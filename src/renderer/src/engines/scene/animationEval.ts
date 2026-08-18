@@ -97,6 +97,26 @@ export function tracksFor(
 }
 
 /**
+ * How many degrees the tracks add to a camera's own field of view at that instant.
+ *
+ * `null` where nothing drives it, which is what tells the renderer to leave the lens alone
+ * rather than write back the value it already holds. Additive, exactly like every other track:
+ * a channel standing at +10 on a camera set to 50° gives 60°.
+ *
+ * The only reader of a `fov` keyframe's `.x`, and the reason the other two components of that
+ * vector mean nothing — see `neutralOf`.
+ */
+export function fovAt(timeline: AnimationTimeline, nodeId: string, time: Us): number | null {
+  const soloed = anySoloed(timeline)
+  const tracks = tracksFor(timeline, nodeId).filter(
+    track => track.target.property === 'fov' && playsThrough(track, soloed),
+  )
+  if (tracks.length === 0) return null
+
+  return tracks.reduce((total, track) => total + valueAt(track, time).x, 0)
+}
+
+/**
  * What every track driving one target adds at that instant, as one delta per property.
  *
  * `null` where nothing drives it at all — the caller then leaves the object alone rather than
@@ -118,6 +138,10 @@ export function contributionAt(
   let turned = false
 
   for (const track of tracks) {
+    // A lens is not a pose: read by `fovAt` and by nothing else, or a `fov` track would land in
+    // the rotation branch below and turn the camera by its own field of view.
+    if (track.target.property === 'fov') continue
+
     const value = valueAt(track, time)
 
     if (track.target.property === 'position') position = add(position, value)

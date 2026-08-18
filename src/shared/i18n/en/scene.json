@@ -201,6 +201,7 @@
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Scale",
+    "fov": "Field of view",
     "addTrack": "Add a {{property}} track",
     "removeTrack": "Remove track {{name}}",
     "arm": "Arm track {{name}} for writing",

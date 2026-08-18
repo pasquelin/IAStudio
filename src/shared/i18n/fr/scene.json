@@ -201,6 +201,7 @@
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Échelle",
+    "fov": "Angle de vue",
     "addTrack": "Ajouter une piste {{property}}",
     "removeTrack": "Supprimer la piste {{name}}",
     "arm": "Armer la piste {{name}} en écriture",

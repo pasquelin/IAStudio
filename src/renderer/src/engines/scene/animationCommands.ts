@@ -1,4 +1,5 @@
 import {
+  POSE_PROPERTIES,
   TRACK_PROPERTIES,
   type AnimationTrack,
   type CameraShot,
@@ -183,6 +184,21 @@ export function removeAnimationKey(trackId: string, time: number): Command<Scene
  * Ids are minted here rather than inside `apply`, for the reason `addAnimationTrack` carries: a
  * redo must name the same channels the undo took away.
  */
+/**
+ * What a subject can be keyed on: the three of a pose, plus the lens when it is a camera and the
+ * subject is the node itself.
+ *
+ * Read off the node rather than fixed, so keying a cube never opens a channel that drives
+ * nothing — and a bone, which lives inside a file, has no lens of its own to open.
+ */
+export function keyableProperties(
+  state: SceneState,
+  subject: { nodeId: string; bone?: string },
+): readonly TrackProperty[] {
+  const camera = !subject.bone && nodeById(state, subject.nodeId)?.type === 'camera'
+  return camera ? TRACK_PROPERTIES : POSE_PROPERTIES
+}
+
 export function keyNode(
   state: SceneState,
   subject: { nodeId: string; bone?: string },
@@ -191,7 +207,7 @@ export function keyNode(
   mintId: (property: TrackProperty) => string,
 ): Command<SceneState> | null {
   const held = recordingTracksFor(state, subject.nodeId, subject.bone)
-  const missing = TRACK_PROPERTIES.filter(
+  const missing = keyableProperties(state, subject).filter(
     property => !held.some(track => track.target.property === property),
   )
 

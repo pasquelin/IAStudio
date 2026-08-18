@@ -5,9 +5,18 @@ import { SECOND, type Us } from './time'
  * What a track drives. Three for a node, and the same three for one bone of a rig — a bone is
  * addressed by name because it lives inside the file, never in the document (see `ModelRef`).
  */
-export type TrackProperty = 'position' | 'rotation' | 'scale'
+export type TrackProperty = 'position' | 'rotation' | 'scale' | 'fov'
 
-export const TRACK_PROPERTIES: readonly TrackProperty[] = ['position', 'rotation', 'scale']
+export const TRACK_PROPERTIES: readonly TrackProperty[] = ['position', 'rotation', 'scale', 'fov']
+
+/**
+ * The three a pose is made of — what every node can be keyed on, and what `contributionAt`
+ * composes. `fov` is deliberately out: it drives a lens rather than a transform, and it is read
+ * by `fovAt` alone.
+ */
+export type PoseProperty = Exclude<TrackProperty, 'fov'>
+
+export const POSE_PROPERTIES: readonly PoseProperty[] = ['position', 'rotation', 'scale']
 
 /**
  * One value at one instant, in microseconds from the start of the timeline — the unit the
@@ -132,7 +141,12 @@ export const EMPTY_TIMELINE: AnimationTimeline = Object.freeze({
   shots: [],
 })
 
-/** What a track adds where it holds no key: nothing for a move or a turn, one for a scale. */
+/**
+ * What a track adds where it holds no key: nothing for a move, a turn or a lens, one for a scale.
+ *
+ * A `fov` track carries a `Vector3` whose `y` and `z` mean nothing — the price of keeping ONE
+ * keyframe shape. `fovAt` is the only reader of `.x`, and a test holds it to that.
+ */
 export function neutralOf(property: TrackProperty): Vector3 {
   return property === 'scale' ? ONE : ZERO
 }

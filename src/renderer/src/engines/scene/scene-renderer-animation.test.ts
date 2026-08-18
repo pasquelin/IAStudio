@@ -1,4 +1,12 @@
-import { AnimationClip, Bone, Group, Mesh, SphereGeometry, VectorKeyframeTrack } from 'three'
+import {
+  AnimationClip,
+  Bone,
+  Group,
+  Mesh,
+  PerspectiveCamera,
+  SphereGeometry,
+  VectorKeyframeTrack,
+} from 'three'
 import type { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { embeddedClip, type ClipRef } from '@shared/domain/scene'
@@ -339,6 +347,40 @@ describe('SceneRenderer and a camera on a rail', () => {
     engine.setPlayhead(4 * SECOND - 1)
     // From the far end of the rail it has to turn to keep the same mesh in frame.
     expect(Math.abs(objectOf(engine, 'cam')?.quaternion.y ?? 0)).toBeGreaterThan(0.1)
+    engine.dispose()
+  })
+
+  it('opens the lens by what its fov channel adds, and leaves it alone without one', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    const camera = cameraNodeFixture('cam', { fov: 50 })
+    engine.apply({
+      ...EMPTY_SCENE,
+      nodes: [camera],
+      animation: {
+        ...EMPTY_TIMELINE,
+        tracks: [
+          {
+            id: 'lens',
+            name: 'Lens',
+            index: 0,
+            muted: false,
+            solo: false,
+            locked: false,
+            target: { nodeId: 'cam', property: 'fov' },
+            keys: [
+              { time: 0, value: { x: 0, y: 0, z: 0 } },
+              { time: 2 * SECOND, value: { x: 20, y: 0, z: 0 } },
+            ],
+          },
+        ],
+      },
+    })
+
+    const lens = objectOf(engine, 'cam')
+    expect(lens instanceof PerspectiveCamera && lens.fov).toBe(50)
+
+    engine.setPlayhead(1 * SECOND)
+    expect(lens instanceof PerspectiveCamera && lens.fov).toBeCloseTo(60, 5)
     engine.dispose()
   })
 

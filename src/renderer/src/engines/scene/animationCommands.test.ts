@@ -413,7 +413,12 @@ describe('keying an object that was moved by hand', () => {
     return command.apply(state)
   }
 
-  const NAMES = { position: 'Cube · Position', rotation: 'Cube · Rotation', scale: 'Cube · Scale' }
+  const NAMES = {
+    position: 'Cube · Position',
+    rotation: 'Cube · Rotation',
+    scale: 'Cube · Scale',
+    fov: 'Cube · Lens',
+  }
 
   it('holds the movement made since the channel opened, not zero', () => {
     const first = keyAt(cubeAt(0), 0)
@@ -480,7 +485,12 @@ describe('dragging an object that is already keyed', () => {
     type: 'group',
   })
 
-  const NAMES = { position: 'Cube · Position', rotation: 'Cube · Rotation', scale: 'Cube · Scale' }
+  const NAMES = {
+    position: 'Cube · Position',
+    rotation: 'Cube · Rotation',
+    scale: 'Cube · Scale',
+    fov: 'Cube · Lens',
+  }
 
   /** A cube keyed at zero and again at two seconds, four units along. */
   function animated(): SceneState {

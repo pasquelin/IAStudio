@@ -87,7 +87,7 @@ import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './textGeometry'
 import { createGltfSource, type GltfSource } from './gltfSource'
 import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
-import { drivenNodes, poseAt } from './animationEval'
+import { drivenNodes, fovAt, poseAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
 import { nearestBone, type ProjectedBone } from './bonePicking'
@@ -645,6 +645,25 @@ export class SceneRenderer {
     }
 
     this.applyBonePoses(timeline)
+    this.applyLenses(timeline)
+  }
+
+  /**
+   * What the `fov` channels add to each camera's own field of view, in degrees.
+   *
+   * Written only where a channel actually drives one: a camera nothing animates keeps the lens
+   * its descriptor gave it, and `applyCamera` stays the only other writer.
+   */
+  private applyLenses(timeline: AnimationTimeline): void {
+    for (const node of this.applied.values()) {
+      if (node.type !== 'camera') continue
+
+      const delta = fovAt(timeline, node.id, this.playhead)
+      const camera = this.cameraObject(node.id)
+      if (delta === null || !camera) continue
+
+      applyCamera(camera, { ...node.camera, fov: node.camera.fov + delta })
+    }
   }
 
   /**

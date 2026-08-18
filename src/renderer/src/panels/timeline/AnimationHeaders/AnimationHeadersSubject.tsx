@@ -28,6 +28,7 @@ function channelNames(t: (key: string) => string, subject: string): Record<Track
     position: `${subject} · ${t('animation.position')}`,
     rotation: `${subject} · ${t('animation.rotation')}`,
     scale: `${subject} · ${t('animation.scale')}`,
+    fov: `${subject} · ${t('animation.fov')}`,
   }
 }
 
