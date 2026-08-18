@@ -185,6 +185,20 @@ describe('createDocumentFiles', () => {
     expect((await documents.read('twin', 'image'))?.content).toBe('image side')
   })
 
+  /**
+   * `.gltf` names two kinds, so the address a document of either WOULD have had is the same one
+   * — and closing a sky that was never saved would have deleted the scene sitting at it. Removal
+   * asks the file whose it is rather than trusting where it was pointed.
+   */
+  it('removes nothing when the file at that address belongs to the other kind', async () => {
+    await documents.write('twin', 'scene', { title: 'Twin', content: '{}' })
+    await rename(join(root, 'documents', 'Twin.gltf'), join(root, 'documents', 'twin.gltf'))
+
+    await documents.remove('twin', 'skybox')
+
+    expect(await readdir(join(root, 'documents'))).toEqual(['twin.gltf'])
+  })
+
   // Two windows on one document is a case the studio already lives with; a shared staging name
   // would have each overwrite the other's and rename half of one over the target.
   it('survives concurrent writes of the same document', async () => {

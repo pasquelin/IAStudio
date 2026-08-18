@@ -532,11 +532,13 @@ export function createDocumentFiles({
    * renamed in the Finder would otherwise be written to a path that is no longer there — which
    * `writeFile` answers by creating it, leaving two files where the user made one.
    */
+  const holdsDocument = async (path: string, id: string, kind: DocumentKind): Promise<boolean> => {
+    const descriptor = await descriptorOf(path)
+    return descriptor?.id === id && descriptor.kind === kind
+  }
+
   const locate = async (id: string, kind: DocumentKind): Promise<string> => {
-    const holds = async (path: string): Promise<boolean> => {
-      const descriptor = await descriptorOf(path)
-      return descriptor?.id === id && descriptor.kind === kind
-    }
+    const holds = (path: string): Promise<boolean> => holdsDocument(path, id, kind)
 
     const cached = index.get(keyOf(id, kind))
     if (cached && (await holds(cached))) return absoluteOf(cached)
@@ -728,7 +730,13 @@ export function createDocumentFiles({
     remove: async (id, kind) => {
       await queued(id, async () => {
         const file = await locate(id, kind)
-        await rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) })
+        // Verified before it is deleted, never merely located. `locate` falls back on the address
+        // a document WOULD have had, and two kinds share an extension — so that address is the
+        // same for both, and an id that happens to be another document's file name would have
+        // that document removed instead. A file that is not there answers no, as it always did.
+        if (await holdsDocument(relativeOf(file), id, kind)) {
+          await rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) })
+        }
         index.delete(keyOf(id, kind))
         seen.delete(stampKey(id, kind))
       })
