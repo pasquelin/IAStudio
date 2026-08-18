@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { DOCUMENT_VERSION, STUDIO_METADATA_KEY, type DocumentFile } from '@shared/domain/document'
+import {
+  DOCUMENT_VERSION,
+  ENVELOPE_LIMIT,
+  STUDIO_METADATA_KEY,
+  type DocumentFile,
+} from '@shared/domain/document'
 import { isGltfDocument } from '@shared/domain/gltf'
 import { bodyFormatOf, ENVELOPED } from './documentBody'
 
@@ -107,6 +112,73 @@ describe('a scene held as glTF', () => {
     const indented = JSON.stringify(JSON.parse(gltf({ documentId: 'doc-3' })), null, 2)
 
     expect(scene.read(indented)).toMatchObject({ kind: 'scene', id: 'doc-3' })
+  })
+
+  /**
+   * `readHead` looks for the studio's mark inside the first `ENVELOPE_LIMIT` bytes and turns away
+   * a file that has none. Behind the default scene's list of root nodes the mark fell outside it:
+   * a scene of about 1 900 objects at the root was present in the folder, absent from every list,
+   * and `locate` could no longer find the file a save had to be written back to.
+   */
+  it('writes the mark ahead of the list of root nodes, however long that list is', () => {
+    const many = JSON.stringify({
+      asset: { version: '2.0' },
+      scene: 0,
+      scenes: [{ nodes: Array.from({ length: 5_000 }, (_unused, at) => at), extras: {} }],
+      nodes: Array.from({ length: 5_000 }, (_unused, at) => ({ name: `Mesh ${at}` })),
+    })
+
+    const written = scene.write({
+      version: DOCUMENT_VERSION,
+      kind: 'scene',
+      title: 'Foule',
+      updatedAt: '',
+      content: many,
+    })
+
+    expect(written.indexOf(`"${STUDIO_METADATA_KEY}"`)).toBeLessThan(ENVELOPE_LIMIT)
+  })
+
+  // The mark moved to the front of the scene object; the title still has to win over the name
+  // the file arrived with, which is what a rename writes.
+  it('still stamps the title over a name the file already had', () => {
+    const named = JSON.stringify({
+      asset: { version: '2.0' },
+      scene: 0,
+      scenes: [{ name: 'Ancien', nodes: [], extras: { [STUDIO_METADATA_KEY]: {} } }],
+      nodes: [],
+    })
+
+    const written = scene.write({
+      version: DOCUMENT_VERSION,
+      kind: 'scene',
+      title: 'Nouveau',
+      updatedAt: '',
+      content: named,
+    })
+
+    expect(JSON.parse(written).scenes[0].name).toBe('Nouveau')
+  })
+
+  // Everything of ours lives under one key, and the extras a file arrived with are somebody
+  // else's — a reordering that dropped them would be a reordering that loses data.
+  it('keeps the extras the file arrived with beside the studio’s own', () => {
+    const foreign = JSON.stringify({
+      asset: { version: '2.0' },
+      scene: 0,
+      scenes: [{ nodes: [], extras: { blender: { flavour: 'cycles' } } }],
+      nodes: [],
+    })
+
+    const written = scene.write({
+      version: DOCUMENT_VERSION,
+      kind: 'scene',
+      title: '',
+      updatedAt: '',
+      content: foreign,
+    })
+
+    expect(JSON.parse(written).scenes[0].extras.blender).toEqual({ flavour: 'cycles' })
   })
 })
 

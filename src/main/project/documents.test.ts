@@ -526,6 +526,26 @@ describe('createDocumentFiles', () => {
       expect(await readFile(file, 'utf8')).toBe(OUTSIDE)
     })
 
+    /**
+     * `headOf` keeps what it read, keyed on the modification time and the size — a scene is a
+     * whole parse to open the head of, and `locate` asks for one at every save. A file the user
+     * replaced in the Finder must not be answered for out of that map.
+     */
+    it('is listed as what it now holds, never as what the studio last read', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":[]}' })
+      expect((await documents.list()).map(entry => entry.kind)).toEqual(['scene'])
+
+      const file = join(root, 'documents', 'Level.gltf')
+      await writeFile(
+        file,
+        `${JSON.stringify({ version: DOCUMENT_VERSION, kind: 'skybox', title: 'Level', updatedAt: NOW, id: 'doc-1' })}\n{}`,
+        'utf8',
+      )
+      await utimes(file, LATER, LATER)
+
+      expect((await documents.list()).map(entry => entry.kind)).toEqual(['skybox'])
+    })
+
     it('is written over once the caller says the user agreed', async () => {
       await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":[]}' })
       await changeBehindTheStudio(join(root, 'documents', 'Level.gltf'))

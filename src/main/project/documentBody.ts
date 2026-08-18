@@ -255,6 +255,11 @@ function sceneDocument(body: string): DocumentFile {
  * The standard file and nothing else, its default scene renamed from the title and stamped with
  * the identity `otioBody` stamps, for the same reason. Compact where a montage is indented:
  * indenting a scene of 5 000 nodes takes it from 2 396 Ko to 6 840 Ko — measured 18/08.
+ *
+ * The mark is written into the FIRST bytes of the file, and that is not a nicety: `readHead`
+ * looks for it inside `ENVELOPE_LIMIT`, and behind the default scene's list of root nodes it fell
+ * outside — a scene of about 1 900 objects at the root stopped being listed at all, measured
+ * 18/08. The order of an object's members means nothing to a glTF reader, so it is ours to pick.
  */
 function gltfBody(parsed: Record<string, unknown>, document: DocumentFile): string {
   const scenes: unknown[] = Array.isArray(parsed.scenes) ? parsed.scenes : []
@@ -262,22 +267,30 @@ function gltfBody(parsed: Record<string, unknown>, document: DocumentFile): stri
   const held = scenes[at]
   if (!isRecord(held)) return JSON.stringify(parsed)
 
-  const extras = isRecord(held.extras) ? held.extras : {}
-  return JSON.stringify({
-    ...parsed,
-    scenes: scenes.map((scene, index) =>
+  const { extras: heldExtras, ...restOfScene } = held
+  const extras: Record<string, unknown> = {
+    [STUDIO_METADATA_KEY]: studioStamp(gltfStudioMetadata(parsed), document),
+  }
+  // Whatever another application left there, kept beside ours rather than under it — and added
+  // after, so its own `scenario` cannot put back the stamp this just wrote.
+  for (const [key, value] of Object.entries(isRecord(heldExtras) ? heldExtras : {})) {
+    if (key !== STUDIO_METADATA_KEY) extras[key] = value
+  }
+
+  const body: Record<string, unknown> = {
+    asset: parsed.asset,
+    scene: parsed.scene,
+    scenes: scenes.map((other, index) =>
       index === at
-        ? {
-            ...held,
-            ...(document.title ? { name: document.title } : {}),
-            extras: {
-              ...extras,
-              [STUDIO_METADATA_KEY]: studioStamp(gltfStudioMetadata(parsed), document),
-            },
-          }
-        : scene,
+        ? { extras, ...restOfScene, ...(document.title ? { name: document.title } : {}) }
+        : other,
     ),
-  })
+  }
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!(key in body)) body[key] = value
+  }
+
+  return JSON.stringify(body)
 }
 
 /** A montage as OpenTimelineIO holds it, `.otio` serving two kinds and the file saying which. */
