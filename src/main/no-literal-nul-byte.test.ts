@@ -47,9 +47,8 @@ const sweptFiles = (): string[] =>
  * A literal NUL makes git call the file BINARY, and a binary file is one nobody reviews.
  *
  * The byte is legitimate as a VALUE; what costs is spelling it raw instead of escaped, which
- * compiles to the very same string. Refused wherever it sits and not only in the first 8 000 bytes
- * git actually reads: the second file that carried one sat past that window, and would have
- * flipped the day a line was added above it.
+ * compiles to the very same string. Refused wherever it sits, and not only in the first 8 000
+ * bytes git actually reads — a rule hanging on a byte offset holds until an unrelated edit.
  *
  * **Blind spot, written rather than discovered**: what git does not track is not read, and
  * `CLAUDE.md` — ignored — names the byte on purpose. Everything tracked and not binary is swept,
