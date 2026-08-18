@@ -64,8 +64,6 @@ describe('the scene export handler', () => {
     ).rejects.toThrow()
   })
 
-  // The same climb without a separator to give it away, and this channel used to let it through
-  // while the picture one refused it.
   it('refuses the name of the folder above', async () => {
     await expect(
       invoke(CHANNELS.sceneExport, { name: '..', format: 'glb', data: bytes }),
