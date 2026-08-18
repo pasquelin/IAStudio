@@ -38,6 +38,18 @@ All six types write into the project folder and open back exactly as they were.
 | Edited sound | `.otio` | **yes** |
 | Sky | `.gltf` | **yes** |
 
+### Four of these extensions announce a format they do not hold yet
+
+An `.otio` edit really **is** OpenTimelineIO: Resolve and Premiere read it.
+
+The other four are not. An `.ora`, a `.gltf` or an `.mtlx` written by the studio wears the name of
+the open format but still holds the studio's own internal shape — **no other application opens
+it**. The extension says where these documents are going, not what they are today. That is the
+work in progress, and it is the heaviest limit on this page.
+
+Until then, to take an image or a scene to another application, the **exports** are what count:
+File ▸ Export.
+
 **What does not save:**
 
 - **the undo history** — reopening a document means starting again without `⌘Z`;

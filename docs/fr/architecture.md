@@ -792,9 +792,13 @@ type que son extension dément est refusé plutôt qu’ouvert dans le mauvais �
 passe par un fichier de transit puis un `rename`, atomique dans un même dossier, de sorte qu’une
 coupure en cours d’écriture ne laisse jamais un document tronqué là où était le travail.
 
-Le corps du fichier appartient à l’espace qui l’a écrit : le processus principal ne le lit pas, il
-l’estampille et le rend tel quel. Un espace qui apprend à s’enregistrer n’a donc pas de canal à
-lui. **Les six genres savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel et
+Le corps du fichier appartient à l’espace qui l’a écrit, et une table par extension
+(`main/project/documentBody.ts`) dit comment il est épelé. Pour cinq genres c’est l’**enveloppe**
+du studio — une ligne d’en-tête, le contenu dessous — et le processus principal ne lit pas ce
+contenu : il estampille et rend tel quel. Pour le montage, le fichier **EST** le format ouvert :
+il n’y a pas d’enveloppe où loger l’en-tête, donc le principal parse l’OpenTimelineIO à la lecture
+comme à l’écriture, et refuse d’écrire un corps qui n’est pas un montage. Un espace qui apprend à
+s’enregistrer n’a dans les deux cas pas de canal à lui. **Les six genres savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel et
 matière, déclarés en un seul endroit, `IO_BY_KIND` dans `app/documentIo.ts`. Un genre absent de
 cette table a un Enregistrer qui ne fait rien, plutôt qu’un qui écrit un corps vide.
 

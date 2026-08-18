@@ -159,6 +159,15 @@ export function kindsForExtension(extension: string): readonly DocumentKind[] {
 }
 
 /**
+ * Whether any kind is held under this extension — the same question without the array, for the
+ * one caller that asks it of EVERY file in the project before a single one is opened.
+ */
+const DOCUMENT_EXTENSIONS: ReadonlySet<string> = new Set(Object.values(EXTENSIONS_BY_KIND))
+
+export const isDocumentExtension = (extension: string): boolean =>
+  DOCUMENT_EXTENSIONS.has(extension)
+
+/**
  * What an editor hands over to be saved. `content` is already serialized, and that is the whole
  * point: the file layer never reads into it, so it never pays for it either. `JSON.parse` of a
  * scene of twenty thousand nodes is synchronous, and the main process owns every window.

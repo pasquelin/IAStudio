@@ -763,9 +763,13 @@ extension denies is refused rather than opened in the wrong editor. Writing goes
 staging file and a `rename`, which is atomic within one folder, so a crash mid-write can never
 leave a truncated document where the work was.
 
-The body belongs to the space that wrote it: the main process never reads into it, it stamps an
-envelope and hands it back untouched. A space that learns to save therefore needs no channel of
-its own. **All six kinds can write themselves today** — image, scene, sequence, audio, skybox and
+The body belongs to the space that wrote it, and a table by extension
+(`main/project/documentBody.ts`) says how it is spelt. For five kinds that is the studio's
+**envelope** — one header line, the content under it — and the main process never reads into that
+content: it stamps and hands it back untouched. For the montage the file **IS** the open format:
+there is no envelope to put a header in, so the main process parses the OpenTimelineIO on the way
+in and on the way out, and refuses to write a body that is not a montage. Either way a space that
+learns to save needs no channel of its own. **All six kinds can write themselves today** — image, scene, sequence, audio, skybox and
 texture, declared in one place, `IO_BY_KIND` in `app/documentIo.ts`. A kind absent from
 that table has a Save that does nothing, rather than one that writes an empty body.
 

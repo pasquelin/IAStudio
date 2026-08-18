@@ -1,5 +1,6 @@
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import type { Asset } from '@shared/domain/asset'
+import { otioStudioMetadata } from '@shared/domain/otio'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DOCUMENT_KINDS,
@@ -1529,8 +1530,9 @@ describe('an image document', () => {
  * still lose the document.
  */
 describe('the kinds a string holds', () => {
-  /** Writes to memory and reads back, which is what a project folder does. */
-  const diskBackedBridge = (kind: DocumentKind): void => {
+  /** Writes to memory and reads back, as a project folder does. Answers what reached it, so a
+   * case can read the BYTES and not only the round trip. */
+  const diskBackedBridge = (kind: DocumentKind): Map<string, string> => {
     const written = new Map<string, string>()
     installFakeBridge({
       documents: {
@@ -1554,6 +1556,7 @@ describe('the kinds a string holds', () => {
         },
       },
     })
+    return written
   }
 
   const open = async (workspace: 'video' | 'audio' | 'skyboxes'): Promise<string> => {
@@ -1575,6 +1578,49 @@ describe('the kinds a string holds', () => {
     useSequences.getState().drop(documentId)
     await restoreDocument(documentId)
     expect(useSequences.getState().states[documentId]).toEqual(before)
+  })
+
+  /**
+   * Asserted on the BYTES, and nothing else in this suite is: every round trip here would pass
+   * just as well over a JSON of the studio's own. What would be lost without this is not the
+   * round trip but the FORMAT — and, with `documentKind` gone, the take reopens as a video
+   * montage whose next save wipes the chain.
+   */
+  it('writes a take as a timeline that says it is a take, chain and all', async () => {
+    const written = diskBackedBridge('audio')
+    const documentId = await open('audio')
+
+    const clip = makeClip({ id: 'clip-a', assetId: 'asset-a', start: 0, duration: 2_000_000 })
+    useSequences.getState().runCommand(documentId, addClip('A1', clip))
+    useAudioEdits.getState().runCommand(documentId, pushEdit('clip-a', { kind: 'gain', db: -6 }))
+    await saveDocument(documentId)
+
+    const file: unknown = JSON.parse(written.get(documentId) ?? '{}')
+    expect(file).toMatchObject({ OTIO_SCHEMA: 'Timeline.1' })
+    expect(otioStudioMetadata(file).documentKind).toBe('audio')
+    expect(otioStudioMetadata(file).audioEdits).toBeDefined()
+  })
+
+  /**
+   * A take whose `documentKind` a foreign tool stripped is listed as a montage and opens in the
+   * VIDEO editor, which composes its metadata from state alone. Carried across the save rather
+   * than recomposed, the chain survives a workspace that cannot read it.
+   */
+  it('gives back a chain the editor that opened the file cannot read', async () => {
+    const written = diskBackedBridge('sequence')
+    const documentId = await open('video')
+    await saveDocument(documentId)
+
+    const asWritten: Record<string, unknown> = JSON.parse(written.get(documentId) ?? '{}')
+    const foreign = { ...asWritten, metadata: { scenario: { audioEdits: { 'clip-a': [] } } } }
+    written.set(documentId, JSON.stringify(foreign))
+    useSequences.getState().drop(documentId)
+    await restoreDocument(documentId)
+    await saveDocument(documentId)
+
+    expect(otioStudioMetadata(JSON.parse(written.get(documentId) ?? '{}')).audioEdits).toEqual({
+      'clip-a': [],
+    })
   })
 
   it('carries an edit chain to disk and back', async () => {

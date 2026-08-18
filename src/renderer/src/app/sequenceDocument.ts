@@ -1,6 +1,7 @@
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { FOLDER_ROOT, nameOf, parentOf } from '@shared/domain/folder'
+import { otioStudioMetadata, OTIO_DOCUMENT_ID } from '@shared/domain/otio'
 import i18next from 'i18next'
 import {
   mediaLinkFrom,
@@ -90,7 +91,9 @@ export function sequencePayload(
   return otioTimelineFor(state, documentId, {
     linkOf: path => mediaLinkOf(path, folder),
     identifies: true,
-    studio,
+    // What the file carried and this editor does not compose, under what the caller adds: a take
+    // saved from the Audio workspace writes its own chain, and must not be given back a stale one.
+    studio: { ...carried.get(documentId), ...studio },
   })
 }
 
@@ -112,12 +115,43 @@ export function serializeSequencePayload(payload: unknown): string {
 }
 
 /**
+ * What the studio's own metadata held and this editor does not compose back — the effects chain
+ * of a take, read by the Audio workspace alone, and which workspace wrote the file at all.
+ *
+ * Carried across a save rather than dropped, and that is what stops a take from losing its chain:
+ * an `.otio` opened by the VIDEO editor — which is where one lands whose `documentKind` a foreign
+ * tool stripped — would otherwise write back a montage recomposed from state alone.
+ */
+const carried = new Map<string, Record<string, unknown>>()
+
+const COMPOSED = new Set([
+  OTIO_DOCUMENT_ID,
+  'width',
+  'height',
+  'sampleRate',
+  'playhead',
+  'selectedId',
+])
+
+function remember(payload: unknown, documentId: string): void {
+  const kept = Object.entries(otioStudioMetadata(payload)).filter(([key]) => !COMPOSED.has(key))
+  if (kept.length > 0) carried.set(documentId, Object.fromEntries(kept))
+  else carried.delete(documentId)
+}
+
+/** Dropped with the document, so a reopened id never inherits what another file carried. */
+export const forgetCarriedMetadata = (documentId: string): void => {
+  carried.delete(documentId)
+}
+
+/**
  * A montage read back off its file. `sequenceFromOtio` answers the empty sequence on anything
  * that is not a timeline, so a file the studio cannot make sense of opens on nothing rather than
  * failing — and `documentIo` refuses to write over one that did.
  */
 export function sequenceFromPayload(payload: unknown, documentId: string): SequenceState {
   incomplete.delete(documentId)
+  remember(payload, documentId)
 
   const unlinked: string[] = []
   const relink = assetIdRelinker(heldIn(documentId))

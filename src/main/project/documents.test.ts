@@ -289,15 +289,36 @@ describe('createDocumentFiles', () => {
     ])
   })
 
-  // Renaming it is what puts the extension back, so the repair is one gesture from the explorer.
+  /**
+   * Renaming it is what puts the extension back, so the repair is one gesture from the explorer.
+   *
+   * Listed again rather than merely counted on disk: the extension it GAINS decides how the
+   * bytes are spelt, and writing them the way the file it is LEAVING was spelt made a rename
+   * destroy the document — right name, unreadable body, gone from every list at the next walk.
+   */
   it('gives the extension back to such a document when it is renamed', async () => {
+    await mkdir(join(root, 'documents'), { recursive: true })
+    const envelope = { version: 2, kind: 'texture', title: 'Perdu', updatedAt: NOW }
+    await writeFile(join(root, 'documents', 'demo'), `${JSON.stringify(envelope)}\n{}`, 'utf8')
+
+    await documents.rename('demo', 'texture', 'Retrouvé')
+
+    expect(await readdir(join(root, 'documents'))).toEqual(['Retrouvé.mtlx'])
+    expect((await documents.list()).map(one => one.title)).toEqual(['Retrouvé'])
+  })
+
+  /**
+   * A montage IS its OpenTimelineIO file, so a body that is not one cannot be written into that
+   * name. Refused LOUDLY and before anything moves: the file the user has is left exactly as it
+   * was, where a rename that went through would have left a document nothing can read again.
+   */
+  it('refuses to rename a document into a spelling its body cannot be written in', async () => {
     await mkdir(join(root, 'documents'), { recursive: true })
     const envelope = { version: 2, kind: 'audio', title: 'Perdu', updatedAt: NOW }
     await writeFile(join(root, 'documents', 'demo'), `${JSON.stringify(envelope)}\n{}`, 'utf8')
 
-    await documents.rename('demo', 'audio', 'Retrouvé')
-
-    expect(await readdir(join(root, 'documents'))).toEqual(['Retrouvé.otio'])
+    await expect(documents.rename('demo', 'audio', 'Retrouvé')).rejects.toThrow()
+    expect(await readdir(join(root, 'documents'))).toEqual(['demo'])
   })
 
   // A stray note the user dropped in there is not a document, and must stay a plain file.

@@ -9,6 +9,7 @@ import {
   FOLDER_KINDS,
   isPartName,
   isStagingName,
+  isDocumentExtension,
   kindsForExtension,
   STAGING_SUFFIX,
   workspaceForKind,
@@ -131,7 +132,9 @@ function claimsDocument(path: string): boolean {
   // extension", and it exists because three sites had quietly disagreed about `.gitignore`.
   // Over the NAME, since it reads back to the last dot and a folder may hold one.
   const extension = extensionOf(basename(path))
-  return extension === '' || kindsForExtension(extension).length > 0
+  // A Set rather than `kindsForExtension`, which allocates: this runs once per file of the
+  // project, and a hundred thousand of them is a hundred thousand arrays thrown away.
+  return extension === '' || isDocumentExtension(extension)
 }
 
 /** How many heads are read at once. Measured in `documents.bench.ts`: 2 000 documents across
@@ -303,7 +306,13 @@ export function createDocumentFiles({
   /** The staging copies being written right now. Every window writes through this one map. */
   const staging = new Set<string>()
 
-  const store = async (file: string, document: DocumentFile): Promise<void> => {
+  /**
+   * `spelling` is the file the bytes are DESTINED for, which a rename makes different from the
+   * one they are written to: a document that lost its extension is written back under the one
+   * its kind names, and spelling it as the file it is leaving puts an envelope inside a name
+   * that promises a standard — unreadable at the next listing, and the document is gone.
+   */
+  const store = async (file: string, document: DocumentFile, spelling = file): Promise<void> => {
     // Unique per call: the staging copy of one window must not be the staging copy of another.
     const copy = `${file}.${randomUUID()}${STAGING_SUFFIX}`
     staging.add(basename(copy))
@@ -316,7 +325,7 @@ export function createDocumentFiles({
       // Shared with the three stores of `persistence`, which is also where the tidy-up learned not
       // to become the failure: this copy's `rm` used to throw over the error the caller needed.
       // Durability across a power cut would want `fsync`; it has none.
-      const body = bodyFormatOf(extensionOf(basename(file))).write(document)
+      const body = bodyFormatOf(extensionOf(basename(spelling))).write(document)
       await writeAtomic(file, body, { staging: copy })
     } finally {
       staging.delete(basename(copy))
@@ -703,7 +712,7 @@ export function createDocumentFiles({
           ? writeAtomic(join(from, DOCUMENT_MANIFEST), ENVELOPED.write(renamed), {
               staging: join(from, `${DOCUMENT_MANIFEST}.${randomUUID()}${STAGING_SUFFIX}`),
             })
-          : store(from, renamed))
+          : store(from, renamed, to))
 
         await rename(from, to)
         index.set(keyOf(id, kind), path)
