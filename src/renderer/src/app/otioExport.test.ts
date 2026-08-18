@@ -14,7 +14,7 @@ import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { useSequences } from '@/stores/sequences'
-import { exportOtio, fileUrlOf, otioExportFiles } from './otioExport'
+import { exportOtio, otioExportFiles } from './otioExport'
 
 const RUSH: Asset = {
   id: 'asset-a',
@@ -50,20 +50,10 @@ beforeEach(() => {
   })
 })
 
-describe('fileUrlOf', () => {
-  it('builds an absolute url, escaping what a path may hold and a url may not', () => {
-    expect(fileUrlOf('/Volumes/Travail/Film', 'assets/vid/plan large.mp4')).toBe(
-      'file:///Volumes/Travail/Film/assets/vid/plan%20large.mp4',
-    )
-  })
-
-  // `file://C:/…` would read the drive letter as a host, and resolve to nothing.
-  it('keeps a windows drive letter inside the path rather than in the host', () => {
-    expect(fileUrlOf('C:\\Films\\Court', 'assets/a.mp4')).toBe(
-      'file:///C:/Films/Court/assets/a.mp4',
-    )
-  })
-})
+/** The `target_url` the only clip of a montage of one comes out with. */
+const linkWritten = (): string =>
+  JSON.parse(new TextDecoder().decode(otioExportFiles('doc-1').files[0]?.bytes)).tracks.children[0]
+    .children[0].media_reference.target_url
 
 /** A montage in the store under `doc-1`, and the tab that names it « Bande ». */
 function laid(state: SequenceState, extra: Record<string, DocumentDescriptor> = {}): void {
@@ -99,6 +89,28 @@ describe('otioExportFiles', () => {
       name: 'Plan large',
       target_url: 'file:///Volumes/Travail/Film/assets/vid/plan%20large.mp4',
     })
+  })
+
+  /**
+   * `file://C:/…` would read the drive letter as a host and resolve to nothing — and the URL is
+   * built through the parser rather than by escaping, which would have escaped the `:` too.
+   */
+  it('keeps a windows drive letter inside the path rather than in the host', () => {
+    laid(sequenceWith(reindexTracks([trackFixture('V1', 'video', [clipFixture('a', 0, SECOND)])])))
+    useProject.setState({
+      project: {
+        path: 'C:\\Films\\Court',
+        manifest: {
+          version: 1,
+          name: 'Court',
+          createdAt: '2026-08-18T09:00:00.000Z',
+          updatedAt: '2026-08-18T09:00:00.000Z',
+        },
+      },
+      known: true,
+    })
+
+    expect(linkWritten()).toBe('file:///C:/Films/Court/assets/vid/plan%20large.mp4')
   })
 
   // Thrown rather than answered empty: an outside client has to tell « nothing to export » from
