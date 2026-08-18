@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { CHANNELS, EVENTS } from '@shared/ipc'
-import { PICTURES, withoutSourcePath } from '@shared/domain/asset'
+import { PICTURES, withoutSourcePath, type Asset, type MediaProbe } from '@shared/domain/asset'
 import type { FileOutcome } from '@shared/domain/fileOp'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
 import type { TextureExtraction } from '@main/assets/textureExtraction'
@@ -399,6 +399,52 @@ export function registerProjectHandlers({
     )
   })
 
+  /**
+   * The half `savePicture` and `saveLayered` share: overwrite the picture named, or land a new
+   * one beside the source it derives from. Only the bytes and the extension tell the two apart,
+   * and a rule fixed on one of them alone is what this exists to stop.
+   */
+  const landPicture = async (
+    request: { name: string; replaces?: string; derivedFrom?: string },
+    bytes: Uint8Array,
+    extension: string,
+    probe: MediaProbe | undefined,
+  ): Promise<Asset> => {
+    // Checked against the CATALOGUE, not against what was sent. `sourceAssetId` is read back
+    // off a JSON envelope inside the project folder — user territory, like the manifest — and
+    // `replaceBytes` builds its path from the row's own type: an id naming a take would write
+    // `audio/<id>.png` and `rm` the `.wav` beside it, destroying a recording from a save on
+    // another document entirely.
+    if (request.replaces) {
+      const replaced = await project.catalog().find(request.replaces)
+      if (!replaced || !PICTURES.includes(replaced.type)) {
+        throw new Error(`asset ${request.replaces} is not a picture to overwrite`)
+      }
+
+      return withoutSourcePath(await assets.replaceBytes(request.replaces, bytes, extension, probe))
+    }
+
+    // A picture saved beside its source inherits what the source IS: its kind, and the channel
+    // it holds when it holds one. Read from the catalogue rather than sent by the renderer, for
+    // the reason `saveTexture` gives — the kind is what the folder and the extension follow.
+    const source = request.derivedFrom ? await project.catalog().find(request.derivedFrom) : null
+
+    return withoutSourcePath(
+      await assets.importFromBytes(
+        {
+          id: newAssetId(),
+          name: request.name,
+          type: source?.type ?? 'image',
+          extension,
+          ...(probe ? { probe } : {}),
+          ...(source?.map ? { map: source.map } : {}),
+          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
+        },
+        bytes,
+      ),
+    )
+  }
+
   handle(CHANNELS.assetsSavePicture, async (_event, value) => {
     const request = parseSavePicture(value)
     // Decoded here rather than in the renderer, exactly as the export is: a `Buffer` does not
@@ -417,41 +463,7 @@ export function registerProjectHandlers({
 
     // The same asset, edited — what ⌘S means on a document opened from one. `replaceBytes` keeps
     // the id, the name and the tags, and moves the extension with the bytes.
-    if (request.replaces) {
-      // Checked against the CATALOGUE, not against what was sent. `sourceAssetId` is read back
-      // off a JSON envelope inside the project folder — user territory, like the manifest — and
-      // `replaceBytes` builds its path from the row's own type: an id naming a take would write
-      // `audio/<id>.png` and `rm` the `.wav` beside it, destroying a recording from a save on
-      // another document entirely.
-      const replaced = await project.catalog().find(request.replaces)
-      if (!replaced || !PICTURES.includes(replaced.type)) {
-        throw new Error(`asset ${request.replaces} is not a picture to overwrite`)
-      }
-
-      return withoutSourcePath(
-        await assets.replaceBytes(request.replaces, png, PNG_EXTENSION, probe),
-      )
-    }
-
-    // A picture saved beside its source inherits what the source IS: its kind, and the channel
-    // it holds when it holds one. Read from the catalogue rather than sent by the renderer, for
-    // the reason `saveTexture` gives — the kind is what the folder and the extension follow.
-    const source = request.derivedFrom ? await project.catalog().find(request.derivedFrom) : null
-
-    return withoutSourcePath(
-      await assets.importFromBytes(
-        {
-          id: newAssetId(),
-          name: request.name,
-          type: source?.type ?? 'image',
-          extension: PNG_EXTENSION,
-          ...(probe ? { probe } : {}),
-          ...(source?.map ? { map: source.map } : {}),
-          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
-        },
-        png,
-      ),
-    )
+    return landPicture(request, png, PNG_EXTENSION, probe)
   })
 
   handle(CHANNELS.assetsSaveLayered, async (_event, value) => {
@@ -467,35 +479,7 @@ export function registerProjectHandlers({
     // inspector show of a `.ora` is its `mergedimage.png`, and its dimensions are the picture's.
     const probe = probePng(merged) ?? undefined
 
-    if (request.replaces) {
-      // Checked against the catalogue for the reason `savePicture` gives at its own line: an id
-      // naming a take would write `audio/<id>.ora` and delete the recording beside it.
-      const replaced = await project.catalog().find(request.replaces)
-      if (!replaced || !PICTURES.includes(replaced.type)) {
-        throw new Error(`asset ${request.replaces} is not a picture to overwrite`)
-      }
-
-      return withoutSourcePath(
-        await assets.replaceBytes(request.replaces, bytes, ORA_EXTENSION, probe),
-      )
-    }
-
-    const source = request.derivedFrom ? await project.catalog().find(request.derivedFrom) : null
-
-    return withoutSourcePath(
-      await assets.importFromBytes(
-        {
-          id: newAssetId(),
-          name: request.name,
-          type: source?.type ?? 'image',
-          extension: ORA_EXTENSION,
-          ...(probe ? { probe } : {}),
-          ...(source?.map ? { map: source.map } : {}),
-          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
-        },
-        bytes,
-      ),
-    )
+    return landPicture(request, bytes, ORA_EXTENSION, probe)
   })
 
   handle(CHANNELS.assetsReadLayered, async (_event, value) => {
