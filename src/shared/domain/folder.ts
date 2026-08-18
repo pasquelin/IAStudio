@@ -1,5 +1,3 @@
-import { FOLDER_KINDS, kindForExtension } from './document'
-import { extensionOf } from './fileName'
 
 /**
  * The project folder as the explorer walks it — one level at a time, never the whole tree.
@@ -180,29 +178,11 @@ export function isPrivatePath(path: string, contents: 'own' | 'shown' = 'own'): 
 export function moveRefusal(path: string, folder: string): 'private' | 'into-itself' | null {
   if (isPrivatePath(path) || isPrivatePath(folder)) return 'private'
 
-  /**
-   * A document written as a folder is a DOCUMENT, whatever the disk calls it.
-   *
-   * `<name>.ora` is a real directory holding a manifest and one PNG per layer, so every reader
-   * that asks the disk what it is gets "folder" — and would let a file be dropped into it. The
-   * next ⌘S rebuilds that folder from the document's own parts and renames the old one away: a
-   * file dropped in there is deleted by the save, and its catalogue row left pointing at nothing.
-   * The old lock refused this as a side effect of `documents/` being private; it is a rule of its
-   * own now, and it belongs here where both sides read it.
-   */
-  if (isDocumentFolder(folder)) return 'private'
-
   // A folder dropped inside itself would take its own destination with it, and the rename that
   // carries it out would leave the whole subtree unreachable.
   if (folder === path || isUnder(folder, path)) return 'into-itself'
 
   return null
-}
-
-/** Whether this path names a document the studio writes as a directory — `Planche.ora`. */
-export function isDocumentFolder(path: string): boolean {
-  const kind = kindForExtension(extensionOf(nameOf(path)))
-  return kind !== null && FOLDER_KINDS.has(kind)
 }
 
 /** The same rule as the panel reads it: may this be dropped there, yes or no. */

@@ -89,7 +89,8 @@ describe('writing a document: serializing the content, as it no longer does', ()
 
 describe('reading a document: the whole main-thread cost of one open', () => {
   for (const count of SIZES) {
-    const body = SCENE.write(sceneOf(count))
+    // As `readFile` hands it over: the format reads bytes, and decoding them is part of an open.
+    const body = Buffer.from(SCENE.write(sceneOf(count)))
     bench(`${count} nodes`, () => {
       serialize(SCENE.read(body))
     })
@@ -250,7 +251,7 @@ const CLIP_COUNTS: readonly number[] = [50, 500, 5_000]
  */
 describe('reading a montage: the head that has to be the whole file', () => {
   for (const count of CLIP_COUNTS) {
-    const body = otioOf(count)
+    const body = Buffer.from(otioOf(count))
     bench(`${count} clips (${Math.round(body.length / 1024)} KiB)`, () => {
       OTIO.read(body)
     })

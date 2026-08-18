@@ -154,14 +154,27 @@ describe('parseDocumentDraft', () => {
    * replaced the folder with a manifest alone — a save that threw away the pixels it was called
    * to keep, and nothing in the reply said so.
    */
-  it('keeps the files that go beside the content', () => {
+  it('keeps the surfaces that go beside the content', () => {
+    const png = Uint8Array.from([137, 80, 78, 71])
     const drafted = parseDocumentDraft({
       title: 'Poster',
       content: '{"layers":[{"id":"l1"}]}',
-      parts: [{ name: 'l1.png', data: 'AA==' }],
+      parts: [{ path: 'data/p_l1.png', png }],
     })
 
-    expect(drafted.parts).toEqual([{ name: 'l1.png', data: 'AA==' }])
+    expect(drafted.parts).toEqual([{ path: 'data/p_l1.png', png }])
+  })
+
+  // These names become ZIP entries the studio writes AND reads back, so one naming its way out
+  // of the container has to be turned away at the boundary.
+  it('refuses a surface that names its way out of the container', () => {
+    expect(() =>
+      parseDocumentDraft({
+        title: 'Poster',
+        content: '{}',
+        parts: [{ path: '../escaped.png', png: Uint8Array.from([137]) }],
+      }),
+    ).toThrow()
   })
 
   // Same silence, same cost: the link is what brings a double-click back to the tab that edits

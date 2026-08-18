@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DOCUMENT_KINDS,
-  DOCUMENT_MANIFEST,
   documentPath,
-  FOLDER_KINDS,
-  isPartName,
   EXTENSIONS_BY_KIND,
   isDocumentKind,
   kindForExtension,
@@ -152,40 +149,3 @@ describe('documentPath', () => {
   })
 })
 
-/**
- * The one field of the document contract that crosses a security boundary: the renderer names
- * these, and the main process turns the name into a path.
- */
-describe('isPartName', () => {
-  it('accepts the name a layer’s picture is written under', () => {
-    expect(isPartName('a1b2c3.png')).toBe(true)
-    expect(isPartName('layer_1-mask.png')).toBe(true)
-  })
-
-  it('refuses anything that could climb out of the folder', () => {
-    expect(isPartName('../secrets.png')).toBe(false)
-    expect(isPartName('..')).toBe(false)
-    expect(isPartName('/etc/passwd')).toBe(false)
-    expect(isPartName('sub/dir.png')).toBe(false)
-    expect(isPartName('a\\b.png')).toBe(false)
-  })
-
-  it('refuses a name that is not a plain file name', () => {
-    expect(isPartName('')).toBe(false)
-    expect(isPartName('nodot')).toBe(false)
-    expect(isPartName('.png')).toBe(false)
-    expect(isPartName('a b.png')).toBe(false)
-  })
-
-  // A part standing where the manifest goes would overwrite the document with a picture.
-  it('refuses the manifest’s own name', () => {
-    expect(isPartName(DOCUMENT_MANIFEST)).toBe(false)
-  })
-})
-
-describe('FOLDER_KINDS', () => {
-  // The image is the only kind whose pixels cannot fit in the content string.
-  it('names the image, and only the image', () => {
-    expect([...FOLDER_KINDS]).toEqual(['image'])
-  })
-})

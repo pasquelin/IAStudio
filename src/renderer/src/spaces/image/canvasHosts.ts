@@ -6,7 +6,12 @@ export type CanvasHost = {
   pixelSnapshots: () => Promise<LayerPixels[]>
   restoreSnapshot: (pixels: LayerPixels) => Promise<void>
   /**
-   * The stack composited into one picture, base64 — what the asset behind the document holds.
+   * The stack composited into one picture, as bytes — `mergedimage.png`, which the container
+   * requires and every other application draws of a `.ora`.
+   */
+  flatten: () => Promise<Uint8Array | null>
+  /**
+   * The same picture, base64 — what a PNG asset and the API take.
    *
    * The engine has had it all along; the port had no reason to publish it until a save had to
    * reach the asset as well as the document. It is the same pass the screen shows, so what

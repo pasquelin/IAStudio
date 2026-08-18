@@ -5,7 +5,6 @@ import { exists } from '@main/persistence'
 import { isStagingName } from '@shared/domain/document'
 import {
   entriesByName,
-  isDocumentFolder,
   isHiddenEntry,
   pathIn,
   type FolderEntry,
@@ -122,11 +121,10 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
       for (const entry of entries) {
         if (keep(entry)) found.push(entry)
         if (entry.kind !== 'folder' || depth >= MAX_SEARCH_DEPTH) continue
-        // A document written as a FOLDER, and the staged copy of one: what they hold is the
-        // studio's own writing, and walking in would offer a manifest and a pile of layers as the
-        // user's own files. Only those — a document wears the extension of an open format now,
-        // and a glTF delivered unpacked into `Repérages.gltf/` is material the rescan must see.
-        if (isDocumentFolder(entry.name) || isStagingName(entry.name)) continue
+        // The staged copy of a document, and nothing else: what it holds is the studio's own
+        // writing, half-landed. A document wears the extension of an open format now, and a
+        // glTF delivered unpacked into `Repérages.gltf/` is material the rescan must see.
+        if (isStagingName(entry.name)) continue
         deeper.push(walk(entry.path, depth + 1))
       }
 
@@ -155,14 +153,14 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
     },
 
     walk: async (hidden = false) =>
-      // Folders are left out, documents written as one excepted: the domain view answers what a
-      // file IS, and a folder is not a domain.
+      // Folders are left out: the domain view answers what a file IS, and a folder is not a
+      // domain.
       //
       // UNSORTED, unlike `list` and `search`: `localeCompare` builds a collator per comparison,
       // and not one caller of this keeps the order — the domain view groups what comes back, the
       // document listing re-sorts by code unit, and the reconciliation pass puts it into a `Set`.
       // This is the walk that crosses a hundred thousand files on every save.
-      await walkAll(hidden, entry => entry.kind === 'file' || isDocumentFolder(entry.name), false),
+      await walkAll(hidden, entry => entry.kind === 'file', false),
 
     names: async relative => await readdir(join(rootOf(), relative)).catch(() => null),
   }

@@ -10,7 +10,9 @@ import {
   RenderTexture,
   Sprite,
   Text,
+  Texture,
   type BLEND_MODES,
+  type ICanvas,
 } from 'pixi.js'
 import { assetUrl } from '@shared/domain/asset'
 import { fontKey } from '@shared/domain/font'
@@ -213,14 +215,17 @@ type LayerSurface = {
 export type PaintSurface = 'pixels' | 'mask'
 
 /**
- * One surface's pixels, on their way to a file or back. `data` is base64 PNG — what the document
- * layer writes beside the manifest, and what the renderer has to offer since it owns no disk.
+ * One surface's pixels, on their way to a file or back — a PNG, as bytes.
+ *
+ * Never base64. A 4K stack of ten layers is hundreds of megabytes of text, held at the same
+ * instant by the window that encoded it and the process that decodes it — and a data URL of one
+ * would be kept for the session by the loader's cache, which is keyed on the whole string.
  */
 export type LayerPixels = {
   layerId: string
   /** A layer keeps two surfaces: the picture, and the mask painted over it. */
   mask: boolean
-  data: string
+  data: Uint8Array
 }
 
 /**
@@ -255,6 +260,31 @@ function strokeWidth(brushSize: number): number {
 function payloadOf(url: string): string {
   const at = url.indexOf(',')
   return at >= 0 ? url.slice(at + 1) : url
+}
+
+/**
+ * A canvas as PNG bytes. Two spellings and no way round it: a window's canvas answers through a
+ * callback, a worker's through a promise, and Pixi publishes both as optional.
+ */
+async function blobOf(canvas: ICanvas): Promise<Blob | null> {
+  if (canvas.convertToBlob) return await canvas.convertToBlob({ type: 'image/png' })
+  const { toBlob } = canvas
+  if (!toBlob) return null
+  return await new Promise(resolve => {
+    toBlob.call(canvas, resolve, 'image/png')
+  })
+}
+
+/**
+ * Bytes as base64, in bounded slices. `String.fromCharCode(...bytes)` on a 4K picture spreads
+ * millions of arguments onto the stack, which throws rather than answering.
+ */
+function bytesToBase64(bytes: Uint8Array): string {
+  const chunks: string[] = []
+  for (let at = 0; at < bytes.length; at += 0x8000) {
+    chunks.push(String.fromCharCode(...bytes.subarray(at, at + 0x8000)))
+  }
+  return btoa(chunks.join(''))
 }
 
 /** A grading pass: the container the filter runs over, and the filter itself. */
@@ -437,7 +467,7 @@ export class CanvasEngine {
    * the store, and the engine only hears about it a React commit later — so a picture read off the
    * disk almost always arrives before the layer it fills.
    */
-  private readonly pendingSnapshots = new Map<string, string>()
+  private readonly pendingSnapshots = new Map<string, Uint8Array>()
   private readonly stamp = new Graphics()
   /**
    * What softens the edge of a dab. One instance, tuned when the brush changes and never per
@@ -1277,28 +1307,48 @@ export class CanvasEngine {
   }
 
   /**
-   * The whole document as one picture, or a region of it. What an edit sends to the API: the
-   * model is asked about what the eye sees, not about a stack it knows nothing of.
+   * The whole document as one picture, or a region of it — the flatten `mergedimage.png` holds,
+   * and what every other application draws of a `.ora`.
    *
-   * Extracted rather than composited by hand — the world is already the composited tree, and
-   * the GPU has it. `base64` hands back a data URL, so the prefix is stripped: the API takes
-   * the payload alone, and a `data:image/png;base64,` reaching it is part of the picture.
+   * Extracted rather than composited by hand: the world IS the composited tree, and the GPU has
+   * it. Through a canvas and a blob rather than a data URL, so the bytes are never a string.
+   */
+  async flatten(region?: Rect): Promise<Uint8Array | null> {
+    const frame = region ?? this.documentRect()
+    if (!frame || !this.state) return null
+
+    return await this.pngOf(
+      this.world,
+      new Rectangle(frame.x, frame.y, frame.width, frame.height),
+    )
+  }
+
+  /**
+   * The same picture as base64. What an edit sends to the API, which takes the payload alone —
+   * a `data:image/png;base64,` reaching it is part of the picture.
    */
   async snapshot(region?: Rect): Promise<string | null> {
+    const png = await this.flatten(region)
+    return png && bytesToBase64(png)
+  }
+
+  /**
+   * A target rendered to PNG bytes.
+   *
+   * `resolution: 1` and never the renderer's, which is the display scale: the same document
+   * would otherwise be extracted at 1024² from one screen and 2048² from another.
+   */
+  private async pngOf(target: Container | Texture, frame?: Rectangle): Promise<Uint8Array | null> {
     const renderer = this.app?.renderer
-    if (!renderer || !this.state) return null
+    if (!renderer) return null
 
-    const frame = region ?? this.documentRect()
-    if (!frame) return null
-
-    const url = await renderer.extract.base64({
-      target: this.world,
-      frame: new Rectangle(frame.x, frame.y, frame.width, frame.height),
-      // Not the renderer's, which is the display scale: the same document would otherwise be
-      // sent at 1024² from one screen and 2048² from another, at twice the price.
+    const canvas = renderer.extract.canvas({
+      target,
+      ...(frame ? { frame } : {}),
       resolution: 1,
     })
-    return payloadOf(url)
+    const blob = await blobOf(canvas)
+    return blob && new Uint8Array(await blob.arrayBuffer())
   }
 
   /**
@@ -1330,16 +1380,15 @@ export class CanvasEngine {
    * layer's business, not the engine's.
    */
   async pixelSnapshots(): Promise<LayerPixels[]> {
-    const renderer = this.app?.renderer
-    if (!renderer || !this.state) return []
+    if (!this.app?.renderer || !this.state) return []
 
     const taken: LayerPixels[] = []
     for (const layer of allLayers(this.state.layers)) {
       for (const mask of [false, true]) {
         const surface = this.surfaces.get(mask ? maskKey(layer.id) : layer.id)
         if (!surface) continue
-        const url = await renderer.extract.base64({ target: surface.texture, resolution: 1 })
-        taken.push({ layerId: layer.id, mask, data: payloadOf(url) })
+        const data = await this.pngOf(surface.texture)
+        if (data) taken.push({ layerId: layer.id, mask, data })
       }
     }
     return taken
@@ -1352,23 +1401,19 @@ export class CanvasEngine {
    */
   async restoreSnapshot(pixels: LayerPixels): Promise<void> {
     const key = pixels.mask ? maskKey(pixels.layerId) : pixels.layerId
-    const url = `data:image/png;base64,${pixels.data}`
     const surface = this.surfaces.get(key)
 
     // Held rather than dropped when the surface is not there yet: `loadInto` returns in silence
     // on a missing one, and a document would reopen with its stack and none of its pixels. The
     // claim below is then made by the drain, which runs before the surface can reload `source`.
     if (!surface) {
-      this.pendingSnapshots.set(key, url)
+      this.pendingSnapshots.set(key, pixels.data)
       return
     }
     // Marked before the await, so a reload of `source` in flight cannot slip in front of it.
     surface.fromDocument = true
     try {
-      // Cleared, unlike a placed picture: the surface was born filled — white, for the base
-      // layer — and compositing over that would bring a hole the user erased back as white
-      // rather than as the transparency the file holds.
-      await this.loadInto(key, url, true)
+      await this.loadPixelsInto(key, pixels.data)
     } catch (error) {
       // Given back, and the asset drawn in its place — see `fallBackToSource`.
       this.fallBackToSource(key, surface)
@@ -1376,24 +1421,47 @@ export class CanvasEngine {
     }
   }
 
+  /**
+   * Saved pixels into a surface, through a blob URL the loader forgets afterwards.
+   *
+   * The cache is keyed on the WHOLE source string, so a data URL of a 4K layer would be held for
+   * the life of the window — the very megabytes this stopped putting in a string. `unload` and
+   * `revokeObjectURL` give both back.
+   *
+   * Cleared, unlike a placed picture: the surface was born filled — white, for the base layer —
+   * and compositing over that would bring a hole the user erased back as white rather than as
+   * the transparency the file holds.
+   */
+  private async loadPixelsInto(key: string, png: Uint8Array): Promise<void> {
+    // `slice()`, as two other call sites of `createObjectURL` already do: a `Uint8Array` over an
+    // `ArrayBufferLike` is not a `BlobPart`, and the copy is what narrows it.
+    const url = URL.createObjectURL(new Blob([png.slice()], { type: 'image/png' }))
+    try {
+      await this.loadInto(key, url, true)
+    } finally {
+      await Assets.unload(url).catch(() => undefined)
+      URL.revokeObjectURL(url)
+    }
+  }
+
   /** Pours the saved pixels held for a surface into it, once it exists. */
   private drainPendingSnapshot(key: string, surface: LayerSurface): void {
-    const url = this.pendingSnapshots.get(key)
-    if (!url) return
+    const png = this.pendingSnapshots.get(key)
+    if (!png) return
     this.pendingSnapshots.delete(key)
     // Claimed BEFORE the load, because the guard in `syncLayer` reads it on the very next line:
     // set on success it would always be too late, and the asset would be drawn over these pixels
     // every time. Given back below if the load turns out not to arrive.
     surface.fromDocument = true
     // Nothing is rethrown: this runs inside `reconcile`, which has nowhere to report to.
-    void this.loadInto(key, url, true).catch(() => this.fallBackToSource(key, surface))
+    void this.loadPixelsInto(key, png).catch(() => this.fallBackToSource(key, surface))
   }
 
   /**
    * Draws the asset a layer names, after its own saved pixels failed to.
    *
-   * A part inside `<id>.img/` can be truncated or corrupt, and before the claim existed the
-   * layer was drawn from `assetUrl(source)` regardless — so a bad part cost nothing visible.
+   * A surface inside the container can be truncated or corrupt, and before the claim existed
+   * the layer was drawn from `assetUrl(source)` regardless — so a bad one cost nothing visible.
    * The claim would now leave that layer empty and silent, and the next ⌘S would write the empty
    * layer over the asset. The claim is given back and the asset drawn, which is what it did.
    */

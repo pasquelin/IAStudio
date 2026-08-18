@@ -27,7 +27,7 @@ vi.mock('./documentBody', async importOriginal => {
       const format = real.bodyFormatOf(extension)
       return {
         ...format,
-        read: (body: string) => {
+        read: (body: Buffer) => {
           parses.push(`read${extension}`)
           return format.read(body)
         },

@@ -11,6 +11,7 @@ import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { isPngBytes, probePng } from '@main/media/png'
 import { packOpenRaster, unpackOpenRaster } from '@main/assets/openRasterFile'
+import { ORA_MERGED_PATH } from '@shared/domain/openRaster'
 import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/localBackend'
 import { fileFactsOf } from './fileFacts'
@@ -471,8 +472,8 @@ export function registerProjectHandlers({
     // Checked like `savePicture` checks its own, and it matters more here: `mergedimage.png` is
     // what every other application draws of this file, so bytes that are not a picture make a
     // container that opens as nothing — with the layers beside it, intact and unreachable.
-    const merged = Buffer.from(request.document.merged, 'base64')
-    if (!isPngBytes(merged)) throw new Error('expected a PNG payload')
+    const merged = request.document.surfaces.find(one => one.path === ORA_MERGED_PATH)?.png
+    if (!merged || !isPngBytes(merged)) throw new Error('expected a PNG payload')
 
     const bytes = packOpenRaster(request.document)
     // Read off the FLATTEN the container carries, not off the container: what the shelf and the

@@ -90,13 +90,15 @@ export type DocumentSnapshot = {
   title: string
   content: string
   /**
-   * The files beside the content — one PNG per layer of an image document.
+   * The surfaces the container holds — one PNG per layer of an image document, as a length and
+   * a name rather than the bytes: a comparison reads, and a megabyte of pixels in a diff is one
+   * nobody can read.
    *
-   * Without them this tool would miss the very loss it exists to catch: a migration that dropped
-   * every layer of an `.ora` while keeping its manifest would leave `content` untouched and the
+   * Without them this tool would miss the very loss it exists to catch: a change that dropped
+   * every layer of an `.ora` while keeping its stack would leave `content` untouched and the
    * snapshot identical.
    */
-  parts: readonly { name: string; data: string }[]
+  parts: readonly { path: string; bytes: number }[]
 }
 
 /**
@@ -121,11 +123,11 @@ export async function snapshotDocuments(documents: DocumentFiles): Promise<Docum
       kind: descriptor.kind,
       title: descriptor.title,
       content: file?.content ?? '',
-      // Sorted for the reason the documents themselves are: a folder answers in its own order,
-      // and that order is not a promise either.
-      parts: [...(file?.parts ?? [])].sort((one, other) =>
-        one.name.localeCompare(other.name, 'en'),
-      ),
+      // Sorted for the reason the documents themselves are: a container answers in its own
+      // order, and that order is not a promise either.
+      parts: [...(file?.parts ?? [])]
+        .map(one => ({ path: one.path, bytes: one.png.byteLength }))
+        .sort((one, other) => one.path.localeCompare(other.path, 'en')),
     })
   }
 

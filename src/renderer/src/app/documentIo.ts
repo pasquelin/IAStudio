@@ -1,12 +1,11 @@
 import type { Asset } from '@shared/domain/asset'
-import {
-  isPartName,
-  type CloseChoice,
-  type DocumentDescriptor,
-  type DocumentDraft,
-  type DocumentKind,
-  type DocumentPart,
+import type {
+  CloseChoice,
+  DocumentDescriptor,
+  DocumentDraft,
+  DocumentKind,
 } from '@shared/domain/document'
+import type { OraSurface } from '@shared/domain/openRaster'
 import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
 import { chainsOnMontage, parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
@@ -25,8 +24,12 @@ import {
   type WritableFormat,
 } from '@shared/domain/formatCapability'
 import { traitsOfCanvas } from '@/engines/canvas/canvasTraits'
-import { layerPixelName, layerPixelsNamed } from '@/engines/canvas/layerPixelName'
-import { oraDocumentOf } from '@/engines/canvas/oraDocument'
+import {
+  canvasFromOra,
+  canvasFromOraContent,
+  oraStackOf,
+  oraSurfacesOf,
+} from '@/engines/canvas/oraDocument'
 import { getBridge } from '@/services/bridge'
 import type { StudioBridge } from '@shared/ipc'
 import { reportFailure, reportNotice } from '@/services/diagnostics'
@@ -46,9 +49,8 @@ import { sceneStore } from '@/stores/scenes'
 import { sequenceStore } from '@/stores/sequences'
 import { skyboxStore } from '@/stores/skyboxes'
 import type { DocumentStore } from '@/stores/documentStore'
-import { DEFAULT_CANVAS, deserializeCanvas, serializeCanvas } from '@/engines/canvas/canvasState'
-import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
-import { canvasHost } from '@/spaces/image/canvasHosts'
+import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
+import { canvasHost, type CanvasHost } from '@/spaces/image/canvasHosts'
 import { canvasStore, canvasOf, useCanvases } from '@/stores/canvases'
 import { newTexture, parseTexture } from '@/engines/texture/textureState'
 import { useSkyboxViews } from '@/stores/skyboxViews'
@@ -103,7 +105,7 @@ type DocumentIo = AssetWriting & {
   capture: (
     documentId: string,
   ) => Promise<{ draft: CapturedDraft; commit: () => void; wasEdited: boolean }>
-  install: (documentId: string, content: string, parts?: readonly DocumentPart[]) => void
+  install: (documentId: string, content: string, parts?: readonly OraSurface[]) => void
   /**
    * Hands a FRESH engine the pixels the document already has on disk, leaving the state alone.
    *
@@ -115,7 +117,7 @@ type DocumentIo = AssetWriting & {
    * their asset — and once ⌘S writes the flattened stack into that asset, redrawing from it
    * folds the whole picture into the one layer it came from.
    */
-  rehydrate?: (documentId: string, parts: readonly DocumentPart[]) => void
+  rehydrate?: (documentId: string, content: string, parts: readonly OraSurface[]) => void
   /**
    * The same, for a tab whose pixels are still in the ASSET it was opened from — a container
    * opened and not yet saved has no document file to read them out of.
@@ -346,21 +348,37 @@ const AUDIO_IO: DocumentIo = {
   },
 }
 
-/**
- * The name `layerPixelName` gives, once it is known to be a file name a document folder accepts.
- *
- * `null` for an id that could not be one. Ids are UUIDs today, but `reviveLayer` takes whatever a
- * file holds, and one odd id must cost that layer's pixels — never the whole save.
- */
-function partName(pixels: LayerPixels): string | null {
-  const name = layerPixelName(pixels)
-  return isPartName(name) ? name : null
+/** The stack, into the asset it was opened from. `null` while the engine boots its GPU context. */
+async function layeredAsset(
+  documentId: string,
+  host: CanvasHost,
+  target: AssetTarget,
+  bridge: StudioBridge,
+): Promise<Asset | null> {
+  const merged = await host.flatten()
+  if (!merged) return null
+
+  const surfaces = oraSurfacesOf(await host.pixelSnapshots(), merged)
+  return await bridge.assets.saveLayered({
+    ...target,
+    document: { stack: oraStackOf(canvasOf(useCanvases.getState(), documentId), surfaces), surfaces },
+  })
+}
+
+/** The flatten alone, for a format that holds no layers. Base64, as `savePicture` takes it. */
+async function flatAsset(
+  host: CanvasHost,
+  target: AssetTarget,
+  bridge: StudioBridge,
+): Promise<Asset | null> {
+  const png = await host.snapshot()
+  return png ? await bridge.assets.savePicture({ ...target, png }) : null
 }
 
 /**
- * The image, which is the one kind a string cannot hold: the stack goes in the manifest, and each
- * layer's texture in a PNG beside it. The pixels live on the GPU, so they are asked of the engine
- * holding the document — see `canvasHost`.
+ * The image, which is the one kind a string cannot hold: its file IS an OpenRaster container —
+ * `content` is the stack as JSON, and each surface a PNG entry beside it. The pixels live on the
+ * GPU, so they are asked of the engine holding the document — see `canvasHost`.
  */
 const IMAGE_IO: DocumentIo = {
   /**
@@ -375,24 +393,25 @@ const IMAGE_IO: DocumentIo = {
     // edit made while the pixels are being extracted must not be counted as saved.
     const mark = canvasStore.markOf(canvases, documentId)
     const wasEdited = canvasStore.hasUnsavedWork(canvases, documentId)
-    const content = serializeCanvas(canvasOf(canvases, documentId))
+    const state = canvasOf(canvases, documentId)
 
     const host = canvasHost(documentId)
-    // Refused rather than written empty. A folder is replaced whole, so a save with no pictures
-    // would delete the ones on disk AND mark the document clean — the work would be gone with
-    // nothing said. The engine is unreachable while it boots its GPU context, which is exactly
-    // when a ⌘S after switching workspace lands.
+    // Refused rather than written empty. The container is replaced whole, so a save with no
+    // pictures would delete the ones on disk AND mark the document clean — the work would be
+    // gone with nothing said. The engine is unreachable while it boots its GPU context, which is
+    // exactly when a ⌘S after switching workspace lands.
     if (!host) throw new Error(`No editor holds ${documentId}: its pixels cannot be read`)
 
-    const taken = await host.pixelSnapshots()
-    const parts: DocumentPart[] = []
-    for (const pixels of taken) {
-      const name = partName(pixels)
-      if (name) parts.push({ name, data: pixels.data })
-    }
+    // The flatten is what every OTHER application draws of this file, and the spec requires it.
+    // Refused for the same reason as the engine: a container without one opens as nothing, with
+    // the layers inside it intact and unreachable.
+    const merged = await host.flatten()
+    if (!merged) throw new Error(`No flatten for ${documentId}: the container would open as nothing`)
+
+    const parts = oraSurfacesOf(await host.pixelSnapshots(), merged)
 
     return {
-      draft: { content, parts },
+      draft: { content: JSON.stringify(oraStackOf(state, parts)), parts },
       commit: () => useCanvases.getState().markSaved(documentId, mark),
       wasEdited,
     }
@@ -400,20 +419,22 @@ const IMAGE_IO: DocumentIo = {
   install: (documentId, content, parts = []) => {
     const canvases = useCanvases.getState()
     // `replace`, not a command: loading a document is not something ⌘Z gives back.
-    canvases.replace(documentId, deserializeCanvas(content))
+    canvases.replace(documentId, canvasFromOraContent(content, parts).state)
     canvases.markSaved(documentId, canvasStore.markOf(useCanvases.getState(), documentId))
 
     // After the state, never before: the engine builds a surface per layer of the state it was
     // given, and pixels aimed at a layer it has not heard of yet land nowhere.
-    IMAGE_IO.rehydrate?.(documentId, parts)
+    IMAGE_IO.rehydrate?.(documentId, content, parts)
   },
-  rehydrate: (documentId, parts) => {
+  rehydrate: (documentId, content, parts) => {
     const host = canvasHost(documentId)
     if (!host) return
-    for (const part of parts) {
-      const pixels = layerPixelsNamed(part.name, part.data)
+    // Through the stack rather than by name alone: a container written elsewhere names its
+    // surfaces its own way, and only the stack says which layer each belongs to. The ids it
+    // invents are positional, so the same file gives the same ones the state was built with.
+    for (const pixels of canvasFromOraContent(content, parts).pixels) {
       // Nothing is rethrown into a mount effect that has nowhere to show it — see `restoreDocument`.
-      if (pixels) void host.restoreSnapshot(pixels).catch(() => undefined)
+      void host.restoreSnapshot(pixels).catch(() => undefined)
     }
   },
   /**
@@ -426,7 +447,6 @@ const IMAGE_IO: DocumentIo = {
     const layered = host ? await getBridge()?.assets.readLayered(assetId) : null
     if (!host || !layered) return
 
-    const { canvasFromOra } = await import('@/engines/canvas/oraDocument')
     for (const pixels of canvasFromOra(layered).pixels) {
       void host.restoreSnapshot(pixels).catch(() => undefined)
     }
@@ -461,20 +481,10 @@ const IMAGE_IO: DocumentIo = {
 
     // `null` while the engine boots its GPU context, which is exactly when a ⌘S after switching
     // workspace lands. The document is still written; only the asset waits for the next save.
-    const png = await host.snapshot()
-    if (!png) return null
-
-    const written =
-      target.format === 'ora'
-        ? await bridge.assets.saveLayered({
-            ...target,
-            document: oraDocumentOf(
-              canvasOf(useCanvases.getState(), documentId),
-              await host.pixelSnapshots(),
-              png,
-            ),
-          })
-        : await bridge.assets.savePicture({ ...target, png })
+    const written = await (target.format === 'ora'
+      ? layeredAsset(documentId, host, target, bridge)
+      : flatAsset(host, target, bridge))
+    if (!written) return null
     // After the write, and only for an overwrite: the id did not move, so the loader would keep
     // answering with the picture it cached before this save.
     if (target.replaces) await host.forgetPicture(target.replaces)
@@ -904,7 +914,7 @@ export async function rehydrateDocument(documentId: string): Promise<void> {
 
   try {
     const file = await bridge.documents.read(document.id, document.kind)
-    if (file?.parts?.length) return io.rehydrate(documentId, file.parts)
+    if (file?.parts?.length) return io.rehydrate(documentId, file.content, file.parts)
 
     // No file of its own yet — a tab opened from a container and never saved. Its pixels are
     // still where they were read from, and only the container holds them layer by layer.

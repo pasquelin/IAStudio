@@ -2,15 +2,22 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
 import {
   isOraGroup,
+  ORA_MERGED_PATH,
   ORA_MIMETYPE,
   type OraDocument,
   type OraLayer,
+  type OraStack,
+  type OraSurface,
 } from '@shared/domain/openRaster'
-import { packOpenRaster, unpackOpenRaster } from './openRasterFile'
+import { oraHeadIn, packOpenRaster, unpackOpenRaster } from './openRasterFile'
 
 /** One transparent pixel, which is all any of this needs to be real PNG bytes. */
-const PNG =
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+const PNG = Uint8Array.from(
+  Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64',
+  ),
+)
 
 const layer = (name: string, src: string, over: Partial<OraLayer> = {}): OraLayer => ({
   kind: 'layer',
@@ -21,17 +28,27 @@ const layer = (name: string, src: string, over: Partial<OraLayer> = {}): OraLaye
   opacity: 1,
   visible: true,
   composite: 'svg:src-over',
-  png: PNG,
   ...over,
 })
 
-const document = (over: Partial<OraDocument> = {}): OraDocument => ({
+const stack = (over: Partial<OraStack> = {}): OraStack => ({
   width: 64,
   height: 32,
   nodes: [layer('Top', 'data/p_a.png'), layer('Bottom', 'data/p_b.png')],
-  merged: PNG,
   studio: '{"layers":[]}',
-  extras: {},
+  ...over,
+})
+
+const surfaces = (over: readonly OraSurface[] = []): OraSurface[] => [
+  { path: ORA_MERGED_PATH, png: PNG },
+  { path: 'data/p_a.png', png: PNG },
+  { path: 'data/p_b.png', png: PNG },
+  ...over,
+]
+
+const document = (over: Partial<OraDocument> = {}): OraDocument => ({
+  stack: stack(),
+  surfaces: surfaces(),
   ...over,
 })
 
@@ -74,51 +91,108 @@ describe('writing an OpenRaster container', () => {
   })
 
   it('nests a group as a stack of its own, which is how the format carries one', () => {
-    const stack = entriesOf(
+    const written = entriesOf(
       packOpenRaster(
         document({
-          nodes: [
-            {
-              kind: 'group',
-              name: 'Sky',
-              x: 0,
-              y: 0,
-              opacity: 1,
-              visible: true,
-              composite: 'svg:src-over',
-              isolation: 'isolate',
-              children: [layer('Cloud', 'data/p_c.png')],
-            },
-          ],
+          stack: stack({
+            nodes: [
+              {
+                kind: 'group',
+                name: 'Sky',
+                x: 0,
+                y: 0,
+                opacity: 1,
+                visible: true,
+                composite: 'svg:src-over',
+                isolation: 'isolate',
+                children: [layer('Cloud', 'data/p_c.png')],
+              },
+            ],
+          }),
         }),
       ),
     )['stack.xml']
 
-    expect(stack).toContain('<stack name="Sky"')
-    expect(stack).toContain('isolation="isolate"')
-    expect(stack).toContain('name="Cloud"')
+    expect(written).toContain('<stack name="Sky"')
+    expect(written).toContain('isolation="isolate"')
+    expect(written).toContain('name="Cloud"')
   })
 
   it('escapes a layer name that would otherwise break the XML', () => {
-    const stack = entriesOf(
-      packOpenRaster(document({ nodes: [layer('R&D <draft>', 'data/p_a.png')] })),
+    const written = entriesOf(
+      packOpenRaster(document({ stack: stack({ nodes: [layer('R&D <draft>', 'data/p_a.png')] }) })),
     )['stack.xml']
 
-    expect(stack).toContain('R&amp;D &lt;draft&gt;')
-    expect(stack).not.toContain('<draft>')
+    expect(written).toContain('R&amp;D &lt;draft&gt;')
+    expect(written).not.toContain('<draft>')
   })
 
   it('carries the studio state no standard field could hold', () => {
-    const entries = entriesOf(packOpenRaster(document({ studio: '{"guides":[1]}' })))
+    const entries = entriesOf(packOpenRaster(document({ stack: stack({ studio: '{"guides":[1]}' }) })))
 
     expect(entries['scenario/document.json']).toBe('{"guides":[1]}')
   })
 
   /** A file written elsewhere has nothing of ours in it, and must still be a valid container. */
   it('writes no studio entry when there is no studio state', () => {
-    expect(entriesOf(packOpenRaster(document({ studio: '' })))).not.toHaveProperty(
-      'scenario/document.json',
+    expect(
+      entriesOf(packOpenRaster(document({ stack: stack({ studio: '' }) }))),
+    ).not.toHaveProperty('scenario/document.json')
+  })
+
+  /**
+   * These names become ZIP entries the studio writes AND reads back, so one naming its way out
+   * of the container would be written back out by whoever unpacks one.
+   */
+  it('drops a surface whose path it would never have written', () => {
+    const entries = entriesOf(
+      packOpenRaster(
+        document({ surfaces: surfaces([{ path: '../../escape.png', png: PNG }]) }),
+      ),
     )
+
+    expect(Object.keys(entries)).not.toContain('../../escape.png')
+    expect(entries['data/p_a.png']).toBeDefined()
+  })
+
+  /**
+   * The head of the file alone — a container of ten 4K layers is a hundred megabytes, and a
+   * listing reads one per document.
+   */
+  it('puts the studio envelope where the first kilobytes of the file reach it', () => {
+    const envelope = '{"version":3,"kind":"image","title":"Planche","updatedAt":"x","id":"doc-1"}'
+    const bytes = packOpenRaster(document(), envelope)
+
+    expect(oraHeadIn(bytes.subarray(0, 64 * 1024))).toEqual({
+      mimetype: ORA_MIMETYPE,
+      envelope,
+    })
+  })
+
+  /**
+   * A head cut mid-envelope hands back half a JSON object with no error at all, which would cost
+   * the document its identity in silence. Only a FINISHED entry is an answer.
+   */
+  it('answers nothing rather than half an envelope when the head stops short', () => {
+    const bytes = packOpenRaster(document(), '{"version":3,"kind":"image","id":"doc-1"}')
+
+    expect(oraHeadIn(bytes.subarray(0, 80)).envelope).toBe('')
+  })
+
+  it('answers no envelope for a container that carries none of ours', () => {
+    expect(oraHeadIn(packOpenRaster(document()))).toEqual({
+      mimetype: ORA_MIMETYPE,
+      envelope: '',
+    })
+  })
+
+  /**
+   * What tells a real container from a file that only wears the extension. Without it a `.ora`
+   * the user copied a scene into is listed as an image document, opens as nothing, and is
+   * overwritten by the next ⌘S.
+   */
+  it('answers no mimetype for bytes that are not a container', () => {
+    expect(oraHeadIn(strToU8('a scene, saved under the wrong name')).mimetype).toBe('')
   })
 })
 
@@ -131,18 +205,24 @@ describe('reading an OpenRaster container back', () => {
 
   it('gives back a nested group with its children', () => {
     const written = document({
-      nodes: [
-        {
-          kind: 'group',
-          name: 'Sky',
-          x: 4,
-          y: 8,
-          opacity: 0.5,
-          visible: false,
-          composite: 'svg:multiply',
-          isolation: 'isolate',
-          children: [layer('Cloud', 'data/p_c.png', { x: 2, y: 3, opacity: 0.25 })],
-        },
+      stack: stack({
+        nodes: [
+          {
+            kind: 'group',
+            name: 'Sky',
+            x: 4,
+            y: 8,
+            opacity: 0.5,
+            visible: false,
+            composite: 'svg:multiply',
+            isolation: 'isolate',
+            children: [layer('Cloud', 'data/p_c.png', { x: 2, y: 3, opacity: 0.25 })],
+          },
+        ],
+      }),
+      surfaces: [
+        { path: ORA_MERGED_PATH, png: PNG },
+        { path: 'data/p_c.png', png: PNG },
       ],
     })
 
@@ -154,10 +234,10 @@ describe('reading an OpenRaster container back', () => {
    * opening it must give back what it DOES hold rather than refusing.
    */
   it('reads a container written without any studio state', () => {
-    const foreign = unpackOpenRaster(packOpenRaster(document({ studio: '' })))
+    const read = unpackOpenRaster(packOpenRaster(document({ stack: stack({ studio: '' }) })))
 
-    expect(foreign.studio).toBe('')
-    expect(foreign.nodes).toHaveLength(2)
+    expect(read.stack.studio).toBe('')
+    expect(read.stack.nodes).toHaveLength(2)
   })
 
   /**
@@ -165,9 +245,12 @@ describe('reading an OpenRaster container back', () => {
    * come back. Another application ignores the entry; this one is the only reader that wants it.
    */
   it('carries back the pixels no layer element names', () => {
-    const written = document({ extras: { 'data/m_a.png': PNG } })
+    const written = document({ surfaces: surfaces([{ path: 'data/m_a.png', png: PNG }]) })
 
-    expect(unpackOpenRaster(packOpenRaster(written)).extras).toEqual({ 'data/m_a.png': PNG })
+    expect(unpackOpenRaster(packOpenRaster(written)).surfaces).toContainEqual({
+      path: 'data/m_a.png',
+      png: PNG,
+    })
   })
 
   /** A container another application wrote, assembled by hand: `packOpenRaster` is not on trial. */
@@ -197,7 +280,7 @@ describe('reading an OpenRaster container back', () => {
       ),
     )
 
-    expect(read.nodes[0]).toMatchObject({ name: 'Ink', x: 7, y: 9, opacity: 0.25 })
+    expect(read.stack.nodes[0]).toMatchObject({ name: 'Ink', x: 7, y: 9, opacity: 0.25 })
   })
 
   /**
@@ -221,7 +304,7 @@ describe('reading an OpenRaster container back', () => {
       ),
     )
 
-    expect(read).toMatchObject({
+    expect(read.stack).toMatchObject({
       width: 64,
       height: 32,
       nodes: [
@@ -252,13 +335,13 @@ describe('reading an OpenRaster container back', () => {
       ),
     )
 
-    const group = read.nodes[0]
-    expect(read.nodes).toHaveLength(2)
+    const group = read.stack.nodes[0]
+    expect(read.stack.nodes).toHaveLength(2)
     expect(group).toMatchObject({ kind: 'group', name: 'Groupe GIMP', opacity: 0.6, x: 0, y: 0 })
     expect(group && isOraGroup(group) ? group.children.map(child => child.name) : []).toEqual([
       'Dans le groupe',
     ])
-    expect(read.nodes[1]).toMatchObject({ kind: 'layer', name: 'Hors groupe' })
+    expect(read.stack.nodes[1]).toMatchObject({ kind: 'layer', name: 'Hors groupe' })
   })
 
   /**
@@ -276,8 +359,8 @@ describe('reading an OpenRaster container back', () => {
       ),
     )
 
-    expect(read.nodes).toHaveLength(1)
-    expect(read.nodes[0]).toMatchObject({ kind: 'layer', name: 'Ink' })
+    expect(read.stack.nodes).toHaveLength(1)
+    expect(read.stack.nodes[0]).toMatchObject({ kind: 'layer', name: 'Ink' })
   })
 
   it('refuses bytes that are not an OpenRaster container', () => {

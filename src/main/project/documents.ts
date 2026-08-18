@@ -1,13 +1,10 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, stat } from 'node:fs/promises'
 import { basename, dirname, join, relative, sep } from 'node:path'
 import {
-  DOCUMENT_MANIFEST,
   documentPath,
   DOCUMENTS_FOLDER,
   DOCUMENT_VERSION,
-  FOLDER_KINDS,
-  isPartName,
   isStagingName,
   isDocumentExtension,
   kindsForExtension,
@@ -17,7 +14,6 @@ import {
   type DocumentDraft,
   type DocumentFile,
   type DocumentKind,
-  type DocumentPart,
   type DocumentWrite,
 } from '@shared/domain/document'
 import {
@@ -29,7 +25,7 @@ import {
 import { extensionOf, foldForFileName } from '@shared/domain/fileName'
 import { parentOf, pathIn, type FolderEntry } from '@shared/domain/folder'
 import { exists, isMissing, writeAtomic } from '@main/persistence'
-import { bodyFormatOf, ENVELOPED, type DocumentHead } from './documentBody'
+import { bodyFormatOf, type DocumentHead } from './documentBody'
 import { createHeadCache } from './headCache'
 
 export type DocumentFiles = {
@@ -285,20 +281,10 @@ export function createDocumentFiles({
 
   const absoluteOf = (path: string): string => join(projectPath(), path)
 
-  /**
-   * The file that actually holds a document's bytes.
-   *
-   * A folder document answers for its MANIFEST rather than the folder: a directory's own time
-   * moves when any entry inside it does, so `.ora` would read as changed every time a layer was
-   * rewritten by the studio itself.
-   */
-  const bodyFileOf = (file: string, kind: DocumentKind): string =>
-    FOLDER_KINDS.has(kind) ? join(file, DOCUMENT_MANIFEST) : file
-
   /** When the file was last written, or `null` when it is not there. */
-  const timeOf = async (file: string, kind: DocumentKind): Promise<number | null> => {
+  const timeOf = async (file: string): Promise<number | null> => {
     try {
-      return (await stat(bodyFileOf(file, kind))).mtimeMs
+      return (await stat(file)).mtimeMs
     } catch (error) {
       if (isMissing(error)) return null
       throw error
@@ -306,7 +292,7 @@ export function createDocumentFiles({
   }
 
   const remember = async (id: string, kind: DocumentKind, file: string): Promise<void> => {
-    const time = await timeOf(file, kind)
+    const time = await timeOf(file)
     if (time !== null) seen.set(stampKey(id, kind), time)
   }
 
@@ -347,79 +333,6 @@ export function createDocumentFiles({
     }
   }
 
-  /**
-   * A folder document, swapped in whole. The manifest carries what a file document's body
-   * carries; the parts sit beside it, under names `isPartName` has cleared — they become paths,
-   * so they are checked here rather than trusted from the renderer.
-   *
-   * Three moves rather than one: `rename` will not replace a folder that has anything in it, so
-   * the previous one steps aside before the new one lands, and is removed only once it has. The
-   * one it steps aside to is `.old`, which the sweep deliberately leaves alone: a process that
-   * dies between the two renames must leave the previous document recoverable by hand, not
-   * collected as rubbish.
-   */
-  const storeFolder = async (folder: string, document: DocumentFile): Promise<void> => {
-    const { parts = [], ...rest } = document
-    const refused = parts.find(part => !isPartName(part.name))
-    if (refused) throw new Error(`Part name ${refused.name} is not a file name`)
-
-    const staged = `${folder}.${randomUUID()}${STAGING_SUFFIX}`
-    const stepped = `${folder}.${randomUUID()}.old`
-    staging.add(basename(staged))
-
-    try {
-      await mkdir(staged, { recursive: true })
-      // The manifest holds no parts: they are the folder's own entries, and naming them twice
-      // would let the two disagree.
-      // A folder document is always the studio's own: its manifest holds the envelope by design.
-      await writeFile(join(staged, DOCUMENT_MANIFEST), ENVELOPED.write(rest), 'utf8')
-      for (const part of parts) {
-        await writeFile(join(staged, part.name), Buffer.from(part.data, 'base64'))
-      }
-
-      // Anything at all, not just a folder: a hand-repaired project may have left a stray file
-      // where the folder belongs, and `readdir` reports one as absent — the swap would then fail
-      // on every save, for good.
-      const held = await exists(folder)
-      if (held) await rename(folder, stepped)
-      try {
-        await rename(staged, folder)
-      } catch (error) {
-        // Put back what stepped aside: the window between the two renames is the only moment
-        // the document does not exist, and leaving it that way would lose it.
-        if (held) await rename(stepped, folder)
-        throw error
-      }
-      // Swallowed for the opposite reason to the one below: the swap has landed, the document
-      // IS saved, and refusing the save because the previous copy would not go away would leave
-      // the tab marked dirty over a folder nothing reads.
-      if (held) await rm(stepped, { force: true, recursive: true }).catch(() => {})
-    } catch (error) {
-      // The tidy-up must not become the failure, exactly as in `writeAtomic`: what the caller
-      // has to hear is why the document could not be written, not why the staging folder would
-      // not go away. Unguarded, an `rm` that throws replaces the error it was cleaning up after.
-      await rm(staged, { force: true, recursive: true }).catch(() => {})
-      throw error
-    } finally {
-      staging.delete(basename(staged))
-    }
-  }
-
-  /** Reads a folder document back: its manifest, and every file the renderer left beside it. */
-  const readFolder = async (folder: string): Promise<DocumentFile> => {
-    const document = ENVELOPED.read(await readFile(join(folder, DOCUMENT_MANIFEST), 'utf8'))
-    const entries = await readdir(folder)
-
-    const parts: DocumentPart[] = []
-    for (const entry of entries) {
-      // The manifest is not a part, and anything else in there is not ours: a file the user
-      // dropped in the folder is left where it is rather than handed to the editor.
-      if (entry === DOCUMENT_MANIFEST || !isPartName(entry)) continue
-      parts.push({ name: entry, data: (await readFile(join(folder, entry))).toString('base64') })
-    }
-    return { ...document, parts }
-  }
-
   /** Swept while listing rather than on a timer: nothing else ever walks the whole folder. */
   const sweep = async (orphans: readonly string[]): Promise<void> => {
     // Failure is nothing to report: the listing is what was asked for, and the copy will be
@@ -449,10 +362,7 @@ export function createDocumentFiles({
 
     try {
       const file = absoluteOf(path)
-      const first = claimed[0]
-      const { envelope, body, time } = await heads.read(
-        first && FOLDER_KINDS.has(first) ? join(file, DOCUMENT_MANIFEST) : file,
-      )
+      const { envelope, body, time } = await heads.read(file)
       // The file says which kind it is, BOUNDED by what its extension could name: a container
       // serving two editors cannot be told apart by its name, and trusting the head outright
       // would send a `.gltf` whose envelope reads `texture` to the material editor.
@@ -627,11 +537,7 @@ export function createDocumentFiles({
     )
   }
 
-  /**
-   * The bytes under a file, put back into a document — or nothing, for a file that is not there.
-   * A folder document is swapped in three moves, and a read landing between two of them sees
-   * nothing: the tab takes the default, and the next ⌘S writes that over the document.
-   */
+  /** The bytes under a file, put back into a document — or nothing, for a file that is not there. */
   const bodyAt = async (
     file: string,
     kind: DocumentKind,
@@ -639,9 +545,7 @@ export function createDocumentFiles({
   ): Promise<DocumentFile | null> => {
     let document: DocumentFile
     try {
-      document = FOLDER_KINDS.has(kind)
-        ? await readFolder(file)
-        : bodyFormatOf(extensionOf(basename(file))).read(await readFile(file, 'utf8'))
+      document = bodyFormatOf(extensionOf(basename(file))).read(await readFile(file))
     } catch (error) {
       if (isMissing(error)) return null
       throw error
@@ -655,14 +559,6 @@ export function createDocumentFiles({
     return document
   }
 
-  /**
-   * A folder document's head is its MANIFEST, so the body a head read hands back holds none of
-   * the parts. Reusing it would give the editor a stack with every layer's pixels missing, and
-   * the next ⌘S would write that back — so a folder kind always goes to the folder.
-   */
-  const reusableBody = (kind: DocumentKind, found: FoundDocument | null): DocumentFile | null =>
-    found && !FOLDER_KINDS.has(kind) ? found.body : null
-
   async function readOne(id: string, kind: DocumentKind): Promise<DocumentFile | null> {
     const { file, found } = await locate(id, kind)
 
@@ -675,7 +571,7 @@ export function createDocumentFiles({
     if (found) seen.set(stampKey(id, kind), found.time)
     else await remember(id, kind, file)
 
-    return reusableBody(kind, found) ?? (await bodyAt(file, kind, id))
+    return found?.body ?? (await bodyAt(file, kind, id))
   }
 
   return {
@@ -696,18 +592,18 @@ export function createDocumentFiles({
         // A document the studio has no clock for is one it cannot claim to have written, so it
         // is not defended — and nothing is stat'd for it either.
         const known = onDisk && !force ? seen.get(stampKey(id, kind)) : undefined
-        if (known !== undefined && (await timeOf(file, kind)) !== known) return 'stale'
+        if (known !== undefined && (await timeOf(file)) !== known) return 'stale'
 
         // Stamped here rather than taken from the draft: the renderer owns none of these, and
         // an id from its side would be its word against the folder's.
         const document = { ...draft, version: DOCUMENT_VERSION, kind, updatedAt: now(), id }
 
-        await (FOLDER_KINDS.has(kind) ? storeFolder(file, document) : store(file, document))
+        await store(file, document)
         // The head kept for this file is now a description of bytes that are gone. Dropped
         // rather than left to the clock: a save landing in the same millisecond at the same
         // size is the one case `mtimeMs` cannot tell apart, and it is the studio's own writes
         // that come that fast.
-        heads.forget(bodyFileOf(file, kind))
+        heads.forget(file)
         index.set(keyOf(id, kind), relativeOf(file))
         await remember(id, kind, file)
         return 'written'
@@ -760,21 +656,17 @@ export function createDocumentFiles({
         // reads the document correctly and only its file lags, which renaming again repairs. The
         // other order leaves a file whose name says one thing and whose envelope says another:
         // the two names this whole change exists to collapse into one.
-        const held = reusableBody(kind, found) ?? (await bodyAt(from, kind, id))
+        const held = found?.body ?? (await bodyAt(from, kind, id))
         if (!held) throw new Error(`Document ${id} is not there to rename`)
 
-        // Spelt out rather than spread, so that `parts` cannot come along: they are the folder's
-        // own entries and `storeFolder` drops them for the same reason. Carried in, the
-        // manifest's first line held the base64 of every layer — past `ENVELOPE_LIMIT`, so
-        // `headOf` found no newline and every listing read the whole document back.
+        // `parts` comes along, and the whole picture rides on that word: the container is
+        // rewritten from this object, so leaving them out writes a stack with no surfaces under
+        // it — every layer of the document gone, silently, on a rename. They were dropped here
+        // while an image was a FOLDER and its parts were the folder's own entries.
         const renamed: DocumentFile = {
-          version: held.version,
-          kind: held.kind,
-          updatedAt: held.updatedAt,
-          content: held.content,
+          ...held,
           title,
           id,
-          ...(held.sourceAssetId ? { sourceAssetId: held.sourceAssetId } : {}),
         }
 
         // A document that GAINS an extension is written straight to its new name, and the old
@@ -784,22 +676,17 @@ export function createDocumentFiles({
         // every other rename, `descriptorOf` refusing a file whose head its name denies, and
         // there the envelope-then-move order stands: a crash leaves the right title under the
         // old name, which renaming again repairs.
-        if (!FOLDER_KINDS.has(kind) && extensionOf(basename(from)) !== extensionOf(entry)) {
+        if (extensionOf(basename(from)) !== extensionOf(entry)) {
           await store(to, renamed)
           await rm(from, { force: true })
         } else {
-          await (FOLDER_KINDS.has(kind)
-            ? writeAtomic(join(from, DOCUMENT_MANIFEST), ENVELOPED.write(renamed), {
-                staging: join(from, `${DOCUMENT_MANIFEST}.${randomUUID()}${STAGING_SUFFIX}`),
-              })
-            : store(from, renamed))
-
+          await store(from, renamed)
           await rename(from, to)
         }
         // Both names, for the same reason `write` drops one: the file under `from` is gone and
         // the one under `to` was written by the studio a moment ago.
-        heads.forget(bodyFileOf(from, kind))
-        heads.forget(bodyFileOf(to, kind))
+        heads.forget(from)
+        heads.forget(to)
         index.set(keyOf(id, kind), path)
         // The envelope was just rewritten and the file just moved, both by the studio. Without
         // this, the next ⌘S would read a time it does not recognise and accuse the user of
@@ -827,9 +714,9 @@ export function createDocumentFiles({
         // fallback address — where nothing was read and the entry has to be looked at.
         const sitting = found?.descriptor ?? (await descriptorOf(relativeOf(file)))
         if (!sitting || (sitting.id === id && sitting.kind === kind)) {
-          await rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) })
+          await rm(file, { force: true })
         }
-        heads.forget(bodyFileOf(file, kind))
+        heads.forget(file)
         index.delete(keyOf(id, kind))
         seen.delete(stampKey(id, kind))
       })

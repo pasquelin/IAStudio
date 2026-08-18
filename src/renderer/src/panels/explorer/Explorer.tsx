@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { thumbnailUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
-import { FOLDER_KINDS, kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
+import { kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
 import { extensionOf, stemOf } from '@shared/domain/fileName'
 import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/fileOp'
 import { canMoveInto, FOLDER_ROOT, isPrivatePath, nameOf, parentOf } from '@shared/domain/folder'
@@ -151,18 +151,12 @@ export function Explorer() {
   }, [stored])
 
   /**
-   * The descriptor behind a folder entry, or nothing.
-   *
-   * A folder is not disqualified by being one: an image document IS a directory — `<id>.img/`
-   * holding its manifest and its parts (`FOLDER_KINDS`) — and the reader that walks the project
-   * folder can only see that it is a directory. Refusing every folder here left image documents
-   * with no workspace glyph, no "open" mark, and unfoldable instead of openable.
+   * The descriptor behind an entry, or nothing. Every document is a FILE now, containers
+   * included, so a folder wearing a document's extension is a folder.
    */
   const documentOf = useCallback(
     (node: FolderNode): DocumentDescriptor | null => {
-      const kind = kindForExtension(extensionOf(node.name))
-      if (!kind) return null
-      if (node.kind === 'folder' && !FOLDER_KINDS.has(kind)) return null
+      if (node.kind === 'folder' || !kindForExtension(extensionOf(node.name))) return null
       return documentsByFile.get(node.path) ?? null
     },
     [documentsByFile],
