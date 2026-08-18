@@ -15,31 +15,12 @@
  * Only the subset this studio writes is modelled. A transition, a marker or a nested stack read
  * from a foreign file is not represented — see `sequenceFromOtio` for what that costs.
  */
+import { STUDIO_METADATA_KEY } from './document'
 import { isRecord } from '../guards'
 
 /**
- * The domain key metadata travels under — the spec asks for a unique one. The extension is not
- * spelt here: `EXTENSIONS_BY_KIND` is the one table that names a document's file.
- */
-export const OTIO_STUDIO_KEY = 'scenario'
-
-/**
- * Which document of the studio a timeline IS, under the studio domain. Read by BOTH processes —
- * the window writes it, the file layer reads it back as the document's id — so it is spelt here
- * rather than on either side, where the two spellings would be free to drift apart in silence.
- */
-export const OTIO_DOCUMENT_ID = 'documentId'
-
-/**
- * Which kind of document the timeline is, the video montage and the audio one being the same
- * standard file — so the name cannot say, and only this can. Written by the window that saved it,
- * read back by the file layer.
- */
-export const OTIO_DOCUMENT_KIND = 'documentKind'
-
-/**
- * Whether a payload is a timeline of this format. Spelt here for the reason `OTIO_DOCUMENT_ID`
- * is: three modules across both processes ask it, and three spellings would drift in silence.
+ * Whether a payload is a timeline of this format. Spelt here rather than at each of the three
+ * modules that ask it, across both processes: three spellings would drift in silence.
  */
 export function isOtioTimeline(value: unknown): value is Record<string, unknown> {
   return isRecord(value) && value.OTIO_SCHEMA === 'Timeline.1'
@@ -49,7 +30,7 @@ export function isOtioTimeline(value: unknown): value is Record<string, unknown>
 export function otioStudioMetadata(value: unknown): Record<string, unknown> {
   const metadata = isRecord(value) ? value.metadata : null
   if (!isRecord(metadata)) return {}
-  const studio = metadata[OTIO_STUDIO_KEY]
+  const studio = metadata[STUDIO_METADATA_KEY]
   return isRecord(studio) ? studio : {}
 }
 

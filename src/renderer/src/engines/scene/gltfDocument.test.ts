@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  GLTF_DOCUMENT_ID,
-  GLTF_DOCUMENT_KIND,
-  GLTF_STUDIO_KEY,
-  gltfStudioMetadata,
-  isGltfDocument,
-} from '@shared/domain/gltf'
+import { DOCUMENT_ID_KEY, DOCUMENT_KIND_KEY, STUDIO_METADATA_KEY } from '@shared/domain/document'
+import { gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
 import { isRecord } from '@shared/guards'
 import { gltfDocumentOf, sceneFromGltf, type GltfDocumentOptions } from './gltfDocument'
 import { cameraNodeFixture, lightNodeFixture, meshNode } from './scene-fixtures'
@@ -36,8 +31,8 @@ describe('gltfDocumentOf', () => {
   it('says which document it is, and which kind, where the file name cannot', () => {
     const studio = gltfStudioMetadata(write(EMPTY_SCENE))
 
-    expect(studio[GLTF_DOCUMENT_ID]).toBe('doc-1')
-    expect(studio[GLTF_DOCUMENT_KIND]).toBe('scene')
+    expect(studio[DOCUMENT_ID_KEY]).toBe('doc-1')
+    expect(studio[DOCUMENT_KIND_KEY]).toBe('scene')
   })
 
   it('hangs a child under its parent, and roots the rest', () => {
@@ -133,7 +128,7 @@ describe('sceneFromGltf', () => {
       sceneFromGltf({
         ...document,
         scene: 1,
-        scenes: [{ name: 'other', extras: { [GLTF_STUDIO_KEY]: {} } }, held],
+        scenes: [{ name: 'other', extras: { [STUDIO_METADATA_KEY]: {} } }, held],
       }).nodes,
     ).toHaveLength(1)
   })

@@ -3,8 +3,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { deserialize, serialize } from 'node:v8'
 import { afterAll, bench, describe } from 'vitest'
-import { DOCUMENT_VERSION, EXTENSIONS_BY_KIND, type DocumentFile } from '@shared/domain/document'
-import { GLTF_SCENE_STATE, GLTF_STUDIO_KEY } from '@shared/domain/gltf'
+import {
+  DOCUMENT_VERSION,
+  EXTENSIONS_BY_KIND,
+  STUDIO_METADATA_KEY,
+  type DocumentFile,
+} from '@shared/domain/document'
+import { GLTF_SCENE_STATE } from '@shared/domain/gltf'
 // The production read and the production pool, not copies of them: this bench measures the exact
 // syscall shape `list()` takes, and a second implementation beside it would drift from the one
 // being measured. It did — `headOf` was copied here without its envelope parse, so the pool was
@@ -69,7 +74,7 @@ function sceneOf(count: number): DocumentFile {
       scenes: [
         {
           nodes: nodes.map((_unused, index) => index),
-          extras: { [GLTF_STUDIO_KEY]: { [GLTF_SCENE_STATE]: { nodes } } },
+          extras: { [STUDIO_METADATA_KEY]: { [GLTF_SCENE_STATE]: { nodes } } },
         },
       ],
       nodes: nodes.map(node => ({ name: node.name })),

@@ -1,6 +1,7 @@
 import type { Asset } from '@shared/domain/asset'
 import {
   isPartName,
+  DOCUMENT_KIND_KEY,
   type CloseChoice,
   type DocumentDescriptor,
   type DocumentDraft,
@@ -17,7 +18,7 @@ import {
   EMPTY_SOUND_SEQUENCE,
   type SequenceState,
 } from '@/engines/timeline/timelineState'
-import { otioStudioMetadata, OTIO_DOCUMENT_KIND } from '@shared/domain/otio'
+import { otioStudioMetadata } from '@shared/domain/otio'
 import {
   formatOfFile,
   lossesFor,
@@ -291,7 +292,7 @@ const AUDIO_IO: DocumentIo = {
       draft: {
         content: serializeSequencePayload(
           sequencePayload(written, documentId, {
-            [OTIO_DOCUMENT_KIND]: 'audio',
+            [DOCUMENT_KIND_KEY]: 'audio',
             // Pruned on the way to the file and nowhere else — see `chainsOnMontage`: the store
             // keeps every chain so that ⌘Z of a deleted block gives its settings back.
             [OTIO_AUDIO_EDITS]: chainsOnMontage(audioEditStore.stateOf(edits, documentId), written),

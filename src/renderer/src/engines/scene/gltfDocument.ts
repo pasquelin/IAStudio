@@ -1,26 +1,20 @@
 /**
  * The scene as glTF holds it — which IS the scene document, not an export beside one.
  *
- * The standard carries what another application reads: the tree, where each node stands, the
- * cameras and the punctual lights. Everything the studio holds past that — which primitive a mesh
- * is, what a material wears, the shots, the rails, the animation — rides in the `extras` of the
- * scene, under the studio's own key, where the format says a reader may carry what it does not
- * understand. `formatCapability.ts` is what says which trait falls on which side.
+ * The standard carries the tree, the placements, the cameras and the punctual lights; everything
+ * past that rides in the `extras` of the scene, which the format says a reader may ignore.
  *
- * Geometry is NOT baked here: a mesh is a named node with its primitive in `extras`, so a viewer
- * shows the layout and not the shapes. Baking needs the engine, which a save of an unmounted tab
- * has not got — `sceneExport.ts` is what bakes, on the export path.
+ * Geometry is NOT baked: a mesh is a named node with its primitive in `extras`. Baking needs the
+ * engine, which a save of an unmounted tab has not got — `sceneExport.ts` is what bakes.
  */
 import { Color, Euler, Quaternion } from 'three'
-import type { DocumentKind } from '@shared/domain/document'
 import {
-  GLTF_DOCUMENT_ID,
-  GLTF_DOCUMENT_KIND,
-  GLTF_SCENE_STATE,
-  GLTF_STUDIO_KEY,
-  gltfStudioMetadata,
-  isGltfDocument,
-} from '@shared/domain/gltf'
+  DOCUMENT_ID_KEY,
+  DOCUMENT_KIND_KEY,
+  STUDIO_METADATA_KEY,
+  type DocumentKind,
+} from '@shared/domain/document'
+import { GLTF_SCENE_STATE, gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
 import type { LightDescriptor, Transform } from '@shared/domain/scene'
 import { scenePayload, sceneFromPayload } from './sceneDocument'
 import type { SceneState } from './sceneState'
@@ -51,11 +45,7 @@ type GltfCamera = {
   perspective: { yfov: number; znear: number; zfar: number }
 }
 
-/**
- * A light as `KHR_lights_punctual` spells it. `range` is left out for a light that reaches
- * everywhere, which is what the extension says an absent range means — and what a distance of
- * zero means in the studio.
- */
+/** An absent `range` means a light that reaches everywhere, on both sides. */
 type GltfLight = {
   type: 'directional' | 'point' | 'spot'
   name: string
@@ -82,12 +72,21 @@ export function gltfDocumentOf(
 ): unknown {
   const cameras: GltfCamera[] = []
   const lights: GltfLight[] = []
+  // Once for the whole scene, never once per node: asking each node which others hang from it is
+  // n² comparisons on the thread that draws — measured 18/08 at 27,6 ms for 1 000 nodes and
+  // 367 ms for 5 000, against 0,06 and 1,2 this way.
+  const childrenOfNode = new Map<string | null, number[]>()
+  state.nodes.forEach((node, at) => {
+    const siblings = childrenOfNode.get(node.parentId)
+    if (siblings) siblings.push(at)
+    else childrenOfNode.set(node.parentId, [at])
+  })
 
   const nodes = state.nodes.map(node => {
     const written: GltfNode = { name: node.name, ...placement(node.transform) }
 
-    const children = state.nodes.flatMap((child, at) => (child.parentId === node.id ? [at] : []))
-    if (children.length > 0) written.children = children
+    const children = childrenOfNode.get(node.id)
+    if (children) written.children = children
 
     if (node.type === 'camera') {
       written.camera = cameras.length
@@ -116,11 +115,11 @@ export function gltfDocumentOf(
     scene: 0,
     scenes: [
       {
-        nodes: state.nodes.flatMap((node, at) => (node.parentId === null ? [at] : [])),
+        nodes: childrenOfNode.get(null) ?? [],
         extras: {
-          [GLTF_STUDIO_KEY]: {
-            [GLTF_DOCUMENT_ID]: documentId,
-            [GLTF_DOCUMENT_KIND]: documentKind,
+          [STUDIO_METADATA_KEY]: {
+            [DOCUMENT_ID_KEY]: documentId,
+            [DOCUMENT_KIND_KEY]: documentKind,
             [GLTF_SCENE_STATE]: scenePayload(state),
           },
         },
@@ -148,14 +147,7 @@ export function sceneFromGltf(document: unknown): SceneState {
   return sceneFromPayload(gltfStudioMetadata(document)[GLTF_SCENE_STATE])
 }
 
-/**
- * Where a node stands, in the three fields glTF holds it in — each left out when it is the
- * default, which is what keeps a file of a hundred untouched nodes readable by eye.
- *
- * The rotation is a quaternion there and Euler angles here, and three is what converts: a
- * hand-written conversion would be a second answer to a question `Quaternion` already answers,
- * free to disagree about the order the angles apply in.
- */
+/** Fields at their default are left out. The rotation is Euler here, a quaternion there. */
 function placement({ position, rotation, scale }: Transform): Partial<GltfNode> {
   const quaternion = new Quaternion().setFromEuler(new Euler(rotation.x, rotation.y, rotation.z))
 
@@ -173,14 +165,8 @@ function placement({ position, rotation, scale }: Transform): Partial<GltfNode> 
 }
 
 /**
- * A light as the extension holds it, or nothing for one it has no type for.
- *
- * Ambient and hemisphere are the two: neither is punctual, and writing one as a directional
- * would light another application's scene from a direction nobody chose. Both are still in the
- * extras, so nothing is lost to this studio.
- *
- * The cone follows three's own reading of the extension — the penumbra is the share of the cone
- * that fades — so a spot written here and read back by any three-based viewer is the same light.
+ * Ambient and hemisphere are not punctual, and writing one as a directional would light another
+ * application's scene from a direction nobody chose. Both are still in the extras.
  */
 function punctualLight(name: string, light: LightDescriptor): GltfLight | null {
   if (light.kind === 'ambient' || light.kind === 'hemisphere') return null

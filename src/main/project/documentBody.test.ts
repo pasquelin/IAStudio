@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { DOCUMENT_VERSION, type DocumentFile } from '@shared/domain/document'
-import { GLTF_STUDIO_KEY, isGltfDocument } from '@shared/domain/gltf'
+import { DOCUMENT_VERSION, STUDIO_METADATA_KEY, type DocumentFile } from '@shared/domain/document'
+import { isGltfDocument } from '@shared/domain/gltf'
 import { bodyFormatOf, ENVELOPED } from './documentBody'
 
 const scene = bodyFormatOf('.gltf')
@@ -10,7 +10,7 @@ const gltf = (studio: Record<string, unknown> = {}): string =>
   JSON.stringify({
     asset: { version: '2.0' },
     scene: 0,
-    scenes: [{ nodes: [], extras: { [GLTF_STUDIO_KEY]: studio } }],
+    scenes: [{ nodes: [], extras: { [STUDIO_METADATA_KEY]: studio } }],
     nodes: [],
   })
 
@@ -71,7 +71,10 @@ describe('a scene held as glTF', () => {
       content: gltf(),
     })
 
-    expect(written).toContain('"name": "Repérage"')
+    expect(JSON.parse(written).scenes[0].name).toBe('Repérage')
+    // Compact: indenting a scene of 5 000 nodes takes its file from 2 396 Ko to 6 840 Ko, and
+    // those spaces are parsed again on every open. Measured 18/08.
+    expect(written).not.toContain('\n')
   })
 
   // The sky wears this extension too, and is still written the studio's own way: what the file

@@ -1039,7 +1039,10 @@ describe('createDocumentFiles', () => {
         nodes: [],
       })
 
-    it('lists a file another application wrote, named after its file', async () => {
+    // Named after its file, an id being what a document written here carries and this one has not.
+    // A glTF with nothing of ours in it is a MESH, and `turns away a file of an open format the
+    // studio did not write` is the other half of that rule.
+    it('lists one of ours that lost its id, named after its file', async () => {
       await writeFile(join(root, 'Repérage.gltf'), gltf(), 'utf8')
 
       expect(await documents.list()).toEqual([
