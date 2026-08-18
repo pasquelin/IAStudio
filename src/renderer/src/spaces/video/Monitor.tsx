@@ -19,6 +19,7 @@ import { createSoundPort } from '@/engines/timeline/soundPort'
 import { transports } from '@/engines/timeline/playback'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import type { SequenceState, Us } from '@/engines/timeline/timelineState'
+import { useLatest } from '@/hooks/useLatest'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -83,7 +84,7 @@ export function Monitor({
     height: sequence.settings.height,
   })
   /** Where this monitor stands, for a redraw that no state change of its own asked for. */
-  const playhead = useRef(sequence.playhead)
+  const playhead = useLatest(sequence.playhead)
   // Published rather than held: the timeline's own bar draws the same transport, and neither of
   // the two trees contains the other — see `stores/playback`.
   const playing = usePlayback(state => playbackOf(state, owner))
@@ -123,7 +124,6 @@ export function Monitor({
   // The engine holds decoders and textures, never the stack: every state change is pushed in.
   useEffect(() => {
     frameSize.current = { width: sequence.settings.width, height: sequence.settings.height }
-    playhead.current = sequence.playhead
     engine.current?.apply(sequence)
   }, [sequence])
 
@@ -140,7 +140,7 @@ export function Monitor({
     return () => {
       for (const stop of stops) stop()
     }
-  }, [])
+  }, [playhead])
 
   // Published by name so the timeline strip can drive it: the space bar is pressed on a tool
   // window, and neither tree contains the other.

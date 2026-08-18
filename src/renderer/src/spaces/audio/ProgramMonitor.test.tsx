@@ -55,6 +55,28 @@ describe('ProgramMonitor', () => {
   })
 
   /**
+   * The click is clamped to the montage's DURATION, read off a ref rather than a dependency — so a
+   * clip appended while the monitor stands there has to lengthen what a click can reach.
+   */
+  it('scrubs the montage as it stands, not as it was mounted', () => {
+    const onSeek = vi.fn()
+    const view = render(
+      <ProgramMonitor sequence={montage()} transport={transport()} onSeek={onSeek} />,
+    )
+    view.rerender(
+      <ProgramMonitor
+        sequence={sequenceWith([trackFixture('a', 'audio', [clipFixture('c', 0, 10 * SECOND)])])}
+        transport={transport()}
+        onSeek={onSeek}
+      />,
+    )
+
+    fireEvent.pointerDown(wave(), { clientX: 400 })
+
+    expect(onSeek).toHaveBeenCalledWith(10 * SECOND)
+  })
+
+  /**
    * A pointer that starts on the wave and lands past its end still reports a coordinate — the
    * head has nowhere to go beyond the last frame, and a montage that scrubbed past its own end
    * would play silence it never holds.
