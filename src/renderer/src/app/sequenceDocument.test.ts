@@ -90,6 +90,21 @@ describe('what a save writes for a montage', () => {
     })
   })
 
+  /**
+   * One step out per folder, which is what tells the folder apart from its segments.
+   *
+   * `documentFolder` answers the SEGMENTS a link climbs out of; a version answering the folder
+   * whole writes a single `../` from any depth, and the montage opens with its media lost — a
+   * case at one level alone reads the same either way.
+   */
+  it('climbs out of every folder a montage sits under, not just one', () => {
+    heldIn('Cinematics/2026/Bande.otio')
+
+    expect(firstReference(sequencePayload(ONE_CLIP, 'doc-1'))).toMatchObject({
+      target_url: '../../assets/vid/plan%20large.mp4',
+    })
+  })
+
   // Without it, a montage renamed on disk comes back as a different document — its tab, its
   // place in the layout and its recent entry all keyed on the name it has just stopped having.
   it('remembers which document the file is', () => {
