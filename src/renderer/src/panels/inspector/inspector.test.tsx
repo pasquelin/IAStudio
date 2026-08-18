@@ -6,6 +6,7 @@ import { STUDIO_ENVIRONMENT, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { addNode } from '@/engines/scene/commands'
 import { createNodeOf } from '@/engines/scene/nodeFactory'
 import {
+  cameraNodeFixture,
   lightNodeFixture,
   meshNode,
   rigStateFixture,
@@ -174,6 +175,15 @@ describe('inspector panel', () => {
     expect(screen.getByRole('button', { name: /Lumière/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Géométrie/ })).not.toBeInTheDocument()
     // A light is placed like anything else: the transform is not a mesh privilege.
+    expect(screen.getByRole('button', { name: /Transformation/ })).toBeInTheDocument()
+  })
+
+  it('shows a camera its lens, and no material', () => {
+    install(cameraNodeFixture('camera-1'))
+    render(<Content />)
+
+    expect(screen.getByRole('button', { name: /Caméra/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Matière/ })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Transformation/ })).toBeInTheDocument()
   })
 

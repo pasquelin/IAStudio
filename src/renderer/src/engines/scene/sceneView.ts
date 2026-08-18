@@ -3,6 +3,7 @@ import {
   EdgesGeometry,
   LineSegments,
   Mesh,
+  PerspectiveCamera,
   Vector3,
   WireframeGeometry,
   type Material,
@@ -13,10 +14,11 @@ import {
   VIEW_DIRECTIONS,
   isViewDirection,
   type DisplayMode,
+  type Transform,
   type Vector3 as PlainVector3,
   type ViewDirection,
 } from '@shared/domain/scene'
-import { centreOf } from './pivot'
+import { centreOf, transformOf } from './pivot'
 
 /**
  * What one view of a quad layout shows: a side, or a camera free to turn.
@@ -25,12 +27,22 @@ import { centreOf } from './pivot'
  * and a top view one drag away from being an almost-top view answers no question at all. Panning
  * and zooming stay: those move where one looks from, never the direction.
  */
-export type PaneView = 'free' | ViewDirection
+/** A pane locked onto a camera of the scene: it draws what that camera films, and orbits IT. */
+export type CameraView = { kind: 'camera'; nodeId: string }
 
-export const PANE_VIEWS: readonly PaneView[] = ['free', ...VIEW_DIRECTIONS]
+export type PaneView = 'free' | ViewDirection | CameraView
 
-export function isPaneView(value: string): value is PaneView {
-  return value === 'free' || isViewDirection(value)
+/** The views that need nothing of the scene. A camera view names a node, so it is not one. */
+export const PANE_VIEWS: readonly ('free' | ViewDirection)[] = ['free', ...VIEW_DIRECTIONS]
+
+export function isPaneView(value: unknown): value is PaneView {
+  if (isCameraView(value)) return true
+  return typeof value === 'string' && (value === 'free' || isViewDirection(value))
+}
+
+export function isCameraView(view: unknown): view is CameraView {
+  if (typeof view !== 'object' || view === null) return false
+  return 'kind' in view && view.kind === 'camera' && 'nodeId' in view
 }
 
 /**
@@ -277,6 +289,22 @@ export type CameraPlacement = { position: PlainVector3; target: PlainVector3 }
 /** Three's vector as the studio spells one everywhere else. */
 export function plainVector({ x, y, z }: Vector3): PlainVector3 {
   return { x, y, z }
+}
+
+/**
+ * The transform a node takes to stand where a view stands and look where it looks.
+ *
+ * Through a CAMERA and not a bare `Object3D`: `lookAt` branches on `isCamera` — it points local
+ * +Z at the target for an object, and −Z for a camera. Aimed as an object, the camera would end
+ * up in the right place facing exactly the opposite way.
+ */
+export function transformFromPlacement(placement: CameraPlacement, rest: Transform): Transform {
+  const camera = new PerspectiveCamera()
+  camera.position.set(placement.position.x, placement.position.y, placement.position.z)
+  camera.lookAt(placement.target.x, placement.target.y, placement.target.z)
+
+  // A camera is never scaled by this gesture: what it stood at is what it keeps.
+  return { ...transformOf(camera), scale: rest.scale }
 }
 
 /**

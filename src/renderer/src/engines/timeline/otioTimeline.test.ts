@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  OTIO_STUDIO_KEY,
-  type OtioClip,
-  type OtioTimeline,
-  type OtioTrackItem,
-} from '@shared/domain/otio'
+import { STUDIO_METADATA_KEY } from '@shared/domain/document'
+import { type OtioClip, type OtioTimeline, type OtioTrackItem } from '@shared/domain/otio'
 import { otioTimelineOf, sequenceFromOtio, type OtioSource } from './otioTimeline'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import {
@@ -194,7 +190,7 @@ describe('sequenceFromOtio', () => {
             ]),
           ),
         ),
-      ).replaceAll(`"${OTIO_STUDIO_KEY}"`, '"someone_else"'),
+      ).replaceAll(`"${STUDIO_METADATA_KEY}"`, '"someone_else"'),
     )
 
     const state = sequenceFromOtio(foreign, () => 'relinked')
@@ -212,7 +208,7 @@ describe('sequenceFromOtio', () => {
     const foreign = JSON.parse(
       JSON.stringify(
         write(sequenceWith([trackFixture('V1', 'video', [clipFixture('a', 0, SECOND)])])),
-      ).replaceAll(`"${OTIO_STUDIO_KEY}"`, '"someone_else"'),
+      ).replaceAll(`"${STUDIO_METADATA_KEY}"`, '"someone_else"'),
     )
 
     expect(sequenceFromOtio(foreign).tracks[0]?.clips).toEqual([])
@@ -249,7 +245,7 @@ describe('sequenceFromOtio', () => {
     }
 
     const stripped = JSON.parse(
-      JSON.stringify(write(rich)).replaceAll(`"${OTIO_STUDIO_KEY}"`, '"someone_else"'),
+      JSON.stringify(write(rich)).replaceAll(`"${STUDIO_METADATA_KEY}"`, '"someone_else"'),
     )
 
     expect(

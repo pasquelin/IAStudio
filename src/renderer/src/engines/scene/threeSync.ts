@@ -1,22 +1,29 @@
 import {
+  CameraHelper,
   DirectionalLight,
   HemisphereLight,
+  Line,
+  Mesh,
   MeshStandardMaterial,
   PointLight,
   SpotLight,
   type BufferGeometry,
   type Light,
-  type Mesh,
+  type Object3D,
+  type PerspectiveCamera,
   type SpriteMaterial,
 } from 'three'
 import type {
+  CameraDescriptor,
   GeometryDescriptor,
   LightDescriptor,
   MaterialDescriptor,
+  PathDescriptor,
   SpriteDescriptor,
   Vector3,
 } from '@shared/domain/scene'
-import { bareLight, geometryFor } from './threeFactory'
+import { pathPoints } from './cameraPath'
+import { bareLight, geometryFor, pathKnob, PATH_CURVE_NAME, PATH_KNOB_PREFIX } from './threeFactory'
 
 /*
  * Bringing an existing three.js object in line with an edited descriptor — the other half of
@@ -121,6 +128,73 @@ function applyTarget(light: DirectionalLight | SpotLight, target: Vector3): void
   // The helper reads the target's world matrix, and nothing else updates it before the frame
   // that draws it: without this the beam points where the light aimed one edit ago.
   light.target.updateMatrixWorld()
+}
+
+/**
+ * The lens of a camera of the scene, and the frustum drawn from it.
+ *
+ * The helper is updated by hand: it reads the projection matrix once, so a camera whose field of
+ * view was just typed in would keep outlining the one it had before.
+ */
+export function applyCamera(
+  camera: PerspectiveCamera,
+  descriptor: CameraDescriptor,
+  outlineFar: number = descriptor.far,
+): void {
+  camera.fov = descriptor.fov
+  camera.near = descriptor.near
+  camera.far = descriptor.far
+  camera.updateProjectionMatrix()
+
+  // Shortened for the outline and put straight back: `update` reads the projection matrix at the
+  // moment it is called, and THIS camera is the one a preview and a film render through.
+  camera.far = Math.min(descriptor.far, outlineFar)
+  camera.updateProjectionMatrix()
+  for (const child of camera.children) {
+    if (child instanceof CameraHelper) child.update()
+  }
+  camera.far = descriptor.far
+  camera.updateProjectionMatrix()
+}
+
+/**
+ * The knobs of a rail, shown only on the rail being worked on.
+ *
+ * A sphere per point on every rail of the scene is what makes a five-camera sequence unreadable,
+ * and only a SELECTED rail hands its points to the gizmo anyway — see `pathPointAt`. The line
+ * stays either way, so a rail can still be clicked to become the selected one.
+ */
+export function showPathKnobs(object: Object3D, shown: boolean): void {
+  for (const child of object.children) {
+    if (child.name.startsWith(PATH_KNOB_PREFIX)) child.visible = shown
+  }
+}
+
+/**
+ * A rail brought in line with its descriptor: the sampled line, and one knob per control point.
+ *
+ * Knobs are added and removed rather than rebuilt whole: a drag of one point emits a descriptor
+ * per pointer move, and disposing every sphere each time would churn the GPU for a curve that
+ * has not changed shape.
+ */
+export function applyPath(object: Object3D, descriptor: PathDescriptor, colour: string): void {
+  const line = object.getObjectByName(PATH_CURVE_NAME)
+  if (line instanceof Line) line.geometry.setFromPoints(pathPoints(descriptor))
+
+  const knobs = object.children.filter(
+    (child): child is Mesh => child.name.startsWith(PATH_KNOB_PREFIX) && child instanceof Mesh,
+  )
+
+  for (const extra of knobs.slice(descriptor.points.length)) {
+    object.remove(extra)
+    extra.geometry.dispose()
+  }
+
+  for (const [index, point] of descriptor.points.entries()) {
+    const knob = knobs[index] ?? pathKnob(index, colour)
+    if (!knobs[index]) object.add(knob)
+    knob.position.set(point.x, point.y, point.z)
+  }
 }
 
 /** The material a mesh was built with. Arrays are never built here, and neither is any other. */

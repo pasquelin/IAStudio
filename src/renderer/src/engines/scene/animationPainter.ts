@@ -7,14 +7,16 @@
  * The header column beside it stays DOM, where the controls belong — see `AnimationHeaders`.
  */
 import type { Us } from '@shared/domain/time'
+import type { CameraShot } from '@shared/domain/animation'
 import { placeRows } from '../timeline/band'
 import { paintBandEnd } from '../timeline/bandEnd'
+import { paintBarGrips, paintClipOn } from '../timeline/painter'
+import type { Clip } from '../timeline/timelineState'
 import { paintRuler, readRulerStyle } from '../timeline/ruler'
-import { paintBarGrips } from '../timeline/painter'
 import { RULER_HEIGHT, timeToX, type Viewport } from '../timeline/timelineGeometry'
 import { memoPalette, rootColour, rootFont } from '../core/palette'
 import type { Size } from '../core/geometry'
-import type { AnimationRow, ClipBlock } from './animationRows'
+import type { AnimationRow, ClipBlock, ShotBar } from './animationRows'
 
 /** Half the diagonal of a key, in pixels. A diamond reads at this size and crowds beyond it. */
 const KEY_REACH = 4
@@ -49,7 +51,13 @@ type Palette = {
   blockFont: string
   playhead: string
   muted: string
+  text: string
+  font: string
 }
+
+/** The name inside a bar, at the size the ruler labels use — the smallest the scale carries. */
+const BAR_SIZE = '10px'
+const BAR_FAMILY = 'system-ui, sans-serif'
 
 const readPalette = memoPalette((): Palette => ({
   ruler: rootColour('--color-chassis'),
@@ -66,6 +74,8 @@ const readPalette = memoPalette((): Palette => ({
   blockFont: rootFont('--text-tiny', BLOCK_SIZE, BLOCK_FAMILY),
   playhead: rootColour('--color-accent'),
   muted: rootColour('--color-muted'),
+  text: rootColour('--color-text'),
+  font: rootFont('--text-mini', BAR_SIZE, BAR_FAMILY),
 }))
 
 export type AnimationPaint = {
@@ -74,7 +84,10 @@ export type AnimationPaint = {
   fps: number
   duration: Us
   playhead: Us
-  /** The keys under a selection, as `<rowId>@<time>`, so a channel and its subject agree. */
+  /**
+   * What the band holds picked. Keys read as `<rowId>@<time>`, so a channel and its subject
+   * agree; a shot is its own id, which `keyParts` answers nothing for.
+   */
   selected: ReadonlySet<string>
   /** The block shown as chosen, by its own id. */
   picked?: string | null
@@ -192,6 +205,12 @@ function paintRows(
       continue
     }
 
+    // The bars first, the diamonds over them: a camera on air is a run of shots AND a subject
+    // whose lens can be keyed, and its line has to show both — folding it away loses neither.
+    if (row.kind === 'subject' && row.bars) {
+      for (const bar of row.bars) paintShot(context, bar, top, row.height, paint)
+    }
+
     const middle = top + row.height / 2
     const reach = reachOf(row)
 
@@ -238,6 +257,43 @@ function paintBlock(
   context.textBaseline = 'middle'
   context.fillText(block.name, left + BLOCK_LABEL_PAD, box.top + box.height / 2)
   context.restore()
+}
+
+/**
+ * What the montage draws a clip from, filled in from a shot. Everything a montage carries and a
+ * shot has no notion of reads as nothing: no fade, no gain, no pair to travel with.
+ */
+function clipOfShot(shot: CameraShot): Clip {
+  return {
+    id: shot.id,
+    assetId: '',
+    start: shot.start,
+    duration: shot.duration,
+    inPoint: 0,
+    speed: 1,
+    fadeIn: 0,
+    fadeOut: 0,
+    gain: 0,
+  }
+}
+
+/** A shot, painted BY the montage: same fill, same name, same grips, same everything. */
+function paintShot(
+  context: CanvasRenderingContext2D,
+  bar: ShotBar,
+  top: number,
+  height: number,
+  paint: AnimationPaint,
+): void {
+  paintClipOn(
+    context,
+    clipOfShot(bar.shot),
+    bar.name,
+    paint.viewport,
+    top,
+    height,
+    paint.selected.has(bar.shot.id),
+  )
 }
 
 function paintHead(

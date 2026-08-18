@@ -1,4 +1,38 @@
+import { STUDIO_METADATA_KEY } from './document'
 import { isRecord } from '../guards'
+
+/**
+ * What the studio holds that the standard has no field for, under `STUDIO_METADATA_KEY` in the
+ * `extras` of the SCENE — not of the document. A scene's extras are what three carries in
+ * `Scene.userData`, so they survive a trip through a loader and an exporter.
+ */
+export const GLTF_SCENE_STATE = 'scene'
+
+/** A glTF 2.0 document, told from the studio's own envelope under the same extension. */
+export function isGltfDocument(value: unknown): value is Record<string, unknown> {
+  const asset = isRecord(value) ? value.asset : null
+  return isRecord(asset) && typeof asset.version === 'string'
+}
+
+/**
+ * Which scene a document opens on. Asked here rather than answered where it is needed: the studio
+ * data is read off one scene and the title is stamped onto another the day two answers disagree.
+ */
+export function defaultSceneIndex(document: unknown): number {
+  const at = isRecord(document) ? document.scene : undefined
+  return typeof at === 'number' ? at : 0
+}
+
+/** What rides under the studio's own domain, on the default scene, or nothing. */
+export function gltfStudioMetadata(value: unknown): Record<string, unknown> {
+  if (!isRecord(value)) return {}
+
+  const scenes = value.scenes
+  const scene = Array.isArray(scenes) ? scenes[defaultSceneIndex(value)] : undefined
+  const extras = isRecord(scene) ? scene.extras : undefined
+  const studio = isRecord(extras) ? extras[STUDIO_METADATA_KEY] : undefined
+  return isRecord(studio) ? studio : {}
+}
 
 /**
  * Which textures a glTF material definition asks to wear.

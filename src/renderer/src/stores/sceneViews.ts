@@ -18,10 +18,22 @@ export type SceneView = {
   poseMode: boolean
   /** The bone the pose mode picked, which the gizmo holds. Never a node — see `TrackTarget`. */
   pickedBone: { nodeId: string; bone: string } | null
+  /** The control point of a rail the gizmo holds. Never a node either — see `PathDescriptor`. */
+  pickedPathPoint: { nodeId: string; index: number } | null
   /** Four views instead of one — top, front, left, and the one being flown. */
   quad: boolean
   /** Whether the wireframe drops its triangulation diagonals. Never real quads — see the engine. */
   quadEdges: boolean
+  /**
+   * How big the camera preview is drawn. It opens by itself on a camera being selected and
+   * closes with that selection, so there is no third value: what it shows is never a question.
+   */
+  previewSize: 'inset' | 'full'
+  /**
+   * How far the preview has been dragged from the corner it opens in, in CSS pixels. Session
+   * state like the rest: where somebody pushed a window aside to see under it is not the scene.
+   */
+  previewOffset: { x: number; y: number }
   /** What each of the four views shows. Only a free one turns — see `PaneView`. */
   panes: readonly PaneView[]
   /** Where the animation head stands, in microseconds. Never in the document — see `AnimationTimeline`. */
@@ -59,8 +71,11 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   skeletons: false,
   poseMode: false,
   pickedBone: null,
+  pickedPathPoint: null,
   quad: false,
   quadEdges: false,
+  previewSize: 'inset',
+  previewOffset: { x: 0, y: 0 },
   panes: DEFAULT_PANE_VIEWS,
   playhead: 0,
   playing: false,
@@ -83,8 +98,11 @@ export type SceneViewsState = {
   setSkeletons: (documentId: string, skeletons: boolean) => void
   setPoseMode: (documentId: string, poseMode: boolean) => void
   setPickedBone: (documentId: string, pickedBone: SceneView['pickedBone']) => void
+  setPickedPathPoint: (documentId: string, pickedPathPoint: SceneView['pickedPathPoint']) => void
   setQuad: (documentId: string, quad: boolean) => void
   setQuadEdges: (documentId: string, quadEdges: boolean) => void
+  setPreviewSize: (documentId: string, previewSize: SceneView['previewSize']) => void
+  setPreviewOffset: (documentId: string, previewOffset: SceneView['previewOffset']) => void
   setPaneView: (documentId: string, pane: number, view: PaneView) => void
   setPlayhead: (documentId: string, playhead: Us) => void
   setPlaying: (documentId: string, playing: boolean) => void
@@ -127,6 +145,14 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), pickedBone } },
     })),
 
+  setPickedPathPoint: (documentId, pickedPathPoint) =>
+    set(state => ({
+      views: {
+        ...state.views,
+        [documentId]: { ...sceneViewOf(state, documentId), pickedPathPoint },
+      },
+    })),
+
   setQuad: (documentId, quad) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), quad } },
@@ -135,6 +161,16 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setQuadEdges: (documentId, quadEdges) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), quadEdges } },
+    })),
+
+  setPreviewSize: (documentId, previewSize) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), previewSize } },
+    })),
+
+  setPreviewOffset: (documentId, previewOffset) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), previewOffset } },
     })),
 
   setPaneView: (documentId, pane, view) =>

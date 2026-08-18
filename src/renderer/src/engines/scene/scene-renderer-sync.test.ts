@@ -1,8 +1,22 @@
-import { BufferGeometry, Group, Material, Mesh, Object3D } from 'three'
+import {
+  BufferGeometry,
+  CameraHelper,
+  Group,
+  Material,
+  Mesh,
+  Object3D,
+  PerspectiveCamera,
+} from 'three'
 import { beforeEach, describe, expect, it, vi, type Mock, type MockInstance } from 'vitest'
 import { nodeIdOf, SceneRenderer } from './SceneRenderer'
 import type { ModelSource } from './modelCache'
-import { directionalLight, meshNode, modelNodeFixture, spriteNodeFixture } from './scene-fixtures'
+import {
+  cameraNodeFixture,
+  directionalLight,
+  meshNode,
+  modelNodeFixture,
+  spriteNodeFixture,
+} from './scene-fixtures'
 import { EMPTY_SCENE, type SceneNode, type SceneState } from './sceneState'
 
 /**
@@ -266,6 +280,33 @@ describe('a scene told what changed', () => {
       expect(one?.selected).toBeGreaterThan(0)
       expect(one?.selected).toBeLessThan(one?.scene ?? 0)
 
+      renderer.dispose()
+    })
+
+    /**
+     * The one three.js gets to decide for us: `CameraHelper` sets `this.matrix` to the camera's
+     * own world matrix and turns `matrixAutoUpdate` off, so it places ITSELF on the camera. Made
+     * a child of that camera, the placement applied twice — a camera at (0, 2, 6) drew its
+     * outline at (0, 4, 12), and nothing in the suite could see it: the engine's own maps were
+     * right, only the graph was wrong. Seen on screen first, which is why this reads the GRAPH.
+     */
+    it('hangs a camera frustum in the scene, never under the camera it outlines', () => {
+      // Watched on the prototype, like the freeing above: the graph is the engine's own, and what
+      // this has to catch is a helper handed to the camera rather than to the scene.
+      const added = vi.spyOn(PerspectiveCamera.prototype, 'add')
+      const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+      const camera = cameraNodeFixture('cam-1')
+      camera.transform = { ...camera.transform, position: { x: 0, y: 2, z: 6 } }
+
+      renderer.apply({ ...EMPTY_SCENE, nodes: [camera] })
+
+      const hung = added.mock.calls.flat()
+      expect(hung.some(child => child instanceof CameraHelper)).toBe(false)
+      // The body IS hung under it, and by the same call: the two are told apart here so a fix
+      // that took both off screen would not read as a pass.
+      expect(hung).not.toHaveLength(0)
+
+      added.mockRestore()
       renderer.dispose()
     })
 

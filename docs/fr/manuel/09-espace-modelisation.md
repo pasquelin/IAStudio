@@ -188,7 +188,7 @@ Un *sprite* n’est pas une maille : c’est une image plate qui se tourne toujo
 que soit l’angle de la vue. C’est ce qu’on emploie pour une étincelle, une lueur, un repère, une
 étiquette au-dessus d’un objet — tout ce qui doit rester lisible d’où qu’on regarde.
 
-**Ajouter ▸ Sprite** en pose un à l’origine. Il arrive sans image : choisissez-la dans
+**Ajouter ▸ Objet ▸ Sprite** en pose un à l’origine. Il arrive sans image : choisissez-la dans
 l’Inspecteur, section **Sprite**, parmi les images du projet — les mêmes que celles qu’une
 matière accepte en texture.
 
@@ -217,6 +217,28 @@ Quatre choses à savoir :
   lui montre donc aucune section Ombres.
 - **Il n’est pas éclairé.** Sa couleur est celle qu’on lui donne, pas celle que les lumières de la
   scène en font.
+
+### Le chemin — le rail d’une caméra
+
+Un *chemin* est une courbe posée dans la scène. Il ne se voit pas dans une image rendue : c’est
+un rail, le long duquel une caméra peut courir pendant un plan.
+
+**Ajouter ▸ Objet ▸ Chemin** en pose un à l’origine, avec deux points. Ses **poignées** — une
+bille par point — n’apparaissent que lorsqu’on travaille dessus : chemin sélectionné, ou caméra
+sélectionnée qui l’emprunte pendant un plan. Elles gardent leur taille à l’écran, où que soit la
+vue.
+
+Trois gestes, dans la scène :
+
+| Geste | Ce qu’il fait |
+|---|---|
+| **Cliquer une poignée**, chemin sélectionné | la choisit : les flèches de déplacement s’y accrochent, et on la déplace comme un objet |
+| **⌥ + clic sur la courbe** | pose un nouveau point dans la portion cliquée, et le choisit aussitôt |
+| **Suppr**, ou clic droit sur une poignée | retire le point choisi. Un chemin garde toujours ses deux derniers points |
+
+L’Inspecteur, section **Emplacement**, règle la **Tension** — de l’angle vif à la courbe ronde —
+et **Fermé**, qui referme la boucle sur le premier point. Le **+** de la ligne **Points** ajoute
+un point au bout, sans viser dans la vue.
 
 ### Les lumières disponibles
 
@@ -567,6 +589,13 @@ est dans la scène, pas là où il est dans son groupe.
 `⌘S` / `Ctrl+S` écrit la scène dans le projet, sous `documents/`.
 
 **Les scènes 3D savent s’enregistrer**, comme les six autres types de documents.
+
+**Le fichier écrit est un `.gltf`, et c’est un vrai glTF** : un autre logiciel l’ouvre et y trouve
+l’arbre de la scène, le nom et la place de chaque objet, les caméras et les lumières
+directionnelles, ponctuelles et coniques. Ce que le standard ne porte pas — la forme des
+primitives, les matières, les rails, les plans de caméra, l’animation — voyage dans le même
+fichier mais **n’est lu que par Scenario**. Rien ne se perd d’un enregistrement à l’autre ; ce qui
+s’ouvre ailleurs est plus pauvre que ce que vous voyez ici.
 
 Un onglet dont le travail n’est pas encore écrit porte **un point** (`•`) à côté de son nom. Le
 point disparaît à l’enregistrement et revient à la modification suivante.

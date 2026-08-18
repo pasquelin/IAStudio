@@ -7,8 +7,14 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent,
 } from 'react'
-import { snapToFrame, type Us } from '@shared/domain/time'
-import { moveAnimationKey, unkeySubject } from '@/engines/scene/animationCommands'
+import { frameDuration, snapToFrame, type Us } from '@shared/domain/time'
+import {
+  editCameraShot,
+  moveAnimationKey,
+  removeCameraShot,
+  unkeySubject,
+} from '@/engines/scene/animationCommands'
+import { draggedShot } from '@/engines/scene/cameraShots'
 import { embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
 import { newId } from '@/helpers/ids'
@@ -63,6 +69,7 @@ type Grab =
   | { kind: 'key'; rowId: string; trackIds: readonly string[]; from: Us; at: Us }
   | ({ kind: 'block'; grabbedAt: Us } & BlockRef)
   | ({ kind: 'blockEdge'; edge: ClipEdge } & BlockRef)
+  | { kind: 'shot'; shotId: string; edge: 'start' | 'end' | null; grabbedAt: Us }
 
 /**
  * Rewrites one lane of one model, and banks nothing when the edit is refused: `runCommand` takes
@@ -116,14 +123,18 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   // zustand a new snapshot on every render and the subscription would never settle.
   const selected = useMemo(() => keySetOf(view.selected), [view.selected])
 
-  const latest = useRef({
+  // Everything the paint reads, gathered once: the ref and the effect below hand over the very
+  // same object, so a field gained here is not a field to remember in two other places.
+  const snapshot = {
     rows,
     viewport: view.viewport,
     timeline,
     playhead,
     selected,
     picked: view.pickedBlock,
-  })
+  }
+
+  const latest = useRef(snapshot)
   const size = useRef<Size>({ width: 0, height: 0 })
 
   const paint = useCallback((): void => {
@@ -148,16 +159,9 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   }, [])
 
   useEffect(() => {
-    latest.current = {
-      rows,
-      viewport: view.viewport,
-      timeline,
-      playhead,
-      selected,
-      picked: view.pickedBlock,
-    }
+    latest.current = snapshot
     paint()
-  }, [rows, view.viewport, timeline, playhead, selected, view.pickedBlock, paint])
+  })
 
   useRepaintOnResize(canvasRef, paint)
 
@@ -191,6 +195,15 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     if (event.key !== 'Delete' && event.key !== 'Backspace') return
 
     const current = latest.current
+    // A shot answers to its own id in the same set the keys use, so what is picked is read once.
+    const shot = current.timeline.shots.find(held => current.selected.has(held.id))
+    if (shot) {
+      event.preventDefault()
+      useScenes.getState().runCommand(documentId, removeCameraShot(shot.id))
+      useAnimationViews.getState().setSelected(documentId, [])
+      return
+    }
+
     const picked = [...current.selected]
     if (picked.length === 0) return
 
@@ -271,6 +284,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>): void => {
     const hit = hitAt(event)
+
     if (!hit) {
       useAnimationViews.getState().setSelected(documentId, [])
       return
@@ -302,6 +316,18 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       return
     }
 
+    if (hit.kind === 'shot') {
+      grabbed.current = {
+        kind: 'shot',
+        shotId: hit.shotId,
+        edge: hit.edge,
+        grabbedAt: hit.grabbedAt,
+      }
+      useScenes.getState().beginGesture(documentId)
+      useAnimationViews.getState().setSelected(documentId, [hit.shotId])
+      return
+    }
+
     const row = latest.current.rows.find(candidate => candidate.id === hit.rowId)
     if (!row) return
 
@@ -316,6 +342,8 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
 
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>): void => {
     const grab = grabbed.current
+    // What the pointer promises before it presses, as the montage does over a clip's edge: a
+    // bar that can be trimmed and never says so is a bar nobody tries to trim.
     if (!grab) {
       event.currentTarget.style.cursor = animationCursorAt(hitContext(), pointIn(event))
       return
@@ -352,6 +380,15 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       return
     }
 
+    if (grab.kind === 'shot') {
+      const shot = current.timeline.shots.find(held => held.id === grab.shotId)
+      const bounds = shot ? draggedShot(shot, grab, at, frameDuration(current.timeline.fps)) : null
+      // Written straight through, like a block: the bar IS the preview, and the run collapses
+      // into one entry because a gesture was opened on the press.
+      if (bounds) useScenes.getState().runCommand(documentId, editCameraShot(grab.shotId, bounds))
+      return
+    }
+
     // The preview follows the pointer; the command is written once, on release — a drag must
     // cost one entry in the history, not one per pixel.
     grabbed.current = { ...grab, at: clampPlayhead(at, current.timeline.duration) }
@@ -371,7 +408,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       event.currentTarget.releasePointerCapture(event.pointerId)
     }
 
-    if (grab.kind === 'block' || grab.kind === 'blockEdge') {
+    if (grab.kind === 'block' || grab.kind === 'blockEdge' || grab.kind === 'shot') {
       useScenes.getState().endGesture(documentId)
       return
     }
@@ -404,6 +441,8 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       onDrop={onDrop}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
+      // Or a pointer that leaves mid-hover writes the resize cursor on the element for good.
+      onPointerLeave={event => (event.currentTarget.style.cursor = '')}
       onPointerUp={closeGesture}
       onPointerCancel={closeGesture}
       onLostPointerCapture={closeGesture}

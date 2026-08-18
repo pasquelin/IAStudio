@@ -10,6 +10,7 @@ import {
   deltaOf,
   contributionAt,
   drivenNodes,
+  fovAt,
   playsThrough,
   poseAt,
   valueAt,
@@ -21,6 +22,45 @@ const vec = (x: number, y = 0, z = 0) => ({ x, y, z })
 
 const track = animationTrack
 const timelineOf = (tracks: AnimationTrack[]): AnimationTimeline => timelineWith(tracks)
+
+describe('the lens a fov channel drives', () => {
+  const lens = (keys: { time: number; value: { x: number; y: number; z: number } }[]) =>
+    track('lens', 'fov', keys)
+
+  it('adds up the degrees its channels hold, and interpolates between two keys', () => {
+    const timeline = timelineOf([
+      lens([
+        { time: 0, value: vec(0) },
+        { time: 2 * SECOND, value: vec(20) },
+      ]),
+    ])
+
+    expect(fovAt(timeline, 'cube', 0)).toBe(0)
+    expect(fovAt(timeline, 'cube', 1 * SECOND)).toBeCloseTo(10, 5)
+    expect(fovAt(timeline, 'cube', 2 * SECOND)).toBe(20)
+  })
+
+  // `null` rather than zero: the renderer leaves a lens alone rather than writing back what it
+  // already holds, so a camera nobody animates keeps exactly what its descriptor says.
+  it('answers nothing at all where no channel drives one', () => {
+    expect(fovAt(timelineOf([track('p', 'position', [])]), 'cube', 0)).toBeNull()
+  })
+
+  it('is left out of the pose, so a lens never turns the camera it belongs to', () => {
+    const timeline = timelineOf([lens([{ time: 0, value: vec(35) }])])
+
+    expect(contributionAt(timeline, 'cube', 0)).toEqual({
+      position: ZERO,
+      rotation: ZERO,
+      scale: ONE,
+    })
+  })
+
+  it('goes quiet when its channel is muted, like every other track', () => {
+    const timeline = timelineOf([{ ...lens([{ time: 0, value: vec(35) }]), muted: true }])
+    expect(fovAt(timeline, 'cube', 0)).toBeNull()
+  })
+})
 
 describe('where a track stands', () => {
   it('answers its neutral while it holds no key at all', () => {

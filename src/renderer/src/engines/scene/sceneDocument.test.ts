@@ -7,6 +7,7 @@ import {
   lightNodeFixture as light,
   meshNode as mesh,
   modelNodeFixture,
+  pathNodeFixture,
   spriteNodeFixture,
   textNodeFixture,
 } from './scene-fixtures'
@@ -353,6 +354,25 @@ describe('sceneFromPayload', () => {
     })
   })
 
+  // Every new kind of node is tested by a round trip through what a file holds — the trap this
+  // loader has fallen into twice, for groups and then for sprites.
+  it('carries a rail, its points and its shape through a round trip', () => {
+    const rail = pathNodeFixture('rail')
+
+    expect(reread({ ...EMPTY_SCENE, nodes: [rail] }).nodes).toEqual([rail])
+  })
+
+  it('drops a rail of fewer than two points, and keeps the scene around it', () => {
+    const rail = pathNodeFixture('rail')
+    const nodes: unknown[] = [
+      mesh('a'),
+      { ...rail, path: { ...rail.path, points: [{ x: 0, y: 0, z: 0 }] } },
+      { ...rail, id: 'nowhere', path: { ...rail.path, points: 'somewhere' } },
+    ]
+
+    expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
+  })
+
   // A family this machine has not got is kept as written: the document said what it meant, and
   // rewriting it here would lose the author's choice on every open.
   it('keeps a system face nobody here has, rather than rewriting the document', () => {
@@ -621,6 +641,65 @@ describe('the timeline a file holds', () => {
     })
 
     expect(timeline.tracks[0]?.target).toMatchObject({ bone: 'spine' })
+  })
+
+  it('reads the shots back whole, and gives none to a file written before they existed', () => {
+    const shot = { id: 'shot-1', cameraId: 'cam-a', start: 0, duration: 5 }
+
+    expect(read({ tracks: [], shots: [shot] }).shots).toEqual([shot])
+    expect(read({ tracks: [trackPayload] }).shots).toEqual([])
+  })
+
+  /**
+   * `layer` is gone from the shot: the list's own order is what settles an overlap now. A file
+   * written while the number existed is sorted by it ONCE, here — highest first, equal layers by
+   * start, which is exactly the law those numbers used to spell — and comes back without it.
+   */
+  it('sorts a file written with layers by them, once, and drops the number', () => {
+    const held = (id: string, layer: number, start: number) => ({
+      id,
+      cameraId: `cam-${id}`,
+      layer,
+      start,
+      duration: 5,
+    })
+
+    const shots = read({
+      tracks: [],
+      shots: [held('low', 0, 0), held('high', 4, 0), held('mid', 2, 0)],
+    }).shots
+
+    expect(shots.map(shot => shot.id)).toEqual(['high', 'mid', 'low'])
+    expect(shots[0]).not.toHaveProperty('layer')
+  })
+
+  // The stack a user arranged IS the order of this list now, so a read that re-sorted it would
+  // undo that arrangement every time the document was opened.
+  it('leaves the order of a file written without layers exactly as it stands', () => {
+    const held = (id: string, start: number) => ({
+      id,
+      cameraId: `cam-${id}`,
+      start,
+      duration: 5,
+    })
+
+    const shots = read({ tracks: [], shots: [held('late', 9), held('early', 0)] }).shots
+    expect(shots.map(shot => shot.id)).toEqual(['late', 'early'])
+  })
+
+  // A shot of no length covers no instant, so it can only ever be a hole in the band.
+  it('drops a shot of no length, and one naming no camera, rather than the band around it', () => {
+    const shot = { id: 'shot-1', cameraId: 'cam-a', layer: 0, start: 0, duration: 5 }
+    const timeline = read({
+      tracks: [],
+      shots: [
+        { ...shot, id: 'empty', duration: 0 },
+        { ...shot, id: 'nameless', cameraId: '' },
+        shot,
+      ],
+    })
+
+    expect(timeline.shots.map(kept => kept.id)).toEqual(['shot-1'])
   })
 
   it('refuses a bone that is not a name', () => {

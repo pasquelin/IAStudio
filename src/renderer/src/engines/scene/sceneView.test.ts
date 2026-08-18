@@ -7,6 +7,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   Object3D,
+  PerspectiveCamera,
   Raycaster,
 } from 'three'
 import { Vector3 } from 'three'
@@ -23,7 +24,10 @@ import {
   viewPosition,
   framingDistance,
   framingPlacement,
+  plainVector,
+  transformFromPlacement,
 } from './sceneView'
+import { IDENTITY_TRANSFORM } from './sceneState'
 import {
   DISPLAY_MODES,
   VIEW_DIRECTIONS,
@@ -32,6 +36,53 @@ import {
 } from '@shared/domain/scene'
 
 const ORIGIN = new Vector3(0, 0, 0)
+
+describe('transformFromPlacement', () => {
+  const rest = { ...IDENTITY_TRANSFORM, scale: { x: 2, y: 2, z: 2 } }
+
+  it('stands the node where the view stands', () => {
+    const placed = transformFromPlacement(
+      { position: { x: 1, y: 2, z: 3 }, target: { x: 0, y: 0, z: 0 } },
+      rest,
+    )
+
+    expect(placed.position).toEqual({ x: 1, y: 2, z: 3 })
+  })
+
+  /**
+   * Asserted on the DIRECTION the camera ends up looking in, never on an angle: `lookAt` points
+   * +Z at the target for a plain object and −Z for a camera, and both give a rotation whose `y`
+   * reads as a quarter turn. Only the direction tells the two apart — the object form aims the
+   * camera exactly backwards.
+   */
+  it('turns it to look at what the view was looking at', () => {
+    const watched = new Vector3(0, 0, 0)
+
+    for (const from of [new Vector3(0, 0, 5), new Vector3(5, 0, 0), new Vector3(3, 4, 5)]) {
+      const placed = transformFromPlacement(
+        { position: plainVector(from), target: plainVector(watched) },
+        rest,
+      )
+
+      const camera = new PerspectiveCamera()
+      camera.position.copy(from)
+      camera.rotation.set(placed.rotation.x, placed.rotation.y, placed.rotation.z)
+
+      const forward = camera.getWorldDirection(new Vector3())
+      const wanted = watched.clone().sub(from).normalize()
+      expect(forward.dot(wanted)).toBeCloseTo(1, 6)
+    }
+  })
+
+  it('leaves the scale the node stood at, since aiming a camera never resizes it', () => {
+    const placed = transformFromPlacement(
+      { position: { x: 1, y: 1, z: 1 }, target: { x: 0, y: 0, z: 0 } },
+      rest,
+    )
+
+    expect(placed.scale).toEqual(rest.scale)
+  })
+})
 
 describe('viewPosition', () => {
   it('stands on the axis the side names, at the distance it was given', () => {

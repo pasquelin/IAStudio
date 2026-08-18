@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { reconcileOrder } from './order'
+import { movedWithin, reconcileOrder } from './order'
 
 const REGISTRY = ['a', 'b', 'c', 'd']
 const identity = (id: string): string => id
@@ -40,5 +40,26 @@ describe('reconcileOrder', () => {
       { id: 'a', hidden: false },
       { id: 'b', hidden: true },
     ])
+  })
+})
+
+describe('movedWithin', () => {
+  it('moves one entry and leaves the others in place', () => {
+    expect(movedWithin(['a', 'b', 'c'], 'c', -1)).toEqual(['a', 'c', 'b'])
+    expect(movedWithin(['a', 'b', 'c'], 'a', 2)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('stops at the ends rather than wrapping, so a line dragged up has arrived', () => {
+    expect(movedWithin(['a', 'b', 'c'], 'a', -3)).toEqual(['a', 'b', 'c'])
+    expect(movedWithin(['a', 'b', 'c'], 'c', 5)).toEqual(['a', 'b', 'c'])
+  })
+
+  // What tells a caller "already at that end" from "it travelled" — the grip banks a step on the
+  // answer, and a fresh array would say it moved every time.
+  it('hands the same array back when nothing moved, and for an entry it does not hold', () => {
+    const ids = ['a', 'b', 'c']
+
+    expect(movedWithin(ids, 'a', -1)).toBe(ids)
+    expect(movedWithin(ids, 'gone', 1)).toBe(ids)
   })
 })

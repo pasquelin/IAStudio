@@ -165,14 +165,72 @@ export async function pooledHeads<T>(
 }
 
 /**
+ * Where the head of a document is READ, which is not always the document itself: a folder
+ * document keeps its envelope in a manifest inside it.
+ *
+ * One spelling, because the cache is keyed on it: three of the four places that drop an entry
+ * used the folder's own path, a key never written, so a renamed `.ora` was answered for out of
+ * the map on any clock too coarse to tell two writes apart.
+ */
+function headFileOf(file: string, kind: DocumentKind | undefined): string {
+  return kind && FOLDER_KINDS.has(kind) ? join(file, DOCUMENT_MANIFEST) : file
+}
+
+type CachedHead = { mtimeMs: number; size: number; envelope: DocumentEnvelope }
+
+/** Heads already read, by absolute path — see `headFileOf` for what that path is. */
+const heads = new Map<string, CachedHead>()
+
+/**
+ * How many are kept. Beyond it the OLDEST goes, one at a time: emptying the map instead put a
+ * cliff at this many documents — a single walk cleared it several times mid-walk, and every file
+ * then paid a `stat` on top of the read it was already paying.
+ */
+const HEAD_CACHE_LIMIT = 4_096
+
+/**
  * What a listing needs of a file, read the cheapest way the format allows — a project of heavy
  * scenes would otherwise be read whole every time it is opened.
+ *
+ * "Cheapest" is not cheap for a scene: a glTF carries no head of ours to read short, so one is
+ * read and parsed WHOLE — 10,1 ms at 5 000 nodes and 31,3 at 15 000, measured 18/08 by the bench
+ * beside this. And `locate` verifies through `descriptorOf`, so one save pays it on top of its
+ * own write, which takes a 14 ms save past the 16 ms a frame has. Kept, the same ask costs
+ * 0,011 ms whatever the size — that number IS the `stat`.
+ *
+ * Hence the cache, and what it is keyed on: a `stat` says nothing moved, and nothing is opened
+ * at all. Measured on this disk, `mtimeMs` carries sub-millisecond decimals and two writes of
+ * the SAME size a fraction of a millisecond apart are told apart — but a coarser clock would not,
+ * which is why what the studio writes is dropped from here by hand as well.
  *
  * Exported for the bench beside it rather than for callers — like `pooledHeads`, and for the same
  * reason: timing a copy of it would time something else.
  */
 export async function headOf(file: string): Promise<DocumentEnvelope> {
-  return await bodyFormatOf(extensionOf(basename(file))).readHead(file)
+  const stamp = await stat(file).catch(() => null)
+  const held = stamp ? heads.get(file) : undefined
+  if (held && stamp && held.mtimeMs === stamp.mtimeMs && held.size === stamp.size) {
+    return held.envelope
+  }
+
+  const envelope = await bodyFormatOf(extensionOf(basename(file))).readHead(file)
+
+  if (stamp) {
+    // A Map keeps its insertion order, so the first key is the one read longest ago.
+    if (heads.size >= HEAD_CACHE_LIMIT) heads.delete(heads.keys().next().value ?? '')
+    heads.set(file, { mtimeMs: stamp.mtimeMs, size: stamp.size, envelope })
+  }
+  return envelope
+}
+
+/** What the studio just wrote, moved or removed. A path it no longer holds is one to read again. */
+function forgetHead(file: string): void {
+  heads.delete(file)
+}
+
+/** Every head forgotten. For the bench beside this, which times the READ and not the `stat`. */
+export function forgetHeads(): void {
+  heads.clear()
 }
 
 /**
@@ -321,6 +379,7 @@ export function createDocumentFiles({
       // Durability across a power cut would want `fsync`; it has none.
       const body = bodyFormatOf(extensionOf(basename(file))).write(document)
       await writeAtomic(file, body, { staging: copy })
+      forgetHead(file)
     } finally {
       staging.delete(basename(copy))
     }
@@ -369,6 +428,7 @@ export function createDocumentFiles({
         if (held) await rename(stepped, folder)
         throw error
       }
+      forgetHead(headFileOf(folder, document.kind))
       // Swallowed for the opposite reason to the one below: the swap has landed, the document
       // IS saved, and refusing the save because the previous copy would not go away would leave
       // the tab marked dirty over a folder nothing reads.
@@ -422,10 +482,7 @@ export function createDocumentFiles({
 
     try {
       const file = absoluteOf(path)
-      const first = claimed[0]
-      const envelope = await headOf(
-        first && FOLDER_KINDS.has(first) ? join(file, DOCUMENT_MANIFEST) : file,
-      )
+      const envelope = await headOf(headFileOf(file, claimed[0]))
       // The file says which kind it is, BOUNDED by what its extension could name: a container
       // serving two editors cannot be told apart by its name, and trusting the head outright
       // would send a `.gltf` whose envelope reads `texture` to the material editor.
@@ -721,6 +778,10 @@ export function createDocumentFiles({
 
           await rename(from, to)
         }
+        // Both ends: what was read under the old name is gone, and the new one holds a head
+        // nothing has read yet.
+        forgetHead(headFileOf(from, kind))
+        forgetHead(headFileOf(to, kind))
         index.set(keyOf(id, kind), path)
         // The envelope was just rewritten and the file just moved, both by the studio. Without
         // this, the next ⌘S would read a time it does not recognise and accuse the user of
@@ -746,6 +807,7 @@ export function createDocumentFiles({
         const sitting = await descriptorOf(relativeOf(file))
         if (!sitting || (sitting.id === id && sitting.kind === kind)) {
           await rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) })
+          forgetHead(headFileOf(file, kind))
         }
         index.delete(keyOf(id, kind))
         seen.delete(stampKey(id, kind))

@@ -1,22 +1,29 @@
 import { mkdir, mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { deserialize, serialize } from 'node:v8'
 import { afterAll, bench, describe } from 'vitest'
-import { DOCUMENT_VERSION, EXTENSIONS_BY_KIND, type DocumentFile } from '@shared/domain/document'
+import {
+  DOCUMENT_VERSION,
+  EXTENSIONS_BY_KIND,
+  STUDIO_METADATA_KEY,
+  type DocumentFile,
+} from '@shared/domain/document'
+import { GLTF_SCENE_STATE } from '@shared/domain/gltf'
 // The production read and the production pool, not copies of them: this bench measures the exact
 // syscall shape `list()` takes, and a second implementation beside it would drift from the one
 // being measured. It did — `headOf` was copied here without its envelope parse, so the pool was
 // timed against a lighter read than the one it runs.
-import { headOf, pooledHeads } from './documents'
+import { forgetHeads, headOf, pooledHeads } from './documents'
 import { bodyFormatOf } from './documentBody'
 
 /**
  * What one save and one open cost the main process.
  *
- * One cost per save now, not two: the content arrives already serialized, so all the main
- * thread does is decode the structured clone `ipcMain` hands it and concatenate two strings.
- * The `JSON.stringify` of the document itself happens in the window that owns it.
+ * The scene stopped being free the day it became glTF: writing one PARSES the whole body and
+ * writes it back indented, to stamp the title into the field a reader shows. Measured 18/08 —
+ * 19 ms at 5 000 nodes and 190 ms at 50 000, against 9 and 88 for the envelope it replaced. The
+ * montage pays the same price for the same reason, on a body an order of magnitude smaller.
  *
  * The comparison is the point of keeping this: `stringify` of the whole file is measured beside
  * it, and it is what the main thread used to pay per save. A main thread busy for more than
@@ -57,8 +64,21 @@ function sceneOf(count: number): DocumentFile {
     kind: 'scene',
     title: 'Bench',
     updatedAt: '2026-08-07T10:00:00.000Z',
-    // Already a string when it crosses the boundary — that is the whole point of the format.
-    content: JSON.stringify({ nodes }),
+    // The spelling the window actually sends since the scene became glTF, and the reason this
+    // bench is worth rerunning: writing one PARSES it, to stamp the title into the standard.
+    // Written out rather than imported — `gltfDocumentOf` lives in the window, which this side
+    // of the boundary cannot reach.
+    content: JSON.stringify({
+      asset: { version: '2.0', generator: 'Bench' },
+      scene: 0,
+      scenes: [
+        {
+          nodes: nodes.map((_unused, index) => index),
+          extras: { [STUDIO_METADATA_KEY]: { [GLTF_SCENE_STATE]: { nodes } } },
+        },
+      ],
+      nodes: nodes.map(node => ({ name: node.name })),
+    }),
   }
 }
 
@@ -107,13 +127,13 @@ describe('reading a document: the whole main-thread cost of one open', () => {
  * Written on a temporary folder rather than mocked: what is being compared is syscall shape, and
  * a mock would compare nothing.
  *
- * **Measured 2026-08-17** (macOS, APFS, Node 24): 117 ms one at a time, 35 ms over a pool of 16,
- * 19 ms when every head is cached. The pool alone is what `list()` does — a cache saving 16 ms
- * of the 35 does not pay for a map to keep in step, nor for the file rewritten within the same
- * millisecond at the same size that it would answer stale for.
+ * **Measured 2026-08-18** (macOS, APFS, Node 24): 151 ms one at a time, 55 ms over a pool of 16,
+ * 20 ms when every head is answered from the cache.
  *
- * Those three predate the import of the real `headOf` above, and the shape held when it landed —
- * the ratio moved by a few percent, not the conclusion. To be retaken on a quiet machine.
+ * **The conclusion once drawn from these three — that a cache does not pay — was wrong twice
+ * over.** It saves 35 ms of the 55 even here, and here is the CHEAP case: these files carry an
+ * enveloped head followed by four thousand `x`, where a scene the studio writes is a glTF whose
+ * head is the whole file parsed. The group below measures that one.
  */
 const DOCUMENT_COUNT = 2_000
 const FOLDER_COUNT = 200
@@ -169,13 +189,18 @@ describe('listing a project of 2 000 documents in 200 folders', () => {
     if (laid) await rm(await laid, { recursive: true, force: true })
   })
 
+  // Forgotten before each round, or the second sample onwards would time the `stat` `headOf`
+  // answers from — which is the third bench below, and would make these two measure it twice.
   bench('one head at a time', async () => {
     const found = await candidates()
+    forgetHeads()
     for (const file of found) await headOf(file)
   })
 
   bench(`${POOL} heads in flight`, async () => {
-    await pooledHeads(await candidates(), headOf)
+    const found = await candidates()
+    forgetHeads()
+    await pooledHeads(found, headOf)
   })
 
   // The cache as it would be: a `stat` says nothing moved, and the head is not opened at all.
@@ -183,6 +208,62 @@ describe('listing a project of 2 000 documents in 200 folders', () => {
   bench(`${POOL} heads in flight, all of them cached`, async () => {
     await pooledHeads(await candidates(), file => stat(file))
   })
+})
+
+/**
+ * The head of a scene the studio wrote, which is a COMPACT glTF — and there is nothing short to
+ * read in one. Its first line is the whole file, so `readHead` falls through to reading and
+ * parsing all of it, exactly as a montage does.
+ *
+ * Measured rather than deduced: the two comments beside this one say a scene is "kept from
+ * paying" that parse, and the three listing benches above lay down enveloped heads followed by
+ * four thousand `x` — a fixture that cannot show this at all.
+ *
+ * `locate` verifies through `descriptorOf`, so ONE save pays this on top of its own write.
+ */
+const HEAD_SIZES: readonly number[] = [50, 500, 5_000, 15_000]
+
+/** Laid down once, for the same reason `laid` is: `vitest bench` honours no `beforeAll`. */
+let scenes: Promise<Map<number, string>> | null = null
+
+async function laySceneFiles(): Promise<Map<number, string>> {
+  const root = await mkdtemp(join(tmpdir(), 'scenario-head-bench-'))
+  const written = new Map<number, string>()
+
+  for (const count of HEAD_SIZES) {
+    const file = join(root, `scene ${count}${EXTENSIONS_BY_KIND.scene}`)
+    await writeFile(file, SCENE.write(sceneOf(count)), 'utf8')
+    written.set(count, file)
+  }
+
+  return written
+}
+
+describe('reading the head of a scene: what one glTF costs a listing, and a save', () => {
+  afterAll(async () => {
+    const written = await scenes
+    const first = written ? [...written.values()][0] : null
+    if (first) await rm(dirname(first), { recursive: true, force: true })
+  })
+
+  for (const count of HEAD_SIZES) {
+    bench(`${count} nodes`, async () => {
+      const file = (await (scenes ??= laySceneFiles())).get(count)
+      if (file) await SCENE.readHead(file)
+    })
+  }
+
+  // The same head through `headOf`, which is what `locate` and the walk actually call: it keeps
+  // what it read against the file's modification time, so everything past the first ask is one
+  // `stat`. That first ask is in here too — it is one sample out of hundreds.
+  // Nothing forgotten here, deliberately: what this times is the SECOND ask and every one after,
+  // which is what `locate` does at each save once the file has been listed.
+  for (const count of HEAD_SIZES) {
+    bench(`${count} nodes, through headOf`, async () => {
+      const file = (await (scenes ??= laySceneFiles())).get(count)
+      if (file) await headOf(file)
+    })
+  }
 })
 
 const CLIP_COUNTS: readonly number[] = [50, 500, 5_000]
@@ -195,9 +276,9 @@ const CLIP_COUNTS: readonly number[] = [50, 500, 5_000]
  * A project of a few ordinary montages stays under the 16 ms a frame has; several of the largest
  * would not, and `list()` runs on the thread that owns every window.
  *
- * **And one gesture pays it more than once**: `locate` verifies through `descriptorOf`, so an
- * open costs two of these and a rename four. Cheap for an enveloped head, not for this — the fix
- * is `locate` answering with what it already read, and it is not written yet.
+ * **And one gesture used to pay it more than once**: `locate` verifies through `descriptorOf`,
+ * so an open cost two of these and a rename four. Since 18/08 `headOf` keeps what it read against
+ * the file's modification time, so only the first of them opens anything.
  */
 describe('reading a montage: the head that has to be the whole file', () => {
   for (const count of CLIP_COUNTS) {

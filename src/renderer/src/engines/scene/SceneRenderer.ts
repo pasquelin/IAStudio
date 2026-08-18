@@ -2,9 +2,11 @@ import {
   Box3,
   BufferGeometry,
   CameraHelper,
+  Color,
   type AnimationClip,
   DirectionalLight,
   GridHelper,
+  type Intersection,
   Light,
   LineBasicMaterial,
   Mesh,
@@ -27,10 +29,11 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
-import type { ExportFormat, Transform } from '@shared/domain/scene'
+import type { ExportFormat, LightDescriptor, Transform } from '@shared/domain/scene'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { SelectionMode } from '@/helpers/selection'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
+import { screenScale } from '../viewport/screenScale'
 import { createSkyBinding, type SkyBinding } from '../viewport/skyBinding'
 import {
   ViewportEngine,
@@ -38,6 +41,7 @@ import {
   type ViewportCamera,
   type ViewportOutput,
 } from '../viewport/ViewportEngine'
+import type { PaneRect } from '../viewport/panes'
 import {
   canReceiveShadow,
   type ModelNode,
@@ -48,13 +52,32 @@ import {
   type SpriteNode,
   type TextNode,
 } from './sceneState'
-import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './threeFactory'
+import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
+import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
+import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
+import { clampUnit, progressAt } from './cameraMotion'
+import { shotOfCameraAt } from './cameraShots'
 import {
+  buildPath,
+  cameraBody,
+  geometryFor,
+  helperFor,
+  knobIndexOf,
+  knobName,
+  lightBulb,
+  PATH_CURVE_NAME,
+  tuneViewHelper,
+  type LightHelper,
+} from './threeFactory'
+import {
+  applyCamera,
   applyGeometry,
   applyLight,
   applyMaterial,
+  applyPath,
   applySprite,
   lightFor,
+  showPathKnobs,
   standardMaterialOf,
 } from './threeSync'
 import {
@@ -71,10 +94,10 @@ import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './textGeometry'
 import { createGltfSource, type GltfSource } from './gltfSource'
 import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
-import { drivenNodes, poseAt } from './animationEval'
+import { drivenNodes, fovAt, poseAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
-import { nearestBone, type ProjectedBone } from './bonePicking'
+import { nearestProjected, type Projected, type ProjectedBone } from './bonePicking'
 import { rigStateOf, type RigState } from './rigState'
 import { evenSize, flipInto, frameTimes, type FilmRequest } from './film'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
@@ -96,6 +119,7 @@ import {
   showsEdges,
   directionOf,
   framingPlacement,
+  isCameraView,
   plainVector,
   viewPosition,
   type CameraPlacement,
@@ -149,6 +173,22 @@ export type SceneRendererOptions = {
    * addressed by the pair its channels are addressed by — see `TrackTarget`.
    */
   onSelectBone?: (picked: { nodeId: string; bone: string } | null) => void
+  /**
+   * A control point of a rail was picked, or let go of. Apart from `onSelect` for the same
+   * reason a bone is: a point has no id in the document, and no row in the tree.
+   */
+  onSelectPathPoint?: (picked: { nodeId: string; index: number } | null) => void
+  /** Where a picked control point was dragged to, in the frame of the rail that holds it. */
+  onPathPoint?: (nodeId: string, index: number, point: PlainVector3) => void
+  /** A point is to be posed on that rail, right after the stretch of it that was clicked. */
+  onAddPathPoint?: (nodeId: string, index: number) => void
+  /** A control point was right-clicked, for whoever raises its menu — this side draws none. */
+  onPathPointMenu?: (nodeId: string, index: number) => void
+  /**
+   * A camera of the scene was moved by orbiting the pane locked onto it — an EDIT of the
+   * document, unlike moving the view, and reported once per gesture rather than per frame.
+   */
+  onCameraMoved?: (nodeId: string, transform: Transform) => void
   /**
    * A node right-clicked in the viewport, for whoever raises the menu — this side draws none.
    *
@@ -215,6 +255,9 @@ const STUDIO_INTENSITY = 0.4
 /** How far the pointer may wander between press and release and still count as a click, in px. */
 const CLICK_SLOP = 4
 
+/** How far a camera's frustum is OUTLINED, in metres. Never how far that camera sees. */
+const FRUSTUM_REACH = 2
+
 /**
  * Whether a release ends a click rather than a drag. Both buttons ask it: the left one to tell a
  * pick from an orbit, the right one to tell a menu from a flight — and a slop written twice is a
@@ -223,6 +266,11 @@ const CLICK_SLOP = 4
 function wasClick(from: { x: number; y: number } | null, event: PointerEvent): boolean {
   return from !== null && Math.hypot(event.clientX - from.x, event.clientY - from.y) <= CLICK_SLOP
 }
+
+/** Where a shot's target stands and where its rail puts it: a camera driven per frame allocates
+ * nothing. */
+const aimed = new ThreeVector3()
+const railed = new ThreeVector3()
 
 /** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
 const forward = new ThreeVector3()
@@ -243,6 +291,22 @@ const NOOP = (): void => {}
 
 /** Scratch for projecting a bone, so a click over a rig allocates nothing per bone. */
 const BONE_WORLD = new Vector3()
+
+/** Scratch for placing a rail or one of its knobs, so a click over one allocates nothing. */
+const RAIL_SPOT = new Vector3()
+
+/** How wide a rail's line is grabbed, as a share of the visible height: about six pixels. */
+const LINE_GRAB = 1 / 150
+
+/** A control point, as the screen sees it. */
+type ProjectedKnob = Projected & { nodeId: string; index: number }
+
+/**
+ * How near the pointer must fall to grab a knob, in normalised device units — the knob covers
+ * `KNOB_SHARE` of the height, which is 2 in this space, and a little over that is what a hand
+ * needs. Far tighter than a bone's reach: knobs stand apart, where a rig's bones crowd.
+ */
+const KNOB_REACH = 0.025
 
 /** Where a normalised view stands when the camera already sits on its target and has no distance. */
 const DEFAULT_VIEW_DISTANCE = 8
@@ -292,8 +356,10 @@ export class SceneRenderer {
     onFrame: delta => this.advance(delta),
     onOverlay: renderer => this.viewHelper?.render(renderer),
     onPane: (index, camera) => this.dressPane(index, camera),
+    // A preview shows what the camera FILMS: the same pass the film and the montage take.
+    onInset: () => this.hideWorkshop(),
     // Read back rather than computed here: only the controls know where an orbit ended up.
-    onCameraSettled: () => this.options.onView?.(this.viewPlacement()),
+    onCameraSettled: pane => this.reportCameraSettled(pane),
     // Only here: the texture and skybox viewports show what they show without any light told to
     // cast, so a depth pass per frame would buy them nothing.
     shadows: true,
@@ -313,6 +379,14 @@ export class SceneRenderer {
   /** A shadow walk stops here: what hangs under a node carries that node's flags, not its parent's. */
   private readonly belongsToAnotherNode = ownedByAnotherNode(this.objects)
   private readonly helpers = new Map<string, LightHelper>()
+  /** The frustum drawn under each camera of the scene — what makes one clickable. */
+  private readonly frustums = new Map<string, CameraHelper>()
+  /**
+   * The body a camera and a lamp are DRAWN as, by node. Kept the way the helpers are, and for the
+   * same two reasons: a render hides all of them at once, and finding them by walking each node's
+   * children would be a scan per frame.
+   */
+  private readonly markers = new Map<string, Object3D>()
   /** The texture slots of each mesh, and the references they hold on the cache. */
   private readonly textures = new Map<string, MaterialTextures>()
   /** The same, for the one map a sprite wears. Apart, so each map stays exactly typed. */
@@ -339,6 +413,8 @@ export class SceneRenderer {
   private poseMode = false
   /** The bone the gizmo is aimed at while the pose mode is on, and what a release reports. */
   private pickedBone: { nodeId: string; bone: string } | null = null
+  /** The control point of a rail the gizmo holds. Never a node — see `setPickedPathPoint`. */
+  private pickedPathPoint: { nodeId: string; index: number } | null = null
   /** The tracks of the document, and where the head stands over them. */
   private timeline: AnimationTimeline = EMPTY_TIMELINE
   private playhead = 0
@@ -381,6 +457,10 @@ export class SceneRenderer {
   private selectedIds: readonly string[] = []
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
   private meshColor = ''
+  /** What a camera body and a bulb's cap are FILLED with, read off the palette beside `meshColor`. */
+  private markerColor = ''
+  /** And what outlines them: the edges are what carry the shape where no lamp lights it. */
+  private markerEdge = ''
   /** One mode per pane, main view first. A single-view scene reads index 0 and nothing else. */
   private displays: DisplayMode[] = ['shaded']
   /** Whether the edges are rebuilt as quads. Never real quads — see `applyWireOverlay`. */
@@ -523,10 +603,74 @@ export class SceneRenderer {
     // node was rebuilt under an unchanged timeline, and that node would stand in its rest pose.
     // It costs nothing on a scene with no track, and the loop is over driven nodes, not all.
     this.applyPoses()
+    this.applyCameraShots()
+    this.showAidsForSelection()
     if (this.environment) void this.sky.apply(this.environment, state.environment)
     this.attachGizmo()
     this.reportStats()
     this.viewport.requestRender()
+  }
+
+  /**
+   * The working aids — a camera's frustum, a light's helper, a rail's knobs — shown on what is
+   * SELECTED and on nothing else.
+   *
+   * A directional light draws a line clear across the scene and a frustum reaches its camera's
+   * `far`: three lamps and two cameras already cross the whole viewport, which is what made a
+   * scene unreadable. Selected, a frustum is still drawn SHORT — a thousand metres of outline
+   * says nothing a couple of metres does not, and the projection it is read off is put straight
+   * back, so what a film renders through is untouched.
+   *
+   * The price, and it is real: a light or a camera nobody has selected is no longer under the
+   * pointer, so it is selected from the scene tree. A resting mark that stays clickable is what
+   * would give that back.
+   */
+  private showAidsForSelection(): void {
+    const selected = new Set(this.selectedIds)
+
+    for (const [id, frustum] of this.frustums) {
+      const node = this.applied.get(id)
+      const camera = this.objects.get(id)
+      if (node?.type !== 'camera' || !(camera instanceof PerspectiveCamera)) continue
+      applyCamera(camera, node.camera, FRUSTUM_REACH)
+      frustum.visible = selected.has(id)
+    }
+
+    for (const [id, helper] of this.helpers) helper.visible = selected.has(id)
+
+    const rails = this.workedRailIds()
+    for (const [id, node] of this.applied) {
+      if (node.type !== 'path') continue
+      const rail = this.objects.get(id)
+      if (rail) showPathKnobs(rail, rails.has(id))
+    }
+  }
+
+  /**
+   * The rails being worked on: those selected, and those a selected camera rides during a shot.
+   *
+   * The second half is what ties a rail to its camera on screen. Nothing else did: a rail does
+   * start at its camera and follow its axis, but with the camera selected and the rail not, the
+   * line lay there unmarked and read as somebody else's.
+   */
+  private workedRailIds(): Set<string> {
+    const ids = new Set<string>()
+
+    for (const id of this.selectedIds) {
+      if (this.applied.get(id)?.type === 'path') ids.add(id)
+      for (const shot of this.timeline.shots) {
+        if (shot.cameraId === id && shot.motion) ids.add(shot.motion.pathId)
+      }
+    }
+
+    return ids
+  }
+
+  /** The objects of those rails — what a click may reach a control point of. */
+  private workedRails(): Object3D[] {
+    return [...this.workedRailIds()].flatMap(id =>
+      this.applied.get(id)?.type === 'path' ? (this.objects.get(id) ?? []) : [],
+    )
   }
 
   /**
@@ -537,6 +681,7 @@ export class SceneRenderer {
     if (time === this.playhead) return
     this.playhead = time
     this.applyPoses()
+    this.applyCameraShots()
     // The clips of every imported model follow the head too, which is what puts them on the band
     // rather than on real time — and what stops a render from writing a frozen character.
     this.animations.seek(time)
@@ -571,6 +716,77 @@ export class SceneRenderer {
   }
 
   /**
+   * Where the shots put their cameras at the instant the head stands on: along a rail, aimed at
+   * a target, or both.
+   *
+   * After `applyPoses` and never before: a camera may be told to watch a node that is itself
+   * animated, and aiming at where that node USED to be lags one frame behind for good.
+   */
+  private applyCameraShots(): void {
+    const shots = this.timeline.shots
+    if (shots.length === 0) return
+
+    const driven: { object: Object3D; shot: CameraShot }[] = []
+    for (const node of this.applied.values()) {
+      if (node.type !== 'camera') continue
+
+      const object = this.objects.get(node.id)
+      // A camera the gizmo carries holds a transform relative to the pivot — see `applyPoses`.
+      if (!object || object.parent === this.pivot) continue
+
+      const shot = shotOfCameraAt(this.timeline, node.id, this.playhead)
+      if (shot) driven.push({ object, shot })
+      // Put back where the document holds it the moment no shot drives it any more: scrubbing
+      // past the end of a shot would otherwise strand the camera wherever its rail left it, and
+      // the film would go on being taken from there.
+      else if (this.timeline.shots.some(held => held.cameraId === node.id)) {
+        applyTransform(object, poseAt(node.transform, this.timeline, node.id, this.playhead))
+      }
+    }
+
+    // Only when something is about to READ a world position, and only then: `force` recomposes
+    // the matrix of every object of the scene, bones included, on the frame path.
+    if (driven.some(({ shot }) => shot.motion || shot.target?.kind === 'node')) {
+      this.viewport.scene.updateMatrixWorld(true)
+    }
+
+    for (const { object, shot } of driven) {
+      if (shot.motion) this.railCamera(object, shot, shot.motion)
+      if (shot.target) this.aimCamera(object, shot.target)
+    }
+  }
+
+  /** Puts a camera where its rail says, in the frame of whatever the camera hangs from. */
+  private railCamera(object: Object3D, shot: CameraShot, motion: CameraMotion): void {
+    const rail = this.applied.get(motion.pathId)
+    const railObject = this.objects.get(motion.pathId)
+    if (rail?.type !== 'path' || !railObject) return
+
+    // `getPointAt`, never `getPoint`: the second is parameterised per segment, so a camera
+    // speeds up through the short ones — the very defect a rail exists to avoid. Into a scratch
+    // vector, since this runs per frame of playback.
+    const along = curveOf(rail.path).getPointAt(
+      clampUnit(progressAt(shot, motion, this.playhead)),
+      railed,
+    )
+    const world = railObject.localToWorld(along)
+    object.position.copy(object.parent ? object.parent.worldToLocal(world) : world)
+  }
+
+  /** Turns a camera towards a point of the scene, or towards whatever a node stands at. */
+  private aimCamera(object: Object3D, target: CameraTarget): void {
+    if (target.kind === 'point') {
+      object.lookAt(target.at.x, target.at.y, target.at.z)
+      return
+    }
+
+    // A camera cannot watch itself: doing so leaves `lookAt` with a direction of no length, and
+    // the quaternion it hands back is the identity — a shot silently aimed down the Z axis.
+    const watched = target.nodeId === object.name ? null : this.objects.get(target.nodeId)
+    if (watched) object.lookAt(watched.getWorldPosition(aimed))
+  }
+
+  /**
    * Lays the timeline over the rest poses. Only the nodes it drives are touched, and a scene
    * with no track at all leaves before building anything.
    */
@@ -589,6 +805,32 @@ export class SceneRenderer {
     }
 
     this.applyBonePoses(timeline)
+    this.applyLenses(timeline)
+  }
+
+  /**
+   * What the `fov` channels add to each camera's own field of view, in degrees.
+   *
+   * Walked from the CHANNELS rather than from the nodes: a scene of a thousand objects and no
+   * lens channel is one that leaves here having read nothing.
+   */
+  private applyLenses(timeline: AnimationTimeline): void {
+    const lensed = new Set(
+      timeline.tracks.flatMap(track =>
+        track.target.property === 'fov' ? track.target.nodeId : [],
+      ),
+    )
+
+    for (const nodeId of lensed) {
+      const node = this.applied.get(nodeId)
+      const camera = this.cameraObject(nodeId)
+      if (node?.type !== 'camera' || !camera) continue
+
+      // Zero where every channel is muted or soloed away, never "leave it alone": the lens would
+      // otherwise keep whatever the last scrub wrote, on screen and in a render alike.
+      const delta = fovAt(timeline, nodeId, this.playhead) ?? 0
+      applyCamera(camera, { ...node.camera, fov: node.camera.fov + delta })
+    }
   }
 
   /**
@@ -699,6 +941,12 @@ export class SceneRenderer {
     this.viewport.setPaneHeight(this.sceneHeight())
 
     for (const [index, view] of this.paneViews.entries()) {
+      // A pane locked onto a camera of the scene draws through IT: orbiting there then moves
+      // that camera, which is what `onCameraSettled` writes back to the document.
+      const locked = isCameraView(view) ? this.cameraObject(view.nodeId) : null
+      this.viewport.setPaneCamera(index, locked)
+      if (isCameraView(view)) continue
+
       this.viewport.setPaneProjection(index, view === 'free' ? 'perspective' : 'orthographic')
 
       // Read AFTER the projection is set: swapping it hands the pane a different camera object.
@@ -1145,8 +1393,7 @@ export class SceneRenderer {
     const canvas = this.viewport.canvas
     if (!gl || !canvas) return null
 
-    const aimed = cameraNodeId ? this.objects.get(cameraNodeId) : null
-    const camera = aimed instanceof PerspectiveCamera ? aimed : this.viewport.perspective
+    const camera = this.cameraObject(cameraNodeId) ?? this.viewport.perspective
 
     this.setPlayhead(time)
 
@@ -1164,8 +1411,29 @@ export class SceneRenderer {
   }
 
   /**
+   * Shows what a camera of the scene films, in a corner of the viewport. `null` closes it.
+   *
+   * The rectangle is the caller's because the frame drawn around the preview is DOM: two
+   * rectangles that agree until one of them drifts would be a border sitting beside its picture.
+   */
+  setCameraPreview(cameraNodeId: string | null, rect: PaneRect | null): void {
+    const camera = this.cameraObject(cameraNodeId)
+    // The viewport's own colour, never a panel one: what this shows is a RENDER, and a preview
+    // painted on studio chrome would promise a film nobody is going to get.
+    const backdrop = new Color(this.viewport.paletteToken('--color-viewport'))
+    this.viewport.setInsetPane(camera && rect ? { camera, rect, backdrop } : null)
+  }
+
+  /** The camera a node id stands for, or `null` when nothing in the scene answers to it. */
+  private cameraObject(cameraNodeId: string | null): PerspectiveCamera | null {
+    const aimed = cameraNodeId ? this.objects.get(cameraNodeId) : null
+    return aimed instanceof PerspectiveCamera ? aimed : null
+  }
+
+  /**
    * Hides everything the workshop draws for the person editing — light helpers, camera
-   * frustums, skeletons, the grid — and hands back the call that puts them all back.
+   * frustums, skeletons, the grid, the rails, the transform gizmo — and hands back the call
+   * that puts them all back.
    *
    * A render is the scene, not the tools it was built with. A directional light's helper is a
    * line drawn clean across the picture, and it was in every frame of both the film and the
@@ -1182,9 +1450,19 @@ export class SceneRenderer {
 
     for (const helper of this.helpers.values()) hide(helper)
     for (const skeleton of this.skeletons.values()) hide(skeleton)
+    for (const frustum of this.frustums.values()) hide(frustum)
+    // A body and a bulb are workshop furniture too: they stand where the thing they draw stands,
+    // so a camera aimed at a lamp would otherwise film the bulb somebody drew to find it by.
+    for (const marker of this.markers.values()) hide(marker)
     hide(this.grid)
-    for (const object of this.objects.values()) {
-      hide(object.children.find(child => child instanceof CameraHelper))
+    // The arrows a person drags an object by. They stand where the object stands, so a camera
+    // aimed at a selected node fills its preview — and its film — with the tool instead.
+    hide(this.gizmo?.getHelper())
+
+    // A rail is a working aid like the grid, not something a shot puts on screen: drawn, its
+    // line and its knobs would run across every previewed and every rendered frame.
+    for (const node of this.applied.values()) {
+      if (node.type === 'path') hide(this.objects.get(node.id))
     }
 
     return () => {
@@ -1193,8 +1471,8 @@ export class SceneRenderer {
   }
 
   /**
-   * Draws the film one frame at a time, from a camera of the scene, and hands each one over
-   * already encoded as a PNG.
+   * Draws the film one frame at a time, through whichever camera `cameraAt` names for that
+   * instant, and hands each one over already encoded as a PNG.
    *
    * Off screen and at the film's own size, never the viewport's: what is being written has a
    * resolution of its own, and resizing the viewport to match would be visible on screen. The
@@ -1205,14 +1483,14 @@ export class SceneRenderer {
    * process, and running ahead of it would hold a whole film in memory.
    */
   async renderFilm(
-    cameraNodeId: string,
+    cameraAt: (time: Us) => string | null,
     request: FilmRequest,
     onFrame: (index: number, png: Uint8Array) => Promise<void>,
     signal?: AbortSignal,
   ): Promise<void> {
     const gl = this.viewport.gl
-    const camera = this.objects.get(cameraNodeId)
-    if (!gl || !(camera instanceof PerspectiveCamera)) throw new Error('no camera to render from')
+    let camera = this.cameraObject(cameraAt(0))
+    if (!gl || !camera) throw new Error('no camera to render from')
 
     const { width, height } = evenSize(request)
     const target = new WebGLRenderTarget(width, height)
@@ -1227,14 +1505,18 @@ export class SceneRenderer {
 
     const restore = this.hideWorkshop()
 
-    camera.aspect = width / height
-    camera.updateProjectionMatrix()
     const head = this.playhead
 
     try {
       let index = 0
       for (const time of frameTimes(request.duration, request.fps)) {
         if (signal?.aborted) return
+
+        // Resolved per frame: a shot hands the film to another camera mid-way, and the frame
+        // after a camera is deleted keeps the last one rather than throwing at the encoder.
+        camera = this.cameraObject(cameraAt(time)) ?? camera
+        camera.aspect = width / height
+        camera.updateProjectionMatrix()
 
         this.setPlayhead(time)
         gl.setRenderTarget(target)
@@ -1419,6 +1701,10 @@ export class SceneRenderer {
     const line = this.viewport.paletteToken('--color-viewport-line')
 
     this.meshColor = this.viewport.paletteToken('--color-mesh')
+    // `elevated` is what a marker is made of and `muted` what outlines it: the fill sits a step
+    // off the viewport so the body reads as an object, and the edges carry the shape.
+    this.markerColor = this.viewport.paletteToken('--color-elevated')
+    this.markerEdge = this.viewport.paletteToken('--color-muted')
     this.paintBackground()
 
     if (this.grid) {
@@ -1556,6 +1842,20 @@ export class SceneRenderer {
       return
     }
 
+    if (node.type === 'camera' && object instanceof PerspectiveCamera) {
+      const before = previous?.type === 'camera' ? previous : null
+      // The lens, and the frustum drawn from it: a helper left alone would keep outlining the
+      // field of view the camera had before the inspector changed it.
+      if (before?.camera !== node.camera) applyCamera(object, node.camera)
+      return
+    }
+
+    if (node.type === 'path') {
+      const before = previous?.type === 'path' ? previous : null
+      if (before?.path !== node.path) applyPath(object, node.path, this.meshColor)
+      return
+    }
+
     if (node.type === 'text' && object instanceof Mesh) {
       const before = previous?.type === 'text' ? previous : null
       // Cut again only when the words or their shape moved: a colour change must not re-extrude
@@ -1576,22 +1876,33 @@ export class SceneRenderer {
     if (node.type === 'sprite') return this.buildSprite(node)
     if (node.type === 'text') return this.buildText(node)
     if (node.type === 'camera') return this.buildCamera(node)
+    if (node.type === 'path') return buildPath(node.path, this.meshColor)
     // A group is its transform and nothing else: an empty object others hang from.
     return new Object3D()
   }
 
   /**
-   * A camera of the scene, drawn as the frustum it sees — the helper is what makes it clickable
-   * and readable, since a camera itself draws nothing.
+   * A camera of the scene: the body one sees and clicks, and the frustum selection adds to it.
    *
-   * Hung UNDER the camera rather than beside it, unlike a light's helper: this one has to follow
-   * the object it draws through every move, and a camera is aimed far more often than a lamp.
+   * The body hangs UNDER the camera, so it follows every move; the frustum hangs BESIDE it, in
+   * the scene, like a light's helper — and that is not a preference. `CameraHelper` sets
+   * `this.matrix = camera.matrixWorld` with `matrixAutoUpdate` off, so it places itself ON the
+   * camera: made a child of it, that matrix applied TWICE and the outline was drawn at double
+   * the camera's placement. A camera at (0, 2, 6) had its frustum floating at (0, 4, 12), which
+   * is what a selection looked like until Alban pointed at it.
+   *
+   * The body carries no name of its own, so a click on it walks up to the camera's id.
    */
   private buildCamera(node: SceneNode & { type: 'camera' }): Object3D {
     const camera = new PerspectiveCamera(node.camera.fov, 1, node.camera.near, node.camera.far)
     const helper = new CameraHelper(camera)
-    // The helper reads the camera's world matrix, which is only right once three has updated it.
-    camera.add(helper)
+    this.viewport.scene.add(helper)
+    const body = cameraBody(this.markerColor, this.markerEdge)
+    camera.add(body)
+    // Kept beside the light helpers, and for the same reason: the preview hides all of them on
+    // every frame it draws, and finding them by walking each node's children would be a scan.
+    this.frustums.set(node.id, helper)
+    this.markers.set(node.id, body)
     return camera
   }
 
@@ -1799,6 +2110,14 @@ export class SceneRenderer {
       this.helpers.set(node.id, helper)
       this.viewport.scene.add(helper)
     }
+
+    // The bulb, glowing in the lamp's own colour, hung under the light so it travels with it —
+    // and so a click on it walks up to the light's id. It is what stands in the view at rest,
+    // the helper being what selection adds; an ambient light gets one too, which is the only
+    // thing in the viewport that can be pointed at to select it.
+    const bulb = lightBulb(bulbColourOf(node.light), this.markerColor, this.markerEdge)
+    light.add(bulb)
+    this.markers.set(node.id, bulb)
     return light
   }
 
@@ -1876,6 +2195,18 @@ export class SceneRenderer {
       helper.dispose()
       this.helpers.delete(id)
     }
+
+    // The frustum stands in the SCENE, beside its camera rather than under it — see `buildCamera`
+    // — so removing the node leaves it drawn over nothing until it is taken out by hand.
+    const frustum = this.frustums.get(id)
+    if (frustum) {
+      this.viewport.scene.remove(frustum)
+      frustum.dispose()
+      this.frustums.delete(id)
+    }
+
+    // The body hangs under the node, so it goes with it; the map is what would keep it alive.
+    this.markers.delete(id)
   }
 
   private selectedObjects(): Object3D[] {
@@ -1896,6 +2227,15 @@ export class SceneRenderer {
     if (boneObject) {
       if (this.mode === 'select') gizmo.detach()
       else gizmo.attach(boneObject)
+      return
+    }
+
+    const knob = this.pickedKnob()
+    if (knob) {
+      // Translate only: a control point is a position, and rotating or scaling one would ask
+      // the gizmo to write something the descriptor has no room for.
+      if (this.mode === 'translate') gizmo.attach(knob)
+      else gizmo.detach()
       return
     }
 
@@ -1949,6 +2289,14 @@ export class SceneRenderer {
       return
     }
 
+    const point = this.pickedPathPoint
+    const knob = this.pickedKnob()
+    if (point && knob) {
+      // The knob's own position IS the control point: both live in the rail's frame.
+      this.options.onPathPoint?.(point.nodeId, point.index, plainVector(knob.position))
+      return
+    }
+
     const picked = this.pickedBone
     const boneObject = this.pickedBoneObject()
     if (picked && boneObject) {
@@ -1984,11 +2332,54 @@ export class SceneRenderer {
     return rest
   }
 
+  /**
+   * A hand has let go of a camera, and which camera decides where it is written: a locked pane
+   * edits the DOCUMENT, every other one moves the view, which is session state.
+   */
+  private reportCameraSettled(pane: number): void {
+    // Pane 0 draws with the viewport's own camera whatever its view says — it can be lent none,
+    // so an orbit there moves the VIEW even where a camera was picked for it.
+    const view = pane === 0 ? 'free' : this.paneViews[pane]
+    const object = isCameraView(view) ? this.cameraObject(view.nodeId) : null
+
+    if (isCameraView(view) && object) {
+      this.options.onCameraMoved?.(view.nodeId, transformOf(object))
+      return
+    }
+    if (pane === 0) this.options.onView?.(this.viewPlacement())
+  }
+
   /** Aims the gizmo at a bone, or lets go of the one it held. */
   setPickedBone(picked: { nodeId: string; bone: string } | null): void {
     this.pickedBone = picked
     this.attachGizmo()
     this.viewport.requestRender()
+  }
+
+  /**
+   * Aims the gizmo at one control point of a rail, or lets go of it.
+   *
+   * A point is not a node, exactly as a bone is not: it has no id in the document, cannot be
+   * renamed, hidden or deleted on its own. `LightDescriptor` says why that matters — a node
+   * nobody can rename is a property that leaked into the tree.
+   */
+  setPickedPathPoint(picked: { nodeId: string; index: number } | null): void {
+    this.pickedPathPoint = picked
+    this.attachGizmo()
+    this.viewport.requestRender()
+  }
+
+  /**
+   * The knob of the point picked, while one is picked and its rail is still being worked on.
+   *
+   * The rail matters as much as the knob: a point is let go of by a click in the VIEWPORT, and
+   * the tree selects through another door entirely — without this the gizmo stayed on a knob the
+   * selection had hidden, while the object just picked in the tree got none.
+   */
+  private pickedKnob(): Object3D | null {
+    const picked = this.pickedPathPoint
+    if (!picked || !this.workedRailIds().has(picked.nodeId)) return null
+    return this.objects.get(picked.nodeId)?.getObjectByName(knobName(picked.index)) ?? null
   }
 
   /** Redraws nodes from what was last applied, undoing what a gesture moved without meaning to. */
@@ -2042,6 +2433,15 @@ export class SceneRenderer {
       // Never in pose mode: there a click names a bone, and a bone is not a node the menu could
       // act on.
       if (still && !this.poseMode) {
+        // A knob raises the menu of its POINT, and picks it on the way: what the menu acts on is
+        // then what the gizmo holds, rather than two different things under one pointer.
+        const knob = this.pathPointAt(event)
+        if (knob) {
+          this.options.onSelectPathPoint?.(knob)
+          this.options.onPathPointMenu?.(knob.nodeId, knob.index)
+          return
+        }
+
         const id = this.nodeAt(event)
         if (id) this.options.onContextMenu?.(id)
       }
@@ -2052,6 +2452,9 @@ export class SceneRenderer {
     const pressed = this.pressed
     this.pressed = null
     if (!wasClick(pressed, event)) return
+    // A click in the preview picks nothing: it is drawn through another camera, so a ray cast
+    // from the pane underneath would select whatever the picture happens to be covering.
+    if (this.viewport.insetHasPointer(event)) return
 
     this.aimGizmo()
 
@@ -2062,15 +2465,135 @@ export class SceneRenderer {
       if (!ndc) return
 
       // The camera of the view under the pointer, never the main one — `nodeAt` says why.
-      const picked = nearestBone(this.projectedBones(this.cameraInHand()), { x: ndc.x, y: ndc.y })
+      const picked = nearestProjected(this.projectedBones(this.cameraInHand()), {
+        x: ndc.x,
+        y: ndc.y,
+      })
       this.options.onSelectBone?.(picked ? { nodeId: picked.nodeId, bone: picked.bone } : null)
       return
+    }
+
+    // A knob of a rail already selected names a POINT, not the rail again: that is the one way
+    // to reach a sub-element the tree has no row for.
+    const knob = this.pathPointAt(event)
+    if (knob) {
+      this.options.onSelectPathPoint?.(knob)
+      return
+    }
+
+    // Alt on the LINE of a selected rail poses a point in the stretch it was clicked on. Alt
+    // rather than a plain click, which still has to be able to pick what stands behind the rail.
+    if (event.altKey) {
+      const spot = this.pathSegmentAt(event)
+      if (spot) {
+        this.options.onAddPathPoint?.(spot.nodeId, spot.index)
+        return
+      }
     }
 
     // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
     const extending = event.shiftKey || event.metaKey || event.ctrlKey
     const id = this.nodeAt(event)
     this.options.onSelect(id ? [id] : [], extending ? 'toggle' : 'replace')
+    // Whatever was picked before belongs to a rail that may no longer be the selection.
+    if (this.pickedPathPoint) this.options.onSelectPathPoint?.(null)
+  }
+
+  /**
+   * The control point the pointer is over, on a rail being WORKED ON — otherwise the knobs of
+   * every rail would take clicks meant for what stands behind them.
+   *
+   * On the SCREEN rather than through a ray, for the reason `nearestProjected` carries: a knob
+   * keeps its size on screen, and its world radius is whatever the last camera to draw it left
+   * behind. A ray answered with that one, so in a quad view a knob could be unreachable where it
+   * was plainly visible. It also settles what a ray never could — the curve lies right across
+   * its own control points, so the nearest INTERSECTION was often the line.
+   */
+  private pathPointAt(event: PointerEvent): { nodeId: string; index: number } | null {
+    const ndc = this.viewport.pointerNdcOf(event)
+    if (!ndc) return null
+
+    const picked = nearestProjected(
+      this.projectedKnobs(this.cameraInHand()),
+      { x: ndc.x, y: ndc.y },
+      KNOB_REACH,
+    )
+    return picked ? { nodeId: picked.nodeId, index: picked.index } : null
+  }
+
+  /** Every knob of every rail being worked on, as the screen sees it. */
+  private projectedKnobs(camera: Camera): ProjectedKnob[] {
+    const projected: ProjectedKnob[] = []
+
+    for (const rail of this.workedRails()) {
+      for (const knob of rail.children) {
+        const index = knobIndexOf(knob.name)
+        if (index === null) continue
+
+        knob.getWorldPosition(RAIL_SPOT)
+        RAIL_SPOT.project(camera)
+        projected.push({ nodeId: rail.name, index, x: RAIL_SPOT.x, y: RAIL_SPOT.y, z: RAIL_SPOT.z })
+      }
+    }
+
+    return projected
+  }
+
+  /**
+   * The stretch of rail the pointer is over, as an index into its control points: the point a
+   * click poses goes right after it.
+   *
+   * The line is sampled by arc length, so the vertex three hands back IS an abscissa — which is
+   * what `segmentAt` converts back into a stretch.
+   */
+  private pathSegmentAt(event: PointerEvent): { nodeId: string; index: number } | null {
+    const hit = this.railHits(event).find(
+      candidate => candidate.object.name === PATH_CURVE_NAME && candidate.index !== undefined,
+    )
+    const nodeId = hit?.object.parent?.name
+    const node = nodeId ? this.applied.get(nodeId) : null
+    if (!hit || hit.index === undefined || !nodeId || node?.type !== 'path') return null
+
+    // The MIDDLE of the sample three hands back: `index` names where the segment starts, so
+    // reading it straight puts a click in the last sixty-fourth before a control point into the
+    // stretch before it.
+    return { nodeId, index: segmentAt(node.path, (hit.index + 0.5) / PATH_SAMPLES) }
+  }
+
+  /**
+   * What the pointer meets on the rails being worked on, nearest first.
+   *
+   * The grab around a LINE is set per rail and never left at three's own: its default is one
+   * WORLD UNIT, which on a rail five units long is a tube wide enough to swallow clicks meant for
+   * whatever stands beside it. It cost nothing while only knobs were read out of these hits; ⌥
+   * now writes a point into the document, so it costs an edit nobody asked for. Put back
+   * afterwards, the raycaster being the one every other pick goes through — a light is picked by
+   * the LINES of its helper.
+   *
+   * Measured from the rail's own origin rather than from where the ray lands: the point is not
+   * known before the hit, and a rail is small enough that the two agree to within its length.
+   */
+  private railHits(event: PointerEvent): Intersection[] {
+    const ndc = this.viewport.pointerNdcOf(event)
+    if (!ndc) return []
+
+    this.pointer.set(ndc.x, ndc.y)
+    const camera = this.cameraInHand()
+    this.raycaster.setFromCamera(this.pointer, camera)
+
+    const held = this.raycaster.params.Line.threshold
+    const hits: Intersection[] = []
+    for (const rail of this.workedRails()) {
+      this.raycaster.params.Line.threshold = screenScale(
+        camera,
+        rail.getWorldPosition(RAIL_SPOT),
+        LINE_GRAB,
+      )
+      hits.push(...this.raycaster.intersectObject(rail, true))
+    }
+    this.raycaster.params.Line.threshold = held
+
+    return hits.sort((left, right) => left.distance - right.distance)
   }
 
   /** The node the pointer is over, or nothing for a ray that met only the void. */
@@ -2085,8 +2608,13 @@ export class SceneRenderer {
     this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
 
     // Helpers are what makes a light clickable, and recursively: it is one of their children
-    // that the ray actually meets. Both they and the light carry the node's id.
-    const targets = [...this.objects.values(), ...this.helpers.values()]
+    // that the ray actually meets. Both they and the light carry the node's id. Only the ones on
+    // SCREEN: three's raycaster does not read `visible`, so a hidden helper would go on catching
+    // clicks over empty space and selecting a lamp nobody could see.
+    const targets = [
+      ...this.objects.values(),
+      ...[...this.helpers.values()].filter(helper => helper.visible),
+    ]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
     return hit ? nodeIdOf(hit.object, name => this.objects.has(name)) : null
   }
@@ -2188,6 +2716,14 @@ export function nodeIdOf(object: Object3D, isNode: (name: string) => boolean): s
     current = current.parent
   }
   return null
+}
+
+/**
+ * What colour a lamp's bulb glows. A hemisphere light has two, and the sky one is what says which
+ * way it is turned; an ambient has one and lights everything with it.
+ */
+function bulbColourOf(light: LightDescriptor): string {
+  return light.kind === 'hemisphere' ? light.skyColor : light.color
 }
 
 /** A light catches nothing: the flag exists on every node, but only two kinds answer to it. */

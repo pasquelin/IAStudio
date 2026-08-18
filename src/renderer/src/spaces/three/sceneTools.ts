@@ -23,7 +23,6 @@ import {
   mdiVectorSquare,
 } from '@mdi/js'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar/tools'
-import { type PaneView } from '@/engines/scene/sceneView'
 import { DISPLAY_MODES, type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 
 /** Arrows read as the direction the camera looks from, which is what the row promises. */
@@ -37,7 +36,7 @@ const VIEW_ICONS: Record<ViewDirection, string> = {
 }
 
 /** What a view of the quad layout wears in its own menu. The free one is the studio's cube. */
-export const PANE_VIEW_ICONS: Record<PaneView, string> = {
+export const PANE_VIEW_ICONS: Record<'free' | ViewDirection, string> = {
   free: mdiCubeOutline,
   ...VIEW_ICONS,
 }

@@ -1,4 +1,10 @@
-import { ACESFilmicToneMapping, NoToneMapping, OrthographicCamera, PerspectiveCamera } from 'three'
+import {
+  ACESFilmicToneMapping,
+  Color,
+  NoToneMapping,
+  OrthographicCamera,
+  PerspectiveCamera,
+} from 'three'
 import type * as ThreeModule from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ViewportEngine } from './ViewportEngine'
@@ -20,6 +26,8 @@ const rendered = vi.fn()
 const viewported = vi.fn()
 const scissored = vi.fn()
 const scissorTest = vi.fn()
+const clearColor = vi.fn()
+const cleared = vi.fn()
 /** What the display is worth. Two is a laptop retina screen, which is where the fault showed. */
 let displayRatio = 1
 
@@ -52,6 +60,12 @@ vi.mock('three', async importOriginal => ({
     setViewport = viewported
     setScissor = scissored
     setScissorTest = scissorTest
+    // The preview clears its own rectangle before drawing, so it reads the clear colour back to
+    // put it where it found it. A double that answered nothing here failed inside the frame loop.
+    getClearColor = (target: { set: (hex: number) => unknown }): unknown => target.set(0x000000)
+    getClearAlpha = (): number => 1
+    setClearColor = clearColor
+    clear = cleared
     getPixelRatio = (): number => displayRatio
     render = (...args: unknown[]): void => {
       if (this.info.autoReset) this.info.reset()
@@ -208,6 +222,146 @@ describe('a viewport', () => {
       // The same rectangles as at a ratio of 1: three applies the display's own scale after this.
       expect(viewported).toHaveBeenCalledWith(0, HOST_HEIGHT / 2, HOST_WIDTH / 2, HOST_HEIGHT / 2)
       expect(viewported).not.toHaveBeenCalledWith(0, HOST_HEIGHT, HOST_WIDTH, HOST_HEIGHT)
+    })
+
+    /**
+     * Seen on screen before it was written down: a scene with no background of its own draws
+     * NOTHING where it is empty, so the panes underneath showed straight through the picture and
+     * the preview read as a hole in the view. The clear obeys the scissor, so it paints that
+     * rectangle and nothing else — and the colour it found is put back for the frames after.
+     */
+    it('clears the preview to its own backdrop before drawing it', () => {
+      const engine = atRest()
+      clearColor.mockClear()
+      cleared.mockClear()
+
+      const backdrop = new Color('#123456')
+      engine.setInsetPane({
+        camera: new PerspectiveCamera(),
+        backdrop,
+        rect: { x: 500, y: 700, width: 100, height: 56 },
+      })
+      drawFrames()
+
+      expect(clearColor).toHaveBeenNthCalledWith(1, backdrop, 1)
+      expect(cleared).toHaveBeenCalledTimes(1)
+      // Put back, and with the alpha it was read with: every later frame clears to what the
+      // viewport itself uses, not to the preview's colour.
+      expect(clearColor).toHaveBeenLastCalledWith(expect.any(Color), 1)
+    })
+
+    it('draws the camera preview as one more scissored pass, never a second context', () => {
+      const engine = atRest()
+      rendered.mockClear()
+
+      engine.setInsetPane({
+        camera: new PerspectiveCamera(),
+        backdrop: new Color(),
+        rect: { x: 500, y: 700, width: 100, height: 56 },
+      })
+      drawFrames()
+
+      expect(rendered).toHaveBeenCalledTimes(2)
+      // Bottom-right, in WebGL's own frame: the host is 800 tall, so a rect 700 down sits at 44.
+      expect(scissored).toHaveBeenCalledWith(500, HOST_HEIGHT - 700 - 56, 100, 56)
+      expect(scissorTest).toHaveBeenLastCalledWith(false)
+    })
+
+    it('hides the workshop for the preview pass and puts it back after', () => {
+      const restore = vi.fn()
+      const hide = vi.fn(() => restore)
+      const engine = atRest({ onInset: hide })
+
+      engine.setInsetPane({
+        camera: new PerspectiveCamera(),
+        backdrop: new Color(),
+        rect: { x: 0, y: 0, width: 100, height: 56 },
+      })
+      drawFrames()
+
+      expect(hide).toHaveBeenCalledTimes(1)
+      expect(restore).toHaveBeenCalledTimes(1)
+    })
+
+    // Without this a drag inside the preview would orbit the view underneath it.
+    it('answers no pane for a pointer inside the preview', () => {
+      const engine = atRest()
+      engine.setInsetPane({
+        camera: new PerspectiveCamera(),
+        backdrop: new Color(),
+        rect: { x: 500, y: 700, width: 100, height: 56 },
+      })
+
+      expect(engine.paneAtPointer(pointerAt(550, 720))).toBeNull()
+      expect(engine.paneAtPointer(pointerAt(100, 100))).toBe(0)
+    })
+
+    it('draws a locked pane through the camera it was lent, and gives it the orbit', () => {
+      const engine = atRest()
+      engine.setLayout('quad')
+      const lent = new PerspectiveCamera()
+
+      engine.setPaneCamera(1, lent)
+
+      expect(engine.paneCameras[1]).toBe(lent)
+      // The orbit follows, or a drag in that pane would turn a camera nobody is drawing.
+      expect(engine.paneOrbits[1]?.object).toBe(lent)
+    })
+
+    /**
+     * `OrbitControls.update()` ends on `object.lookAt(target)`. Left where the pane last
+     * orbited, that target swung the borrowed camera round the moment it was lent — and again
+     * on every frame the pointer merely hovered the pane, with no gesture to report it.
+     */
+    it('leaves a borrowed camera aimed where it already was', () => {
+      const engine = atRest()
+      engine.setLayout('quad')
+
+      const lent = new PerspectiveCamera()
+      lent.position.set(0, 0, 10)
+      lent.lookAt(0, 0, 0)
+      const before = lent.quaternion.clone()
+
+      engine.setPaneCamera(1, lent)
+      engine.paneOrbits[1]?.update()
+
+      expect(lent.quaternion.angleTo(before)).toBeCloseTo(0, 6)
+    })
+
+    it('sizes a borrowed camera to the pane it draws into', () => {
+      const engine = atRest()
+      engine.setLayout('quad')
+      const lent = new PerspectiveCamera()
+
+      engine.setPaneCamera(1, lent)
+
+      // A camera of the scene is built square; the pane is a quarter of the host.
+      expect(lent.aspect).toBeCloseTo(HOST_WIDTH / HOST_HEIGHT, 6)
+    })
+
+    it('gives a pane its own camera back when the loan ends', () => {
+      const engine = atRest()
+      engine.setLayout('quad')
+      const own = engine.paneCameras[1]
+
+      engine.setPaneCamera(1, new PerspectiveCamera())
+      engine.setPaneCamera(1, null)
+
+      expect(engine.paneCameras[1]).toBe(own)
+    })
+
+    // Which pane settled is what tells a caller whether a gesture moved the VIEW or a camera of
+    // the scene — the two land in different places, and one of them is an edit.
+    it('says which pane a settled orbit belongs to', () => {
+      const settled = vi.fn()
+      const engine = atRest({ onCameraSettled: settled })
+      engine.setLayout('quad')
+
+      engine.orbit?.dispatchEvent({ type: 'end' })
+      expect(settled).toHaveBeenLastCalledWith(0)
+
+      engine.paneOrbits[1]?.dispatchEvent({ type: 'end' })
+      expect(settled).toHaveBeenLastCalledWith(1)
     })
 
     it('draws one pass and no scissor while there is one view', () => {

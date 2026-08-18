@@ -15,7 +15,9 @@ import type {
   DocumentFile,
   DocumentKind,
 } from '@shared/domain/document'
+import { isGltfDocument } from '@shared/domain/gltf'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
+import { sceneFromGltf } from '@/engines/scene/gltfDocument'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { getBridge } from '@/services/bridge'
@@ -123,8 +125,10 @@ describe('saveDocument', () => {
     return created.id
   }
 
-  it('writes the scene, and only what a scene is — never its selection', async () => {
-    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
+  it('writes the scene as glTF, and only what a scene is — never its selection', async () => {
+    const write = vi.fn((_id: string, _kind: DocumentKind, _draft: DocumentDraft) =>
+      Promise.resolve<DocumentWrite>('written'),
+    )
     installFakeBridge({ documents: { write } })
 
     const documentId = await openScene()
@@ -133,18 +137,22 @@ describe('saveDocument', () => {
     expect(write).toHaveBeenCalledWith(
       documentId,
       'scene',
-      {
-        title: expect.any(String),
-        content: JSON.stringify({
-          nodes: [box],
-          environment: { kind: 'studio' },
-          animation: EMPTY_TIMELINE,
-        }),
-      },
+      { title: expect.any(String), content: expect.any(String) },
       false,
       // Where the descriptor says it goes, which a first save reads and a later one ignores.
       'documents',
     )
+
+    // What was written is read back rather than compared to a spelling: the file is a standard
+    // one now, and pinning its exact bytes here would break on every field the format gains.
+    const written: unknown = JSON.parse(String(write.mock.calls[0]?.[2].content))
+    expect(isGltfDocument(written)).toBe(true)
+    expect(sceneFromGltf(written)).toEqual({
+      nodes: [box],
+      selectedIds: [],
+      environment: { kind: 'studio' },
+      animation: EMPTY_TIMELINE,
+    })
   })
 
   it('marks the document clean once it is written', async () => {

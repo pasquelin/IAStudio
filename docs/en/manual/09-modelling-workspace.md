@@ -186,7 +186,7 @@ A *sprite* is not a mesh: it is a flat picture that always turns towards you, wh
 does. It is what you use for a spark, a glow, a marker, a label above an object — anything that
 has to stay readable from wherever you look.
 
-**Add ▸ Sprite** puts one at the origin. It arrives with no picture: choose one in the Inspector,
+**Add ▸ Object ▸ Sprite** puts one at the origin. It arrives with no picture: choose one in the Inspector,
 under **Sprite**, from the project's own images — the same ones a material takes as a texture.
 
 | Setting | What it does |
@@ -211,6 +211,27 @@ Four things to know:
 - **It has nothing to do with shadows.** It throws none and catches none; the Inspector therefore
   shows it no Shadows section at all.
 - **It is not lit.** Its colour is the one you give it, not the one the scene's lights make of it.
+
+### The path — a camera's rail
+
+A *path* is a curve laid into the scene. It never shows up in a rendered picture: it is a rail, and
+a camera can run along it during a shot.
+
+**Add ▸ Object ▸ Path** puts one at the origin, with two points. Its **knobs** — one bead per
+point — only appear while it is being worked on: the path selected, or a selected camera that
+rides it during a shot. They keep their size on screen, wherever the view stands.
+
+Three gestures, in the scene:
+
+| Gesture | What it does |
+|---|---|
+| **Click a knob**, path selected | picks it: the move handles attach to it, and it is dragged like an object |
+| **⌥ + click on the curve** | puts a new point in the stretch clicked, and picks it straight away |
+| **Delete**, or right-click a knob | takes the picked point away. A path always keeps its last two points |
+
+The Inspector, section **Placement**, holds **Tension** — from sharp corners to a round curve —
+and **Closed**, which loops it back onto the first point. The **+** on the **Points** row adds a
+point at the end, without aiming in the view.
 
 ### The available lights
 
@@ -549,6 +570,13 @@ stands in the scene, not where it stands inside its group.
 `⌘S` / `Ctrl+S` writes the scene into the project, under `documents/`.
 
 **3D scenes can save**, as do the six other document kinds.
+
+**The file written is a `.gltf`, and it is a real glTF**: another application opens it and finds
+the scene tree, the name and place of every object, the cameras, and the directional, point and
+spot lights. What the standard does not carry — the shape of the primitives, the materials, the
+rails, the camera shots, the animation — travels inside the same file but **is read by Scenario
+alone**. Nothing is lost from one save to the next; what opens elsewhere is poorer than what you
+see here.
 
 A tab whose work is not yet written carries **a dot** (`•`) beside its name. The dot disappears on
 save and comes back on the next change.

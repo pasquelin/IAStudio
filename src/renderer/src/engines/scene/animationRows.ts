@@ -6,10 +6,11 @@
  * to evaluate: what a subject line adds is a way to READ them, which is why it is derived here
  * rather than stored. Folding a subject away must never lose a key.
  */
-import type { AnimationTimeline, AnimationTrack } from '@shared/domain/animation'
+import type { AnimationTimeline, AnimationTrack, CameraShot } from '@shared/domain/animation'
 import { reconcileOrder } from '@shared/domain/order'
 import type { Us } from '@shared/domain/time'
 import { ROW_PADDING } from '../timeline/timelineGeometry'
+import { shotCameras } from './cameraShots'
 
 /** One object, or one bone of one object. Its channels are the tracks that drive it. */
 export type Subject = {
@@ -27,6 +28,15 @@ export type SubjectRow = {
   /** Every key of every channel, merged and deduplicated: what the folded line shows. */
   keys: readonly Us[]
   tracks: readonly AnimationTrack[]
+  /**
+   * The shots this camera is on air for, when the subject IS a camera the band stacks — absent
+   * on every other line, which is what tells the two apart.
+   *
+   * On the subject's own line rather than a row of its own, because a camera and its shots are
+   * one thing to a hand: the line carries the camera's NAME, its bars, and its channels folded
+   * underneath. Two rows put the shot at the top of the sheet and the lens halfway down it.
+   */
+  bars?: readonly ShotBar[]
 }
 
 export type ChannelRow = {
@@ -55,6 +65,12 @@ export type LaneRow = {
   /** The last lane of its object offers to add one after it, and it alone: adding is one action. */
   last: boolean
   blocks: readonly ClipBlock[]
+}
+
+/** One shot on the band, with the name of the camera it puts on air. */
+export type ShotBar = {
+  shot: CameraShot
+  name: string
 }
 
 export type AnimationRow = SubjectRow | ChannelRow | LaneRow
@@ -142,25 +158,6 @@ export function orderedSubjects(
   )
 }
 
-/**
- * The same list with one entry moved by that many places. Clamped at both ends rather than
- * wrapping: a row dragged past the top has arrived, it has not gone to the bottom.
- */
-export function movedWithin(ids: readonly string[], id: string, by: number): readonly string[] {
-  const from = ids.indexOf(id)
-  if (from === -1 || by === 0) return ids
-
-  const to = Math.min(Math.max(from + by, 0), ids.length - 1)
-  // The SAME array back when nothing moved — a line dragged against the top is asked to move on
-  // every step of the gesture, and a fresh array each time rebuilds the whole sheet for nothing.
-  if (to === from) return ids
-
-  const moved = [...ids]
-  moved.splice(from, 1)
-  moved.splice(to, 0, id)
-  return moved
-}
-
 export type RowsOptions = {
   /**
    * The objects on stage, in outliner order. EVERY one gets a line, keyed or not: a scene's
@@ -188,6 +185,7 @@ export type RowsOptions = {
  * the moment an object is renamed.
  */
 export function animationRows(timeline: AnimationTimeline, options: RowsOptions): AnimationRow[] {
+  const rows: AnimationRow[] = []
   const grouped = new Map<string, AnimationTrack[]>()
 
   for (const track of timeline.tracks) {
@@ -198,7 +196,6 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
   }
 
   const named = new Map(options.nodes.map(node => [node.id, node.name]))
-  const rows: AnimationRow[] = []
 
   const lanesOfNode = new Map<string, SheetLane[]>()
   for (const lane of options.lanes ?? []) {
@@ -207,14 +204,8 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
     else lanesOfNode.set(lane.nodeId, [lane])
   }
 
-  /** The objects first, in the order the scene holds them, then the bones keyed inside them. */
-  const natural = [
-    ...options.nodes.map(node => node.id),
-    ...[...grouped.keys()].filter(key => !named.has(key)),
-  ]
-  const order = orderedSubjects(natural, options.order ?? [])
-
-  for (const key of order) {
+  /** One line, its channels and its lanes, appended in place — wherever the subject stands. */
+  const push = (key: string, bars?: readonly ShotBar[]): void => {
     const tracks = grouped.get(key) ?? []
     const bone = tracks[0]?.target.bone
     const plain = named.get(bone ? (tracks[0]?.target.nodeId ?? key) : key) ?? key
@@ -229,9 +220,10 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
       expanded,
       keys: mergedKeys(tracks),
       tracks,
+      bars,
     })
 
-    if (!expanded) continue
+    if (!expanded) return
 
     for (const track of tracks) {
       rows.push({
@@ -261,7 +253,34 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
     }
   }
 
+  // A shot whose camera the scene has lost is left out, as `activeShotAt` leaves it out of the
+  // answer: a bar naming nothing would be a line one could drag and never see on screen.
+  const onAir = shotCameras(timeline.shots).filter(cameraId => named.has(cameraId))
+
+  // The cameras on air open the sheet, in the order the DOCUMENT holds their shots — that order
+  // IS the montage's law, so the eye and `activeShotAt` cannot disagree. Which is also why they
+  // are left out of the arrangement below.
+  for (const cameraId of onAir) push(cameraId, barsOf(timeline, cameraId, named))
+
+  /** The objects first, in the order the scene holds them, then the bones keyed inside them. */
+  const natural = [
+    ...options.nodes.map(node => node.id).filter(id => !onAir.includes(id)),
+    ...[...grouped.keys()].filter(key => !named.has(key)),
+  ]
+
+  for (const key of orderedSubjects(natural, options.order ?? [])) push(key)
+
   return rows
+}
+
+/** The bars one camera's line carries, in the order the document lays its shots down. */
+function barsOf(
+  timeline: AnimationTimeline,
+  cameraId: string,
+  named: ReadonlyMap<string, string>,
+): ShotBar[] {
+  const name = named.get(cameraId) ?? cameraId
+  return timeline.shots.flatMap(shot => (shot.cameraId === cameraId ? { shot, name } : []))
 }
 
 /** How a lane row is named, and what a hit test hands back — one spelling for both. */

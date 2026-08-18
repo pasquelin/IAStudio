@@ -1,13 +1,23 @@
-import { AnimationClip, Bone, Group, Mesh, SphereGeometry, VectorKeyframeTrack } from 'three'
+import {
+  AnimationClip,
+  Bone,
+  Group,
+  Mesh,
+  PerspectiveCamera,
+  SphereGeometry,
+  VectorKeyframeTrack,
+} from 'three'
 import type { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SceneRenderer } from './SceneRenderer'
 import type { BvhBuilder } from './bvhBuilder'
 import type * as ModelCache from './modelCache'
-import { meshNode, modelNodeFixture } from './scene-fixtures'
-import { EMPTY_SCENE } from './sceneState'
-import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
+import { cameraShot } from './animation-fixtures'
+import { cameraNodeFixture, meshNode, modelNodeFixture, pathNodeFixture } from './scene-fixtures'
+import { EMPTY_SCENE, IDENTITY_TRANSFORM } from './sceneState'
+import { EMPTY_TIMELINE, type AnimationTimeline, type CameraShot } from '@shared/domain/animation'
+import { SECOND } from '@shared/domain/time'
 
 /**
  * The instance the scene mounts is a clone, which nothing outside the engine can reach. Handing
@@ -253,6 +263,255 @@ describe('SceneRenderer and the timeline over the scene', () => {
     engine.setPlayhead(3)
 
     expect(objectOf(engine, 'cube-1')?.position.x).toBe(0)
+    engine.dispose()
+  })
+})
+
+describe('SceneRenderer and a camera on a rail', () => {
+  const objectOf = (engine: SceneRenderer, id: string): Object3D | undefined => {
+    const scene: { children: Object3D[] } = Reflect.get(engine, 'viewport').scene
+    return scene.children.find(child => child.name === id)
+  }
+
+  /** A rail ten units long down X, a camera bound to it for the whole of a four-second shot. */
+  const staged = (extra: Partial<CameraShot> = {}): SceneRenderer => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    engine.apply({
+      ...EMPTY_SCENE,
+      nodes: [
+        cameraNodeFixture('cam'),
+        pathNodeFixture('rail', {
+          points: [
+            { x: 0, y: 0, z: 0 },
+            { x: 10, y: 0, z: 0 },
+          ],
+        }),
+        {
+          ...meshNode('watched'),
+          transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 0, z: -20 } },
+        },
+      ],
+      animation: {
+        ...EMPTY_TIMELINE,
+        shots: [
+          cameraShot('s1', {
+            cameraId: 'cam',
+            start: 0,
+            duration: 4 * SECOND,
+            motion: { pathId: 'rail', easing: 'linear', from: 0, to: 1 },
+            ...extra,
+          }),
+        ],
+      },
+    })
+    return engine
+  }
+
+  it('stands the camera at the start of the rail, and at its end when the shot is over', () => {
+    const engine = staged()
+
+    expect(objectOf(engine, 'cam')?.position.x).toBeCloseTo(0, 4)
+
+    // One microsecond before the end: a shot covers `[start, start + duration)`, so the very
+    // instant it ends is already outside it — see `activeShotAt`.
+    engine.setPlayhead(4 * SECOND - 1)
+    expect(objectOf(engine, 'cam')?.position.x).toBeCloseTo(10, 4)
+    engine.dispose()
+  })
+
+  // Placing the head straight there must give the very same pose as walking to it — the whole
+  // reason nothing here accumulates frame by frame.
+  it('gives the same place whether the head arrived in one step or in twenty', () => {
+    const straight = staged()
+    straight.setPlayhead(2.5 * SECOND)
+    const once = objectOf(straight, 'cam')?.position.x ?? -1
+
+    const walked = staged()
+    for (let step = 1; step <= 20; step += 1) walked.setPlayhead((2.5 * SECOND * step) / 20)
+
+    expect(objectOf(walked, 'cam')?.position.x).toBeCloseTo(once, 10)
+    straight.dispose()
+    walked.dispose()
+  })
+
+  it('turns the camera towards the node its shot watches', () => {
+    const engine = staged({ target: { kind: 'node', nodeId: 'watched' } })
+    const camera = objectOf(engine, 'cam')
+
+    // The watched mesh stands down -Z, which is where a camera looks by default: aimed at it
+    // from the start of the rail, the camera is barely turned at all.
+    expect(camera?.quaternion.y ?? 1).toBeCloseTo(0, 2)
+
+    // One microsecond before the end: a shot covers `[start, start + duration)`, so the very
+    // instant it ends is already outside it — see `activeShotAt`.
+    engine.setPlayhead(4 * SECOND - 1)
+    // From the far end of the rail it has to turn to keep the same mesh in frame.
+    expect(Math.abs(objectOf(engine, 'cam')?.quaternion.y ?? 0)).toBeGreaterThan(0.1)
+    engine.dispose()
+  })
+
+  it('opens the lens by what its fov channel adds, and puts it back when that channel goes quiet', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    const lensTrack = (muted: boolean): AnimationTimeline => ({
+      ...EMPTY_TIMELINE,
+      tracks: [
+        {
+          id: 'lens',
+          name: 'Lens',
+          index: 0,
+          muted,
+          solo: false,
+          locked: false,
+          target: { nodeId: 'cam', property: 'fov' },
+          keys: [
+            { time: 0, value: { x: 0, y: 0, z: 0 } },
+            { time: 2 * SECOND, value: { x: 20, y: 0, z: 0 } },
+          ],
+        },
+      ],
+    })
+
+    const nodes = [cameraNodeFixture('cam', { fov: 50 })]
+    engine.apply({ ...EMPTY_SCENE, nodes, animation: lensTrack(false) })
+
+    const lens = objectOf(engine, 'cam')
+    expect(lens instanceof PerspectiveCamera && lens.fov).toBe(50)
+
+    engine.setPlayhead(1 * SECOND)
+    expect(lens instanceof PerspectiveCamera && lens.fov).toBeCloseTo(60, 5)
+
+    // Muted, the lens takes back what the document says rather than keeping the last scrub.
+    engine.apply({ ...EMPTY_SCENE, nodes, animation: lensTrack(true) })
+    expect(lens instanceof PerspectiveCamera && lens.fov).toBe(50)
+    engine.dispose()
+  })
+
+  // Scrubbing past the end of a shot used to strand the camera wherever its rail left it — and
+  // the film went on being taken from there.
+  it('puts the camera back where the document holds it once no shot drives it', () => {
+    const engine = staged()
+
+    engine.setPlayhead(4 * SECOND - 1)
+    expect(objectOf(engine, 'cam')?.position.x).toBeCloseTo(10, 4)
+
+    engine.setPlayhead(5 * SECOND)
+    expect(objectOf(engine, 'cam')?.position.x).toBeCloseTo(0, 4)
+    engine.dispose()
+  })
+
+  /**
+   * A rail is a working aid like the grid: the preview and the film both draw through
+   * `hideWorkshop`, and a line with a knob per point ran across every frame of both.
+   */
+  it('hides the rails for a pass that shows what a camera films', () => {
+    const engine = staged()
+    const rail = objectOf(engine, 'rail')
+    // `hideWorkshop` is what both the inset pass and `renderFilm` take; reached here directly,
+    // since neither of the two can run without a GL context.
+    const restore: () => void = Reflect.get(engine, 'hideWorkshop').call(engine)
+
+    expect(rail?.visible).toBe(false)
+    restore()
+    expect(rail?.visible).toBe(true)
+    engine.dispose()
+  })
+
+  /**
+   * The gizmo stands where the object stands, so a camera aimed at a selected node filled its
+   * preview — and its film — with the arrows instead of the node. Stood in for: the real one
+   * needs a GL canvas, and `hideWorkshop` asks it for nothing but its helper.
+   */
+  it('hides the transform gizmo for a pass that shows what a camera films', () => {
+    const engine = staged()
+    const helper = new Group()
+    Reflect.set(engine, 'gizmo', { getHelper: () => helper })
+    const restore: () => void = Reflect.get(engine, 'hideWorkshop').call(engine)
+
+    expect(helper.visible).toBe(false)
+    restore()
+    expect(helper.visible).toBe(true)
+
+    // Back to none before disposing: the stand-in answers `getHelper` and nothing else, and
+    // teardown unsubscribes from the real one.
+    Reflect.set(engine, 'gizmo', null)
+    engine.dispose()
+  })
+
+  /**
+   * A knob per control point on every rail of the scene is what buries a five-camera sequence,
+   * and only a SELECTED rail hands its points to the gizmo anyway — see `pathPointAt`.
+   */
+  it('shows a rail its knobs only while it is the selected one', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    const scene = {
+      ...EMPTY_SCENE,
+      nodes: [
+        pathNodeFixture('rail', {
+          points: [
+            { x: 0, y: 0, z: 0 },
+            { x: 10, y: 0, z: 0 },
+          ],
+        }),
+      ],
+    }
+    const knobs = (): boolean[] =>
+      (objectOf(engine, 'rail')?.children ?? [])
+        .filter(child => child.name.startsWith('path-knob-'))
+        .map(knob => knob.visible)
+
+    engine.apply(scene)
+    expect(knobs()).toEqual([false, false])
+
+    engine.apply({ ...scene, selectedIds: ['rail'] })
+    expect(knobs()).toEqual([true, true])
+    engine.dispose()
+  })
+
+  /**
+   * What ties a rail to its camera on screen: the line does start at the camera and follow its
+   * axis, but unmarked it reads as somebody else's.
+   */
+  it('shows a rail its knobs when the camera riding it is the one selected', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    const scene = {
+      ...EMPTY_SCENE,
+      nodes: [
+        cameraNodeFixture('cam-a'),
+        pathNodeFixture('rail', {
+          points: [
+            { x: 0, y: 0, z: 0 },
+            { x: 10, y: 0, z: 0 },
+          ],
+        }),
+      ],
+      animation: {
+        ...EMPTY_TIMELINE,
+        shots: [
+          cameraShot('shot-1', {
+            motion: { pathId: 'rail', easing: 'linear', from: 0, to: 1 },
+          }),
+        ],
+      },
+    }
+    const knobs = (): boolean[] =>
+      (objectOf(engine, 'rail')?.children ?? [])
+        .filter(child => child.name.startsWith('path-knob-'))
+        .map(knob => knob.visible)
+
+    engine.apply(scene)
+    expect(knobs()).toEqual([false, false])
+
+    engine.apply({ ...scene, selectedIds: ['cam-a'] })
+    expect(knobs()).toEqual([true, true])
+    engine.dispose()
+  })
+
+  it('leaves a camera with no shot exactly where its transform puts it', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    engine.apply({ ...EMPTY_SCENE, nodes: [cameraNodeFixture('cam')] })
+    engine.setPlayhead(3 * SECOND)
+
+    expect(objectOf(engine, 'cam')?.position.x).toBe(0)
     engine.dispose()
   })
 })

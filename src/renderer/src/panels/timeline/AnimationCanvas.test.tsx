@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
-import { animationTrack, timelineWith } from '@/engines/scene/animation-fixtures'
+import { animationTrack, cameraShot, timelineWith } from '@/engines/scene/animation-fixtures'
 import {
   addAnimationTrack,
   setAnimationKey,
@@ -10,7 +10,7 @@ import {
 } from '@/engines/scene/animationCommands'
 import { animationRows, CHANNEL_HEIGHT, SUBJECT_HEIGHT } from '@/engines/scene/animationRows'
 import { RULER_HEIGHT } from '@/engines/timeline/timelineGeometry'
-import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
+import { cameraNodeFixture, meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { ANIMATION_DRAG_TYPE } from '@/panels/animations/dragged'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
@@ -431,5 +431,115 @@ describe('removing a picked key with the keyboard', () => {
     act(() => press(canvas(), 'Delete'))
 
     expect(keys()).toHaveLength(2)
+  })
+})
+
+describe('dragging a shot', () => {
+  const SHOT = cameraShot('s1', { cameraId: 'cam-a', start: 1 * SECOND, duration: 2 * SECOND })
+
+  /** The vertical middle of the shot line, which the sheet draws above every subject. */
+  const SHOT_MIDDLE = RULER_HEIGHT + SUBJECT_HEIGHT / 2
+
+  beforeEach(() => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [cameraNodeFixture('cam-a')],
+      animation: { ...EMPTY_SCENE.animation, shots: [SHOT] },
+    })
+    useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({
+      views: {
+        [DOCUMENT]: {
+          viewport: VIEWPORT,
+          expanded: [],
+          selected: [],
+          pickedBlock: null,
+          autoKey: false,
+          order: [],
+        },
+      },
+    })
+  })
+
+  const shotRows = () =>
+    animationRows(sceneOf(useScenes.getState(), DOCUMENT).animation, {
+      nodes: [{ id: 'cam-a', name: 'Camera A' }],
+      expanded: new Set(),
+    })
+
+  const shotNow = () => sceneOf(useScenes.getState(), DOCUMENT).animation.shots[0]
+
+  it('slides the bar, keeping where inside it the pointer took hold', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+
+    // Grabbed half a second into a shot that starts at one second, dropped at three.
+    act(() => press(canvas(), 'pointerdown', 150, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointermove', 300, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 300, SHOT_MIDDLE))
+
+    expect(shotNow()).toMatchObject({ start: 2.5 * SECOND, duration: 2 * SECOND })
+  })
+
+  it('trims the tail by its edge, leaving the head where it stands', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+
+    act(() => press(canvas(), 'pointerdown', 300, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointermove', 500, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 500, SHOT_MIDDLE))
+
+    expect(shotNow()).toMatchObject({ start: 1 * SECOND, duration: 4 * SECOND })
+  })
+
+  /**
+   * One set for everything the band holds picked, keys and shots alike — a shot answers to its
+   * own id. A second store for the same question is how two selections stop agreeing.
+   */
+  it('picks a shot into the very set the keys are picked in', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+
+    act(() => press(canvas(), 'pointerdown', 150, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 150, SHOT_MIDDLE))
+
+    expect(useAnimationViews.getState().views[DOCUMENT]?.selected).toEqual(['s1'])
+  })
+
+  /**
+   * The promise the montage makes over a clip's edge, made here too: a bar that trims and never
+   * says so is a bar nobody tries to trim.
+   */
+  it('promises a trim over an edge, and nothing over the body', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+
+    act(() => press(canvas(), 'pointermove', 300, SHOT_MIDDLE))
+    expect(canvas().style.cursor).toBe('ew-resize')
+
+    act(() => press(canvas(), 'pointermove', 200, SHOT_MIDDLE))
+    expect(canvas().style.cursor).toBe('')
+  })
+
+  // One entry however far the bar travelled: a drag that cost thirty ⌘Z would be unusable.
+  it('costs one entry in the history', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
+
+    act(() => press(canvas(), 'pointerdown', 150, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointermove', 200, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointermove', 300, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 300, SHOT_MIDDLE))
+
+    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length).toBe(before + 1)
+  })
+
+  it('takes the picked shot away on Delete, and lets the pick go with it', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+    act(() => press(canvas(), 'pointerdown', 150, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 150, SHOT_MIDDLE))
+
+    act(() =>
+      canvas().dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })),
+    )
+
+    expect(sceneOf(useScenes.getState(), DOCUMENT).animation.shots).toEqual([])
+    expect(useAnimationViews.getState().views[DOCUMENT]?.selected).toEqual([])
   })
 })
