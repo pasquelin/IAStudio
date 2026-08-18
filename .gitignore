@@ -8,7 +8,7 @@ secrets/*
 !secrets/.env.example
 !secrets/README.md
 .playwright-mcp/
-# Doc externe régénérable (pnpm docs:scenario) — pas de la doc de projet
+# Doc écrite ailleurs et déposée ici — pas de la doc de projet
 docs/specs
 docs/superpowers
 # Le dépôt ne publie que la DOC DU PROJET. Ce qui suit est de l'état d'outillage : utile sur la
