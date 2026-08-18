@@ -8,6 +8,7 @@
  * engine, which a save of an unmounted tab has not got — `sceneExport.ts` is what bakes.
  */
 import { Color, Euler, Quaternion } from 'three'
+import { toRadians } from '@shared/domain/angles'
 import {
   DOCUMENT_ID_KEY,
   DOCUMENT_KIND_KEY,
@@ -94,7 +95,7 @@ export function gltfDocumentOf(
         type: 'perspective',
         name: node.name,
         perspective: {
-          yfov: (node.camera.fov * Math.PI) / 180,
+          yfov: toRadians(node.camera.fov),
           znear: node.camera.near,
           zfar: node.camera.far,
         },

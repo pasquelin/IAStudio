@@ -165,20 +165,24 @@ export async function pooledHeads<T>(
 }
 
 /**
- * Where the head of a document is READ, which is not always the document itself: a folder
- * document keeps its envelope in a manifest inside it.
+ * The file that actually holds a document's bytes, which is not always the document itself: a
+ * folder document answers for its MANIFEST rather than the folder. A directory's own time moves
+ * when any entry inside it does, so `.ora` would read as changed every time a layer was
+ * rewritten by the studio itself.
  *
- * One spelling, because the cache is keyed on it: three of the four places that drop an entry
- * used the folder's own path, a key never written, so a renamed `.ora` was answered for out of
- * the map on any clock too coarse to tell two writes apart.
+ * One spelling for the head cache AND for the modification time, because the cache is keyed on
+ * it: three of the four places that drop an entry used the folder's own path, a key never
+ * written, so a renamed `.ora` was answered for out of the map on any clock too coarse to tell
+ * two writes apart. The kind is optional for `descriptorOf`, which only knows what an extension
+ * CLAIMS — and an entry claiming nothing is a plain file.
  */
-function headFileOf(file: string, kind: DocumentKind | undefined): string {
+function bodyFileOf(file: string, kind: DocumentKind | undefined): string {
   return kind && FOLDER_KINDS.has(kind) ? join(file, DOCUMENT_MANIFEST) : file
 }
 
 type CachedHead = { mtimeMs: number; size: number; envelope: DocumentEnvelope }
 
-/** Heads already read, by absolute path — see `headFileOf` for what that path is. */
+/** Heads already read, by absolute path — `bodyFileOf` says which path that is. */
 const heads = new Map<string, CachedHead>()
 
 /**
@@ -327,16 +331,6 @@ export function createDocumentFiles({
 
   const absoluteOf = (path: string): string => join(projectPath(), path)
 
-  /**
-   * The file that actually holds a document's bytes.
-   *
-   * A folder document answers for its MANIFEST rather than the folder: a directory's own time
-   * moves when any entry inside it does, so `.ora` would read as changed every time a layer was
-   * rewritten by the studio itself.
-   */
-  const bodyFileOf = (file: string, kind: DocumentKind): string =>
-    FOLDER_KINDS.has(kind) ? join(file, DOCUMENT_MANIFEST) : file
-
   /** When the file was last written, or `null` when it is not there. */
   const timeOf = async (file: string, kind: DocumentKind): Promise<number | null> => {
     try {
@@ -433,7 +427,7 @@ export function createDocumentFiles({
         if (held) await rename(stepped, folder)
         throw error
       }
-      forgetHead(headFileOf(folder, document.kind))
+      forgetHead(bodyFileOf(folder, document.kind))
       // Swallowed for the opposite reason to the one below: the swap has landed, the document
       // IS saved, and refusing the save because the previous copy would not go away would leave
       // the tab marked dirty over a folder nothing reads.
@@ -487,7 +481,7 @@ export function createDocumentFiles({
 
     try {
       const file = absoluteOf(path)
-      const envelope = await headOf(headFileOf(file, claimed[0]))
+      const envelope = await headOf(bodyFileOf(file, claimed[0]))
       // The file says which kind it is, BOUNDED by what its extension could name: a container
       // serving two editors cannot be told apart by its name, and trusting the head outright
       // would send a `.gltf` whose envelope reads `texture` to the material editor.
@@ -785,8 +779,8 @@ export function createDocumentFiles({
         }
         // Both ends: what was read under the old name is gone, and the new one holds a head
         // nothing has read yet.
-        forgetHead(headFileOf(from, kind))
-        forgetHead(headFileOf(to, kind))
+        forgetHead(bodyFileOf(from, kind))
+        forgetHead(bodyFileOf(to, kind))
         index.set(keyOf(id, kind), path)
         // The envelope was just rewritten and the file just moved, both by the studio. Without
         // this, the next ⌘S would read a time it does not recognise and accuse the user of
@@ -812,7 +806,7 @@ export function createDocumentFiles({
         const sitting = await descriptorOf(relativeOf(file))
         if (!sitting || (sitting.id === id && sitting.kind === kind)) {
           await rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) })
-          forgetHead(headFileOf(file, kind))
+          forgetHead(bodyFileOf(file, kind))
         }
         index.delete(keyOf(id, kind))
         seen.delete(stampKey(id, kind))

@@ -22,6 +22,7 @@ import {
   type PaneRect,
 } from './panes'
 import { pointerNdc, type PointerPosition } from './pointer'
+import { frustumHeight } from './screenScale'
 
 /** Where an unmounted viewport orbits, having no controls to hold a target. Never written to. */
 const ORIGIN = new Vector3()
@@ -275,7 +276,7 @@ export class ViewportEngine {
     const camera = this.camera
     const target = this.controls?.target
     const distance = target ? camera.position.distanceTo(target) : camera.position.length()
-    const height = 2 * distance * Math.tan((this.perspective.fov * Math.PI) / 360)
+    const height = frustumHeight(this.perspective.fov, distance)
     const width = height * aspect
 
     this.orthographic.top = height / 2
