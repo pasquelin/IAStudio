@@ -1,5 +1,6 @@
 import { Texture, type ColorSpace } from 'three'
 import type { LightDescriptor, TextDescriptor } from '@shared/domain/scene'
+import type { Bounds } from './rigFit'
 import type { RigState } from './rigState'
 import type { TextureCache } from './textureCache'
 import {
@@ -106,17 +107,23 @@ export function modelNodeFixture(id: string, assetId = 'asset-1'): ModelNode {
  * For the suites that only care that a rig HAS bones — a bone picker, a track on one — and that
  * would otherwise each spell a whole `RigState` of their own.
  */
+/** A standing figure of ordinary proportions, for a suite that is not testing the shape. */
+export const STANDING_BOUNDS: Bounds = {
+  min: { x: -0.3, y: 0, z: -0.2 },
+  max: { x: 0.3, y: 1.8, z: 0.2 },
+}
+
 export function rigStateFixture(names: readonly string[]): RigState {
+  const rigged = names.length > 0
   const bones = names.map((name, index) => ({ name, parent: names[index - 1] ?? null }))
 
   return {
-    status: names.length > 0 ? 'skinnedMesh' : 'staticMesh',
+    status: rigged ? 'skinnedMesh' : 'staticMesh',
     bones,
     boneNames: [...names],
     boneCount: names.length,
-    // A standing figure of ordinary proportions, so a suite that offers to fit one is not
-    // refused for a reason it never meant to test.
-    bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
+    // Nothing once there are bones, which is what the engine answers.
+    bounds: rigged ? null : STANDING_BOUNDS,
   }
 }
 
