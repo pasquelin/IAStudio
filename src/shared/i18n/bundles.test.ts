@@ -518,10 +518,10 @@ describe('the translation bundles', () => {
    * for — it drops diacritics, so `échec` would meet `echec` and every accented exemption below
    * would quietly stop matching the term it names.
    *
-   * What this does NOT catch: a label used once — nothing to be inconsistent with — a term
-   * inside a sentence, and the reverse direction, one English word for two French labels. That
-   * last one is usually right, English being the poorer in flexions: `Move` renders `Déplacer`
-   * and `Déplacement` both, and demanding otherwise would make the English worse.
+   * What this does NOT catch: a label used once — nothing to be inconsistent with — and a term
+   * inside a sentence. The reverse direction, one English word for two French labels, was
+   * dismissed here as harmless flexion until it was measured: `TWO_WAYS` guards it now, and a
+   * legitimate flexion earns an entry there rather than a flattened French.
    */
   const isComparable = (text: string): boolean =>
     text.length > 1 && holes(text).length === 0 && !/[.!?:]$/.test(text)
@@ -542,7 +542,7 @@ describe('the translation bundles', () => {
    * A label earns its place here by naming a difference, never by being noisy — and it leaves
    * the day one of its readings stops being written, which the second test makes happen.
    */
-  const TWO_THINGS: Record<string, { reads: readonly string[]; separates: string }> = {
+  const TWO_THINGS: Split = {
     annuler: { reads: ['cancel', 'undo'], separates: 'closes a dialog, and undoes an edit' },
     supprimer: { reads: ['delete', 'remove'], separates: 'destroys, and takes off a list' },
     repères: { reads: ['helpers', 'guides'], separates: "the 3D scene's, and the canvas'" },
@@ -590,31 +590,43 @@ describe('the translation bundles', () => {
     },
   }
 
-  const ENGLISH_FORMS = ((): Map<string, Set<string>> => {
+  type Split = Record<string, { reads: readonly string[]; separates: string }>
+
+  const formsOf = (read: Map<string, string>, against: Map<string, string>) => {
     const forms = new Map<string, Set<string>>()
 
-    for (const [key, source] of REFERENCE) {
-      const target = BUNDLES.en.get(key)
+    for (const [key, source] of read) {
+      const target = against.get(key)
       if (target === undefined || !isComparable(source) || !isComparable(target)) continue
       const term = asTerm(source)
-      const written = forms.get(term) ?? new Set<string>()
-      written.add(asTerm(target))
-      forms.set(term, written)
+      forms.set(term, (forms.get(term) ?? new Set<string>()).add(asTerm(target)))
     }
 
     return forms
-  })()
+  }
 
-  it('renders a repeated French label the same way in English', () => {
-    const drifted = [...ENGLISH_FORMS]
+  const driftedIn = (forms: Map<string, Set<string>>, exempt: Split) =>
+    [...forms]
       .filter(([, written]) => written.size > 1)
       .filter(([term, written]) => {
-        const allowed = TWO_THINGS[term]?.reads
+        const allowed = exempt[term]?.reads
         return allowed === undefined || [...written].some(form => !allowed.includes(form))
       })
       .map(([term, written]) => `${term} — ${[...written].join(' / ')}`)
 
-    expect(drifted).toEqual([])
+  const staleIn = (forms: Map<string, Set<string>>, exempt: Split) =>
+    Object.entries(exempt)
+      .map(([term, allowed]) => {
+        const written = forms.get(term) ?? new Set<string>()
+        return { term, missing: allowed.reads.filter(form => !written.has(form)) }
+      })
+      .filter(({ missing }) => missing.length > 0)
+      .map(({ term, missing }) => `${term} — nothing reads ${missing.join(', ')} any more`)
+
+  const ENGLISH_FORMS = formsOf(REFERENCE, BUNDLES.en)
+
+  it('renders a repeated French label the same way in English', () => {
+    expect(driftedIn(ENGLISH_FORMS, TWO_THINGS)).toEqual([])
   })
 
   /**
@@ -624,15 +636,98 @@ describe('the translation bundles', () => {
    * ask for opposite fixes.
    */
   it('drops an exemption once the label stops reading both ways', () => {
-    const settled = Object.entries(TWO_THINGS)
-      .map(([term, allowed]) => {
-        const written = ENGLISH_FORMS.get(term) ?? new Set<string>()
-        return { term, missing: allowed.reads.filter(form => !written.has(form)) }
-      })
-      .filter(({ missing }) => missing.length > 0)
-      .map(({ term, missing }) => `${term} — nothing reads ${missing.join(', ')} any more`)
+    expect(staleIn(ENGLISH_FORMS, TWO_THINGS)).toEqual([])
+  })
 
-    expect(settled).toEqual([])
+  /**
+   * The mirror of `TWO_THINGS`, and the blind spot the comment above dismissed as "usually
+   * right, English being the poorer in flexions". Usually is not always: of the twenty-three
+   * splits these bundles hold, twenty-one are that flexion and two were drift — `Asset kind`
+   * read `Type d'asset` in the usage window against four sites writing `Nature`, and `Metalness`
+   * reads two ways still, arbitration pending at `TWO_WAYS.metalness`.
+   *
+   * The morphological shortcut that would spare most of this table was tried and dropped:
+   * skipping a pair when one form starts the other swallows `métal` / `métallicité`, the very
+   * split worth seeing. A split names what separates it here, or it is drift.
+   */
+  const TWO_WAYS: Split = {
+    added: { reads: ['ajouté le', 'ajouté'], separates: "a file's date field, and a git status" },
+    back: { reads: ['de dos', 'précédent'], separates: 'a 3D view, and the explorer step back' },
+    changed: { reads: ['modifiés', 'modifié'], separates: 'a count of files, and one file' },
+    crop: {
+      reads: ['rogner', 'recadrage'],
+      separates: 'the audio tool, which trims, and the image tool, which reframes',
+    },
+    delete: {
+      reads: ['supprimer', 'suppr'],
+      separates: 'the action, and the key cap, abbreviated as a keyboard prints it',
+    },
+    failed: {
+      reads: ['échec', 'échouée'],
+      separates: "an ingest status, and a job's, which agrees with `tâche`",
+    },
+    group: { reads: ['grouper', 'groupe'], separates: 'the command, and the layer it makes' },
+    home: { reads: ['début', 'accueil'], separates: 'the Home key, and the home screen' },
+    light: { reads: ['lumière', 'clair'], separates: 'a scene light, and the light theme' },
+    media: { reads: ['média', 'médias'], separates: "one file's section, and the setting for all" },
+    'merge down': {
+      reads: ['fusionner vers le bas', 'fusionner avec le calque du dessous'],
+      separates: 'the command palette, where a title is short, and the layer menu, which explains',
+    },
+    metalness: {
+      reads: ['métallicité', 'métal'],
+      separates:
+        'the 3D inspector writes the trade word beside `Rugosité`, the textures panel the short ' +
+        'one that fits a tile — `docs/fr/manuel/12-espace-textures.md` says so in as many words. ' +
+        'Nothing conceptual separates them: a product call, not a translation one',
+    },
+    move: {
+      reads: ['déplacer', 'déplacement'],
+      separates: 'the scene command, and the canvas tool, whose palette names its tools as nouns',
+    },
+    'new project': {
+      reads: ['créer un projet', 'nouveau projet'],
+      separates: 'the button that does it, and the menu entry that names it',
+    },
+    none: { reads: ['aucune', 'aucun'], separates: 'agreement — a texture, and a model' },
+    normal: {
+      reads: ['normal', 'normale'],
+      separates: 'the blend mode, which carries the CSS name, and the normal map',
+    },
+    open: {
+      reads: ['ouvrir', 'ouvert'],
+      separates:
+        'the action, and a state — nothing reads the KEY `shell.explorer.open`, measured 18/08, ' +
+        'so what shows it is unknown rather than settled. Grepping `explorer.open` finds five ' +
+        'sites and none of them is it: they are the `LogScope` of the same name',
+    },
+    pause: {
+      reads: ['mettre en pause', 'pause'],
+      separates: "the inspector's action, and the transport button, which has room for a word",
+    },
+    scale: {
+      reads: ['redimensionner', 'échelle'],
+      separates: 'the scene command, and the property the canvas and the animation show',
+    },
+    size: {
+      reads: ['taille', 'corps'],
+      separates: "a dimension, and a font's body size, as the trade names it",
+    },
+    upscale: {
+      reads: ['agrandir', 'agrandissement'],
+      separates: 'the canvas command, and the billed action — the mirror of `agrandissement`',
+    },
+    view: { reads: ['vue', 'affichage'], separates: 'a panel, and the native View menu' },
+  }
+
+  const FRENCH_FORMS = formsOf(BUNDLES.en, REFERENCE)
+
+  it('renders a repeated English label the same way in French', () => {
+    expect(driftedIn(FRENCH_FORMS, TWO_WAYS)).toEqual([])
+  })
+
+  it('drops a French exemption once the label stops reading both ways', () => {
+    expect(staleIn(FRENCH_FORMS, TWO_WAYS)).toEqual([])
   })
 
   /**
