@@ -83,8 +83,31 @@ of it would delete those parts, and a half-rewritten file would open nowhere. Th
 protects a sky holding a whole scene, and a `.mtlx` material holding more than the studio composes
 — a second material, or simply a surface dial the material editor has not got, such as a coat.
 
-To take your changes out anyway, use **File ▸ Export scene**: an export writes beside the file,
-leaving the original untouched.
+**An edit is protected the same way**, and for two distinct reasons. An `.otio` holding a marker,
+an effect or a transition the studio does not compose opens read-only; and an edit whose media
+cannot be found opens **without the clips concerned**, so saving it would erase them from the file.
+In that second case, import the media into the project, then open the edit again: the refusal
+lifts on its own.
+
+**The refusal is said twice, and never in between.** On opening, the studio names what it cannot
+write back and the document arrives read-only. Then `⌘S` answers, with the full reason. **The
+autosave says NOTHING**: it comes round, meets the same refusal, and stays quiet — repeating the
+sentence every thirty seconds would be worse than silence. A refused document is therefore never
+written to disk until you have tried `⌘S` yourself.
+
+To take your changes out anyway, use that document's **export** — **File ▸ Export scene**, **Export
+sky**, **Export material**, or **Export edit (OTIO)…**: the writing goes to a NEW file, leaving the
+original untouched.
+
+> **Do not expect *Save as…* to get round the refusal**: both saving gestures go through the same
+> door, and the copy is refused for the same reason as the original. The export, and only the
+> export, takes work out of a read-only document.
+
+> **The image is the only one of the six with no refusal, and that is deliberate.** An `.ora` is
+> recomposed whole on saving too, but it writes without asking: whatever another application put
+> there and the studio does not compose is lost on the first write — and **renaming the file is
+> enough** to trigger that rewrite. If an `.ora` reaches you from elsewhere and you care about what
+> it holds, work on a copy.
 
 **What does not save:**
 
