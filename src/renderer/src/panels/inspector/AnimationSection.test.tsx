@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { embeddedClip } from '@shared/domain/scene'
+import { clipLane, embeddedClip } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type ModelNode } from '@/engines/scene/sceneState'
@@ -19,7 +19,9 @@ const nodeOf = (): ModelNode | undefined => {
   return node?.type === 'model' ? node : undefined
 }
 
-const playedOf = () => nodeOf()?.model.clips?.[0]
+const heldOf = () => nodeOf()?.model.lanes?.[0]?.clips
+
+const playedOf = () => heldOf()?.[0]
 
 /** Whether the scene's head is running — the one clock, written by this button too. */
 const runningNow = () => useSceneViews.getState().views[DOCUMENT]?.playing ?? false
@@ -142,7 +144,7 @@ describe('AnimationSection', () => {
     await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
     await userEvent.selectOptions(screen.getByLabelText('Clip'), '')
 
-    expect(nodeOf()?.model.clips).toBeUndefined()
+    expect(nodeOf()?.model.lanes).toBeUndefined()
   })
 
   /**
@@ -156,15 +158,40 @@ describe('AnimationSection', () => {
       nodes: [
         {
           ...modelNodeFixture('a'),
-          model: { assetId: 'asset-1', clips: [embeddedClip('c1', 'walk'), kept] },
+          model: {
+            assetId: 'asset-1',
+            lanes: [clipLane('main', [embeddedClip('c1', 'walk'), kept])],
+          },
         },
       ],
     })
     show()
     await userEvent.click(screen.getByLabelText('En boucle'))
 
-    expect(nodeOf()?.model.clips?.map(clip => clip.id)).toEqual(['c1', 'c2'])
-    expect(nodeOf()?.model.clips?.[1]).toEqual(kept)
+    expect(heldOf()?.map(clip => clip.id)).toEqual(['c1', 'c2'])
+    expect(heldOf()?.[1]).toEqual(kept)
+  })
+
+  // The band is where the layering is edited: an inspector that rewrote the whole field from one
+  // control would take a stacked animation off without ever showing it.
+  it('leaves the lanes it does not show alone', async () => {
+    const other = clipLane('second', [embeddedClip('c3', 'wave')])
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [
+        {
+          ...modelNodeFixture('a'),
+          model: {
+            assetId: 'asset-1',
+            lanes: [clipLane('main', [embeddedClip('c1', 'walk')]), other],
+          },
+        },
+      ],
+    })
+    show()
+    await userEvent.click(screen.getByLabelText('En boucle'))
+
+    expect(nodeOf()?.model.lanes?.[1]).toEqual(other)
   })
 
   // Its clip is gone from the file, so the picker lists nothing — but « none » has to stay
@@ -175,14 +202,14 @@ describe('AnimationSection', () => {
       nodes: [
         {
           ...modelNodeFixture('a'),
-          model: { assetId: 'asset-1', clips: [embeddedClip('c1', 'gone')] },
+          model: { assetId: 'asset-1', lanes: [clipLane('main', [embeddedClip('c1', 'gone')])] },
         },
       ],
     })
     show([])
     await userEvent.selectOptions(screen.getByLabelText('Clip'), '')
 
-    expect(nodeOf()?.model.clips).toBeUndefined()
+    expect(nodeOf()?.model.lanes).toBeUndefined()
   })
 
   it('offers neither speed nor loop while no clip is chosen', () => {

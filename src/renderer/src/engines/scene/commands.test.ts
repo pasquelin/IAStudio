@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { embeddedClip } from '@shared/domain/scene'
+import { clipLane, embeddedClip } from '@shared/domain/scene'
 import type { Rig } from '@shared/domain/rig'
 import { emptyHistory, run, undo, type Command } from '../core/history'
 import {
@@ -21,7 +21,7 @@ import {
   setLightOn,
   setMeshMaterial,
   setMaterialOn,
-  setModelClips,
+  setModelLanes,
   setModelRig,
   setModelTextures,
   setNodeVisible,
@@ -754,25 +754,38 @@ describe('setModelTextures', () => {
   })
 
   // Both edits write the same reference: rebuilding it from `assetId` alone dropped the other.
-  it('leaves the clips of the model alone, and is left alone by them', () => {
-    const clip = embeddedClip('c1', 'run', { speed: 2 })
-    const blocked = setModelClips('m', [clip]).apply(withModel())
+  it('leaves the lanes of the model alone, and is left alone by them', () => {
+    const lane = clipLane('main', [embeddedClip('c1', 'run', { speed: 2 })])
+    const blocked = setModelLanes('m', [lane]).apply(withModel())
     const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(blocked)
 
     const node = nodeById(dressed, 'm')
-    expect(node?.type === 'model' && node.model.clips).toEqual([clip])
-    expect(texturesOf(setModelClips('m', []).apply(dressed))).toEqual({
+    expect(node?.type === 'model' && node.model.lanes).toEqual([lane])
+    expect(texturesOf(setModelLanes('m', []).apply(dressed))).toEqual({
       map: { assetId: 'tex-1' },
     })
   })
 
-  it('drops the field when the last block goes, so a rest pose says nothing at all', () => {
-    const clip = embeddedClip('c1', 'run')
-    const blocked = setModelClips('m', [clip]).apply(withModel())
-    const stopped = setModelClips('m', []).apply(blocked)
+  // One empty lane is exactly what the band shows a model that has never played anything, so
+  // writing it says nothing the default does not.
+  it('holds a lane the user added even while nothing has been dropped in it', () => {
+    const lanes = [clipLane('main'), clipLane('second')]
+    const node = nodeById(setModelLanes('m', lanes).apply(withModel()), 'm')
+
+    expect(node?.type === 'model' && node.model.lanes).toEqual(lanes)
+
+    const alone = nodeById(setModelLanes('m', [clipLane('main')]).apply(withModel()), 'm')
+    expect(alone?.type === 'model' && 'lanes' in alone.model).toBe(false)
+  })
+
+  it('drops the field when the last lane goes, so a rest pose says nothing at all', () => {
+    const blocked = setModelLanes('m', [clipLane('main', [embeddedClip('c1', 'run')])]).apply(
+      withModel(),
+    )
+    const stopped = setModelLanes('m', []).apply(blocked)
 
     const node = nodeById(stopped, 'm')
-    expect(node?.type === 'model' && 'clips' in node.model).toBe(false)
+    expect(node?.type === 'model' && 'lanes' in node.model).toBe(false)
   })
 
   it('puts a skeleton on a model, and takes it back off', () => {

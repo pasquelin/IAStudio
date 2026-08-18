@@ -4,7 +4,7 @@ import { StrictMode, useMemo } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { animationRows, SUBJECT_HEIGHT } from '@/engines/scene/animationRows'
-import { meshNode } from '@/engines/scene/scene-fixtures'
+import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { addAnimationTrack } from '@/engines/scene/animationCommands'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
@@ -319,5 +319,72 @@ describe('a line of the sheet dragged by its grip', () => {
     expect(animationViewOf(useAnimationViews.getState(), DOCUMENT).viewport.scrollTop).toBe(
       2 * SUBJECT_HEIGHT,
     )
+  })
+})
+
+describe('the line of a sub-track', () => {
+  beforeEach(() => {
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelNodeFixture('perso')] })
+    useAnimationViews.setState({ views: {} })
+  })
+
+  const lanesOf = () => {
+    const node = sceneOf(useScenes.getState(), DOCUMENT).nodes.find(one => one.id === 'perso')
+    return node?.type === 'model' ? node.model.lanes : undefined
+  }
+
+  const showLanes = (...laneIds: string[]) => {
+    cleanup()
+    const rows = animationRows(timelineOf(), {
+      nodes: [{ id: 'perso', name: 'Perso' }],
+      expanded: new Set(['perso']),
+      lanes: laneIds.map(laneId => ({
+        nodeId: 'perso',
+        laneId,
+        name: `Anim. ${laneId}`,
+        blocks: [],
+      })),
+    })
+    return render(<AnimationHeaders documentId={DOCUMENT} rows={rows} />)
+  }
+
+  it('names each sub-track of an object apart, so two of them are told apart', () => {
+    showLanes('1', '2')
+
+    expect(screen.getByText('Anim. 1')).toBeTruthy()
+    expect(screen.getByText('Anim. 2')).toBeTruthy()
+  })
+
+  // Adding is ONE action, so it belongs to one line: offered on every lane it read as a control
+  // that meant something different on each.
+  it('offers to add a sub-track on the last line alone', () => {
+    showLanes('1', '2')
+
+    expect(screen.getAllByRole('button', { name: 'Ajouter une sous-piste' })).toHaveLength(1)
+  })
+
+  it('adds a sub-track at the end of the stack', async () => {
+    showLanes('main')
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter une sous-piste' }))
+
+    expect(lanesOf()).toHaveLength(2)
+  })
+
+  // An object's track is where an animation is dropped: one with no lane left has nowhere to
+  // receive the next.
+  it('never takes the last sub-track away', async () => {
+    showLanes('main')
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Supprimer la sous-piste Anim. main' }),
+    )
+
+    expect(lanesOf()).toBeUndefined()
+    expect(screen.getByText('Anim. main')).toBeTruthy()
+  })
+
+  it('offers a grip to move a sub-track through the stack', () => {
+    showLanes('1', '2')
+
+    expect(screen.getByRole('button', { name: 'Déplacer la ligne Anim. 1' })).toBeTruthy()
   })
 })

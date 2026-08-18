@@ -78,7 +78,12 @@ export type ModelRef = {
   assetId: string
   /** The skeleton the studio put on this model. The one exception to the rule above — see `rig.ts`. */
   rig?: Rig
-  /** What plays on this model, in the order the band draws the blocks. */
+  /** What plays on this model: one lane per layer, and the blocks inside each. */
+  lanes?: readonly ClipLane[]
+  /**
+   * @deprecated Read when a document written before lanes existed is opened, and folded into a
+   * single lane. Never written again.
+   */
   clips?: readonly ClipRef[]
   /**
    * @deprecated Read when a document written before clips were plural is opened, and converted
@@ -170,6 +175,29 @@ export type ClipRef = {
   fadeOut: Us
   /** `auto` lets the studio decide from what the clip actually holds. */
   rootMotion: RootMotion
+}
+
+/**
+ * One layer of blocks on a model's track, and several of them stack.
+ *
+ * A lane is what makes two moves play AT ONCE — a walk under a wave — where blocks laid in one
+ * lane simply take turns. It exists even while empty: an object has its lane before it has
+ * anything to put in it.
+ */
+export type ClipLane = {
+  id: string
+  clips: readonly ClipRef[]
+}
+
+/**
+ * The lane a document written before lanes existed describes, and the one a model is given when
+ * it first needs somewhere to drop a block. Fixed rather than minted, so reopening a file twice
+ * gives the same document.
+ */
+export const MAIN_LANE_ID = 'main'
+
+export function clipLane(id: string, clips: readonly ClipRef[] = []): ClipLane {
+  return { id, clips }
 }
 
 export type RootMotion = 'inPlace' | 'travel' | 'auto'

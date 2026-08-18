@@ -11,7 +11,9 @@
  */
 import {
   clipFromAnimation,
+  clipLane,
   DEFAULT_CAMERA,
+  MAIN_LANE_ID,
   isTransform,
   isVector3,
   readEnvironment,
@@ -111,7 +113,7 @@ function revived(node: SceneNode): SceneNode {
     return { ...filled, camera: { ...DEFAULT_CAMERA, ...filled.camera } }
   }
   if (filled.type === 'model') {
-    return { ...filled, model: withClips(filled.model) }
+    return { ...filled, model: withLanes(filled.model) }
   }
   if (filled.type !== 'text') return filled
 
@@ -123,14 +125,18 @@ function revived(node: SceneNode): SceneNode {
 }
 
 /**
- * A model's clips, from whichever of the two forms the file spells. The singular is READ and
- * never written again — dropping it would lose the animation of every scene saved so far, and a
- * node that plays nothing looks exactly like one that never played.
+ * A model's lanes, from whichever of the three forms the file spells. The two older ones are READ
+ * and never written again — dropping either would lose the animation of every scene saved so far,
+ * and a node that plays nothing looks exactly like one that never played.
  */
-function withClips(model: ModelRef): ModelRef {
-  if (!model.animation) return model
+function withLanes(model: ModelRef): ModelRef {
+  if (model.lanes) return model
 
-  const next = { ...model, clips: model.clips ?? [clipFromAnimation(model.animation)] }
+  const clips = model.clips ?? (model.animation ? [clipFromAnimation(model.animation)] : null)
+  if (!clips) return model
+
+  const next = { ...model, lanes: [clipLane(MAIN_LANE_ID, clips)] }
+  delete next.clips
   delete next.animation
   return next
 }
@@ -175,6 +181,7 @@ function isSceneNode(value: unknown): value is SceneNode {
       typeof value.model.assetId === 'string' &&
       isOptionalAnimation(value.model.animation) &&
       isOptionalClips(value.model.clips) &&
+      isOptionalLanes(value.model.lanes) &&
       isOptionalRig(value.model.rig) &&
       isOptionalTextureOverrides(value.model.textures)
     )
@@ -194,6 +201,22 @@ function isSceneNode(value: unknown): value is SceneNode {
 
 function isOptionalFlag(value: unknown): boolean {
   return value == null || typeof value === 'boolean'
+}
+
+/**
+ * Absent is legal and means "still", as for the two older forms below: a document written before
+ * lanes existed holds none, and `revived` is what folds what it does hold into one.
+ */
+function isOptionalLanes(value: unknown): boolean {
+  if (value == null) return true
+
+  return Array.isArray(value) && value.every(isLane)
+}
+
+function isLane(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.id !== 'string') return false
+
+  return Array.isArray(value.clips) && value.clips.every(isClip)
 }
 
 /**

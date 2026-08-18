@@ -219,6 +219,10 @@
     "unkeySubject": "Retirer la clé de {{name}}",
     "unkeySubjectHint": "Retire la clé posée ici, sur toutes les propriétés de cet objet",
     "reorderRow": "Déplacer la ligne {{name}}",
-    "rowList": "Lignes de l’animation"
+    "rowList": "Lignes de l’animation",
+    "lane": "Anim. {{index}}",
+    "addLane": "Ajouter une sous-piste",
+    "addLaneHint": "Une animation de plus, jouée en même temps que celles du dessus",
+    "removeLane": "Supprimer la sous-piste {{name}}"
   }
 }

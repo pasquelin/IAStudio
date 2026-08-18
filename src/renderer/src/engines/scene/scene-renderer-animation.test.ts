@@ -1,7 +1,7 @@
 import { AnimationClip, Bone, Group, Mesh, SphereGeometry, VectorKeyframeTrack } from 'three'
 import type { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import { embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SceneRenderer } from './SceneRenderer'
 import type { BvhBuilder } from './bvhBuilder'
 import type * as ModelCache from './modelCache'
@@ -52,7 +52,7 @@ function withModel(loaded: Group): SceneRenderer {
 
 const modelNode = (clip: ClipRef | null) => ({
   ...modelNodeFixture('a'),
-  model: { assetId: 'asset-1', ...(clip && { clips: [clip] }) },
+  model: { assetId: 'asset-1', ...(clip && { lanes: [clipLane('main', [clip])] }) },
 })
 
 /** A block on `walk`, since that is the clip every fixture of this file brings. */

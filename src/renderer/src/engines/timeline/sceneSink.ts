@@ -1,4 +1,4 @@
-import { embeddedClip } from '@shared/domain/scene'
+import { clipLane, embeddedClip, MAIN_LANE_ID } from '@shared/domain/scene'
 import { secondsToUs } from '@shared/domain/time'
 import { newId } from '@/helpers/ids'
 import { createDefaultScene } from '../scene/defaultScene'
@@ -44,7 +44,10 @@ export function createModelScene(assetId: string, name: string): ModelScene {
           node.id === model.id && node.type === 'model'
             ? {
                 ...node,
-                model: { ...node.model, clips: [embeddedClip(newId(), clip)] },
+                model: {
+                  ...node.model,
+                  lanes: [clipLane(MAIN_LANE_ID, [embeddedClip(newId(), clip)])],
+                },
               }
             : node,
         ),

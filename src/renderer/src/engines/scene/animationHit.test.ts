@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { RULER_HEIGHT, type Viewport } from '../timeline/timelineGeometry'
 import { animationTrack, timelineWith } from './animation-fixtures'
-import { hitAnimation, type HitContext } from './animationHit'
-import { CHANNEL_HEIGHT, CLIP_HEIGHT, SUBJECT_HEIGHT, animationRows } from './animationRows'
+import { animationCursorAt, hitAnimation, type HitContext } from './animationHit'
+import { CHANNEL_HEIGHT, SUBJECT_HEIGHT, animationRows, type ClipBlock } from './animationRows'
 
 /** One pixel per 10 ms, so a second is a hundred pixels across. */
 const viewport: Viewport = { scale: 100 / SECOND, offset: 0, scrollTop: 0 }
@@ -110,34 +110,62 @@ describe('pointing at the animation band', () => {
 })
 
 describe('pointing at a clip block', () => {
-  const withBlock = (): HitContext => ({
+  const laneWith = (...blocks: readonly ClipBlock[]): HitContext => ({
     rows: animationRows(timelineWith([]), {
-      nodes: [],
-      expanded: new Set(),
-      clips: [
-        { nodeId: 'perso', clipId: 'c1', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND },
-      ],
+      nodes: [{ id: 'perso', name: 'Perso' }],
+      expanded: new Set(['perso']),
+      lanes: [{ nodeId: 'perso', laneId: 'main', name: 'Animation 1', blocks }],
     }),
     viewport,
     fps: 25,
   })
 
-  /** The vertical middle of the block row, which is the only row here. */
-  const middle = RULER_HEIGHT + CLIP_HEIGHT / 2
+  const walk: ClipBlock = { clipId: 'c1', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND }
+
+  const withBlock = (): HitContext => laneWith(walk)
+
+  /** The vertical middle of the lane row, which sits under the object's own line. */
+  const middle = RULER_HEIGHT + SUBJECT_HEIGHT + CHANNEL_HEIGHT / 2
+
+  const where = { rowId: 'lane:perso:main', nodeId: 'perso', laneId: 'main', clipId: 'c1' }
 
   it('finds the block, and says how far into it the pointer landed', () => {
     expect(hitAnimation(withBlock(), { x: 150, y: middle })).toEqual({
       kind: 'block',
-      rowId: 'clip:perso:c1',
-      nodeId: 'perso',
-      clipId: 'c1',
+      ...where,
       grabbedAt: 0.5 * SECOND,
     })
   })
 
-  it('grabs at zero when the pointer lands on the very start of the block', () => {
-    const hit = hitAnimation(withBlock(), { x: 100, y: middle })
-    expect(hit?.kind === 'block' && hit.grabbedAt).toBe(0)
+  it('finds the end a trim is grabbed by, at both edges', () => {
+    expect(hitAnimation(withBlock(), { x: 102, y: middle })).toEqual({
+      kind: 'blockEdge',
+      ...where,
+      edge: 'in',
+    })
+    expect(hitAnimation(withBlock(), { x: 298, y: middle })).toEqual({
+      kind: 'blockEdge',
+      ...where,
+      edge: 'out',
+    })
+  })
+
+  it('says the pointer is over a trim zone, which is what shows the resize cursor', () => {
+    expect(animationCursorAt(withBlock(), { x: 102, y: middle })).toBe('ew-resize')
+    expect(animationCursorAt(withBlock(), { x: 150, y: middle })).toBe('')
+  })
+
+  // They are drawn last, so the eye grabs what it sees.
+  it('gives the later of two overlapping blocks to the hand', () => {
+    const context = laneWith(walk, {
+      clipId: 'c2',
+      name: 'Run',
+      start: 2 * SECOND,
+      duration: 2 * SECOND,
+    })
+    const hit = hitAnimation(context, { x: 250, y: middle })
+
+    expect(hit?.kind === 'block' && hit.clipId).toBe('c2')
   })
 
   it('reads the row rather than the block once the pointer is past its end', () => {
