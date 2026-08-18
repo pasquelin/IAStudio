@@ -367,6 +367,7 @@ export function pathKnob(index: number, colour: string): Mesh {
   )
   knob.name = knobName(index)
   knob.onBeforeRender = (_renderer, _scene, camera) => sizeKnobFor(knob, camera)
+  knob.onAfterRender = () => restoreKnob(knob)
   return knob
 }
 
@@ -374,6 +375,19 @@ export function pathKnob(index: number, colour: string): Mesh {
 export function sizeKnobFor(knob: Object3D, camera: Camera): void {
   knob.getWorldPosition(KNOB_SPOT)
   knob.scale.setScalar(screenScale(camera, KNOB_SPOT, KNOB_SHARE) / PATH_KNOB_RADIUS)
+  knob.updateMatrixWorld(true)
+}
+
+/**
+ * The knob put back to the size it was BUILT at, the moment its draw call is over.
+ *
+ * Or the scale of whichever camera drew last would outlive the frame, and everything that reads a
+ * matrix outside the render reads that one: framing a rail would answer differently depending on
+ * where the view stood before, the frustum of the side views would breathe, and exporting the
+ * same scene twice would write two different files.
+ */
+export function restoreKnob(knob: Object3D): void {
+  knob.scale.setScalar(1)
   knob.updateMatrixWorld(true)
 }
 

@@ -46,15 +46,24 @@ export function toggleNodeVisible(documentId: string, nodeId: string): void {
  * The picked control point of a rail, taken away. Answers whether there was one, so a caller can
  * go on to what it would otherwise have deleted.
  *
- * Two points is the floor `withoutPoint` holds — one point is not a line — and the refusal still
- * counts as handled: falling through would delete the rail itself.
+ * Only while its rail is still the SELECTION, and that is what stops Delete from being hijacked:
+ * a point is picked by a click in the viewport and let go of by another one, where the tree
+ * selects through `selectIn`, which knows nothing of this. A point left over from a rail worked
+ * on earlier would eat the Delete meant for the object just picked in the tree — and on a rail
+ * already down to its last two points, it would swallow every Delete and do nothing at all.
+ *
+ * Two points is the floor `withoutPoint` holds — one point is not a line — and that refusal still
+ * counts as handled: falling through would delete the rail the hand is working on.
  */
 export function removePickedPathPoint(documentId: string): boolean {
   const picked = sceneViewOf(useSceneViews.getState(), documentId).pickedPathPoint
   if (!picked) return false
 
   const store = useScenes.getState()
-  const node = nodeById(sceneOf(store, documentId), picked.nodeId)
+  const scene = sceneOf(store, documentId)
+  if (!scene.selectedIds.includes(picked.nodeId)) return false
+
+  const node = nodeById(scene, picked.nodeId)
   if (node?.type !== 'path') return false
 
   const path = withoutPoint(node.path, picked.index)

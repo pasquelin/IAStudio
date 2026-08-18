@@ -33,6 +33,7 @@ import type { ExportFormat, LightDescriptor, Transform } from '@shared/domain/sc
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { SelectionMode } from '@/helpers/selection'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
+import { screenScale } from '../viewport/screenScale'
 import { createSkyBinding, type SkyBinding } from '../viewport/skyBinding'
 import {
   ViewportEngine,
@@ -96,7 +97,7 @@ import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf } from './animatio
 import { drivenNodes, fovAt, poseAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
-import { nearestBone, type ProjectedBone } from './bonePicking'
+import { nearestProjected, type Projected, type ProjectedBone } from './bonePicking'
 import { rigStateOf, type RigState } from './rigState'
 import { evenSize, flipInto, frameTimes, type FilmRequest } from './film'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
@@ -290,6 +291,22 @@ const NOOP = (): void => {}
 
 /** Scratch for projecting a bone, so a click over a rig allocates nothing per bone. */
 const BONE_WORLD = new Vector3()
+
+/** Scratch for placing a rail or one of its knobs, so a click over one allocates nothing. */
+const RAIL_SPOT = new Vector3()
+
+/** How wide a rail's line is grabbed, as a share of the visible height: about six pixels. */
+const LINE_GRAB = 1 / 150
+
+/** A control point, as the screen sees it. */
+type ProjectedKnob = Projected & { nodeId: string; index: number }
+
+/**
+ * How near the pointer must fall to grab a knob, in normalised device units — the knob covers
+ * `KNOB_SHARE` of the height, which is 2 in this space, and a little over that is what a hand
+ * needs. Far tighter than a bone's reach: knobs stand apart, where a rig's bones crowd.
+ */
+const KNOB_REACH = 0.025
 
 /** Where a normalised view stands when the camera already sits on its target and has no distance. */
 const DEFAULT_VIEW_DISTANCE = 8
@@ -2352,10 +2369,16 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
-  /** The knob of the point picked, while one is picked and its rail is still on stage. */
+  /**
+   * The knob of the point picked, while one is picked and its rail is still being worked on.
+   *
+   * The rail matters as much as the knob: a point is let go of by a click in the VIEWPORT, and
+   * the tree selects through another door entirely — without this the gizmo stayed on a knob the
+   * selection had hidden, while the object just picked in the tree got none.
+   */
   private pickedKnob(): Object3D | null {
     const picked = this.pickedPathPoint
-    if (!picked) return null
+    if (!picked || !this.workedRailIds().has(picked.nodeId)) return null
     return this.objects.get(picked.nodeId)?.getObjectByName(knobName(picked.index)) ?? null
   }
 
@@ -2442,7 +2465,10 @@ export class SceneRenderer {
       if (!ndc) return
 
       // The camera of the view under the pointer, never the main one — `nodeAt` says why.
-      const picked = nearestBone(this.projectedBones(this.cameraInHand()), { x: ndc.x, y: ndc.y })
+      const picked = nearestProjected(this.projectedBones(this.cameraInHand()), {
+        x: ndc.x,
+        y: ndc.y,
+      })
       this.options.onSelectBone?.(picked ? { nodeId: picked.nodeId, bone: picked.bone } : null)
       return
     }
@@ -2476,15 +2502,41 @@ export class SceneRenderer {
   /**
    * The control point the pointer is over, on a rail being WORKED ON — otherwise the knobs of
    * every rail would take clicks meant for what stands behind them.
+   *
+   * On the SCREEN rather than through a ray, for the reason `nearestProjected` carries: a knob
+   * keeps its size on screen, and its world radius is whatever the last camera to draw it left
+   * behind. A ray answered with that one, so in a quad view a knob could be unreachable where it
+   * was plainly visible. It also settles what a ray never could — the curve lies right across
+   * its own control points, so the nearest INTERSECTION was often the line.
    */
   private pathPointAt(event: PointerEvent): { nodeId: string; index: number } | null {
-    // The nearest KNOB, not the nearest thing on the rail: the curve is an object of the same
-    // subtree and it lies right across its own control points, so taking the first intersection
-    // meant a press landing on the line between two knobs answered « no point here ».
-    const hit = this.railHits(event).find(candidate => knobIndexOf(candidate.object.name) !== null)
-    const index = hit ? knobIndexOf(hit.object.name) : null
+    const ndc = this.viewport.pointerNdcOf(event)
+    if (!ndc) return null
 
-    return index === null ? null : { nodeId: hit?.object.parent?.name ?? '', index }
+    const picked = nearestProjected(
+      this.projectedKnobs(this.cameraInHand()),
+      { x: ndc.x, y: ndc.y },
+      KNOB_REACH,
+    )
+    return picked ? { nodeId: picked.nodeId, index: picked.index } : null
+  }
+
+  /** Every knob of every rail being worked on, as the screen sees it. */
+  private projectedKnobs(camera: Camera): ProjectedKnob[] {
+    const projected: ProjectedKnob[] = []
+
+    for (const rail of this.workedRails()) {
+      for (const knob of rail.children) {
+        const index = knobIndexOf(knob.name)
+        if (index === null) continue
+
+        knob.getWorldPosition(RAIL_SPOT)
+        RAIL_SPOT.project(camera)
+        projected.push({ nodeId: rail.name, index, x: RAIL_SPOT.x, y: RAIL_SPOT.y, z: RAIL_SPOT.z })
+      }
+    }
+
+    return projected
   }
 
   /**
@@ -2502,17 +2554,46 @@ export class SceneRenderer {
     const node = nodeId ? this.applied.get(nodeId) : null
     if (!hit || hit.index === undefined || !nodeId || node?.type !== 'path') return null
 
-    return { nodeId, index: segmentAt(node.path, hit.index / PATH_SAMPLES) }
+    // The MIDDLE of the sample three hands back: `index` names where the segment starts, so
+    // reading it straight puts a click in the last sixty-fourth before a control point into the
+    // stretch before it.
+    return { nodeId, index: segmentAt(node.path, (hit.index + 0.5) / PATH_SAMPLES) }
   }
 
-  /** What the pointer meets on the rails being worked on, nearest first. */
+  /**
+   * What the pointer meets on the rails being worked on, nearest first.
+   *
+   * The grab around a LINE is set per rail and never left at three's own: its default is one
+   * WORLD UNIT, which on a rail five units long is a tube wide enough to swallow clicks meant for
+   * whatever stands beside it. It cost nothing while only knobs were read out of these hits; ⌥
+   * now writes a point into the document, so it costs an edit nobody asked for. Put back
+   * afterwards, the raycaster being the one every other pick goes through — a light is picked by
+   * the LINES of its helper.
+   *
+   * Measured from the rail's own origin rather than from where the ray lands: the point is not
+   * known before the hit, and a rail is small enough that the two agree to within its length.
+   */
   private railHits(event: PointerEvent): Intersection[] {
     const ndc = this.viewport.pointerNdcOf(event)
     if (!ndc) return []
 
     this.pointer.set(ndc.x, ndc.y)
-    this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
-    return this.raycaster.intersectObjects(this.workedRails(), true)
+    const camera = this.cameraInHand()
+    this.raycaster.setFromCamera(this.pointer, camera)
+
+    const held = this.raycaster.params.Line.threshold
+    const hits: Intersection[] = []
+    for (const rail of this.workedRails()) {
+      this.raycaster.params.Line.threshold = screenScale(
+        camera,
+        rail.getWorldPosition(RAIL_SPOT),
+        LINE_GRAB,
+      )
+      hits.push(...this.raycaster.intersectObject(rail, true))
+    }
+    this.raycaster.params.Line.threshold = held
+
+    return hits.sort((left, right) => left.distance - right.distance)
   }
 
   /** The node the pointer is over, or nothing for a ray that met only the void. */
