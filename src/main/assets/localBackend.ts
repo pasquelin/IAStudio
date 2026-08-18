@@ -21,6 +21,7 @@ const FALLBACK_EXTENSION: Record<AssetType, string> = {
   mesh: '.glb',
   texture: '.png',
   skybox: '.png',
+  animation: '.glb',
 }
 
 export type Download = (url: string) => Promise<Uint8Array>

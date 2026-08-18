@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AssetType } from '@shared/domain/asset'
+import type { AssetType, CloudAssetType } from '@shared/domain/asset'
 import type { CloudAsset, CloudPage } from '@shared/domain/cloudAsset'
 import { queryHost } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -116,10 +116,13 @@ describe('one tab of the public feed', () => {
       { assets: [cloudAsset('b', 'video')], cursor: null },
     ])
 
-    const { result, rerender } = renderHook(({ type }: { type: AssetType }) => useExplore(type), {
-      initialProps: { type: 'image' },
-      wrapper: queryHost(),
-    })
+    const { result, rerender } = renderHook(
+      ({ type }: { type: CloudAssetType }) => useExplore(type),
+      {
+        initialProps: { type: 'image' },
+        wrapper: queryHost(),
+      },
+    )
     await waitFor(() => expect(result.current.items).toHaveLength(1))
 
     rerender({ type: 'video' })
@@ -167,10 +170,13 @@ describe('one tab of the public feed', () => {
       { assets: [cloudAsset('b', 'video')], cursor: 'o:40' },
     ])
 
-    const { result, rerender } = renderHook(({ type }: { type: AssetType }) => useExplore(type), {
-      initialProps: { type: 'image' },
-      wrapper: queryHost(),
-    })
+    const { result, rerender } = renderHook(
+      ({ type }: { type: CloudAssetType }) => useExplore(type),
+      {
+        initialProps: { type: 'image' },
+        wrapper: queryHost(),
+      },
+    )
     await waitFor(() => expect(result.current.items.map(asset => asset.id)).toEqual(['a']))
 
     rerender({ type: 'video' })
@@ -190,10 +196,13 @@ describe('one tab of the public feed', () => {
       .mockResolvedValue({ assets: [cloudAsset('a')], cursor: null })
     installFakeBridge({ cloud: { explore } })
 
-    const { result, rerender } = renderHook(({ type }: { type: AssetType }) => useExplore(type), {
-      initialProps: { type: 'image' },
-      wrapper: queryHost(),
-    })
+    const { result, rerender } = renderHook(
+      ({ type }: { type: CloudAssetType }) => useExplore(type),
+      {
+        initialProps: { type: 'image' },
+        wrapper: queryHost(),
+      },
+    )
     await waitFor(() => expect(result.current.exhausted).toBe(true))
     expect(result.current.items).toHaveLength(0)
 
@@ -210,10 +219,13 @@ describe('one tab of the public feed', () => {
       { assets: [cloudAsset('b', 'video')], cursor: null },
     ])
 
-    const { result, rerender } = renderHook(({ type }: { type: AssetType }) => useExplore(type), {
-      initialProps: { type: 'image' },
-      wrapper: queryHost(),
-    })
+    const { result, rerender } = renderHook(
+      ({ type }: { type: CloudAssetType }) => useExplore(type),
+      {
+        initialProps: { type: 'image' },
+        wrapper: queryHost(),
+      },
+    )
     await waitFor(() => expect(result.current.items.map(asset => asset.id)).toEqual(['a']))
 
     rerender({ type: 'video' })

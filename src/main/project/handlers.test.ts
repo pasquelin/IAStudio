@@ -720,6 +720,7 @@ describe('project handlers', () => {
       mesh: 0,
       texture: 0,
       skybox: 0,
+      animation: 0,
     })
   })
 

@@ -13,9 +13,11 @@ import type { HumanoidRole } from '@shared/domain/humanoid'
 import { rigHandBones } from './rigFit'
 import { ikLinksOf } from './ik'
 import {
+  clipLane,
   isVector3,
   type CameraDescriptor,
   type ClipLane,
+  type ClipRef,
   type EnvironmentRef,
   type GeometryDescriptor,
   type LightDescriptor,
@@ -497,6 +499,22 @@ export function addRigHands(id: string): Command<SceneState> {
   return editRigBones(id, 'rigBone', bones => {
     const hands = rigHandBones(bones)
     return hands && rigWithBones(bones, hands)
+  })
+}
+
+/**
+ * One block more on a model's band, at the end of its first lane.
+ *
+ * The lane is made if the model has none: a character that has never played anything holds no
+ * lane at all, and it is exactly the one an animation is dropped on.
+ */
+export function addModelClip(id: string, clip: ClipRef): Command<SceneState> {
+  return editModel(id, 'lanes', model => {
+    const lanes = model.lanes?.length ? model.lanes : [clipLane('main', [])]
+    const [first, ...rest] = lanes
+    if (!first) return model
+
+    return { ...model, lanes: [{ ...first, clips: [...first.clips, clip] }, ...rest] }
   })
 }
 

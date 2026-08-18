@@ -107,4 +107,10 @@ describe('where an asset is edited', () => {
     expect(editorIntent(picture({ type: 'audio' }))?.id).toBe('audio.take')
     expect(editorIntent(picture({ type: 'mesh' }))?.id).toBe('3d.mesh')
   })
+
+  // Both live in 3D, and a motion is not a model: sending one to `3d.mesh` would land an
+  // invisible node — the `SKELETON_ONLY` trap `rigState` was written for.
+  it('tells a motion apart from a model, though both live in 3D', () => {
+    expect(editorIntent(picture({ type: 'animation' }))?.id).toBe('3d.animation')
+  })
 })

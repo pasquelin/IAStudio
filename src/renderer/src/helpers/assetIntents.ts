@@ -14,7 +14,7 @@ import { loadTake } from '@/spaces/audio/loadTake'
 import { becomeAsset, placeAsset } from '@/spaces/image/placeAsset'
 import { placeTextureChannel } from '@/spaces/textures/placeChannel'
 import { documentOfKind, useDocuments } from '@/stores/documents'
-import { addModelTo } from '@/stores/scenes'
+import { addAnimationTo, addModelTo } from '@/stores/scenes'
 import { addAssetToSequence, sequenceTakes } from '@/stores/sequences'
 import { setSkyboxSource } from '@/stores/skyboxes'
 
@@ -190,6 +190,15 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
     labelKey: 'intents.sceneMesh',
     accepts: ['mesh'],
     ...inDocument('scene', addModelTo),
+  },
+  {
+    // A motion is not a thing in a scene: it goes ON the character that is selected, which is
+    // why this one can be listed and still refuse — `addAnimationTo` says so.
+    id: '3d.animation',
+    workspace: '3d',
+    labelKey: 'intents.sceneAnimation',
+    accepts: ['animation'],
+    ...inDocument('scene', addAnimationTo),
   },
   {
     id: 'audio.take',

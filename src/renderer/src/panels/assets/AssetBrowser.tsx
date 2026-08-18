@@ -1,7 +1,7 @@
 import { mdiImageMultipleOutline } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ASSET_TYPES, isAssetType, type AssetType } from '@shared/domain/asset'
+import { ASSET_TYPES, isAssetType, isCloudAssetType, type AssetType } from '@shared/domain/asset'
 import { typeOfWorkspace } from '@shared/domain/assetKind'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
@@ -119,12 +119,21 @@ export function AssetBrowser() {
    */
   const search = useDebounced(collection.search.trim(), SEARCH_DELAY_MS)
 
+  /**
+   * The same scope, minus what the API has never heard of.
+   *
+   * Narrowed HERE rather than in `scope`: the project's own catalogue does hold animations, and
+   * the shelf has to keep asking for them — it is only the cloud half that would answer a
+   * request for motion with a page of characters.
+   */
+  const cloudScope = useMemo(() => scope.filter(isCloudAssetType), [scope])
+
   // Keyed on the account, on what is asked for and on the word: another key is another library.
-  const library = usePages(['assets', 'library', ownerId, scope, search], from =>
+  const library = usePages(['assets', 'library', ownerId, cloudScope, search], from =>
     getBridge()
       ?.cloud.browse({
         pageSize: LIBRARY_PAGE,
-        types: scope,
+        types: cloudScope,
         ...(search ? { text: search } : {}),
         ...from,
       })
@@ -140,7 +149,7 @@ export function AssetBrowser() {
    * the space's own kind otherwise: the feed pages by one kind, and this is the one on screen.
    */
   const wantsPublished = (collection.selections[LOCATION_FACET] ?? []).includes(PUBLISHED_BADGE)
-  const publishedType = wantsPublished ? (scope[0] ?? null) : null
+  const publishedType = wantsPublished ? (cloudScope[0] ?? null) : null
   const feed = usePages(
     ['assets', 'published', publishedType, search],
     from =>

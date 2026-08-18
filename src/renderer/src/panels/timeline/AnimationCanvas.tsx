@@ -59,6 +59,18 @@ export type AnimationCanvasProps = {
 /** Which block of which lane a gesture is editing. */
 type BlockRef = { nodeId: string; laneId: string; clipId: string }
 
+/**
+ * Whether what is flying holds motion this band could play.
+ *
+ * A model as well as an animation: a `.glb` carries either, and which one it is cannot be known
+ * before the drop — `getData` answers nothing until then. What lands is read for its CLIPS and
+ * its mesh never enters the scene, so taking a character here costs a file read and nothing else.
+ */
+function carriesMotion(event: { dataTransfer: DataTransfer | null }): boolean {
+  const kind = draggedAssetType(event)
+  return kind === 'mesh' || kind === 'animation'
+}
+
 function blockRefOf(hit: { nodeId: string; laneId: string; clipId: string }): BlockRef {
   return { nodeId: hit.nodeId, laneId: hit.laneId, clipId: hit.clipId }
 }
@@ -259,7 +271,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     const written = event.dataTransfer.getData(ANIMATION_DRAG_TYPE)
     // Started before anything else is worked out: a `DragEvent` is recycled once the handler
     // returns, so `droppedAsset` has to read it now even though it answers later.
-    const flying = written || draggedAssetType(event) !== 'mesh' ? null : droppedAsset(event)
+    const flying = written || !carriesMotion(event) ? null : droppedAsset(event)
     if (!written && !flying) return
 
     event.preventDefault()
@@ -453,8 +465,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       // Without the `preventDefault` on drag-over the drop never fires at all.
       onDragOver={event => {
         const carried =
-          event.dataTransfer.types.includes(ANIMATION_DRAG_TYPE) ||
-          draggedAssetType(event) === 'mesh'
+          event.dataTransfer.types.includes(ANIMATION_DRAG_TYPE) || carriesMotion(event)
         if (!carried) return
         event.preventDefault()
         event.dataTransfer.dropEffect = 'copy'
