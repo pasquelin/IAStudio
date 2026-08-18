@@ -41,8 +41,16 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   // rather than empty.
   if (!rig) return null
 
-  const played = node.model.clips?.[0] ?? null
-  const write = (next: ClipRef | null): void => edit.run(setModelClips(node.id, next ? [next] : []))
+  const held = node.model.clips ?? []
+  const played = held[0] ?? null
+
+  // The played block is replaced WITHIN the list, never made into the list: a document may hold
+  // several — the reader accepts them and the band draws them — and rewriting the whole field
+  // from one control would drop every block this section does not show.
+  const write = (next: ClipRef | null): void => {
+    const kept = held.filter(clip => clip.id !== played?.id)
+    edit.run(setModelClips(node.id, next ? [next, ...kept] : kept))
+  }
 
   // Picking a clip on a model that had none starts from the defaults rather than from nothing:
   // a chosen clip that neither plays nor loops would read as a control that did not work.
@@ -55,7 +63,9 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
     <PropertySection title={t('inspector.animation')}>
       <QuietNote>{t(`inspector.rigStatus_${rig.status}`)}</QuietNote>
 
-      {clips.length > 0 && (
+      {/* Shown for a block whose clip the file no longer spells, too: without the picker its
+          « none » option is gone, and a block nothing can play could never be taken off. */}
+      {(clips.length > 0 || played) && (
         <PropertyRow label={t('inspector.clip')}>
           <div className="flex w-full items-center gap-1.5">
             {/* A native select, as the model picker uses one: the OS list is searchable by

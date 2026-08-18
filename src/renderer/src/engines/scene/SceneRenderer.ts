@@ -1573,9 +1573,10 @@ export class SceneRenderer {
       }
       this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
       // Read once and used twice: whether this model has bones at all is the same question the
-      // helper asks, and answering it in two places is how the two came to disagree.
+      // helper asks, and answering it in two places is how the two came to disagree. The COUNT
+      // and not the named ones — an export that stripped joint names still has a rig to draw.
       const rig = rigStateOf(holder, clipsOf(source))
-      this.bindSkeleton(node.id, holder, rig.bones.length > 0)
+      this.bindSkeleton(node.id, holder, rig.boneCount > 0)
       this.options.onRig?.(node.id, rig)
       // The bones arrive a tick after the sync that laid the timeline over the scene, so a track
       // on one of them would drive nothing at all until the next edit.

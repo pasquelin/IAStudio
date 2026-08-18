@@ -80,9 +80,17 @@ describe('the humanoid standard', () => {
     expect(HUMANOID_FINGER_ROLES).toContain('RightLittle3')
   })
 
-  it('is the fifty-two of mixamo, body first', () => {
+  it('holds the fifty-two of the vrm humanoid, body first', () => {
     expect(HUMANOID_ROLES).toHaveLength(52)
     expect(HUMANOID_ROLES[0]).toBe('Hips')
+  })
+
+  // The names are VRM's, not Mixamo's, and a bone name matches a role only by accident. What
+  // reads a provider convention is `boneRoles.ts`, in the retargeting phase.
+  it('does not answer to the way mixamo spells the same joints', () => {
+    expect(isHumanoidRole('LeftForeArm')).toBe(false)
+    expect(isHumanoidRole('LeftUpLeg')).toBe(false)
+    expect(isHumanoidRole('LeftToeBase')).toBe(false)
   })
 
   it('holds no name twice', () => {

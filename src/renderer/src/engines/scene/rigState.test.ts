@@ -80,6 +80,21 @@ describe('what a loaded model is', () => {
 
     expect(rigStateOf(root).status).toBe('riggedCharacter')
   })
+
+  /**
+   * Some export pipelines strip joint names. Such a character cannot be keyed by hand — nothing
+   * can address a nameless bone — but it is not a bare mesh either, and telling its owner it
+   * « cannot be animated yet » would be false.
+   */
+  it('does not call a skinned rig static just because its joints lost their names', () => {
+    const nameless = [new Bone(), new Bone()]
+    nameless[0]?.add(nameless[1] ?? new Bone())
+    const state = rigStateOf(rootWith(skinnedOn(nameless)))
+
+    expect(state.status).toBe('skinnedMesh')
+    expect(state.boneCount).toBe(2)
+    expect(state.bones).toEqual([])
+  })
 })
 
 describe('the bones of a model', () => {

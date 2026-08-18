@@ -6,9 +6,11 @@
  * what makes retargeting possible between two files that agree on nothing else, and what leaves a
  * non-humanoid model riggable and animatable by hand.
  *
- * The set is Mixamo's, which two of the three provider outputs measured on 2026-08-17 already
- * speak, and which importing from Mixamo requires. The names here are the studio's own and clean:
- * a file's `mixamorig:` prefix is stripped when its bones are read, never carried inside.
+ * THESE ARE THE VRM AND UNITY NAMES, NOT MIXAMO'S — Mixamo spells `LeftArm`, `LeftForeArm`,
+ * `LeftUpLeg`, `LeftToeBase` and `Spine1` where this set says `LeftUpperArm`, `LeftLowerArm`,
+ * `LeftUpperLeg`, `LeftToes` and `Chest`. Matching a bone name against a role therefore resolves
+ * almost nothing on a real provider file: translating each vendor's convention is `boneRoles.ts`,
+ * and it is what the retargeting phase is for.
  */
 
 export type HumanoidSide = 'Left' | 'Right'
@@ -111,7 +113,7 @@ export const HUMANOID_FINGER_ROLES: readonly HumanoidFingerRole[] = HUMANOID_SID
   ),
 )
 
-/** All fifty-two. This is the list the translation bundles are walked against. */
+/** All fifty-two, body first. Nothing walks this yet: no role is shown on screen in this phase. */
 export const HUMANOID_ROLES: readonly HumanoidRole[] = [
   ...HUMANOID_BODY_ROLES,
   ...HUMANOID_FINGER_ROLES,

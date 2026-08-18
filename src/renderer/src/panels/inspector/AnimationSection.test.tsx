@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { embeddedClip } from '@shared/domain/scene'
 import { modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type ModelNode } from '@/engines/scene/sceneState'
 import { useModelClips } from '@/stores/modelClips'
@@ -106,6 +107,46 @@ describe('AnimationSection', () => {
   it('clears the reference when the choice goes back to none', async () => {
     show()
     await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), '')
+
+    expect(nodeOf()?.model.clips).toBeUndefined()
+  })
+
+  /**
+   * The section shows one block of a list that may hold several — the reader accepts them and the
+   * band draws them all. Rewriting the whole field from this one control dropped the rest.
+   */
+  it('leaves the blocks it does not show alone when the played one is edited', async () => {
+    const kept = embeddedClip('c2', 'run', { start: 5 })
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [
+        {
+          ...modelNodeFixture('a'),
+          model: { assetId: 'asset-1', clips: [embeddedClip('c1', 'walk'), kept] },
+        },
+      ],
+    })
+    show()
+    await userEvent.click(screen.getByLabelText('En boucle'))
+
+    expect(nodeOf()?.model.clips?.map(clip => clip.id)).toEqual(['c1', 'c2'])
+    expect(nodeOf()?.model.clips?.[1]).toEqual(kept)
+  })
+
+  // Its clip is gone from the file, so the picker lists nothing — but « none » has to stay
+  // reachable, or a block that plays nothing could never be taken off.
+  it('still offers a way out for a block whose clip the file no longer spells', async () => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [
+        {
+          ...modelNodeFixture('a'),
+          model: { assetId: 'asset-1', clips: [embeddedClip('c1', 'gone')] },
+        },
+      ],
+    })
+    show([])
     await userEvent.selectOptions(screen.getByLabelText('Clip'), '')
 
     expect(nodeOf()?.model.clips).toBeUndefined()
