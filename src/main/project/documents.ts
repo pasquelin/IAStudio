@@ -267,8 +267,11 @@ export function createDocumentFiles({
 
   /**
    * Every head this reader has looked at, kept until its file changes — see `headCache.ts` for
-   * what that costs and what it cannot see. Held here so it follows the reader rather than the
-   * process: one per project reader, cleared with it.
+   * what that costs and what it cannot see.
+   *
+   * It outlives a project, and that is not a leak: `services.ts` builds ONE reader for the life of
+   * the process, `projectPath` being a function it follows. Closing a project drops nothing, which
+   * is why the key is the absolute path.
    */
   const heads = createHeadCache(headOf)
 

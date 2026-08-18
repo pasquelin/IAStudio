@@ -109,6 +109,9 @@ describe('writing an OpenRaster container', () => {
               },
             ],
           }),
+          // The child's own surface: the tree may only name entries the container holds, so a
+          // fixture without it was describing a file the packer now refuses to write.
+          surfaces: surfaces([{ path: 'data/p_c.png', png: PNG }]),
         }),
       ),
     )['stack.xml']
@@ -153,6 +156,50 @@ describe('writing an OpenRaster container', () => {
 
     expect(Object.keys(entries)).not.toContain('../../escape.png')
     expect(entries['data/p_a.png']).toBeDefined()
+  })
+
+  /**
+   * A `<layer>` naming an entry that is not in the ZIP is the one malformation another reader
+   * cannot recover from — the picture is not merely missing, the file is broken.
+   *
+   * The two filters had drifted apart: the packer drops a surface whose path it would not write,
+   * and the tree kept naming it. Unreachable from a capture of this studio, whose stack is built
+   * from the surfaces themselves; reachable from a `.ora` written elsewhere and saved again here.
+   */
+  it('never names a layer whose surface it refused to write', () => {
+    const bytes = packOpenRaster({
+      stack: stack({
+        nodes: [layer('Escaped', '../../escape.png'), layer('Kept', 'data/p_a.png')],
+      }),
+      surfaces: [
+        { path: ORA_MERGED_PATH, png: PNG },
+        { path: '../../escape.png', png: PNG },
+        { path: 'data/p_a.png', png: PNG },
+      ],
+    })
+
+    expect(entriesOf(bytes)['stack.xml']).not.toContain('escape.png')
+    expect(entriesOf(bytes)['stack.xml']).toContain('data/p_a.png')
+  })
+
+  /**
+   * An entry is a key of an object, so the second surface of a path simply replaced the first —
+   * and the layer that named it drew the other one's pixels, with nothing to say so.
+   */
+  it('keeps the first surface of a path rather than letting a second take its place', () => {
+    const second = Uint8Array.from(Buffer.from('iVBORw0KGgo=', 'base64'))
+    const entries = entriesOf(
+      packOpenRaster({
+        stack: stack({ nodes: [layer('One', 'data/p_a.png')] }),
+        surfaces: [
+          { path: ORA_MERGED_PATH, png: PNG },
+          { path: 'data/p_a.png', png: PNG },
+          { path: 'data/p_a.png', png: second },
+        ],
+      }),
+    )
+
+    expect(entries['data/p_a.png']).toBe(strFromU8(PNG))
   })
 
   /**
@@ -281,6 +328,30 @@ describe('reading an OpenRaster container back', () => {
     )
 
     expect(read.stack.nodes[0]).toMatchObject({ name: 'Ink', x: 7, y: 9, opacity: 0.25 })
+  })
+
+  /**
+   * An opacity nothing can read is fully opaque, never `NaN` — the layer would be undrawable, and
+   * the studio wrote the word back out on the next ⌘S, leaving a file no other reader can repair.
+   * `x` and `y` had this defence from the start (`|| 0`); opacity did not, and it is the attribute
+   * a writer is most likely to spell its own way.
+   */
+  it.each([
+    ['50%', 1],
+    ['', 1],
+    ['1.5', 1],
+    ['-2', 0],
+  ])('reads an opacity of %s as %s rather than as a number nothing can draw', (written, read) => {
+    const stack = unpackOpenRaster(
+      foreign(
+        `<image version="0.0.3" w="64" h="32"><stack>` +
+          `<layer src="data/ink.png" name="Ink" x="0" y="0" opacity="${written}" ` +
+          `visibility="visible" composite-op="svg:src-over"/>` +
+          `</stack></image>`,
+      ),
+    ).stack
+
+    expect(stack.nodes[0]).toMatchObject({ opacity: read })
   })
 
   /**

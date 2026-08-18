@@ -31,25 +31,41 @@ function commonAttributes(node: OraNode): string {
   )
 }
 
-function nodeXml(node: OraNode, depth: number): string {
+/**
+ * `null` for a layer naming a surface this container does not hold — the one shape of `stack.xml`
+ * that makes a reader fail rather than lose a layer.
+ *
+ * `written` is what the packer ACTUALLY put in, and the two filters had drifted apart: a surface
+ * with an illegal path or no bytes is dropped below, while the tree naming it came from elsewhere
+ * — a `.ora` written by another application and saved again here. The studio's own state carries
+ * the layer either way, `studio` being the whole of it.
+ */
+function nodeXml(node: OraNode, depth: number, written: ReadonlySet<string>): string | null {
   const pad = '  '.repeat(depth)
   if (!isOraGroup(node)) {
+    if (!written.has(node.src)) return null
     return `${pad}<layer ${commonAttributes(node)} src="${escapeXml(node.src)}"/>`
   }
 
   return [
     `${pad}<stack ${commonAttributes(node)} isolation="${node.isolation}">`,
-    ...node.children.map(child => nodeXml(child, depth + 1)),
+    ...nodesXml(node.children, depth + 1, written),
     `${pad}</stack>`,
   ].join('\n')
 }
 
-function stackXml(stack: OraStack): string {
+const nodesXml = (
+  nodes: readonly OraNode[],
+  depth: number,
+  written: ReadonlySet<string>,
+): string[] => nodes.map(node => nodeXml(node, depth, written)).filter(line => line !== null)
+
+function stackXml(stack: OraStack, written: ReadonlySet<string>): string {
   return [
     `<?xml version='1.0' encoding='UTF-8'?>`,
     `<image version="${ORA_VERSION}" w="${stack.width}" h="${stack.height}">`,
     `  <stack>`,
-    ...stack.nodes.map(node => nodeXml(node, 2)),
+    ...nodesXml(stack.nodes, 2, written),
     `  </stack>`,
     `</image>`,
     '',
@@ -75,15 +91,22 @@ export function packOpenRaster({ stack, surfaces }: OraDocument, envelope = ''):
     [MIMETYPE_PATH]: [strToU8(ORA_MIMETYPE), { level: 0 }],
     // Second, and stored: `oraEnvelopeIn` reads it out of the head of the file alone.
     ...(envelope ? { [ORA_ENVELOPE_PATH]: stored(strToU8(envelope)) } : {}),
-    [STACK_PATH]: strToU8(stackXml(stack)),
   }
 
+  const written = new Set<string>()
   for (const surface of surfaces) {
     if (!isOraSurfacePath(surface.path) || surface.png.byteLength === 0) continue
+    // Refused rather than replaced: an entry is a key of an object, so a second surface of the same
+    // path would silently take the first one's pixels away from the layer that named it.
+    if (written.has(surface.path)) continue
+    written.add(surface.path)
     files[surface.path] = stored(surface.png)
     // The spec asks for a thumbnail, and the flatten is the only picture this process holds.
     if (surface.path === ORA_MERGED_PATH) files[THUMBNAIL_PATH] = stored(surface.png)
   }
+
+  // After the surfaces, and that ordering is the point: the tree may only name what went in.
+  files[STACK_PATH] = strToU8(stackXml(stack, written))
 
   if (stack.studio) files[ORA_STUDIO_PATH] = strToU8(stack.studio)
 
@@ -115,12 +138,25 @@ const unescapeXml = (text: string): string =>
     .replace(/&quot;/g, '"')
     .replace(/&amp;/g, '&')
 
+/**
+ * The spec's own range, and anything else reads as fully opaque — `50%`, an empty attribute, a
+ * writer that spelt it `1.0e0` wrongly. Bare, `Number('50%')` is `NaN`, which the studio then wrote
+ * back out as `opacity="NaN"`: a layer nothing can draw, in a file no other reader can repair.
+ */
+function opacityIn(text: string): number {
+  // `Number('')` is ZERO, not `NaN`, so the absent attribute is answered before the parse: read
+  // through the guard below it would make every layer of a writer that omits opacity invisible.
+  if (text === '') return 1
+  const value = Number(text)
+  return Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 1
+}
+
 function baseFrom(tag: string): OraNodeBase {
   return {
     name: unescapeXml(attribute(tag, 'name')),
     x: Number(attribute(tag, 'x')) || 0,
     y: Number(attribute(tag, 'y')) || 0,
-    opacity: attribute(tag, 'opacity') === '' ? 1 : Number(attribute(tag, 'opacity')),
+    opacity: opacityIn(attribute(tag, 'opacity')),
     visible: attribute(tag, 'visibility') !== 'hidden',
     composite: unescapeXml(attribute(tag, 'composite-op')) || 'svg:src-over',
   }

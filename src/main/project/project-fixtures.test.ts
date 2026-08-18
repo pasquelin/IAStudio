@@ -1,9 +1,9 @@
 import { readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { strToU8, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
 import { DOCUMENT_KINDS, type DocumentKind } from '@shared/domain/document'
-import { ORA_MERGED_PATH, type OraStack } from '@shared/domain/openRaster'
-import { packOpenRaster } from '@main/assets/openRasterFile'
+import { ORA_MERGED_PATH, ORA_MIMETYPE } from '@shared/domain/openRaster'
 import { documentFilesAt, snapshotDocuments, withTempProject } from './project-fixtures'
 
 const NOW = '2026-08-16T10:00:00.000Z'
@@ -100,11 +100,25 @@ describe('the project fixture', () => {
     })
 
     const whole = await snapshotDocuments(documents)
-    // The same stack, with nothing behind it — which is what a change that dropped the surfaces
-    // would leave on disk.
+
+    /**
+     * Written by hand rather than by `packOpenRaster`, which refuses this shape now: the tree may
+     * only name entries the container holds. It is still what a truncated copy, a failed sync or
+     * another tool leaves on disk, and it is exactly the loss a file count cannot see.
+     */
     await writeFile(
       join(root, 'documents', 'Cover.ora'),
-      packOpenRaster({ stack: JSON.parse(content) as OraStack, surfaces: [] }),
+      zipSync({
+        mimetype: [strToU8(ORA_MIMETYPE), { level: 0 }],
+        'stack.xml': strToU8(
+          `<?xml version='1.0' encoding='UTF-8'?>\n` +
+            `<image version="0.0.3" w="64" h="32"><stack>` +
+            `<layer name="Ink" x="0" y="0" opacity="1" visibility="visible" ` +
+            `composite-op="svg:src-over" src="data/p_a.png"/>` +
+            `</stack></image>\n`,
+        ),
+        'scenario/document.json': strToU8('{"layers":[]}'),
+      }),
     )
 
     const stripped = await snapshotDocuments(documentFilesAt(root, NOW))

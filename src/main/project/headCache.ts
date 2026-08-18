@@ -32,6 +32,10 @@ export type HeadCache = {
  * under that would evict what one listing had just filled — so this is that shape with room
  * over it. An envelope is a title and three short fields, so the ceiling is a couple of
  * megabytes, not a budget worth tuning.
+ *
+ * **Nothing tests the eviction, and nothing can at this price**: it takes 8 193 real files, where
+ * the cases of `documents.reads.test.ts` count parses over one. The LRU order is observable only
+ * THROUGH an eviction, so it is untested for the same reason.
  */
 const CAPACITY = 8_192
 
@@ -43,10 +47,13 @@ const CAPACITY = 8_192
  * every window. `documents.bench.ts` measured 143 ms for 2 000 enveloped documents against 45 ms
  * when none of them is opened at all; the montages are what makes that gap worth a map.
  *
- * **The blind spot, in clear**: freshness is `mtimeMs` and size, so a file rewritten within the
- * same millisecond AT THE SAME SIZE is served from the cache. The studio's own writers call
- * `forget`, which leaves the window open only to another application — and the stale check that
- * defends a save carries exactly the same one, `mtimeMs` being what a filesystem reports.
+ * **The blind spot, in clear**: freshness is `mtimeMs` and size, so a file rewritten AT THE SAME
+ * SIZE within one tick of the volume's clock is served from the cache. A millisecond is the
+ * resolution of the API, NOT of the filesystem — APFS stamps in nanoseconds, exFAT and SMB in one
+ * or two SECONDS, and a project on a memory stick therefore has a window three orders of magnitude
+ * wider than this paragraph used to claim. The studio's own writers call `forget`, which leaves the
+ * window open only to another application — and the stale check that defends a save carries exactly
+ * the same one, `mtimeMs` being all a filesystem reports.
  *
  * Keyed by ABSOLUTE path, never by the project-relative one every other boundary uses: this
  * reader is built once for the life of the process and follows whichever project is open, and
@@ -68,6 +75,9 @@ export function createHeadCache(readHead: (file: string) => Promise<DocumentHead
       }
 
       const { content, ...envelope } = await readHead(file)
+      // Deleted first, because `Map.set` does NOT move a key it already holds: a file that changes
+      // often kept the position of its first read and was evicted before files nobody opens.
+      entries.delete(file)
       entries.set(file, { envelope, time: stats.mtimeMs, size: stats.size })
 
       const oldest = entries.keys().next()

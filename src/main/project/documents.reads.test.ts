@@ -113,4 +113,28 @@ describe('what one gesture on a montage costs', () => {
     expect(await documents.list()).toHaveLength(1)
     expect(parses).toEqual(['readHead.otio'])
   })
+
+  /**
+   * The SAME LENGTH, which is the only rewrite that exercises the clock half of the key — the case
+   * above adds a field, so its size moves and a cache comparing size alone would pass it.
+   *
+   * It is also the shape of the rewrite the studio cannot see coming: another application saving a
+   * montage in place, where the payload changed and the byte count did not.
+   */
+  it('parses again a montage rewritten to exactly the same length', async () => {
+    await documents.list()
+    parses.length = 0
+
+    const before = otio({ documentId: 'doc-1', documentKind: 'sequence', note: 'aaa' })
+    const after = otio({ documentId: 'doc-1', documentKind: 'sequence', note: 'bbb' })
+    expect(after).toHaveLength(before.length)
+
+    await writeFile(join(root, 'Rushes.otio'), before, 'utf8')
+    await documents.list()
+    parses.length = 0
+    await writeFile(join(root, 'Rushes.otio'), after, 'utf8')
+
+    expect(await documents.list()).toHaveLength(1)
+    expect(parses).toEqual(['readHead.otio'])
+  })
 })
