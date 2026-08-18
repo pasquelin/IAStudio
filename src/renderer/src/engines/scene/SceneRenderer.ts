@@ -1671,7 +1671,7 @@ export class SceneRenderer {
       // Same reason, same place: what the file brought was not there when the mode was applied,
       // and a model landing into a wireframe scene would be the one thing still drawn shaded.
       if (this.needsEdges()) this.applyDisplay(holder)
-      // A dense model is what makes a click cost a frame — measured in `scene-picking.bench.ts`.
+      // A dense model is what makes a click cost a frame — measured in `scenePicking.bench.ts`.
       // Off the UI thread, and after the render: the viewport shows the file before the tree.
       this.viewport.requestRender()
       // Reported rather than swallowed, and under a scope of its own: `reportFailure` says a

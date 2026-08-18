@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { basename, relative, sep } from 'node:path'
+import { readdirSync, readFileSync } from 'node:fs'
+import { basename, join, relative, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { PROJECT_TREES, SOURCE_ROOT, WHOLE_PROJECT, sourceFiles } from './sourceFiles'
 
@@ -99,6 +99,26 @@ const projectSources = PROJECT_TREES.flatMap(tree => sourceFiles(tree)).filter(
   path => !isDeclaration(path),
 )
 
+/**
+ * The benchmarks, which `sourceFiles` drops along with the suites — and which nothing else was
+ * reading, so `scene-picking.bench.ts` sat in kebab-case for as long as it existed without a
+ * single guard noticing. A bench is production code that happens to be timed: it names a module
+ * of the tree and follows the same rule.
+ *
+ * **Suites and fixtures stay out, and that is a decision rather than an oversight**: 46 suites
+ * and 35 fixtures are off-convention today, and most of them are named for a RULE rather than for
+ * a module — `no-hardcoded-text.test.ts`, `text-scale.test.ts`. Renaming them would also break
+ * every `vi.mock('./x')` resolved from the file that moves, which this repository has already
+ * paid for twice. It is a lot to be arbitrated, not a line to slip into this guard.
+ */
+function benchFilesUnder(folder: string): string[] {
+  return readdirSync(folder, { withFileTypes: true }).flatMap(entry => {
+    const path = join(folder, entry.name)
+    if (entry.isDirectory()) return benchFilesUnder(path)
+    return /\.bench\.tsx?$/.test(entry.name) ? [path] : []
+  })
+}
+
 const reported = (path: string): string => relative(SOURCE_ROOT, path)
 
 describe(`file names — ${RULE}`, () => {
@@ -110,7 +130,8 @@ describe(`file names — ${RULE}`, () => {
   it(
     'holds every name to the case its exports earn',
     () => {
-      const wrong = projectSources.filter(path => {
+      const swept = [...projectSources, ...PROJECT_TREES.flatMap(tree => benchFilesUnder(tree))]
+      const wrong = swept.filter(path => {
         const name = stem(path)
 
         return isPascalCase(name) ? !handsOut(readFileSync(path, 'utf8'), name) : !isCamelCase(name)

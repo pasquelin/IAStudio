@@ -18,7 +18,7 @@ export type BvhBuilder = {
 
 /**
  * Below this, walking the triangles is already faster than the tree would be to build. Measured
- * in `scene-picking.bench.ts`: three models of 32k triangles cost 1.9 ms a click, which is a
+ * in `scenePicking.bench.ts`: three models of 32k triangles cost 1.9 ms a click, which is a
  * frame; a studio primitive is thirty triangles and costs nothing.
  */
 export const WORTH_A_TREE = 20_000
