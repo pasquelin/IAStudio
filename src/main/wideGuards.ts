@@ -93,16 +93,18 @@ export function readsTheTree(code: string): boolean {
 }
 
 /**
- * Every suite under `folder`, whatever it reads.
+ * Every suite under `folder`, whatever it reads — or whatever else `matching` asks for.
  *
  * Exported because a guard that sweeps the SUITES rather than the sources has nowhere else to get
- * them: `sourceFiles.ts` excludes `.test.ts` by design. Two walks of the same tree would drift.
+ * them: `sourceFiles.ts` excludes `.test.ts` by design. Two walks of the same tree would drift,
+ * which is what the pattern is for: `file-names.test.ts` wants the BENCHES, and had written the
+ * same recursion out a second time to get them.
  */
-export function testFilesUnder(folder: string): string[] {
+export function testFilesUnder(folder: string, matching = /\.test\.tsx?$/): string[] {
   return readdirSync(folder, { withFileTypes: true }).flatMap(entry => {
     const path = join(folder, entry.name)
-    if (entry.isDirectory()) return testFilesUnder(path)
-    return /\.test\.tsx?$/.test(entry.name) ? [path] : []
+    if (entry.isDirectory()) return testFilesUnder(path, matching)
+    return matching.test(entry.name) ? [path] : []
   })
 }
 
