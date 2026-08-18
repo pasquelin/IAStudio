@@ -141,8 +141,11 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
             {t('inspector.makeAnimatable')}
           </Button>
 
+          {/* Beside the button and never under it: `under` takes the anchor's own width and
+              clamps nothing vertically, so the dialogue came out button-wide and cut off by the
+              bottom of the window — seen on screen, at the foot of the inspector. */}
           {asking && (
-            <Flyout anchor={opener} placement="under" onDismiss={() => setAsking(false)}>
+            <Flyout anchor={opener} onDismiss={() => setAsking(false)}>
               <div className="flex w-72 flex-col gap-2 p-2">
                 <PropertyRow label={t('inspector.characterKind')}>
                   <select
@@ -162,10 +165,11 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
                 {/* Every service is shown and none can be chosen: submitting one needs the whole
                     export-upload-job-import chain, which nothing here can verify. */}
                 <PropertyRow label={t('inspector.rigService')}>
+                  {/* Uncontrolled, and nothing can move it: every other option is disabled, so
+                      there is no change to answer for. */}
                   <select
                     aria-label={t('inspector.rigService')}
-                    value=""
-                    onChange={() => undefined}
+                    defaultValue=""
                     className={cn(NATIVE_SELECT, 'w-full')}
                   >
                     <option value="">{t('inspector.rigServiceLocal')}</option>

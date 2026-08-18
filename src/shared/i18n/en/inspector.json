@@ -212,7 +212,7 @@
       "other": "Other"
     },
     "rigService": "Service",
-    "rigServiceLocal": "Automatic — the studio, free of charge",
+    "rigServiceLocal": "Automatic — the studio",
     "rigNotHumanoid": "The studio only lays a humanoid skeleton — hips, spine, two arms and two legs.",
     "rigCreate": "Create the skeleton",
     "boneName": "Name",

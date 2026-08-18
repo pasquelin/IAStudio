@@ -122,16 +122,19 @@ function blockOf(documentId: string, clipId: string): BlockRef | null {
   return null
 }
 
-/** How long the clip a block plays runs in the file, which is what a trim is measured against. */
-function clipLengthOf(documentId: string, where: BlockRef): number | null {
+/** The blocks of the lane a reference names, or nothing once the model or the lane has gone. */
+function laneClipsOf(documentId: string, where: BlockRef): readonly ClipRef[] | null {
   const node = sceneOf(useScenes.getState(), documentId).nodes.find(
     candidate => candidate.id === where.nodeId,
   )
   if (node?.type !== 'model') return null
 
-  const clip = node.model.lanes
-    ?.find(lane => lane.id === where.laneId)
-    ?.clips.find(candidate => candidate.id === where.clipId)
+  return node.model.lanes?.find(lane => lane.id === where.laneId)?.clips ?? null
+}
+
+/** How long the clip a block plays runs in the file, which is what a trim is measured against. */
+function clipLengthOf(documentId: string, where: BlockRef): number | null {
+  const clip = laneClipsOf(documentId, where)?.find(candidate => candidate.id === where.clipId)
 
   return clip
     ? (useModelClips.getState().lengths[documentId]?.[where.nodeId]?.[clipKeyOf(clip.source)] ??
@@ -328,6 +331,24 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       .setPlayhead(documentId, clampPlayhead(snapToFrame(time, held.fps), held.duration))
   }
 
+  /**
+   * Whether a cut at the head would give two halves. Asked of the arithmetic that will do it
+   * rather than repeated here — the answer must not drift from what the gesture then refuses.
+   */
+  const cuttable = (where: BlockRef): boolean => {
+    const clips = laneClipsOf(documentId, where)
+    const cut =
+      clips &&
+      clipsSplit(
+        clips,
+        where.clipId,
+        latest.current.playhead,
+        newId(),
+        clipLengthOf(documentId, where),
+      )
+    return cut !== null
+  }
+
   /** The three block gestures, where a key alone would leave them undiscoverable. */
   const onContextMenu = (event: ReactMouseEvent<HTMLCanvasElement>): void => {
     const hit = hitAnimation(hitContext(), pointIn(event))
@@ -336,26 +357,30 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     event.preventDefault()
     // Chosen first: a menu acting on something other than what the band shows as chosen is a
     // menu nobody trusts.
-    useAnimationViews.getState().setPickedBlock(documentId, hit.clipId)
+    const where = blockRefOf(hit)
+    useAnimationViews.getState().setPickedBlock(documentId, where.clipId)
 
     void showContextMenu([
       {
         label: t('animations.duplicateBlock'),
         icon: mdiContentDuplicate,
         tooltip: t('animations.duplicateBlockHint'),
-        onSelect: () => duplicateBlock(blockRefOf(hit)),
+        onSelect: () => duplicateBlock(where),
       },
       {
         label: t('animations.splitBlock'),
         icon: mdiContentCut,
         tooltip: t('animations.splitBlockHint'),
-        onSelect: () => splitBlock(blockRefOf(hit)),
+        // Greyed rather than dropped, as the montage's own cut is: a menu whose length follows
+        // the playhead cannot be learnt.
+        disabled: !cuttable(where),
+        onSelect: () => splitBlock(where),
       },
       {
         label: t('animations.removeBlock'),
         icon: mdiDeleteOutline,
         tooltip: t('animations.removeBlockHint'),
-        onSelect: () => dropBlock(blockRefOf(hit)),
+        onSelect: () => dropBlock(where),
       },
     ])
   }

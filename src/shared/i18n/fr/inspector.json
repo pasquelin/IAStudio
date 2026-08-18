@@ -212,7 +212,7 @@
       "other": "Autre"
     },
     "rigService": "Service",
-    "rigServiceLocal": "Automatique — le studio, gratuitement",
+    "rigServiceLocal": "Automatique — le studio",
     "rigNotHumanoid": "Le studio ne sait poser qu’un squelette humanoïde — hanches, colonne, deux bras et deux jambes.",
     "rigCreate": "Créer le squelette",
     "boneName": "Nom",
