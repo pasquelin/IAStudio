@@ -12,7 +12,8 @@ import {
   setTextOn,
 } from '@/engines/scene/commands'
 import { cameraFields, geometryFields, lightFields } from '@/engines/scene/propertyFields'
-import { shotOfCameraAt } from '@/engines/scene/cameraShots'
+import { newShotAt, shotOfCameraAt } from '@/engines/scene/cameraShots'
+import { newId } from '@/helpers/ids'
 import { selectedNodes } from '@/engines/scene/sceneState'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { changedFields } from '@/helpers/objects'
@@ -178,6 +179,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
           <CameraShotSection
             camera={camera}
             shot={shotOfCameraAt(animation, camera.id, playhead)}
+            shotAtHead={() => newShotAt(animation, camera.id, newId(), playhead)}
             nodes={nodes}
             run={command => edit.run(command)}
             gesture={edit.gesture}

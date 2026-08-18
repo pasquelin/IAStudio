@@ -6,7 +6,12 @@ import { PropertySection } from '@/design/PropertySection'
 import { ToolButton } from '@/design/ToolButton'
 import { VectorField } from '@/design/VectorField'
 import { NATIVE_SELECT, type GestureProps } from '@/design/styles'
-import { bindRailToShot, editCameraShot, railForShot } from '@/engines/scene/animationCommands'
+import {
+  bindRailToShot,
+  editCameraShot,
+  railForShot,
+  railOnNewShot,
+} from '@/engines/scene/animationCommands'
 import type { Command } from '@/engines/core/history'
 import type { CameraNode, SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { TIP_LEFT } from '@/helpers/tooltip'
@@ -16,6 +21,8 @@ export type CameraShotSectionProps = {
   camera: CameraNode
   /** The shot of this camera covering the head, or `null` when it has none there. */
   shot: CameraShot | null
+  /** A shot for this camera from the head onwards, minted on demand — see `railOnNewShot`. */
+  shotAtHead: () => CameraShot
   nodes: readonly SceneNode[]
   run: (command: Command<SceneState>) => void
   gesture: GestureProps
@@ -27,13 +34,32 @@ export type CameraShotSectionProps = {
  * Both live on the SHOT rather than on the camera, which is what lets one camera travel in one
  * shot and stand still in the next — see `CameraShot`.
  */
-export function CameraShotSection({ camera, shot, nodes, run, gesture }: CameraShotSectionProps) {
+export function CameraShotSection({
+  camera,
+  shot,
+  shotAtHead,
+  nodes,
+  run,
+  gesture,
+}: CameraShotSectionProps) {
   const { t } = useTranslation()
 
   if (!shot) {
     return (
       <PropertySection title={t('inspector.shot')}>
-        <p className="text-muted text-tiny px-2 py-1">{t('inspector.noShot')}</p>
+        <PropertyRow label={t('inspector.rail')}>
+          <p className="text-muted text-tiny min-w-0 flex-1">{t('inspector.noShot')}</p>
+          {/* Offered with no shot to hang it on: a rail drives nothing on its own, so the one
+              gesture opens both — and the button was unreachable until a shot was posed elsewhere. */}
+          <ToolButton
+            icon={mdiVectorPolyline}
+            label={t('inspector.addRail')}
+            description={t('inspector.addRailHint')}
+            tooltip={TIP_LEFT}
+            variant="header"
+            onClick={() => run(railOnNewShot(camera, shotAtHead()))}
+          />
+        </PropertyRow>
       </PropertySection>
     )
   }

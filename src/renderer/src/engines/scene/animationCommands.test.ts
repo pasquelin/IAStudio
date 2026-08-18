@@ -12,6 +12,7 @@ import {
   keySubject,
   moveAnimationKey,
   movesToCommand,
+  railOnNewShot,
   recordMove,
   removeAnimationKey,
   removeAnimationTrack,
@@ -20,7 +21,8 @@ import {
   updateAnimationTrack,
 } from './animationCommands'
 import { cameraShot } from './animation-fixtures'
-import { EMPTY_SCENE, type SceneNode, type SceneState } from './sceneState'
+import { cameraNodeFixture } from './scene-fixtures'
+import { EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneNode, type SceneState } from './sceneState'
 
 const target = (nodeId: string, property: TrackTarget['property'] = 'position'): TrackTarget => ({
   nodeId,
@@ -598,5 +600,40 @@ describe('the shots of a sequence', () => {
   it('leaves the state alone when the shot named is gone', () => {
     expect(editCameraShot('nowhere', { layer: 9 }).apply(start)).toBe(start)
     expect(removeCameraShot('nowhere').apply(start)).toBe(start)
+  })
+
+  /**
+   * A rail drives nothing without a shot to run it, so asking for one asks for both — and the
+   * button was unreachable until a shot had been posed from another panel, with nothing saying so.
+   */
+  it('opens a shot and lays its rail in one gesture, and takes back both', () => {
+    const camera = cameraNodeFixture('cam-c')
+    const fresh = cameraShot('s3', { cameraId: 'cam-c' })
+    const command = railOnNewShot(camera, fresh)
+    const applied = command.apply({ ...start, nodes: [camera] })
+
+    const laid = applied.animation.shots.find(held => held.id === 's3')
+    expect(applied.nodes.filter(node => node.type === 'path')).toHaveLength(1)
+    expect(laid?.motion?.pathId).toBe(applied.nodes.find(node => node.type === 'path')?.id)
+
+    expect(command.revert(applied)).toEqual({ ...start, nodes: [camera] })
+  })
+
+  // Where the camera stands, so the rail starts under it rather than at the world's origin.
+  it('lays the rail on the camera it belongs to', () => {
+    const camera = {
+      ...cameraNodeFixture('cam-c'),
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 3, y: 1, z: -2 } },
+    }
+    const applied = railOnNewShot(camera, cameraShot('s3', { cameraId: 'cam-c' })).apply({
+      ...start,
+      nodes: [camera],
+    })
+
+    expect(applied.nodes.find(node => node.type === 'path')?.transform.position).toEqual({
+      x: 3,
+      y: 1,
+      z: -2,
+    })
   })
 })

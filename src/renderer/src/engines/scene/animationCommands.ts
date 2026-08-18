@@ -427,6 +427,16 @@ export function railForShot(camera: CameraNode, shot: CameraShot): Command<Scene
   ])
 }
 
+/**
+ * A rail on a camera the head covers no shot of: the shot is opened by the same gesture.
+ *
+ * A rail drives nothing without a shot to run it, so asking for one is asking for both — and
+ * asking for both by hand meant finding a button in another panel first, with nothing saying so.
+ */
+export function railOnNewShot(camera: CameraNode, shot: CameraShot): Command<SceneState> {
+  return multi(`shot:rail:new:${shot.id}`, [addCameraShot(shot), railForShot(camera, shot)])
+}
+
 /** Another rail on a shot that already exists, or none at all. */
 export function bindRailToShot(shot: CameraShot, pathId: string): Command<SceneState> {
   const motion: CameraMotion | undefined =
