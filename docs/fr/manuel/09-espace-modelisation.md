@@ -913,6 +913,58 @@ cesse alors de choisir des objets et choisit des os.
 > **Le studio prend l’os le plus proche du pointeur à l’écran**, qu’il soit devant ou derrière une
 > épaule. Visez donc **l’articulation elle-même** plutôt que le membre qu’elle pilote.
 
+### Retoucher un squelette
+
+**Un os choisi en mode pose ouvre ses réglages dans la section Squelette** — et il doit appartenir
+au modèle que l’Inspecteur décrit. Tant qu’aucun os n’est choisi, la section garde l’état du
+personnage, **Ajouter les mains** s’il a quelque chose à faire, et **Retirer le squelette**.
+
+| Réglage ou bouton | Ce qu’il fait |
+|---|---|
+| **Nom** | renomme l’os choisi. Un nom déjà pris est refusé, et rien ne change |
+| **Articulation** | quel rôle cet os tient dans un corps humain — ou **Aucune** |
+| **Ajouter un os enfant** | pose un os sous celui qui est choisi, exactement à sa place |
+| **Retirer cet os** | retire l’os choisi du squelette |
+| **Ajouter une poignée à suivre** | donne à cette articulation une poignée qu’elle cherche à atteindre |
+| **Ajouter les mains** | pose des doigts sur les mains d’un personnage qui n’en a pas |
+| **Retirer le squelette** | rend le modèle à son état de maille |
+
+**Renommer sert plus qu’on ne croit** : un squelette arrive avec les noms de son fichier, et
+`mixamorigHips` n’est le choix de personne. Le nom est celui que vous lirez ensuite partout.
+
+***Articulation* est ce qui rend un mouvement transposable.** C’est par ces rôles — et non par les
+noms — que le studio fait jouer à votre personnage une animation montée pour un autre : deux
+squelettes ne partagent que ce vocabulaire. Un os qui n’en tient aucun reste sur **Aucune** et ne
+gêne rien.
+
+> **Les rôles sont écrits en anglais et ne sont pas traduits** : c’est la liste que se partagent
+> les logiciels d’animation, et la traduire ici la rendrait introuvable ailleurs.
+
+**Une poignée à suivre pose un pied au sol ou une main sur une prise.** L’articulation cherche à
+l’atteindre, et **les os au-dessus d’elle tournent pour suivre — deux au plus** : le parent et le
+grand-parent. C’est ce qui distingue un pied qui reste posé d’un pied qui traverse le sol quand la
+hanche bouge. Le bouton devient **Retirer la poignée** pour une articulation qui en a déjà une.
+
+> **Ce n’est pas la poignée d’un manipulateur**, ni celle qui rogne un clip : celle-ci est un point
+> que l’articulation VISE, et elle reste posée dans la scène.
+
+> **Sur un os qui n’a rien au-dessus de lui, le bouton ne fait rien** — les hanches, par exemple,
+> n’ont aucun ancêtre à faire tourner. Un os dont le parent est déjà la racine n’en fait suivre
+> qu’un.
+
+**Ajouter les mains n’apparaît que là où il a quelque chose à faire** : il faut une main et un
+avant-bras reconnus, et **une main qui porte déjà un pouce est laissée intacte**. **La condition se
+juge côté par côté** — si une seule main la remplit, le bouton apparaît et ne pose des doigts que
+de ce côté-là, sans rien dire de l’autre.
+
+**Un os ajouté naît sous son parent, au même endroit que lui**, et porte son nom suivi d’un
+numéro. C’est le gizmo qui le met où il doit aller.
+
+> **Retirer le squelette n’efface pas les animations posées.** Le modèle redevient une maille, mais
+> les blocs et les clés qui visaient ses os restent dans le document — sans os pour les porter,
+> donc sans effet. `⌘Z` ramène le squelette et tout se rattache ; sinon, retirez les blocs
+> vous-même.
+
 ### Poser vos propres mouvements
 
 **Vos objets sont déjà dans la bande.** Chaque objet de la scène y a sa ligne : il n’y a rien à

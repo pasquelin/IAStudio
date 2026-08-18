@@ -885,6 +885,57 @@ picks bones instead of objects.
 > **The studio takes the bone nearest the pointer on screen**, whether it sits in front of a
 > shoulder or behind it. Aim at **the joint itself** rather than at the limb it drives.
 
+### Reworking a skeleton
+
+**A bone picked in pose mode opens its settings in the Skeleton section** — and it must belong to
+the model the Inspector describes. While no bone is picked, the section keeps the character's
+state, **Add the hands** if it has anything to do, and **Remove the skeleton**.
+
+| Setting or button | What it does |
+|---|---|
+| **Name** | renames the picked bone. A name already taken is refused, and nothing changes |
+| **Joint** | which role this bone fills in a human body — or **None** |
+| **Add a child bone** | lays a bone under the picked one, exactly where it stands |
+| **Remove this bone** | takes the picked bone out of the skeleton |
+| **Add a handle to follow** | gives this joint a handle it reaches for |
+| **Add the hands** | lays fingers on the hands of a character that has none |
+| **Remove the skeleton** | returns the model to its bare mesh state |
+
+**Renaming matters more than it looks**: a skeleton arrives with the names its file spells, and
+`mixamorigHips` is nobody's choice. The name is the one you will read everywhere afterwards.
+
+***Joint* is what makes a motion transposable.** It is through those roles — not through the
+names — that the studio makes your character play an animation authored for another: that
+vocabulary is the only one two skeletons share. A bone filling none stays on **None** and gets in
+the way of nothing.
+
+> **The roles are written in English and are not translated**: it is the list animation software
+> shares, and translating it here would make it unfindable elsewhere.
+
+**A handle to follow puts a foot on the ground or a hand on a grip.** The joint reaches for it, and
+**the bones above it turn to follow — two at most**: the parent and the grandparent. That is what
+separates a foot that stays put from a foot that goes through the floor when the hip moves. The
+button reads **Remove the handle** for a joint that already has one.
+
+> **This is not a gizmo handle**, nor the one that trims a clip: this one is a point the joint
+> AIMS at, and it stays put in the scene.
+
+> **On a bone with nothing above it, the button does nothing** — the hips, for one, have no
+> ancestor to turn. A bone whose parent is already the root makes only one follow.
+
+**Add the hands only appears where it has something to do**: a hand and a forearm must be
+recognised, and **a hand that already carries a thumb is left alone**. **The condition is judged
+side by side** — if only one hand meets it, the button appears and lays fingers on that side only,
+saying nothing about the other.
+
+**An added bone is born under its parent, in the same place as it**, and bears its parent's name
+followed by a number. The gizmo is what puts it where it belongs.
+
+> **Removing the skeleton does not erase the animations already laid.** The model goes back to
+> being a mesh, but the blocks and keys that targeted its bones stay in the document — with no
+> bones to carry them, so with no effect. `⌘Z` brings the skeleton back and everything reattaches;
+> otherwise, take the blocks off yourself.
+
 ### Laying down your own motion
 
 **Your objects are in the band already.** Every object of the scene has its line: there is nothing
