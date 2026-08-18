@@ -32,6 +32,7 @@ import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 import { americanVerbs, americanWords } from './spelling-fixtures'
 import modelTextFr from './model-text.fr.json'
 
+/** Every key, nested ones included, in the order the file writes them. */
 function flatten(
   bundle: unknown,
   prefix = '',
@@ -53,7 +54,6 @@ function holes(text: string): readonly string[] {
   return [...text.matchAll(/\{\{[^}]+\}\}/g)].map(match => match[0]).sort()
 }
 
-/** Every key, nested ones included, in the order the file writes them. */
 /**
  * What a block holds, with its names sorted at every depth.
  *
@@ -948,16 +948,6 @@ describe('the failures the journal reports', () => {
 })
 
 /**
- * Tag and Capability are two menus of the same bar, filtering on two different things — one the
- * API matches as a tag, the other the registry applies. A `<select>` shows the chosen OPTION once
- * it closes, never the facet it belongs to (`CollectionBar.tsx` says so where it draws one), so
- * two menus wearing the same words leave a picked filter unreadable.
- *
- * The first translation of the tags walked straight into it: `Text to Image` became "Texte vers
- * image", which is what `capabilities.txt2img` had said all along. Until then the tags were in
- * English, and that — not any design — was the only thing telling the two menus apart.
- */
-/**
  * The one gesture that silenced the whole arrangement, found by review: setting a translatable
  * tag to `null` left sixty-one tests green and abandoned its `modelTags.*` line in both bundles,
  * read by nobody. The table's guard only asks that every tag HAS an answer — `null` is one.
@@ -975,6 +965,16 @@ describe('the tag names the bundles carry', () => {
   })
 })
 
+/**
+ * Tag and Capability are two menus of the same bar, filtering on two different things — one the
+ * API matches as a tag, the other the registry applies. A `<select>` shows the chosen OPTION once
+ * it closes, never the facet it belongs to (`CollectionBar.tsx` says so where it draws one), so
+ * two menus wearing the same words leave a picked filter unreadable.
+ *
+ * The first translation of the tags walked straight into it: `Text to Image` became "Texte vers
+ * image", which is what `capabilities.txt2img` had said all along. Until then the tags were in
+ * English, and that — not any design — was the only thing telling the two menus apart.
+ */
 describe('two facet menus of the same bar', () => {
   it.each(CODES)('never puts the same words in both, in %s', code => {
     const capabilities = new Set(

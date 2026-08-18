@@ -119,20 +119,6 @@ export type ClientProvider = {
   authState: () => Promise<AuthState>
 }
 
-/**
- * Holds the SDK client. Building one is cheap, but it caches nothing useful across
- * credentials, so it is rebuilt lazily and dropped whenever they change.
- */
-/**
- * Runs an API call and lets nothing of it cross the IPC boundary but a code.
- *
- * An SDK message embeds the request that produced it — headers included, so the key. The cause
- * stays attached for the main process alone: Electron serializes `message`, `name` and `stack`
- * of a rejected handler, never `cause`.
- *
- * A factory rather than a function per handler family: three of them had copied the same six
- * lines, and the rule that matters here is the one it would take one forgetful copy to break.
- */
 /** What a refused call is told to, beyond the terminal. Installed once the journal exists. */
 type FailureSink = (scope: string, detail: string) => void
 
@@ -160,6 +146,16 @@ function reducing(note: (error: unknown) => void) {
   }
 }
 
+/**
+ * Runs an API call and lets nothing of it cross the IPC boundary but a code.
+ *
+ * An SDK message embeds the request that produced it — headers included, so the key. The cause
+ * stays attached for the main process alone: Electron serializes `message`, `name` and `stack`
+ * of a rejected handler, never `cause`.
+ *
+ * A factory rather than a function per handler family: three of them had copied the same six
+ * lines, and the rule that matters here is the one it would take one forgetful copy to break.
+ */
 export function reducedBy(scope: string) {
   return reducing(error => {
     // Logged where the credentials already live: reduced to a code, neither the renderer nor
@@ -212,6 +208,10 @@ export type ClientProviderDeps = {
   transport: Transport
 }
 
+/**
+ * Holds the SDK client. Building one is cheap, but it caches nothing useful across
+ * credentials, so it is rebuilt lazily and dropped whenever they change.
+ */
 export function createClientProvider({
   resolve,
   watch,

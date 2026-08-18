@@ -44,12 +44,12 @@ const LicencesWindow = lazy(async () => ({
   default: (await import('@/licences/LicencesWindow')).LicencesWindow,
 }))
 
-/** Lazy for a harder reason than size: the charting library must stay out of the first frame. */
 /** Split like its neighbours: the return is opened on purpose, and rarely. */
 const MirrorWindow = lazy(async () => ({
   default: (await import('@/spaces/video/MirrorWindow')).MirrorWindow,
 }))
 
+/** Lazy for a harder reason than size: the charting library must stay out of the first frame. */
 const UsageWindow = lazy(async () => ({
   default: (await import('@/usage/UsageWindow/UsageWindow')).UsageWindow,
 }))

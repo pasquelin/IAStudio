@@ -1,3 +1,15 @@
+/**
+ * The analyser's bins, folded into bars spread by OCTAVE rather than by hertz.
+ *
+ * An FFT spreads its bins evenly in hertz, which is not how anyone hears: half of them describe
+ * the top octave alone. Read that way, a whole mix crowds into the first two bars and everything
+ * to their right is the air above the cymbals. Spread by octave, each bar covers the same musical
+ * distance as its neighbour, which is the shape every analyser on every desk is drawn in.
+ *
+ * A bar takes the LOUDEST bin it spans, never their average: the low bars span one or two bins
+ * and the high ones span hundreds, and averaging would fade out exactly the bars that cover the
+ * most ground.
+ */
 import { clamp } from '@shared/numeric'
 
 /**
@@ -22,18 +34,6 @@ export type SpectrumBand = {
   level: number
 }
 
-/**
- * The analyser's bins, folded into bars spread by OCTAVE rather than by hertz.
- *
- * An FFT spreads its bins evenly in hertz, which is not how anyone hears: half of them describe
- * the top octave alone. Read that way, a whole mix crowds into the first two bars and everything
- * to their right is the air above the cymbals. Spread by octave, each bar covers the same musical
- * distance as its neighbour, which is the shape every analyser on every desk is drawn in.
- *
- * A bar takes the LOUDEST bin it spans, never their average: the low bars span one or two bins
- * and the high ones span hundreds, and averaging would fade out exactly the bars that cover the
- * most ground.
- */
 /**
  * Which bins each bar spans, and where it starts — everything about the fold that does not depend
  * on what is being heard.

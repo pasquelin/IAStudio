@@ -38,13 +38,6 @@ type Grab =
   | { kind: 'key'; rowId: string; trackIds: readonly string[]; from: Us; at: Us }
   | { kind: 'block'; nodeId: string; clipId: string; grabbedAt: Us }
 
-/**
- * The animation band: the ruler, the rows and the keys, painted.
- *
- * The same split the montage uses — this canvas draws, `AnimationHeaders` beside it holds the
- * controls. Reimplementing focus and accessible names inside a canvas would be rebuilding the
- * browser; drawing a thousand diamonds in the DOM would be a scroll that stutters.
- */
 /** Slides one clip block along the band, keeping what it plays and leaving its neighbours put. */
 function moveBlock(documentId: string, nodeId: string, clipId: string, start: Us): void {
   const store = useScenes.getState()
@@ -55,6 +48,13 @@ function moveBlock(documentId: string, nodeId: string, clipId: string, start: Us
   store.runCommand(documentId, setModelClips(nodeId, moved))
 }
 
+/**
+ * The animation band: the ruler, the rows and the keys, painted.
+ *
+ * The same split the montage uses — this canvas draws, `AnimationHeaders` beside it holds the
+ * controls. Reimplementing focus and accessible names inside a canvas would be rebuilding the
+ * browser; drawing a thousand diamonds in the DOM would be a scroll that stutters.
+ */
 export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const grabbed = useRef<Grab | null>(null)

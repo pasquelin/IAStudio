@@ -84,7 +84,6 @@ function sideCount(sides: number): number {
   return Math.round(clamp(sides, MIN_SIDES, MAX_SIDES))
 }
 
-/** Normalised so width and height are never negative: dragging up-left is still a rectangle. */
 /** How many segments an ellipse is outlined with — enough to read as a curve at any zoom. */
 const ELLIPSE_SEGMENTS = 48
 
@@ -157,6 +156,7 @@ export function paintShape(path: ShapePath, shape: ShapeGeometry): void {
   if (shape.kind !== 'line' && shape.kind !== 'arrow') path.lineTo(first.x, first.y)
 }
 
+/** Normalised so width and height are never negative: dragging up-left is still a rectangle. */
 export function box(from: Point, to: Point, constrain: boolean): Rect {
   let dx = to.x - from.x
   let dy = to.y - from.y

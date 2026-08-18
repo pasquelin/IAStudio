@@ -115,13 +115,6 @@ export function removeAnimationTrack(trackId: string): Command<SceneState> {
 }
 
 /**
- * Writes a key at that instant, replacing whatever stood there.
- *
- * The value is a DELTA — what this track adds to the pose underneath — because tracks add up.
- * Whoever calls this has already worked out the difference between where the object is and where
- * it rests; the command is not the place to guess it.
- */
-/**
  * A command that rewrites the keys of ONE track and takes them back whole.
  *
  * Written once because setting, removing and moving a key had it spelt identically: the undo of
@@ -160,6 +153,13 @@ function keysCommand(
   }
 }
 
+/**
+ * Writes a key at that instant, replacing whatever stood there.
+ *
+ * The value is a DELTA — what this track adds to the pose underneath — because tracks add up.
+ * Whoever calls this has already worked out the difference between where the object is and where
+ * it rests; the command is not the place to guess it.
+ */
 export function setAnimationKey(
   trackId: string,
   time: number,
@@ -172,15 +172,6 @@ export function removeAnimationKey(trackId: string, time: number): Command<Scene
   return keysCommand(`key:remove:${trackId}`, trackId, keys => withoutKey(keys, time))
 }
 
-/**
- * A key on every channel of one subject, holding where the object STANDS right now.
- *
- * This is what a sheet's key button does — Blender spells it `LocRotScale` — and it is the whole
- * difference between a usable band and the one that wrote a neutral value: a key that holds
- * nothing moves nothing, so pressing the button appeared to do nothing at all.
- *
- * One command whatever the channel count, so a key costs one ⌘Z rather than three.
- */
 /**
  * Keys an object that may hold no channel yet, creating the ones it lacks.
  *
@@ -224,6 +215,15 @@ export function keyNode(
   return multi('key:node', [...opened, keys])
 }
 
+/**
+ * A key on every channel of one subject, holding where the object STANDS right now.
+ *
+ * This is what a sheet's key button does — Blender spells it `LocRotScale` — and it is the whole
+ * difference between a usable band and the one that wrote a neutral value: a key that holds
+ * nothing moves nothing, so pressing the button appeared to do nothing at all.
+ *
+ * One command whatever the channel count, so a key costs one ⌘Z rather than three.
+ */
 export function keySubject(
   state: SceneState,
   trackIds: readonly string[],

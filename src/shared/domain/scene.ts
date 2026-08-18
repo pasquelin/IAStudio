@@ -407,16 +407,11 @@ export const LIGHT_ENTRIES: readonly SceneEntry<LightKind>[] = [
   { kind: 'spot' },
 ]
 
-/**
- * How a scene is being looked at, and drawn.
- *
- * Session state, like an image document's zoom: never saved with the document, and ⌘Z never
- * touches it — the scene did not change, the view did.
- *
- * Declared here rather than beside the renderer that applies them, and for the same reason
- * `MESH_ENTRIES` is: the native menu offers a row per value and is built in the main process,
- * which cannot import a renderer module.
- */
+// How a scene is being looked at, and drawn, starts here. Session state, like an image document's
+// zoom: never saved with the document, and ⌘Z never touches it — the scene did not change, the
+// view did. Declared here rather than beside the renderer that applies them, and for the same
+// reason `MESH_ENTRIES` is: the native menu offers a row per value and is built in the main
+// process, which cannot import a renderer module.
 
 /** The six sides of the box a set is judged from. */
 export type ViewDirection = 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right'
