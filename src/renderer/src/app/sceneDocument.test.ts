@@ -56,6 +56,37 @@ describe('a scene on its way back from its file', () => {
     expect(sceneRefusesToSave(DOCUMENT)).not.toBeNull()
   })
 
+  /**
+   * The lesson MaterialX taught, applied here: a root member this studio composes is NOT a
+   * member it reproduces. `gltfDocumentOf` writes `scene: 0` and exactly ONE scene, so a file
+   * holding three comes back holding one — and `scenes` being composed, nothing reported it.
+   */
+  it('refuses to save one that came back holding more than one scene', () => {
+    const two = { ...written(), scenes: [{ nodes: [] }, { name: 'Plan large', nodes: [] }] }
+
+    sceneFromPayloadFile(two, DOCUMENT)
+    expect(sceneRefusesToSave(DOCUMENT)).not.toBeNull()
+  })
+
+  /** `asset` is rewritten from two fields, so a `copyright` another application set is dropped. */
+  it('refuses to save one whose asset carries more than the studio writes', () => {
+    const credited = { ...written(), asset: { version: '2.0', copyright: 'Atelier' } }
+
+    sceneFromPayloadFile(credited, DOCUMENT)
+    expect(sceneRefusesToSave(DOCUMENT)).not.toBeNull()
+  })
+
+  /** The extension block is overwritten whole, so any extension but the lights one is lost. */
+  it('refuses to save one using an extension the studio does not write', () => {
+    const variants = {
+      ...written(),
+      extensionsUsed: ['KHR_lights_punctual', 'KHR_materials_variants'],
+    }
+
+    sceneFromPayloadFile(variants, DOCUMENT)
+    expect(sceneRefusesToSave(DOCUMENT)).not.toBeNull()
+  })
+
   /** A file that lost its extra parts opens clean again — the refusal is not sticky. */
   it('lifts the refusal when the file comes back without them', () => {
     sceneFromPayloadFile({ ...written(), meshes: [] }, DOCUMENT)
