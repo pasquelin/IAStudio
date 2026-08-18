@@ -48,10 +48,12 @@ function orphansIn(path: string, text: string): string[] {
     if (docs.length === 0) return
 
     // A module header opens in column 0 — an indented block never is one, whatever it sits above.
+    // The header is the FIRST block, so it is dropped from the front rather than counted off the
+    // end: counting made three stacked blocks report the header and spare the orphan between them.
     const opensTheFile =
       !headerSpent && file.getLineAndCharacterOfPosition(docs[0]?.pos ?? 0).character === 0
     headerSpent = true
-    for (const range of docs.slice(0, Math.max(0, docs.length - (opensTheFile ? 2 : 1))))
+    for (const range of docs.slice(opensTheFile ? 1 : 0, -1))
       found.push(`${path}:${file.getLineAndCharacterOfPosition(range.pos).line + 1}`)
   })
 
@@ -93,6 +95,21 @@ describe(RULE, () => {
     const code = ['/** the module */', '/** the symbol */', 'export const value = 1'].join('\n')
 
     expect(orphansIn('probe.ts', code)).toEqual([])
+  })
+
+  /**
+   * The tolerance spares the HEADER, not "one of them": found by review, and it was an inversion
+   * rather than a miscount — three stacked blocks used to report the header and spare the orphan.
+   */
+  it('spares the header and names what stands between it and the real block', () => {
+    const code = [
+      '/** the module */',
+      '/** stranded */',
+      '/** the symbol */',
+      'export const value = 1',
+    ].join('\n')
+
+    expect(orphansIn('probe.ts', code)).toEqual(['probe.ts:2'])
   })
 
   /** The tolerance is spent once: a file does not open twice, whatever its length. */
