@@ -5,6 +5,7 @@ import {
   HemisphereLight,
   Mesh,
   MeshStandardMaterial,
+  type Object3D,
   PerspectiveCamera,
   PointLight,
   SpotLight,
@@ -13,7 +14,7 @@ import {
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PATH, type PathDescriptor } from '@shared/domain/scene'
 import { LIGHT_TYPES } from './lightTypes'
-import { buildPath, geometryFor, PATH_CURVE_NAME } from './threeFactory'
+import { buildPath, geometryFor, PATH_CURVE_NAME, sizeKnobFor } from './threeFactory'
 import { DEFAULT_MATERIAL } from './sceneState'
 import {
   applyCamera,
@@ -339,6 +340,66 @@ describe('showPathKnobs', () => {
     expect(
       object.children.filter(child => child instanceof Mesh).map(knob => knob.visible),
     ).toEqual([true, true])
+  })
+})
+
+describe('a knob about to be drawn', () => {
+  const pathOf = (points: PathDescriptor['points']): PathDescriptor => ({
+    ...DEFAULT_PATH,
+    points,
+  })
+
+  /** What the knob's own `onBeforeRender` calls, with the camera about to draw it. */
+  const draw = (knob: Object3D, camera: PerspectiveCamera): void => {
+    knob.parent?.updateMatrixWorld(true)
+    sizeKnobFor(knob, camera)
+  }
+
+  const cameraAt = (z: number): PerspectiveCamera => {
+    const camera = new PerspectiveCamera(60, 1, 0.1, 100)
+    camera.position.set(0, 0, z)
+    return camera
+  }
+
+  /**
+   * A knob of a fixed size in the SCENE covers five pixels once the view steps back, and a
+   * target of five pixels is one nobody hits.
+   */
+  it('grows with the distance of the camera drawing it, keeping its size on screen', () => {
+    const object = buildPath(
+      pathOf([
+        { x: 0, y: 0, z: 0 },
+        { x: 10, y: 0, z: 0 },
+      ]),
+      '#ffffff',
+    )
+    const knob = object.children[1]
+    if (!knob) throw new Error('the rail was built without a knob')
+
+    draw(knob, cameraAt(5))
+    const near = knob.scale.x
+
+    draw(knob, cameraAt(10))
+
+    expect(knob.scale.x).toBeCloseTo(near * 2, 3)
+  })
+
+  // Written into the matrix on the spot: a scale three has already composed for this draw shows
+  // up one frame late, which reads as a lag.
+  it('carries the size it just took into the matrix it is drawn with', () => {
+    const object = buildPath(
+      pathOf([
+        { x: 0, y: 0, z: 0 },
+        { x: 10, y: 0, z: 0 },
+      ]),
+      '#ffffff',
+    )
+    const knob = object.children[1]
+    if (!knob) throw new Error('the rail was built without a knob')
+
+    draw(knob, cameraAt(20))
+
+    expect(knob.matrixWorld.elements[0]).toBeCloseTo(knob.scale.x, 5)
   })
 })
 

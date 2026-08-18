@@ -35,11 +35,13 @@ import {
   TorusKnotGeometry,
   TubeGeometry,
   Vector3,
+  type Camera,
   type Light,
 } from 'three'
 import type { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { GeometryDescriptor, LightKind, PathDescriptor } from '@shared/domain/scene'
 import { pathPoints } from './cameraPath'
+import { screenScale } from '../viewport/screenScale'
 
 /*
  * The three.js objects a descriptor maps to. Kept out of `SceneRenderer` on purpose: none of it
@@ -289,13 +291,21 @@ function lit(colour: string): Color {
   return held.setHSL(hsl.h, hsl.s, Math.max(hsl.l, 0.62))
 }
 
-/**
- * How big a control point is drawn, in scene units. Raised from 0,08 on 18/08 for one measured
- * reason: on a rail five units long seen whole, a knob of that size covers about five pixels, and
- * a target of five pixels is one nobody hits. It is still a fixed size in the SCENE, so it shrinks
- * with distance — a knob that keeps its size on screen is what would settle this for good.
- */
+/** How big a control point is built, in scene units. What it ends up drawn at is `KNOB_SHARE`. */
 export const PATH_KNOB_RADIUS = 0.14
+
+/**
+ * How much of the visible height a knob covers, whatever the distance — the share 0,14 units
+ * happened to cover on a rail five units long seen whole, which is the framing the size was
+ * arbitrated on.
+ *
+ * A fixed size in the SCENE was the defect: the same knob covered five pixels once the view
+ * stepped back, and a target of five pixels is one nobody hits.
+ */
+const KNOB_SHARE = 0.14 / 5
+
+/** Reused rather than minted per knob per frame: this runs inside the render loop. */
+const KNOB_SPOT = new Vector3()
 
 /** What the line of a rail is called among its node's children, so a sync can find it again. */
 export const PATH_CURVE_NAME = 'path-curve'
@@ -338,14 +348,31 @@ export function buildPath(descriptor: PathDescriptor, colour: string): Object3D 
   return object
 }
 
-/** One knob, ready to be hung under a rail. Its index is what a pick reads out of its name. */
+/**
+ * One knob, ready to be hung under a rail. Its index is what a pick reads out of its name.
+ *
+ * It keeps its size on SCREEN, resized against the camera about to draw it — which is why it is
+ * done here and not once per frame: in a quad view four cameras draw the same knob, and one
+ * scale could only ever be right for one of them.
+ *
+ * The matrix is recomposed by hand because three had already composed it for this draw: a scale
+ * written and left there is a scale that shows up one frame late, and reads as a lag.
+ */
 export function pathKnob(index: number, colour: string): Mesh {
   const knob = new Mesh(
     new SphereGeometry(PATH_KNOB_RADIUS, 8, 6),
     new MeshBasicMaterial({ color: colour }),
   )
   knob.name = knobName(index)
+  knob.onBeforeRender = (_renderer, _scene, camera) => sizeKnobFor(knob, camera)
   return knob
+}
+
+/** The knob resized for the camera about to draw it. Apart so it can be asked for by a test. */
+export function sizeKnobFor(knob: Object3D, camera: Camera): void {
+  knob.getWorldPosition(KNOB_SPOT)
+  knob.scale.setScalar(screenScale(camera, KNOB_SPOT, KNOB_SHARE) / PATH_KNOB_RADIUS)
+  knob.updateMatrixWorld(true)
 }
 
 const AXIS_KNOB_SCALE = 0.6
