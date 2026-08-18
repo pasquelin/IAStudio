@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
+import { rigFit } from '@/engines/scene/rigFit'
+import { modelNodeFixture, rigStateFixture, STANDING_BOUNDS } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type ModelNode } from '@/engines/scene/sceneState'
 import { useModelClips } from '@/stores/modelClips'
 import { installScene, sceneNodeIn, sceneNodeNow } from '@/stores/scene-fixtures'
@@ -24,7 +25,7 @@ function Host() {
 }
 
 /** A model whose file has landed as a bare mesh of the given shape. */
-function show(bounds = rigStateFixture([]).bounds, progress?: number): void {
+function show(bounds = STANDING_BOUNDS, progress?: number): void {
   useModelClips.setState({
     rigs: { [DOCUMENT]: { a: { ...rigStateFixture([]), bounds } } },
     rigProgress: progress === undefined ? {} : { [DOCUMENT]: { a: progress } },
@@ -110,5 +111,18 @@ describe('RigSection', () => {
     render(<Host />)
 
     expect(screen.queryByText('Squelette')).not.toBeInTheDocument()
+  })
+
+  it('never tells a model it cannot be rigged once it has been', () => {
+    const node = modelNodeFixture('a')
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [{ ...node, model: { ...node.model, rig: rigFit(STANDING_BOUNDS) } }],
+    })
+    useModelClips.setState({ rigs: { [DOCUMENT]: { a: rigStateFixture(['Hips', 'Spine']) } } })
+    render(<Host />)
+
+    expect(screen.getByText(/a reçu un squelette/)).toBeInTheDocument()
+    expect(screen.queryByText(/trop plat/)).not.toBeInTheDocument()
   })
 })

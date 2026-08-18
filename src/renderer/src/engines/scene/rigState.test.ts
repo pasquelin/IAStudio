@@ -81,7 +81,21 @@ describe('what a loaded model is', () => {
     const mesh = new Mesh(new BoxGeometry(2, 4, 2), new MeshStandardMaterial())
     const state = rigStateOf(rootWith(mesh))
 
-    expect(state.bounds.max.y - state.bounds.min.y).toBeCloseTo(4, 5)
+    expect(state.bounds?.min.y).toBeCloseTo(-2, 5)
+    expect(state.bounds?.max.y).toBeCloseTo(2, 5)
+  })
+
+  it('measures nothing at all once a model carries bones', () => {
+    expect(rigStateOf(rootWith(skinnedOn(chain(['Hips', 'Spine'])))).bounds).toBeNull()
+  })
+
+  // A zero box and not nothing: it is what the inspector reads as `noGeometry`, and nulling it
+  // for consistency with the line above would drop that note without a test going red.
+  it('measures a zero box for a bare model holding no mesh at all', () => {
+    expect(rigStateOf(new Object3D()).bounds).toEqual({
+      min: { x: 0, y: 0, z: 0 },
+      max: { x: 0, y: 0, z: 0 },
+    })
   })
 
   it('reads the mixamo prefix off a name before matching a role', () => {

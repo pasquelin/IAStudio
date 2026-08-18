@@ -58,8 +58,12 @@ export type RigState = {
    * export pipelines strip joint names, and such a rig still has a skeleton to draw.
    */
   boneCount: number
-  /** What the model measures, for whoever fits a skeleton to it. Empty for a model with no mesh. */
-  bounds: Bounds
+  /**
+   * What the model measures, for whoever fits a skeleton to it. `null` for anything carrying
+   * bones, which is never measured; a ZERO BOX for a bare mesh holding no vertices, which the
+   * inspector reads as `noGeometry` — nulling that one too would drop the message in silence.
+   */
+  bounds: Bounds | null
 }
 
 /** three marks its bones with a flag; `instanceof` would miss one from another three instance. */
@@ -105,7 +109,7 @@ export function rigStateOf(root: Object3D, clips: readonly AnimationClip[] = [])
     bones,
     boneNames: bones.map(bone => bone.name),
     boneCount,
-    bounds: status === 'staticMesh' ? boundsOf(root) : EMPTY_BOUNDS,
+    bounds: status === 'staticMesh' ? boundsOf(root) : null,
   }
 }
 
@@ -137,8 +141,8 @@ function boundsOf(root: Object3D): Bounds {
     }
   })
 
-  // `Box3` starts inverted: a model with nothing to measure never narrows it, and those numbers
-  // would place bones at the ends of the world.
+  // `Box3` starts inverted, so a mesh with no vertex would place bones at the ends of the world.
+  // Zeroes rather than `null`: that box is the route to `noGeometry`, the note the user reads.
   return box.isEmpty() ? EMPTY_BOUNDS : { min: { ...box.min }, max: { ...box.max } }
 }
 

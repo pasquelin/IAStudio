@@ -30,7 +30,9 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
   // own is never offered another, and one still loading has nothing to measure.
   if (!rig || (rig.status !== 'staticMesh' && !node.model.rig)) return null
 
-  const fault = rigFitFaultOf(rig.bounds)
+  // Held so the `onClick` closure narrows: a property access does not stay narrowed inside one.
+  const bounds = rig.bounds
+  const fault = bounds && rigFitFaultOf(bounds)
 
   return (
     <PropertySection title={t('inspector.rig')}>
@@ -38,11 +40,8 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
 
       {progress === null && fault && <QuietNote>{t(`inspector.rigFault_${fault}`)}</QuietNote>}
 
-      {progress === null && !fault && !node.model.rig && (
-        <Button
-          variant="primary"
-          onClick={() => edit.run(setModelRig(node.id, rigFit(rig.bounds)))}
-        >
+      {progress === null && bounds && !fault && !node.model.rig && (
+        <Button variant="primary" onClick={() => edit.run(setModelRig(node.id, rigFit(bounds)))}>
           {t('inspector.makeAnimatable')}
         </Button>
       )}
