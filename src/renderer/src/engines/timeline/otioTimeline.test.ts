@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { STUDIO_METADATA_KEY } from '@shared/domain/document'
 import { type OtioClip, type OtioTimeline, type OtioTrackItem } from '@shared/domain/otio'
-import {
-  montageHoldsMore,
-  otioTimelineOf,
-  sequenceFromOtio,
-  type OtioSource,
-} from './otioTimeline'
+import { montageHoldsMore, otioTimelineOf, sequenceFromOtio, type OtioSource } from './otioTimeline'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import {
   DEFAULT_SETTINGS,
@@ -156,12 +151,9 @@ const montage: SequenceState = {
       ],
       { name: 'Plans', height: 90, locked: true },
     ),
-    trackFixture(
-      'A1',
-      'audio',
-      [clipFixture('c', 0, 2 * SECOND, { gain: -6, linkId: 'take-1' })],
-      { muted: true },
-    ),
+    trackFixture('A1', 'audio', [clipFixture('c', 0, 2 * SECOND, { gain: -6, linkId: 'take-1' })], {
+      muted: true,
+    }),
   ]),
   selectedId: 'b',
   playhead: 1_500_000,

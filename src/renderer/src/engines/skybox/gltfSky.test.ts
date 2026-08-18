@@ -314,7 +314,9 @@ describe('a sky whose file holds more than this editor composes', () => {
 
   it('finds nothing in a file that has been through the file layer', () => {
     const stamped = enriched({
-      scenes: [{ name: 'Crépuscule', nodes: [0, 1], extras: { [STUDIO_METADATA_KEY]: { id: 'a' } } }],
+      scenes: [
+        { name: 'Crépuscule', nodes: [0, 1], extras: { [STUDIO_METADATA_KEY]: { id: 'a' } } },
+      ],
     })
 
     expect(skyHoldsMore(stamped)).toEqual([])

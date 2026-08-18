@@ -190,9 +190,9 @@ describe('sceneHoldsMore', () => {
   })
 
   it('names a root member this studio never writes', () => {
-    expect(sceneHoldsMore(enriched({ extensionsRequired: ['KHR_draco_mesh_compression'] }))).toEqual(
-      ['extensionsRequired'],
-    )
+    expect(
+      sceneHoldsMore(enriched({ extensionsRequired: ['KHR_draco_mesh_compression'] })),
+    ).toEqual(['extensionsRequired'])
     expect(sceneHoldsMore(enriched({ meshes: [{ primitives: [] }] }))).toEqual(['meshes'])
   })
 

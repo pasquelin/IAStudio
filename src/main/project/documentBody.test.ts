@@ -35,7 +35,11 @@ const asText = (body: string | Uint8Array): string =>
 const writeScene = (document: DocumentFile): string => asText(scene.write(document))
 
 /** The four fields every document file carries, so a case states only what it is about. */
-const ENVELOPE = { version: DOCUMENT_VERSION, title: 'Titre', updatedAt: '2026-08-18T10:00:00.000Z' }
+const ENVELOPE = {
+  version: DOCUMENT_VERSION,
+  title: 'Titre',
+  updatedAt: '2026-08-18T10:00:00.000Z',
+}
 
 const gltf = (studio: Record<string, unknown> = {}): string =>
   JSON.stringify({
@@ -700,7 +704,12 @@ describe('what a listing pays per document', () => {
   it('takes the kind off the head rather than off the extension', async () => {
     const file = await laid(
       'Crépuscule.gltf',
-      writeScene({ ...ENVELOPE, kind: 'skybox', id: 'doc-7', content: gltf({ documentId: 'doc-7' }) }),
+      writeScene({
+        ...ENVELOPE,
+        kind: 'skybox',
+        id: 'doc-7',
+        content: gltf({ documentId: 'doc-7' }),
+      }),
     )
 
     expect(await scene.readHead(file)).toMatchObject({ kind: 'skybox', id: 'doc-7' })
@@ -718,7 +727,10 @@ describe('what a listing pays per document', () => {
       scenes: [
         {
           extras: {
-            [STUDIO_METADATA_KEY]: { scene: { nodes: 'x'.repeat(ENVELOPE_LIMIT) }, documentId: 'doc-6' },
+            [STUDIO_METADATA_KEY]: {
+              scene: { nodes: 'x'.repeat(ENVELOPE_LIMIT) },
+              documentId: 'doc-6',
+            },
           },
         },
       ],
@@ -736,11 +748,18 @@ describe('what a listing pays per document', () => {
       `${JSON.stringify({ ...ENVELOPE, kind: 'scene', id: 'doc-5', title: 'Ancienne' })}\n{"nodes":[]}`,
     )
 
-    expect(await scene.readHead(file)).toMatchObject({ kind: 'scene', id: 'doc-5', title: 'Ancienne' })
+    expect(await scene.readHead(file)).toMatchObject({
+      kind: 'scene',
+      id: 'doc-5',
+      title: 'Ancienne',
+    })
   })
 
   it('turns away a glTF another application exported into the project', async () => {
-    const file = await laid('Maille.gltf', JSON.stringify({ asset: { version: '2.0' }, meshes: [] }))
+    const file = await laid(
+      'Maille.gltf',
+      JSON.stringify({ asset: { version: '2.0' }, meshes: [] }),
+    )
 
     await expect(scene.readHead(file)).rejects.toThrow()
   })

@@ -143,14 +143,18 @@ export function skyHoldsMore(document: unknown): string[] {
   // hangs it off its own node. Read from the extension too, so a light sharing a node still shows.
   if (gltfPunctualLights(document).length > COMPOSED_LIGHTS) held.push('lights')
 
-  held.push(...Object.keys(isRecord(document.asset) ? document.asset : {})
-    .filter(key => !COMPOSED_ASSET.has(key))
-    .map(key => `asset.${key}`))
+  held.push(
+    ...Object.keys(isRecord(document.asset) ? document.asset : {})
+      .filter(key => !COMPOSED_ASSET.has(key))
+      .map(key => `asset.${key}`),
+  )
 
   // Both `extras` a sky carries: the root one holds its state, and the default scene's holds the
   // identity the file layer stamps. Each is rewritten whole, so a foreign key in either is lost.
   held.push(...gltfForeignExtras(document.extras).map(key => `extras.${key}`))
-  held.push(...gltfForeignExtras(gltfDefaultScene(document)?.extras).map(key => `scene.extras.${key}`))
+  held.push(
+    ...gltfForeignExtras(gltfDefaultScene(document)?.extras).map(key => `scene.extras.${key}`),
+  )
 
   // The extension block is overwritten whole, so anything but the lights one would be lost — read
   // from BOTH sides, a file being free to declare one without listing it and the reverse.
