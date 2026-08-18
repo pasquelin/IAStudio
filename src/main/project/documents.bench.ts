@@ -159,14 +159,32 @@ const POOL = 16
  */
 let laid: Promise<string> | null = null
 
-/** The envelope a real document carries, as one line — the only part any of these three reads. */
-const HEAD = `${JSON.stringify({
-  version: DOCUMENT_VERSION,
-  kind: 'scene',
-  id: 'a3f1',
-  title: 'Bench',
-  updatedAt: '2026-08-17T10:00:00.000Z',
-})}\n${'x'.repeat(4_000)}`
+const asText = (body: string | Uint8Array): string =>
+  typeof body === 'string' ? body : Buffer.from(body).toString('utf8')
+
+/**
+ * A scene as the studio WRITES one, through the writer itself.
+ *
+ * This used to be an envelope on a first line — the spelling the studio dropped when a scene
+ * became glTF — so the bench that stood for a listing measured a head no document wears any more,
+ * and it read short where a real one read whole. Measured 18/08 at ×2,6 between the two.
+ */
+const HEAD = asText(
+  bodyFormatOf(EXTENSIONS_BY_KIND.scene).write({
+    version: DOCUMENT_VERSION,
+    kind: 'scene',
+    id: 'a3f1',
+    title: 'Bench',
+    updatedAt: '2026-08-17T10:00:00.000Z',
+    content: JSON.stringify({
+      asset: { version: '2.0' },
+      scene: 0,
+      scenes: [{ nodes: [], extras: { [STUDIO_METADATA_KEY]: { [GLTF_SCENE_STATE]: {} } } }],
+      nodes: [],
+      spacer: 'x'.repeat(4_000),
+    }),
+  }),
+)
 
 async function layDown(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'scenario-list-bench-'))

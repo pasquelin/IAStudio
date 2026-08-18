@@ -102,10 +102,95 @@ export const ENVELOPED: DocumentBodyFormat = {
 const OPEN_TIMELINE: DocumentBodyFormat = {
   read: body => otioDocument(body.toString('utf8')),
   write: otioBody,
-  // No head of ours to read short: what an envelope carries is spread through the file, so the
-  // whole of it is read and parsed — and handed back whole, `DocumentHead.content` being what
-  // keeps an open from paying for that parse a second time.
-  readHead: async file => otioDocument(await readFile(file, 'utf8')),
+  // The studio's own block opens the file — it rides on the timeline's `metadata`, the third
+  // member — so a listing of long montages reads a bounded head. A montage written before that
+  // block carried an id, or one whose take holds a chain too long to fit, falls back on the whole.
+  readHead: async file => {
+    const bytes = await firstBytes(file, ENVELOPE_LIMIT)
+    if (endedInside(bytes)) return otioDocument(bytes.toString('utf8'))
+
+    return (
+      shortHeadIn(bytes.toString('utf8'), 'sequence') ?? otioDocument(await readFile(file, 'utf8'))
+    )
+  },
+}
+
+/**
+ * What a listing needs, out of a head already in hand: which document this is, and of which kind.
+ *
+ * `null` whenever the head cannot answer BOTH, and then the caller reads the file. The id is the
+ * half that matters — `foundAt` falls back on the file name for a document that has none, so a head
+ * answering a kind alone would quietly rename every document to its stem, taking its tabs, its
+ * place in the layout and its recent entry with it.
+ *
+ * Title and clock stay empty for the reason `openDocument` gives: the file NAME is the title and
+ * the disk's own time is the only true clock.
+ */
+function shortHeadIn(head: string, defaultKind: DocumentKind): DocumentHead | null {
+  const studio = studioMarkIn(head)
+  const id = readString(studio, DOCUMENT_ID_KEY, '')
+  if (!id) return null
+
+  const claimed = readString(studio, DOCUMENT_KIND_KEY, '')
+  return {
+    version: DOCUMENT_VERSION,
+    kind: isDocumentKind(claimed) ? claimed : defaultKind,
+    title: '',
+    updatedAt: '',
+    id,
+  }
+}
+
+/**
+ * A bounded read is only a saving on a file BIGGER than the bound — measured, and it was the other
+ * way round at first: on documents of four kilobytes the short head came out at ×0,7 of reading the
+ * whole file, an `open`/`read`/`close` and an eight-kilobyte buffer against one call sized to the
+ * file. So the bound is read once and its LENGTH answers the question: a file that ended inside it
+ * is already in hand and gets parsed from there, costing nothing.
+ */
+const endedInside = (bytes: Buffer): boolean => bytes.length < ENVELOPE_LIMIT
+
+/**
+ * Every `scenario` block a head holds, merged — a glTF writes one on `asset` and one on its default
+ * scene, and only the second names the document.
+ *
+ * The braces are MATCHED rather than pattern-matched: a head is a cut of the file, so a block that
+ * runs past its end has to be told apart from one that fits, and a title holding `{` must not end
+ * it. A block that does not fit is skipped, which is what makes the fallback correct rather than
+ * lucky — measured on a scene of 5 000 nodes, whose state does not fit in eight kilobytes.
+ */
+function studioMarkIn(head: string): Record<string, unknown> {
+  const merged: Record<string, unknown> = {}
+
+  for (let at = head.indexOf(STUDIO_MARK); at !== -1; at = head.indexOf(STUDIO_MARK, at + 1)) {
+    const opens = head.indexOf('{', at + STUDIO_MARK.length)
+    if (opens === -1) break
+
+    const parsed = jsonOrNull(balancedObject(head, opens) ?? '')
+    if (isRecord(parsed)) Object.assign(merged, parsed)
+  }
+
+  return merged
+}
+
+/** The object opening at `opens`, or `null` when the head cut it short. */
+function balancedObject(head: string, opens: number): string | null {
+  let depth = 0
+  let quoted = false
+
+  for (let at = opens; at < head.length; at += 1) {
+    if (quoted) {
+      if (head[at] === '\\') at += 1
+      else if (head[at] === '"') quoted = false
+      continue
+    }
+
+    if (head[at] === '"') quoted = true
+    else if (head[at] === '{') depth += 1
+    else if (head[at] === '}' && (depth -= 1) === 0) return head.slice(opens, at + 1)
+  }
+
+  return null
 }
 
 /**
@@ -190,7 +275,8 @@ const OPEN_SCENE: DocumentBodyFormat = {
   // a mesh somebody exported into the project — `.gltf` is an asset extension too — so it is
   // turned away rather than read whole at every listing, which is the rule `ENVELOPE_MARK` states.
   readHead: async file => {
-    const head = (await firstBytes(file, ENVELOPE_LIMIT)).toString('utf8')
+    const bytes = await firstBytes(file, ENVELOPE_LIMIT)
+    const head = bytes.toString('utf8')
     const cut = head.indexOf('\n')
     // A first line that PARSES as an envelope, never a first line at all: an indented glTF has
     // one too — it reads `{` — and taking that as an envelope dropped every scene written before
@@ -203,7 +289,11 @@ const OPEN_SCENE: DocumentBodyFormat = {
     if (!head.includes(STUDIO_MARK) && !head.includes(ENVELOPE_MARK)) {
       throw new Error('Nothing of the studio where this file begins')
     }
-    return sceneDocument(await readFile(file, 'utf8'))
+    if (endedInside(bytes)) return sceneDocument(head)
+
+    // `asset` names the document AND its kind, and `gltfBody` writes it first, so a big scene is
+    // listed without being parsed. One written before that stamp carried the id falls back below.
+    return shortHeadIn(head, 'scene') ?? sceneDocument(await readFile(file, 'utf8'))
   },
 }
 
@@ -479,17 +569,18 @@ function studioExtrasFirst(held: unknown, studio: unknown): Record<string, unkno
 }
 
 /**
- * The `asset` member, carrying the mark that says the file is a document of the studio.
+ * The `asset` member, carrying the mark that says the file is a document of the studio — and WHICH
+ * document, which is what lets `readHead` answer without parsing the file.
  *
- * `DOCUMENT_KIND_KEY` rather than a spelling of its own: the same invariant written twice is free
- * to drift, and nothing reads THIS copy — so nothing would go red the day the two disagree.
+ * `asset` is the one member glTF requires and the first `gltfBody` writes, so this mark is inside
+ * the bounded head whatever the scene weighs. The id is stamped here as well as on the default
+ * scene, because the scene's own block carries the whole state beside it and a large one does not
+ * fit in that head.
  */
 function markedAsset(held: unknown, document: DocumentFile): Record<string, unknown> {
   return {
     ...(isRecord(held) ? held : {}),
-    extras: studioExtrasFirst(isRecord(held) ? held.extras : undefined, {
-      [DOCUMENT_KIND_KEY]: document.kind,
-    }),
+    extras: studioExtrasFirst(isRecord(held) ? held.extras : undefined, studioStamp({}, document)),
   }
 }
 
