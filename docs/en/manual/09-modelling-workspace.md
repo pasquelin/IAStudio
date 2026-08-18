@@ -603,20 +603,29 @@ section:
 | Control | What it does |
 |---|---|
 | **Clip** | picks which one plays, among those the file carries |
-| **▶ / ⏸** | starts or stops playback |
+| **▶ / ⏸** | shows the block in the view, on a clock of its own |
 | **Speed** | a multiplier, from 0.1 to 4 |
 | **Loop** | starts over at the end, or holds the last pose |
 
-**The pose is saved with the document.** Reopening the scene finds it where you left it, not back
-at the start.
+**All four controls act on THE BLOCK YOU CHOSE on the band**: press a block to choose it, and the
+section switches over to it — while you have chosen none, it is the first. A model carrying several
+blocks is therefore set block by block: speed and loop are written into the one you are watching,
+and the others do not move.
+
+> **The Inspector's ▶ does not move the playhead.** Watching an animation is a glance at one block,
+> not a move of the scene's clock: the block runs in the view and the band stays where you left it.
+> **The two never run together** — starting the timeline drops the preview, so does moving the
+> head, and starting the preview pauses the timeline.
+
+**The playhead position is not saved**: reopening the scene puts it back at the start. What is
+saved are the blocks — where they sit on the band, their speed and their loop.
 
 **A model with no clip keeps the section**, which then says what it is missing — that it carries no
 skeleton yet, or one the studio does not recognise. The picker itself only appears when there is
 something to choose.
 
-**The chosen clip also shows on the band below**, laid as a block at its real length, on a line of
-its own bearing **the clip's name**. Blocks are grouped **under** the key lines, never mixed into
-them.
+**A clip also shows on the band below**, laid as a block at its real length, on a line of its own
+bearing **the clip's name**. Blocks are grouped **under** the key lines, never mixed into them.
 
 ### Seeing the skeleton
 

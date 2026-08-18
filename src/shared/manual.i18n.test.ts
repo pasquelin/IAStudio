@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { LANGUAGES, type Language } from './i18n/languages'
 import { deadManualLinks, type ManualChapter } from './domain/manual'
 import { americanVerbs, americanWords, proseOf } from './i18n/spelling-fixtures'
+import { asRead, menuPathsOf, screenLabels } from './i18n/menuPath-fixtures'
 import { TRANSLATIONS } from './i18n'
-import { isRecord } from './guards'
 import manual from './manual.json'
 
 /**
@@ -20,38 +20,6 @@ const languages = LANGUAGES.map(language => language.code)
 
 /** Per language, never merged: `07-assets` is the slug of a chapter in BOTH — see `ManualChapter`. */
 const chaptersOf = (language: (typeof languages)[number]): ManualChapter[] => manual[language]
-
-/**
- * Both separators the chapters write, and they are not interchangeable to a regexp: `▸` carries
- * 70 paths in French and 71 in English, `›` four each. Reading one alone missed two false
- * citations, measured.
- *
- * ONE line break at most, and the `\S` edges are what make crossing it safe: `**` pairs greedily,
- * so without them the reading starts on a CLOSING `**` and runs to the next line's opening one,
- * returning half a table row as a path — measured. Refusing the break outright was the other
- * failure: a path a reflow had split was quoted correctly and read by nobody.
- */
-const MENU_PATH =
-  /\*\*(?=\S)((?:[^*\n]|\n(?!\s*\n)){1,90}[▸›](?:[^*\n]|\n(?!\s*\n)){1,90})(?<=\S)\*\*/g
-
-/** A path a reflow split reads as one line, the break being of the page and not of the menu. */
-const menuPathsOf = (markdown: string): string[] =>
-  [...markdown.matchAll(MENU_PATH)].flatMap(match => (match[1] ?? '').replace(/\s*\n\s*/g, ' '))
-
-/** As a reader compares a quote to a menu: trailing ellipsis dropped, holes dropped, folded. */
-const asRead = (text: string): string =>
-  text
-    .replace(/\{\{[^}]*\}\}/g, '')
-    .replace(/[….]+$/, '')
-    .trim()
-    .toLowerCase()
-
-const labelsOf = (bundle: unknown, into = new Set<string>()): Set<string> => {
-  if (typeof bundle === 'string') into.add(asRead(bundle))
-  else if (isRecord(bundle)) for (const held of Object.values(bundle)) labelsOf(held, into)
-
-  return into
-}
 
 /**
  * Segments that follow the shape of a path without naming a menu entry. One each, and both are
@@ -176,7 +144,7 @@ describe('the manual the application carries', () => {
    * path. `**Enlarge**` alone sat in three more chapters and no reading here would have found it.
    */
   it.each(languages)('quotes no menu path the screen does not carry, in %s', language => {
-    const labels = labelsOf(TRANSLATIONS[language])
+    const labels = screenLabels(TRANSLATIONS[language])
     const invented = chaptersOf(language).flatMap(chapter =>
       menuPathsOf(chapter.markdown).flatMap(path =>
         path

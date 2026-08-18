@@ -30,6 +30,7 @@ import { WORKSPACE_IDS } from '../domain/workspace'
 import { USAGE_ACTIONS, USAGE_ASSET_KINDS, USAGE_EVENT_ACTIONS } from '../domain/usage'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 import { americanVerbs, americanWords } from './spelling-fixtures'
+import { screenLabels, unquotedMenuSegments } from './menuPath-fixtures'
 import modelTextFr from './model-text.fr.json'
 
 /** Every key, nested ones included, in the order the file writes them. */
@@ -1453,5 +1454,40 @@ describe('a space a sentence points at', () => {
     )
 
     expect(invented).toEqual([])
+  })
+})
+
+describe('a menu path a sentence quotes', () => {
+  /**
+   * `manual.i18n.test.ts` holds this for the twenty chapters, where a wrong path reads as the
+   * software being broken. The bundles quote one too — `home.spotlight.connectBody` sends a
+   * newcomer to `Réglages ▸ Compte` — and nothing read it: a renamed entry would have left that
+   * sentence pointing at a menu nobody can find, in the one window shown before anything works.
+   *
+   * ONE site today, so the value is prospective; the manual's twin has gone stale three times.
+   *
+   * Its blind spot, and the manual's guard shares it: a segment is checked against EVERY label
+   * the screen carries, not against the menu alone. A path renamed onto a word that happens to
+   * be a panel title or a button elsewhere would pass — the bundles hold no menu-only index.
+   */
+  it.each(CODES)('quotes no menu path the screen does not carry, in %s', code => {
+    const labels = screenLabels(TRANSLATIONS[code])
+    const invented = [...BUNDLES[code]].flatMap(([key, value]) =>
+      unquotedMenuSegments(value, labels).map(found => `${key} — ${found}`),
+    )
+
+    expect(invented).toEqual([])
+  })
+
+  /** The assertion above is a list expected EMPTY: a reading that finds nothing keeps it green. */
+  it('slides from the separator onto the labels around it, and says when it cannot', () => {
+    const labels = new Set(['réglages', 'compte'])
+
+    expect(unquotedMenuSegments('Collez-les dans Réglages ▸ Compte — chiffrés.', labels)).toEqual(
+      [],
+    )
+    expect(unquotedMenuSegments('Collez-les dans Réglages ▸ Trousseau.', labels)).toEqual([
+      '"Trousseau" in Collez-les dans Réglages ▸ Trousseau',
+    ])
   })
 })
