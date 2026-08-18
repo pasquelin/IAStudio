@@ -26,10 +26,10 @@ phrase et où l’on télécharge une image, c’est **tout ce qui vient après*
 > d’annulation. La liste complète et honnête de ce qui manque encore est le chapitre
 > [Ce qui n’existe pas encore](18-limites.md) — il est fait pour être lu, pas caché.
 
-## Sept façons de travailler
+## Six façons de travailler
 
-Le studio ne fait pas sept logiciels différents. Il fait un seul logiciel qui **se réarrange**
-selon ce que vous fabriquez. Ces sept arrangements s’appellent des **espaces de travail**.
+Le studio ne fait pas six logiciels différents. Il fait un seul logiciel qui **se réarrange**
+selon ce que vous fabriquez. Ces six arrangements s’appellent des **espaces de travail**.
 
 | Espace | Ce qu’on y fabrique | Un exemple |
 |---|---|---|
@@ -78,7 +78,7 @@ La différence avec un asset est celle qui sépare **la matière** de **l’ouvr
 générée est un asset ; l’image que vous êtes en train de peindre, avec ses calques et son
 historique, est un document.
 
-Il y a sept sortes de documents, une par espace :
+Il y a six sortes de documents, une par espace :
 
 | Espace | Document | Extension du fichier |
 |---|---|---|

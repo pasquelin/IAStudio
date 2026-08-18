@@ -28,6 +28,10 @@ export type ScenarioInput = {
   minLength?: number
   maxLength?: number
   allowedValues?: unknown[]
+  /** Bytes, on a file input. Uthana's character rigger answers 30000000 and refuses above it. */
+  maxSize?: number
+  /** Whether choosing this input changes what the run costs — Tripo marks its `animation` so. */
+  costImpact?: boolean
   required?: { always?: boolean } | null
 }
 
@@ -52,7 +56,10 @@ function kindOf(input: ScenarioInput): FieldKind {
       if (input.prompt) return 'longText'
       return 'text'
     case 'file':
-      return input.kind === 'image' || input.kind === 'image-hdr' ? 'image' : 'raw'
+      if (input.kind === 'image' || input.kind === 'image-hdr') return 'image'
+      // The six riggers and the motion models all take their mesh under `kind: '3d'`; without
+      // this they fell to `raw`, and the form asked for an asset id to be typed out by hand.
+      return input.kind === '3d' ? 'mesh' : 'raw'
     default:
       return 'raw'
   }
@@ -111,6 +118,10 @@ export function translateSchema(inputs: readonly ScenarioInput[] | undefined): F
     if (input.min !== undefined) descriptor.min = input.min
     if (input.max !== undefined) descriptor.max = input.max
     if (input.step !== undefined) descriptor.step = input.step
+    // Carried so a file too big is refused HERE rather than after minutes of upload, and so a
+    // field that moves the price can say it before the run.
+    if (input.maxSize !== undefined) descriptor.maxSize = input.maxSize
+    if (input.costImpact === true) descriptor.costImpact = true
 
     // The pairing Scenario declares between a mask and the picture it masks: carried through so
     // an edit action can fill both without knowing either model's field names.

@@ -779,7 +779,7 @@ en ressort.
 Un asset est soit `local` (un fichier du projet), soit `cloud` (encore uniquement chez Scenario).
 Une image locale est servie au renderer sous la forme `scenario://<id>`.
 
-Les **documents** sont des fichiers JSON rangés où l’utilisateur veut — `documents/` n’est que le
+Les **documents** sont des fichiers rangés où l’utilisateur veut — `documents/` n’est que le
 dossier où atterrit une première sauvegarde, et `documents.list()` parcourt le projet entier pour
 les trouver. Un par document, **nommé d’après le
 document** — `Niveau.gltf`, `Bande annonce.otio`. Son identifiant vit dans l’enveloppe (version 3
@@ -793,14 +793,67 @@ passe par un fichier de transit puis un `rename`, atomique dans un même dossier
 coupure en cours d’écriture ne laisse jamais un document tronqué là où était le travail.
 
 Le corps du fichier appartient à l’espace qui l’a écrit, et une table par extension
-(`main/project/documentBody.ts`) dit comment il est épelé. Pour cinq genres c’est l’**enveloppe**
-du studio — une ligne d’en-tête, le contenu dessous — et le processus principal ne lit pas ce
-contenu : il estampille et rend tel quel. Pour le montage, le fichier **EST** le format ouvert :
-il n’y a pas d’enveloppe où loger l’en-tête, donc le principal parse l’OpenTimelineIO à la lecture
-comme à l’écriture, et refuse d’écrire un corps qui n’est pas un montage. Un espace qui apprend à
-s’enregistrer n’a dans les deux cas pas de canal à lui. **Les six genres savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel et
-matière, déclarés en un seul endroit, `IO_BY_KIND` dans `app/documentIo.ts`. Un genre absent de
-cette table a un Enregistrer qui ne fait rien, plutôt qu’un qui écrit un corps vide.
+(`main/project/documentBody.ts`) dit comment il est épelé. **Quatre formats ouverts, et
+l’enveloppe du studio pour tout le reste.**
+
+Le même mécanisme les tient tous les quatre : la **fenêtre** produit la structure standard, parce
+qu’elle seule tient le catalogue, la scène et le GPU ; le `content` du document EST cette
+structure ; le **processus principal écrit la syntaxe et la relit**, sans jamais parser l’état du
+studio. Ce que le standard ne porte pas voyage à l’endroit que le standard réserve aux tiers, et
+l’état y va **verbatim** — relire est alors une seule passe, et aucune règle n’est à tenir en
+phase des deux côtés. Un fichier de nous lit de là ; un fichier venu d’ailleurs se reconstruit de
+la partie standard seule, et ce que le standard ne dit pas est simplement absent.
+
+Pour la **scène** et le **ciel**, c’est du glTF 2.0, sous la même extension — c’est la métadonnée
+du fichier, jamais l’extension, qui dit lequel des deux genres il porte. L’en-tête voyage sur
+`asset`, le seul membre que le format exige et que rien ne peut repousser plus bas : derrière la
+liste des nœuds racines d’une grosse scène il tombait hors de la tête lue, et le document
+disparaissait du listing.
+
+Pour la **matière**, c’est du MaterialX 1.39 : un `standard_surface` alimenté par des
+`tiledimage`, et l’état du studio dans un attribut personnalisé que la spécification oblige un
+lecteur à préserver. Contrairement au glTF, ce format a une vraie **tête** — la racine est la
+première ligne — donc lister n’ouvre jamais une matière en entier.
+
+Pour le **montage**, le fichier EST le format ouvert : il n’y a pas d’enveloppe où loger
+l’en-tête, donc le principal parse l’OpenTimelineIO à la lecture comme à l’écriture, et refuse
+d’écrire un corps qui n’est pas un montage.
+
+Pour l’**image**, le fichier est une archive OpenRaster — un ZIP, et non plus un dossier. Le
+principal l’empaquette et la dépaquette : `mimetype` en premier et stocké, `stack.xml`,
+`mergedimage.png` que la spécification exige, un PNG par surface sous `data/`, et l’état du studio
+sous `scenario/`. La fenêtre produit la pile (le `content` du document EST cette pile, en JSON) et
+les surfaces à côté, en octets ; le principal écrit la syntaxe. **Un listing ne lit que les
+premiers kilooctets du conteneur** — l’enveloppe du studio y est écrite deuxième et non
+compressée, sans quoi lister un projet ouvrirait cent mégaoctets par document.
+
+**L’enveloppe du studio n’est plus le format d’aucun genre** : elle reste le repli d’une extension
+que la table ne nomme pas, et le **sursis de migration** des documents déjà sur les disques — une
+scène ou une matière écrite avant ce basculement s’ouvre inchangée, et c’est le fichier lui-même,
+pas son extension, qui décide de quelle épellation il relève.
+
+**Un fichier revenu enrichi refuse de s’enregistrer.** Une scène rouverte dans Blender revient
+avec des `meshes` et des `accessors` ; ses `extras` sont toujours les nôtres, donc elle se liste
+et s’ouvre — et l’écriture recompose le document ENTIER depuis l’état. Comme un glTF est lié par
+index, reporter ces parties à moitié ne produit pas un fichier à demi juste mais un fichier cassé :
+le studio refuse et laisse le fichier tel quel. Même refus pour un ciel qui porte une scène entière
+et pour une matière qui en porte plus d’une (`incomplete` dans `IO_BY_KIND`).
+
+Un espace qui apprend à s’enregistrer n’a dans les trois cas pas de canal à lui. **Les six genres
+savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel et matière, déclarés en un seul
+endroit, `IO_BY_KIND` dans `app/documentIo.ts`. Un genre absent de cette table a un Enregistrer
+qui ne fait rien, plutôt qu’un qui écrit un corps vide.
+
+**Aucun genre n’est plus écrit comme un DOSSIER.** L’image l’a été, `Planche.ora/` portant un
+manifeste et un PNG par calque ; un dossier qui porte aujourd’hui l’extension d’un document est la
+matière de l’utilisateur, et le walk y entre.
+
+**Les pixels ne traversent plus la frontière en base64.** Une pile 4K de dix calques faisait des
+centaines de mégaoctets de texte, détenus au même instant par la fenêtre qui encode et le
+processus qui décode. `LayerPixels`, `OraSurface` et les parts d’un document portent des
+`Uint8Array` ; le moteur extrait par un canvas et un blob, et restitue par une URL d’objet qu’il
+révoque — une data URL de calque restait sinon dans le cache du chargeur pour toute la session,
+la clé de ce cache ÉTANT la chaîne entière.
 
 ---
 

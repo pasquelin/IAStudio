@@ -751,7 +751,7 @@ deletes — gives a whole row back if the file comes out of it.
 Assets are either `local` (a file in the project) or `cloud` (still only on Scenario). A local
 image is served to the renderer as `scenario://<id>`.
 
-**Documents** are JSON files filed wherever the user wants them — `documents/` is only where a
+**Documents** are files filed wherever the user wants them — `documents/` is only where a
 first save lands, and `documents.list()` walks the whole project to find them. One per document,
 **named after the document** —
 `Niveau.gltf`, `Bande annonce.otio`. Its id lives in the envelope (format version 3) rather than
@@ -764,14 +764,67 @@ staging file and a `rename`, which is atomic within one folder, so a crash mid-w
 leave a truncated document where the work was.
 
 The body belongs to the space that wrote it, and a table by extension
-(`main/project/documentBody.ts`) says how it is spelt. For five kinds that is the studio's
-**envelope** — one header line, the content under it — and the main process never reads into that
-content: it stamps and hands it back untouched. For the montage the file **IS** the open format:
-there is no envelope to put a header in, so the main process parses the OpenTimelineIO on the way
-in and on the way out, and refuses to write a body that is not a montage. Either way a space that
-learns to save needs no channel of its own. **All six kinds can write themselves today** — image, scene, sequence, audio, skybox and
-texture, declared in one place, `IO_BY_KIND` in `app/documentIo.ts`. A kind absent from
-that table has a Save that does nothing, rather than one that writes an empty body.
+(`main/project/documentBody.ts`) says how it is spelt. **Four open formats, and the studio's
+envelope for everything else.**
+
+One mechanism holds all four: the **window** produces the standard structure, since it alone holds
+the catalogue, the scene and the GPU; a document's `content` IS that structure; and the **main
+process writes the syntax and reads it back**, never parsing the studio's state. What the standard
+does not carry travels where the standard reserves room for third parties, and the state goes
+there **verbatim** — reading back is then one pass, and no rule has to be kept in step on two
+sides. A file of ours reads from there; a file from elsewhere is rebuilt from the standard part
+alone, and what the standard cannot say is simply absent.
+
+For the **scene** and the **sky** it is glTF 2.0, under the same extension — the file's own
+metadata says which of the two kinds it holds, never the extension. The header travels on `asset`,
+the one member the format requires and that nothing can push further down: behind a large scene's
+list of root nodes it fell outside the bounded head read, and the document vanished from the
+listing.
+
+For the **material** it is MaterialX 1.39: a `standard_surface` fed by `tiledimage` nodes, with
+the studio's state in a custom attribute the specification requires a reader to preserve. Unlike
+glTF, this format has a real **head** — the root is the first line — so listing never opens a
+material whole.
+
+For the **montage** the file IS the open format: there is no envelope to put a header in, so the
+main process parses the OpenTimelineIO on the way in and on the way out, and refuses to write a
+body that is not a montage.
+
+For the **image** the file is an OpenRaster container — a ZIP, no longer a folder. The main
+process packs and unpacks it: `mimetype` first and stored, `stack.xml`, the `mergedimage.png` the
+specification requires, one PNG per surface under `data/`, and the studio's own state under
+`scenario/`. The window produces the stack (a document's `content` IS that stack, as JSON) and
+the surfaces beside it, as bytes; the main process writes the syntax. **A listing reads only the
+first kilobytes of a container** — the studio envelope is written second and uncompressed, or
+listing a project would open a hundred megabytes per document.
+
+**The studio's envelope is no longer any kind's format**: it stays the fallback for an extension
+the table does not name, and the **migration reprieve** for documents already on disk — a scene or
+a material written before this switch opens unchanged, and it is the file itself, not its
+extension, that decides which spelling it belongs to.
+
+**A file that comes back enriched refuses to save.** A scene reopened in Blender returns holding
+`meshes` and `accessors`; its `extras` are still ours, so it lists and it opens — and a write
+recomposes the WHOLE document from the state. Since a glTF is linked by index, carrying those
+parts across half way does not produce a half-right file but a broken one: the studio refuses and
+leaves the file as it is. The same refusal covers a sky holding a whole scene and a material
+holding more than one (`incomplete` in `IO_BY_KIND`).
+
+Either way a space that learns to save needs no channel of its own. **All six kinds can write
+themselves today** — image, scene, sequence, audio, skybox and texture, declared in one place,
+`IO_BY_KIND` in `app/documentIo.ts`. A kind absent from that table has a Save that does nothing,
+rather than one that writes an empty body.
+
+**No kind is written as a FOLDER any more.** The image was, `Planche.ora/` holding a manifest and
+one PNG per layer; a folder wearing a document's extension today is the user's own material, and
+the walk goes into it.
+
+**Pixels no longer cross the boundary as base64.** A 4K stack of ten layers was hundreds of
+megabytes of text, held at the same instant by the window that encodes and the process that
+decodes. `LayerPixels`, `OraSurface` and a document's parts carry `Uint8Array`; the engine
+extracts through a canvas and a blob, and restores through an object URL it revokes — a layer's
+data URL otherwise sat in the loader's cache for the whole session, that cache being keyed on the
+entire string.
 
 ---
 

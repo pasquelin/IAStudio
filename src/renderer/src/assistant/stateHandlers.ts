@@ -4,7 +4,7 @@ import type { DocumentDescriptor } from '@shared/domain/document'
 import { EXPORT_FORMATS } from '@shared/domain/scene'
 import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/textureExport'
 import type { FolderExportRequest } from '@shared/ipc'
-import { closeDocument, documentIsDirty } from '@/app/documentIo'
+import { closeDocument, documentIsDirty, dropDocument, saveDocument } from '@/app/documentIo'
 import { openDocument } from '@/app/dockviewApi'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -139,6 +139,35 @@ async function rename(input: Record<string, unknown>): Promise<ActionOutcome> {
 }
 
 /**
+ * ⌘S on a named document, AWAITED — the difference from `command.run('document.save')`, which
+ * saves whatever is in front and answers before the write lands.
+ *
+ * A throw is a refusal rather than an exception across the boundary: an image whose engine is
+ * still booting its GPU context cannot hand its pixels over, and that is `notRenderable` — the
+ * same answer an export gives for the same cause.
+ */
+async function save(input: Record<string, unknown>): Promise<ActionOutcome> {
+  const documents = useDocuments.getState()
+  const documentId = textOf(input, 'documentId') ?? documents.activeId
+  if (documentId === null || !documents.documents[documentId]) return refused('notFound')
+
+  try {
+    return { ok: true, data: { written: await saveDocument(documentId) } }
+  } catch (error) {
+    reportFailure('document.save', documentId, error)
+    return refused('notRenderable')
+  }
+}
+
+/** Deletes the document's file and closes its tab — see `dropDocument` for why nothing is asked. */
+async function remove(input: Record<string, unknown>): Promise<ActionOutcome> {
+  const documentId = named(input)
+  if (documentId === null) return refused('notFound')
+
+  return (await dropDocument(documentId)) ? { ok: true } : refused('failed')
+}
+
+/**
  * The files an export of the document in front comes to, one space at a time.
  *
  * Loaded on the call rather than imported at the top: this table is evaluated by the first screen,
@@ -225,6 +254,8 @@ export const STATE_HANDLERS: ActionHandlers = {
   'document.open': openByPath,
   'document.close': close,
   'document.rename': rename,
+  'document.save': save,
+  'document.remove': remove,
 
   // The same gesture as opening it: naming the tab in the store alone left an image in front of
   // a sky's panels, which no click can produce — the state this action exists to repair.

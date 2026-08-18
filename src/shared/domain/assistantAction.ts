@@ -35,6 +35,8 @@ export type ActionName =
   | 'document.activate'
   | 'document.close'
   | 'document.rename'
+  | 'document.save'
+  | 'document.remove'
   | 'document.export'
   | 'activity.recent'
   | 'project.open'
@@ -367,6 +369,7 @@ function fits(field: ActionField, value: unknown): boolean {
     case 'longText':
     case 'choice':
     case 'image':
+    case 'mesh':
       return (
         typeof value === 'string' &&
         (!field.required || value.trim() !== '') &&

@@ -20,6 +20,11 @@ import {
   type Object3D,
 } from 'three'
 import type { HumanoidRole } from '@shared/domain/humanoid'
+import {
+  profileWithRole,
+  skeletonSignatureOf,
+  type SkeletonProfile,
+} from '@shared/domain/skeletonProfile'
 import { boneRolesOf, type NamedBone } from './boneRoles'
 import { isBoneObject } from './rigState'
 import {
@@ -43,11 +48,20 @@ export type Retarget = {
     clips: readonly AnimationClip[],
     watch?: { onProgress?: (progress: number) => void; signal?: AbortSignal },
   ) => Promise<AnimationClip[] | null>
+  /**
+   * What a skeleton of exactly these bones means, from now on and for every model carrying them.
+   *
+   * Recognised by SIGNATURE and not by model: a mapping put right on one character is the same
+   * mapping the next file of that rig needs, and asking twice for the same correction is the
+   * thing this closes.
+   */
+  learn: (boneNames: readonly string[], roles: Readonly<Record<string, HumanoidRole>>) => void
   dispose: () => void
 }
 
 export function createRetarget(spawn: () => Worker): Retarget {
   const waiting = new Map<number, Slot>()
+  const profiles = new Map<string, SkeletonProfile>()
   let worker: Worker | null = null
   let disposed = false
   let nextId = 0
@@ -131,11 +145,16 @@ export function createRetarget(spawn: () => Worker): Retarget {
 
       const request: RetargetRequest = {
         id: (nextId += 1),
-        ...retargetPlanOf(targetBones, sourceBones, clips.map(wireClipOf)),
+        ...retargetPlanOf(targetBones, sourceBones, clips.map(wireClipOf), undefined, profiles),
       }
       const adapted = await send(request, watch)
 
       return adapted && adapted.map(clipFromWire)
+    },
+
+    learn: (boneNames, roles) => {
+      const signature = skeletonSignatureOf(boneNames)
+      profiles.set(signature, { signature, roles })
     },
 
     dispose: () => {
@@ -183,16 +202,16 @@ export function retargetPlanOf(
   source: readonly WireBone[],
   clips: readonly WireClip[],
   fps?: number,
+  known?: ReadonlyMap<string, SkeletonProfile>,
 ): Omit<RetargetRequest, 'id'> {
-  const sourceRoles = boneRolesOf(namedBonesOf(source))
+  const sourceRoles = rolesOf(source, known)
   const sourceByRole = new Map(Object.entries(sourceRoles).map(([name, role]) => [role, name]))
   const sourceNames = new Set(source.map(bone => bone.name))
 
   const names: Record<string, string> = {}
   for (const bone of target) if (sourceNames.has(bone.name)) names[bone.name] = bone.name
 
-  const targetRoles = boneRolesOf(namedBonesOf(target))
-  for (const [name, role] of Object.entries(targetRoles)) {
+  for (const [name, role] of Object.entries(rolesOf(target, known))) {
     const from = sourceByRole.get(role)
     if (from) names[name] = from
   }
@@ -203,6 +222,29 @@ export function retargetPlanOf(
 /** The wire spells a parent as an index; reading roles wants it as a name. */
 function namedBonesOf(bones: readonly WireBone[]): NamedBone[] {
   return bones.map(bone => ({ name: bone.name, parent: bones[bone.parent]?.name ?? null }))
+}
+
+/**
+ * What each bone MEANS: what its name spells, corrected by whatever was recorded for a skeleton
+ * of exactly these bones.
+ *
+ * A correction wins over a name, because it was made precisely BECAUSE the name lied — and it is
+ * laid on one bone at a time so that giving a role to another takes it off whoever held it.
+ */
+function rolesOf(
+  bones: readonly WireBone[],
+  known?: ReadonlyMap<string, SkeletonProfile>,
+): Record<string, HumanoidRole> {
+  const signature = skeletonSignatureOf(bones.map(bone => bone.name))
+  const found = boneRolesOf(namedBonesOf(bones))
+  const corrections = known?.get(signature)?.roles
+  if (!corrections) return found
+
+  let profile: SkeletonProfile = { signature, roles: found }
+  for (const [name, role] of Object.entries(corrections)) {
+    profile = profileWithRole(profile, name, role)
+  }
+  return { ...profile.roles }
 }
 
 /**

@@ -3,8 +3,8 @@ import { foldForFileName, isSafeFileName, safeFileName } from './fileName'
 
 /**
  * What `safeFileName` already did when it belonged to the texture export is covered in
- * `textureExport.test.ts`, where those cases stay: one of them carries a literal NUL byte.
- * Here is what it learnt when documents came to be named by hand.
+ * `textureExport.test.ts`, where those cases stayed. Here is what it learnt when documents came
+ * to be named by hand.
  */
 describe('the name a file takes', () => {
   /**

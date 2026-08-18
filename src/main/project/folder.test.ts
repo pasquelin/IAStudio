@@ -172,23 +172,10 @@ describe('searching the project folder', () => {
   })
 
   /**
-   * An image document IS a folder — `<id>.ora/` holding its manifest and its parts. What it
-   * holds is the studio's own writing, and offering those parts as results would hand the reader
-   * files no space can open in place of the document they belong to.
-   */
-  it('does not walk into a document that happens to be a folder', async () => {
-    const root = await project()
-    await mkdir(join(root, 'ruelle.ora'))
-    await writeFile(join(root, 'ruelle.ora', 'ruelle-part.png'), '')
-
-    expect(await namesFound(root, 'ruelle')).toEqual(['ruelle.ora'])
-  })
-
-  /**
-   * Only the kind written as a folder, though. A document wears the extension of an open format
-   * now, and a glTF delivered unpacked into `Repérages.gltf/` is the user's OWN material —
-   * walked past, every file in it drops out of the domain view, of search, and of the rescan,
-   * which then counts them all as gone.
+   * Every document is a FILE now, containers included. A folder wearing a document's extension
+   * is the user's OWN material — an `.ora` unpacked by hand, a glTF delivered unzipped into
+   * `Repérages.gltf/` — and walking past it drops every file in it out of the domain view, of
+   * search, and of the rescan, which then counts them all as gone.
    */
   it('walks into a folder that merely wears a document spelling', async () => {
     const root = await project()
@@ -217,8 +204,7 @@ describe('walking the project folder for what it holds', () => {
     const root = await project()
     await mkdir(join(root, 'Repérages', 'Ruelles'), { recursive: true })
     await writeFile(join(root, 'Repérages', 'Ruelles', 'ruelle.png'), '')
-    await mkdir(join(root, 'planche.ora'))
-    await writeFile(join(root, 'planche.ora', 'document.json'), '{}')
+    await writeFile(join(root, 'planche.ora'), 'a container')
 
     expect((await walked(root)).sort()).toEqual([
       'Repérages/Ruelles/ruelle.png',

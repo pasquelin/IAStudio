@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CAPABILITY_TRAITS,
+  MATERIAL_TRAITS,
   MONTAGE_TRAITS,
   PICTURE_TRAITS,
   SCENE_TRAITS,
@@ -102,11 +103,25 @@ describe('the table itself', () => {
     expect(foreign).toEqual([])
   })
 
-  // That the three lists share no value is the COMPILER's to hold — the three trait unions have
-  // no overlap, so an assertion here would not even type-check.
-  it('publishes a union that is exactly its three domains', () => {
+  /**
+   * The two channels `standard_surface` has no input for. They are carried — the studio reads
+   * them back — so ⌘S has nothing to warn about; what they are NOT is visible to anyone else.
+   */
+  it('loses neither occlusion nor cavity into MaterialX, and carries neither into the open', () => {
+    expect(lossesFor(['occlusionMap', 'cavityMap'], 'mtlx')).toEqual([])
+    expect(capabilityOf('mtlx').interchange).not.toContain('occlusionMap')
+    expect(capabilityOf('mtlx').extended).toContain('occlusionMap')
+  })
+
+  it('reports a trait of another domain against MaterialX as lost', () => {
+    expect(lossesFor(['layers'], 'mtlx')).toEqual(['layers'])
+  })
+
+  // That the lists share no value is the COMPILER's to hold — the four trait unions have no
+  // overlap, so an assertion here would not even type-check.
+  it('publishes a union that is exactly its four domains', () => {
     expect([...CAPABILITY_TRAITS].sort()).toEqual(
-      [...PICTURE_TRAITS, ...MONTAGE_TRAITS, ...SCENE_TRAITS].sort(),
+      [...PICTURE_TRAITS, ...MONTAGE_TRAITS, ...SCENE_TRAITS, ...MATERIAL_TRAITS].sort(),
     )
   })
 })

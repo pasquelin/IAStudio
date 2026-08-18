@@ -1426,7 +1426,8 @@ describe('project handlers', () => {
   })
 
   describe('a layered picture the editor edited', () => {
-    const PNG_BASE64 = png(1024, 768).toString('base64')
+    // Bytes, not base64: a surface crosses the bridge as what it is — see `OraSurface`.
+    const PNG_BYTES = Uint8Array.from(png(1024, 768))
 
     const backend = () => ({
       importFromUrl: vi.fn(),
@@ -1442,24 +1443,27 @@ describe('project handlers', () => {
     const layered = (over: Record<string, unknown> = {}) => ({
       name: 'Hero',
       document: {
-        width: 1024,
-        height: 768,
-        nodes: [
-          {
-            kind: 'layer',
-            name: 'Ink',
-            src: 'data/p_ink.png',
-            x: 0,
-            y: 0,
-            opacity: 1,
-            visible: true,
-            composite: 'svg:src-over',
-            png: PNG_BASE64,
-          },
+        stack: {
+          width: 1024,
+          height: 768,
+          nodes: [
+            {
+              kind: 'layer',
+              name: 'Ink',
+              src: 'data/p_ink.png',
+              x: 0,
+              y: 0,
+              opacity: 1,
+              visible: true,
+              composite: 'svg:src-over',
+            },
+          ],
+          studio: '{}',
+        },
+        surfaces: [
+          { path: 'mergedimage.png', png: PNG_BYTES },
+          { path: 'data/p_ink.png', png: PNG_BYTES },
         ],
-        merged: PNG_BASE64,
-        studio: '{}',
-        extras: {},
       },
       ...over,
     })
@@ -1517,7 +1521,17 @@ describe('project handlers', () => {
       registerProjectHandlers(deps(holdingPicture(), { assets: backend() }))
 
       const escaping = layered()
-      escaping.document.nodes[0]!.src = '../../etc/passwd.png'
+      escaping.document.stack.nodes[0]!.src = '../../etc/passwd.png'
+
+      await expect(invoke(CHANNELS.assetsSaveLayered, escaping)).rejects.toThrow()
+    })
+
+    /** The same rule on the SURFACE, which is what actually becomes a ZIP entry. */
+    it('refuses a surface whose entry would land outside the container', async () => {
+      registerProjectHandlers(deps(holdingPicture(), { assets: backend() }))
+
+      const escaping = layered()
+      escaping.document.surfaces[1]!.path = '../../etc/passwd.png'
 
       await expect(invoke(CHANNELS.assetsSaveLayered, escaping)).rejects.toThrow()
     })

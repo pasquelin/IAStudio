@@ -69,6 +69,14 @@
         "title": "Rename a document",
         "description": "Calls a document something else, on disk and on screen at once. The document keeps its identity, so an open tab renames without closing."
       },
+      "documentSave": {
+        "title": "Save a document",
+        "description": "Writes the named document into the project and waits for it to land. Without an id, the one in front. Answers whether anything was written: an untouched tab has nothing to write, and that is not a failure."
+      },
+      "documentRemove": {
+        "title": "Delete a document",
+        "description": "Takes the document’s file out of the project, then closes its tab. Unsaved work goes with it: the file is leaving, and saving it before destroying it would mean nothing."
+      },
       "activityRecent": {
         "title": "Read the recent activity",
         "description": "Returns what the studio has recorded lately — generations, file operations, failures — newest first. This is how to find out what an action actually did."

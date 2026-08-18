@@ -66,10 +66,15 @@ describe('exporting the document', () => {
     expect(written.mock.calls[0]?.[0]).toBe('image.png')
   })
 
-  it('writes nothing when there is nothing to flatten', async () => {
+  /**
+   * REJECTS rather than answering `null`, and the difference is what the user hears: `null` is the
+   * dialog dismissed, which is not worth a word — an engine whose context is not up yet is, and
+   * the two were indistinguishable from the caller that reports.
+   */
+  it('says so, rather than nothing, when there is nothing to flatten', async () => {
     await expect(
       exportPicture(DOCUMENT, { snapshot: () => Promise.resolve(null) }),
-    ).resolves.toBeNull()
+    ).rejects.toThrow()
     expect(written).not.toHaveBeenCalled()
   })
 })

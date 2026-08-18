@@ -1,12 +1,57 @@
-import { mkdir, mkdtemp, readdir, readFile, rename, utimes, writeFile } from 'node:fs/promises'
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rename,
+  utimes,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DOCUMENT_VERSION } from '@shared/domain/document'
+import { DOCUMENT_VERSION, type DocumentDescriptor } from '@shared/domain/document'
+import type { OraSurface } from '@shared/domain/openRaster'
 import { orphanStagingCopies, type DocumentFiles } from './documents'
 import { documentFilesAt } from './project-fixtures'
 
 const NOW = '2026-08-07T10:00:00.000Z'
+
+/** One transparent pixel, which is all any of this needs to be real PNG bytes. */
+const PIXELS = new Uint8Array(
+  Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64',
+  ),
+)
+
+/**
+ * What an image document's `content` is: the OpenRaster stack, as JSON. Anything else is refused
+ * by the writer, exactly as a montage that is not a timeline is.
+ */
+const oraContent = (srcs: readonly string[] = [], studio = '{"layers":[]}'): string =>
+  JSON.stringify({
+    width: 64,
+    height: 32,
+    nodes: srcs.map(src => ({
+      kind: 'layer',
+      name: src,
+      src,
+      x: 0,
+      y: 0,
+      opacity: 1,
+      visible: true,
+      composite: 'svg:src-over',
+    })),
+    studio,
+  })
+
+/** The surfaces beside it: the flatten the spec demands, and one per layer. */
+const oraParts = (srcs: readonly string[] = []): OraSurface[] => [
+  { path: 'mergedimage.png', png: PIXELS },
+  ...srcs.map(path => ({ path, png: PIXELS })),
+]
 
 describe('createDocumentFiles', () => {
   let root = ''
@@ -213,10 +258,81 @@ describe('createDocumentFiles', () => {
 
   it('keeps two kinds of the same id apart', async () => {
     await documents.write('twin', 'scene', { title: 'Twin', content: 'scene side' })
-    await documents.write('twin', 'image', { title: 'Twin', content: 'image side' })
+    await documents.write('twin', 'image', {
+      title: 'Twin',
+      content: oraContent(),
+      parts: oraParts(),
+    })
 
     expect((await documents.read('twin', 'scene'))?.content).toBe('scene side')
-    expect((await documents.read('twin', 'image'))?.content).toBe('image side')
+    expect(JSON.parse((await documents.read('twin', 'image'))?.content ?? '')).toMatchObject({
+      studio: '{"layers":[]}',
+    })
+  })
+
+  /**
+   * The five gestures a format is not delivered without: write it, read it back, list it, rename
+   * it, and open it again. A sky IS its glTF, so all five run against a real one here — the file
+   * another application reads, not a spelling of the studio's own under the same extension.
+   */
+  it('writes a sky as glTF, and finds it again by its own head', async () => {
+    const sky = JSON.stringify({
+      asset: { version: '2.0', generator: 'Scenario Studio' },
+      scene: 0,
+      scenes: [{ name: 'Crépuscule', nodes: [0] }],
+      nodes: [{ name: 'Sun', rotation: [0, 0, 0, 1] }],
+      extras: { scenario: { sun: { intensity: 2 } } },
+    })
+    await documents.write('doc-sky', 'skybox', { title: 'Crépuscule', content: sky })
+
+    const listed = await documents.list()
+    expect(listed).toMatchObject([{ id: 'doc-sky', kind: 'skybox', title: 'Crépuscule' }])
+
+    // Whole, and still glTF: the envelope went into `asset.extras` rather than in front of it.
+    const onDisk: unknown = JSON.parse(
+      await readFile(join(root, 'documents', 'Crépuscule.gltf'), 'utf8'),
+    )
+    expect(onDisk).toMatchObject({ asset: { version: '2.0' }, scene: 0 })
+
+    await documents.rename('doc-sky', 'skybox', 'Aube')
+    expect((await documents.read('doc-sky', 'skybox'))?.content).toContain('"scenario"')
+    expect(await readdir(join(root, 'documents'))).toEqual(['Aube.gltf'])
+  })
+
+  /**
+   * The same five for the material. The one that caught the sky's defect is the RENAME: it
+   * rewrites the body from what a read answered, so anything a read drops is written back empty.
+   */
+  it('writes a material as MaterialX, and finds it again by its own head', async () => {
+    const material = JSON.stringify({
+      images: [
+        {
+          input: 'base_color',
+          type: 'color3',
+          file: 'Assets/base.png',
+          colorspace: 'srgb_texture',
+          tiling: [1, 1],
+          offset: [0, 0],
+        },
+      ],
+      values: [{ input: 'specular_roughness', type: 'float', value: 0.5 }],
+      studio: { material: { edgeIntensity: 0.4 } },
+    })
+    await documents.write('doc-mat', 'texture', { title: 'Laiton', content: material })
+
+    const listed = await documents.list()
+    expect(listed).toMatchObject([{ id: 'doc-mat', kind: 'texture', title: 'Laiton' }])
+
+    // Real MaterialX, not a spelling of the studio's own wearing the extension.
+    const onDisk = await readFile(join(root, 'documents', 'Laiton.mtlx'), 'utf8')
+    expect(onDisk.startsWith('<?xml version="1.0"?>\n<materialx version="1.39"')).toBe(true)
+    expect(onDisk).toContain('<standard_surface name="SR_scenario" type="surfaceshader">')
+
+    await documents.rename('doc-mat', 'texture', 'Bronze')
+    expect(await readdir(join(root, 'documents'))).toEqual(['Bronze.mtlx'])
+    // The dial no MaterialX input can carry survived the rewrite the rename does.
+    expect((await documents.read('doc-mat', 'texture'))?.content).toContain('edgeIntensity')
+    expect(await documents.list()).toMatchObject([{ id: 'doc-mat', title: 'Bronze' }])
   })
 
   /**
@@ -495,6 +611,72 @@ describe('createDocumentFiles', () => {
     expect(await readdir(join(root, 'documents'))).toEqual(['Brique 1 2.gltf'])
   })
 
+  /**
+   * A document duplicated in the Finder carries the id of the one it was copied from. The listing
+   * keeps that id for the first in path order and calls the second after its own PATH, which is
+   * unique by construction — the alternative being a file plainly sitting in the folder and
+   * absent from every list.
+   *
+   * What that leaves is a document whose id is a path: every gesture of the studio then arrives
+   * with that id, and the file's own envelope still answers the OLD one.
+   */
+  describe('a document duplicated outside the studio', () => {
+    /**
+     * The one the listing did NOT give the envelope's id to — whichever of the pair that is.
+     *
+     * Which one wins is settled by path order and is nobody's business: `Level copie.gltf` sorts
+     * before `Level.gltf`, a space being under a dot. What matters is the loser, and that it is
+     * reachable at all.
+     */
+    const secondOfTwo = async (): Promise<DocumentDescriptor> => {
+      await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":["mine"]}' })
+      await copyFile(
+        join(root, 'documents', 'Level.gltf'),
+        join(root, 'documents', 'Level copie.gltf'),
+      )
+
+      const second = (await documents.list()).find(one => one.id !== 'doc-1')
+      if (!second) throw new Error('expected the pair to be told apart')
+      return second
+    }
+
+    it('tells the pair apart, calling one of them after its own path', async () => {
+      const second = await secondOfTwo()
+
+      expect(second.id).toBe(second.path)
+      expect((await documents.list()).map(one => one.id).sort()).toEqual(
+        ['doc-1', second.path].sort(),
+      )
+    })
+
+    // Listed and unopenable is the worst of both: the row is there, the double-click gives an
+    // empty tab, and the next ⌘S writes that emptiness under `documents/<the whole path>.gltf`.
+    it('reads it back rather than answering nothing', async () => {
+      const second = await secondOfTwo()
+
+      expect((await documents.read(second.id, 'scene'))?.content).toBe('{"nodes":["mine"]}')
+    })
+
+    it('writes it back into its own file', async () => {
+      const second = await secondOfTwo()
+
+      expect(await documents.write(second.id, 'scene', { title: 'x', content: 'theirs' })).toBe(
+        'written',
+      )
+      expect(await readFile(join(root, second.path), 'utf8')).toContain('theirs')
+    })
+
+    it('removes it rather than the other one', async () => {
+      const second = await secondOfTwo()
+
+      await documents.remove(second.id, 'scene')
+
+      expect(await readdir(join(root, 'documents'))).toEqual([
+        basename(second.path) === 'Level.gltf' ? 'Level copie.gltf' : 'Level.gltf',
+      ])
+    })
+  })
+
   describe('a file changed outside the studio', () => {
     const LATER = new Date('2026-08-07T11:00:00.000Z')
 
@@ -628,21 +810,22 @@ describe('createDocumentFiles', () => {
       })
     })
 
-    // An image is a directory holding its manifest and its parts; renaming it moves the lot.
-    it('renames a document written as a folder, parts and all', async () => {
-      const pixels = Buffer.from([137, 80, 78, 71]).toString('base64')
+    /**
+     * The container is rewritten from the document, so a rename that dropped its surfaces would
+     * write a stack with no pixels under it — every layer gone, on a rename, in silence. That is
+     * what the old folder shape hid: the parts were the folder's own entries and stayed put.
+     */
+    it('renames a container, surfaces and all', async () => {
       await documents.write('doc-1', 'image', {
         title: 'Poster',
-        content: '{}',
-        parts: [{ name: 'layer-1.png', data: pixels }],
+        content: oraContent(['data/p_a.png']),
+        parts: oraParts(['data/p_a.png']),
       })
 
       await documents.rename('doc-1', 'image', 'Affiche')
 
       expect(await readdir(join(root, 'documents'))).toEqual(['Affiche.ora'])
-      expect((await documents.read('doc-1', 'image'))?.parts).toEqual([
-        { name: 'layer-1.png', data: pixels },
-      ])
+      expect((await documents.read('doc-1', 'image'))?.parts).toEqual(oraParts(['data/p_a.png']))
     })
 
     /**
@@ -696,32 +879,6 @@ describe('createDocumentFiles', () => {
       })
     })
 
-    /**
-     * The parts are the folder's own entries, and naming them twice would let the two disagree.
-     * Left in the envelope, the manifest's first line carried the base64 of every layer — past
-     * `ENVELOPE_LIMIT`, so `headOf` found no newline and read the whole thing back per listing.
-     */
-    it('keeps the pixels out of the manifest it rewrites', async () => {
-      const pixels = Buffer.from([137, 80, 78, 71]).toString('base64')
-      await documents.write('doc-1', 'image', {
-        title: 'Poster',
-        content: '{}',
-        parts: [{ name: 'layer-1.png', data: pixels }],
-      })
-
-      await documents.rename('doc-1', 'image', 'Affiche')
-
-      const manifest = await readFile(
-        join(root, 'documents', 'Affiche.ora', 'document.json'),
-        'utf8',
-      )
-      expect(manifest.split('\n')[0]).not.toContain(pixels)
-      expect(await readdir(join(root, 'documents', 'Affiche.ora'))).toEqual([
-        'document.json',
-        'layer-1.png',
-      ])
-    })
-
     // A rename and a save in flight aim at two different paths, so nothing queues them but the id.
     it('does not let a write in flight land under the name just left behind', async () => {
       await documents.write('doc-1', 'scene', { title: 'Niveau', content: 'first' })
@@ -747,7 +904,11 @@ describe('createDocumentFiles', () => {
     // follow the application instead, and open the previous project's tabs in the next one.
     it('answers with what the folder holds, kind and workspace included', async () => {
       await documents.write('doc-1', 'scene', { title: 'Level', content: '{}' })
-      await documents.write('doc-2', 'image', { title: 'Poster', content: '{}' })
+      await documents.write('doc-2', 'image', {
+        title: 'Poster',
+        content: oraContent(),
+        parts: oraParts(),
+      })
 
       expect(await documents.list()).toEqual(
         expect.arrayContaining([
@@ -813,19 +974,20 @@ describe('createDocumentFiles', () => {
     })
 
     /**
-     * A folder document stages a FOLDER, and the walk that feeds the listing answers files and
-     * documents — it never shows one, and would have descended into it and offered its manifest
-     * and its layers as though they were the user's own files. Its own folder is read for it.
+     * The remains of a container half-written by a process that died. A file now, where it used
+     * to be a folder — and the walk still has to leave it out of the listing and sweep it away.
      */
-    it('sweeps a staging copy that is a folder, and never offers what it holds', async () => {
+    it('sweeps a staging copy of a container', async () => {
       await documents.write('doc-1', 'image', {
         title: 'Planche',
-        content: '{"layers":[]}',
-        parts: [],
+        content: oraContent(),
+        parts: oraParts(),
       })
-      const staged = join(root, 'documents', 'Planche.ora.3f2a1c88-9d4e-4b7a-8c15-2e6f0a7b9d31.tmp')
-      await mkdir(staged, { recursive: true })
-      await writeFile(join(staged, 'document.json'), '{}', 'utf8')
+      await writeFile(
+        join(root, 'documents', 'Planche.ora.3f2a1c88-9d4e-4b7a-8c15-2e6f0a7b9d31.tmp'),
+        'half a container',
+        'utf8',
+      )
 
       const listed = await documents.list()
 
@@ -835,57 +997,63 @@ describe('createDocumentFiles', () => {
   })
 
   /**
-   * An image keeps one PNG per layer, so it is written as a folder rather than a file. What is
-   * checked here is the contract the renderer depends on: the parts come back byte for byte, and
-   * nothing a part is named can reach outside the folder.
+   * An image document IS an OpenRaster container — one file, a ZIP, holding a `stack.xml`, one
+   * PNG per surface and the studio's own state. What is checked here is the contract the
+   * renderer depends on: the surfaces come back byte for byte, and the file another application
+   * opens is the document rather than a copy of it.
    */
-  describe('a document written as a folder', () => {
-    const PIXELS = Buffer.from([137, 80, 78, 71]).toString('base64')
-
-    it('reads back the manifest and every part', async () => {
+  describe('a document written as an OpenRaster container', () => {
+    it('reads back the stack and every surface', async () => {
       await documents.write('doc-1', 'image', {
         title: 'Poster',
-        content: '{"layers":[]}',
-        parts: [{ name: 'layer-1.png', data: PIXELS }],
+        content: oraContent(['data/p_a.png']),
+        parts: oraParts(['data/p_a.png']),
       })
 
       const file = await documents.read('doc-1', 'image')
 
       expect(file?.title).toBe('Poster')
-      expect(file?.content).toBe('{"layers":[]}')
-      expect(file?.parts).toEqual([{ name: 'layer-1.png', data: PIXELS }])
+      expect(JSON.parse(file?.content ?? '')).toMatchObject({
+        width: 64,
+        height: 32,
+        studio: '{"layers":[]}',
+      })
+      expect(file?.parts).toEqual(oraParts(['data/p_a.png']))
     })
 
-    it('lays the folder out so it reads by hand', async () => {
+    /** One FILE, not a folder — and a ZIP another application opens, `mimetype` first. */
+    it('writes one file, and it is a container', async () => {
       await documents.write('doc-1', 'image', {
         title: 'Poster',
-        content: '{}',
-        parts: [{ name: 'layer-1.png', data: PIXELS }],
+        content: oraContent(['data/p_a.png']),
+        parts: oraParts(['data/p_a.png']),
       })
 
-      const entries = await readdir(join(root, 'documents', 'Poster.ora'))
-      expect([...entries].sort()).toEqual(['document.json', 'layer-1.png'])
+      expect(await readdir(join(root, 'documents'))).toEqual(['Poster.ora'])
+      const bytes = await readFile(join(root, 'documents', 'Poster.ora'))
+      expect([bytes[0], bytes[1]]).toEqual([0x50, 0x4b])
+      expect(bytes.subarray(30, 38).toString('utf8')).toBe('mimetype')
     })
 
     /**
-     * The defect `writeAtomic` had, and the folder path had kept: the tidy-up threw over the
-     * error it was cleaning up after, and the caller heard the wrong one.
-     *
-     * A `documents` that is a FILE is what makes the two distinguishable — `mkdir` fails on it
-     * and so does the `rm` of the staging folder it never created, both `ENOTDIR`, one naming
-     * `mkdir` and the other `lstat`. Aiming at a path that simply does not exist would prove
-     * nothing: `force: true` never throws there.
+     * The defect `writeAtomic` had: the tidy-up threw over the error it was cleaning up after,
+     * and the caller heard the wrong one. A `documents` that is a FILE is what makes them
+     * distinguishable — `mkdir` fails on it, naming itself.
      */
     it('reports why the write failed, not why the tidy-up would not go away', async () => {
       await writeFile(join(root, 'documents'), 'a file where the folder goes')
 
       await expect(
-        documents.write('doc-1', 'image', { title: 'Poster', content: '{}' }),
+        documents.write('doc-1', 'image', { title: 'Poster', content: oraContent() }),
       ).rejects.toThrow(/mkdir/)
     })
 
-    it('lists a folder document like any other', async () => {
-      await documents.write('doc-1', 'image', { title: 'Poster', content: '{}' })
+    it('lists a container like any other document', async () => {
+      await documents.write('doc-1', 'image', {
+        title: 'Poster',
+        content: oraContent(),
+        parts: oraParts(),
+      })
 
       expect(await documents.list()).toEqual([
         {
@@ -898,43 +1066,39 @@ describe('createDocumentFiles', () => {
       ])
     })
 
-    // The second write must leave the folder holding the second document, not both merged.
-    it('replaces the whole folder rather than merging into it', async () => {
+    // Written whole at every ⌘S: the second write must leave the container holding the second
+    // document, not both merged.
+    it('replaces the whole container rather than merging into it', async () => {
       await documents.write('doc-1', 'image', {
         title: 'Poster',
-        content: '{}',
-        parts: [
-          { name: 'layer-1.png', data: PIXELS },
-          { name: 'layer-2.png', data: PIXELS },
-        ],
+        content: oraContent(['data/p_a.png', 'data/p_b.png']),
+        parts: oraParts(['data/p_a.png', 'data/p_b.png']),
       })
       await documents.write('doc-1', 'image', {
         title: 'Poster',
-        content: '{}',
-        parts: [{ name: 'layer-1.png', data: PIXELS }],
+        content: oraContent(['data/p_a.png']),
+        parts: oraParts(['data/p_a.png']),
       })
 
-      const entries = await readdir(join(root, 'documents', 'Poster.ora'))
-      expect([...entries].sort()).toEqual(['document.json', 'layer-1.png'])
+      expect((await documents.read('doc-1', 'image'))?.parts).toEqual(oraParts(['data/p_a.png']))
     })
 
     it('leaves no staging copy behind', async () => {
       await documents.write('doc-1', 'image', {
         title: 'Poster',
-        content: '{}',
-        parts: [{ name: 'layer-1.png', data: PIXELS }],
+        content: oraContent(['data/p_a.png']),
+        parts: oraParts(['data/p_a.png']),
       })
-      await documents.write('doc-1', 'image', { title: 'Poster', content: '{}' })
+      await documents.write('doc-1', 'image', { title: 'Poster', content: oraContent() })
 
-      const entries = await readdir(join(root, 'documents'))
-      expect(entries).toEqual(['Poster.ora'])
+      expect(await readdir(join(root, 'documents'))).toEqual(['Poster.ora'])
     })
 
-    it('takes the whole folder away on remove', async () => {
+    it('takes the container away on remove', async () => {
       await documents.write('doc-1', 'image', {
         title: 'Poster',
-        content: '{}',
-        parts: [{ name: 'layer-1.png', data: PIXELS }],
+        content: oraContent(['data/p_a.png']),
+        parts: oraParts(['data/p_a.png']),
       })
       await documents.remove('doc-1', 'image')
 
@@ -943,22 +1107,57 @@ describe('createDocumentFiles', () => {
     })
 
     /**
-     * The renderer names the parts and the main process turns those names into paths: the one
-     * field of this contract that crosses a security boundary.
+     * The renderer names the surfaces and they become ZIP entries the studio writes AND reads
+     * back — the one field of this contract that crosses a security boundary. The IPC boundary
+     * REFUSES one outright (`validation.test.ts`); this is the packer's own last line, below it,
+     * where dropping is right — one odd name must cost that surface, never the whole picture.
      */
-    it('refuses a part that would write outside the folder', async () => {
+    it('drops a surface that would name its way out of the container', async () => {
+      await documents.write('doc-1', 'image', {
+        title: 'Poster',
+        content: oraContent(['data/p_a.png']),
+        parts: [...oraParts(['data/p_a.png']), { path: '../escaped.png', png: PIXELS }],
+      })
+
+      const paths = (await documents.read('doc-1', 'image'))?.parts?.map(one => one.path) ?? []
+      expect(paths).not.toContain('../escaped.png')
+      expect(paths).toContain('data/p_a.png')
+    })
+
+    /**
+     * A body no reader understands would drop the document from every listing while it sat in
+     * the folder — the same refusal a montage that is not a timeline gets, and the one place a
+     * save can be stopped.
+     */
+    it('refuses a content that is not a stack', async () => {
       await expect(
-        documents.write('doc-1', 'image', {
-          title: 'Poster',
-          content: '{}',
-          parts: [{ name: '../escaped.png', data: PIXELS }],
-        }),
-      ).rejects.toThrow(/not a file name/)
+        documents.write('doc-1', 'image', { title: 'Poster', content: '{}' }),
+      ).rejects.toThrow()
 
       expect(await documents.list()).toEqual([])
     })
 
-    it('reads back nothing for a folder that was never written', async () => {
+    /**
+     * A container written elsewhere may carry no `w`/`h` on its `<image>`, which the unpacker
+     * reads as zero. Refusing that on the way OUT makes the document unsaveable for good — the
+     * value came from the read, and the write is echoing it back.
+     */
+    it('saves a container whose stack declares no size', async () => {
+      const sizeless = JSON.stringify({ width: 0, height: 0, nodes: [], studio: '{}' })
+
+      await documents.write('doc-1', 'image', {
+        title: 'Sans taille',
+        content: sizeless,
+        parts: oraParts(),
+      })
+
+      expect(JSON.parse((await documents.read('doc-1', 'image'))?.content ?? '')).toMatchObject({
+        width: 0,
+        height: 0,
+      })
+    })
+
+    it('reads back nothing for a container that was never written', async () => {
       expect(await documents.read('doc-9', 'image')).toBeNull()
     })
   })

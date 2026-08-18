@@ -188,9 +188,10 @@ the image you are painting on, with its *layers* and its history, is a document.
 Six kinds, one per *workspace*, each under the extension of the open format it belongs in: `.ora`
 (image), `.gltf` (3D scene and sky), `.otio` (sequence and audio), `.mtlx` (material).
 
-**Only `.otio` edits open in another application today.** For the other four the extension
-announces where the file is going, not yet what is inside it: the body is still written in the
-studio's own format.
+**All six open in another application today**: the extension announces what is inside the file,
+no longer where it is going. What the standard cannot say travels at the place each format
+reserves for applications — another application does not lose it, it does not see it. See
+[What the studio does not do](18-limits.md).
 
 ---
 

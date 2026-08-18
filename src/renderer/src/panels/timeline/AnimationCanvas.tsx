@@ -15,7 +15,8 @@ import {
   unkeySubject,
 } from '@/engines/scene/animationCommands'
 import { draggedShot } from '@/engines/scene/cameraShots'
-import { bundledClip, clipKeyOf, embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { assetClip, bundledClip, clipKeyOf, embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
 import { newId } from '@/helpers/ids'
 import { ANIMATION_DRAG_TYPE, draggedAnimationOf } from '@/panels/animations/dragged'
 import { multi, setModelLanes } from '@/engines/scene/commands'
@@ -256,7 +257,10 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
    */
   const onDrop = (event: DragEvent<HTMLCanvasElement>): void => {
     const written = event.dataTransfer.getData(ANIMATION_DRAG_TYPE)
-    if (!written) return
+    // Started before anything else is worked out: a `DragEvent` is recycled once the handler
+    // returns, so `droppedAsset` has to read it now even though it answers later.
+    const flying = written || draggedAssetType(event) !== 'mesh' ? null : droppedAsset(event)
+    if (!written && !flying) return
 
     event.preventDefault()
     const hit = hitAnimation(hitContext(), pointIn(event))
@@ -265,25 +269,35 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     const row = latest.current.rows.find(candidate => candidate.id === hit.rowId)
     if (row?.kind !== 'lane') return
 
-    const dropped = draggedAnimationOf(JSON.parse(written))
-    if (!dropped) return
-
     const current = latest.current
     const at = clampPlayhead(
       snapToFrame(xToTime(pointIn(event).x, current.viewport), current.timeline.fps),
       current.timeline.duration,
     )
-
-    // A shipped animation is laid down at once and read afterwards: the engine sees a block
-    // naming a clip it has not got, loads it, retargets it, and the block starts playing.
     const start = Math.max(0, at)
-    const laid =
+
+    // A block is laid down at once and read afterwards: the engine sees one naming a clip it has
+    // not got, loads it, retargets it, and the block starts playing.
+    const lay = (laid: ClipRef): void => {
+      editLane(documentId, { ...row, clipId: laid.id }, clips => [...clips, laid])
+      // Dropped is chosen: the inspector then describes what one has just laid down.
+      useAnimationViews.getState().setPickedBlock(documentId, laid.id)
+    }
+
+    if (flying) {
+      // The mesh the file also holds never enters the scene — what was asked for is the motion.
+      void flying.then(asset => asset && lay(assetClip(newId(), asset.id, asset.name, { start })))
+      return
+    }
+
+    const dropped = draggedAnimationOf(JSON.parse(written))
+    if (!dropped) return
+
+    lay(
       dropped.kind === 'embedded'
         ? embeddedClip(newId(), dropped.clip, { start })
-        : bundledClip(newId(), dropped.name, { start })
-    editLane(documentId, { ...row, clipId: laid.id }, clips => [...clips, laid])
-    // Dropped is chosen: the inspector then describes what one has just laid down.
-    useAnimationViews.getState().setPickedBlock(documentId, laid.id)
+        : bundledClip(newId(), dropped.name, { start }),
+    )
   }
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>): void => {
@@ -438,7 +452,10 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       onKeyDown={onKeyDown}
       // Without the `preventDefault` on drag-over the drop never fires at all.
       onDragOver={event => {
-        if (!event.dataTransfer.types.includes(ANIMATION_DRAG_TYPE)) return
+        const carried =
+          event.dataTransfer.types.includes(ANIMATION_DRAG_TYPE) ||
+          draggedAssetType(event) === 'mesh'
+        if (!carried) return
         event.preventDefault()
         event.dataTransfer.dropEffect = 'copy'
       }}

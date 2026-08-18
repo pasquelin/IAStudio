@@ -30,7 +30,6 @@ import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
 import {
-  clipKeyOf,
   type ClipLane,
   type ExportFormat,
   type LightDescriptor,
@@ -100,7 +99,15 @@ import type { FontLibrary } from '../core/fonts'
 import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './textGeometry'
 import { createGltfSource, type GltfSource } from './gltfSource'
-import { SceneAnimations, bundledNamesOf, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
+import {
+  SceneAnimations,
+  clipLengthsOf,
+  clipNamesOf,
+  clipsOf,
+  foreignClipsOf,
+  type ForeignClip,
+} from './animation'
+import { createRefCache, type RefCache } from '../core/refCache'
 import { drivenNodes, fovAt, poseAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
@@ -143,11 +150,11 @@ import BvhWorker from './bvh.worker?worker'
 import SkinWorker from './skinWeights.worker?worker'
 import RetargetWorker from './retarget.worker?worker'
 import { createRetarget, type Retarget } from './retarget'
-import { bundledAnimationUrl } from '@shared/domain/animationLibrary'
 import { applyRig, positionsIn, skinnableMeshesOf } from './rigBuild'
 import { createSkinWeights, type SkinWeights } from './skinWeights'
 import type { SkinBinding } from './skinVertices'
 import type { Rig } from '@shared/domain/rig'
+import type { HumanoidRole } from '@shared/domain/humanoid'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
@@ -498,10 +505,17 @@ export class SceneRenderer {
   private readonly skin: SkinWeights
   private readonly retarget: Retarget
   /**
-   * Which shipped animations were already asked for, per node. A block plays nothing until its
-   * clip lands, and every `apply` would otherwise start the same load again.
+   * Which foreign clips a node holds a reference on, by key, and where each was read from. A
+   * block plays nothing until its clip lands, and every `apply` would otherwise load again.
    */
-  private readonly bundled = new Map<string, Set<string>>()
+  private readonly bundled = new Map<string, Map<string, string>>()
+  /**
+   * One read per animation FILE, however many characters play it — two dancers are one parse.
+   *
+   * Kept while a block still names it rather than freed after the retarget: what costs is the
+   * read, and the second character to be given the same walk is exactly the case this closes.
+   */
+  private readonly clipSources: RefCache<Object3D>
   /** The binds still running, so a model that leaves the stage takes its own off the worker. */
   private readonly skinning = new Map<string, AbortController>()
   private readonly fonts: FontLibrary
@@ -533,6 +547,12 @@ export class SceneRenderer {
       // otherwise indistinguishable from one that was never asked for.
       (assetId, error) => reportFailure('scene.model', assetId, error),
     )
+    this.clipSources = createRefCache({
+      load: url => this.gltf.loadAnimation(url),
+      free: disposeTree,
+      // Under a scope of its own: a failing animation must not swallow what a failing model says.
+      onFailure: (url, error) => reportFailure('scene.animation', url, error),
+    })
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
     this.skin = options.skin ?? createSkinWeights(() => new SkinWorker())
     this.retarget = options.retarget ?? createRetarget(() => new RetargetWorker())
@@ -1624,6 +1644,7 @@ export class SceneRenderer {
     this.bvh.dispose()
     this.skin.dispose()
     this.retarget.dispose()
+    this.clipSources.dispose()
     this.bundled.clear()
 
     this.grid?.dispose()
@@ -1801,6 +1822,10 @@ export class SceneRenderer {
       applyShadowFlags(object, node.castShadow, receivesShadow(node), this.belongsToAnotherNode)
     }
     if (node.type === 'light') this.tuneShadow(object)
+
+    // Before anything is retargeted onto it: the document is where a bone's role was PUT RIGHT,
+    // and the port would otherwise go on reading roles off names that lied.
+    if (node.type === 'model' && node.model.rig) this.learnRig(node.model.rig)
 
     // The clips of a model that is already on stage. Skipped for one still loading: `buildModel`
     // binds what the file brought the moment it lands, and applies this reference there.
@@ -2069,46 +2094,69 @@ export class SceneRenderer {
     return holder
   }
 
+  /** Told once per skeleton, not per model: it is filed by what its bones ARE. */
+  private learnRig(rig: Rig): void {
+    const roles: Record<string, HumanoidRole> = {}
+    for (const bone of rig.bones) if (bone.role) roles[bone.name] = bone.role
+    if (Object.keys(roles).length === 0) return
+
+    this.retarget.learn(
+      rig.bones.map(bone => bone.name),
+      roles,
+    )
+  }
+
   /**
-   * Loads whatever shipped animations a model's blocks name, once each. Called wherever lanes
-   * are applied: a block can be dropped long after the file it plays on landed.
+   * Loads whatever clips a model's blocks name that its own file did not bring, once each, and
+   * lets go of the ones no block names any more. Called wherever lanes are applied: a block can
+   * be dropped long after the file it plays on landed.
    */
   private ensureBundled(nodeId: string, lanes: readonly ClipLane[]): void {
-    const asked = this.bundled.get(nodeId) ?? new Set<string>()
-    this.bundled.set(nodeId, asked)
+    const held = this.bundled.get(nodeId) ?? new Map<string, string>()
+    this.bundled.set(nodeId, held)
+    const wanted = new Map(foreignClipsOf(lanes).map(clip => [clip.key, clip]))
 
-    for (const name of bundledNamesOf(lanes)) {
-      if (asked.has(name)) continue
+    for (const clip of wanted.values()) {
+      if (held.has(clip.key)) continue
 
-      asked.add(name)
-      void this.adoptBundled(nodeId, name)
+      // Acquired HERE and not inside the adoption: released while the read is still in flight,
+      // a reference taken afterwards would never be given back.
+      held.set(clip.key, clip.url)
+      void this.adopt(nodeId, clip, this.clipSources.acquire(clip.url))
+    }
+    for (const [key, url] of [...held]) {
+      if (wanted.has(key)) continue
+
+      held.delete(key)
+      this.clipSources.release(url)
     }
   }
 
   /**
-   * Reads an animation the app ships with and replays it on THIS model's skeleton, which is the
-   * whole point: the clip was authored for a rig nobody here has.
+   * Replays a clip the model's own file never held on THIS model's skeleton, which is the whole
+   * point: it was authored for a rig nobody here has.
    */
-  private async adoptBundled(nodeId: string, name: string): Promise<void> {
+  private async adopt(nodeId: string, clip: ForeignClip, loading: Promise<Object3D | null>) {
     const holder = this.objects.get(nodeId)
     if (!holder) return
 
     try {
-      const source = await this.gltf.loadAnimation(bundledAnimationUrl(name))
-      // The first clip and only it: a folder IS one animation, however many the file spells.
-      const clip = clipsOf(source)[0]
-      if (!clip) throw new Error('this file carries no animation')
+      // Nothing of the source ever enters the scene: a file dropped for its animation carries a
+      // whole character with it, and only its skeleton is any use here.
+      const source = await loading
+      if (!source) return
 
-      const adapted = (await this.retarget.adapt(holder, source, [clip]))?.[0]
-      // Nothing of the file itself is kept — a shipped animation carries a whole character with
-      // it, and its meshes and pictures would sit on the GPU for a set of keyframes.
-      disposeTree(source)
+      // The first clip and only it: one file IS one animation, however many it spells.
+      const first = clipsOf(source)[0]
+      if (!first) throw new Error('this file carries no animation')
+
+      const adapted = (await this.retarget.adapt(holder, source, [first]))?.[0]
       if (!adapted || this.objects.get(nodeId) !== holder) return
 
       // Named by the studio, always: Tripo spells its only clip `NlaTrack` and Uthana's spells
       // nothing at all, and neither may reach the screen.
-      adapted.name = name
-      this.animations.addClip(nodeId, clipKeyOf({ kind: 'bundled', name }), adapted)
+      adapted.name = clip.label
+      this.animations.addClip(nodeId, clip.key, adapted)
       this.options.onClips?.(
         nodeId,
         this.animations.fileNamesOf(nodeId),
@@ -2117,7 +2165,7 @@ export class SceneRenderer {
       this.viewport.requestRender()
     } catch (error) {
       // Under a scope of its own: a failing animation must not swallow what a failing model says.
-      reportFailure('scene.animation', name, error)
+      reportFailure('scene.animation', clip.url, error)
     }
   }
 
@@ -2251,6 +2299,8 @@ export class SceneRenderer {
     // Before the instance goes: a mixer holding actions keeps every bone of a released model
     // alive with it.
     this.animations.remove(id)
+    // Its share of every animation file it played: the last node to let go frees the parse.
+    for (const url of this.bundled.get(id)?.values() ?? []) this.clipSources.release(url)
     this.bundled.delete(id)
     this.unbindSkeleton(id)
     this.stopSkinning(id)

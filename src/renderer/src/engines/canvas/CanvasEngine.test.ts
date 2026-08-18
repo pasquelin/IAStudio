@@ -61,6 +61,9 @@ type Placed = {
   matrix: { a: number; b: number; c: number; d: number; tx: number; ty: number } | null
 }
 
+/** What the faked renderer hands back from an extraction: bytes, as the real one now does. */
+const EXTRACTED = Uint8Array.from([137, 80, 78, 71])
+
 const gpu: {
   renders: number
   texturesCreated: number
@@ -79,6 +82,10 @@ const gpu: {
   loaded: { src: string; parser?: string }[]
   /** Set by the one test that needs a load to fail: an asset whose file is gone. */
   refuseLoad: boolean
+  /** Every URL the loader was told to forget — a blob URL held for the session is a leak. */
+  unloaded: string[]
+  /** Set by the cases that need an extraction to fail: a canvas that hands back no blob. */
+  refuseEncode: boolean
   /** Every extraction, so what a snapshot framed and at what scale can be asserted. */
   extracted: { frame?: unknown; resolution?: number }[]
   /** Every frame the eyedropper read, so what it sampled — and how much of it — can be asserted. */
@@ -98,6 +105,8 @@ const gpu: {
   painted: [],
   loaded: [],
   refuseLoad: false,
+  unloaded: [],
+  refuseEncode: false,
   extracted: [],
   sampled: [],
   pixels: [0, 0, 0, 0],
@@ -254,9 +263,22 @@ vi.mock('pixi.js', () => {
             if (options.frame) gpu.sampled.push(options.frame)
             return { pixels: gpu.pixels }
           },
-          base64: (options: { frame?: unknown; resolution?: number }) => {
+          /**
+           * What the engine extracts through now: a canvas, then a blob, never a string.
+           *
+           * `toBlob` and NOT `convertToBlob`, because that is the one Electron gives: Pixi's
+           * `generateCanvas` goes through `DOMAdapter.createCanvas()`, which is
+           * `document.createElement('canvas')` in a window — an `HTMLCanvasElement`, which has
+           * `toBlob`. `convertToBlob` belongs to `OffscreenCanvas`, in a worker. Faking that one
+           * left the branch every ⌘S really takes untested.
+           */
+          canvas: (options: { frame?: unknown; resolution?: number }) => {
             gpu.extracted.push(options)
-            return Promise.resolve('data:image/png;base64,QUJD')
+            return {
+              toBlob: (give: (blob: Blob | null) => void) => {
+                give(gpu.refuseEncode ? null : new Blob([EXTRACTED], { type: 'image/png' }))
+              },
+            }
           },
         },
       }
@@ -300,6 +322,12 @@ vi.mock('pixi.js', () => {
         gpu.loaded.push(options)
         if (gpu.refuseLoad) return Promise.reject(new Error('gone'))
         return Promise.resolve({ width: 200, height: 100 })
+      },
+      // Saved pixels go in through a blob URL the loader is then told to forget: its cache is
+      // keyed on the whole source string, and a data URL of a 4K layer would sit in it for good.
+      unload: (src: string) => {
+        gpu.unloaded.push(src)
+        return Promise.resolve()
       },
     },
     Text: class extends Container {},
@@ -444,6 +472,9 @@ function mounted(
 
 /** 1:1 and unpanned, so a screen coordinate in a test is a document coordinate. */
 const VIEW_1_1 = { ...DEFAULT_VIEW, viewport: { x: 0, y: 0, scale: 1 } }
+
+/** Saved pixels, as they now cross: bytes, never base64 — see `LayerPixels`. */
+const SAVED = Uint8Array.from([65, 66, 67])
 
 const nextFrame = (): Promise<void> =>
   new Promise(resolve => requestAnimationFrame(() => resolve()))
@@ -1512,13 +1543,14 @@ describe('loading a picture into a layer', () => {
   it('leaves the asset alone for a layer whose pixels the document restored', async () => {
     const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
     const { engine } = await mounted()
-    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' })
+    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: SAVED })
     gpu.loaded = []
 
     engine.apply(stacked([pixelLayer('layer-1', 'Background'), laid]))
     await flushMicrotasks()
 
-    expect(gpu.loaded).toEqual([{ src: 'data:image/png;base64,QUJD', parser: 'texture' }])
+    expect(gpu.loaded).toHaveLength(1)
+    expect(gpu.loaded[0]?.src.startsWith('blob:')).toBe(true)
   })
 
   /**
@@ -1530,7 +1562,7 @@ describe('loading a picture into a layer', () => {
   it('falls back to the asset when the document’s own pixels will not decode', async () => {
     const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
     const { engine } = await mounted()
-    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' })
+    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: SAVED })
     gpu.loaded = []
     gpu.refuseLoad = true
     onTestFinished(() => {
@@ -1556,7 +1588,7 @@ describe('loading a picture into a layer', () => {
     })
 
     await expect(
-      engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' }),
+      engine.restoreSnapshot({ layerId: 'a', mask: false, data: SAVED }),
     ).rejects.toThrow()
     await flushMicrotasks()
 
@@ -1567,7 +1599,7 @@ describe('loading a picture into a layer', () => {
   it('goes back to the asset once the layer has left the stack and returned', async () => {
     const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
     const { engine } = await mounted()
-    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' })
+    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: SAVED })
     engine.apply(stacked([laid]))
     await flushMicrotasks()
 
@@ -1807,12 +1839,19 @@ describe('making a mask of a selection', () => {
 })
 
 describe('flattening the document', () => {
-  // What an edit sends to the API: the model is asked about what the eye sees, not about a
-  // stack it knows nothing of.
-  it('hands back the payload alone, without the data URL around it', async () => {
+  // What `mergedimage.png` holds: the picture every other application draws of a `.ora`, as
+  // bytes — never a string, and never through one either.
+  it('hands the flatten back as bytes', async () => {
     const { engine } = await mounted()
 
-    await expect(engine.snapshot()).resolves.toBe('QUJD')
+    await expect(engine.flatten()).resolves.toEqual(EXTRACTED)
+  })
+
+  // The same picture, for the API and for a PNG asset: the payload alone, no data URL around it.
+  it('hands the same picture back as base64 for the callers that take one', async () => {
+    const { engine } = await mounted()
+
+    await expect(engine.snapshot()).resolves.toBe(btoa(String.fromCharCode(...EXTRACTED)))
   })
 
   it('frames the whole document when no region is named', async () => {
@@ -1860,7 +1899,9 @@ describe('flattening the document', () => {
       activeLayerId: 'layer-1',
     })
 
-    await expect(engine.maskSnapshot('layer-1')).resolves.toBe('QUJD')
+    await expect(engine.maskSnapshot('layer-1')).resolves.toBe(
+      btoa(String.fromCharCode(...EXTRACTED)),
+    )
   })
 
   it('says nothing for a layer that carries no mask', async () => {
@@ -1888,9 +1929,9 @@ describe('saving and restoring the pixels', () => {
     const { engine } = await mounted(masked())
 
     await expect(engine.pixelSnapshots()).resolves.toEqual([
-      { layerId: 'layer-1', mask: false, data: 'QUJD' },
-      { layerId: 'layer-1', mask: true, data: 'QUJD' },
-      { layerId: 'layer-2', mask: false, data: 'QUJD' },
+      { layerId: 'layer-1', mask: false, data: EXTRACTED },
+      { layerId: 'layer-1', mask: true, data: EXTRACTED },
+      { layerId: 'layer-2', mask: false, data: EXTRACTED },
     ])
   })
 
@@ -1924,14 +1965,54 @@ describe('saving and restoring the pixels', () => {
     await expect(engine.pixelSnapshots()).resolves.toEqual([])
   })
 
+  /**
+   * The loudest thing this engine does, and it has to stay loud. The container is replaced whole
+   * on every ⌘S, so a surface handed back as ABSENT is a surface deleted from the file — and the
+   * save then marks the document clean. A layer gone, in silence, on a save that looked fine.
+   */
+  it('refuses the whole extraction rather than dropping a surface it cannot encode', async () => {
+    const { engine } = await mounted(masked())
+    gpu.refuseEncode = true
+    onTestFinished(() => {
+      gpu.refuseEncode = false
+    })
+
+    await expect(engine.pixelSnapshots()).rejects.toThrow()
+  })
+
+  // Same rule for the flatten: `mergedimage.png` is what every other application draws.
+  it('refuses to hand back a flatten it could not encode', async () => {
+    const { engine } = await mounted(masked())
+    gpu.refuseEncode = true
+    onTestFinished(() => {
+      gpu.refuseEncode = false
+    })
+
+    await expect(engine.flatten()).rejects.toThrow()
+  })
+
   it('draws a saved picture back into the surface it came from', async () => {
     const { engine } = await mounted(masked())
     gpu.loaded.length = 0
 
-    await engine.restoreSnapshot({ layerId: 'layer-1', mask: true, data: 'QUJD' })
+    await engine.restoreSnapshot({ layerId: 'layer-1', mask: true, data: SAVED })
 
-    expect(gpu.loaded[0]?.src).toBe('data:image/png;base64,QUJD')
+    expect(gpu.loaded[0]?.src.startsWith('blob:')).toBe(true)
     expect(gpu.loaded[0]?.parser).toBe('texture')
+  })
+
+  /**
+   * The loader's cache is keyed on the WHOLE source string and lives for the session. A data URL
+   * of a 4K layer sat in it for good — the very megabytes this stopped putting in a string — so
+   * the blob URL that replaced it has to be given back, both to the loader and to the document.
+   */
+  it('tells the loader to forget the blob URL a restore went in through', async () => {
+    const { engine } = await mounted(masked())
+    gpu.unloaded.length = 0
+
+    await engine.restoreSnapshot({ layerId: 'layer-1', mask: true, data: SAVED })
+
+    expect(gpu.unloaded).toEqual([gpu.loaded[gpu.loaded.length - 1]?.src])
   })
 })
 

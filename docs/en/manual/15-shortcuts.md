@@ -216,7 +216,7 @@ studio cannot undo, and a bare delete key is too close to what a hand does while
 | **Magnet** | `M` | steps the handles by regular amounts, set in the settings |
 | **Local frame** | `L` | aligns the handles with the object's orientation rather than the world's |
 | **Projection** | `O` | switches between perspective and orthographic projection |
-| **Display mode** | `Z` | cycles the seven ways of drawing |
+| **Display mode** | `Z` | cycles the nine ways of drawing |
 | **Four views** | `⇧Q` | splits the viewport in four: the current view, top, front, side |
 | **Quad edges** | `⇧W` | in wireframe, erases the diagonals triangulation added |
 | **Show skeletons** | `B` | draws the bones of every rigged model over the scene |

@@ -14,8 +14,11 @@ export async function exportPicture(documentId: string, host: ExportHost): Promi
   const bridge = getBridge()
   if (!bridge) return null
 
+  // THROWS rather than answering `null`, and the difference is a message: `null` here means the
+  // user dismissed the dialog, and an engine whose context is not up yet would look exactly the
+  // same. The caller reports a rejection; it reports nothing at all for a dismissal.
   const image = await host.snapshot()
-  if (!image) return null
+  if (!image) throw new Error('this image has no picture to export yet')
 
   // The tab's own title, so the file is findable afterwards. A word rather than the id when there
   // is no title left to clean: an id is no more findable than a word, and shorter to read.

@@ -67,7 +67,7 @@ Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ 3D**
 | **Redimensionner** | `S` | agrandit ou rétrécit avec les poignées |
 | **Magnétisme** | `M` | fait avancer les poignées **par crans** au lieu de les laisser libres |
 | **Repère local** | `L` | aligne les poignées sur l’orientation de **l’objet** plutôt que sur celle du monde |
-| **Mode de rendu** | `Z` | fait défiler les sept façons de dessiner ; le survol les offre une à une |
+| **Mode de rendu** | `Z` | fait défiler les neuf façons de dessiner ; le survol les offre une à une |
 | **Cadrer la sélection** | `F` | recentre la caméra sur l’objet choisi |
 
 La barre ne porte que ce qui se réclame **sans lâcher la souris**. Le reste est au menu natif :
@@ -75,7 +75,7 @@ La barre ne porte que ce qui se réclame **sans lâcher la souris**. Le reste es
 | Ce qui n’est pas dans la barre | Où le trouver |
 |---|---|
 | Projection, quatre vues, arêtes de quads, squelettes, mode pose | **Affichage**, en cases à cocher |
-| Les six côtés, les sept modes de rendu | **Affichage ▸ Point de vue** et **▸ Mode de rendu** |
+| Les six côtés, les neuf modes de rendu | **Affichage ▸ Point de vue** et **▸ Mode de rendu** |
 | Ajouter une maille, une lumière, un objet | **Ajouter** |
 | Dupliquer, grouper, supprimer | **Édition** |
 | Copier, couper, coller | **les touches seules** — voir plus bas |
@@ -294,6 +294,8 @@ aligne.
 | **Aperçu matière** | les matières sous le seul éclairage du studio, sans les lumières de la scène |
 | **Matcap** | un éclairage capté sur une sphère : c’est le relief qui se lit, pas la couleur |
 | **Densité** | du vert au rouge selon les triangles au centimètre carré : le rouge est à optimiser |
+| **Translucide** | les surfaces à peine posées, pour voir les articulations à l’intérieur |
+| **Squelette seul** | plus aucune surface — il ne reste que les os, pour les corriger sans rien deviner |
 
 Le bouton porte le mode en cours et le fait défiler à chaque clic ; son menu permet d’en choisir un
 directement. `Z` fait la même chose au clavier — **et en quatre vues, sur le
@@ -625,8 +627,9 @@ offre la section **Animation** :
 | **▶ / ⏸** | montre le bloc dans la vue, sur une horloge à lui |
 | **Vitesse** | un multiplicateur, de 0,1 à 4 |
 | **En boucle** | recommence à la fin, ou s’arrête sur la dernière pose |
+| **Pilote** | quelle moitié du corps ce bloc anime — **Tout le corps**, **Le haut du corps**, **Le bas du corps** |
 
-**Ces quatre contrôles portent sur LE BLOC CHOISI sur la bande** : appuyez sur un bloc pour le
+**Ces cinq contrôles portent sur LE BLOC CHOISI sur la bande** : appuyez sur un bloc pour le
 choisir, et la section bascule dessus — tant que vous n’en avez choisi aucun, c’est le premier.
 Un modèle qui porte plusieurs blocs se règle donc bloc par bloc : la vitesse et la boucle
 s’écrivent dans celui que vous regardez, et les autres ne bougent pas.
@@ -637,15 +640,71 @@ s’écrivent dans celui que vous regardez, et les autres ne bougent pas.
 > timeline coupe l’aperçu, déplacer la tête aussi, et lancer l’aperçu met la timeline en pause.
 
 **La position de la tête n’est pas enregistrée** : rouvrir la scène la remet au début. Ce qui est
-enregistré, ce sont les blocs — leur place sur la bande, leur vitesse et leur boucle.
+enregistré, ce sont les blocs — leur place sur la bande, leur vitesse, leur boucle et ce qu’ils
+pilotent.
 
 **Un modèle sans séquence garde la section**, qui dit alors ce qui lui manque — qu’il ne porte pas
 encore de squelette, ou qu’il en porte un que le studio ne reconnaît pas. Le menu, lui, ne
 s’affiche que s’il y a quelque chose à choisir.
 
-**Une séquence se voit aussi sur la bande du bas**, posée en bloc à sa longueur réelle, sur une
-ligne à elle qui porte **le nom du clip**. Les blocs sont groupés **sous** les lignes de clés,
-jamais mêlés à elles.
+**Une séquence se voit aussi sur la bande du bas**, posée en bloc à sa longueur réelle, et c’est
+**le bloc** qui porte le nom du clip. La ligne qui l’accueille est une **sous-piste**, appelée
+**Anim. 1**, **Anim. 2**, et ainsi de suite. Les sous-pistes sont groupées **sous** les lignes de
+clés, jamais mêlées à elles.
+
+### La bibliothèque d’animations
+
+Le panneau **Animations**, dans la colonne de droite, liste **ce qu’un personnage peut jouer** :
+d’abord les séquences que le fichier du modèle sélectionné porte, puis celles livrées avec le
+studio. Les deux sources se suivent dans une seule liste, et se glissent de la même façon.
+
+**Une ligne se glisse sur une sous-piste de la bande, et c’est ce qui y pose un bloc.** Il commence
+là où vous lâchez, cadré sur l’image la plus proche, et prend la longueur réelle du fichier. Il est
+choisi aussitôt : l’Inspecteur décrit alors ce que vous venez de poser.
+
+> **Seule une sous-piste accepte un dépôt.** Une ligne de clés porte des clés, la ligne d’un objet
+> est l’objet lui-même, et la règle du haut n’est pas une piste : lâcher sur l’une des trois ne
+> fait rien.
+
+**Une animation livrée est rejouée sur le squelette de VOTRE personnage** — elle a été montée pour
+un autre, et le studio la transpose. Le personnage qui la portait n’entre pas dans la scène.
+
+**Une animation livrée porte le nom de son DOSSIER**, jamais celui écrit dans le fichier — un
+export Tripo appelle son unique séquence `NlaTrack`, un export Uthana n’en nomme aucune. Une
+vignette s’affiche si le dossier en porte une, sinon une marque générique. Un dossier vaut **une**
+animation : si son fichier en épelle plusieurs, c’est la première qui est jouée.
+
+**Le studio peut être livré sans aucune animation.** Quand ni le modèle sélectionné ni le dossier
+livré n’ont rien à offrir, le panneau le dit : « Aucune animation. Sélectionnez un personnage, ou
+installez des animations dans le dossier de l’application. » Ce dossier est commun à tous les
+projets, et il se met à jour en mettant le studio à jour.
+
+### Superposer deux animations
+
+**Deux blocs ne se superposent pas sur une même sous-piste.** Là où ils se chevauchent, ils se
+partagent le personnage à parts égales, et la pose obtenue est leur moyenne — c’est-à-dire ni
+l’un ni l’autre. Posez-les **bout à bout** pour les enchaîner : hors de son bloc, un mouvement
+tient sa pose de bord, et c’est le suivant qui prend la main.
+
+**Pour les jouer ensemble, donnez-leur chacun une ligne.** Le bouton **+** de la dernière
+sous-piste — *Ajouter une sous-piste* — en ouvre une en dessous, et une sous-piste restée seule ne
+se supprime pas : c’est elle qui reçoit ce qu’on dépose sur l’objet. Leur ordre se change en
+glissant leur en-tête, et **il ne change que l’endroit où elles sont dessinées** — contrairement
+aux plans de caméra, aucune sous-piste ne passe devant une autre.
+
+**C’est là que *Pilote* sert.** Deux blocs réglés sur **Tout le corps** n’ont rien de plus à donner
+que leur moyenne, même sur deux lignes : ils se disputent les mêmes os. Réglez l’un sur **Le haut
+du corps** et l’autre sur **Le bas du corps**, et chacun garde sa moitié entière — marcher *et*
+lever les bras devient les deux à la fois, au lieu d’un demi-pas les bras à mi-hauteur.
+
+> **Les hanches vont avec les jambes**, et c’est délibéré : elles portent le placement du
+> personnage, donc un bloc du haut du corps l’emmènerait ailleurs que là où ses jambes l’ont posé.
+
+> **Les moitiés se lisent sur le squelette, pas sur le fichier.** Un os qui ne remplit aucun rôle
+> reconnu suit le membre auquel il pend — un os de torsion, un doigt que personne n’a nommé, une
+> queue. Et quand rien au-dessus de lui n’est reconnu non plus, il part avec le bas du corps : sur
+> un modèle dont la section annonce **un squelette dont aucune articulation n’est reconnue**, ne
+> comptez pas sur les moitiés et laissez les blocs sur **Tout le corps**.
 
 ### Voir le squelette
 

@@ -247,7 +247,8 @@ dessous dans la seconde.
 ### Le rail de droite
 
 Les icônes de la colonne de droite — Skybox, Vue, Calques, Canaux, Styles, Scène, Lumières,
-Mailles, celles que l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
+Mailles, Animations, celles que l’espace déclare, dans cet ordre — puis, sous le trait,
+Inspecteur.
 
 En **Vidéo** et en **Audio**, la moitié haute de cette colonne est vide : ces deux espaces n’y
 déclarent rien, et le rail ne porte alors que l’Inspecteur.
@@ -320,6 +321,7 @@ garde sa taille.
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
 | **Mailles** | droite | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
+| **Animations** | droite | 1re | 3D | ce qu’un personnage peut jouer : les séquences de son fichier, et celles livrées avec le studio |
 | **Explorateur** | gauche | 2de | partout | le dossier du projet, dossiers et fichiers |
 | **Git** | gauche | 2de | partout *(si un projet est ouvert)* | ce qui a changé dans le dossier du projet depuis la dernière version enregistrée |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |

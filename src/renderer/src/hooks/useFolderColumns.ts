@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { folderTrail, isDocumentFolder, type FolderEntry } from '@shared/domain/folder'
+import { folderTrail, type FolderEntry } from '@shared/domain/folder'
 import { getBridge } from '@/services/bridge'
 
 /** One column: the folder it stands for, and the sub-folders it holds. */
@@ -36,9 +36,7 @@ export function useFolderColumns(chosen: string): FolderColumns {
 
       setHeld(before => ({
         ...before,
-        [folder]: (entries ?? []).filter(
-          entry => entry.kind === 'folder' && !isDocumentFolder(entry.path),
-        ),
+        [folder]: (entries ?? []).filter(entry => entry.kind === 'folder'),
       }))
     })()
   }, [])

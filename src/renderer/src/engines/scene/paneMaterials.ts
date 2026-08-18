@@ -47,6 +47,17 @@ export function createPaneMaterials(
   // would fill in every hole the reading depends on.
   const hidden = new MeshBasicMaterial({ visible: false })
 
+  // `depthWrite` off, or the surfaces in front would cut holes in the bones behind them — which
+  // is the one thing this mode exists to show.
+  const ghost = new MeshStandardMaterial({
+    color: new Color(CLAY, CLAY, CLAY),
+    transparent: true,
+    opacity: 0.18,
+    depthWrite: false,
+    roughness: 0.9,
+    metalness: 0,
+  })
+
   const matcapTexture = drawMatcap()
   const matcap = new MeshMatcapMaterial(
     // No texture means no shading at all from this material, so it falls back to the clay tint
@@ -56,7 +67,7 @@ export function createPaneMaterials(
 
   /** One material per density step, so a scene of fifty objects builds at most eleven. */
   const ramp = new Map<number, MeshStandardMaterial>()
-  const mine = new Set<Material>([solid, matcap, hidden])
+  const mine = new Set<Material>([solid, matcap, hidden, ghost])
 
   const densityMaterial = (density: number): Material => {
     const step = Math.min(10, Math.round((Math.min(density, DENSE) / DENSE) * 10))
@@ -80,6 +91,7 @@ export function createPaneMaterials(
       if (substitute === 'matcap') return matcap
       if (substitute === 'density') return densityMaterial(density)
       if (substitute === 'hidden') return hidden
+      if (substitute === 'ghost') return ghost
       return null
     },
     owns: material =>
@@ -88,6 +100,7 @@ export function createPaneMaterials(
       solid.dispose()
       matcap.dispose()
       hidden.dispose()
+      ghost.dispose()
       matcapTexture?.dispose()
       for (const material of ramp.values()) material.dispose()
       ramp.clear()

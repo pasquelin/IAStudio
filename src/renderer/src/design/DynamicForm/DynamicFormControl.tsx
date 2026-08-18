@@ -125,12 +125,13 @@ export function DynamicFormControl({
       )
 
     case 'image':
+    case 'mesh':
       return (
         <AssetDropField
           id={id}
           registration={registration}
           initial={typeof initial === 'string' && initial ? initial : undefined}
-          placeholder={t('generation.dropPicture')}
+          placeholder={t(field.kind === 'mesh' ? 'generation.dropModel' : 'generation.dropPicture')}
         />
       )
 

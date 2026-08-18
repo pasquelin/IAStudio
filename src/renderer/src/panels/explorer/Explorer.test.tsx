@@ -46,7 +46,7 @@ const montage: DocumentDescriptor = {
   path: 'Bande.otio',
 }
 
-/** Written as a folder — `FOLDER_KINDS` — which is what the folder reader sees of it. */
+/** A container, so one FILE — which is what the folder reader sees of it. */
 const picture: DocumentDescriptor = {
   id: 'a3f1',
   kind: 'image',
@@ -489,7 +489,7 @@ describe('the project explorer', () => {
      */
     it('opens an image document rather than folding it open', async () => {
       withProject()
-      install({ '': [folder('a3f1.ora')] }, [picture])
+      install({ '': [file('a3f1.ora')] }, [picture])
 
       render(<Explorer />)
       await userEvent.dblClick(await screen.findByText('Planche'))
@@ -1722,7 +1722,7 @@ describe('the project explorer, as a grid', () => {
   it('leaves a document its own glyph rather than asking for a preview', async () => {
     withProject()
     showGrid()
-    install({ '': [folder('a3f1.ora')] }, [picture])
+    install({ '': [file('a3f1.ora')] }, [picture])
 
     render(<Explorer />)
 

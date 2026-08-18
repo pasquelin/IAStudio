@@ -22,8 +22,8 @@ const FOLDERS: Record<string, readonly FolderEntry[]> = {
     { path: '3D', name: '3D', kind: 'folder' },
     { path: 'Images', name: 'Images', kind: 'folder' },
     { path: 'lisezmoi.txt', name: 'lisezmoi.txt', kind: 'file' },
-    // A layered image is written AS a folder, and the listing answers it as one.
-    { path: 'TOTO.ora', name: 'TOTO.ora', kind: 'folder' },
+    // A layered image is a container — one FILE, whatever its extension suggests.
+    { path: 'TOTO.ora', name: 'TOTO.ora', kind: 'file' },
   ],
   Images: [
     { path: 'Images/Croquis', name: 'Croquis', kind: 'folder' },
@@ -60,7 +60,7 @@ describe('FolderPicker', () => {
     expect(columns()).toHaveLength(1)
   })
 
-  it('offers no file, and no document written as a folder', async () => {
+  it('offers no file, container or not', async () => {
     show()
 
     await screen.findByRole('option', { name: 'Images' })
