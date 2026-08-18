@@ -370,6 +370,85 @@ function fpsFrom(timeline: Record<string, unknown>, stack: Record<string, unknow
   return rate > 0 ? rate : DEFAULT_SETTINGS.fps
 }
 
+/** The root members `otioTimelineOf` composes. Anything else came from another application. */
+const COMPOSED_ROOT = new Set(['OTIO_SCHEMA', 'name', 'metadata', 'global_start_time', 'tracks'])
+
+/** What a track may hold: this editor writes clips and the gaps between them, and nothing else. */
+const COMPOSED_ITEMS = new Set(['Clip.1', 'Gap.1'])
+
+/** The one effect a clip carries out of the studio — a speed change, written as a time warp. */
+const COMPOSED_EFFECT = 'LinearTimeWarp.1'
+
+/**
+ * What an OTIO file holds beyond what a save would write back.
+ *
+ * `otioTimelineOf` recomposes the whole timeline: the root metadata becomes the studio's own, and
+ * every stack, track and clip is written with `markers: []`, `effects: []` and a metadata holding
+ * nothing but `scenario`. So a montage the studio wrote, enriched elsewhere with a marker, a
+ * colour effect or a transition, came back without them on the first ⌘S — measured at the screen
+ * on 18/08, with nothing said. The refusal that already existed covers only clips whose media the
+ * project has lost, which is a different failure.
+ *
+ * **The blind spot, in clear**: a TAKE keeps only its audio tracks (`soundMontageOf`), so a `.otio`
+ * of a take that somehow holds a picture track loses it, and nothing here can see that — this
+ * function reads the file, never which workspace opened it.
+ */
+export function montageHoldsMore(payload: unknown): string[] {
+  if (!isOtioTimeline(payload)) return []
+  const held = new Set(Object.keys(payload).filter(key => !COMPOSED_ROOT.has(key)))
+
+  for (const key of foreignMetadata(payload)) held.add(`metadata.${key}`)
+
+  const stack = isRecord(payload.tracks) ? payload.tracks : {}
+  for (const name of composedOver(stack)) held.add(name)
+
+  for (const track of childrenOf(stack)) {
+    // `enabled` is the RESULT of the mute and the solo, written from the state on every save.
+    for (const name of composedOver(track, { enabled: true })) held.add(name)
+
+    for (const item of childrenOf(track)) {
+      const schema = readString(item, 'OTIO_SCHEMA', '')
+      if (!COMPOSED_ITEMS.has(schema)) held.add(schema || 'children')
+      else for (const name of composedOver(item, { range: true })) held.add(name)
+    }
+  }
+
+  return [...held]
+}
+
+const childrenOf = (value: Record<string, unknown>): Record<string, unknown>[] =>
+  Array.isArray(value.children) ? value.children.filter(isRecord) : []
+
+const foreignMetadata = (value: Record<string, unknown>): string[] =>
+  isRecord(value.metadata)
+    ? Object.keys(value.metadata).filter(key => key !== STUDIO_METADATA_KEY)
+    : []
+
+/**
+ * What a level of the file writes back from its own state, and therefore must not be reported. A
+ * track's `enabled` is its mute and its solo; a clip's and a gap's `source_range` is its trim.
+ */
+type Composes = { range?: boolean; enabled?: boolean }
+
+/**
+ * The members an item is rewritten with whatever it held — every one of them a place another
+ * application puts work. A `LinearTimeWarp` is the studio's own speed change and stays silent.
+ */
+function composedOver(item: Record<string, unknown>, composes: Composes = {}): string[] {
+  const held = foreignMetadata(item).map(key => `metadata.${key}`)
+
+  if (Array.isArray(item.markers) && item.markers.length > 0) held.push('markers')
+  if (!composes.enabled && !readBoolean(item, 'enabled', true)) held.push('enabled')
+  if (!composes.range && isRecord(item.source_range)) held.push('source_range')
+
+  const effects = Array.isArray(item.effects) ? item.effects : []
+  if (effects.some(one => !isRecord(one) || one.OTIO_SCHEMA !== COMPOSED_EFFECT)) {
+    held.push('effects')
+  }
+
+  return held
+}
+
 /**
  * A montage read back from an OTIO file. Answers the empty sequence on anything that is not one,
  * exactly as `parseSequence` does: a file that fails to read must not open on nothing at all.

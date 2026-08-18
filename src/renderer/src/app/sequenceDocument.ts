@@ -4,7 +4,12 @@ import { otioStudioMetadata } from '@shared/domain/otio'
 import i18next from 'i18next'
 import { documentFolder } from '@/app/documentFolder'
 import { mediaLinkFrom, mediaLinkOf, mediaNameOf } from '@/engines/timeline/mediaLink'
-import { otioTimelineOf, sequenceFromOtio, type OtioSource } from '@/engines/timeline/otioTimeline'
+import {
+  montageHoldsMore,
+  otioTimelineOf,
+  sequenceFromOtio,
+  type OtioSource,
+} from '@/engines/timeline/otioTimeline'
 import type { Clip, SequenceState } from '@/engines/timeline/timelineState'
 import { assetIdForLink } from '@/helpers/assetIndex'
 import { reportNotice } from '@/services/diagnostics'
@@ -94,9 +99,19 @@ export function sequencePayload(
  */
 const incomplete = new Set<string>()
 
-/** The sentence a refusal says, or `null` — a sky's would talk about something else entirely. */
-export const montageIsIncomplete = (documentId: string): string | null =>
-  incomplete.has(documentId) ? i18next.t('documents.saveRefusedIncomplete') : null
+/** Montages whose file holds work this editor does not compose — a marker, an effect, a transition. */
+const holdsMore = new Set<string>()
+
+/**
+ * The sentence a refusal says, or `null` — a sky's would talk about something else entirely.
+ *
+ * The lost media first: it is the older of the two failures and the one a user can act on, where
+ * the other asks them to give up an edit made elsewhere.
+ */
+export function montageIsIncomplete(documentId: string): string | null {
+  if (incomplete.has(documentId)) return i18next.t('documents.saveRefusedIncomplete')
+  return holdsMore.has(documentId) ? i18next.t('documents.saveRefusedMontageHoldsMore') : null
+}
 
 /** Indented: a montage IS its `.otio`, and that file is read by hand and by other tools. */
 export function serializeSequencePayload(payload: unknown): string {
@@ -131,6 +146,7 @@ function remember(payload: unknown, documentId: string): void {
 /** Dropped with the document, so a reopened id never inherits what another file carried. */
 export const forgetCarriedMetadata = (documentId: string): void => {
   carried.delete(documentId)
+  holdsMore.delete(documentId)
 }
 
 /**
@@ -140,7 +156,17 @@ export const forgetCarriedMetadata = (documentId: string): void => {
  */
 export function sequenceFromPayload(payload: unknown, documentId: string): SequenceState {
   incomplete.delete(documentId)
+  holdsMore.delete(documentId)
   remember(payload, documentId)
+
+  const beyond = montageHoldsMore(payload)
+  if (beyond.length > 0) {
+    holdsMore.add(documentId)
+    reportNotice(
+      'document.load',
+      i18next.t('documents.montageHoldsMore', { parts: beyond.join(', ') }),
+    )
+  }
 
   const unlinked: string[] = []
   const folder = documentFolder(documentId)

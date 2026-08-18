@@ -97,6 +97,8 @@
     "new": "New document",
     "missing": "This document is no longer open.",
     "saveRefusedIncomplete": "This edit opened without the clips whose media are missing. Saving would erase them from the file — import the media into the project, then open the edit again.",
+    "saveRefusedMontageHoldsMore": "This edit comes from an OpenTimelineIO file holding more than the studio composes — a marker, an effect, a transition. The edit is written back whole, so saving would erase those parts. Save it under another name, or start from a new edit.",
+    "montageHoldsMore": "This edit holds parts the studio cannot write back — {{parts}}. It opens read-only: saving is refused while they are there.",
     "saveRefusedSkyHoldsMore": "This sky comes from a glTF file holding more than the studio composes — a second scene, another light, an extension of its own. Only the sun and the horizon are written back, so saving would erase the rest. Use File ▸ Export sky, or start from a new sky.",
     "skyHoldsMore": "This sky holds parts the studio cannot write back — {{parts}}. It opens read-only: saving is refused while they are there.",
     "saveRefusedSceneHoldsMore": "This scene comes from a glTF file holding meshes or animations the studio does not compose. A glTF is linked by index, so saving would erase those parts. Use File ▸ Export scene, or start from a new scene.",
