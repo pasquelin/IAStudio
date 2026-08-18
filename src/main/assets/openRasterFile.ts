@@ -101,10 +101,9 @@ export function packOpenRaster({ stack, surfaces }: OraDocument, envelope = ''):
 const stored = (png: Uint8Array): [Uint8Array, { level: 0 }] => [png, { level: 0 }]
 
 /**
- * Anchored on whitespace, and that is not pedantry: unanchored, `y="…"` matches inside
- * `opacity="…"`. Writers that emit attributes alphabetically — GIMP and MyPaint do — put
- * `opacity` first, so every layer of a file from either landed at the wrong height. Ours emits
- * `y` before `opacity`, which is exactly why a round trip through this studio never showed it.
+ * Anchored on whitespace: unanchored, `y="…"` matches inside `opacity="…"`, and every layer of
+ * such a file lands at the wrong height. The spec fixes no attribute order, and ours writes `y`
+ * first — so a round trip through this studio can never show it. GIMP 3.2.4 does not either.
  */
 const attribute = (tag: string, name: string): string =>
   new RegExp(`(?:^|\\s)${name}="([^"]*)"`).exec(tag)?.[1] ?? ''

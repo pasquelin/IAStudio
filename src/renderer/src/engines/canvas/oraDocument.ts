@@ -194,14 +194,22 @@ export function canvasFromOraContent(
   content: string,
   surfaces: readonly OraSurface[],
 ): { state: CanvasState; pixels: LayerPixels[] } {
-  let stack: OraStack = EMPTY_STACK
+  return canvasFromOra({ stack: oraStackFromContent(content) ?? EMPTY_STACK, surfaces })
+}
+
+/**
+ * The stack an image document's `content` IS, or `null` for a string that is not one.
+ *
+ * The caller decides what an unreadable one means, and the two callers disagree: opening shows an
+ * empty document, where baking into an asset must write nothing at all.
+ */
+export function oraStackFromContent(content: string): OraStack | null {
   try {
     const parsed: unknown = JSON.parse(content)
-    if (isOraStack(parsed)) stack = parsed
+    return isOraStack(parsed) ? parsed : null
   } catch {
-    stack = EMPTY_STACK
+    return null
   }
-  return canvasFromOra({ stack, surfaces })
 }
 
 const EMPTY_STACK: OraStack = { width: 0, height: 0, nodes: [], studio: '' }

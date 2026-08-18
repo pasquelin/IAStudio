@@ -16,6 +16,7 @@ import {
 } from 'pixi.js'
 import { assetUrl } from '@shared/domain/asset'
 import { fontKey } from '@shared/domain/font'
+import { bytesToBase64 } from '@/helpers/base64'
 import { newId } from '@/helpers/ids'
 import { isTyping } from '@/helpers/typing'
 import { reportFailure } from '@/services/diagnostics'
@@ -267,18 +268,6 @@ async function blobOf(canvas: ICanvas): Promise<Blob | null> {
   return await new Promise(resolve => {
     toBlob.call(canvas, resolve, 'image/png')
   })
-}
-
-/**
- * Bytes as base64, in bounded slices. `String.fromCharCode(...bytes)` on a 4K picture spreads
- * millions of arguments onto the stack, which throws rather than answering.
- */
-function bytesToBase64(bytes: Uint8Array): string {
-  const chunks: string[] = []
-  for (let at = 0; at < bytes.length; at += 0x8000) {
-    chunks.push(String.fromCharCode(...bytes.subarray(at, at + 0x8000)))
-  }
-  return btoa(chunks.join(''))
 }
 
 /** A grading pass: the container the filter runs over, and the filter itself. */

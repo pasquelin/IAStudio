@@ -32,6 +32,7 @@ import { isOraSurfacePath } from '@shared/domain/openRaster'
 import { DEFAULT_CANVAS, pixelLayer, textLayer } from '@/engines/canvas/canvasState'
 import { addLayer, removeLayer, renameLayer, resizeCanvas } from '@/engines/canvas/commands'
 import { holdCanvas, type CanvasHost } from '@/spaces/image/canvasHosts'
+import { bytesToBase64 } from '@/helpers/base64'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import { EMPTY_AUDIO_EDIT, pushEdit } from '@/engines/audio/edits'
 import { addClip, removeTrack } from '@/engines/timeline/commands'
@@ -105,14 +106,27 @@ beforeEach(() => {
  * A fake engine behind the canvas port. Written once so a member added to `CanvasHost` is one
  * edit here rather than one per case — nine of them had spelled the same stubs out.
  */
-function fakeCanvas(overrides: Partial<CanvasHost> = {}): CanvasHost {
-  return {
+function fakeCanvas(overrides: Omit<Partial<CanvasHost>, 'snapshot'> = {}): CanvasHost {
+  const host = {
     pixelSnapshots: () => Promise.resolve([]),
     restoreSnapshot: () => Promise.resolve(),
-    flatten: () => Promise.resolve(FLATTEN),
-    snapshot: () => Promise.resolve(null),
+    flatten: () => Promise.resolve<Uint8Array | null>(FLATTEN),
     forgetPicture: () => Promise.resolve(),
     ...overrides,
+  }
+
+  return {
+    ...host,
+    /**
+     * NOT overridable, because the engine cannot make the two disagree: `snapshot()` IS
+     * `flatten()` with a base64 pass after it. A fake that answered bytes to one and nothing to
+     * the other described a state no engine reaches, and it is what let ⌘S read the whole picture
+     * back off the card twice without a single case going red.
+     */
+    snapshot: async () => {
+      const png = await host.flatten()
+      return png && bytesToBase64(png)
+    },
   }
 }
 
@@ -344,7 +358,8 @@ describe('saveDocument', () => {
    * the loop it would otherwise close is written out.
    */
   describe('the asset behind the document', () => {
-    const PNG = 'iVBORw0KGgo='
+    /** What a flat source is written with — the flatten ⌘S already captured, base64 as the channel takes it. */
+    const PNG = bytesToBase64(FLATTEN)
 
     /** Which pictures the engine was told to forget, so the overwrite's second half is visible. */
     let forgotten: string[] = []
@@ -365,7 +380,6 @@ describe('saveDocument', () => {
       useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
       const release = holdCanvas(created.id, () =>
         fakeCanvas({
-          snapshot: () => Promise.resolve(PNG),
           forgetPicture: assetId => {
             forgotten.push(assetId)
             return Promise.resolve()
@@ -565,6 +579,47 @@ describe('saveDocument', () => {
     })
 
     /**
+     * One extraction per ⌘S, and this is a COUNT rather than a duration: each of these reads every
+     * layer's texture back off the graphics card through a synchronous `gl.readPixels`, so a
+     * second pass doubles the freeze on a stack of ten 4K layers.
+     *
+     * Both halves of the gesture want the same bytes — the document's container and the source
+     * asset's — and they were asking the engine separately.
+     */
+    it('reads the pixels back off the card once, whatever the second half of ⌘S needs', async () => {
+      let flattens = 0
+      let extractions = 0
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { saveLayered: () => Promise.resolve(picture()) },
+      })
+      shelve('Images/hero.ora')
+      const created = await useDocuments
+        .getState()
+        .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
+      if (!created) throw new Error('expected a document')
+      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
+      const release = holdCanvas(created.id, () =>
+        fakeCanvas({
+          flatten: () => {
+            flattens += 1
+            return Promise.resolve(FLATTEN)
+          },
+          pixelSnapshots: () => {
+            extractions += 1
+            return Promise.resolve([])
+          },
+        }),
+      )
+      useCanvases.getState().runCommand(created.id, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await expect(saveDocument(created.id)).resolves.toBe(true)
+      release()
+
+      expect({ flattens, extractions }).toEqual({ flattens: 1, extractions: 1 })
+    })
+
+    /**
      * A row named like a picture but filed under a container is the shape of the defect that
      * nearly shipped: the format has to come off the PATH, so a name saying `.png` must not make
      * ⌘S flatten a `.ora`. It also stands for every real row, whose name has no extension at all.
@@ -604,7 +659,6 @@ describe('saveDocument', () => {
       // one with no pixels is left out of the stack, so a fake that has none writes nothing.
       const release = holdCanvas(created.id, () =>
         fakeCanvas({
-          snapshot: () => Promise.resolve(PNG),
           pixelSnapshots: () =>
             Promise.resolve([
               { layerId: 'layer-1', mask: false, data: PIXELS },
@@ -879,14 +933,25 @@ describe('saveDocument', () => {
     })
 
     /**
-     * `null` is "nothing to bake yet" — an engine still bringing its GPU context up, which is
-     * exactly when a ⌘S after switching workspace lands. Treated as a success it left every
-     * consumer of the asset on the pre-edit picture, and said nothing.
+     * `null` is "nothing to bake yet" — the engine gone between the two halves of ⌘S, which is
+     * what switching workspace mid-save does. Treated as a success it left every consumer of the
+     * asset on the pre-edit picture, and said nothing.
+     *
+     * The engine is dropped DURING the document write, and that is the only window there is: the
+     * pixels are captured before it and the asset is written after it. A fake answering nothing to
+     * `snapshot` while `flatten` still hands bytes over would be quicker to write and would
+     * describe a state no engine reaches.
      */
     it('says so, and retries, when there was nothing to bake yet', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
+      let booting = (): void => undefined
       const { entries } = bridgeWatchingLogs({
-        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        documents: {
+          write: () => {
+            booting()
+            return Promise.resolve<DocumentWrite>('written')
+          },
+        },
         assets: { savePicture },
       })
       const created = await useDocuments
@@ -895,18 +960,16 @@ describe('saveDocument', () => {
       if (!created) throw new Error('expected a document')
       useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
 
-      const booting = holdCanvas(created.id, () => fakeCanvas())
+      booting = holdCanvas(created.id, () => fakeCanvas())
       editImage(created.id)
       await saveDocument(created.id)
-      booting()
 
       expect(savePicture).not.toHaveBeenCalled()
       expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
 
       // The engine is up now, and the debt is what brings the asset back into line.
-      const ready = holdCanvas(created.id, () =>
-        fakeCanvas({ snapshot: () => Promise.resolve(PNG) }),
-      )
+      booting = () => undefined
+      const ready = holdCanvas(created.id, () => fakeCanvas())
       await saveDocument(created.id)
       ready()
 
@@ -965,7 +1028,7 @@ describe('saveDocument', () => {
    * copy — the gesture every application has, applied to an asset rather than to a file.
    */
   describe('saveDocumentAs', () => {
-    const PNG = 'iVBORw0KGgo='
+    const PNG = bytesToBase64(FLATTEN)
 
     /** What the engine was told to forget — nothing, for a gesture that overwrites nothing. */
     let forgotten: string[] = []
@@ -983,7 +1046,6 @@ describe('saveDocument', () => {
       useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
       const release = holdCanvas(created.id, () =>
         fakeCanvas({
-          snapshot: () => Promise.resolve(PNG),
           forgetPicture: assetId => {
             forgotten.push(assetId)
             return Promise.resolve()

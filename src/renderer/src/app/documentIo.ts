@@ -5,7 +5,7 @@ import type {
   DocumentDraft,
   DocumentKind,
 } from '@shared/domain/document'
-import type { OraSurface } from '@shared/domain/openRaster'
+import { ORA_MERGED_PATH, type OraSurface } from '@shared/domain/openRaster'
 import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
 import { chainsOnMontage, parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
@@ -27,9 +27,11 @@ import { traitsOfCanvas } from '@/engines/canvas/canvasTraits'
 import {
   canvasFromOra,
   canvasFromOraContent,
+  oraStackFromContent,
   oraStackOf,
   oraSurfacesOf,
 } from '@/engines/canvas/oraDocument'
+import { bytesToBase64 } from '@/helpers/base64'
 import { getBridge } from '@/services/bridge'
 import type { StudioBridge } from '@shared/ipc'
 import { reportFailure, reportNotice } from '@/services/diagnostics'
@@ -50,7 +52,7 @@ import { sequenceStore } from '@/stores/sequences'
 import { skyboxStore } from '@/stores/skyboxes'
 import type { DocumentStore } from '@/stores/documentStore'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
-import { canvasHost, type CanvasHost } from '@/spaces/image/canvasHosts'
+import { canvasHost } from '@/spaces/image/canvasHosts'
 import { canvasStore, canvasOf, useCanvases } from '@/stores/canvases'
 import { newTexture, parseTexture } from '@/engines/texture/textureState'
 import { useSkyboxViews } from '@/stores/skyboxViews'
@@ -170,8 +172,16 @@ type AssetWriting =
        *
        * Answers `null` when there was nothing to bake yet — an engine whose GPU context is
        * still coming up, which is exactly when a save right after switching workspace lands.
+       *
+       * `captured` is the draft the document was written from, and it is handed over rather than
+       * taken again: an image's bytes come off the graphics card, and asking twice per ⌘S doubles
+       * a freeze that grows with the stack.
        */
-      writeAsset: (documentId: string, target: AssetTarget) => Promise<Asset | null>
+      writeAsset: (
+        documentId: string,
+        target: AssetTarget,
+        captured: CapturedDraft,
+      ) => Promise<Asset | null>
       /** What this document holds that the target format has to carry, measured on its state. */
       traitsOf: (documentId: string) => CapabilityTrait[]
     }
@@ -348,34 +358,42 @@ const AUDIO_IO: DocumentIo = {
   },
 }
 
-/** The stack, into the asset it was opened from. `null` while the engine boots its GPU context. */
+/**
+ * The stack, into the asset it was opened from — out of the capture ⌘S already paid for.
+ *
+ * Nothing is asked of the engine here, and that is the point: reading a layer's texture back off
+ * the card is a synchronous `gl.readPixels`, and this half of the gesture wants the very bytes the
+ * other half has just written. It is also what keeps the two from disagreeing — a stroke landing
+ * while the document is on its way to disk would otherwise reach the asset and not the file.
+ *
+ * `null` for a stack that will not parse: the asset is replaced whole, so writing an empty one
+ * would destroy the picture in the file it names.
+ */
 async function layeredAsset(
-  documentId: string,
-  host: CanvasHost,
+  captured: CapturedDraft,
   target: AssetTarget,
   bridge: StudioBridge,
 ): Promise<Asset | null> {
-  const merged = await host.flatten()
-  if (!merged) return null
+  const stack = oraStackFromContent(captured.content)
+  if (!stack) return null
 
-  const surfaces = oraSurfacesOf(await host.pixelSnapshots(), merged)
   return await bridge.assets.saveLayered({
     ...target,
-    document: {
-      stack: oraStackOf(canvasOf(useCanvases.getState(), documentId), surfaces),
-      surfaces,
-    },
+    document: { stack, surfaces: captured.parts ?? [] },
   })
 }
 
 /** The flatten alone, for a format that holds no layers. Base64, as `savePicture` takes it. */
 async function flatAsset(
-  host: CanvasHost,
+  captured: CapturedDraft,
   target: AssetTarget,
   bridge: StudioBridge,
 ): Promise<Asset | null> {
-  const png = await host.snapshot()
-  return png ? await bridge.assets.savePicture({ ...target, png }) : null
+  // The same entry every other application draws of a container, taken from the capture rather
+  // than flattened a second time — `snapshot()` IS `flatten()` with a base64 pass after it.
+  const merged = captured.parts?.find(one => one.path === ORA_MERGED_PATH)
+  if (!merged) return null
+  return await bridge.assets.savePicture({ ...target, png: bytesToBase64(merged.png) })
 }
 
 /**
@@ -455,7 +473,7 @@ const IMAGE_IO: DocumentIo = {
       void host.restoreSnapshot(pixels).catch(() => undefined)
     }
   },
-  writeAsset: async (documentId, target) => {
+  writeAsset: async (documentId, target, captured) => {
     const bridge = getBridge()
     const host = canvasHost(documentId)
     if (!bridge || !host) return null
@@ -486,8 +504,8 @@ const IMAGE_IO: DocumentIo = {
     // `null` while the engine boots its GPU context, which is exactly when a ⌘S after switching
     // workspace lands. The document is still written; only the asset waits for the next save.
     const written = await (target.format === 'ora'
-      ? layeredAsset(documentId, host, target, bridge)
-      : flatAsset(host, target, bridge))
+      ? layeredAsset(captured, target, bridge)
+      : flatAsset(captured, target, bridge))
     if (!written) return null
     // After the write, and only for an overwrite: the id did not move, so the loader would keep
     // answering with the picture it cached before this save.
@@ -653,7 +671,7 @@ export async function saveDocument(documentId: string, byHand = true): Promise<b
    */
   if (!byHand) return true
 
-  await rewriteSourceAsset(document, io, wasEdited)
+  await rewriteSourceAsset(document, io, wasEdited, draft)
   // The folder now holds a file it did not: a document saved for the first time has to appear
   // in the Explorer without waiting for the panel to be reopened.
   void useDocuments.getState().relist('own-write')
@@ -699,6 +717,7 @@ async function rewriteSourceAsset(
   document: DocumentDescriptor,
   io: DocumentIo,
   wasEdited: boolean,
+  captured: CapturedDraft,
 ): Promise<void> {
   const source = document.sourceAssetId
   if (!source || !io.writeAsset) return
@@ -717,11 +736,11 @@ async function rewriteSourceAsset(
   }
 
   try {
-    const written = await io.writeAsset(document.id, {
-      replaces: source,
-      name: document.title,
-      format,
-    })
+    const written = await io.writeAsset(
+      document.id,
+      { replaces: source, name: document.title, format },
+      captured,
+    )
     // `null` is "nothing to bake yet" — an engine still bringing its GPU context up, which is
     // exactly when a ⌘S after switching workspace lands. Not a success, and not silent either:
     // treated as such it left every consumer of the asset on the pre-edit picture for good.
@@ -779,11 +798,15 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
   const { format, losses } = writePlanFor(document, io, source)
 
   try {
-    const copy = await io.writeAsset(documentId, {
-      derivedFrom: source,
-      name,
-      format: losses.length === 0 ? format : 'ora',
-    })
+    // ONE capture for both, and it comes first: the copy and the document it belongs to have to be
+    // the same picture, and an image's bytes come off the graphics card — asking twice doubles the
+    // freeze AND lets a stroke made in between land in one of the two and not the other.
+    const { draft } = await io.capture(documentId)
+    const copy = await io.writeAsset(
+      documentId,
+      { derivedFrom: source, name, format: losses.length === 0 ? format : 'ora' },
+      draft,
+    )
     if (!copy) {
       reportFailure('assets.copy', document.title, new Error('nothing to bake yet'))
       return false
@@ -791,7 +814,6 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
 
     // The document SECOND, and pointed at the copy: the tab carries on with the new asset, and
     // the one that was open keeps whatever the last ⌘S left on it.
-    const { draft } = await io.capture(documentId)
     const created = await useDocuments
       .getState()
       .create(document.workspace, { title: name, sourceAssetId: copy.id })
