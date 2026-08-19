@@ -618,8 +618,8 @@ Cachez-la pour juger une image sans rien autour.
 
 ## Sortir une scène du studio
 
-**Fichier ▸ Exporter la scène** écrit tout ce que le document contient.
-**Fichier ▸ Exporter la sélection** n’écrit que les objets choisis — un groupe emmène ce qui pend
+**Fichier ▸ Exporter ▸ Scène** écrit tout ce que le document contient.
+**Fichier ▸ Exporter ▸ Sélection** n’écrit que les objets choisis — un groupe emmène ce qui pend
 dessous.
 
 | Format | Ce que c’est | Quand l’employer |

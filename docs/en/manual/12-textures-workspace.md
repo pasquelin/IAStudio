@@ -332,7 +332,7 @@ is still waiting to be written.
 
 ## Exporting the material
 
-Menu **File ▸ Export material**, then the row of the engine that will receive it. The menu only
+Menu **File ▸ Export ▸ Material**, then the row of the engine that will receive it. The menu only
 appears in the Textures workspace, and it speaks to the **tab in front**: two open materials do
 not both answer one click.
 

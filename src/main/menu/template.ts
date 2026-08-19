@@ -257,52 +257,54 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     }))
 
   /**
-   * Only where the thing being edited is what the rows export. An image document has neither a
+   * What the space in front can send out, under ONE row. Flat, the montages put three « Exporter
+   * … » in a row at the top level of the File menu, which is not what an application looks like.
+   *
+   * Only where the thing being edited is what the rows export: an image document has neither a
    * scene nor a set of channels, and a row that exported nothing would still look like one.
    *
-   * Returns rather than a nested ternary: this file's idiom is one flat arm per feature, and
-   * there are three exporting spaces now — a ternary would already be a triple.
+   * The labels inside are short — « La vidéo… » — because the row above already says Export. The
+   * commands keep their full title for the palette, where nothing stands above them.
    */
-  const exportMenu = (): MenuItemConstructorOptions[] => {
+  const exportSubmenu = (): MenuItemConstructorOptions[] => {
     if (workspace === '3d') {
       return [
-        { type: 'separator' },
         { label: t.menu.exportScene, submenu: exportItems('scene') },
         { label: t.menu.exportSelection, submenu: exportItems('selection') },
       ]
     }
 
-    if (workspace === 'textures') {
-      return [{ type: 'separator' }, { label: t.menu.exportTexture, submenu: textureItems() }]
-    }
-
-    if (workspace === 'skyboxes') {
-      return [{ type: 'separator' }, { label: t.menu.exportSkybox, submenu: skyboxItems() }]
-    }
+    if (workspace === 'textures') return [{ label: t.menu.exportTexture, submenu: textureItems() }]
+    if (workspace === 'skyboxes') return [{ label: t.menu.exportSkybox, submenu: skyboxItems() }]
 
     // A command rather than an action of its own, unlike the three above: what a montage exports
     // is composed by the window — decoders, scenes and all — so the main process asks the
     // surface in front to do it instead of describing what to write.
     if (workspace === 'video') {
       return [
-        { type: 'separator' },
-        commandItem('sequence.export', t.commands.sequenceExport.title),
-        commandItem('sequence.exportCut', t.commands.sequenceExportCut.title),
-        commandItem('sequence.exportBundle', t.commands.sequenceExportBundle.title),
+        commandItem('sequence.export', t.menu.exportVideo),
+        commandItem('sequence.exportCut', t.menu.exportCut),
+        commandItem('sequence.exportBundle', t.menu.exportBundle),
       ]
     }
 
-    // The same montage without a picture row, so the same row — and no film to render out of a
-    // document that has none.
+    // The same montage without a picture row — and no film to render out of a document with none.
     if (workspace === 'audio') {
       return [
-        { type: 'separator' },
-        commandItem('sequence.exportCut', t.commands.sequenceExportCut.title),
-        commandItem('sequence.exportBundle', t.commands.sequenceExportBundle.title),
+        commandItem('sequence.exportCut', t.menu.exportCut),
+        commandItem('sequence.exportBundle', t.menu.exportBundle),
       ]
     }
 
     return []
+  }
+
+  /** Nothing at all where the space sends nothing out: an empty « Export » row promises one. */
+  const exportMenu = (): MenuItemConstructorOptions[] => {
+    const items = exportSubmenu()
+    return items.length === 0
+      ? []
+      : [{ type: 'separator' }, { label: t.menu.export, submenu: items }]
   }
 
   /**
@@ -314,6 +316,9 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     label: string,
     registerAccelerator = true,
   ): MenuItemConstructorOptions => ({
+    // The command it fires, carried on the row. `can be reached` used to match on the TITLE, so a
+    // row worded for its place — « La vidéo… » under Export — read as a command reachable nowhere.
+    id: command,
     label,
     accelerator: shortcut(command),
     registerAccelerator,
@@ -612,11 +617,9 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
             click: () => actions.openTool({ zone: placement.zone, tool: placement.id }),
           })),
         },
-        {
-          label: t.menu.resetLayout,
-          accelerator: shortcut('layout.reset'),
-          click: () => actions.runCommand('layout.reset'),
-        },
+        // Through the fabric like every other command row: written by hand, it carried no `id`,
+        // and the guard that checks a command can be reached could not see it at all.
+        commandItem('layout.reset', t.menu.resetLayout),
         ...canvasViewMenu,
         ...sceneViewMenu,
         { type: 'separator' },

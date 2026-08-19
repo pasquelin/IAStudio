@@ -192,7 +192,7 @@ endroit. Deux façons de continuer :
 
 ## Sortir le ciel : les six faces
 
-**Fichier › Exporter le ciel**, et une taille : 512, 1024 ou 2048 pixels de côté. Le studio
+**Fichier › Exporter › Ciel**, et une taille : 512, 1024 ou 2048 pixels de côté. Le studio
 demande un dossier, y crée un sous-dossier au nom du document, et y écrit six PNG :
 
 | Fichier | Face |

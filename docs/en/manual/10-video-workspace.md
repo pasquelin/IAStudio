@@ -434,10 +434,12 @@ file. To edit an `.exr` or a `.tif`, convert it to `.png` yourself before import
 > **A sequence saves** as `.otio` with `⌘S`, and opens back as it was: tracks, clips, fades and
 > gains. What does not come back is the undo history.
 >
-> **Two exports exist**, both on the File menu. *Export video* writes a final file, frame by
-> frame, 3D scenes included — but **without the sound**, which is not in it yet. *Export edit
-> (OTIO)* writes the edit itself: tracks, clips, in points, speeds and links to the media, in a
-> file other editing applications open.
+> **Three exports exist**, all under **File ▸ Export**. *Video…* writes a final file, frame by
+> frame, 3D scenes included — but **without the sound**, which is not in it yet. *Edit
+> (OTIO)…* writes the edit itself: tracks, clips, in points, speeds and links to the media, in a
+> file other editing applications open. *Edit with its media (OTIOZ)…* writes that same edit with
+> the files inside it — the one to hand to somebody else, the other application then finding the
+> rushes on its own.
 >
 > **An `.otio` also opens**, on a double-click in the Explorer — yours as much as another
 > application's — and `⌘S` writes it back into its own file.

@@ -447,10 +447,12 @@ l’importer.
 > **Une séquence s’enregistre** en `.otio` par `⌘S`, et se rouvre telle quelle : pistes, clips,
 > fondus et gains. Ce qui ne revient pas, c’est l’historique d’annulation.
 >
-> **Deux exports existent**, tous deux dans le menu Fichier. *Exporter la vidéo* écrit un fichier
+> **Trois exports existent**, tous sous **Fichier ▸ Exporter**. *Vidéo…* écrit un fichier
 > final, image par image, scènes 3D comprises — mais **sans le son**, qui n’y est pas encore.
-> *Exporter le montage (OTIO)* écrit le montage lui-même : pistes, clips, points d’entrée,
+> *Montage (OTIO)…* écrit le montage lui-même : pistes, clips, points d’entrée,
 > vitesses et liens vers les médias, dans un fichier que d’autres logiciels de montage ouvrent.
+> *Montage et médias (OTIOZ)…* écrit le même montage avec les fichiers dedans — c’est celui
+> à donner à quelqu’un d’autre, l’autre logiciel retrouvant alors les rushes tout seul.
 >
 > **Un `.otio` s’ouvre aussi**, d’un double-clic dans l’Explorateur — le vôtre comme celui d’un
 > autre logiciel — et `⌘S` le réenregistre dans son propre fichier.

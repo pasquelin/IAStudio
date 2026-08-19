@@ -123,7 +123,7 @@ right, to set exposure and rotation.
 6 faces. They show the same sky, at the same rotation, but laid flat: a seam at the back or a
 crushed pole shows up at a glance, where the 360 view makes you turn your head to run into it.
 
-**To take it into an engine**: **File ▸ Export sky**, and a size. Six PNGs come out into a
+**To take it into an engine**: **File ▸ Export ▸ Sky**, and a size. Six PNGs come out into a
 folder, named `_Rt`, `_Lf`, `_Up`, `_Dn`, `_Ft`, `_Bk` — the two letters Unity, Unreal and Roblox
 expect. **Grade before you export**: the exposure, the horizon rotation and everything else are
 baked into the files. See [Skyboxes workspace](13-skyboxes-workspace.md#taking-the-sky-out-the-six-faces).

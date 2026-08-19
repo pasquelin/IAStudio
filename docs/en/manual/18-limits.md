@@ -95,8 +95,8 @@ autosave says NOTHING**: it comes round, meets the same refusal, and stays quiet
 sentence every thirty seconds would be worse than silence. A refused document is therefore never
 written to disk until you have tried `⌘S` yourself.
 
-To take your changes out anyway, use that document's **export** — **File ▸ Export scene**, **Export
-sky**, **Export material**, or **Export edit (OTIO)…**: the writing goes to a NEW file, leaving the
+To take your changes out anyway, use that document's **export** — **File ▸ Export ▸ Scene**, **Sky**,
+**Material**, or **Edit (OTIO)…**: the writing goes to a NEW file, leaving the
 original untouched.
 
 > **Do not expect *Save as…* to get round the refusal**: both saving gestures go through the same
@@ -267,7 +267,7 @@ by key** button does not find them.
 
 A sequence is written into an `.otio` file and reopens exactly as it was.
 
-**File › Export video** does write a final file, frame by frame, 3D scenes included. **But it
+**File › Export › Video…** does write a final file, frame by frame, 3D scenes included. **But it
 comes out mute**: the edit's sound tracks are not encoded into it yet. This is the heaviest limit
 of this workspace, because it makes you rebuild the sound elsewhere.
 
@@ -346,7 +346,7 @@ what you do when the result has to serve elsewhere rather than carry on being ed
   the project, then drop it onto the channel's thumbnail.
 
 **Export now exists** — glTF/GLB, Unity, Unreal, Roblox and the raw channels, through File →
-Export material. Two bounds worth knowing: **Roblox refuses a map above 1024 px**, so its four
+Export → Material. Two bounds worth knowing: **Roblox refuses a map above 1024 px**, so its four
 files are brought under that ceiling; and the `.glb` leaves with the shape of the preview, an
 object format having no way to carry a material on its own.
 
@@ -380,7 +380,7 @@ A sky is now written into a `.gltf` file — the exposure, the horizon rotation 
 reopen exactly as they were. What the document does not keep: the view and the field of view, which
 say how you were looking at it rather than what it is.
 
-The six faces of a cube export from **File › Export sky**, at 512, 1024 or 2048. What is
+The six faces of a cube export from **File › Export › Sky**, at 512, 1024 or 2048. What is
 still missing is the *HDRI*: the faces come out as PNG, so eight bits a channel, and anything
 above white is clipped.
 
