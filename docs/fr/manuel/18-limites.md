@@ -100,8 +100,8 @@ refus, et se tait — répéter la phrase toutes les trente secondes serait pire
 document refusé n’est donc jamais écrit sur le disque tant que vous n’avez pas tenté `⌘S` vous-même.
 
 Pour sortir malgré tout ce que vous avez modifié, passez par l’**export** de ce document —
-**Fichier ▸ Exporter la scène**, **Exporter le ciel**, **Exporter la matière**, ou
-**Exporter le montage (OTIO)…** : l’écriture va dans un fichier NEUF, sans toucher à l’original.
+**Fichier ▸ Exporter ▸ Scène**, **Ciel**, **Matière**, ou
+**Montage (OTIO)…** : l’écriture va dans un fichier NEUF, sans toucher à l’original.
 
 > **N’attendez pas d’*Enregistrer sous…* qu’il contourne le refus** : les deux gestes
 > d’enregistrement passent par la même porte, et la copie est refusée pour la même raison que
@@ -279,7 +279,7 @@ raccourcis, et le bouton **Chercher par touche** ne les trouve pas.
 
 Une séquence s’enregistre en `.otio` et se rouvre telle quelle.
 
-**Fichier › Exporter la vidéo** écrit bien un fichier final, image par image, scènes 3D comprises.
+**Fichier › Exporter › Vidéo…** écrit bien un fichier final, image par image, scènes 3D comprises.
 **Mais il sort muet** : les pistes de son du montage ne sont pas encore encodées dedans. C’est la
 limite la plus lourde de cet espace, parce qu’elle oblige à remonter le son ailleurs.
 
@@ -359,7 +359,7 @@ nouveau** : c’est ce qu’on fait quand le résultat doit servir ailleurs, pas
   l’image dans le projet, puis posez-la sur la vignette du canal.
 
 **L’export existe désormais** — glTF/GLB, Unity, Unreal, Roblox et les canaux bruts, par
-Fichier → Exporter la matière. Deux bornes à connaître : **Roblox refuse une carte au-delà de
+Fichier → Exporter → Matière. Deux bornes à connaître : **Roblox refuse une carte au-delà de
 1024 px**, donc ses quatre fichiers sont ramenés sous ce plafond ; et le `.glb` part avec la
 forme de l’aperçu, faute pour un format d’objet de savoir porter une matière toute seule.
 
@@ -394,7 +394,7 @@ Un ciel s’enregistre désormais en `.gltf` — l’exposition, la rotation de 
 du soleil se rouvrent telles quelles. Ce que le document ne garde pas : la vue et le champ de
 vision, qui disent comment on le regardait et non ce qu’il est.
 
-Les six faces d’un cube s’exportent depuis **Fichier › Exporter le ciel**, en 512, 1024 ou 2048.
+Les six faces d’un cube s’exportent depuis **Fichier › Exporter › Ciel**, en 512, 1024 ou 2048.
 Ce qui manque encore est le *HDRI* : les faces sortent en PNG, donc en 8 bits par canal, et ce qui
 dépasse le blanc est écrêté.
 

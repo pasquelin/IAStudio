@@ -249,7 +249,7 @@ its width, from start to finish: this is a view you read at a glance, not one yo
 > take; the upper one plays the **clips laid on the tracks**. Starting one stops the other: the
 > studio has a single player.
 
-**File › Export edit (OTIO)** writes that edit into a file other editing applications open:
+**File › Export › Edit (OTIO)…** writes that edit into a file other editing applications open:
 tracks, clips, in points, speeds and links to the sounds. It is the same edit the Video workspace
 holds, so it is the same command.
 

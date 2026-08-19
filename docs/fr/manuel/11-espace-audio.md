@@ -257,7 +257,7 @@ qu’on lit d’un coup d’œil, pas une qu’on fait défiler.
 > d’outils** appliquée à la prise ouverte ; celui du haut fait entendre les **clips posés sur
 > les pistes**. Lancer l’une arrête l’autre : le studio n’a qu’un seul lecteur.
 
-**Fichier › Exporter le montage (OTIO)** écrit ce montage dans un fichier que d’autres logiciels
+**Fichier › Exporter › Montage (OTIO)…** écrit ce montage dans un fichier que d’autres logiciels
 de montage ouvrent : pistes, clips, points d’entrée, vitesses et liens vers les sons. C’est le
 même montage que l’espace Vidéo, donc la même commande.
 

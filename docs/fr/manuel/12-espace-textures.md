@@ -337,7 +337,7 @@ puce sur l’onglet dit ce qui attend encore d’être écrit.
 
 ## Exporter la matière
 
-Menu **Fichier ▸ Exporter la matière**, puis la ligne du moteur qui va la recevoir. Le menu
+Menu **Fichier ▸ Exporter ▸ Matière**, puis la ligne du moteur qui va la recevoir. Le menu
 n'apparaît que dans l'espace Textures, et il s'adresse à **l'onglet au premier plan** : deux
 matières ouvertes ne répondent pas ensemble au même clic.
 
