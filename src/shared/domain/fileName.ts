@@ -10,6 +10,17 @@
 export const FILE_NAME_MAX_LENGTH = 80
 
 /**
+ * And as long in BYTES, because the two bounds do not say the same thing: ext4 counts `NAME_MAX`
+ * in bytes, so eighty code points of emoji are 320 and refused, while eighty of anything Latin are
+ * eighty and fine. Measured on 2026-08-19 — macOS wrote all four of ASCII, accented, CJK and
+ * astral at eighty code points, so nothing on this machine can show the refusal.
+ *
+ * Under 255 by the room an extension takes: this bounds a STEM, and the caller appends `.gltf` or
+ * `.mtlx` after — five bytes at most across every format the studio writes, eight kept for slack.
+ */
+export const FILE_NAME_MAX_BYTES = 247
+
+/**
  * Names Windows refuses outright, whatever the extension: `CON.gltf` is as refused as `CON`.
  * They are device names, not files, and a project holding one cannot be opened there at all —
  * so a title typed on a Mac would travel to a machine that cannot read the document.
@@ -22,6 +33,34 @@ const RESERVED = new Set([
   ...Array.from({ length: 9 }, (_, index) => `com${index + 1}`),
   ...Array.from({ length: 9 }, (_, index) => `lpt${index + 1}`),
 ])
+
+/**
+ * Whether a name fits the byte bound as it stands — what the two name checks ask before they say
+ * a name is INVALID, so a name refused for its length is not reported as malformed.
+ */
+export function withinFileNameBytes(name: string): boolean {
+  return new TextEncoder().encode(name).length <= FILE_NAME_MAX_BYTES
+}
+
+/**
+ * As many whole code points as fit in `FILE_NAME_MAX_BYTES`, counted one at a time.
+ *
+ * One at a time rather than by slicing an encoded buffer: cutting bytes lands mid-sequence, and
+ * the half-character that comes back is the U+FFFD the code-point cut exists to avoid.
+ */
+function withinBytes(points: readonly string[]): string {
+  let held = ''
+  let bytes = 0
+
+  for (const point of points) {
+    const width = new TextEncoder().encode(point).length
+    if (bytes + width > FILE_NAME_MAX_BYTES) break
+    held += point
+    bytes += width
+  }
+
+  return held
+}
 
 /**
  * Everything a file name cannot hold, gone. A document is titled by hand — "Brique 1/2" is an
@@ -57,7 +96,7 @@ export function safeFileName(name: string, fallback = 'texture'): string {
   // Cut by code point: `slice` counts UTF-16 units, so a name of emoji came
   // out ending on half a surrogate pair — which `writeFile` then replaced with U+FFFD, letting
   // two different titles land on the same folder.
-  const cut = [...cleaned].slice(0, FILE_NAME_MAX_LENGTH).join('').trim()
+  const cut = withinBytes([...cleaned].slice(0, FILE_NAME_MAX_LENGTH)).trim()
   if (cut.length === 0) return fallback
 
   // Suffixed rather than refused, so a document may still be called `Nul`: what Windows reads as

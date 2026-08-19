@@ -15,7 +15,16 @@ describe('whether an asset may be called this', () => {
 
   /** Counted by code point, as the bound is meant: a name of emoji is as long as it looks. */
   it('measures a name in characters, not in the units a string is stored in', () => {
-    expect(checkAssetName('🎬'.repeat(ASSET_NAME_MAX_LENGTH))).toBeNull()
+    expect(checkAssetName('🎬'.repeat(40))).toBeNull()
+  })
+
+  /**
+   * Eighty code points of emoji are 320 bytes and ext4 stops at 255, so the name is refused — and
+   * refused for its LENGTH. Without the byte check it fell to `isSafeFileName` and came back
+   * `invalid`, which tells the user their name is malformed when it is merely too long.
+   */
+  it('says a name too long in bytes is too long, not malformed', () => {
+    expect(checkAssetName('🎬'.repeat(ASSET_NAME_MAX_LENGTH))).toBe('too-long')
   })
 
   /**
