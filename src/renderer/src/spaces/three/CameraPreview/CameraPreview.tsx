@@ -118,11 +118,13 @@ export function CameraPreview({ documentId }: { documentId: string }) {
 
   useEffect(() => {
     const engine = sceneEngineOf(documentId)
-    engine?.setCameraPreview(cameraId, picture)
+    engine?.setCameraPreview(
+      cameraId && picture ? { cameraNodeId: cameraId, rect: picture, full } : null,
+    )
 
     // The engine outlives this component: left open, it would draw over a document nobody sees.
-    return () => engine?.setCameraPreview(null, null)
-  }, [documentId, cameraId, picture])
+    return () => engine?.setCameraPreview(null)
+  }, [documentId, cameraId, picture, full])
 
   const onGrab = (event: ReactPointerEvent<HTMLDivElement>): void => {
     // Not from the button in the corner: its press bubbles up here, and a preview that jumps
