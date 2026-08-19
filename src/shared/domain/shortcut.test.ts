@@ -98,12 +98,7 @@ describe('defaults', () => {
     const arrows = Object.values(DEFAULT_MOTION)
       .flat()
       .filter(signature => signature.startsWith('Arrow'))
-    expect(arrows).toEqual([
-      'ArrowUp',
-      'ArrowDown',
-      'ArrowLeft',
-      'ArrowRight',
-    ])
+    expect(arrows).toEqual(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'])
   })
 
   it('overlaps motion and scene commands on exactly one key, which flight modality resolves', () => {
