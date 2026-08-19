@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { OtioClip, OtioTimeRange, OtioTimeline, OtioTrack, OtioTrackItem } from './otio'
-import { bundleOf, OTIOZ_VERSION } from './otioz'
+import { bundleOf, isBundleEntry, OTIOZ_VERSION } from './otioz'
 
 const FIVE_SECONDS: OtioTimeRange = {
   OTIO_SCHEMA: 'TimeRange.1',
@@ -133,6 +133,48 @@ describe('two media that share a name, which the reference implementation does n
       'media/plan-2.mp4',
       'media/plan-3.mp4',
     ])
+  })
+})
+
+describe('what the writing side accepts as an entry', () => {
+  it('takes one plain name under the media folder', () => {
+    expect(isBundleEntry('media/plan.mp4')).toBe(true)
+    expect(isBundleEntry('media/prise deux.mp4')).toBe(true)
+  })
+
+  /**
+   * The studio EMITS this file and hands it to somebody else, so a climbing entry is a zip-slip
+   * archive of its own making — worse than opening one.
+   */
+  it('refuses an entry that would climb out of the bundle', () => {
+    expect(isBundleEntry('media/../../.bashrc')).toBe(false)
+    expect(isBundleEntry('media/sub/plan.mp4')).toBe(false)
+    expect(isBundleEntry('media/..')).toBe(false)
+    expect(isBundleEntry('media/')).toBe(false)
+  })
+
+  it('refuses an entry that sits anywhere but the media folder', () => {
+    expect(isBundleEntry('content.otio')).toBe(false)
+    expect(isBundleEntry('plan.mp4')).toBe(false)
+    expect(isBundleEntry('medias/plan.mp4')).toBe(false)
+  })
+
+  it('refuses a backslash, which a reader on another system reads as a separator', () => {
+    expect(isBundleEntry('media/..\\..\\plan.mp4')).toBe(false)
+  })
+
+  it('accepts every entry it composes itself, which is what makes the pair hold', () => {
+    const { media } = bundleOf(
+      timelineOf(clip('a', 'file:///A/plan.mp4'), clip('b', 'file:///B/plan.mp4')),
+    )
+
+    expect(media.map(one => isBundleEntry(one.entry))).toEqual([true, true])
+  })
+
+  it('flattens a url that spells a separator into its own name', () => {
+    const { media } = bundleOf(timelineOf(clip('a', 'file:///A/odd%2F..%2Fname.mp4')))
+
+    expect(media.every(one => isBundleEntry(one.entry))).toBe(true)
   })
 })
 

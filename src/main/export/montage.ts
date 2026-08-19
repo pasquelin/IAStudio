@@ -1,11 +1,12 @@
 import { basename } from 'node:path'
 import { z } from 'zod'
 import { exportTargetOf } from '@shared/domain/exportRegistry'
+import { isBundleEntry } from '@shared/domain/otioz'
 import { CHANNELS, type MontageExportRequest } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { fileInsideProject } from '@main/project/fileInsideProject'
 import { pathSegment } from '@main/validation'
-import { MissingMediumError, writeOtiozFile } from './otiozFile'
+import { writeOtiozFile } from './otiozFile'
 import { writePickedFile } from './writePickedFile'
 
 export type MontageHandlerDeps = {
@@ -25,14 +26,35 @@ const MAX_CONTENT_BYTES = 64 * 1024 * 1024
 /** The widest a cut gets. A bundle carries the media beside it, never a clip each. */
 const MAX_MEDIA = 2048
 
-const medium = z.object({ source: z.string(), entry: z.string() })
+/**
+ * A medium the bundle cannot take: gone from the disk, or sitting outside the open project.
+ *
+ * One error for both because this side answers both the same way — `fileInsideProject` says no
+ * without saying which — and naming only one of them sends somebody hunting for a file that is
+ * exactly where they left it.
+ */
+export class UnreachableMediumError extends Error {
+  constructor(readonly entry: string) {
+    super(`this montage points at a file that is missing, or outside the project: ${entry}`)
+  }
+}
 
-const montageExport = z.object({
-  name: pathSegment,
-  target: z.union([z.literal('montage.otio'), z.literal('montage.otioz')]),
-  content: z.string().refine(text => text.length <= MAX_CONTENT_BYTES),
-  media: z.array(medium).max(MAX_MEDIA).optional(),
-})
+// `entry` becomes a path INSIDE the archive, and the sandboxed side names it: unchecked, the
+// studio would emit a zip-slip file and hand it to somebody else.
+const medium = z.object({ source: z.string(), entry: z.string().refine(isBundleEntry) })
+
+const montageExport = z
+  .object({
+    name: pathSegment,
+    target: z.union([z.literal('montage.otio'), z.literal('montage.otioz')]),
+    // Bytes, not code units: a cut full of accented clip names encodes to up to three times its
+    // length in UTF-8, so the ceiling a `.length` holds is three times the one meant here.
+    content: z.string().refine(text => Buffer.byteLength(text, 'utf8') <= MAX_CONTENT_BYTES),
+    media: z.array(medium).max(MAX_MEDIA).optional(),
+  })
+  // Two media under one entry is one rush's pixels landing under the other's clip — and a zip
+  // holding the same path twice is a file readers disagree about.
+  .refine(value => new Set(value.media?.map(one => one.entry)).size === (value.media?.length ?? 0))
 
 /**
  * Writing the montage out. The cut alone, or the cut with its media inside it.
@@ -58,7 +80,10 @@ export function registerMontageHandlers({ pickSavePath, projectPath }: MontageHa
     const resolved = []
     for (const one of media ?? []) {
       const path = await fileInsideProject(root, one.source)
-      if (!path) throw new MissingMediumError(one.entry)
+      // Both causes at once, deliberately: this side cannot tell « gone » from « out of bounds »
+      // without saying which, and « go find a file that is not there » sends somebody looking for
+      // a rush sitting exactly where they left it.
+      if (!path) throw new UnreachableMediumError(one.entry)
       resolved.push({ ...one, path })
     }
 

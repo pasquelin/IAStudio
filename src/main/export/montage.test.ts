@@ -118,6 +118,35 @@ describe('the same cut, bundled with the media it points at', () => {
     await expect(readFile(join(out, 'Bande.otioz'))).rejects.toThrow()
   })
 
+  /**
+   * The entry becomes a path inside the archive, and the renderer names it. Unchecked, the studio
+   * writes a zip-slip file of its own making and hands it to somebody else.
+   */
+  it('refuses an entry that would climb out of the bundle', async () => {
+    await expect(
+      invoke(CHANNELS.montageExport, {
+        name: 'Bande',
+        target: 'montage.otioz',
+        content: CONTENT,
+        media: [{ source: `file://${rush}`, entry: 'media/../../.bashrc' }],
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('refuses two media asking for the same entry, one pixel set landing under the other', async () => {
+    await expect(
+      invoke(CHANNELS.montageExport, {
+        name: 'Bande',
+        target: 'montage.otioz',
+        content: CONTENT,
+        media: [
+          { source: `file://${rush}`, entry: 'media/plan.mp4' },
+          { source: `file://${rush}`, entry: 'media/plan.mp4' },
+        ],
+      }),
+    ).rejects.toThrow()
+  })
+
   it('refuses a medium the cut names and the project does not hold', async () => {
     await expect(
       invoke(CHANNELS.montageExport, bundling(`file://${join(project, 'absent.mp4')}`)),

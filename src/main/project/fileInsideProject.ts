@@ -2,6 +2,8 @@ import { realpath } from 'node:fs/promises'
 import { isAbsolute, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+const RESERVED: readonly string[] = ['.git', '.index']
+
 /**
  * Which file a montage is allowed to have READ, decided by what the disk resolves to.
  *
@@ -14,8 +16,6 @@ import { fileURLToPath } from 'node:url'
  * project names nothing suspicious and walks straight out. The file must already exist, which is
  * the difference: there is nothing to read otherwise.
  */
-const RESERVED: readonly string[] = ['.git', '.index']
-
 export async function fileInsideProject(root: string, url: string): Promise<string | null> {
   try {
     const base = await realpath(root)

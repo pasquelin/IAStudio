@@ -20,6 +20,24 @@ export const OTIOZ_VERSION_PATH = 'version.txt'
 export const OTIOZ_CONTENT_PATH = 'content.otio'
 export const OTIOZ_MEDIA_FOLDER = 'media'
 
+/**
+ * Whether a name is an entry this bundle would write — `media/` and one plain segment.
+ *
+ * Checked on the WRITING side, where the names arrive from the sandboxed one: an entry is a path
+ * inside an archive, and `media/../../.bashrc` makes a zip-slip file. Emitting one would be worse
+ * than opening one, the studio being what hands it to somebody else.
+ */
+export function isBundleEntry(entry: string): boolean {
+  const name = entry.startsWith(`${OTIOZ_MEDIA_FOLDER}/`)
+    ? entry.slice(OTIOZ_MEDIA_FOLDER.length + 1)
+    : ''
+
+  if (name === '' || name === '.' || name === '..') return false
+  // Spelled by code point rather than as a range inside a regex: a control character written into
+  // a source does not survive being edited, and the guard would quietly stop covering them.
+  return ![...name].some(letter => letter === '/' || letter === '\\' || letter.charCodeAt(0) < 32)
+}
+
 /** One medium on its way into the bundle: where it is read from, and the entry it becomes. */
 export type BundledMedium = {
   /** As the timeline named it — a `file://` URL, which only the writing side can open. */
@@ -96,7 +114,9 @@ export function bundleOf(timeline: OtioTimeline): OtioBundle {
     const known = entryBySource.get(source)
     if (known) return known
 
-    const name = freeName(fileNameOf(source) || 'media', taken)
+    // `safeName` first: a url can name anything, and what comes out has to be one plain segment
+    // — `isBundleEntry` is what the writing side then holds it to.
+    const name = freeName(safeName(fileNameOf(source)), taken)
     taken.add(name)
 
     const entry = `${OTIOZ_MEDIA_FOLDER}/${name}`
@@ -108,4 +128,13 @@ export function bundleOf(timeline: OtioTimeline): OtioBundle {
   const media = [...entryBySource].map(([source, entry]) => ({ source, entry }))
 
   return { timeline: { ...timeline, tracks: { ...timeline.tracks, children: tracks } }, media }
+}
+
+/** One plain segment, whatever the url held. Anything a path or an archive reads is replaced. */
+function safeName(name: string): string {
+  const plain = [...name]
+    .map(letter => (letter === '/' || letter === '\\' || letter.charCodeAt(0) < 32 ? '-' : letter))
+    .join('')
+
+  return plain === '' || plain === '.' || plain === '..' ? 'media' : plain
 }

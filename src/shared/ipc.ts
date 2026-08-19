@@ -532,8 +532,13 @@ export type SceneExportRequest = {
 export type MontageExportRequest = {
   /** Suggested file name, without its extension — the target decides that. */
   name: string
-  /** `montage.otio` for the cut alone, `montage.otioz` for the cut with its media inside. */
-  target: ExportTargetId
+  /**
+   * `montage.otio` for the cut alone, `montage.otioz` for the cut with its media inside.
+   *
+   * The two literals rather than `ExportTargetId`: this writer takes no other, and the wider type
+   * let a caller pass `scene.glb` and compile, failing at runtime as an opaque parse error.
+   */
+  target: 'montage.otio' | 'montage.otioz'
   /** The serialized timeline. Text, never bytes: a bundle wraps it rather than writing it. */
   content: string
   /**

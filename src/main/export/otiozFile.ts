@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from 'node:fs'
-import { stat } from 'node:fs/promises'
+import { rm, stat } from 'node:fs/promises'
 import { pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
 import { Zip, ZipPassThrough, strToU8 } from 'fflate'
@@ -79,14 +79,27 @@ export async function writeOtiozFile(
 
   const out = createWriteStream(path)
   let wanted = false
+  let wake: (() => void) | null = null
+  let failure: Error | null = null
+
+  /** Whatever went wrong, remembered once and told to whoever is waiting for room. */
+  const stop = (error: Error): void => {
+    failure ??= error
+    wake?.()
+    wake = null
+  }
+
   const chunks = new Readable({
     read: () => {
       wanted = true
+      wake?.()
+      wake = null
     },
   })
 
   const zip = new Zip((error, data, final) => {
     if (error) {
+      stop(error)
       chunks.destroy(error)
       return
     }
@@ -96,21 +109,44 @@ export async function writeOtiozFile(
   })
 
   const drained = pipeline(chunks, out)
+  // Attached at once rather than at the await below: a disk that fills up rejects this seconds
+  // before the media loop ends, and an unhandled rejection takes the whole main process down.
+  drained.catch(stop)
 
-  /** Resolves once the destination has room, so reading never runs ahead of writing. */
+  /**
+   * Resolves once the destination has room, so reading never runs ahead of writing — and THROWS
+   * when there is no destination left. Spinning until `read` is called again never ends once the
+   * sink is destroyed: the export would never settle and the process that owns every window would
+   * turn at full speed for as long as the studio stays open.
+   */
   const room = async (): Promise<void> => {
-    while (!wanted) await new Promise(resume => setImmediate(resume))
+    if (failure) throw failure
+    if (wanted) return
+
+    await new Promise<void>(resume => {
+      wake = resume
+    })
+    if (failure) throw failure
   }
 
-  storedEntry(zip, OTIOZ_VERSION_PATH, strToU8(OTIOZ_VERSION))
-  storedEntry(zip, OTIOZ_CONTENT_PATH, strToU8(content))
+  try {
+    storedEntry(zip, OTIOZ_VERSION_PATH, strToU8(OTIOZ_VERSION))
+    storedEntry(zip, OTIOZ_CONTENT_PATH, strToU8(content))
 
-  for (const medium of media) {
-    const entry = new ZipPassThrough(medium.entry)
-    zip.add(entry)
-    await pushFile(entry, medium.path, room)
+    for (const medium of media) {
+      const entry = new ZipPassThrough(medium.entry)
+      zip.add(entry)
+      await pushFile(entry, medium.path, room)
+    }
+
+    zip.end()
+    await drained
+  } catch (error) {
+    chunks.destroy()
+    out.destroy()
+    // A half-written bundle looks exactly like a finished one, and it is the file somebody hands
+    // to somebody else. It goes rather than staying to be found later.
+    await rm(path, { force: true })
+    throw error
   }
-
-  zip.end()
-  await drained
 }
