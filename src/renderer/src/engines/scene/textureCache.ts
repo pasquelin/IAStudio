@@ -1,5 +1,6 @@
-import { TextureLoader, type ColorSpace, type Texture } from 'three'
+import { TextureLoader, type ColorSpace, type Loader, type Texture } from 'three'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
+import { hdrFormatOf, type HdrFormat } from '@shared/domain/hdrFormat'
 import { createRefCache } from '../core/refCache'
 
 /** A port rather than a hard-wired `TextureLoader`, like `SqliteDriver`: jsdom decodes no image. */
@@ -9,8 +10,44 @@ export type TextureSource = (url: string) => Promise<Texture>
  * What production hands every engine that decodes a picture. Here rather than at each of them:
  * the port is declared on this line, and three spaces had grown their own identical copy of the
  * one implementation it has.
+ *
+ * Read once and routed by the BYTES: no browser decodes Radiance or OpenEXR, and an `<img>` handed
+ * either lands as a picture of nothing — which is what a sky lit by an `.exr` used to be.
  */
-export const loadTexture: TextureSource = url => new TextureLoader().loadAsync(url)
+export const loadTexture: TextureSource = async url => {
+  const answer = await fetch(url)
+  if (!answer.ok) throw new Error(`${url} answered ${answer.status}`)
+
+  const bytes = new Uint8Array(await answer.arrayBuffer())
+  // The served type is carried over rather than dropped: a blob with none of it renders no SVG at
+  // all, `<img>` reading the vector case by the MIME and not by the content.
+  const blob = URL.createObjectURL(
+    new Blob([bytes], { type: answer.headers.get('content-type') ?? '' }),
+  )
+
+  try {
+    return await (await loaderFor(hdrFormatOf(bytes))).loadAsync(blob)
+  } finally {
+    URL.revokeObjectURL(blob)
+  }
+}
+
+/**
+ * `loadAsync` rather than `parse` for the two of them: `parse` answers raw texture DATA, and it is
+ * `load` that turns it into the `DataTexture` — flags, wrapping and all — that a material can wear.
+ * Each parser is imported only when a file actually is one; together they are some 90 Ko.
+ */
+async function loaderFor(format: HdrFormat | null): Promise<Loader<Texture>> {
+  // `HDRLoader`, not the `RGBELoader` every example written before r180 names: that one is a
+  // deprecated alias, and constructing it warns on the console at every picture.
+  if (format === 'radiance') {
+    return new (await import('three/addons/loaders/HDRLoader.js')).HDRLoader()
+  }
+  if (format === 'openexr') {
+    return new (await import('three/addons/loaders/EXRLoader.js')).EXRLoader()
+  }
+  return new TextureLoader()
+}
 
 export type TextureCache = {
   /**

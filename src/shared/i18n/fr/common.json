@@ -50,7 +50,10 @@
   "exportFormats": {
     "glb": "glTF binaire (.glb)",
     "gltf": "glTF (.gltf)",
-    "usdz": "USDZ (.usdz)"
+    "usdz": "USDZ (.usdz)",
+    "obj": "Wavefront, formes seules (.obj)",
+    "ply": "Stanford, formes seules (.ply)",
+    "stl": "STL, triangles seuls (.stl)"
   },
   "errors": {
     "missingCredentials": "Aucun identifiant enregistré.",

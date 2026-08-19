@@ -3,7 +3,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { APP_NAME } from '@shared/constants'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
-import { DISPLAY_MODES, LIGHT_ENTRIES, MESH_ENTRIES, VIEW_DIRECTIONS } from '@shared/domain/scene'
+import {
+  DISPLAY_MODES,
+  EXPORT_FORMATS,
+  LIGHT_ENTRIES,
+  MESH_ENTRIES,
+  VIEW_DIRECTIONS,
+} from '@shared/domain/scene'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
@@ -596,15 +602,20 @@ describe('the export menu', () => {
     ).not.toContain('Exporter')
   })
 
-  it('offers the three formats, for the scene and for the selection', () => {
+  it('offers every declared format, for the scene and for the selection', () => {
     const exports = exportsIn(menuTemplate(options()))
 
     expect(submenuOf(exports, 'Scène').map(item => item.label)).toEqual([
       'glTF binaire (.glb)',
       'glTF (.gltf)',
       'USDZ (.usdz)',
+      'Wavefront, formes seules (.obj)',
+      'Stanford, formes seules (.ply)',
+      'STL, triangles seuls (.stl)',
     ])
-    expect(submenuOf(exports, 'Sélection')).toHaveLength(3)
+    // The same list on both, and derived from the same one: a format offered for the scene and
+    // not for the selection would be a row that appears and disappears with a click.
+    expect(submenuOf(exports, 'Sélection')).toHaveLength(EXPORT_FORMATS.length)
   })
 
   it('asks for the format and the scope the row names', () => {

@@ -430,3 +430,42 @@ describe('what a scene export carries, against what the registry promises', () =
     expect((await gltfOf([camera])).cameras?.length).toBeGreaterThan(0)
   })
 })
+
+/**
+ * The three formats a printer, a mesh tool and a physics engine read. Each carries shapes and
+ * nothing else, which the registry says out loud — these cases check the FILE says the same.
+ */
+describe('the shape formats', () => {
+  it('writes an OBJ naming the objects it was handed', async () => {
+    const written = new TextDecoder().decode(await exportObjects([named('box-1')], 'obj'))
+
+    expect(written).toContain('o box-1')
+    expect(written).toMatch(/^v /m)
+  })
+
+  it('writes a PLY under the header the format opens on, binary rather than text', async () => {
+    const written = await exportObjects([named('box-1')], 'ply')
+
+    expect(new TextDecoder().decode(written.subarray(0, 3))).toBe('ply')
+    expect(new TextDecoder().decode(written.subarray(0, 64))).toContain('binary')
+  })
+
+  /** 80 bytes of header, the triangle count, then 50 bytes each — the length has to add up. */
+  it('writes an STL a reader can measure', async () => {
+    const written = await exportObjects([named('box-1')], 'stl')
+
+    const triangles = new DataView(written.buffer, written.byteOffset).getUint32(80, true)
+    expect(triangles).toBe(12)
+    expect(written.byteLength).toBe(84 + triangles * 50)
+  })
+
+  /** Several roots reach exporters that take exactly one, and must not lose all but the first. */
+  it('carries every object handed to it, however many', async () => {
+    const written = new TextDecoder().decode(
+      await exportObjects([named('box-1'), named('box-2')], 'obj'),
+    )
+
+    expect(written).toContain('o box-1')
+    expect(written).toContain('o box-2')
+  })
+})

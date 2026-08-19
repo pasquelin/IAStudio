@@ -31,6 +31,9 @@ export type ExportTargetId =
   | 'scene.glb'
   | 'scene.gltf'
   | 'scene.usdz'
+  | 'scene.obj'
+  | 'scene.ply'
+  | 'scene.stl'
   | 'sky.faces'
   | 'material.gltf'
   | 'material.unity'
@@ -45,6 +48,9 @@ export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'scene.glb',
   'scene.gltf',
   'scene.usdz',
+  'scene.obj',
+  'scene.ply',
+  'scene.stl',
   'sky.faces',
   'material.gltf',
   'material.unity',
@@ -235,6 +241,35 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
     openedBy: ['Xcode', 'Preview'],
     capability: USDZ_SCENE_EXPORT,
   },
+  /**
+   * The three shape formats, and what they are FOR: a printer, a mesh tool, a physics engine. Each
+   * is `import` rather than `declared` — none of the three is a format this machine hands to an
+   * application on a double-click, and saying otherwise would promise an opening that never comes.
+   */
+  'scene.obj': {
+    domain: 'scene',
+    extension: '.obj',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['Blender', 'MeshLab'],
+    capability: capabilityOf('obj'),
+  },
+  'scene.ply': {
+    domain: 'scene',
+    extension: '.ply',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['Blender', 'MeshLab'],
+    capability: capabilityOf('ply'),
+  },
+  'scene.stl': {
+    domain: 'scene',
+    extension: '.stl',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['Blender', 'MeshLab'],
+    capability: capabilityOf('stl'),
+  },
   'sky.faces': {
     domain: 'sky',
     extension: '.png',
@@ -323,6 +358,9 @@ export const SCENE_TARGET_OF_FORMAT: Record<SceneExportFormat, ExportTargetId> =
   glb: 'scene.glb',
   gltf: 'scene.gltf',
   usdz: 'scene.usdz',
+  obj: 'scene.obj',
+  ply: 'scene.ply',
+  stl: 'scene.stl',
 }
 
 export const MATERIAL_TARGET_OF: Record<TextureExportTarget, ExportTargetId> = {

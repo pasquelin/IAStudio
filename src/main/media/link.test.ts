@@ -21,11 +21,22 @@ describe('media kind from a file name', () => {
   it('reads nothing from a file the studio has no editor for', () => {
     expect(assetTypeOf('/notes.txt')).toBeNull()
     expect(assetTypeOf('/no-extension')).toBeNull()
-    // Announced nowhere rather than accepted and then failing in the viewport: a `.gltf` cannot
-    // resolve its sidecars once served flat, and nothing here reads `.obj` or `.fbx` at all.
+  })
+
+  it('takes the shapes that carry everything they need', () => {
+    for (const name of ['chair.obj', 'chair.fbx', 'chair.stl', 'chair.ply', 'chair.usdz']) {
+      expect(assetTypeOf(`/props/${name}`)).toBe('mesh')
+    }
+  })
+
+  /**
+   * Announced nowhere rather than accepted and then failing in the viewport: an asset is served
+   * flat as `scenario://asset/<id>`, so a file naming its buffers or its textures beside itself
+   * would 404 on every one and show an empty model with nothing said.
+   */
+  it('leaves out a shape that points at files beside it', () => {
     expect(assetTypeOf('/props/chair.gltf')).toBeNull()
-    expect(assetTypeOf('/props/chair.obj')).toBeNull()
-    expect(assetTypeOf('/props/chair.fbx')).toBeNull()
+    expect(assetTypeOf('/props/chair.dae')).toBeNull()
   })
 })
 

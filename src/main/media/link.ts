@@ -9,14 +9,16 @@ const IMPORTABLE_TYPES: readonly ImportableType[] = ['video', 'audio', 'image', 
 const EXTENSIONS: Record<ImportableType, readonly string[]> = {
   video: ['mp4', 'mov', 'mkv', 'webm', 'avi', 'mxf', 'm4v'],
   audio: ['wav', 'mp3', 'aac', 'flac', 'm4a', 'ogg'],
-  image: ['png', 'jpg', 'jpeg', 'webp', 'tif', 'tiff', 'exr'],
+  image: ['png', 'jpg', 'jpeg', 'webp', 'tif', 'tiff', 'exr', 'hdr'],
   /**
-   * `.glb` alone, on purpose. A `.gltf` points at its buffers and textures by relative path, and
-   * an asset is served flat as `scenario://asset/<id>` — the sidecars have no id, so the loader
-   * would 404 on every one and show an empty model with nothing said. `.obj` and `.fbx` are left
-   * out for the plainer reason that nothing here reads them.
+   * The SELF-CONTAINED shapes, and only those. An asset is served flat as `scenario://asset/<id>`,
+   * so a file pointing at siblings by relative path — `.gltf` at its buffers, `.dae` at its
+   * textures — would 404 on every one and show an empty model with nothing said.
+   *
+   * `.obj` is the line to know: it names a `.mtl` this side never fetches, so its shapes arrive
+   * dressed in the loader's default rather than white and silent.
    */
-  mesh: ['glb'],
+  mesh: ['glb', 'obj', 'fbx', 'stl', 'ply', 'usdz'],
 }
 
 /** The kind of editor a file opens in, read from its extension — or nothing we can montage. */

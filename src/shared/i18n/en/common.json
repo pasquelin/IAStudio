@@ -50,7 +50,10 @@
   "exportFormats": {
     "glb": "Binary glTF (.glb)",
     "gltf": "glTF (.gltf)",
-    "usdz": "USDZ (.usdz)"
+    "usdz": "USDZ (.usdz)",
+    "obj": "Wavefront, shapes only (.obj)",
+    "ply": "Stanford, shapes only (.ply)",
+    "stl": "STL, triangles only (.stl)"
   },
   "errors": {
     "missingCredentials": "No credentials saved.",
