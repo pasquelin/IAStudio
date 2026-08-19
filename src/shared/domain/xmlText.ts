@@ -1,9 +1,9 @@
 /**
- * The three XML gestures the main process makes, which has no parser and needs none: OpenRaster's
- * `stack.xml` and MaterialX are both a nesting of known element names with no text content.
+ * The three XML gestures the studio makes, having no parser and needing none: OpenRaster's
+ * `stack.xml`, MaterialX and FCPXML are each a nesting of known element names.
  *
- * Shared because they were about to be spelt twice, and the anchor below is why that would have
- * cost: a rule this small reads as obviously right in both copies, and is wrong in one of them.
+ * Under `shared/` rather than `main/` because the third speller was the renderer's FCPXML writer:
+ * a rule this small reads as obviously right in every copy, and is wrong in one of them.
  */
 
 export const escapeXml = (text: string): string =>

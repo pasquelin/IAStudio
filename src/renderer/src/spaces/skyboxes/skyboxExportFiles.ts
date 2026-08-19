@@ -15,7 +15,7 @@ import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
  */
 export async function skyboxExportFiles(
   documentId: string,
-  { size, target = 'sky.faces' }: SkyboxExportCommand,
+  command: SkyboxExportCommand,
   watch?: TaskWatch,
 ): Promise<FolderExportRequest> {
   // Read once, before any `await`. Read twice — the picture here and the grading after the
@@ -26,9 +26,11 @@ export async function skyboxExportFiles(
 
   const name = documentExportName(useDocuments.getState(), documentId, 'skybox')
 
+  const target = command.kind === 'faces' ? 'sky.faces' : command.target
+
   const { createSkyboxExportPort } = await import('@/engines/skybox/exportPort')
   const files = await createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })(
-    { assetId: sky.source.assetId, adjustments: sky.adjustments, name, size, target },
+    { assetId: sky.source.assetId, adjustments: sky.adjustments, name, command },
     watch,
   )
 

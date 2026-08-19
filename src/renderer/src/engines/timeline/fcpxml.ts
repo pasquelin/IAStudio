@@ -1,5 +1,6 @@
+import { escapeXml } from '@shared/domain/xmlText'
 import type { SequenceState, Track } from './timelineState'
-import { clipEnd } from './timelineState'
+import { clipEnd, sequenceDuration } from './timelineState'
 
 /**
  * FCPXML — what Final Cut Pro reads, and what Premiere and Resolve take as an interchange.
@@ -15,9 +16,6 @@ import { clipEnd } from './timelineState'
 
 /** The version every reader since 2019 takes, and the oldest one this writes for. */
 const FCPXML_VERSION = '1.9'
-
-const escaped = (text: string): string =>
-  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 /**
  * Microseconds as the format's own rational. The numerator counts FRAMES times the microseconds
@@ -59,7 +57,7 @@ function clipsIn(track: Track, lane: number, fps: number, byAsset: Map<string, M
 
     return [
       `        <asset-clip ref="${media.id}" lane="${lane}" offset="${rationalOf(clip.start, fps)}"` +
-        ` name="${escaped(media.name)}" start="${rationalOf(clip.inPoint, fps)}"` +
+        ` name="${escapeXml(media.name)}" start="${rationalOf(clip.inPoint, fps)}"` +
         ` duration="${rationalOf(clipEnd(clip) - clip.start, fps)}" enabled="${enabled}"/>`,
     ]
   })
@@ -78,12 +76,9 @@ export function fcpxmlOf(
   const { fps, width, height } = state.settings
   const media = mediaOf(state, nameOf)
   const byAsset = new Map(media.map(one => [one.assetId, one]))
-  const name = escaped(title)
+  const name = escapeXml(title)
 
-  const duration = rationalOf(
-    Math.max(0, ...state.tracks.flatMap(track => track.clips.map(clipEnd))),
-    fps,
-  )
+  const duration = rationalOf(sequenceDuration(state), fps)
 
   // Lane 0 is the spine — the picture row every reader draws first — and the rows beside it count
   // up from 1. The studio holds its tracks top first, which is the order the lanes run in.
@@ -97,7 +92,7 @@ export function fcpxmlOf(
       ` width="${width}" height="${height}"/>`,
     ...media.map(
       one =>
-        `    <asset id="${one.id}" name="${escaped(one.name)}" start="0s" hasVideo="1"` +
+        `    <asset id="${one.id}" name="${escapeXml(one.name)}" start="0s" hasVideo="1"` +
         ' hasAudio="1"/>',
     ),
     '  </resources>',

@@ -1,7 +1,7 @@
 import { NoColorSpace, SRGBColorSpace, Texture } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
-import { createSkyboxExportPort } from './exportPort'
+import { createSkyboxExportPort, type SkyboxExportRequest } from './exportPort'
 
 /**
  * Everything below the pass needs a GPU, and jsdom has none: a run reaches the renderer and then
@@ -18,7 +18,12 @@ const decoded = (width: number, height: number): Texture => {
   return texture
 }
 
-const request = { assetId: 'a-sky', adjustments: NEUTRAL_ADJUSTMENTS, name: 'Ciel', size: 1024 }
+const request: SkyboxExportRequest = {
+  assetId: 'a-sky',
+  adjustments: NEUTRAL_ADJUSTMENTS,
+  name: 'Ciel',
+  command: { kind: 'faces', size: 1024 },
+}
 
 describe('the skybox export port', () => {
   it('asks for the source by its asset url, and for nothing else', async () => {
@@ -65,7 +70,7 @@ describe('the skybox export port', () => {
     const port = createSkyboxExportPort({ loadTexture })
 
     await expect(port(request)).rejects.toThrow()
-    await expect(port({ ...request, size: 512 })).rejects.toThrow()
+    await expect(port({ ...request, command: { kind: 'faces', size: 512 } })).rejects.toThrow()
 
     // Once per export, not once per face: a 4K panorama is 32 MB decoded, and six of them at a
     // time is what a browser evicts a live viewport's context to make room for.

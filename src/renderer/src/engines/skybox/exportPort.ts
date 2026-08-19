@@ -5,7 +5,7 @@ import { assetUrl, versionedUrl } from '@shared/domain/asset'
 import { exportTargetOf, type ExportTargetId } from '@shared/domain/exportRegistry'
 import { encodeRgbe } from '@shared/domain/rgbe'
 import { faceFileNames } from '@shared/domain/skybox'
-import type { ExportedFile } from '@shared/ipc'
+import type { ExportedFile, SkyboxExportCommand } from '@shared/ipc'
 import { createAdjustPass } from '../gpu/passes/adjust'
 import { encodePng, runOffscreenPass, type PictureSize } from '../texture/derive/offscreen'
 import type { TextureSource } from '../scene/textureCache'
@@ -29,13 +29,8 @@ export type SkyboxExportRequest = {
   adjustments: AdjustmentStack
   /** What the files are named after, already cleaned of everything a name cannot hold. */
   name: string
-  /** The side of each square face, in pixels. Unread by the two panoramas, which keep the source's. */
-  size: number
-  /**
-   * Six faces, or the one equirectangular picture they are cut out of. Defaults to the faces,
-   * which is what every caller written before the panoramas asks for.
-   */
-  target?: Extract<ExportTargetId, 'sky.faces' | 'sky.hdr' | 'sky.exr'>
+  /** Six faces at a size, or the one equirectangular picture they are cut out of. */
+  command: SkyboxExportCommand
 }
 
 /**
@@ -93,10 +88,14 @@ export function createSkyboxExportPort({
 }: SkyboxExportPortOptions): SkyboxExportPort {
   // `async`, so a stop already raised comes back as a rejection rather than as a synchronous
   // throw: the port promises a promise, and half its callers only ever look at one.
-  return async ({ assetId, adjustments, name, size, target = 'sky.faces' }, watch) => {
+  return async ({ assetId, adjustments, name, command }, watch) => {
     // Before the source is even asked for: decoding a 4K panorama is the first long thing here,
     // and a stop pressed while it downloads must not be answered by six faces of it.
     watch?.signal?.throwIfAborted()
+
+    // A panorama is read back off its own target and never reaches the canvas, so one texel is
+    // what its frame costs — a face's side is the only size this frame ever means.
+    const faceSide = command.kind === 'faces' ? command.size : 1
 
     // Filled while the sources are in hand: `draw` is handed the frame's size — one face — and
     // the graded picture in between is the source's, which nothing else carries across.
@@ -122,7 +121,7 @@ export function createSkyboxExportPort({
 
       frame: sources => {
         equirect = sources[0].size
-        return { width: size, height: size }
+        return { width: faceSide, height: faceSide }
       },
 
       draw: async ({ pipeline, renderer, material }) => {
@@ -134,18 +133,18 @@ export function createSkyboxExportPort({
 
           // The panorama IS this target, so it leaves before anything squares it off — and it
           // leaves with the range the grading gave it, which is the whole reason to ask for one.
-          if (target !== 'sky.faces') {
+          if (command.kind === 'panorama') {
             watch?.signal?.throwIfAborted()
-            const bytes = await panoramaBytes(target, renderer, graded, equirect)
+            const bytes = await panoramaBytes(command.target, renderer, graded, equirect)
             watch?.onStep?.(1, 1)
-            return [{ name, extension: exportTargetOf(target).extension, bytes }]
+            return [{ name, extension: exportTargetOf(command.target).extension, bytes }]
           }
 
           const projection = createProjectionPass()
           try {
             projection.setSource(graded.texture)
             // A square frame for a square face, so `single` letterboxes nothing.
-            projection.setFrame(size, size)
+            projection.setFrame(faceSide, faceSide)
 
             const faces = faceFileNames(name)
             const files: ExportedFile[] = []

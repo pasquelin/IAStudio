@@ -863,13 +863,13 @@ export type TextureExportCommand = { target: TextureExportTarget }
  * What the native menu asks of the sky in front: the six faces at a size, or the one panorama
  * they are cut out of.
  *
- * `size` is read by the faces ALONE — a panorama leaves at the source's own resolution, there
- * being nothing to square off and no second sampling to choose.
+ * DISCRIMINATED rather than a size beside an optional target: a size means nothing to a panorama,
+ * which leaves at the source's own resolution, and an optional field with an unwritten default is
+ * one every consumer reconstructs — differently, once there are three of them.
  */
-export type SkyboxExportCommand = {
-  size: number
-  target?: Extract<ExportTargetId, 'sky.faces' | 'sky.hdr' | 'sky.exr'>
-}
+export type SkyboxExportCommand =
+  | { kind: 'faces'; size: number }
+  | { kind: 'panorama'; target: Extract<ExportTargetId, 'sky.hdr' | 'sky.exr'> }
 
 /**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in

@@ -711,7 +711,7 @@ describe('exporting a sky', () => {
       .find(item => item.label === 'Panorama OpenEXR (.exr)')
       ?.click?.(...([] as never[] as [never, never, never]))
 
-    expect(exportSkybox).toHaveBeenCalledWith(expect.objectContaining({ target: 'sky.exr' }))
+    expect(exportSkybox).toHaveBeenCalledWith({ kind: 'panorama', target: 'sky.exr' })
   })
 
   it('asks for the size the row names', () => {
@@ -723,7 +723,7 @@ describe('exporting a sky', () => {
 
     largest?.click?.(...([] as never[] as [never, never, never]))
 
-    expect(exportSkybox).toHaveBeenCalledWith({ size: 2048 })
+    expect(exportSkybox).toHaveBeenCalledWith({ kind: 'faces', size: 2048 })
   })
 })
 

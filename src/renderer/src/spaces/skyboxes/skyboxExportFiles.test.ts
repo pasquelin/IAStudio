@@ -30,19 +30,13 @@ beforeEach(() => {
 })
 
 describe('what the sky hands the writer', () => {
-  it('asks the port for the six faces unless a panorama was named', async () => {
-    await skyboxExportFiles('doc-1', { size: 1024 })
+  it('hands the port the command it was given, whole', async () => {
+    await skyboxExportFiles('doc-1', { kind: 'panorama', target: 'sky.exr' })
 
     expect(port).toHaveBeenCalledWith(
-      expect.objectContaining({ target: 'sky.faces', size: 1024 }),
+      expect.objectContaining({ command: { kind: 'panorama', target: 'sky.exr' } }),
       undefined,
     )
-  })
-
-  it('carries the panorama the menu named through to the port', async () => {
-    await skyboxExportFiles('doc-1', { size: 1024, target: 'sky.exr' })
-
-    expect(port).toHaveBeenCalledWith(expect.objectContaining({ target: 'sky.exr' }), undefined)
   })
 
   /**
@@ -50,15 +44,18 @@ describe('what the sky hands the writer', () => {
    * panorama handed none is a target that fails at the first click and nowhere before it.
    */
   it('names a folder for the panorama as well as for the faces', async () => {
-    const faces = await skyboxExportFiles('doc-1', { size: 1024 })
-    const panorama = await skyboxExportFiles('doc-1', { size: 1024, target: 'sky.hdr' })
+    const faces = await skyboxExportFiles('doc-1', { kind: 'faces', size: 1024 })
+    const panorama = await skyboxExportFiles('doc-1', { kind: 'panorama', target: 'sky.hdr' })
 
     expect(faces.folder).toBe('Ciel')
     expect(panorama.folder).toBe('Ciel')
   })
 
   it('says which target the files are for, so the writer holds them to its extension', async () => {
-    expect((await skyboxExportFiles('doc-1', { size: 1024, target: 'sky.hdr' })).target).toBe(
+    expect((await skyboxExportFiles('doc-1', { kind: 'faces', size: 1024 })).target).toBe(
+      'sky.faces',
+    )
+    expect((await skyboxExportFiles('doc-1', { kind: 'panorama', target: 'sky.hdr' })).target).toBe(
       'sky.hdr',
     )
   })

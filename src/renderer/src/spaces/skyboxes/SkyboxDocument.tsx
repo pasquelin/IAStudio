@@ -49,7 +49,11 @@ async function exportSkybox(documentId: string, command: SkyboxExportCommand): P
         bridge.skybox.export(await skyboxExportFiles(documentId, command, watch)),
     )
   } catch (error) {
-    reportFailure('skybox.export', command.target ?? String(command.size), error)
+    reportFailure(
+      'skybox.export',
+      command.kind === 'faces' ? String(command.size) : command.target,
+      error,
+    )
   }
 }
 
