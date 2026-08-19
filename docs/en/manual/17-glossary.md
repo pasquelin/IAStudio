@@ -151,9 +151,10 @@ You meet it in three places: the **Generate** button carries an estimate — `~1
 press it; the generation's own line shows the real figure once it has gone; **Help ▸ Usage…**
 totals a period. Asking for the estimate spends nothing and generates nothing.
 
-**Crop** *(audio)*
-To keep only the selected portion of a sound, and throw the rest away. Not to be confused with
-*Trim*, which pulls a *clip* in from one of its ends.
+**Crop**
+Two gestures share this word. On a sound, keeping only the selected portion and throwing the rest
+away; on an image, placing a frame and keeping what falls inside it. Pulling a *clip* in from one
+of its ends is *Trim*.
 
 ---
 
