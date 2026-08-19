@@ -269,6 +269,11 @@ The document keeps its layers. Flattening is not destructive here.
 To ask a *model* to make something. The request leaves for Scenario, comes back as a *job*, and the
 result lands in your *assets*.
 
+**Gizmo**
+The coloured *handles* that appear on a selected 3D object, and through which it is transformed:
+the **arrows** move it, the **circles** rotate it, the scale handles resize it. Which ones show is
+decided by the armed tool. Their orientation follows the *local or world frame*.
+
 **Group**
 Several objects filed under one parent. In the Modelling workspace (`⌘G`) as in the layer stack: moving
 the group moves everything hanging below it, and folding it away makes a busy scene readable.
@@ -292,6 +297,15 @@ at.
 ---
 
 ## H
+
+**Handle**
+A point you take hold of to act. The studio uses three kinds, and they have nothing to do with one
+another: the **manipulation handles** of a 3D object — the arrows and circles of the *gizmo*; the
+**handle of a clip**, at its edge, which *trims* it; and a joint's **handle to follow**, a point
+placed in the scene that the bone reaches for, and that the two bones above it, at most, turn to
+follow.
+
+The first two are dragged; the third is placed and stays put.
 
 **HDRI**
 A high-dynamic-range image: an image that keeps the real gap between sun and shadow, where an
@@ -548,6 +562,15 @@ that miss by a hair.
 A picture placed in a 3D scene that **always faces the camera**, whichever direction you look from.
 Useful for foliage, a spark, a flat character. It is neither lit nor part of shadows: its colour is
 the one you give it.
+
+**Sub-track**
+A line of the animation band, in the Modelling workspace, on which an object's animation blocks are
+laid. They are called **Anim. 1**, **Anim. 2**, and are grouped **under** the object's key lines.
+
+It is not a *track* of the edit: a track holds *clips* and belongs to a sequence, a sub-track holds
+blocks and belongs to an object of the scene. Two motions on two sub-tracks play at the same time,
+but **they still share the same bones**: it is *Drives*, in the Inspector, that gives each one its
+half of the body.
 
 ---
 
