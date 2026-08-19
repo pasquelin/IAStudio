@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
+import type { CapabilityDomain } from '@shared/domain/formatCapability'
 import { CHANNELS, type FolderExportRequest } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { folderInsideProject } from '@main/project/folderInsideProject'
@@ -27,8 +28,9 @@ export type ExportHandlerDeps = {
 async function writeFolder(
   request: unknown,
   destinationOf: (folder: string) => Promise<string | null>,
+  allowed: CapabilityDomain | null,
 ): Promise<string | null> {
-  const { folder, files }: FolderExportRequest = parseFolderExport(request)
+  const { folder, files }: FolderExportRequest = parseFolderExport(request, allowed)
 
   const destination = await destinationOf(folder)
   if (!destination) return null
@@ -70,7 +72,12 @@ export function registerExportHandlers({ pickFolder, projectPath }: ExportHandle
     return root ? folderInsideProject(root, folder) : null
   }
 
-  handle(CHANNELS.textureExport, (_event, request) => writeFolder(request, picked))
-  handle(CHANNELS.skyboxExport, (_event, request) => writeFolder(request, picked))
-  handle(CHANNELS.projectExport, (_event, request) => writeFolder(request, inProject))
+  // The channel PINS the section, so naming a target is not enough to reach another one's
+  // extension: the renderer chooses both the target and the file name, and without this a sky
+  // could ask for a `.usdz` on the sky channel and be written one.
+  handle(CHANNELS.textureExport, (_event, request) => writeFolder(request, picked, 'material'))
+  handle(CHANNELS.skyboxExport, (_event, request) => writeFolder(request, picked, 'sky'))
+  // The outside door serves every section, so it pins none — what holds it is the destination,
+  // which is NAMED rather than pointed at and stays inside the open project.
+  handle(CHANNELS.projectExport, (_event, request) => writeFolder(request, inProject, null))
 }

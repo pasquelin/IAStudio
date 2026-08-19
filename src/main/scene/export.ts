@@ -1,4 +1,4 @@
-import { EXPORT_EXTENSIONS } from '@shared/domain/scene'
+import { exportTargetOf, SCENE_TARGET_OF_FORMAT } from '@shared/domain/exportRegistry'
 import { CHANNELS, type SceneExportRequest } from '@shared/ipc'
 import { writePickedFile } from '@main/export/writePickedFile'
 import { handle } from '@main/ipc/handle'
@@ -17,6 +17,10 @@ export function registerSceneHandlers({ pickSavePath }: SceneHandlerDeps): void 
   handle(CHANNELS.sceneExport, async (_event, request) => {
     const { name, format, data }: SceneExportRequest = parseSceneExport(request)
 
-    return writePickedFile(() => pickSavePath(name, EXPORT_EXTENSIONS[format]), data)
+    // The registry, not `EXPORT_EXTENSIONS`: the save dialog and the folder writer name the same
+    // file, and two tables agreeing today drift the first time one of them is edited.
+    const { extension } = exportTargetOf(SCENE_TARGET_OF_FORMAT[format])
+
+    return writePickedFile(() => pickSavePath(name, extension), data)
   })
 }

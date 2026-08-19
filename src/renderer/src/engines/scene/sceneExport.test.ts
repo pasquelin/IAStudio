@@ -8,6 +8,7 @@ import {
   LineBasicMaterial,
   Mesh,
   MeshStandardMaterial,
+  PerspectiveCamera,
   Scene,
   Skeleton,
   SkinnedMesh,
@@ -17,6 +18,7 @@ import {
   type Object3D,
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
+import { exportTargetOf } from '@shared/domain/exportRegistry'
 import { applyWireOverlay } from './sceneView'
 import { exportObjects, placedCopy } from './sceneExport'
 
@@ -25,6 +27,9 @@ type GltfFile = {
   meshes?: { name?: string }[]
   nodes?: { name?: string }[]
   animations?: { name?: string; channels?: { target?: { path?: string } }[] }[]
+  materials?: unknown[]
+  cameras?: unknown[]
+  extensions?: Record<string, unknown>
 }
 
 async function gltfOf(objects: Parameters<typeof exportObjects>[0]): Promise<GltfFile> {
@@ -393,5 +398,35 @@ describe('exportObjects and the animation a reader plays', () => {
   /** A still scene must not gain an empty animation, which every reader would list as one. */
   it('writes no animation for a scene that holds none', async () => {
     expect((await gltfOf([named('box-1')])).animations).toBeUndefined()
+  })
+})
+
+/**
+ * The registry tells a person, before the click, what a `.glb` will carry. Nothing else checks
+ * that promise against the file: a trait classed as carried and quietly written by nobody reads
+ * as « no loss » on screen and arrives empty in Blender.
+ */
+describe('what a scene export carries, against what the registry promises', () => {
+  const carried = exportTargetOf('scene.glb').capability.interchange
+
+  it('writes the material a node wears, which is why nodeMaterial is not a loss', async () => {
+    expect(carried).toContain('nodeMaterial')
+    expect((await gltfOf([named('box-1')])).materials?.length).toBeGreaterThan(0)
+  })
+
+  it('writes a punctual light through the extension glTF spells it with', async () => {
+    const light = new DirectionalLight()
+    light.name = 'sun'
+
+    expect(carried).toContain('punctualLight')
+    expect(Object.keys((await gltfOf([light])).extensions ?? {})).toContain('KHR_lights_punctual')
+  })
+
+  it('writes a camera, so its lens survives the trip', async () => {
+    const camera = new PerspectiveCamera(35)
+    camera.name = 'shot'
+
+    expect(carried).toContain('cameraLens')
+    expect((await gltfOf([camera])).cameras?.length).toBeGreaterThan(0)
   })
 })

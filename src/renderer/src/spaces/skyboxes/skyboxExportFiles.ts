@@ -32,5 +32,5 @@ export async function skyboxExportFiles(
     size,
   })
 
-  return { folder: name, files }
+  return { folder: name, target: 'sky.faces', files }
 }

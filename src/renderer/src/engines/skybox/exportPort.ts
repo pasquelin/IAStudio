@@ -1,6 +1,7 @@
 import { SRGBColorSpace } from 'three'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
+import { exportTargetOf } from '@shared/domain/exportRegistry'
 import { faceFileNames } from '@shared/domain/skybox'
 import type { ExportedFile } from '@shared/ipc'
 import { createAdjustPass } from '../gpu/passes/adjust'
@@ -42,8 +43,6 @@ export type SkyboxExportPortOptions = {
    */
   assetVersion?: (assetId: string) => string | undefined
 }
-
-const PNG_EXTENSION = '.png'
 
 export function createSkyboxExportPort({
   loadTexture,
@@ -97,7 +96,11 @@ export function createSkyboxExportPort({
               // Awaited before the next face is drawn: they share one canvas, and a read left
               // running would encode whichever face happened to be on it.
               const bytes = await encodePng(renderer.domElement)
-              files.push({ name: face.name, extension: PNG_EXTENSION, bytes })
+              files.push({
+                name: face.name,
+                extension: exportTargetOf('sky.faces').extension,
+                bytes,
+              })
             }
             return files
           } finally {

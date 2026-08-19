@@ -1,3 +1,4 @@
+import { MATERIAL_TARGET_OF } from '@shared/domain/exportRegistry'
 import type { TextureExportTarget } from '@shared/domain/textureExport'
 import type { FolderExportRequest } from '@shared/ipc'
 import { loadTexture } from '@/engines/scene/textureCache'
@@ -33,5 +34,5 @@ export async function textureExportFiles(
   // question nobody can answer — whoever asked it.
   if (files.length === 0) throw new Error('this texture has no channel to export')
 
-  return { folder: name, files }
+  return { folder: name, target: MATERIAL_TARGET_OF[target], files }
 }
