@@ -6,8 +6,19 @@ import {
   type PaneView,
   type PreviewWatch,
 } from '@/engines/scene/sceneView'
-import { type DisplayMode } from '@shared/domain/scene'
+import { type ClipRef, type DisplayMode } from '@shared/domain/scene'
 import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
+
+/**
+ * What the engine needs to watch a block, plus the very block the animations panel laid to watch
+ * it — `laid` only when that panel is the one that laid it, and the engine never reads it.
+ *
+ * In the SAME object rather than beside it, so nothing can drop one half: `setPlayhead` and
+ * `setPlaying` end a preview by writing `null`, and an ownership that outlived that write would
+ * hand back the very block an interruption is meant to keep. Held as the REF and compared by
+ * identity, so a block the band has since moved or trimmed is work, no longer a try.
+ */
+export type WatchedPreview = PreviewWatch & { laid?: ClipRef }
 
 export type SceneView = {
   projection: ProjectionKind
@@ -55,7 +66,7 @@ export type SceneView = {
    * scene's clock, and the band must stay where it was left. Moving the head drops it — two
    * clocks driving one model is the one thing that would make a render disagree with the screen.
    */
-  preview: PreviewWatch | null
+  preview: WatchedPreview | null
   /**
    * Where the free camera of the 3D tab stands, published once a drag of it settles.
    *

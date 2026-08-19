@@ -1,10 +1,15 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { MAIN_LANE_ID } from '@shared/domain/scene'
+import { SECOND } from '@shared/domain/time'
+import { clipsMoved, lanesWith } from '@/engines/scene/clipBlend'
+import { setModelLanes } from '@/engines/scene/commands'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { useDocuments } from '@/stores/documents'
 import { useModelClips } from '@/stores/modelClips'
+import { installDocuments } from '@/stores/document-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/sceneViews'
@@ -111,6 +116,12 @@ describe('the animations panel', () => {
     await waitFor(() => expect(screen.getByText(/Aucune animation/)).toBeInTheDocument())
   })
 
+  /** The sub-tracks the one character of the fixture holds. */
+  const lanesOf = () => {
+    const node = sceneOf(useScenes.getState(), DOCUMENT).nodes[0]
+    return node?.type === 'model' ? (node.model.lanes ?? []) : []
+  }
+
   /** Every block of the scene, or those of one character when a node is named. */
   const blocksOf = (nodeId?: string) =>
     sceneOf(useScenes.getState(), DOCUMENT).nodes.flatMap(node =>
@@ -214,6 +225,66 @@ describe('the animations panel', () => {
 
     await userEvent.click(screen.getAllByRole('button', { name: 'Jouer sur le personnage' })[1]!)
     expect(blocksOf().map(clip => clip.label)).toEqual(['NlaTrack', 'run'])
+  })
+
+  // The rail swaps this panel for another one on the same slot, which unmounts it: an owner held
+  // in the panel's own state left the try standing as kept work and its preview running with no
+  // button to stop it — the manual knows only two ways out, and neither is « the panel closed ».
+  it('is still watching its own try after the panel is closed and opened again', async () => {
+    withCharacter(['NlaTrack', 'run'])
+    const shown = render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('run')).toBeInTheDocument())
+    await userEvent.click(screen.getAllByRole('button', { name: 'Jouer sur le personnage' })[0]!)
+
+    shown.unmount()
+    render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('run')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: 'Arrêter et retirer le bloc' }))
+    expect(blocksOf()).toEqual([])
+  })
+
+  // A try the band has MOVED is work, and work is never taken back: the ownership outlives the
+  // panel now, so what used to be forgotten on unmount has to be given up on the edit instead.
+  it('never takes back a try the band has since moved', async () => {
+    withCharacter(['NlaTrack', 'run'])
+    render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('run')).toBeInTheDocument())
+    await userEvent.click(screen.getAllByRole('button', { name: 'Jouer sur le personnage' })[0]!)
+
+    const moved = lanesWith(lanesOf(), MAIN_LANE_ID, clips =>
+      clipsMoved(clips, blocksOf()[0]!.id, SECOND),
+    )
+    act(() => useScenes.getState().runCommand(DOCUMENT, setModelLanes('perso', moved ?? [])))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Jouer sur le personnage' }))
+    expect(blocksOf().map(clip => clip.label)).toEqual(['NlaTrack', 'run'])
+  })
+
+  // Green before this panel published its ownership too, and kept as an assurance rather than a
+  // fix: ownership now travels with a preview, and a preview belongs to ONE document.
+  it('watches its try in the document it laid it in, and in no other', async () => {
+    const other = 'doc-2'
+    withCharacter(['NlaTrack'])
+    const alone = modelNodeFixture('perso-b')
+    useScenes.getState().replace(other, { ...EMPTY_SCENE, nodes: [alone], selectedIds: [alone.id] })
+    installDocuments({ [DOCUMENT]: '3d', [other]: '3d' }, DOCUMENT)
+    useModelClips.getState().report(other, 'perso-b', ['NlaTrack'])
+    render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('Animation')).toBeInTheDocument())
+    await userEvent.click(screen.getByRole('button', { name: 'Jouer sur le personnage' }))
+
+    act(() => useDocuments.setState({ activeId: other }))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Jouer sur le personnage' })).toBeInTheDocument(),
+    )
+
+    act(() => useDocuments.setState({ activeId: DOCUMENT }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Arrêter et retirer le bloc' }),
+      ).toBeInTheDocument(),
+    )
   })
 
   // A ⌘Z takes the block out from under the panel without touching the preview. Removing it again

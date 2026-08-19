@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { clipKeyOf, type ClipLane } from '@shared/domain/scene'
 import { usToSeconds } from '@shared/domain/time'
 import { setModelLanes } from '@/engines/scene/commands'
-import { clipSpanOf, lanesWith, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
+import { clipSpanOf, laneHolding, lanesWith, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
 import { clipLengthOf, useModelClips } from '@/stores/modelClips'
 import { SliderField } from '../SliderField'
 import { ToggleField } from '../ToggleField'
@@ -44,7 +44,7 @@ export function AnimationPickerPreview({
     return node?.type === 'model' ? (node.model.lanes ?? NO_LANES) : NO_LANES
   })
 
-  const lane = lanes.find(one => one.clips.some(clip => clip.id === clipId))
+  const lane = laneHolding(lanes, clipId)
   const played = lane?.clips.find(clip => clip.id === clipId)
   const length = useModelClips(state =>
     played ? clipLengthOf(state, documentId, nodeId, clipKeyOf(played.source)) : null,

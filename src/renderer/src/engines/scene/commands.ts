@@ -15,6 +15,7 @@ import { ikLinksOf } from './ik'
 import {
   clipLane,
   isVector3,
+  MAIN_LANE_ID,
   type CameraDescriptor,
   type ClipLane,
   type ClipRef,
@@ -510,7 +511,7 @@ export function addRigHands(id: string): Command<SceneState> {
  */
 export function addModelClip(id: string, clip: ClipRef): Command<SceneState> {
   return editModel(id, 'lanes', model => {
-    const lanes = model.lanes?.length ? model.lanes : [clipLane('main', [])]
+    const lanes = model.lanes?.length ? model.lanes : [clipLane(MAIN_LANE_ID, [])]
     const [first, ...rest] = lanes
     if (!first) return model
 

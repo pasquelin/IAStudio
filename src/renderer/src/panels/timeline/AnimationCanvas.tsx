@@ -25,6 +25,7 @@ import {
   clipsMoved,
   clipsSplit,
   clipsTrimmed,
+  laneHolding,
   lanesWith,
 } from '@/engines/scene/clipBlend'
 import { useModelClips } from '@/stores/modelClips'
@@ -111,7 +112,7 @@ function blockOf(documentId: string, clipId: string): BlockRef | null {
   for (const node of sceneOf(useScenes.getState(), documentId).nodes) {
     if (node.type !== 'model') continue
 
-    const lane = node.model.lanes?.find(held => held.clips.some(clip => clip.id === clipId))
+    const lane = laneHolding(node.model.lanes ?? [], clipId)
     if (lane) return { nodeId: node.id, laneId: lane.id, clipId }
   }
 
