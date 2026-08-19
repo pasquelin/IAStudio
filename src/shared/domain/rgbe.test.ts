@@ -62,6 +62,21 @@ describe('a Radiance file', () => {
   })
 
   /**
+   * A half-float target reads back as the sixteen-bit patterns themselves, and widening them into
+   * floats first is a whole second copy of the picture — 128 MiB of a 4K panorama.
+   *
+   * The four values are exact in both widths, so the two files have to match byte for byte: a
+   * half read wrongly would not merely round, it would land on another exponent entirely.
+   */
+  it('writes the same file from a half-float readback as from the floats it stands for', () => {
+    const halves = new Uint16Array([0x4a00, 0x4600, 0x4200, 0x3c00])
+
+    expect([...encodeRgbe(halves, 1, 1)]).toEqual([
+      ...encodeRgbe(new Float32Array([12, 6, 3, 1]), 1, 1),
+    ])
+  })
+
+  /**
    * The defect a viewer shows and no other assertion would: a render target reads back with row
    * zero at the BOTTOM, and `-Y` says the file starts at the top.
    */

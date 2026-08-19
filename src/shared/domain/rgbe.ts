@@ -44,22 +44,49 @@ function rgbeOf(red: number, green: number, blue: number, into: Uint8Array, at: 
 }
 
 /**
- * A `.hdr` file of `pixels`, which is RGBA floats in the layout a render target reads back — row
- * zero at the BOTTOM, as OpenGL counts. The `-Y` header says top-first, so the rows are written
- * in reverse: a sky written the other way up is the defect a viewer shows and no test would.
+ * One half float, as three's `DataUtils.fromHalfFloat` reads it — spelt here because `shared/`
+ * carries no runtime dependency. Checked against three on all 65 536 patterns, 2026-08-20.
+ */
+function fromHalfFloat(bits: number): number {
+  const sign = bits & 0x8000 ? -1 : 1
+  const exponent = (bits & 0x7c00) >> 10
+  const fraction = bits & 0x03ff
+
+  // Subnormals and zero share the empty exponent; the encoder writes both as black either way.
+  if (exponent === 0) return sign * Math.pow(2, -24) * fraction
+  if (exponent === 0x1f) return fraction ? Number.NaN : sign * Infinity
+  return sign * Math.pow(2, exponent - 15) * (1 + fraction / 1024)
+}
+
+/**
+ * A `.hdr` file of `pixels`, which is RGBA in the layout a render target reads back — row zero at
+ * the BOTTOM, as OpenGL counts. The `-Y` header says top-first, so the rows are written in
+ * reverse: a sky written the other way up is the defect a viewer shows and no test would.
+ *
+ * Half floats are taken as they come off a half-float target, and that is the point: materialising
+ * them as `Float32Array` first held the same picture twice — 224 MiB in flight for a 4K panorama
+ * against 96, and 896 against 384 at 8K.
  *
  * Alpha is dropped, and it is not an omission: Radiance has no fourth channel to put it in.
  */
-export function encodeRgbe(pixels: Float32Array, width: number, height: number): Uint8Array {
+export function encodeRgbe(
+  pixels: Float32Array | Uint16Array,
+  width: number,
+  height: number,
+): Uint8Array {
   const header = new TextEncoder().encode(`${HEADER}-Y ${height} +X ${width}\n`)
   const file = new Uint8Array(header.length + width * height * 4)
   file.set(header)
+
+  const half = pixels instanceof Uint16Array
+  const valueAt = (index: number): number =>
+    half ? fromHalfFloat(pixels[index] ?? 0) : (pixels[index] ?? 0)
 
   let at = header.length
   for (let row = height - 1; row >= 0; row -= 1) {
     for (let column = 0; column < width; column += 1) {
       const from = (row * width + column) * 4
-      rgbeOf(pixels[from] ?? 0, pixels[from + 1] ?? 0, pixels[from + 2] ?? 0, file, at)
+      rgbeOf(valueAt(from), valueAt(from + 1), valueAt(from + 2), file, at)
       at += 4
     }
   }

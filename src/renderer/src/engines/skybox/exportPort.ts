@@ -1,4 +1,4 @@
-import { DataUtils, SRGBColorSpace, type WebGLRenderer, type WebGLRenderTarget } from 'three'
+import { SRGBColorSpace, type WebGLRenderer, type WebGLRenderTarget } from 'three'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
 import type { TaskWatch } from '@shared/domain/taskProgress'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
@@ -34,8 +34,8 @@ export type SkyboxExportRequest = {
 }
 
 /**
- * The graded panorama, as the file the target names. Read back FLOAT in both cases: the target is
- * half-float, and reading it as bytes would quantise the very range these two formats exist for.
+ * The graded panorama, as the file the target names. Read back at the target's own half-float
+ * depth: asking for bytes would quantise the very range these two formats exist for.
  *
  * `EXRExporter` does its own readback, so only the Radiance path asks for the pixels here.
  */
@@ -50,15 +50,12 @@ async function panoramaBytes(
     return new EXRExporter().parse(renderer, graded)
   }
 
-  // Half floats come back as the sixteen-bit patterns they are; `fromHalfFloat` is what three
-  // reads them with, and writing them raw would make every value a number nobody meant.
+  // Half floats come back as the sixteen-bit patterns they are, and the encoder takes them so:
+  // widening them into a `Float32Array` first held the same 4K panorama twice, 128 MiB of it.
   const half = new Uint16Array(size.width * size.height * 4)
   await renderer.readRenderTargetPixelsAsync(graded, 0, 0, size.width, size.height, half)
 
-  const pixels = new Float32Array(half.length)
-  for (let at = 0; at < half.length; at += 1) pixels[at] = DataUtils.fromHalfFloat(half[at] ?? 0)
-
-  return encodeRgbe(pixels, size.width, size.height)
+  return encodeRgbe(half, size.width, size.height)
 }
 
 /**
