@@ -44,8 +44,6 @@ export type SkyboxExportPortOptions = {
   assetVersion?: (assetId: string) => string | undefined
 }
 
-const PNG_EXTENSION = exportTargetOf('sky.faces').extension
-
 export function createSkyboxExportPort({
   loadTexture,
   assetVersion,
@@ -98,7 +96,11 @@ export function createSkyboxExportPort({
               // Awaited before the next face is drawn: they share one canvas, and a read left
               // running would encode whichever face happened to be on it.
               const bytes = await encodePng(renderer.domElement)
-              files.push({ name: face.name, extension: PNG_EXTENSION, bytes })
+              files.push({
+                name: face.name,
+                extension: exportTargetOf('sky.faces').extension,
+                bytes,
+              })
             }
             return files
           } finally {

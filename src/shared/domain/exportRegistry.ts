@@ -11,8 +11,6 @@ import {
   capabilityOf,
   lossesAgainst,
   MATERIAL_TRAITS,
-  SCENE_TRAITS,
-  SKY_TRAITS,
   type CapabilityDomain,
   type CapabilityTrait,
   type FormatCapability,
@@ -170,11 +168,10 @@ const TRAIT_OF_CHANNEL: Record<PbrChannel, MaterialTrait> = {
  * through leaves inside the pixels, which is why `raw` is the one target that loses it.
  */
 function materialCapability(target: TextureExportTarget): FormatCapability {
-  const carried: CapabilityTrait[] = channelsWrittenBy(target).map(
+  const interchange: CapabilityTrait[] = channelsWrittenBy(target).map(
     channel => TRAIT_OF_CHANNEL[channel],
   )
-  const judged: CapabilityTrait = 'valueRanges'
-  const interchange: CapabilityTrait[] = bakesRemap(target) ? [...carried, judged] : carried
+  if (bakesRemap(target)) interchange.push('valueRanges')
 
   return {
     domain: 'material',
@@ -316,11 +313,4 @@ export function lossesExportingTo(
   id: ExportTargetId,
 ): CapabilityTrait[] {
   return lossesAgainst(traits, TARGETS[id].capability)
-}
-
-/** Every trait a section has, which is what a document is measured against when it has none. */
-export const TRAITS_TO_DECLARE: Record<'scene' | 'sky' | 'material', readonly CapabilityTrait[]> = {
-  scene: SCENE_TRAITS,
-  sky: SKY_TRAITS,
-  material: MATERIAL_TRAITS,
 }

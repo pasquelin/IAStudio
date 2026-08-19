@@ -16,6 +16,8 @@ import { pathSegment } from '@main/validation'
 const isTargetId = (value: unknown): value is ExportTargetId =>
   EXPORT_TARGET_IDS.some(id => id === value)
 
+const written = (id: ExportTargetId): string => exportTargetOf(id).extension
+
 /**
  * Which entry of the registry this is. It used to be a hand-written list of extensions, which
  * answered « some target writes this » and never « THIS target writes this » — so a sky could
@@ -55,9 +57,7 @@ const folderExport = z
   // Checked against the target rather than against every extension the studio writes anywhere:
   // the sandboxed side names the file, and this is what stops one target's name from riding in
   // under another's.
-  .refine(value =>
-    value.files.every(entry => entry.extension === exportTargetOf(value.target).extension),
-  )
+  .refine(value => value.files.every(entry => entry.extension === written(value.target)))
 
 export function parseFolderExport(value: unknown): FolderExportRequest {
   return folderExport.parse(value)
