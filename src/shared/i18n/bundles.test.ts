@@ -29,7 +29,7 @@ import { PBR_CHANNELS, type PbrChannel } from '../domain/texture'
 import { WORKSPACE_IDS } from '../domain/workspace'
 import { USAGE_ACTIONS, USAGE_ASSET_KINDS, USAGE_EVENT_ACTIONS } from '../domain/usage'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
-import { americanVerbs, americanWords } from './spelling-fixtures'
+import { americanVerbs, americanWords, frenchWords } from './spelling-fixtures'
 import { screenLabels, unquotedMenuSegments } from './menuPath-fixtures'
 import modelTextFr from './model-text.fr.json'
 
@@ -147,6 +147,9 @@ const NAMED_AS_CSS_BLENDS_THEM: ReadonlySet<string> = new Set([
   'blend.color-burn',
   'blend.color-dodge',
 ])
+
+/** Keys writing a `FRENCH_FORMS` word in its own English sense. Empty, and measured so. */
+const BORROWED_IN_ENGLISH: ReadonlySet<string> = new Set<string>()
 
 describe('the translation bundles', () => {
   // The typecheck only catches a bundle that MISSES a key: an extra one is still assignable.
@@ -951,9 +954,24 @@ describe('the translation bundles', () => {
   })
 
   /**
-   * The same reasoning as the `SETTLED_WORDS.except` guard above, applied to the two sets the
-   * spelling guard reads: an exemption whose key no longer says the word — or no longer exists —
-   * is one nobody would think to delete, and the next reader takes it for a rule.
+   * The reading beside the spelling one, and the same trap: `assistant.fields.easing` said `Speed
+   * curve of the travelling`, the French noun for what this studio calls a camera move. Nothing
+   * above could see it — the guards there compare a label to its OTHER readings, and this one was
+   * written once. Shared with the manual for the reason the spelling reading is: chapter 09 wrote
+   * the same borrowing, in prose that quotes this very label.
+   */
+  it('writes its own English word rather than a French one', () => {
+    const borrowed = [...BUNDLES.en].flatMap(([key, text]) =>
+      (BORROWED_IN_ENGLISH.has(key) ? [] : frenchWords(text)).map(word => `${key} — ${word}`),
+    )
+
+    expect(borrowed).toEqual([])
+  })
+
+  /**
+   * The same reasoning as the `SETTLED_WORDS.except` guard above, applied to the three sets the
+   * two readings above take: an exemption whose key no longer says the word — or no longer
+   * exists — is one nobody would think to delete, and the next reader takes it for a rule.
    */
   it('drops a spelling exemption once its key stops needing it', () => {
     const stale = [
@@ -962,6 +980,9 @@ describe('the translation bundles', () => {
       ),
       ...[...NAMED_AS_CSS_BLENDS_THEM].filter(
         key => americanWords(BUNDLES.en.get(key) ?? '').length === 0,
+      ),
+      ...[...BORROWED_IN_ENGLISH].filter(
+        key => frenchWords(BUNDLES.en.get(key) ?? '').length === 0,
       ),
     ]
 

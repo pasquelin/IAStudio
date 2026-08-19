@@ -70,7 +70,7 @@ const COMPOSED_KEYS: readonly string[] = [
   // Whether a block moves the character or plays on the spot. Same control, same trap.
   ...ROOT_MOTIONS.map(motion => `inspector.rootMotion_${motion}`),
   // How a camera picks up speed along its rail. The only control of the shot section whose rows
-  // are composed, so a fifth curve would read as a raw key inside a travelling.
+  // are composed, so a fifth curve would read as a raw key inside a camera move.
   ...EASINGS.map(easing => `inspector.easing_${easing}`),
   ...TRACK_KINDS.map(kind => `inspector.kind_${kind}`),
   ...TRACK_FLAGS.map(flag => `inspector.${flag.key}`),

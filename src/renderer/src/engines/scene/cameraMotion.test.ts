@@ -65,7 +65,7 @@ describe('the speed curves', () => {
 /**
  * The claim the issue asked to check rather than assume: `getPoint` is parameterised per
  * segment, so a camera on a rail of very unequal segments speeds up through the short ones.
- * `getPointAt` reads the arc-length table instead, which is what makes a travelling watchable.
+ * `getPointAt` reads the arc-length table instead, which is what makes a camera move watchable.
  */
 describe('a rail of very unequal segments', () => {
   const curve = curveOf({

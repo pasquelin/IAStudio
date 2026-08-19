@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LANGUAGES, type Language } from './i18n/languages'
 import { deadManualLinks, type ManualChapter } from './domain/manual'
-import { americanVerbs, americanWords, proseOf } from './i18n/spelling-fixtures'
+import { americanVerbs, americanWords, frenchWords, proseOf } from './i18n/spelling-fixtures'
 import { asRead, menuPathsOf, screenLabels } from './i18n/menuPath-fixtures'
 import { TRANSLATIONS } from './i18n'
 import manual from './manual.json'
@@ -115,6 +115,21 @@ describe('the manual the application carries', () => {
     })
 
     expect(american).toEqual([])
+  })
+
+  /**
+   * Chapter 09 wrote `a travelling starts and stops dead` where English says the camera does —
+   * the borrowing the bundle carried in the label that row explains. Prose only, for the reason
+   * above, and no exemption exists on this side: the manual has no keys to name one by.
+   */
+  it('writes its own English words rather than French ones', () => {
+    const borrowed = chaptersOf('en').flatMap(chapter =>
+      frenchWords(`${chapter.title}\n${proseOf(chapter.markdown)}`).map(
+        word => `${chapter.slug} — ${word}`,
+      ),
+    )
+
+    expect(borrowed).toEqual([])
   })
 
   /**

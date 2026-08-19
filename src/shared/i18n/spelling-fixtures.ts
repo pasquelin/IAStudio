@@ -66,6 +66,23 @@ export const americanWords = (text: string): string[] =>
   [...text.matchAll(AMERICAN_WORDS)].map(([word]) => word)
 
 /**
+ * French words the English must not borrow. `travelling` is the French noun for what this studio
+ * writes `a camera move`; on its own it names nothing in English.
+ *
+ * The word IS English as a participle, which the code writes freely, and `a travelling shot` is
+ * the trade's own. No pattern tells those from the borrowed noun, so a legitimate one is exempted
+ * by key — on the bundle side only, the manual having no keys to name one by. Neither text writes
+ * the word at all today.
+ */
+const FRENCH_FORMS: readonly string[] = ['travell?ings?']
+
+const FRENCH_WORDS = new RegExp(`\\b(?:${FRENCH_FORMS.join('|')})\\b`, 'gi')
+
+/** Every French word the English borrows where it has its own, in the order read. */
+export const frenchWords = (text: string): string[] =>
+  [...text.matchAll(FRENCH_WORDS)].map(([word]) => word)
+
+/**
  * A markdown chapter with everything that is not read as prose taken out: fenced blocks first, so
  * that a backtick inside one cannot pair with another and swallow the text between them, then
  * inline code, the capture notes the collector leaves as HTML comments, and link targets.
