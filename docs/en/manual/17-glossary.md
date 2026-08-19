@@ -55,14 +55,14 @@ Keep this in mind: **an asset is a finished, reusable file**.
 
 Assets live in the **Assets** panel, familiarly called *the shelf*.
 
-**Automatic retry**
-What the studio does when a *job* fails for a reason another attempt can mend: a dropped
-connection, a busy service, too many requests. See *Exponential backoff*.
-
 **Assistant**
 The window where you say what you want to do, in an ordinary sentence, rather than clicking it.
 `⌘K`. It picks the actions itself and runs them, and asks for your yes before anything that spends
 or uploads. See [Driving the studio from outside](20-driving-from-outside.md).
+
+**Automatic retry**
+What the studio does when a *job* fails for a reason another attempt can mend: a dropped
+connection, a busy service, too many requests. See *Exponential backoff*.
 
 **Azimuth**
 The direction of something all around you, measured by turning on the spot. For a *skybox*'s sun:
@@ -216,7 +216,7 @@ even with no light around.
 **Environment** *(of a 3D scene)*
 What lights a scene besides its own lamps. Two values: **Studio**, a neutral computed lighting, or
 **a *skybox* from the project**, which lays its light and its reflections over everything. Chosen
-in the Modelling workspace's Inspector, under Environment.
+in the Modelling workspace's **Inspector**, under **Environment**.
 
 **Equirectangular**
 The format of an image holding a whole sphere, flattened: twice as wide as it is tall, the way a
@@ -407,7 +407,7 @@ A mask can also be made from a *selection*, in one command.
 
 **Material**
 What a surface is made of: its colour, its grain, what it gives back of the light. It is what the
-**Textures** workspace makes, and what the **Material** section of the Inspector sets on a 3D
+**Textures** workspace makes, and what the **Material** section of the **Inspector** sets on a 3D
 object.
 
 **MCP** *(Model Context Protocol)*
@@ -589,7 +589,7 @@ laid. They are called **Anim. 1**, **Anim. 2**, and are grouped **under** the ob
 
 It is not a *track* of the edit: a track holds *clips* and belongs to a sequence, a sub-track holds
 blocks and belongs to an object of the scene. Two motions on two sub-tracks play at the same time,
-but **they still share the same bones**: it is **Drives**, in the Inspector, that gives each one its
+but **they still share the same bones**: it is **Drives**, in the **Inspector**, that gives each one its
 half of the body.
 
 ---
