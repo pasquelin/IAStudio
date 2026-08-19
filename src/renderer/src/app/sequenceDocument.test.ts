@@ -48,6 +48,9 @@ function heldIn(path: string): void {
     documents: {
       'doc-1': { id: 'doc-1', kind: 'sequence', workspace: 'video', title: 'Bande', path },
     },
+    // Emptied with them: `setState` MERGES, so a listing one case installed is one every case
+    // after it reads — and whether a scene id resolves is now what half of them are about.
+    stored: [],
     activeId: 'doc-1',
   })
 }
@@ -249,13 +252,34 @@ describe('what an open reads back', () => {
   // was reported as a file that had gone missing — with an empty name in the sentence.
   it('says nothing about a clip drawing a live scene', () => {
     heldIn('Bande.otio')
+    holdsScene('scene-1')
     const state = sequenceFromPayload(sceneClip(), 'doc-1')
 
     expect(state.tracks[0]?.clips[0]?.sceneId).toBe('scene-1')
     expect(reported).not.toHaveBeenCalled()
     expect(montageIsIncomplete('doc-1')).toBeNull()
   })
+
+  /**
+   * « Ce projet détient-il cet identifiant » is the only question, and this is its other half: a
+   * scene id minted on another machine names a document nobody here has, and a clip kept on one
+   * draws nothing while claiming to.
+   */
+  it('drops a clip drawing a scene this project has never held, and says so', () => {
+    heldIn('Bande.otio')
+    const state = sequenceFromPayload(sceneClip(), 'doc-1')
+
+    expect(state.tracks[0]?.clips).toEqual([])
+    expect(montageIsIncomplete('doc-1')).not.toBeNull()
+  })
 })
+
+/** A scene document sitting in the project's folder, which is what makes its id resolvable. */
+function holdsScene(id: string): void {
+  useDocuments.setState({
+    stored: [{ id, kind: 'scene', workspace: '3d', title: 'Décor', path: '3D/Décor.gltf' }],
+  })
+}
 
 /** One of OURS, drawing a live scene: no media, no url, and an empty `assetId` by construction. */
 const sceneClip = (): unknown =>

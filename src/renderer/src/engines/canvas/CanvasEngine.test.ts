@@ -4,9 +4,9 @@ import type { FontRef } from '@shared/domain/font'
 import type { FaceRegistrar } from './canvasFonts'
 import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { layerFixture } from './canvas-fixtures'
+import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import {
   adjustmentLayer,
-  BLEND_MODES,
   DEFAULT_CANVAS,
   groupLayer,
   IDENTITY,

@@ -473,9 +473,9 @@ export const MESH_ENTRIES: readonly SceneEntry<MeshKind>[] = [
  * The files a scene can leave the studio as. `glb` is one binary file and the safe default;
  * `gltf` is its JSON form, readable and diffable; `usdz` is what Apple's viewers open.
  */
-export type ExportFormat = 'glb' | 'gltf' | 'usdz'
+export type ExportFormat = 'glb' | 'gltf' | 'usdz' | 'obj' | 'ply' | 'stl'
 
-export const EXPORT_FORMATS: readonly ExportFormat[] = ['glb', 'gltf', 'usdz']
+export const EXPORT_FORMATS: readonly ExportFormat[] = ['glb', 'gltf', 'usdz', 'obj', 'ply', 'stl']
 
 /** What is picked from the Add menu without being a mesh or a light. */
 export type ObjectKind = 'sprite' | 'text' | 'camera' | 'path'

@@ -1,5 +1,6 @@
 import type { CommandId } from '@shared/domain/command'
 import { saveDocument, saveDocumentAs } from '@/app/documentIo'
+import { importOtioz } from '@/app/otioImport'
 import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -27,6 +28,11 @@ export function runGlobalCommand(command: CommandId): boolean {
       return true
     case 'project.open':
       void useProject.getState().openPicked()
+      return true
+    // No document in front to belong to: an import is what makes one. Its own failures are
+    // journaled under `sequence.import`, so nothing is caught here.
+    case 'montage.import':
+      void importOtioz()
       return true
     // These two answer `false` with no document in front, where the others answer `true`: the
     // menu greys its row out and cannot get here, but the assistant can — and reporting a save

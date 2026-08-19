@@ -70,6 +70,10 @@ const DOMAIN_BY_EXTENSION: Record<string, AssetType> = {
   '.stl': 'mesh',
   '.ply': 'mesh',
   '.usdz': 'mesh',
+  '.usd': 'mesh',
+  '.usda': 'mesh',
+  '.usdc': 'mesh',
+  '.dae': 'mesh',
 }
 
 /**

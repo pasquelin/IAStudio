@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { assistantAction, type ActionName } from '@shared/domain/assistant'
+import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import {
   ADJUSTMENT_KINDS,
-  BLEND_MODES,
   DEFAULT_CANVAS,
   LAYER_KINDS,
   pixelLayer,

@@ -1,10 +1,11 @@
-import { SRGBColorSpace } from 'three'
+import { SRGBColorSpace, UnsignedByteType, type WebGLRenderer, type WebGLRenderTarget } from 'three'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
-import type { ExportWatch } from '@shared/domain/exportProgress'
+import type { TaskWatch } from '@shared/domain/taskProgress'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
-import { exportTargetOf } from '@shared/domain/exportRegistry'
+import { exportTargetOf, type ExportTargetId } from '@shared/domain/exportRegistry'
+import { encodeRgbe } from '@shared/domain/rgbe'
 import { faceFileNames } from '@shared/domain/skybox'
-import type { ExportedFile } from '@shared/ipc'
+import type { ExportedFile, SkyboxExportCommand } from '@shared/ipc'
 import { createAdjustPass } from '../gpu/passes/adjust'
 import { encodePng, runOffscreenPass, type PictureSize } from '../texture/derive/offscreen'
 import type { TextureSource } from '../scene/textureCache'
@@ -28,8 +29,33 @@ export type SkyboxExportRequest = {
   adjustments: AdjustmentStack
   /** What the files are named after, already cleaned of everything a name cannot hold. */
   name: string
-  /** The side of each square face, in pixels. */
-  size: number
+  /** Six faces at a size, or the one equirectangular picture they are cut out of. */
+  command: SkyboxExportCommand
+}
+
+/**
+ * The graded panorama, as the file the target names. Read back at the target's own half-float
+ * depth: asking for bytes would quantise the very range these two formats exist for.
+ *
+ * `EXRExporter` does its own readback, so only the Radiance path asks for the pixels here.
+ */
+async function panoramaBytes(
+  target: Extract<ExportTargetId, 'sky.hdr' | 'sky.exr'>,
+  renderer: WebGLRenderer,
+  graded: WebGLRenderTarget,
+  size: PictureSize,
+): Promise<Uint8Array> {
+  if (target === 'sky.exr') {
+    const { EXRExporter } = await import('three/addons/exporters/EXRExporter.js')
+    return new EXRExporter().parse(renderer, graded)
+  }
+
+  // Half floats come back as the sixteen-bit patterns they are, and the encoder takes them so:
+  // widening them into a `Float32Array` first held the same 4K panorama twice, 128 MiB of it.
+  const half = new Uint16Array(size.width * size.height * 4)
+  await renderer.readRenderTargetPixelsAsync(graded, 0, 0, size.width, size.height, half)
+
+  return encodeRgbe(half, size.width, size.height)
 }
 
 /**
@@ -39,7 +65,7 @@ export type SkyboxExportRequest = {
  */
 export type SkyboxExportPort = (
   request: SkyboxExportRequest,
-  watch?: ExportWatch,
+  watch?: TaskWatch,
 ) => Promise<ExportedFile[]>
 
 export type SkyboxExportPortOptions = {
@@ -59,10 +85,14 @@ export function createSkyboxExportPort({
 }: SkyboxExportPortOptions): SkyboxExportPort {
   // `async`, so a stop already raised comes back as a rejection rather than as a synchronous
   // throw: the port promises a promise, and half its callers only ever look at one.
-  return async ({ assetId, adjustments, name, size }, watch) => {
+  return async ({ assetId, adjustments, name, command }, watch) => {
     // Before the source is even asked for: decoding a 4K panorama is the first long thing here,
     // and a stop pressed while it downloads must not be answered by six faces of it.
     watch?.signal?.throwIfAborted()
+
+    // A panorama is read back off its own target and never reaches the canvas, so one texel is
+    // what its frame costs — a face's side is the only size this frame ever means.
+    const faceSide = command.kind === 'faces' ? command.size : 1
 
     // Filled while the sources are in hand: `draw` is handed the frame's size — one face — and
     // the graded picture in between is the source's, which nothing else carries across.
@@ -76,8 +106,9 @@ export function createSkyboxExportPort({
         const [source] = sources
         // `loadSource` reads every picture as stored, which is right for a PBR channel and wrong
         // for a sky: this one IS a colour. Left undecoded, the grading would work on sRGB
-        // numbers and the pass would encode them a second time on the way out.
-        source.texture.colorSpace = SRGBColorSpace
+        // numbers and the pass would encode them a second time on the way out. NOT over a float
+        // decode — a `.hdr` is linear already, and stamping sRGB there decodes it twice instead.
+        if (source.texture.type === UnsignedByteType) source.texture.colorSpace = SRGBColorSpace
         source.texture.needsUpdate = true
 
         const adjust = createAdjustPass()
@@ -88,7 +119,7 @@ export function createSkyboxExportPort({
 
       frame: sources => {
         equirect = sources[0].size
-        return { width: size, height: size }
+        return { width: faceSide, height: faceSide }
       },
 
       draw: async ({ pipeline, renderer, material }) => {
@@ -98,11 +129,20 @@ export function createSkyboxExportPort({
         try {
           pipeline.renderTo(material, graded)
 
+          // The panorama IS this target, so it leaves before anything squares it off — and it
+          // leaves with the range the grading gave it, which is the whole reason to ask for one.
+          if (command.kind === 'panorama') {
+            watch?.signal?.throwIfAborted()
+            const bytes = await panoramaBytes(command.target, renderer, graded, equirect)
+            watch?.onStep?.(1, 1)
+            return [{ name, extension: exportTargetOf(command.target).extension, bytes }]
+          }
+
           const projection = createProjectionPass()
           try {
             projection.setSource(graded.texture)
             // A square frame for a square face, so `single` letterboxes nothing.
-            projection.setFrame(size, size)
+            projection.setFrame(faceSide, faceSide)
 
             const faces = faceFileNames(name)
             const files: ExportedFile[] = []

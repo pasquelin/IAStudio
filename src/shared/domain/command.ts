@@ -75,6 +75,9 @@ export type CommandId =
   | 'sequence.export'
   | 'sequence.exportCut'
   | 'sequence.exportBundle'
+  | 'sequence.exportEdl'
+  | 'sequence.exportFcpxml'
+  | 'montage.import'
   | 'sequence.mirror'
   | 'sequence.split'
   | 'sequence.delete'
@@ -103,6 +106,7 @@ export type CommandId =
   | 'canvas.vectorize'
   | 'canvas.extend'
   | 'canvas.export'
+  | 'canvas.exportLayered'
   | 'canvas.mergeDown'
   | 'canvas.flatten'
   | 'canvas.flipHorizontal'
@@ -224,6 +228,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.documentSaveAs.title',
     helpKey: 'commands.documentSaveAs.help',
     defaultBinding: 'Shift+Meta+KeyS',
+  }),
+  // `global` rather than `sequence`, unlike the two exports it mirrors: an import has no montage
+  // in front to belong to — it is what MAKES one.
+  command({
+    id: 'montage.import',
+    scope: 'global',
+    titleKey: 'commands.montageImport.title',
+    helpKey: 'commands.montageImport.help',
+    defaultBinding: null,
   }),
   command({
     id: 'layout.reset',
@@ -558,6 +571,24 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.sequenceExportBundle.help',
     defaultBinding: null,
   }),
+  // The oldest of the three, and beside them for the same reason: an event list carries the cuts
+  // and their timecodes and nothing else, which is what an online room asks for and no more.
+  command({
+    id: 'sequence.exportEdl',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExportEdl.title',
+    helpKey: 'commands.sequenceExportEdl.help',
+    defaultBinding: null,
+  }),
+  // The richer of the two plain-text interchanges, and the one that keeps the tracks: what an EDL
+  // flattens into one picture channel, this holds as a lane each.
+  command({
+    id: 'sequence.exportFcpxml',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExportFcpxml.title',
+    helpKey: 'commands.sequenceExportFcpxml.help',
+    defaultBinding: null,
+  }),
   // The program monitor alone answers it: `Monitor` arms the sequence scope on the one that
   // holds the playback token, so the key opens a return on the EDIT, never on the take.
   command({
@@ -809,6 +840,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasExport.title',
     helpKey: 'commands.canvasExport.help',
     defaultBinding: 'Shift+Meta+KeyE',
+  }),
+  command({
+    /** The stack rather than the flatten — no default binding, ⇧⌘E being the flatten's. */
+    id: 'canvas.exportLayered',
+    scope: 'canvas',
+    titleKey: 'commands.canvasExportLayered.title',
+    helpKey: 'commands.canvasExportLayered.help',
+    defaultBinding: null,
   }),
   command({
     id: 'canvas.snap',

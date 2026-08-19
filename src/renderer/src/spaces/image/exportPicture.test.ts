@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installDocument, retitleDocument } from '@/stores/document-fixtures'
-import { exportPicture } from './exportPicture'
+import { exportPicture, type ExportHost } from './exportPicture'
 
 const DOCUMENT = 'doc-1'
 
@@ -12,7 +12,12 @@ vi.mock('@/services/bridge', () => ({
   getBridge: () => ({ dialog: { exportPicture: (...args: [string, string]) => written(...args) } }),
 }))
 
-const host = { snapshot: () => Promise.resolve('PAYLOAD') }
+/** The two halves the layered way out reads are empty here: the flatten is what this suite is about. */
+const host: ExportHost = {
+  snapshot: () => Promise.resolve('PAYLOAD'),
+  pixelSnapshots: () => Promise.resolve([]),
+  flatten: () => Promise.resolve(new Uint8Array([1])),
+}
 
 beforeEach(() => {
   written.mockClear()
@@ -73,7 +78,7 @@ describe('exporting the document', () => {
    */
   it('says so, rather than nothing, when there is nothing to flatten', async () => {
     await expect(
-      exportPicture(DOCUMENT, { snapshot: () => Promise.resolve(null) }),
+      exportPicture(DOCUMENT, { ...host, snapshot: () => Promise.resolve(null) }),
     ).rejects.toThrow()
     expect(written).not.toHaveBeenCalled()
   })

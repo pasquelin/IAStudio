@@ -1,16 +1,16 @@
 import { basename } from 'node:path'
 import { z } from 'zod'
-import { exportRatio } from '@shared/domain/exportProgress'
+import { taskRatio } from '@shared/domain/taskProgress'
 import { exportTargetOf } from '@shared/domain/exportRegistry'
-import { isBundleEntry } from '@shared/domain/otioz'
+import { isBundleEntry, MAX_CONTENT_BYTES } from '@shared/domain/otioz'
 import { CHANNELS, EVENTS, type MontageExportRequest } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { sendToSender } from '@main/ipc/broadcast'
 import { fileInsideProject } from '@main/project/fileInsideProject'
 import { pathSegment } from '@main/validation'
-import type { BundleClient } from './bundleClient'
-import type { BundleMedium } from './bundleProtocol'
-import type { RunningExports } from './runningExports'
+import type { BundleClient } from '@main/bundle/bundleClient'
+import type { BundleMedium } from '@main/bundle/bundleProtocol'
+import type { RunningTasks } from '@main/task/runningTasks'
 import { writePickedFile } from './writePickedFile'
 
 export type MontageHandlerDeps = {
@@ -20,15 +20,8 @@ export type MontageHandlerDeps = {
   projectPath: () => string | null
   /** The process that packs the archive — injected as the waveform's client is, same reason. */
   bundles: () => BundleClient
-  running: RunningExports
+  running: RunningTasks
 }
-
-/**
- * A cut is JSON, and a long one stays small: ten thousand clips come to a few megabytes. The
- * ceiling is there because the renderer is the sandboxed side, not because a montage approaches
- * it.
- */
-const MAX_CONTENT_BYTES = 64 * 1024 * 1024
 
 /** The widest a cut gets. A bundle carries the media beside it, never a clip each. */
 const MAX_MEDIA = 2048
@@ -56,7 +49,12 @@ const montageExport = z
     // since an unbounded string from the sandbox becomes an entry in a table this process keeps.
     id: z.string().min(1).max(64),
     name: pathSegment,
-    target: z.union([z.literal('montage.otio'), z.literal('montage.otioz')]),
+    target: z.union([
+      z.literal('montage.otio'),
+      z.literal('montage.otioz'),
+      z.literal('montage.edl'),
+      z.literal('montage.fcpxml'),
+    ]),
     // Bytes, not code units: a cut full of accented clip names encodes to up to three times its
     // length in UTF-8, so the ceiling a `.length` holds is three times the one meant here.
     content: z.string().refine(text => Buffer.byteLength(text, 'utf8') <= MAX_CONTENT_BYTES),
@@ -83,7 +81,9 @@ export function registerMontageHandlers({
     const { id, name, target, content, media }: MontageExportRequest = montageExport.parse(request)
     const { extension } = exportTargetOf(target)
 
-    if (target === 'montage.otio') {
+    // Both of the text targets take the same road: what tells them apart is what the window
+    // composed, and this side writes the bytes it was handed either way.
+    if (target !== 'montage.otioz') {
       return writePickedFile(() => pickSavePath(name, extension), new TextEncoder().encode(content))
     }
 
@@ -117,9 +117,9 @@ export function registerMontageHandlers({
         // To the window that asked, never broadcast: the row belongs to one status line, and a
         // second window would show a bar for an export it cannot stop.
         onStep: (done, total) =>
-          sendToSender(event.sender, EVENTS.exportProgress, {
+          sendToSender(event.sender, EVENTS.taskProgress, {
             id,
-            ratio: exportRatio(done, total),
+            ratio: taskRatio(done, total),
           }),
         signal,
       })

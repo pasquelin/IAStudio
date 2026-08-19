@@ -135,6 +135,7 @@ type ChannelMethod = {
 
   [CHANNELS.sceneExport]: StudioBridge['scene']['export']
   [CHANNELS.montageExport]: StudioBridge['montage']['export']
+  [CHANNELS.montageImport]: StudioBridge['montage']['import']
 
   [CHANNELS.renderStart]: StudioBridge['render']['start']
   [CHANNELS.renderFrame]: StudioBridge['render']['frame']
@@ -143,7 +144,7 @@ type ChannelMethod = {
 
   [CHANNELS.textureExport]: StudioBridge['texture']['export']
   [CHANNELS.skyboxExport]: StudioBridge['skybox']['export']
-  [CHANNELS.exportCancel]: StudioBridge['exports']['cancel']
+  [CHANNELS.taskCancel]: StudioBridge['tasks']['cancel']
 
   [CHANNELS.fontsList]: StudioBridge['fonts']['list']
   [CHANNELS.fontsRead]: StudioBridge['fonts']['read']

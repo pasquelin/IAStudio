@@ -7,19 +7,16 @@ import { mediaLinkFrom, mediaLinkOf, mediaNameOf } from '@/engines/timeline/medi
 import {
   montageHoldsMore,
   otioTimelineOf,
-  sequenceFromOtio,
+  readSequenceFromOtio,
   type OtioSource,
 } from '@/engines/timeline/otioTimeline'
 import type { Clip, SequenceState } from '@/engines/timeline/timelineState'
 import { assetIdForLink } from '@/helpers/assetIndex'
 import { reportNotice } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
-import { useDocuments } from '@/stores/documents'
+import { documentIsKnown, useDocuments } from '@/stores/documents'
 
-/**
- * A montage on its way to and from its file, which is an OpenTimelineIO one and nothing else:
- * the open format IS the document, not an export laid beside a spelling of the studio's own.
- */
+/** A montage to and from its file: the OpenTimelineIO one IS the document, not an export beside. */
 
 /** Everything a clip is named and pointed at from, read once for a whole montage. */
 type Catalogue = {
@@ -40,12 +37,7 @@ function sourceOf(clip: Clip, { assets, documents, linkOf }: Catalogue): OtioSou
 }
 
 /**
- * The montage as OpenTimelineIO holds it. Composed by the WINDOW: only this side holds the
- * catalogue a clip's media is resolved against.
- *
- * `identifies` writes which document the file IS, and ONLY the document's own save may ask for
- * it: an export landing inside the project would otherwise claim the id of what it copied, and
- * the listing — which settles a shared id by path order — would hand the tab to the copy.
+ * `identifies` is the document's own save ALONE: a copy inside the project would steal its tab.
  */
 export function otioTimelineFor(
   state: SequenceState,
@@ -92,12 +84,7 @@ export function sequencePayload(
 }
 
 /**
- * Montages that opened holding LESS than their file did — a clip whose media nothing here could
- * be found for is dropped, and the file still holds it.
- *
- * Read by `savableDocument`: writing such a montage back would delete those clips for good, and
- * the tab shows nothing to say so, `install` having marked the document clean. The mark lifts
- * when the media are in the project and the document is opened again.
+ * Montages that opened with LESS than their file holds: writing one back deletes the rest for good.
  */
 const incomplete = new Set<string>()
 
@@ -105,10 +92,7 @@ const incomplete = new Set<string>()
 const holdsMore = new Set<string>()
 
 /**
- * The sentence a refusal says, or `null` — a sky's would talk about something else entirely.
- *
- * The lost media first: it is the older of the two failures and the one a user can act on, where
- * the other asks them to give up an edit made elsewhere.
+ * The sentence a refusal says, or `null`. Lost media first — it is the one a user can act on.
  */
 export function montageIsIncomplete(documentId: string): string | null {
   if (incomplete.has(documentId)) return i18next.t('documents.saveRefusedIncomplete')
@@ -121,12 +105,7 @@ export function serializeSequencePayload(payload: unknown): string {
 }
 
 /**
- * What the studio's own metadata held and this editor does not compose back — the effects chain
- * of a take, read by the Audio workspace alone, and which workspace wrote the file at all.
- *
- * Carried across a save rather than dropped, and that is what stops a take from losing its chain:
- * an `.otio` opened by the VIDEO editor — which is where one lands whose `documentKind` a foreign
- * tool stripped — would otherwise write back a montage recomposed from state alone.
+ * Studio metadata this editor does not compose back — carried, or a take loses its effects chain.
  */
 const carried = new Map<string, Record<string, unknown>>()
 
@@ -152,11 +131,16 @@ export const forgetCarriedMetadata = (documentId: string): void => {
 }
 
 /**
- * A montage read back off its file. `sequenceFromOtio` answers the empty sequence on anything
- * that is not a timeline, so a file the studio cannot make sense of opens on nothing rather than
- * failing — and `documentIo` refuses to write over one that did.
+ * A montage read off its file. What is not a timeline opens empty, and no save writes over it.
  */
-export function sequenceFromPayload(payload: unknown, documentId: string): SequenceState {
+export function sequenceFromPayload(
+  payload: unknown,
+  documentId: string,
+  /**
+   * Where a bundle's unpacked media are named, keyed by the entry it rewrote each `target_url` to.
+   */
+  unpacked?: ReadonlyMap<string, string>,
+): SequenceState {
   incomplete.delete(documentId)
   holdsMore.delete(documentId)
   remember(payload, documentId)
@@ -172,25 +156,41 @@ export function sequenceFromPayload(payload: unknown, documentId: string): Seque
 
   const unlinked: string[] = []
   const folder = documentFolder(documentId)
-  const state = sequenceFromOtio(payload, url => {
-    const link = mediaLinkFrom(url)
-    const found = assetIdForLink(link, folder)
-    // Only a link that NAMES something: a clip drawing a live scene has no media and no url, and
-    // counting it here reported every scene of a montage as a file that had gone missing.
+  const documents = useDocuments.getState()
+
+  const { state, dropped } = readSequenceFromOtio(payload, ({ assetId, sceneId, targetUrl }) => {
+    // « Does THIS project hold that id », never « where did the file come from ». A flag answering
+    // the second dropped every scene clip of a bundle this very machine had exported, while the
+    // scenes it named sat in the same project.
+    if (sceneId) {
+      return documentIsKnown(documents, sceneId)
+        ? { assetId: '', sceneId }
+        : { assetId: '', sceneId: '' }
+    }
+    // A bundle rewrote every url to its own entry and its ids were minted by another catalogue, so
+    // there the url names the medium and the carried id names a row nobody here has. Read off what
+    // the caller HANDED OVER rather than off a provenance label — and the catalogue is not asked
+    // either way: a montage opens before the shelf has read it, and a clip dropped for a row that
+    // was merely late is a cut that opens short.
+    if (assetId && !unpacked) return { assetId, sceneId: '' }
+
+    const link = mediaLinkFrom(targetUrl)
+    const found = unpacked?.get(targetUrl) ?? assetIdForLink(link, folder)
     if (!found && mediaNameOf(link) !== '') unlinked.push(mediaNameOf(link))
-    return found
+    return { assetId: found, sceneId: '' }
   })
 
-  // Said rather than swallowed, and the save is refused with it: a clip nothing could be found
-  // for is DROPPED, and a cut that silently opens shorter than it was written — then overwrites
-  // the file on the next ⌘S — is the worst answer available.
-  if (unlinked.length > 0) {
+  // The COUNT comes from the reader, which is the only side that knows a clip was let go of and
+  // for which of the three reasons; the names come from whoever could put one to it. Said rather
+  // than swallowed, and the save is refused with it: a cut that silently opens shorter than it
+  // was written — then overwrites the file on the next ⌘S — is the worst answer available.
+  if (dropped.length > 0) {
     incomplete.add(documentId)
     reportNotice(
       'document.load',
       i18next.t('documents.unlinkedClips', {
-        count: unlinked.length,
-        files: [...new Set(unlinked)].join(', '),
+        count: dropped.length,
+        files: [...new Set([...unlinked, ...dropped].filter(Boolean))].join(', '),
       }),
     )
   }

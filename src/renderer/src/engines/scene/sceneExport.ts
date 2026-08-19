@@ -130,7 +130,8 @@ function write(
   decoder: TextureDecoder,
   animations: readonly AnimationClip[],
 ): Promise<Uint8Array> {
-  if (format !== 'usdz') return toGltf(roots, format, decoder, animations)
+  if (format === 'glb' || format === 'gltf') return toGltf(roots, format, decoder, animations)
+  if (format !== 'usdz') return toShapes(oneRoot(roots), format)
 
   const exporter = new USDZExporter()
   exporter.setTextureUtils(decoder)
@@ -139,9 +140,49 @@ function write(
   const [only] = roots
   if (roots.length === 1 && only) return exporter.parseAsync(only)
 
+  return exporter.parseAsync(oneRoot(roots))
+}
+
+/** The three shape exporters take a single object, where `GLTFExporter` takes a list. */
+function oneRoot(roots: readonly Object3D[]): Object3D {
+  const [only] = roots
+  if (roots.length === 1 && only) return only
+
   const root = new Group()
   root.add(...roots)
-  return exporter.parseAsync(root)
+  return root
+}
+
+/**
+ * Geometry, and geometry alone. Binary in all three: an ASCII mesh is some four times the bytes
+ * for the same triangles, and every reader of these formats takes both.
+ *
+ * Loaded on demand, as the loaders are — a project exports a `.glb` a hundred times for each of
+ * these, and together they are 30 Ko nobody else needs.
+ */
+async function toShapes(
+  root: Object3D,
+  format: Extract<ExportFormat, 'obj' | 'ply' | 'stl'>,
+): Promise<Uint8Array> {
+  if (format === 'obj') {
+    // The one that has no binary spelling at all: OBJ is a text format and nothing else.
+    const { OBJExporter } = await import('three/addons/exporters/OBJExporter.js')
+    return new TextEncoder().encode(new OBJExporter().parse(root))
+  }
+
+  if (format === 'ply') {
+    const { PLYExporter } = await import('three/addons/exporters/PLYExporter.js')
+    // The RETURN value, never the callback: `parse` schedules `onDone` through
+    // `requestAnimationFrame`, which a hidden window never runs — and it returns before scheduling
+    // anything at all when it refuses a mesh. Waiting on the callback hung both ways.
+    const parsed: unknown = new PLYExporter().parse(root, () => {}, { binary: true })
+    if (!(parsed instanceof ArrayBuffer)) throw new Error('this scene has no PLY to write')
+    return new Uint8Array(parsed)
+  }
+
+  const { STLExporter } = await import('three/addons/exporters/STLExporter.js')
+  const view = new STLExporter().parse(root, { binary: true })
+  return new Uint8Array(view.buffer, view.byteOffset, view.byteLength)
 }
 
 /**

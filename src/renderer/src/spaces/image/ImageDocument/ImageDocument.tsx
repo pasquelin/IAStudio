@@ -52,7 +52,7 @@ import {
 } from '../imageTools'
 import { layerPort } from '../layerPort'
 import { prepareEdit } from '../aiActions'
-import { exportPicture } from '../exportPicture'
+import { exportLayeredPicture, exportPicture } from '../exportPicture'
 import { maskFromSelection } from '../maskActions'
 import { placeAsset } from '../placeAsset'
 import { revealAssets } from '@/helpers/revealPanel'
@@ -227,14 +227,17 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           return toggleView(documentId, 'snap')
         case 'canvas.clearGuides':
           return clearGuides(documentId)
-        case 'canvas.export': {
+        case 'canvas.export':
+        case 'canvas.exportLayered': {
           const host = engine.current
           // Reported rather than swallowed: a dismissed dialog and a refused write look exactly
           // alike from here, and only one of the two is worth knowing about.
           if (host) {
-            void exportPicture(documentId, host).catch(error =>
-              reportFailure('image.export', documentId, error),
-            )
+            const written =
+              command === 'canvas.export'
+                ? exportPicture(documentId, host)
+                : exportLayeredPicture(documentId, host)
+            void written.catch(error => reportFailure('image.export', documentId, error))
           }
           return
         }

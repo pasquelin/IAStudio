@@ -1,14 +1,19 @@
+import { exportTargetOf } from '@shared/domain/exportRegistry'
+import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
+import { bytesToBase64 } from '@/helpers/base64'
 import { getBridge } from '@/services/bridge'
+import { canvasOf, useCanvases } from '@/stores/canvases'
 import { documentExportName, useDocuments } from '@/stores/documents'
 
-/** The engine, seen from an export: it flattens, and that is the whole of it. */
-export type ExportHost = { snapshot: () => Promise<string | null> }
+/** The engine seen from an export: the flatten, plus every layer's pixels for the layered way. */
+export type ExportHost = {
+  snapshot: () => Promise<string | null>
+  pixelSnapshots: () => Promise<readonly LayerPixels[]>
+  flatten: () => Promise<Uint8Array<ArrayBuffer> | null>
+}
 
 /**
- * Writes the document, flattened, wherever the user points. The stack is composited by the GPU
- * on the way out — the same pass the screen shows, so what lands on disk is what was judged.
- *
- * Returns the path, or `null` when the dialog was dismissed or there was nothing to write.
+ * The document flattened by the GPU, wherever the user points. `null` for a dismissed dialog.
  */
 export async function exportPicture(documentId: string, host: ExportHost): Promise<string | null> {
   const bridge = getBridge()
@@ -23,5 +28,36 @@ export async function exportPicture(documentId: string, host: ExportHost): Promi
   // The tab's own title, so the file is findable afterwards. A word rather than the id when there
   // is no title left to clean: an id is no more findable than a word, and shorter to read.
   const name = documentExportName(useDocuments.getState(), documentId, 'image')
-  return bridge.dialog.exportPicture(`${name}.png`, image)
+  return bridge.dialog.exportPicture(`${name}${exportTargetOf('picture.png').extension}`, image)
+}
+
+/**
+ * The same document with its layers intact, as a `.psd`, through `exportPicture`'s own door.
+ */
+export async function exportLayeredPicture(
+  documentId: string,
+  host: ExportHost,
+): Promise<string | null> {
+  const bridge = getBridge()
+  if (!bridge) return null
+
+  const merged = await host.flatten()
+  // The same refusal the save makes, and for the same reason: a stack read while the engine is
+  // booting its GPU context is empty, and an empty PSD is a file that opens on nothing.
+  if (!merged) throw new Error('this image has no picture to export yet')
+
+  const { psdBytesOf } = await import('./psdDocument')
+  const { oraStackOf, oraSurfacesOf } = await import('@/engines/canvas/oraDocument')
+
+  const surfaces = oraSurfacesOf(await host.pixelSnapshots(), merged)
+  const bytes = await psdBytesOf({
+    stack: oraStackOf(canvasOf(useCanvases.getState(), documentId), surfaces),
+    surfaces,
+  })
+
+  const name = documentExportName(useDocuments.getState(), documentId, 'image')
+  return bridge.dialog.exportPicture(
+    `${name}${exportTargetOf('picture.psd').extension}`,
+    bytesToBase64(bytes),
+  )
 }

@@ -18,7 +18,7 @@ import { Breadcrumb } from '../Breadcrumb'
 import { Footer } from '../Footer'
 import { ActivityStatus } from '../ActivityStatus'
 import { ActivityToasts } from '../ActivityToasts'
-import { ExportsStatus } from '../ExportsStatus'
+import { TasksStatus } from '../TasksStatus'
 import { JobsStatus } from '../JobsStatus'
 import { UpdateStatus } from '../UpdateStatus'
 import { Rail } from '../Rail/Rail'
@@ -130,7 +130,7 @@ export function Shell() {
             <JobsStatus />
             {/* After the generations: both are work in flight, and what the studio is writing
                 out is nearer to being finished than what it is still asking the API for. */}
-            <ExportsStatus />
+            <TasksStatus />
             <ActivityStatus />
           </>
         }

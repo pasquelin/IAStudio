@@ -8,7 +8,7 @@
     "generateHint": "Starts the generation with the settings above; it is followed in the generations bar"
   },
   "jobs": {
-    "none": "No job running.",
+    "none": "No generation running.",
     "running_one": "{{count, number}} generation",
     "running_many": "{{count, number}} generations",
     "running_other": "{{count, number}} generations",
@@ -26,20 +26,21 @@
     },
     "cancel": "Cancel job"
   },
-  "exports": {
-    "running_one": "{{count, number}} export",
-    "running_many": "{{count, number}} exports",
-    "running_other": "{{count, number}} exports",
-    "open": "Show exports",
-    "openHint": "Opens the list of exports being written",
-    "cancel": "Stop this export"
+  "tasks": {
+    "running_one": "{{count, number}} task",
+    "running_many": "{{count, number}} tasks",
+    "running_other": "{{count, number}} tasks",
+    "open": "Show tasks",
+    "openHint": "Opens the list of tasks in progress",
+    "cancel": "Stop this task"
   },
   "dialog": {
     "allMedia": "All media",
     "video": "Video",
     "audio": "Audio",
     "image": "Image",
-    "mesh": "3D model"
+    "mesh": "3D model",
+    "bundle": "Edit with its media"
   },
   "sorts": {
     "relevance": "Quality: highest first",
@@ -49,7 +50,10 @@
   "exportFormats": {
     "glb": "Binary glTF (.glb)",
     "gltf": "glTF (.gltf)",
-    "usdz": "USDZ (.usdz)"
+    "usdz": "USDZ (.usdz)",
+    "obj": "Wavefront, shapes only (.obj)",
+    "ply": "Stanford, shapes only (.ply)",
+    "stl": "STL, triangles only (.stl)"
   },
   "errors": {
     "missingCredentials": "No credentials saved.",

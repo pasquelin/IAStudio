@@ -191,7 +191,7 @@ describe('sequenceFromOtio', () => {
       ).replaceAll(`"${STUDIO_METADATA_KEY}"`, '"someone_else"'),
     )
 
-    const state = sequenceFromOtio(foreign, () => 'relinked')
+    const state = sequenceFromOtio(foreign, () => ({ assetId: 'relinked', sceneId: '' }))
     const [clip] = state.tracks[0]?.clips ?? []
     expect(state.tracks).toHaveLength(1)
     expect(clip).toMatchObject({
@@ -247,7 +247,12 @@ describe('sequenceFromOtio', () => {
     )
 
     expect(
-      anonymous(sequenceFromOtio(stripped, url => url.slice(url.lastIndexOf('/') + 1, -4))),
+      anonymous(
+        sequenceFromOtio(stripped, ({ targetUrl }) => ({
+          assetId: targetUrl.slice(targetUrl.lastIndexOf('/') + 1, -4),
+          sceneId: '',
+        })),
+      ),
     ).toEqual(
       anonymous({
         // Frame size, sample rate, playhead and selection are gone: OTIO has no field for any

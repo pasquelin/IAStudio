@@ -123,6 +123,7 @@
       "sequence.mirror": "The return window could not open",
       "explorer.open": "The studio could not work out what this file is",
       "sequence.export": "Exporting the sequence failed",
+      "sequence.import": "Importing the edit failed",
       "document.export": "Exporting the document into the project failed",
       "scene": {
         "render": "Rendering the video failed"

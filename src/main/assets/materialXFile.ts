@@ -13,7 +13,7 @@ import {
   type MtlxWrap,
 } from '@shared/domain/materialX'
 import { isRecord } from '@shared/guards'
-import { attribute, escapeXml, unescapeXml } from './xmlText'
+import { attribute, escapeXml, unescapeXml } from '@shared/domain/xmlText'
 
 /**
  * The syntax of a `.mtlx`, written and read from the tag stream — the main process has no XML

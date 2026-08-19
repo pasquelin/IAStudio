@@ -4,7 +4,7 @@ import { mdiContentCut, mdiDeleteOutline, mdiLinkVariantOff } from '@mdi/js'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { posterUrl } from '@shared/domain/asset'
-import { exportOtio, exportOtioz } from '@/app/otioExport'
+import { exportCutAs, exportOtio, exportOtioz } from '@/app/otioExport'
 import type { Command } from '@/engines/core/history'
 import {
   addClips,
@@ -52,7 +52,7 @@ import { useShortcuts } from '@/hooks/useShortcuts'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import { assetsById, useAssets } from '@/stores/assets'
 import { documentExportName, useDocuments } from '@/stores/documents'
-import { runExport } from '@/stores/exports'
+import { runTask } from '@/stores/tasks'
 import { usePeaks } from '@/stores/peaks'
 import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { useSelection } from '@/stores/selection'
@@ -237,9 +237,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
         // to say so, so minutes of encoding showed nothing and offered no way out.
         case 'sequence.export': {
           const title = documentExportName(useDocuments.getState(), documentId, documentId)
-          void runExport(title, (_id, watch) =>
-            exportSequence({ sequence: state, title, ...watch }),
-          )
+          void runTask(title, (_id, watch) => exportSequence({ sequence: state, title, ...watch }))
           return
         }
         case 'sequence.exportCut':
@@ -247,6 +245,12 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
           return
         case 'sequence.exportBundle':
           void exportOtioz(documentId)
+          return
+        case 'sequence.exportEdl':
+          void exportCutAs(documentId, 'montage.edl')
+          return
+        case 'sequence.exportFcpxml':
+          void exportCutAs(documentId, 'montage.fcpxml')
           return
         case 'sequence.unlink': {
           // Asked here rather than left to the command: every command run lands on the undo

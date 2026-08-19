@@ -40,6 +40,7 @@
     "@mdi/react": "^1.6.1",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@scenario-labs/sdk": "^3.0.0",
+    "ag-psd": "^31.0.2",
     "better-sqlite3": "^13.0.3",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.9",
@@ -52,7 +53,8 @@
     "sherpa-onnx-node": "1.13.5",
     "simple-git": "^3.36.0",
     "three": "0.185.1",
-    "three-mesh-bvh": "^0.9.14"
+    "three-mesh-bvh": "^0.9.14",
+    "utif": "^3.1.0"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",

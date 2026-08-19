@@ -149,7 +149,7 @@ describe('the export menu row', () => {
       listeners: () => callbacks.length,
       unsubscribed: () => released,
       fire: size => {
-        for (const callback of callbacks) callback({ size })
+        for (const callback of callbacks) callback({ kind: 'faces', size })
       },
       exported: () => exported,
     }
@@ -197,7 +197,7 @@ describe('the export menu row', () => {
 
     useDocuments.setState({ activeId: 'doc-1' })
     render(<SkyboxDocument documentId="doc-1" />)
-    for (const callback of callbacks) callback({ size: 1024 })
+    for (const callback of callbacks) callback({ kind: 'faces', size: 1024 })
 
     // The message, not merely the silence: jsdom has no WebGL, so an export that got past the
     // guard would fail too — and a test that only checked for no dialog would pass either way.

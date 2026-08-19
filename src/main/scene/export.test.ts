@@ -54,8 +54,16 @@ describe('the scene export handler', () => {
   // The renderer is the sandboxed side: what crosses is validated, never trusted.
   it('refuses a format nothing writes', async () => {
     await expect(
-      invoke(CHANNELS.sceneExport, { name: 'set', format: 'obj', data: bytes }),
+      invoke(CHANNELS.sceneExport, { name: 'set', format: 'dxf', data: bytes }),
     ).rejects.toThrow()
+  })
+
+  it('writes each of the shape formats under its own extension', async () => {
+    for (const format of ['obj', 'ply', 'stl']) {
+      await expect(
+        invoke(CHANNELS.sceneExport, { name: 'set', format, data: bytes }),
+      ).resolves.toBe(`set.${format}`)
+    }
   })
 
   it('refuses a name that would climb out of the folder the user chose', async () => {

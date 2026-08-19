@@ -51,7 +51,7 @@ const parsed = ({
   }
 }
 
-const loadAsync = vi.fn(() => Promise.resolve(parsed()))
+const parseAsync = vi.fn(() => Promise.resolve(parsed()))
 const detectSupport = vi.fn()
 const setDecoderPath = vi.fn()
 const setTranscoderPath = vi.fn()
@@ -67,11 +67,17 @@ const disposeKtx2 = vi.fn()
  */
 vi.mock('three/addons/loaders/GLTFLoader.js', () => ({
   GLTFLoader: class {
-    loadAsync = loadAsync
+    parseAsync = parseAsync
     setDRACOLoader = setDRACOLoader
     setKTX2Loader = setKTX2Loader
   },
 }))
+
+/** Every file is read before it is routed, so every case needs bytes to be read. */
+const served = vi.fn(() => Promise.resolve(new TextEncoder().encode('glTF____').buffer))
+vi.stubGlobal('fetch', () =>
+  Promise.resolve({ ok: true, arrayBuffer: served } as unknown as Response),
+)
 
 vi.mock('three/addons/loaders/DRACOLoader.js', () => ({
   DRACOLoader: class {
@@ -105,7 +111,7 @@ const fakeGpu = () => ({}) as WebGLRenderer
 describe('createGltfSource', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    loadAsync.mockResolvedValue(parsed())
+    parseAsync.mockResolvedValue(parsed())
   })
 
   // Served by the application itself, never fetched from a CDN: the window policy forbids it,
@@ -128,7 +134,9 @@ describe('createGltfSource', () => {
     const source = await createGltfSource(() => null).load('scenario://asset/mesh-1')
 
     expect(source).toBeInstanceOf(Group)
-    expect(loadAsync).toHaveBeenCalledWith('scenario://asset/mesh-1')
+    // The BASE, which is what `GLTFLoader.load` resolves a file's siblings against — handing it
+    // the whole url would look for `…/mesh-1buffer.bin`.
+    expect(parseAsync).toHaveBeenCalledWith(expect.anything(), 'scenario://asset/')
   })
 
   /**
@@ -137,7 +145,7 @@ describe('createGltfSource', () => {
    * unreported — a window policy that refused them went unnoticed until the pixels were measured.
    */
   it('reports the textures a file asked for and did not get', async () => {
-    loadAsync.mockResolvedValue(parsed({ wants: 2, gets: 0 }))
+    parseAsync.mockResolvedValue(parsed({ wants: 2, gets: 0 }))
 
     await createGltfSource(() => null).load('scenario://asset/mesh-1')
 
@@ -149,7 +157,7 @@ describe('createGltfSource', () => {
   })
 
   it('reports the ones missing when only some arrived', async () => {
-    loadAsync.mockResolvedValue(parsed({ wants: 3, gets: 2 }))
+    parseAsync.mockResolvedValue(parsed({ wants: 3, gets: 2 }))
 
     await createGltfSource(() => null).load('scenario://asset/mesh-1')
 
@@ -161,7 +169,7 @@ describe('createGltfSource', () => {
   })
 
   it('says nothing about a file whose textures all arrived', async () => {
-    loadAsync.mockResolvedValue(parsed({ wants: 2, gets: 2 }))
+    parseAsync.mockResolvedValue(parsed({ wants: 2, gets: 2 }))
 
     await createGltfSource(() => null).load('scenario://asset/mesh-1')
 
@@ -182,7 +190,7 @@ describe('createGltfSource', () => {
    */
   it('judges what the materials asked for, not what the file happens to hold', async () => {
     const gltf = parsed({ wants: 1, gets: 1, unreferenced: 3 })
-    loadAsync.mockResolvedValue(gltf)
+    parseAsync.mockResolvedValue(gltf)
 
     await createGltfSource(() => null).load('scenario://asset/mesh-1')
 
@@ -230,5 +238,50 @@ describe('createGltfSource', () => {
 
     expect(disposeDraco).toHaveBeenCalled()
     expect(disposeKtx2).toHaveBeenCalled()
+  })
+})
+
+/**
+ * The formats a project holds beside its glTFs. Each is routed by its BYTES — the asset scheme
+ * spells no extension — and each parser is loaded only when a file actually is one.
+ */
+describe('the shapes that are not glTF', () => {
+  const holding = (bytes: Uint8Array): void => {
+    served.mockResolvedValue(bytes.buffer as ArrayBuffer)
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    parseAsync.mockResolvedValue(parsed())
+  })
+
+  it('reads an OBJ without asking the glTF parser anything', async () => {
+    holding(new TextEncoder().encode('# cube\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n'))
+
+    const model = await createGltfSource(() => null).load('scenario://asset/mesh-1')
+
+    expect(model.type).toBe('Group')
+    expect(parseAsync).not.toHaveBeenCalled()
+  })
+
+  /** Both geometry loaders hand back a `BufferGeometry`, which a scene cannot hold on its own. */
+  it('dresses the bare geometry an STL brings in something a scene can show', async () => {
+    const stl = new Uint8Array(84 + 50)
+    new DataView(stl.buffer).setUint32(80, 1, true)
+    holding(stl)
+
+    const model = await createGltfSource(() => null).load('scenario://asset/mesh-1')
+
+    expect(model).toBeInstanceOf(Mesh)
+    expect((model as Mesh).material).toBeInstanceOf(MeshStandardMaterial)
+  })
+
+  /** An animation arrives under a url spelling no extension either, and takes the same road. */
+  it('routes an animation by its bytes, as it routes a model', async () => {
+    holding(new TextEncoder().encode('glTF____'))
+
+    await createGltfSource(() => null).loadAnimation('scenario://animation/walk')
+
+    expect(parseAsync).toHaveBeenCalled()
   })
 })

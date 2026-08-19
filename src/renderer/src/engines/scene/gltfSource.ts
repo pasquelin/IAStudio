@@ -1,8 +1,10 @@
-import { Mesh, type Material, type Texture, type WebGLRenderer } from 'three'
+import { Mesh, MeshStandardMaterial, type Material, type Object3D } from 'three'
+import type { BufferGeometry, Texture, WebGLRenderer } from 'three'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
 import { materialDefOf, textureSlotsOf } from '@shared/domain/gltf'
+import { meshFormatOf, type MeshFormat } from '@shared/domain/meshFormat'
 import { reportFailure } from '@/services/diagnostics'
 import type { ModelSource } from './modelCache'
 import { texturesOf } from './sceneStats'
@@ -57,48 +59,42 @@ export function createGltfSource(rendererOf: () => WebGLRenderer | null): GltfSo
 
   let detected = false
 
+  /** The glTF path, which is the only one carrying decoders, textures and a texture count. */
+  const gltfOf = async (bytes: ArrayBuffer, url: string): Promise<Object3D> => {
+    // Once, and only once there is a GPU to ask: called twice, the loader would rebuild its
+    // support table on every model.
+    const renderer = detected ? null : rendererOf()
+    if (renderer) {
+      ktx2.detectSupport(renderer)
+      detected = true
+    }
+
+    const gltf = await loader.parseAsync(bytes, baseOf(url))
+    // Carried on the root rather than returned beside it: `Object3D.animations` is where three
+    // itself keeps them, and the cache hands one object back. Dropping them here is what left
+    // every model Scenario animates standing still, with nothing said.
+    gltf.scene.animations = gltf.animations
+
+    const { missing, declared } = unresolvedTextures(gltf)
+    // A count, not a sentence: the scope carries the translated line the user reads, and this
+    // detail rides beside it exactly as an SDK message would.
+    if (missing > 0) reportFailure('scene.texture', url, new Error(`${missing}/${declared}`))
+
+    return gltf.scene
+  }
+
+  const parse = async (bytes: ArrayBuffer, url: string): Promise<Object3D> => {
+    // Routed by the BYTES, never by the name: an asset reaches this side as `scenario://asset/<id>`
+    // and an animation as `scenario://animation/walk` — neither spells an extension, and this side
+    // holds no catalogue to ask.
+    const format = meshFormatOf(new Uint8Array(bytes))
+    if (format === 'gltf' || format === null) return gltfOf(bytes, url)
+    return parseWith(format, bytes, url)
+  }
+
   return {
-    load: async url => {
-      // Once, and only once there is a GPU to ask: called twice, the loader would rebuild its
-      // support table on every model.
-      const renderer = detected ? null : rendererOf()
-      if (renderer) {
-        ktx2.detectSupport(renderer)
-        detected = true
-      }
-
-      const gltf = await loader.loadAsync(url)
-      // Carried on the root rather than returned beside it: `Object3D.animations` is where three
-      // itself keeps them, and the cache hands one object back. Dropping them here is what left
-      // every model Scenario animates standing still, with nothing said.
-      gltf.scene.animations = gltf.animations
-
-      const { missing, declared } = unresolvedTextures(gltf)
-      // A count, not a sentence: the scope carries the translated line the user reads, and this
-      // detail rides beside it exactly as an SDK message would.
-      if (missing > 0) reportFailure('scene.texture', url, new Error(`${missing}/${declared}`))
-
-      return gltf.scene
-    },
-
-    loadAnimation: async url => {
-      const answer = await fetch(url)
-      if (!answer.ok) throw new Error(`${url} answered ${answer.status}`)
-
-      const bytes = await answer.arrayBuffer()
-      // Routed by the BYTES, never by the name: `scenario://animation/walk` spells no extension,
-      // and three's two loaders parse entirely different things.
-      if (readsAsGltf(bytes)) {
-        const gltf = await loader.parseAsync(bytes, url)
-        gltf.scene.animations = gltf.animations
-        return gltf.scene
-      }
-
-      // Loaded only when something is actually in FBX: it is 108 Ko of parser, and every other
-      // file the studio reads goes through the loader above.
-      const { FBXLoader } = await import('three/addons/loaders/FBXLoader.js')
-      return new FBXLoader().parse(bytes, url)
-    },
+    load: async url => parse(await bytesOf(url), url),
+    loadAnimation: async url => parse(await bytesOf(url), url),
     // `KTX2Loader` counts live instances: an undisposed one makes the next engine warn about itself.
     dispose: () => {
       draco.dispose()
@@ -107,10 +103,55 @@ export function createGltfSource(rendererOf: () => WebGLRenderer | null): GltfSo
   }
 }
 
-/** A glTF says so in its first four bytes, binary or not; anything else is left to `FBXLoader`. */
-function readsAsGltf(bytes: ArrayBuffer): boolean {
-  const head = new TextDecoder().decode(new Uint8Array(bytes, 0, Math.min(64, bytes.byteLength)))
-  return head.startsWith('glTF') || head.trimStart().startsWith('{')
+async function bytesOf(url: string): Promise<ArrayBuffer> {
+  const answer = await fetch(url)
+  if (!answer.ok) throw new Error(`${url} answered ${answer.status}`)
+  return answer.arrayBuffer()
+}
+
+/** What `GLTFLoader.load` resolves a file's siblings against — its own url, up to the last slash. */
+const baseOf = (url: string): string => url.slice(0, url.lastIndexOf('/') + 1)
+
+/** Geometry alone is not a scene: three's two geometry loaders hand one back, unlit and unnamed. */
+const meshOf = (geometry: BufferGeometry): Object3D =>
+  new Mesh(geometry, new MeshStandardMaterial())
+
+/**
+ * Every format but glTF, each parser loaded only when a file actually is one: together they are
+ * some 400 Ko, and all but one of them is rare in a project.
+ */
+async function parseWith(format: Exclude<MeshFormat, 'gltf'>, bytes: ArrayBuffer, url: string) {
+  const text = (): string => new TextDecoder().decode(bytes)
+
+  switch (format) {
+    case 'fbx':
+      return new (await import('three/addons/loaders/FBXLoader.js')).FBXLoader().parse(bytes, url)
+    case 'obj':
+      // No `.mtl`: an OBJ names its materials in a file beside it, which the asset scheme does not
+      // serve — the shapes arrive, dressed in the default the loader gives them.
+      return new (await import('three/addons/loaders/OBJLoader.js')).OBJLoader().parse(text())
+    case 'ply':
+      return meshOf(
+        new (await import('three/addons/loaders/PLYLoader.js')).PLYLoader().parse(bytes),
+      )
+    case 'stl':
+      return meshOf(
+        new (await import('three/addons/loaders/STLLoader.js')).STLLoader().parse(bytes),
+      )
+    case 'collada': {
+      const { ColladaLoader } = await import('three/addons/loaders/ColladaLoader.js')
+      // `null` for a document its parser could not make a scene of, where the others throw.
+      const collada = new ColladaLoader().parse(text(), baseOf(url))
+      if (!collada) throw new Error(`${url} is not a Collada document this build can read`)
+      return collada.scene
+    }
+    case 'usd': {
+      // `USDLoader`, not the `USDZLoader` every example written before r179 names: that one is a
+      // deprecated alias, and constructing it warns on the console at every model.
+      const { USDLoader } = await import('three/addons/loaders/USDLoader.js')
+      return new USDLoader().parse(bytes, baseOf(url))
+    }
+  }
 }
 
 /**

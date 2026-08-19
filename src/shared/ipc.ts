@@ -55,7 +55,7 @@ import type {
   ViewDirection,
 } from './domain/scene'
 import type { ExportTargetId } from './domain/exportRegistry'
-import type { ExportWriteProgress } from './domain/exportProgress'
+import type { TaskProgress } from './domain/taskProgress'
 import type { TextureExportTarget } from './domain/textureExport'
 import type { Language } from './i18n/languages'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
@@ -226,6 +226,7 @@ export type Channels = {
 
   sceneExport: 'scene:export'
   montageExport: 'montage:export'
+  montageImport: 'montage:import'
   renderStart: 'render:start'
   renderFrame: 'render:frame'
   renderFinish: 'render:finish'
@@ -234,7 +235,7 @@ export type Channels = {
   textureExport: 'texture:export'
   skyboxExport: 'skybox:export'
   projectExport: 'project:export'
-  exportCancel: 'export:cancel'
+  taskCancel: 'task:cancel'
 
   fontsList: 'fonts:list'
   fontsRead: 'fonts:read'
@@ -408,6 +409,7 @@ export const CHANNELS: Channels = {
 
   sceneExport: 'scene:export',
   montageExport: 'montage:export',
+  montageImport: 'montage:import',
   renderStart: 'render:start',
   renderFrame: 'render:frame',
   renderFinish: 'render:finish',
@@ -416,7 +418,7 @@ export const CHANNELS: Channels = {
   textureExport: 'texture:export',
   skyboxExport: 'skybox:export',
   projectExport: 'project:export',
-  exportCancel: 'export:cancel',
+  taskCancel: 'task:cancel',
 
   fontsList: 'fonts:list',
   fontsRead: 'fonts:read',
@@ -534,7 +536,7 @@ export type SceneExportRequest = {
  */
 export type MontageExportRequest = {
   /**
-   * The row the window is already showing for this export, and the name `exports.cancel` answers
+   * The row the window is already showing for this export, and the name `tasks.cancel` answers
    * to. Minted there rather than here: a bundle is gigabytes, and an id this side only handed
    * back at the END would leave the whole write unstoppable.
    */
@@ -542,13 +544,17 @@ export type MontageExportRequest = {
   /** Suggested file name, without its extension — the target decides that. */
   name: string
   /**
-   * `montage.otio` for the cut alone, `montage.otioz` for the cut with its media inside.
+   * `montage.otio` for the cut alone, `montage.otioz` for the cut with its media inside, and
+   * `montage.edl` for the event list.
    *
-   * The two literals rather than `ExportTargetId`: this writer takes no other, and the wider type
-   * let a caller pass `scene.glb` and compile, failing at runtime as an opaque parse error.
+   * The literals rather than `ExportTargetId`: this writer takes no other, and the wider type let
+   * a caller pass `scene.glb` and compile, failing at runtime as an opaque parse error.
    */
-  target: 'montage.otio' | 'montage.otioz'
-  /** The serialized timeline. Text, never bytes: a bundle wraps it rather than writing it. */
+  target: 'montage.otio' | 'montage.otioz' | 'montage.edl' | 'montage.fcpxml'
+  /**
+   * The cut, serialized. TEXT whatever the target — an OTIO is JSON and an EDL is columns, and
+   * both are files somebody reads with their eyes. A bundle wraps this rather than writing it.
+   */
   content: string
   /**
    * What the cut points at, for a bundle only. The PATHS never cross back: this side resolves
@@ -556,6 +562,22 @@ export type MontageExportRequest = {
    * project packed into something it then hands to somebody else.
    */
   media?: readonly { source: string; entry: string }[]
+}
+
+/**
+ * What came out of a bundle the studio was asked to read.
+ *
+ * The cut travels as TEXT and the media as catalogue ids — never as bytes: the archive can be
+ * gigabytes, and this side has already copied every medium into the project and given it a row.
+ * The window relinks each clip by the entry its `target_url` names, and composes the document.
+ */
+export type MontageImportResult = {
+  /** `content.otio`, verbatim. Parsed by the window, which is the side that reads a timeline. */
+  content: string
+  /** Each medium that landed, by the entry the cut names it under and the row it became. */
+  media: readonly { entry: string; assetId: string }[]
+  /** Where they landed, relative to the project — what the explorer will show them under. */
+  folder: string
 }
 
 /** One file of an export, already encoded by the renderer that drew it. */
@@ -607,6 +629,8 @@ export type LogScope =
   | 'scene.export'
   | 'scene.render'
   | 'sequence.export'
+  /** Reading a montage back from a bundle another application wrote. */
+  | 'sequence.import'
   /** An export asked for from outside, whichever space rendered it. */
   | 'document.export'
   | 'texture.map'
@@ -681,6 +705,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'scene.export',
   'scene.render',
   'sequence.export',
+  'sequence.import',
   'document.export',
   'texture.map',
   'texture.channel',
@@ -792,7 +817,7 @@ export const EVENTS = {
   sceneExport: 'evt:scene-export',
   textureExport: 'evt:texture-export',
   skyboxExport: 'evt:skybox-export',
-  exportProgress: 'evt:export-progress',
+  taskProgress: 'evt:task-progress',
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
   activity: 'evt:activity',
@@ -835,13 +860,16 @@ export type AssistantActionResult = { callId: string; outcome: ActionOutcome }
 export type TextureExportCommand = { target: TextureExportTarget }
 
 /**
- * What the native menu asks of the sky in front: how large each of the six faces comes out.
+ * What the native menu asks of the sky in front: the six faces at a size, or the one panorama
+ * they are cut out of.
  *
- * A size where a texture takes a target, because a sky has no per-engine recipe to choose from —
- * six PNGs named `_Rt`…`_Bk` is what all of them read. What differs is what the machine can
- * hold, and that is a number.
+ * DISCRIMINATED rather than a size beside an optional target: a size means nothing to a panorama,
+ * which leaves at the source's own resolution, and an optional field with an unwritten default is
+ * one every consumer reconstructs — differently, once there are three of them.
  */
-export type SkyboxExportCommand = { size: number }
+export type SkyboxExportCommand =
+  | { kind: 'faces'; size: number }
+  | { kind: 'panorama'; target: Extract<ExportTargetId, 'sky.hdr' | 'sky.exr'> }
 
 /**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in
@@ -1426,6 +1454,15 @@ export type StudioBridge = {
      * below does for the picture, this does for the edit. Answers the file name, never the path.
      */
     export: (request: MontageExportRequest) => Promise<string | null>
+    /**
+     * Reads a bundle back: opens the picker, unpacks the media into the project and gives each a
+     * catalogue row, then answers the cut and what it relinks to. `null` when the picker was
+     * dismissed, no project is open, or the read was stopped.
+     *
+     * The id is minted by the window, as an export's is, and for the same reason: unpacking is
+     * minutes of disk, and a name only handed back at the end would leave them unstoppable.
+     */
+    import: (id: string) => Promise<MontageImportResult | null>
   }
   /**
    * Rendering a scene to a film, in three steps: a session is opened once the save dialog has
@@ -1455,19 +1492,21 @@ export type StudioBridge = {
     export: (request: FolderExportRequest) => Promise<string | null>
   }
   /**
-   * The two halves invariant 6 asks of a long task, for the exports this side WRITES — the bundle
-   * being the one that matters, since it moves gigabytes with the window learning nothing.
+   * The two halves invariant 6 asks of a long task, for the ones this side RUNS — the bundle
+   * being the one that matters, since it moves gigabytes with the window learning nothing. It
+   * carries reading one back in as much as writing one out, which is why it is not named for the
+   * export.
    *
    * What the window bakes itself — six faces of a sky, five channels of a material — is watched
    * and stopped where its loop lives and never comes through here.
    */
-  exports: {
-    /** How far the write has got. Silent for anything that finishes in one go. */
-    onProgress: (callback: (progress: ExportWriteProgress) => void) => Unsubscribe
+  tasks: {
+    /** How far it has got. Silent for anything that finishes in one go. */
+    onProgress: (callback: (progress: TaskProgress) => void) => Unsubscribe
     /**
-     * Stops the export that was started under this id, half-written file and all. Answers
-     * whether one was still running — an id that already finished is not a failure, it is a
-     * click that arrived a moment late.
+     * Stops the task that was started under this id, half-written file and all. Answers whether
+     * one was still running — an id that already finished is not a failure, it is a click that
+     * arrived a moment late.
      */
     cancel: (id: string) => Promise<boolean>
   }

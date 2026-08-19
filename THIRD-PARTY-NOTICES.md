@@ -15,6 +15,7 @@ Studio itself (LICENSE) nor by the application's terms of use (EULA.md).
 | @scenario-labs/sdk | 3.0.0 | MIT |
 | @tanstack/react-query | 5.101.4 | MIT |
 | @tanstack/react-virtual | 3.14.9 | MIT |
+| ag-psd | 31.0.2 | MIT |
 | better-sqlite3 | 13.0.3 | MIT |
 | daisyui | 5.7.16 | MIT |
 | dockview-react | 8.1.0 | MIT |
@@ -49,6 +50,7 @@ Studio itself (LICENSE) nor by the application's terms of use (EULA.md).
 | tailwindcss | 4.3.3 | MIT |
 | three | 0.185.1 | MIT |
 | three-mesh-bvh | 0.9.14 | MIT |
+| utif | 3.1.0 | MIT |
 | wavesurfer.js | 7.12.11 | BSD-3-Clause |
 | zod | 4.4.3 | MIT |
 | zustand | 5.0.15 | MIT |
@@ -233,6 +235,39 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+## ag-psd
+
+Version: 31.0.2  
+Licence: MIT
+
+```
+The MIT License (MIT)
+
+Copyright (c) 2016 Agamnentzar
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+
+Any image or brush files included in this repository are not covered by this
+license and belong to their copyright holders.
 ```
 ## better-sqlite3
 
@@ -1658,6 +1693,34 @@ Licence: MIT
 MIT License
 
 Copyright (c) 2018 Garrett Johnson
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+## utif
+
+Version: 3.1.0  
+Licence: MIT
+
+```
+MIT License
+
+Copyright (c) 2017 Photopea
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

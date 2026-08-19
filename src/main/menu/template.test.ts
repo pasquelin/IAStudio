@@ -3,7 +3,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { APP_NAME } from '@shared/constants'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
-import { DISPLAY_MODES, LIGHT_ENTRIES, MESH_ENTRIES, VIEW_DIRECTIONS } from '@shared/domain/scene'
+import {
+  DISPLAY_MODES,
+  EXPORT_FORMATS,
+  LIGHT_ENTRIES,
+  MESH_ENTRIES,
+  VIEW_DIRECTIONS,
+} from '@shared/domain/scene'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
@@ -586,25 +592,42 @@ describe('the export menu', () => {
     expect(file.map(item => item.label)).not.toContain('Vidéo…')
     expect(
       exportsIn(menuTemplate(options({ workspace: 'video' }))).map(item => item.label),
-    ).toEqual(['Vidéo…', 'Montage (OTIO)…', 'Montage et médias (OTIOZ)…'])
+    ).toEqual([
+      'Vidéo…',
+      'Montage (OTIO)…',
+      'Montage et médias (OTIOZ)…',
+      'Liste de montage (EDL)…',
+      'Montage (FCPXML)…',
+    ])
   })
 
-  /** An « Export » row a space cannot fill would open on nothing at all. */
-  it('shows no row at all where the space sends nothing out', () => {
-    expect(
-      submenuOf(menuTemplate(options({ workspace: 'image' })), 'Fichier').map(item => item.label),
-    ).not.toContain('Exporter')
+  /**
+   * Every one of the six sends something out since the image gained its two rows, so the empty
+   * fallback below `exportSubmenu` is now unreachable by any workspace — kept for the compiler,
+   * and named here rather than left looking like a case somebody forgot to cover.
+   */
+  it('shows the row in every space, each space sending something out', () => {
+    for (const workspace of WORKSPACE_IDS) {
+      expect(
+        submenuOf(menuTemplate(options({ workspace })), 'Fichier').map(item => item.label),
+      ).toContain('Exporter')
+    }
   })
 
-  it('offers the three formats, for the scene and for the selection', () => {
+  it('offers every declared format, for the scene and for the selection', () => {
     const exports = exportsIn(menuTemplate(options()))
 
     expect(submenuOf(exports, 'Scène').map(item => item.label)).toEqual([
       'glTF binaire (.glb)',
       'glTF (.gltf)',
       'USDZ (.usdz)',
+      'Wavefront, formes seules (.obj)',
+      'Stanford, formes seules (.ply)',
+      'STL, triangles seuls (.stl)',
     ])
-    expect(submenuOf(exports, 'Sélection')).toHaveLength(3)
+    // The same list on both, and derived from the same one: a format offered for the scene and
+    // not for the selection would be a row that appears and disappears with a click.
+    expect(submenuOf(exports, 'Sélection')).toHaveLength(EXPORT_FORMATS.length)
   })
 
   it('asks for the format and the scope the row names', () => {
@@ -641,7 +664,6 @@ describe('the export menu', () => {
     expect(exportTexture).toHaveBeenCalledWith({ target: 'roblox' })
   })
 
-  // Exporting an image document is another errand, with another writer behind it.
   it('shows each workspace only the export that belongs to it', () => {
     const labels = (workspace: WorkspaceId): (string | undefined)[] =>
       exportsIn(menuTemplate(options({ workspace }))).map(item => item.label)
@@ -652,23 +674,44 @@ describe('the export menu', () => {
     expect(labels('textures')).not.toContain('Scène')
     expect(labels('skyboxes')).toContain('Ciel')
     expect(labels('skyboxes')).not.toContain('Matière')
-    expect(labels('image')).toEqual([])
+    // Two rows rather than a submenu of formats, as the montage has: what an image writes is
+    // composed by the window, and the flatten already answers a binding of its own.
+    expect(labels('image')).toEqual(['Image aplatie (PNG)…', 'Image à calques (PSD)…'])
   })
 })
 
 describe('exporting a sky', () => {
-  it('offers one row per face size, and only sizes the domain knows', () => {
+  it('offers one row per face size, then the panoramas, and nothing else', () => {
     const exports = exportsIn(menuTemplate(options({ workspace: 'skyboxes' })))
 
     // Written through the constant, which is why it exists: the no-break space binding a size to
     // its `×` is invisible here, and a literal one would have been read as an ordinary space.
     const size = (side: number): string => `${side}${NO_BREAK_SPACE}×${NO_BREAK_SPACE}${side}`
 
+    // The separator carries no label: what a row says is the assertion, and a separator says
+    // nothing on purpose.
     expect(submenuOf(exports, 'Ciel').map(item => item.label)).toEqual([
       size(512),
       size(1024),
       size(2048),
+      undefined,
+      'Panorama Radiance (.hdr)',
+      'Panorama OpenEXR (.exr)',
     ])
+  })
+
+  /** A panorama leaves at the source's own resolution: a size chosen for it would be a lie. */
+  it('asks for a panorama by its target rather than by a size', () => {
+    const exportSkybox = vi.fn()
+    const exports = exportsIn(
+      menuTemplate(options({ workspace: 'skyboxes', actions: actions({ exportSkybox }) })),
+    )
+
+    submenuOf(exports, 'Ciel')
+      .find(item => item.label === 'Panorama OpenEXR (.exr)')
+      ?.click?.(...([] as never[] as [never, never, never]))
+
+    expect(exportSkybox).toHaveBeenCalledWith({ kind: 'panorama', target: 'sky.exr' })
   })
 
   it('asks for the size the row names', () => {
@@ -680,7 +723,7 @@ describe('exporting a sky', () => {
 
     largest?.click?.(...([] as never[] as [never, never, never]))
 
-    expect(exportSkybox).toHaveBeenCalledWith({ size: 2048 })
+    expect(exportSkybox).toHaveBeenCalledWith({ kind: 'faces', size: 2048 })
   })
 })
 

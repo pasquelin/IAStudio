@@ -225,8 +225,27 @@ export const TRAITS_OF_DOMAIN: Record<CapabilityDomain, readonly CapabilityTrait
   sky: SKY_TRAITS,
 }
 
+/**
+ * A capability from what it CARRIES. `dropped` is the rest of its domain, derived rather than
+ * spelt a second time: a trait added to a domain lands in every format's losses at once, where
+ * two lists kept by hand let it land in neither and nothing says so.
+ */
+export function carrying(
+  domain: CapabilityDomain,
+  interchange: readonly CapabilityTrait[],
+  extended: readonly CapabilityTrait[] = [],
+): FormatCapability {
+  return {
+    domain,
+    interchange,
+    extended,
+    dropped: lossesAgainst(TRAITS_OF_DOMAIN[domain], { interchange, extended }),
+  }
+}
+
 /** A format the studio can write an edited document to. */
-export type WritableFormat = 'png' | 'jpeg' | 'webp' | 'ora' | 'otio' | 'gltf' | 'mtlx'
+export type WritableFormat =
+  'png' | 'jpeg' | 'webp' | 'ora' | 'otio' | 'gltf' | 'mtlx' | 'obj' | 'ply' | 'stl'
 
 export const WRITABLE_FORMATS: readonly WritableFormat[] = [
   'png',
@@ -236,6 +255,9 @@ export const WRITABLE_FORMATS: readonly WritableFormat[] = [
   'otio',
   'gltf',
   'mtlx',
+  'obj',
+  'ply',
+  'stl',
 ]
 
 /**
@@ -257,12 +279,7 @@ export type FormatCapability = {
 }
 
 /** Nothing survives a flatten, so the three flat formats share one entry. */
-const FLAT: FormatCapability = {
-  domain: 'picture',
-  interchange: [],
-  extended: [],
-  dropped: PICTURE_TRAITS,
-}
+const FLAT: FormatCapability = carrying('picture', [])
 
 /**
  * OpenRaster holds a stack of layers with a name, an offset, an opacity, a visibility and a
@@ -272,20 +289,11 @@ const FLAT: FormatCapability = {
  * `layerTransform` is extended rather than standard on purpose: ORA carries an integer x/y
  * offset, not the rotation, scale and skew a layer here can hold.
  */
-const OPEN_RASTER: FormatCapability = {
-  domain: 'picture',
-  interchange: ['layers', 'groups', 'blendMode', 'layerOpacity'],
-  extended: [
-    'layerMask',
-    'adjustmentLayer',
-    'liveText',
-    'layerTransform',
-    'clipping',
-    'layerLock',
-    'guides',
-  ],
-  dropped: [],
-}
+const OPEN_RASTER: FormatCapability = carrying(
+  'picture',
+  ['layers', 'groups', 'blendMode', 'layerOpacity'],
+  ['layerMask', 'adjustmentLayer', 'liveText', 'layerTransform', 'clipping', 'layerLock', 'guides'],
+)
 
 /**
  * OpenTimelineIO holds the STRUCTURE of a cut, and it IS the montage document — there is no
@@ -296,9 +304,9 @@ const OPEN_RASTER: FormatCapability = {
  * OTIO's `Transition` sits BETWEEN two items and consumes media from both, which a fade held by
  * a clip does not. Writing one as the other would change the cut in the standard part.
  */
-const OPEN_TIMELINE: FormatCapability = {
-  domain: 'montage',
-  interchange: [
+const OPEN_TIMELINE: FormatCapability = carrying(
+  'montage',
+  [
     'tracks',
     'trackName',
     'trackOrder',
@@ -308,7 +316,7 @@ const OPEN_TIMELINE: FormatCapability = {
     'mediaLink',
     'trackAudible',
   ],
-  extended: [
+  [
     'clipFade',
     'clipGain',
     'clipLink',
@@ -321,8 +329,7 @@ const OPEN_TIMELINE: FormatCapability = {
     'sampleRate',
     'editorState',
   ],
-  dropped: [],
-}
+)
 
 /**
  * glTF IS the scene document, and nothing of it is lost: what the standard has no field for
@@ -331,10 +338,10 @@ const OPEN_TIMELINE: FormatCapability = {
  * The split is what the manual promises — a scene opened elsewhere shows its tree, its cameras
  * and its lights, and is poorer than what this studio draws.
  */
-const GLTF_SCENE: FormatCapability = {
-  domain: 'scene',
-  interchange: ['sceneTree', 'nodeName', 'nodePlacement', 'cameraLens', 'punctualLight'],
-  extended: [
+const GLTF_SCENE: FormatCapability = carrying(
+  'scene',
+  ['sceneTree', 'nodeName', 'nodePlacement', 'cameraLens', 'punctualLight'],
+  [
     'ambientLight',
     'primitiveShape',
     'nodeMaterial',
@@ -343,8 +350,7 @@ const GLTF_SCENE: FormatCapability = {
     'sceneAnimation',
     'sceneEnvironment',
   ],
-  dropped: [],
-}
+)
 
 /**
  * MaterialX holds a `standard_surface` fed by `tiledimage` nodes, and it IS the material
@@ -355,9 +361,9 @@ const GLTF_SCENE: FormatCapability = {
  * to put them: the surface shader declares no input for either, so a map another application
  * would honour cannot be written at all. They come back here and nowhere else.
  */
-const MATERIAL_X: FormatCapability = {
-  domain: 'material',
-  interchange: [
+const MATERIAL_X: FormatCapability = carrying(
+  'material',
+  [
     'colourMap',
     'roughnessMap',
     'metalnessMap',
@@ -370,7 +376,7 @@ const MATERIAL_X: FormatCapability = {
     'heightScale',
     'emissiveStrength',
   ],
-  extended: [
+  [
     'occlusionMap',
     'cavityMap',
     'valueRanges',
@@ -381,8 +387,25 @@ const MATERIAL_X: FormatCapability = {
     'channelOrigin',
     'previewState',
   ],
-  dropped: [],
-}
+)
+
+/**
+ * The three geometry formats carry SHAPES and nothing else — no camera, no light, no animation,
+ * and no way to say so: none of the three reserves a place for data a reader would ignore, which
+ * is why they have no `extended` at all where every other format here has one.
+ *
+ * They are offered because a 3D printer, a mesh tool and a physics engine read them and read
+ * little else — and the studio says out loud what leaves on the way, rather than writing a file
+ * that opens on a shape somebody expected to be a scene.
+ *
+ * `nodeName` splits the three: OBJ names its groups and PLY its elements, an STL is one soup of
+ * triangles. `nodeMaterial` is dropped by all three all the same — OBJ names a `.mtl` this studio
+ * does not write beside it, and the name of a material nobody wrote is not the material.
+ */
+const SHAPES_ONLY: FormatCapability = carrying('scene', ['sceneTree', 'nodeName', 'nodePlacement'])
+
+/** One soup of triangles: an STL has no place to put a name or a tree, let alone the rest. */
+const TRIANGLE_SOUP: FormatCapability = carrying('scene', ['nodePlacement'])
 
 const CAPABILITY_BY_FORMAT: Record<WritableFormat, FormatCapability> = {
   png: FLAT,
@@ -392,6 +415,9 @@ const CAPABILITY_BY_FORMAT: Record<WritableFormat, FormatCapability> = {
   otio: OPEN_TIMELINE,
   gltf: GLTF_SCENE,
   mtlx: MATERIAL_X,
+  obj: SHAPES_ONLY,
+  ply: SHAPES_ONLY,
+  stl: TRIANGLE_SOUP,
 }
 
 export const capabilityOf = (format: WritableFormat): FormatCapability =>
@@ -443,7 +469,7 @@ export function lossesFor(
  */
 export function lossesAgainst(
   traits: readonly CapabilityTrait[],
-  { interchange, extended }: FormatCapability,
+  { interchange, extended }: Pick<FormatCapability, 'interchange' | 'extended'>,
 ): CapabilityTrait[] {
   return traits.filter(trait => !interchange.includes(trait) && !extended.includes(trait))
 }

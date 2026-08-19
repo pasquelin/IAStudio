@@ -26,7 +26,7 @@ describe('the jobs list', () => {
   it('says that nothing is running rather than drawing nothing', () => {
     render(<Jobs />)
 
-    expect(screen.getByText('Aucune tâche en cours.')).toBeInTheDocument()
+    expect(screen.getByText('Aucune génération en cours.')).toBeInTheDocument()
   })
 
   // Finished ones stay for the session: the flyout is where one goes to see what a run cost.

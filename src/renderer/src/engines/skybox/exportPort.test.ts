@@ -1,7 +1,7 @@
-import { NoColorSpace, SRGBColorSpace, Texture } from 'three'
+import { HalfFloatType, NoColorSpace, SRGBColorSpace, Texture } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
-import { createSkyboxExportPort } from './exportPort'
+import { createSkyboxExportPort, type SkyboxExportRequest } from './exportPort'
 
 /**
  * Everything below the pass needs a GPU, and jsdom has none: a run reaches the renderer and then
@@ -18,7 +18,12 @@ const decoded = (width: number, height: number): Texture => {
   return texture
 }
 
-const request = { assetId: 'a-sky', adjustments: NEUTRAL_ADJUSTMENTS, name: 'Ciel', size: 1024 }
+const request: SkyboxExportRequest = {
+  assetId: 'a-sky',
+  adjustments: NEUTRAL_ADJUSTMENTS,
+  name: 'Ciel',
+  command: { kind: 'faces', size: 1024 },
+}
 
 describe('the skybox export port', () => {
   it('asks for the source by its asset url, and for nothing else', async () => {
@@ -60,12 +65,26 @@ describe('the skybox export port', () => {
     expect(texture.version).toBeGreaterThan(0)
   })
 
+  /**
+   * A `.hdr` sky decodes LINEAR already. Stamped sRGB all the same, the grading works on numbers
+   * nobody meant and the six faces leave visibly darker than the panorama they were cut from.
+   */
+  it('leaves a float decode as the colour it already is', async () => {
+    const texture = decoded(4096, 2048)
+    texture.type = HalfFloatType
+    const port = createSkyboxExportPort({ loadTexture: () => Promise.resolve(texture) })
+
+    await expect(port(request)).rejects.toThrow()
+
+    expect(texture.colorSpace).not.toBe(SRGBColorSpace)
+  })
+
   it('decodes the panorama once for all six faces, never once per face', async () => {
     const loadTexture = vi.fn((_url: string) => Promise.resolve(decoded(2048, 1024)))
     const port = createSkyboxExportPort({ loadTexture })
 
     await expect(port(request)).rejects.toThrow()
-    await expect(port({ ...request, size: 512 })).rejects.toThrow()
+    await expect(port({ ...request, command: { kind: 'faces', size: 512 } })).rejects.toThrow()
 
     // Once per export, not once per face: a 4K panorama is 32 MB decoded, and six of them at a
     // time is what a browser evicts a live viewport's context to make room for.

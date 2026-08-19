@@ -9,8 +9,8 @@
 
 import {
   capabilityOf,
+  carrying,
   lossesAgainst,
-  MATERIAL_TRAITS,
   type CapabilityDomain,
   type CapabilityTrait,
   type FormatCapability,
@@ -28,10 +28,16 @@ import {
 /** A (section, target) pair. Named for the section first, so the list reads by surface. */
 export type ExportTargetId =
   | 'picture.png'
+  | 'picture.psd'
   | 'scene.glb'
   | 'scene.gltf'
   | 'scene.usdz'
+  | 'scene.obj'
+  | 'scene.ply'
+  | 'scene.stl'
   | 'sky.faces'
+  | 'sky.hdr'
+  | 'sky.exr'
   | 'material.gltf'
   | 'material.unity'
   | 'material.unreal'
@@ -39,13 +45,21 @@ export type ExportTargetId =
   | 'material.raw'
   | 'montage.otio'
   | 'montage.otioz'
+  | 'montage.edl'
+  | 'montage.fcpxml'
 
 export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'picture.png',
+  'picture.psd',
   'scene.glb',
   'scene.gltf',
   'scene.usdz',
+  'scene.obj',
+  'scene.ply',
+  'scene.stl',
   'sky.faces',
+  'sky.hdr',
+  'sky.exr',
   'material.gltf',
   'material.unity',
   'material.unreal',
@@ -53,6 +67,8 @@ export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'material.raw',
   'montage.otio',
   'montage.otioz',
+  'montage.edl',
+  'montage.fcpxml',
 ]
 
 /**
@@ -97,20 +113,15 @@ export type ExportTarget = {
  * `primitiveShape` is the one that reads oddly: a cube still arrives, as a mesh. What is dropped
  * is that it WAS a cube, which is the trait.
  */
-const GLTF_SCENE_EXPORT: FormatCapability = {
-  domain: 'scene',
-  interchange: [
-    'sceneTree',
-    'nodeName',
-    'nodePlacement',
-    'cameraLens',
-    'punctualLight',
-    'nodeMaterial',
-    'sceneAnimation',
-  ],
-  extended: [],
-  dropped: ['ambientLight', 'primitiveShape', 'cameraPath', 'cameraShot', 'sceneEnvironment'],
-}
+const GLTF_SCENE_EXPORT: FormatCapability = carrying('scene', [
+  'sceneTree',
+  'nodeName',
+  'nodePlacement',
+  'cameraLens',
+  'punctualLight',
+  'nodeMaterial',
+  'sceneAnimation',
+])
 
 /**
  * The same, minus every light: `USDZExporter` writes meshes, materials and cameras, and holds no
@@ -119,38 +130,19 @@ const GLTF_SCENE_EXPORT: FormatCapability = {
  * `sceneAnimation` is dropped for a second reason, and it is the studio's own: `sceneExport.ts`
  * hands the clips to `parseAsync` on the glTF path ALONE, so a USDZ arrives as a still pose.
  */
-const USDZ_SCENE_EXPORT: FormatCapability = {
-  domain: 'scene',
-  interchange: ['sceneTree', 'nodeName', 'nodePlacement', 'cameraLens', 'nodeMaterial'],
-  extended: [],
-  dropped: [
-    'punctualLight',
-    'ambientLight',
-    'primitiveShape',
-    'cameraPath',
-    'cameraShot',
-    'sceneAnimation',
-    'sceneEnvironment',
-  ],
-}
+const USDZ_SCENE_EXPORT: FormatCapability = carrying('scene', [
+  'sceneTree',
+  'nodeName',
+  'nodePlacement',
+  'cameraLens',
+  'nodeMaterial',
+])
 
 /**
  * Six square pictures. The grading is BAKED rather than carried — it survives as an appearance
  * and never as a setting — and everything the sun and the environment hold is left behind.
  */
-const SKY_FACES_EXPORT: FormatCapability = {
-  domain: 'sky',
-  interchange: ['skyImage', 'skyGrading'],
-  extended: [],
-  dropped: [
-    'sunAngles',
-    'sunIntensity',
-    'sunColour',
-    'environmentIntensity',
-    'backgroundVisible',
-    'skyGeneration',
-  ],
-}
+const SKY_FACES_EXPORT: FormatCapability = carrying('sky', ['skyImage', 'skyGrading'])
 
 const TRAIT_OF_CHANNEL: Record<PbrChannel, MaterialTrait> = {
   baseColor: 'colourMap',
@@ -194,12 +186,7 @@ function materialCapability(target: TextureExportTarget): FormatCapability {
   if (written.includes('normal')) interchange.push('normalGreenFlip')
   if (writesOneFile(target)) interchange.push(...MATERIAL_SETTINGS)
 
-  return {
-    domain: 'material',
-    interchange,
-    extended: [],
-    dropped: MATERIAL_TRAITS.filter(trait => !interchange.includes(trait)),
-  }
+  return carrying('material', interchange)
 }
 
 const TARGETS: Record<ExportTargetId, ExportTarget> = {
@@ -210,6 +197,23 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
     destination: 'folder',
     openedBy: ['Preview', 'GIMP', 'Safari', 'Firefox', 'Google Chrome'],
     capability: capabilityOf('png'),
+  },
+  /**
+   * The stack rather than the flatten — the one way out of an image that another editor can go
+   * on working in.
+   *
+   * `groups` is DROPPED and it is the loss worth naming: what the writer is handed is already a
+   * flat list of surfaces, the tree living in the studio's own field, so a group's children
+   * arrive as siblings. Everything past the four traits below has nowhere to go in what this
+   * composer writes — it writes pixels, a name, an opacity and a blend, and nothing else.
+   */
+  'picture.psd': {
+    domain: 'picture',
+    extension: '.psd',
+    door: 'declared',
+    destination: 'file',
+    openedBy: ['Adobe Photoshop', 'GIMP', 'Preview', 'Affinity Photo'],
+    capability: carrying('picture', ['layers', 'blendMode', 'layerOpacity', 'layerTransform']),
   },
   'scene.glb': {
     domain: 'scene',
@@ -235,12 +239,65 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
     openedBy: ['Xcode', 'Preview'],
     capability: USDZ_SCENE_EXPORT,
   },
+  /**
+   * The three shape formats, and what they are FOR: a printer, a mesh tool, a physics engine. Each
+   * is `import` rather than `declared` — none of the three is a format this machine hands to an
+   * application on a double-click, and saying otherwise would promise an opening that never comes.
+   */
+  'scene.obj': {
+    domain: 'scene',
+    extension: '.obj',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['Blender', 'MeshLab'],
+    capability: capabilityOf('obj'),
+  },
+  'scene.ply': {
+    domain: 'scene',
+    extension: '.ply',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['Blender', 'MeshLab'],
+    capability: capabilityOf('ply'),
+  },
+  'scene.stl': {
+    domain: 'scene',
+    extension: '.stl',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['Blender', 'MeshLab'],
+    capability: capabilityOf('stl'),
+  },
   'sky.faces': {
     domain: 'sky',
     extension: '.png',
     door: 'declared',
     destination: 'folder',
     openedBy: ['Preview', 'GIMP', 'Safari', 'Firefox', 'Google Chrome'],
+    capability: SKY_FACES_EXPORT,
+  },
+  /**
+   * The same sky as one equirectangular picture, and the reason to want it: an engine lights a
+   * scene from a panorama, not from six faces. Both carry the grading BAKED and lose the same
+   * settings — what they do not share is range, which is the whole point of writing either.
+   *
+   * `import` rather than `declared`: nothing on this machine opens a Radiance or an OpenEXR on a
+   * double-click, and saying otherwise would promise an opening that never comes.
+   */
+  'sky.hdr': {
+    domain: 'sky',
+    extension: '.hdr',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['Blender', 'Unreal Engine', 'Unity'],
+    capability: SKY_FACES_EXPORT,
+  },
+  'sky.exr': {
+    domain: 'sky',
+    extension: '.exr',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['Blender', 'Nuke', 'DaVinci Resolve'],
     capability: SKY_FACES_EXPORT,
   },
   'material.gltf': {
@@ -310,6 +367,46 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
     openedBy: [],
     capability: capabilityOf('otio'),
   },
+  /**
+   * The oldest way out, and the one an online room still asks for: an event list of cuts and
+   * timecodes. What it carries is the FOUR times of each shot and its reel, and its losses are
+   * therefore most of what a montage holds — the format has nowhere to put any of the rest.
+   *
+   * `tracks` is dropped rather than carried: CMX3600 has one `V` channel and two `A` ones, so a
+   * montage's rows do not survive as rows. `clipFade` goes with them — a fade held by a clip is
+   * not a transition BETWEEN two shots, which is the only thing the notation can spell.
+   */
+  'montage.edl': {
+    domain: 'montage',
+    extension: '.edl',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['DaVinci Resolve', 'Avid Media Composer', 'Adobe Premiere Pro'],
+    capability: carrying('montage', ['clipPlacement', 'clipTrim', 'trackOrder', 'mediaLink']),
+  },
+  /**
+   * What Final Cut reads, and what Premiere and Resolve take as an interchange. Unlike an EDL it
+   * keeps the TRACKS — a lane per row — and the frame size, the format declaring both.
+   *
+   * `exactTime` is dropped and it is the one worth naming: FCPXML counts in rationals over the
+   * frame rate, so a time the studio holds between two frames comes back rounded to one.
+   */
+  'montage.fcpxml': {
+    domain: 'montage',
+    extension: '.fcpxml',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['Final Cut Pro', 'DaVinci Resolve', 'Adobe Premiere Pro'],
+    capability: carrying('montage', [
+      'tracks',
+      'trackOrder',
+      'clipPlacement',
+      'clipTrim',
+      'mediaLink',
+      'trackAudible',
+      'frameSize',
+    ]),
+  },
 }
 
 export const exportTargetOf = (id: ExportTargetId): ExportTarget => TARGETS[id]
@@ -323,6 +420,9 @@ export const SCENE_TARGET_OF_FORMAT: Record<SceneExportFormat, ExportTargetId> =
   glb: 'scene.glb',
   gltf: 'scene.gltf',
   usdz: 'scene.usdz',
+  obj: 'scene.obj',
+  ply: 'scene.ply',
+  stl: 'scene.stl',
 }
 
 export const MATERIAL_TARGET_OF: Record<TextureExportTarget, ExportTargetId> = {

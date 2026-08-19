@@ -6,12 +6,8 @@ import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { BODY_PARTS } from '@shared/domain/humanoid'
 import { ROOT_MOTIONS } from '@shared/domain/scene'
 import { EASINGS } from '@shared/domain/animation'
-import {
-  ADJUSTMENT_KINDS,
-  BLEND_MODES,
-  LAYER_KINDS,
-  type LayerKind,
-} from '@/engines/canvas/canvasState'
+import { BLEND_MODES } from '@shared/domain/canvasBlend'
+import { ADJUSTMENT_KINDS, LAYER_KINDS, type LayerKind } from '@/engines/canvas/canvasState'
 import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timelineState'
 import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'

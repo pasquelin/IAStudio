@@ -14,6 +14,8 @@ const traitsOf = (id: ExportTargetId): CapabilityTrait[] => {
 }
 
 describe('the table itself', () => {
+  // Every capability here comes from `carrying` now, so these two cannot fail on what is there
+  // today: what they still catch is a capability somebody writes out by hand later.
   it('classes every trait of its section exactly once, so none slips in unclassed', () => {
     for (const id of EXPORT_TARGET_IDS) {
       const classed = traitsOf(id)
@@ -34,9 +36,21 @@ describe('the table itself', () => {
   })
 
   it('offers each section the targets declared for it, and no other', () => {
-    expect(targetsOfDomain('scene')).toEqual(['scene.glb', 'scene.gltf', 'scene.usdz'])
-    expect(targetsOfDomain('sky')).toEqual(['sky.faces'])
-    expect(targetsOfDomain('montage')).toEqual(['montage.otio', 'montage.otioz'])
+    expect(targetsOfDomain('scene')).toEqual([
+      'scene.glb',
+      'scene.gltf',
+      'scene.usdz',
+      'scene.obj',
+      'scene.ply',
+      'scene.stl',
+    ])
+    expect(targetsOfDomain('sky')).toEqual(['sky.faces', 'sky.hdr', 'sky.exr'])
+    expect(targetsOfDomain('montage')).toEqual([
+      'montage.otio',
+      'montage.otioz',
+      'montage.edl',
+      'montage.fcpxml',
+    ])
   })
 })
 

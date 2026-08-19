@@ -2,6 +2,7 @@ import { mdiCubeOutline } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SphericalAngles } from '@shared/domain/angles'
+import type { SkyboxExportCommand } from '@shared/ipc'
 import { PICTURES, type Asset } from '@shared/domain/asset'
 import { EmptyState } from '@/design/EmptyState'
 import { PANE_TOOLBAR } from '@/design/styles'
@@ -15,7 +16,7 @@ import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { isSkyboxDirty, setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { documentExportName, useDocuments } from '@/stores/documents'
-import { runExport } from '@/stores/exports'
+import { runTask } from '@/stores/tasks'
 import { useSkyboxViews, skyboxViewOf } from '@/stores/skyboxViews'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
@@ -34,20 +35,25 @@ import { SKYBOX_TOOLS, skyboxViewFrom } from './skyboxTools'
  * follows the first screen: statically imported, the export pass would be downloaded by anyone
  * who opens a sky, and it is only ever read by somebody who exports one.
  */
-async function exportSkybox(documentId: string, size: number): Promise<void> {
+async function exportSkybox(documentId: string, command: SkyboxExportCommand): Promise<void> {
   const bridge = getBridge()
   if (!bridge) return
 
   try {
-    await runExport(
+    await runTask(
       documentExportName(useDocuments.getState(), documentId, 'skybox'),
       // The rendering is `skyboxExportFiles`, which the outside door shares. A sky with no
       // picture throws THERE, before any dialog: a folder chooser opened to write six files of
       // nothing is a question nobody can answer.
-      async (_id, watch) => bridge.skybox.export(await skyboxExportFiles(documentId, size, watch)),
+      async (_id, watch) =>
+        bridge.skybox.export(await skyboxExportFiles(documentId, command, watch)),
     )
   } catch (error) {
-    reportFailure('skybox.export', String(size), error)
+    reportFailure(
+      'skybox.export',
+      command.kind === 'faces' ? String(command.size) : command.target,
+      error,
+    )
   }
 }
 
@@ -81,8 +87,8 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
     const bridge = getBridge()
     if (!bridge || !active) return
 
-    return bridge.menu.onSkyboxExport(({ size }) => {
-      void exportSkybox(documentId, size)
+    return bridge.menu.onSkyboxExport(command => {
+      void exportSkybox(documentId, command)
     })
   }, [documentId, active])
 

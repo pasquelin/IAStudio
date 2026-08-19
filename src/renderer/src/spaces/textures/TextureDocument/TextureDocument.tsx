@@ -13,7 +13,7 @@ import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { documentExportName, useDocuments } from '@/stores/documents'
-import { runExport } from '@/stores/exports'
+import { runTask } from '@/stores/tasks'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { loadTexture } from '@/engines/scene/textureCache'
@@ -41,7 +41,7 @@ async function exportTexture(documentId: string, target: TextureExportTarget): P
   if (!bridge) return
 
   try {
-    await runExport(
+    await runTask(
       documentExportName(useDocuments.getState(), documentId, 'texture'),
       // The baking is `textureExportFiles`, which the outside door shares — including its refusal
       // of a material with no channel, which throws before any dialog is raised.

@@ -7,11 +7,10 @@ import { SliderField } from '@/design/SliderField'
 import { TextField } from '@/design/TextField'
 import { NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
+import { BLEND_MODES, type BlendMode } from '@shared/domain/canvasBlend'
 import {
-  BLEND_MODES,
   isGroup,
   type AdjustmentKind,
-  type BlendMode,
   type Layer,
   type Transform,
 } from '@/engines/canvas/canvasState'

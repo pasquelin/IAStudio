@@ -18,6 +18,7 @@ export const SHIPPED: string[] = [
   '@mdi/react',
   '@modelcontextprotocol/sdk',
   '@scenario-labs/sdk',
+  'ag-psd',
   'better-sqlite3',
   'electron-store',
   'electron-updater',
@@ -29,6 +30,7 @@ export const SHIPPED: string[] = [
   'simple-git',
   'three',
   'three-mesh-bvh',
+  'utif',
   // The runtime itself.
   'electron',
   // Bundled into the renderer by Vite, hence in `devDependencies` while shipping all the same.

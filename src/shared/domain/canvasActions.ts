@@ -1,4 +1,5 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
+import { BLEND_MODES } from './canvasBlend'
 
 /**
  * The image workspace, driven by value rather than by gesture.
@@ -23,25 +24,6 @@ const LAYER: ActionField = {
   labelKey: 'assistant.fields.layerId',
   required: true,
 }
-
-const BLEND_MODES: readonly string[] = [
-  'normal',
-  'multiply',
-  'screen',
-  'overlay',
-  'darken',
-  'lighten',
-  'color-dodge',
-  'color-burn',
-  'hard-light',
-  'soft-light',
-  'difference',
-  'exclusion',
-  'hue',
-  'saturation',
-  'color',
-  'luminosity',
-]
 
 export const CANVAS_ACTIONS: readonly AssistantAction[] = [
   action({

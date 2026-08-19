@@ -1,5 +1,5 @@
-import type { ExportWatch } from '@shared/domain/exportProgress'
-import type { FolderExportRequest } from '@shared/ipc'
+import type { TaskWatch } from '@shared/domain/taskProgress'
+import type { FolderExportRequest, SkyboxExportCommand } from '@shared/ipc'
 import { loadTexture } from '@/engines/scene/textureCache'
 import { assetVersionOf } from '@/stores/assets'
 import { documentExportName, useDocuments } from '@/stores/documents'
@@ -15,8 +15,8 @@ import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
  */
 export async function skyboxExportFiles(
   documentId: string,
-  size: number,
-  watch?: ExportWatch,
+  command: SkyboxExportCommand,
+  watch?: TaskWatch,
 ): Promise<FolderExportRequest> {
   // Read once, before any `await`. Read twice — the picture here and the grading after the
   // `import()` — and a slider moved while the chunk downloads would export one sky's pixels
@@ -26,11 +26,16 @@ export async function skyboxExportFiles(
 
   const name = documentExportName(useDocuments.getState(), documentId, 'skybox')
 
+  const target = command.kind === 'faces' ? 'sky.faces' : command.target
+
   const { createSkyboxExportPort } = await import('@/engines/skybox/exportPort')
   const files = await createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })(
-    { assetId: sky.source.assetId, adjustments: sky.adjustments, name, size },
+    { assetId: sky.source.assetId, adjustments: sky.adjustments, name, command },
     watch,
   )
 
-  return { folder: name, target: 'sky.faces', files }
+  // The same folder either way, and that is a decision rather than an oversight: the writer takes
+  // a folder and only a folder — `pathSegment` refuses an empty one — so a panorama lands in one
+  // of its own instead of beside whatever the person picked.
+  return { folder: name, target, files }
 }

@@ -14,7 +14,7 @@ import {
   type OraStack,
   type OraSurface,
 } from '@shared/domain/openRaster'
-import { attribute, escapeXml, unescapeXml } from './xmlText'
+import { attribute, escapeXml, unescapeXml } from '@shared/domain/xmlText'
 
 const MIMETYPE_PATH = 'mimetype'
 const THUMBNAIL_PATH = 'Thumbnails/thumbnail.png'

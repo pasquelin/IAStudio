@@ -49,7 +49,7 @@ sont des panneaux qui vous disent ce qu’il leur manque pour se remplir.
 | « Aucun projet ouvert » | il faut créer ou ouvrir un projet (`⌘N` / `⌘O`) |
 | « Aucun document ouvert. Générez ou ouvrez un asset pour commencer. » | le centre de la fenêtre attend un premier onglet |
 | « Aucun asset. Générez quelque chose pour commencer. » | l’étagère du projet est encore vide |
-| « Aucune tâche en cours. » | rien ne travaille en ce moment — la liste des générations est vide |
+| « Aucune génération en cours. » | rien ne se génère en ce moment — la liste des générations est vide |
 | « Ouvrez un projet pour générer. » | le formulaire attend un projet où déposer le résultat |
 | « Ouvrez un projet pour voir ses assets. » | idem, pour l’étagère |
 | « Ouvrez une scène pour voir son contenu. » | le panneau **Scène** attend une scène ouverte |

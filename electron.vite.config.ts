@@ -74,7 +74,7 @@ export default defineConfig(({ command }) => ({
           index: resolve('src/main/index.ts'),
           catalogWorker: resolve('src/main/project/catalogWorker.ts'),
           peaksWorker: resolve('src/main/media/peaksWorker.ts'),
-          bundleWorker: resolve('src/main/export/bundleWorker.ts'),
+          bundleWorker: resolve('src/main/bundle/bundleWorker.ts'),
           sttWorker: resolve('src/main/dictation/sttWorker.ts'),
         },
         output: { entryFileNames: '[name].js' },

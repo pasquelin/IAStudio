@@ -9,6 +9,7 @@ import {
   TRAITS_OF_DOMAIN,
   WRITABLE_FORMATS,
   capabilityOf,
+  carrying,
   formatOfFile,
   lossesFor,
   type CapabilityTrait,
@@ -73,7 +74,22 @@ describe('what a file name says its format is', () => {
   })
 })
 
+describe('a capability built from what it carries', () => {
+  it('drops the rest of its domain rather than taking a second list to keep in step', () => {
+    expect(carrying('sky', ['skyImage'], ['skyGrading']).dropped).toEqual([
+      'sunAngles',
+      'sunIntensity',
+      'sunColour',
+      'environmentIntensity',
+      'backgroundVisible',
+      'skyGeneration',
+    ])
+  })
+})
+
 describe('the table itself', () => {
+  // Every capability of both tables comes from `carrying` now, so these two cannot fail on what
+  // is there today: what they still catch is a capability somebody writes out by hand later.
   it('classes every trait exactly once per format, so a new trait cannot slip in unclassed', () => {
     // The defect this guards is the one the module exists to stop. A trait nobody classed would
     // read as carried — and a trait wrongly read as carried is a trait silently lost, which is

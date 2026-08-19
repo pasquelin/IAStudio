@@ -2,10 +2,11 @@ import { exportTargetOf } from '@shared/domain/exportRegistry'
 import { bundleOf } from '@shared/domain/otioz'
 import type { FolderExportRequest } from '@shared/ipc'
 import { newId } from '@/helpers/ids'
+import { assetsById, useAssets } from '@/stores/assets'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { documentExportName, useDocuments } from '@/stores/documents'
-import { runExport } from '@/stores/exports'
+import { runTask } from '@/stores/tasks'
 import { useProject } from '@/stores/project'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { otioTimelineFor, serializeSequencePayload } from './sequenceDocument'
@@ -54,6 +55,49 @@ export function otioExportFiles(documentId: string): FolderExportRequest {
         bytes: new TextEncoder().encode(serializeSequencePayload(timeline)),
       },
     ],
+  }
+}
+
+/**
+ * Where a rush sits, absolutely — a plain-text interchange lands wherever the dialog says, so it
+ * has no folder of its own to be relative to. `null` when no project holds the media.
+ */
+function mediaUrlOf(assetPath: string | undefined): string | null {
+  const projectPath = useProject.getState().project?.path
+  return assetPath && projectPath ? fileUrlsUnder(projectPath)(assetPath) : null
+}
+
+/**
+ * The same cut in one of the two plain-text interchanges. Written from the STATE rather than from
+ * the OTIO, which would be translating a translation — and the names come from the catalogue,
+ * both formats naming their shots.
+ */
+export async function exportCutAs(
+  documentId: string,
+  target: 'montage.edl' | 'montage.fcpxml',
+): Promise<string | null> {
+  const bridge = getBridge()
+  if (!bridge) return null
+
+  try {
+    const byId = assetsById(useAssets.getState())
+    const name = documentExportName(useDocuments.getState(), documentId, 'edit')
+    const state = sequenceOf(useSequences.getState(), documentId)
+    const nameOf = (assetId: string): string => byId.get(assetId)?.name ?? assetId
+
+    // Not one `compose` for the two: an EDL has nowhere to put a path, and FCPXML is unusable
+    // without one — the same three arguments would have hidden that they ask for different things.
+    const content =
+      target === 'montage.edl'
+        ? (await import('@/engines/timeline/edl')).edlOf(state, name, nameOf)
+        : (await import('@/engines/timeline/fcpxml')).fcpxmlOf(state, name, nameOf, assetId =>
+            mediaUrlOf(byId.get(assetId)?.path),
+          )
+
+    return await bridge.montage.export({ id: newId(), name, target, content })
+  } catch (error) {
+    reportFailure('sequence.export', documentId, error)
+    return null
   }
 }
 
@@ -109,7 +153,7 @@ export async function exportOtioz(documentId: string): Promise<string | null> {
 
     // The id travels WITH the request: the process that writes the archive answers the stop
     // button by that same name, and one handed back at the end would come minutes too late.
-    return await runExport(name, id =>
+    return await runTask(name, id =>
       bridge.montage.export({
         id,
         name,

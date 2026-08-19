@@ -3,6 +3,7 @@ import {
   readAdjustments,
   type AdjustmentStack,
 } from '@shared/domain/adjustments'
+import { BLEND_MODES, type BlendMode } from '@shared/domain/canvasBlend'
 import { DEFAULT_FONT, readFontRef, type FontRef } from '@shared/domain/font'
 import { isRecord } from '@shared/guards'
 import { clamp } from '@shared/numeric'
@@ -15,44 +16,6 @@ import type { Point } from '../core/geometry'
  * Pixels are NOT here — they live in a GPU texture per layer, owned by `CanvasEngine` and keyed
  * by layer id. This is what a layer *is*, not what it shows.
  */
-
-/** The Porter-Duff and separable modes Pixi can composite with. */
-export type BlendMode =
-  | 'normal'
-  | 'multiply'
-  | 'screen'
-  | 'overlay'
-  | 'darken'
-  | 'lighten'
-  | 'color-dodge'
-  | 'color-burn'
-  | 'hard-light'
-  | 'soft-light'
-  | 'difference'
-  | 'exclusion'
-  | 'hue'
-  | 'saturation'
-  | 'color'
-  | 'luminosity'
-
-export const BLEND_MODES: readonly BlendMode[] = [
-  'normal',
-  'multiply',
-  'screen',
-  'overlay',
-  'darken',
-  'lighten',
-  'color-dodge',
-  'color-burn',
-  'hard-light',
-  'soft-light',
-  'difference',
-  'exclusion',
-  'hue',
-  'saturation',
-  'color',
-  'luminosity',
-]
 
 /**
  * What each padlock holds. Three of them rather than one boolean: locking a layer's position

@@ -1,10 +1,11 @@
-import { writeOtiozFile } from './otiozFile'
+import { readOtiozFile } from './otiozRead'
+import { writeOtiozFile } from './otiozWrite'
 import { isBundleCancel, type BundleMessage, type BundleResponse } from './bundleProtocol'
 
 /**
  * The bundle's own process — a `utilityProcess`, which is what invariant 6 asks for around a zip:
- * the archive of a montage IS the rushes, and it was assembled on the process that owns the
- * windows. Measured there: 545–860 ms of blocked loop per 320 Mio, in stalls of up to 135 ms.
+ * the archive of a montage IS the rushes. Measured on the main process: 545–860 ms of blocked loop
+ * per 320 Mio written, in stalls of up to 135 ms.
  */
 
 const running = new Map<number, AbortController>()
@@ -32,17 +33,27 @@ process.parentPort.on('message', event => {
     const controller = new AbortController()
     running.set(message.id, controller)
 
-    writeOtiozFile(
-      message.path,
-      { content: message.content, media: message.media },
-      {
-        onStep: (done, total) => reply({ id: message.id, kind: 'progress', done, total }),
-        signal: controller.signal,
-      },
-    )
-      .then(
-        written => reply({ id: message.id, kind: 'settled', written }),
-        (error: unknown) => reply({ id: message.id, kind: 'failed', error: messageOf(error) }),
+    const watch = {
+      onStep: (done: number, total: number) =>
+        reply({ id: message.id, kind: 'progress', done, total }),
+      signal: controller.signal,
+    }
+
+    const work = message.writes
+      ? writeOtiozFile(
+          message.path,
+          { content: message.content, media: message.media },
+          watch,
+        ).then((written): BundleResponse => ({ id: message.id, kind: 'wrote', written }))
+      : readOtiozFile(message.path, message.into, watch).then((contents): BundleResponse => ({
+          id: message.id,
+          kind: 'read',
+          contents,
+        }))
+
+    work
+      .then(reply, (error: unknown) =>
+        reply({ id: message.id, kind: 'failed', error: messageOf(error) }),
       )
       .finally(() => running.delete(message.id))
   } catch (error) {

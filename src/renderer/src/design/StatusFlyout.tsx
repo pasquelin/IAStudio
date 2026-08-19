@@ -18,7 +18,7 @@ export type StatusFlyoutProps = {
 
 /**
  * A status-line button that raises a panel above itself. Written three times over — the journal,
- * the generations, the exports — down to the `w-12` of the bar and the `size={12}` of the chevron.
+ * the generations, the tasks — down to the `w-12` of the bar and the `size={12}` of the chevron.
  */
 export function StatusFlyout({ label, hint, face, panel, onOpen }: StatusFlyoutProps) {
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)

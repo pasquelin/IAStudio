@@ -6,31 +6,31 @@ import { ProgressRow } from '@/design/ProgressRow'
 import { StatusFlyout } from '@/design/StatusFlyout'
 import { UiIcon } from '@/design/UiIcon'
 import { formatPercent } from '@/helpers/format'
-import { useExports } from '@/stores/exports'
+import { useTasks } from '@/stores/tasks'
 
 /**
- * What the studio is writing out. An export has to be readable from every section — and, unlike
- * a generation, stoppable from there too, which is the half invariant 6 had nowhere to offer.
+ * The long work the studio has in hand — writing a file out, reading one in, rendering. Readable
+ * from every section, and, unlike a generation, stoppable from there too.
  */
-export function ExportsStatus() {
+export function TasksStatus() {
   const { t, i18n } = useTranslation()
-  const running = useExports(state => state.running)
+  const running = useTasks(state => state.running)
 
   // Derived here rather than in a selector: `Object.values` allocates, and a store selector that
   // hands back a new array every call re-renders on every snapshot React takes.
   const rows = useMemo(() => Object.values(running), [running])
 
   // Silent when there is nothing to say. Nothing outlives a run either: a failure has already
-  // been reported by whoever asked for the export, and it shows in the activity list.
+  // been reported by whoever asked for the work, and it shows in the activity list.
   if (rows.length === 0) return null
 
   const ratio = rows.reduce((sum, row) => sum + row.ratio, 0) / rows.length
-  const label = t('exports.running', { count: rows.length })
+  const label = t('tasks.running', { count: rows.length })
 
   return (
     <StatusFlyout
-      label={t('exports.open')}
-      hint={t('exports.openHint')}
+      label={t('tasks.open')}
+      hint={t('tasks.openHint')}
       face={
         <>
           <span>{label}</span>
@@ -48,10 +48,10 @@ export function ExportsStatus() {
               ratio={row.ratio}
               status={formatPercent(row.ratio, i18n.language)}
               cancel={{
-                label: t('exports.cancel'),
+                label: t('tasks.cancel'),
                 // Read at the press rather than subscribed to: an action never changes, and a
                 // second subscription here is re-read on every snapshot React takes.
-                onClick: () => useExports.getState().cancelExport(row.id),
+                onClick: () => useTasks.getState().cancelTask(row.id),
               }}
             />
           ))}

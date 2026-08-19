@@ -28,7 +28,7 @@ import {
 import { acceleratorOf } from '@shared/domain/shortcut'
 import { fillHoles, TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
 import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/textureExport'
-import { FACE_SIZES } from '@shared/domain/skybox'
+import { FACE_SIZES, SKY_PANORAMAS } from '@shared/domain/skybox'
 import type {
   SceneAddRequest,
   SceneDisplayRequest,
@@ -250,11 +250,19 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * One face size per row. A sky has no engine to choose between — six PNGs named `_Rt`…`_Bk` is
    * what all of them read — so what the rows offer is the one thing that does differ.
    */
-  const skyboxItems = (): MenuItemConstructorOptions[] =>
-    FACE_SIZES.map(size => ({
+  const skyboxItems = (): MenuItemConstructorOptions[] => [
+    ...FACE_SIZES.map(size => ({
       label: fillHoles(t.skyboxFaceSize, { size }, language),
-      click: () => actions.exportSkybox({ size }),
-    }))
+      click: () => actions.exportSkybox({ kind: 'faces', size }),
+    })),
+    { type: 'separator' },
+    // The one picture the faces are cut out of, at the source's own resolution — which is why
+    // these two carry no size to choose. An engine lights a scene from a panorama, not from six.
+    ...SKY_PANORAMAS.map(target => ({
+      label: t.skyboxPanoramas[target],
+      click: () => actions.exportSkybox({ kind: 'panorama', target }),
+    })),
+  ]
 
   /**
    * What the space in front can send out, under ONE row. Flat, the montages put three « Exporter
@@ -285,6 +293,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         commandItem('sequence.export', t.menu.exportVideo),
         commandItem('sequence.exportCut', t.menu.exportCut),
         commandItem('sequence.exportBundle', t.menu.exportBundle),
+        commandItem('sequence.exportEdl', t.menu.exportEdl),
+        commandItem('sequence.exportFcpxml', t.menu.exportFcpxml),
       ]
     }
 
@@ -296,15 +306,38 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       ]
     }
 
+    // Two rows rather than a submenu of formats: what an image exports is composed by the window,
+    // as a montage is, and the flatten already has a binding of its own.
+    if (workspace === 'image') {
+      return [
+        commandItem('canvas.export', t.menu.exportPicture),
+        commandItem('canvas.exportLayered', t.menu.exportLayers),
+      ]
+    }
+
+    // Unreachable by any of the six since the image gained its rows, and kept for the compiler
+    // alone: `menu/template.test.ts` names that rather than leaving it read as a case forgotten.
     return []
   }
 
-  /** Nothing at all where the space sends nothing out: an empty « Export » row promises one. */
+  /**
+   * What the studio can read back. A submenu of ONE today, and it stays a submenu: the row is
+   * about to gain a sibling per format, and « Importer… » naming a montage would then have lied.
+   */
+  const importMenu = (): MenuItemConstructorOptions[] => [
+    {
+      label: t.menu.import,
+      submenu: [commandItem('montage.import', t.menu.importBundle)],
+    },
+  ]
+
+  /**
+   * Nothing at all where the space sends nothing out: an empty « Export » row promises one.
+   * No separator of its own — the import above it opens the group, and it is always there.
+   */
   const exportMenu = (): MenuItemConstructorOptions[] => {
     const items = exportSubmenu()
-    return items.length === 0
-      ? []
-      : [{ type: 'separator' }, { label: t.menu.export, submenu: items }]
+    return items.length === 0 ? [] : [{ label: t.menu.export, submenu: items }]
   }
 
   /**
@@ -585,6 +618,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           accelerator: shortcut('document.saveAs'),
           click: () => actions.runCommand('document.saveAs'),
         },
+        { type: 'separator' },
+        ...importMenu(),
         ...exportMenu(),
         { type: 'separator' },
         ...fileMenuSettings,

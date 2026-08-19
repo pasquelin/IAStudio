@@ -1,9 +1,9 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { packedColour } from '@shared/domain/color'
 import { toRadians } from '@shared/domain/angles'
+import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import {
   ADJUSTMENT_KINDS,
-  BLEND_MODES,
   adjustmentLayer,
   allLayers,
   canMoveLayer,

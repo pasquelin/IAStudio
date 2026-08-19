@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { OtioClip, OtioTimeRange, OtioTimeline, OtioTrack, OtioTrackItem } from './otio'
-import { bundleOf, isBundleEntry, OTIOZ_VERSION } from './otioz'
+import { bundleEntryOf, bundleOf, freeName, isBundleEntry, OTIOZ_VERSION, safeName } from './otioz'
 
 const FIVE_SECONDS: OtioTimeRange = {
   OTIO_SCHEMA: 'TimeRange.1',
@@ -175,6 +175,58 @@ describe('what the writing side accepts as an entry', () => {
     const { media } = bundleOf(timelineOf(clip('a', 'file:///A/odd%2F..%2Fname.mp4')))
 
     expect(media.every(one => isBundleEntry(one.entry))).toBe(true)
+  })
+})
+
+/**
+ * THREE answers, not two. « is not a medium » and « climbs out » were one refusal, and every
+ * `zip -r` bundle was hostile for it: that command writes a `media/` directory entry.
+ */
+describe('what a reader is to do with one entry', () => {
+  it('takes a plain name under the media folder as the medium it claims to be', () => {
+    expect(bundleEntryOf('media/plan.mp4')).toEqual({ kind: 'medium', name: 'plan.mp4' })
+  })
+
+  it('ignores the folder markers an archiver writes beside the media', () => {
+    expect(bundleEntryOf('media/').kind).toBe('ignored')
+    expect(bundleEntryOf('media/rushes/').kind).toBe('ignored')
+  })
+
+  it('ignores what claims to be no medium at all, rather than refusing the bundle', () => {
+    expect(bundleEntryOf('content.otio').kind).toBe('ignored')
+    expect(bundleEntryOf('notes/readme.txt').kind).toBe('ignored')
+    expect(bundleEntryOf('medias/plan.mp4').kind).toBe('ignored')
+  })
+
+  it('calls hostile what would land outside the folder it is unpacked into', () => {
+    expect(bundleEntryOf('media/../../.bashrc').kind).toBe('hostile')
+    expect(bundleEntryOf('media/sub/plan.mp4').kind).toBe('hostile')
+    expect(bundleEntryOf('media/..').kind).toBe('hostile')
+    expect(bundleEntryOf('media/..\\..\\plan.mp4').kind).toBe('hostile')
+  })
+})
+
+describe('a name a file system will take', () => {
+  /** `CON.mp4` IS the console on Win32, whatever the extension — and the pipeline builds there. */
+  it('moves a Win32 device name out of the way, extension and all', () => {
+    expect(safeName('CON.mp4')).toBe('_CON.mp4')
+    expect(safeName('nul')).toBe('_nul')
+    expect(safeName('com1.wav')).toBe('_com1.wav')
+  })
+
+  it('leaves a name that merely starts like one alone', () => {
+    expect(safeName('console.mp4')).toBe('console.mp4')
+    expect(safeName('lpt10.mp4')).toBe('lpt10.mp4')
+  })
+
+  /** Win32 trims both silently, which turns two entries of an archive into one file on disk. */
+  it('trims a trailing dot or space rather than letting the system do it', () => {
+    expect(safeName('plan.mp4 ')).toBe('plan.mp4')
+    expect(safeName('plan.mp4.')).toBe('plan.mp4')
+  })
+
+  it('suffixes before the dot, so the extension a reader looks at survives', () => {
+    expect(freeName('plan.mp4', new Set(['plan.mp4']))).toBe('plan-2.mp4')
   })
 })
 
