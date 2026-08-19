@@ -227,6 +227,7 @@
       "connectAction": "Enter the API key",
       "ready": "Ready when you are",
       "readyBody": "{{project}} is open and holds nothing yet. Pick a workspace and make the first thing in it.",
+      "readyBodyNoProject": "Nothing is open yet. Pick a workspace and make the first thing in it.",
       "readyAction": "Make an image"
     },
     "closing": {
