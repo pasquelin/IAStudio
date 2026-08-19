@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AssetType } from '@shared/domain/asset'
 import { STUDIO_ENVIRONMENT, type EnvironmentRef } from '@shared/domain/scene'
@@ -24,7 +25,10 @@ export type EnvironmentSectionProps = {
  * Shared by the 3D space and by Textures, because it is one question with one answer: a roughness
  * judged under a flat lamp is not judged, and the skies on offer are the project's own either way.
  */
-export function EnvironmentSection({ environment, onChange }: EnvironmentSectionProps) {
+export const EnvironmentSection = memo(function EnvironmentSection({
+  environment,
+  onChange,
+}: EnvironmentSectionProps) {
   const { t } = useTranslation()
   const options = useProjectPictures(SKIES)
 
@@ -50,4 +54,4 @@ export function EnvironmentSection({ environment, onChange }: EnvironmentSection
       />
     </PropertySection>
   )
-}
+})

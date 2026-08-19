@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   setEnvironment,
@@ -11,6 +11,7 @@ import {
   setTextOn,
 } from '@/engines/scene/commands'
 import { snapToFrame } from '@shared/domain/time'
+import type { EnvironmentRef } from '@shared/domain/scene'
 import type { FieldValue } from '@/engines/scene/propertyFields'
 import { cameraFields, geometryFields, lightFields } from '@/engines/scene/propertyFields'
 import { lensToCommand } from '@/engines/scene/animationCommands'
@@ -90,6 +91,22 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
     [camera, animation, at],
   )
 
+  /**
+   * Stable, which is what lets `EnvironmentSection` be memoised: it captures `edit` alone, itself
+   * memoised on the document. Delivered as an assurance rather than as a fix — the one dependency
+   * worth sparing is the catalogue read behind it, and `useProjectPictureAssets` already amortises
+   * that through its own in-flight map, so the saving was not measurable.
+   *
+   * The sections below cannot follow, and the reason is worth writing down rather than guessing
+   * at: their commands take the selected NODES, so their callbacks capture `selection` — which is
+   * derived from `nodes` and is therefore new on every edit to any node in the scene. Making them
+   * stable means commands that take ids, which is a change to `engines/scene/commands`.
+   */
+  const changeEnvironment = useCallback(
+    (next: EnvironmentRef) => edit.run(setEnvironment(next)),
+    [edit],
+  )
+
   // Which lens fields can be keyed is `lensToCommand`'s to know, not a panel's. Read at call time
   // rather than from the render above, so a value typed as playback runs keys where it lands.
   const changeLens = (name: string, value: FieldValue): void => {
@@ -103,10 +120,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // it is what keeps the panel from being empty when nothing is selected, in place of a message.
   return (
     <>
-      <EnvironmentSection
-        environment={environment}
-        onChange={next => edit.run(setEnvironment(next))}
-      />
+      <EnvironmentSection environment={environment} onChange={changeEnvironment} />
 
       {node && (
         <>
