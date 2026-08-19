@@ -12,7 +12,7 @@ import { audioHistoryOf, isAudioEditDirty, useAudioEdits } from '@/stores/audioE
 import { useDocuments } from '@/stores/documents'
 import { isClipMonitorShown, useMonitorPair } from '@/stores/monitorPair'
 import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
-import { exportOtio, exportOtioz } from '@/app/otioExport'
+import { exportOtio, exportOtioz, exportStems } from '@/app/otioExport'
 import { ProgramMonitor } from './ProgramMonitor'
 import { TakeEditor } from './TakeEditor'
 
@@ -112,6 +112,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
       // programme monitor does not hear it either — it becomes real when the take is applied.
       if (command === 'sequence.exportCut') void exportOtio(documentId)
       if (command === 'sequence.exportBundle') void exportOtioz(documentId)
+      if (command === 'sequence.exportStems') void exportStems(documentId)
     },
     [documentId, transport],
   )

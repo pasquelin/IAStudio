@@ -47,6 +47,7 @@ export type ExportTargetId =
   | 'montage.otioz'
   | 'montage.edl'
   | 'montage.fcpxml'
+  | 'montage.wav'
 
 export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'picture.png',
@@ -69,6 +70,7 @@ export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'montage.otioz',
   'montage.edl',
   'montage.fcpxml',
+  'montage.wav',
 ]
 
 /**
@@ -405,6 +407,30 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
       'mediaLink',
       'trackAudible',
       'frameSize',
+    ]),
+  },
+  /**
+   * The sound itself, one `.wav` per audible track — what an online room asks for when it will
+   * mix somewhere else. Everything the cut DOES to a take is baked into the samples, the way a
+   * sky's grading is baked into its faces: carried as sound, never as a setting to change back.
+   */
+  'montage.wav': {
+    domain: 'montage',
+    extension: '.wav',
+    door: 'declared',
+    destination: 'folder',
+    openedBy: ['QuickTime Player', 'Music', 'Books'],
+    capability: carrying('montage', [
+      'tracks',
+      'trackName',
+      'trackOrder',
+      'clipPlacement',
+      'clipTrim',
+      'clipSpeed',
+      'clipFade',
+      'clipGain',
+      'trackAudible',
+      'sampleRate',
     ]),
   },
 }

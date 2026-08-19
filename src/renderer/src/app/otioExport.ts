@@ -9,6 +9,7 @@ import { documentExportName, useDocuments } from '@/stores/documents'
 import { runTask } from '@/stores/tasks'
 import { useProject } from '@/stores/project'
 import { sequenceOf, useSequences } from '@/stores/sequences'
+import { montageStemsFiles } from './montageStemsFiles'
 import { otioTimelineFor, serializeSequencePayload } from './sequenceDocument'
 
 /**
@@ -98,6 +99,25 @@ export async function exportCutAs(
   } catch (error) {
     reportFailure('sequence.export', documentId, error)
     return null
+  }
+}
+
+/**
+ * The cut's SOUND, one `.wav` per audible track, into a folder the dialog picks.
+ *
+ * Watched rather than awaited silently: decoding a montage's rushes and mixing them is the one
+ * export here that is minutes rather than milliseconds, and it is stoppable for the same reason.
+ */
+export async function exportStems(documentId: string): Promise<void> {
+  const bridge = getBridge()
+  if (!bridge) return
+
+  try {
+    await runTask(documentExportName(useDocuments.getState(), documentId, 'edit'), (_id, watch) =>
+      montageStemsFiles(documentId, watch).then(request => bridge.montage.stems(request)),
+    )
+  } catch (error) {
+    reportFailure('sequence.export', documentId, error)
   }
 }
 

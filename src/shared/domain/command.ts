@@ -77,6 +77,7 @@ export type CommandId =
   | 'sequence.exportBundle'
   | 'sequence.exportEdl'
   | 'sequence.exportFcpxml'
+  | 'sequence.exportStems'
   | 'montage.import'
   | 'sequence.mirror'
   | 'sequence.split'
@@ -587,6 +588,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'sequence',
     titleKey: 'commands.sequenceExportFcpxml.title',
     helpKey: 'commands.sequenceExportFcpxml.help',
+    defaultBinding: null,
+  }),
+  // The sound rather than the cut: what the other three describe, this one renders. A room that
+  // will mix elsewhere asks for the tracks, not for a list of what to fetch and where to put it.
+  command({
+    id: 'sequence.exportStems',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExportStems.title',
+    helpKey: 'commands.sequenceExportStems.help',
     defaultBinding: null,
   }),
   // The program monitor alone answers it: `Monitor` arms the sequence scope on the one that

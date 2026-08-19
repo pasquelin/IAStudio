@@ -234,6 +234,7 @@ export type Channels = {
 
   textureExport: 'texture:export'
   skyboxExport: 'skybox:export'
+  montageStems: 'montage:stems'
   projectExport: 'project:export'
   taskCancel: 'task:cancel'
 
@@ -417,6 +418,7 @@ export const CHANNELS: Channels = {
 
   textureExport: 'texture:export',
   skyboxExport: 'skybox:export',
+  montageStems: 'montage:stems',
   projectExport: 'project:export',
   taskCancel: 'task:cancel',
 
@@ -1463,6 +1465,12 @@ export type StudioBridge = {
      * minutes of disk, and a name only handed back at the end would leave them unstoppable.
      */
     import: (id: string) => Promise<MontageImportResult | null>
+    /**
+     * The cut's SOUND, one `.wav` per audible track, into a folder of its own — same writer and
+     * same bargain as a sky's faces. Stems mean nothing apart: a dialogue track alone is not
+     * the mix somebody judged, which is why this is a folder and not a save dialog per track.
+     */
+    stems: (request: FolderExportRequest) => Promise<string | null>
   }
   /**
    * Rendering a scene to a film, in three steps: a session is opened once the save dialog has

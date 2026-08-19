@@ -176,6 +176,10 @@
       "title": "Exporter le montage (FCPXML)…",
       "help": "Écrit le montage au format que Final Cut lit, et que Premiere et Resolve importent. Les pistes survivent, une voie chacune, ainsi que la taille d’image. Les fondus, les gains et les vitesses restent ici."
     },
+    "sequenceExportStems": {
+      "title": "Exporter les sons par piste (WAV)…",
+      "help": "Écrit un fichier WAV par piste audible, mixé comme le montage le joue — les placements, les rognages, les fondus, les gains et les vitesses sont cuits dans les échantillons. Une piste muette n’est pas écrite."
+    },
     "sequenceExportBundle": {
       "title": "Exporter le montage et ses médias (OTIOZ)…",
       "help": "Écrit le même montage avec les médias qu’il utilise à l’intérieur du fichier. C’est celui à donner à quelqu’un d’autre, ou à ouvrir dans DaVinci Resolve, qui retrouve alors les rushes tout seul au lieu de les demander un par un."
