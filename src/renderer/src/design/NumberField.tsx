@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
 import { formatDecimal, parseDecimal } from '@/helpers/format'
 import { bound, type NumericBounds } from '@shared/numeric'
+import { ResetButton } from './ResetButton'
 import { FIELD_FILL, FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
 export type NumberFieldProps = NumericBounds &
@@ -32,6 +33,8 @@ export type NumberFieldProps = NumericBounds &
     hint?: Record<string, string>
     /** The handle the MCP steers this field by. Never a translated word. */
     scId?: string
+    /** Puts the value back where it started. Absent while it already stands there. */
+    onReset?: () => void
   }
 
 /** Units per pixel dragged, for a field that declares no step of its own. */
@@ -66,6 +69,7 @@ export function NumberField({
   disabled,
   hint,
   scId,
+  onReset,
 }: NumberFieldProps) {
   const drag = useRef<Drag | null>(null)
   /**
@@ -243,6 +247,10 @@ export function NumberField({
           axis === 'z' && 'border-l-axis-z',
         )}
       />
+
+      {/* Never inside a vector's grid: the three axes share one reset, drawn by `VectorField` at
+          the end of their line, or a Position row would end with three identical buttons. */}
+      {layout === 'row' && <ResetButton onReset={onReset} />}
     </div>
   )
 }

@@ -311,7 +311,16 @@ export const PANEL_BAR = 'border-border flex items-center gap-2 border-b'
  * under the other, so a fixed heading in one space and a folding one in the next was the same
  * gesture failing in half the studio.
  */
-export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
+export const PROPERTY_BODY = cn(
+  'flex flex-col gap-2 px-2 pt-1 pb-2',
+  // Every other line on a faintly raised fill, which is what lets the eye run down a long
+  // section without losing which value belongs to which name. Painted on the ROW rather than
+  // between the rows: the gap is what separates them, and a band drawn in the gap would read as
+  // a rule. `elevated` and not a colour of its own — it is the same step the studio raises a
+  // surface by, and one more token would be one more thing to hold at contrast.
+  '[&>*:nth-child(even)]:bg-elevated [&>*:nth-child(even)]:-mx-1 [&>*:nth-child(even)]:px-1',
+  '[&>*:nth-child(even)]:rounded-(--radius-sc-sm)',
+)
 
 /**
  * A picture standing in a property line — the texture a slot holds, the map a model carries.

@@ -266,6 +266,25 @@ describe('inspector panel', () => {
     ])
   })
 
+  /**
+   * Through the same command as any other edit, so ⌘Z undoes a reset the way it undoes a drag —
+   * and drawn only where there is something to undo: a row of buttons that do nothing is how a
+   * panel stops being read.
+   */
+  it('offers to reset only the rows that have moved, and undoes like any edit', async () => {
+    install({ ...meshNode('box-1'), transform: moved(2, 0, 0) })
+    render(<Content />)
+
+    expect(screen.getAllByRole('button', { name: /Revenir à la valeur par défaut/ })).toHaveLength(
+      1,
+    )
+    await userEvent.click(screen.getByRole('button', { name: /Revenir à la valeur par défaut/ }))
+
+    expect(nodeInStore('box-1')?.transform.position).toEqual(IDENTITY_TRANSFORM.position)
+    useScenes.getState().undo('doc-1')
+    expect(nodeInStore('box-1')?.transform.position).toEqual({ x: 2, y: 0, z: 0 })
+  })
+
   it('gives the row back to a sprite others hang from, which turning swings around it', () => {
     installScene('doc-1', {
       ...EMPTY_SCENE,

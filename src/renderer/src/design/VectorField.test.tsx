@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { VectorField } from './VectorField'
 
@@ -105,5 +106,79 @@ describe('VectorField', () => {
     renderField({ scId: 'transform.position' })
 
     expect(screen.getByLabelText('X')).toHaveAttribute('data-sc', 'field:transform.position.x')
+  })
+
+  describe('the axes unfolded one per line', () => {
+    it('starts on one line, and stacks when asked', async () => {
+      renderField()
+
+      expect(screen.getByRole('button', { name: 'Position' })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      )
+      await userEvent.click(screen.getByRole('button', { name: 'Position' }))
+
+      expect(screen.getByRole('button', { name: 'Position' })).toHaveAttribute(
+        'aria-expanded',
+        'true',
+      )
+      // Still three fields, still the same values: only where they sit has changed.
+      expect(screen.getByLabelText('Y')).toHaveValue('2')
+    })
+  })
+
+  describe('the padlock that keeps the proportions', () => {
+    function renderScale() {
+      const onChange = vi.fn()
+      render(
+        <VectorField
+          label="Échelle"
+          value={{ x: 1, y: 2, z: 4 }}
+          step={0.1}
+          lockable
+          onChange={onChange}
+        />,
+      )
+      return { onChange }
+    }
+
+    it('is offered only where a caller asked for one', () => {
+      renderField()
+
+      expect(screen.queryByRole('button', { name: /proportions/i })).not.toBeInTheDocument()
+    })
+
+    it('leaves the other axes alone while it is open', () => {
+      const { onChange } = renderScale()
+
+      fireEvent.change(screen.getByLabelText('X'), { target: { value: '2' } })
+
+      expect(onChange).toHaveBeenCalledWith({ x: 2, y: 2, z: 4 })
+    })
+
+    it('takes the others along in the ratio they were locked at', async () => {
+      const { onChange } = renderScale()
+
+      await userEvent.click(screen.getByRole('button', { name: /Garder les proportions/ }))
+      fireEvent.change(screen.getByLabelText('X'), { target: { value: '2' } })
+
+      expect(onChange).toHaveBeenCalledWith({ x: 2, y: 4, z: 8 })
+    })
+
+    /**
+     * The one case a ratio cannot express. Scaling from zero has no factor, and answering with
+     * one anyway would flatten the other two axes with nothing to bring them back.
+     */
+    it('moves an axis alone when it was locked at zero', async () => {
+      const onChange = vi.fn()
+      render(
+        <VectorField label="Échelle" value={{ x: 0, y: 2, z: 4 }} lockable onChange={onChange} />,
+      )
+
+      await userEvent.click(screen.getByRole('button', { name: /Garder les proportions/ }))
+      fireEvent.change(screen.getByLabelText('X'), { target: { value: '3' } })
+
+      expect(onChange).toHaveBeenCalledWith({ x: 3, y: 2, z: 4 })
+    })
   })
 })
