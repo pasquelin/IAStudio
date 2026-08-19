@@ -58,9 +58,9 @@ describe('scene tools', () => {
 
 describe('SCENE_TOOLS', () => {
   /**
-   * Twelve. It was twenty-three, then eight — and the cut that mattered was never the COUNT: the
-   * fifteen that left were settings (seven ways of drawing as rows, six sides, projection), and
-   * four have come back because they are VERBS a hand reaches for by the minute.
+   * The list, never a count — a cardinal written above it goes stale the next time one arrives.
+   * What settled the bar was not the number: the ones that left were SETTINGS (ways of drawing,
+   * sides, projection), and the ones that came back are VERBS a hand reaches for by the minute.
    */
   it('holds what a hand reaches for while manipulating, and nothing else', () => {
     expect(SCENE_TOOLS.map(tool => tool.id)).toEqual([
@@ -76,6 +76,9 @@ describe('SCENE_TOOLS', () => {
       'display',
       'quad',
       'frame',
+      'isolate',
+      'hide',
+      'showAll',
     ])
   })
 

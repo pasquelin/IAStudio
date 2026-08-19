@@ -45,7 +45,7 @@ import { removePickedPathPoint, runSceneCommand, toggleNodeVisible } from './sce
 import { ScenePaneGrid } from './ScenePaneGrid/ScenePaneGrid'
 import { ADD_TOOLS, SCENE_TOOLS, addedKind } from './sceneTools'
 import { sceneExportFiles } from './sceneExportFiles'
-import { hideIn, NOTHING_ISOLATED, type Isolation } from '@/engines/scene/isolation'
+import { hideIn, isolating, NOTHING_ISOLATED, type Isolation } from '@/engines/scene/isolation'
 import { toggledIsolation } from '@/engines/scene/sceneVisibility'
 
 /**
@@ -467,10 +467,13 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   })
 
   // Rebuilt only when something the bar SHOWS moves — a shortcut, a button's availability, a
-  // toggle: the document re-renders on every transform release, and this maps twelve items,
-  // each of them looking its key up through the registry.
+  // toggle: the document re-renders on every transform release, and this maps every item of the
+  // bar, each of them looking its key up through the registry.
   const nothingSelected = scene.selectedIds.length === 0
   const nothingHeld = useSceneClipboard(state => state.nodes.length === 0)
+  // The boolean rather than the object: `hideIn` mints a fresh isolation on every hidden node,
+  // which would remap all the tools for a state that has not changed.
+  const isolated = isolating(view.isolation)
   const tools = useMemo(() => {
     // Keyed by command rather than by tool id, so a renamed command fails to compile instead of
     // quietly leaving a toggle unlit.
@@ -482,6 +485,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       'scene.poseMode': view.poseMode,
       'scene.quad': view.quad,
       'scene.quadEdges': view.quadEdges,
+      // The one tool of the bar whose armed state is not a setting: it says an isolation is
+      // running, which is what makes leaving it the same press that entered it.
+      'scene.isolate': isolated,
     }
     const unavailable: Partial<Record<CommandId, boolean>> = {
       'scene.delete': nothingSelected,
@@ -490,6 +496,12 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       'scene.copy': nothingSelected,
       'scene.cut': nothingSelected,
       'scene.paste': nothingHeld,
+      'scene.frame': nothingSelected,
+      // Leaving one needs no selection, which is the whole point of a toggle that can be armed
+      // with nothing picked.
+      'scene.isolate': nothingSelected && !isolated,
+      'scene.hide': nothingSelected,
+      'scene.showAll': !isolated,
     }
 
     return [
@@ -502,6 +514,14 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         activeMode: tool.id === 'display' ? displayOfPane(view.displays, 0) : undefined,
         disabled: unavailable[tool.command],
         pressed: pressed[tool.command],
+        // Armed says « something is being kept from the view », which a plain Hide sets too —
+        // so the word has to follow, or the button offers to isolate what it is about to reveal.
+        ...(tool.id === 'isolate' && isolated
+          ? {
+              labelKey: 'sceneTools.leaveIsolation',
+              descriptionKey: 'sceneTools.leaveIsolationHint',
+            }
+          : {}),
       })),
     ]
     // The fields of `view` this reads, not `view` itself: the store also carries the camera and
@@ -519,6 +539,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     view.quad,
     view.quadEdges,
     view.displays,
+    isolated,
   ])
 
   return (

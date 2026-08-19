@@ -1,7 +1,5 @@
 import type { DisplayMode, SceneWorld } from '@shared/domain/scene'
 import { setWorld } from '@/engines/scene/commands'
-import type { Isolation } from '@/engines/scene/isolation'
-import type { SceneNode } from '@/engines/scene/sceneState'
 import { useSceneEdit } from '@/hooks/useSceneEdit'
 import { useViewportSetting } from '@/hooks/useViewportSetting'
 import { EnvironmentAtmosphereSection } from './EnvironmentAtmosphereSection'
@@ -13,13 +11,10 @@ import { EnvironmentLightingSection } from './EnvironmentLightingSection'
 import { EnvironmentRenderSection } from './EnvironmentRenderSection'
 import { EnvironmentShadowsSection } from './EnvironmentShadowsSection'
 import { EnvironmentSnapSection } from './EnvironmentSnapSection'
-import { EnvironmentVisibilitySection } from './EnvironmentVisibilitySection'
 
 export type EnvironmentPanelProps = {
   documentId: string
   world: SceneWorld
-  nodes: readonly SceneNode[]
-  selectedIds: readonly string[]
   /** The mode of the view being worked in — one per pane, and this is the one in hand. */
   mode: DisplayMode
   onMode: (mode: DisplayMode) => void
@@ -27,28 +22,25 @@ export type EnvironmentPanelProps = {
   onSkeletons: (skeletons: boolean) => void
   snapping: boolean
   onSnapping: (snapping: boolean) => void
-  isolation: Isolation
-  onIsolation: (isolation: Isolation) => void
 }
 
 /**
  * How a scene is LIT and how it is LOOKED AT — two questions with two lifetimes, which is why
  * the document goes through a command, the person's own settings through `useViewportSetting`,
  * and the moment through `sceneViews`. No section here touches three.js.
+ *
+ * Framing, isolating and hiding are NOT here: they act rather than describe, and a panel of
+ * property lines had no shape for them — the toolbar does, beside the framing it already held.
  */
 export function EnvironmentPanel({
   documentId,
   world,
-  nodes,
-  selectedIds,
   mode,
   onMode,
   skeletons,
   onSkeletons,
   snapping,
   onSnapping,
-  isolation,
-  onIsolation,
 }: EnvironmentPanelProps) {
   const edit = useSceneEdit(documentId)
   const viewport = useViewportSetting()
@@ -58,14 +50,6 @@ export function EnvironmentPanel({
   return (
     <>
       <EnvironmentDisplaySection mode={mode} onMode={onMode} world={world} onPreset={change} />
-
-      <EnvironmentVisibilitySection
-        documentId={documentId}
-        nodes={nodes}
-        selectedIds={selectedIds}
-        isolation={isolation}
-        onIsolation={onIsolation}
-      />
 
       <EnvironmentLightingSection world={world} onChange={change} gesture={edit.gesture} />
 

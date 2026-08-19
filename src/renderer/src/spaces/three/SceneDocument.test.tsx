@@ -340,6 +340,71 @@ describe('snapping and the coordinate frame', () => {
   })
 })
 
+// They used to be four wide buttons in the inspector, framing duplicating the bar's own. What
+// matters is that the bar reaches the SAME rules — `sceneVisibility` holds them, and it is what
+// makes leaving an isolation the very press that entered it.
+describe('the visibility tools', () => {
+  /** They act on a SELECTION, and the bar greys them out without one. */
+  const withChosenBox = (): void => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    selectIn('doc-1', ['box-1'])
+  }
+
+  // `acts` is what would take the pressed state away, so the toggle is asserted where it shows
+  // rather than on the descriptor's own flag.
+  it('isolates what is chosen, and gives the scene back on the second press', async () => {
+    withChosenBox()
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Isoler/ }))
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').isolation.only).not.toBeNull()
+
+    // The word follows the state: armed, the button offers the way OUT — it would otherwise
+    // read « Isolate » over a scene that is already isolated.
+    const armed = screen.getByRole('button', { name: /Rétablir la vue/ })
+    expect(armed).toHaveAttribute('aria-pressed', 'true')
+
+    await userEvent.click(armed)
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').isolation.only).toBeNull()
+    expect(screen.getByRole('button', { name: /Isoler/ })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  // Hiding arms the same button, since `isolating` counts a hidden node too — so the word has
+  // to follow there as well, or it offers to isolate what it is about to reveal.
+  it('offers the way out after a plain hide, never « isolate » over it', async () => {
+    withChosenBox()
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Masquer/ }))
+
+    expect(screen.getByRole('button', { name: /Rétablir la vue/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Isoler/ })).not.toBeInTheDocument()
+  })
+
+  it('hides the selection without touching what the document holds', async () => {
+    withChosenBox()
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Masquer/ }))
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').isolation.hidden.size).toBeGreaterThan(0)
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes.every(node => node.visible)).toBe(true)
+  })
+
+  it('gives everything back with show all', async () => {
+    withChosenBox()
+    render(<SceneDocument documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Masquer/ }))
+    // Stated before the second click: zero is also the value this starts on, so asserting it
+    // at the end alone would pass with both buttons doing nothing at all.
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').isolation.hidden.size).toBe(1)
+
+    await userEvent.click(screen.getByRole('button', { name: /Tout afficher/ }))
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').isolation.hidden.size).toBe(0)
+  })
+})
+
 describe('the viewport settings', () => {
   it('pushes them into the engine, which holds no truth of its own', () => {
     configure.mockClear()

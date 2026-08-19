@@ -2,19 +2,18 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import { drawsNode } from '@/engines/scene/isolation'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { useSceneViews } from '@/stores/sceneViews'
 import { useSettings } from '@/stores/settings'
 import { definition } from '..'
 
 const { Content } = definition
 
-/** Two meshes, one of them hidden by its author — the case isolation must not undo. */
+/** Three meshes, one hidden by its author: what a look settles must reach none of them. */
 function installTwo(): SceneState {
   const state: SceneState = {
     ...EMPTY_SCENE,
@@ -26,7 +25,6 @@ function installTwo(): SceneState {
 }
 
 const world = () => sceneOf(useScenes.getState(), 'doc-1').world
-const view = () => sceneViewOf(useSceneViews.getState(), 'doc-1')
 
 describe('environment panel', () => {
   beforeEach(() => {
@@ -86,40 +84,14 @@ describe('environment panel', () => {
     })
   })
 
-  describe('isolation', () => {
-    it('restores the exact visibility that went in, and not all-visible', async () => {
-      render(<Content />)
+  // The four ACT rather than describe, and framing was a plain duplicate of the bar's own — which
+  // is why all four are named here, not the two that were easiest to assert.
+  it('leaves the four visibility commands to the toolbar', () => {
+    render(<Content />)
 
-      await userEvent.click(screen.getByRole('button', { name: 'Isoler' }))
-      expect(drawsNode(view().isolation, 'a', true)).toBe(true)
-      expect(drawsNode(view().isolation, 'c', true)).toBe(false)
-
-      await userEvent.click(screen.getByRole('button', { name: /Quitter/ }))
-      expect(drawsNode(view().isolation, 'a', true)).toBe(true)
-      expect(drawsNode(view().isolation, 'c', true)).toBe(true)
-      // The one the document hides, which « show all » must never bring back.
-      expect(drawsNode(view().isolation, 'b', false)).toBe(false)
-    })
-
-    // Hiding for the viewport is not hiding in the document: nothing here reaches the file.
-    it('never writes the visibility a document holds', async () => {
-      render(<Content />)
-      await userEvent.click(screen.getByRole('button', { name: /Masquer/ }))
-
-      expect(sceneOf(useScenes.getState(), 'doc-1').nodes.map(node => node.visible)).toEqual([
-        true,
-        false,
-        true,
-      ])
-    })
-
-    it('gives everything back with show all', async () => {
-      render(<Content />)
-      await userEvent.click(screen.getByRole('button', { name: /Masquer/ }))
-      await userEvent.click(screen.getByRole('button', { name: /Tout afficher/ }))
-
-      expect(drawsNode(view().isolation, 'a', true)).toBe(true)
-    })
+    for (const name of [/Cadrer/, /Isoler/, /Masquer/, /Tout afficher/]) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
+    }
   })
 
   describe('contextual fields', () => {
