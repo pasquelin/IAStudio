@@ -4,6 +4,7 @@ import { densityOf } from './sceneStats'
 import {
   applyDisplayMode,
   EDGE_LAYER,
+  hidesSceneEnvironment,
   hidesSceneLights,
   showsEdges,
   substituteFor,
@@ -52,10 +53,19 @@ export function dressForPane(
   materials: PaneMaterials,
   memory: PaneMemory,
   eye: PaneEye,
+  /**
+   * Swaps what lights the scene for this pass, or puts the document's own back. Per PANE and not
+   * per document: `scene.environment` is one reference, but it is read at draw time, so a studio
+   * view and a rendered view can stand side by side in a quad layout.
+   */
+  light: (studio: boolean) => void = () => {},
 ): void {
   // The layers are the camera's own and have to be set every pass; the scene's dress does not.
   if (showsEdges(mode, quads)) eye.layers.enable(EDGE_LAYER)
   else eye.layers.disable(EDGE_LAYER)
+
+  // Every pass, like the layers: what the previous pane left is not what this one wants.
+  light(hidesSceneEnvironment(mode))
 
   if (memory.worn?.mode === mode && memory.worn.quads === quads) return
   memory.worn = { mode, quads }

@@ -6,9 +6,9 @@
  * contains, and the native menu builds its Add entries from the same kinds.
  */
 import {
-  STUDIO_ENVIRONMENT,
+  DEFAULT_WORLD,
   type CameraDescriptor,
-  type EnvironmentRef,
+  type SceneWorld,
   type GeometryDescriptor,
   type LightDescriptor,
   type MaterialDescriptor,
@@ -69,8 +69,8 @@ export type SceneState = {
   nodes: SceneNode[]
   /** Ordered, and the last one is the anchor: what the inspector reads out. See `helpers/selection`. */
   selectedIds: readonly string[]
-  /** What lights the scene, and what its materials reflect. Part of the document. */
-  environment: EnvironmentRef
+  /** What lights the scene and what hangs behind it. Part of the document, and belongs to no node. */
+  world: SceneWorld
   /** The tracks that move it through time. Where the head STANDS is session state, not this. */
   animation: AnimationTimeline
   /**
@@ -256,7 +256,7 @@ export const DEFAULT_TEXT: TextDescriptor = {
 export const EMPTY_SCENE: SceneState = {
   nodes: [],
   selectedIds: [],
-  environment: STUDIO_ENVIRONMENT,
+  world: DEFAULT_WORLD,
   animation: EMPTY_TIMELINE,
 }
 

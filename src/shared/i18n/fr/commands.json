@@ -96,6 +96,18 @@
       "title": "Cadrer la sélection",
       "help": "Rapproche la caméra de l’objet choisi pour qu’il remplisse la vue. Pratique quand on s’est perdu ou qu’un objet est minuscule."
     },
+    "sceneIsolate": {
+      "title": "Isoler la sélection",
+      "help": "Ne laisse à l’écran que les objets choisis, le temps de travailler dessus. Rien n’est modifié : appuyer une seconde fois rend la scène telle qu’elle était, y compris les objets que vous aviez masqués vous-même."
+    },
+    "sceneHide": {
+      "title": "Masquer la sélection",
+      "help": "Retire les objets choisis de l’affichage sans toucher au document. « Tout afficher » les fait revenir."
+    },
+    "sceneShowAll": {
+      "title": "Tout afficher",
+      "help": "Annule les masquages et l’isolation faits depuis le viewport. Les objets que le document déclare masqués le restent."
+    },
     "sceneSnap": {
       "title": "Magnétisme",
       "help": "Fait avancer les poignées par pas réguliers au lieu de les laisser libres. Pratique pour poser des objets bien alignés. La finesse des pas se règle dans les réglages de l’espace Modélisation."

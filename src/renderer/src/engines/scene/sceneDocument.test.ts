@@ -1,6 +1,6 @@
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { describe, expect, it } from 'vitest'
-import { MESH_ENTRIES, TEXTURE_SLOTS } from '@shared/domain/scene'
+import { DEFAULT_WORLD, MESH_ENTRIES, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { MESH_PRIMITIVES } from './meshPrimitives'
 import { LIGHT_TYPES } from './lightTypes'
 import {
@@ -35,7 +35,7 @@ describe('scenePayload', () => {
     const state: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: ['a'] }
     expect(scenePayload(state)).toEqual({
       nodes: [mesh('a')],
-      environment: { kind: 'studio' },
+      world: DEFAULT_WORLD,
       animation: EMPTY_TIMELINE,
     })
   })
@@ -301,18 +301,46 @@ describe('sceneFromPayload', () => {
   // A document names no environment until this step: every one written so far, and any file a
   // hand left half-edited, has to open lit rather than black.
   it('lights a scene the file says nothing about with the studio', () => {
-    expect(sceneFromPayload({ nodes: [] }).environment).toEqual({ kind: 'studio' })
-    expect(sceneFromPayload({ nodes: [], environment: null }).environment).toEqual({
+    expect(sceneFromPayload({ nodes: [] }).world.environment).toEqual({ kind: 'studio' })
+    expect(sceneFromPayload({ nodes: [], environment: null }).world.environment).toEqual({
       kind: 'studio',
     })
-    expect(sceneFromPayload({ nodes: [], environment: { kind: 'skybox' } }).environment).toEqual({
-      kind: 'studio',
-    })
+    expect(
+      sceneFromPayload({ nodes: [], environment: { kind: 'skybox' } }).world.environment,
+    ).toEqual({ kind: 'studio' })
+  })
+
+  // Every scene saved before the world existed spells its sky at the ROOT of the payload. Reading
+  // it there is the whole of the migration, and losing it would relight every project silently.
+  it('keeps the sky of a document written before the world existed', () => {
+    const held = sceneFromPayload({ nodes: [], environment: { kind: 'skybox', assetId: 'sky-1' } })
+
+    expect(held.world.environment).toEqual({ kind: 'skybox', assetId: 'sky-1' })
   })
 
   it('carries a chosen sky through a round trip', () => {
-    const lit: SceneState = { ...EMPTY_SCENE, environment: { kind: 'skybox', assetId: 'sky-1' } }
-    expect(reread(lit).environment).toEqual({ kind: 'skybox', assetId: 'sky-1' })
+    const lit: SceneState = {
+      ...EMPTY_SCENE,
+      world: { ...EMPTY_SCENE.world, environment: { kind: 'skybox', assetId: 'sky-1' } },
+    }
+    expect(reread(lit).world.environment).toEqual({ kind: 'skybox', assetId: 'sky-1' })
+  })
+
+  it('carries the rest of the world through a round trip', () => {
+    const dressed: SceneState = {
+      ...EMPTY_SCENE,
+      world: {
+        ...EMPTY_SCENE.world,
+        envIntensity: 1.5,
+        background: { kind: 'color', color: '#123456' },
+        fog: { kind: 'exp2', color: '#abcdef', density: 0.04 },
+        toneMapping: 'aces',
+        exposure: 1.2,
+        ground: { visible: true, color: '#ffffff', size: 40, opacity: 0.5, receiveShadow: true },
+      },
+    }
+
+    expect(reread(dressed).world).toEqual(dressed.world)
   })
 
   // Saving a grouped scene and reopening it dropped every group, leaving their children hanging

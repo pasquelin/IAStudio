@@ -86,7 +86,7 @@ function readState(): ActionOutcome {
     data: {
       documentId: open.documentId,
       selectedIds: open.state.selectedIds,
-      environment: open.state.environment,
+      environment: open.state.world.environment,
       // What drives the cameras: without them a client can open a shot and never edit one, since
       // `camera.rail` and `camera.target` name it by the id only this list hands over.
       shots: open.state.animation.shots,

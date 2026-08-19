@@ -17,12 +17,12 @@ import {
   MAIN_LANE_ID,
   isTransform,
   isVector3,
-  readEnvironment,
   ROOT_MOTIONS,
   TEXTURE_SLOTS,
-  type EnvironmentRef,
   type ModelRef,
+  type SceneWorld,
 } from '@shared/domain/scene'
+import { readWorld } from './sceneWorld'
 import { BODY_PARTS } from '@shared/domain/humanoid'
 import { isRig } from '@shared/domain/rig'
 import {
@@ -59,12 +59,12 @@ import {
 /** What a saved scene holds. The selection is session state, and is deliberately left out. */
 export type ScenePayload = {
   nodes: readonly SceneNode[]
-  environment: EnvironmentRef
+  world: SceneWorld
   animation: AnimationTimeline
 }
 
 export function scenePayload(state: SceneState): ScenePayload {
-  return { nodes: state.nodes, environment: state.environment, animation: state.animation }
+  return { nodes: state.nodes, world: state.world, animation: state.animation }
 }
 
 /**
@@ -88,7 +88,8 @@ export function sceneFromPayload(payload: unknown): SceneState {
   return {
     nodes: nodes.filter(isSceneNode).map(revived),
     selectedIds: [],
-    environment: readEnvironment(payload.environment),
+    // The root `environment` is where the sky lived before the world existed — see `readWorld`.
+    world: readWorld(payload.world, payload.environment),
     animation: readTimeline(payload.animation),
   }
 }

@@ -230,6 +230,8 @@ describe('what a mode paints with', () => {
       'none',
       'solid',
       'none',
+      // `studio` keeps the real materials too: what it changes is what LIGHTS them.
+      'none',
       'matcap',
       'density',
       'ghost',
@@ -243,8 +245,10 @@ describe('what a mode paints with', () => {
     expect(substituteFor('both', true)).toBe('none')
   })
 
-  it('puts the lights out for the material preview only', () => {
-    expect(DISPLAY_MODES.filter(hidesSceneLights)).toEqual(['material'])
+  // The two modes that judge a SURFACE rather than a scene, and no others: what they exist for
+  // is seeing a material under one known light.
+  it('puts the lights out for the two preview modes', () => {
+    expect(DISPLAY_MODES.filter(hidesSceneLights)).toEqual(['material', 'studio'])
   })
 
   it('draws the edge overlay for the two modes that read edges', () => {

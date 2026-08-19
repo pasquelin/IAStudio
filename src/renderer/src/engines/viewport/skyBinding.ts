@@ -111,6 +111,10 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
 
     environment.setTexture(loaded)
     environment.refresh()
+    // `setTexture` paints the backdrop from the sky it was just handed, which is only right when
+    // the sky IS the backdrop: a viewport showing a colour instead had it wiped to nothing the
+    // moment a sky landed. Asking again is what settles it, and it is the caller who knows.
+    paintBackground()
 
     // After the swap, never before: the old texture is bound to the background until then.
     const previous = shown

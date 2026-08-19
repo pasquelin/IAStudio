@@ -1,5 +1,5 @@
 import { BoxGeometry, DirectionalLight, Layers, Mesh, MeshStandardMaterial, Object3D } from 'three'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPaneMemory, dressForPane, type PaneEye } from './paneDress'
 import { createPaneMaterials, type PaneMaterials } from './paneMaterials'
 import { EDGE_LAYER } from './sceneView'
@@ -197,5 +197,39 @@ describe('dressing a view before it is drawn', () => {
     dressForPane([model], 'solid', false, materials, memory, eye())
 
     expect(inside.material).not.toBe(own)
+  })
+
+  /**
+   * Per PANE and not per document. `scene.environment` is one reference, but it is read at draw
+   * time — which is what lets a studio view and a rendered view stand side by side in a quad
+   * layout. Settled globally, one pane in studio re-lit the other three.
+   */
+  describe('what lights a pane', () => {
+    it('borrows the studio room for the studio view alone', () => {
+      const light = vi.fn()
+
+      dressForPane([cube()], 'studio', false, materials, memory, eye(), light)
+      expect(light).toHaveBeenCalledWith(true)
+
+      dressForPane([cube()], 'shaded', false, materials, memory, eye(), light)
+      expect(light).toHaveBeenLastCalledWith(false)
+    })
+
+    it("keeps the document's own sky for the material preview, which judges against it", () => {
+      const light = vi.fn()
+      dressForPane([cube()], 'material', false, materials, memory, eye(), light)
+
+      expect(light).toHaveBeenCalledWith(false)
+    })
+
+    // Every pass, like the layers: what the previous pane left is not what this one wants, and
+    // the dress itself short-circuits when the mode has not moved.
+    it('says so on every pass, even when the dress is already worn', () => {
+      const light = vi.fn()
+      dressForPane([cube()], 'studio', false, materials, memory, eye(), light)
+      dressForPane([cube()], 'studio', false, materials, memory, eye(), light)
+
+      expect(light).toHaveBeenCalledTimes(2)
+    })
   })
 })

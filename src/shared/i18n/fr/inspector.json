@@ -35,7 +35,7 @@
     "addPathPoint": "Ajouter un point au chemin",
     "addPathPointHint": "Pose un point de plus au bout du chemin, à mi-distance du précédent",
     "name": "Nom",
-    "position": "Position",
+    "position": "Position ({{unit}})",
     "rotation": "Rotation",
     "scale": "Échelle",
     "noTexture": "Aucune",

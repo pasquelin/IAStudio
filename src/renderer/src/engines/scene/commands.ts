@@ -19,7 +19,7 @@ import {
   type CameraDescriptor,
   type ClipLane,
   type ClipRef,
-  type EnvironmentRef,
+  type SceneWorld,
   type GeometryDescriptor,
   type LightDescriptor,
   type MaterialDescriptor,
@@ -847,19 +847,26 @@ function commandId(label: string, ids: readonly string[]): string {
 }
 
 /**
- * What lights the scene. In the history like any other edit of the document: choosing a sky is a
- * decision about the scene, and ⌘Z has to take it back like the rest.
+ * What lights the scene and what hangs behind it. In the history like any other edit of the
+ * document: choosing a sky is a decision about the scene, and ⌘Z has to take it back like the rest.
+ *
+ * A patch rather than a whole world, so a preset writing five fields and a slider writing one are
+ * the same call — and so a field this build does not know is left exactly as the file spelled it.
  */
-export function setEnvironment(environment: EnvironmentRef): Command<SceneState> {
-  let previous: EnvironmentRef | null = null
+export function setWorld(patch: Partial<SceneWorld>): Command<SceneState> {
+  let previous: SceneWorld | null = null
 
   return {
-    id: 'environment',
+    // Named by what moved, so a drag of one slider coalesces with itself and not with the next.
+    // Ordered by code point rather than by language: these are field names, not words on screen.
+    id: `world:${Object.keys(patch)
+      .sort((left, right) => (left < right ? -1 : 1))
+      .join(',')}`,
     apply: state => {
-      previous = state.environment
-      return { ...state, environment }
+      previous = state.world
+      return { ...state, world: { ...state.world, ...patch } }
     },
-    revert: state => (previous ? { ...state, environment: previous } : state),
+    revert: state => (previous ? { ...state, world: previous } : state),
   }
 }
 

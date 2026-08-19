@@ -217,6 +217,8 @@
     "solidHint": "Plain clay on every surface: the shape, without the materials",
     "material": "Material preview",
     "materialHint": "The materials under the studio light alone, with the scene’s own lights out",
+    "studio": "Studio",
+    "studioHint": "A neutral, constant light: the model stays readable even in a scene with none",
     "matcap": "Matcap",
     "matcapHint": "Lighting captured on a sphere: it is the relief that reads, not the colour",
     "density": "Density",

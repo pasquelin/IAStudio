@@ -178,6 +178,24 @@
       "title": "Accélération",
       "help": "Par combien la vitesse est multipliée tant que vous maintenez la touche d’accélération. À 3, vous allez trois fois plus vite : de quoi traverser une grande scène sans changer le réglage du dessus."
     },
+    "shadows": {
+      "title": "Ombres portées",
+      "help": "Calcule les ombres que les lumières projettent. Chaque lumière qui en projette une coûte une passe de rendu supplémentaire par image, et couper cette option reste le moyen le plus direct d’alléger une scène chargée."
+    },
+    "viewportQuality": {
+      "title": "Qualité du viewport",
+      "help": "La finesse à laquelle la même image est dessinée. Rien des modèles ni des textures ne change — seul le nombre de pixels calculés. Le niveau Performance plafonne aussi la finesse des ombres.",
+      "performance": "Performance",
+      "balanced": "Équilibrée",
+      "high": "Haute"
+    },
+    "units": {
+      "title": "Unité d’affichage",
+      "help": "L’unité dans laquelle les longueurs sont écrites et lues. Une unité de scène reste un mètre quoi qu’il arrive, et ceci ne change que ce qui s’affiche, jamais ce que le document contient.",
+      "mm": "Millimètres",
+      "cm": "Centimètres",
+      "m": "Mètres"
+    },
     "shadowQuality": {
       "title": "Douceur des ombres",
       "help": "Le grain du bord d’une ombre. « Dure » découpe net et coûte le moins ; « Douce » adoucit le bord. Ce qui projette une ombre, en revanche, se décide objet par objet dans l’inspecteur.",

@@ -39,6 +39,7 @@ const setProjection = vi.fn()
 const setDisplayModes = vi.fn()
 const activePane = vi.fn(() => 0)
 const setSkeletons = vi.fn()
+const setIsolation = vi.fn()
 const setPoseMode = vi.fn()
 const setPickedBone = vi.fn()
 const setPickedPathPoint = vi.fn()
@@ -80,6 +81,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setDisplayModes = setDisplayModes
     activePane = activePane
     setSkeletons = setSkeletons
+    setIsolation = setIsolation
     setPoseMode = setPoseMode
     setPickedBone = setPickedBone
     setPickedPathPoint = setPickedPathPoint

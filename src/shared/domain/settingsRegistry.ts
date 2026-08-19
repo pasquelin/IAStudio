@@ -8,7 +8,7 @@ import {
   type SettingsSectionId,
 } from './settings'
 import type { ModelFamily } from './model'
-import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from './scene'
+import { DISPLAY_UNITS, SHADOW_MAP_SIZES, SHADOW_QUALITIES, VIEWPORT_QUALITIES } from './scene'
 import type { SettingPath, SettingValue, ValueAt } from './settingsPath'
 
 /**
@@ -403,7 +403,9 @@ export const SETTING_REGISTRY = [
     section: 'spaces.three',
     titleKey: 'settings.snapTranslate.title',
     helpKey: 'settings.snapTranslate.help',
-    min: 0.1,
+    // Down to a millimetre: the Environment panel offers the fine steps a small object needs,
+    // and a floor of a decimetre here would have the write refused on exactly those.
+    min: 0.001,
     max: 10,
     step: 0.1,
   }),
@@ -423,9 +425,16 @@ export const SETTING_REGISTRY = [
     section: 'spaces.three',
     titleKey: 'settings.snapScale.title',
     helpKey: 'settings.snapScale.help',
-    min: 0.05,
+    min: 0.01,
     max: 1,
     step: 0.05,
+  }),
+  setting({
+    path: 'three.shadows',
+    kind: 'boolean',
+    section: 'spaces.three',
+    titleKey: 'settings.shadows.title',
+    helpKey: 'settings.shadows.help',
   }),
   setting({
     path: 'three.shadowQuality',
@@ -437,6 +446,7 @@ export const SETTING_REGISTRY = [
       value,
       labelKey: `settings.shadowQuality.${value}`,
     })),
+    dependsOn: { path: 'three.shadows', equals: true },
   }),
   setting({
     path: 'three.shadowMapSize',
@@ -447,6 +457,26 @@ export const SETTING_REGISTRY = [
     // A list rather than a slider: the values in between are not allowed, and a slider would
     // suggest they are.
     options: SHADOW_MAP_SIZES.map(value => ({ value, label: String(value) })),
+    dependsOn: { path: 'three.shadows', equals: true },
+  }),
+  setting({
+    path: 'three.quality',
+    kind: 'choice',
+    section: 'spaces.three',
+    titleKey: 'settings.viewportQuality.title',
+    helpKey: 'settings.viewportQuality.help',
+    options: VIEWPORT_QUALITIES.map(value => ({
+      value,
+      labelKey: `settings.viewportQuality.${value}`,
+    })),
+  }),
+  setting({
+    path: 'three.units',
+    kind: 'choice',
+    section: 'spaces.three',
+    titleKey: 'settings.units.title',
+    helpKey: 'settings.units.help',
+    options: DISPLAY_UNITS.map(value => ({ value, labelKey: `settings.units.${value}` })),
   }),
   setting({
     path: 'storage.projectsFolder',
@@ -729,6 +759,17 @@ export const UNLISTED_PATHS = paths(
   // Chosen from the assistant's own panel, where the wish to change it arises: one wants a
   // better model mid-sentence, and going through this screen to get there loses the sentence.
   'assistant.model',
+  // The working aids of the 3D viewport, for the same reason as the line above: one turns a
+  // bounding box on to answer a question about the object in front of them, and a preferences
+  // window opened to get there is a window closed before the answer was read. They live in the
+  // Environment panel, beside the scene they describe.
+  'three.lightHelpers',
+  'three.cameraHelpers',
+  'three.boundingBoxes',
+  'three.origins',
+  'three.normals',
+  'three.normalLength',
+  'three.stats',
 )
 
 /**
