@@ -1,5 +1,6 @@
 import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, PlaneGeometry, Texture } from 'three'
 import { describe, expect, it } from 'vitest'
+import { MARKER_NAME } from './markerPaint'
 import { densityOf, EMPTY_STATS, statsOf, totalStats } from './sceneStats'
 
 function texturedMaterial(width: number, height: number): MeshStandardMaterial {
@@ -40,6 +41,20 @@ describe('statsOf', () => {
     const second = new Mesh(new PlaneGeometry(), material)
 
     expect(statsOf([first, second]).textureBytes).toBe(256 * 256 * 4)
+  })
+
+  /**
+   * A marker is an aid, not content: a scene holding five lamps and no object at all reported
+   * 2 304 triangles, which is the number somebody reads to judge how heavy their MODEL is.
+   */
+  it('leaves out the markers a lamp or a camera is drawn as', () => {
+    const light = new Object3D()
+    const body = new Object3D()
+    body.name = MARKER_NAME
+    body.add(new Mesh(new BoxGeometry(), new MeshStandardMaterial()))
+    light.add(body)
+
+    expect(statsOf([light])).toEqual(EMPTY_STATS)
   })
 
   it('leaves out what is hidden', () => {

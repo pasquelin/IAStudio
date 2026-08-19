@@ -73,12 +73,13 @@ import {
   helperFor,
   knobIndexOf,
   knobName,
-  lightBulb,
-  MARKER_NAME,
   PATH_CURVE_NAME,
   tuneViewHelper,
   type LightHelper,
 } from './threeFactory'
+import { applyLightBody, lightBody } from './lightBodies'
+import { MARKER_NAME } from './markerPaint'
+import { aimLightMarker, holdMarkerSize } from './markerPose'
 import {
   applyCamera,
   applyGeometry,
@@ -737,6 +738,7 @@ export class SceneRenderer {
     // A second pass, because the first cannot know the order: a child may be synced before the
     // parent it hangs from exists as an object. By here every one of them does.
     for (const node of state.nodes) this.hangFromParent(node)
+    this.poseMarkers(state.nodes)
 
     this.selectedIds = state.selectedIds
     // After the transforms are written, never before: a pose is what the tracks ADD to the one
@@ -1992,6 +1994,7 @@ export class SceneRenderer {
     const nodes = [...this.applied.values()]
     this.applied.clear()
     for (const node of nodes) this.syncNode(node)
+    this.poseMarkers(nodes)
 
     this.redraw()
   }
@@ -2134,7 +2137,17 @@ export class SceneRenderer {
 
     if (node.type === 'light' && object instanceof Light) {
       const before = previous?.type === 'light' ? previous : null
-      if (before?.light !== node.light) applyLight(object, node.light)
+      if (before?.light === node.light) return
+
+      applyLight(object, node.light)
+
+      const marker = this.markers.get(node.id)
+      // Everything the body reads — the colour it glows, the cone its doors open to — is written
+      // into the one already hanging there. The kind is compared rather than assumed, but no
+      // command changes it today: `setLightOn` refuses a node whose kind differs from the anchor,
+      // and a kind that did change would leave the three.js light itself the wrong class.
+      if (marker && before?.light.kind === node.light.kind) applyLightBody(marker, node.light)
+      else this.dressLight(node.id, object, node.light)
       return
     }
 
@@ -2511,14 +2524,44 @@ export class SceneRenderer {
       this.viewport.scene.add(helper)
     }
 
-    // The bulb, glowing in the lamp's own colour, hung under the light so it travels with it —
-    // and so a click on it walks up to the light's id. It is what stands in the view at rest,
-    // the helper being what selection adds; an ambient light gets one too, which is the only
-    // thing in the viewport that can be pointed at to select it.
-    const bulb = lightBulb(bulbColourOf(node.light), this.markerColor, this.markerEdge)
-    light.add(bulb)
-    this.markers.set(node.id, bulb)
+    // Hung under the light so it travels with it, and so a click on it walks up to the light's
+    // id. An ambient lamp gets one too: it is the only thing in the viewport that can select it.
+    this.dressLight(node.id, light, node.light)
     return light
+  }
+
+  /**
+   * Markers set right AFTER their nodes are hung: held at their own size whatever scale a node
+   * carries, and — for a lamp — turned to where its light actually goes.
+   *
+   * A pass of its own, and not part of `syncNode`, because both readings walk the chain of
+   * PARENTS: a node built during the sync hangs from the scene until `hangFromParent` moves it,
+   * so posing it any earlier would answer against the place it no longer is.
+   */
+  private poseMarkers(nodes: readonly SceneNode[]): void {
+    for (const node of nodes) {
+      const marker = this.markers.get(node.id)
+      if (!marker) continue
+
+      holdMarkerSize(marker)
+      if (node.type === 'light') aimLightMarker(marker, node.light)
+    }
+  }
+
+  /** The body a lamp is drawn as, built from its descriptor and put in place of the last one. */
+  private dressLight(id: string, light: Light, descriptor: LightDescriptor): void {
+    const worn = this.markers.get(id)
+
+    // Hung before the old one goes: freeing the last user of a material destroys its GL program,
+    // and three would compile it again on the very next frame.
+    const body = lightBody(descriptor, this.markerColor, this.markerEdge)
+    light.add(body)
+    this.markers.set(id, body)
+
+    if (worn) {
+      light.remove(worn)
+      disposeTree(worn)
+    }
   }
 
   /** The object a node hangs from, or the scene for a node that hangs from nothing. */
@@ -2609,7 +2652,10 @@ export class SceneRenderer {
       this.frustums.delete(id)
     }
 
-    // The body hangs under the node, so it goes with it; the map is what would keep it alive.
+    // The body hangs under the node, so it goes with it — but nothing above frees what it is made
+    // of: an ambient lamp draws no helper, and its whole shape would leak on every delete.
+    const marker = this.markers.get(id)
+    if (marker) disposeTree(marker)
     this.markers.delete(id)
   }
 
@@ -2788,12 +2834,15 @@ export class SceneRenderer {
 
   /** Redraws nodes from what was last applied, undoing what a gesture moved without meaning to. */
   private resync(moves: readonly NodeMove[]): void {
+    const back: SceneNode[] = []
     for (const move of moves) {
       const node = this.applied.get(move.id)
       if (!node) continue
       this.applied.delete(move.id)
       this.syncNode(node)
+      back.push(node)
     }
+    this.poseMarkers(back)
     this.redraw()
   }
 
@@ -3219,14 +3268,6 @@ export function nodeIdOf(object: Object3D, isNode: (name: string) => boolean): s
     current = current.parent
   }
   return null
-}
-
-/**
- * What colour a lamp's bulb glows. A hemisphere light has two, and the sky one is what says which
- * way it is turned; an ambient has one and lights everything with it.
- */
-function bulbColourOf(light: LightDescriptor): string {
-  return light.kind === 'hemisphere' ? light.skyColor : light.color
 }
 
 /** A light catches nothing: the flag exists on every node, but only two kinds answer to it. */
