@@ -13,6 +13,9 @@ import { createRefCache } from '../core/refCache'
 /** A port rather than a hard-wired `TextureLoader`, like `SqliteDriver`: jsdom decodes no image. */
 export type TextureSource = (url: string) => Promise<Texture>
 
+/** What `decoderFor` reads: an OpenEXR magic, a TIFF one, or the `#?RADIANCE` line. */
+const SIGNATURE_BYTES = 16
+
 /**
  * What production hands every engine that decodes a picture. Here rather than at each of them:
  * the port is declared on this line, and three spaces had grown their own identical copy of the
@@ -25,22 +28,23 @@ export const loadTexture: TextureSource = async url => {
   const answer = await fetch(url)
   if (!answer.ok) throw new Error(`${url} answered ${answer.status}`)
 
-  const bytes = new Uint8Array(await answer.arrayBuffer())
-  const decoder = decoderFor(bytes)
-  // A container rather than a picture: `utif` hands back plain RGBA, which no `<img>` is needed
-  // for and no three loader reads.
-  if (decoder === 'tiff') return tiffTexture(bytes)
+  // The BLOB rather than the bytes, and the HEAD of it rather than the whole. Two things ride on
+  // that: the served type stays on it — a blob with none renders no SVG at all, `<img>` reading
+  // the vector case by the MIME — and an ordinary 4K picture, which is nearly all of them, no
+  // longer has a 32 MiB copy of itself made in JavaScript to read sixteen bytes.
+  const blob = await answer.blob()
+  const decoder = decoderFor(new Uint8Array(await blob.slice(0, SIGNATURE_BYTES).arrayBuffer()))
 
-  // The served type is carried over rather than dropped: a blob with none of it renders no SVG at
-  // all, `<img>` reading the vector case by the MIME and not by the content.
-  const blob = URL.createObjectURL(
-    new Blob([bytes], { type: answer.headers.get('content-type') ?? '' }),
-  )
+  // A container rather than a picture: `utif` hands back plain RGBA, which no `<img>` is needed
+  // for and no three loader reads. The one path that does need every byte asks for them here.
+  if (decoder === 'tiff') return tiffTexture(new Uint8Array(await blob.arrayBuffer()))
+
+  const object = URL.createObjectURL(blob)
 
   try {
-    return await (await loaderFor(decoder)).loadAsync(blob)
+    return await (await loaderFor(decoder)).loadAsync(object)
   } finally {
-    URL.revokeObjectURL(blob)
+    URL.revokeObjectURL(object)
   }
 }
 

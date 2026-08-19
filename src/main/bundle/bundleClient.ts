@@ -1,11 +1,6 @@
 import type { TaskWatch } from '@shared/domain/taskProgress'
-import type {
-  BundleJob,
-  BundleMessage,
-  BundleReadJob,
-  BundleResponse,
-  BundleWriteJob,
-} from './bundleProtocol'
+import { createProcessClient } from '@main/processClient'
+import type { BundleMessage, BundleReadJob, BundleResponse, BundleWriteJob } from './bundleProtocol'
 import type { OtiozRead } from './otiozRead'
 
 /** The worker, reduced to what the client needs — injected, since `fork` needs a live app. */
@@ -24,87 +19,40 @@ export type BundleClient = {
   read: (run: Omit<BundleReadJob, 'writes'> & TaskWatch) => Promise<OtiozRead | null>
 }
 
+/** Either direction's answer. The worker says `wrote` to a write and `read` to a read. */
 type Settled = boolean | OtiozRead | null
 
-type Pending = {
-  resolve: (settled: Settled) => void
-  reject: (error: Error) => void
-  onStep?: (done: number, total: number) => void
-  /** Drops the abort listener: a signal outlives the run it was handed to. */
-  release: () => void
-}
-
 export function createBundleClient(port: BundlePort): BundleClient {
-  const pending = new Map<number, Pending>()
-  let nextId = 1
-  // A dead process swallows `postMessage` without a word, so a bundle posted into one would leave
-  // a row turning in the status line for the rest of the session. Same guard `peaksClient` has.
-  let closed = false
-
-  port.onMessage(response => {
-    const slot = pending.get(response.id)
-    if (!slot) return
-
-    if (response.kind === 'progress') {
-      slot.onStep?.(response.done, response.total)
-      return
-    }
-
-    pending.delete(response.id)
-    slot.release()
-
-    if (response.kind === 'wrote') slot.resolve(response.written)
-    else if (response.kind === 'read') slot.resolve(response.contents)
-    else slot.reject(new Error(response.error))
-  })
-
-  port.onFailure(error => {
-    closed = true
-    const waiting = [...pending.values()]
-    pending.clear()
-    for (const slot of waiting) {
-      slot.release()
-      slot.reject(error)
-    }
-  })
-
-  /** One promise for both directions: what differs is the job posted and the answer read back. */
-  const run = (job: BundleJob, { onStep, signal }: TaskWatch): Promise<Settled> =>
-    new Promise((resolve, reject) => {
-      if (closed) {
-        reject(new Error('the bundle process is gone'))
-        return
+  const client = createProcessClient<BundleMessage, BundleResponse, Settled>({
+    port,
+    runOf: response => response.id,
+    read: response => {
+      if (response.kind === 'progress') {
+        return { kind: 'progress', done: response.done, total: response.total }
       }
-      if (signal?.aborted) {
-        resolve(job.writes ? false : null)
-        return
-      }
-
-      const id = nextId++
-
-      // Sent first, the order `peaksClient` settled on: a throw here leaves nothing behind and
-      // rejects this promise on its own. Safe because an answer is always a turn later.
-      port.postMessage({ id, ...job })
-
-      // The worker answers the cancel like any other end, so the half-written file is removed
-      // there rather than being left for this side to guess at.
-      const cancel = (): void => port.postMessage({ id, cancel: true })
-      signal?.addEventListener('abort', cancel, { once: true })
-
-      pending.set(id, {
-        resolve,
-        reject,
-        onStep,
-        release: () => signal?.removeEventListener('abort', cancel),
-      })
-    })
+      if (response.kind === 'wrote') return { kind: 'settled', result: response.written }
+      if (response.kind === 'read') return { kind: 'settled', result: response.contents }
+      return { kind: 'failed', error: response.error }
+    },
+    gone: 'the bundle process is gone',
+    cancel: id => ({ id, cancel: true }),
+    // A bundle stopped before it left produced nothing, and BOTH directions have a word for
+    // that — `false` and `null`. The casts below turn the shared one into each.
+    stopped: () => null,
+  })
 
   return {
     // The two casts are the boundary itself: the worker answers `wrote` to a write and `read` to
-    // a read, and nothing in the type system carries that pairing across a `postMessage`.
+    // a read, and nothing in the type system carries that pairing across a `postMessage`. A stop
+    // before the start answers `null`, which a write reads as its own `false`.
     write: ({ onStep, signal, ...job }) =>
-      run({ writes: true, ...job }, { onStep, signal }) as Promise<boolean>,
+      client
+        .send(id => ({ id, writes: true, ...job }), { onStep, signal })
+        .then(settled => settled === true) as Promise<boolean>,
     read: ({ onStep, signal, ...job }) =>
-      run({ writes: false, ...job }, { onStep, signal }) as Promise<OtiozRead | null>,
+      client.send(id => ({ id, writes: false, ...job }), {
+        onStep,
+        signal,
+      }) as Promise<OtiozRead | null>,
   }
 }
