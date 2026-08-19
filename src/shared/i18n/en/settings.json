@@ -219,7 +219,7 @@
     "openLogFolder": {
       "title": "Technical log",
       "help": "Opens the file manager on the log the studio writes on every launch. This is the file you will be asked for when something fails without saying anything on screen.",
-      "button": "Reveal the technical log"
+      "button": "Show the technical log"
     },
     "openSettingsFile": {
       "title": "Settings file",
