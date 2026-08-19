@@ -7,7 +7,7 @@ import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
 import { TextField } from '@/design/TextField'
 import { ToggleField } from '@/design/ToggleField'
-import { BLEND_MODES, type BlendMode } from '@shared/domain/canvasBlend'
+import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import {
   isGroup,
   type AdjustmentKind,
