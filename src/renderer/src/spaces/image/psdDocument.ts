@@ -4,14 +4,7 @@ import { psdBlendOf } from '@shared/domain/psdBlend'
 import type { BlendMode } from '@shared/domain/canvasBlend'
 
 /**
- * The layered picture, as Photoshop holds one.
- *
- * Composed HERE and not in the main process, which is the opposite of `.ora` and for one reason:
- * a PSD carries raw pixels, and what a layer holds at this point is PNG bytes. Decoding those
- * needs an image decoder, which this side has and the other does not.
- *
- * Built from the very `OraDocument` a save writes, so the two ways out of an image document
- * describe the same stack — one tree, not two that drift.
+ * Composed HERE, unlike `.ora`: a PSD carries raw pixels, and only this side decodes a PNG.
  */
 
 /** What the studio's stack calls a composite, back to a blend the table knows. */
@@ -40,11 +33,7 @@ function canvasOf(bitmap: ImageBitmap): HTMLCanvasElement {
 }
 
 /**
- * The bytes of a `.psd` holding this document's layers.
- *
- * GROUPS are flattened away, and that is the one thing to know: the studio's stack nests, a PSD
- * nests too, but what an `OraDocument` hands over is already a flat list of surfaces — the tree
- * lives in `studio`, which no other application reads. A group's children arrive as siblings.
+ * The bytes of a `.psd`. GROUPS flatten away: an `OraDocument` hands over a flat list already.
  */
 export async function psdBytesOf({ stack, surfaces }: OraDocument): Promise<Uint8Array> {
   const byPath = new Map(surfaces.map(one => [one.path, one.png]))

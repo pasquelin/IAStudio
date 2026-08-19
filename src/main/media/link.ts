@@ -11,12 +11,7 @@ const EXTENSIONS: Record<ImportableType, readonly string[]> = {
   audio: ['wav', 'mp3', 'aac', 'flac', 'm4a', 'ogg'],
   image: ['png', 'jpg', 'jpeg', 'webp', 'tif', 'tiff', 'exr', 'hdr'],
   /**
-   * The SELF-CONTAINED shapes, and only those. An asset is served flat as `scenario://asset/<id>`,
-   * so a file pointing at siblings by relative path — `.gltf` at its buffers, `.dae` at its
-   * textures — would 404 on every one and show an empty model with nothing said.
-   *
-   * `.obj` is the line to know: it names a `.mtl` this side never fetches, so its shapes arrive
-   * dressed in the loader's default rather than white and silent.
+   * Self-contained only: served flat as `scenario://asset/<id>`, a `.gltf` 404s on its buffers.
    */
   mesh: ['glb', 'obj', 'fbx', 'stl', 'ply', 'usdz'],
 }
@@ -32,8 +27,7 @@ export function assetTypeOf(path: string): ImportableType | null {
 export type LinkOptions = { id: string; type: AssetType; now: string }
 
 /**
- * A catalogue row pointing at a file left where it is. `path` stays empty on purpose: it means
- * "inside the project", and this one is not — that is the whole reason `hash` exists.
+ * A row for a file left where it is — empty `path` means « inside », which is why `hash` exists.
  */
 export function linkedAsset(source: string, { id, type, now }: LinkOptions): Asset {
   return {

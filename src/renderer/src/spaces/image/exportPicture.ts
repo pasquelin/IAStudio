@@ -5,10 +5,7 @@ import { getBridge } from '@/services/bridge'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { documentExportName, useDocuments } from '@/stores/documents'
 
-/**
- * The engine, seen from an export: it flattens, and — for the layered way out — hands over every
- * layer's pixels and the flatten the container requires.
- */
+/** The engine seen from an export: the flatten, plus every layer's pixels for the layered way. */
 export type ExportHost = {
   snapshot: () => Promise<string | null>
   pixelSnapshots: () => Promise<readonly LayerPixels[]>
@@ -16,10 +13,7 @@ export type ExportHost = {
 }
 
 /**
- * Writes the document, flattened, wherever the user points. The stack is composited by the GPU
- * on the way out — the same pass the screen shows, so what lands on disk is what was judged.
- *
- * Returns the path, or `null` when the dialog was dismissed or there was nothing to write.
+ * The document flattened by the GPU, wherever the user points. `null` for a dismissed dialog.
  */
 export async function exportPicture(documentId: string, host: ExportHost): Promise<string | null> {
   const bridge = getBridge()
@@ -34,15 +28,11 @@ export async function exportPicture(documentId: string, host: ExportHost): Promi
   // The tab's own title, so the file is findable afterwards. A word rather than the id when there
   // is no title left to clean: an id is no more findable than a word, and shorter to read.
   const name = documentExportName(useDocuments.getState(), documentId, 'image')
-  return bridge.dialog.exportPicture(`${name}.png`, image)
+  return bridge.dialog.exportPicture(`${name}${exportTargetOf('picture.png').extension}`, image)
 }
 
 /**
- * The same document with its layers intact, as a `.psd`.
- *
- * Through `exportPicture`'s own door — a PSD IS a picture, and that channel is « write these bytes
- * where the person points ». The stack is the one a save composes, so the two ways out of an image
- * describe the same tree.
+ * The same document with its layers intact, as a `.psd`, through `exportPicture`'s own door.
  */
 export async function exportLayeredPicture(
   documentId: string,
