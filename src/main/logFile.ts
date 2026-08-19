@@ -4,7 +4,8 @@ import type { Sink } from '@main/log'
 
 /** Two files at most, so the trace of a launch survives the one that follows it. */
 const MAX_BYTES = 1_000_000
-const CURRENT = 'main.log'
+/** Exported so whoever points a reader at the log names the same file this one writes. */
+export const CURRENT = 'main.log'
 const PREVIOUS = 'main.1.log'
 
 function sizeOf(file: string): number {

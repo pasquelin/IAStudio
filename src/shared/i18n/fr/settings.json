@@ -216,6 +216,11 @@
       "warn": "Erreurs et avertissements",
       "info": "Tout"
     },
+    "openLogFolder": {
+      "title": "Journal technique",
+      "help": "Ouvre le gestionnaire de fichiers sur le journal que le studio écrit à chaque lancement. C’est ce fichier qu’on vous demandera si quelque chose échoue sans rien afficher à l’écran.",
+      "button": "Afficher le journal technique"
+    },
     "openSettingsFile": {
       "title": "Fichier de réglages",
       "help": "Ouvre le gestionnaire de fichiers sur l’endroit où vos réglages sont enregistrés. Utile pour en faire une copie avant de changer de machine, ou pour l’envoyer à quelqu’un qui vous aide."

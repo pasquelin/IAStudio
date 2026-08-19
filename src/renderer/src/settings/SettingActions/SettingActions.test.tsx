@@ -31,6 +31,18 @@ describe('the buttons of a section', () => {
     expect(runAction).toHaveBeenCalledWith('advanced.openSettingsFile')
   })
 
+  // Its own label, not the shared `reveal`: two buttons of this section would otherwise read
+  // the same, and `getByRole` finding two is what said so.
+  it('tells the log button apart from the one beside it', async () => {
+    const runAction = vi.fn((_id: SettingActionId) => Promise.resolve())
+    installFakeBridge({ settings: { runAction } })
+    render(<SettingActions section="advanced" />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Afficher le journal technique' }))
+
+    expect(runAction).toHaveBeenCalledWith('advanced.openLogFolder')
+  })
+
   // No Cancel covers these: they never pass through the editing buffer.
   it('asks before an action that cannot be taken back', async () => {
     const runAction = vi.fn((_id: SettingActionId) => Promise.resolve())

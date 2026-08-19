@@ -3,6 +3,7 @@ import { isRecord } from '../guards'
 import { LANGUAGES, TRANSLATIONS } from '../i18n'
 import { defaultAt } from './settingsPath'
 import {
+  ACTION_REGISTRY,
   boundsOf,
   childSections,
   descriptorAt,
@@ -47,6 +48,14 @@ function keysOf(): string[] {
       ...(descriptor.placeholderKey ? [descriptor.placeholderKey] : []),
       // An option naming itself literally has no key to look up — see `optionLabel`.
       ...optionsOf(descriptor).flatMap(option => (option.labelKey ? [option.labelKey] : [])),
+    ]),
+    // The buttons were outside this list until 19/08, and nothing else resolved their keys: an
+    // action added with a key that does not exist paints the key itself onto the screen.
+    ...ACTION_REGISTRY.flatMap(action => [
+      action.titleKey,
+      action.helpKey,
+      action.buttonKey,
+      ...(action.confirmKey ? [action.confirmKey] : []),
     ]),
   ]
 }
