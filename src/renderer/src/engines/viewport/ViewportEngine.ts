@@ -95,7 +95,7 @@ export type ViewportEngineOptions = {
    * camera has to run first. Left to the caller's own listener, the order would rest on which of
    * the two `mount` calls came first, and nothing would guard it.
    */
-  onPaneArmed?: () => void
+  onPaneArmed?: (event: PointerEvent) => void
   fieldOfView?: number
   near?: number
   far?: number
@@ -568,7 +568,7 @@ export class ViewportEngine {
 
     // Outside the guard above, and that is the point: a caller that thaws does it from here, and
     // it would never get the chance if a frozen viewport returned before saying anything.
-    this.options.onPaneArmed?.()
+    this.options.onPaneArmed?.(event)
   }
 
   /**

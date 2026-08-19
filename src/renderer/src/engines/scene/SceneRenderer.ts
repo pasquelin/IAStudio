@@ -448,7 +448,7 @@ export class SceneRenderer {
     onPane: (index, camera) => this.dressPane(index, camera),
     // Before `TransformControls` reads the same event — see `onPaneArmed`, which says why the
     // viewport owns this call rather than a listener of this file.
-    onPaneArmed: () => this.onPointerAim(),
+    onPaneArmed: event => this.onPointerAim(event),
     // A preview shows what the camera FILMS: the same pass the film and the montage take.
     onInset: () => this.hideWorkshop(),
     // Read back rather than computed here: only the controls know where an orbit ended up.
@@ -669,7 +669,7 @@ export class SceneRenderer {
     // `onPointerDown` hovers and THEN grabs, so the axis is decided inside the very call that
     // uses the plane. This fires synchronously on that decision, which is the only moment left
     // to turn the plane before it is read.
-    gizmo.addEventListener('axis-changed', this.refreshGizmoMatrices)
+    gizmo.addEventListener('axis-changed', this.onGizmoAxisChanged)
     gizmo.addEventListener('dragging-changed', this.onDraggingChanged)
     gizmo.addEventListener('objectChange', this.onGizmoChange)
     gizmo.addEventListener('mouseDown', this.onGizmoGrab)
@@ -1223,7 +1223,7 @@ export class SceneRenderer {
    * and a hover asks for none, so the plane keeps the orientation of the view one quitted and comes
    * out parallel to the new ray: measured 19/08, ray·normal 0 in « De gauche », nothing moved.
    */
-  private readonly refreshGizmoMatrices = (): void => {
+  private refreshGizmoMatrices(): void {
     this.gizmo?.getHelper().updateMatrixWorld(true)
   }
 
@@ -1826,7 +1826,7 @@ export class SceneRenderer {
     canvas?.removeEventListener('contextmenu', this.onContextMenu)
     window.removeEventListener('pointerup', this.onPointerUp)
 
-    this.gizmo?.removeEventListener('axis-changed', this.refreshGizmoMatrices)
+    this.gizmo?.removeEventListener('axis-changed', this.onGizmoAxisChanged)
     this.gizmo?.removeEventListener('dragging-changed', this.onDraggingChanged)
     this.gizmo?.removeEventListener('objectChange', this.onGizmoChange)
     this.gizmo?.removeEventListener('mouseDown', this.onGizmoGrab)
@@ -2764,7 +2764,13 @@ export class SceneRenderer {
     this.viewport.freezePanes(this.gizmo?.dragging === true || this.flying)
   }
 
-  private readonly onPointerAim = (): void => {
+  private readonly onPointerAim = (event: PointerEvent): void => {
+    // A drag nobody holds any more. `TransformControls.pointerUp` returns before clearing
+    // `dragging` unless the button released is the LEFT one, so a right click mid-drag — the fly
+    // camera's own button — leaves it set for good, and the views frozen with it. No button down
+    // is the one reading that cannot lie; clearing it dispatches, so the freeze lifts by itself.
+    if (event.buttons === 0 && this.gizmo?.dragging) this.gizmo.dragging = false
+
     // Any movement repairs a freeze that outlived its gesture.
     this.syncPaneFreeze()
     this.aimGizmo()
@@ -2799,7 +2805,9 @@ export class SceneRenderer {
 
       this.flownFrom = null
       this.held.clear()
-      this.viewport.freezePanes(false)
+      // Asked rather than asserted: a handle may still be held under the left button, and thawing
+      // in the middle of that drag hands the gizmo another camera than the one it started in.
+      this.syncPaneFreeze()
 
       // Never in pose mode: there a click names a bone, and a bone is not a node the menu could
       // act on.
@@ -3096,6 +3104,14 @@ export class SceneRenderer {
 
   // Without this the OS menu opens on the very gesture that starts flying.
   private readonly onContextMenu = (event: Event): void => event.preventDefault()
+
+  /**
+   * On the way IN to an axis, never on the way back to `null`: there is no plane to turn once
+   * nothing is held, and this fires on both edges — half the walks would be for no one.
+   */
+  private readonly onGizmoAxisChanged = (): void => {
+    if (this.gizmo?.axis) this.refreshGizmoMatrices()
+  }
 
   // No need for the event's own value: three writes the property before it dispatches.
   private readonly onDraggingChanged = (): void => {

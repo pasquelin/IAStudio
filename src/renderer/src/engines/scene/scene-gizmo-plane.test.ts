@@ -52,12 +52,16 @@ function stubElement(): HTMLElement {
   } as unknown as HTMLElement
 }
 
-/** How squarely the ray of a view meets the plane. Zero is parallel, so nothing intersects. */
-function rayAgainstPlane(controls: TransformControls, camera: OrthographicCamera): number {
+/** Which way the drag plane faces, in world space. Its local +Z, as `PlaneGeometry` builds it. */
+function planeNormal(controls: TransformControls): Vector3 {
   // `_plane` is three's own member and the whole subject here; it publishes no accessor for it.
   const plane = (controls as unknown as { _plane: Mesh })._plane
-  const normal = new Vector3(0, 0, 1).applyQuaternion(plane.getWorldQuaternion(new Quaternion()))
-  return Math.abs(camera.getWorldDirection(new Vector3()).dot(normal))
+  return new Vector3(0, 0, 1).applyQuaternion(plane.getWorldQuaternion(new Quaternion()))
+}
+
+/** How squarely the ray of a view meets the plane. Zero is parallel, so nothing intersects. */
+function rayAgainstPlane(controls: TransformControls, camera: OrthographicCamera): number {
+  return Math.abs(camera.getWorldDirection(new Vector3()).dot(planeNormal(controls)))
 }
 
 describe('the gizmo drag plane', () => {
@@ -73,17 +77,21 @@ describe('the gizmo drag plane', () => {
     return { scene, controls, top, left: sideCamera(new Vector3(-1, 0, 0)) }
   }
 
-  it('comes out parallel to the new view when no frame has run since the axis changed', () => {
+  it('keeps the orientation of the view one has quitted, and so misses the new ray', () => {
     const { scene, controls, left } = build()
 
-    // A frame in the top view, holding the axis one grabs there.
+    // A frame in the top view, holding the axis one grabs there: the plane turns to face THAT eye.
     controls.axis = 'X'
     scene.updateMatrixWorld(true)
+    expect(planeNormal(controls).y).toBeCloseTo(-1, 3)
 
     // The pointer moves to the left view and grabs a vertical axis. A hover renders nothing.
     controls.camera = left
     controls.axis = 'Y'
 
+    // The normal, not merely the miss: a plane never turned at all would read as parallel too,
+    // and this case would then pass without the state it is here to describe.
+    expect(planeNormal(controls).y).toBeCloseTo(-1, 3)
     expect(rayAgainstPlane(controls, left)).toBeLessThan(0.001)
   })
 
@@ -98,6 +106,7 @@ describe('the gizmo drag plane', () => {
     // What `refreshGizmoMatrices` does, and the only thing it does.
     controls.getHelper().updateMatrixWorld(true)
 
+    expect(Math.abs(planeNormal(controls).x)).toBeCloseTo(1, 3)
     expect(rayAgainstPlane(controls, left)).toBeGreaterThan(0.999)
   })
 })

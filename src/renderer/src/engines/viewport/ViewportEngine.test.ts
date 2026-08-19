@@ -397,28 +397,14 @@ describe('a viewport', () => {
     })
 
     /**
-     * `TransformControls` reads its own pointer events off the canvas and grabs from the camera
-     * it is holding at that instant. Armed after it, the pane is one event behind and the gizmo
-     * casts its ray from the view one has just left — no handle lights, and the drag falls
-     * through to the orbit. A capture on the host is what puts the arming first.
-     */
-    it('arms the pane before any listener of the canvas reads the same event', () => {
-      const engine = mounted()
-      engine.setLayout('quad')
-      const canvas = engine.canvas
-      if (!canvas) throw new Error('mounted with no canvas')
-
-      const seen: number[] = []
-      canvas.addEventListener('pointermove', () => seen.push(engine.activePane))
-      canvas.dispatchEvent(pointerAt(HOST_WIDTH - 10, HOST_HEIGHT - 10))
-
-      expect(seen).toEqual([3])
-    })
-
-    /**
      * The seam `TransformControls` needs: it grabs from the camera it holds, so whoever aims it
      * has to run before the canvas hears the event. Through the viewport rather than a listener
      * of the caller's own, or the order would rest on which `mount` ran first.
+     *
+     * **What this does NOT prove**: that a CAPTURE is required. Measured — a bubble listener
+     * posted at mount already runs before one a caller adds later, so this case is green against
+     * the arrangement this lot replaced. What the capture buys is running ahead of the main
+     * `OrbitControls`, built inside `mount` before the arming was, and nothing here covers that.
      */
     it('says the pane is armed before the canvas hears the event, and says it while frozen', () => {
       const armed: number[] = []
