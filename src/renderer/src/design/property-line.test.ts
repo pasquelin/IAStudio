@@ -78,9 +78,19 @@ describe('the label column of a property line', () => {
    * "shared" is no longer two spellings kept in step but a single component both call.
    */
   it('is one gauge, read through one component rather than written twice', () => {
-    expect(FIELD_LABEL).toContain('w-(--sc-label)')
+    expect(FIELD_LABEL).toContain('w-(--sc-label-share)')
     expect(code(propertyRow)).toContain('<PropertyLabel')
     expect(code(labelSource)).toContain('FIELD_LABEL')
+  })
+
+  /**
+   * Capped and NOT floored, which is not an oversight: a floor cannot shrink, and a side zone
+   * dragged to its 140px minimum then overflowed by 21px — the control collapsing to nothing
+   * while the buttons sat outside the panel.
+   */
+  it('takes a share of the row that a narrow panel can still shrink', () => {
+    expect(FIELD_LABEL).toContain('max-w-(--sc-label-max)')
+    expect(FIELD_LABEL).not.toContain('min-w-(--sc-label')
   })
 
   /** The lookbehind keeps `min-w-0` out of it: a minimum of zero is not a column width. */

@@ -50,7 +50,7 @@
     "linkAxesHint": "Moving one axis takes the others with it, in the ratio they held when it was locked",
     "rotationInert": "A sprite always faces the camera: turning it shows only where it carries children",
     "browseTexture": "Browse the images",
-    "browseTextureHint": "Choose from every image in the project, local and remote alike",
+    "browseTextureHint": "Choose from the images this project holds, as thumbnails rather than a list",
     "modelOverrides": "Swap a channel",
     "noModelTexture": "No image was taken out of this model.",
     "openTextureHint": "Double-click to open this image in the Textures space",

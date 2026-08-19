@@ -38,8 +38,14 @@ export function AssetPickerBody({
   const surface = useRef<HTMLDivElement>(null)
 
   // On the DOCUMENT: the press that opens this window leaves the focus on `<body>`, so a handler
-  // on the dialog caught no Escape. `onLeave` opted out — losing the window is not a choice made.
-  useDismiss(() => settle(null), surface, null, undefined)
+  // on the dialog caught no Escape. `onLeave` is a NO-OP and not `undefined`, which a default
+  // parameter would read as "unset" and answer the choice on the first ⌘-Tab.
+  useDismiss(
+    () => settle(null),
+    surface,
+    null,
+    () => {},
+  )
 
   const shown = useMemo(() => {
     const needle = search.trim().toLowerCase()

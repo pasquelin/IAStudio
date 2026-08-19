@@ -50,7 +50,7 @@
     "linkAxesHint": "Un axe déplacé entraîne les autres dans le rapport où ils étaient au verrouillage",
     "rotationInert": "Un sprite fait toujours face à la caméra, et le tourner ne se voit que s’il porte des enfants",
     "browseTexture": "Parcourir les images",
-    "browseTextureHint": "Choisir parmi toutes les images du projet, locales comme distantes",
+    "browseTextureHint": "Choisir parmi les images du projet, en vignettes plutôt qu’en liste",
     "modelOverrides": "Remplacer un canal",
     "noModelTexture": "Aucune image extraite de ce modèle.",
     "openTextureHint": "Double-cliquer pour ouvrir cette image dans l’espace Textures",

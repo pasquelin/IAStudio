@@ -18,9 +18,9 @@ const host = createMountedHost<AssetPicker>()
  * Declares the window as the place an asset is chosen from the WHOLE project. Returns the way to
  * take it back down.
  *
- * Mounted by the shell, the way the document namer is: a slot's own list holds what the project
- * has locally, and that is the fast answer — this one is the long one, where the remote library
- * is reachable too. A window with no picker answers nothing, and the press does nothing.
+ * Mounted by the shell, the way the document namer is: the slot's own select is the fast answer,
+ * a list of names; this one shows the same pictures AS pictures, and takes a search. A window with
+ * no picker answers nothing, and the press does nothing.
  */
 export const registerAssetPicker = host.hold
 

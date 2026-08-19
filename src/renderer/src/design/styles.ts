@@ -348,14 +348,14 @@ export const COLOR_READOUT = 'text-muted text-mini min-w-0 flex-1 truncate font-
 
 /**
  * One width for a whole section, shared with `PropertyRow` so both families of line start on one
- * column. A SHARE of the row, floored and capped rather than fixed: at the floor alone a name
- * truncated in a panel wide enough to hold three of it.
+ * column. A SHARE of the row, capped and NOT floored: a fixed width truncated in a wide panel, and
+ * a floor of eighty overflowed a side zone dragged to its 140px minimum by 21px, measured.
  *
  * The edge is what makes it read as a column rather than a word standing before a control;
  * `PropertyLabel` wears it and stretches, so the rule runs the row's whole height.
  */
 export const FIELD_LABEL =
-  'text-muted border-border w-(--sc-label-share) min-w-(--sc-label) max-w-(--sc-label-max) shrink-0 border-r pr-2'
+  'text-muted border-border w-(--sc-label-share) max-w-(--sc-label-max) shrink-0 border-r pr-2'
 
 /**
  * The number beside a track — "somewhere past the middle" is not a value anyone can write down.
