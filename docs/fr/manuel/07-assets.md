@@ -230,7 +230,8 @@ disque — pas d’un asset abîmé.
 
 | Vous glissez… | Vers… | Résultat |
 |---|---|---|
-| n’importe quel asset | la **timeline** | un clip sur la piste visée |
+| n’importe quel asset | la **timeline** | un clip sur une piste qui peut le prendre |
+| une scène 3D, depuis l’Explorateur | la **timeline** | elle y devient un clip vivant |
 | une image | la **toile** de l’espace Image | elle devient un calque de plus, armé |
 | une image | l’aperçu d’une **matière** | elle devient la couleur de base |
 | une image | la vignette d’un **canal** précis | elle devient ce canal-là |
@@ -239,8 +240,10 @@ disque — pas d’un asset abîmé.
 | un son | l’**éditeur audio** | il s’ajoute au montage comme un clip, et c’est lui qu’on édite |
 | un asset | un **champ d’asset** d’un formulaire de génération | il devient l’entrée du champ |
 
-**La timeline ne trie pas.** Elle prend ce qu’on lui donne : un asset sans durée propre reçoit une
-durée par défaut plutôt qu’un refus. Dans la vue 3D, le dépôt est accepté **partout sur la vue**,
+**La timeline ne trie pas sur la durée** : un asset qui n’en a pas en reçoit une par défaut plutôt
+qu’un refus. Elle trie en revanche les **pistes**, et un lâcher qui n’en trouve aucune reste sans
+effet — voir [Poser un premier clip](10-espace-video.md#poser-un-premier-clip). Dans la vue 3D, le
+dépôt est accepté **partout sur la vue**,
 la barre d’outils comprise : un lâcher qui tombe à côté serait un raté qu’on ne voit pas venir.
 
 **Au centre, un lâcher que personne ne prend n’est pas perdu** : sur la zone à onglets, un asset
