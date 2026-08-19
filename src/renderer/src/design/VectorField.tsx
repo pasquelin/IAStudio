@@ -74,6 +74,17 @@ export function VectorField<V extends AxisValue>({
     setLocked(!locked)
   }
 
+  /**
+   * And RECAPTURED at the start of every gesture, which the padlock alone could not do: this
+   * component keeps its place in the tree across selections, so a padlock closed over a cube of
+   * (1, 2, 4) went on scaling the NEXT cube by that ratio — typing 2 into a (1, 1, 1) gave
+   * (2, 4, 8). Undo and the reset button replace the value the same silent way.
+   */
+  const beginGesture = (): void => {
+    if (locked) held.current = value
+    onGestureStart?.()
+  }
+
   const move = (axis: keyof AxisValue, next: number): void => {
     const from = held.current
     // Nothing to scale FROM at zero: the axis moves alone rather than taking the others to zero
@@ -95,7 +106,7 @@ export function VectorField<V extends AxisValue>({
       label={axis.toUpperCase()}
       value={value[axis] ?? 0}
       onChange={next => move(axis, next)}
-      onGestureStart={onGestureStart}
+      onGestureStart={beginGesture}
       onGestureEnd={onGestureEnd}
       {...bounds}
     />

@@ -114,12 +114,21 @@ export function NumberField({
     const started = drag.current
     if (!started || started.pointerId !== event.pointerId) return
 
-    const travelled = event.clientX - started.x
     if (!started.scrubbing) {
-      if (Math.abs(travelled) < SCRUB_SLACK) return
+      if (Math.abs(event.clientX - started.x) < SCRUB_SLACK) return
+      /**
+       * The origin moves to where the slack was crossed, and this is not a detail: measured from
+       * the PRESS, the first value emitted was `from + 4 × step` — a position axis leapt 0.4
+       * units and a rotation 4° the instant the drag was recognised. The label drag has no slack
+       * and so no jump, which made the two gestures of one row behave differently.
+       */
+      started.x = event.clientX
       started.scrubbing = true
       onGestureStart?.()
+      return
     }
+
+    const travelled = event.clientX - started.x
 
     // From where the drag began rather than from the current value: accumulating deltas drifts,
     // because each one is snapped to the step before it comes back.

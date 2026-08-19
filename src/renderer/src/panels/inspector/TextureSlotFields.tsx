@@ -8,6 +8,12 @@ export type TextureSlotFieldsProps = {
   onChange: (slot: TextureSlot, assetId: string | null) => void
   /** What an empty row reads, already translated — see `PictureField`. */
   emptyLabel?: string
+  /**
+   * What the SECTION holding these slots is called, in code. Required because two sections draw
+   * them — a mesh's material and a model's overrides — and a handle hardcoded to `material`
+   * named the wrong surface in the second.
+   */
+  scId: string
 }
 
 /**
@@ -17,7 +23,7 @@ export type TextureSlotFieldsProps = {
  * different fields of a document, and there the resemblance ends — a mesh's material also carries
  * a colour and a finish, a model's file already carries both.
  */
-export function TextureSlotFields({ slots, onChange, emptyLabel }: TextureSlotFieldsProps) {
+export function TextureSlotFields({ slots, onChange, emptyLabel, scId }: TextureSlotFieldsProps) {
   const { t } = useTranslation()
 
   return (
@@ -29,7 +35,7 @@ export function TextureSlotFields({ slots, onChange, emptyLabel }: TextureSlotFi
           value={slots[slot]?.assetId ?? null}
           onChange={assetId => onChange(slot, assetId)}
           emptyLabel={emptyLabel}
-          scId={`material.${slot}`}
+          scId={`${scId}.${slot}`}
         />
       ))}
     </>

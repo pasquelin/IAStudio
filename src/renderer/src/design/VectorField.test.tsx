@@ -166,6 +166,28 @@ describe('VectorField', () => {
     })
 
     /**
+     * The component keeps its place in the tree across selections, so a ratio captured only at
+     * the padlock went on scaling the NEXT node by it: a cube of (1, 2, 4) locked, then a cube
+     * of (1, 1, 1) typed to 2, came out (2, 4, 8). Undo and the reset button replace the value
+     * the same silent way — so the ratio is taken again at the start of every gesture.
+     */
+    it('takes the ratio again when the value was replaced under it', async () => {
+      const onChange = vi.fn()
+      const { rerender } = render(
+        <VectorField label="Échelle" value={{ x: 1, y: 2, z: 4 }} lockable onChange={onChange} />,
+      )
+      await userEvent.click(screen.getByRole('button', { name: /Garder les proportions/ }))
+
+      rerender(
+        <VectorField label="Échelle" value={{ x: 1, y: 1, z: 1 }} lockable onChange={onChange} />,
+      )
+      fireEvent.focus(screen.getByLabelText('X'))
+      fireEvent.change(screen.getByLabelText('X'), { target: { value: '2' } })
+
+      expect(onChange).toHaveBeenCalledWith({ x: 2, y: 2, z: 2 })
+    })
+
+    /**
      * The one case a ratio cannot express. Scaling from zero has no factor, and answering with
      * one anyway would flatten the other two axes with nothing to bring them back.
      */

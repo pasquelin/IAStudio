@@ -8,6 +8,7 @@ import { FIELD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
 import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
+import { useCloud } from '@/stores/cloud'
 
 export type AssetPickerBodyProps = {
   accepts: readonly AssetType[]
@@ -32,9 +33,30 @@ export function AssetPickerBody({
   settle,
   labels,
 }: AssetPickerBodyProps) {
-  // `remote`, which is the whole difference with a slot's own list: choosing a library row here
-  // is what fetches it, so offering one is not offering an id that resolves to nothing.
+  // `remote`, which is the whole difference with a slot's own list: a library row is offered
+  // here because choosing one FETCHES it — see `choose` below, without which the id handed back
+  // would resolve to no file at all.
   const found = useProjectPictureAssets(accepts, true)
+  const busy = useCloud(state => state.busy)
+
+  /**
+   * A cloud row is pulled before its id is handed over. The drop path has always done this
+   * (`droppedAsset`); this one did not, so a library picture chosen here wrote an id the slot's
+   * own list could not resolve — the row then read « Image introuvable » and the engine asked
+   * for a file that was never on disk.
+   */
+  const choose = (asset: Asset): void => {
+    if (asset.location === 'local') return settle(asset.id)
+
+    void useCloud
+      .getState()
+      .fetchOne(asset.id)
+      // `null` when the exchange failed: the window stays up rather than filling the slot with
+      // an id that resolves to nothing, and the journal says why.
+      .then(arrived => {
+        if (arrived) settle(arrived.id)
+      })
+  }
   const shown = useMemo(() => {
     const needle = search.trim().toLowerCase()
     return needle === '' ? found : found.filter(asset => asset.name.toLowerCase().includes(needle))
@@ -78,8 +100,11 @@ export function AssetPickerBody({
               <li key={asset.id}>
                 <button
                   type="button"
-                  onClick={() => settle(asset.id)}
-                  className="w-full cursor-pointer border-none bg-transparent p-0"
+                  onClick={() => choose(asset)}
+                  // One transfer at a time, which `useCloud` already enforces: a second press
+                  // while a picture is in flight would queue a choice nobody is waiting for.
+                  disabled={busy}
+                  className="w-full cursor-pointer border-none bg-transparent p-0 disabled:cursor-wait"
                 >
                   <MediaTile
                     url={posterUrl(asset) ?? undefined}

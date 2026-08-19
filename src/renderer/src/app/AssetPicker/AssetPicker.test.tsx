@@ -1,8 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { useCloud } from '@/stores/cloud'
 import { mountedAssetPicker } from '../assetPicker'
 import { AssetPicker } from './AssetPicker'
 
@@ -64,6 +65,34 @@ describe('the asset picker', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Annuler' }))
 
     await expect(chosen).resolves.toBeNull()
+  })
+
+  /**
+   * A library row is fetched BEFORE its id is handed over. Without it the slot took an id its
+   * own list could not resolve — the row read « Image introuvable » and the engine asked for a
+   * file that was never on disk. The drop path had always pulled first; this one had not.
+   */
+  it('fetches a library picture before handing its id over', async () => {
+    const pulled = vi.fn().mockResolvedValue(asset('a-2-local', 'Mousse'))
+    useCloud.setState({ fetchOne: pulled })
+    render(<AssetPicker />)
+    const chosen = ask()
+
+    await userEvent.click(await screen.findByRole('button', { name: /Mousse/ }))
+
+    expect(pulled).toHaveBeenCalledWith('a-2')
+    await expect(chosen).resolves.toBe('a-2-local')
+  })
+
+  // The window stays up rather than filling a slot with an id that resolves to nothing.
+  it('stays open when the exchange failed', async () => {
+    useCloud.setState({ fetchOne: vi.fn().mockResolvedValue(null) })
+    render(<AssetPicker />)
+    void ask()
+
+    await userEvent.click(await screen.findByRole('button', { name: /Mousse/ }))
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
   it('narrows what it shows to what is typed', async () => {

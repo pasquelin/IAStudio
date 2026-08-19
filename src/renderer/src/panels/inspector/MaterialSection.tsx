@@ -36,6 +36,7 @@ export function MaterialSection({
     >
       <TextureSlotFields
         slots={material}
+        scId="material"
         onChange={(slot, assetId) =>
           onChange({ ...material, [slot]: assetId === null ? null : { assetId } })
         }

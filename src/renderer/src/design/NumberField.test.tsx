@@ -280,13 +280,21 @@ describe('NumberField', () => {
    * two answers are opposite: a click must end in edit mode, a drag must not.
    */
   describe('dragging the field', () => {
+    /**
+     * Counted from where the SLACK was crossed, not from the press: the crossing itself moves
+     * nothing. Measured the other way, the first value emitted was `from + 4 × step` — a jump of
+     * 0.4 on a position axis the instant the drag was recognised, which the label drag, having no
+     * slack, never had.
+     */
     it('moves the value sideways once the press has travelled', () => {
       const { onChange } = renderField({ value: 1, step: 0.1 })
       const field = screen.getByLabelText('Radius')
 
       fireEvent.pointerDown(field, { button: 0, pointerId: 1, clientX: 100 })
       fireEvent.pointerMove(field, { pointerId: 1, clientX: 110 })
+      expect(onChange).not.toHaveBeenCalled()
 
+      fireEvent.pointerMove(field, { pointerId: 1, clientX: 120 })
       expect(onChange).toHaveBeenLastCalledWith(2)
     })
 
