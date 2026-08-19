@@ -22,6 +22,7 @@ export async function imageExportFiles(documentId: string): Promise<FolderExport
   const name = documentExportName(useDocuments.getState(), documentId, 'image')
   return {
     folder: name,
+    target: 'picture.png',
     files: [
       {
         name,

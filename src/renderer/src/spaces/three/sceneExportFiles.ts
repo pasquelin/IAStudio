@@ -26,6 +26,7 @@ export async function sceneExportFiles(
   const name = documentExportName(useDocuments.getState(), documentId, 'scene')
   return {
     folder: name,
+    target: SCENE_TARGET_OF_FORMAT[format],
     files: [
       {
         name,

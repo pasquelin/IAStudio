@@ -11,6 +11,9 @@ vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElec
 const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
 const glb = new Uint8Array([0x67, 0x6c, 0x54, 0x46])
 
+/** Built rather than written: `no-literal-nul-byte.test.ts` refuses the byte itself in a source. */
+const NUL = String.fromCharCode(0)
+
 const file = (name: string, extension = '.png', bytes = png): unknown => ({
   name,
   extension,
@@ -32,6 +35,7 @@ describe('the two doors onto one writer', () => {
   it('writes a sky through its own channel, into a folder of its own', async () => {
     await invoke(CHANNELS.skyboxExport, {
       folder: 'Coucher',
+      target: 'sky.faces',
       files: [file('Coucher_Rt'), file('Coucher_Up')],
     })
 
@@ -43,10 +47,18 @@ describe('the two doors onto one writer', () => {
 
   it('refuses a sky the same way it refuses a texture — one writer, one set of rules', async () => {
     await expect(
-      invoke(CHANNELS.skyboxExport, { folder: '../escape', files: [file('Rt')] }),
+      invoke(CHANNELS.skyboxExport, {
+        folder: '../escape',
+        target: 'sky.faces',
+        files: [file('Rt')],
+      }),
     ).rejects.toThrow()
     await expect(
-      invoke(CHANNELS.skyboxExport, { folder: 'Ciel', files: [file('sub/Rt')] }),
+      invoke(CHANNELS.skyboxExport, {
+        folder: 'Ciel',
+        target: 'sky.faces',
+        files: [file('sub/Rt')],
+      }),
     ).rejects.toThrow()
   })
 })
@@ -65,6 +77,7 @@ describe('the texture export handler', () => {
   it('writes every file into a folder named after the texture', async () => {
     await invoke(CHANNELS.textureExport, {
       folder: 'Brique',
+      target: 'material.unity',
       files: [file('Brique_BaseColor'), file('Brique_ORM')],
     })
 
@@ -75,16 +88,21 @@ describe('the texture export handler', () => {
   })
 
   it('writes the bytes it was handed, not a re-encoding of them', async () => {
-    await invoke(CHANNELS.textureExport, { folder: 'Brique', files: [file('Brique_BaseColor')] })
+    await invoke(CHANNELS.textureExport, {
+      folder: 'Brique',
+      target: 'material.unity',
+      files: [file('Brique_BaseColor')],
+    })
 
     await expect(readFile(join(chosen, 'Brique', 'Brique_BaseColor.png'))).resolves.toEqual(
       Buffer.from(png),
     )
   })
 
-  it('gives each file the extension it arrived with', async () => {
+  it('gives each file the extension its target writes, a glTF material being one file', async () => {
     await invoke(CHANNELS.textureExport, {
       folder: 'Brique',
+      target: 'material.gltf',
       files: [file('Brique', '.glb', glb)],
     })
 
@@ -94,7 +112,11 @@ describe('the texture export handler', () => {
   // The name, never the path: where a folder sits is this side's business.
   it('answers the name of the folder it filled', async () => {
     await expect(
-      invoke(CHANNELS.textureExport, { folder: 'Brique', files: [file('Brique_BaseColor')] }),
+      invoke(CHANNELS.textureExport, {
+        folder: 'Brique',
+        target: 'material.unity',
+        files: [file('Brique_BaseColor')],
+      }),
     ).resolves.toBe('Brique')
   })
 
@@ -104,14 +126,22 @@ describe('the texture export handler', () => {
     registerExportHandlers({ pickFolder, projectPath: () => null })
 
     await expect(
-      invoke(CHANNELS.textureExport, { folder: 'Brique', files: [file('Brique_BaseColor')] }),
+      invoke(CHANNELS.textureExport, {
+        folder: 'Brique',
+        target: 'material.unity',
+        files: [file('Brique_BaseColor')],
+      }),
     ).resolves.toBeNull()
     await expect(readdir(chosen)).resolves.toEqual([])
   })
 
   /** Re-exporting after a change is the ordinary case, and it must not fail on the second go. */
   it('writes over a folder it already filled', async () => {
-    const twice = { folder: 'Brique', files: [file('Brique_BaseColor')] }
+    const twice = {
+      folder: 'Brique',
+      target: 'material.unity',
+      files: [file('Brique_BaseColor')],
+    }
     await invoke(CHANNELS.textureExport, twice)
 
     await expect(invoke(CHANNELS.textureExport, twice)).resolves.toBe('Brique')
@@ -120,25 +150,70 @@ describe('the texture export handler', () => {
   describe('refuses what the sandboxed side must not decide', () => {
     it('a folder that would climb out of the one that was picked', async () => {
       await expect(
-        invoke(CHANNELS.textureExport, { folder: '../escape', files: [file('a')] }),
+        invoke(CHANNELS.textureExport, {
+          folder: '../escape',
+          target: 'material.unity',
+          files: [file('a')],
+        }),
       ).rejects.toThrow()
       await expect(
-        invoke(CHANNELS.textureExport, { folder: '..', files: [file('a')] }),
+        invoke(CHANNELS.textureExport, {
+          folder: '..',
+          target: 'material.unity',
+          files: [file('a')],
+        }),
       ).rejects.toThrow()
     })
 
     it('a file name carrying a separator', async () => {
       await expect(
-        invoke(CHANNELS.textureExport, { folder: 'Brique', files: [file('sub/base')] }),
+        invoke(CHANNELS.textureExport, {
+          folder: 'Brique',
+          target: 'material.unity',
+          files: [file('sub/base')],
+        }),
       ).rejects.toThrow()
       await expect(
-        invoke(CHANNELS.textureExport, { folder: 'Brique', files: [file('..\\base')] }),
+        invoke(CHANNELS.textureExport, {
+          folder: 'Brique',
+          target: 'material.unity',
+          files: [file('..\\base')],
+        }),
       ).rejects.toThrow()
     })
 
     it('an extension no target writes', async () => {
       await expect(
-        invoke(CHANNELS.textureExport, { folder: 'Brique', files: [file('base', '.exe')] }),
+        invoke(CHANNELS.textureExport, {
+          folder: 'Brique',
+          target: 'material.unity',
+          files: [file('base', '.exe')],
+        }),
+      ).rejects.toThrow()
+    })
+
+    /**
+     * The extension is checked against THIS target rather than against every extension the studio
+     * writes somewhere: a list of all of them answers « some target writes this », which let a
+     * `.glb` ride in under a target that only ever writes pictures.
+     */
+    it('an extension another target writes, which is not the same question', async () => {
+      await expect(
+        invoke(CHANNELS.textureExport, {
+          folder: 'Brique',
+          target: 'material.unity',
+          files: [file('Brique', '.glb', glb)],
+        }),
+      ).rejects.toThrow()
+    })
+
+    it('a target that is not in the registry at all', async () => {
+      await expect(
+        invoke(CHANNELS.textureExport, {
+          folder: 'Brique',
+          target: 'material.substance',
+          files: [file('Brique_BaseColor')],
+        }),
       ).rejects.toThrow()
     })
 
@@ -151,14 +226,22 @@ describe('the texture export handler', () => {
       const notBytes = { name: 'base', extension: '.png', bytes: new ArrayBuffer(8) }
 
       await expect(
-        invoke(CHANNELS.textureExport, { folder: 'Brique', files: [notBytes] }),
+        invoke(CHANNELS.textureExport, {
+          folder: 'Brique',
+          target: 'material.unity',
+          files: [notBytes],
+        }),
       ).rejects.toThrow()
       await expect(readdir(chosen)).resolves.toEqual([])
     })
 
     it('an export with no file in it at all', async () => {
       await expect(
-        invoke(CHANNELS.textureExport, { folder: 'Brique', files: [] }),
+        invoke(CHANNELS.textureExport, {
+          folder: 'Brique',
+          target: 'material.unity',
+          files: [],
+        }),
       ).rejects.toThrow()
     })
 
@@ -166,7 +249,11 @@ describe('the texture export handler', () => {
       const many = Array.from({ length: 17 }, (_unused, index) => file(`base-${index}`))
 
       await expect(
-        invoke(CHANNELS.textureExport, { folder: 'Brique', files: many }),
+        invoke(CHANNELS.textureExport, {
+          folder: 'Brique',
+          target: 'material.unity',
+          files: many,
+        }),
       ).rejects.toThrow()
     })
 
@@ -182,25 +269,37 @@ describe('the texture export handler', () => {
         bytes: big(),
       }))
 
-      await expect(invoke(CHANNELS.textureExport, { folder: 'Brique', files })).rejects.toThrow(
-        /too_big|custom|Invalid/i,
-      )
+      await expect(
+        invoke(CHANNELS.textureExport, { folder: 'Brique', target: 'material.unity', files }),
+      ).rejects.toThrow(/too_big|custom|Invalid/i)
       await expect(readdir(chosen)).resolves.toEqual([])
     })
 
     it('a name carrying a control character, which would break the write half way', async () => {
       await expect(
-        invoke(CHANNELS.textureExport, { folder: 'Brique', files: [file('a\u0000b')] }),
+        invoke(CHANNELS.textureExport, {
+          folder: 'Brique',
+          target: 'material.unity',
+          files: [file(`a${NUL}b`)],
+        }),
       ).rejects.toThrow()
       await expect(
-        invoke(CHANNELS.textureExport, { folder: 'a\u0000b', files: [file('base')] }),
+        invoke(CHANNELS.textureExport, {
+          folder: `a${NUL}b`,
+          target: 'material.unity',
+          files: [file('base')],
+        }),
       ).rejects.toThrow()
     })
   })
 
   it('never opens a dialog for a request it refuses', async () => {
     await expect(
-      invoke(CHANNELS.textureExport, { folder: '../escape', files: [file('a')] }),
+      invoke(CHANNELS.textureExport, {
+        folder: '../escape',
+        target: 'material.unity',
+        files: [file('a')],
+      }),
     ).rejects.toThrow()
 
     expect(pickFolder).not.toHaveBeenCalled()
@@ -225,7 +324,11 @@ describe('the door that names its destination', () => {
 
   it('writes into the open project, and answers the folder name', async () => {
     await expect(
-      invoke(CHANNELS.projectExport, { folder: 'Rendus', files: [file('vue')] }),
+      invoke(CHANNELS.projectExport, {
+        folder: 'Rendus',
+        target: 'picture.png',
+        files: [file('vue')],
+      }),
     ).resolves.toBe('Rendus')
 
     await expect(readdir(join(project, 'Rendus'))).resolves.toEqual(['vue.png'])
@@ -238,7 +341,11 @@ describe('the door that names its destination', () => {
     registerExportHandlers({ pickFolder, projectPath: () => null })
 
     await expect(
-      invoke(CHANNELS.projectExport, { folder: 'Rendus', files: [file('vue')] }),
+      invoke(CHANNELS.projectExport, {
+        folder: 'Rendus',
+        target: 'picture.png',
+        files: [file('vue')],
+      }),
     ).resolves.toBeNull()
     expect(pickFolder).not.toHaveBeenCalled()
   })
@@ -248,7 +355,11 @@ describe('the door that names its destination', () => {
     await symlink(elsewhere, join(project, 'Rendus'))
 
     await expect(
-      invoke(CHANNELS.projectExport, { folder: 'Rendus', files: [file('vue')] }),
+      invoke(CHANNELS.projectExport, {
+        folder: 'Rendus',
+        target: 'picture.png',
+        files: [file('vue')],
+      }),
     ).resolves.toBeNull()
     await expect(readdir(elsewhere)).resolves.toEqual([])
   })
@@ -256,7 +367,11 @@ describe('the door that names its destination', () => {
   // The same parser as the other two doors, so a climbing name never reaches the write at all.
   it('refuses a name that is not one segment', async () => {
     await expect(
-      invoke(CHANNELS.projectExport, { folder: '../escape', files: [file('vue')] }),
+      invoke(CHANNELS.projectExport, {
+        folder: '../escape',
+        target: 'picture.png',
+        files: [file('vue')],
+      }),
     ).rejects.toThrow()
   })
 })

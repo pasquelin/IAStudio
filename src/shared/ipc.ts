@@ -54,6 +54,7 @@ import type {
   ObjectKind,
   ViewDirection,
 } from './domain/scene'
+import type { ExportTargetId } from './domain/exportRegistry'
 import type { TextureExportTarget } from './domain/textureExport'
 import type { Language } from './i18n/languages'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
@@ -515,7 +516,7 @@ export type RenderFrameRequest = {
 
 /** A scene on its way to a file the studio will never look at again. */
 export type SceneExportRequest = {
-  /** Suggested file name, without its extension — the format decides that. */
+  /** Suggested file name, without its extension — the target decides that. */
   name: string
   format: ExportFormat
   /** Already encoded by the renderer: three.js's exporters run where the scene lives. */
@@ -555,6 +556,13 @@ export type FolderExportRequest = {
   /** The folder to create inside the chosen one, named after what is being exported. */
   folder: string
   files: readonly ExportedFile[]
+  /**
+   * Which entry of `exportRegistry` this is. The channels stay one per section — they are asked
+   * from different places and refused for different reasons — but what they CARRY is one
+   * vocabulary, so the writing side derives the extension it will accept instead of holding a
+   * list that says nothing about which target went wrong.
+   */
+  target: ExportTargetId
 }
 
 export type LogLevel = 'info' | 'warn' | 'error'

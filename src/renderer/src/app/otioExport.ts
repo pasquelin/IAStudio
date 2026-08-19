@@ -43,6 +43,7 @@ export function otioExportFiles(documentId: string): FolderExportRequest {
   const name = documentExportName(useDocuments.getState(), documentId, 'edit')
   return {
     folder: name,
+    target: 'montage.otio',
     files: [
       {
         name,
