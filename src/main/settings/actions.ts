@@ -1,6 +1,8 @@
 import { BrowserWindow, clipboard, shell } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import type { SettingActionId } from '@shared/domain/settingsRegistry'
+import { installResolveScript } from '@main/bridge/resolveBridge'
+import { log } from '@main/log'
 import { mcpAddCommand, type McpEndpoint } from '@main/mcp/endpoint'
 import type { SettingsStore } from './store'
 
@@ -44,6 +46,16 @@ export function runSettingAction({ settings, settingsPath, logFile, mcpEndpoint 
         if (endpoint) clipboard.writeText(mcpAddCommand(endpoint, APP_NAME.toLowerCase()))
         return
       }
+
+      case 'advanced.installResolveBridge':
+        // Revealed once written, which is the whole of the feedback: the window is told nothing,
+        // and a file dropped in another application's folder that nobody is shown is a file
+        // nobody trusts. A failure lands in the main log, where every other one does.
+        void installResolveScript().then(
+          written => shell.showItemInFolder(written),
+          (error: unknown) => log.error('resolve bridge', String(error)),
+        )
+        return
 
       case 'advanced.reset':
         // `reset`, not `write(DEFAULT_SETTINGS)`: a write merges, and the settings with no

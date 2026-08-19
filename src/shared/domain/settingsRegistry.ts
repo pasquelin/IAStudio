@@ -631,6 +631,7 @@ export type SettingActionId =
   | 'advanced.openLogFolder'
   | 'advanced.openDevtools'
   | 'advanced.copyMcpCommand'
+  | 'advanced.installResolveBridge'
   | 'advanced.reset'
 
 export type SettingAction = {
@@ -678,6 +679,16 @@ export const ACTION_REGISTRY: readonly SettingAction[] = [
     titleKey: 'settings.copyMcpCommand.title',
     helpKey: 'settings.copyMcpCommand.help',
     buttonKey: 'settings.copyMcpCommand.button',
+  },
+  {
+    // Asked before acting, and it is the only action here that writes OUTSIDE the studio's own
+    // folders: a `.lua` into another application's script folder, on somebody's machine.
+    id: 'advanced.installResolveBridge',
+    section: 'advanced',
+    titleKey: 'settings.installResolveBridge.title',
+    helpKey: 'settings.installResolveBridge.help',
+    buttonKey: 'settings.installResolveBridge.button',
+    confirmKey: 'settings.installResolveBridge.confirm',
   },
   {
     id: 'advanced.reset',

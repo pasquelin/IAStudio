@@ -250,6 +250,12 @@
       "help": "Copie la ligne à coller dans un terminal pour brancher un client. Le jeton et le port changent à chaque démarrage du studio, la ligne est donc à recopier après chaque lancement.",
       "button": "Copier"
     },
+    "installResolveBridge": {
+      "title": "Passerelle DaVinci Resolve",
+      "help": "Dépose un script dans le dossier que Resolve lit, pour importer un montage écrit ici depuis son menu des scripts. Il apparaît sans redémarrer Resolve. Le retirer se fait à la main, et Resolve ne le voit qu’au redémarrage suivant.",
+      "button": "Installer",
+      "confirm": "Un script va être écrit dans le dossier de DaVinci Resolve, sur cette machine. Rien d’autre n’est touché."
+    },
     "openDevtools": {
       "title": "Outils de développement",
       "help": "Ouvre la console technique du navigateur intégré. Elle affiche les messages du journal et les erreurs. Réservé au dépannage : rien de ce qui s’y trouve n’est nécessaire pour se servir du logiciel."
