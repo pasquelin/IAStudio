@@ -1,5 +1,6 @@
 import { readPsd } from 'ag-psd'
 import { describe, expect, it, vi } from 'vitest'
+import { exportTargetOf, lossesExportingTo } from '@shared/domain/exportRegistry'
 import {
   ORA_MERGED_PATH,
   type OraDocument,
@@ -108,6 +109,29 @@ describe('an image document as Photoshop holds it', () => {
     const psd = await readBack(documentOf([layer('Top'), layer('Bottom')]))
 
     expect(psd.children?.map(child => child.name)).toEqual(['Bottom', 'Top'])
+  })
+
+  /**
+   * The three the writer puts on a layer, and the placement it cannot: a `left` and a `top`, over
+   * pixels handed to it untransformed. `layerTransform` fires for a TURN, so a rotated layer
+   * arrives square — it was listed as carried, and this is the case that would have said so.
+   *
+   * The registry is read HERE rather than beside itself: this is where the file comes back, and
+   * the cases around it are what show each of the three surviving the trip.
+   */
+  it('carries what the registry promises of it, and no placement past the offset', async () => {
+    const psd = await readBack(documentOf([layer('Ink', { x: 12, y: 34 })]))
+
+    expect([psd.children?.[0]?.left, psd.children?.[0]?.top]).toEqual([12, 34])
+    expect(exportTargetOf('picture.psd').capability.interchange).toEqual([
+      'layers',
+      'blendMode',
+      'layerOpacity',
+    ])
+    expect(lossesExportingTo(['layerTransform', 'groups'], 'picture.psd')).toEqual([
+      'layerTransform',
+      'groups',
+    ])
   })
 
   it('carries the name, the opacity and what is hidden', async () => {

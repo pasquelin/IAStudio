@@ -1,8 +1,8 @@
 import {
   DirectionalLight,
   type AnimationClip,
-  Group,
   Object3D,
+  Scene,
   SpotLight,
   Vector3,
   WebGLRenderer,
@@ -131,26 +131,12 @@ function write(
   animations: readonly AnimationClip[],
 ): Promise<Uint8Array> {
   if (format === 'glb' || format === 'gltf') return toGltf(roots, format, decoder, animations)
-  if (format !== 'usdz') return toShapes(oneRoot(roots), format)
+  if (format !== 'usdz') return toShapes(oneScene(roots), format)
 
   const exporter = new USDZExporter()
   exporter.setTextureUtils(decoder)
 
-  // `USDZExporter` takes one root, so several are handed to it under a group of no consequence.
-  const [only] = roots
-  if (roots.length === 1 && only) return exporter.parseAsync(only)
-
-  return exporter.parseAsync(oneRoot(roots))
-}
-
-/** The three shape exporters take a single object, where `GLTFExporter` takes a list. */
-function oneRoot(roots: readonly Object3D[]): Object3D {
-  const [only] = roots
-  if (roots.length === 1 && only) return only
-
-  const root = new Group()
-  root.add(...roots)
-  return root
+  return exporter.parseAsync(oneScene(roots))
 }
 
 /**
@@ -255,6 +241,21 @@ function dropOverlays(object: Object3D): void {
   for (const overlay of overlays) overlay.removeFromParent()
 }
 
+/**
+ * The one container all four exporters take, and the only one that adds no node: `GLTFExporter`
+ * and `USDZExporter` both test `isScene` and write a scene's CHILDREN, where a `Group` becomes
+ * one more `Xform` in the file. Pushed rather than added, so no copy's `parent` moves.
+ *
+ * It is also what makes `animations` mean what it says: that option is read flat for ONE input
+ * and per input beyond, so several roots and a flat list wrote nothing at all — measured 20/08 on
+ * a `.gltf` of eight roots, which Unreal 5.8.1 imported with no `AnimSequence`.
+ */
+function oneScene(roots: readonly Object3D[]): Scene {
+  const scene = new Scene()
+  scene.children.push(...roots)
+  return scene
+}
+
 async function toGltf(
   roots: readonly Object3D[],
   format: Exclude<ExportFormat, 'usdz'>,
@@ -265,13 +266,13 @@ async function toGltf(
   const exporter = new GLTFExporter()
   exporter.setTextureUtils(decoder)
 
-  // An array, not a wrapper group: `GLTFExporter` takes several roots, and wrapping them would
-  // add a node the document never held.
-  //
   // `animations` is passed rather than left out, and that is the whole point of this option: the
   // exporter writes NOTHING of an animation it was not handed — a scene animated in the studio,
   // and a model that arrived animated, both left as still poses.
-  const result = await exporter.parseAsync([...roots], { binary, animations: [...animations] })
+  const result = await exporter.parseAsync(oneScene(roots), {
+    binary,
+    animations: [...animations],
+  })
 
   if (result instanceof ArrayBuffer) return new Uint8Array(result)
   // `.gltf` is JSON, and what a text file holds is its bytes: the encoding is the writer's, and

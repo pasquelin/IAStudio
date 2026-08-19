@@ -18,7 +18,7 @@ import {
   type Object3D,
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import { exportTargetOf } from '@shared/domain/exportRegistry'
+import { exportTargetOf, lossesExportingTo } from '@shared/domain/exportRegistry'
 import { applyWireOverlay } from './sceneView'
 import { exportObjects, placedCopy } from './sceneExport'
 
@@ -32,8 +32,11 @@ type GltfFile = {
   extensions?: Record<string, unknown>
 }
 
-async function gltfOf(objects: Parameters<typeof exportObjects>[0]): Promise<GltfFile> {
-  const bytes = await exportObjects(objects, 'gltf')
+async function gltfOf(
+  objects: Parameters<typeof exportObjects>[0],
+  options?: Parameters<typeof exportObjects>[2],
+): Promise<GltfFile> {
+  const bytes = await exportObjects(objects, 'gltf', options)
   // `as`: what a `.gltf` file holds is glTF, and the two fields read here are the ones a reader
   // would look at. A guard would restate the schema to learn nothing more.
   return JSON.parse(new TextDecoder().decode(bytes)) as GltfFile
@@ -187,22 +190,7 @@ describe('exportObjects with a compressed texture', () => {
   })
 })
 
-// `USDZExporter` takes one root; several are handed to it under a group of no consequence, and
-// the file must hold them all the same.
-describe('exportObjects to USDZ', () => {
-  /**
-   * Weighed rather than read: a USDZ is a zip of a binary USD crate, and the studio ships no
-   * reader for one. What this pins is that both shapes reach the file — the geometry of a second
-   * box is thousands of bytes, far more than the envelope a wrapping root adds.
-   */
-  it('writes one object, and writes several under a root of its own', async () => {
-    const one = await exportObjects([named('box-1')], 'usdz')
-    const two = await exportObjects([named('box-1'), named('box-2')], 'usdz')
-
-    expect(one.byteLength).toBeGreaterThan(0)
-    expect(two.byteLength).toBeGreaterThan(one.byteLength * 1.5)
-  })
-})
+// USDZ is read in `sceneExportUsdz.test.ts`, which runs without a browser — see its head.
 
 /**
  * `USDZExporter` reads `object.matrix` and never refreshes it (`USDZExporter.js:639`), where
@@ -234,10 +222,9 @@ describe('exportObjects and the names a reader sees', () => {
   it('writes what the document calls a node, not the id the engine picks it by', async () => {
     const object = named('3f2a8e14-0c7b-4e9d-9f21-6a5d2b8c1e40')
 
-    const bytes = await exportObjects([object], 'gltf', {
+    const file = await gltfOf([object], {
       nameOf: id => (id === '3f2a8e14-0c7b-4e9d-9f21-6a5d2b8c1e40' ? 'Lamp post' : undefined),
     })
-    const file: GltfFile = JSON.parse(new TextDecoder().decode(bytes))
 
     expect(file.nodes?.map(node => node.name)).toEqual(['Lamp post'])
   })
@@ -248,10 +235,7 @@ describe('exportObjects and the names a reader sees', () => {
     const inner = named('Wheel')
     object.add(inner)
 
-    const bytes = await exportObjects([object], 'gltf', {
-      nameOf: id => (id === 'node-1' ? 'Cart' : undefined),
-    })
-    const file: GltfFile = JSON.parse(new TextDecoder().decode(bytes))
+    const file = await gltfOf([object], { nameOf: id => (id === 'node-1' ? 'Cart' : undefined) })
 
     expect(file.nodes?.map(node => node.name).sort()).toEqual(['Cart', 'Wheel'])
   })
@@ -362,42 +346,69 @@ describe('placedCopy of a rigged model', () => {
  * before it was fixed — `parseAsync` was called with `{ binary }` alone.
  */
 describe('exportObjects and the animation a reader plays', () => {
+  /**
+   * Bound by NAME, which is what `GLTFLoader` produces and the copies therefore keep. A track
+   * naming a uuid binds to nothing on the other side — `placedCopy` mints fresh ones — and the
+   * exporter then writes the clip anyway, with no channel at all. Measured 20/08: a uuid-bound
+   * `Walk` reaches the file as `Walk:0`, a name-bound one as `Walk:1`, and a test reading names
+   * alone cannot tell them apart.
+   */
   const walking = (object: Object3D, target: Object3D): void => {
     object.animations = [
       new AnimationClip('Walk', 1, [
-        new VectorKeyframeTrack(`${target.uuid}.position`, [0, 1], [0, 0, 0, 1, 0, 0]),
+        new VectorKeyframeTrack(`${target.name}.position`, [0, 1], [0, 0, 0, 1, 0, 0]),
       ]),
     ]
   }
+
+  /** What a reader actually plays: a clip with no channel is a name and nothing else. */
+  const played = (file: GltfFile): string[] =>
+    (file.animations ?? [])
+      .filter(one => (one.channels?.length ?? 0) > 0)
+      .map(one => one.name ?? '')
 
   it('carries the clips a loaded model brought with it', async () => {
     const model = named('rig')
     walking(model, model)
 
-    const file = await gltfOf([model])
+    expect(played(await gltfOf([model]))).toEqual(['Walk'])
+  })
 
-    expect(file.animations?.map(one => one.name)).toEqual(['Walk'])
+  /** The copy is what the file holds, so the clip has to name that — never the object on screen. */
+  const composed = (at: number): Parameters<typeof gltfOf>[1] => ({
+    clipsFor: copies => [
+      new AnimationClip('Scenario', 2, [
+        new VectorKeyframeTrack(`${copies[at]?.uuid}.position`, [0, 2], [0, 0, 0, 5, 0, 0]),
+      ]),
+    ],
   })
 
   it('carries the document’s own animation, built from the copies', async () => {
-    const box = named('box-1')
-    const bytes = await exportObjects([box], 'gltf', {
-      // The copy is what the file holds, so the clip has to name that — never the object on screen.
-      clipsFor: copies => [
-        new AnimationClip('Scenario', 2, [
-          new VectorKeyframeTrack(`${copies[0]?.uuid}.position`, [0, 2], [0, 0, 0, 5, 0, 0]),
-        ]),
-      ],
-    })
-    const file = JSON.parse(new TextDecoder().decode(bytes)) as GltfFile
+    const file = await gltfOf([named('box-1')], composed(0))
 
-    expect(file.animations?.map(one => one.name)).toEqual(['Scenario'])
+    expect(played(file)).toEqual(['Scenario'])
     expect(file.animations?.[0]?.channels?.[0]?.target?.path).toBe('translation')
   })
 
   /** A still scene must not gain an empty animation, which every reader would list as one. */
   it('writes no animation for a scene that holds none', async () => {
     expect((await gltfOf([named('box-1')])).animations).toBeUndefined()
+  })
+
+  /**
+   * The case every real scene is in — a mesh and a lamp is already two — and the one every case
+   * above missed by handing over exactly one root. `GLTFExporter` reads `animations` as a flat
+   * list for a single input and as a list PER input beyond that, so a flat one was walked as if
+   * each clip were an array of clips and nothing at all reached the file. Both sources at once:
+   * they arrive through the same option, and both were silenced by it.
+   */
+  it('carries the animation of a scene standing on more than one root', async () => {
+    const box = named('box-1')
+    walking(box, box)
+
+    const file = await gltfOf([box, named('box-2')], composed(1))
+
+    expect(played(file).sort()).toEqual(['Scenario', 'Walk'])
   })
 })
 
@@ -467,5 +478,43 @@ describe('the shape formats', () => {
 
     expect(written).toContain('o box-1')
     expect(written).toContain('o box-2')
+  })
+
+  /**
+   * A parent and its child, which is the smallest tree there is. OBJ writes the two as SIBLING
+   * `o` groups — the notation has no nesting at all — and the registry must not promise one.
+   */
+  it('flattens a tree into siblings, which is why OBJ cannot promise the tree', async () => {
+    const parent = named('parent')
+    parent.add(named('child'))
+
+    const written = new TextDecoder().decode(await exportObjects([parent], 'obj'))
+
+    expect(written).toContain('o parent')
+    expect(written).toContain('o child')
+    expect(lossesExportingTo(['sceneTree'], 'scene.obj')).toEqual(['sceneTree'])
+    expect(lossesExportingTo(['nodeName', 'nodePlacement'], 'scene.obj')).toEqual([])
+  })
+
+  /**
+   * A PLY is one list of vertices and one of faces, and the header names neither an object nor a
+   * parent — `element vertex` and `element face` are the format's own words, not a node's. The
+   * registry promised both, on the reading that PLY "names its elements".
+   */
+  it('names nothing at all in a PLY, tree or node', async () => {
+    const parent = named('parent')
+    parent.add(named('child'))
+
+    // The head alone: the rest is binary, and decoding it as text says nothing about a name.
+    const header = new TextDecoder().decode((await exportObjects([parent], 'ply')).subarray(0, 512))
+
+    expect(header).toContain('end_header')
+    expect(header.slice(0, header.indexOf('end_header'))).not.toContain('parent')
+    expect(header.slice(0, header.indexOf('end_header'))).not.toContain('child')
+    expect(lossesExportingTo(['sceneTree', 'nodeName'], 'scene.ply')).toEqual([
+      'sceneTree',
+      'nodeName',
+    ])
+    expect(lossesExportingTo(['nodePlacement'], 'scene.ply')).toEqual([])
   })
 })

@@ -75,6 +75,23 @@ describe('a cut as FCPXML', () => {
     expect(written(muted)).toContain('enabled="0"')
   })
 
+  /**
+   * `trackAudible` is declared CARRIED, and it is the RESULT of the two switches: one track
+   * soloed anywhere silences every track that is not. Reading `muted` alone wrote `enabled="1"`
+   * for rows the studio was not playing.
+   */
+  it('silences the rows a solo elsewhere silences, which is what audible means', () => {
+    const file = written(
+      sequenceWith([
+        trackFixture('V1', 'video', [clipFixture('a', 0, SECOND)], { solo: true }),
+        trackFixture('A1', 'audio', [clipFixture('b', 0, SECOND)]),
+      ]),
+    )
+
+    expect(file).toMatch(/lane="0"[^>]*enabled="1"/)
+    expect(file).toMatch(/lane="1"[^>]*enabled="0"/)
+  })
+
   /** A name is written into an attribute, and an ampersand there makes a file nothing parses. */
   it('escapes what XML cannot hold raw', () => {
     const file = fcpxmlOf(ONE_CLIP, 'Rushes & <essais>', named, linked)
