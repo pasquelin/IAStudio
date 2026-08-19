@@ -14,7 +14,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import { decompress } from 'three/addons/utils/WebGLTextureUtils.js'
 import type { ExportFormat } from '@shared/domain/scene'
 import { OVERLAY_NAME } from './sceneView'
-import { MARKER_NAME } from './threeFactory'
+import { MARKER_NAME } from './markerPaint'
 
 /**
  * A scene on its way out of the studio.

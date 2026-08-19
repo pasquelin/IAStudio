@@ -1,4 +1,5 @@
 import { Box3, Mesh, Vector3, type Material, type Object3D, type Texture } from 'three'
+import { MARKER_NAME } from './markerPaint'
 
 /**
  * What a model costs, counted off the geometry rather than off a drawn frame.
@@ -36,10 +37,12 @@ export function statsOf(
   const textures = seen.textures ?? new Set<unknown>()
   const stats = { ...EMPTY_STATS }
 
-  for (const object of objects) {
-    object.traverse(child => {
-      if (!(child instanceof Mesh) || !child.visible) return
+  const count = (child: Object3D): void => {
+    // Walked by hand rather than by `traverse`: a marker is a whole subtree to step over, and
+    // `traverse` offers no way to stop at one. Visibility still gates the MESH alone, as before.
+    if (child.name === MARKER_NAME) return
 
+    if (child instanceof Mesh && child.visible) {
       const geometry = child.geometry
       if (!geometries.has(geometry)) {
         geometries.add(geometry)
@@ -56,8 +59,12 @@ export function statsOf(
           stats.textureBytes += textureBytes(texture)
         }
       }
-    })
+    }
+
+    for (const grandchild of child.children) count(grandchild)
   }
+
+  for (const object of objects) count(object)
 
   return stats
 }
