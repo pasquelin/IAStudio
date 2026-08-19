@@ -8,7 +8,8 @@ import { registerAssetScheme } from '@main/assets/protocol'
 import { broadcast } from '@main/ipc/broadcast'
 import { isDevelopment } from '@main/environment'
 import { registerIpc } from '@main/ipc/register'
-import { log, mirrorLogsTo } from '@main/log'
+import { log, mirrorLogsTo, recordLogsTo } from '@main/log'
+import { createLogFile } from '@main/logFile'
 import { createServices, createSettings } from '@main/services'
 import { createShutdown } from '@main/shutdown'
 import type { SettingsStore } from '@main/settings/store'
@@ -128,6 +129,14 @@ function bootstrap(): void {
   registerFieldMenu()
 
   void app.whenReady().then(() => {
+    // First, so what follows leaves a trace. `setAppLogsPath()` is what defines the path at all
+    // on Linux and Windows, where it sits under `userData` rather than beside the system's logs.
+    // First, so what follows leaves a trace. `setAppLogsPath()` is what defines the path at all
+    // on Linux and Windows, where it sits under `userData` rather than beside the system's logs.
+    app.setAppLogsPath()
+    recordLogsTo(createLogFile(app.getPath('logs')))
+    log.info('startup', `${APP_NAME} ${app.getVersion()} starting`)
+
     // The session only exists once ready, and no window may exist before it is locked: with no
     // handler installed Electron grants every permission a page asks for.
     lockPermissions(session.defaultSession, rendererOrigin())
