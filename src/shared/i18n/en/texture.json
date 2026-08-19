@@ -7,6 +7,10 @@
     "raw": "Raw channels"
   },
   "skyboxFaceSize": "{{size}} × {{size}}",
+  "skyboxPanoramas": {
+    "sky.hdr": "Radiance panorama (.hdr)",
+    "sky.exr": "OpenEXR panorama (.exr)"
+  },
   "skybox": {
     "sun": "Sun",
     "elevation": "Elevation",

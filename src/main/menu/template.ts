@@ -28,7 +28,7 @@ import {
 import { acceleratorOf } from '@shared/domain/shortcut'
 import { fillHoles, TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
 import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/textureExport'
-import { FACE_SIZES } from '@shared/domain/skybox'
+import { DEFAULT_FACE_SIZE, FACE_SIZES, SKY_PANORAMAS } from '@shared/domain/skybox'
 import type {
   SceneAddRequest,
   SceneDisplayRequest,
@@ -250,11 +250,19 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * One face size per row. A sky has no engine to choose between — six PNGs named `_Rt`…`_Bk` is
    * what all of them read — so what the rows offer is the one thing that does differ.
    */
-  const skyboxItems = (): MenuItemConstructorOptions[] =>
-    FACE_SIZES.map(size => ({
+  const skyboxItems = (): MenuItemConstructorOptions[] => [
+    ...FACE_SIZES.map(size => ({
       label: fillHoles(t.skyboxFaceSize, { size }, language),
       click: () => actions.exportSkybox({ size }),
-    }))
+    })),
+    { type: 'separator' },
+    // The one picture the faces are cut out of, at the source's own resolution — which is why
+    // these two carry no size to choose. An engine lights a scene from a panorama, not from six.
+    ...SKY_PANORAMAS.map(target => ({
+      label: t.skyboxPanoramas[target],
+      click: () => actions.exportSkybox({ size: DEFAULT_FACE_SIZE, target }),
+    })),
+  ]
 
   /**
    * What the space in front can send out, under ONE row. Flat, the montages put three « Exporter

@@ -856,13 +856,16 @@ export type AssistantActionResult = { callId: string; outcome: ActionOutcome }
 export type TextureExportCommand = { target: TextureExportTarget }
 
 /**
- * What the native menu asks of the sky in front: how large each of the six faces comes out.
+ * What the native menu asks of the sky in front: the six faces at a size, or the one panorama
+ * they are cut out of.
  *
- * A size where a texture takes a target, because a sky has no per-engine recipe to choose from —
- * six PNGs named `_Rt`…`_Bk` is what all of them read. What differs is what the machine can
- * hold, and that is a number.
+ * `size` is read by the faces ALONE — a panorama leaves at the source's own resolution, there
+ * being nothing to square off and no second sampling to choose.
  */
-export type SkyboxExportCommand = { size: number }
+export type SkyboxExportCommand = {
+  size: number
+  target?: Extract<ExportTargetId, 'sky.faces' | 'sky.hdr' | 'sky.exr'>
+}
 
 /**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in

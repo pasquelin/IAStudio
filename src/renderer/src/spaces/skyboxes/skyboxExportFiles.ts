@@ -1,5 +1,5 @@
 import type { TaskWatch } from '@shared/domain/taskProgress'
-import type { FolderExportRequest } from '@shared/ipc'
+import type { FolderExportRequest, SkyboxExportCommand } from '@shared/ipc'
 import { loadTexture } from '@/engines/scene/textureCache'
 import { assetVersionOf } from '@/stores/assets'
 import { documentExportName, useDocuments } from '@/stores/documents'
@@ -15,7 +15,7 @@ import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
  */
 export async function skyboxExportFiles(
   documentId: string,
-  size: number,
+  { size, target = 'sky.faces' }: SkyboxExportCommand,
   watch?: TaskWatch,
 ): Promise<FolderExportRequest> {
   // Read once, before any `await`. Read twice — the picture here and the grading after the
@@ -28,9 +28,11 @@ export async function skyboxExportFiles(
 
   const { createSkyboxExportPort } = await import('@/engines/skybox/exportPort')
   const files = await createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })(
-    { assetId: sky.source.assetId, adjustments: sky.adjustments, name, size },
+    { assetId: sky.source.assetId, adjustments: sky.adjustments, name, size, target },
     watch,
   )
 
-  return { folder: name, target: 'sky.faces', files }
+  // The folder is the six faces' own — a panorama is ONE file, and burying it under a directory
+  // named after it would make the person open a folder to find a single picture.
+  return { folder: target === 'sky.faces' ? name : '', target, files }
 }

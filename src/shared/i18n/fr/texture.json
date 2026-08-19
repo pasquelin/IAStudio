@@ -7,6 +7,10 @@
     "raw": "Canaux bruts"
   },
   "skyboxFaceSize": "{{size}} × {{size}}",
+  "skyboxPanoramas": {
+    "sky.hdr": "Panorama Radiance (.hdr)",
+    "sky.exr": "Panorama OpenEXR (.exr)"
+  },
   "skybox": {
     "sun": "Soleil",
     "elevation": "Élévation",

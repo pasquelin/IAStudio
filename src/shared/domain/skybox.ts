@@ -107,6 +107,14 @@ export const DEFAULT_FIELD_OF_VIEW = 75
 /** Face sizes offered on export. Powers of two: engines sample cube maps by hardware. */
 export const FACE_SIZES: readonly number[] = [512, 1024, 2048]
 
+/**
+ * The two ways out that are ONE picture rather than six, and that carry a range eight bits a
+ * channel cannot. Their order is the menu's.
+ */
+export type SkyPanorama = 'sky.hdr' | 'sky.exr'
+
+export const SKY_PANORAMAS: readonly SkyPanorama[] = ['sky.hdr', 'sky.exr']
+
 /** The middle one. Large enough to stand behind a scene, small enough not to be a decision. */
 export const DEFAULT_FACE_SIZE = 1024
 

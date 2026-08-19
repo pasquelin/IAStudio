@@ -1,8 +1,9 @@
-import { SRGBColorSpace } from 'three'
+import { DataUtils, SRGBColorSpace, type WebGLRenderer, type WebGLRenderTarget } from 'three'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
 import type { TaskWatch } from '@shared/domain/taskProgress'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
-import { exportTargetOf } from '@shared/domain/exportRegistry'
+import { exportTargetOf, type ExportTargetId } from '@shared/domain/exportRegistry'
+import { encodeRgbe } from '@shared/domain/rgbe'
 import { faceFileNames } from '@shared/domain/skybox'
 import type { ExportedFile } from '@shared/ipc'
 import { createAdjustPass } from '../gpu/passes/adjust'
@@ -28,8 +29,41 @@ export type SkyboxExportRequest = {
   adjustments: AdjustmentStack
   /** What the files are named after, already cleaned of everything a name cannot hold. */
   name: string
-  /** The side of each square face, in pixels. */
+  /** The side of each square face, in pixels. Unread by the two panoramas, which keep the source's. */
   size: number
+  /**
+   * Six faces, or the one equirectangular picture they are cut out of. Defaults to the faces,
+   * which is what every caller written before the panoramas asks for.
+   */
+  target?: Extract<ExportTargetId, 'sky.faces' | 'sky.hdr' | 'sky.exr'>
+}
+
+/**
+ * The graded panorama, as the file the target names. Read back FLOAT in both cases: the target is
+ * half-float, and reading it as bytes would quantise the very range these two formats exist for.
+ *
+ * `EXRExporter` does its own readback, so only the Radiance path asks for the pixels here.
+ */
+async function panoramaBytes(
+  target: Extract<ExportTargetId, 'sky.hdr' | 'sky.exr'>,
+  renderer: WebGLRenderer,
+  graded: WebGLRenderTarget,
+  size: PictureSize,
+): Promise<Uint8Array> {
+  if (target === 'sky.exr') {
+    const { EXRExporter } = await import('three/addons/exporters/EXRExporter.js')
+    return new EXRExporter().parse(renderer, graded)
+  }
+
+  // Half floats come back as the sixteen-bit patterns they are; `fromHalfFloat` is what three
+  // reads them with, and writing them raw would make every value a number nobody meant.
+  const half = new Uint16Array(size.width * size.height * 4)
+  await renderer.readRenderTargetPixelsAsync(graded, 0, 0, size.width, size.height, half)
+
+  const pixels = new Float32Array(half.length)
+  for (let at = 0; at < half.length; at += 1) pixels[at] = DataUtils.fromHalfFloat(half[at] ?? 0)
+
+  return encodeRgbe(pixels, size.width, size.height)
 }
 
 /**
@@ -59,7 +93,7 @@ export function createSkyboxExportPort({
 }: SkyboxExportPortOptions): SkyboxExportPort {
   // `async`, so a stop already raised comes back as a rejection rather than as a synchronous
   // throw: the port promises a promise, and half its callers only ever look at one.
-  return async ({ assetId, adjustments, name, size }, watch) => {
+  return async ({ assetId, adjustments, name, size, target = 'sky.faces' }, watch) => {
     // Before the source is even asked for: decoding a 4K panorama is the first long thing here,
     // and a stop pressed while it downloads must not be answered by six faces of it.
     watch?.signal?.throwIfAborted()
@@ -97,6 +131,15 @@ export function createSkyboxExportPort({
         const graded = pipeline.createTarget(equirect.width, equirect.height, 'float')
         try {
           pipeline.renderTo(material, graded)
+
+          // The panorama IS this target, so it leaves before anything squares it off — and it
+          // leaves with the range the grading gave it, which is the whole reason to ask for one.
+          if (target !== 'sky.faces') {
+            watch?.signal?.throwIfAborted()
+            const bytes = await panoramaBytes(target, renderer, graded, equirect)
+            watch?.onStep?.(1, 1)
+            return [{ name, extension: exportTargetOf(target).extension, bytes }]
+          }
 
           const projection = createProjectionPass()
           try {

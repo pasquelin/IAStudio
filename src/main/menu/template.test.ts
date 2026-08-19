@@ -668,18 +668,37 @@ describe('the export menu', () => {
 })
 
 describe('exporting a sky', () => {
-  it('offers one row per face size, and only sizes the domain knows', () => {
+  it('offers one row per face size, then the panoramas, and nothing else', () => {
     const exports = exportsIn(menuTemplate(options({ workspace: 'skyboxes' })))
 
     // Written through the constant, which is why it exists: the no-break space binding a size to
     // its `×` is invisible here, and a literal one would have been read as an ordinary space.
     const size = (side: number): string => `${side}${NO_BREAK_SPACE}×${NO_BREAK_SPACE}${side}`
 
+    // The separator carries no label: what a row says is the assertion, and a separator says
+    // nothing on purpose.
     expect(submenuOf(exports, 'Ciel').map(item => item.label)).toEqual([
       size(512),
       size(1024),
       size(2048),
+      undefined,
+      'Panorama Radiance (.hdr)',
+      'Panorama OpenEXR (.exr)',
     ])
+  })
+
+  /** A panorama leaves at the source's own resolution: a size chosen for it would be a lie. */
+  it('asks for a panorama by its target rather than by a size', () => {
+    const exportSkybox = vi.fn()
+    const exports = exportsIn(
+      menuTemplate(options({ workspace: 'skyboxes', actions: actions({ exportSkybox }) })),
+    )
+
+    submenuOf(exports, 'Ciel')
+      .find(item => item.label === 'Panorama OpenEXR (.exr)')
+      ?.click?.(...([] as never[] as [never, never, never]))
+
+    expect(exportSkybox).toHaveBeenCalledWith(expect.objectContaining({ target: 'sky.exr' }))
   })
 
   it('asks for the size the row names', () => {

@@ -35,6 +35,8 @@ export type ExportTargetId =
   | 'scene.ply'
   | 'scene.stl'
   | 'sky.faces'
+  | 'sky.hdr'
+  | 'sky.exr'
   | 'material.gltf'
   | 'material.unity'
   | 'material.unreal'
@@ -52,6 +54,8 @@ export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'scene.ply',
   'scene.stl',
   'sky.faces',
+  'sky.hdr',
+  'sky.exr',
   'material.gltf',
   'material.unity',
   'material.unreal',
@@ -276,6 +280,30 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
     door: 'declared',
     destination: 'folder',
     openedBy: ['Preview', 'GIMP', 'Safari', 'Firefox', 'Google Chrome'],
+    capability: SKY_FACES_EXPORT,
+  },
+  /**
+   * The same sky as one equirectangular picture, and the reason to want it: an engine lights a
+   * scene from a panorama, not from six faces. Both carry the grading BAKED and lose the same
+   * settings — what they do not share is range, which is the whole point of writing either.
+   *
+   * `import` rather than `declared`: nothing on this machine opens a Radiance or an OpenEXR on a
+   * double-click, and saying otherwise would promise an opening that never comes.
+   */
+  'sky.hdr': {
+    domain: 'sky',
+    extension: '.hdr',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['Blender', 'Unreal Engine', 'Unity'],
+    capability: SKY_FACES_EXPORT,
+  },
+  'sky.exr': {
+    domain: 'sky',
+    extension: '.exr',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['Blender', 'Nuke', 'DaVinci Resolve'],
     capability: SKY_FACES_EXPORT,
   },
   'material.gltf': {

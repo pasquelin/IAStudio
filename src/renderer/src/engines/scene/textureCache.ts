@@ -1,6 +1,6 @@
-import { TextureLoader, type ColorSpace, type Loader, type Texture } from 'three'
+import { DataTexture, TextureLoader, type ColorSpace, type Loader, type Texture } from 'three'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
-import { hdrFormatOf, type HdrFormat } from '@shared/domain/hdrFormat'
+import { decoderFor, type PictureDecoder } from '@shared/domain/pictureDecoder'
 import { createRefCache } from '../core/refCache'
 
 /** A port rather than a hard-wired `TextureLoader`, like `SqliteDriver`: jsdom decodes no image. */
@@ -19,6 +19,11 @@ export const loadTexture: TextureSource = async url => {
   if (!answer.ok) throw new Error(`${url} answered ${answer.status}`)
 
   const bytes = new Uint8Array(await answer.arrayBuffer())
+  const decoder = decoderFor(bytes)
+  // A container rather than a picture: `utif` hands back plain RGBA, which no `<img>` is needed
+  // for and no three loader reads.
+  if (decoder === 'tiff') return tiffTexture(bytes)
+
   // The served type is carried over rather than dropped: a blob with none of it renders no SVG at
   // all, `<img>` reading the vector case by the MIME and not by the content.
   const blob = URL.createObjectURL(
@@ -26,7 +31,7 @@ export const loadTexture: TextureSource = async url => {
   )
 
   try {
-    return await (await loaderFor(hdrFormatOf(bytes))).loadAsync(blob)
+    return await (await loaderFor(decoder)).loadAsync(blob)
   } finally {
     URL.revokeObjectURL(blob)
   }
@@ -37,16 +42,36 @@ export const loadTexture: TextureSource = async url => {
  * `load` that turns it into the `DataTexture` — flags, wrapping and all — that a material can wear.
  * Each parser is imported only when a file actually is one; together they are some 90 Ko.
  */
-async function loaderFor(format: HdrFormat | null): Promise<Loader<Texture>> {
+async function loaderFor(decoder: PictureDecoder | null): Promise<Loader<Texture>> {
   // `HDRLoader`, not the `RGBELoader` every example written before r180 names: that one is a
   // deprecated alias, and constructing it warns on the console at every picture.
-  if (format === 'radiance') {
+  if (decoder === 'radiance') {
     return new (await import('three/addons/loaders/HDRLoader.js')).HDRLoader()
   }
-  if (format === 'openexr') {
+  if (decoder === 'openexr') {
     return new (await import('three/addons/loaders/EXRLoader.js')).EXRLoader()
   }
   return new TextureLoader()
+}
+
+/**
+ * The FIRST image of the container, which is the picture — the ones after it are a scan's further
+ * pages or a texture's mip levels, and showing page two for page one would be the wrong answer.
+ */
+async function tiffTexture(bytes: Uint8Array): Promise<Texture> {
+  const { decode, decodeImage, toRGBA8 } = await import('utif')
+
+  const pages = decode(bytes)
+  const [first] = pages
+  if (!first) throw new Error('this TIFF holds no image at all')
+
+  decodeImage(bytes, first, pages)
+  const texture = new DataTexture(toRGBA8(first), first.width, first.height)
+  // A picture, not a table of numbers: `DataTexture` defaults to `RGBAFormat` and `UnsignedByte`,
+  // which is what `toRGBA8` answers — only the flip and the update are left to say.
+  texture.flipY = true
+  texture.needsUpdate = true
+  return texture
 }
 
 export type TextureCache = {
