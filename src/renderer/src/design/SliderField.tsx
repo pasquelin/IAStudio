@@ -3,6 +3,7 @@ import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
+import { Slider } from './Slider'
 import { FIELD_ROW, type GestureProps } from './styles'
 
 export type SliderFieldProps = GestureProps & {
@@ -38,21 +39,16 @@ export function SliderField({
     <label className={FIELD_ROW}>
       <PropertyLabel label={label} />
 
-      <input
-        type="range"
-        data-sc={scId && `field:${scId}`}
+      <Slider
         value={value}
         min={min}
         max={max}
         step={step}
-        onChange={event => onChange(bound(Number(event.target.value), { min, max, step }))}
-        // A slider drag is a pointer gesture from the first frame; keyboard steps report the
-        // same way, and a focus that changes nothing costs an empty gesture, not an entry.
-        onPointerDown={() => onGestureStart?.()}
-        onPointerUp={() => onGestureEnd?.()}
-        onFocus={() => onGestureStart?.()}
-        onBlur={() => onGestureEnd?.()}
-        className="accent-accent h-(--sc-control) min-w-0 flex-1"
+        onChange={raw => onChange(bound(raw, { min, max, step }))}
+        scId={scId}
+        onGestureStart={onGestureStart}
+        onGestureEnd={onGestureEnd}
+        className="flex-1"
       />
 
       <Readout values={[value]} />

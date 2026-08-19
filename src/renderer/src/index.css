@@ -499,6 +499,12 @@
      exception: these are the only targets on their line, and the row itself answers everywhere
      they do not. Chosen on 2026-08-14, not derived. */
   --sc-control-inline: 20px;
+  /* The rail a slider runs on, and the handle that runs along it. Gauges rather than classes
+     because the browser's own slider honours neither: its track is white on one field and blue
+     on the next, at a thickness nothing here chose. `slider-handle` drops it and the rail is
+     drawn behind as a div, so a single pair of values answers every slider of the studio. */
+  --sc-slider-rail: 4px;
+  --sc-slider-thumb: 14px;
   /* The glyph a `ToolButton` draws on a header. RECOPIED from `HOSTS.header.glyph`, which takes a
      number and not a gauge — `design/styles.test.ts` holds the two together, since moving one
      alone would shift the lean below by half its change and nothing would say so. */
@@ -593,6 +599,8 @@
 :root[data-density='compact'] {
   --sc-control: 24px;
   --sc-control-inline: 18px;
+  --sc-slider-rail: 3px;
+  --sc-slider-thumb: 12px;
   --sc-row-stacked: 32px;
   --sc-row-filled: 38px;
   --sc-rail: 42px;
@@ -780,6 +788,30 @@ body,
   mask-size: contain;
   mask-position: center;
   mask-repeat: no-repeat;
+}
+
+/*
+ * The handle of a slider, and nothing else: `appearance: none` drops the track the browser draws
+ * with it — white under one field, blue under the next, at a thickness no token chose — so every
+ * slider of the studio draws its rail behind the input instead (`SliderRail`).
+ *
+ * A utility rather than classes in a component: the thumb is only reachable through a
+ * pseudo-element, and the two rules are one control. WebKit alone, this window being Chromium.
+ */
+@utility slider-handle {
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: var(--sc-slider-thumb);
+    height: var(--sc-slider-thumb);
+    border: none;
+    border-radius: calc(infinity* 1px);
+    background: var(--color-accent);
+    cursor: pointer;
+  }
 }
 
 body {

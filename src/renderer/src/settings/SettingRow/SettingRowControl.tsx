@@ -8,6 +8,7 @@ import {
 } from '@shared/domain/settingsRegistry'
 import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
+import { Slider } from '@/design/Slider'
 import { WINDOW_CAPTION } from '@/design/windowStyles'
 import type { Labelled } from './controls'
 import { SettingRowColorControl } from './SettingRowColorControl'
@@ -98,17 +99,15 @@ export function SettingRowControl({
     case 'slider':
       return (
         <div className="flex items-center gap-2">
-          <input
+          <Slider
             id={id}
-            aria-describedby={describedBy}
-            className="range range-xs w-40"
-            type="range"
+            describedBy={describedBy}
+            className="w-40"
             min={descriptor.min}
             max={descriptor.max}
             step={descriptor.step}
             value={typeof value === 'number' ? value : 0}
-            onChange={event => {
-              const next = event.target.valueAsNumber
+            onChange={next => {
               if (writableNumber(descriptor, next)) onChange(next)
             }}
           />

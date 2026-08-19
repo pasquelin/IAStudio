@@ -3,6 +3,7 @@ import { bound } from '@shared/numeric'
 import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
 import { PropertyLabel } from './PropertyLabel'
+import { SliderRail } from './SliderRail'
 import { FIELD_ROW, type GestureProps } from './styles'
 
 /** Both ends of one value, kept in order. Declared here rather than imported from an engine:
@@ -16,9 +17,8 @@ export type RangeValue = { min: number; max: number }
  * At module scope because it depends on nothing, and this field sits on the drag path twice.
  */
 const HANDLE = cn(
-  'absolute inset-0 m-0 h-full w-full appearance-none bg-transparent pointer-events-none',
-  '[&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto',
-  'accent-accent',
+  'slider-handle absolute inset-0 m-0 size-full pointer-events-none',
+  '[&::-webkit-slider-thumb]:pointer-events-auto',
 )
 
 export type RangeFieldProps = GestureProps & {
@@ -84,17 +84,7 @@ export function RangeField({
         onPointerDown={() => onGestureStart?.()}
         onPointerUp={() => onGestureEnd?.()}
       >
-        {/* The rail and the span, drawn behind both inputs — decoration, never a target. */}
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2">
-          <div className="bg-surface size-full rounded-full" />
-          <div
-            className="bg-accent absolute inset-y-0 rounded-full"
-            style={{
-              left: `${percent(value.min)}%`,
-              width: `${percent(value.max) - percent(value.min)}%`,
-            }}
-          />
-        </div>
+        <SliderRail from={percent(value.min)} to={percent(value.max)} />
 
         <input
           type="range"
