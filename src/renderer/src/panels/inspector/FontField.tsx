@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { fontKey, type FontRef } from '@shared/domain/font'
-import { TextureField, type TextureOption } from '@/design/TextureField/TextureField'
+import { LinkField, type LinkOption } from '@/design/LinkField/LinkField'
 import { studioFonts } from '@/services/fonts'
 
 export type FontFieldProps = {
   label: string
   value: FontRef
   onChange: (font: FontRef) => void
+  /**
+   * The handle the MCP steers this field by — from the CALLER, since two of them draw it: a layer
+   * of an image and a text node of a scene are two fields, and one name for both steers neither.
+   */
+  scId?: string
 }
 
 /**
@@ -20,7 +25,7 @@ export type FontFieldProps = {
  * missing. Dropping it from the list would silently rewrite the document on the first edit —
  * which is the one thing the missing-font hole must not do.
  */
-export function FontField({ label, value, onChange }: FontFieldProps) {
+export function FontField({ label, value, onChange, scId }: FontFieldProps) {
   const { t } = useTranslation()
   const [offered, setOffered] = useState<readonly FontRef[]>([])
 
@@ -40,7 +45,7 @@ export function FontField({ label, value, onChange }: FontFieldProps) {
     return held ? offered : [...offered, value]
   }, [offered, value])
 
-  const options = useMemo<TextureOption[]>(
+  const options = useMemo<LinkOption[]>(
     () =>
       known.map(font => ({
         id: fontKey(font),
@@ -52,24 +57,20 @@ export function FontField({ label, value, onChange }: FontFieldProps) {
   )
 
   return (
-    <TextureField
+    <LinkField
       label={label}
       value={fontKey(value)}
       options={options}
-      // Never cleared: a text has to be set in something, so the row offers no empty state.
+      // No `emptyLabel`, which is what says this link cannot be emptied: a text has to be set in
+      // something. The list always holds at least the face the document names, so `missingLabel`
+      // is never reached either — `known` appends it when the machine has not got it.
       onChange={key => {
         const picked = known.find(font => fontKey(font) === key)
         if (picked) onChange(picked)
       }}
-      emptyLabel={t('inspector.noFont')}
-      chooseLabel={t('inspector.chooseFont')}
+      missingLabel={t('inspector.noFontOffered')}
       clearLabel={t('inspector.chooseFont')}
-      emptyHint={t('inspector.noFontHint')}
-      optionHint={t('inspector.pickFontHint')}
-      // The list always holds at least the face the document names, so this is the answer to a
-      // machine that announced nothing at all — offered rather than silent, like the others.
-      noOptionLabel={t('inspector.noFontOffered')}
-      noOptionHint={t('inspector.noFontOfferedHint')}
+      scId={scId}
     />
   )
 }

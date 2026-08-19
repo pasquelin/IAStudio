@@ -28,17 +28,20 @@ export function TextSection({ text, onChange, gesture }: TextSectionProps) {
       fields={fields}
       onChange={(name, value) => onChange(withField(text, name, value))}
       gesture={gesture}
+      scId="text"
     >
       <TextField
         label={t('inspector.fields.value', 'value')}
         value={text.value}
         onChange={value => onChange({ ...text, value })}
+        scId="text.value"
         {...gesture}
       />
       <FontField
         label={t('inspector.font')}
         value={text.font}
         onChange={font => onChange({ ...text, font })}
+        scId="text.font"
       />
     </DescriptorSection>
   )

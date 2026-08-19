@@ -32,7 +32,6 @@
     "prompt": "Prompt",
     "seed": "Seed",
     "model": "Model",
-    "empty": "Open a skybox to grade it.",
     "noSource": "No skybox yet. Generate one or drop an equirectangular panorama.",
     "viewImmersive": "360°",
     "viewEquirect": "Equirect",

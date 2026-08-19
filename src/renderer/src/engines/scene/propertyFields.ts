@@ -1,4 +1,5 @@
 import {
+  DEFAULT_CAMERA,
   isVector3,
   type CameraDescriptor,
   type GeometryDescriptor,
@@ -10,6 +11,9 @@ import {
   type Vector3,
 } from '@shared/domain/scene'
 import type { NumericBounds } from '@shared/numeric'
+import { lightByKind } from './lightTypes'
+import { primitiveByKind } from './meshPrimitives'
+import { DEFAULT_MATERIAL, DEFAULT_SPRITE, DEFAULT_TEXT } from './sceneState'
 
 /*
  * What each field of a descriptor is, so the inspector can be derived from a descriptor rather
@@ -34,6 +38,11 @@ export type PropertyField = {
   value: FieldValue
   /** Absent for a field no table describes — it still renders, bare. */
   spec?: PropertySpec
+  /**
+   * What this field holds on a descriptor just made, which is what its reset puts it back to.
+   * Absent where nothing can say — a field of a descriptor with no factory behind it.
+   */
+  fallback?: FieldValue
 }
 
 type SpecsOf<D extends { kind: string }> = {
@@ -166,7 +175,7 @@ export const CAMERA_SPECS: CameraSpecs = {
 }
 
 export function cameraFields(descriptor: CameraDescriptor): PropertyField[] {
-  return listFields(descriptor, CAMERA_SPECS)
+  return listFields(descriptor, CAMERA_SPECS, DEFAULT_CAMERA)
 }
 
 /** The caption and the face are left out: each has a control of its own in the inspector. */
@@ -177,18 +186,27 @@ export function textFields(descriptor: TextDescriptor): PropertyField[] {
     curveSegments: descriptor.curveSegments,
   }
 
-  return listFields(measured, TEXT_SPECS)
+  return listFields(measured, TEXT_SPECS, DEFAULT_TEXT)
 }
 
 /** Derived from the specs, so a parameter gained without a control fails to compile here. */
 type TextSpecsSubject = { [F in keyof TextSpecs]: TextDescriptor[F] }
 
 export function geometryFields(descriptor: GeometryDescriptor): PropertyField[] {
-  return listFields(descriptor, GEOMETRY_SPECS[descriptor.kind])
+  // Its own factory, which is the one thing that knows what a fresh one of THIS kind holds.
+  return listFields(
+    descriptor,
+    GEOMETRY_SPECS[descriptor.kind],
+    primitiveByKind(descriptor.kind)?.create(),
+  )
 }
 
 export function lightFields(descriptor: LightDescriptor): PropertyField[] {
-  return listFields(descriptor, LIGHT_SPECS[descriptor.kind])
+  return listFields(
+    descriptor,
+    LIGHT_SPECS[descriptor.kind],
+    lightByKind(descriptor.kind)?.create(),
+  )
 }
 
 /**
@@ -199,12 +217,18 @@ export function materialFields(
   descriptor: MaterialDescriptor,
   fallbackColor: string,
 ): PropertyField[] {
-  return listFields({ ...descriptor, color: descriptor.color ?? fallbackColor }, MATERIAL_SPECS)
+  return listFields({ ...descriptor, color: descriptor.color ?? fallbackColor }, MATERIAL_SPECS, {
+    ...DEFAULT_MATERIAL,
+    color: fallbackColor,
+  })
 }
 
 /** Same rule as a material's, and for the same `null`. */
 export function spriteFields(descriptor: SpriteDescriptor, fallbackColor: string): PropertyField[] {
-  return listFields({ ...descriptor, color: descriptor.color ?? fallbackColor }, SPRITE_SPECS)
+  return listFields({ ...descriptor, color: descriptor.color ?? fallbackColor }, SPRITE_SPECS, {
+    ...DEFAULT_SPRITE,
+    color: fallbackColor,
+  })
 }
 
 /**
@@ -223,12 +247,25 @@ export function withField<D extends object>(descriptor: D, name: string, value: 
  * descriptor itself, so a parameter the tables have never heard of is still listed — bare, but
  * listed. A panel that hides what it cannot describe is worse than one that shows it plainly.
  */
-function listFields(descriptor: object, specs: Record<string, PropertySpec>): PropertyField[] {
+function listFields(
+  descriptor: object,
+  specs: Record<string, PropertySpec>,
+  /** The same descriptor as it comes out of its factory — where one exists. */
+  fresh?: Record<string, unknown>,
+): PropertyField[] {
   const fields: PropertyField[] = []
 
   for (const [name, value] of Object.entries(descriptor)) {
     if (name === 'kind') continue
-    if (isFieldValue(value)) fields.push({ name, value, spec: specs[name] })
+    if (!isFieldValue(value)) continue
+
+    const fallback = fresh?.[name]
+    fields.push({
+      name,
+      value,
+      spec: specs[name],
+      fallback: isFieldValue(fallback) ? fallback : undefined,
+    })
   }
 
   return fields

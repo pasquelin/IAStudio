@@ -38,10 +38,35 @@ const FIELDS: Record<string, string> = import.meta.glob('./*Field.tsx', {
   eager: true,
 })
 
-const named = (source: string): boolean => source.includes('title={label}')
+/**
+ * Every component of the renderer, read the same way — the end-column rule below is swept over
+ * all of them, `design/` having proved too narrow twice.
+ */
+const RENDERER: Record<string, string> = import.meta.glob('../**/*.tsx', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
 
-/** Either gauge: both truncate, so both owe the reader the whole label somewhere. */
-const labelled = (source: string): boolean => source.includes('FIELD_LABEL')
+/** The one component that now draws a name in the shared column, read the same way. */
+const LABEL: Record<string, string> = import.meta.glob('./PropertyLabel.tsx', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
+
+const labelSource = Object.values(LABEL)[0] ?? ''
+
+/**
+ * Read with the comments stripped, which is not a detail: four rules of this file were matching
+ * their own prose. `expect(propertyRow).toContain('FIELD_LABEL')` was green on the sentence « It
+ * wears `FIELD_ROW` and `FIELD_LABEL` » long after the row had stopped wearing it — so deleting a
+ * stale comment failed the suite while deleting the class did not.
+ */
+const code = (source: string): string =>
+  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+
+const named = (source: string): boolean => code(source).includes('title={label}')
 
 describe('the label column of a property line', () => {
   it('finds the row at all, so the rules below cannot pass on an empty file', () => {
@@ -49,13 +74,23 @@ describe('the label column of a property line', () => {
   })
 
   /**
-   * Read from the constant now, not spelt out a second time: the row wears `FIELD_LABEL` itself,
-   * which is what "one gauge" was always after — the two spellings had converged to the byte,
-   * and two identical strings are still two things to keep in step.
+   * One gauge, and one place that reads it: both families now go through `PropertyLabel`, so
+   * "shared" is no longer two spellings kept in step but a single component both call.
    */
-  it('is one gauge, read by both families rather than written twice', () => {
-    expect(FIELD_LABEL).toContain('w-(--sc-label)')
-    expect(propertyRow).toContain('FIELD_LABEL')
+  it('is one gauge, read through one component rather than written twice', () => {
+    expect(FIELD_LABEL).toContain('w-(--sc-label-share)')
+    expect(code(propertyRow)).toContain('<PropertyLabel')
+    expect(code(labelSource)).toContain('FIELD_LABEL')
+  })
+
+  /**
+   * Capped and NOT floored, which is not an oversight: a floor cannot shrink, and a side zone
+   * dragged to its 140px minimum then overflowed by 21px — the control collapsing to nothing
+   * while the buttons sat outside the panel.
+   */
+  it('takes a share of the row that a narrow panel can still shrink', () => {
+    expect(FIELD_LABEL).toContain('max-w-(--sc-label-max)')
+    expect(FIELD_LABEL).not.toContain('min-w-(--sc-label')
   })
 
   /** The lookbehind keeps `min-w-0` out of it: a minimum of zero is not a column width. */
@@ -63,7 +98,7 @@ describe('the label column of a property line', () => {
     const HARDCODED_WIDTH = /(?<![\w-])w-\d/
 
     expect(FIELD_LABEL).not.toMatch(HARDCODED_WIDTH)
-    expect(propertyRow).not.toMatch(HARDCODED_WIDTH)
+    expect(code(propertyRow)).not.toMatch(HARDCODED_WIDTH)
   })
 
   /**
@@ -91,44 +126,86 @@ describe('a label the column is too narrow for', () => {
    * The column truncates, so the whole label has to be reachable somewhere. `PropertyRow` learned
    * this first and the fields did not follow: « Sortie du … » read as an instruction of its own
    * on a canvas whose every node already carries a port called « Sortie ».
-   */
-  it('is reachable on hover from every field that draws one', () => {
-    const silent = Object.entries(FIELDS)
-      .filter(([, source]) => labelled(source) && !named(source))
-      .map(([path]) => path)
-
-    expect(silent, `these draw a truncating label with no title: ${silent.join(', ')}`).toEqual([])
-  })
-
-  /**
-   * Both gauges are counted, and that is not a detail: the rule above once read `FIELD_LABEL`
-   * alone, so the day `ToggleField` moved to the wide one it left the guard through the back
-   * door — silently, and it is the very file the rule was first repaired on.
-   */
-  it('counts the fields that wear the wide label as well as the fixed column', () => {
-    const wide = Object.entries(FIELDS)
-      .filter(([, source]) => source.includes('FIELD_LABEL_WIDE'))
-      .map(([path]) => path)
-
-    // One, and named: a field with a control to place has a column to line up on, and taking the
-    // wide label there would put its name where the neighbours draw their sliders.
-    expect(wide).toEqual(['./ToggleField.tsx'])
-  })
-
-  it('is reachable on the row family too, which is where the rule started', () => {
-    expect(named(propertyRow)).toBe(true)
-  })
-
-  /**
-   * And on `Row`, which is the third family: a field that hands its whole line over to it — a
-   * texture slot does — leaves this glob, since it no longer names `FIELD_LABEL` anywhere. The
-   * rule has to be held where the truncation now happens, or it is held nowhere at all.
    *
-   * Both lines: the name is tipped by `Row` itself, the kind under it was not, and « Occlusion
-   * ambian… » is exactly the case the rule was written for.
+   * ONE place says it now, and that is what the two-column reading bought: the column carries a
+   * fill and an edge, so it has to stand its row's full height — and a box that stretches cannot
+   * also be the box that truncates. `PropertyLabel` holds both halves, and the rule with them.
    */
-  it('is reachable on both lines of `Row`, which fields now delegate to', () => {
-    expect(rowSource).toContain('title={subtitle}')
-    expect(rowSource).toContain('tip(title')
+  it('is reachable on hover from the one component that draws a name', () => {
+    expect(labelSource).toContain('export function PropertyLabel')
+    expect(named(labelSource)).toBe(true)
+    // The CLASS, not the word: `truncate` appears twice in this file's own prose, so a rule
+    // reading the raw source stayed green with the class deleted.
+    expect(code(labelSource)).toContain('className="min-w-0 truncate"')
+  })
+
+  /**
+   * The rule above is only worth anything while nothing goes round it. A field that reached for
+   * the gauge itself would draw a name in the column with no `title` and no rule down its side —
+   * which is exactly how eight of them used to spell out the same three lines.
+   */
+  it('is drawn by no field on its own', () => {
+    const spelling = Object.entries(FIELDS)
+      .filter(([, source]) => code(source).includes('FIELD_LABEL'))
+      .map(([path]) => path)
+
+    expect(spelling, `these draw the column themselves: ${spelling.join(', ')}`).toEqual([])
+  })
+
+  /**
+   * Every line ENDS on one column too: `FieldActions` holds the room a reset or a padlock takes
+   * whether or not one is drawn there. Measured before it existed — a field narrowed from 86px to
+   * 74px UNDER the pointer, the reset appearing as the value left its default.
+   *
+   * Swept over the WHOLE renderer, not over `design/*Field.tsx`: read narrowly it would have
+   * missed both of its real cases — `LinkField/` sits a folder down, and `panels/view/View.tsx`
+   * drew a hand-written line in the same section as a `SliderField`, ending 56px past it.
+   *
+   * Three blind spots, in clear. A file that DELEGATES its row is invisible here, since it wears
+   * no `FIELD_ROW` of its own — `LinkField` hands its to `SelectField`, and nothing checks that
+   * the one it hands to holds the column. The tag is looked for as TEXT, so one written in a
+   * branch nothing takes would pass. And a line ending inside a helper is not followed there.
+   */
+  it('holds the end column on every property line of the renderer', () => {
+    const missing = Object.entries(RENDERER)
+      .filter(([, source]) => code(source).includes('FIELD_ROW'))
+      .filter(([, source]) => !code(source).includes('<FieldActions'))
+      .map(([path]) => path.replace('../', ''))
+
+    expect(missing, `these end where they please: ${missing.join(', ')}`).toEqual([])
+  })
+
+  /** The wide gauge is gone with it: a checkbox now starts where every other control starts. */
+  it('offers one gauge only, no field reaching for a second', () => {
+    expect(code(labelSource)).not.toContain('FIELD_LABEL_WIDE')
+
+    const asking = Object.entries(FIELDS)
+      .filter(([, source]) =>
+        [...code(source).matchAll(/<PropertyLabel\b[\s\S]*?\/>/g)].some(m => /\bwide\b/.test(m[0])),
+      )
+      .map(([path]) => path)
+
+    expect(asking).toEqual([])
+  })
+
+  /**
+   * The STACKED shape, and only it — the two column shapes go through `PropertyLabel` and are
+   * held above. Stacked draws its own span, so it owes its own `title`: the value sits under the
+   * name there, which is a second line to run out of room on rather than a column to truncate in.
+   */
+  it('is reachable on the row family too, where the column does not bind', () => {
+    expect(named(propertyRow)).toBe(true)
+    expect(code(propertyRow)).toContain("shape === 'stacked' ?")
+  })
+
+  /**
+   * And on `Row`, which is the third family — the LISTS now, no longer the fields: `LinkField`
+   * took its name back into the shared label column, so a texture slot is held by the rule above
+   * again. What is left here is the outliner, the layer stack and the model's own maps, where two
+   * lines of text still truncate inside one row.
+   */
+  it('is reachable on both lines of `Row`, which every list of the studio draws', () => {
+    expect(code(rowSource)).toContain('title={subtitle}')
+    expect(code(rowSource)).toContain('tip(title')
   })
 })

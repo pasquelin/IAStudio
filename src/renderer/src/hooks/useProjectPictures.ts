@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { posterUrl, type AssetType } from '@shared/domain/asset'
-import type { TextureOption } from '@/design/TextureField/TextureField'
+import type { LinkOption } from '@/design/LinkField/LinkField'
 import { useProjectPictureAssets } from './useProjectPictureAssets'
 
 /**
@@ -10,7 +10,7 @@ import { useProjectPictureAssets } from './useProjectPictureAssets'
  * `useAssets.items`, which is the shelf's scope: in the 3D space it is narrowed to meshes, so every
  * texture slot of the inspector offered nothing and refused every click.
  */
-export function useProjectPictures(types: readonly AssetType[]): readonly TextureOption[] {
+export function useProjectPictures(types: readonly AssetType[]): readonly LinkOption[] {
   const pictures = useProjectPictureAssets(types)
 
   return useMemo(

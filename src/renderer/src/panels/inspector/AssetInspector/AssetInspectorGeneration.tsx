@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AssetGeneration } from '@shared/domain/asset'
 import { FAVORITES_MAX, sameRecipe } from '@shared/domain/favorite'
-import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
 import { ToolButton } from '@/design/ToolButton'
 import { openGeneratorOn } from '@/helpers/openGenerator'
@@ -41,7 +41,7 @@ export function AssetInspectorGeneration({
   }
 
   return (
-    <PropertyGroup title={t('inspector.generation')}>
+    <PropertySection title={t('inspector.generation')}>
       <PropertyRow label={t('inspector.model')}>{generation.modelLabel}</PropertyRow>
       {generation.seed !== undefined && (
         <PropertyRow label={t('inspector.seed')}>{generation.seed}</PropertyRow>
@@ -79,6 +79,6 @@ export function AssetInspectorGeneration({
           onClick={regenerate}
         />
       </div>
-    </PropertyGroup>
+    </PropertySection>
   )
 }

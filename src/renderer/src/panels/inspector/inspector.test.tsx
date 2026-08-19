@@ -1,8 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import { STUDIO_ENVIRONMENT, TEXTURE_SLOTS } from '@shared/domain/scene'
+// The expected words come from the French bundle rather than being spelt out, which is what keeps
+// a renamed slot from leaving this case asserting a label the panel no longer draws.
+import { fr } from '@shared/i18n/fr'
 import { addAnimationTrack } from '@/engines/scene/animationCommands'
 import { addNode } from '@/engines/scene/commands'
 import { createNodeOf } from '@/engines/scene/nodeFactory'
@@ -123,9 +126,10 @@ describe('inspector panel', () => {
     ])
     render(<Content />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Choisir un ciel/ }))
+    const sky = screen.getByLabelText('Ciel')
 
-    expect(await screen.findByRole('menuitemradio', { name: /Coucher/ })).toBeInTheDocument()
+    expect(await within(sky).findByRole('option', { name: /Coucher/ })).toBeInTheDocument()
+    expect(within(sky).getByRole('option', { name: 'Studio' })).toBeInTheDocument()
   })
 
   it('writes the chosen sky into the document, through the history', async () => {
@@ -142,8 +146,9 @@ describe('inspector panel', () => {
     ])
     render(<Content />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Choisir un ciel/ }))
-    await userEvent.click(await screen.findByRole('menuitemradio', { name: /Coucher/ }))
+    const sky = screen.getByLabelText('Ciel')
+    await within(sky).findByRole('option', { name: /Coucher/ })
+    await userEvent.selectOptions(sky, 'sky-1')
 
     expect(sceneOf(useScenes.getState(), 'doc-1').environment).toEqual({
       kind: 'skybox',
@@ -244,14 +249,87 @@ describe('inspector panel', () => {
   /**
    * The viewport already refused the handle over a lone sprite; the row went on taking an angle
    * nothing draws, which stacked an undo for a screen that never moved.
+   *
+   * INERT rather than absent since 2026-08-19: the panel keeps its shape from one node to the
+   * next, so an attribute is found where it was last seen instead of the rows below it shifting
+   * up. The three axes are refused together, and the row says why on hover.
    */
-  it('offers a lone sprite no rotation row, and keeps the two that show', () => {
+  it('leaves a lone sprite its rotation row, inert, and keeps the two that act', () => {
     install(spriteNodeFixture('sprite-1'))
     render(<Content />)
 
-    expect(screen.queryByText('Rotation')).not.toBeInTheDocument()
-    expect(screen.getByText('Position')).toBeInTheDocument()
-    expect(screen.getByText('Échelle')).toBeInTheDocument()
+    expect(screen.getByText('Rotation')).toBeInTheDocument()
+    expect(screen.getAllByLabelText('X').map(field => field.hasAttribute('disabled'))).toEqual([
+      false,
+      true,
+      false,
+    ])
+  })
+
+  /**
+   * Through the same command as any other edit, so ⌘Z undoes a reset the way it undoes a drag —
+   * and ENABLED only where there is something to undo. Every line draws the button since
+   * 2026-08-19, or the field narrowed under the pointer at the very moment a value left its
+   * default; what says which row moved is which button acts.
+   */
+  it('enables the reset of the rows that have moved alone, and undoes like any edit', async () => {
+    install({ ...meshNode('box-1'), transform: moved(2, 0, 0) })
+    render(<Content />)
+
+    const live = screen
+      .getAllByRole('button', { name: /Revenir à la valeur par défaut/ })
+      .filter(button => !button.hasAttribute('disabled'))
+
+    expect(live).toHaveLength(1)
+    await userEvent.click(live[0] as HTMLElement)
+
+    expect(nodeInStore('box-1')?.transform.position).toEqual(IDENTITY_TRANSFORM.position)
+    useScenes.getState().undo('doc-1')
+    expect(nodeInStore('box-1')?.transform.position).toEqual({ x: 2, y: 0, z: 0 })
+  })
+
+  /**
+   * A descriptor's own factory says what its default is — the transform was the only family
+   * wired to one until 2026-08-19, so every other line of the panel drew a reset that could
+   * never act. What a primitive holds when it is made is the one place that fact lives.
+   */
+  it('resets a descriptor field to what its factory gives', async () => {
+    install({
+      ...meshNode('box-1'),
+      geometry: { kind: 'box', width: 4, height: 1, depth: 1 },
+    })
+    render(<Content />)
+
+    const width = screen.getByLabelText('Largeur')
+    expect(width).toHaveValue('4')
+
+    const row = width.parentElement
+    const reset = within(row as HTMLElement).getByRole('button', {
+      name: /Revenir à la valeur par défaut/,
+    })
+
+    expect(reset).toBeEnabled()
+    await userEvent.click(reset)
+
+    const box = nodeInStore('box-1')
+    expect(box?.type === 'mesh' && box.geometry).toEqual({
+      kind: 'box',
+      width: 1,
+      height: 1,
+      depth: 1,
+    })
+  })
+
+  /** Inert where the value already stands there, which is what tells the moved rows apart. */
+  it('leaves the reset of an untouched descriptor field disabled', () => {
+    install(meshNode('box-1'))
+    render(<Content />)
+
+    const row = screen.getByLabelText('Largeur').parentElement
+
+    expect(
+      within(row as HTMLElement).getByRole('button', { name: /Revenir à la valeur par défaut/ }),
+    ).toBeDisabled()
   })
 
   it('gives the row back to a sprite others hang from, which turning swings around it', () => {
@@ -478,10 +556,8 @@ describe('inspector panel', () => {
     it('offers the pictures of the project, whatever folder they were filed under', async () => {
       render(<Content />)
 
-      await userEvent.click(screen.getAllByRole('button', { name: /Choisir la texture de/ })[0]!)
-
-      expect(await screen.findByRole('menuitemradio', { name: /Brique/ })).toBeInTheDocument()
-      expect(screen.getByRole('menuitemradio', { name: /Rendu/ })).toBeInTheDocument()
+      expect(await screen.findAllByRole('option', { name: /Brique/ })).not.toHaveLength(0)
+      expect(screen.getAllByRole('option', { name: /Rendu/ })).not.toHaveLength(0)
     })
 
     /**
@@ -493,27 +569,23 @@ describe('inspector panel', () => {
       useAssets.setState({ items: [] })
       render(<Content />)
 
-      await userEvent.click(screen.getAllByRole('button', { name: /Choisir la texture de/ })[0]!)
-
-      expect(await screen.findByRole('menuitemradio', { name: /Brique/ })).toBeInTheDocument()
+      expect(await screen.findAllByRole('option', { name: /Brique/ })).not.toHaveLength(0)
     })
 
     it('leaves out what could never be loaded as a texture', async () => {
       render(<Content />)
+      await screen.findAllByRole('option', { name: /Brique/ })
 
-      await userEvent.click(screen.getAllByRole('button', { name: /Choisir la texture de/ })[0]!)
-      await screen.findByRole('menuitemradio', { name: /Brique/ })
-
-      expect(screen.queryByRole('menuitemradio', { name: /Rush/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('option', { name: /Rush/ })).not.toBeInTheDocument()
     })
 
     // A texture is a reference to an asset, never an image: that is what a reopened scene can
     // resolve again.
     it('stores the asset identifier in the material', async () => {
       render(<Content />)
+      await screen.findAllByRole('option', { name: /Brique/ })
 
-      await userEvent.click(screen.getAllByRole('button', { name: /Choisir la texture de/ })[0]!)
-      await userEvent.click(await screen.findByRole('menuitemradio', { name: /Brique/ }))
+      await userEvent.selectOptions(screen.getByLabelText('Texture'), 'tex-1')
 
       const node = nodeInStore('box-1')
       expect(node?.type === 'mesh' && node.material.map).toEqual({ assetId: 'tex-1' })
@@ -536,25 +608,17 @@ describe('inspector panel', () => {
       expect(back?.type === 'mesh' && back.material.map).toEqual({ assetId: 'tex-1' })
     })
 
-    it('offers a slot per map a standard material reads', () => {
-      render(<Content />)
-
-      expect(screen.getAllByRole('button', { name: /Choisir la texture de/ })).toHaveLength(
-        TEXTURE_SLOTS.length,
-      )
-    })
-
     /**
-     * The whole LINE is what opens the menu since 2026-08-14, so its name is the only thing left
-     * to tell five stacked slots apart by — a reader stepping through them, or a voice command
-     * naming the one on screen. One shared « Choose a texture » made them five identical controls.
+     * One list per map, each named after the map it fills — which is what tells five stacked
+     * slots apart, for a reader stepping through them or a voice command naming the one on
+     * screen. The name is now the label of the shared column, like every other property line.
      */
-    it('names each slot after the map it fills, so the stacked ones can be told apart', () => {
+    it('offers a slot per map a standard material reads, each under its own name', () => {
       render(<Content />)
 
-      const named = screen
-        .getAllByRole('button', { name: /Choisir la texture de/ })
-        .map(button => button.getAttribute('aria-label'))
+      const named = TEXTURE_SLOTS.map(slot =>
+        screen.getByLabelText(fr.inspector.fields[slot], { exact: true }),
+      )
 
       expect(new Set(named).size).toBe(TEXTURE_SLOTS.length)
     })
@@ -714,7 +778,9 @@ describe('inspector panel', () => {
     useSelection.getState().selectClip('doc-1', 'clip-1')
     render(<Content />)
 
-    expect(screen.getByRole('heading', { name: 'Clip' })).toBeInTheDocument()
+    // A folding heading like every other section of the studio, since the fixed one was merged
+    // into it: the Audio space used to be one of the four that could not fold anything.
+    expect(screen.getByRole('button', { name: /Clip/ })).toBeInTheDocument()
     // The three a sound clip is shaped by, and the reason this matters: they had no other surface.
     expect(screen.getByRole('spinbutton', { name: /Gain/ })).toBeInTheDocument()
   })

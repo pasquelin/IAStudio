@@ -25,12 +25,13 @@ export function ShadowSection({ node, selection, edit }: ShadowSectionProps) {
   if (!casts && !receives) return null
 
   return (
-    <PropertySection title={t('inspector.shadows')}>
+    <PropertySection title={t('inspector.shadows')} scId="shadows">
       {/* An ambient or hemisphere light has no shadow camera: three.js would warn every frame. */}
       {casts && (
         <ToggleField
           label={t('inspector.castShadow')}
           value={node.castShadow}
+          scId="shadows.cast"
           onChange={value => edit.run(setShadowOn(selection, { castShadow: value }))}
         />
       )}
@@ -40,6 +41,7 @@ export function ShadowSection({ node, selection, edit }: ShadowSectionProps) {
         <ToggleField
           label={t('inspector.receiveShadow')}
           value={node.receiveShadow}
+          scId="shadows.receive"
           onChange={value => edit.run(setShadowOn(selection, { receiveShadow: value }))}
         />
       )}

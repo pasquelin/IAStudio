@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
 import { assetsAt } from '@/helpers/assetAt'
 import { formatBytes } from '@/helpers/format'
@@ -56,7 +56,7 @@ export function FileInspector({ paths }: { paths: readonly string[] }) {
   }
 
   return (
-    <PropertyGroup title={t('inspector.identity')}>
+    <PropertySection title={t('inspector.identity')}>
       <PropertyRow label={t('inspector.name')}>{only.name}</PropertyRow>
       {/* Stacked: a path is the one value here that has no chance of fitting a column. */}
       <PropertyRow label={t('inspector.path')} shape="stacked">
@@ -68,6 +68,6 @@ export function FileInspector({ paths }: { paths: readonly string[] }) {
           {formatBytes(only.bytes, unit => t(`units.${unit}`), i18n.language)}
         </PropertyRow>
       )}
-    </PropertyGroup>
+    </PropertySection>
   )
 }

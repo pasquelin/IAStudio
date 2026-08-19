@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { NumberField } from '@/design/NumberField'
-import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
 import { setClipFade, setClipGain, setClipSpeed } from '@/engines/timeline/commands'
 import { formatDuration, formatTimecode } from '@/engines/timeline/timecode'
@@ -36,7 +36,7 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
 
   return (
     <>
-      <PropertyGroup title={t('inspector.clip')}>
+      <PropertySection title={t('inspector.clip')}>
         <PropertyRow label={t('inspector.source')}>{name}</PropertyRow>
         {track && <PropertyRow label={t('inspector.track')}>{track.name}</PropertyRow>}
         <PropertyRow label={t('inspector.start')}>
@@ -49,9 +49,9 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
         <PropertyRow label={t('inspector.inPoint')}>
           {formatTimecode(clip.inPoint, sequence.settings.fps)}
         </PropertyRow>
-      </PropertyGroup>
+      </PropertySection>
 
-      <PropertyGroup title={t('inspector.shaping')}>
+      <PropertySection title={t('inspector.shaping')}>
         <NumberField
           label={t('inspector.fadeIn')}
           value={clip.fadeIn / SECOND}
@@ -90,7 +90,7 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
             {...edit.gesture}
           />
         )}
-      </PropertyGroup>
+      </PropertySection>
     </>
   )
 }

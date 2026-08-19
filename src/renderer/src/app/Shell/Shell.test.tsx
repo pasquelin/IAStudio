@@ -145,12 +145,14 @@ describe('the default layout', () => {
     expect(screen.getByLabelText('Modèles')).toBeInTheDocument()
   })
 
-  it('opens Skyboxes on the sky controls', () => {
+  // The sky's own settings went back to the inspector on 2026-08-19, so what is left of that
+  // half is how the viewport looks at it.
+  it('opens Skyboxes on the viewing controls', () => {
     useLayouts.setState({ activeWorkspace: 'skyboxes' })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
-    expect(screen.getByLabelText('Skybox')).toBeInTheDocument()
+    expect(screen.getByLabelText('Vue')).toBeInTheDocument()
   })
 })
 

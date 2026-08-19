@@ -1,6 +1,9 @@
 import { bound } from '@shared/numeric'
+import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
-import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { PropertyLabel } from './PropertyLabel'
+import { ResetButton } from './ResetButton'
+import { FIELD_ROW, type GestureProps } from './styles'
 
 export type SliderFieldProps = GestureProps & {
   label: string
@@ -9,6 +12,10 @@ export type SliderFieldProps = GestureProps & {
   max: number
   step: number
   onChange: (value: number) => void
+  /** The handle the MCP steers this field by. Never a translated word. */
+  scId?: string
+  /** Puts the value back where it started. Absent while it already stands there. */
+  onReset?: () => void
 }
 
 /**
@@ -22,17 +29,18 @@ export function SliderField({
   max,
   step,
   onChange,
+  scId,
+  onReset,
   onGestureStart,
   onGestureEnd,
 }: SliderFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      <span title={label} className={FIELD_LABEL}>
-        {label}
-      </span>
+      <PropertyLabel label={label} />
 
       <input
         type="range"
+        data-sc={scId && `field:${scId}`}
         value={value}
         min={min}
         max={max}
@@ -48,6 +56,10 @@ export function SliderField({
       />
 
       <Readout values={[value]} />
+
+      <FieldActions>
+        <ResetButton onReset={onReset} />
+      </FieldActions>
     </label>
   )
 }

@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { toDegrees, toRadians } from '@shared/domain/angles'
 import { NumberField } from '@/design/NumberField'
-import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
+import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
 import { TextField } from '@/design/TextField'
-import { NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
-import { BLEND_MODES, type BlendMode } from '@shared/domain/canvasBlend'
+import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import {
   isGroup,
   type AdjustmentKind,
@@ -24,7 +24,6 @@ import {
   setLayerText,
   setLayerTransform,
 } from '@/engines/canvas/commands'
-import { cn } from '@/helpers/cn'
 import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
 import { useCanvases } from '@/stores/canvases'
 import { FontField } from './FontField'
@@ -56,32 +55,21 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
 
   return (
     <>
-      <PropertyGroup title={t('inspector.layer')}>
+      <PropertySection title={t('inspector.layer')}>
         <PropertyRow label={t('inspector.name')}>{layer.name}</PropertyRow>
         <PropertyRow label={t('inspector.kind')}>
           {t(`inspector.layerKind_${layer.kind}`)}
         </PropertyRow>
-      </PropertyGroup>
+      </PropertySection>
 
-      <PropertyGroup title={t('inspector.compositing')}>
-        <PropertyRow label={t('inspector.blend')}>
-          {/*
-            A native select, as `CollectionBar` uses one: sixteen rows in a flyout would be a
-            menu to scroll, and the OS list is already keyboard-reachable and searchable.
-          */}
-          <select
-            aria-label={t('inspector.blend')}
-            value={layer.blend}
-            onChange={event => edit.run(setLayerBlend(layer.id, asBlendMode(event.target.value)))}
-            className={cn(NATIVE_SELECT, 'w-full')}
-          >
-            {BLEND_MODES.map(mode => (
-              <option key={mode} value={mode}>
-                {t(`blend.${mode}`)}
-              </option>
-            ))}
-          </select>
-        </PropertyRow>
+      <PropertySection title={t('inspector.compositing')}>
+        <SelectField
+          label={t('inspector.blend')}
+          value={layer.blend}
+          options={BLEND_MODES.map(mode => ({ value: mode, label: t(`blend.${mode}`) }))}
+          onChange={blend => edit.run(setLayerBlend(layer.id, blend))}
+          scId="layer.blend"
+        />
 
         <SliderField
           label={t('inspector.opacity')}
@@ -109,9 +97,9 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           value={layer.clipped}
           onChange={value => edit.run(setLayerClipped(layer.id, value))}
         />
-      </PropertyGroup>
+      </PropertySection>
 
-      <PropertyGroup title={t('inspector.locks')}>
+      <PropertySection title={t('inspector.locks')}>
         {LAYER_LOCKS.map(padlock => (
           <ToggleField
             key={padlock.key}
@@ -122,10 +110,10 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
             }
           />
         ))}
-      </PropertyGroup>
+      </PropertySection>
 
       {layer.kind === 'text' && (
-        <PropertyGroup title={t('inspector.text')}>
+        <PropertySection title={t('inspector.text')}>
           <TextField
             label={t('inspector.words')}
             value={layer.text}
@@ -146,12 +134,13 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
             label={t('inspector.font')}
             value={layer.font}
             onChange={font => edit.run(setLayerText(layer.id, { font }))}
+            scId="layer.font"
           />
-        </PropertyGroup>
+        </PropertySection>
       )}
 
       {layer.kind === 'adjustment' && (
-        <PropertyGroup title={t(`adjustment.${layer.adjustment}`)}>
+        <PropertySection title={t(`adjustment.${layer.adjustment}`)}>
           <SliderField
             label={t(`adjustment.${layer.adjustment}`)}
             value={layer.values[layer.adjustment]}
@@ -168,11 +157,11 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
             }
             {...edit.gesture}
           />
-        </PropertyGroup>
+        </PropertySection>
       )}
 
       {/* A group has no pixels of its own, but it does have a place: it carries its children. */}
-      <PropertyGroup title={t('inspector.transform')}>
+      <PropertySection title={t('inspector.transform')}>
         <NumberField
           label={t('inspector.x')}
           value={layer.transform.x}
@@ -211,12 +200,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
         {isGroup(layer) && (
           <PropertyRow label={t('inspector.children')}>{layer.children.length}</PropertyRow>
         )}
-      </PropertyGroup>
+      </PropertySection>
     </>
   )
-}
-
-/** The select hands back a string; only the sixteen the state declares are ones. */
-function asBlendMode(value: string): BlendMode {
-  return BLEND_MODES.find(mode => mode === value) ?? 'normal'
 }

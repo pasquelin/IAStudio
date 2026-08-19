@@ -9,16 +9,15 @@ import {
   ROOT_MOTIONS,
   type ClipRef,
   type ClipSource,
-  type RootMotion,
 } from '@shared/domain/scene'
 import { secondsToUs, usToSeconds } from '@shared/domain/time'
 import { AnimationPicker } from '@/design/AnimationPicker/AnimationPicker'
-import { BODY_PARTS, isBodyPart, WHOLE_BODY, type BodyPart } from '@shared/domain/humanoid'
-import { PropertyRow } from '@/design/PropertyRow'
+import { BODY_PARTS, WHOLE_BODY } from '@shared/domain/humanoid'
 import { PropertySection } from '@/design/PropertySection'
 import { QuietNote } from '@/design/QuietNote'
+import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
-import { INLINE_LINK, NATIVE_SELECT } from '@/design/styles'
+import { INLINE_LINK } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
 import { addModelClip, removeModelClip, setModelLanes } from '@/engines/scene/commands'
@@ -26,7 +25,6 @@ import { laneHolding, lanesWith, MAX_SPEED, MIN_SPEED } from '@/engines/scene/cl
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import type { ModelNode } from '@/engines/scene/sceneState'
 import { clipLabel } from '@/helpers/clipLabel'
-import { cn } from '@/helpers/cn'
 import { newId } from '@/helpers/ids'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { clipsOfNode, rigOfNode, useModelClips } from '@/stores/modelClips'
@@ -41,13 +39,6 @@ export type AnimationSectionProps = {
 
 /** Seconds. Past a second a transition stops reading as one move joining another. */
 const MAX_FADE = 1
-
-/** A `<select>` answers a string; the whole body is what anything else can only have meant. */
-const bodyPartRead = (value: string): BodyPart => (isBodyPart(value) ? value : WHOLE_BODY)
-
-/** Same contract: `auto` is what a value the studio did not write can only have meant. */
-const rootMotionRead = (value: string): RootMotion =>
-  ROOT_MOTIONS.find(motion => motion === value) ?? 'auto'
 
 /**
  * What an imported model can be made to play, and what stands in the way when it cannot.
@@ -177,24 +168,16 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
       {/* Shown for a block whose clip the file no longer spells, too: without the picker its
           « none » option is gone, and a block nothing can play could never be taken off. */}
       {(clips.length > 0 || played) && (
-        <PropertyRow label={t('inspector.clip')}>
-          <div className="flex w-full items-center gap-1.5">
-            {/* A native select, as the model picker uses one: the OS list is searchable by
-                keystroke, and a rig can carry a dozen clips. */}
-            <select
-              aria-label={t('inspector.clip')}
-              value={played?.source.name ?? ''}
-              onChange={event => choose(event.target.value)}
-              className={cn(NATIVE_SELECT, 'min-w-0 flex-1')}
-            >
-              <option value="">{t('inspector.noClip')}</option>
-              {clips.map(clip => (
-                <option key={clip} value={clip}>
-                  {clipLabel(clip, t)}
-                </option>
-              ))}
-            </select>
-
+        <SelectField
+          label={t('inspector.clip')}
+          value={played?.source.name ?? ''}
+          options={[
+            { value: '', label: t('inspector.noClip') },
+            ...clips.map(clip => ({ value: clip, label: clipLabel(clip, t) })),
+          ]}
+          onChange={choose}
+          scId="animation.clip"
+          actions={
             <ToolButton
               icon={running ? mdiPause : mdiPlay}
               label={running ? t('inspector.pauseClip') : t('inspector.playClip')}
@@ -203,8 +186,8 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
               disabled={!played}
               onClick={() => play(running ? null : played)}
             />
-          </div>
-        </PropertyRow>
+          }
+        />
       )}
 
       {played && (
@@ -236,38 +219,28 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
             }
             {...edit.gesture}
           />
-          <PropertyRow label={t('inspector.clipRootMotion')}>
-            <select
-              aria-label={t('inspector.clipRootMotion')}
-              value={played.rootMotion}
-              onChange={event =>
-                write({ ...played, rootMotion: rootMotionRead(event.target.value) })
-              }
-              className={cn(NATIVE_SELECT, 'w-full')}
-            >
-              {ROOT_MOTIONS.map(motion => (
-                <option key={motion} value={motion}>
-                  {t(`inspector.rootMotion_${motion}`)}
-                </option>
-              ))}
-            </select>
-          </PropertyRow>
+          <SelectField
+            label={t('inspector.clipRootMotion')}
+            value={played.rootMotion}
+            options={ROOT_MOTIONS.map(motion => ({
+              value: motion,
+              label: t(`inspector.rootMotion_${motion}`),
+            }))}
+            onChange={rootMotion => write({ ...played, rootMotion })}
+            scId="animation.rootMotion"
+          />
           {/* What makes two blocks stack rather than average each other out. A select for the
               same reason as the clip picker above: the OS list reads on its own. */}
-          <PropertyRow label={t('inspector.clipPart')}>
-            <select
-              aria-label={t('inspector.clipPart')}
-              value={played.part ?? WHOLE_BODY}
-              onChange={event => write({ ...played, part: bodyPartRead(event.target.value) })}
-              className={cn(NATIVE_SELECT, 'w-full')}
-            >
-              {BODY_PARTS.map(part => (
-                <option key={part} value={part}>
-                  {t(`inspector.clipPart_${part}`)}
-                </option>
-              ))}
-            </select>
-          </PropertyRow>
+          <SelectField
+            label={t('inspector.clipPart')}
+            value={played.part ?? WHOLE_BODY}
+            options={BODY_PARTS.map(part => ({
+              value: part,
+              label: t(`inspector.clipPart_${part}`),
+            }))}
+            onChange={part => write({ ...played, part })}
+            scId="animation.clipPart"
+          />
         </>
       )}
     </PropertySection>

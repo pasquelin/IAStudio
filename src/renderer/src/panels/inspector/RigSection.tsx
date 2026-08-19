@@ -7,8 +7,7 @@ import { ProgressBar } from '@/design/ProgressBar'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { QuietNote } from '@/design/QuietNote'
-import { NATIVE_SELECT } from '@/design/styles'
-import { cn } from '@/helpers/cn'
+import { SelectField } from '@/design/SelectField'
 import { rigFit, rigFitFaultOf, rigHandBones } from '@/engines/scene/rigFit'
 import {
   addIkChain,
@@ -41,9 +40,6 @@ export const CHARACTER_KINDS: readonly CharacterKind[] = ['auto', 'human', 'anim
 
 /** The kinds a bounding box can be fitted with a skeleton — see `rigFit`, which is humanoid. */
 const HUMANOID_KINDS: readonly CharacterKind[] = ['auto', 'human']
-
-const characterKindRead = (value: string): CharacterKind =>
-  CHARACTER_KINDS.find(kind => kind === value) ?? 'auto'
 
 export type RigSectionProps = {
   documentId: string
@@ -120,39 +116,36 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
           {asking && (
             <Flyout anchor={opener} onDismiss={() => setAsking(false)}>
               <div className="flex w-72 flex-col gap-2 p-2">
-                <PropertyRow label={t('inspector.characterKind')}>
-                  <select
-                    aria-label={t('inspector.characterKind')}
-                    value={kind}
-                    onChange={event => setKind(characterKindRead(event.target.value))}
-                    className={cn(NATIVE_SELECT, 'w-full')}
-                  >
-                    {CHARACTER_KINDS.map(candidate => (
-                      <option key={candidate} value={candidate}>
-                        {t(`inspector.characterKinds.${candidate}`)}
-                      </option>
-                    ))}
-                  </select>
-                </PropertyRow>
+                <SelectField
+                  label={t('inspector.characterKind')}
+                  value={kind}
+                  options={CHARACTER_KINDS.map(candidate => ({
+                    value: candidate,
+                    label: t(`inspector.characterKinds.${candidate}`),
+                  }))}
+                  onChange={setKind}
+                  scId="rig.characterKind"
+                />
 
                 {/* Every service is shown and none can be chosen: submitting one needs the whole
                     export-upload-job-import chain, which nothing here can verify. */}
-                <PropertyRow label={t('inspector.rigService')}>
-                  {/* Uncontrolled, and nothing can move it: every other option is disabled, so
-                      there is no change to answer for. */}
-                  <select
-                    aria-label={t('inspector.rigService')}
-                    defaultValue=""
-                    className={cn(NATIVE_SELECT, 'w-full')}
-                  >
-                    <option value="">{t('inspector.rigServiceLocal')}</option>
-                    {services.map(service => (
-                      <option key={service.modelId} value={service.modelId} disabled>
-                        {`${service.name} — ${rigServiceNote(service, plan, { bytes, maxSize }, t)}`}
-                      </option>
-                    ))}
-                  </select>
-                </PropertyRow>
+                {/* Every other option is disabled, so `onChange` is unreachable rather than
+                    ignored: the list opens to say WHY each service is out of reach, which a
+                    disabled control would hide. */}
+                <SelectField
+                  label={t('inspector.rigService')}
+                  value=""
+                  options={[
+                    { value: '', label: t('inspector.rigServiceLocal') },
+                    ...services.map(service => ({
+                      value: service.modelId,
+                      label: `${service.name} — ${rigServiceNote(service, plan, { bytes, maxSize }, t)}`,
+                      disabled: true,
+                    })),
+                  ]}
+                  onChange={() => undefined}
+                  scId="rig.service"
+                />
 
                 {/* The studio's own rigger lays a HUMANOID skeleton — hips, spine, four limbs.
                     Saying so beats laying one on a horse and letting the user find out. */}
@@ -208,26 +201,19 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
                 />
               </PropertyRow>
 
-              <PropertyRow label={t('inspector.boneRole')}>
-                {/* The standard's own spelling, untranslated and deliberately so: these are the
-                    identifiers of the Mixamo set, and the issue's mapping screen shows them as
-                    such. Advanced mode is the only place they appear. */}
-                <select
-                  aria-label={t('inspector.boneRole')}
-                  value={roleOf(node, picked) ?? ''}
-                  onChange={event =>
-                    edit.run(setRigBoneRole(node.id, picked, roleRead(event.target.value)))
-                  }
-                  className={cn(NATIVE_SELECT, 'w-full')}
-                >
-                  <option value="">{t('inspector.boneNoRole')}</option>
-                  {HUMANOID_ROLES.map(role => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
-              </PropertyRow>
+              {/* The roles keep the standard's own spelling, untranslated and deliberately so:
+                  these are the identifiers of the Mixamo set, and the mapping screen shows them
+                  as such. Advanced mode is the only place they appear. */}
+              <SelectField
+                label={t('inspector.boneRole')}
+                value={roleOf(node, picked) ?? ''}
+                options={[
+                  { value: '', label: t('inspector.boneNoRole') },
+                  ...HUMANOID_ROLES.map(role => ({ value: role, label: role })),
+                ]}
+                onChange={role => edit.run(setRigBoneRole(node.id, picked, roleRead(role)))}
+                scId="rig.boneRole"
+              />
 
               <Button onClick={() => edit.run(addRigBone(node.id, childBone(picked, node)))}>
                 {t('inspector.addBone')}

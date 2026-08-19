@@ -541,6 +541,44 @@ describe('the contrast of the inks', () => {
   })
 
   /**
+   * The three axis stripes, on the field each one edges. At the 3 of WCAG 1.4.11 rather than 4.5:
+   * a stripe is a shape that informs, never a word — and the letter beside it says which axis it
+   * is anyway, which is what keeps colour from being the only carrier (WCAG 1.4.1).
+   *
+   * ONE value serves both themes, and that is the point of measuring them together rather than a
+   * theme at a time: the window where a colour clears 3:1 against `surface` dark AND light is
+   * narrow, so a hue nudged for one theme is exactly how the other silently falls under.
+   */
+  it('carries three axis stripes readable on every fill a row can wear, in both themes', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+      const stripes = ['axis-x', 'axis-y', 'axis-z'].map(name => tokens[name] ?? '')
+
+      expect(stripes.every(stripe => /^#[0-9a-f]{6}$/.test(stripe))).toBe(true)
+      /**
+       * BOTH sides of the stripe: it is the field's left border, so `surface` meets it on the
+       * right and whatever fills the row meets it on the left — `panel`, the section's own.
+       *
+       * Reading `surface` alone is not enough, and that was measured rather than reasoned: a
+       * zebra fill striping every other row `elevated` took the same three stripes to 2.34, 2.42
+       * and 2.11 IN THE DARK THEME with this case still green — it clears 3 in the light one
+       * (3.61, 3.50, 4.02), which is why the sweep runs over both. `elevated` is deliberately NOT
+       * swept, since no property row wears it: a fill that brought it back would have to bring
+       * its own measurement, of both themes.
+       */
+      const failing = ['panel', 'surface'].flatMap(ground =>
+        stripes
+          .filter(stripe => contrastRatio(stripe, tokens[ground] ?? '') < AA_NON_TEXT)
+          .map(stripe => `${stripe} on ${ground}`),
+      )
+
+      expect(failing).toEqual([])
+      // Three axes read as three only while no two of them are the same colour.
+      expect(new Set(stripes).size).toBe(3)
+    }
+  })
+
+  /**
    * The one ink in the studio that is darker than its fill on one theme and lighter on the other.
    * Held at AA rather than at the 3:1 of WCAG 1.4.11 that a glyph would need: the rail's plus is
    * a glyph today, and a token that only ever cleared the glyph bar would be the wrong thing to

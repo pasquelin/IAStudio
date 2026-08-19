@@ -5,6 +5,7 @@ import {
   activeImageId,
   activeSceneId,
   activeMontageId,
+  activeSkyboxId,
   activeTextureId,
   useDocuments,
 } from '@/stores/documents'
@@ -14,6 +15,7 @@ import { ClipInspector } from '../ClipInspector'
 import { FileInspector } from '../FileInspector'
 import { LayerInspector } from '../LayerInspector'
 import { SceneInspector } from '../SceneInspector'
+import { SkyboxInspector } from '../SkyboxInspector/SkyboxInspector'
 import { TextureInspector } from '../TextureInspector/TextureInspector'
 import { TrackInspector } from '../TrackInspector'
 import { inspectedTextureId } from '../inspected'
@@ -28,6 +30,7 @@ export function InspectorFace() {
   const sequenceId = useDocuments(activeMontageId)
   const sequence = useSequences(state => (sequenceId ? sequenceOf(state, sequenceId) : null))
   const textureId = useDocuments(activeTextureId)
+  const skyboxId = useDocuments(activeSkyboxId)
   const imageId = useDocuments(activeImageId)
   const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
 
@@ -90,6 +93,10 @@ export function InspectorFace() {
   // on every switch between two scenes, and kept it empty over a texture afterwards. At most one
   // id is set below, so the order is reading order.
   if (sceneId) return <SceneInspector documentId={sceneId} />
+
+  // A sky has no node to pick either — everything on it belongs to the document. It had a panel
+  // of its own until 2026-08-19, stacked above an inspector that read "select something".
+  if (skyboxId) return <SkyboxInspector documentId={skyboxId} />
 
   // Through the same answer the title row reads, so the button it carries and the face below it
   // can never describe two different things.

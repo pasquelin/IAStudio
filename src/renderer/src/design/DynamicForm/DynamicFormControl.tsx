@@ -132,6 +132,8 @@ export function DynamicFormControl({
           registration={registration}
           initial={typeof initial === 'string' && initial ? initial : undefined}
           placeholder={t(field.kind === 'mesh' ? 'generation.dropModel' : 'generation.dropPicture')}
+          // The model's own key for this input — never translated, which is what a handle must be.
+          scId={`generation.${field.key}`}
         />
       )
 

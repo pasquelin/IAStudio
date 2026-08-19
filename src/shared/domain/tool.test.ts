@@ -59,29 +59,12 @@ describe('resolving where a tool sits', () => {
 
   it('answers null for a workspace a tool does not serve', () => {
     expect(placementIn('timeline', 'image')).toBeNull()
-    expect(placementIn('skybox', '3d')).toBeNull()
+    expect(placementIn('channels', '3d')).toBeNull()
   })
 
   it('answers null for an id no version knows any more', () => {
     expect(placementIn('moodboard', 'image')).toBeNull()
     expect(placementOf('moodboard')).toBeNull()
-  })
-})
-
-describe('the skybox panel', () => {
-  it('serves only its own workspace', () => {
-    expect(placementIn('skybox', 'skyboxes')?.zone).toBe('right')
-    for (const workspace of WORKSPACE_IDS) {
-      if (workspace !== 'skyboxes') expect(placementIn('skybox', workspace)).toBeNull()
-    }
-  })
-
-  it('does not share a half with the inspector, which serves every workspace', () => {
-    const skybox = placementIn('skybox', 'skyboxes')
-    const inspector = placementIn('inspector', 'skyboxes')
-
-    expect(inspector).not.toBeNull()
-    expect(skybox?.zone === inspector?.zone && skybox?.slot === inspector?.slot).toBe(false)
   })
 })
 
@@ -281,10 +264,12 @@ describe('the rail order of the upper right', () => {
     expect(upperRightIn('audio')).toEqual([])
   })
 
-  // `view` sits right behind them: how a sky is being looked at is next of kin to what it is,
-  // and both used to be a menu floating over the picture.
-  it('puts the sky controls first in Skyboxes — it is what that space is for', () => {
-    expect(upperRightIn('skyboxes')).toEqual(['skybox', 'view'])
+  /**
+   * How a sky is being LOOKED at, and nothing else — what a sky IS went back to the inspector on
+   * 2026-08-19. It had a panel of its own, stacked above an inspector reading "select something".
+   */
+  it('keeps only the viewing controls in Skyboxes', () => {
+    expect(upperRightIn('skyboxes')).toEqual(['view'])
   })
 
   /** Same rule, same reason: a texture IS its eight channels, so they come before the files. */

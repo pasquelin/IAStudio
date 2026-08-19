@@ -37,7 +37,6 @@ export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
   models: { load: () => import('@/panels/models'), role: null },
   generator: { load: () => import('@/panels/generator'), role: null },
   inspector: { load: () => import('@/panels/inspector'), role: 'actions' },
-  skybox: { load: () => import('@/panels/skybox'), role: null },
   assets: { load: () => import('@/panels/assets'), role: 'actions' },
   channels: { load: () => import('@/panels/channels'), role: null },
   styles: { load: () => import('@/panels/styles'), role: null },

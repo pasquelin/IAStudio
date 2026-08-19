@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { EASINGS, type CameraMotion } from '@shared/domain/animation'
 import { NumberField } from '@/design/NumberField'
-import { PropertyRow } from '@/design/PropertyRow'
-import { NATIVE_SELECT, type GestureProps } from '@/design/styles'
+import { SelectField } from '@/design/SelectField'
+import type { GestureProps } from '@/design/styles'
 
 export type CameraShotSectionMotionProps = {
   motion: CameraMotion
@@ -24,24 +24,16 @@ export function CameraShotSectionMotion({
 
   return (
     <>
-      <PropertyRow label={t('inspector.easing')}>
-        <select
-          value={motion.easing}
-          // Read back off the list rather than asserted: what a select hands over is a string,
-          // and a value no easing answers to would be written into the document.
-          onChange={event => {
-            const easing = EASINGS.find(candidate => candidate === event.target.value)
-            if (easing) onChange({ ...motion, easing })
-          }}
-          className={NATIVE_SELECT}
-        >
-          {EASINGS.map(easing => (
-            <option key={easing} value={easing}>
-              {t(`inspector.easing_${easing}`)}
-            </option>
-          ))}
-        </select>
-      </PropertyRow>
+      <SelectField
+        label={t('inspector.easing')}
+        value={motion.easing}
+        options={EASINGS.map(easing => ({
+          value: easing,
+          label: t(`inspector.easing_${easing}`),
+        }))}
+        onChange={easing => onChange({ ...motion, easing })}
+        scId="shot.easing"
+      />
 
       <NumberField
         label={t('inspector.railFrom')}

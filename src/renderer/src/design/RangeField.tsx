@@ -1,7 +1,9 @@
 import { cn } from '@/helpers/cn'
 import { bound } from '@shared/numeric'
+import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
-import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { PropertyLabel } from './PropertyLabel'
+import { FIELD_ROW, type GestureProps } from './styles'
 
 /** Both ends of one value, kept in order. Declared here rather than imported from an engine:
  * `design/` describes controls, and a field that reached into a workspace would tie the two. */
@@ -29,6 +31,8 @@ export type RangeFieldProps = GestureProps & {
   fromLabel: string
   toLabel: string
   onChange: (value: RangeValue) => void
+  /** The handle the MCP steers this field by; each end extends it with its own word. */
+  scId?: string
 }
 
 /**
@@ -48,6 +52,7 @@ export function RangeField({
   fromLabel,
   toLabel,
   onChange,
+  scId,
   onGestureStart,
   onGestureEnd,
 }: RangeFieldProps) {
@@ -72,9 +77,7 @@ export function RangeField({
 
   return (
     <div className={FIELD_ROW}>
-      <span title={label} className={FIELD_LABEL}>
-        {label}
-      </span>
+      <PropertyLabel label={label} />
 
       <div
         className="relative h-(--sc-control) min-w-0 flex-1"
@@ -96,6 +99,7 @@ export function RangeField({
         <input
           type="range"
           aria-label={fromLabel}
+          data-sc={scId && `field:${scId}.min`}
           value={value.min}
           min={min}
           max={max}
@@ -108,6 +112,7 @@ export function RangeField({
         <input
           type="range"
           aria-label={toLabel}
+          data-sc={scId && `field:${scId}.max`}
           value={value.max}
           min={min}
           max={max}
@@ -120,6 +125,8 @@ export function RangeField({
       </div>
 
       <Readout values={[value.min, value.max]} />
+
+      <FieldActions />
     </div>
   )
 }

@@ -15,7 +15,7 @@ import { HINT_TOP, TIP_BOTTOM } from '@/helpers/tooltip'
 import { CONTROL, PANEL_BAR, PANEL_HEAD } from '../styles'
 import { ToolButton } from '../ToolButton'
 import { UiIcon } from '../UiIcon'
-import { CollectionBarDropdown } from './CollectionBarDropdown'
+import { SelectField } from '../SelectField'
 
 /** Facets shown before the fold — one row of the grid. The rest hide behind the toggle. */
 const FACETS_BEFORE_FOLD = 2
@@ -94,13 +94,16 @@ export function CollectionBar({
 
   const menusOf = (shown: readonly FacetDescriptor[]): ReactNode[] =>
     shown.map((facet, index) => (
-      <CollectionBarDropdown
+      <SelectField
         key={facet.key}
+        layout="bar"
         label={facet.label}
-        options={facet.options}
-        anyLabel={facet.label}
+        hint={TIP_BOTTOM(facet.label)}
+        // The facet's own name stands for "no choice": once a value is picked, the closed control
+        // shows the value and what it filters on is nowhere on screen.
+        options={[{ value: '', label: facet.label }, ...facet.options]}
         value={selectedValues(state, facet.key)[0] ?? ''}
-        onPick={value => onChange(setFacetValue(state, facet.key, value || null))}
+        onChange={value => onChange(setFacetValue(state, facet.key, value || null))}
         // An odd last one spans both columns rather than leaving a hole beside it.
         className={index === shown.length - 1 && shown.length % 2 === 1 ? 'col-span-2' : undefined}
       />
@@ -109,11 +112,13 @@ export function CollectionBar({
   const menus = menusOf(facets ?? [])
 
   const sortMenu = sorts && sorts.length > 0 && (
-    <CollectionBarDropdown
+    <SelectField
+      layout="bar"
       label={t('collection.sort')}
+      hint={TIP_BOTTOM(t('collection.sort'))}
       options={sorts}
       value={state.sort ?? sorts[0]?.value ?? ''}
-      onPick={value => onChange({ ...state, sort: value })}
+      onChange={sort => onChange({ ...state, sort })}
     />
   )
 

@@ -1,32 +1,38 @@
-import { CHECKBOX, FIELD_LABEL_WIDE, FIELD_ROW } from './styles'
+import { FieldActions } from './FieldActions'
+import { PropertyLabel } from './PropertyLabel'
+import { CHECKBOX, FIELD_ROW } from './styles'
 import { cn } from '@/helpers/cn'
 
 export type ToggleFieldProps = {
   label: string
   value: boolean
   onChange: (value: boolean) => void
+  /** The handle the MCP steers this field by. Never a translated word. */
+  scId?: string
 }
 
 /**
  * A property that is on or off. It carries no gesture props: a checkbox changes once per
  * click, so there is no drag to coalesce into a single history entry.
  */
-export function ToggleField({ label, value, onChange }: ToggleFieldProps) {
+export function ToggleField({ label, value, onChange, scId }: ToggleFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      {/* The wide label, and the only field that wears it: a checkbox sits at the far end of the
-          row whatever its name does, so there is no control here to line up on the shared column
-          — see `FIELD_LABEL_WIDE`, which says what that cost. */}
-      <span title={label} className={FIELD_LABEL_WIDE}>
-        {label}
-      </span>
+      <PropertyLabel label={label} />
 
+      {/* At the START of the control column like every other field, since 2026-08-19: pinned to
+          the far end it was the one line of the panel that began nowhere the others did, and it
+          held its name to a gauge that read « Projette une … ». */}
       <input
         type="checkbox"
+        data-sc={scId && `field:${scId}`}
         checked={value}
         onChange={event => onChange(event.target.checked)}
-        className={cn(CHECKBOX, 'size-4')}
+        // `mr-auto` rather than a filler element: the box keeps its size and takes the column.
+        className={cn(CHECKBOX, 'mr-auto size-4 shrink-0')}
       />
+
+      <FieldActions />
     </label>
   )
 }

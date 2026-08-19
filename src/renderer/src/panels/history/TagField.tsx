@@ -41,6 +41,7 @@ export function TagField({ commit }: { commit: string }) {
       label={t('git.tagVersion')}
       placeholder={t('git.tagPlaceholder')}
       accepts={isRefName}
+      scId="history.tagName"
       onSubmit={name => {
         void tag(name, commit)
         setNaming(false)

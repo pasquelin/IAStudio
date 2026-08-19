@@ -15,6 +15,8 @@ export type AssetDropFieldProps = {
   /** What the form starts with, so a preset filled by an edit action shows its picture. */
   initial?: string
   placeholder: string
+  /** The handle the MCP steers this field by. Never a translated word. */
+  scId?: string
 }
 
 /**
@@ -25,7 +27,13 @@ export type AssetDropFieldProps = {
  * The input stays, underneath: an id can still be pasted, and a kind this field cannot serve
  * falls back to it rather than making the form disappear (invariant 5).
  */
-export function AssetDropField({ id, registration, initial, placeholder }: AssetDropFieldProps) {
+export function AssetDropField({
+  id,
+  registration,
+  initial,
+  placeholder,
+  scId,
+}: AssetDropFieldProps) {
   const [assetId, setAssetId] = useState(initial ?? '')
   /**
    * The dropped picture's stamped URL, kept beside the id so a ⌘S that overwrote it repaints.
@@ -73,6 +81,7 @@ export function AssetDropField({ id, registration, initial, placeholder }: Asset
       <input
         id={id}
         type="text"
+        data-sc={scId && `field:${scId}`}
         placeholder={placeholder}
         className={FIELD_FILL}
         {...registration}

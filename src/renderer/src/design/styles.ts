@@ -305,12 +305,11 @@ export const PANEL_HEAD = 'border-border flex flex-col gap-2 border-b p-2'
 export const PANEL_BAR = 'border-border flex items-center gap-2 border-b'
 
 /**
- * The body of a titled run of properties — `PropertyGroup`'s and `PropertySection`'s alike.
+ * The body of a titled run of properties, under the heading `PropertySection` folds.
  *
- * One string because the inspector shows both, one under the other, and a reader takes them for
- * one panel: a group whose rows touched while a section two boxes down breathed reads as a bug in
- * the panel rather than as two components. They were kept in step by a comment saying "the same
- * gap as", which is what this closes.
+ * No zebra fill, and the reason is the PARITY, not the colour: `nth-child` counts DOM children
+ * rather than property lines, so a button row takes a band and unfolding a vector flips everything
+ * below it. The contrast half is measured in `tokens.test.ts`.
  */
 export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
 
@@ -331,23 +330,32 @@ export const FIELD_THUMBNAIL = 'size-(--sc-control)'
 export const FIELD_ROW = 'flex min-h-(--sc-control) min-w-0 items-center gap-2 text-tiny'
 
 /**
- * Fixed, so the controls of a section line up rather than each starting where its name ends.
- *
- * The gauge is shared with `PropertyRow`, and that is the whole point: five inspectors out of six
- * draw both families inside one group, so two widths meant two columns of labels in the same box.
+ * The room every property line keeps at its end — two controls wide, which is the most any of them
+ * asks for. It leans into the panel's own padding so the GLYPHS land on the column the fields end
+ * on: a button's box already ends there, but its 14px icon sits centred in a wider square.
  */
-export const FIELD_LABEL = 'text-muted w-(--sc-label) shrink-0 truncate'
+export const ROW_ACTIONS =
+  'flex w-(--sc-row-actions) shrink-0 items-center justify-end -mr-(--sc-row-action-bleed)'
 
 /**
- * The same label where the field has NO control to line up on that column — a checkbox, which
- * sits at the far end of the row whatever the label does.
- *
- * Held to the fixed gauge, « Projette une ombre » read « Projette une … » at eighty pixels with
- * two thirds of the row empty beside it. Still truncating, and still `title`d for it: a panel
- * narrow enough will run out of room here too, and a label cut mid-word reads as a shorter one
- * that means something else.
+ * One empty place at the END of that room. Only ever needed there: `justify-end` already puts a
+ * lone button on the last place, so a spacer BEFORE one moves nothing.
  */
-export const FIELD_LABEL_WIDE = 'text-muted min-w-0 flex-1 truncate'
+export const ROW_ACTION_SPACER = 'size-(--sc-control) shrink-0'
+
+/** The hexadecimal a colour swatch is read out as. Published so its guard can import it. */
+export const COLOR_READOUT = 'text-muted text-mini min-w-0 flex-1 truncate font-mono uppercase'
+
+/**
+ * One width for a whole section, shared with `PropertyRow` so both families of line start on one
+ * column. A SHARE of the row, capped and NOT floored: a fixed width truncated in a wide panel, and
+ * a floor of eighty overflowed a side zone dragged to its 140px minimum by 21px, measured.
+ *
+ * The edge is what makes it read as a column rather than a word standing before a control;
+ * `PropertyLabel` wears it and stretches, so the rule runs the row's whole height.
+ */
+export const FIELD_LABEL =
+  'text-muted border-border w-(--sc-label-share) max-w-(--sc-label-max) shrink-0 border-r pr-2'
 
 /**
  * The number beside a track — "somewhere past the middle" is not a value anyone can write down.
@@ -430,7 +438,7 @@ export const TOOLBAR_LABEL = 'text-muted text-tiny px-1'
 
 /**
  * The word that divides a LIST into groups — a git stage, the side of a comparison, a set of
- * parameters. Small caps rather than a heavier weight: `PropertyGroup` takes the weight instead,
+ * parameters. Small caps rather than a heavier weight: `PropertySection` takes the weight instead,
  * and the two are a rank apart on purpose, an inspector titling more often than a list does.
  */
 export const PANEL_GROUP_LABEL = 'text-muted text-tiny tracking-wide uppercase'

@@ -1,8 +1,9 @@
+import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AssetType } from '@shared/domain/asset'
 import { STUDIO_ENVIRONMENT, type EnvironmentRef } from '@shared/domain/scene'
+import { LinkField } from '@/design/LinkField/LinkField'
 import { PropertySection } from '@/design/PropertySection'
-import { TextureField } from '@/design/TextureField/TextureField'
 import { openAssetById } from '@/helpers/openAsset'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
 
@@ -24,24 +25,23 @@ export type EnvironmentSectionProps = {
  * Shared by the 3D space and by Textures, because it is one question with one answer: a roughness
  * judged under a flat lamp is not judged, and the skies on offer are the project's own either way.
  */
-export function EnvironmentSection({ environment, onChange }: EnvironmentSectionProps) {
+export const EnvironmentSection = memo(function EnvironmentSection({
+  environment,
+  onChange,
+}: EnvironmentSectionProps) {
   const { t } = useTranslation()
   const options = useProjectPictures(SKIES)
 
   return (
     <PropertySection title={t('inspector.environment')}>
-      <TextureField
+      <LinkField
         label={t('inspector.sky')}
         value={environment.kind === 'skybox' ? environment.assetId : null}
         options={options}
         onChange={assetId => onChange(assetId ? { kind: 'skybox', assetId } : STUDIO_ENVIRONMENT)}
         emptyLabel={t('inspector.studio')}
-        chooseLabel={t('inspector.chooseSky')}
+        missingLabel={t('inspector.missingSky')}
         clearLabel={t('inspector.clearSky')}
-        emptyHint={t('inspector.studioHint')}
-        optionHint={t('inspector.pickSkyHint')}
-        noOptionLabel={t('inspector.noSky')}
-        noOptionHint={t('inspector.noSkyHint')}
         // A sky and nothing else: the slot lights up for what it can actually hold, so a drag
         // across the panel says where it may land before the hand commits to it.
         accepts={SKIES}
@@ -50,7 +50,8 @@ export function EnvironmentSection({ environment, onChange }: EnvironmentSection
           hint: t('inspector.openSkyHint'),
           run: () => openAssetById(environment.kind === 'skybox' ? environment.assetId : null),
         }}
+        scId="scene.environment"
       />
     </PropertySection>
   )
-}
+})

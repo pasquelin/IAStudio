@@ -9,11 +9,15 @@ import { PropertyRow } from './PropertyRow'
  * nothing to hover for the rest.
  */
 describe('a property label too long for its column', () => {
+  /**
+   * The `title` sits on the COLUMN rather than on the word since the column gained an edge: a box
+   * that stretches to its row cannot also be the box that truncates, so `PropertyLabel` is two
+   * elements now. Hovering either still raises it, the attribute being inherited by the pointer.
+   */
   it('can still be read in full, by pointing at it', () => {
     render(<PropertyRow label="Aperçu de la répétition">4×</PropertyRow>)
 
-    expect(screen.getByText('Aperçu de la répétition')).toHaveAttribute(
-      'title',
+    expect(screen.getByTitle('Aperçu de la répétition')).toHaveTextContent(
       'Aperçu de la répétition',
     )
   })
