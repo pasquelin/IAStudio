@@ -1,3 +1,4 @@
+import { FieldActions } from './FieldActions'
 import { PropertyLabel } from './PropertyLabel'
 import { CHECKBOX, FIELD_ROW } from './styles'
 import { cn } from '@/helpers/cn'
@@ -17,17 +18,22 @@ export type ToggleFieldProps = {
 export function ToggleField({ label, value, onChange, scId }: ToggleFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      {/* The wide gauge, and the only field that asks for it: a checkbox sits at the far end of
-          the row whatever its name does, so there is no control here to line up on the column. */}
-      <PropertyLabel label={label} wide />
+      <PropertyLabel label={label} />
 
+      {/* At the START of the control column like every other field, since 2026-08-19: pinned to
+          the far end it was the one line of the panel that began nowhere the others did, and it
+          held its name to a gauge that read « Projette une … ». */}
       <input
         type="checkbox"
         data-sc={scId && `field:${scId}`}
         checked={value}
         onChange={event => onChange(event.target.checked)}
-        className={cn(CHECKBOX, 'size-4')}
+        className={cn(CHECKBOX, 'size-4 shrink-0')}
       />
+
+      <span className="min-w-0 flex-1" />
+
+      <FieldActions />
     </label>
   )
 }

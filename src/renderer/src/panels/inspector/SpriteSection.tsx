@@ -30,6 +30,7 @@ export function SpriteSection({ sprite, fallbackColor, onChange, gesture }: Spri
         label={t('inspector.fields.map', 'map')}
         value={sprite.map?.assetId ?? null}
         onChange={assetId => onChange({ ...sprite, map: assetId === null ? null : { assetId } })}
+        scId="sprite.map"
       />
     </DescriptorSection>
   )

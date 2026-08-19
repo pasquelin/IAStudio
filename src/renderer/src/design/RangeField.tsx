@@ -1,5 +1,6 @@
 import { cn } from '@/helpers/cn'
 import { bound } from '@shared/numeric'
+import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
 import { PropertyLabel } from './PropertyLabel'
 import { FIELD_ROW, type GestureProps } from './styles'
@@ -124,6 +125,8 @@ export function RangeField({
       </div>
 
       <Readout values={[value.min, value.max]} />
+
+      <FieldActions />
     </div>
   )
 }

@@ -133,26 +133,36 @@ describe('a label the column is too narrow for', () => {
   })
 
   /**
-   * Both gauges live on the one component, and it is the WIDE one that has to stay exceptional:
-   * a field with a control to place has a column to line up on, and taking the wide label there
-   * would put its name where the neighbours draw their sliders.
+   * Every line ENDS on one column too, and that is the other half of the two-column reading:
+   * `FieldActions` holds the room a reset or a padlock takes whether or not one is drawn there.
+   *
+   * Measured on 2026-08-19 before it existed: a reset appears the moment a value leaves its
+   * default, so the field narrowed from 86px to 74px UNDER the pointer, mid-drag — and the six
+   * families of line ended on five different columns.
+   *
+   * Read on `FIELD_ROW`, since that class IS what makes a line one. The blind spot is a field
+   * that ends its row inside a helper of its own: nothing here would follow it there.
    */
-  it('offers the wide gauge as a prop rather than as a second class to reach for', () => {
-    expect(code(labelSource)).toContain('wide ? FIELD_LABEL_WIDE : FIELD_LABEL')
+  it('holds the end column on every family that draws a property line', () => {
+    const missing = Object.entries({ ...FIELDS, './PropertyRow.tsx': propertyRow })
+      .filter(([, source]) => code(source).includes('FIELD_ROW'))
+      .filter(([, source]) => !code(source).includes('<FieldActions'))
+      .map(([path]) => path)
 
-    /**
-     * The whole element, children included: `[^>]*` stopped at the first `>`, so a `wide` written
-     * after a `leading={<UiIcon />}` was invisible — which is exactly the shape `VectorField`
-     * passes. The rule claimed to read the prop as PASSED and read rather less than that.
-     */
-    const ASKS_WIDE = /<PropertyLabel\b[\s\S]*?\/>/g
+    expect(missing, `these end where they please: ${missing.join(', ')}`).toEqual([])
+  })
+
+  /** The wide gauge is gone with it: a checkbox now starts where every other control starts. */
+  it('offers one gauge only, no field reaching for a second', () => {
+    expect(code(labelSource)).not.toContain('FIELD_LABEL_WIDE')
+
     const asking = Object.entries(FIELDS)
       .filter(([, source]) =>
-        [...code(source).matchAll(ASKS_WIDE)].some(m => /\bwide\b/.test(m[0])),
+        [...code(source).matchAll(/<PropertyLabel\b[\s\S]*?\/>/g)].some(m => /\bwide\b/.test(m[0])),
       )
       .map(([path]) => path)
 
-    expect(asking).toEqual(['./ToggleField.tsx'])
+    expect(asking).toEqual([])
   })
 
   /**

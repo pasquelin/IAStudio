@@ -8,6 +8,11 @@ export type FontFieldProps = {
   label: string
   value: FontRef
   onChange: (font: FontRef) => void
+  /**
+   * The handle the MCP steers this field by — from the CALLER, since two of them draw it: a layer
+   * of an image and a text node of a scene are two fields, and one name for both steers neither.
+   */
+  scId?: string
 }
 
 /**
@@ -20,7 +25,7 @@ export type FontFieldProps = {
  * missing. Dropping it from the list would silently rewrite the document on the first edit —
  * which is the one thing the missing-font hole must not do.
  */
-export function FontField({ label, value, onChange }: FontFieldProps) {
+export function FontField({ label, value, onChange, scId }: FontFieldProps) {
   const { t } = useTranslation()
   const [offered, setOffered] = useState<readonly FontRef[]>([])
 
@@ -65,7 +70,7 @@ export function FontField({ label, value, onChange }: FontFieldProps) {
       }}
       missingLabel={t('inspector.noFontOffered')}
       clearLabel={t('inspector.chooseFont')}
-      scId="layer.font"
+      scId={scId}
     />
   )
 }

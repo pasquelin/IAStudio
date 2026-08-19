@@ -4,7 +4,6 @@ import {
   CONTROL,
   FIELD,
   FIELD_FILL,
-  FIELD_LABEL_WIDE,
   NATIVE_SELECT,
   OVERLAY_BUTTON,
   PANEL_BAR,
@@ -567,10 +566,14 @@ describe('the word that names a group in a panel', () => {
 })
 
 /**
- * All five words or none: `FIELD_LABEL_WIDE` is the same shape one ink away, three of these words
- * plus `text-muted`, and a field label told off by this rule would be told off wrongly.
+ * All five words or none: the hexadecimal `ColorField` writes beside its swatch is the same shape
+ * one ink away — four of these words plus `text-muted` — and telling it off would be telling off
+ * the wrong thing.
  */
 const spellsOutSubject = spellsOut(ROW_SUBJECT.split(' '))
+
+/** That very neighbour, quoted rather than imported: it is written inline, not published. */
+const COLOUR_READOUT = 'text-muted text-mini min-w-0 flex-1 truncate font-mono uppercase'
 
 describe('what a line names', () => {
   it('is worn rather than written out again', () => {
@@ -581,8 +584,8 @@ describe('what a line names', () => {
     expect(offenders).toEqual([])
   })
 
-  it('leaves the muted label of a field alone, which shares three of the five', () => {
-    expect(spellsOutSubject(`'${FIELD_LABEL_WIDE}'`)).toBe(false)
+  it('leaves the muted readout of a colour alone, which shares four of the five', () => {
+    expect(spellsOutSubject(`'${COLOUR_READOUT}'`)).toBe(false)
   })
 
   // Named rather than counted: a count stays green when one site drops the constant and another

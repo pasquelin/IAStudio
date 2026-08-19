@@ -30,10 +30,18 @@ export function PropertyControl({
   gesture,
   section,
 }: PropertyControlProps) {
-  const { value, spec } = field
+  const { value, spec, fallback } = field
   // `field.name` is the descriptor's own key — never translated, which is exactly what a handle
   // must be. One line here names every parameter of every primitive, light and lens.
   const scId = `${section}.${field.name}`
+
+  /**
+   * Live only where the field has moved off what its factory gives — and only where a factory
+   * could be found: a descriptor with none leaves the button drawn and inert rather than lying
+   * about a default nobody can name.
+   */
+  const onReset =
+    fallback === undefined || fallback === value ? undefined : () => onChange(fallback)
 
   if (typeof value === 'number') {
     if (spec?.control === 'slider') {
@@ -46,6 +54,7 @@ export function PropertyControl({
           step={spec.step}
           onChange={onChange}
           scId={scId}
+          onReset={onReset}
           {...gesture}
         />
       )
@@ -61,6 +70,7 @@ export function PropertyControl({
         step={spec?.control === 'number' ? spec.step : undefined}
         onChange={onChange}
         scId={scId}
+        onReset={onReset}
         {...gesture}
       />
     )
@@ -75,6 +85,7 @@ export function PropertyControl({
         step={step}
         onChange={onChange}
         scId={scId}
+        defaults={isVector3(fallback) ? fallback : undefined}
         {...gesture}
       />
     )
@@ -82,8 +93,26 @@ export function PropertyControl({
 
   // A hexadecimal is a colour whether or not a table said so — and anything else is text.
   if (spec?.control === 'color' || value.startsWith('#')) {
-    return <ColorField label={label} value={value} onChange={onChange} scId={scId} {...gesture} />
+    return (
+      <ColorField
+        label={label}
+        value={value}
+        onChange={onChange}
+        scId={scId}
+        onReset={onReset}
+        {...gesture}
+      />
+    )
   }
 
-  return <TextField label={label} value={value} onChange={onChange} scId={scId} {...gesture} />
+  return (
+    <TextField
+      label={label}
+      value={value}
+      onChange={onChange}
+      scId={scId}
+      onReset={onReset}
+      {...gesture}
+    />
+  )
 }

@@ -10,7 +10,8 @@ import { formatDecimal, parseDecimal } from '@/helpers/format'
 import { bound, type NumericBounds } from '@shared/numeric'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
-import { FIELD_FILL, FIELD_ROW, type GestureProps } from './styles'
+import { FieldActions } from './FieldActions'
+import { FIELD_FILL, FIELD_ROW, ROW_ACTION_SPACER, type GestureProps } from './styles'
 
 export type NumberFieldProps = NumericBounds &
   GestureProps & {
@@ -46,8 +47,24 @@ const DEFAULT_STEP = 0.1
  */
 const SCRUB_SLACK = 4
 
-/** `scrubbing` is false while a press on the input is still short of `SCRUB_SLACK`. */
-type Drag = { pointerId: number; x: number; from: number; last: number; scrubbing: boolean }
+/** `PointerEvent.button` for the left one. A drag is that press and no other. */
+const PRIMARY_BUTTON = 0
+
+/** What Shift does to a drag: ten steps per pixel where it would have moved one. */
+const FAST_MULTIPLIER = 10
+
+/**
+ * `scrubbing` is false while a press on the input is still short of `SCRUB_SLACK`; `fast` is
+ * whether Shift was down at the last move, since letting go of it has to rebase the drag.
+ */
+type Drag = {
+  pointerId: number
+  x: number
+  from: number
+  last: number
+  scrubbing: boolean
+  fast: boolean
+}
 
 /**
  * A number that can be typed, stepped with the arrows, or dragged sideways — on its label, and on
@@ -98,7 +115,7 @@ export function NumberField({
 
   /** `scrubbing` from the first pixel on the label, from `SCRUB_SLACK` on the field. */
   const startDrag = (event: ReactPointerEvent<Element>, scrubbing: boolean): void => {
-    if (event.button !== 0) return
+    if (event.button !== PRIMARY_BUTTON) return
     event.currentTarget.setPointerCapture(event.pointerId)
     drag.current = {
       pointerId: event.pointerId,
@@ -106,6 +123,7 @@ export function NumberField({
       from: value,
       last: value,
       scrubbing,
+      fast: event.shiftKey,
     }
     if (scrubbing) onGestureStart?.()
   }
@@ -128,11 +146,20 @@ export function NumberField({
       return
     }
 
+    // Rebased where the modifier CHANGES, for the reason the slack is: reading the new rate off
+    // the whole travel would move the value ten steps for every one already dragged.
+    if (event.shiftKey !== started.fast) {
+      started.from = started.last
+      started.x = event.clientX
+      started.fast = event.shiftKey
+    }
+
     const travelled = event.clientX - started.x
+    const rate = (step ?? DEFAULT_STEP) * (started.fast ? FAST_MULTIPLIER : 1)
 
     // From where the drag began rather than from the current value: accumulating deltas drifts,
     // because each one is snapped to the step before it comes back.
-    const next = bound(started.from + travelled * (step ?? DEFAULT_STEP), { min, max, step })
+    const next = bound(started.from + travelled * rate, { min, max, step })
     // A drag crosses many pixels per step, and a vertical one crosses none. Compared against
     // what the drag last emitted, not the prop: several moves can land before React re-renders,
     // and each repeat would rebuild the geometry and the whole panel for the same number.
@@ -165,6 +192,9 @@ export function NumberField({
    * after a drag is what made the two gestures fight for one control in the first place.
    */
   const endFieldDrag = (event: ReactPointerEvent<HTMLInputElement>): void => {
+    // A release the press never armed — a right button — is not a click on this field, and
+    // focusing on it would answer a gesture `onPointerDown` declined.
+    if (event.button !== PRIMARY_BUTTON) return
     const scrubbed = drag.current?.scrubbing === true
     const field = event.currentTarget
     endDrag(event)
@@ -222,6 +252,9 @@ export function NumberField({
           // Nothing while the caret is in: a press on a field being typed in is a press on TEXT,
           // and selecting a digit to overwrite it must not drag the value away.
           if (document.activeElement === event.currentTarget) return
+          // BEFORE the withholding, not after: a right press starts no drag, so swallowing its
+          // default would cost the field menu its press and still focus the field on release.
+          if (event.button !== PRIMARY_BUTTON) return
           // Withholds the focus the platform would give now, so a drag never lands in edit mode.
           // `endFieldDrag` hands it back when the press turns out to have been a click.
           event.preventDefault()
@@ -256,11 +289,13 @@ export function NumberField({
       />
 
       {/* Never inside a vector's grid: the three axes share one reset, drawn by `VectorField` at
-          the end of their line, or a Position row would end with three identical buttons.
-
-          Guarded on `onReset` at the SITE, so a row with nothing to reset mounts no component
-          and takes no `useTranslation` subscription — fifteen of them per scene inspector. */}
-      {layout === 'row' && onReset && <ResetButton onReset={onReset} />}
+          the end of their line, or a Position row would end with three identical buttons. */}
+      {layout === 'row' && (
+        <FieldActions>
+          <span aria-hidden className={ROW_ACTION_SPACER} />
+          <ResetButton onReset={onReset} />
+        </FieldActions>
+      )}
     </div>
   )
 }

@@ -77,16 +77,6 @@ export function TransformSection({ node, nodes, selection, edit }: TransformSect
       ),
     )
 
-  /**
-   * Back to the identity, through the same command as any other edit — so ⌘Z undoes a reset the
-   * way it undoes a drag. Absent while the row already stands there: `ResetButton` draws nothing,
-   * and five buttons that do nothing is how a panel stops being read.
-   */
-  const resetOf = (part: keyof Transform): (() => void) | undefined =>
-    Object.keys(changedFields(IDENTITY_TRANSFORM[part], transform[part])).length === 0
-      ? undefined
-      : () => move({ [part]: IDENTITY_TRANSFORM[part] })
-
   return (
     <PropertySection title={t('inspector.transform')} scId="transform">
       <TextField
@@ -103,7 +93,7 @@ export function TransformSection({ node, nodes, selection, edit }: TransformSect
         step={0.1}
         onChange={next => move({ position: changedFields(transform.position, next) })}
         scId="transform.position"
-        onReset={resetOf('position')}
+        defaults={IDENTITY_TRANSFORM.position}
         {...edit.gesture}
       />
 
@@ -121,7 +111,8 @@ export function TransformSection({ node, nodes, selection, edit }: TransformSect
         // as the anchor's own angle — onto every other node of the selection.
         onChange={next => move({ rotation: radiansOf(changedFields(degrees, next)) })}
         scId="transform.rotation"
-        onReset={turns ? resetOf('rotation') : undefined}
+        // In DEGREES, the unit this field reports — the identity being zero, the two agree.
+        defaults={turns ? degreesOf(IDENTITY_TRANSFORM.rotation) : undefined}
         {...edit.gesture}
       />
 
@@ -131,7 +122,7 @@ export function TransformSection({ node, nodes, selection, edit }: TransformSect
         step={0.1}
         onChange={next => move({ scale: changedFields(transform.scale, next) })}
         scId="transform.scale"
-        onReset={resetOf('scale')}
+        defaults={IDENTITY_TRANSFORM.scale}
         // The one row a padlock belongs on: locking a position would drag the node along a
         // diagonal through the origin, which is not a gesture anyone reaches for.
         lockable

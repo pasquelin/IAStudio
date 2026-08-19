@@ -343,6 +343,58 @@ describe('NumberField', () => {
       expect(onChange).not.toHaveBeenCalled()
     })
 
+    /** Shift covers ten steps per pixel — the coarse pass over a range a step alone crawls. */
+    it('drags ten times as far while Shift is held', () => {
+      const { onChange } = renderField({ value: 1, step: 0.1 })
+      const field = screen.getByLabelText('Radius')
+
+      fireEvent.pointerDown(field, { button: 0, pointerId: 1, clientX: 100, shiftKey: true })
+      // The first move only crosses the slack; the second is the one that travels.
+      fireEvent.pointerMove(field, { pointerId: 1, clientX: 110, shiftKey: true })
+      fireEvent.pointerMove(field, { pointerId: 1, clientX: 120, shiftKey: true })
+
+      // Ten pixels at ten steps each, where the same drag unmodified moves one.
+      expect(onChange).toHaveBeenLastCalledWith(11)
+    })
+
+    /**
+     * Rebased where the modifier CHANGES, for the reason the slack is: read off the whole travel,
+     * the new rate would move the value ten steps for every one already dragged — 1 would leap to
+     * 11 on the press of a key that moved the pointer not at all.
+     */
+    it('does not jump when Shift is taken mid-drag', () => {
+      const { onChange } = renderField({ value: 1, step: 0.1 })
+      const field = screen.getByLabelText('Radius')
+
+      fireEvent.pointerDown(field, { button: 0, pointerId: 1, clientX: 100 })
+      fireEvent.pointerMove(field, { pointerId: 1, clientX: 110 })
+      fireEvent.pointerMove(field, { pointerId: 1, clientX: 120 })
+      expect(onChange).toHaveBeenLastCalledWith(2)
+
+      fireEvent.pointerMove(field, { pointerId: 1, clientX: 120, shiftKey: true })
+      expect(onChange).toHaveBeenLastCalledWith(2)
+
+      fireEvent.pointerMove(field, { pointerId: 1, clientX: 130, shiftKey: true })
+
+      expect(onChange).toHaveBeenLastCalledWith(12)
+    })
+
+    /**
+     * The right button starts nothing, so the press must not be swallowed either: it used to be,
+     * and the release then read as a click and focused the field — a gesture the press declined.
+     */
+    it('leaves a right press to the platform, field and all', () => {
+      const { onChange } = renderField({ value: 1, step: 0.1 })
+      const field = screen.getByLabelText('Radius')
+
+      const press = fireEvent.pointerDown(field, { button: 2, pointerId: 1, clientX: 100 })
+      fireEvent.pointerUp(field, { button: 2, pointerId: 1, clientX: 100 })
+
+      expect(press).toBe(true)
+      expect(field).not.toHaveFocus()
+      expect(onChange).not.toHaveBeenCalled()
+    })
+
     // One history entry for the whole drag, opened where the scrub is, not where the press was.
     it('spans the drag with a single gesture', () => {
       const { onGestureStart, onGestureEnd } = renderField({ value: 1, step: 0.1 })

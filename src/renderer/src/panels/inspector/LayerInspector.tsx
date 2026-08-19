@@ -134,6 +134,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
             label={t('inspector.font')}
             value={layer.font}
             onChange={font => edit.run(setLayerText(layer.id, { font }))}
+            scId="layer.font"
           />
         </PropertySection>
       )}

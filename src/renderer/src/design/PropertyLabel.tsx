@@ -1,6 +1,6 @@
 import type { ElementType, ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { FIELD_LABEL, FIELD_LABEL_WIDE } from './styles'
+import { FIELD_LABEL } from './styles'
 
 export type PropertyLabelProps = {
   label: string
@@ -12,8 +12,6 @@ export type PropertyLabelProps = {
   as?: ElementType
   /** Passed through where the element is a `<label>`, which is the only case it means anything. */
   htmlFor?: string
-  /** The wide gauge, for a row whose control sits at the far end — a checkbox. */
-  wide?: boolean
   /** A chevron, where the row folds. Drawn before the word, inside the column. */
   leading?: ReactNode
   /**
@@ -43,7 +41,6 @@ export function PropertyLabel({
   label,
   as: Tag = 'span',
   htmlFor,
-  wide,
   leading,
   gesture,
   hidden,
@@ -56,7 +53,7 @@ export function PropertyLabel({
       {...gesture}
       title={label}
       className={cn(
-        wide ? FIELD_LABEL_WIDE : FIELD_LABEL,
+        FIELD_LABEL,
         // Full height, so the column reads as a column rather than as a word floating in one.
         'flex items-center gap-1.5 self-stretch',
         className,

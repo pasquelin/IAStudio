@@ -106,10 +106,14 @@ describe('LinkField', () => {
     expect(onChange).toHaveBeenCalledWith(null)
   })
 
-  it('offers nothing to clear while the slot is empty', () => {
+  /**
+   * Drawn but inert while there is nothing to clear, since 2026-08-19: the button appearing with
+   * the first picture chosen used to narrow the select the pointer was still over.
+   */
+  it('holds the clear button in place, disabled, while the slot is empty', () => {
     render(<Slot value={null} onChange={vi.fn()} />)
 
-    expect(screen.queryByRole('button', { name: /Retirer la texture/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Retirer la texture/ })).toBeDisabled()
   })
 
   /**

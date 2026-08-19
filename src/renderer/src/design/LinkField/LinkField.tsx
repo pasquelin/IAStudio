@@ -8,7 +8,7 @@ import { Flyout } from '../Flyout'
 import { SelectField } from '../SelectField'
 import { Spinner } from '../Spinner'
 import { Thumbnail } from '../Thumbnail'
-import { FIELD_THUMBNAIL } from '../styles'
+import { FIELD_THUMBNAIL, ROW_ACTION_SPACER } from '../styles'
 import { ToolButton } from '../ToolButton'
 import { LinkFieldSlot } from './LinkFieldSlot'
 
@@ -150,8 +150,11 @@ export function LinkField({
           )
         }
         actions={
+          /* Both places are held whatever is drawn in them, so every link line ends on the column
+             the fields end on — and so choosing a picture, which is what raises the cross, does not
+             narrow the select the pointer is still over. */
           <>
-            {browse && (
+            {browse ? (
               <ToolButton
                 icon={mdiFolderSearchOutline}
                 label={browse.label}
@@ -160,16 +163,21 @@ export function LinkField({
                 variant="header"
                 onClick={browse.run}
               />
+            ) : (
+              <span aria-hidden className={ROW_ACTION_SPACER} />
             )}
             {/* Only when there is something to clear, and only where empty is a state this link
                 HAS: a dead cross on each of the five empty slots of a fresh material is five
                 buttons that do nothing. */}
-            {value !== null && emptyLabel !== undefined && (
+            {emptyLabel === undefined ? (
+              <span aria-hidden className={ROW_ACTION_SPACER} />
+            ) : (
               <ToolButton
                 icon={mdiClose}
                 label={clearLabel}
                 tooltip={TIP_LEFT}
                 variant="header"
+                disabled={value === null}
                 onClick={() => onChange(null)}
               />
             )}

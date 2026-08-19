@@ -1,22 +1,27 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { useCloud } from '@/stores/cloud'
 import { mountedAssetPicker } from '../assetPicker'
 import { AssetPicker } from './AssetPicker'
 
-const asset = (id: string, name: string, location: Asset['location'] = 'local'): Asset => ({
+/**
+ * Local, every one of them, and that is not a shortcut: no writer in the app puts a
+ * `location: 'cloud'` row in the catalogue, so a fixture that did was describing a state the
+ * handler behind `assets.search` cannot produce — and four cases of this file passed on it.
+ */
+const asset = (id: string, name: string): Asset => ({
   id,
   name,
   type: 'image',
-  location,
+  location: 'local',
+  path: `pictures/${id}.png`,
   tags: [],
   createdAt: '2026-08-19T10:00:00.000Z',
 })
 
-const HELD = [asset('a-1', 'Brique'), asset('a-2', 'Mousse', 'cloud')]
+const HELD = [asset('a-1', 'Brique'), asset('a-2', 'Mousse')]
 
 beforeEach(() => {
   installFakeBridge({ assets: { search: () => Promise.resolve(HELD) } })
@@ -68,31 +73,19 @@ describe('the asset picker', () => {
   })
 
   /**
-   * A library row is fetched BEFORE its id is handed over. Without it the slot took an id its
-   * own list could not resolve — the row read « Image introuvable » and the engine asked for a
-   * file that was never on disk. The drop path had always pulled first; this one had not.
+   * On the DIALOG, not on the search box, which was the only thing carrying it: Escape did
+   * nothing from a tile, from Cancel, or from a window just opened whose `autoFocus` had not
+   * taken — measured on 2026-08-19, where the focus sat on `<body>`.
    */
-  it('fetches a library picture before handing its id over', async () => {
-    const pulled = vi.fn().mockResolvedValue(asset('a-2-local', 'Mousse'))
-    useCloud.setState({ fetchOne: pulled })
+  it('is called off by Escape from anywhere inside it', async () => {
     render(<AssetPicker />)
     const chosen = ask()
+    const tile = await screen.findByRole('button', { name: /Brique/ })
 
-    await userEvent.click(await screen.findByRole('button', { name: /Mousse/ }))
+    tile.focus()
+    await userEvent.keyboard('{Escape}')
 
-    expect(pulled).toHaveBeenCalledWith('a-2')
-    await expect(chosen).resolves.toBe('a-2-local')
-  })
-
-  // The window stays up rather than filling a slot with an id that resolves to nothing.
-  it('stays open when the exchange failed', async () => {
-    useCloud.setState({ fetchOne: vi.fn().mockResolvedValue(null) })
-    render(<AssetPicker />)
-    void ask()
-
-    await userEvent.click(await screen.findByRole('button', { name: /Mousse/ }))
-
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    await expect(chosen).resolves.toBeNull()
   })
 
   it('narrows what it shows to what is typed', async () => {

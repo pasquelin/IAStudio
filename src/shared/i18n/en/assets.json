@@ -7,7 +7,6 @@
     "pickSearch": "Filter by name…",
     "pickEmpty": "No item of this kind in the project.",
     "pickCancel": "Cancel",
-    "pickRemote": "Remote",
     "type": "Type",
     "count_one": "{{count, number}} asset",
     "count_many": "{{count, number}} assets",

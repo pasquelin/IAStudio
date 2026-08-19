@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import { FieldActions } from './FieldActions'
 import { PropertyLabel } from './PropertyLabel'
 import { FIELD_ROW } from './styles'
 
@@ -57,14 +58,19 @@ export function PropertyRow({ label, children, shape = 'inline' }: PropertyRowPr
       <div
         className={cn(
           'text-text min-w-0',
-          shape === 'inline' && 'flex-1 truncate text-right',
+          // Left, where a field would start, since 2026-08-19: a value read and a value edited sat
+          // on two different columns inside one section — « Rôle » beginning where « Taille » ended.
+          shape === 'inline' && 'flex-1 truncate text-left',
           // `break-all`: a path and a hash hold no space to break at, so a wrap with nothing to
           // wrap ON runs off the edge instead.
-          shape === 'wrap' && 'flex-1 text-right break-all',
+          shape === 'wrap' && 'flex-1 text-left break-all',
         )}
       >
         {children}
       </div>
+
+      {/* Not when stacked: there is no column there, so no end column to hold either. */}
+      {shape !== 'stacked' && <FieldActions />}
     </div>
   )
 }

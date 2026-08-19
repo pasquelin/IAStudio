@@ -307,10 +307,13 @@ export const PANEL_BAR = 'border-border flex items-center gap-2 border-b'
 /**
  * The body of a titled run of properties, under the heading `PropertySection` folds.
  *
- * No zebra fill, and that was MEASURED rather than decided: striping every other child put the
- * axis stripes on `elevated`, where they read 2.34, 2.42 and 2.11 against the 3 of WCAG 1.4.11 —
- * and `nth-child` counts DOM children, not property lines, so a button row took a band and
- * unfolding a vector shifted the parity of everything under it.
+ * No zebra fill, and the reason is the PARITY rather than the colour — remeasured on 2026-08-19,
+ * since the first note said less than it seemed. Striping on `elevated` fails WCAG 1.4.11 in the
+ * dark theme only (2.34, 2.42, 2.11 against the 3 an axis stripe needs) and clears it in the light
+ * one (3.61, 3.50, 4.02); a third fill can be found. What cannot be found in CSS is which children
+ * are LINES: `nth-child` counts DOM children, so a button row takes a band and unfolding a vector
+ * shifts the parity of everything below it. Carrying parity per line means a React counter through
+ * every field, on the panel that re-renders at every keystroke.
  */
 export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
 
@@ -331,28 +334,30 @@ export const FIELD_THUMBNAIL = 'size-(--sc-control)'
 export const FIELD_ROW = 'flex min-h-(--sc-control) min-w-0 items-center gap-2 text-tiny'
 
 /**
- * Fixed, so the controls of a section line up rather than each starting where its name ends.
+ * The room every property line keeps at its end — two controls wide, which is the most any of them
+ * asks for. It leans into the panel's own padding so the GLYPHS land on the column the fields end
+ * on: a button's box already ends there, but its 14px icon sits centred in a wider square.
+ */
+export const ROW_ACTIONS =
+  'flex w-(--sc-row-actions) shrink-0 items-center justify-end -mr-(--sc-row-action-bleed)'
+
+/** One empty place inside that room, for a line whose second button does not exist at all. */
+export const ROW_ACTION_SPACER = 'size-(--sc-control) shrink-0'
+
+/**
+ * One width for the whole section, so the controls line up rather than each starting where its own
+ * name ends — a SHARE of the line since 2026-08-19, floored and capped rather than fixed: held to
+ * the floor alone, « Point d'entrée » truncated in a panel 1300px across.
  *
- * The gauge is shared with `PropertyRow`, and that is the whole point: five inspectors out of six
- * draw both families inside one group, so two widths meant two columns of labels in the same box.
+ * The three gauges are shared with `PropertyRow`, and that is the whole point: five inspectors out
+ * of six draw both families inside one group, so two widths meant two columns in the same box.
  *
  * The edge is what makes it read as a COLUMN rather than as a word standing before a control —
  * the two-column reading of every inspector this studio is measured against. `PropertyLabel`
  * wears it, and stretches to the row's height so the rule runs the whole way down.
  */
-export const FIELD_LABEL = 'text-muted border-border w-(--sc-label) shrink-0 border-r'
-
-/**
- * The same label where the field has NO control to line up on that column — a checkbox, which
- * sits at the far end of the row whatever the label does.
- *
- * Held to the fixed gauge, « Projette une ombre » read « Projette une … » at eighty pixels with
- * two thirds of the row empty beside it. The truncation and its `title` live in `PropertyLabel`,
- * which wears either gauge — a panel narrow enough runs out of room here too.
- *
- * No edge: a rule drawn where the column has run out is a rule in the middle of a row.
- */
-export const FIELD_LABEL_WIDE = 'text-muted min-w-0 flex-1'
+export const FIELD_LABEL =
+  'text-muted border-border w-(--sc-label-share) min-w-(--sc-label) max-w-(--sc-label-max) shrink-0 border-r pr-2'
 
 /**
  * The number beside a track — "somewhere past the middle" is not a value anyone can write down.

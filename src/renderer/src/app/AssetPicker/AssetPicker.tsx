@@ -63,7 +63,6 @@ export const AssetPicker = memo(function AssetPicker() {
         search: t('assets.pickSearch'),
         empty: t('assets.pickEmpty'),
         cancel: t('assets.pickCancel'),
-        remote: t('assets.pickRemote'),
       }}
     />
   )

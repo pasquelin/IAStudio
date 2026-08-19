@@ -499,6 +499,15 @@
      exception: these are the only targets on their line, and the row itself answers everywhere
      they do not. Chosen on 2026-08-14, not derived. */
   --sc-control-inline: 20px;
+  /* How far a property line's END button leans into the panel's own padding. Its box already ends
+     on the column every field ends on, but its 14px glyph sits centred in a `--sc-control` square,
+     so what the eye reads stops 7px short — measured on 2026-08-19 against a checkbox, which is
+     its own box and does touch the edge. Half the difference of the two, per density. */
+  --sc-row-action-bleed: 7px;
+  /* The room every property line keeps at its end, drawn into or not. Two controls wide, which is
+     the most any line asks for — padlock and reset on Scale, browse and clear on a link. Held on
+     every line so all of them start and end on one column, decided on 2026-08-19. */
+  --sc-row-actions: 56px;
   /* A list row that stacks a name over a subtitle. `--sc-control` cannot hold it: two steps of
      `leading-tight` text are 27.5px, which fills a 28px row edge to edge and overflows a compact
      one. Its own gauge rather than a padding on the row, because the virtualizer is given a
@@ -554,6 +563,12 @@
      group, so their labels started in two different places. 80 is the wider of the two, and the
      one that was measured: `Aperçu de la répétition` does not fit in 64. */
   --sc-label: 80px;
+  /* What that column takes of a WIDE line, since 2026-08-19: the gauge above is a floor, not a
+     width. Held to it, « Point d'entrée » truncated to « Point d'entr… » in a docked inspector
+     1300px across, with the whole of that width sitting empty beside its value. The ceiling is
+     what keeps a detached panel from spending three hundred pixels on one word. */
+  --sc-label-share: 30%;
+  --sc-label-max: 200px;
   /* One column of the folder browser, which shows folder names and nothing else. Wide enough for
      the names a project actually carries — `Textures`, `Repérages` — and narrow enough that three
      columns fit the dialog without it becoming a window. Truncation is the fallback, as
@@ -581,6 +596,9 @@
 :root[data-density='compact'] {
   --sc-control: 24px;
   --sc-control-inline: 18px;
+  /* The glyph keeps its 14px at both densities, so the lean is half of a smaller square. */
+  --sc-row-action-bleed: 5px;
+  --sc-row-actions: 48px;
   --sc-row-stacked: 32px;
   --sc-row-filled: 38px;
   --sc-rail: 42px;

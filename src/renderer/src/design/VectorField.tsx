@@ -6,7 +6,8 @@ import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { NumberField } from './NumberField'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
-import { FIELD_ROW, type GestureProps } from './styles'
+import { FieldActions } from './FieldActions'
+import { FIELD_ROW, ROW_ACTION_SPACER, type GestureProps } from './styles'
 import { ToolButton } from './ToolButton'
 import { UiIcon } from './UiIcon'
 
@@ -28,8 +29,13 @@ export type VectorFieldProps<V extends AxisValue> = NumericBounds &
      * position would drag a node along a diagonal through the origin, which is not a gesture.
      */
     lockable?: boolean
-    /** Puts the whole vector back where it started. Absent while it already stands there. */
-    onReset?: () => void
+    /**
+     * Where this vector RESTS, which is what a reset puts it back to — the whole vector from the
+     * folded row, one axis at a time from each unfolded one. A value rather than a callback so
+     * that the per-axis reset needs no second prop of its own; the write goes through `onChange`,
+     * so ⌘Z undoes it the way it undoes a drag.
+     */
+    defaults?: V
   }
 
 const XYZ: readonly (keyof AxisValue)[] = ['x', 'y', 'z']
@@ -52,7 +58,7 @@ export function VectorField<V extends AxisValue>({
   disabled,
   hint,
   lockable,
-  onReset,
+  defaults,
   ...bounds
 }: VectorFieldProps<V>) {
   const { t } = useTranslation()
@@ -96,6 +102,20 @@ export function VectorField<V extends AxisValue>({
     onChange({ ...value, ...scaled })
   }
 
+  /**
+   * Straight through `onChange`, never through `move`: `move` is where the padlock multiplies,
+   * and a reset that dragged the other two axes along with it would not be one.
+   */
+  const resetOf = (axis: keyof AxisValue): (() => void) | undefined =>
+    defaults === undefined || (value[axis] ?? 0) === (defaults[axis] ?? 0)
+      ? undefined
+      : () => onChange({ ...value, [axis]: defaults[axis] })
+
+  const resetAll =
+    defaults !== undefined && shown.some(axis => (value[axis] ?? 0) !== (defaults[axis] ?? 0))
+      ? () => onChange(defaults)
+      : undefined
+
   const axisField = (axis: keyof AxisValue, layout: 'row' | 'inline') => (
     <NumberField
       key={axis}
@@ -106,6 +126,8 @@ export function VectorField<V extends AxisValue>({
       label={axis.toUpperCase()}
       value={value[axis] ?? 0}
       onChange={next => move(axis, next)}
+      // Only where an axis has a line of its own to end; folded, the three share the row's.
+      onReset={layout === 'row' ? resetOf(axis) : undefined}
       onGestureStart={beginGesture}
       onGestureEnd={onGestureEnd}
       {...bounds}
@@ -141,22 +163,27 @@ export function VectorField<V extends AxisValue>({
 
         {stacked && <div className="min-w-0 flex-1" />}
 
-        {lockable && (
-          <ToolButton
-            icon={locked ? mdiLink : mdiLinkOff}
-            label={t(locked ? 'inspector.unlinkAxes' : 'inspector.linkAxes')}
-            description={t('inspector.linkAxesHint')}
-            // `TIP_*` and not `HINT_*`: the padlock draws no word of its own, so this is where
-            // its accessible name comes from.
-            tooltip={TIP_LEFT}
-            variant="header"
-            active={locked}
-            onClick={lock}
-          />
-        )}
+        {/* The padlock's place is held even where no line can padlock — only Scale can — so that
+            the three lines of one transform sit on the same column whatever each carries. */}
+        <FieldActions>
+          {lockable ? (
+            <ToolButton
+              icon={locked ? mdiLink : mdiLinkOff}
+              label={t(locked ? 'inspector.unlinkAxes' : 'inspector.linkAxes')}
+              description={t('inspector.linkAxesHint')}
+              // `TIP_*` and not `HINT_*`: the padlock draws no word of its own, so this is where
+              // its accessible name comes from.
+              tooltip={TIP_LEFT}
+              variant="header"
+              active={locked}
+              onClick={lock}
+            />
+          ) : (
+            <span aria-hidden className={ROW_ACTION_SPACER} />
+          )}
 
-        {/* Guarded here rather than inside, so a row standing at its default mounts nothing. */}
-        {onReset && <ResetButton onReset={onReset} />}
+          <ResetButton onReset={resetAll} />
+        </FieldActions>
       </div>
 
       {/* One line per axis, each in the shared label column — the same shape as every other

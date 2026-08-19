@@ -1,6 +1,7 @@
 import { mdiChevronDown } from '@mdi/js'
 import { useId, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import { FieldActions } from './FieldActions'
 import { PropertyLabel } from './PropertyLabel'
 import { CONTROL, FIELD_ROW, NATIVE_SELECT } from './styles'
 import { UiIcon } from './UiIcon'
@@ -109,7 +110,9 @@ export function SelectField<V extends string>({
         />
       )}
 
-      {actions}
+      {/* A property line keeps its end room whether or not it acts; a bar or an inline select is
+          not one, and would only be given a gap nothing ever fills. */}
+      {layout === 'row' ? <FieldActions>{actions}</FieldActions> : actions}
     </div>
   )
 }

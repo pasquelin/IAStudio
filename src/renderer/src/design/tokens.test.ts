@@ -561,9 +561,10 @@ describe('the contrast of the inks', () => {
        *
        * Reading `surface` alone is not enough, and that was measured rather than reasoned: a
        * zebra fill striping every other row `elevated` took the same three stripes to 2.34, 2.42
-       * and 2.11 with this case still green. The fill was removed for it — and `elevated` is
-       * deliberately NOT swept here, since no property row wears it, so a fill that brought it
-       * back would have to bring its own measurement.
+       * and 2.11 IN THE DARK THEME with this case still green — it clears 3 in the light one
+       * (3.61, 3.50, 4.02), which is why the sweep runs over both. `elevated` is deliberately NOT
+       * swept, since no property row wears it: a fill that brought it back would have to bring
+       * its own measurement, of both themes.
        */
       const failing = ['panel', 'surface'].flatMap(ground =>
         stripes

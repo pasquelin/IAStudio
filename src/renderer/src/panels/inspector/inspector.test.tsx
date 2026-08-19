@@ -268,21 +268,68 @@ describe('inspector panel', () => {
 
   /**
    * Through the same command as any other edit, so ⌘Z undoes a reset the way it undoes a drag —
-   * and drawn only where there is something to undo: a row of buttons that do nothing is how a
-   * panel stops being read.
+   * and ENABLED only where there is something to undo. Every line draws the button since
+   * 2026-08-19, or the field narrowed under the pointer at the very moment a value left its
+   * default; what says which row moved is which button acts.
    */
-  it('offers to reset only the rows that have moved, and undoes like any edit', async () => {
+  it('enables the reset of the rows that have moved alone, and undoes like any edit', async () => {
     install({ ...meshNode('box-1'), transform: moved(2, 0, 0) })
     render(<Content />)
 
-    expect(screen.getAllByRole('button', { name: /Revenir à la valeur par défaut/ })).toHaveLength(
-      1,
-    )
-    await userEvent.click(screen.getByRole('button', { name: /Revenir à la valeur par défaut/ }))
+    const live = screen
+      .getAllByRole('button', { name: /Revenir à la valeur par défaut/ })
+      .filter(button => !button.hasAttribute('disabled'))
+
+    expect(live).toHaveLength(1)
+    await userEvent.click(live[0] as HTMLElement)
 
     expect(nodeInStore('box-1')?.transform.position).toEqual(IDENTITY_TRANSFORM.position)
     useScenes.getState().undo('doc-1')
     expect(nodeInStore('box-1')?.transform.position).toEqual({ x: 2, y: 0, z: 0 })
+  })
+
+  /**
+   * A descriptor's own factory says what its default is — the transform was the only family
+   * wired to one until 2026-08-19, so every other line of the panel drew a reset that could
+   * never act. What a primitive holds when it is made is the one place that fact lives.
+   */
+  it('resets a descriptor field to what its factory gives', async () => {
+    install({
+      ...meshNode('box-1'),
+      geometry: { kind: 'box', width: 4, height: 1, depth: 1 },
+    })
+    render(<Content />)
+
+    const width = screen.getByLabelText('Largeur')
+    expect(width).toHaveValue('4')
+
+    const row = width.parentElement
+    const reset = within(row as HTMLElement).getByRole('button', {
+      name: /Revenir à la valeur par défaut/,
+    })
+
+    expect(reset).toBeEnabled()
+    await userEvent.click(reset)
+
+    const box = nodeInStore('box-1')
+    expect(box?.type === 'mesh' && box.geometry).toEqual({
+      kind: 'box',
+      width: 1,
+      height: 1,
+      depth: 1,
+    })
+  })
+
+  /** Inert where the value already stands there, which is what tells the moved rows apart. */
+  it('leaves the reset of an untouched descriptor field disabled', () => {
+    install(meshNode('box-1'))
+    render(<Content />)
+
+    const row = screen.getByLabelText('Largeur').parentElement
+
+    expect(
+      within(row as HTMLElement).getByRole('button', { name: /Revenir à la valeur par défaut/ }),
+    ).toBeDisabled()
   })
 
   it('gives the row back to a sprite others hang from, which turning swings around it', () => {

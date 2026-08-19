@@ -1,5 +1,7 @@
+import { FieldActions } from './FieldActions'
 import { PropertyLabel } from './PropertyLabel'
-import { FIELD_FILL, FIELD_ROW, type GestureProps } from './styles'
+import { ResetButton } from './ResetButton'
+import { FIELD_FILL, FIELD_ROW, ROW_ACTION_SPACER, type GestureProps } from './styles'
 
 export type TextFieldProps = GestureProps & {
   label: string
@@ -13,6 +15,8 @@ export type TextFieldProps = GestureProps & {
   hint?: Record<string, string>
   /** The handle the MCP steers this field by. Never a translated word. */
   scId?: string
+  /** Puts the value back where it started. Absent while it already stands there. */
+  onReset?: () => void
 }
 
 /**
@@ -25,6 +29,7 @@ export function TextField({
   onChange,
   hint,
   scId,
+  onReset,
   onGestureStart,
   onGestureEnd,
 }: TextFieldProps) {
@@ -43,6 +48,11 @@ export function TextField({
         className={FIELD_FILL}
         {...hint}
       />
+
+      <FieldActions>
+        <span aria-hidden className={ROW_ACTION_SPACER} />
+        <ResetButton onReset={onReset} />
+      </FieldActions>
     </label>
   )
 }
