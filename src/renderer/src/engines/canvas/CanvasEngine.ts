@@ -15,6 +15,7 @@ import {
   type Texture,
 } from 'pixi.js'
 import { assetUrl } from '@shared/domain/asset'
+import type { BlendMode } from '@shared/domain/canvasBlend'
 import { fontKey } from '@shared/domain/font'
 import { bytesToBase64 } from '@/helpers/base64'
 import { newId } from '@/helpers/ids'
@@ -29,7 +30,6 @@ import {
   IDENTITY,
   isGroup,
   layerById,
-  type BlendMode,
   type AdjustmentLayer,
   type CanvasState,
   type GroupLayer,

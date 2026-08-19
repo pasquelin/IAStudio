@@ -7,17 +7,16 @@ import {
   type OraStack,
   type OraSurface,
 } from '@shared/domain/openRaster'
+import { BLEND_MODES, type BlendMode } from '@shared/domain/canvasBlend'
 import { isRecord } from '@shared/guards'
 import type { LayerPixels } from './CanvasEngine'
 import { layerPixelPath, layerPixelsNamed } from './layerPixelPath'
 import {
   IDENTITY,
-  BLEND_MODES,
   deserializeCanvas,
   isGroup,
   layerBase,
   serializeCanvas,
-  type BlendMode,
   type CanvasState,
   type GroupLayer,
   type Layer,

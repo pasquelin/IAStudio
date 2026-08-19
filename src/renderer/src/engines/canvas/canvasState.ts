@@ -18,13 +18,6 @@ import type { Point } from '../core/geometry'
  */
 
 /**
- * The Porter-Duff and separable modes Pixi can composite with. Re-exported so the sites reading a
- * layer's blend from here keep reading it from here — the LIST moved to `shared/`, which the
- * assistant's field and the PSD table both have to see.
- */
-export { BLEND_MODES, type BlendMode }
-
-/**
  * What each padlock holds. Three of them rather than one boolean: locking a layer's position
  * while still painting on it is the ordinary case, not an advanced one.
  */

@@ -1,4 +1,5 @@
 import type { AdjustmentStack } from '@shared/domain/adjustments'
+import type { BlendMode } from '@shared/domain/canvasBlend'
 import { clamp } from '@shared/numeric'
 import type { Command } from '../core/history'
 import {
@@ -13,7 +14,6 @@ import {
   mapLayers,
   pixelLayer,
   updateSiblings,
-  type BlendMode,
   type CanvasState,
   type Guide,
   type Layer,
