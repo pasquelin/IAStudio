@@ -137,7 +137,7 @@ asset itself:
 |---|---|---|
 | **Use as sky** | the open sky, Skyboxes workspace | pictures |
 | **Add to the scene** | the open 3D scene | meshes |
-| **Make the character play it** | the character picked in the open 3D scene | motions |
+| **Make the character play it** | the character picked in the open 3D scene | animations |
 | **Open in the audio editor** | the open edit, Audio workspace | sounds |
 | **Place as a layer** | the open image, Image workspace | pictures |
 | **Add to the edit** | the open sequence, Video workspace | all |
@@ -161,6 +161,13 @@ so is a name the folder already holds, rather than overwriting another picture.
 > `asset_40f76c36-8ad4-4def-a1b3-9125cba4da98.png`. They take their real name the day you rename
 > them, and not before: the studio does not stir your folder on its own.
 
+**Make the character play it asks for two things, and the menu only shows one.** The row lights up
+as soon as a scene is open somewhere — but a motion is laid ON a character, and that character is
+the one you picked in the scene. **With no character picked, the row stays lit and does nothing**,
+without a word. It is the one row of this menu that stays lit while something is missing —
+everywhere else, what is missing greys out: pick the character in the scene first, then start the
+motion.
+
 **Edit the image is the row that opens a tab**, and it only appears on a texture or a sky already
 on disk: those two are assembled in their own workspace — one holds channels, the other a
 projection — and neither writes back the picture underneath. Retouching it therefore happens in
@@ -180,7 +187,8 @@ deliberate: a menu whose length changes with what is open is a menu you cannot l
 tells you what to do — open a document in that workspace — where a missing row tells you nothing.
 
 It is also what to look at when a send leads nowhere: right-click
-shows in one go what this asset can do, and what is missing for it to do it.
+shows in one go what this asset can do, and what is missing for it to do it — **with the single
+reservation of Make the character play it**, said above.
 
 ### Double-click opens the asset, it sends it nowhere
 

@@ -308,7 +308,7 @@ déjà pris dans le dossier d’arrivée est refusé plutôt qu’écrasé, et l
 | Groupe | Geste | Ce qu’il fait |
 |---|---|---|
 | ouvrir | **Ouvrir** | ouvre le fichier dans son espace, ou déplie le dossier |
-| | **Afficher dans le dossier** | ouvre le Finder ou l’Explorateur Windows, la ligne sélectionnée |
+| | **Afficher dans le dossier** | ouvre le Finder ou l’Explorateur Windows, sur la ligne cliquée |
 | | **Informations sur le fichier** | ouvre la fenêtre qui dit tout ce que le studio sait de cette entrée |
 | presse-papiers | **Couper** · **Copier** | retiennent la sélection pour le prochain collage |
 | | **Coller** | dépose dans le dossier affiché ce que le presse-papiers retient |
@@ -318,7 +318,7 @@ déjà pris dans le dossier d’arrivée est refusé plutôt qu’écrasé, et l
 | | **Mettre à la corbeille** | envoie à la corbeille de votre système |
 | revenir | **Annuler** · **Rétablir** | défont et refont le dernier lot de fichiers |
 
-**Huit de ces douze lignes portent le raccourci auquel elles répondent**, et c’est celui qui est
+**Huit de ces douze gestes portent le raccourci auquel ils répondent**, et c’est celui qui est
 *en vigueur* : si vous l’avez remappé dans les réglages, c’est le vôtre qui s’affiche ici. Les
 quatre autres — **Ouvrir**, **Afficher dans le dossier**, **Informations sur le fichier**,
 **Renommer** — n’en portent aucun, et c’est exact : ce ne sont pas des commandes du registre.
@@ -329,9 +329,11 @@ pas.
 longueur change selon la ligne cliquée est un menu qu’on ne peut pas apprendre. **Informations
 sur le fichier** est grisé sur un dossier — ce qu’il répond est celui d’un fichier.
 
-**Un seul geste de ce menu ne suit pas la sélection : Informations sur le fichier.** Il ouvre la
-fenêtre sur la ligne que vous venez de cliquer, même si douze noms sont pris. C’est la seule
-exception, et elle va de soi : cette fenêtre parle d’une entrée.
+**Quatre gestes ne suivent pas la sélection, et ce sont exactement les quatre sans raccourci** :
+**Ouvrir**, **Afficher dans le dossier**, **Informations sur le fichier** et **Renommer** visent
+la ligne que vous venez de cliquer, même si plusieurs noms sont pris. Les huit autres travaillent
+sur la sélection entière. Le partage se retient sans l’apprendre : un geste qui parle d’**une**
+entrée — l’ouvrir, la montrer, la décrire, la renommer — ne peut pas en viser vingt.
 
 **`⌘Z` ne défait les fichiers que si le focus est dans ce panneau.** Ailleurs il appartient au
 document ouvert : annuler dans le canevas ne doit pas atteindre votre disque.
