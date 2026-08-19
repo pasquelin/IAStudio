@@ -30,17 +30,26 @@ const NOT_A_MENU_ENTRY: Record<Language, ReadonlySet<string>> = {
   en: new Set(['right-click']),
 }
 
-/** Any bold run on one line — the shape `MENU_PATH` narrows, kept whole for the reading below. */
-const BOLD = /\*\*([^*\n]{1,90})\*\*/g
+/**
+ * Any bold run — the shape `MENU_PATH` narrows, kept whole for the readings below, and crossing
+ * one line break of the page for the reason that regexp writes out: the chapters are wrapped, so
+ * a run a reflow has split is quoted correctly and read by nobody. Over a hundred runs cross a
+ * break in each language, none of them an arrow or a button today.
+ */
+const BOLD = /\*\*(?=\S)((?:[^*\n]|\n(?!\s*\n)){1,90})(?<=\S)\*\*/g
+
+/** Every bold run of every chapter, carried with the slug that writes it, the break folded. */
+const boldsOf = (language: Language): { slug: string; bold: string }[] =>
+  chaptersOf(language).flatMap(chapter =>
+    [...chapter.markdown.matchAll(BOLD)].map(match => ({
+      slug: chapter.slug,
+      bold: (match[1] ?? '').replace(/\s*\n\s*/g, ' ').trim(),
+    })),
+  )
 
 /** Read by both the guard below and its exemption-freshness sibling, so the two cannot drift. */
 const arrowsOf = (language: Language): { slug: string; bold: string }[] =>
-  chaptersOf(language).flatMap(chapter =>
-    [...chapter.markdown.matchAll(BOLD)]
-      .flatMap(match => (match[1] ?? '').trim())
-      .filter(bold => bold.includes('→'))
-      .map(bold => ({ slug: chapter.slug, bold })),
-  )
+  boldsOf(language).filter(({ bold }) => bold.includes('→'))
 
 /**
  * `→` is the third arrow the chapters write, and adding it to `MENU_PATH` returned six French and
@@ -55,6 +64,24 @@ const A_DIRECTION_NOT_A_PATH: Record<Language, ReadonlySet<string>> = {
   fr: new Set(['projet → bibliothèque']),
   en: new Set(['project → library']),
 }
+
+/**
+ * A label quoted ALONE, outside any path — the shape the settings chapter opens a section with,
+ * and one `menuPathsOf` cannot see. It wrote `Reveal the technical log` for an entry the screen
+ * spells `Show the technical log`, under a green suite. Bounded to buttons on measure — the
+ * `Starts at: X` of that same chapter names a state or a number more often than a label, and the
+ * bold first cell of a table names a gesture as readily as a control, both read against the
+ * bundles before being left out. Its blind spot is a chapter that stops quoting: the reading
+ * proves it still reads, never how many it should find.
+ */
+const BUTTON_QUOTE = /^(?:Bouton :|Button:)\s+(.+)$/
+
+const buttonQuotesOf = (language: Language): { slug: string; label: string }[] =>
+  boldsOf(language).flatMap(({ slug, bold }) => {
+    const label = BUTTON_QUOTE.exec(bold)?.[1]
+
+    return label ? [{ slug, label }] : []
+  })
 
 describe('the manual the application carries', () => {
   // A hole here is a language that opens on nothing, and only for the readers who chose it.
@@ -173,6 +200,19 @@ describe('the manual the application carries', () => {
     )
 
     expect(invented).toEqual([])
+  })
+
+  it.each(languages)('quotes no button the screen does not carry, in %s', language => {
+    const labels = screenLabels(TRANSLATIONS[language])
+    const quotes = buttonQuotesOf(language)
+
+    // A reading that recognised nothing would keep the assertion below green for good.
+    expect(quotes.length).toBeGreaterThan(0)
+    expect(
+      quotes
+        .filter(({ label }) => !labels.has(asRead(label)))
+        .map(({ slug, label }) => `${slug} — "${label}"`),
+    ).toEqual([])
   })
 
   /**
