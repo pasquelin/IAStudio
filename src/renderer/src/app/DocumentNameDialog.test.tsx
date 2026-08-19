@@ -174,6 +174,25 @@ describe('DocumentNameDialog', () => {
     await expect(first).resolves.toEqual(placed('Sans titre 2'))
   })
 
+  // « Nouveau document » said nothing about which of the six was being made, and the six do not
+  // even share an editor. The heading is per kind for the article French puts in front of it.
+  it('says which kind of document is being made', () => {
+    render(<DocumentNameDialog />)
+    void askFor({ kind: 'sequence' })
+
+    expect(screen.getByRole('dialog', { name: 'Nouvelle vidéo' })).toBeInTheDocument()
+  })
+
+  it('shows the extension the file will land on', () => {
+    render(<DocumentNameDialog />)
+    void askFor({ kind: 'sequence' })
+
+    expect(screen.getByText('.otio')).toBeInTheDocument()
+    // Announced with the field: a reader who cannot see it beside the caret has no other way of
+    // learning what the document is about to be called.
+    expect(field()).toHaveAccessibleDescription('.otio')
+  })
+
   // The surfaces behind bind bare letters: typing a name must not arm a tool or split a clip.
   it('keeps what is typed off the window behind it', async () => {
     const typed: string[] = []

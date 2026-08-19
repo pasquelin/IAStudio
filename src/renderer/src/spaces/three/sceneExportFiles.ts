@@ -3,6 +3,7 @@ import type { ExportFormat } from '@shared/domain/scene'
 import type { FolderExportRequest } from '@shared/ipc'
 import { documentExportName, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
+import { sceneOf, useScenes } from '@/stores/scenes'
 
 /**
  * A scene, encoded to one file — the half of an export that has nothing to do with where it lands.
@@ -22,6 +23,11 @@ export async function sceneExportFiles(
 ): Promise<FolderExportRequest> {
   const engine = sceneEngineOf(documentId)
   if (!engine) throw new Error('this scene has no viewport mounted to export from')
+
+  // Refused where BOTH doors pass, and not at the menu row alone: the menu greys the row, but the
+  // assistant asks for this scope straight out — and an empty one wrote a glTF holding no node.
+  if (scope === 'selection' && sceneOf(useScenes.getState(), documentId).selectedIds.length === 0)
+    throw new Error('this scene has nothing selected to export')
 
   const name = documentExportName(useDocuments.getState(), documentId, 'scene')
   return {

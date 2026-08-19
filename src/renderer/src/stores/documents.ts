@@ -446,18 +446,21 @@ export function takenDocumentNames(
 }
 
 /**
- * The next free name for a blank document — « Sans titre 3 ». What the studio proposes when it
- * makes one, and what the naming dialog opens on.
+ * The next free name for a blank document — « Scène 3 ». What the studio proposes when it makes
+ * one, and what the naming dialog opens on.
  *
- * Only the BLANK ones are numbered. A document opened for an asset carries the asset's name and
- * never collides with « Sans titre N », so nothing needs skipping for it.
+ * Named after its KIND rather than « Sans titre », and the folder is why: the number is free per
+ * FILE name, so the six kinds each held a « Sans titre 1 » a glyph alone told apart.
  */
 export function untitledDocumentName(taken: readonly NamedDocument[], kind: DocumentKind): string {
   const names = new Set(taken.map(document => foldForFileName(document.fileName)))
+  // Composed, hence `COMPOSED_KEYS` — and read once, the word being the same at every number.
+  const called = i18next.t(`documents.kinds.${kind}`)
 
-  // Ends on the first free one, and there are only ever as many taken as the folder holds.
+  // Ends on the first free one, and there are only ever as many taken as the folder holds. A
+  // document opened for an asset is skipped like any other: « Image 1 » is a name one may wear.
   for (let n = 1; ; n += 1) {
-    const title = i18next.t('documents.untitled', { n })
+    const title = i18next.t('documents.untitled', { kind: called, n })
     if (!names.has(foldForFileName(documentFileName(title, kind)))) return title
   }
 }

@@ -236,6 +236,18 @@ export const TILE_QUIET = cn(ROW_QUIET, 'group-hover/row:text-text')
 export const ROW_INK = 'text-text transition-colors'
 
 /**
+ * A file's extension shown beside a name that does not carry it — the naming field's, and any
+ * other surface that is not a row. Monospaced because it is a file's spelling, not a word.
+ */
+export const FILE_EXTENSION = 'text-muted font-mono'
+
+/**
+ * The same at the end of a row's title, where the ink has to lift with the row — `ROW_QUIET`.
+ * `shrink-0`, so a name too wide for the panel is what gets cut, never the extension.
+ */
+export const ROW_SUFFIX = cn(ROW_QUIET, 'ml-1 shrink-0 font-mono')
+
+/**
  * What a line NAMES, among metadata left muted beside it: the room the rest leaves, cut short.
  * No transition, unlike `ROW_INK` — these words never change ink, and a row that lifts its name
  * on selection wants the pair above instead.

@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MenuCheck } from '@shared/domain/command'
+import type { MenuAbility, MenuCheck } from '@shared/domain/command'
 import type {
   SceneAddRequest,
   SceneDisplayRequest,
@@ -219,14 +219,16 @@ describe('what the native menu is told', () => {
     surface: string
     tools: readonly ToolId[]
     checked: readonly MenuCheck[]
+    abilities: readonly MenuAbility[]
   } {
     // Typed by the stub rather than by the bridge; the call is what the hook actually sent.
-    const [surface, tools, checked] = (setWorkspace.mock.lastCall ?? []) as unknown as [
+    const [surface, tools, checked, abilities] = (setWorkspace.mock.lastCall ?? []) as unknown as [
       string,
       readonly ToolId[],
       readonly MenuCheck[],
+      readonly MenuAbility[],
     ]
-    return { surface, tools, checked }
+    return { surface, tools, checked, abilities }
   }
 
   beforeEach(() => {
@@ -370,6 +372,45 @@ describe('what the native menu is told', () => {
       useSceneViews.getState().setQuad('doc-1', true)
 
       expect(listedTools).toHaveBeenCalled()
+    })
+  })
+
+  /** What the menu greys out — see `MenuAbility`, which carries why. */
+  describe('the rows it reports as answerable', () => {
+    /** Written straight into the scene, which is exactly how a duplicate and a ⌘Z write one. */
+    const pick = (ids: readonly string[]): void => {
+      const scene = sceneOf(useScenes.getState(), 'doc-1')
+      useScenes.getState().replace('doc-1', { ...scene, selectedIds: ids })
+    }
+
+    it('offers nothing to export where nothing is picked', () => {
+      renderHook(() => useNativeMenu())
+      expect(lastPublished().abilities).toEqual([])
+    })
+
+    /** The scene is the source, so a pick nothing pointed the studio at counts all the same. */
+    it('offers the selection export on a pick the studio was never pointed at', () => {
+      renderHook(() => useNativeMenu())
+      pick(['node-1'])
+      expect(lastPublished().abilities).toEqual(['scene.exportSelection'])
+    })
+
+    it('takes it back when the selection empties', () => {
+      renderHook(() => useNativeMenu())
+      pick(['node-1'])
+      pick([])
+      expect(lastPublished().abilities).toEqual([])
+    })
+
+    /** A timeline drag writes the scene on every pointer move, and moves nothing that is picked. */
+    it('sends nothing when the scene is written without the pick changing', () => {
+      renderHook(() => useNativeMenu())
+      pick(['node-1'])
+      const sent = setWorkspace.mock.calls.length
+
+      pick(['node-1'])
+
+      expect(setWorkspace.mock.calls.length).toBe(sent)
     })
   })
 })

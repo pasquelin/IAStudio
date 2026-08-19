@@ -21,6 +21,7 @@ import { ASSET_INTENTS } from '@/helpers/assetIntents'
 import { FOLDER_SORTS } from '@/helpers/folderSort'
 import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
 import { DOCUMENT_NAME_REFUSALS } from '@/app/documentName'
+import { DOCUMENT_KINDS } from '@shared/domain/document'
 import { FILE_KINDS } from '@shared/domain/folder'
 import { FILE_INFO_SECTIONS } from '@/fileInfo/sections'
 
@@ -102,6 +103,11 @@ const COMPOSED_KEYS: readonly string[] = [
   // reads as its own key inside the panel that settles how a scene is lit.
   ...explained('environment.preset_', ENVIRONMENT_PRESETS),
   ...explained('environment.shadows_', SHADOW_LEVELS),
+  // What a document of this kind is CALLED — the word a blank one is named after, « Scène 1 ».
+  // A kind with no word would name every new document of that space `documents.kinds.x 1`.
+  ...DOCUMENT_KINDS.map(kind => `documents.kinds.${kind}`),
+  // The heading of the field that names it, one per kind for the article French puts in front.
+  ...DOCUMENT_KINDS.map(kind => `documents.newByKind.${kind}`),
 ]
 
 describe('the keys the renderer composes', () => {

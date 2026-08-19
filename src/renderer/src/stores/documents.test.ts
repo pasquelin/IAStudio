@@ -49,8 +49,8 @@ describe('documents store', () => {
     expect(written).toEqual([])
   })
 
-  // Counting the open tabs alone handed the same name twice: a document saved under "Sans
-  // titre 1" and closed is still called that, and the folder is what remembers it.
+  // Counting the open tabs alone handed the same name twice: a document saved under « Scène 1 »
+  // and closed is still called that, and the folder is what remembers it.
   it('numbers a new document against the folder as much as against the tabs', async () => {
     installFakeBridge({
       documents: {
@@ -59,16 +59,18 @@ describe('documents store', () => {
             {
               id: 'saved-then-closed',
               kind: 'scene',
-              title: 'Untitled 1',
+              title: 'Scène 1',
               workspace: '3d',
-              path: 'documents/Untitled 1.gltf',
+              path: 'documents/Scène 1.gltf',
             },
           ]),
       },
     })
 
     const created = await useDocuments.getState().create('3d')
-    expect(created?.title).not.toBe('Untitled 1')
+    // The NEXT number, not merely a different name: a title the studio would never propose leaves
+    // this green with the listing dropped entirely — measured, that is what it used to assert.
+    expect(created?.title).toBe('Scène 2')
   })
 
   describe('refresh', () => {
@@ -193,16 +195,17 @@ describe('documents store', () => {
     expect(one?.title).not.toBe(other?.title)
   })
 
-  it('numbers untitled documents per workspace', async () => {
+  it('numbers untitled documents per workspace, under the name of what they are', async () => {
     const { create } = useDocuments.getState()
     const first = await create('3d')
     const second = await create('3d')
     const other = await create('image')
 
-    expect(first?.title).not.toBe(second?.title)
-    // Numbering restarts per workspace: an image document is not "Untitled 3" because the
-    // 3D workspace already holds two.
-    expect(other?.title).toBe(first?.title)
+    expect(first?.title).toBe('Scène 1')
+    expect(second?.title).toBe('Scène 2')
+    // Numbering restarts per workspace, and the WORD changes with it: the two used to share
+    // « Sans titre 1 », two files a folder is happy to hold and a glyph alone told apart.
+    expect(other?.title).toBe('Image 1')
   })
 
   it('names a document after the asset it was opened for, rather than numbering it', async () => {

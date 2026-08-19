@@ -102,8 +102,24 @@
   "documents": {
     "copyName": "{{name}} copy",
     "none": "No document open. Generate or open an asset to get started.",
-    "untitled": "Untitled {{n}}",
+    "untitled": "{{kind}} {{n}}",
+    "kinds": {
+      "image": "Image",
+      "scene": "Scene",
+      "sequence": "Video",
+      "audio": "Audio",
+      "skybox": "Sky",
+      "texture": "Material"
+    },
     "new": "New document",
+    "newByKind": {
+      "image": "New image",
+      "scene": "New scene",
+      "sequence": "New video",
+      "audio": "New audio",
+      "skybox": "New sky",
+      "texture": "New material"
+    },
     "missing": "This document is no longer open.",
     "saveRefusedIncomplete": "This edit opened without the clips whose media are missing. Saving would erase them from the file — import the media into the project, then open the edit again.",
     "saveRefusedMontageHoldsMore": "This edit comes from an OpenTimelineIO file holding more than the studio composes — a marker, an effect, a transition. The edit is written back whole, so saving would erase those parts. Use the edit’s own export, in the File menu, or start from a new edit.",

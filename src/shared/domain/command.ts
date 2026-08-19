@@ -168,6 +168,18 @@ export type CommandId =
 export type MenuCheck = CommandId | `scene.display:${DisplayMode}`
 
 /**
+ * What the focused window can do RIGHT NOW, for the rows that are greyed out without it.
+ *
+ * Told apart from `MenuCheck`, which draws a tick: this decides whether a row answers at all.
+ * `Export ▸ Selection` is why — with nothing picked it wrote a glTF holding no node, after a save
+ * dialog that gave every sign of being about to write a scene.
+ *
+ * A fact of the document in front, so only the renderer holds it. Named after the ROW it opens
+ * rather than after the state behind it: the template reads this beside the item it enables.
+ */
+export type MenuAbility = 'scene.exportSelection'
+
+/**
  * What a command is: where it applies, what it is called, what it does in plain words, and the
  * key it ships with.
  *

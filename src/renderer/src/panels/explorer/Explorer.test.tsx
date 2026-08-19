@@ -1558,6 +1558,38 @@ describe('the explorer read by domain', () => {
     expect(screen.queryByText('a3f1.gltf')).not.toBeInTheDocument()
   })
 
+  /** A source needs none: its own name IS the directory entry, extension and all. */
+  it('says which format a document is written in, beside its name', async () => {
+    withProject()
+    byDomain()
+    const filed = { ...scene, path: 'Acte 1/Niveau.gltf' }
+    install({ '': [folder('Acte 1')] }, [filed], [], {}, [
+      file('Niveau.gltf', 'Acte 1'),
+      file('chaise.glb', 'Acte 1'),
+    ])
+
+    render(<Explorer />)
+
+    expect(await screen.findByText('.gltf')).toBeInTheDocument()
+    expect(screen.queryByText('.glb')).not.toBeInTheDocument()
+  })
+
+  /**
+   * A document written before the file was named after it wears a uuid and shows its TITLE.
+   * `Niveau .gltf` would then name no file at all — the row would send a reader looking for one.
+   */
+  it('leaves the extension off a document whose file is not named after it', async () => {
+    withProject()
+    byDomain()
+    const filed = { ...scene, path: 'Acte 1/a3f1.gltf' }
+    install({ '': [folder('Acte 1')] }, [filed], [], {}, [file('a3f1.gltf', 'Acte 1')])
+
+    render(<Explorer />)
+
+    expect(await screen.findByText('Niveau')).toBeInTheDocument()
+    expect(screen.queryByText('.gltf')).not.toBeInTheDocument()
+  })
+
   /** A domain names files rather than holding a place: nothing can be selected or written there. */
   it('folds a domain shut rather than picking it', async () => {
     withProject()
