@@ -50,6 +50,7 @@ describe('the table itself', () => {
       'montage.otioz',
       'montage.edl',
       'montage.fcpxml',
+      'montage.wav',
     ])
   })
 })

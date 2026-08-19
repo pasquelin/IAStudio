@@ -1,10 +1,12 @@
 import {
   mdiAlertOutline,
   mdiCloudUploadOutline,
+  mdiFileDocumentOutline,
   mdiFileImportOutline,
   mdiTextBoxOutline,
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
+import { exportContactSheet } from '@/app/contactSheetExport'
 import { getBridge } from '@/services/bridge'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
@@ -81,6 +83,15 @@ export function AssetBrowserActions() {
         disabled={!project || selected.length === 0}
         // The names land in the catalogue, which the panel only re-reads when asked.
         onClick={() => void describeSelection(selected).then(refresh)}
+      />
+      <ToolButton
+        icon={mdiFileDocumentOutline}
+        label={t('assets.contactSheet', { count: selected.length })}
+        description={t('assets.contactSheetHint')}
+        tooltip={TIP_BOTTOM}
+        variant="header"
+        disabled={!project || selected.length === 0}
+        onClick={() => void exportContactSheet(selected, t('assets.contactSheetName'))}
       />
       <ToolButton
         icon={mdiCloudUploadOutline}

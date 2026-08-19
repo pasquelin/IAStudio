@@ -234,6 +234,7 @@ export type Channels = {
 
   textureExport: 'texture:export'
   skyboxExport: 'skybox:export'
+  montageStems: 'montage:stems'
   projectExport: 'project:export'
   taskCancel: 'task:cancel'
 
@@ -417,6 +418,7 @@ export const CHANNELS: Channels = {
 
   textureExport: 'texture:export',
   skyboxExport: 'skybox:export',
+  montageStems: 'montage:stems',
   projectExport: 'project:export',
   taskCancel: 'task:cancel',
 
@@ -669,6 +671,8 @@ export type LogScope =
   // did not happen. One of them fires once the copy is already on disk — under `assets.save` the
   // journal denied a write that had just succeeded.
   | 'assets.copy'
+  /** A sheet of the chosen pictures, whose failure has no row of its own to appear in. */
+  | 'assets.contactSheet'
   | 'assets.extract'
   // The catalogue refusing a new name. The field has closed by then — it commits on blur as much
   // as on Enter — so the journal is the only place left to say the name did not take.
@@ -727,6 +731,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.open',
   'assets.save',
   'assets.copy',
+  'assets.contactSheet',
   'assets.extract',
   'assets.rename',
   'assets.retype',
@@ -1463,6 +1468,12 @@ export type StudioBridge = {
      * minutes of disk, and a name only handed back at the end would leave them unstoppable.
      */
     import: (id: string) => Promise<MontageImportResult | null>
+    /**
+     * The cut's SOUND, one `.wav` per audible track, into a folder of its own — same writer and
+     * same bargain as a sky's faces. Stems mean nothing apart: a dialogue track alone is not
+     * the mix somebody judged, which is why this is a folder and not a save dialog per track.
+     */
+    stems: (request: FolderExportRequest) => Promise<string | null>
   }
   /**
    * Rendering a scene to a film, in three steps: a session is opened once the save dialog has

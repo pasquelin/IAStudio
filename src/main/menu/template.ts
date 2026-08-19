@@ -295,6 +295,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         commandItem('sequence.exportBundle', t.menu.exportBundle),
         commandItem('sequence.exportEdl', t.menu.exportEdl),
         commandItem('sequence.exportFcpxml', t.menu.exportFcpxml),
+        commandItem('sequence.exportStems', t.menu.exportStems),
       ]
     }
 
@@ -303,6 +304,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       return [
         commandItem('sequence.exportCut', t.menu.exportCut),
         commandItem('sequence.exportBundle', t.menu.exportBundle),
+        commandItem('sequence.exportStems', t.menu.exportStems),
       ]
     }
 

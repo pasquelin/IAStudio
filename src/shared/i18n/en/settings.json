@@ -250,6 +250,15 @@
       "help": "Copies the line to paste in a terminal to connect a client. The token and the port change every time the studio starts, so the line has to be copied again after each launch.",
       "button": "Copy"
     },
+    "installResolveBridge": {
+      "title": "DaVinci Resolve bridge",
+      "help": "Drops a script into the folder Resolve reads, to import an edit written here from its own scripts menu. It appears without restarting Resolve. Removing it is done by hand, and Resolve only notices on its next start.",
+      "button": "Install",
+      "confirm": "A script will be written into DaVinci Resolve’s folder, on this machine. Nothing else is touched.",
+      "missing": "DaVinci Resolve was not found on this machine",
+      "missingDetail": "Its folder does not exist, so nothing was written. Install Resolve, run it once, then come back here.",
+      "missingOk": "Close"
+    },
     "openDevtools": {
       "title": "Developer tools",
       "help": "Opens the technical console of the embedded browser. It shows the log messages and the errors. For troubleshooting only: nothing in there is needed to use the software."

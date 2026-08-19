@@ -47,6 +47,7 @@ export type ExportTargetId =
   | 'montage.otioz'
   | 'montage.edl'
   | 'montage.fcpxml'
+  | 'montage.wav'
 
 export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'picture.png',
@@ -69,6 +70,7 @@ export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'montage.otioz',
   'montage.edl',
   'montage.fcpxml',
+  'montage.wav',
 ]
 
 /**
@@ -407,6 +409,30 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
       'frameSize',
     ]),
   },
+  /**
+   * The sound itself, one `.wav` per audible track — what an online room asks for when it will
+   * mix somewhere else. Everything the cut DOES to a take is baked into the samples, the way a
+   * sky's grading is baked into its faces: carried as sound, never as a setting to change back.
+   */
+  'montage.wav': {
+    domain: 'montage',
+    extension: '.wav',
+    door: 'declared',
+    destination: 'folder',
+    openedBy: ['QuickTime Player', 'Music', 'Books'],
+    capability: carrying('montage', [
+      'tracks',
+      'trackName',
+      'trackOrder',
+      'clipPlacement',
+      'clipTrim',
+      'clipSpeed',
+      'clipFade',
+      'clipGain',
+      'trackAudible',
+      'sampleRate',
+    ]),
+  },
 }
 
 export const exportTargetOf = (id: ExportTargetId): ExportTarget => TARGETS[id]
@@ -437,6 +463,12 @@ export const MATERIAL_TARGET_OF: Record<TextureExportTarget, ExportTargetId> = {
 export function targetsOfDomain(domain: CapabilityDomain): ExportTargetId[] {
   return EXPORT_TARGET_IDS.filter(id => TARGETS[id].domain === domain)
 }
+
+/**
+ * What one export may weigh, every file of it together. Read by the writer, which REFUSES past
+ * it, and by the window, which has to know before spending minutes producing what would be.
+ */
+export const MAX_EXPORT_WEIGHT = 512 * 1024 * 1024
 
 /**
  * What sending `traits` to this target would destroy — the sentence a dialog says BEFORE the

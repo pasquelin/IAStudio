@@ -205,6 +205,7 @@ describe('the lists that stand for a union', () => {
       'assets.open': true,
       'assets.save': true,
       'assets.copy': true,
+      'assets.contactSheet': true,
       'assets.extract': true,
       'assets.rename': true,
       'assets.retype': true,

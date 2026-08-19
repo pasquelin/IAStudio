@@ -62,6 +62,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   // The copy lands in the shelf, and that is where a user goes looking for it — including in the
   // one case where it arrived and no document names it.
   'assets.copy': 'library',
+  // The sheet is made OF the shelf's pictures and is asked for from its bar, so a refusal is read
+  // beside the tiles it was asked over — not with a document, which a sheet does not belong to.
+  'assets.contactSheet': 'library',
   // `import`, with the lines the extraction itself writes: what it produces is bytes landing in
   // the project, and a failure filed away from its own outcome reads as a different event.
   'assets.extract': 'import',

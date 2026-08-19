@@ -598,6 +598,7 @@ describe('the export menu', () => {
       'Montage et médias (OTIOZ)…',
       'Liste de montage (EDL)…',
       'Montage (FCPXML)…',
+      'Sons par piste (WAV)…',
     ])
   })
 

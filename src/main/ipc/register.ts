@@ -18,6 +18,7 @@ import { registerGitHandlers } from '@main/git/handlers'
 import { createElectronAdapter } from '@main/settings/adapter'
 import { registerProjectHandlers } from '@main/project/handlers'
 import { registerScenarioHandlers } from '@main/scenario/handlers'
+import { TRANSLATIONS } from '@shared/i18n'
 import { CURRENT } from '@main/logFile'
 import { runSettingAction } from '@main/settings/actions'
 import { registerSettingsHandlers } from '@main/settings/handlers'
@@ -55,6 +56,16 @@ export function registerIpc(services: Services): void {
       settingsPath: services.settings.path,
       logFile: () => join(app.getPath('logs'), CURRENT),
       mcpEndpoint: services.mcp.endpoint,
+      onResolveMissing: () => {
+        const t = TRANSLATIONS[services.language()].settings.installResolveBridge
+        void services.askUser({
+          message: t.missing,
+          detail: t.missingDetail,
+          buttons: [t.missingOk],
+          defaultId: 0,
+          cancelId: 0,
+        })
+      },
     }),
   })
   registerScenarioHandlers(services)

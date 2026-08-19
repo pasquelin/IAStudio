@@ -77,6 +77,7 @@ export function registerExportHandlers({ pickFolder, projectPath }: ExportHandle
   // could ask for a `.usdz` on the sky channel and be written one.
   handle(CHANNELS.textureExport, (_event, request) => writeFolder(request, picked, 'material'))
   handle(CHANNELS.skyboxExport, (_event, request) => writeFolder(request, picked, 'sky'))
+  handle(CHANNELS.montageStems, (_event, request) => writeFolder(request, picked, 'montage'))
   // The outside door serves every section, so it pins none — what holds it is the destination,
   // which is NAMED rather than pointed at and stays inside the open project.
   handle(CHANNELS.projectExport, (_event, request) => writeFolder(request, inProject, null))

@@ -1,6 +1,8 @@
 import { BrowserWindow, clipboard, shell } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import type { SettingActionId } from '@shared/domain/settingsRegistry'
+import { installResolveScript } from '@main/bridge/resolveBridge'
+import { log } from '@main/log'
 import { mcpAddCommand, type McpEndpoint } from '@main/mcp/endpoint'
 import type { SettingsStore } from './store'
 
@@ -12,13 +14,24 @@ export type ActionDeps = {
   logFile: () => string
   /** Where the MCP server is listening, or `null` while it is off. */
   mcpEndpoint: () => McpEndpoint | null
+  /**
+   * Says the bridge could not be installed, in the language the window is in. A dialog and not a
+   * log line: nothing else answers this button, so a silent failure is one nobody finds out about.
+   */
+  onResolveMissing: () => void
 }
 
 /**
  * What the buttons of the settings window do. Kept apart from the handlers: each one reaches
  * straight into Electron, and the handler that routes them stays testable without it.
  */
-export function runSettingAction({ settings, settingsPath, logFile, mcpEndpoint }: ActionDeps) {
+export function runSettingAction({
+  settings,
+  settingsPath,
+  logFile,
+  mcpEndpoint,
+  onResolveMissing,
+}: ActionDeps) {
   return (id: SettingActionId): void => {
     switch (id) {
       case 'advanced.openLogFolder':
@@ -44,6 +57,19 @@ export function runSettingAction({ settings, settingsPath, logFile, mcpEndpoint 
         if (endpoint) clipboard.writeText(mcpAddCommand(endpoint, APP_NAME.toLowerCase()))
         return
       }
+
+      case 'advanced.installResolveBridge':
+        // Revealed once written, which is the whole of the feedback: a file dropped in another
+        // application's folder that nobody is shown is a file nobody trusts. And SAID when it
+        // could not be — no Resolve on this machine is the ordinary case, not a fault to log.
+        void installResolveScript().then(
+          written => shell.showItemInFolder(written),
+          (error: unknown) => {
+            log.error('resolve bridge', String(error))
+            onResolveMissing()
+          },
+        )
+        return
 
       case 'advanced.reset':
         // `reset`, not `write(DEFAULT_SETTINGS)`: a write merges, and the settings with no
