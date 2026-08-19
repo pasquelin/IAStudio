@@ -6,6 +6,7 @@
  * only one of them has to walk a spec table per primitive.
  */
 import {
+  BACKGROUND_BLUR,
   DEFAULT_BACKGROUND,
   DEFAULT_EXP2_FOG,
   DEFAULT_GROUND,
@@ -17,8 +18,10 @@ import {
   GROUND_SIZE,
   NO_FOG,
   readEnvironment,
+  STUDIO_ENVIRONMENT,
   TONE_MAPPINGS,
   type BackgroundDescriptor,
+  type EnvironmentRef,
   type FogDescriptor,
   type GroundDescriptor,
   type SceneWorld,
@@ -63,7 +66,10 @@ function readBounded(
 function readBackground(value: unknown): BackgroundDescriptor {
   if (!isRecord(value)) return DEFAULT_WORLD.background
   if (value.kind === 'transparent') return { kind: 'transparent' }
-  if (value.kind !== 'color') return DEFAULT_WORLD.background
+  // Every document written before the softening exists says nothing about it, and nothing is
+  // exactly what it was: sharp.
+  if (value.kind !== 'color')
+    return { kind: 'environment', blur: readBounded(value, 'blur', 0, BACKGROUND_BLUR) }
 
   // A colour background with no colour in it is not a colour background: it would paint black
   // over whatever the document meant, which is the one outcome nobody asked for.
@@ -116,6 +122,22 @@ export function fogOfKind(kind: FogDescriptor['kind'], previous: FogDescriptor):
   const color = previous.kind === 'none' ? DEFAULT_LINEAR_FOG.color : previous.color
 
   return kind === 'linear' ? { ...DEFAULT_LINEAR_FOG, color } : { ...DEFAULT_EXP2_FOG, color }
+}
+
+/**
+ * What lights a scene, switched to the other source. A sky is a REFERENCE, so « from a sky » is
+ * only an answer while the project holds one: with none, this stays on the studio rather than
+ * writing a reference to nothing.
+ *
+ * Nothing is carried across, unlike the two below — the studio has no id to remember a sky by,
+ * so coming back lands on the project's first one again.
+ */
+export function environmentOfKind(
+  kind: EnvironmentRef['kind'],
+  skies: readonly { id: string }[],
+): EnvironmentRef {
+  const first = kind === 'skybox' ? skies[0] : undefined
+  return first ? { kind: 'skybox', assetId: first.id } : STUDIO_ENVIRONMENT
 }
 
 /** What a colour backdrop opens on when none was ever chosen — a mid grey, flattering nothing. */

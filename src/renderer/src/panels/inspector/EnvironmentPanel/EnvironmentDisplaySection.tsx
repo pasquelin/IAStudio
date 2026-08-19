@@ -1,14 +1,10 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DISPLAY_MODES, type DisplayMode, type SceneWorld } from '@shared/domain/scene'
-import { ChoiceField } from '@/design/ChoiceField'
 import { PropertySection } from '@/design/PropertySection'
-import {
-  ENVIRONMENT_PRESETS,
-  presetOf,
-  presetPatch,
-  type EnvironmentPreset,
-} from '@/engines/scene/environmentPresets'
+import { SelectField } from '@/design/SelectField'
+import { ENVIRONMENT_PRESETS, presetOf, presetPatch } from '@/engines/scene/environmentPresets'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { choicesOf } from './environmentChoices'
 
 export type EnvironmentDisplaySectionProps = {
@@ -20,7 +16,7 @@ export type EnvironmentDisplaySectionProps = {
 
 /**
  * How the scene is drawn, and the ready-made worlds to draw it in — the first question anyone
- * asks of this panel, and both answered by a row of buttons before a slider is touched.
+ * asks of this panel, and both answered before a slider is touched.
  */
 export function EnvironmentDisplaySection({
   mode,
@@ -33,22 +29,27 @@ export function EnvironmentDisplaySection({
   const modes = useMemo(() => choicesOf(DISPLAY_MODES, 'sceneDisplay.', t), [t])
   const presets = useMemo(() => choicesOf(ENVIRONMENT_PRESETS, 'environment.preset_', t), [t])
 
+  // Read back from the world rather than remembered: a stored name would go on claiming « Night »
+  // after the first slider moved.
+  const preset = presetOf(world)
+
   return (
     <PropertySection title={t('environment.displayMode')} scId="display">
-      <ChoiceField
+      <SelectField
         label={t('environment.displayMode')}
         value={mode}
-        options={modes}
+        options={modes.options}
         onChange={onMode}
+        hint={HINT_LEFT(modes.hintOf(mode))}
       />
 
-      <ChoiceField
+      <SelectField
         label={t('environment.presets')}
-        // Read back from the world rather than remembered: a stored name would go on claiming
-        // « Night » after the first slider moved. Nothing matching leaves every chip unpressed.
-        value={presetOf(world)}
-        options={presets}
-        onChange={(preset: EnvironmentPreset) => onPreset(presetPatch(preset))}
+        value={preset}
+        options={presets.options}
+        onChange={picked => onPreset(presetPatch(picked))}
+        unnamedLabel={t('environment.presetCustom')}
+        hint={preset ? HINT_LEFT(presets.hintOf(preset)) : undefined}
       />
     </PropertySection>
   )

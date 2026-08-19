@@ -41,6 +41,11 @@ export type ViewportEnvironment = {
   /** Radians around Y. Turns the horizon and what the scene reflects together. */
   setRotation: (radians: number) => void
   setBackgroundVisible: (visible: boolean) => void
+  /**
+   * How soft the PICTURE is, 0 to 1. The prefiltered map is untouched: a sky serving as a backdrop
+   * is softened behind the subject while what the subject reflects stays as sharp as it was.
+   */
+  setBackgroundBlur: (blur: number) => void
   dispose: () => void
 }
 
@@ -134,6 +139,13 @@ export function createEnvironment(
     setBackgroundVisible: visible => {
       backgroundVisible = visible
       applyBackground()
+      requestRender()
+    },
+
+    setBackgroundBlur: blur => {
+      // Any value above zero routes the backdrop through a PMREM of three's own, built inside the
+      // render loop on the first frame that asks — once per sky, cached by texture, not per frame.
+      scene.backgroundBlurriness = blur
       requestRender()
     },
 

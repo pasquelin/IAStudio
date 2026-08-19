@@ -12,6 +12,8 @@ import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timelineState'
 import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
 import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
+import { ENVIRONMENT_PRESETS } from '@/engines/scene/environmentPresets'
+import { SHADOW_LEVELS } from '@/engines/scene/shadowLevels'
 import { RIG_STATUSES, type RigStatus } from '@/engines/scene/rigState'
 import { RIG_FIT_FAULTS, type RigFitFault } from '@/engines/scene/rigFit'
 import { CHARACTER_KINDS } from '@/panels/inspector/RigSection'
@@ -29,6 +31,11 @@ function resolve(code: Language, key: string): unknown {
   return key
     .split('.')
     .reduce<unknown>((current, part) => (isRecord(current) ? current[part] : undefined), bundle)
+}
+
+/** The label AND the sentence beside it — the shape `choicesOf` composes, missing in two ways. */
+function explained(prefix: string, values: readonly string[]): string[] {
+  return values.flatMap(value => [`${prefix}${value}`, `${prefix}${value}Hint`])
 }
 
 /**
@@ -90,6 +97,11 @@ const COMPOSED_KEYS: readonly string[] = [
   // Why a typed name was refused, read off the failure the shared check answers with. The
   // compiler holds the other half — the record has one entry per failure or it does not build.
   ...Object.values(DOCUMENT_NAME_REFUSALS),
+  // The two unions the 3D environment panel owns itself — the rest of its rows come from
+  // `domain/scene` and are held next door. A sixth look or a fifth shadow level without its line
+  // reads as its own key inside the panel that settles how a scene is lit.
+  ...explained('environment.preset_', ENVIRONMENT_PRESETS),
+  ...explained('environment.shadows_', SHADOW_LEVELS),
 ]
 
 describe('the keys the renderer composes', () => {

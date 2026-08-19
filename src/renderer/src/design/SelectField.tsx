@@ -14,9 +14,16 @@ export type SelectOption<V extends string> = {
 
 export type SelectFieldProps<V extends string> = {
   label: string
-  value: V
+  /** `null` is a value no option names — a world nobody's preset matches, a file with no domain. */
+  value: V | null
   options: readonly SelectOption<V>[]
   onChange: (value: V) => void
+  /**
+   * What a value NO OPTION CARRIES reads as, on a row of its own that nobody may pick — `null`
+   * included. Without it the browser falls back to the FIRST option, so a snap step the
+   * preferences set between two of the offered ones reads as the smallest of them.
+   */
+  unnamedLabel?: string
   /**
    * `row` is the property line. `inline` drops the label column, for a bar. `bar` drops it too
    * and draws its own chevron — the browser pins the native one to the edge of the control, where
@@ -38,6 +45,9 @@ export type SelectFieldProps<V extends string> = {
   className?: string
 }
 
+/** The row a `null` stands on: a `<select>` always shows one of its own entries. */
+const UNNAMED = ''
+
 /**
  * One of a fixed set of values. Written once because a `<select>` hands back a STRING: every one
  * of the twenty-one sites that drew its own had to read the answer back into its union, and three
@@ -51,6 +61,7 @@ export function SelectField<V extends string>({
   value,
   options,
   onChange,
+  unnamedLabel,
   layout = 'row',
   hint,
   leading,
@@ -61,6 +72,15 @@ export function SelectField<V extends string>({
   // Bound by `htmlFor` rather than by wrapping, so a thumbnail can stand between the name and the
   // control: a label that WRAPS them would make pressing the picture open the list beside it.
   const id = useId()
+  /**
+   * Read off the OPTIONS rather than off `null` alone: a stored value can fall outside the list
+   * without being absent — a snap step the preferences set between two of the offered ones.
+   *
+   * Only where the caller named it: a field that already carries an « empty » entry of its own
+   * would otherwise get a SECOND `<option value="">`, and picking either became ambiguous.
+   */
+  const unnamed =
+    unnamedLabel !== undefined && (value === null || !options.some(one => one.value === value))
 
   return (
     <div
@@ -77,7 +97,7 @@ export function SelectField<V extends string>({
         // Only where no visible name is drawn, for the reason above.
         aria-label={layout === 'row' ? undefined : label}
         data-sc={scId && `field:${scId}`}
-        value={value}
+        value={unnamed ? UNNAMED : (value ?? UNNAMED)}
         onChange={event => {
           const picked = options.find(option => option.value === event.target.value)
           if (picked) onChange(picked.value)
@@ -90,9 +110,17 @@ export function SelectField<V extends string>({
           'min-w-0 flex-1',
           // The unset entry reads quieter than a value, which is how a filter bar shows at a
           // glance which of its facets are actually filtering.
-          layout === 'bar' && value === '' && 'text-muted',
+          layout === 'bar' && !value && 'text-muted',
         )}
       >
+        {/* Only while nothing names the value: an entry no one may pick would otherwise sit in
+            every list, and `disabled` is what keeps it out of the answers while it shows. */}
+        {unnamed && (
+          <option value={UNNAMED} disabled>
+            {unnamedLabel}
+          </option>
+        )}
+
         {options.map(option => (
           <option key={option.value} value={option.value} disabled={option.disabled}>
             {option.label}

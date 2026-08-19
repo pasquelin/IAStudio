@@ -59,6 +59,27 @@ describe('SelectField', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
+  /**
+   * The other half of the same problem, and the one that was missing: a value no option carries
+   * cannot LEAVE the field, but until now nothing said what it showed while it was in hand —
+   * the browser falls back to the first option, so the row read « Normal » over something else.
+   */
+  describe('a value none of the options names', () => {
+    it('stands on a row of its own, which nobody may pick', () => {
+      const { select } = renderField({ value: null, unnamedLabel: 'Custom' })
+
+      expect(select).toHaveValue('')
+      expect(screen.getByRole('option', { name: 'Custom' })).toBeDisabled()
+    })
+
+    it('leaves the named rows alone once a value names itself again', () => {
+      renderField({ value: 'screen', unnamedLabel: 'Custom' })
+
+      expect(screen.queryByRole('option', { name: 'Custom' })).not.toBeInTheDocument()
+      expect(screen.getAllByRole('option')).toHaveLength(BLENDS.length)
+    })
+  })
+
   it('names itself by its visible label, with no second name over it', () => {
     renderField()
 

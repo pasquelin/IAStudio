@@ -1,12 +1,12 @@
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { EnvironmentRef } from '@shared/domain/scene'
-import { Chip } from '@/design/Chip'
 import { ColorField } from '@/design/ColorField'
-import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { RangeField } from '@/design/RangeField'
+import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { ToggleField } from '@/design/ToggleField'
 import { VectorField } from '@/design/VectorField'
 import { setTextureMaterial, setPreview } from '@/engines/texture/commands'
@@ -15,8 +15,8 @@ import {
   PREVIEW_BOUNDS,
   PREVIEW_SHAPES,
   TILING_PREVIEWS,
-  type PreviewShape,
 } from '@/engines/texture/textureState'
+import { SHAPE_LABELS } from '@/spaces/textures/textureTools'
 import { toDegrees, toRadians } from '@shared/domain/angles'
 import { DEFAULT_TEXTURE_MATERIAL, MATERIAL_BOUNDS } from '@shared/domain/texture'
 import { textureOf, useTextures } from '@/stores/textures'
@@ -27,15 +27,6 @@ import { StylesSection } from '../StylesSection/StylesSection'
 import { TextureInspectorSeamReading } from './TextureInspectorSeamReading'
 
 export type TextureInspectorProps = { documentId: string }
-
-/** i18n key of a shape — never the label itself, as the scene registry does for its primitives. */
-const SHAPE_LABELS: Record<PreviewShape, string> = {
-  sphere: 'texture.shapeSphere',
-  box: 'texture.shapeBox',
-  cylinder: 'texture.shapeCylinder',
-  plane: 'texture.shapePlane',
-  torusKnot: 'texture.shapeKnot',
-}
 
 /**
  * Everything a material is made of, and everything the shape it sits on is judged under.
@@ -243,19 +234,20 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
 
         {/* Below the values it multiplies, and visibly apart from them: these two are how the
             repeat is LOOKED at, and neither ever reaches a scene. */}
-        <PropertyRow label={t('texture.tilingPreview')}>
-          <div className="flex justify-end gap-2">
-            {TILING_PREVIEWS.map(times => (
-              <Chip
-                key={times}
-                label={t('texture.tilingPreviewTimes', { count: times })}
-                hint={t('texture.tilingPreviewHint')}
-                selected={preview.tilingPreview === times}
-                onClick={() => onPreview('tilingPreview', times)}
-              />
-            ))}
-          </div>
-        </PropertyRow>
+        <SelectField
+          label={t('texture.tilingPreview')}
+          value={String(preview.tilingPreview)}
+          options={TILING_PREVIEWS.map(times => ({
+            value: String(times),
+            label: t('texture.tilingPreviewTimes', { count: times }),
+          }))}
+          // Back to the numeric union — the field speaks strings.
+          onChange={value => {
+            const times = TILING_PREVIEWS.find(candidate => String(candidate) === value)
+            if (times) onPreview('tilingPreview', times)
+          }}
+          hint={HINT_LEFT(t('texture.tilingPreviewHint'))}
+        />
         <ToggleField
           label={t('texture.showSeam')}
           value={preview.showSeam}
@@ -265,17 +257,16 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
       </PropertySection>
 
       <PropertySection title={t('texture.preview')}>
-        <div className="flex flex-wrap gap-2">
-          {PREVIEW_SHAPES.map(shape => (
-            <Chip
-              key={shape}
-              label={t(SHAPE_LABELS[shape])}
-              hint={t('texture.previewShapeHint')}
-              selected={preview.shape === shape}
-              onClick={() => onPreview('shape', shape)}
-            />
-          ))}
-        </div>
+        <SelectField
+          label={t('texture.previewShape')}
+          value={preview.shape}
+          options={PREVIEW_SHAPES.map(shape => ({
+            value: shape,
+            label: t(SHAPE_LABELS[shape]),
+          }))}
+          onChange={shape => onPreview('shape', shape)}
+          hint={HINT_LEFT(t('texture.previewShapeHint'))}
+        />
 
         <SliderField
           label={t('texture.envIntensity')}

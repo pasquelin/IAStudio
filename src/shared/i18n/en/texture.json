@@ -121,6 +121,7 @@
     "frame": "Recentre",
     "frameHint": "Puts the camera back where it was when the texture opened",
     "tilingPreviewHint": "Changes the preview only — the exported texture is not repeated for it",
+    "previewShape": "Shape",
     "previewShapeHint": "Changes the shape the preview is laid on, not the texture",
     "measureSeamHint": "Compares the opposite edges of the texture to say whether the seam shows",
     "deriveHint": "Computes this channel from another one rather than from an imported image"

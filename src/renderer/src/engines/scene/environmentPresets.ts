@@ -60,7 +60,7 @@ const PATCHES: Record<EnvironmentPreset, Partial<SceneWorld>> = {
   // the haze is what gives distance to a set that has any.
   outdoor: {
     envIntensity: 1.8,
-    background: { kind: 'environment' },
+    background: { kind: 'environment', blur: 0 },
     fog: { kind: 'linear', color: '#b6c6d8', near: 25, far: 140 },
     toneMapping: 'aces',
     exposure: 1,

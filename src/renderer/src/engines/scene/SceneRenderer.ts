@@ -2169,6 +2169,9 @@ export class SceneRenderer {
     // this one is laid over. It outranks the document — a montage never asked for a backdrop.
     const shows = !this.transparent && wanted.kind === 'environment'
     this.environment?.setBackgroundVisible(shows)
+    // Only the picture carries it, so any other backdrop puts it back to sharp rather than
+    // leaving the previous softening on the next sky that hangs there.
+    this.environment?.setBackgroundBlur(wanted.kind === 'environment' ? wanted.blur : 0)
 
     if (shows && this.sky.showsSky()) return
 

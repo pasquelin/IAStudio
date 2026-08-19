@@ -101,6 +101,16 @@ describe('the environment of a viewport', () => {
     expect(scene.background).toBe(sky)
   })
 
+  it('softens the picture without touching what the materials reflect', () => {
+    const environment = withPrefilteredMap()
+    const reflected = scene.environment
+
+    environment.setBackgroundBlur(0.6)
+
+    expect(scene.backgroundBlurriness).toBe(0.6)
+    expect(scene.environment).toBe(reflected)
+  })
+
   it('leaves the background hidden when a new source arrives', () => {
     const environment = environmentOf()
     environment.setBackgroundVisible(false)

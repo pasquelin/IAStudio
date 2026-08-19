@@ -1,15 +1,16 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Settings } from '@shared/domain/settings'
-import { ChoiceField } from '@/design/ChoiceField'
 import { PropertySection } from '@/design/PropertySection'
 import { QuietNote } from '@/design/QuietNote'
+import { SelectField } from '@/design/SelectField'
 import {
   SHADOW_LEVELS,
   shadowLevelOf,
   shadowPreferenceFor,
   shadowsCapped,
 } from '@/engines/scene/shadowLevels'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { choicesOf } from './environmentChoices'
 
 export type EnvironmentShadowsSectionProps = {
@@ -29,11 +30,13 @@ export function EnvironmentShadowsSection({ view, onViewport }: EnvironmentShado
 
   return (
     <PropertySection title={t('environment.shadows')} defaultOpen={false} scId="shadows">
-      <ChoiceField
+      <SelectField
         label={t('environment.shadowsLevel')}
         value={level}
-        options={levels}
+        options={levels.options}
         onChange={wanted => onViewport(shadowPreferenceFor(wanted))}
+        unnamedLabel={t('environment.shadowsCustom')}
+        hint={level ? HINT_LEFT(levels.hintOf(level)) : undefined}
       />
 
       {level === null && <QuietNote>{t('environment.shadowsCustomHint')}</QuietNote>}

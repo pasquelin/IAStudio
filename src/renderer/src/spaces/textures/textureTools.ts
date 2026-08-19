@@ -40,8 +40,8 @@ const SHAPE_ICONS: Record<PreviewShape, string> = {
   torusKnot: mdiVectorCircleVariant,
 }
 
-/** i18n key of a shape, as the inspector already names them — one word, one place. */
-const SHAPE_LABELS: Record<PreviewShape, string> = {
+/** i18n key of a shape — one word, one place, which the inspector reads from here too. */
+export const SHAPE_LABELS: Record<PreviewShape, string> = {
   sphere: 'texture.shapeSphere',
   box: 'texture.shapeBox',
   cylinder: 'texture.shapeCylinder',

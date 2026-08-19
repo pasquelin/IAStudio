@@ -39,14 +39,14 @@ describe('environment panel', () => {
   it('lights a scene the studio way until somebody says otherwise', () => {
     render(<Content />)
 
-    expect(screen.getByRole('button', { name: /Éclairage/ })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Source' })).toHaveValue('studio')
     expect(world().environment).toEqual({ kind: 'studio' })
   })
 
   describe('looks', () => {
     it('writes the fields the look is about', async () => {
       render(<Content />)
-      await userEvent.click(screen.getByRole('button', { name: 'Nuit' }))
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Ambiances' }), 'night')
 
       expect(world().toneMapping).toBe('aces')
       expect(world().exposure).toBeGreaterThan(1)
@@ -57,30 +57,32 @@ describe('environment panel', () => {
     // outliner, an entry in the history and a light in every export.
     it('adds no node to the scene', async () => {
       render(<Content />)
-      await userEvent.click(screen.getByRole('button', { name: 'Extérieur' }))
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Ambiances' }), 'outdoor')
 
       expect(sceneOf(useScenes.getState(), 'doc-1').nodes).toHaveLength(3)
     })
 
     // A stored name would go on claiming « Night » after the first field moved, which is why the
-    // chip reads the world back rather than remembering what was clicked.
-    it('reads back as chosen, and stops once anything it set is tuned', async () => {
+    // row reads the world back rather than remembering what was chosen.
+    it('reads back as chosen, and falls to « custom » once anything it set is tuned', async () => {
       render(<Content />)
-      await userEvent.click(screen.getByRole('button', { name: 'Nuit' }))
-      expect(screen.getByRole('button', { name: 'Nuit' })).toHaveAttribute('aria-pressed', 'true')
+      const looks = screen.getByRole('combobox', { name: 'Ambiances' })
+      await userEvent.selectOptions(looks, 'night')
+      expect(looks).toHaveValue('night')
 
-      await userEvent.click(screen.getByRole('button', { name: 'Transparent' }))
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Fond' }), 'transparent')
 
-      expect(screen.getByRole('button', { name: 'Nuit' })).toHaveAttribute('aria-pressed', 'false')
+      expect(looks).toHaveValue('')
+      expect(screen.getByRole('option', { name: 'Personnalisé' })).toBeDisabled()
     })
 
     it('comes back with one undo', async () => {
       render(<Content />)
-      await userEvent.click(screen.getByRole('button', { name: 'Nuit' }))
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Ambiances' }), 'night')
       useScenes.getState().undo('doc-1')
 
       expect(world().toneMapping).toBe('none')
-      expect(world().background).toEqual({ kind: 'environment' })
+      expect(world().background).toEqual({ kind: 'environment', blur: 0 })
     })
   })
 
@@ -126,7 +128,7 @@ describe('environment panel', () => {
       await userEvent.click(screen.getByRole('button', { name: /Atmosphère/ }))
       expect(screen.queryByTitle('Densité')).not.toBeInTheDocument()
 
-      await userEvent.click(screen.getByRole('button', { name: 'Exponentiel' }))
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Brouillard' }), 'exp2')
       expect(screen.getByTitle('Densité')).toBeInTheDocument()
     })
 
@@ -135,8 +137,17 @@ describe('environment panel', () => {
       render(<Content />)
       expect(screen.queryByTitle('Couleur du fond')).not.toBeInTheDocument()
 
-      await userEvent.click(screen.getByRole('button', { name: 'Couleur' }))
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Fond' }), 'color')
       expect(screen.getByTitle('Couleur du fond')).toBeInTheDocument()
+    })
+
+    // Softening a backdrop that is the procedural studio would soften nothing: there is no
+    // picture to blur, only light.
+    it('offers the backdrop softening only under a sky', () => {
+      render(<Content />)
+
+      expect(screen.queryByTitle('Flou du fond')).not.toBeInTheDocument()
+      expect(screen.getByText(/le fond retombe/i)).toBeInTheDocument()
     })
 
     it('offers the snap steps only while snapping is on', async () => {

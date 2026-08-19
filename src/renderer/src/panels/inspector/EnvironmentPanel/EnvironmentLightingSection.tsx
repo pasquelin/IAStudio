@@ -1,13 +1,23 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AssetType } from '@shared/domain/asset'
 import { toDegrees, toRadians } from '@shared/domain/angles'
-import { ENV_INTENSITY, STUDIO_ENVIRONMENT, type SceneWorld } from '@shared/domain/scene'
+import {
+  ENV_INTENSITY,
+  ENVIRONMENT_KINDS,
+  STUDIO_ENVIRONMENT,
+  type SceneWorld,
+} from '@shared/domain/scene'
 import { PropertySection } from '@/design/PropertySection'
+import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
 import { LinkField } from '@/design/LinkField/LinkField'
 import type { GestureProps } from '@/design/styles'
+import { environmentOfKind } from '@/engines/scene/sceneWorld'
 import { openAssetById } from '@/helpers/openAsset'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
+import { choicesOf } from './environmentChoices'
 
 const SKIES: readonly AssetType[] = ['skybox']
 
@@ -18,9 +28,9 @@ export type EnvironmentLightingSectionProps = {
 }
 
 /**
- * What lights the subject and what its materials reflect. The intensity is a MULTIPLIER over the
- * studio's own strength, not an absolute: at 1 a saved scene is lit exactly as before. See
- * `applyWorld`, which holds the other half.
+ * What lights the subject and what its materials reflect. A scene is lit by exactly ONE
+ * prefiltered map, so the studio and a sky are alternatives rather than layers — hence the first
+ * row. The intensity multiplies whichever is in hand; see `applyWorld`, which holds that half.
  */
 export function EnvironmentLightingSection({
   world,
@@ -28,14 +38,28 @@ export function EnvironmentLightingSection({
   gesture,
 }: EnvironmentLightingSectionProps) {
   const { t } = useTranslation()
-  const options = useProjectPictures(SKIES)
+  const skies = useProjectPictures(SKIES)
+  const sources = useMemo(() => choicesOf(ENVIRONMENT_KINDS, 'environment.source_', t), [t])
+  const environment = world.environment
+  const skyId = environment.kind === 'skybox' ? environment.assetId : null
 
   return (
-    <PropertySection title={t('environment.lighting')} scId="lighting">
+    <PropertySection title={t('environment.ambience')} scId="lighting">
+      <SelectField
+        label={t('environment.source')}
+        value={environment.kind}
+        options={sources.options}
+        onChange={kind => onChange({ environment: environmentOfKind(kind, skies) })}
+        hint={HINT_LEFT(sources.hintOf(environment.kind))}
+      />
+
+      {/* Shown whatever the source, and NOT only under « sky »: this slot is the one drop target
+          the 3D space has for a sky, and a fresh scene opens on the studio — hiding it there left
+          no way at all to drag one in. */}
       <LinkField
         label={t('inspector.sky')}
-        value={world.environment.kind === 'skybox' ? world.environment.assetId : null}
-        options={options}
+        value={skyId}
+        options={skies}
         onChange={assetId =>
           onChange({ environment: assetId ? { kind: 'skybox', assetId } : STUDIO_ENVIRONMENT })
         }
@@ -48,8 +72,7 @@ export function EnvironmentLightingSection({
         open={{
           label: t('inspector.openSky'),
           hint: t('inspector.openSkyHint'),
-          run: () =>
-            openAssetById(world.environment.kind === 'skybox' ? world.environment.assetId : null),
+          run: () => openAssetById(skyId),
         }}
         scId="scene.environment"
       />
@@ -64,17 +87,19 @@ export function EnvironmentLightingSection({
         {...gesture}
       />
 
-      <SliderField
-        label={t('environment.rotation')}
-        // Degrees on screen, radians in the document — the rule every other angle of the studio
-        // follows, and the one place the two meet.
-        value={Math.round(toDegrees(world.envRotation))}
-        min={0}
-        max={360}
-        step={1}
-        onChange={degrees => onChange({ envRotation: toRadians(degrees) })}
-        {...gesture}
-      />
+      {/* Turning a procedural room shows nothing: there is no horizon in it to move. */}
+      {environment.kind === 'skybox' && (
+        <SliderField
+          label={t('environment.rotation')}
+          // Degrees on screen, radians in the document — the rule every other angle follows.
+          value={Math.round(toDegrees(world.envRotation))}
+          min={0}
+          max={360}
+          step={1}
+          onChange={degrees => onChange({ envRotation: toRadians(degrees) })}
+          {...gesture}
+        />
+      )}
     </PropertySection>
   )
 }

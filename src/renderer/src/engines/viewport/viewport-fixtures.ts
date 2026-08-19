@@ -17,6 +17,7 @@ export function fakeEnvironment(): ViewportEnvironment {
     setIntensity: vi.fn(),
     setRotation: vi.fn(),
     setBackgroundVisible: vi.fn(),
+    setBackgroundBlur: vi.fn(),
     dispose: vi.fn(),
   }
 }
