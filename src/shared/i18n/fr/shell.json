@@ -154,6 +154,8 @@
     "exportVideo": "Vidéo…",
     "exportCut": "Montage (OTIO)…",
     "exportBundle": "Montage et médias (OTIOZ)…",
+    "exportPicture": "Image aplatie (PNG)…",
+    "exportLayers": "Image à calques (PSD)…",
     "exportScene": "Scène",
     "exportSelection": "Sélection",
     "exportTexture": "Matière",

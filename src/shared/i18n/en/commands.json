@@ -309,6 +309,10 @@
       "title": "Export the image",
       "help": "Writes the flattened document to disk, as a PNG."
     },
+    "canvasExportLayered": {
+      "title": "Export the layers (PSD)…",
+      "help": "Writes the document with its layers, as a Photoshop file. Groups are flattened away: their layers arrive side by side."
+    },
     "skyboxView": {
       "title": "Change the view",
       "help": "Cycles through the four ways of looking at the sky: immersive, panoramic, cross, faces."

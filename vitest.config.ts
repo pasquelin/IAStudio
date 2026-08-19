@@ -108,6 +108,9 @@ const TEST_POOL = 'threads'
  */
 const DOM_BOUND = [
   'src/renderer/src/app/documentIo.test.ts',
+  // The composer makes a canvas per layer to read its pixels back, and a spy has to have
+  // something to stand in FOR.
+  'src/renderer/src/spaces/image/psdDocument.test.ts',
   // Not for a DOM: the name it proposes is « Sans titre N », composed by `i18next` — only the
   // renderer setup initialises it, and an uninitialised `t` answers with no string at all.
   'src/renderer/src/app/newDocument.test.ts',

@@ -304,6 +304,17 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       ]
     }
 
+    // Two rows rather than a submenu of formats: what an image exports is composed by the window,
+    // as a montage is, and the flatten already has a binding of its own.
+    if (workspace === 'image') {
+      return [
+        commandItem('canvas.export', t.menu.exportPicture),
+        commandItem('canvas.exportLayered', t.menu.exportLayers),
+      ]
+    }
+
+    // Unreachable by any of the six since the image gained its rows, and kept for the compiler
+    // alone: `menu/template.test.ts` names that rather than leaving it read as a case forgotten.
     return []
   }
 

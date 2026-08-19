@@ -309,6 +309,10 @@
       "title": "Exporter l’image",
       "help": "Écrit le document aplati sur le disque, au format PNG."
     },
+    "canvasExportLayered": {
+      "title": "Exporter les calques (PSD)…",
+      "help": "Écrit le document avec ses calques, au format Photoshop. Les groupes sont mis à plat, et leurs calques arrivent côte à côte."
+    },
     "skyboxView": {
       "title": "Changer de vue",
       "help": "Fait défiler les quatre façons de regarder le ciel : immersive, panoramique, croix, faces."

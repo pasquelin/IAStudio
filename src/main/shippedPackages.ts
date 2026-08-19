@@ -25,7 +25,6 @@ export const SHIPPED: string[] = [
   'fflate',
   'mediabunny',
   'opentype.js',
-  'pdf-lib',
   'pixi.js',
   'sherpa-onnx-node',
   'simple-git',

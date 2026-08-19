@@ -104,6 +104,7 @@ export type CommandId =
   | 'canvas.vectorize'
   | 'canvas.extend'
   | 'canvas.export'
+  | 'canvas.exportLayered'
   | 'canvas.mergeDown'
   | 'canvas.flatten'
   | 'canvas.flipHorizontal'
@@ -819,6 +820,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasExport.title',
     helpKey: 'commands.canvasExport.help',
     defaultBinding: 'Shift+Meta+KeyE',
+  }),
+  command({
+    /** The stack rather than the flatten — no default binding, ⇧⌘E being the flatten's. */
+    id: 'canvas.exportLayered',
+    scope: 'canvas',
+    titleKey: 'commands.canvasExportLayered.title',
+    helpKey: 'commands.canvasExportLayered.help',
+    defaultBinding: null,
   }),
   command({
     id: 'canvas.snap',

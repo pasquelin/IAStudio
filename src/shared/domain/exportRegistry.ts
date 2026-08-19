@@ -28,6 +28,7 @@ import {
 /** A (section, target) pair. Named for the section first, so the list reads by surface. */
 export type ExportTargetId =
   | 'picture.png'
+  | 'picture.psd'
   | 'scene.glb'
   | 'scene.gltf'
   | 'scene.usdz'
@@ -47,6 +48,7 @@ export type ExportTargetId =
 
 export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'picture.png',
+  'picture.psd',
   'scene.glb',
   'scene.gltf',
   'scene.usdz',
@@ -220,6 +222,36 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
     destination: 'folder',
     openedBy: ['Preview', 'GIMP', 'Safari', 'Firefox', 'Google Chrome'],
     capability: capabilityOf('png'),
+  },
+  /**
+   * The stack rather than the flatten — the one way out of an image that another editor can go
+   * on working in.
+   *
+   * `groups` is DROPPED and it is the loss worth naming: what the writer is handed is already a
+   * flat list of surfaces, the tree living in the studio's own field, so a group's children
+   * arrive as siblings. Everything past the four traits below has nowhere to go in what this
+   * composer writes — it writes pixels, a name, an opacity and a blend, and nothing else.
+   */
+  'picture.psd': {
+    domain: 'picture',
+    extension: '.psd',
+    door: 'declared',
+    destination: 'file',
+    openedBy: ['Adobe Photoshop', 'GIMP', 'Preview', 'Affinity Photo'],
+    capability: {
+      domain: 'picture',
+      interchange: ['layers', 'blendMode', 'layerOpacity', 'layerTransform'],
+      extended: [],
+      dropped: [
+        'groups',
+        'layerMask',
+        'adjustmentLayer',
+        'liveText',
+        'clipping',
+        'layerLock',
+        'guides',
+      ],
+    },
   },
   'scene.glb': {
     domain: 'scene',

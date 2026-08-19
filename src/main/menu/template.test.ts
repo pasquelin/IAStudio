@@ -595,11 +595,17 @@ describe('the export menu', () => {
     ).toEqual(['Vidéo…', 'Montage (OTIO)…', 'Montage et médias (OTIOZ)…'])
   })
 
-  /** An « Export » row a space cannot fill would open on nothing at all. */
-  it('shows no row at all where the space sends nothing out', () => {
-    expect(
-      submenuOf(menuTemplate(options({ workspace: 'image' })), 'Fichier').map(item => item.label),
-    ).not.toContain('Exporter')
+  /**
+   * Every one of the six sends something out since the image gained its two rows, so the empty
+   * fallback below `exportSubmenu` is now unreachable by any workspace — kept for the compiler,
+   * and named here rather than left looking like a case somebody forgot to cover.
+   */
+  it('shows the row in every space, each space sending something out', () => {
+    for (const workspace of WORKSPACE_IDS) {
+      expect(
+        submenuOf(menuTemplate(options({ workspace })), 'Fichier').map(item => item.label),
+      ).toContain('Exporter')
+    }
   })
 
   it('offers every declared format, for the scene and for the selection', () => {
@@ -652,7 +658,6 @@ describe('the export menu', () => {
     expect(exportTexture).toHaveBeenCalledWith({ target: 'roblox' })
   })
 
-  // Exporting an image document is another errand, with another writer behind it.
   it('shows each workspace only the export that belongs to it', () => {
     const labels = (workspace: WorkspaceId): (string | undefined)[] =>
       exportsIn(menuTemplate(options({ workspace }))).map(item => item.label)
@@ -663,7 +668,9 @@ describe('the export menu', () => {
     expect(labels('textures')).not.toContain('Scène')
     expect(labels('skyboxes')).toContain('Ciel')
     expect(labels('skyboxes')).not.toContain('Matière')
-    expect(labels('image')).toEqual([])
+    // Two rows rather than a submenu of formats, as the montage has: what an image writes is
+    // composed by the window, and the flatten already answers a binding of its own.
+    expect(labels('image')).toEqual(['Image aplatie (PNG)…', 'Image à calques (PSD)…'])
   })
 })
 
