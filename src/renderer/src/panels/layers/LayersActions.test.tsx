@@ -1,12 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addLayer } from '@/engines/canvas/commands'
 import { layerFixture } from '@/engines/canvas/canvas-fixtures'
 import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
 import { groupLayer } from '@/engines/canvas/canvasState'
+import { subscribeToCommands } from '@/services/commandBus'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { canvasOf, useCanvases } from '@/stores/canvases'
+import { useCanvasViews } from '@/stores/canvasViews'
 import { useDocuments } from '@/stores/documents'
 import { LayersActions } from './LayersActions'
 
@@ -96,7 +98,42 @@ describe('LayersActions', () => {
       await userEvent.click(screen.getByRole('button', { name: /^Opérations/ }))
 
       const rows = await screen.findAllByRole('menuitem')
-      expect(rows.map(row => row.textContent)).toEqual(['Grouper', 'Dégrouper', 'Dupliquer'])
+      expect(rows.map(row => row.textContent)).toEqual([
+        'Grouper',
+        'Dégrouper',
+        'Dupliquer',
+        'Faire un masque de la sélection',
+      ])
+    })
+
+    /**
+     * Implemented, tested, and reachable by the Image menu alone: no default key, and no button
+     * anywhere. Published rather than run — carving the mask is the engine's, and this panel
+     * holds no engine.
+     */
+    it('asks the tab in front to make a mask, rather than reaching for its engine', async () => {
+      useCanvasViews
+        .getState()
+        .setSelection('doc-1', { kind: 'rect', rect: { x: 0, y: 0, width: 4, height: 4 } })
+      const heard = vi.fn()
+      const stop = subscribeToCommands(heard)
+      render(<LayersActions />)
+
+      await userEvent.click(screen.getByRole('button', { name: /^Opérations/ }))
+      await userEvent.click(await screen.findByRole('menuitem', { name: /masque/ }))
+
+      expect(heard).toHaveBeenCalledWith('canvas.maskFromSelection')
+      stop()
+    })
+
+    /** Nothing to make a mask OF: the row is offered greyed rather than doing nothing. */
+    it('greys that row while nothing is selected', async () => {
+      useCanvasViews.getState().setSelection('doc-1', null)
+      render(<LayersActions />)
+
+      await userEvent.click(screen.getByRole('button', { name: /^Opérations/ }))
+
+      expect(await screen.findByRole('menuitem', { name: /masque/ })).toBeDisabled()
     })
 
     // The label is composed from the operation key, and so is the sentence: neither is written
@@ -110,6 +147,7 @@ describe('LayersActions', () => {
         'Range le calque actif dans un nouveau groupe',
         'Sort les calques du groupe et supprime le groupe',
         'Copie le calque actif juste au-dessus de lui',
+        'Masque le calque actif hors de la région sélectionnée.',
       ])
       // An `aria-label` over a visible label replaces it for a screen reader (WCAG 2.5.3).
       for (const row of rows) expect(row).not.toHaveAttribute('aria-label')

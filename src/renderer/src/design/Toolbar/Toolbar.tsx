@@ -54,9 +54,11 @@ export function Toolbar({
         className,
       )}
     >
-      {tools.map(tool => (
+      {tools.map((tool, index) => (
         <Fragment key={tool.id}>
-          {tool.separatorBefore && divider}
+          {/* `index > 0`: a registry that opens on a separator is one composed with something in
+              front of it, and a rule against the edge of the bar separates nothing. */}
+          {tool.separatorBefore && index > 0 && divider}
           <ToolbarTool
             tool={tool}
             // Either, never one overriding the other: `pressed: false` on the armed tool must

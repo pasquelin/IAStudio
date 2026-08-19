@@ -35,6 +35,10 @@ import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from '../canvasView'
 import { guidePort } from '../guidePort'
 import {
+  AI_EDIT_TOOL,
+  AI_EDIT_TOOL_ID,
+  aiEditCommand,
+  aiEditOf,
   armedBy,
   armingCommand,
   canvasToolFor,
@@ -45,7 +49,7 @@ import {
   shapeKindFor,
 } from '../imageTools'
 import { layerPort } from '../layerPort'
-import { prepareEdit, type AiEdit } from '../aiActions'
+import { prepareEdit } from '../aiActions'
 import { exportPicture } from '../exportPicture'
 import { maskFromSelection } from '../maskActions'
 import { placeAsset } from '../placeAsset'
@@ -55,15 +59,6 @@ import { pixelPort } from '../pixelPort'
 import { ZoomBar } from '../ZoomBar'
 
 export type ImageDocumentProps = { documentId: string }
-
-/** Which edit each command asks for. A table, so a sixth is one entry and no new branch. */
-const EDIT_BY_COMMAND: Readonly<Record<string, AiEdit>> = {
-  'canvas.regenerate': 'regenerate',
-  'canvas.cutout': 'cutout',
-  'canvas.enlarge': 'enlarge',
-  'canvas.vectorize': 'vectorize',
-  'canvas.extend': 'extend',
-}
 
 /**
  * The transparency checker, as one repeating gradient — no image, and no hex: a painted white
@@ -261,7 +256,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         case 'canvas.vectorize':
         case 'canvas.extend': {
           const host = engine.current
-          const edit = EDIT_BY_COMMAND[command]
+          const edit = aiEditOf(command)
           const bridge = getBridge()
           if (!host || !edit || !bridge) return
 
@@ -339,12 +334,17 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       return command ? label(bindingOf(command, bindings)) || undefined : undefined
     }
 
-    return IMAGE_TOOLS.map(entry => ({
-      ...entry,
-      activeMode: modes[entry.id],
-      shortcut: keyOf(entry.id),
-      modes: entry.modes?.map(item => ({ ...item, shortcut: keyOf(entry.id, item.id) })),
-    }))
+    return [
+      ...IMAGE_TOOLS.map(entry => ({
+        ...entry,
+        activeMode: modes[entry.id],
+        shortcut: keyOf(entry.id),
+        modes: entry.modes?.map(item => ({ ...item, shortcut: keyOf(entry.id, item.id) })),
+      })),
+      // No `activeMode`, and that is what makes it a menu of actions rather than a choice of
+      // tool: none of its rows can be armed, so the click opens what hovering would have.
+      AI_EDIT_TOOL,
+    ]
   }, [modes, bindings, label])
 
   // Read off the registry rather than written on the buttons: a key remapped in the settings
@@ -392,7 +392,11 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           tools={tools}
           activeTool={tool}
           onTool={setTool}
-          onMode={pick}
+          onMode={(toolId, modeId) => {
+            if (toolId !== AI_EDIT_TOOL_ID) return pick(toolId, modeId)
+            const command = aiEditCommand(modeId)
+            if (command) run(command)
+          }}
           extras={
             <ImageDocumentBrush
               armed={canvasToolFor(tool, mode)}

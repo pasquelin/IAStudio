@@ -1,11 +1,7 @@
 import { mdiEyeOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import {
-  MAX_FIELD_OF_VIEW,
-  MIN_FIELD_OF_VIEW,
-  SKYBOX_VIEWS,
-  type SkyboxView,
-} from '@shared/domain/skybox'
+import { MAX_FIELD_OF_VIEW, MIN_FIELD_OF_VIEW, SKYBOX_VIEWS } from '@shared/domain/skybox'
+import { SKYBOX_VIEW_LABELS } from '@/spaces/skyboxes/skyboxTools'
 import { Chip } from '@/design/Chip'
 import { EmptyState } from '@/design/EmptyState'
 import { PropertySection } from '@/design/PropertySection'
@@ -14,14 +10,6 @@ import { ToggleField } from '@/design/ToggleField'
 import { FIELD_LABEL, FIELD_ROW, PANEL_SCROLL } from '@/design/styles'
 import { activeSkyboxId, useDocuments } from '@/stores/documents'
 import { useSkyboxViews, skyboxViewOf } from '@/stores/skyboxViews'
-
-/** i18n key of a projection — never the label itself, as `SkyboxDocument` did before it. */
-const VIEW_LABELS: Record<SkyboxView, string> = {
-  immersive: 'skybox.viewImmersive',
-  equirect: 'skybox.viewEquirect',
-  cross: 'skybox.viewCross',
-  faces: 'skybox.viewFaces',
-}
 
 /**
  * How the document in the centre is being LOOKED AT — never what it is.
@@ -56,7 +44,7 @@ export function View() {
             {SKYBOX_VIEWS.map(candidate => (
               <Chip
                 key={candidate}
-                label={t(VIEW_LABELS[candidate])}
+                label={t(SKYBOX_VIEW_LABELS[candidate])}
                 hint={t('view.modeHint')}
                 selected={settings.view === candidate}
                 onClick={() => set(documentId, { view: candidate })}

@@ -1,9 +1,11 @@
 import { mdiCubeOutline } from '@mdi/js'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SphericalAngles } from '@shared/domain/angles'
 import { PICTURES, type Asset } from '@shared/domain/asset'
 import { EmptyState } from '@/design/EmptyState'
+import { PANE_TOOLBAR } from '@/design/styles'
+import { Toolbar } from '@/design/Toolbar/Toolbar'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { setSunAngles } from '@/engines/skybox/commands'
@@ -19,8 +21,11 @@ import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { assetVersionOf } from '@/stores/assets'
-import type { CommandId } from '@shared/domain/command'
+import { bindingOf, type CommandId } from '@shared/domain/command'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
+import { useBindingOverrides } from '@/stores/bindings'
 import { skyboxExportFiles } from './skyboxExportFiles'
+import { SKYBOX_TOOLS, skyboxViewFrom } from './skyboxTools'
 
 /**
  * A sky handed to an engine as six faces, from the row of the native menu that was picked.
@@ -59,6 +64,8 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   // the centre carries the toolbar and the rulers only. Session state all the same — none of it
   // is saved with the document, and ⌘Z never touches it.
   const { fieldOfView, probes, view } = useSkyboxViews(state => skyboxViewOf(state, documentId))
+  const bindings = useBindingOverrides()
+  const label = useShortcutLabel()
 
   useDocumentTitle(
     documentId,
@@ -117,6 +124,21 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
     engine.current?.setView(view)
   }, [view])
 
+  // The panel above this viewport drives the field of view with a slider, so this document
+  // re-renders on every frame of that drag — the bar must not be rebuilt with it.
+  const tools = useMemo(
+    () =>
+      SKYBOX_TOOLS.map(tool => ({
+        ...tool,
+        // Read off the registry rather than written on the button: a key remapped in the
+        // settings has to move on the bar with it, as the two other bars already do.
+        shortcut: label(bindingOf(tool.command, bindings)),
+        activeMode: tool.id === 'view' ? view : undefined,
+        pressed: tool.id === 'probes' ? probes : undefined,
+      })),
+    [view, probes, bindings, label],
+  )
+
   const onDrop = (asset: Asset): void => setSkyboxSource(documentId, asset)
 
   /**
@@ -161,6 +183,19 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
           <EmptyState icon={mdiCubeOutline} message={t('skybox.noSource')} />
         </div>
       )}
+
+      <Toolbar
+        className={PANE_TOOLBAR}
+        tools={tools}
+        onTool={id => {
+          const command = SKYBOX_TOOLS.find(candidate => candidate.id === id)?.command
+          if (command) run(command)
+        }}
+        onMode={(_toolId, modeId) => {
+          const chosen = skyboxViewFrom(modeId)
+          if (chosen) useSkyboxViews.getState().set(documentId, { view: chosen })
+        }}
+      />
     </AssetDropTarget>
   )
 }

@@ -28,13 +28,9 @@ const BRUSH_FIELDS: readonly {
 ]
 
 /**
- * The paint settings, showing only what the armed tool reads.
- *
- * A control the tool ignores is not greyed, it is gone — the rule the inspector already applies
- * to a sprite, which gets no shadow section at all rather than a dead one. The hardness slider
- * under the pencil was the case that named this: live, draggable, and moving nothing.
- *
- * The table is `BRUSH_SETTINGS_BY_TOOL`, and the engine reads the same one.
+ * The colour, always, and the settings the armed tool reads — `BRUSH_SETTINGS_BY_TOOL`, which
+ * the engine reads too. A setting the tool ignores is not greyed, it is gone; the colour is not
+ * one of them, it belongs to the document.
  */
 export function ImageDocumentBrush({
   armed,
@@ -51,33 +47,23 @@ export function ImageDocumentBrush({
 }) {
   const { t } = useTranslation()
   const reads = armed ? BRUSH_SETTINGS_BY_TOOL[armed] : []
-
-  // Nothing to set is nothing to show: the pointer, the crop and the picker paint no pixel, and
-  // a bar of live controls above them promised settings the gesture never reads. `null` and not
-  // an empty wrapper — the bar is a flex row with a gap, which an empty child still spends.
-  if (reads.length === 0) return null
-
   const fields = BRUSH_FIELDS.filter(field => reads.includes(field.of))
-  const showsColor = reads.includes('color')
 
   return (
     <div className="flex flex-col items-center gap-2">
       {/*
-        A native colour input, deliberately: macOS opens the system picker, which already has
-        an eyedropper, swatches and HSL fields. Same reasoning as the native `<select>` in
-        `CollectionBar`.
+        A native colour input, deliberately: macOS opens the system picker, which already has an
+        eyedropper, swatches and HSL fields. Same reasoning as `CollectionBar`'s native `<select>`.
       */}
-      {showsColor && (
-        <input
-          type="color"
-          {...TIP_RIGHT(t('imageTools.color'), undefined, t('imageTools.colorHint'))}
-          value={`#${brush.color.toString(16).padStart(6, '0')}`}
-          onChange={event =>
-            onBrush({ ...brush, color: Number.parseInt(event.target.value.slice(1), 16) })
-          }
-          className={cn(CONTROL, 'w-(--sc-control) cursor-pointer border-none p-0.5')}
-        />
-      )}
+      <input
+        type="color"
+        {...TIP_RIGHT(t('imageTools.color'), undefined, t('imageTools.colorHint'))}
+        value={`#${brush.color.toString(16).padStart(6, '0')}`}
+        onChange={event =>
+          onBrush({ ...brush, color: Number.parseInt(event.target.value.slice(1), 16) })
+        }
+        className={cn(CONTROL, 'w-(--sc-control) cursor-pointer border-none p-0.5')}
+      />
 
       {/*
         Behind a flyout rather than in the bar: this bar is one control wide, and three labelled

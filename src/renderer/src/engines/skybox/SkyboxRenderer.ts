@@ -205,6 +205,9 @@ export class SkyboxRenderer {
   setProbesVisible(visible: boolean): void {
     this.probesWanted = visible
     this.syncProbes()
+    // Hiding them changes nothing a frame is drawn for, and this viewport only draws when asked:
+    // without this the spheres stayed on screen until something else moved.
+    this.viewport.requestRender()
   }
 
   /**

@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
 import { cn } from '@/helpers/cn'
-import type { TooltipFactory } from '@/helpers/tooltip'
+import { withoutTip, type TooltipFactory } from '@/helpers/tooltip'
 import { BUTTON_BASE } from './styles'
 import { UiIcon } from './UiIcon'
 
@@ -39,9 +39,13 @@ export type ToolButtonProps = Omit<
    * spelled out is a button one has to press to find out what it does.
    */
   tooltip: TooltipFactory
+  /** Drops the tip while something of this button's own covers it — see `MenuButton`. */
+  tipHidden?: boolean
   shortcut?: string | false
-  /** Tool currently in use: neutral background. */
+  /** Tool currently in use: neutral background, and `aria-pressed` unless `acts`. */
   active?: boolean
+  /** Acts rather than toggles: no `aria-pressed` — see `ToolbarItem.acts`. */
+  acts?: boolean
   /** Tool in use AND whose zone has focus: accented background. */
   accented?: boolean
   /** Which host the button sits on — see `HOSTS` for what each one costs. */
@@ -62,8 +66,10 @@ export function ToolButton({
   label,
   description,
   tooltip,
+  tipHidden,
   shortcut,
   active,
+  acts,
   accented,
   variant = 'bar',
   className,
@@ -72,13 +78,14 @@ export function ToolButton({
   ref,
   ...rest
 }: ToolButtonProps) {
-  const naming = tooltip(label, shortcut, description)
+  const named = tooltip(label, shortcut, description)
+  const naming = tipHidden ? withoutTip(named) : named
 
   return (
     <button
       type="button"
       ref={ref}
-      aria-pressed={active}
+      aria-pressed={acts ? undefined : active}
       className={cn(
         BUTTON_BASE,
         'text-muted shrink-0 bg-transparent',

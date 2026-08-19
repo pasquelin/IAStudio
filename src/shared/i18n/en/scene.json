@@ -86,6 +86,8 @@
     "removePathPointHint": "Takes the point off the path. A path always keeps its last two points"
   },
   "objects": {
+    "add": "Add an object",
+    "addHint": "Puts a camera, a rail, a sprite or some text into the scene",
     "sprite": "Sprite",
     "text": "Text",
     "camera": "Camera",
@@ -166,6 +168,10 @@
     "scaleHint": "Change the selected object’s scale",
     "frame": "Frame selection",
     "frameHint": "Recentre the camera on the selected object",
+    "duplicateHint": "Puts a copy of the selection in the same place",
+    "groupHint": "Files the selection under one group",
+    "deleteHint": "Takes what is selected out of the scene",
+    "quadHint": "Splits the viewport into four views",
     "snap": "Snap",
     "snapHint": "Move the handles in regular steps, as coarse as the settings say",
     "space": "Local frame",

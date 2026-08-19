@@ -290,12 +290,19 @@ describe('ImageDocument', () => {
       expect(await settingsUnder('KeyR')).toEqual(['Taille', 'Opacité'])
     })
 
-    // Its stamp is white, which is what the erase blend reads — the swatch chose nothing.
-    it('takes the colour away under the eraser, and keeps it under the bucket', () => {
-      armedWith('KeyE')
-      expect(screen.queryByLabelText('Couleur')).not.toBeInTheDocument()
+    /**
+     * The colour belongs to the DOCUMENT, not to the tool: shown only under a painting tool, it
+     * could not be chosen before picking a brush, and nothing said which colour the next stroke
+     * would be. Every one of these tools is one the bar opens on or reaches for mid-work.
+     */
+    it.each([
+      ['the eraser', 'KeyE'],
+      ['the bucket', 'KeyG'],
+      ['the eyedropper', 'KeyI'],
+      ['the pointer', 'KeyV'],
+    ])('keeps the colour under %s, whatever that tool reads', (_name, key) => {
+      armedWith(key)
 
-      armedWith('KeyG')
       expect(screen.getByLabelText('Couleur')).toBeInTheDocument()
     })
 
@@ -312,25 +319,10 @@ describe('ImageDocument', () => {
       ['the pointer', 'KeyV'],
       ['the crop frame', 'KeyF'],
       ['the caption tool', 'KeyT'],
-    ])('shows nothing at all under %s, which paints no pixel', (_name, key) => {
+    ])('offers no setting at all under %s, which paints no pixel', (_name, key) => {
       armedWith(key)
 
-      expect(screen.queryByLabelText('Couleur')).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Réglages du pinceau' })).not.toBeInTheDocument()
-    })
-
-    /**
-     * Withdrawing means leaving, not standing there empty: the bar is a flex row with a gap
-     * between every pair of children, so a wrapper with nothing in it still spends one. The
-     * separators are `<span>`, which is what makes an empty `<div>` here nothing but this.
-     */
-    it('takes its slot in the bar with it rather than leaving a gap behind', () => {
-      armedWith('KeyI')
-
-      const empty = [...screen.getByRole('toolbar').children].filter(
-        child => child.tagName === 'DIV' && child.childElementCount === 0,
-      )
-      expect(empty).toEqual([])
     })
   })
 

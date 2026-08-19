@@ -2,7 +2,8 @@ import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
 import { DISPLAY_MODES } from '@shared/domain/scene'
-import { SCENE_TOOLS } from './sceneTools'
+import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
+import { ADD_TOOLS, SCENE_TOOLS, addedKind } from './sceneTools'
 
 const display = SCENE_TOOLS.find(tool => tool.id === 'display')
 
@@ -13,14 +14,23 @@ describe('scene tools', () => {
     }
   })
 
+  /**
+   * Either namespace, and the second is not a loophole: the three verbs of a selection wear the
+   * COMMANDS' own titles, so a word translated for the Édition menu is never translated twice.
+   */
   it('names every tool through i18n rather than a literal', () => {
-    for (const tool of SCENE_TOOLS) expect(tool.labelKey).toMatch(/^sceneTools\./)
+    for (const tool of SCENE_TOOLS) expect(tool.labelKey).toMatch(/^(sceneTools|commands)\./)
   })
 
   it('gives every tool an icon', () => {
     for (const tool of SCENE_TOOLS) expect(tool.icon).toBeTruthy()
   })
 
+  /**
+   * `sceneTools.*Hint` and no `commands.*.help`: a command's help is written for a MENU and runs
+   * to two sentences — `sceneDuplicate` is 174 characters, against 43 for `frameHint`. A floating
+   * tip on a bar button is one line, so the four verbs got a bar sentence of their own.
+   */
   it('explains every tool, so no tooltip merely repeats the button’s own name', () => {
     for (const tool of SCENE_TOOLS) expect(tool.descriptionKey).toMatch(/^sceneTools\..+Hint$/)
   })
@@ -48,9 +58,9 @@ describe('scene tools', () => {
 
 describe('SCENE_TOOLS', () => {
   /**
-   * Eight, down from twenty-three. The fifteen that left are all in the native menu now, and
-   * this is the number the whole batch is about: a bar of twenty-three icons made the eight
-   * that matter impossible to find.
+   * Twelve. It was twenty-three, then eight — and the cut that mattered was never the COUNT: the
+   * fifteen that left were settings (seven ways of drawing as rows, six sides, projection), and
+   * four have come back because they are VERBS a hand reaches for by the minute.
    */
   it('holds what a hand reaches for while manipulating, and nothing else', () => {
     expect(SCENE_TOOLS.map(tool => tool.id)).toEqual([
@@ -60,7 +70,11 @@ describe('SCENE_TOOLS', () => {
       'scale',
       'snap',
       'space',
+      'duplicate',
+      'group',
+      'delete',
       'display',
+      'quad',
       'frame',
     ])
   })
@@ -90,26 +104,31 @@ describe('SCENE_TOOLS', () => {
     expect(SCENE_TOOLS[0]?.id).toBe('select')
   })
 
+  /** `select` opens the rule under what a scene GAINS, which stands above it — see `ADD_TOOLS`. */
   it('reads as groups rather than a run of icons', () => {
     expect(SCENE_TOOLS.filter(tool => tool.separatorBefore).map(tool => tool.id)).toEqual([
+      'select',
       'snap',
+      'duplicate',
       'display',
       'frame',
     ])
   })
 
   /**
-   * Copy, cut and paste stay on the bar while duplicate, group and delete left for the Edit
-   * menu, and the asymmetry is deliberate: those three rows keep their NATIVE roles so a text
-   * field goes on copying, and a command row in their place would act on the scene with the
-   * caret in a field — the menu path carries no `isTyping` guard.
+   * Copy, cut and paste stay OFF the bar while duplicate, group and delete are on it, and the
+   * asymmetry is deliberate: the clipboard three keep their native menu roles so a text field
+   * goes on copying, and a row in their place would act on the scene with the caret in a field.
+   * A BUTTON carries no such risk — nobody clicks a toolbar by mistake while typing.
    */
-  it('keeps the clipboard gestures, which no menu row can answer for', () => {
+  it('draws the three verbs of a selection, and none of the clipboard', () => {
     const ids = SCENE_TOOLS.map(tool => tool.id)
 
-    expect(ids).not.toContain('duplicate')
-    expect(ids).not.toContain('group')
-    expect(ids).not.toContain('delete')
+    expect(ids).toContain('duplicate')
+    expect(ids).toContain('group')
+    expect(ids).toContain('delete')
+    expect(ids).not.toContain('copy')
+    expect(ids).not.toContain('paste')
   })
 
   // They qualify the armed tool rather than replacing it, so they follow it in their own group.
@@ -127,5 +146,54 @@ describe('SCENE_TOOLS', () => {
    */
   it('gives every button a command of its own', () => {
     expect(SCENE_TOOLS.filter(tool => tool.command === undefined)).toEqual([])
+  })
+})
+
+/**
+ * What a scene GAINS. Adding was left to the native Add menu, three levels deep, and a camera,
+ * a sprite, a caption and a rail had no other way in at all — no panel, no key, and a right-click
+ * that only answers over a node.
+ */
+describe('ADD_TOOLS', () => {
+  it('offers one button per family a scene grows by', () => {
+    expect(ADD_TOOLS.map(tool => tool.id)).toEqual(['add:meshes', 'add:lights', 'add:objects'])
+  })
+
+  /** Three flat lists rather than one of twenty-four: a flyout has no submenu to fold them into. */
+  it('offers every kind each family declares', () => {
+    expect(ADD_TOOLS.flatMap(tool => tool.modes ?? [])).toHaveLength(ADD_ENTRIES.length)
+  })
+
+  /** The four objects are the reason this exists: none of them has a panel to be added from. */
+  it('is the only place an object can be added from', () => {
+    const objects = ADD_TOOLS.find(tool => tool.id === 'add:objects')
+
+    expect(objects?.modes?.map(mode => mode.id)).toEqual(['sprite', 'text', 'camera', 'path'])
+  })
+
+  /** Arms nothing, so it must carry no armed mode — that is what opens the menu on a click. */
+  it('names no armed mode, being a menu of actions', () => {
+    expect(ADD_TOOLS.filter(tool => tool.activeMode !== undefined)).toEqual([])
+  })
+
+  it('has a translation behind every key it declares', () => {
+    for (const tool of ADD_TOOLS) {
+      expect(i18next.exists(tool.labelKey)).toBe(true)
+      expect(i18next.exists(tool.descriptionKey ?? '')).toBe(true)
+
+      for (const mode of tool.modes ?? []) {
+        expect(i18next.exists(mode.labelKey)).toBe(true)
+        expect(i18next.exists(mode.descriptionKey)).toBe(true)
+        expect(mode.icon).toBeTruthy()
+      }
+    }
+  })
+
+  it('reads a row back as the kind it adds, and nothing else as one', () => {
+    expect(addedKind('add:objects', 'camera')).toBe('camera')
+    expect(addedKind('add:meshes', 'box')).toBe('box')
+    // A kind of another family: the row exists, but not under that button.
+    expect(addedKind('add:lights', 'box')).toBeNull()
+    expect(addedKind('display', 'shaded')).toBeNull()
   })
 })

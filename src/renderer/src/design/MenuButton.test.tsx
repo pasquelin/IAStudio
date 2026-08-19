@@ -250,4 +250,22 @@ describe('MenuButton', () => {
       expect(row('Pinceau')).toBeInTheDocument()
     })
   })
+
+  /**
+   * The menu opens right beside the button, over its own tip — which then reads as a sentence cut
+   * in half behind the rows. The NAME is not the tooltip's to lose: a screen reader still has one.
+   */
+  describe('its own tip, while the menu covers it', () => {
+    it('drops the tip once the menu is open, and puts it back on close', async () => {
+      const button = bar()
+      expect(button).toHaveAttribute('data-tooltip-content', 'Brush')
+
+      await userEvent.click(button)
+      expect(button).not.toHaveAttribute('data-tooltip-content')
+      expect(button).toHaveAccessibleName('Brush')
+
+      await userEvent.keyboard('{Escape}')
+      expect(button).toHaveAttribute('data-tooltip-content', 'Brush')
+    })
+  })
 })

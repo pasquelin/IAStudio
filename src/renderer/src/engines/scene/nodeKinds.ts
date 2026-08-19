@@ -5,6 +5,7 @@ import {
   mdiImageOutline,
   mdiLightbulbOutline,
   mdiShapeOutline,
+  mdiShapePlusOutline,
   mdiVectorPolyline,
   mdiVideoOutline,
 } from '@mdi/js'
@@ -70,15 +71,20 @@ export function labelKeyOf(namespace: string, entry: AddEntry): string {
 }
 
 /**
- * Everything a scene can hold, family by family, in the order the registries declare. The
- * families with a panel come from `NODE_KINDS`; sprite and text have none — see `PanelNodeType`.
+ * The three families a scene grows by, each with the glyph its button wears. The two with a
+ * panel come from `NODE_KINDS`; the objects have none — see `PanelNodeType`.
  */
-export const ADD_ENTRIES: readonly { entry: AddEntry; labelKey: string }[] = [
+export const ADD_FAMILIES: readonly NodeKind[] = [
   ...Object.values(NODE_KINDS),
   {
+    icon: mdiShapePlusOutline,
     entries: OBJECT_ENTRIES.map(entry => ({ ...entry, icon: OBJECT_ICONS[entry.kind] })),
     namespace: 'objects',
   },
-].flatMap(({ entries, namespace }) =>
-  entries.map(entry => ({ entry, labelKey: labelKeyOf(namespace, entry) })),
+]
+
+/** Everything a scene can hold, flat, in the order the registries declare. */
+export const ADD_ENTRIES: readonly { entry: AddEntry; labelKey: string }[] = ADD_FAMILIES.flatMap(
+  ({ entries, namespace }) =>
+    entries.map(entry => ({ entry, labelKey: labelKeyOf(namespace, entry) })),
 )

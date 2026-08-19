@@ -43,6 +43,17 @@ function makeTooltip(place: TooltipPlace): TooltipFactory {
 }
 
 /**
+ * The same attributes with the tooltip anchor dropped, the accessible name kept — for a button
+ * whose own flyout is open over it. The tip is then drawn UNDER the menu it opened, and reads as
+ * a sentence cut in half; the name is not the tooltip's to lose.
+ */
+export function withoutTip(attributes: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(attributes).filter(([name]) => !name.startsWith('data-tooltip-')),
+  )
+}
+
+/**
  * Explains a control whose name is ALREADY on screen — a button that reads "Refresh", a tab
  * that reads "Models". The sentence only, and no `aria-label`: one set over a visible label
  * replaces it for a screen reader (WCAG SC 2.5.3), so the button would answer to a name nobody

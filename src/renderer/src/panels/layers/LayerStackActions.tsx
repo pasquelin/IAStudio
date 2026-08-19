@@ -4,6 +4,7 @@ import {
   mdiFolderPlusOutline,
   mdiFolderRemoveOutline,
   mdiPlus,
+  mdiSelectionDrag,
   mdiTrashCanOutline,
   mdiTune,
 } from '@mdi/js'
@@ -29,7 +30,9 @@ import {
 } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
 import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
+import { publishCommand } from '@/services/commandBus'
 import { canvasOf, useCanvases } from '@/stores/canvases'
+import { selectionOf, useCanvasViews } from '@/stores/canvasViews'
 
 /** What the stack menu offers. Each one names itself from `layers.<operation>`. */
 export type LayerOperation = 'group' | 'ungroup' | 'duplicate'
@@ -42,6 +45,9 @@ export function LayerStackActions({ documentId }: { documentId: string }) {
   const canvas = useCanvases(state => canvasOf(state, documentId))
   const active = canvas.activeLayerId
   const activeLayer = layerById(canvas, active)
+  // The BOOLEAN, not the selection: the engine republishes a fresh selection object once per
+  // frame while a marquee is being drawn, and this title bar would re-render with it.
+  const hasSelection = useCanvasViews(state => selectionOf(state, documentId) !== null)
   const perform = (command: Parameters<ReturnType<typeof useCanvases.getState>['runCommand']>[1]) =>
     useCanvases.getState().runCommand(documentId, command)
 
@@ -147,23 +153,38 @@ export function LayerStackActions({ documentId }: { documentId: string }) {
         description={t('layers.operationsHint')}
         tooltip={TIP_BOTTOM}
         variant="header"
-        rowCount={operations.length}
+        rowCount={operations.length + 1}
         opensOnClick
-        rows={close =>
-          operations.map(operation => (
+        rows={close => (
+          <>
+            {operations.map(operation => (
+              <MenuRow
+                key={operation.key}
+                label={t(`layers.${operation.key}`)}
+                icon={operation.icon}
+                disabled={!operation.enabled}
+                tip={HINT_RIGHT(t(`layers.${operation.key}Hint`))}
+                onSelect={() => {
+                  operation.run()
+                  close()
+                }}
+              />
+            ))}
+
+            {/* Published rather than run: carving the mask is the ENGINE's, and this panel holds
+                none — the same door the native menu row uses, answered by the tab in front. */}
             <MenuRow
-              key={operation.key}
-              label={t(`layers.${operation.key}`)}
-              icon={operation.icon}
-              disabled={!operation.enabled}
-              tip={HINT_RIGHT(t(`layers.${operation.key}Hint`))}
+              label={t('commands.canvasMaskFromSelection.title')}
+              icon={mdiSelectionDrag}
+              disabled={!hasSelection}
+              tip={HINT_RIGHT(t('commands.canvasMaskFromSelection.help'))}
               onSelect={() => {
-                operation.run()
+                publishCommand('canvas.maskFromSelection')
                 close()
               }}
             />
-          ))
-        }
+          </>
+        )}
       />
     </>
   )

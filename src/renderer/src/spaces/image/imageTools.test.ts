@@ -2,7 +2,15 @@ import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
 import { UNBUILT_TOOLS } from '@/engines/canvas/CanvasEngine'
 import type { CanvasTool } from '@/engines/canvas/canvasTool'
-import { IMAGE_TOOLS, canvasToolFor, toolById } from './imageTools'
+import { AI_EDITS } from './aiActions'
+import {
+  AI_EDIT_TOOL,
+  aiEditCommand,
+  aiEditOf,
+  IMAGE_TOOLS,
+  canvasToolFor,
+  toolById,
+} from './imageTools'
 
 /**
  * Every gesture the bar can arm, and whether it is reachable — the group's own button, plus one
@@ -73,7 +81,58 @@ describe('image tools', () => {
   it('finds nothing for an unknown id', () => {
     expect(toolById('nope')).toBeNull()
   })
+})
 
+/**
+ * The five the Image menu was the only way to, with no default key on purpose — they spend
+ * credit. A menu is where a rare gesture lives, and these are what this studio has that a pixel
+ * editor does not.
+ */
+describe('the model edits, as a group of the bar', () => {
+  /** Sorted on both sides: the menu reads in its own order, and a sixth edit must appear here. */
+  it('offers every edit the canvas knows how to prepare', () => {
+    expect(AI_EDIT_TOOL.modes?.map(mode => mode.id).sort()).toEqual(Object.keys(AI_EDITS).sort())
+  })
+
+  it('has a translation behind every key it declares', () => {
+    expect(i18next.exists(AI_EDIT_TOOL.labelKey)).toBe(true)
+    expect(i18next.exists(AI_EDIT_TOOL.descriptionKey ?? '')).toBe(true)
+
+    for (const mode of AI_EDIT_TOOL.modes ?? []) {
+      expect(i18next.exists(mode.labelKey)).toBe(true)
+      expect(i18next.exists(mode.descriptionKey)).toBe(true)
+    }
+  })
+
+  /** Arms nothing, so it must carry no armed mode — that is what opens the menu on a click. */
+  it('names no armed mode, being a menu of actions', () => {
+    expect(AI_EDIT_TOOL.activeMode).toBeUndefined()
+  })
+
+  /**
+   * From what the SCREEN offers, not from the table the lookup reads: mapped over `AI_EDIT_ROWS`
+   * the assertion would read itself back. A row the menu draws and no command answers is what
+   * this is here to catch.
+   */
+  it('fires a command for every row it draws, and none for a row from nowhere', () => {
+    const rows = AI_EDIT_TOOL.modes ?? []
+
+    expect(rows.filter(row => aiEditCommand(row.id) === null)).toEqual([])
+    expect(aiEditCommand('nope')).toBeNull()
+  })
+
+  /** The other way round, which is what the handler takes — one table, two lookups. */
+  it('reads each command back as the edit it prepares', () => {
+    const edits = (AI_EDIT_TOOL.modes ?? []).map(row => aiEditCommand(row.id))
+
+    expect(edits.map(command => (command ? aiEditOf(command) : null))).toEqual(
+      (AI_EDIT_TOOL.modes ?? []).map(row => row.id),
+    )
+    expect(aiEditOf('canvas.flatten')).toBeNull()
+  })
+})
+
+describe('what the bar arms against what the engine implements', () => {
   /**
    * The bar and the engine hold two halves of the same truth, and nothing made them agree: the
    * frame group armed a tool `onPointerDown` ignores, then the comment button did the same. The

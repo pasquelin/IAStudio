@@ -238,12 +238,27 @@ describe('SceneDocument', () => {
   })
 
   /**
-   * Adding is the native Add menu's now, not the bar's — `useNativeMenu` covers the row, and
-   * `useAddNode` what it builds. What is left to say here is that the bar offers no second way.
+   * The gesture the space was missing: a camera, a sprite, a caption and a rail had no panel to
+   * be added from, no key, and a right-click that only answers over a node — the native Add menu,
+   * three levels deep, was the whole of it.
    */
-  it('offers no add button of its own', () => {
+  it('adds a camera from the bar, which nothing else could reach', async () => {
     render(<SceneDocument documentId="doc-1" />)
-    expect(screen.queryByRole('button', { name: /Ajouter/ })).not.toBeInTheDocument()
+
+    await userEvent.hover(screen.getByRole('button', { name: 'Ajouter un objet' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Caméra' }))
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes.some(node => node.type === 'camera')).toBe(
+      true,
+    )
+  })
+
+  it('offers one button per family a scene grows by', () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    for (const name of ['Ajouter une maille', 'Ajouter une lumière', 'Ajouter un objet']) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument()
+    }
   })
 })
 

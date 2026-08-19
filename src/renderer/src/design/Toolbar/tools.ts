@@ -31,6 +31,12 @@ export type ToolbarItem = {
   disabled?: boolean
   /** A toggle that is on. Distinct from `activeTool`, the one armed tool, and drawn alike. */
   pressed?: boolean
+  /**
+   * Acts rather than arms — Duplicate, Add, the model edits. It gets no `aria-pressed`: a button
+   * for ever announcing "toggle, not pressed" describes a state it does not have, which is the
+   * very reason the montage bar puts its two action buttons in `extras` instead of here.
+   */
+  acts?: true
   /** Two or more open a flyout on hover; one or none makes the button act directly. */
   modes?: readonly ToolMode[]
   activeMode?: string

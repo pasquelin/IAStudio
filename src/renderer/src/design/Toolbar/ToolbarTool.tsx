@@ -25,6 +25,10 @@ export function ToolbarTool({ tool, active, tip, onTool, onMode }: ToolbarToolPr
   // like an ellipse, or the bar stops saying what the next click will draw.
   const armed = tool.modes?.find(mode => mode.id === tool.activeMode)
   const description = armed?.descriptionKey ?? tool.descriptionKey
+  // A group of SEVERAL rows with no armed mode is a menu of ACTIONS — Add a cube, Regenerate:
+  // its click opens what hovering would have, and arms nothing. Several, because `useHoverFlyout`
+  // opens nothing under two rows — one row and no armed mode would be a button doing neither.
+  const opensOnClick = (tool.modes?.length ?? 0) > 1 && tool.activeMode === undefined
 
   return (
     <MenuButton
@@ -36,12 +40,13 @@ export function ToolbarTool({ tool, active, tip, onTool, onMode }: ToolbarToolPr
       shortcut={tool.modes ? armed?.shortcut : tool.shortcut}
       tooltip={tip}
       active={active}
+      // A menu of actions acts too, whether or not its registry says so: none of its rows can be
+      // armed, so the button it opens from has no pressed state either.
+      acts={tool.acts === true || opensOnClick}
       disabled={tool.disabled}
       rowCount={tool.modes?.length ?? 0}
-      // A group with no armed mode is a menu of actions, not a choice of tool: nothing is
-      // armed by clicking it, so the click has to open what hovering would have.
-      opensOnClick={tool.modes !== undefined && tool.activeMode === undefined}
-      onClick={() => onTool(tool.id)}
+      opensOnClick={opensOnClick}
+      onClick={opensOnClick ? undefined : () => onTool(tool.id)}
       rows={close =>
         tool.modes?.map(mode => {
           // The same distinction the `opensOnClick` line above makes: a group with no armed mode
