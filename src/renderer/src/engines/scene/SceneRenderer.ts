@@ -663,6 +663,10 @@ export class SceneRenderer {
     const gizmo = new TransformControls(camera, canvas)
     // Since r169 the controls are not an Object3D; the helper is what goes into the scene.
     this.viewport.scene.add(gizmo.getHelper())
+    // `onPointerDown` hovers and THEN grabs, so the axis is decided inside the very call that
+    // uses the plane. This fires synchronously on that decision, which is the only moment left
+    // to turn the plane before it is read.
+    gizmo.addEventListener('axis-changed', this.onGizmoAxisChanged)
     gizmo.addEventListener('dragging-changed', this.onDraggingChanged)
     gizmo.addEventListener('objectChange', this.onGizmoChange)
     gizmo.addEventListener('mouseDown', this.onGizmoGrab)
@@ -1217,6 +1221,19 @@ export class SceneRenderer {
     gizmo.viewport = region
       ? this.gizmoRegion.set(region.x, region.y, region.width, region.height)
       : null
+
+    // After the camera and the region are both posted, and before three reads this same event:
+    // the ray is cast from what is set here, so the handles have to be placed against it now.
+    this.refreshGizmoMatrices()
+  }
+
+  /**
+   * `TransformControls` turns its drag PLANE in `updateMatrixWorld`, which only a RENDER calls —
+   * and a hover asks for none, so the plane keeps the orientation of the view one quitted and comes
+   * out parallel to the new ray: measured 19/08, ray·normal 0 in « De gauche », nothing moved.
+   */
+  private refreshGizmoMatrices(): void {
+    this.gizmo?.getHelper().updateMatrixWorld(true)
   }
 
   /**
@@ -1823,6 +1840,7 @@ export class SceneRenderer {
     canvas?.removeEventListener('contextmenu', this.onContextMenu)
     window.removeEventListener('pointerup', this.onPointerUp)
 
+    this.gizmo?.removeEventListener('axis-changed', this.onGizmoAxisChanged)
     this.gizmo?.removeEventListener('dragging-changed', this.onDraggingChanged)
     this.gizmo?.removeEventListener('objectChange', this.onGizmoChange)
     this.gizmo?.removeEventListener('mouseDown', this.onGizmoGrab)
@@ -3086,6 +3104,10 @@ export class SceneRenderer {
 
   // Without this the OS menu opens on the very gesture that starts flying.
   private readonly onContextMenu = (event: Event): void => event.preventDefault()
+
+  private readonly onGizmoAxisChanged = (): void => {
+    this.refreshGizmoMatrices()
+  }
 
   private readonly onDraggingChanged = (event: { value: unknown }): void => {
     this.viewport.freezePanes(event.value === true || this.flying)
