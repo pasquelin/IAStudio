@@ -1,12 +1,12 @@
 import { mdiClose } from '@mdi/js'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ASSISTANT_MODELS, type AssistantModel } from '@shared/domain/assistant'
+import { ASSISTANT_MODELS } from '@shared/domain/assistant'
 import { Button } from '@/design/Button'
 import { QuietNote } from '@/design/QuietNote'
+import { SelectField } from '@/design/SelectField'
 import { Spinner } from '@/design/Spinner'
 import { ToolButton } from '@/design/ToolButton'
-import { NATIVE_SELECT } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
 import { HINT_TOP, TIP_LEFT, TIP_TOP } from '@/helpers/tooltip'
@@ -259,20 +259,20 @@ export function AssistantOverlay() {
             <div className="flex items-center gap-2">
               {/* Down here from the header, beside the sentence it will read: the moment one wants
                 a better model is the middle of writing, not a trip to a title bar. */}
-              <select
-                {...TIP_TOP(t('assistant.model'), false, t('assistant.modelHint'))}
+              <SelectField
+                layout="inline"
+                label={t('assistant.model')}
+                hint={TIP_TOP(t('assistant.model'), false, t('assistant.modelHint'))}
                 value={model}
-                onChange={event => useAssistant.getState().setModel(asModel(event.target.value))}
-                className={cn(NATIVE_SELECT, 'max-w-44')}
-              >
-                {/* Named from the bundle, never from the union: a raw `gemini-3.5-flash` in an
-                  otherwise French list is the defect this repository pays for most. */}
-                {ASSISTANT_MODELS.map(name => (
-                  <option key={name} value={name}>
-                    {t(`assistant.models.${name}`)}
-                  </option>
-                ))}
-              </select>
+                // Named from the bundle, never from the union: a raw `gemini-3.5-flash` in an
+                // otherwise French list is the defect this repository pays for most.
+                options={ASSISTANT_MODELS.map(name => ({
+                  value: name,
+                  label: t(`assistant.models.${name}`),
+                }))}
+                onChange={name => useAssistant.getState().setModel(name)}
+                className="max-w-44"
+              />
 
               {/* Beside the button it shares a job with: this pair is "how the sentence gets in". */}
               <span className="ml-auto flex items-center gap-2">
@@ -314,12 +314,4 @@ const SCROLL_SLACK = 24
  */
 function endSession(): void {
   if (useDictation.getState().state === 'listening') void useDictation.getState().stop()
-}
-
-/**
- * The one cast in the file, and why it is safe: the `<option>` list is built from
- * `ASSISTANT_MODELS`, so the only values this element can produce are the ones the union holds.
- */
-function asModel(value: string): AssistantModel {
-  return value as AssistantModel
 }

@@ -3,11 +3,10 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { secondsToUs, usToSeconds, type Us } from '@shared/domain/time'
 import { NumberField } from '@/design/NumberField'
+import { SelectField } from '@/design/SelectField'
 import { ToolButton } from '@/design/ToolButton'
-import { NATIVE_SELECT } from '@/design/styles'
 import { setTimelineSettings } from '@/engines/scene/animationCommands'
 import { selectedNodes } from '@/engines/scene/sceneState'
-import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { bonesOfNode, useModelClips } from '@/stores/modelClips'
@@ -95,19 +94,17 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
       <div className="flex-1" />
 
       {bones.length > 0 && (
-        <select
-          aria-label={t('animation.bone')}
+        <SelectField
+          layout="inline"
+          label={t('animation.bone')}
           value={bone}
-          onChange={event => setChosen(event.target.value)}
-          className={cn(NATIVE_SELECT, 'max-w-32')}
-        >
-          <option value="">{t('animation.wholeModel')}</option>
-          {bones.map(name => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: '', label: t('animation.wholeModel') },
+            ...bones.map(name => ({ value: name, label: name })),
+          ]}
+          onChange={setChosen}
+          className="max-w-32"
+        />
       )}
 
       <div className="flex w-24 shrink-0 items-center">

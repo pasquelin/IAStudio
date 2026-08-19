@@ -1,9 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import { ASSET_TYPES, isAssetType } from '@shared/domain/asset'
-import type { FileDomain } from '@shared/domain/fileRole'
+import { FILE_DOMAINS, type FileDomain } from '@shared/domain/fileRole'
 import { PropertyRow } from '@/design/PropertyRow'
-import { NATIVE_SELECT } from '@/design/styles'
-import { cn } from '@/helpers/cn'
+import { SelectField } from '@/design/SelectField'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useAssets } from '@/stores/assets'
 
@@ -33,24 +31,21 @@ export function RoleField({ assetId, domain }: { assetId: string | null; domain:
   }
 
   return (
-    <PropertyRow label={t('inspector.role')}>
-      {/* A native `<select>`, as `CollectionBar` uses one: the inspector is a narrow column, and
-          a menu drawn inside it gets clipped by its own edge. */}
-      <select
-        className={cn(NATIVE_SELECT, 'w-full')}
-        aria-label={t('inspector.role')}
-        value={domain}
-        onChange={event => {
-          const picked = event.target.value
-          if (isAssetType(picked)) void retype(assetId, picked)
-        }}
-      >
-        {ASSET_TYPES.map(type => (
-          <option key={type} value={type}>
-            {t(`assetTypes.${type}`)}
-          </option>
-        ))}
-      </select>
-    </PropertyRow>
+    <SelectField
+      label={t('inspector.role')}
+      value={domain}
+      options={FILE_DOMAINS.map(type => ({
+        value: type,
+        label: t(`assetTypes.${type}`),
+        // Listed as a STATE, never as a choice: `other` is what the studio reads when no
+        // extension answers, and there is nothing to retype a file to. Left out, the row showed
+        // « Image » over a file that is not one — the select simply fell back to its first option.
+        disabled: type === 'other',
+      }))}
+      onChange={picked => {
+        if (picked !== 'other') void retype(assetId, picked)
+      }}
+      scId="file.role"
+    />
   )
 }

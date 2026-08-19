@@ -386,13 +386,17 @@ describe('the OS list wearing the control language', () => {
     )
   })
 
-  // The partner of the rule above: a constant nobody wears is a dead export.
-  it('is worn by the four pickers it was extracted from', () => {
+  /**
+   * It was extracted from four pickers and is now worn by ONE, which is the stronger rule: a
+   * second wearer means a `<select>` was drawn by hand again instead of through `SelectField`,
+   * and that is how twenty-one of them each read their own value back into their own union.
+   */
+  it('is worn by `SelectField`, and by nothing else', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && source.includes('NATIVE_SELECT'),
-    )
+    ).map(([path]) => path)
 
-    expect(wearing.length).toBeGreaterThanOrEqual(4)
+    expect(wearing).toEqual([expect.stringContaining('SelectField.tsx')])
   })
 })
 

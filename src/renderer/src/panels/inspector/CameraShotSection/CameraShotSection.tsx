@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { POINT_TARGET, type CameraShot, type CameraTarget } from '@shared/domain/animation'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
+import { SelectField } from '@/design/SelectField'
 import { ToolButton } from '@/design/ToolButton'
 import { VectorField } from '@/design/VectorField'
-import { NATIVE_SELECT, type GestureProps } from '@/design/styles'
+import type { GestureProps } from '@/design/styles'
 import {
   bindRailToShot,
   editCameraShot,
@@ -76,30 +77,28 @@ export function CameraShotSection({
 
   return (
     <PropertySection title={t('inspector.shot')}>
-      <PropertyRow label={t('inspector.rail')}>
-        <select
-          value={shot.motion?.pathId ?? ''}
-          onChange={event => run(bindRailToShot(shot, event.target.value))}
-          className={NATIVE_SELECT}
-        >
-          <option value="">{t('inspector.noRail')}</option>
-          {nodes
+      <SelectField
+        label={t('inspector.rail')}
+        value={shot.motion?.pathId ?? ''}
+        options={[
+          { value: '', label: t('inspector.noRail') },
+          ...nodes
             .filter(node => node.type === 'path')
-            .map(rail => (
-              <option key={rail.id} value={rail.id}>
-                {rail.name}
-              </option>
-            ))}
-        </select>
-        <ToolButton
-          icon={mdiVectorPolyline}
-          label={t('inspector.addRail')}
-          description={t('inspector.addRailHint')}
-          tooltip={TIP_LEFT}
-          variant="header"
-          onClick={() => run(railForShot(camera, shot))}
-        />
-      </PropertyRow>
+            .map(rail => ({ value: rail.id, label: rail.name })),
+        ]}
+        onChange={pathId => run(bindRailToShot(shot, pathId))}
+        scId="shot.rail"
+        actions={
+          <ToolButton
+            icon={mdiVectorPolyline}
+            label={t('inspector.addRail')}
+            description={t('inspector.addRailHint')}
+            tooltip={TIP_LEFT}
+            variant="header"
+            onClick={() => run(railForShot(camera, shot))}
+          />
+        }
+      />
 
       {shot.motion && (
         <CameraShotSectionMotion
@@ -109,23 +108,19 @@ export function CameraShotSection({
         />
       )}
 
-      <PropertyRow label={t('inspector.target')}>
-        <select
-          value={target?.kind === 'node' ? target.nodeId : (target?.kind ?? '')}
-          onChange={event => aimAt(event.target.value)}
-          className={NATIVE_SELECT}
-        >
-          <option value="">{t('inspector.noTarget')}</option>
-          <option value={POINT_TARGET.kind}>{t('inspector.targetPoint')}</option>
-          {nodes
+      <SelectField
+        label={t('inspector.target')}
+        value={target?.kind === 'node' ? target.nodeId : (target?.kind ?? '')}
+        options={[
+          { value: '', label: t('inspector.noTarget') },
+          { value: POINT_TARGET.kind, label: t('inspector.targetPoint') },
+          ...nodes
             .filter(node => node.id !== camera.id)
-            .map(node => (
-              <option key={node.id} value={node.id}>
-                {node.name}
-              </option>
-            ))}
-        </select>
-      </PropertyRow>
+            .map(node => ({ value: node.id, label: node.name })),
+        ]}
+        onChange={aimAt}
+        scId="shot.target"
+      />
 
       {target?.kind === POINT_TARGET.kind && (
         <VectorField

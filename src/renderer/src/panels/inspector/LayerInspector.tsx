@@ -3,9 +3,9 @@ import { toDegrees, toRadians } from '@shared/domain/angles'
 import { NumberField } from '@/design/NumberField'
 import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
+import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
 import { TextField } from '@/design/TextField'
-import { NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { BLEND_MODES, type BlendMode } from '@shared/domain/canvasBlend'
 import {
@@ -24,7 +24,6 @@ import {
   setLayerText,
   setLayerTransform,
 } from '@/engines/canvas/commands'
-import { cn } from '@/helpers/cn'
 import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
 import { useCanvases } from '@/stores/canvases'
 import { FontField } from './FontField'
@@ -64,24 +63,13 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
       </PropertyGroup>
 
       <PropertyGroup title={t('inspector.compositing')}>
-        <PropertyRow label={t('inspector.blend')}>
-          {/*
-            A native select, as `CollectionBar` uses one: sixteen rows in a flyout would be a
-            menu to scroll, and the OS list is already keyboard-reachable and searchable.
-          */}
-          <select
-            aria-label={t('inspector.blend')}
-            value={layer.blend}
-            onChange={event => edit.run(setLayerBlend(layer.id, asBlendMode(event.target.value)))}
-            className={cn(NATIVE_SELECT, 'w-full')}
-          >
-            {BLEND_MODES.map(mode => (
-              <option key={mode} value={mode}>
-                {t(`blend.${mode}`)}
-              </option>
-            ))}
-          </select>
-        </PropertyRow>
+        <SelectField
+          label={t('inspector.blend')}
+          value={layer.blend}
+          options={BLEND_MODES.map(mode => ({ value: mode, label: t(`blend.${mode}`) }))}
+          onChange={blend => edit.run(setLayerBlend(layer.id, blend))}
+          scId="layer.blend"
+        />
 
         <SliderField
           label={t('inspector.opacity')}
@@ -214,9 +202,4 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
       </PropertyGroup>
     </>
   )
-}
-
-/** The select hands back a string; only the sixteen the state declares are ones. */
-function asBlendMode(value: string): BlendMode {
-  return BLEND_MODES.find(mode => mode === value) ?? 'normal'
 }
