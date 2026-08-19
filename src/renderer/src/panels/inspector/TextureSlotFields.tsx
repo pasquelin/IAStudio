@@ -8,8 +8,6 @@ export type TextureSlotFieldsProps = {
   onChange: (slot: TextureSlot, assetId: string | null) => void
   /** What an empty row reads, already translated — see `PictureField`. */
   emptyLabel?: string
-  /** Opens the whole project rather than the pictures already listed, for the slot named. */
-  browse?: (slot: TextureSlot) => void
 }
 
 /**
@@ -19,7 +17,7 @@ export type TextureSlotFieldsProps = {
  * different fields of a document, and there the resemblance ends — a mesh's material also carries
  * a colour and a finish, a model's file already carries both.
  */
-export function TextureSlotFields({ slots, onChange, emptyLabel, browse }: TextureSlotFieldsProps) {
+export function TextureSlotFields({ slots, onChange, emptyLabel }: TextureSlotFieldsProps) {
   const { t } = useTranslation()
 
   return (
@@ -31,7 +29,6 @@ export function TextureSlotFields({ slots, onChange, emptyLabel, browse }: Textu
           value={slots[slot]?.assetId ?? null}
           onChange={assetId => onChange(slot, assetId)}
           emptyLabel={emptyLabel}
-          browse={browse && (() => browse(slot))}
           scId={`material.${slot}`}
         />
       ))}

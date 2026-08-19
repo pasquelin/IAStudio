@@ -5,6 +5,7 @@ import { useSettings } from '@/stores/settings'
 import { useTools } from '@/stores/tools'
 import { HomeView } from '@/home/HomeView/HomeView'
 import { DocumentArea } from '../DocumentArea'
+import { AssetPicker } from '../AssetPicker/AssetPicker'
 import { DocumentNameDialog } from '../DocumentNameDialog'
 import { showWorkspace } from '../dockviewApi'
 import { guardUnsavedWork } from '../unsavedGuard'
@@ -143,6 +144,10 @@ export function Shell() {
       {/* After the assistant, and over it: a sentence said to it can ask for a document, and the
           field that names one would otherwise open behind the conversation that asked for it. */}
       <DocumentNameDialog />
+      {/* The window a slot browses the whole project from. Mounted here rather than by the
+          inspector, for the reason the namer is: a panel that happened to be closed would leave
+          the browse button with nobody to ask. */}
+      <AssetPicker />
       <TooltipHost />
     </div>
   )

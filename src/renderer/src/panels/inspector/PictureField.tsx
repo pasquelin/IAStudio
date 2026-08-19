@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { PICTURES } from '@shared/domain/asset'
+import { mountedAssetPicker } from '@/app/assetPicker'
 import { LinkField } from '@/design/LinkField/LinkField'
 import { openAssetById } from '@/helpers/openAsset'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
@@ -14,8 +15,6 @@ export type PictureFieldProps = {
    * would be a plain lie.
    */
   emptyLabel?: string
-  /** Opens the whole project rather than the pictures already listed. */
-  browse?: () => void
   /** The handle the MCP steers this link by. Never a translated word. */
   scId?: string
 }
@@ -25,16 +24,23 @@ export type PictureFieldProps = {
  * what it dresses. One component rather than one per section, so a mesh's five maps and a
  * sprite's one never disagree on what counts as a picture, or on what the empty row reads.
  */
-export function PictureField({
-  label,
-  value,
-  onChange,
-  emptyLabel,
-  browse,
-  scId,
-}: PictureFieldProps) {
+export function PictureField({ label, value, onChange, emptyLabel, scId }: PictureFieldProps) {
   const { t } = useTranslation()
   const options = useProjectPictures(PICTURES)
+  /**
+   * Asked for at press time, never at render: the window is mounted by the shell, and a slot that
+   * captured it while drawing would hold whatever was mounted when the panel first opened.
+   */
+  const browse = (): void => {
+    const picker = mountedAssetPicker()
+    if (!picker) return
+
+    void picker({ accepts: PICTURES, current: value, label }).then(chosen => {
+      // `null` is the window being called off, which is not the same as choosing nothing — that
+      // is what the empty entry of the list is for.
+      if (chosen !== null) onChange(chosen)
+    })
+  }
 
   return (
     <LinkField
@@ -53,13 +59,11 @@ export function PictureField({
         hint: t('inspector.openTextureHint'),
         run: () => openAssetById(value),
       }}
-      browse={
-        browse && {
-          label: t('inspector.browseTexture'),
-          hint: t('inspector.browseTextureHint'),
-          run: browse,
-        }
-      }
+      browse={{
+        label: t('inspector.browseTexture'),
+        hint: t('inspector.browseTextureHint'),
+        run: browse,
+      }}
       scId={scId}
     />
   )
