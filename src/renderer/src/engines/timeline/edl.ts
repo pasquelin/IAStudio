@@ -52,6 +52,10 @@ function eventsOf(state: SequenceState, nameOf: (assetId: string) => string): Ev
     const row = track.kind === 'audio' ? audioRow++ : 0
 
     for (const clip of track.clips) {
+      // A clip drawing a live scene names no rush, and an event pointing at nothing is a shot an
+      // online room cannot conform. `liveScene` is declared dropped; this is it being dropped.
+      if (!clip.assetId) continue
+
       const name = nameOf(clip.assetId)
       events.push({
         channel: channelOf(track.kind, row),

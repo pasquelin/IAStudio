@@ -1,6 +1,12 @@
 import { readPsd } from 'ag-psd'
 import { describe, expect, it, vi } from 'vitest'
-import type { OraDocument, OraLayer, OraNode } from '@shared/domain/openRaster'
+import {
+  ORA_MERGED_PATH,
+  type OraDocument,
+  type OraGroup,
+  type OraLayer,
+  type OraNode,
+} from '@shared/domain/openRaster'
 import { psdBytesOf } from './psdDocument'
 
 /**
@@ -19,8 +25,15 @@ vi.spyOn(document, 'createElement').mockImplementation(() => {
     height: 0,
     getContext: () => ({
       drawImage: () => {},
+      createImageData: (width: number, height: number) => ({
+        data: new Uint8ClampedArray(width * height * 4),
+        width,
+        height,
+      }),
       getImageData: () => ({
-        data: new Uint8ClampedArray(canvas.width * canvas.height * 4),
+        // NOT zeros: the composite the writer is handed is read back below, and a field of zeros
+        // is exactly what it writes when nobody hands it one.
+        data: new Uint8ClampedArray(canvas.width * canvas.height * 4).fill(7),
         width: canvas.width,
         height: canvas.height,
       }),
@@ -42,13 +55,35 @@ const layer = (name: string, over: Partial<OraLayer> = {}): OraLayer => ({
   ...over,
 })
 
+const group = (
+  name: string,
+  children: readonly OraNode[],
+  over: Partial<OraGroup> = {},
+): OraGroup => ({
+  kind: 'group',
+  name,
+  isolation: 'auto',
+  children,
+  x: 0,
+  y: 0,
+  opacity: 1,
+  visible: true,
+  composite: 'svg:src-over',
+  ...over,
+})
+
+/** Every layer of the tree, however deep — a surface has to exist for each, or it is left out. */
+function layersIn(nodes: readonly OraNode[]): OraLayer[] {
+  return nodes.flatMap(node => (node.kind === 'group' ? layersIn(node.children) : [node]))
+}
+
 function documentOf(nodes: readonly OraNode[]): OraDocument {
   return {
     stack: { width: 2, height: 2, nodes, studio: '' },
-    surfaces: nodes.map(node => ({
-      path: node.kind === 'layer' ? node.src : '',
-      png: new Uint8Array([1, 2, 3]),
-    })),
+    surfaces: [
+      { path: ORA_MERGED_PATH, png: new Uint8Array([1, 2, 3]) },
+      ...layersIn(nodes).map(one => ({ path: one.src, png: new Uint8Array([1, 2, 3]) })),
+    ],
   }
 }
 
@@ -110,5 +145,49 @@ describe('an image document as Photoshop holds it', () => {
     })
 
     expect(psd.children?.map(child => child.name)).toEqual(['Ink'])
+  })
+
+  /**
+   * A stack NESTS — `oraStackOf` writes a group with its children inside it — and reading only the
+   * top level dropped every layer of every group, with nothing said and the registry declaring the
+   * opposite. Bottom first inside the group as well as outside it.
+   */
+  it('brings a group’s layers out as siblings rather than losing them', async () => {
+    const psd = await readBack(
+      documentOf([layer('Top'), group('Folder', [layer('Inner top'), layer('Inner bottom')])]),
+    )
+
+    expect(psd.children?.map(child => child.name)).toEqual(['Inner bottom', 'Inner top', 'Top'])
+  })
+
+  /** A group is gone, so what it held of its children has to ride down onto them. */
+  it('folds a group’s own hiding and opacity onto what it held', async () => {
+    const psd = await readBack(
+      documentOf([
+        group('Folder', [layer('Ink', { opacity: 0.5 })], { visible: false, opacity: 0.5 }),
+      ]),
+    )
+
+    const [child] = psd.children ?? []
+    expect(child?.hidden).toBe(true)
+    expect(child?.opacity).toBeCloseTo(0.25, 2)
+  })
+
+  /**
+   * `ag-psd` writes a field of zeros for the document's own composite when it is handed none, and
+   * a reader that SHOWS that composite rather than re-compositing — Preview, Finder — draws black.
+   */
+  it('writes the flatten as the composite, not a field of zeros', async () => {
+    const bytes = await psdBytesOf(documentOf([layer('Ink')]))
+
+    const psd = readPsd(new Uint8Array(bytes).buffer, {
+      useImageData: true,
+      skipLayerImageData: true,
+      skipThumbnail: true,
+    })
+
+    // The COLOUR bytes alone: a composite written as three channels reads back with an alpha of
+    // 255 throughout, so looking at every byte is green on the very field of zeros this catches.
+    expect(psd.imageData?.data.some((byte, at) => at % 4 !== 3 && byte !== 0)).toBe(true)
   })
 })

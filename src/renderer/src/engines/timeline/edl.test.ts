@@ -77,6 +77,20 @@ describe('an edit decision list', () => {
     expect(written(faded)[2]?.slice(17, 18)).toBe('C')
   })
 
+  /**
+   * A clip drawing a live scene names no rush. Written all the same, it came out as an event on
+   * reel `AX` with an empty `FROM CLIP NAME` — a shot an online room cannot conform to anything.
+   */
+  it('leaves out a clip that draws a scene rather than a rush', () => {
+    const scene = sequenceWith([
+      trackFixture('V1', 'video', [
+        clipFixture('a', 0, SECOND, { assetId: '', sceneId: 'doc-scene' }),
+      ]),
+    ])
+
+    expect(written(scene).filter(line => /^\d{3} /.test(line))).toEqual([])
+  })
+
   it('writes a header and nothing else for a montage with no clip at all', () => {
     expect(written(sequenceWith([trackFixture('V1', 'video', [])]))).toEqual([
       'TITLE: BANDE',

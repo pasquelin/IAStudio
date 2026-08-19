@@ -108,6 +108,20 @@ describe('a bundle this studio wrote', () => {
     ).rejects.toThrow(/EISDIR/)
   })
 
+  /**
+   * The two above at once, which is the only shape the defect has: a rush past the buffer AND a
+   * sink that dies. A dead stream emits no further `drain`, so a reader waiting on that alone
+   * never came back — with the fault already named beside it and nobody left to read it.
+   */
+  it('names the fault when a medium too big for the buffer cannot be written', async () => {
+    await mkdir(join(into, 'plan.mp4'))
+    const heavy = new Uint8Array(1_500_000).fill(0x42)
+
+    await expect(
+      readOtiozFile(await ours([{ name: 'plan.mp4', bytes: heavy }]), into),
+    ).rejects.toThrow(/EISDIR/)
+  })
+
   it('answers nothing for a stop that arrived before it began, and unpacks nothing', async () => {
     const read = await readOtiozFile(await ours([{ name: 'plan.mp4', bytes: RUSH }]), into, {
       signal: AbortSignal.abort(),

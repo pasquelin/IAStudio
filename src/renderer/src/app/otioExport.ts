@@ -59,6 +59,15 @@ export function otioExportFiles(documentId: string): FolderExportRequest {
 }
 
 /**
+ * Where a rush sits, absolutely — a plain-text interchange lands wherever the dialog says, so it
+ * has no folder of its own to be relative to. `null` when no project holds the media.
+ */
+function mediaUrlOf(assetPath: string | undefined): string | null {
+  const projectPath = useProject.getState().project?.path
+  return assetPath && projectPath ? fileUrlsUnder(projectPath)(assetPath) : null
+}
+
+/**
  * The same cut in one of the two plain-text interchanges. Written from the STATE rather than from
  * the OTIO, which would be translating a translation — and the names come from the catalogue,
  * both formats naming their shots.
@@ -71,21 +80,21 @@ export async function exportCutAs(
   if (!bridge) return null
 
   try {
-    const compose =
-      target === 'montage.edl'
-        ? (await import('@/engines/timeline/edl')).edlOf
-        : (await import('@/engines/timeline/fcpxml')).fcpxmlOf
-
     const byId = assetsById(useAssets.getState())
     const name = documentExportName(useDocuments.getState(), documentId, 'edit')
     const state = sequenceOf(useSequences.getState(), documentId)
+    const nameOf = (assetId: string): string => byId.get(assetId)?.name ?? assetId
 
-    return await bridge.montage.export({
-      id: newId(),
-      name,
-      target,
-      content: compose(state, name, assetId => byId.get(assetId)?.name ?? assetId),
-    })
+    // Not one `compose` for the two: an EDL has nowhere to put a path, and FCPXML is unusable
+    // without one — the same three arguments would have hidden that they ask for different things.
+    const content =
+      target === 'montage.edl'
+        ? (await import('@/engines/timeline/edl')).edlOf(state, name, nameOf)
+        : (await import('@/engines/timeline/fcpxml')).fcpxmlOf(state, name, nameOf, assetId =>
+            mediaUrlOf(byId.get(assetId)?.path),
+          )
+
+    return await bridge.montage.export({ id: newId(), name, target, content })
   } catch (error) {
     reportFailure('sequence.export', documentId, error)
     return null

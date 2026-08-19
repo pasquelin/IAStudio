@@ -5,7 +5,11 @@ import { fcpxmlOf } from './fcpxml'
 
 const named = (assetId: string): string => ({ 'asset-a': 'Plan large' })[assetId] ?? assetId
 
-const written = (state: Parameters<typeof fcpxmlOf>[0]): string => fcpxmlOf(state, 'Bande', named)
+const linked = (assetId: string): string | null =>
+  assetId === 'asset-a' ? 'file:///Projets/Bande/media/plan.mp4' : null
+
+const written = (state: Parameters<typeof fcpxmlOf>[0]): string =>
+  fcpxmlOf(state, 'Bande', named, linked)
 
 const ONE_CLIP = sequenceWith([
   trackFixture('V1', 'video', [clipFixture('a', SECOND, 2 * SECOND, { inPoint: 5 * SECOND })]),
@@ -73,7 +77,7 @@ describe('a cut as FCPXML', () => {
 
   /** A name is written into an attribute, and an ampersand there makes a file nothing parses. */
   it('escapes what XML cannot hold raw', () => {
-    const file = fcpxmlOf(ONE_CLIP, 'Rushes & <essais>', named)
+    const file = fcpxmlOf(ONE_CLIP, 'Rushes & <essais>', named, linked)
 
     expect(file).toContain('name="Rushes &amp; &lt;essais&gt;"')
     expect(file).not.toContain('name="Rushes & <')
@@ -88,5 +92,36 @@ describe('a cut as FCPXML', () => {
     ])
 
     expect(written(scene)).not.toContain('<asset-clip')
+  })
+
+  /**
+   * `mediaLink` is declared CARRIED for this target, and an `asset` naming no file does not carry
+   * it: every shot opens offline in Resolve with nothing to relink from, and the loss notice said
+   * nothing was lost.
+   */
+  it('points each rush at the file it is, so a reader has something to relink from', () => {
+    expect(written(ONE_CLIP)).toContain(
+      '<media-rep kind="original-media" src="file:///Projets/Bande/media/plan.mp4"/>',
+    )
+  })
+
+  /** The format wants a duration on an asset, and how far the cut reaches into it is the one known. */
+  it('declares how far into the rush the cut reaches', () => {
+    const twice = sequenceWith([
+      trackFixture('V1', 'video', [
+        clipFixture('a', 0, SECOND, { inPoint: 0 }),
+        clipFixture('b', SECOND, SECOND, { assetId: 'asset-a', inPoint: 9 * SECOND }),
+      ]),
+    ])
+
+    expect(written(twice)).toContain('duration="250/25s"')
+  })
+
+  /** A rush the catalogue has no path for: named, and left without a `media-rep` rather than one
+   * pointing nowhere. */
+  it('writes no media-rep for a rush it has no path for', () => {
+    const unknown = sequenceWith([trackFixture('V1', 'video', [clipFixture('z', 0, SECOND)])])
+
+    expect(written(unknown)).not.toContain('<media-rep')
   })
 })

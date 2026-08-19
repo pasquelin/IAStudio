@@ -172,13 +172,12 @@ async function toShapes(
 
   if (format === 'ply') {
     const { PLYExporter } = await import('three/addons/exporters/PLYExporter.js')
-    return new Uint8Array(
-      // The callback is the ONLY way out: `parse` answers `null` for the binary spelling, and
-      // returns its bytes to this hand instead. It is called synchronously all the same.
-      await new Promise<ArrayBuffer>(resolve => {
-        new PLYExporter().parse(root, resolve, { binary: true })
-      }),
-    )
+    // The RETURN value, never the callback: `parse` schedules `onDone` through
+    // `requestAnimationFrame`, which a hidden window never runs — and it returns before scheduling
+    // anything at all when it refuses a mesh. Waiting on the callback hung both ways.
+    const parsed: unknown = new PLYExporter().parse(root, () => {}, { binary: true })
+    if (!(parsed instanceof ArrayBuffer)) throw new Error('this scene has no PLY to write')
+    return new Uint8Array(parsed)
   }
 
   const { STLExporter } = await import('three/addons/exporters/STLExporter.js')

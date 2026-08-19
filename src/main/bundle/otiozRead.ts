@@ -101,19 +101,28 @@ export async function readOtiozFile(
     return false
   }
 
-  const drain = (sink: WriteStream, chunk: Uint8Array, last: boolean): void => {
+  const drain = (
+    sink: WriteStream,
+    halted: Promise<void>,
+    chunk: Uint8Array,
+    last: boolean,
+  ): void => {
     // Held so the archive stops being read while the disk catches up: without it, a fast source
     // and a slow destination keep the difference in memory, which here is a rush.
     const full = !sink.write(chunk)
     if (last) sink.end()
-    // An ended stream never emits `drain`, so the flush is what a full buffer waits on there — a
-    // `drain` listener armed on the last chunk of a rush is one nothing ever fires. Its rejection
-    // is dropped: the listener below has already named the fault, and `room` throws it.
-    if (full) {
-      blocked = last
-        ? finished(sink).catch(() => {})
-        : new Promise(resume => sink.once('drain', () => resume()))
-    }
+    if (!full) return
+
+    // An ended stream never emits `drain`, so the flush is what a full buffer waits on there.
+    // Otherwise the wait RACES the sink dying: a full disk emits `error` and never `drain` again,
+    // and a reader holding out for one alone hung for good with the fault already named beside it.
+    const room = last
+      ? finished(sink).catch(() => {})
+      : Promise.race([new Promise<void>(resume => sink.once('drain', () => resume())), halted])
+
+    // Chained rather than replaced: two entries of one 1 MiB push can each fill their own sink,
+    // and the first one's back-pressure used to be dropped on the floor.
+    blocked = blocked ? blocked.then(() => room) : room
   }
 
   unzip.onfile = file => {
@@ -159,13 +168,19 @@ export async function readOtiozFile(
     const sink = createWriteStream(join(into, name))
     // A full disk emits `error` here with nothing listening, which Node raises as an uncaught
     // exception — it would take the bundle process down and every other job with it, under a
-    // message naming the exit code rather than the disk.
-    sink.on('error', error => void (failure ??= error))
+    // message naming the exit code rather than the disk. Settling `halted` is what wakes a read
+    // waiting on a `drain` this sink will now never emit.
+    const halted = new Promise<void>(resolve => {
+      sink.on('error', error => {
+        failure ??= error
+        resolve()
+      })
+    })
     sinks.push(sink)
     media.push({ entry: file.name, file: name })
     file.ondata = (error, chunk, final) => {
       if (error) failure ??= error
-      else if (grew(chunk.length)) drain(sink, chunk, final)
+      else if (grew(chunk.length)) drain(sink, halted, chunk, final)
     }
     file.start()
   }
