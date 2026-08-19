@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { RepeatWrapping } from 'three'
+import { PerspectiveCamera, RepeatWrapping, Vector3 } from 'three'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
 import { ViewportEngine } from '../viewport/ViewportEngine'
@@ -67,6 +67,24 @@ describe('the texture preview', () => {
     await applied(mounted(), skyOf('sky-1'))
 
     expect(source.load).toHaveBeenCalledWith('scenario://asset/sky-1')
+  })
+
+  /** Both halves: an orbit panned with the middle button aims elsewhere, and putting only the
+   * camera back would show the same void it did before. */
+  it('puts the camera and what it aims at back where the texture opened', () => {
+    const camera = new PerspectiveCamera()
+    vi.spyOn(ViewportEngine.prototype, 'camera', 'get').mockReturnValue(camera)
+    const orbit = { target: new Vector3(), update: vi.fn() }
+    vi.spyOn(ViewportEngine.prototype, 'orbit', 'get').mockReturnValue(orbit as never)
+    const renderer = mounted()
+    const home = camera.position.clone()
+
+    camera.position.set(9, 9, 9)
+    orbit.target.set(3, 0, 0)
+    renderer.resetView()
+
+    expect(camera.position.toArray()).toEqual(home.toArray())
+    expect(orbit.target.toArray()).toEqual([0, 0, 0])
   })
 
   /** The branch a refactor would silently regress by moving the release inside the sky path. */

@@ -18,12 +18,14 @@ import { TextureDocument } from './TextureDocument'
 // the document handing it the right state — same reason as `SkyboxDocument.test`.
 vi.mock('@/services/diagnostics', () => ({ reportFailure: vi.fn() }))
 
+const resetViewSpy = vi.fn()
 vi.mock('@/engines/texture/TextureRenderer', () => ({
   TextureRenderer: class {
     mount = vi.fn()
     apply = vi.fn()
     dispose = vi.fn()
     refreshMaps = vi.fn()
+    resetView = resetViewSpy
   },
 }))
 
@@ -53,6 +55,7 @@ beforeEach(() => {
   useTextureViews.setState({ inspected: {} })
   useAssets.setState({ items: [] })
   openAsset.mockClear()
+  resetViewSpy.mockClear()
 })
 
 /**
