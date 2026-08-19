@@ -12,9 +12,11 @@ const mount = (
   enabled = true,
   onMotionChange?: (held: Set<MotionId>) => void,
   documentId?: string,
+  isFlying?: () => boolean,
 ) =>
   renderHook(
-    () => useShortcuts({ scope: 'scene', enabled, documentId, onCommand, onMotionChange }),
+    () =>
+      useShortcuts({ scope: 'scene', enabled, documentId, onCommand, onMotionChange, isFlying }),
     { wrapper: ShortcutsFixture },
   )
 
@@ -193,6 +195,60 @@ describe('useShortcuts', () => {
 
     await user.keyboard('{/w}')
     expect([...result.current.heldMotion.current]).toEqual([])
+  })
+
+  it('holds the same direction from an arrow as from its letter', async () => {
+    const user = userEvent.setup()
+    const { result } = mount(vi.fn())
+
+    await user.keyboard('{ArrowUp>}')
+    expect([...result.current.heldMotion.current]).toEqual(['forward'])
+
+    await user.keyboard('{/ArrowUp}')
+    expect([...result.current.heldMotion.current]).toEqual([])
+  })
+
+  it('keeps a direction key from reaching anything downstream while flying', () => {
+    const downstream = vi.fn()
+    document.addEventListener('keydown', downstream)
+    onTestFinished(() => document.removeEventListener('keydown', downstream))
+    mount(vi.fn(), true, undefined, undefined, () => true)
+
+    fireEvent.keyDown(document.body, { code: 'ArrowDown' })
+
+    // An arrow the outliner still focused would answer scrolls the list out from under the
+    // flight; the flight is what owns the key while the button is down.
+    expect(downstream).not.toHaveBeenCalled()
+  })
+
+  // `KeyS` is both "back" and the scale gizmo, and nothing but the button down tells them apart.
+  it('answers a shared key as a direction while flying, not as its command', () => {
+    const onCommand = vi.fn()
+    mount(onCommand, true, undefined, undefined, () => true)
+
+    fireEvent.keyDown(document.body, { code: 'KeyS' })
+
+    expect(onCommand).not.toHaveBeenCalled()
+  })
+
+  it('answers that same key as its command when no flight is under way', () => {
+    const onCommand = vi.fn()
+    mount(onCommand, true, undefined, undefined, () => false)
+
+    fireEvent.keyDown(document.body, { code: 'KeyS' })
+
+    expect(onCommand).toHaveBeenCalledWith('scene.scale')
+  })
+
+  it('leaves a direction key to the rest of the window when no flight is under way', () => {
+    const downstream = vi.fn()
+    document.addEventListener('keydown', downstream)
+    onTestFinished(() => document.removeEventListener('keydown', downstream))
+    mount(vi.fn(), true, undefined, undefined, () => false)
+
+    fireEvent.keyDown(document.body, { code: 'ArrowDown' })
+
+    expect(downstream).toHaveBeenCalled()
   })
 
   it('drops every held key when the window loses focus', async () => {

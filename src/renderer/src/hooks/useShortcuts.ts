@@ -24,6 +24,12 @@ export type ShortcutsOptions = {
   onCommand: (command: CommandId) => void
   /** Fires when the held set actually changes — never on a frame tick. */
   onMotionChange?: (held: Set<MotionId>) => void
+  /**
+   * Whether a flight is under way, and a flight OWNS its keys. Asked at the keystroke rather
+   * than passed as state: it begins and ends on a mouse button, and rebuilding this effect
+   * twice per gesture would drop whatever was held across it.
+   */
+  isFlying?: () => boolean
 }
 
 function holdsText(): boolean {
@@ -47,11 +53,12 @@ export function useShortcuts({
   documentId,
   onCommand,
   onMotionChange,
+  isFlying,
 }: ShortcutsOptions): {
   heldMotion: RefObject<Set<MotionId>>
 } {
   const heldMotion = useRef<Set<MotionId>>(new Set())
-  const handlers = useLatest({ onCommand, onMotionChange })
+  const handlers = useLatest({ onCommand, onMotionChange, isFlying })
 
   /**
    * The same surface, reached the other way: the native menu fires a command outright rather
@@ -88,10 +95,21 @@ export function useShortcuts({
       const typing = isTyping(event.target)
       const signature = signatureOf(event)
       const motion = motionFor(signature)
-      // Holding a key repeats keydown; only a set that actually changed is worth reporting.
-      if (!typing && motion && !held.has(motion)) {
-        held.add(motion)
-        handlers.current.onMotionChange?.(held)
+      if (!typing && motion) {
+        // Holding a key repeats keydown; only a set that actually changed is worth reporting.
+        if (!held.has(motion)) {
+          held.add(motion)
+          handlers.current.onMotionChange?.(held)
+        }
+
+        // A flight owns the key outright, and nothing downstream gets to see it: an arrow would
+        // otherwise scroll whatever list the pointer left focused, and `S` would reach
+        // `scene.scale` while it means "back". Only the modality tells the two apart.
+        if (handlers.current.isFlying?.()) {
+          event.preventDefault()
+          event.stopPropagation()
+          return
+        }
       }
 
       // A field keeps every command, and the lookup is skipped rather than thrown away: ⌘E would
@@ -117,12 +135,15 @@ export function useShortcuts({
     // flying after an ⌘Tab.
     const onBlur = release
 
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('keyup', onKeyUp)
+    // Capture, so a flight takes its key before the focused element reads it: React attaches at
+    // the root container, which reaches `window` only once every component has answered. Both
+    // edges — a keyup swallowed on one of them leaves the camera flying for good.
+    window.addEventListener('keydown', onKeyDown, true)
+    window.addEventListener('keyup', onKeyUp, true)
     window.addEventListener('blur', onBlur)
     return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('keydown', onKeyDown, true)
+      window.removeEventListener('keyup', onKeyUp, true)
       window.removeEventListener('blur', onBlur)
       release()
     }

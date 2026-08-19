@@ -434,6 +434,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     // Pushed on change, not polled: the engine restarts its own loop while something moves, so
     // nothing has to tick when the keyboard is idle.
     onMotionChange: held => engine.current?.setMotion(held),
+    isFlying: () => engine.current?.flying ?? false,
     onCommand: run,
   })
 

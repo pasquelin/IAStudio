@@ -209,14 +209,19 @@ function keyGlyph(code: string, keyName: (code: NamedKey) => string): string {
   return KEY_GLYPHS[code] ?? code
 }
 
-export const DEFAULT_MOTION: Record<MotionId, Signature> = {
-  forward: 'KeyW',
-  back: 'KeyS',
-  left: 'KeyA',
-  right: 'KeyD',
-  down: 'KeyQ',
-  up: 'KeyE',
-  boost: 'ShiftLeft',
+/**
+ * Every key a direction answers to. The arrows are a SECOND key for the four of the ground
+ * plane, never a remap: altitude keeps its two letters, which an arrow could only reach by
+ * taking one the ground plane already holds.
+ */
+export const DEFAULT_MOTION: Record<MotionId, readonly Signature[]> = {
+  forward: ['KeyW', 'ArrowUp'],
+  back: ['KeyS', 'ArrowDown'],
+  left: ['KeyA', 'ArrowLeft'],
+  right: ['KeyD', 'ArrowRight'],
+  down: ['KeyQ'],
+  up: ['KeyE'],
+  boost: ['ShiftLeft'],
 }
 
 /**

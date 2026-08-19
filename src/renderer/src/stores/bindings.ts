@@ -29,7 +29,9 @@ export function currentOverrides(): BindingOverrides {
  */
 const MOTION_BY_SIGNATURE: ReadonlyMap<Signature, MotionId> = new Map(
   // `as`: `Object.entries` widens the key to `string`, and the table is keyed by `MotionId`.
-  (Object.entries(DEFAULT_MOTION) as [MotionId, Signature][]).map(([id, bound]) => [bound, id]),
+  (Object.entries(DEFAULT_MOTION) as [MotionId, readonly Signature[]][]).flatMap(([id, bound]) =>
+    bound.map((signature): [Signature, MotionId] => [signature, id]),
+  ),
 )
 
 /** Motion is held rather than fired, and is not remappable yet — see `DEFAULT_MOTION`. */
