@@ -124,8 +124,14 @@ l’étagère :
 
 | Geste | Résultat |
 |---|---|
-| **Double-clic** sur une maille dans l’étagère | elle entre dans la scène ouverte |
-| **Glisser-déposer** sur la vue 3D | idem — n’importe où sur la vue, la barre d’outils comprise |
+| **Double-clic** sur une maille dans l’étagère | une **scène à elle** s’ouvre, avec la maille dedans |
+| **Glisser-déposer** sur la vue 3D | elle entre dans la scène **ouverte devant vous** — n’importe où sur la vue, la barre d’outils comprise |
+| **Clic droit ▸ Ajouter à la scène** | idem, sans viser la vue — il suffit qu’une scène soit ouverte quelque part |
+
+**Le double-clic ne regarde jamais l’onglet en avant** : il ouvre l’asset dans l’espace de son
+type, quoi qu’il y ait à l’écran. C’est la règle de tout le studio, décrite dans
+[Les assets](07-assets.md) — pour faire entrer une maille dans la scène que vous avez devant vous,
+c’est le glisser-déposer ou le clic droit.
 
 **Seules les mailles entrent.** Une image, un son ou une vidéo lâchés sur la vue 3D ne font
 rien : la scène ne saurait qu’en faire.

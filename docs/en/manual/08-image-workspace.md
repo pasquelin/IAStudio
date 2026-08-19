@@ -26,14 +26,21 @@ named after the asset and **already active**: it is the one the next stroke will
 | Gesture | What it needs |
 |---|---|
 | **Drag and drop** the picture onto the canvas | the image tab open in front of you |
-| **Double-click** the picture in the shelf | an image tab in front — it is the one that receives it |
+| **Right-click ▸ Place as a layer** | an image tab open, in front or not |
 | The **Image…** tool, Shapes group | nothing: it opens the shelf, you pick there |
 
 > Only **pictures of the project** come in — the ones showing in the shelf, generated or
 > imported. A picture not yet downloaded into the project cannot be dropped.
 
-There is **no "Open" menu**: an image document does not open *onto* a file, it receives pictures
-as layers. The distinction matters when you close the tab — see the end of this chapter.
+**Double-click is not in that table, and that is the chapter's distinction**: it goes into no open
+document. It opens the picture in a tab **of its own**: it is not one more layer there, the
+document IS the picture — and reopening the same picture comes back to that tab rather than opening
+a second. It is the studio-wide rule, described in [Assets](07-assets.md).
+
+There is **no "Open" menu**: you open with a double-click, on the picture in the shelf or on the
+document in the Explorer. The `+` on the left rail starts from white instead — and that document
+has no asset behind it. The distinction matters when you close the tab — see the end of this
+chapter.
 
 ---
 

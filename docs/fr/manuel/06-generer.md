@@ -427,15 +427,16 @@ plus souvent :
 | une **image** | la peindre dans un document **image**, la reprendre comme départ d’une autre génération, ou s’en servir comme **ciel** ou comme **couleur de base** d’une matière |
 | une **vidéo** ou un **son** | le poser sur une **timeline** (espace Vidéo), ou l’éditer (espace Audio) |
 | un **panorama** | le poser dans un document **ciel** (espace Skyboxes) |
-| un **objet 3D** | rien d’utile — le studio ne sait pas encore ouvrir une maille |
+| un **objet 3D** | l’ouvrir dans une **scène** (espace 3D), qui naît avec lui dedans |
 
-**Rappel du geste**, parce qu’il déroute : le double-clic **n’ouvre pas d’onglet**, il envoie
-l’asset dans l’onglet déjà en avant. Ouvrez d’abord le document qui doit le recevoir, avec le
-bouton `+` du rail gauche. Voir [Les assets](07-assets.md).
+**Rappel du geste**, parce qu’il déroute : le double-clic **ouvre l’asset dans un onglet à lui**,
+dans l’espace qui édite son type, sans regarder ce que vous avez devant vous. Aucun document
+préalable n’est donc nécessaire. Pour l’envoyer dans un onglet **déjà ouvert**, c’est le clic droit
+ou le glisser-déposer. Voir [Les assets](07-assets.md).
 
-> **Une image générée se retouche dans l’espace Image** : ouvrez un document avec le `+`, puis
-> glissez l’image sur la toile — elle y devient un calque. Ce document, en revanche, ne
-> s’enregistre pas ; `⇧⌘E` en sort un PNG. Voir [Espace Image](08-espace-image.md).
+> **Une image générée se retouche dans l’espace Image** : double-cliquez-la, ou glissez-la sur la
+> toile d’un document image déjà ouvert — elle y devient un calque. `⌘S` enregistre ce document,
+> calques compris, et `⇧⌘E` en sort un PNG. Voir [Espace Image](08-espace-image.md).
 
 <!-- CAPTURE : le panneau Génération avec le formulaire d’un modèle, et la ligne d’état en
      dessous avec une tâche en cours. Vers ../../images/generate.png -->

@@ -27,15 +27,21 @@ nommé d’après l’asset et **déjà actif** : c’est lui que le prochain tr
 | Geste | Ce qu’il faut |
 |---|---|
 | **Glisser-déposer** l’image sur la toile | l’onglet image ouvert devant vous |
-| **Double-clic** sur l’image dans l’étagère | un onglet image en avant — c’est lui qui la reçoit |
+| **Clic droit ▸ Placer comme calque** | un onglet image ouvert, en avant ou non |
 | L’outil **Image…**, groupe Formes | rien : il ouvre l’étagère, vous y choisissez |
 
 > Seules les **images du projet** entrent — celles que vous voyez dans l’étagère, générées ou
 > importées. Une image qui n’a pas encore été téléchargée dans le projet n’est pas déposable.
 
-Il n’y a **pas de menu « Ouvrir »** : un document image ne s’ouvre pas *sur* un fichier, il
-reçoit des images comme calques. La nuance compte au moment de fermer l’onglet — voir la fin de
-ce chapitre.
+**Le double-clic ne figure pas dans ce tableau, et c’est la nuance du chapitre** : il n’entre dans
+aucun document ouvert. Il ouvre l’image dans un onglet **à elle** : elle n’y est pas un calque de
+plus, le document EST l’image — et rouvrir la même image revient à cet onglet-là plutôt que d’en
+ouvrir un second. C’est la règle de tout le studio, décrite dans [Les assets](07-assets.md).
+
+Il n’y a **pas de menu « Ouvrir »** : on ouvre par un double-clic, sur l’image dans l’étagère ou
+sur le document dans l’Explorateur. Le `+` du rail gauche, lui, part du blanc — et ce
+document-là ne porte aucun asset derrière lui. La nuance compte au moment de fermer l’onglet, voir
+la fin de ce chapitre.
 
 ---
 

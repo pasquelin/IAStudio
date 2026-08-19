@@ -408,15 +408,17 @@ people most often:
 | a **picture** | paint on it in an **image** document, use it as the starting point of another generation, or set it as a **sky** or as a material's **base colour** |
 | a **video** or a **sound** | drop it on a **timeline** (Video workspace), or edit it (Audio workspace) |
 | a **panorama** | place it in a **sky** document (Skyboxes workspace) |
-| a **3D object** | nothing useful — the studio cannot open a mesh yet |
+| a **3D object** | open it in a **scene** (3D workspace), which is born with it inside |
 
-**A reminder about the gesture**, because it misleads: double-click **does not open a tab**, it
-sends the asset into the tab already in front. Open the document meant to receive it first, with
-the `+` button on the left rail. See [Assets](07-assets.md).
+**A reminder about the gesture**, because it misleads: double-click **opens the asset in a tab of
+its own**, in the workspace that edits its kind, without looking at what you have in front of you.
+No document is needed first. To send it into a tab **already open**, use right-click or drag and
+drop. See [Assets](07-assets.md).
 
-> **A generated picture is retouched in the Image workspace**: open a document with `+`, then
-> drag the picture onto the canvas — it becomes a layer there. That document, however, does not
-> save; `⇧⌘E` gets a PNG out of it. See [Image workspace](08-image-workspace.md).
+> **A generated picture is retouched in the Image workspace**: double-click it, or drag it onto
+> the canvas of an image document already open — it becomes a layer there. `⌘S` saves that
+> document, layers and all, and `⇧⌘E` gets a PNG out of it. See
+> [Image workspace](08-image-workspace.md).
 
 <!-- SCREENSHOT: the Generation panel with a model's form, and the status line below with a running
      generation. Save to ../../images/generate.png -->

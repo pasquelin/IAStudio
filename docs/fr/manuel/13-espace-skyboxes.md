@@ -33,14 +33,16 @@ le fond : il pose une lumière orange rasante sur tout ce qui est devant.
 
 ## Trois façons d’obtenir un ciel
 
-**D’abord, ouvrez un document ciel** avec le bouton `+` du rail gauche. Les trois chemins qui
-suivent remplissent un onglet ouvert ; aucun n’en crée un.
+| Chemin | Comment | Où ça atterrit |
+|---|---|---|
+| **Double-clic** | sur un **panorama** de l’étagère | dans un onglet ciel **à lui**, ouvert pour l’occasion |
+| **Glisser-déposer** | depuis l’étagère vers l’aperçu, n’importe où dessus | dans l’onglet **devant vous** |
+| **Générer** | choisissez un modèle de ciel et lancez une génération | dans le document d’où elle est partie, **toute seule** |
 
-| Chemin | Comment |
-|---|---|
-| **Double-clic** | sur une image de l’étagère, l’onglet ciel étant devant |
-| **Glisser-déposer** | depuis l’étagère vers l’aperçu, n’importe où dessus |
-| **Générer** | choisissez un modèle de ciel et lancez une génération : elle se pose **toute seule** dans le document d’où elle est partie |
+**Le double-clic est le seul des trois qui ouvre un onglet** ; les deux autres remplissent celui
+que vous avez déjà, que le bouton `+` du rail gauche crée vide. Et il ne vaut que pour un
+**panorama** : une image ordinaire double-cliquée part dans l’espace Image, qui est celui de son
+type — pour la poser en ciel, c’est le glisser-déposer ou le clic droit ▸ **Utiliser comme ciel**.
 
 Tant qu’aucune image n’est posée, l’aperçu affiche : « Aucune skybox. Générez-en une ou déposez
 un panorama équirectangulaire. »

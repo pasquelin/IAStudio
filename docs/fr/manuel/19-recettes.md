@@ -28,19 +28,21 @@ geste juste, fait dans le mauvais espace.
 
 Avant les recettes, une règle qui les traverse toutes.
 
-**Le double-clic sur un asset n’ouvre pas d’onglet.** Il envoie l’asset dans l’onglet **déjà
-ouvert devant vous** — et à défaut dans un document ouvert **ailleurs**, en changeant d’espace.
-S’il n’y en a nulle part, un message le dit : « Cet asset n’a pas pu être ouvert ».
+**Le double-clic sur un asset ouvre un onglet à lui**, dans l’espace qui édite son type, sans
+jamais regarder celui que vous avez devant vous. Aucun document préalable n’est nécessaire, et
+rouvrir le même asset revient à son onglet plutôt que d’en ouvrir un second. Quand l’ouverture ne
+peut pas aboutir — l’asset n’est pas encore sur votre disque, ou aucun projet n’est ouvert — un
+message le dit : « Cet asset n’a pas pu être ouvert ».
 
-Donc, dans toutes les recettes qui suivent, l’ordre est **toujours** le même :
+**Pour l’envoyer dans un document déjà ouvert, c’est l’autre geste** — et c’est là que tout le
+monde se trompe :
 
 ```
-1. le bon espace        (les onglets, en haut)
-2. le bouton +          (le rail gauche — il crée le document)
-3. alors seulement, l'asset
+ouvrir l'asset             → double-clic
+l'ajouter à un document    → clic droit (il liste les destinations), ou glisser-déposer
 ```
 
-Retenez ces trois lignes et vous ne serez bloqué nulle part.
+Retenez ces deux lignes et vous ne serez bloqué nulle part.
 
 ---
 
@@ -164,8 +166,8 @@ Canaux.
 4. **Générer** — comptez plus longtemps que pour une image : quelques minutes est normal ;
 5. le clip arrive dans les **Assets**.
 
-**Pour le voir en grand** : bouton **+** du rail gauche pour ouvrir une séquence, puis glissez le
-clip sur la timeline.
+**Pour le voir en grand** : **double-cliquez** le clip dans l’étagère. Un montage s’ouvre pour lui,
+avec le clip déjà posé — le `+` du rail gauche n’est pas un préalable.
 
 ---
 
@@ -176,8 +178,8 @@ clip sur la timeline.
 3. décrivez le son voulu, **Générer** ;
 4. le son arrive dans les **Assets**.
 
-**Pour l’écouter et le retoucher :** bouton **+** du rail gauche — un onglet son s’ouvre — puis
-**double-cliquez** votre son dans l’étagère. La forme d’onde apparaît.
+**Pour l’écouter et le retoucher :** **double-cliquez** votre son dans l’étagère. Un onglet
+s’ouvre pour lui, et la forme d’onde apparaît — le `+` du rail gauche n’est pas un préalable.
 
 ---
 
@@ -226,7 +228,7 @@ final.
 
 ## Rogner un son et le faire monter en douceur
 
-1. espace **Audio**, bouton **+**, puis **double-cliquez** votre son ;
+1. **double-cliquez** votre son dans l’étagère — l’espace Audio s’ouvre avec lui ;
 2. tirez les bords de la région pour **rogner** ;
 3. posez un **fondu d’entrée** et un **fondu de sortie** ;
 4. l’outil **A/B** compare avec l’original, avant vos retouches — c’est un outil à lui seul, pas
@@ -239,9 +241,9 @@ réglages** : les coupes se mesurent sur la prise qui les a reçues.
 
 ## Poser un asset là où il faut
 
-Le tableau des dépôts les plus courants. Il y a **neuf** surfaces qui acceptent un asset ; le
-chapitre [Les assets](07-assets.md) les liste toutes, et le double-clic obéit à une autre règle
-encore.
+Le tableau des dépôts les plus courants. Il y a **huit** surfaces qui acceptent un asset ; le
+chapitre [Les assets](07-assets.md) les liste toutes. Le double-clic, lui, n’entre dans aucune : il
+ouvre l’asset dans un onglet à lui.
 
 | Vous voulez… | Le geste | Il faut, devant vous |
 |---|---|---|
@@ -251,8 +253,9 @@ encore.
 | une image en ciel | glisser sur l’**aperçu du ciel** | un onglet ciel |
 | un objet 3D dans une scène | glisser sur la **vue 3D** | un onglet scène |
 
-Une texture se double-clique comme les autres : elle se pose alors en couleur de base de la
-matière ouverte.
+Une texture se double-clique comme les autres : une **matière à elle** s’ouvre, dont elle remplit
+la couleur de base. Pour la poser dans la matière que vous avez devant vous, c’est le
+glisser-déposer ou le clic droit ▸ **Utiliser comme couleur de base**.
 
 ---
 
@@ -365,10 +368,10 @@ Tout est détaillé, sans rien cacher, dans
 | un ciel à 360° | Skyboxes | `+` → Générer, ça se pose tout seul |
 | une matière | Textures | `+` → glisser une image sur l’aperçu → `⌘S` |
 | un plan animé | Vidéo | filtre *Image vers vidéo* → Générer |
-| un son | Audio | Modèles → Générer, puis `+` et double-clic |
+| un son | Audio | Modèles → Générer, puis double-clic sur le son |
 | une scène 3D | 3D | `+` → une lumière **d’abord**, puis les objets → `⌘S` |
 | éclairer une scène d’un ciel | 3D | Inspecteur → Environnement → choisir la skybox |
-| poser un modèle 3D | 3D | double-clic sur la maille, ou la glisser sur la vue |
+| poser un modèle 3D dans la scène ouverte | 3D | glisser la maille sur la vue, ou clic droit |
 | monter deux plans | Vidéo | `+` → glisser les clips sur la timeline |
 | importer mes fichiers | partout | Assets → Importer un média |
 | refaire la même image | partout | Inspecteur → Régénérer |
