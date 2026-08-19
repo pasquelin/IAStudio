@@ -640,12 +640,12 @@ How much the application says about what it is doing, in its log.
 nothing about what the software does — only about what it says.
 
 **Do not confuse this log with the one on the status line.** This one is the studio's internal log:
-it goes to the terminal that launched it, **and to a file**, which the button below reveals. The
+it goes to the terminal that launched it, **and to a file**, which the button below shows. The
 status line's journal does not depend on this setting — it gets its lines either way.
 
 ### Technical log
 
-**Button: Reveal the technical log.**
+**Button: Show the technical log.**
 
 Opens your file manager on the internal log, a file named `main.log`. The studio writes to it on
 every launch, however you started it.

@@ -452,7 +452,7 @@ describe('the translation bundles', () => {
        * before this one wrote that no chapter described those sections.
        *
        * The exemptions left are the internal log, the one thing the manual keeps as `log` — and
-       * it is now a FILE on disk, which the button under Advanced reveals.
+       * it is now a FILE on disk, which the button under Advanced shows.
        */
       {
         dropped: /\blogs?\b/i,
@@ -471,6 +471,12 @@ describe('the translation bundles', () => {
        * thirty-three values elsewhere. It forbids `montage`; it does not require `edit`.
        */
       { dropped: /\bmontages?\b/i, kept: 'edit' },
+      /**
+       * One gesture, one verb: four keys say `Show in folder`, a fifth said `Reveal the technical
+       * log`, and the French says `Afficher` at all five. Bundle VALUES only, which is the blind
+       * spot — the manual keeps `reveals` as a plain English verb.
+       */
+      { dropped: /\breveals?\b/i, kept: 'show' },
     ],
   }
 
@@ -479,7 +485,7 @@ describe('the translation bundles', () => {
    * plural, `montages` slips through the very typo the canary is there to catch — `montagess?`
    * still reads it, and the canary shipped green when it was.
    */
-  const ENGLISH_SAMPLES = ['file browser', 'preference', 'picture', 'log', 'montage']
+  const ENGLISH_SAMPLES = ['file browser', 'preference', 'picture', 'log', 'montage', 'reveal']
 
   /**
    * The negative half. Each word matches its reading once the boundary is dropped, which is what
@@ -487,7 +493,7 @@ describe('the translation bundles', () => {
    * `preferences?` has none: no English word carries `preference` inside a longer one. Which is
    * the blind spot — a reading added tomorrow without a near miss of its own stays green.
    */
-  const ENGLISH_NEAR_MISSES = ['profile browser', 'catalogue', 'pictured', 'remontage']
+  const ENGLISH_NEAR_MISSES = ['profile browser', 'catalogue', 'pictured', 'remontage', 'revealed']
 
   it.each(CODES)('says one thing one way in %s', code => {
     const drifted = [...BUNDLES[code]].flatMap(([key, text]) =>
