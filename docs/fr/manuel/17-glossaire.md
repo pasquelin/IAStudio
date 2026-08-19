@@ -532,6 +532,14 @@ lettre imprimée dessus : les touches de vol forment toujours le même carré en
 Une des deux bandes d’icônes collées aux bords gauche et droit de la fenêtre. Un clic sur une
 icône ouvre ou ferme le *panneau* correspondant.
 
+**Recadrage** *(crop)*
+Poser un cadre sur une image et ne garder que ce qui tombe dedans. L’outil `F` de l’espace Image :
+on glisse le cadre, on l’ajuste, `⏎` l’applique. **Un recadrage rogne, il n’agrandit jamais** — le
+cadre ne sort pas de l’image.
+
+Ne pas confondre avec *Rogner* : au montage il raccourcit **ou allonge** un *clip* par ses bouts,
+sur un son il n’en garde que la portion choisie. Aucun des deux ne touche à une image.
+
 **Régénérer**
 Relancer une génération avec les réglages qui ont produit un résultat donné — même *modèle*, même
 *prompt*, même *graine*. Le point de départ de toute variation maîtrisée.
