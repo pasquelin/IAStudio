@@ -3,7 +3,7 @@ import type { AdjustmentStack } from '@shared/domain/adjustments'
 import type { TaskWatch } from '@shared/domain/taskProgress'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
 import { exportTargetOf, type ExportTargetId } from '@shared/domain/exportRegistry'
-import { encodeRgbe } from '@shared/domain/rgbe'
+import { encodeRgbeOffThread, type RgbeEncoder } from './rgbePort'
 import { faceFileNames } from '@shared/domain/skybox'
 import type { ExportedFile, SkyboxExportCommand } from '@shared/ipc'
 import { createAdjustPass } from '../gpu/passes/adjust'
@@ -44,6 +44,7 @@ async function panoramaBytes(
   renderer: WebGLRenderer,
   graded: WebGLRenderTarget,
   size: PictureSize,
+  encodeRadiance: RgbeEncoder,
 ): Promise<Uint8Array> {
   if (target === 'sky.exr') {
     const { EXRExporter } = await import('three/addons/exporters/EXRExporter.js')
@@ -55,7 +56,7 @@ async function panoramaBytes(
   const half = new Uint16Array(size.width * size.height * 4)
   await renderer.readRenderTargetPixelsAsync(graded, 0, 0, size.width, size.height, half)
 
-  return encodeRgbe(half, size.width, size.height)
+  return encodeRadiance(half, size.width, size.height)
 }
 
 /**
@@ -77,11 +78,17 @@ export type SkyboxExportPortOptions = {
    * would write the six faces from the old panorama while the viewport shows the new one.
    */
   assetVersion?: (assetId: string) => string | undefined
+  /**
+   * Radiance encoding, which runs OFF this thread by default: 8.4 M iterations at 4K and 33.5 M
+   * at 8K. Injected because jsdom has no `Worker`, exactly as `loadTexture` is.
+   */
+  encodeRadiance?: RgbeEncoder
 }
 
 export function createSkyboxExportPort({
   loadTexture,
   assetVersion,
+  encodeRadiance = encodeRgbeOffThread,
 }: SkyboxExportPortOptions): SkyboxExportPort {
   // `async`, so a stop already raised comes back as a rejection rather than as a synchronous
   // throw: the port promises a promise, and half its callers only ever look at one.
@@ -133,7 +140,13 @@ export function createSkyboxExportPort({
           // leaves with the range the grading gave it, which is the whole reason to ask for one.
           if (command.kind === 'panorama') {
             watch?.signal?.throwIfAborted()
-            const bytes = await panoramaBytes(command.target, renderer, graded, equirect)
+            const bytes = await panoramaBytes(
+              command.target,
+              renderer,
+              graded,
+              equirect,
+              encodeRadiance,
+            )
             watch?.onStep?.(1, 1)
             return [{ name, extension: exportTargetOf(command.target).extension, bytes }]
           }
