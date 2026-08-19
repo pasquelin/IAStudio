@@ -36,7 +36,7 @@ describe('the table itself', () => {
   it('offers each section the targets declared for it, and no other', () => {
     expect(targetsOfDomain('scene')).toEqual(['scene.glb', 'scene.gltf', 'scene.usdz'])
     expect(targetsOfDomain('sky')).toEqual(['sky.faces'])
-    expect(targetsOfDomain('montage')).toEqual(['montage.otio'])
+    expect(targetsOfDomain('montage')).toEqual(['montage.otio', 'montage.otioz'])
   })
 })
 

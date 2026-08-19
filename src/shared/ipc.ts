@@ -530,9 +530,18 @@ export type SceneExportRequest = {
  * catalogue a clip's media is resolved against.
  */
 export type MontageExportRequest = {
-  /** Suggested file name, without its extension: this writer only ever writes `.otio`. */
+  /** Suggested file name, without its extension — the target decides that. */
   name: string
-  data: Uint8Array
+  /** `montage.otio` for the cut alone, `montage.otioz` for the cut with its media inside. */
+  target: ExportTargetId
+  /** The serialized timeline. Text, never bytes: a bundle wraps it rather than writing it. */
+  content: string
+  /**
+   * What the cut points at, for a bundle only. The PATHS never cross back: this side resolves
+   * each url against the open project and reads it, so a montage cannot have a file outside the
+   * project packed into something it then hands to somebody else.
+   */
+  media?: readonly { source: string; entry: string }[]
 }
 
 /** One file of an export, already encoded by the renderer that drew it. */

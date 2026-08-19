@@ -11,7 +11,7 @@ import { useSplitPair } from '@/hooks/useSplitPair'
 import { audioHistoryOf, isAudioEditDirty, useAudioEdits } from '@/stores/audioEdits'
 import { useDocuments } from '@/stores/documents'
 import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
-import { exportOtio } from '@/app/otioExport'
+import { exportOtio, exportOtioz } from '@/app/otioExport'
 import { ProgramMonitor } from './ProgramMonitor'
 import { TakeEditor } from './TakeEditor'
 
@@ -103,6 +103,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
       // The chain of an edited take is NOT in it, and that is not a loss of the export: the
       // programme monitor does not hear it either — it becomes real when the take is applied.
       if (command === 'sequence.exportCut') void exportOtio(documentId)
+      if (command === 'sequence.exportBundle') void exportOtioz(documentId)
     },
     [documentId, transport],
   )

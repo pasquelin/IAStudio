@@ -29,8 +29,7 @@ const RUSH: Asset = {
 
 const written = vi.fn<(request: MontageExportRequest) => Promise<string | null>>()
 
-const timelineWritten = () =>
-  JSON.parse(new TextDecoder().decode(written.mock.calls[0]?.[0].data ?? new Uint8Array()))
+const timelineWritten = () => JSON.parse(written.mock.calls[0]?.[0].content ?? '{}')
 
 beforeEach(() => {
   written.mockReset()
