@@ -1,6 +1,7 @@
 import { SRGBColorSpace } from 'three'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
+import { exportTargetOf } from '@shared/domain/exportRegistry'
 import { faceFileNames } from '@shared/domain/skybox'
 import type { ExportedFile } from '@shared/ipc'
 import { createAdjustPass } from '../gpu/passes/adjust'
@@ -43,7 +44,7 @@ export type SkyboxExportPortOptions = {
   assetVersion?: (assetId: string) => string | undefined
 }
 
-const PNG_EXTENSION = '.png'
+const PNG_EXTENSION = exportTargetOf('sky.faces').extension
 
 export function createSkyboxExportPort({
   loadTexture,

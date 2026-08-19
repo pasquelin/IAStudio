@@ -1,4 +1,5 @@
-import { EXPORT_EXTENSIONS, type ExportFormat } from '@shared/domain/scene'
+import { exportTargetOf, SCENE_TARGET_OF_FORMAT } from '@shared/domain/exportRegistry'
+import type { ExportFormat } from '@shared/domain/scene'
 import type { FolderExportRequest } from '@shared/ipc'
 import { documentExportName, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
@@ -26,7 +27,11 @@ export async function sceneExportFiles(
   return {
     folder: name,
     files: [
-      { name, extension: EXPORT_EXTENSIONS[format], bytes: await engine.exportTo(format, scope) },
+      {
+        name,
+        extension: exportTargetOf(SCENE_TARGET_OF_FORMAT[format]).extension,
+        bytes: await engine.exportTo(format, scope),
+      },
     ],
   }
 }

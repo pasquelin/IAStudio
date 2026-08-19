@@ -243,6 +243,32 @@ export function writesOneFile(target: TextureExportTarget): boolean {
 }
 
 /**
+ * Which channels a target reads at all — derived from its own recipes rather than listed beside
+ * them, so the registry that reports what an export loses cannot drift from what it writes.
+ *
+ * A channel a recipe only ever falls back to a constant for is NOT in it: `missing` is what lands
+ * in the file when the texture has none, which is the opposite of carrying one.
+ */
+export function channelsWrittenBy(target: TextureExportTarget): PbrChannel[] {
+  const written: PbrChannel[] = []
+
+  for (const picture of TARGETS[target].pictures) {
+    for (const component of [picture.red, picture.green, picture.blue, picture.alpha]) {
+      if (typeof component !== 'number' && !written.includes(component.channel)) {
+        written.push(component.channel)
+      }
+    }
+  }
+
+  return written
+}
+
+/** Whether the material panel's remap is written into the pixels rather than lost. */
+export function bakesRemap(target: TextureExportTarget): boolean {
+  return TARGETS[target].bakesRemap
+}
+
+/**
  * Held under the target's ceiling, keeping the aspect ratio. Not squared, even where the target
  * asks for square: a texture stretched on the way out is a texture that no longer matches the
  * uv it was authored against.

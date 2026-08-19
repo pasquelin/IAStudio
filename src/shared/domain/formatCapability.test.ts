@@ -5,6 +5,7 @@ import {
   MONTAGE_TRAITS,
   PICTURE_TRAITS,
   SCENE_TRAITS,
+  SKY_TRAITS,
   TRAITS_OF_DOMAIN,
   WRITABLE_FORMATS,
   capabilityOf,
@@ -117,11 +118,24 @@ describe('the table itself', () => {
     expect(lossesFor(['layers'], 'mtlx')).toEqual(['layers'])
   })
 
-  // That the lists share no value is the COMPILER's to hold — the four trait unions have no
-  // overlap, so an assertion here would not even type-check.
-  it('publishes a union that is exactly its four domains', () => {
+  // That the lists share no value is the COMPILER's to hold — the trait unions have no overlap,
+  // so an assertion here would not even type-check.
+  it('publishes a union that is exactly its domains', () => {
     expect([...CAPABILITY_TRAITS].sort()).toEqual(
-      [...PICTURE_TRAITS, ...MONTAGE_TRAITS, ...SCENE_TRAITS, ...MATERIAL_TRAITS].sort(),
+      [
+        ...PICTURE_TRAITS,
+        ...MONTAGE_TRAITS,
+        ...SCENE_TRAITS,
+        ...MATERIAL_TRAITS,
+        ...SKY_TRAITS,
+      ].sort(),
     )
+  })
+
+  // The sky has traits and no writable format of its own: only an EXPORT answers about one, and
+  // `exportRegistry` is where that answer lives. Read as « nothing to lose » it would be a lie.
+  it('answers for every domain a trait belongs to', () => {
+    const covered = Object.values(TRAITS_OF_DOMAIN).flatMap(traits => [...traits])
+    expect([...covered].sort()).toEqual([...CAPABILITY_TRAITS].sort())
   })
 })

@@ -13,7 +13,7 @@ import { extensionOf } from './fileName'
  * of its own domain: an `.otio` carries no layer, and the answer for one is « everything lost »
  * rather than « nothing to lose ».
  */
-export type CapabilityDomain = 'picture' | 'montage' | 'scene' | 'material'
+export type CapabilityDomain = 'picture' | 'montage' | 'scene' | 'material' | 'sky'
 
 /** A property of an edited picture that a format either carries or loses. */
 export type PictureTrait =
@@ -180,13 +180,41 @@ export const MATERIAL_TRAITS: readonly MaterialTrait[] = [
   'previewState',
 ]
 
-export type CapabilityTrait = PictureTrait | MontageTrait | SceneTrait | MaterialTrait
+/**
+ * The same question for a sky, read off `SkyboxContent` field by field.
+ *
+ * `skyGrading` is the one that behaves unlike the others on the way out: an export bakes it into
+ * the pixels rather than carrying it, so it survives as an appearance and never as a setting.
+ */
+export type SkyTrait =
+  | 'skyImage'
+  | 'skyGrading'
+  | 'sunAngles'
+  | 'sunIntensity'
+  | 'sunColour'
+  | 'environmentIntensity'
+  | 'backgroundVisible'
+  | 'skyGeneration'
+
+export const SKY_TRAITS: readonly SkyTrait[] = [
+  'skyImage',
+  'skyGrading',
+  'sunAngles',
+  'sunIntensity',
+  'sunColour',
+  'environmentIntensity',
+  'backgroundVisible',
+  'skyGeneration',
+]
+
+export type CapabilityTrait = PictureTrait | MontageTrait | SceneTrait | MaterialTrait | SkyTrait
 
 export const CAPABILITY_TRAITS: readonly CapabilityTrait[] = [
   ...PICTURE_TRAITS,
   ...MONTAGE_TRAITS,
   ...SCENE_TRAITS,
   ...MATERIAL_TRAITS,
+  ...SKY_TRAITS,
 ]
 
 export const TRAITS_OF_DOMAIN: Record<CapabilityDomain, readonly CapabilityTrait[]> = {
@@ -194,6 +222,7 @@ export const TRAITS_OF_DOMAIN: Record<CapabilityDomain, readonly CapabilityTrait
   montage: MONTAGE_TRAITS,
   scene: SCENE_TRAITS,
   material: MATERIAL_TRAITS,
+  sky: SKY_TRAITS,
 }
 
 /** A format the studio can write an edited document to. */
@@ -405,7 +434,17 @@ export function lossesFor(
   traits: readonly CapabilityTrait[],
   format: WritableFormat,
 ): CapabilityTrait[] {
-  const { interchange, extended } = capabilityOf(format)
+  return lossesAgainst(traits, capabilityOf(format))
+}
+
+/**
+ * The same answer against a capability that belongs to no writable format — what an EXPORT
+ * carries, which is a derivative rather than the document and has no extension to be looked up by.
+ */
+export function lossesAgainst(
+  traits: readonly CapabilityTrait[],
+  { interchange, extended }: FormatCapability,
+): CapabilityTrait[] {
   return traits.filter(trait => !interchange.includes(trait) && !extended.includes(trait))
 }
 

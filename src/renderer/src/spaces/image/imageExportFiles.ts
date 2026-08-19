@@ -1,3 +1,4 @@
+import { exportTargetOf } from '@shared/domain/exportRegistry'
 import type { FolderExportRequest } from '@shared/ipc'
 import { documentExportName, useDocuments } from '@/stores/documents'
 import { canvasHost } from './canvasHosts'
@@ -19,7 +20,16 @@ export async function imageExportFiles(documentId: string): Promise<FolderExport
 
   // The tab's own title, so the file is findable afterwards — an opaque id is not.
   const name = documentExportName(useDocuments.getState(), documentId, 'image')
-  return { folder: name, files: [{ name, extension: '.png', bytes: bytesOfDataUrl(image) }] }
+  return {
+    folder: name,
+    files: [
+      {
+        name,
+        extension: exportTargetOf('picture.png').extension,
+        bytes: bytesOfDataUrl(image),
+      },
+    ],
+  }
 }
 
 /** A `data:` URL down to its bytes. `atob` is the only decoder a renderer has without a fetch. */
