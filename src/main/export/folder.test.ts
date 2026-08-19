@@ -262,7 +262,7 @@ describe('the texture export handler', () => {
     })
 
     it('more files than the widest target writes', async () => {
-      const many = Array.from({ length: 17 }, (_unused, index) => file(`base-${index}`))
+      const many = Array.from({ length: 65 }, (_unused, index) => file(`base-${index}`))
 
       await expect(
         invoke(CHANNELS.textureExport, {

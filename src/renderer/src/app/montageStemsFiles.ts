@@ -1,5 +1,6 @@
 import type { TaskWatch } from '@shared/domain/taskProgress'
 import { exportTargetOf } from '@shared/domain/exportRegistry'
+import { freeName, safeName } from '@shared/domain/otioz'
 import type { ExportedFile, FolderExportRequest } from '@shared/ipc'
 import { encodeWav } from '@/engines/audio/wav'
 import { stemsOf } from '@/engines/timeline/stems'
@@ -31,18 +32,14 @@ export async function montageStemsFiles(
 
   // Numbered, and the number comes FIRST: two tracks left under the studio's default name are the
   // ordinary case, and a folder holding one `track.wav` is a stem set missing every other row.
+  // `safeName` because a track is named by hand — a slash in one would be refused by the writer
+  // rather than written, which costs the whole export at the first click.
   const taken = new Set<string>()
   const files: ExportedFile[] = stems.map((stem, row) => {
-    const stub = `${row + 1} ${stem.name.trim() || UNTITLED_TRACK}`
-    let file = stub
-    for (let twin = 2; taken.has(file); twin += 1) file = `${stub} (${twin})`
-    taken.add(file)
+    const name = freeName(safeName(`${row + 1} ${stem.name.trim() || UNTITLED_TRACK}`), taken)
+    taken.add(name)
 
-    return {
-      name: file,
-      extension: exportTargetOf('montage.wav').extension,
-      bytes: encodeWav(stem.data),
-    }
+    return { name, extension: exportTargetOf('montage.wav').extension, bytes: encodeWav(stem.data) }
   })
 
   return { folder: name, target: 'montage.wav', files }

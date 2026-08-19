@@ -36,8 +36,11 @@ const target = z.custom<ExportTargetId>(isTargetId)
  */
 const MAX_EXPORT_BYTES = 512 * 1024 * 1024
 
-/** Eight raw channels is the widest an export gets, and the margin above it is deliberate. */
-const MAX_FILES = 16
+/**
+ * A stem set is one file per audible TRACK, and a montage carries as many as somebody laid down —
+ * where eight raw channels used to be the widest an export got. The margin above is deliberate.
+ */
+const MAX_FILES = 64
 
 const file = z.object({
   name: pathSegment,

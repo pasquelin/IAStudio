@@ -32,15 +32,18 @@ function fitted(picture: PdfImage, cell: { width: number; height: number }): [nu
   return [picture.width * scale, picture.height * scale]
 }
 
+/** What one cell measures across, which is also what a row measures down. */
+const cellWidth = (across: number, page: typeof A4_POINTS): number =>
+  (page.width - 2 * MARGIN - (across - 1) * GAP) / across
+
 /** How many fit across and down, given the paper and the cell size asked for. */
 export function sheetLayout(columns: number, page = A4_POINTS): SheetLayout {
   const across = Math.max(1, Math.floor(columns))
-  const cell = (page.width - 2 * MARGIN - (across - 1) * GAP) / across
   // The caption rides UNDER the picture, inside the cell: a row counted without it walks the
   // last line of each page off the bottom.
   return {
     columns: across,
-    rows: Math.max(1, Math.floor((page.height - 2 * MARGIN) / (cell + GAP))),
+    rows: Math.max(1, Math.floor((page.height - 2 * MARGIN) / (cellWidth(across, page) + GAP))),
   }
 }
 
@@ -56,7 +59,7 @@ export function contactSheetPages(
   if (pictures.length === 0) return []
 
   const { columns: across, rows } = sheetLayout(columns, page)
-  const width = (page.width - 2 * MARGIN - (across - 1) * GAP) / across
+  const width = cellWidth(across, page)
   const perPage = across * rows
 
   const pages: PdfPage[] = []
