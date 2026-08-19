@@ -150,6 +150,19 @@ export function clipTimeAt(ref: ClipRef, length: number, playhead: Us): number {
 }
 
 /**
+ * The sub-track a block stands on, or nothing — a block a ⌘Z took out stands on none.
+ *
+ * Asked before taking one off, too: `removeModelClip` on an id no lane carries still banks a
+ * history entry and wipes the redo.
+ */
+export function laneHolding(
+  lanes: readonly ClipLane[],
+  clipId: string | undefined,
+): ClipLane | null {
+  return lanes.find(lane => lane.clips.some(clip => clip.id === clipId)) ?? null
+}
+
+/**
  * The lanes rewritten around one of them, or `null` when that lane refuses the edit.
  *
  * Every edit below answers `null` for one that cannot be made, and a refusal must not reach the

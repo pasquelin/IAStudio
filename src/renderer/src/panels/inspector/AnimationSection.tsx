@@ -22,7 +22,7 @@ import { INLINE_LINK, NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
 import { addModelClip, removeModelClip, setModelLanes } from '@/engines/scene/commands'
-import { lanesWith, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
+import { laneHolding, lanesWith, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import type { ModelNode } from '@/engines/scene/sceneState'
 import { clipLabel } from '@/helpers/clipLabel'
@@ -103,7 +103,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
           ? clips.map(clip => (clip.id === played.id ? next : clip))
           : [...clips, next]
 
-    const holding = lanes.find(lane => lane.clips.some(clip => clip.id === played?.id)) ?? lanes[0]
+    const holding = laneHolding(lanes, played?.id) ?? lanes[0]
     const written = holding
       ? lanesWith(lanes, holding.id, rewrite)
       : [clipLane(MAIN_LANE_ID, rewrite([]))]
@@ -120,10 +120,18 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
     play(next)
   }
 
+  // Guarded on the block STILL being there: a ⌘Z takes it out under the picker, and removing what
+  // no lane carries banks an entry and wipes the redo.
+  const takeBack = (): void => {
+    if (picking && laneHolding(lanes, picking.clipId)) {
+      edit.run(removeModelClip(node.id, picking.clipId))
+    }
+  }
+
   /** Lays what the picker chose, plays it at once, and remembers which block that was. */
   const browse = (source: ClipSource, label: string): void => {
     const laid = { ...DEFAULT_CLIP, id: newId(), source, label }
-    if (picking) edit.run(removeModelClip(node.id, picking.clipId))
+    takeBack()
     edit.run(addModelClip(node.id, laid))
     setPicking({ clipId: laid.id, source })
     play(laid)
@@ -136,7 +144,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   }
 
   const drop = (): void => {
-    if (picking) edit.run(removeModelClip(node.id, picking.clipId))
+    takeBack()
     keep()
   }
 

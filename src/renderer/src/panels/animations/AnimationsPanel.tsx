@@ -4,28 +4,22 @@ import { useTranslation } from 'react-i18next'
 import type { BundledAnimation } from '@shared/domain/animationLibrary'
 import { clipKeyOf, DEFAULT_CLIP, type ClipRef, type ClipSource } from '@shared/domain/scene'
 import { EmptyState } from '@/design/EmptyState'
+import { laneHolding } from '@/engines/scene/clipBlend'
 import { addModelClip, removeModelClip } from '@/engines/scene/commands'
 import { nodeById, type SceneState } from '@/engines/scene/sceneState'
-import type { PreviewWatch } from '@/engines/scene/sceneView'
 import { clipLabel } from '@/helpers/clipLabel'
 import { newId } from '@/helpers/ids'
 import { clipsOfNode, useModelClips } from '@/stores/modelClips'
-import { useDocuments } from '@/stores/documents'
+import { activeSceneId, useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { sceneViewOf, useSceneViews, type WatchedPreview } from '@/stores/sceneViews'
 import { AnimationsPanelRow } from './AnimationsPanelRow'
 
-/**
- * What a character can be made to play: the clips its file brought, and those the app ships with.
- * `▶` lays the REAL block and watches it, so a preview the playhead interrupts leaves its block
- * standing — which is exactly what dragging the row would have laid.
- */
+/** What a character can be made to play: the clips its file brought, and those the app ships with. */
 export function AnimationsPanel() {
   const { t } = useTranslation()
-  const documentId = useDocuments(state => state.activeId)
+  const documentId = useDocuments(activeSceneId)
   const [bundled, setBundled] = useState<readonly BundledAnimation[]>([])
-  /** The block laid to be watched, with the very preview this panel opened on it — see `held`. */
-  const [watched, setWatched] = useState<{ clip: ClipRef; look: PreviewWatch } | null>(null)
   const preview = useSceneViews(state => sceneViewOf(state, documentId ?? '').preview)
 
   useEffect(() => {
@@ -52,39 +46,37 @@ export function AnimationsPanel() {
     return <EmptyState icon={mdiRunFast} message={t('animations.empty')} />
   }
 
-  // Ours while OUR preview is the one running, compared by IDENTITY and never by clip id: the
-  // playhead drops it without touching the block, and a surface that later watches that same
-  // block must not hand it back — what an interruption leaves standing is kept work.
-  const held = watched && preview === watched.look ? watched : null
+  // Ours while the running preview says WE laid it: the playhead drops that preview without
+  // touching the block, and a surface that later watches the same block writes a preview of its
+  // own without `laid` — what an interruption leaves standing is kept work.
+  const held = laidHere(preview) ? preview : null
 
   // By SOURCE and never by label: a label reaches the screen translated, and an identity that
   // changes with the language would lose the row at the first switch.
   const playingIs = (source: ClipSource): boolean =>
-    held !== null &&
-    held.look.nodeId === nodeId &&
-    clipKeyOf(held.clip.source) === clipKeyOf(source)
+    held !== null && held.nodeId === nodeId && clipKeyOf(held.laid.source) === clipKeyOf(source)
 
   const watch = (source: ClipSource, label: string): void => {
     if (!documentId || !nodeId) return
 
     // Off the character it went ON, which is not always the one in front: the block IS the
-    // preview, and two of them left behind would play at once. Guarded on the block STILL being
-    // there — a ⌘Z took it out under us, and a command that removes nothing wipes the redo.
-    if (held && stillLaid(sceneOf(useScenes.getState(), documentId), held)) {
-      useScenes.getState().runCommand(documentId, removeModelClip(held.look.nodeId, held.clip.id))
+    // preview, and two of them left behind would play at once. Guarded on the block still being
+    // the one we laid — a ⌘Z takes it out, the band turns it into work, and either way a command
+    // that removes nothing wipes the redo.
+    if (held && stillOurs(sceneOf(useScenes.getState(), documentId), held)) {
+      useScenes.getState().runCommand(documentId, removeModelClip(held.nodeId, held.clipId))
     }
-    useSceneViews.getState().setPreview(documentId, null)
     // Pressing the row that plays only STOPS it: its block has just been taken off.
     if (playingIs(source)) {
-      setWatched(null)
+      useSceneViews.getState().setPreview(documentId, null)
       return
     }
 
     const laid = { ...DEFAULT_CLIP, id: newId(), source, label }
-    const look = { nodeId, clipId: laid.id, at: 0, playing: true }
     useScenes.getState().runCommand(documentId, addModelClip(nodeId, laid))
-    useSceneViews.getState().setPreview(documentId, look)
-    setWatched({ clip: laid, look })
+    useSceneViews
+      .getState()
+      .setPreview(documentId, { nodeId, clipId: laid.id, at: 0, playing: true, laid })
   }
 
   return (
@@ -118,9 +110,18 @@ export function AnimationsPanel() {
   )
 }
 
-/** Whether the watched block is still on its character: a ⌘Z takes it out without a word. */
-function stillLaid(scene: SceneState, held: { clip: ClipRef; look: PreviewWatch }): boolean {
-  const node = nodeById(scene, held.look.nodeId)
+/** Whether this panel is the one watching, which is what makes the block its own to take back. */
+function laidHere(watch: WatchedPreview | null): watch is WatchedPreview & { laid: ClipRef } {
+  return watch?.laid !== undefined
+}
+
+/**
+ * Whether the block on the character is still the very one we laid, by IDENTITY: a ⌘Z takes it
+ * out, and every band edit hands back a new ref for the block it rewrites — moved or trimmed, a
+ * try has become work, and taking it back would destroy that work without a word.
+ */
+function stillOurs(scene: SceneState, held: WatchedPreview & { laid: ClipRef }): boolean {
+  const node = nodeById(scene, held.nodeId)
   if (node?.type !== 'model') return false
-  return (node.model.lanes ?? []).some(lane => lane.clips.some(clip => clip.id === held.clip.id))
+  return laneHolding(node.model.lanes ?? [], held.clipId)?.clips.includes(held.laid) === true
 }

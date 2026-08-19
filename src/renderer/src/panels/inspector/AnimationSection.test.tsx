@@ -409,5 +409,18 @@ describe('AnimationSection', () => {
 
       expect(heldOf() ?? []).toEqual([])
     })
+
+    // A ⌘Z takes the block out from under the picker. Taking it back off again would rewrite the
+    // document for nothing AND wipe the redo — the ⌘Y would vanish unannounced.
+    it('leaves the history alone when the block it laid has already been undone', async () => {
+      await lay()
+      act(() => useScenes.getState().undo(DOCUMENT))
+      expect(heldOf() ?? []).toEqual([])
+
+      await userEvent.keyboard('{Escape}')
+      act(() => useScenes.getState().redo(DOCUMENT))
+
+      expect(heldOf()?.map(clip => clip.label)).toEqual(['Capoeira'])
+    })
   })
 })
