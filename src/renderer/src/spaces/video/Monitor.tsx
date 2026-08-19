@@ -6,6 +6,7 @@ import {
   mdiPlay,
   mdiSkipPrevious,
   mdiTelevisionPlay,
+  mdiViewSplitVertical,
 } from '@mdi/js'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -58,6 +59,11 @@ export type MonitorProps = {
    * on the take being trimmed would be the source monitor copied onto the second screen.
    */
   program?: boolean
+  /**
+   * The one-clip half beside this monitor, when there is one to show and hide. Absent leaves the
+   * button out — the source monitor has no second half of its own to offer.
+   */
+  clipHalf?: { shown: boolean; onToggle: () => void }
 }
 
 /**
@@ -73,6 +79,7 @@ export function Monitor({
   placeholder,
   keyboard = false,
   program = false,
+  clipHalf,
 }: MonitorProps) {
   const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
@@ -212,6 +219,18 @@ export function Monitor({
           },
         ]
       : []),
+    ...(clipHalf
+      ? [
+          {
+            id: 'clipHalf',
+            labelKey: 'transport.showSource',
+            descriptionKey: 'transport.showSourceHint',
+            icon: mdiViewSplitVertical,
+            pressed: clipHalf.shown,
+            separatorBefore: true,
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -225,6 +244,7 @@ export function Monitor({
           onTool={id => {
             if (id === 'rewind') return rewind()
             if (id === 'mirror') return showReturn()
+            if (id === 'clipHalf') return clipHalf?.onToggle()
             return toggle()
           }}
           extras={
