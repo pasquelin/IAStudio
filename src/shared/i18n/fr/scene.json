@@ -86,6 +86,8 @@
     "removePathPointHint": "Retire le point du chemin. Un chemin garde toujours ses deux derniers points"
   },
   "objects": {
+    "add": "Ajouter un objet",
+    "addHint": "Poser une caméra, un rail, un sprite ou du texte dans la scène",
     "sprite": "Sprite",
     "text": "Texte",
     "camera": "Caméra",
@@ -166,6 +168,10 @@
     "scaleHint": "Changer l’échelle de l’objet sélectionné",
     "frame": "Cadrer la sélection",
     "frameHint": "Recentrer la caméra sur l’objet sélectionné",
+    "duplicateHint": "Poser une copie de la sélection au même endroit",
+    "groupHint": "Ranger la sélection sous un même groupe",
+    "deleteHint": "Retirer de la scène ce qui est sélectionné",
+    "quadHint": "Partager le viewport en quatre vues",
     "snap": "Magnétisme",
     "snapHint": "Faire avancer les poignées par pas réguliers, réglables dans les réglages",
     "space": "Repère local",

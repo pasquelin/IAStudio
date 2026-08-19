@@ -35,6 +35,7 @@
     "viewCross": "Cross",
     "viewFaces": "6 faces",
     "testObjects": "Test objects",
+    "testObjectsHint": "Puts probe spheres into the sky, to judge the light it gives",
     "fieldOfView": "Field of view"
   },
   "texture": {

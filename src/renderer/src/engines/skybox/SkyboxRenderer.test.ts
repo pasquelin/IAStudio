@@ -1,5 +1,14 @@
 import { DirectionalLight, Texture, WebGLRenderTarget } from 'three'
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+  type MockInstance,
+} from 'vitest'
 import type { SphericalAngles } from '@shared/domain/angles'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
 import type * as AdjustModule from '../gpu/passes/adjust'
@@ -644,11 +653,16 @@ describe('the renderer of a skybox', () => {
  */
 describe('the test objects of a skybox', () => {
   const mountedRenderers: SkyboxRenderer[] = []
+  let painted: MockInstance<() => void>
 
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
-    vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(() => {})
+    // Watched from `mount`, which is where the viewport this renderer built becomes reachable:
+    // `requestRender` is an instance field, so the prototype carries nothing to spy on.
+    vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(function (this: ViewportEngine) {
+      painted = vi.spyOn(this, 'requestRender')
+    })
     vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue({} as never)
     vi.spyOn(ViewportEngine.prototype, 'canvas', 'get').mockReturnValue(
       document.createElement('canvas'),
@@ -711,6 +725,20 @@ describe('the test objects of a skybox', () => {
     renderer.apply(withSky())
 
     expect(probes.group.visible).toBe(false)
+  })
+
+  /**
+   * Seen on screen on 19 August: the spheres stayed put. This viewport draws only when asked, and
+   * taking them away moves nothing else that would ask.
+   */
+  it('paints the frame again when the setting takes them away', () => {
+    const renderer = mounted()
+    renderer.apply(withSky())
+    painted.mockClear()
+
+    renderer.setProbesVisible(false)
+
+    expect(painted).toHaveBeenCalled()
   })
 
   /** And they go again when the sky is taken away — the empty state comes back with them. */

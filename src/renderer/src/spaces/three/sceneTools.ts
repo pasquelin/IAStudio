@@ -12,19 +12,24 @@ import {
   mdiBone,
   mdiCircleHalfFull,
   mdiCircleOpacity,
+  mdiContentCopy,
   mdiCropFree,
   mdiCubeOutline,
   mdiCubeUnfolded,
   mdiCursorDefaultOutline,
+  mdiFolderPlusOutline,
+  mdiGrid,
   mdiHexagonOutline,
   mdiMagnet,
   mdiResize,
   mdiSphere,
   mdiSquareOpacity,
   mdiThermometer,
+  mdiTrashCanOutline,
   mdiVectorSquare,
 } from '@mdi/js'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar/tools'
+import { ADD_FAMILIES, labelKeyOf } from '@/engines/scene/nodeKinds'
 import { DISPLAY_MODES, type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 
 /** Arrows read as the direction the camera looks from, which is what the row promises. */
@@ -66,20 +71,38 @@ const DISPLAY_TOOL_MODES: readonly ToolMode[] = DISPLAY_MODES.map(mode => ({
 }))
 
 /**
+ * What a scene GAINS, one button per family. Three rather than one because a flyout is a FLAT
+ * list: a single button would hold twenty-four rows of three different natures.
+ */
+export const ADD_TOOLS: readonly ToolbarItem[] = ADD_FAMILIES.map(family => ({
+  id: `add:${family.namespace}`,
+  labelKey: `${family.namespace}.add`,
+  descriptionKey: `${family.namespace}.addHint`,
+  icon: family.icon,
+  modes: family.entries.map(entry => ({
+    id: entry.kind,
+    labelKey: labelKeyOf(family.namespace, entry),
+    descriptionKey: `${labelKeyOf(family.namespace, entry)}Hint`,
+    icon: entry.icon,
+    disabled: entry.disabled,
+  })),
+}))
+
+/**
+ * The kind a row of those menus adds, or `null` for a row of any other group. The dispatch on
+ * the TOOL is what carries the meaning: a display mode reaching `addNodeTo` is only impossible
+ * as long as no `DisplayMode` ever shares a name with a kind, which nothing guarantees.
+ */
+export function addedKind(toolId: string, modeId: string): string | null {
+  const tool = ADD_TOOLS.find(candidate => candidate.id === toolId)
+  return tool?.modes?.some(mode => mode.id === modeId) ? modeId : null
+}
+
+/**
  * The bar's registry. The bar itself is `design/Toolbar` — nothing is drawn here.
  *
- * Eight buttons, down from twenty-three. What is left is what a hand reaches for WHILE
- * manipulating: the four transform modes, the two that qualify them, the one view setting a
- * modeller flips several times a minute, and framing the selection.
- *
- * The fifteen that left are all in the native menu now — Édition for what acts on a selection,
- * Affichage for what the viewport does, Ajouter for what a scene gains. They are settings and
- * one-off gestures, not moves repeated by the minute, and a bar of twenty-three icons made the
- * eight that matter impossible to find.
- *
- * The three transform modes stay three visible buttons rather than one flyout — unlike the image
- * space, and on purpose: a mode is switched several times a minute, and Blender, Maya, Unity and
- * the three.js editor all show them at once.
+ * What a hand reaches for WHILE manipulating; the settings stay in the native menu. The three
+ * transform modes are three buttons and not one flyout: one switches between them by the minute.
  */
 export const SCENE_TOOLS: readonly SceneTool[] = [
   {
@@ -88,6 +111,8 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     labelKey: 'sceneTools.select',
     descriptionKey: 'sceneTools.selectHint',
     icon: mdiCursorDefaultOutline,
+    // What a scene GAINS stands above, and this is the rule under it — see `ADD_TOOLS`.
+    separatorBefore: true,
   },
   {
     id: 'translate',
@@ -126,6 +151,33 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     descriptionKey: 'sceneTools.spaceHint',
     icon: mdiAxisArrowLock,
   },
+  // The three verbs of a selection, which every modeller reaches for by the minute — Blender,
+  // Maya and Unity all draw them. They were left to the Édition menu alone.
+  {
+    id: 'duplicate',
+    command: 'scene.duplicate',
+    labelKey: 'commands.sceneDuplicate.title',
+    descriptionKey: 'sceneTools.duplicateHint',
+    icon: mdiContentCopy,
+    separatorBefore: true,
+    acts: true,
+  },
+  {
+    id: 'group',
+    command: 'scene.group',
+    labelKey: 'commands.sceneGroup.title',
+    descriptionKey: 'sceneTools.groupHint',
+    icon: mdiFolderPlusOutline,
+    acts: true,
+  },
+  {
+    id: 'delete',
+    command: 'scene.delete',
+    labelKey: 'commands.sceneDelete.title',
+    descriptionKey: 'sceneTools.deleteHint',
+    icon: mdiTrashCanOutline,
+    acts: true,
+  },
   // The one view setting worth a button: a modeller flips between shaded and wireframe several
   // times a minute, which is what tells it from the seven rows the native View menu now carries.
   {
@@ -137,6 +189,16 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     separatorBefore: true,
     modes: DISPLAY_TOOL_MODES,
   },
+  // A round trip of PLACEMENT, not a setting of the session: one goes to four views to put an
+  // object down and comes straight back out. The six directions stay in the menu — the axis
+  // gizmo already reaches them with the pointer.
+  {
+    id: 'quad',
+    command: 'scene.quad',
+    labelKey: 'commands.sceneQuad.title',
+    descriptionKey: 'sceneTools.quadHint',
+    icon: mdiGrid,
+  },
   {
     id: 'frame',
     command: 'scene.frame',
@@ -144,5 +206,6 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     descriptionKey: 'sceneTools.frameHint',
     icon: mdiCropFree,
     separatorBefore: true,
+    acts: true,
   },
 ]

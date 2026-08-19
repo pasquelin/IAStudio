@@ -173,11 +173,40 @@ describe('Toolbar modes', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
-  it('still acts on click when the tool has modes', async () => {
+  /**
+   * Rows and no armed mode is a menu of ACTIONS — Add a cube, Regenerate. Its click opens what
+   * hovering would have and arms nothing: `onTool` there lit a button for a tool the space had
+   * never heard of, and every caller filtered the id back out by hand.
+   */
+  it('arms nothing on click when the group carries no armed mode', async () => {
     const onTool = vi.fn()
     render(<Toolbar tools={WITH_MODES} onTool={onTool} onMode={vi.fn()} />)
+
     await userEvent.click(screen.getByRole('button', { name: 'Fermer' }))
+
+    expect(onTool).not.toHaveBeenCalled()
+    expect(await screen.findByRole('menuitem', { name: 'Générer' })).toBeInTheDocument()
+  })
+
+  /** A group that DOES arm still acts on click: the menu only offers to switch mode. */
+  it('acts on click when the group is armed on one of its modes', async () => {
+    const onTool = vi.fn()
+    const armed = WITH_MODES.map(tool => ({ ...tool, activeMode: 'point' }))
+    render(<Toolbar tools={armed} onTool={onTool} onMode={vi.fn()} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fermer' }))
+
     expect(onTool).toHaveBeenCalledWith('eraser')
+  })
+
+  /**
+   * A button that acts announces no pressed state — the montage bar already puts its two action
+   * buttons in `extras` rather than say "toggle, not pressed" for ever.
+   */
+  it('gives a menu of actions no pressed state', () => {
+    render(<Toolbar tools={WITH_MODES} onTool={vi.fn()} onMode={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: 'Fermer' })).not.toHaveAttribute('aria-pressed')
   })
 
   it('closes the menu once a mode is chosen', async () => {

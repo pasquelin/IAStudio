@@ -35,6 +35,7 @@
     "viewCross": "Croix",
     "viewFaces": "6 faces",
     "testObjects": "Objets de test",
+    "testObjectsHint": "Pose des sphères d’essai dans le ciel pour juger la lumière qu’il donne",
     "fieldOfView": "Angle de vue"
   },
   "texture": {

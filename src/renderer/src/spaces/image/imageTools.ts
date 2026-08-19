@@ -1,8 +1,11 @@
 import {
+  mdiArrowExpandAll,
   mdiArrowTopRight,
+  mdiAutoFix,
   mdiBrush,
   mdiCardOutline,
   mdiCircleOutline,
+  mdiCreation,
   mdiCommentOutline,
   mdiCropFree,
   mdiCursorMove,
@@ -16,6 +19,8 @@ import {
   mdiFormatText,
   mdiHandBackRight,
   mdiImagePlusOutline,
+  mdiImageRemoveOutline,
+  mdiImageSizeSelectLarge,
   mdiLasso,
   mdiPencil,
   mdiRectangleOutline,
@@ -25,12 +30,14 @@ import {
   mdiStarOutline,
   mdiTriangleOutline,
   mdiVectorLine,
+  mdiVectorPolyline,
 } from '@mdi/js'
 import type { CommandId } from '@shared/domain/command'
 import type { SelectionShape } from '@/engines/canvas/canvasSelection'
 import { SHAPE_KINDS, type ShapeKind } from '@/engines/canvas/shapeGeometry'
 import type { CanvasTool } from '@/engines/canvas/canvasTool'
 import type { ToolbarItem } from '@/design/Toolbar/tools'
+import type { AiEdit } from './aiActions'
 
 export type ImageTool = ToolbarItem & { tool: CanvasTool }
 
@@ -322,6 +329,82 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
     icon: mdiEyedropperVariant,
   },
 ]
+
+/** The group of model edits, which is not one of `IMAGE_TOOLS`: those arm, these act. */
+export const AI_EDIT_TOOL_ID = 'ai'
+
+/**
+ * Written out rather than composed from the ids, for the reason `TOOL_COMMANDS` above gives: a
+ * key built by hand from another is a key no search finds and no guard reads.
+ */
+const AI_EDIT_ROWS: readonly {
+  edit: AiEdit
+  command: CommandId
+  labelKey: string
+  helpKey: string
+  icon: string
+}[] = [
+  {
+    edit: 'regenerate',
+    command: 'canvas.regenerate',
+    labelKey: 'commands.canvasRegenerate.title',
+    helpKey: 'commands.canvasRegenerate.help',
+    icon: mdiAutoFix,
+  },
+  {
+    edit: 'extend',
+    command: 'canvas.extend',
+    labelKey: 'commands.canvasExtend.title',
+    helpKey: 'commands.canvasExtend.help',
+    icon: mdiArrowExpandAll,
+  },
+  {
+    edit: 'cutout',
+    command: 'canvas.cutout',
+    labelKey: 'commands.canvasCutout.title',
+    helpKey: 'commands.canvasCutout.help',
+    icon: mdiImageRemoveOutline,
+  },
+  {
+    edit: 'enlarge',
+    command: 'canvas.enlarge',
+    labelKey: 'commands.canvasEnlarge.title',
+    helpKey: 'commands.canvasEnlarge.help',
+    icon: mdiImageSizeSelectLarge,
+  },
+  {
+    edit: 'vectorize',
+    command: 'canvas.vectorize',
+    labelKey: 'commands.canvasVectorize.title',
+    helpKey: 'commands.canvasVectorize.help',
+    icon: mdiVectorPolyline,
+  },
+]
+
+/** The rows wear the commands' own titles, so a word translated once is never translated twice. */
+export const AI_EDIT_TOOL: ToolbarItem = {
+  id: AI_EDIT_TOOL_ID,
+  labelKey: 'imageTools.ai',
+  descriptionKey: 'imageTools.aiHint',
+  icon: mdiCreation,
+  separatorBefore: true,
+  modes: AI_EDIT_ROWS.map(({ edit, labelKey, helpKey, icon }) => ({
+    id: edit,
+    labelKey,
+    descriptionKey: helpKey,
+    icon,
+  })),
+}
+
+/** Which command a row of that menu fires. `null` for a row from nowhere. */
+export function aiEditCommand(modeId: string): CommandId | null {
+  return AI_EDIT_ROWS.find(row => row.edit === modeId)?.command ?? null
+}
+
+/** The other way round, as `armedBy` reads `TOOL_COMMANDS`: one table, two lookups. */
+export function aiEditOf(command: CommandId): AiEdit | null {
+  return AI_EDIT_ROWS.find(row => row.command === command)?.edit ?? null
+}
 
 export function toolById(id: string): ImageTool | null {
   return IMAGE_TOOLS.find(tool => tool.id === id) ?? null

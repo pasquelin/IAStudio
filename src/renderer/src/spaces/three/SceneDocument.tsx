@@ -12,6 +12,7 @@ import { nodeById } from '@/engines/scene/sceneState'
 import { movesToCommand } from '@/engines/scene/animationCommands'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
+import { addNodeTo } from '@/hooks/useAddNode'
 import { useAnimationPlayback } from '@/hooks/useAnimationPlayback'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
@@ -41,7 +42,7 @@ import { openSceneNodeMenu } from './sceneNodeMenu'
 import { openPathPointMenu } from './pathPointMenu'
 import { removePickedPathPoint, runSceneCommand, toggleNodeVisible } from './sceneCommands'
 import { ScenePaneGrid } from './ScenePaneGrid/ScenePaneGrid'
-import { SCENE_TOOLS } from './sceneTools'
+import { ADD_TOOLS, SCENE_TOOLS, addedKind } from './sceneTools'
 import { sceneExportFiles } from './sceneExportFiles'
 
 /**
@@ -399,9 +400,12 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     [documentId, view, cycleDisplay],
   )
 
-  /** The one flyout left on this bar names a way to draw; Add and the six sides are menu rows. */
+  /** Two flyouts answer here: the ways of drawing, and the three families a scene grows by. */
   const runMode = useCallback(
-    (modeId: string) => {
+    (toolId: string, modeId: string) => {
+      const added = addedKind(toolId, modeId)
+      if (added) return addNodeTo(documentId, added)
+
       if (isDisplayMode(modeId)) {
         useSceneViews.getState().setDisplay(documentId, paneInHand(), modeId)
       }
@@ -420,9 +424,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     onCommand: run,
   })
 
-  // Rebuilt only when something the bar shows moves — a shortcut, a button's availability, a
-  // toggle: the document re-renders on every transform release, and each item carries the
-  // 22-entry Add flyout.
+  // Rebuilt only when something the bar SHOWS moves — a shortcut, a button's availability, a
+  // toggle: the document re-renders on every transform release, and this maps twelve items,
+  // each of them looking its key up through the registry.
   const nothingSelected = scene.selectedIds.length === 0
   const nothingHeld = useSceneClipboard(state => state.nodes.length === 0)
   const tools = useMemo(() => {
@@ -440,19 +444,40 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     const unavailable: Partial<Record<CommandId, boolean>> = {
       'scene.delete': nothingSelected,
       'scene.duplicate': nothingSelected,
+      'scene.group': nothingSelected,
       'scene.copy': nothingSelected,
       'scene.cut': nothingSelected,
       'scene.paste': nothingHeld,
     }
 
-    return SCENE_TOOLS.map(tool => ({
-      ...tool,
-      shortcut: label(bindingOf(tool.command, bindings)),
-      activeMode: tool.id === 'display' ? displayOfPane(view.displays, 0) : undefined,
-      disabled: unavailable[tool.command],
-      pressed: pressed[tool.command],
-    }))
-  }, [bindings, label, nothingSelected, nothingHeld, snapping, localFrame, view])
+    return [
+      // Above the tools, and carrying no armed mode: their click opens the family rather than
+      // arming anything — see `ADD_TOOLS`.
+      ...ADD_TOOLS,
+      ...SCENE_TOOLS.map(tool => ({
+        ...tool,
+        shortcut: label(bindingOf(tool.command, bindings)),
+        activeMode: tool.id === 'display' ? displayOfPane(view.displays, 0) : undefined,
+        disabled: unavailable[tool.command],
+        pressed: pressed[tool.command],
+      })),
+    ]
+    // The fields of `view` this reads, not `view` itself: the store also carries the camera and
+    // the picked bone, each written often and shown on no button of this bar.
+  }, [
+    bindings,
+    label,
+    nothingSelected,
+    nothingHeld,
+    snapping,
+    localFrame,
+    view.projection,
+    view.skeletons,
+    view.poseMode,
+    view.quad,
+    view.quadEdges,
+    view.displays,
+  ])
 
   return (
     // The whole surface, not the canvas: the renderer owns that one, and a drop landing on the
@@ -484,7 +509,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           const command = SCENE_TOOLS.find(candidate => candidate.id === id)?.command
           if (command) run(command)
         }}
-        onMode={(_toolId, modeId) => runMode(modeId)}
+        onMode={runMode}
       />
     </AssetDropTarget>
   )

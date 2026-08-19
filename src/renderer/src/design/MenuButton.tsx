@@ -12,6 +12,7 @@ export type MenuButtonProps = Pick<
   | 'description'
   | 'shortcut'
   | 'active'
+  | 'acts'
   | 'disabled'
   | 'variant'
   // Drawn beside the icon, for a menu whose CHOICE has to stay readable while it is closed — a
@@ -88,6 +89,9 @@ export function MenuButton({
         // sends a screen reader looking for rows to step through.
         aria-haspopup={menu ? flyout.triggerProps['aria-haspopup'] : undefined}
         tooltip={tooltip}
+        // The flyout opens right beside the button and covers its own tip, which then reads as a
+        // sentence cut in half. The accessible name stays — it is not the tooltip's to lose.
+        tipHidden={flyout.showing}
         onClick={() => {
           onClick?.()
           if (opensOnClick) flyout.open()
