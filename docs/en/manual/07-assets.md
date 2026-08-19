@@ -235,9 +235,10 @@ editor takes, or an asset not yet down on your disk — not a broken one.
 | a mesh | the **3D view** | it enters the scene, at the origin |
 | a sound | the **audio editor** | it joins the edit as a clip, and that clip is what you edit |
 | an asset | an **asset field** of a generation form | it becomes that field's input |
-| a motion | a **sub-track** of the band, in 3D | it becomes a block there, where you release it |
-| an image | a picture row of the **Inspector** — a channel, a sprite, a scene's sky | it fills that row, and that row only |
-| any asset | a **folder** of the Explorer | its file is moved there |
+| a motion, or a mesh that carries one | a **sub-track** of the band, in 3D | it becomes a block there, where you release it |
+| an image | a texture row of the **Inspector** — a material's maps, a sprite's picture | it fills that row, and that row only |
+| a sky | the **Sky** row of the Inspector, in 3D as in Textures | it lights the preview |
+| any asset | a **folder row** of the Explorer | its file is moved there |
 
 **The timeline does not sort on duration**: an asset with no duration of its own gets a default
 one rather than a refusal. It does sort **tracks**, and a release that finds none stays without
@@ -253,10 +254,16 @@ drop.
 **In the columns and in the band, a refused drop has no effect at all**, and nothing says so: a
 channel's thumbnail takes pictures only, and there is nobody behind it to catch the rest.
 
-**A folder of the Explorer is the only one of these drops that does not bring the asset into a
-document: it MOVES its file**, as Finder would — and an asset from the library is fetched first. An
-asset the studio holds no file of then does not move, **and nothing says so**: the folder lights up
-all the same, the kind being readable only at the release.
+**The Explorer is the only one of these drops that does not bring the asset into a document: it
+MOVES its file**, as Finder would — and an asset from the library is fetched first. This is a
+different gesture from the one in [The Projects panel](04-projects.md#the-gestures), which files a
+row **of** the Explorer: here the asset comes from the shelf. The blank counts too — under the
+cards it means the folder on screen, under the tree the project root — but that one does not light
+up.
+
+**And this drop carries two silences.** An asset the studio holds no file of does not move: the row
+lights up all the same, the kind being readable only at the release. The pointer also shows the `+`
+of a copy, while the file is in fact **moved**.
 
 ---
 

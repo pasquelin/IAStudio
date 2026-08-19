@@ -239,9 +239,10 @@ disque — pas d’un asset abîmé.
 | une maille | la **vue 3D** | elle entre dans la scène, à l’origine |
 | un son | l’**éditeur audio** | il s’ajoute au montage comme un clip, et c’est lui qu’on édite |
 | un asset | un **champ d’asset** d’un formulaire de génération | il devient l’entrée du champ |
-| un mouvement | une **sous-piste** de la bande, en 3D | il y devient un bloc, là où vous lâchez |
-| une image | une ligne d’image de l’**Inspecteur** — un canal, un sprite, le ciel d’une scène | elle remplit cette ligne-là, et elle seule |
-| n’importe quel asset | un **dossier** de l’Explorateur | son fichier y est déplacé |
+| un mouvement, ou une maille qui en porte | une **sous-piste** de la bande, en 3D | il y devient un bloc, là où vous lâchez |
+| une image | une ligne de texture de l’**Inspecteur** — les cartes d’une matière, l’image d’un sprite | elle remplit cette ligne-là, et elle seule |
+| un ciel | la ligne **Ciel** de l’Inspecteur, en 3D comme en Textures | il éclaire l’aperçu |
+| n’importe quel asset | une **ligne de dossier** de l’Explorateur | son fichier y est déplacé |
 
 **La timeline ne trie pas sur la durée** : un asset qui n’en a pas en reçoit une par défaut plutôt
 qu’un refus. Elle trie en revanche les **pistes**, et un lâcher qui n’en trouve aucune reste sans
@@ -258,10 +259,16 @@ centre vide prend le lâcher.
 vignette d’un canal ne prend que des images, et il n’y a personne derrière elle pour rattraper le
 reste.
 
-**Un dossier de l’Explorateur est le seul de ces dépôts qui ne fasse pas entrer l’asset dans un
-document : il DÉPLACE son fichier**, comme le ferait le Finder — et un asset de la bibliothèque est
-rapatrié d’abord. Un asset dont le studio ne tient aucun fichier ne bouge alors pas, **et rien ne
-le dit** : le dossier s’allume quand même, le type ne se lisant qu’au lâcher.
+**L’Explorateur est le seul de ces dépôts qui ne fasse pas entrer l’asset dans un document : il
+DÉPLACE son fichier**, comme le ferait le Finder — et un asset de la bibliothèque est rapatrié
+d’abord. C’est un autre geste que celui décrit dans
+[Le panneau Projets](04-projets.md#les-gestes), qui range une ligne **de** l’Explorateur : ici,
+l’asset vient de l’étagère. Le blanc compte aussi — sous les cartes il vise le dossier affiché,
+sous l’arbre la racine du projet — mais lui ne s’allume pas.
+
+**Et ce dépôt-là porte deux silences.** Un asset dont le studio ne tient aucun fichier ne bouge
+pas : la ligne s’allume quand même, le type ne se lisant qu’au lâcher. Le pointeur montre en outre
+le `+` d’une copie, alors que le fichier est bel et bien **déplacé**.
 
 ---
 
