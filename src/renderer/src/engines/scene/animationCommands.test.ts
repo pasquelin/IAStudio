@@ -680,7 +680,7 @@ describe('the shots of a sequence', () => {
     expect(applied.animation.shots.map(held => held.id)).toEqual(['s3', 's1', 's2'])
   })
 
-  // Two shots of one layer starting together are settled by their order, so a shot restored at
+  // Two shots of one line starting together are settled by their order, so a shot restored at
   // the end would come back on top of what it was under.
   it('puts a removed shot back where it stood', () => {
     const command = removeCameraShot('s1')

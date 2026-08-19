@@ -96,7 +96,7 @@ type Player = {
   lengths: Record<string, number>
   /** The travel channel of each clip, worked out once — it depends on the file and the rig alone. */
   rootTracks: Map<string, string | null>
-  /** The layering as the document holds it. `bound` alone would lose which lane a block lies in. */
+  /** The lanes as the document holds them. `bound` alone would lose which lane a block lies in. */
   lanes: readonly ClipLane[]
   /** One entry per block the document holds, keyed by block id. */
   bound: Map<string, Bound>
