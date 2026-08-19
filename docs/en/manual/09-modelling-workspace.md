@@ -226,13 +226,23 @@ a camera can run along it during a shot.
 point — only appear while it is being worked on: the path selected, or a selected camera that
 rides it during a shot. They keep their size on screen, wherever the view stands.
 
-Three gestures, in the scene:
+Four gestures, in the scene:
 
 | Gesture | What it does |
 |---|---|
 | **Click a knob**, path selected | picks it: the move handles attach to it, and it is dragged like an object |
 | **⌥ + click on the curve** | puts a new point in the stretch clicked, and picks it straight away |
+| **⌥ ⇧ + click anywhere** | **extends the path**: the point lands at its end, where you just aimed. This is the gesture that draws a trajectory click after click |
 | **Delete**, or right-click a knob | takes the picked point away. A path always keeps its last two points |
+
+**⌥ ⇧ + click lands on whatever you click** — the floor, a wall, a crate. Where the ray meets
+nothing, the point lands **at the height of the point before it**, which keeps a trajectory level
+when clicking into the void. Every click is one `⌘Z`, so a trajectory unwinds point by point.
+
+> **One path has to be the one worked on.** The gesture serves the selected path, or the one the
+> selected camera rides. With two paths worked on at once it extends neither, rather than
+> choosing for you — **and it does nothing else either**: `⌥ ⇧` is reserved for drawing, and
+> never changes the selection mid-trajectory.
 
 The Inspector, section **Path**, holds **Tension** — from sharp corners to a round curve — and
 **Closed**, which loops it back onto the first point. The **+** on the **Points** row adds a

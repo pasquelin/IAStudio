@@ -1,8 +1,8 @@
 import type { AssetType } from '@shared/domain/asset'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
-import type { ExportFormat, PathDescriptor } from '@shared/domain/scene'
-import { withMovedPoint, withPointAfter } from '@/engines/scene/cameraPath'
+import type { ExportFormat, PathDescriptor, Vector3 as PlainVector3 } from '@shared/domain/scene'
+import { withMovedPoint, withPointAfter, withPointAppended } from '@/engines/scene/cameraPath'
 import { setPath, setTransform } from '@/engines/scene/commands'
 import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -107,6 +107,20 @@ function addPathPoint(documentId: string, nodeId: string, index: number): void {
 }
 
 /**
+ * A control point posed at the end of a rail, where the pointer aimed. The new END is picked, so
+ * a run of clicks lays a trajectory and the gizmo sits on the last one laid.
+ */
+function appendPathPoint(documentId: string, nodeId: string, point: PlainVector3): void {
+  editPath(documentId, nodeId, path => withPointAppended(path, point))
+  const node = nodeById(sceneOf(useScenes.getState(), documentId), nodeId)
+  if (node?.type !== 'path') return
+
+  useSceneViews
+    .getState()
+    .setPickedPathPoint(documentId, { nodeId, index: node.path.points.length - 1 })
+}
+
+/**
  * A node right-clicked in the viewport, selected and then offered what can be done to it.
  *
  * Selecting first is this side's job rather than the menu's, as it is for the asset shelf: an
@@ -196,6 +210,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onPathPoint: (nodeId, index, point) =>
         editPath(documentId, nodeId, path => withMovedPoint(path, index, point)),
       onAddPathPoint: (nodeId, index) => addPathPoint(documentId, nodeId, index),
+      onAppendPathPoint: (nodeId, point) => appendPathPoint(documentId, nodeId, point),
       // Orbiting a pane locked onto a camera MOVES that camera: an edit of the document, so it
       // lands as a command — one per gesture, since the engine reports on release.
       onCameraMoved: (nodeId, transform) =>

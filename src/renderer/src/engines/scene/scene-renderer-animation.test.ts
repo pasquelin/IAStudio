@@ -704,6 +704,131 @@ describe('SceneRenderer and a camera on a rail', () => {
   })
 })
 
+/**
+ * Alt and shift over the viewport lays a point at the end of the rail being worked on, which is
+ * how a trajectory is drawn click by click. `pointerNdcOf` is the one thing stood in for: it
+ * reads a canvas the engine has none of under vitest, and everything downstream of it is real.
+ */
+describe('SceneRenderer and a rail drawn click by click', () => {
+  const railScene = (extra: Partial<SceneState> = {}): SceneState => ({
+    ...EMPTY_SCENE,
+    nodes: [
+      pathNodeFixture('rail', {
+        points: [
+          { x: 0, y: 0, z: 0 },
+          { x: 10, y: 0, z: 0 },
+        ],
+      }),
+    ],
+    selectedIds: ['rail'],
+    ...extra,
+  })
+
+  /** An engine whose pointer lands wherever the caller says, in normalised device coordinates. */
+  const aiming = (scene: SceneState, ndc: { x: number; y: number } | null): SceneRenderer => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    engine.apply(scene)
+
+    const viewport: { camera: PerspectiveCamera } = Reflect.get(engine, 'viewport')
+    // What a frame does before any click can land. Left out, the view's matrix still holds the
+    // placement it was BUILT with, and every ray leaves the origin looking down -Z.
+    viewport.camera.updateMatrixWorld()
+    Object.assign(viewport, { pointerNdcOf: () => ndc })
+    return engine
+  }
+
+  const spotOf = (
+    engine: SceneRenderer,
+  ): { nodeId: string; point: { x: number; y: number; z: number } } | null =>
+    Reflect.get(engine, 'railSpotAt').call(engine, new MouseEvent('pointerup'))
+
+  it('lays the point in the rail’s OWN frame, so moving the rail carries the point with it', () => {
+    const engine = aiming(
+      railScene({
+        nodes: [
+          {
+            ...pathNodeFixture('rail', {
+              points: [
+                { x: 0, y: 0, z: 0 },
+                { x: 10, y: 0, z: 0 },
+              ],
+            }),
+            transform: { ...IDENTITY_TRANSFORM, position: { x: 100, y: 0, z: 0 } },
+          },
+        ],
+      }),
+      { x: 0, y: 0 },
+    )
+
+    const spot = spotOf(engine)
+    expect(spot?.nodeId).toBe('rail')
+    // Dead centre of a view looking down -Z from the origin, on the level plane of the last
+    // point: the world spot is near x = 0, so the rail's own frame reads it a hundred back.
+    expect(spot?.point.x).toBeCloseTo(-100, 4)
+    engine.dispose()
+  })
+
+  /**
+   * The scenery wins over the fallback plane, which is what makes the gesture read as "I clicked
+   * on that": a click on a crate lays the point ON the crate, not at the height of the last one.
+   */
+  it('lays the point on what the ray meets, above the level of the point before it', () => {
+    const engine = aiming(railScene({ nodes: [...railScene().nodes, meshNode('crate')] }), {
+      x: 0,
+      y: 0,
+    })
+
+    // The unit cube of the fixture sits at the origin, and the view looks down at it from
+    // (5, 5, 5) — so the ray meets its corner well above the y = 0 the rail's last point holds.
+    expect(spotOf(engine)?.point.y).toBeCloseTo(0.5, 4)
+    engine.dispose()
+  })
+
+  it('answers nothing while no rail is being worked on', () => {
+    const engine = aiming({ ...railScene(), selectedIds: [] }, { x: 0, y: 0 })
+
+    expect(spotOf(engine)).toBeNull()
+    engine.dispose()
+  })
+
+  /**
+   * Extending whichever rail came first would pose a point on one nobody aimed at, and a gesture
+   * repeated ten times would scatter half of them.
+   */
+  it('answers nothing while two rails are being worked on at once', () => {
+    const engine = aiming(
+      railScene({
+        nodes: [
+          pathNodeFixture('rail', {
+            points: [
+              { x: 0, y: 0, z: 0 },
+              { x: 10, y: 0, z: 0 },
+            ],
+          }),
+          pathNodeFixture('other', {
+            points: [
+              { x: 0, y: 0, z: 0 },
+              { x: 10, y: 0, z: 0 },
+            ],
+          }),
+        ],
+        selectedIds: ['rail', 'other'],
+      }),
+      { x: 0, y: 0 },
+    )
+
+    expect(spotOf(engine)).toBeNull()
+    engine.dispose()
+  })
+
+  it('answers nothing for a pointer the viewport places nowhere', () => {
+    const engine = aiming(railScene(), null)
+
+    expect(spotOf(engine)).toBeNull()
+    engine.dispose()
+  })
+})
+
 describe('SceneRenderer and a track on one bone', () => {
   const boneTimeline = (value: number): AnimationTimeline => ({
     ...EMPTY_TIMELINE,

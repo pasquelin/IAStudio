@@ -234,13 +234,23 @@ bille par point — n’apparaissent que lorsqu’on travaille dessus : chemin s
 sélectionnée qui l’emprunte pendant un plan. Elles gardent leur taille à l’écran, où que soit la
 vue.
 
-Trois gestes, dans la scène :
+Quatre gestes, dans la scène :
 
 | Geste | Ce qu’il fait |
 |---|---|
 | **Cliquer une poignée**, chemin sélectionné | la choisit : les flèches de déplacement s’y accrochent, et on la déplace comme un objet |
 | **⌥ + clic sur la courbe** | pose un nouveau point dans la portion cliquée, et le choisit aussitôt |
+| **⌥ ⇧ + clic n’importe où** | **allonge le chemin** : le point se pose au bout, là où l’on vient de viser. C’est le geste qui trace un trajet clic après clic |
 | **Suppr**, ou clic droit sur une poignée | retire le point choisi. Un chemin garde toujours ses deux derniers points |
+
+**⌥ ⇧ + clic se pose sur ce qu’on clique** — le sol, un mur, une caisse. Si le rayon ne rencontre
+rien, le point se pose **à la hauteur du point précédent**, ce qui garde un trajet à plat quand
+on clique dans le vide. Chaque clic est **un `⌘Z`**, donc un trajet se défait point par point.
+
+> **Il faut travailler sur un seul chemin.** Le geste sert le chemin sélectionné, ou celui
+> qu’emprunte la caméra sélectionnée. Si deux chemins sont en cours en même temps, il n’allonge
+> aucun des deux plutôt que de choisir à votre place. **Et il ne fait alors rien d’autre non
+> plus** : `⌥ ⇧` est réservé au traçage, il ne change jamais la sélection en cours de route.
 
 L’Inspecteur, section **Chemin**, règle la **Tension** — de l’angle vif à la courbe ronde — et
 **Fermé**, qui referme la boucle sur le premier point. Le **+** de la ligne **Points** ajoute un

@@ -98,17 +98,24 @@ export function withPointAtEnd(path: PathDescriptor): PathDescriptor {
   const to = path.points[last]
   if (!from || !to) return path
 
-  return {
-    ...path,
-    points: [
-      ...path.points,
-      {
-        x: to.x + (to.x - from.x) / 2,
-        y: to.y + (to.y - from.y) / 2,
-        z: to.z + (to.z - from.z) / 2,
-      },
-    ],
-  }
+  return withPointAppended(path, {
+    x: to.x + (to.x - from.x) / 2,
+    y: to.y + (to.y - from.y) / 2,
+    z: to.z + (to.z - from.z) / 2,
+  })
+}
+
+/** Where a rail ends, and what a point appended to it is measured against. */
+export function lastPointOf(path: PathDescriptor): PlainVector3 {
+  return path.points[path.points.length - 1] ?? { x: 0, y: 0, z: 0 }
+}
+
+/**
+ * A control point laid at a place that was AIMED at, past the last one — what a click in the
+ * viewport adds. `withPointAtEnd` guesses where instead, which is all a panel can do.
+ */
+export function withPointAppended(path: PathDescriptor, point: PlainVector3): PathDescriptor {
+  return { ...path, points: [...path.points, point] }
 }
 
 /** One control point taken away. A rail never drops below two: one point is not a line. */
