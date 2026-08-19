@@ -206,8 +206,15 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
    *
    * `groups` is DROPPED and it is the loss worth naming: what the writer is handed is already a
    * flat list of surfaces, the tree living in the studio's own field, so a group's children
-   * arrive as siblings. Everything past the four traits below has nowhere to go in what this
-   * composer writes — it writes pixels, a name, an opacity and a blend, and nothing else.
+   * arrive as siblings. Everything past the list below has nowhere to go in what this composer
+   * writes — it writes pixels, a name, an opacity and a blend, and nothing else.
+   *
+   * `layerTransform` was listed here and is not carried: the trait fires for a TURN and never for
+   * a move, and `psdBytesOf` writes a `left` and a `top` over pixels handed to it untransformed.
+   *
+   * Written out rather than derived from ORA's, though the two agree today: `psdBytesOf` is its
+   * own writer, so a trait ORA promotes to `interchange` would be claimed here by a table nobody
+   * changed. `psdDocument.test.ts` holds this list against what the file actually comes back with.
    */
   'picture.psd': {
     domain: 'picture',
@@ -215,7 +222,7 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
     door: 'declared',
     destination: 'file',
     openedBy: ['Adobe Photoshop', 'GIMP', 'Preview', 'Affinity Photo'],
-    capability: carrying('picture', ['layers', 'blendMode', 'layerOpacity', 'layerTransform']),
+    capability: carrying('picture', ['layers', 'blendMode', 'layerOpacity']),
   },
   'scene.glb': {
     domain: 'scene',

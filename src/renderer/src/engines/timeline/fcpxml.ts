@@ -1,6 +1,6 @@
 import { escapeXml } from '@shared/domain/xmlText'
 import type { SequenceState, Track } from './timelineState'
-import { clipEnd, sequenceDuration } from './timelineState'
+import { clipEnd, playsThrough, sequenceDuration } from './timelineState'
 
 /**
  * FCPXML — what Final Cut Pro reads, and what Premiere and Resolve take as an interchange.
@@ -53,10 +53,15 @@ function mediaOf(state: SequenceState, nameOf: (assetId: string) => string): Med
   return [...seen.values()]
 }
 
-function clipsIn(track: Track, lane: number, fps: number, byAsset: Map<string, Media>): string[] {
-  // The track's own switch, which is the only one the format has a place for: a clip carries no
-  // mute of its own here, and `enabled` is what a reader draws greyed.
-  const enabled = track.muted ? '0' : '1'
+function clipsIn(
+  track: Track,
+  audible: boolean,
+  lane: number,
+  fps: number,
+  byAsset: Map<string, Media>,
+): string[] {
+  // `enabled` is the one place the format has the switch, and a clip carries no mute of its own.
+  const enabled = audible ? '1' : '0'
 
   return track.clips.flatMap(clip => {
     const media = byAsset.get(clip.assetId)
@@ -114,7 +119,11 @@ export function fcpxmlOf(
 
   // Lane 0 is the spine — the picture row every reader draws first — and the rows beside it count
   // up from 1. The studio holds its tracks top first, which is the order the lanes run in.
-  const lanes = state.tracks.flatMap((track, row) => clipsIn(track, row, fps, byAsset))
+  // The RESULT of the two switches, never `muted` alone — a solo elsewhere silences this row, and
+  // that is what another application is told. Read here, as `otioTimeline` reads it.
+  const lanes = state.tracks.flatMap((track, row) =>
+    clipsIn(track, playsThrough(state, track), row, fps, byAsset),
+  )
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',

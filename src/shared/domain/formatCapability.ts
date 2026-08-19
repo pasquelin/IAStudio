@@ -389,22 +389,19 @@ const MATERIAL_X: FormatCapability = carrying(
   ],
 )
 
-/**
- * The three geometry formats carry SHAPES and nothing else — no camera, no light, no animation,
- * and no way to say so: none of the three reserves a place for data a reader would ignore, which
- * is why they have no `extended` at all where every other format here has one.
- *
- * They are offered because a 3D printer, a mesh tool and a physics engine read them and read
- * little else — and the studio says out loud what leaves on the way, rather than writing a file
- * that opens on a shape somebody expected to be a scene.
- *
- * `nodeName` splits the three: OBJ names its groups and PLY its elements, an STL is one soup of
- * triangles. `nodeMaterial` is dropped by all three all the same — OBJ names a `.mtl` this studio
- * does not write beside it, and the name of a material nobody wrote is not the material.
- */
-const SHAPES_ONLY: FormatCapability = carrying('scene', ['sceneTree', 'nodeName', 'nodePlacement'])
+// OBJ, PLY and STL share these two. All three carry SHAPES and nothing else — no camera, no
+// light, no animation, and no `extended` at all, none of them reserving a place for data a reader
+// would ignore. They are offered because a 3D printer, a mesh tool and a physics engine read them
+// and read little else. `sceneTree` is carried by NONE of the three, and `nodeName` by OBJ alone,
+// read off the files 20/08; `nodeMaterial` goes with them, OBJ naming a `.mtl` nothing writes.
 
-/** One soup of triangles: an STL has no place to put a name or a tree, let alone the rest. */
+/** OBJ, which opens each mesh with `o <name>` — but as a SIBLING: the notation has no nesting. */
+const NAMED_SHAPES: FormatCapability = carrying('scene', ['nodeName', 'nodePlacement'])
+
+/**
+ * PLY and STL, which name nothing: `element vertex` and `element face` are the FORMAT's own
+ * words, so a stack of meshes comes out as one list of vertices and one of faces.
+ */
 const TRIANGLE_SOUP: FormatCapability = carrying('scene', ['nodePlacement'])
 
 const CAPABILITY_BY_FORMAT: Record<WritableFormat, FormatCapability> = {
@@ -415,8 +412,8 @@ const CAPABILITY_BY_FORMAT: Record<WritableFormat, FormatCapability> = {
   otio: OPEN_TIMELINE,
   gltf: GLTF_SCENE,
   mtlx: MATERIAL_X,
-  obj: SHAPES_ONLY,
-  ply: SHAPES_ONLY,
+  obj: NAMED_SHAPES,
+  ply: TRIANGLE_SOUP,
   stl: TRIANGLE_SOUP,
 }
 
