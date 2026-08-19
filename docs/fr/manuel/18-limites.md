@@ -138,9 +138,9 @@ Un point qui reste : **changer de projet** ferme les documents ouverts sans pose
 
 ### Il n’y a pas de menu « Ouvrir », et il n’en faut pas
 
-Une image de l’étagère **entre** dans un document — glissée sur la toile, double-cliquée, ou
-choisie par l’outil **Image…** : elle y devient un calque. Voir
-[Espace Image](08-espace-image.md).
+Une image de l’étagère **entre** dans un document ouvert — glissée sur la toile, envoyée par le
+clic droit, ou choisie par l’outil **Image…** : elle y devient un calque. Et **double-cliquée,
+elle ouvre un document à elle**. Voir [Espace Image](08-espace-image.md).
 
 Rouvrir un document composé plus tôt passe par le panneau **Explorateur**, qui liste les
 documents du projet : un double-clic sur une ligne l’ouvre, en changeant d’espace s’il le faut.

@@ -123,8 +123,13 @@ The shapes below are the ones the studio can **build**. A model from elsewhere �
 
 | Gesture | Result |
 |---|---|
-| **Double-click** a mesh in the shelf | it enters the open scene |
-| **Drag and drop** onto the 3D view | the same — anywhere on the view, toolbar included |
+| **Double-click** a mesh in the shelf | a **scene of its own** opens, with the mesh inside |
+| **Drag and drop** onto the 3D view | it enters the scene **in front of you** — anywhere on the view, toolbar included |
+| **Right-click ▸ Add to the scene** | the same, without aiming at the view — a scene open anywhere is enough |
+
+**Double-click never looks at the tab in front**: it opens the asset in the workspace of its kind,
+whatever is on screen. It is the studio-wide rule, described in [Assets](07-assets.md) — to bring a
+mesh into the scene you have in front of you, use drag and drop or right-click.
 
 **Only meshes come in.** A picture, a sound or a video released over the 3D view does nothing:
 the scene would not know what to do with it.

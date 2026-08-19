@@ -51,12 +51,12 @@ Three gestures, and **they do not put the clip in the same place**:
 |---|---|---|
 | **Drag and drop** from the shelf | the one you are hovering, **if it can take it** | where you release |
 | **Drag and drop** into the empty space below the last track | a **new** track, opened for it | where you release |
-| **Double-click** the asset | the studio chooses | at the **playhead** |
+| **Right-click ▸ Add to the edit** | the studio chooses | at the **playhead** |
 
 **Drag and drop obeys you to the pixel for the TIME; for the track, it corrects you.** You release
 exactly where you mean to in time. But **aiming at a track that cannot take the clip does not put
 it there**: a picture track for a sound, a locked track, a muted one, or one silenced by another
-track's solo. The studio then chooses for you, as double-click does, and the clip lands **somewhere
+track's solo. The studio then chooses for you, as right-click does, and the clip lands **somewhere
 other than under the pointer**.
 
 That is one rule rather than two: a muted track accepted under the pointer and avoided everywhere
@@ -71,11 +71,16 @@ Two places still take nothing: the **time ruler** at the top, and an edit with n
 at all — the one in the Audio workspace — where releasing a rush only opens the asset, since
 there is no monitor there to show it.
 
-**Double-click chooses for you**, and it chooses well: a sound goes on a sound track, everything
+**Right-click chooses for you**, and it chooses well: a sound goes on a sound track, everything
 else on a picture track, and **any track that does not reach the output is avoided** — a clip
 landing there would look like it did nothing. That covers **locked** and **muted** tracks, and also
-those silenced by **another track's solo**: a track nothing sets apart to the eye, and on which
-double-click will nonetheless lay nothing.
+those silenced by **another track's solo**: a track nothing sets apart to the eye, and on which the
+clip will nonetheless not land.
+
+> **Double-click does not aim at this edit.** It opens the asset in a tab **of its own**, in the
+> workspace of its kind: a fresh edit for a video, the **audio editor** for a sound. It is the
+> studio-wide rule, described in [Assets](07-assets.md). So to gather two media in the **same**
+> edit, use drag and drop or right-click.
 
 Whichever way, the studio settles two things:
 
@@ -275,7 +280,7 @@ same instant; the one **highest in the column** is the one shown, and it covers 
 comes in front of V2, as in every editing suite. Moving a track therefore changes the picture in
 the monitor, the moment you release it.
 
-**The order matters for double-click too**: the studio then lays the asset on the **first track of
+**The order matters for right-click too**: the studio then lays the asset on the **first track of
 the right kind that reaches the output**, counting from the top. Moving a track up therefore makes
 it the default destination. Every header carries a **grip** on its left edge.
 

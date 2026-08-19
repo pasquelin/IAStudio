@@ -33,14 +33,16 @@ raking orange light over everything in front of it.
 
 ## Three ways to get a sky
 
-**First, open a sky document** with the `+` button on the left rail. The three paths below fill an
-open tab; none of them creates one.
+| Path | How | Where it lands |
+|---|---|---|
+| **Double-click** | on a **panorama** in the shelf | in a sky tab **of its own**, opened for it |
+| **Drag and drop** | from the shelf onto the preview, anywhere on it | in the tab **in front of you** |
+| **Generate** | pick a sky model and launch a generation | in the document it started from, **by itself** |
 
-| Path | How |
-|---|---|
-| **Double-click** | on a picture in the shelf, with the sky tab in front |
-| **Drag and drop** | from the shelf onto the preview, anywhere on it |
-| **Generate** | pick a sky model and launch a generation: it lands **by itself** in the document it started from |
+**Double-click is the only one of the three that opens a tab**; the other two fill the one you
+already have, which the `+` button on the left rail creates empty. And it only holds for a
+**panorama**: an ordinary picture, double-clicked, goes to the Image workspace, which is the one of
+its kind — to set it as a sky, use drag and drop or right-click ▸ **Use as sky**.
 
 While no image is placed, the preview shows: "No skybox yet. Generate one or drop an
 equirectangular panorama."

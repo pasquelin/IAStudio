@@ -133,8 +133,9 @@ One gap remains: **switching projects** closes the open documents without asking
 
 ### There is no "Open" menu, and none is needed
 
-A picture from the shelf comes **in** — dragged onto the canvas, double-clicked, or chosen with
-the **Image…** tool: it becomes a layer. See [Image workspace](08-image-workspace.md).
+A picture from the shelf comes **in** to an open document — dragged onto the canvas, sent by
+right-click, or chosen with the **Image…** tool: it becomes a layer. And **double-clicked, it opens
+a document of its own**. See [Image workspace](08-image-workspace.md).
 
 Reopening a document composed earlier goes through the **Explorer** panel, which lists the
 documents of the project: double-clicking a row opens it, switching workspace if it belongs to

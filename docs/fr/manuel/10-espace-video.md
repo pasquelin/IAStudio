@@ -53,12 +53,12 @@ Trois gestes, et **ils ne posent pas le clip au même endroit** :
 |---|---|---|
 | **Glisser-déposer** depuis l’étagère | celle que vous survolez, **si elle peut le prendre** | là où vous lâchez |
 | **Glisser-déposer** dans le vide, sous la dernière piste | une **nouvelle** piste, ouverte pour lui | là où vous lâchez |
-| **Double-clic** sur l’asset | le studio choisit | à la **tête de lecture** |
+| **Clic droit ▸ Ajouter au montage** | le studio choisit | à la **tête de lecture** |
 
 **Le glisser-déposer vous obéit au pixel près pour l’INSTANT ; pour la piste, il vous corrige.**
 Vous lâchez exactement où vous voulez dans le temps. Mais **viser une piste qui ne peut pas
 prendre le clip ne l’y pose pas** : une piste image pour un son, une piste verrouillée, muette, ou
-tue par le solo d’une autre. Le studio choisit alors à votre place, comme au double-clic, et le
+tue par le solo d’une autre. Le studio choisit alors à votre place, comme au clic droit, et le
 clip atterrit **ailleurs que sous le pointeur**.
 
 C’est une règle unique et non deux : une piste muette acceptée sous le pointeur et évitée partout
@@ -73,11 +73,16 @@ Deux endroits ne prennent toujours rien : la **règle des temps**, en haut, et u
 aucune piste image — celui de l’espace Audio — où lâcher un rush ne fait qu’ouvrir l’asset,
 puisqu’il n’y a là aucun moniteur pour l’afficher.
 
-**Le double-clic choisit à votre place**, et il choisit bien : un son va sur une piste son, tout
+**Le clic droit choisit à votre place**, et il choisit bien : un son va sur une piste son, tout
 le reste sur une piste image, et **toute piste qui ne se fait pas entendre est évitée** — un clip
 qui y atterrirait aurait l’air de n’avoir rien fait. Cela vise les **verrouillées** et les
 **muettes**, mais aussi celles que le **solo d’une autre piste** a fait taire : une piste que rien
-ne distingue à l’œil, et sur laquelle le double-clic ne posera pourtant rien.
+ne distingue à l’œil, et sur laquelle le clip ne se posera pourtant pas.
+
+> **Le double-clic ne vise pas ce montage-ci.** Il ouvre l’asset dans un onglet **à lui**, dans
+> l’espace de son type : un montage neuf pour une vidéo, l’**éditeur audio** pour un son. C’est la
+> règle de tout le studio, décrite dans [Les assets](07-assets.md). Pour réunir deux médias dans
+> le **même** montage, c’est donc le glisser-déposer ou le clic droit.
 
 Dans tous les cas, le studio décide de deux choses :
 
@@ -283,7 +288,7 @@ peuvent porter un clip ; c’est celle qui est **le plus haut dans la colonne** 
 elle recouvre les autres — V1 passe devant V2, comme dans tout logiciel de montage. Déplacer une
 piste change donc l’image du moniteur, à l’instant du lâcher.
 
-**L’ordre compte aussi pour le double-clic** : le studio pose alors l’asset sur la **première
+**L’ordre compte aussi pour le clic droit** : le studio pose alors l’asset sur la **première
 piste du bon genre qui se fait entendre**, en partant du haut. Monter une piste, c’est donc en
 faire la destination par défaut. Chaque en-tête porte une **poignée** sur son bord gauche.
 
