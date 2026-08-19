@@ -113,3 +113,51 @@ describe('the bundle client', () => {
     await expect(client.write(JOB)).rejects.toThrow('the bundle process is gone')
   })
 })
+
+/** The direction this lot added, and the one the suite covered nowhere. */
+describe('the bundle client, reading one back', () => {
+  const READ = { path: '/tmp/Bande.otioz', into: '/tmp/unpacked' }
+
+  it('answers the contents the worker unpacked', async () => {
+    const port = fakePort()
+    const client = createBundleClient(port)
+    const contents = { content: '{"OTIO_SCHEMA":"Timeline.1"}', media: [] }
+
+    const reading = client.read(READ)
+    port.answer({ id: 1, kind: 'read', contents })
+
+    await expect(reading).resolves.toEqual(contents)
+  })
+
+  /** `false` is the write's answer for a stop; a read that borrowed it would be a cut of `false`. */
+  it('answers nothing rather than not-written for a read that was stopped', async () => {
+    const port = fakePort()
+    const client = createBundleClient(port)
+
+    const reading = client.read(READ)
+    port.answer({ id: 1, kind: 'read', contents: null })
+
+    await expect(reading).resolves.toBeNull()
+  })
+
+  it('never posts a read that was stopped before it started, and answers nothing', async () => {
+    const port = fakePort()
+    const client = createBundleClient(port)
+
+    await expect(client.read({ ...READ, signal: AbortSignal.abort() })).resolves.toBeNull()
+    expect(port.posted).toEqual([])
+  })
+
+  it('relays the steps of a read to the run that asked for it', async () => {
+    const port = fakePort()
+    const client = createBundleClient(port)
+
+    const seen: number[] = []
+    const reading = client.read({ ...READ, onStep: done => seen.push(done) })
+    port.answer({ id: 1, kind: 'progress', done: 1024, total: 4096 })
+    port.answer({ id: 1, kind: 'read', contents: null })
+
+    await reading
+    expect(seen).toEqual([1024])
+  })
+})

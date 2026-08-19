@@ -174,7 +174,7 @@
     },
     "montageImport": {
       "title": "Importer un montage et ses médias (OTIOZ)…",
-      "help": "Ouvre un montage écrit par un autre logiciel, avec ses rushes. Les médias sont copiés dans le projet et entrent au catalogue, puis le montage s’ouvre relié à eux. Ce qu’un fichier étranger n’apporte pas — les fondus, les gains, les hauteurs de piste — repart de sa valeur par défaut."
+      "help": "Ouvre un montage écrit par un autre logiciel, avec ses rushes. Les médias sont copiés dans le projet et entrent au catalogue, puis le montage s’ouvre relié à eux. Ce que le fichier ouvert n’apporte pas est dit à l’ouverture, et ne repart de sa valeur par défaut que là."
     },
     "sequenceMirror": {
       "title": "Fenêtre de retour",

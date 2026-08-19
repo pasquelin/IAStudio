@@ -80,7 +80,12 @@ export type OtioAssetIdOf = (targetUrl: string) => string
  */
 export type OtioRelink = 'catalogue' | 'link'
 
-type Relinking = { assetIdOf: OtioAssetIdOf; relink: OtioRelink }
+type Relinking = {
+  assetIdOf: OtioAssetIdOf
+  relink: OtioRelink
+  /** Every clip this read let go of, by the name the file gave it. Filled as they are met. */
+  dropped: string[]
+}
 
 const timeAt = (time: Us, fps: number): OtioRationalTime => ({
   OTIO_SCHEMA: 'RationalTime.1',
@@ -330,6 +335,9 @@ function clipsFrom(children: unknown, frame: Us, linking: Relinking): Clip[] {
     const clip =
       raw.OTIO_SCHEMA === 'Clip.1' ? clipFrom(raw, standard, cursor, frame, linking) : null
     if (clip) clips.push(clip)
+    // Said HERE rather than left to each caller to instrument its own resolver: a clip is let go
+    // of for three different reasons, and the second caller written did not think to count any.
+    else if (raw.OTIO_SCHEMA === 'Clip.1') linking.dropped.push(readString(raw, 'name', ''))
     // A gap, or a clip nothing could name a source for: both only move the head along.
     cursor = clip ? clipEnd(clip) : cursor + standard.duration
   }
@@ -474,19 +482,59 @@ function composedOver(item: Record<string, unknown>, composes?: 'range' | 'enabl
 }
 
 /**
- * A montage read back from an OTIO file. Answers the empty sequence on anything that is not one,
- * exactly as `parseSequence` does: a file that fails to read must not open on nothing at all.
+ * Whether the file itself carries what the standard rounds away — the fades, the gains, the links
+ * and the exact times. Asked of a CLIP: the root metadata says which document it was, the clips
+ * are where the extended traits ride, and a file may keep one without the other.
+ *
+ * Its blind spot is written rather than hidden: one clip answering for all of them. A file half
+ * written here would be called whole, which is the harmless way round — the alternative is
+ * telling somebody their fades are gone while the montage plays them.
+ */
+export function montageRebuildsExtended(payload: unknown): boolean {
+  if (!isOtioTimeline(payload)) return false
+  const stack = isRecord(payload.tracks) ? payload.tracks : {}
+
+  return childrenOf(stack).some(track =>
+    childrenOf(track).some(
+      item =>
+        isRecord(item) &&
+        item.OTIO_SCHEMA === 'Clip.1' &&
+        Object.keys(otioStudioMetadata(item)).length > 0,
+    ),
+  )
+}
+
+/** A montage read back, with the clips the read let go of — see `readSequenceFromOtio`. */
+export type OtioReading = { state: SequenceState; dropped: readonly string[] }
+
+/**
+ * A montage read back from an OTIO file, and what it could not keep. Answers the empty sequence on
+ * anything that is not one, exactly as `parseSequence` does: a file that fails to read must not
+ * open on nothing at all.
  *
  * `assetIdOf` relinks a media the studio metadata does not name — a file written by another
  * application. Its default answers nothing, which drops such clips rather than inventing a
- * catalogue row for them.
+ * catalogue row for them; `dropped` is how the caller can SAY so.
  */
+export function readSequenceFromOtio(
+  content: unknown,
+  assetIdOf: OtioAssetIdOf = () => '',
+  relink: OtioRelink = 'catalogue',
+): OtioReading {
+  const dropped: string[] = []
+  return { state: sequenceIn(content, { assetIdOf, relink, dropped }), dropped }
+}
+
+/** The same read, for a caller with nowhere to say what was let go of. */
 export function sequenceFromOtio(
   content: unknown,
   assetIdOf: OtioAssetIdOf = () => '',
   relink: OtioRelink = 'catalogue',
 ): SequenceState {
-  const linking: Relinking = { assetIdOf, relink }
+  return readSequenceFromOtio(content, assetIdOf, relink).state
+}
+
+function sequenceIn(content: unknown, linking: Relinking): SequenceState {
   if (!isOtioTimeline(content)) return EMPTY_SEQUENCE
   const stack = content.tracks
   if (!isRecord(stack) || !Array.isArray(stack.children)) return EMPTY_SEQUENCE

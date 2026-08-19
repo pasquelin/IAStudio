@@ -2,7 +2,7 @@ import { basename } from 'node:path'
 import { z } from 'zod'
 import { taskRatio } from '@shared/domain/taskProgress'
 import { exportTargetOf } from '@shared/domain/exportRegistry'
-import { isBundleEntry } from '@shared/domain/otioz'
+import { isBundleEntry, MAX_CONTENT_BYTES } from '@shared/domain/otioz'
 import { CHANNELS, EVENTS, type MontageExportRequest } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { sendToSender } from '@main/ipc/broadcast'
@@ -22,13 +22,6 @@ export type MontageHandlerDeps = {
   bundles: () => BundleClient
   running: RunningTasks
 }
-
-/**
- * A cut is JSON, and a long one stays small: ten thousand clips come to a few megabytes. The
- * ceiling is there because the renderer is the sandboxed side, not because a montage approaches
- * it.
- */
-const MAX_CONTENT_BYTES = 64 * 1024 * 1024
 
 /** The widest a cut gets. A bundle carries the media beside it, never a clip each. */
 const MAX_MEDIA = 2048

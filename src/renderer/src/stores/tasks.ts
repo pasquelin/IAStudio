@@ -69,6 +69,10 @@ export const useTasks = create<TasksState>()((set, get) => ({
   end: id => set(state => ({ running: withoutKey(state.running, id) })),
 }))
 
+/** Nothing, once the stop is pressed. Never rejects: a stop is a decision, not a fault. */
+const stopped = (signal: AbortSignal): Promise<null> =>
+  new Promise(resolve => signal.addEventListener('abort', () => resolve(null), { once: true }))
+
 /**
  * Runs one long task under a row the status line shows and a button that stops it. Answers `null`
  * when it was stopped, which is what every caller here already answers for a dismissed dialog.
@@ -85,11 +89,19 @@ export async function runTask<T>(
   stops.set(id, controller)
   useTasks.getState().begin({ id, label, ratio: 0 })
 
+  const running = work(id, {
+    onStep: (done, total) => useTasks.getState().step(id, taskRatio(done, total)),
+    signal: controller.signal,
+  })
+  // Observed here as well as awaited below, so a failure that arrives after a stop is not an
+  // unhandled rejection. It is simply not reported: a stop the person asked for is not a fault.
+  running.catch(() => {})
+
   try {
-    return await work(id, {
-      onStep: (done, total) => useTasks.getState().step(id, taskRatio(done, total)),
-      signal: controller.signal,
-    })
+    // The press wins the race, rather than the answer to it: a native dialog cannot be dismissed
+    // from this side, so an import waiting on one kept its row turning at 0 % for the rest of the
+    // session — pressed stop or not. The other side still tidies up when the dialog answers.
+    return await Promise.race([running, stopped(controller.signal)])
   } catch (error) {
     // The signal rather than the error's own shape: a loop stopped mid-await throws whatever it
     // was in, and a stop the person asked for is not a fault to report.

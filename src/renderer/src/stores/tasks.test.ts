@@ -70,6 +70,20 @@ describe('stopping one', () => {
   })
 
   /**
+   * Measured on screen: a native dialog cannot be dismissed from this side, so an import waiting
+   * on one kept its row turning at 0 % for the rest of the session — pressed stop or not.
+   */
+  it('takes the row away at the press, without waiting for the other side to answer', async () => {
+    const running = runTask('Bande', () => new Promise<string>(() => {}))
+
+    const [row] = Object.values(useTasks.getState().running)
+    useTasks.getState().cancelTask(row?.id ?? '')
+
+    await expect(running).resolves.toBeNull()
+    expect(useTasks.getState().running).toEqual({})
+  })
+
+  /**
    * A stop is a decision, not a fault: answering `null` is what every caller here already
    * answers for a dismissed dialog, so nothing downstream has to learn a second shape.
    */

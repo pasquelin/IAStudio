@@ -3,14 +3,17 @@ import { stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { finished } from 'node:stream/promises'
 import { Unzip, UnzipInflate, UnzipPassThrough, strFromU8 } from 'fflate'
-import type { TaskWatch } from '@shared/domain/taskProgress'
+import { steppedProgress, type TaskWatch } from '@shared/domain/taskProgress'
 import {
-  isBundleEntry,
-  mediaNameOf,
+  bundleEntryOf,
+  freeName,
+  MAX_CONTENT_BYTES,
   OTIOZ_CONTENT_PATH,
   OTIOZ_MAJOR,
   OTIOZ_VERSION_PATH,
   otiozMajorOf,
+  safeName,
+  unpackedCeiling,
 } from '@shared/domain/otioz'
 
 /**
@@ -28,9 +31,6 @@ export type OtiozRead = {
   /** Each medium that landed, by the entry the cut names and the file it became under `into`. */
   media: readonly { entry: string; file: string }[]
 }
-
-/** The ceiling the writing side already holds. A cut is JSON; a claim past this is not one. */
-const MAX_CONTENT_BYTES = 64 * 1024 * 1024
 
 /** A file that is not a bundle, or one this reader refuses. Named so the caller can say why. */
 export class NotABundleError extends Error {}
@@ -58,15 +58,7 @@ const collect = (into: Collected, chunk: Uint8Array): void => {
   into.chunks.push(chunk)
 }
 
-const joined = ({ chunks, bytes }: Collected): Uint8Array => {
-  const all = new Uint8Array(bytes)
-  let at = 0
-  for (const chunk of chunks) {
-    all.set(chunk, at)
-    at += chunk.length
-  }
-  return all
-}
+const joined = ({ chunks, bytes }: Collected): Uint8Array => Buffer.concat(chunks, bytes)
 
 /**
  * Unpacks the bundle into `into`, which the caller made and owns — including taking it away when
@@ -86,15 +78,36 @@ export async function readOtiozFile(
   const content: Collected = { chunks: [], bytes: 0 }
   const media: { entry: string; file: string }[] = []
   const sinks: WriteStream[] = []
+  const taken = new Set<string>()
 
   let failure: Error | null = null
   let blocked: Promise<void> | null = null
+  // Counted as it lands rather than read off a header: a zip declares its own sizes, and a bomb
+  // declares them small. `UnzipInflate` is registered, so the ratio is the archive's to choose.
+  let unpacked = 0
+  const ceiling = unpackedCeiling(total)
 
   const unzip = new Unzip()
   // Both, explicitly: a bundle is written stored, but nothing stops another application from
   // deflating its own — and an unregistered method makes `start()` throw rather than skip.
   unzip.register(UnzipPassThrough)
   unzip.register(UnzipInflate)
+
+  /** The version, refused as soon as it is legible. Throws, so the caller's `catch` names it. */
+  const refuseUnknownVersion = (): void => {
+    const spelled = otiozMajorOf(strFromU8(joined(version)))
+    if (spelled !== OTIOZ_MAJOR) {
+      throw new NotABundleError(`this bundle is version ${spelled}, and this reader knows 1`)
+    }
+  }
+
+  /** Whether there is still room to write this chunk. Answers `false` once, and refuses after. */
+  const grew = (bytes: number): boolean => {
+    unpacked += bytes
+    if (unpacked <= ceiling) return true
+    failure ??= new NotABundleError('this bundle unpacks to far more than it weighs')
+    return false
+  }
 
   const drain = (sink: WriteStream, chunk: Uint8Array, last: boolean): void => {
     // Held so the archive stops being read while the disk catches up: without it, a fast source
@@ -112,13 +125,22 @@ export async function readOtiozFile(
   }
 
   unzip.onfile = file => {
+    // Once the bundle is refused, nothing more of it is opened: fflate hands over every entry of
+    // a chunk before the loop gets to look at `failure`, and a file created here would outlive
+    // the refusal in somebody's project.
+    if (failure) return
+
     if (file.name === OTIOZ_VERSION_PATH || file.name === OTIOZ_CONTENT_PATH) {
-      const into = file.name === OTIOZ_VERSION_PATH ? version : content
-      file.ondata = (error, chunk) => {
+      const collected = file.name === OTIOZ_VERSION_PATH ? version : content
+      file.ondata = (error, chunk, final) => {
         if (error) failure ??= error
         else
           try {
-            collect(into, chunk)
+            collect(collected, chunk)
+            // Read the MOMENT the version is whole rather than at the end: a well-formed bundle
+            // spells it first, and a reader that waited would have written thirty gigabytes before
+            // saying it knows no such layout.
+            if (final && collected === version) refuseUnknownVersion()
           } catch (thrown) {
             failure ??= thrown instanceof Error ? thrown : new Error(String(thrown))
           }
@@ -127,14 +149,20 @@ export async function readOtiozFile(
       return
     }
 
-    const name = mediaNameOf(file.name)
-    // Not a member of a bundle at all — another application's sidecar. Left unread rather than
-    // refused: only an entry CLAIMING to be a medium and climbing out is hostile.
-    if (name === null) return
-    if (!isBundleEntry(file.name)) {
+    const entry = bundleEntryOf(file.name)
+    // Another application's sidecar, or the folder marker every `zip -r` emits. Left unread rather
+    // than refused: only an entry CLAIMING to be a medium and climbing out is hostile.
+    if (entry.kind === 'ignored') return
+    if (entry.kind === 'hostile') {
       failure ??= new BundleEscapeError(file.name)
       return
     }
+
+    // Through the same pair the writing side uses: an archive may name two entries one file system
+    // makes one file — `plan.mp4` twice, or `CON.mp4` on Windows — and the second would land on
+    // the first's pixels with the cut pointing at both.
+    const name = freeName(safeName(entry.name), taken)
+    taken.add(name)
 
     const sink = createWriteStream(join(into, name))
     // A full disk emits `error` here with nothing listening, which Node raises as an uncaught
@@ -145,7 +173,7 @@ export async function readOtiozFile(
     media.push({ entry: file.name, file: name })
     file.ondata = (error, chunk, final) => {
       if (error) failure ??= error
-      else drain(sink, chunk, final)
+      else if (grew(chunk.length)) drain(sink, chunk, final)
     }
     file.start()
   }
@@ -161,11 +189,12 @@ export async function readOtiozFile(
   }
 
   try {
-    let read = 0
+    // Per step rather than per chunk, the rule the writer and the model download already carry: a
+    // gigabyte read a mebibyte at a time is a thousand reports to move a bar of a hundred states.
+    const read = steppedProgress(total, onStep)
     for await (const chunk of createReadStream(archive, { highWaterMark: 1 << 20 })) {
       unzip.push(chunk, false)
-      read += chunk.length
-      onStep?.(read, total)
+      read(chunk.length)
       await room()
     }
     unzip.push(new Uint8Array(0), true)
@@ -179,11 +208,8 @@ export async function readOtiozFile(
     if (version.bytes === 0 || content.bytes === 0) {
       throw new NotABundleError('this file carries no cut, so it is not a bundle')
     }
-
-    const spelled = otiozMajorOf(strFromU8(joined(version)))
-    if (spelled !== OTIOZ_MAJOR) {
-      throw new NotABundleError(`this bundle is version ${spelled}, and this reader knows 1`)
-    }
+    // Again, for the archive that spells its version LAST: the early refusal never ran there.
+    refuseUnknownVersion()
 
     return { content: strFromU8(joined(content)), media }
   } catch (error) {

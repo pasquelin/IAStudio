@@ -3,7 +3,7 @@ import { rm, stat } from 'node:fs/promises'
 import { finished, pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
 import { Zip, ZipPassThrough, strToU8 } from 'fflate'
-import type { TaskWatch } from '@shared/domain/taskProgress'
+import { steppedProgress, type TaskWatch } from '@shared/domain/taskProgress'
 import {
   OTIOZ_CONTENT_PATH,
   OTIOZ_VERSION,
@@ -66,9 +66,6 @@ async function pushFile(
   into.push(new Uint8Array(0), true)
 }
 
-/** The floor under a report, for the bundle small enough that a hundredth is a few bytes. */
-const PROGRESS_STEP = 4 * 1024 * 1024
-
 function storedEntry(zip: Zip, name: string, bytes: Uint8Array): void {
   const entry = new ZipPassThrough(name)
   zip.add(entry)
@@ -108,18 +105,7 @@ export async function writeOtiozFile(
     total += found.size
   }
 
-  // Per step rather than per chunk, the rule `modelDownload` already carries: a rush arrives a
-  // mebibyte at a time, and a gigabyte would push a thousand reports through two process
-  // boundaries to move a bar that shows a hundred states.
-  const step = Math.max(PROGRESS_STEP, Math.floor(total / 100))
-  let done = 0
-  let told = 0
-  const wrote = (bytes: number): void => {
-    done += bytes
-    if (done - told < step && done < total) return
-    told = done
-    onStep?.(done, total)
-  }
+  const wrote = steppedProgress(total, onStep)
 
   const out = createWriteStream(path)
   let wanted = false

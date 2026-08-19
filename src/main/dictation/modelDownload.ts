@@ -6,6 +6,10 @@ import {
   type DownloadProgress,
   type SttModelFile,
 } from '@shared/domain/dictation'
+// The same floor every long task in this studio reports on: `net.fetch` hands out a few tens of
+// kilobytes at a time, and reporting each would push twenty thousand events through the IPC for
+// the encoder alone — each broadcast to every window, to move a bar of sixty steps.
+import { PROGRESS_STEP } from '@shared/domain/taskProgress'
 
 /**
  * What fetching the model needs from the world, injected so every path below is testable
@@ -55,16 +59,6 @@ export type DownloadOptions = {
   signal?: AbortSignal
   onProgress: (progress: DownloadProgress) => void
 }
-
-/**
- * How much has to arrive before the progress is reported again.
- *
- * `net.fetch` hands out chunks of a few tens of kilobytes, so reporting each one would push
- * around twenty thousand events through the IPC for the encoder alone — every one of them
- * broadcast to every window and re-rendering a bar that can show sixty steps. The media ingest
- * has the same rule for the same reason: it reports per stage, not per byte.
- */
-const PROGRESS_STEP = 4 * 1024 * 1024
 
 /** Refused by the download itself, as opposed to a network that simply failed. */
 export class ChecksumMismatch extends Error {}

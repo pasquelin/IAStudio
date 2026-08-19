@@ -165,6 +165,67 @@ describe('an archive from anywhere else', () => {
     await expect(readOtiozFile(archive, into)).rejects.toThrow(NotABundleError)
   })
 
+  /** Every `zip -r` writes one, so refusing it made a legitimate bundle look hostile. */
+  it('unpacks a bundle that carries the folder markers an archiver adds', async () => {
+    const read = await readOtiozFile(
+      await handMade({
+        [OTIOZ_VERSION_PATH]: OTIOZ_VERSION,
+        [OTIOZ_CONTENT_PATH]: CONTENT,
+        'media/': '',
+        'media/plan.mp4': RUSH,
+      }),
+      into,
+    )
+
+    expect(read?.media.map(one => one.file)).toEqual(['plan.mp4'])
+  })
+
+  /** Two clips would otherwise point at one file's pixels, and nothing would say which was lost. */
+  it('lands two entries of the same name side by side rather than one over the other', async () => {
+    const read = await readOtiozFile(
+      await handMade({
+        [OTIOZ_VERSION_PATH]: OTIOZ_VERSION,
+        [OTIOZ_CONTENT_PATH]: CONTENT,
+        'media/plan.mp4': RUSH,
+        'media/plan.mp4 ': new Uint8Array(64).fill(3),
+      }),
+      into,
+    )
+
+    expect(read?.media.map(one => one.file)).toEqual(['plan.mp4', 'plan-2.mp4'])
+    expect((await readdir(into)).sort()).toEqual(['plan-2.mp4', 'plan.mp4'])
+  })
+
+  /** Zeros deflate to nothing, and `UnzipInflate` is registered on purpose. */
+  it('refuses an archive that unpacks to far more than it weighs', async () => {
+    const archive = join(folder, 'Bomb.otioz')
+    await writeFile(
+      archive,
+      zipSync(
+        {
+          [OTIOZ_VERSION_PATH]: strToU8(OTIOZ_VERSION),
+          [OTIOZ_CONTENT_PATH]: strToU8(CONTENT),
+          'media/plan.mp4': new Uint8Array(4 * 1024 * 1024),
+        },
+        { level: 1 },
+      ),
+    )
+
+    await expect(readOtiozFile(archive, into)).rejects.toThrow(NotABundleError)
+  })
+
+  /** Thirty gigabytes written, then « version inconnue », is the wrong order to find that out. */
+  it('refuses a major it does not know before unpacking a single medium', async () => {
+    const archive = await handMade({
+      [OTIOZ_VERSION_PATH]: '2.0.0',
+      [OTIOZ_CONTENT_PATH]: CONTENT,
+      'media/plan.mp4': RUSH,
+    })
+
+    await expect(readOtiozFile(archive, into)).rejects.toThrow(NotABundleError)
+    expect(await readdir(into)).toEqual([])
+  })
+
   it('reads a bundle whose media were deflated rather than stored', async () => {
     const archive = join(folder, 'Deflated.otioz')
     await writeFile(

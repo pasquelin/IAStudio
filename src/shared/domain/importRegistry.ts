@@ -7,15 +7,8 @@
  * two failures.
  */
 
-import {
-  capabilityOf,
-  type CapabilityDomain,
-  type CapabilityTrait,
-  type FormatCapability,
-  type WritableFormat,
-} from './formatCapability'
+import { capabilityOf, type CapabilityTrait, type WritableFormat } from './formatCapability'
 import type { DocumentKind } from './document'
-import { extensionOf } from './fileName'
 
 /** A (section, format read) pair. Named for the section first, as the export targets are. */
 export type ImportSourceId = 'montage.otioz'
@@ -23,7 +16,6 @@ export type ImportSourceId = 'montage.otioz'
 export const IMPORT_SOURCE_IDS: readonly ImportSourceId[] = ['montage.otioz']
 
 export type ImportSource = {
-  domain: CapabilityDomain
   /** What the picker filters on, and what a file has to be named to be offered this reader. */
   extension: string
   /** The document the studio makes of it. */
@@ -34,41 +26,28 @@ export type ImportSource = {
    * the day one gains a trait.
    */
   format: WritableFormat
-  /** Whether the media travel inside the file, or are left where the cut points at them. */
-  carriesMedia: boolean
 }
 
 const SOURCES: Record<ImportSourceId, ImportSource> = {
   'montage.otioz': {
-    domain: 'montage',
     extension: '.otioz',
     // A montage, never a take: a take keeps only its audio tracks, so a bundle carrying a picture
     // track would open on a surface that drops it — see `montageHoldsMore`'s own blind spot.
     kind: 'sequence',
     format: 'otio',
-    carriesMedia: true,
   },
 }
 
 export const importSourceOf = (id: ImportSourceId): ImportSource => SOURCES[id]
 
-/** The reader a file name asks for, or nothing when the studio reads nothing of that shape. */
-export function importSourceOfFile(fileName: string): ImportSourceId | null {
-  const extension = extensionOf(fileName)
-  return IMPORT_SOURCE_IDS.find(id => SOURCES[id].extension === extension) ?? null
-}
-
-export const capabilityImportingFrom = (id: ImportSourceId): FormatCapability =>
-  capabilityOf(SOURCES[id].format)
-
 /**
- * What a file written by ANOTHER application does not bring.
+ * What a file written by ANOTHER application does not bring — the STRUCTURAL half.
  *
- * Everything outside `interchange`, and that is the whole point of the split: `extended` is what
- * this studio writes beside the standard part and reads back from its own files — a montage that
- * never passed through here carries none of it, whatever the round trip says.
+ * Everything outside `interchange`: `extended` is what this studio writes beside the standard part
+ * and reads back from its own files. Which is why the import asks `montageRebuildsExtended` of the
+ * payload before saying any of it — a `.otioz` this studio wrote brings every one of them back.
  */
 export function lossesImportingFrom(id: ImportSourceId): CapabilityTrait[] {
-  const { interchange, extended, dropped } = capabilityImportingFrom(id)
+  const { interchange, extended, dropped } = capabilityOf(SOURCES[id].format)
   return [...extended, ...dropped].filter(trait => !interchange.includes(trait))
 }

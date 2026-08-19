@@ -1,4 +1,4 @@
-import { mkdir, rm, stat } from 'node:fs/promises'
+import { mkdir, rm } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { z } from 'zod'
 import type { Asset } from '@shared/domain/asset'
@@ -30,19 +30,24 @@ const montageImport = z.object({ id: z.string().min(1).max(64) })
 const MAX_TRIES = 64
 
 /**
- * A folder inside the project that does not exist yet, named after the bundle.
+ * A folder inside the project this side just MADE, named after the bundle.
  *
- * Fresh rather than reused, and that is what lets a stopped import take its folder away: unpacking
- * into one somebody already had would mean deleting their files to undo.
+ * Created here rather than tested for and made later: `mkdir` without `recursive` refuses a name
+ * somebody holds, which is the only answer a case-insensitive volume and a race cannot both slip
+ * through — and that refusal is what lets a stopped import remove the folder whole to undo.
  */
-async function freeFolder(root: string, wanted: string): Promise<string | null> {
+async function madeFolder(root: string, wanted: string): Promise<string | null> {
   for (let attempt = 1; attempt <= MAX_TRIES; attempt += 1) {
     const name = attempt === 1 ? wanted : `${wanted} ${attempt}`
     const absolute = await folderInsideProject(root, name)
     if (!absolute) return null
 
-    const found = await stat(absolute).catch(() => null)
-    if (!found) return name
+    const failure = await mkdir(absolute).then(
+      () => null,
+      (error: NodeJS.ErrnoException) => error,
+    )
+    if (!failure) return name
+    if (failure.code !== 'EEXIST') throw failure
   }
   return null
 }
@@ -78,11 +83,10 @@ export function registerMontageImportHandlers({
       // one in somebody's project for the moment it takes the reader to answer nothing.
       if (signal.aborted) return null
 
-      const folder = await freeFolder(root, safeFileName(stemOf(basename(archive)), 'montage'))
+      const folder = await madeFolder(root, safeFileName(stemOf(basename(archive)), 'montage'))
       if (!folder) return null
 
       const into = join(root, folder)
-      await mkdir(into, { recursive: true })
 
       try {
         const contents = await bundles().read({

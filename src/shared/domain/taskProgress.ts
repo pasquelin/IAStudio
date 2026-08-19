@@ -33,3 +33,27 @@ export type TaskProgress = { id: string; ratio: number }
 export function taskRatio(done: number, total: number): number {
   return total > 0 ? done / total : 0
 }
+
+/** The floor under a report, for the task small enough that a hundredth of it is a few bytes. */
+export const PROGRESS_STEP = 4 * 1024 * 1024
+
+/**
+ * A reporter that speaks every four mebibytes at most, and always for the last byte. A rush
+ * arrives a mebibyte at a time, and a gigabyte would push a thousand reports through two process
+ * boundaries to move a bar that shows a hundred states.
+ */
+export function steppedProgress(
+  total: number,
+  onStep: TaskWatch['onStep'],
+): (bytes: number) => void {
+  const step = Math.max(PROGRESS_STEP, Math.floor(total / 100))
+  let done = 0
+  let told = 0
+
+  return bytes => {
+    done += bytes
+    if (done - told < step && done < total) return
+    told = done
+    onStep?.(done, total)
+  }
+}

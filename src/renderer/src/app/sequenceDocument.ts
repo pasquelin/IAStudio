@@ -7,7 +7,9 @@ import { mediaLinkFrom, mediaLinkOf, mediaNameOf } from '@/engines/timeline/medi
 import {
   montageHoldsMore,
   otioTimelineOf,
-  sequenceFromOtio,
+  readSequenceFromOtio,
+  type OtioAssetIdOf,
+  type OtioRelink,
   type OtioSource,
 } from '@/engines/timeline/otioTimeline'
 import type { Clip, SequenceState } from '@/engines/timeline/timelineState'
@@ -156,7 +158,17 @@ export const forgetCarriedMetadata = (documentId: string): void => {
  * that is not a timeline, so a file the studio cannot make sense of opens on nothing rather than
  * failing — and `documentIo` refuses to write over one that did.
  */
-export function sequenceFromPayload(payload: unknown, documentId: string): SequenceState {
+export function sequenceFromPayload(
+  payload: unknown,
+  documentId: string,
+  /**
+   * How the clips find their media. Its default is the open project's catalogue, which is what a
+   * document read off disk needs; a bundle passes the entries it just unpacked. Taken here rather
+   * than read straight from `sequenceFromOtio` so that a montage arriving from ANYWHERE gets the
+   * same bookkeeping — the carried metadata kept, the losses said, the save refused.
+   */
+  linking?: { assetIdOf: OtioAssetIdOf; relink: OtioRelink },
+): SequenceState {
   incomplete.delete(documentId)
   holdsMore.delete(documentId)
   remember(payload, documentId)
@@ -172,25 +184,31 @@ export function sequenceFromPayload(payload: unknown, documentId: string): Seque
 
   const unlinked: string[] = []
   const folder = documentFolder(documentId)
-  const state = sequenceFromOtio(payload, url => {
-    const link = mediaLinkFrom(url)
-    const found = assetIdForLink(link, folder)
-    // Only a link that NAMES something: a clip drawing a live scene has no media and no url, and
-    // counting it here reported every scene of a montage as a file that had gone missing.
-    if (!found && mediaNameOf(link) !== '') unlinked.push(mediaNameOf(link))
-    return found
-  })
+  const { state, dropped } = readSequenceFromOtio(
+    payload,
+    linking?.assetIdOf ??
+      (url => {
+        const link = mediaLinkFrom(url)
+        const found = assetIdForLink(link, folder)
+        // Only a link that NAMES something: a clip drawing a live scene has no media and no url,
+        // and counting it here reported every scene of a montage as a file that had gone missing.
+        if (!found && mediaNameOf(link) !== '') unlinked.push(mediaNameOf(link))
+        return found
+      }),
+    linking?.relink,
+  )
 
-  // Said rather than swallowed, and the save is refused with it: a clip nothing could be found
-  // for is DROPPED, and a cut that silently opens shorter than it was written — then overwrites
-  // the file on the next ⌘S — is the worst answer available.
-  if (unlinked.length > 0) {
+  // The COUNT comes from the reader, which is the only side that knows a clip was let go of and
+  // for which of the three reasons; the names come from whoever could put one to it. Said rather
+  // than swallowed, and the save is refused with it: a cut that silently opens shorter than it
+  // was written — then overwrites the file on the next ⌘S — is the worst answer available.
+  if (dropped.length > 0) {
     incomplete.add(documentId)
     reportNotice(
       'document.load',
       i18next.t('documents.unlinkedClips', {
-        count: unlinked.length,
-        files: [...new Set(unlinked)].join(', '),
+        count: dropped.length,
+        files: [...new Set([...unlinked, ...dropped].filter(Boolean))].join(', '),
       }),
     )
   }

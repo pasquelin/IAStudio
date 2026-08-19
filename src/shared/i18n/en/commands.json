@@ -174,7 +174,7 @@
     },
     "montageImport": {
       "title": "Import an edit with its media (OTIOZ)…",
-      "help": "Opens an edit written by another application, rushes and all. The media are copied into the project and enter the catalogue, then the edit opens linked to them. What a foreign file does not bring — fades, gains, track heights — starts from its default."
+      "help": "Opens an edit written by another application, rushes and all. The media are copied into the project and enter the catalogue, then the edit opens linked to them. What the opened file does not bring is said as it opens, and starts from its default only there."
     },
     "sequenceMirror": {
       "title": "Return window",
