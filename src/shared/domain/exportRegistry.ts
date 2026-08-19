@@ -9,8 +9,8 @@
 
 import {
   capabilityOf,
+  carrying,
   lossesAgainst,
-  MATERIAL_TRAITS,
   type CapabilityDomain,
   type CapabilityTrait,
   type FormatCapability,
@@ -113,20 +113,15 @@ export type ExportTarget = {
  * `primitiveShape` is the one that reads oddly: a cube still arrives, as a mesh. What is dropped
  * is that it WAS a cube, which is the trait.
  */
-const GLTF_SCENE_EXPORT: FormatCapability = {
-  domain: 'scene',
-  interchange: [
-    'sceneTree',
-    'nodeName',
-    'nodePlacement',
-    'cameraLens',
-    'punctualLight',
-    'nodeMaterial',
-    'sceneAnimation',
-  ],
-  extended: [],
-  dropped: ['ambientLight', 'primitiveShape', 'cameraPath', 'cameraShot', 'sceneEnvironment'],
-}
+const GLTF_SCENE_EXPORT: FormatCapability = carrying('scene', [
+  'sceneTree',
+  'nodeName',
+  'nodePlacement',
+  'cameraLens',
+  'punctualLight',
+  'nodeMaterial',
+  'sceneAnimation',
+])
 
 /**
  * The same, minus every light: `USDZExporter` writes meshes, materials and cameras, and holds no
@@ -135,38 +130,19 @@ const GLTF_SCENE_EXPORT: FormatCapability = {
  * `sceneAnimation` is dropped for a second reason, and it is the studio's own: `sceneExport.ts`
  * hands the clips to `parseAsync` on the glTF path ALONE, so a USDZ arrives as a still pose.
  */
-const USDZ_SCENE_EXPORT: FormatCapability = {
-  domain: 'scene',
-  interchange: ['sceneTree', 'nodeName', 'nodePlacement', 'cameraLens', 'nodeMaterial'],
-  extended: [],
-  dropped: [
-    'punctualLight',
-    'ambientLight',
-    'primitiveShape',
-    'cameraPath',
-    'cameraShot',
-    'sceneAnimation',
-    'sceneEnvironment',
-  ],
-}
+const USDZ_SCENE_EXPORT: FormatCapability = carrying('scene', [
+  'sceneTree',
+  'nodeName',
+  'nodePlacement',
+  'cameraLens',
+  'nodeMaterial',
+])
 
 /**
  * Six square pictures. The grading is BAKED rather than carried — it survives as an appearance
  * and never as a setting — and everything the sun and the environment hold is left behind.
  */
-const SKY_FACES_EXPORT: FormatCapability = {
-  domain: 'sky',
-  interchange: ['skyImage', 'skyGrading'],
-  extended: [],
-  dropped: [
-    'sunAngles',
-    'sunIntensity',
-    'sunColour',
-    'environmentIntensity',
-    'backgroundVisible',
-    'skyGeneration',
-  ],
-}
+const SKY_FACES_EXPORT: FormatCapability = carrying('sky', ['skyImage', 'skyGrading'])
 
 const TRAIT_OF_CHANNEL: Record<PbrChannel, MaterialTrait> = {
   baseColor: 'colourMap',
@@ -210,12 +186,7 @@ function materialCapability(target: TextureExportTarget): FormatCapability {
   if (written.includes('normal')) interchange.push('normalGreenFlip')
   if (writesOneFile(target)) interchange.push(...MATERIAL_SETTINGS)
 
-  return {
-    domain: 'material',
-    interchange,
-    extended: [],
-    dropped: MATERIAL_TRAITS.filter(trait => !interchange.includes(trait)),
-  }
+  return carrying('material', interchange)
 }
 
 const TARGETS: Record<ExportTargetId, ExportTarget> = {
@@ -242,20 +213,7 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
     door: 'declared',
     destination: 'file',
     openedBy: ['Adobe Photoshop', 'GIMP', 'Preview', 'Affinity Photo'],
-    capability: {
-      domain: 'picture',
-      interchange: ['layers', 'blendMode', 'layerOpacity', 'layerTransform'],
-      extended: [],
-      dropped: [
-        'groups',
-        'layerMask',
-        'adjustmentLayer',
-        'liveText',
-        'clipping',
-        'layerLock',
-        'guides',
-      ],
-    },
+    capability: carrying('picture', ['layers', 'blendMode', 'layerOpacity', 'layerTransform']),
   },
   'scene.glb': {
     domain: 'scene',
@@ -424,28 +382,7 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
     door: 'import',
     destination: 'file',
     openedBy: ['DaVinci Resolve', 'Avid Media Composer', 'Adobe Premiere Pro'],
-    capability: {
-      domain: 'montage',
-      interchange: ['clipPlacement', 'clipTrim', 'trackOrder', 'mediaLink'],
-      extended: [],
-      dropped: [
-        'tracks',
-        'trackName',
-        'clipSpeed',
-        'trackAudible',
-        'clipFade',
-        'clipGain',
-        'clipLink',
-        'trackSwitches',
-        'trackLock',
-        'trackHeight',
-        'liveScene',
-        'exactTime',
-        'frameSize',
-        'sampleRate',
-        'editorState',
-      ],
-    },
+    capability: carrying('montage', ['clipPlacement', 'clipTrim', 'trackOrder', 'mediaLink']),
   },
   /**
    * What Final Cut reads, and what Premiere and Resolve take as an interchange. Unlike an EDL it
@@ -460,33 +397,15 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
     door: 'import',
     destination: 'file',
     openedBy: ['Final Cut Pro', 'DaVinci Resolve', 'Adobe Premiere Pro'],
-    capability: {
-      domain: 'montage',
-      interchange: [
-        'tracks',
-        'trackOrder',
-        'clipPlacement',
-        'clipTrim',
-        'mediaLink',
-        'trackAudible',
-        'frameSize',
-      ],
-      extended: [],
-      dropped: [
-        'trackName',
-        'clipSpeed',
-        'clipFade',
-        'clipGain',
-        'clipLink',
-        'trackSwitches',
-        'trackLock',
-        'trackHeight',
-        'liveScene',
-        'exactTime',
-        'sampleRate',
-        'editorState',
-      ],
-    },
+    capability: carrying('montage', [
+      'tracks',
+      'trackOrder',
+      'clipPlacement',
+      'clipTrim',
+      'mediaLink',
+      'trackAudible',
+      'frameSize',
+    ]),
   },
 }
 

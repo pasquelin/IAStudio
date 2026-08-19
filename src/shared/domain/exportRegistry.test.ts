@@ -14,6 +14,8 @@ const traitsOf = (id: ExportTargetId): CapabilityTrait[] => {
 }
 
 describe('the table itself', () => {
+  // Every capability here comes from `carrying` now, so these two cannot fail on what is there
+  // today: what they still catch is a capability somebody writes out by hand later.
   it('classes every trait of its section exactly once, so none slips in unclassed', () => {
     for (const id of EXPORT_TARGET_IDS) {
       const classed = traitsOf(id)
