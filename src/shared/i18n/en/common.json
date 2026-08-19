@@ -27,19 +27,20 @@
     "cancel": "Cancel job"
   },
   "exports": {
-    "running_one": "{{count, number}} export",
-    "running_many": "{{count, number}} exports",
-    "running_other": "{{count, number}} exports",
-    "open": "Show exports",
-    "openHint": "Opens the list of exports being written",
-    "cancel": "Stop this export"
+    "running_one": "{{count, number}} transfer",
+    "running_many": "{{count, number}} transfers",
+    "running_other": "{{count, number}} transfers",
+    "open": "Show transfers",
+    "openHint": "Opens the list of transfers in progress",
+    "cancel": "Stop this transfer"
   },
   "dialog": {
     "allMedia": "All media",
     "video": "Video",
     "audio": "Audio",
     "image": "Image",
-    "mesh": "3D model"
+    "mesh": "3D model",
+    "bundle": "Edit with its media"
   },
   "sorts": {
     "relevance": "Quality: highest first",

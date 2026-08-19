@@ -299,12 +299,24 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     return []
   }
 
-  /** Nothing at all where the space sends nothing out: an empty « Export » row promises one. */
+  /**
+   * What the studio can read back. A submenu of ONE today, and it stays a submenu: the row is
+   * about to gain a sibling per format, and « Importer… » naming a montage would then have lied.
+   */
+  const importMenu = (): MenuItemConstructorOptions[] => [
+    {
+      label: t.menu.import,
+      submenu: [commandItem('montage.import', t.menu.importBundle)],
+    },
+  ]
+
+  /**
+   * Nothing at all where the space sends nothing out: an empty « Export » row promises one.
+   * No separator of its own — the import above it opens the group, and it is always there.
+   */
   const exportMenu = (): MenuItemConstructorOptions[] => {
     const items = exportSubmenu()
-    return items.length === 0
-      ? []
-      : [{ type: 'separator' }, { label: t.menu.export, submenu: items }]
+    return items.length === 0 ? [] : [{ label: t.menu.export, submenu: items }]
   }
 
   /**
@@ -585,6 +597,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           accelerator: shortcut('document.saveAs'),
           click: () => actions.runCommand('document.saveAs'),
         },
+        { type: 'separator' },
+        ...importMenu(),
         ...exportMenu(),
         { type: 'separator' },
         ...fileMenuSettings,

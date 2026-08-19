@@ -75,6 +75,7 @@ export type CommandId =
   | 'sequence.export'
   | 'sequence.exportCut'
   | 'sequence.exportBundle'
+  | 'montage.import'
   | 'sequence.mirror'
   | 'sequence.split'
   | 'sequence.delete'
@@ -224,6 +225,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.documentSaveAs.title',
     helpKey: 'commands.documentSaveAs.help',
     defaultBinding: 'Shift+Meta+KeyS',
+  }),
+  // `global` rather than `sequence`, unlike the two exports it mirrors: an import has no montage
+  // in front to belong to — it is what MAKES one.
+  command({
+    id: 'montage.import',
+    scope: 'global',
+    titleKey: 'commands.montageImport.title',
+    helpKey: 'commands.montageImport.help',
+    defaultBinding: null,
   }),
   command({
     id: 'layout.reset',

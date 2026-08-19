@@ -30,7 +30,7 @@ describe('the bundle client', () => {
     const client = createBundleClient(port)
 
     const writing = client.write(JOB)
-    port.answer({ id: 1, kind: 'settled', written: true })
+    port.answer({ id: 1, kind: 'wrote', written: true })
 
     await expect(writing).resolves.toBe(true)
   })
@@ -46,8 +46,8 @@ describe('the bundle client', () => {
 
     port.answer({ id: 1, kind: 'progress', done: 512, total: 2048 })
     port.answer({ id: 2, kind: 'progress', done: 8, total: 8 })
-    port.answer({ id: 1, kind: 'settled', written: true })
-    port.answer({ id: 2, kind: 'settled', written: true })
+    port.answer({ id: 1, kind: 'wrote', written: true })
+    port.answer({ id: 2, kind: 'wrote', written: true })
 
     await Promise.all([first, second])
     expect(mine).toEqual([512])
@@ -60,7 +60,7 @@ describe('the bundle client', () => {
     const client = createBundleClient(port)
 
     const writing = client.write(JOB)
-    port.answer({ id: 1, kind: 'settled', written: false })
+    port.answer({ id: 1, kind: 'wrote', written: false })
 
     await expect(writing).resolves.toBe(false)
   })
@@ -76,7 +76,7 @@ describe('the bundle client', () => {
     expect(port.posted.at(-1)).toEqual({ id: 1, cancel: true })
 
     // Still the worker's answer that settles it: it is the side holding the half-written file.
-    port.answer({ id: 1, kind: 'settled', written: false })
+    port.answer({ id: 1, kind: 'wrote', written: false })
     await expect(writing).resolves.toBe(false)
   })
 

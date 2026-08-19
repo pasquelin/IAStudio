@@ -123,6 +123,7 @@
       "sequence.mirror": "La fenêtre de retour n’a pas pu s’ouvrir",
       "explorer.open": "Le studio n’a pas pu déterminer ce qu’est ce fichier",
       "sequence.export": "L’export de la séquence a échoué",
+      "sequence.import": "L’import du montage a échoué",
       "document.export": "L’export du document dans le projet a échoué",
       "scene": {
         "render": "Le rendu vidéo a échoué"

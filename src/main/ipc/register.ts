@@ -28,6 +28,7 @@ import { registerSceneHandlers } from '@main/scene/export'
 import { registerExportHandlers } from '@main/export/folder'
 import { registerMontageHandlers } from '@main/export/montage'
 import { createRunningExports, registerExportCancelHandler } from '@main/export/runningExports'
+import { registerMontageImportHandlers } from '@main/import/montageImport'
 import { registerRenderHandlers } from '@main/render/handlers'
 import { registerUpdateHandlers } from '@main/update/handlers'
 import { registerFileInfoWindow } from '@main/window/fileInfo'
@@ -114,6 +115,8 @@ export function registerIpc(services: Services): void {
   // stop button reaches it by the same name. Built here so neither handler owns the other's door.
   const running = createRunningExports()
   registerMontageHandlers({ ...services, running })
+  // The same table both ways: an unpack is as long as a pack, and the stop button is one button.
+  registerMontageImportHandlers({ ...services, running })
   registerExportCancelHandler(running)
   registerRenderHandlers({
     ...services,

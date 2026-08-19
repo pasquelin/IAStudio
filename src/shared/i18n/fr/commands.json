@@ -172,6 +172,10 @@
       "title": "Exporter le montage et ses médias (OTIOZ)…",
       "help": "Écrit le même montage avec les médias qu’il utilise à l’intérieur du fichier. C’est celui à donner à quelqu’un d’autre, ou à ouvrir dans DaVinci Resolve, qui retrouve alors les rushes tout seul au lieu de les demander un par un."
     },
+    "montageImport": {
+      "title": "Importer un montage et ses médias (OTIOZ)…",
+      "help": "Ouvre un montage écrit par un autre logiciel, avec ses rushes. Les médias sont copiés dans le projet et entrent au catalogue, puis le montage s’ouvre relié à eux. Ce qu’un fichier étranger n’apporte pas — les fondus, les gains, les hauteurs de piste — repart de sa valeur par défaut."
+    },
     "sequenceMirror": {
       "title": "Fenêtre de retour",
       "help": "Ouvre le montage dans une fenêtre à part, à poser sur un second écran. Elle suit le studio image par image, sans le son, et se ferme comme une fenêtre ordinaire."

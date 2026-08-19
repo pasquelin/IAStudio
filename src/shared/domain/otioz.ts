@@ -16,23 +16,42 @@ import type { OtioTimeline, OtioTrack, OtioTrackItem } from './otio'
 /** The exact contents of `version.txt`, with no trailing newline — read off a reference bundle. */
 export const OTIOZ_VERSION = '1.0.0'
 
+/** The only layout this studio knows how to unpack. A `2.x` bundle is refused, never guessed at. */
+export const OTIOZ_MAJOR = 1
+
 export const OTIOZ_VERSION_PATH = 'version.txt'
 export const OTIOZ_CONTENT_PATH = 'content.otio'
 export const OTIOZ_MEDIA_FOLDER = 'media'
 
+/** The major a `version.txt` spells, or `NaN` for anything that is not a version at all. */
+export function otiozMajorOf(version: string): number {
+  return Number.parseInt(version.trim().split('.')[0] ?? '', 10)
+}
+
+/**
+ * The bare name a bundle entry gives a medium, or nothing when the entry is not one at all.
+ *
+ * Says only what the entry CLAIMS to be — `isBundleEntry` is what says whether the claim is safe.
+ * The two are apart because a reader answers them differently: an entry that is no medium is
+ * another application's sidecar and is left alone, one that climbs out is hostile.
+ */
+export function mediaNameOf(entry: string): string | null {
+  return entry.startsWith(`${OTIOZ_MEDIA_FOLDER}/`)
+    ? entry.slice(OTIOZ_MEDIA_FOLDER.length + 1)
+    : null
+}
+
 /**
  * Whether a name is an entry this bundle would write — `media/` and one plain segment.
  *
- * Checked on the WRITING side, where the names arrive from the sandboxed one: an entry is a path
- * inside an archive, and `media/../../.bashrc` makes a zip-slip file. Emitting one would be worse
- * than opening one, the studio being what hands it to somebody else.
+ * Checked on BOTH sides. Writing, because the names arrive from the sandboxed one and emitting a
+ * zip-slip file is worse than opening one. Reading, because an entry is a path an archive from
+ * anywhere gets to name, and `media/../../.bashrc` unpacked is the same file by the other door.
  */
 export function isBundleEntry(entry: string): boolean {
-  const name = entry.startsWith(`${OTIOZ_MEDIA_FOLDER}/`)
-    ? entry.slice(OTIOZ_MEDIA_FOLDER.length + 1)
-    : ''
+  const name = mediaNameOf(entry)
 
-  if (name === '' || name === '.' || name === '..') return false
+  if (name === null || name === '' || name === '.' || name === '..') return false
   // Spelled by code point rather than as a range inside a regex: a control character written into
   // a source does not survive being edited, and the guard would quietly stop covering them.
   return ![...name].some(letter => letter === '/' || letter === '\\' || letter.charCodeAt(0) < 32)

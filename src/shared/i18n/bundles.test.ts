@@ -824,6 +824,10 @@ describe('the translation bundles', () => {
         'one that fits a tile — `docs/fr/manuel/12-espace-textures.md` says so in as many words. ' +
         'Nothing conceptual separates them: a product call, not a translation one',
     },
+    import: {
+      reads: ['importer', 'import'],
+      separates: 'the File menu, whose rows are verbs, and the journal filter, whose are nouns',
+    },
     move: {
       reads: ['déplacer', 'déplacement'],
       separates: 'the scene command, and the canvas tool, whose palette names its tools as nouns',

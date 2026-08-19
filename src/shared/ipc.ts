@@ -226,6 +226,7 @@ export type Channels = {
 
   sceneExport: 'scene:export'
   montageExport: 'montage:export'
+  montageImport: 'montage:import'
   renderStart: 'render:start'
   renderFrame: 'render:frame'
   renderFinish: 'render:finish'
@@ -408,6 +409,7 @@ export const CHANNELS: Channels = {
 
   sceneExport: 'scene:export',
   montageExport: 'montage:export',
+  montageImport: 'montage:import',
   renderStart: 'render:start',
   renderFrame: 'render:frame',
   renderFinish: 'render:finish',
@@ -558,6 +560,22 @@ export type MontageExportRequest = {
   media?: readonly { source: string; entry: string }[]
 }
 
+/**
+ * What came out of a bundle the studio was asked to read.
+ *
+ * The cut travels as TEXT and the media as catalogue ids — never as bytes: the archive can be
+ * gigabytes, and this side has already copied every medium into the project and given it a row.
+ * The window relinks each clip by the entry its `target_url` names, and composes the document.
+ */
+export type MontageImportResult = {
+  /** `content.otio`, verbatim. Parsed by the window, which is the side that reads a timeline. */
+  content: string
+  /** Each medium that landed, by the entry the cut names it under and the row it became. */
+  media: readonly { entry: string; assetId: string }[]
+  /** Where they landed, relative to the project — what the explorer will show them under. */
+  folder: string
+}
+
 /** One file of an export, already encoded by the renderer that drew it. */
 export type ExportedFile = {
   /** No separator and no extension: it is joined to a folder this process chose. */
@@ -607,6 +625,8 @@ export type LogScope =
   | 'scene.export'
   | 'scene.render'
   | 'sequence.export'
+  /** Reading a montage back from a bundle another application wrote. */
+  | 'sequence.import'
   /** An export asked for from outside, whichever space rendered it. */
   | 'document.export'
   | 'texture.map'
@@ -681,6 +701,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'scene.export',
   'scene.render',
   'sequence.export',
+  'sequence.import',
   'document.export',
   'texture.map',
   'texture.channel',
@@ -1426,6 +1447,15 @@ export type StudioBridge = {
      * below does for the picture, this does for the edit. Answers the file name, never the path.
      */
     export: (request: MontageExportRequest) => Promise<string | null>
+    /**
+     * Reads a bundle back: opens the picker, unpacks the media into the project and gives each a
+     * catalogue row, then answers the cut and what it relinks to. `null` when the picker was
+     * dismissed, no project is open, or the read was stopped.
+     *
+     * The id is minted by the window, as an export's is, and for the same reason: unpacking is
+     * minutes of disk, and a name only handed back at the end would leave them unstoppable.
+     */
+    import: (id: string) => Promise<MontageImportResult | null>
   }
   /**
    * Rendering a scene to a film, in three steps: a session is opened once the save dialog has

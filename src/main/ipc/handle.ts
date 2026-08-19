@@ -135,6 +135,7 @@ type ChannelMethod = {
 
   [CHANNELS.sceneExport]: StudioBridge['scene']['export']
   [CHANNELS.montageExport]: StudioBridge['montage']['export']
+  [CHANNELS.montageImport]: StudioBridge['montage']['import']
 
   [CHANNELS.renderStart]: StudioBridge['render']['start']
   [CHANNELS.renderFrame]: StudioBridge['render']['frame']

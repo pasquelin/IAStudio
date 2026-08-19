@@ -24,7 +24,7 @@ describe('the exports indicator', () => {
     showing({ id: 'a', label: 'Coucher', ratio: 0.4 }, { id: 'b', label: 'Bande', ratio: 0.8 })
     render(<ExportsStatus />)
 
-    expect(screen.getByRole('button')).toHaveTextContent('2 exports')
+    expect(screen.getByRole('button')).toHaveTextContent('2 transferts')
     // Off `textContent`: the separator is U+00A0, and a matcher that normalises it would accept
     // a hand-written space.
     expect(screen.getByRole('button').textContent).toContain('60 %')
@@ -36,7 +36,7 @@ describe('the exports indicator', () => {
 
     expect(screen.getByRole('button')).toHaveAttribute(
       'data-tooltip-content',
-      'Ouvre la liste des exports en cours d’écriture',
+      'Ouvre la liste des transferts en cours',
     )
   })
 
@@ -51,7 +51,7 @@ describe('the exports indicator', () => {
     render(<ExportsStatus />)
 
     await userEvent.click(screen.getByRole('button'))
-    const stops = screen.getAllByRole('button', { name: 'Interrompre l’export' })
+    const stops = screen.getAllByRole('button', { name: 'Interrompre ce transfert' })
     await userEvent.click(stops[1] as HTMLElement)
 
     expect(cancel).toHaveBeenCalledTimes(1)

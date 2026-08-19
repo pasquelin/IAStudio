@@ -71,6 +71,17 @@ export type OtioWriteOptions = {
  */
 export type OtioAssetIdOf = (targetUrl: string) => string
 
+/**
+ * Which side names a clip's source.
+ *
+ * `catalogue` trusts the id the studio metadata carries and falls back to the url — right for a
+ * file this project wrote. `link` reads the URL and nothing else, which is the only honest answer
+ * for a file from another machine: its ids name rows this catalogue has never held.
+ */
+export type OtioRelink = 'catalogue' | 'link'
+
+type Relinking = { assetIdOf: OtioAssetIdOf; relink: OtioRelink }
+
 const timeAt = (time: Us, fps: number): OtioRationalTime => ({
   OTIO_SCHEMA: 'RationalTime.1',
   rate: fps,
@@ -258,13 +269,15 @@ function speedFrom(raw: Record<string, unknown>): number {
 function assetIdFrom(
   raw: Record<string, unknown>,
   studio: Record<string, unknown>,
-  assetIdOf: OtioAssetIdOf,
+  { assetIdOf, relink }: Relinking,
 ): string {
-  const known = readString(studio, 'assetId', '')
-  if (known) return known
-  // A live scene has no media to relink, and its clip carries an EMPTY `assetId`: asked anyway,
-  // the resolver reported every scene of a montage as a media it could not find.
-  if (readString(studio, 'sceneId', '')) return ''
+  if (relink === 'catalogue') {
+    const known = readString(studio, 'assetId', '')
+    if (known) return known
+    // A live scene has no media to relink, and its clip carries an EMPTY `assetId`: asked anyway,
+    // the resolver reported every scene of a montage as a media it could not find.
+    if (readString(studio, 'sceneId', '')) return ''
+  }
 
   const reference = raw.media_reference
   return isRecord(reference) ? assetIdOf(readString(reference, 'target_url', '')) : ''
@@ -275,14 +288,16 @@ function clipFrom(
   standard: { start: Us; duration: Us },
   cursor: Us,
   frame: Us,
-  assetIdOf: OtioAssetIdOf,
+  linking: Relinking,
 ): Clip | null {
   const studio = otioStudioMetadata(raw)
   const duration = refined(studio, 'duration', standard.duration, frame)
   if (duration <= 0) return null
 
-  const sceneId = readString(studio, 'sceneId', '')
-  const assetId = assetIdFrom(raw, studio, assetIdOf)
+  // Only when the ids are this project's own: a scene id from another machine names a document
+  // nobody here has, and a clip kept on one draws nothing while claiming to.
+  const sceneId = linking.relink === 'catalogue' ? readString(studio, 'sceneId', '') : ''
+  const assetId = assetIdFrom(raw, studio, linking)
   // The same refusal `parseSequence` makes: a clip with no source can be neither drawn nor played.
   if (!assetId && !sceneId) return null
 
@@ -303,7 +318,7 @@ function clipFrom(
 }
 
 /** A gap is not read back as anything: a hole is what the next clip's `start` already says. */
-function clipsFrom(children: unknown, frame: Us, assetIdOf: OtioAssetIdOf): Clip[] {
+function clipsFrom(children: unknown, frame: Us, linking: Relinking): Clip[] {
   if (!Array.isArray(children)) return []
 
   const clips: Clip[] = []
@@ -313,7 +328,7 @@ function clipsFrom(children: unknown, frame: Us, assetIdOf: OtioAssetIdOf): Clip
 
     const standard = rangeFrom(raw.source_range, frame)
     const clip =
-      raw.OTIO_SCHEMA === 'Clip.1' ? clipFrom(raw, standard, cursor, frame, assetIdOf) : null
+      raw.OTIO_SCHEMA === 'Clip.1' ? clipFrom(raw, standard, cursor, frame, linking) : null
     if (clip) clips.push(clip)
     // A gap, or a clip nothing could name a source for: both only move the head along.
     cursor = clip ? clipEnd(clip) : cursor + standard.duration
@@ -325,7 +340,7 @@ function trackFrom(
   raw: unknown,
   row: number,
   frame: Us,
-  assetIdOf: OtioAssetIdOf,
+  linking: Relinking,
   taken: readonly Track[],
 ): Track | null {
   if (!isRecord(raw) || raw.OTIO_SCHEMA !== 'Track.1') return null
@@ -348,7 +363,7 @@ function trackFrom(
     locked: readBoolean(studio, 'locked', false),
   })
 
-  return clipsFrom(raw.children, frame, assetIdOf).reduce(
+  return clipsFrom(raw.children, frame, linking).reduce(
     (current, clip) => insertClip(current, clip, newClipId()),
     track,
   )
@@ -469,7 +484,9 @@ function composedOver(item: Record<string, unknown>, composes?: 'range' | 'enabl
 export function sequenceFromOtio(
   content: unknown,
   assetIdOf: OtioAssetIdOf = () => '',
+  relink: OtioRelink = 'catalogue',
 ): SequenceState {
+  const linking: Relinking = { assetIdOf, relink }
   if (!isOtioTimeline(content)) return EMPTY_SEQUENCE
   const stack = content.tracks
   if (!isRecord(stack) || !Array.isArray(stack.children)) return EMPTY_SEQUENCE
@@ -480,7 +497,7 @@ export function sequenceFromOtio(
   const audible: boolean[] = []
   // Reversed back: the stack is written bottom first, the studio holds its tracks top first.
   ;[...stack.children].reverse().forEach((raw, row) => {
-    const track = trackFrom(raw, row, frame, assetIdOf, tracks)
+    const track = trackFrom(raw, row, frame, linking, tracks)
     if (!track || !isRecord(raw)) return
     tracks.push(track)
     audible.push(readBoolean(raw, 'enabled', true))

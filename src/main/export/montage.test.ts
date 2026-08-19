@@ -5,9 +5,10 @@ import { unzipSync } from 'fflate'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { invoke, invokeFrom, openWindow, resetHandlers } from '@main/ipc/testHarness'
-import type { BundleClient } from './bundleClient'
+import type { BundleClient } from '@main/bundle/bundleClient'
+import { readOtiozFile } from '@main/bundle/otiozRead'
+import { writeOtiozFile } from '@main/bundle/otiozWrite'
 import { registerMontageHandlers } from './montage'
-import { writeOtiozFile } from './otiozFile'
 import { createRunningExports, registerExportCancelHandler } from './runningExports'
 
 vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
@@ -20,6 +21,7 @@ const CONTENT = '{"OTIO_SCHEMA":"Timeline.1"}'
  */
 const inProcessBundles = (): BundleClient => ({
   write: ({ path, content, media, ...watch }) => writeOtiozFile(path, { content, media }, watch),
+  read: ({ path, into, ...watch }) => readOtiozFile(path, into, watch),
 })
 
 describe('the montage export handler', () => {

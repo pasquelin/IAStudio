@@ -66,8 +66,8 @@ import {
   runProcess,
 } from './media/runner'
 import { openPeaksProcess } from './media/peaksProcess'
-import { openBundleProcess } from './export/bundleProcess'
-import type { BundleClient } from './export/bundleClient'
+import { openBundleProcess } from './bundle/bundleProcess'
+import type { BundleClient } from './bundle/bundleClient'
 import type { PeaksClient } from './media/peaksClient'
 import { catchUpMedia } from './media/catchUp'
 import { createMediaService, type MediaService } from './media/service'
@@ -213,8 +213,10 @@ export type Services = {
   pickSavePath: (name: string, extension: string) => Promise<string | null>
   /** Where a folder the studio is about to fill goes — an exported texture is several files. */
   pickFolder: () => Promise<string | null>
-  /** The process that packs a montage bundle, forked on the first one asked for. */
+  /** The process that packs and unpacks a montage bundle, forked on the first one asked for. */
   bundles: () => BundleClient
+  /** Where a bundle is read FROM. A file the user pointed at, so nothing confines it. */
+  pickImportPath: (extension: string) => Promise<string | null>
   /** Where the open project sits, or nothing when none is — what confines an export by name. */
   projectPath: () => string | null
   /** Shows a file in the OS file manager, so the path never leaves this process. */
@@ -322,6 +324,14 @@ function pickSavePath(name: string, extension: string): Promise<string | null> {
     defaultPath: `${name}${extension}`,
     filters: [{ name: extension.slice(1).toUpperCase(), extensions: [extension.slice(1)] }],
   })
+}
+
+/** The one file a reader accepts, named in the language the dialog opens in. */
+function pickImportPath(extension: string, language: Language): Promise<string | null> {
+  return openDialog({
+    properties: ['openFile'],
+    filters: [{ name: TRANSLATIONS[language].dialog.bundle, extensions: [extension.slice(1)] }],
+  }).then(chosen => chosen[0] ?? null)
 }
 
 /** Translated here, where the dialog opens: a native picker shows these names as they are. */
@@ -1397,6 +1407,7 @@ export function createServices(settings: SettingsStore): Services {
       (bundles ??= openBundleProcess(() => {
         bundles = null
       })),
+    pickImportPath: extension => pickImportPath(extension, language()),
     reveal: file => shell.showItemInFolder(file),
     exists: existsSync,
     folder,

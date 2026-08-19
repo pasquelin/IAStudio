@@ -148,6 +148,8 @@
     "mesh": "Mesh",
     "light": "Light",
     "object": "Object",
+    "import": "Import",
+    "importBundle": "Edit with its media (OTIOZ)…",
     "export": "Export",
     "exportVideo": "Video…",
     "exportCut": "Edit (OTIO)…",

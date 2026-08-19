@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { unzipSync } from 'fflate'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { ExportWatch } from '@shared/domain/exportProgress'
-import { MissingMediumError, writeOtiozFile } from './otiozFile'
+import { MissingMediumError, writeOtiozFile } from './otiozWrite'
 
 let folder: string
 

@@ -148,6 +148,8 @@
     "mesh": "Maille",
     "light": "Lumière",
     "object": "Objet",
+    "import": "Importer",
+    "importBundle": "Montage et médias (OTIOZ)…",
     "export": "Exporter",
     "exportVideo": "Vidéo…",
     "exportCut": "Montage (OTIO)…",
