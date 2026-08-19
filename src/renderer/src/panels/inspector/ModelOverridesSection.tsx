@@ -27,7 +27,6 @@ export function ModelOverridesSection({ textures, onChange }: ModelOverridesSect
       <TextureSlotFields
         slots={textures ?? {}}
         emptyLabel={t('inspector.fileTexture')}
-        emptyHint={t('inspector.fileTextureHint')}
         onChange={(slot, assetId) => {
           const rest = { ...textures }
           delete rest[slot]

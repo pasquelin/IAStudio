@@ -1,5 +1,5 @@
 import { mdiChevronDown } from '@mdi/js'
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { CONTROL, FIELD_LABEL, FIELD_ROW, NATIVE_SELECT } from './styles'
 import { UiIcon } from './UiIcon'
@@ -27,10 +27,9 @@ export type SelectFieldProps<V extends string> = {
    */
   hint?: Record<string, string>
   disabled?: boolean
-  /**
-   * Buttons that follow the select — adding a rail, browsing for an asset. OUTSIDE the wrapping
-   * label, or pressing one would open the list it sits beside.
-   */
+  /** Between the label and the select — the thumbnail of what a link field points at. */
+  leading?: ReactNode
+  /** Buttons that follow the select: adding a rail, browsing for an asset, clearing a slot. */
   actions?: ReactNode
   /** The handle the MCP steers this field by. Never a translated word — see `pilotable.test.ts`. */
   scId?: string
@@ -54,53 +53,57 @@ export function SelectField<V extends string>({
   layout = 'row',
   hint,
   disabled,
+  leading,
   actions,
   scId,
   className,
 }: SelectFieldProps<V>) {
+  // Bound by `htmlFor` rather than by wrapping, so a thumbnail can stand between the name and the
+  // control: a label that WRAPS them would make pressing the picture open the list beside it.
+  const id = useId()
+
   return (
     <div
       className={cn(layout === 'bar' ? 'relative flex min-w-0 items-center' : FIELD_ROW, className)}
     >
-      {/* `contents` so the label wraps the pair without becoming a box of its own: the row is the
-          flex container, and the actions below have to sit in it rather than inside the label. */}
-      <label className="contents">
-        {/* Titled because the column truncates, and it is the wrapping label that names the
-            select — an `aria-label` over it would replace the visible name (WCAG 2.5.3). */}
-        {layout === 'row' && (
-          <span title={label} className={FIELD_LABEL}>
-            {label}
-          </span>
-        )}
+      {/* Titled because the column truncates, and it is this label that names the select — an
+          `aria-label` over it would replace the visible name (WCAG 2.5.3). */}
+      {layout === 'row' && (
+        <label htmlFor={id} title={label} className={FIELD_LABEL}>
+          {label}
+        </label>
+      )}
 
-        <select
-          // Only where no visible name is drawn, for the reason above.
-          aria-label={layout === 'row' ? undefined : label}
-          data-sc={scId && `field:${scId}`}
-          value={value}
-          disabled={disabled}
-          onChange={event => {
-            const picked = options.find(option => option.value === event.target.value)
-            if (picked) onChange(picked.value)
-          }}
-          {...hint}
-          className={cn(
-            layout === 'bar'
-              ? cn(CONTROL, 'w-full cursor-pointer appearance-none border-none pr-6 pl-2')
-              : NATIVE_SELECT,
-            'min-w-0 flex-1',
-            // The unset entry reads quieter than a value, which is how a filter bar shows at a
-            // glance which of its facets are actually filtering.
-            layout === 'bar' && value === '' && 'text-muted',
-          )}
-        >
-          {options.map(option => (
-            <option key={option.value} value={option.value} disabled={option.disabled}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      {leading}
+
+      <select
+        id={id}
+        // Only where no visible name is drawn, for the reason above.
+        aria-label={layout === 'row' ? undefined : label}
+        data-sc={scId && `field:${scId}`}
+        value={value}
+        disabled={disabled}
+        onChange={event => {
+          const picked = options.find(option => option.value === event.target.value)
+          if (picked) onChange(picked.value)
+        }}
+        {...hint}
+        className={cn(
+          layout === 'bar'
+            ? cn(CONTROL, 'w-full cursor-pointer appearance-none border-none pr-6 pl-2')
+            : NATIVE_SELECT,
+          'min-w-0 flex-1',
+          // The unset entry reads quieter than a value, which is how a filter bar shows at a
+          // glance which of its facets are actually filtering.
+          layout === 'bar' && value === '' && 'text-muted',
+        )}
+      >
+        {options.map(option => (
+          <option key={option.value} value={option.value} disabled={option.disabled}>
+            {option.label}
+          </option>
+        ))}
+      </select>
 
       {/* Only the closed control is restyled; the open list stays the platform's, which is the
           whole reason a `<select>` is used inside a panel too narrow for a menu of its own. */}

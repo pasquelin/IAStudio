@@ -120,14 +120,12 @@ describe('a label the column is too narrow for', () => {
   })
 
   /**
-   * And on `Row`, which is the third family: a field that hands its whole line over to it — a
-   * texture slot does — leaves this glob, since it no longer names `FIELD_LABEL` anywhere. The
-   * rule has to be held where the truncation now happens, or it is held nowhere at all.
-   *
-   * Both lines: the name is tipped by `Row` itself, the kind under it was not, and « Occlusion
-   * ambian… » is exactly the case the rule was written for.
+   * And on `Row`, which is the third family — the LISTS now, no longer the fields: `LinkField`
+   * took its name back into the shared label column, so a texture slot is held by the rule above
+   * again. What is left here is the outliner, the layer stack and the model's own maps, where two
+   * lines of text still truncate inside one row.
    */
-  it('is reachable on both lines of `Row`, which fields now delegate to', () => {
+  it('is reachable on both lines of `Row`, which every list of the studio draws', () => {
     expect(rowSource).toContain('title={subtitle}')
     expect(rowSource).toContain('tip(title')
   })

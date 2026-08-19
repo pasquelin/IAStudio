@@ -87,15 +87,18 @@ describe('SelectField', () => {
   })
 
   /**
-   * The button follows the select inside the row but OUTSIDE the label: wrapped by it, pressing
-   * « add a rail » would open the list of rails it stands beside.
+   * The label BINDS the select rather than wrapping it, so what stands beside the control is not
+   * swallowed by it: wrapped, pressing « add a rail » would open the list of rails next to it.
    */
-  it('leaves an action beside the select out of what the label names', () => {
-    renderField({ actions: <button type="button">Add a rail</button> })
+  it('leaves what stands beside the select out of what the label names', () => {
+    renderField({
+      leading: <button type="button">Open</button>,
+      actions: <button type="button">Add a rail</button>,
+    })
 
-    const action = screen.getByRole('button', { name: 'Add a rail' })
-
-    expect(action).toBeInTheDocument()
-    expect(action.closest('label')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Open' }).closest('label')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Add a rail' }).closest('label')).toBeNull()
+    // And the binding still holds, which is what makes the visible word the accessible name.
+    expect(screen.getByLabelText('Blend mode')).toBe(screen.getByRole('combobox'))
   })
 })
