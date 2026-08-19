@@ -8,7 +8,7 @@
  */
 
 /** The worker, reduced to what a client needs — injected, since forking needs a live app. */
-export type ProcessPort<Message, Response> = {
+type ProcessPort<Message, Response> = {
   postMessage: (message: Message) => void
   onMessage: (listener: (response: Response) => void) => void
   /** The process died. Whatever it was asked will never be answered. */
@@ -16,12 +16,12 @@ export type ProcessPort<Message, Response> = {
 }
 
 /** What one response means. A worker says one of exactly these three things about a run. */
-export type ProcessReading<Result> =
+type ProcessReading<Result> =
   | { kind: 'progress'; done: number; total: number }
   | { kind: 'settled'; result: Result }
   | { kind: 'failed'; error: string }
 
-export type ProcessWatch = {
+type ProcessWatch = {
   onStep?: (done: number, total: number) => void
   signal?: AbortSignal
 }

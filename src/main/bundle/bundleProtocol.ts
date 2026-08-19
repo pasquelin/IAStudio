@@ -28,7 +28,7 @@ export type BundleReadJob = {
   into: string
 }
 
-export type BundleJob = BundleWriteJob | BundleReadJob
+type BundleJob = BundleWriteJob | BundleReadJob
 
 type BundleRequest = BundleJob & { id: number }
 
