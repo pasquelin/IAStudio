@@ -849,8 +849,12 @@ at a time.
 > by you, the block goes. **Interrupted by the playhead — because you started the band or moved the
 > head — the block STAYS**, laid on the character. That is not an accident: it is what turns a
 > convincing try into kept work. **And nothing takes it back after that**: the next ▶ lays its try
-> IN ADDITION, on the same spot — the character then plays both at once, in equal parts. Drag the
-> blocks apart on the sub-track to see them one after the other.
+> IN ADDITION, on the same spot.
+
+**The preview only ever shows the last try, on its own.** It is the BAND that afterwards shares the
+pose out between the blocks overlapping under the playhead: two tries stacked on the same spot
+average out, and the character does both by halves. Drag them apart on the sub-track — a block
+moves with the mouse — to see them one after the other.
 
 **The ▶ is off while no model is selected in the scene**: there is then nothing to play a motion
 on. **A model is enough — it does not have to be animatable yet**; what it can really play is what

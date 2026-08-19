@@ -194,6 +194,45 @@ describe('the animations panel', () => {
     expect(blocksOf(two.id)).toHaveLength(1)
   })
 
+  // A kept block belongs to the scene, and a surface that watches it again does not hand it back:
+  // the Inspector's ▶ writes a preview on a block ALREADY laid, and this panel must not read that
+  // as its own — it is the manual's « nothing takes it back after that ».
+  it('never takes back a kept block another surface has put the preview on again', async () => {
+    withCharacter(['NlaTrack', 'run'])
+    render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('run')).toBeInTheDocument())
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Jouer sur le personnage' })[0]!)
+    const kept = blocksOf()[0]!
+    act(() => useSceneViews.getState().setPlaying(DOCUMENT, true))
+    act(() =>
+      useSceneViews
+        .getState()
+        .setPreview(DOCUMENT, { nodeId: 'perso', clipId: kept.id, at: 0, playing: true }),
+    )
+    expect(screen.getAllByRole('button', { name: 'Jouer sur le personnage' })).toHaveLength(2)
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Jouer sur le personnage' })[1]!)
+    expect(blocksOf().map(clip => clip.label)).toEqual(['NlaTrack', 'run'])
+  })
+
+  // A ⌘Z takes the block out from under the panel without touching the preview. Removing it again
+  // would rewrite the document for nothing AND wipe the redo — the ⌘Y would vanish unannounced.
+  it('leaves the history alone when the block it watched has already been undone', async () => {
+    withCharacter(['NlaTrack'])
+    render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('Animation')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: 'Jouer sur le personnage' }))
+    act(() => useScenes.getState().undo(DOCUMENT))
+    expect(blocksOf()).toEqual([])
+
+    await userEvent.click(screen.getByRole('button', { name: 'Arrêter et retirer le bloc' }))
+    act(() => useScenes.getState().redo(DOCUMENT))
+
+    expect(blocksOf()).toHaveLength(1)
+  })
+
   // Nothing to play it ON: the row is still listed, since a shipped animation is listed whatever
   // is in front, and the button says so rather than doing nothing.
   it('offers no preview while no character is in front', async () => {

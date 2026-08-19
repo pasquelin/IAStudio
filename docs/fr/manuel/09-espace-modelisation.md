@@ -879,9 +879,12 @@ fois.
 > bouton. Arrêté par vous, le bloc s’en va. **Interrompu par la tête de lecture — parce que vous
 > avez lancé la bande ou déplacé la tête — le bloc RESTE**, posé sur le personnage. Ce n’est pas un
 > accident : c’est ce qui transforme un essai concluant en travail gardé. **Et plus rien ne le
-> reprend** : le ▶ suivant pose son essai EN PLUS, au même endroit — le personnage joue alors les
-> deux à la fois, à parts égales. Écartez les blocs sur la sous-piste pour les voir l’un après
-> l’autre.
+> reprend** : le ▶ suivant pose son essai EN PLUS, au même endroit.
+
+**L’aperçu ne montre jamais que le dernier essai, seul.** C’est la BANDE qui, ensuite, partage la
+pose entre les blocs qui se recouvrent sous la tête de lecture : deux essais empilés au même
+endroit se moyennent, et le personnage fait les deux à moitié. Écartez-les sur la sous-piste — un
+bloc se glisse à la souris — pour les voir l’un après l’autre.
 
 **Le ▶ est éteint tant qu’aucun modèle n’est sélectionné dans la scène** : il n’y a alors rien sur
 quoi jouer un mouvement. **Un modèle suffit — il n’a pas besoin d’être déjà animable** ; ce qu’il
