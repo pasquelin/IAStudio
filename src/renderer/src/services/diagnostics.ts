@@ -56,6 +56,10 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   // first attempt failed — silenced, a second try looks exactly like a dialog somebody dismissed.
   'texture.export',
   'skybox.export',
+  // The two of this branch, for that same reason and one more: both spend minutes before they can
+  // fail, so a second press silenced is a wait nobody is told the outcome of.
+  'sequence.export',
+  'assets.contactSheet',
 ])
 
 /**

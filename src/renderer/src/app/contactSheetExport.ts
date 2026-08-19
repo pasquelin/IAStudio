@@ -1,4 +1,4 @@
-import { PICTURES, type Asset } from '@shared/domain/asset'
+import { isLocalPicture, type Asset } from '@shared/domain/asset'
 import { contactSheetPdf, type SheetPicture } from '@shared/domain/contactSheet'
 import { bytesToBase64 } from '@/helpers/base64'
 import { fetchAsset } from '@/helpers/assetFetch'
@@ -68,15 +68,18 @@ export async function exportContactSheet(
 
   try {
     const byId = assetsById(useAssets.getState())
+    // `isLocalPicture` and not the type alone: a library picture has no file behind it here, and
+    // `fetchAsset` answers 404 for one — which used to cost the WHOLE sheet rather than its cell.
     const chosen = assetIds
       .map(id => byId.get(id))
-      .filter((asset): asset is Asset => !!asset && PICTURES.includes(asset.type))
+      .filter((asset): asset is Asset => !!asset && isLocalPicture(asset))
 
     // One at a time: a bitmap is the decoded picture, and forty 4K ones alive at once is what a
-    // browser drops a live viewport's context to make room for.
+    // browser drops a live viewport's context to make room for. One that will not decode costs
+    // its own cell and nothing else.
     const pictures: SheetPicture[] = []
     for (const asset of chosen) {
-      const picture = await reduced(asset)
+      const picture = await reduced(asset).catch(() => null)
       if (picture) pictures.push(picture)
     }
 

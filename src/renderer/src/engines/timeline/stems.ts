@@ -27,14 +27,21 @@ export type StemsOptions = {
  * recorded at 44 100 in a 48 000 sequence, otherwise arrives with the buzz of a stepped read.
  */
 function sampleAt(channel: Float32Array, position: number): number {
-  if (position <= 0) return channel[0] ?? 0
-
+  if (position < 0) return 0
+  // SILENCE past the end, not the last sample held: a clip whose timeline duration outruns its
+  // rush would otherwise sit on a DC level for the remainder, where playback plays nothing.
   const before = Math.floor(position)
-  if (before + 1 >= channel.length) return channel[channel.length - 1] ?? 0
+  if (before + 1 >= channel.length) return 0
 
   const after = (channel[before + 1] ?? 0) - (channel[before] ?? 0)
   return (channel[before] ?? 0) + after * (position - before)
 }
+
+/**
+ * Back to the window for one turn. A macrotask and not a microtask: a resolved promise drains
+ * without ever letting the browser paint or read a click, which is the whole point of stopping.
+ */
+const yieldToWindow = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
 /** The channel a mono rush feeds into a stereo stem: its only one, into both. */
 const sourceChannel = (source: AudioData, channel: number): Float32Array =>
@@ -74,6 +81,21 @@ function mixChunk(
         (stem[lands] ?? 0) + sampleAt(read, from + frame * step) * peak * fadeAt(chunk.fade, moment)
     }
   }
+}
+
+/**
+ * What a stem set would weigh, at most, before a single sample is mixed — stereo assumed for
+ * every audible track, which is the widest any of them can come out.
+ *
+ * Answered UP FRONT because the alternative is minutes of mixing followed by a refusal: 16-bit
+ * stereo at 48 kHz is 192 KB a second, so the ceiling is reached by a montage that fits on screen.
+ */
+export function stemsWeight(state: SequenceState): number {
+  const audible = state.tracks.filter(
+    track => track.kind === 'audio' && playsThrough(state, track),
+  ).length
+
+  return audible * framesFor(sequenceDuration(state), state.settings.sampleRate) * 2 * 2
 }
 
 /**
@@ -118,6 +140,12 @@ export async function stemsOf(
 
     const channels = Array.from({ length: widest }, () => new Float32Array(frames))
     for (const chunk of mine) {
+      // BETWEEN clips, and it is not decoration: one clip is millions of samples of straight-line
+      // arithmetic, and without giving the loop back the stop button does nothing and the bar this
+      // very call feeds never repaints. Invariant 6, on the one export here measured in minutes.
+      await yieldToWindow()
+      signal?.throwIfAborted()
+
       const source = sources.get(chunk.assetId)
       if (source) mixChunk(channels, sampleRate, chunk, source)
       done += 1

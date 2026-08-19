@@ -465,6 +465,12 @@ export function targetsOfDomain(domain: CapabilityDomain): ExportTargetId[] {
 }
 
 /**
+ * What one export may weigh, every file of it together. Read by the writer, which REFUSES past
+ * it, and by the window, which has to know before spending minutes producing what would be.
+ */
+export const MAX_EXPORT_WEIGHT = 512 * 1024 * 1024
+
+/**
  * What sending `traits` to this target would destroy — the sentence a dialog says BEFORE the
  * click, rather than a line in a journal nobody reads afterwards.
  */

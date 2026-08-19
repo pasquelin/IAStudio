@@ -254,7 +254,10 @@
       "title": "DaVinci Resolve bridge",
       "help": "Drops a script into the folder Resolve reads, to import an edit written here from its own scripts menu. It appears without restarting Resolve. Removing it is done by hand, and Resolve only notices on its next start.",
       "button": "Install",
-      "confirm": "A script will be written into DaVinci Resolve’s folder, on this machine. Nothing else is touched."
+      "confirm": "A script will be written into DaVinci Resolve’s folder, on this machine. Nothing else is touched.",
+      "missing": "DaVinci Resolve was not found on this machine",
+      "missingDetail": "Its folder does not exist, so nothing was written. Install Resolve, run it once, then come back here.",
+      "missingOk": "Close"
     },
     "openDevtools": {
       "title": "Developer tools",

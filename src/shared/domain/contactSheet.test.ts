@@ -71,6 +71,15 @@ describe('a contact sheet', () => {
     expect(page?.places[0]?.caption).toBe('Plan large')
   })
 
+  /** An uncut name crosses into the next column — or off the paper, in the last one. */
+  it('cuts a name too long for its cell rather than letting it run', () => {
+    const [page] = contactSheetPages([picture('x'.repeat(300))], 4)
+
+    const caption = page?.places[0]?.caption ?? ''
+    expect(caption.length).toBeLessThan(60)
+    expect(caption.endsWith('…')).toBe(true)
+  })
+
   /** Every cell has to sit on the paper: a row counted without its caption walks off the bottom. */
   it('keeps every cell inside the page', () => {
     const { columns, rows } = sheetLayout(3)

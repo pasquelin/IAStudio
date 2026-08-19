@@ -1,9 +1,9 @@
 import type { TaskWatch } from '@shared/domain/taskProgress'
-import { exportTargetOf } from '@shared/domain/exportRegistry'
+import { exportTargetOf, MAX_EXPORT_WEIGHT } from '@shared/domain/exportRegistry'
 import { freeName, safeName } from '@shared/domain/otioz'
 import type { ExportedFile, FolderExportRequest } from '@shared/ipc'
 import { encodeWav } from '@/engines/audio/wav'
-import { stemsOf } from '@/engines/timeline/stems'
+import { stemsOf, stemsWeight } from '@/engines/timeline/stems'
 import { decodeAsset } from '@/helpers/audioDecode'
 import { documentExportName, useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
@@ -22,8 +22,15 @@ export async function montageStemsFiles(
   watch?: TaskWatch,
 ): Promise<FolderExportRequest> {
   const name = documentExportName(useDocuments.getState(), documentId, 'edit')
+  const state = sequenceOf(useSequences.getState(), documentId)
 
-  const stems = await stemsOf(sequenceOf(useSequences.getState(), documentId), decodeAsset, {
+  // BEFORE the mix, not after: the writer refuses past this weight, and finding out there means
+  // the person waited through every minute of it for a refusal with nothing to act on.
+  if (stemsWeight(state) > MAX_EXPORT_WEIGHT) {
+    throw new Error('this montage is too long to write as stems')
+  }
+
+  const stems = await stemsOf(state, decodeAsset, {
     onStep: watch?.onStep,
     signal: watch?.signal,
   })

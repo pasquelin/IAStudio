@@ -24,6 +24,16 @@ export type SheetPicture = PdfImage & { caption: string }
 export type SheetLayout = { columns: number; rows: number }
 
 /**
+ * Helvetica at 8 pt runs about half its size per character, so this is what a cell holds. Cut
+ * rather than left to run: a name is as long as somebody made it, and an uncut one crosses into
+ * the neighbouring column — or off the paper, in the last one.
+ */
+function cut(caption: string, width: number): string {
+  const fits = Math.max(1, Math.floor(width / (CAPTION_POINTS * 0.5)))
+  return caption.length <= fits ? caption : `${caption.slice(0, Math.max(1, fits - 1))}…`
+}
+
+/**
  * Fits within a cell rather than filling it: a generation is any shape, and cropping one to a
  * square on a sheet whose whole point is choosing would hide what is being chosen.
  */
@@ -80,7 +90,9 @@ export function contactSheetPages(
         y: page.height - MARGIN - row * (width + GAP) - tall,
         width: drawn,
         height: tall,
-        caption: picture.caption,
+        // Measured against the CELL, not the drawn picture: a portrait frame is narrower than
+        // its cell, and a caption cut to it would lose letters the paper had room for.
+        caption: cut(picture.caption, width),
       })
     })
 

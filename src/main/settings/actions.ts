@@ -14,13 +14,24 @@ export type ActionDeps = {
   logFile: () => string
   /** Where the MCP server is listening, or `null` while it is off. */
   mcpEndpoint: () => McpEndpoint | null
+  /**
+   * Says the bridge could not be installed, in the language the window is in. A dialog and not a
+   * log line: nothing else answers this button, so a silent failure is one nobody finds out about.
+   */
+  onResolveMissing: () => void
 }
 
 /**
  * What the buttons of the settings window do. Kept apart from the handlers: each one reaches
  * straight into Electron, and the handler that routes them stays testable without it.
  */
-export function runSettingAction({ settings, settingsPath, logFile, mcpEndpoint }: ActionDeps) {
+export function runSettingAction({
+  settings,
+  settingsPath,
+  logFile,
+  mcpEndpoint,
+  onResolveMissing,
+}: ActionDeps) {
   return (id: SettingActionId): void => {
     switch (id) {
       case 'advanced.openLogFolder':
@@ -48,12 +59,15 @@ export function runSettingAction({ settings, settingsPath, logFile, mcpEndpoint 
       }
 
       case 'advanced.installResolveBridge':
-        // Revealed once written, which is the whole of the feedback: the window is told nothing,
-        // and a file dropped in another application's folder that nobody is shown is a file
-        // nobody trusts. A failure lands in the main log, where every other one does.
+        // Revealed once written, which is the whole of the feedback: a file dropped in another
+        // application's folder that nobody is shown is a file nobody trusts. And SAID when it
+        // could not be — no Resolve on this machine is the ordinary case, not a fault to log.
         void installResolveScript().then(
           written => shell.showItemInFolder(written),
-          (error: unknown) => log.error('resolve bridge', String(error)),
+          (error: unknown) => {
+            log.error('resolve bridge', String(error))
+            onResolveMissing()
+          },
         )
         return
 

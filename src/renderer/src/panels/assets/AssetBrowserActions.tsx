@@ -90,7 +90,7 @@ export function AssetBrowserActions() {
         description={t('assets.contactSheetHint')}
         tooltip={TIP_BOTTOM}
         variant="header"
-        disabled={selected.length === 0}
+        disabled={!project || selected.length === 0}
         onClick={() => void exportContactSheet(selected, t('assets.contactSheetName'))}
       />
       <ToolButton

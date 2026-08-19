@@ -2,6 +2,7 @@ import { z } from 'zod'
 import {
   EXPORT_TARGET_IDS,
   exportTargetOf,
+  MAX_EXPORT_WEIGHT,
   type ExportTargetId,
 } from '@shared/domain/exportRegistry'
 import type { CapabilityDomain } from '@shared/domain/formatCapability'
@@ -27,14 +28,11 @@ const written = (id: ExportTargetId): string => exportTargetOf(id).extension
 const target = z.custom<ExportTargetId>(isTargetId)
 
 /**
- * What one export may weigh, all of its files together.
- *
- * Eight 4K channels come to a few hundred megabytes, and this leaves room above that. One
- * ceiling rather than one per file as well: the total already bounds every file under it, and
- * the request crosses the boundary by structured clone — so what this really bounds is a copy
- * made in each of the two processes.
+ * One ceiling rather than one per file: the total already bounds every file under it, and the
+ * request crosses the boundary by structured clone — so what this bounds is a copy made in each
+ * of the two processes. Shared, so a window can refuse BEFORE spending minutes on a mix.
  */
-const MAX_EXPORT_BYTES = 512 * 1024 * 1024
+const MAX_EXPORT_BYTES = MAX_EXPORT_WEIGHT
 
 /**
  * A stem set is one file per audible TRACK, and a montage carries as many as somebody laid down —
