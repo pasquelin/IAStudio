@@ -177,6 +177,13 @@ export class ViewportEngine {
   /** Whether another gesture holds the pointer — see `freezePanes`. */
   private frozen = false
   /**
+   * Where the pointer last was, kept even while frozen so thawing can re-arm from it. Written in
+   * place: this takes every pointer move, and a fresh object per move is garbage per move.
+   */
+  private readonly lastPointer: PointerPosition = { clientX: 0, clientY: 0 }
+  /** Kept so the listeners posted on it at mount come off at dispose. */
+  private host: HTMLElement | null = null
+  /**
    * The views beside the main one, which is always pane 0 and always the one that was already
    * there. Empty in a single layout, so every viewport that never asks for four draws exactly
    * what it drew before — one camera, one render, no scissor.
@@ -359,7 +366,15 @@ export class ViewportEngine {
    * the gizmo another camera halfway through.
    */
   freezePanes(frozen: boolean): void {
+    // On the TRANSITION, never on every call: this is read back on each pointer move, and
+    // `paneAtPointer` measures the canvas — a second reflow per move for an answer already known.
+    const thawing = this.frozen && !frozen
     this.frozen = frozen
+    // Thawing re-arms from where the pointer IS: the move that lifts a freeze is the very one
+    // `armPaneUnderPointer` returned early on, so reading `active` alone leaves the working view
+    // — and the camera a gizmo grabs from — one event behind. `null` off the surface.
+    if (thawing) this.active = this.paneAtPointer(this.lastPointer) ?? this.active
+
     // A single layout keeps `active` at 0, so the main orbit reads the same test as the others.
     if (this.controls) this.controls.enabled = !frozen && this.active === 0
     for (const [index, pane] of this.extras.entries()) {
@@ -517,6 +532,10 @@ export class ViewportEngine {
    * scene editor that had to arm it would be the second place deciding which view is being used.
    */
   private readonly armPaneUnderPointer = (event: PointerEvent): void => {
+    // Kept before the early return, never after: the move that lifts a freeze is one this
+    // returns on, and `freezePanes` has nothing to re-arm from unless that move was recorded.
+    this.lastPointer.clientX = event.clientX
+    this.lastPointer.clientY = event.clientY
     if (this.layout === 'single' || this.frozen) return
 
     const over = this.paneAtPointer(event)
@@ -609,8 +628,12 @@ export class ViewportEngine {
       if (settled) this.controls.addEventListener('end', () => settled(0))
     }
 
-    canvas.addEventListener('pointerdown', this.armPaneUnderPointer)
-    canvas.addEventListener('pointermove', this.armPaneUnderPointer)
+    // Capture, and on the HOST rather than the canvas: a capture on an ancestor runs ahead of
+    // every listener of the canvas whatever order those were added in — and `TransformControls`
+    // is one of them, grabbing from whichever camera it holds when it reads the event.
+    this.host = host
+    host.addEventListener('pointerdown', this.armPaneUnderPointer, true)
+    host.addEventListener('pointermove', this.armPaneUnderPointer, true)
 
     this.observer = new ResizeObserver(this.onResize)
     this.observer.observe(canvas)
@@ -630,9 +653,11 @@ export class ViewportEngine {
 
     while (this.extras.length > 0) this.disposeExtra()
 
+    this.host?.removeEventListener('pointerdown', this.armPaneUnderPointer, true)
+    this.host?.removeEventListener('pointermove', this.armPaneUnderPointer, true)
+    this.host = null
+
     const canvas = this.renderer?.domElement
-    canvas?.removeEventListener('pointerdown', this.armPaneUnderPointer)
-    canvas?.removeEventListener('pointermove', this.armPaneUnderPointer)
     this.renderer?.dispose()
     this.renderer = null
 

@@ -397,6 +397,25 @@ describe('a viewport', () => {
     })
 
     /**
+     * `TransformControls` reads its own pointer events off the canvas and grabs from the camera
+     * it is holding at that instant. Armed after it, the pane is one event behind and the gizmo
+     * casts its ray from the view one has just left — no handle lights, and the drag falls
+     * through to the orbit. A capture on the host is what puts the arming first.
+     */
+    it('arms the pane before any listener of the canvas reads the same event', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      const seen: number[] = []
+      canvas.addEventListener('pointermove', () => seen.push(engine.activePane))
+      canvas.dispatchEvent(pointerAt(HOST_WIDTH - 10, HOST_HEIGHT - 10))
+
+      expect(seen).toEqual([3])
+    })
+
+    /**
      * A gizmo handle held, a camera flying: the gesture belongs to whoever started it. Without
      * this the arming above answered every pixel of that same drag — the view orbited under the
      * handle being pulled, and the working view could change halfway through.
@@ -416,7 +435,26 @@ describe('a viewport', () => {
 
       engine.freezePanes(false)
 
-      expect(engine.paneOrbits.map(orbit => orbit?.enabled)).toEqual([true, false, false, false])
+      // The pane the pointer STANDS in, not the one it was in when the gesture began: the move
+      // that lifts a freeze is the one this returned early on, so reading the pane held before
+      // would leave the working view — and the camera a gizmo grabs from — one event behind.
+      expect(engine.activePane).toBe(3)
+      expect(engine.paneOrbits.map(orbit => orbit?.enabled)).toEqual([false, false, false, true])
+    })
+
+    /** Off the surface entirely — a drag released outside the window — there is no pane to read. */
+    it('keeps the pane it had when thawing with the pointer off the canvas', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      canvas.dispatchEvent(pointerAt(HOST_WIDTH - 10, HOST_HEIGHT - 10))
+      engine.freezePanes(true)
+      canvas.dispatchEvent(pointerAt(-40, -40))
+      engine.freezePanes(false)
+
+      expect(engine.activePane).toBe(3)
     })
 
     it('leaves every orbit alone while there is one view', () => {

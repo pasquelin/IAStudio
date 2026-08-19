@@ -543,6 +543,8 @@ export class SceneRenderer {
   private flew = false
 
   private gizmo: TransformControls | null = null
+  /** Kept so the capture listeners posted on it at mount come off at dispose. */
+  private host: HTMLElement | null = null
   /** The rectangle handed to the gizmo, rewritten in place — see `aimGizmo`. */
   private readonly gizmoRegion = new Vector4()
   private viewHelper: ViewHelper | null = null
@@ -646,6 +648,7 @@ export class SceneRenderer {
 
   mount(host: HTMLElement): void {
     this.viewport.mount(host)
+    this.host = host
 
     const canvas = this.viewport.canvas
     const camera = this.viewport.camera
@@ -689,10 +692,11 @@ export class SceneRenderer {
 
     this.buildViewHelper()
 
-    // On move, not only on press: `TransformControls` listens on this canvas too and was added
-    // first, so it sees a press before this file does — and would grab with the camera of the
-    // view one has just left.
-    canvas.addEventListener('pointermove', this.onPointerMove)
+    // Capture, on the HOST: `TransformControls` listens on this canvas, and an aim posted after
+    // it hands the gizmo the camera of the view one has just left. Registered after
+    // `viewport.mount`, so the pane is armed first. Untested — mounting needs a WebGL context.
+    host.addEventListener('pointermove', this.onPointerAim, true)
+    host.addEventListener('pointerdown', this.onPointerAim, true)
     canvas.addEventListener('pointerdown', this.onPointerDown)
     canvas.addEventListener('contextmenu', this.onContextMenu)
     window.addEventListener('pointerup', this.onPointerUp)
@@ -1358,10 +1362,12 @@ export class SceneRenderer {
    * grid and the trihedron are siblings, never in `objects`.
    */
   private dressPane(index: number, camera: ViewportCamera): void {
-    // The handles are sized in ONE camera — the one they are aimed from — so the three views
-    // that are not being worked in draw them at their own scale, which came out as a gizmo
-    // spanning a whole pane. The view in hand keeps the manipulators, as the command says.
-    const helper = this.gizmo?.getHelper()
+    // Only while it HOLDS something: `TransformControls` keeps its helper hidden when nothing is
+    // attached, and writing `true` here showed a gizmo that no selection stood behind — one that
+    // grabs nothing, so the drag fell through to the orbit and turned the scene instead.
+    // The handles are sized in one camera, so the views that are not being worked in would draw
+    // them at their own scale; the view in hand keeps them, as the command's help says.
+    const helper = this.gizmo?.object ? this.gizmo.getHelper() : null
     if (helper) helper.visible = !this.quadView() || index === this.viewport.activePane
 
     const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
@@ -1808,8 +1814,11 @@ export class SceneRenderer {
     this.stopPaletteWatch?.()
     this.stopPaletteWatch = null
 
+    this.host?.removeEventListener('pointermove', this.onPointerAim, true)
+    this.host?.removeEventListener('pointerdown', this.onPointerAim, true)
+    this.host = null
+
     const canvas = this.viewport.canvas
-    canvas?.removeEventListener('pointermove', this.onPointerMove)
     canvas?.removeEventListener('pointerdown', this.onPointerDown)
     canvas?.removeEventListener('contextmenu', this.onContextMenu)
     window.removeEventListener('pointerup', this.onPointerUp)
@@ -2742,7 +2751,12 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
-  private readonly onPointerMove = (): void => {
+  private readonly onPointerAim = (): void => {
+    // Read back from what is TRUE rather than left to the events that turn it on: a release
+    // swallowed by a native menu, or a drag ended off the window, would otherwise leave the views
+    // frozen for good — and a frozen viewport picks with the camera of the pane one has left,
+    // so nothing can be selected any more. Any movement repairs it.
+    this.viewport.freezePanes(this.gizmo?.dragging === true || this.flying)
     this.aimGizmo()
   }
 
