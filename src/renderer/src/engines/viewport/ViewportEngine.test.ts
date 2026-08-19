@@ -84,6 +84,7 @@ describe('a viewport', () => {
   let frames: Map<number, FrameRequestCallback>
   let nextHandle: number
   let engines: ViewportEngine[]
+  let observations: (() => void)[]
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -101,6 +102,25 @@ describe('a viewport', () => {
       return nextHandle++
     })
     vi.stubGlobal('cancelAnimationFrame', (handle: number) => frames.delete(handle))
+
+    // Broadcast by hand for the same reason: the browser delivers observations after the frame
+    // callbacks of the turn that is about to paint, and that order is what this file measures.
+    observations = []
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private readonly callback: ResizeObserverCallback) {}
+
+        // Recorded on `observe` and not in the constructor: an engine that built an observer and
+        // never pointed it at its canvas would follow nothing, and would still read as green.
+        observe(): void {
+          observations.push(() => this.callback([], this))
+        }
+
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    )
   })
 
   afterEach(() => {
@@ -127,6 +147,11 @@ describe('a viewport', () => {
     const pending = [...frames.values()]
     frames.clear()
     for (const frame of pending) frame(performance.now())
+  }
+
+  /** A splitter moved: the host is laid out anew, and the browser reports it before painting. */
+  const observeResize = (): void => {
+    for (const observation of observations) observation()
   }
 
   describe('mounting', () => {
@@ -798,6 +823,48 @@ describe('a viewport', () => {
 
       expect(() => drawFrames()).toThrow('overlay')
       expect(engine.gl?.autoClear).toBe(true)
+    })
+  })
+
+  describe('following its host', () => {
+    /**
+     * `setSize` blanks the drawing buffer, and an observation lands after the frame callbacks of
+     * the paint that follows: a frame merely asked for here is one paint late, and every paint
+     * of a dragged splitter shows an empty viewport.
+     */
+    it('draws the new size in the turn it is measured, not on the next frame', () => {
+      atRest({ controls: 'none', onFrame: () => false })
+      rendered.mockClear()
+
+      observeResize()
+
+      expect(rendered).toHaveBeenCalled()
+      expect(frames.size).toBe(0)
+    })
+
+    /** The frame the motion had already asked for is the one drawn, rather than a second one. */
+    it('draws once and keeps the loop when the resize lands mid-motion', () => {
+      atRest({ controls: 'none', onFrame: () => true })
+      rendered.mockClear()
+
+      observeResize()
+
+      expect(rendered).toHaveBeenCalledTimes(1)
+      expect(frames.size).toBe(1)
+    })
+
+    /** A panel folded to nothing: the surface is refused, so the frame stays owed to its paint. */
+    it('spends no frame on an observation it turns back', () => {
+      const engine = atRest({ controls: 'none', onFrame: () => true })
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+      Object.defineProperty(canvas, 'clientWidth', { configurable: true, value: 0 })
+      rendered.mockClear()
+
+      observeResize()
+
+      expect(rendered).not.toHaveBeenCalled()
+      expect(frames.size).toBe(1)
     })
   })
 
