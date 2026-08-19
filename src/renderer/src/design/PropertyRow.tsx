@@ -19,6 +19,8 @@ export type PropertyRowProps = {
   /** A value to read, or a control to change it. */
   children: ReactNode
   shape?: PropertyShape
+  /** What the line ends with — a button that acts on the value, never one that replaces it. */
+  actions?: ReactNode
 }
 
 /**
@@ -36,7 +38,7 @@ export type PropertyRowProps = {
  * hand; a group draws both families side by side, so one of them drifting is two label columns
  * in the same box.
  */
-export function PropertyRow({ label, children, shape = 'inline' }: PropertyRowProps) {
+export function PropertyRow({ label, children, shape = 'inline', actions }: PropertyRowProps) {
   return (
     <div
       className={cn(
@@ -71,7 +73,7 @@ export function PropertyRow({ label, children, shape = 'inline' }: PropertyRowPr
       </div>
 
       {/* Not when stacked: there is no column there, so no end column to hold either. */}
-      {shape !== 'stacked' && <FieldActions />}
+      {shape !== 'stacked' && <FieldActions>{actions}</FieldActions>}
     </div>
   )
 }
