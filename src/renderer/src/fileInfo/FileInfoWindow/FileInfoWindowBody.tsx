@@ -3,7 +3,7 @@ import type { Asset } from '@shared/domain/asset'
 import type { FileFacts } from '@shared/domain/fileInfo'
 import { nameOf } from '@shared/domain/folder'
 import type { GitStatus } from '@shared/domain/git'
-import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { formatBytes, formatMoment } from '@/helpers/format'
@@ -35,12 +35,12 @@ export function FileInfoWindowBody({ id, path, facts, asset, status }: FileInfoW
     const change = status.files.find(file => file.path === path)?.change
 
     return (
-      <PropertyGroup title={t('fileInfo.sections.git')}>
+      <PropertySection title={t('fileInfo.sections.git')}>
         <PropertyRow label={t('git.ref.branch')}>{status.branch ?? t('git.detached')}</PropertyRow>
         <PropertyRow label={t('inspector.state')}>
           {change ? t(`git.change.${change}`) : t('fileInfo.gitUnchanged')}
         </PropertyRow>
-      </PropertyGroup>
+      </PropertySection>
     )
   }
 
@@ -50,7 +50,7 @@ export function FileInfoWindowBody({ id, path, facts, asset, status }: FileInfoW
     const height = probe?.height ?? asset.height
 
     return (
-      <PropertyGroup title={t('fileInfo.sections.media')}>
+      <PropertySection title={t('fileInfo.sections.media')}>
         {width !== undefined && height !== undefined && (
           <PropertyRow label={t('inspector.dimensions')}>
             {width} × {height}
@@ -64,13 +64,13 @@ export function FileInfoWindowBody({ id, path, facts, asset, status }: FileInfoW
         {probe?.codec !== undefined && (
           <PropertyRow label={t('fileInfo.codec')}>{probe.codec}</PropertyRow>
         )}
-      </PropertyGroup>
+      </PropertySection>
     )
   }
 
   if (id === 'catalogue' && asset) {
     return (
-      <PropertyGroup title={t('fileInfo.sections.catalogue')}>
+      <PropertySection title={t('fileInfo.sections.catalogue')}>
         <PropertyRow label={t('fileInfo.identifier')}>{asset.id}</PropertyRow>
         {asset.hash !== undefined && (
           // Stacked: a content hash is sixty-four characters, and a column truncates it to
@@ -84,12 +84,12 @@ export function FileInfoWindowBody({ id, path, facts, asset, status }: FileInfoW
         <PropertyRow label={t('fileInfo.added')}>
           {formatMoment(asset.createdAt, i18n.language, 'local')}
         </PropertyRow>
-      </PropertyGroup>
+      </PropertySection>
     )
   }
 
   return (
-    <PropertyGroup title={t('fileInfo.sections.general')}>
+    <PropertySection title={t('fileInfo.sections.general')}>
       <PropertyRow label={t('inspector.name')}>{nameOf(path)}</PropertyRow>
       {/* The inspector's own word for this question, not a second one: « Nature » already names
           what a thing IS there, and two labels for one idea is how a vocabulary drifts. */}
@@ -118,6 +118,6 @@ export function FileInfoWindowBody({ id, path, facts, asset, status }: FileInfoW
       <PropertyRow label={t('fileInfo.modified')}>
         {formatMoment(facts.modifiedAt, i18n.language, 'local')}
       </PropertyRow>
-    </PropertyGroup>
+    </PropertySection>
   )
 }

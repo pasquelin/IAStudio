@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { toDegrees, toRadians } from '@shared/domain/angles'
 import { NumberField } from '@/design/NumberField'
-import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
 import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
@@ -55,14 +55,14 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
 
   return (
     <>
-      <PropertyGroup title={t('inspector.layer')}>
+      <PropertySection title={t('inspector.layer')}>
         <PropertyRow label={t('inspector.name')}>{layer.name}</PropertyRow>
         <PropertyRow label={t('inspector.kind')}>
           {t(`inspector.layerKind_${layer.kind}`)}
         </PropertyRow>
-      </PropertyGroup>
+      </PropertySection>
 
-      <PropertyGroup title={t('inspector.compositing')}>
+      <PropertySection title={t('inspector.compositing')}>
         <SelectField
           label={t('inspector.blend')}
           value={layer.blend}
@@ -97,9 +97,9 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           value={layer.clipped}
           onChange={value => edit.run(setLayerClipped(layer.id, value))}
         />
-      </PropertyGroup>
+      </PropertySection>
 
-      <PropertyGroup title={t('inspector.locks')}>
+      <PropertySection title={t('inspector.locks')}>
         {LAYER_LOCKS.map(padlock => (
           <ToggleField
             key={padlock.key}
@@ -110,10 +110,10 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
             }
           />
         ))}
-      </PropertyGroup>
+      </PropertySection>
 
       {layer.kind === 'text' && (
-        <PropertyGroup title={t('inspector.text')}>
+        <PropertySection title={t('inspector.text')}>
           <TextField
             label={t('inspector.words')}
             value={layer.text}
@@ -135,11 +135,11 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
             value={layer.font}
             onChange={font => edit.run(setLayerText(layer.id, { font }))}
           />
-        </PropertyGroup>
+        </PropertySection>
       )}
 
       {layer.kind === 'adjustment' && (
-        <PropertyGroup title={t(`adjustment.${layer.adjustment}`)}>
+        <PropertySection title={t(`adjustment.${layer.adjustment}`)}>
           <SliderField
             label={t(`adjustment.${layer.adjustment}`)}
             value={layer.values[layer.adjustment]}
@@ -156,11 +156,11 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
             }
             {...edit.gesture}
           />
-        </PropertyGroup>
+        </PropertySection>
       )}
 
       {/* A group has no pixels of its own, but it does have a place: it carries its children. */}
-      <PropertyGroup title={t('inspector.transform')}>
+      <PropertySection title={t('inspector.transform')}>
         <NumberField
           label={t('inspector.x')}
           value={layer.transform.x}
@@ -199,7 +199,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
         {isGroup(layer) && (
           <PropertyRow label={t('inspector.children')}>{layer.children.length}</PropertyRow>
         )}
-      </PropertyGroup>
+      </PropertySection>
     </>
   )
 }

@@ -32,7 +32,6 @@
     "prompt": "Prompt",
     "seed": "Graine",
     "model": "Modèle",
-    "empty": "Ouvrez une skybox pour la régler.",
     "noSource": "Aucune skybox. Générez-en une ou déposez un panorama équirectangulaire.",
     "viewImmersive": "360°",
     "viewEquirect": "Équirect",

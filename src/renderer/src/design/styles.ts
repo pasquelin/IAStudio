@@ -305,12 +305,11 @@ export const PANEL_HEAD = 'border-border flex flex-col gap-2 border-b p-2'
 export const PANEL_BAR = 'border-border flex items-center gap-2 border-b'
 
 /**
- * The body of a titled run of properties — `PropertyGroup`'s and `PropertySection`'s alike.
+ * The body of a titled run of properties, under the heading `PropertySection` folds.
  *
- * One string because the inspector shows both, one under the other, and a reader takes them for
- * one panel: a group whose rows touched while a section two boxes down breathed reads as a bug in
- * the panel rather than as two components. They were kept in step by a comment saying "the same
- * gap as", which is what this closes.
+ * It served a second, unfolding component until the two were merged: the panel showed both, one
+ * under the other, so a fixed heading in one space and a folding one in the next was the same
+ * gesture failing in half the studio.
  */
 export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
 
@@ -430,7 +429,7 @@ export const TOOLBAR_LABEL = 'text-muted text-tiny px-1'
 
 /**
  * The word that divides a LIST into groups — a git stage, the side of a comparison, a set of
- * parameters. Small caps rather than a heavier weight: `PropertyGroup` takes the weight instead,
+ * parameters. Small caps rather than a heavier weight: `PropertySection` takes the weight instead,
  * and the two are a rank apart on purpose, an inspector titling more often than a list does.
  */
 export const PANEL_GROUP_LABEL = 'text-muted text-tiny tracking-wide uppercase'

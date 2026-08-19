@@ -14,7 +14,7 @@ import { FileInfoWindowBody } from './FileInfoWindowBody'
  * The file is named by the URL FRAGMENT, not by a selection, which is the whole difference with
  * the inspector panel: that one answers for whatever the main window holds at that instant.
  *
- * One block, scrolled, its runs told apart by the rule `PropertyGroup` already draws — no column
+ * One block, scrolled, its runs told apart by the rule `PropertySection` already draws — no column
  * and no tabs, since a reader after a size should not have to find which screen holds it.
  */
 export function FileInfoWindow() {

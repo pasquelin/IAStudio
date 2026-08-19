@@ -7,6 +7,7 @@ import { job as jobOf } from '@/stores/job-fixtures'
 import { addClip } from '@/engines/timeline/commands'
 import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
 import { useAssets } from '@/stores/assets'
+import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useJobs } from '@/stores/jobs'
 import { useModels } from '@/stores/models'
@@ -52,6 +53,20 @@ describe('Inspector, on what a panel selected', () => {
   it('asks for a selection when there is none', () => {
     render(<Inspector />)
     expect(screen.getByText(/Sélectionnez un élément/)).toBeInTheDocument()
+  })
+
+  /**
+   * A sky has no node to pick: everything on it belongs to the document, so the face shows
+   * without a selection. It had a panel of its own until 2026-08-19 — which put a box full of the
+   * document's properties directly above an inspector reading « select something ».
+   */
+  it('grades the sky in front without waiting for anything to be selected', () => {
+    installDocument('sky-1', 'skyboxes')
+
+    render(<Inspector />)
+
+    expect(screen.getByLabelText('Élévation')).toBeInTheDocument()
+    expect(screen.queryByText(/Sélectionnez un élément/)).not.toBeInTheDocument()
   })
 
   it('reads out the asset that was selected', () => {

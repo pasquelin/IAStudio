@@ -3,7 +3,7 @@ import type { AdjustmentStack } from '@shared/domain/adjustments'
 import { SliderField } from '@/design/SliderField'
 import { ADJUSTMENT_FIELDS } from '@/engines/skybox/adjustmentFields'
 
-export type AdjustmentSlidersProps = {
+export type SkyboxInspectorAdjustmentsProps = {
   adjustments: AdjustmentStack
   onChange: (key: keyof AdjustmentStack, value: number) => void
   onGestureStart: () => void
@@ -11,15 +11,15 @@ export type AdjustmentSlidersProps = {
 }
 
 /**
- * Every adjustment, rendered from `ADJUSTMENT_FIELDS`. Used twice — under the viewport and in
- * the panel — so that the two are the same controls rather than two lists that drift apart.
+ * Every adjustment, rendered from `ADJUSTMENT_FIELDS` rather than written out — a grading step
+ * added to the stack has a slider here without anyone remembering to draw one.
  */
-export function AdjustmentSliders({
+export function SkyboxInspectorAdjustments({
   adjustments,
   onChange,
   onGestureStart,
   onGestureEnd,
-}: AdjustmentSlidersProps) {
+}: SkyboxInspectorAdjustmentsProps) {
   const { t } = useTranslation()
 
   return (

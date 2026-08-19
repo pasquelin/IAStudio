@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { NumberField } from '@/design/NumberField'
-import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
 import { ToolButton } from '@/design/ToolButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
@@ -29,13 +29,13 @@ export function TrackInspector({ documentId, track }: TrackInspectorProps) {
 
   return (
     <>
-      <PropertyGroup title={t('inspector.track')}>
+      <PropertySection title={t('inspector.track')}>
         <PropertyRow label={t('inspector.name')}>{track.name}</PropertyRow>
         <PropertyRow label={t('inspector.kind')}>{t(`inspector.kind_${track.kind}`)}</PropertyRow>
         <PropertyRow label={t('inspector.clips')}>{clips}</PropertyRow>
-      </PropertyGroup>
+      </PropertySection>
 
-      <PropertyGroup title={t('inspector.state')}>
+      <PropertySection title={t('inspector.state')}>
         {/* The same control as the header column, from the same table: a switch that looks
             different depending on where it is found reads as two different switches. */}
         {TRACK_FLAGS.map(flag => (
@@ -58,7 +58,7 @@ export function TrackInspector({ documentId, track }: TrackInspectorProps) {
           step={4}
           onChange={value => write(current => ({ ...current, height: clampTrackHeight(value) }))}
         />
-      </PropertyGroup>
+      </PropertySection>
     </>
   )
 }

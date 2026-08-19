@@ -16,7 +16,6 @@ import { definition as meshes } from '@/panels/meshes'
 import { definition as models } from '@/panels/models'
 import { definition as projects } from '@/panels/projects'
 import { definition as scene } from '@/panels/scene'
-import { definition as skybox } from '@/panels/skybox'
 import { definition as styles } from '@/panels/styles'
 import { definition as timeline } from '@/panels/timeline'
 import { definition as view } from '@/panels/view'
@@ -42,7 +41,6 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   models,
   generator,
   inspector,
-  skybox,
   assets,
   channels,
   styles,

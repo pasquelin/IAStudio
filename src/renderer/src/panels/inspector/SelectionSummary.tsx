@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
 import { formatBytes } from '@/helpers/format'
 
@@ -18,7 +18,7 @@ export function SelectionSummary({ count, bytes }: { count: number; bytes: numbe
   const { t, i18n } = useTranslation()
 
   return (
-    <PropertyGroup title={t('inspector.selection')}>
+    <PropertySection title={t('inspector.selection')}>
       <PropertyRow label={t('inspector.count')}>{count}</PropertyRow>
       {/* Nothing rather than « 0 o »: a selection the catalogue holds no size for has not been
           measured, which is a different thing from weighing nothing. */}
@@ -27,6 +27,6 @@ export function SelectionSummary({ count, bytes }: { count: number; bytes: numbe
           {formatBytes(bytes, unit => t(`units.${unit}`), i18n.language)}
         </PropertyRow>
       )}
-    </PropertyGroup>
+    </PropertySection>
   )
 }

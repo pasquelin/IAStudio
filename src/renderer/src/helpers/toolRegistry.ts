@@ -14,7 +14,6 @@ import {
   mdiSourceBranch,
   mdiTuneVariant,
   mdiVideoVintage,
-  mdiWeatherPartlyCloudy,
   mdiEyeOutline,
 } from '@mdi/js'
 import {
@@ -55,7 +54,6 @@ const ICONS: Record<ToolId, string> = {
   models: mdiCubeScan,
   generator: mdiCreationOutline,
   inspector: mdiTuneVariant,
-  skybox: mdiWeatherPartlyCloudy,
   view: mdiEyeOutline,
   assets: mdiImageMultipleOutline,
   channels: mdiGridLarge,

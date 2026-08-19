@@ -705,7 +705,9 @@ describe('inspector panel', () => {
     useSelection.getState().selectClip('doc-1', 'clip-1')
     render(<Content />)
 
-    expect(screen.getByRole('heading', { name: 'Clip' })).toBeInTheDocument()
+    // A folding heading like every other section of the studio, since the fixed one was merged
+    // into it: the Audio space used to be one of the four that could not fold anything.
+    expect(screen.getByRole('button', { name: /Clip/ })).toBeInTheDocument()
     // The three a sound clip is shaped by, and the reason this matters: they had no other surface.
     expect(screen.getByRole('spinbutton', { name: /Gain/ })).toBeInTheDocument()
   })

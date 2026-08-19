@@ -1,39 +1,31 @@
-import { mdiWeatherPartlyCloudy } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
 import { POLE_LIMIT } from '@shared/domain/angles'
 import type { SkyboxEnvironment, SunSettings } from '@shared/domain/skybox'
-import { PANEL_SCROLL } from '@/design/styles'
 import { ColorField } from '@/design/ColorField'
-import { EmptyState } from '@/design/EmptyState'
+import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { SliderField } from '@/design/SliderField'
-import { TextField } from '@/design/TextField'
 import { ToggleField } from '@/design/ToggleField'
 import { setAdjustment, setEnvironmentSetting, setSunSetting } from '@/engines/skybox/commands'
-import { AdjustmentSliders } from './AdjustmentSliders'
-import { activeSkyboxId, useDocuments } from '@/stores/documents'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
+import { SkyboxInspectorAdjustments } from './SkyboxInspectorAdjustments'
 
 const TWO_PI = Math.PI * 2
 
+export type SkyboxInspectorProps = { documentId: string }
+
 /**
- * The right-hand panel of the Skyboxes workspace: the sun, the grading, the environment and
- * what produced the picture. Every control is a uniform — nothing here rewrites a pixel.
+ * The sky in front: its sun, its grading, what it lights, and what produced it. Every control is
+ * a uniform — nothing here rewrites a pixel.
+ *
+ * A FACE of the inspector rather than a panel of its own, since 2026-08-19. It was the sixth
+ * inspector `Inspector` exists not to have: the Skyboxes workspace showed this panel full of the
+ * document's properties with the inspector empty underneath it, saying "select something".
  */
-export function Skybox() {
+export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
   const { t } = useTranslation()
-
-  // The sky in front, and only if it is one: the panel belongs to a workspace, but the
-  // document in the centre may be of another kind, and grading a sequence means nothing.
-  const documentId = useDocuments(activeSkyboxId)
-  const content = useSkyboxes(state => (documentId ? skyboxOf(state, documentId) : null))
-
-  // `!content` cannot happen — `skyboxOf` falls back to the default — but the selector answers
-  // `null` for the no-tab case rather than invent an id for it, and this narrows it back.
-  if (!documentId || !content) {
-    return <EmptyState icon={mdiWeatherPartlyCloudy} message={t('skybox.empty')} />
-  }
+  const content = useSkyboxes(state => skyboxOf(state, documentId))
 
   const beginGesture = () => useSkyboxes.getState().beginGesture(documentId)
   const endGesture = () => useSkyboxes.getState().endGesture(documentId)
@@ -50,7 +42,7 @@ export function Skybox() {
     useSkyboxes.getState().runCommand(documentId, setAdjustment(key, value))
 
   return (
-    <div className={PANEL_SCROLL}>
+    <>
       <PropertySection title={t('skybox.sun')}>
         <SliderField
           label={t('skybox.elevation')}
@@ -92,7 +84,7 @@ export function Skybox() {
       </PropertySection>
 
       <PropertySection title={t('skybox.adjustments')}>
-        <AdjustmentSliders
+        <SkyboxInspectorAdjustments
           adjustments={content.adjustments}
           onChange={onAdjust}
           onGestureStart={beginGesture}
@@ -118,24 +110,15 @@ export function Skybox() {
         />
       </PropertySection>
 
-      {/* Read-only: what produced this sky, so a result can be traced back and reproduced. */}
+      {/* Read out, not typed into. These were `TextField`s whose `onChange` did nothing: three
+          boxes that looked editable, took a caret, and dropped every keystroke. */}
       <PropertySection title={t('skybox.generation')} defaultOpen={false}>
-        <TextField
-          label={t('skybox.model')}
-          value={content.generation?.modelLabel ?? ''}
-          onChange={() => undefined}
-        />
-        <TextField
-          label={t('skybox.prompt')}
-          value={content.generation?.prompt ?? ''}
-          onChange={() => undefined}
-        />
-        <TextField
-          label={t('skybox.seed')}
-          value={content.generation?.seed?.toString() ?? ''}
-          onChange={() => undefined}
-        />
+        <PropertyRow label={t('skybox.model')}>{content.generation?.modelLabel ?? ''}</PropertyRow>
+        <PropertyRow label={t('skybox.prompt')} shape="wrap">
+          {content.generation?.prompt ?? ''}
+        </PropertyRow>
+        <PropertyRow label={t('skybox.seed')}>{content.generation?.seed ?? ''}</PropertyRow>
       </PropertySection>
-    </div>
+    </>
   )
 }

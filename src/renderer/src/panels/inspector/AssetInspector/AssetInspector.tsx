@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import { InlineRename } from '@/design/InlineRename'
-import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
 import { ToolButton } from '@/design/ToolButton'
 import { formatDuration } from '@/engines/timeline/timecode'
@@ -46,7 +46,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
 
   return (
     <>
-      <PropertyGroup title={t('inspector.identity')}>
+      <PropertySection title={t('inspector.identity')}>
         {/* Edited where it is read, on a double-click — the gesture every other name of this
             studio answers. The row is the field's host, so the tooltip explains rather than
             repeats: the name is already on screen. */}
@@ -93,12 +93,12 @@ export function AssetInspector({ asset }: { asset: Asset }) {
           {/* Local: this says when a person made the thing, not what an account was billed. */}
           {formatMoment(asset.createdAt, i18n.language, 'local')}
         </PropertyRow>
-      </PropertyGroup>
+      </PropertySection>
 
       {generation && <AssetInspectorGeneration assetId={asset.id} generation={generation} />}
 
       {asset.location === 'local' && (
-        <PropertyGroup title={t('inspector.file')}>
+        <PropertySection title={t('inspector.file')}>
           <PropertyRow label={t('inspector.onDisk')}>
             {missing ? (
               <span className="text-muted text-tiny">{t('inspector.fileMissing')}</span>
@@ -111,7 +111,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
               />
             )}
           </PropertyRow>
-        </PropertyGroup>
+        </PropertySection>
       )}
     </>
   )
