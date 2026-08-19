@@ -864,7 +864,6 @@ describe('the translation bundles', () => {
       reads: ['agrandir', 'agrandissement'],
       separates: 'the canvas command, and the billed action — the mirror of `agrandissement`',
     },
-    view: { reads: ['vue', 'affichage'], separates: 'a panel, and the native View menu' },
   }
 
   const FRENCH_FORMS = formsOf(BUNDLES.en, REFERENCE)

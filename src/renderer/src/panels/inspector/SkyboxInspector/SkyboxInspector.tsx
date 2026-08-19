@@ -16,6 +16,7 @@ import { setAdjustment, setEnvironmentSetting, setSunSetting } from '@/engines/s
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { SkyboxInspectorAdjustments } from './SkyboxInspectorAdjustments'
+import { SkyboxInspectorView } from './SkyboxInspectorView'
 
 const TWO_PI = Math.PI * 2
 
@@ -58,6 +59,10 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
 
   return (
     <>
+      {/* How it is LOOKED at, before what it is: the projection is what the rest is judged
+          under, and it was a panel of its own until 2026-08-19. */}
+      <SkyboxInspectorView documentId={documentId} />
+
       <PropertySection title={t('skybox.sun')}>
         <SliderField
           label={t('skybox.elevation')}

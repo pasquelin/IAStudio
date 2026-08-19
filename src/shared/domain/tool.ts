@@ -56,7 +56,6 @@ export type ToolId =
   | 'assets'
   | 'channels'
   | 'styles'
-  | 'view'
   | 'projects'
   | 'library'
   | 'animations'
@@ -139,10 +138,6 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The upper right, in rail order. Every tool here takes its turn with the others its space
   // declares — the order below is the order their icons stack.
   //
-  // How the viewport is being looked at, never what it holds. Beside the sky's own controls
-  // rather than under them: the centre carries the toolbar and the rulers, and a menu laid
-  // over the picture covers the one thing the space exists to show.
-  { id: 'view', zone: 'right', slot: 'primary', surfaces: ['skyboxes'] },
   { id: 'layers', zone: 'right', slot: 'primary', surfaces: ['image'] },
   // The eight channels of a material, first in Textures for the same reason the sky controls come
   // first in Skyboxes: it is what the space is for.
