@@ -511,7 +511,7 @@
       },
       "cameraShot": {
         "title": "Mettre une caméra à l’antenne",
-        "description": "Ouvre un plan pour cette caméra, à partir de l’instant donné en secondes. L’étage suit la règle de la bande, où une caméra qui n’y figurait pas encore arrive au-dessus."
+        "description": "Ouvre un plan pour cette caméra, à partir de l’instant donné en secondes. La ligne où il se pose suit la règle de la bande, où une caméra qui n’y figurait pas encore arrive au-dessus."
       },
       "nodeReparent": {
         "title": "Rattacher un objet",
