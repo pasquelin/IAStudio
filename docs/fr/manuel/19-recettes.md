@@ -241,9 +241,9 @@ réglages** : les coupes se mesurent sur la prise qui les a reçues.
 
 ## Poser un asset là où il faut
 
-Le tableau des dépôts les plus courants. Il y a **onze** surfaces qui acceptent un asset ; le
-chapitre [Les assets](07-assets.md) les liste toutes. Le double-clic, lui, n’entre dans aucune : il
-ouvre l’asset dans un onglet à lui.
+Le tableau des dépôts les plus courants — le chapitre [Les assets](07-assets.md) porte la liste
+entière, ce qui l’accepte et ce qui le refuse en silence. Le double-clic, lui, n’entre dans
+aucune surface : il ouvre l’asset dans un onglet à lui.
 
 | Vous voulez… | Le geste | Il faut, devant vous |
 |---|---|---|

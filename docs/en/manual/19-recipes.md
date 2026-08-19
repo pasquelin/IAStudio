@@ -236,9 +236,9 @@ settings**: cuts are measured against the take that received them.
 
 ## Put an asset where it belongs
 
-The table of the commonest drops. **Eleven** surfaces accept an asset; the [Assets](07-assets.md)
-chapter lists them all. Double-click goes into none of them: it opens the asset in a tab of its
-own.
+The table of the commonest drops — the [Assets](07-assets.md) chapter carries the whole list, what
+each takes and what it refuses in silence. Double-click goes into no surface at all: it opens the
+asset in a tab of its own.
 
 | You want… | The gesture | You need, in front of you |
 |---|---|---|
