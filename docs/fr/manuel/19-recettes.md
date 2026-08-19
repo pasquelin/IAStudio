@@ -196,7 +196,8 @@ s’ouvre pour lui, et la forme d’onde apparaît — le `+` du rail gauche n�
 
 **Pour voler dans la scène :** maintenez le **clic droit** et servez-vous de `W` `A` `S` `D`
 (`Z` `Q` `S` `D` sur un clavier français — le studio écoute la position de la touche, pas la
-lettre). `E` monte, `Q` descend, `⇧` gauche accélère.
+lettre) ou des quatre **flèches**, qui font la même chose. `E` monte, `Q` descend, `⇧` gauche
+accélère.
 
 ---
 

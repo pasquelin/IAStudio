@@ -36,6 +36,7 @@ This is the default mode. You turn **around** the scene, as if walking round it.
 | Key | Movement |
 |---|---|
 | `W` `A` `S` `D` | forward, left, back, right |
+| `↑` `←` `↓` `→` | the same four directions |
 | `E` | up |
 | `Q` | down |
 | `⇧ Shift` | boost |

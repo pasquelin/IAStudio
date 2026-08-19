@@ -251,15 +251,18 @@ studio cannot undo, and a bare delete key is too close to what a hand does while
 
 These keys are **held** rather than pressed: while you hold, the camera moves.
 
-| Direction | Key (QWERTY keyboard) | Key (AZERTY keyboard) |
-|---|---|---|
-| **Forward** | `W` | `Z` |
-| **Back** | `S` | `S` |
-| **Left** | `A` | `Q` |
-| **Right** | `D` | `D` |
-| **Up** | `E` | `E` |
-| **Down** | `Q` | `A` |
-| **Boost** | left `⇧` | left `⇧` |
+| Direction | Key (QWERTY keyboard) | Key (AZERTY keyboard) | Arrow |
+|---|---|---|---|
+| **Forward** | `W` | `Z` | `↑` |
+| **Back** | `S` | `S` | `↓` |
+| **Left** | `A` | `Q` | `←` |
+| **Right** | `D` | `D` | `→` |
+| **Up** | `E` | `E` | — |
+| **Down** | `Q` | `A` | — |
+| **Boost** | left `⇧` | left `⇧` | — |
+
+The arrows do exactly what the four letters do: they are added, they replace nothing. Altitude has
+none, the four being already taken by movement along the ground.
 
 > **Why two columns.** The studio listens to the **position** of the key on the keyboard, not the
 > letter printed on it. The four direction keys are therefore always the same square, top left:
@@ -273,9 +276,10 @@ These keys are **held** rather than pressed: while you hold, the camera moves.
 
 Speed and boost are set in [settings](14-settings.md#workspaces).
 
-> **`S` does two things at once in the 3D view**: it picks the **Scale** tool *and* moves the camera
-> backwards while held. This is a known overlap — see [What does not exist yet](18-limits.md). In
-> practice you barely notice: pressing `S` to take the tool backs the camera up by a hair.
+> **`S` carries two meanings, and the right button settles which.** Button up, `S` picks the
+> **Scale** tool; right button held, it moves the camera back and leaves the tool alone. The
+> arrows work the same way: during a flight they drive the camera, and the list that had the
+> focus never sees them.
 
 ### What the mouse does, with no shortcut
 

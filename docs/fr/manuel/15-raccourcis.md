@@ -258,15 +258,18 @@ parcourant une liste.
 
 Ces touches se **maintiennent** au lieu de se presser : tant que vous appuyez, la caméra bouge.
 
-| Direction | Touche (clavier QWERTY) | Touche (clavier AZERTY) |
-|---|---|---|
-| **Avancer** | `W` | `Z` |
-| **Reculer** | `S` | `S` |
-| **Gauche** | `A` | `Q` |
-| **Droite** | `D` | `D` |
-| **Monter** | `E` | `E` |
-| **Descendre** | `Q` | `A` |
-| **Accélérer** | `⇧` gauche | `⇧` gauche |
+| Direction | Touche (clavier QWERTY) | Touche (clavier AZERTY) | Flèche |
+|---|---|---|---|
+| **Avancer** | `W` | `Z` | `↑` |
+| **Reculer** | `S` | `S` | `↓` |
+| **Gauche** | `A` | `Q` | `←` |
+| **Droite** | `D` | `D` | `→` |
+| **Monter** | `E` | `E` | — |
+| **Descendre** | `Q` | `A` | — |
+| **Accélérer** | `⇧` gauche | `⇧` gauche | — |
+
+Les flèches font la même chose que les quatre lettres : elles s’ajoutent, elles ne remplacent rien.
+L’altitude n’en a pas, les quatre étant déjà prises par le déplacement au sol.
 
 > **Pourquoi deux colonnes.** Le studio écoute la **position** de la touche sur le clavier, pas la
 > lettre écrite dessus. Les quatre touches de direction sont donc toujours le même carré, en haut
@@ -281,10 +284,10 @@ Ces touches se **maintiennent** au lieu de se presser : tant que vous appuyez, l
 
 La vitesse et l’accélération se règlent dans les [réglages](14-reglages.md#espaces-de-travail).
 
-> **`S` fait deux choses à la fois dans la vue 3D** : il choisit l’outil **Redimensionner** *et*
-> fait reculer la caméra tant qu’on le tient. C’est un chevauchement connu — voir
-> [Ce qui n’existe pas encore](18-limites.md). En pratique on le remarque peu : appuyer sur `S`
-> pour prendre l’outil recule la caméra d’un cheveu.
+> **`S` porte deux sens, et c’est le bouton droit qui tranche.** Bouton relâché, `S` choisit
+> l’outil **Redimensionner** ; bouton droit maintenu, il fait reculer la caméra et ne touche plus
+> à l’outil. Il en va de même des flèches : pendant un vol elles pilotent la caméra, et la liste
+> qui avait le focus ne les reçoit pas.
 
 ### Ce que la souris fait, sans raccourci
 

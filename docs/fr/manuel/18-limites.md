@@ -258,18 +258,10 @@ que le studio emploie ne connaît pas tous les formats de table que les faces h�
 années 2000 emploient. Sur une machine Apple, cela concerne une police sur dix environ. Le texte
 retombe alors sur la police par défaut, et le journal dit laquelle a échoué.
 
-### Le raccourci `S` fait deux choses à la fois
-
-Dans la vue 3D, `S` choisit l’outil **Redimensionner** *et* fait reculer la caméra tant qu’on le
-tient. Les deux tables de touches — les outils et le vol — sont lues sur le même appui.
-
-En pratique on le remarque peu : prendre l’outil recule la caméra d’un cheveu. Mais c’est un
-chevauchement, pas une intention.
-
 ### Les touches de vol ne se remappent pas
 
-`W A S D Q E` et la touche d’accélération sont figées. Elles n’apparaissent pas dans l’écran des
-raccourcis, et le bouton **Chercher par touche** ne les trouve pas.
+`W A S D Q E`, les quatre flèches et la touche d’accélération sont figées. Elles n’apparaissent pas
+dans l’écran des raccourcis, et le bouton **Chercher par touche** ne les trouve pas.
 
 ---
 

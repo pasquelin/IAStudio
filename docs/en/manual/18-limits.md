@@ -246,18 +246,10 @@ know every table format faces inherited from before the 2000s use. On an Apple m
 affects about one font in ten. The text then falls back to the default font, and the log says
 which one failed.
 
-### The `S` shortcut does two things at once
-
-In the 3D view, `S` picks the **Scale** tool *and* moves the camera backwards while held. The two key
-tables — the tools and the flying — are read on the same press.
-
-In practice you barely notice: taking the tool backs the camera up by a hair. But it is an overlap,
-not an intention.
-
 ### The flying keys cannot be remapped
 
-`W A S D Q E` and the boost key are fixed. They do not appear in the shortcuts screen, and the **Find
-by key** button does not find them.
+`W A S D Q E`, the four arrows and the boost key are fixed. They do not appear in the shortcuts
+screen, and the **Find by key** button does not find them.
 
 ---
 
