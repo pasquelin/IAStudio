@@ -24,6 +24,12 @@ export type ShortcutsOptions = {
   onCommand: (command: CommandId) => void
   /** Fires when the held set actually changes — never on a frame tick. */
   onMotionChange?: (held: Set<MotionId>) => void
+  /**
+   * Whether a flight is under way, and a flight OWNS its keys. Asked at the keystroke rather
+   * than passed as state: it begins and ends on a mouse button, and rebuilding this effect
+   * twice per gesture would drop whatever was held across it.
+   */
+  isFlying?: () => boolean
 }
 
 function holdsText(): boolean {
@@ -47,11 +53,12 @@ export function useShortcuts({
   documentId,
   onCommand,
   onMotionChange,
+  isFlying,
 }: ShortcutsOptions): {
   heldMotion: RefObject<Set<MotionId>>
 } {
   const heldMotion = useRef<Set<MotionId>>(new Set())
-  const handlers = useLatest({ onCommand, onMotionChange })
+  const handlers = useLatest({ onCommand, onMotionChange, isFlying })
 
   /**
    * The same surface, reached the other way: the native menu fires a command outright rather
@@ -84,15 +91,33 @@ export function useShortcuts({
       return
     }
 
-    const onKeyDown = (event: KeyboardEvent) => {
-      const typing = isTyping(event.target)
-      const signature = signatureOf(event)
-      const motion = motionFor(signature)
+    /**
+     * A flight, and nothing else, reads a key ahead of the tree — and only while one is under
+     * way. A surface that shields what is behind it does so from a React handler, which capture
+     * on `window` would run ahead of: outside a flight this must stay silent. See `onKeyDown`.
+     */
+    const onFlightKeyDown = (event: KeyboardEvent) => {
+      if (!handlers.current.isFlying?.() || isTyping(event.target)) return
+      // On the CODE, never the signature: holding Shift to boost would sign every direction as
+      // `Shift+…`, and the table would match none of them.
+      const motion = motionFor(event.code)
+      if (!motion) return
+
       // Holding a key repeats keydown; only a set that actually changed is worth reporting.
-      if (!typing && motion && !held.has(motion)) {
+      if (!held.has(motion)) {
         held.add(motion)
         handlers.current.onMotionChange?.(held)
       }
+
+      // The flight owns the key: the list the pointer left focused never sees the arrow, and `S`
+      // does not reach `scene.scale` while it means "back". Only the modality tells them apart.
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const typing = isTyping(event.target)
+      const signature = signatureOf(event)
 
       // A field keeps every command, and the lookup is skipped rather than thrown away: ⌘E would
       // flatten a layer while its name is being typed, and the ⌘Z reflex would undo the typing
@@ -108,8 +133,10 @@ export function useShortcuts({
       if (!event.repeat) handlers.current.onCommand(command)
     }
 
+    // In the bubble phase, and never consumed: the flight may already be over when the key comes
+    // up, and a direction that stayed held would fly the camera on the next press of the button.
     const onKeyUp = (event: KeyboardEvent) => {
-      const motion = motionFor(signatureOf(event))
+      const motion = motionFor(event.code)
       if (motion && held.delete(motion)) handlers.current.onMotionChange?.(held)
     }
 
@@ -117,10 +144,14 @@ export function useShortcuts({
     // flying after an ⌘Tab.
     const onBlur = release
 
+    // The flight listens in capture, the commands stay in bubble. Moving the commands too would
+    // run them ahead of every `stopPropagation` a surface uses to shield what is behind it.
+    window.addEventListener('keydown', onFlightKeyDown, true)
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
     window.addEventListener('blur', onBlur)
     return () => {
+      window.removeEventListener('keydown', onFlightKeyDown, true)
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)

@@ -37,6 +37,7 @@ C’est le mode par défaut. On tourne **autour** de la scène, comme si on en f
 | Touche | Mouvement |
 |---|---|
 | `W` `A` `S` `D` | avancer, gauche, reculer, droite |
+| `↑` `←` `↓` `→` | les mêmes quatre directions |
 | `E` | monter |
 | `Q` | descendre |
 | `⇧ Maj` | accélérer |

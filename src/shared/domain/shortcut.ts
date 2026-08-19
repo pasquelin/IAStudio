@@ -209,14 +209,19 @@ function keyGlyph(code: string, keyName: (code: NamedKey) => string): string {
   return KEY_GLYPHS[code] ?? code
 }
 
-export const DEFAULT_MOTION: Record<MotionId, Signature> = {
-  forward: 'KeyW',
-  back: 'KeyS',
-  left: 'KeyA',
-  right: 'KeyD',
-  down: 'KeyQ',
-  up: 'KeyE',
-  boost: 'ShiftLeft',
+/**
+ * Every key a direction answers to, as a BARE code: motion is matched on `event.code` and never
+ * through `signatureOf`, boost being Shift itself. The arrows are a second key for the four of
+ * the ground plane, altitude keeping the two letters an arrow could only take from it.
+ */
+export const DEFAULT_MOTION: Record<MotionId, readonly Signature[]> = {
+  forward: ['KeyW', 'ArrowUp'],
+  back: ['KeyS', 'ArrowDown'],
+  left: ['KeyA', 'ArrowLeft'],
+  right: ['KeyD', 'ArrowRight'],
+  down: ['KeyQ'],
+  up: ['KeyE'],
+  boost: ['ShiftLeft'],
 }
 
 /**
