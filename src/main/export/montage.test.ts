@@ -9,7 +9,7 @@ import type { BundleClient } from '@main/bundle/bundleClient'
 import { readOtiozFile } from '@main/bundle/otiozRead'
 import { writeOtiozFile } from '@main/bundle/otiozWrite'
 import { registerMontageHandlers } from './montage'
-import { createRunningExports, registerExportCancelHandler } from './runningExports'
+import { createRunningTasks, registerTaskCancelHandler } from '@main/task/runningTasks'
 
 vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
@@ -38,7 +38,7 @@ describe('the montage export handler', () => {
       pickSavePath,
       projectPath: () => null,
       bundles: inProcessBundles,
-      running: createRunningExports(),
+      running: createRunningTasks(),
     })
   })
 
@@ -61,7 +61,7 @@ describe('the montage export handler', () => {
       pickSavePath: () => Promise.resolve(null),
       projectPath: () => null,
       bundles: inProcessBundles,
-      running: createRunningExports(),
+      running: createRunningTasks(),
     })
 
     await expect(
@@ -118,7 +118,7 @@ describe('the same cut, bundled with the media it points at', () => {
   let project: string
   let out: string
   let rush: string
-  let running: ReturnType<typeof createRunningExports>
+  let running: ReturnType<typeof createRunningTasks>
   let asking: ReturnType<typeof openWindow>
 
   beforeEach(async () => {
@@ -128,14 +128,14 @@ describe('the same cut, bundled with the media it points at', () => {
     rush = join(project, 'plan.mp4')
     await writeFile(rush, new Uint8Array(2048).fill(9))
 
-    running = createRunningExports()
+    running = createRunningTasks()
     registerMontageHandlers({
       pickSavePath: (name, extension) => Promise.resolve(join(out, `${name}${extension}`)),
       projectPath: () => project,
       bundles: inProcessBundles,
       running,
     })
-    registerExportCancelHandler(running)
+    registerTaskCancelHandler(running)
     // Named rather than anonymous: a bundle reports its progress to the window that asked, so
     // every case here is invoked FROM one.
     asking = openWindow()
@@ -168,10 +168,10 @@ describe('the same cut, bundled with the media it points at', () => {
 
     await exporting(bundling(`file://${rush}`))
 
-    const steps = asking.sent.filter(one => one.channel === EVENTS.exportProgress)
+    const steps = asking.sent.filter(one => one.channel === EVENTS.taskProgress)
     expect(steps.length).toBeGreaterThan(0)
     expect(steps.at(-1)).toEqual({
-      channel: EVENTS.exportProgress,
+      channel: EVENTS.taskProgress,
       payload: { id: 'export-1', ratio: 1 },
     })
     expect(other.sent).toEqual([])
@@ -211,8 +211,8 @@ describe('the same cut, bundled with the media it points at', () => {
     await expect(readFile(join(out, 'Bande.otioz'))).rejects.toThrow()
   })
 
-  it('says nothing was stopped when the id names no running export', async () => {
-    expect(invoke(CHANNELS.exportCancel, 'export-never-started')).toBe(false)
+  it('says nothing was stopped when the id names no running task', async () => {
+    expect(invoke(CHANNELS.taskCancel, 'export-never-started')).toBe(false)
   })
 
   /**
@@ -270,7 +270,7 @@ describe('the same cut, bundled with the media it points at', () => {
       pickSavePath: (name, extension) => Promise.resolve(join(out, `${name}${extension}`)),
       projectPath: () => null,
       bundles: inProcessBundles,
-      running: createRunningExports(),
+      running: createRunningTasks(),
     })
 
     await expect(exporting(bundling(`file://${rush}`))).resolves.toBeNull()

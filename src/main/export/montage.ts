@@ -1,6 +1,6 @@
 import { basename } from 'node:path'
 import { z } from 'zod'
-import { exportRatio } from '@shared/domain/exportProgress'
+import { taskRatio } from '@shared/domain/taskProgress'
 import { exportTargetOf } from '@shared/domain/exportRegistry'
 import { isBundleEntry } from '@shared/domain/otioz'
 import { CHANNELS, EVENTS, type MontageExportRequest } from '@shared/ipc'
@@ -10,7 +10,7 @@ import { fileInsideProject } from '@main/project/fileInsideProject'
 import { pathSegment } from '@main/validation'
 import type { BundleClient } from '@main/bundle/bundleClient'
 import type { BundleMedium } from '@main/bundle/bundleProtocol'
-import type { RunningExports } from './runningExports'
+import type { RunningTasks } from '@main/task/runningTasks'
 import { writePickedFile } from './writePickedFile'
 
 export type MontageHandlerDeps = {
@@ -20,7 +20,7 @@ export type MontageHandlerDeps = {
   projectPath: () => string | null
   /** The process that packs the archive — injected as the waveform's client is, same reason. */
   bundles: () => BundleClient
-  running: RunningExports
+  running: RunningTasks
 }
 
 /**
@@ -117,9 +117,9 @@ export function registerMontageHandlers({
         // To the window that asked, never broadcast: the row belongs to one status line, and a
         // second window would show a bar for an export it cannot stop.
         onStep: (done, total) =>
-          sendToSender(event.sender, EVENTS.exportProgress, {
+          sendToSender(event.sender, EVENTS.taskProgress, {
             id,
-            ratio: exportRatio(done, total),
+            ratio: taskRatio(done, total),
           }),
         signal,
       })

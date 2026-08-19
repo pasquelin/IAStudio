@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { unzipSync } from 'fflate'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { ExportWatch } from '@shared/domain/exportProgress'
+import type { TaskWatch } from '@shared/domain/taskProgress'
 import { MissingMediumError, writeOtiozFile } from './otiozWrite'
 
 let folder: string
@@ -19,7 +19,7 @@ const RUSH = new Uint8Array(4096).fill(0x41)
 
 async function bundleWith(
   media: { name: string; bytes: Uint8Array }[],
-  watch: ExportWatch = {},
+  watch: TaskWatch = {},
 ): Promise<string> {
   const paths = []
   for (const one of media) {

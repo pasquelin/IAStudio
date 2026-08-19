@@ -1,5 +1,5 @@
 import { assetUrl } from '@shared/domain/asset'
-import type { ExportWatch } from '@shared/domain/exportProgress'
+import type { TaskWatch } from '@shared/domain/taskProgress'
 import {
   assetsOf,
   boundedSize,
@@ -55,7 +55,7 @@ export type TexturePackRequest = {
  */
 export type TextureExportPort = (
   request: TexturePackRequest,
-  watch?: ExportWatch,
+  watch?: TaskWatch,
 ) => Promise<ExportedFile[]>
 
 export type TextureExportPortOptions = {

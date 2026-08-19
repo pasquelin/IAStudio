@@ -3,7 +3,7 @@ import { stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { finished } from 'node:stream/promises'
 import { Unzip, UnzipInflate, UnzipPassThrough, strFromU8 } from 'fflate'
-import type { ExportWatch } from '@shared/domain/exportProgress'
+import type { TaskWatch } from '@shared/domain/taskProgress'
 import {
   isBundleEntry,
   mediaNameOf,
@@ -75,7 +75,7 @@ const joined = ({ chunks, bytes }: Collected): Uint8Array => {
 export async function readOtiozFile(
   archive: string,
   into: string,
-  { onStep, signal }: ExportWatch = {},
+  { onStep, signal }: TaskWatch = {},
 ): Promise<OtiozRead | null> {
   if (signal?.aborted) return null
 

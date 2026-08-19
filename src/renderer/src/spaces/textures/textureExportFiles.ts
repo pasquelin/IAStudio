@@ -1,4 +1,4 @@
-import type { ExportWatch } from '@shared/domain/exportProgress'
+import type { TaskWatch } from '@shared/domain/taskProgress'
 import { MATERIAL_TARGET_OF } from '@shared/domain/exportRegistry'
 import type { TextureExportTarget } from '@shared/domain/textureExport'
 import type { FolderExportRequest } from '@shared/ipc'
@@ -18,7 +18,7 @@ import { textureOf, useTextures } from '@/stores/textures'
 export async function textureExportFiles(
   documentId: string,
   target: TextureExportTarget,
-  watch?: ExportWatch,
+  watch?: TaskWatch,
 ): Promise<FolderExportRequest> {
   const texture = textureOf(useTextures.getState(), documentId)
   const name = documentExportName(useDocuments.getState(), documentId, 'texture')

@@ -1,54 +1,56 @@
 import { create } from 'zustand'
-import { exportRatio, type ExportWatch } from '@shared/domain/exportProgress'
+import { taskRatio, type TaskWatch } from '@shared/domain/taskProgress'
 import { newId } from '@/helpers/ids'
 import { withoutKey } from '@/helpers/objects'
 import { getBridge } from '@/services/bridge'
 
-/** One export in flight, as the status line reads it. Window state — it crosses nothing. */
-export type ExportRow = {
+/** One long task in flight, as the status line reads it. Window state — it crosses nothing. */
+export type TaskRow = {
   /** Minted here, and the name the cancel channel answers to on the other side. */
   id: string
-  /** The document's name, as the file will be called. */
+  /** What it is working on — the document's name, or what the task is doing. */
   label: string
-  /** 0 to 1 across the whole export. */
+  /** 0 to 1 across the whole task. */
   ratio: number
 }
 
-type ExportsState = {
-  /** What this window is writing out, by the id it minted for each. */
-  running: Record<string, ExportRow>
+type TasksState = {
+  /** What this window is running, by the id it minted for each. */
+  running: Record<string, TaskRow>
 
-  /** Follows what the main process writes. Returns the unsubscribe. */
+  /** Follows what the main process reports. Returns the unsubscribe. */
   connect: () => () => void
-  /** Stops one, on both sides of the boundary — the loop here, and the write over there. */
-  cancelExport: (id: string) => void
+  /** Stops one, on both sides of the boundary — the loop here, and the work over there. */
+  cancelTask: (id: string) => void
 
-  begin: (row: ExportRow) => void
+  begin: (row: TaskRow) => void
   step: (id: string, ratio: number) => void
   end: (id: string) => void
 }
 
 /**
- * The stop of each running export, outside the state: an `AbortController` is not something a
+ * The stop of each running task, outside the state: an `AbortController` is not something a
  * component renders, and a store that held one would put it in every snapshot comparison.
  */
 const stops = new Map<string, AbortController>()
 
 /**
- * The exports in flight, which is what the status line shows and what its stop button reaches.
+ * The long tasks in flight, which is what the status line shows and what its stop button reaches.
  * Both halves of invariant 6, which nothing but the video render had — and it had nowhere to say.
+ *
+ * A TASK, not an export: the same row carries reading a bundle back in, and the render.
  */
-export const useExports = create<ExportsState>()((set, get) => ({
+export const useTasks = create<TasksState>()((set, get) => ({
   running: {},
 
   connect: () =>
-    getBridge()?.exports.onProgress(({ id, ratio }) => get().step(id, ratio)) ?? (() => {}),
+    getBridge()?.tasks.onProgress(({ id, ratio }) => get().step(id, ratio)) ?? (() => {}),
 
-  cancelExport: id => {
+  cancelTask: id => {
     // Locally first: the abort unwinds whatever loop is drawing here, and the main process is
-    // told in the same breath for the half that is writing there.
+    // told in the same breath for the half that is working there.
     stops.get(id)?.abort()
-    void getBridge()?.exports.cancel(id)
+    void getBridge()?.tasks.cancel(id)
   },
 
   begin: row => set(state => ({ running: { ...state.running, [row.id]: row } })),
@@ -68,24 +70,24 @@ export const useExports = create<ExportsState>()((set, get) => ({
 }))
 
 /**
- * Runs one export under a row the status line shows and a button that stops it. Answers `null`
+ * Runs one long task under a row the status line shows and a button that stops it. Answers `null`
  * when it was stopped, which is what every caller here already answers for a dismissed dialog.
  *
- * `work` is handed the id because the bundle needs it: the process writing the file answers the
+ * `work` is handed the id because the bundle needs it: the process doing the work answers the
  * stop by that same name. The row goes whichever way it ends, including a throw.
  */
-export async function runExport<T>(
+export async function runTask<T>(
   label: string,
-  work: (id: string, watch: ExportWatch) => Promise<T>,
+  work: (id: string, watch: TaskWatch) => Promise<T>,
 ): Promise<T | null> {
   const id = newId()
   const controller = new AbortController()
   stops.set(id, controller)
-  useExports.getState().begin({ id, label, ratio: 0 })
+  useTasks.getState().begin({ id, label, ratio: 0 })
 
   try {
     return await work(id, {
-      onStep: (done, total) => useExports.getState().step(id, exportRatio(done, total)),
+      onStep: (done, total) => useTasks.getState().step(id, taskRatio(done, total)),
       signal: controller.signal,
     })
   } catch (error) {
@@ -95,6 +97,6 @@ export async function runExport<T>(
     throw error
   } finally {
     stops.delete(id)
-    useExports.getState().end(id)
+    useTasks.getState().end(id)
   }
 }

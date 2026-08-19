@@ -8,7 +8,7 @@
     "generateHint": "Lance la génération avec les réglages ci-dessus ; elle se suit dans la barre des générations"
   },
   "jobs": {
-    "none": "Aucune tâche en cours.",
+    "none": "Aucune génération en cours.",
     "running_one": "{{count, number}} génération",
     "running_many": "{{count, number}} générations",
     "running_other": "{{count, number}} générations",
@@ -26,13 +26,13 @@
     },
     "cancel": "Annuler la tâche"
   },
-  "exports": {
-    "running_one": "{{count, number}} transfert",
-    "running_many": "{{count, number}} transferts",
-    "running_other": "{{count, number}} transferts",
-    "open": "Afficher les transferts",
-    "openHint": "Ouvre la liste des transferts en cours",
-    "cancel": "Interrompre ce transfert"
+  "tasks": {
+    "running_one": "{{count, number}} tâche",
+    "running_many": "{{count, number}} tâches",
+    "running_other": "{{count, number}} tâches",
+    "open": "Afficher les tâches",
+    "openHint": "Ouvre la liste des tâches en cours",
+    "cancel": "Interrompre cette tâche"
   },
   "dialog": {
     "allMedia": "Tous les médias",

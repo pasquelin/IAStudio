@@ -1,4 +1,4 @@
-import type { ExportWatch } from '@shared/domain/exportProgress'
+import type { TaskWatch } from '@shared/domain/taskProgress'
 import type {
   BundleJob,
   BundleMessage,
@@ -19,9 +19,9 @@ export type BundlePort = {
 /** Packs a montage and its rushes into one archive, and unpacks one, off this process entirely. */
 export type BundleClient = {
   /** Answers whether the bundle was written — `false` when it was stopped. */
-  write: (run: Omit<BundleWriteJob, 'writes'> & ExportWatch) => Promise<boolean>
+  write: (run: Omit<BundleWriteJob, 'writes'> & TaskWatch) => Promise<boolean>
   /** Answers the cut and where each medium landed — `null` when it was stopped. */
-  read: (run: Omit<BundleReadJob, 'writes'> & ExportWatch) => Promise<OtiozRead | null>
+  read: (run: Omit<BundleReadJob, 'writes'> & TaskWatch) => Promise<OtiozRead | null>
 }
 
 type Settled = boolean | OtiozRead | null
@@ -69,7 +69,7 @@ export function createBundleClient(port: BundlePort): BundleClient {
   })
 
   /** One promise for both directions: what differs is the job posted and the answer read back. */
-  const run = (job: BundleJob, { onStep, signal }: ExportWatch): Promise<Settled> =>
+  const run = (job: BundleJob, { onStep, signal }: TaskWatch): Promise<Settled> =>
     new Promise((resolve, reject) => {
       if (closed) {
         reject(new Error('the bundle process is gone'))

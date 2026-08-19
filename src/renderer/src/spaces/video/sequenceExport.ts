@@ -1,4 +1,4 @@
-import type { ExportWatch } from '@shared/domain/exportProgress'
+import type { TaskWatch } from '@shared/domain/taskProgress'
 import { offScreenHost } from '@/engines/core/offScreenHost'
 import { frameTimes } from '@/engines/scene/film'
 import { sequenceDuration, type SequenceState } from '@/engines/timeline/timelineState'
@@ -19,7 +19,7 @@ const MAX_PICTURES = 4
  * The same watch every other export takes — `onStep` counts frames here. It had its own pair of
  * fields under its own names, which is why nothing ever plugged it into the status line.
  */
-export type SequenceExportOptions = ExportWatch & {
+export type SequenceExportOptions = TaskWatch & {
   sequence: SequenceState
   /** Names the file the save dialog opens on — the document's own title. */
   title: string

@@ -15,7 +15,7 @@ import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { isSkyboxDirty, setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { documentExportName, useDocuments } from '@/stores/documents'
-import { runExport } from '@/stores/exports'
+import { runTask } from '@/stores/tasks'
 import { useSkyboxViews, skyboxViewOf } from '@/stores/skyboxViews'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
@@ -39,7 +39,7 @@ async function exportSkybox(documentId: string, size: number): Promise<void> {
   if (!bridge) return
 
   try {
-    await runExport(
+    await runTask(
       documentExportName(useDocuments.getState(), documentId, 'skybox'),
       // The rendering is `skyboxExportFiles`, which the outside door shares. A sky with no
       // picture throws THERE, before any dialog: a folder chooser opened to write six files of

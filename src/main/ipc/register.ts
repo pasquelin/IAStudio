@@ -27,7 +27,7 @@ import { registerDialogHandlers } from '@main/window/dialogs'
 import { registerSceneHandlers } from '@main/scene/export'
 import { registerExportHandlers } from '@main/export/folder'
 import { registerMontageHandlers } from '@main/export/montage'
-import { createRunningExports, registerExportCancelHandler } from '@main/export/runningExports'
+import { createRunningTasks, registerTaskCancelHandler } from '@main/task/runningTasks'
 import { registerMontageImportHandlers } from '@main/import/montageImport'
 import { registerRenderHandlers } from '@main/render/handlers'
 import { registerUpdateHandlers } from '@main/update/handlers'
@@ -111,13 +111,13 @@ export function registerIpc(services: Services): void {
   registerDialogHandlers(services)
   registerSceneHandlers(services)
   registerExportHandlers(services)
-  // One table for both: the window names an export, this side runs it under that name, and the
-  // stop button reaches it by the same name. Built here so neither handler owns the other's door.
-  const running = createRunningExports()
+  // One table for both: the window names a task, this side runs it under that name, and the stop
+  // button reaches it by the same name. Built here so neither handler owns the other's door.
+  const running = createRunningTasks()
   registerMontageHandlers({ ...services, running })
   // The same table both ways: an unpack is as long as a pack, and the stop button is one button.
   registerMontageImportHandlers({ ...services, running })
-  registerExportCancelHandler(running)
+  registerTaskCancelHandler(running)
   registerRenderHandlers({
     ...services,
     newId: () => `render_${randomUUID()}`,

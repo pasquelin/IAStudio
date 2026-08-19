@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { AccountSummary } from '@shared/domain/account'
 import type { ActivityEntry } from '@shared/domain/activity'
 import type { CommandId } from '@shared/domain/command'
-import type { ExportWriteProgress } from '@shared/domain/exportProgress'
+import type { TaskProgress } from '@shared/domain/taskProgress'
 import type { SttEvent } from '@shared/domain/dictation'
 import type { FileOutcome } from '@shared/domain/fileOp'
 import type { Project, RescanState } from '@shared/domain/project'
@@ -212,9 +212,9 @@ const bridge: StudioBridge = {
   skybox: {
     export: request => ipcRenderer.invoke(CHANNELS.skyboxExport, request),
   },
-  exports: {
-    onProgress: callback => subscribe<ExportWriteProgress>(EVENTS.exportProgress, callback),
-    cancel: id => ipcRenderer.invoke(CHANNELS.exportCancel, id),
+  tasks: {
+    onProgress: callback => subscribe<TaskProgress>(EVENTS.taskProgress, callback),
+    cancel: id => ipcRenderer.invoke(CHANNELS.taskCancel, id),
   },
   fonts: {
     list: () => ipcRenderer.invoke(CHANNELS.fontsList),

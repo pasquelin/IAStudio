@@ -1,6 +1,6 @@
 import { SRGBColorSpace } from 'three'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
-import type { ExportWatch } from '@shared/domain/exportProgress'
+import type { TaskWatch } from '@shared/domain/taskProgress'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
 import { exportTargetOf } from '@shared/domain/exportRegistry'
 import { faceFileNames } from '@shared/domain/skybox'
@@ -39,7 +39,7 @@ export type SkyboxExportRequest = {
  */
 export type SkyboxExportPort = (
   request: SkyboxExportRequest,
-  watch?: ExportWatch,
+  watch?: TaskWatch,
 ) => Promise<ExportedFile[]>
 
 export type SkyboxExportPortOptions = {

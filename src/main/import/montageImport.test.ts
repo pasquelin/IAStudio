@@ -7,7 +7,7 @@ import { CHANNELS, EVENTS } from '@shared/ipc'
 import type { BundleClient } from '@main/bundle/bundleClient'
 import { readOtiozFile } from '@main/bundle/otiozRead'
 import { writeOtiozFile } from '@main/bundle/otiozWrite'
-import { createRunningExports, registerExportCancelHandler } from '@main/export/runningExports'
+import { createRunningTasks, registerTaskCancelHandler } from '@main/task/runningTasks'
 import { invokeFrom, openWindow, resetHandlers } from '@main/ipc/testHarness'
 import { registerMontageImportHandlers } from './montageImport'
 
@@ -25,7 +25,7 @@ const inProcessBundles = (): BundleClient => ({
 describe('reading a montage bundle into the project', () => {
   let project: string
   let archive: string
-  let running: ReturnType<typeof createRunningExports>
+  let running: ReturnType<typeof createRunningTasks>
   let asking: ReturnType<typeof openWindow>
   let adopted: string[]
 
@@ -38,7 +38,7 @@ describe('reading a montage bundle into the project', () => {
     changes: Partial<Parameters<typeof registerMontageImportHandlers>[0]> = {},
   ): Promise<void> {
     resetHandlers()
-    running = createRunningExports()
+    running = createRunningTasks()
     registerMontageImportHandlers({
       pickImportPath: () => Promise.resolve(archive),
       projectPath: () => project,
@@ -47,7 +47,7 @@ describe('reading a montage bundle into the project', () => {
       adopt,
       ...changes,
     })
-    registerExportCancelHandler(running)
+    registerTaskCancelHandler(running)
     asking = openWindow()
   }
 
@@ -100,10 +100,10 @@ describe('reading a montage bundle into the project', () => {
   it('reports how far along it is, to the window that asked', async () => {
     await importing()
 
-    const steps = asking.sent.filter(one => one.channel === EVENTS.exportProgress)
+    const steps = asking.sent.filter(one => one.channel === EVENTS.taskProgress)
     expect(steps.length).toBeGreaterThan(0)
     expect(steps.at(-1)).toEqual({
-      channel: EVENTS.exportProgress,
+      channel: EVENTS.taskProgress,
       payload: { id: 'import-1', ratio: 1 },
     })
   })

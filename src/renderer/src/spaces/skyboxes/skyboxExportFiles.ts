@@ -1,4 +1,4 @@
-import type { ExportWatch } from '@shared/domain/exportProgress'
+import type { TaskWatch } from '@shared/domain/taskProgress'
 import type { FolderExportRequest } from '@shared/ipc'
 import { loadTexture } from '@/engines/scene/textureCache'
 import { assetVersionOf } from '@/stores/assets'
@@ -16,7 +16,7 @@ import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 export async function skyboxExportFiles(
   documentId: string,
   size: number,
-  watch?: ExportWatch,
+  watch?: TaskWatch,
 ): Promise<FolderExportRequest> {
   // Read once, before any `await`. Read twice — the picture here and the grading after the
   // `import()` — and a slider moved while the chunk downloads would export one sky's pixels

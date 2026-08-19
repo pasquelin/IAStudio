@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ExportWriteProgress } from '@shared/domain/exportProgress'
+import type { TaskProgress } from '@shared/domain/taskProgress'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { runExport, useExports } from './exports'
+import { runTask, useTasks } from './tasks'
 
 beforeEach(() => {
-  useExports.setState({ running: {} })
+  useTasks.setState({ running: {} })
   installFakeBridge()
 })
 
-describe('an export in flight', () => {
+describe('a long task in flight', () => {
   it('shows a row for as long as it runs, and takes it away when it ends', async () => {
     let release = (): void => {}
-    const running = runExport(
+    const running = runTask(
       'Coucher',
       () =>
         new Promise<string>(resolve => {
@@ -19,21 +19,21 @@ describe('an export in flight', () => {
         }),
     )
 
-    expect(Object.values(useExports.getState().running)).toEqual([
+    expect(Object.values(useTasks.getState().running)).toEqual([
       expect.objectContaining({ label: 'Coucher', ratio: 0 }),
     ])
 
     release()
     await expect(running).resolves.toBe('Coucher')
-    expect(useExports.getState().running).toEqual({})
+    expect(useTasks.getState().running).toEqual({})
   })
 
   it('moves the needle as the work reports it', async () => {
     const seen: number[] = []
 
-    await runExport('Coucher', (_id, watch) => {
+    await runTask('Coucher', (_id, watch) => {
       watch.onStep?.(3, 6)
-      seen.push(Object.values(useExports.getState().running)[0]?.ratio ?? -1)
+      seen.push(Object.values(useTasks.getState().running)[0]?.ratio ?? -1)
       return Promise.resolve(null)
     })
 
@@ -42,27 +42,27 @@ describe('an export in flight', () => {
 
   /** A failure is reported by whoever asked; a row left behind would be a bar nothing removes. */
   it('takes the row away when the work throws, and lets the failure through', async () => {
-    await expect(
-      runExport('Coucher', () => Promise.reject(new Error('no channel'))),
-    ).rejects.toThrow('no channel')
+    await expect(runTask('Coucher', () => Promise.reject(new Error('no channel')))).rejects.toThrow(
+      'no channel',
+    )
 
-    expect(useExports.getState().running).toEqual({})
+    expect(useTasks.getState().running).toEqual({})
   })
 })
 
 describe('stopping one', () => {
   it('aborts the work here and tells the main process, under the same name', async () => {
     const cancel = vi.fn(() => Promise.resolve(true))
-    installFakeBridge({ exports: { cancel } })
+    installFakeBridge({ tasks: { cancel } })
 
     const seen: AbortSignal[] = []
-    const running = runExport('Bande', (_id, watch) => {
+    const running = runTask('Bande', (_id, watch) => {
       if (watch.signal) seen.push(watch.signal)
       return new Promise<string>(() => {})
     })
 
-    const [row] = Object.values(useExports.getState().running)
-    useExports.getState().cancelExport(row?.id ?? '')
+    const [row] = Object.values(useTasks.getState().running)
+    useTasks.getState().cancelTask(row?.id ?? '')
 
     expect(seen[0]?.aborted).toBe(true)
     expect(cancel).toHaveBeenCalledWith(row?.id)
@@ -74,7 +74,7 @@ describe('stopping one', () => {
    * answers for a dismissed dialog, so nothing downstream has to learn a second shape.
    */
   it('answers nothing rather than the throw the loop unwound with', async () => {
-    const running = runExport(
+    const running = runTask(
       'Coucher',
       (_id, watch) =>
         new Promise<string>((_resolve, reject) => {
@@ -82,11 +82,11 @@ describe('stopping one', () => {
         }),
     )
 
-    const [row] = Object.values(useExports.getState().running)
-    useExports.getState().cancelExport(row?.id ?? '')
+    const [row] = Object.values(useTasks.getState().running)
+    useTasks.getState().cancelTask(row?.id ?? '')
 
     await expect(running).resolves.toBeNull()
-    expect(useExports.getState().running).toEqual({})
+    expect(useTasks.getState().running).toEqual({})
   })
 })
 
@@ -95,10 +95,10 @@ describe('what the main process reports', () => {
    * The last chunk of a bundle and its answer cross: a row re-created by a late step would sit
    * at 100 % for the rest of the session with nothing left to remove it.
    */
-  it('ignores a step for an export that has already ended', () => {
-    let push = (_progress: ExportWriteProgress): void => {}
+  it('ignores a step for a task that has already ended', () => {
+    let push = (_progress: TaskProgress): void => {}
     installFakeBridge({
-      exports: {
+      tasks: {
         onProgress: callback => {
           push = callback
           return () => {}
@@ -106,10 +106,10 @@ describe('what the main process reports', () => {
       },
     })
 
-    const stop = useExports.getState().connect()
+    const stop = useTasks.getState().connect()
     push({ id: 'gone', ratio: 0.5 })
 
-    expect(useExports.getState().running).toEqual({})
+    expect(useTasks.getState().running).toEqual({})
     stop()
   })
 })

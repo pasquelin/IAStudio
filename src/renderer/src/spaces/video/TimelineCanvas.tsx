@@ -52,7 +52,7 @@ import { useShortcuts } from '@/hooks/useShortcuts'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import { assetsById, useAssets } from '@/stores/assets'
 import { documentExportName, useDocuments } from '@/stores/documents'
-import { runExport } from '@/stores/exports'
+import { runTask } from '@/stores/tasks'
 import { usePeaks } from '@/stores/peaks'
 import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { useSelection } from '@/stores/selection'
@@ -237,9 +237,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
         // to say so, so minutes of encoding showed nothing and offered no way out.
         case 'sequence.export': {
           const title = documentExportName(useDocuments.getState(), documentId, documentId)
-          void runExport(title, (_id, watch) =>
-            exportSequence({ sequence: state, title, ...watch }),
-          )
+          void runTask(title, (_id, watch) => exportSequence({ sequence: state, title, ...watch }))
           return
         }
         case 'sequence.exportCut':

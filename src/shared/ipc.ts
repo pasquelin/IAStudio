@@ -55,7 +55,7 @@ import type {
   ViewDirection,
 } from './domain/scene'
 import type { ExportTargetId } from './domain/exportRegistry'
-import type { ExportWriteProgress } from './domain/exportProgress'
+import type { TaskProgress } from './domain/taskProgress'
 import type { TextureExportTarget } from './domain/textureExport'
 import type { Language } from './i18n/languages'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
@@ -235,7 +235,7 @@ export type Channels = {
   textureExport: 'texture:export'
   skyboxExport: 'skybox:export'
   projectExport: 'project:export'
-  exportCancel: 'export:cancel'
+  taskCancel: 'task:cancel'
 
   fontsList: 'fonts:list'
   fontsRead: 'fonts:read'
@@ -418,7 +418,7 @@ export const CHANNELS: Channels = {
   textureExport: 'texture:export',
   skyboxExport: 'skybox:export',
   projectExport: 'project:export',
-  exportCancel: 'export:cancel',
+  taskCancel: 'task:cancel',
 
   fontsList: 'fonts:list',
   fontsRead: 'fonts:read',
@@ -536,7 +536,7 @@ export type SceneExportRequest = {
  */
 export type MontageExportRequest = {
   /**
-   * The row the window is already showing for this export, and the name `exports.cancel` answers
+   * The row the window is already showing for this export, and the name `tasks.cancel` answers
    * to. Minted there rather than here: a bundle is gigabytes, and an id this side only handed
    * back at the END would leave the whole write unstoppable.
    */
@@ -813,7 +813,7 @@ export const EVENTS = {
   sceneExport: 'evt:scene-export',
   textureExport: 'evt:texture-export',
   skyboxExport: 'evt:skybox-export',
-  exportProgress: 'evt:export-progress',
+  taskProgress: 'evt:task-progress',
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
   activity: 'evt:activity',
@@ -1485,19 +1485,21 @@ export type StudioBridge = {
     export: (request: FolderExportRequest) => Promise<string | null>
   }
   /**
-   * The two halves invariant 6 asks of a long task, for the exports this side WRITES — the bundle
-   * being the one that matters, since it moves gigabytes with the window learning nothing.
+   * The two halves invariant 6 asks of a long task, for the ones this side RUNS — the bundle
+   * being the one that matters, since it moves gigabytes with the window learning nothing. It
+   * carries reading one back in as much as writing one out, which is why it is not named for the
+   * export.
    *
    * What the window bakes itself — six faces of a sky, five channels of a material — is watched
    * and stopped where its loop lives and never comes through here.
    */
-  exports: {
-    /** How far the write has got. Silent for anything that finishes in one go. */
-    onProgress: (callback: (progress: ExportWriteProgress) => void) => Unsubscribe
+  tasks: {
+    /** How far it has got. Silent for anything that finishes in one go. */
+    onProgress: (callback: (progress: TaskProgress) => void) => Unsubscribe
     /**
-     * Stops the export that was started under this id, half-written file and all. Answers
-     * whether one was still running — an id that already finished is not a failure, it is a
-     * click that arrived a moment late.
+     * Stops the task that was started under this id, half-written file and all. Answers whether
+     * one was still running — an id that already finished is not a failure, it is a click that
+     * arrived a moment late.
      */
     cancel: (id: string) => Promise<boolean>
   }

@@ -2,14 +2,14 @@ import { mkdir, rm, stat } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { z } from 'zod'
 import type { Asset } from '@shared/domain/asset'
-import { exportRatio } from '@shared/domain/exportProgress'
+import { taskRatio } from '@shared/domain/taskProgress'
 import { safeFileName, stemOf } from '@shared/domain/fileName'
 import { importSourceOf } from '@shared/domain/importRegistry'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import type { BundleClient } from '@main/bundle/bundleClient'
 import { sendToSender } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
-import type { RunningExports } from '@main/export/runningExports'
+import type { RunningTasks } from '@main/task/runningTasks'
 import { folderInsideProject } from '@main/project/folderInsideProject'
 
 export type MontageImportDeps = {
@@ -18,7 +18,7 @@ export type MontageImportDeps = {
   /** Where the open project sits, or nothing when none is. */
   projectPath: () => string | null
   bundles: () => BundleClient
-  running: RunningExports
+  running: RunningTasks
   /** Gives a landed file its catalogue row — the same door a double-click in the explorer uses. */
   adopt: (relative: string) => Promise<Asset | null>
 }
@@ -89,9 +89,9 @@ export function registerMontageImportHandlers({
           path: archive,
           into,
           onStep: (done, total) =>
-            sendToSender(event.sender, EVENTS.exportProgress, {
+            sendToSender(event.sender, EVENTS.taskProgress, {
               id,
-              ratio: exportRatio(done, total),
+              ratio: taskRatio(done, total),
             }),
           signal,
         })

@@ -5,7 +5,7 @@ import { newId } from '@/helpers/ids'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { documentExportName, useDocuments } from '@/stores/documents'
-import { runExport } from '@/stores/exports'
+import { runTask } from '@/stores/tasks'
 import { useProject } from '@/stores/project'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { otioTimelineFor, serializeSequencePayload } from './sequenceDocument'
@@ -109,7 +109,7 @@ export async function exportOtioz(documentId: string): Promise<string | null> {
 
     // The id travels WITH the request: the process that writes the archive answers the stop
     // button by that same name, and one handed back at the end would come minutes too late.
-    return await runExport(name, id =>
+    return await runTask(name, id =>
       bridge.montage.export({
         id,
         name,

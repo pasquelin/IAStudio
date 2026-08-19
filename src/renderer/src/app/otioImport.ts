@@ -9,7 +9,7 @@ import { getBridge } from '@/services/bridge'
 import { reportFailure, reportNotice } from '@/services/diagnostics'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
-import { runExport } from '@/stores/exports'
+import { runTask } from '@/stores/tasks'
 import { sequenceStore } from '@/stores/sequences'
 import { openDocument } from './dockviewApi'
 import { saveDocument } from './documentIo'
@@ -69,7 +69,7 @@ export async function importOtioz(): Promise<string | null> {
   if (!workspace) return null
 
   try {
-    const read = await runExport(i18next.t('documents.importing'), id => bridge.montage.import(id))
+    const read = await runTask(i18next.t('documents.importing'), id => bridge.montage.import(id))
     if (!read) return null
 
     // The rows were minted by the main process while it unpacked; nothing in the window has seen

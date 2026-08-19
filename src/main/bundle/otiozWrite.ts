@@ -3,7 +3,7 @@ import { rm, stat } from 'node:fs/promises'
 import { finished, pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
 import { Zip, ZipPassThrough, strToU8 } from 'fflate'
-import type { ExportWatch } from '@shared/domain/exportProgress'
+import type { TaskWatch } from '@shared/domain/taskProgress'
 import {
   OTIOZ_CONTENT_PATH,
   OTIOZ_VERSION,
@@ -86,7 +86,7 @@ function storedEntry(zip: Zip, name: string, bytes: Uint8Array): void {
 export async function writeOtiozFile(
   path: string,
   { content, media }: OtiozContents,
-  { onStep, signal }: ExportWatch = {},
+  { onStep, signal }: TaskWatch = {},
 ): Promise<boolean> {
   if (signal?.aborted) return false
 

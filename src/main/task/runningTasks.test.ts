@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { createRunningExports } from './runningExports'
+import { createRunningTasks } from './runningTasks'
 
-describe('the table of running exports', () => {
+describe('the table of running tasks', () => {
   it('stops the one the window names, and leaves the others turning', async () => {
-    const table = createRunningExports()
+    const table = createRunningTasks()
     const stopped: string[] = []
 
     const watch = (id: string) => (signal: AbortSignal) =>
@@ -26,8 +26,8 @@ describe('the table of running exports', () => {
   })
 
   /** A click that arrives after the file was written is late, not wrong. */
-  it('says nothing was stopped once the export has ended', async () => {
-    const table = createRunningExports()
+  it('says nothing was stopped once the task has ended', async () => {
+    const table = createRunningTasks()
     await table.run('a', () => Promise.resolve())
 
     expect(table.cancel('a')).toBe(false)
@@ -37,8 +37,8 @@ describe('the table of running exports', () => {
    * The second would take over the stop button of the first, which then becomes unstoppable —
    * and the first to end would delete the second's entry.
    */
-  it('refuses a second export under a name already running', async () => {
-    const table = createRunningExports()
+  it('refuses a second task under a name already running', async () => {
+    const table = createRunningTasks()
     const held = table.run('a', () => new Promise<void>(() => {}))
 
     await expect(table.run('a', () => Promise.resolve())).rejects.toThrow('already running')
@@ -48,8 +48,8 @@ describe('the table of running exports', () => {
     void held
   })
 
-  it('forgets an export that ended badly, so its name can be used again', async () => {
-    const table = createRunningExports()
+  it('forgets a task that ended badly, so its name can be used again', async () => {
+    const table = createRunningTasks()
 
     await expect(table.run('a', () => Promise.reject(new Error('disk full')))).rejects.toThrow()
     await expect(table.run('a', () => Promise.resolve('done'))).resolves.toBe('done')
