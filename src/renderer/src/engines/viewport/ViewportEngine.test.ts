@@ -396,6 +396,81 @@ describe('a viewport', () => {
       expect(engine.paneOrbits.map(orbit => orbit?.enabled)).toEqual([false, true, false, false])
     })
 
+    /**
+     * The seam `TransformControls` needs: it grabs from the camera it holds, so whoever aims it
+     * has to run before the canvas hears the event. Through the viewport rather than a listener
+     * of the caller's own, or the order would rest on which `mount` ran first.
+     *
+     * **What this does NOT prove**: that a CAPTURE is required. Measured — a bubble listener
+     * posted at mount already runs before one a caller adds later, so this case is green against
+     * the arrangement this lot replaced. What the capture buys is running ahead of the main
+     * `OrbitControls`, built inside `mount` before the arming was, and nothing here covers that.
+     */
+    it('says the pane is armed before the canvas hears the event, and says it while frozen', () => {
+      const armed: number[] = []
+      const engine = mounted({ onPaneArmed: () => armed.push(engine.activePane) })
+      engine.setLayout('quad')
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      const afterCanvas: number[] = []
+      canvas.addEventListener('pointermove', () => afterCanvas.push(armed.length))
+      canvas.dispatchEvent(pointerAt(HOST_WIDTH - 10, HOST_HEIGHT - 10))
+
+      expect(armed).toEqual([3])
+      expect(afterCanvas).toEqual([1])
+
+      // Frozen, nothing is armed — but the caller still has to be told, since thawing happens
+      // from that very call. Without it a freeze that outlived its gesture would never lift.
+      engine.freezePanes(true)
+      canvas.dispatchEvent(pointerAt(10, 10))
+
+      expect(engine.activePane).toBe(3)
+      expect(armed).toHaveLength(2)
+    })
+
+    /**
+     * A gizmo handle held, a camera flying: the gesture belongs to whoever started it. Without
+     * this the arming above answered every pixel of that same drag — the view orbited under the
+     * handle being pulled, and the working view could change halfway through.
+     */
+    it('arms nothing while another gesture holds the pointer, and gives it back after', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      canvas.dispatchEvent(pointerAt(10, 10))
+      engine.freezePanes(true)
+      canvas.dispatchEvent(pointerAt(HOST_WIDTH - 10, HOST_HEIGHT - 10))
+
+      expect(engine.paneOrbits.map(orbit => orbit?.enabled)).toEqual([false, false, false, false])
+      expect(engine.activePane).toBe(0)
+
+      engine.freezePanes(false)
+
+      // The pane the pointer STANDS in, not the one it was in when the gesture began: the move
+      // that lifts a freeze is the one this returned early on, so reading the pane held before
+      // would leave the working view — and the camera a gizmo grabs from — one event behind.
+      expect(engine.activePane).toBe(3)
+      expect(engine.paneOrbits.map(orbit => orbit?.enabled)).toEqual([false, false, false, true])
+    })
+
+    /** Off the surface entirely — a drag released outside the window — there is no pane to read. */
+    it('keeps the pane it had when thawing with the pointer off the canvas', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      canvas.dispatchEvent(pointerAt(HOST_WIDTH - 10, HOST_HEIGHT - 10))
+      engine.freezePanes(true)
+      canvas.dispatchEvent(pointerAt(-40, -40))
+      engine.freezePanes(false)
+
+      expect(engine.activePane).toBe(3)
+    })
+
     it('leaves every orbit alone while there is one view', () => {
       const engine = mounted()
       const canvas = engine.canvas
@@ -415,6 +490,30 @@ describe('a viewport', () => {
 
       expect(ndc?.x).toBeCloseTo(0)
       expect(ndc?.y).toBeCloseTo(0)
+    })
+
+    /**
+     * What a control reading its own pointer events has to be told, `TransformControls` being
+     * the one that does: unset, it normalises a click against the whole canvas — four times the
+     * pane its handles are drawn in — and no handle ever lights up in a quad layout.
+     */
+    it('gives the active pane bottom-left, and none of it while there is one view', () => {
+      const engine = mounted()
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      expect(engine.activePaneRegion()).toBeNull()
+
+      engine.setLayout('quad')
+      canvas.dispatchEvent(pointerAt(HOST_WIDTH - 10, HOST_HEIGHT - 10))
+
+      // The bottom-right pane, which is where a bottom-left origin puts its own zero.
+      expect(engine.activePaneRegion()).toEqual({
+        x: HOST_WIDTH / 2,
+        y: 0,
+        width: HOST_WIDTH / 2,
+        height: HOST_HEIGHT / 2,
+      })
     })
 
     /** The seam a per-view display mode hangs on: each pane is announced before its own pass. */
