@@ -204,11 +204,12 @@ c’est cet élément-là qui est refusé ; les autres passent.
 ne sait pas annuler, et une touche de suppression nue est trop proche de ce qu’une main fait en
 parcourant une liste.
 
-> **Trois gestes du menu ne sont pas dans cette table**, et ils ne sont pas dans l’écran des
+> **Quatre gestes du menu ne sont pas dans cette table**, et ils ne sont pas dans l’écran des
 > raccourcis non plus. **Ouvrir** répond à `Entrée`, mais c’est l’arbre qui écoute cette touche,
-> pas le registre : elle ne se change donc pas. **Afficher dans le dossier** et **Renommer** ne
-> répondent à aucune touche du tout — ils vivent dans le menu du clic droit, et nulle part
-> ailleurs. Voir [Les projets](04-projets.md#le-clic-droit--onze-gestes-en-quatre-groupes).
+> pas le registre : elle ne se change donc pas. **Afficher dans le dossier**, **Informations sur
+> le fichier** et **Renommer** ne répondent à aucune touche du tout — ils vivent dans le menu du
+> clic droit, et nulle part ailleurs. Voir
+> [Les projets](04-projets.md#le-clic-droit--douze-gestes-en-quatre-groupes).
 
 ---
 

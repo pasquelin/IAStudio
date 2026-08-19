@@ -129,18 +129,23 @@ pas de la première.
 
 **Les deux gestes ne servent pas le même besoin, et c’est le partage à retenir** : le double-clic
 sert **l’asset** — il l’ouvre chez lui ; le clic droit sert **le document déjà ouvert** — il y
-envoie l’asset. Le premier crée un onglet, le second n’en crée aucun.
+envoie l’asset. Le premier crée un onglet ; de tout ce que le second liste, **une seule ligne**
+en crée un, et elle est nommée plus bas.
 
-Le clic droit liste toutes les destinations, toujours dans le même ordre :
+Le clic droit liste les destinations en premier, toujours dans le même ordre, puis ce qui se fait
+de l’asset lui-même :
 
 | Ligne | Où elle envoie l’asset | Pour quels types |
 |---|---|---|
 | **Utiliser comme ciel** | le ciel ouvert, espace Skyboxes | images |
 | **Ajouter à la scène** | la scène 3D ouverte | mailles |
+| **Faire jouer au personnage** | le personnage choisi dans la scène 3D ouverte | animations |
 | **Ouvrir dans l’éditeur audio** | le montage ouvert, espace Audio | sons |
 | **Placer comme calque** | l’image ouverte, espace Image | images |
 | **Ajouter au montage** | la séquence ouverte, espace Vidéo | tous |
 | **Utiliser comme couleur de base** | la matière ouverte, espace Textures | images |
+| **Modifier l’image** | un onglet à elle, espace Image | textures et ciels |
+| **Extraire ses textures** | sort les images du modèle dans l’étagère | mailles |
 | **Renommer** | ouvre le nom sur la vignette elle-même | tous |
 | **Afficher dans le dossier** | ouvre le gestionnaire de fichiers sur le fichier | tous |
 
@@ -158,9 +163,19 @@ silence ; un nom que le dossier tient déjà l’est également, plutôt que d�
 > — `asset_40f76c36-8ad4-4def-a1b3-9125cba4da98.png`. Ils prennent leur vrai nom le jour où vous
 > les renommez, et pas avant : le studio ne remue pas votre dossier tout seul.
 
-Chaque ligne porte l’icône de son espace, la même que dans la barre de titre. Le menu ne montre
-que les destinations capables de recevoir **ce type-là** : le clic droit sur un son n’offre pas
-de le poser comme ciel.
+**Modifier l’image est la ligne qui ouvre un onglet**, et elle n’apparaît que sur une texture
+ou un ciel déjà posés sur le disque : ces deux-là s’assemblent dans leur espace — l’un tient
+des canaux, l’autre une projection — et aucun des deux ne réécrit l’image qui est dessous.
+C’est donc dans Image qu’on la retouche, et l’onglet ouvert est celui de l’asset lui-même.
+
+**Extraire ses textures ne s’adresse qu’à une maille**, et c’est l’autre moitié du même
+besoin : les images que le modèle porte à l’intérieur ressortent dans l’étagère du projet, où
+elles deviennent des assets comme les autres — donc retouchables. La ligne est grisée tant que
+le modèle n’est pas sur votre disque, comme **Afficher dans le dossier**.
+
+Chaque destination porte l’icône de son espace, la même que dans la barre de titre. Le menu ne
+montre que les destinations capables de recevoir **ce type-là** : le clic droit sur un son
+n’offre pas de le poser comme ciel.
 
 **En revanche, une destination dont l’espace n’a pas de document ouvert reste affichée, mais
 grisée.** C’est délibéré : un menu qui change de longueur selon ce qui est ouvert est un menu

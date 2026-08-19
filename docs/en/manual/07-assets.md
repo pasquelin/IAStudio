@@ -127,18 +127,23 @@ first.
 
 **The two gestures do not serve the same need, and that is the split to remember**: double-click
 serves **the asset** — it opens it at home; right-click serves **the document already open** — it
-sends the asset there. The first makes a tab, the second makes none.
+sends the asset there. The first makes a tab; of everything the second lists, **one single row**
+makes one, and it is named below.
 
-Right-click lists every destination, always in the same order:
+Right-click lists the destinations first, always in the same order, then what is done with the
+asset itself:
 
 | Row | Where it sends the asset | For which types |
 |---|---|---|
 | **Use as sky** | the open sky, Skyboxes workspace | pictures |
 | **Add to the scene** | the open 3D scene | meshes |
+| **Make the character play it** | the character picked in the open 3D scene | motions |
 | **Open in the audio editor** | the open edit, Audio workspace | sounds |
 | **Place as a layer** | the open image, Image workspace | pictures |
 | **Add to the edit** | the open sequence, Video workspace | all |
 | **Use as base colour** | the open material, Textures workspace | pictures |
+| **Edit the image** | a tab of its own, Image workspace | textures and skies |
+| **Extract its textures** | lays the model's pictures out on the shelf | meshes |
 | **Rename** | opens the name on the thumbnail itself | all |
 | **Show in folder** | opens the file manager on the file | all |
 
@@ -156,9 +161,19 @@ so is a name the folder already holds, rather than overwriting another picture.
 > `asset_40f76c36-8ad4-4def-a1b3-9125cba4da98.png`. They take their real name the day you rename
 > them, and not before: the studio does not stir your folder on its own.
 
-Each row carries its workspace's icon, the same one as in the title bar. The menu only shows
-destinations able to take **that type**: right-clicking a sound does not offer to lay it out as a
-sky.
+**Edit the image is the row that opens a tab**, and it only appears on a texture or a sky already
+on disk: those two are assembled in their own workspace — one holds channels, the other a
+projection — and neither writes back the picture underneath. Retouching it therefore happens in
+Image, and the tab opened is the asset's own.
+
+**Extract its textures only speaks to a mesh**, and it is the other half of the same need: the
+pictures the model carries inside come out onto the project's shelf, where they become assets like
+any other — and so can be retouched. The row is greyed as long as the model is not on your disk,
+like **Show in folder**.
+
+Each destination carries its workspace's icon, the same one as in the title bar. The menu only
+shows destinations able to take **that type**: right-clicking a sound does not offer to lay it out
+as a sky.
 
 **A destination whose workspace has no open document does stay listed, but greyed out.** That is
 deliberate: a menu whose length changes with what is open is a menu you cannot learn. A greyed row

@@ -303,12 +303,13 @@ change le nom **là où le fichier est déjà**, et ne peut pas le sortir de son
 qui n’accepterait pas le dépôt ne s’allume pas : vous voyez avant de lâcher, pas après. Un nom
 déjà pris dans le dossier d’arrivée est refusé plutôt qu’écrasé, et le journal le dit.
 
-#### Le clic droit : onze gestes, en quatre groupes
+#### Le clic droit : douze gestes, en quatre groupes
 
 | Groupe | Geste | Ce qu’il fait |
 |---|---|---|
 | ouvrir | **Ouvrir** | ouvre le fichier dans son espace, ou déplie le dossier |
 | | **Afficher dans le dossier** | ouvre le Finder ou l’Explorateur Windows, la ligne sélectionnée |
+| | **Informations sur le fichier** | ouvre la fenêtre qui dit tout ce que le studio sait de cette entrée |
 | presse-papiers | **Couper** · **Copier** | retiennent la sélection pour le prochain collage |
 | | **Coller** | dépose dans le dossier affiché ce que le presse-papiers retient |
 | fichiers | **Nouveau dossier** | crée un dossier vide dans le dossier affiché |
@@ -317,14 +318,20 @@ déjà pris dans le dossier d’arrivée est refusé plutôt qu’écrasé, et l
 | | **Mettre à la corbeille** | envoie à la corbeille de votre système |
 | revenir | **Annuler** · **Rétablir** | défont et refont le dernier lot de fichiers |
 
-**Huit de ces onze lignes portent le raccourci auquel elles répondent**, et c’est celui qui est
+**Huit de ces douze lignes portent le raccourci auquel elles répondent**, et c’est celui qui est
 *en vigueur* : si vous l’avez remappé dans les réglages, c’est le vôtre qui s’affiche ici. Les
-trois autres — **Ouvrir**, **Afficher dans le dossier**, **Renommer** — n’en portent aucun, et
-c’est exact : elles ne sont pas des commandes du registre. `Entrée` ouvre bien la ligne, mais
-c’est l’arbre qui écoute cette touche, et elle ne se change pas.
+quatre autres — **Ouvrir**, **Afficher dans le dossier**, **Informations sur le fichier**,
+**Renommer** — n’en portent aucun, et c’est exact : ce ne sont pas des commandes du registre.
+`Entrée` ouvre bien la ligne, mais c’est l’arbre qui écoute cette touche, et elle ne se change
+pas.
 
 **Aucun geste ne disparaît du menu ; ceux qui ne s’appliquent pas sont grisés.** Un menu dont la
-longueur change selon la ligne cliquée est un menu qu’on ne peut pas apprendre.
+longueur change selon la ligne cliquée est un menu qu’on ne peut pas apprendre. **Informations
+sur le fichier** est grisé sur un dossier — ce qu’il répond est celui d’un fichier.
+
+**Un seul geste de ce menu ne suit pas la sélection : Informations sur le fichier.** Il ouvre la
+fenêtre sur la ligne que vous venez de cliquer, même si douze noms sont pris. C’est la seule
+exception, et elle va de soi : cette fenêtre parle d’une entrée.
 
 **`⌘Z` ne défait les fichiers que si le focus est dans ce panneau.** Ailleurs il appartient au
 document ouvert : annuler dans le canevas ne doit pas atteindre votre disque.
