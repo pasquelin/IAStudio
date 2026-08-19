@@ -362,6 +362,22 @@ describe('migrating to the split arrangement', () => {
     expect(migrated?.arrangements.workspaces.open.left).toEqual({ primary: 'assets' })
     expect(migrated?.lengths.sizes.bottomRight).toBe(400)
   })
+
+  /**
+   * What a stored `channels` comes back as, the panel having become a section of the inspector.
+   *
+   * **This does not hold the version bump beside it**, and nothing here can: whether `migrate`
+   * runs at all is zustand's contract with `version`, not ours. What it holds is the half of the
+   * answer that IS ours — that the migration knows to unhang a panel no placement declares.
+   */
+  it('unhangs a panel a stored layout named and the registry has dropped', () => {
+    const migrated = migrateTools(
+      { arrangements: { workspaces: { open: { right: { primary: 'channels' } } } } },
+      16,
+    )
+
+    expect(migrated?.arrangements.workspaces.open.right).toEqual({})
+  })
 })
 
 describe('fitSplit', () => {
