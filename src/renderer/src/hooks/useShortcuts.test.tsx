@@ -101,7 +101,7 @@ describe('useShortcuts', () => {
   // flying while writing in a field would be the regression that restructuring could cause.
   it('registers no motion for a key typed into a field', () => {
     const onMotionChange = vi.fn()
-    const { result } = mount(vi.fn(), true, onMotionChange)
+    const { result } = mount(vi.fn(), true, onMotionChange, undefined, () => true)
 
     fireEvent.keyDown(screen.getByLabelText('prompt'), { code: 'KeyW' })
 
@@ -188,7 +188,7 @@ describe('useShortcuts', () => {
     // One `setup()` instance, because a key held down is state: the direct `userEvent.keyboard`
     // starts from a blank keyboard every call and would silently skip the release.
     const user = userEvent.setup()
-    const { result } = mount(vi.fn())
+    const { result } = mount(vi.fn(), true, undefined, undefined, () => true)
 
     await user.keyboard('{w>}')
     expect([...result.current.heldMotion.current]).toEqual(['forward'])
@@ -199,13 +199,41 @@ describe('useShortcuts', () => {
 
   it('holds the same direction from an arrow as from its letter', async () => {
     const user = userEvent.setup()
-    const { result } = mount(vi.fn())
+    const { result } = mount(vi.fn(), true, undefined, undefined, () => true)
 
     await user.keyboard('{ArrowUp>}')
     expect([...result.current.heldMotion.current]).toEqual(['forward'])
 
     await user.keyboard('{/ArrowUp}')
     expect([...result.current.heldMotion.current]).toEqual([])
+  })
+
+  // The boost key IS Shift, so its own keydown already carries `shiftKey` — read through
+  // `signatureOf` it signed as `Shift+ShiftLeft` and matched nothing, leaving the boost setting
+  // inert and every direction pressed under it dead.
+  it('holds boost, and the direction pressed while it is held', async () => {
+    const user = userEvent.setup()
+    const { result } = mount(vi.fn(), true, undefined, undefined, () => true)
+
+    await user.keyboard('{Shift>}')
+    expect([...result.current.heldMotion.current]).toEqual(['boost'])
+
+    await user.keyboard('{ArrowUp>}')
+    expect([...result.current.heldMotion.current]).toEqual(['boost', 'forward'])
+  })
+
+  // A list is walked with the arrows, so this is the ordinary way to hold one: the flight must
+  // not inherit a direction the user pressed to move through the outliner.
+  it('takes no direction from a key held before the flight began', () => {
+    const onMotionChange = vi.fn()
+    let flying = false
+    const { result } = mount(vi.fn(), true, onMotionChange, undefined, () => flying)
+
+    fireEvent.keyDown(document.body, { code: 'ArrowDown' })
+    expect([...result.current.heldMotion.current]).toEqual([])
+
+    flying = true
+    expect(onMotionChange).not.toHaveBeenCalled()
   })
 
   it('keeps a direction key from reaching anything downstream while flying', () => {
@@ -240,6 +268,25 @@ describe('useShortcuts', () => {
     expect(onCommand).toHaveBeenCalledWith('scene.scale')
   })
 
+  /**
+   * `DocumentNameDialog` shields the surfaces behind it with `stopPropagation` on a React
+   * handler, which runs from the root container — ahead of `window` in bubble, behind it in
+   * capture. Moving the command lookup to capture let `Delete` reach `scene.delete` from a
+   * button inside an open dialog, where `isTyping` is false.
+   */
+  it('lets a surface shield what is behind it from a command key', () => {
+    const onCommand = vi.fn()
+    mount(onCommand, true)
+    const shield = document.body.appendChild(document.createElement('div'))
+    const inside = shield.appendChild(document.createElement('button'))
+    shield.addEventListener('keydown', event => event.stopPropagation())
+    onTestFinished(() => shield.remove())
+
+    fireEvent.keyDown(inside, { code: 'Delete' })
+
+    expect(onCommand).not.toHaveBeenCalled()
+  })
+
   it('leaves a direction key to the rest of the window when no flight is under way', () => {
     const downstream = vi.fn()
     document.addEventListener('keydown', downstream)
@@ -263,7 +310,7 @@ describe('useShortcuts', () => {
   it('reports the held set when it changes, so nobody has to poll it every frame', async () => {
     const user = userEvent.setup()
     const onMotionChange = vi.fn()
-    mount(vi.fn(), true, onMotionChange)
+    mount(vi.fn(), true, onMotionChange, undefined, () => true)
 
     await user.keyboard('{w>}')
     expect(onMotionChange).toHaveBeenCalledTimes(1)
@@ -277,7 +324,7 @@ describe('useShortcuts', () => {
   it('stays quiet while a held key repeats', async () => {
     const user = userEvent.setup()
     const onMotionChange = vi.fn()
-    mount(vi.fn(), true, onMotionChange)
+    mount(vi.fn(), true, onMotionChange, undefined, () => true)
 
     await user.keyboard('{w>}')
     // Dispatched by hand: holding a key makes the platform repeat keydown without any keyup,
@@ -291,7 +338,7 @@ describe('useShortcuts', () => {
   it('reports the release when the window loses focus', async () => {
     const user = userEvent.setup()
     const onMotionChange = vi.fn()
-    mount(vi.fn(), true, onMotionChange)
+    mount(vi.fn(), true, onMotionChange, undefined, () => true)
 
     await user.keyboard('{w>}')
     onMotionChange.mockClear()

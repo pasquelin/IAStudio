@@ -91,26 +91,33 @@ export function useShortcuts({
       return
     }
 
+    /**
+     * A flight, and nothing else, reads a key ahead of the tree — and only while one is under
+     * way. A surface that shields what is behind it does so from a React handler, which capture
+     * on `window` would run ahead of: outside a flight this must stay silent. See `onKeyDown`.
+     */
+    const onFlightKeyDown = (event: KeyboardEvent) => {
+      if (!handlers.current.isFlying?.() || isTyping(event.target)) return
+      // On the CODE, never the signature: holding Shift to boost would sign every direction as
+      // `Shift+…`, and the table would match none of them.
+      const motion = motionFor(event.code)
+      if (!motion) return
+
+      // Holding a key repeats keydown; only a set that actually changed is worth reporting.
+      if (!held.has(motion)) {
+        held.add(motion)
+        handlers.current.onMotionChange?.(held)
+      }
+
+      // The flight owns the key: the list the pointer left focused never sees the arrow, and `S`
+      // does not reach `scene.scale` while it means "back". Only the modality tells them apart.
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
     const onKeyDown = (event: KeyboardEvent) => {
       const typing = isTyping(event.target)
       const signature = signatureOf(event)
-      const motion = motionFor(signature)
-      if (!typing && motion) {
-        // Holding a key repeats keydown; only a set that actually changed is worth reporting.
-        if (!held.has(motion)) {
-          held.add(motion)
-          handlers.current.onMotionChange?.(held)
-        }
-
-        // A flight owns the key outright, and nothing downstream gets to see it: an arrow would
-        // otherwise scroll whatever list the pointer left focused, and `S` would reach
-        // `scene.scale` while it means "back". Only the modality tells the two apart.
-        if (handlers.current.isFlying?.()) {
-          event.preventDefault()
-          event.stopPropagation()
-          return
-        }
-      }
 
       // A field keeps every command, and the lookup is skipped rather than thrown away: ⌘E would
       // flatten a layer while its name is being typed, and the ⌘Z reflex would undo the typing
@@ -126,8 +133,10 @@ export function useShortcuts({
       if (!event.repeat) handlers.current.onCommand(command)
     }
 
+    // In the bubble phase, and never consumed: the flight may already be over when the key comes
+    // up, and a direction that stayed held would fly the camera on the next press of the button.
     const onKeyUp = (event: KeyboardEvent) => {
-      const motion = motionFor(signatureOf(event))
+      const motion = motionFor(event.code)
       if (motion && held.delete(motion)) handlers.current.onMotionChange?.(held)
     }
 
@@ -135,15 +144,16 @@ export function useShortcuts({
     // flying after an ⌘Tab.
     const onBlur = release
 
-    // Capture, so a flight takes its key before the focused element reads it: React attaches at
-    // the root container, which reaches `window` only once every component has answered. Both
-    // edges — a keyup swallowed on one of them leaves the camera flying for good.
-    window.addEventListener('keydown', onKeyDown, true)
-    window.addEventListener('keyup', onKeyUp, true)
+    // The flight listens in capture, the commands stay in bubble. Moving the commands too would
+    // run them ahead of every `stopPropagation` a surface uses to shield what is behind it.
+    window.addEventListener('keydown', onFlightKeyDown, true)
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
     window.addEventListener('blur', onBlur)
     return () => {
-      window.removeEventListener('keydown', onKeyDown, true)
-      window.removeEventListener('keyup', onKeyUp, true)
+      window.removeEventListener('keydown', onFlightKeyDown, true)
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
       release()
     }

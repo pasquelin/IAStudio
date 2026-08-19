@@ -93,12 +93,12 @@ describe('defaults', () => {
     expect(DEFAULT_MOTION.back).toContain('ArrowDown')
     expect(DEFAULT_MOTION.left).toContain('ArrowLeft')
     expect(DEFAULT_MOTION.right).toContain('ArrowRight')
-    // Named rather than counted: altitude sits under the other hand, and an arrow reaching it
-    // would take a key the ground plane has already claimed.
+    // Sorted, so reordering the table stays a cosmetic edit: what is asserted is that these four
+    // arrows are bound and no fifth is, altitude having no arrow left to take.
     const arrows = Object.values(DEFAULT_MOTION)
       .flat()
-      .filter(signature => signature.startsWith('Arrow'))
-    expect(arrows).toEqual(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'])
+      .filter(code => code.startsWith('Arrow'))
+    expect(arrows.toSorted()).toEqual(['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'])
   })
 
   it('overlaps motion and scene commands on exactly one key, which flight modality resolves', () => {

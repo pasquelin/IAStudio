@@ -210,9 +210,9 @@ function keyGlyph(code: string, keyName: (code: NamedKey) => string): string {
 }
 
 /**
- * Every key a direction answers to. The arrows are a SECOND key for the four of the ground
- * plane, never a remap: altitude keeps its two letters, which an arrow could only reach by
- * taking one the ground plane already holds.
+ * Every key a direction answers to, as a BARE code: motion is matched on `event.code` and never
+ * through `signatureOf`, boost being Shift itself. The arrows are a second key for the four of
+ * the ground plane, altitude keeping the two letters an arrow could only take from it.
  */
 export const DEFAULT_MOTION: Record<MotionId, readonly Signature[]> = {
   forward: ['KeyW', 'ArrowUp'],
