@@ -1,6 +1,7 @@
 import { bound } from '@shared/numeric'
 import { Readout } from './Readout'
-import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { PropertyLabel } from './PropertyLabel'
+import { FIELD_ROW, type GestureProps } from './styles'
 
 export type SliderFieldProps = GestureProps & {
   label: string
@@ -27,9 +28,7 @@ export function SliderField({
 }: SliderFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      <span title={label} className={FIELD_LABEL}>
-        {label}
-      </span>
+      <PropertyLabel label={label} />
 
       <input
         type="range"

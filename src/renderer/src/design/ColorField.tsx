@@ -1,5 +1,6 @@
 import { cn } from '@/helpers/cn'
-import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { PropertyLabel } from './PropertyLabel'
+import { FIELD_ROW, type GestureProps } from './styles'
 
 export type ColorFieldProps = GestureProps & {
   label: string
@@ -18,9 +19,7 @@ export function ColorField({
 }: ColorFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      <span title={label} className={FIELD_LABEL}>
-        {label}
-      </span>
+      <PropertyLabel label={label} />
 
       <input
         type="color"

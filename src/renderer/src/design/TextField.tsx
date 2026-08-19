@@ -1,4 +1,5 @@
-import { FIELD_FILL, FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { PropertyLabel } from './PropertyLabel'
+import { FIELD_FILL, FIELD_ROW, type GestureProps } from './styles'
 
 export type TextFieldProps = GestureProps & {
   label: string
@@ -26,9 +27,7 @@ export function TextField({
 }: TextFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      <span title={label} className={FIELD_LABEL}>
-        {label}
-      </span>
+      <PropertyLabel label={label} />
 
       <input
         type="text"

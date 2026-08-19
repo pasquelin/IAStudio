@@ -343,8 +343,12 @@ export const FIELD_ROW = 'flex min-h-(--sc-control) min-w-0 items-center gap-2 t
  *
  * The gauge is shared with `PropertyRow`, and that is the whole point: five inspectors out of six
  * draw both families inside one group, so two widths meant two columns of labels in the same box.
+ *
+ * The edge is what makes it read as a COLUMN rather than as a word standing before a control —
+ * the two-column reading of every inspector this studio is measured against. `PropertyLabel`
+ * wears it, and stretches to the row's height so the rule runs the whole way down.
  */
-export const FIELD_LABEL = 'text-muted w-(--sc-label) shrink-0 truncate'
+export const FIELD_LABEL = 'text-muted border-border w-(--sc-label) shrink-0 border-r'
 
 /**
  * The same label where the field has NO control to line up on that column — a checkbox, which
@@ -354,8 +358,10 @@ export const FIELD_LABEL = 'text-muted w-(--sc-label) shrink-0 truncate'
  * two thirds of the row empty beside it. Still truncating, and still `title`d for it: a panel
  * narrow enough will run out of room here too, and a label cut mid-word reads as a shorter one
  * that means something else.
+ *
+ * No edge: a rule drawn where the column has run out is a rule in the middle of a row.
  */
-export const FIELD_LABEL_WIDE = 'text-muted min-w-0 flex-1 truncate'
+export const FIELD_LABEL_WIDE = 'text-muted min-w-0 flex-1'
 
 /**
  * The number beside a track — "somewhere past the middle" is not a value anyone can write down.

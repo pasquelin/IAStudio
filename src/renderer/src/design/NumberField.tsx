@@ -8,8 +8,9 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
 import { formatDecimal, parseDecimal } from '@/helpers/format'
 import { bound, type NumericBounds } from '@shared/numeric'
+import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
-import { FIELD_FILL, FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { FIELD_FILL, FIELD_ROW, type GestureProps } from './styles'
 
 export type NumberFieldProps = NumericBounds &
   GestureProps & {
@@ -164,26 +165,29 @@ export function NumberField({
     if (!scrubbed) field.focus()
   }
 
+  /** No slack on the name: it has no second gesture to be told apart from. */
+  const scrub = {
+    onPointerDown: disabled ? undefined : (event: ReactPointerEvent) => startDrag(event, true),
+    onPointerMove,
+    onPointerUp: endDrag,
+    onPointerCancel: endDrag,
+  }
+  const scrubSkin = cn(
+    'touch-none select-none',
+    disabled ? 'cursor-not-allowed' : 'cursor-ew-resize',
+  )
+
   return (
     <div className={FIELD_ROW}>
       {/* Deliberately not a `<label>` bound to the field: a bound label focuses what it names,
           so every drag would leave the field in edit mode. The input carries the name. */}
-      <span
-        aria-hidden
-        // No slack here: the label has no second gesture to be told apart from.
-        onPointerDown={disabled ? undefined : event => startDrag(event, true)}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        title={label}
-        className={cn(
-          'text-muted shrink-0 touch-none select-none',
-          disabled ? 'cursor-not-allowed' : 'cursor-ew-resize',
-          layout === 'row' && FIELD_LABEL,
-        )}
-      >
-        {label}
-      </span>
+      {layout === 'row' ? (
+        <PropertyLabel label={label} hidden gesture={scrub} className={scrubSkin} />
+      ) : (
+        <span aria-hidden title={label} {...scrub} className={cn('text-muted shrink-0', scrubSkin)}>
+          {label}
+        </span>
+      )}
 
       {/* Text rather than `number`, which discards what it cannot parse: "0." would come back
           empty and the dot would be eaten as it is typed. */}

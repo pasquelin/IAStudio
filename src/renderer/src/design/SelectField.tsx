@@ -1,7 +1,8 @@
 import { mdiChevronDown } from '@mdi/js'
 import { useId, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { CONTROL, FIELD_LABEL, FIELD_ROW, NATIVE_SELECT } from './styles'
+import { PropertyLabel } from './PropertyLabel'
+import { CONTROL, FIELD_ROW, NATIVE_SELECT } from './styles'
 import { UiIcon } from './UiIcon'
 
 export type SelectOption<V extends string> = {
@@ -66,13 +67,9 @@ export function SelectField<V extends string>({
     <div
       className={cn(layout === 'bar' ? 'relative flex min-w-0 items-center' : FIELD_ROW, className)}
     >
-      {/* Titled because the column truncates, and it is this label that names the select — an
-          `aria-label` over it would replace the visible name (WCAG 2.5.3). */}
-      {layout === 'row' && (
-        <label htmlFor={id} title={label} className={FIELD_LABEL}>
-          {label}
-        </label>
-      )}
+      {/* A real `<label>`, since a select is what a label may safely bind: pressing the word opens
+          the list, which is the gesture anyone expects of it. */}
+      {layout === 'row' && <PropertyLabel as="label" htmlFor={id} label={label} />}
 
       {leading}
 

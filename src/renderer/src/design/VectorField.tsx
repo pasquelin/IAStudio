@@ -2,11 +2,11 @@ import { mdiChevronDown, mdiChevronRight, mdiLink, mdiLinkOff } from '@mdi/js'
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NumericBounds } from '@shared/numeric'
-import { cn } from '@/helpers/cn'
 import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { NumberField } from './NumberField'
+import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
-import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { FIELD_ROW, type GestureProps } from './styles'
 import { ToolButton } from './ToolButton'
 import { UiIcon } from './UiIcon'
 
@@ -106,21 +106,18 @@ export function VectorField<V extends AxisValue>({
       <div className={FIELD_ROW} {...hint}>
         {/* The name and the fold are one target: a chevron of its own would be a second control
             for a row whose whole left column already says what it is. */}
-        <button
-          type="button"
-          aria-expanded={stacked}
-          {...HINT_LEFT(t(stacked ? 'inspector.stackFoldHint' : 'inspector.stackUnfoldHint'))}
-          onClick={() => setStacked(current => !current)}
-          className={cn(
-            FIELD_LABEL,
-            'flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-left',
-          )}
-        >
-          <UiIcon path={stacked ? mdiChevronDown : mdiChevronRight} size={12} />
-          <span title={label} className="truncate">
-            {label}
-          </span>
-        </button>
+        <PropertyLabel
+          as="button"
+          label={label}
+          leading={<UiIcon path={stacked ? mdiChevronDown : mdiChevronRight} size={12} />}
+          gesture={{
+            type: 'button',
+            'aria-expanded': stacked,
+            onClick: () => setStacked(current => !current),
+            ...HINT_LEFT(t(stacked ? 'inspector.stackFoldHint' : 'inspector.stackUnfoldHint')),
+          }}
+          className="cursor-pointer border-y-0 border-l-0 bg-transparent p-0 text-left"
+        />
 
         {!stacked && (
           <div

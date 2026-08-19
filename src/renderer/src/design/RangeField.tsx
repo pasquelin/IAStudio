@@ -1,7 +1,8 @@
 import { cn } from '@/helpers/cn'
 import { bound } from '@shared/numeric'
 import { Readout } from './Readout'
-import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { PropertyLabel } from './PropertyLabel'
+import { FIELD_ROW, type GestureProps } from './styles'
 
 /** Both ends of one value, kept in order. Declared here rather than imported from an engine:
  * `design/` describes controls, and a field that reached into a workspace would tie the two. */
@@ -72,9 +73,7 @@ export function RangeField({
 
   return (
     <div className={FIELD_ROW}>
-      <span title={label} className={FIELD_LABEL}>
-        {label}
-      </span>
+      <PropertyLabel label={label} />
 
       <div
         className="relative h-(--sc-control) min-w-0 flex-1"

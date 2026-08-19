@@ -38,10 +38,16 @@ const FIELDS: Record<string, string> = import.meta.glob('./*Field.tsx', {
   eager: true,
 })
 
-const named = (source: string): boolean => source.includes('title={label}')
+/** The one component that now draws a name in the shared column, read the same way. */
+const LABEL: Record<string, string> = import.meta.glob('./PropertyLabel.tsx', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
 
-/** Either gauge: both truncate, so both owe the reader the whole label somewhere. */
-const labelled = (source: string): boolean => source.includes('FIELD_LABEL')
+const labelSource = Object.values(LABEL)[0] ?? ''
+
+const named = (source: string): boolean => source.includes('title={label}')
 
 describe('the label column of a property line', () => {
   it('finds the row at all, so the rules below cannot pass on an empty file', () => {
@@ -91,28 +97,45 @@ describe('a label the column is too narrow for', () => {
    * The column truncates, so the whole label has to be reachable somewhere. `PropertyRow` learned
    * this first and the fields did not follow: « Sortie du … » read as an instruction of its own
    * on a canvas whose every node already carries a port called « Sortie ».
+   *
+   * ONE place says it now, and that is what the two-column reading bought: the column carries a
+   * fill and an edge, so it has to stand its row's full height — and a box that stretches cannot
+   * also be the box that truncates. `PropertyLabel` holds both halves, and the rule with them.
    */
-  it('is reachable on hover from every field that draws one', () => {
-    const silent = Object.entries(FIELDS)
-      .filter(([, source]) => labelled(source) && !named(source))
-      .map(([path]) => path)
-
-    expect(silent, `these draw a truncating label with no title: ${silent.join(', ')}`).toEqual([])
+  it('is reachable on hover from the one component that draws a name', () => {
+    expect(labelSource).toContain('export function PropertyLabel')
+    expect(named(labelSource)).toBe(true)
+    expect(labelSource).toContain('truncate')
   })
 
   /**
-   * Both gauges are counted, and that is not a detail: the rule above once read `FIELD_LABEL`
-   * alone, so the day `ToggleField` moved to the wide one it left the guard through the back
-   * door — silently, and it is the very file the rule was first repaired on.
+   * The rule above is only worth anything while nothing goes round it. A field that reached for
+   * the gauge itself would draw a name in the column with no `title` and no rule down its side —
+   * which is exactly how eight of them used to spell out the same three lines.
    */
-  it('counts the fields that wear the wide label as well as the fixed column', () => {
-    const wide = Object.entries(FIELDS)
-      .filter(([, source]) => source.includes('FIELD_LABEL_WIDE'))
+  it('is drawn by no field on its own', () => {
+    const spelling = Object.entries(FIELDS)
+      .filter(([, source]) => source.includes('FIELD_LABEL'))
       .map(([path]) => path)
 
-    // One, and named: a field with a control to place has a column to line up on, and taking the
-    // wide label there would put its name where the neighbours draw their sliders.
-    expect(wide).toEqual(['./ToggleField.tsx'])
+    expect(spelling, `these draw the column themselves: ${spelling.join(', ')}`).toEqual([])
+  })
+
+  /**
+   * Both gauges live on the one component, and it is the WIDE one that has to stay exceptional:
+   * a field with a control to place has a column to line up on, and taking the wide label there
+   * would put its name where the neighbours draw their sliders.
+   */
+  it('offers the wide gauge as a prop rather than as a second class to reach for', () => {
+    expect(labelSource).toContain('wide ? FIELD_LABEL_WIDE : FIELD_LABEL')
+
+    // The prop as PASSED, not the word wherever it appears: `RangeField` says "wide" in prose.
+    const ASKS_WIDE = /<PropertyLabel[^>]*\bwide\b/s
+    const asking = Object.entries(FIELDS)
+      .filter(([, source]) => ASKS_WIDE.test(source))
+      .map(([path]) => path)
+
+    expect(asking).toEqual(['./ToggleField.tsx'])
   })
 
   it('is reachable on the row family too, which is where the rule started', () => {

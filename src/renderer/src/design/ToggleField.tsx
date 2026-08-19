@@ -1,4 +1,5 @@
-import { CHECKBOX, FIELD_LABEL_WIDE, FIELD_ROW } from './styles'
+import { PropertyLabel } from './PropertyLabel'
+import { CHECKBOX, FIELD_ROW } from './styles'
 import { cn } from '@/helpers/cn'
 
 export type ToggleFieldProps = {
@@ -14,12 +15,9 @@ export type ToggleFieldProps = {
 export function ToggleField({ label, value, onChange }: ToggleFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      {/* The wide label, and the only field that wears it: a checkbox sits at the far end of the
-          row whatever its name does, so there is no control here to line up on the shared column
-          — see `FIELD_LABEL_WIDE`, which says what that cost. */}
-      <span title={label} className={FIELD_LABEL_WIDE}>
-        {label}
-      </span>
+      {/* The wide gauge, and the only field that asks for it: a checkbox sits at the far end of
+          the row whatever its name does, so there is no control here to line up on the column. */}
+      <PropertyLabel label={label} wide />
 
       <input
         type="checkbox"

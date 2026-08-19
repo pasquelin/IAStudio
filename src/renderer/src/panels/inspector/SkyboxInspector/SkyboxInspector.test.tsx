@@ -17,6 +17,15 @@ beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
 })
 
+/**
+ * What a read-only property row shows, found from its name. The word sits inside `PropertyLabel`,
+ * which truncates in a span of its own — so the value is the label's next sibling, not the
+ * word's.
+ */
+function valueOf(name: string): Element | null {
+  return screen.getByText(name).closest('span')?.parentElement?.nextElementSibling ?? null
+}
+
 describe('the skybox face of the inspector', () => {
   // A tab in front with nothing written for it still grades: `skyboxOf` falls back to the default.
   it('falls back to the default sky for a tab the store has never written', () => {
@@ -38,9 +47,9 @@ describe('the skybox face of the inspector', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Génération/ }))
 
-    expect(screen.getByText('Modèle').nextElementSibling).toBeEmptyDOMElement()
-    expect(screen.getByText('Prompt').nextElementSibling).toBeEmptyDOMElement()
-    expect(screen.getByText('Graine').nextElementSibling).toBeEmptyDOMElement()
+    expect(valueOf('Modèle')).toBeEmptyDOMElement()
+    expect(valueOf('Prompt')).toBeEmptyDOMElement()
+    expect(valueOf('Graine')).toBeEmptyDOMElement()
   })
 
   it('names what produced the sky, so a result can be traced back', async () => {
@@ -68,7 +77,7 @@ describe('the skybox face of the inspector', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Génération/ }))
 
-    expect(screen.getByText('Graine').nextElementSibling).toHaveTextContent('0')
+    expect(valueOf('Graine')).toHaveTextContent('0')
   })
 
   // Every control is a uniform: what the document holds is what the control shows.

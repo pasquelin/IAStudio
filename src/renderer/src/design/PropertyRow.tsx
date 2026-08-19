@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { FIELD_LABEL, FIELD_ROW } from './styles'
+import { PropertyLabel } from './PropertyLabel'
+import { FIELD_ROW } from './styles'
 
 /**
  * How a value that does not fit its column is given room.
@@ -44,11 +45,15 @@ export function PropertyRow({ label, children, shape = 'inline' }: PropertyRowPr
         shape === 'wrap' && 'items-start',
       )}
     >
-      {/* Titled because the column truncates: `Repeat preview` fits eighty pixels and
-          `Aperçu de la répétition` does not, so the label was readable in one language only. */}
-      <span title={label} className={shape === 'stacked' ? 'text-muted shrink-0' : FIELD_LABEL}>
-        {label}
-      </span>
+      {/* Stacked, the value sits UNDER the name rather than beside it — so there is no column,
+          and therefore no rule and no fixed gauge to hold it to. */}
+      {shape === 'stacked' ? (
+        <span title={label} className="text-muted shrink-0">
+          {label}
+        </span>
+      ) : (
+        <PropertyLabel label={label} />
+      )}
       <div
         className={cn(
           'text-text min-w-0',
