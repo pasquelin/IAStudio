@@ -16,9 +16,9 @@ function sizeOf(file: string): number {
 }
 
 /** Written synchronously: a queued append loses the lines before a crash, which are the ones. */
-export function createLogFile(directory: string, maxBytes: number = MAX_BYTES): Sink {
-  const current = join(directory, CURRENT)
-  let written: number | null = null
+export function createLogFile(directoryOf: () => string, maxBytes: number = MAX_BYTES): Sink {
+  let folder: string | null = null
+  let written = 0
   let stopped = false
 
   return entry => {
@@ -28,15 +28,24 @@ export function createLogFile(directory: string, maxBytes: number = MAX_BYTES): 
     const bytes = Buffer.byteLength(line)
 
     try {
-      // Reached on the first line, never at start-up: the studio opens where nothing can be written.
-      if (written === null) {
-        mkdirSync(directory, { recursive: true })
-        written = sizeOf(current)
+      // The path itself is resolved here and not at start-up: a throw on the way to the folder
+      // would otherwise take down whatever ran the launch, and the studio must open anyway.
+      if (folder === null) {
+        folder = directoryOf()
+        mkdirSync(folder, { recursive: true })
+        written = sizeOf(join(folder, CURRENT))
       }
 
-      if (written > 0 && written + bytes > maxBytes) {
-        renameSync(current, join(directory, PREVIOUS))
-        written = 0
+      const current = join(folder, CURRENT)
+
+      if (written + bytes > maxBytes) {
+        // The count is this process's; only the disk says whether there is still a file to move.
+        // One removed underneath us would otherwise raise ENOENT and end the recording for good.
+        written = sizeOf(current)
+        if (written > 0) {
+          renameSync(current, join(folder, PREVIOUS))
+          written = 0
+        }
       }
 
       appendFileSync(current, line)
@@ -44,7 +53,9 @@ export function createLogFile(directory: string, maxBytes: number = MAX_BYTES): 
     } catch (cause) {
       stopped = true
       // Reported straight to the terminal: going through `log` would come back here.
-      console.error(`[log] no longer recording to ${current}: ${String(cause)}`)
+      console.error(
+        `[log] no longer recording under ${folder ?? 'the log folder'}: ${String(cause)}`,
+      )
     }
   }
 }
