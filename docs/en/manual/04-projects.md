@@ -297,7 +297,7 @@ already taken in the destination is refused rather than overwritten, and the jou
 | Group | Gesture | What it does |
 |---|---|---|
 | open | **Open** | opens the file in its workspace, or unfolds the folder |
-| | **Show in folder** | opens Finder or Windows Explorer, with the row selected |
+| | **Show in folder** | opens Finder or Windows Explorer, on the row you clicked |
 | | **File information** | opens the window that tells everything the studio knows about this entry |
 | clipboard | **Cut** · **Copy** | hold the selection for the next paste |
 | | **Paste** | drops what the clipboard holds into the folder shown |
@@ -307,19 +307,21 @@ already taken in the destination is refused rather than overwritten, and the jou
 | | **Move to trash** | sends it to your system's trash |
 | going back | **Undo** · **Redo** | undo and redo the last batch of files |
 
-**Eight of these twelve rows show the shortcut they answer to**, and it is the one *in force*: if
-you remapped it in the settings, yours is what appears here. The other four — **Open**, **Show in
-folder**, **File information**, **Rename** — show none, and that is correct: they are not commands
-of the registry. `Enter` does open the row, but it is the tree that listens for that key, and it
-cannot be changed.
+**Eight of these twelve gestures show the shortcut they answer to**, and it is the one *in
+force*: if you remapped it in the settings, yours is what appears here. The other four —
+**Open**, **Show in folder**, **File information**, **Rename** — show none, and that is correct:
+they are not commands of the registry. `Enter` does open the row, but it is the tree that listens
+for that key, and it cannot be changed.
 
 **No gesture ever leaves the menu; the ones that do not apply are greyed.** A menu whose length
 changes with the row you clicked is a menu one cannot learn. **File information** is greyed on a
 folder — what it answers is a file's.
 
-**One gesture of this menu does not follow the selection: File information.** It opens the window
-on the row you just clicked, even with twelve names taken. It is the only exception, and it stands
-to reason: that window is about one entry.
+**Four gestures do not follow the selection, and they are exactly the four without a shortcut**:
+**Open**, **Show in folder**, **File information** and **Rename** aim at the row you just
+clicked, even with several names taken. The other eight work on the whole selection. The split
+needs no learning: a gesture about **one** entry — opening it, showing it, describing it,
+renaming it — cannot aim at twenty.
 
 **`⌘Z` only undoes files while the focus is inside this panel.** Elsewhere it belongs to the open
 document: undoing on the canvas must not reach your disk.

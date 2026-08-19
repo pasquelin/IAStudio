@@ -163,6 +163,13 @@ silence ; un nom que le dossier tient déjà l’est également, plutôt que d�
 > — `asset_40f76c36-8ad4-4def-a1b3-9125cba4da98.png`. Ils prennent leur vrai nom le jour où vous
 > les renommez, et pas avant : le studio ne remue pas votre dossier tout seul.
 
+**Faire jouer au personnage demande deux choses, et le menu n’en montre qu’une.** La ligne
+s’active dès qu’une scène est ouverte quelque part — mais un mouvement se pose SUR un
+personnage, et c’est celui que vous avez sélectionné dans la scène. **Sans personnage
+sélectionné, la ligne reste active et ne fait rien**, sans message. C’est la seule ligne du menu
+qui reste allumée alors qu’il manque quelque chose — partout ailleurs, ce qui manque grise :
+choisissez d’abord le personnage dans la scène, puis lancez le mouvement.
+
 **Modifier l’image est la ligne qui ouvre un onglet**, et elle n’apparaît que sur une texture
 ou un ciel déjà posés sur le disque : ces deux-là s’assemblent dans leur espace — l’un tient
 des canaux, l’autre une projection — et aucun des deux ne réécrit l’image qui est dessous.
@@ -183,7 +190,8 @@ qu’on ne peut pas apprendre. Une ligne grisée vous dit quoi faire — ouvrir 
 espace — là où une ligne absente ne dit rien du tout.
 
 C’est aussi ce qu’il faut regarder quand un envoi ne mène nulle part : le clic droit montre en une
-fois ce que cet asset peut faire, et ce qui manque pour qu’il le fasse.
+fois ce que cet asset peut faire, et ce qui manque pour qu’il le fasse — **à la seule réserve de
+Faire jouer au personnage**, dite plus haut.
 
 ### Le double-clic ouvre l’asset, il ne l’envoie nulle part
 
