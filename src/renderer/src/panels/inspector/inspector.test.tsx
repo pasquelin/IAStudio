@@ -249,14 +249,21 @@ describe('inspector panel', () => {
   /**
    * The viewport already refused the handle over a lone sprite; the row went on taking an angle
    * nothing draws, which stacked an undo for a screen that never moved.
+   *
+   * INERT rather than absent since 2026-08-19: the panel keeps its shape from one node to the
+   * next, so an attribute is found where it was last seen instead of the rows below it shifting
+   * up. The three axes are refused together, and the row says why on hover.
    */
-  it('offers a lone sprite no rotation row, and keeps the two that show', () => {
+  it('leaves a lone sprite its rotation row, inert, and keeps the two that act', () => {
     install(spriteNodeFixture('sprite-1'))
     render(<Content />)
 
-    expect(screen.queryByText('Rotation')).not.toBeInTheDocument()
-    expect(screen.getByText('Position')).toBeInTheDocument()
-    expect(screen.getByText('Échelle')).toBeInTheDocument()
+    expect(screen.getByText('Rotation')).toBeInTheDocument()
+    expect(screen.getAllByLabelText('X').map(field => field.hasAttribute('disabled'))).toEqual([
+      false,
+      true,
+      false,
+    ])
   })
 
   it('gives the row back to a sprite others hang from, which turning swings around it', () => {

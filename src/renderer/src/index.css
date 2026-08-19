@@ -188,6 +188,18 @@
    */
   --color-mesh: #868a91;
   /*
+   * The three axes, on the edge of the field that holds each one — the reading every 3D
+   * application gives them, and the reason a Position row can be scanned without reading X, Y, Z.
+   *
+   * ONE value for both themes, which is unusual here and is what the narrow window allows: a
+   * stripe has to clear 3:1 against `surface`, dark and light alike, so its luminance is pinched
+   * between 0.146 and 0.273 — and all three fit. The letters stay beside them: colour alone may
+   * not identify anything (WCAG 1.4.1), and it is the letter that carries the scrub and the name.
+   */
+  --color-axis-x: #e03131;
+  --color-axis-y: #2b8a3e;
+  --color-axis-z: #1971c2;
+  /*
    * What dims the part of a document a crop is about to throw away. Translucent black rather
    * than a flat grey: the picture underneath has to stay readable, or the frame cannot be
    * placed against what it cuts.
@@ -444,6 +456,16 @@
   /* Darkened rather than lightened, as every ink is here: the meters keep the same chassis under
      them, and a mid green that carried 5:1 on the dark one carries 1.6 on this. */
   --color-level-safe: #2f7d4f;
+  /*
+   * Restated identically, and the only inks in this block that are: a stripe has to clear 3:1
+   * against `surface` on BOTH themes, which pinches its luminance into a window narrow enough
+   * that one value serves the two. Stated here all the same, rather than left to inheritance —
+   * `design/tokens.test.ts` reads each theme's block on its own, and so does anyone reading this
+   * file to find out what the light theme paints.
+   */
+  --color-axis-x: #e03131;
+  --color-axis-y: #2b8a3e;
+  --color-axis-z: #1971c2;
   /*
    * Restated identically, and for the same reason as the monitor: the marching ants are drawn
    * over the document, not over the studio's chrome, and the document does not change with the

@@ -41,6 +41,7 @@
     "fileTexture": "The file’s own",
     "clearTexture": "Remove the texture",
     "missingTexture": "Image not found",
+    "rotationInert": "A sprite always faces the camera: turning it shows only where it carries children",
     "browseTexture": "Browse the images",
     "browseTextureHint": "Choose from every image in the project, local and remote alike",
     "modelOverrides": "Swap a channel",

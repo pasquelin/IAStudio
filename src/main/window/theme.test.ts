@@ -81,6 +81,13 @@ describe('the light theme', () => {
       '--color-monitor',
       '--color-marquee-light',
       '--color-marquee-dark',
+      // The three axis stripes, and their reason is arithmetic rather than editorial: a stripe
+      // has to clear 3:1 against `surface` on BOTH themes, which pinches its luminance between
+      // 0.146 and 0.273 — a window narrow enough that one value serves the two. Measured in
+      // `design/tokens.test.ts`, which holds the ratios on either theme.
+      '--color-axis-x',
+      '--color-axis-y',
+      '--color-axis-z',
     ]
     const unchanged = [...reference]
       .filter(([name, value]) => light.get(name) === value)

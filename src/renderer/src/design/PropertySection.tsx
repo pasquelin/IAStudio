@@ -11,10 +11,17 @@ export type PropertySectionProps = {
   children: ReactNode
   /** Sections a node rarely needs open on sight can start folded. */
   defaultOpen?: boolean
+  /** The handle the MCP folds this section by. Never a translated word. */
+  scId?: string
 }
 
 /** One group of properties under a heading that folds. What is open is session state. */
-export function PropertySection({ title, children, defaultOpen = true }: PropertySectionProps) {
+export function PropertySection({
+  title,
+  children,
+  defaultOpen = true,
+  scId,
+}: PropertySectionProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(defaultOpen)
 
@@ -23,6 +30,7 @@ export function PropertySection({ title, children, defaultOpen = true }: Propert
       <button
         type="button"
         aria-expanded={open}
+        data-sc={scId && `section:${scId}`}
         {...HINT_LEFT(t(open ? 'inspector.sectionFoldHint' : 'inspector.sectionUnfoldHint'))}
         onClick={() => setOpen(current => !current)}
         className={cn(

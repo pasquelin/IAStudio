@@ -10,6 +10,11 @@ export type VectorFieldProps<V extends AxisValue> = NumericBounds &
     label: string
     value: V
     onChange: (value: V) => void
+    /** The handle the MCP steers this vector by; each axis extends it with its own letter. */
+    scId?: string
+    /** Inert but still drawn — see `NumberField`, which owes the reader the `hint` that says why. */
+    disabled?: boolean
+    hint?: Record<string, string>
   }
 
 const XYZ: readonly (keyof AxisValue)[] = ['x', 'y', 'z']
@@ -28,6 +33,9 @@ export function VectorField<V extends AxisValue>({
   onChange,
   onGestureStart,
   onGestureEnd,
+  scId,
+  disabled,
+  hint,
   ...bounds
 }: VectorFieldProps<V>) {
   // Read off the value rather than declared: a tiling has two components and a transform three,
@@ -35,7 +43,7 @@ export function VectorField<V extends AxisValue>({
   const shown = XYZ.filter(axis => value[axis] !== undefined)
 
   return (
-    <div className={FIELD_ROW}>
+    <div className={FIELD_ROW} {...hint}>
       <span title={label} className={FIELD_LABEL}>
         {label}
       </span>
@@ -48,6 +56,9 @@ export function VectorField<V extends AxisValue>({
           <NumberField
             key={axis}
             layout="inline"
+            axis={axis}
+            disabled={disabled}
+            scId={scId && `${scId}.${axis}`}
             label={axis.toUpperCase()}
             value={value[axis] ?? 0}
             onChange={next => onChange({ ...value, [axis]: next })}

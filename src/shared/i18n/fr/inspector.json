@@ -41,6 +41,7 @@
     "fileTexture": "Celle du fichier",
     "clearTexture": "Retirer la texture",
     "missingTexture": "Image introuvable",
+    "rotationInert": "Un sprite fait toujours face à la caméra, et le tourner ne se voit que s’il porte des enfants",
     "browseTexture": "Parcourir les images",
     "browseTextureHint": "Choisir parmi toutes les images du projet, locales comme distantes",
     "modelOverrides": "Remplacer un canal",

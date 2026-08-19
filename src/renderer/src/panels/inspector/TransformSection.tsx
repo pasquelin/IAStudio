@@ -7,6 +7,7 @@ import { VectorField } from '@/design/VectorField'
 import { batch, renameNode, setTransform } from '@/engines/scene/commands'
 import { hasChildren, rotationShows, type SceneNode } from '@/engines/scene/sceneState'
 import { changedFields } from '@/helpers/objects'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
 
 /** A field reports a whole vector; this is the axes of it that actually moved. */
@@ -72,7 +73,7 @@ export function TransformSection({ node, nodes, selection, edit }: TransformSect
     )
 
   return (
-    <PropertySection title={t('inspector.transform')}>
+    <PropertySection title={t('inspector.transform')} scId="transform">
       <TextField
         label={t('inspector.name')}
         value={node.name}
@@ -85,28 +86,33 @@ export function TransformSection({ node, nodes, selection, edit }: TransformSect
         value={transform.position}
         step={0.1}
         onChange={next => move({ position: changedFields(transform.position, next) })}
+        scId="transform.position"
         {...edit.gesture}
       />
 
-      {/* Hidden where `rotationShows` refuses, for the reason the viewport refuses the handle. */}
-      {turns && (
-        <VectorField
-          label={t('inspector.rotation')}
-          value={degrees}
-          step={1}
-          // Diffed in degrees, which is the unit the field reports: converting back to radians
-          // first leaves the untouched axes a few ulps off, and those would then be written —
-          // as the anchor's own angle — onto every other node of the selection.
-          onChange={next => move({ rotation: radiansOf(changedFields(degrees, next)) })}
-          {...edit.gesture}
-        />
-      )}
+      {/* INERT where `rotationShows` refuses, no longer absent: the panel keeps its shape from
+          one node to the next, so an attribute is found where it was last seen. The viewport
+          still withholds the handle, and the command still refuses the write. */}
+      <VectorField
+        label={t('inspector.rotation')}
+        value={degrees}
+        step={1}
+        disabled={!turns}
+        hint={turns ? undefined : HINT_LEFT(t('inspector.rotationInert'))}
+        // Diffed in degrees, which is the unit the field reports: converting back to radians
+        // first leaves the untouched axes a few ulps off, and those would then be written —
+        // as the anchor's own angle — onto every other node of the selection.
+        onChange={next => move({ rotation: radiansOf(changedFields(degrees, next)) })}
+        scId="transform.rotation"
+        {...edit.gesture}
+      />
 
       <VectorField
         label={t('inspector.scale')}
         value={transform.scale}
         step={0.1}
         onChange={next => move({ scale: changedFields(transform.scale, next) })}
+        scId="transform.scale"
         {...edit.gesture}
       />
     </PropertySection>

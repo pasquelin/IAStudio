@@ -17,6 +17,21 @@ export type NumberFieldProps = NumericBounds &
     onChange: (value: number) => void
     /** `inline` shrinks the label to the width of an axis letter, for a vector's three fields. */
     layout?: 'row' | 'inline'
+    /**
+     * Stripes the field's leading edge in the axis colour. Named rather than derived from the
+     * label: `X` is the letter in every language, but a caller could pass anything.
+     */
+    axis?: 'x' | 'y' | 'z'
+    /**
+     * Inert but still drawn — the row keeps its place in the panel rather than vanishing, so an
+     * attribute is always found where it was last seen. Whoever disables one owes the reader a
+     * `hint` saying why: a control refused without a reason is worse than one that is absent.
+     */
+    disabled?: boolean
+    /** Tooltip attributes from the host's own factory, already resolved. */
+    hint?: Record<string, string>
+    /** The handle the MCP steers this field by. Never a translated word. */
+    scId?: string
   }
 
 /** Units per pixel dragged, for a field that declares no step of its own. */
@@ -47,6 +62,10 @@ export function NumberField({
   onGestureStart,
   onGestureEnd,
   layout = 'row',
+  axis,
+  disabled,
+  hint,
+  scId,
 }: NumberFieldProps) {
   const drag = useRef<Drag | null>(null)
   /**
@@ -148,13 +167,14 @@ export function NumberField({
       <span
         aria-hidden
         // No slack here: the label has no second gesture to be told apart from.
-        onPointerDown={event => startDrag(event, true)}
+        onPointerDown={disabled ? undefined : event => startDrag(event, true)}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
         title={label}
         className={cn(
-          'text-muted shrink-0 cursor-ew-resize touch-none select-none',
+          'text-muted shrink-0 touch-none select-none',
+          disabled ? 'cursor-not-allowed' : 'cursor-ew-resize',
           layout === 'row' && FIELD_LABEL,
         )}
       >
@@ -187,6 +207,8 @@ export function NumberField({
          * Armed only while the field is NOT being typed in: once the caret is in, a press is a
          * press on text — selecting a digit to overwrite it must not drag the value away.
          */
+        disabled={disabled}
+        {...hint}
         onPointerDown={event => {
           if (document.activeElement === event.currentTarget) return
           // Withholds the focus the platform would give now, so a drag never lands in edit mode.
@@ -204,9 +226,22 @@ export function NumberField({
           setTyped(null)
           onGestureEnd?.()
         }}
+        data-sc={scId && `field:${scId}`}
         // The scrub cursor is what makes the gesture discoverable at all — and it gives way to
         // the caret on focus, for the same reason the press does: a field being typed in is text.
-        className={cn(FIELD_FILL, 'cursor-ew-resize touch-none focus:cursor-text')}
+        className={cn(
+          FIELD_FILL,
+          'touch-none',
+          // A disabled control is exempt from the contrast of WCAG 1.4.3, which is what lets the
+          // row stay legible as a row while saying it cannot be touched.
+          disabled ? 'text-muted cursor-not-allowed' : 'cursor-ew-resize focus:cursor-text',
+          // A stripe, not a whole border: the field keeps its own edge, and what changes is the
+          // side the eye scans down a column of three.
+          axis && 'border-l-2',
+          axis === 'x' && 'border-l-axis-x',
+          axis === 'y' && 'border-l-axis-y',
+          axis === 'z' && 'border-l-axis-z',
+        )}
       />
     </div>
   )

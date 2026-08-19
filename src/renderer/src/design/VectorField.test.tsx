@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { VectorField } from './VectorField'
 
-function renderField() {
+function renderField(props: { scId?: string } = {}) {
   const onChange = vi.fn()
   const onGestureStart = vi.fn()
   const onGestureEnd = vi.fn()
@@ -15,6 +15,7 @@ function renderField() {
       onChange={onChange}
       onGestureStart={onGestureStart}
       onGestureEnd={onGestureEnd}
+      {...props}
     />,
   )
 
@@ -84,5 +85,25 @@ describe('VectorField', () => {
 
       expect(onChange).toHaveBeenCalledWith({ x: 5, y: 3 })
     })
+  })
+
+  /**
+   * The reading every 3D application gives the axes, and what lets a Position row be scanned
+   * without reading the letters. They stay all the same: colour may not identify a thing on its
+   * own (WCAG 1.4.1), and the letter is what carries the scrub and the accessible name.
+   */
+  it('stripes each field in the colour of its axis', () => {
+    renderField()
+
+    expect(screen.getByLabelText('X')).toHaveClass('border-l-axis-x')
+    expect(screen.getByLabelText('Y')).toHaveClass('border-l-axis-y')
+    expect(screen.getByLabelText('Z')).toHaveClass('border-l-axis-z')
+  })
+
+  // One handle per axis, so a script can name the very field it means.
+  it('extends its own handle with the letter of each axis', () => {
+    renderField({ scId: 'transform.position' })
+
+    expect(screen.getByLabelText('X')).toHaveAttribute('data-sc', 'field:transform.position.x')
   })
 })
