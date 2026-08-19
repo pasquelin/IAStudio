@@ -1498,3 +1498,76 @@ describe('a menu path a sentence quotes', () => {
     ])
   })
 })
+
+/**
+ * English words one surface owns, each paired with the French it always translates. A sentence
+ * that writes the English word where the French says something else has borrowed a word that
+ * already names another thing on screen.
+ */
+const OWNED_WORDS: readonly { english: RegExp; french: RegExp; owns: string }[] = [
+  {
+    english: /\blayers?\b/i,
+    french: /calqu/i,
+    owns: 'a sheet of the image stack',
+  },
+]
+
+/**
+ * Keys that write an owned English word in another of its senses. Empty today, and measured so:
+ * every `layer` of the English bundles pairs with a French `calque`.
+ *
+ * It exists so the day a MaterialX layer or a three.js layer mask reaches the screen has an
+ * answer other than widening the pattern until it says nothing.
+ */
+const ANOTHER_SENSE: ReadonlySet<string> = new Set<string>()
+
+const borrowedWords = (english: Map<string, string>, french: Map<string, string>) =>
+  OWNED_WORDS.flatMap(word =>
+    [...english]
+      .filter(
+        ([key, value]) =>
+          word.english.test(value) &&
+          !word.french.test(french.get(key) ?? '') &&
+          !ANOTHER_SENSE.has(key),
+      )
+      .map(([key]) => `${key} — borrows the word of ${word.owns}`),
+  )
+
+describe('a word one surface owns', () => {
+  /**
+   * `assistant.actions.cameraShot.description` told an assistant which `layer` a camera shot
+   * lands on, where the French said `étage` and the manual says `line` — `layer` naming a sheet
+   * of the image stack everywhere else. `TWO_THINGS` cannot see it: it reads labels, and drops
+   * anything ending in a full stop.
+   *
+   * Three blind spots. It reads the English SIDE only — a French `calque` translated some other
+   * way is legitimate twice today (`Merge down`, `a layered canvas`) and stays unwatched. It
+   * reads bundle values, never a word joined in code. And an entry is a pair of words, not a
+   * glossary: a word the French owns alone has nothing to pair with here.
+   */
+  it('never lends an English word to a sentence the French says otherwise', () => {
+    expect(borrowedWords(BUNDLES.en, REFERENCE)).toEqual([])
+  })
+
+  /** The assertion above is a list expected EMPTY: a reading that finds nothing keeps it green. */
+  it('reads the pair rather than the English alone', () => {
+    expect(
+      borrowedWords(new Map([['k', 'Which layer it lands on']]), new Map([['k', 'L’étage suit']])),
+    ).toEqual(['k — borrows the word of a sheet of the image stack'])
+    expect(
+      borrowedWords(
+        new Map([['k', 'Merge the layer down']]),
+        new Map([['k', 'Fusionner le calque du dessous']]),
+      ),
+    ).toEqual([])
+  })
+
+  /**
+   * An entry whose word left the screen watches nothing, and the next reader reads it as a rule
+   * still held — the failure `staleIn` exists for above, on the same file's exemptions.
+   */
+  it.each(OWNED_WORDS)('still reads $owns on both sides', word => {
+    expect([...BUNDLES.en.values()].some(value => word.english.test(value))).toBe(true)
+    expect([...REFERENCE.values()].some(value => word.french.test(value))).toBe(true)
+  })
+})

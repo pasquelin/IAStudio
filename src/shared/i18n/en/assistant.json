@@ -511,7 +511,7 @@
       },
       "cameraShot": {
         "title": "Put a camera on air",
-        "description": "Opens a shot for this camera, from the given instant in seconds. Which layer it lands on follows the band’s own rule, where a camera not yet on the band arrives on top."
+        "description": "Opens a shot for this camera, from the given instant in seconds. Which line it lands on follows the band’s own rule, where a camera not yet on the band arrives on top."
       },
       "nodeReparent": {
         "title": "Reparent an object",
