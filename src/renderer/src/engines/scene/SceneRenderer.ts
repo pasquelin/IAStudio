@@ -22,6 +22,7 @@ import {
   SpriteMaterial,
   Vector2,
   Vector3,
+  Vector4,
   WebGLRenderTarget,
   Vector3 as ThreeVector3,
 } from 'three'
@@ -542,6 +543,8 @@ export class SceneRenderer {
   private flew = false
 
   private gizmo: TransformControls | null = null
+  /** The rectangle handed to the gizmo, rewritten in place — see `aimGizmo`. */
+  private readonly gizmoRegion = new Vector4()
   private viewHelper: ViewHelper | null = null
   private grid: GridHelper | null = null
   private mode: TransformMode = 'select'
@@ -1098,6 +1101,9 @@ export class SceneRenderer {
   setQuadView(on: boolean): void {
     this.viewport.setLayout(on ? 'quad' : 'single')
     if (on) this.placePanes()
+    // Now rather than at the next pointer move: the gizmo reads its own events, and one left
+    // aimed at a quarter of the canvas answers a click nowhere near the handle it is drawn on.
+    this.aimGizmo()
   }
 
   /**
@@ -1181,15 +1187,32 @@ export class SceneRenderer {
   }
 
   /**
-   * Hands the gizmo to the view being worked in.
+   * Hands the gizmo to the view being worked in — its camera, and the rectangle that view fills.
    *
-   * `TransformControls` casts its grab ray from the camera it holds, and sizes its handles in
-   * that camera's screen space. Left on the main one, a handle dragged in a side view answers to
-   * a ray starting somewhere else entirely.
+   * `TransformControls` casts its grab ray from the camera it holds, and reads its own pointer
+   * events against `viewport`, the whole canvas until told otherwise: in a quad layout that
+   * normalises a click against four times the surface it was aimed at, and no handle ever lights.
    */
   private aimGizmo(): void {
+    const gizmo = this.gizmo
+    if (!gizmo) return
+
     const camera = this.cameraInHand()
-    if (this.gizmo && this.gizmo.camera !== camera) this.gizmo.camera = camera
+    if (gizmo.camera !== camera) {
+      gizmo.camera = camera
+      // Redrawn at once: the handles are SIZED in the camera they are aimed from, and a hover
+      // asks for no frame of its own — the pane would keep showing them at the scale of the view
+      // just left, while the ray already reads the new one. Measured: handles answering 200px
+      // away from where they are drawn, with dead spots in between.
+      this.viewport.requestRender()
+    }
+
+    const region = this.viewport.activePaneRegion()
+    // Reused rather than built: this runs on every pointer move, and a `Vector4` per move is
+    // garbage per move.
+    gizmo.viewport = region
+      ? this.gizmoRegion.set(region.x, region.y, region.width, region.height)
+      : null
   }
 
   /**
@@ -1335,6 +1358,12 @@ export class SceneRenderer {
    * grid and the trihedron are siblings, never in `objects`.
    */
   private dressPane(index: number, camera: ViewportCamera): void {
+    // The handles are sized in ONE camera — the one they are aimed from — so the three views
+    // that are not being worked in draw them at their own scale, which came out as a gizmo
+    // spanning a whole pane. The view in hand keeps the manipulators, as the command says.
+    const helper = this.gizmo?.getHelper()
+    if (helper) helper.visible = !this.quadView() || index === this.viewport.activePane
+
     const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
     dressForPane(
       this.objects.values(),
@@ -2721,8 +2750,7 @@ export class SceneRenderer {
     if (event.button === 2) {
       this.flownFrom = { x: event.clientX, y: event.clientY }
       this.flew = false
-      const orbit = this.viewport.orbit
-      if (orbit) orbit.enabled = false
+      this.viewport.freezePanes(true)
       // Before the first frame of the flight, or its opening step spans the whole idle time.
       this.viewport.resetClock()
       this.viewport.requestRender()
@@ -2747,8 +2775,7 @@ export class SceneRenderer {
 
       this.flownFrom = null
       this.held.clear()
-      const orbit = this.viewport.orbit
-      if (orbit) orbit.enabled = true
+      this.viewport.freezePanes(false)
 
       // Never in pose mode: there a click names a bone, and a bone is not a node the menu could
       // act on.
@@ -3047,8 +3074,7 @@ export class SceneRenderer {
   private readonly onContextMenu = (event: Event): void => event.preventDefault()
 
   private readonly onDraggingChanged = (event: { value: unknown }): void => {
-    const orbit = this.viewport.orbit
-    if (orbit) orbit.enabled = event.value !== true && !this.flying
+    this.viewport.freezePanes(event.value === true || this.flying)
   }
 
   /** Reports whether the camera is still flying, which is what keeps the loop alive. */

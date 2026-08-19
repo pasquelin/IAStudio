@@ -396,6 +396,29 @@ describe('a viewport', () => {
       expect(engine.paneOrbits.map(orbit => orbit?.enabled)).toEqual([false, true, false, false])
     })
 
+    /**
+     * A gizmo handle held, a camera flying: the gesture belongs to whoever started it. Without
+     * this the arming above answered every pixel of that same drag — the view orbited under the
+     * handle being pulled, and the working view could change halfway through.
+     */
+    it('arms nothing while another gesture holds the pointer, and gives it back after', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      canvas.dispatchEvent(pointerAt(10, 10))
+      engine.freezePanes(true)
+      canvas.dispatchEvent(pointerAt(HOST_WIDTH - 10, HOST_HEIGHT - 10))
+
+      expect(engine.paneOrbits.map(orbit => orbit?.enabled)).toEqual([false, false, false, false])
+      expect(engine.activePane).toBe(0)
+
+      engine.freezePanes(false)
+
+      expect(engine.paneOrbits.map(orbit => orbit?.enabled)).toEqual([true, false, false, false])
+    })
+
     it('leaves every orbit alone while there is one view', () => {
       const engine = mounted()
       const canvas = engine.canvas
@@ -415,6 +438,30 @@ describe('a viewport', () => {
 
       expect(ndc?.x).toBeCloseTo(0)
       expect(ndc?.y).toBeCloseTo(0)
+    })
+
+    /**
+     * What a control reading its own pointer events has to be told, `TransformControls` being
+     * the one that does: unset, it normalises a click against the whole canvas — four times the
+     * pane its handles are drawn in — and no handle ever lights up in a quad layout.
+     */
+    it('gives the active pane bottom-left, and none of it while there is one view', () => {
+      const engine = mounted()
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      expect(engine.activePaneRegion()).toBeNull()
+
+      engine.setLayout('quad')
+      canvas.dispatchEvent(pointerAt(HOST_WIDTH - 10, HOST_HEIGHT - 10))
+
+      // The bottom-right pane, which is where a bottom-left origin puts its own zero.
+      expect(engine.activePaneRegion()).toEqual({
+        x: HOST_WIDTH / 2,
+        y: 0,
+        width: HOST_WIDTH / 2,
+        height: HOST_HEIGHT / 2,
+      })
     })
 
     /** The seam a per-view display mode hangs on: each pane is announced before its own pass. */

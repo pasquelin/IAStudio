@@ -174,6 +174,8 @@ export class ViewportEngine {
   private layout: PaneLayout = 'single'
   /** Pane 0 until a pointer says otherwise, which is the only pane a single layout has. */
   private active = 0
+  /** Whether another gesture holds the pointer — see `freezePanes`. */
+  private frozen = false
   /**
    * The views beside the main one, which is always pane 0 and always the one that was already
    * there. Empty in a single layout, so every viewport that never asks for four draws exactly
@@ -346,6 +348,37 @@ export class ViewportEngine {
     return this.active
   }
 
+  /**
+   * Takes the views out of the pointer's hands for the length of another gesture — a gizmo handle
+   * held, a camera flying — and gives them back.
+   *
+   * EVERY orbit, and the active pane with them: `armPaneUnderPointer` re-arms on every move, so a
+   * caller that turned one orbit off itself would find it back on at the next pixel of that very
+   * drag — the scene orbited under a handle being pulled. Frozen, the working view cannot change
+   * mid-drag either, which is what stops a pointer straying into a neighbouring pane from handing
+   * the gizmo another camera halfway through.
+   */
+  freezePanes(frozen: boolean): void {
+    this.frozen = frozen
+    // A single layout keeps `active` at 0, so the main orbit reads the same test as the others.
+    if (this.controls) this.controls.enabled = !frozen && this.active === 0
+    for (const [index, pane] of this.extras.entries()) {
+      if (pane.controls) pane.controls.enabled = !frozen && this.active === index + 1
+    }
+  }
+
+  /**
+   * Where the active pane sits, in the frame a control that reads raw pointer events needs: CSS
+   * pixels, origin bottom-left. `null` in a single layout, where the pane IS the canvas.
+   */
+  activePaneRegion(): PaneRect | null {
+    const canvas = this.renderer?.domElement
+    const rect = this.rects[this.active]
+    if (this.layout === 'single' || !canvas || !rect) return null
+
+    return glRect(rect, canvas.clientHeight)
+  }
+
   /** Which pane a pointer is over, or `null` when it is off the surface entirely. */
   paneAtPointer(pointer: PointerPosition): number | null {
     const canvas = this.renderer?.domElement
@@ -484,7 +517,7 @@ export class ViewportEngine {
    * scene editor that had to arm it would be the second place deciding which view is being used.
    */
   private readonly armPaneUnderPointer = (event: PointerEvent): void => {
-    if (this.layout === 'single') return
+    if (this.layout === 'single' || this.frozen) return
 
     const over = this.paneAtPointer(event)
     if (over !== null) this.active = over
