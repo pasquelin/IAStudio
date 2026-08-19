@@ -129,12 +129,15 @@ function bootstrap(): void {
   registerFieldMenu()
 
   void app.whenReady().then(() => {
-    // First, so what follows leaves a trace. `setAppLogsPath()` is what defines the path at all
-    // on Linux and Windows, where it sits under `userData` rather than beside the system's logs.
-    // First, so what follows leaves a trace. `setAppLogsPath()` is what defines the path at all
-    // on Linux and Windows, where it sits under `userData` rather than beside the system's logs.
-    app.setAppLogsPath()
-    recordLogsTo(createLogFile(app.getPath('logs')))
+    // First, so what follows leaves a trace — but resolved on the first LINE, never here: a throw
+    // on the way to the folder would take the splash and the permission lock with it.
+    // `setAppLogsPath()` is what defines the path at all on Linux and Windows.
+    recordLogsTo(
+      createLogFile(() => {
+        app.setAppLogsPath()
+        return app.getPath('logs')
+      }),
+    )
     log.info('startup', `${APP_NAME} ${app.getVersion()} starting`)
 
     // The session only exists once ready, and no window may exist before it is locked: with no

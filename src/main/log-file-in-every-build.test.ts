@@ -11,24 +11,36 @@ const callsRecordLogsTo = (node: ts.Node): node is ts.CallExpression =>
   ts.isIdentifier(node.expression) &&
   node.expression.text === 'recordLogsTo'
 
-const underBuildCondition = (node: ts.Node): boolean =>
-  ts.findAncestor(
-    node,
-    up => ts.isIfStatement(up) && /isDevelopment/.test(up.expression.getText()),
-  ) !== undefined
+function asksTheBuild(node: ts.Node): boolean {
+  if (ts.isIfStatement(node)) return /isDevelopment/.test(node.expression.getText())
+  if (ts.isConditionalExpression(node)) return /isDevelopment/.test(node.condition.getText())
+  return false
+}
 
-function recordingIn(path: string, source: string): { sites: string[]; conditional: string[] } {
+/**
+ * What is INSTALLED, as opposed to what is merely called: the argument is read as TEXT, so a
+ * helper hiding the condition behind another name would pass. `null` is what a ternary collapses
+ * to, and it installs nothing.
+ */
+function installs(call: ts.CallExpression): boolean {
+  const argument = call.arguments[0]
+  if (argument === undefined || argument.kind === ts.SyntaxKind.NullKeyword) return false
+  return !/isDevelopment/.test(argument.getText())
+}
+
+function recordingIn(path: string, source: string): { installed: string[]; conditional: string[] } {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
-  const sites: string[] = []
+  const installed: string[] = []
   const conditional: string[] = []
 
   walkIn(file, node => {
     if (!callsRecordLogsTo(node)) return
-    sites.push(siteOf(file, path, node))
-    if (underBuildCondition(node)) conditional.push(siteOf(file, path, node))
+    if (ts.findAncestor(node, asksTheBuild) !== undefined || !installs(node))
+      conditional.push(siteOf(file, path, node))
+    else installed.push(siteOf(file, path, node))
   })
 
-  return { sites, conditional }
+  return { installed, conditional }
 }
 
 /**
@@ -41,21 +53,31 @@ describe('the log reaches a file whatever the build', () => {
     recordingIn(ENTRY, readFileSync(join(import.meta.dirname, 'index.ts'), 'utf8'))
 
   it('installs the file destination from the entry point', () => {
-    expect(entry().sites).not.toEqual([])
+    expect(entry().installed).not.toEqual([])
   })
 
   it('installs it outside any question about the build', () => {
     expect(entry().conditional).toEqual([])
   })
 
-  it('sees the mistake the mirror invites', () => {
+  it('sees the mistake the mirror invites, written as a statement', () => {
     expect(
       recordingIn('probe.ts', 'if (isDevelopment) recordLogsTo(createLogFile(directory))')
         .conditional,
     ).toEqual(['probe.ts:1'])
   })
 
+  // The same defect one rewrite away, and the first draft of this guard was blind to it: the
+  // ternary sits INSIDE the call, so no ancestor of it asks anything about the build.
+  it('sees it written as a ternary, and as an install of nothing', () => {
+    expect(
+      recordingIn('probe.ts', 'recordLogsTo(isDevelopment ? createLogFile(directory) : null)')
+        .conditional,
+    ).toEqual(['probe.ts:1'])
+    expect(recordingIn('probe.ts', 'recordLogsTo(null)').installed).toEqual([])
+  })
+
   it('leaves the mirror alone', () => {
-    expect(recordingIn('probe.ts', 'if (isDevelopment) mirrorLogsTo(send)').sites).toEqual([])
+    expect(recordingIn('probe.ts', 'if (isDevelopment) mirrorLogsTo(send)').installed).toEqual([])
   })
 })
