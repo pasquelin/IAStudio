@@ -2,7 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { ACTIVITY_LEVELS, ACTIVITY_MESSAGES, ACTIVITY_TOPICS } from '../domain/activity'
 import { TRACK_PROPERTIES } from '../domain/animation'
 import { HOME_SECTION_IDS } from '../domain/home'
-import { DISPLAY_MODES, VIEW_DIRECTIONS } from '../domain/scene'
+import {
+  BACKGROUND_KINDS,
+  DISPLAY_MODES,
+  DISPLAY_UNITS,
+  ENVIRONMENT_KINDS,
+  FOG_KINDS,
+  HELPER_VISIBILITIES,
+  TONE_MAPPINGS,
+  VIEW_DIRECTIONS,
+  VIEWPORT_QUALITIES,
+} from '../domain/scene'
 import { TOOL_PLACEMENTS } from '../domain/tool'
 import { ASSET_BADGES } from '../domain/asset'
 import { FILE_DOMAINS } from '../domain/fileRole'
@@ -1118,6 +1128,14 @@ describe('what the guards would catch', () => {
 })
 
 /**
+ * The label AND the sentence beside it, which is the shape `choicesOf` composes: a union whose
+ * values each explain themselves goes missing in two ways, never one.
+ */
+function explained(prefix: string, values: readonly string[]): string[] {
+  return values.flatMap(value => [`${prefix}${value}`, `${prefix}${value}Hint`])
+}
+
+/**
  * Keys the interface builds at runtime — `t(`assetTypes.${type}`)` and its like. A value added
  * to one of these unions and forgotten in the bundles shows the user the key itself, and no
  * amount of typechecking sees it: the key exists only once the template has run.
@@ -1149,7 +1167,17 @@ const DYNAMIC_KEYS: readonly string[] = [
     `sceneViews.${direction}`,
     `sceneViews.${direction}Hint`,
   ]),
-  ...DISPLAY_MODES.flatMap(mode => [`sceneDisplay.${mode}`, `sceneDisplay.${mode}Hint`]),
+  ...explained('sceneDisplay.', DISPLAY_MODES),
+  // The unions of `domain/scene` the 3D inspector composes a label AND a sentence from, none of
+  // them listed until now: a value without its line reads as its own key, on the very rows a
+  // select explains itself with.
+  ...explained('environment.source_', ENVIRONMENT_KINDS),
+  ...explained('environment.background_', BACKGROUND_KINDS),
+  ...explained('environment.fog_', FOG_KINDS),
+  ...explained('environment.tone_', TONE_MAPPINGS),
+  ...explained('environment.visibility_', HELPER_VISIBILITIES),
+  ...explained('environment.quality_', VIEWPORT_QUALITIES),
+  ...explained('environment.unit_', DISPLAY_UNITS),
   ...MODEL_PERIODS.map(period => `periods.${period}`),
   ...MODEL_SORTS.map(sort => `sorts.${sort}`),
   ...ACTIVITY_LEVELS.map(level => `activity.levels.${level}`),

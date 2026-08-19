@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import type { Settings } from '@shared/domain/settings'
-import { ChoiceField } from '@/design/ChoiceField'
 import { PropertySection } from '@/design/PropertySection'
+import { SelectField } from '@/design/SelectField'
 import { ToggleField } from '@/design/ToggleField'
+import { HINT_LEFT } from '@/helpers/tooltip'
 
 export type EnvironmentSnapSectionProps = {
   view: Settings['three']
@@ -23,11 +24,11 @@ export function EnvironmentSnapSection({
 }: EnvironmentSnapSectionProps) {
   const { t } = useTranslation()
 
-  const steps = (
-    values: readonly number[],
-    hint: string,
-    format: (value: number) => string = String,
-  ) => values.map(value => ({ value: String(value), label: format(value), hint }))
+  const steps = (values: readonly number[], format: (value: number) => string = String) =>
+    values.map(value => ({ value: String(value), label: format(value) }))
+
+  const degrees = (value: number) => t('environment.snapDegrees', { value })
+  const hint = HINT_LEFT(t('environment.snapEnabledHint'))
 
   return (
     <PropertySection title={t('environment.snap')} defaultOpen={false} scId="snap">
@@ -37,27 +38,33 @@ export function EnvironmentSnapSection({
           reads as broken, and the toggle above is one click away. */}
       {snapping && (
         <>
-          <ChoiceField
+          {/* The preferences set these three by a free SLIDER, so a stored step can fall between
+              two of the ones offered here — it then reads as itself rather than as the first. */}
+          <SelectField
             label={t('environment.snapTranslate')}
             value={String(view.snapTranslate)}
-            options={steps(TRANSLATE_STEPS, t('environment.snapEnabledHint'))}
+            options={steps(TRANSLATE_STEPS)}
             onChange={value => onViewport({ snapTranslate: Number(value) })}
+            unnamedLabel={String(view.snapTranslate)}
+            hint={hint}
           />
 
-          <ChoiceField
+          <SelectField
             label={t('environment.snapRotate')}
             value={String(view.snapRotate)}
-            options={steps(ROTATE_STEPS, t('environment.snapEnabledHint'), degrees =>
-              t('environment.snapDegrees', { value: degrees }),
-            )}
+            options={steps(ROTATE_STEPS, degrees)}
             onChange={value => onViewport({ snapRotate: Number(value) })}
+            unnamedLabel={degrees(view.snapRotate)}
+            hint={hint}
           />
 
-          <ChoiceField
+          <SelectField
             label={t('environment.snapScale')}
             value={String(view.snapScale)}
-            options={steps(SCALE_STEPS, t('environment.snapEnabledHint'))}
+            options={steps(SCALE_STEPS)}
             onChange={value => onViewport({ snapScale: Number(value) })}
+            unnamedLabel={String(view.snapScale)}
+            hint={hint}
           />
         </>
       )}

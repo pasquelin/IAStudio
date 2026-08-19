@@ -6,13 +6,11 @@ import {
   SKYBOX_VIEWS,
 } from '@shared/domain/skybox'
 import { SKYBOX_VIEW_LABELS } from '@/spaces/skyboxes/skyboxTools'
-import { Chip } from '@/design/Chip'
-import { FieldActions } from '@/design/FieldActions'
 import { PropertySection } from '@/design/PropertySection'
+import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
 import { ToggleField } from '@/design/ToggleField'
-import { PropertyLabel } from '@/design/PropertyLabel'
-import { FIELD_ROW } from '@/design/styles'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { useSkyboxViews, skyboxViewOf } from '@/stores/skyboxViews'
 
 export type SkyboxInspectorViewProps = { documentId: string }
@@ -35,23 +33,16 @@ export function SkyboxInspectorView({ documentId }: SkyboxInspectorViewProps) {
   return (
     <>
       <PropertySection title={t('view.projection')} scId="view">
-        <div className={FIELD_ROW}>
-          <PropertyLabel label={t('view.mode')} />
-
-          <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-            {SKYBOX_VIEWS.map(candidate => (
-              <Chip
-                key={candidate}
-                label={t(SKYBOX_VIEW_LABELS[candidate])}
-                hint={t('view.modeHint')}
-                selected={settings.view === candidate}
-                onClick={() => set(documentId, { view: candidate })}
-              />
-            ))}
-          </div>
-
-          <FieldActions />
-        </div>
+        <SelectField
+          label={t('view.mode')}
+          value={settings.view}
+          options={SKYBOX_VIEWS.map(candidate => ({
+            value: candidate,
+            label: t(SKYBOX_VIEW_LABELS[candidate]),
+          }))}
+          onChange={view => set(documentId, { view })}
+          hint={HINT_LEFT(t('view.modeHint'))}
+        />
 
         <SliderField
           label={t('skybox.fieldOfView')}

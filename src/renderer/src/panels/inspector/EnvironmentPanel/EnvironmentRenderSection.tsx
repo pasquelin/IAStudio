@@ -8,11 +8,12 @@ import {
   type SceneWorld,
 } from '@shared/domain/scene'
 import type { Settings } from '@shared/domain/settings'
-import { ChoiceField } from '@/design/ChoiceField'
 import { PropertySection } from '@/design/PropertySection'
+import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
 import { ToggleField } from '@/design/ToggleField'
 import type { GestureProps } from '@/design/styles'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { choicesOf } from './environmentChoices'
 
 export type EnvironmentRenderSectionProps = {
@@ -42,11 +43,12 @@ export function EnvironmentRenderSection({
 
   return (
     <PropertySection title={t('environment.render')} defaultOpen={false} scId="render">
-      <ChoiceField
+      <SelectField
         label={t('environment.toneMapping')}
         value={world.toneMapping}
-        options={tones}
+        options={tones.options}
         onChange={toneMapping => onChange({ toneMapping })}
+        hint={HINT_LEFT(tones.hintOf(world.toneMapping))}
       />
 
       {/* Shown whatever the curve: three.js reads `toneMappingExposure` even under `none`, so
@@ -61,18 +63,20 @@ export function EnvironmentRenderSection({
         {...gesture}
       />
 
-      <ChoiceField
+      <SelectField
         label={t('environment.quality')}
         value={view.quality}
-        options={qualities}
+        options={qualities.options}
         onChange={quality => onViewport({ quality })}
+        hint={HINT_LEFT(qualities.hintOf(view.quality))}
       />
 
-      <ChoiceField
+      <SelectField
         label={t('environment.units')}
         value={view.units}
-        options={units}
+        options={units.options}
         onChange={units => onViewport({ units })}
+        hint={HINT_LEFT(units.hintOf(view.units))}
       />
 
       <ToggleField

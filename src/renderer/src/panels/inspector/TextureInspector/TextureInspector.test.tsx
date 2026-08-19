@@ -138,7 +138,7 @@ describe('TextureInspector', () => {
   it('says that the preview rows change nothing that gets exported', () => {
     show()
 
-    expect(screen.getByRole('button', { name: 'Sphère' })).toHaveAttribute(
+    expect(screen.getByRole('combobox', { name: 'Forme' })).toHaveAttribute(
       'data-tooltip-content',
       'Change la forme sur laquelle l’aperçu est plaqué, pas la texture',
     )
@@ -147,16 +147,15 @@ describe('TextureInspector', () => {
   it('chooses the shape the material is judged on', () => {
     show()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cube' }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Forme' }), { target: { value: 'box' } })
 
     expect(preview().shape).toBe('box')
   })
 
-  it('shows which shape is current, so the buttons are not five identical ones', () => {
+  it('shows which shape is current, so the row is not five identical words', () => {
     show()
 
-    expect(screen.getByRole('button', { name: 'Sphère' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'Cube' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('combobox', { name: 'Forme' })).toHaveValue('sphere')
   })
 
   it('hangs the sky behind the subject, or only lights with it', () => {

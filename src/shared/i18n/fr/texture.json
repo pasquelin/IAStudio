@@ -121,6 +121,7 @@
     "frame": "Recentrer",
     "frameHint": "Remet la caméra là où elle était en ouvrant la texture",
     "tilingPreviewHint": "Ne change que l’aperçu — la texture exportée n’est pas répétée pour autant",
+    "previewShape": "Forme",
     "previewShapeHint": "Change la forme sur laquelle l’aperçu est plaqué, pas la texture",
     "measureSeamHint": "Compare les bords opposés de la texture pour dire si la couture se voit",
     "deriveHint": "Calcule ce canal à partir d’un autre plutôt que d’une image importée"

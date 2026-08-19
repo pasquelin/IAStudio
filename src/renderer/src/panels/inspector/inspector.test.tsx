@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset, AssetType } from '@shared/domain/asset'
@@ -83,6 +83,27 @@ function cataloguing(assets: readonly Asset[]): void {
   installFakeBridge({ assets: { search: () => Promise.resolve([...assets]) } })
 }
 
+/** A sky the catalogue answers with — the only kind the environment slot takes. */
+function skyAsset(id: string, name: string): Asset {
+  return {
+    id,
+    name,
+    type: 'skybox',
+    location: 'local',
+    path: `assets/${id}.png`,
+    tags: [],
+    createdAt: '2026-08-08T00:00:00.000Z',
+  }
+}
+
+/** The source row, once the catalogue has answered — the slot lists nothing until it has. */
+async function skySource(): Promise<HTMLElement> {
+  await waitFor(() =>
+    expect(within(screen.getByLabelText('Ciel')).getAllByRole('option').length).toBeGreaterThan(1),
+  )
+  return screen.getByRole('combobox', { name: 'Source' })
+}
+
 const entries = () => sceneHistoryOf(useScenes.getState(), 'doc-1').past.length
 
 /** The drag handle of one axis. Throws rather than narrowing, so a miss reads as a miss. */
@@ -118,43 +139,22 @@ describe('inspector panel', () => {
     expect(screen.queryByRole('button', { name: /Transformation/ })).not.toBeInTheDocument()
   })
 
-  it('offers the skies of the project, and the studio to come back to', async () => {
-    cataloguing([
-      {
-        id: 'sky-1',
-        name: 'Coucher',
-        type: 'skybox',
-        location: 'local',
-        path: 'assets/sky-1.png',
-        tags: [],
-        createdAt: '2026-08-08T00:00:00.000Z',
-      },
-    ])
+  // The slot is what a sky is DRAGGED onto, and a fresh scene opens on the studio: hiding it
+  // there would leave the 3D space with no drop target for a sky at all.
+  it('keeps the sky slot whatever the source, so a sky can always be dropped', () => {
     render(<Content />)
 
-    const sky = screen.getByLabelText('Ciel')
-
-    expect(await within(sky).findByRole('option', { name: /Coucher/ })).toBeInTheDocument()
-    expect(within(sky).getByRole('option', { name: 'Studio' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Ciel')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Source' })).toHaveValue('studio')
   })
 
-  it('writes the chosen sky into the document, through the history', async () => {
-    cataloguing([
-      {
-        id: 'sky-1',
-        name: 'Coucher',
-        type: 'skybox',
-        location: 'local',
-        path: 'assets/sky-1.png',
-        tags: [],
-        createdAt: '2026-08-08T00:00:00.000Z',
-      },
-    ])
+  // The row asks « lit by a sky », and an answer that lights nothing until a second gesture is
+  // not one: the first sky of the project lands, and the slot below is what changes it.
+  it('writes a sky into the document as soon as one is asked for, through the history', async () => {
+    cataloguing([skyAsset('sky-1', 'Coucher')])
     render(<Content />)
 
-    const sky = screen.getByLabelText('Ciel')
-    await within(sky).findByRole('option', { name: /Coucher/ })
-    await userEvent.selectOptions(sky, 'sky-1')
+    await userEvent.selectOptions(await skySource(), 'skybox')
 
     expect(sceneOf(useScenes.getState(), 'doc-1').world.environment).toEqual({
       kind: 'skybox',
@@ -163,6 +163,21 @@ describe('inspector panel', () => {
 
     useScenes.getState().undo('doc-1')
     expect(sceneOf(useScenes.getState(), 'doc-1').world.environment).toEqual({ kind: 'studio' })
+  })
+
+  it('offers the skies of the project in the slot, and the studio to come back to', async () => {
+    cataloguing([skyAsset('sky-1', 'Coucher'), skyAsset('sky-2', 'Aube')])
+    render(<Content />)
+    await userEvent.selectOptions(await skySource(), 'skybox')
+
+    const slot = screen.getByLabelText('Ciel')
+    await userEvent.selectOptions(slot, 'sky-2')
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').world.environment).toEqual({
+      kind: 'skybox',
+      assetId: 'sky-2',
+    })
+    expect(within(slot).getByRole('option', { name: 'Studio' })).toBeInTheDocument()
   })
 
   it('shows the three sections of a mesh', () => {
@@ -885,7 +900,10 @@ describe('inspector panel', () => {
       render(<Content />)
       await openTiling()
 
-      await userEvent.click(screen.getByRole('button', { name: '4×' }))
+      await userEvent.selectOptions(
+        screen.getByRole('combobox', { name: 'Aperçu de la répétition' }),
+        '4',
+      )
 
       const texture = textureOf(useTextures.getState(), 'doc-1')
       expect(texture.preview.tilingPreview).toBe(4)

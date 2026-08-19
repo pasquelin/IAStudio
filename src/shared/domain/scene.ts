@@ -330,6 +330,14 @@ export type EnvironmentRef = { kind: 'studio' } | { kind: 'skybox'; assetId: str
 export const STUDIO_ENVIRONMENT: EnvironmentRef = Object.freeze({ kind: 'studio' })
 
 /**
+ * Derived, never restated — the same rule `BACKGROUND_KINDS` follows.
+ *
+ * The two are EXCLUSIVE, and that is the whole reason a panel names them: a scene is lit by one
+ * prefiltered map, so choosing a sky is what puts the procedural studio out.
+ */
+export const ENVIRONMENT_KINDS: readonly EnvironmentRef['kind'][] = ['studio', 'skybox']
+
+/**
  * What a stored value says about lighting, or the studio when it says nothing usable — a
  * document written before environments existed, a sky named without an id, a hand-edited file.
  */
@@ -350,9 +358,22 @@ export function readEnvironment(value: unknown): EnvironmentRef {
  * else needs — the montage already renders that way, through a path of its own.
  */
 export type BackgroundDescriptor =
-  { kind: 'environment' } | { kind: 'color'; color: string } | { kind: 'transparent' }
+  | {
+      kind: 'environment'
+      /**
+       * `scene.backgroundBlurriness`, 0 to 1. Softens the PICTURE alone: what the materials
+       * reflect goes on being read from the sharp map, which is what lets a sky serve as a
+       * backdrop without turning every specular into a smear.
+       */
+      blur: number
+    }
+  | { kind: 'color'; color: string }
+  | { kind: 'transparent' }
 
-export const DEFAULT_BACKGROUND: BackgroundDescriptor = Object.freeze({ kind: 'environment' })
+export const DEFAULT_BACKGROUND: BackgroundDescriptor = Object.freeze({
+  kind: 'environment',
+  blur: 0,
+})
 
 /** Derived, never restated: a fourth shape above is a fourth button on the spot. */
 export const BACKGROUND_KINDS: readonly BackgroundDescriptor['kind'][] = [
@@ -462,6 +483,8 @@ export const DEFAULT_WORLD: SceneWorld = Object.freeze({
 
 /** Bounds a slider and a stored value are both held to. */
 export const ENV_INTENSITY = Object.freeze({ min: 0, max: 3, step: 0.05 })
+/** `scene.backgroundBlurriness` takes 0 to 1 and clamps past it, so the bounds are the API's. */
+export const BACKGROUND_BLUR = Object.freeze({ min: 0, max: 1, step: 0.05 })
 export const EXPOSURE = Object.freeze({ min: 0, max: 3, step: 0.05 })
 export const GROUND_SIZE = Object.freeze({ min: 1, max: 500, step: 1 })
 export const FOG_DENSITY = Object.freeze({ min: 0.001, max: 0.2, step: 0.001 })

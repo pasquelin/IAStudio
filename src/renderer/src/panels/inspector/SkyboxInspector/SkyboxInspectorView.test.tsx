@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { installDocument } from '@/stores/document-fixtures'
@@ -11,17 +11,18 @@ describe('the view sections of the sky inspector', () => {
     installDocument('sky-1', 'skyboxes')
   })
 
-  it('offers the four projections, with the armed one pressed', () => {
+  it('offers the four projections, showing the armed one', () => {
     render(<SkyboxInspectorView documentId="sky-1" />)
 
-    expect(screen.getByRole('button', { name: '360°' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'Croix' })).toHaveAttribute('aria-pressed', 'false')
+    const mode = screen.getByRole('combobox', { name: 'Mode' })
+    expect(mode).toHaveValue('immersive')
+    expect(within(mode).getByRole('option', { name: 'Croix' })).toBeInTheDocument()
   })
 
   it('arms the projection that was picked', async () => {
     render(<SkyboxInspectorView documentId="sky-1" />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Croix' }))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Mode' }), 'cross')
 
     expect(skyboxViewOf(useSkyboxViews.getState(), 'sky-1').view).toBe('cross')
   })

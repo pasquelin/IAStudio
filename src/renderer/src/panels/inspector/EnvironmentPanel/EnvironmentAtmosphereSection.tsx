@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FOG_DENSITY, FOG_KINDS, type SceneWorld } from '@shared/domain/scene'
-import { ChoiceField } from '@/design/ChoiceField'
 import { ColorField } from '@/design/ColorField'
 import { NumberField } from '@/design/NumberField'
 import { PropertySection } from '@/design/PropertySection'
+import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
 import type { GestureProps } from '@/design/styles'
 import { fogOfKind } from '@/engines/scene/sceneWorld'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { choicesOf } from './environmentChoices'
 
 export type EnvironmentAtmosphereSectionProps = {
@@ -32,11 +33,12 @@ export function EnvironmentAtmosphereSection({
 
   return (
     <PropertySection title={t('environment.atmosphere')} defaultOpen={false} scId="atmosphere">
-      <ChoiceField
+      <SelectField
         label={t('environment.fog')}
         value={fog.kind}
-        options={kinds}
+        options={kinds.options}
         onChange={kind => onChange({ fog: fogOfKind(kind, fog) })}
+        hint={HINT_LEFT(kinds.hintOf(fog.kind))}
       />
 
       {fog.kind !== 'none' && (

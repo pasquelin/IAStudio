@@ -2,11 +2,12 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { HELPER_VISIBILITIES, NORMAL_LENGTH } from '@shared/domain/scene'
 import type { Settings } from '@shared/domain/settings'
-import { ChoiceField } from '@/design/ChoiceField'
 import { PropertySection } from '@/design/PropertySection'
+import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
 import { ToggleField } from '@/design/ToggleField'
 import type { GestureProps } from '@/design/styles'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { choicesOf } from './environmentChoices'
 
 export type EnvironmentHelpersSectionProps = {
@@ -38,25 +39,28 @@ export function EnvironmentHelpersSection({
 
   return (
     <PropertySection title={t('environment.helpers')} defaultOpen={false} scId="helpers">
-      <ChoiceField
+      <SelectField
         label={t('environment.lightHelpers')}
         value={view.lightHelpers}
-        options={visibility}
+        options={visibility.options}
         onChange={lightHelpers => onViewport({ lightHelpers })}
+        hint={HINT_LEFT(visibility.hintOf(view.lightHelpers))}
       />
 
-      <ChoiceField
+      <SelectField
         label={t('environment.cameraHelpers')}
         value={view.cameraHelpers}
-        options={visibility}
+        options={visibility.options}
         onChange={cameraHelpers => onViewport({ cameraHelpers })}
+        hint={HINT_LEFT(visibility.hintOf(view.cameraHelpers))}
       />
 
-      <ChoiceField
+      <SelectField
         label={t('environment.boundingBoxes')}
         value={view.boundingBoxes}
-        options={visibility}
+        options={visibility.options}
         onChange={boundingBoxes => onViewport({ boundingBoxes })}
+        hint={HINT_LEFT(visibility.hintOf(view.boundingBoxes))}
       />
 
       {/* Session state, unlike its neighbours: skeletons are per document, and the toolbar and

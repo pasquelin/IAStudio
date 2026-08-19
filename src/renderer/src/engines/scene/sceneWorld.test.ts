@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_WORLD, STUDIO_ENVIRONMENT } from '@shared/domain/scene'
-import { backgroundOfKind, fogOfKind, readWorld } from './sceneWorld'
+import { backgroundOfKind, environmentOfKind, fogOfKind, readWorld } from './sceneWorld'
 
 describe('reading a world back', () => {
   it('opens a document written before the world existed on the defaults', () => {
@@ -29,7 +29,21 @@ describe('reading a world back', () => {
   it('refuses a colour background with no colour rather than painting black', () => {
     expect(readWorld({ background: { kind: 'color' } }, undefined).background).toEqual({
       kind: 'environment',
+      blur: 0,
     })
+  })
+
+  it('opens a backdrop written before the softening on a sharp one', () => {
+    expect(readWorld({ background: { kind: 'environment' } }, undefined).background).toEqual({
+      kind: 'environment',
+      blur: 0,
+    })
+  })
+
+  it('holds a hand-edited softening to what three.js actually takes', () => {
+    expect(
+      readWorld({ background: { kind: 'environment', blur: 40 } }, undefined).background,
+    ).toEqual({ kind: 'environment', blur: 1 })
   })
 
   it('reads both forms of fog, and nothing else', () => {
@@ -80,21 +94,42 @@ describe('switching the form of a fog', () => {
   })
 })
 
+describe('switching what lights a scene', () => {
+  const skies = [{ id: 'sky-1' }, { id: 'sky-2' }]
+
+  it('lights from the first sky of the project when one is asked for', () => {
+    expect(environmentOfKind('skybox', skies)).toEqual({ kind: 'skybox', assetId: 'sky-1' })
+  })
+
+  // A sky is a REFERENCE: with none to point at, the answer is the studio rather than a link
+  // to nothing.
+  it('stays on the studio when the project holds no sky at all', () => {
+    expect(environmentOfKind('skybox', [])).toEqual(STUDIO_ENVIRONMENT)
+  })
+
+  it('goes back to the studio whatever the project holds', () => {
+    expect(environmentOfKind('studio', skies)).toEqual(STUDIO_ENVIRONMENT)
+  })
+})
+
 describe('switching the form of a backdrop', () => {
   it('carries the colour across, so leaving and coming back keeps what was chosen', () => {
-    const chosen = backgroundOfKind('color', { kind: 'environment' })
+    const chosen = backgroundOfKind('color', { kind: 'environment', blur: 0 })
     const away = backgroundOfKind('transparent', chosen)
 
     expect(backgroundOfKind('color', away)).toEqual(chosen)
   })
 
   it('opens on a colour of its own when none was ever chosen', () => {
-    expect(backgroundOfKind('color', { kind: 'environment' })).toMatchObject({ kind: 'color' })
+    expect(backgroundOfKind('color', { kind: 'environment', blur: 0 })).toMatchObject({
+      kind: 'color',
+    })
   })
 
   it('carries nothing back to the environment', () => {
     expect(backgroundOfKind('environment', { kind: 'color', color: '#123456' })).toEqual({
       kind: 'environment',
+      blur: 0,
     })
   })
 })
