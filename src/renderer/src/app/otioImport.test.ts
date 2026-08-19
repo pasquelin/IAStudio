@@ -7,6 +7,7 @@ import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/time
 import { otioTimelineOf } from '@/engines/timeline/otioTimeline'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
+import { sequenceOf, useSequences } from '@/stores/sequences'
 import { importOtioz, sequenceOfBundle } from './otioImport'
 import { montageIsIncomplete } from './sequenceDocument'
 
@@ -16,12 +17,21 @@ vi.mock('@/services/diagnostics', () => ({ reportFailure: () => {}, reportNotice
  * A bundle exactly as the writing side makes one: `bundleOf` rewrites every `target_url` to the
  * entry it takes inside the archive, and the entry is the only name the reading side has left.
  */
-function bundled(): { content: string; media: readonly { entry: string; assetId: string }[] } {
+function bundled(scene?: { sceneId: string }): {
+  content: string
+  media: readonly { entry: string; assetId: string }[]
+} {
   const state = sequenceWith([
-    trackFixture('t1', 'video', [
-      clipFixture('c1', 0, 1_000_000, { assetId: 'old-a' }),
-      clipFixture('c2', 1_000_000, 1_000_000, { assetId: 'old-b' }),
-    ]),
+    trackFixture(
+      't1',
+      'video',
+      scene
+        ? [clipFixture('c1', 0, 1_000_000, { assetId: '', sceneId: scene.sceneId })]
+        : [
+            clipFixture('c1', 0, 1_000_000, { assetId: 'old-a' }),
+            clipFixture('c2', 1_000_000, 1_000_000, { assetId: 'old-b' }),
+          ],
+    ),
   ])
 
   const bundle = bundleOf(
@@ -121,6 +131,38 @@ describe('importing a montage bundle', () => {
     // The refusal of the HOLDS-MORE cause, spelled out: both causes answer « not null », and a
     // test that only asked that would pass on the other one.
     expect(montageIsIncomplete(created ?? '')).toContain('contient plus que ce que le studio')
+  })
+
+  /**
+   * The question is « does THIS project hold that id », never « where did the file come from ».
+   * A flag answering the second dropped every scene clip of a bundle this very machine had
+   * exported, while the scenes it named sat in the same project.
+   */
+  it('keeps a scene clip whose document this project holds', async () => {
+    useDocuments.setState({
+      stored: [
+        { id: 'scene-1', kind: 'scene', workspace: '3d', title: 'Décor', path: '3D/Décor.gltf' },
+      ],
+    })
+    read = { ...bundled({ sceneId: 'scene-1' }), media: [], folder: 'Bande' }
+
+    const created = await importOtioz()
+
+    const clips = sequenceOf(useSequences.getState(), created ?? '').tracks.flatMap(
+      track => track.clips,
+    )
+    expect(clips.map(clip => clip.sceneId)).toEqual(['scene-1'])
+  })
+
+  /** And it holds none of another machine's: a clip kept on one draws nothing while claiming to. */
+  it('drops a scene clip whose document this project has never held', async () => {
+    read = { ...bundled({ sceneId: 'scene-elsewhere' }), media: [], folder: 'Bande' }
+
+    const created = await importOtioz()
+
+    expect(sequenceOf(useSequences.getState(), created ?? '').tracks.flatMap(t => t.clips)).toEqual(
+      [],
+    )
   })
 
   /** « Ce que l'importeur ne sait pas reconstruire se DIT » — and a save that would drop it is not. */

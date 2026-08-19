@@ -197,6 +197,19 @@ export const activeSkyboxId = (state: DocumentsSlice): string | null =>
 export const activeTextureId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'texture')
 
+/**
+ * Whether this project holds the document an id names — open in a tab or sitting in the folder.
+ *
+ * Both halves, because a montage read back may name a scene nobody has opened yet: the listing
+ * is the project's answer, the tabs are only what is in front of it right now.
+ */
+export function documentIsKnown(
+  state: Pick<DocumentsState, 'documents' | 'stored'>,
+  documentId: string,
+): boolean {
+  return Boolean(state.documents[documentId]) || state.stored.some(one => one.id === documentId)
+}
+
 export function documentsIn(
   state: Pick<DocumentsState, 'documents'>,
   workspace: WorkspaceId,

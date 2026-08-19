@@ -8,15 +8,13 @@ import {
   montageHoldsMore,
   otioTimelineOf,
   readSequenceFromOtio,
-  type OtioAssetIdOf,
-  type OtioRelink,
   type OtioSource,
 } from '@/engines/timeline/otioTimeline'
 import type { Clip, SequenceState } from '@/engines/timeline/timelineState'
 import { assetIdForLink } from '@/helpers/assetIndex'
 import { reportNotice } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
-import { useDocuments } from '@/stores/documents'
+import { documentIsKnown, useDocuments } from '@/stores/documents'
 
 /**
  * A montage on its way to and from its file, which is an OpenTimelineIO one and nothing else:
@@ -162,12 +160,10 @@ export function sequenceFromPayload(
   payload: unknown,
   documentId: string,
   /**
-   * How the clips find their media. Its default is the open project's catalogue, which is what a
-   * document read off disk needs; a bundle passes the entries it just unpacked. Taken here rather
-   * than read straight from `sequenceFromOtio` so that a montage arriving from ANYWHERE gets the
-   * same bookkeeping — the carried metadata kept, the losses said, the save refused.
+   * Where the media a bundle just unpacked are named, keyed by the entry it rewrote every
+   * `target_url` to. Absent for a document read off disk, which resolves against the project.
    */
-  linking?: { assetIdOf: OtioAssetIdOf; relink: OtioRelink },
+  unpacked?: ReadonlyMap<string, string>,
 ): SequenceState {
   incomplete.delete(documentId)
   holdsMore.delete(documentId)
@@ -184,19 +180,29 @@ export function sequenceFromPayload(
 
   const unlinked: string[] = []
   const folder = documentFolder(documentId)
-  const { state, dropped } = readSequenceFromOtio(
-    payload,
-    linking?.assetIdOf ??
-      (url => {
-        const link = mediaLinkFrom(url)
-        const found = assetIdForLink(link, folder)
-        // Only a link that NAMES something: a clip drawing a live scene has no media and no url,
-        // and counting it here reported every scene of a montage as a file that had gone missing.
-        if (!found && mediaNameOf(link) !== '') unlinked.push(mediaNameOf(link))
-        return found
-      }),
-    linking?.relink,
-  )
+  const documents = useDocuments.getState()
+
+  const { state, dropped } = readSequenceFromOtio(payload, ({ assetId, sceneId, targetUrl }) => {
+    // « Does THIS project hold that id », never « where did the file come from ». A flag answering
+    // the second dropped every scene clip of a bundle this very machine had exported, while the
+    // scenes it named sat in the same project.
+    if (sceneId) {
+      return documentIsKnown(documents, sceneId)
+        ? { assetId: '', sceneId }
+        : { assetId: '', sceneId: '' }
+    }
+    // A bundle rewrote every url to its own entry and its ids were minted by another catalogue, so
+    // there the url names the medium and the carried id names a row nobody here has. Read off what
+    // the caller HANDED OVER rather than off a provenance label — and the catalogue is not asked
+    // either way: a montage opens before the shelf has read it, and a clip dropped for a row that
+    // was merely late is a cut that opens short.
+    if (assetId && !unpacked) return { assetId, sceneId: '' }
+
+    const link = mediaLinkFrom(targetUrl)
+    const found = unpacked?.get(targetUrl) ?? assetIdForLink(link, folder)
+    if (!found && mediaNameOf(link) !== '') unlinked.push(mediaNameOf(link))
+    return { assetId: found, sceneId: '' }
+  })
 
   // The COUNT comes from the reader, which is the only side that knows a clip was let go of and
   // for which of the three reasons; the names come from whoever could put one to it. Said rather

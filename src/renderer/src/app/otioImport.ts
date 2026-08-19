@@ -16,12 +16,9 @@ import { saveDocument } from './documentIo'
 import { sequenceFromPayload } from './sequenceDocument'
 
 /**
- * What THIS file does not bring, said once per import.
- *
- * Read off the payload, never off the registry alone: the registry says what a montage from
- * another application carries STRUCTURALLY, and a `.otioz` this studio wrote brings every extended
- * trait back. Saying they were lost over a file that plays its fades is the lie this chantier is
- * against.
+ * What THIS file does not bring. Read off the payload, never off the registry alone: a `.otioz`
+ * this studio wrote brings every extended trait back, and saying they were lost over a montage
+ * that plays its fades is the lie this chantier is against.
  */
 function sayWhatIsNotRebuilt(payload: unknown): void {
   if (montageRebuildsExtended(payload)) return
@@ -35,34 +32,27 @@ function sayWhatIsNotRebuilt(payload: unknown): void {
 }
 
 /**
- * The cut, relinked to the rows the media were given on the way in, through the SAME door a
- * document read off disk goes through: the carried metadata kept, what was let go of said, and
- * the save refused until somebody has seen it.
- *
- * Keyed by the ENTRY, which is what the bundle rewrote every `target_url` to. `link` because the
- * ids a bundle carries were minted by another catalogue, and trusting them would point every clip
- * at a row this project has never held.
+ * The cut, through the SAME door a document read off disk goes through: the carried metadata
+ * kept, what was let go of said, the save refused. Keyed by the ENTRY, which is what the bundle
+ * rewrote every `target_url` to.
  */
 export function sequenceOfBundle(
   { content, media }: MontageImportResult,
   documentId: string,
 ): SequenceState {
-  const byEntry = new Map(media.map(one => [one.entry, one.assetId]))
   const payload: unknown = JSON.parse(content)
 
   sayWhatIsNotRebuilt(payload)
-  return sequenceFromPayload(payload, documentId, {
-    assetIdOf: url => byEntry.get(url) ?? '',
-    relink: 'link',
-  })
+  return sequenceFromPayload(
+    payload,
+    documentId,
+    new Map(media.map(one => [one.entry, one.assetId])),
+  )
 }
 
 /**
- * Reads a montage bundle into the project and opens it.
- *
- * Answers the new document's id, or `null` when the picker was dismissed, no project is open, or
- * the read was stopped. What the file says WINS: the cut is the file's, and every medium is
- * copied in and catalogued rather than pointed at where it happened to lie.
+ * Reads a montage bundle into the project and opens it. Answers the new document's id, or `null`
+ * for a dismissed picker, no project, or a stopped read.
  */
 export async function importOtioz(): Promise<string | null> {
   const bridge = getBridge()

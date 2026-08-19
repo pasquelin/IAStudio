@@ -65,24 +65,28 @@ export type OtioWriteOptions = {
   sourceOf: (clip: Clip) => OtioSource
 }
 
-/**
- * A catalogue id for a media a foreign file points at, or nothing when the project holds no such
- * file. Relinking is the caller's problem: this module never guesses one from a path.
- */
-export type OtioAssetIdOf = (targetUrl: string) => string
+/** What a clip points at once this project has answered for it. Empty for what it does not hold. */
+export type OtioSourceIds = { assetId: string; sceneId: string }
 
 /**
- * Which side names a clip's source.
+ * Where a clip's source is looked up. Asked the only question that has one answer: DOES THIS
+ * PROJECT HOLD THESE IDS — the ids the file carries, and the url it points at.
  *
- * `catalogue` trusts the id the studio metadata carries and falls back to the url — right for a
- * file this project wrote. `link` reads the URL and nothing else, which is the only honest answer
- * for a file from another machine: its ids name rows this catalogue has never held.
+ * Never « where does the file come from ». A `.otioz` this machine exported and reimported has
+ * ids this project DOES hold, and a flag saying « from elsewhere » dropped every scene clip of it
+ * while the scenes sat in the same project. Relinking stays the caller's: this module never
+ * guesses one from a path.
  */
-export type OtioRelink = 'catalogue' | 'link'
+export type OtioResolveSource = (asked: {
+  /** What the studio metadata claims, empty when the file carries none. */
+  assetId: string
+  sceneId: string
+  /** The standard part, which every montage carries and no metadata can contradict. */
+  targetUrl: string
+}) => OtioSourceIds
 
 type Relinking = {
-  assetIdOf: OtioAssetIdOf
-  relink: OtioRelink
+  resolve: OtioResolveSource
   /** Every clip this read let go of, by the name the file gave it. Filled as they are met. */
   dropped: string[]
 }
@@ -271,21 +275,17 @@ function speedFrom(raw: Record<string, unknown>): number {
   return 1
 }
 
-function assetIdFrom(
+function sourceIdsFrom(
   raw: Record<string, unknown>,
   studio: Record<string, unknown>,
-  { assetIdOf, relink }: Relinking,
-): string {
-  if (relink === 'catalogue') {
-    const known = readString(studio, 'assetId', '')
-    if (known) return known
-    // A live scene has no media to relink, and its clip carries an EMPTY `assetId`: asked anyway,
-    // the resolver reported every scene of a montage as a media it could not find.
-    if (readString(studio, 'sceneId', '')) return ''
-  }
-
+  { resolve }: Relinking,
+): OtioSourceIds {
   const reference = raw.media_reference
-  return isRecord(reference) ? assetIdOf(readString(reference, 'target_url', '')) : ''
+  return resolve({
+    assetId: readString(studio, 'assetId', ''),
+    sceneId: readString(studio, 'sceneId', ''),
+    targetUrl: isRecord(reference) ? readString(reference, 'target_url', '') : '',
+  })
 }
 
 function clipFrom(
@@ -299,10 +299,7 @@ function clipFrom(
   const duration = refined(studio, 'duration', standard.duration, frame)
   if (duration <= 0) return null
 
-  // Only when the ids are this project's own: a scene id from another machine names a document
-  // nobody here has, and a clip kept on one draws nothing while claiming to.
-  const sceneId = linking.relink === 'catalogue' ? readString(studio, 'sceneId', '') : ''
-  const assetId = assetIdFrom(raw, studio, linking)
+  const { assetId, sceneId } = sourceIdsFrom(raw, studio, linking)
   // The same refusal `parseSequence` makes: a clip with no source can be neither drawn nor played.
   if (!assetId && !sceneId) return null
 
@@ -512,26 +509,21 @@ export type OtioReading = { state: SequenceState; dropped: readonly string[] }
  * anything that is not one, exactly as `parseSequence` does: a file that fails to read must not
  * open on nothing at all.
  *
- * `assetIdOf` relinks a media the studio metadata does not name — a file written by another
- * application. Its default answers nothing, which drops such clips rather than inventing a
- * catalogue row for them; `dropped` is how the caller can SAY so.
+ * `resolve` answers which ids a project holds. Its default takes the file at its word, which is
+ * all a module with no catalogue can do — asking whether an id EXISTS is `sequenceDocument`'s,
+ * and it is the only side that can. `dropped` is how a caller says what fell out.
  */
 export function readSequenceFromOtio(
   content: unknown,
-  assetIdOf: OtioAssetIdOf = () => '',
-  relink: OtioRelink = 'catalogue',
+  resolve: OtioResolveSource = ({ assetId, sceneId }) => ({ assetId, sceneId }),
 ): OtioReading {
   const dropped: string[] = []
-  return { state: sequenceIn(content, { assetIdOf, relink, dropped }), dropped }
+  return { state: sequenceIn(content, { resolve, dropped }), dropped }
 }
 
 /** The same read, for a caller with nowhere to say what was let go of. */
-export function sequenceFromOtio(
-  content: unknown,
-  assetIdOf: OtioAssetIdOf = () => '',
-  relink: OtioRelink = 'catalogue',
-): SequenceState {
-  return readSequenceFromOtio(content, assetIdOf, relink).state
+export function sequenceFromOtio(content: unknown, resolve?: OtioResolveSource): SequenceState {
+  return readSequenceFromOtio(content, resolve).state
 }
 
 function sequenceIn(content: unknown, linking: Relinking): SequenceState {

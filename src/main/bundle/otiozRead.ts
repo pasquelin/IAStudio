@@ -16,14 +16,8 @@ import {
   unpackedCeiling,
 } from '@shared/domain/otioz'
 
-/**
- * Reading an OpenTimelineIO bundle back — the half that was missing, and the one that makes a
- * round trip through another application possible at all.
- *
- * STREAMED for the reason the writer is: `unzipSync` would hold every rush in memory at once, and
- * a montage bundle IS the rushes. The media land on disk as they arrive; only the cut is kept in
- * hand, and it is JSON.
- */
+// STREAMED for the reason the writer is: `unzipSync` would hold every rush in memory at once, and
+// a montage bundle IS the rushes. The media land on disk as they arrive; only the cut is kept.
 
 export type OtiozRead = {
   /** `content.otio`, as text. The caller parses it — this side never reads a timeline. */
@@ -36,10 +30,8 @@ export type OtiozRead = {
 export class NotABundleError extends Error {}
 
 /**
- * An archive naming an entry that would land outside the folder it is unpacked into.
- *
- * REFUSED WHOLE rather than skipped: an archive trying to write outside itself is hostile, and
- * unpacking the rest of it would leave somebody a montage that opened fine.
+ * An entry that would land outside the folder. Refused WHOLE rather than skipped: unpacking the
+ * rest would leave somebody a montage that opened fine.
  */
 export class BundleEscapeError extends Error {
   constructor(readonly entry: string) {

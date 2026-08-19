@@ -35,9 +35,7 @@ type TasksState = {
 const stops = new Map<string, AbortController>()
 
 /**
- * The long tasks in flight, which is what the status line shows and what its stop button reaches.
- * Both halves of invariant 6, which nothing but the video render had — and it had nowhere to say.
- *
+ * The long tasks in flight — both halves of invariant 6, which nothing but the video render had.
  * A TASK, not an export: the same row carries reading a bundle back in, and the render.
  */
 export const useTasks = create<TasksState>()((set, get) => ({
@@ -75,10 +73,8 @@ const stopped = (signal: AbortSignal): Promise<null> =>
 
 /**
  * Runs one long task under a row the status line shows and a button that stops it. Answers `null`
- * when it was stopped, which is what every caller here already answers for a dismissed dialog.
- *
- * `work` is handed the id because the bundle needs it: the process doing the work answers the
- * stop by that same name. The row goes whichever way it ends, including a throw.
+ * when it was stopped. `work` is handed the id because the process doing the work answers the
+ * stop by that same name; the row goes whichever way it ends, including a throw.
  */
 export async function runTask<T>(
   label: string,

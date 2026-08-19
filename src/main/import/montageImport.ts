@@ -30,11 +30,9 @@ const montageImport = z.object({ id: z.string().min(1).max(64) })
 const MAX_TRIES = 64
 
 /**
- * A folder inside the project this side just MADE, named after the bundle.
- *
- * Created here rather than tested for and made later: `mkdir` without `recursive` refuses a name
- * somebody holds, which is the only answer a case-insensitive volume and a race cannot both slip
- * through — and that refusal is what lets a stopped import remove the folder whole to undo.
+ * A folder inside the project this side just MADE. `mkdir` without `recursive` refuses a name
+ * somebody holds — the only answer a case-insensitive volume and a race cannot both slip through,
+ * and what lets a stopped import remove the folder whole to undo.
  */
 async function madeFolder(root: string, wanted: string): Promise<string | null> {
   for (let attempt = 1; attempt <= MAX_TRIES; attempt += 1) {
@@ -53,11 +51,8 @@ async function madeFolder(root: string, wanted: string): Promise<string | null> 
 }
 
 /**
- * Reading a montage bundle back into the project.
- *
- * What it reads WINS: the cut comes from the file, and the media are copied in and given
- * catalogue rows of their own rather than being pointed at where they lie. What the studio cannot
- * rebuild is `lossesImportingFrom`, said before the click rather than discovered afterwards.
+ * Reading a montage bundle back into the project. What it reads WINS: the cut comes from the
+ * file, and the media are copied in and catalogued rather than pointed at where they lie.
  */
 export function registerMontageImportHandlers({
   pickImportPath,
