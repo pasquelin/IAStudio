@@ -22,12 +22,20 @@ export type NumberFieldProps = NumericBounds &
 /** Units per pixel dragged, for a field that declares no step of its own. */
 const DEFAULT_STEP = 0.1
 
-type Drag = { pointerId: number; x: number; from: number; last: number }
+/**
+ * How far the pointer travels on the INPUT before the press is a scrub rather than a click. Under
+ * it the caret is placed, over it the value is dragged and the field never takes focus — the
+ * arbitration Unreal makes, and the only way one control can serve both gestures.
+ */
+const SCRUB_SLACK = 4
+
+/** `scrubbing` is false while a press on the input is still short of `SCRUB_SLACK`. */
+type Drag = { pointerId: number; x: number; from: number; last: number; scrubbing: boolean }
 
 /**
- * A number that can be typed, stepped with the arrows, or dragged sideways on its label — the
- * gesture of Blender and of Unity. It knows nothing of scenes or of history: it reports a value
- * and the two ends of a gesture, and whoever owns the value decides what that means.
+ * A number that can be typed, stepped with the arrows, or dragged sideways — on its label, and on
+ * the field itself. It knows nothing of scenes or of history: it reports a value and the two ends
+ * of a gesture, and whoever owns the value decides what that means.
  */
 export function NumberField({
   label,
@@ -67,24 +75,34 @@ export function NumberField({
     if (next !== value) onChange(next)
   }
 
-  const onPointerDown = (event: ReactPointerEvent<HTMLSpanElement>): void => {
+  /** `scrubbing` from the first pixel on the label, from `SCRUB_SLACK` on the field. */
+  const startDrag = (event: ReactPointerEvent<Element>, scrubbing: boolean): void => {
     if (event.button !== 0) return
     event.currentTarget.setPointerCapture(event.pointerId)
-    drag.current = { pointerId: event.pointerId, x: event.clientX, from: value, last: value }
-    onGestureStart?.()
+    drag.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      from: value,
+      last: value,
+      scrubbing,
+    }
+    if (scrubbing) onGestureStart?.()
   }
 
-  const onPointerMove = (event: ReactPointerEvent<HTMLSpanElement>): void => {
+  const onPointerMove = (event: ReactPointerEvent<Element>): void => {
     const started = drag.current
     if (!started || started.pointerId !== event.pointerId) return
 
+    const travelled = event.clientX - started.x
+    if (!started.scrubbing) {
+      if (Math.abs(travelled) < SCRUB_SLACK) return
+      started.scrubbing = true
+      onGestureStart?.()
+    }
+
     // From where the drag began rather than from the current value: accumulating deltas drifts,
     // because each one is snapped to the step before it comes back.
-    const next = bound(started.from + (event.clientX - started.x) * (step ?? DEFAULT_STEP), {
-      min,
-      max,
-      step,
-    })
+    const next = bound(started.from + travelled * (step ?? DEFAULT_STEP), { min, max, step })
     // A drag crosses many pixels per step, and a vertical one crosses none. Compared against
     // what the drag last emitted, not the prop: several moves can land before React re-renders,
     // and each repeat would rebuild the geometry and the whole panel for the same number.
@@ -103,11 +121,24 @@ export function NumberField({
     emit(value + direction * (step ?? DEFAULT_STEP))
   }
 
-  const endDrag = (event: ReactPointerEvent<HTMLSpanElement>): void => {
-    if (drag.current?.pointerId !== event.pointerId) return
+  const endDrag = (event: ReactPointerEvent<Element>): void => {
+    const started = drag.current
+    if (started?.pointerId !== event.pointerId) return
     drag.current = null
     event.currentTarget.releasePointerCapture(event.pointerId)
-    onGestureEnd?.()
+    if (started.scrubbing) onGestureEnd?.()
+  }
+
+  /**
+   * A press that never travelled is a click: the field takes focus and the caret lands, which the
+   * `preventDefault` below withheld. One that scrubbed does NOT — leaving the field in edit mode
+   * after a drag is what made the two gestures fight for one control in the first place.
+   */
+  const endFieldDrag = (event: ReactPointerEvent<HTMLInputElement>): void => {
+    const scrubbed = drag.current?.scrubbing === true
+    const field = event.currentTarget
+    endDrag(event)
+    if (!scrubbed) field.focus()
   }
 
   return (
@@ -116,7 +147,8 @@ export function NumberField({
           so every drag would leave the field in edit mode. The input carries the name. */}
       <span
         aria-hidden
-        onPointerDown={onPointerDown}
+        // No slack here: the label has no second gesture to be told apart from.
+        onPointerDown={event => startDrag(event, true)}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
@@ -151,6 +183,20 @@ export function NumberField({
           if (text.trim() !== '') emit(parseDecimal(text))
         }}
         onKeyDown={onKeyDown}
+        /**
+         * Armed only while the field is NOT being typed in: once the caret is in, a press is a
+         * press on text — selecting a digit to overwrite it must not drag the value away.
+         */
+        onPointerDown={event => {
+          if (document.activeElement === event.currentTarget) return
+          // Withholds the focus the platform would give now, so a drag never lands in edit mode.
+          // `endFieldDrag` hands it back when the press turns out to have been a click.
+          event.preventDefault()
+          startDrag(event, false)
+        }}
+        onPointerMove={onPointerMove}
+        onPointerUp={endFieldDrag}
+        onPointerCancel={endDrag}
         // Typing is a gesture too: a field filled in character by character must cost one undo,
         // not one per keystroke.
         onFocus={() => onGestureStart?.()}
@@ -158,7 +204,9 @@ export function NumberField({
           setTyped(null)
           onGestureEnd?.()
         }}
-        className={FIELD_FILL}
+        // The scrub cursor is what makes the gesture discoverable at all — and it gives way to
+        // the caret on focus, for the same reason the press does: a field being typed in is text.
+        className={cn(FIELD_FILL, 'cursor-ew-resize touch-none focus:cursor-text')}
       />
     </div>
   )
