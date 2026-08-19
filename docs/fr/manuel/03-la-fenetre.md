@@ -247,12 +247,12 @@ dessous dans la seconde.
 
 ### Le rail de droite
 
-Les icônes de la colonne de droite — Skybox, Vue, Calques, Canaux, Styles, Scène, Lumières,
-Mailles, Animations, celles que l’espace déclare, dans cet ordre — puis, sous le trait,
-Inspecteur.
+Les icônes de la colonne de droite — Calques, Scène, Lumières, Mailles, Animations, celles que
+l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
 
-En **Vidéo** et en **Audio**, la moitié haute de cette colonne est vide : ces deux espaces n’y
-déclarent rien, et le rail ne porte alors que l’Inspecteur.
+En **Vidéo**, en **Audio**, en **Textures** et en **Skyboxes**, la moitié haute de cette colonne
+est vide : ces quatre espaces n’y déclarent rien, et le rail ne porte alors que l’Inspecteur — ce
+qu’un ciel ou une matière EST y est décrit par l’inspecteur lui-même.
 
 À l’accueil, il n’en porte qu’une : **Votre bibliothèque**, et rien sous le trait.
 
@@ -314,11 +314,7 @@ garde sa taille.
 | **Modèles** | gauche | 1re | partout | le catalogue Scenario, filtré sur l’espace actif |
 | **Génération** | gauche | 1re | partout *(si un modèle est choisi)* | le formulaire du modèle choisi |
 | **Assets** | gauche | 1re | partout | l’étagère : ce que le projet tient, ce que votre clé possède, ce qui est en train d’être produit |
-| **Skybox** | droite | 1re | Skyboxes | les réglages du ciel ouvert |
-| **Vue** | droite | 1re | Skyboxes | la projection, l’angle de vue et les objets de test |
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
-| **Canaux** | droite | 1re | Textures | les huit canaux de la matière ouverte |
-| **Styles** | droite | 1re | Textures | les réglages de matière enregistrés, à rejouer sur n’importe quelle matière |
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
 | **Mailles** | droite | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
@@ -373,8 +369,8 @@ l’**Explorateur**, partout aussi.
 | **Vidéo** | *rien* | Timeline |
 | **3D** | Scène | Timeline |
 | **Audio** | *rien* | Timeline |
-| **Textures** | Canaux | Historique |
-| **Skyboxes** | Skybox | Historique |
+| **Textures** | *rien* | Historique |
+| **Skyboxes** | *rien* | Historique |
 
 > **L’Historique demande un projet ouvert.** Sans projet, la bande basse de ces trois espaces
 > n’affiche rien — la zone est là, elle est vide.

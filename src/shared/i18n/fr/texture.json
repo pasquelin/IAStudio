@@ -85,12 +85,9 @@
     "rotation": "Rotation",
     "preview": "Aperçu",
     "envRotation": "Rotation du ciel",
-    "noDocument": "Ouvrez une texture pour voir ses canaux.",
     "originGenerated": "Généré par un modèle — figé tel qu’il est arrivé",
     "originDerived": "Calculé depuis un autre canal de cette texture",
     "originImported": "Votre propre fichier",
-    "chooseChannel": "Ce que contient {{channel}}",
-    "clearChannel": "Vider ce canal",
     "derive": "Calculer depuis {{source}}",
     "deriveMissing": "Calculer depuis {{source}} — {{source}} est vide",
     "deriveBusy": "Calculer depuis {{source}} — un autre canal est en calcul",
@@ -123,13 +120,9 @@
     "autoSpinHint": "Fait tourner le support pour juger la matière sous tous ses angles",
     "frame": "Recentrer",
     "frameHint": "Remet la caméra là où elle était en ouvrant la texture",
-    "noPicture": "Aucune image dans ce projet",
     "tilingPreviewHint": "Ne change que l’aperçu — la texture exportée n’est pas répétée pour autant",
     "previewShapeHint": "Change la forme sur laquelle l’aperçu est plaqué, pas la texture",
     "measureSeamHint": "Compare les bords opposés de la texture pour dire si la couture se voit",
-    "deriveHint": "Calcule ce canal à partir d’un autre plutôt que d’une image importée",
-    "clearChannelHint": "Retire l’image du canal ; la matière reprend sa valeur par défaut",
-    "noPictureHint": "Générez ou importez une image pour pouvoir en poser une ici",
-    "pickChannelHint": "Pose cette image sur le canal"
+    "deriveHint": "Calcule ce canal à partir d’un autre plutôt que d’une image importée"
   }
 }

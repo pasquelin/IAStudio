@@ -240,12 +240,12 @@ zone's cut: the icons above it open in the first half, those below in the second
 
 ### The right rail
 
-The right column's icons — Skybox, View, Layers, Channels, Styles, Scene, Lights, Meshes,
-Animations, whichever the workspace declares, in that order — then, below the separator,
-Inspector.
+The right column's icons — Layers, Scene, Lights, Meshes, Animations, whichever the workspace
+declares, in that order — then, below the separator, Inspector.
 
-In **Video** and **Audio** the upper half of that column is empty: neither workspace declares
-anything there, and the rail then carries the Inspector alone.
+In **Video**, **Audio**, **Textures** and **Skyboxes** the upper half of that column is empty:
+none of those four declares anything there, and the rail then carries the Inspector alone — what a
+sky or a material IS is described by the inspector itself.
 
 On the home it carries one: **Your library**, and nothing below the separator.
 
@@ -304,11 +304,7 @@ close button never goes**, and the panel's name keeps its size.
 | **Models** | left | 1st | everywhere | the Scenario catalogue, filtered on the active workspace |
 | **Generate** | left | 1st | everywhere *(if a model is chosen)* | the chosen model's form |
 | **Assets** | left | 1st | everywhere | the shelf: what the project holds, what your key owns, what is being made |
-| **Skybox** | right | 1st | Skyboxes | the open sky's settings |
-| **View** | right | 1st | Skyboxes | the projection, the field of view and the test objects |
 | **Layers** | right | 1st | Image | the layer stack of the open image |
-| **Channels** | right | 1st | Textures | the eight channels of the open material |
-| **Styles** | right | 1st | Textures | saved material settings, to replay on any material |
 | **Scene** | right | 1st | 3D | the tree of the open scene |
 | **Lights** | right | 1st | 3D | the scene's light sources |
 | **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
@@ -361,8 +357,8 @@ starts, and the shelf is asked for. The lower half opens on the **Explorer**, ev
 | **Video** | *nothing* | Timeline |
 | **3D** | Scene | Timeline |
 | **Audio** | *nothing* | Timeline |
-| **Textures** | Channels | History |
-| **Skyboxes** | Skybox | History |
+| **Textures** | *nothing* | History |
+| **Skyboxes** | *nothing* | History |
 
 > **History needs a project open.** With none, the bottom strip of those three workspaces shows
 > nothing — the zone is there, and it is empty.

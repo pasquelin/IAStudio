@@ -100,10 +100,10 @@ différent de la surface.
 | **Émission** | ce qui brille par soi-même | une enseigne au néon, des braises |
 | **Cavité** | les creux et les arêtes de la surface | assombrit le fond des rainures, réglable par le curseur *Cavité* de la section **Matière** |
 
-> **Le panneau écrit trois de ces noms plus court** : la vignette dit **Normale**, **Métal** et
+> **L’inspecteur écrit trois de ces noms plus court** : la ligne dit **Normale**, **Métal** et
 > **Occlusion** là où ce tableau et le [glossaire](17-glossaire.md) disent *Normales*,
 > *Métallicité* et *Occlusion ambiante*. Ce sont les mêmes canaux — les noms longs sont ceux du
-> métier, les courts tiennent sous une vignette.
+> métier, les courts tiennent dans la colonne des noms.
 
 Chaque canal a une **origine** :
 
@@ -113,17 +113,19 @@ Chaque canal a une **origine** :
 | **Dérivé** | calculé par le studio depuis un autre canal, à la demande |
 | **Importé** | une image que vous avez posée vous-même |
 
-### Le panneau Canaux
+### La section Canaux
 
-Colonne de droite, premier panneau de l’espace — c’est ce que Textures est. Une vignette par
-canal, les huit, **y compris ceux qui sont vides** : ce qui manque à une matière compte autant que
-ce qu’elle a.
+Première section de l’**Inspecteur** — c’est ce que Textures est. Une ligne par canal, les huit,
+**y compris ceux qui sont vides** : ce qui manque à une matière compte autant que ce qu’elle a.
 
 | Geste | Ce qu’il fait |
 |---|---|
-| **Glisser une image sur une vignette** | pose cette image dans **ce** canal |
-| **Le menu d’une vignette** | calcule le canal depuis sa source, choisit parmi les images du projet, ou vide le canal |
-| **Cliquer une vignette** | montre ce canal **seul**, à plat |
+| **Glisser une image sur une ligne** | pose cette image dans **ce** canal |
+| **La liste de la ligne** | choisit parmi les images du projet, ou vide le canal |
+| **Le bouton parcourir** | ouvre la fenêtre de choix, en vignettes plutôt qu’en liste |
+| **La croix** | vide le canal |
+| **Clic droit sur la ligne** | calcule le canal depuis sa source |
+| **Cliquer la vignette** | montre ce canal **seul**, à plat |
 | **Cliquer la même à nouveau** | revient à la matière éclairée |
 
 Le badge en haut à gauche d’une vignette dit son **origine** — généré, dérivé ou importé.
@@ -133,11 +135,11 @@ une carte de normales ou de hauteur s’inspecte précisément pour le bruit et 
 lissage d’un navigateur cacherait. Elle ne s’enregistre pas avec le document, et `⌘Z` ne la rend
 pas — c’est une façon de regarder, pas une décision.
 
-Une vignette vide ne se clique pas : il n’y a rien à regarder.
+Une ligne vide n’a pas de vignette à cliquer : il n’y a rien à regarder.
 
 > **Une image glissée sur l’aperçu, elle, va toujours dans la couleur de base.** C’est le canal
 > sans lequel une matière ne se juge pas, et l’aperçu ne peut pas devenir : pour viser un autre
-> canal, déposez sur sa vignette.
+> canal, déposez sur sa ligne.
 
 ### Calculer un canal depuis un autre
 
@@ -151,7 +153,7 @@ Quatre canaux se calculent depuis un autre, sur votre carte graphique — sans a
 | **Occlusion ambiante** | Hauteur | ce qui est plus bas que son voisinage s’assombrit |
 | **Rugosité** | Couleur de base | les zones sombres deviennent mates, les claires brillantes |
 
-Le calcul est la **première ligne du menu de la vignette**. Si le canal source est vide, la ligne le
+Le calcul est ce que le **clic droit sur la ligne** offre. Si le canal source est vide, l’entrée le
 dit et ne se clique pas : c’est celui-là qu’il faut remplir d’abord.
 
 Le résultat est une **image du projet** comme une autre — elle apparaît dans l’étagère, se regarde à
@@ -294,11 +296,11 @@ Une matière bien réglée, c’est une quinzaine de valeurs. Les retrouver à l
 d’après, c’est le genre de travail qu’on ne refait pas deux fois de bon cœur.
 
 **Le bouton en haut à droite de l’inspecteur** enregistre l’état courant de la matière sous un nom
-généré — « Style 1 », « Style 2 ». Le panneau **Styles**, dans la colonne de droite à côté des
-Canaux, les liste tous.
+généré — « Style 1 », « Style 2 ». La section **Styles** de l’inspecteur, juste sous les canaux,
+les liste tous.
 
-**Double-cliquez un style** — ou pressez Entrée dessus — pour l’appliquer à la matière ouverte.
-C’est une seule annulation : `⌘Z` remet exactement ce qui était réglé avant.
+**Cliquez un style** pour l’appliquer à la matière ouverte. C’est une seule annulation : `⌘Z`
+remet exactement ce qui était réglé avant.
 
 **Clic droit ▸ Renommer**, comme dans un IDE. Le nom s’édite là où il se lit.
 **Clic droit ▸ Supprimer** retire le style.
@@ -390,7 +392,7 @@ retient qu'elle est inversée. Un fichier `_Roughness` contient donc bien de la 
 
 ### Quatre choses à savoir
 
-**Vos réglages de plage partent avec.** La double poignée du panneau Matière — celle qui
+**Vos réglages de plage partent avec.** La double poignée de la section Matière — celle qui
 resserre la rugosité ou la métallicité — n’existe dans aucun des quatre formats. Elle est donc
 **écrite dans les pixels** : une rugosité resserrée entre 0,3 et 0,7 à l’écran sort resserrée.
 Une seule exception, et c’est sa raison d’être : **les canaux bruts sortent tels qu’ils sont
@@ -415,7 +417,7 @@ contienne que le dernier export.
 ### Ce que le `.glb` emporte en plus
 
 Lui seul est un objet et pas un jeu de fichiers : il part avec **la forme de l'aperçu**, et avec
-les réglages du panneau Matière que le format sait porter : la teinte, la rugosité, la
+les réglages de la section Matière que le format sait porter : la teinte, la rugosité, la
 métallicité, la force de la normale, l'intensité d'occlusion, l'émission et son intensité, et la
 répétition avec son décalage et sa rotation. Ouvert ailleurs, il ressemble à ce que vous jugiez à
 l'écran.
@@ -434,7 +436,7 @@ appartient à un fichier.
 ## Ce qui manque encore
 
 - l’**import d’un fichier du disque** directement dans un canal. Passez par l’import du projet
-  (chapitre 7), puis posez l’image sur la vignette.
+  (chapitre 7), puis posez l’image sur la ligne du canal.
 
 Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 

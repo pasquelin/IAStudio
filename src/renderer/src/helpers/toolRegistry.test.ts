@@ -86,7 +86,7 @@ describe('the generator', () => {
   // column — the two state rules answer for the generator and for the home's Explorer, and for
   // nothing else.
   it('leaves the right column alone — no model removes anything there', () => {
-    expect(idsOf('right', 'textures')).toEqual(['channels', 'styles', 'inspector'])
+    expect(idsOf('right', 'textures')).toEqual(['inspector'])
   })
 })
 
@@ -124,9 +124,10 @@ describe('a half open on no panel in particular', () => {
   it('shows the one this section declares first', () => {
     expect(shownTool(null, 'right', 'primary', 'image', WITH_MODEL)).toBe('layers')
     expect(shownTool(null, 'right', 'primary', '3d', WITH_MODEL)).toBe('scene')
-    // Skyboxes declares nothing in that half since the view sections joined the inspector.
+    // Neither Skyboxes nor Textures declares anything in that half any more: what a sky is, and
+    // what a material is made of, are sections of the inspector.
     expect(shownTool(null, 'right', 'primary', 'skyboxes', WITH_MODEL)).toBeNull()
-    expect(shownTool(null, 'right', 'primary', 'textures', WITH_MODEL)).toBe('channels')
+    expect(shownTool(null, 'right', 'primary', 'textures', WITH_MODEL)).toBeNull()
   })
 
   // Video and Audio declare NOTHING in that half since the shelf went left, so the half opens
@@ -204,7 +205,8 @@ describe('what a half of a zone shows', () => {
   // whoever reorders that table next.
   it('substitutes the first tool the half declares when several share it', () => {
     expect(shownTool('layers', 'right', 'primary', '3d', WITH_MODEL)).toBe('scene')
-    expect(shownTool('layers', 'right', 'primary', 'textures', WITH_MODEL)).toBe('channels')
+    // The other half several tools share, so the rule does not hang on the 3D column alone.
+    expect(shownTool('layers', 'left', 'primary', 'image', WITH_MODEL)).toBe('models')
   })
 
   it('falls back to the models panel where the generator has no model', () => {

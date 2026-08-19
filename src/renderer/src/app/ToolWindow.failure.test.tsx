@@ -25,9 +25,9 @@ vi.mock('./toolComponents', async () => {
       Content: () => <p>explorer tree</p>,
       Actions: () => <p>explorer actions</p>,
     },
-    // Every panel is fetched on demand, so a chunk that never lands is a failure mode all
-    // fourteen now have — and one React reports by throwing, not by suspending forever.
-    channels: { Content: lazy(() => Promise.reject(new Error('chunk never landed'))) },
+    // Every panel is fetched on demand, so a chunk that never lands is a failure mode every one
+    // of them has — and one React reports by throwing, not by suspending forever.
+    scene: { Content: lazy(() => Promise.reject(new Error('chunk never landed'))) },
   }
 
   return {
@@ -92,7 +92,7 @@ describe('a half switched to another tool', () => {
 
 describe('a panel whose chunk never arrives', () => {
   it('keeps its header, so the panel can still be closed', async () => {
-    render(<ToolWindow tool="channels" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
+    render(<ToolWindow tool="scene" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
 
     expect(await screen.findByText('Ce panneau a rencontré une erreur.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Retirer le module' })).toBeInTheDocument()

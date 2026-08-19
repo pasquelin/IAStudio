@@ -38,6 +38,7 @@ import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { useModelClips } from '@/stores/modelClips'
 import { installScene, sceneNodeNow } from '@/stores/scene-fixtures'
 import { installTexture } from '@/stores/texture-fixtures'
+import { inSection } from './inspector-fixtures'
 import { useTextureViews } from '@/stores/textureViews'
 import { textureOf, useTextures } from '@/stores/textures'
 import { setChannel } from '@/engines/texture/commands'
@@ -830,7 +831,7 @@ describe('inspector panel', () => {
       installTexture('doc-1')
       render(<Content />)
 
-      expect(screen.getByLabelText('Rugosité')).toBeInTheDocument()
+      expect(inSection('Matière').getByLabelText('Rugosité')).toBeInTheDocument()
     })
 
     /** The section folds, and a folded one keeps no field mounted — see `PropertySection`. */
@@ -1091,6 +1092,6 @@ describe('the inspector and what is picked in a scene', () => {
     installTexture('doc-2')
     render(<Content />)
 
-    expect(screen.getByLabelText('Rugosité')).toBeInTheDocument()
+    expect(inSection('Matière').getByLabelText('Rugosité')).toBeInTheDocument()
   })
 })

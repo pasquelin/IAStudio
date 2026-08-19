@@ -6,11 +6,9 @@ import {
   mdiFileTreeOutline,
   mdiFolderMultipleOutline,
   mdiFolderOutline,
-  mdiGridLarge,
   mdiHistory,
   mdiImageMultipleOutline,
   mdiLayersOutline,
-  mdiPaletteSwatchOutline,
   mdiSourceBranch,
   mdiTuneVariant,
   mdiVideoVintage,
@@ -54,8 +52,6 @@ const ICONS: Record<ToolId, string> = {
   generator: mdiCreationOutline,
   inspector: mdiTuneVariant,
   assets: mdiImageMultipleOutline,
-  channels: mdiGridLarge,
-  styles: mdiPaletteSwatchOutline,
   // The home's own. `mdiFolderOutline` is the Explorer's and `mdiCreationOutline` the
   // generator's: a rail where two glyphs mean two things is a rail one reads twice.
   projects: mdiFolderMultipleOutline,

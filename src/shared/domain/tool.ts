@@ -54,8 +54,6 @@ export type ToolId =
   | 'generator'
   | 'inspector'
   | 'assets'
-  | 'channels'
-  | 'styles'
   | 'projects'
   | 'library'
   | 'animations'
@@ -139,13 +137,6 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // declares — the order below is the order their icons stack.
   //
   { id: 'layers', zone: 'right', slot: 'primary', surfaces: ['image'] },
-  // The eight channels of a material, first in Textures for the same reason the sky controls come
-  // first in Skyboxes: it is what the space is for.
-  { id: 'channels', zone: 'right', slot: 'primary', surfaces: ['textures'] },
-  // Saved ways of reading a material, beside the channels they read. In the upper half so the
-  // inspector keeps the lower one: a style is saved FROM the inspector, and a panel that took
-  // its place would hide the settings one is capturing at the moment of capturing them.
-  { id: 'styles', zone: 'right', slot: 'primary', surfaces: ['textures'] },
   // The outliner of the scene, which the Explorer used to hold in this one workspace — it now
   // lists the documents of the project in every space, which is a different question.
   { id: 'scene', zone: 'right', slot: 'primary', surfaces: ['3d'] },

@@ -146,13 +146,13 @@ flat.
    **Emission** are two neighbouring sections, not its contents. If the
    material looks uniformly average, it is the **ranges** — "Roughness range", "Metalness range" —
    that need adjusting; they sit in the Material section, under the two settings;
-6. **Channels** panel: drop a picture onto the thumbnail of each channel you want to fill — and
-   for **height**, **normal**, **occlusion** and **roughness**, the thumbnail's menu computes them
+6. **Channels** section: drop a picture onto the row of each channel you want to fill — and for
+   **height**, **normal**, **occlusion** and **roughness**, right-clicking the row computes them
    from another channel, at no cost;
 7. `⌘S` **saves**.
 
 **The catch.** A picture dropped on the **preview** always goes to the base colour — that is
-deliberate. To aim at normals or roughness, drop onto **their thumbnail** in the Channels panel.
+deliberate. To aim at normals or roughness, drop onto **their row** in the Channels section.
 
 ---
 

@@ -22,6 +22,8 @@ import { DEFAULT_TEXTURE_MATERIAL, MATERIAL_BOUNDS } from '@shared/domain/textur
 import { textureOf, useTextures } from '@/stores/textures'
 import { EnvironmentSection } from '../EnvironmentSection'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
+import { ChannelsSection } from '../ChannelsSection/ChannelsSection'
+import { StylesSection } from '../StylesSection/StylesSection'
 import { TextureInspectorSeamReading } from './TextureInspectorSeamReading'
 
 export type TextureInspectorProps = { documentId: string }
@@ -77,6 +79,15 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
 
   return (
     <>
+      {/* Keyed: the derivation in flight is that section's own state, and one instance shared
+          across documents left every derivable row of the texture in front dead for a job running
+          in another tab. */}
+      <ChannelsSection key={documentId} documentId={documentId} />
+
+      {/* Beside the channels they read, and before the values they write: a style is picked, then
+          tuned by the sections underneath. */}
+      <StylesSection documentId={documentId} />
+
       <PropertySection title={t('inspector.material')}>
         <ColorField
           label={t('texture.baseTint')}

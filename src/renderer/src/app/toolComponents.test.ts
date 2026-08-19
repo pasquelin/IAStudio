@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import type { ToolId } from '@shared/domain/tool'
 import type { ToolDefinition } from '@/panels/definition'
 import { definition as assets } from '@/panels/assets'
-import { definition as channels } from '@/panels/channels'
 import { definition as explorer } from '@/panels/explorer'
 import { definition as git } from '@/panels/git'
 import { definition as history } from '@/panels/history'
@@ -16,7 +15,6 @@ import { definition as meshes } from '@/panels/meshes'
 import { definition as models } from '@/panels/models'
 import { definition as projects } from '@/panels/projects'
 import { definition as scene } from '@/panels/scene'
-import { definition as styles } from '@/panels/styles'
 import { definition as timeline } from '@/panels/timeline'
 import { isKnownTool, TOOL_ENTRIES, toolDefinition } from './toolComponents'
 
@@ -41,8 +39,6 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   generator,
   inspector,
   assets,
-  channels,
-  styles,
   projects,
   library,
   animations,
