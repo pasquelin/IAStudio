@@ -295,7 +295,7 @@ aligne.
 | **Solide** | une argile unie sur toutes les surfaces : la forme, sans les matières |
 | **Aperçu matière** | les matières sous le seul éclairage du studio, sans les lumières de la scène |
 | **Matcap** | un éclairage capté sur une sphère : c’est le relief qui se lit, pas la couleur |
-| **Densité** | du vert au rouge selon les triangles au centimètre carré : le rouge est à optimiser |
+| **Densité** | du vert au rouge selon les triangles par unité de surface : le rouge est à optimiser |
 | **Translucide** | les surfaces à peine posées, pour voir les articulations à l’intérieur |
 | **Squelette seul** | plus aucune surface — il ne reste que les os, pour les corriger sans rien deviner |
 
