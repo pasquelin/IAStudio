@@ -542,14 +542,18 @@ Activités et Journal nomment leurs lignes dans la langue de la fenêtre : vous 
 d’images », pas `images-generation`. Un type d’événement que le studio ne connaît pas encore
 affiche le nom brut de l’API.
 
-Trois avertissements y sont affichés :
+**La fenêtre dit elle-même ce que ses chiffres ne disent pas** — sous le montant pour le premier,
+en pied de fenêtre pour les autres :
 
-- **il n’y a pas de solde.** L’API Scenario n’expose que ce qui a été dépensé, jamais ce qui
-  reste. Aucun chiffre ne dira combien vous pouvez encore générer ;
 - **le montant en euros est indicatif.** Calculé sur la grille publique des packs prépayés : un
   ordre de grandeur, pas une facture ;
-- **le total mélange des comptes facturés séparément.** Avec plusieurs clés, la somme affichée ne
-  correspond à aucune facture réelle — la Vue d’ensemble détaille par compte.
+- **il n’y a pas de solde.** L’API Scenario n’expose que ce qui a été dépensé, jamais ce qui
+  reste. Aucun chiffre ne dira combien vous pouvez encore générer ;
+- **les jours et les heures de cet écran sont comptés en UTC**, comme l’API les date. La barre
+  d’une journée ne suit donc pas forcément votre calendrier ;
+- **le total mélange des comptes facturés séparément** — cet avertissement-là n’apparaît qu’avec
+  plusieurs clés. La somme affichée ne correspond alors à aucune facture réelle, et la Vue
+  d’ensemble détaille par compte.
 
 **Une clé qui ne répond pas ne fausse pas les chiffres en silence** : la fenêtre nomme les clés
 restées muettes et précise que les totaux sont ceux des autres. Sans aucune clé enregistrée, elle

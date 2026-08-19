@@ -528,14 +528,17 @@ days**, 31 by default.
 Activities and Journal name their rows in the window's language: you read "Image generation", not
 `images-generation`. An event kind the studio does not know yet shows the API's raw name.
 
-Three warnings are shown there:
+**The window says itself what its figures do not** — under the amount for the first, in the
+window's footer for the others:
 
-- **there is no balance.** The Scenario API only exposes what has been spent, never what is left.
-  No figure will tell you how much you can still generate;
 - **the euro amount is indicative.** Computed from the public prepaid pack grid: an order of
   magnitude, not an invoice;
-- **the total mixes accounts billed separately.** With several keys, the sum shown matches no
-  real invoice — the Overview breaks it down per account.
+- **there is no balance.** The Scenario API only exposes what has been spent, never what is left.
+  No figure will tell you how much you can still generate;
+- **this screen's days and hours are counted in UTC**, as the API dates them. A day's bar therefore
+  need not follow your own calendar;
+- **the total mixes accounts billed separately** — that one only appears with several keys. The sum
+  shown then matches no real invoice, and the Overview breaks it down per account.
 
 **A key that does not answer does not skew the figures silently**: the window names the keys that
 stayed quiet and states that the totals are the other keys'. With no key stored at all, it says
