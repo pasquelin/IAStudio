@@ -23,7 +23,7 @@ export function curveOf(path: PathDescriptor): CatmullRomCurve3 {
       'catmullrom',
       path.tension,
     )
-    // Arc lengths are what `getPointAt` reads, and what makes a travelling run at a steady speed:
+    // Arc lengths are what `getPointAt` reads, and what makes a camera move run at a steady speed:
     // `getPoint` is parameterised per segment, so a camera speeds up through the short ones.
     curve.updateArcLengths()
     return curve

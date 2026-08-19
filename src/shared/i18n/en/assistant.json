@@ -761,7 +761,7 @@
       "pathId": "Id of the path, or nothing to stop moving the camera",
       "railFrom": "Where on the path it starts, from 0 to 1",
       "railTo": "Where on the path it ends, from 0 to 1",
-      "easing": "Speed curve of the travelling",
+      "easing": "Speed curve along the path",
       "targetId": "Object the camera aims at, or nothing to leave it free",
       "gitPath": "Path inside the repository",
       "gitPaths": "Paths inside the repository",

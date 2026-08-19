@@ -511,7 +511,7 @@ path for this camera** button — which then opens the shot and lays the rail in
 |---|---|
 | **Path** | the rail the camera rides during this shot. **None** leaves it wherever its placement and its keys put it |
 | **Create a path for this camera** | lays a path in front of the camera, down its line of sight, and binds it to this shot. **One `⌘Z` undoes both** — and where no shot covers the head, the button opens one in the same gesture |
-| **Speed curve** | **Steady**, **Soft start**, **Soft finish**, **Soft start and finish**. Without one, a travelling starts and stops dead |
+| **Speed curve** | **Steady**, **Soft start**, **Soft finish**, **Soft start and finish**. Without one, the camera move starts and stops dead |
 | **Start on the path** / **End on the path** | from 0 to 1, the stretch of rail actually taken. **A start greater than the end runs the rail backwards** |
 | **Target** | **Free** — the camera looks where its own rotation turns it · **A point** — it aims at coordinates, set by **Aim point** · **an object's name** — it follows that object, even one that is itself animated |
 
