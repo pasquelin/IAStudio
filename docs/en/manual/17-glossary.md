@@ -629,6 +629,15 @@ To shorten or lengthen a *clip* from one of its ends, by pulling the *handle* th
 video stops where its source does; a still has no source to run past, so both of its ends stretch
 it. Keeping only the selected portion of a sound is *Crop*.
 
+**Trim silence**
+To pull a sound *clip* in to what is not silence, **at its two ends only**: whatever falls quiet in
+the middle stays. The studio counts as silence anything under **−50 dB** for at least **0.4
+seconds** — shorter than that is a breath, not a gap to remove.
+
+It is a montage gesture, the same one *Crop* uses on a sound: it moves both of the clip's edges and
+**does not touch** its effects chain. Not to be confused with *Trim*, which pulls **one** edge by
+hand.
+
 ---
 
 ## U

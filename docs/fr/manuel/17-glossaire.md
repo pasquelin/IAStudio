@@ -158,6 +158,15 @@ actif, la *tête de lecture*, le cadre d’une sélection. Réglable dans Régla
 La couleur d’une matière, telle qu’elle serait sous un éclairage parfaitement neutre : sans ombre,
 sans reflet, sans relief. L’aspect « peinture » de la surface.
 
+**Couper les silences**
+Resserrer un *clip* de son sur ce qui n’est pas silence, **aux deux bouts seulement** : ce qui se
+tait au milieu reste. Le studio considère comme silence ce qui passe sous **−50 dB** pendant au
+moins **0,4 seconde** — plus court, c’est une respiration, pas un blanc à retirer.
+
+C’est un geste de montage, le même que le *Rogner* d’un son : il déplace les deux bords du clip et
+**ne touche pas** à sa chaîne d’effets. À ne pas confondre avec le *Rogner* du montage, qui tire
+**un seul** bord à la main.
+
 ---
 
 ## D
