@@ -16,6 +16,7 @@ import {
   ROW_QUIET,
   ROW_SUBJECT,
   rowSkin,
+  SLIDER_HANDLE,
   TILE_QUIET,
   TITLE_BAR_GHOST,
   TITLE_BAR_TRIGGER,
@@ -667,6 +668,47 @@ describe('the line a pane draws above what it shows', () => {
       './CollectionBar/CollectionBar.tsx',
       './FormHeader.tsx',
     ])
+  })
+})
+
+/** The set, in one string: a site that never wore the constant leaves no call to read. */
+const spellsOutHandle = spellsOut(SLIDER_HANDLE.split(' '))
+
+/**
+ * The two files that may hold a `<input type="range">`, and the rule is about the RAIL: the
+ * studio drew three of them — a native track, a hand-made one and daisyUI's — before this list
+ * existed, and each was written by a site reaching for the input on its own. A fourth would
+ * arrive the same way and pass every other guard, each of them reading tokens it wears properly.
+ */
+const SLIDER_OWNERS = ['./RangeField.tsx', './Slider.tsx']
+
+describe('the slider of the studio', () => {
+  it('is the only kind of input allowed to be a range', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => !SLIDER_OWNERS.includes(path) && source.includes('type="range"'),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('is written by the two that own it, so the rule cannot pass on a studio without sliders', () => {
+    const owners = WRITTEN_SOURCES.filter(([, source]) => source.includes('type="range"')).map(
+      ([path]) => path,
+    )
+
+    expect(owners.sort()).toEqual(SLIDER_OWNERS)
+  })
+
+  it('wears the shared handle rather than writing it out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && spellsOutHandle(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone an input that merely covers its host', () => {
+    expect(spellsOutHandle("'absolute inset-0 m-0 size-full'")).toBe(false)
   })
 })
 

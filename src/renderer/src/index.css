@@ -791,12 +791,9 @@ body,
 }
 
 /*
- * The handle of a slider, and nothing else: `appearance: none` drops the track the browser draws
- * with it — white under one field, blue under the next, at a thickness no token chose — so every
- * slider of the studio draws its rail behind the input instead (`SliderRail`).
- *
- * A utility rather than classes in a component: the thumb is only reachable through a
- * pseudo-element, and the two rules are one control. WebKit alone, this window being Chromium.
+ * The handle of a slider, and nothing else — the rail is `SliderRail`, drawn behind it. A utility
+ * rather than classes in a component: a pseudo-element is out of reach of one, and the two rules
+ * are a single control. WebKit alone, this window being Chromium.
  */
 @utility slider-handle {
   appearance: none;
@@ -810,7 +807,6 @@ body,
     border: none;
     border-radius: calc(infinity* 1px);
     background: var(--color-accent);
-    cursor: pointer;
   }
 }
 

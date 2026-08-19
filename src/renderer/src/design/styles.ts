@@ -377,6 +377,15 @@ export const FIELD_READOUT = 'text-muted w-14 shrink-0 text-right tabular-nums'
  */
 export const CHECKBOX = 'accent-accent cursor-pointer'
 
+/** The box a slider is drawn in: the rail sits absolute inside it, the input covers it whole. */
+export const SLIDER_TRACK = 'relative h-(--sc-control) min-w-0'
+
+/**
+ * That input, stripped of the track the browser would draw with it. The thumb comes from
+ * `slider-handle` in `index.css`, a pseudo-element being out of reach of a class written here.
+ */
+export const SLIDER_HANDLE = 'slider-handle absolute inset-0 m-0 size-full'
+
 /**
  * Both ends of one gesture. Everything a field emits between them is one thing the user did,
  * and whoever owns the value is expected to keep exactly one history entry for it.

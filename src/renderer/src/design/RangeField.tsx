@@ -4,7 +4,7 @@ import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
 import { PropertyLabel } from './PropertyLabel'
 import { SliderRail } from './SliderRail'
-import { FIELD_ROW, type GestureProps } from './styles'
+import { FIELD_ROW, SLIDER_HANDLE, SLIDER_TRACK, type GestureProps } from './styles'
 
 /** Both ends of one value, kept in order. Declared here rather than imported from an engine:
  * `design/` describes controls, and a field that reached into a workspace would tie the two. */
@@ -17,8 +17,8 @@ export type RangeValue = { min: number; max: number }
  * At module scope because it depends on nothing, and this field sits on the drag path twice.
  */
 const HANDLE = cn(
-  'slider-handle absolute inset-0 m-0 size-full pointer-events-none',
-  '[&::-webkit-slider-thumb]:pointer-events-auto',
+  SLIDER_HANDLE,
+  'pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto',
 )
 
 export type RangeFieldProps = GestureProps & {
@@ -56,9 +56,6 @@ export function RangeField({
   onGestureStart,
   onGestureEnd,
 }: RangeFieldProps) {
-  const span = max - min
-  const percent = (edge: number): number => ((edge - min) / span) * 100
-
   // Stacked inputs: «to» is last in the DOM, so it takes the press wherever the two meet. Only
   // at the ceiling is that a trap — «to» has nowhere to drag to, so it cannot part them. Lifting
   // «from» any earlier would take the presses «to» still needs to widen the span upwards.
@@ -80,11 +77,11 @@ export function RangeField({
       <PropertyLabel label={label} />
 
       <div
-        className="relative h-(--sc-control) min-w-0 flex-1"
+        className={cn(SLIDER_TRACK, 'flex-1')}
         onPointerDown={() => onGestureStart?.()}
         onPointerUp={() => onGestureEnd?.()}
       >
-        <SliderRail from={percent(value.min)} to={percent(value.max)} />
+        <SliderRail from={value.min} to={value.max} min={min} max={max} />
 
         <input
           type="range"

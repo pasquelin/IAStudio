@@ -1,6 +1,6 @@
 import { cn } from '@/helpers/cn'
 import { SliderRail } from './SliderRail'
-import type { GestureProps } from './styles'
+import { SLIDER_HANDLE, SLIDER_TRACK, type GestureProps } from './styles'
 
 export type SliderProps = GestureProps & {
   value: number
@@ -11,19 +11,13 @@ export type SliderProps = GestureProps & {
   step?: number
   id?: string
   describedBy?: string
-  /** Named by whatever wraps it — a `<label>` around the field, or this when nothing does. */
-  ariaLabel?: string
   /** The handle the MCP steers this control by. Never a translated word. */
   scId?: string
   /** How wide the control sits: a share of its row here, a fixed column in a settings window. */
   className?: string
 }
 
-/**
- * One value along a rail, in the studio's own dress rather than the browser's. The value is not
- * read out here: a slider alone says «somewhere past the middle», and every host pairs it with
- * a number of its own — a `Readout` in a panel, a formatted caption in the settings window.
- */
+/** One value along a rail. The number itself belongs to the host, which prints it beside. */
 export function Slider({
   value,
   onChange,
@@ -32,21 +26,19 @@ export function Slider({
   step = 1,
   id,
   describedBy,
-  ariaLabel,
   scId,
   className,
   onGestureStart,
   onGestureEnd,
 }: SliderProps) {
   return (
-    <div className={cn('relative h-(--sc-control) min-w-0', className)}>
-      <SliderRail from={0} to={((value - min) / (max - min)) * 100} />
+    <div className={cn(SLIDER_TRACK, className)}>
+      <SliderRail from={min} to={value} min={min} max={max} />
 
       <input
         type="range"
         id={id}
         aria-describedby={describedBy}
-        aria-label={ariaLabel}
         data-sc={scId && `field:${scId}`}
         value={value}
         min={min}
@@ -59,7 +51,7 @@ export function Slider({
         onPointerUp={() => onGestureEnd?.()}
         onFocus={() => onGestureStart?.()}
         onBlur={() => onGestureEnd?.()}
-        className="slider-handle absolute inset-0 m-0 size-full"
+        className={SLIDER_HANDLE}
       />
     </div>
   )

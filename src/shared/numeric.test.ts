@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bound, clamp, snap } from './numeric'
+import { bound, clamp, percentIn, snap } from './numeric'
 
 describe('clamp', () => {
   it('leaves a value inside its bounds alone', () => {
@@ -26,6 +26,18 @@ describe('snap', () => {
 
   it('leaves the value alone when there is no step to snap to', () => {
     expect(snap(1.2345, 0)).toBe(1.2345)
+  })
+})
+
+describe('percentIn', () => {
+  it('reads a value as its share of the span', () => {
+    expect(percentIn(2.5, 0, 10)).toBe(25)
+    expect(percentIn(-1, -2, 2)).toBe(25)
+  })
+
+  // A rail handed `NaN%` drops the declaration and draws nothing, without a word.
+  it('answers zero on a span of nothing rather than NaN', () => {
+    expect(percentIn(3, 3, 3)).toBe(0)
   })
 })
 

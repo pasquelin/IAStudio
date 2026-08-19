@@ -12,6 +12,14 @@ export function snap(value: number, step: number): number {
   return Number((Math.round(value / step) * step).toPrecision(12))
 }
 
+/**
+ * Where a value stands in its span, as a percentage. A span of nothing answers 0 rather than
+ * `NaN`, which a rail would take as `width: NaN%` — an invalid declaration, dropped in silence.
+ */
+export function percentIn(value: number, min: number, max: number): number {
+  return max > min ? ((value - min) / (max - min)) * 100 : 0
+}
+
 export type NumericBounds = {
   min?: number
   max?: number
