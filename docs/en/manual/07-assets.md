@@ -226,7 +226,8 @@ editor takes, or an asset not yet down on your disk — not a broken one.
 
 | You drag… | Onto… | Result |
 |---|---|---|
-| any asset | the **timeline** | a clip on the track you aimed at |
+| any asset | the **timeline** | a clip on a track that can take it |
+| a 3D scene, from the Explorer | the **timeline** | it becomes a live clip there |
 | an image | the Image workspace **canvas** | it becomes one more layer, armed |
 | an image | a **material** preview | it becomes the base colour |
 | an image | a specific **channel**'s thumbnail | it becomes that channel |
@@ -235,9 +236,11 @@ editor takes, or an asset not yet down on your disk — not a broken one.
 | a sound | the **audio editor** | it joins the edit as a clip, and that clip is what you edit |
 | an asset | an **asset field** of a generation form | it becomes that field's input |
 
-**The timeline does not sort.** It takes what it is given: an asset with no duration of its own
-gets a default one rather than a refusal. In the 3D view the drop is accepted **anywhere on the
-view**, toolbar included: a release landing beside it would be a miss you cannot see coming.
+**The timeline does not sort on duration**: an asset with no duration of its own gets a default
+one rather than a refusal. It does sort **tracks**, and a release that finds none stays without
+effect — see [Placing a first clip](10-video-workspace.md#placing-a-first-clip). In the 3D view
+the drop is accepted **anywhere on the view**, toolbar included: a release landing beside it would
+be a miss you cannot see coming.
 
 **In the centre, a drop nobody takes is not a drop lost**: over the tabbed area, an asset no
 document will have opens in its own workspace, as a double-click would — a picture dropped on the

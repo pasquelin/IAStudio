@@ -50,7 +50,7 @@ Four gestures, and **they do not put the clip in the same place**:
 | Gesture | On which track | At what time |
 |---|---|---|
 | **Drag and drop** from the shelf | the one you are hovering, **if it can take it** | where you release |
-| **Drag and drop** into the empty space below the last track | a **new** track, opened for it | where you release |
+| **Drag and drop** into the empty space below the last track | a **new** track, opened for it — except for a 3D scene | where you release |
 | **Drag and drop** a 3D scene row from the **Explorer** | a picture track, never a sound one | where you release |
 | **Right-click ▸ Add to the edit** | the studio chooses | at the **playhead** |
 
@@ -60,11 +60,12 @@ it there**: a picture track for a sound, a locked track, a muted one, or one sil
 track's solo. The studio then chooses for you, as right-click does, and the clip lands **somewhere
 other than under the pointer**.
 
-**And when it finds no track at all, the gesture does nothing whatsoever** — without a word, and
-without even opening the asset the way a release the edit did not take would. That happens on an
-edit whose only picture track is locked, on a sound released while a picture track is soloed, or
-on a rush released **onto a track** of the Audio workspace's edit. Right-click, for its part, greys
-the line out in that case.
+**And when it finds none at all, the gesture does nothing whatsoever, without a word.** That is
+what happens to a release **onto a track**: an edit whose only picture track is locked, a sound
+released while a picture track is soloed, a rush released onto a track of the Audio workspace's
+edit. Released **below** the last track, the first two lay their clip on a fresh track instead.
+Right-click, for its part, **greys the line out** when no track can take the asset: it is the only
+one of the two gestures that says so.
 
 For an asset, that is one rule rather than two: a muted track accepted under the pointer and
 avoided everywhere else would answer the same question twice. But **nothing on screen says so**,
@@ -74,18 +75,18 @@ and it is the one place in the edit where the gesture does not do what it shows.
 track, and the sound track beside it for a take that carries sound. Both arrive in one gesture,
 and **⌘Z takes them back in one** — the clips and the tracks.
 
-Two places take nothing **and let the release travel back to the studio, which then opens the
-asset** the way a double-click would: the **time ruler** at the top, and the **empty space below
-the last track** of an edit with no picture track at all — the one in the Audio workspace — since
-there is no monitor there to show a rush.
+Two places take nothing, **and the release stops there without opening anything**: the **time
+ruler** at the top, and the **empty space below the last track** of an edit with no picture track
+at all — the one in the Audio workspace — since there is no monitor there to show a rush. The edit
+lives in the band, and **the band catches nothing**: that is the rule of the whole studio,
+described in [Assets](07-assets.md).
 
 **A 3D scene is laid down like a medium**, by dragging its row from the Explorer. The clip it
-becomes is **live**: what it shows is computed from the scene as the playhead goes over it, so
-reworking the scene changes the edit without exporting anything. Its length is that of the scene's
-**animation**, or **5 seconds** if it has none yet. It always goes on a picture track and never on
-a sound one — a scene has no soundtrack of its own — and **it opens no track**: released below the
-last one, it joins the first picture track that reaches the output, and on an edit that has none,
-the gesture does nothing.
+becomes is **live**: reworking the scene changes what the edit shows, with nothing to export. Its
+length is that of the scene's **animation**, or **5 seconds** if it has none yet. It always goes
+on a picture track and never on a sound one — a scene has no soundtrack of its own — and **it
+opens no track**: released below the last one, it joins the first picture track that reaches the
+output, and on an edit that has none, the gesture does nothing.
 
 **Right-click chooses for you**, and it chooses well: a sound goes on a sound track, everything
 else on a picture track, and **any track that does not reach the output is avoided** — a clip
@@ -98,7 +99,7 @@ clip will nonetheless not land.
 > studio-wide rule, described in [Assets](07-assets.md). So to gather two media in the **same**
 > edit, use drag and drop or right-click.
 
-Whichever way, the studio settles two things:
+For a medium, the studio settles two things:
 
 - **the duration** — that of the media. A still image, or a medium whose duration is unknown,
   lasts **5 seconds** by default. That is only a starting point: how long an image stays on
