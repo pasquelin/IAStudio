@@ -1,5 +1,6 @@
 import { SRGBColorSpace } from 'three'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
+import type { ExportWatch } from '@shared/domain/exportProgress'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
 import { exportTargetOf } from '@shared/domain/exportRegistry'
 import { faceFileNames } from '@shared/domain/skybox'
@@ -31,7 +32,15 @@ export type SkyboxExportRequest = {
   size: number
 }
 
-export type SkyboxExportPort = (request: SkyboxExportRequest) => Promise<ExportedFile[]>
+/**
+ * Six faces of a 4K sky is seconds of GPU and six PNG encodes, so the watch is not decoration.
+ * Optional because the assistant's door asks for the same bytes without one — that door shows no
+ * row and cannot be stopped, which is a gap rather than a decision.
+ */
+export type SkyboxExportPort = (
+  request: SkyboxExportRequest,
+  watch?: ExportWatch,
+) => Promise<ExportedFile[]>
 
 export type SkyboxExportPortOptions = {
   /** Injected for the same reason the renderer's is: jsdom decodes no image. */
@@ -48,7 +57,13 @@ export function createSkyboxExportPort({
   loadTexture,
   assetVersion,
 }: SkyboxExportPortOptions): SkyboxExportPort {
-  return ({ assetId, adjustments, name, size }) => {
+  // `async`, so a stop already raised comes back as a rejection rather than as a synchronous
+  // throw: the port promises a promise, and half its callers only ever look at one.
+  return async ({ assetId, adjustments, name, size }, watch) => {
+    // Before the source is even asked for: decoding a 4K panorama is the first long thing here,
+    // and a stop pressed while it downloads must not be answered by six faces of it.
+    watch?.signal?.throwIfAborted()
+
     // Filled while the sources are in hand: `draw` is handed the frame's size — one face — and
     // the graded picture in between is the source's, which nothing else carries across.
     let equirect: PictureSize = { width: 0, height: 0 }
@@ -89,8 +104,12 @@ export function createSkyboxExportPort({
             // A square frame for a square face, so `single` letterboxes nothing.
             projection.setFrame(size, size)
 
+            const faces = faceFileNames(name)
             const files: ExportedFile[] = []
-            for (const face of faceFileNames(name)) {
+            for (const face of faces) {
+              // Between faces, which is where a stop can be honoured: one face is a single
+              // draw and a read, and interrupting inside it would leave the canvas half read.
+              watch?.signal?.throwIfAborted()
               projection.setLayout('single', face.face)
               pipeline.renderToScreen(projection.material)
               // Awaited before the next face is drawn: they share one canvas, and a read left
@@ -101,6 +120,7 @@ export function createSkyboxExportPort({
                 extension: exportTargetOf('sky.faces').extension,
                 bytes,
               })
+              watch?.onStep?.(files.length, faces.length)
             }
             return files
           } finally {

@@ -1,4 +1,5 @@
 import { assetUrl } from '@shared/domain/asset'
+import type { ExportWatch } from '@shared/domain/exportProgress'
 import {
   assetsOf,
   boundedSize,
@@ -47,7 +48,15 @@ export type TexturePackRequest = {
   shape: PreviewShape
 }
 
-export type TextureExportPort = (request: TexturePackRequest) => Promise<ExportedFile[]>
+/**
+ * Up to five channels, each a full-resolution pass and a PNG encode, so the watch is not
+ * decoration. Optional because the assistant's door asks for the same bytes without one — that
+ * door shows no row and cannot be stopped, which is a gap rather than a decision.
+ */
+export type TextureExportPort = (
+  request: TexturePackRequest,
+  watch?: ExportWatch,
+) => Promise<ExportedFile[]>
 
 export type TextureExportPortOptions = {
   /** Injected for the same reason the renderer's is: jsdom decodes no image. */
@@ -110,7 +119,7 @@ function drawPicture(
 export function createTextureExportPort({
   loadTexture,
 }: TextureExportPortOptions): TextureExportPort {
-  return async ({ target, channels, name, material, shape }) => {
+  return async ({ target, channels, name, material, shape }, watch) => {
     const pictures = resolvePictures(target, channels, name)
     // Before the glTF road as much as the folder one: a texture with no channel resolves to no
     // picture, and `buildGlb` would happily answer a grey sphere wearing nothing — the one
@@ -121,10 +130,14 @@ export function createTextureExportPort({
 
     const drawn: { picture: ResolvedPicture; bytes: Uint8Array }[] = []
     for (const picture of pictures) {
+      // Between pictures, which is where a stop can be honoured: one is a single pass and a
+      // read, and interrupting inside it would leave the canvas half read.
+      watch?.signal?.throwIfAborted()
       // One after another rather than at once: each opens a WebGL context of its own, and
       // `runOffscreenPass` would serialize them anyway — asked for together they would only
       // hold every decoded channel of every picture in memory at the same time.
       drawn.push({ picture, bytes: await drawPicture(loadTexture, picture, max) })
+      watch?.onStep?.(drawn.length, pictures.length)
     }
 
     if (!writesOneFile(target)) {

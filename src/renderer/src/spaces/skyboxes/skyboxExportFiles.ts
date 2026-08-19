@@ -1,3 +1,4 @@
+import type { ExportWatch } from '@shared/domain/exportProgress'
 import type { FolderExportRequest } from '@shared/ipc'
 import { loadTexture } from '@/engines/scene/textureCache'
 import { assetVersionOf } from '@/stores/assets'
@@ -15,6 +16,7 @@ import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 export async function skyboxExportFiles(
   documentId: string,
   size: number,
+  watch?: ExportWatch,
 ): Promise<FolderExportRequest> {
   // Read once, before any `await`. Read twice — the picture here and the grading after the
   // `import()` — and a slider moved while the chunk downloads would export one sky's pixels
@@ -25,12 +27,10 @@ export async function skyboxExportFiles(
   const name = documentExportName(useDocuments.getState(), documentId, 'skybox')
 
   const { createSkyboxExportPort } = await import('@/engines/skybox/exportPort')
-  const files = await createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })({
-    assetId: sky.source.assetId,
-    adjustments: sky.adjustments,
-    name,
-    size,
-  })
+  const files = await createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })(
+    { assetId: sky.source.assetId, adjustments: sky.adjustments, name, size },
+    watch,
+  )
 
   return { folder: name, target: 'sky.faces', files }
 }

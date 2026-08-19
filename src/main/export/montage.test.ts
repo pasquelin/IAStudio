@@ -3,13 +3,24 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { unzipSync } from 'fflate'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { CHANNELS } from '@shared/ipc'
-import { invoke, resetHandlers } from '@main/ipc/testHarness'
+import { CHANNELS, EVENTS } from '@shared/ipc'
+import { invoke, invokeFrom, openWindow, resetHandlers } from '@main/ipc/testHarness'
+import type { BundleClient } from './bundleClient'
 import { registerMontageHandlers } from './montage'
+import { writeOtiozFile } from './otiozFile'
+import { createRunningExports, registerExportCancelHandler } from './runningExports'
 
 vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 const CONTENT = '{"OTIO_SCHEMA":"Timeline.1"}'
+
+/**
+ * The worker, in this process. Faithful in the only way that matters here: the handler is asked
+ * for a bundle and answers `false` when it was stopped — which is what the real client relays.
+ */
+const inProcessBundles = (): BundleClient => ({
+  write: ({ path, content, media, ...watch }) => writeOtiozFile(path, { content, media }, watch),
+})
 
 describe('the montage export handler', () => {
   let folder: string
@@ -21,12 +32,18 @@ describe('the montage export handler', () => {
     pickSavePath = vi.fn((name: string, extension: string) =>
       Promise.resolve(join(folder, `${name}${extension}`)),
     )
-    registerMontageHandlers({ pickSavePath, projectPath: () => null })
+    registerMontageHandlers({
+      pickSavePath,
+      projectPath: () => null,
+      bundles: inProcessBundles,
+      running: createRunningExports(),
+    })
   })
 
   it('writes the cut where the dialog landed, under the extension its target writes', async () => {
     await expect(
       invoke(CHANNELS.montageExport, {
+        id: 'export-1',
         name: 'Bande',
         target: 'montage.otio',
         content: CONTENT,
@@ -38,10 +55,16 @@ describe('the montage export handler', () => {
   })
 
   it('writes nothing at all when the dialog was dismissed', async () => {
-    registerMontageHandlers({ pickSavePath: () => Promise.resolve(null), projectPath: () => null })
+    registerMontageHandlers({
+      pickSavePath: () => Promise.resolve(null),
+      projectPath: () => null,
+      bundles: inProcessBundles,
+      running: createRunningExports(),
+    })
 
     await expect(
       invoke(CHANNELS.montageExport, {
+        id: 'export-1',
         name: 'Bande',
         target: 'montage.otio',
         content: CONTENT,
@@ -54,6 +77,7 @@ describe('the montage export handler', () => {
   it('refuses a name that would leave the folder the dialog chose', async () => {
     await expect(
       invoke(CHANNELS.montageExport, {
+        id: 'export-1',
         name: '../escape',
         target: 'montage.otio',
         content: CONTENT,
@@ -64,11 +88,27 @@ describe('the montage export handler', () => {
   it('refuses a target that belongs to another section', async () => {
     await expect(
       invoke(CHANNELS.montageExport, {
+        id: 'export-1',
         name: 'Bande',
         target: 'scene.usdz',
         content: CONTENT,
       }),
     ).rejects.toThrow()
+  })
+
+  // The id is a key in a table this process keeps for as long as the export runs, and the
+  // sandboxed side names it.
+  it('refuses an export named by nothing, or by a name without end', async () => {
+    for (const id of ['', 'x'.repeat(65)]) {
+      await expect(
+        invoke(CHANNELS.montageExport, {
+          id,
+          name: 'Bande',
+          target: 'montage.otio',
+          content: CONTENT,
+        }),
+      ).rejects.toThrow()
+    }
   })
 })
 
@@ -76,6 +116,8 @@ describe('the same cut, bundled with the media it points at', () => {
   let project: string
   let out: string
   let rush: string
+  let running: ReturnType<typeof createRunningExports>
+  let asking: ReturnType<typeof openWindow>
 
   beforeEach(async () => {
     resetHandlers()
@@ -84,13 +126,24 @@ describe('the same cut, bundled with the media it points at', () => {
     rush = join(project, 'plan.mp4')
     await writeFile(rush, new Uint8Array(2048).fill(9))
 
+    running = createRunningExports()
     registerMontageHandlers({
       pickSavePath: (name, extension) => Promise.resolve(join(out, `${name}${extension}`)),
       projectPath: () => project,
+      bundles: inProcessBundles,
+      running,
     })
+    registerExportCancelHandler(running)
+    // Named rather than anonymous: a bundle reports its progress to the window that asked, so
+    // every case here is invoked FROM one.
+    asking = openWindow()
   })
 
+  const exporting = (request: unknown): unknown =>
+    invokeFrom(asking, CHANNELS.montageExport, request)
+
   const bundling = (source: string): unknown => ({
+    id: 'export-1',
     name: 'Bande',
     target: 'montage.otioz',
     content: CONTENT,
@@ -98,12 +151,66 @@ describe('the same cut, bundled with the media it points at', () => {
   })
 
   it('writes a bundle holding the cut and the medium', async () => {
-    await expect(invoke(CHANNELS.montageExport, bundling(`file://${rush}`))).resolves.toBe(
-      'Bande.otioz',
-    )
+    await expect(exporting(bundling(`file://${rush}`))).resolves.toBe('Bande.otioz')
 
     const entries = unzipSync(await readFile(join(out, 'Bande.otioz')))
     expect(Object.keys(entries)).toEqual(['version.txt', 'content.otio', 'media/plan.mp4'])
+  })
+
+  /**
+   * The row belongs to one status line: a second window showing a bar for an export it cannot
+   * stop is worse than showing nothing.
+   */
+  it('reports how far along it is, to the window that asked and to no other', async () => {
+    const other = openWindow()
+
+    await exporting(bundling(`file://${rush}`))
+
+    const steps = asking.sent.filter(one => one.channel === EVENTS.exportProgress)
+    expect(steps.length).toBeGreaterThan(0)
+    expect(steps.at(-1)).toEqual({
+      channel: EVENTS.exportProgress,
+      payload: { id: 'export-1', ratio: 1 },
+    })
+    expect(other.sent).toEqual([])
+  })
+
+  /**
+   * The half a bundle had before was progress and no stop: gigabytes with nothing to press. It
+   * leaves nothing behind either — a half-written archive looks exactly like a finished one.
+   */
+  it('stops on demand, answers nothing, and leaves no half-written archive', async () => {
+    // The stop arrives mid-write, which is the only moment worth testing: pressed before the
+    // dialog answers it would prove nothing about the loop that moves the bytes.
+    asking.webContents.send = () => void running.cancel('export-1')
+
+    await expect(exporting(bundling(`file://${rush}`))).resolves.toBeNull()
+    await expect(readFile(join(out, 'Bande.otioz'))).rejects.toThrow()
+  })
+
+  /**
+   * The window shows the row and its stop button from the moment it invokes, and the dialog is
+   * where a person sits for as long as they like. An id only registered once the dialog answered
+   * would refuse every press until then — and the archive would be written and called a success.
+   */
+  it('answers a stop pressed while the save dialog is still open', async () => {
+    resetHandlers()
+    registerMontageHandlers({
+      pickSavePath: (name, extension) => {
+        running.cancel('export-1')
+        return Promise.resolve(join(out, `${name}${extension}`))
+      },
+      projectPath: () => project,
+      bundles: inProcessBundles,
+      running,
+    })
+
+    await expect(exporting(bundling(`file://${rush}`))).resolves.toBeNull()
+    await expect(readFile(join(out, 'Bande.otioz'))).rejects.toThrow()
+  })
+
+  it('says nothing was stopped when the id names no running export', async () => {
+    expect(invoke(CHANNELS.exportCancel, 'export-never-started')).toBe(false)
   })
 
   /**
@@ -114,7 +221,7 @@ describe('the same cut, bundled with the media it points at', () => {
     const elsewhere = join(await mkdtemp(join(tmpdir(), 'scenario-elsewhere-')), 'secret.mp4')
     await writeFile(elsewhere, new Uint8Array([1, 2, 3]))
 
-    await expect(invoke(CHANNELS.montageExport, bundling(`file://${elsewhere}`))).rejects.toThrow()
+    await expect(exporting(bundling(`file://${elsewhere}`))).rejects.toThrow()
     await expect(readFile(join(out, 'Bande.otioz'))).rejects.toThrow()
   })
 
@@ -124,7 +231,8 @@ describe('the same cut, bundled with the media it points at', () => {
    */
   it('refuses an entry that would climb out of the bundle', async () => {
     await expect(
-      invoke(CHANNELS.montageExport, {
+      exporting({
+        id: 'export-1',
         name: 'Bande',
         target: 'montage.otioz',
         content: CONTENT,
@@ -135,7 +243,8 @@ describe('the same cut, bundled with the media it points at', () => {
 
   it('refuses two media asking for the same entry, one pixel set landing under the other', async () => {
     await expect(
-      invoke(CHANNELS.montageExport, {
+      exporting({
+        id: 'export-1',
         name: 'Bande',
         target: 'montage.otioz',
         content: CONTENT,
@@ -148,9 +257,7 @@ describe('the same cut, bundled with the media it points at', () => {
   })
 
   it('refuses a medium the cut names and the project does not hold', async () => {
-    await expect(
-      invoke(CHANNELS.montageExport, bundling(`file://${join(project, 'absent.mp4')}`)),
-    ).rejects.toThrow()
+    await expect(exporting(bundling(`file://${join(project, 'absent.mp4')}`))).rejects.toThrow()
   })
 
   // Without one there is nothing to resolve a medium against, and every path would be refused
@@ -160,8 +267,10 @@ describe('the same cut, bundled with the media it points at', () => {
     registerMontageHandlers({
       pickSavePath: (name, extension) => Promise.resolve(join(out, `${name}${extension}`)),
       projectPath: () => null,
+      bundles: inProcessBundles,
+      running: createRunningExports(),
     })
 
-    await expect(invoke(CHANNELS.montageExport, bundling(`file://${rush}`))).resolves.toBeNull()
+    await expect(exporting(bundling(`file://${rush}`))).resolves.toBeNull()
   })
 })

@@ -18,7 +18,11 @@ const registered = new Map<string, Invoke>()
 
 /** What a window announces to the main process — only what the code under test reads. */
 export type FakeWindow = {
-  webContents: { id: number; send: (channel: string, payload: unknown) => void }
+  webContents: {
+    id: number
+    send: (channel: string, payload: unknown) => void
+    isDestroyed: () => boolean
+  }
   isFocusable: () => boolean
   isDestroyed: () => boolean
   on: (event: string, listener: () => void) => void
@@ -99,6 +103,7 @@ export function openWindow({ focusable = true } = {}): FakeWindow {
         return contentsId
       },
       send: (channel, payload) => void sent.push({ channel, payload }),
+      isDestroyed: () => destroyed.has(window) || closed.has(window),
     },
     isFocusable: () => focusable,
     isDestroyed: () => destroyed.has(window),

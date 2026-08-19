@@ -26,6 +26,14 @@
     },
     "cancel": "Annuler la tâche"
   },
+  "exports": {
+    "running_one": "{{count, number}} export",
+    "running_many": "{{count, number}} exports",
+    "running_other": "{{count, number}} exports",
+    "open": "Afficher les exports",
+    "openHint": "Ouvre la liste des exports en cours d’écriture",
+    "cancel": "Interrompre l’export"
+  },
   "dialog": {
     "allMedia": "Tous les médias",
     "video": "Vidéo",

@@ -26,6 +26,14 @@
     },
     "cancel": "Cancel job"
   },
+  "exports": {
+    "running_one": "{{count, number}} export",
+    "running_many": "{{count, number}} exports",
+    "running_other": "{{count, number}} exports",
+    "open": "Show exports",
+    "openHint": "Opens the list of exports being written",
+    "cancel": "Stop this export"
+  },
   "dialog": {
     "allMedia": "All media",
     "video": "Video",

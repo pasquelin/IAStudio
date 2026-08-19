@@ -148,4 +148,27 @@ describe('the size an exported picture is drawn at', () => {
       { width: 64, height: 32 },
     ])
   })
+
+  /**
+   * Baking five channels at full resolution is seconds of GPU, so the stop is checked between
+   * pictures — which is where this reads it: the first turn of the loop comes before any pass.
+   */
+  it('bakes no picture at all when the export was already stopped', async () => {
+    const loadTexture = vi.fn(() => Promise.resolve(decoded(8, 8)))
+
+    await expect(
+      createTextureExportPort({ loadTexture })(
+        {
+          target: 'unreal',
+          channels: exportChannelsOf(state),
+          name: 'mat',
+          material: state.material,
+          shape: 'sphere',
+        },
+        { signal: AbortSignal.abort() },
+      ),
+    ).rejects.toThrow()
+
+    expect(loadTexture).not.toHaveBeenCalled()
+  })
 })

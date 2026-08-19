@@ -1,3 +1,4 @@
+import type { ExportWatch } from '@shared/domain/exportProgress'
 import { offScreenHost } from '@/engines/core/offScreenHost'
 import { frameTimes } from '@/engines/scene/film'
 import { sequenceDuration, type SequenceState } from '@/engines/timeline/timelineState'
@@ -14,15 +15,14 @@ import { silentSound } from './silentSound'
 const MAX_DECODERS = 2
 const MAX_PICTURES = 4
 
-/** Reported per frame, so a caller can show how far along a render is. */
-export type ExportProgress = { frame: number; total: number }
-
-export type SequenceExportOptions = {
+/**
+ * The same watch every other export takes — `onStep` counts frames here. It had its own pair of
+ * fields under its own names, which is why nothing ever plugged it into the status line.
+ */
+export type SequenceExportOptions = ExportWatch & {
   sequence: SequenceState
   /** Names the file the save dialog opens on — the document's own title. */
   title: string
-  onProgress?: (progress: ExportProgress) => void
-  signal?: AbortSignal
 }
 
 /**
@@ -41,7 +41,7 @@ export type SequenceExportOptions = {
 export async function exportSequence({
   sequence,
   title,
-  onProgress,
+  onStep,
   signal,
 }: SequenceExportOptions): Promise<string | null> {
   const bridge = getBridge()
@@ -86,7 +86,7 @@ export async function exportSequence({
 
       index += 1
       await bridge.render.frame({ id, index, png })
-      onProgress?.({ frame: index, total: times.length })
+      onStep?.(index, times.length)
     }
 
     return await bridge.render.finish(id)
