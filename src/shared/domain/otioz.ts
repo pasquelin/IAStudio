@@ -10,6 +10,7 @@
  * timeline says once they moved. The writing side pairs it with the bytes.
  */
 
+import { extensionOf, stemOf } from './fileName'
 import type { OtioTimeline, OtioTrack, OtioTrackItem } from './otio'
 
 /** The exact contents of `version.txt`, with no trailing newline — read off a reference bundle. */
@@ -59,13 +60,9 @@ function fileNameOf(url: string): string {
 function freeName(name: string, taken: Set<string>): string {
   if (!taken.has(name)) return name
 
-  const dot = name.lastIndexOf('.')
-  const stem = dot > 0 ? name.slice(0, dot) : name
-  const extension = dot > 0 ? name.slice(dot) : ''
-
   let index = 2
-  while (taken.has(`${stem}-${index}${extension}`)) index += 1
-  return `${stem}-${index}${extension}`
+  while (taken.has(`${stemOf(name)}-${index}${extensionOf(name)}`)) index += 1
+  return `${stemOf(name)}-${index}${extensionOf(name)}`
 }
 
 function itemInBundle(item: OtioTrackItem, entryOf: (source: string) => string): OtioTrackItem {

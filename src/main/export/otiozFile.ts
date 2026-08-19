@@ -39,11 +39,16 @@ export class MissingMediumError extends Error {
   }
 }
 
-/** Pushed in chunks rather than whole, so one rush never sits in memory beside the others. */
-async function pushFile(into: ZipPassThrough, path: string): Promise<void> {
+/**
+ * Pushed in chunks rather than whole, so one rush never sits in memory beside the others — and
+ * only while the disk keeps up. Without the wait, reading is bounded by nothing: a fast source
+ * and a slow destination hold the difference in memory, which on a montage is the whole rush.
+ */
+async function pushFile(into: ZipPassThrough, path: string, room: () => Promise<void>) {
   for await (const chunk of createReadStream(path, { highWaterMark: 1 << 20 })) {
     // `Buffer` IS a `Uint8Array`, and fflate reads it as one — no copy is made here.
     into.push(chunk, false)
+    await room()
   }
   into.push(new Uint8Array(0), true)
 }
@@ -73,18 +78,29 @@ export async function writeOtiozFile(
   }
 
   const out = createWriteStream(path)
-  const chunks = new Readable({ read: () => {} })
+  let wanted = false
+  const chunks = new Readable({
+    read: () => {
+      wanted = true
+    },
+  })
 
   const zip = new Zip((error, data, final) => {
     if (error) {
       chunks.destroy(error)
       return
     }
-    chunks.push(data)
+    // False means the buffer is full; the reader asks for more by calling `read` above.
+    wanted = chunks.push(data)
     if (final) chunks.push(null)
   })
 
   const drained = pipeline(chunks, out)
+
+  /** Resolves once the destination has room, so reading never runs ahead of writing. */
+  const room = async (): Promise<void> => {
+    while (!wanted) await new Promise(resume => setImmediate(resume))
+  }
 
   storedEntry(zip, OTIOZ_VERSION_PATH, strToU8(OTIOZ_VERSION))
   storedEntry(zip, OTIOZ_CONTENT_PATH, strToU8(content))
@@ -92,7 +108,7 @@ export async function writeOtiozFile(
   for (const medium of media) {
     const entry = new ZipPassThrough(medium.entry)
     zip.add(entry)
-    await pushFile(entry, medium.path)
+    await pushFile(entry, medium.path, room)
   }
 
   zip.end()
