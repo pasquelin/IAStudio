@@ -290,7 +290,7 @@ forme de *tâche*, et le résultat atterrit dans vos *assets*.
 Les *poignées* de couleur qui apparaissent sur un objet 3D sélectionné, et par lesquelles on le
 transforme : les **flèches** le déplacent, les **cercles** le font pivoter, les poignées de
 redimensionnement l’agrandissent. C’est l’outil armé qui décide desquelles s’affichent. Leur
-orientation suit le *repère local ou monde*.
+orientation suit le *repère local / repère monde*.
 
 **Gouttière**
 L’espace entre deux *panneaux*. C’est lui-même la poignée qui les redimensionne : il n’y a pas de
@@ -357,7 +357,7 @@ d’une rue, on change un vêtement.
 **Job** → voir *Tâche*.
 
 **Journal d’activité**
-La liste de ce que le studio a fait et raté, ouverte depuis la *ligne d’état*. Six sujets —
+La liste de ce que le studio a fait et raté, ouverte depuis la **ligne d’état**. Six sujets —
 génération, import, bibliothèque, document, projet, interface — et trois niveaux : information,
 avertissement, échec. Un échec y ajoute une **bulle** dans le coin de la fenêtre, qui ne
 disparaît que si on la ferme. Voir [Quand ça coince](16-depannage.md).
@@ -428,7 +428,7 @@ Réglable par *famille*, dans Réglages → **Génération**.
 
 **Nœud** *(node)*
 Un élément de l’arbre d’une *scène* 3D : une *maille*, une lumière, un sprite, un groupe. C’est ce
-que l’*outliner* liste et ce que l’*inspecteur* décrit.
+que l’**Outliner** liste et ce que l’**Inspecteur** décrit.
 
 **Normales** *(canal de texture)*
 Une image aux couleurs étranges — des bleus, des violets — qui encode les **micro-reliefs** d’une
@@ -493,6 +493,12 @@ Les deux premières se tirent ; la troisième se pose et reste là.
 La façon dont la caméra 3D met le volume à plat. En **perspective**, ce qui est loin est plus
 petit — c’est ce que voit un œil. En **orthographique**, les tailles ne changent pas avec la
 distance : c’est la vue d’un plan d’architecte, et c’est ce qu’on veut pour aligner des objets.
+
+**Projet**
+Un dossier sur votre disque, et tout ce qu’il contient : les *assets*, les *documents*, le
+catalogue qui les indexe. **Le studio n’en ouvre qu’un à la fois** — toutes ses fenêtres travaillent
+sur le même. C’est lui qui fournit la première des trois sources de l’*étagère*, les deux autres
+étant votre bibliothèque en ligne et les générations en cours.
 
 **Prompt**
 Votre phrase de commande : le texte qui décrit ce que vous voulez. Le champ le plus important du
@@ -573,6 +579,11 @@ d’eau — la couleur est presque la même.
 L’intensité des couleurs. À 0, l’image est en noir et blanc ; au-dessus de 1, les couleurs
 crient.
 
+**Scène**
+Ce que l’espace Modélisation compose : un arbre de *nœuds* — objets, lumières, caméras — avec leurs
+places, leurs *matières* et leur animation. C’est le *document* de cet espace, et il s’écrit en
+`.gltf`.
+
 **Secret API**
 La seconde moitié de vos identifiants Scenario, l’équivalent d’un mot de passe. Il va toujours
 avec une *clé API*, et ne s’affiche jamais en clair une fois enregistré.
@@ -601,7 +612,7 @@ de clés de l’objet.
 
 Ce n’est pas une *piste* du montage : une piste porte des *clips* et appartient à une séquence, une
 sous-piste porte des blocs et appartient à un objet de la scène. Deux mouvements sur deux
-sous-pistes jouent en même temps, mais **ils se partagent encore les mêmes os** : c’est *Pilote*,
+sous-pistes jouent en même temps, mais **ils se partagent encore les mêmes os** : c’est **Pilote**,
 dans l’Inspecteur, qui donne à chacun sa moitié du corps.
 
 **Sprite**
