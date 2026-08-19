@@ -2,8 +2,8 @@ import type { LogVerbosity } from '@shared/domain/settings'
 import type { LogEntry, LogLevel } from '@shared/ipc'
 
 /**
- * The main process's own log. It prints to the terminal running the app AND, once a sink is
- * installed, mirrors to every renderer's devtools console.
+ * The main process's own log. It prints to the terminal running the app, records to a rotating
+ * file in every build, and — once the mirror is installed — reaches every renderer's devtools.
  *
  * The mirror is the point: the API calls leave from the main process, so they never appear in
  * the renderer's Network tab, and every failure crossing the boundary is reduced to a code —
@@ -14,13 +14,20 @@ import type { LogEntry, LogLevel } from '@shared/ipc'
  * Never log a whole SDK error: log its status and its parsed body, which the credentials never
  * travel in — see `describeFailure`.
  */
-type Sink = (entry: LogEntry) => void
+export type Sink = (entry: LogEntry) => void
 
 let sink: Sink | null = null
 
 /** Installed once the windows exist; before that the terminal is the only output. */
 export function mirrorLogsTo(destination: Sink | null): void {
   sink = destination
+}
+
+let record: Sink | null = null
+
+/** Installed in EVERY build, unlike the mirror: a run from the Finder has no terminal to read. */
+export function recordLogsTo(destination: Sink | null): void {
+  record = destination
 }
 
 const quiet = process.env['NODE_ENV'] === 'test'
@@ -51,7 +58,9 @@ function write(level: LogLevel, scope: string, message: string): void {
   else console.log(line)
   /* eslint-enable no-console */
 
-  sink?.({ level, scope, message })
+  const entry: LogEntry = { level, scope, message }
+  sink?.(entry)
+  record?.(entry)
 }
 
 export const log = {
