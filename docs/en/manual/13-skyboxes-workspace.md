@@ -69,9 +69,10 @@ This is **not** a camera orbiting something — you are at the centre of the sph
 you. The drag follows your hand: pulling to the right turns the view to the left, as if you were
 grabbing the world.
 
-### The View panel
+### Projection and helpers
 
-In the right column, under the Skybox panel. Two sections.
+The **Inspector**'s first two sections, right at the top: how you look is what the rest is judged
+under.
 
 **Projection**
 
@@ -101,7 +102,7 @@ In the right column, under the Skybox panel. Two sections.
 > rulers, nothing else: a menu laid over the preview would cover the one thing this workspace
 > exists to show.
 
-**Two keys skip the panel**: `V` cycles through the four views, `P` shows or hides the test
+**Two keys skip the inspector**: `V` cycles through the four views, `P` shows or hides the test
 objects. `⌘Z` and `⇧⌘Z` undo and redo here as anywhere else — see [Every shortcut](15-shortcuts.md).
 
 **The test objects** are spheres set in the middle of the sky: one matte, one glossy, one metallic.
@@ -113,9 +114,11 @@ little but closely; a wide angle shows a lot, but the edges distort.
 
 ---
 
-## The Skybox panel
+## The sky inspector
 
-In the right column. Four sections.
+The right column holds one panel, and it describes the open sky: there is nothing to select, and
+everything it shows belongs to the document. Six sections — the two above, which say how you LOOK,
+then the four that follow.
 
 > **None of these settings rewrites your image.** They are instructions applied to the display. The
 > original file stays intact, and your settings can be replayed indefinitely.
@@ -223,7 +226,7 @@ folder chooser for six empty files.
 
 ## What is still missing
 
-- **the Regenerate and Reset buttons** — the panel does not place them;
+- **the Regenerate and Reset buttons** — the inspector does not place them;
 - **HDRI export** — the six faces come out as PNG, so eight bits a channel: anything above white
   is clipped. For high dynamic range lighting there is no output yet;
 - **importing a `.hdr`** — the studio only imports ordinary images. An imported `.exr` is catalogued

@@ -69,7 +69,6 @@ telling you what they are missing in order to fill up.
 | "Select something to see its properties." | the same thing, outside 3D |
 | "Select a clip to see it here." | the Source monitor is waiting for a selection |
 | "No sequence open. Create one to start editing." | the timeline is waiting for a sequence document — the **+** button |
-| "Open a skybox to grade it." | the Skybox panel is waiting for a sky document |
 
 None of these sentences calls for troubleshooting. The rest of the chapter is about real failures.
 

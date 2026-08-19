@@ -70,9 +70,10 @@ Ce n’est **pas** une caméra qui tourne autour de quelque chose — vous êtes
 sphère, et vous regardez autour de vous. Le glissement suit la main : tirer vers la droite fait
 tourner la vue vers la gauche, comme si vous attrapiez le monde.
 
-### Le panneau Vue
+### Projection et repères
 
-Dans la colonne de droite, sous le panneau Skybox. Deux sections.
+Les deux premières sections de l’**Inspecteur**, tout en haut : la façon dont on regarde est ce
+sous quoi le reste se juge.
 
 **Projection**
 
@@ -102,7 +103,7 @@ Dans la colonne de droite, sous le panneau Skybox. Deux sections.
 > barre d’outils et les règles : un menu posé sur l’aperçu couvrirait la seule chose que cet
 > espace existe pour montrer.
 
-**Deux touches évitent le panneau** : `V` fait défiler les quatre vues, `P` montre ou cache les
+**Deux touches évitent l’inspecteur** : `V` fait défiler les quatre vues, `P` montre ou cache les
 objets de test. `⌘Z` et `⇧⌘Z` annulent et rétablissent ici comme ailleurs — voir
 [Tous les raccourcis](15-raccourcis.md).
 
@@ -116,9 +117,11 @@ déforment.
 
 ---
 
-## Le panneau Skybox
+## L’inspecteur du ciel
 
-Dans la colonne de droite. Quatre sections.
+La colonne de droite n’a qu’un panneau, et il décrit le ciel ouvert : rien n’est à sélectionner,
+tout ce qu’il montre appartient au document. Six sections — les deux ci-dessus, qui disent comment
+on REGARDE, puis les quatre qui suivent.
 
 > **Aucun de ces réglages ne réécrit votre image.** Ce sont des instructions appliquées à
 > l’affichage. Le fichier d’origine reste intact, et vos réglages sont rejouables à l’infini.
@@ -227,7 +230,7 @@ sélecteur de dossier pour six fichiers vides.
 
 ## Ce qui manque encore
 
-- **les boutons Régénérer et Réinitialiser** — le panneau ne les pose pas ;
+- **les boutons Régénérer et Réinitialiser** — l’inspecteur ne les pose pas ;
 - **l’export en HDRI** — les six faces sortent en PNG, donc en 8 bits par canal : ce qui dépasse
   le blanc est écrêté. Pour un éclairage à forte dynamique, il n’y a pas encore de sortie ;
 - **l’import d’un `.hdr`** — le studio n’importe que les images ordinaires. Un `.exr` importé est

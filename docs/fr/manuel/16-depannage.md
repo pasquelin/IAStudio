@@ -71,7 +71,6 @@ sont des panneaux qui vous disent ce qu’il leur manque pour se remplir.
 | « Sélectionnez un élément pour voir ses propriétés. » | la même chose, hors de la 3D |
 | « Sélectionnez un clip pour le voir ici. » | le moniteur Source attend une sélection |
 | « Aucune séquence ouverte. Créez-en une pour monter. » | la timeline attend un document séquence — bouton **+** |
-| « Ouvrez une skybox pour la régler. » | le panneau Skybox attend un document ciel |
 
 Aucune de ces phrases ne demande d’action de dépannage. Le reste du chapitre parle des vraies
 pannes.
