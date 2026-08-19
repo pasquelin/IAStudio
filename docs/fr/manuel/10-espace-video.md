@@ -47,12 +47,13 @@ introuvable, lui, reste noir et muet sans rien annoncer.
 
 ## Poser un premier clip
 
-Trois gestes, et **ils ne posent pas le clip au même endroit** :
+Quatre gestes, et **ils ne posent pas le clip au même endroit** :
 
 | Geste | Sur quelle piste | À quel instant |
 |---|---|---|
 | **Glisser-déposer** depuis l’étagère | celle que vous survolez, **si elle peut le prendre** | là où vous lâchez |
 | **Glisser-déposer** dans le vide, sous la dernière piste | une **nouvelle** piste, ouverte pour lui | là où vous lâchez |
+| **Glisser-déposer** une ligne de scène 3D depuis l’**Explorateur** | une piste image, jamais une piste son | là où vous lâchez |
 | **Clic droit ▸ Ajouter au montage** | le studio choisit | à la **tête de lecture** |
 
 **Le glisser-déposer vous obéit au pixel près pour l’INSTANT ; pour la piste, il vous corrige.**
@@ -61,17 +62,32 @@ prendre le clip ne l’y pose pas** : une piste image pour un son, une piste ver
 tue par le solo d’une autre. Le studio choisit alors à votre place, comme au clic droit, et le
 clip atterrit **ailleurs que sous le pointeur**.
 
-C’est une règle unique et non deux : une piste muette acceptée sous le pointeur et évitée partout
-ailleurs répondrait deux fois à la même question. Mais **rien ne le dit à l’écran**, et c’est le
-seul endroit du montage où le geste ne fait pas ce qu’il montre.
+**Et quand il ne trouve aucune piste, le geste ne fait rien du tout** — sans un mot, et sans même
+ouvrir l’asset comme le ferait un lâcher que le montage n’a pas pris. C’est ce qui arrive sur un
+montage dont la seule piste image est verrouillée, sur un son lâché pendant qu’une piste image est
+en solo, ou sur un rush lâché **sur une piste** du montage de l’espace Audio. Le clic droit, lui,
+grise la ligne dans ce cas.
+
+Pour un asset, c’est une règle unique et non deux : une piste muette acceptée sous le pointeur et
+évitée partout ailleurs répondrait deux fois à la même question. Mais **rien ne le dit à
+l’écran**, et c’est le seul endroit du montage où le geste ne fait pas ce qu’il montre.
 
 **Lâcher sous la dernière piste ouvre les pistes qu’il faut** plutôt que de ne rien faire : une
 piste image, et la piste son à côté pour une prise qui porte du son. Les deux arrivent d’un seul
 geste, et **⌘Z les reprend d’un seul coup** — les clips et les pistes.
 
-Deux endroits ne prennent toujours rien : la **règle des temps**, en haut, et un montage qui n’a
-aucune piste image — celui de l’espace Audio — où lâcher un rush ne fait qu’ouvrir l’asset,
-puisqu’il n’y a là aucun moniteur pour l’afficher.
+Deux endroits ne prennent rien **et laissent le lâcher repartir vers le studio, qui ouvre alors
+l’asset** comme le ferait un double-clic : la **règle des temps**, en haut, et le **vide sous la
+dernière piste** d’un montage qui n’a aucune piste image — celui de l’espace Audio — puisqu’il n’y
+a là aucun moniteur pour afficher un rush.
+
+**Une scène 3D se pose comme un média**, en glissant sa ligne depuis l’Explorateur. Le clip
+qu’elle devient est **vivant** : ce qu’il montre est calculé depuis la scène au passage de la tête
+de lecture, donc retoucher la scène change le montage sans rien réexporter. Sa durée est celle de
+son **animation**, ou **5 secondes** si elle n’en a pas encore. Elle va toujours sur une piste
+image et jamais sur une piste son — une scène n’a pas de bande son à elle — et **elle n’ouvre
+aucune piste** : lâchée sous la dernière, elle rejoint la première piste image qui se fait voir, et
+sur un montage qui n’en a aucune, le geste ne fait rien.
 
 **Le clic droit choisit à votre place**, et il choisit bien : un son va sur une piste son, tout
 le reste sur une piste image, et **toute piste qui ne se fait pas entendre est évitée** — un clip
