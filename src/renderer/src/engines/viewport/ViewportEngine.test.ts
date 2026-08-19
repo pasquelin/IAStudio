@@ -7,7 +7,7 @@ import {
 } from 'three'
 import type * as ThreeModule from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ViewportEngine } from './ViewportEngine'
+import { INSET_CADENCE_MS, ViewportEngine } from './ViewportEngine'
 
 /**
  * A renderer jsdom can hold: the real one asks the canvas for a WebGL context and gets null.
@@ -28,6 +28,7 @@ const scissored = vi.fn()
 const scissorTest = vi.fn()
 const clearColor = vi.fn()
 const cleared = vi.fn()
+const renderTarget = vi.fn()
 /** What the display is worth. Two is a laptop retina screen, which is where the fault showed. */
 let displayRatio = 1
 
@@ -35,7 +36,9 @@ vi.mock('three', async importOriginal => ({
   ...(await importOriginal<typeof ThreeModule>()),
   WebGLRenderer: class {
     readonly domElement: HTMLCanvasElement
-    readonly shadowMap = { enabled: false }
+    readonly shadowMap = { enabled: false, autoUpdate: true }
+    /** What the preview target is sized against: the drawing buffer's own sample count. */
+    readonly capabilities = { maxSamples: 4 }
     toneMapping = NoToneMapping
     autoClear = true
     readonly info = {
@@ -67,6 +70,17 @@ vi.mock('three', async importOriginal => ({
     setClearColor = clearColor
     clear = cleared
     getPixelRatio = (): number => displayRatio
+    /** What the preview draws into, and what `GpuPipeline` puts back after compositing. */
+    private bound: unknown = null
+    setRenderTarget = (target: unknown): void => {
+      this.bound = target
+      renderTarget(target)
+    }
+    getRenderTarget = (): unknown => this.bound
+    getContext = (): { SAMPLES: number; getParameter: () => number } => ({
+      SAMPLES: 0x80a9,
+      getParameter: () => 4,
+    })
     render = (...args: unknown[]): void => {
       if (this.info.autoReset) this.info.reset()
       this.info.render.calls += 1
@@ -88,6 +102,9 @@ describe('a viewport', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // `performance` among them: the preview holds itself to a cadence, and a clock the test
+    // cannot move would make that cadence depend on how fast the machine ran the assertions.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] })
     displayRatio = 1
     host = document.createElement('div')
     document.body.appendChild(host)
@@ -125,6 +142,7 @@ describe('a viewport', () => {
 
   afterEach(() => {
     for (const engine of engines) engine.dispose()
+    vi.useRealTimers()
     vi.unstubAllGlobals()
     host.remove()
   })
@@ -249,47 +267,215 @@ describe('a viewport', () => {
       expect(viewported).not.toHaveBeenCalledWith(0, HOST_HEIGHT, HOST_WIDTH, HOST_HEIGHT)
     })
 
+    /** The corner preview, as the component opens it: a rect, a backdrop, not grown. */
+    const insetPane = (over: Partial<Parameters<ViewportEngine['setInsetPane']>[0]> = {}) => ({
+      camera: new PerspectiveCamera(),
+      backdrop: new Color(),
+      rect: { x: 500, y: 700, width: 100, height: 56 },
+      full: false,
+      ...over,
+    })
+
     /**
      * Seen on screen before it was written down: a scene with no background of its own draws
      * NOTHING where it is empty, so the panes underneath showed straight through the picture and
-     * the preview read as a hole in the view. The clear obeys the scissor, so it paints that
-     * rectangle and nothing else — and the colour it found is put back for the frames after.
+     * the preview read as a hole in the view. Cleared inside its own target now, which is why the
+     * colour is asserted rather than the scissor — and put back for the frames after.
      */
     it('clears the preview to its own backdrop before drawing it', () => {
       const engine = atRest()
       clearColor.mockClear()
-      cleared.mockClear()
 
       const backdrop = new Color('#123456')
-      engine.setInsetPane({
-        camera: new PerspectiveCamera(),
-        backdrop,
-        rect: { x: 500, y: 700, width: 100, height: 56 },
-      })
+      engine.setInsetPane(insetPane({ backdrop }))
       drawFrames()
 
       expect(clearColor).toHaveBeenNthCalledWith(1, backdrop, 1)
-      expect(cleared).toHaveBeenCalledTimes(1)
       // Put back, and with the alpha it was read with: every later frame clears to what the
       // viewport itself uses, not to the preview's colour.
       expect(clearColor).toHaveBeenLastCalledWith(expect.any(Color), 1)
     })
 
-    it('draws the camera preview as one more scissored pass, never a second context', () => {
+    it('draws the camera preview into a target and composites it, never a second context', () => {
       const engine = atRest()
       rendered.mockClear()
+      renderTarget.mockClear()
 
-      engine.setInsetPane({
-        camera: new PerspectiveCamera(),
-        backdrop: new Color(),
-        rect: { x: 500, y: 700, width: 100, height: 56 },
-      })
+      engine.setInsetPane(insetPane())
       drawFrames()
 
-      expect(rendered).toHaveBeenCalledTimes(2)
+      // The panes, the preview into its target, the quad that puts it on the canvas.
+      expect(rendered).toHaveBeenCalledTimes(3)
+      expect(renderTarget).toHaveBeenCalledWith(expect.objectContaining({ isRenderTarget: true }))
+      expect(renderTarget).toHaveBeenLastCalledWith(null)
       // Bottom-right, in WebGL's own frame: the host is 800 tall, so a rect 700 down sits at 44.
       expect(scissored).toHaveBeenCalledWith(500, HOST_HEIGHT - 700 - 56, 100, 56)
       expect(scissorTest).toHaveBeenLastCalledWith(false)
+    })
+
+    /**
+     * The whole point of the target: a frame in which nothing a scene camera films has moved —
+     * an orbit, a fly, damping settling — composites the picture already drawn rather than
+     * walking the scene a second time. Measured on 1 504 nodes, that second walk cost 5,1 ms of
+     * CPU against 0,38 ms of GPU.
+     */
+    it('composites the picture again rather than redrawing it while nothing it shows has moved', () => {
+      const engine = atRest()
+      engine.setInsetPane(insetPane())
+      drawFrames()
+      rendered.mockClear()
+
+      engine.requestRender()
+      drawFrames()
+
+      // The panes and the quad. The preview itself is not drawn again.
+      expect(rendered).toHaveBeenCalledTimes(2)
+    })
+
+    it('draws it again once what it shows has changed', () => {
+      const engine = atRest()
+      engine.setInsetPane(insetPane())
+      drawFrames()
+      rendered.mockClear()
+
+      engine.invalidateInset()
+      // Past the cap, so the change is not the one being held back — see the test below.
+      vi.advanceTimersByTime(100)
+      engine.requestRender()
+      drawFrames()
+
+      expect(rendered).toHaveBeenCalledTimes(3)
+    })
+
+    /** A corner monitor at 30 Hz beside a view at 120 reads as live and costs a quarter as much. */
+    it('holds the preview to its own cadence while what it shows keeps changing', () => {
+      const engine = atRest()
+      engine.setInsetPane(insetPane())
+      drawFrames()
+      rendered.mockClear()
+
+      // Three frames of playback well inside one cadence window — the panes follow every one.
+      for (let frame = 0; frame < 3; frame += 1) {
+        engine.invalidateInset()
+        vi.advanceTimersByTime(5)
+        engine.requestRender()
+        drawFrames()
+      }
+
+      // Three pane passes and three quads. The preview itself was not drawn once.
+      expect(rendered).toHaveBeenCalledTimes(6)
+    })
+
+    /**
+     * A target that has just been made holds nothing, so the cadence must not hold its first
+     * draw back — compositing it before then samples an empty texture, and a panel dragged wider
+     * would flash the preview black for as long as the cap lasts.
+     */
+    it('draws into a resized target at once, whatever the cadence would have said', () => {
+      const engine = atRest()
+      engine.setInsetPane(insetPane())
+      drawFrames()
+      rendered.mockClear()
+
+      // Inside the cadence window on purpose: this is the frame the cap would have held back.
+      vi.advanceTimersByTime(5)
+      engine.setInsetPane(insetPane({ rect: { x: 500, y: 700, width: 200, height: 112 } }))
+      drawFrames()
+
+      // The panes, the preview into its new target, the quad.
+      expect(rendered).toHaveBeenCalledTimes(3)
+    })
+
+    /**
+     * A change held back by the cap must not be the last word: the frame it arrived on may be the
+     * one the loop goes to sleep after, and the preview would keep showing the instant before.
+     */
+    it('wakes itself to catch up on a change the cadence held back', () => {
+      const engine = atRest()
+      engine.setInsetPane(insetPane())
+      drawFrames()
+      rendered.mockClear()
+
+      engine.invalidateInset()
+      vi.advanceTimersByTime(8)
+      engine.requestRender()
+      drawFrames()
+      expect(rendered).toHaveBeenCalledTimes(2)
+
+      // Nobody asks for anything more; the wake the engine set for itself is what draws it.
+      vi.advanceTimersByTime(INSET_CADENCE_MS)
+      drawFrames()
+      expect(rendered).toHaveBeenCalledTimes(5)
+    })
+
+    /**
+     * Grown, the preview hides the panes whole — and the panes were still being drawn under it,
+     * because the rect handed over is the INSIDE of the DOM frame and never measured as covering
+     * the canvas. Told rather than measured, so the saving actually happens.
+     */
+    it('skips the panes under a preview grown to the whole view', () => {
+      const engine = atRest()
+      rendered.mockClear()
+
+      engine.setInsetPane(
+        insetPane({
+          full: true,
+          rect: { x: 2, y: 2, width: HOST_WIDTH - 4, height: HOST_HEIGHT - 4 },
+        }),
+      )
+      drawFrames()
+
+      // The preview into its target, and the quad. No pane pass at all.
+      expect(rendered).toHaveBeenCalledTimes(2)
+      // The two pixels of canvas the DOM frame leaves outside the picture, which no pane covers
+      // any more: cleared, or they would hold whatever the last frame that drew them left.
+      expect(scissored).toHaveBeenCalledWith(0, 0, HOST_WIDTH, HOST_HEIGHT)
+    })
+
+    /**
+     * `render` redoes the world matrices and every shadow map from scratch, and the pane pass of
+     * this frame has just done both over a scene nothing has moved since — 1,2 ms of the 5,1 the
+     * second pass cost. Only when the panes ran: a grown preview skips them, and the preview
+     * camera is a node of the scene, so its own world matrix rides on that traversal.
+     */
+    it('leaves the matrices and the shadow maps of the frame alone, and puts both flags back', () => {
+      const engine = atRest()
+      const renderer = engine.gl
+      if (!renderer) throw new Error('the viewport mounts a renderer')
+
+      const seen: { matrices: boolean; shadows: boolean }[] = []
+      rendered.mockImplementation(() =>
+        seen.push({
+          matrices: engine.scene.matrixWorldAutoUpdate,
+          shadows: renderer.shadowMap.autoUpdate,
+        }),
+      )
+
+      engine.setInsetPane(insetPane())
+      drawFrames()
+
+      // Panes, preview, quad — and only the preview is spared the two.
+      expect(seen).toEqual([
+        { matrices: true, shadows: true },
+        { matrices: false, shadows: false },
+        { matrices: true, shadows: true },
+      ])
+      expect(engine.scene.matrixWorldAutoUpdate).toBe(true)
+      expect(renderer.shadowMap.autoUpdate).toBe(true)
+    })
+
+    it('keeps them on for a grown preview, which has no pane pass to ride on', () => {
+      const engine = atRest()
+      const renderer = engine.gl
+      if (!renderer) throw new Error('the viewport mounts a renderer')
+
+      const seen: boolean[] = []
+      rendered.mockImplementation(() => seen.push(engine.scene.matrixWorldAutoUpdate))
+
+      engine.setInsetPane(insetPane({ full: true }))
+      drawFrames()
+
+      expect(seen).toEqual([true, true])
     })
 
     it('hides the workshop for the preview pass and puts it back after', () => {
@@ -297,25 +483,33 @@ describe('a viewport', () => {
       const hide = vi.fn(() => restore)
       const engine = atRest({ onInset: hide })
 
-      engine.setInsetPane({
-        camera: new PerspectiveCamera(),
-        backdrop: new Color(),
-        rect: { x: 0, y: 0, width: 100, height: 56 },
-      })
+      engine.setInsetPane(insetPane({ rect: { x: 0, y: 0, width: 100, height: 56 } }))
       drawFrames()
 
       expect(hide).toHaveBeenCalledTimes(1)
       expect(restore).toHaveBeenCalledTimes(1)
     })
 
+    /** A composited frame draws no scene, so it must not hide the workshop of the one on screen. */
+    it('leaves the workshop alone on a frame that only composites', () => {
+      const restore = vi.fn()
+      const hide = vi.fn(() => restore)
+      const engine = atRest({ onInset: hide })
+
+      engine.setInsetPane(insetPane())
+      drawFrames()
+      hide.mockClear()
+
+      engine.requestRender()
+      drawFrames()
+
+      expect(hide).not.toHaveBeenCalled()
+    })
+
     // Without this a drag inside the preview would orbit the view underneath it.
     it('answers no pane for a pointer inside the preview', () => {
       const engine = atRest()
-      engine.setInsetPane({
-        camera: new PerspectiveCamera(),
-        backdrop: new Color(),
-        rect: { x: 500, y: 700, width: 100, height: 56 },
-      })
+      engine.setInsetPane(insetPane())
 
       expect(engine.paneAtPointer(pointerAt(550, 720))).toBeNull()
       expect(engine.paneAtPointer(pointerAt(100, 100))).toBe(0)

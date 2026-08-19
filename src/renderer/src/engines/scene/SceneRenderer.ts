@@ -391,6 +391,15 @@ const LINE_GRAB = 1 / 150
 /** A control point, as the screen sees it. */
 type ProjectedKnob = Projected & { nodeId: string; index: number }
 
+/** What the panel asks the engine to show in the corner — see `setCameraPreview`. */
+export type CameraPreviewRequest = {
+  cameraNodeId: string
+  /** The inside of the DOM frame, in CSS pixels, measured rather than worked out. */
+  rect: PaneRect
+  /** Grown to the whole view. Told, never measured — the rect is two pixels short of it. */
+  full: boolean
+}
+
 /**
  * How near the pointer must fall to grab a knob, in normalised device units — the knob covers
  * `KNOB_SHARE` of the height, which is 2 in this space, and a little over that is what a hand
@@ -686,11 +695,7 @@ export class SceneRenderer {
     // exactly as the texture viewport does. `apply` replaces this the moment a document says so.
     const renderer = this.viewport.gl
     if (renderer) {
-      this.environment = createEnvironment(
-        renderer,
-        this.viewport.scene,
-        this.viewport.requestRender,
-      )
+      this.environment = createEnvironment(renderer, this.viewport.scene, () => this.redraw())
       this.environment.setStudio()
       // Half strength, unlike the texture preview: image-based light comes from everywhere and
       // is occluded by nothing, so at full intensity it fills the very shadows the lights cast.
@@ -744,7 +749,7 @@ export class SceneRenderer {
     if (this.environment) void this.sky.apply(this.environment, state.environment)
     this.attachGizmo()
     this.reportStats()
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -814,7 +819,7 @@ export class SceneRenderer {
     // The clips of every imported model follow the head too, which is what puts them on the band
     // rather than on real time — and what stops a render from writing a frozen character.
     this.animations.seek(time)
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -829,14 +834,14 @@ export class SceneRenderer {
 
     if (!target) {
       this.animations.seek(this.playhead)
-      this.viewport.requestRender()
+      this.redraw()
       return
     }
 
     // Held at one position: the pose is looked AT, so one frame answers it and no loop follows.
     if (!target.playing) {
       this.animations.preview(target.nodeId, target.clipId, target.at)
-      this.viewport.requestRender()
+      this.redraw()
       return
     }
 
@@ -847,7 +852,7 @@ export class SceneRenderer {
         target.clipId,
         target.at + (now - from) / 1000,
       )
-      this.viewport.requestRender()
+      this.redraw()
       // The grace stays on the WALL clock and not on the clip's: a run resumed from a scrub
       // starts past a second in, and would give up before the file it waits for had landed.
       if (length > 0 || now - from < 1000) this.previewFrame = requestAnimationFrame(step)
@@ -1044,7 +1049,7 @@ export class SceneRenderer {
     // `TransformControls` knows only three modes; `select` is ours, and means no gizmo at all.
     if (mode !== 'select') this.gizmo?.setMode(mode)
     this.attachGizmo()
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /** Whether a drag lands on the steps `configure` was given, or wherever it was let go. */
@@ -1063,7 +1068,7 @@ export class SceneRenderer {
     this.gizmo?.setSpace(space)
     // The pivot carries the frame for a group: re-aimed, or it keeps the last one's orientation.
     this.attachGizmo()
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /** Frames whatever is selected, gizmo or not: a mode with no gizmo still has a selection. */
@@ -1079,7 +1084,7 @@ export class SceneRenderer {
     // Moving an orthographic camera changes nothing of what it shows: without this, `F` recentred
     // the orbit and left the screen exactly as it was.
     this.viewport.refit()
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /** Looks at the scene from one of the six sides, keeping the distance the view already had. */
@@ -1093,7 +1098,7 @@ export class SceneRenderer {
 
     camera.position.set(x, y, z)
     orbit.update()
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -1158,7 +1163,7 @@ export class SceneRenderer {
         orbit.update()
       }
     }
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -1205,7 +1210,7 @@ export class SceneRenderer {
     if (gizmo.camera !== camera) {
       gizmo.camera = camera
       // The handles are SIZED in the camera they are aimed from, and a hover asks for no frame.
-      this.viewport.requestRender()
+      this.repaint()
       // On the CHANGE alone: this walks whatever the gizmo holds, and it holds the object itself
       // rather than a pivot for a lone selection — 13.6 µs on an empty pivot against 2.7 ms on a
       // 20 000-node model, which per pointer move would be a third of a frame just to hover.
@@ -1329,7 +1334,7 @@ export class SceneRenderer {
     const helper = new ViewHelper(this.viewport.camera, canvas)
     tuneViewHelper(helper)
     this.viewHelper = helper
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -1353,7 +1358,7 @@ export class SceneRenderer {
     for (const object of this.objects.values()) {
       applyWireOverlay(object, anyEdges, this.wireMaterial, quads)
     }
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /** Whether any view is asking for edges at all — what decides if the geometry is built. */
@@ -1407,7 +1412,7 @@ export class SceneRenderer {
   private refreshSkeletons(): void {
     for (const helper of this.skeletons.values()) helper.visible = this.skeletonsVisible()
     for (const joints of this.joints.values()) joints.points.visible = this.skeletonsVisible()
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -1485,7 +1490,7 @@ export class SceneRenderer {
       // and without this a locally rigged character has a skeleton nothing can show or pick.
       this.bindSkeleton(nodeId, holder, true)
       this.options.onRig?.(nodeId, rigStateOf(holder, this.animations.clipsOf(nodeId)))
-      this.viewport.requestRender()
+      this.redraw()
     } finally {
       this.skinning.delete(nodeId)
       // In every exit, cancellation included: what says "binding" is the progress being there,
@@ -1675,13 +1680,44 @@ export class SceneRenderer {
    *
    * The rectangle is the caller's because the frame drawn around the preview is DOM: two
    * rectangles that agree until one of them drifts would be a border sitting beside its picture.
+   * `full` is told for the same reason — the rect is the INSIDE of that frame, so it never
+   * measures as covering the canvas even when it does.
    */
-  setCameraPreview(cameraNodeId: string | null, rect: PaneRect | null): void {
-    const camera = this.cameraObject(cameraNodeId)
+  setCameraPreview(preview: CameraPreviewRequest | null): void {
+    const camera = this.cameraObject(preview?.cameraNodeId ?? null)
+    if (!camera || !preview) return this.viewport.setInsetPane(null)
+
     // The viewport's own colour, never a panel one: what this shows is a RENDER, and a preview
     // painted on studio chrome would promise a film nobody is going to get.
     const backdrop = new Color(this.viewport.paletteToken('--color-viewport'))
-    this.viewport.setInsetPane(camera && rect ? { camera, rect, backdrop } : null)
+    this.viewport.setInsetPane({ camera, rect: preview.rect, backdrop, full: preview.full })
+  }
+
+  /**
+   * Asks for a frame, and says that what the camera preview shows has moved with it.
+   *
+   * The ONE way this engine asks for a frame, and a guard holds it to that
+   * (`SceneRenderer.redraws-the-preview.test.ts`). Everything here changes the scene, the pose or
+   * the lens — which is exactly what a preview is a picture of — so the two travel together.
+   * What must NOT come through here is the viewport's own camera: orbiting, flying and settling
+   * ask for frames straight from `ViewportEngine`, and those frames reuse the picture rather
+   * than walking the scene a second time.
+   */
+  private redraw(): void {
+    this.viewport.invalidateInset()
+    this.viewport.requestRender()
+  }
+
+  /**
+   * Asks for a frame and says nothing about the preview: the workshop moved, not the scene.
+   *
+   * The other half of `redraw`, and named rather than left as a bare call so the two intents can
+   * be told apart at a glance — and so the guard can be a plain "none anywhere else" instead of a
+   * list of exemptions that would go stale. What belongs here is what `hideWorkshop` hides: the
+   * gizmo, the helpers, the grid. Nothing a camera of the scene can film.
+   */
+  private repaint(): void {
+    this.viewport.requestRender()
   }
 
   /** The camera a node id stands for, or `null` when nothing in the scene answers to it. */
@@ -1797,14 +1833,14 @@ export class SceneRenderer {
       restore()
       // Where the head was before the film was asked for: a render is not an edit.
       this.setPlayhead(head)
-      this.viewport.requestRender()
+      this.redraw()
     }
   }
 
   setMotion(held: Set<MotionId>): void {
     this.held.clear()
     for (const motion of held) this.held.add(motion)
-    if (this.flying && this.held.size > 0) this.viewport.requestRender()
+    if (this.flying && this.held.size > 0) this.redraw()
   }
 
   /** Whether the right button is down, which is the whole of what flying means here. */
@@ -1922,7 +1958,7 @@ export class SceneRenderer {
     }
 
     if (gridMoved && this.viewport.canvas) this.applyPalette()
-    if (gridMoved || lensMoved || shadowsMoved) this.viewport.requestRender()
+    if (gridMoved || lensMoved || shadowsMoved) this.redraw()
   }
 
   private applySnap(): void {
@@ -1950,7 +1986,7 @@ export class SceneRenderer {
     this.applied.clear()
     for (const node of nodes) this.syncNode(node)
 
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /** The backdrop, unless a sky is hanging behind the scene — in which case the sky is it. */
@@ -2045,7 +2081,7 @@ export class SceneRenderer {
       this.animations.apply(node.id, node.model.lanes ?? [])
       this.ensureBundled(node.id, node.model.lanes ?? [])
       this.holdPreview(node.id)
-      this.viewport.requestRender()
+      this.redraw()
     }
 
     // A carried object holds a transform relative to the pivot, and the state holds one relative
@@ -2216,7 +2252,7 @@ export class SceneRenderer {
     // that was there before the face arrived — an empty one at first, the previous words after an
     // edit — and outline a mesh that no longer exists until they are built again.
     if (this.needsEdges()) this.applyDisplay(object)
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -2241,12 +2277,16 @@ export class SceneRenderer {
 
       // The instance, never the cached source: its materials are shared with every other node
       // built from the same file, and `createModelTextures` is what clones them before writing.
-      const maps = createModelTextures(this.textureCache, holder, this.viewport.requestRender, () =>
-        reportFailure(
-          'scene.texture',
-          assetId,
-          new Error('this model carries no material a map can be written into'),
-        ),
+      const maps = createModelTextures(
+        this.textureCache,
+        holder,
+        () => this.redraw(),
+        () =>
+          reportFailure(
+            'scene.texture',
+            assetId,
+            new Error('this model carries no material a map can be written into'),
+          ),
       )
       this.modelMaps.set(node.id, maps)
       if (applied.type === 'model') maps.apply(applied.model.textures)
@@ -2292,7 +2332,7 @@ export class SceneRenderer {
       if (this.needsEdges()) this.applyDisplay(holder)
       // A dense model is what makes a click cost a frame — measured in `scenePicking.bench.ts`.
       // Off the UI thread, and after the render: the viewport shows the file before the tree.
-      this.viewport.requestRender()
+      this.redraw()
       // Reported rather than swallowed, and under a scope of its own: `reportFailure` says a
       // subject once per scope, so sharing `scene.model` would let a tree that failed swallow the
       // message of a load that fails later for the same asset — two failures nothing relates.
@@ -2378,7 +2418,7 @@ export class SceneRenderer {
         this.animations.fileNamesOf(nodeId),
         this.animations.lengthsOf(nodeId),
       )
-      this.viewport.requestRender()
+      this.redraw()
     } catch (error) {
       // Under a scope of its own: a failing animation must not swallow what a failing model says.
       reportFailure('scene.animation', clip.url, error)
@@ -2404,7 +2444,7 @@ export class SceneRenderer {
       }
     }
 
-    this.viewport.requestRender()
+    this.redraw()
     if (failures.length > 0) throw failures[0]
   }
 
@@ -2427,12 +2467,7 @@ export class SceneRenderer {
     const mesh = new Mesh(geometryFor(node.geometry), material)
     // A texture arrives long after the frame that asked for it: the render is requested again
     // when it lands, or the viewport would show the mesh untextured until something else moved.
-    const textures = createMaterialTextures(
-      this.textureCache,
-      mesh,
-      material,
-      this.viewport.requestRender,
-    )
+    const textures = createMaterialTextures(this.textureCache, mesh, material, () => this.redraw())
     textures.apply(node.material)
     this.textures.set(node.id, textures)
 
@@ -2446,7 +2481,7 @@ export class SceneRenderer {
     const sprite = new Sprite(material)
     // Like a mesh's maps: the picture arrives long after the frame that asked for it, and the
     // render has to be asked for again when it lands.
-    const texture = createSpriteTexture(this.textureCache, material, this.viewport.requestRender)
+    const texture = createSpriteTexture(this.textureCache, material, () => this.redraw())
     texture.apply(node.sprite)
     this.spriteMaps.set(node.id, texture)
 
@@ -2626,7 +2661,7 @@ export class SceneRenderer {
 
   private readonly onGizmoChange = (): void => {
     this.dragged = true
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -2715,7 +2750,7 @@ export class SceneRenderer {
   setPickedBone(picked: { nodeId: string; bone: string } | null): void {
     this.pickedBone = picked
     this.attachGizmo()
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -2728,7 +2763,7 @@ export class SceneRenderer {
   setPickedPathPoint(picked: { nodeId: string; index: number } | null): void {
     this.pickedPathPoint = picked
     this.attachGizmo()
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -2752,7 +2787,7 @@ export class SceneRenderer {
       this.applied.delete(move.id)
       this.syncNode(node)
     }
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -2783,7 +2818,7 @@ export class SceneRenderer {
       this.viewport.freezePanes(true)
       // Before the first frame of the flight, or its opening step spans the whole idle time.
       this.viewport.resetClock()
-      this.viewport.requestRender()
+      this.redraw()
       return
     }
     if (event.button !== 0 || this.gizmo?.dragging) return

@@ -1,14 +1,18 @@
 import {
   ACESFilmicToneMapping,
   Color,
+  LinearSRGBColorSpace,
+  MeshBasicMaterial,
   NoToneMapping,
   OrthographicCamera,
   PerspectiveCamera,
   Scene,
   Vector3,
   WebGLRenderer,
+  WebGLRenderTarget,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { createGpuPipeline, type GpuPipeline } from '../gpu/gpuPipeline'
 import { token } from '../core/palette'
 import { aspectLoan } from './aspectLoan'
 import { frameDelta } from './frameClock'
@@ -139,7 +143,27 @@ export type InsetPane = {
    * one reads the viewport through is not a preview.
    */
   backdrop: Color
+  /**
+   * Grown to the whole view, which is what lets the panes under it be skipped.
+   *
+   * Told rather than measured. The rectangle handed over is the INSIDE of the DOM frame, so it
+   * is two pixels short of the canvas on every side — a comparison against the canvas therefore
+   * answered "no" at every size, and the panes went on being drawn under a picture that hid
+   * them whole.
+   */
+  full: boolean
 }
+
+/**
+ * How often the preview is redrawn while what it shows keeps changing — a corner monitor at
+ * 30 Hz beside a view at 120 reads as live, and costs a quarter as much.
+ *
+ * A CAP, never a clock: a preview whose content has not moved is not redrawn at all.
+ */
+export const INSET_CADENCE_MS = 1000 / 30
+
+/** What composites the cached preview: the studio's own full-frame quad, wearing its texture. */
+type InsetBlit = { quad: GpuPipeline; material: MeshBasicMaterial }
 
 /**
  * One of the views beside the main one. It carries both cameras, exactly as the main one does:
@@ -206,6 +230,22 @@ export class ViewportEngine {
   private readonly activeRegion: PaneRect = { x: 0, y: 0, width: 0, height: 0 }
   /** What the camera preview shows, or `null` when it is closed. */
   private inset: InsetPane | null = null
+  /** Where the preview was last drawn, kept so a frame that changed nothing only composites it. */
+  private insetHeld: WebGLRenderTarget | null = null
+  private insetBlit: InsetBlit | null = null
+  /**
+   * Whether what the preview shows has moved since it was last drawn.
+   *
+   * Open by default and closed only by a draw: the cost of one preview too many is a frame, and
+   * the cost of one too few is a monitor showing the wrong instant.
+   */
+  private insetStale = true
+  /** Before any clock there is, so the FIRST preview is never the one the cadence holds back. */
+  private insetDrawnAt = Number.NEGATIVE_INFINITY
+  /** The wake that redraws a preview the cap held back, so the last change is never dropped. */
+  private insetCatchUp: ReturnType<typeof setTimeout> | null = null
+  /** Read back once per drawn preview rather than allocated — this sits on the frame path. */
+  private readonly insetClear = new Color()
   /** How tall the added views see, in world units. Set by whoever knows what the scene holds. */
   private extraHeight = EXTRA_PANE_HEIGHT
   private frame: number | null = null
@@ -453,7 +493,25 @@ export class ViewportEngine {
    */
   setInsetPane(pane: InsetPane | null): void {
     this.inset = pane
+    this.invalidateInset()
     this.requestRender()
+  }
+
+  /**
+   * Says that what the preview SHOWS has changed — as opposed to `requestRender`, which says the
+   * canvas has to be painted again.
+   *
+   * The two are not the same question, and that is the whole gain: orbiting, flying and settling
+   * move the view without moving one thing a scene camera films, and those frames now composite
+   * a picture already drawn instead of walking the scene a second time. Measured on a scene of
+   * 1 504 nodes: the second pass cost 5,1 ms of CPU for 0,38 ms of GPU.
+   *
+   * Whoever owns the scene calls this — `SceneRenderer.redraw` does both at once, and a guard
+   * holds it to that, because a missed call shows the wrong instant while a spare one costs a
+   * single frame.
+   */
+  invalidateInset(): void {
+    this.insetStale = true
   }
 
   private createExtra(): ExtraPane {
@@ -688,6 +746,10 @@ export class ViewportEngine {
     this.host?.removeEventListener('pointermove', this.armPaneUnderPointer, true)
     this.host = null
 
+    if (this.insetCatchUp !== null) clearTimeout(this.insetCatchUp)
+    this.insetCatchUp = null
+    this.disposeInset()
+
     const canvas = this.renderer?.domElement
     this.renderer?.dispose()
     this.renderer = null
@@ -718,6 +780,9 @@ export class ViewportEngine {
 
   setBackgroundColor(css: string): void {
     this.scene.background = css ? new Color(css) : null
+    // What stands behind the objects is part of what a scene camera films, so the preview is as
+    // out of date as the panes are.
+    this.invalidateInset()
     this.requestRender()
   }
 
@@ -838,17 +903,8 @@ export class ViewportEngine {
   }
 
   /** Whether the preview leaves nothing of the panes to see — its grown state, in practice. */
-  private insetCoversAll(renderer: WebGLRenderer): boolean {
-    const rect = this.inset?.rect
-    if (!rect) return false
-
-    const canvas = renderer.domElement
-    return (
-      rect.x <= 0 &&
-      rect.y <= 0 &&
-      rect.width >= canvas.clientWidth &&
-      rect.height >= canvas.clientHeight
-    )
+  private insetCoversAll(): boolean {
+    return this.inset?.full === true
   }
 
   /**
@@ -858,37 +914,194 @@ export class ViewportEngine {
    * drawn instead of dividing the surface, and a context per preview is what `scene-stage` pays
    * elsewhere and says why.
    */
-  private renderInset(renderer: WebGLRenderer): void {
+  private renderInset(renderer: WebGLRenderer, panesDrawn: boolean): void {
     const inset = this.inset
     if (!inset) return
 
-    const height = renderer.domElement.clientHeight
-    const gl = glRect(inset.rect, height)
+    const ratio = renderer.getPixelRatio()
+    const width = Math.max(1, Math.round(inset.rect.width * ratio))
+    const height = Math.max(1, Math.round(inset.rect.height * ratio))
+    const target = this.insetTargetOf(renderer, width, height)
+
+    const now = performance.now()
+    if (this.insetStale && now - this.insetDrawnAt >= INSET_CADENCE_MS) {
+      this.drawInset(renderer, inset, target, panesDrawn)
+      this.insetStale = false
+      this.insetDrawnAt = now
+    } else if (this.insetStale) {
+      this.catchUpInset(now)
+    }
+
+    this.compositeInset(renderer, inset)
+  }
+
+  /**
+   * The target the preview is drawn into, at the size it is shown — one device pixel per pixel,
+   * so the picture is the one the direct pass used to put on the canvas.
+   *
+   * Multisampled to the same count as the canvas: the drawing buffer is antialiased, and a
+   * preview that stopped being would read as a downgrade rather than as a saving.
+   *
+   * **What it costs, said out loud**: a GROWN preview holds a target the size of the canvas —
+   * at 2736×1848 with 4 samples, some 160 MB of colour and depth for as long as it stays grown,
+   * freed when it is folded back or closed. Bought deliberately: at that size the panes are
+   * skipped and the frame went from 7,4 ms of CPU to nothing, on a machine where the CPU is what
+   * runs out first.
+   */
+  private insetTargetOf(renderer: WebGLRenderer, width: number, height: number): WebGLRenderTarget {
+    const held = this.insetHeld
+    if (held && held.width === width && held.height === height) return held
+
+    held?.dispose()
+    // What the DRAWING BUFFER is antialiased to, held to what the context can offer. The ceiling
+    // comes from three rather than from `gl.MAX_SAMPLES`, which the WebGL1 typing has no name for.
+    const gl = renderer.getContext()
+    const samples = Math.max(
+      0,
+      Math.min(Number(gl.getParameter(gl.SAMPLES) ?? 0), renderer.capabilities.maxSamples),
+    )
+    const target = new WebGLRenderTarget(width, height, { samples })
+    // Linear, which is what a render into a target writes whatever the texture says — three picks
+    // the WORKING space for anything but the canvas (`WebGLRenderer`, the `colorSpace` it hands
+    // its output pass). Declared rather than left at the default so the quad below does not
+    // decode a second time.
+    target.texture.colorSpace = LinearSRGBColorSpace
+    this.insetBlitOf(renderer).material.map = target.texture
+
+    this.insetHeld = target
+    // A target that has just been made holds NOTHING, so the cadence must not hold its first
+    // draw back: compositing it before then samples an empty texture, and a panel being dragged
+    // wider would flash the preview black for as long as the cap lasts.
+    this.insetStale = true
+    this.insetDrawnAt = Number.NEGATIVE_INFINITY
+    return target
+  }
+
+  /** Draws the preview into its target. The costly half, and the one the cache exists to skip. */
+  private drawInset(
+    renderer: WebGLRenderer,
+    inset: InsetPane,
+    target: WebGLRenderTarget,
+    panesDrawn: boolean,
+  ): void {
     const restore = this.options.onInset?.()
-
-    const held = renderer.getClearColor(new Color())
+    renderer.getClearColor(this.insetClear)
     const heldAlpha = renderer.getClearAlpha()
-    const loan = aspectLoan(inset.rect.width, inset.rect.height)
+    const heldAutoClear = renderer.autoClear
+    const heldMatrix = this.scene.matrixWorldAutoUpdate
+    const heldShadows = renderer.shadowMap.autoUpdate
+    const loan = aspectLoan(target.width, target.height)
 
-    renderer.setScissorTest(true)
+    // Both of these are redone from scratch by every `render`, and the pane pass of THIS frame
+    // has just done them over a scene nothing has moved since — measured at 1,2 ms of the 5,1 the
+    // second pass cost. Only when the panes actually ran: the preview camera is a node of the
+    // scene, so `render` leaves its world matrix to the scene traversal (`camera.parent !== null`
+    // skips the camera's own update), and a grown preview skips the panes entirely.
+    if (panesDrawn) {
+      this.scene.matrixWorldAutoUpdate = false
+      renderer.shadowMap.autoUpdate = false
+    }
+
     try {
-      renderer.setViewport(gl.x, gl.y, gl.width, gl.height)
-      renderer.setScissor(gl.x, gl.y, gl.width, gl.height)
-      // Cleared to an opaque colour before anything is drawn: `clear` obeys the scissor, so this
-      // paints the preview's rectangle and nothing else.
+      renderer.setRenderTarget(target)
+      renderer.autoClear = true
       renderer.setClearColor(inset.backdrop, 1)
-      renderer.clear(true, true, false)
       loan.frame(inset.camera)
       renderer.render(this.scene, inset.camera)
     } finally {
       loan.restore()
-      renderer.setClearColor(held, heldAlpha)
-      // Every one of them in a `finally`, as `renderPanes` does: a throw here would otherwise
-      // leave the workshop hidden and every later frame clipped to this corner.
+      this.scene.matrixWorldAutoUpdate = heldMatrix
+      renderer.shadowMap.autoUpdate = heldShadows
+      renderer.autoClear = heldAutoClear
+      renderer.setClearColor(this.insetClear, heldAlpha)
+      renderer.setRenderTarget(null)
+      // In a `finally`, as `renderPanes` does: a throw here would otherwise leave the workshop
+      // hidden for every later frame.
       restore?.()
-      renderer.setScissorTest(false)
-      renderer.setViewport(0, 0, renderer.domElement.clientWidth, height)
     }
+  }
+
+  /**
+   * Puts the drawn preview on the canvas: one textured quad inside the scissor, and nothing else.
+   *
+   * This is what a frame costs when only the view moved — one draw call against the second full
+   * traversal of the scene the direct pass paid for.
+   */
+  private compositeInset(renderer: WebGLRenderer, inset: InsetPane): void {
+    const surface = renderer.domElement.clientHeight
+    const gl = glRect(inset.rect, surface)
+    const blit = this.insetBlitOf(renderer)
+    const heldAutoClear = renderer.autoClear
+
+    renderer.setScissorTest(true)
+    try {
+      // A grown preview leaves the panes undrawn, and the DOM frame keeps two pixels of canvas
+      // outside the picture: cleared here, or those pixels would hold whatever the last frame
+      // that did draw them left behind.
+      if (this.insetCoversAll()) {
+        renderer.setScissor(0, 0, renderer.domElement.clientWidth, surface)
+        renderer.setClearColor(inset.backdrop, 1)
+        renderer.clear(true, true, false)
+      }
+      renderer.setViewport(gl.x, gl.y, gl.width, gl.height)
+      renderer.setScissor(gl.x, gl.y, gl.width, gl.height)
+      renderer.autoClear = false
+      blit.quad.renderToScreen(blit.material)
+    } finally {
+      renderer.autoClear = heldAutoClear
+      renderer.setScissorTest(false)
+      renderer.setViewport(0, 0, renderer.domElement.clientWidth, surface)
+    }
+  }
+
+  /** The target and the quad, both held by the GPU until something says otherwise. */
+  private disposeInset(): void {
+    this.insetHeld?.dispose()
+    this.insetHeld = null
+
+    this.insetBlit?.quad.dispose()
+    this.insetBlit?.material.dispose()
+    this.insetBlit = null
+  }
+
+  /**
+   * The quad that composites the preview, and the material it wears.
+   *
+   * `GpuPipeline` is the studio's own full-frame quad — the same one every image filter draws
+   * through — rather than a second scene and camera written here.
+   */
+  private insetBlitOf(renderer: WebGLRenderer): InsetBlit {
+    if (this.insetBlit) return this.insetBlit
+
+    this.insetBlit = {
+      quad: createGpuPipeline(renderer),
+      // Applied on the way OUT and never inside the target: three skips tone mapping for anything
+      // but the canvas (`WebGLPrograms`, `currentRenderTarget === null`), so the quad is where the
+      // preview meets the same curve the panes do.
+      material: new MeshBasicMaterial({
+        depthTest: false,
+        depthWrite: false,
+        toneMapped: renderer.toneMapping !== NoToneMapping,
+      }),
+    }
+    return this.insetBlit
+  }
+
+  /**
+   * Wakes the loop once the cap has run out, so a change held back is never the last word.
+   *
+   * Without it a preview whose content moved on the very frame the loop went to sleep would keep
+   * showing the instant before, until something else asked for a frame.
+   */
+  private catchUpInset(now: number): void {
+    if (this.insetCatchUp !== null) return
+    this.insetCatchUp = setTimeout(
+      () => {
+        this.insetCatchUp = null
+        this.requestRender()
+      },
+      Math.max(0, INSET_CADENCE_MS - (now - this.insetDrawnAt)),
+    )
   }
 
   /**
@@ -923,10 +1136,11 @@ export class ViewportEngine {
 
     // The panes are skipped when the preview covers them whole: drawing a scene twice over to
     // throw the first one away is the most expensive thing a frame can do.
-    if (!this.insetCoversAll(renderer)) this.renderPanes(renderer)
+    const panesDrawn = !this.insetCoversAll()
+    if (panesDrawn) this.renderPanes(renderer)
     // After the panes and before the overlay: the preview covers the view it sits on, and the
     // trihedron stays on top of both.
-    this.renderInset(renderer)
+    this.renderInset(renderer, panesDrawn)
 
     const overlay = this.options.onOverlay
     if (overlay) {

@@ -40,7 +40,7 @@ describe('the camera preview', () => {
     render(<CameraPreview documentId={DOCUMENT} />)
 
     expect(screen.queryByText('Camera A')).not.toBeInTheDocument()
-    expect(setCameraPreview).toHaveBeenLastCalledWith(null, null)
+    expect(setCameraPreview).toHaveBeenLastCalledWith(null)
   })
 
   it('names the selected camera, and hands the engine the rectangle it draws into', () => {
@@ -48,10 +48,11 @@ describe('the camera preview', () => {
     render(<CameraPreview documentId={DOCUMENT} />)
 
     expect(screen.getByText('Camera A')).toBeInTheDocument()
-    expect(setCameraPreview).toHaveBeenLastCalledWith(
-      'Camera A',
-      expect.objectContaining({ width: expect.any(Number) }),
-    )
+    expect(setCameraPreview).toHaveBeenLastCalledWith({
+      cameraNodeId: 'Camera A',
+      rect: expect.objectContaining({ width: expect.any(Number) }),
+      full: false,
+    })
   })
 
   /**
@@ -97,13 +98,23 @@ describe('the camera preview', () => {
     expect(source).toMatch(/ring-\d/)
   })
 
+  /**
+   * The grown state is TOLD to the engine rather than read off the rectangle, and the assertion
+   * follows: this test used to check `x: 0`, which jsdom answers for every rectangle it is asked
+   * about — it held just as well on the preview still folded in its corner. What the engine acts
+   * on is `full`, since that is what lets it skip the panes underneath.
+   */
   it('grows to the whole view and comes back to its corner', async () => {
     install({ nodes: [cameraNodeFixture('cam-a')], selectedIds: ['cam-a'] })
     render(<CameraPreview documentId={DOCUMENT} />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Agrandir/ }))
+    expect(setCameraPreview).toHaveBeenLastCalledWith(expect.objectContaining({ full: false }))
 
+    await userEvent.click(screen.getByRole('button', { name: /Agrandir/ }))
     expect(useSceneViews.getState().views[DOCUMENT]?.previewSize).toBe('full')
-    expect(setCameraPreview).toHaveBeenLastCalledWith('cam-a', expect.objectContaining({ x: 0 }))
+    expect(setCameraPreview).toHaveBeenLastCalledWith(expect.objectContaining({ full: true }))
+
+    await userEvent.click(screen.getByRole('button', { name: /Remettre/ }))
+    expect(setCameraPreview).toHaveBeenLastCalledWith(expect.objectContaining({ full: false }))
   })
 })
