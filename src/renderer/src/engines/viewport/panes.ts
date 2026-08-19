@@ -147,10 +147,14 @@ export function paneAt(rects: readonly PaneRect[], x: number, y: number): number
  * three, which is a quad view that draws exactly one view.
  */
 export function glRect(rect: PaneRect, surfaceHeight: number): PaneRect {
-  return {
-    x: rect.x,
-    y: surfaceHeight - rect.y - rect.height,
-    width: rect.width,
-    height: rect.height,
-  }
+  return intoGlRect(rect, surfaceHeight, { x: 0, y: 0, width: 0, height: 0 })
+}
+
+/** The same flip written into a rectangle one already holds — for the callers on a hot path. */
+export function intoGlRect(rect: PaneRect, surfaceHeight: number, into: PaneRect): PaneRect {
+  into.x = rect.x
+  into.y = surfaceHeight - rect.y - rect.height
+  into.width = rect.width
+  into.height = rect.height
+  return into
 }

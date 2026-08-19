@@ -16,6 +16,7 @@ import { emptyGpuStats, recordFrame, type GpuStats } from './gpuStats'
 import {
   glRect,
   inRect,
+  intoGlRect,
   paneAt,
   paneCount,
   paneRects,
@@ -85,6 +86,16 @@ export type ViewportEngineOptions = {
    * would repaint everything reading it for a drag that is not over.
    */
   onCameraSettled?: (pane: number) => void
+  /**
+   * Called once the pointer has settled which pane is being worked in, and BEFORE any listener of
+   * the canvas sees that same event — this runs in the capture phase, on the host.
+   *
+   * The seam a control that reads its own pointer events needs, `TransformControls` being the one
+   * that does: it casts from the camera it is holding at that instant, so whoever hands it that
+   * camera has to run first. Left to the caller's own listener, the order would rest on which of
+   * the two `mount` calls came first, and nothing would guard it.
+   */
+  onPaneArmed?: () => void
   fieldOfView?: number
   near?: number
   far?: number
@@ -191,6 +202,8 @@ export class ViewportEngine {
   private readonly extras: ExtraPane[] = []
   /** Where each pane sits, in CSS pixels. One entry in a single layout, four in a quad. */
   private rects: PaneRect[] = []
+  /** What `activePaneRegion` answers with, rewritten in place — see the note there. */
+  private readonly activeRegion: PaneRect = { x: 0, y: 0, width: 0, height: 0 }
   /** What the camera preview shows, or `null` when it is closed. */
   private inset: InsetPane | null = null
   /** How tall the added views see, in world units. Set by whoever knows what the scene holds. */
@@ -375,10 +388,18 @@ export class ViewportEngine {
     // — and the camera a gizmo grabs from — one event behind. `null` off the surface.
     if (thawing) this.active = this.paneAtPointer(this.lastPointer) ?? this.active
 
+    this.armOrbits(frozen ? null : this.active)
+  }
+
+  /**
+   * Hands the orbits to one pane and takes them from every other. `null` leaves all of them off,
+   * which is both a frozen viewport and a pointer that has left the surface.
+   */
+  private armOrbits(owner: number | null): void {
     // A single layout keeps `active` at 0, so the main orbit reads the same test as the others.
-    if (this.controls) this.controls.enabled = !frozen && this.active === 0
+    if (this.controls) this.controls.enabled = owner === 0
     for (const [index, pane] of this.extras.entries()) {
-      if (pane.controls) pane.controls.enabled = !frozen && this.active === index + 1
+      if (pane.controls) pane.controls.enabled = owner === index + 1
     }
   }
 
@@ -391,7 +412,9 @@ export class ViewportEngine {
     const rect = this.rects[this.active]
     if (this.layout === 'single' || !canvas || !rect) return null
 
-    return glRect(rect, canvas.clientHeight)
+    // Into a rect of its own: a caller aiming a control reads this on every pointer move, and the
+    // answer is four numbers. The reference is handed out, so nobody may hold on to it.
+    return intoGlRect(rect, canvas.clientHeight, this.activeRegion)
   }
 
   /** Which pane a pointer is over, or `null` when it is off the surface entirely. */
@@ -536,14 +559,16 @@ export class ViewportEngine {
     // returns on, and `freezePanes` has nothing to re-arm from unless that move was recorded.
     this.lastPointer.clientX = event.clientX
     this.lastPointer.clientY = event.clientY
-    if (this.layout === 'single' || this.frozen) return
 
-    const over = this.paneAtPointer(event)
-    if (over !== null) this.active = over
-    if (this.controls) this.controls.enabled = over === 0
-    for (const [index, pane] of this.extras.entries()) {
-      if (pane.controls) pane.controls.enabled = over === index + 1
+    if (this.layout !== 'single' && !this.frozen) {
+      const over = this.paneAtPointer(event)
+      if (over !== null) this.active = over
+      this.armOrbits(over)
     }
+
+    // Outside the guard above, and that is the point: a caller that thaws does it from here, and
+    // it would never get the chance if a frozen viewport returned before saying anything.
+    this.options.onPaneArmed?.()
   }
 
   /**

@@ -416,6 +416,34 @@ describe('a viewport', () => {
     })
 
     /**
+     * The seam `TransformControls` needs: it grabs from the camera it holds, so whoever aims it
+     * has to run before the canvas hears the event. Through the viewport rather than a listener
+     * of the caller's own, or the order would rest on which `mount` ran first.
+     */
+    it('says the pane is armed before the canvas hears the event, and says it while frozen', () => {
+      const armed: number[] = []
+      const engine = mounted({ onPaneArmed: () => armed.push(engine.activePane) })
+      engine.setLayout('quad')
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      const afterCanvas: number[] = []
+      canvas.addEventListener('pointermove', () => afterCanvas.push(armed.length))
+      canvas.dispatchEvent(pointerAt(HOST_WIDTH - 10, HOST_HEIGHT - 10))
+
+      expect(armed).toEqual([3])
+      expect(afterCanvas).toEqual([1])
+
+      // Frozen, nothing is armed — but the caller still has to be told, since thawing happens
+      // from that very call. Without it a freeze that outlived its gesture would never lift.
+      engine.freezePanes(true)
+      canvas.dispatchEvent(pointerAt(10, 10))
+
+      expect(engine.activePane).toBe(3)
+      expect(armed).toHaveLength(2)
+    })
+
+    /**
      * A gizmo handle held, a camera flying: the gesture belongs to whoever started it. Without
      * this the arming above answered every pixel of that same drag — the view orbited under the
      * handle being pulled, and the working view could change halfway through.

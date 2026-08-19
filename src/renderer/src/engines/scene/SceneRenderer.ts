@@ -446,6 +446,9 @@ export class SceneRenderer {
     onFrame: delta => this.advance(delta),
     onOverlay: renderer => this.viewHelper?.render(renderer),
     onPane: (index, camera) => this.dressPane(index, camera),
+    // Before `TransformControls` reads the same event — see `onPaneArmed`, which says why the
+    // viewport owns this call rather than a listener of this file.
+    onPaneArmed: () => this.onPointerAim(),
     // A preview shows what the camera FILMS: the same pass the film and the montage take.
     onInset: () => this.hideWorkshop(),
     // Read back rather than computed here: only the controls know where an orbit ended up.
@@ -543,9 +546,10 @@ export class SceneRenderer {
   private flew = false
 
   private gizmo: TransformControls | null = null
-  /** Kept so the capture listeners posted on it at mount come off at dispose. */
-  private host: HTMLElement | null = null
-  /** The rectangle handed to the gizmo, rewritten in place — see `aimGizmo`. */
+  /**
+   * The rectangle handed to the gizmo, rewritten in place: this is set on every pointer move, and
+   * `activePaneRegion` writes into a rect of its own for the same reason.
+   */
   private readonly gizmoRegion = new Vector4()
   private viewHelper: ViewHelper | null = null
   private grid: GridHelper | null = null
@@ -648,7 +652,6 @@ export class SceneRenderer {
 
   mount(host: HTMLElement): void {
     this.viewport.mount(host)
-    this.host = host
 
     const canvas = this.viewport.canvas
     const camera = this.viewport.camera
@@ -666,7 +669,7 @@ export class SceneRenderer {
     // `onPointerDown` hovers and THEN grabs, so the axis is decided inside the very call that
     // uses the plane. This fires synchronously on that decision, which is the only moment left
     // to turn the plane before it is read.
-    gizmo.addEventListener('axis-changed', this.onGizmoAxisChanged)
+    gizmo.addEventListener('axis-changed', this.refreshGizmoMatrices)
     gizmo.addEventListener('dragging-changed', this.onDraggingChanged)
     gizmo.addEventListener('objectChange', this.onGizmoChange)
     gizmo.addEventListener('mouseDown', this.onGizmoGrab)
@@ -696,11 +699,6 @@ export class SceneRenderer {
 
     this.buildViewHelper()
 
-    // Capture, on the HOST: `TransformControls` listens on this canvas, and an aim posted after
-    // it hands the gizmo the camera of the view one has just left. Registered after
-    // `viewport.mount`, so the pane is armed first. Untested — mounting needs a WebGL context.
-    host.addEventListener('pointermove', this.onPointerAim, true)
-    host.addEventListener('pointerdown', this.onPointerAim, true)
     canvas.addEventListener('pointerdown', this.onPointerDown)
     canvas.addEventListener('contextmenu', this.onContextMenu)
     window.addEventListener('pointerup', this.onPointerUp)
@@ -1196,10 +1194,8 @@ export class SceneRenderer {
 
   /**
    * Hands the gizmo to the view being worked in — its camera, and the rectangle that view fills.
-   *
-   * `TransformControls` casts its grab ray from the camera it holds, and reads its own pointer
-   * events against `viewport`, the whole canvas until told otherwise: in a quad layout that
-   * normalises a click against four times the surface it was aimed at, and no handle ever lights.
+   * Left untold, `TransformControls` reads its own pointer events against the WHOLE canvas, which
+   * in a quad layout normalises a click against four times the surface it was aimed at.
    */
   private aimGizmo(): void {
     const gizmo = this.gizmo
@@ -1208,23 +1204,18 @@ export class SceneRenderer {
     const camera = this.cameraInHand()
     if (gizmo.camera !== camera) {
       gizmo.camera = camera
-      // Redrawn at once: the handles are SIZED in the camera they are aimed from, and a hover
-      // asks for no frame of its own — the pane would keep showing them at the scale of the view
-      // just left, while the ray already reads the new one. Measured: handles answering 200px
-      // away from where they are drawn, with dead spots in between.
+      // The handles are SIZED in the camera they are aimed from, and a hover asks for no frame.
       this.viewport.requestRender()
+      // On the CHANGE alone: this walks whatever the gizmo holds, and it holds the object itself
+      // rather than a pivot for a lone selection — 13.6 µs on an empty pivot against 2.7 ms on a
+      // 20 000-node model, which per pointer move would be a third of a frame just to hover.
+      this.refreshGizmoMatrices()
     }
 
     const region = this.viewport.activePaneRegion()
-    // Reused rather than built: this runs on every pointer move, and a `Vector4` per move is
-    // garbage per move.
     gizmo.viewport = region
       ? this.gizmoRegion.set(region.x, region.y, region.width, region.height)
       : null
-
-    // After the camera and the region are both posted, and before three reads this same event:
-    // the ray is cast from what is set here, so the handles have to be placed against it now.
-    this.refreshGizmoMatrices()
   }
 
   /**
@@ -1232,7 +1223,7 @@ export class SceneRenderer {
    * and a hover asks for none, so the plane keeps the orientation of the view one quitted and comes
    * out parallel to the new ray: measured 19/08, ray·normal 0 in « De gauche », nothing moved.
    */
-  private refreshGizmoMatrices(): void {
+  private readonly refreshGizmoMatrices = (): void => {
     this.gizmo?.getHelper().updateMatrixWorld(true)
   }
 
@@ -1379,13 +1370,12 @@ export class SceneRenderer {
    * grid and the trihedron are siblings, never in `objects`.
    */
   private dressPane(index: number, camera: ViewportCamera): void {
-    // Only while it HOLDS something: `TransformControls` keeps its helper hidden when nothing is
-    // attached, and writing `true` here showed a gizmo that no selection stood behind — one that
-    // grabs nothing, so the drag fell through to the orbit and turned the scene instead.
-    // The handles are sized in one camera, so the views that are not being worked in would draw
-    // them at their own scale; the view in hand keeps them, as the command's help says.
-    const helper = this.gizmo?.object ? this.gizmo.getHelper() : null
-    if (helper) helper.visible = !this.quadView() || index === this.viewport.activePane
+    // Only while it HOLDS something: three keeps the helper hidden with nothing attached, and
+    // writing `true` here showed a gizmo no selection stood behind — it grabs nothing, so the
+    // drag fell through to the orbit and turned the scene. A single layout keeps `active` at 0.
+    if (this.gizmo?.object) {
+      this.gizmo.getHelper().visible = index === this.viewport.activePane
+    }
 
     const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
     dressForPane(
@@ -1831,16 +1821,12 @@ export class SceneRenderer {
     this.stopPaletteWatch?.()
     this.stopPaletteWatch = null
 
-    this.host?.removeEventListener('pointermove', this.onPointerAim, true)
-    this.host?.removeEventListener('pointerdown', this.onPointerAim, true)
-    this.host = null
-
     const canvas = this.viewport.canvas
     canvas?.removeEventListener('pointerdown', this.onPointerDown)
     canvas?.removeEventListener('contextmenu', this.onContextMenu)
     window.removeEventListener('pointerup', this.onPointerUp)
 
-    this.gizmo?.removeEventListener('axis-changed', this.onGizmoAxisChanged)
+    this.gizmo?.removeEventListener('axis-changed', this.refreshGizmoMatrices)
     this.gizmo?.removeEventListener('dragging-changed', this.onDraggingChanged)
     this.gizmo?.removeEventListener('objectChange', this.onGizmoChange)
     this.gizmo?.removeEventListener('mouseDown', this.onGizmoGrab)
@@ -2769,12 +2755,18 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
-  private readonly onPointerAim = (): void => {
-    // Read back from what is TRUE rather than left to the events that turn it on: a release
-    // swallowed by a native menu, or a drag ended off the window, would otherwise leave the views
-    // frozen for good — and a frozen viewport picks with the camera of the pane one has left,
-    // so nothing can be selected any more. Any movement repairs it.
+  /**
+   * Read back from what is TRUE rather than left to the events that turn it on: a release
+   * swallowed by a native menu, or a drag ended off the window, would leave the views frozen for
+   * good, and a frozen viewport picks with the camera of a pane one has left — nothing selects.
+   */
+  private syncPaneFreeze(): void {
     this.viewport.freezePanes(this.gizmo?.dragging === true || this.flying)
+  }
+
+  private readonly onPointerAim = (): void => {
+    // Any movement repairs a freeze that outlived its gesture.
+    this.syncPaneFreeze()
     this.aimGizmo()
   }
 
@@ -3105,12 +3097,9 @@ export class SceneRenderer {
   // Without this the OS menu opens on the very gesture that starts flying.
   private readonly onContextMenu = (event: Event): void => event.preventDefault()
 
-  private readonly onGizmoAxisChanged = (): void => {
-    this.refreshGizmoMatrices()
-  }
-
-  private readonly onDraggingChanged = (event: { value: unknown }): void => {
-    this.viewport.freezePanes(event.value === true || this.flying)
+  // No need for the event's own value: three writes the property before it dispatches.
+  private readonly onDraggingChanged = (): void => {
+    this.syncPaneFreeze()
   }
 
   /** Reports whether the camera is still flying, which is what keeps the loop alive. */
