@@ -33,7 +33,7 @@ const MAX_MEDIA = 2048
  * without saying which — and naming only one of them sends somebody hunting for a file that is
  * exactly where they left it.
  */
-export class UnreachableMediumError extends Error {
+class UnreachableMediumError extends Error {
   constructor(readonly entry: string) {
     super(`this montage points at a file that is missing, or outside the project: ${entry}`)
   }
