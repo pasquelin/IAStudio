@@ -6,6 +6,7 @@ import {
   segmentAt,
   withMovedPoint,
   withPointAfter,
+  withPointAppended,
   withPointAtEnd,
   withoutPoint,
 } from './cameraPath'
@@ -95,6 +96,14 @@ describe('editing the points of a rail', () => {
     const closed = { ...pathOf([at(0), at(10), at(20)]), closed: true }
 
     expect(withPointAtEnd(closed).points.map(point => point.x)).toEqual([0, 10, 20, 10])
+  })
+
+  /** The gesture of the viewport: a place was AIMED at, so nothing is guessed about where. */
+  it('appends a point exactly where a click named, on a closed rail as on an open one', () => {
+    expect(withPointAppended(three, at(7)).points.map(point => point.x)).toEqual([0, 10, 20, 7])
+
+    const closed = { ...three, closed: true }
+    expect(withPointAppended(closed, at(7)).points.map(point => point.x)).toEqual([0, 10, 20, 7])
   })
 
   it('drops a point', () => {

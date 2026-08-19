@@ -61,7 +61,8 @@ import {
 } from './sceneState'
 import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
 import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
-import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
+import { curveOf, lastPointOf, PATH_SAMPLES, segmentAt } from './cameraPath'
+import { spotOnRay } from './railSpot'
 import { clampUnit, progressAt } from './cameraMotion'
 import { railsInUse, shotCameras, shotOfCameraAt } from './cameraShots'
 import {
@@ -222,6 +223,8 @@ export type SceneRendererOptions = {
   onPathPoint?: (nodeId: string, index: number, point: PlainVector3) => void
   /** A point is to be posed on that rail, right after the stretch of it that was clicked. */
   onAddPathPoint?: (nodeId: string, index: number) => void
+  /** A point is to be posed at the END of that rail, where the click landed in its own frame. */
+  onAppendPathPoint?: (nodeId: string, point: PlainVector3) => void
   /** A control point was right-clicked, for whoever raises its menu — this side draws none. */
   onPathPointMenu?: (nodeId: string, index: number) => void
   /**
@@ -338,6 +341,10 @@ const BONE_WORLD = new Vector3()
 
 /** Scratch for placing a rail or one of its knobs, so a click over one allocates nothing. */
 const RAIL_SPOT = new Vector3()
+
+/** Scratch for the two the fallback plane of a click needs: what it passes through, and its way. */
+const RAIL_ANCHOR = new Vector3()
+const RAIL_FACING = new Vector3()
 
 /** How wide a rail's line is grabbed, as a share of the visible height: about six pixels. */
 const LINE_GRAB = 1 / 150
@@ -2748,6 +2755,17 @@ export class SceneRenderer {
       return
     }
 
+    // Alt AND shift lays a point at the end of the rail, wherever the pointer is — the gesture
+    // that draws a trajectory click by click. Tested before the knobs and before the line, or
+    // whatever the pointer happened to be over would take the click out of a run of them.
+    // The pair is RESERVED, so a click that lays no point lays nothing else either: falling
+    // through would insert on the line under it, or toggle the selection mid-trajectory.
+    if (event.altKey && event.shiftKey) {
+      const spot = this.railSpotAt(event)
+      if (spot) this.options.onAppendPathPoint?.(spot.nodeId, spot.point)
+      return
+    }
+
     // A knob of a rail already selected names a POINT, not the rail again: that is the one way
     // to reach a sub-element the tree has no row for.
     const knob = this.pathPointAt(event)
@@ -2862,6 +2880,63 @@ export class SceneRenderer {
     // reading it straight puts a click in the last sixty-fourth before a control point into the
     // stretch before it.
     return { nodeId, index: segmentAt(node.path, (nearest.index + 0.5) / PATH_SAMPLES) }
+  }
+
+  /**
+   * Where a click lands on the ONE rail being worked on, in that rail's own frame.
+   *
+   * Nothing for a pointer with two rails under it: extending whichever came first would pose a
+   * point on a rail nobody aimed at, and a gesture repeated ten times would scatter half of them.
+   */
+  private railSpotAt(event: PointerEvent): { nodeId: string; point: PlainVector3 } | null {
+    const worked = this.workedRailIds()
+    if (worked.size !== 1) return null
+
+    const [nodeId] = [...worked]
+    const ndc = this.viewport.pointerNdcOf(event)
+    const rail = nodeId ? this.objects.get(nodeId) : null
+    const node = nodeId ? this.applied.get(nodeId) : null
+    if (!ndc || !nodeId || !rail || node?.type !== 'path') return null
+
+    const camera = this.cameraInHand()
+    this.pointer.set(ndc.x, ndc.y)
+    this.raycaster.setFromCamera(this.pointer, camera)
+
+    // Up the chain, not down it: a rail parented to a group reads its own placement off that
+    // group's matrix, and `updateMatrixWorld` would compose against whatever it last held.
+    rail.updateWorldMatrix(true, false)
+    RAIL_ANCHOR.copy(lastPointOf(node.path))
+    const spot =
+      this.sceneryUnder() ??
+      spotOnRay(
+        this.raycaster.ray,
+        rail.localToWorld(RAIL_ANCHOR),
+        camera.getWorldDirection(RAIL_FACING),
+      )
+    if (!spot) return null
+
+    rail.worldToLocal(spot)
+    return { nodeId, point: { x: spot.x, y: spot.y, z: spot.z } }
+  }
+
+  /**
+   * What the ray meets of the SCENERY: no rail, since a rail is what the point is being added
+   * to, and no line — thresholds off, or the frustum of a camera would catch clicks as a surface.
+   */
+  private sceneryUnder(): Vector3 | null {
+    const targets = [...this.applied]
+      .filter(([, node]) => node.type !== 'path')
+      .flatMap(([id]) => this.objects.get(id) ?? [])
+
+    const lines = this.raycaster.params.Line.threshold
+    const points = this.raycaster.params.Points.threshold
+    this.raycaster.params.Line.threshold = 0
+    this.raycaster.params.Points.threshold = 0
+    const hit = this.raycaster.intersectObjects(targets, true)[0]
+    this.raycaster.params.Line.threshold = lines
+    this.raycaster.params.Points.threshold = points
+
+    return hit ? hit.point : null
   }
 
   /** The node the pointer is over, or nothing for a ray that met only the void. */

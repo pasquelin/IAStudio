@@ -723,4 +723,38 @@ describe('SceneDocument and a point posed on a rail', () => {
 
     expect(pointsOf()).toEqual([0, 10, 20])
   })
+
+  it('lays an aimed point past the last one, click after click', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onAppendPathPoint?.('rail', at(30)))
+    await act(async () => built.at(-1)?.onAppendPathPoint?.('rail', at(40)))
+
+    expect(pointsOf()).toEqual([0, 10, 20, 30, 40])
+  })
+
+  /** The gizmo has to sit on the point just laid, or a run of clicks would drag the first one. */
+  it('picks the end it just laid rather than the end it started from', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onAppendPathPoint?.('rail', at(30)))
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').pickedPathPoint).toEqual({
+      nodeId: 'rail',
+      index: 3,
+    })
+  })
+
+  it('costs one undo entry per click, so a trajectory unwinds point by point', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onAppendPathPoint?.('rail', at(30)))
+    await act(async () => built.at(-1)?.onAppendPathPoint?.('rail', at(40)))
+    act(() => useScenes.getState().undo('doc-1'))
+
+    expect(pointsOf()).toEqual([0, 10, 20, 30])
+  })
 })
