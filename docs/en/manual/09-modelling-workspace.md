@@ -240,6 +240,10 @@ Four gestures, in the scene:
 nothing, the point lands **at the height of the point before it**, which keeps a trajectory level
 when clicking into the void. Every click is one `⌘Z`, so a trajectory unwinds point by point.
 
+**Whatever is not scenery is passed through**: workshop markers — a camera's body, a lamp's bulb —
+paths themselves along with their knobs, and anything hidden by the eye in the Scene explorer. A
+camera standing on its own rail is therefore no obstacle to the gesture that extends that rail.
+
 > **One path has to be the one worked on.** The gesture serves the selected path, or the one the
 > selected camera rides. With two paths worked on at once it extends neither, rather than
 > choosing for you — **and it does nothing else either**: `⌥ ⇧` is reserved for drawing, and

@@ -249,6 +249,11 @@ Quatre gestes, dans la scène :
 rien, le point se pose **à la hauteur du point précédent**, ce qui garde un trajet à plat quand
 on clique dans le vide. Chaque clic est **un `⌘Z`**, donc un trajet se défait point par point.
 
+**Ce qui n’est pas du décor est traversé** : les repères d’atelier — le boîtier d’une caméra,
+l’ampoule d’une lampe —, les chemins eux-mêmes avec leurs poignées, et tout objet masqué à l’œil
+de l’Explorateur de scène. Une caméra posée sur son propre rail ne fait donc pas obstacle au
+geste qui prolonge ce rail.
+
 > **Il faut travailler sur un seul chemin.** Le geste sert le chemin sélectionné, ou celui
 > qu’emprunte la caméra sélectionnée. Si deux chemins sont en cours en même temps, il n’allonge
 > aucun des deux plutôt que de choisir à votre place. **Et il ne fait alors rien d’autre non

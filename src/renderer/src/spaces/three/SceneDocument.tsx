@@ -111,13 +111,14 @@ function addPathPoint(documentId: string, nodeId: string, index: number): void {
  * a run of clicks lays a trajectory and the gizmo sits on the last one laid.
  */
 function appendPathPoint(documentId: string, nodeId: string, point: PlainVector3): void {
-  editPath(documentId, nodeId, path => withPointAppended(path, point))
   const node = nodeById(sceneOf(useScenes.getState(), documentId), nodeId)
   if (node?.type !== 'path') return
 
-  useSceneViews
-    .getState()
-    .setPickedPathPoint(documentId, { nodeId, index: node.path.points.length - 1 })
+  // Where the point WILL land, read before the edit: appending puts it at the length the rail
+  // holds now. Read after, it would rest on `runCommand` having already applied.
+  const index = node.path.points.length
+  editPath(documentId, nodeId, path => withPointAppended(path, point))
+  useSceneViews.getState().setPickedPathPoint(documentId, { nodeId, index })
 }
 
 /**
