@@ -106,6 +106,7 @@
       "assets.open": "This asset could not be opened",
       "assets.save": "The asset could not be rewritten",
       "assets.copy": "The copy could not be completed",
+      "assets.contactSheet": "The contact sheet could not be written",
       "assets.extract": "The images inside this model could not be taken out",
       "assets.rename": "This asset could not be renamed",
       "assets.retype": "The role of this file could not be corrected",

@@ -106,6 +106,7 @@
       "assets.open": "Cet asset n’a pas pu être ouvert",
       "assets.save": "L’asset n’a pas pu être réécrit",
       "assets.copy": "La copie n’a pas pu être terminée",
+      "assets.contactSheet": "La planche-contact n’a pas pu être écrite",
       "assets.extract": "Les images de ce modèle n’ont pas pu être extraites",
       "assets.rename": "Cet asset n’a pas pu être renommé",
       "assets.retype": "Le rôle de ce fichier n’a pas pu être corrigé",

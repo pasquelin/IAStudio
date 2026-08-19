@@ -671,6 +671,8 @@ export type LogScope =
   // did not happen. One of them fires once the copy is already on disk — under `assets.save` the
   // journal denied a write that had just succeeded.
   | 'assets.copy'
+  /** A sheet of the chosen pictures, whose failure has no row of its own to appear in. */
+  | 'assets.contactSheet'
   | 'assets.extract'
   // The catalogue refusing a new name. The field has closed by then — it commits on blur as much
   // as on Enter — so the journal is the only place left to say the name did not take.
@@ -729,6 +731,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.open',
   'assets.save',
   'assets.copy',
+  'assets.contactSheet',
   'assets.extract',
   'assets.rename',
   'assets.retype',
