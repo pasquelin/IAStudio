@@ -286,6 +286,12 @@ Une montée depuis le silence (fondu d’entrée) ou une descente vers lui (fond
 Demander à un *modèle* de fabriquer quelque chose. La demande part chez Scenario, revient sous
 forme de *tâche*, et le résultat atterrit dans vos *assets*.
 
+**Gizmo**
+Les *poignées* de couleur qui apparaissent sur un objet 3D sélectionné, et par lesquelles on le
+transforme : les **flèches** le déplacent, les **cercles** le font pivoter, les poignées de
+redimensionnement l’agrandissent. C’est l’outil armé qui décide desquelles s’affichent. Leur
+orientation suit le *repère local ou monde*.
+
 **Gouttière**
 L’espace entre deux *panneaux*. C’est lui-même la poignée qui les redimensionne : il n’y a pas de
 petite prise à viser.
@@ -474,6 +480,15 @@ document a la sienne** — c’est pour cela qu’annuler dans un onglet ne touc
 Une ligne du montage, sur laquelle des *clips* sont posés bout à bout. Une piste vidéo, une piste
 audio, plusieurs de chaque si besoin.
 
+**Poignée**
+Un point qu’on attrape pour agir. Le studio en emploie trois sortes, et elles n’ont rien à voir :
+les **poignées de manipulation** d’un objet 3D — les flèches et les cercles du *gizmo* ; la
+**poignée d’un clip**, à son bord, qui le *rogne* ; et la **poignée à suivre** d’une articulation,
+un point posé dans la scène que l’os cherche à atteindre, et que les deux os au-dessus de lui
+suivent au plus.
+
+Les deux premières se tirent ; la troisième se pose et reste là.
+
 **Projection**
 La façon dont la caméra 3D met le volume à plat. En **perspective**, ce qui est loin est plus
 petit — c’est ce que voit un œil. En **orthographique**, les tailles ne changent pas avec la
@@ -578,6 +593,16 @@ le décor lointain. Stockée en *équirectangulaire*.
 
 Elle sert à deux choses : **on la voit** (c’est le décor), et **elle éclaire** (voir *IBL*). Le
 second point compte davantage.
+
+**Sous-piste**
+Une ligne de la bande d’animation, dans l’espace Modélisation, sur laquelle les blocs d’animation
+d’un objet se posent. Elles s’appellent **Anim. 1**, **Anim. 2**, et se groupent **sous** les lignes
+de clés de l’objet.
+
+Ce n’est pas une *piste* du montage : une piste porte des *clips* et appartient à une séquence, une
+sous-piste porte des blocs et appartient à un objet de la scène. Deux mouvements sur deux
+sous-pistes jouent en même temps, mais **ils se partagent encore les mêmes os** : c’est *Pilote*,
+dans l’Inspecteur, qui donne à chacun sa moitié du corps.
 
 **Sprite**
 Une image posée dans une scène 3D et qui **fait toujours face à la caméra**, quelle que soit la

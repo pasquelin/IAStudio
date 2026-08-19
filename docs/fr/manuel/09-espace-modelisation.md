@@ -976,8 +976,8 @@ l’atteindre, et **les os au-dessus d’elle tournent pour suivre — deux au p
 grand-parent. C’est ce qui distingue un pied qui reste posé d’un pied qui traverse le sol quand la
 hanche bouge. Le bouton devient **Retirer la poignée** pour une articulation qui en a déjà une.
 
-> **Ce n’est pas la poignée d’un manipulateur**, ni celle qui rogne un clip : celle-ci est un point
-> que l’articulation VISE, et elle reste posée dans la scène.
+> **Ce n’est pas la poignée d’un gizmo**, ni celle qui rogne un clip : celle-ci est un point que
+> l’articulation VISE, et elle reste posée dans la scène.
 
 > **Sur un os qui n’a rien au-dessus de lui, le bouton ne fait rien** — les hanches, par exemple,
 > n’ont aucun ancêtre à faire tourner. Un os dont le parent est déjà la racine n’en fait suivre
