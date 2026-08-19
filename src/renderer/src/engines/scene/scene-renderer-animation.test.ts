@@ -20,7 +20,7 @@ import type { Retarget } from './retarget'
 import type * as ModelCache from './modelCache'
 import { animationTrack, cameraShot } from './animation-fixtures'
 import { cameraNodeFixture, meshNode, modelNodeFixture, pathNodeFixture } from './scene-fixtures'
-import { EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './sceneState'
+import { EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneNode, type SceneState } from './sceneState'
 import {
   EMPTY_TIMELINE,
   type AnimationTimeline,
@@ -712,20 +712,16 @@ describe('SceneRenderer and a camera on a rail', () => {
 describe('SceneRenderer and a rail drawn click by click', () => {
   const railScene = (extra: Partial<SceneState> = {}): SceneState => ({
     ...EMPTY_SCENE,
-    nodes: [
-      pathNodeFixture('rail', {
-        points: [
-          { x: 0, y: 0, z: 0 },
-          { x: 10, y: 0, z: 0 },
-        ],
-      }),
-    ],
+    nodes: [pathNodeFixture('rail')],
     selectedIds: ['rail'],
     ...extra,
   })
 
-  /** An engine whose pointer lands wherever the caller says, in normalised device coordinates. */
-  const aiming = (scene: SceneState, ndc: { x: number; y: number } | null): SceneRenderer => {
+  /** An engine whose pointer lands dead centre of the view, having no canvas to read one off. */
+  const aiming = (
+    scene: SceneState,
+    ndc: { x: number; y: number } | null = { x: 0, y: 0 },
+  ): SceneRenderer => {
     const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
     engine.apply(scene)
 
@@ -737,34 +733,37 @@ describe('SceneRenderer and a rail drawn click by click', () => {
     return engine
   }
 
+  /** Ends at DIFFERENT heights, so which end anchors the fallback plane is observable. */
+  const SLOPED = [
+    { x: 0, y: 0, z: 0 },
+    { x: 0, y: 3, z: -5 },
+  ]
+
   const spotOf = (
     engine: SceneRenderer,
   ): { nodeId: string; point: { x: number; y: number; z: number } } | null =>
     Reflect.get(engine, 'railSpotAt').call(engine, new MouseEvent('pointerup'))
 
-  it('lays the point in the rail’s OWN frame, so moving the rail carries the point with it', () => {
+  /**
+   * The height comes from the rail's LAST point, and the frame from the rail: a sloped rail a
+   * hundred units out reads (3, 3, 3) of the world as (-97, 3, 3) of its own.
+   */
+  it('lays the point in the rail’s OWN frame, level with the end it is growing from', () => {
     const engine = aiming(
       railScene({
         nodes: [
           {
-            ...pathNodeFixture('rail', {
-              points: [
-                { x: 0, y: 0, z: 0 },
-                { x: 10, y: 0, z: 0 },
-              ],
-            }),
+            ...pathNodeFixture('rail', { points: SLOPED }),
             transform: { ...IDENTITY_TRANSFORM, position: { x: 100, y: 0, z: 0 } },
           },
         ],
       }),
-      { x: 0, y: 0 },
     )
 
     const spot = spotOf(engine)
     expect(spot?.nodeId).toBe('rail')
-    // Dead centre of a view looking down -Z from the origin, on the level plane of the last
-    // point: the world spot is near x = 0, so the rail's own frame reads it a hundred back.
-    expect(spot?.point.x).toBeCloseTo(-100, 4)
+    expect(spot?.point.y).toBeCloseTo(3, 4)
+    expect(spot?.point.x).toBeCloseTo(-97, 4)
     engine.dispose()
   })
 
@@ -773,10 +772,7 @@ describe('SceneRenderer and a rail drawn click by click', () => {
    * on that": a click on a crate lays the point ON the crate, not at the height of the last one.
    */
   it('lays the point on what the ray meets, above the level of the point before it', () => {
-    const engine = aiming(railScene({ nodes: [...railScene().nodes, meshNode('crate')] }), {
-      x: 0,
-      y: 0,
-    })
+    const engine = aiming(railScene({ nodes: [pathNodeFixture('rail'), meshNode('crate')] }))
 
     // The unit cube of the fixture sits at the origin, and the view looks down at it from
     // (5, 5, 5) — so the ray meets its corner well above the y = 0 the rail's last point holds.
@@ -784,48 +780,88 @@ describe('SceneRenderer and a rail drawn click by click', () => {
     engine.dispose()
   })
 
-  it('answers nothing while no rail is being worked on', () => {
-    const engine = aiming({ ...railScene(), selectedIds: [] }, { x: 0, y: 0 })
+  /**
+   * Extending whichever rail came first would pose a point on one nobody aimed at, and a gesture
+   * repeated ten times would scatter half of them. Neither too few nor too many will do.
+   */
+  it('answers nothing unless exactly ONE rail is being worked on', () => {
+    const none = aiming(railScene({ selectedIds: [] }))
+    expect(spotOf(none)).toBeNull()
+    none.dispose()
+
+    const both = aiming(
+      railScene({
+        nodes: [pathNodeFixture('rail'), pathNodeFixture('other')],
+        selectedIds: ['rail', 'other'],
+      }),
+    )
+    expect(spotOf(both)).toBeNull()
+    both.dispose()
+  })
+
+  // Routine in a quad view: `pointerNdcOf` answers nothing for a pointer outside every pane.
+  it('answers nothing for a pointer the viewport places nowhere', () => {
+    const engine = aiming(railScene(), null)
 
     expect(spotOf(engine)).toBeNull()
     engine.dispose()
   })
 
   /**
-   * Extending whichever rail came first would pose a point on one nobody aimed at, and a gesture
-   * repeated ten times would scatter half of them.
+   * The three things a ray walks past, and each reappears THROUGH a parent that passed: the
+   * filter has to read the ancestors, not the roots handed to `intersectObjects`.
    */
-  it('answers nothing while two rails are being worked on at once', () => {
-    const engine = aiming(
-      railScene({
-        nodes: [
-          pathNodeFixture('rail', {
-            points: [
-              { x: 0, y: 0, z: 0 },
-              { x: 10, y: 0, z: 0 },
-            ],
-          }),
-          pathNodeFixture('other', {
-            points: [
-              { x: 0, y: 0, z: 0 },
-              { x: 10, y: 0, z: 0 },
-            ],
-          }),
-        ],
-        selectedIds: ['rail', 'other'],
-      }),
-      { x: 0, y: 0 },
-    )
+  describe('and what the ray is not allowed to land on', () => {
+    const LEVEL_SPOT = { x: 0, y: 0, z: 0 }
 
-    expect(spotOf(engine)).toBeNull()
-    engine.dispose()
-  })
+    const holder = (id: string): SceneNode => ({
+      ...meshNode(id),
+      castShadow: false,
+      receiveShadow: false,
+      type: 'group',
+    })
 
-  it('answers nothing for a pointer the viewport places nowhere', () => {
-    const engine = aiming(railScene(), null)
+    it('walks past a node the outliner has hidden, however solid it still is', () => {
+      const crate = meshNode('crate')
+      const engine = aiming(railScene({ nodes: [pathNodeFixture('rail'), crate] }))
+      expect(spotOf(engine)?.point.y).toBeCloseTo(0.5, 4)
 
-    expect(spotOf(engine)).toBeNull()
-    engine.dispose()
+      engine.apply(railScene({ nodes: [pathNodeFixture('rail'), { ...crate, visible: false }] }))
+      expect(spotOf(engine)?.point).toMatchObject(LEVEL_SPOT)
+      engine.dispose()
+    })
+
+    /**
+     * A camera sits ON the rail it rides, and selecting it is what makes that rail the one worked
+     * on — so its body is squarely in the way of the very gesture that extends the rail.
+     */
+    it('walks past the body of a camera, which is a marker and not scenery', () => {
+      const engine = aiming(
+        railScene({
+          nodes: [pathNodeFixture('rail'), { ...cameraNodeFixture('cam'), parentId: null }],
+        }),
+      )
+
+      expect(spotOf(engine)?.point).toMatchObject(LEVEL_SPOT)
+      engine.dispose()
+    })
+
+    /** A rail inside a group is reached through the group, and its knobs are 14 cm spheres. */
+    it('walks past its own knobs when the rail hangs inside a group', () => {
+      const engine = aiming(
+        railScene({
+          nodes: [
+            holder('holder'),
+            { ...pathNodeFixture('rail', { points: SLOPED }), parentId: 'holder' },
+          ],
+        }),
+      )
+
+      // The knob on the last point stands at y = 3, right where the fallback plane is: a hit on
+      // its surface would read a radius above it.
+      expect(spotOf(engine)?.point.y).toBeCloseTo(3, 4)
+      engine.dispose()
+    })
   })
 })
 

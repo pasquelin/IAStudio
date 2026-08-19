@@ -61,7 +61,7 @@ import {
 } from './sceneState'
 import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
 import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
-import { curveOf, lastPointOf, PATH_SAMPLES, segmentAt } from './cameraPath'
+import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
 import { spotOnRay } from './railSpot'
 import { clampUnit, progressAt } from './cameraMotion'
 import { railsInUse, shotCameras, shotOfCameraAt } from './cameraShots'
@@ -73,6 +73,7 @@ import {
   knobIndexOf,
   knobName,
   lightBulb,
+  MARKER_NAME,
   PATH_CURVE_NAME,
   tuneViewHelper,
   type LightHelper,
@@ -345,6 +346,43 @@ const RAIL_SPOT = new Vector3()
 /** Scratch for the two the fallback plane of a click needs: what it passes through, and its way. */
 const RAIL_ANCHOR = new Vector3()
 const RAIL_FACING = new Vector3()
+
+/**
+ * A pick that may widen the ray's tolerance, with both thresholds put back whatever it does.
+ *
+ * The raycaster is shared by every pick of the engine: a throw that left `Line.threshold` at
+ * another value would silently take away the one thing a light is clickable BY, its helper's
+ * lines, and nothing would go red.
+ */
+function withHeldFuzz<T>(raycaster: Raycaster, pick: () => T): T {
+  const { Line, Points } = raycaster.params
+  const lines = Line.threshold
+  const points = Points.threshold
+
+  try {
+    return pick()
+  } finally {
+    Line.threshold = lines
+    Points.threshold = points
+  }
+}
+
+/**
+ * Whether a hit is scenery a DOCUMENT point may be written onto: not a rail of the studio, not a
+ * workshop marker, and nothing hanging under something hidden.
+ *
+ * Walked up the ancestors rather than filtered at the roots, because `intersectObjects` recurses
+ * and each of the three reappears through a parent that passed: a rail inside a group is reached
+ * THROUGH the group — its knobs are 14 cm spheres, which no line threshold keeps out — a camera's
+ * body and a lamp's bulb hang under nodes of their own, and three never reads `visible`.
+ */
+function isScenery(object: Object3D, isRail: (nodeId: string) => boolean): boolean {
+  for (let node: Object3D | null = object; node; node = node.parent) {
+    if (!node.visible || node.name === MARKER_NAME || isRail(node.name)) return false
+  }
+
+  return true
+}
 
 /** How wide a rail's line is grabbed, as a share of the visible height: about six pixels. */
 const LINE_GRAB = 1 / 150
@@ -2855,21 +2893,23 @@ export class SceneRenderer {
     const camera = this.cameraInHand()
     this.raycaster.setFromCamera(this.pointer, camera)
 
-    const held = this.raycaster.params.Line.threshold
-    let nearest: Intersection | null = null
+    const nearest = withHeldFuzz(this.raycaster, () => {
+      let found: Intersection | null = null
 
-    for (const rail of this.workedRails()) {
-      this.raycaster.params.Line.threshold = screenScale(
-        camera,
-        rail.getWorldPosition(RAIL_SPOT),
-        LINE_GRAB,
-      )
-      for (const hit of this.raycaster.intersectObject(rail, true)) {
-        if (hit.object.name !== PATH_CURVE_NAME || hit.index === undefined) continue
-        if (!nearest || hit.distance < nearest.distance) nearest = hit
+      for (const rail of this.workedRails()) {
+        this.raycaster.params.Line.threshold = screenScale(
+          camera,
+          rail.getWorldPosition(RAIL_SPOT),
+          LINE_GRAB,
+        )
+        for (const hit of this.raycaster.intersectObject(rail, true)) {
+          if (hit.object.name !== PATH_CURVE_NAME || hit.index === undefined) continue
+          if (!found || hit.distance < found.distance) found = hit
+        }
       }
-    }
-    this.raycaster.params.Line.threshold = held
+
+      return found
+    })
     if (!nearest || nearest.index === undefined) return null
 
     const nodeId = nearest.object.parent?.name
@@ -2894,9 +2934,12 @@ export class SceneRenderer {
 
     const [nodeId] = [...worked]
     const ndc = this.viewport.pointerNdcOf(event)
-    const rail = nodeId ? this.objects.get(nodeId) : null
-    const node = nodeId ? this.applied.get(nodeId) : null
-    if (!ndc || !nodeId || !rail || node?.type !== 'path') return null
+    if (!nodeId || !ndc) return null
+
+    const rail = this.objects.get(nodeId)
+    const node = this.applied.get(nodeId)
+    const anchor = node?.type === 'path' ? node.path.points.at(-1) : null
+    if (!rail || !anchor) return null
 
     const camera = this.cameraInHand()
     this.pointer.set(ndc.x, ndc.y)
@@ -2905,7 +2948,7 @@ export class SceneRenderer {
     // Up the chain, not down it: a rail parented to a group reads its own placement off that
     // group's matrix, and `updateMatrixWorld` would compose against whatever it last held.
     rail.updateWorldMatrix(true, false)
-    RAIL_ANCHOR.copy(lastPointOf(node.path))
+    RAIL_ANCHOR.copy(anchor)
     const spot =
       this.sceneryUnder() ??
       spotOnRay(
@@ -2915,28 +2958,27 @@ export class SceneRenderer {
       )
     if (!spot) return null
 
-    rail.worldToLocal(spot)
-    return { nodeId, point: { x: spot.x, y: spot.y, z: spot.z } }
+    return { nodeId, point: plainVector(rail.worldToLocal(spot)) }
   }
 
   /**
-   * What the ray meets of the SCENERY: no rail, since a rail is what the point is being added
-   * to, and no line — thresholds off, or the frustum of a camera would catch clicks as a surface.
+   * What the RAY IN HAND meets of the scenery — `railSpotAt` casts it. Nearest first, and the
+   * nearest that a document point may sit ON: see `isScenery` for the three it walks past.
+   *
+   * No fuzz on lines or clouds either: a point aimed into the void must not land on the edges
+   * hung under a camera as though they were a surface.
    */
   private sceneryUnder(): Vector3 | null {
-    const targets = [...this.applied]
-      .filter(([, node]) => node.type !== 'path')
-      .flatMap(([id]) => this.objects.get(id) ?? [])
+    const hits = withHeldFuzz(this.raycaster, () => {
+      this.raycaster.params.Line.threshold = 0
+      this.raycaster.params.Points.threshold = 0
+      return this.raycaster.intersectObjects([...this.objects.values()], true)
+    })
 
-    const lines = this.raycaster.params.Line.threshold
-    const points = this.raycaster.params.Points.threshold
-    this.raycaster.params.Line.threshold = 0
-    this.raycaster.params.Points.threshold = 0
-    const hit = this.raycaster.intersectObjects(targets, true)[0]
-    this.raycaster.params.Line.threshold = lines
-    this.raycaster.params.Points.threshold = points
-
-    return hit ? hit.point : null
+    return (
+      hits.find(hit => isScenery(hit.object, id => this.applied.get(id)?.type === 'path'))?.point ??
+      null
+    )
   }
 
   /** The node the pointer is over, or nothing for a ray that met only the void. */
