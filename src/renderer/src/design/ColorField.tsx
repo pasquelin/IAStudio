@@ -7,6 +7,8 @@ export type ColorFieldProps = GestureProps & {
   /** Hexadecimal, `#rrggbb` — what the OS picker speaks and what a descriptor stores. */
   value: string
   onChange: (value: string) => void
+  /** The handle the MCP steers this field by. Never a translated word. */
+  scId?: string
 }
 
 /** A colour swatch that opens the OS picker — the input itself, which already draws its value. */
@@ -14,6 +16,7 @@ export function ColorField({
   label,
   value,
   onChange,
+  scId,
   onGestureStart,
   onGestureEnd,
 }: ColorFieldProps) {
@@ -23,6 +26,7 @@ export function ColorField({
 
       <input
         type="color"
+        data-sc={scId && `field:${scId}`}
         // Named here rather than by the label around it: that label also holds the hexadecimal,
         // and a swatch called "Colour #ff0000" is a swatch nobody can find.
         aria-label={label}

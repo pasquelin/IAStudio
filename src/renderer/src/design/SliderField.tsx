@@ -10,6 +10,8 @@ export type SliderFieldProps = GestureProps & {
   max: number
   step: number
   onChange: (value: number) => void
+  /** The handle the MCP steers this field by. Never a translated word. */
+  scId?: string
 }
 
 /**
@@ -23,6 +25,7 @@ export function SliderField({
   max,
   step,
   onChange,
+  scId,
   onGestureStart,
   onGestureEnd,
 }: SliderFieldProps) {
@@ -32,6 +35,7 @@ export function SliderField({
 
       <input
         type="range"
+        data-sc={scId && `field:${scId}`}
         value={value}
         min={min}
         max={max}

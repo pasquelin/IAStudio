@@ -11,6 +11,8 @@ export type TextFieldProps = GestureProps & {
    * expression naming its wires is the case that asked for it.
    */
   hint?: Record<string, string>
+  /** The handle the MCP steers this field by. Never a translated word. */
+  scId?: string
 }
 
 /**
@@ -22,6 +24,7 @@ export function TextField({
   value,
   onChange,
   hint,
+  scId,
   onGestureStart,
   onGestureEnd,
 }: TextFieldProps) {
@@ -31,6 +34,7 @@ export function TextField({
 
       <input
         type="text"
+        data-sc={scId && `field:${scId}`}
         value={value}
         onChange={event => onChange(event.target.value)}
         // One entry per session at the field, not one per keystroke.

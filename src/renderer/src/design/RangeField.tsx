@@ -30,6 +30,8 @@ export type RangeFieldProps = GestureProps & {
   fromLabel: string
   toLabel: string
   onChange: (value: RangeValue) => void
+  /** The handle the MCP steers this field by; each end extends it with its own word. */
+  scId?: string
 }
 
 /**
@@ -49,6 +51,7 @@ export function RangeField({
   fromLabel,
   toLabel,
   onChange,
+  scId,
   onGestureStart,
   onGestureEnd,
 }: RangeFieldProps) {
@@ -95,6 +98,7 @@ export function RangeField({
         <input
           type="range"
           aria-label={fromLabel}
+          data-sc={scId && `field:${scId}.min`}
           value={value.min}
           min={min}
           max={max}
@@ -107,6 +111,7 @@ export function RangeField({
         <input
           type="range"
           aria-label={toLabel}
+          data-sc={scId && `field:${scId}.max`}
           value={value.max}
           min={min}
           max={max}

@@ -6,13 +6,15 @@ export type ToggleFieldProps = {
   label: string
   value: boolean
   onChange: (value: boolean) => void
+  /** The handle the MCP steers this field by. Never a translated word. */
+  scId?: string
 }
 
 /**
  * A property that is on or off. It carries no gesture props: a checkbox changes once per
  * click, so there is no drag to coalesce into a single history entry.
  */
-export function ToggleField({ label, value, onChange }: ToggleFieldProps) {
+export function ToggleField({ label, value, onChange, scId }: ToggleFieldProps) {
   return (
     <label className={FIELD_ROW}>
       {/* The wide gauge, and the only field that asks for it: a checkbox sits at the far end of
@@ -21,6 +23,7 @@ export function ToggleField({ label, value, onChange }: ToggleFieldProps) {
 
       <input
         type="checkbox"
+        data-sc={scId && `field:${scId}`}
         checked={value}
         onChange={event => onChange(event.target.checked)}
         className={cn(CHECKBOX, 'size-4')}

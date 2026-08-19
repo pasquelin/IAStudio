@@ -10,6 +10,8 @@ export type NameFieldProps = {
   accepts: (name: string) => boolean
   onSubmit: (name: string) => void
   onCancel: () => void
+  /** The handle the MCP steers this field by. Never a translated word. */
+  scId?: string
 }
 
 /**
@@ -19,7 +21,14 @@ export type NameFieldProps = {
  * after a half-composed word. It takes no `disabled` on purpose: a browser blurs what it
  * disables, the blur abandons, and a passing git command used to take the name away mid-word.
  */
-export function NameField({ label, placeholder, accepts, onSubmit, onCancel }: NameFieldProps) {
+export function NameField({
+  label,
+  placeholder,
+  accepts,
+  onSubmit,
+  onCancel,
+  scId,
+}: NameFieldProps) {
   const [name, setName] = useState('')
 
   return (
@@ -28,6 +37,7 @@ export function NameField({ label, placeholder, accepts, onSubmit, onCancel }: N
       // second click to type into what one asked for reads as the gesture having failed.
       autoFocus
       type="text"
+      data-sc={scId && `field:${scId}`}
       value={name}
       aria-label={label}
       placeholder={placeholder}
