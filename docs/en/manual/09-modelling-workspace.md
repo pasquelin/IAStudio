@@ -131,8 +131,9 @@ The shapes below are the ones the studio can **build**. A model from elsewhere �
 whatever is on screen. It is the studio-wide rule, described in [Assets](07-assets.md) — to bring a
 mesh into the scene you have in front of you, use drag and drop or right-click.
 
-**Only meshes come in.** A picture, a sound or a video released over the 3D view does nothing:
-the scene would not know what to do with it.
+**Only meshes come into the scene** — but a missed drop is not a lost one. A picture, a sound or a
+video dropped on the 3D view **opens in its own workspace**, exactly as a double-click would.
+Nothing says so before you let go: the pointer shows the same `+` as for a mesh.
 
 Like everything else, the model lands **at the origin**. It sometimes arrives tiny or enormous — a
 `.glb` carries its own scale, which has no reason to match yours. The scale handle (`S`) settles

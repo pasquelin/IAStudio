@@ -48,8 +48,8 @@ Tant qu’aucune image n’est posée, l’aperçu affiche : « Aucune skybox. G
 un panorama équirectangulaire. »
 
 > **Seul ce qui se regarde est accepté** : une image, une matière ou un autre ciel, à condition
-> qu’il soit sur votre disque. Un son ou une vidéo posés là-dessus sont ignorés en silence —
-> rien ne casse, rien ne change.
+> qu’il soit sur votre disque. Un son ou une vidéo posés là-dessus ne changent pas le ciel : ils
+> s’ouvrent dans leur propre espace, comme au double-clic — voir [Les assets](07-assets.md).
 >
 > En revanche, **n’importe quelle image passe**, pas seulement un vrai panorama. Une photo
 > ordinaire posée en ciel donnera une déformation étrange : c’est normal, l’espace attend une
