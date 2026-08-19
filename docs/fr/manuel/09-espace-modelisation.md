@@ -30,9 +30,10 @@ Deux modes de navigation, qui coexistent.
 
 C’est le mode par défaut. On tourne **autour** de la scène, comme si on en faisait le tour.
 
-### Voler dans la scène — le clic droit
+### Voler dans la scène — un bouton maintenu
 
-**Maintenez le bouton droit de la souris**, et la caméra passe en vol libre. Sans lâcher :
+**Maintenez un bouton de la souris**, gauche ou droit, et les touches ci-dessous déplacent la
+caméra. Sans lâcher :
 
 | Touche | Mouvement |
 |---|---|
@@ -43,7 +44,12 @@ C’est le mode par défaut. On tourne **autour** de la scène, comme si on en f
 | `⇧ Maj` | accélérer |
 
 On se déplace **à travers** la scène au lieu d’en faire le tour, comme dans un jeu vidéo.
-Relâchez le bouton droit, la caméra reprend son mode normal.
+Relâchez le bouton, la caméra reprend son mode normal.
+
+Le bouton garde par ailleurs ce qu’il faisait : le gauche continue de tourner autour de la scène
+et de sélectionner au relâchement, le droit de déplacer la vue. Le clavier s’ajoute, il ne
+remplace rien. Une seule réserve : tant que vous tenez la poignée d’un outil, les touches ne
+déplacent pas la caméra — sans quoi le même geste bougerait l’objet et le point de vue.
 
 > **Les touches sont lues à leur position physique.** WASD sur un clavier QWERTY et ZQSD sur un
 > clavier AZERTY sont **les mêmes quatre touches**. Il n’y a rien à reconfigurer.

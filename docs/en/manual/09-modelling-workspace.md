@@ -29,9 +29,9 @@ Two navigation modes, which coexist.
 
 This is the default mode. You turn **around** the scene, as if walking round it.
 
-### Flying through the scene — the right button
+### Flying through the scene — a button held
 
-**Hold the right mouse button**, and the camera switches to free flight. Without letting go:
+**Hold a mouse button**, left or right, and the keys below move the camera. Without letting go:
 
 | Key | Movement |
 |---|---|
@@ -41,8 +41,13 @@ This is the default mode. You turn **around** the scene, as if walking round it.
 | `Q` | down |
 | `⇧ Shift` | boost |
 
-You move **through** the scene instead of around it, as in a video game. Release the right button
-and the camera returns to its normal mode.
+You move **through** the scene instead of around it, as in a video game. Release the button and
+the camera returns to its normal mode.
+
+The button keeps everything it already did: the left one goes on turning around the scene and
+picking on release, the right one on moving the view. The keyboard is added, it replaces nothing.
+One reservation: while you hold a tool's handle the keys do not move the camera — otherwise one
+gesture would move both the object and the point of view.
 
 > **The keys are read at their physical position.** WASD on a QWERTY keyboard and ZQSD on an AZERTY
 > one are **the same four keys**. There is nothing to reconfigure.

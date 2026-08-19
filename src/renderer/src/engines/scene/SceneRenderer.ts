@@ -545,11 +545,16 @@ export class SceneRenderer {
   /** Where the left button went down, so the release can tell a click from an orbit. */
   private pressed: { x: number; y: number } | null = null
   /**
-   * Where the right button went down, or nothing while it is up. It doubles as "the camera is
-   * flying", the two being the same fact: the button starts the flight and ends it. A flight
-   * that never left the pixel it started on is a click, and raises the node menu instead.
+   * Where the button that flies went down, or nothing while none is held. A flight that never
+   * left the pixel it started on is a click: the right button raises the node menu, the left
+   * one picks.
    */
   private flownFrom: { x: number; y: number } | null = null
+  /**
+   * Which button armed the flight, and so whether one is under way at all. Either arms it —
+   * the left one keeps orbiting and picking exactly as before, it only GAINS the keys.
+   */
+  private flownWith: number | null = null
   /**
    * Whether the camera actually moved while the button was down. The pointer alone cannot say:
    * a flight is driven by the keyboard, so letting go of `W` before the button — the ordinary
@@ -1854,7 +1859,7 @@ export class SceneRenderer {
    * boost-strafe-left, and the held set cannot tell them apart — Shift is down either way.
    */
   get flying(): boolean {
-    return this.flownFrom !== null
+    return this.flownWith !== null
   }
 
   dispose(): void {
@@ -2852,7 +2857,9 @@ export class SceneRenderer {
    * good, and a frozen viewport picks with the camera of a pane one has left — nothing selects.
    */
   private syncPaneFreeze(): void {
-    this.viewport.freezePanes(this.gizmo?.dragging === true || this.flying)
+    // `flownWith === 2`, not `flying`: a flight under the LEFT button is orbiting at the same
+    // time, and freezing would take that orbit away — see `startFlight`.
+    this.viewport.freezePanes(this.gizmo?.dragging === true || this.flownWith === 2)
   }
 
   private readonly onPointerAim = (event: PointerEvent): void => {
@@ -2867,14 +2874,36 @@ export class SceneRenderer {
     this.aimGizmo()
   }
 
+  private startFlight(event: PointerEvent): void {
+    this.flownFrom = { x: event.clientX, y: event.clientY }
+    this.flownWith = event.button
+    this.flew = false
+    // The RIGHT button only. `freezePanes` ends in `armOrbits(null)`, which sets
+    // `controls.enabled = false` on the main orbit — freezing under the left button would cost
+    // that button the rotation it is held down for.
+    if (event.button === 2) this.viewport.freezePanes(true)
+    // Before the first frame of the flight, or its opening step spans the whole idle time.
+    this.viewport.resetClock()
+    this.redraw()
+  }
+
+  /** `buttons === 0` is the reading that cannot lie: pressing both and letting go out of order
+   * would otherwise leave a flight armed under a hand that holds nothing. */
+  private endFlight(button: number, event: PointerEvent): void {
+    if (this.flownWith !== button && event.buttons !== 0) return
+
+    const froze = this.flownWith === 2
+    this.flownFrom = null
+    this.flownWith = null
+    this.held.clear()
+    // Only what froze thaws: the left button never froze anything, and thawing would re-arm the
+    // orbits it never took. Asked rather than asserted, a handle may still be held under it.
+    if (froze) this.syncPaneFreeze()
+  }
+
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button === 2) {
-      this.flownFrom = { x: event.clientX, y: event.clientY }
-      this.flew = false
-      this.viewport.freezePanes(true)
-      // Before the first frame of the flight, or its opening step spans the whole idle time.
-      this.viewport.resetClock()
-      this.redraw()
+      this.startFlight(event)
       return
     }
     if (event.button !== 0 || this.gizmo?.dragging) return
@@ -2885,6 +2914,9 @@ export class SceneRenderer {
     // those are the very keys that add to a selection. Picking on release, and only if the
     // pointer never moved, is what stops a recentring gesture from unpicking what it passes over.
     this.pressed = { x: event.clientX, y: event.clientY }
+    // ADDED to the left button, never substituted for what it already did: it goes on orbiting
+    // through `OrbitControls` and picking on release, and only gains the keys.
+    this.startFlight(event)
   }
 
   private readonly onPointerUp = (event: PointerEvent): void => {
@@ -2894,11 +2926,7 @@ export class SceneRenderer {
       // camera.
       const still = !this.flew && this.held.size === 0 && wasClick(this.flownFrom, event)
 
-      this.flownFrom = null
-      this.held.clear()
-      // Asked rather than asserted: a handle may still be held under the left button, and thawing
-      // in the middle of that drag hands the gizmo another camera than the one it started in.
-      this.syncPaneFreeze()
+      this.endFlight(2, event)
 
       // Never in pose mode: there a click names a bone, and a bone is not a node the menu could
       // act on. And never through the preview, for the reason the left button gives below: it is
@@ -2921,8 +2949,12 @@ export class SceneRenderer {
     if (event.button !== 0) return
 
     const pressed = this.pressed
+    const flew = this.flew
     this.pressed = null
-    if (!wasClick(pressed, event)) return
+    this.endFlight(0, event)
+    // A flight that moved the camera is not a click, even when the pointer never left its pixel:
+    // the keyboard did the moving. The same reading the right button already makes for its menu.
+    if (flew || !wasClick(pressed, event)) return
     // A click in the preview picks nothing: it is drawn through another camera, so a ray cast
     // from the pane underneath would select whatever the picture happens to be covering.
     if (this.viewport.insetHasPointer(event)) return
@@ -3207,6 +3239,13 @@ export class SceneRenderer {
 
   // No need for the event's own value: three writes the property before it dispatches.
   private readonly onDraggingChanged = (): void => {
+    // A handle taken under the left button ends the flight that button armed: dragging a gizmo
+    // and flying at once would move the camera and the object on one gesture.
+    if (this.gizmo?.dragging === true && this.flownWith === 0) {
+      this.flownFrom = null
+      this.flownWith = null
+      this.held.clear()
+    }
     this.syncPaneFreeze()
   }
 

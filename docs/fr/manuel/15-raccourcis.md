@@ -284,10 +284,10 @@ L’altitude n’en a pas, les quatre étant déjà prises par le déplacement a
 
 La vitesse et l’accélération se règlent dans les [réglages](14-reglages.md#espaces-de-travail).
 
-> **`S` porte deux sens, et c’est le bouton droit qui tranche.** Bouton relâché, `S` choisit
-> l’outil **Redimensionner** ; bouton droit maintenu, il fait reculer la caméra et ne touche plus
-> à l’outil. Il en va de même des flèches : pendant un vol elles pilotent la caméra, et la liste
-> qui avait le focus ne les reçoit pas.
+> **`S` porte deux sens, et c’est le bouton de la souris qui tranche.** Aucun bouton enfoncé,
+> `S` choisit l’outil **Redimensionner** ; un bouton maintenu dans la vue — gauche ou droit — il
+> fait reculer la caméra et ne touche plus à l’outil. Il en va de même des flèches : pendant un
+> vol elles pilotent la caméra, et la liste qui avait le focus ne les reçoit pas.
 
 ### Ce que la souris fait, sans raccourci
 
@@ -295,6 +295,7 @@ La vitesse et l’accélération se règlent dans les [réglages](14-reglages.md
 |---|---|
 | **Clic gauche** | choisit l’objet sous le curseur — ou l’**os** le plus proche, en mode pose (`P`) |
 | **Clic droit maintenu + souris** | tourne la tête, sur place |
+| **Un bouton maintenu + clavier** | déplace la caméra — voir [l’espace Modélisation](09-espace-modelisation.md) |
 | **Molette** | avance ou recule |
 | **Clic sur une poignée + glisser** | applique l’outil en cours |
 

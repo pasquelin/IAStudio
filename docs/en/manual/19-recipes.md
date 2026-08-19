@@ -192,7 +192,7 @@ waveform appears — the `+` on the left rail is not a prerequisite.
 7. `G` to move it, `R` to rotate it, `S` to scale it, `F` to frame it;
 8. `⌘S` **saves**.
 
-**To fly through the scene:** hold the **right mouse button** and use `W` `A` `S` `D` (`Z` `Q`
+**To fly through the scene:** hold a **mouse button** and use `W` `A` `S` `D` (`Z` `Q`
 `S` `D` on a French keyboard — the studio listens to the key's position, not the letter), or the
 four **arrows**, which do the same. `E` goes up, `Q` goes down, left `⇧` speeds up.
 

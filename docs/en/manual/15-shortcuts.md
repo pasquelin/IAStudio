@@ -276,10 +276,10 @@ none, the four being already taken by movement along the ground.
 
 Speed and boost are set in [settings](14-settings.md#workspaces).
 
-> **`S` carries two meanings, and the right button settles which.** Button up, `S` picks the
-> **Scale** tool; right button held, it moves the camera back and leaves the tool alone. The
-> arrows work the same way: during a flight they drive the camera, and the list that had the
-> focus never sees them.
+> **`S` carries two meanings, and the mouse button settles which.** No button down, `S` picks the
+> **Scale** tool; a button held in the view — left or right — it moves the camera back and leaves
+> the tool alone. The arrows work the same way: during a flight they drive the camera, and the
+> list that had the focus never sees them.
 
 ### What the mouse does, with no shortcut
 
@@ -287,6 +287,7 @@ Speed and boost are set in [settings](14-settings.md#workspaces).
 |---|---|
 | **Left click** | chooses the object under the cursor — or the nearest **bone**, in pose mode (`P`) |
 | **Right click held + move** | turns your head, on the spot |
+| **A button held + keyboard** | moves the camera — see [the Modelling workspace](09-modelling-workspace.md) |
 | **Wheel** | moves forward or back |
 | **Click a handle + drag** | applies the current tool |
 

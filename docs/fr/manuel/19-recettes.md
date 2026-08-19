@@ -194,7 +194,7 @@ s’ouvre pour lui, et la forme d’onde apparaît — le `+` du rail gauche n�
 7. `G` pour la déplacer, `R` pour la tourner, `S` pour la redimensionner, `F` pour la cadrer ;
 8. `⌘S` **enregistre**.
 
-**Pour voler dans la scène :** maintenez le **clic droit** et servez-vous de `W` `A` `S` `D`
+**Pour voler dans la scène :** maintenez un **bouton de la souris** et servez-vous de `W` `A` `S` `D`
 (`Z` `Q` `S` `D` sur un clavier français — le studio écoute la position de la touche, pas la
 lettre) ou des quatre **flèches**, qui font la même chose. `E` monte, `Q` descend, `⇧` gauche
 accélère.
