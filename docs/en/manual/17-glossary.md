@@ -272,7 +272,7 @@ result lands in your *assets*.
 **Gizmo**
 The coloured *handles* that appear on a selected 3D object, and through which it is transformed:
 the **arrows** move it, the **circles** rotate it, the scale handles resize it. Which ones show is
-decided by the armed tool. Their orientation follows the *local or world frame*.
+decided by the armed tool. Their orientation follows the *local frame / world frame*.
 
 **Group**
 Several objects filed under one parent. In the Modelling workspace (`⌘G`) as in the layer stack: moving
@@ -350,7 +350,7 @@ bar, and goes through five states: **Queued** → **Running** → **Done**, or e
 You can keep working while a job runs.
 
 **Journal** *(activity)*
-The list of what the studio has done and failed to do, opened from the *status line*. Six
+The list of what the studio has done and failed to do, opened from the **status line**. Six
 topics — generation, import, library, document, project, interface — and three levels:
 information, warning, failure. A failure also raises a **toast** in the corner of the window,
 which only leaves if you dismiss it. See [When something goes wrong](16-troubleshooting.md).
@@ -401,6 +401,11 @@ picture never moved.
 
 A mask can also be made from a *selection*, in one command.
 
+**Material**
+What a surface is made of: its colour, its grain, what it gives back of the light. It is what the
+**Textures** workspace makes, and what the **Material** section of the Inspector sets on a 3D
+object.
+
 **MCP** *(Model Context Protocol)*
 The common tongue coding assistants speak to the tools they drive. The studio can present itself as
 one of those tools: a client such as Claude Code then runs the same actions the *assistant* runs.
@@ -429,8 +434,8 @@ What you want to avoid. Short, in keywords: `blurry, text, watermark`. It is not
 describe a scene in reverse.
 
 **Node**
-An element of a 3D *scene*'s tree: a mesh, a light, a sprite, a group. It is what the *outliner*
-lists and what the *inspector* describes.
+An element of a 3D *scene*'s tree: a mesh, a light, a sprite, a group. It is what the **Outliner**
+lists and what the **Inspector** describes.
 
 **Normalise** *(audio)*
 Bringing a sound's perceived loudness to a reference level, here −14 *LUFS*. It stops two sounds
@@ -463,6 +468,12 @@ no model is chosen.
 **Playhead**
 The vertical line marking the current instant in the edit. You move it to place yourself, and it is
 at its position that a *clip* is split.
+
+**Project**
+A folder on your disk, and everything in it: the *assets*, the *documents*, the catalogue that
+indexes them. **The studio opens one at a time** — all its windows work on the same one. It supplies
+the first of the *shelf*'s three sources, the other two being your online library and the
+generations under way.
 
 **Projection**
 How the 3D camera lays volume flat. In **perspective**, what is far is smaller — that is what an
@@ -520,6 +531,11 @@ are dragged.
 **Saturation**
 The intensity of colours. At 0 the image is black and white; above 1 the colours shout.
 
+**Scene**
+What the Modelling workspace composes: a tree of *nodes* — objects, lights, cameras — with their
+places, their *materials* and their animation. It is that workspace's *document*, and it is written
+as `.gltf`.
+
 **Seed**
 The starting point of a generation's randomness. It is a number.
 
@@ -569,7 +585,7 @@ laid. They are called **Anim. 1**, **Anim. 2**, and are grouped **under** the ob
 
 It is not a *track* of the edit: a track holds *clips* and belongs to a sequence, a sub-track holds
 blocks and belongs to an object of the scene. Two motions on two sub-tracks play at the same time,
-but **they still share the same bones**: it is *Drives*, in the Inspector, that gives each one its
+but **they still share the same bones**: it is **Drives**, in the Inspector, that gives each one its
 half of the body.
 
 ---
