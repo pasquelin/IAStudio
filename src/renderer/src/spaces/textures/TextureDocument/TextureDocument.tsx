@@ -85,7 +85,7 @@ export function TextureDocument({ documentId }: { documentId: string }) {
     [documentId],
   )
 
-  useShortcuts({ scope: 'texture', enabled: active, onCommand })
+  useShortcuts({ scope: 'texture', enabled: active, documentId, onCommand })
 
   // Only while this tab is in front. The event goes to the window, not to a document, so two
   // open textures would otherwise both answer one click of the same menu row — and both would

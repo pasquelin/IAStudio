@@ -165,7 +165,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
     [documentId],
   )
 
-  useShortcuts({ scope: 'skybox', enabled: active, onCommand: run })
+  useShortcuts({ scope: 'skybox', enabled: active, documentId, onCommand: run })
 
   return (
     <AssetDropTarget

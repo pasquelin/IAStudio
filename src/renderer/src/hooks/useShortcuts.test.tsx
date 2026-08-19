@@ -11,10 +11,12 @@ const mount = (
   onCommand: (command: CommandId) => void,
   enabled = true,
   onMotionChange?: (held: Set<MotionId>) => void,
+  documentId?: string,
 ) =>
-  renderHook(() => useShortcuts({ scope: 'scene', enabled, onCommand, onMotionChange }), {
-    wrapper: ShortcutsFixture,
-  })
+  renderHook(
+    () => useShortcuts({ scope: 'scene', enabled, documentId, onCommand, onMotionChange }),
+    { wrapper: ShortcutsFixture },
+  )
 
 describe('useShortcuts', () => {
   it('fires the command bound to the pressed physical key', async () => {
@@ -136,6 +138,39 @@ describe('useShortcuts', () => {
     mount(onCommand, false)
 
     publishCommand('scene.frame')
+
+    expect(onCommand).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The one thing a key must never do, and the whole reason a sender may name a document: a
+   * panel pinned to a background tab edits the document it SHOWS.
+   */
+  it('runs a command addressed to its document, hidden tab or not', () => {
+    const onCommand = vi.fn()
+    mount(onCommand, false, undefined, 'doc-1')
+
+    publishCommand('scene.frame', 'doc-1')
+
+    expect(onCommand).toHaveBeenCalledWith('scene.frame')
+  })
+
+  it('leaves alone a command addressed to another document, visible or not', () => {
+    const onCommand = vi.fn()
+    mount(onCommand, true, undefined, 'doc-1')
+
+    publishCommand('scene.frame', 'doc-2')
+
+    expect(onCommand).not.toHaveBeenCalled()
+  })
+
+  // Every surface holding no document at all — the explorer, a monitor. Addressed to a document,
+  // the command is not theirs, and the tab in front is not a fallback.
+  it('leaves alone an addressed command when it shows no document', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+
+    publishCommand('scene.frame', 'doc-1')
 
     expect(onCommand).not.toHaveBeenCalled()
   })

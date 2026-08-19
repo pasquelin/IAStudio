@@ -54,6 +54,7 @@ export type CommandId =
   | 'scene.rotate'
   | 'scene.scale'
   | 'scene.frame'
+  | 'scene.add'
   | 'scene.group'
   | 'scene.duplicate'
   | 'scene.copy'
@@ -448,6 +449,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.scenePoseMode.title',
     helpKey: 'commands.scenePoseMode.help',
     defaultBinding: 'KeyP',
+  }),
+  // `⇧A` as in Blender, whose Add menu this is. It opens rows rather than doing anything, which
+  // is why it carries no verb of its own.
+  command({
+    id: 'scene.add',
+    scope: 'scene',
+    titleKey: 'commands.sceneAdd.title',
+    helpKey: 'commands.sceneAdd.help',
+    defaultBinding: 'Shift+KeyA',
   }),
   // `⌘G` as in every editor that groups: the key is taken by nothing else in this scope.
   command({

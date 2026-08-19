@@ -172,14 +172,15 @@ export function LayerStackActions({ documentId }: { documentId: string }) {
             ))}
 
             {/* Published rather than run: carving the mask is the ENGINE's, and this panel holds
-                none — the same door the native menu row uses, answered by the tab in front. */}
+                none. Addressed to the document it shows, unlike the native menu row: a panel
+                pinned to a background image must not engrave the one in front. */}
             <MenuRow
               label={t('commands.canvasMaskFromSelection.title')}
               icon={mdiSelectionDrag}
               disabled={!hasSelection}
               tip={HINT_RIGHT(t('commands.canvasMaskFromSelection.help'))}
               onSelect={() => {
-                publishCommand('canvas.maskFromSelection')
+                publishCommand('canvas.maskFromSelection', documentId)
                 close()
               }}
             />

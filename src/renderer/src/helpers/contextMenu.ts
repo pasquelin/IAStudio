@@ -25,9 +25,24 @@ export type ContextMenuAction = {
 /** A rule between two groups. Nothing to choose, so nothing to explain. */
 export type ContextMenuRule = { separator: true }
 
-export type ContextMenuRow = ContextMenuAction | ContextMenuRule
+/**
+ * A row that opens onto others rather than doing anything itself — Add ▸ Mesh ▸ Cube.
+ *
+ * Its rows are actions and only actions: one level, which the shared type is what bounds. Twenty-
+ * four ways of adding to a scene are unreadable flat, and unpointable three deep.
+ */
+export type ContextMenuGroup = {
+  label: string
+  icon?: string
+  disabled?: boolean
+  tooltip: string
+  rows: readonly ContextMenuAction[]
+}
+
+export type ContextMenuRow = ContextMenuAction | ContextMenuRule | ContextMenuGroup
 
 const isRule = (row: ContextMenuRow): row is ContextMenuRule => 'separator' in row
+const isGroup = (row: ContextMenuRow): row is ContextMenuGroup => 'rows' in row
 
 /**
  * Raises the rows as the system's own context menu, at the pointer, and runs the one chosen.
@@ -44,20 +59,35 @@ const isRule = (row: ContextMenuRow): row is ContextMenuRule => 'separator' in r
  * it: a menu that cannot be popped is a menu nobody chose from.
  */
 export async function showContextMenu(rows: readonly ContextMenuRow[]): Promise<void> {
-  const items: ContextMenuItem[] = rows.map((row, index) => {
-    // Indexed over the whole list, rules included: what comes back is a position in what was
-    // SENT, and numbering only the actions would answer the row above every rule.
-    if (isRule(row)) return { id: String(index), label: '', separator: true }
-
+  // Indexed over the whole list, rules included: what comes back is a position in what was
+  // SENT, and numbering only the actions would answer the row above every rule. A row of a
+  // submenu carries its parent's position too — `3.1` — for the same reason.
+  const leafOf = (row: ContextMenuAction, id: string): ContextMenuItem => {
     const icon = row.icon ? menuIcon(row.icon) : undefined
     return {
-      id: String(index),
+      id,
       label: row.label,
       enabled: !row.disabled,
       ...(icon ? { icon } : {}),
       ...(row.accelerator ? { accelerator: row.accelerator } : {}),
       tooltip: row.tooltip,
     }
+  }
+
+  const items: ContextMenuItem[] = rows.map((row, index) => {
+    if (isRule(row)) return { id: String(index), label: '', separator: true }
+    if (isGroup(row)) {
+      const icon = row.icon ? menuIcon(row.icon) : undefined
+      return {
+        id: String(index),
+        label: row.label,
+        enabled: !row.disabled,
+        ...(icon ? { icon } : {}),
+        tooltip: row.tooltip,
+        submenu: row.rows.map((leaf, inner) => leafOf(leaf, `${index}.${inner}`)),
+      }
+    }
+    return leafOf(row, String(index))
   })
 
   // Caught rather than left to `void`: the main process validates what arrives and REFUSES what
@@ -75,6 +105,11 @@ export async function showContextMenu(rows: readonly ContextMenuRow[]): Promise<
   // skimming even though the string is not.
   if (chosen === null || chosen === undefined) return
 
-  const row = rows[Number(chosen)]
-  if (row && !isRule(row)) row.onSelect()
+  const [outer, inner] = chosen.split('.')
+  const row = rows[Number(outer)]
+  if (!row || isRule(row)) return
+  // A group is opened, never chosen: without a second half there is no row to run, and
+  // `rows[NaN]` is what says so.
+  if (isGroup(row)) row.rows[Number(inner)]?.onSelect()
+  else row.onSelect()
 }

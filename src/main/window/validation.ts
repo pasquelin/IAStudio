@@ -49,31 +49,39 @@ const menuIcon = z
  * `label` is not trimmed to a path segment or anything like it — it is a sentence in the user's
  * language, and the only thing that can go wrong with it is length.
  */
+const contextMenuLeaf = z.object({
+  id: z.string().min(1).max(120),
+  // A rule carries no label, which is the one row where the empty string is the truth.
+  label: z.string().max(200),
+  separator: z.literal(true).optional(),
+  enabled: z.boolean().optional(),
+  icon: menuIcon.optional(),
+  /**
+   * Electron parses this itself and THROWS on a shape it does not know — the menu then never
+   * opens, and what the window hears is a rejected invoke rather than a menu.
+   *
+   * Bounded to what `acceleratorOf` actually produces: its four modifier names, spelled out
+   * rather than "any word" — `Foobar+A` used to pass a rule whose own comment claimed it
+   * could not — then `+`, then a key of letters, digits or the punctuation it names.
+   */
+  accelerator: z
+    .string()
+    .max(60)
+    .regex(/^(?:(?:CmdOrCtrl|Ctrl|Alt|Shift)\+)*[A-Za-z0-9,.=\-/\\]+$/)
+    .optional(),
+  tooltip: z.string().min(1).max(300).optional(),
+})
+
+// One level, spelled as two schemas rather than as a recursion with a depth to count: a leaf
+// has no `submenu` field at all, so nothing deeper can be described, let alone sent.
+const contextMenuItem = contextMenuLeaf
+  .extend({ submenu: z.array(contextMenuLeaf).min(1).max(40).optional() })
+  // A rule that opens onto rows is neither, and this schema is the only thing standing between
+  // the two: the template builds a labelled parent from it and draws no rule at all.
+  .refine(item => !(item.separator && item.submenu))
+
 const contextMenuItems = z
-  .array(
-    z.object({
-      id: z.string().min(1).max(120),
-      // A rule carries no label, which is the one row where the empty string is the truth.
-      label: z.string().max(200),
-      separator: z.literal(true).optional(),
-      enabled: z.boolean().optional(),
-      icon: menuIcon.optional(),
-      /**
-       * Electron parses this itself and THROWS on a shape it does not know — the menu then never
-       * opens, and what the window hears is a rejected invoke rather than a menu.
-       *
-       * Bounded to what `acceleratorOf` actually produces: its four modifier names, spelled out
-       * rather than "any word" — `Foobar+A` used to pass a rule whose own comment claimed it
-       * could not — then `+`, then a key of letters, digits or the punctuation it names.
-       */
-      accelerator: z
-        .string()
-        .max(60)
-        .regex(/^(?:(?:CmdOrCtrl|Ctrl|Alt|Shift)\+)*[A-Za-z0-9,.=\-/\\]+$/)
-        .optional(),
-      tooltip: z.string().min(1).max(300).optional(),
-    }),
-  )
+  .array(contextMenuItem)
   .min(1)
   // Well above the longest menu of the studio — an asset with every intent it can have — and low
   // enough that a runaway list cannot ask the system to draw ten thousand rows.

@@ -4,7 +4,9 @@ import {
   mdiAutoFix,
   mdiBrush,
   mdiCardOutline,
+  mdiCheck,
   mdiCircleOutline,
+  mdiClose,
   mdiCreation,
   mdiCommentOutline,
   mdiCropFree,
@@ -394,6 +396,35 @@ export const AI_EDIT_TOOL: ToolbarItem = {
     descriptionKey: helpKey,
     icon,
   })),
+}
+
+/**
+ * Answering a frame the crop tool has drawn. Greyed rather than dropped while there is none, the
+ * rule this studio's bars already follow: a bar whose length changes is one nobody can learn.
+ */
+export const CROP_TOOLS: readonly (ToolbarItem & { command: CommandId })[] = [
+  {
+    id: 'cropApply',
+    command: 'canvas.cropApply',
+    labelKey: 'commands.canvasCropApply.title',
+    descriptionKey: 'commands.canvasCropApply.help',
+    icon: mdiCheck,
+    separatorBefore: true,
+    acts: true,
+  },
+  {
+    id: 'cropCancel',
+    command: 'canvas.cropCancel',
+    labelKey: 'commands.canvasCropCancel.title',
+    descriptionKey: 'commands.canvasCropCancel.help',
+    icon: mdiClose,
+    acts: true,
+  },
+]
+
+/** Which command one of those two fires. `null` for every other button of the bar. */
+export function cropCommandOf(toolId: string): CommandId | null {
+  return CROP_TOOLS.find(tool => tool.id === toolId)?.command ?? null
 }
 
 /** Which command a row of that menu fires. `null` for a row from nowhere. */

@@ -120,6 +120,10 @@
       "title": "Mode de rendu",
       "help": "Fait défiler ce que le viewport dessine : les surfaces, leurs arêtes seules, ou les deux ensemble. Le menu du bouton permet de choisir directement."
     },
+    "sceneAdd": {
+      "title": "Ajouter",
+      "help": "Ouvre la liste de ce que la scène peut recevoir — mailles, lumières et objets. Un clic droit dans le vide ouvre la même liste."
+    },
     "sceneGroup": {
       "title": "Grouper",
       "help": "Range les objets sélectionnés sous un même groupe. Déplacer le groupe les déplace tous, et ⌘Z défait le rangement."

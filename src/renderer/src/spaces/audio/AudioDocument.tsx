@@ -101,7 +101,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
 
   // Both the keyboard and the Edit menu land here. `enabled` for the same reason the scene
   // gives: Dockview keeps hidden tabs mounted, and a background take would eat ⌘Z.
-  useShortcuts({ scope: 'audio', enabled: active, onCommand })
+  useShortcuts({ scope: 'audio', enabled: active, documentId, onCommand })
 
   // The space bar, which the programme monitor answers here as it does in the picture pair —
   // and the montage export, this space holding the same `SequenceState` the video one does.
@@ -115,7 +115,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
     },
     [documentId, transport],
   )
-  useShortcuts({ scope: 'sequence', enabled: active, onCommand: onMontage })
+  useShortcuts({ scope: 'sequence', enabled: active, documentId, onCommand: onMontage })
 
   return (
     /*

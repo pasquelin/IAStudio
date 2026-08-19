@@ -11,6 +11,7 @@ import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { canvasOf, canvasHistoryOf, useCanvases } from '@/stores/canvases'
+import { useCanvasViews } from '@/stores/canvasViews'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { bridgeWatchingLogs } from '@/services/fakeBridge'
@@ -220,6 +221,50 @@ describe('ImageDocument', () => {
   it('offers a colour input', () => {
     armedWith('KeyP')
     expect(screen.getByLabelText('Couleur')).toBeInTheDocument()
+  })
+
+  /**
+   * ⏎ and ⎋ answered a crop frame and nothing else did — a key nothing on screen names. Greyed
+   * rather than dropped while there is no frame, the rule the rest of this bar follows.
+   */
+  describe('answering a crop frame', () => {
+    it('greys both buttons while no frame is drawn', () => {
+      useCanvasViews.getState().setCropFrame('doc-1', false)
+      render(<ImageDocument documentId="doc-1" />)
+
+      expect(screen.getByRole('button', { name: /^Appliquer le recadrage/ })).toBeDisabled()
+      expect(screen.getByRole('button', { name: /^Abandonner le recadrage/ })).toBeDisabled()
+    })
+
+    it('crops to the frame the engine drew', async () => {
+      useCanvasViews.getState().setCropFrame('doc-1', true)
+      render(<ImageDocument documentId="doc-1" />)
+
+      await userEvent.click(screen.getByRole('button', { name: /^Appliquer le recadrage/ }))
+
+      expect(applyCrop).toHaveBeenCalled()
+    })
+
+    it('takes that frame away without cropping', async () => {
+      useCanvasViews.getState().setCropFrame('doc-1', true)
+      render(<ImageDocument documentId="doc-1" />)
+
+      await userEvent.click(screen.getByRole('button', { name: /^Abandonner le recadrage/ }))
+
+      expect(dropCrop).toHaveBeenCalled()
+      expect(applyCrop).not.toHaveBeenCalled()
+    })
+
+    // It ACTS, so it has no pressed state: a button for ever announcing "toggle, not pressed"
+    // describes something it does not have.
+    it('announces neither of them as a toggle', () => {
+      useCanvasViews.getState().setCropFrame('doc-1', true)
+      render(<ImageDocument documentId="doc-1" />)
+
+      expect(screen.getByRole('button', { name: /^Appliquer le recadrage/ })).not.toHaveAttribute(
+        'aria-pressed',
+      )
+    })
   })
 
   /**

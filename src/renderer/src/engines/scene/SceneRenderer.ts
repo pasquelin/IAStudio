@@ -238,10 +238,12 @@ export type SceneRendererOptions = {
    * A node right-clicked in the viewport, for whoever raises the menu — this side draws none.
    *
    * Only for a right button that went down and came up in the same place with no motion key
-   * held: that button flies the camera, and every flight would otherwise end in a menu. A
-   * click in the void answers nothing, the fly camera being the gesture that owns the void.
+   * held: that button flies the camera, and every flight would otherwise end in a menu.
+   *
+   * `null` for a click that hit nothing — the void offers what a scene can RECEIVE, where a node
+   * offers what can be done to it.
    */
-  onContextMenu?: (nodeId: string) => void
+  onContextMenu?: (nodeId: string | null) => void
   /**
    * What the scene costs, whenever that changes. Counted here because only the engine knows what
    * a model actually brought: the document holds an asset id, not the triangles behind it.
@@ -1843,8 +1845,13 @@ export class SceneRenderer {
     if (this.flying && this.held.size > 0) this.redraw()
   }
 
-  /** Whether the right button is down, which is the whole of what flying means here. */
-  private get flying(): boolean {
+  /**
+   * Whether the right button is down, which is the whole of what flying means here.
+   *
+   * Public because a key can mean two things at once: ⇧A opens the Add menu and is also
+   * boost-strafe-left, and the held set cannot tell them apart — Shift is down either way.
+   */
+  get flying(): boolean {
     return this.flownFrom !== null
   }
 
@@ -2845,8 +2852,10 @@ export class SceneRenderer {
       this.syncPaneFreeze()
 
       // Never in pose mode: there a click names a bone, and a bone is not a node the menu could
-      // act on.
-      if (still && !this.poseMode) {
+      // act on. And never through the preview, for the reason the left button gives below: it is
+      // drawn through another camera, so a ray cast from the pane underneath names whatever the
+      // picture happens to be covering.
+      if (still && !this.poseMode && !this.viewport.insetHasPointer(event)) {
         // A knob raises the menu of its POINT, and picks it on the way: what the menu acts on is
         // then what the gizmo holds, rather than two different things under one pointer.
         const knob = this.pathPointAt(event)
@@ -2856,8 +2865,7 @@ export class SceneRenderer {
           return
         }
 
-        const id = this.nodeAt(event)
-        if (id) this.options.onContextMenu?.(id)
+        this.options.onContextMenu?.(this.nodeAt(event) ?? null)
       }
       return
     }
