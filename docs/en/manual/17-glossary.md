@@ -151,6 +151,10 @@ You meet it in three places: the **Generate** button carries an estimate — `~1
 press it; the generation's own line shows the real figure once it has gone; **Help ▸ Usage…**
 totals a period. Asking for the estimate spends nothing and generates nothing.
 
+**Crop** *(audio)*
+To keep only the selected portion of a sound, and throw the rest away. Not to be confused with
+*Trim*, which pulls a *clip* in from one of its ends.
+
 ---
 
 ## D
@@ -620,9 +624,9 @@ A line of the edit, on which *clips* are laid end to end. A picture track, a sou
 each if needed.
 
 **Trim**
-To shorten or lengthen a *clip* from one of its ends, or to keep only the selected portion of a
-sound. A video stops where its source does; a still has no source to run past, so both of its
-ends stretch it.
+To shorten or lengthen a *clip* from one of its ends, by pulling the *handle* that sits there. A
+video stops where its source does; a still has no source to run past, so both of its ends stretch
+it. Keeping only the selected portion of a sound is *Crop*.
 
 ---
 
