@@ -862,13 +862,16 @@ première sous-piste**, là où le glisser vous laisse choisir la ligne et l’e
 > Celui-ci pose le bloc lui-même, et peut le reprendre.
 
 **Un second appui l’arrête ET retire le bloc** : le bouton le dit, *Arrêter et retirer le bloc*.
-Appuyer sur le ▶ d’une **autre** ligne retire d’abord celui d’avant — il n’y en a jamais deux à la
+Appuyer sur le ▶ d’une **autre** ligne retire d’abord **celui qui joue** — jamais deux aperçus à la
 fois.
 
 > **Ce qui reste dépend de la façon dont ça s’est arrêté**, et c’est la seule subtilité de ce
 > bouton. Arrêté par vous, le bloc s’en va. **Interrompu par la tête de lecture — parce que vous
 > avez lancé la bande ou déplacé la tête — le bloc RESTE**, posé sur le personnage. Ce n’est pas un
-> accident : c’est ce qui transforme un essai concluant en travail gardé.
+> accident : c’est ce qui transforme un essai concluant en travail gardé. **Et plus rien ne le
+> reprend** : le ▶ suivant pose son essai EN PLUS, au même endroit — le personnage joue alors les
+> deux à la fois, à parts égales. Écartez les blocs sur la sous-piste pour les voir l’un après
+> l’autre.
 
 **Le ▶ est éteint tant qu’aucun modèle n’est sélectionné dans la scène** : il n’y a alors rien sur
 quoi jouer un mouvement. **Un modèle suffit — il n’a pas besoin d’être déjà animable** ; ce qu’il
