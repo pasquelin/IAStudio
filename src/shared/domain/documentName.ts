@@ -1,5 +1,11 @@
 import { EXTENSIONS_BY_KIND, type DocumentKind } from './document'
-import { foldForFileName, isSafeFileName, safeFileName, stemForSuffix } from './fileName'
+import {
+  foldForFileName,
+  isSafeFileName,
+  safeFileName,
+  stemForSuffix,
+  withinFileNameBytes,
+} from './fileName'
 
 /**
  * Naming a document, which since documents are named by what they are called is also naming a
@@ -60,6 +66,9 @@ export function checkDocumentName(
 
   if (trimmed.length === 0) return 'empty'
   if ([...trimmed].length > DOCUMENT_NAME_MAX_LENGTH) return 'too-long'
+  // And in bytes, because ext4 counts those — before `isSafeFileName`, which would answer
+  // `invalid` for a title whose only fault is its length.
+  if (!withinFileNameBytes(trimmed)) return 'too-long'
   // Refused rather than quietly cleaned: a title the studio would rewrite is a second name for
   // the document, and one name is the whole point.
   if (!isSafeFileName(trimmed)) return 'invalid'

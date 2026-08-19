@@ -1,5 +1,5 @@
 import { ASSET_NAME_MAX_LENGTH } from './asset'
-import { isSafeFileName, safeFileName } from './fileName'
+import { isSafeFileName, safeFileName, withinFileNameBytes } from './fileName'
 
 /**
  * Naming an asset, which since an asset is named by what it is called is also naming a file.
@@ -53,6 +53,9 @@ export function checkAssetName(name: string): AssetNameFailure | null {
   if (trimmed.length === 0) return 'empty'
   // By code point, as the bound is meant: a name of emoji is as long as it looks, not twice.
   if ([...trimmed].length > ASSET_NAME_MAX_LENGTH) return 'too-long'
+  // And in bytes, because ext4 counts those — before `isSafeFileName`, which would answer
+  // `invalid` for a name whose only fault is its length.
+  if (!withinFileNameBytes(trimmed)) return 'too-long'
   // Refused rather than quietly cleaned: a name the studio would rewrite is a second name for
   // the asset, and one name is the whole point.
   if (!isSafeFileName(trimmed)) return 'invalid'

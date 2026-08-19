@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { foldForFileName, isSafeFileName, safeFileName } from './fileName'
+import { FILE_NAME_MAX_BYTES, foldForFileName, isSafeFileName, safeFileName } from './fileName'
+
+const bytesOf = (value: string): number => new TextEncoder().encode(value).length
 
 /**
  * What `safeFileName` already did when it belonged to the texture export is covered in
@@ -7,6 +9,24 @@ import { foldForFileName, isSafeFileName, safeFileName } from './fileName'
  * to be named by hand.
  */
 describe('the name a file takes', () => {
+  /**
+   * Eighty code points of emoji are 320 bytes, and ext4 refuses a name past 255 — measured on
+   * 2026-08-19, where macOS wrote all four of ASCII, accented, CJK and astral at eighty.
+   */
+  it('holds a name of astral characters inside what every filesystem takes', () => {
+    const cut = safeFileName('🎬'.repeat(80))
+
+    expect(bytesOf(cut)).toBeLessThanOrEqual(FILE_NAME_MAX_BYTES)
+    // And as many as fit, not fewer: a bound that cut to nothing would pass the line above.
+    expect(bytesOf(cut) + bytesOf('🎬')).toBeGreaterThan(FILE_NAME_MAX_BYTES)
+  })
+
+  /** The bound in bytes must not shorten what already fitted: a Latin title is one byte a letter. */
+  it('leaves a name that already fitted exactly as long as it was', () => {
+    expect(safeFileName('é'.repeat(80))).toHaveLength(80)
+    expect(safeFileName('a'.repeat(80))).toHaveLength(80)
+  })
+
   /**
    * Windows drops a trailing dot without a word, so `Niveau.` and `Niveau` are one file there
    * and two everywhere else — the second document written would overwrite the first.
@@ -37,12 +57,18 @@ describe('the name a file takes', () => {
     expect(safeFileName(`Plan${String.fromCodePoint(0x1f)}large`)).toBe('Plan large')
   })
 
-  /** Cut by code point: half a surrogate pair reaches the disk as U+FFFD, and two titles merge. */
+  /**
+   * Cut by code point: half a surrogate pair reaches the disk as U+FFFD, and two titles merge.
+   *
+   * The length is NOT asserted here any more — the bound that bites on astral characters is the
+   * one in bytes, above — but every unit being a whole emoji is what says the cut fell between two
+   * of them rather than through one.
+   */
   it('cuts between characters rather than through one', () => {
     const cut = safeFileName('🎬'.repeat(100))
 
-    expect([...cut]).toHaveLength(80)
-    expect(cut.endsWith('🎬')).toBe(true)
+    expect(cut).toBe('🎬'.repeat([...cut].length))
+    expect([...cut].length).toBeLessThan(100)
   })
 })
 
