@@ -1,4 +1,5 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
+import { EASINGS } from './animation'
 import { LIGHT_ENTRIES, MESH_ENTRIES, OBJECT_ENTRIES } from './scene'
 
 /**
@@ -220,6 +221,56 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
         required: false,
         min: 0,
       },
+      {
+        key: 'durationSeconds',
+        kind: 'number',
+        labelKey: 'assistant.fields.durationSeconds',
+        required: false,
+        min: 0,
+      },
+    ],
+  }),
+  action({
+    /**
+     * The rail a shot runs its camera along, and which stretch of it. An empty `pathId` unbinds:
+     * the camera then stays wherever its transform and its keys put it.
+     */
+    name: 'camera.rail',
+    titleKey: 'assistant.actions.cameraRail.title',
+    descriptionKey: 'assistant.actions.cameraRail.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'shotId', kind: 'text', labelKey: 'assistant.fields.shotId', required: true },
+      { key: 'pathId', kind: 'text', labelKey: 'assistant.fields.pathId', required: false },
+      // Not clamped to one another: `from` past `to` is what runs the rail backwards.
+      { key: 'from', kind: 'number', labelKey: 'assistant.fields.railFrom', required: false },
+      { key: 'to', kind: 'number', labelKey: 'assistant.fields.railTo', required: false },
+      {
+        key: 'easing',
+        kind: 'choice',
+        labelKey: 'assistant.fields.easing',
+        required: false,
+        options: EASINGS,
+      },
+    ],
+  }),
+  action({
+    /**
+     * What a shot aims its camera at: a node it follows, a fixed point, or nothing at all —
+     * which leaves the camera aimed by its own rotation.
+     */
+    name: 'camera.target',
+    titleKey: 'assistant.actions.cameraTarget.title',
+    descriptionKey: 'assistant.actions.cameraTarget.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'shotId', kind: 'text', labelKey: 'assistant.fields.shotId', required: true },
+      { key: 'targetId', kind: 'text', labelKey: 'assistant.fields.targetId', required: false },
+      { key: 'atX', kind: 'number', labelKey: 'assistant.fields.positionX', required: false },
+      { key: 'atY', kind: 'number', labelKey: 'assistant.fields.positionY', required: false },
+      { key: 'atZ', kind: 'number', labelKey: 'assistant.fields.positionZ', required: false },
     ],
   }),
   action({

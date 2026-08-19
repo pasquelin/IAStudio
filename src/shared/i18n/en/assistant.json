@@ -511,7 +511,15 @@
       },
       "cameraShot": {
         "title": "Put a camera on air",
-        "description": "Opens a shot for this camera, from the given instant in seconds. Which line it lands on follows the band’s own rule, where a camera not yet on the band arrives on top."
+        "description": "Opens a shot for this camera, from the given instant in seconds, and answers its id. Which line it lands on follows the band’s own rule, where a camera not yet on the band arrives on top."
+      },
+      "cameraRail": {
+        "title": "Run a camera along a path",
+        "description": "Binds a path to the named shot: the camera travels it for the whole of the shot, at a steady speed along its length. With no path, the shot no longer moves the camera. A start past the end runs the path backwards."
+      },
+      "cameraTarget": {
+        "title": "Give a camera something to aim at",
+        "description": "Aims the camera of the named shot at an object — which it follows even when animated — or at a fixed point. With neither, the camera stays aimed by its own rotation alone."
       },
       "nodeReparent": {
         "title": "Reparent an object",
@@ -748,6 +756,13 @@
       "near": "Near distance",
       "far": "Far distance",
       "startSeconds": "Where the shot starts, in seconds",
+      "durationSeconds": "How long the shot lasts, in seconds — one frame at the very least",
+      "shotId": "Id of the shot",
+      "pathId": "Id of the path, or nothing to stop moving the camera",
+      "railFrom": "Where on the path it starts, from 0 to 1",
+      "railTo": "Where on the path it ends, from 0 to 1",
+      "easing": "Speed curve of the travelling",
+      "targetId": "Object the camera aims at, or nothing to leave it free",
       "gitPath": "Path inside the repository",
       "gitPaths": "Paths inside the repository",
       "commitHash": "Version identifier",
