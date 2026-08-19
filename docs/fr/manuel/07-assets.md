@@ -243,6 +243,15 @@ disque — pas d’un asset abîmé.
 durée par défaut plutôt qu’un refus. Dans la vue 3D, le dépôt est accepté **partout sur la vue**,
 la barre d’outils comprise : un lâcher qui tombe à côté serait un raté qu’on ne voit pas venir.
 
+**Au centre, un lâcher que personne ne prend n’est pas perdu** : sur la zone à onglets, un asset
+dont aucun document ne veut s’ouvre dans son propre espace, comme au double-clic — une image
+lâchée sur la vue 3D ouvre un document d’image. C’est vrai aussi quand rien n’est ouvert : le
+centre vide prend le lâcher.
+
+**Dans les colonnes et dans la bande, un lâcher refusé reste sans effet**, et rien ne le dit : la
+vignette d’un canal ne prend que des images, et il n’y a personne derrière elle pour rattraper le
+reste.
+
 ---
 
 ## L’inspecteur d’un asset

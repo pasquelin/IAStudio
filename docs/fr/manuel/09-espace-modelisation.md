@@ -133,8 +133,10 @@ type, quoi qu’il y ait à l’écran. C’est la règle de tout le studio, dé
 [Les assets](07-assets.md) — pour faire entrer une maille dans la scène que vous avez devant vous,
 c’est le glisser-déposer ou le clic droit.
 
-**Seules les mailles entrent.** Une image, un son ou une vidéo lâchés sur la vue 3D ne font
-rien : la scène ne saurait qu’en faire.
+**Seules les mailles entrent dans la scène** — mais un lâcher raté n’est pas un lâcher perdu. Une
+image, un son ou une vidéo lâchés sur la vue 3D **s’ouvrent dans leur propre espace**, exactement
+comme au double-clic. Rien ne l’annonce avant que vous lâchiez : le pointeur montre le même `+`
+que pour une maille.
 
 Comme le reste, le modèle se pose **à l’origine**. Il arrive parfois minuscule ou gigantesque —
 un `.glb` porte son échelle d’origine, qui n’a aucune raison d’être la vôtre. La poignée

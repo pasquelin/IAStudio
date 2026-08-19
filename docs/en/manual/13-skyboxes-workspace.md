@@ -48,8 +48,8 @@ While no image is placed, the preview shows: "No skybox yet. Generate one or dro
 equirectangular panorama."
 
 > **Only things that can be looked at are accepted**: a picture, a material or another sky,
-> provided it is on your disk. A sound or a video dropped there is ignored in silence — nothing
-> breaks, nothing changes.
+> provided it is on your disk. A sound or a video dropped there does not change the sky: it opens
+> in its own workspace, as a double-click would — see [Assets](07-assets.md).
 >
 > On the other hand, **any picture goes through**, not only a true panorama. An ordinary photo
 > placed as a sky will look strangely stretched: that is normal, the workspace expects an

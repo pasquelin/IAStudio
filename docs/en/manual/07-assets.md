@@ -239,6 +239,14 @@ editor takes, or an asset not yet down on your disk — not a broken one.
 gets a default one rather than a refusal. In the 3D view the drop is accepted **anywhere on the
 view**, toolbar included: a release landing beside it would be a miss you cannot see coming.
 
+**In the centre, a drop nobody takes is not a drop lost**: over the tabbed area, an asset no
+document will have opens in its own workspace, as a double-click would — a picture dropped on the
+3D view opens an image document. The same holds when nothing is open: the empty centre takes the
+drop.
+
+**In the columns and in the band, a refused drop has no effect at all**, and nothing says so: a
+channel's thumbnail takes pictures only, and there is nobody behind it to catch the rest.
+
 ---
 
 ## An asset's inspector
