@@ -32,7 +32,8 @@ export async function skyboxExportFiles(
     watch,
   )
 
-  // The folder is the six faces' own — a panorama is ONE file, and burying it under a directory
-  // named after it would make the person open a folder to find a single picture.
-  return { folder: target === 'sky.faces' ? name : '', target, files }
+  // The same folder either way, and that is a decision rather than an oversight: the writer takes
+  // a folder and only a folder — `pathSegment` refuses an empty one — so a panorama lands in one
+  // of its own instead of beside whatever the person picked.
+  return { folder: name, target, files }
 }

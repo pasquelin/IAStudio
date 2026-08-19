@@ -3,6 +3,7 @@ import {
   readAdjustments,
   type AdjustmentStack,
 } from '@shared/domain/adjustments'
+import { BLEND_MODES, type BlendMode } from '@shared/domain/canvasBlend'
 import { DEFAULT_FONT, readFontRef, type FontRef } from '@shared/domain/font'
 import { isRecord } from '@shared/guards'
 import { clamp } from '@shared/numeric'
@@ -16,43 +17,12 @@ import type { Point } from '../core/geometry'
  * by layer id. This is what a layer *is*, not what it shows.
  */
 
-/** The Porter-Duff and separable modes Pixi can composite with. */
-export type BlendMode =
-  | 'normal'
-  | 'multiply'
-  | 'screen'
-  | 'overlay'
-  | 'darken'
-  | 'lighten'
-  | 'color-dodge'
-  | 'color-burn'
-  | 'hard-light'
-  | 'soft-light'
-  | 'difference'
-  | 'exclusion'
-  | 'hue'
-  | 'saturation'
-  | 'color'
-  | 'luminosity'
-
-export const BLEND_MODES: readonly BlendMode[] = [
-  'normal',
-  'multiply',
-  'screen',
-  'overlay',
-  'darken',
-  'lighten',
-  'color-dodge',
-  'color-burn',
-  'hard-light',
-  'soft-light',
-  'difference',
-  'exclusion',
-  'hue',
-  'saturation',
-  'color',
-  'luminosity',
-]
+/**
+ * The Porter-Duff and separable modes Pixi can composite with. Re-exported so the sites reading a
+ * layer's blend from here keep reading it from here — the LIST moved to `shared/`, which the
+ * assistant's field and the PSD table both have to see.
+ */
+export { BLEND_MODES, type BlendMode }
 
 /**
  * What each padlock holds. Three of them rather than one boolean: locking a layer's position
