@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
@@ -6,7 +6,7 @@ import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { useDocuments } from '@/stores/documents'
 import { useModelClips } from '@/stores/modelClips'
 import { installScene } from '@/stores/scene-fixtures'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/sceneViews'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { AnimationsPanel } from './AnimationsPanel'
@@ -111,9 +111,12 @@ describe('the animations panel', () => {
     await waitFor(() => expect(screen.getByText(/Aucune animation/)).toBeInTheDocument())
   })
 
-  const blocksOf = () =>
+  /** Every block of the scene, or those of one character when a node is named. */
+  const blocksOf = (nodeId?: string) =>
     sceneOf(useScenes.getState(), DOCUMENT).nodes.flatMap(node =>
-      node.type === 'model' ? (node.model.lanes?.flatMap(lane => lane.clips) ?? []) : [],
+      node.type === 'model' && (nodeId === undefined || node.id === nodeId)
+        ? (node.model.lanes?.flatMap(lane => lane.clips) ?? [])
+        : [],
     )
 
   // The block IS the preview — the same trade the picker makes, since a rehearsal that differed
@@ -153,6 +156,42 @@ describe('the animations panel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Jouer sur le personnage' }))
 
     expect(blocksOf()).toHaveLength(1)
+  })
+
+  // The one subtlety of this button: a try the playhead interrupted is kept WORK, so the next row
+  // lays a second block IN ADDITION rather than taking the first back.
+  it('keeps the block the playhead interrupted, and lays the next one in addition', async () => {
+    withCharacter(['NlaTrack', 'run'])
+    render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('run')).toBeInTheDocument())
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Jouer sur le personnage' })[0]!)
+    act(() => useSceneViews.getState().setPlaying(DOCUMENT, true))
+    await userEvent.click(screen.getAllByRole('button', { name: 'Jouer sur le personnage' })[1]!)
+
+    expect(blocksOf().map(clip => clip.source)).toEqual([
+      { kind: 'embedded', name: 'NlaTrack' },
+      { kind: 'embedded', name: 'run' },
+    ])
+  })
+
+  // Off the character it went ON, which the block id alone does not say: taking it off the one in
+  // FRONT left the first standing and the second laid, which is the two this button forbids.
+  it('takes the block off the character it was laid on, not the one in front', async () => {
+    const one = modelNodeFixture('perso')
+    const two = modelNodeFixture('perso-2')
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [one, two], selectedIds: [one.id] })
+    useModelClips.getState().report(DOCUMENT, one.id, ['NlaTrack'])
+    useModelClips.getState().report(DOCUMENT, two.id, ['NlaTrack'])
+    render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('Animation')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: 'Jouer sur le personnage' }))
+    act(() => selectIn(DOCUMENT, [two.id]))
+    await userEvent.click(screen.getByRole('button', { name: 'Jouer sur le personnage' }))
+
+    expect(blocksOf(one.id)).toEqual([])
+    expect(blocksOf(two.id)).toHaveLength(1)
   })
 
   // Nothing to play it ON: the row is still listed, since a shipped animation is listed whatever

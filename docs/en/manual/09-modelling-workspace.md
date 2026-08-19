@@ -832,13 +832,15 @@ the first sub-track**, where dragging lets you choose the line and the spot.
 > anything. This one lays the block itself, and can take it back.
 
 **A second press stops it AND takes the block off**: the button says so, *Stop and take the block
-off*. Pressing the ▶ of **another** row takes the previous one away first — there are never two at
-a time.
+off*. Pressing the ▶ of **another** row takes **the one playing** away first — never two previews
+at a time.
 
 > **What is left depends on how it stopped**, and that is the one subtlety of this button. Stopped
 > by you, the block goes. **Interrupted by the playhead — because you started the band or moved the
 > head — the block STAYS**, laid on the character. That is not an accident: it is what turns a
-> convincing try into kept work.
+> convincing try into kept work. **And nothing takes it back after that**: the next ▶ lays its try
+> IN ADDITION, on the same spot — the character then plays both at once, in equal parts. Drag the
+> blocks apart on the sub-track to see them one after the other.
 
 **The ▶ is off while no model is selected in the scene**: there is then nothing to play a motion
 on. **A model is enough — it does not have to be animatable yet**; what it can really play is what

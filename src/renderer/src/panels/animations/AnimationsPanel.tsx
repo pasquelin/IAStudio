@@ -22,7 +22,7 @@ export function AnimationsPanel() {
   const { t } = useTranslation()
   const documentId = useDocuments(state => state.activeId)
   const [bundled, setBundled] = useState<readonly BundledAnimation[]>([])
-  /** The block laid to be watched, so pressing another row takes this one away first. */
+  /** The block laid to be watched. Taken back only while it still IS watched — see `held`. */
   const [watched, setWatched] = useState<ClipRef | null>(null)
   const preview = useSceneViews(state => sceneViewOf(state, documentId ?? '').preview)
 
@@ -50,6 +50,11 @@ export function AnimationsPanel() {
     return <EmptyState icon={mdiRunFast} message={t('animations.empty')} />
   }
 
+  // The laid block WHILE the preview still points at it, and the character it went ON.
+  // `setPlayhead` and `setPlaying` drop that preview without touching the block: it is kept work.
+  const held =
+    watched && preview?.clipId === watched.id ? { nodeId: preview.nodeId, clip: watched } : null
+
   /**
    * Whether this row is the one playing right now, and not merely the one laid.
    *
@@ -57,9 +62,7 @@ export function AnimationsPanel() {
    * changes with the language would lose the row at the first switch.
    */
   const playingIs = (source: ClipSource): boolean =>
-    watched !== null &&
-    clipKeyOf(watched.source) === clipKeyOf(source) &&
-    preview?.clipId === watched.id
+    held !== null && held.nodeId === nodeId && clipKeyOf(held.clip.source) === clipKeyOf(source)
 
   const watch = (source: ClipSource, label: string): void => {
     if (!documentId || !nodeId) return
@@ -68,12 +71,16 @@ export function AnimationsPanel() {
     // must not depend on what the lines below have already written.
     const stop = playingIs(source)
 
-    // Whatever was laid goes first, whichever row is pressed: the block IS the preview, and two
-    // of them left behind would play at once on the character.
-    if (watched) useScenes.getState().runCommand(documentId, removeModelClip(nodeId, watched.id))
+    // Off the character it went ON, which is not always the one in front: the block IS the
+    // preview, and two of them left behind would play at once.
+    if (held) {
+      useScenes.getState().runCommand(documentId, removeModelClip(held.nodeId, held.clip.id))
+    }
     useSceneViews.getState().setPreview(documentId, null)
-    setWatched(null)
-    if (stop) return
+    if (stop) {
+      setWatched(null)
+      return
+    }
 
     const laid = { ...DEFAULT_CLIP, id: newId(), source, label }
     useScenes.getState().runCommand(documentId, addModelClip(nodeId, laid))
