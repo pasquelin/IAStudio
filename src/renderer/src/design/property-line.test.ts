@@ -38,6 +38,16 @@ const FIELDS: Record<string, string> = import.meta.glob('./*Field.tsx', {
   eager: true,
 })
 
+/**
+ * Every component of the renderer, read the same way — the end-column rule below is swept over
+ * all of them, `design/` having proved too narrow twice.
+ */
+const RENDERER: Record<string, string> = import.meta.glob('../**/*.tsx', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
+
 /** The one component that now draws a name in the shared column, read the same way. */
 const LABEL: Record<string, string> = import.meta.glob('./PropertyLabel.tsx', {
   query: '?raw',
@@ -133,21 +143,24 @@ describe('a label the column is too narrow for', () => {
   })
 
   /**
-   * Every line ENDS on one column too, and that is the other half of the two-column reading:
-   * `FieldActions` holds the room a reset or a padlock takes whether or not one is drawn there.
+   * Every line ENDS on one column too: `FieldActions` holds the room a reset or a padlock takes
+   * whether or not one is drawn there. Measured before it existed — a field narrowed from 86px to
+   * 74px UNDER the pointer, the reset appearing as the value left its default.
    *
-   * Measured on 2026-08-19 before it existed: a reset appears the moment a value leaves its
-   * default, so the field narrowed from 86px to 74px UNDER the pointer, mid-drag — and the six
-   * families of line ended on five different columns.
+   * Swept over the WHOLE renderer, not over `design/*Field.tsx`: read narrowly it would have
+   * missed both of its real cases — `LinkField/` sits a folder down, and `panels/view/View.tsx`
+   * drew a hand-written line in the same section as a `SliderField`, ending 56px past it.
    *
-   * Read on `FIELD_ROW`, since that class IS what makes a line one. The blind spot is a field
-   * that ends its row inside a helper of its own: nothing here would follow it there.
+   * Three blind spots, in clear. A file that DELEGATES its row is invisible here, since it wears
+   * no `FIELD_ROW` of its own — `LinkField` hands its to `SelectField`, and nothing checks that
+   * the one it hands to holds the column. The tag is looked for as TEXT, so one written in a
+   * branch nothing takes would pass. And a line ending inside a helper is not followed there.
    */
-  it('holds the end column on every family that draws a property line', () => {
-    const missing = Object.entries({ ...FIELDS, './PropertyRow.tsx': propertyRow })
+  it('holds the end column on every property line of the renderer', () => {
+    const missing = Object.entries(RENDERER)
       .filter(([, source]) => code(source).includes('FIELD_ROW'))
       .filter(([, source]) => !code(source).includes('<FieldActions'))
-      .map(([path]) => path)
+      .map(([path]) => path.replace('../', ''))
 
     expect(missing, `these end where they please: ${missing.join(', ')}`).toEqual([])
   })

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   BUTTON_NEUTRAL,
+  COLOR_READOUT,
   CONTROL,
   FIELD,
   FIELD_FILL,
@@ -21,6 +22,8 @@ import {
   TOOLBAR_LABEL,
 } from './styles'
 import { rewrites, spellsOut, WRITTEN_SOURCES } from './testHarness'
+import stylesheet from '../index.css?raw'
+import toolButton from './ToolButton.tsx?raw'
 
 /**
  * Read off the skin rather than spelled out again, so a change of shade moves the rule with it.
@@ -572,9 +575,6 @@ describe('the word that names a group in a panel', () => {
  */
 const spellsOutSubject = spellsOut(ROW_SUBJECT.split(' '))
 
-/** That very neighbour, quoted rather than imported: it is written inline, not published. */
-const COLOUR_READOUT = 'text-muted text-mini min-w-0 flex-1 truncate font-mono uppercase'
-
 describe('what a line names', () => {
   it('is worn rather than written out again', () => {
     const offenders = WRITTEN_SOURCES.filter(
@@ -585,7 +585,7 @@ describe('what a line names', () => {
   })
 
   it('leaves the muted readout of a colour alone, which shares four of the five', () => {
-    expect(spellsOutSubject(`'${COLOUR_READOUT}'`)).toBe(false)
+    expect(spellsOutSubject(`'${COLOR_READOUT}'`)).toBe(false)
   })
 
   // Named rather than counted: a count stays green when one site drops the constant and another
@@ -666,5 +666,24 @@ describe('the line a pane draws above what it shows', () => {
       './CollectionBar/CollectionBar.tsx',
       './FormHeader.tsx',
     ])
+  })
+})
+
+/**
+ * The header glyph is written twice — as a number in `HOSTS`, which `UiIcon` takes, and as a gauge
+ * in the sheet, which `--sc-row-action-bleed` derives the end-column lean from. Nothing else holds
+ * them together: moved alone, the button's icon would shift by half its change and the column it
+ * lands on would not follow.
+ *
+ * **Blind**: raw text on both sides, so a second `glyph: 14` written for another host would satisfy
+ * this rule without being the one it means.
+ */
+describe('the header glyph', () => {
+  it('is the same number in the sheet as in the button', () => {
+    const gauge = /--sc-icon-header:\s*(\d+)px/.exec(stylesheet)?.[1]
+    const host = /header:\s*\{[^}]*glyph:\s*(\d+)/.exec(toolButton)?.[1]
+
+    expect(gauge).toBeDefined()
+    expect(host).toBe(gauge)
   })
 })

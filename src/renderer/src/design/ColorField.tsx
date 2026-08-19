@@ -2,7 +2,7 @@ import { cn } from '@/helpers/cn'
 import { FieldActions } from './FieldActions'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
-import { FIELD_ROW, ROW_ACTION_SPACER, type GestureProps } from './styles'
+import { COLOR_READOUT, FIELD_ROW, type GestureProps } from './styles'
 
 export type ColorFieldProps = GestureProps & {
   label: string
@@ -49,15 +49,11 @@ export function ColorField({
 
       {/* Hidden from the accessibility tree: the swatch already announces the colour it holds,
           and a second copy would end up inside the field's own name. */}
-      <span
-        aria-hidden
-        className="text-muted text-mini min-w-0 flex-1 truncate font-mono uppercase"
-      >
+      <span aria-hidden className={COLOR_READOUT}>
         {value}
       </span>
 
       <FieldActions>
-        <span aria-hidden className={ROW_ACTION_SPACER} />
         <ResetButton onReset={onReset} />
       </FieldActions>
     </label>

@@ -499,15 +499,17 @@
      exception: these are the only targets on their line, and the row itself answers everywhere
      they do not. Chosen on 2026-08-14, not derived. */
   --sc-control-inline: 20px;
-  /* How far a property line's END button leans into the panel's own padding. Its box already ends
-     on the column every field ends on, but its 14px glyph sits centred in a `--sc-control` square,
-     so what the eye reads stops 7px short — measured on 2026-08-19 against a checkbox, which is
-     its own box and does touch the edge. Half the difference of the two, per density. */
-  --sc-row-action-bleed: 7px;
-  /* The room every property line keeps at its end, drawn into or not. Two controls wide, which is
-     the most any line asks for — padlock and reset on Scale, browse and clear on a link. Held on
-     every line so all of them start and end on one column, decided on 2026-08-19. */
-  --sc-row-actions: 56px;
+  /* The glyph a `ToolButton` draws on a header. RECOPIED from `HOSTS.header.glyph`, which takes a
+     number and not a gauge — `design/styles.test.ts` holds the two together, since moving one
+     alone would shift the lean below by half its change and nothing would say so. */
+  --sc-icon-header: 14px;
+  /* How far a property line's END button leans into the panel's own padding: its box ends on the
+     column every field ends on, but its glyph sits centred in a wider square, so what the eye
+     reads stopped short. Derived, so a density that moves the control moves the lean with it. */
+  --sc-row-action-bleed: calc((var(--sc-control) - var(--sc-icon-header)) / 2);
+  /* The room every property line keeps at its end, drawn into or not — two controls, the most any
+     line asks for: padlock and reset on Scale, browse and clear on a link. */
+  --sc-row-actions: calc(var(--sc-control) * 2);
   /* A list row that stacks a name over a subtitle. `--sc-control` cannot hold it: two steps of
      `leading-tight` text are 27.5px, which fills a 28px row edge to edge and overflows a compact
      one. Its own gauge rather than a padding on the row, because the virtualizer is given a
@@ -596,9 +598,6 @@
 :root[data-density='compact'] {
   --sc-control: 24px;
   --sc-control-inline: 18px;
-  /* The glyph keeps its 14px at both densities, so the lean is half of a smaller square. */
-  --sc-row-action-bleed: 5px;
-  --sc-row-actions: 48px;
   --sc-row-stacked: 32px;
   --sc-row-filled: 38px;
   --sc-rail: 42px;

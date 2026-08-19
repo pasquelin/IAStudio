@@ -58,12 +58,13 @@ export function PropertyRow({ label, children, shape = 'inline' }: PropertyRowPr
       <div
         className={cn(
           'text-text min-w-0',
-          // Left, where a field would start, since 2026-08-19: a value read and a value edited sat
-          // on two different columns inside one section — « Rôle » beginning where « Taille » ended.
-          shape === 'inline' && 'flex-1 truncate text-left',
+          // Left like a field's own control, so a value read and a value edited share one column:
+          // « Rôle » used to begin where « Taille » ended.
+          shape !== 'stacked' && 'flex-1',
+          shape === 'inline' && 'truncate',
           // `break-all`: a path and a hash hold no space to break at, so a wrap with nothing to
           // wrap ON runs off the edge instead.
-          shape === 'wrap' && 'flex-1 text-left break-all',
+          shape === 'wrap' && 'break-all',
         )}
       >
         {children}

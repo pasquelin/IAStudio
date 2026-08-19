@@ -28,10 +28,9 @@ export function ToggleField({ label, value, onChange, scId }: ToggleFieldProps) 
         data-sc={scId && `field:${scId}`}
         checked={value}
         onChange={event => onChange(event.target.checked)}
-        className={cn(CHECKBOX, 'size-4 shrink-0')}
+        // `mr-auto` rather than a filler element: the box keeps its size and takes the column.
+        className={cn(CHECKBOX, 'mr-auto size-4 shrink-0')}
       />
-
-      <span className="min-w-0 flex-1" />
 
       <FieldActions />
     </label>

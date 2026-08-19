@@ -4,6 +4,7 @@ import { MAX_FIELD_OF_VIEW, MIN_FIELD_OF_VIEW, SKYBOX_VIEWS } from '@shared/doma
 import { SKYBOX_VIEW_LABELS } from '@/spaces/skyboxes/skyboxTools'
 import { Chip } from '@/design/Chip'
 import { EmptyState } from '@/design/EmptyState'
+import { FieldActions } from '@/design/FieldActions'
 import { PropertySection } from '@/design/PropertySection'
 import { SliderField } from '@/design/SliderField'
 import { ToggleField } from '@/design/ToggleField'
@@ -39,7 +40,7 @@ export function View() {
         <div className={FIELD_ROW}>
           <PropertyLabel label={t('view.mode')} />
 
-          <div className="flex min-w-0 flex-wrap gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap gap-2">
             {SKYBOX_VIEWS.map(candidate => (
               <Chip
                 key={candidate}
@@ -50,6 +51,8 @@ export function View() {
               />
             ))}
           </div>
+
+          <FieldActions />
         </div>
 
         <SliderField

@@ -307,13 +307,9 @@ export const PANEL_BAR = 'border-border flex items-center gap-2 border-b'
 /**
  * The body of a titled run of properties, under the heading `PropertySection` folds.
  *
- * No zebra fill, and the reason is the PARITY rather than the colour — remeasured on 2026-08-19,
- * since the first note said less than it seemed. Striping on `elevated` fails WCAG 1.4.11 in the
- * dark theme only (2.34, 2.42, 2.11 against the 3 an axis stripe needs) and clears it in the light
- * one (3.61, 3.50, 4.02); a third fill can be found. What cannot be found in CSS is which children
- * are LINES: `nth-child` counts DOM children, so a button row takes a band and unfolding a vector
- * shifts the parity of everything below it. Carrying parity per line means a React counter through
- * every field, on the panel that re-renders at every keystroke.
+ * No zebra fill, and the reason is the PARITY, not the colour: `nth-child` counts DOM children
+ * rather than property lines, so a button row takes a band and unfolding a vector flips everything
+ * below it. The contrast half is measured in `tokens.test.ts`.
  */
 export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
 
@@ -341,20 +337,22 @@ export const FIELD_ROW = 'flex min-h-(--sc-control) min-w-0 items-center gap-2 t
 export const ROW_ACTIONS =
   'flex w-(--sc-row-actions) shrink-0 items-center justify-end -mr-(--sc-row-action-bleed)'
 
-/** One empty place inside that room, for a line whose second button does not exist at all. */
+/**
+ * One empty place at the END of that room. Only ever needed there: `justify-end` already puts a
+ * lone button on the last place, so a spacer BEFORE one moves nothing.
+ */
 export const ROW_ACTION_SPACER = 'size-(--sc-control) shrink-0'
 
+/** The hexadecimal a colour swatch is read out as. Published so its guard can import it. */
+export const COLOR_READOUT = 'text-muted text-mini min-w-0 flex-1 truncate font-mono uppercase'
+
 /**
- * One width for the whole section, so the controls line up rather than each starting where its own
- * name ends — a SHARE of the line since 2026-08-19, floored and capped rather than fixed: held to
- * the floor alone, « Point d'entrée » truncated in a panel 1300px across.
+ * One width for a whole section, shared with `PropertyRow` so both families of line start on one
+ * column. A SHARE of the row, floored and capped rather than fixed: at the floor alone a name
+ * truncated in a panel wide enough to hold three of it.
  *
- * The three gauges are shared with `PropertyRow`, and that is the whole point: five inspectors out
- * of six draw both families inside one group, so two widths meant two columns in the same box.
- *
- * The edge is what makes it read as a COLUMN rather than as a word standing before a control —
- * the two-column reading of every inspector this studio is measured against. `PropertyLabel`
- * wears it, and stretches to the row's height so the rule runs the whole way down.
+ * The edge is what makes it read as a column rather than a word standing before a control;
+ * `PropertyLabel` wears it and stretches, so the rule runs the row's whole height.
  */
 export const FIELD_LABEL =
   'text-muted border-border w-(--sc-label-share) min-w-(--sc-label) max-w-(--sc-label-max) shrink-0 border-r pr-2'

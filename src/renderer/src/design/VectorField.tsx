@@ -7,7 +7,7 @@ import { NumberField } from './NumberField'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
 import { FieldActions } from './FieldActions'
-import { FIELD_ROW, ROW_ACTION_SPACER, type GestureProps } from './styles'
+import { FIELD_ROW, type GestureProps } from './styles'
 import { ToolButton } from './ToolButton'
 import { UiIcon } from './UiIcon'
 
@@ -30,10 +30,8 @@ export type VectorFieldProps<V extends AxisValue> = NumericBounds &
      */
     lockable?: boolean
     /**
-     * Where this vector RESTS, which is what a reset puts it back to — the whole vector from the
-     * folded row, one axis at a time from each unfolded one. A value rather than a callback so
-     * that the per-axis reset needs no second prop of its own; the write goes through `onChange`,
-     * so ⌘Z undoes it the way it undoes a drag.
+     * Where this vector RESTS: the whole of it from the folded row, one axis at a time from each
+     * unfolded one. A value and not a callback, so the per-axis reset needs no second prop.
      */
     defaults?: V
   }
@@ -102,19 +100,17 @@ export function VectorField<V extends AxisValue>({
     onChange({ ...value, ...scaled })
   }
 
-  /**
-   * Straight through `onChange`, never through `move`: `move` is where the padlock multiplies,
-   * and a reset that dragged the other two axes along with it would not be one.
-   */
-  const resetOf = (axis: keyof AxisValue): (() => void) | undefined =>
-    defaults === undefined || (value[axis] ?? 0) === (defaults[axis] ?? 0)
-      ? undefined
-      : () => onChange({ ...value, [axis]: defaults[axis] })
+  // One place that knows what "this axis has moved" means: read two ways, a missing axis counted
+  // as zero on one side and written as `undefined` on the other.
+  const moved = (axis: keyof AxisValue): boolean =>
+    defaults !== undefined && (value[axis] ?? 0) !== (defaults[axis] ?? 0)
 
-  const resetAll =
-    defaults !== undefined && shown.some(axis => (value[axis] ?? 0) !== (defaults[axis] ?? 0))
-      ? () => onChange(defaults)
-      : undefined
+  // Straight through `onChange`, never through `move`: `move` is where the padlock multiplies, and
+  // a reset dragging the other two axes with it would not be one.
+  const resetOf = (axis: keyof AxisValue): (() => void) | undefined =>
+    moved(axis) ? () => onChange({ ...value, [axis]: defaults?.[axis] ?? 0 }) : undefined
+
+  const resetAll = defaults && shown.some(moved) ? () => onChange(defaults) : undefined
 
   const axisField = (axis: keyof AxisValue, layout: 'row' | 'inline') => (
     <NumberField
@@ -163,10 +159,8 @@ export function VectorField<V extends AxisValue>({
 
         {stacked && <div className="min-w-0 flex-1" />}
 
-        {/* The padlock's place is held even where no line can padlock — only Scale can — so that
-            the three lines of one transform sit on the same column whatever each carries. */}
         <FieldActions>
-          {lockable ? (
+          {lockable && (
             <ToolButton
               icon={locked ? mdiLink : mdiLinkOff}
               label={t(locked ? 'inspector.unlinkAxes' : 'inspector.linkAxes')}
@@ -178,8 +172,6 @@ export function VectorField<V extends AxisValue>({
               active={locked}
               onClick={lock}
             />
-          ) : (
-            <span aria-hidden className={ROW_ACTION_SPACER} />
           )}
 
           <ResetButton onReset={resetAll} />

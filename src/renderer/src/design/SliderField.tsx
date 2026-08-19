@@ -3,7 +3,7 @@ import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
-import { FIELD_ROW, ROW_ACTION_SPACER, type GestureProps } from './styles'
+import { FIELD_ROW, type GestureProps } from './styles'
 
 export type SliderFieldProps = GestureProps & {
   label: string
@@ -58,7 +58,6 @@ export function SliderField({
       <Readout values={[value]} />
 
       <FieldActions>
-        <span aria-hidden className={ROW_ACTION_SPACER} />
         <ResetButton onReset={onReset} />
       </FieldActions>
     </label>

@@ -251,21 +251,20 @@ function listFields(
   descriptor: object,
   specs: Record<string, PropertySpec>,
   /** The same descriptor as it comes out of its factory — where one exists. */
-  fresh?: object,
+  fresh?: Record<string, unknown>,
 ): PropertyField[] {
   const fields: PropertyField[] = []
-  const rest: Record<string, unknown> = { ...fresh }
 
   for (const [name, value] of Object.entries(descriptor)) {
     if (name === 'kind') continue
     if (!isFieldValue(value)) continue
 
-    const fallback = rest[name]
+    const fallback = fresh?.[name]
     fields.push({
       name,
       value,
       spec: specs[name],
-      ...(isFieldValue(fallback) ? { fallback } : {}),
+      fallback: isFieldValue(fallback) ? fallback : undefined,
     })
   }
 

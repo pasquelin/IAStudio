@@ -1,12 +1,12 @@
 import { mdiImageSearchOutline } from '@mdi/js'
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { posterUrl, type AssetType } from '@shared/domain/asset'
 import { Button } from '@/design/Button'
 import { EmptyState } from '@/design/EmptyState'
 import { MediaTile } from '@/design/MediaTile'
 import { FIELD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { isComposing } from '@/helpers/composition'
+import { useDismiss } from '@/hooks/useDismiss'
 import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
 
 export type AssetPickerBodyProps = {
@@ -32,18 +32,14 @@ export function AssetPickerBody({
   settle,
   labels,
 }: AssetPickerBodyProps) {
-  /**
-   * The project's own pictures, as the slot's list holds them.
-   *
-   * It asked for the LIBRARY too until 2026-08-19, and that half could never answer: no writer in
-   * the app puts a `location: 'cloud'` row in the catalogue — `localBackend`, `adoptFile` and
-   * `link` all write `'local'`, and `cloudBackend.push` only adds a twin id to a local row. The
-   * library is a different feed altogether (`panels/assets/rows.ts`, built from the API page),
-   * which `app/` may not reach: `eager-graph.test.ts` keeps the panels out of the Shell's first
-   * screen. Widening the query also dropped the `isLocalPicture` guard, so what it really added
-   * was local rows whose file cannot be decoded.
-   */
+  // Local only: nothing in the app writes a `'cloud'` row to the catalogue, and `isLocalPicture`
+  // is the studio's one answer to "can this be decoded".
   const found = useProjectPictureAssets(accepts)
+  const surface = useRef<HTMLDivElement>(null)
+
+  // On the DOCUMENT: the press that opens this window leaves the focus on `<body>`, so a handler
+  // on the dialog caught no Escape. `onLeave` opted out — losing the window is not a choice made.
+  useDismiss(() => settle(null), surface, null, undefined)
 
   const shown = useMemo(() => {
     const needle = search.trim().toLowerCase()
@@ -51,24 +47,12 @@ export function AssetPickerBody({
   }, [found, search])
 
   return (
-    <div
-      className="bg-scrim fixed inset-0 z-60 flex items-center justify-center p-8"
-      // On the backdrop, so a press beside the window calls the choice off — the gesture every
-      // modal answers, and the slot is left holding whatever it already had.
-      onPointerDown={event => {
-        if (event.target === event.currentTarget) settle(null)
-      }}
-    >
+    <div className="bg-scrim fixed inset-0 z-60 flex items-center justify-center p-8">
       <div
+        ref={surface}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        // On the DIALOG, not on the search box: the box is the only thing that carried it, so
-        // Escape did nothing from a tile, from Cancel, or — measured on 2026-08-19 — from a
-        // window just opened, whose `autoFocus` had not taken.
-        onKeyDown={event => {
-          if (event.key === 'Escape' && !isComposing(event)) settle(null)
-        }}
         className={cn(
           'border-border bg-surface flex max-h-full w-full max-w-3xl flex-col gap-3',
           'rounded-(--radius-sc-lg) border p-4 shadow-(--sc-shadow-floating)',

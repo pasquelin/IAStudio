@@ -7,11 +7,8 @@ export type FieldActionsProps = {
 }
 
 /**
- * The room every property line keeps at its end, whether or not anything is drawn into it.
- *
- * Held by ALL of them and not only by the lines that act, which is what makes one column out of
- * six: a reset appearing the moment a value leaves its default used to narrow the field under the
- * pointer mid-drag — measured on 2026-08-19 at 86px going to 74px.
+ * The room every property line keeps at its end, drawn into or not — which is what makes one
+ * column out of the six the panel used to end on.
  */
 export function FieldActions({ children }: FieldActionsProps) {
   return (

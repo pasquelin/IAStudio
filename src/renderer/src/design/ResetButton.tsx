@@ -9,13 +9,10 @@ export type ResetButtonProps = {
 }
 
 /**
- * Puts a property back where it started. Written once because every family of field ends its line
- * with the same button, and the two that had it first spelt out the same four props.
+ * Puts a property back where it started, written once for every family of field.
  *
- * Always DRAWN, disabled while the value is already its default — decision of 2026-08-19. Drawing
- * it only when it acts made the field narrow under the pointer mid-drag, the button appearing at
- * the very moment the value left its default. Whoever owns the value decides what that default is:
- * a mesh reads its own primitive's factory, a transform reads the identity.
+ * Always drawn and disabled at its default: drawn only when it acts, it narrowed the field under
+ * the pointer mid-drag. Whoever owns the value says what that default is.
  */
 export function ResetButton({ onReset }: ResetButtonProps) {
   const { t } = useTranslation()

@@ -11,7 +11,7 @@ import { bound, type NumericBounds } from '@shared/numeric'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
 import { FieldActions } from './FieldActions'
-import { FIELD_FILL, FIELD_ROW, ROW_ACTION_SPACER, type GestureProps } from './styles'
+import { FIELD_FILL, FIELD_ROW, type GestureProps } from './styles'
 
 export type NumberFieldProps = NumericBounds &
   GestureProps & {
@@ -292,7 +292,6 @@ export function NumberField({
           the end of their line, or a Position row would end with three identical buttons. */}
       {layout === 'row' && (
         <FieldActions>
-          <span aria-hidden className={ROW_ACTION_SPACER} />
           <ResetButton onReset={onReset} />
         </FieldActions>
       )}

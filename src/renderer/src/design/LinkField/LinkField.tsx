@@ -154,7 +154,7 @@ export function LinkField({
              the fields end on — and so choosing a picture, which is what raises the cross, does not
              narrow the select the pointer is still over. */
           <>
-            {browse ? (
+            {browse && (
               <ToolButton
                 icon={mdiFolderSearchOutline}
                 label={browse.label}
@@ -163,13 +163,13 @@ export function LinkField({
                 variant="header"
                 onClick={browse.run}
               />
-            ) : (
-              <span aria-hidden className={ROW_ACTION_SPACER} />
             )}
-            {/* Only when there is something to clear, and only where empty is a state this link
-                HAS: a dead cross on each of the five empty slots of a fresh material is five
-                buttons that do nothing. */}
+            {/* Only where empty is a state this link HAS — a font is set in something, so that
+                row has no cross at all. Drawn and inert while there is nothing to clear, which is
+                what keeps the select from narrowing under the pointer at the first picture. */}
             {emptyLabel === undefined ? (
+              // The place kept is the LAST one, so a browse button stays on the column its
+              // neighbours put theirs on rather than sliding to the end.
               <span aria-hidden className={ROW_ACTION_SPACER} />
             ) : (
               <ToolButton

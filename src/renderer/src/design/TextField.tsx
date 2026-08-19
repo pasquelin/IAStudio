@@ -1,7 +1,7 @@
 import { FieldActions } from './FieldActions'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
-import { FIELD_FILL, FIELD_ROW, ROW_ACTION_SPACER, type GestureProps } from './styles'
+import { FIELD_FILL, FIELD_ROW, type GestureProps } from './styles'
 
 export type TextFieldProps = GestureProps & {
   label: string
@@ -50,7 +50,6 @@ export function TextField({
       />
 
       <FieldActions>
-        <span aria-hidden className={ROW_ACTION_SPACER} />
         <ResetButton onReset={onReset} />
       </FieldActions>
     </label>
