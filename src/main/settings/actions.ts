@@ -8,6 +8,8 @@ export type ActionDeps = {
   settings: SettingsStore
   /** Where the settings file lives, so it can be revealed without guessing the path. */
   settingsPath: () => string
+  /** Where `main.log` lives — the folder Electron hands out, not one this side works out. */
+  logFile: () => string
   /** Where the MCP server is listening, or `null` while it is off. */
   mcpEndpoint: () => McpEndpoint | null
 }
@@ -16,9 +18,15 @@ export type ActionDeps = {
  * What the buttons of the settings window do. Kept apart from the handlers: each one reaches
  * straight into Electron, and the handler that routes them stays testable without it.
  */
-export function runSettingAction({ settings, settingsPath, mcpEndpoint }: ActionDeps) {
+export function runSettingAction({ settings, settingsPath, logFile, mcpEndpoint }: ActionDeps) {
   return (id: SettingActionId): void => {
     switch (id) {
+      case 'advanced.openLogFolder':
+        // Revealed rather than opened, as the settings file above: what a reader wants is the
+        // folder, since a rotation leaves a second file beside the current one.
+        shell.showItemInFolder(logFile())
+        return
+
       case 'advanced.openSettingsFile':
         // Revealed rather than opened: the file is JSON, and whatever the OS opens it with is
         // less useful than seeing where it sits — next to the rest of the profile.

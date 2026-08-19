@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto'
+import { join } from 'node:path'
+import { app } from 'electron'
 import { registerAssetHandlers } from '@main/assets/handlers'
 import { registerDiagnosticsHandlers } from '@main/diagnostics/handlers'
 import { createInstalledFonts } from '@main/fonts/disk'
@@ -16,6 +18,7 @@ import { registerGitHandlers } from '@main/git/handlers'
 import { createElectronAdapter } from '@main/settings/adapter'
 import { registerProjectHandlers } from '@main/project/handlers'
 import { registerScenarioHandlers } from '@main/scenario/handlers'
+import { CURRENT } from '@main/logFile'
 import { runSettingAction } from '@main/settings/actions'
 import { registerSettingsHandlers } from '@main/settings/handlers'
 import { registerWindowControls } from '@main/window/controls'
@@ -48,6 +51,7 @@ export function registerIpc(services: Services): void {
     runAction: runSettingAction({
       settings: services.settings,
       settingsPath: services.settings.path,
+      logFile: () => join(app.getPath('logs'), CURRENT),
       mcpEndpoint: services.mcp.endpoint,
     }),
   })

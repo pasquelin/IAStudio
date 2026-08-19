@@ -658,9 +658,23 @@ Combien l’application raconte ce qu’elle fait, dans son journal.
 rien à ce que fait le logiciel — seulement à ce qu’il en dit.
 
 **Attention à ne pas confondre ce journal avec celui de la ligne d’état.** Celui-ci est le journal
-interne du studio, écrit dans le terminal qui l’a lancé : **dans la version installée, il n’y a pas
-de terminal, donc rien à lire**. Le journal de la ligne d’état, lui, ne dépend pas de ce réglage —
-il reçoit ses lignes quoi qu’il arrive.
+interne du studio : il part dans le terminal qui l’a lancé, **et dans un fichier**, que le bouton
+ci-dessous affiche. Le journal de la ligne d’état, lui, ne dépend pas de ce réglage — il reçoit ses
+lignes quoi qu’il arrive.
+
+### Journal technique
+
+**Bouton : Afficher le journal technique.**
+
+Ouvre votre gestionnaire de fichiers sur le journal interne, un fichier nommé `main.log`. Le studio
+y écrit à chaque lancement, quelle que soit la façon dont vous l’avez démarré.
+
+Le fichier ne grossit pas indéfiniment : passé un mégaoctet, il est mis de côté sous le nom
+`main.1.log` et un neuf reprend. Il y en a donc **deux au plus**, et la trace d’un lancement
+survit à celui qui le suit.
+
+C’est ce fichier qu’on vous demandera si quelque chose échoue sans rien afficher à l’écran. Ce que
+vous y trouverez dépend du réglage juste au-dessus : à « Rien », il ne s’écrit plus une ligne.
 
 ### Fichier de réglages
 

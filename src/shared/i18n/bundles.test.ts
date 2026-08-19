@@ -451,12 +451,19 @@ describe('the translation bundles', () => {
        * title says nothing about usage, so a search by chapter name missed it and the batch
        * before this one wrote that no chapter described those sections.
        *
-       * The two exemptions left are the internal log, the one thing the manual keeps as `log`.
+       * The exemptions left are the internal log, the one thing the manual keeps as `log` — and
+       * it is now a FILE on disk, which the button under Advanced reveals.
        */
       {
         dropped: /\blogs?\b/i,
         kept: 'activity journal',
-        except: ['settings.logLevel.title', 'settings.openDevtools.help'],
+        except: [
+          'settings.logLevel.title',
+          'settings.openDevtools.help',
+          'settings.openLogFolder.title',
+          'settings.openLogFolder.help',
+          'settings.openLogFolder.button',
+        ],
       },
       /**
        * The trade means something else by `montage` — a run of short shots, not the timeline.

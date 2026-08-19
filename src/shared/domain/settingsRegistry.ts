@@ -628,6 +628,7 @@ export const SETTING_REGISTRY = [
  */
 export type SettingActionId =
   | 'advanced.openSettingsFile'
+  | 'advanced.openLogFolder'
   | 'advanced.openDevtools'
   | 'advanced.copyMcpCommand'
   | 'advanced.reset'
@@ -652,6 +653,15 @@ export const ACTION_REGISTRY: readonly SettingAction[] = [
     titleKey: 'settings.openSettingsFile.title',
     helpKey: 'settings.openSettingsFile.help',
     buttonKey: 'settings.reveal',
+  },
+  {
+    id: 'advanced.openLogFolder',
+    section: 'advanced',
+    titleKey: 'settings.openLogFolder.title',
+    helpKey: 'settings.openLogFolder.help',
+    // Its own label rather than the shared `reveal`: two buttons reading the same words sit in
+    // this section, and a reader listing them by name could not tell which reveals what.
+    buttonKey: 'settings.openLogFolder.button',
   },
   {
     id: 'advanced.openDevtools',

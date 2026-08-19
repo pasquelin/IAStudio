@@ -639,10 +639,22 @@ How much the application says about what it is doing, in its log.
 "Everything" helps to understand a problem, and is chatty the rest of the time. This setting changes
 nothing about what the software does — only about what it says.
 
-**Do not confuse this log with the one on the status line.** This one is the studio's internal log,
-written to the terminal that launched it: **in the build you installed there is no terminal, so
-there is nothing to read**. The status line's journal does not depend on this setting — it gets its
-lines either way.
+**Do not confuse this log with the one on the status line.** This one is the studio's internal log:
+it goes to the terminal that launched it, **and to a file**, which the button below reveals. The
+status line's journal does not depend on this setting — it gets its lines either way.
+
+### Technical log
+
+**Button: Reveal the technical log.**
+
+Opens your file manager on the internal log, a file named `main.log`. The studio writes to it on
+every launch, however you started it.
+
+The file does not grow forever: past one megabyte it is set aside as `main.1.log` and a fresh one
+takes over. There are **two at most**, so the trace of one launch survives the one that follows it.
+
+This is the file you will be asked for when something fails without saying anything on screen. What
+you find in it follows the setting just above: at "Nothing", not a line is written.
 
 ### Settings file
 
