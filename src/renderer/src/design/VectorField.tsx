@@ -144,7 +144,8 @@ export function VectorField<V extends AxisValue>({
           />
         )}
 
-        <ResetButton onReset={onReset} />
+        {/* Guarded here rather than inside, so a row standing at its default mounts nothing. */}
+        {onReset && <ResetButton onReset={onReset} />}
       </div>
 
       {/* One line per axis, each in the shared label column — the same shape as every other

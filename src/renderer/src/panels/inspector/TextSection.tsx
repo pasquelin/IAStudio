@@ -28,6 +28,7 @@ export function TextSection({ text, onChange, gesture }: TextSectionProps) {
       fields={fields}
       onChange={(name, value) => onChange(withField(text, name, value))}
       gesture={gesture}
+      scId="text"
     >
       <TextField
         label={t('inspector.fields.value', 'value')}

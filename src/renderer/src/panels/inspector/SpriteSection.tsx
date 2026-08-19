@@ -24,6 +24,7 @@ export function SpriteSection({ sprite, fallbackColor, onChange, gesture }: Spri
       fields={fields}
       onChange={(name, value) => onChange(withField(sprite, name, value))}
       gesture={gesture}
+      scId="sprite"
     >
       <PictureField
         label={t('inspector.fields.map', 'map')}

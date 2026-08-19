@@ -1,5 +1,10 @@
 import { useCallback, useMemo } from 'react'
-import { isLocalPicture, type Asset, type AssetType } from '@shared/domain/asset'
+import {
+  isLocalPicture,
+  type Asset,
+  type AssetLocation,
+  type AssetType,
+} from '@shared/domain/asset'
 import { getBridge } from '@/services/bridge'
 import { NO_ASSETS, useCatalogueAssets } from './useCatalogueAssets'
 
@@ -28,24 +33,33 @@ function askOnce(key: string, run: () => Promise<readonly Asset[]>): Promise<rea
  * guard is the studio's one answer to "can this be decoded", and a cloud row offered here would be
  * chosen and then show nothing at all.
  */
-export function useProjectPictureAssets(types: readonly AssetType[]): readonly Asset[] {
+export function useProjectPictureAssets(
+  types: readonly AssetType[],
+  /**
+   * Whether a CLOUD row may be offered. `false` for a slot's own list, whose id has to resolve to
+   * a file on disk; `true` for the browse window, where choosing one is what fetches it.
+   */
+  remote = false,
+): readonly Asset[] {
   const ask = useCallback(
     () =>
-      askOnce(
-        types.join(),
-        () =>
-          getBridge()?.assets.search({ types, location: 'local' }) ?? Promise.resolve(NO_ASSETS),
-      ),
-    [types],
+      askOnce(`${types.join()}|${remote}`, () => {
+        const location: AssetLocation | undefined = remote ? undefined : 'local'
+        return getBridge()?.assets.search({ types, location }) ?? Promise.resolve(NO_ASSETS)
+      }),
+    [types, remote],
   )
-  const pictures = useCatalogueAssets(ask)
+  const found = useCatalogueAssets(ask)
 
   return useMemo(
     // The kinds asked for, held here as well as in SQL — measured on 2026-08-14 at `catalog.ts:611`
     // and `:617`, both clauses are built. Kept because the cost of the query silently widening is a
     // SKY slot offering every image of the project: the guard knows a picture from a mesh, not a
     // sky from a texture.
-    () => pictures.filter(asset => types.includes(asset.type) && isLocalPicture(asset)),
-    [pictures, types],
+    //
+    // `isLocalPicture` only where the answer must resolve: it is the studio's one answer to "can
+    // this be decoded", and it reads a path a cloud row has not got yet.
+    () => found.filter(asset => types.includes(asset.type) && (remote || isLocalPicture(asset))),
+    [found, types, remote],
   )
 }

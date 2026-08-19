@@ -307,20 +307,12 @@ export const PANEL_BAR = 'border-border flex items-center gap-2 border-b'
 /**
  * The body of a titled run of properties, under the heading `PropertySection` folds.
  *
- * It served a second, unfolding component until the two were merged: the panel showed both, one
- * under the other, so a fixed heading in one space and a folding one in the next was the same
- * gesture failing in half the studio.
+ * No zebra fill, and that was MEASURED rather than decided: striping every other child put the
+ * axis stripes on `elevated`, where they read 2.34, 2.42 and 2.11 against the 3 of WCAG 1.4.11 —
+ * and `nth-child` counts DOM children, not property lines, so a button row took a band and
+ * unfolding a vector shifted the parity of everything under it.
  */
-export const PROPERTY_BODY = cn(
-  'flex flex-col gap-2 px-2 pt-1 pb-2',
-  // Every other line on a faintly raised fill, which is what lets the eye run down a long
-  // section without losing which value belongs to which name. Painted on the ROW rather than
-  // between the rows: the gap is what separates them, and a band drawn in the gap would read as
-  // a rule. `elevated` and not a colour of its own — it is the same step the studio raises a
-  // surface by, and one more token would be one more thing to hold at contrast.
-  '[&>*:nth-child(even)]:bg-elevated [&>*:nth-child(even)]:-mx-1 [&>*:nth-child(even)]:px-1',
-  '[&>*:nth-child(even)]:rounded-(--radius-sc-sm)',
-)
+export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
 
 /**
  * A picture standing in a property line — the texture a slot holds, the map a model carries.
@@ -355,9 +347,8 @@ export const FIELD_LABEL = 'text-muted border-border w-(--sc-label) shrink-0 bor
  * sits at the far end of the row whatever the label does.
  *
  * Held to the fixed gauge, « Projette une ombre » read « Projette une … » at eighty pixels with
- * two thirds of the row empty beside it. Still truncating, and still `title`d for it: a panel
- * narrow enough will run out of room here too, and a label cut mid-word reads as a shorter one
- * that means something else.
+ * two thirds of the row empty beside it. The truncation and its `title` live in `PropertyLabel`,
+ * which wears either gauge — a panel narrow enough runs out of room here too.
  *
  * No edge: a rule drawn where the column has run out is a rule in the middle of a row.
  */

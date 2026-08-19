@@ -17,11 +17,12 @@ export type PropertyLabelProps = {
   /** A chevron, where the row folds. Drawn before the word, inside the column. */
   leading?: ReactNode
   /**
-   * Pointer handlers already resolved, the way `hint` hands over tooltip attributes. One caller:
-   * `NumberField` scrubs its value on its own name, which is the gesture of Blender and of Unity.
+   * Attributes already resolved, the way `hint` hands over tooltip ones — the scrub handlers a
+   * `NumberField` puts on its name, the press and the `aria-expanded` a `VectorField` puts on its
+   * fold. Untyped because what a column carries depends on what `as` made it.
    */
   gesture?: Record<string, unknown>
-  /** With `gesture`, since a name one drags is not a name a reader steps onto. */
+  /** For a name one DRAGS, which is not a name a reader steps onto. */
   hidden?: boolean
   className?: string
 }

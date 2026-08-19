@@ -30,8 +30,6 @@ export type NumberFieldProps = NumericBounds &
      * `hint` saying why: a control refused without a reason is worse than one that is absent.
      */
     disabled?: boolean
-    /** Tooltip attributes from the host's own factory, already resolved. */
-    hint?: Record<string, string>
     /** The handle the MCP steers this field by. Never a translated word. */
     scId?: string
     /** Puts the value back where it started. Absent while it already stands there. */
@@ -68,7 +66,6 @@ export function NumberField({
   layout = 'row',
   axis,
   disabled,
-  hint,
   scId,
   onReset,
 }: NumberFieldProps) {
@@ -211,13 +208,10 @@ export function NumberField({
           if (text.trim() !== '') emit(parseDecimal(text))
         }}
         onKeyDown={onKeyDown}
-        /**
-         * Armed only while the field is NOT being typed in: once the caret is in, a press is a
-         * press on text — selecting a digit to overwrite it must not drag the value away.
-         */
         disabled={disabled}
-        {...hint}
         onPointerDown={event => {
+          // Nothing while the caret is in: a press on a field being typed in is a press on TEXT,
+          // and selecting a digit to overwrite it must not drag the value away.
           if (document.activeElement === event.currentTarget) return
           // Withholds the focus the platform would give now, so a drag never lands in edit mode.
           // `endFieldDrag` hands it back when the press turns out to have been a click.
@@ -253,8 +247,11 @@ export function NumberField({
       />
 
       {/* Never inside a vector's grid: the three axes share one reset, drawn by `VectorField` at
-          the end of their line, or a Position row would end with three identical buttons. */}
-      {layout === 'row' && <ResetButton onReset={onReset} />}
+          the end of their line, or a Position row would end with three identical buttons.
+
+          Guarded on `onReset` at the SITE, so a row with nothing to reset mounts no component
+          and takes no `useTranslation` subscription — fifteen of them per scene inspector. */}
+      {layout === 'row' && onReset && <ResetButton onReset={onReset} />}
     </div>
   )
 }

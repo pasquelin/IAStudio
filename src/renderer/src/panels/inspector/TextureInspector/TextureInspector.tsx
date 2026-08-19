@@ -1,4 +1,6 @@
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { EnvironmentRef } from '@shared/domain/scene'
 import { Chip } from '@/design/Chip'
 import { ColorField } from '@/design/ColorField'
 import { PropertyRow } from '@/design/PropertyRow'
@@ -53,6 +55,16 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
   const onPreview = <K extends keyof typeof preview>(key: K, value: (typeof preview)[K]): void =>
     edit.run(setPreview(key, value))
 
+  /**
+   * Stable, so the memo on `EnvironmentSection` can actually skip: a fresh arrow at the call site
+   * made it re-render on every value a slider drag emits, in the one panel that drags the most.
+   * It captures `edit` alone, itself memoised on the document.
+   */
+  const changeEnvironment = useCallback(
+    (next: EnvironmentRef) => edit.run(setPreview('environment', next)),
+    [edit],
+  )
+
   return (
     <>
       <PropertySection title={t('inspector.material')}>
@@ -82,6 +94,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           step={0.01}
           fromLabel={t('texture.roughnessFrom')}
           toLabel={t('texture.roughnessTo')}
+          scId="texture.roughnessRange"
           onChange={value => onMaterial('roughnessRange', value)}
           {...edit.gesture}
         />
@@ -103,6 +116,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           step={0.01}
           fromLabel={t('texture.metalnessFrom')}
           toLabel={t('texture.metalnessTo')}
+          scId="texture.metalnessRange"
           onChange={value => onMaterial('metalnessRange', value)}
           {...edit.gesture}
         />
@@ -264,10 +278,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
 
       {/* The very section the 3D space shows, because it is the same question: a texture judged
           under a flat lamp is not judged, and the skies on offer are the project's own. */}
-      <EnvironmentSection
-        environment={preview.environment}
-        onChange={next => onPreview('environment', next)}
-      />
+      <EnvironmentSection environment={preview.environment} onChange={changeEnvironment} />
     </>
   )
 }

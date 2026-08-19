@@ -7,7 +7,7 @@ import { MediaTile } from '@/design/MediaTile'
 import { FIELD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
-import { useProjectAssets } from '@/hooks/useProjectAssets'
+import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
 
 export type AssetPickerBodyProps = {
   accepts: readonly AssetType[]
@@ -32,7 +32,9 @@ export function AssetPickerBody({
   settle,
   labels,
 }: AssetPickerBodyProps) {
-  const found = useProjectAssets(accepts)
+  // `remote`, which is the whole difference with a slot's own list: choosing a library row here
+  // is what fetches it, so offering one is not offering an id that resolves to nothing.
+  const found = useProjectPictureAssets(accepts, true)
   const shown = useMemo(() => {
     const needle = search.trim().toLowerCase()
     return needle === '' ? found : found.filter(asset => asset.name.toLowerCase().includes(needle))

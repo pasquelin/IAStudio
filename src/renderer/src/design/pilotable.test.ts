@@ -74,14 +74,19 @@ describe('a control the studio can be driven by', () => {
 
   /**
    * Prefixed by what the thing IS, so a script can tell a section from a field without knowing
-   * the tree — `section:transform` folds, `field:transform.position.x` takes a value, and
-   * `link:material.normalMap` accepts a drop.
+   * the tree — `section:transform` folds, `field:transform.position.x` takes a value. Two kinds
+   * and no more: the rule once offered `link:` and `action:` as facts, and nothing wrote either.
+   *
+   * Counted per ATTRIBUTE rather than per file, which is the difference between a rule and a
+   * coincidence: a file carrying one prefixed handle and one bare one passed on the first.
    */
   it('says what kind of thing it names, not only which one', () => {
-    const KINDS = /`(section|field|link|action):\$\{/
-    const unprefixed = Object.entries(ALL)
-      .filter(([, source]) => source.includes('data-sc') && !KINDS.test(source))
-      .map(([path]) => path)
+    const HANDLES = /data-sc=\{([^}]*)\}/g
+    const unprefixed = Object.entries(ALL).flatMap(([path, source]) =>
+      [...source.matchAll(HANDLES)]
+        .filter(match => !/`(section|field):\$\{/.test(match[1] ?? ''))
+        .map(match => `${path} — ${match[1]}`),
+    )
 
     expect(unprefixed).toEqual([])
   })

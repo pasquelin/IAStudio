@@ -8,6 +8,7 @@ import { PropertySection } from '@/design/PropertySection'
 import { SliderField } from '@/design/SliderField'
 import { ToggleField } from '@/design/ToggleField'
 import { setAdjustment, setEnvironmentSetting, setSunSetting } from '@/engines/skybox/commands'
+import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { SkyboxInspectorAdjustments } from './SkyboxInspectorAdjustments'
 
@@ -26,20 +27,20 @@ export type SkyboxInspectorProps = { documentId: string }
 export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
   const { t } = useTranslation()
   const content = useSkyboxes(state => skyboxOf(state, documentId))
-
-  const beginGesture = () => useSkyboxes.getState().beginGesture(documentId)
-  const endGesture = () => useSkyboxes.getState().endGesture(documentId)
+  // The same seam every other face uses, rather than three `getState()` closures and a pair of
+  // gesture arrows written out — which is what this file carried over from the panel it was.
+  const edit = useDocumentEdit(useSkyboxes, documentId)
 
   const onSun = <K extends keyof SunSettings>(key: K, value: SunSettings[K]): void =>
-    useSkyboxes.getState().runCommand(documentId, setSunSetting(key, value))
+    edit.run(setSunSetting(key, value))
 
   const onEnvironment = <K extends keyof SkyboxEnvironment>(
     key: K,
     value: SkyboxEnvironment[K],
-  ): void => useSkyboxes.getState().runCommand(documentId, setEnvironmentSetting(key, value))
+  ): void => edit.run(setEnvironmentSetting(key, value))
 
   const onAdjust = (key: keyof AdjustmentStack, value: number): void =>
-    useSkyboxes.getState().runCommand(documentId, setAdjustment(key, value))
+    edit.run(setAdjustment(key, value))
 
   return (
     <>
@@ -51,8 +52,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
           max={POLE_LIMIT}
           step={0.01}
           onChange={value => onSun('elevation', value)}
-          onGestureStart={beginGesture}
-          onGestureEnd={endGesture}
+          {...edit.gesture}
         />
         <SliderField
           label={t('skybox.azimuth')}
@@ -61,8 +61,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
           max={TWO_PI}
           step={0.01}
           onChange={value => onSun('azimuth', value)}
-          onGestureStart={beginGesture}
-          onGestureEnd={endGesture}
+          {...edit.gesture}
         />
         <SliderField
           label={t('skybox.intensity')}
@@ -71,15 +70,13 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
           max={10}
           step={0.05}
           onChange={value => onSun('intensity', value)}
-          onGestureStart={beginGesture}
-          onGestureEnd={endGesture}
+          {...edit.gesture}
         />
         <ColorField
           label={t('skybox.color')}
           value={content.sun.color}
           onChange={value => onSun('color', value)}
-          onGestureStart={beginGesture}
-          onGestureEnd={endGesture}
+          {...edit.gesture}
         />
       </PropertySection>
 
@@ -87,8 +84,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
         <SkyboxInspectorAdjustments
           adjustments={content.adjustments}
           onChange={onAdjust}
-          onGestureStart={beginGesture}
-          onGestureEnd={endGesture}
+          {...edit.gesture}
         />
       </PropertySection>
 
@@ -100,8 +96,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
           max={4}
           step={0.05}
           onChange={value => onEnvironment('intensity', value)}
-          onGestureStart={beginGesture}
-          onGestureEnd={endGesture}
+          {...edit.gesture}
         />
         <ToggleField
           label={t('skybox.showBackground')}

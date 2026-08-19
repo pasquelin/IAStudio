@@ -77,6 +77,21 @@ export function LinkField({
   scId,
 }: LinkFieldProps) {
   const chosen = useMemo(() => options.find(option => option.id === value), [options, value])
+  /**
+   * Empty first, then what the project holds. A value `options` does not carry is added as its own
+   * disabled entry rather than left to the browser's fallback — see `missingLabel`.
+   *
+   * Memoised because the inspector re-renders on every value a drag emits and a mesh stacks five
+   * of these: composed inline, each frame rebuilt five arrays as long as the project's pictures.
+   */
+  const choices = useMemo(
+    () => [
+      ...(emptyLabel === undefined ? [] : [{ value: '', label: emptyLabel }]),
+      ...(value !== null && !chosen ? [{ value, label: missingLabel, disabled: true }] : []),
+      ...options.map(option => ({ value: option.id, label: option.name })),
+    ],
+    [options, value, chosen, emptyLabel, missingLabel],
+  )
   const [preview, setPreview] = useState<HTMLElement | null>(null)
   const resting = useRef<number | null>(null)
 
@@ -105,13 +120,7 @@ export function LinkField({
       <SelectField
         label={label}
         scId={scId}
-        // Empty first, then what the project holds. A value `options` does not carry is added as
-        // its own disabled entry rather than left to the browser's fallback — see `missingLabel`.
-        options={[
-          ...(emptyLabel === undefined ? [] : [{ value: '', label: emptyLabel }]),
-          ...(value !== null && !chosen ? [{ value, label: missingLabel, disabled: true }] : []),
-          ...options.map(option => ({ value: option.id, label: option.name })),
-        ]}
+        options={choices}
         value={value ?? ''}
         onChange={id => onChange(id === '' ? null : id)}
         leading={

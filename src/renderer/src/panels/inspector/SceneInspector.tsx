@@ -133,6 +133,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         <>
           <DescriptorSection
             title={t('inspector.geometry')}
+            scId="geometry"
             fields={geometry}
             onChange={(name, value) =>
               edit.run(setGeometryOn(selection, mesh.geometry, name, value))
@@ -206,6 +207,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         <>
           <DescriptorSection
             title={t('inspector.camera')}
+            scId="camera"
             fields={lens}
             onChange={changeLens}
             gesture={edit.gesture}
@@ -226,6 +228,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
       {light && (
         <DescriptorSection
           title={t('inspector.light')}
+          scId="light"
           fields={lit}
           onChange={(name, value) => edit.run(setLightOn(selection, light.light, name, value))}
           gesture={edit.gesture}

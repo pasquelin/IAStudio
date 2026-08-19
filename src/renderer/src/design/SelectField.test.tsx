@@ -66,12 +66,48 @@ describe('SelectField', () => {
     expect(screen.getByRole('combobox')).not.toHaveAttribute('aria-label')
   })
 
-  // On a bar there is no label column to draw, so the name has nowhere to live but the attribute.
+  // `inline` draws no label column, so the name has nowhere to live but the attribute. `bar` is
+  // the same on that point and differs only in skin — its own case is below.
   it('keeps a name when it draws no label column', () => {
     renderField({ layout: 'inline' })
 
     expect(screen.queryByText('Blend mode')).not.toBeInTheDocument()
     expect(screen.getByRole('combobox')).toHaveAttribute('aria-label', 'Blend mode')
+  })
+
+  /**
+   * The one layout carrying bespoke behaviour, and it was tested nowhere: it draws its own
+   * chevron — the browser pins the native one to the edge of the control, where no padding
+   * reaches it — and reads quieter while nothing is chosen, which is how a filter bar shows at a
+   * glance which of its facets are actually filtering.
+   */
+  describe('the filter-bar layout', () => {
+    it('draws a chevron of its own, the native one being unreachable', () => {
+      const { container } = render(
+        <SelectField layout="bar" label="Type" value="" options={BLENDS} onChange={vi.fn()} />,
+      )
+
+      expect(container.querySelector('svg')).toBeInTheDocument()
+      expect(screen.getByRole('combobox')).toHaveClass('appearance-none')
+    })
+
+    it('reads quieter while nothing is chosen, and at full ink once something is', () => {
+      const { rerender } = render(
+        <SelectField layout="bar" label="Type" value="" options={BLENDS} onChange={vi.fn()} />,
+      )
+      expect(screen.getByRole('combobox')).toHaveClass('text-muted')
+
+      rerender(
+        <SelectField
+          layout="bar"
+          label="Type"
+          value="multiply"
+          options={BLENDS}
+          onChange={vi.fn()}
+        />,
+      )
+      expect(screen.getByRole('combobox')).not.toHaveClass('text-muted')
+    })
   })
 
   it('wears the handle the MCP steers it by', () => {

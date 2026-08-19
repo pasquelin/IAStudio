@@ -1,4 +1,5 @@
 import { mdiVectorPolyline } from '@mdi/js'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { POINT_TARGET, type CameraShot, type CameraTarget } from '@shared/domain/animation'
 import { PropertyRow } from '@/design/PropertyRow'
@@ -45,6 +46,31 @@ export function CameraShotSection({
 }: CameraShotSectionProps) {
   const { t } = useTranslation()
 
+  /**
+   * Both lists sweep the WHOLE scene, whose identity is new on every value a gizmo drag emits —
+   * so composed inline they walked every node twice per frame, to answer a question that only
+   * changes when a node is added, removed or renamed.
+   */
+  const rails = useMemo(
+    () => [
+      { value: '', label: t('inspector.noRail') },
+      ...nodes
+        .filter(node => node.type === 'path')
+        .map(rail => ({ value: rail.id, label: rail.name })),
+    ],
+    [nodes, t],
+  )
+  const targets = useMemo(
+    () => [
+      { value: '', label: t('inspector.noTarget') },
+      { value: POINT_TARGET.kind, label: t('inspector.targetPoint') },
+      ...nodes
+        .filter(node => node.id !== camera.id)
+        .map(node => ({ value: node.id, label: node.name })),
+    ],
+    [nodes, camera.id, t],
+  )
+
   if (!shot) {
     return (
       <PropertySection title={t('inspector.shot')}>
@@ -80,12 +106,7 @@ export function CameraShotSection({
       <SelectField
         label={t('inspector.rail')}
         value={shot.motion?.pathId ?? ''}
-        options={[
-          { value: '', label: t('inspector.noRail') },
-          ...nodes
-            .filter(node => node.type === 'path')
-            .map(rail => ({ value: rail.id, label: rail.name })),
-        ]}
+        options={rails}
         onChange={pathId => run(bindRailToShot(shot, pathId))}
         scId="shot.rail"
         actions={
@@ -111,13 +132,7 @@ export function CameraShotSection({
       <SelectField
         label={t('inspector.target')}
         value={target?.kind === 'node' ? target.nodeId : (target?.kind ?? '')}
-        options={[
-          { value: '', label: t('inspector.noTarget') },
-          { value: POINT_TARGET.kind, label: t('inspector.targetPoint') },
-          ...nodes
-            .filter(node => node.id !== camera.id)
-            .map(node => ({ value: node.id, label: node.name })),
-        ]}
+        options={targets}
         onChange={aimAt}
         scId="shot.target"
       />

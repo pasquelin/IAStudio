@@ -32,6 +32,7 @@ export function MaterialSection({
       fields={fields}
       onChange={(name, value) => onChange(withField(material, name, value))}
       gesture={gesture}
+      scId="material"
     >
       <TextureSlotFields
         slots={material}

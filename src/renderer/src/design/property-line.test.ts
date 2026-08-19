@@ -47,7 +47,16 @@ const LABEL: Record<string, string> = import.meta.glob('./PropertyLabel.tsx', {
 
 const labelSource = Object.values(LABEL)[0] ?? ''
 
-const named = (source: string): boolean => source.includes('title={label}')
+/**
+ * Read with the comments stripped, which is not a detail: four rules of this file were matching
+ * their own prose. `expect(propertyRow).toContain('FIELD_LABEL')` was green on the sentence « It
+ * wears `FIELD_ROW` and `FIELD_LABEL` » long after the row had stopped wearing it — so deleting a
+ * stale comment failed the suite while deleting the class did not.
+ */
+const code = (source: string): string =>
+  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+
+const named = (source: string): boolean => code(source).includes('title={label}')
 
 describe('the label column of a property line', () => {
   it('finds the row at all, so the rules below cannot pass on an empty file', () => {
@@ -55,13 +64,13 @@ describe('the label column of a property line', () => {
   })
 
   /**
-   * Read from the constant now, not spelt out a second time: the row wears `FIELD_LABEL` itself,
-   * which is what "one gauge" was always after — the two spellings had converged to the byte,
-   * and two identical strings are still two things to keep in step.
+   * One gauge, and one place that reads it: both families now go through `PropertyLabel`, so
+   * "shared" is no longer two spellings kept in step but a single component both call.
    */
-  it('is one gauge, read by both families rather than written twice', () => {
+  it('is one gauge, read through one component rather than written twice', () => {
     expect(FIELD_LABEL).toContain('w-(--sc-label)')
-    expect(propertyRow).toContain('FIELD_LABEL')
+    expect(code(propertyRow)).toContain('<PropertyLabel')
+    expect(code(labelSource)).toContain('FIELD_LABEL')
   })
 
   /** The lookbehind keeps `min-w-0` out of it: a minimum of zero is not a column width. */
@@ -69,7 +78,7 @@ describe('the label column of a property line', () => {
     const HARDCODED_WIDTH = /(?<![\w-])w-\d/
 
     expect(FIELD_LABEL).not.toMatch(HARDCODED_WIDTH)
-    expect(propertyRow).not.toMatch(HARDCODED_WIDTH)
+    expect(code(propertyRow)).not.toMatch(HARDCODED_WIDTH)
   })
 
   /**
@@ -105,7 +114,9 @@ describe('a label the column is too narrow for', () => {
   it('is reachable on hover from the one component that draws a name', () => {
     expect(labelSource).toContain('export function PropertyLabel')
     expect(named(labelSource)).toBe(true)
-    expect(labelSource).toContain('truncate')
+    // The CLASS, not the word: `truncate` appears twice in this file's own prose, so a rule
+    // reading the raw source stayed green with the class deleted.
+    expect(code(labelSource)).toContain('className="min-w-0 truncate"')
   })
 
   /**
@@ -115,7 +126,7 @@ describe('a label the column is too narrow for', () => {
    */
   it('is drawn by no field on its own', () => {
     const spelling = Object.entries(FIELDS)
-      .filter(([, source]) => source.includes('FIELD_LABEL'))
+      .filter(([, source]) => code(source).includes('FIELD_LABEL'))
       .map(([path]) => path)
 
     expect(spelling, `these draw the column themselves: ${spelling.join(', ')}`).toEqual([])
@@ -127,19 +138,31 @@ describe('a label the column is too narrow for', () => {
    * would put its name where the neighbours draw their sliders.
    */
   it('offers the wide gauge as a prop rather than as a second class to reach for', () => {
-    expect(labelSource).toContain('wide ? FIELD_LABEL_WIDE : FIELD_LABEL')
+    expect(code(labelSource)).toContain('wide ? FIELD_LABEL_WIDE : FIELD_LABEL')
 
-    // The prop as PASSED, not the word wherever it appears: `RangeField` says "wide" in prose.
-    const ASKS_WIDE = /<PropertyLabel[^>]*\bwide\b/s
+    /**
+     * The whole element, children included: `[^>]*` stopped at the first `>`, so a `wide` written
+     * after a `leading={<UiIcon />}` was invisible — which is exactly the shape `VectorField`
+     * passes. The rule claimed to read the prop as PASSED and read rather less than that.
+     */
+    const ASKS_WIDE = /<PropertyLabel\b[\s\S]*?\/>/g
     const asking = Object.entries(FIELDS)
-      .filter(([, source]) => ASKS_WIDE.test(source))
+      .filter(([, source]) =>
+        [...code(source).matchAll(ASKS_WIDE)].some(m => /\bwide\b/.test(m[0])),
+      )
       .map(([path]) => path)
 
     expect(asking).toEqual(['./ToggleField.tsx'])
   })
 
-  it('is reachable on the row family too, which is where the rule started', () => {
+  /**
+   * The STACKED shape, and only it — the two column shapes go through `PropertyLabel` and are
+   * held above. Stacked draws its own span, so it owes its own `title`: the value sits under the
+   * name there, which is a second line to run out of room on rather than a column to truncate in.
+   */
+  it('is reachable on the row family too, where the column does not bind', () => {
     expect(named(propertyRow)).toBe(true)
+    expect(code(propertyRow)).toContain("shape === 'stacked' ?")
   })
 
   /**
@@ -149,7 +172,7 @@ describe('a label the column is too narrow for', () => {
    * lines of text still truncate inside one row.
    */
   it('is reachable on both lines of `Row`, which every list of the studio draws', () => {
-    expect(rowSource).toContain('title={subtitle}')
-    expect(rowSource).toContain('tip(title')
+    expect(code(rowSource)).toContain('title={subtitle}')
+    expect(code(rowSource)).toContain('tip(title')
   })
 })

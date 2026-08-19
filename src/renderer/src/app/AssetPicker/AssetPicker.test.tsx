@@ -24,7 +24,7 @@ beforeEach(() => {
 function ask(): Promise<string | null> {
   const picker = mountedAssetPicker()
   if (!picker) throw new Error('no picker mounted')
-  return picker({ accepts: ['image'], current: null, label: 'Texture' })
+  return picker({ accepts: ['image'], label: 'Texture' })
 }
 
 describe('the asset picker', () => {

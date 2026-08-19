@@ -5,8 +5,6 @@ import { createMountedHost } from '@/helpers/hostRegistry'
 export type AssetPickRequest = {
   /** The kinds the slot can take. Nothing else is offered, local or remote. */
   accepts: readonly AssetType[]
-  /** What it holds today, so the picker opens on it rather than on nothing. */
-  current: string | null
   /** The name of the slot, for the window's own title. Already translated. */
   label: string
 }
@@ -22,7 +20,7 @@ const host = createMountedHost<AssetPicker>()
  *
  * Mounted by the shell, the way the document namer is: a slot's own list holds what the project
  * has locally, and that is the fast answer — this one is the long one, where the remote library
- * and the explorer are reachable too. A window showing no picker simply draws no browse button.
+ * is reachable too. A window with no picker answers nothing, and the press does nothing.
  */
 export const registerAssetPicker = host.hold
 

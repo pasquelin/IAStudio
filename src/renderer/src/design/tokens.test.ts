@@ -549,14 +549,26 @@ describe('the contrast of the inks', () => {
    * theme at a time: the window where a colour clears 3:1 against `surface` dark AND light is
    * narrow, so a hue nudged for one theme is exactly how the other silently falls under.
    */
-  it('carries three axis stripes readable on the field, in both themes', () => {
+  it('carries three axis stripes readable on every fill a row can wear, in both themes', () => {
     for (const theme of THEMES) {
       const tokens = palette(theme.from)
       const stripes = ['axis-x', 'axis-y', 'axis-z'].map(name => tokens[name] ?? '')
 
       expect(stripes.every(stripe => /^#[0-9a-f]{6}$/.test(stripe))).toBe(true)
-      const failing = stripes.filter(
-        stripe => contrastRatio(stripe, tokens.surface ?? '') < AA_NON_TEXT,
+      /**
+       * BOTH sides of the stripe: it is the field's left border, so `surface` meets it on the
+       * right and whatever fills the row meets it on the left — `panel`, the section's own.
+       *
+       * Reading `surface` alone is not enough, and that was measured rather than reasoned: a
+       * zebra fill striping every other row `elevated` took the same three stripes to 2.34, 2.42
+       * and 2.11 with this case still green. The fill was removed for it — and `elevated` is
+       * deliberately NOT swept here, since no property row wears it, so a fill that brought it
+       * back would have to bring its own measurement.
+       */
+      const failing = ['panel', 'surface'].flatMap(ground =>
+        stripes
+          .filter(stripe => contrastRatio(stripe, tokens[ground] ?? '') < AA_NON_TEXT)
+          .map(stripe => `${stripe} on ${ground}`),
       )
 
       expect(failing).toEqual([])

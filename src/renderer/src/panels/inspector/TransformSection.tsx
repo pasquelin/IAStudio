@@ -93,6 +93,7 @@ export function TransformSection({ node, nodes, selection, edit }: TransformSect
         label={t('inspector.name')}
         value={node.name}
         onChange={name => edit.run(renameNode(node.id, name))}
+        scId="transform.name"
         {...edit.gesture}
       />
 

@@ -27,7 +27,6 @@ export type SelectFieldProps<V extends string> = {
    * for a select drawing no visible label; `HINT_*` adds to one and is for `row` (WCAG 2.5.3).
    */
   hint?: Record<string, string>
-  disabled?: boolean
   /** Between the label and the select — the thumbnail of what a link field points at. */
   leading?: ReactNode
   /** Buttons that follow the select: adding a rail, browsing for an asset, clearing a slot. */
@@ -53,7 +52,6 @@ export function SelectField<V extends string>({
   onChange,
   layout = 'row',
   hint,
-  disabled,
   leading,
   actions,
   scId,
@@ -79,7 +77,6 @@ export function SelectField<V extends string>({
         aria-label={layout === 'row' ? undefined : label}
         data-sc={scId && `field:${scId}`}
         value={value}
-        disabled={disabled}
         onChange={event => {
           const picked = options.find(option => option.value === event.target.value)
           if (picked) onChange(picked.value)

@@ -35,7 +35,7 @@ export function PictureField({ label, value, onChange, emptyLabel, scId }: Pictu
     const picker = mountedAssetPicker()
     if (!picker) return
 
-    void picker({ accepts: PICTURES, current: value, label }).then(chosen => {
+    void picker({ accepts: PICTURES, label }).then(chosen => {
       // `null` is the window being called off, which is not the same as choosing nothing — that
       // is what the empty entry of the list is for.
       if (chosen !== null) onChange(chosen)
