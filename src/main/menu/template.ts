@@ -288,6 +288,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         { type: 'separator' },
         commandItem('sequence.export', t.commands.sequenceExport.title),
         commandItem('sequence.exportCut', t.commands.sequenceExportCut.title),
+        commandItem('sequence.exportBundle', t.commands.sequenceExportBundle.title),
       ]
     }
 
@@ -297,6 +298,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       return [
         { type: 'separator' },
         commandItem('sequence.exportCut', t.commands.sequenceExportCut.title),
+        commandItem('sequence.exportBundle', t.commands.sequenceExportBundle.title),
       ]
     }
 

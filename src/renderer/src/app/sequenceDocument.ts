@@ -1,6 +1,6 @@
 import type { Asset } from '@shared/domain/asset'
 import { DOCUMENT_ID_KEY, type DocumentDescriptor } from '@shared/domain/document'
-import { otioStudioMetadata } from '@shared/domain/otio'
+import { otioStudioMetadata, type OtioTimeline } from '@shared/domain/otio'
 import i18next from 'i18next'
 import { documentFolder } from '@/app/documentFolder'
 import { mediaLinkFrom, mediaLinkOf, mediaNameOf } from '@/engines/timeline/mediaLink'
@@ -59,7 +59,9 @@ export function otioTimelineFor(
     identifies?: boolean
     studio?: Record<string, unknown>
   },
-): unknown {
+  // `OtioTimeline` rather than `unknown`: `otioTimelineOf` has always answered one, and a bundle
+  // has to walk the tracks to rewrite what they point at.
+): OtioTimeline {
   const { documents } = useDocuments.getState()
   const catalogue: Catalogue = { assets: assetsById(useAssets.getState()), documents, linkOf }
 

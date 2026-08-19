@@ -73,6 +73,7 @@ export type CommandId =
   | 'sequence.playPause'
   | 'sequence.export'
   | 'sequence.exportCut'
+  | 'sequence.exportBundle'
   | 'sequence.mirror'
   | 'sequence.split'
   | 'sequence.delete'
@@ -536,6 +537,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'sequence',
     titleKey: 'commands.sequenceExportCut.title',
     helpKey: 'commands.sequenceExportCut.help',
+    defaultBinding: null,
+  }),
+  // The same edit with its media inside it. Beside the one above rather than a mode of it: this
+  // is the file that travels — one settles another application's media pool, the other does not.
+  command({
+    id: 'sequence.exportBundle',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExportBundle.title',
+    helpKey: 'commands.sequenceExportBundle.help',
     defaultBinding: null,
   }),
   // The program monitor alone answers it: `Monitor` arms the sequence scope on the one that

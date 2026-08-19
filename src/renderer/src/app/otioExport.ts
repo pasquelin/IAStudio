@@ -1,4 +1,5 @@
 import { exportTargetOf } from '@shared/domain/exportRegistry'
+import { bundleOf } from '@shared/domain/otioz'
 import type { FolderExportRequest } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -66,7 +67,46 @@ export async function exportOtio(documentId: string): Promise<string | null> {
   try {
     const { folder, files } = otioExportFiles(documentId)
     const encoded = files[0]
-    return encoded ? await bridge.montage.export({ name: folder, data: encoded.bytes }) : null
+    if (!encoded) return null
+
+    return await bridge.montage.export({
+      name: folder,
+      target: 'montage.otio',
+      content: new TextDecoder().decode(encoded.bytes),
+    })
+  } catch (error) {
+    reportFailure('sequence.export', documentId, error)
+    return null
+  }
+}
+
+/**
+ * The same cut, with the media it points at packed beside it.
+ *
+ * The bytes of a rush never cross the bridge: what goes over is the timeline and the LIST of what
+ * it names, and the main process reads each file itself — a montage is measured in gigabytes, and
+ * the boundary copies whatever crosses it, twice.
+ */
+export async function exportOtioz(documentId: string): Promise<string | null> {
+  const bridge = getBridge()
+  if (!bridge) return null
+
+  try {
+    const projectPath = useProject.getState().project?.path
+    if (!projectPath) throw new Error('no project is open to resolve the media against')
+
+    const bundle = bundleOf(
+      otioTimelineFor(sequenceOf(useSequences.getState(), documentId), documentId, {
+        linkOf: fileUrlsUnder(projectPath),
+      }),
+    )
+
+    return await bridge.montage.export({
+      name: documentExportName(useDocuments.getState(), documentId, 'edit'),
+      target: 'montage.otioz',
+      content: serializeSequencePayload(bundle.timeline),
+      media: bundle.media,
+    })
   } catch (error) {
     reportFailure('sequence.export', documentId, error)
     return null

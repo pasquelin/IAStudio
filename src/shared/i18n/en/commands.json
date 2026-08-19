@@ -164,6 +164,10 @@
       "title": "Export edit (OTIO)…",
       "help": "Writes the edit itself out as an OpenTimelineIO file, which other editing applications open — tracks, clips, in points, speeds and links to the media. Fades, gains and image/sound links travel in it too, but only Scenario reads them back."
     },
+    "sequenceExportBundle": {
+      "title": "Export edit with its media (OTIOZ)…",
+      "help": "Writes the same edit with the media it uses inside the file. This is the one to hand to somebody else, or to open in DaVinci Resolve, which then finds the rushes on its own instead of asking for them one by one."
+    },
     "sequenceMirror": {
       "title": "Return window",
       "help": "Opens the edit in a window of its own, to put on a second screen. It follows the studio frame by frame, without the sound, and closes like any window."

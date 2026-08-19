@@ -38,6 +38,7 @@ export type ExportTargetId =
   | 'material.roblox'
   | 'material.raw'
   | 'montage.otio'
+  | 'montage.otioz'
 
 export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'picture.png',
@@ -51,6 +52,7 @@ export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'material.roblox',
   'material.raw',
   'montage.otio',
+  'montage.otioz',
 ]
 
 /**
@@ -290,6 +292,19 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
   'montage.otio': {
     domain: 'montage',
     extension: '.otio',
+    door: 'import',
+    destination: 'file',
+    openedBy: [],
+    capability: capabilityOf('otio'),
+  },
+  /**
+   * The same cut with its media inside it, which is what settles the Media Pool: an `.otio` alone
+   * arrives in Resolve as a timeline of files it then has to find. Nothing on this machine
+   * declares the extension — measured 2026-08-19 — so the picker is the door, as for the `.otio`.
+   */
+  'montage.otioz': {
+    domain: 'montage',
+    extension: '.otioz',
     door: 'import',
     destination: 'file',
     openedBy: [],
