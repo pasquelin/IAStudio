@@ -11,6 +11,11 @@ export type EntryRowProps = {
    * the glyph already says — and the file name for everything else.
    */
   name: string
+  /**
+   * The extension the name above does NOT carry — a document's, whose title is its file name
+   * minus this. Left off for everything else, whose `name` is the directory entry whole.
+   */
+  extension?: string
   icon: string
   /** A preview of the file, drawn at glyph size — the tree shows one too, as a file browser does. */
   preview?: string
@@ -40,7 +45,15 @@ export type EntryRowProps = {
  * The glyph is the workspace's for a document and a plain sheet for everything else, read off
  * the same table the rail and the asset menu read.
  */
-export function EntryRow({ name, icon, preview, open, waiting, onRename }: EntryRowProps) {
+export function EntryRow({
+  name,
+  extension,
+  icon,
+  preview,
+  open,
+  waiting,
+  onRename,
+}: EntryRowProps) {
   const { t } = useTranslation()
 
   // The whole row becomes the field: a name edited beside its own icon is where the eye already
@@ -87,6 +100,9 @@ export function EntryRow({ name, icon, preview, open, waiting, onRename }: Entry
         />
       }
       title={name}
+      // Beside the name and not in it: the field above renames a document by its TITLE, and an
+      // extension inside the value would be typed over by whoever replaces the name.
+      suffix={extension}
       quiet={waiting}
     />
   )

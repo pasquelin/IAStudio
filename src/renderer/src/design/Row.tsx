@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { ROW_INK, ROW_LINE, ROW_QUIET } from './styles'
+import { ROW_INK, ROW_LINE, ROW_QUIET, ROW_SUFFIX } from './styles'
 import { TIP_RIGHT, type TooltipFactory } from '@/helpers/tooltip'
 import { UiIcon } from './UiIcon'
 
@@ -10,6 +10,11 @@ export type RowProps = {
   /** `@mdi/js` path, for rows whose kind is what identifies them. */
   icon?: string
   title: string
+  /**
+   * Quiet ink right after the title, and the title truncates around it — a file's extension,
+   * where the name shown is the document's own. Pushed to the row's END instead, that is `actions`.
+   */
+  suffix?: string
   /**
    * Where the title is cut when it does not fit. `end` everywhere a name is a name; `start` where
    * it is a PATH — `Images/Croquis/etude.jpg` clipped the ordinary way leaves the half nobody
@@ -58,6 +63,7 @@ export function Row({
   media,
   icon,
   title,
+  suffix,
   clip,
   subtitle,
   leading,
@@ -97,7 +103,13 @@ export function Row({
         <p
           {...(hint ? tip(title, false, hint) : {})}
           className={cn(
-            clip === 'start' ? 'truncate-start' : 'truncate',
+            // The truncation moves onto the name itself once there is a suffix, which has to
+            // survive it: an extension cut off in a narrow dock is one the row never shows.
+            suffix
+              ? 'flex min-w-0 items-baseline'
+              : clip === 'start'
+                ? 'truncate-start'
+                : 'truncate',
             'text-xs leading-tight',
             // A hidden layer is DIMMED, not disabled: a layer is still selected and renamed, a
             // scene node still selected and dragged, so the exemption WCAG 1.4.3 grants a disabled
@@ -107,7 +119,12 @@ export function Row({
             muted ? cn(ROW_QUIET, 'line-through') : quiet ? ROW_QUIET : ROW_INK,
           )}
         >
-          {title}
+          {suffix ? (
+            <span className={clip === 'start' ? 'truncate-start' : 'truncate'}>{title}</span>
+          ) : (
+            title
+          )}
+          {suffix && <span className={ROW_SUFFIX}>{suffix}</span>}
         </p>
         {/* Muted at rest, full ink once the row is PICKED: `muted` reads 3.25:1 on `accent-soft`,
             under the 4.5 of WCAG 1.4.3. Driven from the row through `rowSkin`'s group, so no list

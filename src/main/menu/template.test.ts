@@ -36,6 +36,7 @@ const options = (given: Partial<MenuOptions> = {}): MenuOptions => ({
   workspace: '3d',
   tools: ['meshes', 'lights', 'explorer', 'models', 'generator', 'inspector', 'assets'],
   checked: [],
+  abilities: [],
   isMac: true,
   isDevelopment: true,
   overrides: {},
@@ -639,6 +640,16 @@ describe('the export menu', () => {
     usdz?.click?.(...([] as never[] as [never, never, never]))
 
     expect(exportScene).toHaveBeenCalledWith({ format: 'usdz', scope: 'selection' })
+  })
+
+  it('greys the selection row where the window reports nothing picked', () => {
+    const without = exportsIn(menuTemplate(options()))
+    const holding = exportsIn(menuTemplate(options({ abilities: ['scene.exportSelection'] })))
+
+    expect(without.find(item => item.label === 'Sélection')?.enabled).toBe(false)
+    expect(holding.find(item => item.label === 'Sélection')?.enabled).toBe(true)
+    // The scene itself is never greyed by it: an empty scene is still a scene to write out.
+    expect(without.find(item => item.label === 'Scène')?.enabled).toBeUndefined()
   })
 
   it('offers the five targets where a texture is what is being edited', () => {

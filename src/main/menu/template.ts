@@ -23,6 +23,7 @@ import {
   scopeOfWorkspace,
   type BindingOverrides,
   type CommandId,
+  type MenuAbility,
   type MenuCheck,
 } from '@shared/domain/command'
 import { acceleratorOf } from '@shared/domain/shortcut'
@@ -86,6 +87,8 @@ export type MenuOptions = {
    * on, and only the window knows: the state belongs to the document in front.
    */
   checked: readonly MenuCheck[]
+  /** The rows the focused window reported as answerable — a row absent from here is drawn greyed. */
+  abilities: readonly MenuAbility[]
   /** What the user remapped, so the menu advertises the key it will actually answer to. */
   overrides: BindingOverrides
   actions: MenuActions
@@ -136,7 +139,17 @@ function placementsFor(tools: readonly ToolId[], workspace: ToolSurface | null):
  * removed with its close button — a panel closed with no way to reopen it would be lost.
  */
 export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
-  const { language, workspace, tools, checked, isMac, isDevelopment, overrides, actions } = options
+  const {
+    language,
+    workspace,
+    tools,
+    checked,
+    abilities,
+    isMac,
+    isDevelopment,
+    overrides,
+    actions,
+  } = options
 
   /**
    * The accelerator of a command, read off the registry. Written by hand until now, which is
@@ -278,7 +291,12 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     if (workspace === '3d') {
       return [
         { label: t.menu.exportScene, submenu: exportItems('scene') },
-        { label: t.menu.exportSelection, submenu: exportItems('selection') },
+        // Greyed rather than dropped: a row that comes and goes is one the eye has to look for.
+        {
+          label: t.menu.exportSelection,
+          enabled: abilities.includes('scene.exportSelection'),
+          submenu: exportItems('selection'),
+        },
       ]
     }
 

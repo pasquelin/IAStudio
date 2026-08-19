@@ -740,15 +740,22 @@ export function Explorer() {
               // Bound rather than read through `row` below: the narrowing above does not survive
               // into the rename closure, and this is what carries it there.
               const node = row.node
+              const document = documentOf(node)
 
               return (
                 <EntryRow
                   // The document's name where there is one — its title for the older ones whose
                   // file still wears a uuid.
-                  name={documentOf(node)?.title ?? node.name}
+                  name={document?.title ?? node.name}
+                  // And its extension beside it — only where the two together spell the FILE.
+                  // A document written before the rename wears a uuid and shows its title, and
+                  // « Ma scène .gltf » would name nothing anyone could find on disk.
+                  extension={
+                    document?.title === stemOf(node.name) ? extensionOf(node.name) : undefined
+                  }
                   icon={iconFor(node, row.expanded)}
                   preview={previewFor(node)}
-                  open={isOpen(documentOf(node))}
+                  open={isOpen(document)}
                   // What a cut looks like before it is pasted: the rows are still there, still
                   // openable, and on their way out.
                   waiting={waiting.has(node.path)}

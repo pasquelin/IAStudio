@@ -9,7 +9,7 @@ import type { FolderEntry } from './domain/folder'
 import type { OraDocument } from './domain/openRaster'
 import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloudAsset'
-import type { CommandId, MenuCheck } from './domain/command'
+import type { CommandId, MenuAbility, MenuCheck } from './domain/command'
 import type { ContextMenuItem } from './domain/contextMenu'
 import type {
   ActionOutcome,
@@ -1624,10 +1624,11 @@ export type StudioBridge = {
     language: () => Promise<Language>
     onLanguage: (callback: (language: Language) => void) => Unsubscribe
     /**
-     * Tells the main process which surface is up, which panels it can currently open, and
-     * which menu rows are ticked, so the menu can follow all three. None of them can be worked
-     * out on the other side: whether the generator exists depends on a model being chosen, and
-     * whether a scene is drawn in wireframe is a fact of the document in front.
+     * Tells the main process which surface is up, which panels it can currently open, which menu
+     * rows are ticked and which of them can answer at all, so the menu can follow all four. None
+     * of them can be worked out on the other side: whether the generator exists depends on a
+     * model being chosen, and whether a scene is drawn in wireframe — or holds a selection to
+     * export — is a fact of the document in front.
      *
      * The surface, not the workspace: the home covers the space behind it, and a menu built on
      * that space offered the image tools over a screen that edits no image.
@@ -1636,6 +1637,7 @@ export type StudioBridge = {
       surface: ToolSurface,
       tools: readonly ToolId[],
       checked: readonly MenuCheck[],
+      abilities: readonly MenuAbility[],
     ) => Promise<void>
   }
   /**

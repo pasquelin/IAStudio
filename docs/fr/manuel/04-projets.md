@@ -196,6 +196,11 @@ un montage avec ses pistes.
 Le bouton **+** en haut du rail gauche en crée un, et demande deux choses : son **nom**, et son
 **emplacement**.
 
+**Le nom proposé dit ce que le document est** — `Scène 1`, `Vidéo 1`, `Image 1` — et l’extension
+du format est écrite à droite du champ, pour que vous voyiez le fichier avant de valider. Chaque
+type compte les siens : la première image d’un projet s’appelle `Image 1` même si le projet tient
+déjà trois scènes.
+
 L’emplacement se parcourt **en colonnes**, comme la fenêtre d’enregistrement du système : chaque
 colonne montre ce qu’un dossier contient, et choisir un dossier ouvre son contenu dans la colonne
 suivante. **Le dernier dossier choisi est celui où le document ira** — il n’y a pas deux notions à
@@ -233,6 +238,10 @@ sont dedans, exactement comme dans l’explorateur de votre système.
 
 **Il montre aussi ce que le studio ne sait pas ouvrir.** Un `.pdf`, un `.txt`, un dossier de notes :
 c’est votre dossier, et c’est ce qui distingue un explorateur d’une liste de documents.
+
+Un document y est écrit sous **le nom que vous lui avez donné**, et la lecture en liste fait
+suivre **son extension en gris** — `Scène 1 .gltf`. Renommer la ligne change le nom, jamais
+l’extension.
 
 #### Deux lectures du même dossier
 

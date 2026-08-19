@@ -190,6 +190,11 @@ with its tracks.
 The **+** button at the top of the left rail makes one, and asks two things: its **name** and its
 **location**.
 
+**The proposed name says what the document is** — `Scene 1`, `Video 1`, `Image 1` — and the
+format's extension is written to the right of the field, so you see the file before saying yes.
+Each type counts its own: the first image of a project is called `Image 1` even where the project
+already holds three scenes.
+
 The location is walked **in columns**, the way the system's own save window is: each column shows
 what one folder holds, and choosing a folder opens its contents in the next column. **The last
 folder chosen is where the document goes** — there are not two things to keep track of. The whole
@@ -224,6 +229,10 @@ system's own file browser.
 
 **It shows what the studio cannot open, too.** A `.pdf`, a `.txt`, a folder of notes: it is your
 folder, and that is what tells an explorer apart from a list of documents.
+
+A document is written there under **the name you gave it**, and the list reading follows it with
+**its extension in grey** — `Scene 1 .gltf`. Renaming the row changes the name, never the
+extension.
 
 #### Two readings of the same folder
 

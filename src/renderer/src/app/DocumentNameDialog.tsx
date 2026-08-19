@@ -1,10 +1,11 @@
 import { memo, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { EXTENSIONS_BY_KIND } from '@shared/domain/document'
 import { checkDocumentName } from '@shared/domain/documentName'
 import { FOLDER_ROOT } from '@shared/domain/folder'
 import { Button } from '@/design/Button'
 import { FolderPicker } from '@/design/FolderPicker/FolderPicker'
-import { FIELD } from '@/design/styles'
+import { FIELD_FILL, FILE_EXTENSION } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
 import { useProject } from '@/stores/project'
@@ -44,6 +45,7 @@ export const DocumentNameDialog = memo(function DocumentNameDialog() {
   const pending = useRef<Asked | null>(null)
   const titleId = useId()
   const nameId = useId()
+  const extensionId = useId()
   const folderId = useId()
   const refusalId = useId()
 
@@ -115,7 +117,7 @@ export const DocumentNameDialog = memo(function DocumentNameDialog() {
         )}
       >
         <h2 id={titleId} className="text-text m-0 text-sm font-medium">
-          {t('documents.new')}
+          {t(`documents.newByKind.${asked.request.kind}`)}
         </h2>
 
         <form
@@ -132,14 +134,21 @@ export const DocumentNameDialog = memo(function DocumentNameDialog() {
             <label htmlFor={nameId} className="text-muted text-xs">
               {t('documents.nameField')}
             </label>
-            <input
-              ref={field}
-              id={nameId}
-              aria-describedby={refusal ? refusalId : undefined}
-              value={draft}
-              className={cn(FIELD, 'w-full text-xs')}
-              onChange={event => setDraft(event.target.value)}
-            />
+            <div className="flex items-center gap-2">
+              <input
+                ref={field}
+                id={nameId}
+                aria-describedby={refusal ? `${extensionId} ${refusalId}` : extensionId}
+                value={draft}
+                className={cn(FIELD_FILL, 'text-xs')}
+                onChange={event => setDraft(event.target.value)}
+              />
+              {/* Read off the kind, and shown rather than offered: one format per kind is the
+                  whole of the open-format decision, so there is nothing here to pick between. */}
+              <span id={extensionId} className={cn(FILE_EXTENSION, 'shrink-0 text-xs')}>
+                {EXTENSIONS_BY_KIND[asked.request.kind]}
+              </span>
+            </div>
           </div>
 
           {refusal && (

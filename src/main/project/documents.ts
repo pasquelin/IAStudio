@@ -236,7 +236,7 @@ export function createDocumentFiles({
    * overwrite without a word. One listing out of date is a document lost.
    *
    * Every entry, not only the ones that read back as documents: the disk cannot hold two things
-   * of one name, so a `Sans titre.gltf` too damaged to open still takes the name it wears.
+   * of one name, so a `Scène 1.gltf` too damaged to open still takes the name it wears.
    *
    * Keyed by the directory entry, which is all a name check ever needs an id for — telling the
    * document being renamed apart from its own name.
@@ -538,7 +538,7 @@ export function createDocumentFiles({
    * finds.
    *
    * Suffixed rather than refused when the folder already holds that name — this is the studio
-   * naming a document nobody has named yet ("Sans titre 2", the title of an asset opened twice),
+   * naming a document nobody has named yet ("Scène 2", the title of an asset opened twice),
    * and there is no one to ask. A name the USER typed is refused instead, by `rename`.
    *
    * One `readdir` of the landing folder, which is what a first save can afford — and the only

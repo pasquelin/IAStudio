@@ -74,7 +74,7 @@ describe('createDocumentIn', () => {
    */
   it('proposes the first free number, reading the folder afresh', async () => {
     installFakeBridge({
-      documents: { list: () => Promise.resolve([stored('Sans titre 1', 'Sans titre 1.gltf')]) },
+      documents: { list: () => Promise.resolve([stored('Scène 1', 'Scène 1.gltf')]) },
     })
     const asked = vi.fn<DocumentNamer>(() => Promise.resolve(null))
     namedBy(asked)
@@ -82,7 +82,7 @@ describe('createDocumentIn', () => {
     createDocumentIn('3d')
 
     await vi.waitFor(() => expect(asked).toHaveBeenCalled())
-    expect(asked.mock.calls[0]?.[0]).toMatchObject({ kind: 'scene', suggested: 'Sans titre 2' })
+    expect(asked.mock.calls[0]?.[0]).toMatchObject({ kind: 'scene', suggested: 'Scène 2' })
   })
 
   // What the field refuses a typed name against: the folder and the tabs it cannot see on disk.
@@ -182,7 +182,7 @@ describe('createDocumentIn', () => {
     createDocumentIn('3d')
 
     await vi.waitFor(() => expect(created()).toHaveLength(1))
-    expect(created()[0]?.title).toBe('Sans titre 1')
+    expect(created()[0]?.title).toBe('Scène 1')
   })
 
   it('makes nothing with no project open', async () => {

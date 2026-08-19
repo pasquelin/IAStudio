@@ -259,8 +259,8 @@ const bridge: StudioBridge = {
     onState: callback => subscribe<WindowState>(EVENTS.windowState, callback),
     language: () => ipcRenderer.invoke(CHANNELS.windowLanguage),
     onLanguage: callback => subscribe<Language>(EVENTS.windowLanguage, callback),
-    setWorkspace: (workspace, tools, checked) =>
-      ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace, tools, checked),
+    setWorkspace: (workspace, tools, checked, abilities) =>
+      ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace, tools, checked, abilities),
   },
   menu: {
     popup: items => ipcRenderer.invoke(CHANNELS.menuPopup, items),

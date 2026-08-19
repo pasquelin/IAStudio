@@ -102,8 +102,24 @@
   "documents": {
     "copyName": "{{name}} copie",
     "none": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer.",
-    "untitled": "Sans titre {{n}}",
+    "untitled": "{{kind}} {{n}}",
+    "kinds": {
+      "image": "Image",
+      "scene": "Scène",
+      "sequence": "Vidéo",
+      "audio": "Audio",
+      "skybox": "Ciel",
+      "texture": "Matière"
+    },
     "new": "Nouveau document",
+    "newByKind": {
+      "image": "Nouvelle image",
+      "scene": "Nouvelle scène",
+      "sequence": "Nouvelle vidéo",
+      "audio": "Nouvel audio",
+      "skybox": "Nouveau ciel",
+      "texture": "Nouvelle matière"
+    },
     "missing": "Ce document n’est plus ouvert.",
     "saveRefusedIncomplete": "Ce montage s’est ouvert sans les clips dont le média manque. Enregistrer les effacerait du fichier — importez les médias dans le projet, puis rouvrez le montage.",
     "saveRefusedMontageHoldsMore": "Ce montage vient d’un fichier OpenTimelineIO qui contient plus que ce que le studio compose — un marqueur, un effet, une transition. Le montage est réécrit en entier, donc enregistrer effacerait ces parties. Passez par l’export du montage, dans le menu Fichier, ou repartez d’un montage neuf.",

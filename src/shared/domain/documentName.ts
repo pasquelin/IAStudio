@@ -82,7 +82,7 @@ export function checkDocumentName(
 }
 
 /**
- * The first name of this shape nobody has taken — `Sans titre`, then `Sans titre 2`.
+ * The first name of this shape nobody has taken — `Niveau`, then `Niveau 2`.
  *
  * For the names the studio engenders itself, where there is nobody to ask: a new document, one
  * opened from an asset, a copy. A name a user TYPED is refused instead, by `checkDocumentName`,
