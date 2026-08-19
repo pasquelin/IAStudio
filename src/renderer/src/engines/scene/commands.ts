@@ -422,8 +422,8 @@ export function setSprite(id: string, sprite: SpriteDescriptor): Command<SceneSt
 }
 
 /**
- * What an imported model plays: one lane per layer, and the blocks inside each. No lane at all
- * puts it back to its rest pose.
+ * What an imported model plays: its lanes, and the blocks inside each. No lane at all puts it
+ * back to its rest pose.
  *
  * The whole set is written rather than one lane patched, for the reason `setModelTextures` states:
  * what the band holds IS the set, and a partial write would leave the revert unable to say which

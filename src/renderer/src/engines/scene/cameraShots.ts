@@ -13,7 +13,7 @@ const cameraLists = new WeakMap<readonly CameraShot[], readonly string[]>()
  *
  * This IS the montage's law — the order of the lines — and it lives in the document's own list
  * rather than in a number on each shot. A number said the same thing twice: two shots of one
- * camera could hold different layers, and the line drawn for them then had no rank at all.
+ * camera could hold different `layer` numbers, and the line drawn for them then had no rank.
  */
 export function shotCameras(shots: readonly CameraShot[]): readonly string[] {
   return cachedOn(cameraLists, shots, () => [...new Set(shots.map(shot => shot.cameraId))])

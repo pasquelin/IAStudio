@@ -120,7 +120,7 @@ export type ClipBlock = {
   duration: Us
 }
 
-/** One lane of one model, as the panel hands it over: the document's layering, measured. */
+/** One lane of one model, as the panel hands it over: the document's own lanes, measured. */
 export type SheetLane = {
   nodeId: string
   laneId: string

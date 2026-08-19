@@ -368,7 +368,7 @@ export function removeCameraShot(shotId: string): Command<SceneState> {
     revert: state => {
       const origin = before
       if (!origin) return state
-      // Put back where it stood: two shots of one layer starting together are settled by their
+      // Put back where it stood: two shots of one line starting together are settled by their
       // order, so a shot restored at the end would come back on top of what it was under.
       return writeShots(state, shots => {
         const restored = [...shots]
@@ -380,8 +380,8 @@ export function removeCameraShot(shotId: string): Command<SceneState> {
 }
 
 /**
- * A shot moved, trimmed or sent to another layer — the three are one command because they are
- * one thing: the same shot with other bounds. Whichever fields are given are the ones written.
+ * A shot moved, trimmed, aimed or set on a rail — one command for all of them, because each is
+ * the same shot with other fields. Whichever fields are given are the ones written.
  */
 export function editCameraShot(
   shotId: string,

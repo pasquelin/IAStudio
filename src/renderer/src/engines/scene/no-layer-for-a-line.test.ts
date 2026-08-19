@@ -1,0 +1,50 @@
+import { describe, expect, it } from 'vitest'
+import { SUITE_SOURCES, WRITTEN_SOURCES } from '@/design/testHarness'
+
+const SCENE = [...WRITTEN_SOURCES, ...SUITE_SOURCES].filter(
+  ([path]) => path.startsWith('../engines/scene/') && !path.endsWith('no-layer-for-a-line.test.ts'),
+)
+
+// The noun only: a move IS laid over another, and condemning the participle would condemn
+// correct English.
+const NOUN = /\blayer(s|ing)?\b/i
+
+// Backticks name the vanished shot field rather than use the word. **Blind**: a lone backtick
+// on a line pairs with the next one and could swallow a real offender — none exists today.
+const stripQuoted = (source: string): string => source.replace(/`[^`\n]*`/g, '``')
+
+/**
+ * Where the word answers for something else, each with what it answers for. An entry joins WITH
+ * its reason, never to make this green. **Blind**: the key is the STEM, so the suite beside a
+ * spared module is spared too, and the drift can be written in any of them unread.
+ */
+const OTHER_SENSES: Record<string, string> = {
+  sceneView: 'three.js `Layers`: which camera draws the overlays',
+  paneDress: "a camera's own layer mask, read per pass",
+  sceneDocument: 'the shot field that no longer exists, sorted once on read',
+  gltfDocument: 'a layer of software — the file layer, and what MaterialX had one down',
+}
+
+const stemOf = (path: string): string => (path.split('/').pop() ?? '').split('.')[0] ?? ''
+
+const spared = (path: string): boolean => stemOf(path) in OTHER_SENSES
+
+// Cameras stack on a `line`, a model's blocks lie in a `lane`; the word this studio spends on
+// the image stack and on three.js is neither.
+describe('a band has lines and lanes', () => {
+  it('never calls one a layer', () => {
+    const offenders = SCENE.filter(
+      ([path, source]) => !spared(path) && NOUN.test(stripQuoted(source)),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('keeps no reason for a file that has stopped saying it', () => {
+    const stale = Object.keys(OTHER_SENSES).filter(
+      stem => !SCENE.some(([path, source]) => stemOf(path) === stem && NOUN.test(source)),
+    )
+
+    expect(stale).toEqual([])
+  })
+})
