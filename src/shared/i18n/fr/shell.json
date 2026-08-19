@@ -227,6 +227,7 @@
       "connectAction": "Saisir la clé API",
       "ready": "Tout est prêt",
       "readyBody": "{{project}} est ouvert et ne contient encore rien. Choisissez un espace et créez-y la première pièce.",
+      "readyBodyNoProject": "Rien n’est encore ouvert. Choisissez un espace et créez-y la première pièce.",
       "readyAction": "Créer une image"
     },
     "closing": {

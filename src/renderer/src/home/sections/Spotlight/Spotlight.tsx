@@ -104,7 +104,11 @@ export function Spotlight() {
       id: 'ready',
       icon: mdiCreationOutline,
       title: t('home.spotlight.ready'),
-      body: t('home.spotlight.readyBody', { project: project?.manifest.name ?? '' }),
+      // Two sentences rather than an empty hole: `readyBody` names the project, and filling that
+      // hole with '' left "est ouvert et ne contient encore rien" standing without a subject.
+      body: project
+        ? t('home.spotlight.readyBody', { project: project.manifest.name })
+        : t('home.spotlight.readyBodyNoProject'),
       action: {
         label: t('home.spotlight.readyAction'),
         hint: t('home.spotlightReadyHint'),

@@ -72,6 +72,23 @@ describe('the spotlight while the studio is still opening', () => {
     expect(container.firstElementChild).toHaveStyle({ height: '76px' })
   })
 
+  /**
+   * Seen on screen, which is the only place it shows: the body names the project, so with none
+   * open the hole was filled with '' and the sentence lost its subject — "est ouvert et ne
+   * contient encore rien", of nothing. Every guard was green: the hole WAS filled.
+   */
+  it('does not say a project is open when none is', () => {
+    useSettings.setState({ auth: { authenticated: true }, authKnown: true })
+    useProject.setState({ project: null, known: true })
+    render(<Spotlight />)
+
+    expect(
+      screen.getByText(
+        'Rien n’est encore ouvert. Choisissez un espace et créez-y la première pièce.',
+      ),
+    ).toBeInTheDocument()
+  })
+
   /** What is already true is said at once: a running job does not wait on the key either. */
   it('reports what is true whatever else is still on its way', () => {
     useJobs.setState({
