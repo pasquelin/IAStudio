@@ -108,7 +108,7 @@
     "showMaterial": "Back to the lit material",
     "litMaterial": "Lit material",
     "litMaterialHint": "Back to the material as rendered, every channel combined",
-    "support": "Support",
+    "support": "Preview shape",
     "supportHint": "The shape the material is laid on — click to step to the next one",
     "inspect": "Inspected channel",
     "inspectHint": "Switches between the lit material and the last channel looked at flat",
