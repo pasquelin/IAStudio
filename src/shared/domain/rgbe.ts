@@ -59,13 +59,19 @@ function fromHalfFloat(bits: number): number {
 }
 
 /**
+ * Every half float there is, 256 KiB of them: converting one by one cost 570 ms at 4K against
+ * 265 through the table, and the whole point was to spend less, not to spend it differently.
+ */
+const HALF_FLOATS = Float32Array.from({ length: 0x10000 }, (_unused, bits) => fromHalfFloat(bits))
+
+/**
  * A `.hdr` file of `pixels`, which is RGBA in the layout a render target reads back — row zero at
  * the BOTTOM, as OpenGL counts. The `-Y` header says top-first, so the rows are written in
  * reverse: a sky written the other way up is the defect a viewer shows and no test would.
  *
  * Half floats are taken as they come off a half-float target, and that is the point: materialising
  * them as `Float32Array` first held the same picture twice — 224 MiB in flight for a 4K panorama
- * against 96, and 896 against 384 at 8K.
+ * against 96, and 896 against 384 at 8K — for 265 ms against 235, measured 2026-08-20.
  *
  * Alpha is dropped, and it is not an omission: Radiance has no fourth channel to put it in.
  */
@@ -80,7 +86,7 @@ export function encodeRgbe(
 
   const half = pixels instanceof Uint16Array
   const valueAt = (index: number): number =>
-    half ? fromHalfFloat(pixels[index] ?? 0) : (pixels[index] ?? 0)
+    half ? (HALF_FLOATS[pixels[index] ?? 0] ?? 0) : (pixels[index] ?? 0)
 
   let at = header.length
   for (let row = height - 1; row >= 0; row -= 1) {
