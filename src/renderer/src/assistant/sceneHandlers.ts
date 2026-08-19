@@ -14,7 +14,8 @@ import {
   setSelection,
   setTransform,
 } from '@/engines/scene/commands'
-import { addCameraShot } from '@/engines/scene/animationCommands'
+import { EASINGS, POINT_TARGET, type CameraShot } from '@shared/domain/animation'
+import { addCameraShot, bindRailToShot, editCameraShot } from '@/engines/scene/animationCommands'
 import { newShotAt } from '@/engines/scene/cameraShots'
 import { newId } from '@/helpers/ids'
 import type { Command } from '@/engines/core/history'
@@ -86,6 +87,9 @@ function readState(): ActionOutcome {
       documentId: open.documentId,
       selectedIds: open.state.selectedIds,
       environment: open.state.environment,
+      // What drives the cameras: without them a client can open a shot and never edit one, since
+      // `camera.rail` and `camera.target` name it by the id only this list hands over.
+      shots: open.state.animation.shots,
       // The flat list the state itself holds — the tree is derived from `parentId`, and handing
       // one over would be a second shape of the same thing for a client to walk.
       nodes: open.state.nodes.map(node => ({
@@ -98,9 +102,56 @@ function readState(): ActionOutcome {
         ...(node.type === 'mesh' ? { geometry: node.geometry, material: node.material } : {}),
         ...(node.type === 'light' ? { light: node.light } : {}),
         ...(node.type === 'model' ? { model: node.model } : {}),
+        ...(node.type === 'camera' ? { camera: node.camera } : {}),
+        // The points of a rail, so binding one is not done blind — `camera.rail` takes the id
+        // from here, and what the rail looks like decides which one a client wants.
+        ...(node.type === 'path' ? { path: node.path } : {}),
       })),
     },
   }
+}
+
+/**
+ * The same as `editNode`, for one named SHOT. A client works on shots by id because that is what
+ * `scene.state` hands it — an instant would leave two shots of one camera to choose between.
+ */
+function editShot(
+  input: Record<string, unknown>,
+  build: (shot: CameraShot, state: SceneState) => Command<SceneState> | null,
+): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
+
+  const shot = open.state.animation.shots.find(held => held.id === textOf(input, 'shotId'))
+  const command = shot && build(shot, open.state)
+  if (!command) return refused('badInput')
+
+  useScenes.getState().runCommand(open.documentId, command)
+  return { ok: true }
+}
+
+/** A shot opened for a camera, answering the id it was born with — a client edits it by that. */
+function openShot(input: Record<string, unknown>): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
+
+  const nodeId = textOf(input, 'nodeId') ?? ''
+  if (nodeById(open.state, nodeId)?.type !== 'camera') return refused('badInput')
+
+  const seconds = numberOf(input, 'durationSeconds')
+  const opened = newShotAt(
+    open.state.animation,
+    nodeId,
+    newId(),
+    (numberOf(input, 'startSeconds') ?? 0) * SECOND,
+  )
+  // The floor `newShotAt` holds is a frame, and a duration below it would be a bar nothing can
+  // grab back.
+  const shot =
+    seconds === null ? opened : { ...opened, duration: Math.max(opened.duration, seconds * SECOND) }
+
+  useScenes.getState().runCommand(open.documentId, addCameraShot(shot))
+  return { ok: true, data: { shotId: shot.id } }
 }
 
 /** Adds a node the caller built, answering the id it was born with. */
@@ -211,15 +262,47 @@ export const SCENE_HANDLERS: ActionHandlers = {
 
   // Seconds here, microseconds in the timeline: a client counting a shot in `Us` would be one
   // unit away from a film six orders of magnitude too long, with nothing on screen to say so.
-  'camera.shot': input =>
-    editNode(input, node => {
-      if (node.type !== 'camera') return null
+  'camera.shot': input => openShot(input),
 
-      const open = mounted()
-      if (!open) return null
+  // Through the very command the inspector's own select goes through, so a rail bound from here
+  // takes the whole of itself forwards exactly as one bound on screen does.
+  'camera.rail': input =>
+    editShot(input, (shot, state) => {
+      const pathId = textOf(input, 'pathId') ?? ''
+      if (pathId === '') return bindRailToShot(shot, '')
+      if (nodeById(state, pathId)?.type !== 'path') return null
 
-      const at = (numberOf(input, 'startSeconds') ?? 0) * SECOND
-      return addCameraShot(newShotAt(open.state.animation, node.id, newId(), at))
+      const from = numberOf(input, 'from')
+      const to = numberOf(input, 'to')
+      const easing = EASINGS.find(candidate => candidate === textOf(input, 'easing'))
+
+      return bindRailToShot(shot, pathId, {
+        ...(from === null ? {} : { from }),
+        ...(to === null ? {} : { to }),
+        ...(easing === undefined ? {} : { easing }),
+      })
+    }),
+
+  'camera.target': input =>
+    editShot(input, (shot, state) => {
+      const targetId = textOf(input, 'targetId') ?? ''
+      if (targetId !== '') {
+        // A camera cannot watch itself: `aimCamera` drops that shot silently, and a refusal here
+        // is what says so.
+        if (targetId === shot.cameraId || !nodeById(state, targetId)) return null
+        return editCameraShot(shot.id, { target: { kind: 'node', nodeId: targetId } })
+      }
+
+      // Naming no node and giving no point is FREE — the camera keeps its own rotation.
+      const aimed =
+        numberOf(input, 'atX') !== null ||
+        numberOf(input, 'atY') !== null ||
+        numberOf(input, 'atZ') !== null
+      return editCameraShot(shot.id, {
+        target: aimed
+          ? { kind: POINT_TARGET.kind, at: vectorOf(input, 'at', POINT_TARGET.at) }
+          : undefined,
+      })
     }),
 
   'node.light': input =>

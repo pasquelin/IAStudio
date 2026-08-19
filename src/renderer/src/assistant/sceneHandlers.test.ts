@@ -16,6 +16,11 @@ function scene(): SceneState {
 const nodeNamed = (name: string): SceneNode | undefined =>
   scene().nodes.find(node => node.name === name)
 
+async function cameraId(): Promise<string> {
+  const added = await runAction('node.add', { kind: 'camera', name: 'Caméra' })
+  return added.ok ? (added.data as { nodeId: string }).nodeId : ''
+}
+
 beforeEach(() => {
   installScene(DOCUMENT, { ...createDefaultScene(), nodes: [], selectedIds: [] })
 })
@@ -198,6 +203,139 @@ describe('a camera driven by value', () => {
 
     expect(await runAction('camera.shot', { nodeId })).toEqual({ ok: false, refusal: 'badInput' })
     expect(scene().animation.shots).toEqual([])
+  })
+
+  it('holds a frame of length for a duration asked for below one', async () => {
+    await runAction('camera.shot', { nodeId: await cameraId(), durationSeconds: 0 })
+
+    expect(scene().animation.shots[0]?.duration).toBeGreaterThan(0)
+  })
+
+  /** The id is the whole of what makes the two edits below reachable at all. */
+  it('answers the id of the shot it opened, and edits it by that id', async () => {
+    const opened = await runAction('camera.shot', { nodeId: await cameraId(), startSeconds: 1 })
+    const shotId = opened.ok ? (opened.data as { shotId: string }).shotId : ''
+
+    expect(scene().animation.shots[0]?.id).toBe(shotId)
+  })
+})
+
+describe('what a shot does with its camera', () => {
+  async function shotOnRail(): Promise<{ shotId: string; pathId: string }> {
+    const opened = await runAction('camera.shot', { nodeId: await cameraId() })
+    const rail = await runAction('node.add', { kind: 'path', name: 'Rail' })
+
+    return {
+      shotId: opened.ok ? (opened.data as { shotId: string }).shotId : '',
+      pathId: rail.ok ? (rail.data as { nodeId: string }).nodeId : '',
+    }
+  }
+
+  it('binds a rail to a shot, taking the whole of it forwards by default', async () => {
+    const { shotId, pathId } = await shotOnRail()
+
+    expect(await runAction('camera.rail', { shotId, pathId })).toEqual({ ok: true })
+    expect(scene().animation.shots[0]?.motion).toEqual({
+      pathId,
+      from: 0,
+      to: 1,
+      easing: 'linear',
+    })
+  })
+
+  it('takes the stretch and the speed curve it was given', async () => {
+    const { shotId, pathId } = await shotOnRail()
+
+    await runAction('camera.rail', { shotId, pathId, from: 1, to: 0.25, easing: 'easeInOut' })
+
+    // `from` past `to` is left alone rather than reordered: that is what runs a rail backwards.
+    expect(scene().animation.shots[0]?.motion).toMatchObject({
+      from: 1,
+      to: 0.25,
+      easing: 'easeInOut',
+    })
+  })
+
+  it('lets a shot go of its rail, leaving the camera where its own transform puts it', async () => {
+    const { shotId, pathId } = await shotOnRail()
+    await runAction('camera.rail', { shotId, pathId })
+
+    await runAction('camera.rail', { shotId, pathId: '' })
+
+    expect(scene().animation.shots[0]?.motion).toBeUndefined()
+  })
+
+  it('refuses a rail that is not a path, rather than binding an id nothing answers to', async () => {
+    const { shotId } = await shotOnRail()
+    const mesh = await runAction('node.add', { kind: 'box', name: 'Caisse' })
+
+    expect(
+      await runAction('camera.rail', {
+        shotId,
+        pathId: mesh.ok ? (mesh.data as { nodeId: string }).nodeId : '',
+      }),
+    ).toEqual({ ok: false, refusal: 'badInput' })
+    expect(scene().animation.shots[0]?.motion).toBeUndefined()
+  })
+
+  it('aims a shot at a node, at a point, and at nothing at all', async () => {
+    const { shotId } = await shotOnRail()
+    const mesh = await runAction('node.add', { kind: 'box', name: 'Statue' })
+    const nodeId = mesh.ok ? (mesh.data as { nodeId: string }).nodeId : ''
+
+    await runAction('camera.target', { shotId, targetId: nodeId })
+    expect(scene().animation.shots[0]?.target).toEqual({ kind: 'node', nodeId })
+
+    await runAction('camera.target', { shotId, atX: 1, atZ: -3 })
+    expect(scene().animation.shots[0]?.target).toEqual({
+      kind: 'point',
+      at: { x: 1, y: 0, z: -3 },
+    })
+
+    await runAction('camera.target', { shotId })
+    expect(scene().animation.shots[0]?.target).toBeUndefined()
+  })
+
+  // `aimCamera` drops a camera watching itself, since `lookAt` on no direction hands back the
+  // identity — a shot silently aimed down the Z axis.
+  it('refuses to have a camera watch itself, or a node the scene has not got', async () => {
+    const opened = await runAction('camera.shot', { nodeId: await cameraId() })
+    const shotId = opened.ok ? (opened.data as { shotId: string }).shotId : ''
+
+    expect(
+      await runAction('camera.target', { shotId, targetId: scene().animation.shots[0]?.cameraId }),
+    ).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await runAction('camera.target', { shotId, targetId: 'nowhere' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  it('refuses an edit naming a shot the document has not got', async () => {
+    expect(await runAction('camera.rail', { shotId: 'nowhere', pathId: '' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  // Without them a client can open a shot and never edit one: the two actions above name it by
+  // an id only this reading hands over.
+  it('publishes the shots, the lens of a camera and the points of a rail', async () => {
+    const { pathId } = await shotOnRail()
+
+    const outcome = await runAction('scene.state', {})
+    const read = outcome.ok
+      ? (outcome.data as {
+          shots: { id: string }[]
+          nodes: { id: string; camera?: unknown; path?: unknown }[]
+        })
+      : null
+
+    expect(read?.shots).toHaveLength(1)
+    expect(read?.nodes.find(node => node.id === pathId)?.path).toMatchObject({
+      kind: 'catmullrom',
+    })
+    expect(read?.nodes.some(node => node.camera !== undefined)).toBe(true)
   })
 })
 

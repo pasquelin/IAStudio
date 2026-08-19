@@ -511,7 +511,15 @@
       },
       "cameraShot": {
         "title": "Mettre une caméra à l’antenne",
-        "description": "Ouvre un plan pour cette caméra, à partir de l’instant donné en secondes. La ligne où il se pose suit la règle de la bande, où une caméra qui n’y figurait pas encore arrive au-dessus."
+        "description": "Ouvre un plan pour cette caméra, à partir de l’instant donné en secondes, et répond son identifiant. La ligne où il se pose suit la règle de la bande, où une caméra qui n’y figurait pas encore arrive au-dessus."
+      },
+      "cameraRail": {
+        "title": "Faire courir une caméra sur un chemin",
+        "description": "Lie un chemin au plan désigné, que la caméra parcourt alors pendant toute la durée du plan, à vitesse régulière le long de sa longueur. Sans chemin, le plan ne déplace plus la caméra. Un départ plus grand que l’arrivée fait rouler le chemin à l’envers."
+      },
+      "cameraTarget": {
+        "title": "Donner une cible à une caméra",
+        "description": "Oriente la caméra du plan désigné vers un objet — qu’elle suit même s’il est animé — ou vers un point fixe. Sans objet ni point, la caméra reste orientée par sa seule rotation."
       },
       "nodeReparent": {
         "title": "Rattacher un objet",
@@ -748,6 +756,13 @@
       "near": "Distance proche",
       "far": "Distance lointaine",
       "startSeconds": "Début du plan, en secondes",
+      "durationSeconds": "Durée du plan, en secondes — une image au minimum",
+      "shotId": "Identifiant du plan",
+      "pathId": "Identifiant du chemin, ou rien pour ne plus déplacer la caméra",
+      "railFrom": "Départ sur le chemin, de 0 à 1",
+      "railTo": "Arrivée sur le chemin, de 0 à 1",
+      "easing": "Courbe de vitesse du parcours",
+      "targetId": "Objet que la caméra vise, ou rien pour la laisser libre",
       "gitPath": "Chemin dans le dépôt",
       "gitPaths": "Chemins dans le dépôt",
       "commitHash": "Identifiant de la version",

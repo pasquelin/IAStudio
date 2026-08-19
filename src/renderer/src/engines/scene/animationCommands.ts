@@ -465,10 +465,17 @@ export function railOnNewShot(camera: CameraNode, shot: CameraShot): Command<Sce
   return multi(`shot:rail:new:${shot.id}`, [addCameraShot(shot), railForShot(camera, shot)])
 }
 
-/** Another rail on a shot that already exists, or none at all. */
-export function bindRailToShot(shot: CameraShot, pathId: string): Command<SceneState> {
+/**
+ * Another rail on a shot that already exists, or none at all. `changes` is what a caller who
+ * knows the stretch it wants writes in the same breath — the panel names only the rail.
+ */
+export function bindRailToShot(
+  shot: CameraShot,
+  pathId: string,
+  changes: Partial<Omit<CameraMotion, 'pathId'>> = {},
+): Command<SceneState> {
   const motion: CameraMotion | undefined =
-    pathId === '' ? undefined : { ...WHOLE_RAIL, ...shot.motion, pathId }
+    pathId === '' ? undefined : { ...WHOLE_RAIL, ...shot.motion, ...changes, pathId }
 
   return editCameraShot(shot.id, { motion })
 }

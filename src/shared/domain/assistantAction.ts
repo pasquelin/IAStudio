@@ -138,6 +138,8 @@ export type ActionName =
   | 'node.light'
   | 'node.camera'
   | 'camera.shot'
+  | 'camera.rail'
+  | 'camera.target'
   | 'node.reparent'
   | 'node.select'
   | 'git.status'
