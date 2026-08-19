@@ -47,6 +47,9 @@ export type TextureRendererOptions = {
 /** Radians per second of auto spin — slow enough to read a normal map, fast enough to see. */
 const SPIN_RATE = 0.35
 
+/** Where the camera opens, and where framing puts it back. Slightly above, so the top reads. */
+const CAMERA_HOME = { x: 0, y: 0.6, z: 3.2 }
+
 /**
  * A texture on a shape, under light. The subject is the material, so the viewport orbits it and
  * the environment is what makes it legible: a roughness judged under a flat lamp is not judged.
@@ -102,7 +105,7 @@ export class TextureRenderer {
         createTextureBinding(this.cache, spaceOf(channel), map => this.install(channel, map)),
       )
     }
-    this.viewport.camera.position.set(0, 0.6, 3.2)
+    this.viewport.camera.position.set(CAMERA_HOME.x, CAMERA_HOME.y, CAMERA_HOME.z)
     this.viewport.scene.add(this.mesh)
 
     // Bound once on the material, not per compile: three hands the hook a fresh uniform object
@@ -258,6 +261,20 @@ export class TextureRenderer {
   refreshMaps(): void {
     for (const [channel, asked] of this.wanted) this.bindings.get(channel)?.(asked)
     void this.sky.refresh()
+  }
+
+  /**
+   * The camera back where it opened. The TARGET as well as the position: an orbit panned with
+   * the middle button aims elsewhere, and putting only the camera back shows the same void.
+   */
+  resetView(): void {
+    this.viewport.camera.position.set(CAMERA_HOME.x, CAMERA_HOME.y, CAMERA_HOME.z)
+    const orbit = this.viewport.orbit
+    if (orbit) {
+      orbit.target.set(0, 0, 0)
+      orbit.update()
+    }
+    this.viewport.requestRender()
   }
 
   /**

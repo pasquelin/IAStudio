@@ -20,8 +20,9 @@ import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { isTextureDirty, textureOf, useTextures } from '@/stores/textures'
-import { placeTextureChannel } from './placeChannel'
-import { textureExportFiles } from './textureExportFiles'
+import { placeTextureChannel } from '../placeChannel'
+import { textureExportFiles } from '../textureExportFiles'
+import { TextureToolbar } from './TextureToolbar'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
@@ -176,6 +177,10 @@ export function TextureDocument({ documentId }: { documentId: string }) {
           <EmptyState icon={mdiTextureBox} message={t('texture.dropSource')} />
         </div>
       )}
+
+      {/* Last, so it stands over the flat channel above it: that one fills the viewport, and a
+          bar drawn before it would be a bar nobody can reach while inspecting a map. */}
+      <TextureToolbar documentId={documentId} onFrame={() => engine.current?.resetView()} />
     </AssetDropTarget>
   )
 }

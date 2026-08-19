@@ -5,6 +5,7 @@ import {
   mdiPause,
   mdiPlay,
   mdiSkipPrevious,
+  mdiViewSplitHorizontal,
 } from '@mdi/js'
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -36,6 +37,8 @@ export type ProgramMonitorProps = {
   transport: SoundTransport
   /** Where a click on the wave puts the head. Scrubbing a montage is not an edit. */
   onSeek: (time: Us) => void
+  /** The take editor under this monitor, which the tab shows and hides — see `stores/monitorPair`. */
+  clipHalf: { shown: boolean; onToggle: () => void }
 }
 
 /**
@@ -48,7 +51,7 @@ export type ProgramMonitorProps = {
  * It OPENS on the whole montage and can be zoomed into from there — ten minutes of music fitted
  * to a panel is a green band with no shape in it, which answers "what am I making" with nothing.
  */
-export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorProps) {
+export function ProgramMonitor({ sequence, transport, onSeek, clipHalf }: ProgramMonitorProps) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   /**
@@ -195,6 +198,7 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
     // Back to null rather than to a computed fit: null is what keeps the view whole as the
     // montage grows under it.
     if (id === 'fit') return setZoom(null)
+    if (id === 'clipHalf') return clipHalf.onToggle()
     transport.toggle()
   }
 
@@ -245,6 +249,14 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
               descriptionKey: 'transport.spectrumHint',
               icon: mdiEqualizer,
               pressed: spectrum,
+            },
+            {
+              id: 'clipHalf',
+              labelKey: 'transport.showTake',
+              descriptionKey: 'transport.showTakeHint',
+              icon: mdiViewSplitHorizontal,
+              pressed: clipHalf.shown,
+              separatorBefore: true,
             },
           ]}
           activeTool={transport.playing ? 'play' : undefined}

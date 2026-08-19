@@ -24,10 +24,15 @@ const transport = (playing = false): SoundTransport => ({
   tap: () => null,
 })
 
+/** The tab owns whether the take editor is on screen; the monitor only carries its button. */
+const CLIP_HALF = { shown: false, onToggle: vi.fn() }
+
 function show(overrides: { playing?: boolean; onSeek?: (time: number) => void } = {}) {
   const player = transport(overrides.playing)
   const onSeek = overrides.onSeek ?? vi.fn()
-  render(<ProgramMonitor sequence={montage()} transport={player} onSeek={onSeek} />)
+  render(
+    <ProgramMonitor sequence={montage()} transport={player} onSeek={onSeek} clipHalf={CLIP_HALF} />,
+  )
   return { player, onSeek }
 }
 
@@ -61,13 +66,19 @@ describe('ProgramMonitor', () => {
   it('scrubs the montage as it stands, not as it was mounted', () => {
     const onSeek = vi.fn()
     const view = render(
-      <ProgramMonitor sequence={montage()} transport={transport()} onSeek={onSeek} />,
+      <ProgramMonitor
+        sequence={montage()}
+        transport={transport()}
+        onSeek={onSeek}
+        clipHalf={CLIP_HALF}
+      />,
     )
     view.rerender(
       <ProgramMonitor
         sequence={sequenceWith([trackFixture('a', 'audio', [clipFixture('c', 0, 10 * SECOND)])])}
         transport={transport()}
         onSeek={onSeek}
+        clipHalf={CLIP_HALF}
       />,
     )
 
@@ -157,7 +168,14 @@ describe('ProgramMonitor', () => {
 
     const heard = vi.fn(() => null)
     const player: SoundTransport = { ...transport(true), tap: heard }
-    render(<ProgramMonitor sequence={montage()} transport={player} onSeek={vi.fn()} />)
+    render(
+      <ProgramMonitor
+        sequence={montage()}
+        transport={player}
+        onSeek={vi.fn()}
+        clipHalf={CLIP_HALF}
+      />,
+    )
     fireEvent.click(screen.getByRole('button', { name: /Spectre/ }))
 
     // One frame each: the meter's loop and the spectrum's, both listening where the montage plays.

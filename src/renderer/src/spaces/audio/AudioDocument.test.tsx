@@ -21,6 +21,7 @@ import { useAssets } from '@/stores/assets'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audioEdits'
 import { useDocuments } from '@/stores/documents'
+import { useMonitorPair } from '@/stores/monitorPair'
 import { installDocuments } from '@/stores/document-fixtures'
 import { AudioDocument } from './AudioDocument'
 
@@ -90,6 +91,9 @@ function montageWithTake(): void {
 // reaching for a bridge these tests do not mount.
 beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
+  // Almost everything below works ON the take editor, which a tab hides by default: the decor
+  // opens it, and the one suite about the default closes it again.
+  useMonitorPair.setState({ clipShown: { 'doc-1': true } })
 })
 
 async function openTake({ inFront = true }: { inFront?: boolean } = {}): Promise<void> {
@@ -112,6 +116,36 @@ describe('AudioDocument', () => {
     saveAudio.mockClear()
     useAssets.setState({ items: [asset] })
     useSequences.setState({ states: { 'doc-1': EMPTY_SOUND_SEQUENCE }, histories: {} })
+  })
+
+  /**
+   * What a montage tab is FOR is the montage: the take editor is the half one opens when a take
+   * needs work, and it used to take half the column whether or not anything was being worked on.
+   */
+  describe('the take editor, which the tab hides by default', () => {
+    beforeEach(() => useMonitorPair.setState({ clipShown: {} }))
+
+    it('opens on the montage alone', async () => {
+      useAudioEdits.setState({ states: { 'doc-1': EMPTY_AUDIO_EDIT }, histories: {} })
+      montageWithTake()
+      installDocuments({ 'doc-1': 'audio' }, 'doc-1')
+      render(<AudioDocument documentId="doc-1" />)
+
+      expect(screen.queryByRole('button', { name: /Rogner/ })).not.toBeInTheDocument()
+    })
+
+    it('shows and hides it on the button the montage monitor carries', async () => {
+      useAudioEdits.setState({ states: { 'doc-1': EMPTY_AUDIO_EDIT }, histories: {} })
+      montageWithTake()
+      installDocuments({ 'doc-1': 'audio' }, 'doc-1')
+      render(<AudioDocument documentId="doc-1" />)
+
+      await userEvent.click(screen.getByRole('button', { name: 'Éditeur de prise' }))
+      expect(await screen.findByRole('button', { name: /Rogner/ })).toBeInTheDocument()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Éditeur de prise' }))
+      expect(screen.queryByRole('button', { name: /Rogner/ })).not.toBeInTheDocument()
+    })
   })
 
   /**

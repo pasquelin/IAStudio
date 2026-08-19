@@ -72,6 +72,7 @@ import {
   textureFromPayload,
   texturePayload,
 } from './textureDocument'
+import { useMonitorPair } from '@/stores/monitorPair'
 import { useSkyboxViews } from '@/stores/skyboxViews'
 import { useTextureViews } from '@/stores/textureViews'
 import { textureStore } from '@/stores/textures'
@@ -1226,6 +1227,9 @@ function forgetDocument(documentId: string, kind?: DocumentKind): void {
   // fresh document opening onto the cross of its predecessor is not what was asked for.
   useTextureViews.getState().forget(documentId)
   useSkyboxViews.getState().forget(documentId)
+  // Of the same kind: a montage reopening with a clip monitor its predecessor had asked for is
+  // not what the default says.
+  useMonitorPair.getState().forgetMonitorPair(documentId)
   closePanel(documentId)
   useDocuments.getState().close(documentId)
 }

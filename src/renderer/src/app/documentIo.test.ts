@@ -44,6 +44,7 @@ import { useAudioEdits } from '@/stores/audioEdits'
 import { sequenceStore, useSequences } from '@/stores/sequences'
 import { useSkyboxes } from '@/stores/skyboxes'
 import { forgetReportedFailures } from '@/services/diagnostics'
+import { isClipMonitorShown, useMonitorPair } from '@/stores/monitorPair'
 import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
 import {
   autosaveOpenDocuments,
@@ -2022,6 +2023,18 @@ describe('closing a document', () => {
     await expect(closeDocument(created.id)).resolves.toBe(true)
 
     expect(inspectedChannel(useTextureViews.getState(), created.id)).toBeNull()
+  })
+
+  /** The same reasoning, on the half a montage tab opens with: hidden is what a tab opens on. */
+  it('forgets that a closed montage had its clip monitor open', async () => {
+    installFakeBridge({})
+    const created = await useDocuments.getState().create('video')
+    if (!created) throw new Error('expected a document')
+    useMonitorPair.getState().toggleClipMonitor(created.id)
+
+    await expect(closeDocument(created.id)).resolves.toBe(true)
+
+    expect(isClipMonitorShown(useMonitorPair.getState(), created.id)).toBe(false)
   })
 
   /**

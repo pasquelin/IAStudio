@@ -10,6 +10,7 @@ import { useSoundTransport } from '@/hooks/useSoundTransport'
 import { useSplitPair } from '@/hooks/useSplitPair'
 import { audioHistoryOf, isAudioEditDirty, useAudioEdits } from '@/stores/audioEdits'
 import { useDocuments } from '@/stores/documents'
+import { isClipMonitorShown, useMonitorPair } from '@/stores/monitorPair'
 import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { exportOtio, exportOtioz } from '@/app/otioExport'
 import { ProgramMonitor } from './ProgramMonitor'
@@ -48,6 +49,13 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   const transport = useSoundTransport(documentId, sequence)
 
   const { pairRef, leadStyle, leadSize, onLeadSize } = useSplitPair('vertical')
+
+  const takeShown = useMonitorPair(state => isClipMonitorShown(state, documentId))
+  const takeStyle = takeShown ? leadStyle : undefined
+  const toggleTake = useCallback(
+    () => useMonitorPair.getState().toggleClipMonitor(documentId),
+    [documentId],
+  )
 
   const seek = useCallback(
     (playhead: Us) => {
@@ -123,16 +131,27 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
       {/* The whole above the part, and the part above the strip it sits on: what one is making
           reads top to bottom, and the take being worked on stays next to the montage it lands
           in rather than a monitor's width away from it. */}
-      <div className="flex min-h-0" style={leadStyle}>
-        <ProgramMonitor sequence={sequence} transport={transport} onSeek={seek} />
+      {/* The montage takes the whole tab while the take editor is away: a `leadStyle` height held
+          over a pane with nothing under it would leave the rest of the column empty. */}
+      <div className={takeShown ? 'flex min-h-0' : 'flex min-h-0 flex-1'} style={takeStyle}>
+        <ProgramMonitor
+          sequence={sequence}
+          transport={transport}
+          onSeek={seek}
+          clipHalf={{ shown: takeShown, onToggle: toggleTake }}
+        />
       </div>
 
-      {/* The same handle the shell splits its zones with, so the gesture is the one gesture. */}
-      <ResizeHandle axis="vertical" size={leadSize} onSize={onLeadSize} />
+      {takeShown && (
+        <>
+          {/* The same handle the shell splits its zones with, so the gesture is the one gesture. */}
+          <ResizeHandle axis="vertical" size={leadSize} onSize={onLeadSize} />
 
-      <div className="flex min-h-0 flex-1">
-        <TakeEditor documentId={documentId} />
-      </div>
+          <div className="flex min-h-0 flex-1">
+            <TakeEditor documentId={documentId} />
+          </div>
+        </>
+      )}
     </div>
   )
 }

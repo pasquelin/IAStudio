@@ -14,6 +14,7 @@ import {
 } from '@/engines/timeline/timelineState'
 import { clamp } from '@shared/numeric'
 import { useDocuments } from '@/stores/documents'
+import { isClipMonitorShown, useMonitorPair } from '@/stores/monitorPair'
 import { playbackOf, usePlayback } from '@/stores/playback'
 import { mirrorMessageOf, openMirrorChannel } from './mirrorChannel'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
@@ -129,6 +130,15 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
    */
   const [focus, setFocus] = useState<'source' | 'program'>('program')
 
+  const sourceShown = useMonitorPair(state => isClipMonitorShown(state, documentId))
+  const toggleSource = useCallback(
+    () => useMonitorPair.getState().toggleClipMonitor(documentId),
+    [documentId],
+  )
+  // Derived rather than written back: with the source hidden the space bar has one monitor to
+  // drive, and a `focus` left on `source` would send it to a player nobody can see.
+  const armed = sourceShown ? focus : 'program'
+
   /**
    * Where the montage's head falls INSIDE the selected clip, which is what following it comes to.
    *
@@ -227,25 +237,31 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
     // The inset belongs to the ROW, not to each monitor: carried by both, it doubled around the
     // handle and the pair read as two panes pushed apart rather than as two panels side by side.
     <div ref={pairRef} className="flex h-full min-h-0 p-(--sc-gutter)">
-      {/* Fixed width once it has been dragged, an equal share until then: a document opens on two
-          monitors of the same size, and only a gesture makes one of them the wide one. */}
-      <div className="flex min-w-0" style={leadStyle} onPointerDown={() => setFocus('source')}>
-        <Monitor
-          owner={owner}
-          title={t('transport.source')}
-          role={t('transport.sourceRole')}
-          sequence={source}
-          onTime={setSourceTime}
-          keyboard={active && focus === 'source'}
-          placeholder={
-            selected ? null : <EmptyState icon={mdiVideoOutline} message={t('transport.noClip')} />
-          }
-        />
-      </div>
+      {sourceShown && (
+        <>
+          {/* Fixed width once it has been dragged, an equal share until then: a document opens on
+              two monitors of the same size, and only a gesture makes one of them the wide one. */}
+          <div className="flex min-w-0" style={leadStyle} onPointerDown={() => setFocus('source')}>
+            <Monitor
+              owner={owner}
+              title={t('transport.source')}
+              role={t('transport.sourceRole')}
+              sequence={source}
+              onTime={setSourceTime}
+              keyboard={active && armed === 'source'}
+              placeholder={
+                selected ? null : (
+                  <EmptyState icon={mdiVideoOutline} message={t('transport.noClip')} />
+                )
+              }
+            />
+          </div>
 
-      {/* The same handle the shell splits its zones with, so the gesture is the one gesture. It
-          replaces a `Separator`, which drew the line and refused to be moved. */}
-      <ResizeHandle axis="horizontal" size={leadSize} onSize={onLeadSize} />
+          {/* The same handle the shell splits its zones with, so the gesture is the one gesture.
+              It replaces a `Separator`, which drew the line and refused to be moved. */}
+          <ResizeHandle axis="horizontal" size={leadSize} onSize={onLeadSize} />
+        </>
+      )}
 
       <div className="flex min-w-0 flex-1" onPointerDown={() => setFocus('program')}>
         <Monitor
@@ -254,8 +270,9 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
           role={t('transport.programRole')}
           sequence={sequence}
           onTime={setProgramTime}
-          keyboard={active && focus === 'program'}
+          keyboard={active && armed === 'program'}
           program
+          clipHalf={{ shown: sourceShown, onToggle: toggleSource }}
         />
       </div>
     </div>

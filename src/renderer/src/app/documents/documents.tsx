@@ -30,7 +30,7 @@ const SkyboxDocument = lazy(async () => ({
   default: (await import('@/spaces/skyboxes/SkyboxDocument')).SkyboxDocument,
 }))
 const TextureDocument = lazy(async () => ({
-  default: (await import('@/spaces/textures/TextureDocument')).TextureDocument,
+  default: (await import('@/spaces/textures/TextureDocument/TextureDocument')).TextureDocument,
 }))
 /** Every space is opened the same way: the tab checks its document still exists, then renders. */
 function panelFor(Space: FC<{ documentId: string }>): FC<IDockviewPanelProps<DocumentPanelParams>> {
