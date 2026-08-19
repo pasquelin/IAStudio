@@ -152,6 +152,50 @@ describe('setTransform', () => {
   })
 
   /**
+   * A held axis is refused HERE and not in the panel, which is the whole of what makes it hold:
+   * the viewport gizmo and the inspector both write through this command, so anywhere else would
+   * have been a padlock the handle walks straight past.
+   */
+  describe('an axis held still', () => {
+    const held: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a')],
+      selectedIds: [],
+      lockedAxes: [{ nodeId: 'a', channel: 'position', axis: 'y' }],
+    }
+
+    it('keeps its value while its neighbours take the move', () => {
+      const after = setTransform('a', {
+        ...IDENTITY_TRANSFORM,
+        position: { x: 1, y: 9, z: 3 },
+      }).apply(held)
+
+      expect(after.nodes[0]?.transform.position).toEqual({ x: 1, y: 0, z: 3 })
+    })
+
+    it('holds one channel without holding the others', () => {
+      const after = setTransform('a', {
+        position: { x: 0, y: 9, z: 0 },
+        rotation: { x: 0, y: 2, z: 0 },
+        scale: { x: 4, y: 4, z: 4 },
+      }).apply(held)
+
+      expect(after.nodes[0]?.transform.rotation.y).toBe(2)
+      expect(after.nodes[0]?.transform.scale.y).toBe(4)
+    })
+
+    it('holds the node it names and no other', () => {
+      const two: SceneState = { ...held, nodes: [mesh('a'), mesh('b')] }
+      const after = setTransform('b', {
+        ...IDENTITY_TRANSFORM,
+        position: { x: 0, y: 9, z: 0 },
+      }).apply(two)
+
+      expect(after.nodes[1]?.transform.position.y).toBe(9)
+    })
+  })
+
+  /**
    * The defect: the viewport already refused the handle, but a typed angle still reached the
    * document — an undo entry for a screen that never moved.
    */

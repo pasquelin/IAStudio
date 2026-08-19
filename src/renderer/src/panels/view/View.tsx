@@ -1,6 +1,11 @@
 import { mdiEyeOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { MAX_FIELD_OF_VIEW, MIN_FIELD_OF_VIEW, SKYBOX_VIEWS } from '@shared/domain/skybox'
+import {
+  DEFAULT_FIELD_OF_VIEW,
+  MAX_FIELD_OF_VIEW,
+  MIN_FIELD_OF_VIEW,
+  SKYBOX_VIEWS,
+} from '@shared/domain/skybox'
 import { SKYBOX_VIEW_LABELS } from '@/spaces/skyboxes/skyboxTools'
 import { Chip } from '@/design/Chip'
 import { EmptyState } from '@/design/EmptyState'
@@ -62,6 +67,11 @@ export function View() {
           max={MAX_FIELD_OF_VIEW}
           step={1}
           onChange={fieldOfView => set(documentId, { fieldOfView })}
+          onReset={
+            settings.fieldOfView === DEFAULT_FIELD_OF_VIEW
+              ? undefined
+              : () => set(documentId, { fieldOfView: DEFAULT_FIELD_OF_VIEW })
+          }
         />
       </PropertySection>
 

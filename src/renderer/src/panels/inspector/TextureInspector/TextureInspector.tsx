@@ -11,13 +11,14 @@ import { ToggleField } from '@/design/ToggleField'
 import { VectorField } from '@/design/VectorField'
 import { setTextureMaterial, setPreview } from '@/engines/texture/commands'
 import {
+  DEFAULT_PREVIEW,
   PREVIEW_BOUNDS,
   PREVIEW_SHAPES,
   TILING_PREVIEWS,
   type PreviewShape,
 } from '@/engines/texture/textureState'
 import { toDegrees, toRadians } from '@shared/domain/angles'
-import { MATERIAL_BOUNDS } from '@shared/domain/texture'
+import { DEFAULT_TEXTURE_MATERIAL, MATERIAL_BOUNDS } from '@shared/domain/texture'
 import { textureOf, useTextures } from '@/stores/textures'
 import { EnvironmentSection } from '../EnvironmentSection'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
@@ -55,6 +56,15 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
   const onPreview = <K extends keyof typeof preview>(key: K, value: (typeof preview)[K]): void =>
     edit.run(setPreview(key, value))
 
+  // Through the same setter, so ⌘Z takes a reset back the way it takes a drag back.
+  const resetMaterial = <K extends keyof typeof material>(key: K): (() => void) | undefined =>
+    material[key] === DEFAULT_TEXTURE_MATERIAL[key]
+      ? undefined
+      : () => onMaterial(key, DEFAULT_TEXTURE_MATERIAL[key])
+
+  const resetPreview = <K extends keyof typeof preview>(key: K): (() => void) | undefined =>
+    preview[key] === DEFAULT_PREVIEW[key] ? undefined : () => onPreview(key, DEFAULT_PREVIEW[key])
+
   /**
    * Stable, so the memo on `EnvironmentSection` can actually skip: a fresh arrow at the call site
    * made it re-render on every value a slider drag emits, in the one panel that drags the most.
@@ -82,6 +92,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           max={1}
           step={0.01}
           onChange={value => onMaterial('roughness', value)}
+          onReset={resetMaterial('roughness')}
           {...edit.gesture}
         />
         {/* The remap reads the map, so it is offered next to the scalar that multiplies it: a
@@ -106,6 +117,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           max={1}
           step={0.01}
           onChange={value => onMaterial('metalness', value)}
+          onReset={resetMaterial('metalness')}
           {...edit.gesture}
         />
         <RangeField
@@ -128,6 +140,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           max={1}
           step={0.01}
           onChange={value => onMaterial('aoIntensity', value)}
+          onReset={resetMaterial('aoIntensity')}
           {...edit.gesture}
         />
         <SliderField
@@ -137,6 +150,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           max={1}
           step={0.01}
           onChange={value => onMaterial('edgeIntensity', value)}
+          onReset={resetMaterial('edgeIntensity')}
           {...edit.gesture}
         />
       </PropertySection>
@@ -150,6 +164,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           value={material.normalScale}
           {...MATERIAL_BOUNDS.normalScale}
           onChange={value => onMaterial('normalScale', value)}
+          onReset={resetMaterial('normalScale')}
           {...edit.gesture}
         />
         <ToggleField
@@ -164,6 +179,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           value={material.heightScale}
           {...MATERIAL_BOUNDS.heightScale}
           onChange={value => onMaterial('heightScale', value)}
+          onReset={resetMaterial('heightScale')}
           {...edit.gesture}
         />
       </PropertySection>
@@ -180,6 +196,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           value={material.emissiveIntensity}
           {...MATERIAL_BOUNDS.emissiveIntensity}
           onChange={value => onMaterial('emissiveIntensity', value)}
+          onReset={resetMaterial('emissiveIntensity')}
           {...edit.gesture}
         />
       </PropertySection>
@@ -209,6 +226,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           max={360}
           step={1}
           onChange={value => onMaterial('rotation', toRadians(value))}
+          onReset={resetMaterial('rotation')}
           {...edit.gesture}
         />
 
@@ -253,6 +271,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           value={preview.envIntensity}
           {...PREVIEW_BOUNDS.envIntensity}
           onChange={value => onPreview('envIntensity', value)}
+          onReset={resetPreview('envIntensity')}
           {...edit.gesture}
         />
         <SliderField
@@ -262,6 +281,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           max={360}
           step={1}
           onChange={value => onPreview('envRotation', toRadians(value))}
+          onReset={resetPreview('envRotation')}
           {...edit.gesture}
         />
         <ToggleField

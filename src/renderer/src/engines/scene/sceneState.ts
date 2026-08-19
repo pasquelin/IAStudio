@@ -17,6 +17,7 @@ import {
   type SpriteDescriptor,
   type TextDescriptor,
   type Transform,
+  type Vector3,
 } from '@shared/domain/scene'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { DEFAULT_FONT } from '@shared/domain/font'
@@ -72,7 +73,73 @@ export type SceneState = {
   environment: EnvironmentRef
   /** The tracks that move it through time. Where the head STANDS is session state, not this. */
   animation: AnimationTimeline
+  /**
+   * The axes held still, which `setTransform` refuses to write — so a padlock holds against the
+   * viewport handle as much as against the field. Session state like `selectedIds`: no file
+   * carries it, and it is written through `replace` rather than as a command.
+   */
+  lockedAxes?: readonly AxisLock[]
 }
+
+/** One axis of one channel of one node, held still. */
+export type AxisLock = {
+  nodeId: string
+  channel: keyof Transform
+  axis: keyof Vector3
+}
+
+/** Whether this axis is held, read off the state a command already receives. */
+export function axisIsLocked(
+  state: Pick<SceneState, 'lockedAxes'>,
+  nodeId: string,
+  channel: keyof Transform,
+  axis: keyof Vector3,
+): boolean {
+  return (state.lockedAxes ?? []).some(
+    lock => lock.nodeId === nodeId && lock.channel === channel && lock.axis === axis,
+  )
+}
+
+/** The same list with one lock taken out or put in. */
+export function withAxisLock(
+  locks: readonly AxisLock[],
+  lock: AxisLock,
+  held: boolean,
+): readonly AxisLock[] {
+  const without = locks.filter(
+    one => one.nodeId !== lock.nodeId || one.channel !== lock.channel || one.axis !== lock.axis,
+  )
+  return held ? [...without, lock] : without
+}
+
+/**
+ * `next` with every held axis put back to where `from` had it. The whole reason the padlock holds
+ * everywhere: both the inspector and the viewport write through `setTransform`.
+ */
+export function withoutLockedAxes(
+  state: Pick<SceneState, 'lockedAxes'>,
+  nodeId: string,
+  from: Transform,
+  next: Transform,
+): Transform {
+  if ((state.lockedAxes ?? []).length === 0) return next
+
+  const channels: (keyof Transform)[] = ['position', 'rotation', 'scale']
+  return channels.reduce((held, channel) => {
+    const axes = XYZ.filter(axis => axisIsLocked(state, nodeId, channel, axis))
+    if (axes.length === 0) return held
+
+    return {
+      ...held,
+      [channel]: axes.reduce(
+        (vector, axis) => ({ ...vector, [axis]: from[channel][axis] }),
+        held[channel],
+      ),
+    }
+  }, next)
+}
+
+const XYZ: readonly (keyof Vector3)[] = ['x', 'y', 'z']
 
 /** Where a node ended up, reported by whatever moved it — a gizmo drag moves a whole selection. */
 export type NodeMove = {

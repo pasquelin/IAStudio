@@ -43,6 +43,9 @@ import {
   nodeById,
   rotationShows,
   subtreeOf,
+  withAxisLock,
+  withoutLockedAxes,
+  type AxisLock,
   type SceneNodeBase,
   type SceneNodeType,
   type MeshNode,
@@ -133,11 +136,25 @@ function editNode(
  * *that* shows.
  */
 export function setTransform(id: string, next: Transform): Command<SceneState> {
-  return editNode('transform', id, (node, state) => ({
-    transform: rotationShows(node, () => hasChildren(state.nodes, id))
-      ? next
-      : { ...next, rotation: node.transform.rotation },
-  }))
+  return editNode('transform', id, (node, state) => {
+    // Held axes first, so a padlock answers the viewport handle as it answers the field: both
+    // write through here, and only here can refuse for both.
+    const allowed = withoutLockedAxes(state, id, node.transform, next)
+
+    return {
+      transform: rotationShows(node, () => hasChildren(state.nodes, id))
+        ? allowed
+        : { ...allowed, rotation: node.transform.rotation },
+    }
+  })
+}
+
+/**
+ * Holds one axis still, or lets it go. Written through `replace` rather than as a command by
+ * whoever calls it: a padlock is a way of editing, not an edit, and ⌘Z should not take it back.
+ */
+export function withAxisHeld(state: SceneState, lock: AxisLock, held: boolean): SceneState {
+  return { ...state, lockedAxes: withAxisLock(state.lockedAxes ?? [], lock, held) }
 }
 
 export function setNodeVisible(id: string, visible: boolean): Command<SceneState> {

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { AdjustmentStack } from '@shared/domain/adjustments'
+import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
 import { SliderField } from '@/design/SliderField'
 import { ADJUSTMENT_FIELDS } from '@/engines/skybox/adjustmentFields'
 
@@ -33,6 +33,12 @@ export function SkyboxInspectorAdjustments({
           max={field.max}
           step={field.step}
           onChange={value => onChange(field.key, value)}
+          // Neutral is what a grading step does nothing at — the one value a reset can mean here.
+          onReset={
+            adjustments[field.key] === NEUTRAL_ADJUSTMENTS[field.key]
+              ? undefined
+              : () => onChange(field.key, NEUTRAL_ADJUSTMENTS[field.key])
+          }
           onGestureStart={onGestureStart}
           onGestureEnd={onGestureEnd}
         />

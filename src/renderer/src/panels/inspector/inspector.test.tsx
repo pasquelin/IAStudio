@@ -289,6 +289,27 @@ describe('inspector panel', () => {
   })
 
   /**
+   * The padlock is per axis and per channel, offered on the unfolded lines alone. What it writes
+   * is NOT a command: ⌘Z gives back edits, never the way one was editing.
+   */
+  it('holds one axis still, and leaves that hold outside the history', async () => {
+    install({ ...meshNode('box-1'), transform: moved(2, 0, 0) })
+    render(<Content />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Position' }))
+    await userEvent.click(screen.getByRole('button', { name: /Figer l’axe X/ }))
+
+    // By handle: three rows carry an axis called X, and only this one is held.
+    const x = (): Element | null => document.querySelector('[data-sc="field:transform.position.x"]')
+    expect(x()).toBeDisabled()
+    expect(document.querySelector('[data-sc="field:transform.position.y"]')).toBeEnabled()
+
+    // The hold survives an undo, which only takes back the move that came before it.
+    useScenes.getState().undo('doc-1')
+    expect(x()).toBeDisabled()
+  })
+
+  /**
    * A descriptor's own factory says what its default is — the transform was the only family
    * wired to one until 2026-08-19, so every other line of the panel drew a reset that could
    * never act. What a primitive holds when it is made is the one place that fact lives.

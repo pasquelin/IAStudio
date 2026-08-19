@@ -3,6 +3,7 @@ import {
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
@@ -31,10 +32,14 @@ export type NumberFieldProps = NumericBounds &
      * `hint` saying why: a control refused without a reason is worse than one that is absent.
      */
     disabled?: boolean
+    /** Tooltip attributes already resolved, which is where a disabled row says WHY it is one. */
+    hint?: Record<string, string>
     /** The handle the MCP steers this field by. Never a translated word. */
     scId?: string
     /** Puts the value back where it started. Absent while it already stands there. */
     onReset?: () => void
+    /** One more button for the row's end column, drawn before the reset — a padlock, say. */
+    action?: ReactNode
   }
 
 /** Units per pixel dragged, for a field that declares no step of its own. */
@@ -83,8 +88,10 @@ export function NumberField({
   layout = 'row',
   axis,
   disabled,
+  hint,
   scId,
   onReset,
+  action,
 }: NumberFieldProps) {
   const drag = useRef<Drag | null>(null)
   /**
@@ -214,7 +221,7 @@ export function NumberField({
   )
 
   return (
-    <div className={FIELD_ROW}>
+    <div className={FIELD_ROW} {...hint}>
       {/* Deliberately not a `<label>` bound to the field: a bound label focuses what it names,
           so every drag would leave the field in edit mode. The input carries the name. */}
       {layout === 'row' ? (
@@ -292,6 +299,7 @@ export function NumberField({
           the end of their line, or a Position row would end with three identical buttons. */}
       {layout === 'row' && (
         <FieldActions>
+          {action}
           <ResetButton onReset={onReset} />
         </FieldActions>
       )}

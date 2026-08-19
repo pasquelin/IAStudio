@@ -1,7 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
 import { POLE_LIMIT } from '@shared/domain/angles'
-import type { SkyboxEnvironment, SunSettings } from '@shared/domain/skybox'
+import {
+  DEFAULT_ENVIRONMENT,
+  DEFAULT_SUN,
+  type SkyboxEnvironment,
+  type SunSettings,
+} from '@shared/domain/skybox'
 import { ColorField } from '@/design/ColorField'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
@@ -39,6 +44,15 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
     value: SkyboxEnvironment[K],
   ): void => edit.run(setEnvironmentSetting(key, value))
 
+  // Through the same setters, so ⌘Z takes a reset back the way it takes a drag back.
+  const resetSun = <K extends keyof SunSettings>(key: K): (() => void) | undefined =>
+    content.sun[key] === DEFAULT_SUN[key] ? undefined : () => onSun(key, DEFAULT_SUN[key])
+
+  const resetEnvironment = <K extends keyof SkyboxEnvironment>(key: K): (() => void) | undefined =>
+    content.environment[key] === DEFAULT_ENVIRONMENT[key]
+      ? undefined
+      : () => onEnvironment(key, DEFAULT_ENVIRONMENT[key])
+
   const onAdjust = (key: keyof AdjustmentStack, value: number): void =>
     edit.run(setAdjustment(key, value))
 
@@ -52,6 +66,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
           max={POLE_LIMIT}
           step={0.01}
           onChange={value => onSun('elevation', value)}
+          onReset={resetSun('elevation')}
           {...edit.gesture}
         />
         <SliderField
@@ -61,6 +76,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
           max={TWO_PI}
           step={0.01}
           onChange={value => onSun('azimuth', value)}
+          onReset={resetSun('azimuth')}
           {...edit.gesture}
         />
         <SliderField
@@ -70,12 +86,14 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
           max={10}
           step={0.05}
           onChange={value => onSun('intensity', value)}
+          onReset={resetSun('intensity')}
           {...edit.gesture}
         />
         <ColorField
           label={t('skybox.color')}
           value={content.sun.color}
           onChange={value => onSun('color', value)}
+          onReset={resetSun('color')}
           {...edit.gesture}
         />
       </PropertySection>
@@ -96,6 +114,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
           max={4}
           step={0.05}
           onChange={value => onEnvironment('intensity', value)}
+          onReset={resetEnvironment('intensity')}
           {...edit.gesture}
         />
         <ToggleField
