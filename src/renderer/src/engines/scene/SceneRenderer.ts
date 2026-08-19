@@ -32,11 +32,20 @@ import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
 import {
+  DEFAULT_WORLD,
   type ClipLane,
   type ExportFormat,
+  type HelperVisibility,
   type LightDescriptor,
+  type SceneWorld,
   type Transform,
+  showsAid,
 } from '@shared/domain/scene'
+import { createGroundPlane } from './groundPlane'
+import { applyFog, applyToneMapping } from './worldBinding'
+import { createViewportAids } from './viewportAids'
+import { drawsNode, isolating, NOTHING_ISOLATED, type Isolation } from './isolation'
+import { pixelRatioFor, shadowMapSizeFor } from './viewportQuality'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { SelectionMode } from '@/helpers/selection'
 import { aspectLoan } from '../viewport/aspectLoan'
@@ -131,13 +140,14 @@ import { applyTransform, carry, placePivot, release, transformOf } from './pivot
 import {
   applyShadowFlags,
   applyShadowQuality,
+  applyShadows,
   fitShadowCamera,
   ownedByAnotherNode,
   resizeShadowMap,
 } from './shadows'
 import { createPaneMemory, dressForPane } from './paneDress'
 import { createPaneMaterials, type PaneMaterials } from './paneMaterials'
-import { statsOf, type SceneStats } from './sceneStats'
+import { EMPTY_STATS, statsOf, type SceneStats } from './sceneStats'
 import {
   applyWireOverlay,
   DEFAULT_PANE_VIEWS,
@@ -258,6 +268,12 @@ export type SceneRendererOptions = {
    * because only the controls know when a gesture ended.
    */
   onView?: (placement: CameraPlacement) => void
+  /**
+   * Which of the four views the pointer settled in. Published rather than asked for: a panel that
+   * read it during its own render was never told when the answer moved, and wrote a display mode
+   * into the pane the hand had already left.
+   */
+  onPane?: (pane: number) => void
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
   /** Same, for a file read for its animation alone — which may be an FBX. See `GltfSource`. */
@@ -537,6 +553,14 @@ export class SceneRenderer {
 
   private environment: ViewportEnvironment | null = null
   private readonly sky: SkyBinding
+  /** What lights the document and hangs behind it, as last applied. See `applyWorld`. */
+  private world: SceneWorld = DEFAULT_WORLD
+  /** The document's own ground. Beside the nodes like the grid, and never one of them. */
+  private readonly ground = createGroundPlane()
+  /** Boxes, origins and normals. Hung beside the nodes for the reason the ground is not. */
+  private readonly aids = createViewportAids()
+  /** What the VIEWPORT hides, which is never what the document hides — see `isolation.ts`. */
+  private isolation: Isolation = NOTHING_ISOLATED
 
   /** What the gizmo holds when more than one node is selected. See `pivot.ts`. */
   private readonly pivot = new Object3D()
@@ -674,6 +698,11 @@ export class SceneRenderer {
     this.applyPalette()
 
     this.viewport.scene.add(this.pivot)
+    // Beside the nodes, like the grid — but unlike the grid it stays in every film pass: it is
+    // part of what the document IS, not of the workshop it is built in.
+    this.viewport.scene.add(this.ground.object)
+    this.viewport.scene.add(this.aids.object)
+    this.applyGround()
 
     const gizmo = new TransformControls(camera, canvas)
     // Since r169 the controls are not an Object3D; the helper is what goes into the scene.
@@ -750,7 +779,9 @@ export class SceneRenderer {
     this.applyPoses()
     this.applyCameraShots()
     this.showAidsForSelection()
-    if (this.environment) void this.sky.apply(this.environment, state.environment)
+    // After the transforms and the poses: a box is read off where an object actually stands.
+    this.refreshAids()
+    this.applyWorld(state.world)
     this.attachGizmo()
     this.reportStats()
     this.redraw()
@@ -772,16 +803,21 @@ export class SceneRenderer {
    */
   private showAidsForSelection(): void {
     const selected = new Set(this.selectedIds)
+    // An aid stands BESIDE its node rather than under it, so it inherits nothing: a lamp the
+    // document hides, or one an isolation excludes, would go on drawing its line across the
+    // scene without this. `selected` stays the default and the paragraph above says why.
+    const shows = (visibility: HelperVisibility, id: string): boolean =>
+      showsAid(visibility, selected, id) && (this.objects.get(id)?.visible ?? false)
 
     for (const [id, frustum] of this.frustums) {
       const node = this.applied.get(id)
       const camera = this.objects.get(id)
       if (node?.type !== 'camera' || !(camera instanceof PerspectiveCamera)) continue
       applyCamera(camera, node.camera, FRUSTUM_REACH)
-      frustum.visible = selected.has(id)
+      frustum.visible = shows(this.view.cameraHelpers, id)
     }
 
-    for (const [id, helper] of this.helpers) helper.visible = selected.has(id)
+    for (const [id, helper] of this.helpers) helper.visible = shows(this.view.lightHelpers, id)
 
     const rails = this.workedRailIds()
     for (const [id, node] of this.applied) {
@@ -1181,8 +1217,19 @@ export class SceneRenderer {
     const report = this.options.onStats
     if (!report) return
 
-    const selected = this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
-    report(statsOf(this.objects.values()), statsOf(selected))
+    // Turned off means not COUNTED, never merely not shown: walking every geometry of the scene
+    // is the cost this switch exists to give back.
+    if (!this.view.stats) {
+      report(EMPTY_STATS, EMPTY_STATS)
+      return
+    }
+
+    // What the MODEL costs, so an isolation does not make the triangle count drop — `statsOf`
+    // skips an invisible mesh, and hiding something to look past it is not making it cheaper.
+    this.asDocumented(() => {
+      const selected = this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
+      report(statsOf(this.objects.values()), statsOf(selected))
+    })
   }
 
   /** Which view the pointer is over — what a display command acts on. */
@@ -1266,15 +1313,20 @@ export class SceneRenderer {
     const wanted = new Set(scope === 'selection' ? this.selectedIds : this.objects.keys())
     const roots = [...wanted].filter(id => !this.hasExportedAncestor(id, wanted))
 
-    return exportObjects(
-      roots.flatMap(id => this.objects.get(id) ?? []),
-      format,
-      {
-        // The objects wear node ids, which is what picking reads back off a hit. A file wears the
-        // names the document gave them.
-        nameOf: id => this.applied.get(id)?.name,
-        clipsFor: copies => this.bakedClips(copies),
-      },
+    // The copies are taken synchronously inside `exportObjects`, so putting the document's own
+    // visibility back for the length of this call is enough — an isolation running while somebody
+    // exports must not write a file missing whatever they were not looking at.
+    return this.asDocumented(() =>
+      exportObjects(
+        roots.flatMap(id => this.objects.get(id) ?? []),
+        format,
+        {
+          // The objects wear node ids, which is what picking reads back off a hit. A file wears
+          // the names the document gave them.
+          nameOf: id => this.applied.get(id)?.name,
+          clipsFor: copies => this.bakedClips(copies),
+        },
+      ),
     )
   }
 
@@ -1394,6 +1446,7 @@ export class SceneRenderer {
       this.paneMaterials,
       this.paneMemory,
       camera,
+      studio => this.environment?.borrowStudio(studio),
     )
   }
 
@@ -1739,6 +1792,9 @@ export class SceneRenderer {
    * line drawn clean across the picture, and it was in every frame of both the film and the
    * montage. Only what was actually visible is restored: a helper already hidden by a setting
    * must not be turned on by a render passing through.
+   *
+   * An isolation is one of those tools, and it is put back the same way: what a camera films is
+   * the scene, never the part of it somebody happened to be working on.
    */
   private hideWorkshop(): () => void {
     const hidden: Object3D[] = []
@@ -1748,6 +1804,20 @@ export class SceneRenderer {
       hidden.push(object)
     }
 
+    // Before the hiding below: this shows nodes again, and a helper hidden after it stays hidden.
+    const masked = isolating(this.isolation)
+    if (masked) {
+      for (const [id, node] of this.applied) {
+        const object = this.objects.get(id)
+        if (object) object.visible = node.visible
+      }
+    }
+
+    // A studio VIEW borrows three's neutral room, and only `dressPane` gives it back — which a
+    // film and a capture never go through, since they render the scene directly. Left alone, the
+    // whole film comes out lit by the room instead of by the document's own sky.
+    this.environment?.borrowStudio(false)
+
     for (const helper of this.helpers.values()) hide(helper)
     for (const skeleton of this.skeletons.values()) hide(skeleton)
     for (const joints of this.joints.values()) hide(joints.points)
@@ -1756,6 +1826,8 @@ export class SceneRenderer {
     // so a camera aimed at a lamp would otherwise film the bulb somebody drew to find it by.
     for (const marker of this.markers.values()) hide(marker)
     hide(this.grid)
+    // Boxes, origins and normals, in one flag: they hang from a group of their own for this.
+    hide(this.aids.object)
     // The arrows a person drags an object by. They stand where the object stands, so a camera
     // aimed at a selected node fills its preview — and its film — with the tool instead.
     hide(this.gizmo?.getHelper())
@@ -1768,6 +1840,7 @@ export class SceneRenderer {
 
     return () => {
       for (const object of hidden) object.visible = true
+      if (masked) this.applyVisibility()
     }
   }
 
@@ -1906,6 +1979,8 @@ export class SceneRenderer {
 
     this.grid?.dispose()
     this.grid = null
+    this.ground.dispose()
+    this.aids.dispose()
 
     this.viewport.dispose()
   }
@@ -1943,10 +2018,15 @@ export class SceneRenderer {
    * hand, since three.js never reads `fov` back on its own.
    */
   configure(next: ViewportOptions): void {
-    const gridMoved = next.showGrid !== this.view.showGrid || next.gridSize !== this.view.gridSize
-    const lensMoved = next.fieldOfView !== this.view.fieldOfView
-    const shadowsResized = next.shadowMapSize !== this.view.shadowMapSize
-    const shadowsMoved = shadowsResized || next.shadowQuality !== this.view.shadowQuality
+    const held = this.view
+    const gridMoved = next.showGrid !== held.showGrid || next.gridSize !== held.gridSize
+    const lensMoved = next.fieldOfView !== held.fieldOfView
+    // The cap moves the size a light is actually given, so a quality change resizes maps too.
+    const shadowsResized =
+      shadowMapSizeFor(next.quality, next.shadowMapSize) !==
+      shadowMapSizeFor(held.quality, held.shadowMapSize)
+    const shadowsMoved =
+      shadowsResized || next.shadowQuality !== held.shadowQuality || next.shadows !== held.shadows
 
     this.view = next
 
@@ -1958,8 +2038,12 @@ export class SceneRenderer {
     this.applySnap()
 
     const gl = this.viewport.gl
-    if (gl) applyShadowQuality(gl, next.shadowQuality)
-    // Every light, not only the ones built after the change: the map is allocated per light.
+    if (gl) {
+      applyShadowQuality(gl, next.shadowQuality)
+      applyShadows(gl, next.shadows, this.viewport.scene)
+    }
+    this.viewport.setPixelRatio(pixelRatioFor(next.quality))
+
     // Every light, not only the ones built after the change: a map is allocated per light, and
     // the frustum of a directional one is sized from the grid the scene is laid out against.
     if (shadowsResized || gridMoved) {
@@ -1967,7 +2051,33 @@ export class SceneRenderer {
     }
 
     if (gridMoved && this.viewport.canvas) this.applyPalette()
+    if (aidsMoved(held, next)) this.refreshAids()
+    if (helperVisibilityMoved(held, next)) this.showAidsForSelection()
+    if (next.stats !== held.stats) this.reportStats()
     if (gridMoved || lensMoved || shadowsMoved) this.redraw()
+  }
+
+  /**
+   * The boxes, origins and normals, rebuilt from what is on stage and what the settings ask for.
+   *
+   * Called from `apply`, which runs on every state change — a selection, a frame of a slider
+   * drag. Nothing asked for and nothing drawn is the ordinary case and has to cost nothing: the
+   * three palette reads below are `getComputedStyle` calls, on a DOM React has just touched.
+   */
+  private refreshAids(): void {
+    const wants =
+      this.view.boundingBoxes !== 'off' ||
+      this.view.origins ||
+      this.view.normals ||
+      !this.aids.idle()
+    if (!wants) return
+
+    this.aids.apply(this.objects, this.selectedIds, this.view, {
+      box: this.viewport.paletteToken('--color-accent'),
+      origin: this.viewport.paletteToken('--color-muted'),
+      normal: this.viewport.paletteToken('--color-accent'),
+    })
+    this.redraw()
   }
 
   private applySnap(): void {
@@ -1990,6 +2100,9 @@ export class SceneRenderer {
     if (!this.viewport.canvas) return
 
     this.applyPalette()
+    // A ground with no colour of its own reads the palette like a mesh does, and `applyPalette`
+    // does not reach it: it is not a node, so the loop below never walks it.
+    this.applyGround()
 
     const nodes = [...this.applied.values()]
     this.applied.clear()
@@ -1999,16 +2112,69 @@ export class SceneRenderer {
     this.redraw()
   }
 
-  /** The backdrop, unless a sky is hanging behind the scene — in which case the sky is it. */
+  /**
+   * The half of a document that belongs to no node, pushed into three.js.
+   *
+   * Compared field by field rather than by reference: a command replaces the whole world object
+   * for a one-field edit, and prefiltering an environment or rebuilding a ground on every apply
+   * would cost a mip chain per keystroke.
+   */
+  private applyWorld(wanted: SceneWorld): void {
+    const held = this.world
+    this.world = wanted
+
+    if (this.environment) {
+      void this.sky.apply(this.environment, wanted.environment)
+      if (wanted.envIntensity !== held.envIntensity) {
+        // A MULTIPLIER over the studio's own strength, never the strength itself: the viewport
+        // has always lit at `STUDIO_INTENSITY`, and a document opening at 1 would relight every
+        // scene ever saved. One means « as before ».
+        this.environment.setIntensity(STUDIO_INTENSITY * wanted.envIntensity)
+      }
+      if (wanted.envRotation !== held.envRotation) this.environment.setRotation(wanted.envRotation)
+    }
+
+    if (wanted.fog !== held.fog) applyFog(this.viewport.scene, wanted.fog)
+
+    const gl = this.viewport.gl
+    if (gl && (wanted.toneMapping !== held.toneMapping || wanted.exposure !== held.exposure)) {
+      applyToneMapping(gl, wanted.toneMapping, wanted.exposure)
+    }
+
+    if (wanted.ground !== held.ground) this.applyGround()
+    if (wanted.background !== held.background) this.paintBackground()
+  }
+
+  private applyGround(): void {
+    this.ground.apply(this.world.ground, this.viewport.paletteToken('--color-mesh'))
+    this.redraw()
+  }
+
+  /**
+   * What hangs behind the scene.
+   *
+   * A sky asked to light the scene without being SEEN is the case that makes this more than a
+   * colour: the environment keeps prefiltering — the reflections stay — and only the picture
+   * stops being drawn. That is what `setBackgroundVisible` is for, and why the choice is settled
+   * here rather than by whoever loads the sky.
+   */
   private paintBackground(): void {
+    const wanted = this.world.background
     // A scene drawn for compositing keeps nothing behind it: a backdrop would hide every clip
-    // this one is laid over, and the sky — when there is one — is scenery the user asked for.
-    if (this.transparent && !this.sky.showsSky()) {
+    // this one is laid over. It outranks the document — a montage never asked for a backdrop.
+    const shows = !this.transparent && wanted.kind === 'environment'
+    this.environment?.setBackgroundVisible(shows)
+
+    if (shows && this.sky.showsSky()) return
+
+    if (this.transparent || wanted.kind === 'transparent') {
       this.viewport.scene.background = null
       return
     }
-    if (this.sky.showsSky()) return
-    this.viewport.setBackgroundColor(this.viewport.paletteToken('--color-viewport'))
+
+    this.viewport.setBackgroundColor(
+      wanted.kind === 'color' ? wanted.color : this.viewport.paletteToken('--color-viewport'),
+    )
   }
 
   /** Pulls the studio palette off the canvas, so the viewport follows a theme change with it. */
@@ -2098,13 +2264,59 @@ export class SceneRenderer {
     // to the scene: writing the second into the first mid-drag teleports it. The release puts
     // the truth back, so an undo during a gesture repaints everything but where things are.
     if (object.parent !== this.pivot) applyTransform(object, node.transform)
-    object.visible = node.visible
+    object.visible = drawsNode(this.isolation, node.id, node.visible)
 
     const helper = this.helpers.get(node.id)
     if (helper) {
-      helper.visible = node.visible
+      helper.visible = object.visible
       // After the move, never before: the helper draws where the light was until it is told.
       helper.update()
+    }
+  }
+
+  /**
+   * What the VIEWPORT hides, on top of what the document already does.
+   *
+   * A pass of its own because nothing about the nodes changed: `syncNode` skips a node it has
+   * already applied, so an isolation pushed through the document would never reach the screen.
+   */
+  setIsolation(isolation: Isolation): void {
+    this.isolation = isolation
+    this.applyVisibility()
+    this.showAidsForSelection()
+    this.refreshAids()
+    this.reportStats()
+    this.redraw()
+  }
+
+  /** Every node's `visible`, from what the document says and what the viewport hides over it. */
+  private applyVisibility(): void {
+    for (const [id, node] of this.applied) {
+      const object = this.objects.get(id)
+      if (object) object.visible = drawsNode(this.isolation, id, node.visible)
+    }
+  }
+
+  /**
+   * Runs something against the scene the DOCUMENT describes, with whatever the viewport is
+   * hiding put back for the length of the call.
+   *
+   * `Object3D.visible` is the one flag three.js draws, picks, counts AND exports through, so an
+   * isolation left in place reaches all four — a `.glb` written mid-isolation comes out amputated,
+   * and `onlyVisible` makes that a silent success rather than an error. Isolating is a way of
+   * LOOKING; anything that leaves the viewport has to see past it.
+   */
+  private asDocumented<T>(run: () => T): T {
+    if (!isolating(this.isolation)) return run()
+
+    for (const [id, node] of this.applied) {
+      const object = this.objects.get(id)
+      if (object) object.visible = node.visible
+    }
+    try {
+      return run()
+    } finally {
+      this.applyVisibility()
     }
   }
 
@@ -2476,7 +2688,7 @@ export class SceneRenderer {
 
   /** What a light's shadow is sized against: the settings for the map, the grid for the reach. */
   private tuneShadow(light: Object3D): void {
-    resizeShadowMap(light, this.view.shadowMapSize)
+    resizeShadowMap(light, shadowMapSizeFor(this.view.quality, this.view.shadowMapSize))
     fitShadowCamera(light, this.view.gridSize)
   }
 
@@ -2714,6 +2926,9 @@ export class SceneRenderer {
 
   private readonly onGizmoChange = (): void => {
     this.dragged = true
+    // A box that stayed behind while its object moved is a box that says nothing. Re-reading a
+    // bounding box is cheap — building one is not, which is why this is not `refreshAids`.
+    this.aids.refreshBoxes()
     this.redraw()
   }
 
@@ -2865,6 +3080,8 @@ export class SceneRenderer {
     // Any movement repairs a freeze that outlived its gesture.
     this.syncPaneFreeze()
     this.aimGizmo()
+    // The store settles for itself whether this is news — see `setActivePane`.
+    this.options.onPane?.(this.viewport.activePane)
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
@@ -3273,6 +3490,21 @@ export function nodeIdOf(object: Object3D, isNode: (name: string) => boolean): s
 /** A light catches nothing: the flag exists on every node, but only two kinds answer to it. */
 function receivesShadow(node: SceneNode): boolean {
   return canReceiveShadow(node) && node.receiveShadow
+}
+
+/** Whether anything the drawn aids are built from moved — see `refreshAids`, which is not cheap. */
+function aidsMoved(held: ViewportOptions, next: ViewportOptions): boolean {
+  return (
+    held.boundingBoxes !== next.boundingBoxes ||
+    held.origins !== next.origins ||
+    held.normals !== next.normals ||
+    held.normalLength !== next.normalLength
+  )
+}
+
+/** The two that only turn existing helpers on and off, which costs a flag apiece. */
+function helperVisibilityMoved(held: ViewportOptions, next: ViewportOptions): boolean {
+  return held.lightHelpers !== next.lightHelpers || held.cameraHelpers !== next.cameraHelpers
 }
 
 /**

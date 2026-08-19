@@ -5,7 +5,7 @@ import {
 } from '@shared/domain/adjustments'
 import { BLEND_MODES, type BlendMode } from '@shared/domain/canvasBlend'
 import { DEFAULT_FONT, readFontRef, type FontRef } from '@shared/domain/font'
-import { isRecord } from '@shared/guards'
+import { isRecord, oneOf } from '@shared/guards'
 import { clamp } from '@shared/numeric'
 import type { Point } from '../core/geometry'
 
@@ -378,11 +378,6 @@ export function clampOpacity(value: number): number {
 
 export function serializeCanvas(state: CanvasState): string {
   return JSON.stringify(state)
-}
-
-/** A stored value narrowed back to what this build still accepts. */
-function oneOf<T extends string>(options: readonly T[], raw: unknown, fallback: T): T {
-  return options.find(option => option === raw) ?? fallback
 }
 
 /**

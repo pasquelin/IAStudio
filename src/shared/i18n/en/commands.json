@@ -96,6 +96,18 @@
       "title": "Frame selection",
       "help": "Brings the camera close enough that the chosen object fills the view. Handy when you are lost, or when an object is tiny."
     },
+    "sceneIsolate": {
+      "title": "Isolate selection",
+      "help": "Leaves only the chosen objects on screen while you work on them. Nothing is changed: pressing it again gives the scene back exactly as it was, including the objects you had hidden yourself."
+    },
+    "sceneHide": {
+      "title": "Hide selection",
+      "help": "Takes the chosen objects out of the view without touching the document. Show all brings them back."
+    },
+    "sceneShowAll": {
+      "title": "Show all",
+      "help": "Undoes the hiding and isolating done from the viewport. Objects the document itself declares hidden stay hidden."
+    },
     "sceneSnap": {
       "title": "Snap",
       "help": "Moves the handles in regular steps instead of leaving them free. Handy for laying objects out in line. How fine the steps are is set in the Modelling workspace settings."

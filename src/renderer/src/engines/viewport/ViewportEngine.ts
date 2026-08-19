@@ -786,6 +786,27 @@ export class ViewportEngine {
     this.requestRender()
   }
 
+  /**
+   * How many device pixels one CSS pixel buys. The single lever a quality setting pulls: nothing
+   * about the assets moves, only how finely the same frame is drawn.
+   *
+   * Held to the screen's own ratio at the top — asking for more than the display has is paying
+   * for pixels nobody can see.
+   */
+  setPixelRatio(ratio: number): void {
+    const renderer = this.renderer
+    if (!renderer) return
+
+    const wanted = Math.min(ratio, window.devicePixelRatio)
+    if (renderer.getPixelRatio() === wanted) return
+
+    renderer.setPixelRatio(wanted)
+    // The drawing buffer is sized from the ratio, so it has to be laid out again — `setSize`
+    // multiplies by the ratio it finds at the moment it runs.
+    this.onResize()
+    this.invalidateInset()
+  }
+
   setFieldOfView(degrees: number): void {
     if (this.perspective.fov === degrees) return
     this.perspective.fov = degrees

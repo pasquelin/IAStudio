@@ -7,6 +7,7 @@ import {
   type PreviewWatch,
 } from '@/engines/scene/sceneView'
 import { type ClipRef, type DisplayMode } from '@shared/domain/scene'
+import { NOTHING_ISOLATED, type Isolation } from '@/engines/scene/isolation'
 import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
 
 /**
@@ -41,6 +42,22 @@ export type SceneView = {
   /** Whether the wireframe drops its triangulation diagonals. Never real quads — see the engine. */
   quadEdges: boolean
   /**
+   * Whether a drag advances in steps. HOW COARSE those steps are is a preference of the person;
+   * whether they apply at all is a way of working on this document at this moment, which is why
+   * the two live apart.
+   *
+   * Here rather than in the viewport's own state because two surfaces toggle it — the toolbar
+   * and the Environment panel — and a `useState` inside the viewport is unreachable from a dock.
+   */
+  snapping: boolean
+  /**
+   * What the VIEWPORT is hiding — an isolation, and nodes hidden by hand.
+   *
+   * Session state and nothing else: `SceneNode.visible` is the document's own answer, saved and
+   * undone, and leaving an isolation must give back exactly what went in. See `isolation.ts`.
+   */
+  isolation: Isolation
+  /**
    * How big the camera preview is drawn. It opens by itself on a camera being selected and
    * closes with that selection, so there is no third value: what it shows is never a question.
    */
@@ -52,6 +69,12 @@ export type SceneView = {
   previewOffset: { x: number; y: number }
   /** What each of the four views shows. Only a free one turns — see `PaneView`. */
   panes: readonly PaneView[]
+  /**
+   * Which of the four the pointer last settled in. Held here rather than read off the engine:
+   * a panel that asked the engine during its render was never told when the answer changed, and
+   * wrote a display mode into the pane the hand had already left.
+   */
+  activePane: number
   /** Where the animation head stands, in microseconds. Never in the document — see `AnimationTimeline`. */
   playhead: Us
   /**
@@ -90,9 +113,12 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   pickedPathPoint: null,
   quad: false,
   quadEdges: false,
+  snapping: false,
+  isolation: NOTHING_ISOLATED,
   previewSize: 'inset',
   previewOffset: { x: 0, y: 0 },
   panes: DEFAULT_PANE_VIEWS,
+  activePane: 0,
   playhead: 0,
   playing: false,
   preview: null,
@@ -117,6 +143,9 @@ export type SceneViewsState = {
   setPickedPathPoint: (documentId: string, pickedPathPoint: SceneView['pickedPathPoint']) => void
   setQuad: (documentId: string, quad: boolean) => void
   setQuadEdges: (documentId: string, quadEdges: boolean) => void
+  setSceneSnapping: (documentId: string, snapping: boolean) => void
+  setActivePane: (documentId: string, activePane: number) => void
+  setSceneIsolation: (documentId: string, isolation: Isolation) => void
   setPreviewSize: (documentId: string, previewSize: SceneView['previewSize']) => void
   setPreviewOffset: (documentId: string, previewOffset: SceneView['previewOffset']) => void
   setPaneView: (documentId: string, pane: number, view: PaneView) => void
@@ -177,6 +206,25 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setQuadEdges: (documentId, quadEdges) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), quadEdges } },
+    })),
+
+  setSceneSnapping: (documentId, snapping) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), snapping } },
+    })),
+
+  setActivePane: (documentId, activePane) =>
+    set(state => {
+      // Written on every pointer move that settles a pane: an unchanged value must not hand
+      // React a new snapshot, or the inspector re-renders across the whole viewport.
+      const view = sceneViewOf(state, documentId)
+      if (view.activePane === activePane) return state
+      return { views: { ...state.views, [documentId]: { ...view, activePane } } }
+    }),
+
+  setSceneIsolation: (documentId, isolation) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), isolation } },
     })),
 
   setPreviewSize: (documentId, previewSize) =>

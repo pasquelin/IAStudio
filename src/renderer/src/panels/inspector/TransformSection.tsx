@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { toDegrees, toRadians } from '@shared/domain/angles'
-import type { Transform, Vector3 } from '@shared/domain/scene'
+import type { DisplayUnit, Transform, Vector3 } from '@shared/domain/scene'
 import { PropertySection } from '@/design/PropertySection'
 import { TextField } from '@/design/TextField'
 import { VectorField } from '@/design/VectorField'
@@ -13,9 +13,11 @@ import {
   type AxisLock,
   type SceneNode,
 } from '@/engines/scene/sceneState'
+import { displayStep, fromDisplayLength, toDisplayLength } from '@shared/domain/units'
 import { changedFields } from '@/helpers/objects'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
+import { useViewportSetting } from '@/hooks/useViewportSetting'
 
 /** A field reports a whole vector; this is the axes of it that actually moved. */
 type AxisPatch = { [K in keyof Transform]?: Partial<Vector3> }
@@ -24,6 +26,25 @@ const AXES: readonly (keyof Vector3)[] = ['x', 'y', 'z']
 
 function degreesOf(vector: Vector3): Vector3 {
   return { x: toDegrees(vector.x), y: toDegrees(vector.y), z: toDegrees(vector.z) }
+}
+
+/** A length of the document, in the unit it is written in. */
+function shownLength(vector: Vector3, unit: DisplayUnit): Vector3 {
+  return {
+    x: toDisplayLength(vector.x, unit),
+    y: toDisplayLength(vector.y, unit),
+    z: toDisplayLength(vector.z, unit),
+  }
+}
+
+/** The axes a field reported, back in what the document holds. Only those, which is the point. */
+function inMetres(shown: Partial<Vector3>, unit: DisplayUnit): Partial<Vector3> {
+  const held: Partial<Vector3> = {}
+  for (const axis of AXES) {
+    const value = shown[axis]
+    if (value !== undefined) held[axis] = fromDisplayLength(value, unit)
+  }
+  return held
 }
 
 function radiansOf(axes: Partial<Vector3>): Partial<Vector3> {
@@ -74,6 +95,8 @@ export function TransformSection({
   const { t } = useTranslation()
   const { transform } = node
   const degrees = degreesOf(transform.rotation)
+  const unit = useViewportSetting().view.units
+  const shownPosition = shownLength(transform.position, unit)
   // Any node of the selection, not the anchor alone: with a cube picked after a sprite, deciding
   // on the anchor would take the row away from a cube a typed angle does turn.
   const turns = selection.some(candidate =>
@@ -109,13 +132,23 @@ export function TransformSection({
         {...edit.gesture}
       />
 
+      {/* The one field of the studio holding a LENGTH of the scene, so the display unit lands
+          here and nowhere else — a rotation is in degrees and a scale is a ratio. */}
       <VectorField
-        label={t('inspector.position')}
-        value={transform.position}
-        step={0.1}
-        onChange={next => move({ position: changedFields(transform.position, next) })}
+        // The unit rides in the label, which is where every other bounded field of the studio
+        // carries its own. It is also the fold button's name, and that is the trade: a reader
+        // who has chosen millimetres has to be told which unit the three figures are in.
+        label={t('inspector.position', { unit: t(`environment.unit_${unit}`) })}
+        value={shownPosition}
+        step={displayStep(unit)}
+        // Compared in the unit SHOWN, then converted — never the other way round. A round trip
+        // through millimetres is not exact for about one double in forty, so comparing after it
+        // marked untouched axes as changed, and a typed height moved three cubes onto one column.
+        onChange={next => move({ position: inMetres(changedFields(shownPosition, next), unit) })}
         scId="transform.position"
-        defaults={IDENTITY_TRANSFORM.position}
+        // In the unit SHOWN, like the value beside it — the identity being zero, the two agree
+        // whatever the unit, and converting says so rather than leaving it to be noticed.
+        defaults={shownLength(IDENTITY_TRANSFORM.position, unit)}
         heldAxes={heldOn('position')}
         onHoldAxis={holdOn('position')}
         {...edit.gesture}

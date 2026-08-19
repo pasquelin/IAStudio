@@ -2,7 +2,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset, AssetType } from '@shared/domain/asset'
-import { STUDIO_ENVIRONMENT, TEXTURE_SLOTS } from '@shared/domain/scene'
+import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { DEFAULT_WORLD, TEXTURE_SLOTS } from '@shared/domain/scene'
 // The expected words come from the French bundle rather than being spelt out, which is what keeps
 // a renamed slot from leaving this case asserting a label the panel no longer draws.
 import { fr } from '@shared/i18n/fr'
@@ -34,6 +35,7 @@ import { useSequences } from '@/stores/sequences'
 import { installDocument, installDocuments } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useSelection } from '@/stores/selection'
+import { useSettings } from '@/stores/settings'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { useModelClips } from '@/stores/modelClips'
 import { installScene, sceneNodeNow } from '@/stores/scene-fixtures'
@@ -93,6 +95,9 @@ function axisHandle(axis: string, occurrence = 0): HTMLElement {
 
 beforeEach(() => {
   install(meshNode('box-1'))
+  // The preferences are a module-wide store: a case that writes one — the display unit — would
+  // otherwise leave every case after it reading lengths in millimetres.
+  useSettings.setState({ settings: DEFAULT_SETTINGS })
 })
 
 describe('inspector panel', () => {
@@ -151,13 +156,13 @@ describe('inspector panel', () => {
     await within(sky).findByRole('option', { name: /Coucher/ })
     await userEvent.selectOptions(sky, 'sky-1')
 
-    expect(sceneOf(useScenes.getState(), 'doc-1').environment).toEqual({
+    expect(sceneOf(useScenes.getState(), 'doc-1').world.environment).toEqual({
       kind: 'skybox',
       assetId: 'sky-1',
     })
 
     useScenes.getState().undo('doc-1')
-    expect(sceneOf(useScenes.getState(), 'doc-1').environment).toEqual({ kind: 'studio' })
+    expect(sceneOf(useScenes.getState(), 'doc-1').world.environment).toEqual({ kind: 'studio' })
   })
 
   it('shows the three sections of a mesh', () => {
@@ -297,7 +302,8 @@ describe('inspector panel', () => {
     install({ ...meshNode('box-1'), transform: moved(2, 0, 0) })
     render(<Content />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Position' }))
+    // Matched loosely: the row carries the display unit since the Environment panel landed.
+    await userEvent.click(screen.getByRole('button', { name: /^Position/ }))
     await userEvent.click(screen.getByRole('button', { name: /Figer l’axe X/ }))
 
     // By handle: three rows carry an axis called X, and only this one is held.
@@ -675,6 +681,39 @@ describe('inspector panel', () => {
       expect(screen.getByLabelText('Nom')).toHaveValue('box-1')
     })
 
+    /**
+     * A length is shown in the display unit and stored in metres, and the round trip through
+     * millimetres is not exact — about one double in forty comes back differing in its last bit.
+     * Compared AFTER the conversion, those untouched axes read as changed and were written onto
+     * the whole selection: three cubes given a height collapsed onto one column.
+     */
+    it('moves only the axis typed, whatever unit the lengths are written in', async () => {
+      useSettings.setState({
+        settings: { ...DEFAULT_SETTINGS, three: { ...DEFAULT_SETTINGS.three, units: 'mm' } },
+      })
+      // An X whose millimetre round trip is NOT exact: any value that survives it would pass.
+      installScene('doc-1', {
+        ...EMPTY_SCENE,
+        nodes: [
+          { ...meshNode('box-1'), transform: moved(6.246671654299291, 0, 0) },
+          { ...meshNode('box-2'), transform: moved(5, 0, 0) },
+        ],
+        selectedIds: ['box-2', 'box-1'],
+      })
+      render(<Content />)
+
+      // The first of the three Y fields: position, then rotation, then scale, in that order.
+      const y = screen.getAllByLabelText('Y')[0]
+      if (!y) throw new Error('no position field')
+      await userEvent.clear(y)
+      await userEvent.type(y, '200')
+      await userEvent.tab()
+
+      // Both took the height; neither took the anchor's X.
+      expect(nodeInStore('box-1')?.transform.position).toMatchObject({ y: 0.2 })
+      expect(nodeInStore('box-2')?.transform.position).toMatchObject({ x: 5, y: 0.2 })
+    })
+
     it('writes a typed geometry parameter onto every selected mesh, as one entry', async () => {
       installPair()
       render(<Content />)
@@ -702,7 +741,7 @@ describe('inspector panel', () => {
           { ...meshNode('box-2'), transform: moved(5, 0, 0) },
         ],
         selectedIds: ['box-2', 'box-1'],
-        environment: STUDIO_ENVIRONMENT,
+        world: DEFAULT_WORLD,
         animation: EMPTY_TIMELINE,
       })
       render(<Content />)
@@ -738,7 +777,7 @@ describe('inspector panel', () => {
           { ...meshNode('box-2'), transform: turned(1.5, 0, 0) },
         ],
         selectedIds: ['box-2', 'box-1'],
-        environment: STUDIO_ENVIRONMENT,
+        world: DEFAULT_WORLD,
         animation: EMPTY_TIMELINE,
       })
       render(<Content />)

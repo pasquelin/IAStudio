@@ -34,7 +34,7 @@ import {
   setModelTextures,
   setNodeVisible,
   setRigBoneRole,
-  setEnvironment,
+  setWorld,
   setSelection,
   setShadowOn,
   setSprite,
@@ -656,21 +656,33 @@ describe('setSpriteOn', () => {
   })
 })
 
-describe('setEnvironment', () => {
+describe('setWorld', () => {
   const sky: EnvironmentRef = { kind: 'skybox', assetId: 'sky-1' }
 
   it('swaps what lights the scene, and comes back', () => {
-    const command = setEnvironment(sky)
+    const command = setWorld({ environment: sky })
     const lit = command.apply(EMPTY_SCENE)
 
-    expect(lit.environment).toEqual(sky)
-    expect(command.revert(lit).environment).toEqual({ kind: 'studio' })
+    expect(lit.world.environment).toEqual(sky)
+    expect(command.revert(lit).world.environment).toEqual({ kind: 'studio' })
+  })
+
+  // A patch, so a preset writing five fields and a slider writing one are the same call — and a
+  // field this build does not know is left exactly as the file spelled it.
+  it('leaves the fields it was not given alone', () => {
+    const lit = setWorld({ exposure: 1.4 }).apply({
+      ...EMPTY_SCENE,
+      world: { ...EMPTY_SCENE.world, environment: sky },
+    })
+
+    expect(lit.world.exposure).toBe(1.4)
+    expect(lit.world.environment).toEqual(sky)
   })
 
   // Choosing a sky is a decision about the document, not a way of looking at it.
   it('leaves the nodes and the selection alone', () => {
     const start = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: ['a'] }
-    const lit = setEnvironment(sky).apply(start)
+    const lit = setWorld({ environment: sky }).apply(start)
 
     expect(lit.nodes).toBe(start.nodes)
     expect(lit.selectedIds).toBe(start.selectedIds)
@@ -749,7 +761,7 @@ describe('a revert asked for before its apply', () => {
     ['setLight', setLight('l', { kind: 'ambient', color: '#fff', intensity: 2 })],
     ['setSprite', setSprite('s', DEFAULT_SPRITE)],
     ['reparentNode', reparentNode('a', 'l')],
-    ['setEnvironment', setEnvironment({ kind: 'skybox', assetId: 'sky-1' })],
+    ['setWorld', setWorld({ environment: { kind: 'skybox', assetId: 'sky-1' } })],
   ]
 
   for (const [name, command] of untouched) {

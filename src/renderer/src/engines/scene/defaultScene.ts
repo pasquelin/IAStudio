@@ -1,7 +1,7 @@
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { LIGHT_TYPES } from './lightTypes'
 import { lightNode } from './nodeFactory'
-import { STUDIO_ENVIRONMENT, type LightDescriptor, type Vector3 } from '@shared/domain/scene'
+import { DEFAULT_WORLD, type LightDescriptor, type Vector3 } from '@shared/domain/scene'
 import type { SceneState } from './sceneState'
 
 /** Which lights a new scene opens with, and where. A kind absent here is simply not one of them. */
@@ -19,7 +19,7 @@ export function createDefaultScene(): SceneState {
       return position ? [lightNode(type.create(), position)] : []
     }),
     selectedIds: [],
-    environment: STUDIO_ENVIRONMENT,
+    world: DEFAULT_WORLD,
     animation: EMPTY_TIMELINE,
   }
 }

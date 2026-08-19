@@ -25,7 +25,7 @@ import { useBindingOverrides } from '@/stores/bindings'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { assetVersionOf } from '@/stores/assets'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
-import type { NodeMove } from '@/engines/scene/sceneState'
+import type { NodeMove, SceneNode } from '@/engines/scene/sceneState'
 import { useModelClips } from '@/stores/modelClips'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
@@ -45,6 +45,8 @@ import { removePickedPathPoint, runSceneCommand, toggleNodeVisible } from './sce
 import { ScenePaneGrid } from './ScenePaneGrid/ScenePaneGrid'
 import { ADD_TOOLS, SCENE_TOOLS, addedKind } from './sceneTools'
 import { sceneExportFiles } from './sceneExportFiles'
+import { hideIn, NOTHING_ISOLATED, type Isolation } from '@/engines/scene/isolation'
+import { toggledIsolation } from '@/engines/scene/sceneVisibility'
 
 /**
  * Encoded here, written by the main process: the renderer has no `fs`, and where the file lands
@@ -71,6 +73,21 @@ async function exportScene(
   } catch (error) {
     reportFailure('scene.export', format, error)
   }
+}
+
+/** What one of the three visibility gestures does, given the scene and what is already hidden. */
+type IsolationEdit = (
+  held: Isolation,
+  nodes: readonly SceneNode[],
+  ids: readonly string[],
+) => Isolation
+
+/** Read at call time so nothing closes over a scene — see the `useCallback` that dispatches. */
+function changeIsolation(documentId: string, edit: IsolationEdit): void {
+  const scene = sceneOf(useScenes.getState(), documentId)
+  const held = sceneViewOf(useSceneViews.getState(), documentId).isolation
+
+  useSceneViews.getState().setSceneIsolation(documentId, edit(held, scene.nodes, scene.selectedIds))
 }
 
 /** The rule itself is `movesToCommand`, which is pure and therefore testable — a viewport is not. */
@@ -165,9 +182,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const host = useRef<HTMLDivElement>(null)
   const engine = useRef<SceneRenderer | null>(null)
   const [mode, setMode] = useState<TransformMode>('select')
-  // Session state, like the mode: a document that remembered its snapping would impose it on
-  // whoever opens it next.
-  const [snapping, setSnapping] = useState(false)
   const [localFrame, setLocalFrame] = useState(false)
   /** What the scene costs, as the engine counts it — see `SceneRendererOptions.onStats`. */
   const [stats, setStats] = useState<{ scene: SceneStats; selected: SceneStats }>({
@@ -235,6 +249,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       // Published so a montage can look through this very view: a scene with no camera of its
       // own has no other framing anybody chose. Once per orbit, never per frame of one.
       onView: placement => useSceneViews.getState().setCamera(documentId, placement),
+      onPane: pane => useSceneViews.getState().setActivePane(documentId, pane),
       assetVersion: assetVersionOf,
     })
 
@@ -269,8 +284,13 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   }, [mode])
 
   useEffect(() => {
-    engine.current?.setSnapping(snapping)
-  }, [snapping])
+    engine.current?.setSnapping(view.snapping)
+  }, [view.snapping])
+
+  // What the VIEWPORT hides, which the document knows nothing about — see `isolation.ts`.
+  useEffect(() => {
+    engine.current?.setIsolation(view.isolation)
+  }, [view.isolation])
 
   // The only line that knows both spellings; everything above it is a toggle like any other.
   useEffect(() => {
@@ -378,7 +398,15 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         case 'scene.scale':
           return setMode('scale')
         case 'scene.snap':
-          return setSnapping(current => !current)
+          return useSceneViews.getState().setSceneSnapping(documentId, !view.snapping)
+        // The rules themselves are in `sceneVisibility`, which the panel's buttons reach too:
+        // « isolating is a toggle » must not be written once per surface.
+        case 'scene.isolate':
+          return changeIsolation(documentId, toggledIsolation)
+        case 'scene.hide':
+          return changeIsolation(documentId, (held, _nodes, ids) => hideIn(held, ids))
+        case 'scene.showAll':
+          return changeIsolation(documentId, () => NOTHING_ISOLATED)
         case 'scene.space':
           return setLocalFrame(current => !current)
         case 'scene.display':
@@ -447,7 +475,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     // Keyed by command rather than by tool id, so a renamed command fails to compile instead of
     // quietly leaving a toggle unlit.
     const pressed: Partial<Record<CommandId, boolean>> = {
-      'scene.snap': snapping,
+      'scene.snap': view.snapping,
       'scene.space': localFrame,
       'scene.projection': view.projection === 'orthographic',
       'scene.skeletons': view.skeletons,
@@ -483,7 +511,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     label,
     nothingSelected,
     nothingHeld,
-    snapping,
+    view.snapping,
     localFrame,
     view.projection,
     view.skeletons,

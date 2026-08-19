@@ -21,6 +21,33 @@ export function applyShadowQuality(renderer: ShadowMapHolder, quality: ShadowQua
   renderer.shadowMap.type = MAP_TYPES[quality]
 }
 
+type ShadowSwitch = { shadowMap: { enabled: boolean } }
+
+/**
+ * Turns shadow maps on or off, and makes the change actually reach the screen.
+ *
+ * `shadowMap.enabled` feeds the program cache key, but three re-reads that key only when a
+ * material's own `version` moves or the lights state does — and this flag moves neither.
+ * Switched alone it leaves every material still sampling a map nothing updates any more, so the
+ * shadows freeze on screen instead of going away. Marking the materials is what closes it, and
+ * it runs on the CROSSING alone: a recompile of the whole scene is not something to repeat.
+ */
+export function applyShadows(renderer: ShadowSwitch, enabled: boolean, root: Object3D): void {
+  if (renderer.shadowMap.enabled === enabled) return
+  renderer.shadowMap.enabled = enabled
+
+  root.traverse(child => {
+    const material: unknown = Reflect.get(child, 'material')
+    for (const one of Array.isArray(material) ? material : [material]) {
+      if (isMaterial(one)) one.needsUpdate = true
+    }
+  })
+}
+
+function isMaterial(value: unknown): value is { needsUpdate: boolean } {
+  return isRecord(value) && 'isMaterial' in value
+}
+
 /**
  * The flags a node carries, put on the object that stands for it and on everything under it that
  * is only scenery: three.js reads them per mesh, and a model is one node over a whole imported

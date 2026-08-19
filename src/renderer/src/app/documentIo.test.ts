@@ -1,4 +1,5 @@
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
+import { DEFAULT_WORLD } from '@shared/domain/scene'
 import type { Asset } from '@shared/domain/asset'
 import { otioStudioMetadata } from '@shared/domain/otio'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -176,7 +177,7 @@ describe('saveDocument', () => {
     expect(sceneFromGltf(written)).toEqual({
       nodes: [box],
       selectedIds: [],
-      environment: { kind: 'studio' },
+      world: DEFAULT_WORLD,
       animation: EMPTY_TIMELINE,
     })
   })

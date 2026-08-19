@@ -121,6 +121,9 @@ const SUBSTITUTES: Record<DisplayMode, Substitute> = {
   both: 'none',
   solid: 'solid',
   material: 'none',
+  // The real materials, like `material` — what studio changes is what lights them, not what they
+  // are. See `shownEnvironment` in the renderer.
+  studio: 'none',
   matcap: 'matcap',
   density: 'density',
   ghost: 'ghost',
@@ -151,11 +154,22 @@ export function showsEdges(mode: DisplayMode, quads: boolean): boolean {
 }
 
 /**
- * Whether the scene's own lights are put out for this view. Only the material preview does it —
- * the point of that mode is to judge a material against the studio environment alone.
+ * Whether the scene's own lights are put out for this view. The two modes that judge a surface
+ * rather than a scene do it: what they exist for is to see a material under one known light.
  */
 export function hidesSceneLights(mode: DisplayMode): boolean {
-  return mode === 'material'
+  return mode === 'material' || mode === 'studio'
+}
+
+/**
+ * Whether this view drops the document's ENVIRONMENT too, and lights from three's own room.
+ *
+ * The one mode that still shows a mesh when the scene around it is a night sky with no lamp in
+ * it. `material` deliberately keeps the document's sky: judging a material means judging it
+ * under the light it will actually be seen in.
+ */
+export function hidesSceneEnvironment(mode: DisplayMode): boolean {
+  return mode === 'studio'
 }
 
 /** The next mode in the list, wrapping — what one key does when three modes share it. */

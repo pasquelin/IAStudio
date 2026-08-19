@@ -1,7 +1,6 @@
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  setEnvironment,
   setGeometryOn,
   setPath,
   setLightOn,
@@ -11,7 +10,6 @@ import {
   setTextOn,
 } from '@/engines/scene/commands'
 import { snapToFrame } from '@shared/domain/time'
-import type { EnvironmentRef } from '@shared/domain/scene'
 import type { FieldValue } from '@/engines/scene/propertyFields'
 import { cameraFields, geometryFields, lightFields } from '@/engines/scene/propertyFields'
 import { lensToCommand } from '@/engines/scene/animationCommands'
@@ -29,7 +27,7 @@ import { AnimationSection } from './AnimationSection'
 import { CameraAlignButton } from './CameraAlignButton'
 import { CameraShotSection } from './CameraShotSection/CameraShotSection'
 import { RigSection } from './RigSection'
-import { EnvironmentSection } from './EnvironmentSection'
+import { EnvironmentPanel } from './EnvironmentPanel/EnvironmentPanel'
 import { MaterialSection } from './MaterialSection'
 import { ModelOverridesSection } from './ModelOverridesSection'
 import { ModelTexturesSection } from './ModelTexturesSection/ModelTexturesSection'
@@ -61,8 +59,9 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const animation = useScenes(state => sceneOf(state, documentId).animation)
   const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
-  const environment = useScenes(state => sceneOf(state, documentId).environment)
+  const world = useScenes(state => sceneOf(state, documentId).world)
   const lockedAxes = useScenes(state => sceneOf(state, documentId).lockedAxes)
+  const view = useSceneViews(state => sceneViewOf(state, documentId))
   const selection = useMemo(() => selectedNodes(nodes, selectedIds), [nodes, selectedIds])
   const node = selection.at(-1) ?? null
 
@@ -93,20 +92,11 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   )
 
   /**
-   * Stable, which is what lets `EnvironmentSection` be memoised: it captures `edit` alone, itself
-   * memoised on the document. Delivered as an assurance rather than as a fix — the one dependency
-   * worth sparing is the catalogue read behind it, and `useProjectPictureAssets` already amortises
-   * that through its own in-flight map, so the saving was not measurable.
-   *
-   * The sections below cannot follow, and the reason is worth writing down rather than guessing
-   * at: their commands take the selected NODES, so their callbacks capture `selection` — which is
-   * derived from `nodes` and is therefore new on every edit to any node in the scene. Making them
+   * The sections below cannot be memoised, and the reason is worth writing down rather than
+   * guessing at: their commands take the selected NODES, so their callbacks capture `selection` —
+   * derived from `nodes`, and therefore new on every edit to any node in the scene. Making them
    * stable means commands that take ids, which is a change to `engines/scene/commands`.
    */
-  const changeEnvironment = useCallback(
-    (next: EnvironmentRef) => edit.run(setEnvironment(next)),
-    [edit],
-  )
 
   // Which lens fields can be keyed is `lensToCommand`'s to know, not a panel's. Read at call time
   // rather than from the render above, so a value typed as playback runs keys where it lands.
@@ -121,7 +111,22 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // it is what keeps the panel from being empty when nothing is selected, in place of a message.
   return (
     <>
-      <EnvironmentSection environment={environment} onChange={changeEnvironment} />
+      <EnvironmentPanel
+        documentId={documentId}
+        world={world}
+        nodes={nodes}
+        selectedIds={selectedIds}
+        // The pane being worked in, not the first: a display mode is per view, and the panel has
+        // to name the one the hand is over. Published by the engine — see `setActivePane`.
+        mode={view.displays[view.activePane] ?? 'shaded'}
+        onMode={mode => useSceneViews.getState().setDisplay(documentId, view.activePane, mode)}
+        skeletons={view.skeletons}
+        onSkeletons={skeletons => useSceneViews.getState().setSkeletons(documentId, skeletons)}
+        snapping={view.snapping}
+        onSnapping={snapping => useSceneViews.getState().setSceneSnapping(documentId, snapping)}
+        isolation={view.isolation}
+        onIsolation={isolation => useSceneViews.getState().setSceneIsolation(documentId, isolation)}
+      />
 
       {node && (
         <>

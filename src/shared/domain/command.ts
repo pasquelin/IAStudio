@@ -54,6 +54,9 @@ export type CommandId =
   | 'scene.rotate'
   | 'scene.scale'
   | 'scene.frame'
+  | 'scene.isolate'
+  | 'scene.hide'
+  | 'scene.showAll'
   | 'scene.add'
   | 'scene.group'
   | 'scene.duplicate'
@@ -397,6 +400,30 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneFrame.title',
     helpKey: 'commands.sceneFrame.help',
     defaultBinding: 'KeyF',
+  }),
+  // The three that hide, and the one that gives everything back. `scene.isolate` toggles: the
+  // hand that pressed it to get in is the hand that presses it to get out, which is what every
+  // 3D package does with this key.
+  command({
+    id: 'scene.isolate',
+    scope: 'scene',
+    titleKey: 'commands.sceneIsolate.title',
+    helpKey: 'commands.sceneIsolate.help',
+    defaultBinding: 'Slash',
+  }),
+  command({
+    id: 'scene.hide',
+    scope: 'scene',
+    titleKey: 'commands.sceneHide.title',
+    helpKey: 'commands.sceneHide.help',
+    defaultBinding: 'KeyH',
+  }),
+  command({
+    id: 'scene.showAll',
+    scope: 'scene',
+    titleKey: 'commands.sceneShowAll.title',
+    helpKey: 'commands.sceneShowAll.help',
+    defaultBinding: 'Alt+KeyH',
   }),
   // `KeyM` and `KeyL` as in magnet and local. Neither flies the camera, which rules out most of
   // the left hand: `useShortcuts` reads both tables on the same keydown.

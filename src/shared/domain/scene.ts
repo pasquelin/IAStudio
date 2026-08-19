@@ -343,6 +343,130 @@ export function readEnvironment(value: unknown): EnvironmentRef {
 }
 
 /**
+ * What hangs behind the scene. `environment` is what every document written so far describes: the
+ * sky when one is chosen, the studio's own backdrop token otherwise.
+ *
+ * `transparent` keeps nothing behind the subject, which is what a capture laid over something
+ * else needs — the montage already renders that way, through a path of its own.
+ */
+export type BackgroundDescriptor =
+  { kind: 'environment' } | { kind: 'color'; color: string } | { kind: 'transparent' }
+
+export const DEFAULT_BACKGROUND: BackgroundDescriptor = Object.freeze({ kind: 'environment' })
+
+/** Derived, never restated: a fourth shape above is a fourth button on the spot. */
+export const BACKGROUND_KINDS: readonly BackgroundDescriptor['kind'][] = [
+  'environment',
+  'color',
+  'transparent',
+]
+
+/**
+ * Distance haze. `linear` fades between two distances, `exp2` thickens with depth — three.js's
+ * `Fog` and `FogExp2`, named as a person would rather than as the library spells them.
+ */
+export type FogDescriptor =
+  | { kind: 'none' }
+  | { kind: 'linear'; color: string; near: number; far: number }
+  | { kind: 'exp2'; color: string; density: number }
+
+type LinearFog = Extract<FogDescriptor, { kind: 'linear' }>
+type Exp2Fog = Extract<FogDescriptor, { kind: 'exp2' }>
+
+export const FOG_KINDS: readonly FogDescriptor['kind'][] = ['none', 'linear', 'exp2']
+
+export const NO_FOG: FogDescriptor = Object.freeze({ kind: 'none' })
+
+/** What a fog gains when it is first turned on, so the two forms open on something visible. */
+export const DEFAULT_LINEAR_FOG: LinearFog = Object.freeze({
+  kind: 'linear',
+  color: '#9aa4b2',
+  near: 10,
+  far: 60,
+})
+
+export const DEFAULT_EXP2_FOG: Exp2Fog = Object.freeze({
+  kind: 'exp2',
+  color: '#9aa4b2',
+  density: 0.02,
+})
+
+/**
+ * How high dynamic range is brought down to a screen. The five three.js 0.185 actually maps —
+ * a sixth word here would be a control that changes nothing.
+ */
+export type ToneMapping = 'none' | 'linear' | 'reinhard' | 'cineon' | 'aces'
+
+export const TONE_MAPPINGS: readonly ToneMapping[] = [
+  'none',
+  'linear',
+  'reinhard',
+  'cineon',
+  'aces',
+]
+
+/**
+ * A ground plane the scene owns — an object shadows land on, never the viewport's grid. The two
+ * are deliberately separate: one is what the scene IS, the other is how it is being looked at.
+ */
+export type GroundDescriptor = {
+  visible: boolean
+  /** `null` is the studio's own colour, resolved from the palette like a mesh's. */
+  color: string | null
+  /** Side of the square, in scene units. */
+  size: number
+  opacity: number
+  receiveShadow: boolean
+}
+
+export const DEFAULT_GROUND: GroundDescriptor = Object.freeze({
+  visible: false,
+  color: null,
+  size: 20,
+  opacity: 1,
+  receiveShadow: true,
+})
+
+/**
+ * What lights a scene and what hangs behind it — the half of a document that belongs to no node.
+ *
+ * Every default below is what the studio already did before this type existed, so opening a
+ * document written without it changes nothing on screen.
+ */
+export type SceneWorld = {
+  environment: EnvironmentRef
+  /** Multiplies both what the environment lights with and what it draws behind the scene. */
+  envIntensity: number
+  /** Radians around the vertical axis. Turns the picture and the reflections together. */
+  envRotation: number
+  background: BackgroundDescriptor
+  fog: FogDescriptor
+  toneMapping: ToneMapping
+  /** `renderer.toneMappingExposure`. Read even when the mapping is `none`, as three.js does. */
+  exposure: number
+  ground: GroundDescriptor
+}
+
+export const DEFAULT_WORLD: SceneWorld = Object.freeze({
+  environment: STUDIO_ENVIRONMENT,
+  envIntensity: 1,
+  envRotation: 0,
+  background: DEFAULT_BACKGROUND,
+  fog: NO_FOG,
+  // `none` and not `aces`: the 3D viewport has always drawn without tone mapping, and turning it
+  // on here would change how every existing project lands.
+  toneMapping: 'none',
+  exposure: 1,
+  ground: DEFAULT_GROUND,
+})
+
+/** Bounds a slider and a stored value are both held to. */
+export const ENV_INTENSITY = Object.freeze({ min: 0, max: 3, step: 0.05 })
+export const EXPOSURE = Object.freeze({ min: 0, max: 3, step: 0.05 })
+export const GROUND_SIZE = Object.freeze({ min: 1, max: 500, step: 1 })
+export const FOG_DENSITY = Object.freeze({ min: 0.001, max: 0.2, step: 0.001 })
+
+/**
  * How soft a shadow edge is, named as a person would rather than as three.js spells it — the
  * engine maps these onto its map types. Here because it is persisted, and `shared/` is where
  * what a settings file holds is described.
@@ -519,13 +643,17 @@ export function isViewDirection(value: string): value is ViewDirection {
 }
 
 /**
- * What the viewport draws. Seven answers, and the order is the order the key cycles through:
- * the three the studio opened with first, then the four a model is judged by.
+ * What the viewport draws. The order is the order the key cycles through: the three the studio
+ * opened with first, then the ones a model is judged by.
  *
  * `solid`, `matcap` and `density` paint every surface with one stand-in material, so what shows
  * is the SHAPE — a matcap reads curvature the way a clay render does, and density says which
  * object of a set carries the triangles. `material` keeps the real materials but drops the
  * scene's own lights, which is how a texture is judged without a light flattering it.
+ *
+ * `studio` goes one step further and drops the document's ENVIRONMENT too, lighting the subject
+ * from three's own prefiltered room: it is the mode that still shows a mesh when the scene it
+ * lives in is a night sky with no lamp in it.
  */
 export type DisplayMode =
   | 'shaded'
@@ -533,6 +661,7 @@ export type DisplayMode =
   | 'both'
   | 'solid'
   | 'material'
+  | 'studio'
   | 'matcap'
   | 'density'
   /** Surfaces barely there, so the skeleton inside is what reads. */
@@ -546,6 +675,7 @@ export const DISPLAY_MODES: readonly DisplayMode[] = [
   'both',
   'solid',
   'material',
+  'studio',
   'matcap',
   'density',
   'ghost',
@@ -555,3 +685,44 @@ export const DISPLAY_MODES: readonly DisplayMode[] = [
 export function isDisplayMode(value: string): value is DisplayMode {
   return DISPLAY_MODES.some(mode => mode === value)
 }
+
+/**
+ * How much of a family of aids is drawn. `selected` is what the studio has always done for lights
+ * and camera frustums, and stays the default: a directional light draws a line clear across the
+ * scene, so three lamps shown at once is a viewport nobody can read.
+ */
+export type HelperVisibility = 'off' | 'selected' | 'all'
+
+export const HELPER_VISIBILITIES: readonly HelperVisibility[] = ['off', 'selected', 'all']
+
+/**
+ * Whether an aid is drawn for this node. Here rather than beside either of its callers: the
+ * viewport draws light helpers and camera frustums, `viewportAids` draws boxes and origins, and
+ * the two had the same expression written out twice.
+ */
+export function showsAid(
+  visibility: HelperVisibility,
+  selected: ReadonlySet<string>,
+  id: string,
+): boolean {
+  return visibility === 'all' || (visibility === 'selected' && selected.has(id))
+}
+
+/**
+ * How the viewport spends its pixels. It moves `pixelRatio` and nothing about the assets: a
+ * texture is never resized, a geometry never simplified.
+ */
+export type ViewportQuality = 'performance' | 'balanced' | 'high'
+
+export const VIEWPORT_QUALITIES: readonly ViewportQuality[] = ['performance', 'balanced', 'high']
+
+/**
+ * The unit lengths are WRITTEN in. One scene unit is one metre and stays one metre — this changes
+ * what a field shows and what it reads back, never what the scene holds.
+ */
+export type DisplayUnit = 'mm' | 'cm' | 'm'
+
+export const DISPLAY_UNITS: readonly DisplayUnit[] = ['mm', 'cm', 'm']
+
+/** How much of a normal is drawn, relative to the object it stands on. */
+export const NORMAL_LENGTH = Object.freeze({ min: 0.01, max: 2, step: 0.01 })

@@ -9,7 +9,7 @@ import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
 import type { RecentProject } from './project'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 import type { ModelFamily } from './model'
-import type { ShadowQuality } from './scene'
+import type { DisplayUnit, HelperVisibility, ShadowQuality, ViewportQuality } from './scene'
 
 /**
  * Spelled exactly as Electron's `nativeTheme.themeSource`, which takes these three words: the
@@ -148,10 +148,27 @@ export type Settings = {
     /** In degrees, like the inspector: radians are stored, never typed. */
     snapRotate: number
     snapScale: number
+    /** Whether shadow maps are drawn at all — a depth pass per casting light, and the way out of it. */
+    shadows: boolean
     /** How soft a shadow edge is. Which objects throw one is a property of the node. */
     shadowQuality: ShadowQuality
     /** Side of the square map each casting light allocates. Doubling it costs four times as much. */
     shadowMapSize: number
+    /** How finely the same frame is drawn. It moves `pixelRatio`, and never the assets. */
+    quality: ViewportQuality
+    /** How much of a family of working aids is drawn — see `HelperVisibility`. */
+    lightHelpers: HelperVisibility
+    cameraHelpers: HelperVisibility
+    boundingBoxes: HelperVisibility
+    /** Whether each object's own axes are drawn at its pivot. */
+    origins: boolean
+    normals: boolean
+    /** How long a drawn normal is, in scene units. */
+    normalLength: number
+    /** Whether what the scene costs is read out over the viewport. */
+    stats: boolean
+    /** The unit lengths are WRITTEN in. One scene unit stays one metre whatever this says. */
+    units: DisplayUnit
   }
   shortcuts: {
     /**
@@ -286,8 +303,21 @@ export const DEFAULT_SETTINGS: Settings = {
     snapTranslate: 0.5,
     snapRotate: 15,
     snapScale: 0.1,
+    shadows: true,
     shadowQuality: 'soft',
     shadowMapSize: 2048,
+    quality: 'balanced',
+    // `selected` and not `all`: a directional light draws a line clear across the scene and a
+    // frustum reaches its camera's far plane, so three lamps shown at once is a viewport nobody
+    // can read. Anyone who wants them all says so.
+    lightHelpers: 'selected',
+    cameraHelpers: 'selected',
+    boundingBoxes: 'off',
+    origins: false,
+    normals: false,
+    normalLength: 0.2,
+    stats: true,
+    units: 'm',
   },
   storage: { backend: 'local', recentProjects: [], projectAccounts: {} },
   shortcuts: { overrides: {} },

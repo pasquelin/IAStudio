@@ -217,6 +217,8 @@
     "solidHint": "Une argile unie sur toutes les surfaces : la forme, sans les matières",
     "material": "Aperçu matière",
     "materialHint": "Les matières sous le seul éclairage du studio, sans les lumières de la scène",
+    "studio": "Studio",
+    "studioHint": "Un éclairage neutre et constant, qui garde le modèle lisible même dans une scène noire",
     "matcap": "Matcap",
     "matcapHint": "Un éclairage capté sur une sphère : c’est le relief qui se lit, pas la couleur",
     "density": "Densité",

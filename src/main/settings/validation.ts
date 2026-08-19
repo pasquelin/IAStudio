@@ -17,7 +17,14 @@ import { isSignature } from '@shared/domain/shortcut'
 import { HOME_SECTION_IDS } from '@shared/domain/home'
 import { RECENT_PROJECTS_MAX } from '@shared/domain/project'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
-import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from '@shared/domain/scene'
+import {
+  DISPLAY_UNITS,
+  HELPER_VISIBILITIES,
+  NORMAL_LENGTH,
+  SHADOW_MAP_SIZES,
+  SHADOW_QUALITIES,
+  VIEWPORT_QUALITIES,
+} from '@shared/domain/scene'
 import { HEX_COLOR } from '@shared/domain/color'
 import type { AccountBook, Credentials } from './accounts'
 
@@ -150,6 +157,7 @@ const three = z.object({
   snapTranslate: z.number().min(moveStep.min).max(moveStep.max).optional(),
   snapRotate: z.number().min(turnStep.min).max(turnStep.max).optional(),
   snapScale: z.number().min(scaleStep.min).max(scaleStep.max).optional(),
+  shadows: z.boolean().optional(),
   shadowQuality: z.enum(SHADOW_QUALITIES).optional(),
   // Read from the shared list, never retyped: what the panel offers and what this refuses have
   // to be the same numbers.
@@ -157,6 +165,15 @@ const three = z.object({
     .number()
     .refine(value => SHADOW_MAP_SIZES.includes(value))
     .optional(),
+  quality: z.enum(VIEWPORT_QUALITIES).optional(),
+  lightHelpers: z.enum(HELPER_VISIBILITIES).optional(),
+  cameraHelpers: z.enum(HELPER_VISIBILITIES).optional(),
+  boundingBoxes: z.enum(HELPER_VISIBILITIES).optional(),
+  origins: z.boolean().optional(),
+  normals: z.boolean().optional(),
+  normalLength: z.number().min(NORMAL_LENGTH.min).max(NORMAL_LENGTH.max).optional(),
+  stats: z.boolean().optional(),
+  units: z.enum(DISPLAY_UNITS).optional(),
 })
 
 /**

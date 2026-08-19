@@ -17,13 +17,14 @@ export type EnvironmentSectionProps = {
 
 /**
  * What lights the subject, and what its materials reflect. A property of the document rather than
- * of any node, which is why it shows whether or not something is selected — and why the panel is
- * no longer empty when nothing is.
+ * of any node, which is why it shows whether or not something is selected.
  *
- * Nothing chosen means the procedural studio: a scene is lit before anyone has generated a sky.
+ * Nothing chosen means the procedural studio: a preview is lit before anyone has generated a sky.
  *
- * Shared by the 3D space and by Textures, because it is one question with one answer: a roughness
- * judged under a flat lamp is not judged, and the skies on offer are the project's own either way.
+ * The Textures space alone since the Environment panel landed. The 3D space asks a wider question
+ * — an intensity and an orientation come with the sky there — and answers it in
+ * `EnvironmentPanel/EnvironmentLightingSection`, against a `SceneWorld` this shape has no room
+ * for. The two share the slot, the asset list and the wording, and nothing else.
  */
 export const EnvironmentSection = memo(function EnvironmentSection({
   environment,

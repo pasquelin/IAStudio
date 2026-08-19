@@ -35,7 +35,7 @@
     "addPathPoint": "Add a point to the path",
     "addPathPointHint": "Sets one more point at the end of the path, halfway from the last one",
     "name": "Name",
-    "position": "Position",
+    "position": "Position ({{unit}})",
     "rotation": "Rotation",
     "scale": "Scale",
     "noTexture": "None",
