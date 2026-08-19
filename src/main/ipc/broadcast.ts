@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, type WebContents } from 'electron'
 
 /**
  * Pushes an event to every live renderer. Used for state the main process owns and all
@@ -25,6 +25,15 @@ export function frontWindow(): BrowserWindow | null {
   const focusable = BrowserWindow.getAllWindows().filter(window => window.isFocusable())
   const target = BrowserWindow.getFocusedWindow() ?? focusable[0]
   return target && !target.isDestroyed() ? target : null
+}
+
+/**
+ * Sends back to whoever invoked — the one case where the answer belongs to ONE window and that
+ * window is already named by the call. The guard is not decoration: an export reports for minutes,
+ * and sending to web contents somebody closed in the meantime throws.
+ */
+export function sendToSender(sender: WebContents, channel: string, payload?: unknown): void {
+  if (!sender.isDestroyed()) sender.send(channel, payload)
 }
 
 /** Sends to the window in front, for the native menu, whose rows belong to whatever is focused. */

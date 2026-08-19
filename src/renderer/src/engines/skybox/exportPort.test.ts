@@ -71,4 +71,19 @@ describe('the skybox export port', () => {
     // time is what a browser evicts a live viewport's context to make room for.
     expect(loadTexture).toHaveBeenCalledTimes(2)
   })
+
+  /**
+   * Decoding a 4K panorama is the first long thing here, so a stop pressed while it downloads
+   * must not be answered by six faces of it.
+   *
+   * The check BETWEEN faces is not reachable from a test: it lives inside the pass, past the
+   * line this file's header draws — jsdom has no GPU, and nothing here gets that far.
+   */
+  it('asks for nothing at all when the export was already stopped', async () => {
+    const loadTexture = vi.fn((_url: string) => Promise.resolve(decoded(2048, 1024)))
+    const port = createSkyboxExportPort({ loadTexture })
+
+    await expect(port(request, { signal: AbortSignal.abort() })).rejects.toThrow()
+    expect(loadTexture).not.toHaveBeenCalled()
+  })
 })

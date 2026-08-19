@@ -5,6 +5,7 @@ import {
   type IngestProgress,
   type MediaCapabilities,
 } from '@shared/domain/media'
+import { withoutKey } from '@/helpers/objects'
 import { getBridge } from '@/services/bridge'
 import { useAssets } from './assets'
 
@@ -20,15 +21,6 @@ type MediaState = {
   importMedia: () => Promise<void>
   cancel: (assetId: string) => Promise<void>
   apply: (progress: IngestProgress) => void
-}
-
-const without = (
-  progress: Record<string, IngestProgress>,
-  assetId: string,
-): Record<string, IngestProgress> => {
-  const rest = { ...progress }
-  delete rest[assetId]
-  return rest
 }
 
 /**
@@ -70,7 +62,7 @@ export const useMedia = create<MediaState>()((set, get) => ({
   cancel: async assetId => {
     // Dropped locally too: the main process answers with a `cancelled` event, and waiting for
     // it would leave the row on screen under a button that already did its job.
-    set(state => ({ progress: without(state.progress, assetId) }))
+    set(state => ({ progress: withoutKey(state.progress, assetId) }))
     await getBridge()?.media.cancel(assetId)
   },
 
@@ -82,7 +74,7 @@ export const useMedia = create<MediaState>()((set, get) => ({
 
     set(state =>
       isTerminal(progress.stage) && !needsDismissing(progress.stage)
-        ? { progress: without(state.progress, progress.assetId) }
+        ? { progress: withoutKey(state.progress, progress.assetId) }
         : { progress: { ...state.progress, [progress.assetId]: progress } },
     )
   },

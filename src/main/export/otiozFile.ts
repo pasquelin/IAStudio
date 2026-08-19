@@ -1,8 +1,9 @@
 import { createReadStream, createWriteStream } from 'node:fs'
 import { rm, stat } from 'node:fs/promises'
-import { pipeline } from 'node:stream/promises'
+import { finished, pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
 import { Zip, ZipPassThrough, strToU8 } from 'fflate'
+import type { ExportWatch } from '@shared/domain/exportProgress'
 import {
   OTIOZ_CONTENT_PATH,
   OTIOZ_VERSION,
@@ -40,18 +41,33 @@ export class MissingMediumError extends Error {
 }
 
 /**
+ * Asked to stop, by the person who started it. Private, and never seen by a caller: it exists to
+ * unwind a stream pipeline that has no other way back, and `writeOtiozFile` answers `false`.
+ */
+class ExportCancelledError extends Error {}
+
+/**
  * Pushed in chunks rather than whole, so one rush never sits in memory beside the others — and
  * only while the disk keeps up. Without the wait, reading is bounded by nothing: a fast source
  * and a slow destination hold the difference in memory, which on a montage is the whole rush.
  */
-async function pushFile(into: ZipPassThrough, path: string, room: () => Promise<void>) {
+async function pushFile(
+  into: ZipPassThrough,
+  path: string,
+  room: () => Promise<void>,
+  wrote: (bytes: number) => void,
+) {
   for await (const chunk of createReadStream(path, { highWaterMark: 1 << 20 })) {
     // `Buffer` IS a `Uint8Array`, and fflate reads it as one — no copy is made here.
     into.push(chunk, false)
+    wrote(chunk.length)
     await room()
   }
   into.push(new Uint8Array(0), true)
 }
+
+/** The floor under a report, for the bundle small enough that a hundredth is a few bytes. */
+const PROGRESS_STEP = 4 * 1024 * 1024
 
 function storedEntry(zip: Zip, name: string, bytes: Uint8Array): void {
   const entry = new ZipPassThrough(name)
@@ -60,7 +76,8 @@ function storedEntry(zip: Zip, name: string, bytes: Uint8Array): void {
 }
 
 /**
- * The bundle, written where it was asked for.
+ * The bundle, written where it was asked for. Answers whether it was — `false` when it was
+ * stopped, which is a decision rather than a failure and leaves nothing on disk.
  *
  * Everything is `ZipPassThrough` — stored, never deflated. That is what lets a reader play a rush
  * in place without unpacking the bundle first, and it is what the reference implementation writes.
@@ -69,12 +86,39 @@ function storedEntry(zip: Zip, name: string, bytes: Uint8Array): void {
 export async function writeOtiozFile(
   path: string,
   { content, media }: OtiozContents,
-): Promise<void> {
-  // Checked BEFORE the file is opened: a bundle half written then abandoned is worse than one
-  // that was never started, and the caller learns which medium is missing rather than a code.
+  { onStep, signal }: ExportWatch = {},
+): Promise<boolean> {
+  if (signal?.aborted) return false
+
+  // Encoded once, and counted in BYTES: `content.length` is code units, and a cut full of accented
+  // clip names encodes to up to three times that — a total the progress would never reach.
+  const encodedContent = strToU8(content)
+
+  // Nothing is opened before every medium is there: half a bundle looks exactly like a whole one.
+  // The sizes come free with the check, and they are what makes the progress a real fraction
+  // rather than a count of files — one rush of thirty gigabytes among six small ones.
+  let total = encodedContent.length
   for (const medium of media) {
     const found = await stat(medium.path).catch(() => null)
     if (!found?.isFile()) throw new MissingMediumError(medium.entry)
+    // READ rather than listened for, and the only stop this walk has: the listener that carries
+    // every other one is attached below, and one added to an already-raised signal never fires.
+    // Nothing after this awaits before it is attached, so no moment is left uncovered.
+    if (signal?.aborted) return false
+    total += found.size
+  }
+
+  // Per step rather than per chunk, the rule `modelDownload` already carries: a rush arrives a
+  // mebibyte at a time, and a gigabyte would push a thousand reports through two process
+  // boundaries to move a bar that shows a hundred states.
+  const step = Math.max(PROGRESS_STEP, Math.floor(total / 100))
+  let done = 0
+  let told = 0
+  const wrote = (bytes: number): void => {
+    done += bytes
+    if (done - told < step && done < total) return
+    told = done
+    onStep?.(done, total)
   }
 
   const out = createWriteStream(path)
@@ -113,6 +157,11 @@ export async function writeOtiozFile(
   // before the media loop ends, and an unhandled rejection takes the whole main process down.
   drained.catch(stop)
 
+  // Through the same door a disk failure uses, so one exit unwinds both: whoever is waiting for
+  // room is woken, the loop throws, and the `catch` below takes the half-written bundle away.
+  const abandon = (): void => stop(new ExportCancelledError())
+  signal?.addEventListener('abort', abandon, { once: true })
+
   /**
    * Resolves once the destination has room, so reading never runs ahead of writing — and THROWS
    * when there is no destination left. Spinning until `read` is called again never ends once the
@@ -131,22 +180,37 @@ export async function writeOtiozFile(
 
   try {
     storedEntry(zip, OTIOZ_VERSION_PATH, strToU8(OTIOZ_VERSION))
-    storedEntry(zip, OTIOZ_CONTENT_PATH, strToU8(content))
+    storedEntry(zip, OTIOZ_CONTENT_PATH, encodedContent)
+    wrote(encodedContent.length)
 
     for (const medium of media) {
+      // Between files as well as between chunks: a bundle of a thousand tiny stills would
+      // otherwise only notice the stop at the end of one it has already finished.
+      await room()
       const entry = new ZipPassThrough(medium.entry)
       zip.add(entry)
-      await pushFile(entry, medium.path, room)
+      await pushFile(entry, medium.path, room, wrote)
     }
 
     zip.end()
     await drained
+    return true
   } catch (error) {
     chunks.destroy()
     out.destroy()
     // A half-written bundle looks exactly like a finished one, and it is the file somebody hands
     // to somebody else. It goes rather than staying to be found later.
-    await rm(path, { force: true })
+    //
+    // Awaited on the stream FIRST: `destroy` closes the descriptor on a later tick, and Windows
+    // refuses to unlink a file that still has an open handle — `force` only swallows `ENOENT`.
+    // And a removal that fails anyway must not turn a stop into a reported failure.
+    await finished(out).catch(() => {})
+    await rm(path, { force: true }).catch(() => {})
+    if (error instanceof ExportCancelledError) return false
     throw error
+  } finally {
+    // A signal outlives the export it was handed to — the window keeps one per row and drops
+    // them all at once, so a listener left behind holds this closure for the session.
+    signal?.removeEventListener('abort', abandon)
   }
 }

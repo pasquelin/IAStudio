@@ -12,7 +12,8 @@ import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { isSkyboxDirty, setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
-import { useDocuments } from '@/stores/documents'
+import { documentExportName, useDocuments } from '@/stores/documents'
+import { runExport } from '@/stores/exports'
 import { useSkyboxViews, skyboxViewOf } from '@/stores/skyboxViews'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
@@ -33,10 +34,13 @@ async function exportSkybox(documentId: string, size: number): Promise<void> {
   if (!bridge) return
 
   try {
-    // The rendering is `skyboxExportFiles`, which the outside door shares. A sky with no picture
-    // throws THERE, before any dialog: a folder chooser opened to write six files of nothing is
-    // a question nobody can answer.
-    await bridge.skybox.export(await skyboxExportFiles(documentId, size))
+    await runExport(
+      documentExportName(useDocuments.getState(), documentId, 'skybox'),
+      // The rendering is `skyboxExportFiles`, which the outside door shares. A sky with no
+      // picture throws THERE, before any dialog: a folder chooser opened to write six files of
+      // nothing is a question nobody can answer.
+      async (_id, watch) => bridge.skybox.export(await skyboxExportFiles(documentId, size, watch)),
+    )
   } catch (error) {
     reportFailure('skybox.export', String(size), error)
   }

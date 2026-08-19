@@ -1,9 +1,11 @@
 import { exportTargetOf } from '@shared/domain/exportRegistry'
 import { bundleOf } from '@shared/domain/otioz'
 import type { FolderExportRequest } from '@shared/ipc'
+import { newId } from '@/helpers/ids'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { documentExportName, useDocuments } from '@/stores/documents'
+import { runExport } from '@/stores/exports'
 import { useProject } from '@/stores/project'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { otioTimelineFor, serializeSequencePayload } from './sequenceDocument'
@@ -69,7 +71,10 @@ export async function exportOtio(documentId: string): Promise<string | null> {
     const encoded = files[0]
     if (!encoded) return null
 
+    // No row and no watch: a cut is JSON, and a long one is a few megabytes — it is written
+    // before a bar would have drawn once.
     return await bridge.montage.export({
+      id: newId(),
       name: folder,
       target: 'montage.otio',
       content: new TextDecoder().decode(encoded.bytes),
@@ -100,13 +105,19 @@ export async function exportOtioz(documentId: string): Promise<string | null> {
         linkOf: fileUrlsUnder(projectPath),
       }),
     )
+    const name = documentExportName(useDocuments.getState(), documentId, 'edit')
 
-    return await bridge.montage.export({
-      name: documentExportName(useDocuments.getState(), documentId, 'edit'),
-      target: 'montage.otioz',
-      content: serializeSequencePayload(bundle.timeline),
-      media: bundle.media,
-    })
+    // The id travels WITH the request: the process that writes the archive answers the stop
+    // button by that same name, and one handed back at the end would come minutes too late.
+    return await runExport(name, id =>
+      bridge.montage.export({
+        id,
+        name,
+        target: 'montage.otioz',
+        content: serializeSequencePayload(bundle.timeline),
+        media: bundle.media,
+      }),
+    )
   } catch (error) {
     reportFailure('sequence.export', documentId, error)
     return null

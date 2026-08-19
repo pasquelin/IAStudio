@@ -1,3 +1,4 @@
+import type { ExportWatch } from '@shared/domain/exportProgress'
 import { MATERIAL_TARGET_OF } from '@shared/domain/exportRegistry'
 import type { TextureExportTarget } from '@shared/domain/textureExport'
 import type { FolderExportRequest } from '@shared/ipc'
@@ -17,18 +18,22 @@ import { textureOf, useTextures } from '@/stores/textures'
 export async function textureExportFiles(
   documentId: string,
   target: TextureExportTarget,
+  watch?: ExportWatch,
 ): Promise<FolderExportRequest> {
   const texture = textureOf(useTextures.getState(), documentId)
   const name = documentExportName(useDocuments.getState(), documentId, 'texture')
 
   const { createTextureExportPort } = await import('@/engines/texture/export/exportPort')
-  const files = await createTextureExportPort({ loadTexture })({
-    target,
-    channels: exportChannelsOf(texture),
-    name,
-    material: texture.material,
-    shape: texture.preview.shape,
-  })
+  const files = await createTextureExportPort({ loadTexture })(
+    {
+      target,
+      channels: exportChannelsOf(texture),
+      name,
+      material: texture.material,
+      shape: texture.preview.shape,
+    },
+    watch,
+  )
 
   // A texture with no channels resolves to no file, and a destination asked for nothing is a
   // question nobody can answer — whoever asked it.

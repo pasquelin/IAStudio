@@ -66,6 +66,8 @@ import {
   runProcess,
 } from './media/runner'
 import { openPeaksProcess } from './media/peaksProcess'
+import { openBundleProcess } from './export/bundleProcess'
+import type { BundleClient } from './export/bundleClient'
 import type { PeaksClient } from './media/peaksClient'
 import { catchUpMedia } from './media/catchUp'
 import { createMediaService, type MediaService } from './media/service'
@@ -211,6 +213,8 @@ export type Services = {
   pickSavePath: (name: string, extension: string) => Promise<string | null>
   /** Where a folder the studio is about to fill goes — an exported texture is several files. */
   pickFolder: () => Promise<string | null>
+  /** The process that packs a montage bundle, forked on the first one asked for. */
+  bundles: () => BundleClient
   /** Where the open project sits, or nothing when none is — what confines an export by name. */
   projectPath: () => string | null
   /** Shows a file in the OS file manager, so the path never leaves this process. */
@@ -922,6 +926,7 @@ export function createServices(settings: SettingsStore): Services {
   // the ingest pool already bounds how many run at once. Forgotten when it exits, so a crash
   // costs the file being ingested and not the session.
   let peaks: PeaksClient | null = null
+  let bundles: BundleClient | null = null
 
   const media = createMediaService({
     ffmpeg: ffmpeg.path,
@@ -1386,6 +1391,12 @@ export function createServices(settings: SettingsStore): Services {
     // The same picker the settings use for a folder: a second dialog with slightly different
     // options is how two flows start behaving differently.
     pickFolder: () => pickPath('folder'),
+    // Forked on the first bundle asked for, then kept — most sessions export none. Forgotten
+    // when it exits, so a crash costs the export it was writing and not the session.
+    bundles: () =>
+      (bundles ??= openBundleProcess(() => {
+        bundles = null
+      })),
     reveal: file => shell.showItemInFolder(file),
     exists: existsSync,
     folder,

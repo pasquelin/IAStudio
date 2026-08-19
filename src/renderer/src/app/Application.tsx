@@ -9,6 +9,7 @@ import { useDictationShortcut } from '@/hooks/useDictationShortcut'
 import { useWindowFit } from '@/hooks/useWindowFit'
 import { useAccounts } from '@/stores/accounts'
 import { useAssets } from '@/stores/assets'
+import { useExports } from '@/stores/exports'
 import { useJobs } from '@/stores/jobs'
 import { useDictation as useDictationStore } from '@/stores/dictation'
 import { useMedia } from '@/stores/media'
@@ -37,6 +38,7 @@ export function Application() {
   const connectUpdates = useUpdates(state => state.connect)
   const connectActivity = useActivity(state => state.connect)
   const connectAssets = useAssets(state => state.connect)
+  const connectExports = useExports(state => state.connect)
 
   useEffect(() => {
     const subscriptions = [
@@ -64,6 +66,10 @@ export function Application() {
     connectActivity,
     connectAssets,
   ])
+
+  // Apart from the batch above, which awaits a promise each: this one hands back its unsubscribe
+  // straight away — there is nothing to read before it can listen.
+  useEffect(() => connectExports(), [connectExports])
 
   // Store to store rather than through the main process, so each subscribes on its own: what a
   // generation produced lands in the document that asked for it, whichever workspace that was.

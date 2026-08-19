@@ -1,12 +1,16 @@
 import { basename } from 'node:path'
 import { z } from 'zod'
+import { exportRatio } from '@shared/domain/exportProgress'
 import { exportTargetOf } from '@shared/domain/exportRegistry'
 import { isBundleEntry } from '@shared/domain/otioz'
-import { CHANNELS, type MontageExportRequest } from '@shared/ipc'
+import { CHANNELS, EVENTS, type MontageExportRequest } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
+import { sendToSender } from '@main/ipc/broadcast'
 import { fileInsideProject } from '@main/project/fileInsideProject'
 import { pathSegment } from '@main/validation'
-import { writeOtiozFile } from './otiozFile'
+import type { BundleClient } from './bundleClient'
+import type { BundleMedium } from './bundleProtocol'
+import type { RunningExports } from './runningExports'
 import { writePickedFile } from './writePickedFile'
 
 export type MontageHandlerDeps = {
@@ -14,6 +18,9 @@ export type MontageHandlerDeps = {
   pickSavePath: (name: string, extension: string) => Promise<string | null>
   /** Where the open project sits, or nothing when none is. Injected as the folder writer's is. */
   projectPath: () => string | null
+  /** The process that packs the archive — injected as the waveform's client is, same reason. */
+  bundles: () => BundleClient
+  running: RunningExports
 }
 
 /**
@@ -45,6 +52,9 @@ const medium = z.object({ source: z.string(), entry: z.string().refine(isBundleE
 
 const montageExport = z
   .object({
+    // Only ever a map key on this side, so nothing about it needs to be a path — but bounded,
+    // since an unbounded string from the sandbox becomes an entry in a table this process keeps.
+    id: z.string().min(1).max(64),
     name: pathSegment,
     target: z.union([z.literal('montage.otio'), z.literal('montage.otioz')]),
     // Bytes, not code units: a cut full of accented clip names encodes to up to three times its
@@ -63,9 +73,14 @@ const montageExport = z
  * one that reads files: every url is resolved against the OPEN PROJECT before anything is opened,
  * so a montage naming `/etc/passwd` packs nothing.
  */
-export function registerMontageHandlers({ pickSavePath, projectPath }: MontageHandlerDeps): void {
-  handle(CHANNELS.montageExport, async (_event, request) => {
-    const { name, target, content, media }: MontageExportRequest = montageExport.parse(request)
+export function registerMontageHandlers({
+  pickSavePath,
+  projectPath,
+  bundles,
+  running,
+}: MontageHandlerDeps): void {
+  handle(CHANNELS.montageExport, async (event, request) => {
+    const { id, name, target, content, media }: MontageExportRequest = montageExport.parse(request)
     const { extension } = exportTargetOf(target)
 
     if (target === 'montage.otio') {
@@ -77,21 +92,40 @@ export function registerMontageHandlers({ pickSavePath, projectPath }: MontageHa
     // resolve them against — and every path would be refused one by one for the wrong reason.
     if (!root) return null
 
-    const resolved = []
-    for (const one of media ?? []) {
-      const path = await fileInsideProject(root, one.source)
-      // Both causes at once, deliberately: this side cannot tell « gone » from « out of bounds »
-      // without saying which, and « go find a file that is not there » sends somebody looking for
-      // a rush sitting exactly where they left it.
-      if (!path) throw new UnreachableMediumError(one.entry)
-      resolved.push({ ...one, path })
-    }
+    // Named to the table BEFORE anything long starts. The window shows the row and its stop
+    // button from the moment it invokes, so an id only registered once the media are resolved and
+    // the dialog has answered would answer `false` to every press until then — and the export
+    // would run to completion and be reported as a success.
+    return running.run(id, async signal => {
+      const resolved: BundleMedium[] = []
+      for (const one of media ?? []) {
+        const path = await fileInsideProject(root, one.source)
+        // Both causes at once, deliberately: this side cannot tell « gone » from « out of bounds »
+        // without saying which, and « go find a file that is not there » sends somebody looking
+        // for a rush sitting exactly where they left it.
+        if (!path) throw new UnreachableMediumError(one.entry)
+        resolved.push({ ...one, path })
+      }
 
-    const destination = await pickSavePath(name, extension)
-    if (!destination) return null
+      const destination = await pickSavePath(name, extension)
+      if (!destination) return null
 
-    await writeOtiozFile(destination, { content, media: resolved })
-    // The name, never the path: where a file sits is this process's business, as everywhere here.
-    return basename(destination)
+      const written = await bundles().write({
+        path: destination,
+        content,
+        media: resolved,
+        // To the window that asked, never broadcast: the row belongs to one status line, and a
+        // second window would show a bar for an export it cannot stop.
+        onStep: (done, total) =>
+          sendToSender(event.sender, EVENTS.exportProgress, {
+            id,
+            ratio: exportRatio(done, total),
+          }),
+        signal,
+      })
+
+      // The name, never the path: where a file sits is this side's business, as everywhere here.
+      return written ? basename(destination) : null
+    })
   })
 }

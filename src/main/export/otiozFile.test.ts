@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { unzipSync } from 'fflate'
 import { beforeEach, describe, expect, it } from 'vitest'
+import type { ExportWatch } from '@shared/domain/exportProgress'
 import { MissingMediumError, writeOtiozFile } from './otiozFile'
 
 let folder: string
@@ -16,7 +17,10 @@ const CONTENT = '{"OTIO_SCHEMA":"Timeline.1","name":"Montage"}'
 /** Four bytes no deflate would leave alone, so « stored » is visible in the file's own size. */
 const RUSH = new Uint8Array(4096).fill(0x41)
 
-async function bundleWith(media: { name: string; bytes: Uint8Array }[]): Promise<string> {
+async function bundleWith(
+  media: { name: string; bytes: Uint8Array }[],
+  watch: ExportWatch = {},
+): Promise<string> {
   const paths = []
   for (const one of media) {
     const path = join(folder, one.name)
@@ -25,7 +29,7 @@ async function bundleWith(media: { name: string; bytes: Uint8Array }[]): Promise
   }
 
   const bundle = join(folder, 'Montage.otioz')
-  await writeOtiozFile(bundle, { content: CONTENT, media: paths })
+  await writeOtiozFile(bundle, { content: CONTENT, media: paths }, watch)
   return bundle
 }
 
@@ -130,6 +134,109 @@ describe('a medium the cut names and the disk does not have', () => {
         { source: 'file:///nowhere/plan.mp4', entry: 'media/plan.mp4', path: '/nowhere/plan.mp4' },
       ],
     }).catch(() => null)
+
+    await expect(readFile(bundle)).rejects.toThrow()
+  })
+})
+
+/**
+ * Big enough to cross the reporting step twice — a rush of a few kilobytes is written in one
+ * chunk, and every case below would then be green on the final report alone.
+ */
+const LONG_RUSH = new Uint8Array(9 * 1024 * 1024).fill(0x43)
+
+describe('a bundle somebody is waiting on', () => {
+  /**
+   * By BYTES, not by file: a montage is one thirty-gigabyte rush among six small ones, and a bar
+   * counting files would sit at 1/7 for the whole export and then jump to the end.
+   */
+  it('reports its share of the bytes, and reaches all of them', async () => {
+    const steps: { done: number; total: number }[] = []
+
+    await bundleWith([{ name: 'a.mp4', bytes: LONG_RUSH }], {
+      onStep: (done, total) => steps.push({ done, total }),
+    })
+
+    const total = CONTENT.length + LONG_RUSH.length
+    expect(steps.at(-1)).toEqual({ done: total, total })
+    expect(steps.length).toBeGreaterThan(1)
+    // Strictly growing, and never past the whole: a bar that goes backwards is worse than none.
+    expect(steps.map(one => one.done)).toEqual(
+      [...steps.map(one => one.done)].sort((a, b) => a - b),
+    )
+  })
+
+  /**
+   * The source is read a mebibyte at a time, so a report per chunk would push nine of them here
+   * and a thousand on a gigabyte — through two process boundaries, to move a bar that shows a
+   * hundred states. Four megabytes is the step `modelDownload` already settled on.
+   */
+  it('reports far less often than it reads, so a long bundle floods nothing', async () => {
+    let steps = 0
+
+    await bundleWith([{ name: 'a.mp4', bytes: LONG_RUSH }], { onStep: () => (steps += 1) })
+
+    expect(steps).toBeLessThan(LONG_RUSH.length / (1024 * 1024))
+  })
+
+  it('stops when asked, and takes the half-written archive with it', async () => {
+    const controller = new AbortController()
+    const bundle = join(folder, 'Montage.otioz')
+    const rush = join(folder, 'plan.mp4')
+    await writeFile(rush, LONG_RUSH)
+
+    await expect(
+      writeOtiozFile(
+        bundle,
+        {
+          content: CONTENT,
+          media: [{ source: `file://${rush}`, entry: 'media/plan.mp4', path: rush }],
+        },
+        // Stopped at the first report, which lands well inside the rush: it is the media loop
+        // that has to unwind, not the tail of the write.
+        { onStep: () => controller.abort(), signal: controller.signal },
+      ),
+    ).resolves.toBe(false)
+
+    await expect(readFile(bundle)).rejects.toThrow()
+  })
+
+  /**
+   * The stop of the walk that checks the media is READ, never waited for: the listener carrying
+   * every other stop is attached after it, and one added to an already-raised signal never fires.
+   * Two thousand media on a network volume is a long walk to press Stop into for nothing.
+   */
+  it('stops during the walk that checks the media, before a file exists', async () => {
+    const controller = new AbortController()
+    const bundle = join(folder, 'Montage.otioz')
+    const rush = join(folder, 'plan.mp4')
+    await writeFile(rush, RUSH)
+
+    // Fires while the first `stat` is still out on the thread pool — the immediate phase comes
+    // before the poll phase where its answer lands.
+    setImmediate(() => controller.abort())
+
+    await expect(
+      writeOtiozFile(
+        bundle,
+        {
+          content: CONTENT,
+          media: [{ source: `file://${rush}`, entry: 'media/plan.mp4', path: rush }],
+        },
+        { signal: controller.signal },
+      ),
+    ).resolves.toBe(false)
+
+    await expect(readFile(bundle)).rejects.toThrow()
+  })
+
+  /** Nothing was written, so there is nothing to remove and no failure to report either. */
+  it('answers not-written for a stop that arrived before it began', async () => {
+    const bundle = join(folder, 'Montage.otioz')
+
+    await expect(
+      writeOtiozFile(bundle, { content: CONTENT, media: [] }, { signal: AbortSignal.abort() }),
+    ).resolves.toBe(false)
 
     await expect(readFile(bundle)).rejects.toThrow()
   })

@@ -12,7 +12,8 @@ import { TIP_TOP } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useShortcuts } from '@/hooks/useShortcuts'
-import { useDocuments } from '@/stores/documents'
+import { documentExportName, useDocuments } from '@/stores/documents'
+import { runExport } from '@/stores/exports'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { loadTexture } from '@/engines/scene/textureCache'
@@ -40,9 +41,13 @@ async function exportTexture(documentId: string, target: TextureExportTarget): P
   if (!bridge) return
 
   try {
-    // The baking is `textureExportFiles`, which the outside door shares — including its refusal
-    // of a material with no channel, which throws before any dialog is raised.
-    await bridge.texture.export(await textureExportFiles(documentId, target))
+    await runExport(
+      documentExportName(useDocuments.getState(), documentId, 'texture'),
+      // The baking is `textureExportFiles`, which the outside door shares — including its refusal
+      // of a material with no channel, which throws before any dialog is raised.
+      async (_id, watch) =>
+        bridge.texture.export(await textureExportFiles(documentId, target, watch)),
+    )
   } catch (error) {
     reportFailure('texture.export', target, error)
   }

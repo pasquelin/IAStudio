@@ -27,6 +27,7 @@ import { registerDialogHandlers } from '@main/window/dialogs'
 import { registerSceneHandlers } from '@main/scene/export'
 import { registerExportHandlers } from '@main/export/folder'
 import { registerMontageHandlers } from '@main/export/montage'
+import { createRunningExports, registerExportCancelHandler } from '@main/export/runningExports'
 import { registerRenderHandlers } from '@main/render/handlers'
 import { registerUpdateHandlers } from '@main/update/handlers'
 import { registerFileInfoWindow } from '@main/window/fileInfo'
@@ -109,7 +110,11 @@ export function registerIpc(services: Services): void {
   registerDialogHandlers(services)
   registerSceneHandlers(services)
   registerExportHandlers(services)
-  registerMontageHandlers(services)
+  // One table for both: the window names an export, this side runs it under that name, and the
+  // stop button reaches it by the same name. Built here so neither handler owns the other's door.
+  const running = createRunningExports()
+  registerMontageHandlers({ ...services, running })
+  registerExportCancelHandler(running)
   registerRenderHandlers({
     ...services,
     newId: () => `render_${randomUUID()}`,
