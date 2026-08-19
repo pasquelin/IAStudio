@@ -76,6 +76,7 @@ export type CommandId =
   | 'sequence.exportCut'
   | 'sequence.exportBundle'
   | 'sequence.exportEdl'
+  | 'sequence.exportFcpxml'
   | 'montage.import'
   | 'sequence.mirror'
   | 'sequence.split'
@@ -577,6 +578,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'sequence',
     titleKey: 'commands.sequenceExportEdl.title',
     helpKey: 'commands.sequenceExportEdl.help',
+    defaultBinding: null,
+  }),
+  // The richer of the two plain-text interchanges, and the one that keeps the tracks: what an EDL
+  // flattens into one picture channel, this holds as a lane each.
+  command({
+    id: 'sequence.exportFcpxml',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExportFcpxml.title',
+    helpKey: 'commands.sequenceExportFcpxml.help',
     defaultBinding: null,
   }),
   // The program monitor alone answers it: `Monitor` arms the sequence scope on the one that

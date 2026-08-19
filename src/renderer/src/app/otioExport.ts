@@ -59,25 +59,32 @@ export function otioExportFiles(documentId: string): FolderExportRequest {
 }
 
 /**
- * The same cut as an event list. Written from the state rather than from the OTIO, which would be
- * translating a translation — and the names come from the catalogue, an EDL naming its shots.
+ * The same cut in one of the two plain-text interchanges. Written from the STATE rather than from
+ * the OTIO, which would be translating a translation — and the names come from the catalogue,
+ * both formats naming their shots.
  */
-export async function exportEdl(documentId: string): Promise<string | null> {
+export async function exportCutAs(
+  documentId: string,
+  target: 'montage.edl' | 'montage.fcpxml',
+): Promise<string | null> {
   const bridge = getBridge()
   if (!bridge) return null
 
   try {
-    const { edlOf } = await import('@/engines/timeline/edl')
+    const compose =
+      target === 'montage.edl'
+        ? (await import('@/engines/timeline/edl')).edlOf
+        : (await import('@/engines/timeline/fcpxml')).fcpxmlOf
+
     const byId = assetsById(useAssets.getState())
     const name = documentExportName(useDocuments.getState(), documentId, 'edit')
+    const state = sequenceOf(useSequences.getState(), documentId)
 
     return await bridge.montage.export({
       id: newId(),
       name,
-      target: 'montage.edl',
-      content: edlOf(sequenceOf(useSequences.getState(), documentId), name, assetId => {
-        return byId.get(assetId)?.name ?? assetId
-      }),
+      target,
+      content: compose(state, name, assetId => byId.get(assetId)?.name ?? assetId),
     })
   } catch (error) {
     reportFailure('sequence.export', documentId, error)

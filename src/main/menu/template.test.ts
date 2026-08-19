@@ -597,6 +597,7 @@ describe('the export menu', () => {
       'Montage (OTIO)…',
       'Montage et médias (OTIOZ)…',
       'Liste de montage (EDL)…',
+      'Montage (FCPXML)…',
     ])
   })
 

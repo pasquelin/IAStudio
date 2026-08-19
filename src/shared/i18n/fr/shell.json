@@ -155,6 +155,7 @@
     "exportCut": "Montage (OTIO)…",
     "exportBundle": "Montage et médias (OTIOZ)…",
     "exportEdl": "Liste de montage (EDL)…",
+    "exportFcpxml": "Montage (FCPXML)…",
     "exportPicture": "Image aplatie (PNG)…",
     "exportLayers": "Image à calques (PSD)…",
     "exportScene": "Scène",

@@ -53,6 +53,7 @@ const montageExport = z
       z.literal('montage.otio'),
       z.literal('montage.otioz'),
       z.literal('montage.edl'),
+      z.literal('montage.fcpxml'),
     ]),
     // Bytes, not code units: a cut full of accented clip names encodes to up to three times its
     // length in UTF-8, so the ceiling a `.length` holds is three times the one meant here.

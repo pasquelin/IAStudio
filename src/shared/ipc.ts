@@ -550,7 +550,7 @@ export type MontageExportRequest = {
    * The literals rather than `ExportTargetId`: this writer takes no other, and the wider type let
    * a caller pass `scene.glb` and compile, failing at runtime as an opaque parse error.
    */
-  target: 'montage.otio' | 'montage.otioz' | 'montage.edl'
+  target: 'montage.otio' | 'montage.otioz' | 'montage.edl' | 'montage.fcpxml'
   /**
    * The cut, serialized. TEXT whatever the target — an OTIO is JSON and an EDL is columns, and
    * both are files somebody reads with their eyes. A bundle wraps this rather than writing it.

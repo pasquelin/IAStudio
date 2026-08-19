@@ -172,6 +172,10 @@
       "title": "Exporter la liste de montage (EDL)…",
       "help": "Écrit les coupes et leurs timecodes au format CMX3600, que toute salle d’étalonnage lit. Le format ne porte qu’une piste image et deux pistes son, et rien des fondus, des gains ni des vitesses."
     },
+    "sequenceExportFcpxml": {
+      "title": "Exporter le montage (FCPXML)…",
+      "help": "Écrit le montage au format que Final Cut lit, et que Premiere et Resolve importent. Les pistes survivent, une voie chacune, ainsi que la taille d’image. Les fondus, les gains et les vitesses restent ici."
+    },
     "sequenceExportBundle": {
       "title": "Exporter le montage et ses médias (OTIOZ)…",
       "help": "Écrit le même montage avec les médias qu’il utilise à l’intérieur du fichier. C’est celui à donner à quelqu’un d’autre, ou à ouvrir dans DaVinci Resolve, qui retrouve alors les rushes tout seul au lieu de les demander un par un."

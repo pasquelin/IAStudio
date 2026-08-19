@@ -43,7 +43,12 @@ describe('the table itself', () => {
       'scene.stl',
     ])
     expect(targetsOfDomain('sky')).toEqual(['sky.faces', 'sky.hdr', 'sky.exr'])
-    expect(targetsOfDomain('montage')).toEqual(['montage.otio', 'montage.otioz', 'montage.edl'])
+    expect(targetsOfDomain('montage')).toEqual([
+      'montage.otio',
+      'montage.otioz',
+      'montage.edl',
+      'montage.fcpxml',
+    ])
   })
 })
 

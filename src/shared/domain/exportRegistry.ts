@@ -46,6 +46,7 @@ export type ExportTargetId =
   | 'montage.otio'
   | 'montage.otioz'
   | 'montage.edl'
+  | 'montage.fcpxml'
 
 export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'picture.png',
@@ -67,6 +68,7 @@ export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'montage.otio',
   'montage.otioz',
   'montage.edl',
+  'montage.fcpxml',
 ]
 
 /**
@@ -440,6 +442,47 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
         'liveScene',
         'exactTime',
         'frameSize',
+        'sampleRate',
+        'editorState',
+      ],
+    },
+  },
+  /**
+   * What Final Cut reads, and what Premiere and Resolve take as an interchange. Unlike an EDL it
+   * keeps the TRACKS — a lane per row — and the frame size, the format declaring both.
+   *
+   * `exactTime` is dropped and it is the one worth naming: FCPXML counts in rationals over the
+   * frame rate, so a time the studio holds between two frames comes back rounded to one.
+   */
+  'montage.fcpxml': {
+    domain: 'montage',
+    extension: '.fcpxml',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['Final Cut Pro', 'DaVinci Resolve', 'Adobe Premiere Pro'],
+    capability: {
+      domain: 'montage',
+      interchange: [
+        'tracks',
+        'trackOrder',
+        'clipPlacement',
+        'clipTrim',
+        'mediaLink',
+        'trackAudible',
+        'frameSize',
+      ],
+      extended: [],
+      dropped: [
+        'trackName',
+        'clipSpeed',
+        'clipFade',
+        'clipGain',
+        'clipLink',
+        'trackSwitches',
+        'trackLock',
+        'trackHeight',
+        'liveScene',
+        'exactTime',
         'sampleRate',
         'editorState',
       ],
