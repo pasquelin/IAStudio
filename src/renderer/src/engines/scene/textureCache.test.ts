@@ -1,4 +1,4 @@
-import { NoColorSpace, SRGBColorSpace, Texture } from 'three'
+import { HalfFloatType, LinearSRGBColorSpace, NoColorSpace, SRGBColorSpace, Texture } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { createTextureCache, type TextureSource } from './textureCache'
 
@@ -175,6 +175,24 @@ describe('createTextureCache', () => {
     expect(source.calls).toHaveLength(2)
     expect((await asColour)?.colorSpace).toBe(SRGBColorSpace)
     expect((await asData)?.colorSpace).toBe(NoColorSpace)
+  })
+
+  /**
+   * A `.hdr` or an `.exr` decodes LINEAR, and its loader says so on the texture it hands over.
+   * Stamped sRGB all the same, the shader decodes it a second time — a sky visibly darker than
+   * the file it was made from, which is what asking for a colour used to do to one.
+   */
+  it('leaves a float decode in the colour space its loader gave it', async () => {
+    const source = deferredSource()
+    const cache = createTextureCache(source.load, silent)
+
+    const loading = cache.acquire('sky-1', SRGBColorSpace)
+    const linear = new Texture()
+    linear.type = HalfFloatType
+    linear.colorSpace = LinearSRGBColorSpace
+    source.settle('sky-1', linear)
+
+    expect((await loading)?.colorSpace).toBe(LinearSRGBColorSpace)
   })
 
   it('frees everything it still holds when the engine goes', async () => {

@@ -1,4 +1,4 @@
-import { SRGBColorSpace, type WebGLRenderer, type WebGLRenderTarget } from 'three'
+import { SRGBColorSpace, UnsignedByteType, type WebGLRenderer, type WebGLRenderTarget } from 'three'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
 import type { TaskWatch } from '@shared/domain/taskProgress'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
@@ -106,8 +106,9 @@ export function createSkyboxExportPort({
         const [source] = sources
         // `loadSource` reads every picture as stored, which is right for a PBR channel and wrong
         // for a sky: this one IS a colour. Left undecoded, the grading would work on sRGB
-        // numbers and the pass would encode them a second time on the way out.
-        source.texture.colorSpace = SRGBColorSpace
+        // numbers and the pass would encode them a second time on the way out. NOT over a float
+        // decode — a `.hdr` is linear already, and stamping sRGB there decodes it twice instead.
+        if (source.texture.type === UnsignedByteType) source.texture.colorSpace = SRGBColorSpace
         source.texture.needsUpdate = true
 
         const adjust = createAdjustPass()

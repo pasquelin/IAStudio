@@ -1,4 +1,4 @@
-import { NoColorSpace, SRGBColorSpace, Texture } from 'three'
+import { HalfFloatType, NoColorSpace, SRGBColorSpace, Texture } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
 import { createSkyboxExportPort, type SkyboxExportRequest } from './exportPort'
@@ -63,6 +63,20 @@ describe('the skybox export port', () => {
     // nothing. The version is what tells the renderer to upload again under the new colour
     // space; set without it, the decode would stay the one the loader asked for.
     expect(texture.version).toBeGreaterThan(0)
+  })
+
+  /**
+   * A `.hdr` sky decodes LINEAR already. Stamped sRGB all the same, the grading works on numbers
+   * nobody meant and the six faces leave visibly darker than the panorama they were cut from.
+   */
+  it('leaves a float decode as the colour it already is', async () => {
+    const texture = decoded(4096, 2048)
+    texture.type = HalfFloatType
+    const port = createSkyboxExportPort({ loadTexture: () => Promise.resolve(texture) })
+
+    await expect(port(request)).rejects.toThrow()
+
+    expect(texture.colorSpace).not.toBe(SRGBColorSpace)
   })
 
   it('decodes the panorama once for all six faces, never once per face', async () => {

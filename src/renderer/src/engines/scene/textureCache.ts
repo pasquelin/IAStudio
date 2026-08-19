@@ -1,4 +1,11 @@
-import { DataTexture, TextureLoader, type ColorSpace, type Loader, type Texture } from 'three'
+import {
+  DataTexture,
+  TextureLoader,
+  UnsignedByteType,
+  type ColorSpace,
+  type Loader,
+  type Texture,
+} from 'three'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
 import { decoderFor, type PictureDecoder } from '@shared/domain/pictureDecoder'
 import { createRefCache } from '../core/refCache'
@@ -118,7 +125,9 @@ export function createTextureCache(
       // Stamped, or a picture the studio has just overwritten would come back from the browser's
       // own cache under an id that never moved — the ⌘S would look like it did nothing.
       const texture = await load(versionedUrl(assetUrl(assetId), version))
-      texture.colorSpace = colorSpace
+      // NOT over a float decode: a `.hdr` or an `.exr` comes back linear already, and stamping
+      // sRGB over it has the shader decode a second time — a sky visibly darker than its file.
+      if (texture.type === UnsignedByteType) texture.colorSpace = colorSpace
       return texture
     },
     free: texture => texture.dispose(),
