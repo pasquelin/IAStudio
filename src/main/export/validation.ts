@@ -4,6 +4,7 @@ import {
   exportTargetOf,
   type ExportTargetId,
 } from '@shared/domain/exportRegistry'
+import type { CapabilityDomain } from '@shared/domain/formatCapability'
 import type { FolderExportRequest } from '@shared/ipc'
 import { pathSegment } from '@main/validation'
 
@@ -59,6 +60,19 @@ const folderExport = z
   // under another's.
   .refine(value => value.files.every(entry => entry.extension === written(value.target)))
 
-export function parseFolderExport(value: unknown): FolderExportRequest {
-  return folderExport.parse(value)
+/**
+ * `allowed` is the section the CHANNEL stands for, or `null` for the outside door, which serves
+ * every one of them. The target alone would not do: it is named by the same sandboxed side that
+ * names the file, so nothing would stop one section from asking for another's extension.
+ */
+export function parseFolderExport(
+  value: unknown,
+  allowed: CapabilityDomain | null,
+): FolderExportRequest {
+  const request = folderExport.parse(value)
+  if (allowed && exportTargetOf(request.target).domain !== allowed) {
+    throw new Error(`this channel writes ${allowed}, not ${request.target}`)
+  }
+
+  return request
 }

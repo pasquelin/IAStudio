@@ -77,6 +77,12 @@ describe('a scene on its way out, which is the objects and never the document', 
     expect(lossesExportingTo(['punctualLight'], 'scene.usdz')).toEqual(['punctualLight'])
     expect(lossesExportingTo(['punctualLight'], 'scene.glb')).toEqual([])
   })
+
+  /** `exportObjects` hands the clips to `parseAsync` on the glTF path alone — see `sceneExport`. */
+  it('loses the animation into USDZ, which the studio never hands its clips', () => {
+    expect(lossesExportingTo(['sceneAnimation'], 'scene.usdz')).toEqual(['sceneAnimation'])
+    expect(lossesExportingTo(['sceneAnimation'], 'scene.glb')).toEqual([])
+  })
 })
 
 describe('a sky on its way out as six faces', () => {
@@ -103,6 +109,13 @@ describe('a material, whose losses are derived from the recipes rather than list
       'roughnessMap',
       'metalnessMap',
       'emissiveMap',
+      'valueRanges',
+      'normalGreenFlip',
+      'baseTint',
+      'uvTiling',
+      'uvRotation',
+      'normalScale',
+      'emissiveStrength',
     ],
     'material.unity': [
       'colourMap',
@@ -112,6 +125,8 @@ describe('a material, whose losses are derived from the recipes rather than list
       'roughnessMap',
       'emissiveMap',
       'heightMap',
+      'valueRanges',
+      'normalGreenFlip',
     ],
     'material.unreal': [
       'colourMap',
@@ -121,8 +136,17 @@ describe('a material, whose losses are derived from the recipes rather than list
       'metalnessMap',
       'emissiveMap',
       'heightMap',
+      'valueRanges',
+      'normalGreenFlip',
     ],
-    'material.roblox': ['colourMap', 'normalMap', 'roughnessMap', 'metalnessMap'],
+    'material.roblox': [
+      'colourMap',
+      'normalMap',
+      'roughnessMap',
+      'metalnessMap',
+      'valueRanges',
+      'normalGreenFlip',
+    ],
     'material.raw': [
       'colourMap',
       'normalMap',
@@ -132,16 +156,29 @@ describe('a material, whose losses are derived from the recipes rather than list
       'heightMap',
       'emissiveMap',
       'cavityMap',
+      'normalGreenFlip',
     ],
   }
 
-  it('carries exactly the channels its recipe writes, target by target', () => {
+  it('carries exactly what its recipe writes, target by target, with nothing filtered out', () => {
     for (const [id, expected] of Object.entries(CARRIED)) {
-      const carried = exportTargetOf(id as ExportTargetId).capability.interchange.filter(
-        trait => trait !== 'valueRanges',
-      )
+      const carried = exportTargetOf(id as ExportTargetId).capability.interchange
       expect([id, [...carried].sort()]).toEqual([id, [...expected].sort()])
     }
+  })
+
+  /**
+   * The one target that builds a `MeshStandardMaterial` rather than a folder of pictures, so it
+   * is the only one with anywhere to put a tint or a tiling. Announcing those as lost would be a
+   * registry that frightens a person off the format that carries the most.
+   */
+  it('keeps the settings of a material only where a material is actually built', () => {
+    expect(lossesExportingTo(['baseTint', 'uvTiling', 'normalScale'], 'material.gltf')).toEqual([])
+    expect(lossesExportingTo(['baseTint', 'uvTiling', 'normalScale'], 'material.unity')).toEqual([
+      'baseTint',
+      'uvTiling',
+      'normalScale',
+    ])
   })
 
   it('carries the cavity mask only into the target that writes every channel', () => {

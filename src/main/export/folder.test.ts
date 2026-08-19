@@ -207,6 +207,22 @@ describe('the texture export handler', () => {
       ).rejects.toThrow()
     })
 
+    /**
+     * The renderer names the target as well as the file, so naming one is not a permission.
+     * Without the channel pinning its section, this request writes a `.usdz` through the door
+     * that exists to write a material.
+     */
+    it('a target belonging to another section, on a channel that stands for one', async () => {
+      await expect(
+        invoke(CHANNELS.textureExport, {
+          folder: 'Brique',
+          target: 'scene.usdz',
+          files: [file('Brique', '.usdz', glb)],
+        }),
+      ).rejects.toThrow()
+      await expect(readdir(chosen)).resolves.toEqual([])
+    })
+
     it('a target that is not in the registry at all', async () => {
       await expect(
         invoke(CHANNELS.textureExport, {

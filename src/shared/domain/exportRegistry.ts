@@ -18,7 +18,12 @@ import {
 } from './formatCapability'
 import type { ExportFormat as SceneExportFormat } from './scene'
 import type { PbrChannel } from './texture'
-import { bakesRemap, channelsWrittenBy, type TextureExportTarget } from './textureExport'
+import {
+  bakesRemap,
+  channelsWrittenBy,
+  writesOneFile,
+  type TextureExportTarget,
+} from './textureExport'
 
 /** A (section, target) pair. Named for the section first, so the list reads by surface. */
 export type ExportTargetId =
@@ -108,17 +113,13 @@ const GLTF_SCENE_EXPORT: FormatCapability = {
 /**
  * The same, minus every light: `USDZExporter` writes meshes, materials and cameras, and holds no
  * spelling for a light at all — read off the exporter of three 0.185, which never tests `isLight`.
+ *
+ * `sceneAnimation` is dropped for a second reason, and it is the studio's own: `sceneExport.ts`
+ * hands the clips to `parseAsync` on the glTF path ALONE, so a USDZ arrives as a still pose.
  */
 const USDZ_SCENE_EXPORT: FormatCapability = {
   domain: 'scene',
-  interchange: [
-    'sceneTree',
-    'nodeName',
-    'nodePlacement',
-    'cameraLens',
-    'nodeMaterial',
-    'sceneAnimation',
-  ],
+  interchange: ['sceneTree', 'nodeName', 'nodePlacement', 'cameraLens', 'nodeMaterial'],
   extended: [],
   dropped: [
     'punctualLight',
@@ -126,6 +127,7 @@ const USDZ_SCENE_EXPORT: FormatCapability = {
     'primitiveShape',
     'cameraPath',
     'cameraShot',
+    'sceneAnimation',
     'sceneEnvironment',
   ],
 }
@@ -160,18 +162,35 @@ const TRAIT_OF_CHANNEL: Record<PbrChannel, MaterialTrait> = {
 }
 
 /**
+ * The settings of a material rather than its maps. Only the target that BUILDS a material can
+ * write them: `buildMaterial` sets the tint, the normal scale and the emissive strength on a
+ * `MeshStandardMaterial`, and `placeTexture` the tiling and the rotation. A folder of pictures
+ * has nowhere to put any of it.
+ */
+const MATERIAL_SETTINGS: readonly CapabilityTrait[] = [
+  'baseTint',
+  'uvTiling',
+  'uvRotation',
+  'normalScale',
+  'emissiveStrength',
+]
+
+/**
  * Derived from the recipes rather than listed beside them: what a texture target carries is
  * exactly the channels it reads, and a sixth engine added to `textureExport` gets its losses for
  * free instead of getting them wrong.
  *
- * `valueRanges` rides with them when the target bakes the remap — the window a channel was judged
- * through leaves inside the pixels, which is why `raw` is the one target that loses it.
+ * Three traits are carried by being BAKED rather than written, and they are classed the same way
+ * for it: `valueRanges` when the target bakes the remap, `normalGreenFlip` wherever a normal goes
+ * out at all — `resolveComponent` reconciles the convention in the pixels, remap or not.
  */
 function materialCapability(target: TextureExportTarget): FormatCapability {
-  const interchange: CapabilityTrait[] = channelsWrittenBy(target).map(
-    channel => TRAIT_OF_CHANNEL[channel],
-  )
+  const written = channelsWrittenBy(target)
+  const interchange: CapabilityTrait[] = written.map(channel => TRAIT_OF_CHANNEL[channel])
+
   if (bakesRemap(target)) interchange.push('valueRanges')
+  if (written.includes('normal')) interchange.push('normalGreenFlip')
+  if (writesOneFile(target)) interchange.push(...MATERIAL_SETTINGS)
 
   return {
     domain: 'material',

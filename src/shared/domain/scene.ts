@@ -477,13 +477,6 @@ export type ExportFormat = 'glb' | 'gltf' | 'usdz'
 
 export const EXPORT_FORMATS: readonly ExportFormat[] = ['glb', 'gltf', 'usdz']
 
-/** The one place the studio's formats meet their file extensions. */
-export const EXPORT_EXTENSIONS: Record<ExportFormat, string> = {
-  glb: '.glb',
-  gltf: '.gltf',
-  usdz: '.usdz',
-}
-
 /** What is picked from the Add menu without being a mesh or a light. */
 export type ObjectKind = 'sprite' | 'text' | 'camera' | 'path'
 
