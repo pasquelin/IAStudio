@@ -17,6 +17,9 @@ import {
   mdiCubeOutline,
   mdiCubeUnfolded,
   mdiCursorDefaultOutline,
+  mdiEyeCheckOutline,
+  mdiEyeOffOutline,
+  mdiEyeOutline,
   mdiFolderPlusOutline,
   mdiGrid,
   mdiHexagonOutline,
@@ -213,6 +216,31 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     descriptionKey: 'sceneTools.frameHint',
     icon: mdiCropFree,
     separatorBefore: true,
+    acts: true,
+  },
+  // Beside framing, because the four are one gesture of WORKING ON one thing: get to it, keep it
+  // alone, put the rest away. None of them touches the document — see `isolation.ts`.
+  {
+    id: 'isolate',
+    command: 'scene.isolate',
+    labelKey: 'commands.sceneIsolate.title',
+    descriptionKey: 'sceneTools.isolateHint',
+    icon: mdiEyeCheckOutline,
+  },
+  {
+    id: 'hide',
+    command: 'scene.hide',
+    labelKey: 'commands.sceneHide.title',
+    descriptionKey: 'sceneTools.hideHint',
+    icon: mdiEyeOffOutline,
+    acts: true,
+  },
+  {
+    id: 'showAll',
+    command: 'scene.showAll',
+    labelKey: 'commands.sceneShowAll.title',
+    descriptionKey: 'sceneTools.showAllHint',
+    icon: mdiEyeOutline,
     acts: true,
   },
 ]

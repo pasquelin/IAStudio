@@ -114,8 +114,6 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
       <EnvironmentPanel
         documentId={documentId}
         world={world}
-        nodes={nodes}
-        selectedIds={selectedIds}
         // The pane being worked in, not the first: a display mode is per view, and the panel has
         // to name the one the hand is over. Published by the engine — see `setActivePane`.
         mode={view.displays[view.activePane] ?? 'shaded'}
@@ -124,8 +122,6 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         onSkeletons={skeletons => useSceneViews.getState().setSkeletons(documentId, skeletons)}
         snapping={view.snapping}
         onSnapping={snapping => useSceneViews.getState().setSceneSnapping(documentId, snapping)}
-        isolation={view.isolation}
-        onIsolation={isolation => useSceneViews.getState().setSceneIsolation(documentId, isolation)}
       />
 
       {node && (

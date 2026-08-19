@@ -135,20 +135,6 @@
 
     "debug": "Diagnostics",
     "stats": "Statistics",
-    "statsHint": "Counts the triangles, vertices and draw calls in the corner of the view",
-
-    "visibility": "Visibility",
-    "focus": "Frame selection",
-    "focusHint": "Brings the camera in so the selection fills the view",
-    "isolate": "Isolate",
-    "isolateHint": "Leaves only what is chosen on screen while you work on it",
-    "leaveIsolation": "Leave isolation",
-    "leaveIsolationHint": "Gives the scene back exactly as it was before isolating",
-    "hide": "Hide selection",
-    "hideHint": "Takes the selection out of the view without touching the document",
-    "showAll": "Show all",
-    "showAllHint": "Undoes the hiding done here. What the document declares hidden stays hidden",
-    "isolating": "Isolation running",
-    "noSelection": "Choose an object to use these commands"
+    "statsHint": "Counts the triangles, vertices and draw calls in the corner of the view"
   }
 }

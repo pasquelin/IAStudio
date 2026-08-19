@@ -135,20 +135,6 @@
 
     "debug": "Diagnostic",
     "stats": "Statistiques",
-    "statsHint": "Compte les triangles, les sommets et les appels de dessin dans le coin de la vue",
-
-    "visibility": "Visibilité",
-    "focus": "Cadrer la sélection",
-    "focusHint": "Rapproche la caméra pour que la sélection remplisse la vue",
-    "isolate": "Isoler",
-    "isolateHint": "Ne laisse à l’écran que ce qui est choisi, le temps de travailler dessus",
-    "leaveIsolation": "Quitter l’isolation",
-    "leaveIsolationHint": "Rend la scène telle qu’elle était avant l’isolation",
-    "hide": "Masquer la sélection",
-    "hideHint": "Retire la sélection de l’affichage sans toucher au document",
-    "showAll": "Tout afficher",
-    "showAllHint": "Annule les masquages faits ici. Ce que le document déclare masqué le reste",
-    "isolating": "Isolation en cours",
-    "noSelection": "Choisissez un objet pour utiliser ces commandes"
+    "statsHint": "Compte les triangles, les sommets et les appels de dessin dans le coin de la vue"
   }
 }
