@@ -99,16 +99,28 @@ export function AssetInspector({ asset }: { asset: Asset }) {
 
       {asset.location === 'local' && (
         <PropertySection title={t('inspector.file')}>
-          <PropertyRow label={t('inspector.onDisk')}>
+          {/* The PATH, which this row used to leave out: a label, a wide empty column and a
+              button at the far end said where nothing. `wrap` because a path is one value that
+              takes two lines rather than a name that truncates. */}
+          <PropertyRow
+            label={t('inspector.onDisk')}
+            shape="wrap"
+            actions={
+              missing ? undefined : (
+                <ToolButton
+                  icon={mdiFolderOpenOutline}
+                  label={t('inspector.reveal')}
+                  tooltip={TIP_LEFT}
+                  variant="header"
+                  onClick={reveal}
+                />
+              )
+            }
+          >
             {missing ? (
               <span className="text-muted text-tiny">{t('inspector.fileMissing')}</span>
             ) : (
-              <ToolButton
-                icon={mdiFolderOpenOutline}
-                label={t('inspector.reveal')}
-                tooltip={TIP_LEFT}
-                onClick={reveal}
-              />
+              (asset.path ?? '')
             )}
           </PropertyRow>
         </PropertySection>

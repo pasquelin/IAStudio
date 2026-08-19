@@ -4,11 +4,13 @@ import type { Transform, Vector3 } from '@shared/domain/scene'
 import { PropertySection } from '@/design/PropertySection'
 import { TextField } from '@/design/TextField'
 import { VectorField } from '@/design/VectorField'
-import { batch, renameNode, setTransform } from '@/engines/scene/commands'
+import { batch, renameNode, setTransform, withAxisHeld } from '@/engines/scene/commands'
 import {
+  axisIsLocked,
   hasChildren,
   IDENTITY_TRANSFORM,
   rotationShows,
+  type AxisLock,
   type SceneNode,
 } from '@/engines/scene/sceneState'
 import { changedFields } from '@/helpers/objects'
@@ -48,6 +50,8 @@ export type TransformSectionProps = {
   nodes: readonly SceneNode[]
   /** What a moved axis writes to — the anchor included. */
   selection: readonly SceneNode[]
+  /** The axes held still, across the whole document; the rows read the anchor's out of it. */
+  lockedAxes: readonly AxisLock[] | undefined
   edit: SceneEdit
 }
 
@@ -60,7 +64,13 @@ export type TransformSectionProps = {
  * cubes given a height keep the columns they stand in. A gizmo drag is the relative gesture, and
  * it goes through the viewport rather than through here.
  */
-export function TransformSection({ node, nodes, selection, edit }: TransformSectionProps) {
+export function TransformSection({
+  node,
+  nodes,
+  selection,
+  lockedAxes,
+  edit,
+}: TransformSectionProps) {
   const { t } = useTranslation()
   const { transform } = node
   const degrees = degreesOf(transform.rotation)
@@ -69,6 +79,18 @@ export function TransformSection({ node, nodes, selection, edit }: TransformSect
   const turns = selection.some(candidate =>
     rotationShows(candidate, () => hasChildren(nodes, candidate.id)),
   )
+
+  /**
+   * The anchor's own locks: a padlock is per node, and the row reads out the anchor. Held through
+   * `apply` rather than a command — see `DocumentEdit.apply`.
+   */
+  const heldOn = (channel: keyof Transform): readonly (keyof Vector3)[] =>
+    AXES.filter(axis => axisIsLocked({ lockedAxes }, node.id, channel, axis))
+
+  const holdOn =
+    (channel: keyof Transform) =>
+    (axis: keyof Vector3, held: boolean): void =>
+      edit.apply(state => withAxisHeld(state, { nodeId: node.id, channel, axis }, held))
 
   const move = (patch: AxisPatch): void =>
     edit.run(
@@ -94,6 +116,8 @@ export function TransformSection({ node, nodes, selection, edit }: TransformSect
         onChange={next => move({ position: changedFields(transform.position, next) })}
         scId="transform.position"
         defaults={IDENTITY_TRANSFORM.position}
+        heldAxes={heldOn('position')}
+        onHoldAxis={holdOn('position')}
         {...edit.gesture}
       />
 
@@ -113,6 +137,8 @@ export function TransformSection({ node, nodes, selection, edit }: TransformSect
         scId="transform.rotation"
         // In DEGREES, the unit this field reports — the identity being zero, the two agree.
         defaults={turns ? degreesOf(IDENTITY_TRANSFORM.rotation) : undefined}
+        heldAxes={heldOn('rotation')}
+        onHoldAxis={holdOn('rotation')}
         {...edit.gesture}
       />
 
@@ -123,6 +149,8 @@ export function TransformSection({ node, nodes, selection, edit }: TransformSect
         onChange={next => move({ scale: changedFields(transform.scale, next) })}
         scId="transform.scale"
         defaults={IDENTITY_TRANSFORM.scale}
+        heldAxes={heldOn('scale')}
+        onHoldAxis={holdOn('scale')}
         // The one row a padlock belongs on: locking a position would drag the node along a
         // diagonal through the origin, which is not a gesture anyone reaches for.
         lockable

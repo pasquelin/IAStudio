@@ -14,7 +14,6 @@ import {
   mdiSourceBranch,
   mdiTuneVariant,
   mdiVideoVintage,
-  mdiEyeOutline,
 } from '@mdi/js'
 import {
   placementIn,
@@ -54,7 +53,6 @@ const ICONS: Record<ToolId, string> = {
   models: mdiCubeScan,
   generator: mdiCreationOutline,
   inspector: mdiTuneVariant,
-  view: mdiEyeOutline,
   assets: mdiImageMultipleOutline,
   channels: mdiGridLarge,
   styles: mdiPaletteSwatchOutline,

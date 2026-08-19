@@ -124,7 +124,8 @@ describe('a half open on no panel in particular', () => {
   it('shows the one this section declares first', () => {
     expect(shownTool(null, 'right', 'primary', 'image', WITH_MODEL)).toBe('layers')
     expect(shownTool(null, 'right', 'primary', '3d', WITH_MODEL)).toBe('scene')
-    expect(shownTool(null, 'right', 'primary', 'skyboxes', WITH_MODEL)).toBe('view')
+    // Skyboxes declares nothing in that half since the view sections joined the inspector.
+    expect(shownTool(null, 'right', 'primary', 'skyboxes', WITH_MODEL)).toBeNull()
     expect(shownTool(null, 'right', 'primary', 'textures', WITH_MODEL)).toBe('channels')
   })
 
@@ -203,7 +204,7 @@ describe('what a half of a zone shows', () => {
   // whoever reorders that table next.
   it('substitutes the first tool the half declares when several share it', () => {
     expect(shownTool('layers', 'right', 'primary', '3d', WITH_MODEL)).toBe('scene')
-    expect(shownTool('layers', 'right', 'primary', 'skyboxes', WITH_MODEL)).toBe('view')
+    expect(shownTool('layers', 'right', 'primary', 'textures', WITH_MODEL)).toBe('channels')
   })
 
   it('falls back to the models panel where the generator has no model', () => {

@@ -1,4 +1,11 @@
-import { mdiChevronDown, mdiChevronRight, mdiLink, mdiLinkOff } from '@mdi/js'
+import {
+  mdiChevronDown,
+  mdiChevronRight,
+  mdiLink,
+  mdiLinkOff,
+  mdiLock,
+  mdiLockOpenVariantOutline,
+} from '@mdi/js'
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NumericBounds } from '@shared/numeric'
@@ -34,6 +41,13 @@ export type VectorFieldProps<V extends AxisValue> = NumericBounds &
      * unfolded one. A value and not a callback, so the per-axis reset needs no second prop.
      */
     defaults?: V
+    /**
+     * The axes held still. Their field is inert and their padlock closed — the caller is what
+     * makes the hold bite everywhere else, this only draws it.
+     */
+    heldAxes?: readonly (keyof AxisValue)[]
+    /** Offers a padlock per axis, on the unfolded lines alone: a folded row has no room for three. */
+    onHoldAxis?: (axis: keyof AxisValue, held: boolean) => void
   }
 
 const XYZ: readonly (keyof AxisValue)[] = ['x', 'y', 'z']
@@ -57,6 +71,8 @@ export function VectorField<V extends AxisValue>({
   hint,
   lockable,
   defaults,
+  heldAxes,
+  onHoldAxis,
   ...bounds
 }: VectorFieldProps<V>) {
   const { t } = useTranslation()
@@ -112,18 +128,39 @@ export function VectorField<V extends AxisValue>({
 
   const resetAll = defaults && shown.some(moved) ? () => onChange(defaults) : undefined
 
+  const isHeld = (axis: keyof AxisValue): boolean => (heldAxes ?? []).includes(axis)
+
   const axisField = (axis: keyof AxisValue, layout: 'row' | 'inline') => (
     <NumberField
       key={axis}
       layout={layout}
       axis={axis}
-      disabled={disabled}
+      // Held axes refuse the caret and the scrub alike: what the command refuses, the field must
+      // not pretend to offer.
+      disabled={disabled || isHeld(axis)}
+      hint={isHeld(axis) ? HINT_LEFT(t('inspector.axisHeldHint')) : undefined}
       scId={scId && `${scId}.${axis}`}
       label={axis.toUpperCase()}
       value={value[axis] ?? 0}
       onChange={next => move(axis, next)}
       // Only where an axis has a line of its own to end; folded, the three share the row's.
       onReset={layout === 'row' ? resetOf(axis) : undefined}
+      action={
+        layout === 'row' &&
+        onHoldAxis && (
+          <ToolButton
+            icon={isHeld(axis) ? mdiLock : mdiLockOpenVariantOutline}
+            label={t(isHeld(axis) ? 'inspector.releaseAxis' : 'inspector.holdAxis', {
+              axis: axis.toUpperCase(),
+            })}
+            description={t('inspector.holdAxisHint')}
+            tooltip={TIP_LEFT}
+            variant="header"
+            active={isHeld(axis)}
+            onClick={() => onHoldAxis(axis, !isHeld(axis))}
+          />
+        )
+      }
       onGestureStart={beginGesture}
       onGestureEnd={onGestureEnd}
       {...bounds}

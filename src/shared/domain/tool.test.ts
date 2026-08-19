@@ -265,11 +265,12 @@ describe('the rail order of the upper right', () => {
   })
 
   /**
-   * How a sky is being LOOKED at, and nothing else — what a sky IS went back to the inspector on
-   * 2026-08-19. It had a panel of its own, stacked above an inspector reading "select something".
+   * Nothing at all, since what a sky IS and how it is LOOKED at both went back to the inspector —
+   * the first on 2026-08-19, the second right after. Two boxes describing one document were two
+   * places to learn to find, and the second sat above an inspector reading "select something".
    */
-  it('keeps only the viewing controls in Skyboxes', () => {
-    expect(upperRightIn('skyboxes')).toEqual(['view'])
+  it('leaves the upper right of Skyboxes to the inspector alone', () => {
+    expect(upperRightIn('skyboxes')).toEqual([])
   })
 
   /** Same rule, same reason: a texture IS its eight channels, so they come before the files. */

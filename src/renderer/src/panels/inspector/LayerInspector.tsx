@@ -8,7 +8,9 @@ import { SliderField } from '@/design/SliderField'
 import { TextField } from '@/design/TextField'
 import { ToggleField } from '@/design/ToggleField'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
+import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
 import {
+  IDENTITY,
   isGroup,
   type AdjustmentKind,
   type Layer,
@@ -30,6 +32,9 @@ import { FontField } from './FontField'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 
 export type LayerInspectorProps = { documentId: string; layer: Layer }
+
+/** An opacity nobody has touched. Named rather than written twice, once per row. */
+const FULL = 1
 
 /** How far each dial swings. Its name is its key: `AdjustmentKind` is a subset of the stack. */
 const DIAL_RANGE: Readonly<Record<AdjustmentKind, { min: number; max: number }>> = {
@@ -78,6 +83,9 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           max={1}
           step={0.01}
           onChange={value => edit.run(setLayerOpacity(layer.id, value))}
+          onReset={
+            layer.opacity === FULL ? undefined : () => edit.run(setLayerOpacity(layer.id, FULL))
+          }
           {...edit.gesture}
         />
         {/* Distinct from the one above: it fades the pixels and leaves the effects drawn around
@@ -89,6 +97,11 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           max={1}
           step={0.01}
           onChange={value => edit.run(setLayerFillOpacity(layer.id, value))}
+          onReset={
+            layer.fillOpacity === FULL
+              ? undefined
+              : () => edit.run(setLayerFillOpacity(layer.id, FULL))
+          }
           {...edit.gesture}
         />
 
@@ -155,6 +168,17 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
                 }),
               )
             }
+            onReset={
+              layer.values[layer.adjustment] === NEUTRAL_ADJUSTMENTS[layer.adjustment]
+                ? undefined
+                : () =>
+                    edit.run(
+                      setLayerAdjustment(layer.id, {
+                        ...layer.values,
+                        [layer.adjustment]: NEUTRAL_ADJUSTMENTS[layer.adjustment],
+                      }),
+                    )
+            }
             {...edit.gesture}
           />
         </PropertySection>
@@ -181,6 +205,11 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           value={toDegrees(layer.transform.rotation)}
           step={1}
           onChange={value => move({ rotation: toRadians(value) })}
+          onReset={
+            layer.transform.rotation === IDENTITY.rotation
+              ? undefined
+              : () => move({ rotation: IDENTITY.rotation })
+          }
           {...edit.gesture}
         />
         <NumberField
@@ -188,6 +217,11 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           value={layer.transform.scaleX}
           step={0.1}
           onChange={value => move({ scaleX: value })}
+          onReset={
+            layer.transform.scaleX === IDENTITY.scaleX
+              ? undefined
+              : () => move({ scaleX: IDENTITY.scaleX })
+          }
           {...edit.gesture}
         />
         <NumberField
@@ -195,6 +229,11 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           value={layer.transform.scaleY}
           step={0.1}
           onChange={value => move({ scaleY: value })}
+          onReset={
+            layer.transform.scaleY === IDENTITY.scaleY
+              ? undefined
+              : () => move({ scaleY: IDENTITY.scaleY })
+          }
           {...edit.gesture}
         />
         {isGroup(layer) && (

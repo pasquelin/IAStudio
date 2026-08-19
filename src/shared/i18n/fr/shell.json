@@ -31,13 +31,11 @@
     "scene": "Scène",
     "channels": "Canaux",
     "styles": "Styles",
-    "view": "Vue",
     "projects": "Vos projets",
     "library": "Votre bibliothèque",
     "animations": "Animations"
   },
   "view": {
-    "empty": "Ouvrez une skybox pour régler la façon dont elle est affichée.",
     "projection": "Projection",
     "mode": "Mode",
     "helpers": "Repères",

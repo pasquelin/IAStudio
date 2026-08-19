@@ -145,14 +145,15 @@ describe('the default layout', () => {
     expect(screen.getByLabelText('Modèles')).toBeInTheDocument()
   })
 
-  // The sky's own settings went back to the inspector on 2026-08-19, so what is left of that
-  // half is how the viewport looks at it.
-  it('opens Skyboxes on the viewing controls', () => {
+  // What a sky IS and how it is LOOKED at both went back to the inspector on 2026-08-19, one
+  // after the other — so that half of the rail declares nothing, and the inspector answers alone.
+  it('opens Skyboxes on the inspector alone, its own half being empty', () => {
     useLayouts.setState({ activeWorkspace: 'skyboxes' })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
-    expect(screen.getByLabelText('Vue')).toBeInTheDocument()
+    expect(screen.getByLabelText('Inspecteur')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Vue')).not.toBeInTheDocument()
   })
 })
 

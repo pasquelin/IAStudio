@@ -62,6 +62,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
   const environment = useScenes(state => sceneOf(state, documentId).environment)
+  const lockedAxes = useScenes(state => sceneOf(state, documentId).lockedAxes)
   const selection = useMemo(() => selectedNodes(nodes, selectedIds), [nodes, selectedIds])
   const node = selection.at(-1) ?? null
 
@@ -124,7 +125,13 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
 
       {node && (
         <>
-          <TransformSection node={node} nodes={nodes} selection={selection} edit={edit} />
+          <TransformSection
+            node={node}
+            nodes={nodes}
+            selection={selection}
+            lockedAxes={lockedAxes}
+            edit={edit}
+          />
           <ShadowSection node={node} selection={selection} edit={edit} />
         </>
       )}

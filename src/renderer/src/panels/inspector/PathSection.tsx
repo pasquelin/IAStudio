@@ -1,6 +1,6 @@
 import { mdiPlus } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import type { PathDescriptor } from '@shared/domain/scene'
+import { DEFAULT_PATH, type PathDescriptor } from '@shared/domain/scene'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { SliderField } from '@/design/SliderField'
@@ -35,6 +35,11 @@ export function PathSection({ path, onChange, gesture }: PathSectionProps) {
         max={MAX_TENSION}
         step={0.05}
         onChange={tension => onChange({ ...path, tension })}
+        onReset={
+          path.tension === DEFAULT_PATH.tension
+            ? undefined
+            : () => onChange({ ...path, tension: DEFAULT_PATH.tension })
+        }
         {...gesture}
       />
       <ToggleField

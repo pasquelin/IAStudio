@@ -18,7 +18,6 @@ import { definition as projects } from '@/panels/projects'
 import { definition as scene } from '@/panels/scene'
 import { definition as styles } from '@/panels/styles'
 import { definition as timeline } from '@/panels/timeline'
-import { definition as view } from '@/panels/view'
 import { isKnownTool, TOOL_ENTRIES, toolDefinition } from './toolComponents'
 
 /**
@@ -44,7 +43,6 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   assets,
   channels,
   styles,
-  view,
   projects,
   library,
   animations,

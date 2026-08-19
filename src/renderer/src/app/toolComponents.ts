@@ -40,7 +40,6 @@ export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
   assets: { load: () => import('@/panels/assets'), role: 'actions' },
   channels: { load: () => import('@/panels/channels'), role: null },
   styles: { load: () => import('@/panels/styles'), role: null },
-  view: { load: () => import('@/panels/view'), role: null },
   projects: { load: () => import('@/panels/projects'), role: null },
   library: { load: () => import('@/panels/library'), role: null },
   animations: { load: () => import('@/panels/animations'), role: null },
