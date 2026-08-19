@@ -21,7 +21,10 @@ export function fakeMenu() {
     bridge: {
       popup: (items: readonly ContextMenuItem[]): Promise<string | null> => {
         raised.push(items)
-        return Promise.resolve(items.find(item => item.label === picked)?.id ?? null)
+        // Rows of a submenu are pickable too, and by their own label: a menu of three families
+        // has nothing choosable at its top level at all.
+        const rows = items.flatMap(item => [item, ...(item.submenu ?? [])])
+        return Promise.resolve(rows.find(row => row.label === picked)?.id ?? null)
       },
     },
     /** The labels of the menu last raised, in the order they were sent. */

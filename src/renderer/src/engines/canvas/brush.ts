@@ -18,10 +18,15 @@ export type BrushSettings = {
   color: number
 }
 
-export type BrushSetting = keyof BrushSettings
+/**
+ * The colour is NOT one, and that is what this type says: it belongs to the DOCUMENT rather than
+ * to the brush — offered whatever the armed tool, exactly as `ImageDocumentBrush` draws it.
+ */
+export type BrushSetting = Exclude<keyof BrushSettings, 'color'>
 
 /**
- * Which of the four settings each tool actually reads.
+ * Which of the three each tool actually reads. An empty row means it reads no BRUSH setting —
+ * the bucket still paints in the colour, which is not one.
  *
  * **It is the source, not a description of one.** `softness()` asks it rather than testing the
  * tool itself, so the bar and the engine cannot disagree about the hardness: a control that
@@ -33,14 +38,13 @@ export type BrushSetting = keyof BrushSettings
  * an answer, "not in the table" is an oversight.
  */
 export const BRUSH_SETTINGS_BY_TOOL: Readonly<Record<CanvasTool, readonly BrushSetting[]>> = {
-  brush: ['size', 'hardness', 'opacity', 'color'],
+  brush: ['size', 'hardness', 'opacity'],
   // Hard by definition, and that is the whole of what tells it from the brush.
-  pencil: ['size', 'opacity', 'color'],
-  // Its colour is not a choice: the stamp is white, which is what the erase blend reads.
+  pencil: ['size', 'opacity'],
   eraser: ['size', 'opacity'],
   // `size` is the stroke's width here rather than a disc's diameter.
-  shape: ['size', 'opacity', 'color'],
-  fill: ['color'],
+  shape: ['size', 'opacity'],
+  fill: [],
   // A caption's colour and size live on the layer and are edited in the inspector.
   text: [],
   select: [],

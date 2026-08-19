@@ -49,6 +49,8 @@ const setPreview = vi.fn()
 const refreshTextures = vi.fn()
 /** Every engine built, so a test can fire the callbacks the real one would. */
 const built = vi.hoisted((): SceneRendererOptions[] => [])
+/** The engines themselves, for the one fact a case has to state rather than fire: the flight. */
+const engines = vi.hoisted((): { flying: boolean }[] => [])
 const viewFrom = vi.fn()
 // At module scope like the others, so a test can make the encoding itself refuse: the exporters
 // throw on a texture they cannot write, and that is the half no bridge failure stands in for.
@@ -60,6 +62,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
   SceneRenderer: class {
     constructor(options: unknown) {
       built.push(options as SceneRendererOptions)
+      engines.push(this)
     }
 
     mount = vi.fn()
@@ -67,6 +70,8 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     apply = vi.fn()
     dispose = vi.fn()
     setMotion = vi.fn()
+    /** The right button, which no case here holds down — the two that need it set it themselves. */
+    flying = false
     configure = configure
     setMode = setMode
     setSnapping = setSnapping
@@ -638,6 +643,65 @@ describe('SceneDocument and a node right-clicked in the viewport', () => {
     built.at(-1)?.onContextMenu?.('box-1')
 
     expect(sceneOf(useScenes.getState(), 'doc-1').selectedIds).toEqual(['box-1'])
+  })
+
+  /**
+   * The void is not nothing to say: it is where a scene GROWS. Before this, a right-click that
+   * hit no node answered with no menu at all, and ⇧A was a key nothing on screen named.
+   */
+  it('offers what a scene can receive where the click hit no node', async () => {
+    const menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
+    render(<SceneDocument documentId="doc-1" />)
+
+    built.at(-1)?.onContextMenu?.(null)
+
+    await vi.waitFor(() => expect(menu.labels()).toContain('Ajouter une maille'))
+    expect(menu.labels()).not.toContain('Supprimer')
+  })
+
+  it('opens the same rows on the key that names them', async () => {
+    const menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{Shift>}{A}{/Shift}')
+
+    await vi.waitFor(() => expect(menu.labels()).toContain('Ajouter une maille'))
+  })
+
+  /**
+   * That key is also boost-strafe-left, and the held set cannot tell the two apart — Shift is
+   * down either way. A native menu takes the focus with it, so the keyups that would end the
+   * flight go to the menu and the boost stays held.
+   */
+  it('opens nothing on that key while the camera is flying', async () => {
+    const menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
+    render(<SceneDocument documentId="doc-1" />)
+    const engine = engines.at(-1)
+    if (engine) engine.flying = true
+
+    await userEvent.keyboard('{Shift>}{A}{/Shift}')
+
+    expect(menu.raised).toEqual([])
+  })
+
+  // The rows are what a scene GAINS, so choosing one puts it there — the same door the bar uses.
+  it('adds the kind whose row was chosen', async () => {
+    const menu = fakeMenu()
+    menu.picks('Cube')
+    installFakeBridge({ menu: menu.bridge })
+    render(<SceneDocument documentId="doc-1" />)
+
+    built.at(-1)?.onContextMenu?.(null)
+
+    // A default scene already holds its lights, so what this reads is what the menu ADDED.
+    await vi.waitFor(() =>
+      expect(
+        sceneOf(useScenes.getState(), 'doc-1').nodes.filter(node => node.type === 'mesh'),
+      ).toHaveLength(1),
+    )
   })
 
   // The other half of the same rule: a right-click on one of six must not shrink it to one.

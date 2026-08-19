@@ -30,7 +30,7 @@ import {
 import { newId } from '@/helpers/ids'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { canvasOf, isCanvasDirty, useCanvases } from '@/stores/canvases'
-import { selectionOf, useCanvasViews, canvasViewOf } from '@/stores/canvasViews'
+import { selectionOf, useCanvasViews, canvasViewOf, cropFrameOf } from '@/stores/canvasViews'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from '../canvasView'
 import { guidePort } from '../guidePort'
@@ -42,6 +42,8 @@ import {
   armedBy,
   armingCommand,
   canvasToolFor,
+  cropCommandOf,
+  CROP_TOOLS,
   cursorFor,
   DEFAULT_MODES,
   IMAGE_TOOLS,
@@ -87,6 +89,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   // What the rulers take from the top and the left when they are on, and nothing when they are off.
   const rulerInset = view.rulers ? RULER_SIZE : 0
   const selection = useCanvasViews(state => selectionOf(state, documentId))
+  const cropFrame = useCanvasViews(state => cropFrameOf(state, documentId))
   const bindings = useBindingOverrides()
   const label = useShortcutLabel()
   const active = useDocuments(state => state.activeId === documentId)
@@ -119,6 +122,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           .getState()
           .runCommand(documentId, addLayer(textLayer(newId(), caption.current, at))),
       onCrop: rect => useCanvases.getState().runCommand(documentId, cropToRect(rect)),
+      onCropFrame: framed => views().setCropFrame(documentId, framed),
       guides: guidePort(documentId),
       layers: layerPort(documentId),
       // Named here rather than defaulted inside the engine: jsdom has no `FontFace`, so
@@ -313,6 +317,9 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     // Dockview keeps hidden tabs mounted, and the hook swallows the keys it recognises: an
     // image left in a background tab would eat the keys the space in front is listening for.
     enabled: active,
+    // What the Layers panel addresses when it sends one — its rows edit the document it shows,
+    // never whichever one is in front.
+    documentId,
     onCommand: run,
   })
 
@@ -329,10 +336,11 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const tools = useMemo(() => {
     // Absent rather than empty when a gesture has no key: a button says nothing instead of
     // wearing a blank where a shortcut is meant to be.
-    const keyOf = (toolId: string, modeId?: string): string | undefined => {
-      const command = armingCommand(toolId, modeId)
-      return command ? label(bindingOf(command, bindings)) || undefined : undefined
-    }
+    const keyFor = (command: CommandId | null): string | undefined =>
+      command ? label(bindingOf(command, bindings)) || undefined : undefined
+
+    const keyOf = (toolId: string, modeId?: string): string | undefined =>
+      keyFor(armingCommand(toolId, modeId))
 
     return [
       ...IMAGE_TOOLS.map(entry => ({
@@ -344,8 +352,13 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       // No `activeMode`, and that is what makes it a menu of actions rather than a choice of
       // tool: none of its rows can be armed, so the click opens what hovering would have.
       AI_EDIT_TOOL,
+      ...CROP_TOOLS.map(entry => ({
+        ...entry,
+        disabled: !cropFrame,
+        shortcut: keyFor(entry.command),
+      })),
     ]
-  }, [modes, bindings, label])
+  }, [modes, bindings, label, cropFrame])
 
   // Read off the registry rather than written on the buttons: a key remapped in the settings
   // has to move on the bar with it.
@@ -391,7 +404,11 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           style={{ marginTop: rulerInset, marginLeft: rulerInset }}
           tools={tools}
           activeTool={tool}
-          onTool={setTool}
+          // Two of them act instead of arming: answering a crop frame is not a choice of tool.
+          onTool={toolId => {
+            const command = cropCommandOf(toolId)
+            return command ? run(command) : setTool(toolId)
+          }}
           onMode={(toolId, modeId) => {
             if (toolId !== AI_EDIT_TOOL_ID) return pick(toolId, modeId)
             const command = aiEditCommand(modeId)

@@ -73,20 +73,25 @@ const DISPLAY_TOOL_MODES: readonly ToolMode[] = DISPLAY_MODES.map(mode => ({
 /**
  * What a scene GAINS, one button per family. Three rather than one because a flyout is a FLAT
  * list: a single button would hold twenty-four rows of three different natures.
+ *
+ * `descriptionKey` is narrowed to required: the right-click menu reads these same rows and every
+ * one of ITS rows has to explain itself — see `openSceneAddMenu`.
  */
-export const ADD_TOOLS: readonly ToolbarItem[] = ADD_FAMILIES.map(family => ({
-  id: `add:${family.namespace}`,
-  labelKey: `${family.namespace}.add`,
-  descriptionKey: `${family.namespace}.addHint`,
-  icon: family.icon,
-  modes: family.entries.map(entry => ({
-    id: entry.kind,
-    labelKey: labelKeyOf(family.namespace, entry),
-    descriptionKey: `${labelKeyOf(family.namespace, entry)}Hint`,
-    icon: entry.icon,
-    disabled: entry.disabled,
-  })),
-}))
+export const ADD_TOOLS: readonly (ToolbarItem & { descriptionKey: string })[] = ADD_FAMILIES.map(
+  family => ({
+    id: `add:${family.namespace}`,
+    labelKey: `${family.namespace}.add`,
+    descriptionKey: `${family.namespace}.addHint`,
+    icon: family.icon,
+    modes: family.entries.map(entry => ({
+      id: entry.kind,
+      labelKey: labelKeyOf(family.namespace, entry),
+      descriptionKey: `${labelKeyOf(family.namespace, entry)}Hint`,
+      icon: entry.icon,
+      disabled: entry.disabled,
+    })),
+  }),
+)
 
 /**
  * The kind a row of those menus adds, or `null` for a row of any other group. The dispatch on

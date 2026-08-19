@@ -336,4 +336,39 @@ describe('the menu a window raises over its own surfaces', () => {
 
     expect(drawn[0]).toEqual({ type: 'separator' })
   })
+
+  /**
+   * A row that OPENS onto others — twenty-four ways of adding to a scene do not read flat. It
+   * carries no `click` of its own: the system reports the leaf, and the window resolves one id.
+   */
+  it('draws a row with rows underneath it, and gives it nothing to choose', () => {
+    const drawn = raise([
+      {
+        id: '0',
+        label: 'Ajouter',
+        tooltip: 'Pose un élément dans la scène',
+        submenu: [{ id: '0.0', label: 'Cube', tooltip: 'Pose un cube' }],
+      },
+    ]).rows[0]
+
+    expect(drawn?.label).toBe('Ajouter')
+    expect(drawn?.click).toBeUndefined()
+    expect(drawn?.submenu).toMatchObject([{ label: 'Cube', toolTip: 'Pose un cube' }])
+  })
+
+  // The schema is the only thing between the two: the template would draw a labelled parent and
+  // no rule at all, which is neither of the things the window asked for.
+  it('refuses a rule that opens onto rows', () => {
+    expect(() =>
+      popup([{ id: '0', label: '', separator: true, submenu: [{ id: '0.0', label: 'Cube' }] }]),
+    ).toThrow()
+    expect(electron.popped).toEqual([])
+  })
+
+  // An empty one takes the WHOLE menu down rather than one row: `handle` rejects the invoke, and
+  // a window that swallows the failure shows nothing at all where a menu was asked for.
+  it('refuses a row that opens onto nothing', () => {
+    expect(() => popup([{ id: '0', label: 'Ajouter', submenu: [] }])).toThrow()
+    expect(electron.popped).toEqual([])
+  })
 })

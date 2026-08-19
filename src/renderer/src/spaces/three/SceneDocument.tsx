@@ -38,6 +38,7 @@ import { isDisplayMode } from '@shared/domain/scene'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
 import { CameraPreview } from './CameraPreview/CameraPreview'
 import { SceneCounters } from './SceneCounters'
+import { openSceneAddMenu } from './sceneAddMenu'
 import { openSceneNodeMenu } from './sceneNodeMenu'
 import { openPathPointMenu } from './pathPointMenu'
 import { removePickedPathPoint, runSceneCommand, toggleNodeVisible } from './sceneCommands'
@@ -134,7 +135,13 @@ function appendPathPoint(documentId: string, nodeId: string, point: PlainVector3
  * the reason `documentIo` reads it that way — this runs from an engine callback, outside any
  * render, and the singleton is always the language in force.
  */
-function openNodeMenu(documentId: string, nodeId: string): void {
+function openNodeMenu(documentId: string, nodeId: string | null): void {
+  // The void offers what a scene can RECEIVE, where a node offers what can be done to it —
+  // the same rows ⇧A opens, since it is the same question asked from the same place.
+  if (nodeId === null) {
+    return openSceneAddMenu({ t: i18next.t, onAdd: kind => addNodeTo(documentId, kind) })
+  }
+
   const scene = sceneOf(useScenes.getState(), documentId)
   // Read before anything is selected: an id the engine still holds for a node the document has
   // already dropped would otherwise move the selection and then open no menu at all.
@@ -391,6 +398,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
               documentId,
               view.projection === 'perspective' ? 'orthographic' : 'perspective',
             )
+        // The same door the right button of the viewport opens, and for the same question.
+        // Never mid-flight: the very keys that open this menu are boost and strafe-left, and a
+        // native menu takes the focus — the keyups then go to it and the boost stays held.
+        case 'scene.add':
+          return engine.current?.flying ? undefined : openNodeMenu(documentId, null)
         case 'scene.undo':
           return store.undo(documentId)
         case 'scene.redo':
@@ -418,6 +430,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     // Dockview keeps hidden tabs mounted, and the hook swallows the keys it recognises: a
     // scene left in a background tab would eat the space bar the video space listens for.
     enabled: active,
+    documentId,
     // Pushed on change, not polled: the engine restarts its own loop while something moves, so
     // nothing has to tick when the keyboard is idle.
     onMotionChange: held => engine.current?.setMotion(held),

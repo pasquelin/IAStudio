@@ -107,11 +107,11 @@ describe('LayersActions', () => {
     })
 
     /**
-     * Implemented, tested, and reachable by the Image menu alone: no default key, and no button
-     * anywhere. Published rather than run — carving the mask is the engine's, and this panel
-     * holds no engine.
+     * Published rather than run — carving the mask is the engine's, and this panel holds none.
+     * Addressed to the document it SHOWS: pinned to a background image, the row would otherwise
+     * engrave whichever image happened to be in front.
      */
-    it('asks the tab in front to make a mask, rather than reaching for its engine', async () => {
+    it('asks the document it shows to make a mask, rather than reaching for its engine', async () => {
       useCanvasViews
         .getState()
         .setSelection('doc-1', { kind: 'rect', rect: { x: 0, y: 0, width: 4, height: 4 } })
@@ -122,7 +122,7 @@ describe('LayersActions', () => {
       await userEvent.click(screen.getByRole('button', { name: /^Opérations/ }))
       await userEvent.click(await screen.findByRole('menuitem', { name: /masque/ }))
 
-      expect(heard).toHaveBeenCalledWith('canvas.maskFromSelection')
+      expect(heard).toHaveBeenCalledWith('canvas.maskFromSelection', 'doc-1')
       stop()
     })
 

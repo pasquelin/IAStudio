@@ -30,9 +30,15 @@ export type CanvasViewsState = {
    * made of it, and ⌘Z must not give one back.
    */
   selections: Record<string, CanvasSelection>
+  /**
+   * Whether a crop frame is drawn on each document. The frame itself stays in the engine, which
+   * owns the drag: what a bar needs is only whether there is one to accept or to drop.
+   */
+  cropFrames: Record<string, boolean>
   setViewport: (documentId: string, viewport: Viewport) => void
   setHost: (documentId: string, size: Size) => void
   setSelection: (documentId: string, selection: CanvasSelection) => void
+  setCropFrame: (documentId: string, framed: boolean) => void
   toggle: (documentId: string, key: ViewToggle) => void
 }
 
@@ -40,6 +46,7 @@ export const useCanvasViews = create<CanvasViewsState>()(set => ({
   views: {},
   hosts: {},
   selections: {},
+  cropFrames: {},
 
   // Both guard on the value first: a wheel notch with no delta, a pan frame with no motion and a
   // resize observer firing for an unchanged layout would otherwise wake every subscriber.
@@ -62,6 +69,15 @@ export const useCanvasViews = create<CanvasViewsState>()(set => ({
   setSelection: (documentId, selection) =>
     set(state => ({ selections: { ...state.selections, [documentId]: selection } })),
 
+  // Guarded like the two above: the engine reports the frame it drops on every pointer-down that
+  // starts a new one, and an unchanged `false` would wake the bar on each of them.
+  setCropFrame: (documentId, framed) =>
+    set(state =>
+      cropFrameOf(state, documentId) === framed
+        ? state
+        : { cropFrames: { ...state.cropFrames, [documentId]: framed } },
+    ),
+
   toggle: (documentId, key) =>
     set(state => {
       const view = canvasViewOf(state, documentId)
@@ -69,7 +85,7 @@ export const useCanvasViews = create<CanvasViewsState>()(set => ({
     }),
 }))
 
-type Readable = Pick<CanvasViewsState, 'views' | 'hosts' | 'selections'>
+type Readable = Pick<CanvasViewsState, 'views' | 'hosts' | 'selections' | 'cropFrames'>
 
 /** Shared defaults, never a fresh object: a selector building one hands React a new snapshot. */
 export function canvasViewOf(state: Readable, documentId: string): CanvasView {
@@ -82,4 +98,8 @@ export function hostOf(state: Readable, documentId: string): Size {
 
 export function selectionOf(state: Readable, documentId: string): CanvasSelection {
   return state.selections[documentId] ?? null
+}
+
+export function cropFrameOf(state: Readable, documentId: string): boolean {
+  return state.cropFrames[documentId] ?? false
 }

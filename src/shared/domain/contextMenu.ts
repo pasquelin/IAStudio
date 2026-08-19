@@ -7,7 +7,7 @@
  * how many intents an asset has. Sending a key would mean sending that state across too, and
  * answering the same question on both sides.
  */
-export type ContextMenuItem = {
+export type ContextMenuLeaf = {
   /** Answered back when the row is chosen, so it has to be unique within one menu. */
   id: string
   label: string
@@ -46,6 +46,20 @@ export type ContextMenuItem = {
    * where it can. Losing it on Windows and Linux is the price of a menu the system draws.
    */
   tooltip?: string
+}
+
+/**
+ * A row, and the rows it opens onto.
+ *
+ * **One level, and the TYPE is what bounds it** — a leaf carries no `submenu` of its own. Twenty-
+ * four ways of adding something to a scene are unreadable in one flat list and unpointable at
+ * three levels deep; the bound is here rather than in a rule the main process has to count.
+ *
+ * A row with a submenu is opened, never chosen: the system reports the leaf, so nothing answers
+ * to the id of a parent.
+ */
+export type ContextMenuItem = ContextMenuLeaf & {
+  submenu?: readonly ContextMenuLeaf[]
 }
 
 /**

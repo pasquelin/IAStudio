@@ -372,6 +372,8 @@ type Harness = {
   captions: Point[]
   /** The frames the engine settled a crop drag on, each of which becomes one history entry. */
   crops: Rect[]
+  /** Whether a frame is drawn, reported on every change: what greys the bar's Accept and Cancel. */
+  cropFrames: boolean[]
   guides: { calls: string[] }
   /** The ids of the patches the engine reported as one finished gesture each. */
   patches: string[]
@@ -402,6 +404,7 @@ function mounted(
   const selections: CanvasSelection[] = []
   const captions: Point[] = []
   const crops: Rect[] = []
+  const cropFrames: boolean[] = []
   const calls: string[] = []
   const patches: string[] = []
   const dropped: string[] = []
@@ -418,6 +421,7 @@ function mounted(
       onSelection: selection => selections.push(selection),
       onText: at => captions.push(at),
       onCrop: rect => crops.push(rect),
+      onCropFrame: framed => cropFrames.push(framed),
       onHost: () => undefined,
       guides: {
         add: (axis, position) => {
@@ -445,6 +449,7 @@ function mounted(
     selections,
     captions,
     crops,
+    cropFrames,
     guides: { calls },
     patches,
     dropped,
@@ -2480,6 +2485,7 @@ function silentOptions(): ConstructorParameters<typeof CanvasEngine>[0] {
     onPixelsDropped: nothing,
     onViewport: nothing,
     onSelection: nothing,
+    onCropFrame: nothing,
     onHost: nothing,
     onText: nothing,
     onCrop: nothing,
@@ -2558,6 +2564,35 @@ describe('the crop tool', () => {
     engine.applyCrop()
 
     expect(crops).toEqual([])
+  })
+
+  /**
+   * What greys the bar's Accept and Cancel. The frame itself stays here — a bar has no use for
+   * a rectangle — but for as long as nobody was told there was one, ⏎ and ⎋ were the only way
+   * to answer it.
+   */
+  it('says a frame is drawn, and says it is gone once answered', async () => {
+    const { engine, host, cropFrames } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+    expect(cropFrames.at(-1)).toBe(true)
+
+    engine.applyCrop()
+
+    expect(cropFrames.at(-1)).toBe(false)
+  })
+
+  it('says so again after a frame dropped rather than applied', async () => {
+    const { engine, host, cropFrames } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+    engine.dropCrop()
+
+    expect(cropFrames.at(-1)).toBe(false)
   })
 
   it('ignores ⏎ when no frame is placed', async () => {

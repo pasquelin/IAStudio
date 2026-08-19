@@ -149,6 +149,11 @@ export type CanvasEngineOptions = {
    * knows where the pointer went, the document's history knows what that means.
    */
   onCrop: (rect: Rect) => void
+  /**
+   * Whether a frame is drawn — not where. It is what a bar needs to offer Accept and Cancel,
+   * and ⏎ and ⎋ were the only way to answer one for as long as nobody was told.
+   */
+  onCropFrame: (framed: boolean) => void
   guides: GuidePort
   layers: LayerPort
   /** Puts an embedded face in the page. Injected because jsdom has no `FontFace` to put it with. */
@@ -1542,7 +1547,7 @@ export class CanvasEngine {
     this.stacking = ''
     // Same reason, and a sharper one: a frame kept across a remount would stand in the previous
     // document's coordinates, armed for ⏎.
-    this.cropping = null
+    this.setCropping(null)
     for (const container of this.groups.values()) container.destroy()
     this.groups.clear()
     for (const pass of this.adjustments.values()) pass.destroy()
@@ -1977,7 +1982,7 @@ export class CanvasEngine {
         return
       }
 
-      this.cropping = null
+      this.setCropping(null)
       this.overlay.invalidate()
       this.gesture = { kind: 'crop', from: point }
       return
@@ -2249,7 +2254,7 @@ export class CanvasEngine {
       }
       case 'crop': {
         // Clamped here rather than at the commit, so the frame drawn is the frame applied.
-        this.cropping = cropRect(gesture.from, point, this.documentSize(), event.shiftKey)
+        this.setCropping(cropRect(gesture.from, point, this.documentSize(), event.shiftKey))
         this.overlay.invalidate()
         return
       }
@@ -2260,7 +2265,7 @@ export class CanvasEngine {
         const next = resizeCrop(gesture.origin, gesture.handle, point, size, event.shiftKey)
         // A collapsed adjustment keeps the last good frame rather than dropping it: the hand is
         // still down, and a frame that vanished mid-drag could not be pulled back open.
-        if (next) this.cropping = next
+        if (next) this.setCropping(next)
         this.overlay.invalidate()
         return
       }
@@ -2557,12 +2562,24 @@ export class CanvasEngine {
     clipping.holder.destroy()
   }
 
+  /**
+   * The one place the frame changes, so that nothing can move it without the bar hearing.
+   *
+   * Reported only when there is or is not one, never on the frame itself: this runs on every
+   * pointer move of a crop drag, and the bar has the same answer for all of them.
+   */
+  private setCropping(rect: Rect | null): void {
+    const framed = this.cropping !== null
+    this.cropping = rect
+    if (framed !== (rect !== null)) this.options.onCropFrame(rect !== null)
+  }
+
   /** Crops the document to the frame on screen, in the one order the three steps work in. */
   applyCrop(): void {
     const rect = this.cropping
     if (!rect) return
 
-    this.cropping = null
+    this.setCropping(null)
     this.overlay.invalidate()
     // A marquee is in document coordinates and the crop moves the picture under it: left
     // standing it would stencil the wrong pixels, or none at all once the frame stops reaching
@@ -2577,7 +2594,7 @@ export class CanvasEngine {
   /** Takes the frame off screen without cropping anything. */
   dropCrop(): void {
     if (!this.cropping) return
-    this.cropping = null
+    this.setCropping(null)
     this.overlay.invalidate()
   }
 

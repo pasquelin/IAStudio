@@ -8,7 +8,18 @@ describe('the command bus', () => {
 
     publishCommand('canvas.flatten')
 
-    expect(heard).toHaveBeenCalledWith('canvas.flatten')
+    expect(heard).toHaveBeenCalledWith('canvas.flatten', null)
+    stop()
+  })
+
+  /** Who it is for travels with it; whether that listener wants it is the listener's business. */
+  it('names the document a sender addressed it to', () => {
+    const heard = vi.fn()
+    const stop = subscribeToCommands(heard)
+
+    publishCommand('canvas.maskFromSelection', 'doc-2')
+
+    expect(heard).toHaveBeenCalledWith('canvas.maskFromSelection', 'doc-2')
     stop()
   })
 
@@ -32,7 +43,7 @@ describe('the command bus', () => {
 
     publishCommand('canvas.flatten')
 
-    expect(second).toHaveBeenCalledWith('canvas.flatten')
+    expect(second).toHaveBeenCalledWith('canvas.flatten', null)
     stopSecond()
   })
 })

@@ -8,7 +8,7 @@ import {
   type NativeImage,
   type WebContents,
 } from 'electron'
-import { MENU_ICON_SCALE } from '@shared/domain/contextMenu'
+import { MENU_ICON_SCALE, type ContextMenuLeaf } from '@shared/domain/contextMenu'
 import { TRANSLATIONS } from '@shared/i18n'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
@@ -121,26 +121,34 @@ export function registerContextMenu(): void {
     if (!window) return null
 
     let chosen: string | null = null
-    const template: MenuItemConstructorOptions[] = parseContextMenuItems(items).map(item =>
+    /** Everything a row wears. What it DOES is added by its caller, and a parent does nothing. */
+    const chromeOf = (item: ContextMenuLeaf): MenuItemConstructorOptions => ({
+      label: item.label,
+      enabled: item.enabled ?? true,
+      ...(item.icon ? { icon: glyph(item.icon) } : {}),
+      // Drawn, never reserved. `registerAccelerator` defaults to true, and a popup menu
+      // that registers its keys takes them from the window for good — on macOS AppKit then
+      // swallows the very ⌘Z the surface underneath is listening for.
+      ...(item.accelerator ? { accelerator: item.accelerator, registerAccelerator: false } : {}),
+      // macOS shows it on hover; Windows and Linux drop it without a word. Sent regardless
+      // — what a row does is written once, wherever the platform can say it.
+      ...(item.tooltip ? { toolTip: item.tooltip } : {}),
+    })
+
+    const rowOf = (item: ContextMenuLeaf): MenuItemConstructorOptions =>
       item.separator
         ? { type: 'separator' }
         : {
-            label: item.label,
-            enabled: item.enabled ?? true,
-            ...(item.icon ? { icon: glyph(item.icon) } : {}),
-            // Drawn, never reserved. `registerAccelerator` defaults to true, and a popup menu
-            // that registers its keys takes them from the window for good — on macOS AppKit then
-            // swallows the very ⌘Z the surface underneath is listening for.
-            ...(item.accelerator
-              ? { accelerator: item.accelerator, registerAccelerator: false }
-              : {}),
-            // macOS shows it on hover; Windows and Linux drop it without a word. Sent regardless
-            // — what a row does is written once, wherever the platform can say it.
-            ...(item.tooltip ? { toolTip: item.tooltip } : {}),
+            ...chromeOf(item),
             click: () => {
               chosen = item.id
             },
-          },
+          }
+
+    const template: MenuItemConstructorOptions[] = parseContextMenuItems(items).map(item =>
+      // A row that opens is never chosen, so it carries no `click` at all: what comes back is
+      // always a leaf, and the window resolves exactly one id either way.
+      item.submenu ? { ...chromeOf(item), submenu: item.submenu.map(rowOf) } : rowOf(item),
     )
 
     return new Promise<string | null>(resolve => {

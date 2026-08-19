@@ -16,6 +16,11 @@ export type ShortcutsOptions = {
   scope: CommandScope
   /** A document only listens while it is the visible tab. */
   enabled: boolean
+  /**
+   * Which document this surface shows, for the commands a sender addresses by name — see
+   * `publishCommand`. Those reach it in a background tab too; keys never do.
+   */
+  documentId?: string
   onCommand: (command: CommandId) => void
   /** Fires when the held set actually changes — never on a frame tick. */
   onMotionChange?: (held: Set<MotionId>) => void
@@ -36,11 +41,35 @@ function holdsText(): boolean {
  * The set is also exposed as a mutable ref, for a consumer that already runs a loop and would
  * rather read it than be called.
  */
-export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: ShortcutsOptions): {
+export function useShortcuts({
+  scope,
+  enabled,
+  documentId,
+  onCommand,
+  onMotionChange,
+}: ShortcutsOptions): {
   heldMotion: RefObject<Set<MotionId>>
 } {
   const heldMotion = useRef<Set<MotionId>>(new Set())
   const handlers = useLatest({ onCommand, onMotionChange })
+
+  /**
+   * The same surface, reached the other way: the native menu fires a command outright rather
+   * than a key, and on macOS it is the menu — never the window — that hears an accelerator it
+   * declared. Both doors have to lead here, or a row of the menu does nothing.
+   *
+   * Its own effect, outside `enabled`: a command ADDRESSED to a document must reach it in a
+   * background tab, which is the one thing a key must never do.
+   */
+  useEffect(
+    () =>
+      subscribeToCommands((command, to) => {
+        if (commandDescriptor(command)?.scope !== scope) return
+        if (to === null ? !enabled : to !== documentId) return
+        handlers.current.onCommand(command)
+      }),
+    [scope, enabled, documentId, handlers],
+  )
 
   useEffect(() => {
     const held = heldMotion.current
@@ -88,18 +117,10 @@ export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: Shor
     // flying after an ⌘Tab.
     const onBlur = release
 
-    // The same surface, reached the other way: the native menu fires a command outright rather
-    // than a key, and on macOS it is the menu — never the window — that hears an accelerator it
-    // declared. Both doors have to lead here, or a row of the menu does nothing.
-    const stopBus = subscribeToCommands(command => {
-      if (commandDescriptor(command)?.scope === scope) handlers.current.onCommand(command)
-    })
-
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
     window.addEventListener('blur', onBlur)
     return () => {
-      stopBus()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
