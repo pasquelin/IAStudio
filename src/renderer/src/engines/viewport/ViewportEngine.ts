@@ -660,8 +660,14 @@ export class ViewportEngine {
     host.addEventListener('pointerdown', this.armPaneUnderPointer, true)
     host.addEventListener('pointermove', this.armPaneUnderPointer, true)
 
-    this.observer = new ResizeObserver(this.onResize)
+    // Drawn in the turn it is measured, never asked for: `setSize` blanks the drawing buffer, and
+    // an observation lands after the frame callbacks of the paint that follows — see
+    // `followHostSize`, which refuses the same frame of lag on the Pixi side.
+    this.observer = new ResizeObserver(() => {
+      if (this.onResize()) this.drawPendingFrame()
+    })
     this.observer.observe(canvas)
+    // Not drawn: the engine that owns this one is still building, and `onFrame` would run on it.
     this.onResize()
   }
 
@@ -760,12 +766,13 @@ export class ViewportEngine {
     this.frame = requestAnimationFrame(this.renderFrame)
   }
 
-  private readonly onResize = (): void => {
+  /** Whether the surface was actually taken: a panel folded to nothing is turned back. */
+  private readonly onResize = (): boolean => {
     const canvas = this.renderer?.domElement
-    if (!canvas || !this.renderer) return
+    if (!canvas || !this.renderer) return false
 
     const { clientWidth, clientHeight } = canvas
-    if (clientWidth === 0 || clientHeight === 0) return
+    if (clientWidth === 0 || clientHeight === 0) return false
 
     this.renderer.setSize(clientWidth, clientHeight, false)
     // The main camera follows its own pane, not the canvas: in a quad layout that is a quarter
@@ -776,6 +783,20 @@ export class ViewportEngine {
     this.perspective.updateProjectionMatrix()
     this.fitProjection()
     this.requestRender()
+    return true
+  }
+
+  /**
+   * Runs the frame already asked for, now, and whatever was still moving keeps its loop.
+   *
+   * A motion of its own drew earlier in this same turn, into the buffer `setSize` then blanked:
+   * a drag of a splitter over a moving scene costs two renders per paint, and nothing can spare
+   * the first — the resize is only known about after it.
+   */
+  private drawPendingFrame(): void {
+    if (this.frame === null) return
+    cancelAnimationFrame(this.frame)
+    this.renderFrame()
   }
 
   /**
