@@ -170,6 +170,11 @@ resserre (24 px) pour faire tenir plus de choses à l’écran.
 Un *canal* de texture que le studio a calculé à partir d’un autre, plutôt que reçu d’un *modèle*.
 Le calcul se relance depuis le menu de sa vignette, autant de fois qu’on veut.
 
+**Détourage** *(background removal)*
+Retirer le fond d’une image pour ne garder que le sujet, sur du transparent. La commande
+**Détourer** est dans le menu Image ; son modèle se règle dans
+**Réglages ▸ Génération ▸ Détourage**.
+
 **Dictée**
 Écrire un texte en le disant plutôt qu'en le tapant. La reconnaissance tourne **sur cet
 ordinateur**, sans clé ni connexion : rien de ce qui est dit ne part ailleurs.
@@ -177,11 +182,6 @@ ordinateur**, sans clé ni connexion : rien de ce qui est dit ne part ailleurs.
 Elle a besoin d'un *modèle* de reconnaissance, téléchargé une seule fois (640 Mo), et fonctionne
 dans tous les champs de texte du studio — le texte se pose à l'endroit du curseur. Voir
 [Générer](06-generer.md#dicter-au-lieu-de-taper).
-
-**Détourage** *(background removal)*
-Retirer le fond d’une image pour ne garder que le sujet, sur du transparent. La commande
-**Détourer** est dans le menu Image ; son modèle se règle dans
-**Réglages ▸ Génération ▸ Détourage**.
 
 **Dock**
 Une zone de la fenêtre où des *panneaux* peuvent se poser : les colonnes de gauche et de droite,
@@ -225,7 +225,7 @@ empreinte, même s’ils portent des noms différents. C’est ainsi que le stud
 **Environnement** *(d’une scène 3D)*
 Ce qui éclaire une scène en dehors de ses lampes. Deux valeurs : **Studio**, un éclairage neutre
 calculé, ou **une *skybox* du projet**, qui pose sa lumière et ses reflets sur tout. Se choisit
-dans l’Inspecteur de l’espace Modélisation, section Environnement.
+dans l’**Inspecteur** de l’espace Modélisation, section **Environnement**.
 
 **Équirectangulaire**
 Le format d’une image qui contient toute une sphère, aplatie : deux fois plus large que haute,
@@ -393,7 +393,7 @@ Un masque se fabrique aussi à partir d’une *sélection*, en une commande.
 
 **Matière** *(material)*
 Ce dont une surface est faite : sa couleur, son grain, ce qu’elle renvoie de la lumière. C’est ce
-que l’espace **Textures** fabrique, et ce que la section **Matière** de l’inspecteur règle sur un
+que l’espace **Textures** fabrique, et ce que la section **Matière** de l’**Inspecteur** règle sur un
 objet 3D. Le studio ne dit jamais *matériau* : un seul mot pour une seule chose.
 
 **MCP** *(Model Context Protocol)*
@@ -554,13 +554,13 @@ bascule de l’un à l’autre.
 Ce que le studio fait quand une *tâche* échoue pour une raison qu’un nouvel essai peut réparer :
 réseau coupé, service occupé, trop de requêtes. Voir *Temporisation exponentielle*.
 
+**Rogner** *(audio)*
+Ne garder que la portion sélectionnée d’un son, et jeter le reste.
+
 **Rogner** *(montage)*
 Raccourcir ou allonger un *clip* par l’un de ses bouts, en tirant sur la poignée qui s’y trouve.
 Une vidéo s’arrête là où sa source s’arrête ; une image fixe n’a aucune source à dépasser, et ses
 deux bouts l’allongent.
-
-**Rogner** *(audio)*
-Ne garder que la portion sélectionnée d’un son, et jeter le reste.
 
 **Rotation de l’horizon**
 Faire tourner toute une *skybox* autour de vous. Le réglage le plus utile d’un ciel : il place le
@@ -613,7 +613,7 @@ de clés de l’objet.
 Ce n’est pas une *piste* du montage : une piste porte des *clips* et appartient à une séquence, une
 sous-piste porte des blocs et appartient à un objet de la scène. Deux mouvements sur deux
 sous-pistes jouent en même temps, mais **ils se partagent encore les mêmes os** : c’est **Pilote**,
-dans l’Inspecteur, qui donne à chacun sa moitié du corps.
+dans l’**Inspecteur**, qui donne à chacun sa moitié du corps.
 
 **Sprite**
 Une image posée dans une scène 3D et qui **fait toujours face à la caméra**, quelle que soit la
