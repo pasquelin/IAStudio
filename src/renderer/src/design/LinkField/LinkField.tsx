@@ -1,6 +1,6 @@
 import { mdiClose, mdiFolderSearchOutline } from '@mdi/js'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import type { AssetType } from '@shared/domain/asset'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import type { Asset, AssetType } from '@shared/domain/asset'
 import { activation } from '@/helpers/activation'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
@@ -40,8 +40,21 @@ export type LinkFieldProps = {
   clearLabel: string
   /** The kinds a drag may drop here. Absent leaves the slot undroppable. */
   accepts?: readonly AssetType[]
-  /** Opening what the slot holds — a double-click on its picture, and Enter with it. */
-  open?: { label: string; hint: string; run: () => void }
+  /** A standing laid over the picture — never an action, the slot `MediaTile` reserves by name. */
+  badge?: ReactNode
+  /**
+   * What a drop puts here, when the caller needs the ASSET rather than its id — a texture channel
+   * keeps what the picture measures. Absent, a drop is the same gesture as choosing from the list.
+   */
+  onDropAsset?: (asset: Asset) => void
+  /**
+   * Opening what the slot holds — a double-click on its picture, and Enter with it.
+   *
+   * `toggled` names both jobs it does: it turns that press into a TOGGLE, answering a single
+   * click, and it says where the toggle stands. Nothing is opened when the press only changes how
+   * the slot is looked at.
+   */
+  open?: { label: string; hint: string; run: () => void; toggled?: boolean }
   /** Choosing from the whole project rather than from `options`. Absent, no button is drawn. */
   browse?: { label: string; hint: string; run: () => void }
   /** While what the slot points at is being fetched. */
@@ -70,6 +83,8 @@ export function LinkField({
   missingLabel,
   clearLabel,
   accepts,
+  badge,
+  onDropAsset,
   open,
   browse,
   busy,
@@ -116,7 +131,10 @@ export function LinkField({
   )
 
   return (
-    <LinkFieldSlot accepts={accepts} onDrop={onChange}>
+    <LinkFieldSlot
+      accepts={accepts}
+      onDrop={asset => (onDropAsset ? onDropAsset(asset) : onChange(asset.id))}
+    >
       <SelectField
         label={label}
         scId={scId}
@@ -124,30 +142,40 @@ export function LinkField({
         value={value ?? ''}
         onChange={id => onChange(id === '' ? null : id)}
         leading={
-          /* Guarded on what the slot RESOLVED to, never on the id it holds: a document outlives
-             the picture it points at, and an id whose asset has left the project offered to open
-             something no longer there — a focus stop that leads nowhere is one more Tab to cross. */
-          open && chosen ? (
-            <button
-              type="button"
-              {...activation(open.run)}
-              {...TIP_LEFT(open.label, false, open.hint)}
-              onPointerEnter={event => {
-                const anchor = event.currentTarget
-                forget()
-                resting.current = window.setTimeout(() => setPreview(anchor), PREVIEW_DELAY)
-              }}
-              onPointerLeave={() => {
-                forget()
-                setPreview(null)
-              }}
-              className="shrink-0 cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent p-0"
-            >
-              {picture}
-            </button>
-          ) : (
-            picture
-          )
+          // `flex`, so the picture is a flex item and not a line of text: left inline, the image
+          // sits on the baseline and the descender space under it made a FILLED row taller than
+          // an empty one — the box below carries no height of its own.
+          <span className="relative flex shrink-0">
+            {/* Guarded on what the slot RESOLVED to, never on the id it holds: a document outlives
+                the picture it points at, and an id whose asset has left the project offered to
+                open something no longer there — a focus stop leading nowhere is a Tab to cross. */}
+            {open && chosen ? (
+              <button
+                type="button"
+                aria-pressed={open.toggled}
+                {...(open.toggled === undefined ? activation(open.run) : { onClick: open.run })}
+                {...TIP_LEFT(open.label, false, open.hint)}
+                onPointerEnter={event => {
+                  const anchor = event.currentTarget
+                  forget()
+                  resting.current = window.setTimeout(() => setPreview(anchor), PREVIEW_DELAY)
+                }}
+                onPointerLeave={() => {
+                  forget()
+                  setPreview(null)
+                }}
+                className="cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent p-0"
+              >
+                {picture}
+              </button>
+            ) : (
+              picture
+            )}
+
+            {/* After the press, so it is painted over it rather than under. `TileMark` takes no
+                pointer of its own, which is what leaves the whole picture pressable. */}
+            {badge}
+          </span>
         }
         actions={
           /* Both places are held whatever is drawn in them, so every link line ends on the column

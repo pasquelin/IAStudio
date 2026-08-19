@@ -59,7 +59,7 @@ describe('resolving where a tool sits', () => {
 
   it('answers null for a workspace a tool does not serve', () => {
     expect(placementIn('timeline', 'image')).toBeNull()
-    expect(placementIn('channels', '3d')).toBeNull()
+    expect(placementIn('layers', '3d')).toBeNull()
   })
 
   it('answers null for an id no version knows any more', () => {
@@ -273,9 +273,13 @@ describe('the rail order of the upper right', () => {
     expect(upperRightIn('skyboxes')).toEqual([])
   })
 
-  /** Same rule, same reason: a texture IS its eight channels, so they come before the files. */
-  it('puts the channels first in Textures, with the styles that read them beside', () => {
-    expect(upperRightIn('textures')).toEqual(['channels', 'styles'])
+  /**
+   * Nothing either, and for the same reason: the eight channels and the saved styles both became
+   * sections of the inspector on 2026-08-19. Textures was the last space to stack three boxes on
+   * one document — what it IS, what reads it, and the panel that describes what is selected.
+   */
+  it('leaves the upper right of Textures to the inspector alone', () => {
+    expect(upperRightIn('textures')).toEqual([])
   })
 })
 

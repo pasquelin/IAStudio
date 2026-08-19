@@ -370,9 +370,9 @@ describe('the translation bundles', () => {
    * Two more holes, named by review so nobody has to rediscover them. **`except` exempts the
    * whole KEY, not the one reading it was granted for**: `inspector.kind_video` is allowed
    * `Picture` for the picture track, and would keep passing if it started saying `Drop a
-   * picture from the project`. And this reads VALUES only — `generation.dropPicture`,
-   * `texture.noPicture` and `texture.noPictureHint` still carry the old word in their NAMES,
-   * which is not screen text and not a fault, but is where the word would creep back in.
+   * picture from the project`. And this reads VALUES only — `generation.dropPicture` still
+   * carries the old word in its NAME, which is not screen text and not a fault, but is where the
+   * word would creep back in.
    */
   const SETTLED_WORDS: Record<
     Language,
@@ -1188,10 +1188,9 @@ const DYNAMIC_KEYS: readonly string[] = [
    * shipped once, with `images-generation` sitting in a French table.
    */
   ...ASSISTANT_MODELS.map(model => `assistant.models.${model}`),
-  // Composed from the shared PBR union to caption a tile of the Channels panel. `panels.channels`
-  // needs no line here because `t.panels[id]` is typed; this family has no such guard, so a ninth
-  // channel — and the domain warns the API adds types without notice — would caption a tile with
-  // its own key.
+  // Composed from the shared PBR union to name a link row of the texture inspector. This family
+  // has no compiler guard, so a ninth channel — and the domain warns the API adds types without
+  // notice — would label its row with its own key.
   ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
   // The usage report showed what the API called things — `images-generation` sat in a French
   // table, and `video` beside a `Vidéo` the bundle already knew.

@@ -129,8 +129,8 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   }
 
   const flat = inspected ? texture.channels[inspected] : undefined
-  // One look-up for both the picture and the gesture over it — `usePosterUrl` did the very same
-  // one, and two subscriptions to a single catalogue row are two re-renders of a viewport.
+  // One look-up for both the picture and the gesture over it: two subscriptions to a single
+  // catalogue row are two re-renders of a viewport.
   const flatAsset = useAssets(state => (flat ? assetsById(state).get(flat.assetId) : undefined))
   const flatPoster = flat && ((flatAsset && posterUrl(flatAsset)) ?? assetUrl(flat.assetId))
   // Where its PIXELS are edited, which is not this space: a texture is assembled here and painted

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { TRANSLATIONS } from '@shared/i18n'
 import { installTexture } from '@/stores/texture-fixtures'
 import { textureHistoryOf, textureOf, useTextures } from '@/stores/textures'
+import { inSection } from '../inspector-fixtures'
 import { TextureInspector } from './TextureInspector'
 
 const DOCUMENT = 'tex-1'
@@ -28,7 +29,7 @@ describe('TextureInspector', () => {
   it('says roughness, never glossiness, so one quantity has one name', () => {
     show()
 
-    expect(screen.getByLabelText('Rugosité')).toBeInTheDocument()
+    expect(inSection('Matière').getByLabelText('Rugosité')).toBeInTheDocument()
     expect(JSON.stringify(TRANSLATIONS.fr)).not.toMatch(/brillance/i)
   })
 
@@ -43,7 +44,7 @@ describe('TextureInspector', () => {
   it('writes a roughness onto the document', () => {
     show()
 
-    fireEvent.change(screen.getByLabelText('Rugosité'), { target: { value: '0.4' } })
+    fireEvent.change(inSection('Matière').getByLabelText('Rugosité'), { target: { value: '0.4' } })
 
     expect(material().roughness).toBe(0.4)
   })
@@ -69,7 +70,7 @@ describe('TextureInspector', () => {
   it('offers the cavity, whose setting had no reader at all before', () => {
     show()
 
-    fireEvent.change(screen.getByLabelText('Cavité'), { target: { value: '0.7' } })
+    fireEvent.change(inSection('Matière').getByLabelText('Cavité'), { target: { value: '0.7' } })
 
     expect(material().edgeIntensity).toBe(0.7)
   })
@@ -85,7 +86,7 @@ describe('TextureInspector', () => {
   it('takes a negative normal scale, which is the other answer to the same problem', () => {
     show()
 
-    fireEvent.change(screen.getByLabelText('Normale'), { target: { value: '-1' } })
+    fireEvent.change(inSection('Relief').getByLabelText('Normale'), { target: { value: '-1' } })
 
     expect(material().normalScale).toBe(-1)
   })
@@ -177,7 +178,7 @@ describe('TextureInspector', () => {
 
   it('collapses a whole drag into one history entry', () => {
     show()
-    const slider = screen.getByLabelText('Rugosité')
+    const slider = inSection('Matière').getByLabelText('Rugosité')
 
     fireEvent.pointerDown(slider)
     fireEvent.change(slider, { target: { value: '0.4' } })
@@ -192,8 +193,8 @@ describe('TextureInspector', () => {
   it('keeps two settings in two entries, so one undo does not take both', () => {
     show()
 
-    fireEvent.change(screen.getByLabelText('Rugosité'), { target: { value: '0.4' } })
-    fireEvent.change(screen.getByLabelText('Métal'), { target: { value: '0.9' } })
+    fireEvent.change(inSection('Matière').getByLabelText('Rugosité'), { target: { value: '0.4' } })
+    fireEvent.change(inSection('Matière').getByLabelText('Métal'), { target: { value: '0.9' } })
 
     expect(entries()).toBe(2)
   })

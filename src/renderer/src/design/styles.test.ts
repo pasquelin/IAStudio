@@ -167,20 +167,20 @@ describe('the row skin and the state it publishes', () => {
   })
 
   /**
-   * The two surfaces of the studio that fill under the pointer, named rather than counted.
+   * The surfaces of the studio that fill under the pointer, named rather than counted.
    *
    * A `tile` is the one thing `rowSkin` fills for, and it is asked for by name — so who may ask
-   * is the rule. Both of these are tiles in the strict sense: nothing else about them looks like
-   * a control, so the fill is the whole of what says they can be pressed.
+   * is the rule. This one is a tile in the strict sense: nothing else about it looks like a
+   * control, so the fill is the whole of what says it can be pressed.
+   *
+   * There were two until 2026-08-19, when the texture channels stopped being tiles and became
+   * link rows of the inspector — where the rule below is that nothing fills at all.
    *
    * The inspector is deliberately absent, and that is a decision of 2026-08-14: no line of it
    * answers the pointer. The cost was stated when it was taken — nothing distinguishes a line one
    * can open from a line one only reads, and what says a row opens is its tooltip.
    */
-  const MAY_FILL_UNDER_THE_POINTER = [
-    '../home/sections/Tools/ToolsGroup.tsx',
-    '../panels/channels/ChannelTile.tsx',
-  ]
+  const MAY_FILL_UNDER_THE_POINTER = ['../home/sections/Tools/ToolsGroup.tsx']
 
   /**
    * Repo-wide rather than by folder, and that is the point: a row of the inspector drawn from
@@ -507,8 +507,8 @@ describe('the shape of a row line', () => {
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
+      '../panels/inspector/StylesSection/StylesSectionRow.tsx',
       '../panels/projects/ProjectRow.tsx',
-      '../panels/styles/StyleRow.tsx',
       './Row.tsx',
       './Tree.tsx',
     ])
@@ -598,6 +598,7 @@ describe('what a line names', () => {
     expect(wearing.sort()).toEqual([
       '../panels/history/DiffPane.tsx',
       '../panels/history/HistoryRow.tsx',
+      '../panels/inspector/StylesSection/StylesSectionRow.tsx',
     ])
   })
 })

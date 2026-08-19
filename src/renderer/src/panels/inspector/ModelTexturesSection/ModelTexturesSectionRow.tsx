@@ -16,8 +16,8 @@ import { Thumbnail } from '@/design/Thumbnail'
  * names the two surfaces still allowed to. The cost is stated rather than hidden — nothing now
  * tells a line one can open from a line one only reads, and what says a row opens is its tooltip.
  *
- * The press is laid OVER the row rather than around it, as `ChannelTile` does and for the same
- * reason `OVERLAY_BUTTON` gives. It covers the whole line, which is also what keeps the two
+ * The press is laid OVER the row rather than around it, for the reason `OVERLAY_BUTTON` gives.
+ * It covers the whole line, which is also what keeps the two
  * tooltips of a row from answering different things — the pointer never reaches the name's own
  * anchor.
  */
@@ -51,8 +51,8 @@ export function ModelTexturesSectionRow({
 
 /**
  * The picture as this panel draws it: straight off the row the catalogue answered with, rather
- * than through `usePosterUrl` — the asset is in hand, and it is fresher than the shelf, which is
- * scoped by space.
+ * than looked up in the shelf — the asset is in hand, and it is fresher than a shelf scoped by
+ * space.
  */
 export const pictureOf = (asset: Asset): ReactNode => (
   <Thumbnail url={posterUrl(asset) ?? assetUrl(asset.id)} className={FIELD_THUMBNAIL} />

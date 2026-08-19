@@ -100,10 +100,10 @@ surface.
 | **Emission** | what glows by itself | a neon sign, embers |
 | **Cavity** | the hollows and edges of the surface | darkens the bottom of grooves, adjusted by the *Cavity* slider in the **Material** section |
 
-> **The panel writes two of these names shorter**: the tile says **Normal** and **Occlusion**
+> **The inspector writes two of these names shorter**: the row says **Normal** and **Occlusion**
 > where this table and the [glossary](17-glossary.md) say *Normals* and *Ambient occlusion*. They
-> are the same channels — the long names are the trade's, the short ones fit under a thumbnail.
-> (In French a third differs: the tile says *Métal* for *Métallicité*.)
+> are the same channels — the long names are the trade's, the short ones fit in the name column.
+> (In French a third differs: the row says *Métal* for *Métallicité*.)
 
 Each channel has an **origin**:
 
@@ -113,16 +113,19 @@ Each channel has an **origin**:
 | **Derived** | computed by the studio from another channel, on demand |
 | **Imported** | an image you placed yourself |
 
-### The Channels panel
+### The Channels section
 
-Right-hand column, the workspace's first panel — it is what Textures is. One thumbnail per channel,
-all eight, **empty ones included**: what a material lacks counts as much as what it has.
+The **Inspector**'s first section — it is what Textures is. One row per channel, all eight,
+**empty ones included**: what a material lacks counts as much as what it has.
 
 | Gesture | What it does |
 |---|---|
-| **Drag an image onto a thumbnail** | puts that image in **that** channel |
-| **A thumbnail's menu** | computes the channel from its source, picks from the project's pictures, or empties the channel |
-| **Click a thumbnail** | shows that channel **on its own**, flat |
+| **Drag an image onto a row** | puts that image in **that** channel |
+| **The row's list** | picks from the project's pictures, or empties the channel |
+| **The browse button** | opens the picker, in thumbnails rather than as a list |
+| **The cross** | empties the channel |
+| **Right-click the row** | computes the channel from its source |
+| **Click the thumbnail** | shows that channel **on its own**, flat |
 | **Click the same one again** | back to the lit material |
 
 The badge at the top left of a thumbnail says its **origin** — generated, derived or imported.
@@ -132,11 +135,11 @@ height map is inspected precisely for the noise and the banding a browser's smoo
 is not saved with the document, and `⌘Z` does not give it back — it is a way of looking, not a
 decision.
 
-An empty thumbnail cannot be clicked: there is nothing to look at.
+An empty row has no thumbnail to click: there is nothing to look at.
 
 > **An image dropped on the preview still goes to the base colour.** It is the channel without which
 > a material cannot be judged, and the one the preview cannot become: to aim at another channel, drop
-> onto its thumbnail.
+> onto its row.
 
 ### Computing a channel from another
 
@@ -150,8 +153,8 @@ spent**.
 | **Ambient occlusion** | Height | whatever sits lower than its surroundings darkens |
 | **Roughness** | Base colour | dark areas turn matte, bright ones glossy |
 
-The computation is the **first row of the thumbnail's menu**. When the source channel is empty, the
-row says so and cannot be clicked: that is the one to fill first.
+The computation is what **right-clicking the row** offers. When the source channel is empty, the
+entry says so and cannot be clicked: that is the one to fill first.
 
 The result is a **picture of the project** like any other — it shows up in the shelf, it can be read
 flat, it travels with the project — and the channel carries it with the "derived" badge. Each
@@ -290,11 +293,11 @@ A well-tuned material is fifteen or so values. Dialling them in again by hand on
 the kind of work nobody does twice gladly.
 
 **The button at the top right of the inspector** saves the material's current state under a
-generated name — "Style 1", "Style 2". The **Styles** panel, in the right column beside Channels,
-lists them all.
+generated name — "Style 1", "Style 2". The inspector's **Styles** section, right under the
+channels, lists them all.
 
-**Double-click a style** — or press Enter on it — to apply it to the open material. It is a
-single undo: `⌘Z` puts back exactly what was set before.
+**Click a style** to apply it to the open material. It is a single undo: `⌘Z` puts back exactly
+what was set before.
 
 **Right-click ▸ Rename**, IDE-style. The name is edited where it is read.
 **Right-click ▸ Delete** removes the style.
@@ -383,7 +386,7 @@ does hold smoothness: the file name says what is inside it.
 
 ### Four things worth knowing
 
-**Your range settings leave with it.** The double handle of the Material panel — the one that
+**Your range settings leave with it.** The double handle of the Material section — the one that
 narrows roughness or metalness — exists in none of the four formats. So it is **written into the
 pixels**: a roughness narrowed to between 0.3 and 0.7 on screen leaves narrowed. One exception,
 and it is the whole reason that row exists: **the raw channels leave with no remap** — that is the
@@ -408,7 +411,7 @@ its stale file there. Empty the folder yourself if you want it to hold only the 
 ### What the `.glb` carries in addition
 
 It alone is an object rather than a set of files: it leaves with **the shape of the preview**, and
-with the settings of the Material panel that the format can hold: the tint, the roughness, the
+with the settings of the Material section that the format can hold: the tint, the roughness, the
 metalness, the strength of the normal, the occlusion intensity, the emission and its strength, and
 the tiling with its offset and rotation. Opened elsewhere, it looks like what you were judging on
 screen.
@@ -426,7 +429,7 @@ choosing one are two gestures, and only the one you chose belongs in a file.
 ## What is still missing
 
 - **importing a file from disk** straight into a channel. Go through the project's import
-  (chapter 7), then drop the picture onto the thumbnail.
+  (chapter 7), then drop the picture onto the channel's row.
 
 The detail is in [What does not exist yet](18-limits.md).
 

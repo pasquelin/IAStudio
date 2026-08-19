@@ -1,13 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
-import { StyleMenu } from './StyleMenu'
+import { StylesSectionMenu } from './StylesSectionMenu'
 
 const open = (): void => {
-  render(<StyleMenu id="s1" at={{ x: 10, y: 10 }} onRename={vi.fn()} onClose={vi.fn()} />)
+  render(<StylesSectionMenu id="s1" at={{ x: 10, y: 10 }} onRename={vi.fn()} onClose={vi.fn()} />)
 }
 
-describe('StyleMenu', () => {
+describe('StylesSectionMenu', () => {
   it('says what each row does to the style rather than reading it back', () => {
     open()
 

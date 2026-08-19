@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
-import type { AssetType } from '@shared/domain/asset'
+import type { Asset, AssetType } from '@shared/domain/asset'
 import { AssetDropTarget } from '../AssetDropTarget'
 
 export type LinkFieldSlotProps = {
   accepts?: readonly AssetType[]
-  onDrop: (assetId: string) => void
+  /** The ASSET, not its id: what a slot may refuse — a cloud row — is read off the row itself. */
+  onDrop: (asset: Asset) => void
   children: ReactNode
 }
 
@@ -29,7 +30,7 @@ export function LinkFieldSlot({ accepts, onDrop, children }: LinkFieldSlotProps)
     <AssetDropTarget
       accepts={accepts}
       exclusive
-      onDrop={asset => onDrop(asset.id)}
+      onDrop={onDrop}
       className="min-w-0 rounded-(--radius-sc-sm)"
     >
       {children}

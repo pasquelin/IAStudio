@@ -41,7 +41,7 @@ export function createTextureBinding(
 
     /**
      * The catalogue says nothing about a picture this slot already holds — the shelf is scoped by
-     * type, so it legitimately holds rows a slot can name without it (see `usePosterUrl`), and it
+     * type, so it legitimately holds rows a slot can name without it, and it
      * is also empty until its first read lands. Kept as it is rather than reloaded: the bare URL
      * is exactly where the stale bitmap sits in the browser's cache, so re-asking would trade a
      * fresh texture for the one it replaced.

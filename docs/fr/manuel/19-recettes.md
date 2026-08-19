@@ -147,14 +147,13 @@ Une *matière* (ou *texture*) n’est pas une image : c’est une surface qu’o
    **Émission** sont deux sections voisines, pas son contenu. Si la matière paraît uniformément
    moyenne, ce sont les **plages** — « Plage de rugosité », « Plage de métal » — qu’il faut
    reprendre ; elles sont dans la section Matière, sous les deux réglages ;
-6. panneau **Canaux** : déposez une image sur la vignette de chaque canal que vous voulez remplir —
-   et pour la **hauteur**, la **normale**, l’**occlusion** et la **rugosité**, le menu de la vignette
-   les calcule depuis un autre canal, sans rien dépenser ;
+6. section **Canaux** : déposez une image sur la ligne de chaque canal que vous voulez remplir —
+   et pour la **hauteur**, la **normale**, l’**occlusion** et la **rugosité**, le clic droit sur la
+   ligne les calcule depuis un autre canal, sans rien dépenser ;
 7. `⌘S` **enregistre**.
 
 **Le piège.** Une image déposée sur l’**aperçu** va toujours dans la couleur de base — c’est
-voulu. Pour viser les normales ou la rugosité, déposez sur **leur vignette** dans le panneau
-Canaux.
+voulu. Pour viser les normales ou la rugosité, déposez sur **leur ligne** dans la section Canaux.
 
 ---
 

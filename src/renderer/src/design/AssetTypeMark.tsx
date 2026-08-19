@@ -1,8 +1,6 @@
 import type { AssetType } from '@shared/domain/asset'
-import { cn } from '@/helpers/cn'
 import { assetIcon } from '@/helpers/workspaces'
-import { TILE_MARK } from './styles'
-import { UiIcon } from './UiIcon'
+import { TileMark } from './TileMark'
 
 export type AssetTypeMarkProps = {
   type: AssetType
@@ -22,18 +20,5 @@ export type AssetTypeMarkProps = {
  * wears the cube it wears everywhere else, or the studio has two vocabularies for one thing.
  */
 export function AssetTypeMark({ type, label }: AssetTypeMarkProps) {
-  return (
-    <span
-      className={cn(
-        'text-muted pointer-events-none absolute top-1 left-1 inline-flex items-center',
-        TILE_MARK,
-      )}
-      // The glyph carries the meaning, so it needs the words a picture cannot give.
-      title={label}
-      aria-label={label}
-      role="img"
-    >
-      <UiIcon path={assetIcon(type)} size={12} />
-    </span>
-  )
+  return <TileMark icon={assetIcon(type)} label={label} />
 }

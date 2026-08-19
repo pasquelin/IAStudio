@@ -548,7 +548,10 @@ export const useTools = create<ToolsState>()(
       // 16 takes the LENGTHS out of the per-family arrangement: the split of version 8 was about
       // what each half HOLDS, and a length holds nothing — the right column changed width on the
       // way to the home for no reason anyone had chosen. The spaces' lengths become the studio's.
-      version: 16,
+      // 17 drops `channels` and `styles`, which became sections of the inspector: the upper right
+      // of Textures declares nothing now, and a stored arrangement still naming one of them would
+      // keep it written for ever — `openEverywhereItSits` only reads what a bump makes it read.
+      version: 17,
       migrate: migrateTools,
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.

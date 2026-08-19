@@ -8,6 +8,8 @@
     "transform": "Transformation",
     "geometry": "Géométrie",
     "material": "Matière",
+    "channels": "Canaux",
+    "styles": "Styles",
     "sprite": "Sprite",
     "light": "Lumière",
     "camera": "Caméra",

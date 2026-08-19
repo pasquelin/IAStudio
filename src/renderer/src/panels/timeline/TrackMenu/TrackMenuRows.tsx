@@ -20,7 +20,7 @@ export const TRACK_MENU_ROWS = 3
 /**
  * What can be done to a track, as rows — the three edits an add button cannot carry.
  *
- * Rendered by two things, on `StyleMenuRows`' pattern: the right-click menu and the row's own
+ * Rendered by two things, on `StylesSectionMenuRows`' pattern: the right-click menu and the row's own
  * button. A right-click is not a keyboard gesture, so the button is what makes these reachable
  * without a mouse.
  */

@@ -4,7 +4,7 @@ import { MenuRow } from '@/design/MenuRow'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useStyles } from '@/stores/styles'
 
-export type StyleMenuRowsProps = {
+export type StylesSectionMenuRowsProps = {
   id: string
   onRename: () => void
   onClose: () => void
@@ -21,7 +21,7 @@ export const STYLE_MENU_ROWS = 2
  * inside it that listens, so the menu could never be opened without a mouse. Both offer the same
  * two rows rather than the button offering a subset, which would make the two disagree.
  */
-export function StyleMenuRows({ id, onRename, onClose }: StyleMenuRowsProps) {
+export function StylesSectionMenuRows({ id, onRename, onClose }: StylesSectionMenuRowsProps) {
   const { t } = useTranslation()
 
   return (

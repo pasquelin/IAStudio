@@ -3,13 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MaterialStyle } from '@shared/domain/style'
 import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/texture'
+import { newTexture } from '@/engines/texture/textureState'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { useDocuments } from '@/stores/documents'
 import { useStyles } from '@/stores/styles'
 import { installTexture } from '@/stores/texture-fixtures'
 import { useTextures } from '@/stores/textures'
-import { newTexture } from '@/engines/texture/textureState'
-import { Styles } from './Styles'
+import { StylesSection } from './StylesSection'
 
 const METAL: MaterialStyle = {
   id: 'style_1',
@@ -20,121 +19,110 @@ const METAL: MaterialStyle = {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  useDocuments.setState({ documents: {}, stored: [], activeId: null })
   useStyles.setState({ styles: [METAL], loaded: true })
   installFakeBridge({})
 })
 
-describe('the styles panel', () => {
-  it('lists what is saved', () => {
-    render(<Styles />)
+const show = (documentId = 'doc-1'): void => {
+  render(<StylesSection documentId={documentId} />)
+}
 
-    expect(screen.getByText('Style 1')).toBeInTheDocument()
+describe('the styles of a material', () => {
+  it('lists what is saved', () => {
+    show()
+
+    expect(screen.getByRole('button', { name: 'Style 1' })).toBeInTheDocument()
   })
 
   it('says so when nothing is saved, rather than showing an empty box', () => {
     useStyles.setState({ styles: [], loaded: true })
-    render(<Styles />)
+    show()
 
     expect(screen.getByText(/Aucun style enregistré/)).toBeInTheDocument()
   })
 
   /**
-   * A style cannot be picked, only applied: there is no plural action here. `Collection` reads
-   * that off the props it is given, so the roles follow — and announcing a `listbox` would
-   * promise a selection these rows can neither take nor give up.
-   */
-  it('announces a list, not a listbox', () => {
-    render(<Styles />)
-
-    expect(screen.getByRole('list', { name: 'Styles' })).toBeInTheDocument()
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
-  })
-
-  /**
    * Which style is in force is read by comparison, since applying keeps no name. The tint is the
-   * studio's one answer to "this line is the one" — the same `accent-soft` the other panels use.
+   * studio's one answer to "this line is the one" — the same `accent-soft` the other lists use.
    */
   describe('the style in force', () => {
-    const openTexture = (material = DEFAULT_TEXTURE_MATERIAL): void => {
+    const openTexture = (material = DEFAULT_TEXTURE_MATERIAL): void =>
       installTexture('doc-1', { ...newTexture(), material })
-      useDocuments.setState({ activeId: 'doc-1' })
-    }
 
     it('paints the style whose values the material carries', () => {
       openTexture(METAL.values)
-      render(<Styles />)
+      show()
 
-      expect(screen.getByText('Style 1').closest('.bg-accent-soft')).not.toBeNull()
+      expect(
+        screen.getByRole('button', { name: 'Style 1' }).closest('.bg-accent-soft'),
+      ).not.toBeNull()
     })
 
     /** Move one slider afterwards and no style is in force any more — which is the truth. */
     it('paints none once the material has drifted from it', () => {
       openTexture({ ...METAL.values, roughness: 0.42 })
-      render(<Styles />)
+      show()
 
-      expect(screen.getByText('Style 1').closest('.bg-accent-soft')).toBeNull()
+      expect(screen.getByRole('button', { name: 'Style 1' }).closest('.bg-accent-soft')).toBeNull()
     })
 
-    it('paints none when no texture is open to carry one', () => {
-      render(<Styles />)
+    /** The store answers nothing for a document whose state has not been built yet. */
+    it('paints none while the material behind the id is not there', () => {
+      show('doc-unknown')
 
-      expect(screen.getByText('Style 1').closest('.bg-accent-soft')).toBeNull()
+      expect(screen.getByRole('button', { name: 'Style 1' }).closest('.bg-accent-soft')).toBeNull()
     })
   })
 
   it('offers renaming and removing on a right click, JetBrains-style', async () => {
-    render(<Styles />)
+    show()
 
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('Style 1') })
+    await userEvent.pointer({
+      keys: '[MouseRight]',
+      target: screen.getByRole('button', { name: 'Style 1' }),
+    })
+
+    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Supprimer' })).toBeInTheDocument()
+  })
+
+  /**
+   * The right click cannot be the only way in: `contextmenu` raised by Shift+F10 targets the
+   * focused element, so a row whose only listener sits above it depends on the focus being inside
+   * it. Without a button on the row, renaming and removing were mouse-only.
+   */
+  it('offers the same two actions to the keyboard, through a button on the row', async () => {
+    show()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Actions du style' }))
 
     expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Supprimer' })).toBeInTheDocument()
   })
 
   it('arms the name field where the name is read', async () => {
-    render(<Styles />)
+    show()
 
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('Style 1') })
+    await userEvent.click(screen.getByRole('button', { name: 'Actions du style' }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
 
     expect(screen.getByRole('textbox', { name: 'Renommer' })).toHaveValue('Style 1')
   })
 
   /**
-   * The right click cannot be the only way in: `contextmenu` raised by Shift+F10 targets the
-   * focused cell, and the listener sits on a div inside it — an event never walks down into its
-   * own descendants. Without a button on the row, renaming and removing were mouse-only.
+   * An input torn out of the tree leaves the focus on `document.body`, and the next Tab restarts
+   * from the top of the window. `InlineRename` hands it back to the nearest `[tabindex]`, which is
+   * why the row carries one — the collection cell that used to be that anchor went with the panel.
    */
-  it('offers the same two actions to the keyboard, through a button on the row', async () => {
-    render(<Styles />)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Actions du style' }))
-
-    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeInTheDocument()
-    expect(screen.getByRole('menuitem', { name: 'Supprimer' })).toBeInTheDocument()
-  })
-
-  it('renames from the row button, not only from the right click', async () => {
-    render(<Styles />)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Actions du style' }))
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
-
-    expect(screen.getByRole('textbox', { name: 'Renommer' })).toHaveValue('Style 1')
-  })
-
-  // The second surface `InlineRename` serves, and the reason the fix belongs to the field rather
-  // than to one of its callers: neither of them knows where the focus should land.
   it('gives the focus back to the row when the rename ends', async () => {
-    render(<Styles />)
+    show()
 
     await userEvent.click(screen.getByRole('button', { name: 'Actions du style' }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), '{Enter}')
 
     await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument())
-    expect(screen.getByText('Style 1').closest('[role="listitem"]')).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Style 1' }).closest('li')).toHaveFocus()
   })
 
   /**
@@ -145,9 +133,9 @@ describe('the styles panel', () => {
   it('renames once when the name is committed with Enter', async () => {
     const rename = vi.fn(() => Promise.resolve([]))
     installFakeBridge({ styles: { rename } })
-    render(<Styles />)
+    show()
 
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('Style 1') })
+    await userEvent.click(screen.getByRole('button', { name: 'Actions du style' }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
     await userEvent.clear(screen.getByRole('textbox', { name: 'Renommer' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), 'Métal brossé{Enter}')
@@ -158,48 +146,29 @@ describe('the styles panel', () => {
   it('removes the one the menu was opened on', async () => {
     const remove = vi.fn(() => Promise.resolve([]))
     installFakeBridge({ styles: { remove } })
-    render(<Styles />)
+    show()
 
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('Style 1') })
+    await userEvent.pointer({
+      keys: '[MouseRight]',
+      target: screen.getByRole('button', { name: 'Style 1' }),
+    })
     await userEvent.click(screen.getByRole('menuitem', { name: 'Supprimer' }))
 
     expect(remove).toHaveBeenCalledWith('style_1')
   })
 
-  it('writes every value of the style onto the texture in front', async () => {
+  /**
+   * A single press, where the panel took a double-click: the name is a button now, and a button
+   * that needed pressing twice would be the one control of the studio that does.
+   */
+  it('writes every value of the style onto the document it was given', async () => {
     const runCommand = vi.fn()
     useTextures.setState({ runCommand })
-    useDocuments.setState({
-      activeId: 'tex-1',
-      documents: {
-        'tex-1': {
-          id: 'tex-1',
-          kind: 'texture',
-          title: 'Roche',
-          workspace: 'textures',
-          path: 'documents/Roche.mtlx',
-        },
-      },
-    })
-    render(<Styles />)
+    show('tex-1')
 
-    await userEvent.dblClick(screen.getByText('Style 1'))
+    await userEvent.click(screen.getByRole('button', { name: 'Style 1' }))
 
     expect(runCommand).toHaveBeenCalledOnce()
     expect(runCommand.mock.calls[0]?.[0]).toBe('tex-1')
-  })
-
-  /**
-   * Listing without a texture open is deliberate: a panel that emptied itself when no document
-   * was in front would read as styles that had been lost.
-   */
-  it('still lists what is saved with no texture open, and applies nothing', async () => {
-    const runCommand = vi.fn()
-    useTextures.setState({ runCommand })
-    render(<Styles />)
-
-    await userEvent.dblClick(screen.getByText('Style 1'))
-
-    expect(runCommand).not.toHaveBeenCalled()
   })
 })
