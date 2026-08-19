@@ -592,7 +592,12 @@ describe('the export menu', () => {
     expect(file.map(item => item.label)).not.toContain('Vidéo…')
     expect(
       exportsIn(menuTemplate(options({ workspace: 'video' }))).map(item => item.label),
-    ).toEqual(['Vidéo…', 'Montage (OTIO)…', 'Montage et médias (OTIOZ)…'])
+    ).toEqual([
+      'Vidéo…',
+      'Montage (OTIO)…',
+      'Montage et médias (OTIOZ)…',
+      'Liste de montage (EDL)…',
+    ])
   })
 
   /**

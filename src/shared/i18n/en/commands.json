@@ -168,6 +168,10 @@
       "title": "Export edit (OTIO)…",
       "help": "Writes the edit itself out as an OpenTimelineIO file, which other editing applications open — tracks, clips, in points, speeds and links to the media. Fades, gains and image/sound links travel in it too, but only Scenario reads them back."
     },
+    "sequenceExportEdl": {
+      "title": "Export edit list (EDL)…",
+      "help": "Writes the cuts and their timecodes as CMX3600, which every online room reads. The format holds one image track and two sound ones, and nothing of the fades, the gains or the speeds."
+    },
     "sequenceExportBundle": {
       "title": "Export edit with its media (OTIOZ)…",
       "help": "Writes the same edit with the media it uses inside the file. This is the one to hand to somebody else, or to open in DaVinci Resolve, which then finds the rushes on its own instead of asking for them one by one."

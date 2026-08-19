@@ -544,13 +544,17 @@ export type MontageExportRequest = {
   /** Suggested file name, without its extension — the target decides that. */
   name: string
   /**
-   * `montage.otio` for the cut alone, `montage.otioz` for the cut with its media inside.
+   * `montage.otio` for the cut alone, `montage.otioz` for the cut with its media inside, and
+   * `montage.edl` for the event list.
    *
-   * The two literals rather than `ExportTargetId`: this writer takes no other, and the wider type
-   * let a caller pass `scene.glb` and compile, failing at runtime as an opaque parse error.
+   * The literals rather than `ExportTargetId`: this writer takes no other, and the wider type let
+   * a caller pass `scene.glb` and compile, failing at runtime as an opaque parse error.
    */
-  target: 'montage.otio' | 'montage.otioz'
-  /** The serialized timeline. Text, never bytes: a bundle wraps it rather than writing it. */
+  target: 'montage.otio' | 'montage.otioz' | 'montage.edl'
+  /**
+   * The cut, serialized. TEXT whatever the target — an OTIO is JSON and an EDL is columns, and
+   * both are files somebody reads with their eyes. A bundle wraps this rather than writing it.
+   */
   content: string
   /**
    * What the cut points at, for a bundle only. The PATHS never cross back: this side resolves

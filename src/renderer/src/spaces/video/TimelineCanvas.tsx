@@ -4,7 +4,7 @@ import { mdiContentCut, mdiDeleteOutline, mdiLinkVariantOff } from '@mdi/js'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { posterUrl } from '@shared/domain/asset'
-import { exportOtio, exportOtioz } from '@/app/otioExport'
+import { exportEdl, exportOtio, exportOtioz } from '@/app/otioExport'
 import type { Command } from '@/engines/core/history'
 import {
   addClips,
@@ -245,6 +245,9 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
           return
         case 'sequence.exportBundle':
           void exportOtioz(documentId)
+          return
+        case 'sequence.exportEdl':
+          void exportEdl(documentId)
           return
         case 'sequence.unlink': {
           // Asked here rather than left to the command: every command run lands on the undo

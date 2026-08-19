@@ -49,7 +49,11 @@ const montageExport = z
     // since an unbounded string from the sandbox becomes an entry in a table this process keeps.
     id: z.string().min(1).max(64),
     name: pathSegment,
-    target: z.union([z.literal('montage.otio'), z.literal('montage.otioz')]),
+    target: z.union([
+      z.literal('montage.otio'),
+      z.literal('montage.otioz'),
+      z.literal('montage.edl'),
+    ]),
     // Bytes, not code units: a cut full of accented clip names encodes to up to three times its
     // length in UTF-8, so the ceiling a `.length` holds is three times the one meant here.
     content: z.string().refine(text => Buffer.byteLength(text, 'utf8') <= MAX_CONTENT_BYTES),
@@ -76,7 +80,9 @@ export function registerMontageHandlers({
     const { id, name, target, content, media }: MontageExportRequest = montageExport.parse(request)
     const { extension } = exportTargetOf(target)
 
-    if (target === 'montage.otio') {
+    // Both of the text targets take the same road: what tells them apart is what the window
+    // composed, and this side writes the bytes it was handed either way.
+    if (target !== 'montage.otioz') {
       return writePickedFile(() => pickSavePath(name, extension), new TextEncoder().encode(content))
     }
 

@@ -154,6 +154,7 @@
     "exportVideo": "Video…",
     "exportCut": "Edit (OTIO)…",
     "exportBundle": "Edit with its media (OTIOZ)…",
+    "exportEdl": "Edit list (EDL)…",
     "exportPicture": "Flattened image (PNG)…",
     "exportLayers": "Layered image (PSD)…",
     "exportScene": "Scene",

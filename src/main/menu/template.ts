@@ -293,6 +293,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         commandItem('sequence.export', t.menu.exportVideo),
         commandItem('sequence.exportCut', t.menu.exportCut),
         commandItem('sequence.exportBundle', t.menu.exportBundle),
+        commandItem('sequence.exportEdl', t.menu.exportEdl),
       ]
     }
 

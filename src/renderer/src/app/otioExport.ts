@@ -2,6 +2,7 @@ import { exportTargetOf } from '@shared/domain/exportRegistry'
 import { bundleOf } from '@shared/domain/otioz'
 import type { FolderExportRequest } from '@shared/ipc'
 import { newId } from '@/helpers/ids'
+import { assetsById, useAssets } from '@/stores/assets'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { documentExportName, useDocuments } from '@/stores/documents'
@@ -54,6 +55,33 @@ export function otioExportFiles(documentId: string): FolderExportRequest {
         bytes: new TextEncoder().encode(serializeSequencePayload(timeline)),
       },
     ],
+  }
+}
+
+/**
+ * The same cut as an event list. Written from the state rather than from the OTIO, which would be
+ * translating a translation — and the names come from the catalogue, an EDL naming its shots.
+ */
+export async function exportEdl(documentId: string): Promise<string | null> {
+  const bridge = getBridge()
+  if (!bridge) return null
+
+  try {
+    const { edlOf } = await import('@/engines/timeline/edl')
+    const byId = assetsById(useAssets.getState())
+    const name = documentExportName(useDocuments.getState(), documentId, 'edit')
+
+    return await bridge.montage.export({
+      id: newId(),
+      name,
+      target: 'montage.edl',
+      content: edlOf(sequenceOf(useSequences.getState(), documentId), name, assetId => {
+        return byId.get(assetId)?.name ?? assetId
+      }),
+    })
+  } catch (error) {
+    reportFailure('sequence.export', documentId, error)
+    return null
   }
 }
 

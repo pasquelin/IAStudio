@@ -45,6 +45,7 @@ export type ExportTargetId =
   | 'material.raw'
   | 'montage.otio'
   | 'montage.otioz'
+  | 'montage.edl'
 
 export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'picture.png',
@@ -65,6 +66,7 @@ export const EXPORT_TARGET_IDS: readonly ExportTargetId[] = [
   'material.raw',
   'montage.otio',
   'montage.otioz',
+  'montage.edl',
 ]
 
 /**
@@ -404,6 +406,44 @@ const TARGETS: Record<ExportTargetId, ExportTarget> = {
     destination: 'file',
     openedBy: [],
     capability: capabilityOf('otio'),
+  },
+  /**
+   * The oldest way out, and the one an online room still asks for: an event list of cuts and
+   * timecodes. What it carries is the FOUR times of each shot and its reel, and its losses are
+   * therefore most of what a montage holds — the format has nowhere to put any of the rest.
+   *
+   * `tracks` is dropped rather than carried: CMX3600 has one `V` channel and two `A` ones, so a
+   * montage's rows do not survive as rows. `clipFade` goes with them — a fade held by a clip is
+   * not a transition BETWEEN two shots, which is the only thing the notation can spell.
+   */
+  'montage.edl': {
+    domain: 'montage',
+    extension: '.edl',
+    door: 'import',
+    destination: 'file',
+    openedBy: ['DaVinci Resolve', 'Avid Media Composer', 'Adobe Premiere Pro'],
+    capability: {
+      domain: 'montage',
+      interchange: ['clipPlacement', 'clipTrim', 'trackOrder', 'mediaLink'],
+      extended: [],
+      dropped: [
+        'tracks',
+        'trackName',
+        'clipSpeed',
+        'trackAudible',
+        'clipFade',
+        'clipGain',
+        'clipLink',
+        'trackSwitches',
+        'trackLock',
+        'trackHeight',
+        'liveScene',
+        'exactTime',
+        'frameSize',
+        'sampleRate',
+        'editorState',
+      ],
+    },
   },
 }
 

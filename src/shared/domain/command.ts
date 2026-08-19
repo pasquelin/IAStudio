@@ -75,6 +75,7 @@ export type CommandId =
   | 'sequence.export'
   | 'sequence.exportCut'
   | 'sequence.exportBundle'
+  | 'sequence.exportEdl'
   | 'montage.import'
   | 'sequence.mirror'
   | 'sequence.split'
@@ -567,6 +568,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'sequence',
     titleKey: 'commands.sequenceExportBundle.title',
     helpKey: 'commands.sequenceExportBundle.help',
+    defaultBinding: null,
+  }),
+  // The oldest of the three, and beside them for the same reason: an event list carries the cuts
+  // and their timecodes and nothing else, which is what an online room asks for and no more.
+  command({
+    id: 'sequence.exportEdl',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExportEdl.title',
+    helpKey: 'commands.sequenceExportEdl.help',
     defaultBinding: null,
   }),
   // The program monitor alone answers it: `Monitor` arms the sequence scope on the one that
