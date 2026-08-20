@@ -89,6 +89,7 @@
       "scene.texture": "Une texture n’a pas pu être chargée",
       "scene.animation": "Une animation n’a pas pu être posée sur le personnage",
       "scene.export": "L’export de la scène a échoué",
+      "scene.capture": "La vue 3D n’a pas pu être capturée",
       "texture.map": "Un canal de texture n’a pas pu être chargé",
       "texture.channel": "Une image n’a pas pu entrer dans un canal",
       "texture.seam": "Les coutures n’ont pas pu être mesurées",

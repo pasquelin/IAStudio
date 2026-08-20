@@ -1,6 +1,7 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { commandDescriptor, scopeOfWorkspace } from '@shared/domain/command'
 import { MODEL_FAMILIES } from '@shared/domain/model'
+import { SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { showWorkspace } from '@/app/dockviewApi'
 import { createDocumentIn } from '@/app/newDocument'
@@ -88,9 +89,18 @@ async function openWorkspace(input: Record<string, unknown>): Promise<ActionOutc
 
   const title = textOf(input, 'title')
   const folder = textOf(input, 'folder')
+  // Only alongside a title, and for the same reason the folder is: with no title the naming
+  // window opens, and what it puts on screen is the person's own choice to make.
+  const template = oneOf(input, 'template', SCENE_TEMPLATE_IDS)
   const created = await createDocumentIn(
     workspace,
-    title === null ? undefined : { title, ...(folder === null ? {} : { folder }) },
+    title === null
+      ? undefined
+      : {
+          title,
+          ...(folder === null ? {} : { folder }),
+          ...(template === null ? {} : { template }),
+        },
   )
   return created ? { ok: true, data: { documentId: created.id } } : refused('declined')
 }

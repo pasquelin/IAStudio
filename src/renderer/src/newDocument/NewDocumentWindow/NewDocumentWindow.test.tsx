@@ -49,7 +49,7 @@ describe('NewDocumentWindow', () => {
     expect(screen.getByText('.gltf')).toBeInTheDocument()
   })
 
-  it('answers with the name and the folder', async () => {
+  it('answers with the name, the folder and the template a scene opens on', async () => {
     open(ASK)
     render(<NewDocumentWindow />)
 
@@ -57,7 +57,48 @@ describe('NewDocumentWindow', () => {
     await userEvent.clear(field)
     await userEvent.type(field, 'Niveau{Enter}')
 
-    expect(answer).toHaveBeenCalledWith({ title: 'Niveau', folder: 'documents' })
+    expect(answer).toHaveBeenCalledWith({
+      title: 'Niveau',
+      folder: 'documents',
+      template: 'basic',
+    })
+  })
+
+  it('answers the template that was picked, not the one it opened on', async () => {
+    open(ASK)
+    render(<NewDocumentWindow />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cinéma' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Créer' }))
+
+    expect(answer).toHaveBeenCalledWith({
+      title: 'Scène 1',
+      folder: 'documents',
+      template: 'cinematic',
+    })
+  })
+
+  // The other five kinds have one thing to be, and a choice nobody was offered must not travel.
+  it('offers no template for a kind that has none, and answers without one', async () => {
+    open({ ...ASK, kind: 'image', suggested: 'Image 1' })
+    render(<NewDocumentWindow />)
+
+    await screen.findByRole('textbox')
+    expect(screen.queryByRole('button', { name: 'Base' })).toBeNull()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Créer' }))
+    expect(answer).toHaveBeenCalledWith({ title: 'Image 1', folder: 'documents' })
+  })
+
+  it('marks the chosen template, and only that one', async () => {
+    open(ASK)
+    render(<NewDocumentWindow />)
+
+    expect(await screen.findByRole('button', { name: 'Base' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Vide' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   // Closing the window says the same thing, and the main process answers `null` for both.

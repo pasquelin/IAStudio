@@ -132,6 +132,10 @@
       "title": "Display mode",
       "help": "Cycles what the viewport draws: the surfaces, their edges alone, or both together. The button’s menu picks one directly."
     },
+    "sceneCapture": {
+      "title": "Capture the view",
+      "help": "Saves a picture of the 3D view into the project's images — without the grid, the handles or the rails. The menu offers definitions larger than the panel's own."
+    },
     "sceneAdd": {
       "title": "Add",
       "help": "Opens the list of what a scene can take: meshes, lights and objects. A right-click on empty space opens the same list."

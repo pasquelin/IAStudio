@@ -654,6 +654,7 @@
       "filePath": "Chemin dans le projet, avec / entre les segments",
       "filePaths": "Chemins dans le projet, avec / entre les segments",
       "folderPath": "Chemin du dossier",
+      "template": "Modèle de départ de la scène",
       "hidden": "Inclure les entrées masquées",
       "jobId": "Identifiant de la tâche",
       "timeoutMs": "Attente maximale, en millisecondes",

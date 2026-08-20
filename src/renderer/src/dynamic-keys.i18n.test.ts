@@ -22,6 +22,7 @@ import { FOLDER_SORTS } from '@/helpers/folderSort'
 import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
 import { DOCUMENT_NAME_REFUSALS } from '@/newDocument/documentName'
 import { DOCUMENT_KINDS } from '@shared/domain/document'
+import { SCENE_TEMPLATE_GROUPS, SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { FILE_KINDS } from '@shared/domain/folder'
 import { FILE_INFO_SECTIONS } from '@/fileInfo/sections'
 
@@ -108,6 +109,13 @@ const COMPOSED_KEYS: readonly string[] = [
   ...DOCUMENT_KINDS.map(kind => `documents.kinds.${kind}`),
   // The heading of the field that names it, one per kind for the article French puts in front.
   ...DOCUMENT_KINDS.map(kind => `documents.newByKind.${kind}`),
+  // What a new scene may open on: the tile's name, and the sentence that says what it holds. A
+  // template with neither would read as its own id inside the window that offers it.
+  ...SCENE_TEMPLATE_IDS.flatMap(id => [
+    `documents.templates.${id}`,
+    `documents.templateHints.${id}`,
+  ]),
+  ...SCENE_TEMPLATE_GROUPS.map(group => `documents.templateGroups.${group}`),
 ]
 
 describe('the keys the renderer composes', () => {

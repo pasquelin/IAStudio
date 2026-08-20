@@ -4,6 +4,7 @@ import { EXTENSIONS_BY_KIND } from '@shared/domain/document'
 import { checkDocumentName } from '@shared/domain/documentName'
 import { FOLDER_ROOT } from '@shared/domain/folder'
 import type { NamedDocumentPlace, NewDocumentAsk } from '@shared/domain/newDocument'
+import { DEFAULT_SCENE_TEMPLATE, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { Button } from '@/design/Button'
 import { FolderPicker } from '@/design/FolderPicker/FolderPicker'
 import { WindowShell } from '@/design/WindowShell'
@@ -14,6 +15,7 @@ import { getBridge } from '@/services/bridge'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { takenDocumentNames, useDocuments } from '@/stores/documents'
 import { DOCUMENT_NAME_REFUSALS } from '../documentName'
+import { NewDocumentTemplates } from './NewDocumentTemplates'
 
 /**
  * What a document is called and where it goes, asked in a WINDOW before it is made.
@@ -36,6 +38,7 @@ export function NewDocumentWindow() {
   const [ask, setAsk] = useState<NewDocumentAsk | null>(null)
   const [draft, setDraft] = useState('')
   const [folder, setFolder] = useState(FOLDER_ROOT)
+  const [template, setTemplate] = useState<SceneTemplateId>(DEFAULT_SCENE_TEMPLATE)
   const stored = useDocuments(state => state.stored)
   const field = useRef<HTMLInputElement>(null)
   const nameId = useId()
@@ -102,7 +105,14 @@ export function NewDocumentWindow() {
         onKeyDown={onKeyDown}
         onSubmit={event => {
           event.preventDefault()
-          if (!refusal) settle({ title: draft.trim(), folder })
+          // The template travels for a scene and for nothing else: a kind that drew no section
+          // would be answering with a choice nobody was offered.
+          if (!refusal)
+            settle({
+              title: draft.trim(),
+              folder,
+              ...(ask.kind === 'scene' ? { template } : {}),
+            })
         }}
       >
         {/* Labelled where it shows, not by an `aria-label`: two bare fields under one heading
@@ -132,6 +142,15 @@ export function NewDocumentWindow() {
           <p id={refusalId} role="alert" className="text-warning m-0 text-xs">
             {t(DOCUMENT_NAME_REFUSALS[refusal])}
           </p>
+        )}
+
+        {/* Under the name and above the folder, which is the order the questions come in: what it
+            is called, what it holds, where it goes. */}
+        {ask.kind === 'scene' && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-muted text-xs">{t('documents.templateField')}</span>
+            <NewDocumentTemplates value={template} onChange={setTemplate} />
+          </div>
         )}
 
         <div className="flex min-h-0 flex-1 flex-col gap-1.5">

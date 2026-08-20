@@ -48,3 +48,16 @@ export function bundledVad(root: string): string {
 export function bundledAnimations(root: string): string {
   return join(root, 'animations')
 }
+
+/**
+ * The working textures the app ships with — a grid and a checker, written by
+ * `scripts/make-checker-textures.mjs`. Copied into a project the first time a scene wants one.
+ */
+export function bundledTextures(root: string): string {
+  return join(root, 'textures')
+}
+
+/** The still drawn of each scene template — one PNG named after the template it shows. */
+export function bundledTemplates(root: string): string {
+  return join(root, 'templates')
+}

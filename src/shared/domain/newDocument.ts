@@ -1,4 +1,5 @@
 import type { DocumentDescriptor, DocumentKind } from './document'
+import type { SceneTemplateId } from './sceneTemplate'
 
 /** URL fragment that tells the shared bundle it is rendering the new-document window. */
 export const NEW_DOCUMENT_ROUTE = 'new-document'
@@ -23,5 +24,16 @@ export type NewDocumentAsk = {
   open: readonly DocumentDescriptor[]
 }
 
-/** What a named document is to be: where it goes and what it is called. */
-export type NamedDocumentPlace = { title: string; folder: string }
+/**
+ * What a named document is to be: where it goes, what it is called, and — for a scene alone —
+ * what it opens on.
+ *
+ * `template` is absent for every other kind rather than defaulted here: only the scene window
+ * draws that section, and a value travelling from a kind that never showed one would be a
+ * choice nobody made.
+ */
+export type NamedDocumentPlace = {
+  title: string
+  folder: string
+  template?: SceneTemplateId
+}

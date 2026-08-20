@@ -32,6 +32,7 @@ import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/textureExport'
 import { FACE_SIZES, SKY_PANORAMAS } from '@shared/domain/skybox'
 import type {
   SceneAddRequest,
+  SceneCaptureCommand,
   SceneDisplayRequest,
   SceneExportCommand,
   SceneViewRequest,
@@ -39,6 +40,11 @@ import type {
   TextureExportCommand,
   ToolRequest,
 } from '@shared/ipc'
+import {
+  CAPTURE_QUALITIES,
+  DEFAULT_CAPTURE_QUALITY,
+  type CaptureQuality,
+} from '@shared/domain/sceneCapture'
 
 /**
  * What the menu asks of the window it belongs to. One method per message rather than a
@@ -57,6 +63,7 @@ export type MenuActions = {
   viewFrom: (request: SceneViewRequest) => void
   setDisplay: (request: SceneDisplayRequest) => void
   exportScene: (command: SceneExportCommand) => void
+  captureScene: (command: SceneCaptureCommand) => void
   exportTexture: (command: TextureExportCommand) => void
   exportSkybox: (command: SkyboxExportCommand) => void
 }
@@ -500,12 +507,29 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * All seven rows were reachable by pointer through that bar alone. They are settings one
    * changes once a session, not gestures repeated by the minute, which is what a menu is for.
    */
+  /**
+   * A still of the view, at the definition each row names. Under the view rows rather than
+   * beside the exports: what this writes is a picture OF the scene, not the scene itself.
+   */
+  const captureItems = (): MenuItemConstructorOptions[] =>
+    CAPTURE_QUALITIES.map((quality: CaptureQuality) =>
+      // The first row IS the command — same picture, same size — so it carries its id and can
+      // be remapped to a key. The others name a definition the command cannot say.
+      quality === DEFAULT_CAPTURE_QUALITY
+        ? commandItem('scene.capture', t.sceneCaptureQualities[quality])
+        : {
+            label: t.sceneCaptureQualities[quality],
+            click: () => actions.captureScene({ quality }),
+          },
+    )
+
   const sceneViewMenu: MenuItemConstructorOptions[] =
     workspace === '3d'
       ? [
           { type: 'separator' },
           { label: t.menu.sceneDisplay, submenu: displayItems() },
           { label: t.menu.sceneView, submenu: viewItems() },
+          { label: t.menu.sceneCapture, submenu: captureItems() },
           { type: 'separator' },
           toggleItem('scene.projection', t.commands.sceneProjection.title),
           toggleItem('scene.quad', t.commands.sceneQuad.title),

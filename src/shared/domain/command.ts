@@ -69,6 +69,7 @@ export type CommandId =
   | 'scene.quad'
   | 'scene.quadEdges'
   | 'scene.display'
+  | 'scene.capture'
   | 'scene.skeletons'
   | 'scene.poseMode'
   | 'scene.delete'
@@ -485,6 +486,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneDisplay.title',
     helpKey: 'commands.sceneDisplay.help',
     defaultBinding: 'KeyZ',
+  }),
+  // No key of its own: the menu rows carry the definitions, and this is the one a remapping
+  // offers — at the view's own size, which is what a still of what one is looking at is.
+  command({
+    id: 'scene.capture',
+    scope: 'scene',
+    titleKey: 'commands.sceneCapture.title',
+    helpKey: 'commands.sceneCapture.help',
+    defaultBinding: null,
   }),
   // `KeyB` as in bones. Nothing in the scene scope claims it, and the fly keys are all on the
   // left hand — see the note above `scene.snap`.

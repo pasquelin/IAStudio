@@ -5,6 +5,8 @@ import {
 } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { parentOf } from '@shared/domain/folder'
+import { DEFAULT_SCENE_TEMPLATE, type SceneTemplateId } from '@shared/domain/sceneTemplate'
+import { seedSceneTemplate } from '@/stores/scenes'
 import { takenDocumentNames, untitledDocumentName, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
@@ -49,14 +51,20 @@ async function startingFolder(): Promise<string> {
  */
 export function createDocumentIn(
   workspace: WorkspaceId,
-  called?: { title: string; folder?: string },
+  called?: NamedCreation,
 ): Promise<DocumentDescriptor | null> {
   return named(workspace, called).catch(() => null)
 }
 
+/**
+ * What a caller who has nobody to ask already knows. `template` is read for a scene and ignored
+ * everywhere else — the assistant names one, and a caller that says nothing takes the default.
+ */
+type NamedCreation = { title: string; folder?: string; template?: SceneTemplateId }
+
 async function named(
   workspace: WorkspaceId,
-  called?: { title: string; folder?: string },
+  called?: NamedCreation,
 ): Promise<DocumentDescriptor | null> {
   const kind = kindForWorkspace(workspace)
   if (kind === null || !useProject.getState().project) return null
@@ -64,7 +72,7 @@ async function named(
   // Already named: no window is opened at all. There is nothing left to ask, and asking would
   // hold a caller outside the window on a question only the person in front of it can answer.
   const namer = called ? null : getBridge()?.newDocument
-  let of: { title: string; folder?: string } | undefined = called
+  let of: NamedCreation | undefined = called
 
   if (namer) {
     // The folders first: what they hold is what the suggested name has to step over.
@@ -90,6 +98,14 @@ async function named(
   }
 
   const created = await useDocuments.getState().create(workspace, of)
-  if (created) openDocument(created)
+  if (!created) return null
+
+  // Before the tab opens, and that order is the whole mechanism: `restoreDocument` puts the
+  // studio default in a document that holds nothing, and holding the template's scene already is
+  // what stops it.
+  if (created.kind === 'scene')
+    seedSceneTemplate(created.id, of?.template ?? DEFAULT_SCENE_TEMPLATE)
+
+  openDocument(created)
   return created
 }

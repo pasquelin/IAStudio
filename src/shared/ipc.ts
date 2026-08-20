@@ -55,6 +55,8 @@ import type {
   ObjectKind,
   ViewDirection,
 } from './domain/scene'
+import type { CaptureQuality } from './domain/sceneCapture'
+import type { InstalledCheckerTexture } from './domain/checkerTexture'
 import type { ExportTargetId } from './domain/exportRegistry'
 import type { TaskProgress } from './domain/taskProgress'
 import type { TextureExportTarget } from './domain/textureExport'
@@ -190,6 +192,7 @@ export type Channels = {
   assetsSaveLayered: 'assets:save-layered'
   assetsReadLayered: 'assets:read-layered'
   assetsSaveTexture: 'assets:save-texture'
+  texturesInstallBundled: 'textures:install-bundled'
   assetsExtractTextures: 'assets:extract-textures'
   assetsUpdate: 'assets:update'
   assetsRemove: 'assets:remove'
@@ -378,6 +381,7 @@ export const CHANNELS: Channels = {
   assetsSaveLayered: 'assets:save-layered',
   assetsReadLayered: 'assets:read-layered',
   assetsSaveTexture: 'assets:save-texture',
+  texturesInstallBundled: 'textures:install-bundled',
   assetsExtractTextures: 'assets:extract-textures',
   assetsUpdate: 'assets:update',
   assetsRemove: 'assets:remove',
@@ -640,6 +644,8 @@ export type LogScope =
   | 'scene.animation'
   | 'scene.export'
   | 'scene.render'
+  /** A still of the view, on its way into the project's pictures. */
+  | 'scene.capture'
   | 'sequence.export'
   /** Reading a montage back from a bundle another application wrote. */
   | 'sequence.import'
@@ -718,6 +724,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'scene.animation',
   'scene.export',
   'scene.render',
+  'scene.capture',
   'sequence.export',
   'sequence.import',
   'document.export',
@@ -830,6 +837,7 @@ export const EVENTS = {
   sceneView: 'evt:scene-view',
   sceneDisplay: 'evt:scene-display',
   sceneExport: 'evt:scene-export',
+  sceneCapture: 'evt:scene-capture',
   textureExport: 'evt:texture-export',
   skyboxExport: 'evt:skybox-export',
   taskProgress: 'evt:task-progress',
@@ -857,6 +865,12 @@ export type SceneDisplayRequest = { mode: DisplayMode }
 
 /** What the native menu asks of the scene in front: a format, and how much of the scene. */
 export type SceneExportCommand = { format: ExportFormat; scope: 'scene' | 'selection' }
+
+/**
+ * A still of the view in front, at the definition the menu row names. The picture lands in the
+ * project as an ordinary asset — nothing here says where, because the window answers that.
+ */
+export type SceneCaptureCommand = { quality: CaptureQuality }
 
 /**
  * An action asked for from OUTSIDE the window — today, by an MCP client on the other side of
@@ -1351,6 +1365,15 @@ export type StudioBridge = {
      */
     saveTexture: (request: SaveTextureRequest) => Promise<Asset>
     /**
+     * Puts the working textures the app ships with into the open project, and answers what they
+     * became. Idempotent: a project that already holds them keeps the assets it has, ids
+     * included, so a document referencing one goes on resolving.
+     *
+     * Copied into the project rather than served from beside the app, because a scene is written
+     * as glTF: what a document points at has to be a file another application can open.
+     */
+    installBundledTextures: () => Promise<InstalledCheckerTexture[]>
+    /**
      * Takes the pictures a `.glb` carries inside itself out into the project, one texture asset
      * each — which is what makes a downloaded model's own maps something the studio can open,
      * paint on, and hand back to a material.
@@ -1700,6 +1723,7 @@ export type StudioBridge = {
     onSceneView: (callback: (request: SceneViewRequest) => void) => Unsubscribe
     onSceneDisplay: (callback: (request: SceneDisplayRequest) => void) => Unsubscribe
     onSceneExport: (callback: (command: SceneExportCommand) => void) => Unsubscribe
+    onSceneCapture: (callback: (command: SceneCaptureCommand) => void) => Unsubscribe
     onTextureExport: (callback: (command: TextureExportCommand) => void) => Unsubscribe
     onSkyboxExport: (callback: (command: SkyboxExportCommand) => void) => Unsubscribe
   }

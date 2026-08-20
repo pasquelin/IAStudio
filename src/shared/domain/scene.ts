@@ -449,6 +449,46 @@ export const DEFAULT_GROUND: GroundDescriptor = Object.freeze({
 })
 
 /**
+ * How a scene is WALKED rather than watched — what the window that plays a set will fly, and
+ * what a template settles for it.
+ *
+ * Nothing reads it today, and that is deliberate (decision of 20/08): these are document values,
+ * so a template that means « first person, feet on the ground » has to be able to say so before
+ * the player exists. Added later, every scene written until then would open on a default nobody
+ * chose, and a template's intent would be lost.
+ */
+export type PlayCamera = 'orbit' | 'firstPerson' | 'thirdPerson' | 'topDown'
+
+export const PLAY_CAMERAS: readonly PlayCamera[] = [
+  'orbit',
+  'firstPerson',
+  'thirdPerson',
+  'topDown',
+]
+
+export type ScenePlay = {
+  camera: PlayCamera
+  /** Metres above the floor: the eye in first person, the pivot the camera holds in the others. */
+  eyeHeight: number
+  /** Metres per second, on the flat. */
+  moveSpeed: number
+  /** Metres per second squared, downward. Zero flies — which is what `orbit` means here. */
+  gravity: number
+}
+
+export const DEFAULT_PLAY: ScenePlay = Object.freeze({
+  camera: 'orbit',
+  eyeHeight: 1.7,
+  moveSpeed: 4,
+  gravity: 0,
+})
+
+/** Bounds a stored value is held to, so a hand-edited file cannot fly a set at Mach 3. */
+export const EYE_HEIGHT = Object.freeze({ min: 0.1, max: 10, step: 0.05 })
+export const MOVE_SPEED = Object.freeze({ min: 0.1, max: 50, step: 0.1 })
+export const GRAVITY = Object.freeze({ min: 0, max: 50, step: 0.01 })
+
+/**
  * What lights a scene and what hangs behind it — the half of a document that belongs to no node.
  *
  * Every default below is what the studio already did before this type existed, so opening a
@@ -466,6 +506,7 @@ export type SceneWorld = {
   /** `renderer.toneMappingExposure`. Read even when the mapping is `none`, as three.js does. */
   exposure: number
   ground: GroundDescriptor
+  play: ScenePlay
 }
 
 export const DEFAULT_WORLD: SceneWorld = Object.freeze({
@@ -479,6 +520,7 @@ export const DEFAULT_WORLD: SceneWorld = Object.freeze({
   toneMapping: 'none',
   exposure: 1,
   ground: DEFAULT_GROUND,
+  play: DEFAULT_PLAY,
 })
 
 /** Bounds a slider and a stored value are both held to. */
