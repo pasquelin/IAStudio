@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { BACKGROUND_BLUR, BACKGROUND_KINDS, type SceneWorld } from '@shared/domain/scene'
 import { ColorField } from '@/design/ColorField'
 import { PropertySection } from '@/design/PropertySection'
-import { QuietNote } from '@/design/QuietNote'
 import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
 import type { GestureProps } from '@/design/styles'
@@ -51,22 +50,19 @@ export function EnvironmentBackgroundSection({
         />
       )}
 
-      {/* Under the studio there is no picture to soften — only light — so the row says why
-          nothing hangs there rather than offering a slider that moves nothing. */}
-      {background.kind === 'environment' &&
-        (world.environment.kind === 'skybox' ? (
-          <SliderField
-            label={t('environment.backgroundBlur')}
-            value={background.blur}
-            min={BACKGROUND_BLUR.min}
-            max={BACKGROUND_BLUR.max}
-            step={BACKGROUND_BLUR.step}
-            onChange={blur => onChange({ background: { kind: 'environment', blur } })}
-            {...gesture}
-          />
-        ) : (
-          <QuietNote>{t('environment.backgroundNoSkyHint')}</QuietNote>
-        ))}
+      {/* Under the studio there is no picture to soften — only light — so the row is not drawn
+          rather than moving nothing. The sentence that said so read as an error and was not one. */}
+      {background.kind === 'environment' && world.environment.kind === 'skybox' && (
+        <SliderField
+          label={t('environment.backgroundBlur')}
+          value={background.blur}
+          min={BACKGROUND_BLUR.min}
+          max={BACKGROUND_BLUR.max}
+          step={BACKGROUND_BLUR.step}
+          onChange={blur => onChange({ background: { kind: 'environment', blur } })}
+          {...gesture}
+        />
+      )}
     </PropertySection>
   )
 }

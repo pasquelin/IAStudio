@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { DEFAULT_WORLD } from '@shared/domain/scene'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -115,11 +116,18 @@ describe('environment panel', () => {
 
     // Softening a backdrop that is the procedural studio would soften nothing: there is no
     // picture to blur, only light.
-    it('offers the backdrop softening only under a sky', () => {
+    it('offers the backdrop softening under a sky, and not under the studio', () => {
+      render(<Content />)
+      expect(screen.queryByTitle('Flou du fond')).not.toBeInTheDocument()
+
+      cleanup()
+      installScene('doc-1', {
+        ...installTwo(),
+        world: { ...DEFAULT_WORLD, environment: { kind: 'skybox', assetId: 'sky-1' } },
+      })
       render(<Content />)
 
-      expect(screen.queryByTitle('Flou du fond')).not.toBeInTheDocument()
-      expect(screen.getByText(/le fond retombe/i)).toBeInTheDocument()
+      expect(screen.getByTitle('Flou du fond')).toBeInTheDocument()
     })
 
     it('offers the snap steps only while snapping is on', async () => {
