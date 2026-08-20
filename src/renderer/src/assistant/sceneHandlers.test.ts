@@ -500,6 +500,41 @@ describe('the world of the scene', () => {
     expect(scene().world.fog).toEqual({ kind: 'none' })
   })
 
+  /**
+   * The switch the panel uses answers with the DEFAULTS of the shape it opens, so re-asserting
+   * the shape in hand to change one value took the other two back to 10 and 60 in silence.
+   */
+  it('keeps the distances when only the colour of the same haze is named', async () => {
+    await runAction('world.fog', { kind: 'linear', near: 5, far: 90 })
+    await runAction('world.fog', { kind: 'linear', color: '#ff0000' })
+
+    expect(scene().world.fog).toEqual({ kind: 'linear', color: '#ff0000', near: 5, far: 90 })
+  })
+
+  it('keeps the softening of a backdrop re-asserted as itself', async () => {
+    await runAction('world.background', { kind: 'environment', blur: 0.5 })
+    await runAction('world.background', { kind: 'environment' })
+
+    expect(scene().world.background).toEqual({ kind: 'environment', blur: 0.5 })
+  })
+
+  /** A key a client believes took must never get a silent yes — the rule of `validatesInput`. */
+  it('refuses a value that belongs to another shape, rather than dropping it', async () => {
+    expect(await runAction('world.fog', { kind: 'exp2', near: 5 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(await runAction('world.background', { kind: 'transparent', color: '#000000' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    // Both readings of this call contradict each other: putting the sky out, and naming one.
+    expect(await runAction('world.environment', { kind: 'studio', assetId: 'sky-1' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
   /** The trap of an optional boolean: read as `false`, a call about the size would hide the floor. */
   it('leaves the ground showing when only its size is named', async () => {
     await runAction('world.ground', { visible: true })

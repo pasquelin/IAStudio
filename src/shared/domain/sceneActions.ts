@@ -487,7 +487,9 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
       {
         key: 'exposure',
         kind: 'number',
-        labelKey: 'assistant.fields.exposure',
+        // Its own label: this one multiplies what three.js maps down, where `exposure` elsewhere
+        // is a count of stops on a grading dial. One sentence for two quantities said neither.
+        labelKey: 'assistant.fields.toneExposure',
         required: false,
         min: EXPOSURE.min,
         max: EXPOSURE.max,

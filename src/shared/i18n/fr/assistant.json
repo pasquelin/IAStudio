@@ -251,7 +251,7 @@
       },
       "layerText": {
         "title": "Régler les mots d’un calque de texte",
-        "description": "Change ce que dit un calque de texte, la taille à laquelle il le dit, ou sa couleur. Refuse un calque qui porte des pixels plutôt que des mots, que la commande laisserait sinon intact."
+        "description": "Change ce que dit un calque de texte, la police et la taille dans lesquelles il le dit, sa couleur, son alignement et son cadre. Refuse un calque qui porte des pixels plutôt que des mots, que la commande laisserait sinon intact."
       },
       "layerMove": {
         "title": "Réordonner un calque",
@@ -487,7 +487,7 @@
       },
       "fontsList": {
         "title": "Lister les polices installées",
-        "description": "Rend les familles de police que la machine a, une graisse par famille. C’est ce dans quoi un calque de texte peut être écrit."
+        "description": "Rend les polices dans lesquelles un texte peut être écrit, celles livrées avec le studio d’abord, puis celles installées sur la machine. Chacune vient avec sa provenance, que poser une police réclame autant que son nom."
       },
       "favoritesList": {
         "title": "Lister les recettes épinglées",
@@ -539,7 +539,7 @@
       },
       "sceneState": {
         "title": "Lire la scène en cours d’édition",
-        "description": "Rend tous les objets du document 3D devant — identifiant, nom, type, parent, visibilité et transformation, avec la géométrie, la matière ou la lumière qu’ils portent — plus ce qui est sélectionné et ce qui éclaire la scène."
+        "description": "Rend tous les objets du document 3D devant — identifiant, nom, type, parent, visibilité et transformation, avec la géométrie, la matière ou la lumière qu’ils portent — plus ce qui est sélectionné, les plans de caméra, et le décor entier de la scène."
       },
       "nodeAdd": {
         "title": "Ajouter un objet à la scène",
@@ -663,7 +663,7 @@
       },
       "layerLock": {
         "title": "Verrouiller un calque",
-        "description": "Pose ou retire les trois verrous d’un calque, celui de ses pixels, celui de sa place et celui de sa transparence. Un verrou posé fait refuser les modifications correspondantes, y compris celles demandées depuis l’extérieur."
+        "description": "Pose ou retire les trois verrous d’un calque, celui de ses pixels, celui de sa place et celui de sa transparence. Ils arrêtent la main sur le canevas. Une valeur écrite par une autre action passe outre, comme elle le fait depuis les panneaux."
       },
       "layerShape": {
         "title": "Repeindre une forme",
@@ -980,7 +980,8 @@
       "fogDensity": "Densité de la brume exponentielle",
       "groundSize": "Côté du sol, en unités de scène",
       "receiveShadow": "Le sol reçoit les ombres",
-      "toneMapping": "Façon de ramener la plage dynamique sur l’écran"
+      "toneMapping": "Façon de ramener la plage dynamique sur l’écran",
+      "toneExposure": "Multiplicateur d’exposition du rendu, 1 laissant tel quel"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

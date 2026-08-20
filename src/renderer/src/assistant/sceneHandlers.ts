@@ -239,8 +239,9 @@ function worldEnvironment(input: Record<string, unknown>): ActionOutcome {
   const kind = oneOf(input, 'kind', ENVIRONMENT_KINDS)
   const assetId = textOf(input, 'assetId')
   // The panel answers `skybox` by taking the first sky of the project, which from outside would
-  // be a reference nobody picked.
+  // be a reference nobody picked. `studio` beside a sky is the opposite of both readings of it.
   if (kind === 'skybox' && assetId === null) return refused('badInput')
+  if (kind === 'studio' && assetId !== null) return refused('badInput')
 
   const intensity = numberOf(input, 'intensity')
   const rotation = numberOf(input, 'rotation')
@@ -259,11 +260,17 @@ function worldEnvironment(input: Record<string, unknown>): ActionOutcome {
 function worldBackground(input: Record<string, unknown>): ActionOutcome {
   const kind = oneOf(input, 'kind', BACKGROUND_KINDS)
   if (!kind) return refused('badInput')
+  // `blur` belongs to one shape only, and a key a client believes took must never get a silent
+  // yes — the very rule `validatesInput` is written for, one level down.
+  if (kind !== 'environment' && input.blur !== undefined) return refused('badInput')
+  if (kind !== 'color' && input.color !== undefined) return refused('badInput')
 
   return editWorld(world => {
-    // Through the switch the panel uses, so a form that gains a shape gains it here too — then
-    // the two values this call may carry are written over what that switch settled for.
-    const background = backgroundOfKind(kind, world.background)
+    // The switch the panel uses, and ONLY when the shape changes: it answers with the defaults of
+    // the shape it opens, so re-asserting the shape in hand would take the blur back to zero.
+    const background =
+      world.background.kind === kind ? world.background : backgroundOfKind(kind, world.background)
+
     if (background.kind === 'color') {
       return { background: { ...background, color: readColor(input, 'color', background.color) } }
     }
@@ -277,9 +284,15 @@ function worldBackground(input: Record<string, unknown>): ActionOutcome {
 function worldFog(input: Record<string, unknown>): ActionOutcome {
   const kind = oneOf(input, 'kind', FOG_KINDS)
   if (!kind) return refused('badInput')
+  const named = ['color', 'near', 'far', 'density'].filter(key => input[key] !== undefined)
+  const belongs =
+    kind === 'linear' ? ['color', 'near', 'far'] : kind === 'exp2' ? ['color', 'density'] : []
+  if (named.some(key => !belongs.includes(key))) return refused('badInput')
 
   return editWorld(world => {
-    const fog = fogOfKind(kind, world.fog)
+    // Switched only when the shape changes, for the reason `worldBackground` gives: `fogOfKind`
+    // answers with the defaults of the shape it opens, distances included.
+    const fog = world.fog.kind === kind ? world.fog : fogOfKind(kind, world.fog)
     if (fog.kind === 'none') return { fog }
 
     const painted = { ...fog, color: readColor(input, 'color', fog.color) }

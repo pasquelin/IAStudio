@@ -561,6 +561,7 @@ export function Explorer() {
           answer about the whole project, and three greyed buttons over either say the panel has
           lost its way. */}
       <CollectionBar
+        scId="explorer"
         state={collection}
         onChange={setCollection}
         sorts={sorts}

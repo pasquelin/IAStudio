@@ -169,7 +169,7 @@ function drawnShape(input: Record<string, unknown>): { at: Point; drawn: DrawnSh
   const height = numberOf(input, 'height')
   if (!shape || width === null || height === null || width <= 0 || height <= 0) return null
 
-  const ink = numberOf(input, 'fill') ?? SHAPE_INK
+  const ink = packedColour(textOf(input, 'fill') ?? '') ?? SHAPE_INK
   const open = isOpenShape(shape)
   const sides = numberOf(input, 'sides') ?? DEFAULT_SHAPE_SIDES
   // A ring is drawn from its CENTRE outwards, so the box's middle is where its drag began, and
@@ -270,14 +270,15 @@ function transform(input: Record<string, unknown>): ActionOutcome {
   ])
 }
 
-// Deduced when the source is not named, and a shipped face wins: a machine may have one of the
-// same name installed, and only the shipped one travels to the next machine.
-function fontRefOf(input: Record<string, unknown>, family: string): FontRef {
-  return {
-    source:
-      oneOf(input, 'fontSource', FONT_SOURCES) ?? (embeddedFontOf(family) ? 'embedded' : 'system'),
-    family,
-  }
+/**
+ * The face, or nothing when `embedded` is claimed for a family the studio does not ship — the one
+ * promise `source` carries is that the document opens the same elsewhere, and that one would not.
+ */
+function fontRefOf(input: Record<string, unknown>, family: string): FontRef | null {
+  const shipped = embeddedFontOf(family) !== null
+  const source = oneOf(input, 'fontSource', FONT_SOURCES) ?? (shipped ? 'embedded' : 'system')
+
+  return source === 'embedded' && !shipped ? null : { source, family }
 }
 
 function text(input: Record<string, unknown>): ActionOutcome {
@@ -290,6 +291,10 @@ function text(input: Record<string, unknown>): ActionOutcome {
   const width = numberOf(input, 'width')
   const height = numberOf(input, 'height')
   const family = textOf(input, 'fontFamily')
+  const font = family === null ? null : fontRefOf(input, family)
+  // An `embedded` face the studio does not ship: refused rather than written as a reference that
+  // will not resolve on the next machine.
+  if (family !== null && font === null) return refused('badInput')
 
   return editLayer(input, layer =>
     // The command only touches a text layer, so a pixel layer named here would be reported as
@@ -298,7 +303,7 @@ function text(input: Record<string, unknown>): ActionOutcome {
       ? [
           setLayerText(layer.id, {
             ...(written === null ? {} : { text: written }),
-            ...(family === null ? {} : { font: fontRefOf(input, family) }),
+            ...(font === null ? {} : { font }),
             ...(size === null ? {} : { size }),
             ...(colour === null ? {} : { color: colour }),
             ...(align === null ? {} : { align }),

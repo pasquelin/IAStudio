@@ -438,6 +438,8 @@ describe('the translation bundles', () => {
           'assistant.actions.cameraShot.description',
           'assistant.actions.cameraRail.description',
           'assistant.actions.cameraTarget.description',
+          // The same sense as the three above: `scene.state` hands back the shots, and says so.
+          'assistant.actions.sceneState.description',
           'assistant.fields.startSeconds',
           'assistant.fields.durationSeconds',
           'assistant.fields.shotId',

@@ -49,10 +49,13 @@ function commandsOf(source: string): string[] {
     .map(match => match[1] ?? '')
 }
 
-/** Everything the handlers are made of, as one text — a name cited anywhere in it is published. */
+/**
+ * Everything the handlers are made of, as one text, WITH THE PROSE TAKEN OUT: `flatten` was read
+ * as published because a comment used the English word, and it has no action at all.
+ */
 const HANDLERS = Object.entries(WINDOW_SOURCES)
   .filter(([path]) => path.includes('/assistant/') && path.endsWith('.ts'))
-  .map(([, source]) => source)
+  .map(([, source]) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, ''))
   .join('\n')
 
 /** Read once, like `HANDLERS`: both rules below walk the same four modules. */
@@ -66,6 +69,17 @@ const COMMANDS: readonly (readonly [string, readonly string[]])[] = COMMAND_MODU
  * publishing the same edit twice, under a name nobody performs.
  */
 const COMBINATORS: readonly string[] = ['multi', 'editClip', 'railOnNewShot']
+
+/**
+ * Reached through `command.run` rather than by an action of its own — the OTHER door, which this
+ * rule cannot see: a client fires the registry command beside each one and the surface in front
+ * builds the edit. Listed so they do not read as gestures nothing can reach.
+ */
+const THROUGH_A_COMMAND: Readonly<Record<string, string>> = {
+  flatten: 'canvas.flatten',
+  clearGuides: 'canvas.clearGuides',
+  removeCameraShot: 'scene.delete',
+}
 
 /**
  * The gestures no action publishes yet, named one by one — a map of what is left rather than a
@@ -86,8 +100,6 @@ const NOT_PUBLISHED: readonly string[] = [
   'addGuide',
   'moveGuide',
   'removeGuide',
-  'clearGuides',
-  'collapseLayer',
   // The scene: what a node is made of, what it is painted with, and what it casts.
   'setShadowOn',
   'setGeometry',
@@ -120,7 +132,6 @@ const NOT_PUBLISHED: readonly string[] = [
   'recordMove',
   'movesToCommand',
   'lensToCommand',
-  'removeCameraShot',
   'reorderCameraShots',
   'railForShot',
 ]
@@ -134,7 +145,7 @@ describe('what edits a document, and what an outside client may ask for', () => 
   })
 
   it('leaves no command of a document that no action can reach', () => {
-    const known = new Set([...COMBINATORS, ...NOT_PUBLISHED])
+    const known = new Set([...COMBINATORS, ...NOT_PUBLISHED, ...Object.keys(THROUGH_A_COMMAND)])
     const orphans = COMMANDS.flatMap(([module, names]) =>
       names
         .filter(name => !known.has(name) && !new RegExp(`\\b${name}\\b`).test(HANDLERS))
@@ -142,6 +153,18 @@ describe('what edits a document, and what an outside client may ask for', () => 
     )
 
     expect(orphans.sort()).toEqual([])
+  })
+
+  /**
+   * The three lists against the modules themselves. A name that no longer names a command — one
+   * renamed, one that stopped being a `Command` — is an entry that guards nothing while reading
+   * as an exemption: `collapseLayer` sat here for a day in exactly that state.
+   */
+  it('names nothing the modules do not declare', () => {
+    const declared = new Set(COMMANDS.flatMap(([, names]) => names))
+    const listed = [...COMBINATORS, ...NOT_PUBLISHED, ...Object.keys(THROUGH_A_COMMAND)]
+
+    expect(listed.filter(name => !declared.has(name)).sort()).toEqual([])
   })
 
   /** The other direction: a gesture that gained a door and stayed on the list above. */

@@ -72,7 +72,9 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
         required: false,
         ...SIDES,
       },
-      { key: 'fill', kind: 'number', labelKey: 'assistant.fields.fill', required: false },
+      // `#rrggbb`, as every other colour of the registry — and as `layer.shape`, which repaints
+      // what this one draws: two spellings of one concept had a client refused on its own value.
+      { key: 'fill', kind: 'color', labelKey: 'assistant.fields.shapeFill', required: false },
       {
         key: 'adjustment',
         kind: 'choice',

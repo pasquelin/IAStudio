@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { assistantAction, type ActionName } from '@shared/domain/assistant'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
+import { EMBEDDED_FONTS } from '@shared/domain/font'
 import {
   ADJUSTMENT_KINDS,
   DEFAULT_CANVAS,
@@ -122,7 +123,7 @@ describe('building a stack', () => {
       y: 20,
       width: 100,
       height: 50,
-      fill: 0xff0000,
+      fill: '#ff0000',
     })
 
     const added = canvas().layers.at(-1)
@@ -152,7 +153,7 @@ describe('building a stack', () => {
       shape: 'line',
       width: 100,
       height: 100,
-      fill: 0x00ff00,
+      fill: '#00ff00',
     })
 
     const added = canvas().layers.at(-1)
@@ -359,14 +360,26 @@ describe('styling and placing a layer', () => {
       font: { source: 'system', family: 'Helvetica Neue' },
     })
 
-    await runAction('layer.text', {
+    const shipped = EMBEDDED_FONTS[0]?.family ?? ''
+    await runAction('layer.text', { layerId: 'layer-t', fontFamily: shipped })
+
+    expect(canvas().layers[0]).toMatchObject({ font: { source: 'embedded', family: shipped } })
+  })
+
+  /**
+   * `source` carries one promise — that the document opens the same on the next machine — and an
+   * `embedded` face the studio does not ship breaks exactly that one, silently.
+   */
+  it('refuses a face claimed as shipped that the studio does not ship', async () => {
+    withLayers(textLayer('layer-t', 'Titre', { x: 0, y: 0 }))
+
+    const outcome = await runAction('layer.text', {
       layerId: 'layer-t',
       fontFamily: 'Helvetica Neue',
       fontSource: 'embedded',
     })
-    expect(canvas().layers[0]).toMatchObject({
-      font: { source: 'embedded', family: 'Helvetica Neue' },
-    })
+
+    expect(outcome).toEqual({ ok: false, refusal: 'badInput' })
   })
 })
 

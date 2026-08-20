@@ -251,7 +251,7 @@
       },
       "layerText": {
         "title": "Set a text layer’s words",
-        "description": "Changes what a text layer says, the size it says it at, or its colour. Refuses a layer that holds pixels rather than words, which the command would otherwise leave untouched."
+        "description": "Changes what a text layer says, the typeface and size it says it at, its colour, its alignment and its box. Refuses a layer that holds pixels rather than words, which the command would otherwise leave untouched."
       },
       "layerMove": {
         "title": "Reorder a layer",
@@ -487,7 +487,7 @@
       },
       "fontsList": {
         "title": "List the installed fonts",
-        "description": "Answers the font families this machine has, one weight each. It is what a text layer can be written in."
+        "description": "Answers the typefaces a text can be set in, the ones that ship with the studio first, then the ones installed on this machine. Each comes with where it is from, which setting a face needs as much as its name."
       },
       "favoritesList": {
         "title": "List the pinned recipes",
@@ -539,7 +539,7 @@
       },
       "sceneState": {
         "title": "Read the scene being edited",
-        "description": "Returns every node of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected and what lights the scene."
+        "description": "Returns every node of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the whole setting of the scene."
       },
       "nodeAdd": {
         "title": "Add an object to the scene",
@@ -663,7 +663,7 @@
       },
       "layerLock": {
         "title": "Lock a layer",
-        "description": "Sets or lifts the three padlocks of a layer, the one on its pixels, the one on its place and the one on its transparency. A padlock that is on refuses the matching edits, including those asked for from outside."
+        "description": "Sets or lifts the three padlocks of a layer, the one on its pixels, the one on its place and the one on its transparency. They stop the hand on the canvas; a value written by another action goes through, as it does from the panels."
       },
       "layerShape": {
         "title": "Repaint a shape",
@@ -980,7 +980,8 @@
       "fogDensity": "Density of the exponential haze",
       "groundSize": "Side of the ground, in scene units",
       "receiveShadow": "Shadows land on the ground",
-      "toneMapping": "How high dynamic range is brought down to the screen"
+      "toneMapping": "How high dynamic range is brought down to the screen",
+      "toneExposure": "Exposure multiplier of the render, 1 leaving it as it is"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",
