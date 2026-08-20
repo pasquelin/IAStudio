@@ -10,10 +10,10 @@ import {
   canMoveWorkspace,
   isWorkspaceId,
   movedWorkspace,
-  movedWorkspaceBy,
   type WorkspaceId,
   type WorkspaceMove,
 } from '@shared/domain/workspace'
+import { applyWorkspaceMove } from '@/helpers/applyWorkspaceMove'
 import { workspaceLabelKey } from '@/helpers/workspaces'
 import { useSettings } from '@/stores/settings'
 import { SPACES } from './spaces'
@@ -55,8 +55,7 @@ export function TitleBar({
 
   const order = workspaces.map(workspace => workspace.id)
 
-  const apply = (next: readonly WorkspaceId[], moved: WorkspaceId): void => {
-    void useSettings.getState().write({ workspaces: { order: [...next] } })
+  const announce = (next: readonly WorkspaceId[], moved: WorkspaceId): void =>
     setAnnouncement(
       t('workspaces.moved', {
         label: t(workspaceLabelKey(moved)),
@@ -64,12 +63,18 @@ export function TitleBar({
         total: next.length,
       }),
     )
+
+  const apply = (next: readonly WorkspaceId[], moved: WorkspaceId): void => {
+    void useSettings.getState().write({ workspaces: { order: [...next] } })
+    announce(next, moved)
   }
 
-  // What the same reordering looks like without a drag: the keyboard's, and the menu's.
+  // What the same reordering looks like without a drag: the keyboard's, the menu's, and a
+  // command's — which is why the refusal and the write live in `applyWorkspaceMove` rather than
+  // here. Only the sentence a screen reader hears belongs to this bar.
   const step = (id: WorkspaceId, move: WorkspaceMove): void => {
-    if (!canMoveWorkspace(order, id, move)) return
-    apply(movedWorkspaceBy(order, id, move), id)
+    const next = applyWorkspaceMove(id, move)
+    if (next) announce(next, id)
   }
 
   // The two moves as a menu, which is the third way to reorder: the drag, the keyboard, this.

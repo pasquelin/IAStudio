@@ -47,19 +47,29 @@ export type ActionName =
   | 'files.copy'
   | 'files.duplicate'
   | 'files.trash'
+  | 'files.undo'
+  | 'files.redo'
+  | 'files.history'
   | 'file.rename'
   | 'file.facts'
+  | 'file.reveal'
   | 'folder.new'
+  | 'project.rename'
   | 'model.schema'
   | 'cost.estimate'
   | 'job.get'
   | 'job.wait'
   | 'job.cancel'
+  | 'task.cancel'
   | 'usage.report'
   | 'assets.search'
   | 'assets.counts'
+  | 'assets.absent'
+  | 'assets.describe'
   | 'asset.get'
   | 'asset.update'
+  | 'asset.reveal'
+  | 'asset.extractTextures'
   | 'assets.remove'
   | 'canvas.state'
   | 'canvas.resize'
@@ -119,6 +129,13 @@ export type ActionName =
   | 'window.fullScreen'
   | 'settings.open'
   | 'updates.state'
+  | 'updates.install'
+  | 'dictation.state'
+  | 'dictation.start'
+  | 'dictation.stop'
+  | 'panels.list'
+  | 'panel.open'
+  | 'panel.close'
   | 'media.capabilities'
   | 'media.adopt'
   | 'fonts.list'
@@ -142,6 +159,8 @@ export type ActionName =
   | 'camera.target'
   | 'node.reparent'
   | 'node.select'
+  | 'view.direction'
+  | 'view.display'
   | 'git.status'
   | 'git.log'
   | 'git.commitFiles'
@@ -168,8 +187,10 @@ export type ActionName =
   | 'git.push'
   | 'settings.read'
   | 'settings.write'
+  | 'settings.action'
   | 'accounts.list'
   | 'accounts.activate'
+  | 'accounts.rename'
 
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.
@@ -278,7 +299,7 @@ export function action(descriptor: AssistantAction): AssistantAction {
  */
 export type ActionRefusal =
   | 'unknownCommand'
-  | 'globalCommand'
+  /** No surface mounted to take it — a scope with no panel up, a save with no tab in front. */
   | 'wrongSurface'
   | 'generatorClosed'
   | 'nothingPrepared'
@@ -309,7 +330,6 @@ export type ActionRefusal =
 
 export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'unknownCommand',
-  'globalCommand',
   'wrongSurface',
   'generatorClosed',
   'nothingPrepared',

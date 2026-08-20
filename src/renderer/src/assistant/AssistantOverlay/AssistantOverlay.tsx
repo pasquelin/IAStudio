@@ -18,6 +18,7 @@ import { formatUnits } from '@/helpers/format'
 import { DictationButton } from '@/dictation/DictationButton'
 import { Heard } from '@/dictation/Heard'
 import { registerDictationTarget } from '@/dictation/destination'
+import { registerChatPanel } from '../chatPanel'
 import { registerConfirmer } from '../confirm'
 import { AssistantOverlayQuestion } from './AssistantOverlayQuestion'
 import { AssistantOverlayTurn } from './AssistantOverlayTurn'
@@ -62,6 +63,9 @@ export function AssistantOverlay() {
   // For as long as the shell is up, and only from here: a confirmation shown where nobody is
   // looking is not a confirmation.
   useEffect(() => registerConfirmer(useAssistant.getState().ask), [])
+
+  // The same arrangement for `⌘K`, which the router fires without being able to import the store.
+  useEffect(() => registerChatPanel({ toggle: useAssistant.getState().toggle }), [])
 
   // A question is answered, never walked away from: Escape and a press outside would otherwise
   // leave the action that raised it waiting for an answer that can no longer come.

@@ -1,39 +1,18 @@
 import { useEffect } from 'react'
-import type { CommandId, MenuAbility, MenuCheck } from '@shared/domain/command'
+import type { MenuAbility, MenuCheck } from '@shared/domain/command'
 import { revealTool } from '@/helpers/revealPanel'
 import { availableToolIds } from '@/helpers/toolRegistry'
 import { getBridge } from '@/services/bridge'
-import { publishCommand } from '@/services/commandBus'
-import { runGlobalCommand } from '@/services/globalCommands'
+import { routeCommand } from '@/services/commandRouter'
 import { addNodeTo } from '@/hooks/useAddNode'
-import { useAssistant } from '@/stores/assistant'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
-import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { displayOfPane, MAIN_SCENE_PANE, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
-
-function runCommand(command: CommandId): void {
-  // Kept out of `globalCommands` to break an import loop: the assistant store imports the
-  // executor to run a confirmed action, so the module the executor calls cannot import the store
-  // back. Untangling that means separating the panel's open state from the conversation store —
-  // worth doing, not worth doing here. Nothing is lost meanwhile: the assistant dismisses itself
-  // through `chat.close`. Toggled rather than opened — ⌘K is what one presses to leave it too.
-  if (command === 'app.assistant') {
-    useAssistant.getState().toggle()
-    return
-  }
-
-  if (runGlobalCommand(command)) return
-
-  // Everything else belongs to a surface — the canvas, the scene, the timeline — and only the
-  // document in front knows how to run it. Without this the whole Image menu fired into nothing:
-  // eleven rows that looked live and did strictly nothing when clicked.
-  publishCommand(command)
-}
 
 type SceneMenuState = { checked: MenuCheck[]; abilities: MenuAbility[] }
 
@@ -50,7 +29,7 @@ function sceneMenuState(): SceneMenuState {
   if (!documentId) return { checked: [], abilities: [] }
 
   const view = sceneViewOf(useSceneViews.getState(), documentId)
-  const checked: MenuCheck[] = [`scene.display:${displayOfPane(view.displays, 0)}`]
+  const checked: MenuCheck[] = [`scene.display:${displayOfPane(view.displays, MAIN_SCENE_PANE)}`]
 
   if (view.projection === 'orthographic') checked.push('scene.projection')
   if (view.quad) checked.push('scene.quad')
@@ -154,7 +133,9 @@ export function useNativeMenu(): void {
     // the workspace, and the menu is built once for the whole app.
     const stopTool = bridge.menu.onOpenTool(({ tool }) => revealTool(tool))
 
-    const stopCommand = bridge.menu.onCommand(runCommand)
+    // The verdict is dropped on purpose: a menu row that reaches nothing is a row already greyed
+    // out, and there is nobody to answer. An MCP client is the caller that needs it.
+    const stopCommand = bridge.menu.onCommand(command => void routeCommand(command))
     // The same path the toolbar and the panels take: two ways of adding a node would drift.
     const stopSceneAdd = bridge.menu.onSceneAdd(({ kind }) => {
       // Of the right kind: the menu is app-wide, and a node written under an image document
@@ -172,7 +153,7 @@ export function useNativeMenu(): void {
 
     const stopSceneDisplay = bridge.menu.onSceneDisplay(({ mode }) => {
       const documentId = activeIdOfKind(useDocuments.getState(), 'scene')
-      if (documentId) useSceneViews.getState().setDisplay(documentId, 0, mode)
+      if (documentId) useSceneViews.getState().setDisplay(documentId, MAIN_SCENE_PANE, mode)
     })
 
     return () => {

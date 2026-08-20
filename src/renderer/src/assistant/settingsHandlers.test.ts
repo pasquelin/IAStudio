@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AccountSummary } from '@shared/domain/account'
+import { commitmentOfCall } from '@shared/domain/assistant'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { runAction } from './executor'
@@ -126,5 +127,45 @@ describe('the accounts', () => {
       ok: false,
       refusal: 'notFound',
     })
+  })
+
+  // The label alone: neither half of the credential crosses this boundary in either direction.
+  it('renames one without either half of its credential crossing', async () => {
+    const rename = vi.fn(async () => ({ accounts: ACCOUNTS }))
+    installFakeBridge({ accounts: { rename } })
+
+    expect(await runAction('accounts.rename', { accountId: 'acc-2', name: 'Studio' })).toMatchObject(
+      { ok: true },
+    )
+    expect(rename).toHaveBeenCalledWith('acc-2', 'Studio')
+  })
+})
+
+describe('the buttons of the settings window', () => {
+  it('fires one the registry declares, and refuses a name it does not', async () => {
+    const runSettingAction = vi.fn(async () => {})
+    installFakeBridge({ settings: { runAction: runSettingAction } })
+
+    expect(await runAction('settings.action', { action: 'advanced.openLogFolder' })).toMatchObject({
+      ok: true,
+    })
+    expect(runSettingAction).toHaveBeenCalledWith('advanced.openLogFolder')
+
+    expect(await runAction('settings.action', { action: 'advanced.selfDestruct' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  /**
+   * The two that leave something behind — a `.lua` in another application's folder, and every
+   * setting back to its default — are asked about, and the four others are not.
+   */
+  it('asks first for the two nothing takes back', () => {
+    expect(commitmentOfCall('settings.action', { action: 'advanced.reset' })).toBe('files')
+    expect(commitmentOfCall('settings.action', { action: 'advanced.installResolveBridge' })).toBe(
+      'files',
+    )
+    expect(commitmentOfCall('settings.action', { action: 'advanced.openDevtools' })).toBe('none')
   })
 })

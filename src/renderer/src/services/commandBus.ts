@@ -1,8 +1,11 @@
-import type { CommandId } from '@shared/domain/command'
+import type { CommandId, CommandScope } from '@shared/domain/command'
 
 type Listener = (command: CommandId, to: string | null) => void
 
 const listeners = new Set<Listener>()
+
+/** How many mounted surfaces are listening for each scope. Counted: three claim `sequence`. */
+const armed = new Map<CommandScope, number>()
 
 /**
  * Hands a command to whichever surface is listening for it.
@@ -31,4 +34,25 @@ export function subscribeToCommands(listener: Listener): () => void {
   return () => {
     listeners.delete(listener)
   }
+}
+
+/**
+ * Declares a surface as able to act on this scope, until the returned function is called.
+ *
+ * Kept beside the bus rather than derived from the listeners: publishing is memoryless, so a
+ * caller that needs an ANSWER — an MCP client — has no other way to tell a command that ran from
+ * one that fell into an empty room.
+ */
+export function armCommandScope(scope: CommandScope): () => void {
+  armed.set(scope, (armed.get(scope) ?? 0) + 1)
+  return () => {
+    const held = (armed.get(scope) ?? 0) - 1
+    if (held > 0) armed.set(scope, held)
+    else armed.delete(scope)
+  }
+}
+
+/** Whether publishing to this scope would reach anything. */
+export function commandScopeIsArmed(scope: CommandScope): boolean {
+  return armed.has(scope)
 }

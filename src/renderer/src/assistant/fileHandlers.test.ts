@@ -193,4 +193,60 @@ describe('opening and making a project', () => {
     })
     expect(open).toHaveBeenCalledWith('/tmp/Neuf')
   })
+
+  /**
+   * The manifest name, never the folder: `recentProjects`, `storage.lastProject` and every
+   * absolute path the catalogue holds are keyed on the folder.
+   */
+  it('renames a project by its own path, open or not', async () => {
+    const renamed = {
+      path: '/tmp/Autre',
+      manifest: { version: 1, name: 'Autre', createdAt: WHEN, updatedAt: WHEN },
+    }
+    withProject({ project: { rename: vi.fn(async () => renamed) } })
+
+    expect(await runAction('project.rename', { path: '/tmp/Autre', name: 'Autre' })).toEqual({
+      ok: true,
+      data: renamed,
+    })
+  })
+})
+
+describe('the file undo stack, which lives in the main process', () => {
+  it('takes the last batch back and puts it back again', async () => {
+    const undoFile = vi.fn(async () => BATCH)
+    const redoFile = vi.fn(async () => BATCH)
+    withProject({ project: { undoFile, redoFile } })
+
+    expect(await runAction('files.undo', {})).toEqual({ ok: true, data: BATCH })
+    expect(await runAction('files.redo', {})).toEqual({ ok: true, data: BATCH })
+    // The listing a write owes its next reader: a client asking straight after would otherwise
+    // read the folder from before its own undo.
+    expect(relist).toHaveBeenCalledTimes(2)
+  })
+
+  it('says whether either gesture would do anything, without attempting one', async () => {
+    const history = { undo: true, redo: false }
+    const fileHistory = vi.fn(async () => history)
+    withProject({ project: { fileHistory } })
+
+    expect(await runAction('files.history', {})).toEqual({ ok: true, data: history })
+    expect(relist).not.toHaveBeenCalled()
+  })
+
+  it('shows a file in the system file manager', async () => {
+    const revealFile = vi.fn(async () => {})
+    withProject({ project: { revealFile } })
+
+    expect(await runAction('file.reveal', { path: 'Plans/a.png' })).toMatchObject({ ok: true })
+    expect(revealFile).toHaveBeenCalledWith('Plans/a.png')
+  })
+
+  it('refuses every one of them with no project to be relative to', async () => {
+    installFakeBridge()
+    useProject.setState({ project: null })
+
+    expect(await runAction('files.undo', {})).toEqual({ ok: false, refusal: 'noProject' })
+    expect(await runAction('files.history', {})).toEqual({ ok: false, refusal: 'noProject' })
+  })
 })

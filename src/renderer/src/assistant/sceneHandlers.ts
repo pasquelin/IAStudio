@@ -1,6 +1,6 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { readColor } from '@shared/domain/color'
-import type { Vector3 } from '@shared/domain/scene'
+import { DISPLAY_MODES, VIEW_DIRECTIONS, type Vector3 } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import {
   addNode,
@@ -22,9 +22,11 @@ import type { Command } from '@/engines/core/history'
 import { createNodeOf, modelNode } from '@/engines/scene/nodeFactory'
 import { canReparent, nodeById, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import { activeSceneId, useDocuments } from '@/stores/documents'
+import { sceneEngineOf } from '@/stores/sceneEngines'
+import { MAIN_SCENE_PANE, useSceneViews } from '@/stores/sceneViews'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { type ActionHandlers } from './actionHandler'
-import { boolOf, numberOf, textOf, textsOf } from './actionInputs'
+import { boolOf, numberOf, oneOf, textOf, textsOf } from './actionInputs'
 
 /**
  * The scene graph, driven by value.
@@ -318,4 +320,32 @@ export const SCENE_HANDLERS: ActionHandlers = {
         ...(intensity === null ? {} : { intensity }),
       })
     }),
+
+  /**
+   * The main pane, as the menu and the bar's own flyout both do: a quad layout gives each of its
+   * four views one, and neither surface has four ways of saying it.
+   */
+  'view.direction': input => {
+    const open = mounted()
+    const direction = oneOf(input, 'direction', VIEW_DIRECTIONS)
+    if (!open) return refused('wrongSurface')
+    if (!direction) return refused('badInput')
+
+    // A side to look from is a MOVE, not a state — see `PaneView` — so it goes to the engine.
+    const engine = sceneEngineOf(open.documentId)
+    if (!engine) return refused('wrongSurface')
+
+    engine.viewFrom(direction)
+    return { ok: true }
+  },
+
+  'view.display': input => {
+    const open = mounted()
+    const mode = oneOf(input, 'mode', DISPLAY_MODES)
+    if (!open) return refused('wrongSurface')
+    if (!mode) return refused('badInput')
+
+    useSceneViews.getState().setDisplay(open.documentId, MAIN_SCENE_PANE, mode)
+    return { ok: true }
+  },
 }

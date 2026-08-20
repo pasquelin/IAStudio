@@ -1,5 +1,14 @@
-import { action, type AssistantAction } from './assistantAction'
+import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { SETTINGS_SECTION_IDS } from './settings'
+import { TOOL_IDS } from './tool'
+
+const PANEL: ActionField = {
+  key: 'panel',
+  kind: 'choice',
+  labelKey: 'assistant.fields.panel',
+  required: true,
+  options: TOOL_IDS,
+}
 
 /**
  * What surrounds the documents — the window, the account, the updates, and the three small lists
@@ -9,11 +18,9 @@ import { SETTINGS_SECTION_IDS } from './settings'
  * history and why `commitment` stays `none` all the same: pinning a recipe or opening a window
  * takes nothing away from anyone.
  *
- * The four commands a client still cannot reach are `app.settings`, `app.assistant`, `app.dictate`
- * and `window.fullScreen` — `runGlobalCommand` answers `false` for all four. Two of them are
- * ANSWERED here by the capability rather than by the command, since that is what a program wants:
- * `settings.open` and `window.fullScreen`. The other two are not, and deliberately — an outside
- * client has no use for opening the assistant it is replacing, nor for dictating.
+ * Two of them answer a command as well — `settings.open` and `window.fullScreen` — and are here
+ * all the same: a program asks for a capability by name, and finding it under `command.run` means
+ * knowing the id of a menu row first.
  */
 
 export const SHELL_ACTIONS: readonly AssistantAction[] = [
@@ -136,5 +143,74 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     reach: 'mcp',
     fields: [],
+  }),
+  action({
+    // Quits and relaunches, which is why it asks: whatever the studio holds unsaved goes with it.
+    name: 'updates.install',
+    titleKey: 'assistant.actions.updatesInstall.title',
+    descriptionKey: 'assistant.actions.updatesInstall.description',
+    commitment: 'files',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    name: 'dictation.state',
+    titleKey: 'assistant.actions.dictationState.title',
+    descriptionKey: 'assistant.actions.dictationState.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    /**
+     * The microphone, held open until `dictation.stop`. What it hears is written wherever the
+     * caret is — so a client that starts it without a field focused writes into nothing.
+     */
+    name: 'dictation.start',
+    titleKey: 'assistant.actions.dictationStart.title',
+    descriptionKey: 'assistant.actions.dictationStart.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    name: 'dictation.stop',
+    titleKey: 'assistant.actions.dictationStop.title',
+    descriptionKey: 'assistant.actions.dictationStop.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      // Told apart because they differ where it matters: one keeps what was heard, the other
+      // drops it. Absent keeps it, which is what stopping ordinarily means.
+      { key: 'discard', kind: 'boolean', labelKey: 'assistant.fields.discard', required: false },
+    ],
+  }),
+  action({
+    name: 'panels.list',
+    titleKey: 'assistant.actions.panelsList.title',
+    descriptionKey: 'assistant.actions.panelsList.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    /**
+     * The zone is resolved against the surface in front rather than named: one panel sits in
+     * different zones from one workspace to the next, and a caller cannot know which.
+     */
+    name: 'panel.open',
+    titleKey: 'assistant.actions.panelOpen.title',
+    descriptionKey: 'assistant.actions.panelOpen.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [PANEL],
+  }),
+  action({
+    name: 'panel.close',
+    titleKey: 'assistant.actions.panelClose.title',
+    descriptionKey: 'assistant.actions.panelClose.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [PANEL],
   }),
 ]

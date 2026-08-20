@@ -1,6 +1,12 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { EASINGS } from './animation'
-import { LIGHT_ENTRIES, MESH_ENTRIES, OBJECT_ENTRIES } from './scene'
+import {
+  DISPLAY_MODES,
+  LIGHT_ENTRIES,
+  MESH_ENTRIES,
+  OBJECT_ENTRIES,
+  VIEW_DIRECTIONS,
+} from './scene'
 
 /**
  * The 3D workspace, driven by value.
@@ -297,6 +303,42 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
         labelKey: 'assistant.fields.nodeIds',
         required: true,
         repeated: true,
+      },
+    ],
+  }),
+  /**
+   * The two the native menu offers by NAME and no command can: `scene.display` cycles, and
+   * cycling to a chosen mode means counting the ones in between.
+   */
+  action({
+    name: 'view.direction',
+    titleKey: 'assistant.actions.viewDirection.title',
+    descriptionKey: 'assistant.actions.viewDirection.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'direction',
+        kind: 'choice',
+        labelKey: 'assistant.fields.viewDirection',
+        required: true,
+        options: VIEW_DIRECTIONS,
+      },
+    ],
+  }),
+  action({
+    name: 'view.display',
+    titleKey: 'assistant.actions.viewDisplay.title',
+    descriptionKey: 'assistant.actions.viewDisplay.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'mode',
+        kind: 'choice',
+        labelKey: 'assistant.fields.displayMode',
+        required: true,
+        options: DISPLAY_MODES,
       },
     ],
   }),

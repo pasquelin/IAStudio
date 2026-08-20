@@ -60,7 +60,12 @@ describe('the registry, published as tools', () => {
 
     // Named rather than counted: a `filter` that empties leaves the loop below green while every
     // tool it guarded goes back to announcing an immediate run.
-    expect(marked.map(action => action.name).sort()).toEqual(['command.run', 'git.commit'])
+    expect(marked.map(action => action.name).sort()).toEqual([
+      'assets.remove',
+      'command.run',
+      'git.commit',
+      'settings.action',
+    ])
     for (const action of marked) {
       const tool = mcpTools().find(one => one.name === toolName(action.name))
 

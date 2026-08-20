@@ -7,15 +7,22 @@ import {
 } from '@shared/domain/command'
 import { copiesText, type MotionId, signatureOf } from '@shared/domain/shortcut'
 import { isTyping } from '@/helpers/typing'
-import { subscribeToCommands } from '@/services/commandBus'
+import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { currentOverrides, motionFor } from '@/stores/bindings'
 import { useLatest } from './useLatest'
 
 export type ShortcutsOptions = {
   /** Which surface is listening: the same key means different things on each. */
   scope: CommandScope
-  /** A document only listens while it is the visible tab. */
+  /** A document only listens while it is the visible tab. Keyboard only — see `listens`. */
   enabled: boolean
+  /**
+   * Whether the surface answers a command SENT to it, which is a different question from whether
+   * it holds the keyboard: a published command names its scope, so two surfaces that share ⌘Z
+   * cannot be confused by one. Defaults to `enabled`; the Explorer sets it while merely mounted,
+   * so a menu row or an MCP client reaches it without the panel having been clicked into first.
+   */
+  listens?: boolean
   /**
    * Which document this surface shows, for the commands a sender addresses by name — see
    * `publishCommand`. Those reach it in a background tab too; keys never do.
@@ -50,6 +57,7 @@ function holdsText(): boolean {
 export function useShortcuts({
   scope,
   enabled,
+  listens = enabled,
   documentId,
   onCommand,
   onMotionChange,
@@ -72,11 +80,15 @@ export function useShortcuts({
     () =>
       subscribeToCommands((command, to) => {
         if (commandDescriptor(command)?.scope !== scope) return
-        if (to === null ? !enabled : to !== documentId) return
+        if (to === null ? !listens : to !== documentId) return
         handlers.current.onCommand(command)
       }),
-    [scope, enabled, documentId, handlers],
+    [scope, listens, documentId, handlers],
   )
+
+  // Declared to the bus so a sender can be told its command reached nothing, rather than watching
+  // it vanish — the one thing `publishCommand` cannot answer on its own.
+  useEffect(() => (listens ? armCommandScope(scope) : undefined), [scope, listens])
 
   useEffect(() => {
     const held = heldMotion.current

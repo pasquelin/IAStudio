@@ -376,7 +376,9 @@ export function Explorer() {
     [settled, landing, folderName],
   )
 
-  useShortcuts({ scope: 'explorer', enabled: focused, onCommand: run })
+  // `listens` without the focus: the keyboard has to be earned — ⌘Z means something else in the
+  // canvas — while a command addressed to this scope names it, and there is one Explorer.
+  useShortcuts({ scope: 'explorer', enabled: focused, listens: true, onCommand: run })
 
   const activate = async (node: FolderNode): Promise<void> => {
     // Asked before the folder question, not after: an image document is a directory, and folding

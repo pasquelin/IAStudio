@@ -104,6 +104,8 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.assetsRemove.title',
     descriptionKey: 'assistant.actions.assetsRemove.description',
     commitment: 'files',
+    // Reaches the library when `alsoRemote` is set, which nothing on this machine takes back.
+    raises: input => (input.alsoRemote === true ? 'remote' : 'files'),
     reach: 'mcp',
     fields: [
       ASSET_IDS,
@@ -114,5 +116,39 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
         required: false,
       },
     ],
+  }),
+  action({
+    // Reads what the API sees in a picture and writes it as the asset's name. Only assets the
+    // library knows can be described, so a local-only selection comes back as zero.
+    name: 'assets.describe',
+    titleKey: 'assistant.actions.assetsDescribe.title',
+    descriptionKey: 'assistant.actions.assetsDescribe.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [ASSET_IDS],
+  }),
+  action({
+    name: 'asset.extractTextures',
+    titleKey: 'assistant.actions.assetExtractTextures.title',
+    descriptionKey: 'assistant.actions.assetExtractTextures.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [{ key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true }],
+  }),
+  action({
+    name: 'asset.reveal',
+    titleKey: 'assistant.actions.assetReveal.title',
+    descriptionKey: 'assistant.actions.assetReveal.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [{ key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true }],
+  }),
+  action({
+    name: 'assets.absent',
+    titleKey: 'assistant.actions.assetsAbsent.title',
+    descriptionKey: 'assistant.actions.assetsAbsent.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [ASSET_IDS],
   }),
 ]

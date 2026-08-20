@@ -1,8 +1,9 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import type { PartialSettings } from '@shared/domain/settings'
+import { SETTING_ACTION_IDS } from '@shared/domain/settingsRegistry'
 import { getBridge } from '@/services/bridge'
 import { withBridge, type ActionHandlers } from './actionHandler'
-import { recordOf, textOf } from './actionInputs'
+import { oneOf, recordOf, textOf } from './actionInputs'
 
 /** The settings and the account, read and set from outside the window. */
 
@@ -46,4 +47,16 @@ export const SETTINGS_HANDLERS: ActionHandlers = {
   'settings.write': write,
   'accounts.list': () => withBridge(bridge => bridge.accounts.list()),
   'accounts.activate': activate,
+
+  'accounts.rename': input =>
+    withBridge(bridge =>
+      bridge.accounts.rename(textOf(input, 'accountId') ?? '', textOf(input, 'name') ?? ''),
+    ),
+
+  'settings.action': input => {
+    const id = oneOf(input, 'action', SETTING_ACTION_IDS)
+    return id
+      ? withBridge(bridge => bridge.settings.runAction(id))
+      : Promise.resolve(refused('badInput'))
+  },
 }

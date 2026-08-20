@@ -32,6 +32,7 @@ import {
 } from './model'
 import { TEXTURE_SLOTS, type TextureSlot } from './scene'
 import { NAMED_KEYS, type NamedKey } from './shortcut'
+import { TOOL_IDS, type ToolId } from './tool'
 
 /**
  * Each of these lists is walked to check something else — the i18n bundles above all, which are
@@ -242,6 +243,30 @@ describe('the lists that stand for a union', () => {
     expect(sorted(NAMED_KEYS)).toEqual(sorted(Object.keys(all)))
   })
 
+  // A panel missing from the list is one `panel.open` refuses as an unknown value — declared in
+  // TypeScript, drawn by the rail, and unreachable by anything that reads the tool schema.
+  it('names every panel the studio can put up', () => {
+    const all: Record<ToolId, true> = {
+      layers: true,
+      meshes: true,
+      lights: true,
+      timeline: true,
+      explorer: true,
+      git: true,
+      history: true,
+      scene: true,
+      models: true,
+      generator: true,
+      inspector: true,
+      assets: true,
+      projects: true,
+      library: true,
+      animations: true,
+    }
+
+    expect(sorted(TOOL_IDS)).toEqual(sorted(Object.keys(all)))
+  })
+
   it('names every texture slot a material carries', () => {
     const all: Record<TextureSlot, true> = {
       map: true,
@@ -263,7 +288,6 @@ describe('the lists that stand for a union', () => {
   it('names every reason an action can be refused', () => {
     const all: Record<ActionRefusal, true> = {
       unknownCommand: true,
-      globalCommand: true,
       wrongSurface: true,
       generatorClosed: true,
       nothingPrepared: true,
@@ -363,19 +387,29 @@ describe('the lists that stand for a union', () => {
       'files.copy': true,
       'files.duplicate': true,
       'files.trash': true,
+      'files.undo': true,
+      'files.redo': true,
+      'files.history': true,
       'file.rename': true,
       'file.facts': true,
+      'file.reveal': true,
       'folder.new': true,
+      'project.rename': true,
       'model.schema': true,
       'cost.estimate': true,
       'job.get': true,
       'job.wait': true,
       'job.cancel': true,
+      'task.cancel': true,
       'usage.report': true,
       'assets.search': true,
       'assets.counts': true,
+      'assets.absent': true,
+      'assets.describe': true,
       'asset.get': true,
       'asset.update': true,
+      'asset.reveal': true,
+      'asset.extractTextures': true,
       'assets.remove': true,
       'canvas.state': true,
       'canvas.resize': true,
@@ -435,6 +469,13 @@ describe('the lists that stand for a union', () => {
       'window.fullScreen': true,
       'settings.open': true,
       'updates.state': true,
+      'updates.install': true,
+      'dictation.state': true,
+      'dictation.start': true,
+      'dictation.stop': true,
+      'panels.list': true,
+      'panel.open': true,
+      'panel.close': true,
       'media.capabilities': true,
       'media.adopt': true,
       'fonts.list': true,
@@ -458,6 +499,8 @@ describe('the lists that stand for a union', () => {
       'camera.target': true,
       'node.reparent': true,
       'node.select': true,
+      'view.direction': true,
+      'view.display': true,
       'git.status': true,
       'git.log': true,
       'git.commitFiles': true,
@@ -484,8 +527,10 @@ describe('the lists that stand for a union', () => {
       'git.push': true,
       'settings.read': true,
       'settings.write': true,
+      'settings.action': true,
       'accounts.list': true,
       'accounts.activate': true,
+      'accounts.rename': true,
     }
 
     expect(sorted(ACTION_REGISTRY.map(entry => entry.name))).toEqual(sorted(Object.keys(all)))

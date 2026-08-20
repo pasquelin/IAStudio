@@ -1,7 +1,12 @@
 import { refused } from '@shared/domain/assistant'
 import { isSettingsSection } from '@shared/domain/settings'
+import { TOOL_IDS } from '@shared/domain/tool'
+import { closeTool, revealTool, toolIsShown } from '@/helpers/revealPanel'
+import { availableToolIds } from '@/helpers/toolRegistry'
+import { useDictation } from '@/stores/dictation'
+import { toolSurface } from '@/stores/layouts'
 import { withBridge, type ActionHandlers } from './actionHandler'
-import { textOf } from './actionInputs'
+import { boolOf, oneOf, textOf } from './actionInputs'
 
 /**
  * The window, the account and the small lists the studio keeps outside every project.
@@ -53,4 +58,49 @@ export const SHELL_HANDLERS: ActionHandlers = {
     withBridge(bridge => bridge.favorites.unpin(textOf(input, 'favoriteId') ?? '')),
 
   'fileInfo.open': input => withBridge(bridge => bridge.fileInfo.open(textOf(input, 'path') ?? '')),
+
+  'updates.install': () => withBridge(bridge => bridge.updates.install()),
+
+  /**
+   * What the panels the surface in front actually carries, with the half each sits in and
+   * whether it is up. Named rather than the whole registry: a tool the current surface does not
+   * serve cannot be opened, and offering it would be offering a refusal.
+   */
+  'panels.list': () => {
+    const surface = toolSurface()
+    return Promise.resolve({
+      ok: true,
+      data: availableToolIds(surface).map(id => ({ id, open: toolIsShown(id, surface) })),
+    })
+  },
+
+  'panel.open': input => {
+    const panel = oneOf(input, 'panel', TOOL_IDS)
+    if (!panel) return Promise.resolve(refused('badInput'))
+
+    return Promise.resolve(revealTool(panel) ? { ok: true } : refused('wrongSurface'))
+  },
+
+  'panel.close': input => {
+    const panel = oneOf(input, 'panel', TOOL_IDS)
+    if (!panel) return Promise.resolve(refused('badInput'))
+
+    return Promise.resolve(closeTool(panel) ? { ok: true } : refused('wrongSurface'))
+  },
+
+  'dictation.state': () => withBridge(bridge => bridge.dictation.state()),
+
+  'dictation.start': async () => {
+    await useDictation.getState().start()
+    // The store reports its own failure rather than throwing: a microphone the machine refused
+    // is a state, and answering `ok` on it would have a client wait for words never heard.
+    const { state, failure } = useDictation.getState()
+    return state === 'listening' ? { ok: true } : refused(failure ? 'failed' : 'notAllowed')
+  },
+
+  'dictation.stop': async input => {
+    const dictation = useDictation.getState()
+    await (boolOf(input, 'discard') ? dictation.cancel() : dictation.stop())
+    return { ok: true }
+  },
 }

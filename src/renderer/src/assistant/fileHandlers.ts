@@ -119,4 +119,20 @@ export const FILE_HANDLERS: ActionHandlers = {
     changing(bridge =>
       bridge.project.newFolder(textOf(input, 'folder') ?? '', textOf(input, 'name') ?? ''),
     ),
+
+  'files.undo': () => changing(bridge => bridge.project.undoFile()),
+
+  'files.redo': () => changing(bridge => bridge.project.redoFile()),
+
+  'files.history': () => inProject(bridge => bridge.project.fileHistory()),
+
+  'file.reveal': input =>
+    inProject(bridge => bridge.project.revealFile(textOf(input, 'path') ?? '')),
+
+  // Not `inProject`: the path is absolute and names a project that need not be the open one —
+  // which is the whole reason the channel takes one.
+  'project.rename': input =>
+    withBridge(bridge =>
+      bridge.project.rename(textOf(input, 'path') ?? '', textOf(input, 'name') ?? ''),
+    ),
 }

@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Language } from '@shared/i18n/languages'
+import { toolIsShown } from '@/helpers/revealPanel'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { useDictation } from '@/stores/dictation'
+import { useLayouts } from '@/stores/layouts'
 import { runAction } from './executor'
 
 beforeEach(() => {
@@ -77,5 +80,76 @@ describe('what surrounds the documents', () => {
       ok: false,
       refusal: 'badInput',
     })
+  })
+
+  it('installs an update that is ready, which only a quit could otherwise apply', async () => {
+    const install = vi.fn(async () => {})
+    installFakeBridge({ updates: { install } })
+
+    expect(await runAction('updates.install', {})).toMatchObject({ ok: true })
+    expect(install).toHaveBeenCalled()
+  })
+})
+
+describe('the panels of the surface in front', () => {
+  beforeEach(() => {
+    useLayouts.setState({ activeWorkspace: 'image', home: false })
+  })
+
+  /**
+   * Named rather than counted, and only what this surface serves: a panel the space does not
+   * carry cannot be opened there, so offering it would be offering a refusal.
+   */
+  it('lists what this surface carries, saying which are up', async () => {
+    const outcome = await runAction('panels.list', {})
+
+    expect(outcome).toMatchObject({ ok: true })
+    const listed = (outcome as { data: { id: string; open: boolean }[] }).data
+    expect(listed.map(panel => panel.id)).toContain('layers')
+    expect(listed.some(panel => panel.open)).toBe(true)
+  })
+
+  it('opens one, and closes it again', async () => {
+    expect(await runAction('panel.open', { panel: 'assets' })).toEqual({ ok: true })
+    expect(toolIsShown('assets', 'image')).toBe(true)
+
+    expect(await runAction('panel.close', { panel: 'assets' })).toEqual({ ok: true })
+    expect(toolIsShown('assets', 'image')).toBe(false)
+  })
+
+  // The Explorer sits on the home and in no space: naming it here is a refusal, not a no-op.
+  it('refuses a panel this surface does not serve', async () => {
+    expect(await runAction('panel.open', { panel: 'projects' })).toEqual({
+      ok: false,
+      refusal: 'wrongSurface',
+    })
+  })
+})
+
+describe('the microphone', () => {
+  it('opens it, and says so rather than ok when the machine refused', async () => {
+    const start = vi.fn(async () => useDictation.setState({ state: 'listening' }))
+    useDictation.setState({ state: 'ready', failure: null, start })
+
+    expect(await runAction('dictation.start', {})).toEqual({ ok: true })
+
+    useDictation.setState({ state: 'permissionRequired', start: vi.fn(async () => {}) })
+    expect(await runAction('dictation.start', {})).toEqual({
+      ok: false,
+      refusal: 'notAllowed',
+    })
+  })
+
+  /** The two ways of ending differ exactly there: one keeps what was heard, the other drops it. */
+  it('keeps what was heard, or throws it away when asked', async () => {
+    const stop = vi.fn(async () => {})
+    const cancel = vi.fn(async () => {})
+    useDictation.setState({ stop, cancel })
+
+    await runAction('dictation.stop', {})
+    expect(stop).toHaveBeenCalled()
+
+    await runAction('dictation.stop', { discard: true })
+    expect(cancel).toHaveBeenCalled()
   })
 })

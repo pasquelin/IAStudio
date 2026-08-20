@@ -138,4 +138,52 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
       { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true },
     ],
   }),
+  /**
+   * The stack the Explorer's ⌘Z drives, which lives in the main process and per project: a batch
+   * made in one window is taken back from another, and from here.
+   */
+  action({
+    name: 'files.undo',
+    titleKey: 'assistant.actions.filesUndo.title',
+    descriptionKey: 'assistant.actions.filesUndo.description',
+    commitment: 'files',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    name: 'files.redo',
+    titleKey: 'assistant.actions.filesRedo.title',
+    descriptionKey: 'assistant.actions.filesRedo.description',
+    commitment: 'files',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    name: 'files.history',
+    titleKey: 'assistant.actions.filesHistory.title',
+    descriptionKey: 'assistant.actions.filesHistory.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    name: 'file.reveal',
+    titleKey: 'assistant.actions.fileReveal.title',
+    descriptionKey: 'assistant.actions.fileReveal.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [{ key: 'path', kind: 'text', labelKey: 'assistant.fields.filePath', required: true }],
+  }),
+  action({
+    // The absolute path, like the two above it: the shelf renames projects it has not opened.
+    name: 'project.rename',
+    titleKey: 'assistant.actions.projectRename.title',
+    descriptionKey: 'assistant.actions.projectRename.description',
+    commitment: 'files',
+    reach: 'mcp',
+    fields: [
+      { key: 'path', kind: 'text', labelKey: 'assistant.fields.folderPath', required: true },
+      { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true },
+    ],
+  }),
 ]

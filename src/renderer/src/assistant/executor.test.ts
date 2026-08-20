@@ -4,7 +4,7 @@ import type { ModelSummary } from '@shared/domain/model'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
-import { subscribeToCommands } from '@/services/commandBus'
+import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { job as jobOf } from '@/stores/job-fixtures'
@@ -160,19 +160,21 @@ describe('running a command', () => {
   it('hands it to the surface listening for it', async () => {
     const heard: string[] = []
     const stop = subscribeToCommands(command => heard.push(command))
+    const disarm = armCommandScope('canvas')
 
     expect(await runAction('command.run', { command: 'canvas.zoomIn' })).toEqual({ ok: true })
 
     expect(heard).toEqual(['canvas.zoomIn'])
+    disarm()
     stop()
   })
 
   /**
    * The defect this whole check exists for: the bus is memoryless and the subscriber filters by
-   * scope, so a command for a surface that is not in front vanishes without a word. Reported as
+   * scope, so a command for a surface nothing has mounted vanishes without a word. Reported as
    * having run, the assistant would be lying about the one thing it is asked to be reliable on.
    */
-  it('says so rather than dropping a command meant for another surface', async () => {
+  it('says so rather than dropping a command no surface is there to take', async () => {
     const heard: string[] = []
     const stop = subscribeToCommands(command => heard.push(command))
 
@@ -202,14 +204,6 @@ describe('running a command', () => {
 
     expect(outcome).toEqual({ ok: true })
     expect(createPicked).toHaveBeenCalled()
-  })
-
-  // The three the main process performs itself never reach the window, so there is nothing here
-  // to run — and saying so is better than reporting a fullscreen that never happened.
-  it('still refuses the commands the main process fires on its own', async () => {
-    const outcome = await runAction('command.run', { command: 'window.fullScreen' })
-
-    expect(outcome).toEqual({ ok: false, refusal: 'globalCommand' })
   })
 })
 

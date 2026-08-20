@@ -76,6 +76,18 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     fields: [{ key: 'jobId', kind: 'text', labelKey: 'assistant.fields.jobId', required: true }],
   }),
   action({
+    /**
+     * The studio's OWN long tasks — an ffmpeg render, an ingest, an index — which are not jobs:
+     * a job runs on Scenario's side and is cancelled there. Both are followed by a task id.
+     */
+    name: 'task.cancel',
+    titleKey: 'assistant.actions.taskCancel.title',
+    descriptionKey: 'assistant.actions.taskCancel.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [{ key: 'taskId', kind: 'text', labelKey: 'assistant.fields.taskId', required: true }],
+  }),
+  action({
     name: 'usage.report',
     titleKey: 'assistant.actions.usageReport.title',
     descriptionKey: 'assistant.actions.usageReport.description',

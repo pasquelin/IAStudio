@@ -60,6 +60,28 @@ export type ToolId =
   | 'text'
 
 /**
+ * The same panels as a list, for the doors that publish a closed set of them — the tool schema
+ * an MCP client reads, and the validator behind it. `exhaustive.test.ts` ties the two together.
+ */
+export const TOOL_IDS: readonly ToolId[] = [
+  'layers',
+  'meshes',
+  'lights',
+  'timeline',
+  'explorer',
+  'git',
+  'history',
+  'scene',
+  'models',
+  'generator',
+  'inspector',
+  'assets',
+  'projects',
+  'library',
+  'animations',
+]
+
+/**
  * The panels the upper half of a WORKSPACE's left column is reserved for: what the Scenario API
  * offers. A model to pick, its form to fill, and the assets the account holds. Nothing else may
  * sit in that half of a workspace, and none of the three sits anywhere else — `tool.test.ts`

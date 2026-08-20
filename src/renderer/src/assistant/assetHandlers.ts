@@ -60,4 +60,21 @@ export const ASSET_HANDLERS: ActionHandlers = {
     withBridge(bridge =>
       bridge.assets.remove(textsOf(input, 'assetIds'), boolOf(input, 'alsoRemote')),
     ),
+
+  'assets.describe': input =>
+    withBridge(bridge => bridge.assets.describe(textsOf(input, 'assetIds'))),
+
+  'assets.absent': input => withBridge(bridge => bridge.assets.absent(textsOf(input, 'assetIds'))),
+
+  'asset.extractTextures': input =>
+    withBridge(bridge => bridge.assets.extractTextures(textOf(input, 'assetId') ?? '')),
+
+  // `false` says there was no file to show, which is a real answer for a library-only asset
+  // rather than a failure — hence `notFound` and not `failed`.
+  'asset.reveal': async input => {
+    const outcome = await withBridge(bridge =>
+      bridge.assets.reveal(textOf(input, 'assetId') ?? ''),
+    )
+    return outcome.ok && outcome.data === false ? refused('notFound') : outcome
+  },
 }

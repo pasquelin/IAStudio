@@ -155,6 +155,13 @@ export type SceneViewsState = {
   setCamera: (documentId: string, camera: CameraPlacement) => void
 }
 
+/**
+ * The pane a surface with one row to say it in speaks for — the native menu, the bar's flyout,
+ * and an action. A quad layout gives each of its four views a way of being drawn, and none of
+ * those three has four ways of asking.
+ */
+export const MAIN_SCENE_PANE = 0
+
 export const useSceneViews = create<SceneViewsState>()(set => ({
   views: {},
 
