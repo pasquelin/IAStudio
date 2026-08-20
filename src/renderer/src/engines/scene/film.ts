@@ -67,18 +67,15 @@ export function flipToSrgbInto(
   width: number,
   height: number,
 ): void {
-  const stride = width * 4
+  flipInto(into, pixels, width, height)
 
-  for (let row = 0; row < height; row += 1) {
-    const from = row * stride
-    const to = (height - row - 1) * stride
-
-    for (let at = 0; at < stride; at += 4) {
-      into[to + at] = SRGB[pixels[from + at] ?? 0] ?? 0
-      into[to + at + 1] = SRGB[pixels[from + at + 1] ?? 0] ?? 0
-      into[to + at + 2] = SRGB[pixels[from + at + 2] ?? 0] ?? 0
-      into[to + at + 3] = pixels[from + at + 3] ?? 0
-    }
+  // Flat over the flipped buffer rather than folded into the loop above: the row arithmetic is
+  // written once, and a run of `set` per row is what a JavaScript engine turns into a memcpy.
+  // Alpha is skipped — it is linear by definition, and encoding it would lift every transparency.
+  for (let at = 0; at < into.length; at += 4) {
+    into[at] = SRGB[into[at] ?? 0] ?? 0
+    into[at + 1] = SRGB[into[at + 1] ?? 0] ?? 0
+    into[at + 2] = SRGB[into[at + 2] ?? 0] ?? 0
   }
 }
 

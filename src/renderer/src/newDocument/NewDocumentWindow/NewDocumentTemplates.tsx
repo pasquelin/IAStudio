@@ -17,6 +17,7 @@ import {
   type SceneTemplateId,
 } from '@shared/domain/sceneTemplate'
 import { MediaTile } from '@/design/MediaTile'
+import { rowSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
 
@@ -32,15 +33,17 @@ const ICONS: Record<SceneTemplateId, string> = {
   topDown: mdiGrid,
 }
 
-/** How wide each group's row is, out of the eight columns the section is divided into. */
-const SPANS: Record<SceneTemplateGroup, string> = {
-  general: 'col-span-5',
-  character: 'col-span-3',
-}
-
-const COLUMNS: Record<SceneTemplateGroup, string> = {
-  general: 'grid-cols-5',
-  character: 'grid-cols-3',
+/**
+ * How each group is laid out: how many of the section's eight columns it takes, and how many
+ * tiles it fits across — always as many as the group holds, so every group is one row.
+ *
+ * Written rather than composed from that count, because Tailwind generates its classes by
+ * reading the source: `grid-cols-${templates.length}` produces a class that does not exist.
+ * `NewDocumentTemplates.test.tsx` holds the two halves together.
+ */
+const LAYOUT: Record<SceneTemplateGroup, { span: string; columns: string }> = {
+  general: { span: 'col-span-5', columns: 'grid-cols-5' },
+  character: { span: 'col-span-3', columns: 'grid-cols-3' },
 }
 
 export type NewDocumentTemplatesProps = {
@@ -62,9 +65,9 @@ export function NewDocumentTemplates({ value, onChange }: NewDocumentTemplatesPr
   return (
     <div className="grid grid-cols-8 gap-3">
       {SCENE_TEMPLATE_GROUPS.map(group => (
-        <section key={group} className={cn('flex min-w-0 flex-col gap-1.5', SPANS[group])}>
+        <section key={group} className={cn('flex min-w-0 flex-col gap-1.5', LAYOUT[group].span)}>
           <span className="text-muted text-xs">{t(`documents.templateGroups.${group}`)}</span>
-          <ul className={cn('grid gap-2', COLUMNS[group])}>
+          <ul className={cn('grid gap-2', LAYOUT[group].columns)}>
             {TEMPLATES_BY_GROUP[group].map(id => (
               <li key={id}>
                 <button
@@ -73,9 +76,11 @@ export function NewDocumentTemplates({ value, onChange }: NewDocumentTemplatesPr
                   data-sc={`field:document.template.${id}`}
                   {...HINT_BOTTOM(t(`documents.templateHints.${id}`))}
                   onClick={() => onChange(id)}
+                  // No background of its own after `rowSkin`: `cn` keeps the LAST of two
+                  // conflicting fills, and a `bg-transparent` here would undo the selection.
                   className={cn(
-                    'w-full cursor-pointer rounded-(--radius-sc-md) border-none p-1',
-                    value === id ? 'bg-accent-soft' : 'hover:bg-elevated bg-transparent',
+                    rowSkin(value === id, { surface: 'tile' }),
+                    'w-full cursor-pointer border-none p-1',
                   )}
                 >
                   <MediaTile
