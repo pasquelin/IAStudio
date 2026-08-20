@@ -150,7 +150,7 @@ describe('the library panel', () => {
     render(<Library />)
 
     await vi.waitFor(() => expect(browse).toHaveBeenCalled())
-    expect(screen.getByText(/bibliothèque de votre compte Scenario est vide/)).toBeInTheDocument()
+    expect(screen.getByText(/bibliothèque de votre compte est vide/)).toBeInTheDocument()
   })
 
   /**

@@ -875,7 +875,7 @@
       },
       "accountsList": {
         "title": "Lister les comptes",
-        "description": "Rend les comptes Scenario que porte ce studio, en disant lequel est actif et lesquels peuvent être renommés ou retirés. Aucune clé ni aucun secret n’est jamais rendu."
+        "description": "Rend les comptes de génération que porte ce studio, en disant lequel est actif et lesquels peuvent être renommés ou retirés. Aucune clé ni aucun secret n’est jamais rendu."
       },
       "accountsActivate": {
         "title": "Changer de compte",

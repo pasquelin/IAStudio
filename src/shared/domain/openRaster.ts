@@ -30,7 +30,7 @@ export const ORA_STUDIO_PATH = 'iastudio/document.json'
  * A container from another application has none, and that is not a failure: it has no identity
  * of ours to carry, so it is known by its file name exactly as a pre-version-3 document is.
  */
-export const ORA_ENVELOPE_PATH = 'scenario/envelope.json'
+export const ORA_ENVELOPE_PATH = 'iastudio/envelope.json'
 
 /** How much of a container is read to find that envelope. */
 export const ORA_HEAD_LIMIT = 64 * 1024

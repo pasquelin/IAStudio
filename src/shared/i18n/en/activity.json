@@ -30,7 +30,7 @@
       "project": "Project",
       "shell": "Interface"
     },
-    "projectNotAProject": "This folder is not a Scenario project",
+    "projectNotAProject": "This folder is not an IA Studio project",
     "projectUnreadable": "This project’s manifest cannot be read: it was truncated or edited by hand",
     "projectTooNew": "This project was made by a newer build of the studio; update the studio to open it",
     "projectNotCreated": "The project could not be created in this folder",
@@ -82,7 +82,7 @@
     "captioned_other": "{{count, number}} assets named",
     "captionFailed": "Naming failed",
     "tagsNotSynced": "The tags of “{{name}}” did not reach the library",
-    "apiRefused": "The Scenario API refused a request",
+    "apiRefused": "The generation API refused a request",
     "scope": {
       "scene.model": "A 3D model could not be loaded",
       "scene.bvh": "A 3D model could not be prepared for picking",
