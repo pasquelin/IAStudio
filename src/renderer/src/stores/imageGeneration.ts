@@ -11,6 +11,7 @@ const landing = createGenerationLanding({
   accepts: isLocalPicture,
   types: PICTURES,
   takes: 'every',
+  scope: 'canvas.place',
   land: placeAsset,
 })
 

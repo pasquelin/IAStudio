@@ -23,7 +23,9 @@ const HOSTS = {
 
 export type ToolButtonProps = Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
-  'aria-label' | 'children' | 'title'
+  // `aria-pressed` among them: it is spread AFTER the one this computes, so a caller passing it
+  // raw would silently win — and the three props below would stop describing what is announced.
+  'aria-label' | 'aria-pressed' | 'children' | 'title'
 > & {
   /**
    * `@mdi/js` icon path. When absent the button renders only its `children` — for the one
@@ -46,6 +48,12 @@ export type ToolButtonProps = Omit<
   active?: boolean
   /** Acts rather than toggles: no `aria-pressed` — see `ToolbarItem.acts`. */
   acts?: boolean
+  /**
+   * ANNOUNCED without being painted, for a state an icon already draws — the eye of a layer row.
+   * Every row is visible by default, so `active` would light a permanent square on each of them,
+   * in the very colour the row takes under the pointer.
+   */
+  told?: boolean
   /** Tool in use AND whose zone has focus: accented background. */
   accented?: boolean
   /** Which host the button sits on — see `HOSTS` for what each one costs. */
@@ -70,6 +78,7 @@ export function ToolButton({
   shortcut,
   active,
   acts,
+  told,
   accented,
   variant = 'bar',
   className,
@@ -85,7 +94,7 @@ export function ToolButton({
     <button
       type="button"
       ref={ref}
-      aria-pressed={acts ? undefined : active}
+      aria-pressed={acts ? undefined : (told ?? active)}
       className={cn(
         BUTTON_BASE,
         'text-muted shrink-0 bg-transparent',

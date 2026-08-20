@@ -8,7 +8,6 @@ import {
   ORA_MERGED_PATH,
   ORA_MIMETYPE,
   ORA_THUMBNAIL_PATH,
-  ORA_THUMBNAIL_SIDE,
   type OraDocument,
   type OraLayer,
   type OraStack,
@@ -461,10 +460,13 @@ describe('reading an OpenRaster container back', () => {
 })
 
 describe('containerPictureOf', () => {
-  // Told apart by their BYTES rather than by their pixels: what is under test is which entry the
-  // reader picks, and it hands back what it read without decoding it.
+  /**
+   * Real PNG bytes, because the choice is made on the thumbnail's MEASURED side. `PNG` is one
+   * pixel, so it covers a caller asking for 1 and falls short of one asking for 2 — which is the
+   * whole decision, at the smallest size that can express it.
+   */
   const FLATTEN = strToU8('the whole picture')
-  const THUMB = strToU8('the small one')
+  const THUMB = PNG
 
   let folder = ''
 
@@ -493,24 +495,24 @@ describe('containerPictureOf', () => {
     await expect(containerPictureOf(file)).resolves.toEqual(FLATTEN)
   })
 
-  it('gives the thumbnail to a tile small enough for it', async () => {
+  it('gives the thumbnail to a tile it is big enough for', async () => {
     const file = await written({ [ORA_MERGED_PATH]: FLATTEN, [ORA_THUMBNAIL_PATH]: THUMB })
 
-    await expect(containerPictureOf(file, ORA_THUMBNAIL_SIDE)).resolves.toEqual(THUMB)
+    await expect(containerPictureOf(file, 1)).resolves.toEqual(THUMB)
   })
 
   // `reduced` never upscales, so a bigger tile handed the thumbnail draws visibly softer than
   // every other format at the same size.
-  it('gives the flatten to a tile bigger than a thumbnail may be', async () => {
+  it('gives the flatten to a tile the thumbnail falls short of', async () => {
     const file = await written({ [ORA_MERGED_PATH]: FLATTEN, [ORA_THUMBNAIL_PATH]: THUMB })
 
-    await expect(containerPictureOf(file, ORA_THUMBNAIL_SIDE * 2)).resolves.toEqual(FLATTEN)
+    await expect(containerPictureOf(file, 2)).resolves.toEqual(FLATTEN)
   })
 
   // Every container the studio writes as a DOCUMENT carries none — see `documentBody`.
   it('falls back to the flatten when the container carries no thumbnail', async () => {
     const file = await written({ [ORA_MERGED_PATH]: FLATTEN })
 
-    await expect(containerPictureOf(file, ORA_THUMBNAIL_SIDE)).resolves.toEqual(FLATTEN)
+    await expect(containerPictureOf(file, 1)).resolves.toEqual(FLATTEN)
   })
 })
