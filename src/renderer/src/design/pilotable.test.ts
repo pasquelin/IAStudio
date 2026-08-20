@@ -153,22 +153,24 @@ describe('a control the studio can be driven by', () => {
    * The controls that go straight to the platform, bypassing the design system entirely — the
    * generation form, the settings window, the git panel, every window that is not a dock.
    *
-   * They are the half the rule above cannot see, and they were the larger one: measured on
-   * 2026-08-20, twenty files rendered an `input`, a `textarea` or a `select` with no handle of any
-   * kind, the generation form among them — the one form of the studio a client most wants to fill.
-   *
-   * Read per FILE rather than per tag: a control wrapped by its own field writes the attribute on
-   * the frame, and demanding it on the input as well would ask for a second, dead one.
+   * Read per TAG, and that is the whole of it: read per file, one named control answered for
+   * every one beside it, and three of the studio's most used fields were invisible while this was
+   * green — the assistant's own box, the search of every collection, and the brush colour.
    */
-  it('is written by every file that goes straight to the platform', () => {
-    const RAW = /<(input|textarea|select)[\s/>]/
-    // The attribute, never the word: `WindowSearch` names `data-sc` in a comment explaining why
-    // it is not a field, and a rule reading the word alone was green on exactly that file.
-    const WRITTEN = /data-sc=|scId[={:]/
+  it('is written by every control that goes straight to the platform', () => {
+    const RAW = /<(input|textarea|select)(?=[\s/>])/g
     const silent = Object.entries(WINDOW_SOURCES)
       .filter(([path]) => path.endsWith('.tsx'))
-      .filter(([, source]) => RAW.test(withoutComments(source)) && !WRITTEN.test(source))
-      .map(([path]) => path)
+      .flatMap(([path, source]) => {
+        const code = withoutComments(source)
+        return (
+          [...code.matchAll(RAW)]
+            // The attribute, never the word: `WindowSearch` names `data-sc` in a comment saying
+            // why it is not a field, and a rule reading the word alone was green on that file.
+            .filter(match => !/data-sc[=\s]/.test(openingTag(code, match.index)))
+            .map(match => `${path} — <${match[1]}>`)
+        )
+      })
 
     expect(silent.sort()).toEqual([])
   })

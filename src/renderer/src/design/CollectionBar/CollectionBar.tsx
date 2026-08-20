@@ -12,6 +12,7 @@ import {
   type FacetOption,
 } from '@/helpers/collectionState'
 import { HINT_TOP, TIP_BOTTOM } from '@/helpers/tooltip'
+import { fieldHandle } from '../scHandle'
 import { CONTROL, PANEL_BAR, PANEL_HEAD } from '../styles'
 import { ToolButton } from '../ToolButton'
 import { UiIcon } from '../UiIcon'
@@ -82,6 +83,7 @@ export function CollectionBar({
       />
       <input
         type="search"
+        data-sc={fieldHandle('collection.search')}
         value={state.search}
         // The placeholder says it, but only until the field is typed in.
         {...TIP_BOTTOM(t('collection.search'), undefined, t('collection.searchHint'))}
