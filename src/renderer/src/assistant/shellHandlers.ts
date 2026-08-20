@@ -1,10 +1,10 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
-import { EMBEDDED_FONTS } from '@shared/domain/font'
 import { isSettingsSection } from '@shared/domain/settings'
 import { TOOL_IDS, type ToolId } from '@shared/domain/tool'
 import { closeTool, revealTool, toolIsShown } from '@/helpers/revealPanel'
 import { availableToolIds } from '@/helpers/toolRegistry'
 import { getBridge } from '@/services/bridge'
+import { studioFonts } from '@/services/fonts'
 import { useDictation } from '@/stores/dictation'
 import { toolSurface } from '@/stores/layouts'
 import { withBridge, type ActionHandlers } from './actionHandler'
@@ -38,16 +38,9 @@ export const SHELL_HANDLERS: ActionHandlers = {
   'auth.state': () => withBridge(bridge => bridge.settings.authState()),
   'updates.state': () => withBridge(bridge => bridge.updates.state()),
   'media.capabilities': () => withBridge(bridge => bridge.media.capabilities()),
-  /**
-   * The studio's own faces first, then whatever the machine adds — the very list the picker
-   * builds. Bare families were half an answer: `layer.text` needs the source as well, and the
-   * three that ship were named nowhere a client could reach.
-   */
-  'fonts.list': () =>
-    withBridge(async bridge => [
-      ...EMBEDDED_FONTS.map(font => ({ source: 'embedded', family: font.family })),
-      ...(await bridge.fonts.list()).map(family => ({ source: 'system', family })),
-    ]),
+  // The picker's own list, faces that ship included: `layer.text` takes a source as well as a
+  // family, and bare installed names left the three shipped ones unnameable.
+  'fonts.list': () => withBridge(() => studioFonts.families()),
   'favorites.list': () => withBridge(bridge => bridge.favorites.list()),
   'mirror.open': () => withBridge(bridge => bridge.mirror.open()),
   'window.fullScreen': () => withBridge(bridge => bridge.window.toggleFullScreen()),

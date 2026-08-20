@@ -8,6 +8,7 @@ import {
   STUDIO_ENVIRONMENT,
   TONE_MAPPINGS,
   VIEW_DIRECTIONS,
+  type EnvironmentRef,
   type SceneWorld,
   type Vector3,
 } from '@shared/domain/scene'
@@ -221,102 +222,101 @@ function reparent(input: Record<string, unknown>): ActionOutcome {
   )
 }
 
-/** A patch of the world of the scene in front. Naming no field at all is a refusal, not a no-op. */
-function editWorld(patch: Partial<SceneWorld>): ActionOutcome {
-  return Object.keys(patch).length === 0 ? refused('badInput') : edit(() => setWorld(patch))
-}
-
-function worldEnvironment(input: Record<string, unknown>): ActionOutcome {
+// `editNode`'s twin for the half of the document that belongs to no node. An empty patch is a
+// refusal rather than a no-op: a client that named nothing meant something.
+function editWorld(build: (world: SceneWorld) => Partial<SceneWorld>): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface')
 
+  const patch = build(open.state.world)
+  if (Object.keys(patch).length === 0) return refused('badInput')
+
+  useScenes.getState().runCommand(open.documentId, setWorld(patch))
+  return { ok: true }
+}
+
+function worldEnvironment(input: Record<string, unknown>): ActionOutcome {
   const kind = oneOf(input, 'kind', ENVIRONMENT_KINDS)
   const assetId = textOf(input, 'assetId')
-  // A sky named outright is a sky chosen, so `kind` is what a client says only to put one out.
-  // Asking for `skybox` without naming one has no answer here: the panel takes the first sky of
-  // the project, which from outside would be a reference nobody picked.
+  // The panel answers `skybox` by taking the first sky of the project, which from outside would
+  // be a reference nobody picked.
   if (kind === 'skybox' && assetId === null) return refused('badInput')
 
   const intensity = numberOf(input, 'intensity')
   const rotation = numberOf(input, 'rotation')
+  // A sky named outright is a sky chosen, so `kind` is what a client says only to put one out.
+  const environment: EnvironmentRef | null =
+    assetId !== null ? { kind: 'skybox', assetId } : kind === 'studio' ? STUDIO_ENVIRONMENT : null
 
-  return editWorld({
-    ...(assetId === null
-      ? kind === 'studio'
-        ? { environment: STUDIO_ENVIRONMENT }
-        : {}
-      : { environment: { kind: 'skybox', assetId } }),
+  return editWorld(() => ({
+    ...(environment === null ? {} : { environment }),
     ...(intensity === null ? {} : { envIntensity: intensity }),
     // Radians, as every other angle a document stores — the panel is what shows degrees.
     ...(rotation === null ? {} : { envRotation: rotation }),
-  })
+  }))
 }
 
 function worldBackground(input: Record<string, unknown>): ActionOutcome {
-  const open = mounted()
-  if (!open) return refused('wrongSurface')
-
   const kind = oneOf(input, 'kind', BACKGROUND_KINDS)
   if (!kind) return refused('badInput')
 
-  // Through the switch the panel uses, so a form that gains a shape gains it here too — then the
-  // two values this call may carry are written over what that switch settled for.
-  const background = backgroundOfKind(kind, open.state.world.background)
-  if (background.kind === 'transparent') return editWorld({ background })
+  return editWorld(world => {
+    // Through the switch the panel uses, so a form that gains a shape gains it here too — then
+    // the two values this call may carry are written over what that switch settled for.
+    const background = backgroundOfKind(kind, world.background)
+    if (background.kind === 'color') {
+      return { background: { ...background, color: readColor(input, 'color', background.color) } }
+    }
 
-  return editWorld({
-    background:
-      background.kind === 'color'
-        ? { kind: 'color', color: textOf(input, 'color') ?? background.color }
-        : { kind: 'environment', blur: numberOf(input, 'blur') ?? background.blur },
+    return background.kind === 'environment'
+      ? { background: { ...background, blur: numberOf(input, 'blur') ?? background.blur } }
+      : { background }
   })
 }
 
 function worldFog(input: Record<string, unknown>): ActionOutcome {
-  const open = mounted()
-  if (!open) return refused('wrongSurface')
-
   const kind = oneOf(input, 'kind', FOG_KINDS)
   if (!kind) return refused('badInput')
 
-  const fog = fogOfKind(kind, open.state.world.fog)
-  if (fog.kind === 'none') return editWorld({ fog })
+  return editWorld(world => {
+    const fog = fogOfKind(kind, world.fog)
+    if (fog.kind === 'none') return { fog }
 
-  const color = textOf(input, 'color') ?? fog.color
+    const painted = { ...fog, color: readColor(input, 'color', fog.color) }
 
-  return editWorld({
-    fog:
-      fog.kind === 'linear'
-        ? {
-            ...fog,
-            color,
-            near: numberOf(input, 'near') ?? fog.near,
-            far: numberOf(input, 'far') ?? fog.far,
-          }
-        : { ...fog, color, density: numberOf(input, 'density') ?? fog.density },
+    return {
+      fog:
+        painted.kind === 'linear'
+          ? {
+              ...painted,
+              near: numberOf(input, 'near') ?? painted.near,
+              far: numberOf(input, 'far') ?? painted.far,
+            }
+          : { ...painted, density: numberOf(input, 'density') ?? painted.density },
+    }
   })
 }
 
 function worldGround(input: Record<string, unknown>): ActionOutcome {
-  const open = mounted()
-  if (!open) return refused('wrongSurface')
-
-  const ground = open.state.world.ground
   const size = numberOf(input, 'size')
   const opacity = numberOf(input, 'opacity')
-  const color = textOf(input, 'color')
-  // `undefined` and not `false`: a call naming the size alone must not put the ground out.
-  const written = {
-    ...(input.visible === undefined ? {} : { visible: boolOf(input, 'visible') }),
-    ...(color === null ? {} : { color }),
-    ...(size === null ? {} : { size }),
-    ...(opacity === null ? {} : { opacity }),
-    ...(input.receiveShadow === undefined ? {} : { receiveShadow: boolOf(input, 'receiveShadow') }),
-  }
 
-  return Object.keys(written).length === 0
-    ? refused('badInput')
-    : editWorld({ ground: { ...ground, ...written } })
+  return editWorld(world => {
+    // `undefined` and not `false`: a call naming the size alone must not put the ground out.
+    const written = {
+      ...(input.visible === undefined ? {} : { visible: boolOf(input, 'visible') }),
+      ...(input.color === undefined
+        ? {}
+        : { color: readColor(input, 'color', world.ground.color ?? '') }),
+      ...(size === null ? {} : { size }),
+      ...(opacity === null ? {} : { opacity }),
+      ...(input.receiveShadow === undefined
+        ? {}
+        : { receiveShadow: boolOf(input, 'receiveShadow') }),
+    }
+
+    return Object.keys(written).length === 0 ? {} : { ground: { ...world.ground, ...written } }
+  })
 }
 
 export const SCENE_HANDLERS: ActionHandlers = {
@@ -331,10 +331,10 @@ export const SCENE_HANDLERS: ActionHandlers = {
     const toneMapping = oneOf(input, 'toneMapping', TONE_MAPPINGS)
     const exposure = numberOf(input, 'exposure')
 
-    return editWorld({
+    return editWorld(() => ({
       ...(toneMapping === null ? {} : { toneMapping }),
       ...(exposure === null ? {} : { exposure }),
-    })
+    }))
   },
   'node.add': add,
   'node.select': select,

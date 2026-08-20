@@ -1,20 +1,15 @@
 import { mdiLockOpenVariantOutline, mdiLockOutline } from '@mdi/js'
-import type { LayerLocks } from '@/engines/canvas/canvasState'
+import { LOCK_KEYS, type LayerLocks } from '@/engines/canvas/canvasState'
 
 /**
- * The three padlocks, declared once for the stack row and the inspector — the same reason
- * `TRACK_FLAGS` is declared once for the track headers and theirs: two hand-written copies had
- * already drifted into two different controls.
+ * The three padlocks as the SCREEN wears them — their order and their keys come from the state,
+ * which `layer.lock` reads too; what is added here is the label and the glyph.
  */
 export const LAYER_LOCKS: readonly {
   key: keyof LayerLocks
   labelKey: string
   iconFor: (locked: boolean) => string
-}[] = [
-  { key: 'pixels', labelKey: 'inspector.lock_pixels', iconFor: padlockIcon },
-  { key: 'position', labelKey: 'inspector.lock_position', iconFor: padlockIcon },
-  { key: 'alpha', labelKey: 'inspector.lock_alpha', iconFor: padlockIcon },
-]
+}[] = LOCK_KEYS.map(key => ({ key, labelKey: `inspector.lock_${key}`, iconFor: padlockIcon }))
 
 function padlockIcon(locked: boolean): string {
   return locked ? mdiLockOutline : mdiLockOpenVariantOutline

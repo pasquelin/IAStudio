@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { assistantAction, type ActionName } from '@shared/domain/assistant'
 import type { SceneWorld } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
@@ -511,5 +512,43 @@ describe('the world of the scene', () => {
     expect(await runAction('world.ground', {})).toEqual({ ok: false, refusal: 'badInput' })
     expect(await runAction('world.render', {})).toEqual({ ok: false, refusal: 'badInput' })
     expect(await runAction('world.environment', {})).toEqual({ ok: false, refusal: 'badInput' })
+  })
+
+  /**
+   * `no-unreachable-command` holds `setWorld` as PUBLISHED, which it now is — and a patch command
+   * says nothing about its fields. This is what names the members no action writes, so a member
+   * added to the world does not gain a door by accident.
+   */
+  it('names the members of the world nothing can write', async () => {
+    const world: readonly ActionName[] = [
+      'world.environment',
+      'world.background',
+      'world.fog',
+      'world.ground',
+      'world.render',
+    ]
+    const written = new Set(
+      world.flatMap(name => assistantAction(name)?.fields ?? []).map(field => field.key),
+    )
+
+    const reached: Record<keyof SceneWorld, boolean> = {
+      environment: written.has('kind'),
+      envIntensity: written.has('intensity'),
+      envRotation: written.has('rotation'),
+      background: written.has('blur'),
+      fog: written.has('density'),
+      toneMapping: written.has('toneMapping'),
+      exposure: written.has('exposure'),
+      ground: written.has('receiveShadow'),
+      // How a set is WALKED. Nothing reads it yet either — see `ScenePlay`, whose own note says
+      // it is written by templates and by nothing else.
+      play: false,
+    }
+
+    expect(
+      Object.entries(reached)
+        .filter(([, held]) => !held)
+        .map(([member]) => member),
+    ).toEqual(['play'])
   })
 })

@@ -27,6 +27,20 @@ export type ShapeOptions = {
 export const MIN_SIDES = 3
 export const MAX_SIDES = 12
 
+/**
+ * Whether the shape has no inside. `paintShape` leaves these two open, so a fill on one paints
+ * nothing at all — which is why the panel hides the switch and `layer.shape` refuses it.
+ */
+export function isOpenShape(kind: ShapeKind): boolean {
+  return kind === 'line' || kind === 'arrow'
+}
+
+/** The paint a shape falls back to when it is switched on, so turning one on is never a no-op. */
+export const SHAPE_INK = 0x000000
+
+/** What a shape is outlined with when nothing else says — a drawn line, a stroke switched on. */
+export const DEFAULT_STROKE_WIDTH = 2
+
 const SNAP = Math.PI / 4
 
 /** Barb length as a share of the shaft, and how far it opens from it. */

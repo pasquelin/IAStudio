@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { WINDOW_SOURCES } from '@/windowSources'
+import { WINDOW_SOURCES } from './windowSources'
 
 /**
  * What edits a document, against what an outside client may ask for.
@@ -55,8 +55,11 @@ const HANDLERS = Object.entries(WINDOW_SOURCES)
   .map(([, source]) => source)
   .join('\n')
 
-const sourceOf = (module: string): string =>
-  Object.entries(WINDOW_SOURCES).find(([path]) => path.endsWith(module))?.[1] ?? ''
+/** Read once, like `HANDLERS`: both rules below walk the same four modules. */
+const COMMANDS: readonly (readonly [string, readonly string[]])[] = COMMAND_MODULES.map(module => [
+  module,
+  commandsOf(Object.entries(WINDOW_SOURCES).find(([path]) => path.endsWith(module))?.[1] ?? ''),
+])
 
 /**
  * A command a combinator builds FROM, rather than a gesture of its own. Publishing one would be
@@ -125,17 +128,15 @@ const NOT_PUBLISHED: readonly string[] = [
 describe('what edits a document, and what an outside client may ask for', () => {
   /** A regex that reads nothing prints the same green as one that works. */
   it('finds the commands at all', () => {
-    for (const module of COMMAND_MODULES) {
-      expect(commandsOf(sourceOf(module)).length, module).toBeGreaterThan(10)
-    }
+    for (const [module, names] of COMMANDS) expect(names.length, module).toBeGreaterThan(10)
 
     expect(HANDLERS.length).toBeGreaterThan(10_000)
   })
 
   it('leaves no command of a document that no action can reach', () => {
     const known = new Set([...COMBINATORS, ...NOT_PUBLISHED])
-    const orphans = COMMAND_MODULES.flatMap(module =>
-      commandsOf(sourceOf(module))
+    const orphans = COMMANDS.flatMap(([module, names]) =>
+      names
         .filter(name => !known.has(name) && !new RegExp(`\\b${name}\\b`).test(HANDLERS))
         .map(name => `${module} — ${name}`),
     )

@@ -2,7 +2,7 @@ import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { packedColour } from '@shared/domain/color'
 import { toRadians } from '@shared/domain/angles'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
-import { embeddedFontOf, FONT_SOURCES } from '@shared/domain/font'
+import { embeddedFontOf, FONT_SOURCES, type FontRef } from '@shared/domain/font'
 import {
   ADJUSTMENT_KINDS,
   adjustmentLayer,
@@ -10,6 +10,7 @@ import {
   canMoveLayer,
   DEFAULT_SHAPE_SIDES,
   layerById,
+  LOCK_KEYS,
   pixelLayer,
   SHAPE_KINDS,
   shapeLayer,
@@ -19,7 +20,12 @@ import {
   type DrawnShape,
   type Layer,
 } from '@/engines/canvas/canvasState'
-import { localShape } from '@/engines/canvas/shapeGeometry'
+import {
+  DEFAULT_STROKE_WIDTH,
+  isOpenShape,
+  localShape,
+  SHAPE_INK,
+} from '@/engines/canvas/shapeGeometry'
 import type { Point, Size } from '@/engines/core/geometry'
 import {
   addLayer,
@@ -163,9 +169,8 @@ function drawnShape(input: Record<string, unknown>): { at: Point; drawn: DrawnSh
   const height = numberOf(input, 'height')
   if (!shape || width === null || height === null || width <= 0 || height <= 0) return null
 
-  const ink = numberOf(input, 'fill') ?? 0x000000
-  // Open by nature: a line and an arrow have no inside, so filling one paints nothing at all.
-  const open = shape === 'line' || shape === 'arrow'
+  const ink = numberOf(input, 'fill') ?? SHAPE_INK
+  const open = isOpenShape(shape)
   const sides = numberOf(input, 'sides') ?? DEFAULT_SHAPE_SIDES
   // A ring is drawn from its CENTRE outwards, so the box's middle is where its drag began, and
   // its far point is the corner — a point on the middle of an edge would ignore one axis.
@@ -188,9 +193,6 @@ function drawnShape(input: Record<string, unknown>): { at: Point; drawn: DrawnSh
     },
   }
 }
-
-/** What an assistant-drawn line is stroked with, having no brush size to read one from. */
-const DEFAULT_STROKE_WIDTH = 2
 
 /** The other axis of a box a client half-named, giving a point caption one for the first time. */
 const DEFAULT_PARAGRAPH: Size = { width: 480, height: 120 }
@@ -268,6 +270,16 @@ function transform(input: Record<string, unknown>): ActionOutcome {
   ])
 }
 
+// Deduced when the source is not named, and a shipped face wins: a machine may have one of the
+// same name installed, and only the shipped one travels to the next machine.
+function fontRefOf(input: Record<string, unknown>, family: string): FontRef {
+  return {
+    source:
+      oneOf(input, 'fontSource', FONT_SOURCES) ?? (embeddedFontOf(family) ? 'embedded' : 'system'),
+    family,
+  }
+}
+
 function text(input: Record<string, unknown>): ActionOutcome {
   const colour = packedColour(textOf(input, 'color') ?? '')
   const size = numberOf(input, 'size')
@@ -278,11 +290,6 @@ function text(input: Record<string, unknown>): ActionOutcome {
   const width = numberOf(input, 'width')
   const height = numberOf(input, 'height')
   const family = textOf(input, 'fontFamily')
-  // Deduced when it is not named, and the studio's own face wins: a machine may have a font of
-  // the same name installed, and the one that ships is the one another machine will also have.
-  const source =
-    oneOf(input, 'fontSource', FONT_SOURCES) ??
-    (embeddedFontOf(family ?? '') ? 'embedded' : 'system')
 
   return editLayer(input, layer =>
     // The command only touches a text layer, so a pixel layer named here would be reported as
@@ -291,7 +298,7 @@ function text(input: Record<string, unknown>): ActionOutcome {
       ? [
           setLayerText(layer.id, {
             ...(written === null ? {} : { text: written }),
-            ...(family === null ? {} : { font: { source, family } }),
+            ...(family === null ? {} : { font: fontRefOf(input, family) }),
             ...(size === null ? {} : { size }),
             ...(colour === null ? {} : { color: colour }),
             ...(align === null ? {} : { align }),
@@ -316,54 +323,44 @@ function text(input: Record<string, unknown>): ActionOutcome {
 
 function locks(input: Record<string, unknown>): ActionOutcome {
   return editLayer(input, layer => {
-    const wanted = {
-      ...layer.locked,
-      ...(input.pixels === undefined ? {} : { pixels: boolOf(input, 'pixels') }),
-      ...(input.position === undefined ? {} : { position: boolOf(input, 'position') }),
-      ...(input.alpha === undefined ? {} : { alpha: boolOf(input, 'alpha') }),
-    }
-
+    const named = LOCK_KEYS.filter(padlock => input[padlock] !== undefined)
     // A call naming no padlock at all is a refusal, which `run` makes of an empty list.
-    return input.pixels === undefined && input.position === undefined && input.alpha === undefined
-      ? []
-      : [setLayerLocks(layer.id, wanted)]
+    if (named.length === 0) return []
+
+    const wanted = Object.fromEntries(named.map(padlock => [padlock, boolOf(input, padlock)]))
+    return [setLayerLocks(layer.id, { ...layer.locked, ...wanted })]
   })
 }
-
-/** The paint a shape falls back to when it is switched on, so a `true` is never a no-op. */
-const INK = 0x000000
 
 function shape(input: Record<string, unknown>): ActionOutcome {
   const fill = packedColour(textOf(input, 'fill') ?? '')
   const stroke = packedColour(textOf(input, 'stroke') ?? '')
   const strokeWidth = numberOf(input, 'strokeWidth')
   const sides = numberOf(input, 'sides')
+  const filled = input.filled === undefined ? null : boolOf(input, 'filled')
+  const stroked = input.stroked === undefined ? null : boolOf(input, 'stroked')
 
   return editLayer(input, layer => {
+    // A line and an arrow have no inside, and the panel hides the switch for them: filling one
+    // from outside would answer `ok` for paint nobody can see.
     if (layer.kind !== 'shape') return []
+    if (isOpenShape(layer.shape) && (filled !== null || fill !== null)) return []
 
     const painted =
-      input.filled === undefined
-        ? fill === null
-          ? layer.fill
-          : fill
-        : boolOf(input, 'filled')
-          ? (fill ?? layer.fill ?? INK)
-          : null
-
+      filled === null ? (fill ?? layer.fill) : filled ? (fill ?? layer.fill ?? SHAPE_INK) : null
+    const keeps = stroked === null && stroke === null && strokeWidth === null
     const outlined =
-      input.stroked !== undefined && !boolOf(input, 'stroked')
+      stroked === false
         ? null
-        : input.stroked === undefined && stroke === null && strokeWidth === null
+        : keeps
           ? layer.stroke
           : {
-              color: stroke ?? layer.stroke?.color ?? INK,
+              color: stroke ?? layer.stroke?.color ?? SHAPE_INK,
               width: strokeWidth ?? layer.stroke?.width ?? DEFAULT_STROKE_WIDTH,
             }
 
-    // The panel answers this by switching the other one back on, which is right under a finger and
-    // wrong here: a client that asked for both to go has to hear that it cannot have that, rather
-    // than be handed a shape it did not ask for.
+    // The panel answers this by switching the other one back on, which is right under a finger
+    // and wrong here: a client that asked for both to go hears that it cannot have that.
     if (painted === null && outlined === null) return []
 
     return [

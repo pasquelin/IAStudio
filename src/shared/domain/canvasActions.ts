@@ -25,6 +25,12 @@ const LAYER: ActionField = {
   required: true,
 }
 
+/**
+ * How many sides a ring may take. Written out because `shapeGeometry.ts` cannot be imported from
+ * here; `canvasHandlers.test.ts` holds this copy to `MIN_SIDES`/`MAX_SIDES`, and the dials too.
+ */
+const SIDES = { min: 3, max: 12 }
+
 export const CANVAS_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'canvas.state',
@@ -59,7 +65,13 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
       },
       { key: 'width', kind: 'number', labelKey: 'assistant.fields.width', required: false },
       { key: 'height', kind: 'number', labelKey: 'assistant.fields.height', required: false },
-      { key: 'sides', kind: 'number', labelKey: 'assistant.fields.sides', required: false },
+      {
+        key: 'sides',
+        kind: 'integer',
+        labelKey: 'assistant.fields.sides',
+        required: false,
+        ...SIDES,
+      },
       { key: 'fill', kind: 'number', labelKey: 'assistant.fields.fill', required: false },
       {
         key: 'adjustment',
@@ -370,8 +382,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
         kind: 'integer',
         labelKey: 'assistant.fields.sides',
         required: false,
-        min: 3,
-        max: 12,
+        ...SIDES,
       },
     ],
   }),

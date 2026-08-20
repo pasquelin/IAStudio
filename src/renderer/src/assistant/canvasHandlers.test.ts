@@ -4,11 +4,13 @@ import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import {
   ADJUSTMENT_KINDS,
   DEFAULT_CANVAS,
+  DIAL_RANGE,
   LAYER_KINDS,
   pixelLayer,
   textLayer,
   type CanvasState,
 } from '@/engines/canvas/canvasState'
+import { MAX_SIDES, MIN_SIDES } from '@/engines/canvas/shapeGeometry'
 import { installIn } from '@/stores/document-fixtures'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
@@ -52,6 +54,24 @@ describe('what the registry offers a layer', () => {
     expect(optionsOf('layer.add', 'kind')).toEqual(
       LAYER_KINDS.filter(kind => kind !== 'group').sort(),
     )
+  })
+
+  /**
+   * The BOUNDS travel the same way as the options, and were the half nothing held: a schema that
+   * offers a wider swing than the slider is a client told it may write what the panel cannot.
+   */
+  it('bounds every dial exactly as the engine does', () => {
+    const boundsOf = (name: ActionName, key: string) => {
+      const field = assistantAction(name)?.fields.find(one => one.key === key)
+      return { min: field?.min, max: field?.max }
+    }
+
+    for (const kind of ADJUSTMENT_KINDS) {
+      expect(boundsOf('layer.adjustment', kind), kind).toEqual(DIAL_RANGE[kind])
+    }
+
+    expect(boundsOf('layer.shape', 'sides')).toEqual({ min: MIN_SIDES, max: MAX_SIDES })
+    expect(boundsOf('layer.add', 'sides')).toEqual({ min: MIN_SIDES, max: MAX_SIDES })
   })
 })
 
@@ -395,6 +415,25 @@ describe('repainting a shape long after it was drawn', () => {
       fill: 0xff0000,
       stroke: { color: 0x0000ff, width: 6 },
     })
+  })
+
+  // The panel hides the fill switch for these two, and `paintShape` leaves their path open: an
+  // `ok` here would be paint nobody can see.
+  it('refuses to fill a line, which has no inside', async () => {
+    const made = await runAction('layer.add', {
+      kind: 'shape',
+      name: 'Trait',
+      shape: 'line',
+      width: 100,
+      height: 0.5,
+    })
+    const layerId = made.ok ? (made.data as { layerId: string }).layerId : ''
+
+    expect(await runAction('layer.shape', { layerId, filled: true })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(layerNamed('Trait')).toMatchObject({ fill: null })
   })
 
   /**

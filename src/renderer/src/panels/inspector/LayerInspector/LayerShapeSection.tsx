@@ -4,7 +4,7 @@ import { NumberField } from '@/design/NumberField'
 import { PropertySection } from '@/design/PropertySection'
 import { ToggleField } from '@/design/ToggleField'
 import { colourOf, packedColour } from '@shared/domain/color'
-import { MAX_SIDES, MIN_SIDES } from '@/engines/canvas/shapeGeometry'
+import { isOpenShape, MAX_SIDES, MIN_SIDES } from '@/engines/canvas/shapeGeometry'
 import { setLayerShape } from '@/engines/canvas/commands'
 import type { CanvasState, ShapeLayer } from '@/engines/canvas/canvasState'
 import type { DocumentEdit } from '@/hooks/useDocumentEdit'
@@ -27,9 +27,7 @@ export function LayerShapeSection({ layer, edit }: LayerShapeSectionProps) {
   // where reading `layer.stroke` again would be `ShapeStroke | null` all over.
   const stroke = layer.stroke
 
-  // A line and an arrow have no inside: `paintShape` leaves their path open, so the fill toggle
-  // would be a control that says the shape is filled while nothing is painted.
-  const closed = layer.shape !== 'line' && layer.shape !== 'arrow'
+  const closed = !isOpenShape(layer.shape)
 
   return (
     <PropertySection title={t('inspector.shape')} scId="shape">
