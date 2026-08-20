@@ -17,7 +17,6 @@ import {
 } from '@shared/domain/openRaster'
 import { attribute, escapeXml, unescapeXml } from '@shared/domain/xmlText'
 import { clamp } from '@shared/numeric'
-import { probePng } from '@main/media/png'
 
 const MIMETYPE_PATH = 'mimetype'
 const STACK_PATH = 'stack.xml'
@@ -311,40 +310,38 @@ async function mergedPictureIn(
 }
 
 /**
- * The picture of a container ON DISK, streamed. `fitting` is the longest side the caller can use;
- * absent, only the FLATTEN will do — preferring the thumbnail by default served 256 px to the
- * asset scheme, which every inspector preview and every layer born of a `.ora` reads through.
- *
- * The thumbnail is taken on its MEASURED side, never on the spec's cap: a caller asking for 264
- * is eight pixels over it, and refusing on that read and decoded a whole flatten — 35 MB of RGBA
- * for a 4K picture, on the process that owns every window — for a size `reduced` cannot even use.
+ * The FLATTEN of a container ON DISK, streamed. What every reader wanting the picture itself
+ * takes — the asset scheme, and through it every inspector preview and every layer born of a
+ * `.ora`. Answered the thumbnail instead, a 4K picture arrived 256 px wide and was stretched
+ * over the whole document.
  */
-export async function containerPictureOf(
-  file: string,
-  fitting?: number,
-): Promise<Uint8Array | null> {
+export function containerPictureOf(file: string): Promise<Uint8Array | null> {
+  return pictureIn(file, ORA_MERGED_PATH)
+}
+
+/**
+ * The same, for a TILE: the container's own thumbnail when it carries one, its flatten otherwise.
+ *
+ * A choice, never a size — the caller knows it is drawing a tile, and the spec's 256 px cap can
+ * only ever be under what a tile asks for. Deciding by the number instead sent the library, which
+ * asks for 264, through a whole flatten: 35 MB of RGBA on the process that owns every window, for
+ * eight pixels `reduced` cannot even use.
+ */
+export async function containerTileOf(file: string): Promise<Uint8Array | null> {
+  return (await pictureIn(file, ORA_THUMBNAIL_PATH)) ?? (await containerPictureOf(file))
+}
+
+/** `null` for every file that is not a container, and for every container without that entry. */
+async function pictureIn(file: string, wanted: string): Promise<Uint8Array | null> {
   if (!file.toLowerCase().endsWith('.ora')) return null
 
   try {
     const { createReadStream } = await import('node:fs')
-    const small =
-      fitting === undefined
-        ? null
-        : await mergedPictureIn(createReadStream(file), ORA_THUMBNAIL_PATH)
-
-    return covers(small, fitting) ? small : await mergedPictureIn(createReadStream(file))
+    return await mergedPictureIn(createReadStream(file), wanted)
   } catch {
     // A file that will not read is answered as every caller answers what it cannot serve.
     return null
   }
-}
-
-/** Whether a thumbnail is big enough for what was asked — `reduced` never upscales. */
-function covers(picture: Uint8Array | null, fitting: number | undefined): picture is Uint8Array {
-  if (!picture || fitting === undefined) return false
-  const probe = probePng(picture)
-
-  return Math.max(probe?.width ?? 0, probe?.height ?? 0) >= fitting
 }
 
 /**
