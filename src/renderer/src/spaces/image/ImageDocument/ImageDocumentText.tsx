@@ -54,6 +54,22 @@ export function ImageDocumentText({
     return () => store.endGesture(documentId)
   }, [documentId])
 
+  /**
+   * A point caption's field follows its own words. Measured off `scrollWidth` rather than
+   * computed from the font: the browser has already laid the line out, and asking it is the only
+   * way to agree with what it drew — a field one letter too narrow would wrap a line that never
+   * wraps.
+   */
+  useEffect(() => {
+    const element = field.current
+    if (!element || layer.box) return
+
+    element.style.width = '0'
+    element.style.width = `${element.scrollWidth}px`
+    element.style.height = '0'
+    element.style.height = `${element.scrollHeight}px`
+  }, [layer.box, layer.text, layer.size, layer.font, layer.tracking, viewport.scale])
+
   useEffect(() => {
     const read = (event: globalThis.KeyboardEvent): void => setPassing(event.metaKey)
     // `blur` too: the window losing focus never delivers the keyup, and the field would stay
@@ -74,8 +90,11 @@ export function ImageDocumentText({
   const style: CSSProperties = {
     left: at.x + inset,
     top: at.y + inset,
-    width: layer.box.width * viewport.scale,
-    height: layer.box.height * viewport.scale,
+    // A POINT caption is sized by its own words: `auto` on both axes, and the effect below keeps
+    // the field just wide enough for the line, which never wraps.
+    width: layer.box ? layer.box.width * viewport.scale : 'auto',
+    height: layer.box ? layer.box.height * viewport.scale : 'auto',
+    whiteSpace: layer.box ? 'pre-wrap' : 'pre',
     // Around the top-left corner, which is where the engine places the words themselves.
     transformOrigin: '0 0',
     transform: `rotate(${toDegrees(layer.transform.rotation)}deg) scale(${layer.transform.scaleX}, ${layer.transform.scaleY})`,

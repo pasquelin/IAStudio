@@ -58,7 +58,7 @@ const MIN_BOX = 8
  * Apart from `resizeBy`, which scales a whole layer: a caption's box is resized rather than
  * stretched, so its words keep the body they were set in and simply wrap somewhere else.
  */
-export function resizedBox(handle: HandleId, box: Size, local: Point): Rect {
+export function resizedBox(handle: HandleId, box: Size, local: Point, constrain = false): Rect {
   const west = handle.includes('w')
   const east = handle.includes('e')
   const north = handle.startsWith('n')
@@ -71,7 +71,26 @@ export function resizedBox(handle: HandleId, box: Size, local: Point): Rect {
   const right = east ? Math.round(Math.max(local.x, left + MIN_BOX)) : box.width
   const bottom = south ? Math.round(Math.max(local.y, top + MIN_BOX)) : box.height
 
-  return { x: left, y: top, width: right - left, height: bottom - top }
+  const pulled = { x: left, y: top, width: right - left, height: bottom - top }
+  // Shift holds the ratio, as it does everywhere else here. On an edge grip there is only one
+  // axis to hold, and the other simply follows it.
+  return constrain ? inRatio(pulled, box, { north, west }) : pulled
+}
+
+/** The same pull, taken back to the box's own ratio — the larger side is what it is read from. */
+function inRatio(pulled: Rect, box: Size, from: { north: boolean; west: boolean }): Rect {
+  const ratio = box.height / box.width
+  const wide = pulled.width * ratio >= pulled.height
+  const width = wide ? pulled.width : pulled.height / ratio
+  const height = wide ? pulled.width * ratio : pulled.height
+
+  // A grip that moved the origin keeps the far edge still, so the corner takes up the slack.
+  return {
+    x: from.west ? pulled.x + pulled.width - width : pulled.x,
+    y: from.north ? pulled.y + pulled.height - height : pulled.y,
+    width,
+    height,
+  }
 }
 
 /** Half the side of the square a grip is drawn as, in screen pixels — grips ignore the zoom. */

@@ -8,10 +8,11 @@ import { TextPanel } from './TextPanel'
 
 const DOCUMENT = 'doc-1'
 
-const withCaption = (): void =>
+/** A PARAGRAPH caption: a box is what the panel's width and height rows are about. */
+const withCaption = (box: { width: number; height: number } | null = { width: 480, height: 120 }) =>
   installCanvas(DOCUMENT, {
     ...DEFAULT_CANVAS,
-    layers: [textLayer('t', 'Bonjour', { x: 10, y: 20 })],
+    layers: [textLayer('t', 'Bonjour', { x: 10, y: 20 }, box)],
     activeLayerId: 't',
   })
 
@@ -61,7 +62,7 @@ describe('TextPanel', () => {
     expect(layer?.kind === 'text' && layer.lineHeight).toBeCloseTo(1.8)
   })
 
-  // The box is what the words WRAP in; nothing is ever cut to it.
+  // The box is what the words WRAP in, and what hides those it cannot show.
   it('widens the box the words wrap in', async () => {
     withCaption()
     render(<TextPanel />)
@@ -72,6 +73,21 @@ describe('TextPanel', () => {
     await userEvent.tab()
 
     const layer = armed()
-    expect(layer?.kind === 'text' && layer.box.width).toBe(900)
+    expect(layer?.kind === 'text' && layer.box?.width).toBe(900)
+  })
+
+  /**
+   * A POINT caption has no box to size — its line simply grows. The panel offers to give it one
+   * rather than a width field over nothing, which is also the only way there from the keyboard.
+   */
+  it('offers a box to a caption that has none, instead of sizing what is not there', async () => {
+    withCaption(null)
+    render(<TextPanel />)
+    expect(screen.queryByLabelText('Largeur de la zone')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Donner une zone' }))
+
+    const layer = armed()
+    expect(layer?.kind === 'text' && layer.box?.width).toBeGreaterThan(0)
   })
 })

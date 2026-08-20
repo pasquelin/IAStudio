@@ -102,6 +102,7 @@ const COLORS = {
 const NO_TOOL: ToolChrome = {
   crop: null,
   textBox: null,
+  overflowing: false,
   handles: null,
   lit: null,
   pending: null,
@@ -462,6 +463,21 @@ describe('the tool chrome', () => {
     expect(shape).toBeGreaterThan(marquee)
     // The dimming comes last of the three, or it would fail to dim what it is about to cut.
     expect(scrim).toBeGreaterThan(shape)
+  })
+
+  /**
+   * A paragraph hides what it cannot show, so something has to say the caption holds more. Both
+   * Photoshop and InDesign cross that corner, and it is the only mark on screen that says it.
+   */
+  it('crosses the south-east grip while words are hidden below the box', () => {
+    const { context, calls } = recorder()
+    drawOverlay(context, toolScene({ handles: cornersOfRect(RECT), overflowing: true }))
+    const crossed = calls.filter(call => call.op === 'moveTo').length
+
+    const plain = recorder()
+    drawOverlay(plain.context, toolScene({ handles: cornersOfRect(RECT), overflowing: false }))
+
+    expect(crossed).toBeGreaterThan(plain.calls.filter(call => call.op === 'moveTo').length)
   })
 
   it('paints nothing at all for a shape with no vertex', () => {

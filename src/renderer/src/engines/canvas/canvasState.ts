@@ -165,10 +165,14 @@ export type TextLayer = LayerBase & {
   /** Packed RGB, the form Pixi takes. */
   color: number
   /**
-   * What the words wrap inside, in document units. Words are never CUT to it: a caption that
-   * outgrows its box spills past it, exactly as one does in Photoshop.
+   * What the words wrap inside, in document units — a PARAGRAPH caption. What outgrows it in
+   * height is hidden rather than spilled, and the box says so; nothing is lost, and widening it
+   * brings the rest back.
+   *
+   * `null` is the other kind, which a plain click opens: a POINT caption has no box at all. Its
+   * line simply grows, only a typed return breaks it, and there is nothing for it to outgrow.
    */
-  box: Size
+  box: Size | null
   align: TextAlign
   /** A multiple of the size, so a caption keeps its leading when it is set bigger. */
   lineHeight: number
@@ -178,12 +182,10 @@ export type TextLayer = LayerBase & {
 
 export const DEFAULT_TEXT_SIZE = 48
 
-/** What a single click opens. A drag names its own, and this is what a click has instead. */
-export const DEFAULT_TEXT_BOX: Size = { width: 480, height: 120 }
-
 export const DEFAULT_LINE_HEIGHT = 1.2
 
-export function textLayer(id: string, text: string, at: Point, box = DEFAULT_TEXT_BOX): TextLayer {
+/** `box` absent is a POINT caption, which is what a plain click opens — see `TextLayer.box`. */
+export function textLayer(id: string, text: string, at: Point, box: Size | null = null): TextLayer {
   return {
     // Named after its words, and after the KIND while it has none: a nameless row in the stack
     // is a row nobody can find the caption back by.
@@ -581,15 +583,13 @@ function reviveAdjustment(raw: unknown): AdjustmentKind {
   return oneOf(ADJUSTMENT_KINDS, raw, 'exposure')
 }
 
-function reviveBox(raw: unknown): Size {
-  if (!isRecord(raw)) return DEFAULT_TEXT_BOX
-  const read = (value: unknown, fallback: number): number =>
-    typeof value === 'number' && value > 0 ? value : fallback
+/** No box at all is the POINT caption, and a box read back has to hold a size on both axes. */
+function reviveBox(raw: unknown): Size | null {
+  if (!isRecord(raw)) return null
+  const { width, height } = raw
+  if (typeof width !== 'number' || typeof height !== 'number') return null
 
-  return {
-    width: read(raw.width, DEFAULT_TEXT_BOX.width),
-    height: read(raw.height, DEFAULT_TEXT_BOX.height),
-  }
+  return width > 0 && height > 0 ? { width, height } : null
 }
 
 /** A shape whose two points collapse has no size, which nothing on screen could ever hold. */

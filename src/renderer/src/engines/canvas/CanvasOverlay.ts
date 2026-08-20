@@ -160,6 +160,8 @@ export type ToolChrome = {
   pending: PendingShape | null
   /** The box a text drag is sizing. A frame, not a shape: nothing is painted where it stands. */
   textBox: Rect | null
+  /** Whether the framed caption holds words its box does not show — the ⊞ grip says so. */
+  overflowing: boolean
   selection: CanvasSelection
   /**
    * Half the brush, in DOCUMENT units, while a painting tool is armed — `null` for every other
@@ -390,6 +392,22 @@ function drawGrips(context: OverlayContext, scene: OverlayScene): void {
     const grow = id === scene.tools.lit ? 1 : 0
     context.fillRect(grip.x - grow, grip.y - grow, grip.width + grow * 2, grip.height + grow * 2)
   }
+
+  // The south-east grip is crossed while words are hidden below the box — Photoshop and InDesign
+  // both mark that corner, and it is the only thing on screen saying the caption holds more.
+  if (scene.tools.overflowing) crossGrip(context, grips.se, scene.colors)
+}
+
+/** A cross through a grip, drawn in the ink that reads over the accent it sits on. */
+function crossGrip(context: OverlayContext, grip: Rect, colors: OverlayColors): void {
+  const inset = 1.5
+  context.strokeStyle = colors.marqueeLight
+  context.beginPath()
+  context.moveTo(grip.x + inset, grip.y + grip.height / 2)
+  context.lineTo(grip.x + grip.width - inset, grip.y + grip.height / 2)
+  context.moveTo(grip.x + grip.width / 2, grip.y + inset)
+  context.lineTo(grip.x + grip.width / 2, grip.y + grip.height - inset)
+  context.stroke()
 }
 
 /** The four sides of a rectangle, laid down for `ants` to stroke twice. */
