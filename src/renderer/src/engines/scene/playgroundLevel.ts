@@ -11,7 +11,7 @@
  * it exists, and what makes a camera at eye height mean something in the meantime.
  */
 import type { MaterialDescriptor, Vector3 } from '@shared/domain/scene'
-import { groupNode, meshNode } from './nodeFactory'
+import { groupNode, meshNode, transformAt } from './nodeFactory'
 import { defaultMeshMaterial } from './checkerTextures'
 import { IDENTITY_TRANSFORM, type SceneNode } from './sceneState'
 
@@ -20,13 +20,14 @@ const FLOOR = 40
 const PIT = 8
 const WALL_HEIGHT = 3
 
+/** The slope, in the three numbers that have to agree: its pitch, its half-length, its half-rise. */
+const RAMP_PITCH = 0.25
+const RAMP_RUN = 4.5
+const RAMP_RISE = RAMP_RUN * Math.sin(RAMP_PITCH)
+
 /** A quarter of a metre per checker square is unreadable; one per metre is what a floor wants. */
 function tiled(metres: number): MaterialDescriptor {
   return { ...defaultMeshMaterial(), uvScale: Math.max(1, Math.round(metres)) }
-}
-
-function at(position: Vector3, rotation: Vector3 = { x: 0, y: 0, z: 0 }) {
-  return { ...IDENTITY_TRANSFORM, position, rotation }
 }
 
 const LYING_FLAT: Vector3 = { x: -Math.PI / 2, y: 0, z: 0 }
@@ -50,7 +51,7 @@ function floorBands(parentId: string): SceneNode[] {
     meshNode(
       { kind: 'plane', width: slab.width, height: slab.depth },
       {
-        transform: at(slab.position, LYING_FLAT),
+        transform: transformAt(slab.position, LYING_FLAT),
         material: tiled(Math.max(slab.width, slab.depth)),
         castShadow: false,
         parentId,
@@ -78,7 +79,7 @@ function walls(parentId: string): SceneNode[] {
   return sides.map(side =>
     meshNode(
       { kind: 'box', width: side.width, height: WALL_HEIGHT, depth: side.depth },
-      { transform: at(side.position), material: tiled(WALL_HEIGHT), parentId },
+      { transform: transformAt(side.position), material: tiled(WALL_HEIGHT), parentId },
     ),
   )
 }
@@ -89,7 +90,7 @@ function climbs(parentId: string): SceneNode[] {
     meshNode(
       { kind: 'box', width: 3, height: 0.25, depth: 0.7 },
       {
-        transform: at({ x: 12, y: 0.125 + at_ * 0.25, z: 6 - at_ * 0.7 }),
+        transform: transformAt({ x: 12, y: 0.125 + at_ * 0.25, z: 6 - at_ * 0.7 }),
         material: tiled(3),
         parentId,
       },
@@ -98,18 +99,28 @@ function climbs(parentId: string): SceneNode[] {
 
   return [
     // Some fourteen degrees, which is a slope one walks up rather than slides down.
+    //
+    // A POSITIVE pitch about X raises the -Z end, which is the end the landing waits at: the
+    // sign was the other way round, and the ramp climbed away from its landing with its foot
+    // buried under the floor. The height is what puts that foot back on the ground —
+    // `RAMP_RISE` is half the slope's rise, and the centre stands exactly that far up.
     meshNode(
-      { kind: 'box', width: 4, height: 0.3, depth: 9 },
+      { kind: 'box', width: 4, height: 0.3, depth: RAMP_RUN * 2 },
       {
-        transform: at({ x: -12, y: 0.9, z: 4 }, { x: -0.25, y: 0, z: 0 }),
-        material: tiled(9),
+        transform: transformAt({ x: -12, y: RAMP_RISE, z: 4 }, { x: RAMP_PITCH, y: 0, z: 0 }),
+        material: tiled(RAMP_RUN * 2),
         parentId,
       },
     ),
-    // Where the ramp arrives: a landing, or a climb ends in mid-air.
+    // Where the ramp arrives, at the height it arrives AT: a landing half a metre off is a step
+    // nobody asked for, and a climb that ends in mid-air is worse.
     meshNode(
       { kind: 'box', width: 4, height: 0.3, depth: 4 },
-      { transform: at({ x: -12, y: 1.95, z: -2 }), material: tiled(4), parentId },
+      {
+        transform: transformAt({ x: -12, y: RAMP_RISE * 2, z: -2 }),
+        material: tiled(4),
+        parentId,
+      },
     ),
     ...steps,
   ]
@@ -117,18 +128,20 @@ function climbs(parentId: string): SceneNode[] {
 
 /** Three blocks at rising heights, spaced so the gap is the question a jump answers. */
 function jumps(parentId: string): SceneNode[] {
-  return [0, 1, 2].map(index =>
-    meshNode(
-      { kind: 'box', width: 2, height: 0.5 + index * 0.6, depth: 2 },
+  return [0, 1, 2].map(index => {
+    const height = 0.5 + index * 0.6
+
+    return meshNode(
+      { kind: 'box', width: 2, height, depth: 2 },
       {
         // Clear of `-12`, where the northern floor band is centred: two things at one depth are
         // two things a test cannot tell apart, and a level nobody can describe.
-        transform: at({ x: -6 + index * 3.5, y: (0.5 + index * 0.6) / 2, z: -15 }),
+        transform: transformAt({ x: -6 + index * 3.5, y: height / 2, z: -15 }),
         material: tiled(2),
         parentId,
       },
-    ),
-  )
+    )
+  })
 }
 
 /** Pillars to go round, and the plank over the pit — precision rather than speed. */
@@ -140,7 +153,7 @@ function obstacles(parentId: string): SceneNode[] {
   ].map(position =>
     meshNode(
       { kind: 'cylinder', radiusTop: 0.6, radiusBottom: 0.6, height: 3, segments: 24 },
-      { transform: at(position), material: tiled(3), parentId },
+      { transform: transformAt(position), material: tiled(3), parentId },
     ),
   )
 
@@ -148,7 +161,7 @@ function obstacles(parentId: string): SceneNode[] {
     ...pillars,
     meshNode(
       { kind: 'box', width: 1.2, height: 0.2, depth: PIT + 0.4 },
-      { transform: at({ x: 0, y: -0.1, z: 0 }), material: tiled(PIT), parentId },
+      { transform: transformAt({ x: 0, y: -0.1, z: 0 }), material: tiled(PIT), parentId },
     ),
   ]
 }
@@ -158,9 +171,9 @@ function obstacles(parentId: string): SceneNode[] {
  * reads, and the families are also how one hides half the level to look at the other.
  */
 export function playgroundNodes(): SceneNode[] {
-  const ground = groupNode()
-  const enclosure = groupNode()
-  const course = groupNode()
+  const ground = groupNode(IDENTITY_TRANSFORM, 'Ground')
+  const enclosure = groupNode(IDENTITY_TRANSFORM, 'Enclosure')
+  const course = groupNode(IDENTITY_TRANSFORM, 'Course')
 
   return [
     ground,

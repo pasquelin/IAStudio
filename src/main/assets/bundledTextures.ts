@@ -69,7 +69,14 @@ export function registerBundledTextureHandlers({
 
     // The SAME asset when the row is still there: its id is what the scenes of this project
     // already point at, and a fresh one would leave every one of them resolving to nothing.
-    if (held) return withoutSourcePath(await assets.replaceBytes(held.id, bytes, '.png'))
+    //
+    // Falling back to a fresh import rather than letting it throw: `replaceBytes` writes to the
+    // path the row carries and makes no folder, so a `Textures/` sent to the trash whole would
+    // fail on the first of the four and cost the project all of them.
+    if (held) {
+      const rewritten = await assets.replaceBytes(held.id, bytes, '.png').catch(() => null)
+      if (rewritten) return withoutSourcePath(rewritten)
+    }
 
     return withoutSourcePath(
       await assets.importFromBytes(

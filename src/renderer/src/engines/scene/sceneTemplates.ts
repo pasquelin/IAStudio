@@ -15,7 +15,6 @@ import {
   type MaterialDescriptor,
   type ScenePlay,
   type SceneWorld,
-  type Transform,
   type Vector3,
 } from '@shared/domain/scene'
 import {
@@ -26,9 +25,9 @@ import {
 import { defaultMeshMaterial } from './checkerTextures'
 import { createDefaultScene } from './defaultScene'
 import { presetPatch } from './environmentPresets'
-import { cameraNode, lightNode, meshNode, pathNode } from './nodeFactory'
+import { cameraNode, lightNode, meshNode, pathNode, transformAt } from './nodeFactory'
 import { playgroundNodes } from './playgroundLevel'
-import { IDENTITY_TRANSFORM, type SceneNode, type SceneState } from './sceneState'
+import type { SceneNode, SceneState } from './sceneState'
 
 const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }
 
@@ -47,14 +46,14 @@ export function pitchTowards(height: number, distance: number, targetHeight = 0)
   return Math.atan2(targetHeight - height, distance)
 }
 
-function at(position: Vector3, rotation: Vector3 = ORIGIN): Transform {
-  return { ...IDENTITY_TRANSFORM, position, rotation }
-}
-
-/** A camera on the +Z axis, aimed by its pitch alone — see `pitchTowards`. */
-function aimedCamera(height: number, distance: number, targetHeight = 0): SceneNode {
+/**
+ * A camera on the +Z axis, aimed by its pitch alone — see `pitchTowards`. `distance` is measured
+ * from what it LOOKS AT, which is at the origin unless `targetZ` says otherwise: a camera placed
+ * at its distance from zero would frame the origin rather than the subject standing away from it.
+ */
+function aimedCamera(height: number, distance: number, targetHeight = 0, targetZ = 0): SceneNode {
   const rotation = { x: pitchTowards(height, distance, targetHeight), y: 0, z: 0 }
-  return cameraNode(at({ x: 0, y: height, z: distance }, rotation))
+  return cameraNode(transformAt({ x: 0, y: height, z: targetZ + distance }, rotation))
 }
 
 /**
@@ -65,20 +64,28 @@ function floor(size: number): SceneNode {
   return meshNode(
     { kind: 'plane', width: size, height: size },
     {
-      transform: at(ORIGIN, LYING_FLAT),
+      transform: transformAt(ORIGIN, LYING_FLAT),
       material: { ...defaultMeshMaterial(), uvScale: size },
       castShadow: false,
     },
   )
 }
 
-/** A stand-in the size of a person — what the three character templates frame. */
+/**
+ * A stand-in the size of a person — what the three character templates frame.
+ *
+ * Off the origin, which the playground turned into an eight-metre hole: framed there, the two
+ * templates that show a silhouette opened on one standing over a void.
+ */
 function standIn(): SceneNode {
   return meshNode(
     { kind: 'capsule', radius: 0.3, height: 1.2, capSegments: 8, radialSegments: 16 },
-    { transform: at({ x: 0, y: 0.9, z: 0 }) },
+    { transform: transformAt({ x: 0, y: 0.9, z: STAND_IN_Z }) },
   )
 }
+
+/** Clear of the pit, on the floor band the two framed views open on. */
+const STAND_IN_Z = 10
 
 const KEY_LIGHT: Vector3 = { x: 5, y: 10, z: 7.5 }
 
@@ -114,6 +121,17 @@ const BACKDROP: MaterialDescriptor = {
  */
 const WALKING: Partial<ScenePlay> = { eyeHeight: 1.7, moveSpeed: 4, gravity: 9.81 }
 
+/**
+ * The level, its light, and what the view adds on top — the three character templates differ by
+ * that last part alone, which is the whole claim they make.
+ */
+function characterView(view: readonly SceneNode[], play: Partial<ScenePlay>): Template {
+  return {
+    nodes: [...playgroundNodes(), sun(2.4, { x: 14, y: 18, z: 10 }), ambient(0.5), ...view],
+    play: { ...WALKING, ...play },
+  }
+}
+
 /** What a template settles, over the studio's own defaults. */
 type Template = {
   nodes: readonly SceneNode[]
@@ -133,7 +151,7 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
       floor(20),
       meshNode(
         { kind: 'box', width: 1, height: 1, depth: 1 },
-        { transform: at({ x: 0, y: 0.5, z: 0 }) },
+        { transform: transformAt({ x: 0, y: 0.5, z: 0 }) },
       ),
       sun(2),
       ambient(0.6),
@@ -147,7 +165,7 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
     nodes: [
       meshNode(
         { kind: 'plane', width: 12, height: 8 },
-        { transform: at({ x: 0, y: 4, z: -5 }), material: BACKDROP, castShadow: false },
+        { transform: transformAt({ x: 0, y: 4, z: -5 }), material: BACKDROP, castShadow: false },
       ),
       floor(12),
       lightNode(
@@ -197,37 +215,21 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // The three below open on the SAME level and differ by where the camera stands — which is what
   // these three views are. A cadrage over an empty floor proved nothing: what makes them worth
   // picking is a set one can climb, fall off and bump into.
-  firstPerson: () => ({
-    nodes: [
-      ...playgroundNodes(),
-      sun(2.4, { x: 14, y: 18, z: 10 }),
-      ambient(0.5),
-      cameraNode(at({ x: 0, y: 1.7, z: 14 })),
-    ],
-    play: { ...WALKING, camera: 'firstPerson' },
-  }),
+  firstPerson: () =>
+    characterView([cameraNode(transformAt({ x: 0, y: 1.7, z: 14 }))], {
+      camera: 'firstPerson',
+    }),
 
-  thirdPerson: () => ({
-    nodes: [
-      ...playgroundNodes(),
-      sun(2.4, { x: 14, y: 18, z: 10 }),
-      ambient(0.5),
-      standIn(),
-      aimedCamera(2.4, 5, 1),
-    ],
-    play: { ...WALKING, camera: 'thirdPerson' },
-  }),
+  // The camera stands back BEHIND the stand-in, which stands at z = 10 — over the shoulder means
+  // both on the same axis, and the aim is at chest height.
+  thirdPerson: () =>
+    characterView([standIn(), aimedCamera(2.4, 5, 1, STAND_IN_Z)], { camera: 'thirdPerson' }),
 
-  topDown: () => ({
-    nodes: [
-      ...playgroundNodes(),
-      sun(2.4, { x: 14, y: 18, z: 10 }),
-      ambient(0.5),
-      standIn(),
-      aimedCamera(16, 11, 0.9),
-    ],
-    play: { ...WALKING, camera: 'topDown', moveSpeed: 6 },
-  }),
+  topDown: () =>
+    characterView([standIn(), aimedCamera(16, 11, 0.9, STAND_IN_Z)], {
+      camera: 'topDown',
+      moveSpeed: 6,
+    }),
 }
 
 /**
