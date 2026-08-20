@@ -873,8 +873,16 @@ export class CanvasEngine {
     // A caption and a shape take the turn in their transform instead — see `rotateImage`. Their
     // own space did not turn, so neither their words nor the mask over them may: the drawing key
     // is dropped so the next reconcile lays them out again at the sides the document now has.
+    //
+    // TOP LEVEL only, exactly like the `moveLayers` that writes those transforms: a caption inside
+    // a group is turned by the group, so skipping its pixels here would leave it the one thing in
+    // the document still reading the old way.
+    //
+    // BLIND SPOT: a mask holds painted pixels, not state, so it cannot be redrawn with the words
+    // it hides. Left at the old sides, `resurface` recuts it — on a NON-SQUARE document a masked
+    // caption loses the paint past the new bounds, and the strip that appears hides nothing.
     const flat = new Set<string>()
-    for (const layer of allLayers(this.state.layers)) {
+    for (const layer of this.state.layers) {
       if (!isRedrawn(layer)) continue
       flat.add(layer.id).add(maskKey(layer.id))
       this.drawings.delete(layer.id)

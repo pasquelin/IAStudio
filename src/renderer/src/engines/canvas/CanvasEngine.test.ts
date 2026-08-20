@@ -2263,6 +2263,36 @@ describe('captions', () => {
     ])
 
   /**
+   * The other half of `rotateImage`, which gives a caption the quarter in its ANGLE because its
+   * texture is redrawn from its state: turned here as well, the words would carry the turn twice
+   * until the next keystroke laid them out flat. The two halves share `isRedrawn` and nothing
+   * else, so this is what keeps them from drifting apart.
+   */
+  it('leaves a caption’s pixels alone while it turns the document', async () => {
+    const { engine } = await mounted(caption('Bonjour'))
+    gpu.sprites.length = 0
+
+    engine.turnQuarter(true)
+
+    expect(gpu.sprites.filter(sprite => sprite.rotation !== 0)).toHaveLength(1)
+  })
+
+  /**
+   * `moveLayers` writes the transforms of the TOP LEVEL only — a group carries its children — so
+   * a caption inside one is turned by its group. Skipped here as well, it would get neither the
+   * pixel turn nor an angle, and would be the one thing left reading the document's old way.
+   */
+  it('turns the pixels of a caption a group carries', async () => {
+    const inside = groupLayer('g', 'Group', [textLayer('t', 'Bonjour', { x: 10, y: 20 })])
+    const { engine } = await mounted(stacked([pixelLayer('layer-1', 'Background'), inside]))
+    gpu.sprites.length = 0
+
+    engine.turnQuarter(true)
+
+    expect(gpu.sprites.filter(sprite => sprite.rotation !== 0)).toHaveLength(2)
+  })
+
+  /**
    * The two kinds Photoshop has, and the two gestures that tell them apart. A click opens a POINT
    * caption: no box, so nothing wraps and nothing can be hidden — its line simply grows.
    */

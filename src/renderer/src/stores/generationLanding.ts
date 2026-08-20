@@ -1,6 +1,7 @@
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { DocumentKind } from '@shared/domain/document'
 import { isFinished, type Job } from '@shared/domain/job'
+import type { LogScope } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useAssets } from './assets'
@@ -30,6 +31,9 @@ export type GenerationLanding = {
    * — so `every` leaves the last one rendered armed.
    */
   takes: 'first' | 'every'
+  /** Where a catalogue read that fails is journalled — one space per scope, or the reader is sent
+   * to the wrong one. */
+  scope: LogScope
   land: (documentId: string, asset: Asset) => void
 }
 
@@ -62,6 +66,7 @@ export function createGenerationLanding({
   accepts,
   types,
   takes,
+  scope,
   land,
 }: GenerationLanding): LandingChannel {
   /**
@@ -96,7 +101,7 @@ export function createGenerationLanding({
     const rows = await bridge.assets
       .search({ types: [...types], limit: SETTLE_LIMIT })
       .catch(error => {
-        reportFailure('canvas.place', kind, error)
+        reportFailure(scope, kind, error)
         return null
       })
 

@@ -12,6 +12,7 @@ const landing = createGenerationLanding({
   accepts: isLocalPicture,
   types: PICTURES,
   takes: 'first',
+  scope: 'skybox.source',
   land: setSkyboxSource,
 })
 

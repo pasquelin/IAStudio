@@ -24,10 +24,9 @@ export function VisibilityToggle({ visible, label, description, onToggle }: Visi
       description={description}
       tooltip={TIP_RIGHT}
       variant="row"
-      // ANNOUNCED, not painted — `active` would do both. The icon is the whole of what a sighted
-      // eye reads here and a screen reader hears none of it, but every row is visible by default,
-      // so painting them all left a permanent square the colour of the row's own hover.
-      aria-pressed={visible}
+      // Announced, not painted: the icon is the whole of what a sighted eye reads here and a
+      // screen reader hears none of it — see `ToolButton.told`.
+      told={visible}
       onPointerDown={event => event.stopPropagation()}
       onDoubleClick={event => event.stopPropagation()}
       onClick={event => {

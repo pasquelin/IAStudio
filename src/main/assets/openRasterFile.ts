@@ -7,7 +7,6 @@ import {
   ORA_MIMETYPE,
   ORA_STUDIO_PATH,
   ORA_THUMBNAIL_PATH,
-  ORA_THUMBNAIL_SIDE,
   ORA_VERSION,
   type OraDocument,
   type OraGroup,
@@ -18,6 +17,7 @@ import {
 } from '@shared/domain/openRaster'
 import { attribute, escapeXml, unescapeXml } from '@shared/domain/xmlText'
 import { clamp } from '@shared/numeric'
+import { probePng } from '@main/media/png'
 
 const MIMETYPE_PATH = 'mimetype'
 const STACK_PATH = 'stack.xml'
@@ -311,12 +311,13 @@ async function mergedPictureIn(
 }
 
 /**
- * The picture of a container ON DISK, streamed. `null` for every file that is not a container.
+ * The picture of a container ON DISK, streamed. `fitting` is the longest side the caller can use;
+ * absent, only the FLATTEN will do — preferring the thumbnail by default served 256 px to the
+ * asset scheme, which every inspector preview and every layer born of a `.ora` reads through.
  *
- * `fitting` is the longest side the caller can use, and it is what decides. A tile that asks for
- * 256 or less takes the container's own thumbnail, which weighs kilobytes; everyone else takes
- * the FLATTEN. Preferring the thumbnail by default served a 256 px picture to the asset scheme,
- * which is what every inspector preview and every layer sourced from a `.ora` reads.
+ * The thumbnail is taken on its MEASURED side, never on the spec's cap: a caller asking for 264
+ * is eight pixels over it, and refusing on that read and decoded a whole flatten — 35 MB of RGBA
+ * for a 4K picture, on the process that owns every window — for a size `reduced` cannot even use.
  */
 export async function containerPictureOf(
   file: string,
@@ -327,26 +328,23 @@ export async function containerPictureOf(
   try {
     const { createReadStream } = await import('node:fs')
     const small =
-      fitting !== undefined && fitting <= ORA_THUMBNAIL_SIDE
-        ? await mergedPictureIn(createReadStream(file), ORA_THUMBNAIL_PATH)
-        : null
+      fitting === undefined
+        ? null
+        : await mergedPictureIn(createReadStream(file), ORA_THUMBNAIL_PATH)
 
-    const streamed = small ?? (await mergedPictureIn(createReadStream(file)))
-    if (streamed) return streamed
-
-    // AN ASSURANCE, not a measured fix: `Unzip` reads local headers only, so an entry carrying
-    // its sizes in a data descriptor is one this cannot reach — and `unzipSync`, which reads the
-    // central directory, could. No writer here emits one, so the case is unproven either way.
-    const { readFile } = await import('node:fs/promises')
-    const whole = unzipSync(await readFile(file), {
-      filter: one => one.name === ORA_MERGED_PATH,
-    })
-
-    return whole[ORA_MERGED_PATH] ?? null
+    return covers(small, fitting) ? small : await mergedPictureIn(createReadStream(file))
   } catch {
     // A file that will not read is answered as every caller answers what it cannot serve.
     return null
   }
+}
+
+/** Whether a thumbnail is big enough for what was asked — `reduced` never upscales. */
+function covers(picture: Uint8Array | null, fitting: number | undefined): picture is Uint8Array {
+  if (!picture || fitting === undefined) return false
+  const probe = probePng(picture)
+
+  return Math.max(probe?.width ?? 0, probe?.height ?? 0) >= fitting
 }
 
 /**

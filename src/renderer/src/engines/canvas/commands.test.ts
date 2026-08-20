@@ -46,6 +46,7 @@ import {
   type Rect,
   type Transform,
 } from './canvasState'
+import type { Size } from '../core/geometry'
 import { applyTo, layerMatrix, mapRect } from './layerSpace'
 
 const second = layerFixture()
@@ -734,12 +735,12 @@ describe('flipping and turning the whole document', () => {
    * it holds: `x` is not the position of the content once a scale or a turn is on, so a suite
    * that reads `x` alone stays green while the whole layer sits outside the frame.
    */
-  const contentOf = (state: CanvasState): Rect => {
+  const contentOf = (state: CanvasState, frame?: Size): Rect => {
     const box = { width: state.width, height: state.height }
     const transform = transformOf(state)
     if (!transform) throw new Error('the fixture has no layer')
 
-    return mapRect(layerMatrix(transform, box), { x: 0, y: 0, ...box })
+    return mapRect(layerMatrix(transform, box), { x: 0, y: 0, ...(frame ?? box) })
   }
 
   const near = (rect: Rect) => ({
@@ -875,13 +876,12 @@ describe('flipping and turning the whole document', () => {
     activeLayerId: 't',
   })
 
-  /** What a paragraph's grips describe: its own box, where its transform puts it. */
-  const captionFrame = (state: CanvasState): Rect => {
+  /** What a paragraph's grips describe, which `contentOf` then places for us. */
+  const captionBox = (state: CanvasState): Size => {
     const layer = state.layers[0]
     if (layer?.kind !== 'text' || !layer.box) throw new Error('the fixture has no caption')
 
-    const box = { width: state.width, height: state.height }
-    return mapRect(layerMatrix(layer.transform, box), { x: 0, y: 0, ...layer.box })
+    return layer.box
   }
 
   /**
@@ -892,7 +892,9 @@ describe('flipping and turning the whole document', () => {
   it('carries a caption to the place the turn sends its box', () => {
     const [after] = roundTrip(captioned(10, 20), rotateImage(true, turns()))
 
-    expect(captionFrame(after)).toMatchObject(near({ x: 170, y: 10, width: 10, height: 40 }))
+    expect(contentOf(after, captionBox(after))).toMatchObject(
+      near({ x: 170, y: 10, width: 10, height: 40 }),
+    )
   })
 
   // Four quarter turns are one full turn, and one full turn is where the document started.

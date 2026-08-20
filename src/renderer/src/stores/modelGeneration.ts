@@ -7,6 +7,7 @@ const landing = createGenerationLanding({
   accepts: asset => asset.type === 'mesh',
   types: ['mesh'],
   takes: 'first',
+  scope: 'scene.model',
   land: (documentId, asset) => void addModelTo(documentId, asset),
 })
 

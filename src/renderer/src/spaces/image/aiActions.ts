@@ -83,8 +83,8 @@ export async function prepareEdit(
     masked && wantsMask && layer?.mask?.enabled === true ? await host.maskSnapshot(layer.id) : null
 
   // A NOTICE, not a failure: the edit goes through, with less than it was asked for. Reported as
-  // a failure it said the send had failed while it was succeeding — and said it once per model,
-  // where every send deserves the warning.
+  // one it carried the scope's own line — "the image could not be sent to the model" — while the
+  // send was succeeding.
   if (masked && !wantsMask) reportNotice('canvas.edit', i18next.t('imageEdit.maskIgnored'))
 
   // Sequenced rather than raced: when the second upload fails, the first has already created a
