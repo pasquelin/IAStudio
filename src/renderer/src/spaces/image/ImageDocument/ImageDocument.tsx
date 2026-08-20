@@ -463,7 +463,6 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
             documentId={documentId}
             layer={typing}
             viewport={view.viewport}
-            inset={rulerInset}
             label={t('imageTools.textEditing')}
             onDone={endTyping}
           />

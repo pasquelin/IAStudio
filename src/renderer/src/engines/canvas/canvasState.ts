@@ -184,6 +184,19 @@ export const DEFAULT_TEXT_SIZE = 48
 
 export const DEFAULT_LINE_HEIGHT = 1.2
 
+/** A frame with no surface is not a frame. */
+export function sided(value: number): number {
+  return Math.max(1, Math.round(value))
+}
+
+/**
+ * A text box as a layer stores one. The engine reads drags in floats, so one taken at 74% zoom
+ * comes back as 471.5789473684211 — and the panel's fields keep every digit they are handed.
+ */
+export function wholeBox(box: Size): Size {
+  return { width: sided(box.width), height: sided(box.height) }
+}
+
 /** `box` absent is a POINT caption, which is what a plain click opens — see `TextLayer.box`. */
 export function textLayer(id: string, text: string, at: Point, box: Size | null = null): TextLayer {
   return {
@@ -195,7 +208,7 @@ export function textLayer(id: string, text: string, at: Point, box: Size | null 
     font: DEFAULT_FONT,
     size: DEFAULT_TEXT_SIZE,
     color: 0x000000,
-    box,
+    box: box && wholeBox(box),
     align: 'left',
     lineHeight: DEFAULT_LINE_HEIGHT,
     tracking: 0,

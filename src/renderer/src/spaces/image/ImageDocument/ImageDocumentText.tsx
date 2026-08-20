@@ -12,8 +12,6 @@ export type ImageDocumentTextProps = {
   documentId: string
   layer: TextLayer
   viewport: Viewport
-  /** What the rulers take from the top and the left, which the host's origin sits after. */
-  inset: number
   label: string
   /** Named, never implied: a click elsewhere opens the NEXT caption before this one lets go. */
   onDone: (layerId: string) => void
@@ -31,7 +29,6 @@ export function ImageDocumentText({
   documentId,
   layer,
   viewport,
-  inset,
   label,
   onDone,
 }: ImageDocumentTextProps) {
@@ -88,8 +85,10 @@ export function ImageDocumentText({
 
   const at = toScreen(viewport, layer.transform)
   const style: CSSProperties = {
-    left: at.x + inset,
-    top: at.y + inset,
+    // No ruler inset here: the viewport is already expressed in the host's frame, rulers
+    // included, so adding it again pushed the field 20px off the words it lies over.
+    left: at.x,
+    top: at.y,
     // A POINT caption is sized by its own words: `auto` on both axes, and the effect below keeps
     // the field just wide enough for the line, which never wraps.
     width: layer.box ? layer.box.width * viewport.scale : 'auto',

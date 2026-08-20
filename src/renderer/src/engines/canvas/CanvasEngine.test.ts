@@ -2344,6 +2344,21 @@ describe('captions', () => {
   })
 
   /**
+   * The pull opens a history entry like any other grip, so releasing it has to close one. Left
+   * open, the next two commands sharing an id coalesced and went back on a single undo.
+   */
+  it('closes the history entry the box pull opened', async () => {
+    const { engine, host, layers } = await mounted(armedCaption(), 'text')
+    engine.setView(BARE_VIEW)
+
+    press(host, 10 + PARAGRAPH.width, 20 + PARAGRAPH.height)
+    drag(host, 200, 100)
+    release(200, 100)
+
+    expect(layers.filter(call => call === 'begin' || call === 'end')).toEqual(['begin', 'end'])
+  })
+
+  /**
    * The ring outside a corner turns a caption as it turns any other layer. It was the one grip
    * of the eight that lied: drawn, hovered, and answered by nothing.
    */

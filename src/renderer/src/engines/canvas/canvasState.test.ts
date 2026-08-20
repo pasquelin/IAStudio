@@ -12,6 +12,7 @@ import {
   layerById,
   mapLayers,
   serializeCanvas,
+  textLayer,
   type CanvasState,
 } from './canvasState'
 
@@ -324,5 +325,29 @@ describe('reading back the kinds this build added', () => {
     )
 
     expect(state.guides).toEqual([{ id: 'g', axis: 'y', position: 40 }])
+  })
+})
+
+describe('a caption given a box', () => {
+  /**
+   * The engine reads drags in floats, so one taken at 74% zoom comes back as 471.5789473684211 —
+   * and the panel's fields keep every digit they are handed rather than rounding for show.
+   */
+  it('stores it in whole pixels', () => {
+    const drawn = textLayer('t', '', { x: 0, y: 0 }, { width: 471.5789473684211, height: 242.52 })
+
+    expect(drawn.box).toEqual({ width: 472, height: 243 })
+  })
+
+  // A box with no surface is not a box: a grip pulled past the opposite edge reads as zero.
+  it('never gets a side of nothing', () => {
+    expect(textLayer('t', '', { x: 0, y: 0 }, { width: 0.2, height: 0 }).box).toEqual({
+      width: 1,
+      height: 1,
+    })
+  })
+
+  it('has none at all when it is a point caption', () => {
+    expect(textLayer('t', '', { x: 0, y: 0 }).box).toBeNull()
   })
 })
