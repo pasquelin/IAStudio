@@ -1,5 +1,6 @@
 import type { BufferAttribute, BufferGeometry, InterleavedBufferAttribute } from 'three'
 import type { GeometryDescriptor } from '@shared/domain/scene'
+import { DEFAULT_TUBE_CURVE } from './threeFactory'
 
 /*
  * Repeating a map at a fixed density — one square of the checker per square metre, on a wall as
@@ -76,10 +77,14 @@ function spanOf(descriptor: GeometryDescriptor, geometry: BufferGeometry): UvSpa
         v: circumference(descriptor.tube),
       }
 
-    // The two whose UVs follow a CURVE the descriptor does not carry. Measured off the built
-    // shape instead, an approximation: a path that doubles back is longer than its box.
-    case 'lathe':
+    // `u` runs ALONG the path and `v` round the tube — the order three.js builds them in. The
+    // path is fixed until a curve editor exists, so its length is read rather than guessed at.
     case 'tube':
+      return { u: DEFAULT_TUBE_CURVE.getLength(), v: circumference(descriptor.radius) }
+
+    // Round the axis, then up the profile — and the profile lives in the factory, so the height
+    // is measured off the built shape.
+    case 'lathe':
       return spanFromBounds(geometry)
   }
 }
@@ -105,6 +110,15 @@ function scaleUvs(uv: UvAttribute, span: UvSpan, tilesPerMetre: number): void {
   uv.needsUpdate = true
 }
 
+/**
+ * The origin sits at the CENTRE of a tile, not on the corner of four. Primitives are built around
+ * their own centre, so without the half a picture meant to fit once straddles the 0..1 seam and
+ * shows its right half on the left — measured on a four-metre plane at a quarter tile per metre.
+ */
+function centred(along: number, tilesPerMetre: number): number {
+  return along * tilesPerMetre + 0.5
+}
+
 function projectUvs(geometry: BufferGeometry, uv: UvAttribute, tilesPerMetre: number): void {
   const position = geometry.attributes.position
   const normal = geometry.attributes.normal
@@ -121,11 +135,11 @@ function projectUvs(geometry: BufferGeometry, uv: UvAttribute, tilesPerMetre: nu
     // The pair the normal does NOT dominate — a floor is read by x and z, a wall facing X by
     // z and y. Ties go to the later axis, which only ever happens on a 45° face.
     if (towardsY >= towardsX && towardsY >= towardsZ) {
-      uv.setXY(at, x * tilesPerMetre, z * tilesPerMetre)
+      uv.setXY(at, centred(x, tilesPerMetre), centred(z, tilesPerMetre))
     } else if (towardsX >= towardsZ) {
-      uv.setXY(at, z * tilesPerMetre, y * tilesPerMetre)
+      uv.setXY(at, centred(z, tilesPerMetre), centred(y, tilesPerMetre))
     } else {
-      uv.setXY(at, x * tilesPerMetre, y * tilesPerMetre)
+      uv.setXY(at, centred(x, tilesPerMetre), centred(y, tilesPerMetre))
     }
   }
   uv.needsUpdate = true

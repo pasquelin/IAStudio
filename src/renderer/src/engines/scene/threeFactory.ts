@@ -50,7 +50,7 @@ import { screenScale } from '../viewport/screenScale'
 const HELPER_SIZE = 0.5
 
 /** Tube needs a path and Lathe a profile; both are fixed until a curve editor exists. */
-const DEFAULT_TUBE_CURVE = new CatmullRomCurve3([
+export const DEFAULT_TUBE_CURVE = new CatmullRomCurve3([
   new Vector3(-0.5, 0, 0),
   new Vector3(0, 0.5, 0),
   new Vector3(0.5, 0, 0),

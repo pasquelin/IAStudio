@@ -86,6 +86,8 @@ export function checkerTextureRef(id: CheckerTextureId): TextureRef | null {
 export function defaultMeshMaterial(
   id: CheckerTextureId = DEFAULT_CHECKER_TEXTURE,
 ): MaterialDescriptor {
+  // A COPY either way: handed out by reference, one descriptor would be shared by every mesh
+  // made while the install is pending, and editing one would edit them all.
   const map = checkerTextureRef(id)
-  return map ? { ...DEFAULT_MATERIAL, map } : DEFAULT_MATERIAL
+  return map ? { ...DEFAULT_MATERIAL, map } : { ...DEFAULT_MATERIAL }
 }

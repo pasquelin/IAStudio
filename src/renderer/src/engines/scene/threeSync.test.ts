@@ -173,6 +173,20 @@ describe('tiledGeometry', () => {
     expect(span.u).toBeCloseTo(25)
   })
 
+  /*
+   * The density a picture is asked to FIT at — one over the metres it covers. Textures repeat, so
+   * a projection centred on nothing puts 0,5 at the middle of the face: the left half of a plane
+   * then shows the right half of the photograph, and no density anywhere makes it whole.
+   */
+  it('lays a picture down once, whole, at the density that covers the face', () => {
+    const uv = tiledGeometry({ kind: 'plane', width: 4, height: 4 }, 0.25).attributes.uv
+    const us: number[] = []
+    for (let at = 0; at < (uv?.count ?? 0); at += 1) us.push(Number(uv?.getX(at)))
+
+    expect(Math.min(...us)).toBeCloseTo(0)
+    expect(Math.max(...us)).toBeCloseTo(1)
+  })
+
   // A surface of revolution keeps its own UVs, scaled: projecting one would seam it all round.
   it('measures a cylinder round its side and down its height', () => {
     const span = spanOf(
@@ -184,6 +198,16 @@ describe('tiledGeometry', () => {
 
     expect(span.u).toBeCloseTo(2 * Math.PI)
     expect(span.v).toBeCloseTo(4)
+  })
+
+  // A tube's `v` runs ROUND it, not down a bounding box: measured off the box it came back as a
+  // height, and the squares on the shipped tube were half the size asked for and not square.
+  it('measures a tube round its own section', () => {
+    const span = spanOf(
+      tiledGeometry({ kind: 'tube', radius: 0.2, tubularSegments: 48, radialSegments: 12 }, 1),
+    )
+
+    expect(span.v).toBeCloseTo(2 * Math.PI * 0.2)
   })
 
   // The one that reaches the screen: a mesh built with a density, not only one edited into it.
