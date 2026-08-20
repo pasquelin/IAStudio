@@ -183,7 +183,12 @@ export function setLayerAdjustment(id: string, values: AdjustmentStack): Command
 /** The words of a caption, and how they are set. Its own command, like the grading values. */
 export function setLayerText(
   id: string,
-  changes: Partial<Pick<TextLayer, 'text' | 'font' | 'size' | 'color'>>,
+  changes: Partial<
+    Pick<
+      TextLayer,
+      'text' | 'font' | 'size' | 'color' | 'box' | 'align' | 'lineHeight' | 'tracking'
+    >
+  >,
 ): Command<CanvasState> {
   let previous: TextLayer | null = null
 

@@ -8,6 +8,7 @@ import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import {
   adjustmentLayer,
   DEFAULT_CANVAS,
+  DEFAULT_TEXT_BOX,
   groupLayer,
   IDENTITY,
   isGroup,
@@ -26,7 +27,7 @@ import stylesheet from '@/index.css?raw'
 import { FALLBACK_COLORS, OVERLAY_TOKENS } from './CanvasEngine'
 import type { CanvasTool } from './canvasTool'
 import type { CanvasSelection } from './canvasSelection'
-import type { Point } from '../core/geometry'
+import type { Point, Size } from '../core/geometry'
 import { RULER_SIZE } from './CanvasOverlay'
 import { DEFAULT_VIEW, toDocument, type Viewport } from './viewport'
 
@@ -369,8 +370,8 @@ type Harness = {
   viewports: Viewport[]
   /** Every selection the engine carved out, in the order it published them. */
   selections: CanvasSelection[]
-  /** Where a caption was asked for, in document coordinates. */
-  captions: Point[]
+  /** Every caption the hand asked for: a layer to edit, or a box to open a fresh one in. */
+  captions: ({ layerId: string } | { at: Point; box: Size })[]
   /** Every shape a drag finished on: where its box starts, and what the layer will hold. */
   shapes: { at: Point; drawn: DrawnShape }[]
   /** The frames the engine settled a crop drag on, each of which becomes one history entry. */
@@ -405,7 +406,7 @@ function mounted(
 
   const viewports: Viewport[] = []
   const selections: CanvasSelection[] = []
-  const captions: Point[] = []
+  const captions: Harness['captions'] = []
   const shapes: { at: Point; drawn: DrawnShape }[] = []
   const crops: Rect[] = []
   const cropFrames: boolean[] = []
@@ -423,7 +424,7 @@ function mounted(
       onPixelsDropped: patchId => dropped.push(patchId),
       onViewport: viewport => viewports.push(viewport),
       onSelection: selection => selections.push(selection),
-      onText: at => captions.push(at),
+      onText: asked => captions.push(asked),
       onShape: (at, drawn) => shapes.push({ at, drawn }),
       onCrop: rect => crops.push(rect),
       onCropFrame: framed => cropFrames.push(framed),
@@ -2199,13 +2200,50 @@ describe('captions', () => {
       { ...textLayer('t', text, { x: 10, y: 20 }), size },
     ])
 
-  it('asks the stack for a caption where the pointer landed', async () => {
+  it('opens a box of the default size where a click landed', async () => {
     const { engine, host, captions } = await mounted()
     engine.setTool('text')
 
     press(host, 300, 250)
+    release()
 
-    expect(captions).toEqual([{ x: 300, y: 250 }])
+    expect(captions).toEqual([{ at: { x: 300, y: 250 }, box: DEFAULT_TEXT_BOX }])
+  })
+
+  // The diagonal is the box, exactly as a shape's is: that is the second half of the gesture.
+  it('sizes the box from the drag when the hand really drew one', async () => {
+    const { engine, host, captions } = await mounted()
+    engine.setTool('text')
+
+    press(host, 100, 100)
+    drag(host, 300, 200)
+    release()
+
+    expect(captions).toEqual([{ at: { x: 100, y: 100 }, box: { width: 200, height: 100 } }])
+  })
+
+  /**
+   * Every click used to stack one more caption on the last: five layers called « Votre texte »,
+   * piled up where the user was trying to correct the first.
+   */
+  it('edits the caption already under the hand rather than stacking another', async () => {
+    const { engine, host, captions } = await mounted(caption('Bonjour'))
+    engine.setTool('text')
+
+    press(host, 20, 30)
+    release()
+
+    expect(captions).toEqual([{ layerId: 't' }])
+  })
+
+  it('opens a fresh box beside a caption, not on it', async () => {
+    const { engine, host, captions } = await mounted(caption('Bonjour'))
+    engine.setTool('text')
+
+    press(host, 800, 800)
+    release()
+
+    expect(captions[0]).toMatchObject({ at: { x: 800, y: 800 } })
   })
 
   /**

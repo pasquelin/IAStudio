@@ -12,6 +12,7 @@ import {
   pixelLayer,
   SHAPE_KINDS,
   shapeLayer,
+  TEXT_ALIGNS,
   textLayer,
   type CanvasState,
   type DrawnShape,
@@ -123,7 +124,9 @@ function readState(): ActionOutcome {
         blend: layer.blend,
         clipped: layer.clipped,
         transform: layer.transform,
-        ...(layer.kind === 'text' ? { text: layer.text, size: layer.size } : {}),
+        ...(layer.kind === 'text'
+          ? { text: layer.text, size: layer.size, align: layer.align, box: layer.box }
+          : {}),
         ...(layer.kind === 'adjustment' ? { adjustment: layer.adjustment } : {}),
         ...(layer.kind === 'shape'
           ? { shape: layer.shape, fill: layer.fill, stroke: layer.stroke }
@@ -229,6 +232,11 @@ function text(input: Record<string, unknown>): ActionOutcome {
   const colour = packedColour(textOf(input, 'color') ?? '')
   const size = numberOf(input, 'size')
   const written = textOf(input, 'text')
+  const align = oneOf(input, 'align', TEXT_ALIGNS)
+  const lineHeight = numberOf(input, 'lineHeight')
+  const tracking = numberOf(input, 'tracking')
+  const width = numberOf(input, 'width')
+  const height = numberOf(input, 'height')
 
   return editLayer(input, layer =>
     // The command only touches a text layer, so a pixel layer named here would be reported as
@@ -239,6 +247,13 @@ function text(input: Record<string, unknown>): ActionOutcome {
             ...(written === null ? {} : { text: written }),
             ...(size === null ? {} : { size }),
             ...(colour === null ? {} : { color: colour }),
+            ...(align === null ? {} : { align }),
+            ...(lineHeight === null ? {} : { lineHeight }),
+            ...(tracking === null ? {} : { tracking }),
+            // One axis at a time: a client naming only a width must not flatten the height.
+            ...(width === null && height === null
+              ? {}
+              : { box: { width: width ?? layer.box.width, height: height ?? layer.box.height } }),
           }),
         ]
       : [],

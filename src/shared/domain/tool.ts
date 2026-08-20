@@ -57,6 +57,7 @@ export type ToolId =
   | 'projects'
   | 'library'
   | 'animations'
+  | 'text'
 
 /**
  * The panels the upper half of a WORKSPACE's left column is reserved for: what the Scenario API
@@ -137,6 +138,9 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // declares — the order below is the order their icons stack.
   //
   { id: 'layers', zone: 'right', slot: 'primary', surfaces: ['image'] },
+  // Beside the stack rather than inside the inspector: what a caption is SET IN is read while it
+  // is being typed, and an inspector folded away takes the whole type panel with it.
+  { id: 'text', zone: 'right', slot: 'primary', surfaces: ['image'] },
   // The outliner of the scene, which the Explorer used to hold in this one workspace — it now
   // lists the documents of the project in every space, which is a different question.
   { id: 'scene', zone: 'right', slot: 'primary', surfaces: ['3d'] },

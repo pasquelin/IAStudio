@@ -158,6 +158,8 @@ export type ToolChrome = {
   lit: HandleId | null
   /** The shape under the hand, drawn as it will land — not as a marquee around where it will. */
   pending: PendingShape | null
+  /** The box a text drag is sizing. A frame, not a shape: nothing is painted where it stands. */
+  textBox: Rect | null
   selection: CanvasSelection
   /**
    * Half the brush, in DOCUMENT units, while a painting tool is armed — `null` for every other
@@ -254,6 +256,7 @@ function drawGuides(context: OverlayContext, scene: OverlayScene): void {
 function drawTools(context: OverlayContext, scene: OverlayScene, phase: number): void {
   drawSelection(context, scene, phase)
   drawPending(context, scene)
+  drawTextBox(context, scene, phase)
   drawCrop(context, scene, phase)
   drawGrips(context, scene)
   // Last: the ring stands in for the cursor, and a cursor is never under what it points at.
@@ -328,6 +331,21 @@ function drawPending(context: OverlayContext, scene: OverlayScene): void {
     context.stroke()
     context.lineWidth = 1
   }
+}
+
+/** The box a caption is being sized into: a frame, drawn in the same ants a marquee is. */
+function drawTextBox(context: OverlayContext, scene: OverlayScene, phase: number): void {
+  const rect = scene.tools.textBox
+  if (!rect) return
+
+  const at = toScreen(scene.viewport, rect)
+  const far = toScreen(scene.viewport, { x: rect.x + rect.width, y: rect.y + rect.height })
+  ants(
+    context,
+    () => traceRect(context, { ...at, width: far.x - at.x, height: far.y - at.y }),
+    phase,
+    scene.colors,
+  )
 }
 
 function drawCrop(context: OverlayContext, scene: OverlayScene, phase: number): void {

@@ -172,6 +172,28 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
         min: 1,
       },
       { key: 'color', kind: 'color', labelKey: 'assistant.fields.colour', required: false },
+      {
+        key: 'align',
+        kind: 'choice',
+        labelKey: 'assistant.fields.align',
+        required: false,
+        options: ['left', 'center', 'right', 'justify'],
+      },
+      { key: 'width', kind: 'number', labelKey: 'assistant.fields.width', required: false, min: 1 },
+      {
+        key: 'height',
+        kind: 'number',
+        labelKey: 'assistant.fields.height',
+        required: false,
+        min: 1,
+      },
+      {
+        key: 'lineHeight',
+        kind: 'number',
+        labelKey: 'assistant.fields.lineHeight',
+        required: false,
+      },
+      { key: 'tracking', kind: 'number', labelKey: 'assistant.fields.tracking', required: false },
     ],
   }),
   action({

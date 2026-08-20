@@ -73,7 +73,8 @@
     "size": "Size",
     "hardness": "Hardness",
     "opacity": "Opacity",
-    "textDefault": "Your text"
+    "textName": "Text",
+    "textEditing": "Typing the caption"
   },
   "imageView": {
     "zoom": "{{value}} — actual size",
@@ -166,5 +167,22 @@
     "contrastHint": "Pushes light and dark tones apart, or brings them together",
     "saturationHint": "Revives the colours or drains them, down to grey",
     "temperatureHint": "Warms towards orange or cools towards blue"
+  },
+  "text": {
+    "noCaption": "Pick a text layer, or draw one with the Text tool.",
+    "character": "Character",
+    "paragraph": "Paragraph",
+    "font": "Font",
+    "size": "Size",
+    "lineHeight": "Leading",
+    "tracking": "Tracking",
+    "colour": "Colour",
+    "align": "Alignment",
+    "align_left": "Align left",
+    "align_center": "Centre",
+    "align_right": "Align right",
+    "align_justify": "Justify",
+    "boxWidth": "Box width",
+    "boxHeight": "Box height"
   }
 }

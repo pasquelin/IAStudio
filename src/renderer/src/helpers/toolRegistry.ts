@@ -6,6 +6,7 @@ import {
   mdiFileTreeOutline,
   mdiFolderMultipleOutline,
   mdiFolderOutline,
+  mdiFormatText,
   mdiHistory,
   mdiImageMultipleOutline,
   mdiLayersOutline,
@@ -57,6 +58,7 @@ const ICONS: Record<ToolId, string> = {
   projects: mdiFolderMultipleOutline,
   library: mdiCloudOutline,
   animations: mdiRunFast,
+  text: mdiFormatText,
 }
 
 /**

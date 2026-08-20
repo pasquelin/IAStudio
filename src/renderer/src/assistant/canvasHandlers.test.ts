@@ -115,6 +115,22 @@ describe('building a stack', () => {
     })
   })
 
+  /** One axis at a time: a client naming only a width must not flatten the height with it. */
+  it('resizes a caption box on the axis it names, and on that one only', async () => {
+    await runAction('layer.add', { kind: 'text', name: 'Titre', text: 'Bonjour' })
+    const id = canvas().layers.at(-1)?.id
+    const before = canvas().layers.at(-1)
+
+    await runAction('layer.text', { layerId: id, width: 900, align: 'center' })
+
+    const written = canvas().layers.at(-1)
+    expect(written?.kind === 'text' && written.box.width).toBe(900)
+    expect(written?.kind === 'text' && written.box.height).toBe(
+      before?.kind === 'text' ? before.box.height : 0,
+    )
+    expect(written?.kind === 'text' && written.align).toBe('center')
+  })
+
   // A row in the panel that changes nothing is the one thing a layer must never be.
   it('refuses an adjustment layer that names no dial', async () => {
     expect(await runAction('layer.add', { kind: 'adjustment', name: 'Étalonnage' })).toEqual({

@@ -32,6 +32,7 @@ import {
   layerById,
   type AdjustmentLayer,
   type CanvasState,
+  DEFAULT_TEXT_BOX,
   type DrawnShape,
   type GroupLayer,
   type Layer,
@@ -51,7 +52,7 @@ import {
   type SelectionShape,
 } from './canvasSelection'
 import { composite, maskKey, placement, type CompositeNode } from './compositor'
-import { compose, invert, layerMatrix, mapRect, type Affine } from './layerSpace'
+import { applyTo, compose, invert, layerMatrix, mapRect, type Affine } from './layerSpace'
 import {
   centerOf,
   cornersOfRect,
@@ -87,6 +88,7 @@ import {
 import { PixelPatches, type PatchSide } from './PixelPatches'
 import { cropRect, resizeCrop } from './crop'
 import {
+  box,
   constrainedTo,
   localShape,
   paintShape,
@@ -151,8 +153,11 @@ export type CanvasEngineOptions = {
   onSelection: (selection: CanvasSelection) => void
   /** The host's size, which the zoom commands need: they centre on a panel they cannot see. */
   onHost: (size: Size) => void
-  /** Where a caption was asked for. The layer it becomes is the stack's to make. */
-  onText: (at: Point) => void
+  /**
+   * A caption the hand asked for: a layer already there to edit, or a fresh box to open one in.
+   * The layer it becomes, and the editor it opens, are the stack's to make.
+   */
+  onText: (asked: { layerId: string } | { at: Point; box: Size }) => void
   /** A shape the hand finished drawing, and where its box starts. Same split as `onText`. */
   onShape: (at: Point, drawn: DrawnShape) => void
   /**
@@ -277,6 +282,12 @@ function strokeWidth(brushSize: number): number {
   return Math.max(1, brushSize / 4)
 }
 
+/**
+ * How far a text drag has to reach before it counts as one, in document units. Below it the hand
+ * meant a click, and a click opens the default box — a caption three pixels wide is nobody's ask.
+ */
+const MIN_TEXT_DRAG = 8
+
 /** The shape a layer holds, back as geometry — its two points are already in its own space. */
 function shapeOf(layer: ShapeLayer): ShapeGeometry {
   return shapeGeometry(layer.shape, layer.from, layer.to, {
@@ -291,7 +302,16 @@ function shapeOf(layer: ShapeLayer): ShapeGeometry {
  */
 function drawingKey(layer: Layer): string | null {
   if (layer.kind === 'text') {
-    return `${layer.text}|${layer.size}|${layer.color}|${fontKey(layer.font)}`
+    return [
+      layer.text,
+      layer.size,
+      layer.color,
+      fontKey(layer.font),
+      layer.box.width,
+      layer.align,
+      layer.lineHeight,
+      layer.tracking,
+    ].join('|')
   }
   if (layer.kind !== 'shape') return null
 
@@ -345,6 +365,8 @@ type Gesture =
    * the point AFTER shift has been applied, and the layer must store the square that was drawn.
    */
   | { kind: 'shape'; from: Point; to: Point }
+  /** Sizing a caption's box by its diagonal. A drag of nothing at all is a click, which opens one. */
+  | { kind: 'text'; from: Point; to: Point }
   /** `origin` is the transform the layer had when the drag began: every step is absolute. */
   | { kind: 'handle'; id: string; handle: HandleId; from: Point; origin: Transform }
   /** Turning by the zone outside a corner. `center` is the middle the layer pivots about. */
@@ -573,6 +595,10 @@ export class CanvasEngine {
   private shapeSides = 5
   /** The shape being dragged, drawn in the overlay until the hand comes up. */
   private pending: ShapeGeometry | null = null
+  /** The box a text drag is sizing, framed in the overlay until the hand comes up. */
+  private textBox: Rect | null = null
+  /** The caption a field is typing: drawn by that field, so its own sprite stands aside. */
+  private editing: string | null = null
   /**
    * The crop frame, once placed. Outlives its drag on purpose — that is what makes the grips
    * real, and what ⏎ applies and ⎋ drops. Session state, like the selection: a frame nobody
@@ -1535,6 +1561,20 @@ export class CanvasEngine {
     this.shapeSides = sides
   }
 
+  /**
+   * The caption a field is typing elsewhere. Its sprite steps aside for as long as that lasts, so
+   * the words are drawn once and by one thing — never twice, half a pixel apart.
+   *
+   * Session state, like the selection: nothing about the document changes, so `visible` is left
+   * alone and ⌘Z gives back no layer nobody hid.
+   */
+  setEditingText(layerId: string | null): void {
+    if (this.editing === layerId) return
+    this.editing = layerId
+    this.reconcile()
+    this.render()
+  }
+
   /** Session state, so React owns it: the engine draws it and clips strokes to it. */
   setSelection(selection: CanvasSelection): void {
     this.selection = selection
@@ -1669,6 +1709,7 @@ export class CanvasEngine {
         handles: this.activeCorners(),
         lit: this.hover?.kind === 'handle' ? this.hover.id : null,
         pending: this.pendingShape(),
+        textBox: this.textBox,
         selection: this.selection,
         // Not while the tool is refusing: a ring is a promise that a dab lands there.
         brushRadius: this.ringed() && !this.refuses() ? this.brush.size / 2 : null,
@@ -1682,7 +1723,9 @@ export class CanvasEngine {
    * stand still.
    */
   private marching(): boolean {
-    return selectionOutline(this.selection).length > 0 || this.cropping !== null
+    return (
+      selectionOutline(this.selection).length > 0 || this.cropping !== null || this.textBox !== null
+    )
   }
 
   /**
@@ -1737,7 +1780,7 @@ export class CanvasEngine {
       )
     }
 
-    surface.sprite.visible = layer.visible
+    surface.sprite.visible = layer.visible && layer.id !== this.editing
     // `fillOpacity` is meant to fade the pixels while leaving the effects drawn around them at
     // full strength. No layer effect exists yet, so for now the two simply multiply.
     surface.sprite.alpha = layer.opacity * layer.fillOpacity
@@ -1769,7 +1812,18 @@ export class CanvasEngine {
 
     const text = new Text({
       text: layer.text,
-      style: { fontFamily: familyStack(layer.font), fontSize: layer.size, fill: layer.color },
+      style: {
+        fontFamily: familyStack(layer.font),
+        fontSize: layer.size,
+        fill: layer.color,
+        align: layer.align,
+        // Wrapped, never cut: a caption that outgrows its box spills past it, as one does in
+        // Photoshop — which is why the texture is the document's size and not the box's.
+        wordWrap: true,
+        wordWrapWidth: layer.box.width,
+        lineHeight: layer.size * layer.lineHeight,
+        letterSpacing: (layer.tracking / 1000) * layer.size,
+      },
     })
     renderer.render({ container: text, target: surface.texture, clear: true })
     text.destroy()
@@ -2036,9 +2090,16 @@ export class CanvasEngine {
     }
 
     if (this.tool === 'text') {
-      // A click places a caption; the words themselves are typed in the inspector, where a
-      //a letter typed on the canvas would be competing with every tool shortcut the space binds.
-      this.options.onText(point)
+      // A caption already under the hand is the one the click edits. Without this, every click
+      // with the tool armed stacked one more layer on the last.
+      const caption = this.captionAt(point)
+      if (caption) {
+        this.options.onText({ layerId: caption.id })
+        return
+      }
+
+      // The box comes from the drag, or from a click, which has none: settled on release.
+      this.gesture = { kind: 'text', from: point, to: point }
       return
     }
 
@@ -2357,6 +2418,12 @@ export class CanvasEngine {
         this.overlay.invalidate()
         return
       }
+      case 'text': {
+        gesture.to = point
+        this.textBox = box(gesture.from, point, false)
+        this.overlay.invalidate()
+        return
+      }
     }
   }
 
@@ -2383,6 +2450,7 @@ export class CanvasEngine {
     if (LAYER_DRAGS.has(gesture.kind)) this.options.layers.endDrag()
     if (gesture.kind === 'paint') this.endPixels()
     if (gesture.kind === 'shape') this.commitShape(gesture.from, gesture.to)
+    if (gesture.kind === 'text') this.commitText(gesture.from, gesture.to)
     // A click that carved nothing out is how every editor deselects. Left standing, a zero-area
     // selection is a stencil nothing gets through, and the document stops taking paint at all.
     if (gesture.kind === 'select' && isEmptySelection(this.selection)) this.publishSelection(null)
@@ -2674,6 +2742,40 @@ export class CanvasEngine {
     if (!this.cropping) return
     this.setCropping(null)
     this.overlay.invalidate()
+  }
+
+  /**
+   * The caption's box, once the hand comes up. A drag too small to have been meant as one opens
+   * the default box instead, which is what makes a plain click work.
+   */
+  private commitText(from: Point, to: Point): void {
+    this.textBox = null
+    this.overlay.invalidate()
+
+    const drawn = box(from, to, false)
+    const dragged = drawn.width >= MIN_TEXT_DRAG && drawn.height >= MIN_TEXT_DRAG
+    this.options.onText(
+      dragged
+        ? { at: { x: drawn.x, y: drawn.y }, box: { width: drawn.width, height: drawn.height } }
+        : { at: from, box: DEFAULT_TEXT_BOX },
+    )
+  }
+
+  /** The topmost caption whose box holds the point — what a click with the text tool edits. */
+  private captionAt(point: Point): TextLayer | null {
+    const size = this.documentSize()
+    for (const layer of allLayers(this.state?.layers ?? []).reverse()) {
+      if (layer.kind !== 'text' || !layer.visible) continue
+
+      const back = invert(layerMatrix(layer.transform, size))
+      if (!back) continue
+
+      const local = applyTo(back, point)
+      const inside =
+        local.x >= 0 && local.y >= 0 && local.x <= layer.box.width && local.y <= layer.box.height
+      if (inside) return layer
+    }
+    return null
   }
 
   /**
