@@ -116,17 +116,22 @@ describe('the assistant’s own window', () => {
 })
 
 describe('dictation, which the keyboard holds down', () => {
+  /**
+   * Started and stopped rather than HELD: outside push-to-talk `setHeld` acts on the press alone,
+   * so the release asked for from here did nothing while the caller was told it ran.
+   */
   it('starts when nothing is listening and stops when something is', () => {
-    const setHeld = vi.fn(() => Promise.resolve())
-    useDictation.setState({ state: 'ready', setHeld })
+    const start = vi.fn(() => Promise.resolve())
+    const stop = vi.fn(() => Promise.resolve())
+    useDictation.setState({ state: 'ready', start, stop })
 
     expect(routeCommand('app.dictate')).toBe('ran')
-    expect(setHeld).toHaveBeenCalledWith(true)
+    expect(start).toHaveBeenCalled()
 
     useDictation.setState({ state: 'listening' })
     routeCommand('app.dictate')
 
-    expect(setHeld).toHaveBeenLastCalledWith(false)
+    expect(stop).toHaveBeenCalled()
   })
 })
 

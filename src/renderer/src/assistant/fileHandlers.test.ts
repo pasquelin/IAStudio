@@ -198,16 +198,22 @@ describe('opening and making a project', () => {
    * The manifest name, never the folder: `recentProjects`, `storage.lastProject` and every
    * absolute path the catalogue holds are keyed on the folder.
    */
-  it('renames a project by its own path, open or not', async () => {
-    const renamed = {
-      path: '/tmp/Autre',
-      manifest: { version: 1, name: 'Autre', createdAt: WHEN, updatedAt: WHEN },
-    }
-    withProject({ project: { rename: vi.fn(async () => renamed) } })
+  it('renames a project by its own path, through the store the shelf reads', async () => {
+    const rename = vi.fn(async () => true)
+    withProject()
+    useProject.setState({ rename })
 
     expect(await runAction('project.rename', { path: '/tmp/Autre', name: 'Autre' })).toEqual({
       ok: true,
-      data: renamed,
+    })
+    // The store, never the channel: it is what puts the new name on the open project and in the
+    // recent list — the broadcast behind the channel reaches OTHER windows only.
+    expect(rename).toHaveBeenCalledWith('/tmp/Autre', 'Autre')
+
+    useProject.setState({ rename: vi.fn(async () => false) })
+    expect(await runAction('project.rename', { path: '/tmp/X', name: 'X' })).toEqual({
+      ok: false,
+      refusal: 'failed',
     })
   })
 })

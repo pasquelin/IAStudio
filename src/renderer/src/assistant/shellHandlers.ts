@@ -3,6 +3,7 @@ import { isSettingsSection } from '@shared/domain/settings'
 import { TOOL_IDS, type ToolId } from '@shared/domain/tool'
 import { closeTool, revealTool, toolIsShown } from '@/helpers/revealPanel'
 import { availableToolIds } from '@/helpers/toolRegistry'
+import { getBridge } from '@/services/bridge'
 import { useDictation } from '@/stores/dictation'
 import { toolSurface } from '@/stores/layouts'
 import { withBridge, type ActionHandlers } from './actionHandler'
@@ -15,10 +16,19 @@ import { boolOf, oneOf, textOf } from './actionInputs'
  * what they are: the work already lives in the main process, it simply had no door.
  */
 
-/** Opens or closes the panel named, which both answer `false` for one this surface does not serve. */
+/**
+ * Opens or closes the panel named, refused for one this surface cannot OFFER.
+ *
+ * Asked of `availableToolIds` rather than of the placement alone, which is what `panels.list`
+ * answers with: a placement `requires` a model or a project, and opening one that does not have
+ * it puts a different panel on screen while answering yes.
+ */
 function showPanel(input: Record<string, unknown>, run: (panel: ToolId) => boolean): ActionOutcome {
   const panel = oneOf(input, 'panel', TOOL_IDS)
   if (!panel) return refused('badInput')
+  if (!availableToolIds(toolSurface()).some(offered => offered === panel)) {
+    return refused('wrongSurface')
+  }
 
   return run(panel) ? { ok: true } : refused('wrongSurface')
 }
@@ -67,7 +77,20 @@ export const SHELL_HANDLERS: ActionHandlers = {
 
   'fileInfo.open': input => withBridge(bridge => bridge.fileInfo.open(textOf(input, 'path') ?? '')),
 
-  'updates.install': () => withBridge(bridge => bridge.updates.install()),
+  /**
+   * Asked about because it quits the studio — so answering `ok` on a state that installs nothing
+   * would have the person accept a relaunch that never comes. `install` is silent below `ready`.
+   */
+  'updates.install': async () => {
+    const bridge = getBridge()
+    if (!bridge) return refused('noBridge')
+
+    const update = await bridge.updates.state()
+    if (update.phase !== 'ready') return refused('nothingPrepared')
+
+    await bridge.updates.install()
+    return { ok: true }
+  },
 
   // Only what this surface serves: a panel it does not carry cannot be opened there, so offering
   // it would be offering a refusal.
@@ -82,12 +105,22 @@ export const SHELL_HANDLERS: ActionHandlers = {
 
   'dictation.state': () => withBridge(bridge => bridge.dictation.state()),
 
+  /**
+   * The verdict is READ BACK from the main process, never off the store: `listening` reaches this
+   * side on the event channel while `start()` answers on the invoke one, and nothing orders the
+   * two — a microphone that did open would be reported refused.
+   */
   'dictation.start': async () => {
+    const bridge = getBridge()
+    if (!bridge) return refused('noBridge')
+
     await useDictation.getState().start()
-    // The store reports its own failure rather than throwing: a microphone the machine refused
-    // is a state, and answering `ok` on it would have a client wait for words never heard.
-    const { state, failure } = useDictation.getState()
-    return state === 'listening' ? { ok: true } : refused(failure ? 'failed' : 'notAllowed')
+    const settled = await bridge.dictation.state()
+    if (settled.state === 'listening') return { ok: true, data: settled }
+
+    // `permissionRequired` is the person's own no; a model still missing or downloading is the
+    // studio not being ready, which is not the same answer.
+    return refused(settled.state === 'permissionRequired' ? 'notAllowed' : 'failed')
   },
 
   'dictation.stop': async input => {

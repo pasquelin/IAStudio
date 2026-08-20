@@ -36,10 +36,15 @@ function moveActiveSpace(move: 'left' | 'right'): CommandRouting {
   return applyWorkspaceMove(useLayouts.getState().activeWorkspace, move) ? 'ran' : 'nothingToDo'
 }
 
-/** Push-to-talk with neither half: it toggles on what the engine is doing. */
+/**
+ * Push-to-talk with neither half, so it starts and stops rather than holding.
+ *
+ * NOT `setHeld`: outside push-to-talk that one acts on the press alone, so a release asked for
+ * from here did nothing at all while the caller was told it ran.
+ */
 function toggleDictation(): CommandRouting {
   const dictation = useDictation.getState()
-  void dictation.setHeld(dictation.state !== 'listening')
+  void (dictation.state === 'listening' ? dictation.stop() : dictation.start())
   return 'ran'
 }
 

@@ -129,10 +129,17 @@ export const FILE_HANDLERS: ActionHandlers = {
   'file.reveal': input =>
     inProject(bridge => bridge.project.revealFile(textOf(input, 'path') ?? '')),
 
-  // Not `inProject`: the path is absolute and names a project that need not be the open one —
-  // which is the whole reason the channel takes one.
-  'project.rename': input =>
-    withBridge(bridge =>
-      bridge.project.rename(textOf(input, 'path') ?? '', textOf(input, 'name') ?? ''),
-    ),
+  /**
+   * Through the store rather than the channel, and not `inProject`: the path is absolute and
+   * names a project that need not be the open one. The store is what puts the new name on the
+   * open project and in the recent list — the broadcast behind the channel reaches OTHER windows,
+   * so the one that served this call would have kept the old name for good.
+   */
+  'project.rename': async input => {
+    const renamed = await useProject
+      .getState()
+      .rename(textOf(input, 'path') ?? '', textOf(input, 'name') ?? '')
+
+    return renamed ? { ok: true } : refused('failed')
+  },
 }

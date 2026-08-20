@@ -48,10 +48,20 @@ export const SETTINGS_HANDLERS: ActionHandlers = {
   'accounts.list': () => withBridge(bridge => bridge.accounts.list()),
   'accounts.activate': activate,
 
-  'accounts.rename': input =>
-    withBridge(bridge =>
-      bridge.accounts.rename(textOf(input, 'accountId') ?? '', textOf(input, 'name') ?? ''),
-    ),
+  /**
+   * The refusal travels IN the answer — an unknown id, a name already taken, the account the
+   * `.env` file holds — so `ok` here would be `ok` on a rename that never happened.
+   */
+  'accounts.rename': async input => {
+    const bridge = getBridge()
+    if (!bridge) return refused('noBridge')
+
+    const result = await bridge.accounts.rename(
+      textOf(input, 'accountId') ?? '',
+      textOf(input, 'name') ?? '',
+    )
+    return result.failure ? refused('notAllowed') : { ok: true, data: result.accounts }
+  },
 
   'settings.action': input => {
     const id = oneOf(input, 'action', SETTING_ACTION_IDS)

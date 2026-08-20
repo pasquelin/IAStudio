@@ -47,11 +47,16 @@ export function toolIsShown(tool: ToolId, surface: ToolSurface): boolean {
   return shownTool(open[zone]?.[slot], zone, slot, surface, toolStateOf(surface)) === tool
 }
 
-/** The other half of the gesture: empties the half this surface puts the panel in. */
+/**
+ * The other half of the gesture, and it closes THIS panel or nothing.
+ *
+ * `close` empties a half whatever stands in it, and three panels share one in every space: asked
+ * to close the shelf while the half shows the models, it closed the models and answered yes.
+ */
 export function closeTool(tool: ToolId): boolean {
   const surface = toolSurface()
   const placement = placementIn(tool, surface)
-  if (!placement) return false
+  if (!placement || !toolIsShown(tool, surface)) return false
 
   useTools.getState().close(surface, placement.zone, placement.slot)
   return true
