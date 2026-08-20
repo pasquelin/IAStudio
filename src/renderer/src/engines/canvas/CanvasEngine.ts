@@ -690,6 +690,7 @@ export class CanvasEngine {
     this.overlay.mount(host)
 
     host.addEventListener('pointerdown', this.onPointerDown)
+    host.addEventListener('dblclick', this.onDoubleClick)
     host.addEventListener('pointermove', this.onPointerMove)
     host.addEventListener('pointerleave', this.onPointerLeave)
     window.addEventListener('pointerup', this.onPointerUp)
@@ -1631,6 +1632,7 @@ export class CanvasEngine {
 
     const host = this.host
     host?.removeEventListener('pointerdown', this.onPointerDown)
+    host?.removeEventListener('dblclick', this.onDoubleClick)
     host?.removeEventListener('pointermove', this.onPointerMove)
     host?.removeEventListener('pointerleave', this.onPointerLeave)
     host?.removeEventListener('wheel', this.onWheel)
@@ -2020,7 +2022,9 @@ export class CanvasEngine {
    * one: reading it per event forces a layout, and it is refreshed on resize and on every
    * pointer down, which is what every gesture starts with.
    */
-  private toHost(event: PointerEvent | WheelEvent): Point {
+  // `MouseEvent`, which pointer, wheel and double-click events all are: only the two client
+  // coordinates every one of them carries are read here.
+  private toHost(event: MouseEvent): Point {
     const bounds = this.bounds
     if (!bounds) return { x: 0, y: 0 }
     return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
@@ -2065,6 +2069,25 @@ export class CanvasEngine {
       snapTargets(this.state, axis),
       SNAP_TOLERANCE / this.view.viewport.scale,
     )
+  }
+
+  /**
+   * A double click on the words edits them, the reflex Photoshop answers to and the only way into
+   * a caption without arming the text tool first. On `dblclick` and not on `pointerdown`, whose
+   * `detail` a pointer event leaves at 0 — measured in Electron, where the count lives on the
+   * mouse events the browser sends beside it.
+   */
+  private readonly onDoubleClick = (event: MouseEvent): void => {
+    if (this.tool !== 'move') return
+
+    this.bounds = this.host?.getBoundingClientRect() ?? this.bounds
+    const point = toDocument(this.view.viewport, this.toHost(event))
+    // The ARMED caption only: this tool moves what is armed and nothing here can arm a layer, so
+    // opening another would leave the type panel on a third. A padlocked POSITION still edits.
+    const caption = this.captionAt(point)
+    if (caption && caption.id === this.state?.activeLayerId) {
+      this.options.onText({ layerId: caption.id })
+    }
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
