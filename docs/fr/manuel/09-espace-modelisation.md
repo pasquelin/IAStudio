@@ -30,15 +30,15 @@ le dit. Seul le modèle **Vide** peut vous y amener, en supprimant ses lumières
 
 Les trois modèles de personnage ouvrent sur un décor fait pour être **parcouru** : un sol de
 40 m sur 32, une enceinte, une cour en contrebas avec son escalier, une planche qui la traverse,
-une terrasse et sa rampe, un balcon, trois blocs de saut aux écarts croissants, des piliers, et
-un repère bleu au sol qui marque le départ.
+une terrasse et sa rampe, une passerelle qui enjambe la cour, trois blocs de saut aux écarts
+croissants, des piliers, et un repère bleu au sol qui marque le départ.
 
 Chaque partie est une forme du studio, rangée sous trois groupes — **Ground**, **Enclosure**,
 **Course** — dans le panneau Scène. Tout s’y déplace, s’y redimensionne et s’y supprime comme
 n’importe quel objet : c’est un décor de travail, pas un décor figé.
 
 Les couleurs disent un rôle : gris pour ce qui se marche, gris sombre pour les murs et ce qui se
-contourne, **orange pour tout ce qui se grimpe** — rampe, marches, blocs, balcon.
+contourne, **orange pour tout ce qui se grimpe** — rampe, marches, blocs, passerelle.
 
 ---
 

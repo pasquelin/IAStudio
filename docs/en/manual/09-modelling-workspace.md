@@ -28,15 +28,16 @@ A scene is black until a light is placed: that is normal, and the Lights panel s
 ### The test level
 
 The three character templates open on a set built to be **walked**: a floor 40 m by 32, a wall
-around it, a sunken court with its stair, a plank across it, a terrace and its ramp, a balcony,
-three jump blocks at widening gaps, pillars, and a blue pad on the floor marking the start.
+around it, a sunken court with its stair, a plank across it, a terrace and its ramp, a walkway
+spanning the court, three jump blocks at widening gaps, pillars, and a blue pad on the floor
+marking the start.
 
 Every part is a shape of the studio, filed under three groups — **Ground**, **Enclosure**,
 **Course** — in the Scene panel. Everything there moves, resizes and deletes like any other
 object: it is a working set, not a fixed one.
 
 The colours say a role: grey for what is walked on, dark grey for walls and what is gone round,
-**orange for everything that is climbed** — ramp, steps, blocks, balcony.
+**orange for everything that is climbed** — ramp, steps, blocks, walkway.
 
 ---
 
