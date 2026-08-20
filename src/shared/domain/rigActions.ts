@@ -1,7 +1,7 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { TRACK_PROPERTIES } from './animation'
 import { BODY_PARTS, HUMANOID_ROLES } from './humanoid'
-import { CLIP_SOURCES, ROOT_MOTIONS } from './scene'
+import { CLIP_SOURCES, CLIP_SPEED, MAX_CLIP_FADE, ROOT_MOTIONS } from './scene'
 
 /**
  * Making a character move — its skeleton, the handles a joint reaches for, and the blocks laid
@@ -27,14 +27,6 @@ const BONE: ActionField = {
   labelKey: 'assistant.fields.boneName',
   required: true,
 }
-
-/**
- * Copied from `engines/scene/clipBlend`, which this side of the boundary may not import — the
- * same bargain the montage family struck, and `rigHandlers.test.ts` holds the copy to its
- * original. Past a second a fade stops reading as one move joining another.
- */
-const CLIP_SPEED = Object.freeze({ min: 0.1, max: 4 })
-const MAX_FADE = 1
 
 /** The channel a key is laid on, named by the id `scene.state` hands over. */
 const TRACK: ActionField = {
@@ -250,7 +242,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
         labelKey: 'assistant.fields.clipFade',
         required: false,
         min: 0,
-        max: MAX_FADE,
+        max: MAX_CLIP_FADE,
       },
       {
         key: 'rootMotion',

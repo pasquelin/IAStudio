@@ -16,6 +16,7 @@ import {
   shapeLayer,
   TEXT_ALIGNS,
   textLayer,
+  GUIDE_AXES,
   type CanvasState,
   type DrawnShape,
   type Guide,
@@ -469,15 +470,10 @@ const TURNS: Record<string, () => Command<CanvasState>> = {
   rotateAnticlockwise: () => rotateImage(false),
 }
 
-/** The two a guide may run along, typed off the state so the registry's copy cannot drift. */
-export const GUIDE_AXES: readonly Guide['axis'][] = ['x', 'y']
-
-/**
- * What an existing mask does. A layer wearing none is refused rather than given a record with no
- * pixels behind it — carving one is the engine's, through `canvas.maskFromSelection`.
- */
+// A layer wearing no mask is refused rather than given a record with no pixels behind it:
+// carving one is the engine's, through `canvas.maskFromSelection`.
 function mask(input: Record<string, unknown>): ActionOutcome {
-  const remove = input.remove !== undefined && boolOf(input, 'remove')
+  const remove = boolOf(input, 'remove')
   const named = ['enabled', 'linked'].some(key => input[key] !== undefined)
   // Taking a mask away and saying what it does are two different calls: one of them would be
   // written into a record the other has just dropped.

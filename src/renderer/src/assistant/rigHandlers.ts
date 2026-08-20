@@ -1,5 +1,5 @@
 import i18next from 'i18next'
-import { TRACK_PROPERTIES, type TrackProperty } from '@shared/domain/animation'
+import { TRACK_PROPERTIES, type AnimationTrack } from '@shared/domain/animation'
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import {
   BODY_PARTS,
@@ -27,7 +27,8 @@ import {
   setTimelineSettings,
   unkeySubject,
 } from '@/engines/scene/animationCommands'
-import { laneHolding, lanesWith } from '@/engines/scene/clipBlend'
+import { clampPlayhead } from '@/engines/scene/animationEval'
+import { clipsEdited, clipsMoved, laneHolding, lanesWith } from '@/engines/scene/clipBlend'
 import { channelNames } from '@/helpers/channelNames'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import {
@@ -54,7 +55,7 @@ import { activeSceneId, useDocuments } from '@/stores/documents'
 import { clipsOfNode, rigOfNode, useModelClips } from '@/stores/modelClips'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { type ActionHandlers } from './actionHandler'
-import { boolOf, numberOf, oneOf, textOf } from './actionInputs'
+import { boolOf, maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
 
 /**
  * The skeleton of a character, the handles its joints reach for, and the blocks laid on its band.
@@ -73,12 +74,12 @@ function model(input: Record<string, unknown>): { documentId: string; node: Mode
 /** Runs one command on the model named, refusing before it rather than writing nothing. */
 function editModelOf(
   input: Record<string, unknown>,
-  build: (node: ModelNode) => Command<SceneState> | null,
+  build: (node: ModelNode, documentId: string) => Command<SceneState> | null,
 ): ActionOutcome {
   const open = model(input)
   if (!open) return refused('wrongSurface')
 
-  const command = build(open.node)
+  const command = build(open.node, open.documentId)
   if (!command) return refused('notFound')
 
   useScenes.getState().runCommand(open.documentId, command)
@@ -125,13 +126,8 @@ function rigState(input: Record<string, unknown>): ActionOutcome {
   }
 }
 
-/**
- * A block on the band, from any of the three places a motion comes from.
- *
- * `assetId` belongs to a clip of the library and `clipName` to the two others, so naming both — or
- * the wrong one for the source — is refused rather than half read. An asset's kind is checked as
- * `addAnimationTo` checks it: a mesh laid on a band would be a block that plays nothing.
- */
+// The asset's kind is checked as `addAnimationTo` checks it: a mesh laid on a band would be a
+// block that plays nothing.
 async function addAnimation(input: Record<string, unknown>): Promise<ActionOutcome> {
   const source = oneOf(input, 'source', CLIP_SOURCES) ?? 'asset'
   const assetId = textOf(input, 'assetId')
@@ -194,10 +190,8 @@ async function listAnimations(input: Record<string, unknown>): Promise<ActionOut
   }
 }
 
-/**
- * One block of the band rewritten IN PLACE, inside its own lane — the inspector's own rule: every
- * other lane is carried over, and a block reordered because a speed changed would move on screen.
- */
+// Rewritten IN PLACE inside its own lane, as the inspector does it: a block reordered because a
+// speed changed would move on screen.
 function editBlock(input: Record<string, unknown>): ActionOutcome {
   const fade = numberOf(input, 'fadeSeconds')
   const start = numberOf(input, 'startSeconds')
@@ -206,29 +200,41 @@ function editBlock(input: Record<string, unknown>): ActionOutcome {
   const rootMotion = oneOf(input, 'rootMotion', ROOT_MOTIONS)
   const part: BodyPart | null = oneOf(input, 'part', BODY_PARTS)
 
-  return editModelOf(input, node => {
+  const loop = maybeBoolOf(input, 'loop')
+  const patch: Partial<ClipRef> = {
+    ...(offset === null ? {} : { offset }),
+    ...(speed === null ? {} : { speed }),
+    ...(loop === null ? {} : { loop }),
+    ...(fade === null ? {} : { fadeIn: secondsToUs(fade), fadeOut: secondsToUs(fade) }),
+    ...(rootMotion === null ? {} : { rootMotion }),
+    ...(part === null ? {} : { part }),
+  }
+  if (start === null && Object.keys(patch).length === 0) return refused('badInput')
+
+  return editModelOf(input, (node, documentId) => {
     const lanes = node.model.lanes ?? []
     const clipId = textOf(input, 'clipId') ?? ''
     const holding = laneHolding(lanes, clipId)
     if (!holding) return null
 
-    const written: readonly ClipRef[] = holding.clips.map(clip =>
-      clip.id !== clipId
-        ? clip
-        : {
-            ...clip,
-            ...(start === null ? {} : { start: secondsToUs(start) }),
-            ...(offset === null ? {} : { offset }),
-            ...(speed === null ? {} : { speed }),
-            ...(input.loop === undefined ? {} : { loop: boolOf(input, 'loop') }),
-            ...(fade === null ? {} : { fadeIn: secondsToUs(fade), fadeOut: secondsToUs(fade) }),
-            ...(rootMotion === null ? {} : { rootMotion }),
-            ...(part === null ? {} : { part }),
-          },
-    )
+    // Where the band can actually reach, as a drag lands it: a block posed off a frame plays a
+    // pose the head never stops on, and one past the end sits where it can never be grabbed back.
+    const band = sceneOf(useScenes.getState(), documentId).animation
+    const at =
+      start === null
+        ? null
+        : clampPlayhead(snapToFrame(secondsToUs(start), band.fps), band.duration)
 
-    const lanesWritten = lanesWith(lanes, holding.id, () => written)
-    return lanesWritten ? setModelLanes(node.id, lanesWritten) : null
+    const written = lanesWith(lanes, holding.id, clips => {
+      const moved = at === null ? clips : (clipsMoved(clips, clipId, at) ?? clips)
+      return Object.keys(patch).length === 0
+        ? at === null || moved === clips
+          ? null
+          : moved
+        : clipsEdited(moved, clipId, clip => ({ ...clip, ...patch }))
+    })
+
+    return written ? setModelLanes(node.id, written) : null
   })
 }
 
@@ -250,85 +256,79 @@ function timelineSettings(input: Record<string, unknown>): ActionOutcome {
   return { ok: true }
 }
 
-/** The scene in front, the instant a key lands on, and the state to measure it against. */
-function keyingAt(
-  input: Record<string, unknown>,
-): { documentId: string; state: SceneState; at: Us } | null {
-  const documentId = activeSceneId(useDocuments.getState())
-  if (documentId === null) return null
-
-  const keying = sceneKeyingAt(documentId)
-  const seconds = numberOf(input, 'timeSeconds')
-
-  return {
-    documentId,
-    state: keying.state,
-    // The head where nothing was named, snapped as the band snaps it: a key laid between two
-    // frames is a key nothing reads back.
-    at:
-      seconds === null ? keying.at : snapToFrame(secondsToUs(seconds), keying.state.animation.fps),
-  }
+/** A key lands on a frame or on nothing: one laid between two is one nothing reads back. */
+function frameAt(state: SceneState, seconds: number): Us {
+  return snapToFrame(secondsToUs(seconds), state.animation.fps)
 }
 
-/** Runs a command built from the instant a key lands on, or refuses. */
+/** Runs a command built from the instant a key lands on, the head where none was named. */
 function editKeys(
   input: Record<string, unknown>,
   build: (open: { state: SceneState; at: Us }) => Command<SceneState> | null,
 ): ActionOutcome {
-  const open = keyingAt(input)
-  if (!open) return refused('wrongSurface')
+  const documentId = activeSceneId(useDocuments.getState())
+  if (documentId === null) return refused('wrongSurface')
 
-  const command = build(open)
+  const keying = sceneKeyingAt(documentId)
+  const seconds = numberOf(input, 'timeSeconds')
+  const command = build({
+    state: keying.state,
+    at: seconds === null ? keying.at : frameAt(keying.state, seconds),
+  })
   if (!command) return refused('badInput')
 
-  useScenes.getState().runCommand(open.documentId, command)
+  useScenes.getState().runCommand(documentId, command)
   return { ok: true }
 }
 
-/** The channels of one subject — the node itself, or one bone of the model it holds. */
-function tracksOfSubject(
-  state: SceneState,
+/** The channel a call names, on the scene in front — an id nobody answers to is a refusal. */
+function editTrack(
   input: Record<string, unknown>,
-  property: TrackProperty | null,
-): string[] {
-  return recordingTracksFor(
-    state.animation,
-    textOf(input, 'nodeId') ?? '',
-    textOf(input, 'bone') ?? undefined,
+  build: (track: AnimationTrack, documentId: string) => ActionOutcome,
+): ActionOutcome {
+  const documentId = activeSceneId(useDocuments.getState())
+  if (documentId === null) return refused('wrongSurface')
+
+  const trackId = textOf(input, 'trackId') ?? ''
+  const track = sceneOf(useScenes.getState(), documentId).animation.tracks.find(
+    held => held.id === trackId,
   )
-    .filter(track => property === null || track.target.property === property)
-    .map(track => track.id)
+
+  return track ? build(track, documentId) : refused('notFound')
+}
+
+/** The subject a call names: a node of the scene, or one bone of the model it holds. */
+function subjectOf(input: Record<string, unknown>): { nodeId: string; bone?: string } {
+  const bone = textOf(input, 'bone')
+  const nodeId = textOf(input, 'nodeId') ?? ''
+  return bone === null ? { nodeId } : { nodeId, bone }
+}
+
+/** Its channels, by id — locked ones left out, as every gesture of the band leaves them out. */
+function tracksOfSubject(state: SceneState, subject: { nodeId: string; bone?: string }): string[] {
+  return recordingTracksFor(state.animation, subject.nodeId, subject.bone).map(track => track.id)
 }
 
 /**
- * One key on every channel of a subject, opening the ones it lacks.
- *
- * The names are the band's own, and they are screen text: a channel opened from outside must read
- * like one opened by the diamond. `i18next` answers nothing before a window has initialised it —
- * a test — and the English line is what stands in, never `undefined` written into a document.
+ * A channel name is screen text, and one opened from outside must read like one opened by the
+ * diamond. `i18next` answers nothing before a window has initialised it — a test — so the English
+ * line stands in, never `undefined` written into a document.
  */
 function keyPose(input: Record<string, unknown>): ActionOutcome {
-  const property: TrackProperty | null = oneOf(input, 'property', TRACK_PROPERTIES)
+  const only = oneOf(input, 'property', TRACK_PROPERTIES) ?? undefined
 
   return editKeys(input, ({ state, at }) => {
-    const nodeId = textOf(input, 'nodeId') ?? ''
-    const bone = textOf(input, 'bone') ?? undefined
-    const node = nodeById(state, nodeId)
+    const subject = subjectOf(input)
+    const node = nodeById(state, subject.nodeId)
     if (!node) return null
-
-    // Narrowed to one channel: `keyNode` opens every property a subject can hold, which is what
-    // the diamond does — a client naming one writes on that one alone.
-    if (property !== null) {
-      const held = tracksOfSubject(state, input, property)
-      return held.length === 0 ? null : keySubject(state, held, at)
-    }
 
     return keyNode(
       state,
-      bone === undefined ? { nodeId } : { nodeId, bone },
+      subject,
       at,
-      channelNames(key => i18next.t(key) || englishText(key), bone ?? node.name),
+      channelNames(key => i18next.t(key) || englishText(key), subject.bone ?? node.name),
       () => `track_${newId()}`,
+      only,
     )
   })
 }
@@ -411,7 +411,7 @@ export const RIG_HANDLERS: ActionHandlers = {
 
   'key.clear': input =>
     editKeys(input, ({ state, at }) =>
-      unkeySubject(state, tracksOfSubject(state, input, null), at),
+      unkeySubject(state, tracksOfSubject(state, subjectOf(input)), at),
     ),
 
   'key.all': input =>
@@ -424,52 +424,44 @@ export const RIG_HANDLERS: ActionHandlers = {
     ),
 
   'key.move': input =>
-    editKeys(input, ({ state }) => {
-      const trackId = textOf(input, 'trackId') ?? ''
-      const track = state.animation.tracks.find(held => held.id === trackId)
-      const from = numberOf(input, 'fromSeconds') ?? 0
-      const to = numberOf(input, 'toSeconds') ?? 0
-      if (!track) return null
+    editTrack(input, (track, documentId) => {
+      const state = sceneOf(useScenes.getState(), documentId)
+      const from = frameAt(state, numberOf(input, 'fromSeconds') ?? 0)
 
-      const at = (seconds: number): Us => snapToFrame(secondsToUs(seconds), state.animation.fps)
       // Nothing standing where the drag began: the command hands the state back untouched, which
       // without this reads as a key moved.
-      return track.keys.some(key => key.time === at(from))
-        ? moveAnimationKey(trackId, at(from), at(to))
-        : null
+      if (!track.keys.some(key => key.time === from)) return refused('badInput')
+
+      const to = frameAt(state, numberOf(input, 'toSeconds') ?? 0)
+      useScenes.getState().runCommand(documentId, moveAnimationKey(track.id, from, to))
+      return { ok: true }
     }),
 
-  'channel.remove': input => {
-    const documentId = activeSceneId(useDocuments.getState())
-    if (documentId === null) return refused('wrongSurface')
+  'channel.remove': input =>
+    editTrack(input, (track, documentId) => {
+      // A locked channel is skipped by the command, which reads as removed.
+      if (track.locked) return refused('badInput')
 
-    const trackId = textOf(input, 'trackId') ?? ''
-    const track = sceneOf(useScenes.getState(), documentId).animation.tracks.find(
-      held => held.id === trackId,
-    )
-    // A locked channel is skipped by the command, which reads as removed.
-    if (!track || track.locked) return refused('badInput')
+      useScenes.getState().runCommand(documentId, removeAnimationTrack(track.id))
+      return { ok: true }
+    }),
 
-    useScenes.getState().runCommand(documentId, removeAnimationTrack(trackId))
-    return { ok: true }
-  },
+  'channel.flags': input =>
+    editTrack(input, (track, documentId) => {
+      const flags = {
+        ...flagNamed(input, 'muted'),
+        ...flagNamed(input, 'solo'),
+        ...flagNamed(input, 'locked'),
+      }
+      if (Object.keys(flags).length === 0) return refused('badInput')
 
-  'channel.flags': input => {
-    const documentId = activeSceneId(useDocuments.getState())
-    if (documentId === null) return refused('wrongSurface')
+      writeAnimationTrack(documentId, track.id, held => ({ ...held, ...flags }))
+      return { ok: true }
+    }),
+}
 
-    const trackId = textOf(input, 'trackId') ?? ''
-    const state = sceneOf(useScenes.getState(), documentId)
-    if (!state.animation.tracks.some(held => held.id === trackId)) return refused('notFound')
-
-    const flags = {
-      ...(input.muted === undefined ? {} : { muted: boolOf(input, 'muted') }),
-      ...(input.solo === undefined ? {} : { solo: boolOf(input, 'solo') }),
-      ...(input.locked === undefined ? {} : { locked: boolOf(input, 'locked') }),
-    }
-    if (Object.keys(flags).length === 0) return refused('badInput')
-
-    writeAnimationTrack(documentId, trackId, track => ({ ...track, ...flags }))
-    return { ok: true }
-  },
+/** One flag of a channel, or nothing at all — the difference `boolOf` alone cannot carry. */
+function flagNamed(input: Record<string, unknown>, key: string): Record<string, boolean> {
+  const value = maybeBoolOf(input, key)
+  return value === null ? {} : { [key]: value }
 }

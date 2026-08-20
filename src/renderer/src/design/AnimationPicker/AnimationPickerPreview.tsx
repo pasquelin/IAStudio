@@ -1,9 +1,9 @@
 import { mdiPause, mdiPlay, mdiSkipNext, mdiSkipPrevious } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { clipKeyOf, type ClipLane } from '@shared/domain/scene'
+import { clipKeyOf, CLIP_SPEED, type ClipLane } from '@shared/domain/scene'
 import { usToSeconds } from '@shared/domain/time'
 import { setModelLanes } from '@/engines/scene/commands'
-import { clipSpanOf, laneHolding, lanesWith, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
+import { clipSpanOf, laneHolding, lanesWith } from '@/engines/scene/clipBlend'
 import { clipLengthOf, useModelClips } from '@/stores/modelClips'
 import { SliderField } from '../SliderField'
 import { ToggleField } from '../ToggleField'
@@ -111,8 +111,8 @@ export function AnimationPickerPreview({
       <SliderField
         label={t('inspector.clipSpeed')}
         scId="animationPicker.speed"
-        min={MIN_SPEED}
-        max={MAX_SPEED}
+        min={CLIP_SPEED.min}
+        max={CLIP_SPEED.max}
         step={0.1}
         value={played.speed}
         onChange={speed => write(speed, played.loop)}

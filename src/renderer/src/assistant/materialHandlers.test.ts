@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Asset } from '@shared/domain/asset'
-import { assistantAction } from '@shared/domain/assistant'
 import { createSkyboxContent } from '@shared/domain/skybox'
-import { newTexture, PREVIEW_SHAPES } from '@/engines/texture/textureState'
+import { newTexture } from '@/engines/texture/textureState'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installIn } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
@@ -180,18 +179,6 @@ describe('the material', () => {
   })
 })
 
-/**
- * The one closed list of this family the registry writes out — the shapes live in the texture
- * engine, which `shared/` may not import. This is what holds the copy to its original.
- */
-describe('what the registry offers a preview', () => {
-  it('offers exactly the shapes the engine declares', () => {
-    const field = assistantAction('texture.preview')?.fields.find(one => one.key === 'shape')
-
-    expect([...(field?.options ?? [])]).toEqual([...PREVIEW_SHAPES])
-  })
-})
-
 describe('how a sky is looked at', () => {
   it('writes the projection, the lens and the probes, and reads them back', async () => {
     withSky()
@@ -224,6 +211,16 @@ describe('the two halves of a material nothing could write', () => {
     await runAction('texture.material', { roughnessMax: 0.8, metalnessMin: 0.1 })
     expect(material().material.roughnessRange).toEqual({ min: 0.2, max: 0.8 })
     expect(material().material.metalnessRange).toEqual({ min: 0.1, max: 1 })
+  })
+
+  /** The invariant `RangeField` holds on a drag: a floor above its ceiling is a remap nothing undoes. */
+  it('keeps the two handles in order when one is pushed past the other', async () => {
+    withMaterial()
+
+    await runAction('texture.material', { roughnessMax: 0.2 })
+    await runAction('texture.material', { roughnessMin: 0.9 })
+
+    expect(material().material.roughnessRange).toEqual({ min: 0.2, max: 0.9 })
   })
 
   it('judges the material on another shape, at another repeat', async () => {

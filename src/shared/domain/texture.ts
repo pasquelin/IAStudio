@@ -87,6 +87,23 @@ export type ValueRange = { min: number; max: number }
 export type Vector2 = { x: number; y: number }
 
 /**
+ * The shapes a texture is judged on. A plane reads tiling, a sphere reads lighting.
+ *
+ * Here rather than beside the preview it drives, for the reason the bounds below are: the
+ * registry on this side of the boundary offers the list to an outside client, and a copy would
+ * be a sixth shape the engine knows and the schema does not.
+ */
+export type PreviewShape = 'sphere' | 'box' | 'cylinder' | 'plane' | 'torusKnot'
+
+export const PREVIEW_SHAPES: readonly PreviewShape[] = [
+  'sphere',
+  'box',
+  'cylinder',
+  'plane',
+  'torusKnot',
+]
+
+/**
  * How far each setting a slider drives is allowed to go. Here rather than at the field, because
  * the parser has to hold the same bounds: read unclamped, a hand-edited `heightScale: 3` opened
  * and rendered fine, the slider pinned at its own maximum, and the first touch of it destroyed the

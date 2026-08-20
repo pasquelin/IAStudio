@@ -3,9 +3,11 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   clipLane,
+  CLIP_SPEED,
   DEFAULT_CLIP,
   embeddedClip,
   MAIN_LANE_ID,
+  MAX_CLIP_FADE,
   ROOT_MOTIONS,
   type ClipRef,
   type ClipSource,
@@ -21,7 +23,7 @@ import { INLINE_LINK } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
 import { addModelClip, removeModelClip, setModelLanes } from '@/engines/scene/commands'
-import { laneHolding, lanesWith, MAX_FADE, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
+import { laneHolding, lanesWith } from '@/engines/scene/clipBlend'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import type { ModelNode } from '@/engines/scene/sceneState'
 import { clipLabel } from '@/helpers/clipLabel'
@@ -193,8 +195,8 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
             label={t('inspector.clipSpeed')}
             scId="animation.clipSpeed"
             value={played.speed}
-            min={MIN_SPEED}
-            max={MAX_SPEED}
+            min={CLIP_SPEED.min}
+            max={CLIP_SPEED.max}
             step={0.1}
             onChange={speed => write({ ...played, speed })}
             {...edit.gesture}
@@ -212,7 +214,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
             scId="animation.clipFade"
             value={usToSeconds(played.fadeIn)}
             min={0}
-            max={MAX_FADE}
+            max={MAX_CLIP_FADE}
             step={0.05}
             onChange={seconds =>
               write({ ...played, fadeIn: secondsToUs(seconds), fadeOut: secondsToUs(seconds) })

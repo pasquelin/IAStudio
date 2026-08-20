@@ -1,4 +1,5 @@
 import type { FieldDescriptor } from '@shared/domain/model'
+import { withinBounds } from '@shared/numeric'
 
 /**
  * Narrows the settings the API proposes to what the target model actually declares.
@@ -34,11 +35,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function withinBounds(field: FieldDescriptor, value: number): boolean {
-  if (field.min !== undefined && value < field.min) return false
-  return field.max === undefined || value <= field.max
-}
-
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
@@ -50,10 +46,10 @@ function accepts(field: FieldDescriptor, value: unknown): boolean {
 
     case 'integer':
     case 'seed':
-      return isFiniteNumber(value) && Number.isInteger(value) && withinBounds(field, value)
+      return isFiniteNumber(value) && Number.isInteger(value) && withinBounds(value, field)
 
     case 'number':
-      return isFiniteNumber(value) && withinBounds(field, value)
+      return isFiniteNumber(value) && withinBounds(value, field)
 
     case 'choice':
       if (typeof value !== 'string') return false

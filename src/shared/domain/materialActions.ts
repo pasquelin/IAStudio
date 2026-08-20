@@ -1,26 +1,18 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { MAX_FIELD_OF_VIEW, MIN_FIELD_OF_VIEW, SKYBOX_VIEWS } from './skybox'
-import { PBR_CHANNELS } from './texture'
+import { PBR_CHANNELS, PREVIEW_SHAPES } from './texture'
 
 /**
  * The sky and the material, driven by value.
  *
  * Unlike the image and the montage, both of these keep their state in `shared/` already — a sky is
  * a `SkyboxContent`, a material a `MaterialSettings` — so the closed lists here are IMPORTED
- * rather than written out. One exception, and it is named where it stands: the preview SHAPES
- * belong to the texture engine rather than to the document.
+ * rather than written out, and no test has to hold a copy to its original.
  *
  * Angles are in RADIANS, which is what the state holds and what the panels write. The image family
  * takes degrees because a layer carries one angle a person types; these carry several a program
  * computes, and converting them back for every read would be the greater cost.
  */
-
-/**
- * The shapes a texture is judged on, and the only closed list of this family written out: they
- * live in `engines/texture/textureState`, which this side may not import.
- * `materialHandlers.test.ts` holds the copy to `PREVIEW_SHAPES`.
- */
-const PREVIEW_SHAPES: readonly string[] = ['sphere', 'box', 'cylinder', 'plane', 'torusKnot']
 
 const NUMBER = (key: string, labelKey: string, min?: number, max?: number): ActionField => ({
   key,

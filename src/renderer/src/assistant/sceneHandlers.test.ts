@@ -6,7 +6,6 @@ import { TEXTURE_SLOTS, type SceneWorld } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
-import { ENVIRONMENT_PRESETS } from '@/engines/scene/environmentPresets'
 import { createNodeOf } from '@/engines/scene/nodeFactory'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { GEOMETRY_SPECS, type PropertySpec } from '@/engines/scene/propertyFields'
@@ -489,12 +488,6 @@ describe('a still of the view, and a world in one call', () => {
     tags: [],
     createdAt: '2026-08-20T10:00:00.000Z',
   }
-
-  it('offers exactly the ready-made worlds the engine declares', () => {
-    const field = assistantAction('world.preset')?.fields.find(one => one.key === 'preset')
-
-    expect([...(field?.options ?? [])]).toEqual([...ENVIRONMENT_PRESETS])
-  })
 
   it('writes what a preset is about and leaves the rest of the world alone', async () => {
     await runAction('world.ground', { visible: true, size: 12 })
@@ -1025,5 +1018,64 @@ describe('a node an animation already drives', () => {
 
     expect(scene().animation.tracks[0]?.keys).toEqual([])
     expect(nodeNamed('Caisse')?.transform.position).toMatchObject({ y: 2 })
+  })
+
+  /**
+   * The fallback for an axis nobody named is the pose PLAYED, and this is what says so: taken from
+   * the rest instead, the two metres the channel already holds would be keyed back to zero.
+   */
+  it('leaves the axes it was not given exactly where the channel plays them', async () => {
+    const nodeId = installKeyedBox()
+    await runAction('animation.autoKey', { on: true })
+    await runAction('node.transform', { nodeId, positionY: 2 })
+
+    await runAction('node.transform', { nodeId, positionX: 5 })
+
+    expect(scene().animation.tracks[0]?.keys).toEqual([{ time: 0, value: { x: 5, y: 2, z: 0 } }])
+  })
+
+  /**
+   * A lens whose channel plays reads the descriptor PLUS what the channel adds. Writing the value
+   * asked for into the descriptor as well would move the rest under every other key of that
+   * channel — the value at this instant would be right and every other one wrong.
+   */
+  it('keys a camera’s lens without moving the rest it is measured against', async () => {
+    const fresh = createDefaultScene()
+    const camera = createNodeOf('camera')
+    const nodeId = camera?.id ?? ''
+    const lens: AnimationTrack = {
+      id: 'track-fov',
+      name: 'Objectif',
+      index: 0,
+      muted: false,
+      solo: false,
+      locked: false,
+      target: { nodeId, property: 'fov' },
+      keys: [],
+    }
+    installScene(DOCUMENT, {
+      ...fresh,
+      nodes: camera ? [{ ...camera, name: 'Caméra' }] : [],
+      selectedIds: [],
+      animation: { ...fresh.animation, tracks: [lens] },
+    })
+    await runAction('animation.autoKey', { on: true })
+
+    await runAction('node.camera', { nodeId, fov: 30, near: 0.5 })
+
+    const written = nodeNamed('Caméra')
+    expect(written?.type === 'camera' && written.camera).toMatchObject({ fov: 50, near: 0.5 })
+    expect(scene().animation.tracks[0]?.keys).toEqual([{ time: 0, value: { x: -20, y: 0, z: 0 } }])
+  })
+
+  /** The floor `CAMERA_SPECS` holds, which the number field clamps and the registry cannot say. */
+  it('refuses a near plane the inspector’s own field would not take', async () => {
+    const added = await runAction('node.add', { kind: 'camera', name: 'Caméra' })
+    const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
+
+    expect(await runAction('node.camera', { nodeId, near: 0 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
   })
 })

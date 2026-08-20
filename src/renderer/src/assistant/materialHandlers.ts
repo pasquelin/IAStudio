@@ -185,32 +185,30 @@ function vectorCommands(
   })
 }
 
-type RangeKey = 'roughnessRange' | 'metalnessRange'
+/** Each double handle, and the stem its two fields are named from. */
+const RANGES: readonly (readonly ['roughnessRange' | 'metalnessRange', string])[] = [
+  ['roughnessRange', 'roughness'],
+  ['metalnessRange', 'metalness'],
+]
 
-const RANGE_KEYS: readonly RangeKey[] = ['roughnessRange', 'metalnessRange']
-
-/**
- * The double handles of the panel, written a bound at a time: a client raising a floor keeps the
- * ceiling it never read. Named `roughnessMin` and its three neighbours, since a range is two
- * numbers and a field carries one.
- */
+// Each bound held against the other, as `RangeField` holds a drag that ran past its twin: a floor
+// above its ceiling is a remap the shader reads and no gesture on screen can undo.
 function rangeCommands(
   input: Record<string, unknown>,
   state: TextureState,
 ): Command<TextureState>[] {
-  return RANGE_KEYS.flatMap(key => {
-    const stem = key.replace('Range', '')
+  return RANGES.flatMap(([key, stem]) => {
     const min = numberOf(input, `${stem}Min`)
     const max = numberOf(input, `${stem}Max`)
+    if (min === null && max === null) return []
 
-    return min === null && max === null
-      ? []
-      : [
-          setTextureMaterial(key, {
-            min: min ?? state.material[key].min,
-            max: max ?? state.material[key].max,
-          }),
-        ]
+    const held = state.material[key]
+    return [
+      setTextureMaterial(key, {
+        min: Math.min(min ?? held.min, max ?? held.max),
+        max: Math.max(max ?? held.max, min ?? held.min),
+      }),
+    ]
   })
 }
 
@@ -235,10 +233,9 @@ function material(input: Record<string, unknown>): ActionOutcome {
 
 function preview(input: Record<string, unknown>): ActionOutcome {
   const shape = oneOf(input, 'shape', PREVIEW_SHAPES)
-  const times = numberOf(input, 'tilingPreview')
   // One, two or four: a bound cannot say « three is not offered », so the refusal is here.
-  const repeat = TILING_PREVIEWS.find(candidate => candidate === times) ?? null
-  if (times !== null && repeat === null) return refused('badInput')
+  const repeat = oneOf(input, 'tilingPreview', TILING_PREVIEWS)
+  if (input.tilingPreview !== undefined && repeat === null) return refused('badInput')
 
   return runMaterial([
     ...dialsOf(input, PREVIEW_DIALS),
@@ -252,10 +249,8 @@ function preview(input: Record<string, unknown>): ActionOutcome {
   ])
 }
 
-/**
- * How a sky is being looked at. Session state through the store, never a command: it is not the
- * document, exactly as the 3D space's own display mode is not.
- */
+// Session state through the store, never a command: how a sky is LOOKED at is not the document,
+// exactly as the 3D space's own display mode is not.
 function skyboxView(input: Record<string, unknown>): ActionOutcome {
   const open = skyOpen()
   if (!open) return refused('wrongSurface')

@@ -40,3 +40,14 @@ export function bound(value: number, { min, max, step }: NumericBounds): number 
   const snapped = step === undefined ? value : snap(value, step)
   return clamp(snapped, min ?? -Infinity, max ?? Infinity)
 }
+
+/**
+ * Whether a value is already acceptable. The other half of `bound`, for the three doors that
+ * REFUSE rather than clamp — a generation's parameters, an action's input, a field of a panel.
+ *
+ * The step is deliberately not checked: a slider offers one, and every value between two notches
+ * is still a value the same control accepts once typed.
+ */
+export function withinBounds(value: number, { min, max }: NumericBounds): boolean {
+  return (min === undefined || value >= min) && (max === undefined || value <= max)
+}

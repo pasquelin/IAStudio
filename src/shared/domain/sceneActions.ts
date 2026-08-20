@@ -8,6 +8,7 @@ import {
   DISPLAY_MODES,
   ENV_INTENSITY,
   ENVIRONMENT_KINDS,
+  ENVIRONMENT_PRESETS,
   EXPOSURE,
   FOG_DENSITY,
   FOG_KINDS,
@@ -81,13 +82,6 @@ const count = (key: string, min: number, max: number): ActionField => ({
 
 /** A size in scene units, which is never zero: a degenerate primitive is a mesh that vanishes. */
 const SMALLEST = 0.001
-
-/**
- * The ready-made worlds the environment panel offers. Written out because their table lives in
- * `engines/scene/environmentPresets`, which this side may not import — `sceneHandlers.test.ts`
- * holds the copy to `ENVIRONMENT_PRESETS`.
- */
-const ENVIRONMENT_PRESETS: readonly string[] = ['neutral', 'studio', 'product', 'outdoor', 'night']
 
 /**
  * The parameters of a primitive, in ONE action rather than fourteen.

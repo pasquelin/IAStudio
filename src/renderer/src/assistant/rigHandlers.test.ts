@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { assistantAction } from '@shared/domain/assistant'
 import type { Rig } from '@shared/domain/rig'
 import { secondsToUs } from '@shared/domain/time'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
-import { MAX_FADE, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { modelNode } from '@/engines/scene/nodeFactory'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -266,15 +264,6 @@ describe('the three places a motion comes from', () => {
 })
 
 describe('what one block of the band plays', () => {
-  /** The bounds the registry copies, held against the module they were copied from. */
-  it('bounds a block exactly as the inspector does', () => {
-    const fieldOf = (key: string) =>
-      assistantAction('animation.block')?.fields.find(field => field.key === key)
-
-    expect(fieldOf('speed')).toMatchObject({ min: MIN_SPEED, max: MAX_SPEED })
-    expect(fieldOf('fadeSeconds')).toMatchObject({ min: 0, max: MAX_FADE })
-  })
-
   async function laid(): Promise<{ nodeId: string; clipId: string }> {
     const nodeId = installCharacter()
     await runAction('animation.add', { nodeId, assetId: 'asset-run' })
@@ -317,6 +306,32 @@ describe('what one block of the band plays', () => {
       refusal: 'notFound',
     })
   })
+
+  /**
+   * Where a drag can actually land it: a block posed off a frame plays a pose the head never stops
+   * on, and one past the end sits where nothing can grab it back.
+   */
+  it('lands a block on a frame, and never past the end of the band', async () => {
+    const { nodeId, clipId } = await laid()
+    const band = scene().animation
+
+    await runAction('animation.block', { nodeId, clipId, startSeconds: 0.001 })
+    expect(character()?.model.lanes?.[0]?.clips[0]?.start).toBe(0)
+
+    await runAction('animation.block', { nodeId, clipId, startSeconds: 9999 })
+    expect(character()?.model.lanes?.[0]?.clips[0]?.start).toBe(band.duration)
+  })
+
+  // A refusal must not reach the history: `runCommand` banks whatever it is handed, and ⌘Z would
+  // give back a state nobody ever left.
+  it('refuses a call that names the block and nothing else', async () => {
+    const { nodeId, clipId } = await laid()
+
+    expect(await runAction('animation.block', { nodeId, clipId })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
 })
 
 describe('the keys of the band', () => {
@@ -347,6 +362,18 @@ describe('the keys of the band', () => {
 
     const keyed = tracks().filter(track => track.keys.length > 1)
     expect(keyed.map(track => track.target.property)).toEqual(['position'])
+  })
+
+  /**
+   * And it OPENS that one. Nothing else in the studio opens a channel, so a client driving a
+   * single axis would otherwise have to key the whole pose and drop the two it never wanted.
+   */
+  it('opens the one channel it was asked for on a subject that has none', async () => {
+    const nodeId = installCharacter()
+
+    expect(await runAction('key.pose', { nodeId, property: 'rotation' })).toEqual({ ok: true })
+
+    expect(tracks().map(track => track.target.property)).toEqual(['rotation'])
   })
 
   it('takes a subject’s keys back off at that instant', async () => {

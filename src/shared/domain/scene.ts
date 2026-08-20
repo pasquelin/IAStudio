@@ -181,6 +181,18 @@ export type ClipSource =
 export const CLIP_SOURCES: readonly ClipSource['kind'][] = ['embedded', 'bundled', 'asset']
 
 /**
+ * What a block may be sped up or slowed to. Zero would make it infinitely long, and past four
+ * times a motion reads as a glitch rather than as a faster move.
+ *
+ * Here rather than in the engine that reads it, for the reason `TILES_PER_METRE` is: it bounds
+ * what a DOCUMENT may hold, so the registry on this side of the boundary can state it too.
+ */
+export const CLIP_SPEED = Object.freeze({ min: 0.1, max: 4 })
+
+/** Seconds. Past a second a transition stops reading as one move joining another. */
+export const MAX_CLIP_FADE = 1
+
+/**
  * What a block's clip is filed under, wherever a player or a length is kept by name.
  *
  * The kind is part of it, and that is the whole point: an animation shipped as `walk` and a clip
@@ -338,6 +350,20 @@ export const STUDIO_ENVIRONMENT: EnvironmentRef = Object.freeze({ kind: 'studio'
  * prefiltered map, so choosing a sky is what puts the procedural studio out.
  */
 export const ENVIRONMENT_KINDS: readonly EnvironmentRef['kind'][] = ['studio', 'skybox']
+
+/**
+ * The ready-made worlds a scene can be set up as. Only the names live here — what each one WRITES
+ * is a patch of `SceneWorld` the engine holds, and it needs a comparison the window owns.
+ */
+export type EnvironmentPreset = 'neutral' | 'studio' | 'product' | 'outdoor' | 'night'
+
+export const ENVIRONMENT_PRESETS: readonly EnvironmentPreset[] = [
+  'neutral',
+  'studio',
+  'product',
+  'outdoor',
+  'night',
+]
 
 /**
  * What a stored value says about lighting, or the studio when it says nothing usable — a

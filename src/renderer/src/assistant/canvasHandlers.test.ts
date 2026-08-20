@@ -6,6 +6,7 @@ import {
   ADJUSTMENT_KINDS,
   DEFAULT_CANVAS,
   DIAL_RANGE,
+  GUIDE_AXES,
   LAYER_KINDS,
   pixelLayer,
   textLayer,
@@ -15,7 +16,6 @@ import { MAX_SIDES, MIN_SIDES } from '@/engines/canvas/shapeGeometry'
 import { installIn } from '@/stores/document-fixtures'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
-import { GUIDE_AXES } from './canvasHandlers'
 import { runAction } from './executor'
 
 const DOCUMENT = 'doc-image'

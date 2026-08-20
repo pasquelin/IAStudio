@@ -7,6 +7,7 @@ import {
   ENVIRONMENT_KINDS,
   FOG_KINDS,
   STUDIO_ENVIRONMENT,
+  TEXTURE_SLOTS,
   TONE_MAPPINGS,
   VIEW_DIRECTIONS,
   type EnvironmentRef,
@@ -21,6 +22,7 @@ import {
 } from '@shared/domain/scene'
 import { CAPTURE_QUALITIES, DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { SECOND } from '@shared/domain/time'
+import { withinBounds } from '@shared/numeric'
 import { captureSceneView } from '@/helpers/captureSceneView'
 import { ENVIRONMENT_PRESETS, presetPatch } from '@/engines/scene/environmentPresets'
 import {
@@ -60,8 +62,10 @@ import {
   withPointAtEnd,
   withoutPoint,
 } from '@/engines/scene/cameraPath'
+import { poseAt } from '@/engines/scene/animationEval'
 import { newShotAt, shotsWithCameraMoved } from '@/engines/scene/cameraShots'
 import {
+  CAMERA_SPECS,
   GEOMETRY_SPECS,
   LIGHT_SPECS,
   withField,
@@ -146,24 +150,18 @@ function namedFields(input: Record<string, unknown>): string[] {
 }
 
 /**
- * Whether a number sits inside what the field's own control ENFORCES.
- *
- * A slider's ends are its travel, not a limit — the number field beside it takes anything typed —
- * so only a `number` spec refuses here, exactly as `NumberField` does on screen.
+ * Whether a number sits inside what the field's own control enforces — a slider clamps its travel
+ * just as the number field clamps its bounds, so both are limits and neither is a suggestion.
  */
 function withinSpec(spec: PropertySpec | undefined, value: number): boolean {
-  if (spec?.control !== 'number') return true
-  return (
-    (spec.min === undefined || value >= spec.min) && (spec.max === undefined || value <= spec.max)
-  )
+  if (spec === undefined || spec.control === 'color' || spec.control === 'vector3') return true
+  return withinBounds(value, spec)
 }
 
 /**
- * The numbers a call writes onto one descriptor, or a refusal.
- *
- * Refused for a field the shape does not carry, and for one outside its own bounds: the registry
- * can only publish the UNION over kinds — a torus takes one radial segment where a capsule takes
- * three — and this is where the kind in hand narrows it.
+ * The numbers a call writes onto one descriptor, or a refusal. The registry can only publish the
+ * UNION over kinds — a torus takes one radial segment where a capsule takes three — so this is
+ * where the kind in hand narrows it.
  */
 function numbersFor(
   input: Record<string, unknown>,
@@ -211,12 +209,7 @@ function fontFrom(input: Record<string, unknown>, current: FontRef): FontRef | n
   return { family: family ?? current.family, source: source ?? current.source }
 }
 
-/**
- * The map slots a call names, as a material stores them.
- *
- * An empty id takes the map OFF, and a slot left unnamed is left alone: `null` and "absent" are
- * two different answers, and a client that could only ever add a map would have no way back.
- */
+/** The map slots a call names, as a material stores them — `null` and absent being two answers. */
 function texturesFrom(
   input: Record<string, unknown>,
 ): Partial<Record<TextureSlot, { assetId: string } | null>> | null {
@@ -253,7 +246,18 @@ function readState(): ActionOutcome {
       // hands over, and `animation.settings` writes the two numbers beside it.
       fps: open.state.animation.fps,
       duration: open.state.animation.duration,
-      tracks: open.state.animation.tracks,
+      // The INSTANTS of the keys, never their values: what a key holds is a delta nothing here
+      // writes, and a ten-second take at every frame is a megabyte of it across the boundary.
+      tracks: open.state.animation.tracks.map(track => ({
+        id: track.id,
+        name: track.name,
+        index: track.index,
+        muted: track.muted,
+        solo: track.solo,
+        locked: track.locked,
+        target: track.target,
+        keys: track.keys.map(key => key.time),
+      })),
       // The flat list the state itself holds — the tree is derived from `parentId`, and handing
       // one over would be a second shape of the same thing for a client to walk.
       nodes: open.state.nodes.map(node => ({
@@ -276,12 +280,9 @@ function readState(): ActionOutcome {
 }
 
 /**
- * The rail one call reshapes, written whole — `setPath` takes the descriptor, and the three
- * gestures a rail offers all land there.
- *
- * A change that hands the same points back is a refusal rather than a no-op: every helper of
- * `cameraPath` answers that way when it declines — an index naming no point, or a rail already
- * down to the two a line needs.
+ * The rail one call reshapes, written whole. A change that hands the SAME points back is a
+ * refusal: that is how every helper of `cameraPath` declines, and a no-op banked in the history
+ * would give ⌘Z a state nobody left.
  */
 function editPath(
   input: Record<string, unknown>,
@@ -534,14 +535,14 @@ export const SCENE_HANDLERS: ActionHandlers = {
     editNode(input, node => setNodeVisible(node.id, boolOf(input, 'visible'))),
 
   /**
-   * Through the very translation a gizmo drag goes through, and that is not a detail: tracks ADD
-   * to the pose underneath, so a move written under a keyed node springs straight back and the
-   * caller is told it took. Recording — `animation.autoKey` — is what decides which of the two
-   * this becomes.
+   * The gizmo's own translation, and what an unnamed axis falls back to is the whole point: the
+   * POSE PLAYED, never the rest. `recordMove` keys every channel from that fallback, so resting
+   * values would write a neutral rotation over the key standing there. Radians, as the state.
    */
   'node.transform': input =>
     editNode(input, (node, documentId) => {
       const keying = sceneKeyingAt(documentId)
+      const played = poseAt(node.transform, keying.state.animation, node.id, keying.at)
 
       return movesToCommand(
         keying.state,
@@ -549,11 +550,9 @@ export const SCENE_HANDLERS: ActionHandlers = {
           {
             id: node.id,
             transform: {
-              position: vectorOf(input, 'position', node.transform.position),
-              // Radians in the state and radians here: unlike a layer's single angle, three Euler
-              // angles in degrees would have to be converted back for every read of `scene.state`.
-              rotation: vectorOf(input, 'rotation', node.transform.rotation),
-              scale: vectorOf(input, 'scale', node.transform.scale),
+              position: vectorOf(input, 'position', played.position),
+              rotation: vectorOf(input, 'rotation', played.rotation),
+              scale: vectorOf(input, 'scale', played.scale),
             },
           },
         ],
@@ -712,35 +711,37 @@ export const SCENE_HANDLERS: ActionHandlers = {
       // The whole set, as `setModelTextures` takes it: a slot left out of the record is a slot
       // put back to the map the file itself carries, which is what an empty id says too.
       const textures: ModelRef['textures'] = {}
-      for (const [slot, ref] of Object.entries(asked)) {
-        if (ref) textures[slot as TextureSlot] = ref
+      for (const slot of TEXTURE_SLOTS) {
+        const ref = asked[slot]
+        if (ref) textures[slot] = ref
       }
 
       return setModelTextures(node.id, textures)
     }),
 
   /**
-   * The lens, through the same translation the inspector's own field goes through: a camera whose
-   * `fov` is keyed reads the descriptor PLUS what its channel adds, so a number written raw lands
-   * wherever that sum falls. `lensToCommand` reads the lens off the node it is handed, which is
-   * why the other two fields travel inside it rather than in a command after it.
+   * The lens, through the inspector's own translation — `fov` may be keyed, the two distances
+   * never are. The lens handed over keeps the fov it ALREADY holds: that value is what its key is
+   * measured against, and a new one there moves the rest pose under every other key.
    */
   'node.camera': input =>
     editNode(input, (node, documentId) => {
       if (node.type !== 'camera') return null
 
+      const written = numbersFor(input, node.camera, CAMERA_SPECS)
+      if (!written || Object.keys(written).length === 0) return null
+
+      // The two distances are never keyed, so they travel as a plain descriptor — and the lens
+      // handed to `lensToCommand` keeps the fov it ALREADY holds: that value is what its key is
+      // measured against, and a new one there would move the rest pose under every other key.
+      const camera = { ...node.camera, ...written, fov: node.camera.fov }
       const fov = numberOf(input, 'fov')
-      const camera = {
-        fov: fov ?? node.camera.fov,
-        near: numberOf(input, 'near') ?? node.camera.near,
-        far: numberOf(input, 'far') ?? node.camera.far,
-      }
       if (fov === null) return setCamera(node.id, camera)
 
       const keying = sceneKeyingAt(documentId)
       return multi(`camera:${node.id}`, [
         // Written first and then again by the lens where nothing records it: the keyed branch
-        // writes no descriptor at all, and near and far would be lost with it.
+        // writes no descriptor at all, and the two distances would be lost with it.
         setCamera(node.id, camera),
         lensToCommand(
           keying.state.animation,
@@ -824,12 +825,9 @@ export const SCENE_HANDLERS: ActionHandlers = {
       })
     }),
 
-  /**
-   * Whatever the kind in hand carries, folded in one field at a time — a hemisphere has a sky and
-   * a ground colour where every other light has one, and a cone belongs to a spot alone. A field
-   * the shape has no room for is refused: `withField` writes by computed key without checking,
-   * and a light given a `penumbra` it never had is a document that no longer describes anything.
-   */
+  // A field the shape has no room for is refused rather than filed: `withField` writes by
+  // computed key without checking, and a light given a `penumbra` it never had is a document
+  // that no longer describes anything.
   'node.light': input =>
     editNode(input, node => {
       if (node.type !== 'light') return null
@@ -880,11 +878,8 @@ export const SCENE_HANDLERS: ActionHandlers = {
     return { ok: true }
   },
 
-  /**
-   * The same function the menu row and the keyboard go through. It answers whether the still
-   * landed, and a viewport that is not mounted is what makes that answer `false` — the row has
-   * nothing to do with a silence, a client does.
-   */
+  // The same function the menu row and the keyboard go through, which answers whether the still
+  // landed: a viewport that is not mounted is a silence the row can live with and a client cannot.
   'scene.capture': async input => {
     const open = mounted()
     const quality = oneOf(input, 'quality', CAPTURE_QUALITIES) ?? DEFAULT_CAPTURE_QUALITY
