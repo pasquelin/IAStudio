@@ -113,4 +113,8 @@ export const JOB_HANDLERS: ActionHandlers = {
     withBridge(bridge =>
       bridge.scenario.usageReport(PERIODS.get(textOf(input, 'days') ?? '') ?? DEFAULT_USAGE_PERIOD),
     ),
+
+  // `false` says nothing was running under that id, which is a click that arrived late rather
+  // than a failure — so it travels as the answer it is.
+  'task.cancel': input => withBridge(bridge => bridge.tasks.cancel(textOf(input, 'taskId') ?? '')),
 }

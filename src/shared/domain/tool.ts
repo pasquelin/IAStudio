@@ -245,6 +245,16 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
 ]
 
 /**
+ * The panels as a closed list, for the doors that publish one — the tool schema an MCP client
+ * reads, and the validator behind it.
+ *
+ * Derived from the placements rather than written out: a panel with nowhere to sit is one the
+ * rail never draws and `revealTool` refuses, so the placements ARE the list. A third copy of the
+ * sixteen names is what this avoids, and it had already drifted once.
+ */
+export const TOOL_IDS: readonly ToolId[] = [...new Set(TOOL_PLACEMENTS.map(({ id }) => id))]
+
+/**
  * Any placement of a tool, for the questions a surface does not change — its slot, and
  * whether the id is one this version still knows.
  *

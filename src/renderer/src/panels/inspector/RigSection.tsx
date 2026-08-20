@@ -20,8 +20,8 @@ import {
   setRigBoneRole,
 } from '@/engines/scene/commands'
 import { HUMANOID_ROLES, isHumanoidRole, type HumanoidRole } from '@shared/domain/humanoid'
-import type { RigBone } from '@shared/domain/rig'
-import { IDENTITY_TRANSFORM, type ModelNode } from '@/engines/scene/sceneState'
+import { childBone } from '@shared/domain/rig'
+import type { ModelNode } from '@/engines/scene/sceneState'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
 import { providersRefusalOf, rigProvidersOf } from '@shared/domain/rigProvider'
@@ -99,7 +99,7 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
   }
 
   return (
-    <PropertySection title={t('inspector.rig')}>
+    <PropertySection title={t('inspector.rig')} scId="rig">
       {progress !== null && <ProgressBar ratio={progress} label={t('inspector.rigBinding')} />}
 
       {progress === null && fault && <QuietNote>{t(`inspector.rigFault_${fault}`)}</QuietNote>}
@@ -215,7 +215,11 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
                 scId="rig.boneRole"
               />
 
-              <Button onClick={() => edit.run(addRigBone(node.id, childBone(picked, node)))}>
+              <Button
+                onClick={() =>
+                  edit.run(addRigBone(node.id, childBone(node.model.rig?.bones ?? [], picked)))
+                }
+              >
                 {t('inspector.addBone')}
               </Button>
               <Button onClick={() => edit.run(removeRigBone(node.id, picked))}>
@@ -258,19 +262,4 @@ function roleOf(node: ModelNode, bone: string): HumanoidRole | undefined {
 /** Cast-free: an empty option means « fills none », and anything else has to be one of the fifty-two. */
 function roleRead(value: string): HumanoidRole | null {
   return isHumanoidRole(value) ? value : null
-}
-
-/**
- * A bone hung under the picked one, resting exactly ON it — the gizmo is what puts it where it
- * belongs, which is the same contract « add the hands » works under.
- *
- * Named after its parent rather than from a word, so a document written in one language reads
- * the same in another, and so the name is free without a counter to keep.
- */
-function childBone(parent: string, node: ModelNode): RigBone {
-  const taken = new Set(node.model.rig?.bones.map(one => one.name))
-  let name = `${parent}.1`
-  for (let index = 2; taken.has(name); index += 1) name = `${parent}.${index}`
-
-  return { name, parent, rest: IDENTITY_TRANSFORM }
 }

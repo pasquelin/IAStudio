@@ -13,6 +13,7 @@ export type WindowSearchProps = {
 export function WindowSearch({ label, value, onChange }: WindowSearchProps) {
   return (
     <input
+      data-sc="field:window.search"
       type="search"
       className="input input-xs w-full shrink-0"
       aria-label={label}

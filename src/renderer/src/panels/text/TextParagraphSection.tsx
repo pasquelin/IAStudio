@@ -39,7 +39,7 @@ export function TextParagraphSection({ documentId, layer }: TextParagraphSection
   }
 
   return (
-    <PropertySection title={t('text.paragraph')}>
+    <PropertySection title={t('text.paragraph')} scId="text.paragraph">
       <PropertyRow label={t('text.align')}>
         <div className="flex gap-1.5">
           {TEXT_ALIGNS.map(align => (
@@ -71,6 +71,7 @@ export function TextParagraphSection({ documentId, layer }: TextParagraphSection
         <>
           <NumberField
             label={t('text.boxWidth')}
+            scId="text.boxWidth"
             value={box.width}
             min={1}
             step={1}
@@ -80,6 +81,7 @@ export function TextParagraphSection({ documentId, layer }: TextParagraphSection
 
           <NumberField
             label={t('text.boxHeight')}
+            scId="text.boxHeight"
             value={box.height}
             min={1}
             step={1}

@@ -25,6 +25,7 @@ export function CommitBox({ status }: { status: GitStatus }) {
   return (
     <div className={PANEL_HEAD}>
       <textarea
+        data-sc="field:git.message"
         rows={3}
         value={message}
         aria-label={t('git.message')}
@@ -40,6 +41,7 @@ export function CommitBox({ status }: { status: GitStatus }) {
         {status.head !== null ? (
           <label className="text-muted flex items-center gap-2 text-xs">
             <input
+              data-sc="field:git.amend"
               type="checkbox"
               className={cn(CHECKBOX, 'size-3')}
               checked={amend}

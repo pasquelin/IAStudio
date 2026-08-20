@@ -40,6 +40,7 @@ export function AccountSettingsAddForm() {
       <label className="flex flex-col gap-2 text-xs">
         {t('accounts.name')}
         <input
+          data-sc="field:newAccount.name"
           className="input input-sm w-full"
           type="text"
           autoComplete="off"
@@ -53,6 +54,7 @@ export function AccountSettingsAddForm() {
       <label className="flex flex-col gap-2 text-xs">
         {t('auth.key')}
         <input
+          data-sc="field:newAccount.key"
           className="input input-sm w-full"
           type="text"
           autoComplete="off"
@@ -65,6 +67,7 @@ export function AccountSettingsAddForm() {
       <label className="flex flex-col gap-2 text-xs">
         {t('auth.secret')}
         <input
+          data-sc="field:newAccount.secret"
           className="input input-sm w-full"
           type="password"
           autoComplete="off"

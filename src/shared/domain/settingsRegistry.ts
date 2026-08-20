@@ -9,7 +9,12 @@ import {
 } from './settings'
 import type { ModelFamily } from './model'
 import { DISPLAY_UNITS, SHADOW_MAP_SIZES, SHADOW_QUALITIES, VIEWPORT_QUALITIES } from './scene'
+import type { SettingActionId } from './settingAction'
 import type { SettingPath, SettingValue, ValueAt } from './settingsPath'
+
+// Re-exported so the callers that ask this module for the ids keep working: what moved is where
+// they are DECLARED, and only because the registry is too heavy for the opening chunk.
+export { SETTING_ACTION_IDS, type SettingActionId } from './settingAction'
 
 /**
  * How a setting is edited. The control follows from the kind alone: no screen decides for
@@ -656,14 +661,6 @@ export const SETTING_REGISTRY = [
  * break the coverage check that makes this registry worth having — hence a table of its own,
  * of the same shape: an id, a section, and the two texts that name and explain it.
  */
-export type SettingActionId =
-  | 'advanced.openSettingsFile'
-  | 'advanced.openLogFolder'
-  | 'advanced.openDevtools'
-  | 'advanced.copyMcpCommand'
-  | 'advanced.installResolveBridge'
-  | 'advanced.reset'
-
 export type SettingAction = {
   id: SettingActionId
   section: SettingsSectionId
@@ -729,10 +726,6 @@ export const ACTION_REGISTRY: readonly SettingAction[] = [
     confirmKey: 'settings.resetAll.confirm',
   },
 ]
-
-export const SETTING_ACTION_IDS: readonly SettingActionId[] = ACTION_REGISTRY.map(
-  action => action.id,
-)
 
 export function actionsIn(section: SettingsSectionId): readonly SettingAction[] {
   return ACTION_REGISTRY.filter(action => action.section === section)

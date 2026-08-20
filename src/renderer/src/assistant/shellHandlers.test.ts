@@ -1,7 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SttState } from '@shared/domain/dictation'
+import type { UpdateState } from '@shared/domain/update'
 import type { Language } from '@shared/i18n/languages'
+import { toolIsShown } from '@/helpers/revealPanel'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { useDictation } from '@/stores/dictation'
+import { useLayouts } from '@/stores/layouts'
 import { runAction } from './executor'
+
+/** What the main process answers about the microphone, which is the authority on it. */
+const snapshot = (state: SttState) => vi.fn(async () => ({ state, download: null, failure: null }))
 
 beforeEach(() => {
   installFakeBridge()
@@ -77,5 +85,125 @@ describe('what surrounds the documents', () => {
       ok: false,
       refusal: 'badInput',
     })
+  })
+
+  /**
+   * `install` is silent below `ready`, and the action asks the person about a quit first — so
+   * `ok` on a state that installs nothing is a relaunch accepted and never delivered.
+   */
+  it('installs an update that is ready, and refuses one that is not', async () => {
+    const install = vi.fn(async () => {})
+    const ready: UpdateState = { phase: 'ready', version: '2.0' }
+    const idle: UpdateState = { phase: 'idle' }
+
+    installFakeBridge({ updates: { install, state: vi.fn(async () => ready) } })
+    expect(await runAction('updates.install', {})).toMatchObject({ ok: true })
+    expect(install).toHaveBeenCalled()
+
+    installFakeBridge({ updates: { install, state: vi.fn(async () => idle) } })
+    expect(await runAction('updates.install', {})).toEqual({
+      ok: false,
+      refusal: 'nothingPrepared',
+    })
+    expect(install).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('the panels of the surface in front', () => {
+  beforeEach(() => {
+    useLayouts.setState({ activeWorkspace: 'image', home: false })
+  })
+
+  /**
+   * Named rather than counted, and only what this surface serves: a panel the space does not
+   * carry cannot be opened there, so offering it would be offering a refusal.
+   */
+  it('lists what this surface carries, saying which are up', async () => {
+    const outcome = await runAction('panels.list', {})
+
+    expect(outcome).toMatchObject({ ok: true })
+    const listed = (outcome as { data: { id: string; open: boolean }[] }).data
+    expect(listed.map(panel => panel.id)).toContain('layers')
+    expect(listed.some(panel => panel.open)).toBe(true)
+  })
+
+  it('opens one, and closes it again', async () => {
+    expect(await runAction('panel.open', { panel: 'assets' })).toEqual({ ok: true })
+    expect(toolIsShown('assets', 'image')).toBe(true)
+
+    expect(await runAction('panel.close', { panel: 'assets' })).toEqual({ ok: true })
+    expect(toolIsShown('assets', 'image')).toBe(false)
+  })
+
+  // The Explorer sits on the home and in no space: naming it here is a refusal, not a no-op.
+  it('refuses a panel this surface does not serve', async () => {
+    expect(await runAction('panel.open', { panel: 'projects' })).toEqual({
+      ok: false,
+      refusal: 'wrongSurface',
+    })
+  })
+
+  /**
+   * Three panels share the left half of every space, and `close` empties a half whatever stands
+   * in it: asked to close the shelf while the half showed the models, it closed the models.
+   */
+  it('closes the panel named, or nothing at all', async () => {
+    await runAction('panel.open', { panel: 'models' })
+
+    expect(await runAction('panel.close', { panel: 'assets' })).toEqual({
+      ok: false,
+      refusal: 'wrongSurface',
+    })
+    expect(toolIsShown('models', 'image')).toBe(true)
+  })
+
+  // A placement `requires` a model or a project, and opening one without it put a DIFFERENT panel
+  // on screen while answering yes — `panels.list` filtered on the very same question.
+  it('refuses a panel this surface cannot offer yet', async () => {
+    expect(await runAction('panel.open', { panel: 'generator' })).toEqual({
+      ok: false,
+      refusal: 'wrongSurface',
+    })
+  })
+})
+
+describe('the microphone', () => {
+  /**
+   * Read back from the main process, never off the store: `listening` lands on the event channel
+   * while `start()` answers on the invoke one, so a store consulted too early reports a
+   * microphone that did open as refused.
+   */
+  it('opens it, and asks the main process what came of it', async () => {
+    const start = vi.fn(async () => {})
+    installFakeBridge({ dictation: { state: snapshot('listening') } })
+    useDictation.setState({ state: 'idle', start })
+
+    expect(await runAction('dictation.start', {})).toMatchObject({ ok: true })
+    expect(start).toHaveBeenCalled()
+  })
+
+  // The person's own no, told apart from a studio that is not ready — a model still downloading
+  // is not a permission refusal.
+  it('says which of the two stopped it', async () => {
+    useDictation.setState({ start: vi.fn(async () => {}) })
+
+    installFakeBridge({ dictation: { state: snapshot('permissionRequired') } })
+    expect(await runAction('dictation.start', {})).toEqual({ ok: false, refusal: 'notAllowed' })
+
+    installFakeBridge({ dictation: { state: snapshot('modelMissing') } })
+    expect(await runAction('dictation.start', {})).toEqual({ ok: false, refusal: 'failed' })
+  })
+
+  /** The two ways of ending differ exactly there: one keeps what was heard, the other drops it. */
+  it('keeps what was heard, or throws it away when asked', async () => {
+    const stop = vi.fn(async () => {})
+    const cancel = vi.fn(async () => {})
+    useDictation.setState({ stop, cancel })
+
+    await runAction('dictation.stop', {})
+    expect(stop).toHaveBeenCalled()
+
+    await runAction('dictation.stop', { discard: true })
+    expect(cancel).toHaveBeenCalled()
   })
 })

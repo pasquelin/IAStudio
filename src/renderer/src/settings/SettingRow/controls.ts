@@ -9,7 +9,15 @@ import type { SettingDescriptor } from '@shared/domain/settingsRegistry'
  * Here rather than in `SettingRow.tsx` because every control is a file of its own now, and
  * importing it back from the parent would close an import cycle.
  */
-export type Labelled = { id: string; describedBy: string }
+export type Labelled = {
+  id: string
+  describedBy: string
+  /**
+   * What a script names this control by — the setting's own path, never `id`, which is a DOM
+   * artefact of the `labelFor` wiring. A caller works this one out from the registry.
+   */
+  scId: string
+}
 
 /**
  * A control that hands its word over when the field is LEFT rather than on every keystroke —

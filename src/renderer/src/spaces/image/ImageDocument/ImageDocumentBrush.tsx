@@ -90,6 +90,8 @@ export function ImageDocumentBrush({
                 <SliderField
                   key={field.of}
                   label={t(field.labelKey)}
+                  // What the brush calls the dial, never how the flyout reads it.
+                  scId={`brush.${field.of}`}
                   value={brush[field.of]}
                   min={field.min}
                   max={field.max}

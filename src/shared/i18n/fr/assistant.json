@@ -125,6 +125,26 @@
         "title": "Créer un dossier",
         "description": "Crée un dossier dans un dossier du projet ouvert. Répond avec le chemin qui lui a été donné, qui peut différer si le nom était pris."
       },
+      "filesUndo": {
+        "title": "Annuler le dernier lot de fichiers",
+        "description": "Reprend le dernier déplacement, renommage ou duplication de fichiers du projet. La pile vit dans le processus principal et vaut pour toutes les fenêtres, mais une mise à la corbeille ne se reprend pas."
+      },
+      "filesRedo": {
+        "title": "Refaire le dernier lot de fichiers",
+        "description": "Rejoue le lot de fichiers qui venait d’être annulé, exactement comme le fait l’Explorateur. Répond avec ce qui a bougé et ce qui a été refusé."
+      },
+      "filesHistory": {
+        "title": "Lire la pile des gestes de fichiers",
+        "description": "Dit si annuler ou refaire ferait quelque chose, sans rien tenter. C’est ce qui grise les deux entrées de menu avant qu’on ne clique dessus."
+      },
+      "fileReveal": {
+        "title": "Montrer un fichier dans le gestionnaire de fichiers",
+        "description": "Ouvre le Finder ou l’explorateur du système sur le fichier nommé, sélectionné. Le chemin ne sort jamais du processus principal."
+      },
+      "projectRename": {
+        "title": "Renommer un projet",
+        "description": "Change le nom qu’un projet porte dans son manifeste, sans jamais toucher au dossier qui le contient — le catalogue et les projets récents sont indexés dessus. Nommé par son chemin absolu, donc même fermé."
+      },
       "modelSchema": {
         "title": "Lire les entrées d’un modèle",
         "description": "Rend les champs qu’un modèle de génération accepte, avec leur nature et leurs bornes, tels que le studio en construit son formulaire. C’est de quoi remplir les paramètres d’une génération préparée."
@@ -144,6 +164,10 @@
       "jobCancel": {
         "title": "Annuler une tâche",
         "description": "Arrête une génération encore en file ou en cours. Ce qui a déjà été dépensé n’est pas rendu."
+      },
+      "taskCancel": {
+        "title": "Annuler un travail local",
+        "description": "Arrête un travail que le studio mène sur cette machine — un rendu, une importation, une indexation — et le fichier à moitié écrit avec lui. Répond si l’un tournait encore, ce qu’un identifiant déjà terminé n’est pas."
       },
       "usageReport": {
         "title": "Lire le rapport de consommation",
@@ -168,6 +192,22 @@
       "assetsRemove": {
         "title": "Retirer des assets",
         "description": "Sort des assets de la bibliothèque du projet, et de la bibliothèque distante quand on le demande. Ce qui a été retiré figure dans l’activité récente."
+      },
+      "assetsDescribe": {
+        "title": "Légender des images",
+        "description": "Fait lire les images nommées par l’API et écrit ce qu’elle y voit comme nom de l’asset. Seules les images que la bibliothèque connaît peuvent l’être, donc une sélection purement locale répond zéro."
+      },
+      "assetsAbsent": {
+        "title": "Repérer les assets dont le fichier a disparu",
+        "description": "Parmi les assets nommés, rend ceux dont le catalogue attend un fichier qui n’est plus là. Un asset qui n’a jamais eu de fichier local n’en est jamais, puisque rien n’était attendu de lui."
+      },
+      "assetExtractTextures": {
+        "title": "Extraire les textures d’un modèle",
+        "description": "Sort les images qu’un fichier 3D transporte et les fait entrer dans la bibliothèque du projet comme des assets à part entière. Rend les lignes qui viennent d’être créées."
+      },
+      "assetReveal": {
+        "title": "Montrer un asset dans le gestionnaire de fichiers",
+        "description": "Ouvre le Finder ou l’explorateur du système sur le fichier d’un asset. Un asset qui ne vit que dans la bibliothèque distante n’a rien à montrer, et le dit."
       },
       "canvasState": {
         "title": "Lire l’image en cours d’édition",
@@ -469,6 +509,34 @@
         "title": "Ouvrir le retour vidéo",
         "description": "Ouvre la fenêtre de retour, ou la ramène devant si elle est déjà là. Elle montre ce que le montage joue, sans rien porter du travail."
       },
+      "updatesInstall": {
+        "title": "Installer la mise à jour téléchargée",
+        "description": "Quitte le studio et relance la version déjà téléchargée. Ne fait quelque chose qu’une fois la mise à jour prête, et ce qui n’est pas enregistré part avec la fermeture."
+      },
+      "dictationState": {
+        "title": "Lire l’état de la dictée",
+        "description": "Dit où en est la reconnaissance vocale — au repos, en écoute, en attente d’autorisation ou de modèle — et ce qui a échoué le cas échéant."
+      },
+      "dictationStart": {
+        "title": "Démarrer la dictée",
+        "description": "Ouvre le micro et écrit ce qu’il entend là où le curseur se trouve. Sans champ actif, la dictée n’a nulle part où écrire, et le curseur se pose donc avant l’appel."
+      },
+      "dictationStop": {
+        "title": "Arrêter la dictée",
+        "description": "Referme le micro. Garde par défaut ce qui a été entendu, et peut le jeter à la place — les deux gestes diffèrent exactement là."
+      },
+      "panelsList": {
+        "title": "Lister les panneaux",
+        "description": "Rend les panneaux que la surface au premier plan sait afficher, et dit lesquels sont ouverts. Un panneau qu’une surface ne sert pas n’y figure pas, puisqu’il ne peut pas y être ouvert."
+      },
+      "panelOpen": {
+        "title": "Ouvrir un panneau",
+        "description": "Amène un panneau devant, à l’endroit que la surface au premier plan lui réserve. Un panneau déjà visible reçoit le focus plutôt que d’être réécrit."
+      },
+      "panelClose": {
+        "title": "Fermer un panneau",
+        "description": "Vide la demi-zone où la surface au premier plan range ce panneau. La disposition des autres panneaux ne bouge pas."
+      },
       "sceneState": {
         "title": "Lire la scène en cours d’édition",
         "description": "Rend tous les objets du document 3D devant — identifiant, nom, type, parent, visibilité et transformation, avec la géométrie, la matière ou la lumière qu’ils portent — plus ce qui est sélectionné et ce qui éclaire la scène."
@@ -528,6 +596,70 @@
       "nodeSelect": {
         "title": "Sélectionner des objets",
         "description": "Fait de ces objets la sélection que lit l’inspecteur et que déplace le manipulateur. Une sélection n’est pas une édition, donc rien ne s’ajoute à l’historique."
+      },
+      "viewDirection": {
+        "title": "Regarder la scène depuis une face",
+        "description": "Place la caméra de la vue principale face au dessus, au dessous, à l’avant, à l’arrière, à la gauche ou à la droite de la scène. C’est un déplacement, donc rien ne s’ajoute à l’historique."
+      },
+      "rigState": {
+        "title": "Lire le squelette d’un personnage",
+        "description": "Rend les os d’un modèle avec leurs rôles, les poignées que ses articulations atteignent, les blocs posés sur sa bande, et ce que le moteur a mesuré de la maille."
+      },
+      "rigFit": {
+        "title": "Rendre un modèle animable",
+        "description": "Pose sur la maille le squelette que le studio ajuste à ce qu’il en a mesuré. Refuse tant que le moteur n’a pas lu le modèle, ce qui est une attente et non une faute."
+      },
+      "rigClear": {
+        "title": "Retirer le squelette d’un modèle",
+        "description": "Rend le modèle à son état de maille, sans os ni poignées. Le geste s’annule comme tous les autres de la scène."
+      },
+      "rigHands": {
+        "title": "Ajouter les os des doigts",
+        "description": "Pose les trente os de doigts au repos sur les mains que le squelette porte déjà. Sans mains reconnues, rien n’est écrit."
+      },
+      "boneAdd": {
+        "title": "Ajouter un os",
+        "description": "Accroche un os sous celui qui est nommé, exactement à sa place — le manipulateur est ce qui le met où il doit aller. Son nom est composé de celui du parent."
+      },
+      "boneRemove": {
+        "title": "Retirer un os",
+        "description": "Sort un os du squelette et raccroche ses enfants là où il était accroché, de sorte qu’un coude s’en aille et que la main reste."
+      },
+      "boneRename": {
+        "title": "Renommer un os",
+        "description": "Change le nom d’un os, ses enfants suivant tout seuls. Un nom déjà pris est refusé plutôt qu’écrit à moitié."
+      },
+      "boneRole": {
+        "title": "Dire quelle articulation un os EST",
+        "description": "Rattache un os à l’une des articulations du standard humanoïde, ou à aucune quand le rôle est laissé vide. L’os qui tenait ce rôle le perd dans le même mouvement."
+      },
+      "ikAdd": {
+        "title": "Poser une poignée sur une articulation",
+        "description": "Ajoute une poignée qu’une articulation atteint, et la chaîne qui la suit — les deux os au-dessus tournent pour l’accompagner, ce qui pose un pied au sol ou une main sur une prise."
+      },
+      "ikRemove": {
+        "title": "Retirer une poignée",
+        "description": "Enlève une chaîne et la poignée qu’elle atteignait, toutes les deux, car une poignée laissée derrière serait un os que rien ne pilote."
+      },
+      "animationAdd": {
+        "title": "Poser un bloc d’animation",
+        "description": "Pose sur la bande d’un personnage une animation que la bibliothèque du projet porte. La bande est créée si le personnage n’en avait aucune."
+      },
+      "animationRemove": {
+        "title": "Retirer un bloc d’animation",
+        "description": "Enlève un bloc de la bande, où qu’il se trouve. La bande reste, vide s’il le faut."
+      },
+      "animationSettings": {
+        "title": "Régler la bande d’animation",
+        "description": "Change la durée de la bande, sa cadence en images par seconde, ou les deux. Ce qui n’est pas nommé n’est pas touché."
+      },
+      "animationAutoKey": {
+        "title": "Activer la pose automatique de clés",
+        "description": "Décide si déplacer un os écrit une clé au passage. C’est un état de session, comme toute façon de regarder une scène, et rien n’en est enregistré avec le document."
+      },
+      "viewDisplay": {
+        "title": "Choisir la façon de dessiner la scène",
+        "description": "Passe la vue principale en ombré, en fil de fer, en matière seule ou dans l’une des autres façons de dessiner. La commande de menu ne fait que tourner d’une à l’autre, quand celle-ci nomme laquelle."
       },
       "gitStatus": {
         "title": "Lire le dépôt",
@@ -608,12 +740,19 @@
       "accountsActivate": {
         "title": "Changer de compte",
         "description": "Fait de l’un des comptes détenus celui par lequel le studio génère. Tout ce qui part ensuite le fait avec ses identifiants."
+      },
+      "accountsRename": {
+        "title": "Renommer un compte",
+        "description": "Change l’étiquette sous laquelle un compte apparaît dans le studio. Ni la clé ni le secret ne traversent cette frontière, dans un sens comme dans l’autre."
+      },
+      "settingsAction": {
+        "title": "Actionner un bouton des réglages",
+        "description": "Déclenche l’un des boutons de la fenêtre des réglages — révéler un fichier, ouvrir les outils de développement, copier la commande de connexion, installer la passerelle, tout remettre à zéro. Les deux derniers laissent quelque chose derrière eux et sont demandés à l’écran."
       }
     },
     "refusals": {
       "unknownCommand": "Cette commande n’existe pas dans le studio.",
-      "globalCommand": "Cette commande appartient au menu de l’application, qui la déclenche lui-même.",
-      "wrongSurface": "Cette commande s’adresse à un document qui n’est pas au premier plan.",
+      "wrongSurface": "Aucune surface du studio n’était là pour prendre cette commande. Ouvrez le document ou le panneau auquel elle s’adresse.",
       "generatorClosed": "Le Générateur n’était pas ouvert. Il vient de l’être.",
       "nothingPrepared": "Le Générateur n’a aucun modèle armé pour l’instant.",
       "notSubmitted": "La génération n’est pas partie.",
@@ -657,6 +796,18 @@
       "template": "Modèle de départ de la scène",
       "hidden": "Inclure les entrées masquées",
       "jobId": "Identifiant de la tâche",
+      "taskId": "Identifiant du travail local",
+      "panel": "Panneau du studio",
+      "discard": "Jeter ce qui a été entendu",
+      "viewDirection": "Face depuis laquelle regarder",
+      "displayMode": "Façon de dessiner la scène",
+      "settingsAction": "Bouton des réglages",
+      "boneName": "Nom de l’os",
+      "parentBone": "Os auquel accrocher",
+      "boneRole": "Articulation du standard humanoïde",
+      "chainId": "Identifiant de la chaîne",
+      "fps": "Images par seconde",
+      "autoKey": "Poser une clé à chaque déplacement",
       "timeoutMs": "Attente maximale, en millisecondes",
       "days": "Fenêtre en jours",
       "assetId": "Identifiant de l’asset",

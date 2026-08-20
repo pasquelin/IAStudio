@@ -1,5 +1,9 @@
 import { action, type AssistantAction } from './assistantAction'
 import { DEFAULT_SETTINGS } from './settings'
+import { SETTING_ACTION_IDS, type SettingActionId } from './settingAction'
+
+/** The two buttons nothing takes back: one writes outside the studio, the other empties it. */
+const IRREVERSIBLE: readonly SettingActionId[] = ['advanced.installResolveBridge', 'advanced.reset']
 
 /**
  * The studio's own settings, and which account it works through.
@@ -56,6 +60,40 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     reach: 'mcp',
     fields: [
       { key: 'accountId', kind: 'text', labelKey: 'assistant.fields.accountId', required: true },
+    ],
+  }),
+  action({
+    // The label alone. Neither half of the credential crosses this boundary in either direction,
+    // which is what keeps this one on the near side of the rule the block above states.
+    name: 'accounts.rename',
+    titleKey: 'assistant.actions.accountsRename.title',
+    descriptionKey: 'assistant.actions.accountsRename.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'accountId', kind: 'text', labelKey: 'assistant.fields.accountId', required: true },
+      { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true },
+    ],
+  }),
+  action({
+    /**
+     * The buttons of the settings window, which are not settings: they have no path and no value.
+     * Two of them leave something behind, and `raises` is what asks about those two.
+     */
+    name: 'settings.action',
+    titleKey: 'assistant.actions.settingsAction.title',
+    descriptionKey: 'assistant.actions.settingsAction.description',
+    commitment: 'none',
+    raises: input => (IRREVERSIBLE.some(id => id === input.action) ? 'files' : 'none'),
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'action',
+        kind: 'choice',
+        labelKey: 'assistant.fields.settingsAction',
+        required: true,
+        options: SETTING_ACTION_IDS,
+      },
     ],
   }),
 ]

@@ -70,6 +70,9 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
       >
         <select
           id={id}
+          // The family, never the heading above it: `image` and `3d` read differently in each
+          // language and the heading is one of the two.
+          data-sc={`field:defaultModel.${family}`}
           className={SETTING_SELECT}
           value={selected}
           onChange={event => stageFamily(event.target.value)}

@@ -11,6 +11,7 @@ import { SettingRowTextControl } from './SettingRowTextControl'
 export function SettingRowPathControl({
   descriptor,
   id,
+  scId,
   describedBy,
   stored,
   onCommit,
@@ -28,6 +29,7 @@ export function SettingRowPathControl({
       <SettingRowTextControl
         descriptor={descriptor}
         id={id}
+        scId={scId}
         describedBy={describedBy}
         stored={stored}
         onCommit={onCommit}

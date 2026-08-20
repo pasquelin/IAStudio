@@ -12,6 +12,7 @@ import { FILE_ACTIONS } from './fileActions'
 import { GIT_ACTIONS } from './gitActions'
 import { JOB_ACTIONS } from './jobActions'
 import { MATERIAL_ACTIONS } from './materialActions'
+import { RIG_ACTIONS } from './rigActions'
 import { SCENE_ACTIONS } from './sceneActions'
 import { SEQUENCE_ACTIONS } from './sequenceActions'
 import { SETTINGS_ACTIONS } from './settingsActions'
@@ -50,6 +51,7 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = [
   ...SEQUENCE_ACTIONS,
   ...MATERIAL_ACTIONS,
   ...SCENE_ACTIONS,
+  ...RIG_ACTIONS,
   ...GIT_ACTIONS,
   ...SETTINGS_ACTIONS,
   ...SHELL_ACTIONS,

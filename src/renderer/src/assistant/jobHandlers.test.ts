@@ -147,4 +147,19 @@ describe('cancelling and counting', () => {
     await runAction('usage.report', {})
     expect(usageReport).toHaveBeenCalledWith(31)
   })
+
+  /**
+   * The studio's own long work, which is not a job: a job runs on Scenario's side. `false` says
+   * nothing was running under that id — a click that arrived late rather than a failure.
+   */
+  it('calls off a local task, answering whether one was still running', async () => {
+    const cancel = vi.fn(async () => false)
+    installFakeBridge({ tasks: { cancel } })
+
+    expect(await runAction('task.cancel', { taskId: 'render-1' })).toEqual({
+      ok: true,
+      data: false,
+    })
+    expect(cancel).toHaveBeenCalledWith('render-1')
+  })
 })

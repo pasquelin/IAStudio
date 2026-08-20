@@ -106,6 +106,7 @@ export function FolderPickerCreate({
       <div className="flex items-center gap-2">
         <input
           autoFocus
+          data-sc="field:folderPicker.name"
           id="sc-folder-picker-name"
           aria-label={labels.newFolderLabel}
           value={draft}

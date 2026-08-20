@@ -37,6 +37,7 @@ export function EnvironmentDisplaySection({
     <PropertySection title={t('environment.displayMode')} scId="display">
       <SelectField
         label={t('environment.displayMode')}
+        scId="environment.displayMode"
         value={mode}
         options={modes.options}
         onChange={onMode}
@@ -45,6 +46,7 @@ export function EnvironmentDisplaySection({
 
       <SelectField
         label={t('environment.presets')}
+        scId="environment.presets"
         value={preset}
         options={presets.options}
         onChange={picked => onPreset(presetPatch(picked))}

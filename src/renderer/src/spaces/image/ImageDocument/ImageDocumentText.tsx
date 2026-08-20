@@ -125,6 +125,7 @@ export function ImageDocumentText({
 
   return (
     <textarea
+      data-sc="field:canvas.text"
       ref={field}
       aria-label={label}
       value={layer.text}

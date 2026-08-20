@@ -1,5 +1,5 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
-import { commandDescriptor, scopeOfWorkspace } from '@shared/domain/command'
+import { commandDescriptor } from '@shared/domain/command'
 import { MODEL_FAMILIES } from '@shared/domain/model'
 import { SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
@@ -7,10 +7,8 @@ import { showWorkspace } from '@/app/dockviewApi'
 import { createDocumentIn } from '@/app/newDocument'
 import { openGeneratorOn } from '@/helpers/openGenerator'
 import { revealTool } from '@/helpers/revealPanel'
-import { publishCommand } from '@/services/commandBus'
-import { runGlobalCommand } from '@/services/globalCommands'
+import { routeCommand, type CommandRouting } from '@/services/commandRouter'
 import { useJobs } from '@/stores/jobs'
-import { toolSurface } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { withBridge, type ActionHandlers } from './actionHandler'
@@ -25,27 +23,27 @@ import { mountedGenerator } from './generatorBridge'
  * path to an existing behaviour.
  */
 
+/** What the router made of it, in the assistant's own words. */
+const ROUTED: Record<CommandRouting, ActionOutcome> = {
+  ran: { ok: true },
+  noSurface: refused('wrongSurface'),
+  // What the command names is there, and there is nothing left for it to do — a space already at
+  // the end of the bar. `failed` would blame the studio for what is a fact of the input.
+  nothingToDo: refused('notFound'),
+  noBridge: refused('noBridge'),
+}
+
 /**
- * Fires a command at the surface listening for it, having first checked one is.
+ * Fires a command wherever it belongs, through the router the native menu uses.
  *
- * `publishCommand` is memoryless and filtered by scope on the subscriber's side: a command sent
- * while no document of that scope is active is dropped in silence. Right for a menu, whose rows
- * grey out, and wrong here — the assistant would report having done something that never happened.
+ * Nothing is decided here: a second copy of that routing is what let ten commands be offered by
+ * the tool schema and refused by the handler for as long as the two existed side by side.
  */
 function runCommand(input: Record<string, unknown>): ActionOutcome {
   const descriptor = commandDescriptor(textOf(input, 'command') ?? '')
   if (!descriptor) return refused('unknownCommand')
 
-  // `global` commands never travel the bus: they run through the same module the native menu
-  // goes through. The three the main process performs itself answer `false`.
-  if (descriptor.scope === 'global') {
-    return runGlobalCommand(descriptor.id) ? { ok: true } : refused('globalCommand')
-  }
-
-  if (scopeOfWorkspace(toolSurface()) !== descriptor.scope) return refused('wrongSurface')
-
-  publishCommand(descriptor.id)
-  return { ok: true }
+  return ROUTED[routeCommand(descriptor.id)]
 }
 
 async function submitPrepared(): Promise<ActionOutcome> {

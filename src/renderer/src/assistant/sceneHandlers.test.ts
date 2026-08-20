@@ -1,8 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
+import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { installScene } from '@/stores/scene-fixtures'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
+import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useDocuments } from '@/stores/documents'
 import { runAction } from './executor'
@@ -396,5 +399,39 @@ describe('hierarchy and selection', () => {
       ok: false,
       refusal: 'notFound',
     })
+  })
+})
+
+/**
+ * The two the native menu offers by name and no command can — `scene.display` cycles, and
+ * cycling to a chosen mode means counting the ones in between.
+ */
+describe('how the scene is looked at', () => {
+  it('points the main view at a side, through the engine that owns the camera', async () => {
+    const viewFrom = vi.fn()
+    registerSceneEngine(DOCUMENT, { viewFrom } as unknown as SceneRenderer)
+
+    expect(await runAction('view.direction', { direction: 'top' })).toEqual({ ok: true })
+    expect(viewFrom).toHaveBeenCalledWith('top')
+
+    forgetSceneEngine(DOCUMENT)
+  })
+
+  // A tab whose viewport is not mounted has no engine, and a side to look from is a move only
+  // the engine can make.
+  it('refuses a side while no viewport is mounted', async () => {
+    forgetSceneEngine(DOCUMENT)
+
+    expect(await runAction('view.direction', { direction: 'top' })).toEqual({
+      ok: false,
+      refusal: 'wrongSurface',
+    })
+  })
+
+  it('names the way the main view is drawn, where the command only cycles', async () => {
+    expect(await runAction('view.display', { mode: 'wireframe' })).toEqual({ ok: true })
+    expect(displayOfPane(sceneViewOf(useSceneViews.getState(), DOCUMENT).displays, 0)).toBe(
+      'wireframe',
+    )
   })
 })

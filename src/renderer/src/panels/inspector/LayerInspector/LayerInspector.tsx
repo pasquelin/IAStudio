@@ -61,14 +61,14 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
 
   return (
     <>
-      <PropertySection title={t('inspector.layer')}>
+      <PropertySection title={t('inspector.layer')} scId="layer">
         <PropertyRow label={t('inspector.name')}>{layer.name}</PropertyRow>
         <PropertyRow label={t('inspector.kind')}>
           {t(`inspector.layerKind_${layer.kind}`)}
         </PropertyRow>
       </PropertySection>
 
-      <PropertySection title={t('inspector.compositing')}>
+      <PropertySection title={t('inspector.compositing')} scId="layer.compositing">
         <SelectField
           label={t('inspector.blend')}
           value={layer.blend}
@@ -79,6 +79,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
 
         <SliderField
           label={t('inspector.opacity')}
+          scId="layer.opacity"
           value={layer.opacity}
           min={0}
           max={1}
@@ -93,6 +94,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
             them alone. No layer effect exists yet, so today the two simply multiply. */}
         <SliderField
           label={t('inspector.fillOpacity')}
+          scId="layer.fillOpacity"
           value={layer.fillOpacity}
           min={0}
           max={1}
@@ -108,16 +110,19 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
 
         <ToggleField
           label={t('inspector.clipped')}
+          scId="layer.clipped"
           value={layer.clipped}
           onChange={value => edit.run(setLayerClipped(layer.id, value))}
         />
       </PropertySection>
 
-      <PropertySection title={t('inspector.locks')}>
+      <PropertySection title={t('inspector.locks')} scId="layer.locks">
         {LAYER_LOCKS.map(padlock => (
           <ToggleField
             key={padlock.key}
             label={t(padlock.labelKey)}
+            // The padlock's own key, never its label: the four read differently in each language.
+            scId={`layer.lock.${padlock.key}`}
             value={layer.locked[padlock.key]}
             onChange={value =>
               edit.run(setLayerLocks(layer.id, { ...layer.locked, [padlock.key]: value }))
@@ -127,15 +132,17 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
       </PropertySection>
 
       {layer.kind === 'text' && (
-        <PropertySection title={t('inspector.text')}>
+        <PropertySection title={t('inspector.text')} scId="layer.text">
           <TextField
             label={t('inspector.words')}
+            scId="layer.words"
             value={layer.text}
             onChange={text => edit.run(setLayerText(layer.id, { text }))}
             {...edit.gesture}
           />
           <NumberField
             label={t('inspector.textSize')}
+            scId="layer.textSize"
             value={layer.size}
             min={1}
             step={1}
@@ -156,9 +163,12 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
       {layer.kind === 'shape' && <LayerShapeSection layer={layer} edit={edit} />}
 
       {layer.kind === 'adjustment' && (
-        <PropertySection title={t(`adjustment.${layer.adjustment}`)}>
+        <PropertySection title={t(`adjustment.${layer.adjustment}`)} scId="layer.adjustment">
           <SliderField
             label={t(`adjustment.${layer.adjustment}`)}
+            // The dial's own name, which is what the layer holds — the title beside it is the
+            // translated one, and the two are only ever equal by accident.
+            scId={`layer.adjustment.${layer.adjustment}`}
             value={layer.values[layer.adjustment]}
             min={DIAL_RANGE[layer.adjustment].min}
             max={DIAL_RANGE[layer.adjustment].max}
@@ -188,9 +198,10 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
       )}
 
       {/* A group has no pixels of its own, but it does have a place: it carries its children. */}
-      <PropertySection title={t('inspector.transform')}>
+      <PropertySection title={t('inspector.transform')} scId="layer.transform">
         <NumberField
           label={t('inspector.x')}
+          scId="layer.x"
           value={layer.transform.x}
           step={1}
           onChange={value => move({ x: value })}
@@ -198,6 +209,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
         />
         <NumberField
           label={t('inspector.y')}
+          scId="layer.y"
           value={layer.transform.y}
           step={1}
           onChange={value => move({ y: value })}
@@ -205,6 +217,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
         />
         <NumberField
           label={t('inspector.rotation')}
+          scId="layer.rotation"
           value={toDegrees(layer.transform.rotation)}
           step={1}
           onChange={value => move({ rotation: toRadians(value) })}
@@ -217,6 +230,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
         />
         <NumberField
           label={t('inspector.scaleX')}
+          scId="layer.scaleX"
           value={layer.transform.scaleX}
           step={0.1}
           onChange={value => move({ scaleX: value })}
@@ -229,6 +243,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
         />
         <NumberField
           label={t('inspector.scaleY')}
+          scId="layer.scaleY"
           value={layer.transform.scaleY}
           step={0.1}
           onChange={value => move({ scaleY: value })}

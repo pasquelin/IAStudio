@@ -42,6 +42,7 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
       <li>
         <form className="flex items-center gap-2" onSubmit={submit}>
           <input
+            data-sc="field:account.name"
             className="input input-sm flex-1"
             aria-label={t('accounts.name')}
             autoFocus

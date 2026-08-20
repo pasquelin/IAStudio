@@ -18,7 +18,10 @@ import { useSettings } from '@/stores/settings'
  * screen waits for (`eager-graph`). Its caller is a space, loaded on demand.
  */
 export function offerModelsOfFamily(family: ModelFamily): void {
-  if (familyOfSurface(toolSurface()) === family) return revealTool('models')
+  if (familyOfSurface(toolSurface()) === family) {
+    revealTool('models')
+    return
+  }
 
   const section = sectionOfFamily(family)
   if (section) useSettings.getState().openSection(section)

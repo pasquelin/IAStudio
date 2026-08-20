@@ -73,7 +73,7 @@ export function CameraShotSection({
 
   if (!shot) {
     return (
-      <PropertySection title={t('inspector.shot')}>
+      <PropertySection title={t('inspector.shot')} scId="shot">
         <PropertyRow label={t('inspector.rail')}>
           {/* Offered with no shot to hang it on: a rail drives nothing on its own, so the one
               gesture opens both — and the button was unreachable until a shot was posed elsewhere.
@@ -102,7 +102,7 @@ export function CameraShotSection({
   }
 
   return (
-    <PropertySection title={t('inspector.shot')}>
+    <PropertySection title={t('inspector.shot')} scId="shot">
       <SelectField
         label={t('inspector.rail')}
         value={shot.motion?.pathId ?? ''}
@@ -140,6 +140,7 @@ export function CameraShotSection({
       {target?.kind === POINT_TARGET.kind && (
         <VectorField
           label={t('inspector.targetAt')}
+          scId="camera.targetAt"
           value={target.at}
           step={0.1}
           onChange={at => run(editCameraShot(shot.id, { target: { kind: POINT_TARGET.kind, at } }))}

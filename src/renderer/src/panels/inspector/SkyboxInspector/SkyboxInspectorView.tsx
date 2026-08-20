@@ -35,6 +35,7 @@ export function SkyboxInspectorView({ documentId }: SkyboxInspectorViewProps) {
       <PropertySection title={t('view.projection')} scId="view">
         <SelectField
           label={t('view.mode')}
+          scId="view.mode"
           value={settings.view}
           options={SKYBOX_VIEWS.map(candidate => ({
             value: candidate,

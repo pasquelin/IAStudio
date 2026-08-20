@@ -1,8 +1,9 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import type { PartialSettings } from '@shared/domain/settings'
+import { SETTING_ACTION_IDS } from '@shared/domain/settingAction'
 import { getBridge } from '@/services/bridge'
 import { withBridge, type ActionHandlers } from './actionHandler'
-import { recordOf, textOf } from './actionInputs'
+import { oneOf, recordOf, textOf } from './actionInputs'
 
 /** The settings and the account, read and set from outside the window. */
 
@@ -46,4 +47,26 @@ export const SETTINGS_HANDLERS: ActionHandlers = {
   'settings.write': write,
   'accounts.list': () => withBridge(bridge => bridge.accounts.list()),
   'accounts.activate': activate,
+
+  /**
+   * The refusal travels IN the answer — an unknown id, a name already taken, the account the
+   * `.env` file holds — so `ok` here would be `ok` on a rename that never happened.
+   */
+  'accounts.rename': async input => {
+    const bridge = getBridge()
+    if (!bridge) return refused('noBridge')
+
+    const result = await bridge.accounts.rename(
+      textOf(input, 'accountId') ?? '',
+      textOf(input, 'name') ?? '',
+    )
+    return result.failure ? refused('notAllowed') : { ok: true, data: result.accounts }
+  },
+
+  'settings.action': input => {
+    const id = oneOf(input, 'action', SETTING_ACTION_IDS)
+    return id
+      ? withBridge(bridge => bridge.settings.runAction(id))
+      : Promise.resolve(refused('badInput'))
+  },
 }

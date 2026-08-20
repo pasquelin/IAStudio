@@ -27,9 +27,10 @@ export function PathSection({ path, onChange, gesture }: PathSectionProps) {
   const { t } = useTranslation()
 
   return (
-    <PropertySection title={t('inspector.rail')}>
+    <PropertySection title={t('inspector.rail')} scId="rail">
       <SliderField
         label={t('inspector.fields.tension')}
+        scId="rail.tension"
         value={path.tension}
         min={0}
         max={MAX_TENSION}
@@ -44,6 +45,7 @@ export function PathSection({ path, onChange, gesture }: PathSectionProps) {
       />
       <ToggleField
         label={t('inspector.fields.closed')}
+        scId="rail.closed"
         value={path.closed}
         onChange={closed => onChange({ ...path, closed })}
       />

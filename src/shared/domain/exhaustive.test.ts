@@ -31,6 +31,7 @@ import {
   type ModelSort,
 } from './model'
 import { TEXTURE_SLOTS, type TextureSlot } from './scene'
+import { SETTING_ACTION_IDS, type SettingActionId } from './settingAction'
 import { NAMED_KEYS, type NamedKey } from './shortcut'
 
 /**
@@ -242,6 +243,24 @@ describe('the lists that stand for a union', () => {
     expect(sorted(NAMED_KEYS)).toEqual(sorted(Object.keys(all)))
   })
 
+  /**
+   * The ids were derived from the registry until `settingAction.ts` had to leave it — the action
+   * catalogue closes a field over them and cannot pull every setting's help text into the opening
+   * chunk with it. A hand-written list standing for a union is exactly what this file is for.
+   */
+  it('names every button the settings window offers', () => {
+    const all: Record<SettingActionId, true> = {
+      'advanced.openSettingsFile': true,
+      'advanced.openLogFolder': true,
+      'advanced.openDevtools': true,
+      'advanced.copyMcpCommand': true,
+      'advanced.installResolveBridge': true,
+      'advanced.reset': true,
+    }
+
+    expect(sorted(SETTING_ACTION_IDS)).toEqual(sorted(Object.keys(all)))
+  })
+
   it('names every texture slot a material carries', () => {
     const all: Record<TextureSlot, true> = {
       map: true,
@@ -263,7 +282,6 @@ describe('the lists that stand for a union', () => {
   it('names every reason an action can be refused', () => {
     const all: Record<ActionRefusal, true> = {
       unknownCommand: true,
-      globalCommand: true,
       wrongSurface: true,
       generatorClosed: true,
       nothingPrepared: true,
@@ -363,19 +381,29 @@ describe('the lists that stand for a union', () => {
       'files.copy': true,
       'files.duplicate': true,
       'files.trash': true,
+      'files.undo': true,
+      'files.redo': true,
+      'files.history': true,
       'file.rename': true,
       'file.facts': true,
+      'file.reveal': true,
       'folder.new': true,
+      'project.rename': true,
       'model.schema': true,
       'cost.estimate': true,
       'job.get': true,
       'job.wait': true,
       'job.cancel': true,
+      'task.cancel': true,
       'usage.report': true,
       'assets.search': true,
       'assets.counts': true,
+      'assets.absent': true,
+      'assets.describe': true,
       'asset.get': true,
       'asset.update': true,
+      'asset.reveal': true,
+      'asset.extractTextures': true,
       'assets.remove': true,
       'canvas.state': true,
       'canvas.resize': true,
@@ -435,6 +463,13 @@ describe('the lists that stand for a union', () => {
       'window.fullScreen': true,
       'settings.open': true,
       'updates.state': true,
+      'updates.install': true,
+      'dictation.state': true,
+      'dictation.start': true,
+      'dictation.stop': true,
+      'panels.list': true,
+      'panel.open': true,
+      'panel.close': true,
       'media.capabilities': true,
       'media.adopt': true,
       'fonts.list': true,
@@ -458,6 +493,22 @@ describe('the lists that stand for a union', () => {
       'camera.target': true,
       'node.reparent': true,
       'node.select': true,
+      'view.direction': true,
+      'view.display': true,
+      'rig.state': true,
+      'rig.fit': true,
+      'rig.clear': true,
+      'rig.hands': true,
+      'bone.add': true,
+      'bone.remove': true,
+      'bone.rename': true,
+      'bone.role': true,
+      'ik.add': true,
+      'ik.remove': true,
+      'animation.add': true,
+      'animation.remove': true,
+      'animation.settings': true,
+      'animation.autoKey': true,
       'git.status': true,
       'git.log': true,
       'git.commitFiles': true,
@@ -484,8 +535,10 @@ describe('the lists that stand for a union', () => {
       'git.push': true,
       'settings.read': true,
       'settings.write': true,
+      'settings.action': true,
       'accounts.list': true,
       'accounts.activate': true,
+      'accounts.rename': true,
     }
 
     expect(sorted(ACTION_REGISTRY.map(entry => entry.name))).toEqual(sorted(Object.keys(all)))

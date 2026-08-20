@@ -54,6 +54,7 @@ export function CredentialField({ host }: { host: string }) {
       <QuietNote>{held ? t('git.tokenHeld', { host }) : t('git.tokenAsked', { host })}</QuietNote>
 
       <input
+        data-sc="field:git.tokenUser"
         type="text"
         value={user}
         aria-label={t('git.tokenUser')}
@@ -64,6 +65,7 @@ export function CredentialField({ host }: { host: string }) {
         onChange={event => setUser(event.target.value)}
       />
       <input
+        data-sc="field:git.token"
         type="password"
         value={token}
         aria-label={t('git.token')}

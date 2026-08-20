@@ -330,8 +330,9 @@ load.
 ### One action registry, two readers
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) declares what the studio can be asked to do —
-**a hundred and fifty actions in thirteen families**, one family per `*Actions.ts` module, their fields, **what
-each one commits** (`none`, `files`, `asset`, `remote`, `credits`) and **which door offers it** (`reach`). It
+one family per `*Actions.ts` module, their fields, **what each one commits** (`none`, `files`,
+`asset`, `remote`, `credits`) and **which door offers it** (`reach`). **The count is not written
+here**: it rises with every batch, and `exhaustive.test.ts` holds it to the `ActionName` union. It
 has two readers, and **neither of them decides**:
 
 - **the assistant**, inside the window, which lists the `both` share to its model — eleven actions;

@@ -32,7 +32,12 @@ export function EnvironmentSnapSection({
 
   return (
     <PropertySection title={t('environment.snap')} defaultOpen={false} scId="snap">
-      <ToggleField label={t('environment.snapEnabled')} value={snapping} onChange={onSnapping} />
+      <ToggleField
+        label={t('environment.snapEnabled')}
+        scId="environment.snapEnabled"
+        value={snapping}
+        onChange={onSnapping}
+      />
 
       {/* Shown only while it is on: a step that changes nothing right now is a control that
           reads as broken, and the toggle above is one click away. */}
@@ -42,6 +47,7 @@ export function EnvironmentSnapSection({
               two of the ones offered here — it then reads as itself rather than as the first. */}
           <SelectField
             label={t('environment.snapTranslate')}
+            scId="environment.snapTranslate"
             value={String(view.snapTranslate)}
             options={steps(TRANSLATE_STEPS)}
             onChange={value => onViewport({ snapTranslate: Number(value) })}
@@ -51,6 +57,7 @@ export function EnvironmentSnapSection({
 
           <SelectField
             label={t('environment.snapRotate')}
+            scId="environment.snapRotate"
             value={String(view.snapRotate)}
             options={steps(ROTATE_STEPS, degrees)}
             onChange={value => onViewport({ snapRotate: Number(value) })}
@@ -60,6 +67,7 @@ export function EnvironmentSnapSection({
 
           <SelectField
             label={t('environment.snapScale')}
+            scId="environment.snapScale"
             value={String(view.snapScale)}
             options={steps(SCALE_STEPS)}
             onChange={value => onViewport({ snapScale: Number(value) })}

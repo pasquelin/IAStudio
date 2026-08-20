@@ -119,3 +119,50 @@ describe('reading and correcting an asset', () => {
     expect(remove).not.toHaveBeenCalled()
   })
 })
+
+describe('correcting what the library holds', () => {
+  it('captions images through the API, answering how many it named', async () => {
+    const describe = vi.fn(async () => 2)
+    installFakeBridge({ assets: { describe } })
+
+    expect(await runAction('assets.describe', { assetIds: ['a', 'b'] })).toEqual({
+      ok: true,
+      data: 2,
+    })
+    expect(describe).toHaveBeenCalledWith(['a', 'b'])
+  })
+
+  it('names the assets whose file has gone', async () => {
+    const absent = vi.fn(async () => ['asset-2'])
+    installFakeBridge({ assets: { absent } })
+
+    expect(await runAction('assets.absent', { assetIds: ['asset-1', 'asset-2'] })).toEqual({
+      ok: true,
+      data: ['asset-2'],
+    })
+  })
+
+  it('pulls a model’s textures into the library as assets of their own', async () => {
+    const extractTextures = vi.fn(async () => [ASSET])
+    installFakeBridge({ assets: { extractTextures } })
+
+    expect(await runAction('asset.extractTextures', { assetId: 'mesh-1' })).toEqual({
+      ok: true,
+      data: [ASSET],
+    })
+    expect(extractTextures).toHaveBeenCalledWith('mesh-1')
+  })
+
+  /**
+   * An asset that lives only in the remote library has no file to show, which the channel
+   * answers as `false` — reported as `ok`, a client would believe a window had opened.
+   */
+  it('says so rather than ok when there is no file to show', async () => {
+    installFakeBridge({ assets: { reveal: vi.fn(async () => false) } })
+
+    expect(await runAction('asset.reveal', { assetId: 'asset-1' })).toEqual({
+      ok: false,
+      refusal: 'notFound',
+    })
+  })
+})
