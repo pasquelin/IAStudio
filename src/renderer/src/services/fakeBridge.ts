@@ -272,6 +272,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       open: () => Promise.resolve(),
       ...overrides.mirror,
     },
+    help: {
+      open: () => Promise.resolve(),
+      ...overrides.help,
+    },
     fileInfo: {
       open: () => Promise.resolve(),
       ...overrides.fileInfo,

@@ -1,5 +1,6 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
-import { PBR_CHANNELS } from './texture'
+import { MAX_FIELD_OF_VIEW, MIN_FIELD_OF_VIEW, SKYBOX_VIEWS } from './skybox'
+import { PBR_CHANNELS, PREVIEW_SHAPES } from './texture'
 
 /**
  * The sky and the material, driven by value.
@@ -30,6 +31,29 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     reach: 'mcp',
     fields: [],
+  }),
+  action({
+    /**
+     * How a sky is being LOOKED AT — the projection, the lens, and whether the test objects stand
+     * in it. Session state, exactly as `view.display` is in the 3D space: none of it is saved with
+     * the document and ⌘Z never touches it.
+     */
+    name: 'skybox.view',
+    titleKey: 'assistant.actions.skyboxView.title',
+    descriptionKey: 'assistant.actions.skyboxView.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'view',
+        kind: 'choice',
+        labelKey: 'assistant.fields.skyboxView',
+        required: false,
+        options: SKYBOX_VIEWS,
+      },
+      NUMBER('fieldOfView', 'assistant.fields.fieldOfView', MIN_FIELD_OF_VIEW, MAX_FIELD_OF_VIEW),
+      { key: 'probes', kind: 'boolean', labelKey: 'assistant.fields.probes', required: false },
+    ],
   }),
   action({
     /**
@@ -116,6 +140,12 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
       { key: 'color', kind: 'color', labelKey: 'assistant.fields.colour', required: false },
       NUMBER('roughness', 'assistant.fields.roughness', 0, 1),
       NUMBER('metalness', 'assistant.fields.metalness', 0, 1),
+      // The double handle of the panel: what a map holds, remapped. Identity by default, and
+      // written a bound at a time so a client raising a floor keeps the ceiling it never read.
+      NUMBER('roughnessMin', 'assistant.fields.roughnessMin', 0, 1),
+      NUMBER('roughnessMax', 'assistant.fields.roughnessMax', 0, 1),
+      NUMBER('metalnessMin', 'assistant.fields.metalnessMin', 0, 1),
+      NUMBER('metalnessMax', 'assistant.fields.metalnessMax', 0, 1),
       NUMBER('normalScale', 'assistant.fields.normalScale'),
       NUMBER('heightScale', 'assistant.fields.heightScale'),
       NUMBER('aoIntensity', 'assistant.fields.aoIntensity', 0),
@@ -152,6 +182,26 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
       },
       { key: 'autoSpin', kind: 'boolean', labelKey: 'assistant.fields.autoSpin', required: false },
       { key: 'showSeam', kind: 'boolean', labelKey: 'assistant.fields.showSeam', required: false },
+      {
+        key: 'shape',
+        kind: 'choice',
+        labelKey: 'assistant.fields.previewShape',
+        required: false,
+        options: PREVIEW_SHAPES,
+      },
+      /**
+       * A multiplier OVER the material's own tiling, never written into it: judging a repeat and
+       * choosing one are two different acts. One, two or four — the handler refuses the rest,
+       * since a bound cannot say « three is not offered ».
+       */
+      {
+        key: 'tilingPreview',
+        kind: 'integer',
+        labelKey: 'assistant.fields.tilingPreview',
+        required: false,
+        min: 1,
+        max: 4,
+      },
     ],
   }),
   action({

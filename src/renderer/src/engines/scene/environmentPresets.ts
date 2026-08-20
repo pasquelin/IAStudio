@@ -12,18 +12,16 @@
  * The colours are document data, not interface: they are what the scene is painted with, and the
  * studio palette has no say in what a night sky looks like.
  */
-import { STUDIO_ENVIRONMENT, type SceneWorld } from '@shared/domain/scene'
+import {
+  ENVIRONMENT_PRESETS,
+  STUDIO_ENVIRONMENT,
+  type EnvironmentPreset,
+  type SceneWorld,
+} from '@shared/domain/scene'
 import { sameValues } from '@/helpers/objects'
 
-export type EnvironmentPreset = 'neutral' | 'studio' | 'product' | 'outdoor' | 'night'
-
-export const ENVIRONMENT_PRESETS: readonly EnvironmentPreset[] = [
-  'neutral',
-  'studio',
-  'product',
-  'outdoor',
-  'night',
-]
+/** Re-exported so the panel and the menu keep reading the list from the module that patches. */
+export { ENVIRONMENT_PRESETS, type EnvironmentPreset } from '@shared/domain/scene'
 
 const PATCHES: Record<EnvironmentPreset, Partial<SceneWorld>> = {
   // Nothing flattering anything: an even grey and no grading, which is what an inspection wants.

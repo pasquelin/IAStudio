@@ -20,7 +20,20 @@ export function boolOf(input: Record<string, unknown>, key: string): boolean {
   return readBoolean(input, key, false)
 }
 
-export function oneOf<T extends string>(
+/**
+ * The same, telling « false » apart from « not named » — which `boolOf` cannot, and which every
+ * partial write needs: a call naming the size of a ground must not put the ground out.
+ *
+ * Its own reader rather than the pair `input.x === undefined ? … : boolOf(input, 'x')`, which was
+ * spelt out at seventeen sites and names the key twice — a typo on either half is a field the
+ * registry declares and the handler silently drops.
+ */
+export function maybeBoolOf(input: Record<string, unknown>, key: string): boolean | null {
+  return input[key] === undefined ? null : readBoolean(input, key, false)
+}
+
+/** A closed set, read by value. Numbers as well as words: `1 | 2 | 4` is a choice like any other. */
+export function oneOf<T extends string | number>(
   input: Record<string, unknown>,
   key: string,
   allowed: readonly T[],

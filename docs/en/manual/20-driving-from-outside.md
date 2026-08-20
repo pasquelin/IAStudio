@@ -197,14 +197,14 @@ it for its tools, with every parameter of every action.
 | **Generating** | read a model's inputs, price them, prepare, start, wait, cancel | **creative units** for starting, and for starting alone |
 | **The library** | search, read, tag, caption and remove assets, find the ones whose file has gone, pull a model's textures out | **files** for removing, **a server** for removing from the remote library too |
 | **The remote library** | browse your own and the public feed, find likenesses, plan, fetch, send | **an asset**, for sending |
-| **The image** | the layer stack: add, style, place, group, merge, crop | nothing |
+| **The image** | the layer stack: add, style, place, group, merge, crop, set a mask, lay and move the guides | nothing |
 | **The edit** | Video and Audio: lay a clip, move it, trim it, cut it, set fades, level and speed, keep the tracks. Exporting the document writes the **cut** as OpenTimelineIO, never a film — the frame-by-frame render needs a session nothing outside can hold | nothing, except the export |
-| **Sky and material** | adjust a sky's image, place its sun, fill a material's channels and render it | nothing |
-| **3D** | the scene: place an object, turn it, light it, paint it, reparent it, and look at it — from one side, in one of the ways of drawing. The setting too: what lights the scene, what hangs behind it, its haze, its ground and its rendering | nothing |
-| **Characters** | make a model animatable, add or remove a bone, tie it to a joint of the standard, put a handle on it, lay an animation block, set length and rate | nothing |
+| **Sky and material** | adjust a sky's image, place its sun, choose the projection to look at it under, fill a material's channels, remap them, choose the shape to judge it on, and render it | nothing |
+| **3D** | the scene: place an object, turn it, cut it to size, light it, paint it, dress it in maps, set a text, draw a rail, reparent it, and look at it — from one side, in one of the ways of drawing, and take a still of it. The setting too: what lights the scene, what hangs behind it, its haze, its ground, its rendering, and the ready-made worlds | nothing |
+| **Characters** | make a model animatable, add or remove a bone, tie it to a joint of the standard, put a handle on it, list what it can play, lay an animation block and set it, lay and take back keys, keep the channels, set length and rate | nothing |
 | **Versions** | read the repository and its history, stage, record, branch, shelve, settle a conflict, fetch, publish | **files**, for whatever rewrites the working tree; **a server**, for publishing |
 | **Settings** | read and change the settings, press the buttons of the window, list the accounts, switch to one, rename one | **files**, for the two buttons nothing takes back |
-| **Around the documents** | the window, the account, updates, fonts, pinned recipes, material styles, the studio's panels, dictation | **files**, for deleting a style and for installing an update |
+| **Around the documents** | the window, the account, updates, fonts, pinned recipes, material styles, the studio's panels, dictation, and the three windows of the Help menu | **files**, for deleting a style and for installing an update |
 
 **What the assistant knows comes to eleven**, and they are the ones a spoken request needs: run a
 command, open a workspace, search for and pick a model, prepare a generation, start it, list the

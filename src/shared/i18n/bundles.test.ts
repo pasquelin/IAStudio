@@ -437,6 +437,8 @@ describe('the translation bundles', () => {
           'animation.addShotNeedsCamera',
           'assistant.actions.cameraShot.description',
           'assistant.actions.cameraRail.description',
+          'assistant.actions.cameraAddRail.description',
+          'assistant.actions.cameraReorder.description',
           'assistant.actions.cameraTarget.description',
           // The same sense as the three above: `scene.state` hands back the shots, and says so.
           'assistant.actions.sceneState.description',

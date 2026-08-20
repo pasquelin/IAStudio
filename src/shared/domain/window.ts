@@ -11,3 +11,11 @@ export const INITIAL_WINDOW_STATE: WindowState = {
   fullScreen: false,
   maximized: false,
 }
+
+/**
+ * The three the Help menu offers, each a window of its own rather than a panel — see
+ * `openManualWindow` and its two neighbours, which say why each one is not a dock.
+ */
+export type HelpPage = 'manual' | 'licences' | 'usage'
+
+export const HELP_PAGES: readonly HelpPage[] = ['manual', 'licences', 'usage']

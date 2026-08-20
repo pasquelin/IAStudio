@@ -219,11 +219,13 @@ export function keyNode(
   time: Us,
   names: Readonly<Record<TrackProperty, string>>,
   mintId: (property: TrackProperty) => string,
+  /** One channel rather than the whole pose. The band's diamond names none; a client may. */
+  only?: TrackProperty,
 ): Command<SceneState> | null {
   const held = recordingTracksFor(state.animation, subject.nodeId, subject.bone)
-  const missing = keyableProperties(state, subject).filter(
-    property => !held.some(track => track.target.property === property),
-  )
+  const missing = keyableProperties(state, subject)
+    .filter(property => only === undefined || property === only)
+    .filter(property => !held.some(track => track.target.property === property))
 
   const opened: Command<SceneState>[] = missing.map(property =>
     addAnimationTrack(
@@ -238,9 +240,9 @@ export function keyNode(
   // Applied first so the keys land on channels that exist: the state a command reads is the one
   // the commands before it produced, and `keySubject` reads the tracks by id.
   const opening = opened.reduce((current, command) => command.apply(current), state)
-  const ids = recordingTracksFor(opening.animation, subject.nodeId, subject.bone).map(
-    track => track.id,
-  )
+  const ids = recordingTracksFor(opening.animation, subject.nodeId, subject.bone)
+    .filter(track => only === undefined || track.target.property === only)
+    .map(track => track.id)
 
   const keys = keySubject(opening, ids, time)
   if (!keys) return opened.length === 0 ? null : multi('key:node', opened)

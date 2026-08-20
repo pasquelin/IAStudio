@@ -200,14 +200,14 @@ lit à la source** quand vous lui demandez ses outils, avec le détail de chaque
 | **Générer** | lire les entrées d’un modèle, chiffrer, préparer, lancer, attendre, annuler | **des unités créatives** pour lancer, et pour lancer seulement |
 | **La bibliothèque** | chercher, lire, étiqueter, légender, retirer des assets, repérer ceux dont le fichier a disparu, extraire les textures d’un modèle | **des fichiers** pour retirer, **un serveur** pour retirer aussi de la bibliothèque distante |
 | **La bibliothèque distante** | parcourir la vôtre et le flux public, chercher des ressemblances, prévoir, rapatrier, envoyer | **un asset** pour envoyer |
-| **L’image** | la pile de calques : ajouter, styler, placer, grouper, fusionner, recadrer | rien |
+| **L’image** | la pile de calques : ajouter, styler, placer, grouper, fusionner, recadrer, régler un masque, poser et déplacer les repères | rien |
 | **Le montage** | Vidéo et Audio : poser un bloc, le déplacer, le rogner, le couper, régler fondus, niveau et vitesse, tenir les pistes. L’export du document sort la **coupe** en OpenTimelineIO, jamais un film — le rendu image par image demande une session que rien d’extérieur ne peut tenir | rien, sauf l’export |
-| **Le ciel et la matière** | régler l’image d’un ciel, y placer le soleil, remplir les canaux d’une matière et la rendre | rien |
-| **La 3D** | la scène : poser un objet, l’orienter, l’éclairer, le peindre, le rattacher, et la regarder — depuis une face, dans l’une des façons de dessiner. Le décor aussi : ce qui éclaire la scène, ce qui est derrière elle, sa brume, son sol et son rendu | rien |
-| **Les personnages** | rendre un modèle animable, ajouter ou retirer un os, lui donner une articulation du standard, poser une poignée qu’il atteint, poser un bloc d’animation, régler durée et cadence | rien |
+| **Le ciel et la matière** | régler l’image d’un ciel, y placer le soleil, choisir sous quelle projection le regarder, remplir les canaux d’une matière, la remapper, choisir la forme sur laquelle la juger et la rendre | rien |
+| **La 3D** | la scène : poser un objet, l’orienter, le tailler, l’éclairer, le peindre, l’habiller de cartes, écrire un texte, tracer un chemin, le rattacher, et la regarder — depuis une face, dans l’une des façons de dessiner, et en prendre une image. Le décor aussi : ce qui éclaire la scène, ce qui est derrière elle, sa brume, son sol, son rendu, et les décors tout prêts | rien |
+| **Les personnages** | rendre un modèle animable, ajouter ou retirer un os, lui donner une articulation du standard, poser une poignée qu’il atteint, lister ce qu’il peut jouer, poser un bloc d’animation et le régler, poser et retirer des clés, tenir les canaux, régler durée et cadence | rien |
 | **Le versionnage** | lire le dépôt et l’historique, indexer, enregistrer, brancher, remiser, trancher un conflit, rapatrier, publier | **des fichiers** pour ce qui réécrit la copie de travail, **un serveur** pour publier |
 | **Les réglages** | lire et changer les réglages, actionner les boutons de la fenêtre, lister les comptes, en activer un, en renommer un | **des fichiers** pour les deux boutons que rien ne reprend |
-| **Autour des documents** | la fenêtre, le compte, les mises à jour, les polices, les recettes épinglées, les styles de matière, les panneaux du studio, la dictée | **des fichiers** pour supprimer un style et pour installer une mise à jour |
+| **Autour des documents** | la fenêtre, le compte, les mises à jour, les polices, les recettes épinglées, les styles de matière, les panneaux du studio, la dictée, et les trois fenêtres du menu Aide | **des fichiers** pour supprimer un style et pour installer une mise à jour |
 
 **Ce que l’assistant en connaît, lui, tient en onze**, et ce sont celles d’une demande parlée :
 lancer une commande, ouvrir un espace, chercher et choisir un modèle, préparer une génération, la

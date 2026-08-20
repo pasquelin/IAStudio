@@ -1,6 +1,7 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { SETTINGS_SECTION_IDS } from './settings'
 import { TOOL_IDS } from './tool'
+import { HELP_PAGES } from './window'
 
 const PANEL: ActionField = {
   key: 'panel',
@@ -143,6 +144,27 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     reach: 'mcp',
     fields: [],
+  }),
+  action({
+    /**
+     * The three of the Help menu, which are windows of the main process and not panels — so no
+     * command of the registry reaches them, and this was the whole of what an outside client
+     * could not open.
+     */
+    name: 'help.open',
+    titleKey: 'assistant.actions.helpOpen.title',
+    descriptionKey: 'assistant.actions.helpOpen.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'page',
+        kind: 'choice',
+        labelKey: 'assistant.fields.helpPage',
+        required: true,
+        options: HELP_PAGES,
+      },
+    ],
   }),
   action({
     // Quits and relaunches, which is why it asks: whatever the studio holds unsaved goes with it.

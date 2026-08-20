@@ -252,6 +252,9 @@ const bridge: StudioBridge = {
   mirror: {
     open: () => ipcRenderer.invoke(CHANNELS.mirrorOpen),
   },
+  help: {
+    open: page => ipcRenderer.invoke(CHANNELS.helpOpen, page),
+  },
   fileInfo: {
     open: relative => ipcRenderer.invoke(CHANNELS.fileInfoOpen, relative),
   },

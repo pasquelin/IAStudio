@@ -178,3 +178,67 @@ describe('the material', () => {
     expect(remove).toHaveBeenCalledWith('style-1')
   })
 })
+
+describe('how a sky is looked at', () => {
+  it('writes the projection, the lens and the probes, and reads them back', async () => {
+    withSky()
+
+    expect(await runAction('skybox.view', { view: 'equirect', probes: false })).toEqual({
+      ok: true,
+    })
+
+    const outcome = await runAction('skybox.state', {})
+    expect(outcome).toMatchObject({
+      ok: true,
+      data: { view: { view: 'equirect', probes: false } },
+    })
+  })
+
+  it('refuses a call that names nothing at all', async () => {
+    withSky()
+
+    expect(await runAction('skybox.view', {})).toEqual({ ok: false, refusal: 'badInput' })
+  })
+})
+
+describe('the two halves of a material nothing could write', () => {
+  it('remaps a channel one bound at a time, keeping the other', async () => {
+    withMaterial()
+
+    expect(await runAction('texture.material', { roughnessMin: 0.2 })).toEqual({ ok: true })
+    expect(material().material.roughnessRange).toEqual({ min: 0.2, max: 1 })
+
+    await runAction('texture.material', { roughnessMax: 0.8, metalnessMin: 0.1 })
+    expect(material().material.roughnessRange).toEqual({ min: 0.2, max: 0.8 })
+    expect(material().material.metalnessRange).toEqual({ min: 0.1, max: 1 })
+  })
+
+  /** The invariant `RangeField` holds on a drag: a floor above its ceiling is a remap nothing undoes. */
+  it('keeps the two handles in order when one is pushed past the other', async () => {
+    withMaterial()
+
+    await runAction('texture.material', { roughnessMax: 0.2 })
+    await runAction('texture.material', { roughnessMin: 0.9 })
+
+    expect(material().material.roughnessRange).toEqual({ min: 0.2, max: 0.9 })
+  })
+
+  it('judges the material on another shape, at another repeat', async () => {
+    withMaterial()
+
+    expect(await runAction('texture.preview', { shape: 'plane', tilingPreview: 4 })).toEqual({
+      ok: true,
+    })
+    expect(material().preview).toMatchObject({ shape: 'plane', tilingPreview: 4 })
+  })
+
+  /** One, two or four: a bound cannot say « three is not offered », so the handler does. */
+  it('refuses a repeat the panel does not offer', async () => {
+    withMaterial()
+
+    expect(await runAction('texture.preview', { tilingPreview: 3 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+})

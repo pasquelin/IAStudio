@@ -68,7 +68,38 @@ const COMMANDS: readonly (readonly [string, readonly string[]])[] = COMMAND_MODU
  * A command a combinator builds FROM, rather than a gesture of its own. Publishing one would be
  * publishing the same edit twice, under a name nobody performs.
  */
-const COMBINATORS: readonly string[] = ['multi', 'editClip', 'railOnNewShot']
+const COMBINATORS: readonly string[] = [
+  'multi',
+  'editClip',
+  'railOnNewShot',
+  // The single-node writer its spreading twin builds from. `setMaterialOn` is what decides
+  // whether a mesh or a text is being painted, and `movesToCommand` whether a move becomes a key
+  // — an action naming the half underneath would be a second law about what that edit means.
+  'setMeshMaterial',
+  'setTextMaterial',
+  'setSprite',
+  'setText',
+  'setTransform',
+  'moveNodes',
+  'recordMove',
+  // The band's own three. A channel is OPENED by keying a subject — `keyNode` mints it — and the
+  // panel offers no other way either; a key is written and taken back by `keySubject` and
+  // `unkeySubject`, which alone know what a channel's value is measured against.
+  'addAnimationTrack',
+  'setAnimationKey',
+  'removeAnimationKey',
+]
+
+/**
+ * The other half of the inspector's own bargain: ONE field, typed once, written onto every node
+ * of the selection built the same way.
+ *
+ * Not published, and it is a decision rather than an omission. Each of these is built from the
+ * descriptor as it stands when the COMMAND is made, so three of them chained would keep only the
+ * last — an action names its node and writes the descriptor whole, through the very writer these
+ * delegate to. A client spreads a value by calling the action once per node.
+ */
+const SPREAD_OVER_A_SELECTION: readonly string[] = ['setGeometryOn', 'setLightOn', 'setCameraOn']
 
 /**
  * Reached through `command.run` rather than by an action of its own — the OTHER door, which this
@@ -79,6 +110,11 @@ const THROUGH_A_COMMAND: Readonly<Record<string, string>> = {
   flatten: 'canvas.flatten',
   clearGuides: 'canvas.clearGuides',
   removeCameraShot: 'scene.delete',
+  // The three gestures of the tree that act on WHAT IS SELECTED, exactly as ⌘G, ⌘D and Delete do
+  // on screen: a client sets the selection with `node.select` and fires the command beside it.
+  groupNodes: 'scene.group',
+  addNodes: 'scene.duplicate',
+  removeNodes: 'scene.delete',
 }
 
 /**
@@ -91,49 +127,17 @@ const THROUGH_A_COMMAND: Readonly<Record<string, string>> = {
  * driving the 3D space runs into first.
  */
 const NOT_PUBLISHED: readonly string[] = [
-  // The canvas: a mask, a caption's own box, guides, and the paint itself — which needs a live
-  // GPU surface rather than a command, see the head of `canvasActions.ts`.
-  'setLayerMask',
-  'resizeCaption',
-  'translateLayer',
+  // A stroke goes through the engine's GPU surface and its patch history: this takes a live PORT,
+  // not a path, and publishing it needs an engine API that does not exist — see `canvasActions.ts`.
   'paintPixels',
-  'addGuide',
-  'moveGuide',
-  'removeGuide',
-  // The scene: what a node is made of, what it is painted with, and what it casts.
-  'setShadowOn',
-  'setGeometry',
-  'setGeometryOn',
-  'setLightOn',
-  'setMaterialOn',
-  'setPath',
-  'setCameraOn',
-  'setSprite',
-  'setSpriteOn',
-  'setText',
-  'setTextOn',
-  'setTextMaterial',
-  'setModelLanes',
-  'setModelTextures',
-  'groupNodes',
-  'addNodes',
-  'removeNodes',
-  'moveNodes',
-  // The animation band: keys, tracks, the shots a rail is bound to, and what a recorded move
-  // becomes.
-  'addAnimationTrack',
-  'removeAnimationTrack',
-  'setAnimationKey',
-  'removeAnimationKey',
-  'keyNode',
-  'keySubject',
-  'unkeySubject',
-  'moveAnimationKey',
-  'recordMove',
-  'movesToCommand',
-  'lensToCommand',
-  'reorderCameraShots',
-  'railForShot',
+  // The drag's own half of `layer.transform`: an absolute x and y, so a gesture coalesced into
+  // one entry keeps the last apply. An action names the transform whole and goes through
+  // `setLayerTransform` — a second door onto the same edit is an edit published twice.
+  'translateLayer',
+  // The grip's half of the pair `layer.text` and `layer.transform` already publish: it writes a
+  // caption's box AND its corner in ONE entry, because a north or west grip pulls both at once.
+  // A call names them one after the other and pays two undos, which no hand can do.
+  'resizeCaption',
 ]
 
 describe('what edits a document, and what an outside client may ask for', () => {
@@ -145,7 +149,12 @@ describe('what edits a document, and what an outside client may ask for', () => 
   })
 
   it('leaves no command of a document that no action can reach', () => {
-    const known = new Set([...COMBINATORS, ...NOT_PUBLISHED, ...Object.keys(THROUGH_A_COMMAND)])
+    const known = new Set([
+      ...COMBINATORS,
+      ...SPREAD_OVER_A_SELECTION,
+      ...NOT_PUBLISHED,
+      ...Object.keys(THROUGH_A_COMMAND),
+    ])
     const orphans = COMMANDS.flatMap(([module, names]) =>
       names
         .filter(name => !known.has(name) && !new RegExp(`\\b${name}\\b`).test(HANDLERS))
@@ -156,20 +165,32 @@ describe('what edits a document, and what an outside client may ask for', () => 
   })
 
   /**
-   * The three lists against the modules themselves. A name that no longer names a command — one
+   * The four lists against the modules themselves. A name that no longer names a command — one
    * renamed, one that stopped being a `Command` — is an entry that guards nothing while reading
    * as an exemption: `collapseLayer` sat here for a day in exactly that state.
    */
   it('names nothing the modules do not declare', () => {
     const declared = new Set(COMMANDS.flatMap(([, names]) => names))
-    const listed = [...COMBINATORS, ...NOT_PUBLISHED, ...Object.keys(THROUGH_A_COMMAND)]
+    const listed = [
+      ...COMBINATORS,
+      ...SPREAD_OVER_A_SELECTION,
+      ...NOT_PUBLISHED,
+      ...Object.keys(THROUGH_A_COMMAND),
+    ]
 
     expect(listed.filter(name => !declared.has(name)).sort()).toEqual([])
   })
 
-  /** The other direction: a gesture that gained a door and stayed on the list above. */
+  /**
+   * The other direction: a gesture that gained a door and stayed on a list of exemptions.
+   *
+   * `COMBINATORS` is deliberately out of this one — `multi` is a combinator a handler legitimately
+   * composes with, and reading its name as a door would fail the day one did.
+   */
   it('keeps no name on the list once an action reaches it', () => {
-    const published = NOT_PUBLISHED.filter(name => new RegExp(`\\b${name}\\b`).test(HANDLERS))
+    const published = [...NOT_PUBLISHED, ...SPREAD_OVER_A_SELECTION].filter(name =>
+      new RegExp(`\\b${name}\\b`).test(HANDLERS),
+    )
 
     expect(published.sort()).toEqual([])
   })

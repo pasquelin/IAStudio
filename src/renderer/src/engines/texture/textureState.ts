@@ -11,9 +11,11 @@ import { readEnvironment, type EnvironmentRef } from '@shared/domain/scene'
 import {
   DEFAULT_TEXTURE_MATERIAL,
   PBR_CHANNELS,
+  PREVIEW_SHAPES,
   readMaterial,
   type MaterialSettings,
   type PbrChannel,
+  type PreviewShape,
 } from '@shared/domain/texture'
 import { clamp } from '@shared/numeric'
 
@@ -124,16 +126,8 @@ export const PREVIEW_BOUNDS = {
   envIntensity: { min: 0, max: 3, step: 0.05 },
 }
 
-/** The shapes a texture is judged on. A plane reads tiling, a sphere reads lighting. */
-export type PreviewShape = 'sphere' | 'box' | 'cylinder' | 'plane' | 'torusKnot'
-
-export const PREVIEW_SHAPES: readonly PreviewShape[] = [
-  'sphere',
-  'box',
-  'cylinder',
-  'plane',
-  'torusKnot',
-]
+/** Re-exported so the eight files that read a preview shape from here keep reading it from here. */
+export { PREVIEW_SHAPES, type PreviewShape } from '@shared/domain/texture'
 
 function isPreviewShape(value: unknown): value is PreviewShape {
   return PREVIEW_SHAPES.some(candidate => candidate === value)

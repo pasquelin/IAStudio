@@ -68,7 +68,7 @@ import type { PbrChannel } from './domain/texture'
 import type { ToolId, ToolSurface, ToolZone } from './domain/tool'
 import type { UpdateState } from './domain/update'
 import type { UsageCursors, UsageEventPage, UsagePeriod, UsageReport } from './domain/usage'
-import type { WindowState } from './domain/window'
+import type { HelpPage, WindowState } from './domain/window'
 
 /**
  * Channel names, declared with literal types. The annotation is verbose on purpose: the
@@ -262,6 +262,9 @@ export type Channels = {
   /** Opens the video return, or reveals the one already open. See `MIRROR_ROUTE`. */
   mirrorOpen: 'mirror:open'
 
+  /** Opens one of the three windows the Help menu offers, or reveals the one already open. */
+  helpOpen: 'help:open'
+
   menuPopup: 'menu:popup'
 
   updateState: 'update:state'
@@ -449,6 +452,7 @@ export const CHANNELS: Channels = {
   windowLanguage: 'window:language',
   windowWorkspace: 'window:workspace',
   mirrorOpen: 'mirror:open',
+  helpOpen: 'help:open',
 
   menuPopup: 'menu:popup',
 
@@ -1682,6 +1686,13 @@ export type StudioBridge = {
    */
   mirror: {
     open: () => Promise<void>
+  }
+  /**
+   * The three windows of the Help menu. Same line as `mirror` above: what each one SHOWS it reads
+   * for itself, and the only thing this side owns is opening the window.
+   */
+  help: {
+    open: (page: HelpPage) => Promise<void>
   }
   /**
    * One file's information, as a window of its own — the studio's ⌘I.

@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Rig } from '@shared/domain/rig'
+import { secondsToUs } from '@shared/domain/time'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { modelNode } from '@/engines/scene/nodeFactory'
+import { installFakeBridge } from '@/services/fakeBridge'
 import type { ModelNode, SceneState } from '@/engines/scene/sceneState'
 import { installScene } from '@/stores/scene-fixtures'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
@@ -196,5 +198,249 @@ describe('the band of a character', () => {
 
     expect(await runAction('animation.autoKey', { on: true })).toEqual({ ok: true })
     expect(animationViewOf(useAnimationViews.getState(), DOCUMENT).autoKey).toBe(true)
+  })
+})
+
+describe('the three places a motion comes from', () => {
+  beforeEach(() => {
+    installFakeBridge({
+      animations: { list: () => Promise.resolve([{ name: 'Salut', thumbnail: false }]) },
+    })
+  })
+
+  it('lists the model’s own clips, the shipped ones and the library’s', async () => {
+    const nodeId = installCharacter()
+    useModelClips.setState({ rigs: {}, clips: { [DOCUMENT]: { [nodeId]: ['Marche'] } } })
+
+    const outcome = await runAction('animations.list', { nodeId })
+
+    expect(outcome).toMatchObject({
+      ok: true,
+      data: { embedded: ['Marche'], bundled: ['Salut'], assets: [{ id: 'asset-run' }] },
+    })
+  })
+
+  it('lays a clip the model’s own file spells', async () => {
+    const nodeId = installCharacter()
+    useModelClips.setState({ rigs: {}, clips: { [DOCUMENT]: { [nodeId]: ['Marche'] } } })
+
+    expect(
+      await runAction('animation.add', { nodeId, source: 'embedded', clipName: 'Marche' }),
+    ).toEqual({ ok: true })
+    expect(character()?.model.lanes?.[0]?.clips[0]?.source).toEqual({
+      kind: 'embedded',
+      name: 'Marche',
+    })
+  })
+
+  it('lays one of the shipped animations, and refuses a name nothing ships', async () => {
+    const nodeId = installCharacter()
+
+    expect(
+      await runAction('animation.add', { nodeId, source: 'bundled', clipName: 'Salut' }),
+    ).toEqual({ ok: true })
+    expect(character()?.model.lanes?.[0]?.clips[0]?.source).toEqual({
+      kind: 'bundled',
+      name: 'Salut',
+    })
+
+    expect(
+      await runAction('animation.add', { nodeId, source: 'bundled', clipName: 'Néant' }),
+    ).toEqual({ ok: false, refusal: 'notFound' })
+  })
+
+  /** An id names one source and a name the two others: a call giving both named two things. */
+  it('refuses a call that names an asset and a clip at once', async () => {
+    const nodeId = installCharacter()
+
+    expect(
+      await runAction('animation.add', { nodeId, assetId: 'asset-run', clipName: 'Marche' }),
+    ).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await runAction('animation.add', { nodeId, source: 'embedded' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+})
+
+describe('what one block of the band plays', () => {
+  async function laid(): Promise<{ nodeId: string; clipId: string }> {
+    const nodeId = installCharacter()
+    await runAction('animation.add', { nodeId, assetId: 'asset-run' })
+    return { nodeId, clipId: character()?.model.lanes?.[0]?.clips[0]?.id ?? '' }
+  }
+
+  it('writes the block’s own settings and leaves the rest of it alone', async () => {
+    const { nodeId, clipId } = await laid()
+
+    expect(
+      await runAction('animation.block', {
+        nodeId,
+        clipId,
+        speed: 2,
+        loop: false,
+        fadeSeconds: 0.5,
+        startSeconds: 1,
+        rootMotion: 'inPlace',
+        part: 'upper',
+      }),
+    ).toEqual({ ok: true })
+
+    expect(character()?.model.lanes?.[0]?.clips[0]).toMatchObject({
+      speed: 2,
+      loop: false,
+      fadeIn: secondsToUs(0.5),
+      fadeOut: secondsToUs(0.5),
+      start: secondsToUs(1),
+      rootMotion: 'inPlace',
+      part: 'upper',
+      label: 'Course',
+    })
+  })
+
+  it('refuses a block no lane carries', async () => {
+    const { nodeId } = await laid()
+
+    expect(await runAction('animation.block', { nodeId, clipId: 'clip-z', speed: 2 })).toEqual({
+      ok: false,
+      refusal: 'notFound',
+    })
+  })
+
+  /**
+   * Where a drag can actually land it: a block posed off a frame plays a pose the head never stops
+   * on, and one past the end sits where nothing can grab it back.
+   */
+  it('lands a block on a frame, and never past the end of the band', async () => {
+    const { nodeId, clipId } = await laid()
+    const band = scene().animation
+
+    await runAction('animation.block', { nodeId, clipId, startSeconds: 0.001 })
+    expect(character()?.model.lanes?.[0]?.clips[0]?.start).toBe(0)
+
+    await runAction('animation.block', { nodeId, clipId, startSeconds: 9999 })
+    expect(character()?.model.lanes?.[0]?.clips[0]?.start).toBe(band.duration)
+  })
+
+  // A refusal must not reach the history: `runCommand` banks whatever it is handed, and ⌘Z would
+  // give back a state nobody ever left.
+  it('refuses a call that names the block and nothing else', async () => {
+    const { nodeId, clipId } = await laid()
+
+    expect(await runAction('animation.block', { nodeId, clipId })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+})
+
+describe('the keys of the band', () => {
+  const tracks = () => scene().animation.tracks
+
+  it('opens the channels a subject lacks and keys them where it stands', async () => {
+    const nodeId = installCharacter()
+
+    expect(await runAction('key.pose', { nodeId })).toEqual({ ok: true })
+
+    expect(
+      tracks()
+        .map(track => track.target.property)
+        .sort(),
+    ).toEqual(['position', 'rotation', 'scale'])
+    expect(tracks().every(track => track.keys.length === 1)).toBe(true)
+    // The band's own naming, so a channel opened from outside reads like one opened by the diamond.
+    expect(tracks()[0]?.name.startsWith('Héros · ')).toBe(true)
+  })
+
+  it('narrows to one channel when a property is named', async () => {
+    const nodeId = installCharacter()
+    await runAction('key.pose', { nodeId })
+
+    expect(await runAction('key.pose', { nodeId, property: 'position', timeSeconds: 1 })).toEqual({
+      ok: true,
+    })
+
+    const keyed = tracks().filter(track => track.keys.length > 1)
+    expect(keyed.map(track => track.target.property)).toEqual(['position'])
+  })
+
+  /**
+   * And it OPENS that one. Nothing else in the studio opens a channel, so a client driving a
+   * single axis would otherwise have to key the whole pose and drop the two it never wanted.
+   */
+  it('opens the one channel it was asked for on a subject that has none', async () => {
+    const nodeId = installCharacter()
+
+    expect(await runAction('key.pose', { nodeId, property: 'rotation' })).toEqual({ ok: true })
+
+    expect(tracks().map(track => track.target.property)).toEqual(['rotation'])
+  })
+
+  it('takes a subject’s keys back off at that instant', async () => {
+    const nodeId = installCharacter()
+    await runAction('key.pose', { nodeId })
+
+    expect(await runAction('key.clear', { nodeId })).toEqual({ ok: true })
+    expect(tracks().every(track => track.keys.length === 0)).toBe(true)
+  })
+
+  it('slides a key along its channel, and refuses one that is not there', async () => {
+    const nodeId = installCharacter()
+    await runAction('key.pose', { nodeId })
+    const trackId = tracks()[0]?.id ?? ''
+
+    expect(await runAction('key.move', { trackId, fromSeconds: 0, toSeconds: 2 })).toEqual({
+      ok: true,
+    })
+    expect(tracks()[0]?.keys[0]?.time).toBe(secondsToUs(2))
+
+    expect(await runAction('key.move', { trackId, fromSeconds: 0, toSeconds: 3 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  it('keys everything already open without opening one', async () => {
+    const nodeId = installCharacter()
+    await runAction('key.pose', { nodeId })
+    await runAction('key.clear', { nodeId })
+
+    expect(await runAction('key.all', { timeSeconds: 1 })).toEqual({ ok: true })
+    expect(tracks()).toHaveLength(3)
+    expect(tracks().every(track => track.keys.length === 1)).toBe(true)
+  })
+
+  it('takes a channel away, and refuses a locked one', async () => {
+    const nodeId = installCharacter()
+    await runAction('key.pose', { nodeId })
+    const trackId = tracks()[0]?.id ?? ''
+
+    expect(await runAction('channel.flags', { trackId, locked: true })).toEqual({ ok: true })
+    expect(await runAction('channel.remove', { trackId })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+
+    await runAction('channel.flags', { trackId, locked: false, muted: true })
+    expect(tracks().find(track => track.id === trackId)).toMatchObject({
+      locked: false,
+      muted: true,
+    })
+    expect(await runAction('channel.remove', { trackId })).toEqual({ ok: true })
+    expect(tracks()).toHaveLength(2)
+  })
+
+  it('refuses a channel the scene has not got, and a call naming no flag', async () => {
+    const nodeId = installCharacter()
+    await runAction('key.pose', { nodeId })
+
+    expect(await runAction('channel.flags', { trackId: 'track-z', muted: true })).toEqual({
+      ok: false,
+      refusal: 'notFound',
+    })
+    expect(await runAction('channel.flags', { trackId: tracks()[0]?.id ?? '' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
   })
 })

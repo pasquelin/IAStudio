@@ -16,8 +16,10 @@ import {
   shapeLayer,
   TEXT_ALIGNS,
   textLayer,
+  GUIDE_AXES,
   type CanvasState,
   type DrawnShape,
+  type Guide,
   type Layer,
 } from '@/engines/canvas/canvasState'
 import {
@@ -28,19 +30,23 @@ import {
 } from '@/engines/canvas/shapeGeometry'
 import type { Point, Size } from '@/engines/core/geometry'
 import {
+  addGuide,
   addLayer,
   cropToRect,
   duplicateLayer,
   flipImage,
   groupLayers,
   mergeDown,
+  moveGuide,
   moveLayer,
+  removeGuide,
   removeLayer,
   renameLayer,
   resizeCanvas,
   resizeImage,
   rotateImage,
   setLayerAdjustment,
+  setLayerMask,
   setLayerBlend,
   setLayerClipped,
   setLayerFillOpacity,
@@ -464,6 +470,45 @@ const TURNS: Record<string, () => Command<CanvasState>> = {
   rotateAnticlockwise: () => rotateImage(false),
 }
 
+// A layer wearing no mask is refused rather than given a record with no pixels behind it:
+// carving one is the engine's, through `canvas.maskFromSelection`.
+function mask(input: Record<string, unknown>): ActionOutcome {
+  const remove = boolOf(input, 'remove')
+  const named = ['enabled', 'linked'].some(key => input[key] !== undefined)
+  // Taking a mask away and saying what it does are two different calls: one of them would be
+  // written into a record the other has just dropped.
+  if (remove && named) return refused('badInput')
+
+  return editLayer(input, layer => {
+    if (!layer.mask || (!remove && !named)) return []
+
+    return [
+      setLayerMask(
+        layer.id,
+        remove
+          ? undefined
+          : {
+              enabled: input.enabled === undefined ? layer.mask.enabled : boolOf(input, 'enabled'),
+              linked: input.linked === undefined ? layer.mask.linked : boolOf(input, 'linked'),
+            },
+      ),
+    ]
+  })
+}
+
+/** The guide named, so an id nobody answers to is a refusal rather than a command that writes
+ * nothing. */
+function editGuide(
+  input: Record<string, unknown>,
+  build: (guide: Guide) => Commands,
+): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
+
+  const guide = open.state.guides.find(held => held.id === textOf(input, 'guideId'))
+  return guide ? run(open.documentId, build(guide)) : refused('notFound')
+}
+
 export const CANVAS_HANDLERS: ActionHandlers = {
   'canvas.state': readState,
   'canvas.resize': resize,
@@ -502,4 +547,21 @@ export const CANVAS_HANDLERS: ActionHandlers = {
   'layer.group': group,
   'layer.ungroup': input => editLayer(input, layer => [ungroupLayer(layer.id)]),
   'layer.mergeDown': input => editLayer(input, layer => [mergeDown(layer.id)]),
+  'layer.mask': mask,
+
+  'guide.add': input => {
+    const open = mounted()
+    const axis = oneOf(input, 'axis', GUIDE_AXES)
+    if (!open) return refused('wrongSurface')
+    if (!axis) return refused('badInput')
+
+    const guide = { id: newId(), axis, position: numberOf(input, 'position') ?? 0 }
+    const outcome = run(open.documentId, [addGuide(guide)])
+    return outcome.ok ? { ok: true, data: { guideId: guide.id } } : outcome
+  },
+
+  'guide.move': input =>
+    editGuide(input, guide => [moveGuide(guide.id, numberOf(input, 'position') ?? guide.position)]),
+
+  'guide.remove': input => editGuide(input, guide => [removeGuide(guide.id)]),
 }

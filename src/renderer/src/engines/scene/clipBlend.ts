@@ -4,17 +4,11 @@
  * Never `crossFadeTo`: that runs the fade on the mixer's clock, so the pose would depend on how
  * playback reached the instant, and a scrub or a frame-by-frame render would not match it.
  */
-import { clipKeyOf, clipLane, type ClipLane, type ClipRef } from '@shared/domain/scene'
+import { CLIP_SPEED, clipKeyOf, clipLane, type ClipLane, type ClipRef } from '@shared/domain/scene'
 import { WHOLE_BODY, type BodyPart } from '@shared/domain/humanoid'
 import { secondsToUs, usToSeconds, type Us } from '@shared/domain/time'
 import { clamp } from '@shared/numeric'
 import type { ClipEdge } from '../timeline/timelineGeometry'
-
-/** A speed of zero would make a block infinitely long; no control in the studio offers less. */
-export const MIN_SPEED = 0.1
-
-/** Past four times, a motion reads as a glitch rather than as a faster move. */
-export const MAX_SPEED = 4
 
 /**
  * How much band a block takes: what the document says, else the file's length at the speed it
@@ -24,7 +18,7 @@ export function clipSpanOf(ref: ClipRef, length: number | null): Us {
   if (ref.duration > 0) return ref.duration
   if (length === null || length <= 0) return 0
 
-  return secondsToUs(length / Math.max(ref.speed, MIN_SPEED))
+  return secondsToUs(length / Math.max(ref.speed, CLIP_SPEED.min))
 }
 
 /** One block as the mixer has to hold it at one instant. */
@@ -215,7 +209,7 @@ export function lanesMoved(
 }
 
 /** The block that answers to this id, with the list rewritten around it. */
-function rewritten(
+export function clipsEdited(
   clips: readonly ClipRef[],
   clipId: string,
   change: (clip: ClipRef) => ClipRef | null,
@@ -234,7 +228,7 @@ export function clipsMoved(
   start: Us,
 ): readonly ClipRef[] | null {
   const at = Math.max(0, start)
-  return rewritten(clips, clipId, clip => (clip.start === at ? null : { ...clip, start: at }))
+  return clipsEdited(clips, clipId, clip => (clip.start === at ? null : { ...clip, start: at }))
 }
 
 /**
@@ -248,7 +242,7 @@ export function clipsTrimmed(
   at: Us,
   length: number | null,
 ): readonly ClipRef[] | null {
-  return rewritten(clips, clipId, clip => {
+  return clipsEdited(clips, clipId, clip => {
     const span = clipSpanOf(clip, length)
     if (span <= 0) return null
     return edge === 'out' ? trimmedOut(clip, at, span) : trimmedIn(clip, at, span, length)

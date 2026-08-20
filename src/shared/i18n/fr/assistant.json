@@ -225,6 +225,22 @@
         "title": "Retourner ou pivoter l’image",
         "description": "Reflète l’image selon un axe, ou la fait pivoter d’un quart de tour dans un sens ou dans l’autre. Un quart de tour échange la largeur et la hauteur du cadre, donc un portrait devient un paysage."
       },
+      "layerMask": {
+        "title": "Régler le masque d’un calque",
+        "description": "Dit si un masque cache ce qu’il couvre et s’il suit le calque quand il se déplace, ou le retire tout à fait. Un calque qui n’en porte aucun est refusé — creuser un masque appartient au moteur, par la commande qui le fait depuis la sélection."
+      },
+      "guideAdd": {
+        "title": "Poser un repère",
+        "description": "Pose un repère vertical ou horizontal à l’endroit donné, en coordonnées du document, et répond l’identifiant qu’il vient de recevoir. Les deux actions voisines le déplacent et le retirent par cet identifiant."
+      },
+      "guideMove": {
+        "title": "Déplacer un repère",
+        "description": "Change la place d’un repère, en coordonnées du document, comme le ferait un glissé depuis la règle. Un identifiant que rien ne porte est refusé."
+      },
+      "guideRemove": {
+        "title": "Retirer un repère",
+        "description": "Enlève un repère de l’image, comme le fait un glissé qui le ramène sur sa règle. Retirer tous les repères d’un coup est une commande du registre, à lancer autrement."
+      },
       "layerAdd": {
         "title": "Ajouter un calque",
         "description": "Pose un calque de pixels, de texte ou de réglage au sommet de la pile de l’image devant, et répond avec l’identifiant qui lui a été donné. Un calque de réglage doit nommer le réglage qu’il porte."
@@ -344,6 +360,10 @@
       "skyboxState": {
         "title": "Lire le ciel en cours d’édition",
         "description": "Rend le ciel devant — sa source équirectangulaire, ses réglages d’image, la position et la couleur de son soleil, et ce que son environnement éclaire — plus ce qui l’a produit s’il vient d’une génération."
+      },
+      "skyboxView": {
+        "title": "Régler la façon de regarder un ciel",
+        "description": "Choisit la projection sous laquelle le ciel est dessiné, l’ouverture de l’objectif, et si les objets d’essai s’y tiennent. C’est un état de session, comme toute façon de regarder un document, et rien n’en est enregistré."
       },
       "skyboxAdjust": {
         "title": "Régler l’image d’un ciel",
@@ -509,6 +529,10 @@
         "title": "Ouvrir le retour vidéo",
         "description": "Ouvre la fenêtre de retour, ou la ramène devant si elle est déjà là. Elle montre ce que le montage joue, sans rien porter du travail."
       },
+      "helpOpen": {
+        "title": "Ouvrir une fenêtre d’aide",
+        "description": "Ouvre le manuel utilisateur, la fenêtre des licences ou celle de la consommation, ou la ramène devant si elle est déjà là. Ce sont les trois entrées du menu Aide, et aucune commande du registre ne les atteint."
+      },
       "updatesInstall": {
         "title": "Installer la mise à jour téléchargée",
         "description": "Quitte le studio et relance la version déjà téléchargée. Ne fait quelque chose qu’une fois la mise à jour prête, et ce qui n’est pas enregistré part avec la fermeture."
@@ -567,11 +591,47 @@
       },
       "nodeMaterial": {
         "title": "Régler la matière d’un objet",
-        "description": "Change la couleur, la rugosité ou l’aspect métallique d’une maille. Refuse un objet qui ne porte pas de matière de maille, que la commande laisserait sinon intact."
+        "description": "Change la couleur, la rugosité, l’aspect métallique, la densité de tuilage et les cinq cartes d’une maille ou d’un texte. Une carte nommée avec un identifiant vide est une carte retirée. Le tuilage est refusé sur un texte, dont le contour n’est pas une primitive."
+      },
+      "nodeGeometry": {
+        "title": "Régler les paramètres d’une primitive",
+        "description": "Change les mesures et les découpages de la forme dont une maille a été construite. Chaque primitive porte les siens, que la lecture de la scène rend — un champ qui n’appartient pas à la forme est refusé plutôt qu’ignoré."
+      },
+      "nodeShadow": {
+        "title": "Régler les ombres d’un objet",
+        "description": "Dit si un objet projette une ombre et s’il reçoit celles des autres. Une lumière n’en reçoit aucune, un panneau ne fait ni l’un ni l’autre, et le champ que l’objet ne peut pas porter est refusé."
+      },
+      "nodeSprite": {
+        "title": "Régler un panneau",
+        "description": "Change la teinte, l’opacité et l’image d’un panneau, qui fait toujours face à la caméra. Un identifiant vide retire l’image et laisse le carré coloré."
+      },
+      "nodeText": {
+        "title": "Régler un texte 3D",
+        "description": "Change les mots, la police, le corps, l’épaisseur du relief et la finesse des courbes d’un texte. Sa matière se règle par l’action de matière, comme celle d’une maille."
+      },
+      "nodePath": {
+        "title": "Régler la forme d’un chemin",
+        "description": "Change la tension d’un chemin, de 0 anguleux à 1 arrondi, et le fait qu’il se referme sur lui-même. Ses points de contrôle s’ajoutent, se déplacent et se retirent par les trois actions voisines."
+      },
+      "pathAddPoint": {
+        "title": "Ajouter un point à un chemin",
+        "description": "Pose un point de contrôle. Avec des coordonnées, il est ajouté après le dernier, là où il est visé. Avec un rang, il est glissé juste après ce point, à mi-distance du suivant. Sans rien, il prolonge le chemin par le bout."
+      },
+      "pathMovePoint": {
+        "title": "Déplacer un point d’un chemin",
+        "description": "Change les coordonnées d’un point de contrôle, dans le repère propre du chemin — bouger le chemin bouge donc toute la trajectoire. Un rang qui ne désigne aucun point est refusé."
+      },
+      "pathRemovePoint": {
+        "title": "Retirer un point d’un chemin",
+        "description": "Retire un point de contrôle. Un chemin ne descend jamais sous deux points, car un point n’est pas une ligne, et la demande est alors refusée."
+      },
+      "modelTextures": {
+        "title": "Remplacer les cartes d’un modèle",
+        "description": "Pointe les cartes d’un modèle importé vers des images du projet, emplacement par emplacement. Ce qui n’est pas nommé revient à la carte que le fichier lui-même porte, et un ensemble vide les rend toutes."
       },
       "nodeLight": {
         "title": "Régler une lumière",
-        "description": "Change la couleur ou l’intensité d’une lumière. Ces deux-là seulement, parce que le reste des champs d’une lumière diffère d’une sorte à l’autre."
+        "description": "Change tout ce que porte la sorte de lumière visée — sa couleur, son intensité, sa portée, son atténuation, l’ouverture et le fondu de son cône, sa cible, et les deux couleurs d’une lumière hémisphérique. Un champ que la sorte ne porte pas est refusé."
       },
       "nodeCamera": {
         "title": "Régler l’objectif d’une caméra",
@@ -584,6 +644,14 @@
       "cameraRail": {
         "title": "Faire courir une caméra sur un chemin",
         "description": "Lie un chemin au plan désigné, que la caméra parcourt alors pendant toute la durée du plan, à vitesse régulière le long de sa longueur. Sans chemin, le plan ne déplace plus la caméra. Un départ plus grand que l’arrivée fait rouler le chemin à l’envers."
+      },
+      "cameraAddRail": {
+        "title": "Poser un chemin sous une caméra",
+        "description": "Crée un chemin là où la caméra se tient, orienté dans sa ligne de visée, et le lie au plan en un seul geste. L’action voisine lie un chemin qui existe déjà, quand celle-ci en fabrique un — un chemin ne conduit rien sans un plan pour le parcourir."
+      },
+      "cameraReorder": {
+        "title": "Changer le rang d’une caméra sur la bande",
+        "description": "Monte ou descend la ligne d’une caméra, ce qui décide de ce que le film regarde quand deux plans se recouvrent. Le nombre est un nombre de rangs, négatif pour descendre, et la réponse dit de combien la ligne a pu bouger."
       },
       "cameraTarget": {
         "title": "Donner une cible à une caméra",
@@ -641,9 +709,17 @@
         "title": "Retirer une poignée",
         "description": "Enlève une chaîne et la poignée qu’elle atteignait, toutes les deux, car une poignée laissée derrière serait un os que rien ne pilote."
       },
+      "animationsList": {
+        "title": "Lister ce qu’un personnage peut jouer",
+        "description": "Rend les trois provenances d’un mouvement — les clips que porte le fichier du modèle, les animations livrées avec le studio, et celles que la bibliothèque du projet garde — puis les blocs déjà posés sur sa bande."
+      },
       "animationAdd": {
         "title": "Poser un bloc d’animation",
-        "description": "Pose sur la bande d’un personnage une animation que la bibliothèque du projet porte. La bande est créée si le personnage n’en avait aucune."
+        "description": "Pose sur la bande d’un personnage un mouvement venu de l’une des trois provenances. L’identifiant nomme un asset de la bibliothèque, le nom nomme les deux autres, et un seul des deux appartient à un appel. La bande est créée si le personnage n’en avait aucune."
+      },
+      "animationBlock": {
+        "title": "Régler un bloc d’animation",
+        "description": "Change la place d’un bloc sur la bande, son départ à l’intérieur du mouvement, sa vitesse, sa boucle, la longueur de ses fondus, ce qu’il fait du déplacement de la racine et la partie du corps qu’il pilote. Le bloc est réécrit sur place, les autres couches restant intactes."
       },
       "animationRemove": {
         "title": "Retirer un bloc d’animation",
@@ -657,9 +733,41 @@
         "title": "Activer la pose automatique de clés",
         "description": "Décide si déplacer un os écrit une clé au passage. C’est un état de session, comme toute façon de regarder une scène, et rien n’en est enregistré avec le document."
       },
+      "keyPose": {
+        "title": "Poser une clé sur un sujet",
+        "description": "Écrit une clé sur chaque canal d’un objet ou d’un os, à l’instant donné ou à la tête de lecture, en tenant la pose où il se trouve. Les canaux qui manquent sont ouverts au passage, puisque exiger une piste d’abord serait réclamer ce qui se tient déjà dans la vue."
+      },
+      "keyClear": {
+        "title": "Retirer les clés d’un sujet",
+        "description": "Reprend la clé que chaque canal d’un objet ou d’un os tient à cet instant. Sans ce geste une pose serait sans retour, et rien d’autre du panneau n’en enlève une."
+      },
+      "keyAll": {
+        "title": "Poser une clé sur tout ce qui est animé",
+        "description": "Écrit une clé sur chaque canal déjà ouvert de la scène, à l’instant donné ou à la tête de lecture. N’en ouvre aucun, ce qui distingue ce geste de la pose sur un sujet."
+      },
+      "keyMove": {
+        "title": "Déplacer une clé",
+        "description": "Fait glisser une clé le long de son canal, en gardant sa valeur. Une clé qui arrive sur un instant qu’une autre occupe la remplace, deux clés sur une image étant un état qu’aucune lecture ne saurait relire."
+      },
+      "channelRemove": {
+        "title": "Retirer un canal d’animation",
+        "description": "Enlève un canal et les clés qu’il portait. Un canal verrouillé est refusé plutôt que laissé en place en silence."
+      },
+      "channelFlags": {
+        "title": "Régler les fanions d’un canal",
+        "description": "Rend un canal muet, le met en solo, ou le verrouille. C’est une façon de travailler et non une modification du document, donc rien ne s’ajoute à l’historique."
+      },
       "viewDisplay": {
         "title": "Choisir la façon de dessiner la scène",
         "description": "Passe la vue principale en ombré, en fil de fer, en matière seule ou dans l’une des autres façons de dessiner. La commande de menu ne fait que tourner d’une à l’autre, quand celle-ci nomme laquelle."
+      },
+      "sceneCapture": {
+        "title": "Prendre une image de la vue 3D",
+        "description": "Écrit une image de ce que la vue montre dans les images du projet, à la définition demandée. Le cadrage ne change jamais — seul le nombre de pixels bouge, sinon la capture montrerait autre chose que l’écran."
+      },
+      "worldPreset": {
+        "title": "Appliquer un décor tout prêt",
+        "description": "Règle d’un coup l’éclairage, le fond, la brume et le rendu d’une scène pour un genre de rendu. Chaque décor n’écrit que les champs dont il parle et laisse le reste tel quel, donc un sol allumé le reste."
       },
       "layerLock": {
         "title": "Verrouiller un calque",
@@ -981,7 +1089,75 @@
       "groundSize": "Côté du sol, en unités de scène",
       "receiveShadow": "Le sol reçoit les ombres",
       "toneMapping": "Façon de ramener la plage dynamique sur l’écran",
-      "toneExposure": "Multiplicateur d’exposition du rendu, 1 laissant tel quel"
+      "toneExposure": "Multiplicateur d’exposition du rendu, 1 laissant tel quel",
+      "depth": "Profondeur",
+      "radius": "Rayon",
+      "radiusTop": "Rayon supérieur, 0 donnant un cône",
+      "radiusBottom": "Rayon inférieur",
+      "innerRadius": "Rayon intérieur",
+      "outerRadius": "Rayon extérieur",
+      "tube": "Rayon du tube",
+      "segments": "Nombre de segments autour de l’axe",
+      "capSegments": "Nombre de segments d’une calotte",
+      "radialSegments": "Nombre de segments autour du tube",
+      "widthSegments": "Nombre de segments en longitude",
+      "heightSegments": "Nombre de segments en latitude",
+      "tubularSegments": "Nombre de segments le long du tube",
+      "p": "Nombre de tours autour de l’axe du nœud",
+      "q": "Nombre de tours autour du tore",
+      "castShadow": "L’objet projette une ombre",
+      "skyColour": "Couleur venue du ciel, en #rrggbb",
+      "groundColour": "Couleur venue du sol, en #rrggbb",
+      "distance": "Portée au-delà de laquelle la lumière ne va plus, 0 étant sans limite",
+      "decay": "Vitesse d’atténuation avec la distance, 2 étant physique",
+      "angle": "Demi-ouverture du cône, en radians",
+      "penumbra": "Fondu du bord du cône, de 0 net à 1 diffus",
+      "targetX": "Cible en largeur",
+      "targetY": "Cible en hauteur",
+      "targetZ": "Cible vers l’observateur",
+      "tilesPerMetre": "Répétitions des cartes par mètre",
+      "textures": "Cartes par emplacement, un identifiant vide retirant celle qui y était",
+      "map": "Identifiant de l’image, ou rien pour n’en mettre aucune",
+      "value": "Mots à écrire",
+      "textSize": "Corps des lettres, en unités de scène",
+      "textDepth": "Épaisseur du relief des lettres, 0 les laissant plates",
+      "curveSegments": "Finesse de découpe des courbes",
+      "tension": "Tension du chemin, de 0 anguleux à 1 arrondi",
+      "closed": "Le chemin se referme sur lui-même",
+      "pointIndex": "Rang du point de contrôle, compté depuis le premier",
+      "pointX": "Point en largeur",
+      "pointY": "Point en hauteur",
+      "pointZ": "Point vers l’observateur",
+      "clipSource": "Provenance du mouvement, le fichier du modèle, les animations livrées, ou la bibliothèque du projet",
+      "clipName": "Nom du mouvement, tel que la liste des animations le rend",
+      "offsetSeconds": "Départ à l’intérieur du mouvement, en secondes",
+      "clipLoop": "Le bloc rejoue sans fin",
+      "clipFade": "Longueur du fondu aux deux bouts du bloc, en secondes",
+      "rootMotion": "Ce que le bloc fait du déplacement de la racine",
+      "bodyPart": "Partie du corps que le bloc pilote",
+      "channelId": "Identifiant du canal d’animation",
+      "timeSeconds": "Instant sur la bande, en secondes, à défaut la tête de lecture",
+      "trackProperty": "Canal visé, à défaut tous ceux du sujet",
+      "fromSeconds": "Instant de départ, en secondes",
+      "toSeconds": "Instant d’arrivée, en secondes",
+      "maskEnabled": "Le masque cache ce qu’il couvre",
+      "maskLinked": "Le masque suit le calque quand il se déplace",
+      "maskRemove": "Retirer le masque du calque",
+      "guideId": "Identifiant du repère",
+      "guideAxis": "Sens du repère, vertical en x ou horizontal en y",
+      "guidePosition": "Place du repère, en coordonnées du document",
+      "helpPage": "Fenêtre d’aide à ouvrir",
+      "captureQuality": "Définition de la capture, à défaut celle de la vue elle-même",
+      "environmentPreset": "Décor tout prêt à appliquer",
+      "skyboxView": "Projection sous laquelle regarder le ciel",
+      "fieldOfView": "Ouverture de l’objectif, en degrés",
+      "probes": "Montrer les objets d’essai dans le ciel",
+      "roughnessMin": "Plancher de la rugosité que la carte remappe",
+      "roughnessMax": "Plafond de la rugosité que la carte remappe",
+      "metalnessMin": "Plancher de l’aspect métallique que la carte remappe",
+      "metalnessMax": "Plafond de l’aspect métallique que la carte remappe",
+      "previewShape": "Forme sur laquelle juger la matière",
+      "tilingPreview": "Multiplicateur de répétition de l’aperçu, 1, 2 ou 4"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

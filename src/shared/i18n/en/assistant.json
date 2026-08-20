@@ -225,6 +225,22 @@
         "title": "Flip or turn the image",
         "description": "Mirrors the image across an axis, or turns it a quarter turn either way. A turn swaps the frame’s width and height, so a portrait becomes a landscape."
       },
+      "layerMask": {
+        "title": "Set a layer’s mask",
+        "description": "Says whether a mask hides what it covers and whether it travels with the layer, or takes it off altogether. A layer wearing none is refused — carving a mask belongs to the engine, through the command that makes one from the selection."
+      },
+      "guideAdd": {
+        "title": "Lay a guide",
+        "description": "Lays an upright or a flat guide at the place given, in document coordinates, and answers the id it was just born with. The two actions beside it move it and take it away by that id."
+      },
+      "guideMove": {
+        "title": "Move a guide",
+        "description": "Changes where a guide sits, in document coordinates, as a drag from the ruler would. An id nothing answers to is refused."
+      },
+      "guideRemove": {
+        "title": "Remove a guide",
+        "description": "Takes a guide off the image, as a drag that drops it back on its ruler does. Clearing every guide at once is a command of the registry, fired another way."
+      },
       "layerAdd": {
         "title": "Add a layer",
         "description": "Puts a new pixel, text or adjustment layer on top of the stack of the image in front, and answers with the id it was given. An adjustment layer must name the dial it carries."
@@ -344,6 +360,10 @@
       "skyboxState": {
         "title": "Read the sky being edited",
         "description": "Answers the sky in front — its equirectangular source, its image settings, where its sun sits and what colour it is, and what its environment lights — plus what produced it when it came from a generation."
+      },
+      "skyboxView": {
+        "title": "Set how a sky is looked at",
+        "description": "Chooses the projection the sky is drawn under, how wide the lens opens, and whether the test objects stand in it. It is session state, as every way of looking at a document is, and none of it is saved."
       },
       "skyboxAdjust": {
         "title": "Adjust a sky’s image",
@@ -509,6 +529,10 @@
         "title": "Open the video return",
         "description": "Opens the return window, or brings it to the front when it is already there. It shows what the edit plays, and carries none of the editing."
       },
+      "helpOpen": {
+        "title": "Open a help window",
+        "description": "Opens the user manual, the licences window or the one showing what has been spent, or brings it to the front when it is already there. These are the three entries of the Help menu, and no command of the registry reaches them."
+      },
       "updatesInstall": {
         "title": "Install the downloaded update",
         "description": "Quits the studio and relaunches the version already downloaded. Only does anything once the update is ready, and whatever is unsaved goes with the quit."
@@ -567,11 +591,47 @@
       },
       "nodeMaterial": {
         "title": "Set an object’s material",
-        "description": "Changes the colour, roughness or metalness of a mesh. Refuses a node that carries no mesh material, which the command would otherwise leave untouched."
+        "description": "Changes the colour, roughness, metalness, tiling density and five maps of a mesh or a text. A slot named with an empty id is a map taken off. Tiling is refused on a text, whose outline is not a primitive."
+      },
+      "nodeGeometry": {
+        "title": "Set the parameters of a primitive",
+        "description": "Changes the measurements and segment counts of the shape a mesh was built from. Each primitive carries its own, which reading the scene hands over — a field that does not belong to the shape is refused rather than ignored."
+      },
+      "nodeShadow": {
+        "title": "Set an object’s shadows",
+        "description": "Says whether an object throws a shadow and whether it catches the ones others throw. A light catches none, a sprite does neither, and the field the object cannot hold is refused."
+      },
+      "nodeSprite": {
+        "title": "Set a sprite",
+        "description": "Changes the tint, the opacity and the image of a sprite, which always faces the camera. An empty id takes the image off and leaves the plain coloured quad."
+      },
+      "nodeText": {
+        "title": "Set a 3D text",
+        "description": "Changes the words, the typeface, the size, the depth out of its own plane and the curve fineness of a text. Its material is set through the material action, like a mesh’s."
+      },
+      "nodePath": {
+        "title": "Set the shape of a rail",
+        "description": "Changes the tension of a rail, from 0 angular to 1 round, and whether it closes back on itself. Its control points are added, moved and dropped by the three actions beside this one."
+      },
+      "pathAddPoint": {
+        "title": "Add a point to a rail",
+        "description": "Lays a control point. With coordinates, it is added past the last one, where it was aimed. With an index, it is slipped just after that point, halfway to its neighbour. With neither, it extends the rail off its end."
+      },
+      "pathMovePoint": {
+        "title": "Move a point of a rail",
+        "description": "Changes the coordinates of a control point, in the rail’s own frame — so moving the rail moves the whole trajectory. An index naming no point is refused."
+      },
+      "pathRemovePoint": {
+        "title": "Remove a point from a rail",
+        "description": "Drops a control point. A rail never falls below two points, one point being no line, and the call is refused there."
+      },
+      "modelTextures": {
+        "title": "Override a model’s maps",
+        "description": "Points the maps of an imported model at images of the project, slot by slot. Whatever is not named goes back to the map the file itself carries, and an empty set gives them all back."
       },
       "nodeLight": {
         "title": "Set a light",
-        "description": "Changes the colour or the intensity of a light. Only these two, because the rest of a light’s fields differ from one kind to another."
+        "description": "Changes everything the kind of light in hand carries — its colour, intensity, range, decay, the width and softness of its cone, its target, and the two colours of a hemisphere light. A field the kind does not carry is refused."
       },
       "nodeCamera": {
         "title": "Set a camera lens",
@@ -584,6 +644,14 @@
       "cameraRail": {
         "title": "Run a camera along a path",
         "description": "Binds a path to the named shot: the camera travels it for the whole of the shot, at a steady speed along its length. With no path, the shot no longer moves the camera. A start past the end runs the path backwards."
+      },
+      "cameraAddRail": {
+        "title": "Lay a rail under a camera",
+        "description": "Makes a rail where the camera stands, aimed down its line of sight, and binds it to the shot in one gesture. The action beside it binds a rail that already exists; this one makes it, because a rail drives nothing without a shot to run it."
+      },
+      "cameraReorder": {
+        "title": "Move a camera’s line on the band",
+        "description": "Takes a camera’s line up or down, which settles what the film looks through where two shots overlap. The number is a count of rows, negative to go down, and the answer says how far the line could actually move."
       },
       "cameraTarget": {
         "title": "Give a camera something to aim at",
@@ -641,9 +709,17 @@
         "title": "Remove a handle",
         "description": "Takes a chain and the handle it reached for, both: a handle left behind would be a bone nothing drives."
       },
+      "animationsList": {
+        "title": "List what a character can play",
+        "description": "Answers the three places a motion comes from — the clips the model’s own file carries, the animations shipped with the studio, and the ones the project library keeps — then the blocks already laid on its band."
+      },
       "animationAdd": {
         "title": "Lay an animation block",
-        "description": "Lays on a character’s band an animation the project library holds. The band is made if the character had none."
+        "description": "Lays on a character’s band a motion from one of the three sources. The id names an asset of the library, the name names the two others, and exactly one of them belongs to a call. The band is made if the character had none."
+      },
+      "animationBlock": {
+        "title": "Set an animation block",
+        "description": "Changes where a block sits on the band, where playback starts inside the motion, its speed, its looping, the length of its fades, what it does with the movement of the root, and the part of the body it drives. The block is rewritten in place, every other lane left untouched."
       },
       "animationRemove": {
         "title": "Take an animation block off",
@@ -657,9 +733,41 @@
         "title": "Turn automatic keying on",
         "description": "Decides whether moving a bone writes a key as it goes. It is session state, as every way of looking at a scene is, and none of it is saved with the document."
       },
+      "keyPose": {
+        "title": "Key a subject",
+        "description": "Writes a key on every channel of an object or a bone, at the instant given or at the playhead, holding the pose it stands in. The channels it lacks are opened on the way, since demanding a track first would be asking for the thing already standing in the viewport."
+      },
+      "keyClear": {
+        "title": "Take a subject’s keys off",
+        "description": "Takes back the key every channel of an object or a bone holds at that instant. Without this a pose would be one nobody could undo, and nothing else in the panel removes one."
+      },
+      "keyAll": {
+        "title": "Key everything animated",
+        "description": "Writes a key on every channel the scene has already opened, at the instant given or at the playhead. It opens none, which is what tells this apart from keying one subject."
+      },
+      "keyMove": {
+        "title": "Move a key",
+        "description": "Slides a key along its channel, keeping its value. A key landing on an instant another already holds replaces it, two keys on one frame being a state no evaluation can read twice."
+      },
+      "channelRemove": {
+        "title": "Remove an animation channel",
+        "description": "Takes a channel away, and the keys it carried with it. A locked channel is refused rather than silently left standing."
+      },
+      "channelFlags": {
+        "title": "Set a channel’s flags",
+        "description": "Mutes a channel, plays it alone, or locks it. It is how one WORKS rather than a change to the document, so nothing is added to the history."
+      },
       "viewDisplay": {
         "title": "Choose how the scene is drawn",
         "description": "Switches the main view to shaded, wireframe, material-only or one of the other ways of drawing. The menu command only cycles from one to the next; this one names which."
+      },
+      "sceneCapture": {
+        "title": "Take a still of the 3D view",
+        "description": "Writes a still of what the view shows into the project’s images, at the size asked for. The framing never changes — only the pixel count does, or the capture would show something other than the screen."
+      },
+      "worldPreset": {
+        "title": "Apply a ready-made world",
+        "description": "Sets the lighting, the backdrop, the haze and the grading of a scene in one call, for a kind of look. Each one writes only the fields it is about and leaves the rest as they were, so a ground somebody turned on stays on."
       },
       "layerLock": {
         "title": "Lock a layer",
@@ -981,7 +1089,75 @@
       "groundSize": "Side of the ground, in scene units",
       "receiveShadow": "Shadows land on the ground",
       "toneMapping": "How high dynamic range is brought down to the screen",
-      "toneExposure": "Exposure multiplier of the render, 1 leaving it as it is"
+      "toneExposure": "Exposure multiplier of the render, 1 leaving it as it is",
+      "depth": "Depth",
+      "radius": "Radius",
+      "radiusTop": "Top radius, 0 making a cone",
+      "radiusBottom": "Bottom radius",
+      "innerRadius": "Inner radius",
+      "outerRadius": "Outer radius",
+      "tube": "Tube radius",
+      "segments": "Segments around the axis",
+      "capSegments": "Segments of one cap",
+      "radialSegments": "Segments around the tube",
+      "widthSegments": "Segments of longitude",
+      "heightSegments": "Segments of latitude",
+      "tubularSegments": "Segments along the tube",
+      "p": "Turns around the knot’s axis",
+      "q": "Turns around the torus",
+      "castShadow": "The object throws a shadow",
+      "skyColour": "Colour coming from the sky, as #rrggbb",
+      "groundColour": "Colour coming from the ground, as #rrggbb",
+      "distance": "Range past which the light no longer reaches, 0 being unbounded",
+      "decay": "How fast the light falls off with distance, 2 being physical",
+      "angle": "Half-angle of the cone, in radians",
+      "penumbra": "Softness of the cone’s edge, from 0 sharp to 1 diffuse",
+      "targetX": "Target across the width",
+      "targetY": "Target up the height",
+      "targetZ": "Target towards the viewer",
+      "tilesPerMetre": "Repeats of the maps per metre",
+      "textures": "Maps by slot, an empty id taking off the one that was there",
+      "map": "Id of the image, or nothing for none at all",
+      "value": "Words to set",
+      "textSize": "Size of the letters, in scene units",
+      "textDepth": "Depth of the letters out of their own surface, 0 leaving them flat",
+      "curveSegments": "How finely the curves are cut",
+      "tension": "Tension of the rail, from 0 angular to 1 round",
+      "closed": "The rail closes back on itself",
+      "pointIndex": "Index of the control point, counted from the first",
+      "pointX": "Point across the width",
+      "pointY": "Point up the height",
+      "pointZ": "Point towards the viewer",
+      "clipSource": "Where the motion comes from, the model’s own file, the shipped animations, or the project’s library",
+      "clipName": "Name of the motion, as the animation listing hands it over",
+      "offsetSeconds": "Where playback starts inside the motion, in seconds",
+      "clipLoop": "The block plays over and over",
+      "clipFade": "Length of the fade at both ends of the block, in seconds",
+      "rootMotion": "What the block does with the movement of the root",
+      "bodyPart": "Part of the body the block drives",
+      "channelId": "Id of the animation channel",
+      "timeSeconds": "Instant on the band, in seconds, or the playhead when absent",
+      "trackProperty": "Channel aimed at, or all the subject’s when absent",
+      "fromSeconds": "Instant to start from, in seconds",
+      "toSeconds": "Instant to land on, in seconds",
+      "maskEnabled": "The mask hides what it covers",
+      "maskLinked": "The mask travels with the layer when it moves",
+      "maskRemove": "Take the mask off the layer",
+      "guideId": "Id of the guide",
+      "guideAxis": "Which way the guide runs, upright on x or flat on y",
+      "guidePosition": "Where the guide sits, in document coordinates",
+      "helpPage": "Which help window to open",
+      "captureQuality": "How big the still comes out, or the view’s own pixels when absent",
+      "environmentPreset": "Which ready-made world to apply",
+      "skyboxView": "Which projection to look at the sky under",
+      "fieldOfView": "How wide the lens opens, in degrees",
+      "probes": "Show the test objects standing in the sky",
+      "roughnessMin": "Floor of the roughness the map is remapped into",
+      "roughnessMax": "Ceiling of the roughness the map is remapped into",
+      "metalnessMin": "Floor of the metalness the map is remapped into",
+      "metalnessMax": "Ceiling of the metalness the map is remapped into",
+      "previewShape": "Which shape to judge the material on",
+      "tilingPreview": "Repeat multiplier of the preview, 1, 2 or 4"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

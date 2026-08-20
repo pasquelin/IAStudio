@@ -1,7 +1,7 @@
 import { mdiChevronDown, mdiChevronRight, mdiRhombus } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import type { TrackProperty } from '@shared/domain/animation'
 import { snapToFrame } from '@shared/domain/time'
+import { channelNames } from '@/helpers/channelNames'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
 import { keyNode, reorderCameraShots, unkeySubject } from '@/engines/scene/animationCommands'
@@ -23,16 +23,6 @@ function subjectOf(rowId: string): { nodeId: string; bone?: string } {
   return cut === -1
     ? { nodeId: rowId }
     : { nodeId: rowId.slice(0, cut), bone: rowId.slice(cut + 1) }
-}
-
-/** What each channel is called, composed once so a created channel is named like an added one. */
-function channelNames(t: (key: string) => string, subject: string): Record<TrackProperty, string> {
-  return {
-    position: `${subject} · ${t('animation.position')}`,
-    rotation: `${subject} · ${t('animation.rotation')}`,
-    scale: `${subject} · ${t('animation.scale')}`,
-    fov: `${subject} · ${t('animation.fov')}`,
-  }
 }
 
 export function AnimationHeadersSubject({
