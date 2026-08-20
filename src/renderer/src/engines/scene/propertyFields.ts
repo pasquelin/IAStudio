@@ -218,6 +218,9 @@ export function lightFields(descriptor: LightDescriptor): PropertyField[] {
   )
 }
 
+/** Typed off the descriptor, so renaming the field cannot leave the filter below green and idle. */
+const TILING_FIELD: keyof MaterialDescriptor = 'tilesPerMetre'
+
 /**
  * `fallbackColor` stands in for the `null` that means "the studio's own colour": a swatch has
  * to show something, and the value it shows is the one the viewport is already painting.
@@ -237,7 +240,7 @@ export function materialFields(
     { ...DEFAULT_MATERIAL, color: fallbackColor },
   )
 
-  return tiling ? fields : fields.filter(field => field.name !== 'tilesPerMetre')
+  return tiling ? fields : fields.filter(field => field.name !== TILING_FIELD)
 }
 
 /** Same rule as a material's, and for the same `null`. */

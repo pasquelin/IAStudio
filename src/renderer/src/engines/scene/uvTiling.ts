@@ -3,24 +3,13 @@ import type { GeometryDescriptor } from '@shared/domain/scene'
 
 /*
  * Repeating a map at a fixed density — one square of the checker per square metre, on a wall as
- * on a floor.
+ * on a floor. Why a COUNT across the shape cannot do it is written on `tilesPerMetre` itself.
  *
- * A count spread over the whole shape cannot do it: every face of every primitive runs 0..1
- * whatever it measures, so one number gives 1 m per square along a forty-metre band and 0,4 m
- * across the sixteen-metre one beside it. Two halves of one floor then read as two textures.
+ * Which of the two ways a shape takes depends on what its own UVs mean: FLAT faces are recomputed
+ * from position and normal, so the pattern CONTINUES across an edge rather than restarting at it;
+ * a surface of REVOLUTION keeps its own UVs, scaled — projecting one would seam it down its side.
  *
- * Two ways round it, and which one a shape gets depends on what its own UVs mean:
- *
- * · a shape made of FLAT faces has its UVs recomputed from each vertex's position and normal,
- *   projected on the plane that normal faces. Density is then exact on every face whatever it
- *   measures, and the pattern CONTINUES across an edge instead of restarting at it — which is
- *   what makes a box read as one object rather than six squares.
- *
- * · a surface of REVOLUTION keeps its own UVs, scaled by what they span in metres. Projecting
- *   one would seam it where the dominant axis changes, all round its side.
- *
- * The node's SCALE is not read: a primitive stretched by its transform wears squares stretched
- * with it, which nothing at the geometry level can know about.
+ * The node's SCALE is not read: a primitive stretched by its transform wears stretched squares.
  */
 
 /** Metres across, then metres down, that the native UVs of a surface of revolution cover. */
@@ -42,10 +31,8 @@ export function tileUvs(
 type UvAttribute = BufferAttribute | InterleavedBufferAttribute
 
 /**
- * `null` for a shape of flat faces, which is projected instead.
- *
- * Exhaustive on purpose rather than defaulting: a kind added to the union has to say which of
- * the two ways it takes, and the compiler is what asks.
+ * `null` for a shape of flat faces, which is projected instead. Exhaustive rather than
+ * defaulting: a kind added to the union has to say which way it takes, and the compiler asks.
  */
 function spanOf(descriptor: GeometryDescriptor, geometry: BufferGeometry): UvSpan | null {
   switch (descriptor.kind) {
@@ -89,9 +76,8 @@ function spanOf(descriptor: GeometryDescriptor, geometry: BufferGeometry): UvSpa
         v: circumference(descriptor.tube),
       }
 
-    // The two whose UVs follow a CURVE the descriptor does not carry — a lathe's profile and a
-    // tube's path both live in the factory. Measured off the built shape instead, which is an
-    // approximation: a path that doubles back is longer than the box it fits in.
+    // The two whose UVs follow a CURVE the descriptor does not carry. Measured off the built
+    // shape instead, an approximation: a path that doubles back is longer than its box.
     case 'lathe':
     case 'tube':
       return spanFromBounds(geometry)

@@ -42,6 +42,7 @@ import {
 } from '@shared/domain/animation'
 import { readFontRef } from '@shared/domain/font'
 import { isRecord, readNumber } from '@shared/guards'
+import { clamp } from '@shared/numeric'
 import {
   GEOMETRY_SPECS,
   LIGHT_SPECS,
@@ -148,10 +149,7 @@ function revivedMaterial(material: MaterialDescriptor): MaterialDescriptor {
 
   return {
     ...filled,
-    tilesPerMetre: Math.min(
-      Math.max(filled.tilesPerMetre, TILES_PER_METRE.min),
-      TILES_PER_METRE.max,
-    ),
+    tilesPerMetre: clamp(filled.tilesPerMetre, TILES_PER_METRE.min, TILES_PER_METRE.max),
   }
 }
 

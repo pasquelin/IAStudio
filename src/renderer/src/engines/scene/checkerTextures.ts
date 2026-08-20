@@ -40,8 +40,9 @@ export function ensureCheckerTextures(path: string): Promise<void> {
     return Promise.resolve()
   }
 
+  if (running && running.path === path) return running.work
+
   const isCurrent = (): boolean => running?.path === path
-  if (isCurrent()) return running?.work ?? Promise.resolve()
 
   const work = (getBridge()?.assets.installBundledTextures() ?? Promise.resolve([]))
     .then(textures => {

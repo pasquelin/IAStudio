@@ -143,6 +143,7 @@ import {
   applyShadowQuality,
   applyShadows,
   fitShadowCamera,
+  needsShadowFrustum,
   ownedByAnotherNode,
   resizeShadowMap,
 } from './shadows'
@@ -448,6 +449,13 @@ const FRAMED_NODES: ReadonlySet<SceneNodeType> = new Set<SceneNodeType>([
   'sprite',
 ])
 
+/** An empty box for an empty set, which is how a caller tells "nothing yet" from "nothing there". */
+function boundsOf(objects: Iterable<Object3D>): Box3 {
+  const bounds = new Box3()
+  for (const object of objects) bounds.expandByObject(object)
+  return bounds
+}
+
 /**
  * How far a side view stands off its target. Distance changes nothing an orthographic camera
  * shows — its frustum does that — but it decides what falls behind the near plane, and a camera
@@ -601,8 +609,6 @@ export class SceneRenderer {
   private readonly gizmoRegion = new Vector4()
   private viewHelper: ViewHelper | null = null
   private grid: GridHelper | null = null
-  /** Dropped whenever the scene may have moved — see `measureShadowReach`. */
-  private shadowReach: number | null = null
   private mode: TransformMode = 'select'
   private snapping = false
   private space: TransformSpace = 'world'
@@ -1662,6 +1668,15 @@ export class SceneRenderer {
     return { position: plainVector(camera.position), target: plainVector(target) }
   }
 
+  /** What a framing and a shadow frustum are both measured against — see `FRAMED_NODES`. */
+  private framedObjects(): Object3D[] {
+    const objects: Object3D[] = []
+    for (const [id, object] of this.objects) {
+      if (FRAMED_NODES.has(this.applied.get(id)?.type ?? 'group')) objects.push(object)
+    }
+    return objects
+  }
+
   /**
    * Points the free camera at what the scene SHOWS, from a direction of the caller's choosing.
    *
@@ -1688,14 +1703,8 @@ export class SceneRenderer {
    * and the picture breathes with every step.
    */
   frameContents(from?: CameraPlacement): boolean {
-    const objects: Object3D[] = []
-    for (const [id, object] of this.objects) {
-      if (FRAMED_NODES.has(this.applied.get(id)?.type ?? 'group')) objects.push(object)
-    }
-    if (objects.length === 0) return false
-
-    const bounds = new Box3()
-    for (const object of objects) bounds.expandByObject(object)
+    const objects = this.framedObjects()
+    const bounds = boundsOf(objects)
     // Empty means the files have not landed: `framingPlacement` would fall back to averaging
     // the placements of empty groups, which is a framing of nothing dressed up as one.
     if (bounds.isEmpty()) return false
@@ -2787,35 +2796,28 @@ export class SceneRenderer {
 
   /** Every light at once, against a reach measured once. */
   private tuneShadows(): void {
-    this.shadowReach = null
+    const size = shadowMapSizeFor(this.view.quality, this.view.shadowMapSize)
+    const framed: Object3D[] = []
     for (const [id, object] of this.objects) {
-      if (this.applied.get(id)?.type === 'light') this.tuneShadow(object)
+      if (this.applied.get(id)?.type !== 'light') continue
+      resizeShadowMap(object, size)
+      if (needsShadowFrustum(object)) framed.push(object)
     }
-  }
+    // The scene is walked only if some light would read the answer: a set lit by a hemisphere
+    // and a point light has no box to size, and measuring it would be a pass for nothing.
+    if (framed.length === 0) return
 
-  /** What a light's shadow is sized against: the settings for the map, the CONTENT for the reach. */
-  private tuneShadow(light: Object3D): void {
-    resizeShadowMap(light, shadowMapSizeFor(this.view.quality, this.view.shadowMapSize))
-    this.shadowReach ??= this.measureShadowReach()
-    fitShadowCamera(light, this.shadowReach)
+    const reach = this.measureShadowReach()
+    for (const light of framed) fitShadowCamera(light, reach)
   }
 
   /**
-   * How far the shadows have to reach: what the scene OCCUPIES, never the grid.
-   *
-   * Sized from the grid was the first design, and it is the very trap `shadows` describes — a
-   * twenty-metre grid over a forty-metre level leaves half of it throwing nothing, with a clean
-   * cut across the floor and no hint as to why. The grid is a floor for it, not a measure: an
-   * empty scene still gets a frustum, so the first mesh laid down casts something.
-   *
-   * Measured once per pass and held in `shadowReach`, so a set of a thousand parts is walked
-   * once rather than once per light.
+   * How far the shadows have to reach: what the scene OCCUPIES, never the grid. The grid is a
+   * FLOOR under the answer, so an empty scene still gets a frustum and the first mesh laid down
+   * casts something.
    */
   private measureShadowReach(): number {
-    const bounds = new Box3()
-    for (const [id, object] of this.objects) {
-      if (FRAMED_NODES.has(this.applied.get(id)?.type ?? 'group')) bounds.expandByObject(object)
-    }
+    const bounds = boundsOf(this.framedObjects())
     if (bounds.isEmpty()) return this.view.gridSize
 
     const size = bounds.getSize(new ThreeVector3())
