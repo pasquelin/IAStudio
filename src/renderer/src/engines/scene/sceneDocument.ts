@@ -372,12 +372,9 @@ function readTimeline(value: unknown, nodes: readonly SceneNode[]): AnimationTim
 }
 
 /**
- * Which objects the band shows. A RECOVERY, not a rule: a file written before the sheet existed
- * has none, and its animated objects would come back with nowhere to be seen. Read from what is
- * animated exactly once, and written out from then on.
- *
- * A file that HAS a sheet is taken as it stands, empty included — an empty band is a legitimate
- * state, and rebuilding it from the tracks would put back what someone removed on purpose.
+ * Which objects the band shows. Without one, rebuilt ONCE from what is animated — a file written
+ * before sheets existed would come back with its animated objects nowhere to be seen. WITH one,
+ * taken as it stands, empty included: rebuilding would put back what someone removed on purpose.
  */
 function readSheet(
   value: unknown,

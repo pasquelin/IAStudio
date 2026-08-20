@@ -6,11 +6,8 @@ import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { sceneOf, useScenes } from '@/stores/scenes'
 
 /**
- * Puts what is SELECTED on the band — the door into animating anything at all.
- *
- * The selection rather than a list to pick from, and that is the whole point on a large scene: a
- * map of 8 000 objects is not one anybody scrolls through. One clicks the character in the
- * viewport and presses this.
+ * Puts what is SELECTED on the band — the door into animating anything at all. The selection
+ * rather than a list to pick from: a map of 8 000 objects is not one anybody scrolls through.
  */
 export function AnimationActionsSheetButton({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
@@ -24,7 +21,8 @@ export function AnimationActionsSheetButton({ documentId }: { documentId: string
       description={t('animation.addToSheetHint')}
       tooltip={TIP_BOTTOM}
       variant="header"
-      disabled={selectedIds.every(id => sheet.includes(id)) || selectedIds.length === 0}
+      // `[].every()` is true, so an empty selection is already refused by the same test.
+      disabled={selectedIds.every(id => sheet.includes(id))}
       onClick={() => {
         const state = sceneOf(useScenes.getState(), documentId)
         const command = putOnAnimationSheet(state, selectedIds)

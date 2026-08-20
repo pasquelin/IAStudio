@@ -27,11 +27,9 @@ export function dragChannel(type: string): DragChannel {
     start: (event, id) => {
       if (!event.dataTransfer) return
       event.dataTransfer.setData(type, id)
-      // BOTH, and the reason is the cursor: a target may only ask for an effect its source
-      // allowed, so `move` alone left every surface that ADDS — the animation band takes an
-      // object without taking it out of the scene — unable to show the `+` that says a drop
-      // will work. Each target still says which of the two it means; this only stops forbidding
-      // one of them. A drop refused for the mismatch is refused in silence, with no error.
+      // BOTH: a target may only ask for an effect its source allowed, so `move` alone left every
+      // surface that ADDS unable to show the `+` that says a drop will work — and a mismatch is
+      // refused by the platform in silence. Each target still says which of the two it means.
       event.dataTransfer.effectAllowed = 'copyMove'
     },
     carries: event => event.dataTransfer?.types.includes(type) ?? false,

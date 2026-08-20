@@ -41,10 +41,8 @@ export function startAssetDrag(
   ASSETS.start(event, asset.id)
   dragChannel(`${TYPED_PREFIX}${asset.type}`).start(event, asset.id)
 
-  // NARROWED after the channels, which allow both for the tabs and tree rows that share them.
-  // Dropping an asset takes nothing away from the shelf it came from, so `move` is a thing it
-  // must never be read as — and the distinction is not academic: `copy` is what puts the "+"
-  // under the pointer instead of the arrow that means "this will be moved".
+  // NARROWED after the channels, which allow both. Dropping an asset takes nothing away from the
+  // shelf it came from, and `copy` is what puts the "+" under the pointer rather than the arrow.
   if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy'
 }
 
@@ -57,11 +55,9 @@ export function startAssetDrag(
  * refusal.
  */
 export function startLibraryDrag(event: DragLike, asset: { id: string; type: AssetType }): void {
-  // The marker FIRST, because `startAssetDrag` ends by narrowing `effectAllowed` to `copy` and
-  // announcing a channel after it would widen that back. A `dropEffect` the allowed set forbids
-  // collapses the operation to `none` and the platform fires no `drop` at all — every library
-  // drag landed nowhere, in silence. Channels now allow both, so the order no longer decides
-  // whether it works; it decides whether an asset can also be read as something MOVED.
+  // The marker FIRST: `startAssetDrag` ends by narrowing `effectAllowed` to `copy`, and a channel
+  // announced after would widen it back. A `dropEffect` the allowed set forbids collapses the
+  // operation to `none` with no `drop` at all — every library drag landed nowhere, in silence.
   LIBRARY.start(event, asset.id)
   startAssetDrag(event, asset)
 }

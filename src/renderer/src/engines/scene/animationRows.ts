@@ -264,22 +264,19 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
    * Who gets a line: what the person PUT on the sheet, plus whoever HOLDS a track. A house is
    * scenery and a character in front of it is animated — only the person can say which, and
    * deriving it from the scene put 8 000 blocks and 24 009 buttons on the band, measured 20/08.
-   *
-   * The second half is not a second rule: keying an object is that same choice made, and without
-   * it a track could be undone into invisibility. It also keeps the commands out of the sheet
-   * entirely, so an undo has nothing extra to put back.
    */
   const keyed = [...grouped.values()].flatMap(tracks => tracks[0]?.target.nodeId ?? [])
-  const onSheet = new Set([...timeline.sheet, ...keyed].filter(id => named.has(id)))
+  // The sheet first, then whoever holds a track. Through a `Set`, which keeps each one at its
+  // FIRST place — an object both on the sheet and keyed appears where the sheet put it.
+  const shown = [...new Set([...timeline.sheet, ...keyed])].filter(id => named.has(id))
+  const isShown = new Set(shown)
 
   /** The objects first, in the order the sheet holds them, then the bones keyed inside them. */
   const natural = [
-    ...[...timeline.sheet, ...keyed].filter(
-      (id, at, all) => onSheet.has(id) && !onAir.includes(id) && all.indexOf(id) === at,
-    ),
+    ...shown.filter(id => !onAir.includes(id)),
     // A bone is keyed inside its object, so it rides on the object's own place on the sheet.
     ...[...grouped.entries()]
-      .filter(([key, tracks]) => !named.has(key) && onSheet.has(tracks[0]?.target.nodeId ?? ''))
+      .filter(([key, tracks]) => !named.has(key) && isShown.has(tracks[0]?.target.nodeId ?? ''))
       .map(([key]) => key),
   ]
 

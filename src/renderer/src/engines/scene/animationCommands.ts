@@ -43,10 +43,8 @@ import {
  */
 
 /**
- * The sheet is deliberately LEFT ALONE here. Adding the keyed object to it was the first design,
- * and it broke undo: a revert would have had to put the sheet back as well, in every command that
- * writes a track. A band shows the sheet OR whoever holds a track — see `animationRows` — so
- * nothing can be keyed into invisibility, and taking a track away takes its line with it.
+ * The sheet is deliberately LEFT ALONE here: a revert would have had to put it back too, in every
+ * command that writes a track. `animationRows` gives a line to whoever holds one instead.
  */
 const write = (
   state: SceneState,
@@ -499,17 +497,23 @@ export function putOnAnimationSheet(
   state: SceneState,
   nodeIds: readonly string[],
 ): Command<SceneState> | null {
-  const held = state.animation.sheet
-  const added = nodeIds.filter(id => !held.includes(id))
+  // Sets on both sides: `includes` in a filter is quadratic, and putting a selection of a few
+  // thousand on the band paid 61 ms for it, its undo as much again — measured 20/08.
+  const held = new Set(state.animation.sheet)
+  const added = [...new Set(nodeIds)].filter(id => !held.has(id))
   if (added.length === 0) return null
 
+  const wanted = new Set(added)
+
   return {
-    id: `sheet:add:${added.join(',')}`,
+    // Its LENGTH and its first, never the ids themselves: a whole selection joined made a 147 KiB
+    // string, held for as long as the command sat in the undo stack, that nobody ever reads.
+    id: `sheet:add:${added.length}:${added[0]}`,
     apply: current => writeSheet(current, [...current.animation.sheet, ...added]),
     revert: current =>
       writeSheet(
         current,
-        current.animation.sheet.filter(id => !added.includes(id)),
+        current.animation.sheet.filter(id => !wanted.has(id)),
       ),
   }
 }
@@ -525,16 +529,17 @@ export function takeOffAnimationSheet(
   nodeIds: readonly string[],
 ): Command<SceneState> | null {
   // Captured with their places, so a revert puts them back WHERE they stood: a sheet somebody
-  // arranged is not one to reshuffle.
-  const taken = state.animation.sheet.flatMap((id, at) => (nodeIds.includes(id) ? { id, at } : []))
+  // arranged is not one to reshuffle. Through a `Set`, for the reason `putOnAnimationSheet` gives.
+  const wanted = new Set(nodeIds)
+  const taken = state.animation.sheet.flatMap((id, at) => (wanted.has(id) ? { id, at } : []))
   if (taken.length === 0) return null
 
   return {
-    id: `sheet:remove:${taken.map(one => one.id).join(',')}`,
+    id: `sheet:remove:${taken.length}:${taken[0]?.id}`,
     apply: current =>
       writeSheet(
         current,
-        current.animation.sheet.filter(id => !nodeIds.includes(id)),
+        current.animation.sheet.filter(id => !wanted.has(id)),
       ),
     revert: current => {
       const back = [...current.animation.sheet]

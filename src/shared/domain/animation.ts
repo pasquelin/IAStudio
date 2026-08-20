@@ -143,12 +143,15 @@ export function sheetFromAnimated(
   shots: readonly CameraShot[],
   playing: readonly string[] = [],
 ): string[] {
-  const found: string[] = []
-  const all = [...tracks.map(t => t.target.nodeId), ...shots.map(shot => shot.cameraId), ...playing]
-  for (const id of all) {
-    if (!found.includes(id)) found.push(id)
-  }
-  return found
+  // Through a `Set`, which keeps each one at its first place: dedup by `includes` in a loop is
+  // quadratic, and a document of a few thousand animated nodes paid 62 ms for it — measured 20/08.
+  return [
+    ...new Set([
+      ...tracks.map(track => track.target.nodeId),
+      ...shots.map(shot => shot.cameraId),
+      ...playing,
+    ]),
+  ]
 }
 
 export const ZERO: Vector3 = Object.freeze({ x: 0, y: 0, z: 0 })

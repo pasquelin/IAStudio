@@ -47,12 +47,19 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
 
     // A block's width comes from the ENGINE: the length of a clip lives in the GLB, and a model
     // still loading has none — it simply has no block yet rather than a block of no width.
+    // Only for the models the band actually SHOWS. Built for every model of the scene, this loop
+    // made a lane, a blocks array and an i18n call for each — and `animationRows` reads them only
+    // for the objects on the sheet, so on 8 000 models with three on the band it threw 7 997 away.
+    // The sheet AND whoever holds a track, which is exactly who `animationRows` gives a line to:
+    // a model keyed but off the sheet has a line, and it would show up without its lanes.
+    const onBand = new Set([...timeline.sheet, ...timeline.tracks.map(t => t.target.nodeId)])
+
     const sheetLanes: SheetLane[] = []
     for (const node of byId.values()) {
-      if (node.type !== 'model') continue
+      if (node.type !== 'model' || !onBand.has(node.id)) continue
 
-      // A model always shows a lane, empty or not: an object's track is where an animation is
-      // dropped, and one that appears only once something plays has nowhere to receive the first.
+      // A model on the band always shows a lane, empty or not: an object's track is where an
+      // animation is dropped, and one appearing only once something plays can receive nothing.
       const lanes = node.model.lanes ?? [clipLane(MAIN_LANE_ID)]
 
       for (const [rank, lane] of lanes.entries()) {
@@ -86,14 +93,9 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
     return animationRows(timeline, { nodes, expanded, lanes: sheetLanes, order })
   }, [timeline, nodes, expanded, lengths, order, t])
 
-  /*
-   * The whole PANEL takes the drop, not the canvas: an empty band draws no canvas at all — the
-   * empty state stands in its place — so the one moment a first object is most wanted is the one
-   * moment there would be nothing to let go over. The headers column is no target either.
-   *
-   * `move` rather than `copy`, and it is not a nicety: the outliner arms its rows with
-   * `effectAllowed = 'move'`, and a browser refuses a drop whose effect the source did not allow
-   * — silently, nothing happening at all.
+  /**
+   * The PANEL takes the drop, never the canvas: an empty band draws no canvas at all — the empty
+   * state stands there — and that is the very moment a first object is dropped.
    */
   const onDropNodes = (event: DragEvent<HTMLDivElement>): void => {
     const carried = event.dataTransfer.getData(SCENE_NODE_DRAG_TYPE)
