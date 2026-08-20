@@ -685,9 +685,9 @@ nommé `settings.json`.
 
 | Système | Où |
 |---|---|
-| macOS | `~/Library/Application Support/Scenario Studio/settings.json` |
-| Windows | `%APPDATA%\Scenario Studio\settings.json` |
-| Linux | `~/.config/Scenario Studio/settings.json` |
+| macOS | `~/Library/Application Support/IA Studio/settings.json` |
+| Windows | `%APPDATA%\IA Studio\settings.json` |
+| Linux | `~/.config/IA Studio/settings.json` |
 
 Utile pour en faire une copie avant de changer de machine, ou pour l’envoyer à quelqu’un qui vous
 aide à comprendre un problème.

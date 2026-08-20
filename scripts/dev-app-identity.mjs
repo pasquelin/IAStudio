@@ -22,11 +22,11 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const PRODUCT_NAME = 'Scenario Studio'
+const PRODUCT_NAME = 'IA Studio'
 const PLIST_BUDDY = '/usr/libexec/PlistBuddy'
 
 /** Stamped into the bundle so the work is skipped when it is already done — icon included. */
-const STAMP_KEY = 'ScenarioStudioIdentity'
+const STAMP_KEY = 'IaStudioIdentity'
 
 /** The sizes an `.icns` is expected to carry, as `iconutil` names them. */
 const ICON_SIZES = [
@@ -61,7 +61,7 @@ const iconSource = join(projectRoot, 'build', 'icon.png')
  * development and the icon in a release can never drift apart.
  */
 function buildIcns(target) {
-  const iconset = mkdtempSync(join(tmpdir(), 'scenario-icon-')) + '.iconset'
+  const iconset = mkdtempSync(join(tmpdir(), 'ia-studio-icon-')) + '.iconset'
   execFileSync('mkdir', ['-p', iconset])
 
   try {

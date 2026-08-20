@@ -32,7 +32,7 @@ export type MirrorMessage =
    */
   | { kind: 'ask' }
 
-const CHANNEL = 'scenario.mirror'
+const CHANNEL = 'ia-studio.mirror'
 
 /** Opens the channel. Both ends call this; the studio only posts, the return only listens. */
 export function openMirrorChannel(): BroadcastChannel {

@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Scenario Studio"
+    "name": "IA Studio"
   },
   "workspaces": {
     "navigation": "Espaces de travail",
@@ -170,7 +170,7 @@
     "clearGuides": "Effacer les repères",
     "snap": "Magnétisme",
     "help": "Aide",
-    "about": "À propos de {{name}}",
+    "about": "À propos d’{{name}}",
     "licences": "Licences",
     "manual": "Manuel utilisateur",
     "imageTools": "Outils",

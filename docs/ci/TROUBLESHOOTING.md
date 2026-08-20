@@ -64,7 +64,7 @@ de commande — `arch: [arm64, x64]` sur les **deux cibles macOS**, `dmg` et `zi
 `arch: [x64]`, et c'est voulu. Ne jamais supposer que le défaut couvre les Mac Intel. Vérifier :
 
 ```bash
-lipo -archs "/Volumes/Scenario Studio/Scenario Studio.app/Contents/MacOS/Scenario Studio"
+lipo -archs "/Volumes/IA Studio/IA Studio.app/Contents/MacOS/IA Studio"
 ```
 
 ### §9.4 — Un binaire `universal` produit une application cassée

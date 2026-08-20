@@ -1,4 +1,4 @@
-# Scenario Studio — architecture
+# IA Studio — architecture
 
 How the studio is built, and why it is built that way. Written for someone picking the codebase
 up. Looking for how to *use* it? See [user-guide.md](user-guide.md).
@@ -184,7 +184,7 @@ the scene.
 The split is not cosmetic: **every `on…` on the bridge subscribes to exactly one entry of
 `EVENTS`**, and every call method maps to exactly one of `CHANNELS`.
 
-Local files are served to the renderer over a custom `scenario://` protocol. The URL is derived
+Local files are served to the renderer over a custom `ia-studio://` protocol. The URL is derived
 from the asset identifier, so a grid of thumbnails costs no IPC at all — and the renderer still
 never handles a file path.
 
@@ -229,7 +229,7 @@ src/main/
 │   ├── syncPlan.ts          what two sides would have to do about each other
 │   ├── collector.ts         what a generation drops into the project
 │   ├── autoCaption.ts       naming a picture from what the API sees in it
-│   └── protocol.ts          the scenario:// protocol
+│   └── protocol.ts          the ia-studio:// protocol
 ├── dictation/               speech recognition: permissions, model, segmenting, handlers
 ├── assistant/               the assistant's thinking, behind a port, and how its reply is read
 ├── mcp/                     the same catalogue of actions, offered to a client outside
@@ -736,7 +736,7 @@ can search thousands of items without touching the filesystem, and so a project 
 **It does not rebuild.** Nothing guesses again what a file IS: the catalogue fills up as you
 generate and import. Deleting it loses the names, the tags, the dimensions, the generation recipe,
 `derivedFrom`, the `sourcePath` of linked media and the activity journal — the files remain, and
-nothing says what they are any more. `.scenario/items.json` is what is left to read that day: a
+nothing says what they are any more. `.ia-studio/items.json` is what is left to read that day: a
 backup keyed by content fingerprint, written after every reconciliation pass that changed
 something, which the studio never reads of its own accord.
 
@@ -750,7 +750,7 @@ have. `search` and `countByType` hide what is dated, so the trash — which date
 deletes — gives a whole row back if the file comes out of it.
 
 Assets are either `local` (a file in the project) or `cloud` (still only on Scenario). A local
-image is served to the renderer as `scenario://<id>`.
+image is served to the renderer as `ia-studio://<id>`.
 
 **Documents** are files filed wherever the user wants them — `documents/` is only where a
 first save lands, and `documents.list()` walks the whole project to find them. One per document,

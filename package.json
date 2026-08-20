@@ -1,8 +1,8 @@
 {
-  "name": "scenario-studio",
-  "productName": "Scenario Studio",
+  "name": "ia-studio",
+  "productName": "IA Studio",
   "version": "1.0.0",
-  "description": "Image, video, 3D, audio, texture and skybox creation on the Scenario API",
+  "description": "Image, video, 3D, audio, texture and skybox creation studio",
   "author": "Alban Pasquelin",
   "license": "PolyForm-Noncommercial-1.0.0",
   "private": true,

@@ -66,9 +66,9 @@ describe('the window policy', () => {
 
   // The asset scheme is fetched, not just linked: the monitor reads a rush through it.
   it('lets the asset scheme be fetched and shown', () => {
-    expect(directive('connect-src')).toContain('scenario:')
-    expect(directive('img-src')).toContain('scenario:')
-    expect(directive('media-src')).toContain('scenario:')
+    expect(directive('connect-src')).toContain('ia-studio:')
+    expect(directive('img-src')).toContain('ia-studio:')
+    expect(directive('media-src')).toContain('ia-studio:')
   })
 
   /**

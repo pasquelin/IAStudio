@@ -36,8 +36,8 @@ describe('asset URLs', () => {
 
   it('refuses a URL that is not ours to serve', () => {
     expect(assetIdFromUrl('https://cdn.cloud.scenario.com/asset_1')).toBeNull()
-    expect(assetIdFromUrl('scenario://other/asset_1')).toBeNull()
-    expect(assetIdFromUrl('scenario://asset/')).toBeNull()
+    expect(assetIdFromUrl('ia-studio://other/asset_1')).toBeNull()
+    expect(assetIdFromUrl('ia-studio://asset/')).toBeNull()
     expect(assetIdFromUrl('not a url')).toBeNull()
   })
 })

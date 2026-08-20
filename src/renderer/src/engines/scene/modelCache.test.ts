@@ -23,7 +23,7 @@ describe('createModelCache', () => {
     }, silent).acquire('mesh-1')
 
     expect(urls[0]).toContain('mesh-1')
-    expect(urls[0]).toMatch(/^scenario:/)
+    expect(urls[0]).toMatch(/^ia-studio:/)
   })
 
   // A compressed or corrupt GLB leaves a node in the outliner drawing nothing: what the engine

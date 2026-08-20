@@ -488,7 +488,7 @@ describe('containerPictureOf', () => {
   }
 
   /**
-   * The asset scheme routes every `scenario://asset/…` through this, so a layer sourced from a
+   * The asset scheme routes every `ia-studio://asset/…` through this, so a layer sourced from a
    * container reads it too: answered the thumbnail, a 4K picture arrived 256 px wide and was
    * stretched over the whole document.
    */

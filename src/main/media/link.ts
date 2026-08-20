@@ -11,7 +11,7 @@ const EXTENSIONS: Record<ImportableType, readonly string[]> = {
   audio: ['wav', 'mp3', 'aac', 'flac', 'm4a', 'ogg'],
   image: ['png', 'jpg', 'jpeg', 'webp', 'tif', 'tiff', 'exr', 'hdr'],
   /**
-   * Self-contained only: served flat as `scenario://asset/<id>`, a `.gltf` 404s on its buffers.
+   * Self-contained only: served flat as `ia-studio://asset/<id>`, a `.gltf` 404s on its buffers.
    */
   mesh: ['glb', 'obj', 'fbx', 'stl', 'ply', 'usdz'],
 }

@@ -1,4 +1,4 @@
-# Conditions d'utilisation de Scenario Studio
+# Conditions d'utilisation de IA Studio
 
 Version 1.0 — 8 août 2026
 © 2026 Alban Pasquelin. Tous droits réservés.
@@ -28,7 +28,7 @@ Ce droit porte sur l'usage du logiciel. Il n'emporte aucune cession de propriét
   fenêtre Aide ▸ Licences.
 - Décompiler ou désassembler l'application au-delà de ce que le droit applicable autorise
   sans qu'il soit possible d'y renoncer par contrat.
-- Utiliser le nom « Scenario Studio », son icône ou son identité visuelle pour désigner un
+- Utiliser le nom « IA Studio », son icône ou son identité visuelle pour désigner un
   autre logiciel ou un service.
 
 ## 4. Propriété
@@ -128,4 +128,4 @@ consommateur résidant dans l'Union européenne, les règles de compétence prot
 
 ## 14. Contact
 
-Alban Pasquelin — https://github.com/pasquelin/scenario
+Alban Pasquelin — https://github.com/pasquelin/IAStudio

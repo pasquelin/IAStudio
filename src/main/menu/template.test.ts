@@ -382,7 +382,7 @@ describe('the Edit menu', () => {
 
 describe('menuTemplate', () => {
   it('names the application menu after the product, not the binary', () => {
-    expect(labels(menuTemplate(options()))[0]).toBe('Scenario Studio')
+    expect(labels(menuTemplate(options()))[0]).toBe('IA Studio')
   })
 
   it('leaves About to the application menu on macOS, where it belongs', () => {
@@ -407,7 +407,7 @@ describe('menuTemplate', () => {
   it('interpolates the product name rather than spelling it out per language', () => {
     const appMenu = menuTemplate(options())[0]
     const about = Array.isArray(appMenu?.submenu) ? appMenu.submenu[0] : undefined
-    expect(about?.label).toBe('À propos de Scenario Studio')
+    expect(about?.label).toBe('À propos d’IA Studio')
     expect(about?.label).not.toContain('{{name}}')
   })
 

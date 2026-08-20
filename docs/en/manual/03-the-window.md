@@ -505,7 +505,7 @@ The system menu — at the top of the screen on macOS, at the top of the window 
 | **View** | Tool windows, Reset layout, Full screen, image zoom |
 | **Objects** | **Add ▸ Mesh**, **Add ▸ Light** — in the Modelling workspace |
 | **Window** | the system's window commands |
-| **Help** | About Scenario Studio, Usage…, Licences |
+| **Help** | About IA Studio, Usage…, Licences |
 
 The shortcuts shown in the menus are **the ones you have set**.
 
@@ -544,7 +544,7 @@ so and points to the settings.
 
 ### The licences window
 
-**Help ▸ Licences** lists the software Scenario Studio ships with: name, version, and the short
+**Help ▸ Licences** lists the software IA Studio ships with: name, version, and the short
 licence name (`MIT`, `Apache-2.0`…). Click a row: the **full text** unfolds, and the link to its
 sources appears when the licence requires it.
 

@@ -227,12 +227,12 @@ describe('the renderer of a skybox', () => {
   })
 
   describe('the source picture', () => {
-    // Handing the cache a URL it had built itself made it encode the whole `scenario://` address
+    // Handing the cache a URL it had built itself made it encode the whole `ia-studio://` address
     // as an asset id, and no sky could ever load.
     it('asks for the sky by asset id, not by a URL it built itself', async () => {
       await applied(mounted(), skyOf('sky-1'))
 
-      expect(source.load).toHaveBeenCalledWith('scenario://asset/sky-1')
+      expect(source.load).toHaveBeenCalledWith('ia-studio://asset/sky-1')
     })
 
     /**
@@ -257,7 +257,7 @@ describe('the renderer of a skybox', () => {
       renderer.refreshSource()
 
       await vi.advanceTimersByTimeAsync(0)
-      expect(source.load).toHaveBeenLastCalledWith('scenario://asset/sky-1?v=after')
+      expect(source.load).toHaveBeenLastCalledWith('ia-studio://asset/sky-1?v=after')
     })
 
     it('grades the picture it was given into the background', async () => {

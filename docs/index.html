@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Scenario Studio — six ateliers de génération, une seule fenêtre</title>
-<meta name="description" content="Application de bureau multimodale : image, vidéo, 3D, audio, textures et skyboxes dans une interface à panneaux ancrables. Client indépendant de l'API Scenario, avec dictée hors ligne et pilotage par serveur MCP.">
+<title>IA Studio — six ateliers de génération, une seule fenêtre</title>
+<meta name="description" content="Application de bureau multimodale : image, vidéo, 3D, audio, textures et skyboxes dans une interface à panneaux ancrables. Dictée hors ligne et pilotage par serveur MCP.">
 <meta name="theme-color" content="#0C0D0F">
-<link rel="canonical" href="https://pasquelin.github.io/scenario/">
+<link rel="canonical" href="https://pasquelin.github.io/IAStudio/">
 
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://pasquelin.github.io/scenario/">
-<meta property="og:title" content="Scenario Studio — six ateliers de génération, une seule fenêtre">
+<meta property="og:url" content="https://pasquelin.github.io/IAStudio/">
+<meta property="og:title" content="IA Studio — six ateliers de génération, une seule fenêtre">
 <meta property="og:description" content="Six ateliers de génération dans une seule fenêtre. Electron, React 19, TypeScript. macOS, Windows, Linux.">
 <!-- Absolue, et non relative : les robots d'aperçu ne résolvent pas les chemins relatifs. -->
-<meta property="og:image" content="https://pasquelin.github.io/scenario/assets/images/accueil.webp">
+<meta property="og:image" content="https://pasquelin.github.io/IAStudio/assets/images/accueil.webp">
 <meta name="twitter:card" content="summary_large_image">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -92,13 +92,13 @@
     <div class="wrap">
       <p class="eyebrow" data-fx data-rise="16" data-delay="60">Application de bureau · projet indépendant, non affilié à Scenario Labs</p>
       <h1>
-        <span class="l1" data-fx data-split data-delay="140">Scenario</span>
+        <span class="l1" data-fx data-split data-delay="140">IA</span>
         <span class="l2" data-fx data-split data-delay="240">Studio</span>
       </h1>
       <p class="lede" data-fx data-rise="22" data-delay="520">Six ateliers de génération dans une seule fenêtre. Panneaux ancrables, timeline au timecode, inspecteur, bibliothèque sur disque : les outils d'un logiciel de production, appliqués aux modèles génératifs.</p>
       <div class="hero-actions" data-fx data-rise="20" data-delay="620">
         <a class="btn btn--fill" href="#video">Parcourir les ateliers</a>
-        <a class="btn" href="https://github.com/pasquelin/scenario" target="_blank" rel="noopener">Voir le code source</a>
+        <a class="btn" href="https://github.com/pasquelin/IAStudio" target="_blank" rel="noopener">Voir le code source</a>
       </div>
       <p class="hero-meta" data-fx data-rise="16" data-delay="720">
         <span>Electron · React 19 · TypeScript</span>
@@ -442,18 +442,18 @@
         <div class="player" data-fx data-rise="0" data-zoom="0.04" data-speedx="0.026">
           <video src="assets/video/demo.mp4" poster="assets/images/demo-poster.webp"
                  controls playsinline preload="none"
-                 aria-label="Démonstration de Scenario Studio : parcours des six ateliers, d'une génération 3D jusqu'au montage."></video>
+                 aria-label="Démonstration d’IA Studio : parcours des six ateliers, d'une génération 3D jusqu'au montage."></video>
         </div>
 
         <!-- `blob/HEAD` suit la branche par défaut du dépôt : un renommage de branche
              ne transforme pas ces six liens en 404. -->
         <ul class="doclist" data-stagger="70" data-stagger-rise="0" data-stagger-shift="-30">
-          <li><a href="https://github.com/pasquelin/scenario/blob/HEAD/docs/fr/guide-utilisateur.md" target="_blank" rel="noopener"><span>Le manuel, vingt chapitres — aussi lisibles dans l'application</span><em>guide-utilisateur.md</em></a></li>
-          <li><a href="https://github.com/pasquelin/scenario/blob/HEAD/docs/fr/architecture.md" target="_blank" rel="noopener"><span>Les invariants, les moteurs et ce qui traverse la frontière</span><em>architecture.md</em></a></li>
-          <li><a href="https://github.com/pasquelin/scenario/blob/HEAD/docs/fr/manuel/20-piloter-de-l-exterieur.md" target="_blank" rel="noopener"><span>Piloter le studio depuis un agent, par le serveur MCP</span><em>20-piloter-de-l-exterieur.md</em></a></li>
-          <li><a href="https://github.com/pasquelin/scenario/tree/HEAD/docs/ci/adr" target="_blank" rel="noopener"><span>Dix-sept décisions, avec ce qui a été écarté et pourquoi</span><em>docs/ci/adr/</em></a></li>
-          <li><a href="https://github.com/pasquelin/scenario/blob/HEAD/docs/ci/RELEASE.md" target="_blank" rel="noopener"><span>Publier une version : signature, artefacts, retour arrière</span><em>RELEASE.md</em></a></li>
-          <li><a href="https://github.com/pasquelin/scenario/blob/HEAD/LICENSE" target="_blank" rel="noopener"><span>Licence du code source — PolyForm Noncommercial 1.0.0</span><em>LICENSE</em></a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/docs/fr/guide-utilisateur.md" target="_blank" rel="noopener"><span>Le manuel, vingt chapitres — aussi lisibles dans l'application</span><em>guide-utilisateur.md</em></a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/docs/fr/architecture.md" target="_blank" rel="noopener"><span>Les invariants, les moteurs et ce qui traverse la frontière</span><em>architecture.md</em></a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/docs/fr/manuel/20-piloter-de-l-exterieur.md" target="_blank" rel="noopener"><span>Piloter le studio depuis un agent, par le serveur MCP</span><em>20-piloter-de-l-exterieur.md</em></a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/tree/HEAD/docs/ci/adr" target="_blank" rel="noopener"><span>Dix-sept décisions, avec ce qui a été écarté et pourquoi</span><em>docs/ci/adr/</em></a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/docs/ci/RELEASE.md" target="_blank" rel="noopener"><span>Publier une version : signature, artefacts, retour arrière</span><em>RELEASE.md</em></a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE" target="_blank" rel="noopener"><span>Licence du code source — PolyForm Noncommercial 1.0.0</span><em>LICENSE</em></a></li>
         </ul>
       </div>
     </div>
@@ -475,27 +475,27 @@
            que la chaîne de publication écrit au moment du tag. Ce qui est écrit ici
            est l'état affiché tant qu'aucune version n'a été publiée. -->
       <div class="dl" data-fx data-rise="28">
-        <a class="dl__item" data-dl="darwin-arm64" href="https://github.com/pasquelin/scenario/releases" target="_blank" rel="noopener">
+        <a class="dl__item" data-dl="darwin-arm64" href="https://github.com/pasquelin/IAStudio/releases" target="_blank" rel="noopener">
           <h3>macOS</h3>
           <p>Apple Silicon · .dmg</p>
           <span class="state">Version à venir</span>
         </a>
-        <a class="dl__item" data-dl="darwin-x64" href="https://github.com/pasquelin/scenario/releases" target="_blank" rel="noopener">
+        <a class="dl__item" data-dl="darwin-x64" href="https://github.com/pasquelin/IAStudio/releases" target="_blank" rel="noopener">
           <h3>macOS</h3>
           <p>Intel · .dmg</p>
           <span class="state">Version à venir</span>
         </a>
-        <a class="dl__item" data-dl="win32-x64" href="https://github.com/pasquelin/scenario/releases" target="_blank" rel="noopener">
+        <a class="dl__item" data-dl="win32-x64" href="https://github.com/pasquelin/IAStudio/releases" target="_blank" rel="noopener">
           <h3>Windows</h3>
           <p>x64 · .exe</p>
           <span class="state">Version à venir</span>
         </a>
-        <a class="dl__item" data-dl="linux-AppImage" href="https://github.com/pasquelin/scenario/releases" target="_blank" rel="noopener">
+        <a class="dl__item" data-dl="linux-AppImage" href="https://github.com/pasquelin/IAStudio/releases" target="_blank" rel="noopener">
           <h3>Linux</h3>
           <p>x86_64 · .AppImage</p>
           <span class="state">Version à venir</span>
         </a>
-        <a class="dl__item" data-dl="linux-deb" href="https://github.com/pasquelin/scenario/releases" target="_blank" rel="noopener">
+        <a class="dl__item" data-dl="linux-deb" href="https://github.com/pasquelin/IAStudio/releases" target="_blank" rel="noopener">
           <h3>Debian, Ubuntu</h3>
           <p>x86_64 · .deb</p>
           <span class="state">Version à venir</span>
@@ -503,10 +503,10 @@
       </div>
 
       <p class="dl-note" data-fx data-rise="18" data-delay="120">
-        L'installeur est régi par les <a href="https://github.com/pasquelin/scenario/blob/HEAD/EULA.md" target="_blank" rel="noopener">conditions d'utilisation</a> ; le code source, par la licence <a href="https://github.com/pasquelin/scenario/blob/HEAD/LICENSE" target="_blank" rel="noopener">PolyForm Noncommercial&nbsp;1.0.0</a>. L'application ne donne accès à aucun service de génération : elle utilise la clé d'API que vous fournissez, sous votre compte et à vos frais.
+        L'installeur est régi par les <a href="https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md" target="_blank" rel="noopener">conditions d'utilisation</a> ; le code source, par la licence <a href="https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE" target="_blank" rel="noopener">PolyForm Noncommercial&nbsp;1.0.0</a>. L'application ne donne accès à aucun service de génération : elle utilise la clé d'API que vous fournissez, sous votre compte et à vos frais.
       </p>
 
-      <pre class="term" data-fx data-rise="22" data-delay="140"><code><b>git</b> clone https://github.com/pasquelin/scenario.git
+      <pre class="term" data-fx data-rise="22" data-delay="140"><code><b>git</b> clone https://github.com/pasquelin/IAStudio.git
 <b>pnpm</b> install
 <b>pnpm</b> start</code></pre>
     </div>
@@ -521,7 +521,7 @@
   <div class="wrap">
     <div class="footer__grid" data-fx data-rise="22">
       <div>
-        <h4>Scenario Studio</h4>
+        <h4>IA Studio</h4>
         <p style="margin:0;max-width:34ch">Application de bureau multimodale, développée en solo. Electron, React, TypeScript.</p>
       </div>
       <div>
@@ -541,8 +541,8 @@
           <li><a href="#docs">Documentation</a></li>
           <li><a href="#architecture">Architecture</a></li>
           <li><a href="#telecharger">Téléchargement</a></li>
-          <li><a href="https://github.com/pasquelin/scenario" target="_blank" rel="noopener">Dépôt</a></li>
-          <li><a href="https://github.com/pasquelin/scenario/blob/HEAD/LICENSE" target="_blank" rel="noopener">Licence</a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio" target="_blank" rel="noopener">Dépôt</a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE" target="_blank" rel="noopener">Licence</a></li>
         </ul>
       </div>
       <div>
@@ -565,7 +565,7 @@
       L'application <strong>ne donne accès à aucun service de génération et n'en revend aucun</strong>. Elle se connecte à l'API publique au moyen de la clé que vous fournissez, sous votre propre compte : l'usage que vous en faites relève des conditions de Scenario Labs, que vous acceptez directement auprès d'eux, et les coûts sont à votre charge. Une interruption ou une modification du service tiers ne relève pas de l'éditeur de cette application.
     </p>
     <p class="legal" data-fx data-rise="18" data-delay="240">
-      Code source sous licence <a href="https://github.com/pasquelin/scenario/blob/HEAD/LICENSE" target="_blank" rel="noopener">PolyForm Noncommercial 1.0.0</a> · application distribuée sous ses <a href="https://github.com/pasquelin/scenario/blob/HEAD/EULA.md" target="_blank" rel="noopener">conditions d'utilisation</a> · composants tiers listés dans les <a href="https://github.com/pasquelin/scenario/blob/HEAD/THIRD-PARTY-NOTICES.md" target="_blank" rel="noopener">mentions</a>. © 2026 Alban Pasquelin.
+      Code source sous licence <a href="https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE" target="_blank" rel="noopener">PolyForm Noncommercial 1.0.0</a> · application distribuée sous ses <a href="https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md" target="_blank" rel="noopener">conditions d'utilisation</a> · composants tiers listés dans les <a href="https://github.com/pasquelin/IAStudio/blob/HEAD/THIRD-PARTY-NOTICES.md" target="_blank" rel="noopener">mentions</a>. © 2026 Alban Pasquelin.
     </p>
   </div>
 </footer>
@@ -574,7 +574,7 @@
      BARRE DE STATUT — position de lecture, comme dans l'application.
      =================================================================== -->
 <div class="status-bar" role="status" aria-live="off">
-  <span class="hide-s"><b>projet</b> scenario-studio</span>
+  <span class="hide-s"><b>projet</b> ia-studio</span>
   <span class="hide-s"><b>atelier</b> <span class="cur" data-current>Accueil</span></span>
   <span class="sp"></span>
   <span><b>position</b> <span class="tc" data-timecode>00:00:00:00</span></span>

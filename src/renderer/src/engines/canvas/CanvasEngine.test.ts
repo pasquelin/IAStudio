@@ -1548,7 +1548,7 @@ describe('painting into a mask', () => {
 })
 
 describe('loading a picture into a layer', () => {
-  const URL = 'scenario://asset/take-1'
+  const URL = 'ia-studio://asset/take-1'
 
   it('draws it into the texture of the layer it names', async () => {
     const { engine } = await mounted(stacked([pixelLayer('a', 'A'), pixelLayer('b', 'B')]))
@@ -1592,7 +1592,7 @@ describe('loading a picture into a layer', () => {
     engine.apply(stacked([pixelLayer('layer-1', 'Background'), laid]))
     await flushMicrotasks()
 
-    expect(gpu.loaded).toEqual([{ src: 'scenario://asset/asset-7', parser: 'texture' }])
+    expect(gpu.loaded).toEqual([{ src: 'ia-studio://asset/asset-7', parser: 'texture' }])
   })
 
   // Once, when it is born: redrawing on every state would repaint over what has been painted.
@@ -1641,7 +1641,7 @@ describe('loading a picture into a layer', () => {
     engine.apply(stacked([laid]))
     await flushMicrotasks()
 
-    expect(gpu.loaded.map(asked => asked.src)).toContain('scenario://asset/asset-7')
+    expect(gpu.loaded.map(asked => asked.src)).toContain('ia-studio://asset/asset-7')
   })
 
   // Same fallback on the other path: a surface that already exists takes its pixels directly,
@@ -1661,7 +1661,7 @@ describe('loading a picture into a layer', () => {
     ).rejects.toThrow()
     await flushMicrotasks()
 
-    expect(gpu.loaded.map(asked => asked.src)).toContain('scenario://asset/asset-7')
+    expect(gpu.loaded.map(asked => asked.src)).toContain('ia-studio://asset/asset-7')
   })
 
   /**
@@ -3143,7 +3143,7 @@ describe('the crop tool', () => {
   it('moves the picture’s grips with the pixels when the document is cropped', async () => {
     const { engine, host, layers } = await mounted(DEFAULT_CANVAS, 'crop')
     // 200 × 100 centred in 1024²: the picture sits at 412,462.
-    await engine.loadInto('layer-1', 'scenario://asset/take-1')
+    await engine.loadInto('layer-1', 'ia-studio://asset/take-1')
 
     press(host, 400, 450)
     drag(host, 700, 600)
@@ -3297,7 +3297,7 @@ describe('the transform grips', () => {
    */
   it('puts the grips on the picture the layer holds, not on the surface around it', async () => {
     const { host, engine, layers } = await armed()
-    await engine.loadInto('layer-1', 'scenario://asset/take-1')
+    await engine.loadInto('layer-1', 'ia-studio://asset/take-1')
 
     press(host, 612, 562)
     drag(host, 812, 662)

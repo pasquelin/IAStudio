@@ -8,7 +8,7 @@
 `electron-builder` intègre la publication vers les GitHub Releases, et `electron-updater` sait
 les consommer sans configuration serveur.
 
-Le dépôt `pasquelin/scenario` est **public**, et c’est ce qui rend ce canal utilisable tel quel :
+Le dépôt `pasquelin/IAStudio` est **public**, et c’est ce qui rend ce canal utilisable tel quel :
 les assets d’une release privée exigent un jeton authentifié, que le client n’a pas.
 
 ## Décision

@@ -32,4 +32,4 @@ export const SPLASH_BACKGROUND_COLOR: Record<ResolvedTheme, string> = {
  */
 export const MIRROR_BACKGROUND = '#000000'
 
-export const APP_NAME = 'Scenario Studio'
+export const APP_NAME = 'IA Studio'

@@ -598,7 +598,7 @@ describe('the project explorer', () => {
 
       expect((await rowFor('facade.jpg')).querySelector('img')).toHaveAttribute(
         'src',
-        'scenario://thumb/facade.jpg',
+        'ia-studio://thumb/facade.jpg',
       )
       expect((await rowFor('Images')).querySelector('img')).toBeNull()
     })
@@ -1745,7 +1745,7 @@ describe('the project explorer, as a grid', () => {
 
     expect((await tileFor('facade.jpg')).querySelector('img')).toHaveAttribute(
       'src',
-      'scenario://thumb/facade.jpg',
+      'ia-studio://thumb/facade.jpg',
     )
   })
 

@@ -72,7 +72,7 @@ My project/
 │
 ├── .project.json         the identity card — HIDDEN
 │
-├── .scenario/            A BACKUP OF THE CATALOGUE — HIDDEN
+├── .ia-studio/            A BACKUP OF THE CATALOGUE — HIDDEN
 │   └── items.json          what a file cannot say about itself
 │
 └── .index/               THE CATALOGUE AND ITS CACHES — KEEP THIS, HIDDEN
@@ -93,7 +93,7 @@ tools, not your work.
 > land, where the studio recreates it rather than refusing to work.
 
 > **On Windows a dot hides nothing** — Explorer reads a file attribute, not the name. The studio
-> sets it on `.project.json` and on `.index/` itself. **`.scenario/` does not get it**: the day it
+> sets it on `.project.json` and on `.index/` itself. **`.ia-studio/` does not get it**: the day it
 > appears — it is only written after a pass that found something — you will see it in Windows
 > Explorer, beside your own folders. There is nothing to do about it: it is the backup described
 > below. If setting the attribute fails, **the project opens anyway**: a service
@@ -138,7 +138,7 @@ import; the pass that re-reads the folder when a project opens FINDS files that 
 does not guess again what they are. Deleting `.index/` therefore leaves a project whose files are
 all still there and about which nothing says what they are.
 
-> **That is what `.scenario/items.json` is for.** After every pass that changed something, the
+> **That is what `.ia-studio/items.json` is for.** After every pass that changed something, the
 > studio copies into it what a file cannot say about itself: its name, its tags, the model and the
 > prompt that produced it — keyed by the fingerprint of the contents, so that a file found again
 > can be recognised. It is not a source: the studio never reads it of its own accord. It is what is
@@ -349,7 +349,7 @@ document: undoing on the canvas must not reach your disk.
 > "This cannot be undone.", and it means it.
 
 **One refusal, greyed rather than hidden.** What the studio keeps for itself — everything starting
-with a dot: `.index/`, `.scenario/`, `.project.json` — cannot be renamed or trashed, and receives
+with a dot: `.index/`, `.ia-studio/`, `.project.json` — cannot be renamed or trashed, and receives
 nothing either. Those are its tools; renaming one would break the project for a name nobody reads.
 **The same refusal holds on both sides of a drag**: you see before you let go.
 

@@ -552,7 +552,7 @@ export type AssetChanges = {
   type?: AssetType
 }
 
-export const ASSET_SCHEME = 'scenario'
+export const ASSET_SCHEME = 'ia-studio'
 export const ASSET_HOST = 'asset'
 
 /**
@@ -570,7 +570,7 @@ export const POSTER_HOST = 'poster'
 export const THUMB_HOST = 'thumb'
 
 /**
- * `scenario://<host>/<id>`. One scheme, one host per kind of thing it serves — the favourites
+ * `ia-studio://<host>/<id>`. One scheme, one host per kind of thing it serves — the favourites
  * keep their stills outside any project, so they answer on a host of their own.
  */
 export function hostedUrl(host: string, id: string): string {
@@ -660,7 +660,7 @@ export function versionedUrl(url: string, version: string | undefined): string {
   return version ? `${url}?v=${encodeURIComponent(version)}` : url
 }
 
-/** `scenario://asset/<id>` → `<id>`. Anything else is not ours to serve. */
+/** `ia-studio://asset/<id>` → `<id>`. Anything else is not ours to serve. */
 export function assetIdFromUrl(url: string): string | null {
   return hostedIdFromUrl(url, ASSET_HOST)
 }

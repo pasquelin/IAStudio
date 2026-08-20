@@ -664,9 +664,9 @@ Opens your file manager where your settings are saved, in a file called `setting
 
 | System | Where |
 |---|---|
-| macOS | `~/Library/Application Support/Scenario Studio/settings.json` |
-| Windows | `%APPDATA%\Scenario Studio\settings.json` |
-| Linux | `~/.config/Scenario Studio/settings.json` |
+| macOS | `~/Library/Application Support/IA Studio/settings.json` |
+| Windows | `%APPDATA%\IA Studio\settings.json` |
+| Linux | `~/.config/IA Studio/settings.json` |
 
 Useful to copy them before moving to another machine, or to send to someone helping you understand
 a problem.

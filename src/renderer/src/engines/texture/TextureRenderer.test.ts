@@ -61,12 +61,12 @@ describe('the texture preview', () => {
 
   /**
    * The cache takes an asset id and builds the URL itself. Handing it one already built made it
-   * encode the whole `scenario://` URL as an id, and the sky could never load.
+   * encode the whole `ia-studio://` URL as an id, and the sky could never load.
    */
   it('asks for the sky by asset id, not by a URL it built itself', async () => {
     await applied(mounted(), skyOf('sky-1'))
 
-    expect(source.load).toHaveBeenCalledWith('scenario://asset/sky-1')
+    expect(source.load).toHaveBeenCalledWith('ia-studio://asset/sky-1')
   })
 
   /** Both halves: an orbit panned with the middle button aims elsewhere, and putting only the
@@ -201,7 +201,7 @@ describe('the texture preview', () => {
 
       await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(PBR_CHANNELS.length))
       for (const channel of PBR_CHANNELS) {
-        expect(source.load).toHaveBeenCalledWith(`scenario://asset/${channel}-1`)
+        expect(source.load).toHaveBeenCalledWith(`ia-studio://asset/${channel}-1`)
       }
     })
 
@@ -403,7 +403,7 @@ describe('the texture preview', () => {
       renderer.refreshMaps()
 
       await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(2))
-      expect(source.load).toHaveBeenLastCalledWith('scenario://asset/base-1?v=after')
+      expect(source.load).toHaveBeenLastCalledWith('ia-studio://asset/base-1?v=after')
     })
   })
 })

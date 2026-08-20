@@ -1,7 +1,7 @@
 import { assetUrl } from '@shared/domain/asset'
 
 /**
- * An asset's bytes, over the `scenario://` scheme.
+ * An asset's bytes, over the `ia-studio://` scheme.
  *
  * The renderer never handles a file path: the main process resolves the id against the
  * catalogue when it serves the scheme. Written once — the video monitor and the audio decoder

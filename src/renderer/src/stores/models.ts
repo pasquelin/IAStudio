@@ -104,7 +104,7 @@ export const useModels = create<ModelsState>()(
       dropPreparation: () => set(state => (state.prepared ? { prepared: null } : state)),
     }),
     {
-      name: 'scenario-studio:models',
+      name: 'ia-studio:models',
       // Bumped with the shape of `CollectionState`: an entry missing `thumbnailSize` lays the
       // grid out in zero-wide columns, which reads as a panel that lost its content.
       //

@@ -5,7 +5,7 @@
 
 ## Contexte
 
-Le dépôt `pasquelin/scenario` est **public** et ne portait aucun fichier `LICENSE`.
+Le dépôt `pasquelin/IAStudio` est **public** et ne portait aucun fichier `LICENSE`.
 `package.json` déclarait `"license": "UNLICENSED"`, ce qui vaut pour npm et pour rien d’autre.
 
 En droit d’auteur l’absence de licence signifie « tous droits réservés », donc le projet était
@@ -97,7 +97,10 @@ fichier modifié devrait lui-même être publié.
   L’hypothèse est désormais écrite là où elle se corrige.
 - Un composant copyleft ajouté sans offre de sources casse `pnpm licences:collect`, donc la
   build. C’est le point de contrôle : il ne dépend de la vigilance de personne.
-- **Le nom reste un sujet ouvert, et il n’est pas de licence.** « Scenario Studio » et
-  `com.scenario.app` reprennent la marque d’un tiers. L'`EULA.md` porte une clause de
-  non-affiliation, ce qui atténue sans régler. Un changement de nom ou une autorisation écrite
-  de Scenario Labs sont les deux seules issues, et cela relève d’une décision produit.
+- **Le nom était un sujet ouvert ; il est clos depuis le 21/08.** « Scenario Studio » et
+  `com.scenario.app` reprenaient la marque d’un tiers, et l’`EULA.md` n’y opposait qu’une clause
+  de non-affiliation — ce qui atténuait sans régler. La décision produit a été rendue : le studio
+  s’appelle **IA Studio**, son `appId` est `com.pasquelin.iastudio`, et plus aucun identifiant du
+  dépôt ne porte le mot. Ce qui subsiste est technique et nominatif — le paquet
+  `@scenario-labs/sdk`, les URL `*.scenario.com` et les variables `SCENARIO_API_*` — tant que
+  l’application appelle cette API.

@@ -8,8 +8,8 @@ import { useAssets } from '@/stores/assets'
 import { LinkField, type LinkFieldProps, type LinkOption } from './LinkField'
 
 const OPTIONS: LinkOption[] = [
-  { id: 'tex-1', name: 'Brick', url: 'scenario://asset/tex-1' },
-  { id: 'tex-2', name: 'Rust', url: 'scenario://asset/tex-2' },
+  { id: 'tex-1', name: 'Brick', url: 'ia-studio://asset/tex-1' },
+  { id: 'tex-2', name: 'Rust', url: 'ia-studio://asset/tex-2' },
 ]
 
 /** What the drag carries — resolved against the catalogue by the drop, never sent with it. */
@@ -209,7 +209,7 @@ describe('LinkField', () => {
       await waitFor(() =>
         expect(screen.getByRole('img', { name: 'Brick' })).toHaveAttribute(
           'src',
-          'scenario://asset/tex-1',
+          'ia-studio://asset/tex-1',
         ),
       )
     })
