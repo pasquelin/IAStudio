@@ -41,7 +41,7 @@ export function AssetInspectorGeneration({
   }
 
   return (
-    <PropertySection title={t('inspector.generation')}>
+    <PropertySection title={t('inspector.generation')} scId="asset.generation">
       <PropertyRow label={t('inspector.model')}>{generation.modelLabel}</PropertyRow>
       {generation.seed !== undefined && (
         <PropertyRow label={t('inspector.seed')}>{generation.seed}</PropertyRow>

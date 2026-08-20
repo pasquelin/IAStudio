@@ -39,6 +39,7 @@ export function EnvironmentGroundSection({
     <PropertySection title={t('environment.ground')} defaultOpen={false} scId="ground">
       <ToggleField
         label={t('environment.gridVisible')}
+        scId="environment.gridVisible"
         value={showGrid}
         onChange={value => onViewport({ showGrid: value })}
       />
@@ -46,6 +47,7 @@ export function EnvironmentGroundSection({
       {showGrid && (
         <NumberField
           label={t('environment.gridSize')}
+          scId="environment.gridSize"
           value={gridSize}
           min={2}
           max={500}
@@ -57,6 +59,7 @@ export function EnvironmentGroundSection({
 
       <ToggleField
         label={t('environment.groundVisible')}
+        scId="environment.groundVisible"
         value={ground.visible}
         onChange={visible => onChange({ ground: { ...ground, visible } })}
       />
@@ -65,6 +68,7 @@ export function EnvironmentGroundSection({
         <>
           <ColorField
             label={t('environment.groundColor')}
+            scId="environment.groundColor"
             value={ground.color ?? FIRST_GROUND}
             onChange={color => onChange({ ground: { ...ground, color } })}
             {...gesture}
@@ -72,6 +76,7 @@ export function EnvironmentGroundSection({
 
           <NumberField
             label={t('environment.groundSize')}
+            scId="environment.groundSize"
             value={ground.size}
             min={GROUND_SIZE.min}
             max={GROUND_SIZE.max}
@@ -82,6 +87,7 @@ export function EnvironmentGroundSection({
 
           <SliderField
             label={t('environment.groundOpacity')}
+            scId="environment.groundOpacity"
             value={ground.opacity}
             min={0}
             max={1}
@@ -92,6 +98,7 @@ export function EnvironmentGroundSection({
 
           <ToggleField
             label={t('environment.groundShadows')}
+            scId="environment.groundShadows"
             value={ground.receiveShadow}
             onChange={receiveShadow => onChange({ ground: { ...ground, receiveShadow } })}
           />

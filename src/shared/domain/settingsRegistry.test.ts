@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { isRecord } from '../guards'
 import { LANGUAGES, TRANSLATIONS } from '../i18n'
+import { SETTING_ACTION_IDS } from './settingAction'
 import { defaultAt } from './settingsPath'
 import {
   ACTION_REGISTRY,
@@ -64,6 +65,16 @@ function keysOf(): string[] {
 const NUMERIC: ReadonlySet<SettingKind> = new Set<SettingKind>(['number', 'slider'])
 
 describe('settings registry', () => {
+  /**
+   * The ids were DERIVED from the registry until the action catalogue needed them: importing this
+   * module to close a field over them dragged every setting and its help text into the opening
+   * chunk, which `eager-graph.test.ts` refuses. They are written out in a module of their own now,
+   * so this is what stops the two lists parting company.
+   */
+  it('names the same buttons as the list the tool schema closes over', () => {
+    expect([...SETTING_ACTION_IDS].sort()).toEqual(ACTION_REGISTRY.map(action => action.id).sort())
+  })
+
   it('describes each setting once', () => {
     const paths = SETTING_REGISTRY.map(descriptor => descriptor.path)
     expect(new Set(paths).size).toBe(paths.length)

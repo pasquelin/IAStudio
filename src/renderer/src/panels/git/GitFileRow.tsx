@@ -34,6 +34,8 @@ export function GitFileRow({ file }: { file: GitFile }) {
       file={file}
       leading={
         <input
+          // The path, which is what tells one row from the next — its label is the file name.
+          data-sc={`field:git.stage.${file.path}`}
           type="checkbox"
           className={cn(CHECKBOX, 'size-3')}
           checked={file.stage === 'staged'}

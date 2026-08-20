@@ -41,6 +41,7 @@ export function EnvironmentHelpersSection({
     <PropertySection title={t('environment.helpers')} defaultOpen={false} scId="helpers">
       <SelectField
         label={t('environment.lightHelpers')}
+        scId="environment.lightHelpers"
         value={view.lightHelpers}
         options={visibility.options}
         onChange={lightHelpers => onViewport({ lightHelpers })}
@@ -49,6 +50,7 @@ export function EnvironmentHelpersSection({
 
       <SelectField
         label={t('environment.cameraHelpers')}
+        scId="environment.cameraHelpers"
         value={view.cameraHelpers}
         options={visibility.options}
         onChange={cameraHelpers => onViewport({ cameraHelpers })}
@@ -57,6 +59,7 @@ export function EnvironmentHelpersSection({
 
       <SelectField
         label={t('environment.boundingBoxes')}
+        scId="environment.boundingBoxes"
         value={view.boundingBoxes}
         options={visibility.options}
         onChange={boundingBoxes => onViewport({ boundingBoxes })}
@@ -65,16 +68,23 @@ export function EnvironmentHelpersSection({
 
       {/* Session state, unlike its neighbours: skeletons are per document, and the toolbar and
           the native menu already toggle this very field. */}
-      <ToggleField label={t('environment.skeletons')} value={skeletons} onChange={onSkeletons} />
+      <ToggleField
+        label={t('environment.skeletons')}
+        scId="environment.skeletons"
+        value={skeletons}
+        onChange={onSkeletons}
+      />
 
       <ToggleField
         label={t('environment.origins')}
+        scId="environment.origins"
         value={view.origins}
         onChange={origins => onViewport({ origins })}
       />
 
       <ToggleField
         label={t('environment.normals')}
+        scId="environment.normals"
         value={view.normals}
         onChange={normals => onViewport({ normals })}
       />
@@ -82,6 +92,7 @@ export function EnvironmentHelpersSection({
       {view.normals && (
         <SliderField
           label={t('environment.normalLength')}
+          scId="environment.normalLength"
           value={view.normalLength}
           min={NORMAL_LENGTH.min}
           max={NORMAL_LENGTH.max}

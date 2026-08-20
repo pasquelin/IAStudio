@@ -59,6 +59,9 @@ export function SettingRowControl({
       return (
         <select
           id={id}
+          // Composed from `id`, which carries the setting's own path — one spelling for every
+          // control of this window, whether it comes from the design system or not.
+          data-sc={`field:${id}`}
           aria-describedby={describedBy}
           className={SETTING_SELECT}
           value={String(value ?? '')}
@@ -83,6 +86,7 @@ export function SettingRowControl({
       return (
         <input
           id={id}
+          data-sc={`field:${id}`}
           aria-describedby={describedBy}
           className="input input-sm w-24"
           type="number"
@@ -102,6 +106,7 @@ export function SettingRowControl({
         <div className="flex items-center gap-2">
           <Slider
             id={id}
+            scId={id}
             describedBy={describedBy}
             className="w-40"
             min={descriptor.min}
@@ -124,6 +129,7 @@ export function SettingRowControl({
       return (
         <input
           id={id}
+          data-sc={`field:${id}`}
           aria-describedby={describedBy}
           className="toggle toggle-sm"
           type="checkbox"

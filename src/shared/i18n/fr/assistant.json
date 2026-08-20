@@ -806,7 +806,6 @@
       "parentBone": "Os auquel accrocher",
       "boneRole": "Articulation du standard humanoïde",
       "chainId": "Identifiant de la chaîne",
-      "clipId": "Identifiant du bloc",
       "fps": "Images par seconde",
       "autoKey": "Poser une clé à chaque déplacement",
       "timeoutMs": "Attente maximale, en millisecondes",

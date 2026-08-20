@@ -21,7 +21,7 @@ export function ModelTexturesSection({ assetId, name }: ModelTexturesSectionProp
   const { t } = useTranslation()
 
   return (
-    <PropertySection title={t('inspector.modelTextures')}>
+    <PropertySection title={t('inspector.modelTextures')} scId="modelTextures">
       {/* Inside the section rather than around it: what is folded away is unmounted, so folding
           this one stops asking the catalogue as well as stops drawing it. */}
       <ModelTexturesSectionList

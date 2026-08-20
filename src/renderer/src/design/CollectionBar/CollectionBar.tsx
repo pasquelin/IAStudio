@@ -98,6 +98,8 @@ export function CollectionBar({
         key={facet.key}
         layout="bar"
         label={facet.label}
+        // The facet's own key: its label is what the panel that declared it chose to show.
+        scId={`collection.facet.${facet.key}`}
         hint={TIP_BOTTOM(facet.label)}
         // The facet's own name stands for "no choice": once a value is picked, the closed control
         // shows the value and what it filters on is nowhere on screen.
@@ -115,6 +117,7 @@ export function CollectionBar({
     <SelectField
       layout="bar"
       label={t('collection.sort')}
+      scId="collection.sort"
       hint={TIP_BOTTOM(t('collection.sort'))}
       options={sorts}
       value={state.sort ?? sorts[0]?.value ?? ''}

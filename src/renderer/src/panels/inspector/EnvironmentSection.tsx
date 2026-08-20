@@ -34,7 +34,7 @@ export const EnvironmentSection = memo(function EnvironmentSection({
   const options = useProjectPictures(SKIES)
 
   return (
-    <PropertySection title={t('inspector.environment')}>
+    <PropertySection title={t('inspector.environment')} scId="environment">
       <LinkField
         label={t('inspector.sky')}
         value={environment.kind === 'skybox' ? environment.assetId : null}

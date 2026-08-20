@@ -18,7 +18,7 @@ export function SelectionSummary({ count, bytes }: { count: number; bytes: numbe
   const { t, i18n } = useTranslation()
 
   return (
-    <PropertySection title={t('inspector.selection')}>
+    <PropertySection title={t('inspector.selection')} scId="selection">
       <PropertyRow label={t('inspector.count')}>{count}</PropertyRow>
       {/* Nothing rather than « 0 o »: a selection the catalogue holds no size for has not been
           measured, which is a different thing from weighing nothing. */}

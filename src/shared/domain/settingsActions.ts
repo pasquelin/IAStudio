@@ -1,6 +1,6 @@
 import { action, type AssistantAction } from './assistantAction'
 import { DEFAULT_SETTINGS } from './settings'
-import { SETTING_ACTION_IDS, type SettingActionId } from './settingsRegistry'
+import { SETTING_ACTION_IDS, type SettingActionId } from './settingAction'
 
 /** The two buttons nothing takes back: one writes outside the studio, the other empties it. */
 const IRREVERSIBLE: readonly SettingActionId[] = ['advanced.installResolveBridge', 'advanced.reset']

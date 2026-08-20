@@ -266,6 +266,7 @@ export function AssistantOverlay() {
               <SelectField
                 layout="inline"
                 label={t('assistant.model')}
+                scId="assistant.model"
                 hint={TIP_TOP(t('assistant.model'), false, t('assistant.modelHint'))}
                 value={model}
                 // Named from the bundle, never from the union: a raw `gemini-3.5-flash` in an

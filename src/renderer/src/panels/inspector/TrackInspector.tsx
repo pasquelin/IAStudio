@@ -29,13 +29,13 @@ export function TrackInspector({ documentId, track }: TrackInspectorProps) {
 
   return (
     <>
-      <PropertySection title={t('inspector.track')}>
+      <PropertySection title={t('inspector.track')} scId="track">
         <PropertyRow label={t('inspector.name')}>{track.name}</PropertyRow>
         <PropertyRow label={t('inspector.kind')}>{t(`inspector.kind_${track.kind}`)}</PropertyRow>
         <PropertyRow label={t('inspector.clips')}>{clips}</PropertyRow>
       </PropertySection>
 
-      <PropertySection title={t('inspector.state')}>
+      <PropertySection title={t('inspector.state')} scId="track.state">
         {TRACK_FLAGS.map(flag => (
           <PropertyRow key={flag.key} label={t(`inspector.${flag.key}`)}>
             <TrackFlagButton
@@ -49,6 +49,7 @@ export function TrackInspector({ documentId, track }: TrackInspectorProps) {
         ))}
         <NumberField
           label={t('inspector.height')}
+          scId="track.height"
           value={track.height}
           min={MIN_TRACK_HEIGHT}
           max={MAX_TRACK_HEIGHT}

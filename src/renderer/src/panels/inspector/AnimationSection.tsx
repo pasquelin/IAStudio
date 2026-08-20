@@ -140,7 +140,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   }
 
   return (
-    <PropertySection title={t('inspector.animation')}>
+    <PropertySection title={t('inspector.animation')} scId="animation">
       <QuietNote>{t(`inspector.rigStatus_${rig.status}`)}</QuietNote>
 
       {/* The one way in, and it browses by LAYING: the preview is the result, never a rehearsal. */}
@@ -194,6 +194,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
         <>
           <SliderField
             label={t('inspector.clipSpeed')}
+            scId="animation.clipSpeed"
             value={played.speed}
             min={MIN_SPEED}
             max={MAX_SPEED}
@@ -203,6 +204,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
           />
           <ToggleField
             label={t('inspector.clipLoop')}
+            scId="animation.clipLoop"
             value={played.loop}
             onChange={loop => write({ ...played, loop })}
           />
@@ -210,6 +212,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
               and a block whose two ends faded differently would have no such thing. */}
           <SliderField
             label={t('inspector.clipFade')}
+            scId="animation.clipFade"
             value={usToSeconds(played.fadeIn)}
             min={0}
             max={MAX_FADE}

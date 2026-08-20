@@ -65,6 +65,7 @@ export function DictationSettings() {
       >
         <select
           id={FIELD_ID}
+          data-sc="field:dictation.device"
           // Wider than the shared cap: the registry rows it was drawn for hold short words, and a
           // device reads « MacBook Pro Microphone (Built-in) ».
           className={cn(SETTING_SELECT, 'max-w-md')}

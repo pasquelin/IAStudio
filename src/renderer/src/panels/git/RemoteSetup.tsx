@@ -26,6 +26,7 @@ export function RemoteSetup() {
   return (
     <div className={cn(PANEL_BAR, 'p-2')}>
       <input
+        data-sc="field:git.remoteUrl"
         type="url"
         value={url}
         aria-label={t('git.remoteUrl')}

@@ -37,6 +37,7 @@ export function CameraShotSectionMotion({
 
       <NumberField
         label={t('inspector.railFrom')}
+        scId="camera.railFrom"
         value={motion.from}
         min={0}
         max={1}
@@ -46,6 +47,7 @@ export function CameraShotSectionMotion({
       />
       <NumberField
         label={t('inspector.railTo')}
+        scId="camera.railTo"
         value={motion.to}
         min={0}
         max={1}

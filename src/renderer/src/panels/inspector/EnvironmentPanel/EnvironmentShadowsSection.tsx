@@ -32,6 +32,7 @@ export function EnvironmentShadowsSection({ view, onViewport }: EnvironmentShado
     <PropertySection title={t('environment.shadows')} defaultOpen={false} scId="shadows">
       <SelectField
         label={t('environment.shadowsLevel')}
+        scId="environment.shadowsLevel"
         value={level}
         options={levels.options}
         onChange={wanted => onViewport(shadowPreferenceFor(wanted))}

@@ -35,6 +35,7 @@ export function EnvironmentAtmosphereSection({
     <PropertySection title={t('environment.atmosphere')} defaultOpen={false} scId="atmosphere">
       <SelectField
         label={t('environment.fog')}
+        scId="environment.fog"
         value={fog.kind}
         options={kinds.options}
         onChange={kind => onChange({ fog: fogOfKind(kind, fog) })}
@@ -44,6 +45,7 @@ export function EnvironmentAtmosphereSection({
       {fog.kind !== 'none' && (
         <ColorField
           label={t('environment.fogColor')}
+          scId="environment.fogColor"
           value={fog.color}
           onChange={color => onChange({ fog: { ...fog, color } })}
           {...gesture}
@@ -54,6 +56,7 @@ export function EnvironmentAtmosphereSection({
         <>
           <NumberField
             label={t('environment.fogNear')}
+            scId="environment.fogNear"
             value={fog.near}
             min={0}
             step={1}
@@ -63,6 +66,7 @@ export function EnvironmentAtmosphereSection({
 
           <NumberField
             label={t('environment.fogFar')}
+            scId="environment.fogFar"
             value={fog.far}
             min={0}
             step={1}
@@ -75,6 +79,7 @@ export function EnvironmentAtmosphereSection({
       {fog.kind === 'exp2' && (
         <SliderField
           label={t('environment.fogDensity')}
+          scId="environment.fogDensity"
           value={fog.density}
           min={FOG_DENSITY.min}
           max={FOG_DENSITY.max}

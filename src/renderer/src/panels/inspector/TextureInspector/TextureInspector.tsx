@@ -79,9 +79,10 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
           tuned by the sections underneath. */}
       <StylesSection documentId={documentId} />
 
-      <PropertySection title={t('inspector.material')}>
+      <PropertySection title={t('inspector.material')} scId="texture.material">
         <ColorField
           label={t('texture.baseTint')}
+          scId="texture.baseTint"
           value={material.color}
           onChange={value => onMaterial('color', value)}
           {...edit.gesture}
@@ -89,6 +90,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
 
         <SliderField
           label={t('texture.roughness')}
+          scId="texture.roughness"
           value={material.roughness}
           min={0}
           max={1}
@@ -114,6 +116,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
 
         <SliderField
           label={t('texture.metalness')}
+          scId="texture.metalness"
           value={material.metalness}
           min={0}
           max={1}
@@ -137,6 +140,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
 
         <SliderField
           label={t('texture.aoIntensity')}
+          scId="texture.aoIntensity"
           value={material.aoIntensity}
           min={0}
           max={1}
@@ -147,6 +151,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         />
         <SliderField
           label={t('texture.edgeIntensity')}
+          scId="texture.edgeIntensity"
           value={material.edgeIntensity}
           min={0}
           max={1}
@@ -157,12 +162,13 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         />
       </PropertySection>
 
-      <PropertySection title={t('texture.relief')}>
+      <PropertySection title={t('texture.relief')} scId="texture.relief">
         {/* Signed on purpose: a negative scale flips the relief, which is the answer to a normal
             map baked the other way round. */}
         {/* The bounds come from the state, which clamps a hand-edited file to the same ones. */}
         <SliderField
           label={t('texture.normalScale')}
+          scId="texture.normalScale"
           value={material.normalScale}
           {...MATERIAL_BOUNDS.normalScale}
           onChange={value => onMaterial('normalScale', value)}
@@ -171,6 +177,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         />
         <ToggleField
           label={t('texture.invertNormalGreen')}
+          scId="texture.invertNormalGreen"
           value={material.invertNormalGreen}
           onChange={value => onMaterial('invertNormalGreen', value)}
         />
@@ -178,6 +185,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
             scene it previews, so displacement is something asked for rather than assumed. */}
         <SliderField
           label={t('texture.heightScale')}
+          scId="texture.heightScale"
           value={material.heightScale}
           {...MATERIAL_BOUNDS.heightScale}
           onChange={value => onMaterial('heightScale', value)}
@@ -186,15 +194,17 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         />
       </PropertySection>
 
-      <PropertySection title={t('texture.emission')}>
+      <PropertySection title={t('texture.emission')} scId="texture.emission">
         <ColorField
           label={t('texture.emissive')}
+          scId="texture.emissive"
           value={material.emissive}
           onChange={value => onMaterial('emissive', value)}
           {...edit.gesture}
         />
         <SliderField
           label={t('texture.emissiveIntensity')}
+          scId="texture.emissiveIntensity"
           value={material.emissiveIntensity}
           {...MATERIAL_BOUNDS.emissiveIntensity}
           onChange={value => onMaterial('emissiveIntensity', value)}
@@ -205,9 +215,10 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
 
       {/* One set of values for all eight channels: applied to one alone, the maps drift apart and
           the relief stops matching the picture it lifts. */}
-      <PropertySection title={t('texture.tiling')} defaultOpen={false}>
+      <PropertySection title={t('texture.tiling')} defaultOpen={false} scId="texture.tiling">
         <VectorField
           label={t('texture.repeat')}
+          scId="texture.repeat"
           value={material.tiling}
           {...MATERIAL_BOUNDS.tiling}
           onChange={value => onMaterial('tiling', value)}
@@ -215,6 +226,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         />
         <VectorField
           label={t('texture.offset')}
+          scId="texture.offset"
           value={material.offset}
           step={0.01}
           onChange={value => onMaterial('offset', value)}
@@ -223,6 +235,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         {/* Degrees on screen, radians in the file — the same trade the sky inspector makes. */}
         <SliderField
           label={t('texture.rotation')}
+          scId="texture.rotation"
           value={toDegrees(material.rotation)}
           min={0}
           max={360}
@@ -236,6 +249,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
             repeat is LOOKED at, and neither ever reaches a scene. */}
         <SelectField
           label={t('texture.tilingPreview')}
+          scId="texture.tilingPreview"
           value={String(preview.tilingPreview)}
           options={TILING_PREVIEWS.map(times => ({
             value: String(times),
@@ -250,15 +264,17 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         />
         <ToggleField
           label={t('texture.showSeam')}
+          scId="texture.showSeam"
           value={preview.showSeam}
           onChange={value => onPreview('showSeam', value)}
         />
         <TextureInspectorSeamReading documentId={documentId} />
       </PropertySection>
 
-      <PropertySection title={t('texture.preview')}>
+      <PropertySection title={t('texture.preview')} scId="texture.preview">
         <SelectField
           label={t('texture.previewShape')}
+          scId="texture.previewShape"
           value={preview.shape}
           options={PREVIEW_SHAPES.map(shape => ({
             value: shape,
@@ -270,6 +286,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
 
         <SliderField
           label={t('texture.envIntensity')}
+          scId="texture.envIntensity"
           value={preview.envIntensity}
           {...PREVIEW_BOUNDS.envIntensity}
           onChange={value => onPreview('envIntensity', value)}
@@ -278,6 +295,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         />
         <SliderField
           label={t('texture.envRotation')}
+          scId="texture.envRotation"
           value={toDegrees(preview.envRotation)}
           min={0}
           max={360}
@@ -288,11 +306,13 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         />
         <ToggleField
           label={t('texture.showBackground')}
+          scId="texture.showBackground"
           value={preview.showBackground}
           onChange={value => onPreview('showBackground', value)}
         />
         <ToggleField
           label={t('texture.autoSpin')}
+          scId="texture.autoSpin"
           value={preview.autoSpin}
           onChange={value => onPreview('autoSpin', value)}
         />

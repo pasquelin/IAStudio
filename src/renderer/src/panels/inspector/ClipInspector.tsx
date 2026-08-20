@@ -36,7 +36,7 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
 
   return (
     <>
-      <PropertySection title={t('inspector.clip')}>
+      <PropertySection title={t('inspector.clip')} scId="clip">
         <PropertyRow label={t('inspector.source')}>{name}</PropertyRow>
         {track && <PropertyRow label={t('inspector.track')}>{track.name}</PropertyRow>}
         <PropertyRow label={t('inspector.start')}>
@@ -51,9 +51,10 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
         </PropertyRow>
       </PropertySection>
 
-      <PropertySection title={t('inspector.shaping')}>
+      <PropertySection title={t('inspector.shaping')} scId="clip.shaping">
         <NumberField
           label={t('inspector.fadeIn')}
+          scId="clip.fadeIn"
           value={clip.fadeIn / SECOND}
           min={0}
           step={0.1}
@@ -62,6 +63,7 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
         />
         <NumberField
           label={t('inspector.fadeOut')}
+          scId="clip.fadeOut"
           value={clip.fadeOut / SECOND}
           min={0}
           step={0.1}
@@ -70,6 +72,7 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
         />
         <NumberField
           label={t('inspector.speed')}
+          scId="clip.speed"
           value={clip.speed}
           min={MIN_SPEED}
           max={MAX_SPEED}
@@ -82,6 +85,7 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
         {audio && (
           <NumberField
             label={t('inspector.gain')}
+            scId="clip.gain"
             value={clip.gain}
             min={MIN_GAIN_DB}
             max={MAX_GAIN_DB}

@@ -18,6 +18,9 @@ export function SettingRowColorControl({
   return (
     <input
       id={id}
+      // Composed from `id`, which `SettingRow` builds out of the setting's own path — a handle a
+      // script works out from the registry rather than from what the row happens to read.
+      data-sc={`field:${id}`}
       aria-describedby={describedBy}
       className="h-(--sc-control) w-16 cursor-pointer rounded-(--radius-sc-sm)"
       type="color"

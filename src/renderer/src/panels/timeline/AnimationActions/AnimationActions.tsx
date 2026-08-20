@@ -97,6 +97,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
         <SelectField
           layout="inline"
           label={t('animation.bone')}
+          scId="animation.bone"
           value={bone}
           options={[
             { value: '', label: t('animation.wholeModel') },
@@ -110,6 +111,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
       <div className="flex w-24 shrink-0 items-center">
         <NumberField
           label={t('animation.duration')}
+          scId="animation.duration"
           value={usToSeconds(timeline.duration)}
           min={MIN_DURATION}
           max={MAX_DURATION}
@@ -122,6 +124,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
       <div className="flex w-24 shrink-0 items-center">
         <NumberField
           label={t('animation.fps')}
+          scId="animation.fps"
           value={timeline.fps}
           min={MIN_FPS}
           max={MAX_FPS}

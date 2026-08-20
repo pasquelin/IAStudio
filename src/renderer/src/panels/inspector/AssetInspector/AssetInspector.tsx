@@ -46,7 +46,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
 
   return (
     <>
-      <PropertySection title={t('inspector.identity')}>
+      <PropertySection title={t('inspector.identity')} scId="asset.identity">
         {/* Edited where it is read, on a double-click — the gesture every other name of this
             studio answers. The row is the field's host, so the tooltip explains rather than
             repeats: the name is already on screen. */}
@@ -98,7 +98,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
       {generation && <AssetInspectorGeneration assetId={asset.id} generation={generation} />}
 
       {asset.location === 'local' && (
-        <PropertySection title={t('inspector.file')}>
+        <PropertySection title={t('inspector.file')} scId="asset.file">
           {/* The PATH, which this row used to leave out: a label, a wide empty column and a
               button at the far end said where nothing. `wrap` because a path is one value that
               takes two lines rather than a name that truncates. */}

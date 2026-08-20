@@ -1,6 +1,6 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import type { PartialSettings } from '@shared/domain/settings'
-import { SETTING_ACTION_IDS } from '@shared/domain/settingsRegistry'
+import { SETTING_ACTION_IDS } from '@shared/domain/settingAction'
 import { getBridge } from '@/services/bridge'
 import { withBridge, type ActionHandlers } from './actionHandler'
 import { oneOf, recordOf, textOf } from './actionInputs'

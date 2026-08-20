@@ -124,6 +124,7 @@ export function NewDocumentWindow() {
           <div className="flex items-center gap-2">
             <input
               ref={field}
+              data-sc="field:newDocument.name"
               id={nameId}
               aria-describedby={refusal ? `${extensionId} ${refusalId}` : extensionId}
               value={draft}

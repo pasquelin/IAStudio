@@ -63,9 +63,10 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
           under, and it was a panel of its own until 2026-08-19. */}
       <SkyboxInspectorView documentId={documentId} />
 
-      <PropertySection title={t('skybox.sun')}>
+      <PropertySection title={t('skybox.sun')} scId="skybox.sun">
         <SliderField
           label={t('skybox.elevation')}
+          scId="skybox.elevation"
           value={content.sun.elevation}
           min={-POLE_LIMIT}
           max={POLE_LIMIT}
@@ -76,6 +77,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
         />
         <SliderField
           label={t('skybox.azimuth')}
+          scId="skybox.azimuth"
           value={content.sun.azimuth}
           min={0}
           max={TWO_PI}
@@ -86,6 +88,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
         />
         <SliderField
           label={t('skybox.intensity')}
+          scId="skybox.intensity"
           value={content.sun.intensity}
           min={0}
           max={10}
@@ -96,6 +99,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
         />
         <ColorField
           label={t('skybox.color')}
+          scId="skybox.color"
           value={content.sun.color}
           onChange={value => onSun('color', value)}
           onReset={resetSun('color')}
@@ -103,7 +107,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
         />
       </PropertySection>
 
-      <PropertySection title={t('skybox.adjustments')}>
+      <PropertySection title={t('skybox.adjustments')} scId="skybox.adjustments">
         <SkyboxInspectorAdjustments
           adjustments={content.adjustments}
           onChange={onAdjust}
@@ -111,9 +115,10 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
         />
       </PropertySection>
 
-      <PropertySection title={t('skybox.environment')}>
+      <PropertySection title={t('skybox.environment')} scId="skybox.environment">
         <SliderField
           label={t('skybox.envIntensity')}
+          scId="skybox.envIntensity"
           value={content.environment.intensity}
           min={0}
           max={4}
@@ -124,6 +129,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
         />
         <ToggleField
           label={t('skybox.showBackground')}
+          scId="skybox.showBackground"
           value={content.environment.showBackground}
           onChange={value => onEnvironment('showBackground', value)}
         />
@@ -131,7 +137,7 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
 
       {/* Read out, not typed into. These were `TextField`s whose `onChange` did nothing: three
           boxes that looked editable, took a caret, and dropped every keystroke. */}
-      <PropertySection title={t('skybox.generation')} defaultOpen={false}>
+      <PropertySection title={t('skybox.generation')} defaultOpen={false} scId="skybox.generation">
         <PropertyRow label={t('skybox.model')}>{content.generation?.modelLabel ?? ''}</PropertyRow>
         <PropertyRow label={t('skybox.prompt')} shape="wrap">
           {content.generation?.prompt ?? ''}

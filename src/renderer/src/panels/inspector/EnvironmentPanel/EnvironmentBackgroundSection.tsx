@@ -33,6 +33,7 @@ export function EnvironmentBackgroundSection({
     <PropertySection title={t('environment.background')} scId="background">
       <SelectField
         label={t('environment.backgroundType')}
+        scId="environment.backgroundType"
         value={background.kind}
         options={kinds.options}
         onChange={kind => onChange({ background: backgroundOfKind(kind, background) })}
@@ -44,6 +45,7 @@ export function EnvironmentBackgroundSection({
       {background.kind === 'color' && (
         <ColorField
           label={t('environment.backgroundColor')}
+          scId="environment.backgroundColor"
           value={background.color}
           onChange={color => onChange({ background: { kind: 'color', color } })}
           {...gesture}
@@ -55,6 +57,7 @@ export function EnvironmentBackgroundSection({
       {background.kind === 'environment' && world.environment.kind === 'skybox' && (
         <SliderField
           label={t('environment.backgroundBlur')}
+          scId="environment.backgroundBlur"
           value={background.blur}
           min={BACKGROUND_BLUR.min}
           max={BACKGROUND_BLUR.max}

@@ -159,6 +159,9 @@ export function InlineRename({ value, label, onCommit, gauge = 'control' }: Inli
     <input
       ref={field}
       autoFocus
+      // One handle for every caller, and it is enough: a rename is a field that replaces the row
+      // being renamed, so exactly one of these is ever mounted.
+      data-sc="field:rename"
       aria-label={label}
       value={draft}
       className={cn(FIELD, 'w-full', GAUGE[gauge])}

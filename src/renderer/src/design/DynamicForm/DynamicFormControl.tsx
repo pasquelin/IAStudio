@@ -34,6 +34,13 @@ export function DynamicFormControl({
   const say = useModelText()
   const box = useRef<HTMLTextAreaElement | null>(null)
 
+  /**
+   * The model's own key for this input, which is the only name that does not move: the label is
+   * a sentence the Scenario API writes, and the `id` beside it comes from `useId` — `:r7:` names
+   * nothing a script could work out. This is the form a client most wants to fill.
+   */
+  const handle = `field:generation.${field.key}`
+
   switch (field.kind) {
     case 'longText':
       // The box is the FRAME: it resizes, and the text takes what is left of it. The strip is
@@ -44,6 +51,7 @@ export function DynamicFormControl({
         <div className={cn(FIELD, 'flex h-auto resize-y flex-col overflow-hidden p-0')}>
           <textarea
             id={id}
+            data-sc={handle}
             rows={4}
             className="min-h-0 w-full flex-1 resize-none bg-transparent px-2 py-1"
             {...registration}
@@ -80,11 +88,19 @@ export function DynamicFormControl({
       )
 
     case 'boolean':
-      return <input id={id} type="checkbox" className="size-4 self-start" {...registration} />
+      return (
+        <input
+          id={id}
+          data-sc={handle}
+          type="checkbox"
+          className="size-4 self-start"
+          {...registration}
+        />
+      )
 
     case 'choice':
       return (
-        <select id={id} className={FIELD} {...registration}>
+        <select id={id} data-sc={handle} className={FIELD} {...registration}>
           {!field.required && <option value="" />}
           {field.options?.map(option => (
             <option key={option.value} value={option.value}>
@@ -95,12 +111,20 @@ export function DynamicFormControl({
       )
 
     case 'color':
-      return <input id={id} type="color" className={cn(FIELD, 'px-1')} {...registration} />
+      return (
+        <input
+          id={id}
+          data-sc={handle}
+          type="color"
+          className={cn(FIELD, 'px-1')}
+          {...registration}
+        />
+      )
 
     case 'seed':
       return (
         <div className="flex items-center gap-2">
-          <input id={id} type="number" className={FIELD_FILL} {...registration} />
+          <input id={id} data-sc={handle} type="number" className={FIELD_FILL} {...registration} />
           <ToolButton
             icon={mdiDiceMultipleOutline}
             label={t('generation.randomSeed')}
@@ -115,6 +139,7 @@ export function DynamicFormControl({
       return (
         <input
           id={id}
+          data-sc={handle}
           type="number"
           step={field.step ?? (field.kind === 'integer' ? 1 : 'any')}
           min={field.min}
@@ -140,6 +165,6 @@ export function DynamicFormControl({
     // An unknown kind renders as a plain input rather than making the form disappear —
     // CLAUDE.md, invariant 5.
     default:
-      return <input id={id} type="text" className={FIELD} {...registration} />
+      return <input id={id} data-sc={handle} type="text" className={FIELD} {...registration} />
   }
 }

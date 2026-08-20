@@ -69,6 +69,7 @@ export function AssetPickerBody({
         </h2>
 
         <input
+          data-sc="field:assetPicker.search"
           type="search"
           autoFocus
           value={search}

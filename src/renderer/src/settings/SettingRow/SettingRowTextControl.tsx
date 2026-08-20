@@ -41,6 +41,7 @@ export function SettingRowTextControl({
   return (
     <input
       id={id}
+      data-sc={`field:${id}`}
       aria-describedby={describedBy}
       className="input input-sm w-full max-w-xs"
       type="text"

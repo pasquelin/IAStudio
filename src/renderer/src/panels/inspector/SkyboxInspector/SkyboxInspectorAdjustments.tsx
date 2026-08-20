@@ -28,6 +28,8 @@ export function SkyboxInspectorAdjustments({
         <SliderField
           key={field.key}
           label={t(field.labelKey)}
+          // The dial's own key, not its label: the six read differently in each language.
+          scId={`skybox.${field.key}`}
           value={adjustments[field.key]}
           min={field.min}
           max={field.max}

@@ -99,7 +99,7 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
   }
 
   return (
-    <PropertySection title={t('inspector.rig')}>
+    <PropertySection title={t('inspector.rig')} scId="rig">
       {progress !== null && <ProgressBar ratio={progress} label={t('inspector.rigBinding')} />}
 
       {progress === null && fault && <QuietNote>{t(`inspector.rigFault_${fault}`)}</QuietNote>}

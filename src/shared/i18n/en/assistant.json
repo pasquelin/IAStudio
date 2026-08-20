@@ -806,7 +806,6 @@
       "parentBone": "Bone to hang it under",
       "boneRole": "Joint of the humanoid standard",
       "chainId": "Chain identifier",
-      "clipId": "Block identifier",
       "fps": "Frames per second",
       "autoKey": "Write a key on every move",
       "timeoutMs": "How long to wait at most, in milliseconds",

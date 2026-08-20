@@ -35,7 +35,7 @@ export function FileInfoWindowBody({ id, path, facts, asset, status }: FileInfoW
     const change = status.files.find(file => file.path === path)?.change
 
     return (
-      <PropertySection title={t('fileInfo.sections.git')}>
+      <PropertySection title={t('fileInfo.sections.git')} scId="fileInfo.git">
         <PropertyRow label={t('git.ref.branch')}>{status.branch ?? t('git.detached')}</PropertyRow>
         <PropertyRow label={t('inspector.state')}>
           {change ? t(`git.change.${change}`) : t('fileInfo.gitUnchanged')}
@@ -50,7 +50,7 @@ export function FileInfoWindowBody({ id, path, facts, asset, status }: FileInfoW
     const height = probe?.height ?? asset.height
 
     return (
-      <PropertySection title={t('fileInfo.sections.media')}>
+      <PropertySection title={t('fileInfo.sections.media')} scId="fileInfo.media">
         {width !== undefined && height !== undefined && (
           <PropertyRow label={t('inspector.dimensions')}>
             {width} × {height}
@@ -70,7 +70,7 @@ export function FileInfoWindowBody({ id, path, facts, asset, status }: FileInfoW
 
   if (id === 'catalogue' && asset) {
     return (
-      <PropertySection title={t('fileInfo.sections.catalogue')}>
+      <PropertySection title={t('fileInfo.sections.catalogue')} scId="fileInfo.catalogue">
         <PropertyRow label={t('fileInfo.identifier')}>{asset.id}</PropertyRow>
         {asset.hash !== undefined && (
           // Stacked: a content hash is sixty-four characters, and a column truncates it to
@@ -89,7 +89,7 @@ export function FileInfoWindowBody({ id, path, facts, asset, status }: FileInfoW
   }
 
   return (
-    <PropertySection title={t('fileInfo.sections.general')}>
+    <PropertySection title={t('fileInfo.sections.general')} scId="fileInfo.general">
       <PropertyRow label={t('inspector.name')}>{nameOf(path)}</PropertyRow>
       {/* The inspector's own word for this question, not a second one: « Nature » already names
           what a thing IS there, and two labels for one idea is how a vocabulary drifts. */}

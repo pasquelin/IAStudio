@@ -100,6 +100,7 @@ export function AnimationPickerPreview({
       {seconds > 0 && (
         <SliderField
           label={t('inspector.animationPosition')}
+          scId="animationPicker.position"
           min={0}
           max={end}
           step={SCRUB_STEP}
@@ -109,6 +110,7 @@ export function AnimationPickerPreview({
       )}
       <SliderField
         label={t('inspector.clipSpeed')}
+        scId="animationPicker.speed"
         min={MIN_SPEED}
         max={MAX_SPEED}
         step={0.1}
@@ -117,6 +119,7 @@ export function AnimationPickerPreview({
       />
       <ToggleField
         label={t('inspector.clipLoop')}
+        scId="animationPicker.loop"
         value={played.loop}
         onChange={loop => write(played.speed, loop)}
       />

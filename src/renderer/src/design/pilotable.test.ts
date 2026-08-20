@@ -1,39 +1,69 @@
 import { describe, expect, it } from 'vitest'
+import { WINDOW_SOURCES } from '../windowSources'
 
 /**
- * Every control of the design system, read as text — what is under test is the attribute each one
- * writes, not what it renders.
- */
-const FIELDS: Record<string, string> = import.meta.glob('./*Field.tsx', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-})
-
-/**
- * The surfaces a script steers besides the fields: the fold, the link row, and the slider handle —
- * that last one writes the `data-sc` its two fields used to write themselves, and the `*Field` glob
- * above cannot see it.
- */
-const SURFACES: Record<string, string> = import.meta.glob(
-  ['./PropertySection.tsx', './LinkField/LinkField.tsx', './SliderHandle.tsx'],
-  { query: '?raw', import: 'default', eager: true },
-)
-
-const ALL = { ...FIELDS, ...SURFACES }
-
-/**
- * The studio is driven from outside — by the MCP over CDP, and by whatever a test reaches for.
- * That driving has to name a control, and the only names on screen are TRANSLATED: a script
+ * The studio is driven from outside — by an MCP client over CDP, and by whatever a script reaches
+ * for. That driving has to name a control, and the only names on screen are TRANSLATED: a script
  * written against « Position » stops working the moment the window is opened in English.
  *
  * `data-sc` is the name that does not move. It is derived from the code — `transform.position.x`
  * — and never from a word anyone reads.
  */
+
+/** Every control that takes a handle, read off what it DECLARES rather than from a list here. */
+const PILOTABLE: readonly string[] = Object.entries(WINDOW_SOURCES)
+  .filter(([, source]) => /\bscId\??:\s*string/.test(source))
+  .map(([path]) => path.split('/').pop()?.replace('.tsx', '') ?? '')
+  .filter(name => /^[A-Z]/.test(name))
+  .sort()
+
+/** The sources of those controls, for the rules about what they write. */
+const CONTROLS = Object.entries(WINDOW_SOURCES).filter(([path]) =>
+  PILOTABLE.some(name => path.endsWith(`/${name}.tsx`)),
+)
+
+/**
+ * The attribute region of one JSX opening tag, braces and strings counted.
+ *
+ * A regex up to the first `>` is not enough: `onChange={next => run(next)}` closes the tag four
+ * characters early, and every site carrying an arrow function would read as attribute-less.
+ */
+function openingTag(source: string, from: number): string {
+  let depth = 0
+  let quote: string | null = null
+
+  for (let index = from; index < source.length; index += 1) {
+    const character = source[index]
+    if (quote) {
+      if (character === quote && source[index - 1] !== '\\') quote = null
+    } else if (character === '"' || character === "'" || character === '`') quote = character
+    else if (character === '{') depth += 1
+    else if (character === '}') depth -= 1
+    else if (character === '>' && depth === 0) return source.slice(from, index + 1)
+  }
+
+  return source.slice(from)
+}
+
+/**
+ * The code with its prose taken out. `Flyout` explains its placements by writing « the way a
+ * `<select>` does », which read as a control going straight to the platform.
+ */
+const withoutComments = (source: string): string =>
+  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '')
+
+/** Every place a pilotable control is rendered, with the attributes it was given. */
+function sitesOf(name: string): { path: string; tag: string }[] {
+  const opens = new RegExp(`<${name}(?=[\\s/>])`, 'g')
+
+  return Object.entries(WINDOW_SOURCES).flatMap(([path, source]) =>
+    [...source.matchAll(opens)].map(match => ({ path, tag: openingTag(source, match.index) })),
+  )
+}
+
 describe('a control the studio can be driven by', () => {
   it('finds the controls at all, so the rules below cannot pass on an empty glob', () => {
-    expect(Object.keys(FIELDS).length).toBeGreaterThan(5)
-    expect(Object.keys(SURFACES).length).toBe(3)
+    expect(PILOTABLE.length).toBeGreaterThan(10)
   })
 
   /**
@@ -42,9 +72,9 @@ describe('a control the studio can be driven by', () => {
    * Demanding the attribute itself would have asked both of them to draw a second, dead one.
    */
   it('offers a handle on every family of control', () => {
-    const silent = Object.entries(ALL)
-      .filter(([, source]) => !source.includes('data-sc') && !/scId=\{/.test(source))
-      .map(([path]) => path)
+    const silent = CONTROLS.filter(
+      ([, source]) => !source.includes('data-sc') && !/scId=\{/.test(source),
+    ).map(([path]) => path)
 
     expect(silent, `these cannot be named from a script: ${silent.join(', ')}`).toEqual([])
   })
@@ -56,9 +86,7 @@ describe('a control the studio can be driven by', () => {
    */
   it('never builds a handle out of a word anyone reads', () => {
     const TRANSLATED = /data-sc=\{[^}]*\bt\(/
-    const guilty = Object.entries(ALL)
-      .filter(([, source]) => TRANSLATED.test(source))
-      .map(([path]) => path)
+    const guilty = CONTROLS.filter(([, source]) => TRANSLATED.test(source)).map(([path]) => path)
 
     expect(guilty, `these name a control by a translated word: ${guilty.join(', ')}`).toEqual([])
   })
@@ -69,9 +97,7 @@ describe('a control the studio can be driven by', () => {
    */
   it('never builds a handle out of the label it was handed either', () => {
     const FROM_LABEL = /data-sc=\{[^}]*\blabel\b/
-    const guilty = Object.entries(ALL)
-      .filter(([, source]) => FROM_LABEL.test(source))
-      .map(([path]) => path)
+    const guilty = CONTROLS.filter(([, source]) => FROM_LABEL.test(source)).map(([path]) => path)
 
     expect(guilty).toEqual([])
   })
@@ -86,12 +112,55 @@ describe('a control the studio can be driven by', () => {
    */
   it('says what kind of thing it names, not only which one', () => {
     const HANDLES = /data-sc=\{([^}]*)\}/g
-    const unprefixed = Object.entries(ALL).flatMap(([path, source]) =>
+    const unprefixed = CONTROLS.flatMap(([path, source]) =>
       [...source.matchAll(HANDLES)]
         .filter(match => !/`(section|field):\$\{/.test(match[1] ?? ''))
-        .map(match => `${path} — ${match[1]}`),
+        .map(match => `${path} — ${match[1] ?? ''}`),
     )
 
     expect(unprefixed).toEqual([])
+  })
+
+  /**
+   * The half no rule above could see, and the one that mattered: a control WRITES the attribute
+   * only when its caller names one, and `scId` is optional on every one of them. Measured on
+   * 2026-08-20, before this existed — 57 of 197 call sites named a handle, so seven controls out
+   * of ten rendered `data-sc={undefined}` and were invisible to every script.
+   *
+   * A site is answered by the attribute alone, whether it is a literal, a prop passed straight
+   * through, or one composed from an id — what is refused is saying nothing.
+   */
+  it('is named by every caller that renders one', () => {
+    const unnamed = PILOTABLE.flatMap(name =>
+      sitesOf(name)
+        .filter(({ tag }) => !/\bscId\b/.test(tag))
+        .map(({ path }) => `${path} — <${name}>`),
+    )
+
+    expect(unnamed.sort()).toEqual([])
+  })
+
+  /**
+   * The controls that go straight to the platform, bypassing the design system entirely — the
+   * generation form, the settings window, the git panel, every window that is not a dock.
+   *
+   * They are the half the rule above cannot see, and they were the larger one: measured on
+   * 2026-08-20, twenty files rendered an `input`, a `textarea` or a `select` with no handle of any
+   * kind, the generation form among them — the one form of the studio a client most wants to fill.
+   *
+   * Read per FILE rather than per tag: a control wrapped by its own field writes the attribute on
+   * the frame, and demanding it on the input as well would ask for a second, dead one.
+   */
+  it('is written by every file that goes straight to the platform', () => {
+    const RAW = /<(input|textarea|select)[\s/>]/
+    // The attribute, never the word: `WindowSearch` names `data-sc` in a comment explaining why
+    // it is not a field, and a rule reading the word alone was green on exactly that file.
+    const WRITTEN = /data-sc=|scId[={:]/
+    const silent = Object.entries(WINDOW_SOURCES)
+      .filter(([path]) => path.endsWith('.tsx'))
+      .filter(([, source]) => RAW.test(withoutComments(source)) && !WRITTEN.test(source))
+      .map(([path]) => path)
+
+    expect(silent.sort()).toEqual([])
   })
 })

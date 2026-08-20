@@ -45,6 +45,7 @@ export function EnvironmentRenderSection({
     <PropertySection title={t('environment.render')} defaultOpen={false} scId="render">
       <SelectField
         label={t('environment.toneMapping')}
+        scId="environment.toneMapping"
         value={world.toneMapping}
         options={tones.options}
         onChange={toneMapping => onChange({ toneMapping })}
@@ -55,6 +56,7 @@ export function EnvironmentRenderSection({
           hiding it there would take away a control that works. */}
       <SliderField
         label={t('environment.exposure')}
+        scId="environment.exposure"
         value={world.exposure}
         min={EXPOSURE.min}
         max={EXPOSURE.max}
@@ -65,6 +67,7 @@ export function EnvironmentRenderSection({
 
       <SelectField
         label={t('environment.quality')}
+        scId="environment.quality"
         value={view.quality}
         options={qualities.options}
         onChange={quality => onViewport({ quality })}
@@ -73,6 +76,7 @@ export function EnvironmentRenderSection({
 
       <SelectField
         label={t('environment.units')}
+        scId="environment.units"
         value={view.units}
         options={units.options}
         onChange={units => onViewport({ units })}
@@ -81,6 +85,7 @@ export function EnvironmentRenderSection({
 
       <ToggleField
         label={t('environment.stats')}
+        scId="environment.stats"
         value={view.stats}
         onChange={stats => onViewport({ stats })}
       />

@@ -47,6 +47,7 @@ export function EnvironmentLightingSection({
     <PropertySection title={t('environment.ambience')} scId="lighting">
       <SelectField
         label={t('environment.source')}
+        scId="environment.source"
         value={environment.kind}
         options={sources.options}
         onChange={kind => onChange({ environment: environmentOfKind(kind, skies) })}
@@ -79,6 +80,7 @@ export function EnvironmentLightingSection({
 
       <SliderField
         label={t('environment.intensity')}
+        scId="environment.intensity"
         value={world.envIntensity}
         min={ENV_INTENSITY.min}
         max={ENV_INTENSITY.max}
@@ -91,6 +93,7 @@ export function EnvironmentLightingSection({
       {environment.kind === 'skybox' && (
         <SliderField
           label={t('environment.rotation')}
+          scId="environment.rotation"
           // Degrees on screen, radians in the document — the rule every other angle follows.
           value={Math.round(toDegrees(world.envRotation))}
           min={0}
