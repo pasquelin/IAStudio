@@ -410,8 +410,12 @@ const RINGED_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'pencil', 'erase
  */
 const WRITING_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'pencil', 'eraser', 'fill'])
 
-/** Which gestures hold a layer open in the history, so releasing one closes its entry. */
-const LAYER_DRAGS: ReadonlySet<Gesture['kind']> = new Set(['move', 'handle', 'rotate'])
+/**
+ * Which gestures hold a layer open in the history, so releasing one closes its entry. `textBox`
+ * calls `beginDrag` like the other three and was missing here, which left the entry open: the two
+ * alignment clicks after a box pull carry one id, merged, and went back on a single ⌘Z.
+ */
+const LAYER_DRAGS: ReadonlySet<Gesture['kind']> = new Set(['move', 'handle', 'rotate', 'textBox'])
 
 /** Both arms carry `id`, so two hovers compare without pairing their kinds again. */
 function sameHit(one: HandleHit | null, other: HandleHit | null): boolean {

@@ -23,7 +23,6 @@ function show(layer = caption(), onDone = vi.fn()): { onDone: ReturnType<typeof 
       documentId={DOCUMENT}
       layer={layer}
       viewport={VIEW}
-      inset={20}
       label="Saisie du texte"
       onDone={onDone}
     />,
@@ -48,14 +47,16 @@ describe('ImageDocumentText', () => {
   })
 
   /**
-   * The field lies exactly over the box the words will occupy: the layer's own origin through
-   * the viewport, the rulers' inset after it, and everything scaled by the zoom.
+   * The field lies exactly over the box the words will occupy: the layer's own origin through the
+   * viewport, scaled by the zoom, and NOTHING else. The viewport already carries the rulers'
+   * inset — adding it here again put the field 20px below and right of the words it lies over,
+   * which read as the caption jumping when the session ended.
    */
   it('lies over the box the caption occupies, at the zoom it is read at', () => {
     show(caption({ box: { width: 100, height: 50 } }))
 
-    expect(field().style.left).toBe('80px')
-    expect(field().style.top).toBe('100px')
+    expect(field().style.left).toBe('60px')
+    expect(field().style.top).toBe('80px')
     expect(field().style.width).toBe('200px')
     expect(field().style.fontSize).toBe('96px')
   })

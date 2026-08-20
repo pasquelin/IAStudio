@@ -24,6 +24,7 @@ import {
   setLayerAdjustment,
   setLayerBlend,
   setLayerOpacity,
+  resizeCaption,
   setLayerText,
   setLayerVisible,
   translateLayer,
@@ -762,6 +763,63 @@ describe('setLayerText', () => {
     const [after] = roundTrip(withTwo, setLayerText('layer-2', { text: 'Goodbye' }))
 
     expect(after.layers).toEqual(withTwo.layers)
+  })
+
+  /**
+   * A drag, a grip and an MCP client all land here, and only the first two pass through a
+   * component — which is why the rounding is the command's job rather than the caller's.
+   */
+  it('rounds a box it is handed to whole pixels', () => {
+    const [after] = roundTrip(
+      withText,
+      setLayerText('cap', { box: { width: 471.5789473684211, height: 242.52 } }),
+    )
+    const layer = layerById(after, 'cap')
+
+    expect(layer?.kind === 'text' ? layer.box : null).toEqual({ width: 472, height: 243 })
+  })
+})
+
+describe('resizeCaption', () => {
+  const withText: CanvasState = addLayer(textLayer('cap', 'Hello', { x: 10, y: 20 })).apply(
+    DEFAULT_CANVAS,
+  )
+
+  // A north or west grip moves the origin as it resizes, which is why both travel together.
+  it('takes the box and where it now starts in one entry', () => {
+    const [after] = roundTrip(
+      withText,
+      resizeCaption('cap', { width: 700.6, height: 310.2 }, { x: 4, y: 6 }),
+    )
+    const layer = layerById(after, 'cap')
+
+    expect(layer?.kind === 'text' ? layer.box : null).toEqual({ width: 701, height: 310 })
+    expect(layer?.transform.x).toBe(4)
+    expect(layer?.transform.y).toBe(6)
+  })
+
+  /**
+   * Both halves or neither. Shift-resizing and a turned caption both hand back a fractional
+   * origin, and rounding only the box moved the edge the grip was supposed to hold still.
+   */
+  it('rounds where it starts too, never one half of the pair', () => {
+    const [after] = roundTrip(
+      withText,
+      resizeCaption('cap', { width: 300.4, height: 120.6 }, { x: 12.7, y: 30.2 }),
+    )
+    const layer = layerById(after, 'cap')
+
+    expect(layer?.transform.x).toBe(13)
+    expect(layer?.transform.y).toBe(30)
+  })
+
+  it('puts the caption it found back on undo', () => {
+    const [, reverted] = roundTrip(
+      withText,
+      resizeCaption('cap', { width: 700, height: 310 }, { x: 4, y: 6 }),
+    )
+
+    expect(layerById(reverted, 'cap')).toEqual(layerById(withText, 'cap'))
   })
 })
 

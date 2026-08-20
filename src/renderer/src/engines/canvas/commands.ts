@@ -14,7 +14,9 @@ import {
   layerById,
   mapLayers,
   pixelLayer,
+  sided,
   updateSiblings,
+  wholeBox,
   type CanvasState,
   type Guide,
   type Layer,
@@ -193,6 +195,10 @@ export function setLayerText(
 ): Command<CanvasState> {
   let previous: TextLayer | null = null
 
+  // Here rather than in the caller: a drag, a grip and an MCP client all land on this one line,
+  // and the panel's fields keep every digit they are handed.
+  const sized = changes.box ? { ...changes, box: wholeBox(changes.box) } : changes
+
   return {
     id: `layer:text:${id}`,
     apply: state => ({
@@ -200,7 +206,7 @@ export function setLayerText(
       layers: mapLayers(state.layers, layer => {
         if (layer.id !== id || layer.kind !== 'text') return layer
         previous ??= layer
-        return { ...layer, ...changes }
+        return { ...layer, ...sized }
       }),
     }),
     revert: state => ({
@@ -216,6 +222,10 @@ export function setLayerText(
  */
 export function resizeCaption(id: string, box: Size, at: Point): Command<CanvasState> {
   let previous: TextLayer | null = null
+  // Both halves or neither: rounding the box while the origin stayed fractional moved the edge a
+  // west or north grip must hold still, which shift-resizing and a turned caption both reach.
+  const corner = { x: Math.round(at.x), y: Math.round(at.y) }
+  const sized = wholeBox(box)
 
   return {
     id: `layer:caption-box:${id}`,
@@ -224,7 +234,7 @@ export function resizeCaption(id: string, box: Size, at: Point): Command<CanvasS
       layers: mapLayers(state.layers, layer => {
         if (layer.id !== id || layer.kind !== 'text') return layer
         previous ??= layer
-        return { ...layer, box, transform: { ...layer.transform, x: at.x, y: at.y } }
+        return { ...layer, box: sized, transform: { ...layer.transform, ...corner } }
       }),
     }),
     revert: state => ({
@@ -594,11 +604,6 @@ export function duplicateLayer(
  */
 function moveLayers(state: CanvasState, change: (transform: Transform) => Transform): Layer[] {
   return state.layers.map(layer => ({ ...layer, transform: change(layer.transform) }))
-}
-
-/** A frame with no surface is not a frame. */
-function sided(value: number): number {
-  return Math.max(1, Math.round(value))
 }
 
 /**
