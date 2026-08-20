@@ -11,6 +11,8 @@ export type MaterialSectionProps = {
   fallbackColor: string
   onChange: (material: MaterialDescriptor) => void
   gesture: GestureProps
+  /** False where the shape's UVs are not the studio's to tile — a text's outline. */
+  tiling?: boolean
 }
 
 /**
@@ -22,9 +24,13 @@ export function MaterialSection({
   fallbackColor,
   onChange,
   gesture,
+  tiling = true,
 }: MaterialSectionProps) {
   const { t } = useTranslation()
-  const fields = useMemo(() => materialFields(material, fallbackColor), [material, fallbackColor])
+  const fields = useMemo(
+    () => materialFields(material, fallbackColor, tiling),
+    [material, fallbackColor, tiling],
+  )
 
   return (
     <DescriptorSection

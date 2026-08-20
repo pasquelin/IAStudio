@@ -22,7 +22,6 @@ import {
   isSceneTemplateId,
   type SceneTemplateId,
 } from '@shared/domain/sceneTemplate'
-import { defaultMeshMaterial } from './checkerTextures'
 import { createDefaultScene } from './defaultScene'
 import { presetPatch } from './environmentPresets'
 import { cameraNode, lightNode, meshNode, pathNode, transformAt } from './nodeFactory'
@@ -57,17 +56,13 @@ function aimedCamera(height: number, distance: number, targetHeight = 0, targetZ
 }
 
 /**
- * The working floor: wearing the checker, catching shadows, throwing none — and tiled one square
- * per metre, where a single stretch of the picture over sixty makes a floor read as a blur.
+ * The working floor: wearing the checker, catching shadows, throwing none. Its tiling is the
+ * studio default of one square per metre, which holds whatever `size` says — see `uvTiling`.
  */
 function floor(size: number): SceneNode {
   return meshNode(
     { kind: 'plane', width: size, height: size },
-    {
-      transform: transformAt(ORIGIN, LYING_FLAT),
-      material: { ...defaultMeshMaterial(), uvScale: size },
-      castShadow: false,
-    },
+    { transform: transformAt(ORIGIN, LYING_FLAT), castShadow: false, name: 'Floor' },
   )
 }
 
@@ -80,7 +75,7 @@ function floor(size: number): SceneNode {
 function standIn(): SceneNode {
   return meshNode(
     { kind: 'capsule', radius: 0.3, height: 1.2, capSegments: 8, radialSegments: 16 },
-    { transform: transformAt({ x: 0, y: 0.9, z: STAND_IN_Z }) },
+    { transform: transformAt({ x: 0, y: 0.9, z: STAND_IN_Z }), name: 'Character' },
   )
 }
 
@@ -97,17 +92,34 @@ function ambient(intensity: number): SceneNode {
   return lightNode({ kind: 'ambient', color: '#404040', intensity }, ORIGIN)
 }
 
+/**
+ * Sky above, bounced ground below — what keeps the shaded side of a wall readable instead of
+ * flat grey. An ambient fills every face with the same light, which is what made the set read
+ * as cardboard: it is a set one walks through, so its corners have to have depth.
+ */
+function skyLight(intensity: number): SceneNode {
+  return lightNode(
+    // A PALE ground colour, because the set has a pale floor: what bounces back is what stops a
+    // wall in shade from going to the value of the sky behind it.
+    { kind: 'hemisphere', skyColor: '#c2d8f2', groundColor: '#9a9384', intensity },
+    { x: 0, y: 24, z: 0 },
+  )
+}
+
 function pointLight(intensity: number, position: Vector3): SceneNode {
   return lightNode({ kind: 'point', color: '#ffffff', intensity, distance: 0, decay: 2 }, position)
 }
 
-/** Plain white and no working texture: a backdrop is what a product is judged AGAINST. */
+/**
+ * Plain white and no working texture: a backdrop is what a product is judged AGAINST, and it is
+ * the one surface of the studio that is deliberately born bare — see `checkerTextures`.
+ */
 const BACKDROP: MaterialDescriptor = {
   kind: 'standard',
   color: '#f2f2f4',
   roughness: 1,
   metalness: 0,
-  uvScale: 1,
+  tilesPerMetre: 1,
   map: null,
   normalMap: null,
   roughnessMap: null,
@@ -119,7 +131,9 @@ const BACKDROP: MaterialDescriptor = {
  * Feet on the ground, walking speed, eyes at 1,70 m — what the character templates share, and
  * the values the player will read the day it exists.
  */
-const WALKING: Partial<ScenePlay> = { eyeHeight: 1.7, moveSpeed: 4, gravity: 9.81 }
+const EYE_HEIGHT = 1.7
+
+const WALKING: Partial<ScenePlay> = { eyeHeight: EYE_HEIGHT, moveSpeed: 4, gravity: 9.81 }
 
 /**
  * The level, its light, and what the view adds on top — the three character templates differ by
@@ -127,7 +141,12 @@ const WALKING: Partial<ScenePlay> = { eyeHeight: 1.7, moveSpeed: 4, gravity: 9.8
  */
 function characterView(view: readonly SceneNode[], play: Partial<ScenePlay>): Template {
   return {
-    nodes: [...playgroundNodes(), sun(2.4, { x: 14, y: 18, z: 10 }), ambient(0.5), ...view],
+    nodes: [...playgroundNodes(), sun(2.2, { x: 22, y: 26, z: 16 }), skyLight(1.3), ...view],
+    // The outdoor preset for its haze and its grading, but a PLAIN SKY behind rather than the
+    // procedural studio: that one is nearly black, and a wall turned away from the sun landed on
+    // the same value as the background — which reads as a wall that vanishes when one turns.
+    // The colour is the haze's own, so the horizon closes instead of ending on a line.
+    world: { ...presetPatch('outdoor'), background: { kind: 'color', color: '#b6c6d8' } },
     play: { ...WALKING, ...play },
   }
 }
@@ -215,8 +234,10 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // The three below open on the SAME level and differ by where the camera stands — which is what
   // these three views are. A cadrage over an empty floor proved nothing: what makes them worth
   // picking is a set one can climb, fall off and bump into.
+  // On the start pad, at eye height and facing down the set — where the walk begins the day a
+  // controller reads `play`, rather than somewhere on the floor with the court behind it.
   firstPerson: () =>
-    characterView([cameraNode(transformAt({ x: 0, y: 1.7, z: 14 }))], {
+    characterView([cameraNode(transformAt({ x: 0, y: EYE_HEIGHT, z: STAND_IN_Z }))], {
       camera: 'firstPerson',
     }),
 

@@ -101,11 +101,11 @@ export function resizeShadowMap(object: Object3D, size: number): void {
 
 /**
  * How far a directional light's shadow reaches. Its frustum is a box, ten units wide by default
- * — a set laid out on a twenty-metre grid would have half of it throwing nothing, with no hint
- * as to why. Sized from the grid, which is what the scene is built against.
+ * — a forty-metre set would have half of it throwing nothing, with no hint as to why. The extent
+ * comes from the caller, which is the only side that knows what the scene occupies.
  */
 export function fitShadowCamera(object: Object3D, extent: number): void {
-  if (!castsShadow(object) || !isOrthographic(object.shadow.camera)) return
+  if (!needsShadowFrustum(object)) return
 
   const half = extent / 2
   const camera = object.shadow.camera
@@ -117,6 +117,16 @@ export function fitShadowCamera(object: Object3D, extent: number): void {
   camera.bottom = -half
   // three.js never reads these back on its own, exactly like a perspective `fov`.
   camera.updateProjectionMatrix()
+}
+
+/**
+ * Whether sizing a frustum for this light means anything — a caller that measures the whole
+ * scene to answer `extent` can skip the walk entirely when no light would read it.
+ */
+export function needsShadowFrustum(
+  object: Object3D,
+): object is Object3D & { shadow: LightShadow & { camera: Orthographic } } {
+  return castsShadow(object) && isOrthographic(object.shadow.camera)
 }
 
 // Structural rather than `instanceof`: three exports `LightShadow` as a type alone.

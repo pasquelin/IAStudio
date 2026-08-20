@@ -5,9 +5,11 @@
  * controls from, rather than restated as a schema here: a primitive gained or a parameter
  * renamed cannot leave a loader still accepting the shape before it.
  *
- * Only presence and type are checked, never the `min`/`max` those tables also declare — those
- * are what an inspector clamps a *live* edit to, and a document written by an earlier build is
- * allowed to hold a value today's bounds would refuse.
+ * ACCEPTING a value is separate from KEEPING it. Only presence and type decide whether a node is
+ * read at all — never the `min`/`max` those tables also declare, since a document written by an
+ * earlier build is allowed to hold a value today's bounds would refuse, and dropping the node
+ * would lose it in silence. What `revived` does afterwards is the other question: one field is
+ * clamped there, and it says why.
  */
 import {
   clipFromAnimation,
@@ -19,6 +21,8 @@ import {
   isVector3,
   ROOT_MOTIONS,
   TEXTURE_SLOTS,
+  TILES_PER_METRE,
+  type MaterialDescriptor,
   type ModelRef,
   type SceneWorld,
 } from '@shared/domain/scene'
@@ -38,6 +42,7 @@ import {
 } from '@shared/domain/animation'
 import { readFontRef } from '@shared/domain/font'
 import { isRecord, readNumber } from '@shared/guards'
+import { clamp } from '@shared/numeric'
 import {
   GEOMETRY_SPECS,
   LIGHT_SPECS,
@@ -109,7 +114,7 @@ function revived(node: SceneNode): SceneNode {
   // is what lets such a file through in the first place; this is the other half of the same
   // rule, and one without the other would revive a sprite whose opacity is nothing at all.
   if (filled.type === 'mesh') {
-    return { ...filled, material: { ...DEFAULT_MATERIAL, ...filled.material } }
+    return { ...filled, material: revivedMaterial(filled.material) }
   }
   if (filled.type === 'sprite') {
     return { ...filled, sprite: { ...DEFAULT_SPRITE, ...filled.sprite } }
@@ -127,8 +132,24 @@ function revived(node: SceneNode): SceneNode {
 
   return {
     ...filled,
-    material: { ...DEFAULT_MATERIAL, ...filled.material },
+    material: revivedMaterial(filled.material),
     text: { ...DEFAULT_TEXT, ...filled.text, font: readFontRef(filled.text.font) },
+  }
+}
+
+/**
+ * A material over its defaults, with its tiling held inside the bounds the field offers.
+ *
+ * CLAMPED rather than refused: `isMaterial` accepts any finite number, and tightening it there
+ * would drop the whole node in silence — a mesh gone is worse than a mesh tiled oddly. Zero is
+ * the case that matters, and it collapses every UV onto one texel.
+ */
+function revivedMaterial(material: MaterialDescriptor): MaterialDescriptor {
+  const filled = { ...DEFAULT_MATERIAL, ...material }
+
+  return {
+    ...filled,
+    tilesPerMetre: clamp(filled.tilesPerMetre, TILES_PER_METRE.min, TILES_PER_METRE.max),
   }
 }
 

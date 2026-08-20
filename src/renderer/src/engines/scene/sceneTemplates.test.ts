@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_CHECKER_TEXTURE } from '@shared/domain/checkerTexture'
 import { SCENE_TEMPLATE_IDS, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { rememberCheckerTextures, forgetCheckerTextures } from './checkerTextures'
 import { pitchTowards, sceneFromTemplate } from './sceneTemplates'
@@ -28,7 +29,7 @@ describe('sceneFromTemplate', () => {
   it('tiles a floor by the metre rather than stretching one picture over it', () => {
     const floor = sceneFromTemplate('basic').nodes.find(node => node.type === 'mesh')
 
-    expect(floor?.type === 'mesh' && floor.material.uvScale).toBe(20)
+    expect(floor?.type === 'mesh' && floor.material.tilesPerMetre).toBe(1)
   })
 
   it('lays the floor flat and keeps it out of the shadow pass', () => {
@@ -99,7 +100,7 @@ describe('sceneFromTemplate', () => {
     const bare = sceneFromTemplate('basic').nodes.find(node => node.type === 'mesh')
     expect(bare?.type === 'mesh' && bare.material.map).toBeNull()
 
-    rememberCheckerTextures([{ id: 'checkerLarge', assetId: 'asset_checker' }])
+    rememberCheckerTextures([{ id: DEFAULT_CHECKER_TEXTURE, assetId: 'asset_checker' }])
     const dressed = sceneFromTemplate('basic').nodes.find(node => node.type === 'mesh')
     expect(dressed?.type === 'mesh' && dressed.material.map).toEqual({ assetId: 'asset_checker' })
 
@@ -107,7 +108,7 @@ describe('sceneFromTemplate', () => {
   })
 
   it('leaves the photo studio backdrop unpainted by the checker', () => {
-    rememberCheckerTextures([{ id: 'checkerLarge', assetId: 'asset_checker' }])
+    rememberCheckerTextures([{ id: DEFAULT_CHECKER_TEXTURE, assetId: 'asset_checker' }])
     const backdrop = sceneFromTemplate('photoStudio').nodes.find(
       node => node.type === 'mesh' && node.transform.position.z === -5,
     )

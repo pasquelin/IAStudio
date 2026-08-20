@@ -19,17 +19,26 @@ import { fileURLToPath } from 'node:url'
 
 const SIZE = 1024
 
-/** Les deux gris du damier, et l'encre des lignes. Ceux de la référence, mesurés dessus. */
-const DARK = 0x4a
-const LIGHT = 0x5e
-const INK = 0xe8
+/**
+ * Clair plutôt que sombre : la texture est MULTIPLIÉE par la couleur du matériau, donc c'est
+ * elle qui doit laisser passer la teinte. Le joint est sombre et marqué, la subdivision à peine
+ * plus foncée que la face — c'est ce qui donne de grandes cases lisibles plutôt qu'un moiré.
+ */
+const FACE = 0xc8
+const FACE_ALT = 0xa4
+const SUB = 0xb4
+const JOINT = 0x4e
 
-/** Une variante : combien de cases par côté, si les cases alternent, épaisseur du trait. */
+/** Une tuile vaut UN MÈTRE : à une répétition par mètre, une case en fait un. */
+const JOINT_WIDTH = 9
+const SUB_WIDTH = 3
+
+/** Combien de cases par tuile, en combien de sous-carreaux, et si les cases alternent. */
 const VARIANTS = [
-  { name: 'GridLarge', cells: 8, alternating: false, line: 3 },
-  { name: 'GridSmall', cells: 16, alternating: false, line: 2 },
-  { name: 'CheckerLarge', cells: 8, alternating: true, line: 3 },
-  { name: 'CheckerSmall', cells: 16, alternating: true, line: 2 },
+  { name: 'GridLarge', cells: 1, divisions: 4, alternating: false },
+  { name: 'GridSmall', cells: 2, divisions: 2, alternating: false },
+  { name: 'CheckerLarge', cells: 2, divisions: 2, alternating: true },
+  { name: 'CheckerSmall', cells: 4, divisions: 1, alternating: true },
 ]
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
@@ -54,14 +63,20 @@ function chunk(type, body) {
   return Buffer.concat([head, body, crc])
 }
 
-/** Le pixel de la variante en (x, y) : le trait gagne sur la case. */
+/** Le pixel de la variante en (x, y). Le joint gagne sur la subdivision, qui gagne sur la face. */
 function shadeAt(variant, x, y) {
   const cell = SIZE / variant.cells
-  const inLine = x % cell < variant.line || y % cell < variant.line
-  if (inLine) return INK
+  // Centré SUR la limite plutôt que posé après elle : deux tuiles voisines partagent alors un
+  // seul joint de la bonne épaisseur, au lieu d'en accoler deux moitiés.
+  const onJoint = axis => (axis + JOINT_WIDTH / 2) % cell < JOINT_WIDTH
+  if (onJoint(x) || onJoint(y)) return JOINT
+
+  const sub = cell / variant.divisions
+  const onSub = axis => (axis + SUB_WIDTH / 2) % sub < SUB_WIDTH
+  if (variant.divisions > 1 && (onSub(x) || onSub(y))) return SUB
 
   const checker = (Math.floor(x / cell) + Math.floor(y / cell)) % 2 === 0
-  return variant.alternating && checker ? LIGHT : DARK
+  return variant.alternating && checker ? FACE_ALT : FACE
 }
 
 function pngOf(variant) {

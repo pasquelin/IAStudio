@@ -1,7 +1,7 @@
 import {
   DEFAULT_CAMERA,
   isVector3,
-  UV_SCALE,
+  TILES_PER_METRE,
   type CameraDescriptor,
   type GeometryDescriptor,
   type LightDescriptor,
@@ -140,9 +140,14 @@ export const MATERIAL_SPECS: MaterialSpecs = {
   color: COLOR,
   roughness: UNIT,
   metalness: UNIT,
-  // A whole number of repeats: half a checker square at the seam of a floor is a texture that
-  // looks misaligned rather than tiled.
-  uvScale: { control: 'number', min: UV_SCALE.min, max: UV_SCALE.max, step: UV_SCALE.step },
+  // Squares per metre, so a step of a twentieth reaches both a floor read by the metre and a
+  // prop read by the centimetre.
+  tilesPerMetre: {
+    control: 'number',
+    min: TILES_PER_METRE.min,
+    max: TILES_PER_METRE.max,
+    step: TILES_PER_METRE.step,
+  },
 }
 
 /** Exhaustive like the material's, minus the map, which no control describes. */
@@ -213,18 +218,29 @@ export function lightFields(descriptor: LightDescriptor): PropertyField[] {
   )
 }
 
+/** Typed off the descriptor, so renaming the field cannot leave the filter below green and idle. */
+const TILING_FIELD: keyof MaterialDescriptor = 'tilesPerMetre'
+
 /**
  * `fallbackColor` stands in for the `null` that means "the studio's own colour": a swatch has
  * to show something, and the value it shows is the one the viewport is already painting.
+ *
+ * `tiling` is false where the density does nothing: a text's outline is not a primitive, so its
+ * UVs never go through `uvTiling`. Offered there, the field marked the document as changed and
+ * changed nothing on screen.
  */
 export function materialFields(
   descriptor: MaterialDescriptor,
   fallbackColor: string,
+  tiling = true,
 ): PropertyField[] {
-  return listFields({ ...descriptor, color: descriptor.color ?? fallbackColor }, MATERIAL_SPECS, {
-    ...DEFAULT_MATERIAL,
-    color: fallbackColor,
-  })
+  const fields = listFields(
+    { ...descriptor, color: descriptor.color ?? fallbackColor },
+    MATERIAL_SPECS,
+    { ...DEFAULT_MATERIAL, color: fallbackColor },
+  )
+
+  return tiling ? fields : fields.filter(field => field.name !== TILING_FIELD)
 }
 
 /** Same rule as a material's, and for the same `null`. */

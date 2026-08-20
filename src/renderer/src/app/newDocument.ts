@@ -6,6 +6,7 @@ import {
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { parentOf } from '@shared/domain/folder'
 import { DEFAULT_SCENE_TEMPLATE, type SceneTemplateId } from '@shared/domain/sceneTemplate'
+import { ensureCheckerTextures } from '@/engines/scene/checkerTextures'
 import { seedSceneTemplate } from '@/stores/scenes'
 import { takenDocumentNames, untitledDocumentName, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -69,6 +70,13 @@ async function named(
   const kind = kindForWorkspace(workspace)
   if (kind === null || !useProject.getState().project) return null
 
+  // Started here and awaited far below: the install is a round trip to the main process, and it
+  // has the naming window and the creation to run under rather than after.
+  const textures =
+    kind === 'scene'
+      ? ensureCheckerTextures(useProject.getState().project?.path ?? '')
+      : Promise.resolve()
+
   // Already named: no window is opened at all. There is nothing left to ask, and asking would
   // hold a caller outside the window on a question only the person in front of it can answer.
   const namer = called ? null : getBridge()?.newDocument
@@ -103,8 +111,13 @@ async function named(
   // Before the tab opens, and that order is the whole mechanism: `restoreDocument` puts the
   // studio default in a document that holds nothing, and holding the template's scene already is
   // what stops it.
-  if (created.kind === 'scene')
+  if (created.kind === 'scene') {
+    // AWAITED, and this is the only place it can be: a template lays its shapes down before any
+    // editor mounts, so the hook that installs the working textures has not run — every shape of
+    // the first 3D document of a session was born bare, and saved that way for good.
+    await textures
     seedSceneTemplate(created.id, of?.template ?? DEFAULT_SCENE_TEMPLATE)
+  }
 
   openDocument(created)
   return created

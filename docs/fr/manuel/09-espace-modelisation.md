@@ -11,8 +11,34 @@ promène.
 
 Le bouton **+** du rail gauche crée une scène neuve. Un projet doit être ouvert.
 
-Une scène neuve contient un sol quadrillé — la **grille** — et rien d’autre. Elle est noire tant
-qu’aucune lumière n’y est posée : c’est normal, et le panneau Lumières le dit.
+La fenêtre qui s’ouvre demande un nom, puis **sur quoi la scène ouvre** : huit modèles, sous le
+nom. Le choix ne s’applique qu’à la création — une scène déjà ouverte ne change pas de modèle.
+
+| Modèle | Ce qu’il pose |
+|---|---|
+| **Vide** | trois lumières, rien d’autre. Le point de départ pour tout construire soi-même |
+| **Base** | un sol, un soleil, une lumière d’appoint, une caméra, et un cube d’un mètre — le cube dit l’échelle, supprimez-le dès qu’un objet à vous arrive |
+| **Studio photo** | un fond blanc incurvé, un sol, et trois lumières placées comme en studio |
+| **Cinéma** | un grand sol, une lumière rasante, une caméra et son **rail** — le plan est déjà un mouvement |
+| **Architecture** | un sol très large, un soleil bas, un ciel, et une caméra à hauteur d’œil |
+| **1re personne**, **3e personne**, **Vue de dessus** | les trois ouvrent sur le **niveau de test** ci-dessous, et ne diffèrent que par où se place la caméra |
+
+Une scène est noire tant qu’aucune lumière n’y est posée : c’est normal, et le panneau Lumières
+le dit. Seul le modèle **Vide** peut vous y amener, en supprimant ses lumières.
+
+### Le niveau de test
+
+Les trois modèles de personnage ouvrent sur un décor fait pour être **parcouru** : un sol de
+40 m sur 32, une enceinte, une cour en contrebas avec son escalier, une planche qui la traverse,
+une terrasse et sa rampe, une passerelle qui enjambe la cour, trois blocs de saut aux écarts
+croissants, des piliers, et un repère bleu au sol qui marque le départ.
+
+Chaque partie est une forme du studio, rangée sous trois groupes — **Ground**, **Enclosure**,
+**Course** — dans le panneau Scène. Tout s’y déplace, s’y redimensionne et s’y supprime comme
+n’importe quel objet : c’est un décor de travail, pas un décor figé.
+
+Les couleurs disent un rôle : gris pour ce qui se marche, gris sombre pour les murs et ce qui se
+contourne, **orange pour tout ce qui se grimpe** — rampe, marches, blocs, passerelle.
 
 ---
 
@@ -476,7 +502,7 @@ montre son rayon, un tore montre son tube, un projecteur montre son angle.
 | **Identité** | le nom, modifiable |
 | **Transformation** | Position, Rotation, Échelle — trois nombres chacune (X, Y, Z). Un sprite sans enfant, sélectionné seul, n’a pas de ligne Rotation : elle ne se verrait nulle part |
 | **Géométrie** | ce qui définit la forme : rayon, largeur, segments… |
-| **Matière** | Couleur, Rugosité, Métallicité, et cinq emplacements de textures |
+| **Matière** | Couleur, Rugosité, Métallicité, Répétition au mètre, et cinq emplacements de textures |
 
 #### Les champs de géométrie, tous
 
@@ -515,6 +541,18 @@ on ne peut pas prévoir le résultat sans essayer.
 Les cinq emplacements de textures — **Texture**, **Normales**, **Carte de rugosité**, **Carte de
 métallicité**, **Occlusion ambiante** — reçoivent des images du projet. Le bouton **Choisir une
 texture** ouvre la liste ; **Retirer la texture** la vide.
+
+**Toute forme neuve arrive déjà habillée** d’un damier de travail. Il sert à trois choses : juger
+une échelle, voir une texture s’étirer, et distinguer une face d’une autre. Remplacez-le quand
+vous voulez — c’est un point de départ, pas une décoration.
+
+Quatre damiers sont copiés dans le dossier **Textures** du projet la première fois qu’une scène
+en demande un : `CheckerLarge`, `CheckerSmall`, `GridLarge`, `GridSmall`. Ce sont des images du
+projet comme les autres.
+
+**Répétition au mètre** dit combien de carreaux tiennent dans un mètre. À `1`, un carreau fait un
+mètre — sur un mur de 3 m comme sur un sol de 40 m, les carreaux restent carrés et de même
+taille. Montez à `2` pour un objet qu’on regarde de près.
 
 ### Pour une lumière
 
@@ -620,6 +658,33 @@ choses et à quelle hauteur. Il n’apparaît dans aucun rendu.
 | **Taille de la grille** | son étendue en mètres — un carreau vaut toujours 1 m | 20 |
 
 Cachez-la pour juger une image sans rien autour.
+
+Elle est posée **juste sous** le niveau zéro : un sol qui repose dessus la masque, au lieu de la
+laisser transparaître. Sur les modèles qui posent un sol — dont le niveau de test — elle
+disparaît donc d’elle-même, sans qu’il y ait rien à décocher.
+
+---
+
+## Capturer la vue
+
+**Affichage ▸ Capturer la vue** enregistre une image de la vue 3D dans le dossier **Images** du
+projet. Ce qui est capturé est ce que le viewport dessine — **moins** la grille, les poignées de
+transformation, les rails et les repères de lumière : une image, pas une copie d’écran.
+
+Le menu du bouton offre quatre définitions :
+
+| Choix | Hauteur de l’image |
+|---|---|
+| **Taille de la vue** | celle du panneau, à l’écran |
+| **1080p** | 1080 pixels |
+| **1440p** | 1440 pixels |
+| **4K** | 2160 pixels |
+
+**Seule la hauteur est imposée** : la largeur suit la forme du panneau, pour que l’image montre
+exactement ce que vous voyiez — ni plus, ni moins. Un panneau étroit donne donc une image étroite,
+et c’est voulu. Élargissez le panneau avant de capturer si vous voulez une image large.
+
+L’image apparaît dans les assets du projet comme n’importe quelle autre.
 
 ---
 

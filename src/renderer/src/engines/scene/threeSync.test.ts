@@ -117,7 +117,7 @@ describe('applyGeometry', () => {
   it('swaps in the geometry the descriptor asks for', () => {
     const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
 
-    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 })
+    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }, 1)
 
     expect(mesh.geometry.type).toBe('SphereGeometry')
   })
@@ -126,41 +126,97 @@ describe('applyGeometry', () => {
     const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
     const dispose = vi.spyOn(mesh.geometry, 'dispose')
 
-    applyGeometry(mesh, { kind: 'box', width: 2, height: 1, depth: 1 })
+    applyGeometry(mesh, { kind: 'box', width: 2, height: 1, depth: 1 }, 1)
 
     expect(dispose).toHaveBeenCalled()
   })
 })
 
 /**
- * A floor of forty metres wearing one stretch of the checker reads as a blur — which is what
- * sent this batch back. The repeat rides on the UVs and not on the texture, because the engine
- * shares one `Texture` between every mesh that asks for the same picture.
+ * The maps repeat at a DENSITY, not a count: one number over UVs that run 0..1 whatever a face
+ * measures gave a forty-metre band and the sixteen-metre one beside it two different textures,
+ * which is what sent this batch back. The repeat rides on the UVs and not on the texture,
+ * because the engine shares one `Texture` between every mesh asking for the same picture.
  */
 describe('tiledGeometry', () => {
-  const uvOf = (geometry: BufferGeometry): number =>
-    Number(geometry.attributes.uv?.getX(1) ?? Number.NaN)
+  const spanOf = (geometry: BufferGeometry): { u: number; v: number } => {
+    const uv = geometry.attributes.uv
+    if (!uv) return { u: Number.NaN, v: Number.NaN }
 
-  it('repeats the maps across the shape, by whole squares', () => {
-    const plain = tiledGeometry({ kind: 'plane', width: 40, height: 40 })
-    const tiled = tiledGeometry({ kind: 'plane', width: 40, height: 40 }, 40)
+    const us: number[] = []
+    const vs: number[] = []
+    for (let at = 0; at < uv.count; at += 1) {
+      us.push(uv.getX(at))
+      vs.push(uv.getY(at))
+    }
+    return { u: Math.max(...us) - Math.min(...us), v: Math.max(...vs) - Math.min(...vs) }
+  }
 
-    expect(uvOf(tiled)).toBeCloseTo(uvOf(plain) * 40)
+  it('puts one square per metre down each side of a face, however oblong', () => {
+    const span = spanOf(tiledGeometry({ kind: 'plane', width: 40, height: 16 }, 1))
+
+    expect(span.u).toBeCloseTo(40)
+    expect(span.v).toBeCloseTo(16)
   })
 
-  it('leaves the shape untouched at one, which is what stretching whole means', () => {
-    const geometry = tiledGeometry({ kind: 'plane', width: 2, height: 2 }, 1)
+  it('gives two faces of different shapes squares of the same size', () => {
+    const wide = spanOf(tiledGeometry({ kind: 'plane', width: 40, height: 16 }, 1))
+    const narrow = spanOf(tiledGeometry({ kind: 'plane', width: 16, height: 8 }, 1))
 
-    expect(uvOf(geometry)).toBeCloseTo(1)
+    expect(wide.u / 40).toBeCloseTo(narrow.u / 16)
+    expect(wide.v / 16).toBeCloseTo(narrow.v / 8)
   })
 
-  // The one that reaches the screen: a mesh built with a scale, not only one edited into it.
-  it('is what a mesh is born with, and what a change of scale rebuilds', () => {
-    const mesh = new Mesh(tiledGeometry({ kind: 'plane', width: 4, height: 4 }, 4))
-    expect(uvOf(mesh.geometry)).toBeCloseTo(4)
+  it('reads the density as squares per metre', () => {
+    const span = spanOf(tiledGeometry({ kind: 'plane', width: 10, height: 10 }, 2.5))
 
-    applyGeometry(mesh, { kind: 'plane', width: 4, height: 4 }, 8)
-    expect(uvOf(mesh.geometry)).toBeCloseTo(8)
+    expect(span.u).toBeCloseTo(25)
+  })
+
+  /*
+   * The density a picture is asked to FIT at — one over the metres it covers. Textures repeat, so
+   * a projection centred on nothing puts 0,5 at the middle of the face: the left half of a plane
+   * then shows the right half of the photograph, and no density anywhere makes it whole.
+   */
+  it('lays a picture down once, whole, at the density that covers the face', () => {
+    const uv = tiledGeometry({ kind: 'plane', width: 4, height: 4 }, 0.25).attributes.uv
+    const us: number[] = []
+    for (let at = 0; at < (uv?.count ?? 0); at += 1) us.push(Number(uv?.getX(at)))
+
+    expect(Math.min(...us)).toBeCloseTo(0)
+    expect(Math.max(...us)).toBeCloseTo(1)
+  })
+
+  // A surface of revolution keeps its own UVs, scaled: projecting one would seam it all round.
+  it('measures a cylinder round its side and down its height', () => {
+    const span = spanOf(
+      tiledGeometry(
+        { kind: 'cylinder', radiusTop: 1, radiusBottom: 1, height: 4, segments: 24 },
+        1,
+      ),
+    )
+
+    expect(span.u).toBeCloseTo(2 * Math.PI)
+    expect(span.v).toBeCloseTo(4)
+  })
+
+  // A tube's `v` runs ROUND it, not down a bounding box: measured off the box it came back as a
+  // height, and the squares on the shipped tube were half the size asked for and not square.
+  it('measures a tube round its own section', () => {
+    const span = spanOf(
+      tiledGeometry({ kind: 'tube', radius: 0.2, tubularSegments: 48, radialSegments: 12 }, 1),
+    )
+
+    expect(span.v).toBeCloseTo(2 * Math.PI * 0.2)
+  })
+
+  // The one that reaches the screen: a mesh built with a density, not only one edited into it.
+  it('is what a mesh is born with, and what a change of density rebuilds', () => {
+    const mesh = new Mesh(tiledGeometry({ kind: 'plane', width: 4, height: 4 }, 1))
+    expect(spanOf(mesh.geometry).u).toBeCloseTo(4)
+
+    applyGeometry(mesh, { kind: 'plane', width: 4, height: 4 }, 2)
+    expect(spanOf(mesh.geometry).u).toBeCloseTo(8)
   })
 })
 
@@ -479,7 +535,7 @@ describe('applyGeometry and the second UV set', () => {
     const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
     giveSecondUvSet(mesh.geometry)
 
-    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 })
+    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }, 1)
 
     expect(mesh.geometry.attributes.uv1).toBeDefined()
   })
@@ -487,7 +543,7 @@ describe('applyGeometry and the second UV set', () => {
   it('does not invent one for a shape that never had it', () => {
     const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
 
-    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 })
+    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }, 1)
 
     expect(mesh.geometry.attributes.uv1).toBeUndefined()
   })

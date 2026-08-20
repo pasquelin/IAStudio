@@ -93,7 +93,7 @@
       "target": "Cible",
       "roughness": "Rugosité",
       "metalness": "Métallicité",
-      "uvScale": "Répétition",
+      "tilesPerMetre": "Répétition au mètre",
       "map": "Texture",
       "opacity": "Opacité",
       "normalMap": "Normales",

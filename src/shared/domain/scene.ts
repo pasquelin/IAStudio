@@ -564,19 +564,27 @@ export type MaterialDescriptor = {
   roughness: number
   metalness: number
   /**
-   * How many times the maps repeat across the shape — 20 on a floor of twenty units puts one
-   * square of the working checker per unit, where 1 stretches the whole picture over the floor.
+   * How many times the maps repeat per METRE, not across the whole shape: 1 puts one square of
+   * the working checker on every square metre, of a forty-metre floor as of a three-metre wall.
+   *
+   * A count across the shape was the first design and it could not hold — one number over UVs
+   * that run 0..1 whatever the face measures gives 1 m per square along a 40 m band and 0,4 m
+   * across the 16 m one, so two halves of one floor read as two different textures.
    *
    * Carried by the material and applied to the GEOMETRY's UVs rather than to the texture: the
    * engine shares one `Texture` between every mesh wearing it, so a repeat set there would
    * follow that picture everywhere it is used. Baked UVs also travel as plain glTF, which any
    * reader understands without an extension.
    */
-  uvScale: number
+  tilesPerMetre: number
 } & { [S in TextureSlot]: TextureRef | null }
 
-/** Bounds the slider and a hand-edited file alike. One is « stretched whole », which is legitimate. */
-export const UV_SCALE = Object.freeze({ min: 1, max: 200, step: 1 })
+/**
+ * Bounds the field and a hand-edited file alike — and the reading CLAMPS to them rather than
+ * only checking the number is finite: zero collapses every UV onto one texel, which reads as a
+ * mesh painted in a single flat colour with no way to tell why.
+ */
+export const TILES_PER_METRE = Object.freeze({ min: 0.05, max: 20, step: 0.05 })
 
 /**
  * A sprite: a picture that always faces the camera, whatever the view does.

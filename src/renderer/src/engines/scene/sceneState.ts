@@ -226,7 +226,8 @@ export const DEFAULT_MATERIAL: MaterialDescriptor = {
   color: null,
   roughness: 1,
   metalness: 0,
-  uvScale: 1,
+  /** One square per metre: the density at which the working checker reads as a measure. */
+  tilesPerMetre: 1,
   map: null,
   normalMap: null,
   roughnessMap: null,
