@@ -1,5 +1,5 @@
 import { messageOf } from '@shared/guards'
-import { MAX_LOG_MESSAGE, type LogScope } from '@shared/ipc'
+import { MAX_LOG_MESSAGE, type LogLevel, type LogScope, type TraceScope } from '@shared/ipc'
 import { getBridge } from './bridge'
 
 /**
@@ -19,6 +19,9 @@ import { getBridge } from './bridge'
  */
 const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'scene.export',
+  // A menu row pressed again after a failure, like its export neighbours: silenced from the
+  // second press, a capture that writes nothing looks exactly like one that worked.
+  'scene.capture',
   'image.export',
   'document.save',
   'document.close',
@@ -26,9 +29,21 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'assets.reveal',
   // A double-click is a gesture too: refusing the same asset twice must say so twice.
   'assets.open',
+  // The same double-click, one step earlier — before there is an asset to open. A reader whose
+  // file did nothing tries again; silenced from the second press, the studio looks broken.
+  'explorer.open',
   // Same gesture, same rule — and here silence costs more: each reopening re-arms a ⌘S that
   // would write the document's size back over a bigger picture.
   'canvas.size',
+  // ⌘S again: pressed a second time precisely because the first left the source file alone, and
+  // a refusal said once reads as a save that worked.
+  'canvas.flatten',
+  // Picking an edit from the Image menu is a gesture too, and it was the one refusal of that menu
+  // that said nothing at all — the caller swallowed everything it threw.
+  'canvas.edit',
+  // A drop and a double-click are gestures: a cloud row that has not been downloaded yet is
+  // dropped again precisely because the first attempt did nothing visible.
+  'canvas.place',
   // ⌘S is a gesture, and the half that reaches the asset can fail while the document is written.
   'assets.save',
   // ⇧⌘S is the same kind of gesture: asked again precisely because the first said nothing.
@@ -47,6 +62,10 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   // first attempt failed — silenced, a second try looks exactly like a dialog somebody dismissed.
   'texture.export',
   'skybox.export',
+  // The two of this branch, for that same reason and one more: both spend minutes before they can
+  // fail, so a second press silenced is a wait nobody is told the outcome of.
+  'sequence.export',
+  'assets.contactSheet',
 ])
 
 /**
@@ -67,13 +86,52 @@ export function reportFailure(scope: LogScope, subject: string, error: unknown):
     reported.add(said)
   }
 
-  const message = `${subject}: ${messageOf(error)}`.slice(0, MAX_LOG_MESSAGE)
+  send('error', scope, lineFor(subject, error))
+}
 
-  // The rejection is dropped on purpose: this IS the path a failure travels, and a failure to
-  // report one has nowhere left to go.
+/**
+ * Something the user has to be told that is not a failure: work that went through with less than
+ * it was asked for. Never deduplicated — the same document opened twice loses the same thing
+ * twice, and a second silence would read as a second open that went fine.
+ */
+export function reportNotice(scope: LogScope, message: string): void {
+  send('warn', scope, message.slice(0, MAX_LOG_MESSAGE))
+}
+
+/**
+ * The rejection is dropped on purpose: this IS the path a failure travels, and a failure to
+ * report one has nowhere left to go. Silent with no bridge — tests and a plain browser have none.
+ */
+function send(level: LogLevel, scope: LogScope, message: string): void {
   getBridge()
-    ?.diagnostics.report({ level: 'error', scope, message })
+    ?.diagnostics.report({ level, scope, message })
     .catch(() => {})
+}
+
+/**
+ * A failure the terminal keeps and no surface shows.
+ *
+ * Never deduplicated, unlike `reportFailure`: nothing here is read while it happens, and a
+ * rejection firing on every detach is telling whoever reads the log precisely that.
+ *
+ * Bounded instead. A promise rejected inside an animation frame would send one message per
+ * frame, and no path of this application is allowed an unbounded burst — a hundred lines already
+ * say that something repeats.
+ */
+export function traceFailure(scope: TraceScope, subject: string, error: unknown): void {
+  if (traced >= MAX_TRACES) return
+  traced += 1
+
+  getBridge()
+    ?.diagnostics.trace({ scope, message: lineFor(subject, error) })
+    .catch(() => {})
+}
+
+const MAX_TRACES = 100
+let traced = 0
+
+function lineFor(subject: string, error: unknown): string {
+  return `${subject}: ${messageOf(error)}`.slice(0, MAX_LOG_MESSAGE)
 }
 
 /**
@@ -93,7 +151,11 @@ function blamedComponent(componentStack: string | undefined): string {
 
 const reported = new Set<string>()
 
-/** Lets a subject be reported again — the studio moved on, and a repeat would now be news. */
+/**
+ * Lets a subject be reported again — the studio moved on, and a repeat would now be news. The
+ * trace budget refills for the same reason: what filled it belonged to the project before.
+ */
 export function forgetReportedFailures(): void {
   reported.clear()
+  traced = 0
 }

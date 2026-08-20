@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EMBEDDED_FONTS, type FontRef } from '@shared/domain/font'
-import { bridgeWatchingLogs } from '@/services/fake-bridge'
+import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { createFontLibrary, type FontSource } from './fonts'
 import moduleSource from './fonts.ts?raw'

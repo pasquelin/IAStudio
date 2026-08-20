@@ -2,10 +2,10 @@ import { act, fireEvent, render, screen, within, type RenderResult } from '@test
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
-import { DEFAULT_TRACK_HEIGHT } from '@/engines/timeline/timeline-state'
+import { DEFAULT_TRACK_HEIGHT } from '@/engines/timeline/timelineState'
 import { sequenceOf, useSequences } from '@/stores/sequences'
-import { useTimelineView, viewportOf } from '@/stores/timeline-view'
-import { TrackHeaders } from './TrackHeaders'
+import { useTimelineView, viewportOf } from '@/stores/timelineView'
+import { TrackHeaders } from './TrackHeaders/TrackHeaders'
 
 /** Six rows in a column three high: the last three cannot be reached without the band moving. */
 const ROWS = 6
@@ -222,10 +222,6 @@ describe('a band that comes to the pointer', () => {
   })
 
   /**
-   * Reading a stack meant carrying the pointer off the very rows one was reading: the strip has
-   * always answered the wheel, the column of names never did.
-   */
-  /**
    * Nothing said these lines belonged together: the column is a stack of bare divs, so a reader
    * met as many unnamed boxes as there are tracks, with no count to place any of them.
    *
@@ -239,6 +235,10 @@ describe('a band that comes to the pointer', () => {
     expect(within(list).getAllByRole('listitem')).toHaveLength(ROWS)
   })
 
+  /**
+   * Reading a stack meant carrying the pointer off the very rows one was reading: the strip has
+   * always answered the wheel, the column of names never did.
+   */
   it('answers the wheel over the names, and stops where the stack ends', () => {
     const view = render(<TrackHeaders documentId="doc-1" />, { wrapper: StrictMode })
     layout(view, CONTENT)

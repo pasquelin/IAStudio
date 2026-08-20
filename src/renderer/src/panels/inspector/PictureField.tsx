@@ -1,22 +1,28 @@
 import { useTranslation } from 'react-i18next'
 import { PICTURES } from '@shared/domain/asset'
-import { TextureField } from '@/design/TextureField'
-import { openAssetById } from '@/helpers/open-asset'
-import { useProjectPictures } from './useProjectPictures'
+import { mountedAssetPicker } from '@/app/assetPicker'
+import { LinkField, type LinkFieldProps } from '@/design/LinkField/LinkField'
+import { openAssetById } from '@/helpers/openAsset'
+import { useProjectPictures } from '@/hooks/useProjectPictures'
 
 export type PictureFieldProps = {
   label: string
   value: string | null
   onChange: (assetId: string | null) => void
+  /** What pressing the picture does, when it is not opening the asset — see `LinkField`. */
+  open?: LinkFieldProps['open']
+  /** A standing laid over the picture — see `LinkField`. */
+  badge?: LinkFieldProps['badge']
+  /** What a drop puts here, when the caller needs the asset itself — see `LinkField`. */
+  onDropAsset?: LinkFieldProps['onDropAsset']
   /**
-   * What the empty row reads, and what its hint explains — both already translated. Given only
-   * where "empty" does not mean "no picture": a model's slot left empty wears the map its own file
-   * carries, and reading « none » over a textured model would be a plain lie. The hint travels
-   * with the label because it says the same thing at more length, and one without the other is
-   * the very lie the label was overridden to avoid.
+   * What the empty row reads. Given only where "empty" does not mean "no picture": a model's slot
+   * left empty wears the map its own file carries, and reading « none » over a textured model
+   * would be a plain lie.
    */
   emptyLabel?: string
-  emptyHint?: string
+  /** The handle the MCP steers this link by. Never a translated word. */
+  scId?: string
 }
 
 /**
@@ -24,39 +30,60 @@ export type PictureFieldProps = {
  * what it dresses. One component rather than one per section, so a mesh's five maps and a
  * sprite's one never disagree on what counts as a picture, or on what the empty row reads.
  */
-export function PictureField({ label, value, onChange, emptyLabel, emptyHint }: PictureFieldProps) {
+export function PictureField({
+  label,
+  value,
+  onChange,
+  open,
+  badge,
+  onDropAsset,
+  emptyLabel,
+  scId,
+}: PictureFieldProps) {
   const { t } = useTranslation()
   const options = useProjectPictures(PICTURES)
+  /**
+   * Asked for at press time, never at render: the window is mounted by the shell, and a slot that
+   * captured it while drawing would hold whatever was mounted when the panel first opened.
+   */
+  const browse = (): void => {
+    const picker = mountedAssetPicker()
+    if (!picker) return
+
+    void picker({ accepts: PICTURES, label }).then(chosen => {
+      // `null` is the window being called off, which is not the same as choosing nothing — that
+      // is what the empty entry of the list is for.
+      if (chosen !== null) onChange(chosen)
+    })
+  }
 
   return (
-    <TextureField
+    <LinkField
       label={label}
       value={value}
       options={options}
       onChange={onChange}
       emptyLabel={emptyLabel ?? t('inspector.noTexture')}
-      // Named after the slot, because the whole LINE is what opens the menu now: five slots of a
-      // material offered five controls called « Choose a texture », so nothing said which channel
-      // one was about to change — to a screen reader stepping through them, or to a voice command
-      // naming the one on screen. It is also the only place the slot's name stays readable when
-      // the column truncates it, which `Row` used to answer with a native title the cover swallows.
-      chooseLabel={t('inspector.chooseTextureFor', { name: label })}
+      missingLabel={t('inspector.missingTexture')}
       clearLabel={t('inspector.clearTexture')}
-      emptyHint={emptyHint ?? t('inspector.noTextureHint')}
-      optionHint={t('inspector.pickTextureHint')}
-      // Said in the menu rather than by a line that refuses in silence. The keys are the Textures
-      // space's own: it is the same sentence about the same project, and a second wording of it
-      // would be two answers to one question.
-      noOptionLabel={t('texture.noPicture')}
-      noOptionHint={t('texture.noPictureHint')}
       // The three kinds that decode as an image, which is exactly what `options` was filtered to:
       // a slot that lit up for a mesh would promise a drop it then refuses.
       accepts={PICTURES}
-      open={{
-        label: t('inspector.openTexture'),
-        hint: t('inspector.openTextureHint'),
-        run: () => openAssetById(value),
+      badge={badge}
+      onDropAsset={onDropAsset}
+      open={
+        open ?? {
+          label: t('inspector.openTexture'),
+          hint: t('inspector.openTextureHint'),
+          run: () => openAssetById(value),
+        }
+      }
+      browse={{
+        label: t('inspector.browseTexture'),
+        hint: t('inspector.browseTextureHint'),
+        run: browse,
       }}
+      scId={scId}
     />
   )
 }

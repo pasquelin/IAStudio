@@ -55,14 +55,14 @@ Keep this in mind: **an asset is a finished, reusable file**.
 
 Assets live in the **Assets** panel, familiarly called *the shelf*.
 
-**Automatic retry**
-What the studio does when a *job* fails for a reason another attempt can mend: a dropped
-connection, a busy service, too many requests. See *Exponential backoff*.
-
 **Assistant**
 The window where you say what you want to do, in an ordinary sentence, rather than clicking it.
 `⌘K`. It picks the actions itself and runs them, and asks for your yes before anything that spends
 or uploads. See [Driving the studio from outside](20-driving-from-outside.md).
+
+**Automatic retry**
+What the studio does when a *job* fails for a reason another attempt can mend: a dropped
+connection, a busy service, too many requests. See *Exponential backoff*.
 
 **Azimuth**
 The direction of something all around you, measured by turning on the spot. For a *skybox*'s sun:
@@ -151,6 +151,11 @@ You meet it in three places: the **Generate** button carries an estimate — `~1
 press it; the generation's own line shows the real figure once it has gone; **Help ▸ Usage…**
 totals a period. Asking for the estimate spends nothing and generates nothing.
 
+**Crop**
+Two gestures share this word. On a sound, keeping only the selected portion and throwing the rest
+away; on an image, placing a frame and keeping what falls inside it. Pulling a *clip* in from one
+of its ends is *Trim*.
+
 ---
 
 ## D
@@ -185,8 +190,13 @@ A work in progress, open in a tab in the centre of the window.
 The difference from an *asset* is the one between material and work: a generated image is an asset;
 the image you are painting on, with its *layers* and its history, is a document.
 
-Six kinds, one per *workspace*: `.img` (image), `.scene` (3D scene), `.seq` (sequence), `.aud`
-(audio), `.tex` (material), `.sky` (sky).
+Six kinds, one per *workspace*, each under the extension of the open format it belongs in: `.ora`
+(image), `.gltf` (3D scene and sky), `.otio` (sequence and audio), `.mtlx` (material).
+
+**All six open in another application today**: the extension announces what is inside the file,
+no longer where it is going. What the standard cannot say travels at the place each format
+reserves for applications — another application does not lose it, it does not see it. See
+[What the studio does not do](18-limits.md).
 
 ---
 
@@ -207,7 +217,7 @@ even with no light around.
 **Environment** *(of a 3D scene)*
 What lights a scene besides its own lamps. Two values: **Studio**, a neutral computed lighting, or
 **a *skybox* from the project**, which lays its light and its reflections over everything. Chosen
-in the 3D workspace's Inspector, under Environment.
+in the Modelling workspace's **Inspector**, under **Environment**.
 
 **Equirectangular**
 The format of an image holding a whole sphere, flattened: twice as wide as it is tall, the way a
@@ -264,8 +274,13 @@ The document keeps its layers. Flattening is not destructive here.
 To ask a *model* to make something. The request leaves for Scenario, comes back as a *job*, and the
 result lands in your *assets*.
 
+**Gizmo**
+The coloured *handles* that appear on a selected 3D object, and through which it is transformed:
+the **arrows** move it, the **circles** rotate it, the scale handles resize it. Which ones show is
+decided by the armed tool. Their orientation follows the *local frame / world frame*.
+
 **Group**
-Several objects filed under one parent. In the 3D workspace (`⌘G`) as in the layer stack: moving
+Several objects filed under one parent. In the Modelling workspace (`⌘G`) as in the layer stack: moving
 the group moves everything hanging below it, and folding it away makes a busy scene readable.
 
 **Guidance** *(ControlNet, cfg)*
@@ -287,6 +302,15 @@ at.
 ---
 
 ## H
+
+**Handle**
+A point you take hold of to act. The studio uses three kinds, and they have nothing to do with one
+another: the **manipulation handles** of a 3D object — the arrows and circles of the *gizmo*; the
+**handle of a clip**, at its edge, which *trims* it; and a joint's **handle to follow**, a point
+placed in the scene that the bone reaches for, and that the two bones above it, at most, turn to
+follow.
+
+The first two are dragged; the third is placed and stays put.
 
 **HDRI**
 A high-dynamic-range image: an image that keeps the real gap between sun and shadow, where an
@@ -331,7 +355,7 @@ bar, and goes through five states: **Queued** → **Running** → **Done**, or e
 You can keep working while a job runs.
 
 **Journal** *(activity)*
-The list of what the studio has done and failed to do, opened from the *status line*. Six
+The list of what the studio has done and failed to do, opened from the **status line**. Six
 topics — generation, import, library, document, project, interface — and three levels:
 information, warning, failure. A failure also raises a **toast** in the corner of the window,
 which only leaves if you dismiss it. See [When something goes wrong](16-troubleshooting.md).
@@ -362,7 +386,7 @@ which is a folder on your disk. The two are separate and nothing travels between
 action of yours. Today only the **project → library** direction has a button (**Send**).
 
 **Local frame / world frame**
-The orientation of the manipulation handles, in the 3D workspace. In the **world** frame the red
+The orientation of the manipulation handles, in the Modelling workspace. In the **world** frame the red
 arrow always points the same way. In the **local** frame it follows the object's orientation:
 which is what you need to drive a car forwards along the way it faces. The `L` key switches.
 
@@ -381,6 +405,11 @@ pixels are still there, they are not displayed. You paint it, adjust it, remove 
 picture never moved.
 
 A mask can also be made from a *selection*, in one command.
+
+**Material**
+What a surface is made of: its colour, its grain, what it gives back of the light. It is what the
+**Textures** workspace makes, and what the **Material** section of the **Inspector** sets on a 3D
+object.
 
 **MCP** *(Model Context Protocol)*
 The common tongue coding assistants speak to the tools they drive. The studio can present itself as
@@ -410,8 +439,8 @@ What you want to avoid. Short, in keywords: `blurry, text, watermark`. It is not
 describe a scene in reverse.
 
 **Node**
-An element of a 3D *scene*'s tree: a mesh, a light, a sprite, a group. It is what the *outliner*
-lists and what the *inspector* describes.
+An element of a 3D *scene*'s tree: a mesh, a light, a sprite, a group. It is what the **Outliner**
+lists and what the **Inspector** describes.
 
 **Normalise** *(audio)*
 Bringing a sound's perceived loudness to a reference level, here −14 *LUFS*. It stops two sounds
@@ -444,6 +473,12 @@ no model is chosen.
 **Playhead**
 The vertical line marking the current instant in the edit. You move it to place yourself, and it is
 at its position that a *clip* is split.
+
+**Project**
+A folder on your disk, and everything in it: the *assets*, the *documents*, the catalogue that
+indexes them. **The studio opens one at a time** — all its windows work on the same one. It supplies
+the first of the *shelf*'s three sources, the other two being your online library and the
+generations under way.
 
 **Projection**
 How the 3D camera lays volume flat. In **perspective**, what is far is smaller — that is what an
@@ -501,6 +536,11 @@ are dragged.
 **Saturation**
 The intensity of colours. At 0 the image is black and white; above 1 the colours shout.
 
+**Scene**
+What the Modelling workspace composes: a tree of *nodes* — objects, lights, cameras — with their
+places, their *materials* and their animation. It is that workspace's *document*, and it is written
+as `.gltf`.
+
 **Seed**
 The starting point of a generation's randomness. It is a number.
 
@@ -544,6 +584,15 @@ A picture placed in a 3D scene that **always faces the camera**, whichever direc
 Useful for foliage, a spark, a flat character. It is neither lit nor part of shadows: its colour is
 the one you give it.
 
+**Sub-track**
+A line of the animation band, in the Modelling workspace, on which an object's animation blocks are
+laid. They are called **Anim. 1**, **Anim. 2**, and are grouped **under** the object's key lines.
+
+It is not a *track* of the edit: a track holds *clips* and belongs to a sequence, a sub-track holds
+blocks and belongs to an object of the scene. Two motions on two sub-tracks play at the same time,
+but **they still share the same bones**: it is **Drives**, in the **Inspector**, that gives each one its
+half of the body.
+
 ---
 
 ## T
@@ -576,9 +625,18 @@ A line of the edit, on which *clips* are laid end to end. A picture track, a sou
 each if needed.
 
 **Trim**
-To shorten or lengthen a *clip* from one of its ends, or to keep only the selected portion of a
-sound. A video stops where its source does; a still has no source to run past, so both of its
-ends stretch it.
+To shorten or lengthen a *clip* from one of its ends, by pulling the *handle* that sits there. A
+video stops where its source does; a still has no source to run past, so both of its ends stretch
+it. Keeping only the selected portion of a sound is *Crop*.
+
+**Trim silence**
+To pull a sound *clip* in to what is not silence, **at its two ends only**: whatever falls quiet in
+the middle stays. The studio counts as silence anything under **−50 dB** for at least **0.4
+seconds** — shorter than that is a breath, not a gap to remove.
+
+It is a montage gesture, the same one *Crop* uses on a sound: it moves both of the clip's edges and
+**does not touch** its effects chain. Not to be confused with *Trim*, which pulls **one** edge by
+hand.
 
 ---
 

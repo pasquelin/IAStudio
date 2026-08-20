@@ -28,11 +28,15 @@ import { access, rename, rm, writeFile } from 'node:fs/promises'
  */
 export async function writeAtomic(
   file: string,
-  content: string,
+  content: string | Uint8Array,
   { staging = `${file}.staging`, mode }: { staging?: string; mode?: number } = {},
 ): Promise<void> {
   try {
-    await writeFile(staging, content, { encoding: 'utf8', ...(mode === undefined ? {} : { mode }) })
+    // The encoding is for TEXT alone: naming one for bytes would have `fs` re-encode them.
+    await writeFile(staging, content, {
+      ...(typeof content === 'string' ? { encoding: 'utf8' } : {}),
+      ...(mode === undefined ? {} : { mode }),
+    })
     await rename(staging, file)
   } catch (error) {
     // The tidy-up must not become the failure: what the caller has to hear is why the content

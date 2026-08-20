@@ -13,7 +13,21 @@ import type { WorkspaceId } from './workspace'
  * only ones a conflict check treats as competing with every scope.
  */
 export type CommandScope =
-  'global' | 'spaces' | 'scene' | 'sequence' | 'canvas' | 'skybox' | 'audio' | 'texture'
+  | 'global'
+  | 'spaces'
+  /**
+   * The project folder. Its own scope, and not `global`, for the reason the whole undo stack
+   * lives in the main process: a file gesture belongs to no document, so ⌘Z in the canvas must
+   * not reach it and ⌘Z here must not reach the canvas. `commandFor` filters by scope, and the
+   * panel arms this one only while the focus is inside it.
+   */
+  | 'explorer'
+  | 'scene'
+  | 'sequence'
+  | 'canvas'
+  | 'skybox'
+  | 'audio'
+  | 'texture'
 
 export type CommandId =
   | 'project.new'
@@ -27,11 +41,25 @@ export type CommandId =
   | 'window.fullScreen'
   | 'spaces.moveLeft'
   | 'spaces.moveRight'
+  | 'explorer.newFolder'
+  | 'explorer.duplicate'
+  | 'explorer.cut'
+  | 'explorer.copy'
+  | 'explorer.paste'
+  | 'explorer.trash'
+  | 'explorer.undo'
+  | 'explorer.redo'
   | 'scene.select'
   | 'scene.translate'
   | 'scene.rotate'
   | 'scene.scale'
   | 'scene.frame'
+  | 'scene.isolate'
+  | 'scene.hide'
+  | 'scene.showAll'
+  | 'scene.add'
+  | 'scene.addToSheet'
+  | 'scene.removeFromSheet'
   | 'scene.group'
   | 'scene.duplicate'
   | 'scene.copy'
@@ -43,6 +71,7 @@ export type CommandId =
   | 'scene.quad'
   | 'scene.quadEdges'
   | 'scene.display'
+  | 'scene.capture'
   | 'scene.skeletons'
   | 'scene.poseMode'
   | 'scene.delete'
@@ -50,6 +79,12 @@ export type CommandId =
   | 'scene.redo'
   | 'sequence.playPause'
   | 'sequence.export'
+  | 'sequence.exportCut'
+  | 'sequence.exportBundle'
+  | 'sequence.exportEdl'
+  | 'sequence.exportFcpxml'
+  | 'sequence.exportStems'
+  | 'montage.import'
   | 'sequence.mirror'
   | 'sequence.split'
   | 'sequence.delete'
@@ -68,6 +103,7 @@ export type CommandId =
   | 'canvas.rulers'
   | 'canvas.guides'
   | 'canvas.clearGuides'
+  | 'canvas.selectAll'
   | 'canvas.deselect'
   | 'canvas.cropApply'
   | 'canvas.cropCancel'
@@ -78,6 +114,7 @@ export type CommandId =
   | 'canvas.vectorize'
   | 'canvas.extend'
   | 'canvas.export'
+  | 'canvas.exportLayered'
   | 'canvas.mergeDown'
   | 'canvas.flatten'
   | 'canvas.flipHorizontal'
@@ -87,7 +124,6 @@ export type CommandId =
   | 'canvas.snap'
   | 'canvas.toolMove'
   | 'canvas.toolHand'
-  | 'canvas.toolScale'
   | 'canvas.toolCrop'
   | 'canvas.toolSelectRectangle'
   | 'canvas.toolSelectEllipse'
@@ -102,7 +138,6 @@ export type CommandId =
   | 'canvas.toolPencil'
   | 'canvas.toolText'
   | 'canvas.toolEraser'
-  | 'canvas.toolEraserSelection'
   | 'canvas.toolFill'
   | 'canvas.toolPicker'
   | 'canvas.brushSmaller'
@@ -133,6 +168,24 @@ export type CommandId =
  * registry, it is a fact of the document in front, which only the renderer holds.
  */
 export type MenuCheck = CommandId | `scene.display:${DisplayMode}`
+
+/**
+ * What the focused window can do RIGHT NOW, for the rows that are greyed out without it.
+ *
+ * Told apart from `MenuCheck`, which draws a tick: this decides whether a row answers at all.
+ * `Export ▸ Selection` is why — with nothing picked it wrote a glTF holding no node, after a save
+ * dialog that gave every sign of being about to write a scene.
+ *
+ * A fact of the document in front, so only the renderer holds it. Named after the ROW it opens
+ * rather than after the state behind it: the template reads this beside the item it enables.
+ */
+export type MenuAbility =
+  | 'scene.exportSelection'
+  // Both refuse in silence from the menu, and both are correctly greyed in the Layers panel —
+  // the native row was the one path that said nothing: a mask needs a selection to cut from,
+  // and a merge needs a layer underneath at the same level.
+  | 'canvas.maskFromSelection'
+  | 'canvas.mergeDown'
 
 /**
  * What a command is: where it applies, what it is called, what it does in plain words, and the
@@ -200,6 +253,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.documentSaveAs.help',
     defaultBinding: 'Shift+Meta+KeyS',
   }),
+  // `global` rather than `sequence`, unlike the two exports it mirrors: an import has no montage
+  // in front to belong to — it is what MAKES one.
+  command({
+    id: 'montage.import',
+    scope: 'global',
+    titleKey: 'commands.montageImport.title',
+    helpKey: 'commands.montageImport.help',
+    defaultBinding: null,
+  }),
   command({
     id: 'layout.reset',
     scope: 'global',
@@ -257,6 +319,71 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: 'Alt+ArrowRight',
   }),
 
+  /**
+   * The file browser's own eight. The keys are the ones every file browser on the platform
+   * answers to, and none of them clashes with a `global` one — which is the only clash that
+   * would matter, since the native menu fires those wherever the focus sits.
+   *
+   * ⌘⌫ rather than ⌫ alone: this is the one gesture here that cannot be undone, and a bare
+   * delete key is too close to what a hand does while reading a list.
+   */
+  command({
+    id: 'explorer.newFolder',
+    scope: 'explorer',
+    titleKey: 'commands.explorerNewFolder.title',
+    helpKey: 'commands.explorerNewFolder.help',
+    defaultBinding: 'Shift+Meta+KeyN',
+  }),
+  command({
+    id: 'explorer.duplicate',
+    scope: 'explorer',
+    titleKey: 'commands.explorerDuplicate.title',
+    helpKey: 'commands.explorerDuplicate.help',
+    defaultBinding: 'Meta+KeyD',
+  }),
+  command({
+    id: 'explorer.cut',
+    scope: 'explorer',
+    titleKey: 'commands.explorerCut.title',
+    helpKey: 'commands.explorerCut.help',
+    defaultBinding: 'Meta+KeyX',
+  }),
+  command({
+    id: 'explorer.copy',
+    scope: 'explorer',
+    titleKey: 'commands.explorerCopy.title',
+    helpKey: 'commands.explorerCopy.help',
+    defaultBinding: 'Meta+KeyC',
+  }),
+  command({
+    id: 'explorer.paste',
+    scope: 'explorer',
+    titleKey: 'commands.explorerPaste.title',
+    helpKey: 'commands.explorerPaste.help',
+    defaultBinding: 'Meta+KeyV',
+  }),
+  command({
+    id: 'explorer.trash',
+    scope: 'explorer',
+    titleKey: 'commands.explorerTrash.title',
+    helpKey: 'commands.explorerTrash.help',
+    defaultBinding: 'Meta+Backspace',
+  }),
+  command({
+    id: 'explorer.undo',
+    scope: 'explorer',
+    titleKey: 'commands.explorerUndo.title',
+    helpKey: 'commands.explorerUndo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'explorer.redo',
+    scope: 'explorer',
+    titleKey: 'commands.explorerRedo.title',
+    helpKey: 'commands.explorerRedo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
+
   // `KeyV` as in every editor that has a pointer tool. Not `KeyQ` or `KeyW`, which fly the
   // camera: `useShortcuts` reads both tables on the same keydown, so one key would do both.
   command({
@@ -293,6 +420,30 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneFrame.title',
     helpKey: 'commands.sceneFrame.help',
     defaultBinding: 'KeyF',
+  }),
+  // The three that hide, and the one that gives everything back. `scene.isolate` toggles: the
+  // hand that pressed it to get in is the hand that presses it to get out, which is what every
+  // 3D package does with this key.
+  command({
+    id: 'scene.isolate',
+    scope: 'scene',
+    titleKey: 'commands.sceneIsolate.title',
+    helpKey: 'commands.sceneIsolate.help',
+    defaultBinding: 'Slash',
+  }),
+  command({
+    id: 'scene.hide',
+    scope: 'scene',
+    titleKey: 'commands.sceneHide.title',
+    helpKey: 'commands.sceneHide.help',
+    defaultBinding: 'KeyH',
+  }),
+  command({
+    id: 'scene.showAll',
+    scope: 'scene',
+    titleKey: 'commands.sceneShowAll.title',
+    helpKey: 'commands.sceneShowAll.help',
+    defaultBinding: 'Alt+KeyH',
   }),
   // `KeyM` and `KeyL` as in magnet and local. Neither flies the camera, which rules out most of
   // the left hand: `useShortcuts` reads both tables on the same keydown.
@@ -343,6 +494,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.sceneDisplay.help',
     defaultBinding: 'KeyZ',
   }),
+  // No key of its own: the menu rows carry the definitions, and this is the one a remapping
+  // offers — at the view's own size, which is what a still of what one is looking at is.
+  command({
+    id: 'scene.capture',
+    scope: 'scene',
+    titleKey: 'commands.sceneCapture.title',
+    helpKey: 'commands.sceneCapture.help',
+    defaultBinding: null,
+  }),
   // `KeyB` as in bones. Nothing in the scene scope claims it, and the fly keys are all on the
   // left hand — see the note above `scene.snap`.
   command({
@@ -359,6 +519,33 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.scenePoseMode.title',
     helpKey: 'commands.scenePoseMode.help',
     defaultBinding: 'KeyP',
+  }),
+  // `⇧A` as in Blender, whose Add menu this is. It opens rows rather than doing anything, which
+  // is why it carries no verb of its own.
+  command({
+    id: 'scene.add',
+    scope: 'scene',
+    titleKey: 'commands.sceneAdd.title',
+    helpKey: 'commands.sceneAdd.help',
+    defaultBinding: 'Shift+KeyA',
+  }),
+  /*
+   * Who is ON the animation band. Bound to nothing: the band shows what somebody put there, and
+   * a key pressed by accident over a scene of thousands would fill it with what nobody chose.
+   */
+  command({
+    id: 'scene.addToSheet',
+    scope: 'scene',
+    titleKey: 'commands.sceneAddToSheet.title',
+    helpKey: 'commands.sceneAddToSheet.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.removeFromSheet',
+    scope: 'scene',
+    titleKey: 'commands.sceneRemoveFromSheet.title',
+    helpKey: 'commands.sceneRemoveFromSheet.help',
+    defaultBinding: null,
   }),
   // `⌘G` as in every editor that groups: the key is taken by nothing else in this scope.
   command({
@@ -439,6 +626,51 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     // it on the Window menu, and two menu rows carrying one accelerator is a key nobody owns.
     // Shift+⌘E is taken too, so this ships without one until someone chooses it — legitimate,
     // and better than a row that quietly steals Minimise.
+    defaultBinding: null,
+  }),
+  // Beside the one above rather than a mode of it: one writes a film, the other writes the EDIT
+  // — a file another application opens to keep cutting. Nothing about them is the same gesture.
+  command({
+    id: 'sequence.exportCut',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExportCut.title',
+    helpKey: 'commands.sequenceExportCut.help',
+    defaultBinding: null,
+  }),
+  // The same edit with its media inside it. Beside the one above rather than a mode of it: this
+  // is the file that travels — one settles another application's media pool, the other does not.
+  command({
+    id: 'sequence.exportBundle',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExportBundle.title',
+    helpKey: 'commands.sequenceExportBundle.help',
+    defaultBinding: null,
+  }),
+  // The oldest of the three, and beside them for the same reason: an event list carries the cuts
+  // and their timecodes and nothing else, which is what an online room asks for and no more.
+  command({
+    id: 'sequence.exportEdl',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExportEdl.title',
+    helpKey: 'commands.sequenceExportEdl.help',
+    defaultBinding: null,
+  }),
+  // The richer of the two plain-text interchanges, and the one that keeps the tracks: what an EDL
+  // flattens into one picture channel, this holds as a lane each.
+  command({
+    id: 'sequence.exportFcpxml',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExportFcpxml.title',
+    helpKey: 'commands.sequenceExportFcpxml.help',
+    defaultBinding: null,
+  }),
+  // The sound rather than the cut: what the other three describe, this one renders. A room that
+  // will mix elsewhere asks for the tracks, not for a list of what to fetch and where to put it.
+  command({
+    id: 'sequence.exportStems',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExportStems.title',
+    helpKey: 'commands.sequenceExportStems.help',
     defaultBinding: null,
   }),
   // The program monitor alone answers it: `Monitor` arms the sequence scope on the one that
@@ -619,6 +851,13 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: null,
   }),
   command({
+    id: 'canvas.selectAll',
+    scope: 'canvas',
+    titleKey: 'commands.canvasSelectAll.title',
+    helpKey: 'commands.canvasSelectAll.help',
+    defaultBinding: 'Meta+KeyA',
+  }),
+  command({
     id: 'canvas.deselect',
     scope: 'canvas',
     titleKey: 'commands.canvasDeselect.title',
@@ -694,6 +933,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: 'Shift+Meta+KeyE',
   }),
   command({
+    /** The stack rather than the flatten — no default binding, ⇧⌘E being the flatten's. */
+    id: 'canvas.exportLayered',
+    scope: 'canvas',
+    titleKey: 'commands.canvasExportLayered.title',
+    helpKey: 'commands.canvasExportLayered.help',
+    defaultBinding: null,
+  }),
+  command({
     id: 'canvas.snap',
     scope: 'canvas',
     titleKey: 'commands.canvasSnap.title',
@@ -724,13 +971,6 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasToolHand.title',
     helpKey: 'commands.canvasToolHand.help',
     defaultBinding: 'KeyH',
-  }),
-  command({
-    id: 'canvas.toolScale',
-    scope: 'canvas',
-    titleKey: 'commands.canvasToolScale.title',
-    helpKey: 'commands.canvasToolScale.help',
-    defaultBinding: 'KeyK',
   }),
   command({
     id: 'canvas.toolCrop',
@@ -829,13 +1069,6 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasToolEraser.title',
     helpKey: 'commands.canvasToolEraser.help',
     defaultBinding: 'KeyE',
-  }),
-  command({
-    id: 'canvas.toolEraserSelection',
-    scope: 'canvas',
-    titleKey: 'commands.canvasToolEraserSelection.title',
-    helpKey: 'commands.canvasToolEraserSelection.help',
-    defaultBinding: null,
   }),
   command({
     id: 'canvas.toolFill',
@@ -947,6 +1180,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
 export const COMMAND_SCOPES: readonly CommandScope[] = [
   'global',
   'spaces',
+  'explorer',
   'scene',
   'sequence',
   'canvas',
@@ -1024,13 +1258,6 @@ export function bindingOf(id: CommandId, overrides: BindingOverrides): Signature
 }
 
 /**
- * The command a signature fires on one surface. Scoped, because the same key means different
- * things on the timeline and in the scene, and only one of the two is ever listening.
- *
- * `global` is deliberately excluded: those are the native menu's accelerators, and Electron
- * fires them itself — matching them here too would run the command twice.
- */
-/**
  * The one key that answers to two names.
  *
  * A Mac's main keyboard carries a single key marked « delete », and it reports `Backspace`. The
@@ -1043,6 +1270,13 @@ export function bindingOf(id: CommandId, overrides: BindingOverrides): Signature
  */
 const KEY_ALIASES: Partial<Record<Signature, Signature>> = { Backspace: 'Delete' }
 
+/**
+ * The command a signature fires on one surface. Scoped, because the same key means different
+ * things on the timeline and in the scene, and only one of the two is ever listening.
+ *
+ * `global` is deliberately excluded: those are the native menu's accelerators, and Electron
+ * fires them itself — matching them here too would run the command twice.
+ */
 export function commandFor(
   signature: Signature,
   scope: CommandScope,

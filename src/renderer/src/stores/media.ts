@@ -5,7 +5,8 @@ import {
   type IngestProgress,
   type MediaCapabilities,
 } from '@shared/domain/media'
-import { getBridge } from '@/services/bridge'
+import { withoutKey } from '@/helpers/objects'
+import { connectThroughBridge, getBridge } from '@/services/bridge'
 import { useAssets } from './assets'
 
 type MediaState = {
@@ -22,15 +23,6 @@ type MediaState = {
   apply: (progress: IngestProgress) => void
 }
 
-const without = (
-  progress: Record<string, IngestProgress>,
-  assetId: string,
-): Record<string, IngestProgress> => {
-  const rest = { ...progress }
-  delete rest[assetId]
-  return rest
-}
-
 /**
  * Ingest lives in the main process; this replica is what lets the asset browser show a file the
  * moment it is linked, and follow the probing that fills in its duration afterwards.
@@ -39,16 +31,13 @@ export const useMedia = create<MediaState>()((set, get) => ({
   progress: {},
   capabilities: { ffmpeg: true },
 
-  connect: async () => {
-    const bridge = getBridge()
-    if (!bridge) return () => {}
-
+  connect: connectThroughBridge(async bridge => {
     const stop = bridge.media.onProgress(progress => get().apply(progress))
     // Not awaited: the caller unsubscribes with what this returns, and holding it back for an
     // IPC round trip leaves a second subscription alive next to the first.
     void get().refreshCapabilities()
     return stop
-  },
+  }),
 
   refreshCapabilities: async () => {
     const capabilities = await getBridge()?.media.capabilities()
@@ -70,7 +59,7 @@ export const useMedia = create<MediaState>()((set, get) => ({
   cancel: async assetId => {
     // Dropped locally too: the main process answers with a `cancelled` event, and waiting for
     // it would leave the row on screen under a button that already did its job.
-    set(state => ({ progress: without(state.progress, assetId) }))
+    set(state => ({ progress: withoutKey(state.progress, assetId) }))
     await getBridge()?.media.cancel(assetId)
   },
 
@@ -82,7 +71,7 @@ export const useMedia = create<MediaState>()((set, get) => ({
 
     set(state =>
       isTerminal(progress.stage) && !needsDismissing(progress.stage)
-        ? { progress: without(state.progress, progress.assetId) }
+        ? { progress: withoutKey(state.progress, progress.assetId) }
         : { progress: { ...state.progress, [progress.assetId]: progress } },
     )
   },

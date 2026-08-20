@@ -1,3 +1,4 @@
+import type { OraSurface } from './openRaster'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
 /**
@@ -31,13 +32,19 @@ export type DocumentDescriptor = {
   title: string
   workspace: WorkspaceId
   /**
-   * The directory entry this document was read from, extension included — `Niveau.scene`.
+   * Where this document was read from, relative to the project folder, extension included —
+   * `Repérages/Niveau.gltf`. The same spelling every other path on this boundary uses, `/` on
+   * every platform.
    *
-   * Carried because the id no longer spells it: whoever joins a folder listing to a document
-   * has only the entry to go on, and rebuilding it from the title would be a second answer free
-   * to disagree with the disk.
+   * The whole path and not the entry alone, since a document may sit anywhere in the project:
+   * two folders may each hold a `Niveau.gltf`, and a listing joined on the name would hand the
+   * explorer one document's descriptor for the other one's row.
+   *
+   * Carried because the id no longer spells it: whoever joins a folder listing to a document has
+   * only the path to go on, and rebuilding it from the title would be a second answer free to
+   * disagree with the disk.
    */
-  fileName: string
+  path: string
   /**
    * The asset this document was opened to edit, when it was opened for one.
    *
@@ -85,20 +92,44 @@ export const DOCUMENT_VERSION = 3
 export const DOCUMENTS_FOLDER = 'documents'
 
 /**
- * One extension per kind, as spec § 5 names them. A project folder is meant to be read by eye
- * and repaired by hand, and `a3f1.json` beside `b204.json` says nothing about what either is.
+ * What a document of the studio carries inside a file it does not own the shape of.
+ *
+ * Every open format the studio writes has somewhere for data a reader may ignore — `metadata` in
+ * OpenTimelineIO, `extras` in glTF — and the studio's own goes under one domain key, holding
+ * which document the file IS and which kind, where a name shared by two editors cannot say.
+ *
+ * Here rather than in each format: they were spelt twice, and two spellings of an invariant are
+ * free to drift the day one is edited — which is the very argument each of them carried.
+ */
+export const STUDIO_METADATA_KEY = 'scenario'
+
+export const DOCUMENT_ID_KEY = 'documentId'
+
+export const DOCUMENT_KIND_KEY = 'documentKind'
+
+/**
+ * The extension each kind reads and writes. A project folder is meant to be read by eye and
+ * repaired by hand, and `a3f1.json` beside `b204.json` says nothing about what either is.
+ *
+ * No spelling of the studio's own is left: every kind names the open format it belongs in. **Only
+ * the two montages have the BYTES to match** — the other four still hold the studio's envelope
+ * under an open name, so no other application opens one of them yet.
  *
  * Exported so a test can hold it against `DOCUMENT_KINDS`: the compiler makes this table
  * complete, but nothing makes that list complete, and a kind missing from it would be refused
  * at the IPC boundary without a word.
  */
-export const EXTENSION_BY_KIND: Record<DocumentKind, string> = {
-  image: '.img',
-  scene: '.scene',
-  sequence: '.seq',
-  audio: '.aud',
-  skybox: '.sky',
-  texture: '.tex',
+export const EXTENSIONS_BY_KIND: Record<DocumentKind, string> = {
+  image: '.ora',
+  scene: '.gltf',
+  sequence: '.otio',
+  // The same montage as a sequence, so the same standard file. Which workspace wrote it is read
+  // out of the file's own studio metadata — see `documentBody.ts`, the extension cannot say.
+  audio: '.otio',
+  // Held in the same container as the scene, for the same reason: a sky is an environment, and
+  // glTF is what carries one. The file says which of the two it is.
+  skybox: '.gltf',
+  texture: '.mtlx',
 }
 
 /**
@@ -106,27 +137,52 @@ export const EXTENSION_BY_KIND: Record<DocumentKind, string> = {
  * before version 3 still lives, its file having been called after its id. Relative: a project
  * folder can be moved.
  *
- * NOT where a document lives in general: it is named after itself now, so what says where one
- * sits is its descriptor's `fileName`, read off the folder.
+ * NOT where a document lives in general: it is named after itself now and filed wherever the user
+ * put it, so what says where one sits is its descriptor's `path`, read off the walk. This is only
+ * the folder a first save falls back to.
  */
 export function documentPath(id: string, kind: DocumentKind): string {
-  return `${DOCUMENTS_FOLDER}/${id}${EXTENSION_BY_KIND[kind]}`
+  return `${DOCUMENTS_FOLDER}/${id}${EXTENSIONS_BY_KIND[kind]}`
 }
 
 /**
- * What a file name says the document is, read the other way round from `EXTENSION_BY_KIND`.
+ * What a file name says the document is, read the other way round from `EXTENSIONS_BY_KIND`.
  * Listing a project folder needs it: the folder is what says which documents exist, and the
  * extension is all a directory entry carries.
  *
  * `null` for anything else in there — a stray note, an export, a staging copy.
+ *
+ * **Two pairs share a spelling** — the two montages under `.otio`, the scene and the sky under
+ * `.gltf` — so this answers the first of each and the FILE settles it: the format declares
+ * `kindFromHead`, and `documentBody.ts` reads which kind out of what the file itself carries.
  *
  * Case-sensitive on purpose: `documentPath` writes the extension in lower case, so a `.IMG`
  * accepted here would be listed under a name that `read` then fails to find on a case-sensitive
  * volume — an empty document, and a second file beside the first at the next save.
  */
 export function kindForExtension(extension: string): DocumentKind | null {
-  return DOCUMENT_KINDS.find(kind => EXTENSION_BY_KIND[kind] === extension) ?? null
+  return kindsForExtension(extension)[0] ?? null
 }
+
+/**
+ * EVERY kind this extension could name — one for most, two where a container serves two editors.
+ * What a file's own head is allowed to claim: `.gltf` may say scene or sky, and nothing else.
+ *
+ * Reading the head is what settles it, and this is what bounds that reading. Trusting the head
+ * outright would let an envelope reading `texture` open a `.gltf` in the material editor.
+ */
+export function kindsForExtension(extension: string): readonly DocumentKind[] {
+  return DOCUMENT_KINDS.filter(kind => EXTENSIONS_BY_KIND[kind] === extension)
+}
+
+/**
+ * Whether any kind is held under this extension — the same question without the array, for the
+ * one caller that asks it of EVERY file in the project before a single one is opened.
+ */
+const DOCUMENT_EXTENSIONS: ReadonlySet<string> = new Set(Object.values(EXTENSIONS_BY_KIND))
+
+export const isDocumentExtension = (extension: string): boolean =>
+  DOCUMENT_EXTENSIONS.has(extension)
 
 /**
  * What an editor hands over to be saved. `content` is already serialized, and that is the whole
@@ -147,47 +203,34 @@ export type DocumentDraft = {
    */
   sourceAssetId?: string
   /**
-   * The files that go beside the content, for a document one string cannot hold. An image keeps
-   * one PNG per layer: the pixels live on the GPU, never in the state, so `content` can only
-   * name them.
+   * The surfaces the container holds beside the stack, for a document one string cannot hold.
+   * An image keeps one PNG per layer: the pixels live on the GPU, never in the state, so
+   * `content` can only name them.
+   *
+   * `OraSurface.path` becomes an entry the studio writes AND reads back, so it is checked rather
+   * than trusted — `isOraSurfacePath`. It is the one field of this contract crossing a security
+   * boundary.
    *
    * Absent for every kind that fits in a string, which is all of them but the image.
    */
-  parts?: readonly DocumentPart[]
+  parts?: readonly OraSurface[]
 }
 
+/** The suffix on a copy being written, before the rename that makes it the document. */
+export const STAGING_SUFFIX = '.tmp'
+
 /**
- * One file beside a document's content. `data` is base64 — the renderer has no filesystem, and
- * bytes are what it has.
+ * A staging copy of OURS, and only ours: `<file>.<uuid>.tmp`. The project folder is the user's
+ * own, and a `render.tmp` they left in there is not something to delete on their behalf.
  *
- * `name` is turned into a path by the main process, so it is checked there rather than trusted:
- * see `isPartName`. It is the one field of this contract that crosses a security boundary.
+ * Here rather than beside the writer because two readers need it and neither owns the other: the
+ * listing sweeps these away, and the folder walk leaves them out of what it offers.
  */
-export type DocumentPart = {
-  name: string
-  data: string
+export function isStagingName(name: string): boolean {
+  return STAGING_PATTERN.test(name)
 }
 
-/**
- * Which kinds are written as a folder rather than a single file. `parts` is what makes it
- * necessary: a document with files beside it needs somewhere to put them, and `<id>.img/` keeps
- * them together — inspectable, and removable in one gesture.
- */
-export const FOLDER_KINDS: ReadonlySet<DocumentKind> = new Set<DocumentKind>(['image'])
-
-/** The manifest inside a folder document, holding exactly what a file document's body holds. */
-export const DOCUMENT_MANIFEST = 'document.json'
-
-/**
- * Whether a part may become a file name. Deliberately narrow: the renderer picks these, and a
- * `../` or an absolute path would write wherever it pleased. Letters, digits, dot, dash and
- * underscore only — no separator can be spelled with those, so no traversal can either.
- *
- * `document.json` is refused: a part must never stand where the manifest goes.
- */
-export function isPartName(name: string): boolean {
-  return /^[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/.test(name) && name !== DOCUMENT_MANIFEST
-}
+const STAGING_PATTERN = /\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/i
 
 /**
  * What a document weighs on disk: a draft under an envelope the file layer stamps itself. The
@@ -230,6 +273,19 @@ export type DocumentEnvelope = Omit<DocumentFile, 'content'>
  * it is what a dismissed dialog gives back — a tab must never close because a key was struck.
  */
 export type CloseChoice = 'save' | 'discard' | 'cancel'
+
+/**
+ * What a write did, and the reason it is not a `void`.
+ *
+ * `stale` says the file changed under the studio since it was last read or written — another
+ * application, or a sync service bringing a different copy back. Writing anyway destroys that
+ * work without a word: the window asks, and writes again with `force` if the user says so.
+ *
+ * The freshness is held by the main process rather than stamped in the file, and it cannot be
+ * otherwise: a file's modification time is set by the write that finishes it, so no value
+ * written INSIDE it can ever match what the filesystem then reports.
+ */
+export type DocumentWrite = 'written' | 'stale'
 
 /**
  * How much of a file the envelope may take. It holds a capped title and three short fields; a

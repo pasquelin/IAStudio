@@ -16,10 +16,10 @@ names the object involved and says what failed.
 
 | What the journal can report | Topic |
 |---|---|
-| "Generation “…” failed", "Generation “…” cancelled", "2 assets generated in Image and 3D" | Generation |
+| "Generation “…” failed", "Generation “…” cancelled", "2 assets generated in Image and Modelling" | Generation |
 | "Could not import “…”", "“…” is unreadable" | Import |
-| "Could not send “…”", "The tags of “…” did not reach the library", "The Scenario API refused a request" | Library |
-| "Saving the document failed", "A layer could not be loaded", "Exporting the scene failed", "The file could not be shown" | Document |
+| "Could not send “…”", "The tags of “…” did not reach the library", "The Scenario API refused a request", "The file could not be shown" | Library |
+| "Saving the document failed", "A layer could not be loaded", "Exporting the scene failed" | Document |
 | "This folder is not a Scenario project", "The project could not be created in this folder", "The system could not open this file" | Project |
 | "Part of the interface could not be drawn", "A workspace’s stored layout could not be read" | Interface |
 
@@ -47,11 +47,11 @@ telling you what they are missing in order to fill up.
 | "No project open" | you need to create or open a project (`⌘N` / `⌘O`) |
 | "No document open. Generate or open an asset to get started." | the centre of the window is waiting for a first tab |
 | "No asset yet. Generate something to get started." | the project's shelf is still empty |
-| "No job running." | nothing is working right now — the generations list is empty |
+| "No generation running." | nothing is generating right now — the generations list is empty |
 | "Open a project to generate." | the form is waiting for a project to drop the result into |
 | "Open a project to see its assets." | the same, for the shelf |
-| "Open a scene to see what is in it." | the explorer is waiting for a 3D scene |
-| "The explorer follows a 3D scene. Open the 3D workspace to see its contents." | you are in another workspace; this panel only serves 3D |
+| "Open a scene to see its contents." | the **Scene** panel is waiting for an open scene |
+| "Open a scene to see its meshes." / "Open a scene to see its lights." | the same, for the two neighbouring panels |
 | "No model chosen" / "Pick one from the list" | the Generation panel is waiting for a model to be selected |
 | "This model takes no parameters." | that is normal: some models take only a prompt |
 | "No result for this filter." | your search finds nothing; widen it |
@@ -69,7 +69,6 @@ telling you what they are missing in order to fill up.
 | "Select something to see its properties." | the same thing, outside 3D |
 | "Select a clip to see it here." | the Source monitor is waiting for a selection |
 | "No sequence open. Create one to start editing." | the timeline is waiting for a sequence document — the **+** button |
-| "Open a skybox to grade it." | the Skybox panel is waiting for a sky document |
 
 None of these sentences calls for troubleshooting. The rest of the chapter is about real failures.
 
@@ -425,8 +424,9 @@ does not start the 640 MB again.
 
 The engine quit mid-way. It restarts on its own at the next dictation, up to three times; past
 that the studio stops trying rather than relaunch a process that dies on every sentence. The
-detail is in the journal (**Help ▸ Journal**), not on screen: it names a file path, which helps
-nobody in front of the screen and tells everything to whoever reads the journal.
+detail goes to the technical console (**Settings ▸ Advanced ▸ Developer tools**), not on screen:
+it names a file path, which helps nobody in front of the screen and tells everything to whoever
+reads the log.
 
 ### "No microphone available."
 
@@ -472,7 +472,7 @@ connection troubles.
 **The commonest cause: the line is from an earlier launch.** The port and the token change every
 time the studio starts. Yesterday's points at a port where nothing is listening any more.
 
-**What to do.** Settings ▸ Advanced ▸ **Connection command ▸ Copy**, and paste the line into your
+**What to do.** **Settings ▸ Advanced ▸ Connection command ▸ Copy**, and paste the line into your
 terminal again. A client already registered under the same name is replaced, so there is nothing to
 remove first.
 
@@ -668,11 +668,11 @@ Settings → **Advanced** → **Reset everything**. Puts every setting back to a
 
 | Symptom | First thing to try |
 |---|---|
-| The model catalogue is empty | Settings → Account → sign in |
-| "Invalid key or secret" | look for a stray space in what was pasted |
+| The model catalogue is empty | **Settings ▸ Account**, then sign in |
+| "Invalid API key or secret." | look for a stray space in what was pasted |
 | "Too many requests" repeatedly | lower **Concurrent generations** to 2 |
-| "The generation failed" | restore the model's parameters to default, relaunch |
-| "Could not save" | check disk space and that the project folder exists |
+| "Generation “…” failed" | restore the model's parameters to default, relaunch |
+| "Saving the document failed" | check disk space and that the project folder exists |
 | Stuttering timeline | check that video preparation is available, or shorten the video |
 | No waves on the audio track | the same |
 | "Video preparation unavailable" although `which ffmpeg` finds one | run `ffmpeg -version`: the binary exists but no longer starts |

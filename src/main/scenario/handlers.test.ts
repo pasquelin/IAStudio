@@ -5,17 +5,17 @@ import {
   PROMPT_IMAGES_MAX,
   PROMPT_INPUT_MAX,
   PROMPT_SUGGESTIONS_MAX,
-} from '@shared/domain/prompt-assist'
-import { invoke, resetHandlers } from '@main/ipc/test-harness'
+} from '@shared/domain/promptAssist'
+import { invoke, resetHandlers } from '@main/ipc/testHarness'
 import { registerScenarioHandlers, type ScenarioHandlerDeps } from './handlers'
 import type { AssetUploader } from './uploader'
-import type { JobManager } from './job-manager'
-import type { ModelRegistry } from './model-registry'
-import type { PromptAssist } from './prompt-assist'
+import type { JobManager } from './jobManager'
+import type { ModelRegistry } from './modelRegistry'
+import type { PromptAssist } from './promptAssist'
 import type { CostEstimator } from './cost'
 import type { UsageReader } from './usage'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 const LEAKY = 'Authorization: Basic YXBpX2tleTpzM2NyM3Q='
 

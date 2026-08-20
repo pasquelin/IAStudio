@@ -1,19 +1,34 @@
 import {
   ACESFilmicToneMapping,
   Color,
+  LinearSRGBColorSpace,
+  MeshBasicMaterial,
   NoToneMapping,
   OrthographicCamera,
   PerspectiveCamera,
   Scene,
   Vector3,
   WebGLRenderer,
+  WebGLRenderTarget,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { createGpuPipeline, type GpuPipeline } from '../gpu/gpuPipeline'
 import { token } from '../core/palette'
-import { frameDelta } from './frame-clock'
-import { emptyGpuStats, recordFrame, type GpuStats } from './gpu-stats'
-import { glRect, paneAt, paneCount, paneRects, type PaneLayout, type PaneRect } from './panes'
+import { aspectLoan } from './aspectLoan'
+import { frameDelta } from './frameClock'
+import { emptyGpuStats, recordFrame, type GpuStats } from './gpuStats'
+import {
+  glRect,
+  inRect,
+  intoGlRect,
+  paneAt,
+  paneCount,
+  paneRects,
+  type PaneLayout,
+  type PaneRect,
+} from './panes'
 import { pointerNdc, type PointerPosition } from './pointer'
+import { frustumHeight } from './screenScale'
 
 /** Where an unmounted viewport orbits, having no controls to hold a target. Never written to. */
 const ORIGIN = new Vector3()
@@ -43,6 +58,14 @@ export type ViewportEngineOptions = {
    */
   onPane?: (index: number, camera: ViewportCamera) => void
   /**
+   * Called around the inset pass, and it hands back the call that undoes whatever it did.
+   *
+   * The seam a preview needs and `onPane` cannot give: a preview shows what the camera FILMS, so
+   * the grid and the helpers have to be hidden for that pass and put back for the next — and
+   * `onPane` has no symmetrical call after a pane is drawn.
+   */
+  onInset?: () => () => void
+  /**
    * Filmic tone mapping. Off by default because it changes how every existing colour lands,
    * and the scene editor was built and reviewed without it; a viewport that judges an HDR
    * environment turns it on.
@@ -66,7 +89,17 @@ export type ViewportEngineOptions = {
    * listens publishes where the view now stands, and a store written sixty times a second
    * would repaint everything reading it for a drag that is not over.
    */
-  onCameraSettled?: () => void
+  onCameraSettled?: (pane: number) => void
+  /**
+   * Called once the pointer has settled which pane is being worked in, and BEFORE any listener of
+   * the canvas sees that same event — this runs in the capture phase, on the host.
+   *
+   * The seam a control that reads its own pointer events needs, `TransformControls` being the one
+   * that does: it casts from the camera it is holding at that instant, so whoever hands it that
+   * camera has to run first. Left to the caller's own listener, the order would rest on which of
+   * the two `mount` calls came first, and nothing would guard it.
+   */
+  onPaneArmed?: (event: PointerEvent) => void
   fieldOfView?: number
   near?: number
   far?: number
@@ -99,6 +132,39 @@ export type ProjectionKind = 'perspective' | 'orthographic'
 
 export type ViewportCamera = PerspectiveCamera | OrthographicCamera
 
+/** A camera drawn over the panes, in a rectangle of its own — the camera preview. */
+export type InsetPane = {
+  camera: PerspectiveCamera
+  /** In CSS pixels, origin top-left, like every other pane rect. */
+  rect: PaneRect
+  /**
+   * What the preview is cleared to before it draws. A scene with no background of its own is
+   * TRANSPARENT, and the panes underneath then showed straight through the picture — a preview
+   * one reads the viewport through is not a preview.
+   */
+  backdrop: Color
+  /**
+   * Grown to the whole view, which is what lets the panes under it be skipped.
+   *
+   * Told rather than measured. The rectangle handed over is the INSIDE of the DOM frame, so it
+   * is two pixels short of the canvas on every side — a comparison against the canvas therefore
+   * answered "no" at every size, and the panes went on being drawn under a picture that hid
+   * them whole.
+   */
+  full: boolean
+}
+
+/**
+ * How often the preview is redrawn while what it shows keeps changing — a corner monitor at
+ * 30 Hz beside a view at 120 reads as live, and costs a quarter as much.
+ *
+ * A CAP, never a clock: a preview whose content has not moved is not redrawn at all.
+ */
+export const INSET_CADENCE_MS = 1000 / 30
+
+/** What composites the cached preview: the studio's own full-frame quad, wearing its texture. */
+type InsetBlit = { quad: GpuPipeline; material: MeshBasicMaterial }
+
 /**
  * One of the views beside the main one. It carries both cameras, exactly as the main one does:
  * a quarter set to a side is flat — converging edges are the one thing a side view rules out —
@@ -109,6 +175,8 @@ type ExtraPane = {
   orthographic: OrthographicCamera
   projection: ProjectionKind
   controls: OrbitControls | null
+  /** A camera of the SCENE this pane draws through instead of its own — see `setPaneCamera`. */
+  borrowed: PerspectiveCamera | null
 }
 
 /**
@@ -117,8 +185,13 @@ type ExtraPane = {
  */
 const EXTRA_PANE_HEIGHT = 6
 
-/** The camera an added view is currently drawing through. */
+/** How far ahead of a borrowed camera its orbit turns. Reused, so lending allocates nothing. */
+const BORROWED_PIVOT = 5
+const borrowedAim = new Vector3()
+
+/** The camera an added view is currently drawing through — a borrowed one wins over both. */
 function cameraOf(pane: ExtraPane): ViewportCamera {
+  if (pane.borrowed) return pane.borrowed
   return pane.projection === 'perspective' ? pane.perspective : pane.orthographic
 }
 
@@ -136,6 +209,15 @@ export class ViewportEngine {
   private layout: PaneLayout = 'single'
   /** Pane 0 until a pointer says otherwise, which is the only pane a single layout has. */
   private active = 0
+  /** Whether another gesture holds the pointer — see `freezePanes`. */
+  private frozen = false
+  /**
+   * Where the pointer last was, kept even while frozen so thawing can re-arm from it. Written in
+   * place: this takes every pointer move, and a fresh object per move is garbage per move.
+   */
+  private readonly lastPointer: PointerPosition = { clientX: 0, clientY: 0 }
+  /** Kept so the listeners posted on it at mount come off at dispose. */
+  private host: HTMLElement | null = null
   /**
    * The views beside the main one, which is always pane 0 and always the one that was already
    * there. Empty in a single layout, so every viewport that never asks for four draws exactly
@@ -144,6 +226,26 @@ export class ViewportEngine {
   private readonly extras: ExtraPane[] = []
   /** Where each pane sits, in CSS pixels. One entry in a single layout, four in a quad. */
   private rects: PaneRect[] = []
+  /** What `activePaneRegion` answers with, rewritten in place — see the note there. */
+  private readonly activeRegion: PaneRect = { x: 0, y: 0, width: 0, height: 0 }
+  /** What the camera preview shows, or `null` when it is closed. */
+  private inset: InsetPane | null = null
+  /** Where the preview was last drawn, kept so a frame that changed nothing only composites it. */
+  private insetHeld: WebGLRenderTarget | null = null
+  private insetBlit: InsetBlit | null = null
+  /**
+   * Whether what the preview shows has moved since it was last drawn.
+   *
+   * Open by default and closed only by a draw: the cost of one preview too many is a frame, and
+   * the cost of one too few is a monitor showing the wrong instant.
+   */
+  private insetStale = true
+  /** Before any clock there is, so the FIRST preview is never the one the cadence holds back. */
+  private insetDrawnAt = Number.NEGATIVE_INFINITY
+  /** The wake that redraws a preview the cap held back, so the last change is never dropped. */
+  private insetCatchUp: ReturnType<typeof setTimeout> | null = null
+  /** Read back once per drawn preview rather than allocated — this sits on the frame path. */
+  private readonly insetClear = new Color()
   /** How tall the added views see, in world units. Set by whoever knows what the scene holds. */
   private extraHeight = EXTRA_PANE_HEIGHT
   private frame: number | null = null
@@ -237,7 +339,7 @@ export class ViewportEngine {
     const camera = this.camera
     const target = this.controls?.target
     const distance = target ? camera.position.distanceTo(target) : camera.position.length()
-    const height = 2 * distance * Math.tan((this.perspective.fov * Math.PI) / 360)
+    const height = frustumHeight(this.perspective.fov, distance)
     const width = height * aspect
 
     this.orthographic.top = height / 2
@@ -306,13 +408,110 @@ export class ViewportEngine {
     return this.active
   }
 
+  /**
+   * Takes the views out of the pointer's hands for the length of another gesture — a gizmo handle
+   * held, a camera flying — and gives them back.
+   *
+   * EVERY orbit, and the active pane with them: `armPaneUnderPointer` re-arms on every move, so a
+   * caller that turned one orbit off itself would find it back on at the next pixel of that very
+   * drag — the scene orbited under a handle being pulled. Frozen, the working view cannot change
+   * mid-drag either, which is what stops a pointer straying into a neighbouring pane from handing
+   * the gizmo another camera halfway through.
+   */
+  freezePanes(frozen: boolean): void {
+    // On the TRANSITION, never on every call: this is read back on each pointer move, and
+    // `paneAtPointer` measures the canvas — a second reflow per move for an answer already known.
+    const thawing = this.frozen && !frozen
+    this.frozen = frozen
+    // Thawing re-arms from where the pointer IS: the move that lifts a freeze is the very one
+    // `armPaneUnderPointer` returned early on, so reading `active` alone leaves the working view
+    // — and the camera a gizmo grabs from — one event behind. `null` off the surface.
+    if (thawing) this.active = this.paneAtPointer(this.lastPointer) ?? this.active
+
+    this.armOrbits(frozen ? null : this.active)
+  }
+
+  /**
+   * Hands the orbits to one pane and takes them from every other. `null` leaves all of them off,
+   * which is both a frozen viewport and a pointer that has left the surface.
+   */
+  private armOrbits(owner: number | null): void {
+    // A single layout keeps `active` at 0, so the main orbit reads the same test as the others.
+    if (this.controls) this.controls.enabled = owner === 0
+    for (const [index, pane] of this.extras.entries()) {
+      if (pane.controls) pane.controls.enabled = owner === index + 1
+    }
+  }
+
+  /**
+   * Where the active pane sits, in the frame a control that reads raw pointer events needs: CSS
+   * pixels, origin bottom-left. `null` in a single layout, where the pane IS the canvas.
+   */
+  activePaneRegion(): PaneRect | null {
+    const canvas = this.renderer?.domElement
+    const rect = this.rects[this.active]
+    if (this.layout === 'single' || !canvas || !rect) return null
+
+    // Into a rect of its own: a caller aiming a control reads this on every pointer move, and the
+    // answer is four numbers. The reference is handed out, so nobody may hold on to it.
+    return intoGlRect(rect, canvas.clientHeight, this.activeRegion)
+  }
+
   /** Which pane a pointer is over, or `null` when it is off the surface entirely. */
   paneAtPointer(pointer: PointerPosition): number | null {
     const canvas = this.renderer?.domElement
     if (!canvas) return null
 
     const bounds = canvas.getBoundingClientRect()
-    return paneAt(this.rects, pointer.clientX - bounds.left, pointer.clientY - bounds.top)
+    const x = pointer.clientX - bounds.left
+    const y = pointer.clientY - bounds.top
+
+    // The inset first, and it answers for nobody: it covers a pane rather than dividing the
+    // surface, so without this a drag inside the preview would orbit the view underneath it.
+    if (this.insetHasPointer(pointer)) return null
+    return paneAt(this.rects, x, y)
+  }
+
+  /**
+   * Whether a pointer landed in the camera preview. What a picker asks before casting a ray: the
+   * preview draws through a camera of its own, so a ray cast from the pane underneath would meet
+   * whatever stands behind the picture rather than what is in it.
+   */
+  insetHasPointer(pointer: PointerPosition): boolean {
+    const canvas = this.renderer?.domElement
+    if (!canvas || !this.inset) return false
+
+    const bounds = canvas.getBoundingClientRect()
+    return inRect(this.inset.rect, pointer.clientX - bounds.left, pointer.clientY - bounds.top)
+  }
+
+  /**
+   * What the preview shows, and where — `null` closes it.
+   *
+   * The rect comes from the caller because the DOM chrome around the preview has to land on the
+   * very same pixels: one rectangle, decided once, rather than two that agree until they drift.
+   */
+  setInsetPane(pane: InsetPane | null): void {
+    this.inset = pane
+    this.invalidateInset()
+    this.requestRender()
+  }
+
+  /**
+   * Says that what the preview SHOWS has changed — as opposed to `requestRender`, which says the
+   * canvas has to be painted again.
+   *
+   * The two are not the same question, and that is the whole gain: orbiting, flying and settling
+   * move the view without moving one thing a scene camera films, and those frames now composite
+   * a picture already drawn instead of walking the scene a second time. Measured on a scene of
+   * 1 504 nodes: the second pass cost 5,1 ms of CPU for 0,38 ms of GPU.
+   *
+   * Whoever owns the scene calls this — `SceneRenderer.redraw` does both at once, and a guard
+   * holds it to that, because a missed call shows the wrong instant while a spare one costs a
+   * single frame.
+   */
+  invalidateInset(): void {
+    this.insetStale = true
   }
 
   private createExtra(): ExtraPane {
@@ -328,6 +527,7 @@ export class ViewportEngine {
       orthographic,
       projection: 'orthographic',
       controls: null,
+      borrowed: null,
     }
 
     const canvas = this.renderer?.domElement
@@ -340,8 +540,43 @@ export class ViewportEngine {
     // one canvas would each answer the same drag, and the three off-screen ones would answer it
     // invisibly.
     controls.enabled = false
+    // The index is read at the moment of the event rather than captured: panes are pushed after
+    // this returns, so nothing here knows yet which one this will be.
+    controls.addEventListener('end', () =>
+      this.options.onCameraSettled?.(this.extras.indexOf(pane) + 1),
+    )
     pane.controls = controls
     return pane
+  }
+
+  /**
+   * Draws a pane through a camera of the SCENE rather than through its own.
+   *
+   * The orbit follows: left on the camera nobody is drawing, a drag would turn something
+   * invisible. Handing it the borrowed camera is what makes orbiting in that pane MOVE the
+   * camera of the scene — which is the whole point, and why `onCameraSettled` carries the pane.
+   */
+  setPaneCamera(index: number, camera: PerspectiveCamera | null): void {
+    // Pane 0 draws with the viewport's own camera and reads `extras[-1]`, which is nobody.
+    const pane = this.extras[index - 1]
+    if (!pane || pane.borrowed === camera) return
+
+    pane.borrowed = camera
+    const drawn = cameraOf(pane)
+    if (pane.controls) {
+      pane.controls.object = drawn
+      // The target is put in FRONT of the borrowed camera before anything updates: `update()`
+      // ends on `object.lookAt(target)`, so a target left where the pane last orbited would
+      // swing that camera round the moment it is lent — and again on every frame the pointer
+      // merely hovers the pane, with no gesture to report it.
+      if (camera) {
+        camera.getWorldDirection(borrowedAim)
+        pane.controls.target.copy(camera.position).addScaledVector(borrowedAim, BORROWED_PIVOT)
+      }
+      pane.controls.update()
+    }
+    this.layOutPanes()
+    this.requestRender()
   }
 
   /**
@@ -378,14 +613,20 @@ export class ViewportEngine {
    * scene editor that had to arm it would be the second place deciding which view is being used.
    */
   private readonly armPaneUnderPointer = (event: PointerEvent): void => {
-    if (this.layout === 'single') return
+    // Kept before the early return, never after: the move that lifts a freeze is one this
+    // returns on, and `freezePanes` has nothing to re-arm from unless that move was recorded.
+    this.lastPointer.clientX = event.clientX
+    this.lastPointer.clientY = event.clientY
 
-    const over = this.paneAtPointer(event)
-    if (over !== null) this.active = over
-    if (this.controls) this.controls.enabled = over === 0
-    for (const [index, pane] of this.extras.entries()) {
-      if (pane.controls) pane.controls.enabled = over === index + 1
+    if (this.layout !== 'single' && !this.frozen) {
+      const over = this.paneAtPointer(event)
+      if (over !== null) this.active = over
+      this.armOrbits(over)
     }
+
+    // Outside the guard above, and that is the point: a caller that thaws does it from here, and
+    // it would never get the chance if a frozen viewport returned before saying anything.
+    this.options.onPaneArmed?.(event)
   }
 
   /**
@@ -414,6 +655,13 @@ export class ViewportEngine {
       pane.orthographic.updateProjectionMatrix()
       pane.perspective.aspect = aspect
       pane.perspective.updateProjectionMatrix()
+
+      // A borrowed camera too: one of the scene is built square, and a 1:1 frustum drawn into a
+      // quarter of a wide canvas stretches everything it shows.
+      if (pane.borrowed) {
+        pane.borrowed.aspect = aspect
+        pane.borrowed.updateProjectionMatrix()
+      }
     }
 
     return this.rects[0] ?? { x: 0, y: 0, width, height }
@@ -459,16 +707,25 @@ export class ViewportEngine {
       // On `end` rather than on `change`: the latter fires per frame of an orbit, and whoever
       // listens here publishes into a store. Once the hand lets go is when the framing is a
       // decision rather than a gesture in progress.
-      if (this.options.onCameraSettled) {
-        this.controls.addEventListener('end', this.options.onCameraSettled)
-      }
+      const settled = this.options.onCameraSettled
+      if (settled) this.controls.addEventListener('end', () => settled(0))
     }
 
-    canvas.addEventListener('pointerdown', this.armPaneUnderPointer)
-    canvas.addEventListener('pointermove', this.armPaneUnderPointer)
+    // Capture, and on the HOST rather than the canvas: a capture on an ancestor runs ahead of
+    // every listener of the canvas whatever order those were added in — and `TransformControls`
+    // is one of them, grabbing from whichever camera it holds when it reads the event.
+    this.host = host
+    host.addEventListener('pointerdown', this.armPaneUnderPointer, true)
+    host.addEventListener('pointermove', this.armPaneUnderPointer, true)
 
-    this.observer = new ResizeObserver(this.onResize)
+    // Drawn in the turn it is measured, never asked for: `setSize` blanks the drawing buffer, and
+    // an observation lands after the frame callbacks of the paint that follows — see
+    // `followHostSize`, which refuses the same frame of lag on the Pixi side.
+    this.observer = new ResizeObserver(() => {
+      if (this.onResize()) this.drawPendingFrame()
+    })
     this.observer.observe(canvas)
+    // Not drawn: the engine that owns this one is still building, and `onFrame` would run on it.
     this.onResize()
   }
 
@@ -485,9 +742,15 @@ export class ViewportEngine {
 
     while (this.extras.length > 0) this.disposeExtra()
 
+    this.host?.removeEventListener('pointerdown', this.armPaneUnderPointer, true)
+    this.host?.removeEventListener('pointermove', this.armPaneUnderPointer, true)
+    this.host = null
+
+    if (this.insetCatchUp !== null) clearTimeout(this.insetCatchUp)
+    this.insetCatchUp = null
+    this.disposeInset()
+
     const canvas = this.renderer?.domElement
-    canvas?.removeEventListener('pointerdown', this.armPaneUnderPointer)
-    canvas?.removeEventListener('pointermove', this.armPaneUnderPointer)
     this.renderer?.dispose()
     this.renderer = null
 
@@ -517,7 +780,31 @@ export class ViewportEngine {
 
   setBackgroundColor(css: string): void {
     this.scene.background = css ? new Color(css) : null
+    // What stands behind the objects is part of what a scene camera films, so the preview is as
+    // out of date as the panes are.
+    this.invalidateInset()
     this.requestRender()
+  }
+
+  /**
+   * How many device pixels one CSS pixel buys. The single lever a quality setting pulls: nothing
+   * about the assets moves, only how finely the same frame is drawn.
+   *
+   * Held to the screen's own ratio at the top — asking for more than the display has is paying
+   * for pixels nobody can see.
+   */
+  setPixelRatio(ratio: number): void {
+    const renderer = this.renderer
+    if (!renderer) return
+
+    const wanted = Math.min(ratio, window.devicePixelRatio)
+    if (renderer.getPixelRatio() === wanted) return
+
+    renderer.setPixelRatio(wanted)
+    // The drawing buffer is sized from the ratio, so it has to be laid out again — `setSize`
+    // multiplies by the ratio it finds at the moment it runs.
+    this.onResize()
+    this.invalidateInset()
   }
 
   setFieldOfView(degrees: number): void {
@@ -565,12 +852,13 @@ export class ViewportEngine {
     this.frame = requestAnimationFrame(this.renderFrame)
   }
 
-  private readonly onResize = (): void => {
+  /** Whether the surface was actually taken: a panel folded to nothing is turned back. */
+  private readonly onResize = (): boolean => {
     const canvas = this.renderer?.domElement
-    if (!canvas || !this.renderer) return
+    if (!canvas || !this.renderer) return false
 
     const { clientWidth, clientHeight } = canvas
-    if (clientWidth === 0 || clientHeight === 0) return
+    if (clientWidth === 0 || clientHeight === 0) return false
 
     this.renderer.setSize(clientWidth, clientHeight, false)
     // The main camera follows its own pane, not the canvas: in a quad layout that is a quarter
@@ -581,6 +869,20 @@ export class ViewportEngine {
     this.perspective.updateProjectionMatrix()
     this.fitProjection()
     this.requestRender()
+    return true
+  }
+
+  /**
+   * Runs the frame already asked for, now, and whatever was still moving keeps its loop.
+   *
+   * A motion of its own drew earlier in this same turn, into the buffer `setSize` then blanked:
+   * a drag of a splitter over a moving scene costs two renders per paint, and nothing can spare
+   * the first — the resize is only known about after it.
+   */
+  private drawPendingFrame(): void {
+    if (this.frame === null) return
+    cancelAnimationFrame(this.frame)
+    this.renderFrame()
   }
 
   /**
@@ -621,6 +923,208 @@ export class ViewportEngine {
     }
   }
 
+  /** Whether the preview leaves nothing of the panes to see — its grown state, in practice. */
+  private insetCoversAll(): boolean {
+    return this.inset?.full === true
+  }
+
+  /**
+   * The camera preview, drawn over the panes in its own scissored rectangle.
+   *
+   * A pass rather than a fifth pane, and rather than a second context: it covers what is already
+   * drawn instead of dividing the surface, and a context per preview is what `scene-stage` pays
+   * elsewhere and says why.
+   */
+  private renderInset(renderer: WebGLRenderer, panesDrawn: boolean): void {
+    const inset = this.inset
+    if (!inset) return
+
+    const ratio = renderer.getPixelRatio()
+    const width = Math.max(1, Math.round(inset.rect.width * ratio))
+    const height = Math.max(1, Math.round(inset.rect.height * ratio))
+    const target = this.insetTargetOf(renderer, width, height)
+
+    const now = performance.now()
+    if (this.insetStale && now - this.insetDrawnAt >= INSET_CADENCE_MS) {
+      this.drawInset(renderer, inset, target, panesDrawn)
+      this.insetStale = false
+      this.insetDrawnAt = now
+    } else if (this.insetStale) {
+      this.catchUpInset(now)
+    }
+
+    this.compositeInset(renderer, inset)
+  }
+
+  /**
+   * The target the preview is drawn into, at the size it is shown — one device pixel per pixel,
+   * so the picture is the one the direct pass used to put on the canvas.
+   *
+   * Multisampled to the same count as the canvas: the drawing buffer is antialiased, and a
+   * preview that stopped being would read as a downgrade rather than as a saving.
+   *
+   * **What it costs, said out loud**: a GROWN preview holds a target the size of the canvas —
+   * at 2736×1848 with 4 samples, some 160 MB of colour and depth for as long as it stays grown,
+   * freed when it is folded back or closed. Bought deliberately: at that size the panes are
+   * skipped and the frame went from 7,4 ms of CPU to nothing, on a machine where the CPU is what
+   * runs out first.
+   */
+  private insetTargetOf(renderer: WebGLRenderer, width: number, height: number): WebGLRenderTarget {
+    const held = this.insetHeld
+    if (held && held.width === width && held.height === height) return held
+
+    held?.dispose()
+    // What the DRAWING BUFFER is antialiased to, held to what the context can offer. The ceiling
+    // comes from three rather than from `gl.MAX_SAMPLES`, which the WebGL1 typing has no name for.
+    const gl = renderer.getContext()
+    const samples = Math.max(
+      0,
+      Math.min(Number(gl.getParameter(gl.SAMPLES) ?? 0), renderer.capabilities.maxSamples),
+    )
+    const target = new WebGLRenderTarget(width, height, { samples })
+    // Linear, which is what a render into a target writes whatever the texture says — three picks
+    // the WORKING space for anything but the canvas (`WebGLRenderer`, the `colorSpace` it hands
+    // its output pass). Declared rather than left at the default so the quad below does not
+    // decode a second time.
+    target.texture.colorSpace = LinearSRGBColorSpace
+    this.insetBlitOf(renderer).material.map = target.texture
+
+    this.insetHeld = target
+    // A target that has just been made holds NOTHING, so the cadence must not hold its first
+    // draw back: compositing it before then samples an empty texture, and a panel being dragged
+    // wider would flash the preview black for as long as the cap lasts.
+    this.insetStale = true
+    this.insetDrawnAt = Number.NEGATIVE_INFINITY
+    return target
+  }
+
+  /** Draws the preview into its target. The costly half, and the one the cache exists to skip. */
+  private drawInset(
+    renderer: WebGLRenderer,
+    inset: InsetPane,
+    target: WebGLRenderTarget,
+    panesDrawn: boolean,
+  ): void {
+    const restore = this.options.onInset?.()
+    renderer.getClearColor(this.insetClear)
+    const heldAlpha = renderer.getClearAlpha()
+    const heldAutoClear = renderer.autoClear
+    const heldMatrix = this.scene.matrixWorldAutoUpdate
+    const heldShadows = renderer.shadowMap.autoUpdate
+    const loan = aspectLoan(target.width, target.height)
+
+    // Both of these are redone from scratch by every `render`, and the pane pass of THIS frame
+    // has just done them over a scene nothing has moved since — measured at 1,2 ms of the 5,1 the
+    // second pass cost. Only when the panes actually ran: the preview camera is a node of the
+    // scene, so `render` leaves its world matrix to the scene traversal (`camera.parent !== null`
+    // skips the camera's own update), and a grown preview skips the panes entirely.
+    if (panesDrawn) {
+      this.scene.matrixWorldAutoUpdate = false
+      renderer.shadowMap.autoUpdate = false
+    }
+
+    try {
+      renderer.setRenderTarget(target)
+      renderer.autoClear = true
+      renderer.setClearColor(inset.backdrop, 1)
+      loan.frame(inset.camera)
+      renderer.render(this.scene, inset.camera)
+    } finally {
+      loan.restore()
+      this.scene.matrixWorldAutoUpdate = heldMatrix
+      renderer.shadowMap.autoUpdate = heldShadows
+      renderer.autoClear = heldAutoClear
+      renderer.setClearColor(this.insetClear, heldAlpha)
+      renderer.setRenderTarget(null)
+      // In a `finally`, as `renderPanes` does: a throw here would otherwise leave the workshop
+      // hidden for every later frame.
+      restore?.()
+    }
+  }
+
+  /**
+   * Puts the drawn preview on the canvas: one textured quad inside the scissor, and nothing else.
+   *
+   * This is what a frame costs when only the view moved — one draw call against the second full
+   * traversal of the scene the direct pass paid for.
+   */
+  private compositeInset(renderer: WebGLRenderer, inset: InsetPane): void {
+    const surface = renderer.domElement.clientHeight
+    const gl = glRect(inset.rect, surface)
+    const blit = this.insetBlitOf(renderer)
+    const heldAutoClear = renderer.autoClear
+
+    renderer.setScissorTest(true)
+    try {
+      // A grown preview leaves the panes undrawn, and the DOM frame keeps two pixels of canvas
+      // outside the picture: cleared here, or those pixels would hold whatever the last frame
+      // that did draw them left behind.
+      if (this.insetCoversAll()) {
+        renderer.setScissor(0, 0, renderer.domElement.clientWidth, surface)
+        renderer.setClearColor(inset.backdrop, 1)
+        renderer.clear(true, true, false)
+      }
+      renderer.setViewport(gl.x, gl.y, gl.width, gl.height)
+      renderer.setScissor(gl.x, gl.y, gl.width, gl.height)
+      renderer.autoClear = false
+      blit.quad.renderToScreen(blit.material)
+    } finally {
+      renderer.autoClear = heldAutoClear
+      renderer.setScissorTest(false)
+      renderer.setViewport(0, 0, renderer.domElement.clientWidth, surface)
+    }
+  }
+
+  /** The target and the quad, both held by the GPU until something says otherwise. */
+  private disposeInset(): void {
+    this.insetHeld?.dispose()
+    this.insetHeld = null
+
+    this.insetBlit?.quad.dispose()
+    this.insetBlit?.material.dispose()
+    this.insetBlit = null
+  }
+
+  /**
+   * The quad that composites the preview, and the material it wears.
+   *
+   * `GpuPipeline` is the studio's own full-frame quad — the same one every image filter draws
+   * through — rather than a second scene and camera written here.
+   */
+  private insetBlitOf(renderer: WebGLRenderer): InsetBlit {
+    if (this.insetBlit) return this.insetBlit
+
+    this.insetBlit = {
+      quad: createGpuPipeline(renderer),
+      // Applied on the way OUT and never inside the target: three skips tone mapping for anything
+      // but the canvas (`WebGLPrograms`, `currentRenderTarget === null`), so the quad is where the
+      // preview meets the same curve the panes do.
+      material: new MeshBasicMaterial({
+        depthTest: false,
+        depthWrite: false,
+        toneMapped: renderer.toneMapping !== NoToneMapping,
+      }),
+    }
+    return this.insetBlit
+  }
+
+  /**
+   * Wakes the loop once the cap has run out, so a change held back is never the last word.
+   *
+   * Without it a preview whose content moved on the very frame the loop went to sleep would keep
+   * showing the instant before, until something else asked for a frame.
+   */
+  private catchUpInset(now: number): void {
+    if (this.insetCatchUp !== null) return
+    this.insetCatchUp = setTimeout(
+      () => {
+        this.insetCatchUp = null
+        this.requestRender()
+      },
+      Math.max(0, INSET_CADENCE_MS - (now - this.insetDrawnAt)),
+    )
+  }
+
   /**
    * On demand, not on a permanent loop: a studio whose viewport burns a frame at rest heats the
    * machine for nothing. The loop keeps going only while something is actually moving.
@@ -651,7 +1155,13 @@ export class ViewportEngine {
       if (pane.controls?.enabled === true && pane.controls.update()) settling = true
     }
 
-    this.renderPanes(renderer)
+    // The panes are skipped when the preview covers them whole: drawing a scene twice over to
+    // throw the first one away is the most expensive thing a frame can do.
+    const panesDrawn = !this.insetCoversAll()
+    if (panesDrawn) this.renderPanes(renderer)
+    // After the panes and before the overlay: the preview covers the view it sits on, and the
+    // trihedron stays on top of both.
+    this.renderInset(renderer, panesDrawn)
 
     const overlay = this.options.onOverlay
     if (overlay) {

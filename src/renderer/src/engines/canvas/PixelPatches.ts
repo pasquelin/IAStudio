@@ -1,5 +1,5 @@
 import { Container, Graphics, Rectangle, RenderTexture, Sprite, Texture } from 'pixi.js'
-import type { Rect } from './canvas-state'
+import type { Rect } from './canvasState'
 import { tileBytes, tileKey, tilesCovering, type Tile } from './tiles'
 import type { Size } from '../core/geometry'
 

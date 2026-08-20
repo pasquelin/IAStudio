@@ -19,6 +19,8 @@ import { isRecord } from '../guards'
  */
 export type FontSource = 'embedded' | 'system'
 
+export const FONT_SOURCES: readonly FontSource[] = ['embedded', 'system']
+
 /** A typeface as a document names it. The family is the key on both sides. */
 export type FontRef = {
   source: FontSource

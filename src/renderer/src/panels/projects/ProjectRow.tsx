@@ -2,13 +2,15 @@ import { mdiDotsHorizontal, mdiFolderOutline } from '@mdi/js'
 import { memo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { RecentProject } from '@shared/domain/project'
-import { useContextMenu } from '@/design/ContextMenu'
+import { useContextMenu } from '@/hooks/useContextMenu'
+import { ContextMenu } from '@/design/ContextMenu'
 import { MenuButton } from '@/design/MenuButton'
 import { Row } from '@/design/Row'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { timeAgo } from '@/helpers/relative-time'
+import { timeAgo } from '@/helpers/relativeTime'
 import { InlineRename } from '@/design/InlineRename'
-import { ProjectMenu, ProjectMenuRows, PROJECT_MENU_ROWS } from './ProjectMenu'
+import { ROW_LINE } from '@/design/styles'
+import { ProjectMenuRows, PROJECT_MENU_ROWS } from './ProjectMenu/ProjectMenuRows'
 
 export type ProjectRowProps = {
   project: RecentProject
@@ -75,7 +77,7 @@ export const ProjectRow = memo(function ProjectRow({
       // pointer press on its own; the click is what it cannot know it has to stop, since the lists
       // it was written for only SELECT on one.
       <span
-        className="flex h-full items-center px-1"
+        className={ROW_LINE}
         onPointerDown={event => event.stopPropagation()}
         onClick={event => event.stopPropagation()}
         onDoubleClick={event => event.stopPropagation()}
@@ -136,12 +138,13 @@ export const ProjectRow = memo(function ProjectRow({
           the shelf with the arrows would never reach the answer it exists to give. */}
       {when && <span className="sr-only">{t('home.projects.openedAt', { when })}</span>}
       {menu.at && (
-        <ProjectMenu
-          path={project.path}
-          at={menu.at}
-          onClose={menu.close}
-          onRename={onRenameStart && startRename}
-        />
+        <ContextMenu at={menu.at} onClose={menu.close}>
+          <ProjectMenuRows
+            path={project.path}
+            onClose={menu.close}
+            onRename={onRenameStart && startRename}
+          />
+        </ContextMenu>
       )}
     </div>
   )

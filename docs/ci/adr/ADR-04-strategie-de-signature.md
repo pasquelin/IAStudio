@@ -61,3 +61,22 @@ passe du compte, et plus stable en CI.
 - Le job macOS reçoit un `timeout-minutes` large dès maintenant : la notarisation est asynchrone
   et parfois lente côté Apple, et le jour où elle s’active ce n’est pas le moment de découvrir
   que le timeout est trop court.
+
+---
+
+## Amendement du 17 août 2026 — `mac.notarize` n’est pas épinglé, et ne doit pas l’être
+
+**La § Décision annonce que « `mac.notarize: false` est déclaré explicitement ». Il ne l’est pas**,
+et c’est délibéré : `electron-builder.yml:111` laisse la clé à son défaut, la raison écrite en
+commentaire au-dessus.
+
+electron-builder ne notarise que ce qu’il a réussi à signer. Une build sans certificat saute donc
+l’étape d’elle-même, sans qu’aucune clé ait à le lui dire. L’épingler à `false` coûterait
+exactement ce que la § Décision exige quelques lignes plus bas : **l’activation par simple ajout
+des secrets d’ADR-07**. Une valeur figée dans un fichier que personne ne pensera à rouvrir le jour
+venu transforme cette promesse en panne silencieuse — un build signé qui ne se notarise pas.
+
+**Le reste de la § Décision est vérifié au 17/08 et reste vrai** :
+`CSC_IDENTITY_AUTO_DISCOVERY=false` est bien forcé (`.github/workflows/release.yml:146`), et le
+résumé du run porte bien l’avertissement de build non signée (étape « Report signing status », même
+fichier).

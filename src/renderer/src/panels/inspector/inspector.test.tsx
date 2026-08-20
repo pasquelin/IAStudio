@@ -1,39 +1,53 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset, AssetType } from '@shared/domain/asset'
-import { STUDIO_ENVIRONMENT, TEXTURE_SLOTS } from '@shared/domain/scene'
+import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { DEFAULT_WORLD, TEXTURE_SLOTS } from '@shared/domain/scene'
+// The expected words come from the French bundle rather than being spelt out, which is what keeps
+// a renamed slot from leaving this case asserting a label the panel no longer draws.
+import { fr } from '@shared/i18n/fr'
+import { addAnimationTrack } from '@/engines/scene/animationCommands'
 import { addNode } from '@/engines/scene/commands'
-import { createNodeOf } from '@/engines/scene/node-factory'
-import { lightNodeFixture, meshNode, spriteNodeFixture } from '@/engines/scene/scene-fixtures'
+import { createNodeOf } from '@/engines/scene/nodeFactory'
+import {
+  cameraNodeFixture,
+  lightNodeFixture,
+  meshNode,
+  rigStateFixture,
+  spriteNodeFixture,
+} from '@/engines/scene/scene-fixtures'
 import {
   DEFAULT_MATERIAL,
   IDENTITY_TRANSFORM,
   type SceneNode,
   type SceneState,
-} from '@/engines/scene/scene-state'
+} from '@/engines/scene/sceneState'
 import type { Transform } from '@shared/domain/scene'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
+import { useAnimationViews } from '@/stores/animationView'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
-import { EMPTY_SOUND_SEQUENCE, SECOND } from '@/engines/timeline/timeline-state'
+import { EMPTY_SOUND_SEQUENCE, SECOND } from '@/engines/timeline/timelineState'
 import { useSequences } from '@/stores/sequences'
 import { installDocument, installDocuments } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useSelection } from '@/stores/selection'
+import { useSettings } from '@/stores/settings'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
-import { useModelClips } from '@/stores/model-clips'
+import { useModelClips } from '@/stores/modelClips'
 import { installScene, sceneNodeNow } from '@/stores/scene-fixtures'
 import { installTexture } from '@/stores/texture-fixtures'
-import { useTextureViews } from '@/stores/texture-views'
+import { inSection } from './inspector-fixtures'
+import { useTextureViews } from '@/stores/textureViews'
 import { textureOf, useTextures } from '@/stores/textures'
 import { setChannel } from '@/engines/texture/commands'
-import { connectSceneSelection } from '@/stores/scene-selection'
+import { connectSceneSelection } from '@/stores/sceneSelection'
 import { addModelTo, sceneHistoryOf, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { definition } from '.'
-import { EMPTY_SCENE } from '@/engines/scene/scene-state'
+import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 
 const { Content } = definition
 
@@ -69,6 +83,27 @@ function cataloguing(assets: readonly Asset[]): void {
   installFakeBridge({ assets: { search: () => Promise.resolve([...assets]) } })
 }
 
+/** A sky the catalogue answers with — the only kind the environment slot takes. */
+function skyAsset(id: string, name: string): Asset {
+  return {
+    id,
+    name,
+    type: 'skybox',
+    location: 'local',
+    path: `assets/${id}.png`,
+    tags: [],
+    createdAt: '2026-08-08T00:00:00.000Z',
+  }
+}
+
+/** The source row, once the catalogue has answered — the slot lists nothing until it has. */
+async function skySource(): Promise<HTMLElement> {
+  await waitFor(() =>
+    expect(within(screen.getByLabelText('Ciel')).getAllByRole('option').length).toBeGreaterThan(1),
+  )
+  return screen.getByRole('combobox', { name: 'Source' })
+}
+
 const entries = () => sceneHistoryOf(useScenes.getState(), 'doc-1').past.length
 
 /** The drag handle of one axis. Throws rather than narrowing, so a miss reads as a miss. */
@@ -81,6 +116,9 @@ function axisHandle(axis: string, occurrence = 0): HTMLElement {
 
 beforeEach(() => {
   install(meshNode('box-1'))
+  // The preferences are a module-wide store: a case that writes one — the display unit — would
+  // otherwise leave every case after it reading lengths in millimetres.
+  useSettings.setState({ settings: DEFAULT_SETTINGS })
 })
 
 describe('inspector panel', () => {
@@ -101,49 +139,45 @@ describe('inspector panel', () => {
     expect(screen.queryByRole('button', { name: /Transformation/ })).not.toBeInTheDocument()
   })
 
-  it('offers the skies of the project, and the studio to come back to', async () => {
-    cataloguing([
-      {
-        id: 'sky-1',
-        name: 'Coucher',
-        type: 'skybox',
-        location: 'local',
-        path: 'assets/sky-1.png',
-        tags: [],
-        createdAt: '2026-08-08T00:00:00.000Z',
-      },
-    ])
+  // The slot is what a sky is DRAGGED onto, and a fresh scene opens on the studio: hiding it
+  // there would leave the 3D space with no drop target for a sky at all.
+  it('keeps the sky slot whatever the source, so a sky can always be dropped', () => {
     render(<Content />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Choisir un ciel/ }))
-
-    expect(await screen.findByRole('menuitemradio', { name: /Coucher/ })).toBeInTheDocument()
+    expect(screen.getByLabelText('Ciel')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Source' })).toHaveValue('studio')
   })
 
-  it('writes the chosen sky into the document, through the history', async () => {
-    cataloguing([
-      {
-        id: 'sky-1',
-        name: 'Coucher',
-        type: 'skybox',
-        location: 'local',
-        path: 'assets/sky-1.png',
-        tags: [],
-        createdAt: '2026-08-08T00:00:00.000Z',
-      },
-    ])
+  // The row asks « lit by a sky », and an answer that lights nothing until a second gesture is
+  // not one: the first sky of the project lands, and the slot below is what changes it.
+  it('writes a sky into the document as soon as one is asked for, through the history', async () => {
+    cataloguing([skyAsset('sky-1', 'Coucher')])
     render(<Content />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Choisir un ciel/ }))
-    await userEvent.click(await screen.findByRole('menuitemradio', { name: /Coucher/ }))
+    await userEvent.selectOptions(await skySource(), 'skybox')
 
-    expect(sceneOf(useScenes.getState(), 'doc-1').environment).toEqual({
+    expect(sceneOf(useScenes.getState(), 'doc-1').world.environment).toEqual({
       kind: 'skybox',
       assetId: 'sky-1',
     })
 
     useScenes.getState().undo('doc-1')
-    expect(sceneOf(useScenes.getState(), 'doc-1').environment).toEqual({ kind: 'studio' })
+    expect(sceneOf(useScenes.getState(), 'doc-1').world.environment).toEqual({ kind: 'studio' })
+  })
+
+  it('offers the skies of the project in the slot, and the studio to come back to', async () => {
+    cataloguing([skyAsset('sky-1', 'Coucher'), skyAsset('sky-2', 'Aube')])
+    render(<Content />)
+    await userEvent.selectOptions(await skySource(), 'skybox')
+
+    const slot = screen.getByLabelText('Ciel')
+    await userEvent.selectOptions(slot, 'sky-2')
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').world.environment).toEqual({
+      kind: 'skybox',
+      assetId: 'sky-2',
+    })
+    expect(within(slot).getByRole('option', { name: 'Studio' })).toBeInTheDocument()
   })
 
   it('shows the three sections of a mesh', () => {
@@ -151,7 +185,7 @@ describe('inspector panel', () => {
 
     expect(screen.getByRole('button', { name: /Transformation/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Géométrie/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Matériau/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Matière/ })).toBeInTheDocument()
   })
 
   it('shows a light its own section, and no geometry', () => {
@@ -172,12 +206,56 @@ describe('inspector panel', () => {
     expect(screen.getByRole('button', { name: /Transformation/ })).toBeInTheDocument()
   })
 
+  it('shows a camera its lens, and no material', () => {
+    install(cameraNodeFixture('camera-1'))
+    render(<Content />)
+
+    expect(screen.getByRole('button', { name: /Caméra/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Matière/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Transformation/ })).toBeInTheDocument()
+  })
+
+  /**
+   * The lens is the one property no gizmo can carry, so the inspector is where a camera is
+   * animated from — and where the whole of `fov` in `TrackProperty` would otherwise be
+   * unreachable: a channel opened by the sheet held nothing but zeroes.
+   */
+  it('keys the field of view while auto-key records, rather than moving the lens itself', () => {
+    const state = install(cameraNodeFixture('camera-1', { fov: 50 }))
+    installScene(
+      'doc-1',
+      addAnimationTrack({ nodeId: 'camera-1', property: 'fov' }, 'Lens', 'lens').apply(state),
+    )
+    useAnimationViews.getState().setAutoKey('doc-1', true)
+    render(<Content />)
+
+    fireEvent.change(screen.getByLabelText('Angle de vue'), { target: { value: '80' } })
+
+    const node = nodeInStore('camera-1')
+    expect(node?.type === 'camera' && node.camera.fov).toBe(50)
+    expect(sceneOf(useScenes.getState(), 'doc-1').animation.tracks[0]?.keys).toEqual([
+      { time: 0, value: { x: 30, y: 0, z: 0 } },
+    ])
+    // What the field reads back is what was typed: the descriptor plus what the channel adds.
+    expect(screen.getByLabelText('Angle de vue')).toHaveValue('80')
+  })
+
+  it('writes the lens itself for a camera nothing animates', () => {
+    install(cameraNodeFixture('camera-1', { fov: 50 }))
+    render(<Content />)
+
+    fireEvent.change(screen.getByLabelText('Angle de vue'), { target: { value: '80' } })
+
+    const node = nodeInStore('camera-1')
+    expect(node?.type === 'camera' && node.camera.fov).toBe(80)
+  })
+
   it('shows a sprite its own section, and no material', () => {
     install(spriteNodeFixture('sprite-1'))
     render(<Content />)
 
     expect(screen.getByRole('button', { name: /Sprite/ })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Matériau/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Matière/ })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Transformation/ })).toBeInTheDocument()
   })
 
@@ -192,14 +270,109 @@ describe('inspector panel', () => {
   /**
    * The viewport already refused the handle over a lone sprite; the row went on taking an angle
    * nothing draws, which stacked an undo for a screen that never moved.
+   *
+   * INERT rather than absent since 2026-08-19: the panel keeps its shape from one node to the
+   * next, so an attribute is found where it was last seen instead of the rows below it shifting
+   * up. The three axes are refused together, and the row says why on hover.
    */
-  it('offers a lone sprite no rotation row, and keeps the two that show', () => {
+  it('leaves a lone sprite its rotation row, inert, and keeps the two that act', () => {
     install(spriteNodeFixture('sprite-1'))
     render(<Content />)
 
-    expect(screen.queryByText('Rotation')).not.toBeInTheDocument()
-    expect(screen.getByText('Position')).toBeInTheDocument()
-    expect(screen.getByText('Échelle')).toBeInTheDocument()
+    expect(screen.getByText('Rotation')).toBeInTheDocument()
+    expect(screen.getAllByLabelText('X').map(field => field.hasAttribute('disabled'))).toEqual([
+      false,
+      true,
+      false,
+    ])
+  })
+
+  /**
+   * Through the same command as any other edit, so ⌘Z undoes a reset the way it undoes a drag —
+   * and ENABLED only where there is something to undo. Every line draws the button since
+   * 2026-08-19, or the field narrowed under the pointer at the very moment a value left its
+   * default; what says which row moved is which button acts.
+   */
+  it('enables the reset of the rows that have moved alone, and undoes like any edit', async () => {
+    install({ ...meshNode('box-1'), transform: moved(2, 0, 0) })
+    render(<Content />)
+
+    const live = screen
+      .getAllByRole('button', { name: /Revenir à la valeur par défaut/ })
+      .filter(button => !button.hasAttribute('disabled'))
+
+    expect(live).toHaveLength(1)
+    await userEvent.click(live[0] as HTMLElement)
+
+    expect(nodeInStore('box-1')?.transform.position).toEqual(IDENTITY_TRANSFORM.position)
+    useScenes.getState().undo('doc-1')
+    expect(nodeInStore('box-1')?.transform.position).toEqual({ x: 2, y: 0, z: 0 })
+  })
+
+  /**
+   * The padlock is per axis and per channel, offered on the unfolded lines alone. What it writes
+   * is NOT a command: ⌘Z gives back edits, never the way one was editing.
+   */
+  it('holds one axis still, and leaves that hold outside the history', async () => {
+    install({ ...meshNode('box-1'), transform: moved(2, 0, 0) })
+    render(<Content />)
+
+    // Matched loosely: the row carries the display unit since the Environment panel landed.
+    await userEvent.click(screen.getByRole('button', { name: /^Position/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Figer l’axe X/ }))
+
+    // By handle: three rows carry an axis called X, and only this one is held.
+    const x = (): Element | null => document.querySelector('[data-sc="field:transform.position.x"]')
+    expect(x()).toBeDisabled()
+    expect(document.querySelector('[data-sc="field:transform.position.y"]')).toBeEnabled()
+
+    // The hold survives an undo, which only takes back the move that came before it.
+    useScenes.getState().undo('doc-1')
+    expect(x()).toBeDisabled()
+  })
+
+  /**
+   * A descriptor's own factory says what its default is — the transform was the only family
+   * wired to one until 2026-08-19, so every other line of the panel drew a reset that could
+   * never act. What a primitive holds when it is made is the one place that fact lives.
+   */
+  it('resets a descriptor field to what its factory gives', async () => {
+    install({
+      ...meshNode('box-1'),
+      geometry: { kind: 'box', width: 4, height: 1, depth: 1 },
+    })
+    render(<Content />)
+
+    const width = screen.getByLabelText('Largeur')
+    expect(width).toHaveValue('4')
+
+    const row = width.parentElement
+    const reset = within(row as HTMLElement).getByRole('button', {
+      name: /Revenir à la valeur par défaut/,
+    })
+
+    expect(reset).toBeEnabled()
+    await userEvent.click(reset)
+
+    const box = nodeInStore('box-1')
+    expect(box?.type === 'mesh' && box.geometry).toEqual({
+      kind: 'box',
+      width: 1,
+      height: 1,
+      depth: 1,
+    })
+  })
+
+  /** Inert where the value already stands there, which is what tells the moved rows apart. */
+  it('leaves the reset of an untouched descriptor field disabled', () => {
+    install(meshNode('box-1'))
+    render(<Content />)
+
+    const row = screen.getByLabelText('Largeur').parentElement
+
+    expect(
+      within(row as HTMLElement).getByRole('button', { name: /Revenir à la valeur par défaut/ }),
+    ).toBeDisabled()
   })
 
   it('gives the row back to a sprite others hang from, which turning swings around it', () => {
@@ -426,10 +599,8 @@ describe('inspector panel', () => {
     it('offers the pictures of the project, whatever folder they were filed under', async () => {
       render(<Content />)
 
-      await userEvent.click(screen.getAllByRole('button', { name: /Choisir la texture de/ })[0]!)
-
-      expect(await screen.findByRole('menuitemradio', { name: /Brique/ })).toBeInTheDocument()
-      expect(screen.getByRole('menuitemradio', { name: /Rendu/ })).toBeInTheDocument()
+      expect(await screen.findAllByRole('option', { name: /Brique/ })).not.toHaveLength(0)
+      expect(screen.getAllByRole('option', { name: /Rendu/ })).not.toHaveLength(0)
     })
 
     /**
@@ -441,27 +612,23 @@ describe('inspector panel', () => {
       useAssets.setState({ items: [] })
       render(<Content />)
 
-      await userEvent.click(screen.getAllByRole('button', { name: /Choisir la texture de/ })[0]!)
-
-      expect(await screen.findByRole('menuitemradio', { name: /Brique/ })).toBeInTheDocument()
+      expect(await screen.findAllByRole('option', { name: /Brique/ })).not.toHaveLength(0)
     })
 
     it('leaves out what could never be loaded as a texture', async () => {
       render(<Content />)
+      await screen.findAllByRole('option', { name: /Brique/ })
 
-      await userEvent.click(screen.getAllByRole('button', { name: /Choisir la texture de/ })[0]!)
-      await screen.findByRole('menuitemradio', { name: /Brique/ })
-
-      expect(screen.queryByRole('menuitemradio', { name: /Rush/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('option', { name: /Rush/ })).not.toBeInTheDocument()
     })
 
     // A texture is a reference to an asset, never an image: that is what a reopened scene can
     // resolve again.
     it('stores the asset identifier in the material', async () => {
       render(<Content />)
+      await screen.findAllByRole('option', { name: /Brique/ })
 
-      await userEvent.click(screen.getAllByRole('button', { name: /Choisir la texture de/ })[0]!)
-      await userEvent.click(await screen.findByRole('menuitemradio', { name: /Brique/ }))
+      await userEvent.selectOptions(screen.getByLabelText('Texture'), 'tex-1')
 
       const node = nodeInStore('box-1')
       expect(node?.type === 'mesh' && node.material.map).toEqual({ assetId: 'tex-1' })
@@ -484,25 +651,17 @@ describe('inspector panel', () => {
       expect(back?.type === 'mesh' && back.material.map).toEqual({ assetId: 'tex-1' })
     })
 
-    it('offers a slot per map a standard material reads', () => {
-      render(<Content />)
-
-      expect(screen.getAllByRole('button', { name: /Choisir la texture de/ })).toHaveLength(
-        TEXTURE_SLOTS.length,
-      )
-    })
-
     /**
-     * The whole LINE is what opens the menu since 2026-08-14, so its name is the only thing left
-     * to tell five stacked slots apart by — a reader stepping through them, or a voice command
-     * naming the one on screen. One shared « Choose a texture » made them five identical controls.
+     * One list per map, each named after the map it fills — which is what tells five stacked
+     * slots apart, for a reader stepping through them or a voice command naming the one on
+     * screen. The name is now the label of the shared column, like every other property line.
      */
-    it('names each slot after the map it fills, so the stacked ones can be told apart', () => {
+    it('offers a slot per map a standard material reads, each under its own name', () => {
       render(<Content />)
 
-      const named = screen
-        .getAllByRole('button', { name: /Choisir la texture de/ })
-        .map(button => button.getAttribute('aria-label'))
+      const named = TEXTURE_SLOTS.map(slot =>
+        screen.getByLabelText(fr.inspector.fields[slot], { exact: true }),
+      )
 
       expect(new Set(named).size).toBe(TEXTURE_SLOTS.length)
     })
@@ -537,6 +696,39 @@ describe('inspector panel', () => {
       expect(screen.getByLabelText('Nom')).toHaveValue('box-1')
     })
 
+    /**
+     * A length is shown in the display unit and stored in metres, and the round trip through
+     * millimetres is not exact — about one double in forty comes back differing in its last bit.
+     * Compared AFTER the conversion, those untouched axes read as changed and were written onto
+     * the whole selection: three cubes given a height collapsed onto one column.
+     */
+    it('moves only the axis typed, whatever unit the lengths are written in', async () => {
+      useSettings.setState({
+        settings: { ...DEFAULT_SETTINGS, three: { ...DEFAULT_SETTINGS.three, units: 'mm' } },
+      })
+      // An X whose millimetre round trip is NOT exact: any value that survives it would pass.
+      installScene('doc-1', {
+        ...EMPTY_SCENE,
+        nodes: [
+          { ...meshNode('box-1'), transform: moved(6.246671654299291, 0, 0) },
+          { ...meshNode('box-2'), transform: moved(5, 0, 0) },
+        ],
+        selectedIds: ['box-2', 'box-1'],
+      })
+      render(<Content />)
+
+      // The first of the three Y fields: position, then rotation, then scale, in that order.
+      const y = screen.getAllByLabelText('Y')[0]
+      if (!y) throw new Error('no position field')
+      await userEvent.clear(y)
+      await userEvent.type(y, '200')
+      await userEvent.tab()
+
+      // Both took the height; neither took the anchor's X.
+      expect(nodeInStore('box-1')?.transform.position).toMatchObject({ y: 0.2 })
+      expect(nodeInStore('box-2')?.transform.position).toMatchObject({ x: 5, y: 0.2 })
+    })
+
     it('writes a typed geometry parameter onto every selected mesh, as one entry', async () => {
       installPair()
       render(<Content />)
@@ -564,7 +756,7 @@ describe('inspector panel', () => {
           { ...meshNode('box-2'), transform: moved(5, 0, 0) },
         ],
         selectedIds: ['box-2', 'box-1'],
-        environment: STUDIO_ENVIRONMENT,
+        world: DEFAULT_WORLD,
         animation: EMPTY_TIMELINE,
       })
       render(<Content />)
@@ -600,7 +792,7 @@ describe('inspector panel', () => {
           { ...meshNode('box-2'), transform: turned(1.5, 0, 0) },
         ],
         selectedIds: ['box-2', 'box-1'],
-        environment: STUDIO_ENVIRONMENT,
+        world: DEFAULT_WORLD,
         animation: EMPTY_TIMELINE,
       })
       render(<Content />)
@@ -662,18 +854,24 @@ describe('inspector panel', () => {
     useSelection.getState().selectClip('doc-1', 'clip-1')
     render(<Content />)
 
-    expect(screen.getByRole('heading', { name: 'Clip' })).toBeInTheDocument()
+    // A folding heading like every other section of the studio, since the fixed one was merged
+    // into it: the Audio space used to be one of the four that could not fold anything.
+    expect(screen.getByRole('button', { name: /Clip/ })).toBeInTheDocument()
     // The three a sound clip is shaped by, and the reason this matters: they had no other surface.
     expect(screen.getByRole('spinbutton', { name: /Gain/ })).toBeInTheDocument()
   })
 
-  // The image in front is not necessarily the one the layer was picked in.
-  it('says nothing for a layer picked in another document', () => {
+  /**
+   * The armed layer of the image in FRONT, whatever a selection posted elsewhere still says. One
+   * answer rather than two: the stack highlights `activeLayerId`, and a panel reading a second
+   * source emptied itself over the very layer the stack showed picked.
+   */
+  it('describes the armed layer of the image in front, not one picked elsewhere', () => {
     installCanvas('doc-1')
     useSelection.getState().selectLayer('elsewhere', 'layer-1')
     render(<Content />)
 
-    expect(screen.queryByText('Composition')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Composition/ })).toBeInTheDocument()
   })
 
   /**
@@ -691,7 +889,7 @@ describe('inspector panel', () => {
       installTexture('doc-1')
       render(<Content />)
 
-      expect(screen.getByLabelText('Rugosité')).toBeInTheDocument()
+      expect(inSection('Matière').getByLabelText('Rugosité')).toBeInTheDocument()
     })
 
     /** The section folds, and a folded one keeps no field mounted — see `PropertySection`. */
@@ -706,7 +904,10 @@ describe('inspector panel', () => {
       render(<Content />)
       await openTiling()
 
-      await userEvent.click(screen.getByRole('button', { name: '4×' }))
+      await userEvent.selectOptions(
+        screen.getByRole('combobox', { name: 'Aperçu de la répétition' }),
+        '4',
+      )
 
       const texture = textureOf(useTextures.getState(), 'doc-1')
       expect(texture.preview.tilingPreview).toBe(4)
@@ -794,13 +995,12 @@ describe('inspector panel', () => {
       expect(screen.getByRole('button', { name: /Environnement/ })).toBeInTheDocument()
     })
 
-    it('says nothing at all when the document in front is neither', () => {
+    /** An image opens with a layer armed, so there is always one to describe — see above. */
+    it('describes the armed layer when the document in front is an image', () => {
       installCanvas('doc-1')
       render(<Content />)
 
-      expect(
-        screen.getByText('Sélectionnez un élément pour voir ses propriétés.'),
-      ).toBeInTheDocument()
+      expect(screen.queryByText('Sélectionnez un élément pour voir ses propriétés.')).toBeNull()
       expect(screen.queryByLabelText('Rugosité')).toBeNull()
     })
   })
@@ -822,7 +1022,10 @@ describe('the inspector on an imported model', () => {
 
   it('offers the clips the file brought', () => {
     install(modelNodeFixture('model-1'))
-    useModelClips.setState({ clips: { 'doc-1': { 'model-1': ['walk'] } } })
+    useModelClips.setState({
+      clips: { 'doc-1': { 'model-1': ['walk'] } },
+      rigs: { 'doc-1': { 'model-1': rigStateFixture([]) } },
+    })
     render(<Content />)
 
     expect(screen.getByLabelText('Clip')).toBeInTheDocument()
@@ -873,7 +1076,7 @@ describe('the inspector and what is picked in a scene', () => {
   it('describes the node an import just put down, not the asset it came from', () => {
     install(meshNode('box-1'), false)
     // The connector the application wires up: what the panel shows after an import is only half
-    // the answer, and the other half is who told it — see `scene-selection.test.ts`.
+    // the answer, and the other half is who told it — see `sceneSelection.test.ts`.
     const stop = connectSceneSelection()
     useSelection.getState().selectAssets(['asset-1'])
 
@@ -949,6 +1152,6 @@ describe('the inspector and what is picked in a scene', () => {
     installTexture('doc-2')
     render(<Content />)
 
-    expect(screen.getByLabelText('Rugosité')).toBeInTheDocument()
+    expect(inSection('Matière').getByLabelText('Rugosité')).toBeInTheDocument()
   })
 })

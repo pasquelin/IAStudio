@@ -4,9 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addClip } from '@/engines/timeline/commands'
 import { programOwner, sourceOwner } from '@/engines/timeline/playback'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
-import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timeline-state'
+import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timelineState'
 import { TimelinePanel } from '@/panels/timeline/TimelinePanel'
 import { useDocuments } from '@/stores/documents'
+import { useMonitorPair } from '@/stores/monitorPair'
 import { usePlayback } from '@/stores/playback'
 import { sequenceStore, useSequences } from '@/stores/sequences'
 import { SequenceDocument } from './SequenceDocument'
@@ -63,6 +64,51 @@ describe('SequenceDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useDocuments.setState({ activeId: 'doc-1' })
+    // Almost everything below is about the PAIR, which a tab now opens with one half of: the
+    // decor asks for the source monitor, and the one suite about the default closes it again.
+    useMonitorPair.setState({ clipShown: { 'doc-1': true } })
+  })
+
+  /**
+   * What a montage tab is FOR is the edit: the source monitor is the half one opens to look at
+   * one clip, and it used to take half the width whether or not a clip was being looked at.
+   */
+  describe('the source monitor, which the tab hides by default', () => {
+    beforeEach(() => useMonitorPair.setState({ clipShown: {} }))
+
+    it('opens on the program alone', () => {
+      render(<SequenceDocument documentId="doc-1" />)
+
+      expect(screen.queryByText('Source')).not.toBeInTheDocument()
+      expect(screen.getByText('Programme')).toBeInTheDocument()
+    })
+
+    it('shows and hides it on the button the program monitor carries', async () => {
+      render(<SequenceDocument documentId="doc-1" />)
+
+      await userEvent.click(screen.getByRole('button', { name: 'Moniteur source' }))
+      expect(screen.getByText('Source')).toBeInTheDocument()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Moniteur source' }))
+      expect(screen.queryByText('Source')).not.toBeInTheDocument()
+    })
+
+    /**
+     * The space bar has one player to drive while the source is away, so the focus a click took
+     * before hiding it must not keep the key. Read off the play button, which advertises the
+     * key only on the monitor that answers it.
+     */
+    it('leaves the key to the program even after the source was clicked', async () => {
+      useMonitorPair.setState({ clipShown: { 'doc-1': true } })
+      render(<SequenceDocument documentId="doc-1" />)
+
+      await userEvent.click(screen.getByText('Source'))
+      await userEvent.click(screen.getByRole('button', { name: 'Moniteur source' }))
+
+      expect(screen.queryByText('Source')).not.toBeInTheDocument()
+      // The key is named on the play button of whichever monitor answers it, and on no other.
+      expect(screen.getByRole('button', { name: 'Lire (Espace)' })).toBeInTheDocument()
+    })
   })
 
   it('shows the source and the program monitors, in that order', () => {

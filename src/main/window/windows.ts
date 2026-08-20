@@ -2,9 +2,11 @@ import { BrowserWindow, dialog, screen, type WebPreferences } from 'electron'
 import { join } from 'node:path'
 import { chromeColor } from './theme'
 import { MIRROR_BACKGROUND } from '@shared/constants'
+import { fileInfoRoute } from '@shared/domain/fileInfo'
 import { LICENCES_ROUTE } from '@shared/domain/licence'
 import { MANUAL_ROUTE } from '@shared/domain/manual'
 import { MIRROR_ROUTE } from '@shared/domain/mirror'
+import { NEW_DOCUMENT_ROUTE } from '@shared/domain/newDocument'
 import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
 import { USAGE_ROUTE } from '@shared/domain/usage'
 import { TRANSLATIONS } from '@shared/i18n'
@@ -208,13 +210,6 @@ function showSection(window: BrowserWindow, section: SettingsSectionId): void {
 }
 
 /**
- * Settings live in their own window, opened by ⌘,. One at a time: a second copy of the
- * account form could save a different key than the one the first is still showing.
- *
- * `section` is what a panel asks for when it sends the user here — the account form, from a
- * panel that has just said no API key is set.
- */
-/**
  * Whether the settings window is holding changes nobody applied. Published by its renderer,
  * because closing a window is the main process's decision and it has no other way to know.
  */
@@ -224,6 +219,13 @@ export function markSettingsPending(pending: boolean): void {
   settingsPending = pending
 }
 
+/**
+ * Settings live in their own window, opened by ⌘,. One at a time: a second copy of the
+ * account form could save a different key than the one the first is still showing.
+ *
+ * `section` is what a panel asks for when it sends the user here — the account form, from a
+ * panel that has just said no API key is set.
+ */
 export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     // Already open, possibly on another section: reloading it would throw away a half-typed
@@ -313,6 +315,38 @@ export function openManualWindow(): BrowserWindow {
     height: 700,
     minWidth: 640,
     minHeight: 420,
+  })
+}
+
+/**
+ * Everything the studio knows about one file, as its own window — the ⌘I of this application.
+ *
+ * One window PER FILE, which the route carries: comparing two files means having both open, and
+ * a single window following the last right-click would close the comparison as it opened it.
+ */
+export function openFileInfoWindow(path: string): BrowserWindow {
+  return openAuxiliaryWindow(fileInfoRoute(path), {
+    width: 460,
+    height: 560,
+    minWidth: 380,
+    minHeight: 320,
+  })
+}
+
+/**
+ * What a document about to be made is called and where it goes — a window, not a modal drawn
+ * over the studio: it is moved, put beside the folder one is looking at, and closed the way
+ * every other window is, which is what closing it has to mean here (nothing is made).
+ *
+ * The floor is read off the browser rather than chosen: three 160 px columns and their rules —
+ * under that the walk is three slots of clipped names.
+ */
+export function openNewDocumentWindow(): BrowserWindow {
+  return openAuxiliaryWindow(NEW_DOCUMENT_ROUTE, {
+    width: 860,
+    height: 640,
+    minWidth: 720,
+    minHeight: 520,
   })
 }
 

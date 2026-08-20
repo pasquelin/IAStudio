@@ -8,24 +8,27 @@ import {
   tracksHeight,
   xToTime,
   type Viewport,
-} from '@/engines/timeline/timeline-geometry'
+} from '@/engines/timeline/timelineGeometry'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
-import type { Clip } from '@/engines/timeline/timeline-state'
-import {
-  EMPTY_SEQUENCE,
-  EMPTY_SOUND_SEQUENCE,
-  snapToFrame,
-} from '@/engines/timeline/timeline-state'
-import { startAssetDrag } from '@/helpers/asset-drag'
+import type { Clip } from '@/engines/timeline/timelineState'
+import { EMPTY_SEQUENCE, EMPTY_SOUND_SEQUENCE, snapToFrame } from '@/engines/timeline/timelineState'
+import { startAssetDrag } from '@/helpers/assetDrag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { fakeMenu } from '@/helpers/menu-fixtures'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { exportOtio } from '@/app/otioExport'
+import { publishCommand } from '@/services/commandBus'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
+import { installDocuments, retitleDocument } from '@/stores/document-fixtures'
+import { exportSequence } from './sequenceExport'
 import { sequenceOf, useSequences } from '@/stores/sequences'
-import { useTimelineView, viewportOf } from '@/stores/timeline-view'
+import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { TIMELESS_DURATION } from '@/engines/timeline/insert'
 import { TimelineCanvas } from './TimelineCanvas'
-import type { VideoToolId } from './video-tools'
+import type { VideoToolId } from './videoTools'
+
+vi.mock('@/app/otioExport', () => ({ exportOtio: vi.fn(() => Promise.resolve('Bande.otio')) }))
+vi.mock('./sequenceExport', () => ({ exportSequence: vi.fn(() => Promise.resolve('Bande.mp4')) }))
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
@@ -58,7 +61,7 @@ const viewOf = (): Viewport => viewportOf(useTimelineView.getState(), 'doc-1')
 
 /**
  * A canvas that can paint, which is the only condition under which the strip ever learns its
- * own width — `test-setup` sizes every element but hands back a null 2D context, so `paint`
+ * own width — `testSetup` sizes every element but hands back a null 2D context, so `paint`
  * returns before measuring anything.
  *
  * Every drawing call is a no-op: nothing is asserted on what was drawn, only on what the
@@ -213,6 +216,31 @@ describe('TimelineCanvas', () => {
     })
 
     expect(clipsOf()).toHaveLength(0)
+  })
+
+  /**
+   * The one command of this strip with no key of its own, so no keyboard test reaches it: it
+   * arrives from the File menu through the bus, and nothing else here proves that it lands.
+   */
+  it('writes the montage out as a cut when the menu asks for it', () => {
+    paint()
+
+    act(() => publishCommand('sequence.exportCut'))
+
+    expect(exportOtio).toHaveBeenCalledWith('doc-1')
+  })
+
+  // The film's door, where the cut's door beside it has cleaned its title since the day it was
+  // written — same tab, same title, and only one of the two came back refused.
+  it('cleans the title down to a file name before the render dialog is asked', () => {
+    installDocuments({ 'doc-1': 'video' }, 'doc-1')
+    retitleDocument('doc-1', 'Brique 1/2')
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    paint()
+
+    act(() => publishCommand('sequence.export'))
+
+    expect(exportSequence).toHaveBeenCalledWith(expect.objectContaining({ title: 'Brique 1 2' }))
   })
 
   it('deletes the selected clip on Delete', () => {

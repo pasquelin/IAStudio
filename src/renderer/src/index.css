@@ -76,7 +76,13 @@
    * one colour, a touch darker than any of them.
    */
   --color-accent-hover: #2a58c2;
-  --color-accent-soft: #2e436e;
+  /*
+   * What a CHOSEN row is filled with: THE accent, thinned — not a second blue. Composed rather
+   * than written out so it can never drift from the one the rail wears, which is the whole point.
+   * Two hand-picked hexadecimals were rejected on sight before this: any opaque value is a colour
+   * of its own, and the eye reads it as one however close the hue is.
+   */
+  --color-accent-soft: color-mix(in srgb, var(--color-accent) 55%, transparent);
   /*
    * The accent as a VEIL — a selected range laid OVER content that has to stay readable, which
    * is what `accent-soft` cannot be: the take editor tints the span its tools act on, and an
@@ -181,6 +187,18 @@
    * which is what having two tokens bought.
    */
   --color-mesh: #868a91;
+  /*
+   * The three axes, on the edge of the field that holds each one — the reading every 3D
+   * application gives them, and the reason a Position row can be scanned without reading X, Y, Z.
+   *
+   * ONE value for both themes, which is unusual here and is what the narrow window allows: a
+   * stripe has to clear 3:1 against `surface`, dark and light alike, so its luminance is pinched
+   * between 0.146 and 0.273 — and all three fit. The letters stay beside them: colour alone may
+   * not identify anything (WCAG 1.4.1), and it is the letter that carries the scrub and the name.
+   */
+  --color-axis-x: #e03131;
+  --color-axis-y: #2b8a3e;
+  --color-axis-z: #1971c2;
   /*
    * What dims the part of a document a crop is about to throw away. Translucent black rather
    * than a flat grey: the picture underneath has to stay readable, or the frame cannot be
@@ -400,7 +418,8 @@
   --color-accent-ink: #2a5dc0;
   /* Restated rather than inherited: this theme reads its own block, and the accent could part. */
   --color-accent-hover: #2a58c2;
-  --color-accent-soft: #d3e1fb;
+  /* Thinned from the accent here too, and lighter: this theme reads its own block. */
+  --color-accent-soft: color-mix(in srgb, var(--color-accent) 22%, transparent);
   /* The studio's own name for daisyUI's `error`, and the same value: two reds would be one too many. */
   --color-danger: #b72e27;
   /*
@@ -438,6 +457,16 @@
      them, and a mid green that carried 5:1 on the dark one carries 1.6 on this. */
   --color-level-safe: #2f7d4f;
   /*
+   * Restated identically, and the only inks in this block that are: a stripe has to clear 3:1
+   * against `surface` on BOTH themes, which pinches its luminance into a window narrow enough
+   * that one value serves the two. Stated here all the same, rather than left to inheritance —
+   * `design/tokens.test.ts` reads each theme's block on its own, and so does anyone reading this
+   * file to find out what the light theme paints.
+   */
+  --color-axis-x: #e03131;
+  --color-axis-y: #2b8a3e;
+  --color-axis-z: #1971c2;
+  /*
    * Restated identically, and for the same reason as the monitor: the marching ants are drawn
    * over the document, not over the studio's chrome, and the document does not change with the
    * theme. Swapping them would make the outline vanish over a light picture.
@@ -470,6 +499,23 @@
      exception: these are the only targets on their line, and the row itself answers everywhere
      they do not. Chosen on 2026-08-14, not derived. */
   --sc-control-inline: 20px;
+  /* The rail a slider runs on, and the handle that runs along it. Gauges rather than classes
+     because the browser's own slider honours neither: its track is white on one field and blue
+     on the next, at a thickness nothing here chose. `slider-handle` drops it and the rail is
+     drawn behind as a div, so a single pair of values answers every slider of the studio. */
+  --sc-slider-rail: 4px;
+  --sc-slider-thumb: 14px;
+  /* The glyph a `ToolButton` draws on a header. RECOPIED from `HOSTS.header.glyph`, which takes a
+     number and not a gauge — `design/styles.test.ts` holds the two together, since moving one
+     alone would shift the lean below by half its change and nothing would say so. */
+  --sc-icon-header: 14px;
+  /* How far a property line's END button leans into the panel's own padding: its box ends on the
+     column every field ends on, but its glyph sits centred in a wider square, so what the eye
+     reads stopped short. Derived, so a density that moves the control moves the lean with it. */
+  --sc-row-action-bleed: calc((var(--sc-control) - var(--sc-icon-header)) / 2);
+  /* The room every property line keeps at its end, drawn into or not — two controls, the most any
+     line asks for: padlock and reset on Scale, browse and clear on a link. */
+  --sc-row-actions: calc(var(--sc-control) * 2);
   /* A list row that stacks a name over a subtitle. `--sc-control` cannot hold it: two steps of
      `leading-tight` text are 27.5px, which fills a 28px row edge to edge and overflows a compact
      one. Its own gauge rather than a padding on the row, because the virtualizer is given a
@@ -520,11 +566,17 @@
   /* Track header column: wide enough for a name plus mute, solo and lock on one line. */
   --sc-track-header: 140px;
   /* The label column of a property line, whichever family draws it: `PropertyRow` for a value to
-     read, the fields for a control to change it. Two hardcoded widths — 80 and 64 — used to be
-     two declarations of the same thing, and five inspectors out of six show both families in one
-     group, so their labels started in two different places. 80 is the wider of the two, and the
-     one that was measured: `Aperçu de la répétition` does not fit in 64. */
-  --sc-label: 80px;
+     read, the fields for a control to change it. A SHARE of the row rather than a width, since a
+     fixed 80px truncated « Point d'entrée » in an inspector 1300px across with that width sitting
+     empty beside its value. No floor: one cannot shrink, and a side zone dragged to its 140px
+     minimum then overflowed. The ceiling keeps a detached panel from spending 300px on one word. */
+  --sc-label-share: 30%;
+  --sc-label-max: 200px;
+  /* One column of the folder browser, which shows folder names and nothing else. Wide enough for
+     the names a project actually carries — `Textures`, `Repérages` — and narrow enough that three
+     columns fit the dialog without it becoming a window. Truncation is the fallback, as
+     everywhere a name is drawn. */
+  --sc-folder-column: 160px;
   /* How wide a tooltip may grow before it wraps. Unbounded, it took the width of its longest
      line — a layer named with a whole sentence drew a band across the canvas beside its panel,
      which is the surface the studio exists to let one judge.
@@ -547,6 +599,8 @@
 :root[data-density='compact'] {
   --sc-control: 24px;
   --sc-control-inline: 18px;
+  --sc-slider-rail: 3px;
+  --sc-slider-thumb: 12px;
   --sc-row-stacked: 32px;
   --sc-row-filled: 38px;
   --sc-rail: 42px;
@@ -555,7 +609,8 @@
   --sc-header: 28px;
   --sc-tab: 32px;
   --sc-track-header: 120px;
-  --sc-label: 72px;
+  /* The share holds at both densities; only what it may never exceed comes down. */
+  --sc-label-max: 180px;
   --sc-meter: 12px;
   --sc-spectrum: 56px;
 }
@@ -699,6 +754,59 @@ body,
 
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/*
+ * `truncate`, cutting at the START. What it is for is a PATH: `Images/Croquis/etude.jpg` clipped
+ * the ordinary way leaves `Images/Croqui…`, which is the half nobody reads — the file's own name
+ * is at the far end, and it is what the row is about.
+ *
+ * `direction: rtl` is the whole trick: the browser only ever puts its ellipsis at the end of the
+ * writing direction, so the text is laid out right to left and the clip lands on the left. What
+ * it costs is that a path ENDING in punctuation would draw that punctuation on the wrong side,
+ * which `unicode-bidi: plaintext` settles by reading each run in its own direction.
+ *
+ * A utility rather than three declarations in a component: they are one rule, and one of the
+ * three alone is a name that reads backwards.
+ */
+@utility truncate-start {
+  overflow: hidden;
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * A picture cut to the DOCUMENT silhouette — `mdiFile` MINUS its fold, written here because CSS
+ * cannot read `@mdi/js`. A mask SUBTRACTS a second subpath instead of drawing it, and the fold
+ * came out as a black triangle of panel through the corner of every thumbnail.
+ */
+@utility document-cutout {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6,2C4.89,2 4,2.89 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6Z'/%3E%3C/svg%3E");
+  mask-size: contain;
+  mask-position: center;
+  mask-repeat: no-repeat;
+}
+
+/*
+ * The handle of a slider, and nothing else — the rail is `SliderRail`, drawn behind it. A utility
+ * rather than classes in a component: a pseudo-element is out of reach of one, and the two rules
+ * are a single control. WebKit alone, this window being Chromium.
+ */
+@utility slider-handle {
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: var(--sc-slider-thumb);
+    height: var(--sc-slider-thumb);
+    border: none;
+    border-radius: calc(infinity* 1px);
+    background: var(--color-accent);
   }
 }
 

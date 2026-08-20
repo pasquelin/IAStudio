@@ -44,6 +44,38 @@
       "title": "Déplacer l’espace vers la droite",
       "help": "Décale d’un cran vers la droite l’espace sur lequel se trouve le focus, dans la barre du haut. L’ordre choisi est retenu d’une session à l’autre."
     },
+    "explorerNewFolder": {
+      "title": "Nouveau dossier",
+      "help": "Crée un dossier vide dans celui que l’explorateur affiche, et ouvre son nom à la saisie. Le dossier vous appartient, comme tout ce que vous rangez dedans."
+    },
+    "explorerDuplicate": {
+      "title": "Dupliquer",
+      "help": "Pose une copie de chaque élément choisi à côté de l’original, sous le premier nom libre. Un dossier est copié avec tout ce qu’il contient."
+    },
+    "explorerCut": {
+      "title": "Couper",
+      "help": "Retient la sélection pour la déplacer au prochain collage. Rien ne bouge tant que vous n’avez pas collé, et les lignes retenues s’affichent atténuées."
+    },
+    "explorerCopy": {
+      "title": "Copier",
+      "help": "Retient la sélection pour en poser une copie au prochain collage. L’original reste où il est."
+    },
+    "explorerPaste": {
+      "title": "Coller",
+      "help": "Dépose dans le dossier affiché ce que le presse-papiers retient. Un nom déjà pris fait refuser l’élément concerné, et les autres passent."
+    },
+    "explorerTrash": {
+      "title": "Mettre à la corbeille",
+      "help": "Envoie la sélection à la corbeille du système, d’où vous pouvez la récupérer. C’est le seul geste de l’explorateur que le studio ne sait pas annuler."
+    },
+    "explorerUndo": {
+      "title": "Annuler le dernier geste sur les fichiers",
+      "help": "Remet à sa place le dernier lot déplacé, renommé, dupliqué ou créé. La pile appartient au projet, pas à une fenêtre, et la mise à la corbeille n’y entre jamais."
+    },
+    "explorerRedo": {
+      "title": "Rétablir le geste sur les fichiers",
+      "help": "Refait le lot de fichiers qui vient d’être annulé, à l’identique."
+    },
     "sceneSelect": {
       "title": "Sélectionner",
       "help": "L’outil de base : cliquer sur un objet de la scène pour le choisir, sans rien lui faire. C’est celui sur lequel on revient entre deux manipulations."
@@ -64,9 +96,21 @@
       "title": "Cadrer la sélection",
       "help": "Rapproche la caméra de l’objet choisi pour qu’il remplisse la vue. Pratique quand on s’est perdu ou qu’un objet est minuscule."
     },
+    "sceneIsolate": {
+      "title": "Isoler la sélection",
+      "help": "Ne laisse à l’écran que les objets choisis, le temps de travailler dessus. Rien n’est modifié : appuyer une seconde fois rend la scène telle qu’elle était, y compris les objets que vous aviez masqués vous-même."
+    },
+    "sceneHide": {
+      "title": "Masquer la sélection",
+      "help": "Retire les objets choisis de l’affichage sans toucher au document. « Tout afficher » les fait revenir."
+    },
+    "sceneShowAll": {
+      "title": "Tout afficher",
+      "help": "Annule les masquages et l’isolation faits depuis le viewport. Les objets que le document déclare masqués le restent."
+    },
     "sceneSnap": {
       "title": "Magnétisme",
-      "help": "Fait avancer les poignées par pas réguliers au lieu de les laisser libres. Pratique pour poser des objets bien alignés. La finesse des pas se règle dans les réglages de l’espace 3D."
+      "help": "Fait avancer les poignées par pas réguliers au lieu de les laisser libres. Pratique pour poser des objets bien alignés. La finesse des pas se règle dans les réglages de l’espace Modélisation."
     },
     "sceneSpace": {
       "title": "Repère local",
@@ -87,6 +131,22 @@
     "sceneDisplay": {
       "title": "Mode de rendu",
       "help": "Fait défiler ce que le viewport dessine : les surfaces, leurs arêtes seules, ou les deux ensemble. Le menu du bouton permet de choisir directement."
+    },
+    "sceneCapture": {
+      "title": "Capturer la vue",
+      "help": "Enregistre une image de la vue 3D dans les images du projet — sans la grille, les poignées ni les rails. Le menu propose des définitions plus grandes que celle du panneau."
+    },
+    "sceneAdd": {
+      "title": "Ajouter",
+      "help": "Ouvre la liste de ce que la scène peut recevoir — mailles, lumières et objets. Un clic droit dans le vide ouvre la même liste."
+    },
+    "sceneAddToSheet": {
+      "title": "Ajouter à la bande d’animation",
+      "help": "Met les objets sélectionnés sur la bande, où l’on pose les clés. La bande ne montre que ce qu’on y met, si bien qu’une scène de plusieurs milliers d’objets reste lisible."
+    },
+    "sceneRemoveFromSheet": {
+      "title": "Retirer de la bande d’animation",
+      "help": "Retire la ligne de la bande. Les clés déjà posées restent, et l’objet garde sa ligne tant qu’il en porte."
     },
     "sceneGroup": {
       "title": "Grouper",
@@ -128,6 +188,30 @@
       "title": "Exporter la vidéo…",
       "help": "Écrit le montage dans un fichier vidéo, image par image, scènes 3D comprises. Le son n’y est pas encore."
     },
+    "sequenceExportCut": {
+      "title": "Exporter le montage (OTIO)…",
+      "help": "Écrit le montage lui-même dans un fichier OpenTimelineIO, que d’autres logiciels de montage ouvrent — pistes, clips, points d’entrée, vitesses et liens vers les médias. Les fondus, les gains et les liens image/son y voyagent aussi, mais seul Scenario les relit."
+    },
+    "sequenceExportEdl": {
+      "title": "Exporter la liste de montage (EDL)…",
+      "help": "Écrit les coupes et leurs timecodes au format CMX3600, que toute salle d’étalonnage lit. Le format ne porte qu’une piste image et deux pistes son, et rien des fondus, des gains ni des vitesses."
+    },
+    "sequenceExportFcpxml": {
+      "title": "Exporter le montage (FCPXML)…",
+      "help": "Écrit le montage au format que Final Cut lit, et que Premiere et Resolve importent. Les pistes survivent, une voie chacune, ainsi que la taille d’image. Les fondus, les gains et les vitesses restent ici."
+    },
+    "sequenceExportStems": {
+      "title": "Exporter les sons par piste (WAV)…",
+      "help": "Écrit un fichier WAV par piste audible, mixé comme le montage le joue — les placements, les rognages, les fondus, les gains et les vitesses sont cuits dans les échantillons. Une piste muette n’est pas écrite."
+    },
+    "sequenceExportBundle": {
+      "title": "Exporter le montage et ses médias (OTIOZ)…",
+      "help": "Écrit le même montage avec les médias qu’il utilise à l’intérieur du fichier. C’est celui à donner à quelqu’un d’autre, ou à ouvrir dans DaVinci Resolve, qui retrouve alors les rushes tout seul au lieu de les demander un par un."
+    },
+    "montageImport": {
+      "title": "Importer un montage et ses médias (OTIOZ)…",
+      "help": "Ouvre un montage écrit par un autre logiciel, avec ses rushes. Les médias sont copiés dans le projet et entrent au catalogue, puis le montage s’ouvre relié à eux. Ce que le fichier ouvert n’apporte pas est dit à l’ouverture, et ne repart de sa valeur par défaut que là."
+    },
     "sequenceMirror": {
       "title": "Fenêtre de retour",
       "help": "Ouvre le montage dans une fenêtre à part, à poser sur un second écran. Elle suit le studio image par image, sans le son, et se ferme comme une fenêtre ordinaire."
@@ -145,11 +229,11 @@
       "help": "Sépare les deux clips d’une même prise. Tant qu’ils sont liés, déplacer, couper ou supprimer l’un fait la même chose à l’autre."
     },
     "sequenceZoomIn": {
-      "title": "Zoomer",
+      "title": "Zoom avant",
       "help": "Étale le montage pour voir le détail : les clips deviennent plus larges et on vise plus précisément."
     },
     "sequenceZoomOut": {
-      "title": "Dézoomer",
+      "title": "Zoom arrière",
       "help": "Resserre le montage pour en voir davantage d’un coup, quitte à perdre le détail."
     },
     "sequenceFit": {
@@ -195,6 +279,10 @@
     "canvasSnap": {
       "title": "Magnétisme",
       "help": "Fait coller ce qu’on déplace aux repères, aux bords de l’image et à son centre, à quelques pixels près."
+    },
+    "canvasSelectAll": {
+      "title": "Tout sélectionner",
+      "help": "Sélectionne le document entier, ce que la sélection système ne sait pas faire sur une image."
     },
     "canvasDeselect": {
       "title": "Désélectionner",
@@ -261,6 +349,10 @@
       "title": "Exporter l’image",
       "help": "Écrit le document aplati sur le disque, au format PNG."
     },
+    "canvasExportLayered": {
+      "title": "Exporter les calques (PSD)…",
+      "help": "Écrit le document avec ses calques, au format Photoshop. Les groupes sont mis à plat, et leurs calques arrivent côte à côte."
+    },
     "skyboxView": {
       "title": "Changer de vue",
       "help": "Fait défiler les quatre façons de regarder le ciel : immersive, panoramique, croix, faces."
@@ -276,10 +368,6 @@
     "canvasToolHand": {
       "title": "Outil Main",
       "help": "Arme la main : un glissement fait défiler la vue sans rien toucher au document. La barre d’espace fait la même chose sans changer d’outil."
-    },
-    "canvasToolScale": {
-      "title": "Outil Échelle",
-      "help": "Arme la mise à l’échelle : les poignées du calque actif le redimensionnent, et MAJ conserve ses proportions."
     },
     "canvasToolCrop": {
       "title": "Outil Recadrage",
@@ -337,10 +425,6 @@
       "title": "Outil Gomme",
       "help": "Arme la gomme ponctuelle : elle efface là où la main passe, bornée par la sélection s’il y en a une."
     },
-    "canvasToolEraserSelection": {
-      "title": "Gomme sélective",
-      "help": "Arme la gomme sélective : un clic efface d’un coup tout ce que la sélection enferme, au lieu de le frotter."
-    },
     "canvasToolFill": {
       "title": "Outil Pot de peinture",
       "help": "Arme le pot : un clic remplit le calque, ou la sélection s’il y en a une."
@@ -359,11 +443,11 @@
     },
     "sceneSkeletons": {
       "title": "Afficher les squelettes",
-      "help": "Dessine les os de chaque modèle rigué par-dessus la scène."
+      "help": "Dessine les os de chaque modèle à squelette par-dessus la scène."
     },
     "scenePoseMode": {
       "title": "Mode pose",
-      "help": "Bascule entre la sélection des objets et celle des os d’un rig."
+      "help": "Bascule entre la sélection des objets et celle des os d’un squelette."
     }
   }
 }

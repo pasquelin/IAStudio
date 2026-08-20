@@ -51,10 +51,11 @@ export type ActivityMessage =
   | 'extractFailed'
   | 'extractedNothing'
   | 'extractedTextures'
-  | 'fileNotMoved'
+  | 'fileAdopted'
   | 'fileNotOpened'
-  | 'fileNotRenamed'
-  | 'fileNotTrashed'
+  | 'filesFound'
+  | 'filesMissing'
+  | 'filesRefused'
   | 'generated'
   | 'generatedInto'
   | 'importFailed'
@@ -66,6 +67,7 @@ export type ActivityMessage =
   | 'projectAccountRestored'
   | 'projectAccountSwitched'
   | 'projectHoldsProjects'
+  | 'projectLegacyAssetsFolder'
   | 'projectNested'
   | 'projectNotAProject'
   | 'projectNotCreated'
@@ -87,10 +89,11 @@ export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
   'extractFailed',
   'extractedNothing',
   'extractedTextures',
-  'fileNotMoved',
+  'fileAdopted',
   'fileNotOpened',
-  'fileNotRenamed',
-  'fileNotTrashed',
+  'filesFound',
+  'filesMissing',
+  'filesRefused',
   'generated',
   'generatedInto',
   'importFailed',
@@ -102,6 +105,7 @@ export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
   'projectAccountRestored',
   'projectAccountSwitched',
   'projectHoldsProjects',
+  'projectLegacyAssetsFolder',
   'projectNested',
   'projectNotAProject',
   'projectNotCreated',

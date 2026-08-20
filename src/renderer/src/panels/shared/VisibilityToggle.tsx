@@ -24,6 +24,9 @@ export function VisibilityToggle({ visible, label, description, onToggle }: Visi
       description={description}
       tooltip={TIP_RIGHT}
       variant="row"
+      // Announced, not painted: the icon is the whole of what a sighted eye reads here and a
+      // screen reader hears none of it — see `ToolButton.told`.
+      told={visible}
       onPointerDown={event => event.stopPropagation()}
       onDoubleClick={event => event.stopPropagation()}
       onClick={event => {

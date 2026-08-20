@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
 import type { Asset } from '@shared/domain/asset'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
-import { invoke as invokeChannel, resetHandlers } from '@main/ipc/test-harness'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
+import { invoke as invokeChannel, resetHandlers } from '@main/ipc/testHarness'
 import { recordFailuresTo } from '@main/scenario/client'
-import { createActivityLog, type ActivityLog } from '@main/project/activity-log'
+import { createActivityLog, type ActivityLog } from '@main/project/activityLog'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
-import type { AsyncCatalog } from '@main/project/catalog-client'
-import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
+import type { AsyncCatalog } from '@main/project/catalogClient'
+import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
 import { registerAssetHandlers, type AssetHandlerDeps } from './handlers'
-import type { CloudBackend } from './cloud-backend'
+import type { CloudBackend } from './cloudBackend'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
   // The harness answers `unknown`, and every caller knows the shape its own channel returns.
@@ -135,7 +135,7 @@ function setup(
     catalog: () => catalog,
     remote: () => remote,
     cloud: () => cloud,
-    // The real one is exercised in `auto-caption.test.ts`; here it must only stay out of the way.
+    // The real one is exercised in `autoCaption.test.ts`; here it must only stay out of the way.
     captionArrivals: async () => {},
     describeAssets: async assets => {
       described.push(...assets)
@@ -144,7 +144,7 @@ function setup(
     removeFile: async asset => {
       removedFiles.push(asset.id)
     },
-    // The disk itself is exercised in `asset-file.test.ts`; what this harness has to show is
+    // The disk itself is exercised in `assetFile.test.ts`; what this harness has to show is
     // that the handler moves the file BEFORE the row, and files the path it comes back with.
     renameFile:
       overrides.renameFile ??
@@ -197,6 +197,49 @@ describe('browsing the library', () => {
   it('takes the search index for free text', async () => {
     await invoke(CHANNELS.cloudBrowse, { text: 'boulder' })
     expect(harness.searched[0]).toMatchObject({ query: 'boulder' })
+  })
+
+  it('keeps newest-first when the index answers in the listing place', async () => {
+    // Left to itself the index ranks by relevance, and the shelf merges this source with two
+    // others on `createdAt` alone: typing a word would reorder one lane of three.
+    await invoke(CHANNELS.cloudBrowse, { text: 'boulder' })
+    expect(harness.searched[0]).toMatchObject({ sortBy: ['createdAt:desc'] })
+  })
+
+  it('asks for no order at all when the caller searches for what fits best', async () => {
+    // Relevance is never a value the API is told — it refuses `score` as a sort field — but the
+    // ranking it applies when nothing overrules it. An agent asking for stone textures wants it.
+    await invoke(CHANNELS.cloudBrowse, { text: 'boulder', order: 'relevance' })
+    expect(harness.searched[0]).not.toHaveProperty('sortBy')
+  })
+
+  it('marks a ranked page apart from a stamped one', async () => {
+    setup({ remote: { search: () => Promise.resolve({ assets: [], token: '40' }) } })
+
+    const stamped = await invoke<{ cursor: string | null }>(CHANNELS.cloudBrowse, { text: 'a' })
+    const ranked = await invoke<{ cursor: string | null }>(CHANNELS.cloudBrowse, {
+      text: 'a',
+      order: 'relevance',
+    })
+
+    expect(stamped.cursor).toBe('o:40')
+    expect(ranked.cursor).toBe('r:40')
+  })
+
+  it('reads a ranked cursor in the order it was made, not in the one the query asks for', async () => {
+    // A client that forgets to repeat `order` would otherwise take offset 40 of one ranking for
+    // the next page of another: rows repeated, rows never seen, and nothing to notice it by.
+    await invoke(CHANNELS.cloudBrowse, { text: 'boulder', cursor: 'r:40' })
+
+    expect(harness.searched[0]).not.toHaveProperty('sortBy')
+    expect(harness.searched[0]).toMatchObject({ offset: 40 })
+  })
+
+  it('keeps newest-first for a relevance asked with no words to rank by', async () => {
+    // Over an unqueried index, relevance is not a ranking — it is whatever order the shard
+    // answers in, which is worse than the stamp for every reader.
+    await invoke(CHANNELS.cloudBrowse, { tags: ['hero'], order: 'relevance' })
+    expect(harness.searched[0]).toMatchObject({ sortBy: ['createdAt:desc'] })
   })
 
   it('narrows a search too, not only a listing', async () => {
@@ -259,6 +302,24 @@ describe('the public feed', () => {
     })
   })
 
+  it('looks for what was typed, keeping the order the shelf merges on', async () => {
+    await invoke(CHANNELS.cloudExplore, { type: 'image', text: 'dragon' })
+
+    // The order stands with a text as without one: the shelf interleaves this feed with the
+    // library and the project on `createdAt`, and a page ranked by relevance carries no stamp
+    // that merge could place.
+    expect(harness.searched[0]).toMatchObject({
+      query: 'dragon',
+      publicFeed: true,
+      sortBy: ['createdAt:desc'],
+    })
+  })
+
+  it('asks for the whole feed when nothing was typed', async () => {
+    await invoke(CHANNELS.cloudExplore, { type: 'image', text: '   ' })
+    expect(harness.searched[0]).not.toHaveProperty('query')
+  })
+
   it('leaves out anything the API flagged', async () => {
     await invoke(CHANNELS.cloudExplore, { type: 'video' })
     expect(harness.searched[0]).toMatchObject({ filter: expect.stringContaining('nsfw IS EMPTY') })
@@ -280,7 +341,7 @@ describe('the public feed', () => {
   })
 
   // The thumbnail a hit does not carry is filled in by `cloudAssetOfHit`, one layer down — see
-  // `asset-normalizer.test.ts` and `asset-catalog.test.ts`. The fake catalogue here answers with
+  // `assetNormalizer.test.ts` and `assetCatalog.test.ts`. The fake catalogue here answers with
   // `CloudAsset`s directly, so it never crosses that reader.
 
   it('walks past a page the retyping emptied rather than reporting the end', async () => {
@@ -493,6 +554,19 @@ describe('renaming and tagging', () => {
     const updated = await invoke<Asset>(CHANNELS.assetsUpdate, 'asset_1', { name: 'Rock' })
 
     expect(updated).toMatchObject({ name: 'Rock', tags: ['stone'] })
+  })
+
+  /**
+   * The correction the extension cannot make: a normal map and an albedo are both PNGs. The row
+   * is what remembers it, and the FILE does not move — a row carries its own path, and what the
+   * studio calls a picture has never been decided by the folder it sits in.
+   */
+  it('writes what a file is, leaving the file where it is', async () => {
+    await harness.catalog.add(localAsset({ type: 'image', path: 'Repérages/ruelle.png' }))
+
+    const updated = await invoke<Asset>(CHANNELS.assetsUpdate, 'asset_1', { type: 'texture' })
+
+    expect(updated).toMatchObject({ type: 'texture', path: 'Repérages/ruelle.png' })
   })
 
   it('tells the library which tags moved, not the whole set', async () => {

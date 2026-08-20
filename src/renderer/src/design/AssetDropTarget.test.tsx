@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PICTURES, type Asset, type AssetType } from '@shared/domain/asset'
-import { startAssetDrag } from '@/helpers/asset-drag'
+import { startAssetDrag } from '@/helpers/assetDrag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { AssetDropTarget } from './AssetDropTarget'

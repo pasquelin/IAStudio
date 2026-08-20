@@ -8,7 +8,7 @@
     "generateHint": "Lance la génération avec les réglages ci-dessus ; elle se suit dans la barre des générations"
   },
   "jobs": {
-    "none": "Aucune tâche en cours.",
+    "none": "Aucune génération en cours.",
     "running_one": "{{count, number}} génération",
     "running_many": "{{count, number}} générations",
     "running_other": "{{count, number}} générations",
@@ -26,12 +26,21 @@
     },
     "cancel": "Annuler la tâche"
   },
+  "tasks": {
+    "running_one": "{{count, number}} tâche",
+    "running_many": "{{count, number}} tâches",
+    "running_other": "{{count, number}} tâches",
+    "open": "Afficher les tâches",
+    "openHint": "Ouvre la liste des tâches en cours",
+    "cancel": "Interrompre cette tâche"
+  },
   "dialog": {
     "allMedia": "Tous les médias",
     "video": "Vidéo",
     "audio": "Audio",
     "image": "Image",
-    "mesh": "Modèle 3D"
+    "mesh": "Modèle 3D",
+    "bundle": "Montage et médias"
   },
   "sorts": {
     "relevance": "Qualité : les meilleurs",
@@ -41,7 +50,10 @@
   "exportFormats": {
     "glb": "glTF binaire (.glb)",
     "gltf": "glTF (.gltf)",
-    "usdz": "USDZ (.usdz)"
+    "usdz": "USDZ (.usdz)",
+    "obj": "Wavefront, formes seules (.obj)",
+    "ply": "Stanford, formes seules (.ply)",
+    "stl": "STL, triangles seuls (.stl)"
   },
   "errors": {
     "missingCredentials": "Aucun identifiant enregistré.",

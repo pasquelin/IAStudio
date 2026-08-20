@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { adjustmentLayer, groupLayer, pixelLayer, type Layer } from './canvas-state'
+import { adjustmentLayer, groupLayer, pixelLayer, type Layer } from './canvasState'
 import { composite, placement, type CompositeNode } from './compositor'
 
 const clipped = (id: string): Layer => ({ ...pixelLayer(id, id), clipped: true })

@@ -43,7 +43,7 @@
       "apiKey": "Dont clé API",
       "action": "Action",
       "count": "Nombre",
-      "kind": "Type d’asset",
+      "kind": "Nature de l’asset",
       "time": "Date",
       "account": "Compte"
     },
@@ -120,7 +120,7 @@
       "project-member": "Membre du projet",
       "reframe": "Recadrage",
       "refunds": "Remboursements",
-      "repaint": "Repeinte",
+      "repaint": "Régénération de zone",
       "restyle": "Restylage",
       "segmentation": "Segmentation",
       "skybox-base-360": "Skybox 360",

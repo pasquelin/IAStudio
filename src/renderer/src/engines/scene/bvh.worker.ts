@@ -2,7 +2,7 @@
 import { BufferAttribute, BufferGeometry } from 'three'
 import { MeshBVH } from 'three-mesh-bvh'
 import { messageOf } from '@shared/guards'
-import type { BvhRequest, BvhResponse } from './bvh-message'
+import type { BvhRequest, BvhResponse } from './bvhMessage'
 
 declare const self: DedicatedWorkerGlobalScope
 

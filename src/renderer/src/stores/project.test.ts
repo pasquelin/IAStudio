@@ -1,16 +1,20 @@
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Project, RecentProject } from '@shared/domain/project'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import type { ActivityEntry } from '@shared/domain/activity'
+import type { FileOutcome } from '@shared/domain/fileOp'
 import { useActivity } from './activity'
 import { assetsById, useAssets } from './assets'
 import { useProject } from './project'
 import { useSettings } from './settings'
 
 const closeOrphanTabs = vi.hoisted(() => vi.fn())
-vi.mock('@/app/orphan-tabs', () => ({ closeOrphanTabs }))
+vi.mock('@/app/orphanTabs', () => ({ closeOrphanTabs }))
 
 const MANIFEST = { version: 1, name: 'demo', createdAt: '', updatedAt: '' }
+
+const nothingMoved = (): Promise<FileOutcome> =>
+  Promise.resolve({ done: [], refused: [], batch: 'batch-1' })
 
 /** A toast standing on screen — what following another project is right to sweep away, and a
  *  rename is not. */
@@ -336,12 +340,12 @@ describe('dropping a project from the shelf', () => {
 
   // The row says "removes it from this list only". Nothing may reach the folder itself.
   it('touches nothing on the disk', async () => {
-    const trashFile = vi.fn(() => Promise.resolve(true))
-    installFakeBridge({ project: { trashFile } })
+    const trashFiles = vi.fn(nothingMoved)
+    installFakeBridge({ project: { trashFiles } })
 
     await useProject.getState().forget(SUMMER.path)
 
-    expect(trashFile).not.toHaveBeenCalled()
+    expect(trashFiles).not.toHaveBeenCalled()
   })
 
   it('says nothing and does nothing with no bridge to write through', async () => {
@@ -439,16 +443,16 @@ describe('giving a project a new name', () => {
 
   // The row says the folder is left where it is. Nothing here may reach it.
   it('touches nothing on the disk', async () => {
-    const renameFile = vi.fn(() => Promise.resolve(true))
-    const trashFile = vi.fn(() => Promise.resolve(true))
+    const renameFile = vi.fn(nothingMoved)
+    const trashFiles = vi.fn(nothingMoved)
     installFakeBridge({
-      project: { rename: () => Promise.resolve(RENAMED), renameFile, trashFile },
+      project: { rename: () => Promise.resolve(RENAMED), renameFile, trashFiles },
     })
 
     await useProject.getState().rename(SUMMER.path, 'Winter')
 
     expect(renameFile).not.toHaveBeenCalled()
-    expect(trashFile).not.toHaveBeenCalled()
+    expect(trashFiles).not.toHaveBeenCalled()
   })
 
   it('says nothing and does nothing with no bridge to write through', async () => {

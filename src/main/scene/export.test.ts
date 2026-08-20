@@ -3,10 +3,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
-import { invoke, resetHandlers } from '@main/ipc/test-harness'
+import { invoke, resetHandlers } from '@main/ipc/testHarness'
 import { registerSceneHandlers } from './export'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 const bytes = new Uint8Array([103, 108, 84, 70])
 
@@ -54,13 +54,27 @@ describe('the scene export handler', () => {
   // The renderer is the sandboxed side: what crosses is validated, never trusted.
   it('refuses a format nothing writes', async () => {
     await expect(
-      invoke(CHANNELS.sceneExport, { name: 'set', format: 'obj', data: bytes }),
+      invoke(CHANNELS.sceneExport, { name: 'set', format: 'dxf', data: bytes }),
     ).rejects.toThrow()
+  })
+
+  it('writes each of the shape formats under its own extension', async () => {
+    for (const format of ['obj', 'ply', 'stl']) {
+      await expect(
+        invoke(CHANNELS.sceneExport, { name: 'set', format, data: bytes }),
+      ).resolves.toBe(`set.${format}`)
+    }
   })
 
   it('refuses a name that would climb out of the folder the user chose', async () => {
     await expect(
       invoke(CHANNELS.sceneExport, { name: '../escape', format: 'glb', data: bytes }),
+    ).rejects.toThrow()
+  })
+
+  it('refuses the name of the folder above', async () => {
+    await expect(
+      invoke(CHANNELS.sceneExport, { name: '..', format: 'glb', data: bytes }),
     ).rejects.toThrow()
   })
 

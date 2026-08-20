@@ -1,16 +1,16 @@
 import { useTranslation } from 'react-i18next'
 import { NumberField } from '@/design/NumberField'
-import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
-import { ToolButton } from '@/design/ToolButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { TRACK_FLAGS } from '@/panels/timeline/track-flags'
+import { TrackFlagButton } from '@/panels/timeline/TrackFlagButton'
+import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
 import {
   clampTrackHeight,
   MAX_TRACK_HEIGHT,
   MIN_TRACK_HEIGHT,
   type Track,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { writeTrack } from '@/stores/sequences'
 
 export type TrackInspectorProps = { documentId: string; track: Track }
@@ -29,36 +29,34 @@ export function TrackInspector({ documentId, track }: TrackInspectorProps) {
 
   return (
     <>
-      <PropertyGroup title={t('inspector.track')}>
+      <PropertySection title={t('inspector.track')} scId="track">
         <PropertyRow label={t('inspector.name')}>{track.name}</PropertyRow>
         <PropertyRow label={t('inspector.kind')}>{t(`inspector.kind_${track.kind}`)}</PropertyRow>
         <PropertyRow label={t('inspector.clips')}>{clips}</PropertyRow>
-      </PropertyGroup>
+      </PropertySection>
 
-      <PropertyGroup title={t('inspector.state')}>
-        {/* The same control as the header column, from the same table: a switch that looks
-            different depending on where it is found reads as two different switches. */}
+      <PropertySection title={t('inspector.state')} scId="track.state">
         {TRACK_FLAGS.map(flag => (
           <PropertyRow key={flag.key} label={t(`inspector.${flag.key}`)}>
-            <ToolButton
-              icon={flag.iconFor(track[flag.key])}
-              label={t(flag.labelKey, { name: track.name })}
+            <TrackFlagButton
+              flag={flag}
+              on={track[flag.key]}
+              name={track.name}
               tooltip={TIP_LEFT}
-              variant="header"
-              active={track[flag.key]}
-              onClick={() => write(current => ({ ...current, [flag.key]: !current[flag.key] }))}
+              onToggle={next => write(current => ({ ...current, [flag.key]: next }))}
             />
           </PropertyRow>
         ))}
         <NumberField
           label={t('inspector.height')}
+          scId="track.height"
           value={track.height}
           min={MIN_TRACK_HEIGHT}
           max={MAX_TRACK_HEIGHT}
           step={4}
           onChange={value => write(current => ({ ...current, height: clampTrackHeight(value) }))}
         />
-      </PropertyGroup>
+      </PropertySection>
     </>
   )
 }

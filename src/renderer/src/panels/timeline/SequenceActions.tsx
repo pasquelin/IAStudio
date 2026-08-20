@@ -1,15 +1,15 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Separator } from '@/design/Separator'
-import { Toolbar } from '@/design/Toolbar'
+import { Toolbar } from '@/design/Toolbar/Toolbar'
 import { ToolButton } from '@/design/ToolButton'
 import { addTrack } from '@/engines/timeline/commands'
-import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timeline-state'
+import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timelineState'
 import { tipFor } from '@/helpers/tooltip'
-import { VIDEO_TOOLS, isVideoTool } from '@/spaces/video/video-tools'
+import { VIDEO_TOOLS, isVideoTool } from '@/spaces/video/videoTools'
 import { useSequences } from '@/stores/sequences'
-import { useVideoTool } from '@/stores/video-tool'
-import { TRACK_KIND_ICONS } from './track-flags'
+import { useVideoTool } from '@/stores/videoTool'
+import { TRACK_KIND_ICONS } from './trackFlags'
 
 export type SequenceActionsProps = {
   documentId: string

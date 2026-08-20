@@ -12,9 +12,9 @@ import {
   trackRows,
   visibleRange,
   type Viewport,
-} from './timeline-geometry'
-import { MDI_VIEWBOX, mdiPath } from '@/helpers/mdi-canvas'
-import { paintBandEnd } from './band-end'
+} from './timelineGeometry'
+import { MDI_VIEWBOX, mdiPath } from '@/helpers/mdiCanvas'
+import { paintBandEnd } from './bandEnd'
 import { paintRuler as paintBandRuler, readRulerStyle } from './ruler'
 import {
   clipEnd,
@@ -25,7 +25,7 @@ import {
   type Track,
   type TrackKind,
   type Us,
-} from './timeline-state'
+} from './timelineState'
 import { memoPalette, rootColour, rootFont } from '../core/palette'
 import type { Point, Size } from '../core/geometry'
 import { waveformColumns, type WaveColumn } from './waveform'
@@ -240,6 +240,26 @@ function paintPoster(
 }
 
 /**
+ * The grips at both ends of a bar one drags by its ends, shared with the animation band as
+ * `paintWaveform` is: a grip drawn by its own arithmetic elsewhere would stop agreeing with
+ * `edgeGrab`, the zone that actually grabs it. The caller hands the rectangle they stand in.
+ */
+export function paintBarGrips(
+  context: CanvasRenderingContext2D,
+  left: number,
+  right: number,
+  top: number,
+  height: number,
+  colour: string,
+): void {
+  if (edgeGrab(right - left) < EDGE_BAR_WIDTH) return
+
+  context.fillStyle = colour
+  context.fillRect(left, top, EDGE_BAR_WIDTH, height)
+  context.fillRect(right - EDGE_BAR_WIDTH, top, EDGE_BAR_WIDTH, height)
+}
+
+/**
  * The grips at both ends, which is what says a clip can be lengthened at all.
  *
  * They start BELOW the fade band, and that offset is the whole point: up there the same corner
@@ -257,16 +277,16 @@ function paintEdgeBars(
   selected: boolean,
   palette: Palette,
 ): void {
-  if (edgeGrab(right - left) < EDGE_BAR_WIDTH) return
-
-  // The band is measured from the row, `top` is the clip box: one inset apart.
-  const barTop = top + FADE_BAND - CLIP_INSET
-  // Never negative: MIN_TRACK_HEIGHT leaves a 23 px box against the 13 px the two insets take.
-  const barHeight = height - (FADE_BAND - CLIP_INSET) - EDGE_BAR_INSET
-
-  context.fillStyle = selected ? palette.text : palette.muted
-  context.fillRect(left, barTop, EDGE_BAR_WIDTH, barHeight)
-  context.fillRect(right - EDGE_BAR_WIDTH, barTop, EDGE_BAR_WIDTH, barHeight)
+  paintBarGrips(
+    context,
+    left,
+    right,
+    // The band is measured from the row, `top` is the clip box: one inset apart.
+    top + FADE_BAND - CLIP_INSET,
+    // Never negative: MIN_TRACK_HEIGHT leaves a 23 px box against the 13 px the two insets take.
+    height - (FADE_BAND - CLIP_INSET) - EDGE_BAR_INSET,
+    selected ? palette.text : palette.muted,
+  )
 }
 
 /**
@@ -275,6 +295,38 @@ function paintEdgeBars(
  * that one is the caller's, and a caller has no business claiming a montage holds pairs.
  */
 type ClipPaint = { palette: Palette; options: PaintOptions; linkable: boolean }
+
+/**
+ * One clip, for a band that is not the montage — the dope sheet's camera shots.
+ *
+ * The montage's own palette and nothing else: a shot and a rush are the same object to a hand,
+ * and two tables of tokens is how two bands stop looking alike without anyone deciding it.
+ */
+export function paintClipOn(
+  context: CanvasRenderingContext2D,
+  clip: Clip,
+  label: string,
+  viewport: Viewport,
+  top: number,
+  height: number,
+  selected: boolean,
+): void {
+  const left = timeToX(clip.start, viewport)
+  // Never nothing: a clip shorter than a pixel still has to be visible enough to grab.
+  const right = Math.max(left + 1, timeToX(clipEnd(clip), viewport))
+  const palette = readPalette()
+
+  // Posed here, where `paintTimeline` poses them for the strip: a band that draws its own text
+  // some other way leaves its baseline behind, and the name rides out of the top of the bar.
+  context.font = palette.clipFont
+  context.textBaseline = 'top'
+
+  paintClip(context, clip, label, viewport, left, right, top, height, selected, 'video', {
+    palette,
+    options: {},
+    linkable: false,
+  })
+}
 
 function paintClip(
   context: CanvasRenderingContext2D,

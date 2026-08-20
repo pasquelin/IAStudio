@@ -1,7 +1,11 @@
 import { cn } from '@/helpers/cn'
 import { bound } from '@shared/numeric'
+import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
-import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { PropertyLabel } from './PropertyLabel'
+import { SliderHandle } from './SliderHandle'
+import { SliderRail } from './SliderRail'
+import { FIELD_ROW, SLIDER_TRACK, type GestureProps } from './styles'
 
 /** Both ends of one value, kept in order. Declared here rather than imported from an engine:
  * `design/` describes controls, and a field that reached into a workspace would tie the two. */
@@ -13,11 +17,7 @@ export type RangeValue = { min: number; max: number }
  *
  * At module scope because it depends on nothing, and this field sits on the drag path twice.
  */
-const HANDLE = cn(
-  'absolute inset-0 m-0 h-full w-full appearance-none bg-transparent pointer-events-none',
-  '[&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto',
-  'accent-accent',
-)
+const HANDLE = 'pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto'
 
 export type RangeFieldProps = GestureProps & {
   label: string
@@ -29,6 +29,8 @@ export type RangeFieldProps = GestureProps & {
   fromLabel: string
   toLabel: string
   onChange: (value: RangeValue) => void
+  /** The handle the MCP steers this field by; each end extends it with its own word. */
+  scId?: string
 }
 
 /**
@@ -48,12 +50,10 @@ export function RangeField({
   fromLabel,
   toLabel,
   onChange,
+  scId,
   onGestureStart,
   onGestureEnd,
 }: RangeFieldProps) {
-  const span = max - min
-  const percent = (edge: number): number => ((edge - min) / span) * 100
-
   // Stacked inputs: «to» is last in the DOM, so it takes the press wherever the two meet. Only
   // at the ceiling is that a trap — «to» has nowhere to drag to, so it cannot part them. Lifting
   // «from» any earlier would take the presses «to» still needs to widen the span upwards.
@@ -72,54 +72,44 @@ export function RangeField({
 
   return (
     <div className={FIELD_ROW}>
-      <span title={label} className={FIELD_LABEL}>
-        {label}
-      </span>
+      <PropertyLabel label={label} />
 
       <div
-        className="relative h-(--sc-control) min-w-0 flex-1"
+        className={cn(SLIDER_TRACK, 'flex-1')}
         onPointerDown={() => onGestureStart?.()}
         onPointerUp={() => onGestureEnd?.()}
       >
-        {/* The rail and the span, drawn behind both inputs — decoration, never a target. */}
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2">
-          <div className="bg-surface size-full rounded-full" />
-          <div
-            className="bg-accent absolute inset-y-0 rounded-full"
-            style={{
-              left: `${percent(value.min)}%`,
-              width: `${percent(value.max) - percent(value.min)}%`,
-            }}
-          />
-        </div>
+        <SliderRail from={value.min} to={value.max} min={min} max={max} />
 
-        <input
-          type="range"
-          aria-label={fromLabel}
+        <SliderHandle
+          label={fromLabel}
+          scId={scId && `${scId}.min`}
           value={value.min}
           min={min}
           max={max}
           step={step}
-          onChange={event => set('min', Number(event.target.value))}
-          onFocus={() => onGestureStart?.()}
-          onBlur={() => onGestureEnd?.()}
+          onChange={raw => set('min', raw)}
+          onGestureStart={onGestureStart}
+          onGestureEnd={onGestureEnd}
           className={cn(HANDLE, fromOnTop && 'z-1')}
         />
-        <input
-          type="range"
-          aria-label={toLabel}
+        <SliderHandle
+          label={toLabel}
+          scId={scId && `${scId}.max`}
           value={value.max}
           min={min}
           max={max}
           step={step}
-          onChange={event => set('max', Number(event.target.value))}
-          onFocus={() => onGestureStart?.()}
-          onBlur={() => onGestureEnd?.()}
+          onChange={raw => set('max', raw)}
+          onGestureStart={onGestureStart}
+          onGestureEnd={onGestureEnd}
           className={HANDLE}
         />
       </div>
 
       <Readout values={[value.min, value.max]} />
+
+      <FieldActions />
     </div>
   )
 }

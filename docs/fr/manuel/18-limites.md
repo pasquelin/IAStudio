@@ -32,12 +32,86 @@ Les six types s’écrivent dans le dossier du projet et se rouvrent tels quels.
 
 | Document | Extension | S’enregistre ? |
 |---|---|---|
-| Scène 3D | `.scene` | **oui** |
-| Matière | `.tex` | **oui** |
-| Image en calques | `.img` | **oui** |
-| Séquence vidéo | `.seq` | **oui** |
-| Son édité | `.aud` | **oui** |
-| Ciel | `.sky` | **oui** |
+| Scène 3D | `.gltf` | **oui** |
+| Matière | `.mtlx` | **oui** |
+| Image en calques | `.ora` | **oui** |
+| Séquence vidéo | `.otio` | **oui** |
+| Son édité | `.otio` | **oui** |
+| Ciel | `.gltf` | **oui** |
+
+### Les six extensions annoncent le format qu’elles contiennent
+
+Un montage `.otio` est **réellement** de l’OpenTimelineIO : Resolve et Premiere le lisent. Une
+image `.ora` est **réellement** de l’OpenRaster : c’est une archive, avec un PNG par calque, la
+pile dans `stack.xml` et l’aplat que la spécification exige — GIMP l’ouvre, calque par calque,
+avec les noms, les opacités, les modes de fusion et les groupes. Mesuré dans les deux sens avec
+GIMP 3.2.4.
+
+Un ciel `.gltf` est **réellement** du glTF 2.0 : le soleil y est une vraie lumière directionnelle
+(`KHR_lights_punctual`), la rotation d’horizon une transformation de nœud, et l’image source un
+fichier `.hdr` ou `.exr` **référencé à côté** plutôt que recopié dedans. Un lecteur glTF ouvre le
+fichier et retrouve la lumière, sa couleur et son intensité.
+
+Une scène 3D `.gltf` en est aussi : l’arbre, les placements, les caméras et les lumières
+ponctuelles sont ceux du standard, et ce que glTF n’a pas de champ pour voyage dans les `extras`
+que la spécification réserve aux applications.
+
+Une matière `.mtlx` en est également : chaque canal y est un `tiledimage` qui lit un fichier posé
+à côté du document, branché sur l’entrée correspondante d’un `standard_surface`, et la teinte, la
+répétition et le décalage sont ceux du standard.
+
+**Deux réserves, et elles sont dites plutôt que tues.** L’occlusion ambiante et la cavité ne
+rentrent pas : `standard_surface` n’a d’entrée ni pour l’une ni pour l’autre. Elles sont
+conservées — le studio les retrouve — mais aucun autre logiciel ne les voit, et c’est le cas
+aussi de la rotation des UV, qu’un `tiledimage` ne sait pas porter. Et la conformité de ce format
+a été vérifiée contre le **texte** de la spécification MaterialX 1.39 et contre les fichiers que
+sa distribution livre, **jamais contre un rendu** : aucun lecteur MaterialX n’a ouvert ces
+fichiers.
+
+Ce que le ciel garde en plus du standard — les réglages d’exposition, de contraste, de
+température, le flou, l’intensité de l’environnement — voyage dans le fichier à un endroit que
+glTF réserve aux applications. Un autre logiciel ne les perd pas : il ne les voit pas. Ouvrir un
+ciel écrit ailleurs donne donc ce que le standard porte, et ces réglages-là au neutre.
+
+Ce qu’un `.ora` du studio garde en plus du standard — les calques de réglage, le texte encore
+modifiable, les repères — voyage dans le conteneur sous un nom que les autres logiciels ignorent.
+Ils ne le perdent pas : ils ne le voient pas.
+
+### Un fichier enrichi ailleurs s’ouvre en lecture seule
+
+Ouvrez une scène du studio dans Blender, posez-y une maille, réenregistrez : le fichier revient
+avec des parties que le studio ne compose pas. Il s’ouvre, il s’affiche — et **`⌘S` refuse
+d’écrire**, avec la raison en clair. Ce n’est pas une précaution excessive : un glTF est lié par
+**index**, donc réécrire la scène depuis ce que le studio en connaît supprimerait ces parties, et
+un fichier à demi réécrit ne s’ouvrirait nulle part. Le même refus protège un ciel qui contient
+une scène entière, et une matière `.mtlx` qui porte plus que ce que le studio compose — un second
+matériau, ou simplement un réglage de surface que l’éditeur de matières n’a pas, comme un vernis.
+
+**Un montage est protégé de la même façon**, et pour deux raisons distinctes. Un `.otio` qui porte
+un marqueur, un effet ou une transition que le studio ne compose pas s’ouvre en lecture seule ; et
+un montage dont les médias sont introuvables s’ouvre **sans les clips concernés**, l’enregistrer
+les effacerait du fichier. Dans ce second cas, importez les médias dans le projet, puis rouvrez le
+montage : le refus tombe de lui-même.
+
+**Le refus se dit deux fois, et jamais entre les deux.** À l’ouverture, le studio annonce ce qu’il
+ne sait pas réécrire et le document arrive en lecture seule. Puis c’est `⌘S` qui répond, avec la
+raison complète. **L’enregistrement automatique, lui, ne dit RIEN** : il passe, se heurte au même
+refus, et se tait — répéter la phrase toutes les trente secondes serait pire que le silence. Un
+document refusé n’est donc jamais écrit sur le disque tant que vous n’avez pas tenté `⌘S` vous-même.
+
+Pour sortir malgré tout ce que vous avez modifié, passez par l’**export** de ce document —
+**Fichier ▸ Exporter ▸ Scène**, **Ciel**, **Matière**, ou
+**Montage (OTIO)…** : l’écriture va dans un fichier NEUF, sans toucher à l’original.
+
+> **N’attendez pas d’*Enregistrer sous…* qu’il contourne le refus** : les deux gestes
+> d’enregistrement passent par la même porte, et la copie est refusée pour la même raison que
+> l’original. C’est l’export, et lui seul, qui sort le travail d’un document en lecture seule.
+
+> **L’image est la seule des six sans refus, et c’est délibéré.** Un `.ora` est lui aussi
+> recomposé en entier à l’enregistrement, mais il s’écrit sans rien vous demander : ce qu’un autre
+> logiciel y a mis et que le studio ne compose pas est perdu à la première écriture — et
+> **renommer le fichier suffit** à déclencher cette réécriture. Si un `.ora` vous vient d’ailleurs
+> et que vous tenez à ce qu’il porte, travaillez sur une copie.
 
 **Ce qui ne s’enregistre pas :**
 
@@ -64,9 +138,9 @@ Un point qui reste : **changer de projet** ferme les documents ouverts sans pose
 
 ### Il n’y a pas de menu « Ouvrir », et il n’en faut pas
 
-Une image de l’étagère **entre** dans un document — glissée sur la toile, double-cliquée, ou
-choisie par l’outil **Image…** : elle y devient un calque. Voir
-[Espace Image](08-espace-image.md).
+Une image de l’étagère **entre** dans un document ouvert — glissée sur la toile, envoyée par le
+clic droit, ou choisie par l’outil **Image…** : elle y devient un calque. Et **double-cliquée,
+elle ouvre un document à elle**. Voir [Espace Image](08-espace-image.md).
 
 Rouvrir un document composé plus tôt passe par le panneau **Explorateur**, qui liste les
 documents du projet : un double-clic sur une ligne l’ouvre, en changeant d’espace s’il le faut.
@@ -82,16 +156,20 @@ Ils sont visibles dans la barre d’outils, en gris.
 
 | Outil | Groupe |
 |---|---|
-| **Section** (`⇧S`) | Cadre |
-| **Découpe** (`S`) | Cadre |
+| **Section** | Cadre |
+| **Découpe** | Cadre |
 | **Plume** | Dessin |
 | **Texte sur chemin** | Texte |
-| **Commentaire** (`C`) | seul de son groupe |
+| **Commentaire** | seul de son groupe |
 
 **Ils disent tous leur état par leur gris**, et c’est la seule chose qu’on leur demande tant qu’ils
 n’existent pas. Le Commentaire a été le dernier à rentrer dans le rang : il s’armait comme les
 autres, changeait le curseur, et laissait le moteur jeter chaque clic — un bouton qui avait l’air
 vivant sans l’être.
+
+**Aucun des cinq n’a de raccourci clavier**, et c’est voulu : une touche qui n’agit pas se cherche
+plus longtemps qu’une touche qui n’existe pas. Le chapitre
+[Raccourcis](15-raccourcis.md) ne les nomme donc nulle part.
 
 ### En Vidéo, les touches des outils ne sont pas écoutées
 
@@ -142,17 +220,17 @@ disparaissent définitivement.
 `⇧⌘E` écrit le document **aplati** en `.png` où vous voulez : une seule image, les calques fondus
 ensemble. Ce n’est pas une sauvegarde — c’est une sortie.
 
-Pour garder la pile de calques, c’est `⌘S` : le document s’écrit en dossier `.img`, masques
+Pour garder la pile de calques, c’est `⌘S` : le document s’écrit en dossier `.ora`, masques
 compris, et se rouvre tel quel. Les deux gestes ne servent pas à la même chose et aucun ne
 remplace l’autre. Ce qui ne revient dans aucun des deux : l’historique d’annulation.
 
 ---
 
-## Espace 3D
+## Espace Modélisation
 
 ### L’animation va en ligne droite, et une séquence se joue seule
 
-La timeline de l’espace 3D — voir [l’espace 3D](09-espace-3d.md) — interpole **linéairement**
+La timeline de l’espace Modélisation — voir [l’espace Modélisation](09-espace-modelisation.md) — interpole **linéairement**
 entre deux clés : pas de courbe d’accélération, donc un mouvement démarre et s’arrête net. Poser
 plus de clés est le seul moyen d’adoucir une trajectoire pour l’instant.
 
@@ -165,7 +243,7 @@ première de la scène qui rend.
 
 ### Le texte 3D n’offre qu’une graisse par famille
 
-**Ajouter ▸ Objet ▸ Texte** fonctionne — voir [l’espace 3D](09-espace-3d.md). Deux réserves.
+**Ajouter ▸ Objet ▸ Texte** fonctionne — voir [l’espace Modélisation](09-espace-modelisation.md). Deux réserves.
 
 **Une seule coupe par famille.** La liste offre le romain de chaque police et rien d’autre : pas
 de gras, pas d’italique. Une famille qui installe neuf graisses n’occupe donc qu’une ligne, ce
@@ -180,29 +258,37 @@ que le studio emploie ne connaît pas tous les formats de table que les faces h�
 années 2000 emploient. Sur une machine Apple, cela concerne une police sur dix environ. Le texte
 retombe alors sur la police par défaut, et le journal dit laquelle a échoué.
 
-### Le raccourci `S` fait deux choses à la fois
-
-Dans la vue 3D, `S` choisit l’outil **Redimensionner** *et* fait reculer la caméra tant qu’on le
-tient. Les deux tables de touches — les outils et le vol — sont lues sur le même appui.
-
-En pratique on le remarque peu : prendre l’outil recule la caméra d’un cheveu. Mais c’est un
-chevauchement, pas une intention.
-
 ### Les touches de vol ne se remappent pas
 
-`W A S D Q E` et la touche d’accélération sont figées. Elles n’apparaissent pas dans l’écran des
-raccourcis, et le bouton **Chercher par touche** ne les trouve pas.
+`W A S D Q E`, les quatre flèches et la touche d’accélération sont figées. Elles n’apparaissent pas
+dans l’écran des raccourcis, et le bouton **Chercher par touche** ne les trouve pas.
 
 ---
 
 ## Espace Vidéo
 
-### Pas d’export
+### L’export vidéo sort sans le son
 
-Une séquence s’enregistre désormais en `.seq` et se rouvre telle quelle.
+Une séquence s’enregistre en `.otio` et se rouvre telle quelle.
 
-**Il n’y a toujours pas d’export** : on ne peut pas encore produire un fichier vidéo final. C’est
-la limite la plus lourde du studio à ce jour, parce qu’elle empêche de livrer.
+**Fichier › Exporter › Vidéo…** écrit bien un fichier final, image par image, scènes 3D comprises.
+**Mais il sort muet** : les pistes de son du montage ne sont pas encore encodées dedans. C’est la
+limite la plus lourde de cet espace, parce qu’elle oblige à remonter le son ailleurs.
+
+### Un montage étranger ne retrouve que les médias déjà vus
+
+Un montage venu d’ailleurs nomme ses médias par un chemin. Le studio les cherche dans le projet
+par ce chemin, puis par le nom du fichier — **parmi les assets que cette fenêtre a déjà vus**. Un
+projet qui vient d’être ouvert n’a pas encore lu son catalogue : ouvrir un montage étranger dans
+la seconde peut n’en retrouver aucun.
+
+**Un clip dont le média n’est pas retrouvé n’est pas ouvert**, et le journal d’activité dit
+lequel. Le montage est alors plus court que ce que le fichier décrit, et **`⌘S` refuse d’écrire**
+tant que c’est le cas : sans ce refus, enregistrer effacerait ces clips du fichier. Amenez les
+médias manquants dans le projet, rouvrez le montage, et l’enregistrement redevient possible.
+
+Et ce que ce format ne porte pas en standard — fondus, gains, liens image/son, scène 3D d’un clip
+vivant — voyage dans le fichier mais **n’est lu que par Scenario**.
 
 ### Les réglages d’une séquence sont figés
 
@@ -245,7 +331,7 @@ faire entrer et sortir proprement. C’est exactement ce que fait cet espace, et
 
 ### Le document audio ne garde pas l’écoute A/B
 
-Le fichier `.aud` existe et se rouvre — c’est le tableau du haut de ce chapitre qui fait foi. Ce
+Le fichier `.otio` existe et se rouvre — c’est le tableau du haut de ce chapitre qui fait foi. Ce
 qu’il tient est **la chaîne d’édition**, pas le son : les coupes, les fondus, le gain, rejoués sur
 l’asset d’origine — **et le montage multipiste de la bande basse**. Ce qu’il ne garde pas, c’est
 l’**écoute A/B** : un document rouvert écoute la chaîne, jamais la source.
@@ -265,7 +351,7 @@ nouveau** : c’est ce qu’on fait quand le résultat doit servir ailleurs, pas
   l’image dans le projet, puis posez-la sur la vignette du canal.
 
 **L’export existe désormais** — glTF/GLB, Unity, Unreal, Roblox et les canaux bruts, par
-Fichier → Exporter la matière. Deux bornes à connaître : **Roblox refuse une carte au-delà de
+Fichier → Exporter → Matière. Deux bornes à connaître : **Roblox refuse une carte au-delà de
 1024 px**, donc ses quatre fichiers sont ramenés sous ce plafond ; et le `.glb` part avec la
 forme de l’aperçu, faute pour un format d’objet de savoir porter une matière toute seule.
 
@@ -296,11 +382,11 @@ revient au même en trois gestes de plus.
 
 ### L’export sort en PNG, donc sans les hautes lumières
 
-Un ciel s’enregistre désormais en `.sky` — l’exposition, la rotation de l’horizon et la position
+Un ciel s’enregistre désormais en `.gltf` — l’exposition, la rotation de l’horizon et la position
 du soleil se rouvrent telles quelles. Ce que le document ne garde pas : la vue et le champ de
 vision, qui disent comment on le regardait et non ce qu’il est.
 
-Les six faces d’un cube s’exportent depuis **Fichier › Exporter le ciel**, en 512, 1024 ou 2048.
+Les six faces d’un cube s’exportent depuis **Fichier › Exporter › Ciel**, en 512, 1024 ou 2048.
 Ce qui manque encore est le *HDRI* : les faces sortent en PNG, donc en 8 bits par canal, et ce qui
 dépasse le blanc est écrêté.
 
@@ -342,6 +428,39 @@ projet remplirait votre disque pour rien.
 touché. Voir [Les assets](07-assets.md).
 
 ---
+
+## Git
+
+Le panneau Git n’est pas un client git complet, et quatre de ses limites se remarquent tout de
+suite. Elles découlent toutes du même choix : **une fenêtre de studio n’a pas de terminal**.
+
+### git doit déjà être installé sur la machine
+
+Le studio ne l’embarque pas, il lance celui du système. macOS répond souvent en proposant
+d’installer les outils de développement en ligne de commande ; une installation Windows neuve n’a
+pas de git du tout. **La question est posée à l’ouverture du projet**, et le panneau le dit alors —
+plutôt que de vous laisser préparer un enregistrement qui ne pourrait pas aboutir.
+
+### Le studio ne demande jamais de mot de passe
+
+Aucune fenêtre de mot de passe, jamais : c’est un choix, pas un oubli. Une commande qui attend une
+réponse dans un terminal inexistant resterait bloquée sans que rien ne puisse l’interrompre.
+
+Pour un serveur qui en réclame un, le jeton se renseigne **dans le panneau, une fois par serveur** —
+pas par projet. Un même jeton personnel ouvre tous vos dépôts chez le même hébergeur.
+
+### Une clé SSH à phrase de passe échoue au lieu de la réclamer
+
+C’est la conséquence directe du point précédent, et **la limite la plus susceptible de vous
+surprendre** : l’envoi échoue, sans rien demander. Le remède est celui que tout poste déjà
+configuré pour ssh possède — charger la clé dans un agent avant d’ouvrir le studio.
+
+### Ce que votre terminal exporte n’a aucun effet ici
+
+Si vous avez l’habitude de régler git par des variables d’environnement — `GIT_EDITOR`, `PAGER`,
+et tout ce qui commence par `GIT_` — sachez qu’elles sont **écartées** avant chaque commande. Le
+studio impose ses propres réponses plutôt que de discuter avec celles du shell qui l’a lancé. Votre
+proxy et votre agent ssh, eux, sont conservés.
 
 ## Réglages et raccourcis
 
@@ -446,7 +565,7 @@ Si vous ne deviez retenir que cinq choses de ce chapitre :
    quoi que ce soit ; ce qui ne revient pas, c’est l’historique d’annulation ;
 2. **un recadrage ne se défait qu’à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
    exportez avant de rogner large ;
-3. **il n’y a pas d’export vidéo** — le studio ne peut pas encore livrer un fichier final ;
+3. **l’export vidéo sort muet** — le fichier final est livrable, le son du montage n’y est pas ;
 4. **les familles Texture et Skybox n’ont pas de modèle par défaut** — ces deux espaces font
    rechoisir leur modèle à chaque session ;
 5. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu’un `.glb`.

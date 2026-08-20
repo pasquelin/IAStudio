@@ -177,7 +177,7 @@ const MIGRATIONS: readonly string[] = [
   -- « Is the file the explorer is showing one of ours? », asked on every double-click over a
   -- folder that can hold thousands. Without it the equality is a full scan of \`assets\`, and the
   -- gesture waits on it: the thread it blocks is the catalogue's own worker, not the main
-  -- process — \`catalog-client\` is what keeps that true, and it is why no window freezes here.
+  -- process — \`catalogClient\` is what keeps that true, and it is why no window freezes here.
   CREATE INDEX assets_path_idx ON assets(path);
   `,
   `
@@ -185,6 +185,22 @@ const MIGRATIONS: readonly string[] = [
   -- path like the proxy and the waveform, and rebuildable like both: the file is the library's
   -- own thumbnail, brought down beside the bytes so a downloaded model stays a picture in a grid.
   ALTER TABLE assets ADD COLUMN poster_path TEXT;
+  `,
+  `
+  -- When the rescan last found nothing at this row's path. A file that has gone is DATED, never
+  -- deleted: the row carries the prompt, the seed and the lineage, and none of that is on the
+  -- disk. Cleared the moment the file is found again, under this path or another.
+  --
+  -- It is also what makes the rescan idempotent where it is visible: a second pass over the same
+  -- state finds the absence already dated and says nothing to the journal, so running it on
+  -- every open and every focus does not write a line each time.
+  ALTER TABLE assets ADD COLUMN missing_at TEXT;
+
+  -- PARTIAL, and it has to be: in the ordinary project every row is NULL here, so a plain index
+  -- would be the size of the table, maintained on every insert, and answer nothing — the two
+  -- queries that read this column ask \`IS NULL\`, which no index serves. What IS worth an index
+  -- is the handful of dated rows, which is what a listing of them would seek.
+  CREATE INDEX assets_missing_at_idx ON assets(missing_at) WHERE missing_at IS NOT NULL;
   `,
 ]
 
@@ -325,6 +341,19 @@ function parseProbe(raw: string | undefined): MediaProbe | undefined {
   }
 }
 
+/**
+ * `assets/img/` and `assets/img` are one folder to the filesystem and two strings to SQLite.
+ * Every path that reaches a comparison here goes through this first.
+ */
+function withoutTrailingSlash(path: string): string {
+  return path.replace(/\/+$/, '')
+}
+
+/** Whether `path` sits strictly inside `folder` — the shape `shared/domain/folder.ts` uses. */
+function isUnder(path: string, folder: string): boolean {
+  return path.startsWith(`${folder}/`)
+}
+
 /** `%` and `_` are wildcards: typed by a user they must match themselves, not everything. */
 function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, character => `\\${character}`)
@@ -418,6 +447,48 @@ function activityOf(row: SqlRow): ActivityEntry {
   }
 }
 
+/**
+ * One filed row, as reconciling with the disk reads it — its path, what identifies its bytes,
+ * and when it was last found to be gone.
+ *
+ * Deliberately not an `Asset`: the rescan compares paths and fingerprints, and carrying the
+ * prompt and the generation parameters of every row across a thread for that would be the cost
+ * this shape exists to avoid.
+ */
+export type FiledAsset = {
+  /**
+   * What the pass writes back by. NOT the path: the pass reads every row, then gives the thread
+   * back while it fingerprints, and the queue goes on serving `repath` and `add` in between — a
+   * write aimed at a path would land on whichever row occupies it by then, which is how a row
+   * whose file is perfectly present gets dated in place of the one that went.
+   */
+  id: string
+  path: string
+  hash: string | null
+  missingAt: string | null
+}
+
+/**
+ * One row as the backup keeps it — what a reader would need to recognise a file again if the
+ * catalogue itself were gone.
+ *
+ * The provenance and nothing else: what the file is, what it was called, and what was asked for
+ * to make it. Everything derived — the proxy, the waveform, the poster — is rebuildable from the
+ * file, and everything about the remote twin belongs to an account rather than to a project.
+ */
+export type BackedUpItem = {
+  hash: string
+  id: string
+  name: string
+  type: string
+  path: string
+  createdAt: string
+  tags: string[]
+  prompt?: string
+  modelId?: string
+  seed?: number
+}
+
 export type Catalog = {
   add: (asset: Asset) => Asset
   find: (assetId: string) => Asset | null
@@ -437,6 +508,53 @@ export type Catalog = {
    * share, so only the caller knows whether they are still wanted.
    */
   remove: (assetId: string) => void
+  /**
+   * Follows a file that moved: the row filed at `from` is refiled at `to`, and so is everything
+   * beneath it when `from` is a folder. The ids do not change, which is the whole point — a
+   * scene referring to a texture keeps referring to it however the user rearranges the project.
+   *
+   * Idempotent, and that is what makes a replayed journal safe: run twice, the second pass finds
+   * nothing at `from` and writes nothing.
+   *
+   * The caller moves the file FIRST and calls this second. The other order leaves a row pointing
+   * at a path nothing is at.
+   */
+  repath: (from: string, to: string) => void
+  /**
+   * Dates the row filed at `path`, and every row beneath it, as gone — a folder sent to the
+   * trash. Answers how many rows it touched.
+   *
+   * DATED and not dropped, which is what makes it agree with the rescan rather than fight it:
+   * the system trash is reversible, and a row deleted the moment a file went there would leave
+   * a restored file with no prompt, no seed and no lineage — the one copy of all three. Dated,
+   * the next pass sees the file back where the catalogue says and clears the date, and the
+   * whole gesture undoes itself without the studio having to have watched the trash.
+   *
+   * A folder is not an asset, so no id can say what went; the path is the only handle.
+   */
+  forgetUnder: (path: string) => number
+  /**
+   * Every row that names a file, and only what reconciling the catalogue with the disk reads of
+   * one. The whole table at once rather than a query per file: a project of a hundred thousand
+   * assets is one statement here and a hundred thousand round trips the other way.
+   */
+  filed: () => FiledAsset[]
+  /**
+   * Dates a row as gone, or clears the date when its file is back. BY ID — see `FiledAsset.id`.
+   *
+   * The row itself is never dropped: it carries the prompt, the seed and the lineage, and none
+   * of that is on the disk. A file the user moved outside the studio comes back to its row by
+   * fingerprint; one they deleted stays dated.
+   */
+  markMissing: (assetId: string, at: string | null) => void
+  /**
+   * Every row that has a file AND a fingerprint, as the backup keeps them.
+   *
+   * Its own query rather than a `search`: what goes into the backup is a handful of columns, and
+   * carrying whole assets — the probe, the generation parameters, the sync stamps — for a file
+   * that keeps none of them would be the cost this shape exists to avoid.
+   */
+  backup: () => BackedUpItem[]
   /**
    * Writes lines to the journal, in one transaction, and trims it back to its bound.
    *
@@ -473,14 +591,80 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   // path and nothing else, so a collation here could not follow the reader's language anyway.
   const selectTags = driver.prepare('SELECT tag FROM asset_tags WHERE asset_id = ?')
   const selectAsset = driver.prepare('SELECT * FROM assets WHERE id = ?')
+
+  /**
+   * A path and everything filed under it, written so the index on `path` can answer it.
+   *
+   * **Not `LIKE`.** SQLite's `LIKE` is case-INSENSITIVE over ASCII unless a pragma says
+   * otherwise — and that pragma is global, so turning it on would change what the text search
+   * below matches. Left as it is, moving `Rushes` would have carried `RUSHES/A001.mov` with it.
+   *
+   * **Not `substr` either.** Exact, but it hides the column from `assets_path_idx` and turns
+   * every move into a full scan of the table.
+   *
+   * A range does both. `'0'` is the code point right after `/`, so `>= 'p/'` and `< 'p0'` holds
+   * exactly the paths beginning with `p/` — no wildcard to escape, no case folding, and a
+   * comparison the index answers directly.
+   */
+  const UNDER_PATH = 'path = ? OR (path >= ? AND path < ?)'
+
+  /** The three parameters `UNDER_PATH` wants, in order. */
+  const underPath = (path: string): [string, string, string] => [path, `${path}/`, `${path}0`]
+
+  /**
+   * The length is measured by SQLite rather than passed in: `length()` counts CHARACTERS in text
+   * where JavaScript's `.length` counts UTF-16 units, so a folder named with an emoji would have
+   * been cut one unit too far and every path under it rewritten wrong.
+   */
+  const movePaths = driver.prepare(`
+    UPDATE assets
+       SET path = ? || substr(path, length(?) + 1)
+     WHERE ${UNDER_PATH}
+  `)
+
+  // Only what is not already dated: a folder thrown away twice would otherwise report the same
+  // rows again, and a pass over the same state has to say nothing the second time.
+  const missUnder = driver.prepare(
+    `UPDATE assets SET missing_at = ? WHERE missing_at IS NULL AND (${UNDER_PATH})`,
+  )
+
+  // Every filed row, and only what the rescan reads of one. `SELECT *` would carry the prompt and
+  // the generation parameters of a hundred thousand assets across a thread for nothing.
+  const selectFiled = driver.prepare(
+    "SELECT id, path, hash, missing_at FROM assets WHERE path IS NOT NULL AND path <> ''",
+  )
+
+  const setMissingAt = driver.prepare('UPDATE assets SET missing_at = ? WHERE id = ?')
+
+  const selectBackup = driver.prepare(`
+    SELECT id, name, type, path, created_at, hash, prompt, model_id, seed
+      FROM assets
+     WHERE hash IS NOT NULL AND hash <> '' AND path IS NOT NULL AND path <> ''
+     ORDER BY created_at, id
+  `)
+
+  // The port's `run` answers nothing, so what the DELETE touched is asked for separately. Inside
+  // the same transaction, where no other statement can have run in between.
+  const rowsChanged = driver.prepare('SELECT changes() AS touched')
+
   // Oldest first: re-importing the same API asset must not move where its children point.
+  //
+  // No `missing_at IS NULL` here, unlike `findByHash` below, and the difference is what the two
+  // questions are. This one asks which local row an API asset IS, not whether its bytes are
+  // there: a pull writes over the row it finds, so filtering would leave a dated row beside a
+  // fresh duplicate instead of repairing it, and would cut the lineage of a texture whose parent
+  // picture the user has tidied away. A caller that is about to act on the FILE asks the disk —
+  // see the collector, which will not skip a download for a row whose file has gone.
   const selectByRemoteId = driver.prepare(
     'SELECT * FROM assets WHERE remote_asset_id = ? ORDER BY created_at, id LIMIT 1',
   )
   // Same order, same reason: the row that has been there longest is the one carrying the tags
   // and the proxy, and it is the one a second import of the same file must land on.
+  // `missing_at IS NULL`, because this is what an import asks to know whether the project already
+  // holds these bytes. A row whose file is gone does not: answering it would call the import a
+  // duplicate of something that is not there, and the copy just written would be discarded.
   const selectByHash = driver.prepare(
-    'SELECT * FROM assets WHERE hash = ? ORDER BY created_at, id LIMIT 1',
+    'SELECT * FROM assets WHERE hash = ? AND missing_at IS NULL ORDER BY created_at, id LIMIT 1',
   )
   const insertActivity = driver.prepare(`
     INSERT INTO activity (at, level, topic, message_key, params, detail, asset_id)
@@ -498,7 +682,12 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     'SELECT id FROM (SELECT id FROM activity ORDER BY id DESC LIMIT ?) ORDER BY id',
   )
   // Answered by `assets_type_idx` alone, without reading a single row.
-  const countTypes = driver.prepare('SELECT type, COUNT(*) AS total FROM assets GROUP BY type')
+  // `missing_at IS NULL` for the reason `search` carries it: the home draws these six numbers
+  // beside a grid that shows what is there, and counting what it does not show would put a
+  // number under a shelf nothing fills.
+  const countTypes = driver.prepare(
+    'SELECT type, COUNT(*) AS total FROM assets WHERE missing_at IS NULL GROUP BY type',
+  )
   const deleteAsset = driver.prepare('DELETE FROM assets WHERE id = ?')
   // A child pointing at a parent that is gone reads back as a derivation from nothing, and
   // every inspector that follows the link would have to guard against a row that cannot exist.
@@ -606,9 +795,103 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       })
     },
 
+    repath: (from, to) => {
+      const source = withoutTrailingSlash(from)
+      const target = withoutTrailingSlash(to)
+
+      // An empty path names the project root, which is not something a row can be filed at.
+      if (!source || !target || source === target) return
+
+      /**
+       * A folder cannot be moved INTO itself, and the refusal belongs here rather than only in
+       * the caller that already forbids the gesture.
+       *
+       * Without it this operation stops being idempotent, which is the property a replayed
+       * journal rests on: rewriting `Rushes` to `Rushes/2024` leaves rows that still begin with
+       * `Rushes/`, so a second pass files them at `Rushes/2024/2024/…`, and every replay sinks
+       * them one level deeper.
+       */
+      if (isUnder(target, source)) return
+
+      movePaths.run(target, source, ...underPath(source))
+    },
+
+    filed: () =>
+      selectFiled.all().map(row => ({
+        id: text(row, 'id'),
+        path: text(row, 'path'),
+        hash: optionalText(row, 'hash') ?? null,
+        missingAt: optionalText(row, 'missing_at') ?? null,
+      })),
+
+    markMissing: (assetId, at) => {
+      if (!assetId) return
+      setMissingAt.run(at, assetId)
+    },
+
+    backup: () => {
+      const rows = selectBackup.all()
+      // The grouped read, for the reason a search uses it: a project of ten thousand assets would
+      // otherwise be ten thousand more queries, in the thread that answers every window's.
+      const tags = tagsByAsset(rows.map(row => text(row, 'id')))
+
+      return rows.map(row => {
+        const seed = optionalNumber(row, 'seed')
+        const prompt = optionalText(row, 'prompt')
+        const modelId = optionalText(row, 'model_id')
+
+        return {
+          hash: text(row, 'hash'),
+          id: text(row, 'id'),
+          name: text(row, 'name'),
+          type: text(row, 'type'),
+          path: text(row, 'path'),
+          createdAt: text(row, 'created_at'),
+          tags: tags.get(text(row, 'id')) ?? [],
+          ...(prompt === undefined ? {} : { prompt }),
+          ...(modelId === undefined ? {} : { modelId }),
+          ...(seed === undefined ? {} : { seed }),
+        }
+      })
+    },
+
+    forgetUnder: path => {
+      // `assets/img/` and `assets/img` name one folder to the filesystem and two strings to
+      // SQLite. Left as typed, the trailing slash made this touch nothing at all — silently,
+      // and after the files had already gone to the trash.
+      const root = withoutTrailingSlash(path)
+      if (!root) return 0
+
+      // Nothing is orphaned and nothing is dropped: the rows are all still there, and a child
+      // still points at the parent it was derived from. Only the date changes.
+      return transaction(driver, () => {
+        missUnder.run(new Date().toISOString(), ...underPath(root))
+        return optionalNumber(rowsChanged.get() ?? {}, 'touched') ?? 0
+      })
+    },
+
     search: query => {
-      const conditions: string[] = []
+      // What is not there is not shown. A row dated gone keeps everything only it holds — the
+      // prompt, the seed, the lineage — and a browser that drew it would draw a card whose
+      // picture cannot load and whose file cannot open. The moment the file is back, the rescan
+      // clears the date and the row comes back with it: a folder thrown away and taken out of
+      // the trash reappears whole, which is what dating instead of deleting buys.
+      const conditions: string[] = ['missing_at IS NULL']
       const params: SqlValue[] = []
+
+      /**
+       * A column held to a set of values, in one round trip.
+       *
+       * An EMPTY set means nothing rather than no filter — `'0'`, which SQLite reads as false —
+       * and that is the arm worth naming: read as "no filter", a caller asking about none of the
+       * rows would be answered with all of them.
+       */
+      const narrowTo = (column: string, values: readonly string[]): void => {
+        conditions.push(
+          values.length > 0 ? `${column} IN (${values.map(() => '?').join(', ')})` : '0',
+        )
+        params.push(...values)
+      }
 
       if (query.type) {
         conditions.push('type = ?')
@@ -635,6 +918,15 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         conditions.push('path = ?')
         params.push(query.path)
       }
+
+      // The same question for a whole listing, in one round trip: a browser showing four hundred
+      // files would otherwise ask four hundred times to learn which of them are ours. Empty means
+      // nothing, exactly as `types` does — a caller with no path to ask about asks nothing.
+      if (query.paths) narrowTo('path', query.paths)
+
+      // What a finished generation hands back is ids and nothing else, so this is how its output
+      // is read. Empty means nothing, as it does for `paths` just above.
+      if (query.ids) narrowTo('id', query.ids)
 
       if (query.syncStatus) {
         conditions.push('sync_state = ?')

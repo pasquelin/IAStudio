@@ -9,7 +9,7 @@ import {
 } from '@shared/domain/color'
 import { THEME_ATTRIBUTE } from '@shared/domain/settings'
 import stylesheet from '../index.css?raw'
-import { WRITTEN_SOURCES } from './test-harness'
+import { WRITTEN_SOURCES } from './testHarness'
 
 /**
  * Tailwind 4 builds `text-<name>` from BOTH the font-size scale and the colour tokens, and the
@@ -99,6 +99,42 @@ describe('color tokens', () => {
 })
 
 /**
+ * `--radius-sc-*` sits in `@theme`, so Tailwind builds `rounded-sc-lg` from it — but the gauges
+ * sit in `:root`, where it builds nothing at all and `h-sc-control` would paint nothing without
+ * a word from anyone. One spelling for both leaves that trap no entrance.
+ *
+ * Any prefix rather than a list of them: a misspelt gauge is the deadly case, and a list holds
+ * only the prefixes written the day it was typed — `size` and `shadow` were already missing from
+ * it. The lookbehind is what spares the correct form, whose `radius-sc-lg` follows a dash.
+ *
+ * **Blind**: a class assembled at runtime, the name arriving from a variable. And it reads raw
+ * text, so a production module that merely NAMES `rounded-sc-lg` — a comment, an import path —
+ * fails the rule while painting nothing wrong.
+ */
+const GENERATED_FROM_A_STUDIO_TOKEN = /(?<![\w-])[a-z][a-z0-9-]*-sc-[a-z0-9-]+/g
+
+describe('a studio token written into a class', () => {
+  it('finds the sources at all, so the rule below cannot pass on an empty list', () => {
+    expect(WRITTEN_SOURCES.length).toBeGreaterThan(100)
+  })
+
+  it('is read through its variable, never through a utility Tailwind may not have built', () => {
+    const generated = WRITTEN_SOURCES.flatMap(([path, source]) =>
+      [...source.matchAll(GENERATED_FROM_A_STUDIO_TOKEN)].map(([written]) => `${path} ${written}`),
+    )
+
+    expect(generated).toEqual([])
+  })
+
+  it('matches at all, so the rule above cannot pass on a dead pattern', () => {
+    expect('rounded-sc-lg h-sc-control'.match(GENERATED_FROM_A_STUDIO_TOKEN)).toEqual([
+      'rounded-sc-lg',
+      'h-sc-control',
+    ])
+  })
+})
+
+/**
  * Read per theme: the light theme restates every token, and an ink that clears its dark
  * background is exactly the wrong colour on the light one. The dark values are the reference and
  * live in `@theme`; the light ones restate them from its own daisyUI block onwards, so reading
@@ -113,6 +149,31 @@ function palette(from: number): Record<string, string> {
   }
 
   return found
+}
+
+/** What a translucent fill actually shows, which is the only thing a contrast can be read on. */
+function over(mix: string, surface: string): string {
+  const share = Number(/(\d+)%/.exec(mix)?.[1] ?? 0) / 100
+  const [ink, under] = [/#[0-9a-f]{6}/i.exec(mix)?.[0] ?? '', surface].map(hex =>
+    [1, 3, 5].map(at => parseInt(hex.substr(at, 2), 16)),
+  )
+
+  return `#${(ink ?? [])
+    .map((band = 0, at) =>
+      Math.round(band * share + (under?.[at] ?? 0) * (1 - share))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`
+}
+
+/** The soft accent as DECLARED, which `palette` cannot return: it only reads hexadecimals. */
+function softFill(from: number): string {
+  return (
+    /--color-accent-soft:\s*([^;]+);/.exec(
+      stylesheet.slice(from).replace(/--color-accent:[^;]+;/, ''),
+    )?.[1] ?? ''
+  ).trim()
 }
 
 const THEMES = [
@@ -199,7 +260,7 @@ const ALPHA_FILL = new RegExp(
  * else already states, which is the same reading `DECORATIVE_GLYPHS` takes of a placeholder.
  */
 const ALPHA_FILL_ALLOWED: Record<string, string> = {
-  '/Spotlight.tsx': 'a tint on a state its own icon states at full `create`',
+  '/SpotlightCard.tsx': 'a tint on a state its own icon states at full `create`',
 }
 
 /**
@@ -217,10 +278,12 @@ const ALPHA_FILL_ALLOWED: Record<string, string> = {
 const DECORATIVE_GLYPHS = ['/Thumbnail.tsx', '/EmptyState.tsx']
 
 /**
- * A glyph that INFORMS, held at the 3:1 of WCAG 1.4.11 rather than the 4.5 of a word. One site:
- * the type icon a media tile falls back to while its poster is being made.
+ * A glyph that INFORMS, held at the 3:1 of WCAG 1.4.11 rather than the 4.5 of a word. Two sites:
+ * the type icon a media tile falls back to while its poster is being made, and the folder shape
+ * an explorer tile is drawn as — which IS the message, the name under it saying nothing about
+ * whether the tile is a folder or a file.
  */
-const INFORMATIVE_GLYPHS = ['/MediaTile.tsx']
+const INFORMATIVE_GLYPHS = ['/MediaTile.tsx', '/EntryCard.tsx']
 
 /**
  * `opacity-70`, `hover:opacity-90`, and Tailwind's arbitrary `opacity-[0.7]` — a dimming written
@@ -250,6 +313,13 @@ function dimmingPercent(fraction = '', unit = '', step = ''): number {
  */
 const DIMMING_ALLOWED: Record<string, string> = {
   '/ShelfTile.tsx': 'a caption at ~17:1 on its own gradient, a tenth off it changes nothing',
+  // MEASURED on 2026-08-17, and it is NOT the ShelfTile case it used to claim: a folder tile is
+  // `bare`, so its caption is `text-text` on the panel rather than white on a gradient — 13.3:1
+  // dark and 16.1:1 light at full ink, but 4.28 and 3.20 once cut. A file tile keeps the gradient
+  // and its ~17:1. The bar is missed in the light theme for a folder on its way out, and the
+  // remedy is a decision about how a cut tile is drawn, not a token.
+  '/EntryCard.tsx':
+    'a tile that has been CUT and is waiting for a paste, dimmed as every file browser dims one — a picture has no ink to quieten, and a folder caption reads 3.20 while it waits',
   '/Tree.tsx':
     'the row a drag is holding, for the length of the gesture, while the ghost reads at full ink',
   '/TimelineRow.tsx':
@@ -394,20 +464,34 @@ describe('the contrast of the inks', () => {
   })
 
   /**
-   * The two fills a list row takes, with the ink that sits on them. `muted` is NOT held here and
-   * that is the whole point of the pair: it reads 3.25:1 on `accent-soft` and 3.51 on `elevated`
-   * in the dark theme, so `Row` lifts its subtitle to `text` on exactly these two states rather
-   * than the palette moving under every list in the studio.
+   * The one blue, thinned — never a second one. Two hand-picked hexadecimals were rejected on
+   * sight before this: any opaque value is a colour of its own however close the hue is, and the
+   * eye reads the drop in saturation long before the drop in lightness.
+   */
+  it('draws the chosen-row fill from the accent itself, in both themes', () => {
+    for (const theme of THEMES) {
+      expect(softFill(theme.from)).toMatch(
+        /^color-mix\(in srgb, var\(--color-accent\) \d{1,2}%, transparent\)$/,
+      )
+    }
+  })
+
+  /**
+   * The two fills a list row takes, with the ink that sits on them — the soft one READ THROUGH,
+   * since a translucent fill shows whatever it lies on. `muted` is not held here on purpose: it
+   * sits under 4.5 on both, so `Row` lifts its subtitle to `text` on exactly these two states.
    */
   it('carries the full ink on the two backgrounds a row takes, in both themes', () => {
     for (const theme of THEMES) {
       const tokens = palette(theme.from)
+      const fills = [
+        ...['panel', 'surface'].map(under => over(softFill(theme.from), tokens[under] ?? '')),
+        tokens.elevated ?? '',
+      ]
 
-      const failing = ['accent-soft', 'elevated'].filter(
-        fill => contrastRatio(tokens.text ?? '', tokens[fill] ?? '') < AA_NORMAL_TEXT,
+      expect(fills.filter(fill => contrastRatio(tokens.text ?? '', fill) < AA_NORMAL_TEXT)).toEqual(
+        [],
       )
-
-      expect(failing).toEqual([])
     }
   })
 
@@ -453,6 +537,44 @@ describe('the contrast of the inks', () => {
 
       expect(failing).toEqual([])
       expect(green).not.toBe(tokens.create)
+    }
+  })
+
+  /**
+   * The three axis stripes, on the field each one edges. At the 3 of WCAG 1.4.11 rather than 4.5:
+   * a stripe is a shape that informs, never a word — and the letter beside it says which axis it
+   * is anyway, which is what keeps colour from being the only carrier (WCAG 1.4.1).
+   *
+   * ONE value serves both themes, and that is the point of measuring them together rather than a
+   * theme at a time: the window where a colour clears 3:1 against `surface` dark AND light is
+   * narrow, so a hue nudged for one theme is exactly how the other silently falls under.
+   */
+  it('carries three axis stripes readable on every fill a row can wear, in both themes', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+      const stripes = ['axis-x', 'axis-y', 'axis-z'].map(name => tokens[name] ?? '')
+
+      expect(stripes.every(stripe => /^#[0-9a-f]{6}$/.test(stripe))).toBe(true)
+      /**
+       * BOTH sides of the stripe: it is the field's left border, so `surface` meets it on the
+       * right and whatever fills the row meets it on the left — `panel`, the section's own.
+       *
+       * Reading `surface` alone is not enough, and that was measured rather than reasoned: a
+       * zebra fill striping every other row `elevated` took the same three stripes to 2.34, 2.42
+       * and 2.11 IN THE DARK THEME with this case still green — it clears 3 in the light one
+       * (3.61, 3.50, 4.02), which is why the sweep runs over both. `elevated` is deliberately NOT
+       * swept, since no property row wears it: a fill that brought it back would have to bring
+       * its own measurement, of both themes.
+       */
+      const failing = ['panel', 'surface'].flatMap(ground =>
+        stripes
+          .filter(stripe => contrastRatio(stripe, tokens[ground] ?? '') < AA_NON_TEXT)
+          .map(stripe => `${stripe} on ${ground}`),
+      )
+
+      expect(failing).toEqual([])
+      // Three axes read as three only while no two of them are the same colour.
+      expect(new Set(stripes).size).toBe(3)
     }
   })
 
@@ -620,7 +742,7 @@ describe('the contrast of the inks', () => {
   })
 
   /**
-   * The sweep run against a source that is KNOWN bad — the exact state `window-styles.ts` was in
+   * The sweep run against a source that is KNOWN bad — the exact state `windowStyles.ts` was in
    * before this batch. Without it, five one-line edits leave the rule green while it measures
    * nothing: `alpha = 1`, an emptied `SURFACES_OF`, the threshold lowered to the glyph bar, a path
    * added to the exemptions. A rule that cannot be shown to refuse anything refuses nothing.

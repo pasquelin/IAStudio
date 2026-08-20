@@ -8,6 +8,7 @@ import {
   parseDocumentId,
   parseDocumentKind,
   parseFolderPath,
+  parseLandingFolder,
   parseManifest,
 } from './validation'
 
@@ -153,14 +154,27 @@ describe('parseDocumentDraft', () => {
    * replaced the folder with a manifest alone — a save that threw away the pixels it was called
    * to keep, and nothing in the reply said so.
    */
-  it('keeps the files that go beside the content', () => {
+  it('keeps the surfaces that go beside the content', () => {
+    const png = Uint8Array.from([137, 80, 78, 71])
     const drafted = parseDocumentDraft({
       title: 'Poster',
       content: '{"layers":[{"id":"l1"}]}',
-      parts: [{ name: 'l1.png', data: 'AA==' }],
+      parts: [{ path: 'data/p_l1.png', png }],
     })
 
-    expect(drafted.parts).toEqual([{ name: 'l1.png', data: 'AA==' }])
+    expect(drafted.parts).toEqual([{ path: 'data/p_l1.png', png }])
+  })
+
+  // These names become ZIP entries the studio writes AND reads back, so one naming its way out
+  // of the container has to be turned away at the boundary.
+  it('refuses a surface that names its way out of the container', () => {
+    expect(() =>
+      parseDocumentDraft({
+        title: 'Poster',
+        content: '{}',
+        parts: [{ path: '../escaped.png', png: Uint8Array.from([137]) }],
+      }),
+    ).toThrow()
   })
 
   // Same silence, same cost: the link is what brings a double-click back to the tab that edits
@@ -212,6 +226,18 @@ describe('parseAssetQuery', () => {
     expect(() => parseAssetQuery({ groupId: '   ' })).toThrow()
   })
 
+  /**
+   * The one field a missing schema line does not REFUSE but silently drops, `z.object` stripping
+   * what it does not declare: `asset.get` then asked an unfiltered catalogue and answered its
+   * first rows as though they were the generation's own output.
+   */
+  it('keeps the ids a caller reads a generation back by', () => {
+    expect(parseAssetQuery({ ids: ['asset_1', 'asset_2'] })).toEqual({
+      ids: ['asset_1', 'asset_2'],
+    })
+    expect(() => parseAssetQuery({ ids: ['  '] })).toThrow()
+  })
+
   it('asks for everything when asked for nothing', () => {
     expect(parseAssetQuery({})).toEqual({})
   })
@@ -245,7 +271,54 @@ describe('parseFolderPath', () => {
     expect(() => parseFolderPath(path)).toThrow()
   })
 
+  // Both rows, so the bound is pinned at one number rather than anywhere inside an interval.
+  it('refuses a path past its own bound and keeps the last one under it', () => {
+    expect(parseFolderPath('a'.repeat(1024))).toBe('a'.repeat(1024))
+    expect(() => parseFolderPath('a'.repeat(1025))).toThrow()
+  })
+
+  // Code points, not UTF-16 units: an astral path is half as long as `length` reads it.
+  it('counts the bound in code points, so an astral path is not halved', () => {
+    const astral = String.fromCodePoint(0x1f3ac).repeat(1024)
+    expect(parseFolderPath(astral)).toBe(astral)
+  })
+
+  // Measured, not assumed: APFS takes a control character in a name and `readdir` hands it back,
+  // so refusing here would lose a folder that exists. Built rather than typed — a literal one
+  // makes this file binary to `git grep`.
+  it('takes the control character a folder on disk may really carry', () => {
+    expect(parseFolderPath(`assets/${String.fromCodePoint(0x85)}img`)).toBe(
+      `assets/${String.fromCodePoint(0x85)}img`,
+    )
+  })
+
   it('refuses what is not a string at all', () => {
     expect(() => parseFolderPath(null)).toThrow()
+  })
+})
+
+describe('parseLandingFolder', () => {
+  it('takes the folder a document was filed in', () => {
+    expect(parseLandingFolder('Images/Croquis')).toBe('Images/Croquis')
+  })
+
+  // A caller with no folder to offer leaves the writer its own default, which is not the same
+  // thing as naming the project root.
+  it('takes nothing at all, and the root, apart', () => {
+    expect(parseLandingFolder(undefined)).toBeUndefined()
+    expect(parseLandingFolder('')).toBe('')
+  })
+
+  it('refuses a walk out of the project, as every path channel does', () => {
+    expect(() => parseLandingFolder('../secrets')).toThrow()
+  })
+
+  /**
+   * On top of the shape, and this one is the field's own rule made true: nothing a user can
+   * click reaches here, since the tree lists no hidden folder — and a document written into
+   * `.index/` would be swept by the next rescan.
+   */
+  it.each(['.index', '.index/thumbs', 'Images/.hidden'])('refuses the studio’s own %s', path => {
+    expect(() => parseLandingFolder(path)).toThrow()
   })
 })

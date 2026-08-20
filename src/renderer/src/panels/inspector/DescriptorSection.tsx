@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PropertySection } from '@/design/PropertySection'
 import type { GestureProps } from '@/design/styles'
-import type { FieldValue, PropertyField } from '@/engines/scene/property-fields'
+import type { FieldValue, PropertyField } from '@/engines/scene/propertyFields'
 import { PropertyControl } from './PropertyControl'
 
 export type DescriptorSectionProps = {
@@ -10,6 +10,8 @@ export type DescriptorSectionProps = {
   fields: readonly PropertyField[]
   onChange: (name: string, value: FieldValue) => void
   gesture: GestureProps
+  /** What this section is called in code, so each of its fields can be named from a script. */
+  scId: string
   /** What the descriptor carries beyond its plain fields — a material's texture slots. */
   children?: ReactNode
 }
@@ -24,12 +26,13 @@ export function DescriptorSection({
   fields,
   onChange,
   gesture,
+  scId,
   children,
 }: DescriptorSectionProps) {
   const { t } = useTranslation()
 
   return (
-    <PropertySection title={title}>
+    <PropertySection title={title} scId={scId}>
       {fields.map(field => (
         <PropertyControl
           key={field.name}
@@ -39,6 +42,7 @@ export function DescriptorSection({
           label={t(`inspector.fields.${field.name}`, field.name)}
           onChange={value => onChange(field.name, value)}
           gesture={gesture}
+          section={scId}
         />
       ))}
       {children}

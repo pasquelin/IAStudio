@@ -1,5 +1,7 @@
 import type { LanguagePreference } from '../i18n/languages'
-import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistant'
+// From the model module rather than from the registry: `shellActions.ts` reads this file, and the
+// registry reads it back — `import-cycles.test.ts` holds that count at zero.
+import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistantModel'
 import type { BindingOverrides } from './command'
 import type { DictationMode } from './dictation'
 import type { ApiFailure } from './failure'
@@ -7,7 +9,7 @@ import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
 import type { RecentProject } from './project'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 import type { ModelFamily } from './model'
-import type { ShadowQuality } from './scene'
+import type { DisplayUnit, HelperVisibility, ShadowQuality, ViewportQuality } from './scene'
 
 /**
  * Spelled exactly as Electron's `nativeTheme.themeSource`, which takes these three words: the
@@ -56,6 +58,13 @@ export type Settings = {
   general: {
     language: LanguagePreference
     startup: StartupBehaviour
+    /**
+     * Whether an open document is written back on its own while it is being worked on.
+     *
+     * A kind whose capture is too costly to run on a timer opts out whatever this says, and says
+     * so itself — `autosaves` in the renderer's document registry.
+     */
+    autosave: boolean
   }
   /**
    * The home screen. `sections` carries the user's own order and what they chose to hide;
@@ -139,10 +148,27 @@ export type Settings = {
     /** In degrees, like the inspector: radians are stored, never typed. */
     snapRotate: number
     snapScale: number
+    /** Whether shadow maps are drawn at all — a depth pass per casting light, and the way out of it. */
+    shadows: boolean
     /** How soft a shadow edge is. Which objects throw one is a property of the node. */
     shadowQuality: ShadowQuality
     /** Side of the square map each casting light allocates. Doubling it costs four times as much. */
     shadowMapSize: number
+    /** How finely the same frame is drawn. It moves `pixelRatio`, and never the assets. */
+    quality: ViewportQuality
+    /** How much of a family of working aids is drawn — see `HelperVisibility`. */
+    lightHelpers: HelperVisibility
+    cameraHelpers: HelperVisibility
+    boundingBoxes: HelperVisibility
+    /** Whether each object's own axes are drawn at its pivot. */
+    origins: boolean
+    normals: boolean
+    /** How long a drawn normal is, in scene units. */
+    normalLength: number
+    /** Whether what the scene costs is read out over the viewport. */
+    stats: boolean
+    /** The unit lengths are WRITTEN in. One scene unit stays one metre whatever this says. */
+    units: DisplayUnit
   }
   shortcuts: {
     /**
@@ -162,6 +188,23 @@ export type Settings = {
      * still works and the interface says what it cannot do.
      */
     ffmpegPath?: string
+  }
+  /**
+   * Version control over the PROJECT folder — never over the repository the studio is built from.
+   */
+  git: {
+    /**
+     * A git binary to use instead of the one on the PATH, on the model of `media.ffmpegPath`.
+     * Absent is the normal case. simple-git REFUSES a path holding a space — which is where the
+     * default Windows install puts it — and the studio then answers as it does for no git at all.
+     */
+    binary?: string
+    /**
+     * Who commits. Absent means "whatever `git config user.name` says", which is the right
+     * answer for anyone who already uses git on this machine — and the wrong one to overwrite.
+     */
+    userName?: string
+    userEmail?: string
   }
   /** Talking to the studio instead of driving it — see `domain/assistant.ts`. */
   assistant: {
@@ -186,6 +229,33 @@ export type Settings = {
    */
   mcp: {
     enabled: boolean
+    /**
+     * What an outside client may do WITHOUT the question on screen.
+     *
+     * Everything off and zero by default, which is the studio as it was before this existed: a
+     * client that finds nothing armed is asked about, exactly as it always has been. Nothing else
+     * in the studio may write this branch — see `settingsHandlers`, which refuses it: a delegation
+     * a client could grant itself would be no delegation at all.
+     *
+     * By LEVEL rather than by action name, and deliberately: the level is the axis the question
+     * already speaks in, and a hundred and forty-six checkboxes is not an interface.
+     *
+     * This one: moving, renaming, binning, and whatever rewrites the working copy.
+     */
+    delegateFiles: boolean
+    /** Uploading a picture, which then stays in the library. */
+    delegateAsset: boolean
+    /** Publishing off this machine. Nothing here takes that back. */
+    delegateRemote: boolean
+    /**
+     * Creative units this window may spend unasked before it starts asking again. Zero asks about
+     * every spend, which is the default.
+     *
+     * A number rather than a switch, because money is bounded by an amount and not by a yes: a
+     * spend the API declines to price is never delegated, whatever this holds — an unknown cost
+     * is an unbounded one.
+     */
+    delegateBudget: number
   }
   /** Speaking a prompt instead of typing it. Everything runs on this machine — see `domain/dictation.ts`. */
   dictation: {
@@ -219,7 +289,7 @@ export type Settings = {
  * exactly this.
  */
 export const DEFAULT_SETTINGS: Settings = {
-  general: { language: 'system', startup: 'lastProject' },
+  general: { language: 'system', startup: 'lastProject', autosave: true },
   home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] },
   workspaces: { order: [...WORKSPACE_IDS] },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
@@ -233,15 +303,35 @@ export const DEFAULT_SETTINGS: Settings = {
     snapTranslate: 0.5,
     snapRotate: 15,
     snapScale: 0.1,
+    shadows: true,
     shadowQuality: 'soft',
     shadowMapSize: 2048,
+    quality: 'balanced',
+    // `selected` and not `all`: a directional light draws a line clear across the scene and a
+    // frustum reaches its camera's far plane, so three lamps shown at once is a viewport nobody
+    // can read. Anyone who wants them all says so.
+    lightHelpers: 'selected',
+    cameraHelpers: 'selected',
+    boundingBoxes: 'off',
+    origins: false,
+    normals: false,
+    normalLength: 0.2,
+    stats: true,
+    units: 'm',
   },
   storage: { backend: 'local', recentProjects: [], projectAccounts: {} },
   shortcuts: { overrides: {} },
   advanced: { logLevel: 'info' },
   media: {},
+  git: {},
   assistant: { model: DEFAULT_ASSISTANT_MODEL },
-  mcp: { enabled: false },
+  mcp: {
+    enabled: false,
+    delegateFiles: false,
+    delegateAsset: false,
+    delegateRemote: false,
+    delegateBudget: 0,
+  },
   dictation: {
     enabled: true,
     mode: 'pushToTalk',
@@ -319,6 +409,7 @@ export type SettingsSectionId =
   | 'shortcuts'
   | 'dictation'
   | 'media'
+  | 'git'
   | 'storage'
   | 'advanced'
 
@@ -339,6 +430,7 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'shortcuts',
   'dictation',
   'media',
+  'git',
   'storage',
   'advanced',
 ]

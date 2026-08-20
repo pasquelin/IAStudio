@@ -1,13 +1,26 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { FIELD_LABEL, FIELD_ROW } from './styles'
+import { FieldActions } from './FieldActions'
+import { PropertyLabel } from './PropertyLabel'
+import { FIELD_ROW } from './styles'
+
+/**
+ * How a value that does not fit its column is given room.
+ *
+ * `inline` truncates, which is right for a number or a name. `stacked` drops the value onto its
+ * own line under the label — a prompt, a paragraph. `wrap` keeps the two columns and lets the
+ * value run onto a second line: a path and a hash are ONE value, and stacking them in a box
+ * whose every other row is a pair reads as a label whose value went missing.
+ */
+export type PropertyShape = 'inline' | 'stacked' | 'wrap'
 
 export type PropertyRowProps = {
   label: string
   /** A value to read, or a control to change it. */
   children: ReactNode
-  /** Lets a long value — a prompt, a path — wrap under its label instead of truncating. */
-  stacked?: boolean
+  shape?: PropertyShape
+  /** What the line ends with — a button that acts on the value, never one that replaces it. */
+  actions?: ReactNode
 }
 
 /**
@@ -25,17 +38,42 @@ export type PropertyRowProps = {
  * hand; a group draws both families side by side, so one of them drifting is two label columns
  * in the same box.
  */
-export function PropertyRow({ label, children, stacked = false }: PropertyRowProps) {
+export function PropertyRow({ label, children, shape = 'inline', actions }: PropertyRowProps) {
   return (
-    <div className={cn(stacked ? 'text-tiny flex min-w-0 flex-col gap-2' : FIELD_ROW)}>
-      {/* Titled because the column truncates: `Repeat preview` fits eighty pixels and
-          `Aperçu de la répétition` does not, so the label was readable in one language only. */}
-      <span title={label} className={stacked ? 'text-muted shrink-0' : FIELD_LABEL}>
-        {label}
-      </span>
-      <div className={cn('text-text min-w-0', stacked ? '' : 'flex-1 truncate text-right')}>
+    <div
+      className={cn(
+        shape === 'stacked' ? 'text-tiny flex min-w-0 flex-col gap-2' : FIELD_ROW,
+        // The label rides the FIRST line of a value that takes two, as it would in any
+        // information panel; centred, it floated beside the middle of a wrapped path.
+        shape === 'wrap' && 'items-start',
+      )}
+    >
+      {/* Stacked, the value sits UNDER the name rather than beside it — so there is no column,
+          and therefore no rule and no fixed gauge to hold it to. */}
+      {shape === 'stacked' ? (
+        <span title={label} className="text-muted shrink-0">
+          {label}
+        </span>
+      ) : (
+        <PropertyLabel label={label} />
+      )}
+      <div
+        className={cn(
+          'text-text min-w-0',
+          // Left like a field's own control, so a value read and a value edited share one column:
+          // « Rôle » used to begin where « Taille » ended.
+          shape !== 'stacked' && 'flex-1',
+          shape === 'inline' && 'truncate',
+          // `break-all`: a path and a hash hold no space to break at, so a wrap with nothing to
+          // wrap ON runs off the edge instead.
+          shape === 'wrap' && 'break-all',
+        )}
+      >
         {children}
       </div>
+
+      {/* Not when stacked: there is no column there, so no end column to hold either. */}
+      {shape !== 'stacked' && <FieldActions>{actions}</FieldActions>}
     </div>
   )
 }

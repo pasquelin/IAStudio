@@ -1,265 +1,131 @@
 import {
-  type ActionName,
-  type ActionOutcome,
-  type ActionRefusal,
+  assistantAction,
   commitmentOfCall,
   needsConfirmation,
+  refused,
+  validatesInput,
+  type ActionName,
+  type ActionOutcome,
 } from '@shared/domain/assistant'
-import { commandDescriptor, scopeOfWorkspace } from '@shared/domain/command'
-import { MODEL_FAMILIES } from '@shared/domain/model'
-import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
-import { isRecord } from '@shared/guards'
-import { showWorkspace } from '@/app/dockview-api'
-import { createDocumentIn } from '@/app/new-document'
-import { openGeneratorOn } from '@/helpers/generation'
-import { revealTool } from '@/helpers/reveal-panel'
+import { delegated } from '@shared/domain/delegation'
 import { getBridge } from '@/services/bridge'
-import { publishCommand } from '@/services/command-bus'
-import { runGlobalCommand } from '@/services/global-commands'
-import { useJobs } from '@/stores/jobs'
-import { toolSurface } from '@/stores/layouts'
-import { useModels } from '@/stores/models'
+import { useSettings } from '@/stores/settings'
+import type { ActionHandlers } from './actionHandler'
 import { mountedConfirmer } from './confirm'
-import { mountedGenerator } from './generator-bridge'
-
-const refused = (refusal: ActionRefusal): ActionOutcome => ({ ok: false, refusal })
+import { ASSET_HANDLERS } from './assetHandlers'
+import { CANVAS_HANDLERS } from './canvasHandlers'
+import { CLOUD_HANDLERS } from './cloudHandlers'
+import { CORE_HANDLERS } from './coreHandlers'
+import { FILE_HANDLERS } from './fileHandlers'
+import { mountedGenerator } from './generatorBridge'
+import { GIT_HANDLERS } from './gitHandlers'
+import { JOB_HANDLERS } from './jobHandlers'
+import { MATERIAL_HANDLERS } from './materialHandlers'
+import { RIG_HANDLERS } from './rigHandlers'
+import { SCENE_HANDLERS } from './sceneHandlers'
+import { SEQUENCE_HANDLERS } from './sequenceHandlers'
+import { SETTINGS_HANDLERS } from './settingsHandlers'
+import { SHELL_HANDLERS } from './shellHandlers'
+import { STATE_HANDLERS } from './stateHandlers'
 
 /**
- * The inputs are read rather than asserted, and these guards are the ONLY thing checking them.
+ * One action in, one outcome out — for both doors.
  *
- * Said plainly because the opposite was written here first: nothing upstream validates a call
- * against `action.fields`. The IPC boundary checks the envelope (`main/assistant/validation.ts`),
- * the reply parser checks that the action NAME is declared (`main/assistant/reply.ts`), and the
- * MCP server passes `params.arguments` through untouched — its `additionalProperties: false` is
- * a promise to the client, not an enforcement.
- *
- * Which makes these four lines the guard rather than belt and braces: what fills these values is
- * a language model, the one caller in the studio that answers something plausible instead of
- * failing, and a wrong `workspace` would otherwise reach `showWorkspace` as a string it has no
- * panel for. Deriving a validator from `action.fields` would serve all three callers at once and
- * is the right shape; it is not this batch.
+ * The table is assembled here and nowhere else, one entry per name the registry publishes.
+ * `executor.test.ts` holds the two lists to each other in both directions: an action published
+ * with nothing behind it would answer `badInput` to every client that read `tools/list` and
+ * believed it, and a handler nothing publishes is code no caller can reach.
  */
-function textOf(input: Record<string, unknown>, key: string): string | null {
-  const value = input[key]
-  return typeof value === 'string' && value.trim() !== '' ? value : null
+const HANDLERS: ActionHandlers = {
+  ...CORE_HANDLERS,
+  ...STATE_HANDLERS,
+  ...FILE_HANDLERS,
+  ...JOB_HANDLERS,
+  ...ASSET_HANDLERS,
+  ...CLOUD_HANDLERS,
+  ...CANVAS_HANDLERS,
+  ...SEQUENCE_HANDLERS,
+  ...MATERIAL_HANDLERS,
+  ...SCENE_HANDLERS,
+  ...RIG_HANDLERS,
+  ...GIT_HANDLERS,
+  ...SETTINGS_HANDLERS,
+  ...SHELL_HANDLERS,
 }
 
-function oneOf<T extends string>(
-  input: Record<string, unknown>,
-  key: string,
-  allowed: readonly T[],
-): T | null {
-  const value = input[key]
-  return allowed.find(candidate => candidate === value) ?? null
+/** Every name the table answers, so a test can compare it with the registry. */
+export function handledActions(): readonly string[] {
+  return Object.keys(HANDLERS)
 }
 
 /**
- * Fires a command at the surface listening for it, having first checked one is.
+ * What this window has already spent WITHOUT asking, against the delegated budget.
  *
- * `publishCommand` is memoryless and filtered by scope on the subscriber's side: a command sent
- * while no document of that scope is mounted and active is dropped in silence. That is right for
- * a menu, whose rows grey out, and wrong here — the assistant would report having done something
- * that never happened. So the scope is checked first, and a mismatch is said out loud.
+ * Its blind spot, written rather than hidden: the ledger is per WINDOW and per launch. Two windows
+ * open at once each carry the whole budget, so an armed studio with two windows may spend twice
+ * what was armed. It is here rather than in the main process because the figure it counts — the
+ * estimate — is read off the form only a window can see, and moving the count without moving the
+ * quote would put the two out of step.
  */
-function runCommand(input: Record<string, unknown>): ActionOutcome {
-  const id = textOf(input, 'command')
-  const descriptor = id === null ? null : commandDescriptor(id)
-  if (!descriptor) return refused('unknownCommand')
+let spentUnasked = 0
 
-  // `global` commands never travel the bus: they are run here, through the same module the
-  // native menu goes through. The three the main process performs on its own answer `false`,
-  // and those are the only ones this still turns away.
-  if (descriptor.scope === 'global') {
-    return runGlobalCommand(descriptor.id) ? { ok: true } : refused('globalCommand')
-  }
-
-  if (scopeOfWorkspace(toolSurface()) !== descriptor.scope) return refused('wrongSurface')
-
-  publishCommand(descriptor.id)
-  return { ok: true }
-}
-
-async function submitPrepared(): Promise<ActionOutcome> {
-  const generator = mountedGenerator()
-  if (!generator) {
-    // Opened rather than merely refused: the next attempt then has somewhere to land, and the
-    // panel is what the person needs to see anyway to judge what is about to be sent.
-    revealTool('generator')
-    return refused('generatorClosed')
-  }
-
-  if (!generator.body()) return refused('nothingPrepared')
-
-  const job = await generator.submit()
-  return job ? { ok: true, data: { jobId: job.id } } : refused('notSubmitted')
-}
-
-async function searchModels(input: Record<string, unknown>): Promise<ActionOutcome> {
-  const bridge = getBridge()
-  if (!bridge) return refused('noBridge')
-
-  const query = textOf(input, 'query')
-  if (query === null) return refused('badInput')
-
-  const family = oneOf(input, 'family', MODEL_FAMILIES)
-  const page = await bridge.scenario.searchModels({ search: query, ...(family ? { family } : {}) })
-
-  return {
-    ok: true,
-    data: page.items.map(model => ({ id: model.id, name: model.name, family: model.family })),
-  }
-}
-
-function prepareGenerator(input: Record<string, unknown>): ActionOutcome {
-  const family = oneOf(input, 'family', MODEL_FAMILIES)
-  const modelId = textOf(input, 'modelId')
-  const parameters = input.parameters
-
-  if (!family || modelId === null || !isRecord(parameters)) {
-    return refused('badInput')
-  }
-
-  openGeneratorOn(family, modelId, parameters)
-  return { ok: true }
-}
-
-function selectModel(input: Record<string, unknown>): ActionOutcome {
-  const family = oneOf(input, 'family', MODEL_FAMILIES)
-  const modelId = textOf(input, 'modelId')
-  if (!family || modelId === null) return refused('badInput')
-
-  useModels.getState().select(family, modelId)
-  return { ok: true }
-}
-
-function openWorkspace(input: Record<string, unknown>): ActionOutcome {
-  const workspace: WorkspaceId | null = oneOf(input, 'workspace', WORKSPACE_IDS)
-  if (!workspace) return refused('badInput')
-
-  if (input.createDocument === true) createDocumentIn(workspace)
-  else showWorkspace(workspace)
-  return { ok: true }
+/** For the suite, which must not have one case's spending decide the next one's. */
+export function resetDelegatedSpendForTests(): void {
+  spentUnasked = 0
 }
 
 /**
- * Runs one action and says what happened.
+ * Runs one action, having checked its input against the fields that declare it.
  *
- * Every branch calls the helper the studio already uses for that gesture — the rail's own way of
- * making a document, the inspector's own way of opening the generator. Nothing here is a second
- * path to an existing behaviour, which is what keeps the assistant from drifting away from what
- * the buttons do.
+ * The check lives HERE rather than one level up, and that is what lets every handler read its
+ * input plainly: `runAction` is exported, so a gate on the confirmed path alone would be a gate
+ * with a way around it. Nothing else does the work either — the IPC boundary checks the
+ * envelope, the reply parser checks the NAME, and the MCP server passes `params.arguments`
+ * through untouched, its `additionalProperties: false` being a promise to the client rather than
+ * an enforcement.
  */
 export async function runAction(
   name: ActionName,
   input: Record<string, unknown>,
 ): Promise<ActionOutcome> {
-  switch (name) {
-    case 'command.run':
-      return runCommand(input)
-    case 'workspace.open':
-      return openWorkspace(input)
-    case 'models.search':
-      return searchModels(input)
-    case 'models.select':
-      return selectModel(input)
-    case 'generator.prepare':
-      return prepareGenerator(input)
-    case 'generator.submit':
-      return submitPrepared()
-    case 'jobs.list':
-      return {
-        ok: true,
-        data: useJobs.getState().jobs.map(job => ({
-          id: job.id,
-          label: job.label,
-          status: job.status,
-          progress: job.progress,
-        })),
-      }
-    /**
-     * Recognised here, carried out by the conversation itself — see `say` in `stores/assistant`.
-     *
-     * Not `useAssistant.getState().hide()` on this line, tempting as it is: that store imports
-     * this file to run a plan, and reaching back into it would close the loop between the two.
-     * The window belongs to the conversation, not to the executor of studio actions.
-     */
-    case 'chat.close':
-      return { ok: true }
-    case 'prompt.suggest':
-      return suggestPrompts(input)
-    case 'prompt.translate':
-      return translatePrompt(input)
-    case 'prompt.describeStyle':
-      return describeStyle()
-  }
+  const action = assistantAction(name)
+  const handler = HANDLERS[name]
+  if (!action || !handler || !validatesInput(action.fields, input)) return refused('badInput')
+
+  return handler(input)
 }
 
 /**
- * The three the prompt field used to carry as buttons.
+ * Runs an action, checking its input and asking first when it engages anything.
  *
- * The channels behind them are untouched — the whole of what changed is who presses. Each
- * answers in one round trip and spends nothing, which is what made them buttons and what makes
- * them free to ask for.
- */
-async function suggestPrompts(input: Record<string, unknown>): Promise<ActionOutcome> {
-  const bridge = getBridge()
-  if (!bridge) return refused('noBridge')
-
-  const draft = textOf(input, 'draft')
-  if (draft === null) return refused('badInput')
-
-  // Suggestions are written FOR a model — its own vocabulary, its own parameters — so there is
-  // no useful answer without one armed.
-  const prepared = mountedGenerator()?.body()
-  if (!prepared) return refused('generatorClosed')
-
-  const suggestions = await bridge.scenario.suggestPrompts({
-    modelId: prepared.modelId,
-    prompt: draft,
-  })
-  return { ok: true, data: suggestions }
-}
-
-async function translatePrompt(input: Record<string, unknown>): Promise<ActionOutcome> {
-  const bridge = getBridge()
-  if (!bridge) return refused('noBridge')
-
-  const text = textOf(input, 'text')
-  if (text === null) return refused('badInput')
-
-  return { ok: true, data: await bridge.scenario.translatePrompt(text) }
-}
-
-async function describeStyle(): Promise<ActionOutcome> {
-  const bridge = getBridge()
-  if (!bridge) return refused('noBridge')
-
-  const generator = mountedGenerator()
-  if (!generator) return refused('generatorClosed')
-
-  const references = generator.references()
-  // Not a failure and not a guess: with nothing on the form there is no style to read, and the
-  // channel refuses an empty list anyway.
-  if (references.length === 0) return refused('noReference')
-
-  return { ok: true, data: await bridge.scenario.describeStyle(references) }
-}
-
-/**
- * Runs an action, asking first when it engages anything.
- *
- * The gate sits here rather than in the main process, and that is deliberate: the figure quoted
+ * Both gates sit here rather than in the main process, and that is deliberate: the figure quoted
  * comes from the form the window is showing, which the main process cannot see, and the question
  * is asked on a screen only the window has. It also means there is one gate rather than two —
  * whether the call came from the modal or from an MCP client on the other side of the machine,
- * it arrives at this function and is asked about the same way.
+ * it arrives at this function and is treated the same way.
  */
 export async function runConfirmedAction(
   name: ActionName,
   input: Record<string, unknown>,
 ): Promise<ActionOutcome> {
+  // Checked before the question as well as inside `runAction`: a bad input asked about first
+  // would have the person approve a spend that was never going to happen.
+  const action = assistantAction(name)
+  if (!action || !validatesInput(action.fields, input)) return refused('badInput')
+
   const commitment = commitmentOfCall(name, input)
   if (!needsConfirmation(commitment)) return runAction(name, input)
+
+  // Read once, before the question and before the delegation is consulted: both read the same
+  // figure, and a form moved between the two would price one thing and send another.
+  const estimate = commitment === 'credits' ? await estimateOfSubmission() : null
+
+  if (delegated(useSettings.getState().settings.mcp, commitment, estimate, spentUnasked)) {
+    // Debited BEFORE the run and never given back: an action that failed halfway may already have
+    // spent, and a ledger that only counted successes would let a run of failures spend forever.
+    if (estimate !== null) spentUnasked += estimate
+    return runAction(name, input)
+  }
 
   const ask = mountedConfirmer()
   // No one to ask. Refusing is the only honest answer: the alternative is spending on a question
@@ -272,7 +138,7 @@ export async function runConfirmedAction(
   const granted = await ask({
     action: name,
     commitment,
-    ...(commitment === 'credits' ? { estimate: await estimateOfSubmission() } : {}),
+    ...(commitment === 'credits' ? { estimate } : {}),
   })
 
   if (!granted) return refused('declined')

@@ -12,6 +12,7 @@ import {
 import {
   arrangementOf,
   DEFAULT_ARRANGEMENTS,
+  DEFAULT_LENGTHS,
   DEFAULT_OPEN,
   DEFAULT_SIZES,
   migrateTools,
@@ -53,17 +54,37 @@ describe('fitZoneSize', () => {
 describe('tools store', () => {
   beforeEach(() => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: {}, sizes: {}, splits: {} }),
+      arrangements: arrangedFor('image', { open: {} }),
+      lengths: DEFAULT_LENGTHS,
       focusedZone: null,
     })
   })
 
   it('clamps the stored size on resize', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+      arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
     })
-    useTools.getState().resize('image', 'bottom', 900, 800)
-    expect(arrangementOf(useTools.getState(), 'image').sizes.bottom).toBe(800 - MIN_CENTER)
+    useTools.getState().resize('bottomRight', 900, 800)
+    expect(useTools.getState().lengths.sizes.bottomRight).toBe(800 - MIN_CENTER)
+  })
+
+  /** One strip, one height: dragged by either half, the other rises with it or steps. */
+  it('gives both halves of the band the same height', () => {
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
+    })
+    useTools.getState().resize('bottomLeft', 300, 800)
+
+    expect(useTools.getState().lengths.sizes.bottomRight).toBe(300)
+    expect(useTools.getState().lengths.sizes.bottomLeft).toBeUndefined()
+  })
+
+  it('parts the band where the handle is dragged, and never past a usable half', () => {
+    useTools.getState().resplitBand(620, 900)
+    expect(useTools.getState().lengths.bandSplit).toBe(620)
+
+    useTools.getState().resplitBand(890, 900)
+    expect(useTools.getState().lengths.bandSplit).toBe(900 - MIN_SPLIT)
   })
 
   it('keeps the center alive when both sides are dragged wide', () => {
@@ -73,22 +94,39 @@ describe('tools store', () => {
       }),
     })
     const { resize } = useTools.getState()
-    resize('image', 'left', 900, 1000)
-    resize('image', 'right', 900, 1000)
+    resize('left', 900, 1000)
+    resize('right', 900, 1000)
 
-    const { sizes } = arrangementOf(useTools.getState(), 'image')
+    const { sizes } = useTools.getState().lengths
     expect((sizes.left ?? 0) + (sizes.right ?? 0)).toBeLessThanOrEqual(1000 - MIN_CENTER)
   })
 
+  /** The home keeps a right column of its own, and one width serves both: it counts here. */
   it('re-clamps every zone when the window shrinks', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', {
-        open: { left: { primary: 'models' } },
-        sizes: { left: 600 },
-      }),
+      arrangements: arrangedFor('image', { open: { left: { primary: 'models' } } }),
+      lengths: { sizes: { left: 600 }, splits: {} },
     })
     useTools.getState().fit(800, 600)
-    expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBe(800 - MIN_CENTER)
+    expect(useTools.getState().lengths.sizes.left).toBe(800 - DEFAULT_SIZES.right - MIN_CENTER)
+  })
+
+  /**
+   * A length is clamped against the TIGHTEST of the two families now that one serves both: a
+   * width the home could afford — its right column being the only one open there — would
+   * overflow a space that keeps the opposite column open.
+   */
+  it('clamps a width against a column the other family keeps open', () => {
+    useTools.setState({
+      arrangements: {
+        workspaces: { open: { left: { primary: 'models' } } },
+        home: { open: { right: { primary: 'library' } } },
+      },
+      lengths: { sizes: { left: 400 }, splits: {} },
+    })
+    useTools.getState().resize('right', 900, 1000)
+
+    expect(useTools.getState().lengths.sizes.right).toBe(1000 - 400 - MIN_CENTER)
   })
 
   it('opens a tool in the half its placement declares', () => {
@@ -117,10 +155,10 @@ describe('tools store', () => {
 
   it('empties the half it is asked to close', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+      arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
     })
-    useTools.getState().close('image', 'bottom', 'primary')
-    expect(arrangementOf(useTools.getState(), 'image').open.bottom?.primary).toBeUndefined()
+    useTools.getState().close('image', 'bottomRight', 'primary')
+    expect(arrangementOf(useTools.getState(), 'image').open.bottomRight?.primary).toBeUndefined()
   })
 
   it('drops focus only once both halves are empty', () => {
@@ -145,8 +183,8 @@ describe('tools store', () => {
         open: { right: { primary: 'layers', secondary: 'inspector' } },
       }),
     })
-    useTools.getState().resplit('image', 'right', 900, 400)
-    expect(arrangementOf(useTools.getState(), 'image').splits.right).toBe(400 - MIN_SPLIT)
+    useTools.getState().resplit('right', 900, 400)
+    expect(useTools.getState().lengths.splits.right).toBe(400 - MIN_SPLIT)
   })
 })
 
@@ -212,43 +250,41 @@ describe('the home and the workspaces arrange their zones apart', () => {
       primary: 'generator',
       secondary: null,
     })
-    // The home's left column has one half, so this is the whole of it.
+    // The home's left column has both halves too, the lower one holding the project as a folder.
     expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left).toEqual({
       primary: 'projects',
+      secondary: null,
     })
   })
 
-  // The generator renders a model's own form; 320 is its width for that reason. A file tree
-  // narrowed on the home has no business taking it with it.
-  it('keeps the width of one column out of the other', () => {
-    useTools.getState().resize(HOME_SURFACE, 'left', 170, 1000)
+  /**
+   * A column dragged on the home is the SAME column in a space, and the reverse was the defect:
+   * the width sat beside what each half holds, so crossing to the home changed it for no reason
+   * anyone had chosen. What stays per family is which panels are up, which is what the split of
+   * version 8 was ever about.
+   */
+  it('carries one width across the home and the spaces', () => {
+    useTools.getState().resize('left', 170, 1000)
 
-    expect(arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left).toBe(170)
-    expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBeUndefined()
+    expect(useTools.getState().lengths.sizes.left).toBe(170)
   })
 
   /**
-   * The home draws a right column now, so its left one is bounded exactly as a space's is: both
-   * have to leave the opposite column and the centre room. It was the one surface where a drag
-   * could take the whole window, and that stopped being true when it gained its second column.
+   * Both columns are bounded against each other, on either surface: the home draws a right
+   * column too, and a drag there could once take the whole window.
    */
-  it('bounds each column against the other, on the home as in a space', () => {
-    useTools.getState().resize(HOME_SURFACE, 'left', 700, 1000)
-    useTools.getState().resize('image', 'left', 700, 1000)
+  it('bounds each column against the other', () => {
+    useTools.getState().resize('left', 700, 1000)
 
-    const bounded = 1000 - DEFAULT_SIZES.right - MIN_CENTER
-    expect(arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left).toBe(bounded)
-    expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBe(bounded)
+    expect(useTools.getState().lengths.sizes.left).toBe(1000 - DEFAULT_SIZES.right - MIN_CENTER)
   })
 
-  it('re-clamps both families when the window shrinks', () => {
-    useTools.getState().resize(HOME_SURFACE, 'left', 700, 1000)
-    useTools.getState().resize('image', 'left', 600, 1400)
+  it('re-clamps the studio when the window shrinks', () => {
+    useTools.getState().resize('left', 700, 1000)
 
     useTools.getState().fit(600, 600)
 
-    expect(arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left).toBe(MIN_SIZE)
-    expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBe(MIN_SIZE)
+    expect(useTools.getState().lengths.sizes.left).toBe(MIN_SIZE)
   })
 })
 
@@ -262,7 +298,7 @@ describe('migrating to the split arrangement', () => {
     )
 
     expect(migrated?.arrangements.workspaces.open.right).toEqual({ primary: 'layers' })
-    expect(migrated?.arrangements.workspaces.sizes).toEqual({ left: 400 })
+    expect(migrated?.lengths.sizes).toEqual({ left: 400 })
     expect(migrated?.arrangements.home).toEqual(DEFAULT_ARRANGEMENTS.home)
   })
 
@@ -284,9 +320,63 @@ describe('migrating to the split arrangement', () => {
     )
 
     expect(migrated?.arrangements.workspaces.open.right).toEqual({ primary: 'layers' })
-    expect(migrated?.arrangements.workspaces.sizes).toEqual({ left: 400 })
+    expect(migrated?.lengths.sizes).toEqual({ left: 400 })
     // The home is the one this bump changes: it starts on both halves of both columns.
     expect(migrated?.arrangements.home).toEqual(DEFAULT_ARRANGEMENTS.home)
+  })
+
+  /**
+   * The band was ONE zone up to version 14. Dropped as an unknown key, the panel it held would
+   * come back closed and the height it was dragged to would go back to the factory's.
+   */
+  it('lands a version 14 band on the right half, height and all', () => {
+    const migrated = migrateTools(
+      {
+        arrangements: {
+          workspaces: { open: { bottom: { primary: 'timeline' } }, sizes: { bottom: 400 } },
+        },
+      },
+      14,
+    )
+
+    expect(migrated?.arrangements.workspaces.open.bottomRight).toEqual({ primary: 'timeline' })
+    expect(migrated?.lengths.sizes.bottomRight).toBe(400)
+  })
+
+  /**
+   * The montage above, and the shelf here, because the two answer differently now: a version 14
+   * band holding the SHELF comes back with the half open and empty, the shelf having moved to
+   * the left column on 17 August. The height is kept all the same — the zone is still there.
+   */
+  it('empties a version 14 band that held the shelf, keeping the half and its height', () => {
+    const migrated = migrateTools(
+      {
+        arrangements: {
+          workspaces: { open: { bottom: { primary: 'assets' } }, sizes: { bottom: 400 } },
+        },
+      },
+      14,
+    )
+
+    expect(migrated?.arrangements.workspaces.open.bottomRight).toEqual({})
+    expect(migrated?.arrangements.workspaces.open.left).toEqual({ primary: 'assets' })
+    expect(migrated?.lengths.sizes.bottomRight).toBe(400)
+  })
+
+  /**
+   * What a stored `channels` comes back as, the panel having become a section of the inspector.
+   *
+   * **This does not hold the version bump beside it**, and nothing here can: whether `migrate`
+   * runs at all is zustand's contract with `version`, not ours. What it holds is the half of the
+   * answer that IS ours — that the migration knows to unhang a panel no placement declares.
+   */
+  it('unhangs a panel a stored layout named and the registry has dropped', () => {
+    const migrated = migrateTools(
+      { arrangements: { workspaces: { open: { right: { primary: 'channels' } } } } },
+      16,
+    )
+
+    expect(migrated?.arrangements.workspaces.open.right).toEqual({})
   })
 })
 
@@ -325,9 +415,17 @@ describe('the default layout', () => {
       bottom: { primary: 'assets' },
     })
 
+    // The band comes back with no half at all: the shelf it named moved to the left column on
+    // 17 August, and a zone emptied that way takes no room rather than standing blank.
+    //
+    // The Explorer stored in the upper right does not reach the left column, and that is
+    // `slotsFrom` rather than this: two panels stored in one zone that both declare the SAME
+    // half leave one of them behind, the last read winning. Unchanged by the move, and written
+    // down here because the expectation looks like a loss and is not a new one.
     expect(unchosen(stored)).toEqual({
-      right: { primary: null, secondary: null },
-      bottom: { primary: null },
+      left: { primary: null },
+      right: { secondary: null },
+      bottomRight: {},
     })
   })
 
@@ -341,13 +439,16 @@ describe('openFrom', () => {
     expect(openFrom({ right: 'inspector' })).toEqual({ right: { secondary: 'inspector' } })
   })
 
-  it('opens a tool in every zone it sits in, so changing workspace never hides it', () => {
-    // The shelf lies in the bottom band nearly everywhere and stands in the right column in
-    // Video and Audio. Stored in one, it has to be open in the other, or the workspace that
-    // reads it elsewhere shows nothing where it belongs.
+  /**
+   * The shelf stood in the right column of Video and Audio until 17 August, and lay in the band
+   * everywhere else. It declares one half now — the upper left — so a layout stored under either
+   * of the old two comes back under the new one. This is the migration every existing install
+   * runs, which is why it is written out rather than left to the generic case below.
+   */
+  it('brings a shelf stored in the right column back to the left', () => {
     expect(openFrom({ right: { primary: 'assets' } })).toEqual({
-      right: { primary: 'assets' },
-      bottom: { primary: 'assets' },
+      right: {},
+      left: { primary: 'assets' },
     })
   })
 
@@ -358,22 +459,26 @@ describe('openFrom', () => {
     expect(open.left?.primary).toBe('generator')
   })
 
-  // The layout a version 6 install actually holds. Every half it named still draws a panel
-  // afterwards: a migration that left one empty would look like a broken window on the first
-  // launch after an update.
-  it('rebuilds a whole version 6 layout without emptying a half', () => {
+  /**
+   * The layout a version 6 install actually holds. Nothing it named is LOST — every panel comes
+   * back in the half it declares today — but two zones do come back empty, and that is the
+   * shelf moving to the left column: it was what filled the band, and what the upper right held
+   * in Video and Audio. An emptied zone takes no room, so what the reader sees is a window with
+   * one column fewer, not a blank rectangle.
+   */
+  it('rebuilds a whole version 6 layout, losing no panel', () => {
     const open = openFrom({
       left: { primary: 'assets', secondary: 'explorer' },
       right: { primary: 'models', secondary: 'inspector' },
       bottom: { primary: 'assets' },
     })
 
-    // The Explorer keeps the lower left it was stored in — it is where it lives now too.
-    expect(open.left).toEqual({ primary: 'models', secondary: 'explorer' })
-    // The shelf takes the upper right the Explorer used to win: it declares that half in Video
-    // and Audio, and nothing is left there to outrank it.
-    expect(open.right).toEqual({ primary: 'assets', secondary: 'inspector' })
-    expect(open.bottom).toEqual({ primary: 'assets' })
+    // The shelf holds the upper left it was stored in, and the models lose it: `??=` leaves the
+    // first claim standing, and the left column is read before the right.
+    expect(open.left).toEqual({ primary: 'assets', secondary: 'explorer' })
+    expect(open.right).toEqual({ secondary: 'inspector' })
+    // The band it was stored in is the band's RIGHT half today, and it comes back empty.
+    expect(open.bottomRight).toEqual({})
   })
 
   /**
@@ -388,12 +493,31 @@ describe('openFrom', () => {
     expect(open.right).toEqual({})
   })
 
-  // The shelf claims the upper right and the band both; the column was only left on its default.
-  // An explicit choice outranks a default, whichever of the two the rebuild reads first.
+  /**
+   * A panel the studio no longer has at all — `documents`, whose flat list the project folder
+   * replaced on 17 August. Dropped where it stood, and the rest of the arrangement restored
+   * whole: nothing here is bumped, nothing is migrated, and no other half pays for it.
+   *
+   * This is what says the version above may stay where it is when a panel goes: a bump would
+   * hand the whole installed base its factory layout back for one icon.
+   */
+  it('drops a panel no version knows any more, and keeps the rest', () => {
+    const open = openFrom({
+      left: { primary: 'models' },
+      right: { primary: 'documents', secondary: 'inspector' },
+    })
+
+    expect(open.left).toEqual({ primary: 'models' })
+    // The half is emptied rather than dropped: it keeps its size and its handle.
+    expect(open.right).toEqual({ secondary: 'inspector' })
+  })
+
+  // The upper left was only left on its default; the shelf stored in the band claims it. An
+  // explicit choice outranks a default, whichever of the two the rebuild reads first.
   it('lets a named panel win a half left on its default', () => {
-    expect(openFrom({ right: { primary: null }, bottom: { primary: 'assets' } })).toEqual({
-      right: { primary: 'assets' },
-      bottom: { primary: 'assets' },
+    expect(openFrom({ left: { primary: null }, bottom: { primary: 'assets' } })).toEqual({
+      left: { primary: 'assets' },
+      bottomRight: {},
     })
   })
 
@@ -404,14 +528,14 @@ describe('openFrom', () => {
   })
 
   it('drops the jobs panel, which is no longer a tool window', () => {
-    expect(openFrom({ bottom: { primary: 'assets', secondary: 'jobs' } }).bottom).toEqual({
-      primary: 'assets',
+    expect(openFrom({ bottom: { primary: 'history', secondary: 'jobs' } }).bottomRight).toEqual({
+      primary: 'history',
     })
   })
 
   it('never leaves a second half in a horizontal band — a band is never cut', () => {
     const stored = { bottom: { primary: 'timeline', secondary: 'explorer' } }
-    expect(openFrom(stored).bottom?.secondary).toBeUndefined()
+    expect(openFrom(stored).bottomRight?.secondary).toBeUndefined()
     // The explorer is not lost with the half it was stored in: it goes back to the column.
     expect(openFrom(stored).left?.secondary).toBe('explorer')
   })

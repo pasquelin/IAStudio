@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useAssets } from '@/stores/assets'
+import { useLatest } from './useLatest'
 
 /**
  * Tells an engine to ask again for the pictures it holds, every time the shelf is re-read.
@@ -19,14 +20,10 @@ import { useAssets } from '@/stores/assets'
  * on each render of its component instead.
  */
 export function useShelfRefresh(refresh: () => void): void {
-  const latest = useRef(refresh)
-
-  useEffect(() => {
-    latest.current = refresh
-  })
+  const latest = useLatest(refresh)
 
   useEffect(
     () => useAssets.subscribe((state, before) => state.items !== before.items && latest.current()),
-    [],
+    [latest],
   )
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_CANVAS, type Guide } from './canvas-state'
-import { boxEdges, guideNear, snapOffset, snapTargets, snapValue } from './guides'
+import { DEFAULT_CANVAS, type Guide } from './canvasState'
+import { boxEdges, guideNear, snapOffset, snapTargets } from './guides'
 
 const GUIDES: Guide[] = [
   { id: 'a', axis: 'x', position: 300 },
@@ -16,17 +16,21 @@ describe('snapTargets', () => {
   })
 })
 
-describe('snapValue', () => {
+/** One edge — what a dragged GUIDE is, and what `snapValue` used to answer on its own. */
+describe('snapOffset on a single edge', () => {
+  const snapped = (value: number, targets: number[], tolerance: number): number =>
+    value + snapOffset([value], targets, tolerance)
+
   it('sticks to a target within tolerance', () => {
-    expect(snapValue(298, [0, 300], 6)).toBe(300)
+    expect(snapped(298, [0, 300], 6)).toBe(300)
   })
 
   it('leaves a value alone outside tolerance', () => {
-    expect(snapValue(290, [0, 300], 6)).toBe(290)
+    expect(snapped(290, [0, 300], 6)).toBe(290)
   })
 
   it('takes the nearest of two candidates, not the first declared', () => {
-    expect(snapValue(299, [296, 300], 6)).toBe(300)
+    expect(snapped(299, [296, 300], 6)).toBe(300)
   })
 })
 

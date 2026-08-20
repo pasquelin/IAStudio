@@ -2,30 +2,19 @@ import { useEffect, type RefObject } from 'react'
 import { isComposing } from '@/helpers/composition'
 
 /**
- * The three ways a floating surface goes away without anything being chosen: a press outside it,
- * `Escape`, and the window losing focus. Written once because a surface that only knows one of
- * them is a surface the user has to guess at — and the journal had none, so re-clicking a status
- * indicator was the only way out of it.
+ * `pointerdown` in capture, not `click`: a surface that survives until mouseup stays under the
+ * pointer while what is behind it has already reacted to the press. `opener` has to count as
+ * inside, or the press closes and the click that follows reopens. `undefined` opts out entirely.
  *
- * The third matters more than it looks in a studio: leaving for a reference image and coming back
- * to a panel still hanging over the canvas reads as a bug.
- *
- * `pointerdown`, in capture, rather than `click`: a surface that survives until mouseup stays
- * under the pointer while what is behind it has already reacted to the press.
- *
- * `surface` is a ref because a portalled surface is placed through a callback ref and is not
- * known at render. `opener` is the control that toggles it, and it has to count as inside: left
- * out, the press closes and the click that follows reopens, so the toggle never looks like it
- * closed.
- *
- * Pass `undefined` to opt out entirely — for a surface whose caller closes it another way. The
- * hover flyouts did, until one of them started holding a menu open for the keyboard: with no
- * pointer-out to close it, dismissal is the only way out and they now pass it always.
+ * `onLeave` separates the two reasons a surface closes: pressing outside and `Escape` are the
+ * user CLOSING it, while the window losing focus is the user going elsewhere. A surface holding
+ * a decision must not take the second for the first — alt-tab would then answer for them.
  */
 export function useDismiss(
   onDismiss: (() => void) | undefined,
   surface: RefObject<HTMLElement | null>,
   opener?: HTMLElement | null,
+  onLeave: (() => void) | undefined = onDismiss,
 ): void {
   useEffect(() => {
     if (!onDismiss) return
@@ -41,15 +30,16 @@ export function useDismiss(
       // field would close under it — the assistant does. See `isComposing`.
       if (event.key === 'Escape' && !isComposing(event)) onDismiss()
     }
+    const onBlur = (): void => onLeave?.()
 
     document.addEventListener('pointerdown', onPointerDown, true)
     document.addEventListener('keydown', onKeyDown)
-    window.addEventListener('blur', onDismiss)
+    window.addEventListener('blur', onBlur)
 
     return () => {
       document.removeEventListener('pointerdown', onPointerDown, true)
       document.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('blur', onDismiss)
+      window.removeEventListener('blur', onBlur)
     }
-  }, [onDismiss, surface, opener])
+  }, [onDismiss, surface, opener, onLeave])
 }

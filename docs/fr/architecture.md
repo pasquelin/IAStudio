@@ -17,12 +17,13 @@ cherchez plutôt comment *s’en servir* ? Voir [guide-utilisateur.md](guide-uti
 6. [Les moteurs](#les-moteurs)
 7. [Une génération, de bout en bout](#une-génération-de-bout-en-bout)
 8. [Projets et catalogue](#projets-et-catalogue)
-9. [Le design system](#le-design-system)
-10. [Internationalisation](#internationalisation)
-11. [La configuration](#la-configuration)
-12. [Les tests](#les-tests)
-13. [Ajouter quelque chose](#ajouter-quelque-chose)
-14. [Livrer une version](#livrer-une-version)
+9. [Le contrôle de version](#le-contrôle-de-version)
+10. [Le design system](#le-design-system)
+11. [Internationalisation](#internationalisation)
+12. [La configuration](#la-configuration)
+13. [Les tests](#les-tests)
+14. [Ajouter quelque chose](#ajouter-quelque-chose)
+15. [Livrer une version](#livrer-une-version)
 
 ---
 
@@ -119,7 +120,7 @@ Toute tâche longue est **annulable**, **rapporte sa progression**, et tourne da
 `better-sqlite3` est synchrone : une requête lourde dans le processus principal bloque toutes les
 fenêtres, donc les requêtes de catalogue non triviales passent par `worker_threads`.
 
-Trois fils existent précisément pour cela. `main/project/catalog-worker.ts` détient la base et
+Trois fils existent précisément pour cela. `main/project/catalogWorker.ts` détient la base et
 répond à une boucle de messages : une recherche parmi des milliers d’assets ne gèle plus aucune
 fenêtre. `renderer/src/engines/audio/audio.worker.ts` sort la chaîne sonore du thread de la
 fenêtre, les buffers d’échantillons étant **transférés** plutôt que copiés. Et
@@ -138,9 +139,9 @@ que rien ne mesure**, et c’est le même remède que `framingPlacement`, sorti 
 pour la même raison.
 
 **Et deux processus, pour ce qui ne doit pas partager un heap.**
-`main/media/peaks-worker.ts` réduit une forme d’onde dans un `utilityProcess` : une heure de PCM
+`main/media/peaksWorker.ts` réduit une forme d’onde dans un `utilityProcess` : une heure de PCM
 mesurée à 129 ms sur le thread principal, et toutes les fenêtres du studio attendaient.
-`main/dictation/stt-worker.ts` tient Parakeet
+`main/dictation/sttWorker.ts` tient Parakeet
 — six cents millions de paramètres, 640 Mo de poids — dans un `utilityProcess` à lui. Un thread
 n'aurait pas suffi : il partage le heap et le cycle de vie de son processus, donc les 700 Mo
 resteraient dans l'empreinte du principal et un plantage de l'addon natif emporterait le studio.
@@ -200,19 +201,19 @@ src/main/
 ├── scenario/
 │   ├── client.ts            le client @scenario-labs/sdk, bâti sur les identifiants stockés
 │   ├── credentials.ts       lecture, validation, état d'authentification
-│   ├── model-registry.ts    GET /models/{id} → FieldDescriptor[]
-│   ├── model-catalog.ts     listing paginé des modèles, mis en cache
-│   ├── job-manager.ts       la file, la concurrence, le polling
+│   ├── modelRegistry.ts     GET /models/{id} → FieldDescriptor[]
+│   ├── modelCatalog.ts      listing paginé des modèles, mis en cache
+│   ├── jobManager.ts        la file, la concurrence, le polling
 │   ├── runner.ts            ce qui appelle réellement generate
 │   ├── schema.ts            traduction de schéma et déduction de famille
 │   ├── retry.ts             le backoff exponentiel, sorti du JobManager et partagé
-│   ├── asset-catalog.ts     la bibliothèque distante, lue et paginée
-│   ├── asset-normalizer.ts  un asset de l'API ramené à la forme du studio
-│   ├── owner-scope.ts       à quel projet la clé active donne accès
-│   ├── filter-expression.ts la recherche traduite pour l'API
+│   ├── assetCatalog.ts      la bibliothèque distante, lue et paginée
+│   ├── assetNormalizer.ts   un asset de l'API ramené à la forme du studio
+│   ├── ownerScope.ts        à quel projet la clé active donne accès
+│   ├── filterExpression.ts  la recherche traduite pour l'API
 │   ├── limits.ts            les tailles de lot que l'API impose
-│   ├── prompt-assist.ts     variantes, traduction, lecture de style
-│   ├── assist-queue.ts      la file bornée de l'assistance de fond
+│   ├── promptAssist.ts      variantes, traduction, lecture de style
+│   ├── assistQueue.ts       la file bornée de l'assistance de fond
 │   ├── uploader.ts          l'envoi d'un fichier vers la bibliothèque
 │   ├── cost.ts              ce qu'une génération coûterait, sans la lancer
 │   ├── usage.ts             les unités consommées et la grille de prix
@@ -220,18 +221,18 @@ src/main/
 ├── project/
 │   ├── store.ts             créer et ouvrir un dossier de projet, lire/écrire le manifeste
 │   ├── catalog.ts           l'index SQLite des assets
-│   ├── catalog-thread.ts    le worker qui le porte, et son protocole
-│   ├── activity-log.ts      ce que le studio a fait et raté
+│   ├── catalogThread.ts     le worker qui le porte, et son protocole
+│   ├── activityLog.ts       ce que le studio a fait et raté
 │   ├── documents.ts         l'écriture atomique d'un document
 │   ├── sqlite.ts            le port SqliteDriver
-│   ├── sqlite-native.ts     better-sqlite3 — production
-│   └── sqlite-memory.ts     node:sqlite — tests
+│   ├── sqliteNative.ts      better-sqlite3 — production
+│   └── sqliteMemory.ts      node:sqlite — tests
 ├── assets/
-│   ├── local-backend.ts     les assets du projet, sur le disque
-│   ├── cloud-backend.ts     les mêmes, du côté de la bibliothèque
-│   ├── sync-plan.ts         ce que deux côtés devraient faire l'un de l'autre
+│   ├── localBackend.ts      les assets du projet, sur le disque
+│   ├── cloudBackend.ts      les mêmes, du côté de la bibliothèque
+│   ├── syncPlan.ts          ce que deux côtés devraient faire l'un de l'autre
 │   ├── collector.ts         ce qu'une génération dépose dans le projet
-│   ├── auto-caption.ts      nommer une image d'après ce que l’API y voit
+│   ├── autoCaption.ts       nommer une image d'après ce que l’API y voit
 │   └── protocol.ts          le protocole scenario://
 ├── dictation/               la reconnaissance vocale : permissions, modèle, découpage, handlers
 ├── assistant/               la pensée de l'assistant, derrière un port, et ce qu'on en relit
@@ -275,8 +276,8 @@ rafale de 429.
 ### Deux backends d’assets, un seul planificateur
 
 Le projet et la bibliothèque du compte sont deux stocks, servis par deux backends de même forme :
-`local-backend.ts` pour le dossier sur le disque, `cloud-backend.ts` pour l’API. Ce qui décide de
-ce qui devrait bouger entre les deux est ailleurs, et **pur** : `sync-plan.ts`.
+`localBackend.ts` pour le dossier sur le disque, `cloudBackend.ts` pour l’API. Ce qui décide de
+ce qui devrait bouger entre les deux est ailleurs, et **pur** : `syncPlan.ts`.
 
 Cette séparation porte deux promesses :
 
@@ -300,7 +301,7 @@ deux.
 
 ### Le journal d’activité
 
-`project/activity-log.ts` tient le compte de ce que le studio a fait et raté. Trois décisions y
+`project/activityLog.ts` tient le compte de ce que le studio a fait et raté. Trois décisions y
 sont figées, et chacune répond à un défaut précis :
 
 - **`record` rend la main immédiatement.** Il est appelé depuis des chemins d’échec : un journal
@@ -338,11 +339,26 @@ de se charger.
 ### Un registre d’actions, deux lecteurs
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) déclare ce que le studio sait faire sur demande —
-onze actions, leurs champs, et **ce que chacune engage** (`none`, `asset`, `credits`). Il a deux
-lecteurs, et **aucun des deux ne décide** :
+une famille par module `*Actions.ts`, leurs champs, **ce que chacune engage** (`none`, `files`,
+`asset`, `remote`, `credits`) et **quelle porte l’offre** (`reach`). **Le nombre n’est pas écrit
+ici** : il monte à chaque lot, et `exhaustive.test.ts` le tient contre l’union `ActionName`. Il a
+deux lecteurs, et **aucun des deux ne décide** :
 
-- **l’assistant**, dans la fenêtre, qui le liste à son modèle comme un vocabulaire ;
-- **`main/mcp/tools.ts`**, qui le republie en outils MCP pour un client extérieur.
+- **l’assistant**, dans la fenêtre, qui liste à son modèle la part `both` — onze actions ;
+- **`main/mcp/tools.ts`**, qui republie **tout** en outils MCP pour un client extérieur.
+
+**L’asymétrie est forcée, pas esthétique.** Le catalogue de l’assistant part dans un prompt plafonné
+par `INSTRUCTION_MAX` à dix mille caractères, dont il reste quatre mille pour la phrase de la
+personne — `brain.test.ts` tient ce plancher. Publier là les familles qu’un programme conduit
+(fichiers, calques, scène, git) mangerait cette marge, et c’est la phrase que la troncature
+emporterait. `tools/list` n’a pas de plafond.
+
+**`validatesInput` (`assistantAction.ts`) est la seule validation d’entrée du dispositif**, dérivée
+des champs et posée sur `runConfirmedAction`. Rien en amont ne la fait : l’IPC vérifie l’enveloppe,
+le parseur de réponse vérifie le NOM, et le serveur MCP passe `params.arguments` tel quel — son
+`additionalProperties: false` est une promesse au client, pas une contrainte. Elle refuse **avant**
+la question de confirmation, sinon une entrée fautive ferait demander à la personne d’autoriser une
+dépense qui n’allait pas partir.
 
 Le nom change de dialecte au passage — `command.run` devient `command_run`, parce que la grammaire
 des noms d’outils n’accepte pas le point — et `actionOfTool` fait le chemin inverse. **Une seule
@@ -355,9 +371,17 @@ file. `main/mcp/asking.ts` compose l’aller-retour que l’IPC n’a pas dans c
 `broadcast` redescend, un `callId` recoud les deux moitiés, et **toute façon d’échouer répond**,
 parce qu’à l’autre bout il y a un client qui attendrait sinon.
 
-`commitmentOfCommand` est **le seul niveau dérivé plutôt que déclaré**, et le seul gardé commande
-par commande : cinq commandes du canevas aplatissent et téléversent l’image, ce qui crée un asset
-permanent. Un oubli y passerait sans que rien en aval ne le rattrape.
+**Le niveau déclaré n’est qu’un plancher.** `raises` l’élève depuis l’entrée de l’appel —
+`commitmentOfCommand` pour `command.run`, un `amend` pour `git.commit` — et `asksItself` marque
+l’action dont le gestionnaire pose sa PROPRE question, ce qui est la raison pour laquelle son
+niveau reste au plancher. `commitmentOfCommand` est le seul gardé commande par commande : cinq
+commandes du canevas aplatissent et téléversent l’image, ce qui crée un asset permanent. Un oubli
+y passerait sans que rien en aval ne le rattrape.
+
+**`files` est délibérément étroit** — détruire, déplacer, renommer, réécrire la copie de travail,
+fermer un onglet qui porte du travail non enregistré — et jamais « tout ce qui écrit » : un dossier
+neuf et un doublon n’enlèvent rien à personne, et un studio qui demanderait pour ceux-là
+apprendrait à son utilisateur à cliquer Autoriser sans lire.
 
 ### La porte du MCP, et ses quatre verrous
 
@@ -400,7 +424,7 @@ src/renderer/src/
 │   ├── textures/   les canaux d'un matériau, et leur aperçu répété
 │   └── skyboxes/   le ciel immersif et ses trois projections à plat
 ├── panels/       les vingt-sept outils ancrables
-├── home/         l'accueil et ses deux bandes — une page, pas une disposition
+├── home/         l'accueil et ses trois bandes — une page, pas une disposition
 ├── settings/     la fenêtre des réglages, chargée à la demande
 ├── usage/        la fenêtre de consommation, idem
 ├── licences/     la fenêtre des licences, idem
@@ -446,7 +470,7 @@ y penser défait le gain sans rien casser de visible — le pire des régression
 voit qu’au chronomètre.
 
 **Les panneaux sont sortis à leur tour**, et c’est ce qui a rétréci la liste des voisins.
-`app/tool-components.ts` les importait tous d’un coup ; il déclare désormais, par panneau, **le
+`app/toolComponents.ts` les importait tous d’un coup ; il déclare désormais, par panneau, **le
 module à charger et ce que son en-tête fait** — cette seconde moitié est nécessaire, parce que la
 ligne de titre se dispose au premier rendu et qu’un séparateur qui arriverait une frame plus tard
 décalerait une rangée déjà à l’écran. Mesuré sur le même commit des deux côtés, préchargés
@@ -455,7 +479,7 @@ comptés, sans sourcemaps : **2 331 395 → 2 081 385 octets, −250 010, soit �
 > **Un glob sur le dossier supprimerait la copie du nom de chaque panneau, et il a été écrit puis
 > retiré.** `eager-graph.test.ts` marche les imports **statiques** : un glob lui est invisible, et
 > la garde qui surveille précisément cette propriété serait restée verte quoi que le glob fasse au
-> chunk d’entrée. La copie reste, et `tool-components.test.ts` la tient — un `layers` qui
+> chunk d’entrée. La copie reste, et `toolComponents.test.ts` la tient — un `layers` qui
 > nommerait le module des mailles échangerait les deux en silence.
 
 **Il reste deux voisins**, et aucun n’est un éditeur : ce sont des helpers que quelque chose du
@@ -489,7 +513,7 @@ pour que cette mémoïsation morde.
 `sequence.mirror` ouvre une seconde fenêtre qui miroite le moniteur Programme, pour un second
 écran. **Le pont IPC n’y porte qu’une chose : l’ouverture de la fenêtre** (`main/window/mirror.ts`).
 Tout le reste — l’édition, le point de lecture, la lecture — voyage par un `BroadcastChannel`
-(`spaces/video/mirror-channel.ts`).
+(`spaces/video/mirrorChannel.ts`).
 
 **Ce n’est pas un contournement de l’invariant 2**, qui garde la frontière entre PROCESSUS. Les
 deux fenêtres chargent le même bundle de rendu : elles partagent déjà `SequenceState` comme type,
@@ -528,8 +552,10 @@ principal a besoin de `{ id, zone, slot, workspaces }` pour ne proposer que ce q
 ouvrir, et le dupliquer dégraderait `ToolId` en `string`.
 
 Un outil peut déclarer **plusieurs placements**, pour des ensembles d’espaces disjoints —
-l’étagère est dans la bande basse presque partout, et dans la colonne de droite en Vidéo, en
-Audio et en 3D, où une timeline possède la bande. `tool.test.ts` verrouille les deux invariants qui rendent cela lisible :
+l’Explorateur occupe la même moitié dans tous les espaces et à l’accueil, mais seul celui de
+l’accueil exige un projet ouvert. **Aucun outil ne déclare deux moitiés d’espace de travail
+depuis le 17/08**, l’étagère ayant abandonné la sienne en montant dans la colonne de gauche.
+`tool.test.ts` verrouille les deux invariants qui rendent cela lisible :
 les espaces de deux placements ne se recouvrent jamais, et les placements d’un même outil partagent
 leur moitié — un outil qui changerait de moitié en même temps que de zone atterrirait dans une
 autre rangée du rail selon l’endroit d’où l’on vient.
@@ -539,7 +565,7 @@ défaut ci-dessous — un test l’épingle espace par espace.
 
 **Deux règles échappent au registre**, et deux seulement, parce qu’elles dépendent de l’état ou de
 l’espace, quand `shared/` n’a aucune dépendance runtime. D’où une couche au-dessus, dans
-`helpers/tool-registry.ts`, plutôt qu’à l’intérieur :
+`helpers/toolRegistry.ts`, plutôt qu’à l’intérieur :
 
 - le générateur n’est offert que là où un modèle est choisi ou préféré ;
 - une moitié que personne n’a choisie affiche le **premier panneau que l’espace y déclare**. Elle
@@ -690,7 +716,7 @@ qu’obtiennent une ou deux générations, pas une cadence fixe. À cadence fixe
 simultanées demandent 120 requêtes par minute contre les cent que l’API accorde — le limiteur
 retient alors chaque poll, le SDK réessaie, et **une génération qui tourne et qui est facturée est
 rapportée comme un échec de débit au bout de quinze secondes**. Le budget lui-même est *dérivé*
-des constantes de `rate-limiter.ts` et non écrit en clair, précisément pour qu’il ne devienne pas
+des constantes de `rateLimiter.ts` et non écrit en clair, précisément pour qu’il ne devienne pas
 faux en silence le jour où l’une d’elles bouge.
 
 **L’étape 5b lit un prix dans deux formes de réponse, parce que la référence et le serveur ne
@@ -715,7 +741,7 @@ falaise — tapé plus lentement que son délai, chaque frappe part en requête.
 n’est pas achetée deux fois, et elle ne se réessaie pas.
 
 **`DynamicForm` est chargé paresseusement**, et les trois fonctions qui appellent zod vivent dans
-`helpers/dynamic-form-schema` séparément de `helpers/dynamic-form`. Les deux moitiés vont
+`helpers/dynamicFormSchema` séparément de `helpers/dynamicForm`. Les deux moitiés vont
 ensemble : sans la seconde, `referencePictures` retenait zod dans le graphe eager. zod,
 `react-hook-form` et `@hookform/resolvers` sont à **zéro** dans le chunk initial, qui passe de
 2 030,50 à 1 810,88 kB — mesuré par décodage VLQ des sourcemaps, et verrouillé par des tests qui
@@ -734,30 +760,146 @@ type, emplacement, étiquettes, dates, et le chemin quand l’asset est local. I
 l’étagère puisse chercher parmi des milliers d’éléments sans toucher au système de fichiers, et
 pour qu’un projet reste transportable.
 
-**Il ne se reconstruit pas.** Aucun réexamen d’`assets/` ne repeuple le catalogue : il se remplit
-au fil des générations et des imports, jamais après coup. Le supprimer perd les noms, les
-étiquettes, les dimensions, la recette de génération, `derivedFrom`, le `sourcePath` des médias
-liés et le journal d’activité — les fichiers restent, plus rien ne dit ce qu’ils sont.
+**Il ne se reconstruit pas.** Rien ne redevine ce qu’un fichier EST : le catalogue se remplit au
+fil des générations et des imports. Le supprimer perd les noms, les étiquettes, les dimensions, la
+recette de génération, `derivedFrom`, le `sourcePath` des médias liés et le journal d’activité —
+les fichiers restent, plus rien ne dit ce qu’ils sont. `.scenario/items.json` est ce qui reste à
+lire ce jour-là : une sauvegarde indexée par empreinte de contenu, écrite après chaque passe de
+réconciliation qui a changé quelque chose, que le studio ne relit jamais de lui-même.
+
+**Une passe le remet d’accord avec le disque**, ce qui n’est pas le reconstruire. `catalogRescan.ts`
+tourne dans le thread du catalogue à l’ouverture d’un projet et au retour de la fenêtre au premier
+plan (plancher de 5 s, un passage à la fois) : elle retrouve par empreinte de contenu un fichier
+déplacé hors du studio et refile sa ligne (`repath`), et elle DATE une absence — `missing_at` —
+sans jamais supprimer de ligne. Deux passages donnent le même état. En cas d’empreinte ambiguë
+elle ne fait rien : réécrire le chemin d’une ligne que personne n’a demandé à déplacer est la
+seule panne qu’une réconciliation ne doit pas avoir. `search` et `countByType` masquent ce qui est
+daté, si bien que la corbeille — qui date au lieu d’effacer — rend une ligne entière si le fichier
+en ressort.
 
 Un asset est soit `local` (un fichier du projet), soit `cloud` (encore uniquement chez Scenario).
 Une image locale est servie au renderer sous la forme `scenario://<id>`.
 
-Les **documents** sont des fichiers JSON dans `documents/`, un par document, **nommé d’après le
-document** — `Niveau.scene`, `Bande annonce.seq`. Son identifiant vit dans l’enveloppe (version 3
+Les **documents** sont des fichiers rangés où l’utilisateur veut — `documents/` n’est que le
+dossier où atterrit une première sauvegarde, et `documents.list()` parcourt le projet entier pour
+les trouver. Un par document, **nommé d’après le
+document** — `Niveau.gltf`, `Bande annonce.otio`. Son identifiant vit dans l’enveloppe (version 3
 du format) et non dans le nom du fichier : c’est ce qui permet de renommer un document, y compris
 ouvert, sans qu’il devienne un autre document — la mise en page, la liste des récents et chaque
 onglet sont indexés par cet identifiant. Un fichier écrit avant cette version porte son
-identifiant comme nom (`<id>.scene`) et se lit exactement comme avant ; rien n’est réécrit à
+identifiant comme nom (`<id>.gltf`) et se lit exactement comme avant ; rien n’est réécrit à
 l’ouverture, le tampon vient au prochain enregistrement. Le dossier fait foi : un fichier dont l’en-tête annonce un
 type que son extension dément est refusé plutôt qu’ouvert dans le mauvais éditeur. L’écriture
 passe par un fichier de transit puis un `rename`, atomique dans un même dossier, de sorte qu’une
 coupure en cours d’écriture ne laisse jamais un document tronqué là où était le travail.
 
-Le corps du fichier appartient à l’espace qui l’a écrit : le processus principal ne le lit pas, il
-l’estampille et le rend tel quel. Un espace qui apprend à s’enregistrer n’a donc pas de canal à
-lui. **Les six genres savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel et
-matière, déclarés en un seul endroit, `IO_BY_KIND` dans `app/document-io.ts`. Un genre absent de
-cette table a un Enregistrer qui ne fait rien, plutôt qu’un qui écrit un corps vide.
+Le corps du fichier appartient à l’espace qui l’a écrit, et une table par extension
+(`main/project/documentBody.ts`) dit comment il est épelé. **Quatre formats ouverts, et
+l’enveloppe du studio pour tout le reste.**
+
+Le même mécanisme les tient tous les quatre : la **fenêtre** produit la structure standard, parce
+qu’elle seule tient le catalogue, la scène et le GPU ; le `content` du document EST cette
+structure ; le **processus principal écrit la syntaxe et la relit**, sans jamais parser l’état du
+studio. Ce que le standard ne porte pas voyage à l’endroit que le standard réserve aux tiers, et
+l’état y va **verbatim** — relire est alors une seule passe, et aucune règle n’est à tenir en
+phase des deux côtés. Un fichier de nous lit de là ; un fichier venu d’ailleurs se reconstruit de
+la partie standard seule, et ce que le standard ne dit pas est simplement absent.
+
+Pour la **scène** et le **ciel**, c’est du glTF 2.0, sous la même extension — c’est la métadonnée
+du fichier, jamais l’extension, qui dit lequel des deux genres il porte. L’en-tête voyage sur
+`asset`, le seul membre que le format exige et que rien ne peut repousser plus bas : derrière la
+liste des nœuds racines d’une grosse scène il tombait hors de la tête lue, et le document
+disparaissait du listing.
+
+Pour la **matière**, c’est du MaterialX 1.39 : un `standard_surface` alimenté par des
+`tiledimage`, et l’état du studio dans un attribut personnalisé que la spécification oblige un
+lecteur à préserver. Contrairement au glTF, ce format a une vraie **tête** — la racine est la
+première ligne — donc lister n’ouvre jamais une matière en entier.
+
+Pour le **montage**, le fichier EST le format ouvert : il n’y a pas d’enveloppe où loger
+l’en-tête, donc le principal parse l’OpenTimelineIO à la lecture comme à l’écriture, et refuse
+d’écrire un corps qui n’est pas un montage.
+
+Pour l’**image**, le fichier est une archive OpenRaster — un ZIP, et non plus un dossier. Le
+principal l’empaquette et la dépaquette : `mimetype` en premier et stocké, `stack.xml`,
+`mergedimage.png` que la spécification exige, un PNG par surface sous `data/`, et l’état du studio
+sous `scenario/`. La fenêtre produit la pile (le `content` du document EST cette pile, en JSON) et
+les surfaces à côté, en octets ; le principal écrit la syntaxe. **Un listing ne lit que les
+premiers kilooctets du conteneur** — l’enveloppe du studio y est écrite deuxième et non
+compressée, sans quoi lister un projet ouvrirait cent mégaoctets par document.
+
+**L’enveloppe du studio n’est plus le format d’aucun genre** : elle reste le repli d’une extension
+que la table ne nomme pas, et le **sursis de migration** des documents déjà sur les disques — une
+scène ou une matière écrite avant ce basculement s’ouvre inchangée, et c’est le fichier lui-même,
+pas son extension, qui décide de quelle épellation il relève.
+
+**Un fichier revenu enrichi refuse de s’enregistrer.** Une scène rouverte dans Blender revient
+avec des `meshes` et des `accessors` ; ses `extras` sont toujours les nôtres, donc elle se liste
+et s’ouvre — et l’écriture recompose le document ENTIER depuis l’état. Comme un glTF est lié par
+index, reporter ces parties à moitié ne produit pas un fichier à demi juste mais un fichier cassé :
+le studio refuse et laisse le fichier tel quel. Même refus pour un ciel qui porte une scène entière
+et pour une matière qui en porte plus d’une (`incomplete` dans `IO_BY_KIND`).
+
+Un espace qui apprend à s’enregistrer n’a dans les trois cas pas de canal à lui. **Les six genres
+savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel et matière, déclarés en un seul
+endroit, `IO_BY_KIND` dans `app/documentIo.ts`. Un genre absent de cette table a un Enregistrer
+qui ne fait rien, plutôt qu’un qui écrit un corps vide.
+
+**Aucun genre n’est plus écrit comme un DOSSIER.** L’image l’a été, `Planche.ora/` portant un
+manifeste et un PNG par calque ; un dossier qui porte aujourd’hui l’extension d’un document est la
+matière de l’utilisateur, et le walk y entre.
+
+**Les pixels ne traversent plus la frontière en base64.** Une pile 4K de dix calques faisait des
+centaines de mégaoctets de texte, détenus au même instant par la fenêtre qui encode et le
+processus qui décode. `LayerPixels`, `OraSurface` et les parts d’un document portent des
+`Uint8Array` ; le moteur extrait par un canvas et un blob, et restitue par une URL d’objet qu’il
+révoque — une data URL de calque restait sinon dans le cache du chargeur pour toute la session,
+la clé de ce cache ÉTANT la chaîne entière.
+
+---
+
+## Le contrôle de version
+
+Le panneau Git travaille sur le dossier du projet ouvert. Tout ce qui suit vit dans le processus
+principal (`main/git/`) ; le rendu ne fait que demander et afficher.
+
+**git est un programme qu’on lance, pas une bibliothèque qu’on appelle.** La conséquence tient en
+une question : la machine peut ne pas l’avoir. macOS répond en proposant d’installer les outils de
+ligne de commande, une installation Windows nue n’a pas de git du tout. La question est donc posée
+à l’ouverture du projet, jamais au premier commit — un panneau qui découvrirait le problème à ce
+moment-là aurait laissé préparer un commit impossible. Ce que le panneau regarde est **une seule
+union** de cinq états (`GitRepository`, dans `shared/domain/git.ts`) : pas de projet · pas de
+binaire · dépôt non initialisé · prêt · une erreur, portant la ligne de git elle-même,
+identifiants retirés. Un statut accompagné de trois booléens autoriserait « aucun projet ouvert ET
+des fichiers modifiés », une forme que quelqu’un finit par afficher.
+
+**Ce qui CONFIGURE git est retiré de l’environnement avant chaque commande.** Tout ce qui commence
+par `GIT_`, plus les trois réglages que git lit sans préfixe — `PAGER`, `EDITOR`, `SSH_ASKPASS`.
+Le reste est conservé, `HTTPS_PROXY` et `SSH_AUTH_SOCK` en premier. La raison n’est pas
+théorique : un `GIT_DIR` hérité pointe ailleurs, un `GIT_EDITOR` hérité ouvre une fenêtre que
+personne ne voit, et simple-git en refuse la plupart d’emblée — la commande échoue alors avant même
+d’être lancée. **Côté utilisateur, cela se dit simplement** : exporter ces variables dans son shell
+ne change rien au studio, et c’est voulu.
+
+**Aucune invite, jamais.** `GIT_TERMINAL_PROMPT=0`, un `GIT_ASKPASS` vide, et `BatchMode=yes` pour
+ssh. Une fenêtre de studio n’a pas de terminal où répondre : git laissé libre de demander
+attendrait indéfiniment, sur une commande que l’utilisateur n’a aucun moyen d’annuler. **Le coût
+se dit franchement** : une clé protégée par une phrase de passe, sans agent chargé, échoue au lieu
+de la réclamer.
+
+**Un git à la fois par projet.** Git prend `.git/index.lock` pour la durée de toute commande qui
+écrit, et une seconde commande qui arrive pendant ce temps **meurt au lieu d’attendre** — deux
+fenêtres qui se rafraîchissent ensemble suffisent à le produire. L’ordonnanceur de simple-git met
+en file dans l’ordre, et c’est pourquoi le studio ne porte pas de seconde file à lui.
+
+**Un jeton appartient à un HÔTE, jamais à un projet ni à un remote.** Un jeton personnel ouvre
+tous les dépôts que quelqu’un possède sur GitHub ; le redemander par projet serait redemander la
+même chaîne indéfiniment. Un serveur d’entreprise garde le sien. Le rendu peut demander **si** un
+hôte en a un, et peut en poser un ; il ne peut jamais en relire un. C’est l’invariant 1 mot pour
+mot, et c’est la forme qu’a déjà la clé API.
+
+**Tout ce qui vient du rendu est validé avant d’atteindre git** — chemins, références, messages,
+hachages, URL de remote (`main/git/validation.ts`).
 
 ---
 
@@ -873,9 +1015,11 @@ qui est au-dessus. C’est une décision de métier, pas d’esthétique.
 
 ## Internationalisation
 
-Un dossier par langue dans `src/shared/i18n/` — `fr/` et `en/`, douze sections JSON chacun
-(`inspector`, `commands`, `settings`, `usage`, `activity`, `shell`, `image`, `texture`, `scene`,
-`assets`, `models`, `common`), recomposées en un seul objet par l’index du dossier. Les deux
+Un dossier par langue dans `src/shared/i18n/` — `fr/` et `en/`, une section JSON par surface
+fonctionnelle, recomposées en un seul objet par l’index du dossier. **Leur nombre n’est écrit
+nulle part, et ce paragraphe ne l’écrit pas non plus** : `ls src/shared/i18n/fr/` fait foi, et
+`main/i18n-sections.test.ts` lit le dossier au lieu de tenir une liste. Un compte écrit ici se
+périme à la surface suivante — il annonçait douze quand le dossier en portait quinze. Les deux
 langues sont tenues en parité stricte. Elles vivent dans `shared/` parce que le menu natif est
 bâti par le processus principal et l’UI par le renderer, et que les deux doivent dire la même
 chose.
@@ -887,9 +1031,9 @@ Le découpage est un choix de **stockage**, pas de contrat : l’espace de noms 
 `tsc` lit `./fr` comme le dossier, donc **le typecheck reste vert** ; Vite lit le JSON, l’export
 nommé disparaît, et `TRANSLATIONS.fr` vaut `undefined` à l’exécution — la langue entière. Ce
 n’est donc pas le compilateur qui garde ce cas, mais cette suite, et elle seule. Elle tient aussi
-la frontière entre les imports : dans `en/index.ts`, douze imports **de type** pointent vers
+la frontière entre les imports : dans `en/index.ts`, un import **de type** par section pointe vers
 `../fr/` — c’est ainsi que la forme attendue d’une section anglaise est dérivée de sa jumelle
-plutôt que recopiée — et douze imports **de valeur** pointent vers `./`. Un import de valeur qui
+plutôt que recopiée — et autant d’imports **de valeur** pointent vers `./`. Un import de valeur qui
 part vers `fr/` compile vert et rend toute une section en français.
 
 ### Une branche antérieure à la découpe entre en conflit : quoi faire
@@ -910,8 +1054,8 @@ Le geste juste, dans cet ordre :
 1. relever les clés que la branche ajoutait, avant de résoudre quoi que ce soit —
    `git diff <base>...<branche> -- src/shared/i18n/fr.json` ;
 2. les réécrire dans la section de leur surface, des deux côtés (`fr/<section>.json` et
-   `en/<section>.json`) ; une racine neuve qui n’appartient à aucune des douze demande de
-   trancher entre une section existante et un treizième fichier — lequel se déclare dans les
+   `en/<section>.json`) ; une racine neuve qui n’appartient à aucune section demande de
+   trancher entre une section existante et un fichier de plus — lequel se déclare dans les
    **deux** `index.ts` ;
 3. `git rm` les deux fichiers plats seulement à ce moment-là ;
 4. rejouer `main/i18n-sections.test.ts` et le typecheck, puis vérifier que le compte de clés a
@@ -1061,7 +1205,7 @@ porte la phrase, et la phrase vient d'un bundle.
 
 **Les fixtures sont hors de TOUS les balayages, `*-fixtures.ts` comme `*-fixtures.tsx`, et des deux
 gardes à la fois.** Une fixture construit la donnée qu'une suite affirme et n'atteint aucun écran —
-mesuré : aucun des 23 fichiers de fixtures de `src/` n'est importé par du code de production. Le
+mesuré : aucun fichier de fixtures de `src/` n'est importé par du code de production. Le
 libellé qu'elle porte est celui que l'API rend, pas un mot que ce studio écrit. C'est une
 **décision**, prise le 11/08 : forcer une fixture à passer par une clé de bundle ne rend rien plus
 vrai et se lit plus mal.
@@ -1189,12 +1333,14 @@ alors quelle partie du pipeline est indisponible, et peut le dire au lieu d’é
 
 ## Les tests
 
-**Plus de 8 100 tests, sur plus de 570 fichiers**, exécutés par Vitest — le chiffre exact bouge à
-chaque fusion, `pnpm test` le dit. Les tests unitaires sont colocalisés (`*.test.ts` à côté du
+**Plus de 9 000 tests, sur près de 700 fichiers**, exécutés par Vitest — le chiffre exact bouge à
+chaque fusion, `pnpm test` le dit (9 315 sur 686 le 17/08). Les tests unitaires sont colocalisés (`*.test.ts` à côté du
 code) et écrits dans le même mouvement que le code, jamais après.
 
-`pnpm validate` — typecheck, lint, vérification de format, tests — doit être vert avant tout
-commit.
+`pnpm validate` doit être vert avant tout commit. Il enchaîne les maillons que `package.json`
+déclare, et c'est là qu'ils se lisent : les réécrire ici ferait une seconde liste, qui se
+périmerait au premier maillon ajouté — c'est arrivé au job de CI, qui appelle désormais la
+commande elle-même.
 
 **Aucune mesure de couverture**, retirée le 2026-08-13 : elle était payée à chaque tour de boucle
 pour un bénéfice qui ne compensait pas le temps pris sur les fonctionnalités ([ADR-14](../ci/adr/ADR-14-portee-de-la-validation-continue.md)).
@@ -1213,7 +1359,7 @@ IPC, et les panneaux via Testing Library.
 | Un espace de travail | `WORKSPACE_IDS`, puis son icône et sa famille dans `helpers/workspaces.ts` — le compilateur réclame les deux |
 | Un canal IPC | `shared/ipc.ts` d’abord, le handler ensuite ; la signature en est dérivée, donc partez du contrat |
 | Un type de maillage ou de lumière | `mesh-primitives.ts` / `light-types.ts` — la barre d’outils, les panneaux et le menu natif lisent ces tables |
-| Un outil image | `spaces/image/image-tools.ts`, dans le bon groupe |
+| Un outil image | `spaces/image/imageTools.ts`, dans le bon groupe |
 | Une forme visuelle partagée | `design/`, un composant par fichier, avec son test |
 
 Deux règles qui font gagner le plus de temps : vérifier qu’un helper n’existe pas déjà avant d’en

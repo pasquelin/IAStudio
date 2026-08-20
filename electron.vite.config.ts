@@ -4,14 +4,14 @@ import { defineConfig } from 'electron-vite'
 import type { Plugin } from 'vite'
 import { execSync } from 'node:child_process'
 import { basename, resolve } from 'node:path'
-import { DECODER_MODULES, withoutDecoderUrls } from './src/main/decoder-urls'
+import { DECODER_MODULES, withoutDecoderUrls } from './src/main/decoderUrls'
 
 const partage = resolve('src/shared')
 const principal = resolve('src/main')
 
 /**
  * Strips three.js's decoder URLs so the bundler stops emitting files nothing fetches. The why,
- * and what it weighed, are in `decoder-urls.ts`.
+ * and what it weighed, are in `decoderUrls.ts`.
  *
  * Refuses rather than passing the source through: the day three.js writes those URLs differently,
  * a silent no-op puts two megabytes back into the artefact without a single test going red.
@@ -68,14 +68,14 @@ export default defineConfig(({ command }) => ({
     build: {
       externalizeDeps: true,
       rollupOptions: {
-        // The catalogue's thread, the waveform's process and the recogniser's are entry points
-        // of their own: each is resolved beside the bundled main, so each has to land there as
-        // a file of its own.
+        // The catalogue's thread and the three worker processes are entry points of their own:
+        // each is resolved beside the bundled main, so each has to land there as a file of its own.
         input: {
           index: resolve('src/main/index.ts'),
-          'catalog-worker': resolve('src/main/project/catalog-worker.ts'),
-          'peaks-worker': resolve('src/main/media/peaks-worker.ts'),
-          'stt-worker': resolve('src/main/dictation/stt-worker.ts'),
+          catalogWorker: resolve('src/main/project/catalogWorker.ts'),
+          peaksWorker: resolve('src/main/media/peaksWorker.ts'),
+          bundleWorker: resolve('src/main/bundle/bundleWorker.ts'),
+          sttWorker: resolve('src/main/dictation/sttWorker.ts'),
         },
         output: { entryFileNames: '[name].js' },
       },

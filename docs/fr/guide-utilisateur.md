@@ -47,7 +47,7 @@ part.
 | | Chapitre | Ce que vous y trouverez |
 |---|---|---|
 | 8 | [Espace Image](manuel/08-espace-image.md) | Peindre, gommer, recadrer, empiler des calques |
-| 9 | [Espace 3D](manuel/09-espace-3d.md) | Voler dans une scène, poser des objets et des lumières, les régler |
+| 9 | [Espace Modélisation](manuel/09-espace-modelisation.md) | Voler dans une scène, poser des objets et des lumières, les régler |
 | 10 | [Espace Vidéo](manuel/10-espace-video.md) | Monter une séquence, couper, régler des pistes |
 | 11 | [Espace Audio](manuel/11-espace-audio.md) | Rogner un son, faire des fondus, normaliser |
 | 12 | [Espace Textures](manuel/12-espace-textures.md) | Juger une matière sur un objet éclairé |
@@ -103,7 +103,7 @@ Vous pouvez continuer à travailler pendant ce temps.
 
 **7. Récupérez le résultat.**
 Quand la tâche passe à « Terminée », l’image arrive dans le panneau **Assets** — l’étagère du
-projet — et sur votre disque, dans le dossier `assets/img/`. Cliquez dessus : l’**Inspecteur**,
+projet — et sur votre disque, dans le dossier `Images/`. Cliquez dessus : l’**Inspecteur**,
 à droite, montre son modèle, son prompt et sa graine, et sait ouvrir le dossier qui la contient.
 
 C’est tout. Le reste du manuel détaille chacune de ces sept étapes, et les cinq autres espaces.

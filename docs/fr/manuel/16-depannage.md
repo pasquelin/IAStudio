@@ -16,10 +16,10 @@ chercher plus loin : il nomme l’objet en cause et dit ce qui a échoué.
 
 | Ce que le journal peut raconter | Sujet |
 |---|---|
-| « La génération « … » a échoué », « Génération « … » annulée », « 2 assets générés dans Image et 3D » | Génération |
+| « La génération « … » a échoué », « Génération « … » annulée », « 2 assets générés dans Image et Modélisation » | Génération |
 | « Impossible d’importer « … » », « « … » est illisible » | Import |
-| « Impossible d’envoyer « … » », « Les tags de « … » n’ont pas rejoint la bibliothèque », « L’API Scenario a refusé une requête » | Bibliothèque |
-| « L’enregistrement du document a échoué », « Un calque n’a pas pu être chargé », « L’export de la scène a échoué », « Le fichier n’a pas pu être montré » | Document |
+| « Impossible d’envoyer « … » », « Les tags de « … » n’ont pas rejoint la bibliothèque », « L’API Scenario a refusé une requête », « Le fichier n’a pas pu être affiché » | Bibliothèque |
+| « L’enregistrement du document a échoué », « Un calque n’a pas pu être chargé », « L’export de la scène a échoué » | Document |
 | « Ce dossier n’est pas un projet Scenario », « Le projet n’a pas pu être créé dans ce dossier », « Ce fichier n’a pas pu être ouvert par le système » | Projet |
 | « Une partie de l’interface n’a pas pu s’afficher », « L’agencement enregistré d’un espace était illisible » | Interface |
 
@@ -49,11 +49,11 @@ sont des panneaux qui vous disent ce qu’il leur manque pour se remplir.
 | « Aucun projet ouvert » | il faut créer ou ouvrir un projet (`⌘N` / `⌘O`) |
 | « Aucun document ouvert. Générez ou ouvrez un asset pour commencer. » | le centre de la fenêtre attend un premier onglet |
 | « Aucun asset. Générez quelque chose pour commencer. » | l’étagère du projet est encore vide |
-| « Aucune tâche en cours. » | rien ne travaille en ce moment — la liste des générations est vide |
+| « Aucune génération en cours. » | rien ne se génère en ce moment — la liste des générations est vide |
 | « Ouvrez un projet pour générer. » | le formulaire attend un projet où déposer le résultat |
 | « Ouvrez un projet pour voir ses assets. » | idem, pour l’étagère |
-| « Ouvrez une scène pour voir son contenu. » | l’explorateur attend une scène 3D |
-| « L’explorateur suit une scène 3D. Ouvrez l’espace 3D pour en voir le contenu. » | vous êtes dans un autre espace ; ce panneau ne sert qu’en 3D |
+| « Ouvrez une scène pour voir son contenu. » | le panneau **Scène** attend une scène ouverte |
+| « Ouvrez une scène pour voir ses mailles. » / « Ouvrez une scène pour voir ses lumières. » | idem, pour les deux panneaux voisins |
 | « Aucun modèle choisi » / « Choisissez-en un dans la liste » | le panneau Génération attend qu’un modèle soit sélectionné |
 | « Ce modèle n’attend aucun paramètre. » | c’est normal : certains modèles ne prennent qu’un prompt |
 | « Aucun résultat pour ce filtre. » | votre recherche ne trouve rien ; élargissez-la |
@@ -71,7 +71,6 @@ sont des panneaux qui vous disent ce qu’il leur manque pour se remplir.
 | « Sélectionnez un élément pour voir ses propriétés. » | la même chose, hors de la 3D |
 | « Sélectionnez un clip pour le voir ici. » | le moniteur Source attend une sélection |
 | « Aucune séquence ouverte. Créez-en une pour monter. » | la timeline attend un document séquence — bouton **+** |
-| « Ouvrez une skybox pour la régler. » | le panneau Skybox attend un document ciel |
 
 Aucune de ces phrases ne demande d’action de dépannage. Le reste du chapitre parle des vraies
 pannes.
@@ -445,8 +444,9 @@ s'était arrêtée**, elle ne recommence pas les 640 Mo.
 
 Le moteur a quitté en cours de route. Il redémarre tout seul à la dictée suivante, jusqu'à trois
 fois ; au-delà, le studio cesse d'essayer plutôt que de relancer un processus qui meurt à chaque
-phrase. Le détail est dans le journal (**Aide ▸ Journal**), pas à l'écran : il nomme un chemin de
-fichier, ce qui n'aide personne devant l'écran mais dit tout à qui lit le journal.
+phrase. Le détail va dans la console technique (**Réglages ▸ Avancé ▸ Outils de développement**),
+pas à l'écran : il nomme un chemin de fichier, ce qui n'aide personne devant l'écran mais dit tout
+à qui la lit.
 
 ### « Aucun micro disponible. »
 
@@ -493,7 +493,7 @@ les ennuis de branchement.
 **La cause la plus fréquente : la ligne date d’un lancement précédent.** Le port et le jeton
 changent à chaque démarrage du studio. Celle d’hier désigne un port où plus rien n’écoute.
 
-**Quoi faire.** Réglages ▸ Avancé ▸ **Commande de connexion ▸ Copier**, et recollez la ligne dans
+**Quoi faire.** **Réglages ▸ Avancé ▸ Commande de connexion ▸ Copier**, et recollez la ligne dans
 votre terminal. Un client déjà enregistré sous le même nom est remplacé, il n’y a rien à supprimer
 avant.
 
@@ -696,11 +696,11 @@ installation neuve.
 
 | Symptôme | Première chose à essayer |
 |---|---|
-| Le catalogue de modèles est vide | Réglages → Compte → se connecter |
-| « Clé ou secret invalide » | chercher un espace en trop dans ce qui a été collé |
+| Le catalogue de modèles est vide | **Réglages ▸ Compte**, puis se connecter |
+| « Clé ou secret API invalide. » | chercher un espace en trop dans ce qui a été collé |
 | « Trop de requêtes » à répétition | baisser **Générations simultanées** à 2 |
-| « La génération a échoué » | remettre les paramètres du modèle par défaut, relancer |
-| « Enregistrement impossible » | vérifier la place disque et que le dossier du projet existe |
+| « La génération « … » a échoué » | remettre les paramètres du modèle par défaut, relancer |
+| « L’enregistrement du document a échoué » | vérifier la place disque et que le dossier du projet existe |
 | Timeline qui saccade | vérifier que la préparation vidéo est disponible, ou raccourcir la vidéo |
 | Pas de vagues sur la piste audio | idem |
 | « Préparation vidéo indisponible » alors que `which ffmpeg` en trouve un | `ffmpeg -version` : le binaire existe mais ne démarre plus |

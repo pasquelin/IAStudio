@@ -23,14 +23,16 @@ import {
   scopeOfWorkspace,
   type BindingOverrides,
   type CommandId,
+  type MenuAbility,
   type MenuCheck,
 } from '@shared/domain/command'
 import { acceleratorOf } from '@shared/domain/shortcut'
 import { fillHoles, TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
-import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/texture-export'
-import { FACE_SIZES } from '@shared/domain/skybox'
+import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/textureExport'
+import { FACE_SIZES, SKY_PANORAMAS } from '@shared/domain/skybox'
 import type {
   SceneAddRequest,
+  SceneCaptureCommand,
   SceneDisplayRequest,
   SceneExportCommand,
   SceneViewRequest,
@@ -38,6 +40,11 @@ import type {
   TextureExportCommand,
   ToolRequest,
 } from '@shared/ipc'
+import {
+  CAPTURE_QUALITIES,
+  DEFAULT_CAPTURE_QUALITY,
+  type CaptureQuality,
+} from '@shared/domain/sceneCapture'
 
 /**
  * What the menu asks of the window it belongs to. One method per message rather than a
@@ -56,6 +63,7 @@ export type MenuActions = {
   viewFrom: (request: SceneViewRequest) => void
   setDisplay: (request: SceneDisplayRequest) => void
   exportScene: (command: SceneExportCommand) => void
+  captureScene: (command: SceneCaptureCommand) => void
   exportTexture: (command: TextureExportCommand) => void
   exportSkybox: (command: SkyboxExportCommand) => void
 }
@@ -86,6 +94,8 @@ export type MenuOptions = {
    * on, and only the window knows: the state belongs to the document in front.
    */
   checked: readonly MenuCheck[]
+  /** The rows the focused window reported as answerable — a row absent from here is drawn greyed. */
+  abilities: readonly MenuAbility[]
   /** What the user remapped, so the menu advertises the key it will actually answer to. */
   overrides: BindingOverrides
   actions: MenuActions
@@ -136,7 +146,17 @@ function placementsFor(tools: readonly ToolId[], workspace: ToolSurface | null):
  * removed with its close button — a panel closed with no way to reopen it would be lost.
  */
 export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
-  const { language, workspace, tools, checked, isMac, isDevelopment, overrides, actions } = options
+  const {
+    language,
+    workspace,
+    tools,
+    checked,
+    abilities,
+    isMac,
+    isDevelopment,
+    overrides,
+    actions,
+  } = options
 
   /**
    * The accelerator of a command, read off the registry. Written by hand until now, which is
@@ -149,7 +169,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
 
   // Interpolated rather than spelled out in both bundles: `constants.test.ts` pins the product
   // name to one place, and a hard-coded copy here would drift past it unnoticed.
-  const named = (sentence: string): string => fillHoles(sentence, { name: APP_NAME })
+  const named = (sentence: string): string => fillHoles(sentence, { name: APP_NAME }, language)
   const aboutLabel = named(t.menu.about)
 
   // `named` rides along: only `hide` and `quit` carry a placeholder, and a sentence without one
@@ -250,48 +270,108 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * One face size per row. A sky has no engine to choose between — six PNGs named `_Rt`…`_Bk` is
    * what all of them read — so what the rows offer is the one thing that does differ.
    */
-  const skyboxItems = (): MenuItemConstructorOptions[] =>
-    FACE_SIZES.map(size => ({
-      label: fillHoles(t.skyboxFaceSize, { size }),
-      click: () => actions.exportSkybox({ size }),
-    }))
+  const skyboxItems = (): MenuItemConstructorOptions[] => [
+    ...FACE_SIZES.map(size => ({
+      label: fillHoles(t.skyboxFaceSize, { size }, language),
+      click: () => actions.exportSkybox({ kind: 'faces', size }),
+    })),
+    { type: 'separator' },
+    // The one picture the faces are cut out of, at the source's own resolution — which is why
+    // these two carry no size to choose. An engine lights a scene from a panorama, not from six.
+    ...SKY_PANORAMAS.map(target => ({
+      label: t.skyboxPanoramas[target],
+      click: () => actions.exportSkybox({ kind: 'panorama', target }),
+    })),
+  ]
 
   /**
-   * Only where the thing being edited is what the rows export. An image document has neither a
+   * What the space in front can send out, under ONE row. Flat, the montages put three « Exporter
+   * … » in a row at the top level of the File menu, which is not what an application looks like.
+   *
+   * Only where the thing being edited is what the rows export: an image document has neither a
    * scene nor a set of channels, and a row that exported nothing would still look like one.
    *
-   * Returns rather than a nested ternary: this file's idiom is one flat arm per feature, and
-   * there are three exporting spaces now — a ternary would already be a triple.
+   * The labels inside are short — « La vidéo… » — because the row above already says Export. The
+   * commands keep their full title for the palette, where nothing stands above them.
    */
-  const exportMenu = (): MenuItemConstructorOptions[] => {
+  const exportSubmenu = (): MenuItemConstructorOptions[] => {
     if (workspace === '3d') {
       return [
-        { type: 'separator' },
         { label: t.menu.exportScene, submenu: exportItems('scene') },
-        { label: t.menu.exportSelection, submenu: exportItems('selection') },
+        // Greyed rather than dropped: a row that comes and goes is one the eye has to look for.
+        {
+          label: t.menu.exportSelection,
+          enabled: abilities.includes('scene.exportSelection'),
+          submenu: exportItems('selection'),
+        },
       ]
     }
 
-    if (workspace === 'textures') {
-      return [{ type: 'separator' }, { label: t.menu.exportTexture, submenu: textureItems() }]
-    }
-
-    if (workspace === 'skyboxes') {
-      return [{ type: 'separator' }, { label: t.menu.exportSkybox, submenu: skyboxItems() }]
-    }
+    if (workspace === 'textures') return [{ label: t.menu.exportTexture, submenu: textureItems() }]
+    if (workspace === 'skyboxes') return [{ label: t.menu.exportSkybox, submenu: skyboxItems() }]
 
     // A command rather than an action of its own, unlike the three above: what a montage exports
     // is composed by the window — decoders, scenes and all — so the main process asks the
     // surface in front to do it instead of describing what to write.
     if (workspace === 'video') {
       return [
-        { type: 'separator' },
-        commandItem('sequence.export', t.commands.sequenceExport.title),
+        commandItem('sequence.export', t.menu.exportVideo),
+        commandItem('sequence.exportCut', t.menu.exportCut),
+        commandItem('sequence.exportBundle', t.menu.exportBundle),
+        commandItem('sequence.exportEdl', t.menu.exportEdl),
+        commandItem('sequence.exportFcpxml', t.menu.exportFcpxml),
+        commandItem('sequence.exportStems', t.menu.exportStems),
       ]
     }
 
+    // The same montage without a picture row — and no film to render out of a document with none.
+    if (workspace === 'audio') {
+      return [
+        commandItem('sequence.exportCut', t.menu.exportCut),
+        commandItem('sequence.exportBundle', t.menu.exportBundle),
+        commandItem('sequence.exportStems', t.menu.exportStems),
+      ]
+    }
+
+    // Two rows rather than a submenu of formats: what an image exports is composed by the window,
+    // as a montage is, and the flatten already has a binding of its own.
+    if (workspace === 'image') {
+      return [
+        commandItem('canvas.export', t.menu.exportPicture),
+        commandItem('canvas.exportLayered', t.menu.exportLayers),
+      ]
+    }
+
+    // Unreachable by any of the six since the image gained its rows, and kept for the compiler
+    // alone: `menu/template.test.ts` names that rather than leaving it read as a case forgotten.
     return []
   }
+
+  /**
+   * What the studio can read back. A submenu of ONE today, and it stays a submenu: the row is
+   * about to gain a sibling per format, and « Importer… » naming a montage would then have lied.
+   */
+  const importMenu = (): MenuItemConstructorOptions[] => [
+    {
+      label: t.menu.import,
+      submenu: [commandItem('montage.import', t.menu.importBundle)],
+    },
+  ]
+
+  /**
+   * Nothing at all where the space sends nothing out: an empty « Export » row promises one.
+   * No separator of its own — the import above it opens the group, and it is always there.
+   */
+  const exportMenu = (): MenuItemConstructorOptions[] => {
+    const items = exportSubmenu()
+    return items.length === 0 ? [] : [{ label: t.menu.export, submenu: items }]
+  }
+
+  /**
+   * Greyed rather than dropped, as `Export ▸ Selection` above: a row that comes and goes is one
+   * the eye has to look for. `undefined` for the rows nothing decides, which is most of them.
+   */
+  const ableTo = (ability: MenuAbility): boolean => abilities.includes(ability)
 
   /**
    * A row that is exactly a command: its label, its accelerator and what it fires all come from
@@ -302,6 +382,9 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     label: string,
     registerAccelerator = true,
   ): MenuItemConstructorOptions => ({
+    // The command it fires, carried on the row. `can be reached` used to match on the TITLE, so a
+    // row worded for its place — « La vidéo… » under Export — read as a command reachable nowhere.
+    id: command,
     label,
     accelerator: shortcut(command),
     registerAccelerator,
@@ -345,6 +428,11 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           { type: 'separator' },
           commandItem('scene.duplicate', t.commands.sceneDuplicate.title),
           commandItem('scene.group', t.commands.sceneGroup.title),
+          // Both, where the context menu shows one at a time: a row is posted before anything is
+          // selected, so it cannot know which of the two the hand will want. Each does nothing
+          // where it does not apply, which a menu row is allowed to do and a context row is not.
+          commandItem('scene.addToSheet', t.commands.sceneAddToSheet.title),
+          commandItem('scene.removeFromSheet', t.commands.sceneRemoveFromSheet.title),
           commandItem('scene.delete', t.commands.sceneDelete.title),
         ]
       : []
@@ -366,7 +454,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       { ...roleItem('cut'), registerAccelerator: false },
       { ...roleItem('copy'), registerAccelerator: false },
       { ...roleItem('paste'), registerAccelerator: false },
-      roleItem('selectAll'),
+      // Unreserved like the clipboard above, and for the same reason: reserved, AppKit serves
+      // ⌘A to the menu and the window never sees it — on a canvas the native role selects
+      // nothing, so the key was dead AND unbindable.
+      { ...roleItem('selectAll'), registerAccelerator: false },
       ...sceneEditItems,
     ],
   }
@@ -424,6 +515,22 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     }))
 
   /**
+   * A still of the view, at the definition each row names. Under the view rows rather than
+   * beside the exports: what this writes is a picture OF the scene, not the scene itself.
+   */
+  const captureItems = (): MenuItemConstructorOptions[] =>
+    CAPTURE_QUALITIES.map((quality: CaptureQuality) =>
+      // The first row IS the command — same picture, same size — so it carries its id and can
+      // be remapped to a key. The others name a definition the command cannot say.
+      quality === DEFAULT_CAPTURE_QUALITY
+        ? commandItem('scene.capture', t.sceneCaptureQualities[quality])
+        : {
+            label: t.sceneCaptureQualities[quality],
+            click: () => actions.captureScene({ quality }),
+          },
+    )
+
+  /**
    * What the viewport does, as opposed to what the scene holds — the 3D counterpart of the
    * canvas rows above, and the reason the 3D bar could go from twenty-three buttons to eight.
    *
@@ -436,6 +543,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           { type: 'separator' },
           { label: t.menu.sceneDisplay, submenu: displayItems() },
           { label: t.menu.sceneView, submenu: viewItems() },
+          { label: t.menu.sceneCapture, submenu: captureItems() },
           { type: 'separator' },
           toggleItem('scene.projection', t.commands.sceneProjection.title),
           toggleItem('scene.quad', t.commands.sceneQuad.title),
@@ -461,7 +569,6 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
             submenu: [
               commandItem('canvas.toolMove', t.commands.canvasToolMove.title),
               commandItem('canvas.toolHand', t.commands.canvasToolHand.title),
-              commandItem('canvas.toolScale', t.commands.canvasToolScale.title),
               { type: 'separator' },
               commandItem('canvas.toolCrop', t.commands.canvasToolCrop.title),
               { type: 'separator' },
@@ -479,7 +586,6 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
               commandItem('canvas.toolBrush', t.commands.canvasToolBrush.title),
               commandItem('canvas.toolPencil', t.commands.canvasToolPencil.title),
               commandItem('canvas.toolEraser', t.commands.canvasToolEraser.title),
-              commandItem('canvas.toolEraserSelection', t.commands.canvasToolEraserSelection.title),
               commandItem('canvas.toolFill', t.commands.canvasToolFill.title),
               { type: 'separator' },
               commandItem('canvas.toolText', t.commands.canvasToolText.title),
@@ -499,7 +605,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           {
             label: t.menu.image,
             submenu: [
-              commandItem('canvas.mergeDown', t.commands.canvasMergeDown.title),
+              {
+                ...commandItem('canvas.mergeDown', t.commands.canvasMergeDown.title),
+                enabled: ableTo('canvas.mergeDown'),
+              },
               commandItem('canvas.flatten', t.commands.canvasFlatten.title),
               { type: 'separator' },
               commandItem('canvas.flipHorizontal', t.commands.canvasFlipHorizontal.title),
@@ -510,7 +619,13 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
               { type: 'separator' },
               // Implemented, tested, and reachable by nothing at all until now: no default key
               // and no row anywhere.
-              commandItem('canvas.maskFromSelection', t.commands.canvasMaskFromSelection.title),
+              {
+                ...commandItem(
+                  'canvas.maskFromSelection',
+                  t.commands.canvasMaskFromSelection.title,
+                ),
+                enabled: ableTo('canvas.maskFromSelection'),
+              },
               { type: 'separator' },
               // The only way in: none of the five carries a default shortcut, deliberately —
               // they spend credit, and a key pressed by accident has no business spending any.
@@ -568,6 +683,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           accelerator: shortcut('document.saveAs'),
           click: () => actions.runCommand('document.saveAs'),
         },
+        { type: 'separator' },
+        ...importMenu(),
         ...exportMenu(),
         { type: 'separator' },
         ...fileMenuSettings,
@@ -600,11 +717,9 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
             click: () => actions.openTool({ zone: placement.zone, tool: placement.id }),
           })),
         },
-        {
-          label: t.menu.resetLayout,
-          accelerator: shortcut('layout.reset'),
-          click: () => actions.runCommand('layout.reset'),
-        },
+        // Through the fabric like every other command row: written by hand, it carried no `id`,
+        // and the guard that checks a command can be reached could not see it at all.
+        commandItem('layout.reset', t.menu.resetLayout),
         ...canvasViewMenu,
         ...sceneViewMenu,
         { type: 'separator' },

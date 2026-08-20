@@ -1,12 +1,17 @@
 import type { AccountSummary, AccountsResult } from './domain/account'
+import type { BundledAnimation } from './domain/animationLibrary'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
+import type { FileFacts } from './domain/fileInfo'
+import type { FileHistory, FileOutcome } from './domain/fileOp'
+import type { NamedDocumentPlace, NewDocumentAsk } from './domain/newDocument'
 import type { FolderEntry } from './domain/folder'
+import type { OraDocument } from './domain/openRaster'
 import type { MaterialStyle } from './domain/style'
-import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloud-asset'
-import type { CommandId, MenuCheck } from './domain/command'
-import type { ContextMenuItem } from './domain/context-menu'
+import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloudAsset'
+import type { CommandId, MenuAbility, MenuCheck } from './domain/command'
+import type { ContextMenuItem } from './domain/contextMenu'
 import type {
   ActionOutcome,
   AssistantAnswer,
@@ -20,18 +25,28 @@ import type {
   DocumentDraft,
   DocumentFile,
   DocumentKind,
+  DocumentWrite,
 } from './domain/document'
+import type {
+  GitBranch,
+  GitCommit,
+  GitCommitFile,
+  GitRemote,
+  GitRepository,
+  GitStashEntry,
+} from './domain/git'
+import type { GitDiff } from './domain/gitDiff'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { PlanAccess } from './domain/plan'
-import type { Project } from './domain/project'
+import type { Project, RescanState } from './domain/project'
 import type {
   PromptStyle,
   PromptSuggestion,
   PromptTranslation,
   SuggestPromptsRequest,
-} from './domain/prompt-assist'
+} from './domain/promptAssist'
 import type {
   DisplayMode,
   ExportFormat,
@@ -40,16 +55,20 @@ import type {
   ObjectKind,
   ViewDirection,
 } from './domain/scene'
-import type { TextureExportTarget } from './domain/texture-export'
+import type { CaptureQuality } from './domain/sceneCapture'
+import type { InstalledCheckerTexture } from './domain/checkerTexture'
+import type { ExportTargetId } from './domain/exportRegistry'
+import type { TaskProgress } from './domain/taskProgress'
+import type { TextureExportTarget } from './domain/textureExport'
 import type { Language } from './i18n/languages'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
-import type { PathKind, SettingActionId } from './domain/settings-registry'
+import type { PathKind, SettingActionId } from './domain/settingsRegistry'
 import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
 import type { PbrChannel } from './domain/texture'
 import type { ToolId, ToolSurface, ToolZone } from './domain/tool'
 import type { UpdateState } from './domain/update'
 import type { UsageCursors, UsageEventPage, UsagePeriod, UsageReport } from './domain/usage'
-import type { WindowState } from './domain/window'
+import type { HelpPage, WindowState } from './domain/window'
 
 /**
  * Channel names, declared with literal types. The annotation is verbose on purpose: the
@@ -90,13 +109,66 @@ export type Channels = {
   projectOpen: 'project:open'
   projectCurrent: 'project:current'
   projectListFolder: 'project:list-folder'
+  projectSearchFolder: 'project:search-folder'
+  projectWalkFolder: 'project:walk-folder'
   projectOpenFile: 'project:open-file'
   projectRevealFile: 'project:reveal-file'
   projectRevealFolder: 'project:reveal-folder'
   projectRename: 'project:rename'
   projectRenameFile: 'project:rename-file'
-  projectMoveFile: 'project:move-file'
-  projectTrashFile: 'project:trash-file'
+  projectMoveFiles: 'project:move-files'
+  projectTrashFiles: 'project:trash-files'
+  projectNewFolder: 'project:new-folder'
+  projectDuplicateFiles: 'project:duplicate-files'
+  projectPasteFiles: 'project:paste-files'
+  projectUndoFile: 'project:undo-file'
+  projectRedoFile: 'project:redo-file'
+  projectFileHistory: 'project:file-history'
+  projectStopRescan: 'project:stop-rescan'
+  projectRescanState: 'project:rescan-state'
+  projectFileFacts: 'project:file-facts'
+
+  /**
+   * Opens one file's information window, or reveals the one that path already has.
+   *
+   * Under `window:` because opening one is the whole of it — and because a channel's domain is
+   * held to a single lowercase word (`ipc.test.ts`), which `file-info:` is not.
+   */
+  fileInfoOpen: 'window:file-info'
+
+  /** Under `window:` for the reason `fileInfoOpen` is: opening one is the whole of it. */
+  newDocumentAsk: 'window:new-document'
+  newDocumentRequest: 'window:new-document-request'
+  newDocumentAnswer: 'window:new-document-answer'
+
+  gitRead: 'git:read'
+  gitInit: 'git:init'
+  gitStage: 'git:stage'
+  gitUnstage: 'git:unstage'
+  gitRestore: 'git:restore'
+  gitCommit: 'git:commit'
+  gitBranches: 'git:branches'
+  gitCreateBranch: 'git:create-branch'
+  gitCheckout: 'git:checkout'
+  gitLog: 'git:log'
+  gitCommitFiles: 'git:commit-files'
+  gitDiff: 'git:diff'
+  gitBytes: 'git:bytes'
+  gitRemotes: 'git:remotes'
+  gitAddRemote: 'git:add-remote'
+  gitFetch: 'git:fetch'
+  gitPull: 'git:pull'
+  gitPush: 'git:push'
+  gitResolve: 'git:resolve'
+  gitAbortMerge: 'git:abort-merge'
+  gitStash: 'git:stash'
+  gitStashes: 'git:stashes'
+  gitStashPop: 'git:stash-pop'
+  gitStashDrop: 'git:stash-drop'
+  gitTag: 'git:tag'
+  gitHasCredentials: 'git:has-credentials'
+  gitSetCredentials: 'git:set-credentials'
+  gitClearCredentials: 'git:clear-credentials'
 
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
@@ -108,6 +180,7 @@ export type Channels = {
   documentRemove: 'document:remove'
   documentConfirmClose: 'document:confirm-close'
   documentConfirmDelete: 'document:confirm-delete'
+  documentConfirmOverwrite: 'document:confirm-overwrite'
 
   assetsSearch: 'assets:search'
   assetsCounts: 'assets:counts'
@@ -116,7 +189,10 @@ export type Channels = {
   assetsAbsent: 'assets:absent'
   assetsSaveAudio: 'assets:save-audio'
   assetsSavePicture: 'assets:save-picture'
+  assetsSaveLayered: 'assets:save-layered'
+  assetsReadLayered: 'assets:read-layered'
   assetsSaveTexture: 'assets:save-texture'
+  texturesInstallBundled: 'textures:install-bundled'
   assetsExtractTextures: 'assets:extract-textures'
   assetsUpdate: 'assets:update'
   assetsRemove: 'assets:remove'
@@ -140,6 +216,7 @@ export type Channels = {
 
   activityRead: 'activity:read'
 
+  mediaAdopt: 'media:adopt'
   mediaIngest: 'media:ingest'
   mediaCancel: 'media:cancel'
   mediaAvailable: 'media:available'
@@ -157,6 +234,8 @@ export type Channels = {
   dictationOpenPrivacy: 'dictation:open-privacy'
 
   sceneExport: 'scene:export'
+  montageExport: 'montage:export'
+  montageImport: 'montage:import'
   renderStart: 'render:start'
   renderFrame: 'render:frame'
   renderFinish: 'render:finish'
@@ -164,11 +243,17 @@ export type Channels = {
 
   textureExport: 'texture:export'
   skyboxExport: 'skybox:export'
+  montageStems: 'montage:stems'
+  projectExport: 'project:export'
+  taskCancel: 'task:cancel'
 
   fontsList: 'fonts:list'
   fontsRead: 'fonts:read'
 
+  animationsList: 'animations:list'
+
   diagnosticsReport: 'diagnostics:report'
+  diagnosticsTrace: 'diagnostics:trace'
 
   windowToggleFullScreen: 'window:toggle-full-screen'
   windowState: 'window:state'
@@ -176,6 +261,9 @@ export type Channels = {
   windowWorkspace: 'window:workspace'
   /** Opens the video return, or reveals the one already open. See `MIRROR_ROUTE`. */
   mirrorOpen: 'mirror:open'
+
+  /** Opens one of the three windows the Help menu offers, or reveals the one already open. */
+  helpOpen: 'help:open'
 
   menuPopup: 'menu:popup'
 
@@ -220,13 +308,59 @@ export const CHANNELS: Channels = {
   projectOpen: 'project:open',
   projectCurrent: 'project:current',
   projectListFolder: 'project:list-folder',
+  projectSearchFolder: 'project:search-folder',
+  projectWalkFolder: 'project:walk-folder',
   projectOpenFile: 'project:open-file',
   projectRevealFile: 'project:reveal-file',
   projectRevealFolder: 'project:reveal-folder',
   projectRename: 'project:rename',
   projectRenameFile: 'project:rename-file',
-  projectMoveFile: 'project:move-file',
-  projectTrashFile: 'project:trash-file',
+  projectMoveFiles: 'project:move-files',
+  projectTrashFiles: 'project:trash-files',
+  projectNewFolder: 'project:new-folder',
+  projectDuplicateFiles: 'project:duplicate-files',
+  projectPasteFiles: 'project:paste-files',
+  projectUndoFile: 'project:undo-file',
+  projectRedoFile: 'project:redo-file',
+  projectFileHistory: 'project:file-history',
+  projectStopRescan: 'project:stop-rescan',
+  projectRescanState: 'project:rescan-state',
+  projectFileFacts: 'project:file-facts',
+
+  fileInfoOpen: 'window:file-info',
+
+  newDocumentAsk: 'window:new-document',
+  newDocumentRequest: 'window:new-document-request',
+  newDocumentAnswer: 'window:new-document-answer',
+
+  gitRead: 'git:read',
+  gitInit: 'git:init',
+  gitStage: 'git:stage',
+  gitUnstage: 'git:unstage',
+  gitRestore: 'git:restore',
+  gitCommit: 'git:commit',
+  gitBranches: 'git:branches',
+  gitCreateBranch: 'git:create-branch',
+  gitCheckout: 'git:checkout',
+  gitLog: 'git:log',
+  gitCommitFiles: 'git:commit-files',
+  gitDiff: 'git:diff',
+  gitBytes: 'git:bytes',
+  gitRemotes: 'git:remotes',
+  gitAddRemote: 'git:add-remote',
+  gitFetch: 'git:fetch',
+  gitPull: 'git:pull',
+  gitPush: 'git:push',
+  gitResolve: 'git:resolve',
+  gitAbortMerge: 'git:abort-merge',
+  gitStash: 'git:stash',
+  gitStashes: 'git:stashes',
+  gitStashPop: 'git:stash-pop',
+  gitStashDrop: 'git:stash-drop',
+  gitTag: 'git:tag',
+  gitHasCredentials: 'git:has-credentials',
+  gitSetCredentials: 'git:set-credentials',
+  gitClearCredentials: 'git:clear-credentials',
 
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
@@ -238,6 +372,7 @@ export const CHANNELS: Channels = {
   documentRemove: 'document:remove',
   documentConfirmClose: 'document:confirm-close',
   documentConfirmDelete: 'document:confirm-delete',
+  documentConfirmOverwrite: 'document:confirm-overwrite',
 
   assetsSearch: 'assets:search',
   assetsCounts: 'assets:counts',
@@ -246,7 +381,10 @@ export const CHANNELS: Channels = {
   assetsAbsent: 'assets:absent',
   assetsSaveAudio: 'assets:save-audio',
   assetsSavePicture: 'assets:save-picture',
+  assetsSaveLayered: 'assets:save-layered',
+  assetsReadLayered: 'assets:read-layered',
   assetsSaveTexture: 'assets:save-texture',
+  texturesInstallBundled: 'textures:install-bundled',
   assetsExtractTextures: 'assets:extract-textures',
   assetsUpdate: 'assets:update',
   assetsRemove: 'assets:remove',
@@ -270,6 +408,7 @@ export const CHANNELS: Channels = {
 
   activityRead: 'activity:read',
 
+  mediaAdopt: 'media:adopt',
   mediaIngest: 'media:ingest',
   mediaCancel: 'media:cancel',
   mediaAvailable: 'media:available',
@@ -287,6 +426,8 @@ export const CHANNELS: Channels = {
   dictationOpenPrivacy: 'dictation:open-privacy',
 
   sceneExport: 'scene:export',
+  montageExport: 'montage:export',
+  montageImport: 'montage:import',
   renderStart: 'render:start',
   renderFrame: 'render:frame',
   renderFinish: 'render:finish',
@@ -294,17 +435,24 @@ export const CHANNELS: Channels = {
 
   textureExport: 'texture:export',
   skyboxExport: 'skybox:export',
+  montageStems: 'montage:stems',
+  projectExport: 'project:export',
+  taskCancel: 'task:cancel',
 
   fontsList: 'fonts:list',
   fontsRead: 'fonts:read',
 
+  animationsList: 'animations:list',
+
   diagnosticsReport: 'diagnostics:report',
+  diagnosticsTrace: 'diagnostics:trace',
 
   windowToggleFullScreen: 'window:toggle-full-screen',
   windowState: 'window:state',
   windowLanguage: 'window:language',
   windowWorkspace: 'window:workspace',
   mirrorOpen: 'mirror:open',
+  helpOpen: 'help:open',
 
   menuPopup: 'menu:popup',
 
@@ -312,13 +460,22 @@ export const CHANNELS: Channels = {
   updateInstall: 'update:install',
 }
 
-/** An edited take on its way back to disk — see `StudioBridge['assets']['saveAudio']`. */
-export type SaveAudioRequest = {
-  /** The asset to overwrite. Absent creates a new one instead. */
+/**
+ * What every "save an edit back into the project" channel carries, whatever the payload is.
+ *
+ * Written once because the three that extend it went from two to three in one batch, and the
+ * per-field contract had already drifted: two spelled it out and the newcomer left it bare.
+ */
+export type SaveRequestBase = {
+  /** The asset to overwrite, keeping its id and its place in the shelf. Absent creates one. */
   replaces?: string
   name: string
-  /** The take this one was edited from, so the two stay traceable to each other. */
+  /** The asset this one was edited from, so the two stay traceable to each other. */
   derivedFrom?: string
+}
+
+/** An edited take on its way back to disk — see `StudioBridge['assets']['saveAudio']`. */
+export type SaveAudioRequest = SaveRequestBase & {
   /** 16-bit PCM WAV, encoded by the renderer that decoded it. */
   wav: Uint8Array
 }
@@ -332,14 +489,19 @@ export type SaveAudioRequest = {
  * string, `derive` hands back bytes; each sends what it holds rather than paying for a
  * conversion — which on a 4K picture is megabytes copied twice for nothing.
  */
-export type SavePictureRequest = {
-  /** The asset to overwrite, keeping its id and its place in the shelf. Absent creates one. */
-  replaces?: string
-  name: string
-  /** The picture this one was edited from, so the two stay traceable to each other. */
-  derivedFrom?: string
+export type SavePictureRequest = SaveRequestBase & {
   /** PNG payload, base64 and never a data URL — the prefix is part of the picture otherwise. */
   png: string
+}
+
+/**
+ * A layered picture on its way to disk as OpenRaster — see `StudioBridge['assets']['saveLayered']`.
+ *
+ * Two channels rather than one taking either: what the main process does with them differs
+ * entirely — one writes bytes it was handed, the other assembles a container.
+ */
+export type SaveLayeredRequest = SaveRequestBase & {
+  document: OraDocument
 }
 
 /**
@@ -359,7 +521,6 @@ export type SaveTextureRequest = {
   png: Uint8Array
 }
 
-/** A scene on its way to a file the studio will never look at again. */
 /** What a render is asked for, before a single frame is computed. */
 export type RenderStartRequest = {
   /** Suggested file name, without its extension. */
@@ -378,12 +539,65 @@ export type RenderFrameRequest = {
   png: Uint8Array
 }
 
+/** A scene on its way to a file the studio will never look at again. */
 export type SceneExportRequest = {
-  /** Suggested file name, without its extension — the format decides that. */
+  /** Suggested file name, without its extension — the target decides that. */
   name: string
   format: ExportFormat
   /** Already encoded by the renderer: three.js's exporters run where the scene lives. */
   data: Uint8Array
+}
+
+/**
+ * The montage itself, as an OpenTimelineIO file — the cut, not a film of it.
+ *
+ * Encoded by the renderer like a scene is, and for the same reason: only the window holds the
+ * catalogue a clip's media is resolved against.
+ */
+export type MontageExportRequest = {
+  /**
+   * The row the window is already showing for this export, and the name `tasks.cancel` answers
+   * to. Minted there rather than here: a bundle is gigabytes, and an id this side only handed
+   * back at the END would leave the whole write unstoppable.
+   */
+  id: string
+  /** Suggested file name, without its extension — the target decides that. */
+  name: string
+  /**
+   * `montage.otio` for the cut alone, `montage.otioz` for the cut with its media inside, and
+   * `montage.edl` for the event list.
+   *
+   * The literals rather than `ExportTargetId`: this writer takes no other, and the wider type let
+   * a caller pass `scene.glb` and compile, failing at runtime as an opaque parse error.
+   */
+  target: 'montage.otio' | 'montage.otioz' | 'montage.edl' | 'montage.fcpxml'
+  /**
+   * The cut, serialized. TEXT whatever the target — an OTIO is JSON and an EDL is columns, and
+   * both are files somebody reads with their eyes. A bundle wraps this rather than writing it.
+   */
+  content: string
+  /**
+   * What the cut points at, for a bundle only. The PATHS never cross back: this side resolves
+   * each url against the open project and reads it, so a montage cannot have a file outside the
+   * project packed into something it then hands to somebody else.
+   */
+  media?: readonly { source: string; entry: string }[]
+}
+
+/**
+ * What came out of a bundle the studio was asked to read.
+ *
+ * The cut travels as TEXT and the media as catalogue ids — never as bytes: the archive can be
+ * gigabytes, and this side has already copied every medium into the project and given it a row.
+ * The window relinks each clip by the entry its `target_url` names, and composes the document.
+ */
+export type MontageImportResult = {
+  /** `content.otio`, verbatim. Parsed by the window, which is the side that reads a timeline. */
+  content: string
+  /** Each medium that landed, by the entry the cut names it under and the row it became. */
+  media: readonly { entry: string; assetId: string }[]
+  /** Where they landed, relative to the project — what the explorer will show them under. */
+  folder: string
 }
 
 /** One file of an export, already encoded by the renderer that drew it. */
@@ -407,6 +621,13 @@ export type FolderExportRequest = {
   /** The folder to create inside the chosen one, named after what is being exported. */
   folder: string
   files: readonly ExportedFile[]
+  /**
+   * Which entry of `exportRegistry` this is. The channels stay one per section — they are asked
+   * from different places and refused for different reasons — but what they CARRY is one
+   * vocabulary, so the writing side derives the extension it will accept instead of holding a
+   * list that says nothing about which target went wrong.
+   */
+  target: ExportTargetId
 }
 
 export type LogLevel = 'info' | 'warn' | 'error'
@@ -422,9 +643,18 @@ export type LogScope =
   | 'scene.model'
   | 'scene.bvh'
   | 'scene.texture'
+  // Apart from `scene.model`, though both read a `.glb`: a scope says a subject once, so an
+  // animation that will not load would otherwise silence what the MODEL had to say.
+  | 'scene.animation'
   | 'scene.export'
   | 'scene.render'
+  /** A still of the view, on its way into the project's pictures. */
+  | 'scene.capture'
   | 'sequence.export'
+  /** Reading a montage back from a bundle another application wrote. */
+  | 'sequence.import'
+  /** An export asked for from outside, whichever space rendered it. */
+  | 'document.export'
   | 'texture.map'
   | 'texture.channel'
   | 'texture.seam'
@@ -433,12 +663,23 @@ export type LogScope =
   | 'skybox.source'
   | 'skybox.export'
   | 'canvas.layer'
+  /**
+   * Laying an asset down as a layer — a drop, or a double-click in the shelf. Apart from
+   * `canvas.layer` above, which is SPONTANEOUS: that one comes from a mount effect and must
+   * speak once, while this is a gesture and answers every time the hand repeats it.
+   */
+  | 'canvas.place'
   // Not `assets.open`, and the split is the point: the document DOES open here, and the code
   // carries on building it. What is reported is that it could not take the size of the picture
   // behind it — which matters because ⌘S writes the document's size back over that picture.
   // Said under `assets.open`, it read « this asset has nowhere to go » while the asset was
   // appearing on screen.
   | 'canvas.size'
+  /** A save that refused to flatten a document over a source file whose format cannot hold it. */
+  | 'canvas.flatten'
+  // An edit sent to a model, whose picture the editor could not produce. Its own scope because
+  // `canvas.flatten` already carries a sentence about a SAVE, and nothing was being saved here.
+  | 'canvas.edit'
   | 'image.export'
   | 'document.load'
   | 'document.save'
@@ -456,10 +697,15 @@ export type LogScope =
   // did not happen. One of them fires once the copy is already on disk — under `assets.save` the
   // journal denied a write that had just succeeded.
   | 'assets.copy'
+  /** A sheet of the chosen pictures, whose failure has no row of its own to appear in. */
+  | 'assets.contactSheet'
   | 'assets.extract'
   // The catalogue refusing a new name. The field has closed by then — it commits on blur as much
   // as on Enter — so the journal is the only place left to say the name did not take.
   | 'assets.rename'
+  // The catalogue refusing what a file IS. Corrected from a menu that closes on the pick, so
+  // there is nothing left on screen for a refusal to appear in.
+  | 'assets.retype'
   // The home's shelf: a folder moved since it was last opened is the ordinary case there, so
   // all three of its gestures need somewhere to say they did nothing.
   | 'project.reveal'
@@ -476,14 +722,22 @@ export type LogScope =
   // The video return is a WINDOW, and a window the main process refuses to open leaves nothing
   // on screen to look at — the button simply appears not to work.
   | 'sequence.mirror'
+  // Asking what a file IS can FAIL, and a failure is not the answer « the studio has no editor
+  // for this ». Swallowed, it sent a file the studio opens to the system instead — measured on a
+  // `.glb` double-clicked while a download held the catalogue.
+  | 'explorer.open'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
   'scene.bvh',
   'scene.texture',
+  'scene.animation',
   'scene.export',
   'scene.render',
+  'scene.capture',
   'sequence.export',
+  'sequence.import',
+  'document.export',
   'texture.map',
   'texture.channel',
   'texture.seam',
@@ -492,7 +746,10 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'skybox.source',
   'skybox.export',
   'canvas.layer',
+  'canvas.place',
   'canvas.size',
+  'canvas.flatten',
+  'canvas.edit',
   'image.export',
   'document.load',
   'document.save',
@@ -502,8 +759,10 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.open',
   'assets.save',
   'assets.copy',
+  'assets.contactSheet',
   'assets.extract',
   'assets.rename',
+  'assets.retype',
   'document.rename',
   'project.reveal',
   'project.forget',
@@ -513,6 +772,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'shell.layout',
   'shell.menu',
   'sequence.mirror',
+  'explorer.open',
 ]
 
 /**
@@ -540,6 +800,31 @@ export type LogEntry = {
   message: string
 }
 
+/**
+ * What a trace is about — and the reason it is a union of its own rather than another `LogScope`.
+ *
+ * A scope names a failure the reader is meant to SEE: it lands in the project's journal, under a
+ * translated sentence, and shows up as a toast on the way. A trace names one that only ever
+ * reaches the log file the main process owns. Nothing about it is drawn.
+ *
+ * Merging the two lists would cost both sides: `TOPIC_OF_SCOPE` would have to answer "nowhere"
+ * for some of its rows, and the bundle guard would ask for a sentence no surface displays.
+ */
+export type TraceScope =
+  // A promise nobody awaited, rejected. This is the renderer's own silence: the calls that cross
+  // to the main process throw their answer away, so a full disk on a rename reaches no `catch`.
+  'shell.dropped'
+
+/**
+ * Disjoint from `LOG_SCOPES`, and the compiler is what holds that: while no name appears in both
+ * unions, comparing one to the other does not typecheck. A name in both would reach the journal
+ * through one channel and dodge it through the other.
+ */
+export const TRACE_SCOPES: readonly TraceScope[] = ['shell.dropped']
+
+/** No level: a trace is always a failure, and a field with one legal value is a branch to test. */
+export type TraceEntry = { scope: TraceScope; message: string }
+
 /** Channels pushed from the main process to the renderer. */
 export const EVENTS = {
   jobProgress: 'evt:job-progress',
@@ -550,6 +835,8 @@ export const EVENTS = {
   log: 'evt:log',
   projectChanged: 'evt:project-changed',
   projectFolderChanged: 'evt:project-folder-changed',
+  filesChanged: 'evt:files-changed',
+  projectRescan: 'evt:project-rescan',
   assetsChanged: 'evt:assets-changed',
   settingsChanged: 'evt:settings-changed',
   accountsChanged: 'evt:accounts-changed',
@@ -561,8 +848,10 @@ export const EVENTS = {
   sceneView: 'evt:scene-view',
   sceneDisplay: 'evt:scene-display',
   sceneExport: 'evt:scene-export',
+  sceneCapture: 'evt:scene-capture',
   textureExport: 'evt:texture-export',
   skyboxExport: 'evt:skybox-export',
+  taskProgress: 'evt:task-progress',
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
   activity: 'evt:activity',
@@ -589,6 +878,12 @@ export type SceneDisplayRequest = { mode: DisplayMode }
 export type SceneExportCommand = { format: ExportFormat; scope: 'scene' | 'selection' }
 
 /**
+ * A still of the view in front, at the definition the menu row names. The picture lands in the
+ * project as an ordinary asset — nothing here says where, because the window answers that.
+ */
+export type SceneCaptureCommand = { quality: CaptureQuality }
+
+/**
  * An action asked for from OUTSIDE the window — today, by an MCP client on the other side of
  * the machine.
  *
@@ -605,13 +900,16 @@ export type AssistantActionResult = { callId: string; outcome: ActionOutcome }
 export type TextureExportCommand = { target: TextureExportTarget }
 
 /**
- * What the native menu asks of the sky in front: how large each of the six faces comes out.
+ * What the native menu asks of the sky in front: the six faces at a size, or the one panorama
+ * they are cut out of.
  *
- * A size where a texture takes a target, because a sky has no per-engine recipe to choose from —
- * six PNGs named `_Rt`…`_Bk` is what all of them read. What differs is what the machine can
- * hold, and that is a number.
+ * DISCRIMINATED rather than a size beside an optional target: a size means nothing to a panorama,
+ * which leaves at the source's own resolution, and an optional field with an unwritten default is
+ * one every consumer reconstructs — differently, once there are three of them.
  */
-export type SkyboxExportCommand = { size: number }
+export type SkyboxExportCommand =
+  | { kind: 'faces'; size: number }
+  | { kind: 'panorama'; target: Extract<ExportTargetId, 'sky.hdr' | 'sky.exr'> }
 
 /**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in
@@ -733,8 +1031,28 @@ export type StudioBridge = {
      * One level of the project folder, `''` being the root. The explorer walks it a folder at a
      * time: `assets/img` holds thousands of files in an ordinary project, and a reader who never
      * opens it must not pay for them.
+     *
+     * `hidden` reveals what a leading dot hides — `.index/` and `.project.json`, the studio's own
+     * bookkeeping. They are shown and stay READ-ONLY: every gesture over them is refused.
      */
-    listFolder: (relative: string) => Promise<FolderEntry[]>
+    listFolder: (relative: string, hidden: boolean) => Promise<FolderEntry[]>
+    /**
+     * Every entry of the whole project folder whose name holds `term` — the explorer's second
+     * source of nodes, and the only one that can answer for a folder nobody has unfolded.
+     *
+     * A flat list, in no order the reader should rely on: the tree rebuilds the ancestors of each
+     * match and sorts what it draws. An empty term answers nothing rather than the whole folder.
+     */
+    searchFolder: (term: string, hidden: boolean) => Promise<FolderEntry[]>
+    /**
+     * Every FILE the project folder holds, at any depth — what the explorer reads to show the
+     * project by what its files ARE rather than by where they sit.
+     *
+     * Folders do not come back: a folder is not a domain. A document written as a folder does,
+     * as the item it is. The listing is flat and unordered; the panel groups and sorts it, and
+     * asks the catalogue about the whole of it in one go (`AssetQuery.paths`).
+     */
+    walkFolder: (hidden: boolean) => Promise<FolderEntry[]>
     /**
      * Hands a file the studio cannot open to the system — a `.pdf` to its viewer. Answers
      * whether it was taken; a refusal is already in the journal, since a folder someone chose
@@ -746,6 +1064,41 @@ export type StudioBridge = {
      * folders it has open, which is cheaper than carrying a path through and never wrong.
      */
     onFolderChanged: (callback: () => void) => Unsubscribe
+    /**
+     * How far the pass reconciling the catalogue with the folder has got.
+     *
+     * A window is never the one who ASKS for a pass — opening a project and coming back to the
+     * front are what do, and both are decided in the main process. What a window gets is the
+     * right to see it happening and to call it off.
+     */
+    onRescan: (callback: (state: RescanState) => void) => Unsubscribe
+    /** What a window opening mid-pass should be showing, since it missed the announcement. */
+    rescanState: () => Promise<RescanState>
+    /** Calls off the pass that is running. What it had already written stays written. */
+    stopRescan: () => Promise<void>
+    /**
+     * What the disk says about one entry — size and stamps, for a folder as much as for a file.
+     *
+     * Asked path by path rather than folded into `listFolder`: a listing of four hundred rows
+     * would pay four hundred `stat` calls for facts one window reads about one of them.
+     *
+     * `null` for a path that is no longer there, which is the ordinary case for a window left
+     * open while the file it names was moved in the Finder.
+     */
+    fileFacts: (relative: string) => Promise<FileFacts | null>
+    /**
+     * Writes an export INSIDE the open project, in a folder of its own named by the caller.
+     *
+     * The other three export channels raise a native picker, which is why they exist as they do
+     * and why no outside client can use them: nobody is there to fill it. This one takes the
+     * destination instead, and pays for that by never letting it leave the project — `folder` is
+     * one `pathSegment`, and the main process resolves both ends before it writes.
+     *
+     * Answers the folder name, never the path, exactly as its three neighbours do. `null` when
+     * the destination resolved outside the project, which is the one refusal worth telling apart
+     * from a failure.
+     */
+    exportInto: (request: FolderExportRequest) => Promise<string | null>
     /** Shows the file in the system's own file manager, so the path never leaves the process. */
     revealFile: (relative: string) => Promise<void>
     /**
@@ -772,22 +1125,122 @@ export type StudioBridge = {
      */
     rename: (path: string, name: string) => Promise<Project>
     /**
-     * Renames in place — the name only, never the folder it sits in. Answers whether it
-     * happened: a name already taken is refused rather than overwritten, and the studio's own
-     * folders refuse to move at all.
+     * Renames in place — the name only, never the folder it sits in.
+     *
+     * The seven gestures below answer the same shape, and it is not a boolean: a batch is a
+     * partial result by design, so what comes back is what MOVED and what was refused, with the
+     * reason for each. A single rename simply has one member.
      */
-    renameFile: (relative: string, name: string) => Promise<boolean>
+    renameFile: (relative: string, name: string) => Promise<FileOutcome>
+    /** Into another folder, keeping their names — the drag in the tree, and Couper puis Coller. */
+    moveFiles: (paths: readonly string[], folder: string) => Promise<FileOutcome>
     /**
-     * Into another folder, keeping its name — the drag in the tree. Answers whether it
-     * happened: a name already taken there is refused rather than overwritten, and the studio's
-     * own folders refuse on both sides, as neither what moves nor what receives.
+     * To the system's trash, never deleted. The studio does not erase anything in a folder that
+     * belongs to someone else — and this is the one gesture `undoFile` cannot take back.
      */
-    moveFile: (relative: string, folder: string) => Promise<boolean>
+    trashFiles: (paths: readonly string[]) => Promise<FileOutcome>
+    /** One folder, inside `folder` — `''` for the project root itself. */
+    newFolder: (folder: string, name: string) => Promise<FileOutcome>
+    /** A copy of each beside itself, under the first free name — `Ruelle bleue 2.png`. */
+    duplicateFiles: (paths: readonly string[]) => Promise<FileOutcome>
+    /** What the clipboard holds, into `folder`: moved when it was cut, copied when it was not. */
+    pasteFiles: (paths: readonly string[], folder: string, cut: boolean) => Promise<FileOutcome>
     /**
-     * To the system's trash, never deleted. Answers whether the system took it. The studio does
-     * not erase anything in a folder that belongs to someone else.
+     * Takes the last batch back, and puts it back again. The stack lives in the main process,
+     * per project: a file gesture belongs to no document, and two windows on one project would
+     * otherwise keep two stacks that disagree.
      */
-    trashFile: (relative: string) => Promise<boolean>
+    undoFile: () => Promise<FileOutcome>
+    redoFile: () => Promise<FileOutcome>
+    /** Whether either gesture would do anything — what greys a menu row before it is clicked. */
+    fileHistory: () => Promise<FileHistory>
+    /**
+     * A batch settled, in this window or another one. Carries what it did, so a tree can point
+     * the selection at what has just appeared rather than guessing at it after a re-read.
+     */
+    onFilesChanged: (callback: (outcome: FileOutcome) => void) => Unsubscribe
+  }
+  /**
+   * Version control over the PROJECT folder — the user's own files. Nothing here reaches the
+   * repository the studio itself is built from.
+   */
+  git: {
+    /**
+     * Everything the panel draws, in one answer. A union rather than a status plus a handful of
+     * booleans: no project, no git on this machine, and a folder never initialised each want
+     * their own screen, and asking three channels would let two of them disagree.
+     */
+    read: () => Promise<GitRepository>
+    /** `git init` on the open project, plus the ignore file, then the state it left. */
+    init: () => Promise<GitRepository>
+    /**
+     * Every gesture answers with the state it LEFT rather than with nothing. One round trip
+     * instead of two, and no window in which two panels could draw a folder already out of date.
+     */
+    stage: (paths: readonly string[]) => Promise<GitRepository>
+    unstage: (paths: readonly string[]) => Promise<GitRepository>
+    /** Puts files back the way the last recorded version has them — see `canRestore`. */
+    restore: (paths: readonly string[]) => Promise<GitRepository>
+    commit: (message: string, amend: boolean) => Promise<GitRepository>
+    /** Read when the menu opens rather than with every status: it costs a command of its own. */
+    branches: () => Promise<GitBranch[]>
+    createBranch: (name: string) => Promise<GitRepository>
+    checkout: (name: string) => Promise<GitRepository>
+    /**
+     * A page of the history, newest first, across every branch. Paged rather than read whole: a
+     * project of two years is tens of thousands of commits, and the band shows twenty.
+     */
+    log: (limit: number, skip: number) => Promise<GitCommit[]>
+    /** What one recorded version changed. Read when a row is picked, never with the page. */
+    commitFiles: (hash: string) => Promise<GitCommitFile[]>
+    /**
+     * What changed inside one file — within `commit`, or against the last recorded version when
+     * it is `null`. `binary` is the ordinary answer for most of a studio project, and what sends
+     * the panel to `bytes` below.
+     */
+    diff: (path: string, commit: string | null) => Promise<GitDiff>
+    /**
+     * The bytes of a file at one version, or as it stands on disk when `ref` is `null` — which
+     * is how two versions of a picture are put side by side.
+     *
+     * `null` for a path that version does not hold, and for anything past the ceiling the main
+     * process keeps: these cross the boundary and are held in a window, and a project holds video.
+     */
+    bytes: (path: string, ref: string | null) => Promise<Uint8Array | null>
+    remotes: () => Promise<GitRemote[]>
+    addRemote: (name: string, url: string) => Promise<GitRepository>
+    /** Takes what the server has without touching the working tree. */
+    fetch: () => Promise<GitRepository>
+    pull: () => Promise<GitRepository>
+    /** `setUpstream` on the first push of a branch — the one that has nothing to track yet. */
+    push: (setUpstream: boolean) => Promise<GitRepository>
+    /**
+     * Settles a conflict by keeping one whole side, and marks it settled in the same breath.
+     *
+     * During a MERGE, `ours` is the branch that is out and `theirs` is what is being brought in.
+     * The two swap during a rebase — one reason the studio pulls with `--ff-only` and offers no
+     * rebase: a gesture whose meaning depends on which operation is running is a gesture nobody
+     * can be sure of.
+     */
+    resolve: (paths: readonly string[], side: 'ours' | 'theirs') => Promise<GitRepository>
+    abortMerge: () => Promise<GitRepository>
+    /** Sets the whole working tree aside, untracked files included, and comes back clean. */
+    stash: (message: string) => Promise<GitRepository>
+    stashes: () => Promise<GitStashEntry[]>
+    stashPop: (index: number) => Promise<GitRepository>
+    stashDrop: (index: number) => Promise<GitRepository>
+    tag: (name: string, commit: string) => Promise<GitRepository>
+    /**
+     * Whether a token is held for a host — and NOTHING else about it.
+     *
+     * There is no channel that answers with a token, and that absence is the point: invariant 1
+     * says the window asks whether it is authenticated, never what the credential is. The token
+     * goes down to the main process once and only ever comes back out inside the environment of
+     * a git command.
+     */
+    hasCredentials: (host: string) => Promise<boolean>
+    setCredentials: (host: string, user: string, token: string) => Promise<void>
+    clearCredentials: (host: string) => Promise<void>
   }
   dialog: {
     /**
@@ -807,16 +1260,32 @@ export type StudioBridge = {
     list: () => Promise<DocumentDescriptor[]>
     /** `null` when nothing has been saved under that id yet. */
     read: (id: string, kind: DocumentKind) => Promise<DocumentFile | null>
-    /** The envelope — version, kind, timestamp — is stamped by the main process, not here. */
-    write: (id: string, kind: DocumentKind, draft: DocumentDraft) => Promise<void>
+    /**
+     * The envelope — version, kind, timestamp — is stamped by the main process, not here.
+     *
+     * Answers `stale` and writes NOTHING when the file changed underneath — see `DocumentWrite`.
+     * Ask with `confirmOverwrite`, then write again with `force`.
+     *
+     * `folder` is where a document written for the FIRST time lands — the folder its author
+     * picked when they made it. It is read for a document with no file yet and ignored for one
+     * that has: a save never moves what is already filed somewhere.
+     */
+    write: (
+      id: string,
+      kind: DocumentKind,
+      draft: DocumentDraft,
+      force?: boolean,
+      folder?: string,
+    ) => Promise<DocumentWrite>
     /**
      * Gives a document another name — which, the file being named after the document, moves it.
      *
      * The id does not change, and that is the point: the layout, the recent list and the open
      * tab all hold it, so a document may be renamed while it is open.
      *
-     * Answers with the descriptor as it now stands, `fileName` included, so no window has to
-     * work out where the document went. Rejects when the folder already holds that name —
+     * Answers with the descriptor as it now stands, `path` included, so no window has to work
+     * out where the document went — and it stays in the folder it was in, a rename being a name
+     * and not a move. Rejects when THAT folder already holds the name —
      * `checkDocumentName` says the same thing before the gesture, this is what makes it true.
      */
     rename: (id: string, kind: DocumentKind, title: string) => Promise<DocumentDescriptor>
@@ -829,6 +1298,11 @@ export type StudioBridge = {
     confirmClose: (title: string) => Promise<CloseChoice>
     /** Whether the document's file really goes. Destructive, so the safe answer is the default. */
     confirmDelete: (title: string) => Promise<boolean>
+    /**
+     * Whether to write over changes another application made. Asked only after `write` answered
+     * `stale`, and answering no is what a dismissed dialog gives back.
+     */
+    confirmOverwrite: (title: string) => Promise<boolean>
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>
@@ -880,12 +1354,36 @@ export type StudioBridge = {
      */
     savePicture: (request: SavePictureRequest) => Promise<Asset>
     /**
+     * Puts a LAYERED picture into the project, as an OpenRaster container.
+     *
+     * Unlike `savePicture` it may overwrite: the container holds the whole stack, so writing it
+     * back over the file the document was opened from loses nothing — which is the difference an
+     * open format buys, and the reason `formatCapability` exists to tell the two cases apart.
+     */
+    saveLayered: (request: SaveLayeredRequest) => Promise<Asset>
+    /**
+     * Reads a layered picture back, or `null` for an asset that is not one.
+     *
+     * `null` rather than a throw: opening a `.png` through this path is the ordinary case, not a
+     * failure — the caller falls back to the one-layer document any flat picture opens as.
+     */
+    readLayered: (assetId: string) => Promise<OraDocument | null>
+    /**
      * Puts a channel the renderer computed into the project.
      *
      * Always a new asset: a derivation is cheap to run again, and overwriting the file the
      * user pointed at would destroy pixels the studio did not author.
      */
     saveTexture: (request: SaveTextureRequest) => Promise<Asset>
+    /**
+     * Puts the working textures the app ships with into the open project, and answers what they
+     * became. Idempotent: a project that already holds them keeps the assets it has, ids
+     * included, so a document referencing one goes on resolving.
+     *
+     * Copied into the project rather than served from beside the app, because a scene is written
+     * as glTF: what a document points at has to be a file another application can open.
+     */
+    installBundledTextures: () => Promise<InstalledCheckerTexture[]>
     /**
      * Takes the pictures a `.glb` carries inside itself out into the project, one texture asset
      * each — which is what makes a downloaded model's own maps something the studio can open,
@@ -999,6 +1497,28 @@ export type StudioBridge = {
      */
     export: (request: SceneExportRequest) => Promise<string | null>
   }
+  montage: {
+    /**
+     * Writes the cut as an OpenTimelineIO file wherever the save dialog lands — what `render`
+     * below does for the picture, this does for the edit. Answers the file name, never the path.
+     */
+    export: (request: MontageExportRequest) => Promise<string | null>
+    /**
+     * Reads a bundle back: opens the picker, unpacks the media into the project and gives each a
+     * catalogue row, then answers the cut and what it relinks to. `null` when the picker was
+     * dismissed, no project is open, or the read was stopped.
+     *
+     * The id is minted by the window, as an export's is, and for the same reason: unpacking is
+     * minutes of disk, and a name only handed back at the end would leave them unstoppable.
+     */
+    import: (id: string) => Promise<MontageImportResult | null>
+    /**
+     * The cut's SOUND, one `.wav` per audible track, into a folder of its own — same writer and
+     * same bargain as a sky's faces. Stems mean nothing apart: a dialogue track alone is not
+     * the mix somebody judged, which is why this is a folder and not a save dialog per track.
+     */
+    stems: (request: FolderExportRequest) => Promise<string | null>
+  }
   /**
    * Rendering a scene to a film, in three steps: a session is opened once the save dialog has
    * answered, frames are staged one by one, and the encode happens at the end.
@@ -1027,17 +1547,43 @@ export type StudioBridge = {
     export: (request: FolderExportRequest) => Promise<string | null>
   }
   /**
+   * The two halves invariant 6 asks of a long task, for the ones this side RUNS — the bundle
+   * being the one that matters, since it moves gigabytes with the window learning nothing. It
+   * carries reading one back in as much as writing one out, which is why it is not named for the
+   * export.
+   *
+   * What the window bakes itself — six faces of a sky, five channels of a material — is watched
+   * and stopped where its loop lives and never comes through here.
+   */
+  tasks: {
+    /** How far it has got. Silent for anything that finishes in one go. */
+    onProgress: (callback: (progress: TaskProgress) => void) => Unsubscribe
+    /**
+     * Stops the task that was started under this id, half-written file and all. Answers whether
+     * one was still running — an id that already finished is not a failure, it is a click that
+     * arrived a moment late.
+     */
+    cancel: (id: string) => Promise<boolean>
+  }
+  /**
    * The typefaces the machine has installed. The studio's own three are not here: they ship
    * inside it, and `EMBEDDED_FONTS` names them without anyone having to ask.
    */
   fonts: {
-    /** Every installed family, sorted, one cut each — see `system-fonts`. */
+    /** Every installed family, sorted, one cut each — see `systemFonts`. */
     list: () => Promise<string[]>
     /**
      * A face's outlines, as a font file the renderer can parse. `null` when the machine no
      * longer has that family, which is the missing-font hole a shared document opens.
      */
     read: (family: string) => Promise<Uint8Array | null>
+  }
+  /**
+   * The animations shipped with the app — one folder per animation under `resources/animations`,
+   * common to every project and read-only. Empty while none has been installed.
+   */
+  animations: {
+    list: () => Promise<BundledAnimation[]>
   }
   media: {
     /**
@@ -1046,6 +1592,16 @@ export type StudioBridge = {
      * ingest runs on and reports through `onProgress`.
      */
     ingest: () => Promise<Asset[]>
+    /**
+     * Gives a file the project ALREADY holds a row in the catalogue, so the studio can open it
+     * instead of handing it to the system — the explorer's double-click on a `.jpg` somebody
+     * copied in by hand. The bytes stay exactly where they are, as `ingest` leaves them.
+     *
+     * `null` when the studio has no editor for that file: the caller then opens it outside,
+     * which is what a `.txt` and a `.pdf` are meant to do. The path is relative to the project,
+     * and one that leaves it is refused.
+     */
+    adopt: (relative: string) => Promise<Asset | null>
     cancel: (assetId: string) => Promise<void>
     capabilities: () => Promise<MediaCapabilities>
     onProgress: (callback: (progress: IngestProgress) => void) => Unsubscribe
@@ -1112,10 +1668,11 @@ export type StudioBridge = {
     language: () => Promise<Language>
     onLanguage: (callback: (language: Language) => void) => Unsubscribe
     /**
-     * Tells the main process which surface is up, which panels it can currently open, and
-     * which menu rows are ticked, so the menu can follow all three. None of them can be worked
-     * out on the other side: whether the generator exists depends on a model being chosen, and
-     * whether a scene is drawn in wireframe is a fact of the document in front.
+     * Tells the main process which surface is up, which panels it can currently open, which menu
+     * rows are ticked and which of them can answer at all, so the menu can follow all four. None
+     * of them can be worked out on the other side: whether the generator exists depends on a
+     * model being chosen, and whether a scene is drawn in wireframe — or holds a selection to
+     * export — is a fact of the document in front.
      *
      * The surface, not the workspace: the home covers the space behind it, and a menu built on
      * that space offered the image tools over a screen that edits no image.
@@ -1124,6 +1681,7 @@ export type StudioBridge = {
       surface: ToolSurface,
       tools: readonly ToolId[],
       checked: readonly MenuCheck[],
+      abilities: readonly MenuAbility[],
     ) => Promise<void>
   }
   /**
@@ -1135,6 +1693,36 @@ export type StudioBridge = {
    */
   mirror: {
     open: () => Promise<void>
+  }
+  /**
+   * The three windows of the Help menu. Same line as `mirror` above: what each one SHOWS it reads
+   * for itself, and the only thing this side owns is opening the window.
+   */
+  help: {
+    open: (page: HelpPage) => Promise<void>
+  }
+  /**
+   * One file's information, as a window of its own — the studio's ⌘I.
+   *
+   * The only thing this side cannot do itself, exactly as `mirror` above: open a window. What
+   * the window then SHOWS it reads for itself, through `project.fileFacts` and the catalogue.
+   */
+  fileInfo: {
+    /** A path relative to the project folder — the spelling every panel names a file with. */
+    open: (relative: string) => Promise<void>
+  }
+  /**
+   * Naming a document, in a window of its own rather than a modal drawn over the studio.
+   *
+   * Three halves, and two windows: the studio ASKS and waits, the new window READS what was
+   * asked and ANSWERS it. Closing that window is the answer `null` — cancelling has to mean
+   * nothing was made, and the close button is the plainest way to say it.
+   */
+  newDocument: {
+    ask: (ask: NewDocumentAsk) => Promise<NamedDocumentPlace | null>
+    /** What the open window was asked, or `null` when nothing is pending. */
+    request: () => Promise<NewDocumentAsk | null>
+    answer: (place: NamedDocumentPlace | null) => Promise<void>
   }
   menu: {
     /**
@@ -1153,6 +1741,7 @@ export type StudioBridge = {
     onSceneView: (callback: (request: SceneViewRequest) => void) => Unsubscribe
     onSceneDisplay: (callback: (request: SceneDisplayRequest) => void) => Unsubscribe
     onSceneExport: (callback: (command: SceneExportCommand) => void) => Unsubscribe
+    onSceneCapture: (callback: (command: SceneCaptureCommand) => void) => Unsubscribe
     onTextureExport: (callback: (command: TextureExportCommand) => void) => Unsubscribe
     onSkyboxExport: (callback: (command: SkyboxExportCommand) => void) => Unsubscribe
   }
@@ -1164,6 +1753,15 @@ export type StudioBridge = {
      * would make reporting a failure cost a round trip.
      */
     report: (entry: LogEntry) => Promise<void>
+    /**
+     * The same direction, for what nobody should be shown: this one stops at the log file. A
+     * rejected promise is nothing the reader can act on — it names no gesture and no document —
+     * so putting it in the journal would raise a toast about something already lost.
+     *
+     * Fire and forget, like `report`, and never deduplicated: a trace is read after the fact,
+     * and how many times a thing happened is half of what it says.
+     */
+    trace: (entry: TraceEntry) => Promise<void>
   }
   updates: {
     /**

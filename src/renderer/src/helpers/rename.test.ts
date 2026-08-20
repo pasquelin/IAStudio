@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { renameAsset, renameDocument } from './rename'
@@ -14,7 +14,7 @@ const POSTER: DocumentDescriptor = {
   kind: 'image',
   title: 'Poster',
   workspace: 'image',
-  fileName: 'Poster.img',
+  path: 'documents/Poster.ora',
 }
 
 const ASSET: Asset = {
@@ -110,7 +110,7 @@ describe('the tabs editing a renamed asset', () => {
     kind: 'image',
     title: 'Pas courus',
     workspace: 'image',
-    fileName: 'Pas courus.img',
+    path: 'documents/Pas courus.ora',
     sourceAssetId: 'asset_1',
   }
 

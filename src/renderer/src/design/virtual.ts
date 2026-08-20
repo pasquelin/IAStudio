@@ -1,6 +1,4 @@
-import { useGauge } from '@/hooks/useGauge'
-import { FILLED_ROW_HEIGHT, LIST_ROW_HEIGHT, STACKED_ROW_HEIGHT } from './styles'
-import { useEffect } from 'react'
+import { clampAtLeast } from '@shared/numeric'
 
 /**
  * What the three virtualized surfaces of the studio agree on.
@@ -8,6 +6,8 @@ import { useEffect } from 'react'
  * `Collection`, `Carousel` and `Masonry` had — or were about to have — the same two numbers
  * three times over, one of them under a comment saying so. A gutter that drifts between a grid
  * and a rail is visible on any screen that shows both, and the home shows both.
+ *
+ * The hooks that read these live under `hooks/` — `useReachEnd`, `useRemeasure`, `useRowHeight`.
  */
 
 /** Between two cards, whichever direction they are laid out in. */
@@ -41,67 +41,35 @@ export function columnsIn(width: number, aim: number): Columns {
   return { columns, columnWidth: (width - (columns - 1) * GAP) / columns }
 }
 
+export type VirtualFocus = {
+  /** Where the cells are looked for — the surface's own scroll container. */
+  scroller: HTMLElement | null | undefined
+  /** Brings the virtual ROW holding a cell into view. The virtualizer's own method. */
+  scrollToIndex: (row: number) => void
+  /** How many cells there are, which is what an arrow walking past the end is held to. */
+  count: number
+  /** The attribute a cell carries its index in — one surface numbers cells, the other rows. */
+  attribute: 'data-cell' | 'data-row'
+  /** How many cells a virtual row holds. One for a list, which is why it defaults. */
+  columns?: number
+}
+
 /**
- * Calls back as the end of a virtualized surface nears, so the next page is asked for before
- * the reader sees the bottom.
- *
- * An empty surface is NOT the end of one: asking for more with nothing on screen loops until the
- * source runs dry, and only the caller knows whether an empty answer is worth another request.
- *
- * `Collection` and `Masonry` had this rule twice, down to the comment. The unit differs — rows
- * there, items here — so the caller states it, and states it by name: three bare numbers swap
- * silently, and the swap would show up as a paging bug rather than as a type error.
+ * Moves the focus to cell `index`, scrolling the row that holds it into view first — the roving
+ * tab stop both `Collection` and `Tree` walk with the arrows.
  */
-export function useReachEnd(
-  { last, count, ahead }: { last: number; count: number; ahead: number },
-  onReachEnd?: () => void,
+export function focusVirtualCell(
+  index: number,
+  { scroller, scrollToIndex, count, attribute, columns = 1 }: VirtualFocus,
 ): void {
-  const nearEnd = count > 0 && last >= count - ahead
+  const bounded = clampAtLeast(index, 0, count - 1)
+  scrollToIndex(Math.floor(bounded / columns))
 
-  useEffect(() => {
-    if (nearEnd) onReachEnd?.()
-  }, [nearEnd, count, onReachEnd])
-}
-
-/**
- * Re-measures a virtualizer when what its estimator reads has changed.
- *
- * The virtualizer memoizes on `count` and friends, never on the estimator itself: without this,
- * a resize leaves every cell at the height the previous width gave it. `key` is whatever the
- * estimate is computed from, flattened — a scalar, so that a float drifting by a fraction of a
- * pixel can be rounded out of it before it costs N estimates a frame.
- */
-export function useRemeasure(virtualizer: { measure: () => void }, key: string | number): void {
-  useEffect(() => virtualizer.measure(), [virtualizer, key])
-}
-
-/**
- * How tall a list row is — a SHAPE by preference, a number only for what no gauge describes.
- *
- * `stacked` and `filled` hold the same two steps of text and part on what is BEHIND them: a row
- * painted edge to edge loses to its own fill the room a bare row keeps. Naming one `stacked` and
- * raising it for the other's sake is what loosened the explorer and the documents panel.
- */
-export type RowHeight = 'control' | 'stacked' | 'filled' | number
-
-/**
- * The pixels a row shape measures, read back from the gauge that sizes it.
- *
- * A shape rather than a number, because a constant is only right at one density.
- *
- * The shapes past `control` belong to `Collection` alone since 2026-08-14: `Tree` asks for a
- * control and cannot be told otherwise — the explorer used to ask for `stacked`, which measured a
- * whole panel for a second line one row in thirty carried, and a tree is a list of NAMES. What
- * each shape costs is written where the gauges are declared, in `index.css`.
- */
-export function useRowHeight(shape: RowHeight): number {
-  // A table rather than a chain, and every gauge read unconditionally: a hook cannot sit behind a
-  // branch, so the next shape adds a line here and nothing else.
-  const heights = {
-    control: useGauge('--sc-control', LIST_ROW_HEIGHT),
-    stacked: useGauge('--sc-row-stacked', STACKED_ROW_HEIGHT),
-    filled: useGauge('--sc-row-filled', FILLED_ROW_HEIGHT),
+  const focus = (): void => {
+    scroller?.querySelector<HTMLElement>(`[${attribute}="${bounded}"]`)?.focus()
   }
-
-  return typeof shape === 'number' ? shape : heights[shape]
+  // Twice: the cell is already mounted in the common case, and only a scroll that revealed a new
+  // row needs the frame the virtualizer takes to render it.
+  focus()
+  requestAnimationFrame(focus)
 }

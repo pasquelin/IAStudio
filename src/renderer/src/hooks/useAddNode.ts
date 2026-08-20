@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { addNode } from '@/engines/scene/commands'
-import { createNodeOf } from '@/engines/scene/node-factory'
+import { createNodeOf } from '@/engines/scene/nodeFactory'
 import { useScenes } from '@/stores/scenes'
 
 /** The one way a node enters a scene: the toolbar, a panel's add menu and the native menu. */

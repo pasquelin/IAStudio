@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { fakeMenu } from '@/helpers/menu-fixtures'
 import { workspaceById } from '@/helpers/workspaces'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import theme from './dockview-theme.css?raw'
 import { DocumentTab } from './DocumentTab'
@@ -14,12 +14,12 @@ const closeDocument = vi.fn((_id: string) => Promise.resolve(true))
 const deleteDocument = vi.fn((_id: string) => Promise.resolve(true))
 const openPanelIds = vi.fn(() => ['doc-1', 'doc-2'])
 
-vi.mock('./document-io', () => ({
+vi.mock('./documentIo', () => ({
   closeDocument: (id: string) => closeDocument(id),
   deleteDocument: (id: string) => deleteDocument(id),
 }))
 
-vi.mock('./dockview-api', () => ({ openPanelIds: () => openPanelIds() }))
+vi.mock('./dockviewApi', () => ({ openPanelIds: () => openPanelIds() }))
 
 // The real one needs a layout engine; what this file is about is the cross and the menu hung
 // beside it. `hideClose` is asserted on rather than assumed — it is what stops Dockview's own
@@ -62,7 +62,7 @@ describe('a document tab', () => {
   /**
    * One tab strip now holds six sections, where the title alone says nothing about which editor
    * a tab opens. Held against the rail's own table rather than against a glyph named here: a
-   * `.scene` wearing two different pictures in two lists is two vocabularies.
+   * `.gltf` wearing two different pictures in two lists is two vocabularies.
    */
   it('wears the glyph of its section, and names it', () => {
     useDocuments.setState({
@@ -72,14 +72,14 @@ describe('a document tab', () => {
           kind: 'scene',
           title: 'Niveau',
           workspace: '3d',
-          fileName: 'Niveau.scene',
+          path: 'documents/Niveau.gltf',
         },
       },
     })
 
     const { container } = render(<DocumentTab {...props('doc-1')} />)
 
-    const glyph = container.querySelector('[data-tooltip-content="3D"] path')
+    const glyph = container.querySelector('[data-tooltip-content="Modélisation"] path')
     expect(glyph?.getAttribute('d')).toBe(workspaceById('3d').icon)
   })
 
@@ -144,7 +144,7 @@ describe('a document tab', () => {
       kind: 'scene',
       title: 'Niveau',
       workspace: '3d',
-      fileName: 'Niveau.scene',
+      path: 'documents/Niveau.gltf',
     }
     useDocuments.setState({ documents: { 'doc-1': document }, stored: [document] })
 

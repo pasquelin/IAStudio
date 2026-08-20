@@ -1,7 +1,7 @@
 import { clamp } from '@shared/numeric'
-import type { Rect } from './canvas-state'
+import type { Rect } from './canvasState'
 import { ANCHOR, cornersOfRect, gripRects, HANDLE_IDS, type HandleId } from './handles'
-import { box } from './shape-geometry'
+import { box } from './shapeGeometry'
 import { crisp, toScreen, type Viewport } from './viewport'
 import type { Point, Size } from '../core/geometry'
 

@@ -1,9 +1,9 @@
 import { Texture } from 'three'
 import { describe, expect, it } from 'vitest'
 import { PBR_CHANNELS } from '@shared/domain/texture'
-import { sourceFor } from '../texture-state'
-import { createDerivePass } from './derive-shaders'
-import { createSeamPass } from './seam-shader'
+import { sourceFor } from '../textureState'
+import { createDerivePass } from './deriveShaders'
+import { createSeamPass } from './seamShader'
 import { LUMA, SOURCE_PREAMBLE } from './glsl'
 
 const source = new Texture()

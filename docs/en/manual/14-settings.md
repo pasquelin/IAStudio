@@ -340,7 +340,7 @@ At **0**, it never tries twice.
 Seven sub-sections: **Image**, **Video**, **3D**, **Audio**, **Upscaling**,
 **Background removal**, **Vectorisation**.
 
-The last three have no workspace of their own: they are the families the canvas edits — Enlarge,
+The last three have no workspace of their own: they are the families the canvas edits — Upscale,
 Cut out, Vectorise — reach for. The **Models** panel only shows the open workspace's family, so
 **this is where, and only where, their model is chosen**.
 
@@ -359,7 +359,7 @@ workspace.
 Set it once you have found the model you work with most: it saves a click every session.
 
 > **For Upscaling, Background removal and Vectorisation, this setting is not a convenience.** It is what
-> decides whether the matching edit can leave at all: with no model set, **Enlarge** opens this
+> decides whether the matching edit can leave at all: with no model set, **Upscale** opens this
 > screen instead of sending the picture.
 
 ---
@@ -442,7 +442,7 @@ The grain of a shadow’s edge.
 | **Soft** | a softened edge, closer to reality |
 
 **This setting says what a shadow looks like, not who casts one.** That is decided object by
-object, in the Inspector — see [3D workspace](09-3d-workspace.md).
+object, in the Inspector — see [Modelling workspace](09-modelling-workspace.md).
 
 ### Shadow detail
 
@@ -569,6 +569,39 @@ The **Browse…** button opens your system's file picker.
 
 ---
 
+## Versions
+
+*Version tracking of the project folder, by git. Your files only.*
+
+This section governs the **Git** panel and the **History** panel. It has nothing to do with the
+studio itself: what is tracked is your project folder.
+
+### Path to git
+
+Version tracking needs the **git** program, which is not shipped with the studio. On most
+machines it is already there and this setting stays empty.
+
+Fill it in only if you insist on a particular git. **A path holding a space is refused** — a limit
+of the component that runs git, not a choice — and the application then behaves as it does when
+git is missing altogether.
+
+> **When git is missing**, the Git panel says so and offers no button: there is nothing to offer
+> while the program is not there.
+
+### Author name, Author address
+
+What is written into every recorded version. **Leave both empty** if you already use git on this
+computer: the studio then takes what git knows, and overwrites nothing.
+
+**Both or neither**: git wants a name AND an address, and filling in only one would make every
+recording fail on the other.
+
+> **Nothing leaves or arrives unless you ask for it.** There is no automatic check: the three
+> buttons of the Git panel — check, take, send — are the only moments the studio speaks to the
+> server.
+
+---
+
 ## Storage
 
 *Where your projects are kept on disk.*
@@ -606,10 +639,22 @@ How much the application says about what it is doing, in its log.
 "Everything" helps to understand a problem, and is chatty the rest of the time. This setting changes
 nothing about what the software does — only about what it says.
 
-**Do not confuse this log with the one on the status line.** This one is the studio's internal log,
-written to the terminal that launched it: **in the build you installed there is no terminal, so
-there is nothing to read**. The **Recent activity** panel does not depend on this setting — it gets
-its lines either way.
+**Do not confuse this log with the one on the status line.** This one is the studio's internal log:
+it goes to the terminal that launched it, **and to a file**, which the button below shows. The
+status line's journal does not depend on this setting — it gets its lines either way.
+
+### Technical log
+
+**Button: Show the technical log.**
+
+Opens your file manager on the internal log, a file named `main.log`. The studio writes to it on
+every launch, however you started it.
+
+The file does not grow forever: past one megabyte it is set aside as `main.1.log` and a fresh one
+takes over. There are **two at most**, so the trace of one launch survives the one that follows it.
+
+This is the file you will be asked for when something fails without saying anything on screen. What
+you find in it follows the setting just above: at "Nothing", not a line is written.
 
 ### Settings file
 
@@ -640,11 +685,11 @@ Claude Code — can run the same actions the assistant runs.
 **Unchecked, nothing is listening.** That is the state of a fresh install, and of every launch for
 as long as the box stays unticked.
 
-**Anything that spends or uploads asks for a yes on screen**, exactly as if you had asked for it
-yourself in the assistant. A program outside cannot give it on your behalf.
+**Anything that spends, uploads or touches your files asks for a yes on screen**, exactly as if you
+had asked for it yourself in the assistant. A program outside cannot give it on your behalf.
 
 > **[Chapter 20](20-driving-from-outside.md) is this setting's own**: what guards that way in, how
-> to connect Claude Code to it, the eleven actions it reaches and what each one commits.
+> to connect Claude Code to it, the families of actions it reaches and what each one commits.
 
 ### Connection command
 

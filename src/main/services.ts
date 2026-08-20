@@ -1,28 +1,29 @@
 import { app, BrowserWindow, dialog, net, shell, systemPreferences } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
 import {
-  ASSET_HOST,
   ASSET_ID_PREFIX,
-  POSTER_HOST,
+  DEFAULT_ASSET_FOLDERS,
   type Asset,
   type AssetType,
   type MediaProbe,
 } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
-import { FAVORITE_HOST } from '@shared/domain/favorite'
 import {
+  LEGACY_ASSETS_FOLDER,
+  THUMBNAIL_SIZE,
+  landedInDefaultFolder,
   planProjectAccount,
   withRecentProject,
   type Project,
   type ProjectAccountPlan,
 } from '@shared/domain/project'
-import type { PathKind } from '@shared/domain/settings-registry'
+import type { PathKind } from '@shared/domain/settingsRegistry'
 import { ASSISTANT_MODEL_ID } from '@shared/domain/assistant'
 import type { AuthState } from '@shared/domain/settings'
 import { log } from './log'
@@ -31,78 +32,88 @@ import { effectiveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
 import { createUpdates, type Updates } from '@main/updater'
-import { moveAssetFile, moveAssetFileToFree } from './assets/asset-file'
 import { createAssetCollector } from './assets/collector'
-import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/auto-caption'
-import {
-  assetFilePath,
-  ownFileOf,
-  posterFileOf,
-  serveAssets,
-  servedFileOf,
-} from './assets/protocol'
+import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/autoCaption'
+import { assetFilePath, ownFileOf, posterFileOf, serveAssets } from './assets/protocol'
+import { createAssetResolvers } from './assets/assetResolvers'
 import { createFavorites, type FavoritesStore } from './favorites/store'
 import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
-import { bundledFfmpeg, bundledVad, resourcesRoot } from './resources'
-import { createAssetText } from './assistant/asset-text'
+import {
+  bundledAnimations,
+  bundledFfmpeg,
+  bundledTemplates,
+  bundledVad,
+  resourcesRoot,
+} from './resources'
+import { bundledTemplateFile } from './templateThumbnails'
+import { bundledAnimationFile } from './animations'
+import { createAssetText } from './assistant/assetText'
 import { createRemoteActions, type RemoteActions } from './mcp/asking'
 import { createMcpControl, type McpControl } from './mcp/control'
-import type { AssistantBrain } from './assistant/brain-port'
-import { createScenarioBrain } from './assistant/brain-scenario'
+import type { AssistantBrain } from './assistant/brainPort'
+import { createScenarioBrain } from './assistant/brainScenario'
 import { createSession, type DictationSession } from './dictation/session'
-import { fetchModel, modelIsComplete } from './dictation/model-download'
-import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/model-store'
+import { fetchModel, modelIsComplete } from './dictation/modelDownload'
+import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/modelStore'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
-import { openSttProcess } from './dictation/stt-process'
+import { openSttProcess } from './dictation/sttProcess'
+import { adoptFile } from './media/adoptFile'
 import { linkedAsset, mediaFilters } from './media/link'
+import { renderThumbnail } from './media/renderThumbnail'
+import { createThumbnailCache } from './project/thumbnailCache'
 import {
   binaryRuns,
   companionPath,
   findOnPath,
   forgetBinaries,
+  hashOrNull,
   hashSource,
   probeSource,
   runProcess,
 } from './media/runner'
-import { openPeaksProcess } from './media/peaks-process'
-import type { PeaksClient } from './media/peaks-client'
-import { catchUpMedia } from './media/catch-up'
+import { openPeaksProcess } from './media/peaksProcess'
+import { openBundleProcess } from './bundle/bundleProcess'
+import type { BundleClient } from './bundle/bundleClient'
+import type { PeaksClient } from './media/peaksClient'
+import { catchUpMedia } from './media/catchUp'
 import { createMediaService, type MediaService } from './media/service'
-import { createLocalBackend, type LocalBackend } from './assets/local-backend'
-import { createTextureExtraction, type TextureExtraction } from './assets/texture-extraction'
+import { createLocalBackend, type LocalBackend } from './assets/localBackend'
+import { createTextureExtraction, type TextureExtraction } from './assets/textureExtraction'
 import { broadcast, sendTo } from './ipc/broadcast'
 import { studioWindow } from './window/windows'
 import { setLogVerbosity } from './log'
+import { exists } from './persistence'
 import type Scenario from '@scenario-labs/sdk'
 import {
   createJobManager,
   type AssetCollector,
   type JobAccount,
   type JobManager,
-} from './scenario/job-manager'
+} from './scenario/jobManager'
 import { runnerOf } from './scenario/runner'
-import type { AskUser } from './project/document-dialogs'
+import type { AskUser } from './project/documentDialogs'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
+import { createFileOps, type FileOps } from './project/fileOps'
 import {
-  createFolderEditor,
   createFolderReader,
+  createFolderWriter,
   watchProjectFolder,
-  type FolderEditor,
   type FolderReader,
   type FolderWatch,
 } from './project/folder'
-import { createProjectStore, openFailureKey, type ProjectStore } from './project/store'
-import { createActivityLog, type ActivityLog } from './project/activity-log'
-import { openCatalogThread } from './project/catalog-thread'
-import { catalogOf } from './scenario/model-catalog'
+import { createProjectStore, openFailureKey, orWhenGone, type ProjectStore } from './project/store'
+import { createReconciler, type Reconciler } from './project/reconcile'
+import { createActivityLog, type ActivityLog } from './project/activityLog'
+import { openCatalogThread } from './project/catalogThread'
+import { catalogOf } from './scenario/modelCatalog'
 import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './scenario/uploader'
-import { createAssetInputResolver } from './scenario/asset-inputs'
-import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './scenario/asset-catalog'
-import { generationOfMetadata } from './scenario/asset-normalizer'
-import { createOwnerScope, type OwnerScope } from './scenario/owner-scope'
+import { createAssetInputResolver } from './scenario/assetInputs'
+import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './scenario/assetCatalog'
+import { generationOfMetadata } from './scenario/assetNormalizer'
+import { createOwnerScope, type OwnerScope } from './scenario/ownerScope'
 import { accountFingerprint } from './settings/accounts'
-import { createCloudBackend, type CloudBackend } from './assets/cloud-backend'
+import { createCloudBackend, type CloudBackend } from './assets/cloudBackend'
 import { isRecord } from '@shared/guards'
 import {
   clientFor,
@@ -112,15 +123,15 @@ import {
 } from './scenario/client'
 import { costEstimatorOf, type CostEstimator } from './scenario/cost'
 import { createUsageReader, type UsageReader } from './scenario/usage'
-import { createJobStore } from './scenario/job-store'
-import { createRateLimiters, limitedTransport } from './scenario/rate-limiter'
-import { createCredentialsWatch } from './scenario/credentials-watch'
+import { createJobStore } from './scenario/jobStore'
+import { createRateLimiters, limitedTransport } from './scenario/rateLimiter'
+import { createCredentialsWatch } from './scenario/credentialsWatch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
-import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
+import { createModelRegistry, type ModelRegistry } from './scenario/modelRegistry'
 import { createPlanReader, teamsOf, type PlanReader } from './scenario/plan'
-import { createAssistQueue } from './scenario/assist-queue'
-import { createPromptAssist, type PromptAssist } from './scenario/prompt-assist'
-import { promptAssistApiOf } from './scenario/prompt-assist-api'
+import { createAssistQueue } from './scenario/assistQueue'
+import { createPromptAssist, type PromptAssist } from './scenario/promptAssist'
+import { promptAssistApiOf } from './scenario/promptAssistApi'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type AccountChange, type SettingsStore } from './settings/store'
 import { buildMenu } from './menu'
@@ -131,7 +142,7 @@ import { applyTheme } from './window/theme'
  * Keys queried at once when reading usage. Fixed and low, so that asking about every stored
  * account does not spend one window's worth of requests on a screen nobody is waiting on — the
  * limiter would hold the rest of the studio behind it. It bounds concurrency, not rate: the
- * hundred a minute the API allows is `rate-limiter.ts`'s business.
+ * hundred a minute the API allows is `rateLimiter.ts`'s business.
  */
 const USAGE_CONCURRENCY = 4
 
@@ -163,11 +174,6 @@ export type Services = {
   ownerScope: OwnerScope
   /** Drops the file an asset owns, leaving a linked one where it lies. */
   removeAssetFile: (asset: Asset) => Promise<void>
-  /**
-   * Moves the file an asset owns so that it is called after `name` — `undefined` when there is
-   * no file of ours to move. A row's name IS its file's name, and this is the half that writes.
-   */
-  renameAssetFile: (asset: Asset, name: string) => Promise<string | undefined>
   project: ProjectStore
   /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
   favorites: FavoritesStore
@@ -204,6 +210,8 @@ export type Services = {
   openMicrophoneSettings: () => void
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
   link: (source: string, type: AssetType) => Promise<Asset>
+  /** The same for a file the project already holds, `null` when nothing here opens it. */
+  adopt: (relative: string) => Promise<Asset | null>
   capabilities: () => Promise<MediaCapabilities>
   /** The language in force. Injected where it is needed, so no module reads the source itself. */
   language: () => Language
@@ -212,15 +220,31 @@ export type Services = {
   pickSavePath: (name: string, extension: string) => Promise<string | null>
   /** Where a folder the studio is about to fill goes — an exported texture is several files. */
   pickFolder: () => Promise<string | null>
+  /** The process that packs and unpacks a montage bundle, forked on the first one asked for. */
+  bundles: () => BundleClient
+  /** Where a bundle is read FROM. A file the user pointed at, so nothing confines it. */
+  pickImportPath: (extension: string) => Promise<string | null>
+  /** Where the open project sits, or nothing when none is — what confines an export by name. */
+  projectPath: () => string | null
   /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
   /** Whether a path is still there — `reveal` above answers nothing for one that has gone. */
   exists: (path: string) => boolean
-  /** The project folder: read one level at a time, and the two gestures that write to it. */
-  folder: FolderReader & FolderEditor
+  /** The project folder, read one level at a time. */
+  folder: FolderReader
+  /** The pass that puts the catalogue and the project folder back in agreement. */
+  reconciler: Reconciler
+  /**
+   * Everything that WRITES to the project folder, and the stack that takes a batch back.
+   *
+   * One orchestrator for all of them: disk, then journal, then catalogue, in that order and no
+   * other. A rename reaching the disk through a second door is a rename the journal never hears
+   * about — which is why the two asset renames live in there rather than here.
+   */
+  files: FileOps
   /** Hands a file to the system. The one place the studio launches a third-party application. */
   openInSystem: (file: string) => Promise<string>
-  /** Asks the user a question the OS puts in front of the window — see `document-dialogs`. */
+  /** Asks the user a question the OS puts in front of the window — see `documentDialogs`. */
   askUser: AskUser
   pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
@@ -228,6 +252,9 @@ export type Services = {
   broadcastAccounts: (accounts: AccountSummary[]) => void
   updates: Updates
 }
+
+/** Two cores left to the interface and to whatever else the machine is doing — CLAUDE.md § 6. */
+const spareCores = (): number => Math.max(1, availableParallelism() - 2)
 
 const timestamp = (): string => new Date().toISOString()
 const newAssetId = (): string => `${ASSET_ID_PREFIX}${randomUUID()}`
@@ -306,6 +333,14 @@ function pickSavePath(name: string, extension: string): Promise<string | null> {
   })
 }
 
+/** The one file a reader accepts, named in the language the dialog opens in. */
+function pickImportPath(extension: string, language: Language): Promise<string | null> {
+  return openDialog({
+    properties: ['openFile'],
+    filters: [{ name: TRANSLATIONS[language].dialog.bundle, extensions: [extension.slice(1)] }],
+  }).then(chosen => chosen[0] ?? null)
+}
+
 /** Translated here, where the dialog opens: a native picker shows these names as they are. */
 function pickMedia(language: Language): Promise<string[]> {
   const t = TRANSLATIONS[language].dialog
@@ -332,21 +367,6 @@ async function download(url: string): Promise<Uint8Array> {
 }
 
 /**
- * Composition root of the main process. Everything stateful is built here, once, so no module
- * reaches for a singleton and every collaborator stays injectable in tests.
- *
- * Called after `app.whenReady()`: it registers the asset protocol handler, which Electron
- * refuses before then. The settings are built before it and handed in — see `createSettings`.
- */
-/**
- * The settings, on their own and before anything else. Built apart from the rest because the
- * first window is painted from them: the splash takes its colour from the theme, and the rest
- * of `createServices` opens SQLite synchronously — far too late to decide what to paint.
- *
- * Notified from the store rather than from the IPC handler: the project store writes
- * `lastProject` on its own, and every window replicates these settings.
- */
-/**
  * What this machine asks to be spoken to in: the application's own locale first, the system's
  * preferences behind it.
  *
@@ -366,6 +386,14 @@ function machineLanguages(): string[] {
   return [app.getLocale(), ...app.getPreferredSystemLanguages()]
 }
 
+/**
+ * The settings, on their own and before anything else. Built apart from the rest because the
+ * first window is painted from them: the splash takes its colour from the theme, and the rest
+ * of `createServices` opens SQLite synchronously — far too late to decide what to paint.
+ *
+ * Notified from the store rather than from the IPC handler: the project store writes
+ * `lastProject` on its own, and every window replicates these settings.
+ */
 export function createSettings(): SettingsStore {
   // `isDevelopment`, arrived on main: the fallback reads a `.env` only outside a packaged run.
   const fallback = createFileSystemFallback(app.getAppPath(), !isDevelopment)
@@ -403,6 +431,9 @@ export function createSettings(): SettingsStore {
 /**
  * Composition root of the main process. Everything stateful is built here, once, so no module
  * reaches for a singleton and every collaborator stays injectable in tests.
+ *
+ * Called after `app.whenReady()`: it registers the asset protocol handler, which Electron
+ * refuses before then. The settings are built before it and handed in — see `createSettings`.
  */
 export function createServices(settings: SettingsStore): Services {
   // Read off the one copy rather than derived a second time: the file picker below is a native
@@ -622,12 +653,74 @@ export function createServices(settings: SettingsStore): Services {
       folderWatch = current
         ? watchProjectFolder(current.path, () => broadcast(EVENTS.projectFolderChanged))
         : null
+
+      // What moved while the studio was closed. After the journal was replayed — that is what
+      // `activate` finishes before it publishes — so a move this session interrupted is already
+      // a row at the right path rather than one this pass would go looking for.
+      if (current) reconciler.request()
     },
     settle: async () => {
       // Both before the catalogue stops answering: the journal writes into it, and the pending
       // jobs are about to be attributed to whichever project opens next.
       await Promise.all([opened?.flush(), jobStore.flush()])
     },
+  })
+
+  /**
+   * Declared after the store because it reads it, and named before it because the store's own
+   * `onChange` asks for the first pass — a function-valued closure either way, so neither has to
+   * be built first.
+   */
+  const reconciler = createReconciler({
+    rootOf: () => project.current()?.path ?? null,
+    catalogOf: () => (project.current() ? project.catalog() : null),
+    announce: state => broadcast(EVENTS.projectRescan, state),
+    report: found => {
+      /**
+       * The windows are told, and this is what makes the pass VISIBLE rather than merely true.
+       *
+       * Every panel that lists assets reads the catalogue once and then waits to be told —
+       * `assets.onChanged` is the shelf's only trigger, and the explorer re-reads its folders on
+       * `onFolderChanged`. Without these two lines the pass would refile twelve rows, write its
+       * line to the journal, and leave the shelf drawing the answer from before it: thumbnails
+       * that open nothing, and assets missing from a library that holds them.
+       *
+       * Only when something actually changed, which is what keeps a pass on every focus quiet.
+       */
+      if (found.moved + found.missing + found.returned > 0) {
+        broadcast(EVENTS.assetsChanged)
+        broadcast(EVENTS.projectFolderChanged)
+      }
+
+      // Only what CHANGED, and that is what makes running this on every focus quiet: a pass over
+      // a project nothing moved in writes nothing at all.
+      if (found.moved > 0) {
+        journal.record({
+          level: 'info',
+          topic: 'project',
+          messageKey: 'activity.filesFound',
+          params: { count: found.moved },
+        })
+      }
+      if (found.missing > 0) {
+        journal.record({
+          level: 'warn',
+          topic: 'project',
+          messageKey: 'activity.filesMissing',
+          params: { count: found.missing },
+        })
+      }
+    },
+    warn: error => log.warn('project', `reconciling the project folder failed: ${String(error)}`),
+  })
+
+  /**
+   * The other half of when: the Finder is where a project folder is rearranged, and a window
+   * coming back to the front is the moment the studio can find out. One pass at a time, so
+   * clicking between two windows does not walk the project twice.
+   */
+  app.on('browser-window-focus', () => {
+    reconciler.request()
   })
 
   // Reads the catalogue per flush rather than holding one: a project can close and another open
@@ -677,11 +770,118 @@ export function createServices(settings: SettingsStore): Services {
       log.warn('media', `could not record what was derived for ${assetId}: ${String(error)}`),
     )
 
+  /**
+   * Whether the project holds the folder every asset used to be filed under — that exact entry,
+   * and a directory. `existsSync` would answer for a `Assets/` the user made themselves, the case
+   * being folded by APFS and NTFS alike, and for a FILE of that name.
+   */
+  const holdsLegacyAssetsFolder = (root: string): boolean => {
+    try {
+      return readdirSync(root, { withFileTypes: true }).some(
+        entry => entry.name === LEGACY_ASSETS_FOLDER && entry.isDirectory(),
+      )
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * The projects whose two-tree question has been answered, by folder — answered, not told: a
+   * project that turns out to wear ONE tree is settled just as much, and settling it is what
+   * keeps a modern project from reading its folder on every import for ever. A set rather than
+   * one root, because the answer is per project and the user comes back to the one they left.
+   */
+  const legacyLayoutSettled = new Set<string>()
+
+  /**
+   * A project made before the tree became the user's keeps its files under `assets/`, and nothing
+   * migrates them out — leaving them alone is the decision, not an oversight. The import that
+   * follows creates `Images/` beside it, and until this line nothing in the app said why one
+   * project suddenly wore two trees.
+   *
+   * The free half of the question first, then ONE reading of the folder per project. Read rather
+   * than `existsSync(join(root, 'assets'))`, which answers `true` for a folder the user made and
+   * called `Assets` — APFS and NTFS both fold the case — and `true` for a file of that name: the
+   * studio would be stating something false about their project and inviting them to tidy it.
+   */
+  const noteLegacyLayout = (asset: Asset): void => {
+    // `current()` and not `path()`, which THROWS when no project is open. This is the first thing
+    // `onImported` does, and `announce` swallows what that listener raises: a project closed while
+    // the catalogue was answering would have cost a mesh its textures, silently.
+    const root = project.current()?.path
+    const folder = DEFAULT_ASSET_FOLDERS[asset.type]
+
+    if (!root || legacyLayoutSettled.has(root)) return
+    if (!landedInDefaultFolder(asset.path, folder)) return
+
+    legacyLayoutSettled.add(root)
+    if (!holdsLegacyAssetsFolder(root)) return
+
+    journal.record({
+      level: 'info',
+      topic: 'project',
+      messageKey: 'activity.projectLegacyAssetsFolder',
+      params: { legacy: LEGACY_ASSETS_FOLDER, folder },
+    })
+  }
+
+  /**
+   * What every asset that lands in the project goes through — a download, a generation collected,
+   * a file the explorer adopted. Named rather than inlined because the adoption needs the very
+   * same derivation: two callers, one deriver, and no way for the two to drift apart.
+   */
+  const onAssetLanded = (asset: Asset): void => {
+    noteLegacyLayout(asset)
+
+    // A take that came down from the API never met the picker, so nothing ever derived what
+    // a montage reads: no waveform under its sound clip, and no proxy for a codec the window
+    // cannot decode. Both are what `ingest` writes for a file picked off a disk.
+    //
+    // Only with a probe: `deriveFiles` needs the length, and a `null` one means ffprobe is
+    // missing — in which case there is no ffmpeg to derive anything with either.
+    if ((asset.type === 'video' || asset.type === 'audio') && asset.probe && asset.path) {
+      void media
+        .derive({
+          assetId: asset.id,
+          path: join(project.path() ?? '', asset.path),
+          kind: asset.type,
+          probe: asset.probe,
+          // The library's own still is a picture of the take; ours would be a frame of it.
+          poster: !asset.posterPath,
+          // The user is waiting on this take: what is being prepared belongs on screen.
+          announce: true,
+        })
+        .then(() => broadcast(EVENTS.assetsChanged))
+        .catch((error: unknown) =>
+          log.warn('media', `could not derive the files of ${asset.name}: ${String(error)}`),
+        )
+      return
+    }
+
+    if (asset.type !== 'mesh') return
+    void extractTextures(asset)
+      .then(textures => {
+        // The one write no window ordered, so the one nothing else would say out loud: the
+        // import that started this is long answered, and its shelf refreshed, by the time a
+        // GLB has been read and its pictures written.
+        if (textures.length > 0) broadcast(EVENTS.assetsChanged)
+      })
+      .catch((error: unknown) =>
+        // The journal already carries the line `extractTextures` writes; this is the rejection
+        // itself, which nothing else would ever hear.
+        log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
+      )
+  }
+
   const assets = createLocalBackend({
     download,
     projectPath: () => project.path(),
     catalog: () => project.catalog(),
     now: timestamp,
+    // The same function the rescan hashes with (`projectDisk` passes the very same one), which
+    // is what makes the two comparable: a fingerprint recorded here is what lets a generated file
+    // be followed after the user files it away themselves.
+    hash: hashOrNull,
     // The API states no duration and no track list beside the bytes it hands over, so a
     // generated take reached the timeline as an untimed clip: five arbitrary seconds, and no
     // way to tell whether it carries a sound. ffprobe reads the file that just landed.
@@ -690,46 +890,7 @@ export function createServices(settings: SettingsStore): Services {
     // something to show beside a model without anyone having gone looking for a menu row. Not
     // awaited by the import: a model of half a dozen 2048² pictures would otherwise hold up the
     // download that produced it, and a failure here must not cost the model itself.
-    onImported: asset => {
-      // A take that came down from the API never met the picker, so nothing ever derived what
-      // a montage reads: no waveform under its sound clip, and no proxy for a codec the window
-      // cannot decode. Both are what `ingest` writes for a file picked off a disk.
-      //
-      // Only with a probe: `deriveFiles` needs the length, and a `null` one means ffprobe is
-      // missing — in which case there is no ffmpeg to derive anything with either.
-      if ((asset.type === 'video' || asset.type === 'audio') && asset.probe && asset.path) {
-        void media
-          .derive({
-            assetId: asset.id,
-            path: join(project.path() ?? '', asset.path),
-            kind: asset.type,
-            probe: asset.probe,
-            // The library's own still is a picture of the take; ours would be a frame of it.
-            poster: !asset.posterPath,
-            // The user is waiting on this take: what is being prepared belongs on screen.
-            announce: true,
-          })
-          .then(() => broadcast(EVENTS.assetsChanged))
-          .catch((error: unknown) =>
-            log.warn('media', `could not derive the files of ${asset.name}: ${String(error)}`),
-          )
-        return
-      }
-
-      if (asset.type !== 'mesh') return
-      void extractTextures(asset)
-        .then(textures => {
-          // The one write no window ordered, so the one nothing else would say out loud: the
-          // import that started this is long answered, and its shelf refreshed, by the time a
-          // GLB has been read and its pictures written.
-          if (textures.length > 0) broadcast(EVENTS.assetsChanged)
-        })
-        .catch((error: unknown) =>
-          // The journal already carries the line `extractTextures` writes; this is the rejection
-          // itself, which nothing else would ever hear.
-          log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
-        )
-    },
+    onImported: onAssetLanded,
   })
 
   const extractTextures = createTextureExtraction({
@@ -740,9 +901,33 @@ export function createServices(settings: SettingsStore): Services {
     record: report => journal.record(report),
   })
 
+  // Reader and writer together: the handlers take the reading half, the orchestrator below takes
+  // the writing one, and neither of them knows the catalogue is involved.
+  const folder = {
+    ...createFolderReader(() => project.path(), language),
+    ...createFolderWriter(
+      () => project.path(),
+      file => shell.trashItem(file),
+    ),
+  }
+
   const documents = createDocumentFiles({
     projectPath: () => project.path(),
     now: timestamp,
+    // The listing walks the project through the same reader the explorer does — one walk with
+    // one depth bound, rather than a second one free to disagree about how deep a project goes.
+    walkFiles: () => folder.walk(),
+    folderNames: relative => folder.names(relative),
+  })
+
+  const files = createFileOps({
+    // `null` rather than `''`: with no project open there is no folder to write in, and every
+    // gesture answers an empty outcome instead of resolving a path against nothing.
+    rootOf: () => project.current()?.path ?? null,
+    folder,
+    catalog: () => project.catalog(),
+    newBatchId: () => randomUUID(),
+    assetsChanged: () => broadcast(EVENTS.assetsChanged),
   })
 
   const ffmpeg = createFfmpegResolver(() => ({
@@ -758,6 +943,7 @@ export function createServices(settings: SettingsStore): Services {
   // the ingest pool already bounds how many run at once. Forgotten when it exits, so a crash
   // costs the file being ingested and not the session.
   let peaks: PeaksClient | null = null
+  let bundles: BundleClient | null = null
 
   const media = createMediaService({
     ffmpeg: ffmpeg.path,
@@ -784,8 +970,7 @@ export function createServices(settings: SettingsStore): Services {
     onProgress: progress => broadcast(EVENTS.mediaProgress, progress),
     record: report => journal.record(report),
     projectPath: () => project.current()?.path ?? null,
-    // Two cores left to the interface and to whatever else the machine is doing.
-    concurrency: () => Math.max(1, availableParallelism() - 2),
+    concurrency: spareCores,
   })
 
   /** Whether a catch-up is already walking the project — see `catchUpProject`. */
@@ -885,7 +1070,17 @@ export function createServices(settings: SettingsStore): Services {
       },
       backend: assets,
       newId: newAssetId,
-      heldFor: remoteAssetId => project.catalog().findByRemoteId(remoteAssetId),
+      // The disk rather than `missing_at`, which the row does not carry out of the catalogue
+      // anyway: the date says what the last reconciliation pass saw, and this is asked at the
+      // moment the answer is acted on. Through the async `exists` and never `existsSync` — this
+      // runs on the main process while a generation is being collected.
+      heldFor: async remoteAssetId => {
+        const held = await project.catalog().findByRemoteId(remoteAssetId)
+        if (!held) return null
+
+        const file = ownFileOf(project.path(), held)
+        return { ...held, onDisk: file !== null && (await exists(file)) }
+      },
     })
 
   // Rebuilt only when the client is, so every job of one account shares a single graph rather
@@ -993,37 +1188,6 @@ export function createServices(settings: SettingsStore): Services {
     }
   }
 
-  /**
-   * Moves an asset's file to its new name. Nothing happens without a project open: the path is
-   * relative to one, and there is no folder to move anything inside of.
-   */
-  const renameAssetFile = async (asset: Asset, name: string): Promise<string | undefined> => {
-    const current = project.current()
-    return current ? moveAssetFile(current.path, asset, name) : undefined
-  }
-
-  /**
-   * Renames an asset the STUDIO named itself — the captioner, and nothing else so far.
-   *
-   * Both halves, because they are one act: a row renamed on its own leaves the shelf reading
-   * « une ruelle bleue » over a file still called `IMG_1234.png`, which is the two-name problem
-   * this whole layout exists to end — and this path never crosses the rename channel that would
-   * have caught it.
-   *
-   * The name written is the one the FOLDER settled on, suffix and cleaning included. A caption
-   * is a sentence a model wrote: there is nobody to hand a refusal back to, so it is made to fit
-   * rather than rejected — and what the row says is then what the disk says, by construction.
-   */
-  const renameAssetToCaption = async (asset: Asset, name: string): Promise<void> => {
-    const current = project.current()
-    if (!current) return
-
-    const moved = await moveAssetFileToFree(current.path, asset, name)
-    // No file of ours to move — a linked rush, a row that lives in the library alone. Its name
-    // is the catalogue's business only, so it takes the caption as it was written.
-    await project.catalog().add(moved ? { ...asset, ...moved } : { ...asset, name })
-  }
-
   const accountOn = (scenario: Scenario): JobAccount => ({
     runner: runnerOf(scenario),
     collect: collectorOf(scenario),
@@ -1115,31 +1279,50 @@ export function createServices(settings: SettingsStore): Services {
   const captioner = createCaptioner({
     queue: assistQueue.run,
     caption: images => prompts.caption(images),
-    rename: renameAssetToCaption,
+    rename: files.renameAssetToCaption,
     record: report => journal.record(report),
     enabled: () => settings.read().generation.captionArrivals,
+  })
+
+  const thumbnails = createThumbnailCache({
+    projectPath: () => project.current()?.path ?? null,
+    render: async (file, relative) => {
+      const drawn = await renderThumbnail(file, THUMBNAIL_SIZE)
+      if (drawn) return drawn
+
+      // A `.glb` is a picture no previewer draws, and the library's own still came down beside
+      // it. Asked ONLY where the machine failed, so the ordinary tile costs no catalogue query.
+      const current = project.current()
+      if (!current) return null
+
+      // Both refusals are answered « no preview » rather than thrown, because both are ordinary
+      // and `servedPath` now reads a rejection as a defect: the catalogue is closing under this
+      // request, or the row names a still the folder no longer holds — what a rescan repairs.
+      const [asset] = await orWhenGone(
+        () => project.catalog().search({ path: relative, limit: 1 }),
+        [],
+      )
+      const poster = asset ? posterFileOf(current.path, asset) : null
+      return poster ? await readFile(poster).catch(() => null) : null
+    },
+    // The same bound the ingest pool takes: previewing is the system's work, but a folder
+    // scrolled fast asks for hundreds at once and each one leaves this process.
+    concurrency: spareCores,
   })
 
   const favorites = createFavorites(join(app.getPath('userData'), 'favorites'))
   const styles = createStyles(() => app.getPath('userData'))
 
-  serveAssets({
-    [ASSET_HOST]: async assetId => {
-      const current = project.current()
-      if (!current) return null
-
-      const asset = await project.catalog().find(assetId)
-      return asset ? servedFileOf(current.path, asset) : null
-    },
-    [POSTER_HOST]: async assetId => {
-      const current = project.current()
-      if (!current) return null
-
-      const asset = await project.catalog().find(assetId)
-      return asset ? posterFileOf(current.path, asset) : null
-    },
-    [FAVORITE_HOST]: favoriteId => Promise.resolve(favorites.thumbnailPath(favoriteId)),
-  })
+  serveAssets(
+    createAssetResolvers({
+      projectPath: () => project.current()?.path ?? null,
+      findAsset: assetId => project.catalog().find(assetId),
+      favouriteThumbnail: favoriteId => favorites.thumbnailPath(favoriteId),
+      thumbnailOf: relative => thumbnails.of(relative),
+      bundledAnimation: id => bundledAnimationFile(bundledAnimations(resourcesRoot()), id),
+      bundledTemplate: file => bundledTemplateFile(bundledTemplates(resourcesRoot()), file),
+    }),
+  )
 
   const stored = settings.read()
   const lastProject = stored.general.startup === 'lastProject' ? stored.storage.lastProject : null
@@ -1175,8 +1358,10 @@ export function createServices(settings: SettingsStore): Services {
     cloud: () => cloudAssets,
     ownerScope,
     removeAssetFile,
-    renameAssetFile,
     project,
+    // `current()` rather than `path()`, which throws: "no project open" is an ordinary answer
+    // here, and an export named against nothing is a refusal rather than a failure.
+    projectPath: () => project.current()?.path ?? null,
     journal,
     flushJobs: () => jobStore.flush(),
     documents,
@@ -1193,6 +1378,17 @@ export function createServices(settings: SettingsStore): Services {
       await project
         .catalog()
         .add(linkedAsset(source, { id: newAssetId(), type, now: timestamp() })),
+    adopt: relative =>
+      adoptFile(relative, {
+        projectPath: () => project.path(),
+        catalog: () => project.catalog(),
+        newAssetId,
+        now: timestamp,
+        hash: hashOrNull,
+        probeFile: probeLocalFile,
+        onAdopted: onAssetLanded,
+        record: report => journal.record(report),
+      }),
     // Asked, not cached: this is what the settings pane consults after the user installed the
     // binary it just said was missing. Run rather than looked for — a half-written download and
     // a binary built for the other architecture both exist on disk and encode nothing.
@@ -1213,15 +1409,18 @@ export function createServices(settings: SettingsStore): Services {
     // The same picker the settings use for a folder: a second dialog with slightly different
     // options is how two flows start behaving differently.
     pickFolder: () => pickPath('folder'),
+    // Forked on the first bundle asked for, then kept — most sessions export none. Forgotten
+    // when it exits, so a crash costs the export it was writing and not the session.
+    bundles: () =>
+      (bundles ??= openBundleProcess(() => {
+        bundles = null
+      })),
+    pickImportPath: extension => pickImportPath(extension, language()),
     reveal: file => shell.showItemInFolder(file),
     exists: existsSync,
-    folder: {
-      ...createFolderReader(() => project.path(), language),
-      ...createFolderEditor(
-        () => project.path(),
-        file => shell.trashItem(file),
-      ),
-    },
+    folder,
+    files,
+    reconciler,
     openInSystem: file => shell.openPath(file),
     askUser,
     pickMedia: () => pickMedia(language()),

@@ -42,24 +42,9 @@ export function renameAsset(assetId: string, was: string, name: string): void {
 }
 
 /**
- * The tabs editing this asset take its new name too.
- *
- * A document opened FROM an asset is called after it — `openAsset` copies the name across when
- * the tab is created — and nothing carried a later rename over: the shelf said « squelette »
- * while the tab above it still read `asset_UjmhYgPhewvzGCx2tD1jxvwL`, which is the two-name
- * problem back in the one place a user cannot miss it.
- *
- * All of them, not the first: one asset is legitimately edited by two documents — a texture is a
- * channel in the Textures space and pixels in the Images one.
- *
- * A document keeps its OWN name once somebody types one; this only follows the asset because the
- * asset is where the name came from. Renaming the tab does not travel back the other way — a
- * montage of layers is not its source picture, and one gesture writing two things is one gesture
- * too many.
- *
- * Failures land in the journal per document rather than undoing the asset's rename: the asset is
- * what was asked for, and a tab whose name did not follow is a smaller wrong than a rename that
- * silently did not happen.
+ * Every document opened from the asset, not the first: two can legitimately edit one — a texture
+ * is a channel in Textures and pixels in Images. The name never travels back the other way, and a
+ * document whose rename fails only reaches the journal: the asset's rename is what was asked for.
  */
 function renameDocumentsOfAsset(assetId: string, name: string): void {
   const { documents, stored } = useDocuments.getState()

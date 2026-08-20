@@ -1,5 +1,5 @@
 import type { AssetGeneration, AssetType } from '@shared/domain/asset'
-import { openGeneratorOn } from '@/helpers/generation'
+import { openGeneratorOn } from '@/helpers/openGenerator'
 import { workspaceById, workspaceOfType } from '@/helpers/workspaces'
 import { enterWorkspace } from './open'
 

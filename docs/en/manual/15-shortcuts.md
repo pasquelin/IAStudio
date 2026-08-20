@@ -38,13 +38,14 @@ The studio files each action under a **context** — the surface where it makes 
 surface listens at a time, the one you are looking at. A key shared between two contexts can
 therefore never be ambiguous.
 
-Eight contexts:
+Nine contexts:
 
 | Context | Where it applies |
 |---|---|
 | **Anywhere in the application** | any window, any workspace |
 | **In the bar of spaces** | the top bar, while the focus is on one of its tabs |
-| **In the 3D view** | the viewport of the 3D workspace |
+| **In the explorer** | the project folder panel, in every workspace and on the home |
+| **In the 3D view** | the viewport of the Modelling workspace |
 | **In the edit** | the timeline of the Video and Audio workspaces |
 | **In the image** | the canvas of the Image workspace |
 | **In the sky** | the view of the Skyboxes workspace |
@@ -52,13 +53,20 @@ Eight contexts:
 | **In the material** | the preview and channels of the Textures workspace |
 
 **A surface can listen to a key without being a context, and the guarantee above does not cover it
-then.** The 3D workspace's animation band is that case: `Delete` and `Backspace` take off the
-chosen key there, the key being bound to the band rather than to the register of contexts. So it
-does not appear on the shortcuts screen, and cannot be changed.
+then.** The Modelling workspace's animation band is that case, and it listens to **four** keys:
+`Delete` and `Backspace` take off whatever is chosen — the key, or the animation block — `⌘D`
+duplicates the chosen block end to end, and `S` cuts it at the playhead. All four are bound to the
+band rather than to the register of contexts: they do not appear on the shortcuts screen, and
+cannot be changed. Right-clicking a block carries the three gestures that concern it — see [the
+Modelling workspace](09-modelling-workspace.md).
 
 One context is special: **Anywhere in the application**. Its keys go through the operating system's
 menu, which catches them before anybody else. They are therefore the only ones that can never be
 "covered" by another context — and the only ones whose conflict is always a real conflict.
+
+**One exception, and only one: `⌥D`, dictation.** It is **held** rather than tapped, and a system
+menu has nothing to report a release with — so the window hears it, and it has no menu row. That
+is also what lets it write into a text field, see below.
 
 ---
 
@@ -140,7 +148,7 @@ changed.
 either, and stopping on one would make the walk look stuck.
 
 **A ticked row says what its tick means.** Some are alternatives — a tool's mode, the active
-account, the view of one quarter of the 3D space: ticking one unticks the rest. Others answer for themselves,
+account, the view of one quarter of the Modelling workspace: ticking one unticks the rest. Others answer for themselves,
 like a layer's two padlocks. A screen reader announces the first kind as radio buttons and the
 second as checkboxes.
 
@@ -160,6 +168,44 @@ shortcuts screen.
 
 ---
 
+## In the explorer
+
+The one context that is not a workspace: it is the project folder panel, and it listens wherever
+that panel is open — in all six workspaces as on the home. The shortcuts screen names it exactly
+as this heading does.
+
+**It only listens while the focus is inside it.** Click a row, or `Tab` into it: while you are
+elsewhere, these keys belong to the open document. That is what lets `⌘Z`, `⌘C` and `⌘V` exist
+here without ever treading on the canvas's own.
+
+| Action | Key | What it does |
+|---|---|---|
+| **New folder** | `⇧⌘N` | creates an empty folder inside the one on screen, and opens its name for typing |
+| **Duplicate** | `⌘D` | lays a copy of each chosen item beside the original, under the first free name |
+| **Cut** | `⌘X` | holds the selection, to be moved on the next paste |
+| **Copy** | `⌘C` | holds the selection, to be copied on the next paste |
+| **Paste** | `⌘V` | drops what the clipboard holds into the folder on screen |
+| **Move to trash** | `⌘⌫` | sends the selection to the system trash |
+| **Undo the last file gesture** | `⌘Z` | puts the last batch moved, renamed, duplicated or created back where it was |
+| **Redo the file gesture** | `⇧⌘Z` | redoes the batch just undone, exactly as it was |
+
+**Cut moves nothing**: the rows being held are drawn dimmed, and nothing shifts until you paste.
+**A folder is duplicated with everything inside it.**
+
+**A paste refuses one by one, not in bulk.** If a name is already taken in the destination, that
+item is the one refused; the rest go through.
+
+**`⌘⌫` rather than `⌫` alone**, and it is deliberate: this is the one gesture of this context the
+studio cannot undo, and a bare delete key is too close to what a hand does while reading a list.
+
+> **Four menu gestures are not in this table**, and they are not on the shortcuts screen either.
+> **Open** answers to `Enter`, but it is the tree that listens for that key, not the registry: it
+> cannot be changed. **Show in folder**, **File information** and **Rename** answer to no key at
+> all — they live in the right-click menu, and nowhere else. See
+> [Projects](04-projects.md#right-clicking-twelve-gestures-in-four-groups).
+
+---
+
 ## In the 3D view
 
 ### The tools
@@ -173,7 +219,7 @@ shortcuts screen.
 | **Magnet** | `M` | steps the handles by regular amounts, set in the settings |
 | **Local frame** | `L` | aligns the handles with the object's orientation rather than the world's |
 | **Projection** | `O` | switches between perspective and orthographic projection |
-| **Display mode** | `Z` | cycles the seven ways of drawing |
+| **Display mode** | `Z` | cycles the nine ways of drawing |
 | **Four views** | `⇧Q` | splits the viewport in four: the current view, top, front, side |
 | **Quad edges** | `⇧W` | in wireframe, erases the diagonals triangulation added |
 | **Show skeletons** | `B` | draws the bones of every rigged model over the scene |
@@ -205,15 +251,18 @@ shortcuts screen.
 
 These keys are **held** rather than pressed: while you hold, the camera moves.
 
-| Direction | Key (QWERTY keyboard) | Key (AZERTY keyboard) |
-|---|---|---|
-| **Forward** | `W` | `Z` |
-| **Back** | `S` | `S` |
-| **Left** | `A` | `Q` |
-| **Right** | `D` | `D` |
-| **Up** | `E` | `E` |
-| **Down** | `Q` | `A` |
-| **Boost** | left `⇧` | left `⇧` |
+| Direction | Key (QWERTY keyboard) | Key (AZERTY keyboard) | Arrow |
+|---|---|---|---|
+| **Forward** | `W` | `Z` | `↑` |
+| **Back** | `S` | `S` | `↓` |
+| **Left** | `A` | `Q` | `←` |
+| **Right** | `D` | `D` | `→` |
+| **Up** | `E` | `E` | — |
+| **Down** | `Q` | `A` | — |
+| **Boost** | left `⇧` | left `⇧` | — |
+
+The arrows do exactly what the four letters do: they are added, they replace nothing. Altitude has
+none, the four being already taken by movement along the ground.
 
 > **Why two columns.** The studio listens to the **position** of the key on the keyboard, not the
 > letter printed on it. The four direction keys are therefore always the same square, top left:
@@ -227,9 +276,10 @@ These keys are **held** rather than pressed: while you hold, the camera moves.
 
 Speed and boost are set in [settings](14-settings.md#workspaces).
 
-> **`S` does two things at once in the 3D view**: it picks the **Scale** tool *and* moves the camera
-> backwards while held. This is a known overlap — see [What does not exist yet](18-limits.md). In
-> practice you barely notice: pressing `S` to take the tool backs the camera up by a hair.
+> **`S` carries two meanings, and the mouse button settles which.** No button down, `S` picks the
+> **Scale** tool; a button held in the view — left or right — it moves the camera back and leaves
+> the tool alone. The arrows work the same way: during a flight they drive the camera, and the
+> list that had the focus never sees them.
 
 ### What the mouse does, with no shortcut
 
@@ -237,6 +287,7 @@ Speed and boost are set in [settings](14-settings.md#workspaces).
 |---|---|
 | **Left click** | chooses the object under the cursor — or the nearest **bone**, in pose mode (`P`) |
 | **Right click held + move** | turns your head, on the spot |
+| **A button held + keyboard** | moves the camera — see [the Modelling workspace](09-modelling-workspace.md) |
 | **Wheel** | moves forward or back |
 | **Click a handle + drag** | applies the current tool |
 
@@ -372,7 +423,7 @@ key pressed by mistake has no business spending any.
 | **Regenerate the region** | has the masked region of the armed layer repainted |
 | **Extend** | has the model paint beyond the edges of the image |
 | **Cut out** | removes the background of the flattened image |
-| **Enlarge** | raises the definition of the flattened image |
+| **Upscale** | raises the definition of the flattened image |
 | **Vectorise** | turns the flattened image into paths |
 
 **None of them leaves on its own.** Each flattens the document, sends it, then **fills in the
@@ -380,7 +431,7 @@ Generation panel's form** and shows it to you. You are the one who presses Gener
 what is going and with which settings.
 
 **They live in the Image menu**, and nowhere else: with no default shortcut, that is the only
-door. Cut out, Enlarge and Vectorise each ask for a model of a family that has no workspace of its
+door. Cut out, Upscale and Vectorise each ask for a model of a family that has no workspace of its
 own; it is set in **Settings ▸ Generation**. Until one is set, the edit request does not leave and
 opens the screen where you choose it.
 
@@ -425,12 +476,13 @@ The Skyboxes workspace answers the keyboard like the others.
 
 ## In the take editor
 
-The seventh context: the audio editor listens for undo alone.
+The seventh context: the audio editor listens for undo, and for the space bar.
 
 | Action | Key | What it does |
 |---|---|---|
 | **Undo** | `⌘Z` | drops the last step off the chain — a fade, a normalise, a crop |
 | **Redo** | `⇧⌘Z` | |
+| **Play / Pause** | `Space` | the bottom monitor, the one carrying the chain — see [The Audio workspace](11-audio-workspace.md) |
 
 > **Nothing is written until you apply.** Every tool appends a step to a chain replayed over the
 > decoded take, which is what makes undo free and A/B instant. See
@@ -443,7 +495,7 @@ taken from the bar, under the waveform.
 
 ## In the material
 
-The eighth context, and the shortest: the Textures workspace listens for undo alone.
+The last context on the list, and the shortest: the Textures workspace listens for undo alone.
 
 | Action | Key | What it does |
 |---|---|---|
@@ -466,6 +518,14 @@ image has not moved.
 > **"⌘Z seems to do nothing."** It is almost always this: the action you have in mind belongs to
 > another tab. Activate the tab, then undo.
 
+**And one stack belongs to no document: the files'.** Moving, renaming, duplicating, creating a
+folder touches no tab — those gestures belong to the project, and so does their stack. It
+therefore outlives closing a document, and it is the same one in every window.
+
+`⌘Z` picks between the two by the focus, and by nothing else: **inside the Explorer it steps back
+one file gesture; anywhere else it steps back one notch in the document in front of you.** The
+trash gesture enters neither.
+
 **While you are typing, `⌘Z` undoes your text.** Rename a layer or a track, make a typo, press
 `⌘Z`: the word you have just typed steps back, not the last brush stroke. The studio stands aside
 as long as the caret is in a text field, and takes over again the moment you leave it.
@@ -473,8 +533,9 @@ as long as the caret is in a text field, and takes over again the moment you lea
 The same holds for `⌘X`, `⌘C` and `⌘V`: in a field they work on the text; anywhere else, on what
 the workspace has selected.
 
-**No shortcut crosses a text field**: a command has to declare it to be heard there, and none
-does today.
+**One shortcut crosses a text field**: a command has to declare it to be heard there, and **`⌥D`,
+dictation, is the only one that does** — it exists precisely to write into the field you are
+already in. That is also why it carries a modifier: without one, it would swallow a letter.
 
 ---
 
@@ -535,12 +596,16 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 **The flying keys** (`W A S D Q E` and boost) are not on this screen. They are fixed for now. See
 [What does not exist yet](18-limits.md).
 
-**`Delete` and `Backspace` on the animation band** are not either, for the reason given above: they
-are bound to the band, not to a context.
+**The animation band's four keys** are not either — `Delete`, `Backspace`, `⌘D` and `S` — for the
+reason given above: they are bound to the band, not to a context.
 
 ---
 
 ## Crib sheet, all on one page
+
+The columns are the workspaces. **The Explorer has its own table, below**: it is the one context
+that is not a workspace — it is open in all of them at once — and one more column would suggest
+`⌘D` or `⌘Z` do there what they do in the workspace of the column next to it.
 
 | Key | Anywhere | Bar | 3D view | Edit | Image | Sky | Audio | Material |
 |---|---|---|---|---|---|---|---|---|
@@ -600,6 +665,16 @@ are bound to the band, not to a context.
 | `Esc` |  |  |  |  | Abandon the crop |  |  |  |
 | `⌥←` |  | Move left |  |  |  |  |  |  |
 | `⌥→` |  | Move right |  |  |  |  |  |  |
+
+**In the explorer** — while the focus is in the panel, and only then:
+
+| Key | What it does |
+|---|---|
+| `⇧⌘N` | New folder |
+| `⌘D` | Duplicate |
+| `⌘X` / `⌘C` / `⌘V` | Cut / Copy / Paste |
+| `⌘⌫` | Move to trash |
+| `⌘Z` / `⇧⌘Z` | Undo / Redo the file gesture |
 
 ---
 

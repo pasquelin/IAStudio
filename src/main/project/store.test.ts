@@ -6,10 +6,19 @@ import {
   LEGACY_MANIFEST_FILE,
   MANIFEST_FILE,
   MANIFEST_VERSION,
-  PROJECT_FOLDERS,
+  MACHINE_FOLDERS,
+  STARTER_FOLDERS,
 } from '@shared/domain/project'
 import { isRecord } from '@shared/guards'
-import { createProjectStore, NoProjectError, ProjectOpenError, type ProjectStore } from './store'
+import {
+  createProjectStore,
+  isCatalogueGone,
+  NoProjectError,
+  orWhenGone,
+  ProjectOpenError,
+  type ProjectStore,
+} from './store'
+import { CATALOGUE_CLOSED } from './catalogClient'
 import { memoryCatalog } from './catalog-fixtures'
 
 type ExecDone = (error: Error | null, stdout: string, stderr: string) => void
@@ -63,9 +72,14 @@ describe('project store', () => {
     // The folder handed in IS the project. Nothing is made from the name — a name that fabricated
     // a subfolder put a project inside the folder the user had just made for it.
     expect(project.path).toBe(root)
-    for (const folder of PROJECT_FOLDERS) {
+    for (const folder of [...MACHINE_FOLDERS, ...STARTER_FOLDERS]) {
       expect(await exists(join(project.path, folder))).toBe(true)
     }
+
+    // The old layout is gone: a document lands in `documents/` when nothing says otherwise and
+    // the folder appears with the first save, exactly as an import recreates `Images/`.
+    expect(await exists(join(project.path, 'assets'))).toBe(false)
+    expect(await exists(join(project.path, 'documents'))).toBe(false)
 
     const manifest: unknown = JSON.parse(
       await readFile(join(project.path, '.project.json'), 'utf8'),
@@ -81,7 +95,28 @@ describe('project store', () => {
   // The rule the entry states: what the folder holds for the user stays in the open, what the
   // machine keeps goes under a dot. `layouts/` was neither — nothing has ever written to it.
   it('leaves no folder behind that nothing writes to', () => {
-    expect(PROJECT_FOLDERS).not.toContain('layouts')
+    expect([...MACHINE_FOLDERS, ...STARTER_FOLDERS]).not.toContain('layouts')
+  })
+
+  /**
+   * What makes the starter folders ORDINARY, and the whole reason they are laid down once rather
+   * than ensured: a user who threw `Images/` away meant to, and a folder that came back at the
+   * next open would be the old layout wearing a new name.
+   *
+   * The machine's own are the other way round — rebuildable, so a missing cache folder must not
+   * be what stops a project from opening.
+   */
+  it('puts back the caches on open, and never the folders the user was given', async () => {
+    const project = await store.create(root, 'My project')
+
+    await rm(join(project.path, 'Images'), { recursive: true, force: true })
+    await rm(join(project.path, '.index/peaks'), { recursive: true, force: true })
+    store.close()
+
+    await store.open(project.path)
+
+    expect(await exists(join(project.path, 'Images'))).toBe(false)
+    expect(await exists(join(project.path, '.index/peaks'))).toBe(true)
   })
 
   /**
@@ -465,15 +500,6 @@ describe('project store', () => {
     expect(await store.open(created.path)).toEqual(created)
   })
 
-  it('rebuilds a folder deleted between two sessions rather than refusing to open', async () => {
-    const created = await store.create(root, 'My project')
-    await rm(join(created.path, 'assets/vid'), { recursive: true })
-    store.close()
-
-    await store.open(created.path)
-    expect(await exists(join(created.path, 'assets/vid'))).toBe(true)
-  })
-
   it('refuses a manifest it cannot make sense of', async () => {
     const created = await store.create(root, 'My project')
     await writeFile(join(created.path, '.project.json'), '{"name":42}', 'utf8')
@@ -637,5 +663,50 @@ describe('renaming a project', () => {
   // reported as anything other than what opening it would report.
   it('refuses a folder that is not a project', async () => {
     await expect(store.rename(join(root, 'nowhere'), 'Name')).rejects.toThrow(ProjectOpenError)
+  })
+})
+
+/**
+ * What the asset scheme reads to know whether a refusal is « the project has gone » or a defect.
+ * Told apart nowhere else: both arrive as a rejected promise on the same call.
+ */
+describe('telling a project that has gone from something that broke', () => {
+  it('recognises no project open, and a catalogue closed under a request in flight', () => {
+    expect(isCatalogueGone(new NoProjectError())).toBe(true)
+    expect(isCatalogueGone(new Error(CATALOGUE_CLOSED))).toBe(true)
+  })
+
+  // The whole point: a resolver that throws for its own reasons must keep travelling, so that
+  // `servedPath` journals it as the defect it is instead of serving it as a quiet 404.
+  it('does not recognise a defect, however it is spelled', () => {
+    expect(isCatalogueGone(new TypeError('find is not a function'))).toBe(false)
+    expect(isCatalogueGone(new Error('catalogue thread failed: out of memory'))).toBe(false)
+    expect(isCatalogueGone('catalogue is closed')).toBe(false)
+  })
+
+  /**
+   * The shape, and the reason this takes a thunk: `project.catalog()` throws BEFORE any promise
+   * exists, so a `.catch()` hung off the call is never attached and the throw leaves by the
+   * stack — reaching the scheme as a defect on a path that is merely a project being left.
+   */
+  it('answers for a read that throws before it ever returns a promise', async () => {
+    await expect(
+      orWhenGone(() => {
+        throw new NoProjectError()
+      }, null),
+    ).resolves.toBeNull()
+
+    await expect(
+      orWhenGone<readonly string[]>(() => {
+        throw new Error(CATALOGUE_CLOSED)
+      }, []),
+    ).resolves.toEqual([])
+  })
+
+  it('hands back what the read answered, and lets a defect travel', async () => {
+    await expect(orWhenGone(() => Promise.resolve('a file'), null)).resolves.toBe('a file')
+    await expect(orWhenGone(() => Promise.reject(new TypeError('broke')), null)).rejects.toThrow(
+      TypeError,
+    )
   })
 })

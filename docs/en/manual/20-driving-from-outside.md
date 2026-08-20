@@ -14,9 +14,16 @@ It has two doors, and **they open onto the same room**:
 | **The assistant** | in the window, on `⌘K` | you, in English or in French |
 | **The way in** | shut to start with, opened in the settings | a program outside, such as Claude Code |
 
-Both run **exactly the same catalogue of eleven actions**, listed further down. Nothing is possible
-on one side that is not possible on the other, and **nothing that commits anything goes out
-without your seeing it on screen** — wherever the request came from.
+Both read **the same catalogue**, and **nothing that commits anything goes out without your seeing
+it on screen** — wherever the request came from.
+
+They do not see the same share of it, and that is deliberate. **The assistant knows eleven**, the
+ones a spoken sentence needs: open a workspace, find a model, prepare a generation. **The way in
+offers them all**, everything a program drives deliberately — the file tree, the layer stack, the
+edit, the sky, the material, the 3D scene, a character's skeleton, the git repository, the remote
+library, the studio's panels. The reason is a plain one: the model that reads your sentences is
+given the whole catalogue before each of them, and the whole catalogue would leave no room left
+for the sentence.
 
 ---
 
@@ -88,8 +95,8 @@ nothing about what it does with the sentence.
 
 ## The way in for a program outside
 
-This is the second door: **another program installed on your machine can run the same eleven
-actions**. A coding assistant such as Claude Code, for instance, or any client speaking the **MCP**
+This is the second door: **another program installed on your machine can drive the studio as you
+would**. A coding assistant such as Claude Code, for instance, or any client speaking the **MCP**
 protocol.
 
 **This door is shut to start with, and stays shut until you open it.**
@@ -138,7 +145,7 @@ are not in this manual because they cannot be: they change.
 ### 3. Paste it in a terminal
 
 Open a terminal **in the project folder where you work with Claude Code**, and paste the line.
-That is all: Claude Code now knows the studio, and sees its eleven tools.
+That is all: Claude Code now knows the studio, and sees its tools.
 
 To check, ask it for its MCP servers — the studio should be there, connected.
 
@@ -159,10 +166,15 @@ client already registered under the same name is replaced; there is nothing to r
 Once connected, Claude Code speaks to the studio the way you would speak to the assistant, but
 from your code project:
 
-> *Open the 3D workspace in the studio and create a document*
+> *Open the Modelling workspace in the studio and create a document*
 > *Find me a night skybox model*
 > *List the generations under way*
 > *Prepare an image generation with this prompt, but do not send it*
+> *Sort this week's rushes into a folder per day*
+> *Generate a stone texture, wait for it, and place it in the scene*
+> *Add a text layer saying “Credits” at the bottom of the image, at 64 points*
+> *Put a sphere two metres to the right of the cube and light it warm*
+> *Record a version with a message describing what we have just done*
 
 **That last sentence is worth reading twice.** Preparing and sending are **two distinct actions**,
 and only the second spends. A program outside can fill the form as much as it likes: until **Start
@@ -170,29 +182,38 @@ the prepared generation** has had your yes on screen, nothing has gone out.
 
 ---
 
-## The eleven actions
+## The catalogue
 
-The same catalogue on both sides. The right-hand column says what the action **commits** — that is
-what decides whether the studio will ask you anything.
+**Fourteen families.** The table below says what each family covers and what it **commits** — that
+last column is what decides whether the studio will ask you anything. Neither the count nor the
+exact list is copied out here: they move, and **your client reads them at the source** when you ask
+it for its tools, with every parameter of every action.
 
-| Action | What it does | What it commits |
+| The family | What it covers | What it commits |
 |---|---|---|
-| **Run a command** | fires a studio command by its identifier, as a shortcut would | **nothing**, bar the five exceptions below |
-| **Open a workspace** | switches to a workspace, and creates a document there when asked | nothing |
-| **Search for a model** | searches generation models by keywords | nothing |
-| **Pick a model** | arms a model for a family; the form is rebuilt on it | nothing |
-| **Prepare a generation** | fills the Generator's form and shows it | nothing — **and above all, sends nothing** |
-| **Start the prepared generation** | sends the form as it stands on screen | **creative units** |
-| **List the jobs** | returns the generations under way and how far along they are | nothing |
-| **Suggest prompt variants** | rewrites a sentence into variants cut for the armed model | nothing |
-| **Translate a prompt into English** | carries a text into the language the models are trained on | nothing |
-| **Describe the style of the references** | reads the form's reference images and returns a description | nothing |
-| **Close the conversation** | clears the conversation off the screen so that what was just done can be seen | nothing |
+| **The studio** | what is open, which document is in front, what has just happened | nothing |
+| **Files** | open a project, rename it, list, search, move, copy, rename, bin, show in the system file manager, undo and redo the last batch | **files**, for whatever moves or destroys |
+| **Documents** | open, bring to the front, rename, close, export into the project | **files**, for closing, renaming and exporting |
+| **Generating** | read a model's inputs, price them, prepare, start, wait, cancel | **creative units** for starting, and for starting alone |
+| **The library** | search, read, tag, caption and remove assets, find the ones whose file has gone, pull a model's textures out | **files** for removing, **a server** for removing from the remote library too |
+| **The remote library** | browse your own and the public feed, find likenesses, plan, fetch, send | **an asset**, for sending |
+| **The image** | the layer stack: add, style, place, group, merge, crop, set a mask, lay and move the guides | nothing |
+| **The edit** | Video and Audio: lay a clip, move it, trim it, cut it, set fades, level and speed, keep the tracks. Exporting the document writes the **cut** as OpenTimelineIO, never a film — the frame-by-frame render needs a session nothing outside can hold | nothing, except the export |
+| **Sky and material** | adjust a sky's image, place its sun, choose the projection to look at it under, fill a material's channels, remap them, choose the shape to judge it on, and render it | nothing |
+| **3D** | the scene: place an object, turn it, cut it to size, light it, paint it, dress it in maps, set a text, draw a rail, reparent it, and look at it — from one side, in one of the ways of drawing, and take a still of it. The setting too: what lights the scene, what hangs behind it, its haze, its ground, its rendering, and the ready-made worlds | nothing |
+| **Characters** | make a model animatable, add or remove a bone, tie it to a joint of the standard, put a handle on it, list what it can play, lay an animation block and set it, lay and take back keys, keep the channels, set length and rate | nothing |
+| **Versions** | read the repository and its history, stage, record, branch, shelve, settle a conflict, fetch, publish | **files**, for whatever rewrites the working tree; **a server**, for publishing |
+| **Settings** | read and change the settings, press the buttons of the window, list the accounts, switch to one, rename one | **files**, for the two buttons nothing takes back |
+| **Around the documents** | the window, the account, updates, fonts, pinned recipes, material styles, the studio's panels, dictation, and the three windows of the Help menu | **files**, for deleting a style and for installing an update |
 
-**The last one is last for a reason.** The assistant reads this catalogue in order, and closing the
-conversation is the last move of a plan: it does it when the result is on screen — a workspace
-opened, a form filled. It does not when the answer IS the words it has just written, nor when
-permission is being asked of you.
+**What the assistant knows comes to eleven**, and they are the ones a spoken request needs: run a
+command, open a workspace, search for and pick a model, prepare a generation, start it, list the
+jobs, rework or translate a prompt, describe the style of the references, and close the
+conversation. The rest is driven from a program.
+
+> **A command only ever reaches the document in front.** That is true of the keyboard shortcut and
+> of the outside client alike, and it is the first thing to know about driving it: ask the studio
+> for its state, bring the right tab forward, then act.
 
 ### The five commands that are the exception
 
@@ -214,7 +235,7 @@ that is what earns them a question.
 
 ## What the studio asks you, and when
 
-Two questions only, both on screen, in the window in front.
+Three questions, all on screen, in the window in front.
 
 **When an action is about to spend:**
 
@@ -230,7 +251,32 @@ says so rather than inventing one:
 
 > *This action will upload an image, which then stays in your library. It costs no creative units.*
 
-In both cases, two buttons: **Allow** and **Don’t allow**. Declining runs nothing, and the
+**When an action is about to touch your files:**
+
+> *This action will change what your project holds — files, or the assets in its library. It
+> costs no creative units.*
+
+This one is deliberately **narrow**: moving, renaming, binning, closing a tab that holds unsaved
+work, putting a git-tracked file back, rewriting the version last recorded. Making a folder or
+duplicating a file takes nothing away from anyone and asks you nothing — a studio that asked
+about those would teach you to click **Allow** without reading.
+
+**Narrow does not mean recoverable.** The Explorer takes back a move, a rename or a binning. It
+takes back nothing a git-tracked file had never recorded, nothing of a rewritten version, and
+nothing of an asset removed from the remote library as well.
+
+**When an action is about to publish off this machine:**
+
+> *This action will publish to a server, off this machine. It costs no creative units, and nothing
+> here takes it back.*
+
+Two requests carry that level, and they are worth naming: **sending a branch to a remote git
+repository**, and **removing an asset while asking that it be removed from the remote library
+too** — the API has neither a single-asset delete nor an undo. Every other one stops at the edge
+of the machine, fetching included — and pulling, which rewrites your working copy and therefore
+asks you on the files ground instead.
+
+In all four cases, two buttons: **Allow** and **Don’t allow**. Declining runs nothing, and the
 assistant takes it into account for what follows.
 
 > **The question cannot be walked around.** Neither `Esc` nor a click outside closes it: an action
@@ -241,6 +287,23 @@ assistant takes it into account for what follows.
 refusal rather than waiting. That is the time it takes to read "this will spend 12 units" and
 decide — not a network timeout.
 
+### Working while you are not there
+
+While nothing is armed, a client acting with nobody in front of the screen stops at the first
+question. That is the default, and it is deliberate.
+
+The advanced settings open four lines that change it, each under **Drive the studio from outside**
+and each with no effect while that is off. The first three let one level of commitment through
+without asking — touching files, uploading, publishing to a server. The fourth is an amount in
+creative units: what a client may spend in this window before the studio starts asking again. At
+zero, every spend is asked about.
+
+> **Three things to know before arming anything.** A generation the API declines to price is
+> **never** started without you, whatever the amount allows — an unknown cost cannot be capped.
+> The count is kept per window and starts again at each launch: two windows open each carry the
+> whole amount. And **no client can arm these four lines itself** — they are written only in this
+> settings window, because an authority a program grants itself is not one.
+
 ---
 
 ## When it refuses
@@ -250,8 +313,7 @@ A refused action always says why. The grounds, and what they mean:
 | The message | What happened |
 |---|---|
 | *No such command exists in the studio.* | the identifier asked for matches nothing |
-| *That command belongs to the application menu, which fires it itself.* | some commands are not to be taken by this route |
-| *That command speaks to a document that is not in front.* | bring the right tab forward, and ask again |
+| *No surface of the studio was there to take that command.* | open the document or the panel it speaks to, and ask again |
 | *The Generator was not open. It is now.* | nothing failed: ask for the same thing again |
 | *The Generator has no model armed at the moment.* | pick a model before preparing |
 | *The generation did not go out.* | sending failed downstream — nothing was spent |
@@ -263,6 +325,11 @@ A refused action always says why. The grounds, and what they mean:
 | *The request stood on screen unanswered, and was given up on.* | the two minutes went by |
 | *The form carries no reference image to read a style from.* | put an image on the form first |
 | *The form changed after the cost was quoted. Nothing was sent — ask again for a fresh figure.* | what was quoted is what goes, never anything else |
+| *What you named is not there.* | the request was well formed and its target is absent — the most frequent ground of all, and it is about an identifier rather than about parameters |
+| *No project is open.* | a path is relative to a project, and there is none to be relative to |
+| *An outside client may not do that.* | never your own refusal: arming the delegation is written in the settings window and nowhere else |
+| *The document in front carries nothing this could render.* | an empty sky, a material with no channel, a scene with no camera |
+| *It was tried and it did not go through.* | the recent activity holds the reason; what was passed was not it |
 
 The window grounds — *no window in front*, *no window to give a yes* — **are only ever met from a
 program outside**. The assistant is in the window: there is always someone there to be asked.
@@ -271,13 +338,19 @@ program outside**. The assistant is in the window: there is always someone there
 
 ## What this route does not do
 
-- **It does not open your files to anyone.** The eleven actions drive the studio; none reads a folder,
-  sends a document, or returns the contents of a project.
-- **It does not replace your API key.** What goes to Scenario goes as usual, with your credentials,
-  from your machine.
-- **It never spends on its own.** One of the eleven spends, and it asks.
+- **It never returns an API key or a secret.** It can say which accounts exist, which one is
+  active, and rename the label of one — never what they hold, and it can neither add one nor
+  delete one. What goes to Scenario goes as usual, with your credentials, from your machine.
+- **It arms nothing for itself.** The four lines that let a commitment through without a question
+  are written in the settings window and nowhere else: a client asking to change them is told no.
+- **It never spends on its own.** One action spends — starting the prepared generation — and it
+  asks, with its estimate.
 - **It does not outlive the studio.** With the studio closed the way in no longer exists, and the
   launch's token with it.
+
+> **It does read and change your project folder**, which the first versions of this way in did not.
+> That is what lets a coding assistant work with you rather than beside you — and it is why
+> everything that moves or destroys is put to you on screen.
 
 ---
 

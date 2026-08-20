@@ -44,6 +44,38 @@
       "title": "Move the space right",
       "help": "Shifts the focused space one place to the right in the top bar. The order you settle on is kept from one session to the next."
     },
+    "explorerNewFolder": {
+      "title": "New folder",
+      "help": "Creates an empty folder inside the one the explorer is showing, and opens its name for typing. The folder is yours, as is everything you put in it."
+    },
+    "explorerDuplicate": {
+      "title": "Duplicate",
+      "help": "Lays a copy of each chosen item beside the original, under the first free name. A folder is copied with everything inside it."
+    },
+    "explorerCut": {
+      "title": "Cut",
+      "help": "Holds the selection, to be moved on the next paste. Nothing moves until you paste, and the rows being held are drawn dimmed."
+    },
+    "explorerCopy": {
+      "title": "Copy",
+      "help": "Holds the selection, to be copied on the next paste. The original stays where it is."
+    },
+    "explorerPaste": {
+      "title": "Paste",
+      "help": "Drops what the clipboard holds into the folder on screen. An item whose name is already taken is refused, and the rest go through."
+    },
+    "explorerTrash": {
+      "title": "Move to trash",
+      "help": "Sends the selection to the system trash, where you can get it back. It is the one explorer gesture the studio cannot undo."
+    },
+    "explorerUndo": {
+      "title": "Undo the last file gesture",
+      "help": "Puts the last batch moved, renamed, duplicated or created back where it was. The stack belongs to the project rather than to a window, and the trash gesture never enters it."
+    },
+    "explorerRedo": {
+      "title": "Redo the file gesture",
+      "help": "Redoes the batch of files that was just undone, exactly as it was."
+    },
     "sceneSelect": {
       "title": "Select",
       "help": "The plain tool: click an object in the scene to choose it, without doing anything to it. It is the one you come back to between manipulations."
@@ -64,9 +96,21 @@
       "title": "Frame selection",
       "help": "Brings the camera close enough that the chosen object fills the view. Handy when you are lost, or when an object is tiny."
     },
+    "sceneIsolate": {
+      "title": "Isolate selection",
+      "help": "Leaves only the chosen objects on screen while you work on them. Nothing is changed: pressing it again gives the scene back exactly as it was, including the objects you had hidden yourself."
+    },
+    "sceneHide": {
+      "title": "Hide selection",
+      "help": "Takes the chosen objects out of the view without touching the document. Show all brings them back."
+    },
+    "sceneShowAll": {
+      "title": "Show all",
+      "help": "Undoes the hiding and isolating done from the viewport. Objects the document itself declares hidden stay hidden."
+    },
     "sceneSnap": {
       "title": "Snap",
-      "help": "Moves the handles in regular steps instead of leaving them free. Handy for laying objects out in line. How fine the steps are is set in the 3D space settings."
+      "help": "Moves the handles in regular steps instead of leaving them free. Handy for laying objects out in line. How fine the steps are is set in the Modelling workspace settings."
     },
     "sceneSpace": {
       "title": "Local frame",
@@ -87,6 +131,22 @@
     "sceneDisplay": {
       "title": "Display mode",
       "help": "Cycles what the viewport draws: the surfaces, their edges alone, or both together. The button’s menu picks one directly."
+    },
+    "sceneCapture": {
+      "title": "Capture the view",
+      "help": "Saves an image of the 3D view into the project’s images — without the grid, the handles or the rails. The menu offers definitions larger than the panel’s own."
+    },
+    "sceneAdd": {
+      "title": "Add",
+      "help": "Opens the list of what a scene can take: meshes, lights and objects. A right-click on empty space opens the same list."
+    },
+    "sceneAddToSheet": {
+      "title": "Add to the animation band",
+      "help": "Puts the selected objects on the band, where keys are posed. The band shows only what is put there, so a scene of thousands of objects stays readable."
+    },
+    "sceneRemoveFromSheet": {
+      "title": "Take off the animation band",
+      "help": "Removes the line from the band. Keys already posed stay, and an object keeps its line for as long as it holds one."
     },
     "sceneGroup": {
       "title": "Group",
@@ -127,6 +187,30 @@
     "sequenceExport": {
       "title": "Export video…",
       "help": "Writes the edit out as a video file, frame by frame, 3D scenes included. The sound is not in it yet."
+    },
+    "sequenceExportCut": {
+      "title": "Export edit (OTIO)…",
+      "help": "Writes the edit itself out as an OpenTimelineIO file, which other editing applications open — tracks, clips, in points, speeds and links to the media. Fades, gains and image/sound links travel in it too, but only Scenario reads them back."
+    },
+    "sequenceExportEdl": {
+      "title": "Export edit list (EDL)…",
+      "help": "Writes the cuts and their timecodes as CMX3600, which every online room reads. The format holds one image track and two sound ones, and nothing of the fades, the gains or the speeds."
+    },
+    "sequenceExportFcpxml": {
+      "title": "Export edit (FCPXML)…",
+      "help": "Writes the edit in the format Final Cut reads and Premiere and Resolve import. The tracks survive, a lane each, and so does the frame size; the fades, the gains and the speeds stay here."
+    },
+    "sequenceExportStems": {
+      "title": "Export sound per track (WAV)…",
+      "help": "Writes one WAV per audible track, mixed the way the edit plays it — the placements, the trims, the fades, the gains and the speeds are baked into the samples. A muted track is not written."
+    },
+    "sequenceExportBundle": {
+      "title": "Export edit with its media (OTIOZ)…",
+      "help": "Writes the same edit with the media it uses inside the file. This is the one to hand to somebody else, or to open in DaVinci Resolve, which then finds the rushes on its own instead of asking for them one by one."
+    },
+    "montageImport": {
+      "title": "Import an edit with its media (OTIOZ)…",
+      "help": "Opens an edit written by another application, rushes and all. The media are copied into the project and enter the catalogue, then the edit opens linked to them. What the opened file does not bring is said as it opens, and starts from its default only there."
     },
     "sequenceMirror": {
       "title": "Return window",
@@ -196,6 +280,10 @@
       "title": "Snap",
       "help": "Makes what is dragged stick to guides, to the image edges and to its centre, within a few pixels."
     },
+    "canvasSelectAll": {
+      "title": "Select all",
+      "help": "Selects the whole document, which the system’s own select-all cannot do on an image."
+    },
     "canvasDeselect": {
       "title": "Deselect",
       "help": "Drops the selected region, so the brush reaches the whole layer again."
@@ -261,6 +349,10 @@
       "title": "Export the image",
       "help": "Writes the flattened document to disk, as a PNG."
     },
+    "canvasExportLayered": {
+      "title": "Export the layers (PSD)…",
+      "help": "Writes the document with its layers, as a Photoshop file. Groups are flattened away: their layers arrive side by side."
+    },
     "skyboxView": {
       "title": "Change the view",
       "help": "Cycles through the four ways of looking at the sky: immersive, panoramic, cross, faces."
@@ -276,10 +368,6 @@
     "canvasToolHand": {
       "title": "Hand tool",
       "help": "Arms the hand: a drag pans the view without touching the document. Holding space does the same without changing tool."
-    },
-    "canvasToolScale": {
-      "title": "Scale tool",
-      "help": "Arms scaling: the active layer’s handles resize it, and Shift keeps its proportions."
     },
     "canvasToolCrop": {
       "title": "Crop tool",
@@ -336,10 +424,6 @@
     "canvasToolEraser": {
       "title": "Eraser tool",
       "help": "Arms the point eraser: it clears where the hand passes, bounded by the selection when there is one."
-    },
-    "canvasToolEraserSelection": {
-      "title": "Selective eraser",
-      "help": "Arms the selective eraser: one click clears everything the selection encloses at once, rather than rubbing it out."
     },
     "canvasToolFill": {
       "title": "Paint bucket tool",

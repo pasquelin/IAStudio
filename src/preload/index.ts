@@ -2,8 +2,10 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { AccountSummary } from '@shared/domain/account'
 import type { ActivityEntry } from '@shared/domain/activity'
 import type { CommandId } from '@shared/domain/command'
+import type { TaskProgress } from '@shared/domain/taskProgress'
 import type { SttEvent } from '@shared/domain/dictation'
-import type { Project } from '@shared/domain/project'
+import type { FileOutcome } from '@shared/domain/fileOp'
+import type { Project, RescanState } from '@shared/domain/project'
 import type { Job, JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
 import type { Settings } from '@shared/domain/settings'
@@ -19,6 +21,7 @@ import {
   type SceneAddRequest,
   type SceneDisplayRequest,
   type SceneViewRequest,
+  type SceneCaptureCommand,
   type SceneExportCommand,
   type SkyboxExportCommand,
   type TextureExportCommand,
@@ -78,15 +81,62 @@ const bridge: StudioBridge = {
     open: path => ipcRenderer.invoke(CHANNELS.projectOpen, path),
     current: () => ipcRenderer.invoke(CHANNELS.projectCurrent),
     onChange: callback => subscribe<Project | null>(EVENTS.projectChanged, callback),
-    listFolder: relative => ipcRenderer.invoke(CHANNELS.projectListFolder, relative),
+    listFolder: (relative, hidden) =>
+      ipcRenderer.invoke(CHANNELS.projectListFolder, relative, hidden),
+    searchFolder: (term, hidden) => ipcRenderer.invoke(CHANNELS.projectSearchFolder, term, hidden),
+    walkFolder: hidden => ipcRenderer.invoke(CHANNELS.projectWalkFolder, hidden),
     openFile: relative => ipcRenderer.invoke(CHANNELS.projectOpenFile, relative),
     onFolderChanged: callback => subscribe<void>(EVENTS.projectFolderChanged, callback),
+    onRescan: callback => subscribe<RescanState>(EVENTS.projectRescan, callback),
+    rescanState: () => ipcRenderer.invoke(CHANNELS.projectRescanState),
+    stopRescan: () => ipcRenderer.invoke(CHANNELS.projectStopRescan),
+    fileFacts: relative => ipcRenderer.invoke(CHANNELS.projectFileFacts, relative),
+    exportInto: request => ipcRenderer.invoke(CHANNELS.projectExport, request),
     revealFile: relative => ipcRenderer.invoke(CHANNELS.projectRevealFile, relative),
     revealFolder: path => ipcRenderer.invoke(CHANNELS.projectRevealFolder, path),
     rename: (path, name) => ipcRenderer.invoke(CHANNELS.projectRename, path, name),
     renameFile: (relative, name) => ipcRenderer.invoke(CHANNELS.projectRenameFile, relative, name),
-    moveFile: (relative, folder) => ipcRenderer.invoke(CHANNELS.projectMoveFile, relative, folder),
-    trashFile: relative => ipcRenderer.invoke(CHANNELS.projectTrashFile, relative),
+    moveFiles: (paths, folder) => ipcRenderer.invoke(CHANNELS.projectMoveFiles, paths, folder),
+    trashFiles: paths => ipcRenderer.invoke(CHANNELS.projectTrashFiles, paths),
+    newFolder: (folder, name) => ipcRenderer.invoke(CHANNELS.projectNewFolder, folder, name),
+    duplicateFiles: paths => ipcRenderer.invoke(CHANNELS.projectDuplicateFiles, paths),
+    pasteFiles: (paths, folder, cut) =>
+      ipcRenderer.invoke(CHANNELS.projectPasteFiles, paths, folder, cut),
+    undoFile: () => ipcRenderer.invoke(CHANNELS.projectUndoFile),
+    redoFile: () => ipcRenderer.invoke(CHANNELS.projectRedoFile),
+    fileHistory: () => ipcRenderer.invoke(CHANNELS.projectFileHistory),
+    onFilesChanged: callback => subscribe<FileOutcome>(EVENTS.filesChanged, callback),
+  },
+  git: {
+    read: () => ipcRenderer.invoke(CHANNELS.gitRead),
+    init: () => ipcRenderer.invoke(CHANNELS.gitInit),
+    stage: paths => ipcRenderer.invoke(CHANNELS.gitStage, paths),
+    unstage: paths => ipcRenderer.invoke(CHANNELS.gitUnstage, paths),
+    restore: paths => ipcRenderer.invoke(CHANNELS.gitRestore, paths),
+    commit: (message, amend) => ipcRenderer.invoke(CHANNELS.gitCommit, message, amend),
+    branches: () => ipcRenderer.invoke(CHANNELS.gitBranches),
+    createBranch: name => ipcRenderer.invoke(CHANNELS.gitCreateBranch, name),
+    checkout: name => ipcRenderer.invoke(CHANNELS.gitCheckout, name),
+    log: (limit, skip) => ipcRenderer.invoke(CHANNELS.gitLog, limit, skip),
+    commitFiles: hash => ipcRenderer.invoke(CHANNELS.gitCommitFiles, hash),
+    diff: (path, commit) => ipcRenderer.invoke(CHANNELS.gitDiff, path, commit),
+    bytes: (path, ref) => ipcRenderer.invoke(CHANNELS.gitBytes, path, ref),
+    remotes: () => ipcRenderer.invoke(CHANNELS.gitRemotes),
+    addRemote: (name, url) => ipcRenderer.invoke(CHANNELS.gitAddRemote, name, url),
+    fetch: () => ipcRenderer.invoke(CHANNELS.gitFetch),
+    pull: () => ipcRenderer.invoke(CHANNELS.gitPull),
+    push: setUpstream => ipcRenderer.invoke(CHANNELS.gitPush, setUpstream),
+    resolve: (paths, side) => ipcRenderer.invoke(CHANNELS.gitResolve, paths, side),
+    abortMerge: () => ipcRenderer.invoke(CHANNELS.gitAbortMerge),
+    stash: message => ipcRenderer.invoke(CHANNELS.gitStash, message),
+    stashes: () => ipcRenderer.invoke(CHANNELS.gitStashes),
+    stashPop: index => ipcRenderer.invoke(CHANNELS.gitStashPop, index),
+    stashDrop: index => ipcRenderer.invoke(CHANNELS.gitStashDrop, index),
+    tag: (name, commit) => ipcRenderer.invoke(CHANNELS.gitTag, name, commit),
+    hasCredentials: host => ipcRenderer.invoke(CHANNELS.gitHasCredentials, host),
+    setCredentials: (host, user, token) =>
+      ipcRenderer.invoke(CHANNELS.gitSetCredentials, host, user, token),
+    clearCredentials: host => ipcRenderer.invoke(CHANNELS.gitClearCredentials, host),
   },
   dialog: {
     pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),
@@ -95,11 +145,13 @@ const bridge: StudioBridge = {
   documents: {
     list: () => ipcRenderer.invoke(CHANNELS.documentList),
     read: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRead, id, kind),
-    write: (id, kind, file) => ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file),
+    write: (id, kind, file, force, folder) =>
+      ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file, force, folder),
     rename: (id, kind, title) => ipcRenderer.invoke(CHANNELS.documentRename, id, kind, title),
     remove: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRemove, id, kind),
     confirmClose: title => ipcRenderer.invoke(CHANNELS.documentConfirmClose, title),
     confirmDelete: title => ipcRenderer.invoke(CHANNELS.documentConfirmDelete, title),
+    confirmOverwrite: title => ipcRenderer.invoke(CHANNELS.documentConfirmOverwrite, title),
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),
@@ -110,7 +162,10 @@ const bridge: StudioBridge = {
     absent: assetIds => ipcRenderer.invoke(CHANNELS.assetsAbsent, assetIds),
     saveAudio: request => ipcRenderer.invoke(CHANNELS.assetsSaveAudio, request),
     savePicture: request => ipcRenderer.invoke(CHANNELS.assetsSavePicture, request),
+    saveLayered: request => ipcRenderer.invoke(CHANNELS.assetsSaveLayered, request),
+    readLayered: assetId => ipcRenderer.invoke(CHANNELS.assetsReadLayered, assetId),
     saveTexture: request => ipcRenderer.invoke(CHANNELS.assetsSaveTexture, request),
+    installBundledTextures: () => ipcRenderer.invoke(CHANNELS.texturesInstallBundled),
     extractTextures: assetId => ipcRenderer.invoke(CHANNELS.assetsExtractTextures, assetId),
     update: (assetId, changes) => ipcRenderer.invoke(CHANNELS.assetsUpdate, assetId, changes),
     remove: (assetIds, alsoRemote) =>
@@ -143,6 +198,11 @@ const bridge: StudioBridge = {
   scene: {
     export: request => ipcRenderer.invoke(CHANNELS.sceneExport, request),
   },
+  montage: {
+    export: request => ipcRenderer.invoke(CHANNELS.montageExport, request),
+    import: id => ipcRenderer.invoke(CHANNELS.montageImport, { id }),
+    stems: request => ipcRenderer.invoke(CHANNELS.montageStems, request),
+  },
   render: {
     start: request => ipcRenderer.invoke(CHANNELS.renderStart, request),
     frame: request => ipcRenderer.invoke(CHANNELS.renderFrame, request),
@@ -155,11 +215,19 @@ const bridge: StudioBridge = {
   skybox: {
     export: request => ipcRenderer.invoke(CHANNELS.skyboxExport, request),
   },
+  tasks: {
+    onProgress: callback => subscribe<TaskProgress>(EVENTS.taskProgress, callback),
+    cancel: id => ipcRenderer.invoke(CHANNELS.taskCancel, id),
+  },
   fonts: {
     list: () => ipcRenderer.invoke(CHANNELS.fontsList),
     read: family => ipcRenderer.invoke(CHANNELS.fontsRead, family),
   },
+  animations: {
+    list: () => ipcRenderer.invoke(CHANNELS.animationsList),
+  },
   media: {
+    adopt: relative => ipcRenderer.invoke(CHANNELS.mediaAdopt, relative),
     ingest: () => ipcRenderer.invoke(CHANNELS.mediaIngest),
     cancel: assetId => ipcRenderer.invoke(CHANNELS.mediaCancel, assetId),
     capabilities: () => ipcRenderer.invoke(CHANNELS.mediaAvailable),
@@ -184,14 +252,25 @@ const bridge: StudioBridge = {
   mirror: {
     open: () => ipcRenderer.invoke(CHANNELS.mirrorOpen),
   },
+  help: {
+    open: page => ipcRenderer.invoke(CHANNELS.helpOpen, page),
+  },
+  fileInfo: {
+    open: relative => ipcRenderer.invoke(CHANNELS.fileInfoOpen, relative),
+  },
+  newDocument: {
+    ask: request => ipcRenderer.invoke(CHANNELS.newDocumentAsk, request),
+    request: () => ipcRenderer.invoke(CHANNELS.newDocumentRequest),
+    answer: place => ipcRenderer.invoke(CHANNELS.newDocumentAnswer, place),
+  },
   window: {
     toggleFullScreen: () => ipcRenderer.invoke(CHANNELS.windowToggleFullScreen),
     state: () => ipcRenderer.invoke(CHANNELS.windowState),
     onState: callback => subscribe<WindowState>(EVENTS.windowState, callback),
     language: () => ipcRenderer.invoke(CHANNELS.windowLanguage),
     onLanguage: callback => subscribe<Language>(EVENTS.windowLanguage, callback),
-    setWorkspace: (workspace, tools, checked) =>
-      ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace, tools, checked),
+    setWorkspace: (workspace, tools, checked, abilities) =>
+      ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace, tools, checked, abilities),
   },
   menu: {
     popup: items => ipcRenderer.invoke(CHANNELS.menuPopup, items),
@@ -201,12 +280,14 @@ const bridge: StudioBridge = {
     onSceneView: callback => subscribe<SceneViewRequest>(EVENTS.sceneView, callback),
     onSceneDisplay: callback => subscribe<SceneDisplayRequest>(EVENTS.sceneDisplay, callback),
     onSceneExport: callback => subscribe<SceneExportCommand>(EVENTS.sceneExport, callback),
+    onSceneCapture: callback => subscribe<SceneCaptureCommand>(EVENTS.sceneCapture, callback),
     onTextureExport: callback => subscribe<TextureExportCommand>(EVENTS.textureExport, callback),
     onSkyboxExport: callback => subscribe<SkyboxExportCommand>(EVENTS.skyboxExport, callback),
   },
   diagnostics: {
     onLog: callback => subscribe<LogEntry>(EVENTS.log, callback),
     report: entry => ipcRenderer.invoke(CHANNELS.diagnosticsReport, entry),
+    trace: entry => ipcRenderer.invoke(CHANNELS.diagnosticsTrace, entry),
   },
   updates: {
     state: () => ipcRenderer.invoke(CHANNELS.updateState),

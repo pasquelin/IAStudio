@@ -11,31 +11,40 @@ import {
   Sprite,
   Text,
   type BLEND_MODES,
+  type ICanvas,
+  type Texture,
 } from 'pixi.js'
 import { assetUrl } from '@shared/domain/asset'
+import type { BlendMode } from '@shared/domain/canvasBlend'
+import { colourOf } from '@shared/domain/color'
 import { fontKey } from '@shared/domain/font'
+import { bytesToBase64 } from '@/helpers/base64'
 import { newId } from '@/helpers/ids'
 import { isTyping } from '@/helpers/typing'
 import { reportFailure } from '@/services/diagnostics'
 import { mountApplication } from '../core/mount'
 import { onPaletteChange, token, tokenAsFont } from '../core/palette'
-import { createAdjustFilter, type AdjustFilter } from './adjust-filter'
-import { captionsSetIn, faceUrlOf, familyStack, type FaceRegistrar } from './canvas-fonts'
+import { createAdjustFilter, type AdjustFilter } from './adjustFilter'
+import { captionsSetIn, faceUrlOf, familyStack, type FaceRegistrar } from './canvasFonts'
 import {
   allLayers,
   IDENTITY,
   isGroup,
+  isRedrawn,
   layerById,
-  type BlendMode,
   type AdjustmentLayer,
   type CanvasState,
+  type DrawnShape,
   type GroupLayer,
   type Layer,
   type Rect,
+  type ShapeKind,
+  type ShapeLayer,
+  type TextAlign,
   type TextLayer,
   type Transform,
   WHITE,
-} from './canvas-state'
+} from './canvasState'
 import {
   dragSelection,
   extendLasso,
@@ -43,9 +52,9 @@ import {
   selectionOutline,
   type CanvasSelection,
   type SelectionShape,
-} from './canvas-selection'
-import { composite, maskKey, placement, type CompositeNode } from './compositor'
-import { compose, invert, layerMatrix, mapRect, type Affine } from './layer-space'
+} from './canvasSelection'
+import { composite, isMaskKey, maskKey, placement, type CompositeNode } from './compositor'
+import { applyTo, compose, invert, layerMatrix, mapRect, type Affine } from './layerSpace'
 import {
   centerOf,
   cornersOfRect,
@@ -53,6 +62,7 @@ import {
   HANDLE_GRAB,
   layerCornersOf,
   resizeBy,
+  resizedBox,
   rotateBy,
   ROTATE_REACH,
   wholeOf,
@@ -61,28 +71,36 @@ import {
   type HandleId,
 } from './handles'
 import { resizeCursor, rotateCursor, UPRIGHT, type Facing } from './cursors'
-import { CanvasOverlay, RULER_SIZE, type OverlayColors, type OverlayScene } from './CanvasOverlay'
+import {
+  CanvasOverlay,
+  RULER_SIZE,
+  type OverlayColors,
+  type OverlayScene,
+  type PendingShape,
+} from './CanvasOverlay'
 import {
   boxEdges,
   guideNear,
   GUIDE_GRAB,
   snapOffset,
   snapTargets,
-  snapValue,
   SNAP_TOLERANCE,
   type Axis,
 } from './guides'
-import { PixelPatches, type PatchSide } from './PixelPatches'
+import { PATCH_BUDGET, PixelPatches, type PatchSide } from './PixelPatches'
 import { cropRect, resizeCrop } from './crop'
 import {
+  box,
+  constrainedTo,
+  localShape,
   paintShape,
   shapeBounds,
   shapeGeometry,
   type ShapeGeometry,
-  type ShapeKind,
-} from './shape-geometry'
+} from './shapeGeometry'
 import type { Point, Size } from '../core/geometry'
 import { blurRadius, DEFAULT_BRUSH, readsBrushSetting, type BrushSettings } from './brush'
+import type { CanvasTool } from './canvasTool'
 import { brushRect, grownBy } from './tiles'
 import {
   containIn,
@@ -94,24 +112,6 @@ import {
   type CanvasView,
   type Viewport,
 } from './viewport'
-
-export type CanvasTool =
-  | 'select'
-  | 'move'
-  | 'crop'
-  | 'shape'
-  | 'brush'
-  /**
-   * The same gesture as the brush, with the edge the bundle promises it: a pencil is hard, and
-   * nothing on screen sets that — which is why it is a tool rather than a mode of the brush.
-   */
-  | 'pencil'
-  | 'text'
-  | 'comment'
-  | 'eraser'
-  | 'fill'
-  | 'picker'
-  | 'hand'
 
 /**
  * What the engine may do to the guides. It builds no id and runs no command: those belong to the
@@ -156,13 +156,28 @@ export type CanvasEngineOptions = {
   onSelection: (selection: CanvasSelection) => void
   /** The host's size, which the zoom commands need: they centre on a panel they cannot see. */
   onHost: (size: Size) => void
-  /** Where a caption was asked for. The layer it becomes is the stack's to make. */
-  onText: (at: Point) => void
+  /**
+   * A caption the hand asked for: a layer already there to edit, or a fresh box to open one in.
+   * The layer it becomes, and the editor it opens, are the stack's to make.
+   */
+  onText: (asked: { layerId: string } | { at: Point; box: Size | null }) => void
+  /**
+   * A caption's box, pulled by one of its grips: the new box, and where its top-left corner now
+   * sits in the document — a north or west grip moves both at once.
+   */
+  onTextBox: (layerId: string, box: Size, at: Point) => void
+  /** A shape the hand finished drawing, and where its box starts. Same split as `onText`. */
+  onShape: (at: Point, drawn: DrawnShape) => void
   /**
    * The frame a crop drag settled on, in document units. Same split as `onText`: the engine
    * knows where the pointer went, the document's history knows what that means.
    */
   onCrop: (rect: Rect) => void
+  /**
+   * Whether a frame is drawn — not where. It is what a bar needs to offer Accept and Cancel,
+   * and ⏎ and ⎋ were the only way to answer one for as long as nobody was told.
+   */
+  onCropFrame: (framed: boolean) => void
   guides: GuidePort
   layers: LayerPort
   /** Puts an embedded face in the page. Injected because jsdom has no `FontFace` to put it with. */
@@ -230,17 +245,23 @@ type LayerSurface = {
 export type PaintSurface = 'pixels' | 'mask'
 
 /**
- * One surface's pixels, on their way to a file or back. `data` is base64 PNG — what the document
- * layer writes beside the manifest, and what the renderer has to offer since it owns no disk.
+ * One surface's pixels, on their way to a file or back — a PNG, as bytes.
+ *
+ * Never base64. A 4K stack of ten layers is hundreds of megabytes of text, held at the same
+ * instant by the window that encoded it and the process that decodes it — and a data URL of one
+ * would be kept for the session by the loader's cache, which is keyed on the whole string.
  */
 export type LayerPixels = {
   layerId: string
   /** A layer keeps two surfaces: the picture, and the mask painted over it. */
   mask: boolean
-  data: string
+  /**
+   * Over an `ArrayBuffer` and not an `ArrayBufferLike`, which is what makes it a `BlobPart`:
+   * spelt loosely, restoring a 4K layer copied the whole of it only to narrow the type.
+   */
+  data: Uint8Array<ArrayBuffer>
 }
 
-/** A surface a gesture may write to, with the key its undo patches are filed under. */
 /**
  * Where a stroke lands, and how to get there. `toSurface` maps the document onto the surface's
  * own pixels: the sprite that shows them carries the layer's transform, so artwork drawn where
@@ -269,10 +290,73 @@ function strokeWidth(brushSize: number): number {
   return Math.max(1, brushSize / 4)
 }
 
-/** A data URL down to what it carries: the API takes the payload, never the prefix. */
-function payloadOf(url: string): string {
-  const at = url.indexOf(',')
-  return at >= 0 ? url.slice(at + 1) : url
+/**
+ * How far a text drag has to reach before it counts as one, in document units. Below it the hand
+ * meant a click, and a click opens the default box — a caption three pixels wide is nobody's ask.
+ */
+const MIN_TEXT_DRAG = 8
+
+const sizeOf = (rect: Rect): Size => ({ width: rect.width, height: rect.height })
+
+/** Where a block of words hangs in its box. `justify` fills the width, so it starts at the edge. */
+function alignedIn(align: TextAlign, box: number, block: number): number {
+  if (align === 'center') return Math.max(0, (box - block) / 2)
+  if (align === 'right') return Math.max(0, box - block)
+  return 0
+}
+
+/** The shape a layer holds, back as geometry — its two points are already in its own space. */
+function shapeOf(layer: ShapeLayer): ShapeGeometry {
+  return shapeGeometry(layer.shape, layer.from, layer.to, {
+    sides: layer.sides,
+    constrain: false,
+  })
+}
+
+/**
+ * What a drawn layer's texture was last rasterized from — an unchanged key costs no redraw.
+ * `null` for a layer that holds its own pixels, which no state can redraw.
+ */
+function drawingKey(layer: Layer): string | null {
+  if (layer.kind === 'text') {
+    return [
+      layer.text,
+      layer.size,
+      layer.color,
+      fontKey(layer.font),
+      layer.box?.width,
+      layer.box?.height,
+      layer.align,
+      layer.lineHeight,
+      layer.tracking,
+    ].join('|')
+  }
+  if (layer.kind !== 'shape') return null
+
+  return [
+    layer.shape,
+    layer.from.x,
+    layer.from.y,
+    layer.to.x,
+    layer.to.y,
+    layer.sides,
+    layer.fill,
+    layer.stroke?.color,
+    layer.stroke?.width,
+  ].join('|')
+}
+
+/**
+ * A canvas as PNG bytes. Two spellings and no way round it: a window's canvas answers through a
+ * callback, a worker's through a promise, and Pixi publishes both as optional.
+ */
+async function blobOf(canvas: ICanvas): Promise<Blob | null> {
+  if (canvas.convertToBlob) return await canvas.convertToBlob({ type: 'image/png' })
+  const { toBlob } = canvas
+  if (!toBlob) return null
+  return await new Promise(resolve => {
+    toBlob.call(canvas, resolve, 'image/png')
+  })
 }
 
 /** A grading pass: the container the filter runs over, and the filter itself. */
@@ -294,8 +378,15 @@ type Gesture =
   | { kind: 'crop'; from: Point }
   /** Pulling one grip of the placed crop frame. `origin` is the frame the drag started on. */
   | { kind: 'cropHandle'; handle: HandleId; origin: Rect }
-  /** `from` is where the drag began; the shape is redrawn from it on every move. */
-  | { kind: 'shape'; from: Point; target: BrushTarget }
+  /**
+   * The drag's two points, in document units. `to` is held rather than derived on release: it is
+   * the point AFTER shift has been applied, and the layer must store the square that was drawn.
+   */
+  | { kind: 'shape'; from: Point; to: Point }
+  /** Sizing a caption's box by its diagonal. A drag of nothing at all is a click, which opens one. */
+  | { kind: 'text'; from: Point; to: Point }
+  /** Pulling one grip of a caption's box. `box` and `origin` are what it stood at when taken. */
+  | { kind: 'textBox'; id: string; handle: HandleId; box: Size; origin: Transform }
   /** `origin` is the transform the layer had when the drag began: every step is absolute. */
   | { kind: 'handle'; id: string; handle: HandleId; from: Point; origin: Transform }
   /** Turning by the zone outside a corner. `center` is the middle the layer pivots about. */
@@ -311,20 +402,20 @@ const NO_GESTURE: Gesture = { kind: 'none' }
 const RINGED_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'pencil', 'eraser'])
 
 /**
- * The tools that write on the armed layer's surface, and so the ones a layer can refuse. The
- * text tool is not one: it places a caption of its own rather than writing on what is armed.
+ * The tools that write on the armed layer's surface, and so the ones a layer can refuse. Neither
+ * the text tool nor the shape tool is one: each lands a LAYER of its own rather than writing on
+ * what is armed, so a padlock on the armed layer has nothing to say about them — and a cursor
+ * that answers `not-allowed` over a gesture that works is worse than no cursor at all.
  * The eyedropper reads, and the selection tools carve out a region rather than a layer.
  */
-const WRITING_TOOLS: ReadonlySet<CanvasTool> = new Set([
-  'brush',
-  'pencil',
-  'eraser',
-  'fill',
-  'shape',
-])
+const WRITING_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'pencil', 'eraser', 'fill'])
 
-/** Which gestures hold a layer open in the history, so releasing one closes its entry. */
-const LAYER_DRAGS: ReadonlySet<Gesture['kind']> = new Set(['move', 'handle', 'rotate'])
+/**
+ * Which gestures hold a layer open in the history, so releasing one closes its entry. `textBox`
+ * calls `beginDrag` like the other three and was missing here, which left the entry open: the two
+ * alignment clicks after a box pull carry one id, merged, and went back on a single ⌘Z.
+ */
+const LAYER_DRAGS: ReadonlySet<Gesture['kind']> = new Set(['move', 'handle', 'rotate', 'textBox'])
 
 /** Both arms carry `id`, so two hovers compare without pairing their kinds again. */
 function sameHit(one: HandleHit | null, other: HandleHit | null): boolean {
@@ -372,7 +463,7 @@ export const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
  */
 export const FALLBACK_COLORS: OverlayColors = {
   frame: '#34363a',
-  guide: '#2e436e',
+  guide: 'rgba(52, 110, 242, 0.55)',
   rulerBackground: '#3c3f44',
   rulerText: '#91959b',
   rulerTick: '#91959b',
@@ -405,6 +496,43 @@ function readColors(element: HTMLElement): OverlayColors {
   }
 }
 
+const bytesOf = (texture: RenderTexture): number => texture.width * texture.height * 4
+
+/**
+ * What the surfaces of departed layers may hold on the card, and it is a SECOND pool beside the
+ * undo tiles rather than a share of theirs — a quarter of their budget, so an image tab is
+ * capped at `PATCH_BUDGET` + this + its live surfaces, not at twice the tiles.
+ *
+ * Sized for the gesture it exists for: merging or removing hands back one surface, and the undo
+ * that wants it comes within a few steps. Holding a whole flatten of a large document is not
+ * what this buys.
+ */
+const DEPARTED_BUDGET = PATCH_BUDGET / 4
+
+/**
+ * How many engines of this window hold each asset URL.
+ *
+ * `Assets` is a singleton of the WINDOW, so an engine unloading on its own dispose took the
+ * texture away from every other tab still drawing that same picture — the survivor then reloaded
+ * and re-decoded it. Counted here because that is where the cache lives: at the module.
+ */
+const leases = new Map<string, number>()
+
+function lease(url: string): void {
+  leases.set(url, (leases.get(url) ?? 0) + 1)
+}
+
+/** Whether that was the LAST holder — the only moment the window's cache may let it go. */
+function released(url: string): boolean {
+  const held = (leases.get(url) ?? 1) - 1
+  if (held > 0) {
+    leases.set(url, held)
+    return false
+  }
+  leases.delete(url)
+  return true
+}
+
 /**
  * The Pixi side of an image document. It owns the pixels — a GPU texture per layer — and the
  * view they are seen through; the stack, its order and its opacities are read from the state it
@@ -419,6 +547,24 @@ export class CanvasEngine {
   private host: HTMLElement | null = null
   private readonly world = new Container()
   private readonly surfaces = new Map<string, LayerSurface>()
+  /**
+   * Surfaces of layers that left the stack, held in case they come back. Merging, flattening and
+   * removing a layer are all undoable, and the tree an undo restores says nothing about pixels:
+   * destroyed here, a layer came back holding its fill and nothing that had been painted on it.
+   *
+   * Oldest evicted first, under the same budget as the undo tiles. What eviction costs is the
+   * undo of a very old merge on a very large document, which is the same bargain `PixelPatches`
+   * already makes — and the alternative is holding every departed texture for the session.
+   */
+  private readonly departed = new Map<string, LayerSurface>()
+  /** What `departed` holds, in bytes — kept running rather than re-summed on every insert. */
+  private kept = 0
+  /** The pointer this panel holds for the length of a gesture — see `capture`. */
+  private captured: number | null = null
+  /** Every URL this engine put in the window's asset cache, so `dispose` can take them back. */
+  private readonly loaded = new Set<string>()
+  /** The viewport the world was last moved to — see `applyViewport`. `null` until the first one. */
+  private applied: Viewport | null = null
   /**
    * Where the picture actually landed inside each layer's surface — what `containIn` worked out
    * when it was drawn, kept so the handles can grip the photo rather than the document.
@@ -435,18 +581,17 @@ export class CanvasEngine {
   private readonly clips = new Map<string, ClipProxy>()
   /** Built on the first isolated group, and only then: most documents never hold one. */
   private isolation: AlphaFilter | null = null
-  /** The stencil of the last clipped pass, kept only so the next one can free it. */
   /**
-   * The stencil pass in flight, and the stencil it owns. Held as the pair because they are not
-   * the same thing to free: the holder's other children are borrowed — the brush's stamp lives
-   * as long as the engine, a tool's drawing is freed by the tool — and only the stencil is the
-   * pass's own.
+   * The stencil pass in flight, the selection it was cut from, and the stencil it owns. Held as
+   * the triple because they are not the same thing to free: the holder's other children are
+   * borrowed — the brush's stamp lives as long as the engine — and only the stencil is the
+   * pass's own. `of` keeps it while that very selection object is still the one.
    */
-  private clipping: { holder: Container; stencil: Graphics } | null = null
+  private clipping: { of: CanvasSelection; holder: Container; stencil: Graphics } | null = null
   /** One grading pass per adjustment layer, holding the filter it applies. */
   private readonly adjustments = new Map<string, AdjustPass>()
-  /** What each text layer was last drawn with, so unchanged words cost no rasterization. */
-  private readonly wordings = new Map<string, string>()
+  /** What each drawn layer — a caption, a shape — was last rasterized from, so a redraw is rare. */
+  private readonly drawings = new Map<string, string>()
   /** Regions asked of masks that did not exist yet — see `fillMaskFromSelection`. */
   private readonly pendingMaskFills = new Map<string, readonly Point[]>()
   /** Pictures composed for layers that do not exist yet — see `flattenInto`. */
@@ -456,7 +601,7 @@ export class CanvasEngine {
    * the store, and the engine only hears about it a React commit later — so a picture read off the
    * disk almost always arrives before the layer it fills.
    */
-  private readonly pendingSnapshots = new Map<string, string>()
+  private readonly pendingSnapshots = new Map<string, Uint8Array<ArrayBuffer>>()
   private readonly stamp = new Graphics()
   /**
    * What softens the edge of a dab. One instance, tuned when the brush changes and never per
@@ -516,7 +661,11 @@ export class CanvasEngine {
    * Keyed on the state's identity, as `apply` keys its own work: `apply` replaces it wholesale,
    * so the document's size and the armed id ride along with the tree.
    */
-  private corners: { of: CanvasState | null; box: Corners | null } = { of: null, box: null }
+  private corners: { of: CanvasState | null; tool: CanvasTool | null; box: Corners | null } = {
+    of: null,
+    tool: null,
+    box: null,
+  }
   private pointer: Point | null = null
   private selection: CanvasSelection = null
   /** Which of the three the region tool draws. Pushed in by the bar, like the tool itself. */
@@ -525,6 +674,12 @@ export class CanvasEngine {
   private shapeSides = 5
   /** The shape being dragged, drawn in the overlay until the hand comes up. */
   private pending: ShapeGeometry | null = null
+  /** The box a text drag is sizing, framed in the overlay until the hand comes up. */
+  private textBox: Rect | null = null
+  /** The caption a field is typing: drawn by that field, so its own sprite stands aside. */
+  private editing: string | null = null
+  /** The paragraph captions holding more words than their box shows — the ⊞ grip says so. */
+  private readonly overflowing = new Set<string>()
   /**
    * The crop frame, once placed. Outlives its drag on purpose — that is what makes the grips
    * real, and what ⏎ applies and ⎋ drops. Session state, like the selection: a frame nobody
@@ -590,6 +745,7 @@ export class CanvasEngine {
     this.overlay.mount(host)
 
     host.addEventListener('pointerdown', this.onPointerDown)
+    host.addEventListener('dblclick', this.onDoubleClick)
     host.addEventListener('pointermove', this.onPointerMove)
     host.addEventListener('pointerleave', this.onPointerLeave)
     window.addEventListener('pointerup', this.onPointerUp)
@@ -691,7 +847,75 @@ export class CanvasEngine {
         this.contents.set(id, { ...laid, x: laid.x - from.x, y: laid.y - from.y })
       }
       this.patches?.dropAll()
+      this.forgetHeld()
     }
+  }
+
+  /**
+   * Turns the pixels of every surface a quarter, into a transposed texture — the same order as
+   * `applyCrop`: the pixels before the state, so the `apply` the command triggers finds them
+   * already the right size and leaves them alone.
+   *
+   * The turn is in the PIXELS rather than in the layer transforms, and that is what keeps a
+   * surface document-sized. Left to the transforms, the sprite would turn while its texture kept
+   * the old sides, and `resurface` would recut a portrait texture to a landscape frame — half
+   * of every layer, gone, with the undo tiles that could have brought it back.
+   *
+   * Exact both ways: a quarter turn permutes pixels, it never resamples one.
+   */
+  turnQuarter(clockwise: boolean): void {
+    const renderer = this.app?.renderer
+    if (!renderer || !this.state) return
+
+    this.publishSelection(null)
+    const { width, height } = this.state
+
+    // A caption and a shape take the turn in their transform instead — see `rotateImage`. Their
+    // own space did not turn, so neither their words nor the mask over them may: the drawing key
+    // is dropped so the next reconcile lays them out again at the sides the document now has.
+    //
+    // TOP LEVEL only, exactly like the `moveLayers` that writes those transforms: a caption inside
+    // a group is turned by the group, so skipping its pixels here would leave it the one thing in
+    // the document still reading the old way.
+    //
+    // BLIND SPOT: a mask holds painted pixels, not state, so it cannot be redrawn with the words
+    // it hides. Left at the old sides, `resurface` recuts it — on a NON-SQUARE document a masked
+    // caption loses the paint past the new bounds, and the strip that appears hides nothing.
+    const flat = new Set<string>()
+    for (const layer of this.state.layers) {
+      if (!isRedrawn(layer)) continue
+      flat.add(layer.id).add(maskKey(layer.id))
+      this.drawings.delete(layer.id)
+    }
+
+    for (const [key, surface] of this.surfaces) {
+      if (flat.has(key)) continue
+      const texture = RenderTexture.create({ width: height, height: width, resolution: 1 })
+
+      const carried = new Sprite(surface.texture)
+      carried.rotation = clockwise ? Math.PI / 2 : -Math.PI / 2
+      carried.position.set(clockwise ? height : 0, clockwise ? 0 : width)
+      renderer.render({ container: carried, target: texture, clear: true })
+      carried.destroy({ texture: false, textureSource: false })
+
+      surface.sprite.texture = texture
+      surface.texture.destroy(true)
+      surface.texture = texture
+    }
+
+    // The remembered picture rects live in surface pixels, so they turn with them — left alone,
+    // a placed photo's grips would hold the box the document had before the turn.
+    for (const [id, laid] of this.contents) {
+      this.contents.set(id, {
+        x: clockwise ? height - laid.y - laid.height : laid.y,
+        y: clockwise ? laid.x : width - laid.x - laid.width,
+        width: laid.height,
+        height: laid.width,
+      })
+    }
+    this.patches?.dropAll()
+    // Every held surface now holds the sides the document has just traded away.
+    this.forgetHeld()
   }
 
   /** The stack, made real on the GPU: one texture per paintable layer, in the stack's order. */
@@ -740,9 +964,16 @@ export class CanvasEngine {
 
     for (const [id, surface] of this.surfaces) {
       if (kept.has(id)) continue
-      surface.sprite.destroy()
-      // The texture lives on the GPU: dropping the reference is not enough.
-      surface.texture.destroy(true)
+      // Held rather than destroyed: the command that took this layer out of the stack is
+      // undoable, and its pixels are not in the state that would come back.
+      //
+      // MASKS ARE NOT HELD, and that is a decision rather than an oversight. A mask is keyed on
+      // the layer that wears it and carries no identity of its own, so a mask REMOVED and a mask
+      // CREATED afterwards are the same key: holding one would hand a fresh mask the pixels of
+      // the old one, silently. The cost is that ⌘Z on a removed mask still gives back a white
+      // one — the smaller of the two wrongs, and the only one the state can tell apart.
+      if (isMaskKey(id)) this.drop(surface)
+      else this.hold(id, surface)
       this.surfaces.delete(id)
       this.contents.delete(id)
     }
@@ -764,9 +995,9 @@ export class CanvasEngine {
       this.adjustments.delete(id)
     }
 
-    for (const id of this.wordings.keys()) {
+    for (const id of this.drawings.keys()) {
       // Its texture went with it, so the words have to be drawn again on the way back.
-      if (!kept.has(id)) this.wordings.delete(id)
+      if (!kept.has(id)) this.drawings.delete(id)
     }
 
     const clipping = new Set(layers.filter(layer => layer.clipped).map(layer => layer.id))
@@ -775,6 +1006,51 @@ export class CanvasEngine {
       this.destroyClip(clip)
       this.clips.delete(id)
     }
+  }
+
+  /**
+   * Keeps a departed surface against the undo that may bring its layer back, evicting the least
+   * recently held once what is kept passes `DEPARTED_BUDGET`.
+   *
+   * BLIND SPOT, and it is the price of holding anything at all: an eviction tells nobody. The
+   * history entry stays on the stack, and undoing back past an evicted surface gives the layer
+   * back EMPTY — which is what happened to every one of them before this existed, so the bargain
+   * is a smaller version of the same one `PixelPatches` already makes with its tiles. What it
+   * does not have is `PixelPatches`'s `onDropped`, which takes the dead entry off the stack.
+   */
+  private hold(key: string, surface: LayerSurface): void {
+    const replaced = this.departed.get(key)
+    if (replaced) this.kept -= bytesOf(replaced.texture)
+    this.drop(replaced)
+    this.departed.delete(key)
+
+    this.departed.set(key, surface)
+    this.kept += bytesOf(surface.texture)
+
+    for (const [oldest, held] of this.departed) {
+      if (this.kept <= DEPARTED_BUDGET) break
+      this.kept -= bytesOf(held.texture)
+      this.drop(held)
+      this.departed.delete(oldest)
+    }
+  }
+
+  /**
+   * Frees every held surface. What a recut, a resample or a turn makes of all of them at once:
+   * they hold the sides the document no longer has, so `buildSurface` would refuse each in turn
+   * — and until then they sit on the card for nothing.
+   */
+  private forgetHeld(): void {
+    for (const held of this.departed.values()) this.drop(held)
+    this.departed.clear()
+    this.kept = 0
+  }
+
+  private drop(surface: LayerSurface | undefined): void {
+    if (!surface) return
+    surface.sprite.destroy()
+    // The texture lives on the GPU: dropping the reference is not enough.
+    surface.texture.destroy(true)
   }
 
   /** Bottom first, so the last node of a level is the one the eye sees on top. */
@@ -893,7 +1169,13 @@ export class CanvasEngine {
 
     // Never `visible` or `alpha` on the container: it holds the layers it grades, so hiding it
     // would hide the whole stack under it. Hiding a grading is dropping its pass.
-    pass.filters = layer.visible ? [pass.filter] : []
+    //
+    // Written only when it turns, exactly as `syncGroup` writes its own: Pixi copies and freezes
+    // the array on every assignment, and this runs for every grading on every state handed in —
+    // sixty times a second while a layer is dragged.
+    if (layer.visible !== (pass.filters ?? []).length > 0) {
+      pass.filters = layer.visible ? [pass.filter] : []
+    }
     pass.filter.grade(layer.values)
   }
 
@@ -942,6 +1224,13 @@ export class CanvasEngine {
 
     // The scheme carries no extension, so nothing in the URL tells Pixi what to make of it.
     const texture = await Assets.load({ src: url, parser: 'texture' })
+    // Nothing here ever gave these back: a placed photo cost its own surface twice on the card —
+    // the layer's, and the source it was drawn from — for the whole session, closed tab included.
+    // Leased rather than simply remembered, because the cache is the window's: see `leases`.
+    if (!this.loaded.has(url)) {
+      this.loaded.add(url)
+      lease(url)
+    }
     // Read after the await: the document can be closed, or the layer removed and rebuilt, while
     // it is in flight. Compared by identity rather than by key — an undo and a redo put a fresh
     // surface under the same id, and the one captured above has had its texture destroyed.
@@ -950,10 +1239,20 @@ export class CanvasEngine {
     const renderer = this.app?.renderer
     if (!renderer || !this.state) return
 
-    const laid = containIn(texture, { width: this.state.width, height: this.state.height })
+    // Centred for a PICTURE being placed, at the origin for pixels being restored — and `clear`
+    // is what tells them apart, being true only on the restore path. A layer of a foreign `.ora`
+    // is not document-sized, and centring it displaced it a second time: the container's own
+    // `x`/`y` are already in the transform, so the picture landed one half-margin out.
+    const laid = clear
+      ? { x: 0, y: 0, width: texture.width, height: texture.height }
+      : containIn(texture, { width: this.state.width, height: this.state.height })
     // Remembered here because here is where it is known: the handles need the rect the picture
     // occupies, and nothing else in the engine ever works it out.
     this.contents.set(layerId, laid)
+    // Landed after an await, so the state has NOT moved: the memoised grips are keyed on it and
+    // would go on holding the whole document around a photo that covers part of it.
+    this.corners = { of: null, tool: null, box: null }
+    this.overlay.invalidate()
     const sprite = new Sprite(texture)
     sprite.position.set(laid.x, laid.y)
     sprite.setSize(laid.width, laid.height)
@@ -1002,11 +1301,21 @@ export class CanvasEngine {
     // typically), and swallowing it would lose it in both the engine and the store.
     const echo = this.published !== null && sameViewport(view.viewport, this.published)
     this.view = { ...view, viewport: echo ? (this.publishing ?? view.viewport) : view.viewport }
+    // The overlay hears about EVERY view, not only the ones that move the world: the rulers, the
+    // guides and the snapping live in this same object, and they change with the viewport still.
+    this.overlay.invalidate()
     this.applyViewport()
   }
 
   private applyViewport(): void {
     const { x, y, scale } = this.view.viewport
+    // Nothing moved since it was last APPLIED, so nothing is redrawn: every frame of a pan comes
+    // through here twice — the pointer, then the store's echo — and the second composited the
+    // whole document again over identical numbers. Against what was APPLIED and not against the
+    // node, whose default a mount already matches.
+    if (this.applied && sameViewport(this.applied, this.view.viewport)) return
+    this.applied = { x, y, scale }
+
     this.world.position.set(x, y)
     this.world.scale.set(scale)
     // A zoom slides the grips out from under a still hand. Not while a gesture is open: that one
@@ -1296,28 +1605,58 @@ export class CanvasEngine {
   }
 
   /**
-   * The whole document as one picture, or a region of it. What an edit sends to the API: the
-   * model is asked about what the eye sees, not about a stack it knows nothing of.
+   * The whole document as one picture — the flatten `mergedimage.png` holds, and what every
+   * other application draws of a `.ora`.
    *
-   * Extracted rather than composited by hand — the world is already the composited tree, and
-   * the GPU has it. `base64` hands back a data URL, so the prefix is stripped: the API takes
-   * the payload alone, and a `data:image/png;base64,` reaching it is part of the picture.
+   * Extracted rather than composited by hand: the world IS the composited tree, and the GPU has
+   * it. Through a canvas and a blob rather than a data URL, so the bytes are never a string.
    */
-  async snapshot(region?: Rect): Promise<string | null> {
+  async flatten(): Promise<Uint8Array<ArrayBuffer> | null> {
+    const frame = this.documentRect()
+    if (!frame || !this.state) return null
+
+    return await this.pngOf(this.world, new Rectangle(frame.x, frame.y, frame.width, frame.height))
+  }
+
+  /**
+   * The same picture as base64. What an edit sends to the API, which takes the payload alone —
+   * a `data:image/png;base64,` reaching it is part of the picture.
+   */
+  async snapshot(): Promise<string | null> {
+    const png = await this.flatten()
+    return png && bytesToBase64(png)
+  }
+
+  /**
+   * A target rendered to PNG bytes.
+   *
+   * `resolution: 1` and never the renderer's, which is the display scale: the same document
+   * would otherwise be extracted at 1024² from one screen and 2048² from another.
+   */
+  private async pngOf(
+    target: Container | Texture,
+    frame?: Rectangle,
+  ): Promise<Uint8Array<ArrayBuffer> | null> {
     const renderer = this.app?.renderer
-    if (!renderer || !this.state) return null
+    // `null` for an engine that is not up yet, which every caller already treats as "not ready".
+    if (!renderer) return null
 
-    const frame = region ?? this.documentRect()
-    if (!frame) return null
-
-    const url = await renderer.extract.base64({
-      target: this.world,
-      frame: new Rectangle(frame.x, frame.y, frame.width, frame.height),
-      // Not the renderer's, which is the display scale: the same document would otherwise be
-      // sent at 1024² from one screen and 2048² from another, at twice the price.
+    const canvas = renderer.extract.canvas({
+      target,
+      ...(frame ? { frame } : {}),
       resolution: 1,
     })
-    return payloadOf(url)
+    const blob = await blobOf(canvas)
+    /**
+     * THROWS rather than answering nothing, and the difference is a document.
+     *
+     * `extract.base64` rejected here, so a surface that would not encode failed the whole ⌘S and
+     * left the tab dirty. Answering `null` instead, the save wrote the container WITHOUT that
+     * surface — the container is replaced whole — and then marked the document clean. A layer
+     * gone, silently, on a save that looked like it worked.
+     */
+    if (!blob) throw new Error('the renderer would not encode this surface')
+    return new Uint8Array(await blob.arrayBuffer())
   }
 
   /**
@@ -1325,19 +1664,32 @@ export class CanvasEngine {
    * texture the brush writes into — the mask one paints is the mask one regenerates.
    */
   async maskSnapshot(layerId: string): Promise<string | null> {
-    const renderer = this.app?.renderer
     const mask = this.surfaces.get(maskKey(layerId))
     const frame = this.documentRect()
-    if (!renderer || !mask || !frame) return null
+    if (!mask || !frame) return null
 
-    // Framed on the document like the picture it masks: extracting the sprite bare would drop
-    // the transform `place` put on it, and the mask would arrive offset from what it masks.
-    const url = await renderer.extract.base64({
-      target: mask.sprite,
-      frame: new Rectangle(frame.x, frame.y, frame.width, frame.height),
-      resolution: 1,
-    })
-    return payloadOf(url)
+    // Rendered through a holder, and that is the whole of the fix: Pixi REPLACES the local
+    // transform of whatever it is handed as the root, so extracting the sprite itself dropped
+    // the placement `place` had put on it — the mask arrived at the origin while the picture
+    // beside it carried its layers' moves, and a moved layer was repainted in the wrong region.
+    // A child keeps its own transform, exactly as the layers under `this.world` do.
+    // A sprite of its own on the same texture, rather than the stack's: borrowing that one would
+    // take it out of the tree, and `reconcile` only puts sprites back when the placement
+    // signature changes — which borrowing does not.
+    const layer = this.state ? layerById(this.state, layerId) : null
+    const placed = new Sprite(mask.texture)
+    if (layer) this.place(placed, surfaceTransform(layer, true), mask.texture)
+
+    const holder = new Container()
+    holder.addChild(placed)
+
+    const png = await this.pngOf(holder, new Rectangle(frame.x, frame.y, frame.width, frame.height))
+
+    // The texture belongs to the surface, so it does not go with the sprite that borrowed it.
+    placed.destroy({ texture: false, textureSource: false })
+    holder.destroy()
+
+    return png && bytesToBase64(png)
   }
 
   /**
@@ -1349,16 +1701,19 @@ export class CanvasEngine {
    * layer's business, not the engine's.
    */
   async pixelSnapshots(): Promise<LayerPixels[]> {
-    const renderer = this.app?.renderer
-    if (!renderer || !this.state) return []
+    if (!this.app?.renderer || !this.state) return []
 
     const taken: LayerPixels[] = []
     for (const layer of allLayers(this.state.layers)) {
       for (const mask of [false, true]) {
         const surface = this.surfaces.get(mask ? maskKey(layer.id) : layer.id)
         if (!surface) continue
-        const url = await renderer.extract.base64({ target: surface.texture, resolution: 1 })
-        taken.push({ layerId: layer.id, mask, data: payloadOf(url) })
+        const data = await this.pngOf(surface.texture)
+        // A surface the engine HAS and cannot hand over is a loss, not an absence — the engine
+        // going down mid-loop is the ordinary way here. Skipping it wrote the container without
+        // that layer and called the save a success.
+        if (!data) throw new Error(`Layer ${layer.id} has a surface this engine can no longer read`)
+        taken.push({ layerId: layer.id, mask, data })
       }
     }
     return taken
@@ -1371,23 +1726,19 @@ export class CanvasEngine {
    */
   async restoreSnapshot(pixels: LayerPixels): Promise<void> {
     const key = pixels.mask ? maskKey(pixels.layerId) : pixels.layerId
-    const url = `data:image/png;base64,${pixels.data}`
     const surface = this.surfaces.get(key)
 
     // Held rather than dropped when the surface is not there yet: `loadInto` returns in silence
     // on a missing one, and a document would reopen with its stack and none of its pixels. The
     // claim below is then made by the drain, which runs before the surface can reload `source`.
     if (!surface) {
-      this.pendingSnapshots.set(key, url)
+      this.pendingSnapshots.set(key, pixels.data)
       return
     }
     // Marked before the await, so a reload of `source` in flight cannot slip in front of it.
     surface.fromDocument = true
     try {
-      // Cleared, unlike a placed picture: the surface was born filled — white, for the base
-      // layer — and compositing over that would bring a hole the user erased back as white
-      // rather than as the transparency the file holds.
-      await this.loadInto(key, url, true)
+      await this.loadPixelsInto(key, pixels.data)
     } catch (error) {
       // Given back, and the asset drawn in its place — see `fallBackToSource`.
       this.fallBackToSource(key, surface)
@@ -1395,24 +1746,49 @@ export class CanvasEngine {
     }
   }
 
+  /**
+   * Saved pixels into a surface, through a blob URL the loader forgets afterwards.
+   *
+   * The cache is keyed on the WHOLE source string, so a data URL of a 4K layer would be held for
+   * the life of the window — the very megabytes this stopped putting in a string. `unload` and
+   * `revokeObjectURL` give the BYTES back; Pixi's resolver keeps its own entry per URL string,
+   * which nothing public clears — a few hundred bytes per surface restored, for the session.
+   *
+   * Cleared, unlike a placed picture: the surface was born filled — white, for the base layer —
+   * and compositing over that would bring a hole the user erased back as white rather than as
+   * the transparency the file holds.
+   */
+  private async loadPixelsInto(key: string, png: Uint8Array<ArrayBuffer>): Promise<void> {
+    const url = URL.createObjectURL(new Blob([png], { type: 'image/png' }))
+    try {
+      await this.loadInto(key, url, true)
+    } finally {
+      // Given back here already, so `dispose` has nothing left to give back for this one. A blob
+      // URL is this engine's alone, so no other holder can be waiting on it.
+      if (this.loaded.delete(url)) released(url)
+      await Assets.unload(url).catch(() => undefined)
+      URL.revokeObjectURL(url)
+    }
+  }
+
   /** Pours the saved pixels held for a surface into it, once it exists. */
   private drainPendingSnapshot(key: string, surface: LayerSurface): void {
-    const url = this.pendingSnapshots.get(key)
-    if (!url) return
+    const png = this.pendingSnapshots.get(key)
+    if (!png) return
     this.pendingSnapshots.delete(key)
     // Claimed BEFORE the load, because the guard in `syncLayer` reads it on the very next line:
     // set on success it would always be too late, and the asset would be drawn over these pixels
     // every time. Given back below if the load turns out not to arrive.
     surface.fromDocument = true
     // Nothing is rethrown: this runs inside `reconcile`, which has nowhere to report to.
-    void this.loadInto(key, url, true).catch(() => this.fallBackToSource(key, surface))
+    void this.loadPixelsInto(key, png).catch(() => this.fallBackToSource(key, surface))
   }
 
   /**
    * Draws the asset a layer names, after its own saved pixels failed to.
    *
-   * A part inside `<id>.img/` can be truncated or corrupt, and before the claim existed the
-   * layer was drawn from `assetUrl(source)` regardless — so a bad part cost nothing visible.
+   * A surface inside the container can be truncated or corrupt, and before the claim existed
+   * the layer was drawn from `assetUrl(source)` regardless — so a bad one cost nothing visible.
    * The claim would now leave that layer empty and silent, and the next ⌘S would write the empty
    * layer over the asset. The claim is given back and the asset drawn, which is what it did.
    */
@@ -1436,6 +1812,20 @@ export class CanvasEngine {
   setShape(kind: ShapeKind, sides = this.shapeSides): void {
     this.shapeKind = kind
     this.shapeSides = sides
+  }
+
+  /**
+   * The caption a field is typing elsewhere. Its sprite steps aside for as long as that lasts, so
+   * the words are drawn once and by one thing — never twice, half a pixel apart.
+   *
+   * Session state, like the selection: nothing about the document changes, so `visible` is left
+   * alone and ⌘Z gives back no layer nobody hid.
+   */
+  setEditingText(layerId: string | null): void {
+    if (this.editing === layerId) return
+    this.editing = layerId
+    this.reconcile()
+    this.render()
   }
 
   /** Session state, so React owns it: the engine draws it and clips strokes to it. */
@@ -1468,6 +1858,7 @@ export class CanvasEngine {
 
     const host = this.host
     host?.removeEventListener('pointerdown', this.onPointerDown)
+    host?.removeEventListener('dblclick', this.onDoubleClick)
     host?.removeEventListener('pointermove', this.onPointerMove)
     host?.removeEventListener('pointerleave', this.onPointerLeave)
     host?.removeEventListener('wheel', this.onWheel)
@@ -1487,15 +1878,29 @@ export class CanvasEngine {
     this.patches?.dispose()
     this.patches = null
 
+    // Given back to the window's cache, which no engine owns and none of them was emptying —
+    // but only what no OTHER engine is still drawing. `Assets` reloads what a later mount asks
+    // for again.
+    for (const url of this.loaded) {
+      if (released(url)) void Assets.unload(url).catch(() => undefined)
+    }
+    this.loaded.clear()
+    // A remount starts from nothing applied, or the first viewport of the new world would be
+    // taken for one already on screen.
+    this.applied = null
+
     for (const surface of this.surfaces.values()) surface.texture.destroy(true)
     this.surfaces.clear()
+    // Their sprites hang from nothing, so `app.destroy` will not reach them the way it reaches
+    // the stack's.
+    this.forgetHeld()
     this.contents.clear()
     // The tree is gone, so no placement holds: kept, it would make the replay in a remount find
     // the signature unchanged and skip the `attach` that is now the only way anything is hung.
     this.stacking = ''
     // Same reason, and a sharper one: a frame kept across a remount would stand in the previous
     // document's coordinates, armed for ⏎.
-    this.cropping = null
+    this.setCropping(null)
     for (const container of this.groups.values()) container.destroy()
     this.groups.clear()
     for (const pass of this.adjustments.values()) pass.destroy()
@@ -1506,7 +1911,7 @@ export class CanvasEngine {
     this.pendingSnapshots.clear()
     for (const picture of this.pendingPictures.values()) picture.destroy(true)
     this.pendingPictures.clear()
-    this.wordings.clear()
+    this.drawings.clear()
     this.dropClipping()
     this.isolation?.destroy()
     this.isolation = null
@@ -1571,7 +1976,9 @@ export class CanvasEngine {
         crop: this.cropping,
         handles: this.activeCorners(),
         lit: this.hover?.kind === 'handle' ? this.hover.id : null,
-        pending: this.pending,
+        pending: this.pendingShape(),
+        textBox: this.textBox,
+        overflowing: this.overflowing.has(this.state.activeLayerId ?? ''),
         selection: this.selection,
         // Not while the tool is refusing: a ring is a promise that a dab lands there.
         brushRadius: this.ringed() && !this.refuses() ? this.brush.size / 2 : null,
@@ -1586,8 +1993,25 @@ export class CanvasEngine {
    */
   private marching(): boolean {
     return (
-      selectionOutline(this.selection).length > 0 || this.pending !== null || this.cropping !== null
+      selectionOutline(this.selection).length > 0 || this.cropping !== null || this.textBox !== null
     )
+  }
+
+  /**
+   * The shape under the hand, dressed in the paint it will be committed with — the overlay draws
+   * what will land, not a marquee around where it will.
+   *
+   * Stroked rather than filled for the two that have no inside; the brush size is the width,
+   * which is the one control the bar already offers.
+   */
+  private pendingShape(): PendingShape | null {
+    const shape = this.pending
+    if (!shape) return null
+
+    const color = colourOf(this.brush.color)
+    return shape.kind === 'line' || shape.kind === 'arrow'
+      ? { shape, fill: null, stroke: { color, width: strokeWidth(this.brush.size) } }
+      : { shape, fill: color, stroke: null }
   }
 
   private render(): void {
@@ -1598,19 +2022,21 @@ export class CanvasEngine {
     // Read before the build: a picture is drawn once, when its surface comes into existence —
     // which is also the only moment the engine can know the layer at all.
     const born = !this.surfaces.has(layer.id)
-    // Words are redrawn whenever they change, unlike pixels, which are what the layer holds. The
-    // face counts as a change: without it, setting a caption in another font is an edit the
-    // screen never shows, and a face the page was never asked for.
-    const wording =
-      layer.kind === 'text'
-        ? `${layer.text}|${layer.size}|${layer.color}|${fontKey(layer.font)}`
-        : null
+    // Words and shapes are redrawn whenever they change, unlike pixels, which are what the layer
+    // holds. The face counts as a change: without it, setting a caption in another font is an
+    // edit the screen never shows, and a face the page was never asked for.
+    const drawn = drawingKey(layer)
     const surface = this.buildSurface(layer.id, layer.kind === 'pixel' ? layer.fill : undefined)
     if (!surface) return
 
-    if (wording !== null && this.wordings.get(layer.id) !== wording) {
-      this.wordings.set(layer.id, wording)
+    // Never while a field is drawing the caption: its sprite is hidden, so rasterizing it would
+    // be a Pixi `Text` and a full frame per KEYSTROKE, for a texture nobody can see. The key is
+    // left unwritten on purpose — the redraw then happens once, when the field lets go.
+    const typing = layer.id === this.editing
+    if (drawn !== null && !typing && this.drawings.get(layer.id) !== drawn) {
+      this.drawings.set(layer.id, drawn)
       if (layer.kind === 'text') this.drawText(surface, layer)
+      if (layer.kind === 'shape') this.drawShape(surface, layer)
     }
 
     // A flatten composed its picture before the command ran; this is the surface it was for.
@@ -1627,7 +2053,7 @@ export class CanvasEngine {
       )
     }
 
-    surface.sprite.visible = layer.visible
+    surface.sprite.visible = layer.visible && layer.id !== this.editing
     // `fillOpacity` is meant to fade the pixels while leaving the effects drawn around them at
     // full strength. No layer effect exists yet, so for now the two simply multiply.
     surface.sprite.alpha = layer.opacity * layer.fillOpacity
@@ -1657,11 +2083,47 @@ export class CanvasEngine {
     const renderer = this.app?.renderer
     if (!renderer) return
 
+    const box = layer.box
     const text = new Text({
       text: layer.text,
-      style: { fontFamily: familyStack(layer.font), fontSize: layer.size, fill: layer.color },
+      style: {
+        fontFamily: familyStack(layer.font),
+        fontSize: layer.size,
+        fill: layer.color,
+        align: layer.align,
+        // A POINT caption never wraps: its line grows, and only a typed return breaks it.
+        wordWrap: box !== null,
+        wordWrapWidth: box?.width,
+        lineHeight: layer.size * layer.lineHeight,
+        letterSpacing: (layer.tracking / 1000) * layer.size,
+      },
     })
-    renderer.render({ container: text, target: surface.texture, clear: true })
+    // Pixi's `align` only ranks the LINES against each other, inside a block sized to the widest
+    // of them: on a single line it changes nothing at all. Hanging the block off the box's own
+    // edge is what makes the four buttons of the paragraph panel do anything.
+    if (box) text.x = alignedIn(layer.align, box.width, text.width)
+
+    // What the layer really occupies, which the grips and the hit test both read back. A point
+    // caption has no box of its own, so the block it drew IS its box.
+    this.contents.set(layer.id, { x: text.x, y: 0, width: text.width, height: text.height })
+    // A face landing re-draws the caption outside any `apply`: the memoised grips have to hear it.
+    this.corners = { of: null, tool: null, box: null }
+    // Hidden rather than spilled, as a paragraph is in Photoshop and InDesign: what outgrows the
+    // box is still in the layer, and widening it brings the rest back. The grip that says so
+    // reads this, so it has to be dropped as readily as it is set.
+    const spills = box !== null && text.height > box.height
+    if (spills !== this.overflowing.has(layer.id)) this.overlay.invalidate()
+    if (spills) this.overflowing.add(layer.id)
+    else this.overflowing.delete(layer.id)
+
+    const container = box ? this.boxed(text, box) : text
+    renderer.render({ container, target: surface.texture, clear: true })
+    if (container !== text) {
+      // The words leave first, so the holder takes only its own stencil down with it.
+      container.mask = null
+      container.removeChild(text)
+      container.destroy({ children: true })
+    }
     text.destroy()
     this.render()
 
@@ -1672,6 +2134,40 @@ export class CanvasEngine {
     void this.registerFace(layer).catch(error =>
       reportFailure('font.face', layer.font.family, error),
     )
+  }
+
+  /**
+   * The shape, drawn into the layer's own texture at the layer's origin. `clear: true`, so
+   * recolouring one replaces it rather than laying the new paint over the old.
+   */
+  private drawShape(surface: LayerSurface, layer: ShapeLayer): void {
+    const renderer = this.app?.renderer
+    if (!renderer) return
+
+    const drawing = new Graphics()
+    paintShape(drawing, shapeOf(layer))
+    if (layer.fill !== null) drawing.fill({ color: layer.fill })
+    if (layer.stroke) drawing.stroke({ color: layer.stroke.color, width: layer.stroke.width })
+
+    renderer.render({ container: drawing, target: surface.texture, clear: true })
+    drawing.destroy()
+    this.render()
+  }
+
+  /**
+   * A paragraph's words, cut to its box. Built and freed per pass, unlike the brush's stencil:
+   * a caption is rasterized when it changes, not sixty times a second.
+   */
+  private boxed(text: Text, box: Size): Container {
+    const stencil = new Graphics()
+    stencil.rect(0, 0, box.width, box.height)
+    stencil.fill({ color: 0xffffff })
+
+    const holder = new Container()
+    holder.addChild(stencil)
+    holder.addChild(text)
+    holder.mask = stencil
+    return holder
   }
 
   /**
@@ -1713,6 +2209,23 @@ export class CanvasEngine {
     // Nothing is built before the renderer exists: a texture allocated against no GPU context
     // would take a stroke and never show it. `mount` replays the state.
     if (!this.app || !this.state) return null
+
+    // A layer coming back from an undo takes its own pixels again. Only when the surface still
+    // matches the frame: one held across a crop or a turn holds the sides the document dropped.
+    const held = this.departed.get(key)
+    if (held) {
+      // Its bytes leave the pool with it, or `kept` only ever climbs: a dozen merge-then-undo
+      // cycles then put it past the budget with `departed` empty, and the next departure evicts
+      // the surface it was just handed — the layer comes back blank, which is the whole defect.
+      this.kept -= bytesOf(held.texture)
+      this.departed.delete(key)
+      if (held.texture.width === this.state.width && held.texture.height === this.state.height) {
+        this.surfaces.set(key, held)
+        return held
+      }
+      held.sprite.destroy()
+      held.texture.destroy(true)
+    }
 
     const texture = RenderTexture.create({
       width: this.state.width,
@@ -1768,7 +2281,9 @@ export class CanvasEngine {
    * one: reading it per event forces a layout, and it is refreshed on resize and on every
    * pointer down, which is what every gesture starts with.
    */
-  private toHost(event: PointerEvent | WheelEvent): Point {
+  // `MouseEvent`, which pointer, wheel and double-click events all are: only the two client
+  // coordinates every one of them carries are read here.
+  private toHost(event: MouseEvent): Point {
     const bounds = this.bounds
     if (!bounds) return { x: 0, y: 0 }
     return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
@@ -1808,11 +2323,29 @@ export class CanvasEngine {
   /** Magnetism is a screen-space feeling: the tolerance shrinks in document units as you zoom. */
   private snapped(value: number, axis: Axis): number {
     if (!this.view.snap || !this.state) return value
-    return snapValue(
-      value,
-      snapTargets(this.state, axis),
-      SNAP_TOLERANCE / this.view.viewport.scale,
+    return (
+      value +
+      snapOffset([value], snapTargets(this.state, axis), SNAP_TOLERANCE / this.view.viewport.scale)
     )
+  }
+
+  /**
+   * A double click on the words edits them, the reflex Photoshop answers to and the only way into
+   * a caption without arming the text tool first. On `dblclick` and not on `pointerdown`, whose
+   * `detail` a pointer event leaves at 0 — measured in Electron, where the count lives on the
+   * mouse events the browser sends beside it.
+   */
+  private readonly onDoubleClick = (event: MouseEvent): void => {
+    if (this.tool !== 'move') return
+
+    this.bounds = this.host?.getBoundingClientRect() ?? this.bounds
+    const point = toDocument(this.view.viewport, this.toHost(event))
+    // The ARMED caption only: this tool moves what is armed and nothing here can arm a layer, so
+    // opening another would leave the type panel on a third. A padlocked POSITION still edits.
+    const caption = this.captionAt(point)
+    if (caption && caption.id === this.state?.activeLayerId) {
+      this.options.onText({ layerId: caption.id })
+    }
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
@@ -1822,6 +2355,9 @@ export class CanvasEngine {
     const host = this.toHost(event)
     const point = toDocument(this.view.viewport, host)
     this.pointer = host
+
+    // Held from here to `endGesture`, so a drag that leaves the panel keeps being followed.
+    if (event.button === 0 || event.button === 1) this.capture(event)
 
     // Middle button pans whatever the tool: it is the one gesture no tool may take over. It can
     // land mid-drag, so whatever was open is closed rather than abandoned — a guide gesture left
@@ -1862,6 +2398,9 @@ export class CanvasEngine {
       // white, black or red background in one gesture, and a region its flat colour.
       this.fill(target.surface, this.brush.color, target.toSurface)
       this.endPixels()
+      // The renderer runs on demand, so a texture written outside a gesture is a texture nobody
+      // presents: the bucket only appeared once a pan or a zoom booked the next frame.
+      this.render()
       return
     }
 
@@ -1905,18 +2444,67 @@ export class CanvasEngine {
     }
 
     if (this.tool === 'text') {
-      // A click places a caption; the words themselves are typed in the inspector, where a
-      //a letter typed on the canvas would be competing with every tool shortcut the space binds.
-      this.options.onText(point)
+      // A grip of the armed caption's box comes first, exactly as the move tool's do: a press on
+      // one resizes the box, a press anywhere else opens or edits a caption.
+      const armed = this.activeLayer()
+      const frame = this.hoverBox()
+      const grip = frame && this.chromeAt(frame, point)
+      if (armed?.kind === 'text' && grip) {
+        this.options.layers.beginDrag()
+        // The ring outside a corner turns the caption, exactly as it turns any other layer: a box
+        // that could be pulled but never turned was the one grip of the eight that lied.
+        this.gesture =
+          grip.kind === 'handle'
+            ? {
+                kind: 'textBox',
+                id: armed.id,
+                handle: grip.id,
+                // A POINT caption has no box: pulling a grip is what gives it one, starting from
+                // what its words already occupy — which is how it becomes a paragraph.
+                box: armed.box ?? sizeOf(this.frameOf(armed)),
+                origin: armed.transform,
+              }
+            : {
+                kind: 'rotate',
+                id: armed.id,
+                center: centerOf(frame.corners),
+                from: point,
+                origin: armed.transform,
+              }
+        return
+      }
+
+      // Held, the caption moves under the hand rather than taking the click — the reflex every
+      // type tool of the trade answers to, and the one that lets a block be placed while it is
+      // still being typed.
+      if (event.metaKey && armed?.kind === 'text') {
+        this.options.layers.beginDrag()
+        this.gesture = {
+          kind: 'move',
+          id: armed.id,
+          from: point,
+          origin: { x: armed.transform.x, y: armed.transform.y },
+        }
+        return
+      }
+
+      // A caption already under the hand is the one the click edits. Without this, every click
+      // with the tool armed stacked one more layer on the last.
+      const caption = this.captionAt(point)
+      if (caption) {
+        this.options.onText({ layerId: caption.id })
+        return
+      }
+
+      // The box comes from the drag, or from a click, which has none: settled on release.
+      this.gesture = { kind: 'text', from: point, to: point }
       return
     }
 
     if (this.tool === 'shape') {
-      const target = this.paintTarget()
-      if (!target) return
-
-      this.beginPixels(target)
-      this.gesture = { kind: 'shape', from: point, target }
+      // No paint target and no undo tiles: a shape lands as a layer of its own, so the armed
+      // layer is neither written to nor required to exist.
+      this.gesture = { kind: 'shape', from: point, to: point }
       return
     }
 
@@ -1930,7 +2518,7 @@ export class CanvasEngine {
         return
       }
 
-      this.cropping = null
+      this.setCropping(null)
       this.overlay.invalidate()
       this.gesture = { kind: 'crop', from: point }
       return
@@ -1983,22 +2571,27 @@ export class CanvasEngine {
   }
 
   /**
-   * The rect a layer's grips describe: the picture it holds where it holds one, its whole
-   * surface otherwise.
+   * The rect a layer's grips describe: what its content really occupies, in its own space.
    *
-   * A layer painted by hand has no better answer — every pixel of its surface is fair game. One
-   * holding a photo does: `containIn` shrank it to fit and centred it, so the surface is mostly
-   * transparent margin, and gripping that is gripping nothing. This is what every other editor
-   * frames for a picture layer.
+   * `contents` knows it for a photo, which `containIn` shrank and centred — its surface is mostly
+   * transparent margin, and gripping that is gripping nothing. A caption and a shape carry it in
+   * their own state. Only pixels painted by hand can reach every corner of the document.
    */
-  private frameOf(layerId: string): Rect {
-    return this.contents.get(layerId) ?? wholeOf(this.documentSize())
+  private frameOf(layer: Layer): Rect {
+    // A PARAGRAPH is framed by its box and not by its words: what outgrows it is hidden, and a
+    // frame drawn on the words would sit around what nobody can see.
+    if (layer.kind === 'text' && layer.box) return { x: 0, y: 0, ...layer.box }
+
+    const laid = this.contents.get(layer.id)
+    if (laid) return laid
+    if (layer.kind === 'shape') return shapeBounds(shapeOf(layer), layer.stroke?.width ?? 0)
+    return wholeOf(this.documentSize())
   }
 
   /** `null` for a group, which has no texture of its own and so no box to grab. */
   private cornersOf(layer: Layer): Corners | null {
     if (!this.state || isGroup(layer)) return null
-    return layerCornersOf(layer.transform, this.documentSize(), this.frameOf(layer.id))
+    return layerCornersOf(layer.transform, this.documentSize(), this.frameOf(layer))
   }
 
   /**
@@ -2007,12 +2600,17 @@ export class CanvasEngine {
    * per pointer move, and pay for every layer in the document to answer about one.
    */
   private activeCorners(): Corners | null {
-    if (this.tool !== 'move') return null
-    if (this.corners.of === this.state) return this.corners.box
+    // The text tool shows them too: a caption whose box is never drawn is a box nobody can aim
+    // at, resize, or even tell apart from the words that spill out of it.
+    if (this.tool !== 'move' && this.tool !== 'text') return null
+    if (this.corners.of === this.state && this.corners.tool === this.tool) return this.corners.box
 
     const layer = this.activeLayer()
-    const box = layer && !layer.locked.position ? this.cornersOf(layer) : null
-    this.corners = { of: this.state, box }
+    // The text tool shows the box of a CAPTION and of nothing else: the frame of a pixel layer
+    // is the whole document, which says nothing about where the next click would type.
+    const drawable = this.tool === 'text' ? layer?.kind === 'text' : true
+    const box = layer && drawable && !layer.locked.position ? this.cornersOf(layer) : null
+    this.corners = { of: this.state, tool: this.tool, box }
     return box
   }
 
@@ -2052,9 +2650,10 @@ export class CanvasEngine {
   private paintTarget(): BrushTarget | null {
     const layer = this.activeLayer()
     if (!layer || isGroup(layer) || layer.locked.pixels) return null
-    // Its own pixels only: a caption is redrawn whole whenever a letter changes, so a stroke laid
-    // on it would be wiped with no history entry to bring it back. Its mask is never redrawn.
-    if (layer.kind === 'text' && this.painting !== 'mask') return null
+    // Its own pixels only: a caption and a shape are redrawn WHOLE whenever anything about them
+    // changes, so a stroke laid on one would be wiped with no history entry to bring it back —
+    // recolouring a rectangle would take the paint over it away. Their masks are never redrawn.
+    if (isRedrawn(layer) && this.painting !== 'mask') return null
 
     const surface = this.activeSurface()
     // No surface means the layer carries no mask while the brush aims at one: there is nothing
@@ -2182,6 +2781,8 @@ export class CanvasEngine {
         return
       }
       case 'handle': {
+        const held = this.state && layerById(this.state, gesture.id)
+        if (!held) return
         // The same frame the grips were drawn on: solved against the document instead, a pull on
         // a photo that does not fill its surface would scale from the wrong corner.
         const next = resizeBy(
@@ -2190,7 +2791,7 @@ export class CanvasEngine {
           this.documentSize(),
           point,
           event.shiftKey,
-          this.frameOf(gesture.id),
+          this.frameOf(held),
         )
         this.options.layers.transform(gesture.id, next)
         return
@@ -2202,7 +2803,7 @@ export class CanvasEngine {
       }
       case 'crop': {
         // Clamped here rather than at the commit, so the frame drawn is the frame applied.
-        this.cropping = cropRect(gesture.from, point, this.documentSize(), event.shiftKey)
+        this.setCropping(cropRect(gesture.from, point, this.documentSize(), event.shiftKey))
         this.overlay.invalidate()
         return
       }
@@ -2213,34 +2814,83 @@ export class CanvasEngine {
         const next = resizeCrop(gesture.origin, gesture.handle, point, size, event.shiftKey)
         // A collapsed adjustment keeps the last good frame rather than dropping it: the hand is
         // still down, and a frame that vanished mid-drag could not be pulled back open.
-        if (next) this.cropping = next
+        if (next) this.setCropping(next)
         this.overlay.invalidate()
         return
       }
       case 'shape': {
-        // Previewed in the overlay, not in the layer: drawing into the texture on every move
-        // would leave every intermediate shape behind, since a texture keeps what it is given.
-        this.pending = shapeGeometry(this.shapeKind, gesture.from, point, {
+        // Previewed in the overlay, not in the layer: a layer per pointer move would be a
+        // hundred entries in the history for one gesture.
+        gesture.to = constrainedTo(this.shapeKind, gesture.from, point, event.shiftKey)
+        this.pending = shapeGeometry(this.shapeKind, gesture.from, gesture.to, {
           sides: this.shapeSides,
-          constrain: event.shiftKey,
+          constrain: false,
         })
         this.overlay.invalidate()
+        return
+      }
+      case 'text': {
+        gesture.to = point
+        this.textBox = box(gesture.from, point, false)
+        this.overlay.invalidate()
+        return
+      }
+      case 'textBox': {
+        const back = invert(layerMatrix(gesture.origin, this.documentSize()))
+        if (!back) return
+
+        const next = resizedBox(gesture.handle, gesture.box, applyTo(back, point), event.shiftKey)
+        // The origin moved with a north or west grip, and it moved in the LAYER's space: taken
+        // through the matrix without its translation, which is what turns it back into document
+        // units under a rotation.
+        const spun = { ...layerMatrix(gesture.origin, this.documentSize()), tx: 0, ty: 0 }
+        const shifted = applyTo(spun, next)
+        this.options.onTextBox(
+          gesture.id,
+          { width: next.width, height: next.height },
+          { x: gesture.origin.x + shifted.x, y: gesture.origin.y + shifted.y },
+        )
         return
       }
     }
   }
 
   private readonly onPointerUp = (event: PointerEvent): void => {
+    // Whatever is still held down keeps the gesture open: a right button let go during a drag
+    // used to close it, and a guide let go over the canvas was thrown away by the ruler test.
+    if (event.buttons !== 0) return
+
     // The corner counts: a guide dropped anywhere on the chrome is a guide thrown away.
     const onChrome = this.inRuler(this.toHost(event)) !== null
     this.forgetHover()
     this.endGesture(onChrome)
   }
 
+  /**
+   * Makes the panel the one thing this pointer talks to, so a drag that leaves it goes on being
+   * followed. Without it the moves stop at the edge and the gesture commits wherever it was last
+   * seen INSIDE — dragging a layer, a marquee or a crop grip to the border was impossible.
+   *
+   * Only a real pointer: a synthesised event names an id no browser is tracking, and asking to
+   * capture it throws. The gesture runs either way, it just stops following the hand.
+   */
+  private capture(event: PointerEvent): void {
+    if (!event.isTrusted) return
+
+    this.host?.setPointerCapture(event.pointerId)
+    this.captured = event.pointerId
+  }
+
+  private release(): void {
+    if (this.captured !== null) this.host?.releasePointerCapture(this.captured)
+    this.captured = null
+  }
+
   /** Closes whatever gesture is open, exactly once, whether it ended or was taken over. */
   private endGesture(dropped = false): void {
     const gesture = this.gesture
     this.gesture = NO_GESTURE
+    this.release()
 
     if (gesture.kind === 'guide') {
       if (dropped) this.options.guides.remove(gesture.id)
@@ -2252,7 +2902,8 @@ export class CanvasEngine {
     // One history entry per gesture: a command per dab, or per pointer move, would make ⌘Z useless.
     if (LAYER_DRAGS.has(gesture.kind)) this.options.layers.endDrag()
     if (gesture.kind === 'paint') this.endPixels()
-    if (gesture.kind === 'shape') this.commitShape(gesture.target)
+    if (gesture.kind === 'shape') this.commitShape(gesture.from, gesture.to)
+    if (gesture.kind === 'text') this.commitText(gesture.from, gesture.to)
     // A click that carved nothing out is how every editor deselects. Left standing, a zero-area
     // selection is a stencil nothing gets through, and the document stops taking paint at all.
     if (gesture.kind === 'select' && isEmptySelection(this.selection)) this.publishSelection(null)
@@ -2472,6 +3123,24 @@ export class CanvasEngine {
    * bucket. Handed back unchanged when nothing is selected, which is the common case.
    */
   private clipped(container: Container): Container {
+    if (!this.selection) {
+      this.dropClipping()
+      return container
+    }
+
+    // Kept while the selection is the same OBJECT, and it is replaced wholesale by
+    // `setSelection` — so this cache cannot drift. Rebuilt per dab it re-ran the trigonometry of
+    // an ellipse and re-tessellated a thousand-point lasso on every frame of a stroke, which is
+    // the hottest gesture there is.
+    const held = this.clipping
+    if (held?.of === this.selection) {
+      // Only the stencil stays between passes — index 0, put there first below. What follows it
+      // is whatever the LAST pass was drawing, and it belongs to its owner, not to this holder.
+      held.holder.removeChildren(1)
+      held.holder.addChild(container)
+      return held.holder
+    }
+
     const outline = selectionOutline(this.selection)
     const first = outline[0]
     if (!first) {
@@ -2488,10 +3157,8 @@ export class CanvasEngine {
     holder.addChild(stencil)
     holder.addChild(container)
     holder.mask = stencil
-    // Rebuilt per pass rather than kept: a held stencil would have to be invalidated on every
-    // selection change.
     this.dropClipping()
-    this.clipping = { holder, stencil }
+    this.clipping = { of: this.selection, holder, stencil }
     return holder
   }
 
@@ -2510,12 +3177,24 @@ export class CanvasEngine {
     clipping.holder.destroy()
   }
 
+  /**
+   * The one place the frame changes, so that nothing can move it without the bar hearing.
+   *
+   * Reported only when there is or is not one, never on the frame itself: this runs on every
+   * pointer move of a crop drag, and the bar has the same answer for all of them.
+   */
+  private setCropping(rect: Rect | null): void {
+    const framed = this.cropping !== null
+    this.cropping = rect
+    if (framed !== (rect !== null)) this.options.onCropFrame(rect !== null)
+  }
+
   /** Crops the document to the frame on screen, in the one order the three steps work in. */
   applyCrop(): void {
     const rect = this.cropping
     if (!rect) return
 
-    this.cropping = null
+    this.setCropping(null)
     this.overlay.invalidate()
     // A marquee is in document coordinates and the crop moves the picture under it: left
     // standing it would stencil the wrong pixels, or none at all once the frame stops reaching
@@ -2530,51 +3209,90 @@ export class CanvasEngine {
   /** Takes the frame off screen without cropping anything. */
   dropCrop(): void {
     if (!this.cropping) return
-    this.cropping = null
+    this.setCropping(null)
     this.overlay.invalidate()
   }
 
-  /** Draws the previewed shape into the armed layer, once, when the hand comes up. */
-  private commitShape(target: BrushTarget): void {
-    const renderer = this.app?.renderer
-    const shape = this.pending
+  /**
+   * The caption's box, once the hand comes up. A drag too small to have been meant as one opens
+   * the default box instead, which is what makes a plain click work.
+   */
+  private commitText(from: Point, to: Point): void {
+    this.textBox = null
+    this.overlay.invalidate()
+
+    const drawn = box(from, to, false)
+    const dragged = drawn.width >= MIN_TEXT_DRAG && drawn.height >= MIN_TEXT_DRAG
+    this.options.onText(
+      dragged
+        ? { at: { x: drawn.x, y: drawn.y }, box: { width: drawn.width, height: drawn.height } }
+        : // A plain click opens a POINT caption: no box, no wrapping, and its line simply grows.
+          { at: from, box: null },
+    )
+  }
+
+  /** The topmost caption whose box holds the point — what a click with the text tool edits. */
+  private captionAt(point: Point): TextLayer | null {
+    const size = this.documentSize()
+    for (const layer of allLayers(this.state?.layers ?? []).reverse()) {
+      if (layer.kind !== 'text' || !layer.visible) continue
+
+      const back = invert(layerMatrix(layer.transform, size))
+      if (!back) continue
+
+      // The frame answers for both kinds: a paragraph is its box, a point caption is its words.
+      const frame = this.frameOf(layer)
+      const local = applyTo(back, point)
+      const inside =
+        local.x >= frame.x &&
+        local.y >= frame.y &&
+        local.x <= frame.x + frame.width &&
+        local.y <= frame.y + frame.height
+      if (inside) return layer
+    }
+    return null
+  }
+
+  /**
+   * Hands the drawn shape over as a LAYER, once, when the hand comes up — rasterizing it into the
+   * armed layer would make the fill of a rectangle drawn an hour ago something only undo can fix.
+   */
+  private commitShape(from: Point, to: Point): void {
+    const drawn = this.pending
     this.pending = null
     this.overlay.invalidate()
-    if (!renderer || !shape) return
+    if (!drawn) return
 
-    const drawing = new Graphics()
-    paintShape(drawing, shape)
-    // Stroked rather than filled for the two that have no inside; the brush size is the width,
-    // which is the one control the bar already offers.
-    if (shape.kind === 'line' || shape.kind === 'arrow') {
-      drawing.stroke({
-        color: this.brush.color,
-        width: strokeWidth(this.brush.size),
-        alpha: this.brush.opacity,
-      })
-    } else {
-      drawing.fill({ color: this.brush.color, alpha: this.brush.opacity })
-    }
+    const line = drawn.kind === 'line' || drawn.kind === 'arrow'
+    const width = strokeWidth(this.brush.size)
+    const local = localShape(this.shapeKind, from, to, this.shapeSides, line ? width : 0)
 
-    this.patches?.touch(mapRect(target.toSurface, shapeBounds(shape, this.brush.size)))
-    renderer.render({
-      container: this.inSurfaceSpace(target.toSurface, this.clipped(drawing)),
-      target: target.surface.texture,
-      clear: false,
+    this.options.onShape(local.at, {
+      shape: this.shapeKind,
+      from: local.from,
+      to: local.to,
+      sides: this.shapeSides,
+      fill: line ? null : this.brush.color,
+      stroke: line ? { color: this.brush.color, width } : null,
     })
-    drawing.destroy()
-    this.endPixels()
-    this.render()
   }
 
   private pick(point: Point): void {
     const renderer = this.app?.renderer
+    const layer = this.activeLayer()
     const surface = this.activeSurface()
-    if (!renderer || !surface || !this.state) return
+    if (!renderer || !layer || isGroup(layer) || !surface) return
 
-    const x = Math.floor(point.x)
-    const y = Math.floor(point.y)
-    if (x < 0 || y < 0 || x >= this.state.width || y >= this.state.height) return
+    // A sprite's frame is read in its TEXTURE's space, not the document's — the same conversion
+    // every other pixel gesture makes. Read straight from the document, the eyedropper answered
+    // for a texel the cursor was nowhere near as soon as the layer had been moved or scaled.
+    const toSurface = invert(this.surfaceMatrix(layer, false, surface))
+    if (!toSurface) return
+
+    const local = applyTo(toSurface, point)
+    const x = Math.floor(local.x)
+    const y = Math.floor(local.y)
+    if (x < 0 || y < 0 || x >= surface.texture.width || y >= surface.texture.height) return
 
     // One pixel, not the whole layer: extracting a 1024² sprite to read a single colour means a
     // 4 MB allocation and a synchronous `readPixels` that stalls the pipeline on every click.
@@ -2582,6 +3300,13 @@ export class CanvasEngine {
       target: surface.sprite,
       frame: new Rectangle(x, y, 1, 1),
     })
+
+    // Nothing was painted there. Answering black would put a colour in the swatch that the
+    // document does not hold, and the next stroke would lay it down.
+    //
+    // A buffer that carries no alpha channel at all is a different thing from one that says
+    // transparent, and it keeps the reading it already had.
+    if (pixels.pixels.length > 3 && pixels.pixels[3] === 0) return
 
     const red = pixels.pixels[0] ?? 0
     const green = pixels.pixels[1] ?? 0

@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
@@ -6,19 +6,19 @@ import type { SceneExportCommand } from '@shared/ipc'
 import { PANE_TOOLBAR } from '@/design/styles'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { fakeMenu } from '@/helpers/menu-fixtures'
-import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
 import { addNode } from '@/engines/scene/commands'
-import { meshNode } from '@/engines/scene/scene-fixtures'
-import type { SceneNode } from '@/engines/scene/scene-state'
+import { meshNode, pathNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
+import type { SceneNode } from '@/engines/scene/sceneState'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
-import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
+import { useSceneViews, sceneViewOf } from '@/stores/sceneViews'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
-import { bonesOfNode, clipsOfNode, useModelClips } from '@/stores/model-clips'
-import { IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
+import { bonesOfNode, clipsOfNode, rigOfNode, useModelClips } from '@/stores/modelClips'
+import { IDENTITY_TRANSFORM } from '@/engines/scene/sceneState'
 import { DISPLAY_MODES } from '@shared/domain/scene'
 import { SceneDocument } from './SceneDocument'
 
@@ -26,7 +26,7 @@ const setDocumentTitle = vi.fn()
 
 // Dockview owns the tabs and needs a layout engine; what matters here is what the space asks
 // of it.
-vi.mock('@/app/dockview-api', () => ({
+vi.mock('@/app/dockviewApi', () => ({
   setDocumentTitle: (...args: unknown[]) => setDocumentTitle(...args),
 }))
 
@@ -39,14 +39,19 @@ const setProjection = vi.fn()
 const setDisplayModes = vi.fn()
 const activePane = vi.fn(() => 0)
 const setSkeletons = vi.fn()
+const setIsolation = vi.fn()
 const setPoseMode = vi.fn()
 const setPickedBone = vi.fn()
+const setPickedPathPoint = vi.fn()
 const setQuadView = vi.fn()
 const setPaneViews = vi.fn()
 const setPlayhead = vi.fn()
+const setPreview = vi.fn()
 const refreshTextures = vi.fn()
 /** Every engine built, so a test can fire the callbacks the real one would. */
 const built = vi.hoisted((): SceneRendererOptions[] => [])
+/** The engines themselves, for the one fact a case has to state rather than fire: the flight. */
+const engines = vi.hoisted((): { flying: boolean }[] => [])
 const viewFrom = vi.fn()
 // At module scope like the others, so a test can make the encoding itself refuse: the exporters
 // throw on a texture they cannot write, and that is the half no bridge failure stands in for.
@@ -58,6 +63,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
   SceneRenderer: class {
     constructor(options: unknown) {
       built.push(options as SceneRendererOptions)
+      engines.push(this)
     }
 
     mount = vi.fn()
@@ -65,6 +71,8 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     apply = vi.fn()
     dispose = vi.fn()
     setMotion = vi.fn()
+    /** The right button, which no case here holds down — the two that need it set it themselves. */
+    flying = false
     configure = configure
     setMode = setMode
     setSnapping = setSnapping
@@ -73,11 +81,15 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setDisplayModes = setDisplayModes
     activePane = activePane
     setSkeletons = setSkeletons
+    setIsolation = setIsolation
     setPoseMode = setPoseMode
     setPickedBone = setPickedBone
+    setPickedPathPoint = setPickedPathPoint
+    setCameraPreview = vi.fn()
     setQuadView = setQuadView
     setPaneViews = setPaneViews
     setPlayhead = setPlayhead
+    setPreview = setPreview
     refreshTextures = refreshTextures
     viewFrom = viewFrom
     frameSelection = frameSelection
@@ -107,7 +119,7 @@ function nodesOf(documentId: string): SceneNode[] {
 beforeEach(() => {
   vi.clearAllMocks()
   built.length = 0
-  useModelClips.setState({ clips: {}, bones: {} })
+  useModelClips.setState({ clips: {}, rigs: {} })
   // The export tests install a bridge; without this it would answer for the ones that follow.
   vi.unstubAllGlobals()
   // A report is said once per subject and the set lives at module scope: a second test on the
@@ -125,7 +137,7 @@ beforeEach(() => {
         kind: 'scene',
         workspace: '3d',
         title: 'Set dressing',
-        fileName: 'Set dressing.scene',
+        path: 'documents/Set dressing.gltf',
       },
     },
     activeId: 'doc-1',
@@ -204,7 +216,7 @@ describe('SceneDocument', () => {
           kind: 'scene',
           workspace: '3d',
           title: 'Fresh',
-          fileName: 'Fresh.scene',
+          path: 'documents/Fresh.gltf',
         },
       },
     })
@@ -233,12 +245,27 @@ describe('SceneDocument', () => {
   })
 
   /**
-   * Adding is the native Add menu's now, not the bar's — `useNativeMenu` covers the row, and
-   * `useAddNode` what it builds. What is left to say here is that the bar offers no second way.
+   * The gesture the space was missing: a camera, a sprite, a caption and a rail had no panel to
+   * be added from, no key, and a right-click that only answers over a node — the native Add menu,
+   * three levels deep, was the whole of it.
    */
-  it('offers no add button of its own', () => {
+  it('adds a camera from the bar, which nothing else could reach', async () => {
     render(<SceneDocument documentId="doc-1" />)
-    expect(screen.queryByRole('button', { name: /Ajouter/ })).not.toBeInTheDocument()
+
+    await userEvent.hover(screen.getByRole('button', { name: 'Ajouter un objet' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Caméra' }))
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes.some(node => node.type === 'camera')).toBe(
+      true,
+    )
+  })
+
+  it('offers one button per family a scene grows by', () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    for (const name of ['Ajouter une maille', 'Ajouter une lumière', 'Ajouter un objet']) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument()
+    }
   })
 })
 
@@ -313,6 +340,71 @@ describe('snapping and the coordinate frame', () => {
   })
 })
 
+// They used to be four wide buttons in the inspector, framing duplicating the bar's own. What
+// matters is that the bar reaches the SAME rules — `sceneVisibility` holds them, and it is what
+// makes leaving an isolation the very press that entered it.
+describe('the visibility tools', () => {
+  /** They act on a SELECTION, and the bar greys them out without one. */
+  const withChosenBox = (): void => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    selectIn('doc-1', ['box-1'])
+  }
+
+  // `acts` is what would take the pressed state away, so the toggle is asserted where it shows
+  // rather than on the descriptor's own flag.
+  it('isolates what is chosen, and gives the scene back on the second press', async () => {
+    withChosenBox()
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Isoler/ }))
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').isolation.only).not.toBeNull()
+
+    // The word follows the state: armed, the button offers the way OUT — it would otherwise
+    // read « Isolate » over a scene that is already isolated.
+    const armed = screen.getByRole('button', { name: /Rétablir la vue/ })
+    expect(armed).toHaveAttribute('aria-pressed', 'true')
+
+    await userEvent.click(armed)
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').isolation.only).toBeNull()
+    expect(screen.getByRole('button', { name: /Isoler/ })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  // Hiding arms the same button, since `isolating` counts a hidden node too — so the word has
+  // to follow there as well, or it offers to isolate what it is about to reveal.
+  it('offers the way out after a plain hide, never « isolate » over it', async () => {
+    withChosenBox()
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Masquer/ }))
+
+    expect(screen.getByRole('button', { name: /Rétablir la vue/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Isoler/ })).not.toBeInTheDocument()
+  })
+
+  it('hides the selection without touching what the document holds', async () => {
+    withChosenBox()
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Masquer/ }))
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').isolation.hidden.size).toBeGreaterThan(0)
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes.every(node => node.visible)).toBe(true)
+  })
+
+  it('gives everything back with show all', async () => {
+    withChosenBox()
+    render(<SceneDocument documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Masquer/ }))
+    // Stated before the second click: zero is also the value this starts on, so asserting it
+    // at the end alone would pass with both buttons doing nothing at all.
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').isolation.hidden.size).toBe(1)
+
+    await userEvent.click(screen.getByRole('button', { name: /Tout afficher/ }))
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').isolation.hidden.size).toBe(0)
+  })
+})
+
 describe('the viewport settings', () => {
   it('pushes them into the engine, which holds no truth of its own', () => {
     configure.mockClear()
@@ -338,7 +430,7 @@ describe('the viewport settings', () => {
             kind: 'scene',
             workspace: '3d',
             title: 'Renamed',
-            fileName: 'Renamed.scene',
+            path: 'documents/Renamed.gltf',
           },
         },
       })
@@ -536,12 +628,35 @@ describe('SceneDocument and the timeline over the scene', () => {
     expect(setPlayhead).toHaveBeenLastCalledWith(1.5)
   })
 
+  /**
+   * The transport lives HERE rather than in the timeline panel, which is a tool window one may
+   * close: a character has to keep walking in the viewport with no band on screen. Nothing else
+   * asserts it — remove the hook and every other test of the studio stays green.
+   */
+  it('runs the head itself, so closing the timeline panel never stops playback', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    act(() => useSceneViews.getState().setPlaying('doc-1', true))
+
+    await waitFor(() =>
+      expect(sceneViewOf(useSceneViews.getState(), 'doc-1').playhead).toBeGreaterThan(0),
+    )
+    act(() => useSceneViews.getState().setPlaying('doc-1', false))
+  })
+
   it('reports the bones a model brought, so a track can name one', () => {
     render(<SceneDocument documentId="doc-1" />)
     const options = built.at(-1)
-    options?.onBones?.('perso', ['spine', 'arm.L'])
+    options?.onRig?.('perso', rigStateFixture(['spine', 'arm.L']))
 
     expect(bonesOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual(['spine', 'arm.L'])
+  })
+
+  it('reports what the model turned out to be, which is what the inspector answers with', () => {
+    render(<SceneDocument documentId="doc-1" />)
+    const options = built.at(-1)
+    options?.onRig?.('perso', rigStateFixture(['spine']))
+
+    expect(rigOfNode(useModelClips.getState(), 'doc-1', 'perso')?.status).toBe('skinnedMesh')
   })
 
   it('reports the clips too, and forgets both when the viewport goes', () => {
@@ -597,6 +712,65 @@ describe('SceneDocument and a node right-clicked in the viewport', () => {
     expect(sceneOf(useScenes.getState(), 'doc-1').selectedIds).toEqual(['box-1'])
   })
 
+  /**
+   * The void is not nothing to say: it is where a scene GROWS. Before this, a right-click that
+   * hit no node answered with no menu at all, and ⇧A was a key nothing on screen named.
+   */
+  it('offers what a scene can receive where the click hit no node', async () => {
+    const menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
+    render(<SceneDocument documentId="doc-1" />)
+
+    built.at(-1)?.onContextMenu?.(null)
+
+    await vi.waitFor(() => expect(menu.labels()).toContain('Ajouter une maille'))
+    expect(menu.labels()).not.toContain('Supprimer')
+  })
+
+  it('opens the same rows on the key that names them', async () => {
+    const menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{Shift>}{A}{/Shift}')
+
+    await vi.waitFor(() => expect(menu.labels()).toContain('Ajouter une maille'))
+  })
+
+  /**
+   * That key is also boost-strafe-left, and the held set cannot tell the two apart — Shift is
+   * down either way. A native menu takes the focus with it, so the keyups that would end the
+   * flight go to the menu and the boost stays held.
+   */
+  it('opens nothing on that key while the camera is flying', async () => {
+    const menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
+    render(<SceneDocument documentId="doc-1" />)
+    const engine = engines.at(-1)
+    if (engine) engine.flying = true
+
+    await userEvent.keyboard('{Shift>}{A}{/Shift}')
+
+    expect(menu.raised).toEqual([])
+  })
+
+  // The rows are what a scene GAINS, so choosing one puts it there — the same door the bar uses.
+  it('adds the kind whose row was chosen', async () => {
+    const menu = fakeMenu()
+    menu.picks('Cube')
+    installFakeBridge({ menu: menu.bridge })
+    render(<SceneDocument documentId="doc-1" />)
+
+    built.at(-1)?.onContextMenu?.(null)
+
+    // A default scene already holds its lights, so what this reads is what the menu ADDED.
+    await vi.waitFor(() =>
+      expect(
+        sceneOf(useScenes.getState(), 'doc-1').nodes.filter(node => node.type === 'mesh'),
+      ).toHaveLength(1),
+    )
+  })
+
   // The other half of the same rule: a right-click on one of six must not shrink it to one.
   it('leaves a selection the node already belongs to', () => {
     useScenes.getState().runCommand('doc-1', addNode(box))
@@ -642,5 +816,91 @@ describe('SceneDocument and the pose mode', () => {
 
     expect(sceneViewOf(useSceneViews.getState(), 'doc-1').pickedBone).toBeNull()
     expect(setPickedBone).toHaveBeenLastCalledWith(null)
+  })
+})
+
+describe('SceneDocument and a point posed on a rail', () => {
+  const at = (x: number) => ({ x, y: 0, z: 0 })
+
+  const pointsOf = (): number[] => {
+    const node = nodesOf('doc-1').find(candidate => candidate.id === 'rail')
+    return node?.type === 'path' ? node.path.points.map(point => point.x) : []
+  }
+
+  const installRail = (): void => {
+    act(() =>
+      useScenes
+        .getState()
+        .runCommand('doc-1', addNode(pathNodeFixture('rail', { points: [at(0), at(10), at(20)] }))),
+    )
+  }
+
+  it('poses the point in the stretch the viewport names, and nowhere else', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onAddPathPoint?.('rail', 0))
+
+    expect(pointsOf()).toEqual([0, 5, 10, 20])
+  })
+
+  /**
+   * Picked on the way, so the point one just made is the point one drags: nothing on screen says
+   * the gesture is in two steps, and a knob posed and left unheld would be that second step.
+   */
+  it('picks the point it just posed', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onAddPathPoint?.('rail', 0))
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').pickedPathPoint).toEqual({
+      nodeId: 'rail',
+      index: 1,
+    })
+  })
+
+  it('costs one undo entry, which puts the rail back as it was', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onAddPathPoint?.('rail', 0))
+    act(() => useScenes.getState().undo('doc-1'))
+
+    expect(pointsOf()).toEqual([0, 10, 20])
+  })
+
+  it('lays an aimed point past the last one, click after click', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onAppendPathPoint?.('rail', at(30)))
+    await act(async () => built.at(-1)?.onAppendPathPoint?.('rail', at(40)))
+
+    expect(pointsOf()).toEqual([0, 10, 20, 30, 40])
+  })
+
+  /** The gizmo has to sit on the point just laid, or a run of clicks would drag the first one. */
+  it('picks the end it just laid rather than the end it started from', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onAppendPathPoint?.('rail', at(30)))
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').pickedPathPoint).toEqual({
+      nodeId: 'rail',
+      index: 3,
+    })
+  })
+
+  it('costs one undo entry per click, so a trajectory unwinds point by point', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onAppendPathPoint?.('rail', at(30)))
+    await act(async () => built.at(-1)?.onAppendPathPoint?.('rail', at(40)))
+    act(() => useScenes.getState().undo('doc-1'))
+
+    expect(pointsOf()).toEqual([0, 10, 20, 30])
   })
 })

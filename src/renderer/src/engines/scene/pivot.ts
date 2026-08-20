@@ -10,7 +10,7 @@
  */
 import { Vector3, type Object3D } from 'three'
 import type { Transform } from '@shared/domain/scene'
-import type { NodeMove } from './scene-state'
+import type { NodeMove } from './sceneState'
 
 const corner = new Vector3()
 

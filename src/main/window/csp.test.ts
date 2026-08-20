@@ -50,6 +50,20 @@ describe('the window policy', () => {
     expect(directive('connect-src')).toContain('blob:')
   })
 
+  /**
+   * PixiJS asks whether `createImageBitmap` works by FETCHING a 1×1 png written as a `data:` URL,
+   * from a worker of its own. Refused, the probe answers "unsupported" — its whole body sits in a
+   * `try/catch` — and Pixi then decodes every texture on the UI thread instead of off it. Nothing
+   * breaks on screen, which is exactly why it is worth a line here: the only sign was one console
+   * violation, and the cost was invariant 6 quietly lost.
+   *
+   * A `data:` URL carries its own payload and reaches no host, so this widens what the renderer
+   * can READ from itself and not what it can talk to.
+   */
+  it('lets Pixi ask whether it may decode off the UI thread', () => {
+    expect(directive('connect-src')).toContain('data:')
+  })
+
   // The asset scheme is fetched, not just linked: the monitor reads a rush through it.
   it('lets the asset scheme be fetched and shown', () => {
     expect(directive('connect-src')).toContain('scenario:')

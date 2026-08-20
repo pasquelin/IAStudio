@@ -5,11 +5,11 @@ import {
   rootSections,
   SETTING_SECTIONS,
   type SettingSectionEntry,
-} from '@shared/domain/settings-registry'
-import { AccountSettings } from './AccountSettings'
+} from '@shared/domain/settingsRegistry'
+import { AccountSettings } from './AccountSettings/AccountSettings'
 import { DictationSettings } from './DictationSettings'
 import { MediaSettings } from './MediaSettings'
-import { ShortcutsSettings } from './ShortcutsSettings'
+import { ShortcutsSettings } from './ShortcutsSettings/ShortcutsSettings'
 import { ModelFamilySettings } from './ModelFamilySettings'
 
 export type SettingsSection = SettingSectionEntry & {

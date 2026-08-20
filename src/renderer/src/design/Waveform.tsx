@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { paintOn } from '@/engines/core/canvas-2d'
+import { paintOn } from '@/engines/core/canvas2d'
 import { rootColour } from '@/engines/core/palette'
 import { paintWaveform } from '@/engines/timeline/painter'
 import { tileColumns } from '@/engines/timeline/waveform'
 import { cn } from '@/helpers/cn'
+import { useLatest } from '@/hooks/useLatest'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 
 export type WaveformProps = {
@@ -25,7 +26,7 @@ export type WaveformProps = {
 export function Waveform({ peaks, className }: WaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // Read on paint rather than depended on: a waveform arriving is a repaint, never a render.
-  const latest = useRef(peaks)
+  const latest = useLatest(peaks)
 
   const paint = useCallback((): void => {
     paintOn(canvasRef.current, (context, { width, height }) => {
@@ -35,12 +36,10 @@ export function Waveform({ peaks, className }: WaveformProps) {
       if (!held) return
       paintWaveform(context, tileColumns(held, width), 0, height, rootColour('--color-muted'))
     })
-  }, [])
+  }, [latest])
 
-  useEffect(() => {
-    latest.current = peaks
-    paint()
-  }, [peaks, paint])
+  // After `useLatest`, whose effect is registered first and so has already mirrored the peaks.
+  useEffect(paint, [peaks, paint])
 
   useRepaintOnResize(canvasRef, paint)
 

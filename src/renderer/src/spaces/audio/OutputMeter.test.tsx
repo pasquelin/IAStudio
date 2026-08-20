@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AudioTap } from '@/engines/timeline/sound-schedule'
+import type { AudioTap } from '@/engines/timeline/soundSchedule'
 import { OutputMeter } from './OutputMeter'
 
 /** A tap that always hears the same thing, and counts how often it was asked. */

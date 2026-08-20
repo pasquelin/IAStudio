@@ -2,7 +2,7 @@ import { mdiProgressClock } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { useJobs } from '@/stores/jobs'
 import { EmptyState } from '@/design/EmptyState'
-import { JobRow } from './JobRow'
+import { JobRow } from './JobRow/JobRow'
 
 /**
  * Global jobs list: a generation is launched and the user goes on working elsewhere. Read from
@@ -14,7 +14,7 @@ export function Jobs() {
 
   if (jobs.length === 0) {
     // Spelled out rather than read from the rail's table: the status bar opens this list on the
-    // first screen, and `tool-registry` would pull the scene's node kinds into that chunk. The
+    // first screen, and `toolRegistry` would pull the scene's node kinds into that chunk. The
     // rail carries the same glyph, and says so where it declares it.
     return <EmptyState icon={mdiProgressClock} message={t('jobs.none')} />
   }

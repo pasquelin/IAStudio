@@ -1,6 +1,8 @@
 import { isAbsolute } from 'node:path'
 import { z } from 'zod'
 import {
+  ASSET_PATHS_MAX,
+  ASSET_SEARCH_LIMIT_MAX,
   ASSET_TYPES,
   isAssetType,
   isSyncStatus,
@@ -15,11 +17,18 @@ import {
   type DocumentEnvelope,
   type DocumentKind,
 } from '@shared/domain/document'
+import { isPrivatePath } from '@shared/domain/folder'
+import { isOraSurfacePath, type OraStack } from '@shared/domain/openRaster'
 import { MANIFEST_VERSION, type Manifest } from '@shared/domain/project'
 import { isPbrChannel, type PbrChannel } from '@shared/domain/texture'
-import type { SaveAudioRequest, SavePictureRequest, SaveTextureRequest } from '@shared/ipc'
+import type {
+  SaveAudioRequest,
+  SaveLayeredRequest,
+  SavePictureRequest,
+  SaveTextureRequest,
+} from '@shared/ipc'
 import { isPngBytes } from '@main/media/png'
-import { pathSegment } from '@main/validation'
+import { pathSegment, withinCodePoints } from '@main/validation'
 import { base64Payload } from '@main/scenario/validation'
 
 const manifest = z.object({
@@ -49,23 +58,63 @@ export function parseProjectName(value: unknown): string {
   return pathSegment.parse(value)
 }
 
+// In code points, and generous rather than exact: `mkdirSync` takes an absolute path of 1 023
+// BYTES on APFS and refuses at 1 024 — swept a byte at a time, with segments under `NAME_MAX` —
+// so nothing a relative path this long names is a folder the disk would hold.
+const withinPathBound = withinCodePoints(1024)
+
 /**
- * A path inside the project, as the explorer asks for it: `''` for the root, then segments
- * joined by `/`. Never absolute, never a `.` or `..` segment, never a backslash.
+ * A path inside the project, as the explorer asks for it: `''` for the root, then segments joined
+ * by `/`. Bounded, never absolute, never climbing, and never through a backslash — Windows takes
+ * that as a separator, so `..\..` would walk out through a check that only looked at `/`.
  *
- * The refusal is the point, not the shape. This is the one channel where the renderer names a
- * path of its own, and `join(root, '../../..')` escapes the project on every platform — the
- * whole folder is otherwise reachable from a window that is not supposed to touch the disk.
- * Backslashes are refused rather than translated: Windows accepts them as separators, so
- * `..\..` would walk out through a check that only looked at `/`.
+ * A control character is deliberately NOT refused, unlike `pathSegment`: that one names what gets
+ * CREATED, this one names what already exists. APFS holds such a name and `folder.list` hands it
+ * straight back, so refusing here would lose a folder the disk really has.
  */
-const folderPath = z
-  .string()
-  .refine(value => !isAbsolute(value) && !value.startsWith('/') && !value.includes('\\'))
-  .refine(value => value.split('/').every(segment => segment !== '.' && segment !== '..'))
+const folderPath = z.string().refine(
+  // One `refine`, and short-circuited, because zod runs every check after a failed one: a bound
+  // of its own would still let a 5 MB string be split, two thousand at a time via `folderPaths`.
+  value =>
+    withinPathBound(value) &&
+    !isAbsolute(value) &&
+    !value.startsWith('/') &&
+    !value.includes('\\') &&
+    value.split('/').every(segment => segment !== '.' && segment !== '..'),
+)
 
 export function parseFolderPath(value: unknown): string {
   return folderPath.parse(value)
+}
+
+/**
+ * A batch of paths, each held to exactly the rule above.
+ *
+ * Bounded, like every list this side takes from a window: what a hand selects in a tree is
+ * hundreds at the outside, and the writes run one after another in the process that owns every
+ * window. `min(1)` because a batch of nothing is a caller that has lost track of its selection,
+ * not a gesture that does nothing.
+ */
+const folderPaths = z.array(folderPath).min(1).max(2000)
+
+export function parseFolderPaths(value: unknown): string[] {
+  return folderPaths.parse(value)
+}
+
+/**
+ * What a search box holds. Bounded like every string this side takes from a window — a term
+ * longer than a file name can be matches nothing, and walking the whole folder to prove it is
+ * work the process that owns every window would pay for.
+ */
+const searchTerm = z.string().max(200)
+
+export function parseSearchTerm(value: unknown): string {
+  return searchTerm.parse(value)
+}
+
+/** Whether a reader asked to see the studio's own bookkeeping. Read, never written to. */
+export function parseHiddenShown(value: unknown): boolean {
+  return z.boolean().parse(value)
 }
 
 // `z.custom` rather than `z.enum`: the values live in `shared/domain/asset.ts`, and zod's enum
@@ -79,6 +128,13 @@ const assetQuery = z.object({
   text: z.string().max(200).optional(),
   // The same shape the explorer's own channel is held to: it is the surface that asks this.
   path: folderPath.optional(),
+  // A whole listing at once, one placeholder each in the statement built from it. The bound is
+  // shared with the caller, which cuts its question into batches of it — read on one side only,
+  // a project past it lost every answer rather than one batch.
+  paths: z.array(folderPath).max(ASSET_PATHS_MAX).optional(),
+  // Absent here, `z.object` STRIPS it and the query reaching SQL is unfiltered: reading back a
+  // generation's output answered with the first rows of the whole catalogue.
+  ids: z.array(z.string().trim().min(1)).max(ASSET_PATHS_MAX).optional(),
   location: z.enum(['local', 'cloud']).optional(),
   syncStatus: z.custom<SyncStatus>(isSyncStatus).optional(),
   groupId: z.string().trim().min(1).optional(),
@@ -87,7 +143,7 @@ const assetQuery = z.object({
   generated: z.literal(true).optional(),
   // Bounded here rather than in SQL: the renderer chooses the page size, and an unbounded
   // one would pull an entire well-stocked project across the IPC boundary in one message.
-  limit: z.number().int().min(1).max(500).optional(),
+  limit: z.number().int().min(1).max(ASSET_SEARCH_LIMIT_MAX).optional(),
   offset: z.number().int().min(0).optional(),
 })
 
@@ -157,6 +213,94 @@ export function parseSavePicture(value: unknown): SavePictureRequest {
   return savePicture.parse(value)
 }
 
+/**
+ * The studio's own canvas state, as text. Generous: it holds the whole layer tree, every text
+ * layer's string and every adjustment's parameters, for a document that may have hundreds of
+ * layers — and refusing it would lose the half of the document the standard cannot carry.
+ */
+const MAX_STUDIO_STATE = 64 * 1024 * 1024
+
+const oraBase = {
+  name: z.string().max(200),
+  x: z.number().finite(),
+  y: z.number().finite(),
+  opacity: z.number().min(0).max(1),
+  visible: z.boolean(),
+  composite: z.string().max(64),
+}
+
+/** One flat entry under `data/`, or the flatten's own name — `isOraSurfacePath` is the rule. */
+const oraPath = z.string().max(300).refine(isOraSurfacePath)
+
+const oraLayer = z.object({
+  ...oraBase,
+  kind: z.literal('layer'),
+  src: oraPath,
+})
+
+/**
+ * Depth-bounded on purpose: `z.lazy` would accept a nesting deep enough to blow the stack when
+ * the writer walks it, and no picture has eight levels of groups.
+ */
+const oraNode = (depth: number): z.ZodType<unknown> =>
+  depth === 0
+    ? oraLayer
+    : z.union([
+        oraLayer,
+        z.object({
+          ...oraBase,
+          kind: z.literal('group'),
+          isolation: z.enum(['auto', 'isolate']),
+          children: z.array(oraNode(depth - 1)).max(500),
+        }),
+      ])
+
+const oraStack = z.object({
+  // Non-negative rather than positive, and that is not laxity: a container written elsewhere may
+  // carry no `w`/`h` on its `<image>`, which the unpacker reads as zero. Refusing that HERE — on
+  // the way out — makes the document unsaveable for good, the value having come from the read.
+  width: z.number().int().min(0),
+  height: z.number().int().min(0),
+  nodes: z.array(oraNode(8)).max(2000),
+  studio: z.string().max(MAX_STUDIO_STATE),
+})
+
+/**
+ * A stack on its way into a container. Called on the CONTENT of an image document, which the
+ * renderer wrote and the file layer is about to turn into `stack.xml` and a list of ZIP entries.
+ */
+export function parseOraStack(value: unknown): OraStack {
+  // The shape is checked field by field above; the cast names what zod has just proved, the
+  // recursive `nodes` being typed as `unknown` by the depth-bounded builder.
+  return oraStack.parse(value) as OraStack
+}
+
+/**
+ * One surface, on its way into a container.
+ *
+ * `png` is a `Uint8Array` and never base64: a 4K stack of ten layers is hundreds of megabytes of
+ * text otherwise. Its ceiling is the picture ceiling, applied to the bytes themselves.
+ */
+const oraSurface = z.object({
+  path: oraPath,
+  png: z.instanceof(Uint8Array).refine(bytes => bytes.byteLength <= MAX_PICTURE_BYTES),
+})
+
+const saveLayered = z.object({
+  replaces: assetId.optional(),
+  name: z.string().trim().min(1).max(200),
+  derivedFrom: assetId.optional(),
+  document: z.object({
+    stack: oraStack,
+    surfaces: z.array(oraSurface).max(2048),
+  }),
+})
+
+export function parseSaveLayered(value: unknown): SaveLayeredRequest {
+  // Cast for the reason `parseOraStack` gives — the recursive nodes are typed `unknown`.
+  return saveLayered.parse(value) as SaveLayeredRequest
+}
+
 export function parseDocumentId(value: unknown): string {
   return pathSegment.parse(value)
 }
@@ -165,6 +309,28 @@ const documentKind = z.custom<DocumentKind>(isDocumentKind)
 
 export function parseDocumentKind(value: unknown): DocumentKind {
   return documentKind.parse(value)
+}
+
+const forceWrite = z.boolean().optional()
+
+/** Absent reads as no: a payload that lost this field must not read as consent to overwrite. */
+export function parseForceWrite(value: unknown): boolean {
+  return forceWrite.parse(value) ?? false
+}
+
+/**
+ * The studio's own folders are refused on top of the shape, which no other path channel needs
+ * to say: the field offering these never lists a hidden folder, so nothing a user can click
+ * reaches here — and a document written into `.index/` would be swept by the next rescan.
+ */
+const landingFolder = folderPath.refine(path => !isPrivatePath(path)).optional()
+
+/**
+ * Where a first save lands, held to the same rule as every other path a window names — absent
+ * for a caller that has none to offer, which leaves the writer its own default.
+ */
+export function parseLandingFolder(value: unknown): string | undefined {
+  return landingFolder.parse(value)
 }
 
 const title = z.string().max(200)
@@ -180,27 +346,15 @@ const MAX_CONTENT_BYTES = 256 * 1024 * 1024
 
 const content = z.string().max(MAX_CONTENT_BYTES)
 
-/**
- * The files that go beside the content — one PNG per layer of an image document.
- *
- * `isPartName` is the guard that matters and it lives where the file is written; this only
- * bounds what crosses. Without this field the schema STRIPPED every part in silence, and
- * `storeFolder` then replaced the document folder with a manifest and nothing else: a save
- * threw away the pixels it was called to keep.
- */
-const MAX_PART_BYTES = 512 * 1024 * 1024
-
-const documentPart = z.object({
-  name: z.string().min(1).max(255),
-  data: z.string().max(MAX_PART_BYTES),
-})
-
 const documentDraft = z.object({
   // Trimmed and non-empty, where the envelope's twin is not: a title is now the NAME OF THE
   // FILE, and a document nobody named is a document nothing can be written to.
   title: z.string().trim().min(1).max(200),
   content,
-  parts: z.array(documentPart).max(1024).optional(),
+  // The surfaces of an image document's container. Declared or the schema STRIPS them in
+  // silence, and a save then writes a stack with no pixels under it — the very loss this whole
+  // field exists to prevent, and one that has already been paid for once.
+  parts: z.array(oraSurface).max(2048).optional(),
   // The asset this document edits. Same reason as `parts`: a field the schema does not name is
   // a field the renderer writes and the disk never sees.
   sourceAssetId: assetId.optional(),

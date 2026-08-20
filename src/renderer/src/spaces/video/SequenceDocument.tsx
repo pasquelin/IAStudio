@@ -11,12 +11,14 @@ import {
   trackOfClip,
   type SequenceState,
   type Us,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { clamp } from '@shared/numeric'
-import { useDocuments } from '@/stores/documents'
+import { useDocumentIsInFront } from '@/stores/documents'
+import { isClipMonitorShown, useMonitorPair } from '@/stores/monitorPair'
 import { playbackOf, usePlayback } from '@/stores/playback'
-import { mirrorMessageOf, openMirrorChannel } from './mirror-channel'
-import { useDocumentTitle } from '@/app/useDocumentTitle'
+import { mirrorMessageOf, openMirrorChannel } from './mirrorChannel'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useLatest } from '@/hooks/useLatest'
 import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { Monitor } from './Monitor'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
@@ -32,9 +34,7 @@ export type SequenceDocumentProps = { documentId: string }
 export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const { t } = useTranslation()
   const sequence = useSequences(state => sequenceOf(state, documentId))
-  // Dockview keeps hidden tabs mounted: without this every open sequence would answer the
-  // space bar at once, and the playback token would arbitrate a fight nobody started.
-  const active = useDocuments(state => state.activeId === documentId)
+  const active = useDocumentIsInFront(documentId)
 
   useDocumentTitle(
     documentId,
@@ -52,7 +52,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
    *
    * The whole sequence on every change, the playhead alone on every move: a scrub posts a few
    * hundred times a second, and re-posting every track with each would be the one thing making
-   * the return cost anything. `mirror-channel` says why this does not go through the bridge.
+   * the return cost anything. `mirrorChannel` says why this does not go through the bridge.
    */
   const channel = useRef<BroadcastChannel | null>(null)
   /** The last state posted, so a playhead that moved alone is not sent as a whole edit. */
@@ -63,7 +63,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
 
     const opened = openMirrorChannel()
     channel.current = opened
-    // The return opens after all this was published, and asks for it — see `mirror-channel`.
+    // The return opens after all this was published, and asks for it — see `mirrorChannel`.
     opened.onmessage = event => {
       const asked = mirrorMessageOf(event.data)?.kind === 'ask'
       if (asked && posted.current) opened.postMessage({ kind: 'edit', sequence: posted.current })
@@ -100,14 +100,11 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const running = usePlayback(state => playbackOf(state, programOwner(documentId)))
   // Written from an effect and not during the render, which React forbids: what it holds is where
   // playback starts FROM, so that pressing play does not make this fire on every frame after.
-  const playhead = useRef(sequence.playhead)
-  useEffect(() => {
-    playhead.current = sequence.playhead
-  }, [sequence.playhead])
+  const playhead = useLatest(sequence.playhead)
 
   useEffect(() => {
     channel.current?.postMessage({ kind: 'playing', playing: running, playhead: playhead.current })
-  }, [running])
+  }, [running, playhead])
 
   // Found through its track, not by id alone: the montage's own answer to "is this a sound?" is
   // the track the clip sits on, and the inspector and the program monitor both read it there.
@@ -130,6 +127,15 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
    * not claim a key that would go elsewhere.
    */
   const [focus, setFocus] = useState<'source' | 'program'>('program')
+
+  const sourceShown = useMonitorPair(state => isClipMonitorShown(state, documentId))
+  const toggleSource = useCallback(
+    () => useMonitorPair.getState().toggleClipMonitor(documentId),
+    [documentId],
+  )
+  // Derived rather than written back: with the source hidden the space bar has one monitor to
+  // drive, and a `focus` left on `source` would send it to a player nobody can see.
+  const armed = sourceShown ? focus : 'program'
 
   /**
    * Where the montage's head falls INSIDE the selected clip, which is what following it comes to.
@@ -229,25 +235,31 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
     // The inset belongs to the ROW, not to each monitor: carried by both, it doubled around the
     // handle and the pair read as two panes pushed apart rather than as two panels side by side.
     <div ref={pairRef} className="flex h-full min-h-0 p-(--sc-gutter)">
-      {/* Fixed width once it has been dragged, an equal share until then: a document opens on two
-          monitors of the same size, and only a gesture makes one of them the wide one. */}
-      <div className="flex min-w-0" style={leadStyle} onPointerDown={() => setFocus('source')}>
-        <Monitor
-          owner={owner}
-          title={t('transport.source')}
-          role={t('transport.sourceRole')}
-          sequence={source}
-          onTime={setSourceTime}
-          keyboard={active && focus === 'source'}
-          placeholder={
-            selected ? null : <EmptyState icon={mdiVideoOutline} message={t('transport.noClip')} />
-          }
-        />
-      </div>
+      {sourceShown && (
+        <>
+          {/* Fixed width once it has been dragged, an equal share until then: a document opens on
+              two monitors of the same size, and only a gesture makes one of them the wide one. */}
+          <div className="flex min-w-0" style={leadStyle} onPointerDown={() => setFocus('source')}>
+            <Monitor
+              owner={owner}
+              title={t('transport.source')}
+              role={t('transport.sourceRole')}
+              sequence={source}
+              onTime={setSourceTime}
+              keyboard={active && armed === 'source'}
+              placeholder={
+                selected ? null : (
+                  <EmptyState icon={mdiVideoOutline} message={t('transport.noClip')} />
+                )
+              }
+            />
+          </div>
 
-      {/* The same handle the shell splits its zones with, so the gesture is the one gesture. It
-          replaces a `Separator`, which drew the line and refused to be moved. */}
-      <ResizeHandle axis="horizontal" size={leadSize} onSize={onLeadSize} />
+          {/* The same handle the shell splits its zones with, so the gesture is the one gesture.
+              It replaces a `Separator`, which drew the line and refused to be moved. */}
+          <ResizeHandle axis="horizontal" size={leadSize} onSize={onLeadSize} />
+        </>
+      )}
 
       <div className="flex min-w-0 flex-1" onPointerDown={() => setFocus('program')}>
         <Monitor
@@ -256,8 +268,9 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
           role={t('transport.programRole')}
           sequence={sequence}
           onTime={setProgramTime}
-          keyboard={active && focus === 'program'}
+          keyboard={active && armed === 'program'}
           program
+          clipHalf={{ shown: sourceShown, onToggle: toggleSource }}
         />
       </div>
     </div>

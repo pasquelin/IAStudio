@@ -14,6 +14,7 @@ import { SHADOW_QUALITIES } from '@shared/domain/scene'
 import {
   applyShadowFlags,
   applyShadowQuality,
+  applyShadows,
   fitShadowCamera,
   ownedByAnotherNode,
   resizeShadowMap,
@@ -215,5 +216,47 @@ describe('fitShadowCamera', () => {
     const spot = new PointLight()
     expect(() => fitShadowCamera(spot, 20)).not.toThrow()
     expect(() => fitShadowCamera(new AmbientLight(), 20)).not.toThrow()
+  })
+})
+
+describe('turning shadows off', () => {
+  const stage = () => {
+    const root = new Object3D()
+    const mesh = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+    root.add(mesh)
+    return { root, material: mesh.material }
+  }
+
+  /**
+   * `shadowMap.enabled` feeds the program cache key, but three re-reads that key only when a
+   * material's own version moves or the lights state does — and this flag moves neither. Switched
+   * alone it leaves every material still sampling a map nothing updates any more, so the shadows
+   * freeze on screen instead of going away.
+   */
+  it('marks the materials, or the shadows stay frozen on screen', () => {
+    const { root, material } = stage()
+    const renderer = { shadowMap: { enabled: true } }
+    const before = material.version
+
+    applyShadows(renderer, false, root)
+
+    expect(renderer.shadowMap.enabled).toBe(false)
+    expect(material.version).toBeGreaterThan(before)
+  })
+
+  it('recompiles nothing when the flag was already where it is asked to be', () => {
+    const { root, material } = stage()
+    const renderer = { shadowMap: { enabled: true } }
+    const before = material.version
+
+    applyShadows(renderer, true, root)
+
+    expect(material.version).toBe(before)
+  })
+
+  it('walks a node carrying no material at all', () => {
+    const renderer = { shadowMap: { enabled: false } }
+
+    expect(() => applyShadows(renderer, true, new Object3D())).not.toThrow()
   })
 })

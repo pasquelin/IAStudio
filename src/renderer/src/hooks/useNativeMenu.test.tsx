@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MenuCheck } from '@shared/domain/command'
+import type { MenuAbility, MenuCheck } from '@shared/domain/command'
 import type {
   SceneAddRequest,
   SceneDisplayRequest,
@@ -10,23 +10,23 @@ import type {
 import { installScene } from '@/stores/scene-fixtures'
 import type { CommandId } from '@shared/domain/command'
 import type { ToolId, ToolSurface } from '@shared/domain/tool'
-import type * as ToolRegistryModule from '@/helpers/tool-registry'
+import type * as ToolRegistryModule from '@/helpers/toolRegistry'
 
 type ToolRegistry = typeof ToolRegistryModule
-import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/scene-views'
-import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
+import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 
 const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
 const saveDocumentAs = vi.fn((_documentId: string) => Promise.resolve(true))
 
-// What saving does is `document-io`'s own suite; what this one is about is the menu reaching it.
-vi.mock('@/app/document-io', () => ({
+// What saving does is `documentIo`'s own suite; what this one is about is the menu reaching it.
+vi.mock('@/app/documentIo', () => ({
   saveDocument: (documentId: string) => saveDocument(documentId),
   saveDocumentAs: (documentId: string) => saveDocumentAs(documentId),
 }))
@@ -37,7 +37,7 @@ vi.mock('@/app/document-io', () => ({
  */
 const listedTools = vi.fn()
 
-vi.mock('@/helpers/tool-registry', async importOriginal => {
+vi.mock('@/helpers/toolRegistry', async importOriginal => {
   const actual = await importOriginal<ToolRegistry>()
   return {
     ...actual,
@@ -115,7 +115,7 @@ describe('useNativeMenu', () => {
           kind: 'image',
           workspace: 'image',
           title: 'Sans titre',
-          fileName: 'Sans titre.img',
+          path: 'documents/Sans titre.ora',
         },
       },
       activeId: 'doc-1',
@@ -219,14 +219,16 @@ describe('what the native menu is told', () => {
     surface: string
     tools: readonly ToolId[]
     checked: readonly MenuCheck[]
+    abilities: readonly MenuAbility[]
   } {
     // Typed by the stub rather than by the bridge; the call is what the hook actually sent.
-    const [surface, tools, checked] = (setWorkspace.mock.lastCall ?? []) as unknown as [
+    const [surface, tools, checked, abilities] = (setWorkspace.mock.lastCall ?? []) as unknown as [
       string,
       readonly ToolId[],
       readonly MenuCheck[],
+      readonly MenuAbility[],
     ]
-    return { surface, tools, checked }
+    return { surface, tools, checked, abilities }
   }
 
   beforeEach(() => {
@@ -370,6 +372,45 @@ describe('what the native menu is told', () => {
       useSceneViews.getState().setQuad('doc-1', true)
 
       expect(listedTools).toHaveBeenCalled()
+    })
+  })
+
+  /** What the menu greys out — see `MenuAbility`, which carries why. */
+  describe('the rows it reports as answerable', () => {
+    /** Written straight into the scene, which is exactly how a duplicate and a ⌘Z write one. */
+    const pick = (ids: readonly string[]): void => {
+      const scene = sceneOf(useScenes.getState(), 'doc-1')
+      useScenes.getState().replace('doc-1', { ...scene, selectedIds: ids })
+    }
+
+    it('offers nothing to export where nothing is picked', () => {
+      renderHook(() => useNativeMenu())
+      expect(lastPublished().abilities).toEqual([])
+    })
+
+    /** The scene is the source, so a pick nothing pointed the studio at counts all the same. */
+    it('offers the selection export on a pick the studio was never pointed at', () => {
+      renderHook(() => useNativeMenu())
+      pick(['node-1'])
+      expect(lastPublished().abilities).toEqual(['scene.exportSelection'])
+    })
+
+    it('takes it back when the selection empties', () => {
+      renderHook(() => useNativeMenu())
+      pick(['node-1'])
+      pick([])
+      expect(lastPublished().abilities).toEqual([])
+    })
+
+    /** A timeline drag writes the scene on every pointer move, and moves nothing that is picked. */
+    it('sends nothing when the scene is written without the pick changing', () => {
+      renderHook(() => useNativeMenu())
+      pick(['node-1'])
+      const sent = setWorkspace.mock.calls.length
+
+      pick(['node-1'])
+
+      expect(setWorkspace.mock.calls.length).toBe(sent)
     })
   })
 })

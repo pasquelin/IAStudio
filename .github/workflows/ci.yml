@@ -1,8 +1,8 @@
 name: CI
 
-# Linux only, and no Electron packaging: what breaks a pull request is a type, a rule or a test,
-# and those answer in minutes. The three-OS matrix belongs to release.yml — see
-# docs/ci/adr/ADR-09-budget-minutes-ci.md.
+# Linux only, and no Electron packaging: what breaks a pull request is whatever the gate judges —
+# a type, a rule, a test, a dead export — and those answer in minutes. The three-OS matrix belongs
+# to release.yml — see docs/ci/adr/ADR-09-budget-minutes-ci.md.
 on:
   pull_request:
   push:
@@ -32,16 +32,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm typecheck
-
-      - run: pnpm lint
-
-      - run: pnpm format:check
-
-      - run: pnpm test
+      # The gate itself, not a copy of its links. Spelling them out one by one gave a prettier
+      # step list and a job that silently stopped matching the desk: `unused:main` was added to
+      # `validate` and this file kept passing pull requests with dead code. `validate` fails on
+      # its first red link exactly as before — the log names it, the step list no longer does.
+      - run: pnpm validate
 
       # `electron-vite build` rather than `pnpm build`, which would run the typecheck a second
-      # time. The step above already did it, and did it first so a type error answers early.
+      # time. The gate above already did it, and did it first so a type error answers early.
       - run: pnpm exec electron-vite build
 
       # What `pnpm build` adds beyond the bundler, spelled out because this job cannot call it:

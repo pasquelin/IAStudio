@@ -55,6 +55,42 @@ describe('MenuButton', () => {
   })
 
   /**
+   * For rows read from somewhere the app is not told about — a branch made in a terminal. Hover
+   * counts as an opening: it is how the menu opens on the toolbar, and rows reached that way
+   * would otherwise be the stale ones.
+   */
+  describe('onShow', () => {
+    it('fires when the menu is opened, and not before', async () => {
+      const onShow = vi.fn()
+      const button = bar({ onShow })
+      expect(onShow).not.toHaveBeenCalled()
+
+      await userEvent.click(button)
+
+      expect(onShow).toHaveBeenCalledTimes(1)
+    })
+
+    it('fires again on the next opening', async () => {
+      const onShow = vi.fn()
+      const button = bar({ onShow })
+      await userEvent.click(button)
+      await userEvent.keyboard('{Escape}')
+
+      await userEvent.click(button)
+
+      expect(onShow).toHaveBeenCalledTimes(2)
+    })
+
+    it('fires on a menu opened by hovering', async () => {
+      const onShow = vi.fn()
+
+      await userEvent.hover(bar({ onShow }))
+
+      expect(onShow).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  /**
    * The two halves of the rule the toolbar lives by. A mode group's menu opens under the pointer
    * as it crosses the bar; taking the focus there pulls the caret out of whatever was being
    * typed, and hands it back to a button the user never meant to press.
@@ -212,6 +248,24 @@ describe('MenuButton', () => {
       await userEvent.unhover(button)
 
       expect(row('Pinceau')).toBeInTheDocument()
+    })
+  })
+
+  /**
+   * The menu opens right beside the button, over its own tip — which then reads as a sentence cut
+   * in half behind the rows. The NAME is not the tooltip's to lose: a screen reader still has one.
+   */
+  describe('its own tip, while the menu covers it', () => {
+    it('drops the tip once the menu is open, and puts it back on close', async () => {
+      const button = bar()
+      expect(button).toHaveAttribute('data-tooltip-content', 'Brush')
+
+      await userEvent.click(button)
+      expect(button).not.toHaveAttribute('data-tooltip-content')
+      expect(button).toHaveAccessibleName('Brush')
+
+      await userEvent.keyboard('{Escape}')
+      expect(button).toHaveAttribute('data-tooltip-content', 'Brush')
     })
   })
 })

@@ -1,4 +1,5 @@
 import { readString } from '../guards'
+import { clamp } from '../numeric'
 
 /**
  * A colour as this studio writes them: `#rrggbb`, what `<input type="color">` reports and the
@@ -26,6 +27,21 @@ export function readColor(source: Record<string, unknown>, key: string, fallback
   return HEX_COLOR.test(value) ? value : fallback
 }
 
+/**
+ * `#rrggbb` as the `0xrrggbb` the drawing engines take, or `null` for anything else.
+ *
+ * `null` rather than a fallback colour: a caller handing this a value it cannot read is a caller
+ * that must refuse, not one that should silently paint black.
+ */
+export function packedColour(colour: string): number | null {
+  return HEX_COLOR.test(colour) ? Number.parseInt(colour.slice(1), 16) : null
+}
+
+/** The other way: the `0xrrggbb` an engine stores, as the `#rrggbb` a swatch and a 2D context take. */
+export function colourOf(packed: number): string {
+  return `#${clamp(Math.trunc(packed), 0, 0xffffff).toString(16).padStart(6, '0')}`
+}
+
 const CHANNEL_WEIGHTS = [0.2126, 0.7152, 0.0722]
 
 /** A tuple rather than an array: `#rrggbb` has exactly three, and a caller that reads them by
@@ -36,6 +52,30 @@ function channels(colour: string): [number, number, number] {
     parseInt(colour.slice(3, 5), 16),
     parseInt(colour.slice(5, 7), 16),
   ]
+}
+
+const toLinear = (value: number): number =>
+  value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+
+const toSrgb = (value: number): number =>
+  value <= 0.0031308 ? value * 12.92 : 1.055 * value ** (1 / 2.4) - 0.055
+
+/**
+ * `#rrggbb` as the LINEAR triple every interchange format writes a colour in — glTF's
+ * `KHR_lights_punctual` among them, whose specification says so in as many words.
+ *
+ * Not the same transfer as `relativeLuminance`, which uses the WCAG threshold of 0.03928: this
+ * one is the sRGB standard's own 0.04045. The two differ in the sixth decimal and never in a
+ * ratio, but a file written with the wrong one is a colour another renderer disagrees with.
+ */
+export function linearRgbOf(colour: string): [number, number, number] {
+  const [red, green, blue] = channels(HEX_COLOR.test(colour) ? colour : '#000000')
+  return [toLinear(red / 255), toLinear(green / 255), toLinear(blue / 255)]
+}
+
+/** The way back, for a file written elsewhere. Out-of-range channels are clamped, never wrapped. */
+export function colourFromLinearRgb(linear: readonly number[]): string {
+  return toHex([0, 1, 2].map(index => toSrgb(clamp(linear[index] ?? 0, 0, 1)) * 255))
 }
 
 /** Relative luminance, WCAG 2.x. Expects the `#rrggbb` shape above; anything else reads as black. */

@@ -1,6 +1,6 @@
 # 10. Espace Vidéo
 
-[← Espace 3D](09-espace-3d.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Audio →](11-espace-audio.md)
+[← Espace Modélisation](09-espace-modelisation.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Audio →](11-espace-audio.md)
 
 L’espace où l’on assemble des plans les uns après les autres pour en faire une séquence.
 
@@ -9,8 +9,13 @@ L’espace où l’on assemble des plans les uns après les autres pour en faire
 ## Comment l’espace est disposé
 
 Comme l’espace Audio, c’est un espace où la **bande basse appartient au montage**. Une séquence se
-lit sur toute la largeur de l’écran : la **Timeline** y prend donc toute la place, et l’étagère à
-assets passe dans la moitié haute de la colonne de droite, pour rester visible en même temps.
+lit sur toute la largeur de l’écran : la **Timeline** y prend donc toute la place. L’étagère à
+assets reste où elle est partout ailleurs — moitié haute de la **colonne de gauche** — et tient
+donc l’écran en même temps que le montage, ce qui est ce qu’il faut pour glisser une prise sur une
+piste.
+
+La moitié haute de la colonne de droite est **vide** dans cet espace : la Vidéo n’y déclare aucun
+panneau. Seul l’**Inspecteur**, sous le trait, l’occupe.
 
 Au centre, deux moniteurs côte à côte — la convention de Premiere et de DaVinci :
 
@@ -42,39 +47,61 @@ introuvable, lui, reste noir et muet sans rien annoncer.
 
 ## Poser un premier clip
 
-Trois gestes, et **ils ne posent pas le clip au même endroit** :
+Quatre gestes, et **ils ne posent pas le clip au même endroit** :
 
 | Geste | Sur quelle piste | À quel instant |
 |---|---|---|
 | **Glisser-déposer** depuis l’étagère | celle que vous survolez, **si elle peut le prendre** | là où vous lâchez |
-| **Glisser-déposer** dans le vide, sous la dernière piste | une **nouvelle** piste, ouverte pour lui | là où vous lâchez |
-| **Double-clic** sur l’asset | le studio choisit | à la **tête de lecture** |
+| **Glisser-déposer** dans le vide, sous la dernière piste | une **nouvelle** piste, ouverte pour lui — sauf pour une scène 3D | là où vous lâchez |
+| **Glisser-déposer** une ligne de scène 3D depuis l’**Explorateur** | une piste image, jamais une piste son | là où vous lâchez |
+| **Clic droit ▸ Ajouter au montage** | le studio choisit | à la **tête de lecture** |
 
 **Le glisser-déposer vous obéit au pixel près pour l’INSTANT ; pour la piste, il vous corrige.**
 Vous lâchez exactement où vous voulez dans le temps. Mais **viser une piste qui ne peut pas
 prendre le clip ne l’y pose pas** : une piste image pour un son, une piste verrouillée, muette, ou
-tue par le solo d’une autre. Le studio choisit alors à votre place, comme au double-clic, et le
+tue par le solo d’une autre. Le studio choisit alors à votre place, comme au clic droit, et le
 clip atterrit **ailleurs que sous le pointeur**.
 
-C’est une règle unique et non deux : une piste muette acceptée sous le pointeur et évitée partout
-ailleurs répondrait deux fois à la même question. Mais **rien ne le dit à l’écran**, et c’est le
-seul endroit du montage où le geste ne fait pas ce qu’il montre.
+**Et quand il n’en trouve aucune, le geste ne fait rien du tout, sans un mot.** C’est ce qui
+arrive à un lâcher **sur une piste** : un montage dont la seule piste image est verrouillée, un
+son lâché pendant qu’une piste image est en solo, un rush lâché sur une piste du montage de
+l’espace Audio. Lâchés **sous** la dernière piste, les deux premiers posent au contraire leur clip
+sur une piste neuve. Le clic droit, lui, **grise la ligne** quand aucune piste ne peut prendre
+l’asset : c’est le seul des deux gestes à le dire.
+
+Pour un asset, c’est une règle unique et non deux : une piste muette acceptée sous le pointeur et
+évitée partout ailleurs répondrait deux fois à la même question. Mais **rien ne le dit à
+l’écran**, et c’est le seul endroit du montage où le geste ne fait pas ce qu’il montre.
 
 **Lâcher sous la dernière piste ouvre les pistes qu’il faut** plutôt que de ne rien faire : une
 piste image, et la piste son à côté pour une prise qui porte du son. Les deux arrivent d’un seul
 geste, et **⌘Z les reprend d’un seul coup** — les clips et les pistes.
 
-Deux endroits ne prennent toujours rien : la **règle des temps**, en haut, et un montage qui n’a
-aucune piste image — celui de l’espace Audio — où lâcher un rush ne fait qu’ouvrir l’asset,
-puisqu’il n’y a là aucun moniteur pour l’afficher.
+Deux endroits ne prennent rien, **et le lâcher s’y arrête sans rien ouvrir** : la **règle des
+temps**, en haut, et le **vide sous la dernière piste** d’un montage qui n’a aucune piste image —
+celui de l’espace Audio — puisqu’il n’y a là aucun moniteur pour afficher un rush. Le montage vit
+dans la bande, et **la bande ne rattrape rien** : c’est la règle du studio entier, décrite dans
+[Les assets](07-assets.md).
 
-**Le double-clic choisit à votre place**, et il choisit bien : un son va sur une piste son, tout
+**Une scène 3D se pose comme un média**, en glissant sa ligne depuis l’Explorateur. Le clip
+qu’elle devient est **vivant** : retoucher la scène change ce que le montage affiche, sans rien
+réexporter. Sa durée est celle de son **animation**, ou **5 secondes** si elle n’en a pas encore.
+Elle va toujours sur une piste image et jamais sur une piste son — une scène n’a pas de bande son
+à elle — et **elle n’ouvre aucune piste** : lâchée sous la dernière, elle rejoint la première
+piste image qui se fait entendre, et sur un montage qui n’en a aucune, le geste ne fait rien.
+
+**Le clic droit choisit à votre place**, et il choisit bien : un son va sur une piste son, tout
 le reste sur une piste image, et **toute piste qui ne se fait pas entendre est évitée** — un clip
 qui y atterrirait aurait l’air de n’avoir rien fait. Cela vise les **verrouillées** et les
 **muettes**, mais aussi celles que le **solo d’une autre piste** a fait taire : une piste que rien
-ne distingue à l’œil, et sur laquelle le double-clic ne posera pourtant rien.
+ne distingue à l’œil, et sur laquelle le clip ne se posera pourtant pas.
 
-Dans tous les cas, le studio décide de deux choses :
+> **Le double-clic ne vise pas ce montage-ci.** Il ouvre l’asset dans un onglet **à lui**, dans
+> l’espace de son type : un montage neuf pour une vidéo, l’**éditeur audio** pour un son. C’est la
+> règle de tout le studio, décrite dans [Les assets](07-assets.md). Pour réunir deux médias dans
+> le **même** montage, c’est donc le glisser-déposer ou le clic droit.
+
+Pour un média, le studio décide de deux choses :
 
 - **la durée** — celle du média. Une image fixe, ou un média dont la durée est inconnue, dure
   **5 secondes** par défaut. Ce n’est qu’un point de départ : le temps qu’une image reste à
@@ -178,8 +205,9 @@ Sous chaque moniteur :
 | `Suppr` | supprimer le clip sélectionné |
 | `⌘Z` / `⇧⌘Z` | annuler / rétablir |
 
-> **`C` et `S` ne font pas la même chose.** `C` **arme l’outil Lame** — vous coupez ensuite là où
-> vous cliquez. `S` **coupe tout de suite**, à la tête de lecture, sans changer d’outil.
+> **L’outil Lame et `S` ne font pas la même chose.** La **Lame** se choisit à la souris — sa
+> touche n’est pas écoutée, voir plus haut — et vous coupez ensuite là où vous cliquez. `S`
+> **coupe tout de suite**, à la tête de lecture, sans changer d’outil.
 
 **Un seul lecteur est actif à la fois.** Si vous ouvrez deux séquences, seule celle qui est en
 avant répond à la barre d’espace. C’est ce qui garde la lecture fluide : deux décodeurs vidéo qui
@@ -277,7 +305,7 @@ peuvent porter un clip ; c’est celle qui est **le plus haut dans la colonne** 
 elle recouvre les autres — V1 passe devant V2, comme dans tout logiciel de montage. Déplacer une
 piste change donc l’image du moniteur, à l’instant du lâcher.
 
-**L’ordre compte aussi pour le double-clic** : le studio pose alors l’asset sur la **première
+**L’ordre compte aussi pour le clic droit** : le studio pose alors l’asset sur la **première
 piste du bon genre qui se fait entendre**, en partant du haut. Monter une piste, c’est donc en
 faire la destination par défaut. Chaque en-tête porte une **poignée** sur son bord gauche.
 
@@ -416,12 +444,20 @@ l’importer.
 
 ## Ce qui manque encore
 
-> **Une séquence s’enregistre** en `.seq` par `⌘S`, et se rouvre telle quelle : pistes, clips,
+> **Une séquence s’enregistre** en `.otio` par `⌘S`, et se rouvre telle quelle : pistes, clips,
 > fondus et gains. Ce qui ne revient pas, c’est l’historique d’annulation.
 >
-> Il n’y a en revanche toujours pas d’**export** : on ne peut pas encore écrire un fichier vidéo
-> final. Voir [Ce qui n’existe pas encore](18-limites.md).
+> **Trois exports existent**, tous sous **Fichier ▸ Exporter**. *Vidéo…* écrit un fichier
+> final, image par image, scènes 3D comprises — mais **sans le son**, qui n’y est pas encore.
+> *Montage (OTIO)…* écrit le montage lui-même : pistes, clips, points d’entrée,
+> vitesses et liens vers les médias, dans un fichier que d’autres logiciels de montage ouvrent.
+> *Montage et médias (OTIOZ)…* écrit le même montage avec les fichiers dedans — c’est celui
+> à donner à quelqu’un d’autre, l’autre logiciel retrouvant alors les rushes tout seul.
+>
+> **Un `.otio` s’ouvre aussi**, d’un double-clic dans l’Explorateur — le vôtre comme celui d’un
+> autre logiciel — et `⌘S` le réenregistre dans son propre fichier.
+> Voir [Ce qui n’existe pas encore](18-limites.md).
 
 ---
 
-[← Espace 3D](09-espace-3d.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Audio →](11-espace-audio.md)
+[← Espace Modélisation](09-espace-modelisation.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Audio →](11-espace-audio.md)

@@ -1,20 +1,26 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Asset, AssetType } from '@shared/domain/asset'
+import {
+  ASSET_SEARCH_LIMIT_MAX,
+  type Asset,
+  type AssetQuery,
+  type AssetType,
+} from '@shared/domain/asset'
 import {
   COLLECTION_PERSIST_VERSION,
   DEFAULT_COLLECTION_STATE,
   withoutSearch,
   type CollectionState,
-} from '@/helpers/collection-state'
+} from '@/helpers/collectionState'
 import {
   ASSET_NAME_FAILURES,
   checkAssetName,
   type AssetNameFailure,
-} from '@shared/domain/asset-name'
-import { nameFailureOf } from '@shared/domain/file-name'
+} from '@shared/domain/assetName'
+import { nameFailureOf } from '@shared/domain/fileName'
 import { isRecord } from '@shared/guards'
-import { getBridge } from '@/services/bridge'
+import { connectThroughBridge, getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 
 type AssetsState = {
   collection: CollectionState
@@ -45,6 +51,17 @@ type AssetsState = {
    */
   shownCount: number | null
   setShownCount: (count: number | null) => void
+  /**
+   * Whether the catalogue holds rows past the ones read so far. The read was ALWAYS paged —
+   * `catalog.search` answers 200 rows whatever it is asked — and nothing said so.
+   */
+  hasMore: boolean
+  /**
+   * Reads the next page and appends it, or does nothing at the end of the catalogue. Appended
+   * rather than replacing: every other reader of `items` would otherwise lose rows to a scroll
+   * happening in the shelf.
+   */
+  loadMore: () => Promise<void>
   refresh: () => Promise<void>
   /**
    * Hears the writes the MAIN process makes on its own — the pictures a model sheds on import.
@@ -69,11 +86,22 @@ type AssetsState = {
    */
   rename: (assetId: string, name: string) => Promise<AssetNameFailure | null>
   /**
+   * What the file IS, corrected by hand.
+   *
+   * The studio reads a domain off the extension, and an extension cannot always tell — a normal
+   * map and an albedo are both PNGs. The row is what remembers the correction, which is why a
+   * file the catalogue does not hold cannot be corrected at all.
+   *
+   * Nothing moves on disk: a row carries its own path, and what the studio calls a picture has
+   * never been decided by the folder it sits in.
+   */
+  retype: (assetId: string, type: AssetType) => Promise<void>
+  /**
    * Drops the coalesced read still waiting, if there is one.
    *
    * It exists for the test harness, and says so rather than pretending to a product need: the
    * timer `invalidate` arms lives at module scope, so a case that leaves one behind has it fire
-   * inside a LATER case and refresh that one's catalogue under it. `test-setup` calls this after
+   * inside a LATER case and refresh that one's catalogue under it. `testSetup` calls this after
    * every case — see the comment there for the failure it produces.
    *
    * The alternative was to leave production untouched and swap `globalThis.setTimeout` in the
@@ -87,6 +115,22 @@ type AssetsState = {
 }
 
 const COALESCE_MS = 200
+
+/**
+ * How many rows one SCROLL brings back — the ceiling `catalog.search` already applies when asked
+ * for nothing. Left at 200 so no reader of `items` sees less than before this store learned to
+ * page; a refresh reads whole multiples of it, up to `ASSET_SEARCH_LIMIT_MAX` at a time.
+ */
+const LOCAL_PAGE = 200
+
+function pageOf(scope: readonly AssetType[] | null, offset: number, limit: number): AssetQuery {
+  return { ...(scope ? { types: [...scope] } : {}), limit, offset }
+}
+
+function withoutHeld(held: readonly Asset[], page: readonly Asset[]): Asset[] {
+  const known = new Set(held.map(asset => asset.id))
+  return page.filter(asset => !known.has(asset.id))
+}
 
 /** Two scopes that ask for the same kinds, so a re-render does not re-read the catalogue. */
 function sameScope(
@@ -170,6 +214,14 @@ export const useAssets = create<AssetsState>()(
       let reading: Promise<void> | null = null
       // Which scope the read in flight is answering for.
       let readingScope: readonly AssetType[] | null = null
+      // The page in flight, so a scroll that fires twice asks once.
+      let growing: Promise<void> | null = null
+      /**
+       * How many pages the shelf has been shown, so a refresh hands back as much as it took away:
+       * a generation finishing while the reader sits at row 800 would otherwise cut the list to
+       * 200 under them. Not derived from `items.length`, which still holds the scope being left.
+       */
+      let pagesRead = 1
 
       return {
         collection: DEFAULT_COLLECTION_STATE,
@@ -183,13 +235,55 @@ export const useAssets = create<AssetsState>()(
           if (get().shownCount !== shownCount) set({ shownCount })
         },
 
+        hasMore: false,
+
         // A change of space changes what the catalogue is asked for, so the rows follow at once
-        // rather than on the next invalidation.
+        // rather than on the next invalidation — and back to one page with it, the pages read
+        // belonging to the list being left. The rows stay until the new ones arrive: the panel
+        // sets its scope as it mounts, so emptying here blanks the shelf on every open.
         setScope: scope => {
           if (sameScope(get().scope, scope)) return
 
+          pagesRead = 1
           set({ scope })
           void get().refresh()
+        },
+
+        loadMore: async () => {
+          if (growing) return growing
+          // A refresh in flight is already reading every page this shelf has been shown.
+          if (reading || !get().hasMore) return
+
+          const scope = get().scope
+          const offset = get().items.length
+
+          growing = (async () => {
+            const bridge = getBridge()
+            if (!bridge) return
+
+            try {
+              const page = await bridge.assets.search(pageOf(scope, offset, LOCAL_PAGE))
+              // The space may have changed while this was in flight, and its rows are another
+              // list's: appended they would be two scopes shown as one.
+              if (!sameScope(get().scope, scope)) return
+
+              pagesRead += 1
+              // Against what is held, because the offset is `items.length` and a row can leave
+              // the list between two pages — `retype` drops one the scope no longer takes, and
+              // the page then starts one row short of where it was meant to.
+              set(state => ({
+                items: [...state.items, ...withoutHeld(state.items, page)],
+                hasMore: page.length === LOCAL_PAGE,
+              }))
+            } catch {
+              // No project open — the catalogue throws, and there is nothing more to read.
+              set({ hasMore: false })
+            }
+          })().finally(() => {
+            growing = null
+          })
+
+          return growing
         },
 
         // Callers that need the rows NOW share the read already in flight rather than opening a
@@ -209,10 +303,32 @@ export const useAssets = create<AssetsState>()(
             if (!bridge) return
 
             try {
-              set({ items: await bridge.assets.search(scope ? { types: [...scope] } : {}) })
+              const found: Asset[] = []
+              let more = false
+
+              // As wide as the query is allowed to be, not one call per page shown: each is a
+              // synchronous SQLite query on the process every window shares. The bound is re-read
+              // each turn, so a `loadMore` landing mid-refresh is not handed back a shorter list.
+              while (found.length < pagesRead * LOCAL_PAGE) {
+                const limit = Math.min(
+                  ASSET_SEARCH_LIMIT_MAX,
+                  pagesRead * LOCAL_PAGE - found.length,
+                )
+                const rows = await bridge.assets.search(pageOf(scope, found.length, limit))
+                found.push(...rows)
+                // Against what was ASKED for, not `LOCAL_PAGE`: a refresh reads wider than a page.
+                more = rows.length === limit
+                if (!more) break
+              }
+
+              // Rounded up so a part-filled page is asked for whole next time, and never zero:
+              // an empty catalogue must still leave a page to read.
+              pagesRead = Math.max(1, Math.ceil(found.length / LOCAL_PAGE))
+              set({ items: found, hasMore: more })
             } catch {
               // No project open: the catalogue throws, and an empty list is the honest answer.
-              set({ items: [] })
+              pagesRead = 1
+              set({ items: [], hasMore: false })
             }
           })().finally(() => {
             reading = null
@@ -221,13 +337,11 @@ export const useAssets = create<AssetsState>()(
           return reading
         },
 
-        connect: () => {
-          const bridge = getBridge()
-          // Through `invalidate` like every other site that says the catalogue moved, so the
-          // coalescing holds: an extraction writing six pictures is one read, not six.
-          const stop = bridge?.assets.onChanged(() => get().invalidate())
-          return Promise.resolve(stop ?? (() => {}))
-        },
+        // Through `invalidate` like every other site that says the catalogue moved, so the
+        // coalescing holds: an extraction writing six pictures is one read, not six.
+        connect: connectThroughBridge(async bridge =>
+          bridge.assets.onChanged(() => get().invalidate()),
+        ),
 
         invalidate: () => {
           if (pending) clearTimeout(pending)
@@ -266,6 +380,28 @@ export const useAssets = create<AssetsState>()(
             items: state.items.map(item => (item.id === assetId ? written : item)),
           }))
           return null
+        },
+
+        retype: async (assetId, type) => {
+          const written = await getBridge()
+            ?.assets.update(assetId, { type })
+            .catch((error: unknown) => {
+              reportFailure('assets.retype', assetId, error)
+              return null
+            })
+          if (!written) return
+
+          // Into the shelf on the spot, as a rename is — `assets:update` broadcasts nothing, so
+          // nothing else would tell it. Told apart from a rename by what a TYPE decides: the
+          // shelf reads a scope, and a picture that has just become a texture is no longer a row
+          // this one asked for. Written in place it stayed on screen, under its old shelf, with
+          // its new name for what it is — until something unrelated happened to re-read.
+          set(state => ({
+            items: state.items.flatMap(item => {
+              if (item.id !== assetId) return [item]
+              return state.scope && !state.scope.includes(written.type) ? [] : [written]
+            }),
+          }))
         },
 
         cancelInvalidate: () => {

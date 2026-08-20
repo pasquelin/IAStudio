@@ -1,48 +1,14 @@
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ModelFamily, ModelSummary } from '@shared/domain/model'
+import type { ModelFamily } from '@shared/domain/model'
 import { ModelOptions, type PickableModel } from '@/design/ModelOptions'
-import { getBridge } from '@/services/bridge'
-import { usePlanAccess, usePlanRefusal } from '@/helpers/plan-access'
+import { useFamilyModels } from '@/hooks/useFamilyModels'
+import { usePlanAccess } from '@/hooks/usePlanAccess'
+import { usePlanRefusal } from '@/hooks/usePlanRefusal'
 import { useSettings } from '@/stores/settings'
-import { useSettingsDraft } from '@/stores/settings-draft'
-
-/**
- * A `<select>` is not a browser: past a hundred entries it stops being usable long before it
- * stops being complete. This picker deliberately shows only the head of the catalogue — the
- * order is the API's own relevance score, so the most used models are the ones it holds.
- */
-const PICKER_LIMIT = 100
-
-/**
- * The models of one family, fetched here rather than through a store: this list is read by
- * one screen, it is already cached by the registry in the main process, and the settings
- * window has no reason to hold a second replica of the catalogue.
- */
-function useFamilyModels(family: ModelFamily): ModelSummary[] {
-  const [models, setModels] = useState<ModelSummary[]>([])
-
-  useEffect(() => {
-    let current = true
-    const bridge = getBridge()
-
-    void bridge?.scenario
-      .searchModels({ family, limit: PICKER_LIMIT })
-      .then(page => {
-        if (current) setModels(page.items)
-      })
-      .catch(() => {
-        // Not authenticated, or offline: an empty picker says so on its own.
-        if (current) setModels([])
-      })
-
-    return () => {
-      current = false
-    }
-  }, [family])
-
-  return models
-}
+import { useSettingsDraft } from '@/stores/settingsDraft'
+import { SettingLine } from './SettingLine'
+import { SETTING_COLUMN, SETTING_SELECT } from './settingStyles'
+import { SettingRestoreButton } from './SettingRestoreButton'
 
 /**
  * The stored default kept among the options whatever the page holds, so the screen never shows
@@ -63,12 +29,22 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
   const stored = useSettings(state => state.settings.generation.defaultModels)
   const stageBranch = useSettingsDraft(state => state.stageBranch)
   // Staged like every other setting: this screen writes a branch no path can name, which is
-  // exactly what `stageBranch` exists for — it must not slip past Apply on its own.
-  const staged = useSettingsDraft(state => state.pending.generation?.defaultModels)
+  // exactly what `stageBranch` exists for — it must not slip past Apply on its own. Its absence
+  // from `touched` is also why the dot is read from the buffer rather than from the leaf set.
+  const pendingModels = useSettingsDraft(state => state.pending.generation?.defaultModels)
 
-  const defaultModels = staged ?? stored
+  const defaultModels = pendingModels ?? stored
   const selected = defaultModels[family] ?? ''
   const models = withStored(fetched, selected)
+
+  const stageFamily = (id: string): void => {
+    // "Ask every time" is the absence of a key, not an empty model id — which the main
+    // process would reject.
+    const next = { ...defaultModels }
+    if (id) next[family] = id
+    else delete next[family]
+    stageBranch({ generation: { defaultModels: next } })
+  }
 
   /**
    * The default that is ALREADY stored, which nobody is choosing right now. A downgrade or an
@@ -79,28 +55,35 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
   const selectedModel = models.find(model => model.id === selected)
   const selectedRefusal = refusalFor(selectedModel?.requiredPlanLevel)
 
+  const id = `setting-default-model-${family}`
+
   return (
-    <div className="flex max-w-md flex-col gap-3">
-      <label className="flex flex-col gap-2 text-xs">
-        {t('settings.defaultModel')}
+    <div className={SETTING_COLUMN}>
+      <SettingLine
+        title={t('settings.defaultModel')}
+        labelFor={id}
+        // This family's own leaf, never the buffer's presence: one branch carries all seven, so
+        // staging a default for images would otherwise mark the video line modified too.
+        staged={pendingModels !== undefined && pendingModels[family] !== stored[family]}
+        stagedLabel={t('settings.modified')}
+        help={selectedRefusal && <p className="text-warning text-xs">{selectedRefusal}</p>}
+      >
         <select
-          className="select select-sm"
+          id={id}
+          // The family, never the heading above it: `image` and `3d` read differently in each
+          // language and the heading is one of the two.
+          data-sc={`field:defaultModel.${family}`}
+          className={SETTING_SELECT}
           value={selected}
-          onChange={event => {
-            // "Ask every time" is the absence of a key, not an empty model id — which the
-            // main process would reject.
-            const next = { ...defaultModels }
-            if (event.target.value) next[family] = event.target.value
-            else delete next[family]
-            stageBranch({ generation: { defaultModels: next } })
-          }}
+          onChange={event => stageFamily(event.target.value)}
         >
           <option value="">{t('settings.noDefaultModel')}</option>
           <ModelOptions models={models} plan={plan} />
         </select>
-      </label>
 
-      {selectedRefusal && <p className="text-warning text-xs">{selectedRefusal}</p>}
+        {/* The factory value is "ask every time" for every family — `defaultModels` ships empty. */}
+        <SettingRestoreButton restorable={selected !== ''} onRestore={() => stageFamily('')} />
+      </SettingLine>
     </div>
   )
 }

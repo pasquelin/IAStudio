@@ -23,11 +23,15 @@ export function ModelOverridesSection({ textures, onChange }: ModelOverridesSect
   const { t } = useTranslation()
 
   return (
-    <PropertySection title={t('inspector.modelOverrides')} defaultOpen={false}>
+    <PropertySection
+      title={t('inspector.modelOverrides')}
+      defaultOpen={false}
+      scId="modelOverrides"
+    >
       <TextureSlotFields
         slots={textures ?? {}}
         emptyLabel={t('inspector.fileTexture')}
-        emptyHint={t('inspector.fileTextureHint')}
+        scId="modelOverrides"
         onChange={(slot, assetId) => {
           const rest = { ...textures }
           delete rest[slot]

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MaterialStyle } from '@shared/domain/style'
 import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/texture'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useStyles } from './styles'
 
 function styleNamed(name: string): MaterialStyle {
@@ -90,10 +90,6 @@ describe('saving before the panel has ever been opened', () => {
     expect(saved[0]?.name).toBe('Style 3')
   })
 
-  /**
-   * A read in flight is older than a write that lands during it. Answering with it puts the
-   * panel back to what the disk held before the save, and `loaded` stops `load` ever retrying.
-   */
   /**
    * A read in flight is older than a write that lands during it. Answering with it would put the
    * panel back to what the disk held before, and `loaded` stops `load` ever retrying.

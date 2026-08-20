@@ -29,19 +29,21 @@ right gesture made in the wrong workspace.
 
 Before the recipes, one rule that runs through all of them.
 
-**Double-clicking an asset does not open a tab.** It sends the asset into the tab **already open
-in front of you** — failing that, into a document open **elsewhere**, switching workspace on the
-way. If there is nowhere at all, a message says so: "This asset could not be opened".
+**Double-clicking an asset opens a tab of its own**, in the workspace that edits its kind, without
+ever looking at the one in front of you. No document is needed first, and reopening the same asset
+comes back to its tab rather than opening a second. When the opening cannot go through — the asset
+is not on your disk yet, or no project is open — a message says so: "This asset could not be
+opened".
 
-So in every recipe below, the order is **always** the same:
+**To send it into a document already open, use the other gesture** — and that is where everybody
+gets it wrong:
 
 ```
-1. the right workspace   (the tabs, at the top)
-2. the + button          (the left rail — it creates the document)
-3. only then, the asset
+open the asset             → double-click
+add it to a document       → right-click (it lists the destinations), or drag and drop
 ```
 
-Remember those three lines and nothing will block you.
+Remember those two lines and nothing will block you.
 
 ---
 
@@ -56,7 +58,7 @@ Remember those three lines and nothing will block you.
 3. click the **Generate** icon in the left rail — choosing a model does not open the panel for
    you — then write your sentence in the **prompt**;
 4. **Generate**. The status line, bottom right, follows the progress;
-5. the result arrives in the **Assets** panel, and in `assets/img/` on your disk.
+5. the result arrives in the **Assets** panel, and in `Images/` on your disk.
 
 **The catch.** With no project open there is **neither form nor button**: the panel shows "Open a
 project to generate." instead. It is not a greyed-out button, it is the whole panel waiting for a
@@ -86,7 +88,7 @@ text — the other path is an image document with the picture dragged onto it as
 
 ## Enlarge a picture
 
-**Image ▸ Enlarge** flattens the document, sends it, and opens the upscaler's form with your
+**Image ▸ Upscale** flattens the document, sends it, and opens the upscaler's form with your
 picture already in it. You are the one who presses **Generate**.
 
 Once, before the first time: **Settings ▸ Generation ▸ Upscaling**, pick a model. Without it the
@@ -98,7 +100,7 @@ shows the open workspace's family.
 
 **Do not look for it in the Image workspace's Models panel**: that panel only ever lists its own
 workspace's family, and an upscaler is not part of it — you could look for a long time. The
-**Image ▸ Enlarge** menu is the way in.
+**Image ▸ Upscale** menu is the way in.
 
 ---
 
@@ -121,7 +123,7 @@ right, to set exposure and rotation.
 6 faces. They show the same sky, at the same rotation, but laid flat: a seam at the back or a
 crushed pole shows up at a glance, where the 360 view makes you turn your head to run into it.
 
-**To take it into an engine**: **File ▸ Export the sky**, and a size. Six PNGs come out into a
+**To take it into an engine**: **File ▸ Export ▸ Sky**, and a size. Six PNGs come out into a
 folder, named `_Rt`, `_Lf`, `_Up`, `_Dn`, `_Ft`, `_Bk` — the two letters Unity, Unreal and Roblox
 expect. **Grade before you export**: the exposure, the horizon rotation and everything else are
 baked into the files. See [Skyboxes workspace](13-skyboxes-workspace.md#taking-the-sky-out-the-six-faces).
@@ -144,13 +146,13 @@ flat.
    **Emission** are two neighbouring sections, not its contents. If the
    material looks uniformly average, it is the **ranges** — "Roughness range", "Metalness range" —
    that need adjusting; they sit in the Material section, under the two settings;
-6. **Channels** panel: drop a picture onto the thumbnail of each channel you want to fill — and
-   for **height**, **normal**, **occlusion** and **roughness**, the thumbnail's menu computes them
+6. **Channels** section: drop a picture onto the row of each channel you want to fill — and for
+   **height**, **normal**, **occlusion** and **roughness**, right-clicking the row computes them
    from another channel, at no cost;
 7. `⌘S` **saves**.
 
 **The catch.** A picture dropped on the **preview** always goes to the base colour — that is
-deliberate. To aim at normals or roughness, drop onto **their thumbnail** in the Channels panel.
+deliberate. To aim at normals or roughness, drop onto **their row** in the Channels section.
 
 ---
 
@@ -162,8 +164,8 @@ deliberate. To aim at normals or roughness, drop onto **their thumbnail** in the
 4. **Generate** — allow longer than for a picture: a few minutes is normal;
 5. the clip arrives in **Assets**.
 
-**To see it large**: the **+** button on the left rail to open a sequence, then drag the clip
-onto the timeline.
+**To see it large**: **double-click** the clip in the shelf. An edit opens for it, with the clip
+already laid down — the `+` on the left rail is not a prerequisite.
 
 ---
 
@@ -174,8 +176,8 @@ onto the timeline.
 3. describe the sound you want, **Generate**;
 4. the sound arrives in **Assets**.
 
-**To hear it and shape it:** the **+** button on the left rail — a sound tab opens — then
-**double-click** your sound in the shelf. The waveform appears.
+**To hear it and shape it:** **double-click** your sound in the shelf. A tab opens for it and the
+waveform appears — the `+` on the left rail is not a prerequisite.
 
 ---
 
@@ -190,9 +192,9 @@ onto the timeline.
 7. `G` to move it, `R` to rotate it, `S` to scale it, `F` to frame it;
 8. `⌘S` **saves**.
 
-**To fly through the scene:** hold the **right mouse button** and use `W` `A` `S` `D` (`Z` `Q`
-`S` `D` on a French keyboard — the studio listens to the key's position, not the letter). `E`
-goes up, `Q` goes down, left `⇧` speeds up.
+**To fly through the scene:** hold a **mouse button** and use `W` `A` `S` `D` (`Z` `Q`
+`S` `D` on a French keyboard — the studio listens to the key's position, not the letter), or the
+four **arrows**, which do the same. `E` goes up, `Q` goes down, left `⇧` speeds up.
 
 ---
 
@@ -211,8 +213,9 @@ goes up, `Q` goes down, left `⇧` speeds up.
 
 **To cut:** place the playhead, press `S`. To delete a clip: select it, `Del`.
 
-**To keep the edit:** `⌘S`. The sequence writes as `.seq` into the project and opens back as it
-was — tracks, clips, fades and gains. What does not come back is the undo history.
+**To keep the edit:** `⌘S`. The sequence writes as `.otio` — a format Resolve and Premiere already
+read — into the project, and opens back as it was: tracks, clips, fades and gains. What does not
+come back is the undo history.
 
 **What is still missing:** the **export**. The studio cannot yet write a final video file.
 
@@ -220,7 +223,7 @@ was — tracks, clips, fades and gains. What does not come back is the undo hist
 
 ## Trim a sound and fade it in
 
-1. **Audio** workspace, the **+** button, then **double-click** your sound;
+1. **double-click** your sound in the shelf — the Audio workspace opens with it;
 2. drag the region's edges to **trim**;
 3. set a **fade in** and a **fade out**;
 4. the **A/B** tool compares against the original, before your edits — it is a tool of its own,
@@ -233,9 +236,9 @@ settings**: cuts are measured against the take that received them.
 
 ## Put an asset where it belongs
 
-The table of the commonest drops. **Nine** surfaces accept an asset; the [Assets](07-assets.md)
-chapter lists them all, and double-click obeys a
-different rule again.
+The table of the commonest drops — the [Assets](07-assets.md) chapter carries the whole list, what
+each takes and what it refuses in silence. Double-click goes into no surface at all: it opens the
+asset in a tab of its own.
 
 | You want… | The gesture | You need, in front of you |
 |---|---|---|
@@ -245,7 +248,9 @@ different rule again.
 | a picture as sky | drag onto the **sky preview** | a sky tab |
 | a 3D object in a scene | drag onto the **3D view** | a scene tab |
 
-A texture double-clicks like the rest: it then lands as the base colour of the open material.
+A texture double-clicks like the rest: a **material of its own** opens, whose base colour it fills.
+To place it in the material you have in front of you, use drag and drop or right-click ▸ **Use as
+base colour**.
 
 ---
 
@@ -350,14 +355,14 @@ All of it is spelled out, with nothing hidden, in
 |---|---|---|
 | a picture from a sentence | Image | Models → prompt → Generate |
 | a variant of a picture | Image | *Image to image* filter → give the picture |
-| a bigger picture | Image | the **Image ▸ Enlarge** menu, once its model is set |
+| a bigger picture | Image | the **Image ▸ Upscale** menu, once its model is set |
 | a 360° sky | Skyboxes | `+` → Generate, it lands by itself |
 | a material | Textures | `+` → drag a picture onto the preview → `⌘S` |
 | an animated shot | Video | *Image to video* filter → Generate |
-| a sound | Audio | Models → Generate, then `+` and double-click |
+| a sound | Audio | Models → Generate, then double-click the sound |
 | a 3D scene | 3D | `+` → a light **first**, then the objects → `⌘S` |
 | to light a scene with a sky | 3D | Inspector → Environment → choose the skybox |
-| to place a 3D model | 3D | double-click the mesh, or drag it onto the view |
+| to place a 3D model in the open scene | 3D | drag the mesh onto the view, or right-click |
 | to edit two shots | Video | `+` → drag the clips onto the timeline |
 | to import my files | anywhere | Assets → Import media |
 | to remake the same picture | anywhere | Inspector → Regenerate |

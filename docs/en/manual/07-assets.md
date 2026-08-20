@@ -11,63 +11,67 @@ have imported.
 
 It is the equivalent of a content browser — the library of raw material you draw from.
 
-**Where it sits** depends on the workspace you are in:
+**Where it sits: in the left column, upper half, in every workspace.** Under **Models** and
+**Generate**, with which it takes turns — the three panels that answer the same question, "what
+does Scenario offer me".
 
-| Workspace | Where the shelf is |
-|---|---|
-| Image, Textures, Skyboxes | in the **bottom strip** |
-| Video, Audio, 3D | in the **right column**, upper half |
+Click its icon in the left rail to bring it forward: it is the third of the three, and the half
+opens on Models until you ask for something else.
 
-This is not a whim: in the Video, Audio and 3D workspaces the bottom strip belongs to the timeline,
-which needs the full width. Yet the shelf and the timeline have to hold the screen **together** so
-you can drag a take or a model from one to the other — so the shelf takes the upper half of the
-right column, the one holding the panels that serve the open document.
+Below the separator, in the lower half of the same column, the **Explorer**. The two therefore
+hold the screen **together**, and that is deliberate: what enters your project passes from the
+shelf to the folder, never otherwise.
 
 ---
 
 ## What you find there
 
-Six asset types:
+Seven asset types:
 
-| Type | What it is | Where it is filed |
+| Type | What it is | Where it lands |
 |---|---|---|
-| **Image** | a still image | `assets/img/` |
-| **Video** | a moving shot | `assets/vid/` |
-| **Audio** | a sound, a piece of music | `assets/aud/` |
-| **Mesh** | a 3D object | `assets/3d/` |
-| **Texture** | a material | `assets/tex/` |
-| **Skybox** | a 360° sky | `assets/sky/` |
+| **Image** | a still image | `Images/` |
+| **Video** | a moving shot | `Video/` |
+| **Audio** | a sound, a piece of music | `Audio/` |
+| **Mesh** | a 3D object | `3D/` |
+| **Texture** | a material | `Textures/` |
+| **Skybox** | a 360° sky | `Sky/` |
+| **Animation** | a motion, to be replayed on a character | `Animations/` |
+
+**Where it lands, not where it lives.** These seven folders are laid down when the project is
+created and are only a starting point: move an asset wherever you like, rename the folder, empty
+it. What a file IS does not depend on where it sits — the studio finds it again, and its entry
+follows.
 
 ---
 
 ## Searching and filtering
 
-**Where the controls sit depends on the room available.**
+**The controls sit on their own line, below the title.**
 
-| Zone | Where they are |
-|---|---|
-| **Bottom strip** | on the **title line**, beside the panel's name |
-| **Right column** (Video, Audio and 3D workspaces) | on their **own line**, below the title |
-
-In a strip the row is wide and mostly empty: putting the bar there saves a whole row, and the
-shelf is there to show assets, not buttons. In a narrow column, the same bar would push the close
-button out of the frame — so it drops back below the title.
+In a narrow column a bar laid on the title line would push the close button out of the frame, so
+it lives **below** it. The mechanism still exists for strips, where the row is wide and mostly
+empty, but the shelf no longer reads in one.
 
 | Control | What it does |
 |---|---|
-| **Search…** | filters on the asset's **name**, as you type |
+| **Search…** | filters the project's assets on their **name**, and queries the library, as you type |
 | **Type** | keeps only **one** kind of asset — picking one replaces the previous |
-| **Location** | keeps only assets in a given state with respect to the library |
+| **Location** | keeps only assets in a given state with respect to the library — and, on **Published by somebody else**, goes and reads what other people published |
 | **Icons** / **List** | grid of thumbnails, or dense list |
 | **Smaller thumbnails** / **Larger thumbnails** | their size |
 
-Filtering is **instant**, even on a large project: the whole catalogue is already loaded in memory,
-unlike the Models panel which queries the Scenario catalogue remotely.
+The **project's** assets answer instantly: they are already in memory. The **library's** take a
+round trip — the word travels once the typing stops, and it is looked for in the name, but also in
+the prompt and the description, which the project knows nothing about.
+
+The list fills in **as you scroll**, on both sides: the project catalogue and the library both hand
+over their assets in batches, and reaching the bottom asks for the next one.
 
 > **Search does not ask you for accents.** Typing `foret` finds "Forêt d'hiver", and `ete` finds
-> "Été". That holds here and in the settings search: you search by typing, not by spelling. The
-> **Models** panel says nothing about it, because it does not search itself — it hands the word to
-> the API and shows what comes back.
+> "Été". That holds for the project's assets and in the settings search: you search by typing, not
+> by spelling. For the **library** half the API answers, and it decides on its own — as in the
+> **Models** panel, which does not search itself either.
 >
 > It applies to files coming from the Finder too. macOS writes names in a form where the accent is
 > a character of its own — invisible to the eye, different to the machine — so an imported asset
@@ -89,7 +93,7 @@ The message says which of the three cases you are in, because they call for diff
 |---|---|
 | "Open a project to see its assets." | no project is open |
 | "No asset yet. Generate something to get started." | the project is empty |
-| "No results for this filter." | your filters are too narrow |
+| "No result for this filter." | your filters are too narrow |
 
 ---
 
@@ -123,18 +127,23 @@ first.
 
 **The two gestures do not serve the same need, and that is the split to remember**: double-click
 serves **the asset** — it opens it at home; right-click serves **the document already open** — it
-sends the asset there. The first makes a tab, the second makes none.
+sends the asset there. The first makes a tab; of everything the second lists, **one single row**
+makes one, and it is named below.
 
-Right-click lists every destination, always in the same order:
+Right-click lists the destinations first, always in the same order, then what is done with the
+asset itself:
 
 | Row | Where it sends the asset | For which types |
 |---|---|---|
 | **Use as sky** | the open sky, Skyboxes workspace | pictures |
 | **Add to the scene** | the open 3D scene | meshes |
+| **Make the character play it** | the character picked in the open 3D scene | animations |
 | **Open in the audio editor** | the open edit, Audio workspace | sounds |
 | **Place as a layer** | the open image, Image workspace | pictures |
 | **Add to the edit** | the open sequence, Video workspace | all |
 | **Use as base colour** | the open material, Textures workspace | pictures |
+| **Edit the image** | a tab of its own, Image workspace | textures and skies |
+| **Extract its textures** | lays the model's pictures out on the shelf | meshes |
 | **Rename** | opens the name on the thumbnail itself | all |
 | **Show in folder** | opens the file manager on the file | all |
 
@@ -152,16 +161,34 @@ so is a name the folder already holds, rather than overwriting another picture.
 > `asset_40f76c36-8ad4-4def-a1b3-9125cba4da98.png`. They take their real name the day you rename
 > them, and not before: the studio does not stir your folder on its own.
 
-Each row carries its workspace's icon, the same one as in the title bar. The menu only shows
-destinations able to take **that type**: right-clicking a sound does not offer to lay it out as a
-sky.
+**Make the character play it asks for two things, and the menu only shows one.** The row lights up
+as soon as a scene is open somewhere — but a motion is laid ON a character, and that character is
+the one you picked in the scene. **With no character picked, the row stays lit and does nothing**,
+without a word. It is the one row of this menu that stays lit while something is missing —
+everywhere else, what is missing greys out: pick the character in the scene first, then start the
+motion.
+
+**Edit the image is the row that opens a tab**, and it only appears on a texture or a sky already
+on disk: those two are assembled in their own workspace — one holds channels, the other a
+projection — and neither writes back the picture underneath. Retouching it therefore happens in
+Image, and the tab opened is the asset's own.
+
+**Extract its textures only speaks to a mesh**, and it is the other half of the same need: the
+pictures the model carries inside come out onto the project's shelf, where they become assets like
+any other — and so can be retouched. The row is greyed as long as the model is not on your disk,
+like **Show in folder**.
+
+Each destination carries its workspace's icon, the same one as in the title bar. The menu only
+shows destinations able to take **that type**: right-clicking a sound does not offer to lay it out
+as a sky.
 
 **A destination whose workspace has no open document does stay listed, but greyed out.** That is
 deliberate: a menu whose length changes with what is open is a menu you cannot learn. A greyed row
 tells you what to do — open a document in that workspace — where a missing row tells you nothing.
 
 It is also what to look at when a send leads nowhere: right-click
-shows in one go what this asset can do, and what is missing for it to do it.
+shows in one go what this asset can do, and what is missing for it to do it — **with the single
+reservation of Make the character play it**, said above.
 
 ### Double-click opens the asset, it sends it nowhere
 
@@ -184,7 +211,7 @@ The asset's kind picks its editor, and nothing else weighs in:
 | a **picture** | the Image workspace |
 | a **texture** | the Textures workspace |
 | a **sky** | the Skyboxes workspace |
-| a **mesh** | the 3D workspace |
+| a **mesh** | the Modelling workspace |
 | a **sound** | the Audio workspace |
 | a **video** | the Video workspace |
 
@@ -199,7 +226,8 @@ editor takes, or an asset not yet down on your disk — not a broken one.
 
 | You drag… | Onto… | Result |
 |---|---|---|
-| any asset | the **timeline** | a clip on the track you aimed at |
+| any asset | the **timeline** | a clip on a track that can take it |
+| a 3D scene, from the Explorer | the **timeline** | it becomes a live clip there |
 | an image | the Image workspace **canvas** | it becomes one more layer, armed |
 | an image | a **material** preview | it becomes the base colour |
 | an image | a specific **channel**'s thumbnail | it becomes that channel |
@@ -207,10 +235,35 @@ editor takes, or an asset not yet down on your disk — not a broken one.
 | a mesh | the **3D view** | it enters the scene, at the origin |
 | a sound | the **audio editor** | it joins the edit as a clip, and that clip is what you edit |
 | an asset | an **asset field** of a generation form | it becomes that field's input |
+| a motion, or a mesh that carries one | a **sub-track** of the band, in 3D | it becomes a block there, where you release it |
+| an image | a texture row of the **Inspector** — a material's maps, a sprite's picture | it fills that row, and that row only |
+| a sky | the **Sky** row of the Inspector, in 3D as in Textures | it lights the preview |
+| any asset | a **folder row** of the Explorer | its file is moved there |
 
-**The timeline does not sort.** It takes what it is given: an asset with no duration of its own
-gets a default one rather than a refusal. In the 3D view the drop is accepted **anywhere on the
-view**, toolbar included: a release landing beside it would be a miss you cannot see coming.
+**The timeline does not sort on duration**: an asset with no duration of its own gets a default
+one rather than a refusal. It does sort **tracks**, and a release that finds none stays without
+effect — see [Placing a first clip](10-video-workspace.md#placing-a-first-clip). In the 3D view
+the drop is accepted **anywhere on the view**, toolbar included: a release landing beside it would
+be a miss you cannot see coming.
+
+**In the centre, a drop nobody takes is not a drop lost**: over the tabbed area, an asset no
+document will have opens in its own workspace, as a double-click would — a picture dropped on the
+3D view opens an image document. The same holds when nothing is open: the empty centre takes the
+drop.
+
+**In the columns and in the band, a refused drop has no effect at all**, and nothing says so: a
+channel's thumbnail takes pictures only, and there is nobody behind it to catch the rest.
+
+**The Explorer is the only one of these drops that does not bring the asset into a document: it
+MOVES its file**, as Finder would — and an asset from the library is fetched first. This is a
+different gesture from the one in [The Projects panel](04-projects.md#the-gestures), which files a
+row **of** the Explorer: here the asset comes from the shelf. The blank counts too — under the
+cards it means the folder on screen, under the tree the project root — but that one does not light
+up.
+
+**And this drop carries two silences.** An asset the studio holds no file of does not move: the row
+lights up all the same, the kind being readable only at the release. The pointer also shows the `+`
+of a copy, while the file is in fact **moved**.
 
 ---
 
@@ -257,6 +310,8 @@ A small mark says where an asset stands with respect to the library:
 | **Changed on both sides** | the two versions have diverged |
 | **The last upload failed** | the previous attempt did not go through |
 | **Belongs to another project** | the online twin answers to a different API key than the active one |
+| **In your library — not on this disk** | the asset exists online under your key, with no file here |
+| **Published by somebody else — not on this disk** | it is not yours; a double-click or a drag and drop fetches it |
 
 **The first two only ever draw in list view.** On a thumbnail, "local only" and "in sync" stay
 silent: those are the two ordinary states, and marking them would cover the grid in dots that say
@@ -275,9 +330,10 @@ again — same file, different library on the other end.
 > to another in the title bar, and it wears the badge. That is the paragraph above at work, not a
 > syncing case.
 >
-> The **Location** filter still offers only four states — *local only*, *in sync*, *to send* and
-> *failed*. "Another project" can therefore show on a thumbnail without being available to filter
-> on.
+> The **Location** filter does not offer it, though. Three badges stay out of that list, each for
+> its own reason: "another project" cannot be reached while the shelf reads one key, "fetching"
+> lasts under a second, and "file not found" is not a place an asset is. They can therefore show
+> on a thumbnail without being available to filter on.
 
 ### Sending a selection
 
@@ -425,23 +481,16 @@ without having run `pnpm ffmpeg:fetch`.
 
 ## Where your files really are
 
-Everything is in the project folder, in a precise and readable place:
+**Wherever you put them.** A generated asset lands in one of the seven starter folders — see
+[What you find there](#what-you-find-there) — and nothing holds it there: move it, file it in a
+tree of your own, the shelf keeps showing it and its entry follows. The layout of the project
+folder is described in [Projects](04-projects.md#what-is-inside).
 
-```
-My project/
-└── assets/
-    ├── img/     images
-    ├── vid/     videos
-    ├── aud/     sounds
-    ├── 3d/      3D objects
-    ├── tex/     textures
-    └── sky/     skies
-```
+These are **real files, in real formats**. You can open them with any other software, copy them,
+send them.
 
-These are real files, in real formats. You can open them with any other software, copy them, send
-them.
-
-**Except imported media**, which stay where they were — that is the whole point of the link.
+**Except imported media**, which stay where they were — that is the whole point of the link. Until
+you edit them: the saved version is written into the project.
 
 ---
 

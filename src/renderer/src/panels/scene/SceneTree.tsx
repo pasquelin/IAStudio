@@ -3,14 +3,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Row } from '@/design/Row'
 import { Tree, type TreeNode } from '@/design/Tree'
-import { canReparent, type SceneNode } from '@/engines/scene/scene-state'
+import { canReparent, type SceneNode } from '@/engines/scene/sceneState'
 import { SceneNodeRow } from '@/panels/shared/SceneNodeRow'
 import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
 import { reparentNode } from '@/engines/scene/commands'
-import { openSceneNodeMenu } from '@/spaces/three/SceneNodeMenu'
-import { runSceneCommand, toggleNodeVisible } from '@/spaces/three/scene-commands'
-import { sceneEngineOf } from '@/stores/scene-engines'
+import { openSceneNodeMenu } from '@/spaces/three/sceneNodeMenu'
+import { runSceneCommand, toggleNodeVisible } from '@/spaces/three/sceneCommands'
+import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
+import { sceneNodeDrag } from './dragged'
 
 /** The synthetic root. It is not a node: it has no transform, no visibility and no delete. */
 const SCENE_ROOT = 'scene-root'
@@ -62,7 +63,11 @@ export function SceneTree({ documentId }: { documentId: string }) {
       selectable={item => item.node !== null}
       // The root stands for the scene, so dropping onto it is how a node comes back out of a
       // group.
-      onDrop={(id, parentId) => {
+      // One row at a time: `dragMultiple` is off here, so the batch is always the row itself.
+      onDrop={(ids, parentId) => {
+        const id = ids[0]
+        if (id === undefined) return
+
         const wanted = parentId === SCENE_ROOT ? null : parentId
         const node = nodes.find(candidate => candidate.id === id)
         // Refused here rather than by the command: a move that changes nothing — dropping a row
@@ -73,6 +78,18 @@ export function SceneTree({ documentId }: { documentId: string }) {
         useScenes.getState().runCommand(documentId, reparentNode(id, wanted))
         // Opened, or the node just moved would vanish into a folded branch.
         if (wanted) setExpandedIds(current => new Set(current).add(wanted))
+      }}
+      // A second channel beside the tree's own, which reparents: this one is what the animation
+      // band reads to put an object on itself. The tree knows nothing of it, and it knows nothing
+      // of the tree — see `onDragStart` on `Tree`.
+      onDragStart={(item, event) => {
+        if (!item.node) return
+        // The whole selection when the row dragged is part of it, so six objects land in one
+        // gesture; the row alone otherwise, which is what dragging an unselected row means.
+        sceneNodeDrag.start(
+          event,
+          selectedIds.includes(item.node.id) ? selectedIds : [item.node.id],
+        )
       }}
       onSelect={(ids, mode) => selectIn(documentId, ids, mode)}
       onToggle={id =>
@@ -96,6 +113,7 @@ export function SceneTree({ documentId }: { documentId: string }) {
           t,
           run: command => runSceneCommand(documentId, command),
           onToggleVisible: () => toggleNodeVisible(documentId, node.id),
+          onSheet: sceneOf(useScenes.getState(), documentId).animation.sheet.includes(node.id),
           onRename: () => openRename(node.id),
         })
       }}

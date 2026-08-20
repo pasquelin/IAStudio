@@ -25,29 +25,31 @@ The second point is what matters most. A sunset sky does not merely fill the bac
 raking orange light over everything in front of it.
 
 > **A sky made here lights your 3D scenes.** Once it is saved in the project, it can be chosen in
-> the 3D workspace's Inspector, under **Environment**: the scene lights up, and the materials
+> the Modelling workspace's Inspector, under **Environment**: the scene lights up, and the materials
 > reflect it. That is a skybox's real use, beyond scenery — see
-> [3D workspace](09-3d-workspace.md).
+> [Modelling workspace](09-modelling-workspace.md).
 
 ---
 
 ## Three ways to get a sky
 
-**First, open a sky document** with the `+` button on the left rail. The three paths below fill an
-open tab; none of them creates one.
+| Path | How | Where it lands |
+|---|---|---|
+| **Double-click** | on a **panorama** in the shelf | in a sky tab **of its own**, opened for it |
+| **Drag and drop** | from the shelf onto the preview, anywhere on it | in the tab **in front of you** |
+| **Generate** | pick a sky model and launch a generation | in the document it started from, **by itself** |
 
-| Path | How |
-|---|---|
-| **Double-click** | on a picture in the shelf, with the sky tab in front |
-| **Drag and drop** | from the shelf onto the preview, anywhere on it |
-| **Generate** | pick a sky model and launch a generation: it lands **by itself** in the document it started from |
+**Double-click is the only one of the three that opens a tab**; the other two fill the one you
+already have, which the `+` button on the left rail creates empty. And it only holds for a
+**panorama**: an ordinary picture, double-clicked, goes to the Image workspace, which is the one of
+its kind — to set it as a sky, use drag and drop or right-click ▸ **Use as sky**.
 
 While no image is placed, the preview shows: "No skybox yet. Generate one or drop an
 equirectangular panorama."
 
 > **Only things that can be looked at are accepted**: a picture, a material or another sky,
-> provided it is on your disk. A sound or a video dropped there is ignored in silence — nothing
-> breaks, nothing changes.
+> provided it is on your disk. A sound or a video dropped there does not change the sky: it opens
+> in its own workspace, as a double-click would — see [Assets](07-assets.md).
 >
 > On the other hand, **any picture goes through**, not only a true panorama. An ordinary photo
 > placed as a sky will look strangely stretched: that is normal, the workspace expects an
@@ -67,9 +69,10 @@ This is **not** a camera orbiting something — you are at the centre of the sph
 you. The drag follows your hand: pulling to the right turns the view to the left, as if you were
 grabbing the world.
 
-### The View panel
+### Projection and helpers
 
-In the right column, under the Skybox panel. Two sections.
+The **Inspector**'s first two sections, right at the top: how you look is what the rest is judged
+under.
 
 **Projection**
 
@@ -99,7 +102,7 @@ In the right column, under the Skybox panel. Two sections.
 > rulers, nothing else: a menu laid over the preview would cover the one thing this workspace
 > exists to show.
 
-**Two keys skip the panel**: `V` cycles through the four views, `P` shows or hides the test
+**Two keys skip the inspector**: `V` cycles through the four views, `P` shows or hides the test
 objects. `⌘Z` and `⇧⌘Z` undo and redo here as anywhere else — see [Every shortcut](15-shortcuts.md).
 
 **The test objects** are spheres set in the middle of the sky: one matte, one glossy, one metallic.
@@ -111,9 +114,11 @@ little but closely; a wide angle shows a lot, but the edges distort.
 
 ---
 
-## The Skybox panel
+## The sky inspector
 
-In the right column. Four sections.
+The right column holds one panel, and it describes the open sky: there is nothing to select, and
+everything it shows belongs to the document. Six sections — the two above, which say how you LOOK,
+then the four that follow.
 
 > **None of these settings rewrites your image.** They are instructions applied to the display. The
 > original file stays intact, and your settings can be replayed indefinitely.
@@ -186,7 +191,7 @@ place. Two ways to carry on:
 
 ## Taking the sky out: the six faces
 
-**File › Export the sky**, then a size: 512, 1024 or 2048 pixels a side. The studio asks for a
+**File › Export › Sky**, then a size: 512, 1024 or 2048 pixels a side. The studio asks for a
 folder, creates one named after the document inside it, and writes six PNGs:
 
 | File | Face |
@@ -221,7 +226,7 @@ folder chooser for six empty files.
 
 ## What is still missing
 
-- **the Regenerate and Reset buttons** — the panel does not place them;
+- **the Regenerate and Reset buttons** — the inspector does not place them;
 - **HDRI export** — the six faces come out as PNG, so eight bits a channel: anything above white
   is clipped. For high dynamic range lighting there is no output yet;
 - **importing a `.hdr`** — the studio only imports ordinary images. An imported `.exr` is catalogued

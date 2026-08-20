@@ -2,8 +2,8 @@ import { CHANNELS, type LogScope } from '@shared/ipc'
 import type { ActivityTopic } from '@shared/domain/activity'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
-import type { ActivityLog } from '@main/project/activity-log'
-import { parseLogEntry } from './validation'
+import type { ActivityLog } from '@main/project/activityLog'
+import { parseLogEntry, parseTraceEntry } from './validation'
 
 /**
  * Which part of the journal a renderer scope belongs to. A closed union on both sides, so a new
@@ -13,11 +13,19 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'scene.model': 'document',
   'scene.bvh': 'document',
   'scene.texture': 'document',
+  'scene.animation': 'document',
   'scene.export': 'document',
   'scene.render': 'document',
+  // With the document although what it writes lands in the project: the subject is the scene
+  // that could not be drawn, and the tab is what the user has to act on.
+  'scene.capture': 'document',
   // With the document, as every other export is: it writes outside the project, and what its
   // failure says something about is the sequence that was open.
   'sequence.export': 'document',
+  'sequence.import': 'document',
+  // With the PROJECT, unlike its neighbours: this one writes inside the project folder, and what
+  // a reader looks for afterwards is the folder that was or was not created.
+  'document.export': 'project',
   'texture.map': 'document',
   'texture.channel': 'document',
   'texture.seam': 'document',
@@ -30,10 +38,15 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'skybox.source': 'document',
   'skybox.export': 'document',
   'canvas.layer': 'document',
+  'canvas.place': 'document',
   // With the document, not the shelf: what these three sites are about is a document that does
   // not measure its picture. The asset is the victim, the document is the subject — and reading
   // them by subject is how a user finds the tab to fix.
   'canvas.size': 'document',
+  // Same reading as its neighbour: the subject is the document that outgrew its source file,
+  // and the tab is what the user has to act on.
+  'canvas.flatten': 'document',
+  'canvas.edit': 'document',
   'image.export': 'document',
   'document.load': 'document',
   'document.save': 'document',
@@ -42,6 +55,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'document.rename': 'document',
   'assets.reveal': 'library',
   'assets.rename': 'library',
+  'assets.retype': 'library',
   // An asset with nowhere to go is read with the shelf it was double-clicked in, not with the
   // document that refused it — there is none, and that is exactly what the line says.
   'assets.open': 'library',
@@ -52,6 +66,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   // The copy lands in the shelf, and that is where a user goes looking for it — including in the
   // one case where it arrived and no document names it.
   'assets.copy': 'library',
+  // The sheet is made OF the shelf's pictures and is asked for from its bar, so a refusal is read
+  // beside the tiles it was asked over — not with a document, which a sheet does not belong to.
+  'assets.contactSheet': 'library',
   // `import`, with the lines the extraction itself writes: what it produces is bytes landing in
   // the project, and a failure filed away from its own outcome reads as a different event.
   'assets.extract': 'import',
@@ -70,6 +87,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   // A monitor belongs to the sequence it shows, so this is read where that document's own
   // failures are — not with the shell's, which is where the window and its menus report.
   'sequence.mirror': 'document',
+  // With the PROJECT, not the library: what failed is a question about a file in the project
+  // folder, asked before any asset exists — and the folder is where the reader will look.
+  'explorer.open': 'project',
 }
 
 /**
@@ -95,5 +115,12 @@ export function registerDiagnosticsHandlers(journal: () => ActivityLog): void {
       messageKey: `activity.scope.${scope}`,
       detail: message,
     })
+  })
+
+  // The journal is deliberately not written here: what reaches this channel names no gesture and
+  // no document, so a row would raise a toast the reader can do nothing about.
+  handle(CHANNELS.diagnosticsTrace, (_event, entry) => {
+    const { scope, message } = parseTraceEntry(entry)
+    log.error(`renderer/${scope}`, message)
   })
 }

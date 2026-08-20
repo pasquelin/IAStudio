@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Collection } from '@/design/Collection'
+import { Collection } from '@/design/Collection/Collection'
 import { EmptyState } from '@/design/EmptyState'
-import { NODE_KINDS, type PanelNodeType } from '@/engines/scene/node-kinds'
-import { nodesOfType } from '@/engines/scene/scene-state'
+import { NODE_KINDS, type PanelNodeType } from '@/engines/scene/nodeKinds'
+import { nodesOfType } from '@/engines/scene/sceneState'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { SceneNodeRow } from './SceneNodeRow'
 

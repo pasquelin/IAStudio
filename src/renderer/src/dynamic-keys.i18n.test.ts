@@ -3,19 +3,33 @@ import { isRecord } from '@shared/guards'
 import { LANGUAGES, TRANSLATIONS, type Language } from '@shared/i18n'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
+import { BODY_PARTS } from '@shared/domain/humanoid'
+import { ROOT_MOTIONS } from '@shared/domain/scene'
+import { EASINGS } from '@shared/domain/animation'
+import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import {
   ADJUSTMENT_KINDS,
-  BLEND_MODES,
   LAYER_KINDS,
+  SHAPE_KINDS,
   type LayerKind,
-} from '@/engines/canvas/canvas-state'
-import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timeline-state'
-import { LAYER_LOCKS } from '@/panels/layers/layer-locks'
+} from '@/engines/canvas/canvasState'
+import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timelineState'
+import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
-import { ADD_ENTRIES } from '@/engines/scene/node-kinds'
-import { ASSET_INTENTS } from '@/helpers/asset-intents'
-import { TRACK_FLAGS } from '@/panels/timeline/track-flags'
-import { DOCUMENT_NAME_REFUSALS } from '@/app/document-name'
+import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
+import { ENVIRONMENT_PRESETS } from '@/engines/scene/environmentPresets'
+import { SHADOW_LEVELS } from '@/engines/scene/shadowLevels'
+import { RIG_STATUSES, type RigStatus } from '@/engines/scene/rigState'
+import { RIG_FIT_FAULTS, type RigFitFault } from '@/engines/scene/rigFit'
+import { CHARACTER_KINDS } from '@/panels/inspector/RigSection'
+import { ASSET_INTENTS } from '@/helpers/assetIntents'
+import { FOLDER_SORTS } from '@/helpers/folderSort'
+import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
+import { DOCUMENT_NAME_REFUSALS } from '@/newDocument/documentName'
+import { DOCUMENT_KINDS } from '@shared/domain/document'
+import { SCENE_TEMPLATE_GROUPS, SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
+import { FILE_KINDS } from '@shared/domain/folder'
+import { FILE_INFO_SECTIONS } from '@/fileInfo/sections'
 
 function resolve(code: Language, key: string): unknown {
   // Widened, not cast: the bundle's inferred type has no index signature, and every key here is
@@ -24,6 +38,11 @@ function resolve(code: Language, key: string): unknown {
   return key
     .split('.')
     .reduce<unknown>((current, part) => (isRecord(current) ? current[part] : undefined), bundle)
+}
+
+/** The label AND the sentence beside it — the shape `choicesOf` composes, missing in two ways. */
+function explained(prefix: string, values: readonly string[]): string[] {
+  return values.flatMap(value => [`${prefix}${value}`, `${prefix}${value}Hint`])
 }
 
 /**
@@ -43,10 +62,32 @@ const COMPOSED_KEYS: readonly string[] = [
   // The sentence beside each of them. A menu row explains what it does, and the explanation is
   // composed the same way the label is — so it goes missing the same way, and is caught here.
   ...ADJUSTMENT_KINDS.map(kind => `adjustment.${kind}Hint`),
+  // The label as well as the sentence, since the padlocks compose their key from `LOCK_KEYS`:
+  // written out, the three labels were literals that `known-keys` read, and it no longer can.
+  ...LAYER_LOCKS.map(padlock => padlock.labelKey),
   ...LAYER_LOCKS.map(padlock => `${padlock.labelKey}Hint`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}Hint`),
   ...BLEND_MODES.map(mode => `blend.${mode}`),
   ...LAYER_KINDS.map(kind => `inspector.layerKind_${kind}`),
+  // What a shape layer is CALLED when the hand finishes drawing it. A kind with no name would
+  // put a raw key in the stack, on the one row the user has to find the shape back by.
+  ...SHAPE_KINDS.map(kind => `layers.shapeName_${kind}`),
+  // What the inspector says an imported model IS. A state with no sentence would read as the
+  // raw key on the one surface that tells a user their model cannot be animated yet.
+  ...RIG_STATUSES.map(status => `inspector.rigStatus_${status}`),
+  // Why a mesh cannot take a skeleton. Composed the same way, and it stands in for the button
+  // itself: a fault with no sentence would leave the user a raw key where the offer used to be.
+  ...RIG_FIT_FAULTS.map(fault => `inspector.rigFault_${fault}`),
+  // The four answers to « what is this », in the dialogue that lays a skeleton.
+  ...CHARACTER_KINDS.map(kind => `inspector.characterKinds.${kind}`),
+  // Which half of a body a block drives. A part with no sentence would read as a raw key inside
+  // the one control that makes two animations stack rather than average.
+  ...BODY_PARTS.map(part => `inspector.clipPart_${part}`),
+  // Whether a block moves the character or plays on the spot. Same control, same trap.
+  ...ROOT_MOTIONS.map(motion => `inspector.rootMotion_${motion}`),
+  // How a camera picks up speed along its rail. The only control of the shot section whose rows
+  // are composed, so a fifth curve would read as a raw key inside a camera move.
+  ...EASINGS.map(easing => `inspector.easing_${easing}`),
   ...TRACK_KINDS.map(kind => `inspector.kind_${kind}`),
   ...TRACK_FLAGS.map(flag => `inspector.${flag.key}`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}`),
@@ -56,13 +97,36 @@ const COMPOSED_KEYS: readonly string[] = [
   // Everything a scene can gain: the panels' add menus draw the mesh and light families, and
   // the 3D bar's own add menu draws all three — `objects` included, which is why it is here.
   ...ADD_ENTRIES.flatMap(({ labelKey }) => [labelKey, `${labelKey}Hint`]),
+  // The orders the explorer's bar offers, composed from the union rather than written beside it.
+  ...FOLDER_SORTS.map(sort => `explorer.sort.${sort}`),
   ...WORKSPACE_IDS.map(workspace => `home.tools.${workspace}`),
+  // The heading of each run of the file information window, composed from the section it draws.
+  ...FILE_INFO_SECTIONS.map(id => `fileInfo.sections.${id}`),
+  // What the disk answers an entry IS — composed from the fact, not written beside it.
+  ...FILE_KINDS.map(kind => `fileInfo.kind.${kind}`),
   // The rail label, built by `workspaceLabelKey` — the most visible string in the window, and
   // the one thing the workspace table does NOT make the compiler demand of a new space.
   ...WORKSPACE_IDS.map(workspace => `workspaces.${workspace}`),
   // Why a typed name was refused, read off the failure the shared check answers with. The
   // compiler holds the other half — the record has one entry per failure or it does not build.
   ...Object.values(DOCUMENT_NAME_REFUSALS),
+  // The two unions the 3D environment panel owns itself — the rest of its rows come from
+  // `domain/scene` and are held next door. A sixth look or a fifth shadow level without its line
+  // reads as its own key inside the panel that settles how a scene is lit.
+  ...explained('environment.preset_', ENVIRONMENT_PRESETS),
+  ...explained('environment.shadows_', SHADOW_LEVELS),
+  // What a document of this kind is CALLED — the word a blank one is named after, « Scène 1 ».
+  // A kind with no word would name every new document of that space `documents.kinds.x 1`.
+  ...DOCUMENT_KINDS.map(kind => `documents.kinds.${kind}`),
+  // The heading of the field that names it, one per kind for the article French puts in front.
+  ...DOCUMENT_KINDS.map(kind => `documents.newByKind.${kind}`),
+  // What a new scene may open on: the tile's name, and the sentence that says what it holds. A
+  // template with neither would read as its own id inside the window that offers it.
+  ...SCENE_TEMPLATE_IDS.flatMap(id => [
+    `documents.templates.${id}`,
+    `documents.templateHints.${id}`,
+  ]),
+  ...SCENE_TEMPLATE_GROUPS.map(group => `documents.templateGroups.${group}`),
 ]
 
 describe('the keys the renderer composes', () => {
@@ -85,6 +149,7 @@ describe('the lists behind those keys', () => {
       group: true,
       adjustment: true,
       text: true,
+      shape: true,
     }
 
     expect([...LAYER_KINDS].sort()).toEqual(Object.keys(all).sort())
@@ -100,6 +165,24 @@ describe('the lists behind those keys', () => {
     const all: Record<TrackKind, true> = { video: true, audio: true }
 
     expect([...TRACK_KINDS].sort()).toEqual(Object.keys(all).sort())
+  })
+
+  it('holds every reason a mesh cannot take a skeleton', () => {
+    const all: Record<RigFitFault, true> = { noGeometry: true, lyingDown: true }
+
+    expect([...RIG_FIT_FAULTS].sort()).toEqual(Object.keys(all).sort())
+  })
+
+  it('holds every state an imported model can be in', () => {
+    const all: Record<RigStatus, true> = {
+      staticMesh: true,
+      skinnedMesh: true,
+      riggedCharacter: true,
+      animatedCharacter: true,
+      skeletonOnly: true,
+    }
+
+    expect([...RIG_STATUSES].sort()).toEqual(Object.keys(all).sort())
   })
 
   it('holds every channel a material carries', () => {

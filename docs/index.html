@@ -119,7 +119,7 @@
       <div class="panel__head">
         <p class="eyebrow" data-fx data-rise="16">Accueil · le point de départ</p>
         <h2 data-fx data-split data-delay="80">Un projet est un dossier. Rien de plus.</h2>
-        <p class="lede" data-fx data-rise="22" data-delay="320">Ouvrez un dossier, il devient un projet : documents, assets importés, générations. Tout reste sur le disque, lisible sans l'application, versionnable comme n'importe quel répertoire de travail.</p>
+        <p class="lede" data-fx data-rise="22" data-delay="320">Ouvrez un dossier, il devient un projet : documents, assets importés, générations. Tout reste sur le disque, dans des formats que d'autres logiciels lisent déjà — OpenRaster, OpenTimelineIO, glTF, MaterialX —, exploré depuis l'application et versionné par git sans quitter la fenêtre.</p>
       </div>
     </div>
 
@@ -127,7 +127,7 @@
       <div class="stage__pin">
         <div class="stage__frame frame frame--glow">
           <img src="assets/images/accueil.webp" width="1800" height="1129"
-               alt="Écran d'accueil : bandeau de reprise du dernier projet, liste des projets ouverts, raccourcis vers les six ateliers, explorateur des générations et panneau bibliothèque." loading="eager">
+               alt="Écran d'accueil : bandeau de reprise du dernier projet, liste des projets récemment ouverts, raccourcis vers les six ateliers, fil des créations publiées par tous, et panneau bibliothèque du compte." loading="eager">
         </div>
         <p class="stage__hint">Continuer à défiler</p>
       </div>
@@ -193,11 +193,11 @@
       <div class="mode__text" data-fx data-still data-speedx="0.026">
         <p class="eyebrow" data-fx data-rise="0" data-shift="-20">Atelier · sortie .glb</p>
         <h2 class="mode__title" data-fx data-split data-delay="60">3D</h2>
-        <p class="lede" data-fx data-rise="0" data-shift="-24" data-delay="220">Un maillage généré, posé dans une scène qu'on éclaire, qu'on anime et qu'on exporte.</p>
+        <p class="lede" data-fx data-rise="0" data-shift="-24" data-delay="220">Une maille générée, posée dans une scène qu'on éclaire, qu'on anime et qu'on exporte.</p>
         <ul class="mode__list" data-stagger="60" data-stagger-rise="0" data-stagger-shift="-26">
           <li><b>Viewport</b>Grille, gizmo d'orientation et compteur en surimpression : triangles, sommets, appels de dessin, mémoire de textures.</li>
-          <li><b>Éclairage</b>Ambient, Directional et Hemisphere exposés en pistes, avec images clés sur la timeline.</li>
-          <li><b>Export</b>Le maillage part en .glb dans le dossier assets du projet, prêt pour un moteur.</li>
+          <li><b>Éclairage</b>Cinq sources — ambiante, directionnelle, hémisphérique, ponctuelle, projecteur — exposées en pistes, avec images clés sur la timeline.</li>
+          <li><b>Export</b>La maille part en .glb là où vous la déposez, prête pour un moteur.</li>
         </ul>
       </div>
       <figure class="mode__shot" data-fx data-still data-speedx="-0.036">
@@ -226,7 +226,7 @@
         <p class="lede" data-fx data-rise="14" data-shift="-14" data-delay="220">Un canevas à calques, où la génération est un outil parmi les autres.</p>
         <ul class="mode__list" data-stagger="60" data-stagger-rise="14" data-stagger-shift="-14">
           <li><b>Calques</b>Empilement, visibilité, verrouillage. Chaque génération arrive en calque, au-dessus de ce qui existe déjà.</li>
-          <li><b>Outils</b>Déplacement, sélection, cadre, pinceau, texte, gomme, pot de peinture, pipette.</li>
+          <li><b>Outils</b>Déplacement, main, mise à l'échelle, cadre, sélection, formes, pinceau, crayon, gomme, texte, remplissage du calque, pipette.</li>
           <li><b>Traçabilité</b>L'inspecteur garde le modèle qui a produit le calque, son poids et sa date de création.</li>
         </ul>
       </div>
@@ -283,17 +283,17 @@
       <div class="mode__text" data-fx data-still data-speedx="-0.026">
         <p class="eyebrow" data-fx data-rise="0" data-shift="-20">Atelier · sortie .png ×4</p>
         <h2 class="mode__title" data-fx data-split data-delay="60">Textures</h2>
-        <p class="lede" data-fx data-rise="0" data-shift="-24" data-delay="220">Un matériau, pas une image : chaque canal est produit puis vérifié séparément.</p>
+        <p class="lede" data-fx data-rise="0" data-shift="-24" data-delay="220">Une matière, pas une image : chaque canal est produit puis vérifié séparément.</p>
         <ul class="mode__list" data-stagger="60" data-stagger-rise="0" data-stagger-shift="-26">
-          <li><b>Canaux</b>Couleur de base, Normale, Rugosité, Métal. Générés ensemble, exportés fichier par fichier.</li>
-          <li><b>Aperçu</b>Le matériau est appliqué sur un volume de test — sphère, cube, cylindre, plan — et éclairé en temps réel, avant l'export.</li>
+          <li><b>Canaux</b>Huit : Couleur de base, Normale, Rugosité, Métal, Occlusion, Hauteur, Émission, Cavité. Sept sortent d'une génération, l'Émission se règle ici même ; tous s'exportent fichier par fichier.</li>
+          <li><b>Aperçu</b>La matière est appliquée sur un volume de test — sphère, cube, cylindre, plan, nœud — et éclairé en temps réel, avant l'export.</li>
           <li><b>Raccords</b>Canaux tuilables en 4096 × 4096, utilisables tels quels dans un moteur.</li>
         </ul>
       </div>
       <figure class="mode__shot" data-fx data-still data-speedx="0.036">
         <div class="frame" data-fx data-rise="0" data-zoom="0.05">
           <img src="assets/images/textures.webp" width="1800" height="1129" data-depth
-               alt="Atelier Textures : cube de prévisualisation portant le matériau, panneau Canaux avec couleur de base et normale, inspecteur du matériau, bandeau de textures générées." loading="lazy">
+               alt="Atelier Textures : cube de prévisualisation portant la matière, inspecteur ouvert sur les canaux — couleur de base et normale — puis sur les réglages de la matière, bandeau de textures générées." loading="lazy">
         </div>
         <figcaption class="chipset" data-stagger="50" data-stagger-rise="0" data-stagger-shift="-18">
           <span>4096 × 4096</span><span>4 canaux</span><span>Aperçu sur volume</span><span>Export séparé</span>
@@ -316,7 +316,7 @@
         <p class="lede" data-fx data-rise="14" data-shift="-14" data-delay="220">Un ciel qui sert de décor et, en même temps, de source de lumière.</p>
         <ul class="mode__list" data-stagger="60" data-stagger-rise="14" data-stagger-shift="-14">
           <li><b>Projections</b>360°, équirectangulaire, croix, six faces. On bascule d'une vue à l'autre sans réexporter.</li>
-          <li><b>Contrôle</b>Champ de vision réglable et objets de test, pour juger la lumière sur une sphère mate et une sphère brillante.</li>
+          <li><b>Contrôle</b>Angle de vue réglable et objets de test, pour juger la lumière sur une sphère mate et une sphère brillante.</li>
           <li><b>Usage</b>Le ciel produit ici éclaire directement la scène de l'atelier 3D.</li>
         </ul>
       </div>
@@ -339,8 +339,8 @@
        ================================================================ -->
   <div class="ticker" aria-hidden="true" data-ticker>
     <div class="ticker__row">
-      <div class="ticker__set"><span>Texte → Image</span><span>Image → Image</span><span>Détourage</span><span>Reframe</span><span>Découpe</span><span>Texte → Vidéo</span><span>Séquence → Vidéo</span><span>Montage</span><span>Concaténation</span><span>Image → 3D</span><span>Voxel</span><span>Texte → Audio</span><span>Matériau PBR</span><span>Couleur · Normale · Rugosité · Métal</span><span>Skybox 360°</span><span>Équirectangulaire</span></div>
-      <div class="ticker__set"><span>Texte → Image</span><span>Image → Image</span><span>Détourage</span><span>Reframe</span><span>Découpe</span><span>Texte → Vidéo</span><span>Séquence → Vidéo</span><span>Montage</span><span>Concaténation</span><span>Image → 3D</span><span>Voxel</span><span>Texte → Audio</span><span>Matériau PBR</span><span>Couleur · Normale · Rugosité · Métal</span><span>Skybox 360°</span><span>Équirectangulaire</span></div>
+      <div class="ticker__set"><span>Texte → Image</span><span>Image → Image</span><span>Détourage</span><span>Reframe</span><span>Découpe</span><span>Texte → Vidéo</span><span>Séquence → Vidéo</span><span>Montage</span><span>Concaténation</span><span>Image → 3D</span><span>Voxel</span><span>Texte → Audio</span><span>Matière PBR</span><span>Couleur · Normale · Rugosité · Métal</span><span>Skybox 360°</span><span>Équirectangulaire</span></div>
+      <div class="ticker__set"><span>Texte → Image</span><span>Image → Image</span><span>Détourage</span><span>Reframe</span><span>Découpe</span><span>Texte → Vidéo</span><span>Séquence → Vidéo</span><span>Montage</span><span>Concaténation</span><span>Image → 3D</span><span>Voxel</span><span>Texte → Audio</span><span>Matière PBR</span><span>Couleur · Normale · Rugosité · Métal</span><span>Skybox 360°</span><span>Équirectangulaire</span></div>
     </div>
   </div>
 
@@ -373,7 +373,7 @@
             <div class="cell">
               <span class="tag">Bibliothèque</span>
               <h3>Dossier de projet</h3>
-              <p>Un projet est un dossier lisible sans l'application. Import, export et catalogue partagent le même index.</p>
+              <p>Un projet est un dossier lisible sans l'application, exploré par un vrai navigateur de fichiers et suivi par git depuis le studio — branches, versions, conflits. Import, export et catalogue partagent le même index, qui retrouve ses fichiers même déplacés hors de l'application.</p>
             </div>
           </div>
         </div>
@@ -410,12 +410,12 @@
             <div class="cell">
               <span class="tag">Serveur MCP</span>
               <h3>Le studio se pilote de l'extérieur</h3>
-              <p>Un agent peut ouvrir un projet, lancer une génération et lire le catalogue, par les mêmes actions que l'interface.</p>
+              <p>222 actions en 14 familles, des documents aux assets, de la scène au montage, du fichier au dépôt git : un agent fait ce que fait l'interface, par les mêmes chemins.</p>
             </div>
             <div class="cell">
               <span class="tag">Charge</span>
               <h3>Le fil d'affichage reste libre</h3>
-              <p>Vignettes, formes d'onde, gros maillages et encodage vidéo partent sur le processeur graphique, dans des fils de calcul ou dans un processus à part.</p>
+              <p>Vignettes, formes d'onde, mailles lourdes et encodage vidéo partent sur le processeur graphique, dans des fils de calcul ou dans un processus à part.</p>
             </div>
           </div>
         </div>

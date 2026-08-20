@@ -9,9 +9,13 @@ en démonte chaque morceau.
 
 ## L’accueil, avant tout le reste
 
-Le studio s’ouvre sur un écran pleine largeur — l’accueil — qui dit où vous en étiez, ce que vous
-avez produit, et ce que vous pouvez faire. Il se ferme dès que vous entrez dans un espace de
-travail. Il n’a ni rail, ni panneau, ni onglet ; la ligne d’état reste en bas.
+Le studio s’ouvre sur l’accueil — un écran qui dit où vous en étiez, ce que le studio sait
+commencer, et ce que les autres ont publié. Il se ferme dès que vous entrez dans un espace de
+travail.
+
+**Il a la même charpente qu’un espace** : les deux rails, les deux colonnes de panneaux, la ligne
+d’état en bas. Ce qui change est le centre — une page qu’on déroule, au lieu d’onglets. **Il n’a
+pas d’onglets**, parce qu’il n’ouvre aucun document : il mène à ceux des autres espaces.
 
 ### La bannière, en haut
 
@@ -27,26 +31,30 @@ Elle n’affiche qu’une chose à la fois :
 Tant que le studio lit vos projets, elle reste muette plutôt que d’annoncer « Tout est prêt »
 puis de se corriger.
 
-### Les deux bandes
+### Les trois bandes
 
-Le centre empile deux bandes :
+Le centre empile trois bandes, dans cet ordre :
 
 | Bande | Ce qu’elle montre | Il faut |
 |---|---|---|
 | **Où vous en étiez** | la bannière : reprendre, connecter, ou créer | rien |
+| **Outils** | ce que le studio sait commencer, et de quoi créer ou ouvrir un projet | rien |
 | **Explorer** | ce que tout le monde a publié, par type | une clé API |
 
 **Une bande qui n’a pas ce qu’il lui faut n’est pas grisée : elle n’est pas là.** Sans clé API,
 **Explorer** n’existe pas sur cet écran.
 
-Tout le reste de l’accueil est un panneau, logé dans les deux colonnes — sauf la section
-**Outils**, au centre et en largeur : elle liste ce que le studio sait commencer, dans le même
-ordre que la barre des espaces, et permet d’y créer un projet.
+**Outils** liste les espaces dans le même ordre que la barre des espaces, avec **Nouveau projet**,
+**Ouvrir un projet** et **Réglages** à côté. C’est la bande qui parle encore sur une machine sans
+clé, sans projet et sans historique.
+
+Tout le reste de l’accueil est un panneau, logé dans les deux colonnes.
 
 ### Explorer, le fil sans fin
 
-Le fil de ce que **tout le monde** a publié, une catégorie à la fois — les six types du studio,
-en onglets. Pas d’onglet « tout ».
+Le fil de ce que **tout le monde** a publié, une catégorie à la fois — les six types que la
+bibliothèque distante sait rendre, en onglets. Pas d’onglet « tout », et **pas d’onglet
+Animation** : le studio en connaît un septième type, que le fil ne sait pas servir.
 
 - **il se charge en descendant** : le fil pagine tant que vous scrollez ;
 - **il reste en bas de page**, et ne se déplace pas ;
@@ -71,70 +79,55 @@ ne répond pas.
 C’est là, et nulle part ailleurs, qu’on rapatrie ; l’étagère, elle, sait envoyer — voir
 [Les assets](07-assets.md).
 
-**Un compteur mène à ses assets.** Cliquer celui des images ouvre l’espace Image avec le filtre
-posé. Un type à zéro ne répond pas. Le panneau reste affiché même sans projet, avec ses six types
-à zéro.
-
 ### Ranger la page
 
 **Masquer cette section**, au survol d’un titre de bande. Les sections masquées sont comptées en
 bas de page — « 1 section masquée » — avec un bouton **Les réafficher**.
 
-Seul **Explorer** porte ce bouton ; la bannière est épinglée.
+Seul **Explorer** porte ce bouton : **Où vous en étiez** et **Outils** sont épinglées, et c’est ce
+qui garantit que cet écran n’est jamais vide.
 
 ### La colonne de gauche
 
-Coupée en deux : en haut ce avec quoi on produit, en bas ce qu’on parcourt. **À l’accueil, seule
-la moitié basse existe.**
+Coupée en deux, comme dans les espaces : en haut ce avec quoi on produit, en bas ce qu’on
+parcourt. **L’accueil ne fabrique aucun document** — il mène à ceux des autres espaces — alors sa
+moitié haute va à ce dans quoi on produit : les projets.
 
 | Panneau | Moitié | Ce qu’il montre | Il faut |
 |---|---|---|---|
 | **Vos projets** | 1re | ceux que vous avez ouverts récemment, avec leur dossier, à rouvrir d’un clic — [son menu par ligne](04-projets.md#la-liste-des-projets-de-laccueil) | rien |
-| **Vos recettes** | 2de | les réglages que vous avez épinglés | rien |
-| **Une idée pour commencer** | 2de | des départs de prompt écrits pour votre modèle d’image | une clé API |
-| **Dans la même veine** | 2de | des créations publiques qui ressemblent à votre dernier asset | une clé API |
+| **Explorateur** | 2de | le projet ouvert, lu comme un dossier | un projet ouvert |
+| **Git** | 2de | ce qui a changé dans ce dossier depuis la dernière version enregistrée | un projet ouvert |
 
-**Vos recettes** vous suit d’un projet à l’autre : une recette est gardée en dehors des projets.
+**C’est le même Explorateur que dans les espaces**, à la même place — voir
+[Les projets](04-projets.md#parcourir-le-projet--le-panneau-explorateur). Il montre le dossier
+entier : vos documents, vos assets, et tout ce que vous y avez déposé vous-même.
 
-**Une idée pour commencer** n’appelle rien tant que vous ne cliquez pas **Proposez-moi une idée**.
-**C’est gratuit** — aucune unité créative n’est consommée. Prendre une idée ouvre le générateur
-sur le prompt **et** sur les réglages qui vont avec. Sans modèle d’image choisi, le panneau dit ce
-qu’il attend.
+**Sans projet ouvert, ces deux-là ne sont pas là du tout** — les seuls panneaux de l’accueil dans
+ce cas. Ailleurs, un panneau reste et dit ce qui lui manque ; ici ils diraient « aucun projet
+ouvert » juste à côté du panneau dont le métier est d’en ouvrir un.
 
-**Dans la même veine** part de votre **dernier asset**, nommé en tête du panneau, et cherche des
-créations publiques qui lui ressemblent. Si la bibliothèque ne répond pas, le panneau propose
-**Réessayer**.
+Le panneau **Git** lit le même dossier que l’Explorateur, sous un autre angle : non pas ce qu’il
+contient, mais ce qui y a changé depuis la dernière fois que vous avez enregistré un état. Les
+deux se relaient dans la même moitié — leurs icônes sont côte à côte dans le rail. Son mode
+d’emploi est au chapitre
+[Les projets](04-projets.md#enregistrer-des-versions--le-panneau-git).
 
 ### La colonne de droite
 
 | Panneau | Moitié | Ce qu’il montre | Il faut |
 |---|---|---|---|
-| **Ce que vous avez produit** | 1re | les générations de ce projet, la plus récente d’abord | un projet ouvert |
-| **Par type** | 1re | un nombre par type d’asset ; un type non nul mène à sa part de l’étagère | rien |
-| **Ce que vous avez consommé** | 1re | vos unités dépensées, en tout et par modèle | une clé API |
 | **Votre bibliothèque** | 1re | ce que votre compte détient en ligne | une clé API |
-| **Vos documents** | 1re | les documents du projet, ouverts ou non | un projet ouvert |
-| **Activité récente** | 2de | le journal du studio, filtrable | rien |
-| **En cours** | 2de | les générations du studio, en route et terminées | rien |
-
-**Ce que vous avez consommé** reprend la période de la fenêtre de consommation. C’est un résumé :
-le détail est dans **Aide ▸ Consommation…**.
-
-**En cours** est la liste qu’ouvre déjà le voyant de la barre d’état. Elle garde les générations
-terminées le temps de la session, pour qu’on puisse y lire ce qu’une exécution a coûté.
 
 **« Il faut » ne veut pas dire la même chose que pour les bandes.** Une bande à qui il manque
-quelque chose disparaît ; **un panneau reste et dit ce qui lui manque**. Sans projet, *Vos
-documents* propose d’en ouvrir un ; sans clé, *Votre bibliothèque* dit qu’elle n’a pas obtenu de
-réponse et offre de réessayer — même message qu’un refus du serveur. « La bibliothèque est vide »
-ne s’affiche que si la question a bien été posée.
+quelque chose disparaît ; **un panneau reste et dit ce qui lui manque**. Sans clé, *Votre
+bibliothèque* dit qu’elle est vide **ou** qu’aucune clé n’est renseignée, sans trancher — et si
+le serveur refuse, elle offre de **réessayer**.
 
-**Vos documents n’est pas l’Explorateur.** L’Explorateur parcourt le dossier du projet en
-arborescence ; ce panneau liste les documents eux-mêmes. **C’est ce qui rend retrouvable un
-document fermé.**
-
-**Activité récente est le journal complet**, avec ses filtres par niveau et par sujet — pas un
-extrait des dernières lignes.
+**Rien n’y est gardé.** La bibliothèque est relue à chaque visite, et les vignettes sont des
+adresses signées qui expirent ; les retenir ferait un panneau d’images cassées quinze jours plus
+tard, sans rien pour l’expliquer. Changer de clé la relit aussi : une autre clé est une autre
+bibliothèque.
 
 > **L’accueil peut être coupé.** **Réglages ▸ Général ▸ Afficher l’accueil** : décoché, le
 > studio va droit à l’espace que vous aviez quitté. Ce que vous masquez se règle sur l’accueil
@@ -241,20 +234,27 @@ dessous dans la seconde.
 
 | Élément | Ce qu’il fait |
 |---|---|
-| **+** (bouton bleu) | crée un **nouveau document** dans l’espace actif |
+| **+** (bouton bleu) | crée un **nouveau document** dans l’espace actif — à l’accueil, un **nouveau projet** |
 | *séparateur* | |
-| Icônes de la **moitié haute** | Modèles, puis Génération ; l’accueil y met **Vos projets** |
+| Icônes de la **moitié haute** | Modèles, Génération, puis Assets — ce que Scenario propose ; l’accueil y met **Vos projets** |
 | *séparateur* | |
-| Icônes de la **moitié basse** | l’Explorateur ; l’accueil y met ses trois étagères |
-| Tout en bas | Assets ou Timeline, selon l’espace |
+| Icônes de la **moitié basse** | l’Explorateur puis Git, à l’accueil comme dans les espaces |
+| Tout en bas | Timeline puis Historique, selon l’espace ; à l’accueil, l’Historique seul |
 
-> Le bouton **+** est grisé quand aucun projet n’est ouvert : un document est un fichier dans un
-> dossier de projet.
+> **Le bouton + fait ce que l’écran sait faire.** Dans un espace, il est grisé tant qu’aucun
+> projet n’est ouvert : un document est un fichier dans un dossier de projet. **À l’accueil il
+> n’est jamais grisé** — il crée le projet, et créer un projet n’en demande pas un.
 
 ### Le rail de droite
 
-Les icônes de la colonne de droite — Skybox, Vue, Calques, Canaux, Styles, Scène, Lumières,
-Mailles, Assets, celles que l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
+Les icônes de la colonne de droite — Calques, Scène, Lumières, Mailles, Animations, celles que
+l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
+
+En **Vidéo**, en **Audio**, en **Textures** et en **Skyboxes**, la moitié haute de cette colonne
+est vide : ces quatre espaces n’y déclarent rien, et le rail ne porte alors que l’Inspecteur — ce
+qu’un ciel ou une matière EST y est décrit par l’inspecteur lui-même.
+
+À l’accueil, il n’en porte qu’une : **Votre bibliothèque**, et rien sous le trait.
 
 ### Le rail ne montre que ce que l’espace sait faire
 
@@ -313,39 +313,41 @@ garde sa taille.
 |---|---|---|---|---|
 | **Modèles** | gauche | 1re | partout | le catalogue Scenario, filtré sur l’espace actif |
 | **Génération** | gauche | 1re | partout *(si un modèle est choisi)* | le formulaire du modèle choisi |
-| **Skybox** | droite | 1re | Skyboxes | les réglages du ciel ouvert |
-| **Vue** | droite | 1re | Skyboxes | la projection, le champ de vision et les objets de test |
+| **Assets** | gauche | 1re | partout | l’étagère : ce que le projet tient, ce que votre clé possède, ce qui est en train d’être produit |
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
-| **Canaux** | droite | 1re | Textures | les huit canaux de la matière ouverte |
-| **Styles** | droite | 1re | Textures | les réglages de matière enregistrés, à rejouer sur n’importe quelle matière |
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
 | **Mailles** | droite | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
-| **Assets** | droite | 1re | Vidéo, Audio, 3D | l’étagère du projet, en colonne |
+| **Animations** | droite | 1re | 3D | ce qu’un personnage peut jouer : les séquences de son fichier, et celles livrées avec le studio |
 | **Explorateur** | gauche | 2de | partout | le dossier du projet, dossiers et fichiers |
+| **Git** | gauche | 2de | partout *(si un projet est ouvert)* | ce qui a changé dans le dossier du projet depuis la dernière version enregistrée |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
-| **Assets** | bas | 1re | Image, Textures, Skyboxes | la même étagère, en bande |
 | **Timeline** | bas | 1re | Vidéo, Audio, 3D | la séquence en cours de montage, ou l’animation |
+| **Historique** | bas | 1re | partout *(si le dossier du projet est suivi par git)* | les versions enregistrées du projet, et ce que chacune a changé |
 
 > **« Partout » veut dire les espaces de travail, pas l’accueil.** L’accueil a ses propres
-> panneaux — onze, dans ses deux colonnes — que ce tableau ne liste pas.
+> panneaux — cinq — que ce tableau ne liste pas. **Trois sont communs aux deux** : l’Explorateur
+> et Git dans la colonne de gauche, l’Historique dans une bande basse que l’accueil n’avait pas
+> avant. L’Explorateur et Git ne s’affichent qu’avec un projet ouvert, et **l’Historique
+> seulement si ce projet est suivi par git** : sans projet, l’accueil est celui qu’il a toujours
+> été, deux colonnes et rien en bas.
 
-**La colonne de gauche est celle de ce qui produit.** En haut, **Modèles** et **Génération**,
-qui se relaient. En bas, l’**Explorateur**.
+**La colonne de gauche se lit en deux temps : ce que Scenario propose, puis ce qui est déjà à
+vous.** En haut, **Modèles**, **Génération** et **Assets**, qui se relaient — un modèle à choisir,
+son formulaire, et l’étagère de ce qu’il produit. En bas, l’**Explorateur** et **Git**, qui se
+relaient aussi : le dossier de votre projet, et ce qui y a changé.
+
+La coupure entre les deux moitiés est ce qui rend le geste possible : l’étagère et l’Explorateur
+tiennent l’écran **ensemble**, et rien n’entre dans le projet sans passer de l’une à l’autre.
 
 **La colonne de droite est celle du document ouvert** : ce qu’il contient, ce qui l’éclaire, ce
 qui est sélectionné. Les panneaux prennent leur tour dans la moitié haute, l’**Inspecteur**
 occupe toujours la moitié basse.
 
-**L’étagère à assets change de place selon l’espace.** En bas dans la plupart ; en **Vidéo**,
-**Audio** et **3D**, la bande basse appartient à la timeline, et l’étagère passe dans la colonne
-de droite — timeline et étagère tiennent alors l’écran ensemble, pour glisser une prise sur une
-piste.
-
 ### Une moitié montre ce que l’espace y met
 
-Ouvrez la bande basse en Image : c’est l’étagère. Passez en Vidéo : la même bande devient le
-montage, sans rien rouvrir.
+Ouvrez la bande basse en Vidéo : c’est le montage. Passez en Image : la même bande devient
+l’Historique, sans rien rouvrir.
 
 **Ce que vous avez ouvert, c’est une zone**, et elle le reste. Fermer la moitié la vide partout.
 
@@ -358,16 +360,23 @@ Tant que vous n’avez cliqué aucune icône d’une moitié, elle affiche le pr
 l’espace y déclare. C’est ce que vous voyez à la première ouverture, et ce que **Affichage ▸
 Réinitialiser la disposition** rétablit.
 
-La moitié basse de gauche s’ouvre sur l’**Explorateur** dans tous les espaces.
+La moitié haute de gauche s’ouvre sur les **Modèles** dans tous les espaces — choisir un modèle
+est ce par quoi tout commence, et l’étagère se demande. La moitié basse s’ouvre sur
+l’**Explorateur**, partout aussi.
 
 | Espace | La moitié haute de droite s’ouvre sur | La bande basse sur |
 |---|---|---|
-| **Image** | Calques | Assets |
-| **Vidéo** | Assets | Timeline |
+| **Image** | Calques | Historique |
+| **Vidéo** | *rien* | Timeline |
 | **3D** | Scène | Timeline |
-| **Audio** | Assets | Timeline |
-| **Textures** | Canaux | Assets |
-| **Skyboxes** | Skybox | Assets |
+| **Audio** | *rien* | Timeline |
+| **Textures** | *rien* | Historique |
+| **Skyboxes** | *rien* | Historique |
+
+> **L’Historique demande un dossier suivi par git.** Tant que le suivi n’est pas en place — pas
+> de projet ouvert, ou un projet dont le dossier n’est pas suivi — la bande basse de ces trois
+> espaces **disparaît** : elle ne prend aucune place. Le panneau Git dit où en est ce projet, et
+> porte le bouton qui met le suivi en place.
 
 Dès que vous cliquez une icône, cette moitié retient **votre** choix et ne bouge plus, jusqu’à ce
 que vous en cliquiez une autre ou que vous réinitialisiez la disposition.
@@ -508,13 +517,13 @@ Le menu du système — en haut de l’écran sur macOS, en haut de la fenêtre 
 | **Fichier** | Nouveau projet…, Ouvrir un projet…, Enregistrer, Réglages… |
 | **Édition** | Annuler, Rétablir, et les commandes de texte du système |
 | **Affichage** | Modules, Réinitialiser la disposition, Plein écran, zoom de l’image |
-| **Objets** | Ajouter ▸ Maille, Ajouter ▸ Lumière — dans l’espace 3D |
+| **Objets** | **Ajouter ▸ Maille**, **Ajouter ▸ Lumière** — dans l’espace Modélisation |
 | **Fenêtre** | les commandes de fenêtre du système |
 | **Aide** | À propos de Scenario Studio, Consommation…, Licences |
 
 Les raccourcis affichés dans les menus sont **ceux que vous avez réglés**.
 
-**Affichage ▸ Modules ne liste que ce que l’espace peut ouvrir**, comme le rail.
+**Affichage ▸ Modules** ne liste que ce que l’espace peut ouvrir, comme le rail.
 
 ### La fenêtre de consommation
 
@@ -532,14 +541,18 @@ Activités et Journal nomment leurs lignes dans la langue de la fenêtre : vous 
 d’images », pas `images-generation`. Un type d’événement que le studio ne connaît pas encore
 affiche le nom brut de l’API.
 
-Trois avertissements y sont affichés :
+**La fenêtre dit elle-même ce que ses chiffres ne disent pas** — sous le montant pour le premier,
+en pied de fenêtre pour les autres :
 
-- **il n’y a pas de solde.** L’API Scenario n’expose que ce qui a été dépensé, jamais ce qui
-  reste. Aucun chiffre ne dira combien vous pouvez encore générer ;
 - **le montant en euros est indicatif.** Calculé sur la grille publique des packs prépayés : un
   ordre de grandeur, pas une facture ;
-- **le total mélange des comptes facturés séparément.** Avec plusieurs clés, la somme affichée ne
-  correspond à aucune facture réelle — la Vue d’ensemble détaille par compte.
+- **il n’y a pas de solde.** L’API Scenario n’expose que ce qui a été dépensé, jamais ce qui
+  reste. Aucun chiffre ne dira combien vous pouvez encore générer ;
+- **les jours et les heures de cet écran sont comptés en UTC**, comme l’API les date. La barre
+  d’une journée ne suit donc pas forcément votre calendrier ;
+- **le total mélange des comptes facturés séparément** — cet avertissement-là n’apparaît qu’avec
+  plusieurs clés. La somme affichée ne correspond alors à aucune facture réelle, et la Vue
+  d’ensemble détaille par compte.
 
 **Une clé qui ne répond pas ne fausse pas les chiffres en silence** : la fenêtre nomme les clés
 restées muettes et précise que les totaux sont ceux des autres. Sans aucune clé enregistrée, elle

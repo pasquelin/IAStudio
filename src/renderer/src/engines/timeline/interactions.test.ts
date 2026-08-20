@@ -7,10 +7,10 @@ import {
   type Gesture,
   type MediaExtents,
 } from './interactions'
-import { RULER_HEIGHT, type Viewport } from './timeline-geometry'
+import { RULER_HEIGHT, type Viewport } from './timelineGeometry'
 import type { Point } from '../core/geometry'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
-import { DEFAULT_TRACK_HEIGHT, trackOfClip, type Clip, type SequenceState } from './timeline-state'
+import { DEFAULT_TRACK_HEIGHT, trackOfClip, type Clip, type SequenceState } from './timelineState'
 
 const viewport: Viewport = { scale: 100 / 1_000_000, offset: 0, scrollTop: 0 }
 

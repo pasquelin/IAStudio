@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { ROW_INK, ROW_LINE, ROW_QUIET } from './styles'
+import { ROW_INK, ROW_LINE, ROW_QUIET, ROW_SUFFIX } from './styles'
 import { TIP_RIGHT, type TooltipFactory } from '@/helpers/tooltip'
 import { UiIcon } from './UiIcon'
 
@@ -10,6 +10,17 @@ export type RowProps = {
   /** `@mdi/js` path, for rows whose kind is what identifies them. */
   icon?: string
   title: string
+  /**
+   * Quiet ink right after the title, and the title truncates around it — a file's extension,
+   * where the name shown is the document's own. Pushed to the row's END instead, that is `actions`.
+   */
+  suffix?: string
+  /**
+   * Where the title is cut when it does not fit. `end` everywhere a name is a name; `start` where
+   * it is a PATH — `Images/Croquis/etude.jpg` clipped the ordinary way leaves the half nobody
+   * reads, the file's own name being at the far end.
+   */
+  clip?: 'end' | 'start'
   subtitle?: string
   /** Before the visual: the visibility eye of a layer or a node. */
   leading?: ReactNode
@@ -17,6 +28,16 @@ export type RowProps = {
   actions?: ReactNode
   /** Struck through, and dimmed AT REST only: a hidden layer, an invisible mesh. */
   muted?: boolean
+  /**
+   * The name in quiet ink, and nothing else: a row that has been CUT and is waiting for a paste.
+   *
+   * Told apart from `muted`, which strikes the name through — that says "this is not showing",
+   * where this says "this is on its way out". An `opacity` would have said it too and is refused
+   * outright by `design/tokens.test.ts`: it dims whatever the element inherits, so no guard can
+   * follow what a word ends up reading at. `ROW_QUIET` is measured, and lifts to full ink the
+   * moment the row is picked.
+   */
+  quiet?: boolean
   /**
    * What the row has to say that the screen does not already show — why it is refused, the full
    * path behind a truncated one, the real name of an asset listed under its id.
@@ -42,10 +63,13 @@ export function Row({
   media,
   icon,
   title,
+  suffix,
+  clip,
   subtitle,
   leading,
   actions,
   muted,
+  quiet,
   hint,
   tip = TIP_RIGHT,
 }: RowProps) {
@@ -79,16 +103,28 @@ export function Row({
         <p
           {...(hint ? tip(title, false, hint) : {})}
           className={cn(
-            'truncate text-xs leading-tight',
+            // The truncation moves onto the name itself once there is a suffix, which has to
+            // survive it: an extension cut off in a narrow dock is one the row never shows.
+            suffix
+              ? 'flex min-w-0 items-baseline'
+              : clip === 'start'
+                ? 'truncate-start'
+                : 'truncate',
+            'text-xs leading-tight',
             // A hidden layer is DIMMED, not disabled: a layer is still selected and renamed, a
             // scene node still selected and dragged, so the exemption WCAG 1.4.3 grants a disabled
             // control does not cover either. Lifted on the same state as the subtitle below —
             // `muted` reads 3.25:1 on `accent-soft` — and the strike-through, with the crossed-out
             // eye beside it, is what goes on saying the row is hidden.
-            muted ? cn(ROW_QUIET, 'line-through') : ROW_INK,
+            muted ? cn(ROW_QUIET, 'line-through') : quiet ? ROW_QUIET : ROW_INK,
           )}
         >
-          {title}
+          {suffix ? (
+            <span className={clip === 'start' ? 'truncate-start' : 'truncate'}>{title}</span>
+          ) : (
+            title
+          )}
+          {suffix && <span className={ROW_SUFFIX}>{suffix}</span>}
         </p>
         {/* Muted at rest, full ink once the row is PICKED: `muted` reads 3.25:1 on `accent-soft`,
             under the 4.5 of WCAG 1.4.3. Driven from the row through `rowSkin`'s group, so no list

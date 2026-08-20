@@ -1,17 +1,30 @@
 import { describe, expect, it } from 'vitest'
 import {
   BUTTON_NEUTRAL,
+  COLOR_READOUT,
   CONTROL,
+  FIELD,
+  FIELD_FILL,
   NATIVE_SELECT,
   OVERLAY_BUTTON,
+  PANEL_BAR,
+  PANEL_GROUP_LABEL,
+  PANEL_GROUP_LABEL_WIDE,
+  PANEL_HEAD,
   ROW_INK,
+  ROW_LINE,
   ROW_QUIET,
+  ROW_SUBJECT,
   rowSkin,
+  SLIDER_HANDLE,
   TILE_QUIET,
   TITLE_BAR_GHOST,
+  TITLE_BAR_TRIGGER,
   TOOLBAR_LABEL,
 } from './styles'
-import { WRITTEN_SOURCES } from './test-harness'
+import { rewrites, spellsOut, WRITTEN_SOURCES } from './testHarness'
+import stylesheet from '../index.css?raw'
+import toolButton from './ToolButton.tsx?raw'
 
 /**
  * Read off the skin rather than spelled out again, so a change of shade moves the rule with it.
@@ -20,7 +33,7 @@ import { WRITTEN_SOURCES } from './test-harness'
  */
 const OWN_HOVER = TITLE_BAR_GHOST.split(' ').filter(one => one.startsWith('hover:bg-'))
 
-/** As `WRITTEN_SOURCES` keys it: the glob resolves against `test-harness.ts`, its own neighbour. */
+/** As `WRITTEN_SOURCES` keys it: the glob resolves against `testHarness.ts`, its own neighbour. */
 const GUARDED = './styles.ts'
 
 describe('the shared class strings', () => {
@@ -155,19 +168,24 @@ describe('the row skin and the state it publishes', () => {
   })
 
   /**
-   * The two surfaces of the studio that fill under the pointer, named rather than counted.
+   * The surfaces of the studio that fill under the pointer, named rather than counted.
    *
    * A `tile` is the one thing `rowSkin` fills for, and it is asked for by name — so who may ask
-   * is the rule. Both of these are tiles in the strict sense: nothing else about them looks like
-   * a control, so the fill is the whole of what says they can be pressed.
+   * is the rule. This one is a tile in the strict sense: nothing else about it looks like a
+   * control, so the fill is the whole of what says it can be pressed.
+   *
+   * There were two until 2026-08-19, when the texture channels stopped being tiles and became
+   * link rows of the inspector — where the rule below is that nothing fills at all.
    *
    * The inspector is deliberately absent, and that is a decision of 2026-08-14: no line of it
    * answers the pointer. The cost was stated when it was taken — nothing distinguishes a line one
    * can open from a line one only reads, and what says a row opens is its tooltip.
    */
   const MAY_FILL_UNDER_THE_POINTER = [
-    '../home/sections/Tools.tsx',
-    '../panels/channels/ChannelTile.tsx',
+    '../home/sections/Tools/ToolsGroup.tsx',
+    // Back to two on 2026-08-20: the tiles a new scene picks its template from. A tile in the
+    // same strict sense — a still and a name, and nothing else on it that looks like a control.
+    '../newDocument/NewDocumentWindow/NewDocumentTemplates.tsx',
   ]
 
   /**
@@ -198,82 +216,57 @@ describe('the row skin and the state it publishes', () => {
 })
 
 /**
- * The loud fill, for the one list whose selection says WHERE ONE IS rather than what a gesture
- * gathered. Every assertion here is a measurement, not a taste: `--color-accent` is pinned at
- * 4.508:1 against pure white, so on that fill nothing but `accent-content` clears WCAG 1.4.3 —
- * `text` reads 3.44.
- *
- * `design/tokens.test.ts` owns the ratios themselves; what this file owns is that the skin and the
- * two inks actually ASK for them.
+ * ONE fill for a chosen row, whichever list holds it. There were two until 17 August: the projects
+ * panel asked for `bg-accent` — the full accent, which the studio spends on what one ACTIONS — and
+ * that made one list read as a different blue from every other. The type that let a caller ask is
+ * gone, so the COMPILER refuses a second tone; what is left to check here is the fill itself.
  */
-describe('the loud fill of a row that says where one is', () => {
-  it('fills with the accent itself, where the soft tone fills with its muted twin', () => {
-    expect(rowSkin(true, { tone: 'strong' })).toContain('bg-accent')
-    expect(rowSkin(true, { tone: 'strong' })).not.toContain('bg-accent-soft')
-    expect(rowSkin(true, { tone: 'soft' })).toContain('bg-accent-soft')
+describe('the fill of a chosen row', () => {
+  it('is the soft accent, and never the full one', () => {
+    expect(rowSkin(true).split(' ')).toContain('bg-accent-soft')
+    expect(rowSkin(true).split(' ')).not.toContain('bg-accent')
   })
 
-  // Soft is the default, so no existing caller can be repainted by this landing.
-  it('is not what a caller gets without asking', () => {
-    expect(rowSkin(true)).toBe(rowSkin(true, { tone: 'soft' }))
-  })
-
-  // Only a SELECTED row is filled, so an unselected one must keep the ordinary hover.
-  it('changes nothing about a row that is not the one open', () => {
-    expect(rowSkin(false, { tone: 'strong' })).toBe(rowSkin(false, { tone: 'soft' }))
+  it('leaves a row nobody chose without a fill at all', () => {
+    expect(rowSkin(false)).not.toContain('bg-accent')
   })
 
   /**
-   * Both inks, and it has to be both: the colour can no longer separate a name from its subtitle
-   * on that fill, so the size does — which is only true if neither is left behind at 3.44:1.
+   * The ink that went with the loud fill is gone with it. `accent-content` is pure white, needed
+   * only where `accent` is the background — a row now fills with `accent-soft`, on which `text`
+   * clears 4.5 on its own, and `tokens.test.ts` holds that ratio.
    */
-  it('takes both the name and its subtitle to the ink the accent needs', () => {
-    for (const ink of [ROW_INK, ROW_QUIET]) {
-      expect(ink).toContain('group-data-accented/row:text-accent-content')
-    }
-    // At rest they are still what they always were — the variant only fires under the attribute.
+  it('no longer takes either ink to the white the full accent demanded', () => {
+    for (const ink of [ROW_INK, ROW_QUIET]) expect(ink).not.toContain('accent-content')
     expect(ROW_INK).toContain('text-text')
     expect(ROW_QUIET).toContain('text-muted')
   })
 
   /**
-   * The subtitle needs a SECOND spelling, and this is the whole of why: it also carries a
-   * `data-selected` lift to `text`, the two variants compile to the same specificity, and Tailwind
-   * emits the accented one FIRST — so `text` won and the path under the open project's name
-   * rendered at 3.44:1. Being written last in the class string decides nothing; the cascade never
-   * reads attribute order. Stacking the variants takes the accented rule to (0,3,0).
+   * The rule the compiler cannot state: no surface may reach for the full accent as a FILL under a
+   * row. `bg-accent` belongs to a control — a button, a tool in use, a filled gauge.
    *
-   * What this can and cannot see: jsdom applies no stylesheet, so no suite here resolves a
-   * cascade. Asserted is the SHAPE that outranks the lift — the ratio itself was measured in
-   * Electron, and `ROW_INK` needs none of this since its base `text-text` is (0,1,0).
+   * **Two blind spots, both measured.** It reads the FILE, not the element, so a row and a real
+   * button in one file passes — and so does `RefBadge`, whose full-accent tag is drawn inside a
+   * row from another file. And `\b` alone would match `bg-accent-soft`, since `-` ends a word.
    */
-  it('outranks its own selected lift rather than trusting the order it is written in', () => {
-    expect(ROW_QUIET).toContain('group-data-selected/row:text-text')
-    expect(ROW_QUIET).toContain(
-      'group-data-accented/row:group-data-selected/row:text-accent-content',
-    )
+  const fillsWithTheFullAccent = (source: string) =>
+    /\browSkin\(/.test(source) && /\bbg-accent(?![-/])/.test(source)
+
+  it('is drawn by no list that also writes the full accent', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && fillsWithTheFullAccent(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
   })
 
-  /**
-   * The partner of the rule above, and the failure it guards is silent: the skin paints the accent
-   * while the words stay at 3.44:1, with nothing on screen saying so. `data-selected` alone cannot
-   * drive it — every picked row in the studio carries that one.
-   */
-  /**
-   * Whoever PAINTS the tone, not whoever asks for it: a panel writes `selectionTone="strong"` and
-   * leaves the attribute to the surface that draws the cell, which is the only place that can
-   * emit it. Filtering on the word alone caught the panel and let the painter through — and it
-   * caught nothing at all before that, since it looked for `'strong'` in single quotes while the
-   * one site that asks writes it as a JSX attribute.
-   */
-  it('is never painted without the attribute the two inks read', () => {
-    const painters = WRITTEN_SOURCES.filter(
-      ([path, source]) =>
-        path !== GUARDED && /\browSkin\(/.test(source) && /["']strong["']/.test(source),
-    )
-
-    expect(painters.map(([path]) => path)).not.toEqual([])
-    expect(painters.filter(([, source]) => !source.includes('data-accented'))).toEqual([])
+  // The partner of the rule above: a sweep that can only ever return `[]` proves nothing.
+  it('tells the full accent from the soft one it is written beside', () => {
+    expect(fillsWithTheFullAccent("rowSkin(true)\ncn('bg-accent text-accent-content')")).toBe(true)
+    expect(fillsWithTheFullAccent("rowSkin(true)\ncn('bg-accent-soft')")).toBe(false)
+    expect(fillsWithTheFullAccent("rowSkin(true)\ncn('hover:bg-accent-hover')")).toBe(false)
+    expect(fillsWithTheFullAccent("cn('bg-accent')")).toBe(false)
   })
 })
 
@@ -333,25 +326,11 @@ describe('the neutral fill of a button', () => {
 })
 
 /**
- * Read off the constant and compared word for word, which settles two things a regex over the
- * raw source got wrong. Order first: `prettier-plugin-tailwindcss` sorts stably and leaves
- * `text-tiny text-muted px-1` exactly as written, so an ordered pattern is a rule anyone can
- * walk past by typing the three in another order. Exactness second: `px-1` as a SUBSTRING is
- * also in `px-10` and `px-1.5`.
- *
- * All three are required, and `text-tiny` is what does the work: `text-muted … px-1` alone is
- * worn by the zoom readout of the image space, which is a BUTTON one clicks to return to 100 %
- * and not a word the bar sets down. A rule without it would call that a violation and be wrong.
- *
- * **What it cannot see**: the trio split across two strings of one `cn()`, or assembled from a
- * variable. A site determined to write the shade again can still do it; this catches the copy
- * that happens by habit, which is the one that happened five times.
+ * All three words are required, and `text-tiny` is what does the work: `text-muted … px-1` alone
+ * is worn by the zoom readout of the image space, which is a BUTTON one clicks to return to
+ * 100 % and not a word the bar sets down. A rule without it would call that a violation.
  */
-const rewritesLabel = (source: string): boolean =>
-  [...source.matchAll(/['"`]([^'"`\n]*)['"`]/g)].some(match => {
-    const words = (match[1] ?? '').split(/\s+/)
-    return TOOLBAR_LABEL.split(' ').every(part => words.includes(part))
-  })
+const rewritesLabel = spellsOut(TOOLBAR_LABEL.split(' '))
 
 describe('the word a bar sets beside its buttons', () => {
   it('carries the ink, the size and the room around it, and nothing else', () => {
@@ -389,20 +368,8 @@ describe('the word a bar sets beside its buttons', () => {
   })
 })
 
-/**
- * The padding written back on top of `CONTROL`, which is the shape the four native pickers had
- * before they were given a constant. Read at the CALL, not over the whole file: a component is
- * free to wear `CONTROL` and to have `px-1` somewhere else entirely on another element, and a
- * rule by file would call that a violation.
- *
- * **What it cannot see**: `cn(CONTROL, someVariable)`, or a padding reached through a second
- * argument — `cn(CONTROL, 'w-full', 'px-1')`. Both are ways of writing it again on purpose;
- * this catches the shape the habit produces.
- */
-const REPADS_CONTROL = /cn\(\s*CONTROL\s*,\s*['"`]([^'"`\n]*)['"`]/g
-
-const repadsControl = (source: string): boolean =>
-  [...source.matchAll(REPADS_CONTROL)].some(match => (match[1] ?? '').split(/\s+/).includes('px-1'))
+/** The shape the four native pickers had before they were given a constant. */
+const repadsControl = rewrites('CONTROL', ['px-1'])
 
 describe('the OS list wearing the control language', () => {
   it('is the control, plus the room around its text and nothing more', () => {
@@ -427,12 +394,356 @@ describe('the OS list wearing the control language', () => {
     )
   })
 
-  // The partner of the rule above: a constant nobody wears is a dead export.
-  it('is worn by the four pickers it was extracted from', () => {
+  /**
+   * It was extracted from four pickers and is now worn by ONE, which is the stronger rule: a
+   * second wearer means a `<select>` was drawn by hand again instead of through `SelectField`,
+   * and that is how twenty-one of them each read their own value back into their own union.
+   */
+  it('is worn by `SelectField`, and by nothing else', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && source.includes('NATIVE_SELECT'),
+    ).map(([path]) => path)
+
+    expect(wearing).toEqual([expect.stringContaining('SelectField.tsx')])
+  })
+})
+
+/**
+ * The way a field was made to fill its line before it had a constant. Both words together and
+ * never one, which is what `rewrites` gives: `min-w-0 flex-1` is the studio's commonest pair of
+ * layout classes, worn by thirty-odd elements that are not fields at all, and either half on its
+ * own is a caller dividing its own row rather than reaching for this shape.
+ */
+const refillsField = rewrites('FIELD', ['min-w-0', 'flex-1'])
+
+describe('the field that takes what its line has left', () => {
+  it('is the field, plus the room it claims and nothing more', () => {
+    expect(FIELD_FILL.split(' ')).toEqual([...FIELD.split(' '), 'min-w-0', 'flex-1'])
+  })
+
+  it('is worn rather than spread again at the call', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && refillsField(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone the callers whose own width is not this one', () => {
+    // The shape the four fields had before the constant, then the rename dialog's field — held
+    // to the width of its box rather than to a share of a row — and a colour swatch, which is
+    // square. Last, one half of the pair: a caller stopping an overflow it can see.
+    expect(refillsField("cn(FIELD, 'text-tiny min-w-0 flex-1')")).toBe(true)
+    expect(refillsField("cn(FIELD, 'w-full text-xs')")).toBe(false)
+    expect(refillsField("cn(FIELD, 'px-1')")).toBe(false)
+    expect(refillsField("cn(FIELD, 'min-w-0 truncate')")).toBe(false)
+  })
+
+  // The partner of the rule above: a constant nobody wears is a dead export.
+  it('is worn by the four fields it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes('FIELD_FILL'),
     )
 
     expect(wearing.length).toBeGreaterThanOrEqual(4)
+  })
+})
+
+/**
+ * The gauge and the room a NAMED control of the title bar takes, which the assistant's entry and
+ * the account trigger had each written out. The pills beside them are not this shape and keep
+ * their own `gap-2 px-3 py-1`: a pill is as wide as the space it stands for.
+ */
+const respacesTitleBar = rewrites('TITLE_BAR_GHOST', ['h-(--sc-control)', 'px-2'])
+
+describe('the named control of a title bar', () => {
+  it('is the ghost, plus the gauge and the room around its word', () => {
+    expect(TITLE_BAR_TRIGGER.split(' ')).toEqual([
+      ...TITLE_BAR_GHOST.split(' '),
+      'text-tiny',
+      'h-(--sc-control)',
+      'gap-1.5',
+      'px-2',
+    ])
+  })
+
+  it('is worn rather than sized again at the call', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && respacesTitleBar(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone the pills, whose room is their own', () => {
+    expect(respacesTitleBar("cn(TITLE_BAR_GHOST, 'text-tiny h-(--sc-control) gap-1.5 px-2')")).toBe(
+      true,
+    )
+    expect(respacesTitleBar("cn(TITLE_BAR_GHOST, 'gap-2 px-3 py-1')")).toBe(false)
+  })
+
+  // The partner of the rule above: a constant nobody wears is a dead export.
+  it('is worn by the two controls it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes('TITLE_BAR_TRIGGER'),
+    )
+
+    expect(wearing.length).toBeGreaterThanOrEqual(2)
+  })
+})
+
+/** The blind spot of `rewrites`: a site that never wore the constant leaves no call to read. */
+const spellsOutRowLine = spellsOut(ROW_LINE.split(' '))
+
+describe('the shape of a row line', () => {
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && spellsOutRowLine(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  // Named rather than counted: a count stays green when one site drops the constant and another
+  // picks it up, and a fifth adopting it fails here ON PURPOSE. **Blind**: raw text, so `Row.tsx`
+  // would still count on the comment that names the constant, with no `cn()` left.
+  it('is worn by the four that draw a line', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && /\bROW_LINE\b/.test(source),
+    ).map(([path]) => path)
+
+    expect(wearing.sort()).toEqual([
+      '../panels/inspector/StylesSection/StylesSectionRow.tsx',
+      '../panels/projects/ProjectRow.tsx',
+      './Row.tsx',
+      './Tree.tsx',
+    ])
+  })
+})
+
+/**
+ * All four words or none: `text-muted` with `uppercase` is also a caption that titles nothing.
+ * The two group titles of the SETTINGS windows sit one word away, on `text-base-content/70` —
+ * DaisyUI ink, and a window harmonised towards `text-muted` would be told off by this wrongly.
+ */
+const spellsOutGroupLabel = spellsOut(PANEL_GROUP_LABEL.split(' '))
+
+/** The three the wide one adds to claim its line, required together or not at all. */
+const widensGroupLabel = rewrites('PANEL_GROUP_LABEL', ['min-w-0', 'flex-1', 'truncate'])
+
+describe('the word that names a group in a panel', () => {
+  it('is the label, plus what a wide one claims of its line and nothing more', () => {
+    expect(PANEL_GROUP_LABEL_WIDE.split(' ')).toEqual([
+      ...PANEL_GROUP_LABEL.split(' '),
+      'min-w-0',
+      'flex-1',
+      'truncate',
+      'font-medium',
+    ])
+  })
+
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && spellsOutGroupLabel(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('is worn rather than widened again at the call', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && widensGroupLabel(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  // Named rather than counted, and `DiffImages` wears it twice — the two sides of a comparison.
+  // **Blind**: raw text, so a file naming the constant in a comment alone would still count.
+  it('is worn by the four files it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && /\bPANEL_GROUP_LABEL(?:_WIDE)?\b/.test(source),
+    ).map(([path]) => path)
+
+    expect(wearing.sort()).toEqual([
+      '../panels/git/GitFileGroup.tsx',
+      '../panels/history/CommitFiles.tsx',
+      '../panels/history/DiffImages.tsx',
+      './DynamicForm/DynamicForm.tsx',
+    ])
+  })
+})
+
+/**
+ * All five words or none: the hexadecimal `ColorField` writes beside its swatch is the same shape
+ * one ink away — four of these words plus `text-muted` — and telling it off would be telling off
+ * the wrong thing.
+ */
+const spellsOutSubject = spellsOut(ROW_SUBJECT.split(' '))
+
+describe('what a line names', () => {
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && spellsOutSubject(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves the muted readout of a colour alone, which shares four of the five', () => {
+    expect(spellsOutSubject(`'${COLOR_READOUT}'`)).toBe(false)
+  })
+
+  // Named rather than counted: a count stays green when one site drops the constant and another
+  // picks it up. **Blind**: raw text, so a comment naming the constant would count as wearing it.
+  it('is worn by the two it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && /\bROW_SUBJECT\b/.test(source),
+    ).map(([path]) => path)
+
+    expect(wearing.sort()).toEqual([
+      '../panels/history/DiffPane.tsx',
+      '../panels/history/HistoryRow.tsx',
+      '../panels/inspector/StylesSection/StylesSectionRow.tsx',
+    ])
+  })
+})
+
+/**
+ * The whole set: the two windows that stack a column the same way rule it off in DaisyUI ink
+ * (`border-base-300`), which is the other side of a border this file has no say over.
+ */
+const spellsOutPanelHead = spellsOut(PANEL_HEAD.split(' '))
+
+describe('the box a panel puts above what it acts on', () => {
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && spellsOutPanelHead(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone a column ruled off in the other vocabulary', () => {
+    expect(spellsOutPanelHead("'border-base-300 flex flex-col gap-2 border-b p-2'")).toBe(false)
+  })
+
+  // Named rather than counted. **Blind**: raw text, as above.
+  it('is worn by the two it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && /\bPANEL_HEAD\b/.test(source),
+    ).map(([path]) => path)
+
+    expect(wearing.sort()).toEqual([
+      '../panels/git/CommitBox.tsx',
+      './CollectionBar/CollectionBar.tsx',
+    ])
+  })
+})
+
+/**
+ * The whole set, which is what leaves the activity list's own bar alone: it rules off the same
+ * way with a tighter gap, and a rule reading four of these five words would move it by 2px.
+ */
+const spellsOutPanelBar = spellsOut(PANEL_BAR.split(' '))
+
+describe('the line a pane draws above what it shows', () => {
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && spellsOutPanelBar(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone the bar of the activity list, which sets its buttons closer', () => {
+    expect(spellsOutPanelBar("'border-border flex items-center gap-1.5 border-b p-1'")).toBe(false)
+  })
+
+  // Named rather than counted. **Blind**: raw text, as above.
+  it('is worn by the five it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && /\bPANEL_BAR\b/.test(source),
+    ).map(([path]) => path)
+
+    expect(wearing.sort()).toEqual([
+      '../panels/git/GitReady.tsx',
+      '../panels/git/RemoteSetup.tsx',
+      '../panels/history/DiffPane.tsx',
+      './CollectionBar/CollectionBar.tsx',
+      './FormHeader.tsx',
+    ])
+  })
+})
+
+/** The set, in one string: a site that never wore the constant leaves no call to read. */
+const spellsOutHandle = spellsOut(SLIDER_HANDLE.split(' '))
+
+/**
+ * The one file that may hold a `<input type="range">`, and the rule is about the RAIL: the studio
+ * drew three of them — a native track, a hand-made one and daisyUI's — before this list existed,
+ * and each was written by a site reaching for the input on its own. A fourth would arrive the same
+ * way and pass every other guard, each of them reading tokens it wears properly.
+ *
+ * It named two until `SliderHandle` was pulled out of them: `Slider` and `RangeField` now compose
+ * it, and a range input is written in exactly one place.
+ */
+const SLIDER_OWNERS = ['./SliderHandle.tsx']
+
+describe('the slider of the studio', () => {
+  it('is the only kind of input allowed to be a range', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => !SLIDER_OWNERS.includes(path) && source.includes('type="range"'),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('is written by the one that owns it, so the rule cannot pass on a studio without sliders', () => {
+    const owners = WRITTEN_SOURCES.filter(([, source]) => source.includes('type="range"')).map(
+      ([path]) => path,
+    )
+
+    expect(owners.sort()).toEqual(SLIDER_OWNERS)
+  })
+
+  /** Named rather than counted. **Blind**: raw text, so a mention in a comment reads as a wearer. */
+  it('is worn by the two it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(([, source]) => /\bSliderHandle\b/.test(source))
+      .map(([path]) => path)
+      .filter(path => !SLIDER_OWNERS.includes(path))
+
+    expect(wearing.sort()).toEqual(['./RangeField.tsx', './Slider.tsx'])
+  })
+
+  it('wears the shared handle rather than writing it out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && spellsOutHandle(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone an input that merely covers its host', () => {
+    expect(spellsOutHandle("'absolute inset-0 m-0 size-full'")).toBe(false)
+  })
+})
+
+/**
+ * The header glyph is written twice — as a number in `HOSTS`, which `UiIcon` takes, and as a gauge
+ * in the sheet, which `--sc-row-action-bleed` derives the end-column lean from. Nothing else holds
+ * them together: moved alone, the button's icon would shift by half its change and the column it
+ * lands on would not follow.
+ *
+ * **Blind**: raw text on both sides, so a second `glyph: 14` written for another host would satisfy
+ * this rule without being the one it means.
+ */
+describe('the header glyph', () => {
+  it('is the same number in the sheet as in the button', () => {
+    const gauge = /--sc-icon-header:\s*(\d+)px/.exec(stylesheet)?.[1]
+    const host = /header:\s*\{[^}]*glyph:\s*(\d+)/.exec(toolButton)?.[1]
+
+    expect(gauge).toBeDefined()
+    expect(host).toBe(gauge)
   })
 })

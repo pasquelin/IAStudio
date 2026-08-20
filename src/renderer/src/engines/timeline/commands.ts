@@ -1,4 +1,4 @@
-import type { Asset } from '@shared/domain/asset'
+import { isTimeless, mediaDuration, type Asset } from '@shared/domain/asset'
 import { composed, type Command } from '../core/history'
 import { clipForAsset, newTracksForAsset, pairedPlacements, type ClipPlacement } from './insert'
 import {
@@ -26,7 +26,7 @@ import {
   type Track,
   type TrackKind,
   type Us,
-} from './timeline-state'
+} from './timelineState'
 
 /**
  * Sequence edits, on the pattern of `engines/scene/commands.ts`: a command captures what it
@@ -102,6 +102,14 @@ function acrossLink(
  * has no source to run past, an unprobed video has one whose length is simply not known yet.
  */
 export type MediaExtent = Us | 'still' | 'unknown'
+
+/**
+ * The extent of the media behind a clip, read from its catalogue row. Only the catalogue knows how
+ * far a source runs, and every surface that trims has to ask it the same way.
+ */
+export function mediaExtentOf(asset: Asset | null): MediaExtent {
+  return mediaDuration(asset) ?? (isTimeless(asset) ? 'still' : 'unknown')
+}
 
 /**
  * How far a trim may travel before it would run past the media behind it. There is nothing to
@@ -512,7 +520,7 @@ export function addTrack(kind: TrackKind): Command<SequenceState> {
   return {
     id: `track:add:${kind}`,
     apply: state => {
-      const id = nextTrackId(state, kind)
+      const id = nextTrackId(state.tracks, kind)
       added = id
       return {
         ...state,

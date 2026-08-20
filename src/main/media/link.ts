@@ -9,14 +9,11 @@ const IMPORTABLE_TYPES: readonly ImportableType[] = ['video', 'audio', 'image', 
 const EXTENSIONS: Record<ImportableType, readonly string[]> = {
   video: ['mp4', 'mov', 'mkv', 'webm', 'avi', 'mxf', 'm4v'],
   audio: ['wav', 'mp3', 'aac', 'flac', 'm4a', 'ogg'],
-  image: ['png', 'jpg', 'jpeg', 'webp', 'tif', 'tiff', 'exr'],
+  image: ['png', 'jpg', 'jpeg', 'webp', 'tif', 'tiff', 'exr', 'hdr'],
   /**
-   * `.glb` alone, on purpose. A `.gltf` points at its buffers and textures by relative path, and
-   * an asset is served flat as `scenario://asset/<id>` — the sidecars have no id, so the loader
-   * would 404 on every one and show an empty model with nothing said. `.obj` and `.fbx` are left
-   * out for the plainer reason that nothing here reads them.
+   * Self-contained only: served flat as `scenario://asset/<id>`, a `.gltf` 404s on its buffers.
    */
-  mesh: ['glb'],
+  mesh: ['glb', 'obj', 'fbx', 'stl', 'ply', 'usdz'],
 }
 
 /** The kind of editor a file opens in, read from its extension — or nothing we can montage. */
@@ -30,8 +27,7 @@ export function assetTypeOf(path: string): ImportableType | null {
 export type LinkOptions = { id: string; type: AssetType; now: string }
 
 /**
- * A catalogue row pointing at a file left where it is. `path` stays empty on purpose: it means
- * "inside the project", and this one is not — that is the whole reason `hash` exists.
+ * A row for a file left where it is — empty `path` means « inside », which is why `hash` exists.
  */
 export function linkedAsset(source: string, { id, type, now }: LinkOptions): Asset {
   return {

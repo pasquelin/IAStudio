@@ -19,7 +19,7 @@ départ : les ADR de `docs/ci/adr/` s’y réfèrent au lieu de le reparaphraser
 > | branche par défaut `feat/scenario-pipeline`, pas de `develop` | `develop` intègre, `main` publie | ADR-15 |
 > | entitlements : une seule clé, `allow-jit` | **deux** — la dictée a ajouté `device.audio-input` | ADR-11, amendée |
 > | `better-sqlite3` seule dépendance native | **deux** — `sherpa-onnx-node` s’ajoute, d’où l’`asarUnpack` | ADR-17 |
-> | main à **3 entrées** | **cinq** — `stt-worker` et `transform-worker` s’ajoutent | — |
+> | main à **3 entrées** | **quatre** — `sttWorker` s’ajoute | ADR-17 |
 > | `resources/ffmpeg/` = 96 Mo · aucun Toast · `react-toastify` inutilisé | 152 Mo · `ActivityToasts` existe · paquet retiré | — |
 >
 > **Ce qui n’a pas bougé** : les cibles de packaging, l’`appId`, les fuses, et le point marqué
@@ -36,7 +36,7 @@ départ : les ADR de `docs/ci/adr/` s’y réfèrent au lieu de le reparaphraser
 | Gestionnaire | pnpm, lockfile v9 commité. Ni `packageManager`, ni `.nvmrc`, ni `engines` | `pnpm-lock.yaml` |
 | Node / pnpm | Node v24.8.0, pnpm 11.16.0 sur le poste — non épinglés | — |
 | Electron | 43.3.0 ; `LSMinimumSystemVersion` = **12.0** | `node_modules/electron/dist/Electron.app/Contents/Info.plist` |
-| Bundling | electron-vite 5. Main à **3 entrées** (`index`, `catalog-worker`, `peaks-worker`), preload forcé CJS, renderer à 2 HTML. Sortie `out/` | `electron.vite.config.ts` |
+| Bundling | electron-vite 5. Main à **4 entrées** (`index`, `catalogWorker`, `peaksWorker`, `sttWorker`), preload forcé CJS, renderer à 2 HTML. Sortie `out/` | `electron.vite.config.ts` |
 | Build vs packaging | `pnpm build` = sources → `out/`. **`pnpm dist` packageait déjà** et produit un `.dmg` | `scripts/dist.sh` |
 | Packaging | `electron-builder 26.15.3`, configuration externalisée et complète | `electron-builder.yml` |
 | `appId` | `com.scenario.app` — déjà arrêté | `electron-builder.yml:1` |

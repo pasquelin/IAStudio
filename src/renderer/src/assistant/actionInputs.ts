@@ -1,0 +1,59 @@
+import { isRecord, readBoolean } from '@shared/guards'
+
+/**
+ * Reading an action's input, after `validatesInput` has agreed it fits the registry. The checks
+ * are therefore narrowing rather than guarding, and they stay total: a handler that threw here
+ * would cross the boundary as a bare `badInput` and tell the client nothing.
+ */
+
+export function textOf(input: Record<string, unknown>, key: string): string | null {
+  const value = input[key]
+  return typeof value === 'string' && value.trim() !== '' ? value : null
+}
+
+export function numberOf(input: Record<string, unknown>, key: string): number | null {
+  const value = input[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+export function boolOf(input: Record<string, unknown>, key: string): boolean {
+  return readBoolean(input, key, false)
+}
+
+/**
+ * The same, telling « false » apart from « not named » — which `boolOf` cannot, and which every
+ * partial write needs: a call naming the size of a ground must not put the ground out.
+ *
+ * Its own reader rather than the pair `input.x === undefined ? … : boolOf(input, 'x')`, which was
+ * spelt out at seventeen sites and names the key twice — a typo on either half is a field the
+ * registry declares and the handler silently drops.
+ */
+export function maybeBoolOf(input: Record<string, unknown>, key: string): boolean | null {
+  return input[key] === undefined ? null : readBoolean(input, key, false)
+}
+
+/** A closed set, read by value. Numbers as well as words: `1 | 2 | 4` is a choice like any other. */
+export function oneOf<T extends string | number>(
+  input: Record<string, unknown>,
+  key: string,
+  allowed: readonly T[],
+): T | null {
+  const value = input[key]
+  return allowed.find(candidate => candidate === value) ?? null
+}
+
+export function recordOf(
+  input: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> | null {
+  const value = input[key]
+  return isRecord(value) ? value : null
+}
+
+/** A list of strings, empty rather than null: every caller treats "none given" as "none". */
+export function textsOf(input: Record<string, unknown>, key: string): string[] {
+  const value = input[key]
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : []
+}

@@ -10,18 +10,21 @@ import {
   type PartialSettings,
   type SettingsSectionId,
 } from '@shared/domain/settings'
-import {
-  boundsOf,
-  SETTING_ACTION_IDS,
-  type SettingActionId,
-} from '@shared/domain/settings-registry'
+import { boundsOf, SETTING_ACTION_IDS, type SettingActionId } from '@shared/domain/settingsRegistry'
 import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
 import { DICTATION_MODES } from '@shared/domain/dictation'
 import { isSignature } from '@shared/domain/shortcut'
 import { HOME_SECTION_IDS } from '@shared/domain/home'
 import { RECENT_PROJECTS_MAX } from '@shared/domain/project'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
-import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from '@shared/domain/scene'
+import {
+  DISPLAY_UNITS,
+  HELPER_VISIBILITIES,
+  NORMAL_LENGTH,
+  SHADOW_MAP_SIZES,
+  SHADOW_QUALITIES,
+  VIEWPORT_QUALITIES,
+} from '@shared/domain/scene'
 import { HEX_COLOR } from '@shared/domain/color'
 import type { AccountBook, Credentials } from './accounts'
 
@@ -30,7 +33,7 @@ import type { AccountBook, Credentials } from './accounts'
 const scale = boundsOf('appearance.fontScale')
 
 // The shape itself is shared with the document readers — the reason it is six digits lives with
-// it, and a setting must not accept what a `.sky` refuses.
+// it, and a setting must not accept what a a sky document refuses.
 const hexColor = z.string().regex(HEX_COLOR)
 
 const appearance = z.object({
@@ -84,9 +87,16 @@ const storage = z.object({
 // storable, and `resolveFfmpeg` falls through to the PATH when it does not resolve.
 const media = z.object({ ffmpegPath: z.string().min(1).optional() })
 
+const git = z.object({
+  binary: z.string().min(1).optional(),
+  userName: z.string().min(1).optional(),
+  userEmail: z.string().min(1).optional(),
+})
+
 const general = z.object({
   language: z.enum(LANGUAGE_PREFERENCES).optional(),
   startup: z.enum(STARTUP_BEHAVIOURS).optional(),
+  autosave: z.boolean().optional(),
 })
 
 const homeSection = z.object({
@@ -147,6 +157,7 @@ const three = z.object({
   snapTranslate: z.number().min(moveStep.min).max(moveStep.max).optional(),
   snapRotate: z.number().min(turnStep.min).max(turnStep.max).optional(),
   snapScale: z.number().min(scaleStep.min).max(scaleStep.max).optional(),
+  shadows: z.boolean().optional(),
   shadowQuality: z.enum(SHADOW_QUALITIES).optional(),
   // Read from the shared list, never retyped: what the panel offers and what this refuses have
   // to be the same numbers.
@@ -154,6 +165,15 @@ const three = z.object({
     .number()
     .refine(value => SHADOW_MAP_SIZES.includes(value))
     .optional(),
+  quality: z.enum(VIEWPORT_QUALITIES).optional(),
+  lightHelpers: z.enum(HELPER_VISIBILITIES).optional(),
+  cameraHelpers: z.enum(HELPER_VISIBILITIES).optional(),
+  boundingBoxes: z.enum(HELPER_VISIBILITIES).optional(),
+  origins: z.boolean().optional(),
+  normals: z.boolean().optional(),
+  normalLength: z.number().min(NORMAL_LENGTH.min).max(NORMAL_LENGTH.max).optional(),
+  stats: z.boolean().optional(),
+  units: z.enum(DISPLAY_UNITS).optional(),
 })
 
 /**
@@ -182,7 +202,15 @@ const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })
 // file, and the defaults are a better answer than a failing assistant.
 const assistant = z.object({ model: z.enum(ASSISTANT_MODELS).optional() })
 
-const mcp = z.object({ enabled: z.boolean().optional() })
+const mcp = z.object({
+  enabled: z.boolean().optional(),
+  delegateFiles: z.boolean().optional(),
+  delegateAsset: z.boolean().optional(),
+  delegateRemote: z.boolean().optional(),
+  // Bounded here as well as by the field: a budget arrived at through the file rather than through
+  // the window is still a budget somebody has to be able to read back.
+  delegateBudget: z.number().min(0).max(10_000).optional(),
+})
 
 const silence = boundsOf('dictation.silenceMs')
 const preview = boundsOf('dictation.previewMs')
@@ -212,6 +240,7 @@ const partialSettings = z.object({
   three: three.optional(),
   shortcuts: shortcuts.optional(),
   media: media.optional(),
+  git: git.optional(),
   advanced: advanced.optional(),
   assistant: assistant.optional(),
   mcp: mcp.optional(),

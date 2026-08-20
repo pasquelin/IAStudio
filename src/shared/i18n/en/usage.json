@@ -5,7 +5,7 @@
       "overview": "Overview",
       "models": "Models",
       "activities": "Activities",
-      "journal": "Log"
+      "journal": "Journal"
     },
     "descriptions": {
       "overview": "What all your keys spent over the period.",
@@ -50,7 +50,7 @@
     "assets": "Assets produced",
     "actions": "Actions",
     "loadMore": "Load more",
-    "loadMoreHint": "Adds the next page of the log to the ones already read",
+    "loadMoreHint": "Adds the next page of the journal to the ones already read",
     "free": "free",
     "actionNames": {
       "asset": "Asset",

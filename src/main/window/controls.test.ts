@@ -1,10 +1,10 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS, EVENTS } from '@shared/ipc'
-import { invoke, openWindow } from '@main/ipc/test-harness'
+import { invoke, openWindow } from '@main/ipc/testHarness'
 import { registerWindowControls } from './controls'
 import { setWindowLanguage } from './language'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 // Once, not per case: `followWindowLanguage` offers no way to unsubscribe, so registering again
 // would leave two followers pushing the same event — which is what the strict assertion below

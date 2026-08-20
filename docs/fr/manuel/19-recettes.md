@@ -28,19 +28,21 @@ geste juste, fait dans le mauvais espace.
 
 Avant les recettes, une règle qui les traverse toutes.
 
-**Le double-clic sur un asset n’ouvre pas d’onglet.** Il envoie l’asset dans l’onglet **déjà
-ouvert devant vous** — et à défaut dans un document ouvert **ailleurs**, en changeant d’espace.
-S’il n’y en a nulle part, un message le dit : « Cet asset n’a pas pu être ouvert ».
+**Le double-clic sur un asset ouvre un onglet à lui**, dans l’espace qui édite son type, sans
+jamais regarder celui que vous avez devant vous. Aucun document préalable n’est nécessaire, et
+rouvrir le même asset revient à son onglet plutôt que d’en ouvrir un second. Quand l’ouverture ne
+peut pas aboutir — l’asset n’est pas encore sur votre disque, ou aucun projet n’est ouvert — un
+message le dit : « Cet asset n’a pas pu être ouvert ».
 
-Donc, dans toutes les recettes qui suivent, l’ordre est **toujours** le même :
+**Pour l’envoyer dans un document déjà ouvert, c’est l’autre geste** — et c’est là que tout le
+monde se trompe :
 
 ```
-1. le bon espace        (les onglets, en haut)
-2. le bouton +          (le rail gauche — il crée le document)
-3. alors seulement, l'asset
+ouvrir l'asset             → double-clic
+l'ajouter à un document    → clic droit (il liste les destinations), ou glisser-déposer
 ```
 
-Retenez ces trois lignes et vous ne serez bloqué nulle part.
+Retenez ces deux lignes et vous ne serez bloqué nulle part.
 
 ---
 
@@ -55,7 +57,7 @@ Retenez ces trois lignes et vous ne serez bloqué nulle part.
 3. cliquez l’icône **Génération** du rail gauche — choisir un modèle n’ouvre pas le panneau à
    votre place — puis écrivez votre phrase dans le **prompt** ;
 4. **Générer**. La ligne d’état, en bas à droite, suit l’avancement ;
-5. le résultat arrive dans le panneau **Assets**, et dans `assets/img/` sur votre disque.
+5. le résultat arrive dans le panneau **Assets**, et dans `Images/` sur votre disque.
 
 **Le piège.** Sans projet ouvert, il n’y a **ni formulaire ni bouton** : le panneau affiche à la
 place « Ouvrez un projet pour générer. » Ce n’est pas un bouton grisé, c’est le panneau entier qui
@@ -122,7 +124,7 @@ Ensuite, **cliquez et glissez** dans l’aperçu pour tourner la tête, et serve
 pôle écrasé s’y voient d’un coup d’œil, alors que la vue 360 demande de tourner la tête pour
 tomber dessus.
 
-**Pour l’emporter dans un moteur** : **Fichier ▸ Exporter le ciel**, et une taille. Six PNG sortent
+**Pour l’emporter dans un moteur** : **Fichier ▸ Exporter ▸ Ciel**, et une taille. Six PNG sortent
 dans un dossier, nommés `_Rt`, `_Lf`, `_Up`, `_Dn`, `_Ft`, `_Bk` — les deux lettres qu’Unity,
 Unreal et Roblox attendent. **Réglez avant d’exporter** : l’exposition, la rotation de l’horizon et
 tout le reste sont cuits dans les fichiers. Voir [Espace Skyboxes](13-espace-skyboxes.md#sortir-le-ciel--les-six-faces).
@@ -141,18 +143,17 @@ Une *matière* (ou *texture*) n’est pas une image : c’est une surface qu’o
 4. **Inspecteur** → section **Aperçu** : choisissez la forme — **sphère**, cube, cylindre, plan ou
    nœud de tore. La **sphère** montre le mieux la lumière, le **plan** montre le mieux la
    répétition du motif ;
-5. **Inspecteur** : la section **Matériau** règle la rugosité et le métal ; **Relief** et
+5. **Inspecteur** : la section **Matière** règle la rugosité et le métal ; **Relief** et
    **Émission** sont deux sections voisines, pas son contenu. Si la matière paraît uniformément
    moyenne, ce sont les **plages** — « Plage de rugosité », « Plage de métal » — qu’il faut
-   reprendre ; elles sont dans la section Matériau, sous les deux réglages ;
-6. panneau **Canaux** : déposez une image sur la vignette de chaque canal que vous voulez remplir —
-   et pour la **hauteur**, la **normale**, l’**occlusion** et la **rugosité**, le menu de la vignette
-   les calcule depuis un autre canal, sans rien dépenser ;
+   reprendre ; elles sont dans la section Matière, sous les deux réglages ;
+6. section **Canaux** : déposez une image sur la ligne de chaque canal que vous voulez remplir —
+   et pour la **hauteur**, la **normale**, l’**occlusion** et la **rugosité**, le clic droit sur la
+   ligne les calcule depuis un autre canal, sans rien dépenser ;
 7. `⌘S` **enregistre**.
 
 **Le piège.** Une image déposée sur l’**aperçu** va toujours dans la couleur de base — c’est
-voulu. Pour viser les normales ou la rugosité, déposez sur **leur vignette** dans le panneau
-Canaux.
+voulu. Pour viser les normales ou la rugosité, déposez sur **leur ligne** dans la section Canaux.
 
 ---
 
@@ -164,8 +165,8 @@ Canaux.
 4. **Générer** — comptez plus longtemps que pour une image : quelques minutes est normal ;
 5. le clip arrive dans les **Assets**.
 
-**Pour le voir en grand** : bouton **+** du rail gauche pour ouvrir une séquence, puis glissez le
-clip sur la timeline.
+**Pour le voir en grand** : **double-cliquez** le clip dans l’étagère. Un montage s’ouvre pour lui,
+avec le clip déjà posé — le `+` du rail gauche n’est pas un préalable.
 
 ---
 
@@ -176,8 +177,8 @@ clip sur la timeline.
 3. décrivez le son voulu, **Générer** ;
 4. le son arrive dans les **Assets**.
 
-**Pour l’écouter et le retoucher :** bouton **+** du rail gauche — un onglet son s’ouvre — puis
-**double-cliquez** votre son dans l’étagère. La forme d’onde apparaît.
+**Pour l’écouter et le retoucher :** **double-cliquez** votre son dans l’étagère. Un onglet
+s’ouvre pour lui, et la forme d’onde apparaît — le `+` du rail gauche n’est pas un préalable.
 
 ---
 
@@ -193,9 +194,10 @@ clip sur la timeline.
 7. `G` pour la déplacer, `R` pour la tourner, `S` pour la redimensionner, `F` pour la cadrer ;
 8. `⌘S` **enregistre**.
 
-**Pour voler dans la scène :** maintenez le **clic droit** et servez-vous de `W` `A` `S` `D`
+**Pour voler dans la scène :** maintenez un **bouton de la souris** et servez-vous de `W` `A` `S` `D`
 (`Z` `Q` `S` `D` sur un clavier français — le studio écoute la position de la touche, pas la
-lettre). `E` monte, `Q` descend, `⇧` gauche accélère.
+lettre) ou des quatre **flèches**, qui font la même chose. `E` monte, `Q` descend, `⇧` gauche
+accélère.
 
 ---
 
@@ -215,9 +217,9 @@ lettre). `E` monte, `Q` descend, `⇧` gauche accélère.
 **Pour couper :** placez la tête de lecture, appuyez sur `S`. Pour supprimer un clip :
 sélectionnez-le, `Suppr`.
 
-**Pour garder le montage :** `⌘S`. La séquence s’écrit en `.seq` dans le projet et se rouvre
-telle quelle — pistes, clips, fondus et gains. Ce qui ne revient pas, c’est l’historique
-d’annulation.
+**Pour garder le montage :** `⌘S`. La séquence s’écrit en `.otio` — un format que Resolve et
+Premiere lisent déjà — dans le projet, et se rouvre telle quelle : pistes, clips, fondus et
+gains. Ce qui ne revient pas, c’est l’historique d’annulation.
 
 **Ce qui manque toujours :** l’**export**. Le studio ne peut pas encore écrire un fichier vidéo
 final.
@@ -226,7 +228,7 @@ final.
 
 ## Rogner un son et le faire monter en douceur
 
-1. espace **Audio**, bouton **+**, puis **double-cliquez** votre son ;
+1. **double-cliquez** votre son dans l’étagère — l’espace Audio s’ouvre avec lui ;
 2. tirez les bords de la région pour **rogner** ;
 3. posez un **fondu d’entrée** et un **fondu de sortie** ;
 4. l’outil **A/B** compare avec l’original, avant vos retouches — c’est un outil à lui seul, pas
@@ -239,9 +241,9 @@ réglages** : les coupes se mesurent sur la prise qui les a reçues.
 
 ## Poser un asset là où il faut
 
-Le tableau des dépôts les plus courants. Il y a **neuf** surfaces qui acceptent un asset ; le
-chapitre [Les assets](07-assets.md) les liste toutes, et le double-clic obéit à une autre règle
-encore.
+Le tableau des dépôts les plus courants — le chapitre [Les assets](07-assets.md) porte la liste
+entière, ce qui l’accepte et ce qui le refuse en silence. Le double-clic, lui, n’entre dans
+aucune surface : il ouvre l’asset dans un onglet à lui.
 
 | Vous voulez… | Le geste | Il faut, devant vous |
 |---|---|---|
@@ -251,8 +253,9 @@ encore.
 | une image en ciel | glisser sur l’**aperçu du ciel** | un onglet ciel |
 | un objet 3D dans une scène | glisser sur la **vue 3D** | un onglet scène |
 
-Une texture se double-clique comme les autres : elle se pose alors en couleur de base de la
-matière ouverte.
+Une texture se double-clique comme les autres : une **matière à elle** s’ouvre, dont elle remplit
+la couleur de base. Pour la poser dans la matière que vous avez devant vous, c’est le
+glisser-déposer ou le clic droit ▸ **Utiliser comme couleur de base**.
 
 ---
 
@@ -365,10 +368,10 @@ Tout est détaillé, sans rien cacher, dans
 | un ciel à 360° | Skyboxes | `+` → Générer, ça se pose tout seul |
 | une matière | Textures | `+` → glisser une image sur l’aperçu → `⌘S` |
 | un plan animé | Vidéo | filtre *Image vers vidéo* → Générer |
-| un son | Audio | Modèles → Générer, puis `+` et double-clic |
+| un son | Audio | Modèles → Générer, puis double-clic sur le son |
 | une scène 3D | 3D | `+` → une lumière **d’abord**, puis les objets → `⌘S` |
 | éclairer une scène d’un ciel | 3D | Inspecteur → Environnement → choisir la skybox |
-| poser un modèle 3D | 3D | double-clic sur le maillage, ou le glisser sur la vue |
+| poser un modèle 3D dans la scène ouverte | 3D | glisser la maille sur la vue, ou clic droit |
 | monter deux plans | Vidéo | `+` → glisser les clips sur la timeline |
 | importer mes fichiers | partout | Assets → Importer un média |
 | refaire la même image | partout | Inspecteur → Régénérer |

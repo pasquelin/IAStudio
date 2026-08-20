@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Tree } from '@/design/Tree'
-import { allLayers, canRemoveLayer, isGroup } from '@/engines/canvas/canvas-state'
+import { allLayers, canRemoveLayer, isGroup } from '@/engines/canvas/canvasState'
 import { moveLayer, setLayerVisible } from '@/engines/canvas/commands'
 import { canvasOf, collapseLayerIn, selectLayerIn, useCanvases } from '@/stores/canvases'
 import { useSelection } from '@/stores/selection'
 import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
 import { LayerRow } from './LayerRow'
-import { openLayerMenu } from './LayerMenu'
-import { layerNodes, levelIndexOf, stackIndex } from './layer-nodes'
+import { openLayerMenu } from './layerMenu'
+import { layerNodes, levelIndexOf, stackIndex } from './layerNodes'
 
 /**
  * The stack of the document in front, listed through the same `Tree` as the scene outliner and
@@ -93,8 +93,10 @@ export function LayerList({ documentId }: { documentId: string }) {
       // Only a group holds layers. Dropping onto one puts the layer at the top of it, which is
       // the first row the list draws inside it — where the eye was aiming.
       droppable={node => isGroup(node.layer)}
-      onDrop={(id, parentId) => move(id, parentId, 0)}
-      onInsert={move}
+      // One row at a time: `dragMultiple` is off here, so the batch is always the row itself —
+      // and the insertion index is arithmetic written for one layer leaving its level.
+      onDrop={(ids, parentId) => ids.forEach(id => move(id, parentId, 0))}
+      onInsert={(ids, parentId, index) => ids.forEach(id => move(id, parentId, index))}
       // Through the tree rather than from the row: it is what holds the `preventDefault` a
       // right-click needs — without it the system raises its clipboard menu over ours — and the
       // guard that leaves a right-click inside the rename field to that menu alone.

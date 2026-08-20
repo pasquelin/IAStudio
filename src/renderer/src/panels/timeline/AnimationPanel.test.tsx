@@ -1,15 +1,16 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
-import { EMPTY_SCENE } from '@/engines/scene/scene-state'
-import { setTimelineSettings } from '@/engines/scene/animation-commands'
+import { meshNode, modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
+import { EMPTY_SCENE } from '@/engines/scene/sceneState'
+import { setTimelineSettings } from '@/engines/scene/animationCommands'
 import { SECOND } from '@shared/domain/time'
 import { installScene } from '@/stores/scene-fixtures'
-import { useSceneViews } from '@/stores/scene-views'
-import { useAnimationViews } from '@/stores/animation-view'
-import { useModelClips } from '@/stores/model-clips'
+import { useSceneViews } from '@/stores/sceneViews'
+import { useAnimationViews } from '@/stores/animationView'
+import { useModelClips } from '@/stores/modelClips'
 import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
+import { sceneNodeDrag } from '@/panels/scene/dragged'
 import { AnimationPanel } from './AnimationPanel'
 
 const DOCUMENT = 'doc-1'
@@ -17,14 +18,78 @@ const DOCUMENT = 'doc-1'
 const timelineOf = () => sceneOf(useScenes.getState(), DOCUMENT).animation
 const tracks = () => timelineOf().tracks
 
-/** A scene with one cube, picked — which is what the add buttons read. */
+/** A scene with one cube, picked and ON the band — which is what the add buttons read. */
 function withSelectedCube(): void {
   installScene(DOCUMENT, {
     ...EMPTY_SCENE,
     nodes: [meshNode('cube-1')],
     selectedIds: ['cube-1'],
+    animation: { ...EMPTY_SCENE.animation, sheet: ['cube-1'] },
   })
 }
+
+/*
+ * Dropping an object of the outliner onto the band. Both halves were found by hand, at the screen,
+ * and neither showed as an error of any kind — a browser refuses a drop in silence.
+ *
+ * The PANEL takes the drop and not the canvas, because an empty band draws no canvas at all: the
+ * empty state stands there instead, and that is precisely when a first object is dropped.
+ *
+ * And the effect has to be `move`: the outliner arms its rows with `effectAllowed = 'move'`, and
+ * a drop asking for `copy` is refused by the platform with nothing happening.
+ */
+describe('an object dropped onto the band', () => {
+  /** Armed through the CHANNEL itself, so the case cannot drift from how a row is really carried. */
+  const carrying = (...nodeIds: string[]) => {
+    const written = new Map<string, string>()
+    const dataTransfer = {
+      effectAllowed: 'uninitialized',
+      dropEffect: 'none',
+      types: [] as string[],
+      setData: (type: string, value: string) => {
+        written.set(type, value)
+        dataTransfer.types = [...written.keys()]
+      },
+      getData: (type: string) => written.get(type) ?? '',
+    }
+    sceneNodeDrag.start({ dataTransfer } as never, nodeIds)
+    return dataTransfer
+  }
+
+  beforeEach(() => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [meshNode('cube-1'), meshNode('sphere-1')],
+      selectedIds: [],
+      animation: { ...EMPTY_SCENE.animation, sheet: [] },
+    })
+    useAnimationViews.setState({ views: {} })
+  })
+
+  it('lands on an EMPTY band, where no canvas is drawn to receive it', () => {
+    const { container } = render(<AnimationPanel documentId={DOCUMENT} />)
+    const panel = container.firstElementChild
+    if (!panel) throw new Error('no panel')
+
+    fireEvent.drop(panel, { dataTransfer: carrying('sphere-1') })
+
+    expect(timelineOf().sheet).toEqual(['sphere-1'])
+    expect(screen.getByTestId('anim-subject-sphere-1')).toBeInTheDocument()
+  })
+
+  // `copy` draws the `+` under the pointer, and a target may not ask for an effect its source
+  // forbade — `move` alone left every surface that ADDS unable to say the drop would work.
+  it('asks for copy, which is the cursor that says the drop will work', () => {
+    const { container } = render(<AnimationPanel documentId={DOCUMENT} />)
+    const panel = container.firstElementChild
+    if (!panel) throw new Error('no panel')
+    const carried = carrying('cube-1')
+
+    fireEvent.dragOver(panel, { dataTransfer: carried })
+
+    expect(carried.dropEffect).toBe('copy')
+  })
+})
 
 describe('AnimationPanel', () => {
   beforeEach(() => {
@@ -110,13 +175,14 @@ describe('AnimationPanel and the bones of a rig', () => {
       ...EMPTY_SCENE,
       nodes: [modelNodeFixture('perso')],
       selectedIds: ['perso'],
+      animation: { ...EMPTY_SCENE.animation, sheet: ['perso'] },
     })
     useSceneViews.setState({ views: {} })
-    useModelClips.setState({ clips: {}, bones: {} })
+    useModelClips.setState({ clips: {}, rigs: {} })
   })
 
   it('keys the model itself, on its own line', async () => {
-    useModelClips.setState({ bones: { [DOCUMENT]: { perso: ['spine', 'arm.L'] } } })
+    useModelClips.setState({ rigs: { [DOCUMENT]: { perso: rigStateFixture(['spine', 'arm.L']) } } })
     render(<AnimationPanel documentId={DOCUMENT} />)
 
     await userEvent.click(
@@ -172,16 +238,22 @@ describe('the request, clause by clause', () => {
     useAnimationViews.setState({ views: {} })
   })
 
-  it('« voir mes objets » — every object of the scene has its line, unprompted', () => {
+  /*
+   * The clause CHANGED, and this case changed with it: the band used to show every object of the
+   * scene, which put 8 000 blocks and 24 009 buttons on it. A house is scenery and a character in
+   * front of it is animated — only the person can say which, so only what they put there shows.
+   */
+  it('« ce que j’y mets » — the objects of the sheet have a line, the others none', () => {
     installScene(DOCUMENT, {
       ...EMPTY_SCENE,
       nodes: [meshNode('cube-1'), meshNode('sphere-1')],
       selectedIds: [],
+      animation: { ...EMPTY_SCENE.animation, sheet: ['cube-1'] },
     })
     render(<AnimationPanel documentId={DOCUMENT} />)
 
     expect(screen.getByTestId('anim-subject-cube-1')).toBeInTheDocument()
-    expect(screen.getByTestId('anim-subject-sphere-1')).toBeInTheDocument()
+    expect(screen.queryByTestId('anim-subject-sphere-1')).not.toBeInTheDocument()
   })
 
   it('« mettre des points clés » — one press keys the object, whatever it held before', async () => {

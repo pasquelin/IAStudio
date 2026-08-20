@@ -1,21 +1,33 @@
 import { readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { CHANNELS, EVENTS } from '@shared/ipc'
-import { PICTURES, withoutSourcePath } from '@shared/domain/asset'
+import { PICTURES, withoutSourcePath, type Asset, type MediaProbe } from '@shared/domain/asset'
+import type { FileOutcome } from '@shared/domain/fileOp'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
-import type { TextureExtraction } from '@main/assets/texture-extraction'
+import type { TextureExtraction } from '@main/assets/textureExtraction'
 import { parseAssetIds } from '@main/assets/validation'
 import { broadcast } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { isPngBytes, probePng } from '@main/media/png'
+import { packOpenRaster, unpackOpenRaster } from '@main/assets/openRasterFile'
+import { oraThumbnailOf } from '@main/media/oraThumbnail'
+import { ORA_MERGED_PATH } from '@shared/domain/openRaster'
 import { probeWav } from '@main/media/wav'
-import type { LocalBackend } from '@main/assets/local-backend'
-import type { FolderEditor, FolderReader } from './folder'
-import type { ActivityReport } from './activity-log'
-import { askCloseChoice, askDeleteDocument, type AskUser } from './document-dialogs'
+import type { LocalBackend } from '@main/assets/localBackend'
+import { fileFactsOf } from './fileFacts'
+import type { FileOps } from './fileOps'
+import type { FolderReader } from './folder'
+import type { Reconciler } from './reconcile'
+import type { ActivityReport } from './activityLog'
+import {
+  askCloseChoice,
+  askDeleteDocument,
+  askOverwriteDocument,
+  type AskUser,
+} from './documentDialogs'
 import type { DocumentFiles } from './documents'
-import { askUseOccupiedFolder } from './project-dialogs'
+import { askTrashFiles, askUseOccupiedFolder } from './projectDialogs'
 import { openFailureKey, type ProjectStore } from './store'
 import {
   parseAssetId,
@@ -25,12 +37,18 @@ import {
   parseDocumentKind,
   parseDocumentTitle,
   parseFolderPath,
+  parseFolderPaths,
+  parseForceWrite,
+  parseHiddenShown,
+  parseLandingFolder,
   parseProjectName,
   parseProjectPath,
   parseProjectTitle,
   parseSaveAudio,
+  parseSaveLayered,
   parseSavePicture,
   parseSaveTexture,
+  parseSearchTerm,
 } from './validation'
 
 /** What `saveAudio` writes — the renderer encodes uncompressed PCM, never a codec. */
@@ -38,6 +56,9 @@ const WAV_EXTENSION = '.wav'
 
 /** What `saveTexture` writes. Lossless, because a channel is data before it is a picture. */
 const PNG_EXTENSION = '.png'
+
+/** What `saveLayered` writes: OpenRaster, the open container for a stack. */
+const ORA_EXTENSION = '.ora'
 
 export type ProjectHandlerDeps = {
   project: ProjectStore
@@ -60,15 +81,19 @@ export type ProjectHandlerDeps = {
    * lost would otherwise be a menu row that does nothing and explains nothing.
    */
   exists: (path: string) => boolean
-  /** The project folder: read one level at a time, and the two gestures that write to it. */
-  folder: FolderReader & FolderEditor
+  /** The project folder, read one level at a time. */
+  folder: FolderReader
+  /** Everything that WRITES to that folder, and the stack that takes a batch back. */
+  files: FileOps
+  /** The pass that puts the catalogue and the folder back in agreement — watched, never asked for. */
+  reconciler: Reconciler
   /**
    * `shell.openPath`, which answers an empty string on success and a sentence on failure — and
    * this is the only place the studio launches a third-party application, so it is injected
    * like every other thing that leaves the process.
    */
   openInSystem: (file: string) => Promise<string>
-  /** `dialog.showMessageBox`, injected for the same reason — see `document-dialogs`. */
+  /** `dialog.showMessageBox`, injected for the same reason — see `documentDialogs`. */
   askUser: AskUser
 }
 
@@ -82,6 +107,8 @@ export function registerProjectHandlers({
   reveal,
   exists,
   folder,
+  files,
+  reconciler,
   openInSystem,
   askUser,
 }: ProjectHandlerDeps): void {
@@ -139,6 +166,12 @@ export function registerProjectHandlers({
     reveal(join(project.path(), parseFolderPath(relative)))
   })
 
+  // Parsed like every other path a window names, and for the same reason: a renderer says where
+  // it wants to look, and `..` would look outside the folder the user opened.
+  handle(CHANNELS.projectFileFacts, async (_event, relative) =>
+    fileFactsOf(join(project.path(), parseFolderPath(relative))),
+  )
+
   // An absolute path, unlike the one above: the home's shelf points at projects that are NOT
   // open, so there is no root to resolve against. `parseProjectPath` is the same refusal
   // `projectOpen` already applies to a path the renderer names — showing a folder opens nothing
@@ -180,31 +213,97 @@ export function registerProjectHandlers({
     }
   })
 
-  // All three answer whether it happened, and all three say why in the journal when it did not:
-  // a gesture that does nothing and explains nothing is the worst of the three outcomes.
-  handle(CHANNELS.projectRenameFile, async (_event, relative, name) => {
-    const done = await folder.rename(parseFolderPath(relative), parseProjectName(name))
-    if (!done) record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotRenamed' })
-    return done
+  /**
+   * The seven gestures that write to the project folder, and the one that reads their history.
+   *
+   * All of them go through `files`, and none of them decides anything: what may be written is
+   * settled in `filePlan.ts` against a reading of the folders taken before the first write.
+   * The panel used to route a rename through three channels depending on what the row turned
+   * out to be — six more gestures would have been that branch written six more times.
+   *
+   * **What comes back is a partial result**, never a boolean: two hundred and ninety-eight
+   * rushes moved and two names already taken is what a file browser answers.
+   */
+  const settled = (outcome: FileOutcome): FileOutcome => {
+    // Only what actually moved is worth waking every window for. A batch that refused everything
+    // has already said so to the one that asked.
+    if (outcome.done.length > 0) broadcast(EVENTS.filesChanged, outcome)
+    if (outcome.refused.length > 0) {
+      record({
+        level: 'error',
+        topic: 'project',
+        messageKey: 'activity.filesRefused',
+        params: { count: outcome.refused.length },
+      })
+    }
+    return outcome
+  }
+
+  handle(CHANNELS.projectRenameFile, async (_event, relative, name) =>
+    settled(await files.rename(parseFolderPath(relative), parseProjectName(name))),
+  )
+
+  handle(CHANNELS.projectMoveFiles, async (_event, paths, folderPath) =>
+    settled(await files.move(parseFolderPaths(paths), parseFolderPath(folderPath))),
+  )
+
+  /**
+   * The files go to the system's trash, and the rows that named them go with them.
+   *
+   * Asked first past one file, because this is the one gesture `undoFile` cannot take back —
+   * see `askTrashFiles`. A refusal is an empty outcome rather than an error: a cancelled
+   * gesture is not a failure, and nothing was written to say otherwise.
+   */
+  handle(CHANNELS.projectTrashFiles, async (_event, paths) => {
+    const wanted = parseFolderPaths(paths)
+    if (wanted.length > 1 && !(await askTrashFiles(askUser, wanted.length))) {
+      return { done: [], refused: [], batch: '' }
+    }
+
+    return settled(await files.trash(wanted))
   })
 
-  handle(CHANNELS.projectMoveFile, async (_event, relative, folderPath) => {
-    const done = await folder.move(parseFolderPath(relative), parseFolderPath(folderPath))
-    if (!done) record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotMoved' })
-    return done
+  handle(CHANNELS.projectNewFolder, async (_event, folderPath, name) =>
+    settled(await files.createFolder(parseFolderPath(folderPath), parseProjectName(name))),
+  )
+
+  handle(CHANNELS.projectDuplicateFiles, async (_event, paths) =>
+    settled(await files.duplicate(parseFolderPaths(paths))),
+  )
+
+  // Cut moves, copy lays a copy down under a free name — one channel because the clipboard is
+  // one gesture with two settings, and two channels would be two places to keep in step.
+  handle(CHANNELS.projectPasteFiles, async (_event, paths, folderPath, cut) => {
+    const wanted = parseFolderPaths(paths)
+    const into = parseFolderPath(folderPath)
+    return settled(
+      cut === true ? await files.move(wanted, into) : await files.duplicate(wanted, into),
+    )
   })
 
-  handle(CHANNELS.projectTrashFile, async (_event, relative) => {
-    const done = await folder.trash(parseFolderPath(relative))
-    if (!done) record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotTrashed' })
-    return done
-  })
+  handle(CHANNELS.projectUndoFile, async () => settled(await files.undo()))
+  handle(CHANNELS.projectRedoFile, async () => settled(await files.redo()))
+  // `async` for the same reason `projectListFolder` is: the other side awaits an invoke.
+  handle(CHANNELS.projectFileHistory, async () => files.can())
+
+  // A window never asks FOR a pass — opening a project and coming back to the front are what do.
+  // What it may do is watch one and call it off.
+  handle(CHANNELS.projectRescanState, async () => reconciler.state())
+  handle(CHANNELS.projectStopRescan, async () => reconciler.stop())
 
   // `async`, though it awaits nothing of its own: a refused path throws from `parseFolderPath`,
   // and a synchronous throw here would reach the caller as an exception rather than a rejected
   // invoke — which is not what the other side is written to catch.
-  handle(CHANNELS.projectListFolder, async (_event, relative) =>
-    folder.list(parseFolderPath(relative)),
+  handle(CHANNELS.projectListFolder, async (_event, relative, hidden) =>
+    folder.list(parseFolderPath(relative), parseHiddenShown(hidden)),
+  )
+
+  handle(CHANNELS.projectSearchFolder, async (_event, term, hidden) =>
+    folder.search(parseSearchTerm(term), parseHiddenShown(hidden)),
+  )
+
+  handle(CHANNELS.projectWalkFolder, async (_event, hidden) =>
+    folder.walk(parseHiddenShown(hidden)),
   )
 
   handle(CHANNELS.projectOpenFile, async (_event, relative) => {
@@ -302,6 +401,52 @@ export function registerProjectHandlers({
     )
   })
 
+  /**
+   * The half `savePicture` and `saveLayered` share: overwrite the picture named, or land a new
+   * one beside the source it derives from. Only the bytes and the extension tell the two apart,
+   * and a rule fixed on one of them alone is what this exists to stop.
+   */
+  const landPicture = async (
+    request: { name: string; replaces?: string; derivedFrom?: string },
+    bytes: Uint8Array,
+    extension: string,
+    probe: MediaProbe | undefined,
+  ): Promise<Asset> => {
+    // Checked against the CATALOGUE, not against what was sent. `sourceAssetId` is read back
+    // off a JSON envelope inside the project folder — user territory, like the manifest — and
+    // `replaceBytes` builds its path from the row's own type: an id naming a take would write
+    // `audio/<id>` under whichever extension landed here and `rm` the `.wav` beside it,
+    // destroying a recording from a save on another document entirely.
+    if (request.replaces) {
+      const replaced = await project.catalog().find(request.replaces)
+      if (!replaced || !PICTURES.includes(replaced.type)) {
+        throw new Error(`asset ${request.replaces} is not a picture to overwrite`)
+      }
+
+      return withoutSourcePath(await assets.replaceBytes(request.replaces, bytes, extension, probe))
+    }
+
+    // A picture saved beside its source inherits what the source IS: its kind, and the channel
+    // it holds when it holds one. Read from the catalogue rather than sent by the renderer, for
+    // the reason `saveTexture` gives — the kind is what the folder and the extension follow.
+    const source = request.derivedFrom ? await project.catalog().find(request.derivedFrom) : null
+
+    return withoutSourcePath(
+      await assets.importFromBytes(
+        {
+          id: newAssetId(),
+          name: request.name,
+          type: source?.type ?? 'image',
+          extension,
+          ...(probe ? { probe } : {}),
+          ...(source?.map ? { map: source.map } : {}),
+          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
+        },
+        bytes,
+      ),
+    )
+  }
+
   handle(CHANNELS.assetsSavePicture, async (_event, value) => {
     const request = parseSavePicture(value)
     // Decoded here rather than in the renderer, exactly as the export is: a `Buffer` does not
@@ -320,41 +465,41 @@ export function registerProjectHandlers({
 
     // The same asset, edited — what ⌘S means on a document opened from one. `replaceBytes` keeps
     // the id, the name and the tags, and moves the extension with the bytes.
-    if (request.replaces) {
-      // Checked against the CATALOGUE, not against what was sent. `sourceAssetId` is read back
-      // off a JSON envelope inside the project folder — user territory, like the manifest — and
-      // `replaceBytes` builds its path from the row's own type: an id naming a take would write
-      // `audio/<id>.png` and `rm` the `.wav` beside it, destroying a recording from a save on
-      // another document entirely.
-      const replaced = await project.catalog().find(request.replaces)
-      if (!replaced || !PICTURES.includes(replaced.type)) {
-        throw new Error(`asset ${request.replaces} is not a picture to overwrite`)
-      }
+    return landPicture(request, png, PNG_EXTENSION, probe)
+  })
 
-      return withoutSourcePath(
-        await assets.replaceBytes(request.replaces, png, PNG_EXTENSION, probe),
-      )
+  handle(CHANNELS.assetsSaveLayered, async (_event, value) => {
+    const request = parseSaveLayered(value)
+    // Checked like `savePicture` checks its own, and it matters more here: `mergedimage.png` is
+    // what every other application draws of this file, so bytes that are not a picture make a
+    // container that opens as nothing — with the layers beside it, intact and unreachable.
+    const merged = request.document.surfaces.find(one => one.path === ORA_MERGED_PATH)?.png
+    if (!merged || !isPngBytes(merged)) throw new Error('expected a PNG payload')
+
+    // The flatten reduced to the 256 px the spec allows, rather than the flatten again: written
+    // whole it doubled the file and put it out of spec, and every read inflated the copy.
+    const bytes = packOpenRaster(request.document, '', oraThumbnailOf(merged))
+    // Read off the FLATTEN the container carries, not off the container: what the shelf and the
+    // inspector show of a `.ora` is its `mergedimage.png`, and its dimensions are the picture's.
+    const probe = probePng(merged) ?? undefined
+
+    return landPicture(request, bytes, ORA_EXTENSION, probe)
+  })
+
+  handle(CHANNELS.assetsReadLayered, async (_event, value) => {
+    const asset = await project.catalog().find(parseAssetId(value))
+    // `ownFileOf`, like every reader here: a linked file is the user's own, and the container is
+    // read from wherever they left it.
+    const file = asset ? ownFileOf(project.path(), asset) : null
+    if (!file?.toLowerCase().endsWith(ORA_EXTENSION)) return null
+
+    try {
+      return unpackOpenRaster(await readFile(file))
+    } catch {
+      // A `.ora` that will not unpack is a file to open as a flat picture rather than a tab that
+      // refuses to appear — the caller falls back, and the container's own flatten still draws.
+      return null
     }
-
-    // A picture saved beside its source inherits what the source IS: its kind, and the channel
-    // it holds when it holds one. Read from the catalogue rather than sent by the renderer, for
-    // the reason `saveTexture` gives — the kind is what the folder and the extension follow.
-    const source = request.derivedFrom ? await project.catalog().find(request.derivedFrom) : null
-
-    return withoutSourcePath(
-      await assets.importFromBytes(
-        {
-          id: newAssetId(),
-          name: request.name,
-          type: source?.type ?? 'image',
-          extension: PNG_EXTENSION,
-          ...(probe ? { probe } : {}),
-          ...(source?.map ? { map: source.map } : {}),
-          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
-        },
-        png,
-      ),
-    )
   })
 
   handle(CHANNELS.assetsSaveTexture, async (_event, value) => {
@@ -405,11 +550,18 @@ export function registerProjectHandlers({
     documents.read(parseDocumentId(id), parseDocumentKind(kind)),
   )
 
-  handle(CHANNELS.documentWrite, async (_event, id, kind, draft) => {
-    await documents.write(parseDocumentId(id), parseDocumentKind(kind), parseDocumentDraft(draft))
+  handle(CHANNELS.documentWrite, async (_event, id, kind, draft, force, folder) => {
+    const written = await documents.write(
+      parseDocumentId(id),
+      parseDocumentKind(kind),
+      parseDocumentDraft(draft),
+      parseForceWrite(force),
+      parseLandingFolder(folder),
+    )
     // After the save, never before: a manifest stamped for a document the disk refused would
-    // say the project worked when nothing was written.
-    project.touch()
+    // say the project worked when nothing was written. A refused overwrite is that same case.
+    if (written === 'written') project.touch()
+    return written
   })
 
   handle(CHANNELS.documentRename, async (_event, id, kind, title) => {
@@ -434,5 +586,9 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.documentConfirmDelete, (_event, title) =>
     askDeleteDocument(askUser, parseDocumentTitle(title)),
+  )
+
+  handle(CHANNELS.documentConfirmOverwrite, (_event, title) =>
+    askOverwriteDocument(askUser, parseDocumentTitle(title)),
   )
 }

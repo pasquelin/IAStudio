@@ -13,11 +13,12 @@ import { describe, expect, it } from 'vitest'
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /**
- * The three import cycles this repository still carries, each written as its two files sorted.
+ * The import cycles this repository still carries, each written as its two files sorted.
  *
- * A ratchet, not a target: this list is meant to shrink and never to grow. Nothing else in
- * `pnpm validate` sees a cycle — not the compiler, not eslint, not the tests — so a cycle removed
- * today can come back tomorrow with every gate green, which is what happened to the fifth one.
+ * **Empty, and that is the point of keeping it.** A ratchet, not a target: the list is meant to
+ * shrink and never to grow. Nothing else in `pnpm validate` sees a cycle — not the compiler, not
+ * eslint, not the tests — so a cycle removed today can come back tomorrow with every gate green,
+ * which is what happened to the fifth one. An empty list makes the next one fail on sight.
  *
  * **Nothing here enforces the direction.** A line can be added as easily as removed, and no test
  * can tell a surrender from a fix. Review is what holds it, and that is worth knowing rather than
@@ -27,11 +28,7 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
  * this tree, not a property of this detector: the two disagree the moment one sees an edge the
  * other does not.
  */
-const KNOWN: readonly string[] = [
-  'main/scenario/job-store.ts -> main/scenario/validation.ts',
-  'renderer/src/engines/canvas/CanvasEngine.ts -> renderer/src/engines/canvas/brush.ts',
-  'renderer/src/stores/layout-prune.ts -> renderer/src/stores/layouts.ts',
-]
+const KNOWN: readonly string[] = []
 
 const ALIASES: readonly [string, string][] = [
   ['@/', 'renderer/src/'],
@@ -60,9 +57,9 @@ const sources = (from: string): string[] => {
  * — measured, before the substitution below existed.
  *
  * What it still cannot see, and neither can madge: a worker named through `new URL('./x.js',
- * import.meta.url)` — four of them, at `project/catalog-thread.ts`, `scenario/transform-thread.ts`,
- * `media/peaks-process.ts`, `dictation/stt-process.ts`. That is a URL, not an import, and each of
- * those workers is a build entry point of its own.
+ * import.meta.url)` — three of them, at `project/catalogThread.ts`, `media/peaksProcess.ts` and
+ * `dictation/sttProcess.ts`, one per worker entry of `electron.vite.config.ts`. That is a URL,
+ * not an import, and each of those workers is a build entry point of its own.
  */
 const resolveImport = (specifier: string, fromFile: string): string | null => {
   // `?worker` and `?raw` are Vite's, and the module they name is still a module.
@@ -125,7 +122,7 @@ const cyclesIn = (graph: Map<string, string[]>): string[] => {
  * Test material — fixtures, harnesses, the fake bridge, and the suites themselves. Kept here
  * because this is where the question « who may import this » is asked.
  */
-const TEST_MATERIAL = /(\.(test|bench)\.tsx?|-fixtures\.tsx?|test-harness\.ts|fake-bridge\.ts)$/
+const TEST_MATERIAL = /(\.(test|bench)\.tsx?|-fixtures\.tsx?|testHarness\.ts|fakeBridge\.ts)$/
 
 /** A fixture, recognised where the resolver LANDED rather than where a specifier pointed. */
 const IS_FIXTURE = /-fixtures\.tsx?$/
@@ -191,7 +188,7 @@ describe('what a shipped file may reach', () => {
 })
 
 describe('the import graph', () => {
-  it('carries no cycle beyond the three already there', () => {
+  it('carries no import cycle at all', () => {
     const files = sources(SRC)
     const graph = new Map<string, string[]>(
       files.map(file => {
@@ -206,9 +203,29 @@ describe('the import graph', () => {
     const found = cyclesIn(graph)
     const known = [...KNOWN].sort()
 
+    // An empty result proves nothing unless the files were opened — the same floor the fixture
+    // walk keeps, and for the same reason: a walk that stopped walking prints this green too.
+    expect(files.length).toBeGreaterThan(600)
+
     // Two assertions rather than one equality: a cycle that appeared is a regression to undo, a
     // cycle that vanished is a line to delete here. A single diff would report them alike.
     expect(found.filter(cycle => !known.includes(cycle))).toEqual([])
     expect(known.filter(cycle => !found.includes(cycle))).toEqual([])
+  })
+
+  /**
+   * And it can fail. While `KNOWN` held entries, the second assertion above was the liveness
+   * probe: a detector gone blind answered nothing and the missing lines reddened. Emptying the
+   * list retired that probe — `[].filter(…)` is empty however broken the walk is — so the proof
+   * that this file can still SEE a cycle has to be made on a graph of its own.
+   */
+  it('would see a cycle if the tree had one', () => {
+    const [a, b] = [join(SRC, 'a.ts'), join(SRC, 'b.ts')]
+    const ring = new Map([
+      [a, [b]],
+      [b, [a]],
+    ])
+
+    expect(cyclesIn(ring)).toEqual(['a.ts -> b.ts'])
   })
 })

@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { LicencesWindow } from './LicencesWindow'
 
 // Unfolding a licence puts its WHOLE text in the DOM — that is the point of the panel — and
@@ -20,6 +20,20 @@ describe('LicencesWindow', () => {
 
     expect(screen.getByRole('button', { name: /FFmpeg/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^three\b/ })).toBeInTheDocument()
+  })
+
+  /**
+   * The frame the four other windows outside the docks already wore. This one wrote it out again
+   * — its own container, its own dragged header, its own tooltip host — which is how a window
+   * ends up looking like a second application beside the one it opens from.
+   */
+  it('wears the shared window frame rather than one of its own', () => {
+    render(<LicencesWindow />)
+
+    expect(screen.getByText('Licences')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toContainElement(
+      screen.getByRole('button', { name: /FFmpeg/ }),
+    )
   })
 
   /**

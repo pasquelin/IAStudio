@@ -92,6 +92,12 @@ try {
   const plist = join(bundle, 'Contents', 'Info.plist')
   const identity = `${PRODUCT_NAME}:${createHash('sha256').update(readFileSync(iconSource)).digest('hex')}`
 
+  // What `require('electron')` reads to find the binary. Re-extracting the archive puts a fresh
+  // `Electron.app` BESIDE the bundle we renamed and points this back at it, which leaves the
+  // studio launching under Electron's name and icon while our bundle sits there, intact.
+  const pathFile = join(electronRoot, 'path.txt')
+  const wiring = `${PRODUCT_NAME}.app/Contents/MacOS/${PRODUCT_NAME}`
+
   // stderr dropped: PlistBuddy writes "Does Not Exist" there before failing, and asking whether
   // a key is present is a normal thing to do — it should not print anything.
   const plistBuddy = command =>
@@ -119,7 +125,16 @@ try {
     }
   }
 
-  if (existsSync(bundle) && stamped() && sealed()) process.exit(0)
+  /** Named and sealed says nothing about which bundle is LAUNCHED — see `pathFile` above. */
+  const wired = () => {
+    try {
+      return readFileSync(pathFile, 'utf8').trim() === wiring
+    } catch {
+      return false
+    }
+  }
+
+  if (existsSync(bundle) && stamped() && sealed() && wired()) process.exit(0)
 
   const original = join(dist, 'Electron.app')
   if (!existsSync(bundle)) {
@@ -143,11 +158,7 @@ try {
   // product's, the icon it carries is what the Dock draws before the app has run a line.
   buildIcns(join(bundle, 'Contents', 'Resources', 'electron.icns'))
 
-  // What `require('electron')` reads to find the binary — stale here means nothing launches.
-  writeFileSync(
-    join(electronRoot, 'path.txt'),
-    `${PRODUCT_NAME}.app/Contents/MacOS/${PRODUCT_NAME}`,
-  )
+  writeFileSync(pathFile, wiring)
 
   // Stamped before sealing: the seal has to cover the stamp, or the next run finds a bundle
   // whose signature no longer matches and redoes everything.

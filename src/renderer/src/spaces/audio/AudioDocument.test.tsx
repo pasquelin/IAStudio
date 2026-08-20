@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
+import type * as Bridge from '@/services/bridge'
 import { canUndo } from '@/engines/core/history'
 import {
   chainOf,
@@ -10,15 +11,18 @@ import {
   withChain,
   type TakeChain,
 } from '@/engines/audio/edits'
-import { startAssetDrag } from '@/helpers/asset-drag'
+import { exportOtio } from '@/app/otioExport'
+import { startAssetDrag } from '@/helpers/assetDrag'
+import { publishCommand } from '@/services/commandBus'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { SECOND } from '@shared/domain/time'
 import { addClip } from '@/engines/timeline/commands'
-import { makeClip, updateClip, EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timeline-state'
+import { makeClip, updateClip, EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timelineState'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
-import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
+import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audioEdits'
 import { useDocuments } from '@/stores/documents'
+import { useMonitorPair } from '@/stores/monitorPair'
 import { installDocuments } from '@/stores/document-fixtures'
 import { AudioDocument } from './AudioDocument'
 
@@ -32,15 +36,20 @@ const decodeAsset = vi.hoisted(() =>
   vi.fn(() => Promise.resolve({ sampleRate: 100, channels: [new Float32Array(200).fill(0.5)] })),
 )
 
-vi.mock('@/helpers/audio-decode', () => ({ decodeAsset }))
+vi.mock('@/helpers/audioDecode', () => ({ decodeAsset }))
 
 vi.mock('./useWaveSurfer', () => ({
   useWaveSurfer: () => ({ playing: false, currentTime: 0, toggle: vi.fn(), seek: vi.fn() }),
 }))
 
-vi.mock('@/services/bridge', () => ({
+// Partial: the stores this document pulls in reach for the rest of the module, and a total mock
+// would have to grow an entry every time the bridge gains one.
+vi.mock('@/services/bridge', async importOriginal => ({
+  ...(await importOriginal<typeof Bridge>()),
   getBridge: () => ({ assets: { saveAudio } }),
 }))
+
+vi.mock('@/app/otioExport', () => ({ exportOtio: vi.fn(() => Promise.resolve('Bande.otio')) }))
 
 const asset: Asset = {
   id: 'asset-1',
@@ -86,6 +95,9 @@ function montageWithTake(): void {
 // reaching for a bridge these tests do not mount.
 beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
+  // Almost everything below works ON the take editor, which a tab hides by default: the decor
+  // opens it, and the one suite about the default closes it again.
+  useMonitorPair.setState({ clipShown: { 'doc-1': true } })
 })
 
 async function openTake({ inFront = true }: { inFront?: boolean } = {}): Promise<void> {
@@ -108,6 +120,48 @@ describe('AudioDocument', () => {
     saveAudio.mockClear()
     useAssets.setState({ items: [asset] })
     useSequences.setState({ states: { 'doc-1': EMPTY_SOUND_SEQUENCE }, histories: {} })
+  })
+
+  /**
+   * What a montage tab is FOR is the montage: the take editor is the half one opens when a take
+   * needs work, and it used to take half the column whether or not anything was being worked on.
+   */
+  describe('the take editor, which the tab hides by default', () => {
+    beforeEach(() => useMonitorPair.setState({ clipShown: {} }))
+
+    it('opens on the montage alone', async () => {
+      useAudioEdits.setState({ states: { 'doc-1': EMPTY_AUDIO_EDIT }, histories: {} })
+      montageWithTake()
+      installDocuments({ 'doc-1': 'audio' }, 'doc-1')
+      render(<AudioDocument documentId="doc-1" />)
+
+      expect(screen.queryByRole('button', { name: /Rogner/ })).not.toBeInTheDocument()
+    })
+
+    it('shows and hides it on the button the montage monitor carries', async () => {
+      useAudioEdits.setState({ states: { 'doc-1': EMPTY_AUDIO_EDIT }, histories: {} })
+      montageWithTake()
+      installDocuments({ 'doc-1': 'audio' }, 'doc-1')
+      render(<AudioDocument documentId="doc-1" />)
+
+      await userEvent.click(screen.getByRole('button', { name: 'Éditeur de prise' }))
+      expect(await screen.findByRole('button', { name: /Rogner/ })).toBeInTheDocument()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Éditeur de prise' }))
+      expect(screen.queryByRole('button', { name: /Rogner/ })).not.toBeInTheDocument()
+    })
+  })
+
+  /**
+   * The same montage as the Video space, so the same export. Nothing else here writes the cut
+   * out, and a montage that exists only in a take's own file is the loss this whole chantier is against.
+   */
+  it('writes its montage out as a cut, on the command the Video space shares', async () => {
+    await openTake()
+
+    publishCommand('sequence.exportCut')
+
+    expect(exportOtio).toHaveBeenCalledWith('doc-1')
   })
 
   it('says what its tools act on: the gesture while there is nothing, the range once there is', async () => {

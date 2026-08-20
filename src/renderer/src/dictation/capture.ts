@@ -1,5 +1,5 @@
 import { rmsOf, STT_CHUNK_SAMPLES, STT_SAMPLE_RATE, toInt16 } from '@shared/domain/dictation'
-import workletUrl from './pcm-worklet?worker&url'
+import workletUrl from './pcmWorklet?worker&url'
 
 /**
  * The microphone, from the window that owns it.

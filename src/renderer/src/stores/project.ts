@@ -6,15 +6,15 @@ import {
   type Project,
 } from '@shared/domain/project'
 import type { StudioBridge } from '@shared/ipc'
-import { refreshDocuments } from '@/app/document-io'
-import { closeOrphanTabs } from '@/app/orphan-tabs'
+import { refreshDocuments } from '@/app/documentIo'
+import { closeOrphanTabs } from '@/app/orphanTabs'
 import { getBridge } from '@/services/bridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { useSettings } from './settings'
 import { useActivity } from './activity'
 import { forgetRememberedAssets, useAssets } from './assets'
 import { useLayouts } from './layouts'
-import { useSceneClipboard } from './scene-clipboard'
+import { useSceneClipboard } from './sceneClipboard'
 
 type ProjectState = {
   project: Project | null

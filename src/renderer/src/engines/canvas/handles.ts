@@ -1,5 +1,5 @@
-import type { Rect, Transform } from './canvas-state'
-import { applyTo, layerMatrix } from './layer-space'
+import type { Rect, Transform } from './canvasState'
+import { anchoredAt, applyTo, layerMatrix } from './layerSpace'
 import { crisp, toScreen, type Viewport } from './viewport'
 import type { Point, Size } from '../core/geometry'
 
@@ -45,6 +45,52 @@ export const ANCHOR: Readonly<Record<HandleId, { x: number; y: number }>> = {
 export function handleDirection(handle: HandleId): Point {
   const anchor = ANCHOR[handle]
   return { x: 1 - 2 * anchor.x, y: 1 - 2 * anchor.y }
+}
+
+/** No box collapses to nothing: a caption one pixel wide wraps every word onto its own line. */
+const MIN_BOX = 8
+
+/**
+ * Where a grip drags a BOX to, in that box's own space — the edges it names move, the others
+ * hold. Its origin moves with a north or west grip, which is why a rectangle comes back rather
+ * than a size: the caller owes the layer that displacement.
+ *
+ * Apart from `resizeBy`, which scales a whole layer: a caption's box is resized rather than
+ * stretched, so its words keep the body they were set in and simply wrap somewhere else.
+ */
+export function resizedBox(handle: HandleId, box: Size, local: Point, constrain = false): Rect {
+  const west = handle.includes('w')
+  const east = handle.includes('e')
+  const north = handle.startsWith('n')
+  const south = handle.startsWith('s')
+
+  // Rounded: a box is a count of document pixels, and a drag at 57 % zoom otherwise lands on
+  // 627.6371549601888 — a number the panel shows in full and nobody can read back.
+  const left = west ? Math.round(Math.min(local.x, box.width - MIN_BOX)) : 0
+  const top = north ? Math.round(Math.min(local.y, box.height - MIN_BOX)) : 0
+  const right = east ? Math.round(Math.max(local.x, left + MIN_BOX)) : box.width
+  const bottom = south ? Math.round(Math.max(local.y, top + MIN_BOX)) : box.height
+
+  const pulled = { x: left, y: top, width: right - left, height: bottom - top }
+  // Shift holds the ratio, as it does everywhere else here. On an edge grip there is only one
+  // axis to hold, and the other simply follows it.
+  return constrain ? inRatio(pulled, box, { north, west }) : pulled
+}
+
+/** The same pull, taken back to the box's own ratio — the larger side is what it is read from. */
+function inRatio(pulled: Rect, box: Size, from: { north: boolean; west: boolean }): Rect {
+  const ratio = box.height / box.width
+  const wide = pulled.width * ratio >= pulled.height
+  const width = wide ? pulled.width : pulled.height / ratio
+  const height = wide ? pulled.width * ratio : pulled.height
+
+  // A grip that moved the origin keeps the far edge still, so the corner takes up the slack.
+  return {
+    x: from.west ? pulled.x + pulled.width - width : pulled.x,
+    y: from.north ? pulled.y + pulled.height - height : pulled.y,
+    width,
+    height,
+  }
 }
 
 /** Half the side of the square a grip is drawn as, in screen pixels — grips ignore the zoom. */
@@ -324,25 +370,12 @@ export function resizeBy(
     scaleY: floored(transform.scaleY * scaleY),
   }
 
-  // Re-anchored where the layer is actually drawn, never inside the un-turned box: `x` and `y`
-  // carry the point the rotation is applied about, so a correction solved before the turn moves
-  // that point too, and the anchored edge swings away by `(I − R) · correction`. At a quarter
-  // turn that is the whole displacement — the edge one is pulling against left the screen.
-  //
-  // Exact in one step: the matrix is affine in `x`/`y` with a unit coefficient, so translating
-  // the transform translates the rendered point by the same amount.
   // The corner the hand is pulling AGAINST, in the frame it is gripping — the picture's when the
   // layer holds one. Solved against the document instead, the anchored edge of a photo that does
   // not fill its surface would drift by the margin `containIn` left around it.
   const held = { x: frame.x + anchor.x * frame.width, y: frame.y + anchor.y * frame.height }
-  const before = applyTo(layerMatrix(transform, document), held)
-  const after = applyTo(layerMatrix(scaled, document), held)
 
-  return {
-    ...scaled,
-    x: scaled.x + before.x - after.x,
-    y: scaled.y + before.y - after.y,
-  }
+  return anchoredAt(scaled, document, held, applyTo(layerMatrix(transform, document), held))
 }
 
 /**

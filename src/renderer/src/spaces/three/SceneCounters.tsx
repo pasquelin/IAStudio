@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { formatDecimal } from '@/helpers/format'
-import type { SceneStats } from '@/engines/scene/scene-stats'
+import type { SceneStats } from '@/engines/scene/sceneStats'
 
 export type SceneCountersProps = {
   scene: SceneStats

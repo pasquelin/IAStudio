@@ -1,12 +1,19 @@
 import { useCallback, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { clampAtLeast } from '@shared/numeric'
 import { cn } from '@/helpers/cn'
 import { useDismiss } from '@/hooks/useDismiss'
 import { useMenuKeys } from '@/hooks/useMenuKeys'
 import { MENU_SURFACE } from './styles'
 
-/** Which side of its anchor the menu hangs on. */
-export type FlyoutPlacement = 'right' | 'above' | 'below'
+/**
+ * Which side of its anchor the menu hangs on.
+ *
+ * `under` is the one that belongs to a FIELD: it takes the anchor's left edge and its width, the
+ * way a `<select>` does. The other three hang from a control whose own width means nothing to
+ * the rows, and align right so a bar at the window edge does not push them off it.
+ */
+export type FlyoutPlacement = 'right' | 'above' | 'below' | 'under'
 
 export type FlyoutProps = {
   anchor: HTMLElement | null
@@ -37,6 +44,12 @@ export type FlyoutProps = {
    * closes. Both are wanted, so there is no guard against it.
    */
   onKeyClose?: () => void
+  /**
+   * What the WINDOW losing focus does, when that is not what closing means. Defaults to
+   * `onDismiss`: a surface holding a decision answers it itself rather than letting an alt-tab
+   * answer for the user.
+   */
+  onWindowLeave?: () => void
   onPointerEnter?: () => void
   onPointerLeave?: () => void
 }
@@ -49,7 +62,7 @@ const OFFSET = 2
 
 /** Kept inside the window: rows drawn past its edge cannot be reached, by pointer or by key. */
 function clamped(wanted: number, size: number, within: number): number {
-  return Math.max(0, Math.min(wanted, within - size))
+  return clampAtLeast(wanted, 0, within - size)
 }
 
 /**
@@ -66,12 +79,13 @@ export function Flyout({
   role,
   onDismiss,
   onKeyClose,
+  onWindowLeave,
   onPointerEnter,
   onPointerLeave,
 }: FlyoutProps) {
   const panel = useRef<HTMLDivElement | null>(null)
 
-  useDismiss(onDismiss, panel, anchor)
+  useDismiss(onDismiss, panel, anchor, onWindowLeave)
   useMenuKeys(panel, onKeyClose)
 
   // Placed through a callback ref rather than state: measuring in an effect and storing the
@@ -92,6 +106,15 @@ export function Flyout({
         // the left of its anchor lands at a negative x, and runs off the side it flipped to.
         const wanted = fits ? beside : box.left - node.offsetWidth - OFFSET
         node.style.left = `${clamped(wanted, node.offsetWidth, window.innerWidth)}px`
+        return
+      }
+
+      if (placement === 'under') {
+        // The field's own width, set BEFORE the left edge is clamped: the clamp reads
+        // `offsetWidth`, and reading it first would measure the menu's content instead.
+        node.style.width = `${box.width}px`
+        node.style.top = `${box.bottom + OFFSET}px`
+        node.style.left = `${clamped(box.left, box.width, window.innerWidth)}px`
         return
       }
 

@@ -65,7 +65,7 @@ export function rotateCursor(corner: CornerId, of: Facing): string {
 
 /**
  * White on a dark outline, so it stays visible on either — the same reasoning as the drawn tool
- * cursors in `image-tools`. `pointer` is the fallback for a platform that refuses an image cursor
+ * cursors in `imageTools`. `pointer` is the fallback for a platform that refuses an image cursor
  * rather than leaving none at all.
  */
 function rotateSvg(degrees: number): string {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  GENERATION_TOOLS,
+  SCENARIO_TOOLS,
   isHorizontal,
   placementIn,
   placementOf,
@@ -9,6 +9,8 @@ import {
   serves,
   TOOL_PLACEMENTS,
   type ToolId,
+  type ToolSlot,
+  type ToolSurface,
   type ToolZone,
 } from './tool'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
@@ -42,14 +44,13 @@ describe('the placements of one tool', () => {
 })
 
 describe('resolving where a tool sits', () => {
-  it('puts the asset shelf in the bottom strip everywhere the band is free', () => {
-    const strips: readonly WorkspaceId[] = ['image', 'textures', 'skyboxes']
-    for (const workspace of strips) expect(placementIn('assets', workspace)?.zone).toBe('bottom')
-  })
-
-  it('sends it to the column wherever a timeline owns the band', () => {
-    const timed: readonly WorkspaceId[] = ['video', 'audio', '3d']
-    for (const workspace of timed) expect(placementIn('assets', workspace)?.zone).toBe('right')
+  // One placement for all six, where there used to be two: the shelf reads the same question
+  // in every space — what can I get from Scenario — so it has no reason to move with the space.
+  it('puts the asset shelf in the left column of every workspace', () => {
+    for (const workspace of WORKSPACE_IDS) {
+      expect(placementIn('assets', workspace)?.zone).toBe('left')
+      expect(placementIn('assets', workspace)?.slot).toBe('primary')
+    }
   })
 
   it('serves the shelf in every workspace — it is never simply absent', () => {
@@ -58,29 +59,12 @@ describe('resolving where a tool sits', () => {
 
   it('answers null for a workspace a tool does not serve', () => {
     expect(placementIn('timeline', 'image')).toBeNull()
-    expect(placementIn('skybox', '3d')).toBeNull()
+    expect(placementIn('layers', '3d')).toBeNull()
   })
 
   it('answers null for an id no version knows any more', () => {
     expect(placementIn('moodboard', 'image')).toBeNull()
     expect(placementOf('moodboard')).toBeNull()
-  })
-})
-
-describe('the skybox panel', () => {
-  it('serves only its own workspace', () => {
-    expect(placementIn('skybox', 'skyboxes')?.zone).toBe('right')
-    for (const workspace of WORKSPACE_IDS) {
-      if (workspace !== 'skyboxes') expect(placementIn('skybox', workspace)).toBeNull()
-    }
-  })
-
-  it('does not share a half with the inspector, which serves every workspace', () => {
-    const skybox = placementIn('skybox', 'skyboxes')
-    const inspector = placementIn('inspector', 'skyboxes')
-
-    expect(inspector).not.toBeNull()
-    expect(skybox?.zone === inspector?.zone && skybox?.slot === inspector?.slot).toBe(false)
   })
 })
 
@@ -117,50 +101,60 @@ describe('every workspace', () => {
 
 describe('the home', () => {
   /**
-   * Two columns and no band, which is what makes it a surface like the others: what one opens
-   * FROM on the left, what one opens on the right, and the centre kept for the page.
-   *
-   * THREE placements, where there were eleven until 13 August. The eight that went answered a
+   * FIVE placements, where there were eleven until 13 August. The eight that went answered a
    * question about the studio — what it spent, how many assets it holds by kind, the newest ones,
    * favourites, ideas, look-alikes, and two journals the status bar already carries — and this
    * screen is where one comes to OPEN something. The list is spelled out rather than counted: an
    * id creeping back in is the exact regression this holds against.
    *
+   * The two that came back are the two about the project that is OPEN, and both are withheld
+   * while none is: what has changed in its folder, and what came before. That is a different
+   * thing from the eight, which spoke about the studio whether or not anything was open.
+   *
    * The order is the order of the rail, and the first of a half is what an unchosen half draws —
    * so this holds both the icon stack and what the screen opens on.
    */
-  it('stands its panels in two columns, in the order their icons stack', () => {
+  it('stands its panels in two columns and a band, in the order their icons stack', () => {
     const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
 
     expect(served.map(placement => [placement.id, placement.zone, placement.slot])).toEqual([
       ['projects', 'left', 'primary'],
+      ['explorer', 'left', 'secondary'],
       ['library', 'right', 'primary'],
-      ['documents', 'right', 'primary'],
+      // Declared LAST on purpose, and the order is what says so: the folder is what an unchosen
+      // half opens on, and the versions of that folder are what one goes to look at next.
+      ['git', 'left', 'secondary'],
+      ['history', 'bottomRight', 'primary'],
     ])
   })
 
   /**
    * The rule every space follows: the left is what one opens FROM, the right is what one opens.
    *
-   * The home now uses ONE half per column, and that is the assertion — no `secondary` anywhere on
-   * this surface. It is what a rail with no separator draws honestly, and it is what the panels
-   * that went were taking: a lower half is a rota, and a rota is where the projects stopped being
-   * the thing this screen opens on.
+   * The left column now holds both halves, as every space does — the projects above, and under
+   * them the one that is open, read as a folder. The right keeps one: a rota there is where the
+   * projects stopped being the thing this screen opens on.
+   *
+   * The BAND is new on 17 August, and it is the one zone this screen had never had. What it
+   * holds is read across — a history is one commit per line, and a branch graph in a 280 px
+   * column is a graph nobody can follow — and it is offered only while a project is open, so the
+   * screen a reader arrives on with nothing open is the one it has always been.
    */
   it('reads its two columns the way every space reads its own', () => {
     const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
-    const inZone = (zone: ToolZone): number =>
-      served.filter(placement => placement.zone === zone).length
-
-    expect(inZone('left')).toBe(1)
-    expect(inZone('right')).toBe(2)
-    expect(served.every(placement => placement.slot === 'primary')).toBe(true)
-    expect(
+    const inHalf = (zone: ToolZone, slot: ToolSlot): string[] =>
       served
-        .filter(placement => placement.zone === 'left' && placement.slot === 'primary')
-        .map(placement => placement.id),
-    ).toEqual(['projects'])
-    expect(served.filter(placement => placement.zone === 'bottom')).toEqual([])
+        .filter(placement => placement.zone === zone && placement.slot === slot)
+        .map(placement => placement.id)
+
+    expect(inHalf('left', 'primary')).toEqual(['projects'])
+    // A rota of two: the open project read as a folder, and the same folder read as a history.
+    expect(inHalf('left', 'secondary')).toEqual(['explorer', 'git'])
+    expect(inHalf('right', 'primary')).toEqual(['library'])
+    expect(inHalf('right', 'secondary')).toEqual([])
+    expect(inHalf('bottomRight', 'primary')).toEqual(['history'])
+    // The band's left half is where a panel is DRAGGED, never where one is declared.
+    expect(inHalf('bottomLeft', 'primary')).toEqual([])
   })
 
   /**
@@ -168,22 +162,25 @@ describe('the home', () => {
    * for: a panel of recent projects beside an editor is a panel about somewhere else.
    */
   it('keeps its panels to itself, and takes none of the workspaces', () => {
-    for (const id of ['projects', 'library', 'documents']) {
+    for (const id of ['projects', 'library']) {
       expect(placementsOf(id)).toHaveLength(1)
       for (const workspace of WORKSPACE_IDS) expect(placementIn(id, workspace)).toBeNull()
     }
   })
 
   /**
-   * The Explorer left this surface for the projects on 10 August. Its list did not: the home's
-   * right column draws it under `documents`, which is the name that screen gives it — one
-   * folder read once, rather than a shelf and a tree that had drifted apart.
+   * The Explorer left this surface for the projects on 10 August and came back on the 17th, as
+   * the project folder itself rather than as the flat list of documents that stood in for it.
+   *
+   * The same half in all seven, and that is not a preference: a tool is held to ONE slot across
+   * its placements — a panel that changed rows of the rail depending on where you came from is
+   * a panel this registry cannot express.
    */
-  it('leaves the Explorer to the spaces, where it keeps one placement for all seven', () => {
-    expect(placementIn('explorer', HOME_SURFACE)).toBeNull()
-    expect(placementsOf('explorer')).toHaveLength(1)
-    for (const workspace of WORKSPACE_IDS) {
-      expect(placementIn('explorer', workspace)).toMatchObject({ zone: 'left', slot: 'secondary' })
+  it('keeps the Explorer in one half, here as in every space', () => {
+    expect(placementsOf('explorer')).toHaveLength(2)
+    const everywhere: readonly ToolSurface[] = [...WORKSPACE_IDS, HOME_SURFACE]
+    for (const surface of everywhere) {
+      expect(placementIn('explorer', surface)).toMatchObject({ zone: 'left', slot: 'secondary' })
     }
   })
 
@@ -202,18 +199,18 @@ describe('a horizontal band', () => {
 })
 
 describe('the left column', () => {
-  it('holds the generation panels, and only them, in the upper half of every workspace', () => {
+  it('holds the Scenario panels, and only them, in the upper half of every workspace', () => {
     for (const workspace of WORKSPACE_IDS) {
       const upper = TOOL_PLACEMENTS.filter(
         placement =>
           placement.zone === 'left' && placement.slot === 'primary' && serves(placement, workspace),
       )
-      expect(new Set(upper.map(placement => placement.id))).toEqual(new Set(GENERATION_TOOLS))
+      expect(new Set(upper.map(placement => placement.id))).toEqual(new Set(SCENARIO_TOOLS))
     }
   })
 
   it('is the only place they sit, and the same place in every workspace', () => {
-    for (const id of GENERATION_TOOLS) {
+    for (const id of SCENARIO_TOOLS) {
       for (const placement of placementsOf(id)) {
         expect(placement.zone).toBe('left')
         expect(placement.slot).toBe('primary')
@@ -223,13 +220,14 @@ describe('the left column', () => {
   })
 
   /**
-   * Two halves of two, never four turns in one. Four icons stacked in a rail is the moment a
-   * column stops being a place one knows and becomes a pile one searches — and a half keeps the
-   * generator visible WHILE the Explorer is read, which taking turns forbids by construction.
+   * Three turns above, two below, and the cut between them is what the column MEANS: what
+   * Scenario offers, then what is already on my disk. The half is what keeps the shelf visible
+   * WHILE the Explorer is read — which is the whole of the gesture that pulls one into the
+   * other, and which taking turns would forbid by construction.
    */
   it('holds what one produces with in its lower half, and nothing else', () => {
     // The spaces' own half. The home's left column is the same zone and the same slot, and it
-    // holds the projects — a surface that generates nothing, so the rule above is not about it.
+    // holds the projects — a surface that calls no model, so the rule above is not about it.
     const lower = TOOL_PLACEMENTS.filter(
       placement =>
         placement.zone === 'left' &&
@@ -237,7 +235,10 @@ describe('the left column', () => {
         WORKSPACE_IDS.some(workspace => serves(placement, workspace)),
     )
 
-    expect(lower.map(placement => placement.id)).toEqual(['explorer'])
+    // Two, and both read the PROJECT FOLDER — as a tree, and as a history of the same files.
+    // That is what keeps them one rota rather than a pile: whichever is in front, the half is
+    // still "the folder I am working in". A third reading of something else would not belong.
+    expect(lower.map(placement => placement.id)).toEqual(['explorer', 'git'])
   })
 })
 
@@ -245,38 +246,63 @@ describe('the rail order of the upper right', () => {
   // What the right keeps once the Explorer has gone left: what acts on the document that is
   // already open, and only that.
   it('reads the panels of the document, and no longer the Explorer', () => {
-    expect(upperRightIn('image')).toEqual(['layers'])
+    expect(upperRightIn('image')).toEqual(['layers', 'text'])
   })
 
-  // The shelf comes last on purpose: a half with nothing chosen opens on the first tool it
-  // declares, and entering 3D must land on the outliner rather than on a list of assets.
-  it('leaves the outliner first in 3D, with the shelf behind it', () => {
-    expect(upperRightIn('3d')).toEqual(['scene', 'lights', 'meshes', 'assets'])
+  it('reads the scene in 3D, and no longer the shelf', () => {
+    expect(upperRightIn('3d')).toEqual(['scene', 'lights', 'meshes', 'animations'])
   })
 
-  it('puts the shelf first where a take is dragged onto a track', () => {
-    expect(upperRightIn('video')).toEqual(['assets'])
-    expect(upperRightIn('audio')).toEqual(['assets'])
+  /**
+   * EMPTY, and it is the shelf leaving that empties it: these two spaces put nothing else in
+   * that half. Asserted rather than left unsaid — a half with no tool is a state the rail and
+   * the shell have to survive, and the day something is declared there this line is what asks
+   * whether it belongs.
+   */
+  it('leaves the upper right of Video and Audio to nothing at all', () => {
+    expect(upperRightIn('video')).toEqual([])
+    expect(upperRightIn('audio')).toEqual([])
   })
 
-  // `view` sits right behind them: how a sky is being looked at is next of kin to what it is,
-  // and both used to be a menu floating over the picture.
-  it('puts the sky controls first in Skyboxes — it is what that space is for', () => {
-    expect(upperRightIn('skyboxes')).toEqual(['skybox', 'view'])
+  /**
+   * Nothing at all, since what a sky IS and how it is LOOKED at both went back to the inspector —
+   * the first on 2026-08-19, the second right after. Two boxes describing one document were two
+   * places to learn to find, and the second sat above an inspector reading "select something".
+   */
+  it('leaves the upper right of Skyboxes to the inspector alone', () => {
+    expect(upperRightIn('skyboxes')).toEqual([])
   })
 
-  /** Same rule, same reason: a texture IS its eight channels, so they come before the files. */
-  it('puts the channels first in Textures, with the styles that read them beside', () => {
-    expect(upperRightIn('textures')).toEqual(['channels', 'styles'])
+  /**
+   * Nothing either, and for the same reason: the eight channels and the saved styles both became
+   * sections of the inspector on 2026-08-19. Textures was the last space to stack three boxes on
+   * one document — what it IS, what reads it, and the panel that describes what is selected.
+   */
+  it('leaves the upper right of Textures to the inspector alone', () => {
+    expect(upperRightIn('textures')).toEqual([])
   })
 })
 
 describe('the montage band', () => {
-  it('is the timeline wherever there is time to read, and the shelf everywhere else', () => {
+  it('is the timeline wherever there is time to read, and free everywhere else', () => {
     const timed: readonly WorkspaceId[] = ['video', 'audio', '3d']
     for (const workspace of WORKSPACE_IDS) {
-      const band = timed.includes(workspace) ? 'timeline' : 'assets'
-      expect(placementIn(band, workspace)?.zone).toBe('bottom')
+      expect(placementIn('timeline', workspace)?.zone ?? null).toBe(
+        timed.includes(workspace) ? 'bottomRight' : null,
+      )
+    }
+  })
+
+  /**
+   * What the band holds in the three spaces with no montage: the history, and nothing else. It
+   * used to be the shelf, and the band emptied when the shelf went to the left column — a zone
+   * whose only tool is one nobody opens by default is a zone that reads as broken, so the fact
+   * that ONE tool is still declared there is worth an assertion rather than a hope.
+   */
+  it('still offers the history in the spaces that have no montage', () => {
+    const untimed: readonly WorkspaceId[] = ['image', 'textures', 'skyboxes']
+    for (const workspace of untimed) {
+      expect(placementIn('history', workspace)?.zone).toBe('bottomRight')
     }
   })
 })

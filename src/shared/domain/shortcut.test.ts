@@ -72,7 +72,7 @@ describe('signatureOf', () => {
 
 describe('defaults', () => {
   it('binds every motion, which is held rather than fired', () => {
-    for (const id of MOTION_IDS) expect(DEFAULT_MOTION[id]).toBeTruthy()
+    for (const id of MOTION_IDS) expect(DEFAULT_MOTION[id].length).toBeGreaterThan(0)
   })
 
   it('puts the gizmos on the Blender letters', () => {
@@ -82,10 +82,23 @@ describe('defaults', () => {
   })
 
   it('puts flight on the physical ZQSD block with A and E for altitude', () => {
-    expect(DEFAULT_MOTION.forward).toBe('KeyW')
-    expect(DEFAULT_MOTION.left).toBe('KeyA')
-    expect(DEFAULT_MOTION.down).toBe('KeyQ')
-    expect(DEFAULT_MOTION.up).toBe('KeyE')
+    expect(DEFAULT_MOTION.forward[0]).toBe('KeyW')
+    expect(DEFAULT_MOTION.left[0]).toBe('KeyA')
+    expect(DEFAULT_MOTION.down[0]).toBe('KeyQ')
+    expect(DEFAULT_MOTION.up[0]).toBe('KeyE')
+  })
+
+  it('gives the ground plane a second key on the arrows, and altitude none', () => {
+    expect(DEFAULT_MOTION.forward).toContain('ArrowUp')
+    expect(DEFAULT_MOTION.back).toContain('ArrowDown')
+    expect(DEFAULT_MOTION.left).toContain('ArrowLeft')
+    expect(DEFAULT_MOTION.right).toContain('ArrowRight')
+    // Sorted, so reordering the table stays a cosmetic edit: what is asserted is that these four
+    // arrows are bound and no fifth is, altitude having no arrow left to take.
+    const arrows = Object.values(DEFAULT_MOTION)
+      .flat()
+      .filter(code => code.startsWith('Arrow'))
+    expect(arrows.toSorted()).toEqual(['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'])
   })
 
   it('overlaps motion and scene commands on exactly one key, which flight modality resolves', () => {
@@ -94,7 +107,7 @@ describe('defaults', () => {
     //
     // Only the scene is checked: motion is flight, flight is the scene, and a timeline command
     // on the same key is resolved by its scope long before either of them is consulted.
-    const motion = new Set(Object.values(DEFAULT_MOTION))
+    const motion = new Set(Object.values(DEFAULT_MOTION).flat())
     const shared = COMMAND_REGISTRY.filter(
       descriptor => descriptor.scope === 'scene' && motion.has(shipped(descriptor.id)),
     )
@@ -291,7 +304,9 @@ describe('whether a string is a signature the studio could produce', () => {
    * which is exactly why nothing else would ever read it back.
    */
   it('spells every motion the studio publishes as a signature', () => {
-    const malformed = Object.entries(DEFAULT_MOTION).filter(([, bound]) => !isSignature(bound))
+    const malformed = Object.entries(DEFAULT_MOTION).flatMap(([id, bound]) =>
+      bound.filter(signature => !isSignature(signature)).map(signature => [id, signature]),
+    )
 
     expect(malformed).toEqual([])
   })

@@ -10,6 +10,14 @@ export type Command<S> = {
   id: string
   apply: (state: S) => S
   revert: (state: S) => S
+  /**
+   * When it answers true of the state at hand, nothing is pushed: a refusal is not a step, and
+   * an entry that changed nothing is a ⌘Z the user watches do nothing.
+   *
+   * Asked rather than compared: a command may legitimately leave the state alone and still be a
+   * step — a stroke lives in the engine's tiles, not in the document.
+   */
+  refuses?: (state: S) => boolean
 }
 
 export type History<S> = {
@@ -52,6 +60,8 @@ export function canRedo<S>(history: History<S>): boolean {
 }
 
 export function run<S>(state: S, history: History<S>, command: Command<S>): [S, History<S>] {
+  if (command.refuses?.(state)) return [state, history]
+
   const kept = [...history.past, command]
   const past = kept.slice(-HISTORY_LIMIT)
   // What fell off this time, or what had already fallen off before it.
@@ -71,6 +81,11 @@ export function composed<S>(id: string, parts: readonly Command<S>[]): Command<S
     id,
     apply: state => parts.reduce((current, part) => part.apply(current), state),
     revert: state => parts.reduceRight((current, part) => part.revert(current), state),
+    // Refused only when EVERY part refuses: a gesture where one of three nodes cannot move is
+    // still a gesture, and it is the whole that is pushed. Carried at all because a `composed`
+    // that ignored its parts' refusals would push an entry doing nothing — the very thing
+    // `refuses` was added to stop, silently defeated by the combinator of its own module.
+    refuses: state => parts.every(part => part.refuses?.(state) === true),
   }
 }
 
@@ -88,6 +103,8 @@ export function runCoalescing<S>(
   history: History<S>,
   command: Command<S>,
 ): [S, History<S>] {
+  if (command.refuses?.(state)) return [state, history]
+
   const last = history.past.at(-1)
   if (!last || last.id !== command.id) return run(state, history, command)
 

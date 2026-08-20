@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { Toast, ToastStack } from '@/design/Toast'
+import { Toast } from '@/design/Toast/Toast'
+import { ToastStack } from '@/design/Toast/ToastStack'
 import { useActivity } from '@/stores/activity'
-import { ActivityMessage, GLYPHS, TONES } from './ActivityList'
+import { ActivityListMessage } from './ActivityList/ActivityListMessage'
+import { GLYPHS, TONES } from './ActivityList/activityLevels'
 
 /**
  * Failures and warnings, said out loud once.
@@ -37,7 +39,7 @@ export function ActivityToasts() {
           dismissLabel={t('activity.dismiss')}
           onDismiss={() => useActivity.getState().dismiss(entry.id)}
         >
-          <ActivityMessage entry={entry} />
+          <ActivityListMessage entry={entry} />
         </Toast>
       ))}
     </ToastStack>

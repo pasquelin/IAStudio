@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { ASSET_NAME_MAX_LENGTH } from '@shared/domain/asset'
 import type { JobTarget } from '@shared/domain/job'
-import type { PersistedJob } from './job-store'
+import type { PersistedJob } from './persistedJob'
 import {
   MODEL_FAMILIES,
   MODEL_IDS_BATCH_LIMIT,
@@ -15,7 +15,7 @@ import {
   PROMPT_INPUT_MAX,
   PROMPT_SUGGESTIONS_MAX,
   type SuggestPromptsRequest,
-} from '@shared/domain/prompt-assist'
+} from '@shared/domain/promptAssist'
 import { USAGE_PERIODS, type UsageCursors, type UsagePeriod } from '@shared/domain/usage'
 
 const usagePeriod = z.literal(USAGE_PERIODS)

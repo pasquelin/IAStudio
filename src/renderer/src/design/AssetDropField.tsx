@@ -4,15 +4,20 @@ import type { UseFormRegisterReturn } from 'react-hook-form'
 import { ASSET_TYPES, assetUrl, posterUrl, type Asset } from '@shared/domain/asset'
 import { cn } from '@/helpers/cn'
 import { AssetDropTarget } from './AssetDropTarget'
-import { FIELD, FIELD_THUMBNAIL } from './styles'
+import { FIELD_FILL, FIELD_THUMBNAIL } from './styles'
+import { fieldHandle } from './scHandle'
 import { Thumbnail } from './Thumbnail'
 import { UiIcon } from './UiIcon'
 
 export type AssetDropFieldProps = {
+  /** Worn by the text input, which is the control the form's label names. */
+  id?: string
   registration: UseFormRegisterReturn
   /** What the form starts with, so a preset filled by an edit action shows its picture. */
   initial?: string
   placeholder: string
+  /** The handle the MCP steers this field by. Never a translated word. */
+  scId?: string
 }
 
 /**
@@ -23,7 +28,13 @@ export type AssetDropFieldProps = {
  * The input stays, underneath: an id can still be pasted, and a kind this field cannot serve
  * falls back to it rather than making the form disappear (invariant 5).
  */
-export function AssetDropField({ registration, initial, placeholder }: AssetDropFieldProps) {
+export function AssetDropField({
+  id,
+  registration,
+  initial,
+  placeholder,
+  scId,
+}: AssetDropFieldProps) {
   const [assetId, setAssetId] = useState(initial ?? '')
   /**
    * The dropped picture's stamped URL, kept beside the id so a ⌘S that overwrote it repaints.
@@ -69,9 +80,11 @@ export function AssetDropField({ registration, initial, placeholder }: AssetDrop
       {/* Controlled, so a drop shows in the field as well as in the thumbnail — and so the
           reset a model switch performs empties both together. */}
       <input
+        id={id}
         type="text"
+        data-sc={scId && fieldHandle(scId)}
         placeholder={placeholder}
-        className={cn(FIELD, 'min-w-0 flex-1')}
+        className={FIELD_FILL}
         {...registration}
         value={assetId}
         onChange={event => {

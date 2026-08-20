@@ -1,11 +1,20 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { canRedo, canUndo, HISTORY_LIMIT } from '@/engines/core/history'
 import { addNode, setTransform } from '@/engines/scene/commands'
-import { createDefaultScene } from '@/engines/scene/default-scene'
-import { meshNode } from '@/engines/scene/scene-fixtures'
-import { EMPTY_SCENE, IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
+import { createDefaultScene } from '@/engines/scene/defaultScene'
+import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
+import { EMPTY_SCENE, IDENTITY_TRANSFORM } from '@/engines/scene/sceneState'
+import type { Asset, AssetType } from '@shared/domain/asset'
 import { clearScenes } from './scene-fixtures'
-import { sceneHistoryOf, isSceneDirty, sceneOf, sceneStore, useScenes } from './scenes'
+import {
+  addAnimationTo,
+  sceneHistoryOf,
+  isSceneDirty,
+  sceneOf,
+  sceneStore,
+  seedSceneTemplate,
+  useScenes,
+} from './scenes'
 
 const box = meshNode('box-1')
 
@@ -151,6 +160,29 @@ describe('ensure', () => {
   })
 })
 
+describe('seedSceneTemplate', () => {
+  beforeEach(() => {
+    clearScenes()
+  })
+
+  it('fills a new document with what its template opens on', () => {
+    seedSceneTemplate('doc-1', 'topDown')
+    const scene = sceneOf(useScenes.getState(), 'doc-1')
+
+    expect(scene.nodes.some(node => node.type === 'camera')).toBe(true)
+    expect(scene.world.play.camera).toBe('topDown')
+  })
+
+  // The tab may already have been restored from disk by the time this runs on a slow machine,
+  // and a template written over a saved scene would be the work lost.
+  it('never writes over a scene that is already there', () => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    seedSceneTemplate('doc-1', 'basic')
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes).toEqual([box])
+  })
+})
+
 describe('gestures', () => {
   const moved = (x: number) => ({ ...IDENTITY_TRANSFORM, position: { x, y: 0, z: 0 } })
   const positionOf = (documentId: string) =>
@@ -232,5 +264,50 @@ describe('gestures', () => {
     store.runCommand('doc-2', setTransform('box-1', moved(2)))
 
     expect(sceneHistoryOf(useScenes.getState(), 'doc-2').past).toHaveLength(2)
+  })
+})
+
+describe('laying a motion on a character', () => {
+  const asset = (type: AssetType): Asset => ({
+    id: 'asset-9',
+    name: 'jig',
+    type,
+    location: 'local',
+    tags: [],
+    createdAt: '2026-01-01T00:00:00.000Z',
+  })
+
+  const installed = (selectedIds: readonly string[]) => {
+    useScenes.setState({
+      states: { 'doc-1': { ...EMPTY_SCENE, nodes: [modelNodeFixture('m')], selectedIds } },
+      histories: {},
+    })
+  }
+
+  it('lays a block on the character that is selected', () => {
+    installed(['m'])
+
+    expect(addAnimationTo('doc-1', asset('animation'))).toBe(true)
+    const node = sceneOf(useScenes.getState(), 'doc-1').nodes[0]
+    expect(node?.type === 'model' && node.model.lanes?.[0]?.clips[0]?.source).toEqual({
+      kind: 'asset',
+      assetId: 'asset-9',
+      name: 'jig',
+    })
+  })
+
+  // With nobody selected there is nobody to make it move, and landing a node of its own would
+  // put an invisible skeleton in the scene.
+  it('refuses when no character is selected, rather than adding a node', () => {
+    installed([])
+
+    expect(addAnimationTo('doc-1', asset('animation'))).toBe(false)
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes).toHaveLength(1)
+  })
+
+  it('refuses an asset of any other kind', () => {
+    installed(['m'])
+
+    expect(addAnimationTo('doc-1', asset('mesh'))).toBe(false)
   })
 })

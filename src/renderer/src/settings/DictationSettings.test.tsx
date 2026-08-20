@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
-import { useSettingsDraft } from '@/stores/settings-draft'
+import { useSettingsDraft } from '@/stores/settingsDraft'
 import { DictationSettings } from './DictationSettings'
 
 const listeners = new Map<string, () => void>()
@@ -51,6 +51,60 @@ describe('choosing a microphone', () => {
     await userEvent.selectOptions(screen.getByRole('combobox'), 'usb')
 
     expect(useSettingsDraft.getState().touched.has('dictation.inputDeviceId')).toBe(true)
+  })
+
+  /**
+   * The row was written by hand outside `SettingLine`, so it carried neither of the two things
+   * every neighbouring setting offers: nothing said the choice was waiting for Apply, and there
+   * was no way back to the microphone the application ships with — the system default.
+   */
+  it('offers the way back to the system default, once one has been chosen', async () => {
+    render(<DictationSettings />)
+    const restore = screen.getByRole('button', { name: /Restaurer/ })
+    expect(restore).toBeDisabled()
+
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'usb')
+    expect(restore).toBeEnabled()
+
+    await userEvent.click(restore)
+    expect(screen.getByRole('combobox')).toHaveValue('')
+  })
+
+  // The registry spells the system default as no key, the `<option>` spells it `''`: read as two
+  // values, the button offered a way back from the default to itself.
+  it('offers no way back once the system default is what is chosen', async () => {
+    render(<DictationSettings />)
+
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'usb')
+    await userEvent.selectOptions(screen.getByRole('combobox'), '')
+
+    expect(screen.getByRole('button', { name: /Restaurer/ })).toBeDisabled()
+  })
+
+  /**
+   * The main process takes `z.string().min(1).optional()`: an empty string makes Apply throw, and
+   * the draft is cleared before that write is awaited — every other staged setting would go with
+   * it, without a word on screen.
+   */
+  it('stages the system default as no value at all, never as an empty string', async () => {
+    render(<DictationSettings />)
+
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'usb')
+    await userEvent.click(screen.getByRole('button', { name: /Restaurer/ }))
+    expect(useSettingsDraft.getState().pending.dictation?.inputDeviceId).toBeUndefined()
+
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'usb')
+    await userEvent.selectOptions(screen.getByRole('combobox'), '')
+    expect(useSettingsDraft.getState().pending.dictation?.inputDeviceId).toBeUndefined()
+  })
+
+  it('marks the choice as waiting for Apply, like the settings above it', async () => {
+    const { container } = render(<DictationSettings />)
+    expect(container.querySelector('.bg-primary.invisible')).not.toBeNull()
+
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'usb')
+
+    expect(container.querySelector('.bg-primary.invisible')).toBeNull()
   })
 
   it('says so when the machine offers nothing', () => {

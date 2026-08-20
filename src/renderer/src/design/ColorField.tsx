@@ -1,11 +1,19 @@
 import { cn } from '@/helpers/cn'
-import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { fieldHandle } from './scHandle'
+import { FieldActions } from './FieldActions'
+import { PropertyLabel } from './PropertyLabel'
+import { ResetButton } from './ResetButton'
+import { COLOR_READOUT, FIELD_ROW, type GestureProps } from './styles'
 
 export type ColorFieldProps = GestureProps & {
   label: string
   /** Hexadecimal, `#rrggbb` — what the OS picker speaks and what a descriptor stores. */
   value: string
   onChange: (value: string) => void
+  /** The handle the MCP steers this field by. Never a translated word. */
+  scId?: string
+  /** Puts the colour back where it started. Absent while it already stands there. */
+  onReset?: () => void
 }
 
 /** A colour swatch that opens the OS picker — the input itself, which already draws its value. */
@@ -13,17 +21,18 @@ export function ColorField({
   label,
   value,
   onChange,
+  scId,
+  onReset,
   onGestureStart,
   onGestureEnd,
 }: ColorFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      <span title={label} className={FIELD_LABEL}>
-        {label}
-      </span>
+      <PropertyLabel label={label} />
 
       <input
         type="color"
+        data-sc={scId && fieldHandle(scId)}
         // Named here rather than by the label around it: that label also holds the hexadecimal,
         // and a swatch called "Colour #ff0000" is a swatch nobody can find.
         aria-label={label}
@@ -41,12 +50,13 @@ export function ColorField({
 
       {/* Hidden from the accessibility tree: the swatch already announces the colour it holds,
           and a second copy would end up inside the field's own name. */}
-      <span
-        aria-hidden
-        className="text-muted text-mini min-w-0 flex-1 truncate font-mono uppercase"
-      >
+      <span aria-hidden className={COLOR_READOUT}>
         {value}
       </span>
+
+      <FieldActions>
+        <ResetButton onReset={onReset} />
+      </FieldActions>
     </label>
   )
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SECOND, frameDuration } from '@shared/domain/time'
-import { evenSize, flipRows, frameTimes } from './film'
+import { evenSize, flipRows, flipToSrgbInto, frameTimes } from './film'
 
 describe('the schedule of a film', () => {
   it('starts at zero and steps by one frame', () => {
@@ -49,6 +49,46 @@ describe('the pixels that come back', () => {
   it('leaves a single row exactly as it was', () => {
     const row = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8])
     expect([...flipRows(row, 2, 1)]).toEqual([...row])
+  })
+})
+
+/**
+ * A render target holds LINEAR pixels whatever its texture says — see `flipToSrgbInto`. What is
+ * under test is that a still comes out of the same door a screen does, not washed out.
+ */
+describe('a still read back out of a render target', () => {
+  const encoded = (linear: number): number => {
+    const into = new Uint8ClampedArray(4)
+    flipToSrgbInto(into, new Uint8Array([linear, linear, linear, 128]), 1, 1)
+    return into[0] ?? 0
+  }
+
+  it('lifts the mid-tones, which is the whole of the correction', () => {
+    // Mid grey in linear light is far brighter once encoded: 128 → 188, not 128.
+    expect(encoded(128)).toBe(188)
+  })
+
+  it('leaves black and white where they are', () => {
+    expect(encoded(0)).toBe(0)
+    expect(encoded(255)).toBe(255)
+  })
+
+  it('never touches the alpha, which is linear by definition', () => {
+    const into = new Uint8ClampedArray(4)
+    flipToSrgbInto(into, new Uint8Array([10, 20, 30, 128]), 1, 1)
+    expect(into[3]).toBe(128)
+  })
+
+  it('turns the rows over like the plain flip does', () => {
+    const into = new Uint8ClampedArray(16)
+    // A blue row, then a red one — the order WebGL hands them back in.
+    const bottomUpRows = new Uint8Array([
+      0, 0, 255, 255, 0, 0, 255, 255, 255, 0, 0, 255, 255, 0, 0, 255,
+    ])
+    flipToSrgbInto(into, bottomUpRows, 2, 2)
+
+    expect(into[0]).toBe(255)
+    expect(into[10]).toBe(255)
   })
 })
 

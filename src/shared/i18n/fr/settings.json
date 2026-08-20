@@ -11,10 +11,12 @@
     "appearance": "Apparence",
     "generation": "Génération",
     "media": "Médias",
+    "git": "Versions",
     "dictation": "Dictée",
     "accountDescription": "Identifiants API, chiffrés par le trousseau du système.",
     "appearanceDescription": "Thème et densité des contrôles.",
     "generationDescription": "File de génération et modèles par défaut, par famille.",
+    "gitDescription": "Suivi des versions du dossier de projet, par git. Ne concerne que vos fichiers.",
     "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
     "dictationDescription": "Dicter un texte au lieu de le taper. Tout se passe sur cet ordinateur : rien de ce que vous dites n’est envoyé nulle part.",
     "theme": {
@@ -46,6 +48,21 @@
       "title": "Chemin de ffmpeg",
       "help": "Emplacement d’un programme ffmpeg à utiliser à la place de celui fourni avec l’application. Laissez vide, sauf si vous tenez au vôtre.",
       "placeholder": "/opt/homebrew/bin/ffmpeg"
+    },
+    "gitBinary": {
+      "title": "Chemin de git",
+      "help": "Emplacement d’un programme git à utiliser à la place de celui du système. Laissez vide dans presque tous les cas. Un chemin contenant un espace est refusé, et l’application se comporte alors comme si git était absent.",
+      "placeholder": "/usr/bin/git"
+    },
+    "gitUserName": {
+      "title": "Nom de l’auteur",
+      "help": "Le nom inscrit dans chaque version enregistrée. Laissez vide pour reprendre celui que git connaît déjà sur cet ordinateur.",
+      "placeholder": "Votre nom"
+    },
+    "gitUserEmail": {
+      "title": "Adresse de l’auteur",
+      "help": "L’adresse inscrite à côté du nom dans chaque version enregistrée. Laissez vide pour reprendre celle que git connaît déjà.",
+      "placeholder": "vous@exemple.fr"
     },
     "dictationEnabled": {
       "title": "Activer la dictée",
@@ -108,6 +125,10 @@
       "lastProject": "Rouvrir le dernier projet",
       "nothing": "Ne rien ouvrir"
     },
+    "autosave": {
+      "title": "Sauvegarde automatique",
+      "help": "Écrit les documents ouverts toutes les trente secondes, sans attendre votre ⌘S. Ce qui a été fait depuis le dernier enregistrement survit alors à une coupure de courant ou à un plantage. Les documents image en sont exclus quoi qu’il arrive, car leurs calques sont relus depuis la carte graphique et une écriture toutes les trente secondes ferait saccader le dessin."
+    },
     "home": {
       "title": "Afficher l’accueil",
       "help": "L’écran pleine largeur sur lequel le studio s’ouvre : vos projets, ce sur quoi vous travailliez, ce qui tourne, et ce que les modèles savent faire. Désactivez-le pour aller droit à l’espace que vous aviez quitté. Les sections affichées et leur ordre se règlent sur l’accueil lui-même."
@@ -130,6 +151,7 @@
     "scope": {
       "global": "Partout dans l’application",
       "spaces": "Dans la barre des espaces",
+      "explorer": "Dans l’explorateur",
       "scene": "Dans la vue 3D",
       "sequence": "Dans le montage",
       "canvas": "Dans l’image",
@@ -155,6 +177,24 @@
     "boostFactor": {
       "title": "Accélération",
       "help": "Par combien la vitesse est multipliée tant que vous maintenez la touche d’accélération. À 3, vous allez trois fois plus vite : de quoi traverser une grande scène sans changer le réglage du dessus."
+    },
+    "shadows": {
+      "title": "Ombres portées",
+      "help": "Calcule les ombres que les lumières projettent. Chaque lumière qui en projette une coûte une passe de rendu supplémentaire par image, et couper cette option reste le moyen le plus direct d’alléger une scène chargée."
+    },
+    "viewportQuality": {
+      "title": "Qualité du viewport",
+      "help": "La finesse à laquelle la même image est dessinée. Rien des modèles ni des textures ne change — seul le nombre de pixels calculés. Le niveau Performance plafonne aussi la finesse des ombres.",
+      "performance": "Performance",
+      "balanced": "Équilibrée",
+      "high": "Haute"
+    },
+    "units": {
+      "title": "Unité d’affichage",
+      "help": "L’unité dans laquelle les longueurs sont écrites et lues. Une unité de scène reste un mètre quoi qu’il arrive, et ceci ne change que ce qui s’affiche, jamais ce que le document contient.",
+      "mm": "Millimètres",
+      "cm": "Centimètres",
+      "m": "Mètres"
     },
     "shadowQuality": {
       "title": "Douceur des ombres",
@@ -194,6 +234,11 @@
       "warn": "Erreurs et avertissements",
       "info": "Tout"
     },
+    "openLogFolder": {
+      "title": "Journal technique",
+      "help": "Ouvre le gestionnaire de fichiers sur le journal que le studio écrit à chaque lancement. C’est ce fichier qu’on vous demandera si quelque chose échoue sans rien afficher à l’écran.",
+      "button": "Afficher le journal technique"
+    },
     "openSettingsFile": {
       "title": "Fichier de réglages",
       "help": "Ouvre le gestionnaire de fichiers sur l’endroit où vos réglages sont enregistrés. Utile pour en faire une copie avant de changer de machine, ou pour l’envoyer à quelqu’un qui vous aide."
@@ -202,10 +247,35 @@
       "title": "Piloter le studio depuis l’extérieur",
       "help": "Ouvre un point d’entrée sur cette machine seule, par lequel un client comme Claude Code peut lancer les mêmes actions que l’assistant. Tout ce qui coûte ou téléverse demande votre accord à l’écran, exactement comme ici. Désactivé, rien n’écoute."
     },
+    "mcpDelegateFiles": {
+      "title": "Laisser toucher aux fichiers sans demander",
+      "help": "Déplacer, renommer, mettre à la corbeille, revenir en arrière sur un fichier suivi par git. L’Explorateur reprend une partie de ces gestes, jamais tous. Sans ce réglage, chacun vous est demandé."
+    },
+    "mcpDelegateAsset": {
+      "title": "Laisser téléverser sans demander",
+      "help": "Envoyer une image vers votre bibliothèque, où elle restera. Cela ne coûte aucune unité créative. Sans ce réglage, chaque téléversement vous est demandé."
+    },
+    "mcpDelegateRemote": {
+      "title": "Laisser publier vers un serveur sans demander",
+      "help": "Envoyer une branche vers un dépôt git distant. C’est le seul geste qui sorte de cette machine, et rien ici ne le rattrape. À n’armer qu’en connaissance de cause."
+    },
+    "mcpDelegateBudget": {
+      "title": "Unités créatives dépensables sans demander",
+      "help": "Ce qu’un client peut dépenser dans cette fenêtre avant que le studio se remette à demander. À zéro, chaque dépense vous est demandée. Une génération que l’API refuse de chiffrer n’est jamais lancée sans vous, quel que soit ce montant."
+    },
     "copyMcpCommand": {
       "title": "Commande de connexion",
       "help": "Copie la ligne à coller dans un terminal pour brancher un client. Le jeton et le port changent à chaque démarrage du studio, la ligne est donc à recopier après chaque lancement.",
       "button": "Copier"
+    },
+    "installResolveBridge": {
+      "title": "Passerelle DaVinci Resolve",
+      "help": "Dépose un script dans le dossier que Resolve lit, pour importer un montage écrit ici depuis son menu des scripts. Il apparaît sans redémarrer Resolve. Le retirer se fait à la main, et Resolve ne le voit qu’au redémarrage suivant.",
+      "button": "Installer",
+      "confirm": "Un script va être écrit dans le dossier de DaVinci Resolve, sur cette machine. Rien d’autre n’est touché.",
+      "missing": "DaVinci Resolve est introuvable sur cette machine",
+      "missingDetail": "Son dossier n’existe pas, donc rien n’a été écrit. Installez Resolve, lancez-le une fois, puis revenez ici.",
+      "missingOk": "Fermer"
     },
     "openDevtools": {
       "title": "Outils de développement",

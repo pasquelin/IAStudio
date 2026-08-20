@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
+import { WINDOW_ROW } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
+import { SettingStagedDot } from './SettingStagedDot'
 
 export type SettingLineProps = {
   title: ReactNode
@@ -37,22 +39,13 @@ export function SettingLine({
 }: SettingLineProps) {
   const heading = (
     <>
-      <span
-        aria-hidden={!staged}
-        {...(staged && stagedLabel !== undefined && { title: stagedLabel })}
-        className={cn('bg-primary size-1.5 shrink-0 rounded-full', !staged && 'invisible')}
-      />
+      <SettingStagedDot staged={staged} label={stagedLabel} />
       {title}
     </>
   )
 
   return (
-    <div
-      className={cn(
-        'border-base-300 flex flex-col gap-2 border-b py-3 last:border-b-0',
-        disabled && 'pointer-events-none opacity-50',
-      )}
-    >
+    <div className={cn(WINDOW_ROW, 'flex-col', disabled && 'pointer-events-none opacity-50')}>
       <div className="flex items-center justify-between gap-4">
         {labelFor === undefined ? (
           <span className="flex items-center gap-1.5 text-xs font-medium">{heading}</span>

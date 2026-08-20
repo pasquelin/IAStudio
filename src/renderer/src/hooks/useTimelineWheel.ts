@@ -1,6 +1,7 @@
-import { useEffect, useRef, type RefObject } from 'react'
+import { useEffect, type RefObject } from 'react'
 import { scrollBy, zoomAt, ZOOM_STEP } from '@/engines/timeline/viewport'
-import type { Viewport } from '@/engines/timeline/timeline-geometry'
+import type { Viewport } from '@/engines/timeline/timelineGeometry'
+import { useLatest } from './useLatest'
 
 /**
  * The wheel over a time band: zoom under the pointer with a modifier, scroll otherwise.
@@ -37,11 +38,7 @@ export function useTimelineWheel(
   setViewport: (next: Viewport) => void,
   { rows = true }: WheelOptions = {},
 ) {
-  const latest = useRef({ viewportNow, setViewport })
-
-  useEffect(() => {
-    latest.current = { viewportNow, setViewport }
-  }, [viewportNow, setViewport])
+  const latest = useLatest({ viewportNow, setViewport })
 
   useEffect(() => {
     const element = ref.current
@@ -68,5 +65,5 @@ export function useTimelineWheel(
 
     element.addEventListener('wheel', onWheel, { passive: false })
     return () => element.removeEventListener('wheel', onWheel)
-  }, [ref, rows])
+  }, [ref, rows, latest])
 }

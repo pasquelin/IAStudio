@@ -1,5 +1,5 @@
 import { Orientation } from 'dockview-react'
-import type { SerializedLayout } from './layouts'
+import type { SerializedLayout } from './serializedLayout'
 import { useLayouts } from './layouts'
 
 /**

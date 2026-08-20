@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { NO_BREAK_SPACE } from './i18n/typography'
 import { byCodeUnit, foldForSearch } from './text'
 
 describe('the shape a text is searched by', () => {
@@ -23,6 +24,16 @@ describe('the shape a text is searched by', () => {
   // The apostrophe and the space are not diacritics: a search for `d hiver` is not this one.
   it('leaves everything that is not an accent where it was', () => {
     expect(foldForSearch('L’an 2 000 — n°4')).toBe('l’an 2 000 — n°4')
+  })
+
+  /**
+   * Built from the constant rather than typed, like the decomposed letter above and for the same
+   * reason: the two spaces are told apart by a code point and by nothing else. The bundles bind a
+   * figure to its unit with the no-break one, no keyboard offers it, and the settings hint about
+   * freeing memory stopped answering to what a hand types the day it was bound.
+   */
+  it('reads a no-break space as the space a keyboard types', () => {
+    expect(foldForSearch(`700${NO_BREAK_SPACE}MB of memory`)).toBe('700 mb of memory')
   })
 })
 

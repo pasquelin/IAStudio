@@ -5,13 +5,13 @@ import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { FavoriteRecipe } from '@shared/domain/favorite'
 import { CHANNELS } from '@shared/ipc'
-import { invoke as invokeChannel, resetHandlers } from '@main/ipc/test-harness'
+import { invoke as invokeChannel, resetHandlers } from '@main/ipc/testHarness'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
-import type { AsyncCatalog } from '@main/project/catalog-client'
+import type { AsyncCatalog } from '@main/project/catalogClient'
 import { registerFavoriteHandlers, type FavoriteHandlerDeps } from './handlers'
 import { createFavorites } from './store'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
   // The harness answers `unknown`, and every caller knows the shape its own channel returns.

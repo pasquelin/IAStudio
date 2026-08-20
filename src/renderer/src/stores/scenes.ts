@@ -1,11 +1,15 @@
 import type { AnimationTrack } from '@shared/domain/animation'
 import type { Asset } from '@shared/domain/asset'
-import { updateAnimationTrack } from '@/engines/scene/animation-commands'
-import { addNode, setSelection } from '@/engines/scene/commands'
-import { modelNode } from '@/engines/scene/node-factory'
-import { EMPTY_SCENE, type SceneState } from '@/engines/scene/scene-state'
+import { updateAnimationTrack } from '@/engines/scene/animationCommands'
+import { addModelClip, addNode, setSelection } from '@/engines/scene/commands'
+import { assetClip } from '@shared/domain/scene'
+import { newId } from '@/helpers/ids'
+import { modelNode } from '@/engines/scene/nodeFactory'
+import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
+import { sceneFromTemplate } from '@/engines/scene/sceneTemplates'
+import type { SceneTemplateId } from '@shared/domain/sceneTemplate'
 import type { SelectionMode } from '@/helpers/selection'
-import { createDocumentStore } from './document-store'
+import { createDocumentStore } from './documentStore'
 import { useSelection } from './selection'
 
 /** One scene per document, in memory like the documents themselves. */
@@ -16,6 +20,16 @@ export const useScenes = store.use
 export const sceneOf = store.stateOf
 export const sceneHistoryOf = store.historyOf
 export const isSceneDirty = store.isDirty
+
+/**
+ * Fills a freshly made document with what its template opens on, before any editor mounts.
+ *
+ * `ensure`, so this never writes over a scene already there — and the state being present is
+ * exactly what stops `restoreDocument` from putting the studio default in its place.
+ */
+export function seedSceneTemplate(documentId: string, template: SceneTemplateId): void {
+  store.use.getState().ensure(documentId, () => sceneFromTemplate(template))
+}
 
 /**
  * A flag of an animation track, written without an entry in the history — how one works, not what
@@ -34,25 +48,11 @@ export function writeAnimationTrack(
 }
 
 /**
- * What is picked in a scene, wherever the gesture came from — the outliner, the two node panels
- * or the viewport.
- *
- * Selection stays out of the history, so it writes the whole scene back — and the scene has to
- * be read at call time, not from the render that drew the row: a copy taken before whatever
- * command ran in between would undo it.
- *
- * It points the studio's selection at the scene too, and keeps doing so even though
- * `connectSceneSelection` watches every write of the document in front: a click on the row that
- * is ALREADY selected changes no ids, so it writes no state and wakes no subscriber — and it is
- * exactly the gesture someone makes to bring the panel back onto a node after clicking an asset
- * in the browser. It points at whichever document it is given, where the connector answers only
- * for the one in front; the three callers all render the front tab, so the two never disagree.
- *
- * The scene holds what the viewport highlights, `useSelection` holds which FACE the inspector
- * shows. `canvases` does the same pairing at its call site rather than here; four callers against
- * one is the whole of the difference.
- *
- * Which nodes is deliberately NOT copied over — `pointAtNodes` says why.
+ * What is picked in a scene, wherever the gesture came from. The scene is read at CALL time, not
+ * from the render that drew the row: a copy taken before whatever command ran in between would
+ * undo it. It points the studio's selection too, and must keep doing so despite
+ * `connectSceneSelection` — re-clicking an already selected row changes no ids, so it wakes no
+ * subscriber, and that is exactly the gesture that brings the panel back onto a node.
  */
 export function selectIn(
   documentId: string,
@@ -71,17 +71,35 @@ export function selectIn(
 }
 
 /**
- * The one way an imported model enters a scene, whichever door it came through: a double-click
- * in the asset browser, a drop on the viewport, or a 3D generation landing in the tab it was
- * launched from. Three call sites building the node their own way is three ways for a model to
- * arrive without a name.
- *
- * Answers whether it went in, so a caller that owns a gesture — a drop — knows whether to
- * swallow it. An asset of another type is refused rather than turned into an empty node.
+ * The one way an imported model enters a scene, whichever door it came through — three call sites
+ * building the node their own way is three ways for a model to arrive without a name. Answers
+ * whether it went in, so a caller that owns a gesture knows whether to swallow it.
  */
 export function addModelTo(documentId: string, asset: Asset): boolean {
   if (asset.type !== 'mesh') return false
 
   useScenes.getState().runCommand(documentId, addNode(modelNode(asset.id, asset.name)))
+  return true
+}
+
+/**
+ * A motion laid on the character that is SELECTED — never on a node of its own.
+ *
+ * An animation is not a thing in a scene: it is something a character does. With nothing
+ * selected there is nobody to make it do it, and the gesture is refused rather than landing an
+ * invisible node — which is exactly the `SKELETON_ONLY` trap `rigState` was written for.
+ */
+export function addAnimationTo(documentId: string, asset: Asset): boolean {
+  if (asset.type !== 'animation') return false
+
+  const scene = sceneOf(useScenes.getState(), documentId)
+  const model = scene.nodes.find(
+    node => node.type === 'model' && scene.selectedIds.includes(node.id),
+  )
+  if (!model) return false
+
+  useScenes
+    .getState()
+    .runCommand(documentId, addModelClip(model.id, assetClip(newId(), asset.id, asset.name)))
   return true
 }

@@ -25,29 +25,31 @@ C’est le deuxième point qui compte le plus. Un ciel de coucher de soleil ne f
 le fond : il pose une lumière orange rasante sur tout ce qui est devant.
 
 > **Un ciel fabriqué ici éclaire vos scènes 3D.** Une fois enregistré dans le projet, il se
-> choisit dans l’Inspecteur de l’espace 3D, section **Environnement** : la scène s’allume, et les
-> matériaux le reflètent. C’est le vrai usage d’une skybox, au-delà du décor —
-> voir [Espace 3D](09-espace-3d.md).
+> choisit dans l’Inspecteur de l’espace Modélisation, section **Environnement** : la scène s’allume, et les
+> matières le reflètent. C’est le vrai usage d’une skybox, au-delà du décor —
+> voir [Espace Modélisation](09-espace-modelisation.md).
 
 ---
 
 ## Trois façons d’obtenir un ciel
 
-**D’abord, ouvrez un document ciel** avec le bouton `+` du rail gauche. Les trois chemins qui
-suivent remplissent un onglet ouvert ; aucun n’en crée un.
+| Chemin | Comment | Où ça atterrit |
+|---|---|---|
+| **Double-clic** | sur un **panorama** de l’étagère | dans un onglet ciel **à lui**, ouvert pour l’occasion |
+| **Glisser-déposer** | depuis l’étagère vers l’aperçu, n’importe où dessus | dans l’onglet **devant vous** |
+| **Générer** | choisissez un modèle de ciel et lancez une génération | dans le document d’où elle est partie, **toute seule** |
 
-| Chemin | Comment |
-|---|---|
-| **Double-clic** | sur une image de l’étagère, l’onglet ciel étant devant |
-| **Glisser-déposer** | depuis l’étagère vers l’aperçu, n’importe où dessus |
-| **Générer** | choisissez un modèle de ciel et lancez une génération : elle se pose **toute seule** dans le document d’où elle est partie |
+**Le double-clic est le seul des trois qui ouvre un onglet** ; les deux autres remplissent celui
+que vous avez déjà, que le bouton `+` du rail gauche crée vide. Et il ne vaut que pour un
+**panorama** : une image ordinaire double-cliquée part dans l’espace Image, qui est celui de son
+type — pour la poser en ciel, c’est le glisser-déposer ou le clic droit ▸ **Utiliser comme ciel**.
 
 Tant qu’aucune image n’est posée, l’aperçu affiche : « Aucune skybox. Générez-en une ou déposez
 un panorama équirectangulaire. »
 
 > **Seul ce qui se regarde est accepté** : une image, une matière ou un autre ciel, à condition
-> qu’il soit sur votre disque. Un son ou une vidéo posés là-dessus sont ignorés en silence —
-> rien ne casse, rien ne change.
+> qu’il soit sur votre disque. Un son ou une vidéo posés là-dessus ne changent pas le ciel : ils
+> s’ouvrent dans leur propre espace, comme au double-clic — voir [Les assets](07-assets.md).
 >
 > En revanche, **n’importe quelle image passe**, pas seulement un vrai panorama. Une photo
 > ordinaire posée en ciel donnera une déformation étrange : c’est normal, l’espace attend une
@@ -68,9 +70,10 @@ Ce n’est **pas** une caméra qui tourne autour de quelque chose — vous êtes
 sphère, et vous regardez autour de vous. Le glissement suit la main : tirer vers la droite fait
 tourner la vue vers la gauche, comme si vous attrapiez le monde.
 
-### Le panneau Vue
+### Projection et repères
 
-Dans la colonne de droite, sous le panneau Skybox. Deux sections.
+Les deux premières sections de l’**Inspecteur**, tout en haut : la façon dont on regarde est ce
+sous quoi le reste se juge.
 
 **Projection**
 
@@ -80,7 +83,7 @@ Dans la colonne de droite, sous le panneau Skybox. Deux sections.
 | **Équirect** | l’image à plat, telle qu’elle est stockée — deux fois plus large que haute |
 | **Croix** | les six faces dépliées en croix, sur une grille de 4 × 3 |
 | **6 faces** | les mêmes six faces serrées en 3 × 2 — la croix dépense la moitié de ses cases en vide, celle-ci aucune, donc une face s’inspecte presque deux fois plus grande |
-| **Champ de vision** | de 50° à 110°, 75° par défaut — **ne joue que sur la vue 360°** |
+| **Angle de vue** | de 50° à 110°, 75° par défaut — **ne joue que sur la vue 360°** |
 
 > **Les trois vues à plat ne sont pas des images fabriquées à côté** : chaque pixel du cadre pose
 > la question à l’envers — quelle direction du ciel est-ce, et où tombe-t-elle dans la source. Le
@@ -100,7 +103,7 @@ Dans la colonne de droite, sous le panneau Skybox. Deux sections.
 > barre d’outils et les règles : un menu posé sur l’aperçu couvrirait la seule chose que cet
 > espace existe pour montrer.
 
-**Deux touches évitent le panneau** : `V` fait défiler les quatre vues, `P` montre ou cache les
+**Deux touches évitent l’inspecteur** : `V` fait défiler les quatre vues, `P` montre ou cache les
 objets de test. `⌘Z` et `⇧⌘Z` annulent et rétablissent ici comme ailleurs — voir
 [Tous les raccourcis](15-raccourcis.md).
 
@@ -108,15 +111,17 @@ objets de test. `⌘Z` et `⇧⌘Z` annulent et rétablissent ici comme ailleurs
 métallique. Elles ne font pas partie du ciel — elles servent à **voir ce que le ciel éclaire**, et
 sont visibles par défaut.
 
-**Le champ de vision** est l’équivalent de l’objectif d’un appareil photo : petit angle =
+**L’angle de vue** est l’équivalent de l’objectif d’un appareil photo : petit angle =
 téléobjectif, on voit peu mais de près ; grand angle = on voit beaucoup, mais les bords se
 déforment.
 
 ---
 
-## Le panneau Skybox
+## L’inspecteur du ciel
 
-Dans la colonne de droite. Quatre sections.
+La colonne de droite n’a qu’un panneau, et il décrit le ciel ouvert : rien n’est à sélectionner,
+tout ce qu’il montre appartient au document. Six sections — les deux ci-dessus, qui disent comment
+on REGARDE, puis les quatre qui suivent.
 
 > **Aucun de ces réglages ne réécrit votre image.** Ce sont des instructions appliquées à
 > l’affichage. Le fichier d’origine reste intact, et vos réglages sont rejouables à l’infini.
@@ -190,7 +195,7 @@ endroit. Deux façons de continuer :
 
 ## Sortir le ciel : les six faces
 
-**Fichier › Exporter le ciel**, et une taille : 512, 1024 ou 2048 pixels de côté. Le studio
+**Fichier › Exporter › Ciel**, et une taille : 512, 1024 ou 2048 pixels de côté. Le studio
 demande un dossier, y crée un sous-dossier au nom du document, et y écrit six PNG :
 
 | Fichier | Face |
@@ -225,7 +230,7 @@ sélecteur de dossier pour six fichiers vides.
 
 ## Ce qui manque encore
 
-- **les boutons Régénérer et Réinitialiser** — le panneau ne les pose pas ;
+- **les boutons Régénérer et Réinitialiser** — l’inspecteur ne les pose pas ;
 - **l’export en HDRI** — les six faces sortent en PNG, donc en 8 bits par canal : ce qui dépasse
   le blanc est écrêté. Pour un éclairage à forte dynamique, il n’y a pas encore de sortie ;
 - **l’import d’un `.hdr`** — le studio n’importe que les images ordinaires. Un `.exr` importé est

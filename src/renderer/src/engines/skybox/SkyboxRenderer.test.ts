@@ -1,12 +1,21 @@
 import { DirectionalLight, Texture, WebGLRenderTarget } from 'three'
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+  type MockInstance,
+} from 'vitest'
 import type { SphericalAngles } from '@shared/domain/angles'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
 import type * as AdjustModule from '../gpu/passes/adjust'
 import type { AdjustPass } from '../gpu/passes/adjust'
-import type { GpuPipeline } from '../gpu/GpuPipeline'
-import type * as TestObjectsModule from '../viewport/test-objects'
-import type { TestObjects } from '../viewport/test-objects'
+import type { GpuPipeline } from '../gpu/gpuPipeline'
+import type * as TestObjectsModule from '../viewport/testObjects'
+import type { TestObjects } from '../viewport/testObjects'
 import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import { SkyboxRenderer } from './SkyboxRenderer'
@@ -35,7 +44,7 @@ let adjust: AdjustPass
  */
 let probes: TestObjects
 
-vi.mock('../viewport/test-objects', async importOriginal => {
+vi.mock('../viewport/testObjects', async importOriginal => {
   const actual = await importOriginal<typeof TestObjectsModule>()
   return {
     ...actual,
@@ -47,7 +56,7 @@ vi.mock('../viewport/test-objects', async importOriginal => {
 })
 
 vi.mock('../viewport/environment', () => ({ createEnvironment: () => environment }))
-vi.mock('../gpu/GpuPipeline', () => ({ createGpuPipeline: () => pipeline }))
+vi.mock('../gpu/gpuPipeline', () => ({ createGpuPipeline: () => pipeline }))
 vi.mock('../gpu/passes/adjust', async importOriginal => {
   const actual = await importOriginal<typeof AdjustModule>()
   return {
@@ -644,11 +653,16 @@ describe('the renderer of a skybox', () => {
  */
 describe('the test objects of a skybox', () => {
   const mountedRenderers: SkyboxRenderer[] = []
+  let painted: MockInstance<() => void>
 
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
-    vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(() => {})
+    // Watched from `mount`, which is where the viewport this renderer built becomes reachable:
+    // `requestRender` is an instance field, so the prototype carries nothing to spy on.
+    vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(function (this: ViewportEngine) {
+      painted = vi.spyOn(this, 'requestRender')
+    })
     vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue({} as never)
     vi.spyOn(ViewportEngine.prototype, 'canvas', 'get').mockReturnValue(
       document.createElement('canvas'),
@@ -711,6 +725,20 @@ describe('the test objects of a skybox', () => {
     renderer.apply(withSky())
 
     expect(probes.group.visible).toBe(false)
+  })
+
+  /**
+   * Seen on screen on 19 August: the spheres stayed put. This viewport draws only when asked, and
+   * taking them away moves nothing else that would ask.
+   */
+  it('paints the frame again when the setting takes them away', () => {
+    const renderer = mounted()
+    renderer.apply(withSky())
+    painted.mockClear()
+
+    renderer.setProbesVisible(false)
+
+    expect(painted).toHaveBeenCalled()
   })
 
   /** And they go again when the sky is taken away — the empty state comes back with them. */

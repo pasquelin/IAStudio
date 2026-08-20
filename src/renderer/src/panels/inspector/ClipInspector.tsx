@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { NumberField } from '@/design/NumberField'
-import { PropertyGroup } from '@/design/PropertyGroup'
+import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
 import { setClipFade, setClipGain, setClipSpeed } from '@/engines/timeline/commands'
 import { formatDuration, formatTimecode } from '@/engines/timeline/timecode'
@@ -14,9 +14,9 @@ import {
   trackOfClip,
   type Clip,
   type SequenceState,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { assetsById, useAssets } from '@/stores/assets'
-import { useSequenceEdit } from './useSequenceEdit'
+import { useSequenceEdit } from '@/hooks/useSequenceEdit'
 
 export type ClipInspectorProps = { documentId: string; sequence: SequenceState; clip: Clip }
 
@@ -36,7 +36,7 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
 
   return (
     <>
-      <PropertyGroup title={t('inspector.clip')}>
+      <PropertySection title={t('inspector.clip')} scId="clip">
         <PropertyRow label={t('inspector.source')}>{name}</PropertyRow>
         {track && <PropertyRow label={t('inspector.track')}>{track.name}</PropertyRow>}
         <PropertyRow label={t('inspector.start')}>
@@ -49,11 +49,12 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
         <PropertyRow label={t('inspector.inPoint')}>
           {formatTimecode(clip.inPoint, sequence.settings.fps)}
         </PropertyRow>
-      </PropertyGroup>
+      </PropertySection>
 
-      <PropertyGroup title={t('inspector.shaping')}>
+      <PropertySection title={t('inspector.shaping')} scId="clip.shaping">
         <NumberField
           label={t('inspector.fadeIn')}
+          scId="clip.fadeIn"
           value={clip.fadeIn / SECOND}
           min={0}
           step={0.1}
@@ -62,6 +63,7 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
         />
         <NumberField
           label={t('inspector.fadeOut')}
+          scId="clip.fadeOut"
           value={clip.fadeOut / SECOND}
           min={0}
           step={0.1}
@@ -70,6 +72,7 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
         />
         <NumberField
           label={t('inspector.speed')}
+          scId="clip.speed"
           value={clip.speed}
           min={MIN_SPEED}
           max={MAX_SPEED}
@@ -82,6 +85,7 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
         {audio && (
           <NumberField
             label={t('inspector.gain')}
+            scId="clip.gain"
             value={clip.gain}
             min={MIN_GAIN_DB}
             max={MAX_GAIN_DB}
@@ -90,7 +94,7 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
             {...edit.gesture}
           />
         )}
-      </PropertyGroup>
+      </PropertySection>
     </>
   )
 }

@@ -30,7 +30,7 @@ describe('Flyout', () => {
 
   /**
    * The anchor's box, which jsdom reports as zeros. `offsetWidth` comes from the layout polyfill
-   * in `test-setup`, which answers 640 for every element — so the menu is 640 wide here.
+   * in `testSetup`, which answers 640 for every element — so the menu is 640 wide here.
    */
   function anchorAt(left: number, right: number): HTMLElement {
     const anchor = document.createElement('div')
@@ -74,6 +74,31 @@ describe('Flyout', () => {
       </Flyout>,
     )
     expect(menuLeft()).toBe('0px')
+  })
+
+  /**
+   * A field's menu takes the field's own box, the way a `<select>` does. The stacked placements
+   * align RIGHT edges — right for a bar against the window edge, off-centre under a field, which
+   * is what the new-document dialog came out looking like.
+   */
+  it('takes the anchor’s left edge and width under a field', () => {
+    render(
+      <Flyout anchor={anchorAt(80, 400)} placement="under" role="menu">
+        <button type="button">Images</button>
+      </Flyout>,
+    )
+    expect(menuLeft()).toBe('80px')
+    expect(screen.getByRole('menu').style.width).toBe('320px')
+  })
+
+  it('keeps a field’s menu inside the window', () => {
+    render(
+      <Flyout anchor={anchorAt(900, 1220)} placement="under" role="menu">
+        <button type="button">Images</button>
+      </Flyout>,
+    )
+    // Clamped on the FIELD's width, not the menu's: the menu has just been given the field's.
+    expect(menuLeft()).toBe(`${1024 - 320}px`)
   })
 
   // `role="menu"` promises rows a reader can step through. The surface also holds panels and
@@ -151,6 +176,69 @@ describe('Flyout', () => {
       menu()
 
       expect(outside).toHaveFocus()
+    })
+  })
+
+  /**
+   * Three ways out through one hook, and a surface holding a decision has to tell them apart:
+   * pressing outside and `Escape` are someone closing it, a window losing focus is not.
+   */
+  describe('the ways out', () => {
+    const show = (props: Partial<FlyoutProps> = {}) => {
+      const anchor = document.createElement('div')
+      document.body.appendChild(anchor)
+      const onDismiss = vi.fn()
+      render(
+        <Flyout anchor={anchor} onDismiss={onDismiss} {...props}>
+          <button type="button">Pinceau</button>
+        </Flyout>,
+      )
+      return { onDismiss }
+    }
+
+    it('dismisses on a press outside it', async () => {
+      const { onDismiss } = show()
+
+      await userEvent.click(document.body)
+
+      expect(onDismiss).toHaveBeenCalled()
+    })
+
+    it('dismisses on Escape', async () => {
+      const { onDismiss } = show()
+
+      await userEvent.keyboard('{Escape}')
+
+      expect(onDismiss).toHaveBeenCalled()
+    })
+
+    // What a caller that asked for nothing else gets: leaving the window closes it like the rest.
+    it('dismisses on the window losing focus, when nothing else was asked for', () => {
+      const { onDismiss } = show()
+
+      window.dispatchEvent(new Event('blur'))
+
+      expect(onDismiss).toHaveBeenCalled()
+    })
+
+    it('hands a caller that asked its own answer for the window leaving, and only that one', () => {
+      const onWindowLeave = vi.fn()
+      const { onDismiss } = show({ onWindowLeave })
+
+      window.dispatchEvent(new Event('blur'))
+
+      expect(onWindowLeave).toHaveBeenCalled()
+      expect(onDismiss).not.toHaveBeenCalled()
+    })
+
+    it('still dismisses that caller on Escape, which is a decision and not a departure', async () => {
+      const onWindowLeave = vi.fn()
+      const { onDismiss } = show({ onWindowLeave })
+
+      await userEvent.keyboard('{Escape}')
+
+      expect(onDismiss).toHaveBeenCalled()
+      expect(onWindowLeave).not.toHaveBeenCalled()
     })
   })
 })

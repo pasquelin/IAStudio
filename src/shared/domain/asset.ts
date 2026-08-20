@@ -1,7 +1,7 @@
-import { FILE_NAME_MAX_LENGTH } from './file-name'
+import { FILE_NAME_MAX_LENGTH } from './fileName'
 import type { PbrChannel } from './texture'
 
-export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'texture' | 'skybox'
+export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'texture' | 'skybox' | 'animation'
 
 /** The values, beside the type: a validator and a row reader both need to enumerate them. */
 export const ASSET_TYPES: readonly AssetType[] = [
@@ -11,25 +11,51 @@ export const ASSET_TYPES: readonly AssetType[] = [
   'mesh',
   'texture',
   'skybox',
+  'animation',
 ]
+
+/**
+ * A kind the API can be ASKED for. Every other list narrows to this one before a request.
+ *
+ * MEASURED: the API has no animation class at all — the Uthana file carrying a capoeira is filed
+ * `kind: '3d'` there, beside the characters. A tab offering animations against the cloud would
+ * therefore promise motion and list models, which is why this split exists rather than one list.
+ */
+export type CloudAssetType = Exclude<AssetType, 'animation'>
+
+export const CLOUD_ASSET_TYPES: readonly CloudAssetType[] = ASSET_TYPES.filter(isCloudAssetType)
+
+export function isCloudAssetType(type: AssetType): type is CloudAssetType {
+  return type !== 'animation'
+}
 
 export function isAssetType(value: unknown): value is AssetType {
   return ASSET_TYPES.some(candidate => candidate === value)
 }
 
 /**
- * Where each kind lands inside a project. One table rather than two: the folders are created
- * from the project side and written to from the asset side, and a rename on one side alone
- * would have the writer land in a folder nobody created — an ENOENT at the exact moment a job
- * succeeds. `Record<AssetType, string>` also makes a new kind a compile error, not a surprise.
+ * Where each kind lands when nothing says otherwise — a DEFAULT, no longer a law.
+ *
+ * It used to be both: the folder a file sat in is what said what the file was, so leaving one
+ * meant ceasing to be a picture. Nothing reads a role off a folder any more (`natureOf` reads
+ * the extension, the catalogue overrules it), so these are ordinary folders the user may rename,
+ * fill with something else, or throw away — and the writer recreates the one it needs rather
+ * than failing, which is the whole difference between a default and a law.
+ *
+ * The names are English and fixed, never translated: a folder whose name followed the interface
+ * language would be renamed on disk at every language change, and every catalogue row under it
+ * would point beside the file.
+ *
+ * `Record<AssetType, string>` still makes a new kind a compile error rather than a surprise.
  */
-export const ASSET_FOLDERS: Record<AssetType, string> = {
-  image: 'assets/img',
-  video: 'assets/vid',
-  audio: 'assets/aud',
-  mesh: 'assets/3d',
-  texture: 'assets/tex',
-  skybox: 'assets/sky',
+export const DEFAULT_ASSET_FOLDERS: Record<AssetType, string> = {
+  image: 'Images',
+  video: 'Video',
+  audio: 'Audio',
+  mesh: '3D',
+  texture: 'Textures',
+  skybox: 'Sky',
+  animation: 'Animations',
 }
 
 /**
@@ -256,6 +282,12 @@ export type AssetBadge =
   | 'other-account'
   /** In the account's library, with no copy on this disk. Nothing local answers for it. */
   | 'remote-only'
+  /**
+   * Published by somebody else — the public feed, which this account owns nothing of. It behaves
+   * exactly as `remote-only` does (no file here, fetched by a double-click or by a drop) and it
+   * is a mark of its own for the one thing that differs: whose it is.
+   */
+  | 'published'
   /** A job is still running. The row stands for an output that does not exist yet. */
   | 'generating'
   /** Its bytes are on their way down right now. Transient, and never read off a stored row. */
@@ -313,6 +345,7 @@ export const ASSET_BADGES: readonly AssetBadge[] = [
   'error',
   'other-account',
   'remote-only',
+  'published',
   'generating',
   'fetching',
   'missing',
@@ -411,6 +444,23 @@ export function hasSound(asset: Asset | null): boolean {
   return (asset?.probe?.channels ?? 0) > 0
 }
 
+/**
+ * How many paths one `AssetQuery` may ask about.
+ *
+ * Read on BOTH sides, which is the whole point: the main process refuses a longer list — one
+ * placeholder each in a statement it builds — and the caller cuts its question into that many
+ * before asking. Written on one side only, a project of three thousand rushes lost every
+ * catalogue answer at once and fell back to guessing from extensions, silently.
+ */
+export const ASSET_PATHS_MAX = 2000
+
+/**
+ * The widest `limit` one `AssetQuery` may ask for. Read on both sides like `ASSET_PATHS_MAX`: the
+ * main process REFUSES a larger one rather than trimming it, so a caller that cuts its reads into
+ * batches has to know where the refusal starts.
+ */
+export const ASSET_SEARCH_LIMIT_MAX = 500
+
 export type AssetQuery = {
   type?: AssetType
   /**
@@ -428,6 +478,25 @@ export type AssetQuery = {
    * explorer spells its paths the way `relativePathFor` writes them — `/` on every platform.
    */
   path?: string
+  /**
+   * The same question for a whole listing — which of THESE files the catalogue holds a row for.
+   *
+   * One round trip rather than one per row: a browser showing four hundred files asked four
+   * hundred times, and each answer is a query against the project's own database. An empty list
+   * means nothing, as it does for `types`.
+   *
+   * Bounded by `ASSET_PATHS_MAX`, which the caller is the one to respect: a longer list is
+   * REFUSED rather than cut, and a folder of rushes goes past it easily.
+   */
+  paths?: readonly string[]
+  /**
+   * Exactly these rows, by id — how a caller holding the output of a generation reads it back.
+   *
+   * `metadata.assetIds` is all a finished job hands over, and until this the catalogue could be
+   * asked by path, by group and by origin but never by the one identifier the API itself
+   * answers in. Empty means nothing, as it does for `paths`.
+   */
+  ids?: readonly string[]
   /** Narrows to one side of the library, or to what still has to move between them. */
   location?: AssetLocation
   syncStatus?: SyncStatus
@@ -446,6 +515,7 @@ export type AssetQuery = {
    * reaches is a branch nothing tests.
    */
   generated?: true
+  /** Bounded by `ASSET_SEARCH_LIMIT_MAX`, past which the query is refused rather than cut. */
   limit?: number
   offset?: number
 }
@@ -461,7 +531,7 @@ export type AssetCounts = Record<AssetType, number>
  * compile error here instead of a counter silently missing from five hand-written copies.
  */
 export function emptyAssetCounts(): AssetCounts {
-  return { image: 0, video: 0, audio: 0, mesh: 0, texture: 0, skybox: 0 }
+  return { image: 0, video: 0, audio: 0, mesh: 0, texture: 0, skybox: 0, animation: 0 }
 }
 
 /**
@@ -472,6 +542,14 @@ export function emptyAssetCounts(): AssetCounts {
 export type AssetChanges = {
   name?: string
   tags?: readonly string[]
+  /**
+   * What the file IS, corrected by hand.
+   *
+   * The studio reads a file's domain from its extension alone, and an extension cannot always
+   * tell: a normal map and an albedo are both PNGs. The row is what remembers the answer, which
+   * is why only a file the catalogue holds can be corrected at all.
+   */
+  type?: AssetType
 }
 
 export const ASSET_SCHEME = 'scenario'
@@ -483,6 +561,13 @@ export const ASSET_HOST = 'asset'
  * two files — the resolver would otherwise have to guess which of them a caller meant.
  */
 export const POSTER_HOST = 'poster'
+
+/**
+ * The host that serves a PREVIEW of a file in the project, named by its path rather than by an
+ * id — the explorer shows files, and most of them have no catalogue row at all. What it hands
+ * back is a small picture the main process rendered and kept under `.index/thumbnails`.
+ */
+export const THUMB_HOST = 'thumb'
 
 /**
  * `scenario://<host>/<id>`. One scheme, one host per kind of thing it serves — the favourites
@@ -521,6 +606,18 @@ export function hostedIdFromUrl(url: string, host: string): string | null {
  */
 export function assetUrl(assetId: string): string {
   return hostedUrl(ASSET_HOST, assetId)
+}
+
+/**
+ * What the explorer draws on the tile of a file it lists, asset or not.
+ *
+ * Keyed by the path and NOT versioned, which is the one thing to know about it: a file replaced
+ * on disk outside the studio keeps the preview the window already decoded until that window
+ * reloads. The cache on disk sees the change — it keys on the size and the stamp — but the URL
+ * it answers is the same one, and nothing here can tell the browser to ask again.
+ */
+export function thumbnailUrl(relativePath: string): string {
+  return hostedUrl(THUMB_HOST, relativePath)
 }
 
 /**

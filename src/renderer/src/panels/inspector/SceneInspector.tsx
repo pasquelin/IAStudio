@@ -1,30 +1,42 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  setEnvironment,
   setGeometryOn,
+  setPath,
   setLightOn,
   setMaterialOn,
   setModelTextures,
   setSpriteOn,
   setTextOn,
 } from '@/engines/scene/commands'
-import { geometryFields, lightFields } from '@/engines/scene/property-fields'
-import { selectedNodes } from '@/engines/scene/scene-state'
+import { snapToFrame } from '@shared/domain/time'
+import type { FieldValue } from '@/engines/scene/propertyFields'
+import { cameraFields, geometryFields, lightFields } from '@/engines/scene/propertyFields'
+import { lensToCommand } from '@/engines/scene/animationCommands'
+import { lensAt } from '@/engines/scene/animationEval'
+import { newShotAt, shotOfCameraAt } from '@/engines/scene/cameraShots'
+import { newId } from '@/helpers/ids'
+import { selectedNodes } from '@/engines/scene/sceneState'
+import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
+import { sceneViewOf, useScenePlayhead, useSceneViews } from '@/stores/sceneViews'
 import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from './DescriptorSection'
 import { AnimationSection } from './AnimationSection'
-import { EnvironmentSection } from './EnvironmentSection'
+import { CameraAlignButton } from './CameraAlignButton'
+import { CameraShotSection } from './CameraShotSection/CameraShotSection'
+import { RigSection } from './RigSection'
+import { EnvironmentPanel } from './EnvironmentPanel/EnvironmentPanel'
 import { MaterialSection } from './MaterialSection'
 import { ModelOverridesSection } from './ModelOverridesSection'
-import { ModelTexturesSection } from './ModelTexturesSection'
+import { ModelTexturesSection } from './ModelTexturesSection/ModelTexturesSection'
+import { PathSection } from './PathSection'
 import { ShadowSection } from './ShadowSection'
 import { SpriteSection } from './SpriteSection'
 import { TextSection } from './TextSection'
 import { TransformSection } from './TransformSection'
-import { useSceneEdit } from './useSceneEdit'
+import { useSceneEdit } from '@/hooks/useSceneEdit'
 
 export type SceneInspectorProps = { documentId: string }
 
@@ -44,8 +56,12 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // Two stable selectors, then derived: a selector that builds an array hands React a new
   // snapshot on every call, and the render loop never settles.
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
+  const animation = useScenes(state => sceneOf(state, documentId).animation)
+  const playhead = useScenePlayhead(documentId)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
-  const environment = useScenes(state => sceneOf(state, documentId).environment)
+  const world = useScenes(state => sceneOf(state, documentId).world)
+  const lockedAxes = useScenes(state => sceneOf(state, documentId).lockedAxes)
+  const view = useSceneViews(state => sceneViewOf(state, documentId))
   const selection = useMemo(() => selectedNodes(nodes, selectedIds), [nodes, selectedIds])
   const node = selection.at(-1) ?? null
 
@@ -58,23 +74,65 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const sprite = node?.type === 'sprite' ? node : null
   const text = node?.type === 'text' ? node : null
   const model = node?.type === 'model' ? node : null
+  const camera = node?.type === 'camera' ? node : null
+  const path = node?.type === 'path' ? node : null
   // The descriptors keep their identity across every edit that does not touch them, so the
   // fields of a material survive a whole drag of the position.
   const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
   const lit = useMemo(() => (light ? lightFields(light.light) : []), [light])
+  // Where a key would land, which is where the lens has to be READ: the head runs on the wall
+  // clock during playback and stops between two frames, so reading it raw would show a value the
+  // key written a frame earlier never takes.
+  const at = snapToFrame(playhead, animation.fps)
+  // `lensAt`, which the viewport draws through too: the field writes the same number back, so
+  // showing the descriptor alone would have a keyed camera jump by whatever its channel adds.
+  const lens = useMemo(
+    () => (camera ? cameraFields(lensAt(camera.camera, animation, camera.id, at)) : []),
+    [camera, animation, at],
+  )
+
+  /**
+   * The sections below cannot be memoised, and the reason is worth writing down rather than
+   * guessing at: their commands take the selected NODES, so their callbacks capture `selection` —
+   * derived from `nodes`, and therefore new on every edit to any node in the scene. Making them
+   * stable means commands that take ids, which is a change to `engines/scene/commands`.
+   */
+
+  // Which lens fields can be keyed is `lensToCommand`'s to know, not a panel's. Read at call time
+  // rather than from the render above, so a value typed as playback runs keys where it lands.
+  const changeLens = (name: string, value: FieldValue): void => {
+    const keying = sceneKeyingAt(documentId)
+    edit.run(
+      lensToCommand(keying.state.animation, selection, name, value, keying.at, keying.recording),
+    )
+  }
 
   // The environment belongs to the document rather than to a node, so it shows either way — and
   // it is what keeps the panel from being empty when nothing is selected, in place of a message.
   return (
     <>
-      <EnvironmentSection
-        environment={environment}
-        onChange={next => edit.run(setEnvironment(next))}
+      <EnvironmentPanel
+        documentId={documentId}
+        world={world}
+        // The pane being worked in, not the first: a display mode is per view, and the panel has
+        // to name the one the hand is over. Published by the engine — see `setActivePane`.
+        mode={view.displays[view.activePane] ?? 'shaded'}
+        onMode={mode => useSceneViews.getState().setDisplay(documentId, view.activePane, mode)}
+        skeletons={view.skeletons}
+        onSkeletons={skeletons => useSceneViews.getState().setSkeletons(documentId, skeletons)}
+        snapping={view.snapping}
+        onSnapping={snapping => useSceneViews.getState().setSceneSnapping(documentId, snapping)}
       />
 
       {node && (
         <>
-          <TransformSection node={node} nodes={nodes} selection={selection} edit={edit} />
+          <TransformSection
+            node={node}
+            nodes={nodes}
+            selection={selection}
+            lockedAxes={lockedAxes}
+            edit={edit}
+          />
           <ShadowSection node={node} selection={selection} edit={edit} />
         </>
       )}
@@ -83,6 +141,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         <>
           <DescriptorSection
             title={t('inspector.geometry')}
+            scId="geometry"
             fields={geometry}
             onChange={(name, value) =>
               edit.run(setGeometryOn(selection, mesh.geometry, name, value))
@@ -108,10 +167,12 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
             gesture={edit.gesture}
           />
           {/* The very section a mesh gets: a text is lit the same way and wears the same
-              descriptor, so neither has to know the other exists. */}
+              descriptor, so neither has to know the other exists. Minus the tiling — a text's
+              outline is not a primitive, and its UVs never go through `uvTiling`. */}
           <MaterialSection
             material={text.material}
             fallbackColor={meshColor}
+            tiling={false}
             onChange={material =>
               edit.run(setMaterialOn(selection, changedFields(text.material, material)))
             }
@@ -122,6 +183,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
 
       {model && (
         <>
+          <RigSection documentId={documentId} node={model} edit={edit} />
           <AnimationSection documentId={documentId} node={model} edit={edit} />
           {/* On the anchor alone, unlike a material: which maps a model wears depends on what its
               own file carries, so spreading one over a selection would dress meshes that never
@@ -143,9 +205,40 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         />
       )}
 
+      {path && (
+        <PathSection
+          path={path.path}
+          onChange={next => edit.run(setPath(path.id, next))}
+          gesture={edit.gesture}
+        />
+      )}
+
+      {camera && (
+        <>
+          <DescriptorSection
+            title={t('inspector.camera')}
+            scId="camera"
+            fields={lens}
+            onChange={changeLens}
+            gesture={edit.gesture}
+          >
+            <CameraAlignButton documentId={documentId} camera={camera} />
+          </DescriptorSection>
+          <CameraShotSection
+            camera={camera}
+            shot={shotOfCameraAt(animation, camera.id, playhead)}
+            shotAtHead={() => newShotAt(animation, camera.id, newId(), playhead)}
+            nodes={nodes}
+            run={command => edit.run(command)}
+            gesture={edit.gesture}
+          />
+        </>
+      )}
+
       {light && (
         <DescriptorSection
           title={t('inspector.light')}
+          scId="light"
           fields={lit}
           onChange={(name, value) => edit.run(setLightOn(selection, light.light, name, value))}
           gesture={edit.gesture}

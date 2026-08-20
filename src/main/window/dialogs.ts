@@ -1,4 +1,4 @@
-import type { PathKind } from '@shared/domain/settings-registry'
+import type { PathKind } from '@shared/domain/settingsRegistry'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { parseBase64Payload, parseFileName, parsePathKind, parseStartIn } from './validation'

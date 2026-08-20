@@ -19,7 +19,19 @@ import type { ReactElement, ReactNode } from 'react'
  * do it assert on data the first render already settled.
  */
 export function withQueries(ui: ReactNode): ReactElement {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return <QueryClientProvider client={freshClient()}>{ui}</QueryClientProvider>
+}
 
-  return <QueryClientProvider client={client}>{ui}</QueryClientProvider>
+/**
+ * The same host as a `renderHook` wrapper, holding ONE client across the rerenders a case drives —
+ * which `withQueries` cannot be: called again by a rerender, it builds a second cache.
+ */
+export function queryHost(): (props: { children: ReactNode }) => ReactElement {
+  const client = freshClient()
+
+  return ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+}
+
+function freshClient(): QueryClient {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } })
 }

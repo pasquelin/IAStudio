@@ -158,6 +158,15 @@ actif, la *tête de lecture*, le cadre d’une sélection. Réglable dans Régla
 La couleur d’une matière, telle qu’elle serait sous un éclairage parfaitement neutre : sans ombre,
 sans reflet, sans relief. L’aspect « peinture » de la surface.
 
+**Couper les silences**
+Resserrer un *clip* de son sur ce qui n’est pas silence, **aux deux bouts seulement** : ce qui se
+tait au milieu reste. Le studio considère comme silence ce qui passe sous **−50 dB** pendant au
+moins **0,4 seconde** — plus court, c’est une respiration, pas un blanc à retirer.
+
+C’est un geste de montage, le même que le *Rogner* d’un son : il déplace les deux bords du clip et
+**ne touche pas** à sa chaîne d’effets. À ne pas confondre avec le *Rogner* du montage, qui tire
+**un seul** bord à la main.
+
 ---
 
 ## D
@@ -170,6 +179,11 @@ resserre (24 px) pour faire tenir plus de choses à l’écran.
 Un *canal* de texture que le studio a calculé à partir d’un autre, plutôt que reçu d’un *modèle*.
 Le calcul se relance depuis le menu de sa vignette, autant de fois qu’on veut.
 
+**Détourage** *(background removal)*
+Retirer le fond d’une image pour ne garder que le sujet, sur du transparent. La commande
+**Détourer** est dans le menu Image ; son modèle se règle dans
+**Réglages ▸ Génération ▸ Détourage**.
+
 **Dictée**
 Écrire un texte en le disant plutôt qu'en le tapant. La reconnaissance tourne **sur cet
 ordinateur**, sans clé ni connexion : rien de ce qui est dit ne part ailleurs.
@@ -177,11 +191,6 @@ ordinateur**, sans clé ni connexion : rien de ce qui est dit ne part ailleurs.
 Elle a besoin d'un *modèle* de reconnaissance, téléchargé une seule fois (640 Mo), et fonctionne
 dans tous les champs de texte du studio — le texte se pose à l'endroit du curseur. Voir
 [Générer](06-generer.md#dicter-au-lieu-de-taper).
-
-**Détourage** *(background removal)*
-Retirer le fond d’une image pour ne garder que le sujet, sur du transparent. La commande
-**Détourer** est dans le menu Image ; son modèle se règle dans
-**Réglages ▸ Génération ▸ Détourage**.
 
 **Dock**
 Une zone de la fenêtre où des *panneaux* peuvent se poser : les colonnes de gauche et de droite,
@@ -194,8 +203,14 @@ La différence avec un *asset* est celle qui sépare la matière de l’ouvrage 
 un asset ; l’image que vous êtes en train de peindre, avec ses *calques* et son historique, est un
 document.
 
-Six sortes, une par *espace de travail* : `.img` (image), `.scene` (scène 3D), `.seq` (séquence),
-`.aud` (audio), `.tex` (matière), `.sky` (ciel).
+Six sortes, une par *espace de travail*, chacune sous l’extension du format ouvert auquel elle
+appartient : `.ora` (image), `.gltf` (scène 3D et ciel), `.otio` (séquence et audio), `.mtlx`
+(matière).
+
+**Les six s’ouvrent aujourd’hui dans un autre logiciel** : l’extension annonce le contenu, et non
+plus une destination. Ce que le standard ne sait pas dire voyage à l’endroit que chaque format
+réserve aux applications — un autre logiciel ne le perd pas, il ne le voit pas. Voir
+[Ce que le studio ne fait pas](18-limites.md).
 
 ---
 
@@ -219,7 +234,7 @@ empreinte, même s’ils portent des noms différents. C’est ainsi que le stud
 **Environnement** *(d’une scène 3D)*
 Ce qui éclaire une scène en dehors de ses lampes. Deux valeurs : **Studio**, un éclairage neutre
 calculé, ou **une *skybox* du projet**, qui pose sa lumière et ses reflets sur tout. Se choisit
-dans l’Inspecteur de l’espace 3D, section Environnement.
+dans l’**Inspecteur** de l’espace Modélisation, section **Environnement**.
 
 **Équirectangulaire**
 Le format d’une image qui contient toute une sphère, aplatie : deux fois plus large que haute,
@@ -280,6 +295,12 @@ Une montée depuis le silence (fondu d’entrée) ou une descente vers lui (fond
 Demander à un *modèle* de fabriquer quelque chose. La demande part chez Scenario, revient sous
 forme de *tâche*, et le résultat atterrit dans vos *assets*.
 
+**Gizmo**
+Les *poignées* de couleur qui apparaissent sur un objet 3D sélectionné, et par lesquelles on le
+transforme : les **flèches** le déplacent, les **cercles** le font pivoter, les poignées de
+redimensionnement l’agrandissent. C’est l’outil armé qui décide desquelles s’affichent. Leur
+orientation suit le *repère local / repère monde*.
+
 **Gouttière**
 L’espace entre deux *panneaux*. C’est lui-même la poignée qui les redimensionne : il n’y a pas de
 petite prise à viser.
@@ -294,7 +315,7 @@ image. Changez la graine, vous obtenez une autre image de la même famille. Lais
 C’est le réglage le plus utile du formulaire, et le plus souvent ignoré.
 
 **Groupe**
-Plusieurs objets rangés sous un même parent. Dans l’espace 3D (`⌘G`) comme dans la pile de
+Plusieurs objets rangés sous un même parent. Dans l’espace Modélisation (`⌘G`) comme dans la pile de
 calques : déplacer le groupe déplace tout ce qui pend dessous, et le replier rend une scène
 chargée lisible.
 
@@ -345,7 +366,7 @@ d’une rue, on change un vêtement.
 **Job** → voir *Tâche*.
 
 **Journal d’activité**
-La liste de ce que le studio a fait et raté, ouverte depuis la *ligne d’état*. Six sujets —
+La liste de ce que le studio a fait et raté, ouverte depuis la **ligne d’état**. Six sujets —
 génération, import, bibliothèque, document, projet, interface — et trois niveaux : information,
 avertissement, échec. Un échec y ajoute une **bulle** dans le coin de la fenêtre, qui ne
 disparaît que si on la ferme. Voir [Quand ça coince](16-depannage.md).
@@ -369,7 +390,8 @@ les alignements ratés d’un cheveu.
 
 **Maille** *(mesh)*
 Un objet 3D, décrit par ses points et les triangles qui les relient. C’est la forme, sans la
-matière ni la lumière.
+matière ni la lumière. Le mot *maillage* désigne son pavage — la finesse du filet de triangles —
+et non l’objet : c’est ce que montre le mode **Filaire**.
 
 **Masque**
 Ce qui décide **où** un calque se voit. Un masque de fusion cache une partie d’un calque sans
@@ -377,6 +399,11 @@ l’effacer : les pixels sont toujours là, ils ne s’affichent pas. On le pein
 retire — l’image d’origine n’a jamais bougé.
 
 Un masque se fabrique aussi à partir d’une *sélection*, en une commande.
+
+**Matière** *(material)*
+Ce dont une surface est faite : sa couleur, son grain, ce qu’elle renvoie de la lumière. C’est ce
+que l’espace **Textures** fabrique, et ce que la section **Matière** de l’**Inspecteur** règle sur un
+objet 3D. Le studio ne dit jamais *matériau* : un seul mot pour une seule chose.
 
 **MCP** *(Model Context Protocol)*
 La langue commune que parlent les assistants de programmation et les outils qu’ils pilotent. Le
@@ -409,8 +436,8 @@ Réglable par *famille*, dans Réglages → **Génération**.
 ## N
 
 **Nœud** *(node)*
-Un élément de l’arbre d’une *scène* 3D : un maillage, une lumière, un sprite, un groupe. C’est ce
-que l’*outliner* liste et ce que l’*inspecteur* décrit.
+Un élément de l’arbre d’une *scène* 3D : une *maille*, une lumière, un sprite, un groupe. C’est ce
+que l’**Outliner** liste et ce que l’**Inspecteur** décrit.
 
 **Normales** *(canal de texture)*
 Une image aux couleurs étranges — des bleus, des violets — qui encode les **micro-reliefs** d’une
@@ -462,10 +489,25 @@ document a la sienne** — c’est pour cela qu’annuler dans un onglet ne touc
 Une ligne du montage, sur laquelle des *clips* sont posés bout à bout. Une piste vidéo, une piste
 audio, plusieurs de chaque si besoin.
 
+**Poignée**
+Un point qu’on attrape pour agir. Le studio en emploie trois sortes, et elles n’ont rien à voir :
+les **poignées de manipulation** d’un objet 3D — les flèches et les cercles du *gizmo* ; la
+**poignée d’un clip**, à son bord, qui le *rogne* ; et la **poignée à suivre** d’une articulation,
+un point posé dans la scène que l’os cherche à atteindre, et que les deux os au-dessus de lui
+suivent au plus.
+
+Les deux premières se tirent ; la troisième se pose et reste là.
+
 **Projection**
 La façon dont la caméra 3D met le volume à plat. En **perspective**, ce qui est loin est plus
 petit — c’est ce que voit un œil. En **orthographique**, les tailles ne changent pas avec la
 distance : c’est la vue d’un plan d’architecte, et c’est ce qu’on veut pour aligner des objets.
+
+**Projet**
+Un dossier sur votre disque, et tout ce qu’il contient : les *assets*, les *documents*, le
+catalogue qui les indexe. **Le studio n’en ouvre qu’un à la fois** — toutes ses fenêtres travaillent
+sur le même. C’est lui qui fournit la première des trois sources de l’*étagère*, les deux autres
+étant votre bibliothèque en ligne et les générations en cours.
 
 **Prompt**
 Votre phrase de commande : le texte qui décrit ce que vous voulez. Le champ le plus important du
@@ -499,6 +541,14 @@ lettre imprimée dessus : les touches de vol forment toujours le même carré en
 Une des deux bandes d’icônes collées aux bords gauche et droit de la fenêtre. Un clic sur une
 icône ouvre ou ferme le *panneau* correspondant.
 
+**Recadrage** *(crop)*
+Poser un cadre sur une image et ne garder que ce qui tombe dedans. L’outil `F` de l’espace Image :
+on glisse le cadre, on l’ajuste, `⏎` l’applique. **Un recadrage rogne, il n’agrandit jamais** — le
+cadre ne sort pas de l’image.
+
+Ne pas confondre avec *Rogner* : au montage il raccourcit **ou allonge** un *clip* par ses bouts,
+sur un son il n’en garde que la portion choisie. Aucun des deux ne touche à une image.
+
 **Régénérer**
 Relancer une génération avec les réglages qui ont produit un résultat donné — même *modèle*, même
 *prompt*, même *graine*. Le point de départ de toute variation maîtrisée.
@@ -512,7 +562,7 @@ Une ligne fine, horizontale ou verticale, posée sur l’image pour aligner ce q
 fait pas partie de l’image et ne s’exporte pas. Masquer les repères ne les efface pas.
 
 **Repère local / repère monde**
-L’orientation des poignées de manipulation, dans l’espace 3D. En repère **monde**, la flèche rouge
+L’orientation des poignées de manipulation, dans l’espace Modélisation. En repère **monde**, la flèche rouge
 pointe toujours dans la même direction. En repère **local**, elle suit l’orientation de l’objet :
 c’est ce qu’il faut pour faire avancer une voiture dans le sens où elle roule. La touche `L`
 bascule de l’un à l’autre.
@@ -521,13 +571,13 @@ bascule de l’un à l’autre.
 Ce que le studio fait quand une *tâche* échoue pour une raison qu’un nouvel essai peut réparer :
 réseau coupé, service occupé, trop de requêtes. Voir *Temporisation exponentielle*.
 
+**Rogner** *(audio)*
+Ne garder que la portion sélectionnée d’un son, et jeter le reste.
+
 **Rogner** *(montage)*
 Raccourcir ou allonger un *clip* par l’un de ses bouts, en tirant sur la poignée qui s’y trouve.
 Une vidéo s’arrête là où sa source s’arrête ; une image fixe n’a aucune source à dépasser, et ses
 deux bouts l’allongent.
-
-**Rogner** *(audio)*
-Ne garder que la portion sélectionnée d’un son, et jeter le reste.
 
 **Rotation de l’horizon**
 Faire tourner toute une *skybox* autour de vous. Le réglage le plus utile d’un ciel : il place le
@@ -545,6 +595,11 @@ d’eau — la couleur est presque la même.
 **Saturation**
 L’intensité des couleurs. À 0, l’image est en noir et blanc ; au-dessus de 1, les couleurs
 crient.
+
+**Scène**
+Ce que l’espace Modélisation compose : un arbre de *nœuds* — objets, lumières, caméras — avec leurs
+places, leurs *matières* et leur animation. C’est le *document* de cet espace, et il s’écrit en
+`.gltf`.
 
 **Secret API**
 La seconde moitié de vos identifiants Scenario, l’équivalent d’un mot de passe. Il va toujours
@@ -566,6 +621,16 @@ le décor lointain. Stockée en *équirectangulaire*.
 
 Elle sert à deux choses : **on la voit** (c’est le décor), et **elle éclaire** (voir *IBL*). Le
 second point compte davantage.
+
+**Sous-piste**
+Une ligne de la bande d’animation, dans l’espace Modélisation, sur laquelle les blocs d’animation
+d’un objet se posent. Elles s’appellent **Anim. 1**, **Anim. 2**, et se groupent **sous** les lignes
+de clés de l’objet.
+
+Ce n’est pas une *piste* du montage : une piste porte des *clips* et appartient à une séquence, une
+sous-piste porte des blocs et appartient à un objet de la scène. Deux mouvements sur deux
+sous-pistes jouent en même temps, mais **ils se partagent encore les mêmes os** : c’est **Pilote**,
+dans l’**Inspecteur**, qui donne à chacun sa moitié du corps.
 
 **Sprite**
 Une image posée dans une scène 3D et qui **fait toujours face à la caméra**, quelle que soit la

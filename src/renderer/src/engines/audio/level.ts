@@ -1,5 +1,5 @@
 import { clamp } from '@shared/numeric'
-import { fromDb, toDb } from './audio-data'
+import { fromDb, toDb } from './audioData'
 
 /**
  * Where a montage stops being comfortable. Six decibels of headroom is what a mixing desk marks

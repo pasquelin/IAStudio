@@ -1,0 +1,456 @@
+/**
+ * The port onto the retargeting worker: an animation authored for one skeleton, replayed on
+ * another.
+ *
+ * `skinWeights`'s shape — an injected `spawn`, one worker, a register of what is out, `abandon`
+ * when it dies, a request that answers many times and can be taken back. What is its own is the
+ * short circuit: two identical skeletons need no worker at all, and asking for one would replace
+ * an exact clip with a resampled approximation of itself.
+ */
+import {
+  AnimationClip,
+  Bone,
+  NumberKeyframeTrack,
+  QuaternionKeyframeTrack,
+  Skeleton,
+  SkinnedMesh,
+  Vector3,
+  VectorKeyframeTrack,
+  type KeyframeTrack,
+  type Object3D,
+} from 'three'
+import { isFingerRole, type HumanoidRole } from '@shared/domain/humanoid'
+import {
+  profileWithRole,
+  skeletonSignatureOf,
+  type SkeletonProfile,
+} from '@shared/domain/skeletonProfile'
+import { boneRolesOf, type NamedBone } from './boneRoles'
+import { isBoneObject } from './rigState'
+import {
+  clipBuffers,
+  type RetargetRequest,
+  type RetargetResponse,
+  type WireBone,
+  type WireClip,
+  type WireTrack,
+  type WireTrackKind,
+} from './retargetMessage'
+
+export type Retarget = {
+  /**
+   * The clips as the target skeleton would play them. `null` means the request was taken back, or
+   * the port let go while it was out — an awaited promise nobody answers never ends.
+   */
+  adapt: (
+    target: Object3D,
+    source: Object3D,
+    clips: readonly AnimationClip[],
+    watch?: { onProgress?: (progress: number) => void; signal?: AbortSignal },
+  ) => Promise<AnimationClip[] | null>
+  /**
+   * What a skeleton of that signature means, from now on and for every model carrying it.
+   *
+   * Recognised by SIGNATURE and not by model: a mapping put right on one character is the same
+   * mapping the next file of that rig needs, and asking twice for the same correction is the
+   * thing this closes. Profiles a project remembered are handed back the same way.
+   */
+  remember: (profile: SkeletonProfile) => void
+  dispose: () => void
+}
+
+export function createRetarget(spawn: () => Worker): Retarget {
+  const waiting = new Map<number, Slot>()
+  const profiles = new Map<string, SkeletonProfile>()
+  let worker: Worker | null = null
+  let disposed = false
+  let nextId = 0
+
+  const abandon = (dead: Worker, reason: string): void => {
+    // A late event from a worker already replaced must not take its successor down with it.
+    if (worker !== dead) return
+
+    worker.terminate()
+    worker = null
+    for (const slot of waiting.values()) slot.reject(new Error(reason))
+    waiting.clear()
+  }
+
+  const workerOf = (): Worker => {
+    if (worker) return worker
+
+    const started = spawn()
+    started.addEventListener('message', (event: MessageEvent<RetargetResponse>) =>
+      settle(waiting, event.data),
+    )
+    started.addEventListener('error', event =>
+      abandon(started, `retargeting worker failed: ${event.message}`),
+    )
+    started.addEventListener('messageerror', () =>
+      abandon(started, 'retargeting worker sent an unreadable answer'),
+    )
+    worker = started
+    return started
+  }
+
+  const send = (request: RetargetRequest, watch: Watch): Promise<readonly WireClip[] | null> =>
+    new Promise((resolve, reject) => {
+      const running = workerOf()
+
+      // Posted before it is recorded, so a payload the structured clone cannot carry throws with
+      // no slot left behind — `bvhInflight` says why this order is safe.
+      running.postMessage(request, clipBuffers(request.clips))
+
+      // Dropped whichever way the request ends, a worker dying included.
+      const stop = new AbortController()
+      const give = (clips: readonly WireClip[] | null): void => {
+        stop.abort()
+        resolve(clips)
+      }
+      const fail = (error: Error): void => {
+        stop.abort()
+        reject(error)
+      }
+      waiting.set(request.id, { resolve: give, reject: fail, onProgress: watch?.onProgress })
+
+      // `{ signal }` rather than a bare listener: a caller keeping ONE controller for its whole
+      // life would otherwise leave one listener per request behind it, each holding a `resolve`.
+      watch?.signal?.addEventListener(
+        'abort',
+        () => {
+          if (!waiting.delete(request.id)) return
+          running.postMessage({ id: request.id, cancel: true })
+          give(null)
+        },
+        { signal: stop.signal },
+      )
+
+      // An `abort` already fired has already been delivered, so the listener above would never
+      // run: without this the worker does the whole job and answers clips for a dead caller.
+      if (watch?.signal?.aborted) {
+        waiting.delete(request.id)
+        running.postMessage({ id: request.id, cancel: true })
+        give(null)
+      }
+    })
+
+  return {
+    adapt: async (target, source, clips, watch) => {
+      if (disposed) return null
+
+      const targetBones = wireBonesOf(target)
+      const sourceBones = wireBonesOf(source)
+      // Nothing to replay: the clips already speak this skeleton's language, exactly.
+      if (sameSkeleton(targetBones, sourceBones)) return [...clips]
+
+      const request: RetargetRequest = {
+        id: (nextId += 1),
+        ...retargetPlanOf(targetBones, sourceBones, clips.map(wireClipOf), undefined, profiles),
+      }
+      const adapted = await send(request, watch)
+
+      return adapted && adapted.map(clipFromWire)
+    },
+
+    remember: profile => void profiles.set(profile.signature, profile),
+
+    dispose: () => {
+      disposed = true
+      worker?.terminate()
+      worker = null
+      // Resolved, not rejected: a window closing is nobody's failure.
+      for (const slot of waiting.values()) slot.resolve(null)
+      waiting.clear()
+    },
+  }
+}
+
+type Watch = { onProgress?: (progress: number) => void; signal?: AbortSignal } | undefined
+
+type Slot = {
+  resolve: (clips: readonly WireClip[] | null) => void
+  reject: (error: Error) => void
+  onProgress?: (progress: number) => void
+}
+
+/** A progress report leaves the slot in place; only a `done` message takes it out. */
+function settle(waiting: Map<number, Slot>, response: RetargetResponse): void {
+  const slot = waiting.get(response.id)
+  if (!slot) return
+
+  if (!response.done) {
+    slot.onProgress?.(response.progress)
+    return
+  }
+
+  waiting.delete(response.id)
+  if (response.ok) slot.resolve(response.clips)
+  else slot.reject(new Error(response.error))
+}
+
+/**
+ * What to ask the worker for: which target bone reads which source bone, and where the hips are.
+ *
+ * The roles do the matching, since that is the whole reason they exist; bones that already share
+ * a name are paired first, so a skeleton only partly recognised still carries over what is plain.
+ */
+export function retargetPlanOf(
+  target: readonly WireBone[],
+  source: readonly WireBone[],
+  clips: readonly WireClip[],
+  fps?: number,
+  known?: ReadonlyMap<string, SkeletonProfile>,
+): Omit<RetargetRequest, 'id'> {
+  const sourceRoles = rolesOf(source, known)
+  const sourceByRole = new Map(Object.entries(sourceRoles).map(([name, role]) => [role, name]))
+  const sourceNames = new Set(source.map(bone => bone.name))
+
+  const names: Record<string, string> = {}
+  for (const bone of target) if (sourceNames.has(bone.name)) names[bone.name] = bone.name
+
+  for (const [name, role] of Object.entries(rolesOf(target, known))) {
+    const from = sourceByRole.get(role)
+    if (from) names[name] = from
+  }
+
+  return { target, source, clips, names, hip: sourceByRole.get('Hips'), fps }
+}
+
+/**
+ * How well an animation fits a character: which joints both of them name, and which only one does.
+ *
+ * What the screen needs to say « compatible » or « not quite », and to say WHICH joint is the
+ * trouble. Roles and not bones, because that is the only vocabulary the two skeletons share —
+ * `mixamorigLeftHand` and `L_Hand` are the same thing and no string comparison says so.
+ */
+export type RetargetFit = {
+  matched: HumanoidRole[]
+  /** Named by the character and not by the animation: that joint will simply stay at rest. */
+  missingInSource: HumanoidRole[]
+  /** Named by the animation and not by the character: that much of the motion is dropped. */
+  missingInTarget: HumanoidRole[]
+}
+
+/**
+ * The same two lists with the hands taken out — what a reader is actually asked to judge.
+ *
+ * MEASURED on the issue's files: Uthana Character Rigging carries 22 bones and stops at the
+ * wrists, so every Mixamo motion drops its thirty fingers on one. Counting those would warn on
+ * the ordinary case, and list thirty rows nobody can act on.
+ */
+export function bodyFitOf(fit: RetargetFit): Omit<RetargetFit, 'matched'> {
+  return {
+    missingInSource: fit.missingInSource.filter(role => !isFingerRole(role)),
+    missingInTarget: fit.missingInTarget.filter(role => !isFingerRole(role)),
+  }
+}
+
+export function retargetFitOf(target: Object3D, source: Object3D): RetargetFit {
+  const targetRoles = new Set(Object.values(boneRolesOf(namedBonesOf(wireBonesOf(target)))))
+  const sourceRoles = new Set(Object.values(boneRolesOf(namedBonesOf(wireBonesOf(source)))))
+
+  return {
+    matched: [...targetRoles].filter(role => sourceRoles.has(role)),
+    missingInSource: [...targetRoles].filter(role => !sourceRoles.has(role)),
+    missingInTarget: [...sourceRoles].filter(role => !targetRoles.has(role)),
+  }
+}
+
+/** The wire spells a parent as an index; reading roles wants it as a name. */
+function namedBonesOf(bones: readonly WireBone[]): NamedBone[] {
+  return bones.map(bone => ({ name: bone.name, parent: bones[bone.parent]?.name ?? null }))
+}
+
+/**
+ * What each bone MEANS: what its name spells, corrected by whatever was recorded for a skeleton
+ * of exactly these bones.
+ *
+ * A correction wins over a name, because it was made precisely BECAUSE the name lied — and it is
+ * laid on one bone at a time so that giving a role to another takes it off whoever held it.
+ */
+function rolesOf(
+  bones: readonly WireBone[],
+  known?: ReadonlyMap<string, SkeletonProfile>,
+): Record<string, HumanoidRole> {
+  const signature = skeletonSignatureOf(bones.map(bone => bone.name))
+  const found = boneRolesOf(namedBonesOf(bones))
+  const corrections = known?.get(signature)?.roles
+  if (!corrections) return found
+
+  let profile: SkeletonProfile = { signature, roles: found }
+  for (const [name, role] of Object.entries(corrections)) {
+    profile = profileWithRole(profile, name, role)
+  }
+  return { ...profile.roles }
+}
+
+/**
+ * How much longer the target's torso is than the source's — the factor the hips' TRAVEL is read
+ * at.
+ *
+ * `retargetClip` carries the hip translation over unchanged unless told otherwise, so a stride
+ * authored on a small character replays at its own size on a large one and the feet slide. Hip
+ * HEIGHT is the obvious measure and cannot be used: Uthana builds its skeleton with the hips at
+ * the ORIGIN, measured on the real file on 2026-08-18 — hips to head is intrinsic to a rig and
+ * survives that, as it survives the rest rotations 46 of its 52 bones carry.
+ */
+export function skeletonScaleOf(target: Object3D, source: Object3D): number {
+  const to = torsoLengthOf(target)
+  const from = torsoLengthOf(source)
+
+  // A rig with no head, or two bones in one place: reading it as a size would be worse than not.
+  return to > 0 && from > 0 ? to / from : 1
+}
+
+function torsoLengthOf(root: Object3D): number {
+  const roles = boneRolesOf(namedBonesOf(wireBonesOf(root)))
+  const hips = boneFilling(root, roles, 'Hips')
+  const head = boneFilling(root, roles, 'Head')
+  if (!hips || !head) return 0
+
+  root.updateWorldMatrix(false, true)
+  return hips.getWorldPosition(new Vector3()).distanceTo(head.getWorldPosition(new Vector3()))
+}
+
+function boneFilling(
+  root: Object3D,
+  roles: Readonly<Record<string, HumanoidRole>>,
+  role: HumanoidRole,
+): Object3D | undefined {
+  const name = Object.keys(roles).find(bone => roles[bone] === role)
+  return name === undefined ? undefined : root.getObjectByName(name)
+}
+
+/**
+ * Whether the clips can be played as they are.
+ *
+ * Names and hierarchy are not enough: two rigs spelled alike but built to different proportions
+ * hold their arms elsewhere, and playing one's rotations on the other is precisely the case
+ * retargeting exists for. So the rest pose is compared too.
+ */
+export function sameSkeleton(target: readonly WireBone[], source: readonly WireBone[]): boolean {
+  if (target.length !== source.length) return false
+
+  return target.every((bone, index) => {
+    const other = source[index]
+    if (!other || bone.name !== other.name || bone.parent !== other.parent) return false
+
+    return (
+      near(bone.position, other.position) &&
+      near(bone.quaternion, other.quaternion) &&
+      near(bone.scale, other.scale)
+    )
+  })
+}
+
+/**
+ * An ABSOLUTE tolerance, which suits a rig measured in metres — the three measured provider files
+ * all stand about one unit tall. A rig in centimetres would never short-circuit and would be
+ * retargeted instead, which is the safe way round to be wrong.
+ */
+const REST_TOLERANCE = 1e-6
+
+function near(a: readonly number[], b: readonly number[]): boolean {
+  return a.every((value, index) => Math.abs(value - (b[index] ?? 0)) <= REST_TOLERANCE)
+}
+
+/**
+ * Every named bone of a model, parents before children.
+ *
+ * Deduplicated by name, like `rigState`: a track and a bone map both address a bone by name, and
+ * a second bone of the same name is one nothing can reach.
+ */
+export function wireBonesOf(root: Object3D): WireBone[] {
+  const bones: WireBone[] = []
+  const indexOf = new Map<string, number>()
+
+  root.traverse(object => {
+    if (!isBoneObject(object) || !object.name || indexOf.has(object.name)) return
+
+    indexOf.set(object.name, bones.length)
+    bones.push({
+      name: object.name,
+      parent: parentIndexOf(object, indexOf),
+      position: object.position.toArray(),
+      quaternion: object.quaternion.toArray(),
+      scale: object.scale.toArray(),
+    })
+  })
+
+  return bones
+}
+
+function parentIndexOf(bone: Object3D, indexOf: ReadonlyMap<string, number>): number {
+  let above = bone.parent
+  while (above) {
+    const known = above.name === '' ? undefined : indexOf.get(above.name)
+    if (known !== undefined) return known
+    above = above.parent
+  }
+  return -1
+}
+
+/** The skeleton three needs to sample a clip: a mesh, because `retargetClip` reads `.skeleton`. */
+export function skinnedFromWire(bones: readonly WireBone[]): SkinnedMesh {
+  const built = bones.map(wire => {
+    const bone = new Bone()
+    bone.name = wire.name
+    bone.position.fromArray([...wire.position])
+    bone.quaternion.fromArray([...wire.quaternion])
+    bone.scale.fromArray([...wire.scale])
+    return bone
+  })
+
+  const mesh = new SkinnedMesh()
+  built.forEach((bone, index) => {
+    const above = bones[index]?.parent ?? -1
+    ;(above < 0 ? mesh : (built[above] ?? mesh)).add(bone)
+  })
+
+  mesh.updateMatrixWorld(true)
+  mesh.bind(new Skeleton(built))
+  return mesh
+}
+
+export function wireClipOf(clip: AnimationClip): WireClip {
+  return {
+    name: clip.name,
+    duration: clip.duration,
+    tracks: clip.tracks.map(track => ({
+      name: track.name,
+      kind: trackKindOf(track),
+      times: new Float32Array(track.times),
+      values: new Float32Array(track.values),
+    })),
+  }
+}
+
+export function clipFromWire(wire: WireClip): AnimationClip {
+  return new AnimationClip(wire.name, wire.duration, wire.tracks.map(trackFromWire))
+}
+
+function trackFromWire(track: WireTrack): KeyframeTrack {
+  if (track.kind === 'quaternion')
+    return new QuaternionKeyframeTrack(track.name, track.times, track.values)
+  if (track.kind === 'vector') return new VectorKeyframeTrack(track.name, track.times, track.values)
+
+  return new NumberKeyframeTrack(track.name, track.times, track.values)
+}
+
+function trackKindOf(track: KeyframeTrack): WireTrackKind {
+  if (track.ValueTypeName === 'quaternion') return 'quaternion'
+  return track.ValueTypeName === 'vector' ? 'vector' : 'number'
+}
+
+/**
+ * `.bones[Hips].quaternion` read as `Hips.quaternion`.
+ *
+ * `retargetClip` writes the SKELETON spelling, which only binds against an object carrying a
+ * `.skeleton`. Every clip this studio plays comes off `GLTFLoader` in the NODE spelling and is
+ * bound against the model holder — so a retargeted clip left as three spells it would resolve to
+ * nothing, silently, and the character would simply stand still.
+ */
+export function nodeTrackNameOf(name: string): string {
+  const match = /^\.bones\[(.+)\]\.(.+)$/.exec(name)
+  return match ? `${match[1]}.${match[2]}` : name
+}

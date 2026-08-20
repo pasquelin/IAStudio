@@ -38,13 +38,14 @@ Le studio range chaque action dans un **contexte** — la surface où elle a un 
 surface écoute à la fois, celle que vous regardez. Une touche partagée entre deux contextes ne
 peut donc jamais être ambiguë.
 
-Huit contextes :
+Neuf contextes :
 
 | Contexte | Où il s’applique |
 |---|---|
 | **Partout dans l’application** | n’importe quelle fenêtre, n’importe quel espace |
 | **Dans la barre des espaces** | la barre du haut, quand le focus est sur l’un de ses onglets |
-| **Dans la vue 3D** | le viewport de l’espace 3D |
+| **Dans l’explorateur** | le panneau du dossier de projet, dans tous les espaces et à l’accueil |
+| **Dans la vue 3D** | le viewport de l’espace Modélisation |
 | **Dans le montage** | la timeline de l’espace Vidéo et de l’espace Audio |
 | **Dans l’image** | le canvas de l’espace Image |
 | **Dans le ciel** | la vue de l’espace Skyboxes |
@@ -52,14 +53,22 @@ Huit contextes :
 | **Dans la matière** | l’aperçu et les canaux de l’espace Textures |
 
 **Une surface peut écouter une touche sans être un contexte, et la garantie ci-dessus ne la couvre
-alors pas.** La bande d’animation de l’espace 3D en est le cas : `Suppr` et `Retour arrière` y
-retirent la clé choisie, la touche étant liée à la bande et non au registre des contextes. Elle ne
-figure donc pas dans l’écran des raccourcis, et ne se change pas.
+alors pas.** La bande d’animation de l’espace Modélisation en est le cas, et elle écoute
+**quatre** touches : `Suppr` et `Retour arrière` retirent ce qui est choisi — la clé, ou le bloc
+d’animation — `⌘D` duplique le bloc choisi bout à bout, et `S` le coupe à la tête de lecture. Les
+quatre sont liées à la bande et non au registre des contextes : elles ne figurent pas dans l’écran
+des raccourcis, et ne se changent pas. Le clic droit sur un bloc porte les trois gestes qui le
+concernent — voir [l’espace Modélisation](09-espace-modelisation.md).
 
 Un seul contexte est spécial : **Partout dans l’application**. Ses touches passent par le menu du
 système d’exploitation, qui les attrape avant tout le monde. Elles sont donc les seules à ne
 jamais pouvoir être « recouvertes » par un autre contexte — et les seules dont un conflit est
 toujours un vrai conflit.
+
+**Une exception, une seule : `⌥D`, la dictée.** Elle se **maintient** au lieu de se taper, et un
+menu du système n’a rien pour rapporter un relâchement — c’est donc la fenêtre qui l’entend, et
+elle n’a aucune ligne de menu. C’est aussi ce qui lui permet d’écrire dans un champ de saisie,
+voir plus bas.
 
 ---
 
@@ -144,7 +153,7 @@ se change pas.
 pas au clavier non plus, et s’y arrêter donnerait un parcours qui semble bloqué.
 
 **Une ligne cochée dit ce que sa coche veut dire.** Certaines sont des alternatives — le mode
-d’un outil, le compte actif, la vue d’un quart de l’espace 3D : en cocher une décoche les
+d’un outil, le compte actif, la vue d’un quart de l’espace Modélisation : en cocher une décoche les
 autres. D’autres se règlent chacune pour soi, comme les deux cadenas d’un calque. Un lecteur
 d’écran annonce les premières comme des boutons radio et les secondes comme des cases à cocher.
 
@@ -164,6 +173,46 @@ l’écran des raccourcis.
 
 ---
 
+## Dans l’explorateur
+
+Le seul contexte qui ne soit pas un espace : c’est le panneau du dossier de projet, et il écoute
+partout où ce panneau est ouvert — dans les six espaces comme à l’accueil. L’écran des raccourcis
+le nomme exactement comme ce titre.
+
+**Il n’écoute que si le focus est dedans.** Cliquez une ligne, ou entrez-y au `Tab` : tant que
+vous êtes ailleurs, ces touches appartiennent au document ouvert. C’est ce qui permet à `⌘Z`,
+`⌘C` et `⌘V` d’exister ici sans jamais marcher sur celles du canevas.
+
+| Action | Touche | Ce qu’elle fait |
+|---|---|---|
+| **Nouveau dossier** | `⇧⌘N` | crée un dossier vide dans celui qui est affiché, et ouvre son nom à la saisie |
+| **Dupliquer** | `⌘D` | pose une copie de chaque élément choisi à côté de l’original, sous le premier nom libre |
+| **Couper** | `⌘X` | retient la sélection pour la déplacer au prochain collage |
+| **Copier** | `⌘C` | retient la sélection pour en poser une copie au prochain collage |
+| **Coller** | `⌘V` | dépose dans le dossier affiché ce que le presse-papiers retient |
+| **Mettre à la corbeille** | `⌘⌫` | envoie la sélection à la corbeille du système |
+| **Annuler le dernier geste sur les fichiers** | `⌘Z` | remet à sa place le dernier lot déplacé, renommé, dupliqué ou créé |
+| **Rétablir le geste sur les fichiers** | `⇧⌘Z` | refait à l’identique le lot qui vient d’être annulé |
+
+**Couper ne déplace rien** : les lignes retenues s’affichent atténuées, et rien ne bouge tant que
+vous n’avez pas collé. **Un dossier se duplique avec tout ce qu’il contient.**
+
+**Un collage refuse au détail, pas en bloc.** Si un nom est déjà pris dans le dossier d’arrivée,
+c’est cet élément-là qui est refusé ; les autres passent.
+
+**`⌘⌫` plutôt que `⌫` seul**, et c’est délibéré : c’est le seul geste de ce contexte que le studio
+ne sait pas annuler, et une touche de suppression nue est trop proche de ce qu’une main fait en
+parcourant une liste.
+
+> **Quatre gestes du menu ne sont pas dans cette table**, et ils ne sont pas dans l’écran des
+> raccourcis non plus. **Ouvrir** répond à `Entrée`, mais c’est l’arbre qui écoute cette touche,
+> pas le registre : elle ne se change donc pas. **Afficher dans le dossier**, **Informations sur
+> le fichier** et **Renommer** ne répondent à aucune touche du tout — ils vivent dans le menu du
+> clic droit, et nulle part ailleurs. Voir
+> [Les projets](04-projets.md#le-clic-droit--douze-gestes-en-quatre-groupes).
+
+---
+
 ## Dans la vue 3D
 
 ### Les outils
@@ -177,11 +226,11 @@ l’écran des raccourcis.
 | **Magnétisme** | `M` | fait avancer les poignées par pas réguliers. Les pas se règlent dans les réglages |
 | **Repère local** | `L` | aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde |
 | **Projection** | `O` | bascule entre perspective et projection orthographique |
-| **Mode de rendu** | `Z` | fait défiler les sept façons de dessiner |
+| **Mode de rendu** | `Z` | fait défiler les neuf façons de dessiner |
 | **Quatre vues** | `⇧Q` | partage le viewport en quatre : la vue en cours, dessus, face, profil |
 | **Arêtes en quads** | `⇧W` | en filaire, efface les diagonales que la triangulation a ajoutées |
-| **Afficher les squelettes** | `B` | dessine les os de chaque modèle rigué par-dessus la scène |
-| **Mode pose** | `P` | le clic choisit alors les **os** d’un rig au lieu des objets |
+| **Afficher les squelettes** | `B` | dessine les os de chaque modèle à squelette par-dessus la scène |
+| **Mode pose** | `P` | le clic choisit alors les **os** d’un squelette au lieu des objets |
 | **Cadrer la sélection** | `F` | rapproche la caméra pour que l’objet remplisse la vue |
 | **Supprimer** | `Suppr` | retire tout ce qui est sélectionné. `⌘Z` le fait revenir |
 
@@ -209,15 +258,18 @@ l’écran des raccourcis.
 
 Ces touches se **maintiennent** au lieu de se presser : tant que vous appuyez, la caméra bouge.
 
-| Direction | Touche (clavier QWERTY) | Touche (clavier AZERTY) |
-|---|---|---|
-| **Avancer** | `W` | `Z` |
-| **Reculer** | `S` | `S` |
-| **Gauche** | `A` | `Q` |
-| **Droite** | `D` | `D` |
-| **Monter** | `E` | `E` |
-| **Descendre** | `Q` | `A` |
-| **Accélérer** | `⇧` gauche | `⇧` gauche |
+| Direction | Touche (clavier QWERTY) | Touche (clavier AZERTY) | Flèche |
+|---|---|---|---|
+| **Avancer** | `W` | `Z` | `↑` |
+| **Reculer** | `S` | `S` | `↓` |
+| **Gauche** | `A` | `Q` | `←` |
+| **Droite** | `D` | `D` | `→` |
+| **Monter** | `E` | `E` | — |
+| **Descendre** | `Q` | `A` | — |
+| **Accélérer** | `⇧` gauche | `⇧` gauche | — |
+
+Les flèches font la même chose que les quatre lettres : elles s’ajoutent, elles ne remplacent rien.
+L’altitude n’en a pas, les quatre étant déjà prises par le déplacement au sol.
 
 > **Pourquoi deux colonnes.** Le studio écoute la **position** de la touche sur le clavier, pas la
 > lettre écrite dessus. Les quatre touches de direction sont donc toujours le même carré, en haut
@@ -232,10 +284,10 @@ Ces touches se **maintiennent** au lieu de se presser : tant que vous appuyez, l
 
 La vitesse et l’accélération se règlent dans les [réglages](14-reglages.md#espaces-de-travail).
 
-> **`S` fait deux choses à la fois dans la vue 3D** : il choisit l’outil **Redimensionner** *et*
-> fait reculer la caméra tant qu’on le tient. C’est un chevauchement connu — voir
-> [Ce qui n’existe pas encore](18-limites.md). En pratique on le remarque peu : appuyer sur `S`
-> pour prendre l’outil recule la caméra d’un cheveu.
+> **`S` porte deux sens, et c’est le bouton de la souris qui tranche.** Aucun bouton enfoncé,
+> `S` choisit l’outil **Redimensionner** ; un bouton maintenu dans la vue — gauche ou droit — il
+> fait reculer la caméra et ne touche plus à l’outil. Il en va de même des flèches : pendant un
+> vol elles pilotent la caméra, et la liste qui avait le focus ne les reçoit pas.
 
 ### Ce que la souris fait, sans raccourci
 
@@ -243,6 +295,7 @@ La vitesse et l’accélération se règlent dans les [réglages](14-reglages.md
 |---|---|
 | **Clic gauche** | choisit l’objet sous le curseur — ou l’**os** le plus proche, en mode pose (`P`) |
 | **Clic droit maintenu + souris** | tourne la tête, sur place |
+| **Un bouton maintenu + clavier** | déplace la caméra — voir [l’espace Modélisation](09-espace-modelisation.md) |
 | **Molette** | avance ou recule |
 | **Clic sur une poignée + glisser** | applique l’outil en cours |
 
@@ -278,8 +331,8 @@ jamais à l’écoute en même temps.
 
 | Action | Touche | Ce qu’elle fait |
 |---|---|---|
-| **Zoomer** | `⌘=` | étale le montage pour voir le détail |
-| **Dézoomer** | `⌘−` | resserre pour en voir davantage d’un coup |
+| **Zoom avant** | `⌘=` | étale le montage pour voir le détail |
+| **Zoom arrière** | `⌘−` | resserre pour en voir davantage d’un coup |
 | **Tout afficher** | `⇧Z` | ajuste pour que le montage entier tienne à l’écran |
 
 ### Annuler et rétablir
@@ -301,7 +354,7 @@ Chaque outil de la barre est une commande : sa touche l’arme, et se remappe co
 |---|---|---|---|---|
 | `V` | Déplacement | | `R` | Rectangle |
 | `H` | Main | | `⇧R` | Trait |
-| `K` | Mise à l’échelle | | `A` | Flèche |
+| `K` | Échelle | | `A` | Flèche |
 | `F` | Recadrage | | `O` | Ellipse |
 | `M` | Sélection rectangulaire | | `P` | Pinceau |
 | `L` | Lasso | | `⇧P` | Crayon |
@@ -433,12 +486,13 @@ L’espace Skyboxes répond au clavier comme les autres.
 
 ## Dans l’éditeur audio
 
-Le septième contexte : l’éditeur de prises n’écoute que l’annulation.
+Le septième contexte : l’éditeur de prises écoute l’annulation, et la barre d’espace.
 
 | Action | Touche | Ce qu’elle fait |
 |---|---|---|
 | **Annuler** | `⌘Z` | retire la dernière étape de la chaîne — un fondu, une normalisation, un rognage |
 | **Rétablir** | `⇧⌘Z` | |
+| **Lire / Pause** | `Espace` | le moniteur du bas, celui de la chaîne — voir [L’espace Audio](11-espace-audio.md) |
 
 > **Rien n’est écrit tant que vous n’avez pas appliqué.** Chaque outil ajoute une étape à une
 > chaîne rejouée sur la prise décodée, ce qui rend l’annulation gratuite et l’A/B instantané.
@@ -451,7 +505,7 @@ touche : ils se prennent à la barre, sous la forme d’onde.
 
 ## Dans la matière
 
-Le huitième contexte, et le plus court : l’espace Textures n’écoute que l’annulation.
+Le dernier contexte de la liste, et le plus court : l’espace Textures n’écoute que l’annulation.
 
 | Action | Touche | Ce qu’elle fait |
 |---|---|---|
@@ -474,6 +528,15 @@ la scène qui recule d’un cran — l’image n’a pas bougé.
 > **« ⌘Z semble ne rien faire. »** C’est presque toujours ceci : l’action que vous visez appartient
 > à un autre onglet. Activez l’onglet, puis annulez.
 
+**Et il y a une pile qui n’appartient à aucun document : celle des fichiers.** Déplacer, renommer,
+dupliquer, créer un dossier ne touche aucun onglet — ces gestes appartiennent au projet, et leur
+pile aussi. Elle survit donc à la fermeture d’un document, et elle est la même dans toutes les
+fenêtres.
+
+`⌘Z` choisit entre les deux par le focus, et par rien d’autre : **dans l’Explorateur il recule
+d’un geste de fichier ; ailleurs il recule d’un cran dans le document devant vous.** La mise à la
+corbeille n’entre dans aucune des deux.
+
 **Quand vous tapez du texte, `⌘Z` annule votre texte.** Renommez un calque ou une piste, faites une
 faute, appuyez sur `⌘Z` : c’est le mot que vous venez de taper qui recule, pas le dernier trait de
 pinceau. Le studio s’efface tant que le curseur est dans un champ de saisie, et reprend la main dès
@@ -482,8 +545,10 @@ que vous en sortez.
 Cela vaut aussi pour `⌘X`, `⌘C` et `⌘V` : dans un champ, ils travaillent sur le texte ; ailleurs,
 sur ce que l’espace a sélectionné.
 
-**Aucun raccourci ne traverse un champ de saisie** : une commande doit le déclarer pour y être
-entendue, et aucune ne le déclare aujourd’hui.
+**Un seul raccourci traverse un champ de saisie** : une commande doit le déclarer pour y être
+entendue, et **`⌥D`, la dictée, est la seule à le faire** — elle existe précisément pour écrire
+dans le champ où vous êtes déjà. C’est aussi pour cela qu’elle porte un modificateur : sans lui,
+elle avalerait une lettre.
 
 ---
 
@@ -546,12 +611,16 @@ l’inverse. Le bouton **Tout afficher** rend la liste complète.
 **Les touches de vol** (`W A S D Q E` et l’accélération) ne sont pas dans cet écran. Elles sont
 figées pour l’instant. Voir [Ce qui n’existe pas encore](18-limites.md).
 
-**`Suppr` et `Retour arrière` sur la bande d’animation** non plus, pour la raison dite plus haut :
-ils sont liés à la bande, pas à un contexte.
+**Les quatre touches de la bande d’animation** non plus — `Suppr`, `Retour arrière`, `⌘D` et `S` —
+pour la raison dite plus haut : elles sont liées à la bande, pas à un contexte.
 
 ---
 
 ## Aide-mémoire, tout sur une page
+
+Les colonnes sont les espaces. **L’Explorateur a sa table à part, en dessous** : c’est le seul
+contexte qui n’est pas un espace — il est ouvert dans tous à la fois — et une colonne de plus
+laisserait croire que `⌘D` ou `⌘Z` y font ce qu’ils font dans l’espace de la colonne d’à côté.
 
 | Touche | Partout | Barre | Vue 3D | Montage | Image | Ciel | Audio | Matière |
 |---|---|---|---|---|---|---|---|---|
@@ -596,8 +665,8 @@ ils sont liés à la bande, pas à un contexte.
 | `⇧` gauche |  |  | Accélérer |  |  |  |  |  |
 | `Espace` |  |  |  | Lire / Pause |  |  |  |  |
 | `Début` / `Fin` |  |  |  | Début / Fin du montage |  |  |  |  |
-| `⌘=` |  |  |  | Zoomer | Zoom avant |  |  |  |
-| `⌘−` |  |  |  | Dézoomer | Zoom arrière |  |  |  |
+| `⌘=` |  |  |  | Zoom avant | Zoom avant |  |  |  |
+| `⌘−` |  |  |  | Zoom arrière | Zoom arrière |  |  |  |
 | `⇧Z` |  |  |  | Tout afficher |  |  |  |  |
 | `⌘L` |  |  |  | Délier l’image et le son |  |  |  |  |
 | `⌘0` |  |  |  |  | Ajuster à la fenêtre |  |  |  |
@@ -611,6 +680,16 @@ ils sont liés à la bande, pas à un contexte.
 | `Échap` |  |  |  |  | Abandonner le recadrage |  |  |  |
 | `⌥←` |  | Déplacer à gauche |  |  |  |  |  |  |
 | `⌥→` |  | Déplacer à droite |  |  |  |  |  |  |
+
+**Dans l’explorateur** — quand le focus est dans le panneau, et là seulement :
+
+| Touche | Ce qu’elle fait |
+|---|---|
+| `⇧⌘N` | Nouveau dossier |
+| `⌘D` | Dupliquer |
+| `⌘X` / `⌘C` / `⌘V` | Couper / Copier / Coller |
+| `⌘⌫` | Mettre à la corbeille |
+| `⌘Z` / `⇧⌘Z` | Annuler / Rétablir le geste sur les fichiers |
 
 ---
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
-import type { Viewport } from './timeline-geometry'
+import type { Viewport } from './timelineGeometry'
 import { clipFixture } from './timeline-fixtures'
 import { tileColumns, waveformColumns } from './waveform'
 

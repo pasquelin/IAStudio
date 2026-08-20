@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { IDENTITY, type Rect, type Transform } from './canvas-state'
+import { IDENTITY, type Rect, type Transform } from './canvasState'
 import type { Point } from '../core/geometry'
 import {
   cornersOfRect,

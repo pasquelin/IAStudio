@@ -2,14 +2,14 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
-import { paintProgram } from '@/engines/timeline/program-wave'
-import type * as ProgramWave from '@/engines/timeline/program-wave'
+import { paintProgram } from '@/engines/timeline/programWave'
+import type * as ProgramWave from '@/engines/timeline/programWave'
 import { ProgramMonitor } from './ProgramMonitor'
-import type { SoundTransport } from './useSoundTransport'
+import type { SoundTransport } from '@/hooks/useSoundTransport'
 
 // The painter alone: `programViewport` and the palette stay real, being what the monitor's own
 // geometry is measured against elsewhere in this file.
-vi.mock('@/engines/timeline/program-wave', async importOriginal => ({
+vi.mock('@/engines/timeline/programWave', async importOriginal => ({
   ...(await importOriginal<typeof ProgramWave>()),
   paintProgram: vi.fn(),
 }))
@@ -24,10 +24,15 @@ const transport = (playing = false): SoundTransport => ({
   tap: () => null,
 })
 
+/** The tab owns whether the take editor is on screen; the monitor only carries its button. */
+const CLIP_HALF = { shown: false, onToggle: vi.fn() }
+
 function show(overrides: { playing?: boolean; onSeek?: (time: number) => void } = {}) {
   const player = transport(overrides.playing)
   const onSeek = overrides.onSeek ?? vi.fn()
-  render(<ProgramMonitor sequence={montage()} transport={player} onSeek={onSeek} />)
+  render(
+    <ProgramMonitor sequence={montage()} transport={player} onSeek={onSeek} clipHalf={CLIP_HALF} />,
+  )
   return { player, onSeek }
 }
 
@@ -52,6 +57,34 @@ describe('ProgramMonitor', () => {
     fireEvent.pointerDown(wave(), { clientX: 200 })
 
     expect(onSeek).toHaveBeenCalledWith(2 * SECOND)
+  })
+
+  /**
+   * The click is clamped to the montage's DURATION, read off a ref rather than a dependency — so a
+   * clip appended while the monitor stands there has to lengthen what a click can reach.
+   */
+  it('scrubs the montage as it stands, not as it was mounted', () => {
+    const onSeek = vi.fn()
+    const view = render(
+      <ProgramMonitor
+        sequence={montage()}
+        transport={transport()}
+        onSeek={onSeek}
+        clipHalf={CLIP_HALF}
+      />,
+    )
+    view.rerender(
+      <ProgramMonitor
+        sequence={sequenceWith([trackFixture('a', 'audio', [clipFixture('c', 0, 10 * SECOND)])])}
+        transport={transport()}
+        onSeek={onSeek}
+        clipHalf={CLIP_HALF}
+      />,
+    )
+
+    fireEvent.pointerDown(wave(), { clientX: 400 })
+
+    expect(onSeek).toHaveBeenCalledWith(10 * SECOND)
   })
 
   /**
@@ -135,7 +168,14 @@ describe('ProgramMonitor', () => {
 
     const heard = vi.fn(() => null)
     const player: SoundTransport = { ...transport(true), tap: heard }
-    render(<ProgramMonitor sequence={montage()} transport={player} onSeek={vi.fn()} />)
+    render(
+      <ProgramMonitor
+        sequence={montage()}
+        transport={player}
+        onSeek={vi.fn()}
+        clipHalf={CLIP_HALF}
+      />,
+    )
     fireEvent.click(screen.getByRole('button', { name: /Spectre/ }))
 
     // One frame each: the meter's loop and the spectrum's, both listening where the montage plays.
@@ -222,7 +262,7 @@ describe('ProgramMonitor', () => {
    * The curves are drawn inside the wave, so they cost no room — but they cross the very crests
    * one may be reading instead, and a reader who has no use for them can put them away.
    *
-   * The palette is what is asserted, not only the button: `test-setup.ts` gives every canvas a
+   * The palette is what is asserted, not only the button: `testSetup.ts` gives every canvas a
    * null context, so nothing under test ever reaches a painter — the one decision this component
    * makes about what is drawn would otherwise be held by nobody, in either direction.
    */

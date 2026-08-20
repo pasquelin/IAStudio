@@ -5,6 +5,7 @@
     "noProject": "Ouvrez un projet pour générer.",
     "noCredentials": "Renseignez vos identifiants API pour voir vos modèles.",
     "dropPicture": "Déposez une image, ou collez son identifiant",
+    "dropModel": "Déposez un modèle 3D, ou collez son identifiant",
     "estimatedCost": "~{{units}} UC"
   },
   "models": {
@@ -129,12 +130,14 @@
   "intents": {
     "skyboxSource": "Utiliser comme ciel",
     "sceneMesh": "Ajouter à la scène",
+    "sceneAnimation": "Faire jouer au personnage",
     "audioTake": "Ouvrir dans l’éditeur audio",
     "imageLayer": "Placer comme calque",
     "videoClip": "Ajouter au montage",
     "textureChannel": "Utiliser comme couleur de base",
     "skyboxSourceHint": "Ouvre le document de skybox et pose cette image comme source du panorama",
     "sceneMeshHint": "Ouvre la scène 3D et y ajoute le modèle",
+    "sceneAnimationHint": "Pose ce mouvement sur le personnage choisi dans la scène",
     "audioTakeHint": "Ouvre l’éditeur audio et y charge cette prise",
     "imageLayerHint": "Ouvre le document image et pose l’asset en nouveau calque",
     "videoClipHint": "Ouvre le montage et y ajoute l’asset comme clip",

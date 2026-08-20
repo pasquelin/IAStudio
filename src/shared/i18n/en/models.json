@@ -5,7 +5,8 @@
     "noProject": "Open a project to generate.",
     "noCredentials": "Enter your API credentials to see your models.",
     "dropPicture": "Drop an image, or paste its id",
-    "estimatedCost": "~{{units}} CU"
+    "dropModel": "Drop a 3D model, or paste its id",
+    "estimatedCost": "~{{units}} CU"
   },
   "models": {
     "none": "No model in this workspace.",
@@ -129,12 +130,14 @@
   "intents": {
     "skyboxSource": "Use as sky",
     "sceneMesh": "Add to the scene",
+    "sceneAnimation": "Make the character play it",
     "audioTake": "Open in the audio editor",
     "imageLayer": "Place as a layer",
     "videoClip": "Add to the edit",
     "textureChannel": "Use as base colour",
     "skyboxSourceHint": "Opens the skybox document and sets this image as the panorama source",
     "sceneMeshHint": "Opens the 3D scene and adds the model to it",
+    "sceneAnimationHint": "Lays this motion on the character selected in the scene",
     "audioTakeHint": "Opens the audio editor and loads this take into it",
     "imageLayerHint": "Opens the image document and lays the asset in as a new layer",
     "videoClipHint": "Opens the edit and adds the asset to it as a clip",

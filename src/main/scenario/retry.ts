@@ -15,6 +15,25 @@ export type RetryOptions = {
 /** Doubles per attempt, from this. */
 export const DEFAULT_BACKOFF_BASE_MS = 1000
 
+/**
+ * The ceiling one wait may reach. `maxRetries` goes up to ten in the preferences, where an
+ * uncapped doubling makes the last wait alone eight and a half minutes — and the job holds its
+ * slot in the concurrency bound for all of it, blocking the queue behind it.
+ */
+const BACKOFF_CEILING_MS = 30_000
+
+/** How far a wait may be pulled either side of its nominal length. */
+const JITTER = 0.2
+
+/**
+ * Capped, and spread. Without the spread, three jobs that take a 429 together come back together
+ * — the very burst the backoff exists to break up.
+ */
+function backoffDelay(baseMs: number, attempt: number): number {
+  const nominal = Math.min(baseMs * 2 ** attempt, BACKOFF_CEILING_MS)
+  return Math.round(nominal * (1 - JITTER + 2 * JITTER * Math.random()))
+}
+
 export type Retry = <T>(action: () => Promise<T>) => Promise<T>
 
 /**
@@ -34,7 +53,7 @@ export function createRetry({
         return await action()
       } catch (error) {
         if (attempt >= maxRetries() || !isRetryable(error)) throw error
-        await sleep(backoffBaseMs * 2 ** attempt)
+        await sleep(backoffDelay(backoffBaseMs, attempt))
       }
     }
   }

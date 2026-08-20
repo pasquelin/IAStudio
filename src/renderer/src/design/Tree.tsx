@@ -1,20 +1,28 @@
 import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { dragChannel } from '@/helpers/drag'
+import type { DragLike } from '@/helpers/drag'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { isTyping } from '@/helpers/typing'
+import { useRemeasure } from '@/hooks/useRemeasure'
+import { useRowHeight } from '@/hooks/useRowHeight'
+import { rowDrag } from './rowDrag'
 import { ROW_LINE, rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
-import { useRemeasure, useRowHeight } from './virtual'
+import { focusVirtualCell } from './virtual'
 
 export type TreeNode = { id: string; parentId: string | null }
 
-const ROWS = dragChannel('application/x-scenario-tree-row')
-
 /** A pick that composes with nothing — what aiming a menu at a row asks for. */
 const NO_MODIFIERS: Modifiers = { shiftKey: false, metaKey: false, ctrlKey: false }
+
+/**
+ * How long a folder is hovered, mid-drag, before it opens by itself. Under ~400 ms one merely
+ * CROSSED opens by accident and reflows the list under a moving pointer; past ~800 ms the hand has
+ * already dropped short. This is about where a deliberate hover parts from a transit.
+ */
+const HOVER_EXPAND_MS = 600
 
 /** Where in a row the pointer is: its edges insert beside it, its middle drops into it. */
 type DropZone = 'before' | 'into' | 'after'
@@ -22,6 +30,25 @@ type DropZone = 'before' | 'into' | 'after'
 /** What releasing over a row would do. An insertion carries where it would land. */
 type DropTarget =
   { zone: 'into' } | { zone: 'before' | 'after'; parentId: string | null; index: number }
+
+/**
+ * A drag from somewhere else, and what releasing it here does. Shared with the grid that reads
+ * the same folder, so the two views of one panel answer one gesture the same way.
+ *
+ * `carries` is asked at HOVER, so it must read the announced types and never the payload — the
+ * platform answers nothing about the latter until the drop itself.
+ */
+export type ForeignDrop<T> = {
+  carries: (event: DragLike) => boolean
+  /**
+   * Which rows receive it. Its own rather than `droppable`, which answers about the batch this
+   * tree picked up: asked with an empty one it drops the very test that refuses a destination —
+   * `canMoveInto` is a question about a PAIR, and there is no source here to make the pair.
+   */
+  accepts: (node: T) => boolean
+  /** `null` for the blank below the rows, which means the folder being read. */
+  onDrop: (event: React.DragEvent<HTMLElement>, node: T | null) => void
+}
 
 export type TreeRow<T> = {
   node: T
@@ -97,15 +124,20 @@ export type TreeProps<T extends TreeNode> = {
    * what an outliner wants: there is nothing to open, only something to select.
    */
   onActivate?: (node: T) => void
-  /** A right-click on a row, with where the pointer was. Absent leaves the browser's own menu. */
-  /** Takes no coordinates: the system pops the menu where the pointer already is. */
+  /**
+   * A right-click on a row. Absent leaves the browser's own menu. Takes no coordinates: the
+   * system pops the menu where the pointer already is.
+   */
   onContextMenu?: (node: T) => void
   /**
-   * A row was dropped onto another. Absent leaves the tree undraggable — a tree with nothing to
+   * Rows were dropped onto another. Absent leaves the tree undraggable — a tree with nothing to
    * reorder that offered the gesture would promise something it cannot do — unless `onInsert`
    * is there, which is the other half of the same gesture.
+   *
+   * A LIST, always, and one element long unless `dragMultiple` says otherwise. The first is the
+   * row the hand actually took hold of.
    */
-  onDrop?: (id: string, parentId: string) => void
+  onDrop?: (ids: readonly string[], parentId: string) => void
   /**
    * A row was dropped BETWEEN two others: `parentId` is the level receiving it, `null` at the
    * root, and `index` its place among that level's rows once the moved one has left them — the
@@ -117,13 +149,52 @@ export type TreeProps<T extends TreeNode> = {
    * the two edges share it, because a third of a row that nothing lands in is a third of a row
    * the hand keeps missing.
    */
-  onInsert?: (id: string, parentId: string | null, index: number) => void
+  onInsert?: (ids: readonly string[], parentId: string | null, index: number) => void
   /**
    * Which rows may be picked up. A row that cannot move never becomes draggable, so the refusal
    * is in the hand rather than at the release: a gesture that runs its course and then does
    * nothing is the one outcome worse than no gesture.
    */
   draggable?: (node: T) => boolean
+  /**
+   * Whether taking hold of a SELECTED row takes the whole selection with it.
+   *
+   * Off by default, which is what leaves the outliner and the layer stack exactly as they were:
+   * a tree that reorders one node at a time gains nothing from carrying three, and the index a
+   * drop lands on is arithmetic written for one row moving.
+   *
+   * A row OUTSIDE the selection is always dragged alone, and the selection is left whole — the
+   * behaviour of every file browser, and what keeps a slip of the hand from moving thirty files.
+   */
+  dragMultiple?: boolean
+  /**
+   * Rows were dropped on the BLANK below the tree, which means "out of every row" — to the
+   * project folder itself, for a file browser.
+   *
+   * Absent, the blank refuses like any other non-target. It exists because a tree whose rows are
+   * the only destinations can take a file INTO a folder and never back out of it, and there is
+   * no row standing for the root to aim at.
+   */
+  onDropRoot?: (ids: readonly string[]) => void
+  /**
+   * A drag that did NOT start in this tree — the asset shelf's, for the Explorer.
+   *
+   * It lands INSIDE a row or on the blank, never between two: what it carries is not a row of
+   * this tree, so it has no place in an ordering. Everything else the hover already does is
+   * unchanged, spring-loaded folders included — that is the whole reason it is a prop here
+   * rather than a second set of handlers written beside the tree.
+   *
+   */
+  foreign?: ForeignDrop<T>
+  /**
+   * A right-click on that same blank, which aims at the same place a drop there does: the project
+   * folder itself. Absent leaves the browser's own menu.
+   *
+   * Its own prop rather than `onContextMenu(null)`, because the two menus are not the same menu
+   * shortened — the root cannot be opened, renamed, copied or thrown away, and a row that stands
+   * for nothing would have to be guarded at every one of them.
+   */
+  onContextMenuRoot?: () => void
   /**
    * A row has just been picked up, so its owner may announce the drag on a channel of its own —
    * a scene document laid on a montage, say. The tree has already announced its own by then,
@@ -136,8 +207,12 @@ export type TreeProps<T extends TreeNode> = {
    * nothing until the drop itself, so a target asked at hover has no other way to know what is
    * coming. It is also what tells a drag that began in ANOTHER tree — the channel is shared —
    * from one of this tree's own rows.
+   *
+   * Asked about the WHOLE batch at once rather than once per member: a caller refusing three
+   * files where one of them is the destination's own ancestor has to see all three, and a
+   * per-member answer would outline a row the drop then refuses.
    */
-  droppable?: (node: T, dragged: T) => boolean
+  droppable?: (node: T, dragged: readonly T[]) => boolean
   /** Draws the row's content. The tree owns the chevron, the indent and the selection. */
   renderRow: (row: TreeRow<T>) => ReactNode
   /**
@@ -185,8 +260,12 @@ export function Tree<T extends TreeNode>({
   onDrop,
   onInsert,
   draggable,
+  dragMultiple = false,
+  onDropRoot,
+  onContextMenuRoot,
   onDragStart,
   droppable,
+  foreign,
   onActivate,
   onContextMenu,
   renderRow,
@@ -196,12 +275,44 @@ export function Tree<T extends TreeNode>({
   // state of the gesture itself, so none of it reaches the caller: what the caller hears about
   // is the drop.
   const [over, setOver] = useState<{ id: string; zone: DropZone } | null>(null)
-  const [dragged, setDragged] = useState<T | null>(null)
+  /**
+   * What the hand is holding, the row it took hold of FIRST — which is also what the ghost
+   * shows and what the insertion arithmetic runs on.
+   *
+   * The batch is settled here, when the drag starts, and read on every hover. It cannot be read
+   * off the payload: `getData` answers nothing until the drop itself, by design of the platform,
+   * so a target asked while the pointer is over it has no other way to know what is coming.
+   */
+  const [dragged, setDragged] = useState<readonly T[] | null>(null)
+  /** The row the gesture started on. The ghost shows it, and the index arithmetic runs on it. */
+  const held = dragged?.[0] ?? null
   const scroller = useRef<HTMLDivElement>(null)
   const rows = useMemo(
     () => flattenTree(nodes, expandedIds, expandable),
     [nodes, expandedIds, expandable],
   )
+
+  /**
+   * Which folder the pointer rests IN, mid-drag. A primitive and not `over` itself: `onDragOver`
+   * sets a fresh object on every tick, so an effect keyed on the object would rearm for ever and
+   * never fire once.
+   */
+  const restingIn = over?.zone === 'into' ? over.id : null
+
+  /**
+   * A folder hovered long enough opens itself, so something can be carried two levels down without
+   * letting go. The cleanup IS the three cancellations — another row, the drop, the end of the
+   * drag. Nothing ever folds back up: a tree that did would move under a hand still holding.
+   */
+  useEffect(() => {
+    if (restingIn === null) return
+    // A folder nobody has opened counts: opening it is what READS it, in a tree that loads lazily.
+    const row = rows.find(one => one.node.id === restingIn)
+    if (!row?.hasChildren || row.expanded) return
+
+    const timer = setTimeout(() => onToggle(restingIn), HOVER_EXPAND_MS)
+    return () => clearTimeout(timer)
+  }, [restingIn, rows, onToggle])
 
   /**
    * Where the ghost sits, and what it shows: the row being dragged, at the depth of the level
@@ -212,11 +323,11 @@ export function Tree<T extends TreeNode>({
    * list under the pointer on every hover.
    */
   const ghost = useMemo(() => {
-    if (dragged === null || over === null || over.zone === 'into') return null
+    if (held === null || over === null || over.zone === 'into') return null
 
     const at = rows.findIndex(row => row.node.id === over.id)
     const target = rows[at]
-    const moved = rows.find(row => row.node.id === dragged.id)
+    const moved = rows.find(row => row.node.id === held.id)
     if (!target || !moved) return null
 
     // After a row means after everything it holds: an insertion beside a group belongs below its
@@ -228,7 +339,7 @@ export function Tree<T extends TreeNode>({
     }
 
     return { index, row: { ...moved, depth: target.depth } }
-  }, [rows, over, dragged])
+  }, [rows, over, held])
 
   /**
    * The rows on screen, with the gap the ghost sits in while a drop is being aimed. Inserted
@@ -268,18 +379,13 @@ export function Tree<T extends TreeNode>({
   // height the previous density gave them.
   useRemeasure(virtualizer, rowPixels)
 
-  const focusRow = (index: number): void => {
-    const bounded = Math.max(0, Math.min(index, slots.length - 1))
-    virtualizer.scrollToIndex(bounded)
-
-    const focus = (): void => {
-      scroller.current?.querySelector<HTMLElement>(`[data-row="${bounded}"]`)?.focus()
-    }
-    // Twice: the row is already mounted in the common case, and only a scroll that revealed a
-    // new one needs the frame the virtualizer takes to render it.
-    focus()
-    requestAnimationFrame(focus)
-  }
+  const focusRow = (index: number): void =>
+    focusVirtualCell(index, {
+      scroller: scroller.current,
+      scrollToIndex: row => virtualizer.scrollToIndex(row),
+      count: slots.length,
+      attribute: 'data-row',
+    })
 
   const selected = new Set(selectedIds)
   const anchor = selectedIds.at(-1)
@@ -303,6 +409,22 @@ export function Tree<T extends TreeNode>({
   const parentById = useMemo(() => new Map(nodes.map(node => [node.id, node.parentId])), [nodes])
 
   /**
+   * What taking hold of `node` picks up: the whole selection where the caller asked for it and
+   * the row is part of it, that row alone everywhere else.
+   *
+   * The row taken hold of comes FIRST, whatever its place in the selection: the ghost shows it,
+   * and it is the one the pointer is actually over.
+   */
+  const batchFrom = (node: T): readonly T[] => {
+    if (!dragMultiple || !selected.has(node.id)) return [node]
+
+    const rest = rows
+      .map(row => row.node)
+      .filter(one => one.id !== node.id && selected.has(one.id) && canDrag(one))
+    return [node, ...rest]
+  }
+
+  /**
    * Whether `id` sits anywhere under `ancestorId` — the whole chain, not just one step. Bounded
    * by the node count rather than by reaching a root: a tree whose data holds a cycle would
    * otherwise hang the window instead of refusing one drop.
@@ -322,8 +444,12 @@ export function Tree<T extends TreeNode>({
 
   // A row receives neither itself nor anything it holds, whatever the caller answers: those two
   // belong to the tree, and a subtree dropped into itself leaves the document with no way back.
+  // Every member of the batch is asked, so one bad member refuses the whole outline rather than
+  // letting a drop through that would take the destination with it.
   const accepts = (node: T): boolean =>
-    dragged !== null && !under(dragged.id, node.id) && (droppable?.(node, dragged) ?? true)
+    dragged !== null &&
+    dragged.every(one => !under(one.id, node.id)) &&
+    (droppable?.(node, dragged) ?? true)
 
   /**
    * Where a drop beside `row` would land, or `null` for a gesture with nothing to do: dropping a
@@ -338,12 +464,14 @@ export function Tree<T extends TreeNode>({
     row: TreeRow<T>,
     side: 'before' | 'after',
   ): { parentId: string | null; index: number } | null => {
-    if (!dragged || under(dragged.id, row.node.parentId)) return null
+    if (!held || !dragged || dragged.some(one => under(one.id, row.node.parentId))) return null
 
     const at = side === 'before' ? row.position - 1 : row.position
+    // Counted on the row the hand took hold of. An insertion is arithmetic written for ONE row
+    // leaving its level, which is why `dragMultiple` is off wherever `onInsert` is used.
     const from =
-      dragged.parentId === row.node.parentId
-        ? (rows.find(candidate => candidate.node.id === dragged.id)?.position ?? 0) - 1
+      held.parentId === row.node.parentId
+        ? (rows.find(candidate => candidate.node.id === held.id)?.position ?? 0) - 1
         : null
 
     if (from === null) return { parentId: row.node.parentId, index: at }
@@ -476,7 +604,60 @@ export function Tree<T extends TreeNode>({
   return (
     // `p-2`, and it moves with `Collection`'s: the same row has to sit at the same distance
     // from the panel edge whichever of the two is holding it.
-    <div ref={scroller} className="h-full overflow-auto p-2">
+    <div
+      ref={scroller}
+      className="h-full overflow-auto p-2"
+      /**
+       * A press on the blank below the rows clears the selection, as every file browser does.
+       *
+       * Not cosmetic: what a gesture applies to is the selection, and where it LANDS is read
+       * off the picked row. With no way to pick nothing, a panel whose rows are all folders the
+       * studio owns could not aim at the project folder at all — measured on screen, in a
+       * project holding only `assets/` and `documents/`, where « Nouveau dossier » was refused
+       * wherever one clicked.
+       */
+      onPointerDown={event => {
+        if (event.target === event.currentTarget) onSelect([], 'replace')
+      }}
+      // Same blank, same aim as the drop below. The selection is cleared first for the same
+      // reason the press above clears it: what the menu offers lands on what is picked, and the
+      // blank means nothing is.
+      onContextMenu={event => {
+        if (!onContextMenuRoot || event.target !== event.currentTarget) return
+        event.preventDefault()
+        onSelect([], 'replace')
+        onContextMenuRoot()
+      }}
+      // Only the blank BELOW the rows: the list is as tall as its rows, so anything over one of
+      // them has the row as its target and is that row's business. Without this test the whole
+      // panel would answer for every hover, outline included.
+      onDragOver={event => {
+        if (event.target !== event.currentTarget) return
+        if (foreign?.carries(event)) {
+          event.preventDefault()
+          event.dataTransfer.dropEffect = 'copy'
+          return setOver(null)
+        }
+        if (!onDropRoot || !rowDrag.carries(event)) return
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'move'
+        setOver(null)
+      }}
+      onDrop={event => {
+        if (event.target !== event.currentTarget) return
+        if (foreign?.carries(event)) {
+          event.preventDefault()
+          setOver(null)
+          return foreign.onDrop(event, null)
+        }
+        if (!onDropRoot) return
+        event.preventDefault()
+        setOver(null)
+        setDragged(null)
+        const carried = rowDrag.idsFrom(event)
+        if (carried.length > 0) onDropRoot(carried)
+      }}
+    >
       <ul
         role="tree"
         aria-label={label}
@@ -556,25 +737,38 @@ export function Tree<T extends TreeNode>({
                   over?.id === row.node.id &&
                     over.zone === 'into' &&
                     'outline-accent outline -outline-offset-1',
-                  // The row the hand is holding, while the ghost shows where it would land. A
-                  // dimming rather than a hidden row: taking it out would remount the element
+                  // The rows the hand is holding, while the ghost shows where they would land. A
+                  // dimming rather than a hidden row: taking one out would remount the element
                   // the pointer is dragging, and the gesture would stop firing there and then.
-                  ghost !== null && dragged?.id === row.node.id && 'opacity-40',
+                  ghost !== null && dragged?.some(one => one.id === row.node.id) && 'opacity-40',
                 )}
                 // The handle is the row itself — a `draggable` makes every control inside it
                 // draggable too, so the eye would reparent instead of toggling.
                 draggable={canDrag(row.node)}
                 onDragStart={event => {
                   if (event.target !== event.currentTarget) return event.preventDefault()
-                  ROWS.start(event, row.node.id)
+                  const batch = batchFrom(row.node)
+                  rowDrag.start(
+                    event,
+                    batch.map(one => one.id),
+                  )
                   // After the tree's own channel, so a row can be BOTH: a document moved within
                   // the folder, and the same document laid on a montage. The two are told apart
                   // by the type each target asks for, never by which one was announced first.
                   onDragStart?.(row.node, event)
-                  setDragged(row.node)
+                  setDragged(batch)
                 }}
                 onDragOver={event => {
-                  if (!ROWS.carries(event)) return
+                  // A drag from elsewhere only ever lands INSIDE a row, so it takes the same
+                  // outline and the same spring-loaded open — `restingIn` reads `into`.
+                  if (foreign?.carries(event)) {
+                    if (!foreign.accepts(row.node)) return
+                    event.preventDefault()
+                    // What leaves the shelf is COPIED into the folder, never taken from it.
+                    event.dataTransfer.dropEffect = 'copy'
+                    return setOver({ id: row.node.id, zone: 'into' })
+                  }
+                  if (!rowDrag.carries(event)) return
                   const target = dropTargetFor(row, event)
                   if (target === null) {
                     return setOver(current => (current?.id === row.node.id ? null : current))
@@ -593,6 +787,13 @@ export function Tree<T extends TreeNode>({
                 }}
                 onDrop={event => {
                   event.preventDefault()
+                  // Before the tree's own reading: `dragged` is null for this one, and every
+                  // check below would refuse it on that alone.
+                  if (foreign?.carries(event)) {
+                    setOver(null)
+                    if (foreign.accepts(row.node)) foreign.onDrop(event, row.node)
+                    return
+                  }
                   const target = dropTargetFor(row, event)
                   setOver(null)
 
@@ -601,11 +802,15 @@ export function Tree<T extends TreeNode>({
                    * survives a gesture that ended without either callback — a drag cancelled
                    * after its source row scrolled out of the window fires no `dragEnd` — and
                    * the channel is shared by every tree, so the next drag started ANYWHERE
-                   * would otherwise be reported here as this tree's stale node.
+                   * would otherwise be reported here as this tree's stale nodes.
+                   *
+                   * The head of the list is what is compared: it is the row the gesture started
+                   * on, and no two trees can be holding the same one.
                    */
-                  if (dragged && target !== null && ROWS.idFrom(event) === dragged.id) {
-                    if (target.zone === 'into') onDrop?.(dragged.id, row.node.id)
-                    else onInsert?.(dragged.id, target.parentId, target.index)
+                  const carried = rowDrag.idsFrom(event)
+                  if (held && target !== null && carried[0] === held.id) {
+                    if (target.zone === 'into') onDrop?.(carried, row.node.id)
+                    else onInsert?.(carried, target.parentId, target.index)
                   }
                   // Cleared here as well as on `dragEnd`: the source row is virtualized, so a
                   // drag that scrolled it out of view has no element left to end on.
@@ -623,7 +828,7 @@ export function Tree<T extends TreeNode>({
                 onDoubleClick={event => !isTyping(event.target) && onActivate?.(row.node)}
                 onContextMenu={event => {
                   // A right-click in a row's rename field belongs to the native clipboard and
-                  // spelling menu (`main/window/context-menu.ts`), which `preventDefault` would
+                  // spelling menu (`main/window/contextMenu.ts`), which `preventDefault` would
                   // keep from ever being asked.
                   if (!onContextMenu || isTyping(event.target)) return
                   event.preventDefault()

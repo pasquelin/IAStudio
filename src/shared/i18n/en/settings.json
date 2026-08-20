@@ -11,10 +11,12 @@
     "appearance": "Appearance",
     "generation": "Generation",
     "media": "Media",
+    "git": "Versions",
     "dictation": "Dictation",
     "accountDescription": "API credentials, encrypted by the system keychain.",
     "appearanceDescription": "Theme and control density.",
     "generationDescription": "Generation queue and default models, per family.",
+    "gitDescription": "Version tracking of the project folder, by git. Your files only.",
     "mediaDescription": "Preparation of imported files: proxies and waveforms.",
     "dictationDescription": "Speaking a text instead of typing it. Everything happens on this computer: nothing you say is sent anywhere.",
     "theme": {
@@ -47,6 +49,21 @@
       "help": "Where to find an ffmpeg to use instead of the one shipped with the application. Leave empty unless you insist on your own.",
       "placeholder": "/opt/homebrew/bin/ffmpeg"
     },
+    "gitBinary": {
+      "title": "Path to git",
+      "help": "Where to find a git to use instead of the system one. Leave empty in nearly every case. A path holding a space is refused, and the application then behaves as it does when git is missing altogether.",
+      "placeholder": "/usr/bin/git"
+    },
+    "gitUserName": {
+      "title": "Author name",
+      "help": "The name written into every recorded version. Leave empty to take the one git already knows on this computer.",
+      "placeholder": "Your name"
+    },
+    "gitUserEmail": {
+      "title": "Author address",
+      "help": "The address written beside the name in every recorded version. Leave empty to take the one git already knows.",
+      "placeholder": "you@example.com"
+    },
     "dictationEnabled": {
       "title": "Enable dictation",
       "help": "Offers a microphone button beside text fields, and puts the listening shortcut into service. Switched off, dictation loads nothing and never asks for microphone access."
@@ -71,7 +88,7 @@
     },
     "dictationIdleUnload": {
       "title": "Free the memory after",
-      "help": "Minutes without dictating before the model is unloaded, returning around 700 MB of memory. It loads itself again on the next dictation, which takes a few seconds. Set it to 0 to keep it resident."
+      "help": "Minutes without dictating before the model is unloaded, returning around 700 MB of memory. It loads itself again on the next dictation, which takes a few seconds. Set it to 0 to keep it resident."
     },
     "dictationModelFolder": {
       "title": "Model folder",
@@ -108,6 +125,10 @@
       "lastProject": "Reopen the last project",
       "nothing": "Open nothing"
     },
+    "autosave": {
+      "title": "Save automatically",
+      "help": "Writes open documents every thirty seconds, without waiting for your ⌘S. Whatever you have done since the last save then survives a power cut or a crash. Image documents are left out of it whatever this says: their layers are read back off the graphics card, and writing every thirty seconds would make drawing stutter."
+    },
     "home": {
       "title": "Show the home screen",
       "help": "The full-width screen the studio opens on: your projects, what you were working on, what is running, and what the models can do. Turn it off to go straight to the workspace you left. Which sections it shows, and in which order, is set on the home itself."
@@ -130,6 +151,7 @@
     "scope": {
       "global": "Anywhere in the application",
       "spaces": "In the bar of spaces",
+      "explorer": "In the explorer",
       "scene": "In the 3D view",
       "sequence": "In the edit",
       "canvas": "In the image",
@@ -155,6 +177,24 @@
     "boostFactor": {
       "title": "Boost",
       "help": "What the speed is multiplied by while you hold the boost key. At 3 you go three times faster — enough to cross a large scene without changing the setting above."
+    },
+    "shadows": {
+      "title": "Cast shadows",
+      "help": "Works out the shadows the lights throw. Every light that casts one costs an extra render pass per frame: turning this off is the most direct way to lighten a heavy scene."
+    },
+    "viewportQuality": {
+      "title": "Viewport quality",
+      "help": "How finely the same frame is drawn. Nothing about the models or the textures changes — only the number of pixels worked out. Performance also caps how fine the shadows get.",
+      "performance": "Performance",
+      "balanced": "Balanced",
+      "high": "High"
+    },
+    "units": {
+      "title": "Display unit",
+      "help": "The unit lengths are written and read in. One scene unit stays one metre whatever this says: it changes what is shown, never what the document holds.",
+      "mm": "Millimetres",
+      "cm": "Centimetres",
+      "m": "Metres"
     },
     "shadowQuality": {
       "title": "Shadow softness",
@@ -194,6 +234,11 @@
       "warn": "Errors and warnings",
       "info": "Everything"
     },
+    "openLogFolder": {
+      "title": "Technical log",
+      "help": "Opens the file manager on the log the studio writes on every launch. This is the file you will be asked for when something fails without saying anything on screen.",
+      "button": "Show the technical log"
+    },
     "openSettingsFile": {
       "title": "Settings file",
       "help": "Opens the file manager where your settings are saved. Useful to copy them before moving to another machine, or to send them to someone helping you."
@@ -202,10 +247,35 @@
       "title": "Drive the studio from outside",
       "help": "Opens a way in on this machine alone, through which a client such as Claude Code can run the same actions the assistant runs. Anything that spends or uploads asks for a yes on screen, exactly as it does here. Switched off, nothing is listening."
     },
+    "mcpDelegateFiles": {
+      "title": "Let it touch files without asking",
+      "help": "Moving, renaming, binning, putting a git-tracked file back. The Explorer takes some of those back, never all. Without this, each one is asked about."
+    },
+    "mcpDelegateAsset": {
+      "title": "Let it upload without asking",
+      "help": "Sending an image to your library, where it stays. It costs no creative units. Without this, every upload is asked about."
+    },
+    "mcpDelegateRemote": {
+      "title": "Let it publish to a server without asking",
+      "help": "Sending a branch to a remote git repository. It is the only gesture that leaves this machine, and nothing here takes it back. Arm it knowingly."
+    },
+    "mcpDelegateBudget": {
+      "title": "Creative units spendable without asking",
+      "help": "What a client may spend in this window before the studio starts asking again. At zero, every spend is asked about. A generation the API declines to price is never started without you, whatever this holds."
+    },
     "copyMcpCommand": {
       "title": "Connection command",
       "help": "Copies the line to paste in a terminal to connect a client. The token and the port change every time the studio starts, so the line has to be copied again after each launch.",
       "button": "Copy"
+    },
+    "installResolveBridge": {
+      "title": "DaVinci Resolve bridge",
+      "help": "Drops a script into the folder Resolve reads, to import an edit written here from its own scripts menu. It appears without restarting Resolve. Removing it is done by hand, and Resolve only notices on its next start.",
+      "button": "Install",
+      "confirm": "A script will be written into DaVinci Resolve’s folder, on this machine. Nothing else is touched.",
+      "missing": "DaVinci Resolve was not found on this machine",
+      "missingDetail": "Its folder does not exist, so nothing was written. Install Resolve, run it once, then come back here.",
+      "missingOk": "Close"
     },
     "openDevtools": {
       "title": "Developer tools",

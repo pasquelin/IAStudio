@@ -1,28 +1,40 @@
 import { describe, expect, it } from 'vitest'
+import { clipLane, embeddedClip } from '@shared/domain/scene'
+import type { Rig, RigBone } from '@shared/domain/rig'
+import { rigFit } from './rigFit'
 import { emptyHistory, run, undo, type Command } from '../core/history'
 import {
   addNode,
   addNodes,
+  addIkChain,
+  addRigBone,
+  addRigHands,
   batch,
   copiesOf,
   groupNodes,
   moveNodes,
   reparentNode,
   multi,
+  removeIkChain,
   removeNode,
   removeNodes,
+  removeRigBone,
   rootedIn,
   renameNode,
+  renameRigBone,
+  setCameraOn,
   setGeometry,
   setGeometryOn,
   setLight,
   setLightOn,
   setMeshMaterial,
   setMaterialOn,
-  setModelAnimation,
+  setModelLanes,
+  setModelRig,
   setModelTextures,
   setNodeVisible,
-  setEnvironment,
+  setRigBoneRole,
+  setWorld,
   setSelection,
   setShadowOn,
   setSprite,
@@ -30,10 +42,12 @@ import {
   setTransform,
 } from './commands'
 import {
+  cameraNodeFixture as camera,
   lightNodeFixture as light,
   meshNode as mesh,
   modelNodeFixture,
   spriteNodeFixture,
+  STANDING_BOUNDS,
 } from './scene-fixtures'
 
 const sprite = (id: string) => spriteNodeFixture(id, 'pic-1')
@@ -44,7 +58,7 @@ import {
   IDENTITY_TRANSFORM,
   nodeById,
   type SceneState,
-} from './scene-state'
+} from './sceneState'
 import type { EnvironmentRef, Transform } from '@shared/domain/scene'
 
 describe('addNode', () => {
@@ -135,6 +149,50 @@ describe('setTransform', () => {
     const node = after.nodes[0]
     expect(node?.type).toBe('mesh')
     expect(node?.type === 'mesh' && node.geometry.kind).toBe('box')
+  })
+
+  /**
+   * A held axis is refused HERE and not in the panel, which is the whole of what makes it hold:
+   * the viewport gizmo and the inspector both write through this command, so anywhere else would
+   * have been a padlock the handle walks straight past.
+   */
+  describe('an axis held still', () => {
+    const held: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a')],
+      selectedIds: [],
+      lockedAxes: [{ nodeId: 'a', channel: 'position', axis: 'y' }],
+    }
+
+    it('keeps its value while its neighbours take the move', () => {
+      const after = setTransform('a', {
+        ...IDENTITY_TRANSFORM,
+        position: { x: 1, y: 9, z: 3 },
+      }).apply(held)
+
+      expect(after.nodes[0]?.transform.position).toEqual({ x: 1, y: 0, z: 3 })
+    })
+
+    it('holds one channel without holding the others', () => {
+      const after = setTransform('a', {
+        position: { x: 0, y: 9, z: 0 },
+        rotation: { x: 0, y: 2, z: 0 },
+        scale: { x: 4, y: 4, z: 4 },
+      }).apply(held)
+
+      expect(after.nodes[0]?.transform.rotation.y).toBe(2)
+      expect(after.nodes[0]?.transform.scale.y).toBe(4)
+    })
+
+    it('holds the node it names and no other', () => {
+      const two: SceneState = { ...held, nodes: [mesh('a'), mesh('b')] }
+      const after = setTransform('b', {
+        ...IDENTITY_TRANSFORM,
+        position: { x: 0, y: 9, z: 0 },
+      }).apply(two)
+
+      expect(after.nodes[1]?.transform.position.y).toBe(9)
+    })
   })
 
   /**
@@ -337,6 +395,28 @@ describe('moveNodes', () => {
     expect(moveNodes([{ id: 'a', transform: IDENTITY_TRANSFORM }]).id).toBe(
       setTransform('a', IDENTITY_TRANSFORM).id,
     )
+  })
+})
+
+describe('setCameraOn', () => {
+  const start: SceneState = {
+    ...EMPTY_SCENE,
+    nodes: [camera('a'), camera('b', { fov: 20 }), mesh('box')],
+    selectedIds: ['a', 'b'],
+  }
+
+  it('writes the lens onto every selected camera, and undoes each one', () => {
+    const command = setCameraOn(start.nodes, 'fov', 90)
+    const applied = command.apply(start)
+
+    const lenses = applied.nodes.map(node => (node.type === 'camera' ? node.camera.fov : null))
+    expect(lenses).toEqual([90, 90, null])
+    expect(command.revert(applied)).toEqual(start)
+  })
+
+  it('leaves a node of another type alone', () => {
+    const applied = setCameraOn(start.nodes, 'fov', 90).apply(start)
+    expect(applied.nodes[2]).toBe(start.nodes[2])
   })
 })
 
@@ -576,21 +656,33 @@ describe('setSpriteOn', () => {
   })
 })
 
-describe('setEnvironment', () => {
+describe('setWorld', () => {
   const sky: EnvironmentRef = { kind: 'skybox', assetId: 'sky-1' }
 
   it('swaps what lights the scene, and comes back', () => {
-    const command = setEnvironment(sky)
+    const command = setWorld({ environment: sky })
     const lit = command.apply(EMPTY_SCENE)
 
-    expect(lit.environment).toEqual(sky)
-    expect(command.revert(lit).environment).toEqual({ kind: 'studio' })
+    expect(lit.world.environment).toEqual(sky)
+    expect(command.revert(lit).world.environment).toEqual({ kind: 'studio' })
+  })
+
+  // A patch, so a preset writing five fields and a slider writing one are the same call — and a
+  // field this build does not know is left exactly as the file spelled it.
+  it('leaves the fields it was not given alone', () => {
+    const lit = setWorld({ exposure: 1.4 }).apply({
+      ...EMPTY_SCENE,
+      world: { ...EMPTY_SCENE.world, environment: sky },
+    })
+
+    expect(lit.world.exposure).toBe(1.4)
+    expect(lit.world.environment).toEqual(sky)
   })
 
   // Choosing a sky is a decision about the document, not a way of looking at it.
   it('leaves the nodes and the selection alone', () => {
     const start = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: ['a'] }
-    const lit = setEnvironment(sky).apply(start)
+    const lit = setWorld({ environment: sky }).apply(start)
 
     expect(lit.nodes).toBe(start.nodes)
     expect(lit.selectedIds).toBe(start.selectedIds)
@@ -669,7 +761,7 @@ describe('a revert asked for before its apply', () => {
     ['setLight', setLight('l', { kind: 'ambient', color: '#fff', intensity: 2 })],
     ['setSprite', setSprite('s', DEFAULT_SPRITE)],
     ['reparentNode', reparentNode('a', 'l')],
-    ['setEnvironment', setEnvironment({ kind: 'skybox', assetId: 'sky-1' })],
+    ['setWorld', setWorld({ environment: { kind: 'skybox', assetId: 'sky-1' } })],
   ]
 
   for (const [name, command] of untouched) {
@@ -751,15 +843,177 @@ describe('setModelTextures', () => {
   })
 
   // Both edits write the same reference: rebuilding it from `assetId` alone dropped the other.
-  it('leaves the animation of the model alone, and is left alone by it', () => {
-    const clip = { clip: 'run', playing: true, time: 0, speed: 1, loop: true, start: 0 }
-    const playing = setModelAnimation('m', clip).apply(withModel())
-    const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(playing)
+  it('leaves the lanes of the model alone, and is left alone by them', () => {
+    const lane = clipLane('main', [embeddedClip('c1', 'run', { speed: 2 })])
+    const blocked = setModelLanes('m', [lane]).apply(withModel())
+    const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(blocked)
 
     const node = nodeById(dressed, 'm')
-    expect(node?.type === 'model' && node.model.animation).toEqual(clip)
-    expect(texturesOf(setModelAnimation('m', null).apply(dressed))).toEqual({
+    expect(node?.type === 'model' && node.model.lanes).toEqual([lane])
+    expect(texturesOf(setModelLanes('m', []).apply(dressed))).toEqual({
       map: { assetId: 'tex-1' },
     })
+  })
+
+  // One empty lane is exactly what the band shows a model that has never played anything, so
+  // writing it says nothing the default does not.
+  it('holds a lane the user added even while nothing has been dropped in it', () => {
+    const lanes = [clipLane('main'), clipLane('second')]
+    const node = nodeById(setModelLanes('m', lanes).apply(withModel()), 'm')
+
+    expect(node?.type === 'model' && node.model.lanes).toEqual(lanes)
+
+    const alone = nodeById(setModelLanes('m', [clipLane('main')]).apply(withModel()), 'm')
+    expect(alone?.type === 'model' && 'lanes' in alone.model).toBe(false)
+  })
+
+  it('drops the field when the last lane goes, so a rest pose says nothing at all', () => {
+    const blocked = setModelLanes('m', [clipLane('main', [embeddedClip('c1', 'run')])]).apply(
+      withModel(),
+    )
+    const stopped = setModelLanes('m', []).apply(blocked)
+
+    const node = nodeById(stopped, 'm')
+    expect(node?.type === 'model' && 'lanes' in node.model).toBe(false)
+  })
+
+  it('puts a skeleton on a model, and takes it back off', () => {
+    const rig: Rig = {
+      origin: 'local',
+      bones: [{ name: 'Hips', parent: null, rest: IDENTITY_TRANSFORM }],
+    }
+    const rigged = setModelRig('m', rig).apply(withModel())
+
+    const node = nodeById(rigged, 'm')
+    expect(node?.type === 'model' && node.model.rig).toEqual(rig)
+
+    const bare = nodeById(setModelRig('m', null).apply(rigged), 'm')
+    expect(bare?.type === 'model' && 'rig' in bare.model).toBe(false)
+  })
+})
+
+describe('editing a skeleton bone by bone', () => {
+  const withModel = (): SceneState => ({ ...EMPTY_SCENE, nodes: [modelNodeFixture('m')] })
+
+  const bone = (name: string, parent: string | null, role?: RigBone['role']): RigBone => ({
+    name,
+    parent,
+    rest: IDENTITY_TRANSFORM,
+    ...(role ? { role } : {}),
+  })
+
+  const ARM: Rig = {
+    origin: 'local',
+    bones: [bone('Hips', null, 'Hips'), bone('Elbow', 'Hips'), bone('Wrist', 'Elbow')],
+  }
+
+  const rigged = (): SceneState => setModelRig('m', ARM).apply(withModel())
+
+  const bonesOf = (state: SceneState): readonly RigBone[] => {
+    const node = nodeById(state, 'm')
+    if (node?.type !== 'model' || !node.model.rig) throw new Error('the fixture rigs one model')
+    return node.model.rig.bones
+  }
+
+  it('hangs a bone where it was asked to', () => {
+    const next = addRigBone('m', bone('Thumb', 'Wrist')).apply(rigged())
+
+    expect(bonesOf(next).at(-1)).toMatchObject({ name: 'Thumb', parent: 'Wrist' })
+  })
+
+  // Refused whole rather than written half: a rig the reader drops would take the model with it
+  // on the next open, and nothing before then would say so.
+  it('writes nothing at all when the edit would break the rig', () => {
+    const next = addRigBone('m', bone('Thumb', 'Nowhere')).apply(rigged())
+
+    expect(bonesOf(next)).toEqual(ARM.bones)
+  })
+
+  it('gives a removed bone’s children its own parent', () => {
+    const next = removeRigBone('m', 'Elbow').apply(rigged())
+
+    expect(bonesOf(next).map(one => one.name)).toEqual(['Hips', 'Wrist'])
+    expect(bonesOf(next)[1]?.parent).toBe('Hips')
+  })
+
+  it('carries the children over a rename', () => {
+    const next = renameRigBone('m', 'Elbow', 'LeftLowerArm').apply(rigged())
+
+    expect(bonesOf(next).map(one => one.parent)).toEqual([null, 'Hips', 'LeftLowerArm'])
+  })
+
+  it('assigns a role, and takes it back off', () => {
+    const named = setRigBoneRole('m', 'Wrist', 'LeftHand').apply(rigged())
+    expect(bonesOf(named)[2]?.role).toBe('LeftHand')
+
+    expect(bonesOf(setRigBoneRole('m', 'Wrist', null).apply(named))[2]?.role).toBeUndefined()
+  })
+
+  // The weights are not recomputed here: the engine re-binds whenever `model.rig` changes, and
+  // an edit that wrote the same array back would leave a model wearing the previous skinning.
+  it('hands the engine a rig it can tell apart from the one before', () => {
+    const next = setRigBoneRole('m', 'Wrist', 'LeftHand').apply(rigged())
+    const node = nodeById(next, 'm')
+
+    expect(node?.type === 'model' && node.model.rig).not.toBe(ARM)
+  })
+
+  it('gives the rig back exactly as it was on an undo', () => {
+    const command = removeRigBone('m', 'Elbow')
+    const before = rigged()
+
+    expect(bonesOf(command.revert(command.apply(before)))).toEqual(ARM.bones)
+  })
+
+  it('lays the thirty finger bones on the hands a rig holds', () => {
+    const withHands = addRigHands('m').apply(
+      setModelRig('m', rigFit(STANDING_BOUNDS)).apply(withModel()),
+    )
+
+    expect(bonesOf(withHands)).toHaveLength(22 + 30)
+  })
+
+  it('lays no finger on a rig that names no hand', () => {
+    expect(bonesOf(addRigHands('m').apply(rigged()))).toEqual(ARM.bones)
+  })
+
+  const ikOf = (state: SceneState) => {
+    const node = nodeById(state, 'm')
+    return node?.type === 'model' ? node.model.rig?.ik : undefined
+  }
+
+  // The handle is a BONE of the same rig, and that is three's rule rather than a shortcut:
+  // `CCDIKSolver` addresses `Skeleton.bones` by index and knows no scene object.
+  it('adds the handle and the chain that reaches for it in one move', () => {
+    const next = addIkChain('m', 'Wrist').apply(rigged())
+
+    expect(bonesOf(next).map(one => one.name)).toContain('Wrist.handle')
+    expect(ikOf(next)?.[0]).toMatchObject({ effector: 'Wrist', target: 'Wrist.handle' })
+  })
+
+  it('lets the two bones above the joint turn, and no more', () => {
+    expect(ikOf(addIkChain('m', 'Wrist').apply(rigged()))?.[0]?.links).toEqual(['Elbow', 'Hips'])
+  })
+
+  it('rests the handle exactly where the joint stands, so nothing jumps on the first frame', () => {
+    const next = addIkChain('m', 'Wrist').apply(rigged())
+
+    expect(bonesOf(next).find(one => one.name === 'Wrist.handle')?.rest).toEqual(IDENTITY_TRANSFORM)
+  })
+
+  // Undone as one: a handle left behind by an undone chain is a bone nothing drives and nothing
+  // explains.
+  it('takes the handle away with the chain', () => {
+    const added = addIkChain('m', 'Wrist').apply(rigged())
+    const chain = ikOf(added)?.[0]
+    if (!chain) throw new Error('the chain was just added')
+
+    const next = removeIkChain('m', chain.id).apply(added)
+    expect(bonesOf(next).map(one => one.name)).not.toContain('Wrist.handle')
+    expect(ikOf(next)).toEqual([])
+  })
+
+  it('reaches for nothing from a root, which has no bone above it to turn', () => {
+    expect(ikOf(addIkChain('m', 'Hips').apply(rigged()))).toBeUndefined()
   })
 })

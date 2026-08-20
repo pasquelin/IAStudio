@@ -203,7 +203,7 @@ jobs:
       # that answers without downloading anything: a tag missing its section stops here rather
       # than after a gigabyte of installers and two tarballs fetched from third parties. No
       # `pnpm install` — the script reads a file and imports one `.ts` that Node strips on the way
-      # in, the same rule `release-notes.test.ts` checks.
+      # in, the same rule `releaseNotes.test.ts` checks.
       - name: Extract the release notes from CHANGELOG.md
         run: |
           node scripts/release-notes.mjs "${GITHUB_REF_NAME#v}" > notes.md

@@ -1,9 +1,13 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { useSectionFolds } from '@/stores/sectionFolds'
 import { PropertySection } from './PropertySection'
 
 describe('PropertySection', () => {
+  // Module-wide: a case that gives an order would otherwise hand it to every case after it.
+  beforeEach(() => useSectionFolds.setState({ stamp: 0, wanted: true, sectionsOpen: new Map() }))
+
   it('shows its content under its heading', () => {
     render(
       <PropertySection title="Transform">
@@ -48,6 +52,47 @@ describe('PropertySection', () => {
 
     await userEvent.click(heading)
     expect(screen.getByText('fields')).toBeInTheDocument()
+  })
+
+  /**
+   * The panel's title row is rendered by the dock from somewhere else entirely, so what reaches a
+   * section is an ORDER rather than a shared open state — and one that folded a section already
+   * folded by hand would leave the button lying about what a second press does.
+   */
+  describe('an order given to every section at once', () => {
+    it('folds a section that was open, and opens one that was folded', () => {
+      render(
+        <>
+          <PropertySection title="Transform">
+            <p>open by hand</p>
+          </PropertySection>
+          <PropertySection title="Material" defaultOpen={false}>
+            <p>folded by hand</p>
+          </PropertySection>
+        </>,
+      )
+
+      act(() => useSectionFolds.getState().askAllSections())
+      expect(screen.queryByText('open by hand')).not.toBeInTheDocument()
+      expect(screen.queryByText('folded by hand')).not.toBeInTheDocument()
+
+      act(() => useSectionFolds.getState().askAllSections())
+      expect(screen.getByText('open by hand')).toBeInTheDocument()
+      expect(screen.getByText('folded by hand')).toBeInTheDocument()
+    })
+
+    // A section mounted after the order — the inspector swaps its whole face on every selection —
+    // opens on what it was written to open on, never on an order it never saw.
+    it('leaves a section that arrives later on its own default', () => {
+      act(() => useSectionFolds.getState().askAllSections())
+      render(
+        <PropertySection title="Transform">
+          <p>fields</p>
+        </PropertySection>,
+      )
+
+      expect(screen.getByText('fields')).toBeInTheDocument()
+    })
   })
 
   it('can start folded', () => {

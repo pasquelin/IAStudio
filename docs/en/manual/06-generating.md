@@ -109,8 +109,9 @@ most models dilute. One accurate sentence beats three vague ones.
 
 ## Speaking instead of typing
 
-A fourth button, shaped like a microphone, sits in the same place. It appears on **every** long
-text field of the form, not only on the prompt: a negative prompt is worth dictating too.
+A button shaped like a microphone sits **in the bottom right corner of the field**. It appears on
+**every** long text field of the form, not only on the prompt: a negative prompt is worth
+dictating too.
 
 **Everything happens on your computer.** Nothing you say is sent anywhere, there is no key to
 enter, and dictation works with no connection at all.
@@ -139,12 +140,15 @@ the text lands **at the caret** — not at the end. What you had already typed i
 This holds for every field in the studio, not only the prompt: the asset search, renaming a
 layer, naming a document.
 
+**A field's own microphone follows the same rule**, which is why it keeps the caret at home:
+pressing it does not leave the field, and the sentence lands there as if you had typed it.
+
 ### What you see while it listens
 
-While you speak, a greyed sentence appears **below** the field: it is what recognition believes
-it is hearing, and it corrects itself as the words come. It does not enter the field. When you
-pause — or let go of the key — the sentence is settled, punctuated, and **only then** written
-into the field.
+While you speak, a greyed sentence appears **at the foot of the field, left of the microphone**:
+it is what recognition believes it is hearing, and it corrects itself as the words come. It does
+not enter the field. When you pause — or let go of the key — the sentence is settled, punctuated,
+and **only then** written into the field.
 
 A small indicator beside the microphone rises and falls with your voice. If it does not move,
 the microphone is hearing nothing: check which one your computer is using.
@@ -200,14 +204,14 @@ own.
 > Suggested settings are **filtered against what the model declares it accepts** before being
 > applied. A value out of bounds is dropped, never forced back into range.
 
-### The two refusals you will meet
+### When these requests have nothing to do
 
-| Message | What it means |
+| The request | What happens |
 |---|---|
-| "This text is already in English." | translation has nothing to do — the studio checks the language before calling |
-| "Drop a reference image to describe its style." | the form carries no image to read |
+| **Translate a prompt into English**, on text that is already English | **nothing is refused**: the text comes back as it was, and the answer carries the language that was recognised |
+| **Describe the style of the references**, with no image on the form | "The form carries no reference image to read a style from." |
 
-Neither is a failure, and nothing is spent when they appear.
+Neither is a failure, and nothing is spent.
 
 > **These requests do not enter the queue**: they do not show in the status line, and there is
 > nothing to cancel. **Suggesting variants costs no creative units** — that is measured, not
@@ -348,7 +352,7 @@ That number is adjustable: **Settings ▸ Generation ▸ Concurrent generations*
 When a request fails because of a dropped connection or a busy server, the studio **retries on its
 own**, waiting a little longer at each attempt.
 
-The number of attempts is adjustable: **Settings ▸ Generation ▸ Maximum retries**, from 0 to 10.
+The number of attempts is adjustable: **Settings ▸ Generation ▸ Max retries**, from 0 to 10.
 Four by default.
 
 > **An invalid API key is never retried.** Retrying would not fix it. The studio distinguishes what
@@ -393,7 +397,8 @@ first one carries on quietly.
 The line turns to **Done**, and the asset appears:
 
 - in the **Assets** panel — the project's shelf;
-- on your disk, in `assets/img/`, `assets/vid/`, `assets/aud/`… depending on its type.
+- on your disk, in `Images/`, `Video/`, `Audio/`… depending on its type, until you file it
+  elsewhere.
 
 **What you can then do with it depends on its type**, and this is where the studio surprises
 people most often:
@@ -403,15 +408,17 @@ people most often:
 | a **picture** | paint on it in an **image** document, use it as the starting point of another generation, or set it as a **sky** or as a material's **base colour** |
 | a **video** or a **sound** | drop it on a **timeline** (Video workspace), or edit it (Audio workspace) |
 | a **panorama** | place it in a **sky** document (Skyboxes workspace) |
-| a **3D object** | nothing useful — the studio cannot open a mesh yet |
+| a **3D object** | open it in a **scene** (3D workspace), which is born with it inside |
 
-**A reminder about the gesture**, because it misleads: double-click **does not open a tab**, it
-sends the asset into the tab already in front. Open the document meant to receive it first, with
-the `+` button on the left rail. See [Assets](07-assets.md).
+**A reminder about the gesture**, because it misleads: double-click **opens the asset in a tab of
+its own**, in the workspace that edits its kind, without looking at what you have in front of you.
+No document is needed first. To send it into a tab **already open**, use right-click or drag and
+drop. See [Assets](07-assets.md).
 
-> **A generated picture is retouched in the Image workspace**: open a document with `+`, then
-> drag the picture onto the canvas — it becomes a layer there. That document, however, does not
-> save; `⇧⌘E` gets a PNG out of it. See [Image workspace](08-image-workspace.md).
+> **A generated picture is retouched in the Image workspace**: double-click it, or drag it onto
+> the canvas of an image document already open — it becomes a layer there. `⌘S` saves that
+> document, layers and all, and `⇧⌘E` gets a PNG out of it. See
+> [Image workspace](08-image-workspace.md).
 
 <!-- SCREENSHOT: the Generation panel with a model's form, and the status line below with a running
      generation. Save to ../../images/generate.png -->
@@ -436,7 +443,7 @@ the fastest way to explore a direction.
 
 | Message | Cause | What to do |
 |---|---|---|
-| **No credentials saved.** | no API key | Settings ▸ Account |
+| **No credentials saved.** | no API key | **Settings ▸ Account** |
 | **Invalid API key or secret.** | one of the two strings is wrong | check it, often a stray space |
 | **This API key lacks the required permissions.** | the key exists but cannot do this | check your plan at app.scenario.com |
 | **Too many requests. Retrying…** | you exceeded the allowed rate | nothing, the studio retries on its own |

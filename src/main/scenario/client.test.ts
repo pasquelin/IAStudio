@@ -11,7 +11,7 @@ import {
   type AuthProbe,
   type ClientProviderDeps,
 } from './client'
-import { createCredentialsWatch } from './credentials-watch'
+import { createCredentialsWatch } from './credentialsWatch'
 
 // Headers are not decoration here: `generate` degrades to a connection error without them,
 // which is exactly what a real response never does when it carries a status.

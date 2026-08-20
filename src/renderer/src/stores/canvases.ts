@@ -1,6 +1,6 @@
 import { collapseLayer, selectLayer } from '@/engines/canvas/commands'
-import { DEFAULT_CANVAS, type CanvasState } from '@/engines/canvas/canvas-state'
-import { createDocumentStore } from './document-store'
+import { DEFAULT_CANVAS, type CanvasState } from '@/engines/canvas/canvasState'
+import { createDocumentStore } from './documentStore'
 
 /**
  * One layer stack per document. The pixels are not here — they live in a GPU texture per layer,

@@ -125,15 +125,11 @@ export const TITLE_BAR_GHOST = cn(
 )
 
 /**
- * How loudly a picked row is filled.
- *
- * `soft` is a row PICKED inside a list — one of several a gesture can move through, and the fill
- * has to stay quiet enough that the list is still read as a list. `strong` is a row that says
- * WHERE ONE IS: the project the studio has open, of which there is exactly one and which nothing
- * in the list can move. The difference is not emphasis for its own sake — a soft fill answered the
- * pointer so faintly that the open project was indistinguishable from a hovered one.
+ * The two of them that OPEN something rather than switch to it — the assistant's entry, the
+ * account trigger. Both carry an icon and a word at the gauge, which is what the pills beside
+ * them do not: a pill is as wide as the space it stands for and pads to match.
  */
-export type RowTone = 'soft' | 'strong'
+export const TITLE_BAR_TRIGGER = cn(TITLE_BAR_GHOST, 'text-tiny h-(--sc-control) gap-1.5 px-2')
 
 /**
  * The shape of ONE LINE: how it is laid out, and its inset from whatever paints the fill.
@@ -152,13 +148,8 @@ export const ROW_LINE = 'flex h-full items-center px-1'
 
 /**
  * Hover and selection of one line in a list. The same line must not light up differently
- * depending on whether a `Tree` or a `Collection` is holding it.
- *
- * `strong` costs one thing beyond the fill, and it is measured rather than chosen: the ink.
- * Nothing but pure white clears WCAG 1.4.3 on `accent` — the token is pinned at 4.508:1 against
- * white, so `text` at 3.44 does not — hence `data-accented`, which `ROW_INK` and `ROW_QUIET` read
- * to swap BOTH the name and its subtitle to `accent-content`. The size is what keeps the two
- * apart on that fill, since the colour no longer can.
+ * depending on whether a `Tree` or a `Collection` is holding it — nor on which list it is, which
+ * is the whole of why there is one fill here and no second tone to ask for.
  *
  * Everything past `selected` is named rather than positional, and `surface` is why: it arrived as
  * a fourth boolean, and the one call that needed it had to spell out the two defaults in front of
@@ -179,7 +170,6 @@ export type RowSkin = {
    */
   surface?: 'row' | 'tile'
   disabled?: boolean
-  tone?: RowTone
 }
 
 export function rowSkin(
@@ -187,10 +177,8 @@ export function rowSkin(
   // `row` by default, which is what the function is called: a surface arriving here without a
   // word on the subject is a list until it says otherwise, and a list that quietly took a hover
   // back is the defect this batch went to remove.
-  { surface = 'row', disabled, tone }: RowSkin = {},
+  { surface = 'row', disabled }: RowSkin = {},
 ): string {
-  const accented = selected && tone === 'strong'
-
   // `elevated` is the studio's hover token — what a toolbar button lights up with.
   return cn(
     'rounded-(--radius-sc-sm)',
@@ -203,7 +191,7 @@ export function rowSkin(
     // and it is left alone knowingly: `opacity-40` is already on it, and WCAG 1.4.3 exempts a
     // disabled control. Lifting the ink there would say the row is available.
     !disabled && 'group/row',
-    selected && (accented ? 'bg-accent' : 'bg-accent-soft'),
+    selected && 'bg-accent-soft',
     // Three refusals in one condition rather than a fill written and then undone: a `hover:` that
     // exists only to cancel another `hover:` is one class the day either of them moves.
     surface === 'tile' && !selected && !disabled && 'hover:bg-elevated',
@@ -230,26 +218,7 @@ export function rowSkin(
  * Written once because five sites had reached the same classes, one of them twice. A site whose
  * row has no selection carries the variant harmlessly: the attribute never appears.
  */
-export const ROW_QUIET = cn(
-  'text-muted transition-colors',
-  'group-data-selected/row:text-text',
-  /**
-   * On an accent FILL the lift above is not enough: `text` reads 3.44:1 there, and the token is
-   * pinned so that only pure white clears 4.5.
-   *
-   * Written TWICE, and the second spelling is the one that works. Being last in the class string
-   * decides nothing — the cascade never reads attribute order — and Tailwind emits the accented
-   * rule BEFORE the selected one at equal specificity, so `text` won and this subtitle rendered at
-   * 3.44:1 on the open project. Measured in Electron on 13 August, and reproduced by compiling
-   * both candidates with the repo's own Tailwind. Stacking the two variants raises the accented
-   * rule to (0,3,0) against the lift's (0,2,0), which no emission order can undo.
-   *
-   * The bare spelling stays for a row accented without being selected, which no surface draws
-   * today: `CollectionCell` derives one from the other.
-   */
-  'group-data-accented/row:text-accent-content',
-  'group-data-accented/row:group-data-selected/row:text-accent-content',
-)
+export const ROW_QUIET = cn('text-muted transition-colors', 'group-data-selected/row:text-text')
 
 /**
  * The same quiet ink on a surface that still FILLS under the pointer — `rowSkin`'s `tile`, and
@@ -263,17 +232,27 @@ export const ROW_QUIET = cn(
  */
 export const TILE_QUIET = cn(ROW_QUIET, 'group-hover/row:text-text')
 
+/** The ink of the NAME in a row — the counterpart of `ROW_QUIET`, which lifts under it. */
+export const ROW_INK = 'text-text transition-colors'
+
 /**
- * The ink of the NAME in a row — the counterpart of `ROW_QUIET`, and it exists for one reason: on
- * a strongly filled row the name has to leave `text` as well, or it sits at 3.44:1 on the accent.
- *
- * At rest it is simply `text`, which is what every row wore before. A site that renders no
- * strongly-filled row carries the variant harmlessly: the attribute never appears.
+ * A file's extension shown beside a name that does not carry it — the naming field's, and any
+ * other surface that is not a row. Monospaced because it is a file's spelling, not a word.
  */
-export const ROW_INK = cn(
-  'text-text transition-colors',
-  'group-data-accented/row:text-accent-content',
-)
+export const FILE_EXTENSION = 'text-muted font-mono'
+
+/**
+ * The same at the end of a row's title, where the ink has to lift with the row — `ROW_QUIET`.
+ * `shrink-0`, so a name too wide for the panel is what gets cut, never the extension.
+ */
+export const ROW_SUFFIX = cn(ROW_QUIET, 'ml-1 shrink-0 font-mono')
+
+/**
+ * What a line NAMES, among metadata left muted beside it: the room the rest leaves, cut short.
+ * No transition, unlike `ROW_INK` — these words never change ink, and a row that lifts its name
+ * on selection wants the pair above instead.
+ */
+export const ROW_SUBJECT = 'text-text min-w-0 flex-1 truncate text-xs'
 
 /**
  * A labelled toggle: the shape buttons of a texture, the view modes of a sky, the shelves of the
@@ -312,9 +291,8 @@ export const LIST_ROW_HEIGHT = 28
 export const STACKED_ROW_HEIGHT = 36
 
 /**
- * `--sc-row-filled` at its tallest, as a number — the same two steps of text under a fill that
- * stands there rather than one a pointer has to summon, which needs the room that fill takes off
- * them. Goes with `selectionTone: 'strong'`, and only the home asks for either.
+ * `--sc-row-filled` at its tallest, as a number — two steps of text with the room a fill takes
+ * off them. Only the home's projects list asks for it.
  */
 export const FILLED_ROW_HEIGHT = 44
 
@@ -326,12 +304,24 @@ export const FILLED_ROW_HEIGHT = 44
 export const PANEL_SCROLL = 'flex min-h-0 flex-1 flex-col overflow-y-auto pr-2'
 
 /**
- * The body of a titled run of properties — `PropertyGroup`'s and `PropertySection`'s alike.
+ * The stacked box a panel puts ABOVE what it acts on — a bar of filters, a message being written.
+ * Ruled off rather than spaced: the body scrolls under a boundary, and a gap would let the first
+ * row of a list read as part of the controls.
+ */
+export const PANEL_HEAD = 'border-border flex flex-col gap-2 border-b p-2'
+
+/**
+ * The same boundary as `PANEL_HEAD`, drawn across ONE line. The room around it stays with the
+ * caller: no two that wear it pad alike.
+ */
+export const PANEL_BAR = 'border-border flex items-center gap-2 border-b'
+
+/**
+ * The body of a titled run of properties, under the heading `PropertySection` folds.
  *
- * One string because the inspector shows both, one under the other, and a reader takes them for
- * one panel: a group whose rows touched while a section two boxes down breathed reads as a bug in
- * the panel rather than as two components. They were kept in step by a comment saying "the same
- * gap as", which is what this closes.
+ * No zebra fill, and the reason is the PARITY, not the colour: `nth-child` counts DOM children
+ * rather than property lines, so a button row takes a band and unfolding a vector flips everything
+ * below it. The contrast half is measured in `tokens.test.ts`.
  */
 export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
 
@@ -352,23 +342,32 @@ export const FIELD_THUMBNAIL = 'size-(--sc-control)'
 export const FIELD_ROW = 'flex min-h-(--sc-control) min-w-0 items-center gap-2 text-tiny'
 
 /**
- * Fixed, so the controls of a section line up rather than each starting where its name ends.
- *
- * The gauge is shared with `PropertyRow`, and that is the whole point: five inspectors out of six
- * draw both families inside one group, so two widths meant two columns of labels in the same box.
+ * The room every property line keeps at its end — two controls wide, which is the most any of them
+ * asks for. It leans into the panel's own padding so the GLYPHS land on the column the fields end
+ * on: a button's box already ends there, but its 14px icon sits centred in a wider square.
  */
-export const FIELD_LABEL = 'text-muted w-(--sc-label) shrink-0 truncate'
+export const ROW_ACTIONS =
+  'flex w-(--sc-row-actions) shrink-0 items-center justify-end -mr-(--sc-row-action-bleed)'
 
 /**
- * The same label where the field has NO control to line up on that column — a checkbox, which
- * sits at the far end of the row whatever the label does.
- *
- * Held to the fixed gauge, « Projette une ombre » read « Projette une … » at eighty pixels with
- * two thirds of the row empty beside it. Still truncating, and still `title`d for it: a panel
- * narrow enough will run out of room here too, and a label cut mid-word reads as a shorter one
- * that means something else.
+ * One empty place at the END of that room. Only ever needed there: `justify-end` already puts a
+ * lone button on the last place, so a spacer BEFORE one moves nothing.
  */
-export const FIELD_LABEL_WIDE = 'text-muted min-w-0 flex-1 truncate'
+export const ROW_ACTION_SPACER = 'size-(--sc-control) shrink-0'
+
+/** The hexadecimal a colour swatch is read out as. Published so its guard can import it. */
+export const COLOR_READOUT = 'text-muted text-mini min-w-0 flex-1 truncate font-mono uppercase'
+
+/**
+ * One width for a whole section, shared with `PropertyRow` so both families of line start on one
+ * column. A SHARE of the row, capped and NOT floored: a fixed width truncated in a wide panel, and
+ * a floor of eighty overflowed a side zone dragged to its 140px minimum by 21px, measured.
+ *
+ * The edge is what makes it read as a column rather than a word standing before a control;
+ * `PropertyLabel` wears it and stretches, so the rule runs the row's whole height.
+ */
+export const FIELD_LABEL =
+  'text-muted border-border w-(--sc-label-share) max-w-(--sc-label-max) shrink-0 border-r pr-2'
 
 /**
  * The number beside a track — "somewhere past the middle" is not a value anyone can write down.
@@ -380,6 +379,24 @@ export const FIELD_LABEL_WIDE = 'text-muted min-w-0 flex-1 truncate'
  * Fourteen fits the widest of them, a range's `0–1`.
  */
 export const FIELD_READOUT = 'text-muted w-14 shrink-0 text-right tabular-nums'
+
+/**
+ * A tick, wherever one is drawn. `accent-accent` is the whole of it and the whole of why this is
+ * written once: left off, a checkbox comes out in the browser's own blue — the one colour in the
+ * studio that answers to nothing in `index.css`, on the control a reader scans a list for.
+ *
+ * The size is the caller's: a tick in a property row is bigger than one in a list of files.
+ */
+export const CHECKBOX = 'accent-accent cursor-pointer'
+
+/** The box a slider is drawn in: the rail sits absolute inside it, the input covers it whole. */
+export const SLIDER_TRACK = 'relative h-(--sc-control) min-w-0'
+
+/**
+ * That input, stripped of the track the browser would draw with it. The thumb comes from
+ * `slider-handle` in `index.css`, a pseudo-element being out of reach of a class written here.
+ */
+export const SLIDER_HANDLE = 'slider-handle absolute inset-0 m-0 size-full'
 
 /**
  * Both ends of one gesture. Everything a field emits between them is one thing the user did,
@@ -398,11 +415,26 @@ export const FIELD =
   'bg-surface border-border text-text h-(--sc-control) rounded-(--radius-sc-sm) border px-2'
 
 /**
+ * The same field where it takes what the line has left — beside a label, a thumbnail, a dice.
+ *
+ * `min-w-0` is the half that gets forgotten: a flex child sizes to its content by default, so a
+ * long value pushes the row wider than the panel holding it instead of scrolling inside itself.
+ *
+ * No text size of its own, and that is measured rather than left out: Tailwind's preflight gives
+ * a control `font: inherit`, so a field inside a `FIELD_ROW` already reads at the row's size.
+ */
+export const FIELD_FILL = cn(FIELD, 'min-w-0 flex-1')
+
+/**
  * The surface a menu wears, whether it hangs from a control or opens at the pointer. Its width
  * is left to the caller: a flyout is as wide as its anchor suggests, a context menu wider.
+ *
+ * Above the modals (`z-60`) and not merely above the panels: a menu is opened BY the surface
+ * under it, and a dialog holding a field with a menu drew its rows behind its own scrim —
+ * measured on the new-document dialog, whose tree came out cut in half.
  */
 export const MENU_SURFACE = cn(
-  'border-border bg-surface fixed z-50 flex flex-col gap-0.5',
+  'border-border bg-surface fixed z-70 flex flex-col gap-0.5',
   'rounded-(--radius-sc-lg) border p-1 shadow-(--sc-shadow-floating)',
 )
 
@@ -425,9 +457,25 @@ export const PANE_TOOLBAR = 'absolute top-2 left-2'
  */
 export const TOOLBAR_LABEL = 'text-muted text-tiny px-1'
 
+/**
+ * The word that divides a LIST into groups — a git stage, the side of a comparison, a set of
+ * parameters. Small caps rather than a heavier weight: `PropertySection` takes the weight instead,
+ * and the two are a rank apart on purpose, an inspector titling more often than a list does.
+ */
+export const PANEL_GROUP_LABEL = 'text-muted text-tiny tracking-wide uppercase'
+
+/** The same word sharing its line with a control, which is what asks for the weight as well. */
+export const PANEL_GROUP_LABEL_WIDE = cn(PANEL_GROUP_LABEL, 'min-w-0 flex-1 truncate font-medium')
+
+/**
+ * The corners a tile cuts, without the plate behind them — for a tile that draws a SHAPE rather
+ * than a picture. A folder is the case: a frame bounds a picture that may be pale or transparent,
+ * and a silhouette needs no bounding.
+ */
+export const MEDIA_SHAPE = 'overflow-hidden rounded-(--radius-sc-sm)'
+
 /** The frame every picture sits in, so a tile and a thumbnail cut their corners the same way. */
-export const MEDIA_FRAME =
-  'border-border bg-surface overflow-hidden rounded-(--radius-sc-sm) border'
+export const MEDIA_FRAME = `border-border bg-surface border ${MEDIA_SHAPE}`
 
 /**
  * The plate a mark sits on in the corner of a tile — never WHICH corner, which is each mark's

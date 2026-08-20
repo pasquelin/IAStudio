@@ -1,3 +1,5 @@
+import type { Language } from './languages'
+
 /**
  * The characters French typography needs and a keyboard does not offer.
  *
@@ -10,7 +12,7 @@ export const NO_BREAK_SPACE = '\u00a0'
 const ORDINARY = '\u0020'
 
 /**
- * The symbols the studio writes after a number, and nothing else.
+ * The symbols the studio writes after a number, and nothing else, per language.
  *
  * A WORD is not one: French writes `2 derniers`, `3 assets`, `24 étapes`, and that space may
  * break — some fifty of them do. Telling `Mo` from `au` is what needs a list, and it is why this
@@ -21,45 +23,55 @@ const ORDINARY = '\u0020'
  * none can arrive by that road today: `units.*` holds the bare symbols, and it is `formatBytes`
  * that joins them to the figure. That join is in CODE, so no guard reading French values can see
  * it — which is why it binds with `NO_BREAK_SPACE` rather than trusting this list.
+ *
+ * English carries the byte family for the same reason, and the two lists must MIRROR each other:
+ * a list holding `Mio` and not `MiB` reddens on a French value while its English twin passes, and
+ * the two bundles drift apart in typography with nothing to say so. What English does not carry
+ * is a word — `8 asset`, `3 days`, `24 hours` — which the boundary already lets through.
  */
-export const UNIT_SYMBOLS: readonly string[] = [
-  'UC',
-  'o',
-  'Kio',
-  'Mio',
-  'Gio',
-  'Mo',
-  'j',
-  'h',
-  'LUFS',
-]
+export const UNIT_SYMBOLS: Record<Language, readonly string[]> = {
+  fr: ['UC', 'o', 'Kio', 'Mio', 'Gio', 'Mo', 'j', 'h', 'LUFS'],
+  en: ['CU', 'B', 'KiB', 'MiB', 'GiB', 'KB', 'MB', 'GB', 'd', 'h', 'LUFS'],
+}
 
 /** Multiplication ties to BOTH numbers: bound on the left alone, the second one leaves the line. */
 const TIMES = '×'
 
 const escaped = (symbol: string): string => symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-const UNIT = `(?:${[...UNIT_SYMBOLS, TIMES].map(escaped).join('|')})`
+type BreakRule = { pattern: RegExp; what: string }
 
-/**
- * Every ordinary space French would not break there, named by what it separates.
- *
- * The interpolation counts as a number — `{{units}} UC` is the most frequent readout the studio
- * draws, and no pattern looking for a digit ever saw it.
- */
-export function breakableSpots(text: string): string[] {
-  const rules: readonly { pattern: RegExp; what: string }[] = [
+/** A figure binds to its unit in both languages; only the punctuation half is French. */
+const rulesFor = (language: Language): readonly BreakRule[] => {
+  const unit = `(?:${[...UNIT_SYMBOLS[language], TIMES].map(escaped).join('|')})`
+
+  return [
     {
-      pattern: new RegExp(`(?:\\d+|\\}\\})${ORDINARY}${UNIT}(?![\\p{Letter}\\d])`, 'gu'),
+      pattern: new RegExp(`(?:\\d+|\\}\\})${ORDINARY}${unit}(?![\\p{Letter}\\d])`, 'gu'),
       what: 'unit',
     },
     { pattern: new RegExp(`${TIMES}${ORDINARY}(?=\\d|\\{\\{)`, 'gu'), what: 'times' },
     { pattern: new RegExp(`\\d${ORDINARY}(?=\\d{3}(?!\\d))`, 'gu'), what: 'thousands' },
-    { pattern: new RegExp(`${ORDINARY}[;:!?»]`, 'gu'), what: 'punctuation' },
-    { pattern: new RegExp(`«${ORDINARY}`, 'gu'), what: 'quote' },
+    ...(language === 'fr'
+      ? [
+          { pattern: new RegExp(`${ORDINARY}[;:!?»]`, 'gu'), what: 'punctuation' },
+          { pattern: new RegExp(`«${ORDINARY}`, 'gu'), what: 'quote' },
+        ]
+      : []),
   ]
+}
 
-  return rules.flatMap(({ pattern, what }) =>
+/** Built once: the guards call this on every value of both bundles. */
+const RULES: Record<Language, readonly BreakRule[]> = { fr: rulesFor('fr'), en: rulesFor('en') }
+
+/**
+ * Every ordinary space the language would not break there, named by what it separates.
+ *
+ * The interpolation counts as a number — `{{units}} UC` is the most frequent readout the studio
+ * draws, and no pattern looking for a digit ever saw it.
+ */
+export function breakableSpots(text: string, language: Language): string[] {
+  return RULES[language].flatMap(({ pattern, what }) =>
     [...text.matchAll(pattern)].map(match => `${what}: ${match[0].trim()}`),
   )
 }

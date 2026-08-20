@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import type { UsagePeriod } from '@shared/domain/usage'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { HeadCell, Row, UsageTable } from './UsageTable'
-import { formatMoment } from '@/helpers/format'
-import { formatUnits } from './format'
-import { useUsageEvents } from './useUsageReport'
-import { WINDOW_CAPTION } from '@/design/window-styles'
+import { UsageTable } from './UsageTable/UsageTable'
+import { UsageTableHeadCell } from './UsageTable/UsageTableHeadCell'
+import { UsageTableRow } from './UsageTable/UsageTableRow'
+import { formatMoment, formatUnits } from '@/helpers/format'
+import { useUsageEvents } from '@/hooks/useUsageEvents'
+import { WINDOW_CAPTION } from '@/design/windowStyles'
 
 /**
  * The raw billable log, event by event.
@@ -32,16 +33,16 @@ export function UsageJournal({ period }: { period: UsagePeriod }) {
             {/* The frame these hours are read in, ON the column: the footnote saying so renders
                 after the table, and this list pages — so a reader scrolling rows whose hours
                 disagree with their own clock had the explanation off screen. */}
-            <HeadCell label={t('usage.columns.time')} hint={t('usage.countedInUtc')} />
-            <HeadCell label={t('usage.columns.action')} />
-            <HeadCell label={t('usage.columns.model')} />
-            <HeadCell label={t('usage.columns.account')} />
-            <HeadCell label={t('usage.columns.units')} numeric />
+            <UsageTableHeadCell label={t('usage.columns.time')} hint={t('usage.countedInUtc')} />
+            <UsageTableHeadCell label={t('usage.columns.action')} />
+            <UsageTableHeadCell label={t('usage.columns.model')} />
+            <UsageTableHeadCell label={t('usage.columns.account')} />
+            <UsageTableHeadCell label={t('usage.columns.units')} numeric />
           </>
         }
       >
         {page.events.map((event, index) => (
-          <Row key={`${event.time}-${event.jobId ?? index}`}>
+          <UsageTableRow key={`${event.time}-${event.jobId ?? index}`}>
             {/* UTC, like the day the chart next door counts it under: a stamp read in the local
                 zone puts an event two hours past midnight on the bar of the day before. */}
             <td className="py-1.5 whitespace-nowrap">{formatMoment(event.time, locale, 'utc')}</td>
@@ -60,7 +61,7 @@ export function UsageJournal({ period }: { period: UsagePeriod }) {
                 formatUnits(event.units, locale)
               )}
             </td>
-          </Row>
+          </UsageTableRow>
         ))}
       </UsageTable>
 

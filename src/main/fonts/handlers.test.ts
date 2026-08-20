@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
-import { invoke, resetHandlers } from '@main/ipc/test-harness'
+import { invoke, resetHandlers } from '@main/ipc/testHarness'
 import { registerFontHandlers } from './handlers'
-import type { SystemFonts } from './system-fonts'
+import type { SystemFonts } from './systemFonts'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 const outlines = Uint8Array.from([0, 1, 0, 0])
 

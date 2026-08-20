@@ -11,9 +11,13 @@ export type FieldKind =
   | 'boolean'
   | 'choice'
   | 'image'
+  /** A 3D file — `kind: '3d'` on the API. What every rigger takes its character under. */
+  | 'mesh'
   | 'color'
   | 'seed'
   | 'raw'
+  /** An object whose top-level keys are known. `raw` is the one whose shape is NOT. */
+  | 'record'
 
 export type FieldOption = {
   value: string
@@ -45,6 +49,13 @@ export type FieldDescriptor = {
    * field name is ever guessed at here.
    */
   promptSpark?: boolean
+  /**
+   * The biggest file this input takes, in bytes, when the model names one. What lets a mesh be
+   * refused BEFORE the upload rather than after it — a rigged GLB runs to tens of megabytes.
+   */
+  maxSize?: number
+  /** Whether filling this field changes what the run costs. The API says so; nothing guesses. */
+  costImpact?: boolean
 }
 
 export type ModelFamily =

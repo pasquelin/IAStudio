@@ -7,11 +7,121 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), numérotation
 est extraite telle quelle par le job `release` et **devient le corps de la release GitHub** — une
 version taguée sans sa section ici fait échouer la publication, délibérément. La procédure est
 dans [`docs/ci/RELEASE.md`](docs/ci/RELEASE.md), la règle d'extraction dans
-`src/main/release-notes.ts`.
+`src/main/releaseNotes.ts`.
 
 Conséquence sur l'écriture : **dans une section de version, les liens sont absolus.** Une page de
 release ne résout pas les chemins relatifs du dépôt, et ces liens-là sont les premiers qu'un
 lecteur ouvre. Le préambule que voici n'est jamais publié et s'autorise donc le relatif.
+
+## [1.0.0] — 2026-08-20
+
+**Les six documents du studio s'écrivent désormais dans des formats que d'autres logiciels lisent
+déjà.** Un projet devient un dossier ordinaire qu'on explore, qu'on met sous contrôle de version et
+qu'on ouvre ailleurs — et le studio tout entier se pilote de l'extérieur.
+
+> **⚠️ Cette version ne rouvre pas les documents des versions 0.x.** Les six extensions maison
+> — `.img`, `.scene`, `.seq`, `.aud`, `.sky`, `.tex` — n'existent plus, et rien ne les convertit :
+> un document enregistré par la 0.2.0 n'est plus reconnu. **Garder la 0.2.0 installée le temps de
+> refaire ce qui doit l'être**, ou repartir des assets, qui eux ne changent pas. C'est ce qui fait
+> de cette version une 1.0.0 plutôt qu'une 0.3.0 : le format d'un document engage, et celui-ci a
+> changé pour de bon.
+
+> **Les installeurs ne sont toujours pas signés.** Ni certificat Apple, ni certificat Windows n'est
+> provisionné à ce jour
+> ([ADR-04](https://github.com/pasquelin/scenario/blob/HEAD/docs/ci/adr/ADR-04-strategie-de-signature.md)) :
+> macOS opposera Gatekeeper, Windows affichera SmartScreen. L'auto-update vérifie le condensat du
+> manifeste — il garantit qu'un téléchargement n'a pas été corrompu, pas qu'il vient de nous.
+
+### Ajouté
+
+**L'Explorateur devient un vrai navigateur de fichiers.** Un arbre et une grille, la navigation aux
+flèches, un menu contextuel sur le fond comme sur chaque ligne, une fenêtre « Informations sur le
+fichier », et l'ouverture décidée par ce que le fichier EST. Ce qu'il montre, il l'ouvre ; ce qu'il
+ouvre, il le montre.
+
+**Un projet se met sous contrôle de version, depuis le studio.** Un panneau Git et un panneau
+Historique : l'état du dossier, les branches, la mise en attente, l'enregistrement d'une version, la
+résolution d'un conflit côté nôtre ou côté leur. L'historique se retire de lui-même quand git ne
+suit pas le dossier ouvert.
+
+**Le studio suit ses fichiers où qu'on les range.** Déplacer, renommer ou trier hors de
+l'application ne casse plus le catalogue : il retrouve ses fichiers, et un rescan reconnaît aussi
+ceux venus de l'API.
+
+**L'espace 3D reçoit l'animation.** Une bande d'animation avec ses blocs, ses canaux et ses
+sous-pistes, des rails de caméra tracés au clic, des plans posés sur ces rails, la composition de
+l'objectif animable depuis l'inspecteur. Un maillage nu reçoit un squelette, un personnage se
+retargète quelle que soit la convention d'os de son fournisseur et garde sa taille, et l'export
+emporte les animations — celles du modèle comme celles du studio.
+
+**L'espace Image redevient complet** : remplissage, formes, texte à deux natures, calques groupés,
+et une boîte de texte qui se voit, se tire et se ferre.
+
+**Le studio se pilote de l'extérieur** — le point d'entrée MCP publie **222 actions en
+14 familles**, des documents aux assets, de la scène au montage, du fichier au dépôt git.
+
+**Une passerelle vers DaVinci Resolve** : un script installé à la demande dans le dossier que
+Resolve lit, qui importe le montage écrit par le studio dans le projet ouvert.
+
+**Un journal d'activité dans le studio**, avec sa fenêtre et son fichier tournant — sans avoir à
+lancer l'application depuis un terminal.
+
+**Le studio n'écrase plus le travail fait ailleurs, et enregistre tout seul.**
+
+### Modifié
+
+**Les six documents portent un format ouvert**, et le format ouvert EST le document — pas un export
+à côté :
+
+| Document | Format |
+|---|---|
+| Image en calques | **`.ora`** — OpenRaster, relu et réécrit par GIMP |
+| Montage vidéo, montage audio | **`.otio`** — OpenTimelineIO, et `.otioz` quand les médias voyagent avec |
+| Scène 3D, ciel | **`.gltf`** — glTF 2.0, ouvert par n'importe quel lecteur |
+| Matière | **`.mtlx`** — MaterialX 1.39 |
+
+**Un fichier revenu enrichi refuse de s'enregistrer plutôt que de perdre ce qu'il porte.** Une
+scène rouverte dans Blender, un montage annoté ailleurs : le studio le liste, le lit, et dit ce
+qu'il ne saurait pas réécrire — au lieu de l'écraser en silence.
+
+**Le vocabulaire est tenu d'un bout à l'autre** — « matière » et non « matériau », « maille » pour
+le type d'asset 3D, un seul mot pour ce que la caméra embrasse, et le même geste porte le même nom
+dans le montage comme dans la palette. Le manuel et les deux langues disent ce que l'écran dit.
+
+**L'interface a une règle de couleur** : l'accent plein désigne ce qu'on actionne, sa version
+adoucie ce qui est choisi, et le survol n'est plus de l'accent. Il n'y a plus deux bleus de
+sélection.
+
+**Le manuel compte vingt chapitres**, dont le mode d'emploi du panneau Git, celui du panneau
+Animations et celui de l'Explorateur — et il est lu **dans** l'application, pas seulement sur
+GitHub.
+
+### Corrigé
+
+- Un export de plusieurs minutes n'avait ni barre de progression ni bouton pour l'arrêter.
+- Le montage sortait un fichier que Resolve ouvrait sans retrouver un seul rush.
+- Le viewport 3D se vidait pendant qu'on déplaçait une cloison, et le moniteur caméra retraversait
+  toute la scène à chaque image même immobile.
+- Le gizmo ne répondait pas en vue grille ; une caméra que ses plans avaient lâchée restait collée
+  à son rail ; la pose d'un personnage dépendait de la façon dont la tête de lecture était arrivée.
+- Deux animations superposées se moyennaient au lieu de se composer.
+- Le panneau Animations supprimait un bloc gardé sans un mot.
+- Une image exportée deux fois portait deux noms ; une image sans titre lisible sortait sous le nom
+  « texture ».
+- Un nom de fichier tient désormais sur les trois plateformes, et son nettoyage couvre tout ce que
+  la frontière refuse.
+- Plusieurs dizaines d'écarts entre ce que le manuel décrivait et ce que l'écran fait — libellés,
+  raccourcis, gestes, comptes annoncés.
+
+### Limites connues
+
+- **Les documents des versions 0.x ne s'ouvrent pas** — voir l'encadré en tête de section.
+- L'historique d'annulation ne survit pas à la fermeture d'un document.
+- Les installeurs ne sont pas signés.
+- Sur Linux, un document dont le nom porte un accent écrit sous forme décomposée — ce que produit
+  une archive faite sur macOS — s'affiche dans l'Explorateur sans pouvoir s'ouvrir.
+- La liste complète et par espace :
+  [chapitre 18](https://github.com/pasquelin/scenario/blob/HEAD/docs/fr/manuel/18-limites.md).
 
 ## [0.2.0] — 2026-08-16
 

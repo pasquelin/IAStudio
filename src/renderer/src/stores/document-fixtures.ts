@@ -1,13 +1,17 @@
-import { kindForWorkspace, type DocumentDescriptor } from '@shared/domain/document'
-import { documentFileName } from '@shared/domain/document-name'
+import {
+  DOCUMENTS_FOLDER,
+  kindForWorkspace,
+  type DocumentDescriptor,
+} from '@shared/domain/document'
+import { documentFileName } from '@shared/domain/documentName'
 import type { WorkspaceId } from '@shared/domain/workspace'
-import type { DocumentStore } from './document-store'
+import type { DocumentStore } from './documentStore'
 import { useDocuments } from './documents'
 
 /**
  * The whole of what an `install<X>` does: a store put back as it was built, one document in it,
  * and a tab in front of it. Written once because the five differ only by their store and their
- * workspace — and because the sixth document store, `audio-edits`, has no fixture of its own.
+ * workspace — and because the sixth document store, `audioEdits`, has no fixture of its own.
  *
  * The document arrives through `replace`, the door production uses to bring one in, rather than
  * through a `setState` of its own shape: a fixture that reaches past the store's own actions is
@@ -38,6 +42,20 @@ export function installDocument(documentId: string, workspace: WorkspaceId): voi
 }
 
 /**
+ * A title as a person typed it, for the cases that ask what a document is EXPORTED as. The
+ * fixtures title a document by its own id, which no separator ever reaches.
+ */
+export function retitleDocument(documentId: string, title: string): void {
+  const { documents, activeId } = useDocuments.getState()
+  const document = documents[documentId]
+  if (!document) throw new Error(`no document "${documentId}" to retitle`)
+  useDocuments.setState({
+    documents: { ...documents, [documentId]: { ...document, title } },
+    activeId,
+  })
+}
+
+/**
  * Several tabs at once, one of them in front — what a gesture that crosses workspaces needs to
  * be tested against, and what a single-document fixture cannot describe.
  */
@@ -51,7 +69,7 @@ export function installDocuments(tabs: Record<string, WorkspaceId>, activeId: st
       kind,
       workspace,
       title: documentId,
-      fileName: documentFileName(documentId, kind),
+      path: `${DOCUMENTS_FOLDER}/${documentFileName(documentId, kind)}`,
     }
   }
 

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { redo, run, undo, type History } from '@/engines/core/history'
 import { emptyHistory } from '@/engines/core/history'
 import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
-import { SECOND } from '@/engines/timeline/timeline-state'
-import { durationOf, frameCount, rms, toDb, type AudioData } from './audio-data'
+import { SECOND } from '@/engines/timeline/timelineState'
+import { durationOf, frameCount, rms, toDb, type AudioData } from './audioData'
 import {
   chainOf,
   chainsOnMontage,

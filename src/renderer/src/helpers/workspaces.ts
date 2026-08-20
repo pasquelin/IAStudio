@@ -2,12 +2,13 @@ import {
   mdiCubeOutline,
   mdiImageOutline,
   mdiPanoramaVariantOutline,
+  mdiRun,
   mdiTextureBox,
   mdiVideoOutline,
   mdiVolumeHigh,
 } from '@mdi/js'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
-import { workspaceOfType } from '@shared/domain/asset-kind'
+import { workspaceOfType } from '@shared/domain/assetKind'
 import { type ModelFamily } from '@shared/domain/model'
 import { HOME_SURFACE, type ToolSurface } from '@shared/domain/tool'
 import { WORKSPACE_IDS, workspaceOrder, type WorkspaceId } from '@shared/domain/workspace'
@@ -37,11 +38,28 @@ const ICONS: Record<WorkspaceId, string> = {
 export { workspaceOfType }
 
 /**
+ * A glyph of its own, or `null` to keep the one its workspace draws.
+ *
+ * Total on purpose: the moment two kinds share a space the workspace table stops telling them
+ * apart — a motion and a character both live in 3D — so a new kind has to answer the question
+ * rather than silently inherit a neighbour's cube.
+ */
+const OWN_ICON: Record<AssetType, string | null> = {
+  image: null,
+  video: null,
+  audio: null,
+  mesh: null,
+  texture: null,
+  skybox: null,
+  animation: mdiRun,
+}
+
+/**
  * What stands for an asset when there is no picture to show it by. Read off the workspace table
  * rather than relisted: changing the video glyph in the rail must change it on the tiles too.
  */
 export function assetIcon(type: AssetType): string {
-  return ICONS[workspaceOfType(type)]
+  return OWN_ICON[type] ?? ICONS[workspaceOfType(type)]
 }
 
 /**
@@ -57,7 +75,7 @@ export function assetIcon(type: AssetType): string {
 const USED_BY_WORKSPACE: Record<WorkspaceId, readonly AssetType[]> = {
   image: ['image', 'texture', 'skybox'],
   video: ASSET_TYPES,
-  '3d': ['mesh', 'texture', 'skybox', 'image'],
+  '3d': ['mesh', 'animation', 'texture', 'skybox', 'image'],
   audio: ['audio'],
   textures: ['texture', 'image'],
   skyboxes: ['skybox', 'image'],
@@ -77,7 +95,7 @@ const FAMILIES: Record<WorkspaceId, ModelFamily> = {
 }
 
 /**
- * Derived from the shared registry rather than relisted, the way `tool-registry.ts` derives
+ * Derived from the shared registry rather than relisted, the way `toolRegistry.ts` derives
  * from `TOOL_PLACEMENTS`: a new workspace is then declared once, and the compiler demands its
  * icon and its family instead of letting the list drift. Its LABEL it does not demand — that
  * one is guarded by `dynamic-keys.i18n.test.ts`.

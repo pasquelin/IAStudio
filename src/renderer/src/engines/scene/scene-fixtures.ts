@@ -1,18 +1,29 @@
 import { Texture, type ColorSpace } from 'three'
-import type { LightDescriptor, TextDescriptor } from '@shared/domain/scene'
-import type { TextureCache } from './texture-cache'
+import {
+  DEFAULT_CAMERA,
+  DEFAULT_PATH,
+  type CameraDescriptor,
+  type LightDescriptor,
+  type PathDescriptor,
+  type TextDescriptor,
+} from '@shared/domain/scene'
+import type { Bounds } from './rigFit'
+import type { RigState } from './rigState'
+import type { TextureCache } from './textureCache'
 import {
   DEFAULT_MATERIAL,
   DEFAULT_SPRITE,
   DEFAULT_TEXT,
   shadowDefaults,
   IDENTITY_TRANSFORM,
+  type CameraNode,
   type LightNode,
   type MeshNode,
   type ModelNode,
+  type PathNode,
   type SpriteNode,
   type TextNode,
-} from './scene-state'
+} from './sceneState'
 
 /**
  * Scene nodes for tests. Declared once so a new required field on `SceneNodeBase` breaks in one
@@ -86,6 +97,32 @@ export function textNodeFixture(id: string, text: Partial<TextDescriptor> = {}):
   }
 }
 
+export function cameraNodeFixture(id: string, camera: Partial<CameraDescriptor> = {}): CameraNode {
+  return {
+    id,
+    parentId: null,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'camera' }),
+    type: 'camera',
+    camera: { ...DEFAULT_CAMERA, ...camera },
+  }
+}
+
+export function pathNodeFixture(id: string, path: Partial<PathDescriptor> = {}): PathNode {
+  return {
+    id,
+    parentId: null,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'path' }),
+    type: 'path',
+    path: { ...DEFAULT_PATH, ...path },
+  }
+}
+
 export function modelNodeFixture(id: string, assetId = 'asset-1'): ModelNode {
   return {
     id,
@@ -96,6 +133,32 @@ export function modelNodeFixture(id: string, assetId = 'asset-1'): ModelNode {
     ...shadowDefaults({ type: 'model' }),
     type: 'model',
     model: { assetId },
+  }
+}
+
+/**
+ * What the engine would report for a model carrying these bones, in one chain.
+ *
+ * For the suites that only care that a rig HAS bones — a bone picker, a track on one — and that
+ * would otherwise each spell a whole `RigState` of their own.
+ */
+/** A standing figure of ordinary proportions, for a suite that is not testing the shape. */
+export const STANDING_BOUNDS: Bounds = {
+  min: { x: -0.3, y: 0, z: -0.2 },
+  max: { x: 0.3, y: 1.8, z: 0.2 },
+}
+
+export function rigStateFixture(names: readonly string[]): RigState {
+  const rigged = names.length > 0
+  const bones = names.map((name, index) => ({ name, parent: names[index - 1] ?? null }))
+
+  return {
+    status: rigged ? 'skinnedMesh' : 'staticMesh',
+    bones,
+    boneNames: [...names],
+    boneCount: names.length,
+    // Nothing once there are bones, which is what the engine answers.
+    bounds: rigged ? null : STANDING_BOUNDS,
   }
 }
 

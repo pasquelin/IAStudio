@@ -1,22 +1,23 @@
 import { app, session } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import { EVENTS } from '@shared/ipc'
-import { registerAboutPanel } from '@main/about-panel'
+import { registerAboutPanel } from '@main/aboutPanel'
 import { APP_ICON_PATH } from '@main/resources'
 import { buildMenu } from '@main/menu'
 import { registerAssetScheme } from '@main/assets/protocol'
 import { broadcast } from '@main/ipc/broadcast'
 import { isDevelopment } from '@main/environment'
 import { registerIpc } from '@main/ipc/register'
-import { log, mirrorLogsTo } from '@main/log'
+import { log, mirrorLogsTo, recordLogsTo } from '@main/log'
+import { createLogFile } from '@main/logFile'
 import { createServices, createSettings } from '@main/services'
 import { createShutdown } from '@main/shutdown'
 import type { SettingsStore } from '@main/settings/store'
-import { registerFieldMenu } from '@main/window/context-menu'
+import { registerFieldMenu } from '@main/window/contextMenu'
 import { lockNavigation } from '@main/window/navigation'
 import { lockPermissions, rendererOrigin } from '@main/window/permissions'
 import { type Splash } from '@main/window/splash'
-import { openSplashWindow } from '@main/window/splash-window'
+import { openSplashWindow } from '@main/window/splashWindow'
 import { createMainWindow, showMainWindow } from '@main/window/windows'
 
 // Before anything reads `app.getPath('userData')`: that path derives from the name, and a
@@ -128,6 +129,17 @@ function bootstrap(): void {
   registerFieldMenu()
 
   void app.whenReady().then(() => {
+    // First, so what follows leaves a trace — but resolved on the first LINE, never here: a throw
+    // on the way to the folder would take the splash and the permission lock with it.
+    // `setAppLogsPath()` is what defines the path at all on Linux and Windows.
+    recordLogsTo(
+      createLogFile(() => {
+        app.setAppLogsPath()
+        return app.getPath('logs')
+      }),
+    )
+    log.info('startup', `${APP_NAME} ${app.getVersion()} starting`)
+
     // The session only exists once ready, and no window may exist before it is locked: with no
     // handler installed Electron grants every permission a page asks for.
     lockPermissions(session.defaultSession, rendererOrigin())

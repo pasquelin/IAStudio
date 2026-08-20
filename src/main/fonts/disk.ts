@@ -2,7 +2,7 @@ import { open, readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { homedir, platform } from 'node:os'
 import { clamp } from '@shared/numeric'
-import { createSystemFonts, fontFolders, type FontDisk, type SystemFonts } from './system-fonts'
+import { createSystemFonts, fontFolders, type FontDisk, type SystemFonts } from './systemFonts'
 
 /** The real disk behind the index. Apart from it so the walk itself is testable without one. */
 export const nodeFontDisk: FontDisk = {

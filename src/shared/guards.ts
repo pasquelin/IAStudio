@@ -74,3 +74,13 @@ export function readBoolean(
   const value = source[key]
   return typeof value === 'boolean' ? value : fallback
 }
+
+/**
+ * A stored value narrowed back to one of a union's members, or the default it does not name.
+ *
+ * The list rather than the key, unlike the readers above: a union is read off a payload, off an
+ * argument and off a menu row, and only the first of those has a record to name a key in.
+ */
+export function oneOf<T extends string>(options: readonly T[], value: unknown, fallback: T): T {
+  return options.find(candidate => candidate === value) ?? fallback
+}

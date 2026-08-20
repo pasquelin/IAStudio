@@ -1,39 +1,30 @@
 import { mdiCreationOutline } from '@mdi/js'
-import { useQuery } from '@tanstack/react-query'
 import { Suspense, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Job } from '@shared/domain/job'
-import type { ModelDescriptor } from '@shared/domain/model'
-import { useModelForFamily } from '@/helpers/model-for-family'
-import { usePlanAccess, usePlanRefusal } from '@/helpers/plan-access'
+import { useDescriptor } from '@/hooks/useDescriptor'
+import { useModelForFamily } from '@/hooks/useModelForFamily'
+import { usePlanAccess } from '@/hooks/usePlanAccess'
+import { usePlanRefusal } from '@/hooks/usePlanRefusal'
 import { workspaceById } from '@/helpers/workspaces'
-import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
-import { registerGenerator } from '@/assistant/generator-bridge'
+import { referencePictures, type FormValues } from '@/helpers/dynamicForm'
+import { registerGenerator } from '@/assistant/generatorBridge'
 import { dictationAccessory } from '@/dictation/DictationField'
-import { failureKeyOf } from '@/services/failure-message'
-import { getBridge } from '@/services/bridge'
+import { failureKeyOf } from '@/services/failureMessage'
 import { useJobs } from '@/stores/jobs'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
-import { claimOnSubmit } from '@/stores/generation-claims'
+import { claimOnSubmit } from '@/stores/generationClaims'
 import { useSettings } from '@/stores/settings'
-import { DynamicForm } from '@/design/dynamic-form-lazy'
+import { DynamicForm } from '@/design/dynamicFormLazy'
 import { FormHeader } from '@/design/FormHeader'
+import { PANEL_SCROLL } from '@/design/styles'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { NoProject } from '@/panels/shared/NoProject'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
-
-function useDescriptor(modelId: string | null) {
-  return useQuery<ModelDescriptor | null>({
-    queryKey: ['model', modelId],
-    queryFn: () =>
-      modelId ? (getBridge()?.scenario.describeModel(modelId) ?? null) : Promise.resolve(null),
-    enabled: modelId !== null,
-  })
-}
 
 /**
  * The form the chosen model's schema describes, and nothing else: the prompt, the parameters,
@@ -152,7 +143,7 @@ export function Generator() {
   const generate = (values: FormValues): void => void runGeneration(values)
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-auto">
+    <div className={PANEL_SCROLL}>
       <FormHeader title={descriptor.data?.name ?? t('collection.loading')} />
 
       {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}

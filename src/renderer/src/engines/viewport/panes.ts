@@ -1,3 +1,5 @@
+import { clampAtLeast } from '@shared/numeric'
+
 /**
  * How a viewport's surface is divided, and where each division lands.
  *
@@ -47,6 +49,85 @@ export function paneRects(layout: PaneLayout, width: number, height: number): Pa
   ]
 }
 
+/** How wide the inset sits, as a share of the surface, and how far it stands off its corner. */
+const INSET_SHARE = 0.28
+const INSET_MARGIN = 12
+
+/** Past this share of the height the inset stops being an inset and starts being the view. */
+const INSET_MAX_HEIGHT = 0.4
+
+/**
+ * Where a camera preview opens: top right, at the aspect of what that camera films.
+ *
+ * TOP and not bottom: the gizmo of whatever is selected stands at the middle of the view and its
+ * arms reach down and out, so a preview in the lower corner sat under the very handles a hand is
+ * reaching for.
+ *
+ * `null` for a surface with no room for one — an inset wider than the view it sits on would hide
+ * the very thing it is a preview OF. Sized from the surface rather than fixed, so it stays the
+ * same fraction of a detached panel as of a full window.
+ */
+export function insetRect(width: number, height: number, aspect: number): PaneRect | null {
+  if (width <= 0 || height <= 0 || aspect <= 0) return null
+
+  const insetWidth = Math.round(width * INSET_SHARE)
+  const insetHeight = Math.round(insetWidth / aspect)
+  if (insetHeight > height * INSET_MAX_HEIGHT) return null
+  if (insetWidth + INSET_MARGIN * 2 > width) return null
+
+  return {
+    x: width - insetWidth - INSET_MARGIN,
+    y: INSET_MARGIN,
+    width: insetWidth,
+    height: insetHeight,
+  }
+}
+
+/** How big a preview is drawn: in its corner, or over the whole view. */
+export type InsetSize = 'inset' | 'full'
+
+/**
+ * Where a camera preview sits at either size. The grown one takes the surface whole, which is
+ * what lets a renderer skip the panes it would cover — the arithmetic of both stays here.
+ */
+export function previewRect(
+  width: number,
+  height: number,
+  aspect: number,
+  size: InsetSize,
+  offset: { x: number; y: number } = { x: 0, y: 0 },
+): PaneRect | null {
+  if (width <= 0 || height <= 0) return null
+  if (size === 'full') return { x: 0, y: 0, width, height }
+
+  const rect = insetRect(width, height, aspect)
+  return rect && movedInside(rect, width, height, offset)
+}
+
+/**
+ * The preview where it was dragged to, kept whole inside the view.
+ *
+ * Clamped rather than free: a preview pushed past the edge cannot be dragged back — the pointer
+ * has nothing left to grab — and one shoved off screen is indistinguishable from one that closed.
+ */
+function movedInside(
+  rect: PaneRect,
+  width: number,
+  height: number,
+  offset: { x: number; y: number },
+): PaneRect {
+  return {
+    ...rect,
+    x: clampAtLeast(rect.x + offset.x, 0, width - rect.width),
+    y: clampAtLeast(rect.y + offset.y, 0, height - rect.height),
+  }
+}
+
+/** Whether a point falls inside a rectangle — the inset's own test, and `paneAt`'s. */
+export function inRect(rect: PaneRect, x: number, y: number): boolean {
+  return x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height
+}
+
 /**
  * Which view a point falls in, or `null` when it falls outside the surface entirely.
  *
@@ -54,9 +135,7 @@ export function paneRects(layout: PaneLayout, width: number, height: number): Pa
  * one, so no coordinate is claimed twice and none is claimed by nobody.
  */
 export function paneAt(rects: readonly PaneRect[], x: number, y: number): number | null {
-  const found = rects.findIndex(
-    rect => x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height,
-  )
+  const found = rects.findIndex(rect => inRect(rect, x, y))
   return found === -1 ? null : found
 }
 
@@ -70,10 +149,14 @@ export function paneAt(rects: readonly PaneRect[], x: number, y: number): number
  * three, which is a quad view that draws exactly one view.
  */
 export function glRect(rect: PaneRect, surfaceHeight: number): PaneRect {
-  return {
-    x: rect.x,
-    y: surfaceHeight - rect.y - rect.height,
-    width: rect.width,
-    height: rect.height,
-  }
+  return intoGlRect(rect, surfaceHeight, { x: 0, y: 0, width: 0, height: 0 })
+}
+
+/** The same flip written into a rectangle one already holds — for the callers on a hot path. */
+export function intoGlRect(rect: PaneRect, surfaceHeight: number, into: PaneRect): PaneRect {
+  into.x = rect.x
+  into.y = surfaceHeight - rect.y - rect.height
+  into.width = rect.width
+  into.height = rect.height
+  return into
 }

@@ -1,6 +1,6 @@
 import { memo, type ReactNode } from 'react'
 import { assetUrl, posterUrl, type AssetBadge as BadgeName } from '@shared/domain/asset'
-import { cloudPreviewUrl } from '@shared/domain/cloud-asset'
+import { cloudPreviewUrl } from '@shared/domain/cloudAsset'
 import { AssetBadge } from '@/design/AssetBadge'
 import { InlineRename } from '@/design/InlineRename'
 import { Row } from '@/design/Row'

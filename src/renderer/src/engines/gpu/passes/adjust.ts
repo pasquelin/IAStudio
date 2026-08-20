@@ -1,5 +1,6 @@
 import { ShaderMaterial, type Texture } from 'three'
 import { adjustUniformsOf, type AdjustmentStack } from '@shared/domain/adjustments'
+import { LUMA } from '@/engines/texture/derive/glsl'
 import { QUAD_VERTEX_SHADER } from './quad'
 
 /**
@@ -21,7 +22,7 @@ uniform float uOffsetU;
 
 varying vec2 vUv;
 
-const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+${LUMA}
 
 // Middle grey in linear light. Pivoting contrast around 0.5 would be pivoting around a value
 // that is nearly white once the source has been decoded out of sRGB.

@@ -1,8 +1,8 @@
 import { mdiImageOffOutline } from '@mdi/js'
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { useLoadable } from '@/hooks/useLoadable'
-import { MEDIA_FRAME } from './styles'
+import { LoadableImage } from './LoadableImage'
+import { MEDIA_FRAME, MEDIA_SHAPE } from './styles'
 import { UiIcon } from './UiIcon'
 
 export type MediaTileProps = {
@@ -42,6 +42,18 @@ export type MediaTileProps = {
    * forced on top of that would crop every picture that is not one.
    */
   fill?: boolean
+  /**
+   * Drops the plate and the border, keeping the corners — for a tile that draws a SHAPE rather
+   * than a picture. The frame exists to bound a picture that may be pale, dark or transparent;
+   * a folder silhouette has nothing to bound, and a box around it reads as a file.
+   */
+  bare?: boolean
+  /**
+   * Cuts the picture to the document silhouette and gives it the shape's box, so one tile says
+   * both what the entry is and what it holds. Goes with `bare`: the frame it drops is the very
+   * square this replaces.
+   */
+  cutout?: boolean
 }
 
 /**
@@ -59,36 +71,57 @@ export function MediaTile({
   fallbackIcon = mdiImageOffOutline,
   face,
   fill = false,
+  bare = false,
+  cutout = false,
 }: MediaTileProps) {
-  const { src, onError } = useLoadable(url)
-
   return (
-    <figure className={cn(MEDIA_FRAME, 'relative m-0 w-full', fill ? 'h-full' : 'aspect-square')}>
-      {src ? (
-        <img
-          src={src}
-          alt=""
-          loading="lazy"
-          onError={onError}
-          className="absolute inset-0 size-full object-cover"
-        />
-      ) : face ? (
-        <div className="absolute inset-0">{face}</div>
-      ) : (
-        <UiIcon path={fallbackIcon} size={20} className="text-muted/80 absolute inset-0 m-auto" />
+    <figure
+      className={cn(
+        bare ? MEDIA_SHAPE : MEDIA_FRAME,
+        'relative m-0 w-full',
+        fill ? 'h-full' : 'aspect-square',
       )}
+    >
+      <LoadableImage
+        url={url}
+        // A cut picture takes the SHAPE's box, held clear of the caption: cut to a silhouette it
+        // reads as placed, the way the folder beside it does, and not as filling the square.
+        box={cn('absolute inset-0', cutout && 'bottom-4 flex items-end justify-center')}
+        className={cn(
+          'object-cover',
+          cutout ? 'document-cutout aspect-square h-full' : 'size-full',
+        )}
+        fallback={
+          face ? (
+            // Held clear of the caption and centred when there is no picture: a shape reads as
+            // placed where a picture reads as filling, and the two want opposite boxes.
+            <div
+              className={cn('absolute inset-0', bare && 'bottom-4 flex items-end justify-center')}
+            >
+              {face}
+            </div>
+          ) : (
+            <UiIcon
+              path={fallbackIcon}
+              size={20}
+              className="text-muted/80 absolute inset-0 m-auto"
+            />
+          )
+        }
+      />
 
       {badge}
 
-      {/* The one white the studio writes outright, and the only place it can be: this word sits
-          on a PICTURE, which no token can describe. Its contrast comes from the gradient under it
-          and the shadow around it, not from a palette that knows nothing of what was generated. */}
+      {/* The white and the gradient go together, and neither survives `bare`: they exist because
+          the word sits on a PICTURE, which no token can describe. Over a shape on the panel's own
+          ground there IS a token, and a black band under a silhouette is a box drawn back on. */}
       <figcaption
         title={caption}
         className={cn(
-          'absolute inset-x-0 bottom-0 truncate px-1.5 pt-5 pb-1',
-          'bg-gradient-to-t from-black/85 via-black/45 to-transparent',
-          'text-tiny text-white drop-shadow-[0_1px_2px_black]',
+          'text-tiny absolute inset-x-0 bottom-0 truncate px-1.5 pb-1',
+          bare
+            ? 'text-text text-center'
+            : 'bg-gradient-to-t from-black/85 via-black/45 to-transparent pt-5 text-white drop-shadow-[0_1px_2px_black]',
         )}
       >
         {captionField ?? caption}

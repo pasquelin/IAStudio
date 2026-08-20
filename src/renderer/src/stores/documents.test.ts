@@ -1,7 +1,14 @@
+import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DocumentDescriptor } from '@shared/domain/document'
-import { installFakeBridge } from '@/services/fake-bridge'
-import { documentForAsset, documentsIn, panelIds, useDocuments } from './documents'
+import type { DocumentDescriptor, DocumentWrite } from '@shared/domain/document'
+import { installFakeBridge } from '@/services/fakeBridge'
+import {
+  documentForAsset,
+  documentsIn,
+  panelIds,
+  useDocumentIsInFront,
+  useDocuments,
+} from './documents'
 import { showPanels } from './layout-fixtures'
 import { useLayouts } from './layouts'
 
@@ -10,7 +17,7 @@ const POSTER: DocumentDescriptor = {
   kind: 'image',
   title: 'Poster',
   workspace: 'image',
-  fileName: 'Poster.img',
+  path: 'documents/Poster.ora',
 }
 
 const showing = (...ids: readonly string[]): void => showPanels(...ids)
@@ -40,7 +47,7 @@ describe('documents store', () => {
       documents: {
         write: id => {
           written.push(id)
-          return Promise.resolve()
+          return Promise.resolve<DocumentWrite>('written')
         },
       },
     })
@@ -49,8 +56,8 @@ describe('documents store', () => {
     expect(written).toEqual([])
   })
 
-  // Counting the open tabs alone handed the same name twice: a document saved under "Sans
-  // titre 1" and closed is still called that, and the folder is what remembers it.
+  // Counting the open tabs alone handed the same name twice: a document saved under « Scène 1 »
+  // and closed is still called that, and the folder is what remembers it.
   it('numbers a new document against the folder as much as against the tabs', async () => {
     installFakeBridge({
       documents: {
@@ -59,16 +66,18 @@ describe('documents store', () => {
             {
               id: 'saved-then-closed',
               kind: 'scene',
-              title: 'Untitled 1',
+              title: 'Scène 1',
               workspace: '3d',
-              fileName: 'Untitled 1.scene',
+              path: 'documents/Scène 1.gltf',
             },
           ]),
       },
     })
 
     const created = await useDocuments.getState().create('3d')
-    expect(created?.title).not.toBe('Untitled 1')
+    // The NEXT number, not merely a different name: a title the studio would never propose leaves
+    // this green with the listing dropped entirely — measured, that is what it used to assert.
+    expect(created?.title).toBe('Scène 2')
   })
 
   describe('refresh', () => {
@@ -193,16 +202,17 @@ describe('documents store', () => {
     expect(one?.title).not.toBe(other?.title)
   })
 
-  it('numbers untitled documents per workspace', async () => {
+  it('numbers untitled documents per workspace, under the name of what they are', async () => {
     const { create } = useDocuments.getState()
     const first = await create('3d')
     const second = await create('3d')
     const other = await create('image')
 
-    expect(first?.title).not.toBe(second?.title)
-    // Numbering restarts per workspace: an image document is not "Untitled 3" because the
-    // 3D workspace already holds two.
-    expect(other?.title).toBe(first?.title)
+    expect(first?.title).toBe('Scène 1')
+    expect(second?.title).toBe('Scène 2')
+    // Numbering restarts per workspace, and the WORD changes with it: the two used to share
+    // « Sans titre 1 », two files a folder is happy to hold and a glyph alone told apart.
+    expect(other?.title).toBe('Image 1')
   })
 
   it('names a document after the asset it was opened for, rather than numbering it', async () => {
@@ -280,7 +290,7 @@ describe('documentForAsset', () => {
       kind: 'image',
       title: 'Poster',
       workspace: 'image',
-      fileName: 'Poster.img',
+      path: 'documents/Poster.ora',
       sourceAssetId: 'asset_42',
     }
     useDocuments.setState({ documents: {}, stored: [saved] })
@@ -300,7 +310,7 @@ describe('documentForAsset', () => {
           kind: 'image',
           title: 'Old',
           workspace: 'image',
-          fileName: 'Old.img',
+          path: 'documents/Old.ora',
           sourceAssetId: 'asset_42',
         },
       ],
@@ -347,7 +357,7 @@ describe('relist', () => {
       kind: 'scene',
       title: 'Untitled 1',
       workspace: '3d',
-      fileName: 'Untitled 1.scene',
+      path: 'documents/Untitled 1.gltf',
     }
     useDocuments.setState({ documents: { unwritten } })
     installFakeBridge({ documents: { list: () => Promise.resolve([POSTER]) } })
@@ -363,14 +373,14 @@ describe('relist', () => {
       kind: 'scene',
       title: 'Zulu',
       workspace: '3d',
-      fileName: 'Zulu.scene',
+      path: 'documents/Zulu.gltf',
     }
     const alpha: DocumentDescriptor = {
       id: 'a',
       kind: 'scene',
       title: 'Alpha',
       workspace: '3d',
-      fileName: 'Alpha.scene',
+      path: 'documents/Alpha.gltf',
     }
     installFakeBridge({ documents: { list: () => Promise.resolve([zulu, alpha]) } })
 
@@ -439,7 +449,11 @@ describe('adopt', () => {
 })
 
 describe('rename', () => {
-  const renamed: DocumentDescriptor = { ...POSTER, title: 'Affiche', fileName: 'Affiche.img' }
+  const renamed: DocumentDescriptor = {
+    ...POSTER,
+    title: 'Affiche',
+    path: 'documents/Affiche.ora',
+  }
 
   beforeEach(() => {
     useDocuments.setState({ documents: {}, stored: [], activeId: null })
@@ -472,7 +486,7 @@ describe('rename', () => {
 
   // Asked here as well as in the main process: this is what puts a sentence under the field.
   it('refuses a name the folder already holds without asking the disk', async () => {
-    const other: DocumentDescriptor = { ...POSTER, id: 'other', fileName: 'Affiche.img' }
+    const other: DocumentDescriptor = { ...POSTER, id: 'other', path: 'documents/Affiche.ora' }
     useDocuments.setState({ documents: { [POSTER.id]: POSTER }, stored: [POSTER, other] })
     const rename = vi.fn()
     installFakeBridge({ documents: { rename } })
@@ -538,5 +552,25 @@ describe('sharing a listing', () => {
 
     expect(list).toHaveBeenCalledTimes(2)
     expect(useDocuments.getState().stored).toHaveLength(1)
+  })
+
+  /**
+   * What the six document components arm their menus and their shortcut scopes on. A hidden tab
+   * stays mounted, so an answer of `true` for anything but the tab in front is two documents
+   * answering one press of the same key.
+   */
+  it('tells the tab in front from every other open one', () => {
+    useDocuments.setState({ documents: {}, activeId: 'doc-front', recent: {} })
+
+    const front = renderHook(() => useDocumentIsInFront('doc-front'))
+    const behind = renderHook(() => useDocumentIsInFront('doc-behind'))
+
+    expect(front.result.current).toBe(true)
+    expect(behind.result.current).toBe(false)
+
+    act(() => useDocuments.getState().activate('doc-behind'))
+
+    expect(front.result.current).toBe(false)
+    expect(behind.result.current).toBe(true)
   })
 })

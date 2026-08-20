@@ -1,8 +1,8 @@
 import { CHANNELS } from '@shared/ipc'
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
-import { checkAssetName } from '@shared/domain/asset-name'
+import { checkAssetName } from '@shared/domain/assetName'
 import { defined } from '@shared/guards'
-import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from '@shared/domain/cloud-asset'
+import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from '@shared/domain/cloudAsset'
 import type { SyncOutcome } from '@shared/domain/sync'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
@@ -13,20 +13,20 @@ import {
   quietlyReducedBy,
   reducedBy,
 } from '@main/scenario/client'
-import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
+import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
 import {
   filterExpression,
   publicFeedFilter,
+  NEWEST_FIRST,
   NSFW_EMPTY,
-  PUBLIC_FEED_SORT,
-} from '@main/scenario/filter-expression'
-import { remoteTypesFor } from '@main/scenario/remote-types'
+} from '@main/scenario/filterExpression'
+import { remoteTypesFor } from '@main/scenario/remoteTypes'
 import { OFFSET_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
-import type { AsyncCatalog } from '@main/project/catalog-client'
-import type { ActivityLog } from '@main/project/activity-log'
-import type { AutoCaption, DescribeAssets } from './auto-caption'
-import type { CloudBackend } from './cloud-backend'
-import { planSync, type SyncSide } from './sync-plan'
+import type { AsyncCatalog } from '@main/project/catalogClient'
+import type { ActivityLog } from '@main/project/activityLog'
+import type { AutoCaption, DescribeAssets } from './autoCaption'
+import type { CloudBackend } from './cloudBackend'
+import { planSync, type SyncSide } from './syncPlan'
 import {
   parseActivityQuery,
   parseAlsoRemote,
@@ -94,6 +94,15 @@ function needsSearch(query: CloudQuery): boolean {
  */
 const TOKEN_CURSOR = 't:'
 const OFFSET_CURSOR = 'o:'
+/**
+ * The index again, ranked by relevance rather than by stamp. Marked apart for the same reason the
+ * two above are: a client that forgot to repeat `order` would read offset 40 of one ranking as the
+ * next page of another — rows repeated, rows never seen, and nothing on the answer to notice it by.
+ */
+const RANKED_CURSOR = 'r:'
+
+/** Both marks reach the API as an offset; only the order they were produced under differs. */
+const OFFSET_MARKS: readonly string[] = [OFFSET_CURSOR, RANKED_CURSOR]
 
 /**
  * A number the index will take, from whatever was handed in. Both cursors reach the API as an
@@ -107,7 +116,10 @@ function boundedOffset(value: string | undefined): number {
 }
 
 function offsetFrom(cursor: string | undefined): number {
-  return cursor?.startsWith(OFFSET_CURSOR) ? boundedOffset(cursor.slice(OFFSET_CURSOR.length)) : 0
+  if (cursor === undefined) return 0
+
+  const mark = OFFSET_MARKS.find(prefix => cursor.startsWith(prefix))
+  return mark ? boundedOffset(cursor.slice(mark.length)) : 0
 }
 
 function tokenFrom(cursor: string | undefined): string | undefined {
@@ -118,18 +130,36 @@ function marked(prefix: string, token: string | null): string | null {
   return token === null ? null : `${prefix}${token}`
 }
 
+/**
+ * Whether this page is ranked by the index rather than by stamp — asked for by asking for no
+ * order at all, see `CloudOrder`. After the first page the CURSOR answers, not the query: what a
+ * client repeats is where it left off, and the order it left off in belongs to that.
+ */
+function ranked(query: CloudQuery): boolean {
+  if (query.cursor !== undefined) return query.cursor.startsWith(RANKED_CURSOR)
+
+  // With no text there is nothing to rank by, and relevance over an unqueried index is whatever
+  // order the shard answers in.
+  return query.order === 'relevance' && Boolean(query.text)
+}
+
 async function browse(remote: RemoteAssetCatalog, query: CloudQuery): Promise<CloudPage> {
   const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, PAGE_SIZE_MAX)
+  const byRank = ranked(query)
 
   const page = needsSearch(query)
     ? await remote
         .search({
           ...(query.text ? { query: query.text } : {}),
           ...defined({ filter: filterExpression(query) }),
+          ...(byRank ? {} : { sortBy: NEWEST_FIRST }),
           limit: pageSize,
           offset: offsetFrom(query.cursor),
         })
-        .then(found => ({ ...found, cursor: marked(OFFSET_CURSOR, found.token) }))
+        .then(found => ({
+          ...found,
+          cursor: marked(byRank ? RANKED_CURSOR : OFFSET_CURSOR, found.token),
+        }))
     : await remote
         .list({
           pageSize,
@@ -148,7 +178,7 @@ async function browse(remote: RemoteAssetCatalog, query: CloudQuery): Promise<Cl
   // otherwise start over.
   const wanted = query.types
   const assets = wanted?.length
-    ? page.assets.filter(asset => wanted.includes(asset.type))
+    ? page.assets.filter(asset => wanted.some(type => type === asset.type))
     : page.assets
 
   return { assets, cursor: page.cursor }
@@ -175,9 +205,14 @@ async function explore(remote: RemoteAssetCatalog, query: ExploreQuery): Promise
    */
   for (let round = 0; round < EMPTY_ROUNDS_MAX; round += 1) {
     const page = await remote.search({
+      ...(query.text ? { query: query.text } : {}),
       filter: publicFeedFilter(query.type),
       publicFeed: true,
-      sortBy: PUBLIC_FEED_SORT,
+      // Kept with a text as without one, and it is an arbitrage rather than an oversight: the
+      // shelf merges this feed with two other sources on `createdAt` alone, and a page ranked by
+      // relevance would carry no stamp the merge could interleave on. What it costs is a
+      // ranking; what it buys is a timeline that is not silently wrong.
+      sortBy: NEWEST_FIRST,
       limit,
       offset,
     })
@@ -287,6 +322,9 @@ export function registerAssetHandlers({
       ...asset,
       ...(name === undefined ? {} : { name }),
       ...(parsed.tags === undefined ? {} : { tags: [...parsed.tags] }),
+      // The file does not move with it: a row carries its own path, and what the studio calls
+      // a picture has never been decided by the folder it sits in.
+      ...(parsed.type === undefined ? {} : { type: parsed.type }),
       ...(path === undefined ? {} : { path }),
     }
     const saved = await catalog().add(updated)

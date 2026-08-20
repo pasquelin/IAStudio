@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   canMoveInto,
   entriesByName,
+  folderTrail,
+  FOLDER_ROOT,
   isHiddenEntry,
   isUnder,
   parentOf,
+  pathIn,
   type FolderEntry,
 } from './folder'
 
@@ -17,7 +20,7 @@ describe('what the explorer does not show', () => {
 
   // Everything else shows, including what the studio cannot open — that is the difference
   // between an explorer and a list of documents.
-  it.each(['assets', 'brief.pdf', 'a3f1.scene'])('shows %s', name => {
+  it.each(['assets', 'brief.pdf', 'a3f1.gltf'])('shows %s', name => {
     expect(isHiddenEntry(name)).toBe(false)
   })
 })
@@ -89,24 +92,31 @@ describe('what may be dragged where', () => {
     expect(canMoveInto('notes', 'refs')).toBe(true)
   })
 
-  // The catalogue stores every asset by a path under `assets/`: moving one orphans rows nobody
-  // can find again, and a file landing there is a file no row knows about.
-  it('refuses a studio folder as what moves', () => {
-    expect(canMoveInto('assets', 'notes')).toBe(false)
-    expect(canMoveInto('assets/img', 'notes')).toBe(false)
-    expect(canMoveInto('documents', 'notes')).toBe(false)
+  // The machine's own bookkeeping, refused on BOTH sides: as what moves and as what receives.
+  it('refuses what the machine keeps for itself', () => {
+    expect(canMoveInto('.index', 'notes')).toBe(false)
+    expect(canMoveInto('.index/catalog.db', 'notes')).toBe(false)
+    expect(canMoveInto('.project.json', 'notes')).toBe(false)
+    expect(canMoveInto('brief.pdf', '.index')).toBe(false)
+    expect(canMoveInto('brief.pdf', '.index/proxies')).toBe(false)
   })
 
-  it('refuses a studio folder as what receives, which is the half a drag adds', () => {
-    expect(canMoveInto('brief.pdf', 'assets')).toBe(false)
-    expect(canMoveInto('brief.pdf', 'assets/img')).toBe(false)
-    expect(canMoveInto('brief.pdf', 'documents')).toBe(false)
+  /**
+   * The whole point of the phase: an asset leaves the folder it was filed under, and a document
+   * leaves `documents/`. Their role is read off the extension and the catalogue row, and the row
+   * follows the file through `repath` — the folder said nothing about either.
+   */
+  it('lets an asset and a document leave the folders they were filed under', () => {
+    expect(canMoveInto('assets/img/dusk.png', 'notes')).toBe(true)
+    expect(canMoveInto('documents/a3f1.gltf', 'notes')).toBe(true)
+    expect(canMoveInto('assets/img', 'notes')).toBe(true)
+    expect(canMoveInto('brief.pdf', 'Images')).toBe(true)
   })
 
-  // No row stands for the root, so no drop can name it — the day one does, this expectation is
-  // the decision to revisit rather than a rule to keep.
-  it('refuses the project root, which no row names today', () => {
-    expect(canMoveInto('notes/brief.pdf', '')).toBe(false)
+  // Dropping on the blank below the tree means "to the project folder", and a file that could
+  // enter a folder the user made but never leave it was a browser missing one of two gestures.
+  it('takes the project root as a destination, which is how a file comes back out', () => {
+    expect(canMoveInto('notes/brief.pdf', '')).toBe(true)
   })
 
   it('refuses a folder dropped on itself', () => {
@@ -131,5 +141,31 @@ describe('the folder an entry sits in', () => {
 
   it('is nothing at the root, which is what the tree calls a root node', () => {
     expect(parentOf('assets')).toBeNull()
+  })
+})
+
+describe('the path an entry has inside a folder', () => {
+  it('joins the folder and the name', () => {
+    expect(pathIn('Images/Croquis', 'etude.jpg')).toBe('Images/Croquis/etude.jpg')
+  })
+
+  // The root is the whole reason this is a function: joining on `/` there would yield `/Notes`,
+  // an absolute path every boundary of the studio refuses.
+  it('is the name alone at the root', () => {
+    expect(pathIn(FOLDER_ROOT, 'Notes')).toBe('Notes')
+  })
+})
+
+describe('the folders leading to one', () => {
+  it('leads from the project folder down to the one being browsed', () => {
+    expect(folderTrail('Images/Rendus')).toEqual([FOLDER_ROOT, 'Images', 'Images/Rendus'])
+  })
+
+  /**
+   * The project folder is a crumb like any other, and the only one shown at the top: a trail that
+   * were empty there would leave the grid with no way back once it had gone down a level.
+   */
+  it('is the project folder alone at the top', () => {
+    expect(folderTrail(FOLDER_ROOT)).toEqual([FOLDER_ROOT])
   })
 })

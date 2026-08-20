@@ -5,6 +5,7 @@ import {
   mdiPause,
   mdiPlay,
   mdiSkipPrevious,
+  mdiViewSplitHorizontal,
 } from '@mdi/js'
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -12,30 +13,28 @@ import { clamp } from '@shared/numeric'
 import { MonitorFrame } from '@/design/MonitorFrame'
 import { TOOLBAR_LABEL } from '@/design/styles'
 import { Timecode } from '@/design/Timecode'
-import { Toolbar } from '@/design/Toolbar'
-import { paintOn } from '@/engines/core/canvas-2d'
+import { Toolbar } from '@/design/Toolbar/Toolbar'
+import { paintOn } from '@/engines/core/canvas2d'
 import type { Size } from '@/engines/core/geometry'
-import { paintProgram, programViewport, readProgramPalette } from '@/engines/timeline/program-wave'
-import { xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
-import { clampViewport, revealTime } from '@/engines/timeline/viewport'
+import { paintProgram, programViewport, readProgramPalette } from '@/engines/timeline/programWave'
+import { xToTime, type Viewport } from '@/engines/timeline/timelineGeometry'
+import { clampViewport } from '@/engines/timeline/viewport'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
-import {
-  sequenceDuration,
-  type Clip,
-  type SequenceState,
-  type Us,
-} from '@/engines/timeline/timeline-state'
+import { useViewFollowsHead } from '@/hooks/useViewFollowsHead'
+import { sequenceDuration, type SequenceState, type Us } from '@/engines/timeline/timelineState'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
-import { usePeaks } from '@/stores/peaks'
+import { peaksOf, usePeaks } from '@/stores/peaks'
 import { OutputMeter } from './OutputMeter'
 import { SpectrumBand } from './SpectrumBand'
-import type { SoundTransport } from './useSoundTransport'
+import type { SoundTransport } from '@/hooks/useSoundTransport'
 
 export type ProgramMonitorProps = {
   sequence: SequenceState
   transport: SoundTransport
   /** Where a click on the wave puts the head. Scrubbing a montage is not an edit. */
   onSeek: (time: Us) => void
+  /** The take editor under this monitor, which the tab shows and hides — see `stores/monitorPair`. */
+  clipHalf: { shown: boolean; onToggle: () => void }
 }
 
 /**
@@ -48,14 +47,14 @@ export type ProgramMonitorProps = {
  * It OPENS on the whole montage and can be zoomed into from there — ten minutes of music fitted
  * to a panel is a green band with no shape in it, which answers "what am I making" with nothing.
  */
-export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorProps) {
+export function ProgramMonitor({ sequence, transport, onSeek, clipHalf }: ProgramMonitorProps) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   /**
    * The view, or null while it is still the whole montage — which is what makes the fit hold as
    * the montage grows, where a viewport computed once would freeze on the length it was built at.
    *
-   * Its own rather than the strip's `timeline-view`: the two surfaces are not the same width, so
+   * Its own rather than the strip's `timelineView`: the two surfaces are not the same width, so
    * one viewport would put them at the same SCALE showing different spans, and a wheel over the
    * monitor would drag the strip under it.
    */
@@ -77,12 +76,6 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
   const [curves, setCurves] = useState(true)
   // Read on paint rather than subscribed to: a waveform arriving is a repaint, never a render.
   const latest = useRef(sequence)
-
-  const peaksOf = useCallback((clip: Clip): Float32Array | null => {
-    const peaks = usePeaks.getState()
-    peaks.request(clip.assetId)
-    return peaks.byAsset[clip.assetId] ?? null
-  }, [])
 
   // Read on paint like the montage beside it, and for the same reason: what a wheel changes is
   // the picture, never the markup.
@@ -122,7 +115,7 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
         viewportFor(size.width),
       )
     })
-  }, [peaksOf, curves, viewportFor])
+  }, [curves, viewportFor])
 
   /**
    * The view sits in this effect beside the montage, and that is load-bearing: it is read on
@@ -176,17 +169,13 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
     { rows: false },
   )
 
-  /**
-   * Playback drags the view along, but only once the head has left it — and only while zoomed in.
-   * Fitted to the width there is nowhere to scroll to, and `revealTime` hands the same viewport
-   * back rather than writing one.
-   */
-  useEffect(() => {
-    if (!view.current || box.current.width === 0) return
-
-    const revealed = revealTime(view.current, sequence.playhead, box.current.width)
-    if (revealed !== view.current) setZoom(revealed)
-  }, [sequence.playhead])
+  // Only while zoomed in: fitted to the width there is nowhere to scroll to, and a null view is
+  // what says the montage is whole on screen.
+  useViewFollowsHead(
+    sequence.playhead,
+    () => view.current && { viewport: view.current, width: box.current.width },
+    setZoom,
+  )
 
   const onTool = (id: string): void => {
     if (id === 'rewind') return transport.rewind()
@@ -195,6 +184,7 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
     // Back to null rather than to a computed fit: null is what keeps the view whole as the
     // montage grows under it.
     if (id === 'fit') return setZoom(null)
+    if (id === 'clipHalf') return clipHalf.onToggle()
     transport.toggle()
   }
 
@@ -245,6 +235,14 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
               descriptionKey: 'transport.spectrumHint',
               icon: mdiEqualizer,
               pressed: spectrum,
+            },
+            {
+              id: 'clipHalf',
+              labelKey: 'transport.showTake',
+              descriptionKey: 'transport.showTakeHint',
+              icon: mdiViewSplitHorizontal,
+              pressed: clipHalf.shown,
+              separatorBefore: true,
             },
           ]}
           activeTool={transport.playing ? 'play' : undefined}

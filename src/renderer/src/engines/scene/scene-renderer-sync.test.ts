@@ -1,9 +1,26 @@
-import { BufferGeometry, Group, Material, Mesh, Object3D } from 'three'
+import {
+  BufferGeometry,
+  CameraHelper,
+  Group,
+  Material,
+  Mesh,
+  Object3D,
+  PerspectiveCamera,
+  Vector3,
+} from 'three'
 import { beforeEach, describe, expect, it, vi, type Mock, type MockInstance } from 'vitest'
 import { nodeIdOf, SceneRenderer } from './SceneRenderer'
-import type { ModelSource } from './model-cache'
-import { directionalLight, meshNode, modelNodeFixture, spriteNodeFixture } from './scene-fixtures'
-import { EMPTY_SCENE, type SceneNode, type SceneState } from './scene-state'
+import type { ModelSource } from './modelCache'
+import {
+  cameraNodeFixture,
+  directionalLight,
+  lightNodeFixture,
+  meshNode,
+  modelNodeFixture,
+  spriteNodeFixture,
+} from './scene-fixtures'
+import type { SceneStats } from './sceneStats'
+import { EMPTY_SCENE, type SceneNode, type SceneState } from './sceneState'
 
 /**
  * What an edit does to a scene already built — and, above all, what it frees. The renderer is
@@ -100,6 +117,43 @@ describe('a scene told what changed', () => {
       applied(renderer)
 
       expect(freedGeometries).toHaveBeenCalled()
+    })
+
+    /**
+     * An ambient lamp has no helper at all, so its body is the ONLY thing it draws: whatever is
+     * freed here was freed for the marker and for nothing else.
+     */
+    it('gives back the body of a deleted lamp', () => {
+      const renderer = rendererOf(lightNodeFixture('light-1'))
+      freedGeometries.mockClear()
+      freedMaterials.mockClear()
+
+      applied(renderer)
+
+      expect(freedGeometries).toHaveBeenCalled()
+      expect(freedMaterials).toHaveBeenCalled()
+    })
+
+    /**
+     * A slider emits a value per frame, and rebuilding a spot on each one costs 0,56 ms of the
+     * 16,6 a frame has. What the body reads is written into it; only a change of kind is a
+     * different body.
+     */
+    it('rebuilds nothing when a lamp is edited without changing kind', () => {
+      const renderer = rendererOf(directionalLight('light-1'))
+      freedGeometries.mockClear()
+
+      applied(
+        renderer,
+        lightNodeFixture('light-1', {
+          kind: 'directional',
+          color: '#ff0000',
+          intensity: 0.5,
+          target: { x: 1, y: 2, z: 3 },
+        }),
+      )
+
+      expect(freedGeometries).not.toHaveBeenCalled()
     })
 
     /**
@@ -269,6 +323,67 @@ describe('a scene told what changed', () => {
       renderer.dispose()
     })
 
+    /**
+     * Counting walks every geometry of the scene, and `apply` runs on every state change — a
+     * selection included. On 8 000 nodes that walk was 12 % of the CPU of one click, measured
+     * 20/08, for a number no selection can move.
+     *
+     * Read on the IDENTITY of what is reported, which is what says the walk did not happen:
+     * `statsOf` builds a fresh object every time it runs. The nodes are the same OBJECTS from one
+     * pass to the next, as a selection leaves them — rebuilt ones would be a real edit.
+     */
+    it('does not count the scene again when only the selection moved', () => {
+      const reported: SceneStats[] = []
+      const renderer = new SceneRenderer({
+        onSelect: vi.fn(),
+        onTransform: vi.fn(),
+        onStats: scene => reported.push(scene),
+      })
+      const nodes = [meshNode('box-1'), meshNode('box-2')]
+
+      renderer.apply({ ...EMPTY_SCENE, nodes })
+      const counted = reported.at(-1)
+      renderer.apply({ ...EMPTY_SCENE, nodes, selectedIds: ['box-1'] })
+      renderer.apply({ ...EMPTY_SCENE, nodes, selectedIds: ['box-2'] })
+
+      expect(reported.at(-1)).toBe(counted)
+
+      // And a node that really arrives is counted again, or the whole thing would be frozen.
+      renderer.apply({ ...EMPTY_SCENE, nodes: [...nodes, meshNode('box-3')] })
+
+      expect(reported.at(-1)).not.toBe(counted)
+      expect(reported.at(-1)?.triangles).toBeGreaterThan(counted?.triangles ?? 0)
+
+      renderer.dispose()
+    })
+
+    /**
+     * The one three.js gets to decide for us: `CameraHelper` sets `this.matrix` to the camera's
+     * own world matrix and turns `matrixAutoUpdate` off, so it places ITSELF on the camera. Made
+     * a child of that camera, the placement applied twice — a camera at (0, 2, 6) drew its
+     * outline at (0, 4, 12), and nothing in the suite could see it: the engine's own maps were
+     * right, only the graph was wrong. Seen on screen first, which is why this reads the GRAPH.
+     */
+    it('hangs a camera frustum in the scene, never under the camera it outlines', () => {
+      // Watched on the prototype, like the freeing above: the graph is the engine's own, and what
+      // this has to catch is a helper handed to the camera rather than to the scene.
+      const added = vi.spyOn(PerspectiveCamera.prototype, 'add')
+      const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+      const camera = cameraNodeFixture('cam-1')
+      camera.transform = { ...camera.transform, position: { x: 0, y: 2, z: 6 } }
+
+      renderer.apply({ ...EMPTY_SCENE, nodes: [camera] })
+
+      const hung = added.mock.calls.flat()
+      expect(hung.some(child => child instanceof CameraHelper)).toBe(false)
+      // The body IS hung under it, and by the same call: the two are told apart here so a fix
+      // that took both off screen would not read as a pass.
+      expect(hung).not.toHaveLength(0)
+
+      added.mockRestore()
+      renderer.dispose()
+    })
+
     it('sizes the side views to what the scene holds rather than to a constant', () => {
       const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
 
@@ -301,6 +416,47 @@ describe('a scene told what changed', () => {
       renderer.setQuadView(false)
       renderer.setPaneViews(['top', 'free', 'free', 'bottom'])
       expect(renderer.quadView()).toBe(false)
+      renderer.dispose()
+    })
+
+    /** What `placePanes` touches of an orbit, and nothing else — an unmounted pane carries none. */
+    type FakeOrbit = {
+      enableRotate: boolean
+      target: Vector3
+      update: () => void
+      removeEventListener: () => void
+      dispose: () => void
+    }
+
+    /**
+     * Seen on screen, and green in the whole suite: a pane offering a camera is one of panes
+     * 1–3, which START on a side view where turning is locked. Locking onto a camera left that
+     * lock in place, so the orbit that is meant to MOVE the camera did nothing at all.
+     */
+    it('gives a pane its rotation back when it draws through a camera of the scene', () => {
+      const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+      renderer.apply({ ...EMPTY_SCENE, nodes: [cameraNodeFixture('cam')] })
+      renderer.setQuadView(true)
+
+      // Unmounted, a pane carries no orbit — three stand-ins is what makes the flag readable.
+      const viewport: object = Reflect.get(renderer, 'viewport')
+      const extras: { controls: FakeOrbit | null }[] = Reflect.get(viewport, 'extras')
+      for (const extra of extras) {
+        extra.controls = {
+          enableRotate: true,
+          target: new Vector3(),
+          update: () => {},
+          removeEventListener: () => {},
+          dispose: () => {},
+        }
+      }
+
+      renderer.setPaneViews(['free', 'top', 'front', 'left'])
+      expect(extras[0]?.controls?.enableRotate).toBe(false)
+
+      renderer.setPaneViews(['free', { kind: 'camera', nodeId: 'cam' }, 'front', 'left'])
+      expect(extras[0]?.controls?.enableRotate).toBe(true)
+
       renderer.dispose()
     })
 

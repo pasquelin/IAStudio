@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   DOCUMENT_KINDS,
-  DOCUMENT_MANIFEST,
   documentPath,
-  FOLDER_KINDS,
-  isPartName,
-  EXTENSION_BY_KIND,
+  EXTENSIONS_BY_KIND,
   isDocumentKind,
   kindForExtension,
+  kindsForExtension,
   kindForWorkspace,
   workspaceForKind,
 } from './document'
@@ -70,9 +68,29 @@ describe('workspaceForKind', () => {
 })
 
 describe('kindForExtension', () => {
-  it('reads back the extension every kind is written under', () => {
-    for (const kind of DOCUMENT_KINDS) {
-      expect(kindForExtension(EXTENSION_BY_KIND[kind])).toBe(kind)
+  // Where two kinds share a spelling this answers the first of them, and the FILE settles it —
+  // `documentBody.ts` reads which kind out of what the file itself carries.
+  it('answers the first kind of a spelling two of them share', () => {
+    expect(kindForExtension('.otio')).toBe('sequence')
+    expect(kindForExtension('.gltf')).toBe('scene')
+  })
+
+  /**
+   * Every kind is held in a format other applications already read. The studio's own spellings
+   * are not written any more, and they are not READ any more either: one left in a folder is not
+   * a document of this build.
+   */
+  it('holds every kind in an open format, and reads no spelling of the studio’s own', () => {
+    expect([...DOCUMENT_KINDS].map(kind => EXTENSIONS_BY_KIND[kind])).toEqual([
+      '.ora',
+      '.gltf',
+      '.otio',
+      '.otio',
+      '.gltf',
+      '.mtlx',
+    ])
+    for (const gone of ['.img', '.scene', '.seq', '.aud', '.sky', '.tex']) {
+      expect(kindForExtension(gone)).toBeNull()
     }
   })
 
@@ -110,57 +128,23 @@ describe('isDocumentKind', () => {
 describe('documentPath', () => {
   // Relative, and under the folder the project creates: a project folder can be moved.
   it('names the file after the kind, so a project folder reads by eye', () => {
-    expect(documentPath('a3f1', 'scene')).toBe('documents/a3f1.scene')
-    expect(documentPath('a3f1', 'image')).toBe('documents/a3f1.img')
-    expect(documentPath('a3f1', 'sequence')).toBe('documents/a3f1.seq')
+    expect(documentPath('a3f1', 'scene')).toBe('documents/a3f1.gltf')
+    expect(documentPath('a3f1', 'image')).toBe('documents/a3f1.ora')
+    expect(documentPath('a3f1', 'sequence')).toBe('documents/a3f1.otio')
   })
 
-  it('gives every kind an extension of its own', () => {
-    const paths = DOCUMENT_KINDS.map(kind => documentPath('id', kind))
-    expect(new Set(paths).size).toBe(DOCUMENT_KINDS.length)
-  })
-
-  // The compiler keeps `EXTENSION_BY_KIND` complete; nothing keeps `DOCUMENT_KINDS` complete,
+  // The compiler keeps `EXTENSIONS_BY_KIND` complete; nothing keeps `DOCUMENT_KINDS` complete,
   // and a kind missing from it is refused at the IPC boundary without a word.
   it('lists every kind the extension table knows', () => {
-    expect([...DOCUMENT_KINDS].sort()).toEqual(Object.keys(EXTENSION_BY_KIND).sort())
-  })
-})
-
-/**
- * The one field of the document contract that crosses a security boundary: the renderer names
- * these, and the main process turns the name into a path.
- */
-describe('isPartName', () => {
-  it('accepts the name a layer’s picture is written under', () => {
-    expect(isPartName('a1b2c3.png')).toBe(true)
-    expect(isPartName('layer_1-mask.png')).toBe(true)
+    expect([...DOCUMENT_KINDS].sort()).toEqual(Object.keys(EXTENSIONS_BY_KIND).sort())
   })
 
-  it('refuses anything that could climb out of the folder', () => {
-    expect(isPartName('../secrets.png')).toBe(false)
-    expect(isPartName('..')).toBe(false)
-    expect(isPartName('/etc/passwd')).toBe(false)
-    expect(isPartName('sub/dir.png')).toBe(false)
-    expect(isPartName('a\\b.png')).toBe(false)
-  })
-
-  it('refuses a name that is not a plain file name', () => {
-    expect(isPartName('')).toBe(false)
-    expect(isPartName('nodot')).toBe(false)
-    expect(isPartName('.png')).toBe(false)
-    expect(isPartName('a b.png')).toBe(false)
-  })
-
-  // A part standing where the manifest goes would overwrite the document with a picture.
-  it('refuses the manifest’s own name', () => {
-    expect(isPartName(DOCUMENT_MANIFEST)).toBe(false)
-  })
-})
-
-describe('FOLDER_KINDS', () => {
-  // The image is the only kind whose pixels cannot fit in the content string.
-  it('names the image, and only the image', () => {
-    expect([...FOLDER_KINDS]).toEqual(['image'])
+  // What a file's own head is allowed to claim. A pair here is a container serving two editors;
+  // a THIRD kind joining one would let a file open in an editor nothing meant it for.
+  it('bounds a shared spelling to the two kinds that container serves', () => {
+    expect(kindsForExtension('.otio')).toEqual(['sequence', 'audio'])
+    expect(kindsForExtension('.gltf')).toEqual(['scene', 'skybox'])
+    expect(kindsForExtension('.ora')).toEqual(['image'])
+    expect(kindsForExtension('.txt')).toEqual([])
   })
 })

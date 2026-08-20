@@ -16,7 +16,7 @@ import {
  * for as long as the two sides answered the question separately.
  */
 describe('which settings a tool reads', () => {
-  const SETTINGS: readonly BrushSetting[] = ['size', 'hardness', 'opacity', 'color']
+  const SETTINGS: readonly BrushSetting[] = ['size', 'hardness', 'opacity']
 
   it('answers for every tool of the engine, which the typecheck is what enforces', () => {
     // Named so the rules below cannot pass on a table someone emptied.
@@ -47,9 +47,9 @@ describe('which settings a tool reads', () => {
     expect(feathering).toEqual(['brush'])
   })
 
-  it('gives the eraser no colour, its stamp being the white the erase blend reads', () => {
-    expect(readsBrushSetting('eraser', 'color')).toBe(false)
+  it('gives the eraser its size, which is the one thing a stamp of white still needs', () => {
     expect(readsBrushSetting('eraser', 'size')).toBe(true)
+    expect(readsBrushSetting('eraser', 'hardness')).toBe(false)
   })
 
   // A tool that reads nothing is an answer; a tool missing from the table is an oversight, and

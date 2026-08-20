@@ -1,15 +1,16 @@
-import { fireEvent, render } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { startAssetDrag } from '@/helpers/asset-drag'
+import { startAssetDrag } from '@/helpers/assetDrag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
-import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { installDocument } from '@/stores/document-fixtures'
 import type { FolderExportRequest, SkyboxExportCommand } from '@shared/ipc'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
-import { useSkyboxViews, skyboxViewOf } from '@/stores/skybox-views'
+import { useSkyboxViews, skyboxViewOf } from '@/stores/skyboxViews'
 import { SKYBOX_VIEWS, type SkyboxView } from '@shared/domain/skybox'
 import { setSunAngles } from '@/engines/skybox/commands'
 import { SkyboxDocument } from './SkyboxDocument'
@@ -148,7 +149,7 @@ describe('the export menu row', () => {
       listeners: () => callbacks.length,
       unsubscribed: () => released,
       fire: size => {
-        for (const callback of callbacks) callback({ size })
+        for (const callback of callbacks) callback({ kind: 'faces', size })
       },
       exported: () => exported,
     }
@@ -196,7 +197,7 @@ describe('the export menu row', () => {
 
     useDocuments.setState({ activeId: 'doc-1' })
     render(<SkyboxDocument documentId="doc-1" />)
-    for (const callback of callbacks) callback({ size: 1024 })
+    for (const callback of callbacks) callback({ kind: 'faces', size: 1024 })
 
     // The message, not merely the silence: jsdom has no WebGL, so an export that got past the
     // guard would fail too — and a test that only checked for no dialog would pass either way.
@@ -279,11 +280,32 @@ describe('the keyboard of a sky', () => {
     expect(skyboxViewOf(useSkyboxViews.getState(), 'doc-1').probes).toBe(false)
   })
 
-  // The menu that floated over the picture is gone: the centre shows the sky, and nothing else.
-  it('lays no menu over the viewport', () => {
+  /**
+   * The floating MENU that covered the picture is still gone. The View panel offers these same
+   * two controls and goes on doing so; the bar is what one reaches WHILE looking, with no panel
+   * to open first. Everything a slider drives stays there.
+   */
+  it('lays no slider over the viewport, which the panel drives', () => {
     const { queryByRole } = render(<SkyboxDocument documentId="doc-1" />)
 
-    expect(queryByRole('button', { name: LABELS.immersive })).toBeNull()
     expect(queryByRole('slider')).toBeNull()
+  })
+
+  it('changes the projection from the bar, with no panel to open first', async () => {
+    render(<SkyboxDocument documentId="doc-1" />)
+
+    await userEvent.hover(screen.getByRole('button', { name: LABELS.immersive }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: LABELS.cross }))
+
+    expect(skyboxViewOf(useSkyboxViews.getState(), 'doc-1').view).toBe('cross')
+  })
+
+  it('toggles the test objects from the bar, the panel keeping its own switch', async () => {
+    render(<SkyboxDocument documentId="doc-1" />)
+
+    // The name carries the key the button answers to, read off the registry: `Objets de test (P)`.
+    await userEvent.click(screen.getByRole('button', { name: /^Objets de test/ }))
+
+    expect(skyboxViewOf(useSkyboxViews.getState(), 'doc-1').probes).toBe(false)
   })
 })

@@ -3,14 +3,14 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
-import type { SceneNode } from '@/engines/scene/scene-state'
+import type { SceneNode } from '@/engines/scene/sceneState'
 import { useDocuments } from '@/stores/documents'
 import { clearScenes } from '@/stores/scene-fixtures'
-import { useSceneClipboard } from '@/stores/scene-clipboard'
+import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { SceneDocument } from './SceneDocument'
 
-vi.mock('@/app/dockview-api', () => ({ setDocumentTitle: vi.fn() }))
+vi.mock('@/app/dockviewApi', () => ({ setDocumentTitle: vi.fn() }))
 
 // jsdom has no WebGL context: what this covers is the wiring between the keyboard and the store.
 vi.mock('@/engines/scene/SceneRenderer', () => ({
@@ -27,11 +27,15 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setDisplayModes = vi.fn()
     activePane = vi.fn(() => 0)
     setSkeletons = vi.fn()
+    setIsolation = vi.fn()
     setPoseMode = vi.fn()
     setPickedBone = vi.fn()
+    setPickedPathPoint = vi.fn()
+    setCameraPreview = vi.fn()
     setQuadView = vi.fn()
     setPaneViews = vi.fn()
     setPlayhead = vi.fn()
+    setPreview = vi.fn()
     refreshTextures = vi.fn()
     viewFrom = vi.fn()
     frameSelection = vi.fn()
@@ -50,7 +54,7 @@ function openSecondScene(): void {
         kind: 'scene',
         workspace: '3d',
         title: 'Other',
-        fileName: 'Other.scene',
+        path: 'documents/Other.gltf',
       },
     },
     activeId: 'doc-2',
@@ -63,7 +67,13 @@ beforeEach(() => {
   useSceneClipboard.setState({ nodes: [] })
   useDocuments.setState({
     documents: {
-      'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Set', fileName: 'Set.scene' },
+      'doc-1': {
+        id: 'doc-1',
+        kind: 'scene',
+        workspace: '3d',
+        title: 'Set',
+        path: 'documents/Set.gltf',
+      },
     },
     activeId: 'doc-1',
   })

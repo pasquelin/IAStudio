@@ -1,3 +1,6 @@
+import { cn } from '@/helpers/cn'
+import { PANEL_BAR } from './styles'
+
 export type FormHeaderProps = {
   /** What the form below is for — a model's name. */
   title: string
@@ -18,7 +21,7 @@ export type FormHeaderProps = {
  */
 export function FormHeader({ title }: FormHeaderProps) {
   return (
-    <div className="border-border flex shrink-0 items-center gap-2 border-b px-1 py-1.5">
+    <div className={cn(PANEL_BAR, 'shrink-0 px-1 py-1.5')}>
       <p className="text-tiny truncate">{title}</p>
     </div>
   )

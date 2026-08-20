@@ -1,10 +1,11 @@
 import { mdiContentCopy, mdiContentCut } from '@mdi/js'
-import { act, fireEvent, render, renderHook, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { ContextMenu, useContextMenu } from './ContextMenu'
+import type { ContextMenuAt } from '@/hooks/useContextMenu'
+import { ContextMenu } from './ContextMenu'
 import { MenuRow } from './MenuRow'
 
 const AT = { x: 40, y: 60 }
@@ -60,7 +61,7 @@ describe('a menu at the pointer', () => {
    */
   describe('kept apart from what it was raised over', () => {
     function Host({ spy }: { spy: (kind: string) => void }) {
-      const [at, setAt] = useState<{ x: number; y: number } | null>(null)
+      const [at, setAt] = useState<ContextMenuAt | null>(null)
 
       return (
         <div
@@ -225,29 +226,5 @@ describe('a menu at the pointer', () => {
 
     expect(container.querySelector('[role="menu"]')).toBeNull()
     expect(document.body.querySelector('[role="menu"]')).not.toBeNull()
-  })
-})
-
-describe('the pointer a right-click reported', () => {
-  const gesture = (x: number, y: number) => ({ preventDefault: vi.fn(), clientX: x, clientY: y })
-
-  // The one contract `TrackHeaders` leans on: it decides BEFORE calling, because this cannot be
-  // undone after. Without it the platform's own menu arrives on top of the one being opened.
-  it('refuses the platform menu the same gesture would have raised', () => {
-    const { result } = renderHook(() => useContextMenu())
-    const event = gesture(40, 60)
-
-    act(() => result.current.open(event))
-
-    expect(event.preventDefault).toHaveBeenCalled()
-  })
-
-  it('is let go when the menu closes', () => {
-    const { result } = renderHook(() => useContextMenu())
-    act(() => result.current.open(gesture(40, 60)))
-
-    act(() => result.current.close())
-
-    expect(result.current.at).toBeNull()
   })
 })

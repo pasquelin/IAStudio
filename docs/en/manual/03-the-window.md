@@ -9,9 +9,12 @@ piece by piece.
 
 ## The home screen, before anything else
 
-The studio opens on a full-width screen — the home — saying where you were, what you have made,
-and what you can do next. It closes as soon as you step into a workspace. It has no rail, no
-panel and no tab; the status line stays at the bottom.
+The studio opens on the home — a screen saying where you were, what the studio knows how to
+start, and what everyone else has published. It closes as soon as you step into a workspace.
+
+**It has the same frame as a workspace**: both rails, both columns of panels, the status line at
+the bottom. What differs is the centre — a page you scroll, instead of tabs. **It has no tabs**,
+because it opens no document of its own: it leads to the other workspaces'.
 
 ### The banner, at the top
 
@@ -27,26 +30,30 @@ It shows one thing at a time:
 While the studio reads your projects, it stays silent rather than announcing "Ready when you are"
 and then correcting itself.
 
-### The two bands
+### The three bands
 
-The centre stacks two bands:
+The centre stacks three bands, in this order:
 
 | Band | What it shows | It needs |
 |---|---|---|
 | **Where you left off** | the banner: resume, connect, or create | nothing |
+| **Tools** | what the studio knows how to start, and the way to create or open a project | nothing |
 | **Explore** | what everyone has published, by kind | an API key |
 
 **A band that lacks what it needs is not greyed out: it is not there.** With no API key,
 **Explore** does not exist on this screen.
 
-Everything else on the home is a panel, held in its two columns — except the **Tools** section,
-in the centre and across the width: it lists what the studio knows how to start, in the same
-order as the workspace bar, and lets you create a project from there.
+**Tools** lists the workspaces in the same order as the workspace bar, with **New project**,
+**Open project** and **Settings** beside them. It is the band that still says something on a
+machine with no key, no project and no history.
+
+Everything else on the home is a panel, held in its two columns.
 
 ### Explore, the endless feed
 
-The feed of what **everyone** has published, one category at a time — the studio's six kinds, as
-tabs. There is no "all" tab.
+The feed of what **everyone** has published, one category at a time — the six kinds the remote
+library can serve, as tabs. There is no "all" tab, and **no Animation tab**: the studio knows a
+seventh kind the feed cannot serve.
 
 - **it loads as you go down**: the feed pages while you scroll;
 - **it stays at the foot of the page**, and does not move;
@@ -69,68 +76,53 @@ asking. With no project open, or while a transfer is running, the tile does not 
 
 That is where you fetch, and nowhere else; the shelf can send — see [Assets](07-assets.md).
 
-**A counter leads to its assets.** Clicking the images one opens the Image workspace with the
-filter set. A kind at zero does not respond. The panel stays on screen even with no project,
-showing its six kinds at zero.
-
 ### Tidying the page
 
 **Hide this section**, when a band's heading is hovered. Hidden sections are counted at the foot
 of the page — "1 section hidden" — with a **Show them again** button.
 
-Only **Explore** carries that button; the banner is pinned.
+Only **Explore** carries that button: **Where you left off** and **Tools** are pinned, and that is
+what keeps this screen from ever being empty.
 
 ### The left column
 
-Cut in two: above, what one produces with; below, what one browses. **On the home screen, only
-the lower half exists.**
+Cut in two, as in the workspaces: above, what one produces with; below, what one browses. **The
+home makes no document of its own** — it leads to the other workspaces' — so its upper half goes
+to what one produces IN: the projects.
 
 | Panel | Half | What it shows | It needs |
 |---|---|---|---|
 | **Your projects** | 1st | the ones you opened recently, with their folder, reopened with a click — [its per-row menu](04-projects.md#the-home-screens-project-list) | nothing |
-| **Your recipes** | 2nd | the settings you have pinned | nothing |
-| **An idea to start from** | 2nd | prompt starting points written for your image model | an API key |
-| **In the same vein** | 2nd | public creations that look like your latest asset | an API key |
+| **Explorer** | 2nd | the open project, read as a folder | an open project |
+| **Git** | 2nd | what has changed in that folder since the last recorded version | an open project |
 
-**Your recipes** follows you from one project to the next: a recipe is kept outside every project.
+**It is the same Explorer as in the workspaces**, in the same place — see
+[Projects](04-projects.md#walking-the-project--the-explorer-panel). It shows the whole folder:
+your documents, your assets, and everything you put there yourself.
 
-**An idea to start from** calls nothing until you click **Suggest an idea**. **It is free** — no
-creative unit is spent. Taking an idea opens the generator on the prompt **and** on the settings
-that go with it. With no image model chosen, the panel says what it is waiting for.
+**With no project open, neither is there at all** — the only panels on the home that behave this
+way. Elsewhere a panel stays and says what it lacks; here they would say "no project open" right
+beside the panel whose whole job is to open one.
 
-**In the same vein** starts from your **latest asset**, named at the top of the panel, and looks
-for public creations that resemble it. If the library does not answer, the panel offers
-**Try again**.
+The **Git** panel reads the same folder as the Explorer, from another angle: not what it holds,
+but what has changed in it since you last recorded a state. The two take turns in the same half —
+their icons sit side by side in the rail. How to use it is in
+[Projects](04-projects.md#recording-versions--the-git-panel).
 
 ### The right column
 
 | Panel | Half | What it shows | It needs |
 |---|---|---|---|
-| **What you have made** | 1st | this project's generations, the most recent first | an open project |
-| **By kind** | 1st | one number per asset kind; a kind that is not at zero leads to its part of the shelf | nothing |
-| **What you have spent** | 1st | your units spent, in total and per model | an API key |
 | **Your library** | 1st | what your account holds online | an API key |
-| **Your documents** | 1st | the project's documents, open or not | an open project |
-| **Recent activity** | 2nd | the studio's journal, with filters | nothing |
-| **Running now** | 2nd | the studio's generations, under way and finished | nothing |
-
-**What you have spent** uses the same period as the usage window. It is a summary: the detail is
-in **Help ▸ Usage…**.
-
-**Running now** is the list the status bar's indicator already opens. It keeps finished
-generations for the session, so you can read what a run cost.
 
 **"It needs" does not mean here what it means for the bands.** A band missing what it needs
-disappears; **a panel stays and says what it lacks**. With no project, *Your documents* offers to
-open one; with no key, *Your library* says it got no answer and offers to try again — the same
-message as a refusal from the server. "The library is empty" only appears once the question has
-actually been asked.
+disappears; **a panel stays and says what it lacks**. With no key, *Your library* says it is empty
+**or** that no key has been entered, without settling which — and if the server refuses, it offers
+to **try again**.
 
-**Your documents is not the Explorer.** The Explorer walks the project folder as a tree; this
-panel lists the documents themselves. **It is what makes a closed document reachable again.**
-
-**Recent activity is the whole journal**, with its filters by level and by subject — not an
-extract of the last few lines.
+**Nothing there is kept.** The library is read afresh on every visit, and the tiles are signed
+addresses that expire; holding on to them would make a panel of broken pictures a fortnight later,
+with nothing to explain it. Changing key reads it again too: another key is another library.
 
 > **The home can be skipped.** **Settings ▸ General ▸ Show the home screen**: unticked, the studio
 > goes straight to the workspace you left. What you hide is set on the home itself.
@@ -235,20 +227,27 @@ zone's cut: the icons above it open in the first half, those below in the second
 
 | Element | What it does |
 |---|---|
-| **+** (blue button) | creates a **new document** in the active workspace |
+| **+** (blue button) | creates a **new document** in the active workspace — on the home, a **new project** |
 | *separator* | |
-| **Upper half** icons | Models, then Generate; the home puts **Your projects** there |
+| **Upper half** icons | Models, Generate, then Assets — what Scenario offers; the home puts **Your projects** there |
 | *separator* | |
-| **Lower half** icons | the Explorer; the home puts its three shelves there |
-| At the bottom | Assets or Timeline, depending on the workspace |
+| **Lower half** icons | the Explorer then Git, on the home as in the workspaces |
+| At the bottom | Timeline then History, depending on the workspace; on the home, History alone |
 
-> The **+** button is greyed out when no project is open: a document is a file in a project
-> folder.
+> **The + button makes what the screen makes.** In a workspace it is greyed out while no project
+> is open: a document is a file in a project folder. **On the home it is never greyed out** — it
+> makes the project, and making a project needs none.
 
 ### The right rail
 
-The right column's icons — Skybox, View, Layers, Channels, Styles, Scene, Lights, Meshes, Assets,
-whichever the workspace declares, in that order — then, below the separator, Inspector.
+The right column's icons — Layers, Scene, Lights, Meshes, Animations, whichever the workspace
+declares, in that order — then, below the separator, Inspector.
+
+In **Video**, **Audio**, **Textures** and **Skyboxes** the upper half of that column is empty:
+none of those four declares anything there, and the rail then carries the Inspector alone — what a
+sky or a material IS is described by the inspector itself.
+
+On the home it carries one: **Your library**, and nothing below the separator.
 
 ### The rail only shows what the workspace can do
 
@@ -304,38 +303,40 @@ close button never goes**, and the panel's name keeps its size.
 |---|---|---|---|---|
 | **Models** | left | 1st | everywhere | the Scenario catalogue, filtered on the active workspace |
 | **Generate** | left | 1st | everywhere *(if a model is chosen)* | the chosen model's form |
-| **Skybox** | right | 1st | Skyboxes | the open sky's settings |
-| **View** | right | 1st | Skyboxes | the projection, the field of view and the test objects |
+| **Assets** | left | 1st | everywhere | the shelf: what the project holds, what your key owns, what is being made |
 | **Layers** | right | 1st | Image | the layer stack of the open image |
-| **Channels** | right | 1st | Textures | the eight channels of the open material |
-| **Styles** | right | 1st | Textures | saved material settings, to replay on any material |
 | **Scene** | right | 1st | 3D | the tree of the open scene |
 | **Lights** | right | 1st | 3D | the scene's light sources |
 | **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
-| **Assets** | right | 1st | Video, Audio, 3D | the project's shelf, as a column |
+| **Animations** | right | 1st | 3D | what a character can be made to play: the sequences its file brought, and those shipped with the studio |
 | **Explorer** | left | 2nd | everywhere | the project folder, folders and files |
+| **Git** | left | 2nd | everywhere *(with a project open)* | what has changed in the project folder since the last recorded version |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
-| **Assets** | bottom | 1st | Image, Textures, Skyboxes | the same shelf, as a strip |
 | **Timeline** | bottom | 1st | Video, Audio, 3D | the sequence being edited, or the animation |
+| **History** | bottom | 1st | everywhere *(with the project folder tracked by git)* | the project's recorded versions, and what each one changed |
 
 > **"Everywhere" means the workspaces, not the home screen.** The home has panels of its own —
-> eleven, in its two columns — that this table does not list.
+> five — that this table does not list. **Three belong to both**: the Explorer and Git in the
+> left column, and History in a bottom strip the home did not have before. The Explorer and Git
+> appear only with a project open, and **History only if that project is tracked by git**: with
+> no project, the home is the screen it has always been — two columns and nothing below.
 
-**The left column belongs to what produces.** Above, **Models** and **Generate**, which take
-turns. Below, the **Explorer**.
+**The left column reads in two parts: what Scenario offers, then what is already yours.** Above,
+**Models**, **Generate** and **Assets**, which take turns — a model to choose, its form, and the
+shelf of what it makes. Below, the **Explorer** and **Git**, which take turns as well: your
+project folder, and what has changed in it.
+
+The cut between the two halves is what makes the gesture possible: the shelf and the Explorer
+hold the screen **together**, and nothing enters the project without passing from one to the other.
 
 **The right column belongs to the open document**: what it holds, what lights it, what is
 selected. The panels take their turn in the upper half; the **Inspector** always holds the lower
 one.
 
-**The asset shelf moves depending on the workspace.** At the bottom in most; in **Video**,
-**Audio** and **3D**, the bottom strip belongs to the timeline, and the shelf moves to the right
-column — timeline and shelf then hold the screen together, so you can drag a take onto a track.
-
 ### A half shows what the workspace puts there
 
-Open the bottom strip in Image: it is the shelf. Switch to Video: the same strip becomes the
-edit, with nothing to reopen.
+Open the bottom strip in Video: it is the edit. Switch to Image: the same strip becomes History,
+with nothing to reopen.
 
 **What you opened is a zone**, and it stays one. Closing the half empties it everywhere.
 
@@ -347,16 +348,22 @@ edit, with nothing to reopen.
 Until you have clicked an icon of a half, it shows the first panel the workspace declares there.
 That is what you see on first opening, and what **View ▸ Reset layout** restores.
 
-The lower left half opens on the **Explorer** in every workspace.
+The upper left half opens on **Models** in every workspace — choosing a model is where everything
+starts, and the shelf is asked for. The lower half opens on the **Explorer**, everywhere too.
 
 | Workspace | The upper right half opens on | The bottom strip on |
 |---|---|---|
-| **Image** | Layers | Assets |
-| **Video** | Assets | Timeline |
+| **Image** | Layers | History |
+| **Video** | *nothing* | Timeline |
 | **3D** | Scene | Timeline |
-| **Audio** | Assets | Timeline |
-| **Textures** | Channels | Assets |
-| **Skyboxes** | Skybox | Assets |
+| **Audio** | *nothing* | Timeline |
+| **Textures** | *nothing* | History |
+| **Skyboxes** | *nothing* | History |
+
+> **History needs a folder tracked by git.** Until tracking is in place — no project open, or a
+> project whose folder is not tracked — the bottom strip of those three workspaces **goes away**:
+> it takes no room at all. The Git panel says where this project stands, and carries the button
+> that sets tracking up.
 
 As soon as you click an icon, that half remembers **your** choice and does not move again, until
 you click another one or reset the layout.
@@ -496,13 +503,13 @@ The system menu — at the top of the screen on macOS, at the top of the window 
 | **File** | New project…, Open project…, Save, Settings… |
 | **Edit** | Undo, Redo, and the system's text commands |
 | **View** | Tool windows, Reset layout, Full screen, image zoom |
-| **Objects** | Add ▸ Mesh, Add ▸ Light — in the 3D workspace |
+| **Objects** | **Add ▸ Mesh**, **Add ▸ Light** — in the Modelling workspace |
 | **Window** | the system's window commands |
 | **Help** | About Scenario Studio, Usage…, Licences |
 
 The shortcuts shown in the menus are **the ones you have set**.
 
-**View ▸ Tool windows only lists what the workspace can open**, like the rail.
+**View ▸ Tool windows** only lists what the workspace can open, like the rail.
 
 ### The usage window
 
@@ -519,14 +526,17 @@ days**, 31 by default.
 Activities and Journal name their rows in the window's language: you read "Image generation", not
 `images-generation`. An event kind the studio does not know yet shows the API's raw name.
 
-Three warnings are shown there:
+**The window says itself what its figures do not** — under the amount for the first, in the
+window's footer for the others:
 
-- **there is no balance.** The Scenario API only exposes what has been spent, never what is left.
-  No figure will tell you how much you can still generate;
 - **the euro amount is indicative.** Computed from the public prepaid pack grid: an order of
   magnitude, not an invoice;
-- **the total mixes accounts billed separately.** With several keys, the sum shown matches no
-  real invoice — the Overview breaks it down per account.
+- **there is no balance.** The Scenario API only exposes what has been spent, never what is left.
+  No figure will tell you how much you can still generate;
+- **this screen's days and hours are counted in UTC**, as the API dates them. A day's bar therefore
+  need not follow your own calendar;
+- **the total mixes accounts billed separately** — that one only appears with several keys. The sum
+  shown then matches no real invoice, and the Overview breaks it down per account.
 
 **A key that does not answer does not skew the figures silently**: the window names the keys that
 stayed quiet and states that the totals are the other keys'. With no key stored at all, it says

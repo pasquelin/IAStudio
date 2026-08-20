@@ -14,9 +14,16 @@ Elle a deux portes, et **elles donnent sur la même pièce** :
 | **L’assistant** | dans la fenêtre, sur `⌘K` | vous, en français ou en anglais |
 | **Le point d’entrée** | fermé au départ, à ouvrir dans les réglages | un programme extérieur, comme Claude Code |
 
-Les deux exécutent **exactement le même catalogue de onze actions**, décrit plus bas. Rien n’est
-possible d’un côté qui ne le soit de l’autre, et **rien qui engage quelque chose ne part sans que
-vous l’ayez vu à l’écran** — d’où que vienne la demande.
+Les deux lisent **le même catalogue**, et **rien qui engage quelque chose ne part sans que vous
+l’ayez vu à l’écran** — d’où que vienne la demande.
+
+Elles n’en voient pas la même part, et c’est délibéré. **L’assistant en connaît onze**, celles
+d’une phrase parlée : ouvrir un espace, chercher un modèle, préparer une génération. **Le point
+d’entrée les offre toutes**, tout ce qu’un programme conduit délibérément — l’arbre des fichiers,
+la pile de calques, le montage, le ciel, la matière, la scène 3D, le squelette d’un personnage, le
+dépôt git, la bibliothèque distante, les panneaux du studio. La raison est prosaïque : le modèle
+qui lit vos phrases reçoit le catalogue entier avant chacune d’elles, et le catalogue entier n’y
+laisserait plus de place pour la phrase.
 
 ---
 
@@ -89,9 +96,9 @@ Le micro à côté du champ est le même que partout ailleurs, avec les mêmes r
 
 ## Le point d’entrée pour un programme extérieur
 
-C’est la seconde porte : **un autre logiciel installé sur votre machine peut lancer les mêmes onze
-actions**. Un assistant de programmation comme Claude Code, par exemple, ou tout client parlant le
-protocole **MCP**.
+C’est la seconde porte : **un autre logiciel installé sur votre machine peut conduire le studio
+comme vous le feriez**. Un assistant de programmation comme Claude Code, par exemple, ou tout
+client parlant le protocole **MCP**.
 
 **Cette porte est fermée au départ, et le reste tant que vous ne l’ouvrez pas.**
 
@@ -140,7 +147,7 @@ lancement-ci**. Ils ne sont pas dans ce manuel parce qu’ils ne peuvent pas y �
 ### 3. Coller dans un terminal
 
 Ouvrez un terminal **dans le dossier du projet où vous travaillez avec Claude Code**, et collez la
-ligne. C’est tout : Claude Code connaît désormais le studio, et voit ses onze outils.
+ligne. C’est tout : Claude Code connaît désormais le studio, et voit ses outils.
 
 Pour vérifier, demandez-lui la liste de ses serveurs MCP — le studio doit y figurer, connecté.
 
@@ -161,10 +168,15 @@ client déjà enregistré sous le même nom se remplace ; il n’y a rien à sup
 Une fois branché, Claude Code parle au studio comme vous parleriez à l’assistant, mais depuis
 votre projet de code :
 
-> *Ouvre l’espace 3D dans le studio et crée un document*
+> *Ouvre l’espace Modélisation dans le studio et crée un document*
 > *Cherche-moi un modèle de skybox nocturne*
 > *Liste les générations en cours*
 > *Prépare une génération d’image avec ce prompt, mais ne l’envoie pas*
+> *Range les rushes de la semaine dans un dossier par jour*
+> *Génère une texture de pierre, attends-la, et pose-la dans la scène*
+> *Ajoute un calque de texte « Générique » en bas de l’image, en 64 points*
+> *Pose une sphère à deux mètres à droite du cube et éclaire-la en chaud*
+> *Enregistre une version avec un message qui décrit ce qu’on vient de faire*
 
 **La dernière phrase mérite d’être lue deux fois.** Préparer et envoyer sont **deux actions
 distinctes**, et seule la seconde dépense. Un client extérieur peut remplir le formulaire autant
@@ -173,29 +185,38 @@ n’est parti.
 
 ---
 
-## Les onze actions
+## Le catalogue
 
-Le même catalogue des deux côtés. La colonne de droite dit ce que l’action **engage** — c’est elle
-qui décide si le studio vous demandera quelque chose.
+**Quatorze familles.** Le tableau ci-dessous dit ce que chacune couvre et ce qu’elle **engage** —
+c’est cette dernière colonne qui décide si le studio vous demandera quelque chose. Ni le nombre
+d’actions ni la liste exacte ne sont recopiés ici : ils bougent, et **c’est votre client qui les
+lit à la source** quand vous lui demandez ses outils, avec le détail de chaque paramètre.
 
-| Action | Ce qu’elle fait | Ce qu’elle engage |
+| La famille | Ce qu’elle couvre | Ce qu’elle engage |
 |---|---|---|
-| **Lancer une commande** | déclenche une commande du studio par son identifiant, comme un raccourci le ferait | **rien**, sauf cinq exceptions ci-dessous |
-| **Ouvrir un espace** | bascule vers un espace de travail, et y crée un document si on le demande | rien |
-| **Chercher un modèle** | cherche un modèle de génération par mots-clés | rien |
-| **Choisir un modèle** | arme un modèle pour une famille ; le formulaire se reconstruit dessus | rien |
-| **Préparer une génération** | remplit le formulaire du Générateur et l’affiche | rien — **et surtout, n’envoie pas** |
-| **Lancer la génération préparée** | envoie le formulaire tel qu’il est affiché | **des unités créatives** |
-| **Lister les tâches** | rend les générations en cours et leur avancement | rien |
-| **Proposer des variantes de prompt** | réécrit une phrase en plusieurs variantes taillées pour le modèle armé | rien |
-| **Traduire un prompt en anglais** | porte un texte dans la langue sur laquelle les modèles sont entraînés | rien |
-| **Décrire le style des références** | lit les images de référence du formulaire et en rend une description | rien |
-| **Refermer la conversation** | efface la conversation de l’écran pour laisser voir ce qui vient d’être fait | rien |
+| **Le studio** | ce qui est ouvert, quel document est devant, ce qui vient de se passer | rien |
+| **Les fichiers** | ouvrir un projet, le renommer, lister, chercher, déplacer, copier, renommer, mettre à la corbeille, montrer dans le gestionnaire de fichiers, annuler et refaire le dernier lot | **des fichiers** pour ce qui déplace ou détruit |
+| **Les documents** | ouvrir, mettre devant, renommer, fermer, exporter dans le projet | **des fichiers** pour fermer, renommer et exporter |
+| **Générer** | lire les entrées d’un modèle, chiffrer, préparer, lancer, attendre, annuler | **des unités créatives** pour lancer, et pour lancer seulement |
+| **La bibliothèque** | chercher, lire, étiqueter, légender, retirer des assets, repérer ceux dont le fichier a disparu, extraire les textures d’un modèle | **des fichiers** pour retirer, **un serveur** pour retirer aussi de la bibliothèque distante |
+| **La bibliothèque distante** | parcourir la vôtre et le flux public, chercher des ressemblances, prévoir, rapatrier, envoyer | **un asset** pour envoyer |
+| **L’image** | la pile de calques : ajouter, styler, placer, grouper, fusionner, recadrer, régler un masque, poser et déplacer les repères | rien |
+| **Le montage** | Vidéo et Audio : poser un bloc, le déplacer, le rogner, le couper, régler fondus, niveau et vitesse, tenir les pistes. L’export du document sort la **coupe** en OpenTimelineIO, jamais un film — le rendu image par image demande une session que rien d’extérieur ne peut tenir | rien, sauf l’export |
+| **Le ciel et la matière** | régler l’image d’un ciel, y placer le soleil, choisir sous quelle projection le regarder, remplir les canaux d’une matière, la remapper, choisir la forme sur laquelle la juger et la rendre | rien |
+| **La 3D** | la scène : poser un objet, l’orienter, le tailler, l’éclairer, le peindre, l’habiller de cartes, écrire un texte, tracer un chemin, le rattacher, et la regarder — depuis une face, dans l’une des façons de dessiner, et en prendre une image. Le décor aussi : ce qui éclaire la scène, ce qui est derrière elle, sa brume, son sol, son rendu, et les décors tout prêts | rien |
+| **Les personnages** | rendre un modèle animable, ajouter ou retirer un os, lui donner une articulation du standard, poser une poignée qu’il atteint, lister ce qu’il peut jouer, poser un bloc d’animation et le régler, poser et retirer des clés, tenir les canaux, régler durée et cadence | rien |
+| **Le versionnage** | lire le dépôt et l’historique, indexer, enregistrer, brancher, remiser, trancher un conflit, rapatrier, publier | **des fichiers** pour ce qui réécrit la copie de travail, **un serveur** pour publier |
+| **Les réglages** | lire et changer les réglages, actionner les boutons de la fenêtre, lister les comptes, en activer un, en renommer un | **des fichiers** pour les deux boutons que rien ne reprend |
+| **Autour des documents** | la fenêtre, le compte, les mises à jour, les polices, les recettes épinglées, les styles de matière, les panneaux du studio, la dictée, et les trois fenêtres du menu Aide | **des fichiers** pour supprimer un style et pour installer une mise à jour |
 
-**La dernière est la dernière pour une raison.** L’assistant lit ce catalogue dans l’ordre, et
-refermer la conversation est le dernier geste d’un plan : on le fait quand le résultat est à
-l’écran — un espace ouvert, un formulaire rempli. Il ne le fait pas quand la réponse EST le texte
-qu’il vient d’écrire, ni quand une autorisation vous est demandée.
+**Ce que l’assistant en connaît, lui, tient en onze**, et ce sont celles d’une demande parlée :
+lancer une commande, ouvrir un espace, chercher et choisir un modèle, préparer une génération, la
+lancer, lister les tâches, retravailler ou traduire un prompt, décrire le style des références, et
+refermer la conversation. Les autres se conduisent depuis un programme.
+
+> **Une commande n’atteint que le document qui est devant.** C’est vrai du raccourci clavier comme
+> du client extérieur, et c’est la première chose à savoir pour le piloter : demandez-lui d’abord
+> l’état du studio, mettez le bon onglet devant, puis agissez.
 
 ### Les cinq commandes qui font exception
 
@@ -218,7 +239,7 @@ demandées.
 
 ## Ce que le studio vous demande, et quand
 
-Deux questions seulement, toutes deux à l’écran, dans la fenêtre au premier plan.
+Trois questions, toutes à l’écran, dans la fenêtre au premier plan.
 
 **Quand une action va dépenser :**
 
@@ -235,7 +256,34 @@ dit plutôt que d’inventer un chiffre :
 > *Cette action va téléverser une image, qui restera dans votre bibliothèque. Elle ne coûte aucune
 > unité créative.*
 
-Dans les deux cas, deux boutons : **Autoriser** et **Refuser**. Refuser n’exécute rien, et
+**Quand une action va toucher à vos fichiers :**
+
+> *Cette action va modifier ce que porte votre projet — des fichiers, ou les assets de sa
+> bibliothèque. Elle ne coûte aucune unité créative.*
+
+Celle-ci est délibérément **étroite** : déplacer, renommer, mettre à la corbeille, fermer un
+onglet qui porte du travail non enregistré, revenir en arrière sur un fichier suivi par git,
+réécrire la dernière version enregistrée. Créer un dossier ou dupliquer un fichier n’enlève rien
+à personne et ne vous demande rien — un studio qui demanderait pour ceux-là vous apprendrait à
+cliquer **Autoriser** sans lire.
+
+**Étroite ne veut pas dire rattrapable.** L’Explorateur reprend un déplacement, un renommage ou
+une mise à la corbeille. Il ne reprend rien de ce qu’un fichier suivi par git n’avait jamais
+enregistré, rien d’une version réécrite, et rien d’un asset retiré aussi de la bibliothèque
+distante.
+
+**Quand une action va publier hors de cette machine :**
+
+> *Cette action va publier vers un serveur, hors de cette machine. Elle ne coûte aucune unité
+> créative, et rien ici ne la rattrape.*
+
+Deux demandes portent ce niveau, et elles méritent d’être nommées : **envoyer une branche vers un
+dépôt git distant**, et **retirer un asset en demandant qu’il le soit aussi de la bibliothèque
+distante** — l’API n’a ni suppression unitaire ni retour en arrière. Toutes les autres restent au
+bord de la machine, y compris rapatrier — lequel réécrit votre copie de travail et vous demande
+donc au titre des fichiers.
+
+Dans les quatre cas, deux boutons : **Autoriser** et **Refuser**. Refuser n’exécute rien, et
 l’assistant en tient compte pour la suite de sa demande.
 
 > **La question ne se contourne pas.** Ni `Échap`, ni un clic à côté ne la referment : une action
@@ -246,6 +294,24 @@ l’assistant en tient compte pour la suite de sa demande.
 formulée reçoit un refus plutôt que d’attendre. C’est le temps de lire « cela va dépenser 12
 unités » et de décider — pas un délai réseau.
 
+### Travailler pendant que vous n’êtes pas là
+
+Tant que rien n’est armé, un client qui agit sans personne devant l’écran s’arrête à la première
+question. C’est le défaut, et il est délibéré.
+
+Les réglages avancés ouvrent quatre lignes qui changent cela, chacune sous **Piloter le studio
+depuis l’extérieur** et sans effet si celui-ci est éteint. Les trois premières laissent passer un
+niveau d’engagement sans demander — toucher aux fichiers, téléverser, publier vers un serveur. La
+quatrième est un montant en unités créatives : ce qu’un client peut dépenser dans cette fenêtre
+avant que le studio se remette à demander. À zéro, chaque dépense vous est demandée.
+
+> **Trois choses à savoir avant d’armer quoi que ce soit.** Une génération dont l’API refuse de
+> donner le prix n’est **jamais** lancée sans vous, quel que soit le montant autorisé — un coût
+> inconnu ne se plafonne pas. Le compte est tenu par fenêtre et repart de zéro à chaque
+> lancement : deux fenêtres ouvertes portent chacune le montant entier. Et **aucun client ne peut
+> armer ces quatre lignes lui-même** : elles ne s’écrivent que dans cette fenêtre de réglages,
+> parce qu’une autorisation qu’un programme se donne à lui-même n’en est pas une.
+
 ---
 
 ## Quand ça refuse
@@ -255,8 +321,7 @@ Une action refusée dit toujours pourquoi. Les motifs, et ce qu’ils veulent di
 | Le message | Ce qui s’est passé |
 |---|---|
 | *Cette commande n’existe pas dans le studio.* | l’identifiant demandé ne correspond à rien |
-| *Cette commande appartient au menu de l’application, qui la déclenche lui-même.* | certaines commandes ne sont pas à prendre par ce chemin |
-| *Cette commande s’adresse à un document qui n’est pas au premier plan.* | mettez le bon onglet devant, et redemandez |
+| *Aucune surface du studio n’était là pour prendre cette commande.* | ouvrez le document ou le panneau auquel elle s’adresse, et redemandez |
 | *Le Générateur n’était pas ouvert. Il vient de l’être.* | rien n’a échoué : redemandez la même chose |
 | *Le Générateur n’a aucun modèle armé pour l’instant.* | choisissez un modèle avant de préparer |
 | *La génération n’est pas partie.* | l’envoi a échoué en aval — rien n’a été dépensé |
@@ -268,6 +333,11 @@ Une action refusée dit toujours pourquoi. Les motifs, et ce qu’ils veulent di
 | *La demande est restée à l’écran sans réponse, et a été abandonnée.* | les deux minutes sont passées |
 | *Le formulaire ne porte aucune image de référence dont lire le style.* | posez une image sur le formulaire d’abord |
 | *Le formulaire a changé depuis l’annonce du coût. Rien n’a été envoyé — redemandez pour obtenir un nouveau chiffre.* | ce qui a été chiffré est ce qui part, jamais autre chose |
+| *Ce que vous nommez n’existe pas.* | la demande était bien formée et sa cible est absente — c’est le motif le plus fréquent, et il porte sur un identifiant plutôt que sur des paramètres |
+| *Aucun projet n’est ouvert.* | un chemin est relatif à un projet, et il n’y en a pas pour l’être |
+| *Un client extérieur ne peut pas faire cela.* | jamais votre refus à vous : armer la délégation ne s’écrit que dans la fenêtre des réglages |
+| *Le document au premier plan n’a rien que ceci puisse rendre.* | un ciel vide, une matière sans canal, une scène sans caméra |
+| *Cela a été tenté et n’a pas abouti.* | l’activité récente en porte la raison ; ce n’est pas ce qui a été transmis |
 
 Les deux motifs de fenêtre — *aucune fenêtre au premier plan*, *aucune fenêtre pour
 donner l’accord* — **ne se rencontrent que depuis un programme extérieur**. L’assistant, lui, est
@@ -277,13 +347,22 @@ dans la fenêtre : il y a toujours quelqu’un pour être demandé.
 
 ## Ce que ce chemin ne fait pas
 
-- **Il n’ouvre pas vos fichiers à qui que ce soit.** Les onze actions conduisent le studio ; aucune
-  ne lit un dossier, n’envoie un document, ni ne rend le contenu d’un projet.
-- **Il ne remplace pas votre clé API.** Ce qui part vers Scenario part comme d’habitude, avec vos
-  identifiants, depuis votre machine.
-- **Il ne dépense jamais de lui-même.** Une seule des onze actions dépense, et elle demande.
+- **Il ne rend jamais une clé API ni un secret.** Il peut dire quels comptes existent, lequel est
+  actif, et renommer l’étiquette de l’un d’eux — jamais ce qu’ils contiennent, et il ne peut ni en
+  ajouter ni en supprimer. Ce qui part vers Scenario part comme d’habitude, avec vos identifiants,
+  depuis votre machine.
+- **Il ne s’autorise rien lui-même.** Les quatre lignes qui laissent passer un engagement sans
+  question ne s’écrivent que dans la fenêtre des réglages : un client qui demande à les changer
+  s’entend répondre non.
+- **Il ne dépense jamais de lui-même.** Une seule action dépense — lancer la génération préparée —
+  et elle demande, avec son estimation.
 - **Il ne survit pas à la fermeture.** Le studio fermé, le point d’entrée n’existe plus, et le
   jeton du lancement avec lui.
+
+> **Il lit et modifie en revanche le dossier de votre projet**, ce qui n’était pas le cas des
+> premières versions de ce point d’entrée. C’est ce qui permet à un assistant de programmation de
+> travailler avec vous plutôt qu’à côté de vous — et c’est pourquoi tout ce qui déplace ou détruit
+> vous est demandé à l’écran.
 
 ---
 

@@ -1,4 +1,4 @@
-import { isGroup, type Layer } from './canvas-state'
+import { isGroup, type Layer } from './canvasState'
 
 /**
  * What the engine has to build, as plain data: one node per layer, groups nesting.
@@ -29,8 +29,15 @@ export type CompositeNode =
  * Where a layer's mask lives among the surfaces. One namespace for both, so an undo patch filed
  * under a key finds its way back without knowing which of the two it recorded.
  */
+const MASK_SUFFIX = ':mask'
+
 export function maskKey(layerId: string): string {
-  return `${layerId}:mask`
+  return `${layerId}${MASK_SUFFIX}`
+}
+
+/** Whether a surface key names a mask rather than a layer's own pixels. */
+export function isMaskKey(key: string): boolean {
+  return key.endsWith(MASK_SUFFIX)
 }
 
 /** Bottom first, like the stack itself: the last node is the one the eye sees on top. */

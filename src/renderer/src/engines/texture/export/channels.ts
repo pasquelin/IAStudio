@@ -1,7 +1,7 @@
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
-import type { ExportChannels } from '@shared/domain/texture-export'
+import type { ExportChannels } from '@shared/domain/textureExport'
 import type { MaterialSettings, ValueRange } from '@shared/domain/texture'
-import type { TextureState } from '../texture-state'
+import type { TextureState } from '../textureState'
 
 /**
  * What the export needs to know about a texture's channels, and nothing else.

@@ -1,7 +1,7 @@
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 import { isFinished, JOB_STATUSES, type Job } from '@shared/domain/job'
-import { SUITE_SOURCES } from '@/design/test-harness'
+import { SUITE_SOURCES } from '@/design/testHarness'
 import { job } from './job-fixtures'
 
 const FINISHED = JOB_STATUSES.filter(isFinished)
@@ -123,7 +123,7 @@ function jobLiteralsIn(file: string, code: string): number {
 
 /**
  * The two names the factory is called by: `job` where nothing collides, `jobOf` where a suite
- * keeps a local wrapper of its own — the form `stores/image-generation.test.ts` settled on.
+ * keeps a local wrapper of its own — the form `stores/imageGeneration.test.ts` settled on.
  */
 const FACTORY_NAMES = new Set(['job', 'jobOf'])
 

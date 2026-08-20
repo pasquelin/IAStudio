@@ -1,5 +1,5 @@
 import {
-  ACTION_REGISTRY,
+  actionsReaching,
   type ActionCommitment,
   type ActionField,
   type ActionName,
@@ -25,13 +25,17 @@ export type JsonSchema = {
   additionalProperties: false
 }
 
-type FieldSchema = {
-  type?: 'string' | 'number' | 'integer' | 'boolean'
+type ScalarSchema = {
+  type?: 'string' | 'number' | 'integer' | 'boolean' | 'object'
   description: string
   enum?: string[]
+  /** The keys a `record` accepts. `enum` would close the VALUE, which is not what is known. */
+  propertyNames?: { enum: string[] }
   minimum?: number
   maximum?: number
 }
+
+type FieldSchema = ScalarSchema | { type: 'array'; description: string; items: ScalarSchema }
 
 /**
  * What each of our kinds is in JSON Schema.
@@ -39,30 +43,48 @@ type FieldSchema = {
  * `raw` is the one with no type at all, and deliberately: it carries a generation model's own
  * parameters, whose shape is only known once `GET /models/{id}` has answered. Announcing it as
  * an object would be a promise the registry cannot keep — it may legitimately be a string.
+ * `record` is the case that was wrongly wearing `raw`: an object whose keys this repository knows.
  */
-const JSON_TYPE: Record<FieldKind, FieldSchema['type']> = {
+const JSON_TYPE: Record<FieldKind, ScalarSchema['type']> = {
   text: 'string',
   longText: 'string',
   choice: 'string',
   color: 'string',
   image: 'string',
+  mesh: 'string',
   number: 'number',
   integer: 'integer',
   seed: 'integer',
   boolean: 'boolean',
   raw: undefined,
+  record: 'object',
 }
 
-function fieldSchema(field: ActionField): FieldSchema {
+function scalarSchema(field: ActionField): ScalarSchema {
   const type = JSON_TYPE[field.kind]
+
+  // A `record`'s options name its KEYS, not the values it may hold — the same list, read on the
+  // other side of the colon.
+  const closed = field.options
+    ? field.kind === 'record'
+      ? { propertyNames: { enum: [...field.options] } }
+      : { enum: [...field.options] }
+    : {}
 
   return {
     ...(type ? { type } : {}),
     description: englishText(field.labelKey),
-    ...(field.options ? { enum: [...field.options] } : {}),
+    ...closed,
     ...(field.min === undefined ? {} : { minimum: field.min }),
     ...(field.max === undefined ? {} : { maximum: field.max }),
   }
+}
+
+function fieldSchema(field: ActionField): FieldSchema {
+  const scalar = scalarSchema(field)
+  if (!field.repeated) return scalar
+
+  return { type: 'array', description: scalar.description, items: scalar }
 }
 
 export function schemaOfFields(fields: readonly ActionField[]): JsonSchema {
@@ -85,8 +107,27 @@ export function schemaOfFields(fields: readonly ActionField[]): JsonSchema {
  */
 const COMMITMENT_NOTE: Record<ActionCommitment, string> = {
   none: 'Runs straight away.',
+  files: 'Asks the person on screen first: it changes files in their project folder.',
   asset: 'Asks the person on screen first: it uploads an image that stays in their library.',
+  remote:
+    'Asks the person on screen first: it publishes to a server, and nothing here undoes that.',
   credits: 'Asks the person on screen first, with an estimate: it spends creative units.',
+}
+
+// The two ways `commitment` alone lies. `raises` lifts the floor from the input; `asksItself`
+// marks a handler that raises the studio's own question, which is WHY its commitment is `none`.
+// Read alone, `commitment` sent both out as "Runs straight away".
+const OVERRIDE_NOTE = {
+  asksItself:
+    'Some calls wait on the person at the screen: the studio raises its own question rather than a confirmation.',
+  raises: 'What one call engages depends on what is given: it may ask the person on screen first.',
+}
+
+function noteOf(action: AssistantAction): string {
+  if (action.asksItself) return OVERRIDE_NOTE.asksItself
+  if (action.raises) return OVERRIDE_NOTE.raises
+
+  return COMMITMENT_NOTE[action.commitment]
 }
 
 export type McpTool = {
@@ -115,7 +156,7 @@ function toolOf(action: AssistantAction): McpTool {
   return {
     name: toolName(action.name),
     title: englishText(action.titleKey),
-    description: `${englishText(action.descriptionKey)} ${COMMITMENT_NOTE[action.commitment]}`,
+    description: `${englishText(action.descriptionKey)} ${noteOf(action)}`,
     inputSchema: schemaOfFields(action.fields),
   }
 }
@@ -126,7 +167,7 @@ function toolOf(action: AssistantAction): McpTool {
  * The registry is a module constant and so is the English bundle it reads, so every `tools/list`
  * was rebuilding the same objects — a split-and-reduce over the bundle per action and per field.
  */
-const TOOLS: readonly McpTool[] = ACTION_REGISTRY.map(toolOf)
+const TOOLS: readonly McpTool[] = actionsReaching('mcp').map(toolOf)
 
 export function mcpTools(): readonly McpTool[] {
   return TOOLS

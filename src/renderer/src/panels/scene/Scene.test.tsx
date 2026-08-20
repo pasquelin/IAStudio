@@ -13,14 +13,14 @@ const scene: DocumentDescriptor = {
   kind: 'scene',
   title: 'Niveau',
   workspace: '3d',
-  fileName: 'Niveau.scene',
+  path: 'documents/Niveau.gltf',
 }
 const image: DocumentDescriptor = {
   id: 'doc-2',
   kind: 'image',
   title: 'Affiche',
   workspace: 'image',
-  fileName: 'Affiche.img',
+  path: 'documents/Affiche.ora',
 }
 
 beforeEach(() => {

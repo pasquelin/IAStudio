@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { LANGUAGES } from './i18n/languages'
+import { LANGUAGES, type Language } from './i18n/languages'
 import { deadManualLinks, type ManualChapter } from './domain/manual'
-import { americanVerbs, americanWords, proseOf } from './i18n/spelling-fixtures'
+import { americanVerbs, americanWords, frenchWords, proseOf } from './i18n/spelling-fixtures'
+import { asRead, menuPathsOf, screenLabels } from './i18n/menuPath-fixtures'
+import { TRANSLATIONS } from './i18n'
 import manual from './manual.json'
 
 /**
@@ -18,6 +20,68 @@ const languages = LANGUAGES.map(language => language.code)
 
 /** Per language, never merged: `07-assets` is the slug of a chapter in BOTH — see `ManualChapter`. */
 const chaptersOf = (language: (typeof languages)[number]): ManualChapter[] => manual[language]
+
+/**
+ * Segments that follow the shape of a path without naming a menu entry. One each, and both are
+ * the same thing: a GESTURE the chapter puts before the entry it opens.
+ */
+const NOT_A_MENU_ENTRY: Record<Language, ReadonlySet<string>> = {
+  fr: new Set(['clic droit']),
+  en: new Set(['right-click']),
+}
+
+/**
+ * Any bold run — the shape `MENU_PATH` narrows, kept whole for the readings below, and crossing
+ * one line break of the page for the reason that regexp writes out: the chapters are wrapped, so
+ * a run a reflow has split is quoted correctly and read by nobody. Over a hundred runs cross a
+ * break in each language, none of them an arrow or a button today.
+ */
+const BOLD = /\*\*(?=\S)((?:[^*\n]|\n(?!\s*\n)){1,90})(?<=\S)\*\*/g
+
+/** Every bold run of every chapter, carried with the slug that writes it, the break folded. */
+const boldsOf = (language: Language): { slug: string; bold: string }[] =>
+  chaptersOf(language).flatMap(chapter =>
+    [...chapter.markdown.matchAll(BOLD)].map(match => ({
+      slug: chapter.slug,
+      bold: (match[1] ?? '').replace(/\s*\n\s*/g, ' ').trim(),
+    })),
+  )
+
+/** Read by both the guard below and its exemption-freshness sibling, so the two cannot drift. */
+const arrowsOf = (language: Language): { slug: string; bold: string }[] =>
+  boldsOf(language).filter(({ bold }) => bold.includes('→'))
+
+/**
+ * `→` is the third arrow the chapters write, and adding it to `MENU_PATH` returned six French and
+ * ten English fragments of sentences — `**` pairs greedily across the prose arrows of chapters 16
+ * and 19, measured. It marks a DIRECTION, so a menu path written with it escapes that reading
+ * whole: `File → Export the texture` did, for an entry the screen spells `Export texture`.
+ *
+ * Its own blind spot is a FOURTH glyph: `->`, `⇒` and their kin would escape both readings. None
+ * is written in a bold run of either manual today — measured — so the hole is prospective.
+ */
+const A_DIRECTION_NOT_A_PATH: Record<Language, ReadonlySet<string>> = {
+  fr: new Set(['projet → bibliothèque']),
+  en: new Set(['project → library']),
+}
+
+/**
+ * A label quoted ALONE, outside any path — the shape the settings chapter opens a section with,
+ * and one `menuPathsOf` cannot see. It wrote `Reveal the technical log` for an entry the screen
+ * spells `Show the technical log`, under a green suite. Bounded to buttons on measure — the
+ * `Starts at: X` of that same chapter names a state or a number more often than a label, and the
+ * bold first cell of a table names a gesture as readily as a control, both read against the
+ * bundles before being left out. Its blind spot is a chapter that stops quoting: the reading
+ * proves it still reads, never how many it should find.
+ */
+const BUTTON_QUOTE = /^(?:Bouton :|Button:)\s+(.+)$/
+
+const buttonQuotesOf = (language: Language): { slug: string; label: string }[] =>
+  boldsOf(language).flatMap(({ slug, bold }) => {
+    const label = BUTTON_QUOTE.exec(bold)?.[1]
+
+    return label ? [{ slug, label }] : []
+  })
 
 describe('the manual the application carries', () => {
   // A hole here is a language that opens on nothing, and only for the readers who chose it.
@@ -78,6 +142,106 @@ describe('the manual the application carries', () => {
     })
 
     expect(american).toEqual([])
+  })
+
+  /**
+   * Chapter 09 wrote `a travelling starts and stops dead` where English says the camera does —
+   * the borrowing the bundle carried in the label that row explains. Prose only, for the reason
+   * above, and no exemption exists on this side: the manual has no keys to name one by.
+   */
+  it('writes its own English words rather than French ones', () => {
+    const borrowed = chaptersOf('en').flatMap(chapter =>
+      frenchWords(`${chapter.title}\n${proseOf(chapter.markdown)}`).map(
+        word => `${chapter.slug} — ${word}`,
+      ),
+    )
+
+    expect(borrowed).toEqual([])
+  })
+
+  /**
+   * Every assertion below is a list expected EMPTY, so a reading that recognises nothing keeps
+   * them all green. These samples are what `menuPathsOf` is worth: the middle one is the table
+   * row that a first, edge-free crossing returned as a menu path.
+   */
+  it('reads a path across one line break of the page, and no further', () => {
+    expect(menuPathsOf('**Fichier ▸ Exporter la\nsélection** écrit tout')).toEqual([
+      'Fichier ▸ Exporter la sélection',
+    ])
+    expect(
+      menuPathsOf('| la pastille est **verte** en haut |\n| [Premiers pas ▸ étape 3] |'),
+    ).toEqual([])
+    expect(menuPathsOf('**Aide ▸\n\nJournal**')).toEqual([])
+  })
+
+  /**
+   * A chapter sending its reader to **Help ▸ Journal** was sending them to a menu entry no
+   * language carries, and the manual being read INSIDE the window, a wrong path reads as the
+   * software being broken. The French chapters were right to the last of their 66 paths; the
+   * English ones held ten wrong citations — `Export the scene` for `Export scene`, `Enlarge` for
+   * `Upscale` — the shape of a manual translated from the French without re-reading the English
+   * screen.
+   *
+   * What it does NOT read, and it is most of the quoting: a label written on its own, outside a
+   * path. `**Enlarge**` alone sat in three more chapters and no reading here would have found it.
+   */
+  it.each(languages)('quotes no menu path the screen does not carry, in %s', language => {
+    const labels = screenLabels(TRANSLATIONS[language])
+    const invented = chaptersOf(language).flatMap(chapter =>
+      menuPathsOf(chapter.markdown).flatMap(path =>
+        path
+          .split(/[▸›]/)
+          .map(asRead)
+          .filter(
+            segment => segment && !labels.has(segment) && !NOT_A_MENU_ENTRY[language].has(segment),
+          )
+          .map(segment => `${chapter.slug} — "${segment}" in ${path.trim()}`),
+      ),
+    )
+
+    expect(invented).toEqual([])
+  })
+
+  it.each(languages)('quotes no button the screen does not carry, in %s', language => {
+    const labels = screenLabels(TRANSLATIONS[language])
+    const quotes = buttonQuotesOf(language)
+
+    // A reading that recognised nothing would keep the assertion below green for good.
+    expect(quotes.length).toBeGreaterThan(0)
+    expect(
+      quotes
+        .filter(({ label }) => !labels.has(asRead(label)))
+        .map(({ slug, label }) => `${slug} — "${label}"`),
+    ).toEqual([])
+  })
+
+  /**
+   * The same reasoning `bundles.test.ts` applies to its own exemptions: one whose segment stopped
+   * being written is one nobody would think to delete, and the next reader takes it for a rule.
+   */
+  it.each(languages)('drops a gesture exemption once no path writes it, in %s', language => {
+    const written = new Set(
+      chaptersOf(language).flatMap(chapter =>
+        menuPathsOf(chapter.markdown).flatMap(path => path.split(/[▸›]/).map(asRead)),
+      ),
+    )
+
+    expect([...NOT_A_MENU_ENTRY[language]].filter(segment => !written.has(segment))).toEqual([])
+  })
+
+  it.each(languages)('writes every menu path with a separator it reads, in %s', language => {
+    const unread = arrowsOf(language)
+      .filter(({ bold }) => !A_DIRECTION_NOT_A_PATH[language].has(bold))
+      .map(({ slug, bold }) => `${slug} — ${bold}`)
+
+    expect(unread).toEqual([])
+  })
+
+  // The same reasoning as the gesture exemptions above: one nobody writes reads as a rule.
+  it.each(languages)('drops a direction exemption once no chapter writes it, in %s', language => {
+    const written = new Set(arrowsOf(language).map(({ bold }) => bold))
+
+    expect([...A_DIRECTION_NOT_A_PATH[language]].filter(bold => !written.has(bold))).toEqual([])
   })
 
   // The range a literal union would have held, had a JSON import been able to keep one.

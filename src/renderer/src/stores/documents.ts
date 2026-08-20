@@ -1,4 +1,5 @@
 import {
+  DOCUMENTS_FOLDER,
   kindForWorkspace,
   type DocumentDescriptor,
   type DocumentKind,
@@ -9,8 +10,9 @@ import {
   DOCUMENT_NAME_FAILURES,
   type DocumentNameFailure,
   type NamedDocument,
-} from '@shared/domain/document-name'
-import { foldForFileName, nameFailureOf } from '@shared/domain/file-name'
+} from '@shared/domain/documentName'
+import { foldForFileName, nameFailureOf, safeFileName } from '@shared/domain/fileName'
+import { nameOf, parentOf, pathIn } from '@shared/domain/folder'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
 import i18next from 'i18next'
@@ -73,10 +75,12 @@ type DocumentsState = {
    * be a title that lies — and stays out when the name was TYPED, which is what the dialog the
    * plus button raises hands over. Without `of` the document is numbered, for a caller with
    * nobody to ask.
+   *
+   * `folder` is where its author filed it — `DOCUMENTS_FOLDER` for a caller who did not ask.
    */
   create: (
     workspace: WorkspaceId,
-    of?: { title: string; sourceAssetId?: string },
+    of?: { title: string; sourceAssetId?: string; folder?: string },
   ) => Promise<DocumentDescriptor | null>
   activate: (id: string | null) => void
   /**
@@ -192,6 +196,19 @@ export const activeSkyboxId = (state: DocumentsSlice): string | null =>
 /** The texture in front, as a selector. Same reason again, for the material inspector. */
 export const activeTextureId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'texture')
+
+/**
+ * Whether this project holds the document an id names — open in a tab or sitting in the folder.
+ *
+ * Both halves, because a montage read back may name a scene nobody has opened yet: the listing
+ * is the project's answer, the tabs are only what is in front of it right now.
+ */
+export function documentIsKnown(
+  state: Pick<DocumentsState, 'documents' | 'stored'>,
+  documentId: string,
+): boolean {
+  return Boolean(state.documents[documentId]) || state.stored.some(one => one.id === documentId)
+}
 
 export function documentsIn(
   state: Pick<DocumentsState, 'documents'>,
@@ -322,11 +339,12 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       kind,
       workspace,
       title,
-      // Where it WOULD go, nothing having been written yet. Not a second answer disagreeing with
-      // the disk — there is no file to disagree with — and the first save answers for good: it
-      // may land on a suffixed name if the folder meanwhile took this one, and `relist` reads
-      // back what the folder actually holds.
-      fileName: documentFileName(title, kind),
+      // Where it WOULD go, nothing having been written yet — the folder its author picked, and
+      // what `saveDocument` hands the writer. Not a second answer disagreeing with the disk
+      // (there is no file to disagree with), and the first save answers for good: it may land on
+      // a suffixed name if the folder meanwhile took this one, and `relist` reads back what the
+      // folder holds.
+      path: pathIn(of?.folder ?? DOCUMENTS_FOLDER, documentFileName(title, kind)),
       ...(of?.sourceAssetId ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 
@@ -351,7 +369,11 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     // Asked here as well as in the main process, and neither is the redundant one: this spares a
     // round trip for what the window can already see, and the main process is what makes the
     // refusal true whatever the window believed.
-    const taken = get().stored.map(entry => ({ id: entry.id, fileName: entry.fileName }))
+    // In the folder the document SITS in, which is where its new name has to be free.
+    const taken = takenDocumentNames(
+      { documents: {}, stored: get().stored },
+      parentOf(document.path) ?? '',
+    )
     const refused = checkDocumentName(title, document.kind, taken, id)
     if (refused) return refused
 
@@ -385,6 +407,15 @@ function asNameFailure(error: unknown): DocumentNameFailure {
 }
 
 /**
+ * Whether the centre is showing this document, subscribed. A hidden tab stays MOUNTED, so whatever
+ * answers the window rather than a document — a menu row, a shortcut scope, the video return — has
+ * to be armed on the tab in front and on no other.
+ */
+export function useDocumentIsInFront(documentId: string): boolean {
+  return useDocuments(state => state.activeId === documentId)
+}
+
+/**
  * Bumped per listing, so one that comes back late cannot install itself — and one PER QUESTION.
  *
  * A shared counter looked harmless and was not: the Explorer relists from a mount effect while
@@ -408,31 +439,52 @@ let listing: Promise<DocumentDescriptor[] | null> | null = null
  * The listing is handed in rather than read off the store: `create` has to read the store and
  * write to it in one synchronous run, and it holds a fresher listing than the one `stored` has.
  */
-export function takenDocumentNames(state: {
-  documents: Record<string, DocumentDescriptor>
-  stored: readonly DocumentDescriptor[]
-}): NamedDocument[] {
-  return [...state.stored, ...Object.values(state.documents)].map(({ id, fileName }) => ({
-    id,
-    fileName,
-  }))
+export function takenDocumentNames(
+  state: {
+    documents: Record<string, DocumentDescriptor>
+    stored: readonly DocumentDescriptor[]
+  },
+  folder: string = DOCUMENTS_FOLDER,
+): NamedDocument[] {
+  // One folder, never the project: two folders may each hold a `Niveau.gltf` and the disk is
+  // happy with both, so a name taken elsewhere in the tree is not taken here. The default is
+  // where a document nobody has placed goes, which is what every caller of this asks about.
+  return [...state.stored, ...Object.values(state.documents)]
+    .filter(document => (parentOf(document.path) ?? '') === folder)
+    .map(({ id, path }) => ({ id, fileName: nameOf(path) }))
 }
 
 /**
- * The next free name for a blank document — « Sans titre 3 ». What the studio proposes when it
- * makes one, and what the naming dialog opens on.
+ * The next free name for a blank document — « Scène 3 ». What the studio proposes when it makes
+ * one, and what the naming dialog opens on.
  *
- * Only the BLANK ones are numbered. A document opened for an asset carries the asset's name and
- * never collides with « Sans titre N », so nothing needs skipping for it.
+ * Named after its KIND rather than « Sans titre », and the folder is why: the number is free per
+ * FILE name, so the six kinds each held a « Sans titre 1 » a glyph alone told apart.
  */
 export function untitledDocumentName(taken: readonly NamedDocument[], kind: DocumentKind): string {
   const names = new Set(taken.map(document => foldForFileName(document.fileName)))
+  // Composed, hence `COMPOSED_KEYS` — and read once, the word being the same at every number.
+  const called = i18next.t(`documents.kinds.${kind}`)
 
-  // Ends on the first free one, and there are only ever as many taken as the folder holds.
+  // Ends on the first free one, and there are only ever as many taken as the folder holds. A
+  // document opened for an asset is skipped like any other: « Image 1 » is a name one may wear.
   for (let n = 1; ; n += 1) {
-    const title = i18next.t('documents.untitled', { n })
+    const title = i18next.t('documents.untitled', { kind: called, n })
     if (!names.has(foldForFileName(documentFileName(title, kind)))) return title
   }
+}
+
+/**
+ * What an export of this document is named — its own title, down to what a file system holds.
+ * Cleaned on THIS side because the main process refuses rather than repairs: a title holding a
+ * separator reaches a channel as a path, and comes back rejected with nothing on screen to say so.
+ */
+export function documentExportName(
+  state: DocumentsSlice,
+  documentId: string,
+  fallback: string,
+): string {
+  return safeFileName(state.documents[documentId]?.title ?? '', fallback)
 }
 
 /**

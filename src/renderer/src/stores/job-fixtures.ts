@@ -18,7 +18,7 @@ const RUNNING: Job = {
  * A job as the main process announces it — the list it publishes, not the progress events it
  * sends. The suites that each built their own invented a third thing the studio never holds: a
  * terminal status with no `finishedAt`, and a succeeded one short of full progress. `settle` in
- * `job-manager.ts` writes both, and `job-manager.test.ts` holds it to that.
+ * `jobManager.ts` writes both, and `jobManager.test.ts` holds it to that.
  *
  * Naming a key is what opts out, `undefined` included — `apply` (`jobs.ts`) merges a progress
  * event without ever dating it, so a job settled that way is the store's other real shape and

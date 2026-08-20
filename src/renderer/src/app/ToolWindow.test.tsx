@@ -1,13 +1,20 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
+import { DEFAULT_COLLECTION_STATE } from '@/helpers/collectionState'
 import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
+import { withQueries } from './query-fixtures'
 import { ToolWindow } from './ToolWindow'
 
-function renderShelf(zone: 'bottom' | 'left') {
-  return render(<ToolWindow tool="assets" zone={zone} onFocus={vi.fn()} onClose={vi.fn()} />)
+/**
+ * Under a query client, as `Application.tsx` mounts every panel: the shelf reads the account's
+ * library a page at a time, and `useInfiniteQuery` is what holds its cursor.
+ */
+function renderShelf() {
+  return render(
+    withQueries(<ToolWindow tool="assets" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />),
+  )
 }
 
 /** The panel's own row: title, actions, close button. */
@@ -19,7 +26,7 @@ function headerOf(node: HTMLElement | null): HTMLElement | null {
  * Every panel arrives through `import()`, so nothing of its own is on screen on the first tick.
  * The RUNNER transforms the panel's subgraph on demand and took 2,6 s over the shelf here — a
  * figure that is the runner's, not the studio's, where the chunk is already built. Three seconds
- * is what `test-setup.ts` gives every awaited query, which would leave this one 400 ms of margin
+ * is what `testSetup.ts` gives every awaited query, which would leave this one 400 ms of margin
  * on a machine that has already been measured seven times slower under load.
  *
  * `BUDGET` is the case's own, and it has to be: `testTimeout: 15_000` in `vitest.config.ts` is
@@ -36,20 +43,16 @@ beforeEach(() => {
 })
 
 describe('a panel lying in a band', () => {
-  // A band is short and wide: a second row of controls under the title costs a tenth of the
-  // shelf's height and buys nothing, since the row it sits on is mostly empty.
-  it(
-    'carries its filter bar on the title row',
-    async () => {
-      renderShelf('bottom')
-
-      expect(headerOf(await screen.findByRole('searchbox', {}, ARRIVES))).not.toBeNull()
-    },
-    BUDGET,
-  )
+  // The montage, where this read the shelf until 17 August — the shelf stands in a column now,
+  // and the timeline is the one panel left that hands a whole bar to a band's title row.
+  function renderMontage() {
+    return render(
+      <ToolWindow tool="timeline" zone="bottomRight" onFocus={vi.fn()} onClose={vi.fn()} />,
+    )
+  }
 
   it('leaves the way out of the panel reachable beside it', () => {
-    renderShelf('bottom')
+    renderMontage()
 
     expect(screen.getByRole('button', { name: 'Retirer le module' })).toBeInTheDocument()
   })
@@ -57,7 +60,7 @@ describe('a panel lying in a band', () => {
   // A bar given `flex-1` weighs nothing when the row runs short, so every missing pixel is
   // taken from whatever else can shrink. The panel's name is not what should pay for it.
   it('keeps the panel name off the table when the row runs short', () => {
-    const { container } = renderShelf('bottom')
+    const { container } = renderMontage()
 
     expect(container.querySelector('header > span')?.className).toContain('shrink-0')
   })
@@ -66,7 +69,7 @@ describe('a panel lying in a band', () => {
   // two buttons shares the band and would otherwise see them drift away from the close button.
   it('spreads the actions of the panel that declared it, and no other', () => {
     const { container } = render(
-      <ToolWindow tool="scene" zone="bottom" onFocus={vi.fn()} onClose={vi.fn()} />,
+      <ToolWindow tool="scene" zone="bottomRight" onFocus={vi.fn()} onClose={vi.fn()} />,
     )
 
     const actions = container.querySelector('header > span:nth-of-type(2)')
@@ -80,7 +83,7 @@ describe('a panel standing in a column', () => {
   it(
     'keeps its filter bar under the title',
     async () => {
-      renderShelf('left')
+      renderShelf()
 
       expect(headerOf(await screen.findByRole('searchbox', {}, ARRIVES))).toBeNull()
     },

@@ -1,9 +1,12 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Us } from '@shared/domain/time'
 import type { TimelineEngineDeps } from '@/engines/timeline/TimelineEngine'
 import { sequenceWith } from '@/engines/timeline/timeline-fixtures'
-import { installFakeBridge } from '@/services/fake-bridge'
+import type { SequenceState } from '@/engines/timeline/timelineState'
+import { installFakeBridge } from '@/services/fakeBridge'
+import { useScenes } from '@/stores/scenes'
 import { Monitor } from './Monitor'
 
 /**
@@ -11,11 +14,13 @@ import { Monitor } from './Monitor'
  * this covers is the one thing the component owes the engine: showing what it reports.
  */
 const built: TimelineEngineDeps[] = []
+const engines: { seek: ReturnType<typeof vi.fn> }[] = []
 
 vi.mock('@/engines/timeline/TimelineEngine', () => ({
   TimelineEngine: class {
     constructor(deps: TimelineEngineDeps) {
       built.push(deps)
+      engines.push(this)
     }
     mount = vi.fn(() => Promise.resolve())
     apply = vi.fn()
@@ -33,6 +38,8 @@ const report = (unreadable: boolean): void => {
 }
 
 const onTime = vi.fn()
+
+const at = (playhead: Us): SequenceState => ({ ...sequenceWith([]), playhead })
 
 describe('Monitor', () => {
   beforeEach(() => {
@@ -57,6 +64,29 @@ describe('Monitor', () => {
     mounted()
 
     expect(screen.queryByText(/n’a pas pu être affiché/)).not.toBeInTheDocument()
+  })
+
+  /**
+   * A scene edited in its own tab changes no sequence, so the redraw runs off a ref rather than a
+   * dependency — and it has to be the head the monitor stands on NOW, not the one it mounted with.
+   */
+  it('redraws a scene edit at the head it currently stands on', () => {
+    const view = render(
+      <Monitor owner="doc-1:program" title="Programme" role="r" sequence={at(0)} onTime={onTime} />,
+    )
+    view.rerender(
+      <Monitor
+        owner="doc-1:program"
+        title="Programme"
+        role="r"
+        sequence={at(4_000_000)}
+        onTime={onTime}
+      />,
+    )
+
+    act(() => useScenes.setState(state => ({ ...state })))
+
+    expect(engines.at(-1)?.seek).toHaveBeenCalledWith(4_000_000)
   })
 
   /** A `.exr` on a track used to leave the programme black, with nothing on screen saying why. */

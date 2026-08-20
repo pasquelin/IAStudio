@@ -1,6 +1,6 @@
 # 8. Espace Image
 
-[← Les assets](07-assets.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace 3D →](09-espace-3d.md)
+[← Les assets](07-assets.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Modélisation →](09-espace-modelisation.md)
 
 L’espace où l’on peint, gomme, recadre et empile des calques.
 
@@ -27,15 +27,21 @@ nommé d’après l’asset et **déjà actif** : c’est lui que le prochain tr
 | Geste | Ce qu’il faut |
 |---|---|
 | **Glisser-déposer** l’image sur la toile | l’onglet image ouvert devant vous |
-| **Double-clic** sur l’image dans l’étagère | un onglet image en avant — c’est lui qui la reçoit |
+| **Clic droit ▸ Placer comme calque** | un onglet image ouvert, en avant ou non |
 | L’outil **Image…**, groupe Formes | rien : il ouvre l’étagère, vous y choisissez |
 
 > Seules les **images du projet** entrent — celles que vous voyez dans l’étagère, générées ou
 > importées. Une image qui n’a pas encore été téléchargée dans le projet n’est pas déposable.
 
-Il n’y a **pas de menu « Ouvrir »** : un document image ne s’ouvre pas *sur* un fichier, il
-reçoit des images comme calques. La nuance compte au moment de fermer l’onglet — voir la fin de
-ce chapitre.
+**Le double-clic ne figure pas dans ce tableau, et c’est la nuance du chapitre** : il n’entre dans
+aucun document ouvert. Il ouvre l’image dans un onglet **à elle** : elle n’y est pas un calque de
+plus, le document EST l’image — et rouvrir la même image revient à cet onglet-là plutôt que d’en
+ouvrir un second. C’est la règle de tout le studio, décrite dans [Les assets](07-assets.md).
+
+Il n’y a **pas de menu « Ouvrir »** : on ouvre par un double-clic, sur l’image dans l’étagère ou
+sur le document dans l’Explorateur. Le `+` du rail gauche, lui, part du blanc — et ce
+document-là ne porte aucun asset derrière lui. La nuance compte au moment de fermer l’onglet, voir
+la fin de ce chapitre.
 
 ---
 
@@ -112,7 +118,7 @@ Autrement dit : un outil armé n’a jamais besoin du menu pour être repris.
 |---|---|---|
 | **Déplacement** | `V` | fait glisser le contenu du calque actif |
 | **Main** | `H` | déplace la vue |
-| **Mise à l’échelle** | `K` | fait apparaître huit poignées et une rotation autour du calque actif |
+| **Échelle** | `K` | fait apparaître huit poignées et une rotation autour du calque actif |
 
 > **C’est le groupe armé à l’ouverture.** Un document s’ouvre sur **Déplacement**, jamais sur le
 > pinceau : le premier clic sur une image que vous venez d’ouvrir ne doit pas pouvoir y laisser
@@ -222,9 +228,9 @@ suivant. Le **Lasso** l’ignore : une zone tracée point par point n’a pas de
 Un calque texte reste du texte : il se corrige, et il reste net à tous les zooms. L’inspecteur en
 règle le **contenu**, le **corps** et la **police**.
 
-**La liste des polices est celle de l’espace 3D** : les trois polices que le studio embarque
+**La liste des polices est celle de l’espace Modélisation** : les trois polices que le studio embarque
 d’abord, puis celles de votre machine. Ce que dit
-[l’espace 3D](09-espace-3d.md#les-polices-offertes) des polices absentes vaut mot pour mot ici.
+[l’espace Modélisation](09-espace-modelisation.md#les-polices-offertes) des polices absentes vaut mot pour mot ici.
 
 ### Groupe Gomme
 
@@ -239,7 +245,7 @@ La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
-| **Commentaire** | `C` | *pas encore disponible* |
+| **Commentaire** | — | *pas encore disponible* |
 | **Remplir le calque** | `G` | remplit le calque actif — ou la **zone sélectionnée**, s’il y en a une |
 | **Pipette** | `I` | prélève la couleur sous le pointeur |
 | **Couleur** | — | la couleur du pinceau, du crayon, des formes et du remplissage |
@@ -376,7 +382,7 @@ composités à l’export ; les règles, les repères et les pointillés de sél
 > dialogue ne demande de nom : la copie s’appelle *« (le nom) copie »*, et l’asset que vous aviez
 > ouvert reste tel qu’il était au dernier `⌘S`.
 >
-> L’image s’écrit en **dossier** `documents/<id>.img/` : un `document.json` pour la pile, et un
+> L’image s’écrit en **dossier** `documents/<id>.ora/` : un `document.json` pour la pile, et un
 > `.png` par calque — plus un second pour son masque, s’il en a un. C’est volontairement
 > inspectable : vous pouvez ouvrir le dossier et regarder les calques un par un.
 >
@@ -385,4 +391,4 @@ composités à l’export ; les règles, les repères et les pointillés de sél
 
 ---
 
-[← Les assets](07-assets.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace 3D →](09-espace-3d.md)
+[← Les assets](07-assets.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Modélisation →](09-espace-modelisation.md)

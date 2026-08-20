@@ -1,9 +1,9 @@
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
-import { WINDOW_SOURCES } from './window-sources'
+import { WINDOW_SOURCES } from './windowSources'
 
 /**
- * Every module of the window, as text — the sweep `window-sources.ts` holds for its guards.
+ * Every module of the window, as text — the sweep `windowSources.ts` holds for its guards.
  *
  * Components ONLY was the first shape of this rule, and it was wrong by exactly one file: a
  * ruler graduation is painted from a `.ts`, and it drew `0.5` at a French reader for months
@@ -19,7 +19,7 @@ const SOURCES = WINDOW_SOURCES
  * comma in a `vec3` is a second component. Adding a name here is the moment to ask whether the
  * number really is not about to be read.
  */
-const NOT_FOR_READING = new Set(['./engines/skybox/projection-shader.ts'])
+const NOT_FOR_READING = new Set(['./engines/skybox/projectionShader.ts'])
 
 /**
  * `toFixed` returns a string, and the string is always English: `0.52` where a French reader

@@ -1,4 +1,4 @@
-import { newTexture, type TextureState } from '@/engines/texture/texture-state'
+import { newTexture, type TextureState } from '@/engines/texture/textureState'
 import { installIn } from './document-fixtures'
 import { textureStore } from './textures'
 

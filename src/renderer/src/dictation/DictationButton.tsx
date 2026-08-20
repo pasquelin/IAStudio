@@ -2,14 +2,14 @@ import { mdiMicrophone, mdiMicrophoneOff } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import type { TooltipFactory } from '@/helpers/tooltip'
+import { useDictation } from '@/hooks/useDictation'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useBinding } from '@/stores/bindings'
 import { LevelMeter } from './LevelMeter'
-import { useDictation } from './useDictation'
 
 export type DictationButtonProps = {
-  /** `header` is the smaller gauge, for a bar of panel actions. */
-  variant?: 'bar' | 'header'
+  /** `header` for a bar of panel actions, `row` for the foot of a field — see `ToolButton`. */
+  variant?: 'bar' | 'header' | 'row'
   /** Tooltip factory of the host, as for any other button of a dock. */
   tooltip: TooltipFactory
 }
@@ -37,6 +37,17 @@ export function DictationButton({ variant = 'bar', tooltip }: DictationButtonPro
 
   return (
     <span className="flex items-center gap-2">
+      {/* Before the button, not after: what follows the microphone is the edge of whatever holds
+          it — the foot of a field, the send button — and a meter wedged in there pushed the one
+          control of the pair away from that edge.
+
+          Named here, where the button beside it says "stop dictating" rather than that anything
+          is being heard. The status line's copy is decorative — its own phrase says it. */}
+      {dictation.isListening && <LevelMeter label={t('dictation.listening')} />}
+      {dictation.state === 'loadingEngine' && (
+        <span className="text-muted text-tiny">{t('dictation.loadingEngine')}</span>
+      )}
+
       <ToolButton
         icon={dictation.isListening ? mdiMicrophone : mdiMicrophoneOff}
         label={dictation.isListening ? t('dictation.stop') : t('dictation.start')}
@@ -47,13 +58,6 @@ export function DictationButton({ variant = 'bar', tooltip }: DictationButtonPro
         disabled={dictation.state === 'loadingEngine' || dictation.state === 'downloadingModel'}
         onClick={() => void (dictation.isListening ? dictation.stop() : dictation.start())}
       />
-
-      {/* Named here, where the button beside it says "stop dictating" rather than that anything
-          is being heard. The status line's copy is decorative — its own phrase says it. */}
-      {dictation.isListening && <LevelMeter label={t('dictation.listening')} />}
-      {dictation.state === 'loadingEngine' && (
-        <span className="text-muted text-tiny">{t('dictation.loadingEngine')}</span>
-      )}
     </span>
   )
 }

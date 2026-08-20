@@ -12,65 +12,66 @@ que vous avez importé.
 C’est l’équivalent d’un navigateur de contenu — la bibliothèque de matière première dans
 laquelle vous piochez.
 
-**Où il se trouve** dépend de l’espace où vous êtes :
+**Où il se trouve : dans la colonne de gauche, moitié haute, dans tous les espaces.** Sous les
+**Modèles** et la **Génération**, avec lesquels il se relaie — les trois panneaux qui répondent à
+la même question, « qu’est-ce que Scenario me propose ».
 
-| Espace | Où se trouve l’étagère |
-|---|---|
-| Image, Textures, Skyboxes | dans la **bande basse** |
-| Vidéo, Audio, 3D | dans la **colonne de droite**, moitié haute |
+Cliquez son icône dans le rail de gauche pour l’amener devant : c’est le troisième des trois, et
+la moitié s’ouvre sur les Modèles tant que vous n’avez rien demandé.
 
-Ce n’est pas un caprice : dans les espaces Vidéo, Audio et 3D, la bande basse appartient à la
-timeline, qui a besoin de toute la largeur. Il faut pourtant que l’étagère et la timeline tiennent
-l’écran **ensemble** pour qu’on puisse glisser une prise ou un modèle de l’une vers l’autre —
-l’étagère prend donc la moitié haute de la colonne de droite, celle des panneaux qui servent le
-document ouvert.
+Sous le trait, dans la moitié basse de la même colonne, l’**Explorateur**. Les deux tiennent donc
+l’écran **ensemble**, et c’est délibéré : ce qui entre dans votre projet passe de l’étagère au
+dossier, jamais autrement.
 
 ---
 
 ## Ce qu’on y trouve
 
-Six types d’assets :
+Sept types d’assets :
 
-| Type | Ce que c’est | Où il est rangé |
+| Type | Ce que c’est | Où il atterrit |
 |---|---|---|
-| **Image** | une image fixe | `assets/img/` |
-| **Vidéo** | un plan animé | `assets/vid/` |
-| **Audio** | un son, une musique | `assets/aud/` |
-| **Maillage** | un objet en 3D | `assets/3d/` |
-| **Texture** | une matière | `assets/tex/` |
-| **Skybox** | un ciel à 360° | `assets/sky/` |
+| **Image** | une image fixe | `Images/` |
+| **Vidéo** | un plan animé | `Video/` |
+| **Audio** | un son, une musique | `Audio/` |
+| **Maille** | un objet en 3D | `3D/` |
+| **Texture** | une matière | `Textures/` |
+| **Skybox** | un ciel à 360° | `Sky/` |
+| **Animation** | un mouvement, à rejouer sur un personnage | `Animations/` |
+
+**Où il atterrit, pas où il vit.** Ces sept dossiers sont posés à la création du projet et ne sont
+qu’un point de départ : déplacez un asset où vous voulez, renommez le dossier, videz-le. Ce qu’un
+fichier EST ne dépend pas de l’endroit où il est — le studio le retrouve, et sa fiche le suit.
 
 ---
 
 ## Chercher et filtrer
 
-**Où sont les contrôles dépend de la place.**
+**Les contrôles sont sur leur propre ligne, sous le titre.**
 
-| Zone | Où ils sont |
-|---|---|
-| **Bande basse** | sur la **ligne de titre**, à côté du nom du panneau |
-| **Colonne de droite** (espaces Vidéo, Audio et 3D) | sur leur **propre ligne**, sous le titre |
-
-Dans une bande, la ligne est large et presque vide : y loger la barre épargne une rangée
-entière, et l’étagère est là pour montrer des assets, pas des boutons. Dans une colonne étroite,
-la même barre pousserait le bouton de fermeture hors du cadre — elle redescend donc sous le
-titre.
+Dans une colonne étroite, une barre posée sur la ligne de titre pousserait le bouton de fermeture
+hors du cadre : elle vit donc **sous** le titre. Le mécanisme existe encore pour les bandes, où la
+ligne est large et presque vide, mais l’étagère n’y lit plus.
 
 | Contrôle | Ce qu’il fait |
 |---|---|
-| **Rechercher…** | filtre sur le **nom** de l’asset, à la frappe |
+| **Rechercher…** | filtre les assets du projet sur leur **nom**, et interroge la bibliothèque, à la frappe |
 | **Type** | ne garde qu’**une seule** sorte d’assets — en choisir une remplace la précédente |
-| **Emplacement** | ne garde que les assets dans un certain état vis-à-vis de la bibliothèque |
+| **Emplacement** | ne garde que les assets dans un certain état vis-à-vis de la bibliothèque — et, sur **Publié par quelqu’un d’autre**, va chercher ce que les autres ont publié |
 | **Icônes** / **Liste** | grille de vignettes, ou liste dense |
 | **Réduire les vignettes** / **Agrandir les vignettes** | leur taille |
 
-Le filtrage est **instantané**, même sur un gros projet : tout le catalogue est déjà chargé en
-mémoire, contrairement au panneau Modèles qui interroge le catalogue Scenario à distance.
+Les assets **du projet** répondent instantanément : ils sont déjà en mémoire. Ceux de la
+**bibliothèque** demandent un aller-retour — le mot part une fois que la frappe s’arrête, et il y
+est cherché dans le nom, mais aussi dans le prompt et la description, que le projet ne connaît pas.
+
+La liste se remplit **au fil du défilement**, dans les deux sens : le catalogue du projet comme la
+bibliothèque livrent leurs assets par paquets, et arriver en bas en demande la suite.
 
 > **La recherche ne réclame pas vos accents.** Taper `foret` trouve « Forêt d’hiver », et `ete`
-> trouve « Été ». C’est vrai ici et dans la recherche des préférences : on cherche en tapant, pas
-> en épelant. Le panneau **Modèles** n’en dit rien, parce qu’il ne cherche pas lui-même — il passe
-> le mot à l’API et affiche ce qu’elle rend.
+> trouve « Été ». C’est vrai pour les assets du projet et dans la recherche des préférences : on
+> cherche en tapant, pas en épelant. Pour la moitié **bibliothèque**, c’est l’API qui répond, et
+> elle décide seule — comme dans le panneau **Modèles**, qui ne cherche pas lui-même non plus.
 >
 > Cela vaut aussi pour les fichiers venus du Finder. macOS écrit les noms sous une forme où
 > l’accent est un caractère à part, invisible à l’œil mais différent pour la machine — un asset
@@ -128,18 +129,23 @@ pas de la première.
 
 **Les deux gestes ne servent pas le même besoin, et c’est le partage à retenir** : le double-clic
 sert **l’asset** — il l’ouvre chez lui ; le clic droit sert **le document déjà ouvert** — il y
-envoie l’asset. Le premier crée un onglet, le second n’en crée aucun.
+envoie l’asset. Le premier crée un onglet ; de tout ce que le second liste, **une seule ligne**
+en crée un, et elle est nommée plus bas.
 
-Le clic droit liste toutes les destinations, toujours dans le même ordre :
+Le clic droit liste les destinations en premier, toujours dans le même ordre, puis ce qui se fait
+de l’asset lui-même :
 
 | Ligne | Où elle envoie l’asset | Pour quels types |
 |---|---|---|
 | **Utiliser comme ciel** | le ciel ouvert, espace Skyboxes | images |
-| **Ajouter à la scène** | la scène 3D ouverte | maillages |
+| **Ajouter à la scène** | la scène 3D ouverte | mailles |
+| **Faire jouer au personnage** | le personnage choisi dans la scène 3D ouverte | animations |
 | **Ouvrir dans l’éditeur audio** | le montage ouvert, espace Audio | sons |
 | **Placer comme calque** | l’image ouverte, espace Image | images |
 | **Ajouter au montage** | la séquence ouverte, espace Vidéo | tous |
 | **Utiliser comme couleur de base** | la matière ouverte, espace Textures | images |
+| **Modifier l’image** | un onglet à elle, espace Image | textures et ciels |
+| **Extraire ses textures** | sort les images du modèle dans l’étagère | mailles |
 | **Renommer** | ouvre le nom sur la vignette elle-même | tous |
 | **Afficher dans le dossier** | ouvre le gestionnaire de fichiers sur le fichier | tous |
 
@@ -157,9 +163,26 @@ silence ; un nom que le dossier tient déjà l’est également, plutôt que d�
 > — `asset_40f76c36-8ad4-4def-a1b3-9125cba4da98.png`. Ils prennent leur vrai nom le jour où vous
 > les renommez, et pas avant : le studio ne remue pas votre dossier tout seul.
 
-Chaque ligne porte l’icône de son espace, la même que dans la barre de titre. Le menu ne montre
-que les destinations capables de recevoir **ce type-là** : le clic droit sur un son n’offre pas
-de le poser comme ciel.
+**Faire jouer au personnage demande deux choses, et le menu n’en montre qu’une.** La ligne
+s’active dès qu’une scène est ouverte quelque part — mais un mouvement se pose SUR un
+personnage, et c’est celui que vous avez sélectionné dans la scène. **Sans personnage
+sélectionné, la ligne reste active et ne fait rien**, sans message. C’est la seule ligne du menu
+qui reste allumée alors qu’il manque quelque chose — partout ailleurs, ce qui manque grise :
+choisissez d’abord le personnage dans la scène, puis lancez le mouvement.
+
+**Modifier l’image est la ligne qui ouvre un onglet**, et elle n’apparaît que sur une texture
+ou un ciel déjà posés sur le disque : ces deux-là s’assemblent dans leur espace — l’un tient
+des canaux, l’autre une projection — et aucun des deux ne réécrit l’image qui est dessous.
+C’est donc dans Image qu’on la retouche, et l’onglet ouvert est celui de l’asset lui-même.
+
+**Extraire ses textures ne s’adresse qu’à une maille**, et c’est l’autre moitié du même
+besoin : les images que le modèle porte à l’intérieur ressortent dans l’étagère du projet, où
+elles deviennent des assets comme les autres — donc retouchables. La ligne est grisée tant que
+le modèle n’est pas sur votre disque, comme **Afficher dans le dossier**.
+
+Chaque destination porte l’icône de son espace, la même que dans la barre de titre. Le menu ne
+montre que les destinations capables de recevoir **ce type-là** : le clic droit sur un son
+n’offre pas de le poser comme ciel.
 
 **En revanche, une destination dont l’espace n’a pas de document ouvert reste affichée, mais
 grisée.** C’est délibéré : un menu qui change de longueur selon ce qui est ouvert est un menu
@@ -167,12 +190,13 @@ qu’on ne peut pas apprendre. Une ligne grisée vous dit quoi faire — ouvrir 
 espace — là où une ligne absente ne dit rien du tout.
 
 C’est aussi ce qu’il faut regarder quand un envoi ne mène nulle part : le clic droit montre en une
-fois ce que cet asset peut faire, et ce qui manque pour qu’il le fasse.
+fois ce que cet asset peut faire, et ce qui manque pour qu’il le fasse — **à la seule réserve de
+Faire jouer au personnage**, dite plus haut.
 
 ### Le double-clic ouvre l’asset, il ne l’envoie nulle part
 
 **Un asset ouvert par double-clic a son onglet à lui**, dans l’espace qui édite son type : une
-image dans Image, un maillage dans 3D, un son dans Audio. Vous n’avez rien à ouvrir avant.
+image dans Image, une maille dans 3D, un son dans Audio. Vous n’avez rien à ouvrir avant.
 
 **Il ne regarde jamais l’onglet que vous avez devant vous** : le double-clic ouvre l’asset dans
 l’espace de son type, quoi qu’il y ait à l’écran.
@@ -190,7 +214,7 @@ Le type de l’asset désigne son éditeur, et rien d’autre n’entre en compt
 | une **image** | l’espace Image |
 | une **texture** | l’espace Textures |
 | un **ciel** | l’espace Skyboxes |
-| un **maillage** | l’espace 3D |
+| une **maille** | l’espace Modélisation |
 | un **son** | l’espace Audio |
 | une **vidéo** | l’espace Vidéo |
 
@@ -206,18 +230,45 @@ disque — pas d’un asset abîmé.
 
 | Vous glissez… | Vers… | Résultat |
 |---|---|---|
-| n’importe quel asset | la **timeline** | un clip sur la piste visée |
+| n’importe quel asset | la **timeline** | un clip sur une piste qui peut le prendre |
+| une scène 3D, depuis l’Explorateur | la **timeline** | elle y devient un clip vivant |
 | une image | la **toile** de l’espace Image | elle devient un calque de plus, armé |
 | une image | l’aperçu d’une **matière** | elle devient la couleur de base |
 | une image | la vignette d’un **canal** précis | elle devient ce canal-là |
 | une image panoramique | l’aperçu d’un **ciel** | elle devient le ciel |
-| un maillage | la **vue 3D** | il entre dans la scène, à l’origine |
+| une maille | la **vue 3D** | elle entre dans la scène, à l’origine |
 | un son | l’**éditeur audio** | il s’ajoute au montage comme un clip, et c’est lui qu’on édite |
 | un asset | un **champ d’asset** d’un formulaire de génération | il devient l’entrée du champ |
+| un mouvement, ou une maille qui en porte | une **sous-piste** de la bande, en 3D | il y devient un bloc, là où vous lâchez |
+| une image | une ligne de texture de l’**Inspecteur** — les cartes d’une matière, l’image d’un sprite | elle remplit cette ligne-là, et elle seule |
+| un ciel | la ligne **Ciel** de l’Inspecteur, en 3D comme en Textures | il éclaire l’aperçu |
+| n’importe quel asset | une **ligne de dossier** de l’Explorateur | son fichier y est déplacé |
 
-**La timeline ne trie pas.** Elle prend ce qu’on lui donne : un asset sans durée propre reçoit une
-durée par défaut plutôt qu’un refus. Dans la vue 3D, le dépôt est accepté **partout sur la vue**,
+**La timeline ne trie pas sur la durée** : un asset qui n’en a pas en reçoit une par défaut plutôt
+qu’un refus. Elle trie en revanche les **pistes**, et un lâcher qui n’en trouve aucune reste sans
+effet — voir [Poser un premier clip](10-espace-video.md#poser-un-premier-clip). Dans la vue 3D, le
+dépôt est accepté **partout sur la vue**,
 la barre d’outils comprise : un lâcher qui tombe à côté serait un raté qu’on ne voit pas venir.
+
+**Au centre, un lâcher que personne ne prend n’est pas perdu** : sur la zone à onglets, un asset
+dont aucun document ne veut s’ouvre dans son propre espace, comme au double-clic — une image
+lâchée sur la vue 3D ouvre un document d’image. C’est vrai aussi quand rien n’est ouvert : le
+centre vide prend le lâcher.
+
+**Dans les colonnes et dans la bande, un lâcher refusé reste sans effet**, et rien ne le dit : la
+vignette d’un canal ne prend que des images, et il n’y a personne derrière elle pour rattraper le
+reste.
+
+**L’Explorateur est le seul de ces dépôts qui ne fasse pas entrer l’asset dans un document : il
+DÉPLACE son fichier**, comme le ferait le Finder — et un asset de la bibliothèque est rapatrié
+d’abord. C’est un autre geste que celui décrit dans
+[Le panneau Projets](04-projets.md#les-gestes), qui range une ligne **de** l’Explorateur : ici,
+l’asset vient de l’étagère. Le blanc compte aussi — sous les cartes il vise le dossier affiché,
+sous l’arbre la racine du projet — mais lui ne s’allume pas.
+
+**Et ce dépôt-là porte deux silences.** Un asset dont le studio ne tient aucun fichier ne bouge
+pas : la ligne s’allume quand même, le type ne se lisant qu’au lâcher. Le pointeur montre en outre
+le `+` d’une copie, alors que le fichier est bel et bien **déplacé**.
 
 ---
 
@@ -266,6 +317,8 @@ Une petite marque dit où en est un asset vis-à-vis de la bibliothèque :
 | **Modifié des deux côtés** | les deux versions ont divergé |
 | **Le dernier envoi a échoué** | la tentative précédente n’est pas passée |
 | **Appartient à un autre projet** | le jumeau en ligne relève d’une autre clé API que celle qui est active |
+| **Dans votre bibliothèque — pas sur ce disque** | l’asset existe en ligne sous votre clé, aucun fichier ici |
+| **Publié par quelqu’un d’autre — pas sur ce disque** | il ne vous appartient pas ; un double-clic ou un glisser-déposer le rapatrie |
 
 **Les deux premiers ne se dessinent qu’en vue liste.** Sur une vignette, « local seulement » et
 « synchronisé » restent muets : ce sont les deux états ordinaires, et les marquer couvrirait la
@@ -285,9 +338,11 @@ relisent — c’est le même fichier, c’est la bibliothèque d’en face qui 
 > avec une clé, basculez sur une autre dans la barre de titre, et il porte le badge. C’est le
 > paragraphe ci-dessus à l’œuvre, pas un cas de synchronisation.
 >
-> Le filtre **Emplacement** ne propose pourtant que quatre états — *local seulement*,
-> *synchronisé*, *à envoyer* et *échec*. « Autre projet » peut donc s’afficher sur une vignette
-> sans qu’on puisse s’en servir pour filtrer.
+> Le filtre **Emplacement** ne le propose pourtant pas. Trois badges restent hors de la liste, et
+> chacun pour sa raison : « autre projet » ne s’atteint pas tant que l’étagère ne lit qu’une clé,
+> « rapatriement en cours » dure moins d’une seconde, et « fichier introuvable » n’est pas un
+> endroit où un asset se trouve. Ils peuvent donc s’afficher sur une vignette sans qu’on puisse
+> s’en servir pour filtrer.
 
 ### Envoyer une sélection
 
@@ -443,23 +498,16 @@ sans avoir exécuté `pnpm ffmpeg:fetch`.
 
 ## Où sont vraiment vos fichiers
 
-Tout est dans le dossier du projet, à un endroit précis et lisible :
+**Là où vous les avez mis.** Un asset généré atterrit dans l’un des sept dossiers de départ — voir
+[Ce qu’on y trouve](#ce-quon-y-trouve) — et rien ne l’y retient : déplacez-le, rangez-le dans une
+arborescence à vous, l’étagère continue de le montrer et sa fiche le suit. La disposition du
+dossier de projet est décrite au chapitre [Les projets](04-projets.md#ce-quil-y-a-dedans).
 
-```
-Mon projet/
-└── assets/
-    ├── img/     les images
-    ├── vid/     les vidéos
-    ├── aud/     les sons
-    ├── 3d/      les objets 3D
-    ├── tex/     les textures
-    └── sky/     les ciels
-```
-
-Ce sont de vrais fichiers, dans de vrais formats. Vous pouvez les ouvrir avec n’importe quel
+Ce sont de **vrais fichiers, dans de vrais formats**. Vous pouvez les ouvrir avec n’importe quel
 autre logiciel, les copier, les envoyer.
 
-**Sauf les médias importés**, qui restent là où ils étaient — c’est tout l’intérêt du lien.
+**Sauf les médias importés**, qui restent là où ils étaient — c’est tout l’intérêt du lien. Jusqu’à
+ce que vous les éditiez : la version enregistrée, elle, est écrite dans le projet.
 
 ---
 

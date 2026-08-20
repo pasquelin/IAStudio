@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { WINDOW_SOURCES } from '@/window-sources'
+import { WINDOW_SOURCES } from '@/windowSources'
 import { WindowShell } from './WindowShell'
 
 describe('WindowShell', () => {
@@ -16,6 +16,34 @@ describe('WindowShell', () => {
     expect(screen.getByRole('navigation', { name: 'Colonne' })).toBeInTheDocument()
     expect(screen.getByRole('main')).toHaveTextContent('Le contenu')
     expect(screen.getByRole('button', { name: 'Un' })).toBeInTheDocument()
+  })
+
+  // The five windows drew their title as bare words, so a reader was told nothing about which
+  // window it had landed in. The licences window was the one that still had its own heading.
+  it('names the window with a heading rather than bare words', () => {
+    render(
+      <WindowShell title="Titre">
+        <p>Le contenu</p>
+      </WindowShell>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Titre' })).toBeInTheDocument()
+  })
+
+  /**
+   * A window that reads as ONE block asks for no column, and an empty one is not the same thing:
+   * 224 px of nothing down the left edge is what the file information window looked like before
+   * the box was allowed to be absent.
+   */
+  it('leaves out the column entirely rather than framing an empty one', () => {
+    render(
+      <WindowShell title="Titre">
+        <p>Le contenu</p>
+      </WindowShell>,
+    )
+
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
+    expect(screen.getByRole('main')).toHaveTextContent('Le contenu')
   })
 
   /**

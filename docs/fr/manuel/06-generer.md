@@ -112,9 +112,9 @@ de mots, la plupart des modèles diluent. Mieux vaut une phrase juste que trois 
 
 ## Dicter au lieu de taper
 
-Un quatrième bouton, en forme de micro, se tient au même endroit. Il apparaît sur **tous** les
-champs de texte long du formulaire, pas seulement sur le prompt : un prompt négatif se dicte
-aussi bien.
+Un bouton en forme de micro se tient **dans le coin inférieur droit du champ**. Il apparaît sur
+**tous** les champs de texte long du formulaire, pas seulement sur le prompt : un prompt négatif
+se dicte aussi bien.
 
 **Tout se passe sur votre ordinateur.** Rien de ce que vous dites n’est envoyé nulle part, il
 n'y a pas de clé à saisir, et la dictée fonctionne sans connexion.
@@ -146,12 +146,15 @@ tapé n'est jamais écrasé.
 Cela vaut pour tous les champs du studio, pas seulement le prompt : la recherche d'assets, le
 renommage d'un calque, un nom de document.
 
+**Le micro d'un champ suit la même règle**, et c'est pour cela qu'il garde le curseur chez lui :
+l'appuyer ne sort pas du champ, la phrase s'y pose comme si vous l'aviez tapée.
+
 ### Ce que vous voyez pendant
 
-Pendant que vous parlez, une phrase grisée s'affiche **sous** le champ : c'est ce que la
-reconnaissance croit entendre, et elle se corrige au fil des mots. Elle n'entre pas dans le
-champ. Quand vous marquez un silence — ou que vous relâchez la touche — la phrase est arrêtée,
-ponctuée, et **elle seule** est écrite dans le champ.
+Pendant que vous parlez, une phrase grisée s'affiche **en bas du champ, à gauche du micro** :
+c'est ce que la reconnaissance croit entendre, et elle se corrige au fil des mots. Elle n'entre
+pas dans le champ. Quand vous marquez un silence — ou que vous relâchez la touche — la phrase est
+arrêtée, ponctuée, et **elle seule** est écrite dans le champ.
 
 Un petit indicateur à côté du micro monte et descend avec votre voix. S'il ne bouge pas, le
 micro n'entend rien : vérifiez lequel votre ordinateur utilise.
@@ -208,14 +211,14 @@ prend toute seule.
 > Les réglages proposés sont **filtrés contre ce que le modèle déclare accepter** avant d’être
 > appliqués. Une valeur hors bornes est écartée, jamais ramenée de force dans l’intervalle.
 
-### Les deux refus que vous verrez
+### Quand ces demandes n’ont rien à faire
 
-| Message | Ce qu’il veut dire |
+| La demande | Ce qui arrive |
 |---|---|
-| « Ce texte est déjà en anglais. » | la traduction n’a rien à faire — le studio vérifie la langue avant d’appeler |
-| « Déposez une image de référence pour en décrire le style. » | le formulaire ne porte aucune image à lire |
+| **Traduire un prompt en anglais**, sur un texte déjà anglais | **rien n’est refusé** : le texte revient tel quel, et la réponse porte la langue reconnue |
+| **Décrire le style des références**, sans image sur le formulaire | « Le formulaire ne porte aucune image de référence dont lire le style. » |
 
-Ces deux-là ne sont pas des pannes, et rien n’est dépensé quand ils s’affichent.
+Ni l’un ni l’autre n’est une panne, et rien n’est dépensé.
 
 > **Ces demandes-là n’entrent pas dans la file** : elles ne s’affichent pas dans la ligne d’état,
 > et il n’y a rien à annuler. **Proposer des variantes ne coûte aucune unité créative** — c’est
@@ -413,7 +416,8 @@ un modèle, et la première continue tranquillement.
 La ligne passe à **Terminée**, et l’asset apparaît :
 
 - dans le panneau **Assets** — l’étagère du projet ;
-- sur votre disque, dans `assets/img/`, `assets/vid/`, `assets/aud/`… selon son type.
+- sur votre disque, dans `Images/`, `Video/`, `Audio/`… selon son type, tant que vous ne l’avez pas
+  rangé ailleurs.
 
 **Ce que vous pouvez en faire ensuite dépend de son type**, et c’est là que le studio surprend le
 plus souvent :
@@ -423,15 +427,16 @@ plus souvent :
 | une **image** | la peindre dans un document **image**, la reprendre comme départ d’une autre génération, ou s’en servir comme **ciel** ou comme **couleur de base** d’une matière |
 | une **vidéo** ou un **son** | le poser sur une **timeline** (espace Vidéo), ou l’éditer (espace Audio) |
 | un **panorama** | le poser dans un document **ciel** (espace Skyboxes) |
-| un **objet 3D** | rien d’utile — le studio ne sait pas encore ouvrir un maillage |
+| un **objet 3D** | l’ouvrir dans une **scène** (espace 3D), qui naît avec lui dedans |
 
-**Rappel du geste**, parce qu’il déroute : le double-clic **n’ouvre pas d’onglet**, il envoie
-l’asset dans l’onglet déjà en avant. Ouvrez d’abord le document qui doit le recevoir, avec le
-bouton `+` du rail gauche. Voir [Les assets](07-assets.md).
+**Rappel du geste**, parce qu’il déroute : le double-clic **ouvre l’asset dans un onglet à lui**,
+dans l’espace qui édite son type, sans regarder ce que vous avez devant vous. Aucun document
+préalable n’est donc nécessaire. Pour l’envoyer dans un onglet **déjà ouvert**, c’est le clic droit
+ou le glisser-déposer. Voir [Les assets](07-assets.md).
 
-> **Une image générée se retouche dans l’espace Image** : ouvrez un document avec le `+`, puis
-> glissez l’image sur la toile — elle y devient un calque. Ce document, en revanche, ne
-> s’enregistre pas ; `⇧⌘E` en sort un PNG. Voir [Espace Image](08-espace-image.md).
+> **Une image générée se retouche dans l’espace Image** : double-cliquez-la, ou glissez-la sur la
+> toile d’un document image déjà ouvert — elle y devient un calque. `⌘S` enregistre ce document,
+> calques compris, et `⇧⌘E` en sort un PNG. Voir [Espace Image](08-espace-image.md).
 
 <!-- CAPTURE : le panneau Génération avec le formulaire d’un modèle, et la ligne d’état en
      dessous avec une tâche en cours. Vers ../../images/generate.png -->
@@ -456,7 +461,7 @@ de relancer, ce qui est la façon la plus rapide d’explorer une piste.
 
 | Message | Cause | Quoi faire |
 |---|---|---|
-| **Aucun identifiant enregistré.** | aucune clé API | Réglages ▸ Compte |
+| **Aucun identifiant enregistré.** | aucune clé API | **Réglages ▸ Compte** |
 | **Clé ou secret API invalide.** | une des deux chaînes est fausse | vérifier, souvent un espace en trop |
 | **Cette clé API n’a pas les droits requis.** | la clé existe mais ne peut pas faire cela | vérifier votre plan sur app.scenario.com |
 | **Trop de requêtes. Nouvelle tentative en cours…** | vous avez dépassé le débit autorisé | rien, le studio réessaie tout seul |

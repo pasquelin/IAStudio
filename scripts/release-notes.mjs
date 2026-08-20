@@ -5,14 +5,14 @@
  * `gh release create --notes-file`. That job runs no `pnpm install`, so nothing here may reach
  * outside Node.
  *
- * The rule itself is `src/main/release-notes.ts`, where the suite can reach it — this file only
+ * The rule itself is `src/main/releaseNotes.ts`, where the suite can reach it — this file only
  * points it at the changelog and turns its answer into an exit code.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 // A `.ts` from a `.mjs`: Node 24 strips the types on the way in, and the rule the tests check is
 // then the one that runs.
-import { releaseNotes } from '../src/main/release-notes.ts'
+import { releaseNotes } from '../src/main/releaseNotes.ts'
 
 const version = process.argv[2]
 

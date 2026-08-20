@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import stylesheet from '../index.css?raw'
-import { WRITTEN_SOURCES } from './test-harness'
+import { WRITTEN_SOURCES } from './testHarness'
 
 /**
  * The studio draws no focus ring — the owner's call, taken on 2026-08-15. What it costs is not
@@ -30,7 +30,7 @@ describe('no focus ring', () => {
     // The rule refuses something, which a sweep that only ever returns nothing cannot show.
     expect(RING.test("'focus-visible:ring-accent'")).toBe(true)
     expect(RING.test("'focus:outline-2'")).toBe(true)
-    expect(RING.test("'group-data-accented/row:focus-visible:ring-accent-content'")).toBe(true)
+    expect(RING.test("'group-data-selected/row:focus-visible:ring-accent-content'")).toBe(true)
     // The drop target of the title bar draws a ring that no focus brings up.
     expect(RING.test("'ring-accent ring-2'")).toBe(false)
     expect(RING.test("'focus-visible:bg-accent'")).toBe(false)

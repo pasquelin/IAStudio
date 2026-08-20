@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AudioData } from './audio-data'
+import type { AudioData } from './audioData'
 import { encodeWav } from './wav'
 
 const HEADER_BYTES = 44

@@ -6,17 +6,17 @@ import {
   type SphericalAngles,
 } from '@shared/domain/angles'
 import { DEFAULT_FIELD_OF_VIEW, type SkyboxContent, type SkyboxView } from '@shared/domain/skybox'
-import { createGpuPipeline, type GpuPipeline } from '../gpu/GpuPipeline'
+import { createGpuPipeline, type GpuPipeline } from '../gpu/gpuPipeline'
 import { createAdjustPass } from '../gpu/passes/adjust'
 import { reportFailure } from '@/services/diagnostics'
-import { createTextureBinding, type TextureBinding } from '../scene/texture-binding'
-import { createTextureCache, type TextureCache, type TextureSource } from '../scene/texture-cache'
+import { createTextureBinding, type TextureBinding } from '../scene/textureBinding'
+import { createTextureCache, type TextureCache, type TextureSource } from '../scene/textureCache'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
-import { createTestObjects, type TestObjects } from '../viewport/test-objects'
-import { turnBy } from '../viewport/look-around'
+import { createTestObjects, type TestObjects } from '../viewport/testObjects'
+import { turnBy } from '../viewport/lookAround'
 import { ViewportEngine } from '../viewport/ViewportEngine'
-import { createProjectionPass, type ProjectionPass } from './projection-shader'
-import { gestureFor, type SkyboxGesture } from './sun-drag'
+import { createProjectionPass, type ProjectionPass } from './projectionShader'
+import { gestureFor, type SkyboxGesture } from './sunDrag'
 
 export type SkyboxRendererOptions = {
   /** A sun dragged in the viewport. The document holds the angles; this only reports them. */
@@ -205,6 +205,9 @@ export class SkyboxRenderer {
   setProbesVisible(visible: boolean): void {
     this.probesWanted = visible
     this.syncProbes()
+    // Hiding them changes nothing a frame is drawn for, and this viewport only draws when asked:
+    // without this the spheres stayed on screen until something else moved.
+    this.viewport.requestRender()
   }
 
   /**

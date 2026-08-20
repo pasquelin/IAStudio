@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS, MAX_LOG_MESSAGE } from '@shared/ipc'
-import { invoke, resetHandlers } from '@main/ipc/test-harness'
+import { invoke, resetHandlers } from '@main/ipc/testHarness'
 import { log } from '@main/log'
 import { registerDiagnosticsHandlers } from './handlers'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 // The real one writes nothing under test — `log.ts` goes quiet on NODE_ENV — so what it was
 // asked to write is what there is to assert on.
@@ -113,5 +113,40 @@ describe('what a renderer failure leaves in the journal', () => {
   it('records nothing when the entry was refused', () => {
     expect(() => invoke(CHANNELS.diagnosticsReport, { level: 'error' })).toThrow()
     expect(journal.record).not.toHaveBeenCalled()
+  })
+})
+
+describe('the diagnostics trace handler', () => {
+  const dropped = { scope: 'shell.dropped', message: 'TypeError: disk is full' }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetHandlers()
+    registerDiagnosticsHandlers(() => journal)
+  })
+
+  it('writes the line to the log the main process owns', async () => {
+    await invoke(CHANNELS.diagnosticsTrace, dropped)
+
+    expect(log.error).toHaveBeenCalledWith('renderer/shell.dropped', 'TypeError: disk is full')
+  })
+
+  /**
+   * The whole point of the second channel. A journal row becomes a toast on the way, and a
+   * rejected promise names no gesture and no document: there is nothing the reader could do
+   * about it, and being interrupted over it is what made the first attempt at this a defect.
+   */
+  it('leaves the journal alone, so nothing reaches the screen', async () => {
+    await invoke(CHANNELS.diagnosticsTrace, dropped)
+
+    expect(journal.record).not.toHaveBeenCalled()
+  })
+
+  // Routing a scope that has a topic through here would file a failure the reader is meant to
+  // see, unseen. That the two lists share no name is the compiler's to hold, not this file's:
+  // comparing a `LogScope` to a `TraceScope` does not typecheck while they stay disjoint.
+  it('refuses a scope that belongs to the journal', () => {
+    expect(() => invoke(CHANNELS.diagnosticsTrace, { ...dropped, scope: 'scene.model' })).toThrow()
+    expect(log.error).not.toHaveBeenCalled()
   })
 })

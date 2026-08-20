@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { RepeatWrapping } from 'three'
+import { PerspectiveCamera, RepeatWrapping, Vector3 } from 'three'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import { TextureRenderer } from './TextureRenderer'
-import { newTexture, slotFor, type ChannelMap, type TextureState } from './texture-state'
+import { newTexture, slotFor, type ChannelMap, type TextureState } from './textureState'
 
 const MAP: Omit<ChannelMap, 'assetId'> = { origin: 'generated', width: 512, height: 512 }
 
@@ -22,7 +22,7 @@ const everyChannel = (): TextureState => {
 }
 
 /**
- * `mount` builds a real `WebGLRenderer`, which jsdom cannot give (`test-setup` hands back no canvas
+ * `mount` builds a real `WebGLRenderer`, which jsdom cannot give (`testSetup` hands back no canvas
  * context). Stubbing the viewport's mount and its `gl` accessor is enough — nothing here
  * dereferences the renderer, so what the engine decides is reachable and what it draws is not.
  */
@@ -67,6 +67,24 @@ describe('the texture preview', () => {
     await applied(mounted(), skyOf('sky-1'))
 
     expect(source.load).toHaveBeenCalledWith('scenario://asset/sky-1')
+  })
+
+  /** Both halves: an orbit panned with the middle button aims elsewhere, and putting only the
+   * camera back would show the same void it did before. */
+  it('puts the camera and what it aims at back where the texture opened', () => {
+    const camera = new PerspectiveCamera()
+    vi.spyOn(ViewportEngine.prototype, 'camera', 'get').mockReturnValue(camera)
+    const orbit = { target: new Vector3(), update: vi.fn() }
+    vi.spyOn(ViewportEngine.prototype, 'orbit', 'get').mockReturnValue(orbit as never)
+    const renderer = mounted()
+    const home = camera.position.clone()
+
+    camera.position.set(9, 9, 9)
+    orbit.target.set(3, 0, 0)
+    renderer.resetView()
+
+    expect(camera.position.toArray()).toEqual(home.toArray())
+    expect(orbit.target.toArray()).toEqual([0, 0, 0])
   })
 
   /** The branch a refactor would silently regress by moving the release inside the sky path. */

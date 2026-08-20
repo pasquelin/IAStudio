@@ -5,9 +5,18 @@ import { SECOND, type Us } from './time'
  * What a track drives. Three for a node, and the same three for one bone of a rig — a bone is
  * addressed by name because it lives inside the file, never in the document (see `ModelRef`).
  */
-export type TrackProperty = 'position' | 'rotation' | 'scale'
+export type TrackProperty = 'position' | 'rotation' | 'scale' | 'fov'
 
-export const TRACK_PROPERTIES: readonly TrackProperty[] = ['position', 'rotation', 'scale']
+export const TRACK_PROPERTIES: readonly TrackProperty[] = ['position', 'rotation', 'scale', 'fov']
+
+/**
+ * The three a pose is made of — what every node can be keyed on, and what `contributionAt`
+ * composes. `fov` is deliberately out: it drives a lens rather than a transform, and it is read
+ * by `fovAt` alone.
+ */
+export type PoseProperty = Exclude<TrackProperty, 'fov'>
+
+export const POSE_PROPERTIES: readonly PoseProperty[] = ['position', 'rotation', 'scale']
 
 /**
  * One value at one instant, in microseconds from the start of the timeline — the unit the
@@ -50,6 +59,54 @@ export type AnimationTrack = {
   keys: readonly Keyframe[]
 }
 
+/** How a camera picks up speed along its rail. A named union, so a drawn curve can join it. */
+export type Easing = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut'
+
+export const EASINGS: readonly Easing[] = ['linear', 'easeIn', 'easeOut', 'easeInOut']
+
+/**
+ * What moves a camera during a shot: a rail, and which stretch of it to take.
+ *
+ * `from` and `to` are normalised abscissae, never seconds — that is what lets a shot take only
+ * part of a rail, and what makes `from > to` mean "run it backwards". The clock of the move is
+ * the shot's own window, which is why this lives on the shot.
+ */
+export type CameraMotion = {
+  pathId: string
+  easing: Easing
+  /** 0..1 */
+  from: number
+  /** 0..1 */
+  to: number
+}
+
+/**
+ * What a camera looks at during a shot. One abstraction for both LOOK AT and TRACK OBJECT: a
+ * fixed point, or a node — which may itself be animated.
+ *
+ * An ORIENTATION target, never a focus distance: depth of field is another chantier entirely.
+ */
+export type CameraTarget = { kind: 'point'; at: Vector3 } | { kind: 'node'; nodeId: string }
+
+/**
+ * One camera, on air from `start` for `duration`.
+ *
+ * A list of its own rather than a track, and the difference is the whole reason: tracks ADD up
+ * (see `AnimationTrack.index`), where at most one camera can be on air at an instant. The rule
+ * that settles an overlap is a montage's — the line drawn highest wins, and a line is a camera —
+ * and it is read off THIS list's order by `activeShotAt`.
+ */
+export type CameraShot = {
+  id: string
+  cameraId: string
+  start: Us
+  duration: Us
+  /** Absent leaves the camera wherever its transform and its tracks put it. */
+  motion?: CameraMotion
+  /** Absent leaves the camera aimed by its own rotation — FREE, in the language of the trade. */
+  target?: CameraTarget
+}
+
 /**
  * What a document holds of its animation. The playhead is NOT here: where the head stands is
  * how a scene is being looked at, like the projection and the display mode — and a head written
@@ -60,10 +117,51 @@ export type AnimationTimeline = {
   duration: Us
   fps: number
   tracks: readonly AnimationTrack[]
+  /** Empty on every document written before shots existed, which is what makes them optional. */
+  shots: readonly CameraShot[]
+  /**
+   * Which objects the band SHOWS, by node id, in the order they were put there.
+   *
+   * A choice the person makes, never a consequence of what the scene holds: a house is scenery
+   * and a character in front of it is animated, and only they can say which is which. Deriving
+   * it from the scene put every object on the sheet — 8 000 blocks meant 24 009 buttons and
+   * 99,2 % of the window's DOM, measured 20/08.
+   */
+  sheet: readonly string[]
+}
+
+/**
+ * The sheet a file written before sheets existed comes back with: whoever is ALREADY animated,
+ * once each. A RECOVERY and nothing more — from then on the sheet is what the person put there,
+ * and this is never consulted again.
+ *
+ * `playing` is for the models whose lane actually carries a clip. A model with an empty lane is
+ * one nobody has animated yet, and it belongs on the sheet no more than a wall does.
+ */
+export function sheetFromAnimated(
+  tracks: readonly AnimationTrack[],
+  shots: readonly CameraShot[],
+  playing: readonly string[] = [],
+): string[] {
+  // Through a `Set`, which keeps each one at its first place: dedup by `includes` in a loop is
+  // quadratic, and a document of a few thousand animated nodes paid 62 ms for it — measured 20/08.
+  return [
+    ...new Set([
+      ...tracks.map(track => track.target.nodeId),
+      ...shots.map(shot => shot.cameraId),
+      ...playing,
+    ]),
+  ]
 }
 
 export const ZERO: Vector3 = Object.freeze({ x: 0, y: 0, z: 0 })
 export const ONE: Vector3 = Object.freeze({ x: 1, y: 1, z: 1 })
+
+/** What aiming at a fixed point starts as, and the one place its `kind` is spelled out. */
+export const POINT_TARGET: Extract<CameraTarget, { kind: 'point' }> = Object.freeze({
+  kind: 'point',
+  at: ZERO,
+})
 
 export const DEFAULT_DURATION: Us = 5 * SECOND
 export const DEFAULT_FPS = 25
@@ -72,9 +170,16 @@ export const EMPTY_TIMELINE: AnimationTimeline = Object.freeze({
   duration: DEFAULT_DURATION,
   fps: DEFAULT_FPS,
   tracks: [],
+  shots: [],
+  sheet: [],
 })
 
-/** What a track adds where it holds no key: nothing for a move or a turn, one for a scale. */
+/**
+ * What a track adds where it holds no key: nothing for a move, a turn or a lens, one for a scale.
+ *
+ * A `fov` track carries a `Vector3` whose `y` and `z` mean nothing — the price of keeping ONE
+ * keyframe shape. `fovAt` is the only reader of `.x`, and a test holds it to that.
+ */
 export function neutralOf(property: TrackProperty): Vector3 {
   return property === 'scale' ? ONE : ZERO
 }

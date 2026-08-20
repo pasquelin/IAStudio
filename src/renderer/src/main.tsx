@@ -1,18 +1,24 @@
 import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
+import { isFileInfoRoute } from '@shared/domain/fileInfo'
 import { isLicencesRoute } from '@shared/domain/licence'
 import { isManualRoute } from '@shared/domain/manual'
 import { isMirrorRoute } from '@shared/domain/mirror'
+import { isNewDocumentRoute } from '@shared/domain/newDocument'
 import { isSettingsRoute } from '@shared/domain/settings'
 import { isUsageRoute } from '@shared/domain/usage'
 import { UNKNOWN_SYSTEM_LANGUAGE } from '@shared/i18n'
 import { Application } from '@/app/Application'
 import { getBridge } from '@/services/bridge'
-import { ROOT_ERROR_REPORTING } from '@/app/root-errors'
+import { ROOT_ERROR_REPORTING, traceDroppedRejections } from '@/app/rootErrors'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { Failure } from '@/design/Failure'
 import { initI18n } from '@/i18n'
 import './index.css'
+
+// First of all, and above the two awaits below: this module splits there, and a rejection during
+// the language read or `initI18n` is exactly the kind nothing else in the window would catch.
+traceDroppedRejections()
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Root element not found in index.html')
@@ -28,7 +34,7 @@ await initI18n(language ?? UNKNOWN_SYSTEM_LANGUAGE)
 
 /** Same reason as the licences below, for another window's folder: registry, sections, draft. */
 const SettingsWindow = lazy(async () => ({
-  default: (await import('@/settings/SettingsWindow')).SettingsWindow,
+  default: (await import('@/settings/SettingsWindow/SettingsWindow')).SettingsWindow,
 }))
 
 /**
@@ -39,14 +45,14 @@ const LicencesWindow = lazy(async () => ({
   default: (await import('@/licences/LicencesWindow')).LicencesWindow,
 }))
 
-/** Lazy for a harder reason than size: the charting library must stay out of the first frame. */
 /** Split like its neighbours: the return is opened on purpose, and rarely. */
 const MirrorWindow = lazy(async () => ({
   default: (await import('@/spaces/video/MirrorWindow')).MirrorWindow,
 }))
 
+/** Lazy for a harder reason than size: the charting library must stay out of the first frame. */
 const UsageWindow = lazy(async () => ({
-  default: (await import('@/usage/UsageWindow')).UsageWindow,
+  default: (await import('@/usage/UsageWindow/UsageWindow')).UsageWindow,
 }))
 
 /**
@@ -54,7 +60,17 @@ const UsageWindow = lazy(async () => ({
  * and the markdown renderer comes with it. None of it belongs in the chunk the splash waits for.
  */
 const ManualWindow = lazy(async () => ({
-  default: (await import('@/manual/ManualWindow')).ManualWindow,
+  default: (await import('@/manual/ManualWindow/ManualWindow')).ManualWindow,
+}))
+
+/** Split like its neighbours, though it is the smallest of them: it opens on a right-click. */
+const FileInfoWindow = lazy(async () => ({
+  default: (await import('@/fileInfo/FileInfoWindow/FileInfoWindow')).FileInfoWindow,
+}))
+
+/** Split like its neighbours: it opens on the plus button, and nowhere near the first frame. */
+const NewDocumentWindow = lazy(async () => ({
+  default: (await import('@/newDocument/NewDocumentWindow/NewDocumentWindow')).NewDocumentWindow,
 }))
 
 /**
@@ -96,6 +112,20 @@ function Route({ hash }: { hash: string }) {
     return (
       <Suspense fallback={null}>
         <ManualWindow />
+      </Suspense>
+    )
+  }
+  if (isFileInfoRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <FileInfoWindow />
+      </Suspense>
+    )
+  }
+  if (isNewDocumentRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <NewDocumentWindow />
       </Suspense>
     )
   }

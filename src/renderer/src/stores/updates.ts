@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { UpdateState } from '@shared/domain/update'
-import { getBridge } from '@/services/bridge'
+import { connectThroughBridge, getBridge } from '@/services/bridge'
 
 type UpdatesState = {
   update: UpdateState
@@ -12,14 +12,11 @@ type UpdatesState = {
 export const useUpdates = create<UpdatesState>()(set => ({
   update: { phase: 'idle' },
 
-  connect: async () => {
-    const bridge = getBridge()
-    if (!bridge) return () => {}
-
+  connect: connectThroughBridge(async bridge => {
     const stop = bridge.updates.onState(update => set({ update }))
     set({ update: await bridge.updates.state() })
     return stop
-  },
+  }),
 
   install: async () => {
     await getBridge()?.updates.install()

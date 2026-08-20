@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
-import { invoke, resetHandlers } from '@main/ipc/test-harness'
+import { invoke, resetHandlers } from '@main/ipc/testHarness'
 import { registerDialogHandlers } from './dialogs'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 const savePicture = vi.fn<(name: string, bytes: Uint8Array) => Promise<string | null>>(() =>
   Promise.resolve('/Users/someone/Pictures/canvas.png'),
@@ -63,6 +63,12 @@ describe('the picture export handler', () => {
   // A separator here would write outside the folder the dialog picked.
   it('refuses a name that is a path', () => {
     expect(() => invoke(CHANNELS.dialogExportPicture, '../escape.png', 'QUI=')).toThrow()
+    expect(savePicture).not.toHaveBeenCalled()
+  })
+
+  // The folder itself is not a file in it, and this channel used to answer that it was.
+  it('refuses the name of the folder it sits in', () => {
+    expect(() => invoke(CHANNELS.dialogExportPicture, '.', 'QUI=')).toThrow()
     expect(savePicture).not.toHaveBeenCalled()
   })
 

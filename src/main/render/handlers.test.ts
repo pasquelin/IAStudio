@@ -3,10 +3,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
-import { invoke, resetHandlers } from '@main/ipc/test-harness'
+import { invoke, resetHandlers } from '@main/ipc/testHarness'
 import { registerRenderHandlers } from './handlers'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 const staged: string[] = []
 
@@ -107,6 +107,12 @@ describe('rendering a scene to a film', () => {
   it('refuses a name that would climb out of the folder it is handed', async () => {
     install()
     await expect(start('../../etc/passwd', 25)).rejects.toThrow()
+  })
+
+  // The same climb without a separator to give it away, which this channel used to let through.
+  it('refuses the name of the folder above', async () => {
+    install()
+    await expect(start('..', 25)).rejects.toThrow()
   })
 
   it('keeps two renders apart', async () => {

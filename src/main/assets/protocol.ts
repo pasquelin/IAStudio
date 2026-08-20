@@ -2,6 +2,7 @@ import { net, protocol } from 'electron'
 import { isAbsolute, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { ASSET_SCHEME, hostedParts, type Asset } from '@shared/domain/asset'
+import { log } from '@main/log'
 
 /**
  * Resolves an asset's stored path inside its project, or refuses.
@@ -77,13 +78,17 @@ export function registerAssetScheme(): void {
   ])
 }
 
-/** Asynchronous since the catalogue moved to its own thread — see `catalog-thread.ts`. */
-type AssetResolver = (assetId: string) => Promise<string | null>
+/**
+ * `null` is « no file », the project having gone included — a resolver absorbs that refusal
+ * itself. A REJECTION therefore means a defect, which `servedPath` journals as one.
+ */
+type AssetResolver = (key: string) => Promise<string | null>
 
 /**
- * One resolver per host of the scheme. `asset` is a row of the open project's catalogue;
- * `favorite` is a still kept outside every project, which is why it cannot be resolved the same
- * way — there is no catalogue to look it up in. A third kind is a third entry, nothing else.
+ * One resolver per host of the scheme, each reading the key ITS host is named by: an asset id for
+ * `asset` and `poster`, a favourite id for `favorite` — kept outside every project, which is why
+ * no catalogue can answer for it — and a project-relative PATH for `thumb`, whose subject is a
+ * file the catalogue has most often never heard of. A further kind is a further entry.
  */
 export type AssetResolvers = Readonly<Record<string, AssetResolver>>
 
@@ -92,8 +97,23 @@ export function serveAssets(resolvers: AssetResolvers): void {
     const file = await servedPath(request.url, resolvers)
 
     if (!file) return new Response(null, { status: 404 })
+
+    // A container is not a picture. Served as it is, its ZIP bytes reach an `<img>` and decode
+    // to nothing — every tile, every inspector and every layer sourced from it draws empty. The
+    // format requires a flatten inside precisely so that a reader wanting a picture has one.
+    const flat = await flattenedContainer(file)
+    if (flat) return new Response(flat, { headers: { 'content-type': 'image/png' } })
+
     return net.fetch(pathToFileURL(file).toString())
   })
+}
+
+/** `null` for anything that is not a container, which is every other file this scheme serves. */
+async function flattenedContainer(file: string): Promise<Uint8Array | null> {
+  // Streamed by the reader itself, not read whole: this answers one request per tile of a grid,
+  // and a container of ten 4K layers is hundreds of megabytes in the process owning every window.
+  const { containerPictureOf } = await import('./openRasterFile')
+  return await containerPictureOf(file)
 }
 
 /**
@@ -109,5 +129,15 @@ export async function servedPath(url: string, resolvers: AssetResolvers): Promis
   if (!Object.hasOwn(resolvers, parsed.host)) return null
 
   const resolveHost = resolvers[parsed.host]
-  return resolveHost ? resolveHost(parsed.id) : null
+  if (!resolveHost) return null
+
+  try {
+    return await resolveHost(parsed.id)
+  } catch (error: unknown) {
+    // Still answered as « no file », because a `protocol.handle` cannot let anything fly — but
+    // said as a DEFECT: the ordinary refusal is the resolver's to absorb, so whatever reaches
+    // here is a resolver that broke, and the journal is the only place it will ever show.
+    log.error('assets', `serving ${parsed.host}/${parsed.id} failed: ${String(error)}`)
+    return null
+  }
 }

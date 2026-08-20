@@ -21,7 +21,7 @@ const FULL_SCALE = 32_768
 /**
  * Folds mono 16-bit PCM into min/max pairs as it streams past, rather than holding a whole
  * decode to reduce afterwards: an hour of the 8 kHz mono ffmpeg is asked for is 57 MB, and
- * nothing needs to hold it. Runs inside the waveform process — see `peaks-worker`.
+ * nothing needs to hold it. Runs inside the waveform process — see `peaksWorker`.
  *
  * The bucket width comes from the sample rate rather than from the total length, so each pair
  * covers the same slice of time whether the file ran short or long of its probe.

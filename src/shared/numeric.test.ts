@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bound, clamp, snap } from './numeric'
+import { bound, clamp, clampAtLeast, percentIn, snap } from './numeric'
 
 describe('clamp', () => {
   it('leaves a value inside its bounds alone', () => {
@@ -9,6 +9,19 @@ describe('clamp', () => {
   it('holds a value at the bound it crossed', () => {
     expect(clamp(-3, 0, 10)).toBe(0)
     expect(clamp(30, 0, 10)).toBe(10)
+  })
+})
+
+describe('clampAtLeast', () => {
+  it('holds a value at the bound it crossed, like clamp', () => {
+    expect(clampAtLeast(-3, 0, 10)).toBe(0)
+    expect(clampAtLeast(30, 0, 10)).toBe(10)
+  })
+
+  // The whole reason it exists: a window narrower than what it shows, a clip shorter than its fade.
+  it('answers the floor when the bounds cross, where clamp answers the ceiling', () => {
+    expect(clampAtLeast(50, 0, -20)).toBe(0)
+    expect(clamp(50, 0, -20)).toBe(-20)
   })
 })
 
@@ -26,6 +39,18 @@ describe('snap', () => {
 
   it('leaves the value alone when there is no step to snap to', () => {
     expect(snap(1.2345, 0)).toBe(1.2345)
+  })
+})
+
+describe('percentIn', () => {
+  it('reads a value as its share of the span', () => {
+    expect(percentIn(2.5, 0, 10)).toBe(25)
+    expect(percentIn(-1, -2, 2)).toBe(25)
+  })
+
+  // A rail handed `NaN%` drops the declaration and draws nothing, without a word.
+  it('answers zero on a span of nothing rather than NaN', () => {
+    expect(percentIn(3, 3, 3)).toBe(0)
   })
 })
 

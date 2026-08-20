@@ -3,7 +3,7 @@ import { canvasOf, canvasHistoryOf, useCanvases } from './canvases'
 import { canUndo, canRedo } from '@/engines/core/history'
 import { addLayer, renameLayer } from '@/engines/canvas/commands'
 import { layerFixture } from '@/engines/canvas/canvas-fixtures'
-import { DEFAULT_CANVAS } from '@/engines/canvas/canvas-state'
+import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
 import { layerNow } from './canvas-fixtures'
 
 const layer = layerFixture()

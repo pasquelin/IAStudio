@@ -28,10 +28,24 @@ export type ViewportEnvironment = {
    * usable light. A roughness judged under no light is not judged.
    */
   setStudio: () => void
+  /**
+   * Lights from the neutral room for the length of one pass, and puts the document's own map back
+   * with `false` — what a studio VIEW needs in a quad layout, where the pane beside it is still
+   * showing the scene as it is.
+   *
+   * The room is prefiltered once, on the first ask, and kept: a mip chain per drawn frame is what
+   * this exists not to pay.
+   */
+  borrowStudio: (studio: boolean) => void
   setIntensity: (intensity: number) => void
   /** Radians around Y. Turns the horizon and what the scene reflects together. */
   setRotation: (radians: number) => void
   setBackgroundVisible: (visible: boolean) => void
+  /**
+   * How soft the PICTURE is, 0 to 1. The prefiltered map is untouched: a sky serving as a backdrop
+   * is softened behind the subject while what the subject reflects stays as sharp as it was.
+   */
+  setBackgroundBlur: (blur: number) => void
   dispose: () => void
 }
 
@@ -48,9 +62,24 @@ export function createEnvironment(
   let source: Texture | null = null
   let prefiltered: WebGLRenderTarget | null = null
   let backgroundVisible = true
+  /** The neutral room, prefiltered on the first ask and kept — see `borrowStudio`. */
+  let room: WebGLRenderTarget | null = null
+  /** What the document asks for, so a borrowed pass has something to give back. */
+  let owned: Texture | null = null
+  let intensity = 1
 
   const applyBackground = (): void => {
     scene.background = backgroundVisible ? source : null
+  }
+
+  const roomMap = (): Texture => {
+    if (!room) {
+      const built = new RoomEnvironment()
+      room = generator.fromScene(built, 0.04)
+      // `fromScene` reads the room and leaves it alone: its dozen boxes and materials are ours.
+      built.dispose()
+    }
+    return room.texture
   }
 
   return {
@@ -66,7 +95,8 @@ export function createEnvironment(
     refresh: () => {
       const previous = prefiltered
       prefiltered = source ? generator.fromEquirectangular(source) : null
-      scene.environment = prefiltered?.texture ?? null
+      owned = prefiltered?.texture ?? null
+      scene.environment = owned
       // Disposed after the new one is in place, never before: releasing the target still bound
       // to `scene.environment` leaves every material pointing at freed GPU memory for a frame.
       previous?.dispose()
@@ -75,19 +105,26 @@ export function createEnvironment(
 
     setStudio: () => {
       const previous = prefiltered
-      const room = new RoomEnvironment()
-      prefiltered = generator.fromScene(room, 0.04)
-      // `fromScene` reads the room and leaves it alone: its dozen boxes and materials are ours.
-      room.dispose()
-
-      scene.environment = prefiltered.texture
+      // The same room a borrowed pass uses, prefiltered once: asking the generator again here
+      // would build a second copy of a map already on the GPU.
+      owned = roomMap()
+      prefiltered = null
+      scene.environment = owned
       previous?.dispose()
       requestRender()
     },
 
-    setIntensity: intensity => {
-      scene.environmentIntensity = intensity
-      scene.backgroundIntensity = intensity
+    borrowStudio: studio => {
+      scene.environment = studio ? roomMap() : owned
+      // The intensity comes with it, or the mode that exists to show a mesh in an unlit scene
+      // would render the Night preset's 0.15 — and with the scene's own lights out, near black.
+      scene.environmentIntensity = studio ? 1 : intensity
+    },
+
+    setIntensity: wanted => {
+      intensity = wanted
+      scene.environmentIntensity = wanted
+      scene.backgroundIntensity = wanted
       requestRender()
     },
 
@@ -105,11 +142,22 @@ export function createEnvironment(
       requestRender()
     },
 
+    setBackgroundBlur: blur => {
+      // Any value above zero routes the backdrop through a PMREM of three's own, built inside the
+      // render loop on the first frame that asks — once per sky, cached by texture, not per frame.
+      scene.backgroundBlurriness = blur
+      requestRender()
+    },
+
     dispose: () => {
       scene.background = null
       scene.environment = null
       prefiltered?.dispose()
       prefiltered = null
+      // The room outlives every sky, so it is freed here and nowhere else.
+      room?.dispose()
+      room = null
+      owned = null
       generator.dispose()
     },
   }

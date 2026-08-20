@@ -9,9 +9,10 @@ then lay it beside the others.
 
 ## How this workspace is laid out
 
-As in Video, the **bottom strip belongs to the edit** and the asset shelf takes the upper half of
-the **right column**, so a take can be dragged from one to the other without switching panels. The
-left column holds Models and Generate, as it does everywhere else.
+As in Video, the **bottom strip belongs to the edit**. The left column holds Models, Generate and
+the **asset shelf**, as it does everywhere else: a take is therefore dragged from the shelf to the
+edit without switching panels. The upper half of the right column is empty in this workspace; only
+the Inspector holds it, below the separator.
 
 In the middle, **two stacked monitors** — where Video puts its own side by side. They take the
 full width, one under the other:
@@ -248,6 +249,14 @@ its width, from start to finish: this is a view you read at a glance, not one yo
 > take; the upper one plays the **clips laid on the tracks**. Starting one stops the other: the
 > studio has a single player.
 
+**File › Export › Edit (OTIO)…** writes that edit into a file other editing applications open:
+tracks, clips, in points, speeds and links to the sounds. It is the same edit the Video workspace
+holds, so it is the same command.
+
+> **The tool chain is not in it, and that is not a loss of the export.** The upper monitor does
+> not hear it either: it belongs to the take open below, and it becomes real when you **Apply**.
+> An exported edit is worth exactly what the Program plays.
+
 ---
 
 ## Undo and redo
@@ -287,7 +296,7 @@ come in and go out cleanly. That is exactly what this workspace does.
 The detail is in [What does not exist yet](18-limits.md).
 
 > **Two different gestures, and they are worth telling apart.** `⌘S` saves the **document** —
-> your cuts, your fades, your settings, **and the edit in the bottom strip** — into an `.aud` file
+> your cuts, your fades, your settings, **and the edit in the bottom strip** — into an `.otio` file
 > in the project, which reopens just as it was. One key for both halves: an edit built over a take
 > you never touched is work, and it is saved as such. **Apply** and **Save as new** write an **audio asset**, a sound usable elsewhere, with
 > the settings baked in.

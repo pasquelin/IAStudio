@@ -2,7 +2,7 @@
  * Whether a gesture belongs to a field rather than to the application. Asked by both listeners on
  * `window` — the shortcut hook, and the canvas engine deciding whether a held space pans or types
  * a space — and by the rows that open a menu on right-click: a field inside one of them owes its
- * press to the native clipboard menu (`main/window/context-menu.ts`), which Chromium never asks
+ * press to the native clipboard menu (`main/window/contextMenu.ts`), which Chromium never asks
  * for once the row has called `preventDefault`. The application menu asks nothing — it delegates
  * with `registerAccelerator: false`.
  *

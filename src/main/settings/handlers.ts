@@ -4,7 +4,7 @@ import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { AccountError } from './accounts'
 import type { AccountChange, SettingsStore } from './store'
-import type { SettingActionId } from '@shared/domain/settings-registry'
+import type { SettingActionId } from '@shared/domain/settingsRegistry'
 import {
   parseAccountId,
   parseAccountName,

@@ -1,5 +1,8 @@
-import { cn } from '@/helpers/cn'
-import { FIELD, FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { FieldActions } from './FieldActions'
+import { PropertyLabel } from './PropertyLabel'
+import { ResetButton } from './ResetButton'
+import { fieldHandle } from './scHandle'
+import { FIELD_FILL, FIELD_ROW, type GestureProps } from './styles'
 
 export type TextFieldProps = GestureProps & {
   label: string
@@ -11,6 +14,10 @@ export type TextFieldProps = GestureProps & {
    * expression naming its wires is the case that asked for it.
    */
   hint?: Record<string, string>
+  /** The handle the MCP steers this field by. Never a translated word. */
+  scId?: string
+  /** Puts the value back where it started. Absent while it already stands there. */
+  onReset?: () => void
 }
 
 /**
@@ -22,25 +29,30 @@ export function TextField({
   value,
   onChange,
   hint,
+  scId,
+  onReset,
   onGestureStart,
   onGestureEnd,
 }: TextFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      <span title={label} className={FIELD_LABEL}>
-        {label}
-      </span>
+      <PropertyLabel label={label} />
 
       <input
         type="text"
+        data-sc={scId && fieldHandle(scId)}
         value={value}
         onChange={event => onChange(event.target.value)}
         // One entry per session at the field, not one per keystroke.
         onFocus={() => onGestureStart?.()}
         onBlur={() => onGestureEnd?.()}
-        className={cn(FIELD, 'text-tiny min-w-0 flex-1')}
+        className={FIELD_FILL}
         {...hint}
       />
+
+      <FieldActions>
+        <ResetButton onReset={onReset} />
+      </FieldActions>
     </label>
   )
 }

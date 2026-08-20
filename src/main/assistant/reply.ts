@@ -1,3 +1,10 @@
+/**
+ * Reads what the model answered, and refuses everything it cannot vouch for.
+ *
+ * The model has no tool use: it is asked for JSON and answers text, so this is the seam where a
+ * plausible sentence becomes — or fails to become — something the studio will act on. It is
+ * written to be strict on purpose. A call it lets through is a call that runs.
+ */
 import {
   type ActionName,
   assistantAction,
@@ -8,14 +15,6 @@ import { isRecord } from '@shared/guards'
 
 /** What `parseReply` answers: the reply without the cost, which only the caller knows. */
 type Reply = Omit<AssistantAnswer, 'cost'>
-
-/**
- * Reads what the model answered, and refuses everything it cannot vouch for.
- *
- * The model has no tool use: it is asked for JSON and answers text, so this is the seam where a
- * plausible sentence becomes — or fails to become — something the studio will act on. It is
- * written to be strict on purpose. A call it lets through is a call that runs.
- */
 
 /**
  * Pulls the object out of whatever the model wrapped it in.
@@ -47,8 +46,14 @@ export function jsonIn(text: string): unknown {
 function callIn(value: unknown): AssistantCall | null {
   if (!isRecord(value)) return null
 
+  /**
+   * Held to the share the model was SHOWN, not to the registry — `instruction.ts` lists it the
+   * `both` actions and nothing else, so an action it names from the other seventy-six is an
+   * action it invented. Checking against the whole registry let a hallucinated `git.checkout`
+   * through on the strength of the name alone.
+   */
   const action = assistantAction(typeof value.action === 'string' ? value.action : '')
-  if (!action) return null
+  if (!action || action.reach !== 'both') return null
 
   // An action with no fields may legitimately arrive without an input at all.
   const input = value.input

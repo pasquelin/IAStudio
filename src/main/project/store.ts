@@ -8,7 +8,8 @@ import {
   MANIFEST_FILE,
   MANIFEST_VERSION,
   LEGACY_MANIFEST_FILE,
-  PROJECT_FOLDERS,
+  MACHINE_FOLDERS,
+  STARTER_FOLDERS,
   type Manifest,
   type Project,
 } from '@shared/domain/project'
@@ -17,7 +18,8 @@ import { isHiddenEntry } from '@shared/domain/folder'
 import { isRecord } from '@shared/guards'
 import { log } from '@main/log'
 import { exists, isMissing, writeAtomic, writeQueue } from '@main/persistence'
-import type { AsyncCatalog } from './catalog-client'
+import { CATALOGUE_CLOSED, type AsyncCatalog } from './catalogClient'
+import { applyJournal } from './fileJournal'
 import { parseManifest } from './validation'
 
 /** Thrown when a channel needing a project is reached before one is open. */
@@ -25,6 +27,34 @@ export class NoProjectError extends Error {
   constructor() {
     super('no-project')
     this.name = 'NoProjectError'
+  }
+}
+
+/**
+ * Whether a refusal means the project has GONE rather than that something broke. A thread that
+ * DIED is deliberately not one of them — it rejects with its own reason, and that is news.
+ *
+ * `NoProjectError` is an assurance, not a live branch: `project` and `catalog` are assigned in
+ * one tick, so no caller reading both without an `await` between them can meet it. It stays
+ * because `catalog()` throws it, and a caller that DOES await between the two would.
+ */
+export function isCatalogueGone(error: unknown): boolean {
+  if (error instanceof NoProjectError) return true
+  return error instanceof Error && error.message === CATALOGUE_CLOSED
+}
+
+/**
+ * A catalogue read, with the project going answered by `gone` rather than by a rejection.
+ *
+ * Takes a THUNK, not a promise: `catalog()` throws before any promise exists, so a `.catch()`
+ * hung off the call is never attached and the throw leaves by the stack instead.
+ */
+export async function orWhenGone<T>(read: () => Promise<T>, gone: T): Promise<T> {
+  try {
+    return await read()
+  } catch (error: unknown) {
+    if (isCatalogueGone(error)) return gone
+    throw error
   }
 }
 
@@ -137,9 +167,25 @@ async function writeManifest({ path, manifest }: Project): Promise<void> {
   await writeAtomic(join(path, MANIFEST_FILE), JSON.stringify(manifest, null, 2))
 }
 
-async function ensureFolders(root: string): Promise<void> {
-  await Promise.all(PROJECT_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
+/**
+ * The machine's own, put back on every open: they hold a rebuildable cache, and a project whose
+ * `.index/peaks` was deleted between two sessions must still open.
+ */
+async function ensureMachineFolders(root: string): Promise<void> {
+  await Promise.all(MACHINE_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
   await hideFromExplorer(join(root, '.index'))
+}
+
+/**
+ * The folders a project STARTS with — laid down once, at creation, and never put back.
+ *
+ * That is the whole of what makes them ordinary: a user who threw `Images/` away meant to, and a
+ * folder that came back at the next open would be the old layout wearing a new name. An import
+ * with nowhere else to go recreates the one it needs (`freeAssetPath`), which is a different
+ * thing — it happens because something is being written, not because a project was opened.
+ */
+async function createStarterFolders(root: string): Promise<void> {
+  await Promise.all(STARTER_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
 }
 
 /**
@@ -336,6 +382,22 @@ export function createProjectStore({
 
     const opening = await openCatalog(file)
 
+    /**
+     * A move interrupted last session left rows naming where their files used to be. Finished
+     * here, on a catalogue nothing is reading yet and BEFORE the studio is told anything — the
+     * four lines below have to stay one gesture, and an `await` among them let a second opening
+     * publish itself in the middle and be overwritten by the first.
+     *
+     * Caught rather than awaited into the failure: opening a project must not fail over
+     * housekeeping. The rows stay where they are, and the reconciliation pass finds them.
+     */
+    try {
+      const caught = await applyJournal(opened.path, opening)
+      if (caught > 0) log.info('project', `finished ${caught} move(s) left by a previous session`)
+    } catch (error) {
+      log.warn('project', `replaying the move journal failed: ${String(error)}`)
+    }
+
     // Whatever is still queued belongs to the project that is closing, and its catalogue is
     // about to stop answering. The stamp goes with it: it is being written into the folder the
     // studio is about to leave.
@@ -350,7 +412,8 @@ export function createProjectStore({
 
   return {
     create: async (path, name) => {
-      await ensureFolders(path)
+      await ensureMachineFolders(path)
+      await createStarterFolders(path)
 
       const timestamp = now()
       const made: Project = {
@@ -405,9 +468,8 @@ export function createProjectStore({
     open: async path => {
       const manifest = await loadManifest(path)
 
-      // Repairs a project whose subfolders were deleted between two sessions — the folder is
-      // the user's, and a missing `assets/vid` must not stop it from opening.
-      await ensureFolders(path)
+      // The caches only. What the user arranged is theirs, deletions included.
+      await ensureMachineFolders(path)
 
       return await activate({ path, manifest })
     },

@@ -458,7 +458,7 @@ Le grain du bord d’une ombre.
 | **Douce** | un bord adouci, plus proche de la réalité |
 
 **Ce réglage dit à quoi ressemble une ombre, pas qui en projette une.** Cela se décide objet par
-objet, dans l’Inspecteur — voir [Espace 3D](09-espace-3d.md).
+objet, dans l’Inspecteur — voir [Espace Modélisation](09-espace-modelisation.md).
 
 ### Finesse des ombres
 
@@ -587,6 +587,39 @@ Le bouton **Parcourir…** ouvre le sélecteur de fichiers de votre système.
 
 ---
 
+## Versions
+
+*Suivi des versions du dossier de projet, par git. Ne concerne que vos fichiers.*
+
+Cette section règle le panneau **Git** et le panneau **Historique**. Elle ne concerne à aucun
+moment le studio lui-même : ce qui est suivi, c’est le dossier de votre projet.
+
+### Chemin de git
+
+Le suivi des versions a besoin du programme **git**, qui n’est pas fourni avec le studio. Sur la
+plupart des machines il est déjà là et ce réglage reste vide.
+
+Renseignez-le seulement si vous tenez à un git précis. **Un chemin contenant une espace est
+refusé** — c’est une limite du composant qui lance git, pas un choix — et l’application se
+comporte alors comme si git était absent.
+
+> **Si git manque**, le panneau Git le dit et n’offre aucun bouton : il n’y a rien à proposer
+> tant que le programme n’est pas là.
+
+### Nom de l’auteur, Adresse de l’auteur
+
+Ce qui est inscrit dans chaque version enregistrée. **Laissez les deux vides** si vous utilisez
+déjà git sur cet ordinateur : le studio reprend alors ce que git connaît, et n’écrase rien.
+
+**Les deux ensemble, ou aucun des deux** : git veut un nom ET une adresse, et n’en renseigner
+qu’un ferait échouer chaque enregistrement sur l’autre.
+
+> **Rien ne part ni n’arrive sans que vous le demandiez.** Il n’y a pas de relève automatique :
+> les trois boutons du panneau Git — relever, recevoir, envoyer — sont les seuls moments où le
+> studio parle au serveur.
+
+---
+
 ## Stockage
 
 *Où vos projets sont rangés sur le disque.*
@@ -625,9 +658,23 @@ Combien l’application raconte ce qu’elle fait, dans son journal.
 rien à ce que fait le logiciel — seulement à ce qu’il en dit.
 
 **Attention à ne pas confondre ce journal avec celui de la ligne d’état.** Celui-ci est le journal
-interne du studio, écrit dans le terminal qui l’a lancé : **dans la version installée, il n’y a pas
-de terminal, donc rien à lire**. Le panneau **Activité récente**, lui, ne dépend pas de ce réglage —
-il reçoit ses lignes quoi qu’il arrive.
+interne du studio : il part dans le terminal qui l’a lancé, **et dans un fichier**, que le bouton
+ci-dessous affiche. Le journal de la ligne d’état, lui, ne dépend pas de ce réglage — il reçoit ses
+lignes quoi qu’il arrive.
+
+### Journal technique
+
+**Bouton : Afficher le journal technique.**
+
+Ouvre votre gestionnaire de fichiers sur le journal interne, un fichier nommé `main.log`. Le studio
+y écrit à chaque lancement, quelle que soit la façon dont vous l’avez démarré.
+
+Le fichier ne grossit pas indéfiniment : passé un mégaoctet, il est mis de côté sous le nom
+`main.1.log` et un neuf reprend. Il y en a donc **deux au plus**, et la trace d’un lancement
+survit à celui qui le suit.
+
+C’est ce fichier qu’on vous demandera si quelque chose échoue sans rien afficher à l’écran. Ce que
+vous y trouverez dépend du réglage juste au-dessus : à « Rien », il ne s’écrit plus une ligne.
 
 ### Fichier de réglages
 
@@ -660,12 +707,13 @@ MCP comme Claude Code — peut lancer les mêmes actions que l’assistant.
 **Décochée, rien n’écoute.** C’est l’état d’une installation neuve, et celui de tout lancement tant
 que la case n’est pas cochée.
 
-**Tout ce qui coûte ou téléverse demande votre accord à l’écran**, exactement comme si vous l’aviez
-demandé vous-même dans l’assistant. Un programme extérieur ne peut pas se le donner à votre place.
+**Tout ce qui coûte, téléverse ou touche à vos fichiers demande votre accord à l’écran**, exactement
+comme si vous l’aviez demandé vous-même dans l’assistant. Un programme extérieur ne peut pas se le
+donner à votre place.
 
 > **Le [chapitre 20](20-piloter-de-l-exterieur.md) est celui de ce réglage** : ce qui garde ce
-> point d’entrée, comment y brancher Claude Code, les onze actions accessibles et ce que chacune
-> engage.
+> point d’entrée, comment y brancher Claude Code, les familles d’actions accessibles et ce que
+> chacune engage.
 
 ### Commande de connexion
 

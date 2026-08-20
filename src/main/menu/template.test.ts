@@ -3,7 +3,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { APP_NAME } from '@shared/constants'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
-import { DISPLAY_MODES, LIGHT_ENTRIES, MESH_ENTRIES, VIEW_DIRECTIONS } from '@shared/domain/scene'
+import {
+  DISPLAY_MODES,
+  EXPORT_FORMATS,
+  LIGHT_ENTRIES,
+  MESH_ENTRIES,
+  VIEW_DIRECTIONS,
+} from '@shared/domain/scene'
+import { CAPTURE_QUALITIES } from '@shared/domain/sceneCapture'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
@@ -20,6 +27,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   viewFrom: () => {},
   setDisplay: () => {},
   exportScene: () => {},
+  captureScene: () => {},
   exportTexture: () => {},
   exportSkybox: () => {},
   ...overrides,
@@ -30,6 +38,7 @@ const options = (given: Partial<MenuOptions> = {}): MenuOptions => ({
   workspace: '3d',
   tools: ['meshes', 'lights', 'explorer', 'models', 'generator', 'inspector', 'assets'],
   checked: [],
+  abilities: [],
   isMac: true,
   isDevelopment: true,
   overrides: {},
@@ -172,6 +181,35 @@ describe('the 3D View rows', () => {
     expect(setDisplay).toHaveBeenCalledWith({ mode: 'wireframe' })
   })
 
+  it('offers one capture row per definition, in the 3D workspace alone', () => {
+    expect(submenuOf(viewOf(), 'Capturer la vue')).toHaveLength(CAPTURE_QUALITIES.length)
+    expect(labels(viewOf({ workspace: 'video' }))).not.toContain('Capturer la vue')
+  })
+
+  it('captures at the definition the row names', () => {
+    const captureScene = vi.fn()
+    const rows = submenuOf(
+      submenuOf(menuTemplate(options({ actions: actions({ captureScene }) })), 'Affichage'),
+      'Capturer la vue',
+    )
+
+    activate(rows.find(row => row.label === '4K'))
+    expect(captureScene).toHaveBeenCalledWith({ quality: 'ultraHd' })
+  })
+
+  // The row at the view's own size IS the command, which is what makes the capture remappable —
+  // and what stops `can be reached` from calling a keyless command unreachable.
+  it('fires the command itself for the row that takes the view as it is', () => {
+    const runCommand = vi.fn()
+    const rows = submenuOf(
+      submenuOf(menuTemplate(options({ actions: actions({ runCommand }) })), 'Affichage'),
+      'Capturer la vue',
+    )
+
+    activate(rows.find(row => row.label === 'Taille de la vue'))
+    expect(runCommand).toHaveBeenCalledWith('scene.capture')
+  })
+
   /**
    * A toggle that reads the same on and off is half a control, and the reason the six of them
    * could not simply be moved: the state belongs to the document, which the main process has no
@@ -208,12 +246,16 @@ describe('every command the studio declares', () => {
    * A command with no default key and no menu row cannot be run at all. Four of them were in
    * that state — the guides, the snapping and the mask from a selection — implemented, tested,
    * and unreachable. The registry is where a command is declared; this is where it earns a way in.
+   *
+   * Read off the `id` each row carries rather than off its LABEL: a row is worded for where it
+   * sits — « Vidéo… » under Export says Export once — and matching on the title made three
+   * commands read as unreachable the day the menu gained a submenu.
    */
   it('can be reached, by a key or by a row', () => {
-    const rows = new Set<string>()
+    const fired = new Set<string>()
     const collect = (items: readonly MenuItemConstructorOptions[]): void => {
       for (const item of items) {
-        if (item.label) rows.add(String(item.label))
+        if (item.id) fired.add(String(item.id))
         if (Array.isArray(item.submenu)) collect(item.submenu)
       }
     }
@@ -222,13 +264,9 @@ describe('every command the studio declares', () => {
     const spaces: WorkspaceId[] = ['image', '3d', 'video', 'audio', 'textures', 'skyboxes']
     for (const workspace of spaces) collect(menuTemplate(options({ workspace })))
 
-    const titles = TRANSLATIONS.fr.commands
-    const stranded = COMMAND_REGISTRY.filter(descriptor => {
-      if (descriptor.defaultBinding) return false
-      const key = descriptor.titleKey.replace('commands.', '').replace('.title', '')
-      const label = titles[key as keyof typeof titles]?.title
-      return !label || !rows.has(label)
-    })
+    const stranded = COMMAND_REGISTRY.filter(
+      descriptor => !descriptor.defaultBinding && !fired.has(descriptor.id),
+    )
 
     expect(stranded.map(descriptor => descriptor.id)).toEqual([])
   })
@@ -315,11 +353,6 @@ describe('the Edit menu', () => {
   })
 
   /**
-   * The clipboard rows keep their native roles — a text field has to go on copying — but must
-   * not reserve the key: `scene.copy` is bound to ⌘C too, and `useShortcuts` is what decides
-   * between the two by looking at whether text is highlighted.
-   */
-  /**
    * Reserving ⌘Z would take it from a field being typed into: the menu would hear it first and
    * undo a brush stroke instead of the word just mistyped. Unreserved, the window sees the key
    * and `useShortcuts` steps aside whenever the caret sits in a text field.
@@ -333,6 +366,11 @@ describe('the Edit menu', () => {
     expect(history[0]?.accelerator).toBeTruthy()
   })
 
+  /**
+   * The clipboard rows keep their native roles — a text field has to go on copying — but must
+   * not reserve the key: `scene.copy` is bound to ⌘C too, and `useShortcuts` is what decides
+   * between the two by looking at whether text is highlighted.
+   */
   it('shows the clipboard keys without reserving them', () => {
     const entries = submenuOf(menuTemplate(options({ workspace: 'image' })), 'Édition')
     const clipboard = entries.filter(entry => ['cut', 'copy', 'paste'].includes(String(entry.role)))
@@ -467,10 +505,10 @@ describe('menuTemplate', () => {
     expect(submenuOf(add, 'Lumière')).toHaveLength(LIGHT_ENTRIES.length)
   })
 
-  it('offers the three objects, each of them reachable', () => {
+  it('offers every object, each of them reachable', () => {
     const objects = submenuOf(submenuOf(menuTemplate(options()), 'Ajouter'), 'Objet')
 
-    expect(objects.map(item => item.label)).toEqual(['Sprite', 'Texte', 'Caméra'])
+    expect(objects.map(item => item.label)).toEqual(['Sprite', 'Texte', 'Caméra', 'Chemin'])
     expect(objects.filter(item => item.enabled === false)).toEqual([])
   })
 
@@ -570,32 +608,85 @@ describe('accelerators within the View menu', () => {
   })
 })
 
-describe('the export menu', () => {
-  it('offers the three formats, for the scene and for the selection', () => {
-    const file = submenuOf(menuTemplate(options()), 'Fichier')
+/** Fichier ▸ Exporter, which is where every space now puts what it sends out. */
+const exportsIn = (menu: ReturnType<typeof menuTemplate>) =>
+  submenuOf(submenuOf(menu, 'Fichier'), 'Exporter')
 
-    expect(submenuOf(file, 'Exporter la scène').map(item => item.label)).toEqual([
+describe('the export menu', () => {
+  /**
+   * One row rather than several at the top of the File menu. Flat, the two montage spaces put
+   * three « Exporter … » in a row beside Save — which is not what an application looks like.
+   */
+  it('puts everything a space sends out under one row', () => {
+    const file = submenuOf(menuTemplate(options({ workspace: 'video' })), 'Fichier')
+
+    expect(file.map(item => item.label)).toContain('Exporter')
+    expect(file.map(item => item.label)).not.toContain('Vidéo…')
+    expect(
+      exportsIn(menuTemplate(options({ workspace: 'video' }))).map(item => item.label),
+    ).toEqual([
+      'Vidéo…',
+      'Montage (OTIO)…',
+      'Montage et médias (OTIOZ)…',
+      'Liste de montage (EDL)…',
+      'Montage (FCPXML)…',
+      'Sons par piste (WAV)…',
+    ])
+  })
+
+  /**
+   * Every one of the six sends something out since the image gained its two rows, so the empty
+   * fallback below `exportSubmenu` is now unreachable by any workspace — kept for the compiler,
+   * and named here rather than left looking like a case somebody forgot to cover.
+   */
+  it('shows the row in every space, each space sending something out', () => {
+    for (const workspace of WORKSPACE_IDS) {
+      expect(
+        submenuOf(menuTemplate(options({ workspace })), 'Fichier').map(item => item.label),
+      ).toContain('Exporter')
+    }
+  })
+
+  it('offers every declared format, for the scene and for the selection', () => {
+    const exports = exportsIn(menuTemplate(options()))
+
+    expect(submenuOf(exports, 'Scène').map(item => item.label)).toEqual([
       'glTF binaire (.glb)',
       'glTF (.gltf)',
       'USDZ (.usdz)',
+      'Wavefront, formes seules (.obj)',
+      'Stanford, formes seules (.ply)',
+      'STL, triangles seuls (.stl)',
     ])
-    expect(submenuOf(file, 'Exporter la sélection')).toHaveLength(3)
+    // The same list on both, and derived from the same one: a format offered for the scene and
+    // not for the selection would be a row that appears and disappears with a click.
+    expect(submenuOf(exports, 'Sélection')).toHaveLength(EXPORT_FORMATS.length)
   })
 
   it('asks for the format and the scope the row names', () => {
     const exportScene = vi.fn()
-    const file = submenuOf(menuTemplate(options({ actions: actions({ exportScene }) })), 'Fichier')
-    const usdz = submenuOf(file, 'Exporter la sélection')[2]
+    const exports = exportsIn(menuTemplate(options({ actions: actions({ exportScene }) })))
+    const usdz = submenuOf(exports, 'Sélection')[2]
 
     usdz?.click?.(...([] as never[] as [never, never, never]))
 
     expect(exportScene).toHaveBeenCalledWith({ format: 'usdz', scope: 'selection' })
   })
 
-  it('offers the five targets where a texture is what is being edited', () => {
-    const file = submenuOf(menuTemplate(options({ workspace: 'textures' })), 'Fichier')
+  it('greys the selection row where the window reports nothing picked', () => {
+    const without = exportsIn(menuTemplate(options()))
+    const holding = exportsIn(menuTemplate(options({ abilities: ['scene.exportSelection'] })))
 
-    expect(submenuOf(file, 'Exporter la matière').map(item => item.label)).toEqual([
+    expect(without.find(item => item.label === 'Sélection')?.enabled).toBe(false)
+    expect(holding.find(item => item.label === 'Sélection')?.enabled).toBe(true)
+    // The scene itself is never greyed by it: an empty scene is still a scene to write out.
+    expect(without.find(item => item.label === 'Scène')?.enabled).toBeUndefined()
+  })
+
+  it('offers the five targets where a texture is what is being edited', () => {
+    const exports = exportsIn(menuTemplate(options({ workspace: 'textures' })))
+
+    expect(submenuOf(exports, 'Matière').map(item => item.label)).toEqual([
       'glTF / GLB (.glb)',
       'Unity (URP)',
       'Unreal Engine',
@@ -606,60 +697,76 @@ describe('the export menu', () => {
 
   it('asks for the engine the row names', () => {
     const exportTexture = vi.fn()
-    const file = submenuOf(
+    const exports = exportsIn(
       menuTemplate(options({ workspace: 'textures', actions: actions({ exportTexture }) })),
-      'Fichier',
     )
-    const roblox = submenuOf(file, 'Exporter la matière')[3]
+    const roblox = submenuOf(exports, 'Matière')[3]
 
     roblox?.click?.(...([] as never[] as [never, never, never]))
 
     expect(exportTexture).toHaveBeenCalledWith({ target: 'roblox' })
   })
 
-  // Exporting an image document is another errand, with another writer behind it.
   it('shows each workspace only the export that belongs to it', () => {
     const labels = (workspace: WorkspaceId): (string | undefined)[] =>
-      submenuOf(menuTemplate(options({ workspace })), 'Fichier').map(item => item.label)
+      exportsIn(menuTemplate(options({ workspace }))).map(item => item.label)
 
-    expect(labels('3d')).toContain('Exporter la scène')
-    expect(labels('3d')).not.toContain('Exporter la matière')
-    expect(labels('textures')).toContain('Exporter la matière')
-    expect(labels('textures')).not.toContain('Exporter la scène')
-    expect(labels('skyboxes')).toContain('Exporter le ciel')
-    expect(labels('skyboxes')).not.toContain('Exporter la matière')
-    expect(labels('image')).not.toContain('Exporter la scène')
-    expect(labels('image')).not.toContain('Exporter la matière')
-    expect(labels('image')).not.toContain('Exporter le ciel')
+    expect(labels('3d')).toContain('Scène')
+    expect(labels('3d')).not.toContain('Matière')
+    expect(labels('textures')).toContain('Matière')
+    expect(labels('textures')).not.toContain('Scène')
+    expect(labels('skyboxes')).toContain('Ciel')
+    expect(labels('skyboxes')).not.toContain('Matière')
+    // Two rows rather than a submenu of formats, as the montage has: what an image writes is
+    // composed by the window, and the flatten already answers a binding of its own.
+    expect(labels('image')).toEqual(['Image aplatie (PNG)…', 'Image à calques (PSD)…'])
   })
 })
 
 describe('exporting a sky', () => {
-  it('offers one row per face size, and only sizes the domain knows', () => {
-    const file = submenuOf(menuTemplate(options({ workspace: 'skyboxes' })), 'Fichier')
+  it('offers one row per face size, then the panoramas, and nothing else', () => {
+    const exports = exportsIn(menuTemplate(options({ workspace: 'skyboxes' })))
 
     // Written through the constant, which is why it exists: the no-break space binding a size to
     // its `×` is invisible here, and a literal one would have been read as an ordinary space.
     const size = (side: number): string => `${side}${NO_BREAK_SPACE}×${NO_BREAK_SPACE}${side}`
 
-    expect(submenuOf(file, 'Exporter le ciel').map(item => item.label)).toEqual([
+    // The separator carries no label: what a row says is the assertion, and a separator says
+    // nothing on purpose.
+    expect(submenuOf(exports, 'Ciel').map(item => item.label)).toEqual([
       size(512),
       size(1024),
       size(2048),
+      undefined,
+      'Panorama Radiance (.hdr)',
+      'Panorama OpenEXR (.exr)',
     ])
+  })
+
+  /** A panorama leaves at the source's own resolution: a size chosen for it would be a lie. */
+  it('asks for a panorama by its target rather than by a size', () => {
+    const exportSkybox = vi.fn()
+    const exports = exportsIn(
+      menuTemplate(options({ workspace: 'skyboxes', actions: actions({ exportSkybox }) })),
+    )
+
+    submenuOf(exports, 'Ciel')
+      .find(item => item.label === 'Panorama OpenEXR (.exr)')
+      ?.click?.(...([] as never[] as [never, never, never]))
+
+    expect(exportSkybox).toHaveBeenCalledWith({ kind: 'panorama', target: 'sky.exr' })
   })
 
   it('asks for the size the row names', () => {
     const exportSkybox = vi.fn()
-    const file = submenuOf(
+    const exports = exportsIn(
       menuTemplate(options({ workspace: 'skyboxes', actions: actions({ exportSkybox }) })),
-      'Fichier',
     )
-    const largest = submenuOf(file, 'Exporter le ciel')[2]
+    const largest = submenuOf(exports, 'Ciel')[2]
 
     largest?.click?.(...([] as never[] as [never, never, never]))
 
-    expect(exportSkybox).toHaveBeenCalledWith({ size: 2048 })
+    expect(exportSkybox).toHaveBeenCalledWith({ kind: 'faces', size: 2048 })
   })
 })
 

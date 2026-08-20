@@ -143,20 +143,20 @@ describe('the opening chunk', () => {
     expect([...unresolved]).toEqual([])
     expect(packages).toContain('react')
     expect(packages).toContain('dockview-react')
-    expect(files).toContain('./app/tool-components.ts')
+    expect(files).toContain('./app/toolComponents.ts')
     expect(files).toContain('../../shared/domain/tool.ts')
     // Deep anchors, both of them the first screen itself: the walk has to reach past the entry
     // point and past the shell, or every negative assertion below passes on an empty graph.
-    expect(files).toContain('./app/Shell.tsx')
-    expect(files).toContain('./home/HomeView.tsx')
+    expect(files).toContain('./app/Shell/Shell.tsx')
+    expect(files).toContain('./home/HomeView/HomeView.tsx')
   })
 
   // Deferred by `Generator.tsx` on 8 August: −219,38 kB, three quarters of it zod.
   it('never reaches the generation form, nor what validates it', () => {
     const { files } = GRAPH
 
-    expect(files).not.toContain('./design/DynamicForm.tsx')
-    expect(files).not.toContain('./helpers/dynamic-form-schema.ts')
+    expect(files).not.toContain('./design/DynamicForm/DynamicForm.tsx')
+    expect(files).not.toContain('./helpers/dynamicFormSchema.ts')
   })
 
   it('never reaches the form libraries', () => {
@@ -182,9 +182,21 @@ describe('the opening chunk', () => {
     // The whole folder, not a sample of it: naming files lets a sibling — `AccountSettings`
     // reused by an onboarding, say — walk back in with the guard still green.
     expect([...files].filter(path => path.startsWith('./settings/'))).toEqual([])
-    expect(files).not.toContain('./stores/settings-draft.ts')
-    expect(files).not.toContain('../../shared/domain/settings-registry.ts')
-    expect(files).not.toContain('../../shared/domain/settings-search.ts')
+    expect(files).not.toContain('./stores/settingsDraft.ts')
+    expect(files).not.toContain('../../shared/domain/settingsRegistry.ts')
+    expect(files).not.toContain('../../shared/domain/settingsSearch.ts')
+  })
+
+  /**
+   * The handler table reaches all fourteen families — the canvas, the scene, the rig, git, the
+   * timeline — for a door that is off by default and never called at launch. `remoteActions.ts`
+   * imports it on the call for that reason, and this is what keeps the edge dynamic.
+   */
+  it('never reaches the action handlers, which the MCP door loads on its first call', () => {
+    const { files } = GRAPH
+
+    expect([...files].filter(path => path.endsWith('Handlers.ts')).sort()).toEqual([])
+    expect(files).not.toContain('./assistant/executor.ts')
   })
 
   // The heaviest row of the table, and the one that was described but never held: six editors,
@@ -193,12 +205,12 @@ describe('the opening chunk', () => {
     const { files } = GRAPH
 
     const editors = [
-      './spaces/image/ImageDocument.tsx',
+      './spaces/image/ImageDocument/ImageDocument.tsx',
       './spaces/three/SceneDocument.tsx',
       './spaces/video/SequenceDocument.tsx',
       './spaces/audio/AudioDocument.tsx',
       './spaces/skyboxes/SkyboxDocument.tsx',
-      './spaces/textures/TextureDocument.tsx',
+      './spaces/textures/TextureDocument/TextureDocument.tsx',
     ]
 
     expect(editors.filter(editor => files.has(editor))).toEqual([])
@@ -216,29 +228,32 @@ describe('the opening chunk', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.startsWith('./spaces/')).sort()).toEqual([
-      './spaces/image/canvas-hosts.ts',
-      './spaces/image/place-asset.ts',
+      './spaces/image/canvasHosts.ts',
+      './spaces/image/placeAsset.ts',
     ])
   })
 
   /**
-   * Deferred by `app/tool-components.ts` on 9 August: every panel of the table, the home screen's
+   * Deferred by `app/toolComponents.ts` on 9 August: every panel of the table, the home screen's
    * own included. Stated over the whole folder, so a panel added tomorrow cannot land eager with
    * the guard still green.
    *
    * The four left are reached for something other than a zone. `panels/jobs/Jobs.tsx` and its row
    * ARE a panel of the table since 11 August — but they are also what the status bar's flyout
    * opens (`app/JobsStatus.tsx:10`), which is the first screen, so the chunk holds them either
-   * way. That is why `Jobs.tsx` may not read `helpers/tool-registry`: it would drag the scene's
-   * node kinds in behind it. The facet key is read by `helpers/reveal-panel.ts`, which narrows a
-   * browser before bringing it up; it is a lone constant in a file of its own for that reason.
+   * way. That is why `Jobs.tsx` may not read `helpers/toolRegistry`: it would drag the scene's
+   * node kinds in behind it. The facet key is read by `helpers/revealPanel.ts`, which narrows a
+   * browser before bringing it up; `panels/assets/facets.ts` holds nothing but constants for that
+   * reason — the hooks that read them moved to `hooks/` on 17 August, and with them the
+   * `react-i18next` import this chunk used to pull in behind a single string.
    */
   it('reaches no panel of the tool table, except the list the status bar itself opens', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.startsWith('./panels/')).sort()).toEqual([
-      './panels/assets/type-facet.ts',
-      './panels/jobs/JobRow.tsx',
+      './panels/assets/facets.ts',
+      './panels/jobs/JobRow/JobRow.tsx',
+      './panels/jobs/JobRow/JobRowDetail.tsx',
       './panels/jobs/Jobs.tsx',
     ])
   })
@@ -250,12 +265,15 @@ describe('the opening chunk', () => {
   })
 
   // The chart library is the reason this one is deferred, more than the window's own weight.
-  // `format.ts` is the exception, and it earns it: a job row prices a run in the units the
-  // window totals (`panels/jobs/JobRow.tsx:7`), and the status bar carries those rows.
+  // `formatUnits` used to be the exception that let `./usage/format.ts` in: a job row prices a run
+  // in the units the window totals, and the status bar carries those rows. It lives in
+  // `helpers/format.ts` now, which the opening chunk already reaches — hence the second assertion,
+  // without which moving it back would read as a win while only shifting the weight.
   it('never reaches the usage window, nor what draws its charts', () => {
     const { files, packages } = GRAPH
 
-    expect([...files].filter(path => path.startsWith('./usage/'))).toEqual(['./usage/format.ts'])
+    expect([...files].filter(path => path.startsWith('./usage/'))).toEqual([])
+    expect(files).toContain('./helpers/format.ts')
     expect(packages).not.toContain('recharts')
   })
 })

@@ -1,6 +1,6 @@
 # 10. Video workspace
 
-[← 3D workspace](09-3d-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Audio workspace →](11-audio-workspace.md)
+[← Modelling workspace](09-modelling-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Audio workspace →](11-audio-workspace.md)
 
 The workspace where you assemble shots one after another into a sequence.
 
@@ -9,8 +9,12 @@ The workspace where you assemble shots one after another into a sequence.
 ## How this workspace is laid out
 
 Like the Audio workspace, this is one where the **bottom strip belongs to the edit**. A sequence
-reads across the full width of the screen: the **Timeline** therefore takes all of it, and the
-asset shelf moves into the upper half of the right column, so it stays visible at the same time.
+reads across the full width of the screen: the **Timeline** therefore takes all of it. The asset
+shelf stays where it is everywhere else — upper half of the **left column** — and so holds the
+screen at the same time as the edit, which is what dragging a take onto a track needs.
+
+The upper half of the right column is **empty** in this workspace: Video declares no panel there.
+Only the **Inspector**, below the separator, holds it.
 
 In the centre, two monitors side by side — the Premiere and DaVinci convention:
 
@@ -41,39 +45,61 @@ its place; a sound clip whose media is missing stays black and silent, announcin
 
 ## Placing a first clip
 
-Three gestures, and **they do not put the clip in the same place**:
+Four gestures, and **they do not put the clip in the same place**:
 
 | Gesture | On which track | At what time |
 |---|---|---|
 | **Drag and drop** from the shelf | the one you are hovering, **if it can take it** | where you release |
-| **Drag and drop** into the empty space below the last track | a **new** track, opened for it | where you release |
-| **Double-click** the asset | the studio chooses | at the **playhead** |
+| **Drag and drop** into the empty space below the last track | a **new** track, opened for it — except for a 3D scene | where you release |
+| **Drag and drop** a 3D scene row from the **Explorer** | a picture track, never a sound one | where you release |
+| **Right-click ▸ Add to the edit** | the studio chooses | at the **playhead** |
 
 **Drag and drop obeys you to the pixel for the TIME; for the track, it corrects you.** You release
 exactly where you mean to in time. But **aiming at a track that cannot take the clip does not put
 it there**: a picture track for a sound, a locked track, a muted one, or one silenced by another
-track's solo. The studio then chooses for you, as double-click does, and the clip lands **somewhere
+track's solo. The studio then chooses for you, as right-click does, and the clip lands **somewhere
 other than under the pointer**.
 
-That is one rule rather than two: a muted track accepted under the pointer and avoided everywhere
-else would answer the same question twice. But **nothing on screen says so**, and it is the one
-place in the edit where the gesture does not do what it shows.
+**And when it finds none at all, the gesture does nothing whatsoever, without a word.** That is
+what happens to a release **onto a track**: an edit whose only picture track is locked, a sound
+released while a picture track is soloed, a rush released onto a track of the Audio workspace's
+edit. Released **below** the last track, the first two lay their clip on a fresh track instead.
+Right-click, for its part, **greys the line out** when no track can take the asset: it is the only
+one of the two gestures that says so.
+
+For an asset, that is one rule rather than two: a muted track accepted under the pointer and
+avoided everywhere else would answer the same question twice. But **nothing on screen says so**,
+and it is the one place in the edit where the gesture does not do what it shows.
 
 **Releasing below the last track opens the tracks it needs** rather than doing nothing: a picture
 track, and the sound track beside it for a take that carries sound. Both arrive in one gesture,
 and **⌘Z takes them back in one** — the clips and the tracks.
 
-Two places still take nothing: the **time ruler** at the top, and an edit with no picture track
-at all — the one in the Audio workspace — where releasing a rush only opens the asset, since
-there is no monitor there to show it.
+Two places take nothing, **and the release stops there without opening anything**: the **time
+ruler** at the top, and the **empty space below the last track** of an edit with no picture track
+at all — the one in the Audio workspace — since there is no monitor there to show a rush. The edit
+lives in the band, and **the band catches nothing**: that is the rule of the whole studio,
+described in [Assets](07-assets.md).
 
-**Double-click chooses for you**, and it chooses well: a sound goes on a sound track, everything
+**A 3D scene is laid down like a medium**, by dragging its row from the Explorer. The clip it
+becomes is **live**: reworking the scene changes what the edit shows, with nothing to export. Its
+length is that of the scene's **animation**, or **5 seconds** if it has none yet. It always goes
+on a picture track and never on a sound one — a scene has no soundtrack of its own — and **it
+opens no track**: released below the last one, it joins the first picture track that reaches the
+output, and on an edit that has none, the gesture does nothing.
+
+**Right-click chooses for you**, and it chooses well: a sound goes on a sound track, everything
 else on a picture track, and **any track that does not reach the output is avoided** — a clip
 landing there would look like it did nothing. That covers **locked** and **muted** tracks, and also
-those silenced by **another track's solo**: a track nothing sets apart to the eye, and on which
-double-click will nonetheless lay nothing.
+those silenced by **another track's solo**: a track nothing sets apart to the eye, and on which the
+clip will nonetheless not land.
 
-Whichever way, the studio settles two things:
+> **Double-click does not aim at this edit.** It opens the asset in a tab **of its own**, in the
+> workspace of its kind: a fresh edit for a video, the **audio editor** for a sound. It is the
+> studio-wide rule, described in [Assets](07-assets.md). So to gather two media in the **same**
+> edit, use drag and drop or right-click.
+
+For a medium, the studio settles two things:
 
 - **the duration** — that of the media. A still image, or a medium whose duration is unknown,
   lasts **5 seconds** by default. That is only a starting point: how long an image stays on
@@ -175,8 +201,9 @@ Below each monitor:
 | `Del` | delete the selected clip |
 | `⌘Z` / `⇧⌘Z` | undo / redo |
 
-> **`C` and `S` do not do the same thing.** `C` **arms the Blade tool** — you then cut wherever you
-> click. `S` **cuts straight away**, at the playhead, without switching tool.
+> **The Blade tool and `S` do not do the same thing.** The **Blade** is picked with the mouse —
+> its key is not listened for, see above — and you then cut wherever you click. `S` **cuts
+> straight away**, at the playhead, without switching tool.
 
 **Only one player is active at a time.** If you open two sequences, only the one in front answers
 the space bar. That is what keeps playback smooth: two video decoders running at once fight over
@@ -270,7 +297,7 @@ same instant; the one **highest in the column** is the one shown, and it covers 
 comes in front of V2, as in every editing suite. Moving a track therefore changes the picture in
 the monitor, the moment you release it.
 
-**The order matters for double-click too**: the studio then lays the asset on the **first track of
+**The order matters for right-click too**: the studio then lays the asset on the **first track of
 the right kind that reaches the output**, counting from the top. Moving a track up therefore makes
 it the default destination. Every header carries a **grip** on its left edge.
 
@@ -404,12 +431,20 @@ file. To edit an `.exr` or a `.tif`, convert it to `.png` yourself before import
 
 ## What is still missing
 
-> **A sequence saves** as `.seq` with `⌘S`, and opens back as it was: tracks, clips, fades and
+> **A sequence saves** as `.otio` with `⌘S`, and opens back as it was: tracks, clips, fades and
 > gains. What does not come back is the undo history.
 >
-> There is no **export** either: you cannot yet write a final video file. See
-> [What does not exist yet](18-limits.md).
+> **Three exports exist**, all under **File ▸ Export**. *Video…* writes a final file, frame by
+> frame, 3D scenes included — but **without the sound**, which is not in it yet. *Edit
+> (OTIO)…* writes the edit itself: tracks, clips, in points, speeds and links to the media, in a
+> file other editing applications open. *Edit with its media (OTIOZ)…* writes that same edit with
+> the files inside it — the one to hand to somebody else, the other application then finding the
+> rushes on its own.
+>
+> **An `.otio` also opens**, on a double-click in the Explorer — yours as much as another
+> application's — and `⌘S` writes it back into its own file.
+> See [What does not exist yet](18-limits.md).
 
 ---
 
-[← 3D workspace](09-3d-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Audio workspace →](11-audio-workspace.md)
+[← Modelling workspace](09-modelling-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Audio workspace →](11-audio-workspace.md)

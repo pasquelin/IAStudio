@@ -2,17 +2,19 @@ import { useCallback } from 'react'
 import type { CommandId } from '@shared/domain/command'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { canRedo, canUndo } from '@/engines/core/history'
-import type { Us } from '@/engines/timeline/timeline-state'
+import type { Us } from '@/engines/timeline/timelineState'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useSoundTransport } from '@/hooks/useSoundTransport'
 import { useSplitPair } from '@/hooks/useSplitPair'
-import { useDocumentTitle } from '@/app/useDocumentTitle'
-import { audioHistoryOf, isAudioEditDirty, useAudioEdits } from '@/stores/audio-edits'
-import { useDocuments } from '@/stores/documents'
+import { audioHistoryOf, isAudioEditDirty, useAudioEdits } from '@/stores/audioEdits'
+import { useDocumentIsInFront } from '@/stores/documents'
+import { isClipMonitorShown, useMonitorPair } from '@/stores/monitorPair'
 import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
+import { exportOtio, exportOtioz, exportStems } from '@/app/otioExport'
 import { ProgramMonitor } from './ProgramMonitor'
 import { TakeEditor } from './TakeEditor'
-import { useSoundTransport } from './useSoundTransport'
 
 export type AudioDocumentProps = { documentId: string }
 
@@ -26,9 +28,7 @@ export type AudioDocumentProps = { documentId: string }
  */
 export function AudioDocument({ documentId }: AudioDocumentProps) {
   const sequence = useSequences(state => sequenceOf(state, documentId))
-  // Dockview keeps hidden tabs mounted: without this every open take would answer the space bar
-  // at once, and the playback token would arbitrate a fight nobody started.
-  const active = useDocuments(state => state.activeId === documentId)
+  const active = useDocumentIsInFront(documentId)
 
   // Both halves, as closing this document already asks of both: a take's file holds the chain of
   // edits over its sample AND the montage under it, and either alone leaves work unaccounted for.
@@ -47,6 +47,13 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   const transport = useSoundTransport(documentId, sequence)
 
   const { pairRef, leadStyle, leadSize, onLeadSize } = useSplitPair('vertical')
+
+  const takeShown = useMonitorPair(state => isClipMonitorShown(state, documentId))
+  const takeStyle = takeShown ? leadStyle : undefined
+  const toggleTake = useCallback(
+    () => useMonitorPair.getState().toggleClipMonitor(documentId),
+    [documentId],
+  )
 
   const seek = useCallback(
     (playhead: Us) => {
@@ -92,16 +99,22 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
 
   // Both the keyboard and the Edit menu land here. `enabled` for the same reason the scene
   // gives: Dockview keeps hidden tabs mounted, and a background take would eat ⌘Z.
-  useShortcuts({ scope: 'audio', enabled: active, onCommand })
+  useShortcuts({ scope: 'audio', enabled: active, documentId, onCommand })
 
-  // The space bar, which the programme monitor answers here as it does in the picture pair.
-  const onTransport = useCallback(
+  // The space bar, which the programme monitor answers here as it does in the picture pair —
+  // and the montage export, this space holding the same `SequenceState` the video one does.
+  const onMontage = useCallback(
     (command: CommandId) => {
-      if (command === 'sequence.playPause') transport.toggle()
+      if (command === 'sequence.playPause') return transport.toggle()
+      // The chain of an edited take is NOT in it, and that is not a loss of the export: the
+      // programme monitor does not hear it either — it becomes real when the take is applied.
+      if (command === 'sequence.exportCut') void exportOtio(documentId)
+      if (command === 'sequence.exportBundle') void exportOtioz(documentId)
+      if (command === 'sequence.exportStems') void exportStems(documentId)
     },
-    [transport],
+    [documentId, transport],
   )
-  useShortcuts({ scope: 'sequence', enabled: active, onCommand: onTransport })
+  useShortcuts({ scope: 'sequence', enabled: active, documentId, onCommand: onMontage })
 
   return (
     /*
@@ -117,16 +130,27 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
       {/* The whole above the part, and the part above the strip it sits on: what one is making
           reads top to bottom, and the take being worked on stays next to the montage it lands
           in rather than a monitor's width away from it. */}
-      <div className="flex min-h-0" style={leadStyle}>
-        <ProgramMonitor sequence={sequence} transport={transport} onSeek={seek} />
+      {/* The montage takes the whole tab while the take editor is away: a `leadStyle` height held
+          over a pane with nothing under it would leave the rest of the column empty. */}
+      <div className={takeShown ? 'flex min-h-0' : 'flex min-h-0 flex-1'} style={takeStyle}>
+        <ProgramMonitor
+          sequence={sequence}
+          transport={transport}
+          onSeek={seek}
+          clipHalf={{ shown: takeShown, onToggle: toggleTake }}
+        />
       </div>
 
-      {/* The same handle the shell splits its zones with, so the gesture is the one gesture. */}
-      <ResizeHandle axis="vertical" size={leadSize} onSize={onLeadSize} />
+      {takeShown && (
+        <>
+          {/* The same handle the shell splits its zones with, so the gesture is the one gesture. */}
+          <ResizeHandle axis="vertical" size={leadSize} onSize={onLeadSize} />
 
-      <div className="flex min-h-0 flex-1">
-        <TakeEditor documentId={documentId} />
-      </div>
+          <div className="flex min-h-0 flex-1">
+            <TakeEditor documentId={documentId} />
+          </div>
+        </>
+      )}
     </div>
   )
 }

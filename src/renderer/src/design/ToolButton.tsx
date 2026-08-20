@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
 import { cn } from '@/helpers/cn'
-import type { TooltipFactory } from '@/helpers/tooltip'
+import { withoutTip, type TooltipFactory } from '@/helpers/tooltip'
 import { BUTTON_BASE } from './styles'
 import { UiIcon } from './UiIcon'
 
@@ -23,7 +23,9 @@ const HOSTS = {
 
 export type ToolButtonProps = Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
-  'aria-label' | 'children' | 'title'
+  // `aria-pressed` among them: it is spread AFTER the one this computes, so a caller passing it
+  // raw would silently win — and the three props below would stop describing what is announced.
+  'aria-label' | 'aria-pressed' | 'children' | 'title'
 > & {
   /**
    * `@mdi/js` icon path. When absent the button renders only its `children` — for the one
@@ -39,9 +41,19 @@ export type ToolButtonProps = Omit<
    * spelled out is a button one has to press to find out what it does.
    */
   tooltip: TooltipFactory
+  /** Drops the tip while something of this button's own covers it — see `MenuButton`. */
+  tipHidden?: boolean
   shortcut?: string | false
-  /** Tool currently in use: neutral background. */
+  /** Tool currently in use: neutral background, and `aria-pressed` unless `acts`. */
   active?: boolean
+  /** Acts rather than toggles: no `aria-pressed` — see `ToolbarItem.acts`. */
+  acts?: boolean
+  /**
+   * ANNOUNCED without being painted, for a state an icon already draws — the eye of a layer row.
+   * Every row is visible by default, so `active` would light a permanent square on each of them,
+   * in the very colour the row takes under the pointer.
+   */
+  told?: boolean
   /** Tool in use AND whose zone has focus: accented background. */
   accented?: boolean
   /** Which host the button sits on — see `HOSTS` for what each one costs. */
@@ -62,8 +74,11 @@ export function ToolButton({
   label,
   description,
   tooltip,
+  tipHidden,
   shortcut,
   active,
+  acts,
+  told,
   accented,
   variant = 'bar',
   className,
@@ -72,24 +87,19 @@ export function ToolButton({
   ref,
   ...rest
 }: ToolButtonProps) {
-  const naming = tooltip(label, shortcut, description)
+  const named = tooltip(label, shortcut, description)
+  const naming = tipHidden ? withoutTip(named) : named
 
   return (
     <button
       type="button"
       ref={ref}
-      aria-pressed={active}
+      aria-pressed={acts ? undefined : (told ?? active)}
       className={cn(
         BUTTON_BASE,
         'text-muted shrink-0 bg-transparent',
         HOSTS[variant].box,
         'hover:bg-elevated hover:text-text',
-        // Inside a row filled with the accent — the open project's menu button is the case — the
-        // rest ink reads 1.50:1 on that blue, and `elevated` under the pointer is grey on it. Both
-        // are read off `rowSkin`'s group, as `ROW_INK` and `ROW_QUIET` are, so no list passes state
-        // down; outside such a row the attribute never appears and neither variant fires.
-        'group-data-accented/row:text-accent-content',
-        'group-data-accented/row:hover:bg-accent-hover',
         active && 'bg-elevated text-text',
         accented && 'bg-accent hover:bg-accent text-accent-content',
         className,

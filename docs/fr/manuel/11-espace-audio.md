@@ -9,10 +9,10 @@ volume — puis où on le pose à côté des autres.
 
 ## Comment l’espace est disposé
 
-Comme en Vidéo, la **bande basse appartient au montage** et l’étagère à assets prend la moitié
-haute de la **colonne de droite**, pour qu’une prise se glisse de l’une vers l’autre sans avoir à
-changer de panneau. La colonne de gauche porte les Modèles et la Génération, comme partout
-ailleurs.
+Comme en Vidéo, la **bande basse appartient au montage**. La colonne de gauche porte les Modèles,
+la Génération et l’**étagère à assets**, comme partout ailleurs : une prise se glisse donc de
+l’étagère au montage sans avoir à changer de panneau. La moitié haute de la colonne de droite est
+vide dans cet espace ; seul l’Inspecteur l’occupe, sous le trait.
 
 Au centre, **deux moniteurs empilés** — là où la Vidéo pose les siens côte à côte. Ils prennent
 toute la largeur, l’un sous l’autre :
@@ -257,6 +257,14 @@ qu’on lit d’un coup d’œil, pas une qu’on fait défiler.
 > d’outils** appliquée à la prise ouverte ; celui du haut fait entendre les **clips posés sur
 > les pistes**. Lancer l’une arrête l’autre : le studio n’a qu’un seul lecteur.
 
+**Fichier › Exporter › Montage (OTIO)…** écrit ce montage dans un fichier que d’autres logiciels
+de montage ouvrent : pistes, clips, points d’entrée, vitesses et liens vers les sons. C’est le
+même montage que l’espace Vidéo, donc la même commande.
+
+> **La chaîne d’outils n’y est pas, et ce n’est pas une perte de l’export.** Le moniteur du haut
+> ne l’entend pas non plus : elle appartient à la prise ouverte en dessous, et elle devient réelle
+> quand vous **Appliquez**. Un montage exporté vaut ce que le Programme fait entendre.
+
 ---
 
 ## Annuler et rétablir
@@ -297,7 +305,7 @@ faire entrer et sortir proprement. C’est exactement ce que fait cet espace.
 Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 
 > **Deux gestes différents, et il faut les distinguer.** `⌘S` enregistre le **document** — vos
-> coupes, vos fondus, vos réglages, **et le montage de la bande basse** — dans un fichier `.aud`
+> coupes, vos fondus, vos réglages, **et le montage de la bande basse** — dans un fichier `.otio`
 > du projet, qui se rouvre tel quel. Une seule touche pour les deux moitiés : un montage bâti
 > sur une prise qu’on n’a pas touchée est du travail, et il est enregistré comme tel.
 > **Appliquer** et **Enregistrer comme nouveau** écrivent un **asset audio**, c’est-à-dire un son

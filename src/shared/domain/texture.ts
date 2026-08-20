@@ -87,6 +87,23 @@ export type ValueRange = { min: number; max: number }
 export type Vector2 = { x: number; y: number }
 
 /**
+ * The shapes a texture is judged on. A plane reads tiling, a sphere reads lighting.
+ *
+ * Here rather than beside the preview it drives, for the reason the bounds below are: the
+ * registry on this side of the boundary offers the list to an outside client, and a copy would
+ * be a sixth shape the engine knows and the schema does not.
+ */
+export type PreviewShape = 'sphere' | 'box' | 'cylinder' | 'plane' | 'torusKnot'
+
+export const PREVIEW_SHAPES: readonly PreviewShape[] = [
+  'sphere',
+  'box',
+  'cylinder',
+  'plane',
+  'torusKnot',
+]
+
+/**
  * How far each setting a slider drives is allowed to go. Here rather than at the field, because
  * the parser has to hold the same bounds: read unclamped, a hand-edited `heightScale: 3` opened
  * and rendered fine, the slider pinned at its own maximum, and the first touch of it destroyed the
@@ -164,7 +181,7 @@ export const DEFAULT_TEXTURE_MATERIAL: MaterialSettings = {
 Object.freeze(DEFAULT_TEXTURE_MATERIAL)
 
 /**
- * Read like every other value, then held inside what the value means. A hand-edited `.tex` is
+ * Read like every other value, then held inside what the value means. A hand-edited `.mtlx` is
  * user territory, and a roughness of -1 reaches the GGX term as a negative alpha: black or white
  * pixels depending on the driver, with nothing on the way to say where it came from.
  */
@@ -206,7 +223,7 @@ function readVector(source: Record<string, unknown>, key: string, fallback: Vect
 }
 
 /**
- * A material read back from anything at all — a `.tex` the user edited, a styles file restored
+ * A material read back from anything at all — a `.mtlx` the user edited, a styles file restored
  * from a backup. Total: what reads as nothing opens on the defaults rather than throwing.
  */
 export function readMaterial(value: unknown): MaterialSettings {

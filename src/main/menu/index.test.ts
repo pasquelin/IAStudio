@@ -11,11 +11,11 @@ import {
   openWindow,
   resetHandlers,
   type FakeWindow,
-} from '@main/ipc/test-harness'
+} from '@main/ipc/testHarness'
 import { setWindowLanguage } from '@main/window/language'
 import { buildMenu, registerMenuHandlers } from './index'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 // The three neighbours the menu calls into. Real, they pull the whole window layer in — and
 // what is under test here is which window a command reaches, never what opening one does.
 vi.mock('@main/window/windows', () => ({
@@ -31,8 +31,9 @@ function announce(
   workspace: string,
   tools: string[] = [],
   checked: string[] = [],
+  abilities: string[] = [],
 ): void {
-  invokeFrom(window, CHANNELS.windowWorkspace, workspace, tools, checked)
+  invokeFrom(window, CHANNELS.windowWorkspace, workspace, tools, checked, abilities)
 }
 
 /**
@@ -249,6 +250,18 @@ describe('what makes the menu rebuild', () => {
     const before = menuBuilds()
 
     focusWindow(other)
+
+    expect(menuBuilds()).toBe(before + 1)
+  })
+
+  /** A greyed row belongs to the window in front, exactly as a tick does. */
+  it('rebuilds when the same workspace reports a different set of answerable rows', () => {
+    const window = openWindow()
+    announce(window, '3d', ['scene'], [], [])
+    focusWindow(window)
+    const before = menuBuilds()
+
+    announce(window, '3d', ['scene'], [], ['scene.exportSelection'])
 
     expect(menuBuilds()).toBe(before + 1)
   })

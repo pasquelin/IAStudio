@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
@@ -147,6 +147,70 @@ describe('Tree', () => {
     await userEvent.click(screen.getByText('a'))
 
     expect(onSelect).toHaveBeenCalledWith(['a'], 'replace')
+  })
+
+  /**
+   * What a gesture applies to is the selection, and where it LANDS is read off the picked row.
+   * With no way to pick nothing, a file browser whose every row is a folder the studio owns
+   * cannot aim at the project folder at all.
+   */
+  it('clears the selection on a press in the blank below the rows', () => {
+    const onSelect = vi.fn()
+    renderTree(onSelect)
+
+    const blank = screen.getByRole('tree').parentElement
+    fireEvent.pointerDown(blank!)
+
+    expect(onSelect).toHaveBeenCalledWith([], 'replace')
+  })
+
+  /**
+   * The blank already took a DROP aimed at the project folder; it raised no menu, so the one
+   * gesture that makes a folder at the root had nowhere to be reached from — a brand new project,
+   * whose rows are all folders one may not write into, offered no way to make one at all.
+   */
+  it('raises the root menu on a right-click in that same blank, having picked nothing', () => {
+    const onSelect = vi.fn()
+    const onContextMenuRoot = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        label="Outline"
+        selectedIds={['scene']}
+        expandedIds={new Set(['scene'])}
+        onSelect={onSelect}
+        onToggle={() => {}}
+        onContextMenuRoot={onContextMenuRoot}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    fireEvent.contextMenu(screen.getByRole('tree').parentElement!)
+
+    expect(onSelect).toHaveBeenCalledWith([], 'replace')
+    expect(onContextMenuRoot).toHaveBeenCalledOnce()
+  })
+
+  // A right-click over a ROW is that row's business: answering for it here would raise the menu
+  // of the project folder on top of the one the row raises.
+  it('leaves a right-click on a row to the row', () => {
+    const onContextMenuRoot = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        label="Outline"
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onContextMenuRoot={onContextMenuRoot}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    fireEvent.contextMenu(screen.getByRole('tree'))
+
+    expect(onContextMenuRoot).not.toHaveBeenCalled()
   })
 
   it('toggles the clicked node when the command key is held', async () => {
@@ -379,7 +443,7 @@ describe('Tree', () => {
     fireEvent.dragStart(rows[1]!, { dataTransfer: data })
     fireEvent.drop(rows[2]!, { dataTransfer: data })
 
-    expect(onDrop).toHaveBeenCalledWith('a', 'b')
+    expect(onDrop).toHaveBeenCalledWith(['a'], 'b')
   })
 
   // Dropping a row onto itself is the gesture of someone who changed their mind.
@@ -491,7 +555,7 @@ describe('Tree', () => {
     }
 
     function renderInsertable(
-      onInsert: (id: string, parentId: string | null, index: number) => void,
+      onInsert: (ids: readonly string[], parentId: string | null, index: number) => void,
       onDrop = () => {},
     ) {
       render(
@@ -519,7 +583,7 @@ describe('Tree', () => {
       fireEvent.dragStart(b!, { dataTransfer: data })
       dropAt(a!, 0.1, data)
 
-      expect(onInsert).toHaveBeenCalledWith('b', 'scene', 0)
+      expect(onInsert).toHaveBeenCalledWith(['b'], 'scene', 0)
     })
 
     /**
@@ -534,7 +598,7 @@ describe('Tree', () => {
       fireEvent.dragStart(a!, { dataTransfer: data })
       dropAt(b!, 0.9, data)
 
-      expect(onInsert).toHaveBeenCalledWith('a', 'scene', 1)
+      expect(onInsert).toHaveBeenCalledWith(['a'], 'scene', 1)
     })
 
     it('takes a row out of the group holding it', () => {
@@ -545,7 +609,7 @@ describe('Tree', () => {
       fireEvent.dragStart(a1!, { dataTransfer: data })
       dropAt(b!, 0.9, data)
 
-      expect(onInsert).toHaveBeenCalledWith('a1', 'scene', 2)
+      expect(onInsert).toHaveBeenCalledWith(['a1'], 'scene', 2)
     })
 
     it('says nothing when the row would land exactly where it already sits', () => {
@@ -581,7 +645,7 @@ describe('Tree', () => {
       fireEvent.dragStart(b!, { dataTransfer: data })
       dropAt(a!, 0.5, data)
 
-      expect(onDrop).toHaveBeenCalledWith('b', 'a')
+      expect(onDrop).toHaveBeenCalledWith(['b'], 'a')
       expect(onInsert).not.toHaveBeenCalled()
     })
 
@@ -683,10 +747,10 @@ describe('Tree', () => {
     fireEvent.dragStart(rows[1]!, { dataTransfer: data })
     fireEvent.drop(rows[2]!, { dataTransfer: data })
 
-    expect(droppable).toHaveBeenCalledWith(
-      { id: 'b', parentId: 'scene' },
+    // The batch, always — one row long unless `dragMultiple` says otherwise.
+    expect(droppable).toHaveBeenCalledWith({ id: 'b', parentId: 'scene' }, [
       { id: 'a', parentId: 'scene' },
-    )
+    ])
   })
 
   // The drag channel is shared by every tree of the studio, so `carries` alone would let a
@@ -770,6 +834,16 @@ describe('Tree', () => {
     expect(screen.getAllByRole('treeitem')[0]).toHaveFocus()
   })
 
+  it('stops at the last row rather than wrapping back to the first', async () => {
+    renderTree()
+
+    const rows = screen.getAllByRole('treeitem')
+    rows.at(-1)?.focus()
+    await userEvent.keyboard('{ArrowDown}')
+
+    expect(rows.at(-1)).toHaveFocus()
+  })
+
   it('toggles from the chevron without selecting the row underneath', async () => {
     const onSelect = vi.fn()
     const onToggle = vi.fn()
@@ -847,7 +921,7 @@ describe('Tree, the menu a right-click opens', () => {
   /**
    * A row can BE a text field — the explorer renames in place — and the press then belongs to the
    * native clipboard menu, which Chromium never asks the main process for once this row has
-   * called `preventDefault` (`main/window/context-menu.ts`).
+   * called `preventDefault` (`main/window/contextMenu.ts`).
    */
   it('leaves a right-click inside a row that is a field to the native menu', () => {
     const onContextMenu = withMenu(row =>
@@ -965,5 +1039,247 @@ describe('flattenTree, asked what can expand', () => {
     const rows = flattenTree([{ id: 'assets', parentId: null }], new Set(), () => true)
 
     expect(rows[0]?.hasChildren).toBe(true)
+  })
+})
+
+/**
+ * Hovering a folder while dragging opens it, which is how something is carried two levels down
+ * without letting go.
+ *
+ * A SECOND root, and the drag always starts there: `accepts` refuses any row sitting under the
+ * node being dragged, so a batch taken from inside `scene` would make every hover below it a
+ * no-op — and the case that matters most here, an already-open folder that must NOT fold, would
+ * then pass for a reason that has nothing to do with the guard being tested.
+ */
+describe('Tree, a folder hovered while something is being dragged', () => {
+  const HOVER_NODES = [...NODES, { id: 'elsewhere', parentId: null }]
+  /** `scene` is open and `a` is not, so both sides of the guard are reachable from one render. */
+  const ROW = { scene: 0, a: 1, elsewhere: 3 }
+
+  function renderHoverable(onToggle: (id: string) => void) {
+    return render(
+      <Tree
+        nodes={HOVER_NODES}
+        label="Outline"
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={onToggle}
+        // Without it no row has an `into` zone at all — see `dropTargetFor`.
+        onDrop={() => {}}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+  }
+
+  /** `fireEvent` only, and never `userEvent`: its own timers do not survive being faked. */
+  function hover(row: HTMLElement, data: DataTransfer): void {
+    fireEvent.dragOver(row, { dataTransfer: data })
+  }
+
+  function wait(ms: number): void {
+    act(() => void vi.advanceTimersByTime(ms))
+  }
+
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('opens it once the hover has lasted, and not before', () => {
+    const onToggle = vi.fn()
+    renderHoverable(onToggle)
+    const data = dragTransfer()
+    const rows = screen.getAllByRole('treeitem')
+
+    fireEvent.dragStart(rows[ROW.elsewhere]!, { dataTransfer: data })
+    hover(rows[ROW.a]!, data)
+
+    wait(599)
+    expect(onToggle).not.toHaveBeenCalled()
+
+    wait(1)
+    expect(onToggle).toHaveBeenCalledWith('a')
+  })
+
+  /**
+   * The defect this guards is the one a user cannot recover from: a tree that folds what it had
+   * opened moves under a hand still holding something, and the row being aimed at is gone.
+   */
+  it('leaves one that is already open alone, however long it is hovered', () => {
+    const onToggle = vi.fn()
+    renderHoverable(onToggle)
+    const data = dragTransfer()
+    const rows = screen.getAllByRole('treeitem')
+
+    fireEvent.dragStart(rows[ROW.elsewhere]!, { dataTransfer: data })
+    hover(rows[ROW.scene]!, data)
+    wait(5_000)
+
+    expect(onToggle).not.toHaveBeenCalled()
+  })
+
+  it('forgets it when the pointer moves on before the hover has lasted', () => {
+    const onToggle = vi.fn()
+    renderHoverable(onToggle)
+    const data = dragTransfer()
+    const rows = screen.getAllByRole('treeitem')
+
+    fireEvent.dragStart(rows[ROW.elsewhere]!, { dataTransfer: data })
+    hover(rows[ROW.a]!, data)
+    wait(300)
+    hover(rows[ROW.scene]!, data)
+    wait(600)
+
+    expect(onToggle).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A timer that survived the drop would open a folder after the gesture had ended — the tree
+   * rearranging itself on its own, a beat after the hand had let go.
+   */
+  it('forgets it on the drop, so nothing opens after the gesture has ended', () => {
+    const onToggle = vi.fn()
+    renderHoverable(onToggle)
+    const data = dragTransfer()
+    const rows = screen.getAllByRole('treeitem')
+
+    fireEvent.dragStart(rows[ROW.elsewhere]!, { dataTransfer: data })
+    hover(rows[ROW.a]!, data)
+    wait(300)
+    fireEvent.drop(rows[ROW.a]!, { dataTransfer: data })
+    wait(600)
+
+    expect(onToggle).not.toHaveBeenCalled()
+  })
+
+  it('forgets it when the drag ends without a drop', () => {
+    const onToggle = vi.fn()
+    renderHoverable(onToggle)
+    const data = dragTransfer()
+    const rows = screen.getAllByRole('treeitem')
+
+    fireEvent.dragStart(rows[ROW.elsewhere]!, { dataTransfer: data })
+    hover(rows[ROW.a]!, data)
+    wait(300)
+    fireEvent.dragEnd(rows[ROW.elsewhere]!, { dataTransfer: data })
+    wait(600)
+
+    expect(onToggle).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * A drag that began somewhere else — the asset shelf, for the Explorer. Nothing of this tree is
+ * in hand, so every check the tree makes about what it picked up would refuse it; this is the
+ * path that lets it through, and it has to reuse the rest rather than repeat it.
+ */
+describe('Tree, a drag that did not start in it', () => {
+  const FOREIGN = 'application/x-foreign'
+
+  function foreignTransfer(): DataTransfer {
+    const data = dragTransfer()
+    data.setData(FOREIGN, 'whatever')
+    return data
+  }
+
+  const carries = (event: { dataTransfer: DataTransfer | null }): boolean =>
+    event.dataTransfer?.types.includes(FOREIGN) ?? false
+
+  function renderForeign(
+    onDrop: (event: unknown, node: { id: string } | null) => void,
+    accepts: (node: { id: string }) => boolean = () => true,
+    extra?: { onToggle?: (id: string) => void },
+  ) {
+    return render(
+      <Tree
+        nodes={NODES}
+        label="Outline"
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={extra?.onToggle ?? (() => {})}
+        // Present so the tree's OWN gesture is fully wired: what is tested is that the foreign
+        // path does not go through it.
+        onDrop={() => {}}
+        onInsert={() => {}}
+        onDropRoot={() => {}}
+        foreign={{ carries, accepts, onDrop }}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+  }
+
+  it('lands it in the row it was released on, nothing having been picked up here', () => {
+    const onDrop = vi.fn()
+    renderForeign(onDrop)
+
+    fireEvent.drop(screen.getAllByRole('treeitem')[1]!, { dataTransfer: foreignTransfer() })
+
+    expect(onDrop).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id: 'a' }))
+  })
+
+  it('leaves a row that refuses it alone', () => {
+    const onDrop = vi.fn()
+    renderForeign(onDrop, node => node.id !== 'a')
+
+    fireEvent.drop(screen.getAllByRole('treeitem')[1]!, { dataTransfer: foreignTransfer() })
+
+    expect(onDrop).not.toHaveBeenCalled()
+  })
+
+  /**
+   * `null` for the blank, which every caller reads as "the place this list is showing". The
+   * tree's own blank means the same thing, and `onDropRoot` is what says it for the tree's rows.
+   */
+  it('reads the blank below the rows as no row at all', () => {
+    const onDrop = vi.fn()
+    renderForeign(onDrop)
+
+    fireEvent.drop(screen.getByRole('tree').parentElement!, { dataTransfer: foreignTransfer() })
+
+    expect(onDrop).toHaveBeenCalledWith(expect.anything(), null)
+  })
+
+  /**
+   * It lands INSIDE a row and never between two, `onInsert` or no `onInsert`: what it carries is
+   * not a row of this tree, so it has no place in an ordering. Read at the very top of the row,
+   * where the tree's own drag would insert before it.
+   */
+  it('never inserts between two rows, whatever part of one it is released on', () => {
+    const onDrop = vi.fn()
+    const onInsert = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        label="Outline"
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onDrop={() => {}}
+        onInsert={onInsert}
+        foreign={{ carries, accepts: () => true, onDrop }}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const row = screen.getAllByRole('treeitem')[1]!
+    fireEvent.drop(row, { dataTransfer: foreignTransfer(), clientY: 0 })
+
+    expect(onInsert).not.toHaveBeenCalled()
+    expect(onDrop).toHaveBeenCalled()
+  })
+
+  // The half of the gesture the user asked for by name: carrying something two levels down
+  // without letting go works the same whichever list the thing came from.
+  it('opens a folder it rests on, exactly as the tree’s own drag does', () => {
+    vi.useFakeTimers()
+    const onToggle = vi.fn()
+    renderForeign(() => {}, undefined, { onToggle })
+
+    fireEvent.dragOver(screen.getAllByRole('treeitem')[1]!, { dataTransfer: foreignTransfer() })
+    act(() => void vi.advanceTimersByTime(600))
+
+    expect(onToggle).toHaveBeenCalledWith('a')
+    vi.useRealTimers()
   })
 })

@@ -1,4 +1,16 @@
 {
+  "animations": {
+    "empty": "Aucune animation. Sélectionnez un personnage, ou installez des animations dans le dossier de l’application.",
+    "dragHint": "Glissez sur une sous-piste",
+    "playPreview": "Jouer sur le personnage",
+    "stopPreview": "Arrêter et retirer le bloc",
+    "duplicateBlock": "Dupliquer",
+    "duplicateBlockHint": "Pose une copie de ce bloc juste après lui",
+    "splitBlock": "Couper le bloc",
+    "splitBlockHint": "Coupe ce bloc en deux là où se trouve la tête de lecture",
+    "removeBlock": "Supprimer",
+    "removeBlockHint": "Retire ce bloc de la bande — l’animation elle-même n’est pas touchée"
+  },
   "meshes": {
     "box": "Cube",
     "capsule": "Capsule",
@@ -35,7 +47,7 @@
     "sphereHint": "Une boule lisse, 32 segments sur 16",
     "tetrahedronHint": "Quatre faces triangulaires — une pyramide",
     "torusHint": "Un anneau épais, en forme de beignet",
-    "torusKnotHint": "Un tore noué sur lui-même — la forme qui juge le mieux un matériau",
+    "torusKnotHint": "Un tore noué sur lui-même — la forme qui juge le mieux une matière",
     "tubeHint": "Un tube fin qui suit une courbe"
   },
   "lights": {
@@ -59,6 +71,9 @@
   },
   "scene": {
     "root": "Scène",
+    "onAir": "À l’antenne",
+    "previewFull": "Agrandir l’aperçu à toute la vue",
+    "previewInset": "Remettre l’aperçu dans son coin",
     "visible": "Afficher ou masquer",
     "noDocument": "Ouvrez une scène pour voir son contenu.",
     "rename": "Renommer l’objet",
@@ -66,15 +81,21 @@
     "show": "Afficher l’objet",
     "showHint": "Remet l’objet dans la vue. Le masquer ne l’avait pas sorti de la scène, ce n’est pas une suppression",
     "hide": "Masquer l’objet",
-    "hideHint": "Retire l’objet de la vue sans le sortir de la scène, pour dégager ce qu’il cache"
+    "hideHint": "Retire l’objet de la vue sans le sortir de la scène, pour dégager ce qu’il cache",
+    "removePathPoint": "Retirer ce point",
+    "removePathPointHint": "Retire le point du chemin. Un chemin garde toujours ses deux derniers points"
   },
   "objects": {
+    "add": "Ajouter un objet",
+    "addHint": "Poser une caméra, un rail, un sprite ou du texte dans la scène",
     "sprite": "Sprite",
     "text": "Texte",
     "camera": "Caméra",
+    "path": "Chemin",
     "spriteHint": "Une image plane qui fait toujours face à la caméra",
     "textHint": "Du texte posé dans la scène, en volume",
-    "cameraHint": "Un point de vue enregistré, en plus de celui qu’on manœuvre"
+    "cameraHint": "Un point de vue enregistré, en plus de celui qu’on manœuvre",
+    "pathHint": "Un rail le long duquel une caméra peut courir pendant un plan"
   },
   "transport": {
     "play": "Lire",
@@ -88,6 +109,10 @@
     "programRole": "Le montage entier, tel qu’il sera exporté",
     "mirror": "Fenêtre de retour",
     "mirrorHint": "Ouvre le montage dans une fenêtre à part, à poser sur un autre écran",
+    "showSource": "Moniteur source",
+    "showSourceHint": "Affiche à côté le clip choisi, tel qu’il est avant montage",
+    "showTake": "Éditeur de prise",
+    "showTakeHint": "Affiche en dessous la prise choisie, pour la retoucher avant montage",
     "outputLevel": "Niveau de sortie",
     "fit": "Tout le montage",
     "fitHint": "Ramène la vue sur le montage entier. Molette pour défiler, ⌘ + molette pour zoomer",
@@ -143,6 +168,15 @@
     "scaleHint": "Changer l’échelle de l’objet sélectionné",
     "frame": "Cadrer la sélection",
     "frameHint": "Recentrer la caméra sur l’objet sélectionné",
+    "isolateHint": "Ne laisse à l’écran que ce qui est choisi",
+    "leaveIsolation": "Rétablir la vue",
+    "leaveIsolationHint": "Remet dans la vue tout ce qui en avait été retiré, masquage comme isolation",
+    "hideHint": "Retire la sélection de l’affichage sans toucher au document",
+    "showAllHint": "Annule les masquages et l’isolation. Ce que le document déclare masqué le reste",
+    "duplicateHint": "Poser une copie de la sélection au même endroit",
+    "groupHint": "Ranger la sélection sous un même groupe",
+    "deleteHint": "Retirer de la scène ce qui est sélectionné",
+    "quadHint": "Partager le viewport en quatre vues",
     "snap": "Magnétisme",
     "snapHint": "Faire avancer les poignées par pas réguliers, réglables dans les réglages",
     "space": "Repère local",
@@ -154,7 +188,8 @@
     "free": "Perspective",
     "freeHint": "La vue qu’on pilote : c’est la seule qui tourne",
     "pane": "{{view}} — vue {{number, number}}",
-    "paneHint": "Choisit ce que ce quart montre — une perspective, ou un axe qui ne tourne pas",
+    "paneHint": "Choisit ce que ce quart montre — une perspective, un axe qui ne tourne pas, ou une caméra de la scène",
+    "throughCameraHint": "Regarde à travers cette caméra, et l’orbite déplace alors la caméra elle-même",
     "front": "De face",
     "back": "De dos",
     "left": "De gauche",
@@ -168,6 +203,15 @@
     "topHint": "Regarde la scène de haut, sans perspective",
     "bottomHint": "Regarde la scène de dessous, sans perspective"
   },
+  "sceneCaptureQualities": {
+    "view": "Taille de la vue",
+    "fullHd": "1080p",
+    "quadHd": "1440p",
+    "ultraHd": "4K"
+  },
+  "sceneCapture": {
+    "failed": "La vue n’a pas pu être capturée."
+  },
   "sceneCounters": {
     "title": "Ce que la scène coûte",
     "triangles": "Triangles",
@@ -180,22 +224,29 @@
     "shaded": "Rendu",
     "wireframe": "Filaire",
     "both": "Rendu et filaire",
-    "shadedHint": "Les surfaces peintes par leur matériau, sans les arêtes",
+    "shadedHint": "Les surfaces peintes par leur matière, sans les arêtes",
     "wireframeHint": "Les arêtes seules — ce qui montre la densité du maillage",
     "bothHint": "Les surfaces peintes, et les arêtes par-dessus",
     "solid": "Solide",
-    "solidHint": "Une argile unie sur toutes les surfaces : la forme, sans les matériaux",
-    "material": "Aperçu matériau",
-    "materialHint": "Les matériaux sous le seul éclairage du studio, sans les lumières de la scène",
+    "solidHint": "Une argile unie sur toutes les surfaces : la forme, sans les matières",
+    "material": "Aperçu matière",
+    "materialHint": "Les matières sous le seul éclairage du studio, sans les lumières de la scène",
+    "studio": "Studio",
+    "studioHint": "Un éclairage neutre et constant, qui garde le modèle lisible même dans une scène noire",
     "matcap": "Matcap",
     "matcapHint": "Un éclairage capté sur une sphère : c’est le relief qui se lit, pas la couleur",
     "density": "Densité",
-    "densityHint": "Du vert au rouge selon les triangles par unité de surface : le rouge est à optimiser"
+    "densityHint": "Du vert au rouge selon les triangles par unité de surface : le rouge est à optimiser",
+    "ghost": "Translucide",
+    "ghostHint": "Les surfaces à peine posées, pour voir les articulations à l’intérieur",
+    "skeleton": "Squelette seul",
+    "skeletonHint": "Plus aucune surface — il ne reste que les os, pour les corriger sans rien deviner"
   },
   "animation": {
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Échelle",
+    "fov": "Angle de vue",
     "addTrack": "Ajouter une piste {{property}}",
     "removeTrack": "Supprimer la piste {{name}}",
     "arm": "Armer la piste {{name}} en écriture",
@@ -216,9 +267,20 @@
     "fps": "Images/s",
     "keyAll": "Poser une clé sur tout ce qui est animé",
     "keyAllHint": "Pose une clé sur chaque objet animé, à la position de la tête",
+    "addToSheet": "Ajouter à la bande",
+    "addToSheetHint": "Met les objets sélectionnés sur la bande, pour pouvoir les animer",
+    "removeFromSheet": "Retirer {{name}} de la bande",
+    "removeFromSheetHint": "Retire la ligne. Les clés déjà posées restent",
     "unkeySubject": "Retirer la clé de {{name}}",
     "unkeySubjectHint": "Retire la clé posée ici, sur toutes les propriétés de cet objet",
     "reorderRow": "Déplacer la ligne {{name}}",
-    "rowList": "Lignes de l’animation"
+    "rowList": "Lignes de l’animation",
+    "addShot": "Mettre cette caméra à l’antenne",
+    "addShotHint": "Ouvre un plan pour la caméra choisie, à partir de la tête",
+    "addShotNeedsCamera": "Choisissez une caméra de la scène pour lui ouvrir un plan",
+    "lane": "Anim. {{index}}",
+    "addLane": "Ajouter une sous-piste",
+    "addLaneHint": "Une animation de plus, jouée en même temps que celles du dessus",
+    "removeLane": "Supprimer la sous-piste {{name}}"
   }
 }

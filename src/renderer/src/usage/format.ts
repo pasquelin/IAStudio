@@ -5,27 +5,11 @@
  * hundred-and-twenty-point axis would both pay on the UI thread. Those two surfaces are what
  * the figure was measured on; the cache moved, the reason did not.
  */
-import { kept } from '@/helpers/format'
 import { clamp } from '@shared/numeric'
+import { kept } from '@/helpers/format'
 
 const NUMBERS = new Map<string, Intl.NumberFormat>()
 const DATES = new Map<string, Intl.DateTimeFormat>()
-
-/**
- * Compute Units, grouped for reading.
- *
- * Decimals only below ten: a studio racks up thousands, where a fractional unit is noise, but a
- * single cheap call costs a fraction and rounding it to zero would read as "this was free".
- */
-export function formatUnits(units: number, locale: string): string {
-  const digits = units !== 0 && Math.abs(units) < 10 ? 2 : 0
-
-  return kept(
-    NUMBERS,
-    `units:${digits}:${locale}`,
-    () => new Intl.NumberFormat(locale, { maximumFractionDigits: digits }),
-  ).format(units)
-}
 
 export function formatMoney(amount: number, currency: string, locale: string): string {
   return kept(

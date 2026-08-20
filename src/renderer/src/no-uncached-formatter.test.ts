@@ -1,9 +1,9 @@
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
-import { WINDOW_SOURCES } from './window-sources'
+import { WINDOW_SOURCES } from './windowSources'
 
 /**
- * The whole window, as text — the sweep `window-sources.ts` holds for its guards.
+ * The whole window, as text — the sweep `windowSources.ts` holds for its guards.
  *
  * This one used to spell its own, and it had drifted: it excluded `-fixtures.tsx` and swept
  * `-fixtures.ts`, alone among the three. Nothing was wrong in the tree, so nothing said a word.

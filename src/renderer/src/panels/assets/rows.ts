@@ -5,7 +5,7 @@ import {
   type AssetBadge,
   type AssetType,
 } from '@shared/domain/asset'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { runningJobs, type Job } from '@shared/domain/job'
 
 /**
@@ -21,7 +21,21 @@ import { runningJobs, type Job } from '@shared/domain/job'
  */
 export type AssetRowModel =
   | { id: string; from: 'local'; asset: Asset }
-  | { id: string; from: 'remote'; asset: CloudAsset }
+  | {
+      id: string
+      from: 'remote'
+      asset: CloudAsset
+      /**
+       * Somebody else's, off the public feed, rather than this account's own library.
+       *
+       * A FLAG and not a fourth provenance, because nothing about the line behaves differently:
+       * neither has a file here, both are fetched by a double-click, both are dragged by
+       * `startLibraryDrag` and pulled at the drop. What differs is one word on the badge, and a
+       * provenance of its own would have made every reader of `from` guard a case that answers
+       * exactly like the one beside it.
+       */
+      published?: true
+    }
   | { id: string; from: 'job'; job: Job; type: AssetType | null }
 
 /**
@@ -62,7 +76,7 @@ export function typeOfRow(row: AssetRowModel): AssetType | null {
  * states a row that does not exist yet can be in.
  */
 export function badgeOfRow(row: AssetRowModel, activeOwnerId: string | null): AssetBadge {
-  if (row.from === 'remote') return 'remote-only'
+  if (row.from === 'remote') return row.published ? 'published' : 'remote-only'
   if (row.from === 'job') return 'generating'
 
   return assetBadgeOf(row.asset, activeOwnerId)
@@ -119,6 +133,14 @@ export type MergeInput = {
   local: readonly Asset[]
   /** A page of the account's library, or nothing when it has not been read — or was refused. */
   remote: readonly CloudAsset[]
+  /**
+   * A page of what everyone else published.
+   *
+   * Optional, and it is the only field here that is: not asking for the feed is the ordinary
+   * case — it is unbounded, it would drown a project's own dozen assets, and reading it costs a
+   * search. A caller that omits it gets the three provenances this panel had before.
+   */
+  published?: readonly CloudAsset[]
   jobs: readonly Job[]
   /** The kinds the space in front can take. `null` asks for everything. */
   scope: readonly AssetType[] | null
@@ -137,7 +159,14 @@ export type MergeInput = {
  * home's shelf still does, over its own page — and a tile that answered it for itself would be
  * asking the whole catalogue per cell.
  */
-export function mergeRows({ local, remote, jobs, scope, absent }: MergeInput): AssetRowModel[] {
+export function mergeRows({
+  local,
+  remote,
+  published = [],
+  jobs,
+  scope,
+  absent,
+}: MergeInput): AssetRowModel[] {
   const wanted = (type: AssetType | null): boolean =>
     scope === null || type === null || scope.includes(type)
 
@@ -187,6 +216,20 @@ export function mergeRows({ local, remote, jobs, scope, absent }: MergeInput): A
     .filter(asset => !twinned.has(asset.id) && wanted(asset.type))
     .map(asset => ({ id: `${REMOTE_PREFIX}${asset.id}`, from: 'remote', asset }))
 
+  // Deduped against the library page and the project's twins, so an asset this account happens
+  // to own AND to have published is one line — the account's own, which is the truer of the two.
+  //
+  // Built only when there IS a feed to dedup: this runs on every catalogue refresh, and walking
+  // the library page to fill a set nothing then reads is the ordinary case, not the exception.
+  const publics: AssetRowModel[] = []
+  if (published.length > 0) {
+    const held = new Set([...twinned, ...inLibrary.keys()])
+    for (const asset of published) {
+      if (held.has(asset.id) || !wanted(asset.type)) continue
+      publics.push({ id: `${REMOTE_PREFIX}${asset.id}`, from: 'remote', asset, published: true })
+    }
+  }
+
   /**
    * Sorted, and that is what makes it a timeline rather than three lists in a row.
    *
@@ -194,24 +237,34 @@ export function mergeRows({ local, remote, jobs, scope, absent }: MergeInput): A
    * every project row — including one imported a year before. Running generations stay on top
    * whatever their stamp: they are what the user is waiting on.
    */
-  return [...running, ...[...locals, ...remotes].sort(newestFirst)]
+  return [...running, ...newestFirst([...locals, ...remotes, ...publics])]
 }
 
 /**
- * Newest first, on the one stamp both provenances carry.
+ * Newest first, on the one stamp both provenances carry — read once per ROW and not once per
+ * comparison: a catalogue of eight hundred lines is some fifteen thousand `Date.parse` a sort.
  *
- * A job never reaches here — running generations are placed above the sort — so the comparison
- * only ever sees the two shapes that have a `createdAt`.
+ * A job never reaches here — running generations are placed above the sort — so this only ever
+ * sees the two shapes that have a `createdAt`.
  */
-function newestFirst(one: AssetRowModel, other: AssetRowModel): number {
-  return madeAt(other) - madeAt(one)
+function newestFirst(rows: readonly AssetRowModel[]): AssetRowModel[] {
+  return rows
+    .map(row => ({ row, stamp: stampOfRow(row) }))
+    .sort((one, other) => other.stamp - one.stamp)
+    .map(({ row }) => row)
 }
 
-function madeAt(row: AssetRowModel): number {
-  if (row.from === 'job') return 0
+/**
+ * When a line was made, as a number. Exported for `mergeFeed`, which cuts the timeline on the
+ * same stamp this sorts by — reading it any other way there would cut it in a different order.
+ */
+export function stampOfRow(row: AssetRowModel): number {
+  return row.from === 'job' ? 0 : stampOfIso(row.asset.createdAt)
+}
 
-  const at = Date.parse(row.asset.createdAt)
-  // An unreadable stamp sorts last rather than throwing the whole list into an arbitrary order.
+/** An unreadable stamp sorts last rather than throwing the whole list into an arbitrary order. */
+export function stampOfIso(createdAt: string): number {
+  const at = Date.parse(createdAt)
   return Number.isNaN(at) ? 0 : at
 }
 

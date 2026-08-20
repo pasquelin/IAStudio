@@ -9,9 +9,9 @@ import {
 import type { IngestProgress, IngestStage } from '@shared/domain/media'
 import { PEAKS_FOLDER, POSTERS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
 import { peaksArgs, posterArgs, posterOffset, proxyArgs, PEAKS_SAMPLE_RATE } from './ffmpeg'
-import type { PeaksRun } from './peaks-client'
+import type { PeaksRun } from './peaksClient'
 import type { ProbeOutcome } from './probe'
-import type { ActivityReport } from '@main/project/activity-log'
+import type { ActivityReport } from '@main/project/activityLog'
 
 /**
  * What WebCodecs decodes without help. Anything else is montaged on a proxy. Both spellings of
@@ -28,7 +28,7 @@ export type MediaServiceDeps = {
   /** A missing ffprobe is not a failed import; a file ffprobe refuses is — see `ProbeOutcome`. */
   probe: (source: string, signal: AbortSignal) => Promise<ProbeOutcome>
   hash: (source: string) => Promise<string>
-  /** Reduces a source to a waveform off this process entirely — see `peaks-process`. */
+  /** Reduces a source to a waveform off this process entirely — see `peaksProcess`. */
   computePeaks: (run: PeaksRun) => Promise<Float32Array>
   /** Whether the catalogue already holds another row with the same bytes. */
   duplicateExists: (assetId: string, hash: string) => Promise<boolean>

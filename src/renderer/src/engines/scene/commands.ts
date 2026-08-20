@@ -1,21 +1,40 @@
 import { composed, type Command } from '../core/history'
-import type {
-  AnimationRef,
-  EnvironmentRef,
-  GeometryDescriptor,
-  LightDescriptor,
-  MaterialDescriptor,
-  ModelRef,
-  SpriteDescriptor,
-  TextDescriptor,
-  Transform,
+import {
+  rigFaultOf,
+  rigRenamed,
+  rigWithBones,
+  rigWithoutBone,
+  rigWithRole,
+  type IkChain,
+  type Rig,
+  type RigBone,
+} from '@shared/domain/rig'
+import type { HumanoidRole } from '@shared/domain/humanoid'
+import { rigHandBones } from './rigFit'
+import { ikLinksOf } from './ik'
+import {
+  clipLane,
+  isVector3,
+  MAIN_LANE_ID,
+  type CameraDescriptor,
+  type ClipLane,
+  type ClipRef,
+  type SceneWorld,
+  type GeometryDescriptor,
+  type LightDescriptor,
+  type MaterialDescriptor,
+  type ModelRef,
+  type PathDescriptor,
+  type SpriteDescriptor,
+  type TextDescriptor,
+  type Transform,
 } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
 import { changedFields } from '@/helpers/objects'
 import { applySelection, type SelectionMode } from '@/helpers/selection'
-import { isVector3, withField, type FieldValue } from './property-fields'
+import { withField, type FieldValue } from './propertyFields'
 import { newId } from '@/helpers/ids'
-import { groupNode } from './node-factory'
+import { groupNode } from './nodeFactory'
 import {
   canCastShadow,
   canReceiveShadow,
@@ -24,13 +43,16 @@ import {
   nodeById,
   rotationShows,
   subtreeOf,
+  withAxisLock,
+  withoutLockedAxes,
+  type AxisLock,
   type SceneNodeBase,
   type SceneNodeType,
   type MeshNode,
   type NodeMove,
   type SceneNode,
   type SceneState,
-} from './scene-state'
+} from './sceneState'
 
 /**
  * Scene edits, reimplemented in TypeScript from `mrdoob/three.js/editor/js/commands/` (MIT).
@@ -114,11 +136,25 @@ function editNode(
  * *that* shows.
  */
 export function setTransform(id: string, next: Transform): Command<SceneState> {
-  return editNode('transform', id, (node, state) => ({
-    transform: rotationShows(node, () => hasChildren(state.nodes, id))
-      ? next
-      : { ...next, rotation: node.transform.rotation },
-  }))
+  return editNode('transform', id, (node, state) => {
+    // Held axes first, so a padlock answers the viewport handle as it answers the field: both
+    // write through here, and only here can refuse for both.
+    const allowed = withoutLockedAxes(state, id, node.transform, next)
+
+    return {
+      transform: rotationShows(node, () => hasChildren(state.nodes, id))
+        ? allowed
+        : { ...allowed, rotation: node.transform.rotation },
+    }
+  })
+}
+
+/**
+ * Holds one axis still, or lets it go. Written through `replace` rather than as a command by
+ * whoever calls it: a padlock is a way of editing, not an edit, and ⌘Z should not take it back.
+ */
+export function withAxisHeld(state: SceneState, lock: AxisLock, held: boolean): SceneState {
+  return { ...state, lockedAxes: withAxisLock(state.lockedAxes ?? [], lock, held) }
 }
 
 export function setNodeVisible(id: string, visible: boolean): Command<SceneState> {
@@ -334,6 +370,57 @@ export function setMaterialOn(
 }
 
 /**
+ * A rail rewritten. The three gestures a rail offers — move a point, add one, drop one — all
+ * land here, because each of them is the same node holding another list of points.
+ */
+export function setPath(id: string, path: PathDescriptor): Command<SceneState> {
+  let previous: PathDescriptor | null = null
+
+  return {
+    id: `path:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'path') return state
+      previous = node.path
+      return patchPart(state, id, 'path', { path })
+    },
+    revert: state => (previous ? patchPart(state, id, 'path', { path: previous }) : state),
+  }
+}
+
+/** What a camera sees through: its lens, edited like any other descriptor. */
+export function setCamera(id: string, camera: CameraDescriptor): Command<SceneState> {
+  let previous: CameraDescriptor | null = null
+
+  return {
+    id: `camera:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'camera') return state
+      previous = node.camera
+      return patchPart(state, id, 'camera', { camera })
+    },
+    revert: state => (previous ? patchPart(state, id, 'camera', { camera: previous }) : state),
+  }
+}
+
+/**
+ * A lens parameter typed into the inspector, written onto every selected camera.
+ *
+ * No anchor to spread from, unlike a light's: a lens has no vector field, so the value typed is
+ * the value every camera of the selection takes.
+ */
+export function setCameraOn(
+  nodes: readonly SceneNode[],
+  name: string,
+  value: FieldValue,
+): Command<SceneState> {
+  return batch('camera', nodes, node =>
+    node.type === 'camera' ? setCamera(node.id, withField(node.camera, name, value)) : null,
+  )
+}
+
+/**
  * The sprite's own parameters. A node of another type is left alone rather than patched, exactly
  * as `editMesh` refuses to give a light a geometry.
  */
@@ -353,16 +440,163 @@ export function setSprite(id: string, sprite: SpriteDescriptor): Command<SceneSt
 }
 
 /**
- * Which clip of an imported model plays, and how. `null` puts it back to its rest pose.
+ * What an imported model plays: its lanes, and the blocks inside each. No lane at all puts it
+ * back to its rest pose.
  *
- * The whole reference is written rather than the field touched: the head position is part of it,
- * and a play that kept the old time would start over from wherever the last pause happened to be.
+ * The whole set is written rather than one lane patched, for the reason `setModelTextures` states:
+ * what the band holds IS the set, and a partial write would leave the revert unable to say which
+ * lanes it was answering for.
  */
-export function setModelAnimation(id: string, animation: AnimationRef | null): Command<SceneState> {
-  return editModel(id, 'animation', model => {
+export function setModelLanes(id: string, lanes: readonly ClipLane[]): Command<SceneState> {
+  return editModel(id, 'clips', model => {
     const rest = { ...model }
-    delete rest.animation
-    return animation ? { ...rest, animation } : rest
+    delete rest.lanes
+    // A single empty lane is exactly what the band shows a model that has never played anything,
+    // so writing one says nothing the default does not — and a rest pose stays a document that
+    // holds no animation at all.
+    return lanes.length > 1 || lanes.some(lane => lane.clips.length > 0) ? { ...rest, lanes } : rest
+  })
+}
+
+/** The skeleton put on a model, or none. Undo comes for free, which is why a rig is a document's. */
+export function setModelRig(id: string, rig: Rig | null): Command<SceneState> {
+  return editModel(id, 'rig', model => {
+    const rest = { ...model }
+    delete rest.rig
+    return rig ? { ...rest, rig } : rest
+  })
+}
+
+/**
+ * One edit of a model's skeleton, refused whole when the result would not hold.
+ *
+ * A change answering `null` writes nothing at all rather than a rig the document reader would
+ * drop on the next open — a cycle, a name taken twice, one role on two bones. The weights follow
+ * on their own: the engine re-binds whenever `model.rig` changes, so nothing recomputes here.
+ */
+function editRigBones(
+  id: string,
+  edited: string,
+  change: (bones: readonly RigBone[]) => readonly RigBone[] | null,
+): Command<SceneState> {
+  return editModel(id, edited, model => {
+    if (!model.rig) return model
+
+    const bones = change(model.rig.bones)
+    if (!bones || rigFaultOf(bones) !== null) return model
+
+    return { ...model, rig: { ...model.rig, bones } }
+  })
+}
+
+/** A bone hung under one the rig already holds. Refused if the parent, the name or the role clash. */
+export function addRigBone(id: string, bone: RigBone): Command<SceneState> {
+  return editRigBones(id, 'rigBone', bones => rigWithBones(bones, [bone]))
+}
+
+/** A bone taken out, its children hung where it hung — an elbow leaves, the hand stays. */
+export function removeRigBone(id: string, name: string): Command<SceneState> {
+  return editRigBones(id, 'rigBone', bones => rigWithoutBone(bones, name))
+}
+
+export function renameRigBone(id: string, from: string, to: string): Command<SceneState> {
+  return editRigBones(id, 'rigBone', bones => rigRenamed(bones, from, to))
+}
+
+/** Which joint of the standard a bone IS. `null` says it fills none. */
+export function setRigBoneRole(
+  id: string,
+  name: string,
+  role: HumanoidRole | null,
+): Command<SceneState> {
+  return editRigBones(id, 'rigRole', bones => rigWithRole(bones, name, role))
+}
+
+/** The thirty finger bones, at rest, on whatever hands the rig holds. */
+export function addRigHands(id: string): Command<SceneState> {
+  return editRigBones(id, 'rigBone', bones => {
+    const hands = rigHandBones(bones)
+    return hands && rigWithBones(bones, hands)
+  })
+}
+
+/**
+ * One block more on a model's band, at the end of its first lane.
+ *
+ * The lane is made if the model has none: a character that has never played anything holds no
+ * lane at all, and it is exactly the one an animation is dropped on.
+ */
+export function addModelClip(id: string, clip: ClipRef): Command<SceneState> {
+  return editModel(id, 'lanes', model => {
+    const lanes = model.lanes?.length ? model.lanes : [clipLane(MAIN_LANE_ID, [])]
+    const [first, ...rest] = lanes
+    if (!first) return model
+
+    return { ...model, lanes: [{ ...first, clips: [...first.clips, clip] }, ...rest] }
+  })
+}
+
+/** One block gone, wherever it sat. The lane stays, empty if it has to — see `setModelLanes`. */
+export function removeModelClip(id: string, clipId: string): Command<SceneState> {
+  return editModel(id, 'lanes', model => ({
+    ...model,
+    lanes: model.lanes?.map(lane => ({
+      ...lane,
+      clips: lane.clips.filter(clip => clip.id !== clipId),
+    })),
+  }))
+}
+
+/** What a handle bone is called, after the joint that reaches for it. */
+const IK_HANDLE = '.handle'
+
+/**
+ * A handle a joint reaches for: one bone added ON the joint, and the chain that follows it.
+ *
+ * Both in one command, so undoing gives back a rig with neither — a handle left behind by an
+ * undone chain would be a bone nothing drives and nothing explains.
+ */
+export function addIkChain(id: string, effector: string): Command<SceneState> {
+  return editModel(id, 'rigIk', model => {
+    const rig = model.rig
+    const joint = rig?.bones.find(bone => bone.name === effector)
+    if (!rig || !joint) return model
+
+    const handle: RigBone = {
+      name: `${effector}${IK_HANDLE}`,
+      parent: joint.parent,
+      rest: joint.rest,
+    }
+    const bones = rigWithBones(rig.bones, [handle])
+    if (!bones) return model
+
+    const chain: IkChain = {
+      id: newId(),
+      effector,
+      target: handle.name,
+      links: ikLinksOf(rig.bones, effector),
+    }
+    if (chain.links.length === 0) return model
+
+    return { ...model, rig: { ...rig, bones, ik: [...(rig.ik ?? []), chain] } }
+  })
+}
+
+/** The chain and the handle it reached for, both. */
+export function removeIkChain(id: string, chainId: string): Command<SceneState> {
+  return editModel(id, 'rigIk', model => {
+    const rig = model.rig
+    const dropped = rig?.ik?.find(chain => chain.id === chainId)
+    if (!rig || !dropped) return model
+
+    return {
+      ...model,
+      rig: {
+        ...rig,
+        bones: rigWithoutBone(rig.bones, dropped.target),
+        ik: rig.ik?.filter(chain => chain.id !== chainId),
+      },
+    }
   })
 }
 
@@ -613,19 +847,26 @@ function commandId(label: string, ids: readonly string[]): string {
 }
 
 /**
- * What lights the scene. In the history like any other edit of the document: choosing a sky is a
- * decision about the scene, and ⌘Z has to take it back like the rest.
+ * What lights the scene and what hangs behind it. In the history like any other edit of the
+ * document: choosing a sky is a decision about the scene, and ⌘Z has to take it back like the rest.
+ *
+ * A patch rather than a whole world, so a preset writing five fields and a slider writing one are
+ * the same call — and so a field this build does not know is left exactly as the file spelled it.
  */
-export function setEnvironment(environment: EnvironmentRef): Command<SceneState> {
-  let previous: EnvironmentRef | null = null
+export function setWorld(patch: Partial<SceneWorld>): Command<SceneState> {
+  let previous: SceneWorld | null = null
 
   return {
-    id: 'environment',
+    // Named by what moved, so a drag of one slider coalesces with itself and not with the next.
+    // Ordered by code point rather than by language: these are field names, not words on screen.
+    id: `world:${Object.keys(patch)
+      .sort((left, right) => (left < right ? -1 : 1))
+      .join(',')}`,
     apply: state => {
-      previous = state.environment
-      return { ...state, environment }
+      previous = state.world
+      return { ...state, world: { ...state.world, ...patch } }
     },
-    revert: state => (previous ? { ...state, environment: previous } : state),
+    revert: state => (previous ? { ...state, world: previous } : state),
   }
 }
 

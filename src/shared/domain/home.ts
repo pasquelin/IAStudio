@@ -132,15 +132,13 @@ export function visibleHomeSections(
     .map(setting => setting.id)
 }
 
-/**
- * The stored order is still reconciled and still read — the registry's own order decides what
- * the centre stacks — but nothing moves a band any more, and that is a consequence rather than
- * a decision: every band is either pinned or anchored, so none of them has anywhere to go.
- * `movedHomeSection`, `canMoveHomeSection` and the `shown` narrowing they took went with the six
- * bands that left on 11 August, and `tools` coming back on the 12th did not bring them with it —
- * it arrived pinned. The day a MOVABLE band lands, rewriting them from the history is cheaper
- * than having carried rules no case can reach, which is what a coverage floor says out loud.
- */
+// The stored order is still reconciled and still read — the registry's own order decides what the
+// centre stacks — but nothing moves a band any more, and that is a consequence rather than a
+// decision: every band is either pinned or anchored, so none of them has anywhere to go.
+// `movedHomeSection`, `canMoveHomeSection` and the `shown` narrowing they took went with the six
+// bands that left on 11 August, and `tools` coming back on the 12th did not bring them with it —
+// it arrived pinned. The day a MOVABLE band lands, rewriting them from the history is cheaper
+// than having carried rules no case can reach.
 
 /** One field of one section, rewritten. Both writes the menu offers are shaped like this. */
 function patchedHomeSection(

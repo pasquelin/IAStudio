@@ -2,8 +2,11 @@ import {
   Box3,
   BufferGeometry,
   CameraHelper,
+  Color,
+  type AnimationClip,
   DirectionalLight,
   GridHelper,
+  type Intersection,
   Light,
   LineBasicMaterial,
   Mesh,
@@ -13,11 +16,13 @@ import {
   Raycaster,
   type Camera,
   SkeletonHelper,
+  SkinnedMesh,
   SpotLight,
   Sprite,
   SpriteMaterial,
   Vector2,
   Vector3,
+  Vector4,
   WebGLRenderTarget,
   Vector3 as ThreeVector3,
 } from 'three'
@@ -26,17 +31,34 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
-import type { ExportFormat, Transform } from '@shared/domain/scene'
+import {
+  DEFAULT_WORLD,
+  type ClipLane,
+  type ExportFormat,
+  type HelperVisibility,
+  type LightDescriptor,
+  type SceneWorld,
+  type Transform,
+  showsAid,
+} from '@shared/domain/scene'
+import { createGroundPlane } from './groundPlane'
+import { applyFog, applyToneMapping } from './worldBinding'
+import { createViewportAids } from './viewportAids'
+import { drawsNode, isolating, NOTHING_ISOLATED, type Isolation } from './isolation'
+import { pixelRatioFor, shadowMapSizeFor } from './viewportQuality'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { SelectionMode } from '@/helpers/selection'
+import { aspectLoan } from '../viewport/aspectLoan'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
-import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
+import { screenScale } from '../viewport/screenScale'
+import { createSkyBinding, type SkyBinding } from '../viewport/skyBinding'
 import {
   ViewportEngine,
   type ProjectionKind,
   type ViewportCamera,
   type ViewportOutput,
 } from '../viewport/ViewportEngine'
+import type { PaneRect } from '../viewport/panes'
 import {
   canReceiveShadow,
   type ModelNode,
@@ -46,72 +68,126 @@ import {
   type SceneState,
   type SpriteNode,
   type TextNode,
-} from './scene-state'
-import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './three-factory'
+} from './sceneState'
+import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
+import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
+import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
+import { spotOnRay } from './railSpot'
+import { clampUnit, progressAt } from './cameraMotion'
+import { railsInUse, shotCameras, shotOfCameraAt } from './cameraShots'
 import {
+  buildPath,
+  cameraBody,
+  helperFor,
+  knobIndexOf,
+  knobName,
+  PATH_CURVE_NAME,
+  tuneViewHelper,
+  type LightHelper,
+} from './threeFactory'
+import { applyLightBody, lightBody } from './lightBodies'
+import { MARKER_NAME } from './markerPaint'
+import { aimLightMarker, holdMarkerSize } from './markerPose'
+import {
+  applyCamera,
   applyGeometry,
   applyLight,
   applyMaterial,
+  applyPath,
   applySprite,
   lightFor,
+  showPathKnobs,
+  tiledGeometry,
   standardMaterialOf,
-} from './three-sync'
+} from './threeSync'
 import {
   createMaterialTextures,
   createSpriteTexture,
   type MaterialTextures,
   type SpriteTexture,
-} from './material-textures'
-import { createModelTextures, type ModelTextures } from './model-textures'
+} from './materialTextures'
+import { createModelTextures, type ModelTextures } from './modelTextures'
 import { reportFailure } from '@/services/diagnostics'
 import { studioFonts } from '@/services/fonts'
 import type { FontLibrary } from '../core/fonts'
 import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
-import { textGeometry } from './text-geometry'
-import { createGltfSource, type GltfSource } from './gltf-source'
-import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
-import { drivenNodes, poseAt } from './animation-eval'
+import { textGeometry } from './textGeometry'
+import { createGltfSource, type GltfSource } from './gltfSource'
+import {
+  SceneAnimations,
+  clipLengthsOf,
+  clipNamesOf,
+  clipsOf,
+  foreignClipsOf,
+  type ForeignClip,
+} from './animation'
+import { createRefCache, type RefCache } from '../core/refCache'
+import { drivenNodes, lensAt, poseAt } from './animationEval'
+import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
-import { nearestBone, type ProjectedBone } from './bone-picking'
-import { evenSize, flipInto, frameTimes, type FilmRequest } from './film'
+import { nearestProjected, type Projected, type ProjectedBone } from './bonePicking'
+import { rigStateOf, type RigState } from './rigState'
+import { evenSize, flipToSrgbInto, frameTimes, type FilmRequest } from './film'
+import { captureSize, type CaptureQuality } from '@shared/domain/sceneCapture'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
-import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
+import {
+  createModelCache,
+  disposeTree,
+  instanceOf,
+  type ModelCache,
+  type ModelSource,
+} from './modelCache'
 import { applyTransform, carry, placePivot, release, transformOf } from './pivot'
 import {
   applyShadowFlags,
   applyShadowQuality,
+  applyShadows,
   fitShadowCamera,
+  needsShadowFrustum,
   ownedByAnotherNode,
   resizeShadowMap,
 } from './shadows'
-import { createPaneMemory, dressForPane } from './pane-dress'
-import { createPaneMaterials, type PaneMaterials } from './pane-materials'
-import { statsOf, type SceneStats } from './scene-stats'
+import { createPaneMemory, dressForPane } from './paneDress'
+import { createPaneMaterials, type PaneMaterials } from './paneMaterials'
+import { EMPTY_STATS, statsOf, type SceneStats } from './sceneStats'
 import {
   applyWireOverlay,
   DEFAULT_PANE_VIEWS,
   showsEdges,
   directionOf,
   framingPlacement,
+  isCameraView,
   plainVector,
   viewPosition,
   type CameraPlacement,
   type PaneView,
-} from './scene-view'
+  type PreviewWatch,
+} from './sceneView'
 import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 import BvhWorker from './bvh.worker?worker'
-import { createBvhBuilder, type BvhBuilder } from './bvh-builder'
-import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmo-target'
-import { exportObjects } from './scene-export'
-import { snapSteps } from './snap-steps'
+import SkinWorker from './skinWeights.worker?worker'
+import RetargetWorker from './retarget.worker?worker'
+import { createRetarget, retargetFitOf, type Retarget, type RetargetFit } from './retarget'
+import { applyRig, positionsIn, skinnableMeshesOf } from './rigBuild'
+import { createIkBinding, ikSpecsOf, type IkBinding } from './ik'
+import { createBoneJoints, type BoneJoints } from './boneJoints'
+import { createSkinWeights, type SkinWeights } from './skinWeights'
+import type { SkinBinding } from './skinVertices'
+import type { Rig } from '@shared/domain/rig'
+import type { HumanoidRole } from '@shared/domain/humanoid'
+import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
+import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
+import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
+import { exportObjects } from './sceneExport'
+import { snapSteps } from './snapSteps'
 import {
   createTextureCache,
   loadTexture,
   type TextureCache,
   type TextureSource,
-} from './texture-cache'
+} from './textureCache'
 
-export type { TransformMode, TransformSpace } from './gizmo-target'
+export type { TransformMode, TransformSpace } from './gizmoTarget'
 
 export type SceneRendererOptions = {
   /**
@@ -129,8 +205,23 @@ export type SceneRendererOptions = {
     clips: readonly string[],
     lengths: Readonly<Record<string, number>>,
   ) => void
-  /** The bones a rigged model brought, named. Same reason as `onClips`: they live in the file. */
-  onBones?: (nodeId: string, bones: readonly string[]) => void
+  /**
+   * How well a clip from elsewhere fits this character, once both skeletons are in hand. Only
+   * the engine ever holds the two at once, so nothing else could work it out.
+   */
+  onClipFit?: (nodeId: string, clipKey: string, fit: RetargetFit) => void
+  /**
+   * What a model turned out to be once its file landed — bones, humanoid roles, and which of the
+   * five states it is in. Same reason as `onClips`: none of it lives in the document.
+   */
+  onRig?: (nodeId: string, rig: RigState) => void
+  /**
+   * What a skeleton of that signature means, worked out from a document's own rig. Kept by the
+   * project rather than here: this port dies with the viewport, and the mapping outlives it.
+   */
+  onProfile?: (profile: SkeletonProfile) => void
+  /** The mappings the project already knows, applied before anything is read. */
+  profiles?: readonly SkeletonProfile[]
   /**
    * The bone a click picked while the pose mode is on, or nothing for a click in the void.
    *
@@ -139,13 +230,33 @@ export type SceneRendererOptions = {
    */
   onSelectBone?: (picked: { nodeId: string; bone: string } | null) => void
   /**
+   * A control point of a rail was picked, or let go of. Apart from `onSelect` for the same
+   * reason a bone is: a point has no id in the document, and no row in the tree.
+   */
+  onSelectPathPoint?: (picked: { nodeId: string; index: number } | null) => void
+  /** Where a picked control point was dragged to, in the frame of the rail that holds it. */
+  onPathPoint?: (nodeId: string, index: number, point: PlainVector3) => void
+  /** A point is to be posed on that rail, right after the stretch of it that was clicked. */
+  onAddPathPoint?: (nodeId: string, index: number) => void
+  /** A point is to be posed at the END of that rail, where the click landed in its own frame. */
+  onAppendPathPoint?: (nodeId: string, point: PlainVector3) => void
+  /** A control point was right-clicked, for whoever raises its menu — this side draws none. */
+  onPathPointMenu?: (nodeId: string, index: number) => void
+  /**
+   * A camera of the scene was moved by orbiting the pane locked onto it — an EDIT of the
+   * document, unlike moving the view, and reported once per gesture rather than per frame.
+   */
+  onCameraMoved?: (nodeId: string, transform: Transform) => void
+  /**
    * A node right-clicked in the viewport, for whoever raises the menu — this side draws none.
    *
    * Only for a right button that went down and came up in the same place with no motion key
-   * held: that button flies the camera, and every flight would otherwise end in a menu. A
-   * click in the void answers nothing, the fly camera being the gesture that owns the void.
+   * held: that button flies the camera, and every flight would otherwise end in a menu.
+   *
+   * `null` for a click that hit nothing — the void offers what a scene can RECEIVE, where a node
+   * offers what can be done to it.
    */
-  onContextMenu?: (nodeId: string) => void
+  onContextMenu?: (nodeId: string | null) => void
   /**
    * What the scene costs, whenever that changes. Counted here because only the engine knows what
    * a model actually brought: the document holds an asset id, not the triangles behind it.
@@ -159,8 +270,18 @@ export type SceneRendererOptions = {
    * because only the controls know when a gesture ended.
    */
   onView?: (placement: CameraPlacement) => void
+  /**
+   * Which of the four views the pointer settled in. Published rather than asked for: a panel that
+   * read it during its own render was never told when the answer moved, and wrote a display mode
+   * into the pane the hand had already left.
+   */
+  onPane?: (pane: number) => void
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
+  /** Same, for a file read for its animation alone — which may be an FBX. See `GltfSource`. */
+  loadAnimation?: ModelSource
+  /** And again, for replaying a shipped animation on a character's own skeleton. */
+  retarget?: Retarget
   /** Same, for the sky an environment hangs: jsdom decodes no image either. */
   loadTexture?: TextureSource
   /**
@@ -172,6 +293,13 @@ export type SceneRendererOptions = {
   assetVersion?: (assetId: string) => string | undefined
   /** Same again, for the picking trees: jsdom spawns the worker that builds them no more. */
   bvh?: BvhBuilder
+  /** And again, for the skinning weights a local rig is bound with. */
+  skin?: SkinWeights
+  /**
+   * How far along binding a model's rig is, 0 to 1. Reported because it is the one operation of
+   * this engine that can take a minute — and it is free, so nothing else warns the user it began.
+   */
+  onRigProgress?: (nodeId: string, progress: number) => void
   /** The typefaces a text is cut from. Shared with the image workspace — see `services/fonts`. */
   fonts?: FontLibrary
 }
@@ -197,6 +325,9 @@ const STUDIO_INTENSITY = 0.4
 /** How far the pointer may wander between press and release and still count as a click, in px. */
 const CLICK_SLOP = 4
 
+/** How far a camera's frustum is OUTLINED, in metres. Never how far that camera sees. */
+const FRUSTUM_REACH = 2
+
 /**
  * Whether a release ends a click rather than a drag. Both buttons ask it: the left one to tell a
  * pick from an orbit, the right one to tell a menu from a flight — and a slop written twice is a
@@ -205,6 +336,11 @@ const CLICK_SLOP = 4
 function wasClick(from: { x: number; y: number } | null, event: PointerEvent): boolean {
   return from !== null && Math.hypot(event.clientX - from.x, event.clientY - from.y) <= CLICK_SLOP
 }
+
+/** Where a shot's target stands and where its rail puts it: a camera driven per frame allocates
+ * nothing. */
+const aimed = new ThreeVector3()
+const railed = new ThreeVector3()
 
 /** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
 const forward = new ThreeVector3()
@@ -226,13 +362,80 @@ const NOOP = (): void => {}
 /** Scratch for projecting a bone, so a click over a rig allocates nothing per bone. */
 const BONE_WORLD = new Vector3()
 
-/** three marks its bones with a flag; `instanceof` would miss one from another three instance. */
-function isBone(object: Object3D): boolean {
-  return Reflect.get(object, 'isBone') === true
+/** Scratch for placing a rail or one of its knobs, so a click over one allocates nothing. */
+const RAIL_SPOT = new Vector3()
+
+/** Scratch for the two the fallback plane of a click needs: what it passes through, and its way. */
+const RAIL_ANCHOR = new Vector3()
+const RAIL_FACING = new Vector3()
+
+/**
+ * A pick that may widen the ray's tolerance, with both thresholds put back whatever it does.
+ *
+ * The raycaster is shared by every pick of the engine: a throw that left `Line.threshold` at
+ * another value would silently take away the one thing a light is clickable BY, its helper's
+ * lines, and nothing would go red.
+ */
+function withHeldFuzz<T>(raycaster: Raycaster, pick: () => T): T {
+  const { Line, Points } = raycaster.params
+  const lines = Line.threshold
+  const points = Points.threshold
+
+  try {
+    return pick()
+  } finally {
+    Line.threshold = lines
+    Points.threshold = points
+  }
 }
+
+/**
+ * Whether a hit is scenery a DOCUMENT point may be written onto: not a rail of the studio, not a
+ * workshop marker, and nothing hanging under something hidden.
+ *
+ * Walked up the ancestors rather than filtered at the roots, because `intersectObjects` recurses
+ * and each of the three reappears through a parent that passed: a rail inside a group is reached
+ * THROUGH the group — its knobs are 14 cm spheres, which no line threshold keeps out — a camera's
+ * body and a lamp's bulb hang under nodes of their own, and three never reads `visible`.
+ */
+function isScenery(object: Object3D, isRail: (nodeId: string) => boolean): boolean {
+  for (let node: Object3D | null = object; node; node = node.parent) {
+    if (!node.visible || node.name === MARKER_NAME || isRail(node.name)) return false
+  }
+
+  return true
+}
+
+/** How wide a rail's line is grabbed, as a share of the visible height: about six pixels. */
+const LINE_GRAB = 1 / 150
+
+/** A control point, as the screen sees it. */
+type ProjectedKnob = Projected & { nodeId: string; index: number }
+
+/** What the panel asks the engine to show in the corner — see `setCameraPreview`. */
+export type CameraPreviewRequest = {
+  cameraNodeId: string
+  /** The inside of the DOM frame, in CSS pixels, measured rather than worked out. */
+  rect: PaneRect
+  /** Grown to the whole view. Told, never measured — the rect is two pixels short of it. */
+  full: boolean
+}
+
+/**
+ * How near the pointer must fall to grab a knob, in normalised device units — the knob covers
+ * `KNOB_SHARE` of the height, which is 2 in this space, and a little over that is what a hand
+ * needs. Far tighter than a bone's reach: knobs stand apart, where a rig's bones crowd.
+ */
+const KNOB_REACH = 0.025
 
 /** Where a normalised view stands when the camera already sits on its target and has no distance. */
 const DEFAULT_VIEW_DISTANCE = 8
+
+/**
+ * How far under zero the reference grid sits. Small enough to read as the ground plane, wide
+ * enough that no depth buffer confuses the two.
+ */
+const GRID_SINKAGE = 0.02
 
 /**
  * The node types an automatic framing counts — see `frameContents`. Lights and cameras are
@@ -245,6 +448,13 @@ const FRAMED_NODES: ReadonlySet<SceneNodeType> = new Set<SceneNodeType>([
   'text',
   'sprite',
 ])
+
+/** An empty box for an empty set, which is how a caller tells "nothing yet" from "nothing there". */
+function boundsOf(objects: Iterable<Object3D>): Box3 {
+  const bounds = new Box3()
+  for (const object of objects) bounds.expandByObject(object)
+  return bounds
+}
 
 /**
  * How far a side view stands off its target. Distance changes nothing an orthographic camera
@@ -279,8 +489,13 @@ export class SceneRenderer {
     onFrame: delta => this.advance(delta),
     onOverlay: renderer => this.viewHelper?.render(renderer),
     onPane: (index, camera) => this.dressPane(index, camera),
+    // Before `TransformControls` reads the same event — see `onPaneArmed`, which says why the
+    // viewport owns this call rather than a listener of this file.
+    onPaneArmed: event => this.onPointerAim(event),
+    // A preview shows what the camera FILMS: the same pass the film and the montage take.
+    onInset: () => this.hideWorkshop(),
     // Read back rather than computed here: only the controls know where an orbit ended up.
-    onCameraSettled: () => this.options.onView?.(this.viewPlacement()),
+    onCameraSettled: pane => this.reportCameraSettled(pane),
     // Only here: the texture and skybox viewports show what they show without any light told to
     // cast, so a depth pass per frame would buy them nothing.
     shadows: true,
@@ -300,6 +515,14 @@ export class SceneRenderer {
   /** A shadow walk stops here: what hangs under a node carries that node's flags, not its parent's. */
   private readonly belongsToAnotherNode = ownedByAnotherNode(this.objects)
   private readonly helpers = new Map<string, LightHelper>()
+  /** The frustum drawn under each camera of the scene — what makes one clickable. */
+  private readonly frustums = new Map<string, CameraHelper>()
+  /**
+   * The body a camera and a lamp are DRAWN as, by node. Kept the way the helpers are, and for the
+   * same two reasons: a render hides all of them at once, and finding them by walking each node's
+   * children would be a scan per frame.
+   */
+  private readonly markers = new Map<string, Object3D>()
   /** The texture slots of each mesh, and the references they hold on the cache. */
   private readonly textures = new Map<string, MaterialTextures>()
   /** The same, for the one map a sprite wears. Apart, so each map stays exactly typed. */
@@ -313,6 +536,8 @@ export class SceneRenderer {
   private readonly gltf: GltfSource
   /** The clips of every model on stage. Apart from the nodes: see `animation.ts`. */
   private readonly animations = new SceneAnimations()
+  /** The cameras the shots named last pass, so one they let go of can be put back where it was. */
+  private railedCameras = new Set<string>()
   /** One per rigged model, drawn over it. Beside the nodes like the grid — never inside one. */
   private readonly skeletons = new Map<string, SkeletonHelper>()
   private showSkeletons = false
@@ -326,15 +551,31 @@ export class SceneRenderer {
   private poseMode = false
   /** The bone the gizmo is aimed at while the pose mode is on, and what a release reports. */
   private pickedBone: { nodeId: string; bone: string } | null = null
+  /** The control point of a rail the gizmo holds. Never a node — see `setPickedPathPoint`. */
+  private pickedPathPoint: { nodeId: string; index: number } | null = null
   /** The tracks of the document, and where the head stands over them. */
   private timeline: AnimationTimeline = EMPTY_TIMELINE
   private playhead = 0
+
+  /** The frame of the preview loop, so switching block or stopping cancels the one running. */
+  private previewFrame = 0
+
+  /** The pose a preview stands still at, which nothing else writes again. See `holdPreview`. */
+  private heldPreview: PreviewWatch | null = null
   /** Where each driven bone rested when it arrived, keyed `<nodeId>/<bone>`. See `applyBonePoses`. */
   private readonly boneRests = new Map<string, Transform>()
   private readonly held = new Set<MotionId>()
 
   private environment: ViewportEnvironment | null = null
   private readonly sky: SkyBinding
+  /** What lights the document and hangs behind it, as last applied. See `applyWorld`. */
+  private world: SceneWorld = DEFAULT_WORLD
+  /** The document's own ground. Beside the nodes like the grid, and never one of them. */
+  private readonly ground = createGroundPlane()
+  /** Boxes, origins and normals. Hung beside the nodes for the reason the ground is not. */
+  private readonly aids = createViewportAids()
+  /** What the VIEWPORT hides, which is never what the document hides — see `isolation.ts`. */
+  private isolation: Isolation = NOTHING_ISOLATED
 
   /** What the gizmo holds when more than one node is selected. See `pivot.ts`. */
   private readonly pivot = new Object3D()
@@ -343,11 +584,16 @@ export class SceneRenderer {
   /** Where the left button went down, so the release can tell a click from an orbit. */
   private pressed: { x: number; y: number } | null = null
   /**
-   * Where the right button went down, or nothing while it is up. It doubles as "the camera is
-   * flying", the two being the same fact: the button starts the flight and ends it. A flight
-   * that never left the pixel it started on is a click, and raises the node menu instead.
+   * Where the button that flies went down, or nothing while none is held. A flight that never
+   * left the pixel it started on is a click: the right button raises the node menu, the left
+   * one picks.
    */
   private flownFrom: { x: number; y: number } | null = null
+  /**
+   * Which button armed the flight, and so whether one is under way at all. Either arms it —
+   * the left one keeps orbiting and picking exactly as before, it only GAINS the keys.
+   */
+  private flownWith: number | null = null
   /**
    * Whether the camera actually moved while the button was down. The pointer alone cannot say:
    * a flight is driven by the keyboard, so letting go of `W` before the button — the ordinary
@@ -356,8 +602,22 @@ export class SceneRenderer {
   private flew = false
 
   private gizmo: TransformControls | null = null
+  /**
+   * The rectangle handed to the gizmo, rewritten in place: this is set on every pointer move, and
+   * `activePaneRegion` writes into a rect of its own for the same reason.
+   */
+  private readonly gizmoRegion = new Vector4()
   private viewHelper: ViewHelper | null = null
   private grid: GridHelper | null = null
+  /**
+   * Two things move separately and are read by different passes, which is why they are two flags
+   * and not one: WHAT the scene holds, which the counters read, and WHERE it stands, which the
+   * shadow reach reads. A pose displaces without adding; hiding a mesh subtracts without moving.
+   */
+  private contentChanged = true
+  private placementChanged = true
+  /** What the model costs, held between the passes that cannot have changed it. */
+  private modelStats: SceneStats = EMPTY_STATS
   private mode: TransformMode = 'select'
   private snapping = false
   private space: TransformSpace = 'world'
@@ -365,6 +625,10 @@ export class SceneRenderer {
   private selectedIds: readonly string[] = []
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
   private meshColor = ''
+  /** What a camera body and a bulb's cap are FILLED with, read off the palette beside `meshColor`. */
+  private markerColor = ''
+  /** And what outlines them: the edges are what carry the shape where no lamp lights it. */
+  private markerEdge = ''
   /** One mode per pane, main view first. A single-view scene reads index 0 and nothing else. */
   private displays: DisplayMode[] = ['shaded']
   /** Whether the edges are rebuilt as quads. Never real quads — see `applyWireOverlay`. */
@@ -379,6 +643,26 @@ export class SceneRenderer {
   /** What each mesh wore, and which lights the material preview put out — see `pane-dress`. */
   private readonly paneMemory = createPaneMemory()
   private readonly bvh: BvhBuilder
+  private readonly skin: SkinWeights
+  private readonly retarget: Retarget
+  /**
+   * Which foreign clips a node holds a reference on, by key, and where each was read from. A
+   * block plays nothing until its clip lands, and every `apply` would otherwise load again.
+   */
+  private readonly bundled = new Map<string, Map<string, string>>()
+  /**
+   * One read per animation FILE, however many characters play it — two dancers are one parse.
+   *
+   * Kept while a block still names it rather than freed after the retarget: what costs is the
+   * read, and the second character to be given the same walk is exactly the case this closes.
+   */
+  private readonly clipSources: RefCache<Object3D>
+  /** The binds still running, so a model that leaves the stage takes its own off the worker. */
+  private readonly skinning = new Map<string, AbortController>()
+  /** One solver per model that reaches for something. Absent is the common case and costs nothing. */
+  private readonly iks = new Map<string, IkBinding>()
+  /** The joints of each drawn skeleton, refreshed with the pose. Beside the helper they double. */
+  private readonly joints = new Map<string, BoneJoints>()
   private readonly fonts: FontLibrary
   private stopPaletteWatch: (() => void) | null = null
   /** Set by `prepareOffscreen`: what stops the backdrop being painted over a montage. */
@@ -394,7 +678,13 @@ export class SceneRenderer {
       options.assetVersion,
     )
     this.gltf = options.loadModel
-      ? { load: options.loadModel, dispose: () => {} }
+      ? {
+          load: options.loadModel,
+          // A test that hands one stub reads animations off it too, exactly as a `.glb` holding
+          // both would.
+          loadAnimation: options.loadAnimation ?? options.loadModel,
+          dispose: () => {},
+        }
       : createGltfSource(() => this.viewport.gl)
     this.modelCache = createModelCache(
       this.gltf.load,
@@ -402,7 +692,18 @@ export class SceneRenderer {
       // otherwise indistinguishable from one that was never asked for.
       (assetId, error) => reportFailure('scene.model', assetId, error),
     )
+    this.clipSources = createRefCache({
+      load: url => this.gltf.loadAnimation(url),
+      free: disposeTree,
+      // Under a scope of its own: a failing animation must not swallow what a failing model says.
+      onFailure: (url, error) => reportFailure('scene.animation', url, error),
+    })
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
+    this.skin = options.skin ?? createSkinWeights(() => new SkinWorker())
+    this.retarget = options.retarget ?? createRetarget(() => new RetargetWorker())
+    // Before any file lands: a skeleton this project has already been taught is recognised on
+    // the first model that carries it, in a document that never saw the correction.
+    for (const profile of options.profiles ?? []) this.retarget.remember(profile)
     this.sky = createSkyBinding(this.textureCache, () => this.paintBackground())
     // The studio's own by default: a face parsed for a caption in the image workspace is the
     // same object a text node extrudes, and half a megabyte of glyph tables is worth sharing.
@@ -426,10 +727,19 @@ export class SceneRenderer {
     this.applyPalette()
 
     this.viewport.scene.add(this.pivot)
+    // Beside the nodes, like the grid — but unlike the grid it stays in every film pass: it is
+    // part of what the document IS, not of the workshop it is built in.
+    this.viewport.scene.add(this.ground.object)
+    this.viewport.scene.add(this.aids.object)
+    this.applyGround()
 
     const gizmo = new TransformControls(camera, canvas)
     // Since r169 the controls are not an Object3D; the helper is what goes into the scene.
     this.viewport.scene.add(gizmo.getHelper())
+    // `onPointerDown` hovers and THEN grabs, so the axis is decided inside the very call that
+    // uses the plane. This fires synchronously on that decision, which is the only moment left
+    // to turn the plane before it is read.
+    gizmo.addEventListener('axis-changed', this.onGizmoAxisChanged)
     gizmo.addEventListener('dragging-changed', this.onDraggingChanged)
     gizmo.addEventListener('objectChange', this.onGizmoChange)
     gizmo.addEventListener('mouseDown', this.onGizmoGrab)
@@ -446,11 +756,7 @@ export class SceneRenderer {
     // exactly as the texture viewport does. `apply` replaces this the moment a document says so.
     const renderer = this.viewport.gl
     if (renderer) {
-      this.environment = createEnvironment(
-        renderer,
-        this.viewport.scene,
-        this.viewport.requestRender,
-      )
+      this.environment = createEnvironment(renderer, this.viewport.scene, () => this.redraw())
       this.environment.setStudio()
       // Half strength, unlike the texture preview: image-based light comes from everywhere and
       // is occluded by nothing, so at full intensity it fills the very shadows the lights cast.
@@ -459,10 +765,6 @@ export class SceneRenderer {
 
     this.buildViewHelper()
 
-    // On move, not only on press: `TransformControls` listens on this canvas too and was added
-    // first, so it sees a press before this file does — and would grab with the camera of the
-    // view one has just left.
-    canvas.addEventListener('pointermove', this.onPointerMove)
     canvas.addEventListener('pointerdown', this.onPointerDown)
     canvas.addEventListener('contextmenu', this.onContextMenu)
     window.addEventListener('pointerup', this.onPointerUp)
@@ -473,6 +775,12 @@ export class SceneRenderer {
   }
 
   apply(state: SceneState): void {
+    // Before the nodes, not after: whether a block travels is decided against what the band
+    // already drives, and a model built in this very pass has to read the timeline that arrived
+    // with it rather than the previous one.
+    this.timeline = state.animation
+    this.animations.setTimeline(state.animation)
+
     // A Set rather than a `some` per object: `apply` runs on every state change, selection
     // included, and the quadratic form costs milliseconds well before a scene gets large.
     const alive = new Set<string>()
@@ -488,9 +796,9 @@ export class SceneRenderer {
     // A second pass, because the first cannot know the order: a child may be synced before the
     // parent it hangs from exists as an object. By here every one of them does.
     for (const node of state.nodes) this.hangFromParent(node)
+    this.poseMarkers(state.nodes)
 
     this.selectedIds = state.selectedIds
-    this.timeline = state.animation
     // After the transforms are written, never before: a pose is what the tracks ADD to the one
     // the node holds, so it has to be laid over a rest pose that is already up to date.
     //
@@ -498,10 +806,77 @@ export class SceneRenderer {
     // node was rebuilt under an unchanged timeline, and that node would stand in its rest pose.
     // It costs nothing on a scene with no track, and the loop is over driven nodes, not all.
     this.applyPoses()
-    if (this.environment) void this.sky.apply(this.environment, state.environment)
+    // After every node is placed and posed: the reach is measured off where things actually
+    // stand, and a set that grew by one block re-cuts the frustum of every light at once.
+    this.tuneShadowsIfMoved()
+    this.applyCameraShots()
+    this.showAidsForSelection()
+    // After the transforms and the poses: a box is read off where an object actually stands.
+    this.refreshAids()
+    this.applyWorld(state.world)
     this.attachGizmo()
     this.reportStats()
-    this.viewport.requestRender()
+    this.redraw()
+  }
+
+  /**
+   * The working aids — a camera's frustum, a light's helper, a rail's knobs — shown on what is
+   * SELECTED and on nothing else.
+   *
+   * A directional light draws a line clear across the scene and a frustum reaches its camera's
+   * `far`: three lamps and two cameras already cross the whole viewport, which is what made a
+   * scene unreadable. Selected, a frustum is still drawn SHORT — a thousand metres of outline
+   * says nothing a couple of metres does not, and the projection it is read off is put straight
+   * back, so what a film renders through is untouched.
+   *
+   * The price, and it is real: a light or a camera nobody has selected is no longer under the
+   * pointer, so it is selected from the scene tree. A resting mark that stays clickable is what
+   * would give that back.
+   */
+  private showAidsForSelection(): void {
+    const selected = new Set(this.selectedIds)
+    // An aid stands BESIDE its node rather than under it, so it inherits nothing: a lamp the
+    // document hides, or one an isolation excludes, would go on drawing its line across the
+    // scene without this. `selected` stays the default and the paragraph above says why.
+    const shows = (visibility: HelperVisibility, id: string): boolean =>
+      showsAid(visibility, selected, id) && (this.objects.get(id)?.visible ?? false)
+
+    for (const [id, frustum] of this.frustums) {
+      const node = this.applied.get(id)
+      const camera = this.objects.get(id)
+      if (node?.type !== 'camera' || !(camera instanceof PerspectiveCamera)) continue
+      applyCamera(camera, node.camera, FRUSTUM_REACH)
+      frustum.visible = shows(this.view.cameraHelpers, id)
+    }
+
+    for (const [id, helper] of this.helpers) helper.visible = shows(this.view.lightHelpers, id)
+
+    const rails = this.workedRailIds()
+    for (const [id, node] of this.applied) {
+      if (node.type !== 'path') continue
+      const rail = this.objects.get(id)
+      if (rail) showPathKnobs(rail, rails.has(id))
+    }
+  }
+
+  /**
+   * The rails being worked on — `railsInUse` holds the rule, so this side and the selection
+   * connector cannot come to disagree. Only the ids that ARE rails: everything selected goes in
+   * there, and a camera is not a rail.
+   */
+  private workedRailIds(): Set<string> {
+    const rails = new Set<string>()
+
+    for (const id of railsInUse(this.selectedIds, this.timeline.shots)) {
+      if (this.applied.get(id)?.type === 'path') rails.add(id)
+    }
+
+    return rails
+  }
+
+  /** The objects of those rails — what a click may reach a control point of. */
+  private workedRails(): Object3D[] {
+    return [...this.workedRailIds()].flatMap(id => this.objects.get(id) ?? [])
   }
 
   /**
@@ -512,10 +887,165 @@ export class SceneRenderer {
     if (time === this.playhead) return
     this.playhead = time
     this.applyPoses()
+    this.applyCameraShots()
     // The clips of every imported model follow the head too, which is what puts them on the band
     // rather than on real time — and what stops a render from writing a frozen character.
     this.animations.seek(time)
-    this.viewport.requestRender()
+    this.redraw()
+  }
+
+  /**
+   * Watches one block on a clock of its own, leaving the head where it stands. `null` gives the
+   * model back to the head. A loop of its own rather than the head's: this is a look at a block,
+   * not a move of the scene's clock.
+   */
+  setPreview(target: PreviewWatch | null): void {
+    cancelAnimationFrame(this.previewFrame)
+    this.previewFrame = 0
+    this.heldPreview = target?.playing === false ? target : null
+
+    if (!target) {
+      this.animations.seek(this.playhead)
+      this.redraw()
+      return
+    }
+
+    // Held at one position: the pose is looked AT, so one frame answers it and no loop follows.
+    if (!target.playing) {
+      this.animations.preview(target.nodeId, target.clipId, target.at)
+      this.redraw()
+      return
+    }
+
+    const from = performance.now()
+    const step = (now: number): void => {
+      const length = this.animations.preview(
+        target.nodeId,
+        target.clipId,
+        target.at + (now - from) / 1000,
+      )
+      this.redraw()
+      // The grace stays on the WALL clock and not on the clip's: a run resumed from a scrub
+      // starts past a second in, and would give up before the file it waits for had landed.
+      if (length > 0 || now - from < 1000) this.previewFrame = requestAnimationFrame(step)
+    }
+
+    this.previewFrame = requestAnimationFrame(step)
+  }
+
+  /**
+   * Puts a HELD pose back after the mixer was asked to apply the document.
+   *
+   * `SceneAnimations.apply` finishes by posing the model from the scene's head, and a held
+   * preview has no loop of its own to write it again — editing the speed of the very block being
+   * looked at would otherwise snap the character back to frame zero.
+   */
+  private holdPreview(nodeId: string): void {
+    if (this.heldPreview?.nodeId !== nodeId) return
+    this.animations.preview(nodeId, this.heldPreview.clipId, this.heldPreview.at)
+  }
+
+  /**
+   * Where the shots put their cameras at the instant the head stands on: along a rail, aimed at
+   * a target, or both.
+   *
+   * After `applyPoses` and never before: a camera may be told to watch a node that is itself
+   * animated, and aiming at where that node USED to be lags one frame behind for good.
+   */
+  private applyCameraShots(): void {
+    const shots = this.timeline.shots
+    // Nothing named and nothing to put back: a scene with no shot at all allocates nothing here,
+    // and this runs once per frame of playback.
+    if (shots.length === 0 && this.railedCameras.size === 0) return
+
+    // Walked from the SHOTS rather than from the nodes, exactly as `applyLenses` is: a camera no
+    // shot names is one this pass has nothing to do to, and this ran over every node per frame.
+    const named = new Set(shotCameras(shots))
+    const held = new Set(named)
+
+    // The ones the shots have just let go of. Nothing else in the engine writes a camera's
+    // position, so a shot deleted — or the undo of one that opened — would leave its camera
+    // wherever the rail last put it, and the film would go on being taken from there.
+    for (const cameraId of this.railedCameras) {
+      if (named.has(cameraId)) continue
+      // Held for the next pass when it could not be written — a camera the gizmo carries, whose
+      // shot an undo took away mid-drag. Forfeiting the one attempt makes the rail its rest pose
+      // on release; a camera the document has lost leaves `applied`, so this cannot pile up.
+      if (!this.restCamera(cameraId) && this.applied.has(cameraId)) held.add(cameraId)
+    }
+    this.railedCameras = held
+    if (named.size === 0) return
+
+    const driven: { object: Object3D; shot: CameraShot }[] = []
+    for (const cameraId of named) {
+      // Where the document holds it, before any shot has its say: unbinding a rail, or deleting
+      // it, leaves a shot that covers the head and moves nothing.
+      const object = this.restCamera(cameraId)
+      if (!object) continue
+
+      const shot = shotOfCameraAt(this.timeline, cameraId, this.playhead)
+      if (shot) driven.push({ object, shot })
+    }
+
+    // Every rail before any aim, and not one camera at a time: a shot may watch a camera that is
+    // itself riding one, and aiming at where that camera stood BEFORE its rail ran is wrong for
+    // the whole length of the shot rather than by one scrub step.
+    for (const { object, shot } of driven) {
+      if (shot.motion) this.railCamera(object, shot, shot.motion)
+    }
+    for (const { object, shot } of driven) {
+      if (shot.target) this.aimCamera(object, shot.target)
+    }
+  }
+
+  /**
+   * A camera put back where the document holds it, tracks included, and the object it stands for.
+   * `null` for one the gizmo carries — its transform is relative to the pivot, see `applyPoses`.
+   */
+  private restCamera(cameraId: string): Object3D | null {
+    const node = this.applied.get(cameraId)
+    const object = this.objects.get(cameraId)
+    if (node?.type !== 'camera' || !object || object.parent === this.pivot) return null
+
+    applyTransform(object, poseAt(node.transform, this.timeline, cameraId, this.playhead))
+    return object
+  }
+
+  /** Puts a camera where its rail says, in the frame of whatever the camera hangs from. */
+  private railCamera(object: Object3D, shot: CameraShot, motion: CameraMotion): void {
+    const rail = this.applied.get(motion.pathId)
+    const railObject = this.objects.get(motion.pathId)
+    if (rail?.type !== 'path' || !railObject) return
+
+    // The two chains this reads, and nothing else. `scene.updateMatrixWorld(true)` stood here
+    // and recomposed EVERY object of the scene, bones included, once per frame of playback —
+    // some 15 000 compose-and-multiply pairs on a large scene, against the six below. `aimCamera`
+    // needs none: `getWorldPosition` refreshes its own chain.
+    railObject.updateWorldMatrix(true, false)
+    object.parent?.updateWorldMatrix(true, false)
+
+    // `getPointAt`, never `getPoint`: the second is parameterised per segment, so a camera
+    // speeds up through the short ones — the very defect a rail exists to avoid. Into a scratch
+    // vector, since this runs per frame of playback.
+    const along = curveOf(rail.path).getPointAt(
+      clampUnit(progressAt(shot, motion, this.playhead)),
+      railed,
+    )
+    const world = railObject.localToWorld(along)
+    object.position.copy(object.parent ? object.parent.worldToLocal(world) : world)
+  }
+
+  /** Turns a camera towards a point of the scene, or towards whatever a node stands at. */
+  private aimCamera(object: Object3D, target: CameraTarget): void {
+    if (target.kind === 'point') {
+      object.lookAt(target.at.x, target.at.y, target.at.z)
+      return
+    }
+
+    // A camera cannot watch itself: doing so leaves `lookAt` with a direction of no length, and
+    // the quaternion it hands back is the identity — a shot silently aimed down the Z axis.
+    const watched = target.nodeId === object.name ? null : this.objects.get(target.nodeId)
+    if (watched) object.lookAt(watched.getWorldPosition(aimed))
   }
 
   /**
@@ -525,6 +1055,10 @@ export class SceneRenderer {
   private applyPoses(): void {
     const timeline = this.timeline
     if (timeline.tracks.length === 0) return
+
+    // A pose displaces without adding anything, so the counters are left alone and only the
+    // shadow reach has to be read again.
+    this.placementChanged = true
 
     for (const nodeId of drivenNodes(timeline)) {
       const object = this.objects.get(nodeId)
@@ -537,6 +1071,32 @@ export class SceneRenderer {
     }
 
     this.applyBonePoses(timeline)
+    this.applyLenses(timeline)
+  }
+
+  /**
+   * What the `fov` channels add to each camera's own field of view, in degrees.
+   *
+   * Walked from the CHANNELS rather than from the nodes: a scene of a thousand objects and no
+   * lens channel is one that leaves here having read nothing.
+   */
+  private applyLenses(timeline: AnimationTimeline): void {
+    const lensed = new Set(
+      timeline.tracks.flatMap(track =>
+        track.target.property === 'fov' ? track.target.nodeId : [],
+      ),
+    )
+
+    for (const nodeId of lensed) {
+      const node = this.applied.get(nodeId)
+      const camera = this.cameraObject(nodeId)
+      if (node?.type !== 'camera' || !camera) continue
+
+      // The descriptor itself where every channel is muted or soloed away, never "leave it
+      // alone": the lens would otherwise keep whatever the last scrub wrote, on screen and in a
+      // render alike.
+      applyCamera(camera, lensAt(node.camera, timeline, nodeId, this.playhead))
+    }
   }
 
   /**
@@ -565,7 +1125,7 @@ export class SceneRenderer {
     // `TransformControls` knows only three modes; `select` is ours, and means no gizmo at all.
     if (mode !== 'select') this.gizmo?.setMode(mode)
     this.attachGizmo()
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /** Whether a drag lands on the steps `configure` was given, or wherever it was let go. */
@@ -584,7 +1144,7 @@ export class SceneRenderer {
     this.gizmo?.setSpace(space)
     // The pivot carries the frame for a group: re-aimed, or it keeps the last one's orientation.
     this.attachGizmo()
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /** Frames whatever is selected, gizmo or not: a mode with no gizmo still has a selection. */
@@ -600,7 +1160,7 @@ export class SceneRenderer {
     // Moving an orthographic camera changes nothing of what it shows: without this, `F` recentred
     // the orbit and left the screen exactly as it was.
     this.viewport.refit()
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /** Looks at the scene from one of the six sides, keeping the distance the view already had. */
@@ -614,7 +1174,7 @@ export class SceneRenderer {
 
     camera.position.set(x, y, z)
     orbit.update()
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -628,6 +1188,9 @@ export class SceneRenderer {
   setQuadView(on: boolean): void {
     this.viewport.setLayout(on ? 'quad' : 'single')
     if (on) this.placePanes()
+    // Now rather than at the next pointer move: the gizmo reads its own events, and one left
+    // aimed at a quarter of the canvas answers a click nowhere near the handle it is drawn on.
+    this.aimGizmo()
   }
 
   /**
@@ -647,6 +1210,19 @@ export class SceneRenderer {
     this.viewport.setPaneHeight(this.sceneHeight())
 
     for (const [index, view] of this.paneViews.entries()) {
+      // A pane locked onto a camera of the scene draws through IT: orbiting there then moves
+      // that camera, which is what `onCameraSettled` writes back to the document.
+      const locked = isCameraView(view) ? this.cameraObject(view.nodeId) : null
+      this.viewport.setPaneCamera(index, locked)
+      if (isCameraView(view)) {
+        // Rotation given back explicitly: a pane offering a camera is one of panes 1–3, and
+        // those START on a side view, where turning is locked. Left alone, the orbit that is
+        // supposed to MOVE the camera did nothing at all — seen on screen, green in the suite.
+        const orbit = this.viewport.paneOrbits[index]
+        if (orbit) orbit.enableRotate = true
+        continue
+      }
+
       this.viewport.setPaneProjection(index, view === 'free' ? 'perspective' : 'orthographic')
 
       // Read AFTER the projection is set: swapping it hands the pane a different camera object.
@@ -663,7 +1239,7 @@ export class SceneRenderer {
         orbit.update()
       }
     }
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -677,8 +1253,27 @@ export class SceneRenderer {
     const report = this.options.onStats
     if (!report) return
 
-    const selected = this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
-    report(statsOf(this.objects.values()), statsOf(selected))
+    // Turned off means not COUNTED, never merely not shown: walking every geometry of the scene
+    // is the cost this switch exists to give back.
+    if (!this.view.stats) {
+      report(EMPTY_STATS, EMPTY_STATS)
+      return
+    }
+
+    // What the MODEL costs, so an isolation does not make the triangle count drop — `statsOf`
+    // skips an invisible mesh, and hiding something to look past it is not making it cheaper.
+    this.asDocumented(() => {
+      // Only when the set moved. `apply` runs on every state change, a selection included, and
+      // walking every geometry of the scene again for a number no selection can move was 12 % of
+      // the CPU of one click on 8 000 nodes — measured 20/08. The selected side is walked every
+      // time on purpose: it is bounded by what is selected, which is usually one thing.
+      if (this.contentChanged) {
+        this.modelStats = statsOf(this.objects.values())
+        this.contentChanged = false
+      }
+      const selected = this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
+      report(this.modelStats, statsOf(selected))
+    })
   }
 
   /** Which view the pointer is over — what a display command acts on. */
@@ -698,15 +1293,38 @@ export class SceneRenderer {
   }
 
   /**
-   * Hands the gizmo to the view being worked in.
-   *
-   * `TransformControls` casts its grab ray from the camera it holds, and sizes its handles in
-   * that camera's screen space. Left on the main one, a handle dragged in a side view answers to
-   * a ray starting somewhere else entirely.
+   * Hands the gizmo to the view being worked in — its camera, and the rectangle that view fills.
+   * Left untold, `TransformControls` reads its own pointer events against the WHOLE canvas, which
+   * in a quad layout normalises a click against four times the surface it was aimed at.
    */
   private aimGizmo(): void {
+    const gizmo = this.gizmo
+    if (!gizmo) return
+
     const camera = this.cameraInHand()
-    if (this.gizmo && this.gizmo.camera !== camera) this.gizmo.camera = camera
+    if (gizmo.camera !== camera) {
+      gizmo.camera = camera
+      // The handles are SIZED in the camera they are aimed from, and a hover asks for no frame.
+      this.repaint()
+      // On the CHANGE alone: this walks whatever the gizmo holds, and it holds the object itself
+      // rather than a pivot for a lone selection — 13.6 µs on an empty pivot against 2.7 ms on a
+      // 20 000-node model, which per pointer move would be a third of a frame just to hover.
+      this.refreshGizmoMatrices()
+    }
+
+    const region = this.viewport.activePaneRegion()
+    gizmo.viewport = region
+      ? this.gizmoRegion.set(region.x, region.y, region.width, region.height)
+      : null
+  }
+
+  /**
+   * `TransformControls` turns its drag PLANE in `updateMatrixWorld`, which only a RENDER calls —
+   * and a hover asks for none, so the plane keeps the orientation of the view one quitted and comes
+   * out parallel to the new ray: measured 19/08, ray·normal 0 in « De gauche », nothing moved.
+   */
+  private refreshGizmoMatrices(): void {
+    this.gizmo?.getHelper().updateMatrixWorld(true)
   }
 
   /**
@@ -739,15 +1357,48 @@ export class SceneRenderer {
     const wanted = new Set(scope === 'selection' ? this.selectedIds : this.objects.keys())
     const roots = [...wanted].filter(id => !this.hasExportedAncestor(id, wanted))
 
-    return exportObjects(
-      roots.flatMap(id => this.objects.get(id) ?? []),
-      format,
-      {
-        // The objects wear node ids, which is what picking reads back off a hit. A file wears the
-        // names the document gave them.
-        nameOf: id => this.applied.get(id)?.name,
-      },
+    // The copies are taken synchronously inside `exportObjects`, so putting the document's own
+    // visibility back for the length of this call is enough — an isolation running while somebody
+    // exports must not write a file missing whatever they were not looking at.
+    return this.asDocumented(() =>
+      exportObjects(
+        roots.flatMap(id => this.objects.get(id) ?? []),
+        format,
+        {
+          // The objects wear node ids, which is what picking reads back off a hit. A file wears
+          // the names the document gave them.
+          nameOf: id => this.applied.get(id)?.name,
+          clipsFor: copies => this.bakedClips(copies),
+        },
+      ),
     )
+  }
+
+  /**
+   * The document's animation as a clip the file carries — baked, because glTF holds one absolute
+   * value per node while a track here holds a delta several tracks add up.
+   *
+   * Read off the COPIES, which still wear node ids at this point: a clip bound to the objects on
+   * screen would name nodes the file does not hold.
+   */
+  private bakedClips(copies: readonly Object3D[]): AnimationClip[] {
+    const targets: ClipTarget[] = []
+    for (const nodeId of drivenNodes(this.timeline)) {
+      const node = this.applied.get(nodeId)
+      const object = copies.flatMap(root => root.getObjectByName(nodeId) ?? []).at(0)
+      if (!node || !object) continue
+
+      targets.push({
+        nodeId,
+        object,
+        // A bone's rest is the one the FILE gave it, remembered the first time a track asked —
+        // never the node's, which would move the whole rig by the node's own placement.
+        restOf: bone => (bone ? (this.boneRests.get(`${nodeId}/${bone}`) ?? null) : node.transform),
+      })
+    }
+
+    const clip = timelineClip(this.timeline, targets)
+    return clip ? [clip] : []
   }
 
   /** A node whose parent is going out too travels with it, and must not be handed over twice. */
@@ -783,7 +1434,7 @@ export class SceneRenderer {
     const helper = new ViewHelper(this.viewport.camera, canvas)
     tuneViewHelper(helper)
     this.viewHelper = helper
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -807,7 +1458,12 @@ export class SceneRenderer {
     for (const object of this.objects.values()) {
       applyWireOverlay(object, anyEdges, this.wireMaterial, quads)
     }
-    this.viewport.requestRender()
+    this.redraw()
+  }
+
+  /** Whether any view is asking for edges at all — what decides if the geometry is built. */
+  private needsEdges(): boolean {
+    return this.displays.some(mode => showsEdges(mode, this.quadEdges))
   }
 
   /**
@@ -818,12 +1474,14 @@ export class SceneRenderer {
    * manipulator nobody can grab. Only the document's own objects are walked — the gizmo, the
    * grid and the trihedron are siblings, never in `objects`.
    */
-  /** Whether any view is asking for edges at all — what decides if the geometry is built. */
-  private needsEdges(): boolean {
-    return this.displays.some(mode => showsEdges(mode, this.quadEdges))
-  }
-
   private dressPane(index: number, camera: ViewportCamera): void {
+    // Only while it HOLDS something: three keeps the helper hidden with nothing attached, and
+    // writing `true` here showed a gizmo no selection stood behind — it grabs nothing, so the
+    // drag fell through to the orbit and turned the scene. A single layout keeps `active` at 0.
+    if (this.gizmo?.object) {
+      this.gizmo.getHelper().visible = index === this.viewport.activePane
+    }
+
     const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
     dressForPane(
       this.objects.values(),
@@ -832,6 +1490,7 @@ export class SceneRenderer {
       this.paneMaterials,
       this.paneMemory,
       camera,
+      studio => this.environment?.borrowStudio(studio),
     )
   }
 
@@ -843,8 +1502,18 @@ export class SceneRenderer {
     if (shown === this.showSkeletons) return
     this.showSkeletons = shown
 
-    for (const helper of this.skeletons.values()) helper.visible = shown
-    this.viewport.requestRender()
+    this.refreshSkeletons()
+  }
+
+  /** The one place the rule lives: written three times, one copy was already wrong. */
+  private skeletonsVisible(): boolean {
+    return this.showSkeletons || this.poseMode
+  }
+
+  private refreshSkeletons(): void {
+    for (const helper of this.skeletons.values()) helper.visible = this.skeletonsVisible()
+    for (const joints of this.joints.values()) joints.points.visible = this.skeletonsVisible()
+    this.redraw()
   }
 
   /**
@@ -855,8 +1524,7 @@ export class SceneRenderer {
     if (on === this.poseMode) return
     this.poseMode = on
 
-    for (const helper of this.skeletons.values()) helper.visible = on || this.showSkeletons
-    this.viewport.requestRender()
+    this.refreshSkeletons()
   }
 
   /**
@@ -886,37 +1554,110 @@ export class SceneRenderer {
   }
 
   /**
+   * Weights every mesh of a model against the rig its document holds, then binds them.
+   *
+   * Off the UI thread and reporting as it goes: half a million vertices against fifty-two bones
+   * is twenty-six million distances, and the window has to stay answerable throughout.
+   */
+  private async skinModel(nodeId: string, holder: Object3D, rig: Rig): Promise<void> {
+    // Captured once: `applyRig` is told which meshes these weights belong to rather than walking
+    // the holder again after the awaits, when it may hold others.
+    const meshes = skinnableMeshesOf(holder)
+    if (meshes.length === 0) return
+
+    this.stopSkinning(nodeId)
+    const stop = new AbortController()
+    this.skinning.set(nodeId, stop)
+
+    try {
+      const bound: { mesh: Mesh; binding: SkinBinding }[] = []
+      for (const [index, mesh] of meshes.entries()) {
+        const binding = await this.skin.bind(positionsIn(mesh, holder), rig, {
+          signal: stop.signal,
+          onProgress: progress =>
+            this.options.onRigProgress?.(nodeId, (index + progress) / meshes.length),
+        })
+        // Taken back, or the port let go — either way this model is no longer being skinned.
+        if (!binding) return
+        bound.push({ mesh, binding })
+      }
+
+      // The model may have been released while the weights were out.
+      if (this.objects.get(nodeId) !== holder) return
+
+      applyRig(holder, rig, bound)
+      this.bindIk(nodeId, holder, rig)
+      // The bones exist only now: the helper was bound before them, when the holder carried none,
+      // and without this a locally rigged character has a skeleton nothing can show or pick.
+      this.bindSkeleton(nodeId, holder, true)
+      this.options.onRig?.(nodeId, rigStateOf(holder, this.animations.clipsOf(nodeId)))
+      this.redraw()
+    } finally {
+      this.skinning.delete(nodeId)
+      // In every exit, cancellation included: what says "binding" is the progress being there,
+      // so leaving it behind would hide both buttons of the inspector for good.
+      this.options.onRigProgress?.(nodeId, 1)
+    }
+  }
+
+  /**
+   * The chains this model reaches with, if any — solved once a frame in `advance`.
+   *
+   * Built from the skeleton the rig just made rather than from the document: the solver holds
+   * bone INDICES, so it only means anything against the bones actually bound.
+   */
+  private bindIk(nodeId: string, holder: Object3D, rig: Rig): void {
+    this.iks.delete(nodeId)
+    if (!rig.ik?.length) return
+
+    const skinned = holder.getObjectByProperty('isSkinnedMesh', true)
+    if (!(skinned instanceof SkinnedMesh)) return
+
+    const names = skinned.skeleton.bones.map(one => one.name)
+    const binding = createIkBinding(skinned, ikSpecsOf(names, rig.ik))
+    if (binding) this.iks.set(nodeId, binding)
+  }
+
+  /** Twenty-six million distances are not worth finishing for a model nobody will see again. */
+  private stopSkinning(nodeId: string): void {
+    this.skinning.get(nodeId)?.abort()
+    this.skinning.delete(nodeId)
+  }
+
+  /**
    * A helper is built from the instance and hung beside the nodes, like the grid and the
    * trihedron — never inside the model, where the outliner would list it as part of the scene
    * and a click could pick it.
    */
-  private bindSkeleton(nodeId: string, root: Object3D): void {
+  private bindSkeleton(nodeId: string, root: Object3D, hasBones: boolean): void {
     this.unbindSkeleton(nodeId)
 
-    const bones = root.getObjectByProperty('isBone', true)
-    if (!bones) return
+    if (!hasBones) return
 
     const helper = new SkeletonHelper(root)
-    helper.visible = this.showSkeletons
+    helper.visible = this.skeletonsVisible()
     // Off the raycaster: the bones of a rig cross every mesh it drives, and a click would land
     // on a line rather than on the model it belongs to.
     helper.raycast = NOOP
     this.skeletons.set(nodeId, helper)
     this.viewport.scene.add(helper)
-  }
 
-  /** The bones of a rigged model, by name, for whoever offers a track on one. */
-  private bonesOf(root: Object3D): string[] {
-    const names: string[] = []
-    root.traverse(object => {
-      // Named, always: an unnamed bone cannot be addressed by a document, and a track that
-      // pointed at one would find nothing after a reload.
-      if (isBone(object) && object.name) names.push(object.name)
-    })
-    return names
+    // The joints beside the segments: the helper draws the bones and nothing marks where two of
+    // them MEET, which is the thing a click and a gizmo are actually aimed at.
+    const joints = createBoneJoints(helper.bones)
+    joints.points.visible = helper.visible
+    this.joints.set(nodeId, joints)
+    this.viewport.scene.add(joints.points)
   }
 
   private unbindSkeleton(nodeId: string): void {
+    const joints = this.joints.get(nodeId)
+    if (joints) {
+      joints.points.removeFromParent()
+      joints.dispose()
+      this.joints.delete(nodeId)
+    }
+
     const helper = this.skeletons.get(nodeId)
     if (!helper) return
 
@@ -948,6 +1689,15 @@ export class SceneRenderer {
     return { position: plainVector(camera.position), target: plainVector(target) }
   }
 
+  /** What a framing and a shadow frustum are both measured against — see `FRAMED_NODES`. */
+  private framedObjects(): Object3D[] {
+    const objects: Object3D[] = []
+    for (const [id, object] of this.objects) {
+      if (FRAMED_NODES.has(this.applied.get(id)?.type ?? 'group')) objects.push(object)
+    }
+    return objects
+  }
+
   /**
    * Points the free camera at what the scene SHOWS, from a direction of the caller's choosing.
    *
@@ -974,14 +1724,8 @@ export class SceneRenderer {
    * and the picture breathes with every step.
    */
   frameContents(from?: CameraPlacement): boolean {
-    const objects: Object3D[] = []
-    for (const [id, object] of this.objects) {
-      if (FRAMED_NODES.has(this.applied.get(id)?.type ?? 'group')) objects.push(object)
-    }
-    if (objects.length === 0) return false
-
-    const bounds = new Box3()
-    for (const object of objects) bounds.expandByObject(object)
+    const objects = this.framedObjects()
+    const bounds = boundsOf(objects)
     // Empty means the files have not landed: `framingPlacement` would fall back to averaging
     // the placements of empty groups, which is a framing of nothing dressed up as one.
     if (bounds.isEmpty()) return false
@@ -1017,32 +1761,87 @@ export class SceneRenderer {
     const canvas = this.viewport.canvas
     if (!gl || !canvas) return null
 
-    const aimed = cameraNodeId ? this.objects.get(cameraNodeId) : null
-    const camera = aimed instanceof PerspectiveCamera ? aimed : this.viewport.perspective
+    const camera = this.cameraObject(cameraNodeId) ?? this.viewport.perspective
 
     this.setPlayhead(time)
 
     const restore = this.hideWorkshop()
-    camera.aspect = canvas.width / canvas.height
-    camera.updateProjectionMatrix()
+    const loan = aspectLoan(canvas.width, canvas.height)
+    loan.frame(camera)
 
     try {
       gl.setRenderTarget(null)
       gl.render(this.viewport.scene, camera)
     } finally {
+      loan.restore()
       restore()
     }
     return canvas
   }
 
   /**
+   * Shows what a camera of the scene films, in a corner of the viewport. `null` closes it.
+   *
+   * The rectangle is the caller's because the frame drawn around the preview is DOM: two
+   * rectangles that agree until one of them drifts would be a border sitting beside its picture.
+   * `full` is told for the same reason — the rect is the INSIDE of that frame, so it never
+   * measures as covering the canvas even when it does.
+   */
+  setCameraPreview(preview: CameraPreviewRequest | null): void {
+    const camera = this.cameraObject(preview?.cameraNodeId ?? null)
+    if (!camera || !preview) return this.viewport.setInsetPane(null)
+
+    // The viewport's own colour, never a panel one: what this shows is a RENDER, and a preview
+    // painted on studio chrome would promise a film nobody is going to get.
+    const backdrop = new Color(this.viewport.paletteToken('--color-viewport'))
+    this.viewport.setInsetPane({ camera, rect: preview.rect, backdrop, full: preview.full })
+  }
+
+  /**
+   * Asks for a frame, and says that what the camera preview shows has moved with it.
+   *
+   * The ONE way this engine asks for a frame, and a guard holds it to that
+   * (`SceneRenderer.redraws-the-preview.test.ts`). Everything here changes the scene, the pose or
+   * the lens — which is exactly what a preview is a picture of — so the two travel together.
+   * What must NOT come through here is the viewport's own camera: orbiting, flying and settling
+   * ask for frames straight from `ViewportEngine`, and those frames reuse the picture rather
+   * than walking the scene a second time.
+   */
+  private redraw(): void {
+    this.viewport.invalidateInset()
+    this.viewport.requestRender()
+  }
+
+  /**
+   * Asks for a frame and says nothing about the preview: the workshop moved, not the scene.
+   *
+   * The other half of `redraw`, and named rather than left as a bare call so the two intents can
+   * be told apart at a glance — and so the guard can be a plain "none anywhere else" instead of a
+   * list of exemptions that would go stale. What belongs here is what `hideWorkshop` hides: the
+   * gizmo, the helpers, the grid. Nothing a camera of the scene can film.
+   */
+  private repaint(): void {
+    this.viewport.requestRender()
+  }
+
+  /** The camera a node id stands for, or `null` when nothing in the scene answers to it. */
+  private cameraObject(cameraNodeId: string | null): PerspectiveCamera | null {
+    const aimed = cameraNodeId ? this.objects.get(cameraNodeId) : null
+    return aimed instanceof PerspectiveCamera ? aimed : null
+  }
+
+  /**
    * Hides everything the workshop draws for the person editing — light helpers, camera
-   * frustums, skeletons, the grid — and hands back the call that puts them all back.
+   * frustums, skeletons, the grid, the rails, the transform gizmo — and hands back the call
+   * that puts them all back.
    *
    * A render is the scene, not the tools it was built with. A directional light's helper is a
    * line drawn clean across the picture, and it was in every frame of both the film and the
    * montage. Only what was actually visible is restored: a helper already hidden by a setting
    * must not be turned on by a render passing through.
+   *
+   * An isolation is one of those tools, and it is put back the same way: what a camera films is
+   * the scene, never the part of it somebody happened to be working on.
    */
   private hideWorkshop(): () => void {
     const hidden: Object3D[] = []
@@ -1052,21 +1851,49 @@ export class SceneRenderer {
       hidden.push(object)
     }
 
+    // Before the hiding below: this shows nodes again, and a helper hidden after it stays hidden.
+    const masked = isolating(this.isolation)
+    if (masked) {
+      for (const [id, node] of this.applied) {
+        const object = this.objects.get(id)
+        if (object) object.visible = node.visible
+      }
+    }
+
+    // A studio VIEW borrows three's neutral room, and only `dressPane` gives it back — which a
+    // film and a capture never go through, since they render the scene directly. Left alone, the
+    // whole film comes out lit by the room instead of by the document's own sky.
+    this.environment?.borrowStudio(false)
+
     for (const helper of this.helpers.values()) hide(helper)
     for (const skeleton of this.skeletons.values()) hide(skeleton)
+    for (const joints of this.joints.values()) hide(joints.points)
+    for (const frustum of this.frustums.values()) hide(frustum)
+    // A body and a bulb are workshop furniture too: they stand where the thing they draw stands,
+    // so a camera aimed at a lamp would otherwise film the bulb somebody drew to find it by.
+    for (const marker of this.markers.values()) hide(marker)
     hide(this.grid)
-    for (const object of this.objects.values()) {
-      hide(object.children.find(child => child instanceof CameraHelper))
+    // Boxes, origins and normals, in one flag: they hang from a group of their own for this.
+    hide(this.aids.object)
+    // The arrows a person drags an object by. They stand where the object stands, so a camera
+    // aimed at a selected node fills its preview — and its film — with the tool instead.
+    hide(this.gizmo?.getHelper())
+
+    // A rail is a working aid like the grid, not something a shot puts on screen: drawn, its
+    // line and its knobs would run across every previewed and every rendered frame.
+    for (const node of this.applied.values()) {
+      if (node.type === 'path') hide(this.objects.get(node.id))
     }
 
     return () => {
       for (const object of hidden) object.visible = true
+      if (masked) this.applyVisibility()
     }
   }
 
   /**
-   * Draws the film one frame at a time, from a camera of the scene, and hands each one over
-   * already encoded as a PNG.
+   * Draws the film one frame at a time, through whichever camera `cameraAt` names for that
+   * instant, and hands each one over already encoded as a PNG.
    *
    * Off screen and at the film's own size, never the viewport's: what is being written has a
    * resolution of its own, and resizing the viewport to match would be visible on screen. The
@@ -1077,14 +1904,14 @@ export class SceneRenderer {
    * process, and running ahead of it would hold a whole film in memory.
    */
   async renderFilm(
-    cameraNodeId: string,
+    cameraAt: (time: Us) => string | null,
     request: FilmRequest,
     onFrame: (index: number, png: Uint8Array) => Promise<void>,
     signal?: AbortSignal,
   ): Promise<void> {
     const gl = this.viewport.gl
-    const camera = this.objects.get(cameraNodeId)
-    if (!gl || !(camera instanceof PerspectiveCamera)) throw new Error('no camera to render from')
+    let camera = this.cameraObject(cameraAt(0))
+    if (!gl || !camera) throw new Error('no camera to render from')
 
     const { width, height } = evenSize(request)
     const target = new WebGLRenderTarget(width, height)
@@ -1098,9 +1925,8 @@ export class SceneRenderer {
     const image = context.createImageData(width, height)
 
     const restore = this.hideWorkshop()
+    const loan = aspectLoan(width, height)
 
-    camera.aspect = width / height
-    camera.updateProjectionMatrix()
     const head = this.playhead
 
     try {
@@ -1108,12 +1934,20 @@ export class SceneRenderer {
       for (const time of frameTimes(request.duration, request.fps)) {
         if (signal?.aborted) return
 
+        // Resolved per frame: a shot hands the film to another camera mid-way, and the frame
+        // after a camera is deleted keeps the last one rather than throwing at the encoder.
+        camera = this.cameraObject(cameraAt(time)) ?? camera
+        loan.frame(camera)
+
         this.setPlayhead(time)
         gl.setRenderTarget(target)
         gl.render(this.viewport.scene, camera)
         gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
 
-        flipInto(image.data, pixels, width, height)
+        // Encoded like a still is, and for the same reason: a render target holds the WORKING
+        // space whatever its texture says, so the frames went into their PNGs linear — washed
+        // out, and dark in the mid-tones. Read off three 0.185 rather than deduced.
+        flipToSrgbInto(image.data, pixels, width, height)
         context.putImageData(image, 0, 0)
         const blob = await surface.convertToBlob({ type: 'image/png' })
         index += 1
@@ -1122,34 +1956,112 @@ export class SceneRenderer {
     } finally {
       gl.setRenderTarget(null)
       target.dispose()
+      loan.restore()
       restore()
       // Where the head was before the film was asked for: a render is not an edit.
       this.setPlayhead(head)
-      this.viewport.requestRender()
+      this.redraw()
+    }
+  }
+
+  /**
+   * One still of the view being worked in, encoded as a PNG — what is posted, and what a
+   * template thumbnail is drawn with.
+   *
+   * Off screen and through the same door a film goes through: `hideWorkshop` takes the grid, the
+   * gizmos, the rails and the light bodies out, so what comes back is the SCENE and not a
+   * picture of the workshop around it. The framing never changes — only the pixel count does.
+   *
+   * The colour is encoded on the way out (`flipToSrgbInto`): three writes the working space into
+   * a render target, and a linear buffer written straight into a PNG comes out washed out.
+   */
+  async captureStill(quality: CaptureQuality): Promise<Uint8Array> {
+    const gl = this.viewport.gl
+    if (!gl) throw new Error('this scene has no viewport mounted to capture from')
+
+    const camera = this.cameraInHand()
+    const canvas = gl.domElement
+    // The pane in hand when there are four of them; the whole canvas when there is one. A quad
+    // layout captured at the canvas's shape would show more scene than the pane it was asked of.
+    const pane = this.viewport.activePaneRegion()
+    const shown = pane ?? { width: canvas.clientWidth, height: canvas.clientHeight }
+    // Times the device ratio, because both measures above are CSS pixels while the frame on
+    // screen is drawn at the buffer's own: « view size » on a 2× display gave back half the
+    // definition of what was being looked at.
+    const ratio = gl.getPixelRatio()
+    const { width, height } = captureSize(
+      { width: shown.width * ratio, height: shown.height * ratio },
+      quality,
+    )
+
+    const context = new OffscreenCanvas(width, height).getContext('2d')
+    if (!context) throw new Error('no 2d context to read the still back through')
+
+    // Antialiased, unlike a film's frames: a still is looked at, and the resolve happens at the
+    // end of `render` — so the read below already has the resolved texture. Capped at four,
+    // which is where the eye stops paying for the memory a 4K target multiplies.
+    const samples = Math.min(4, gl.capabilities.maxSamples)
+    const target = new WebGLRenderTarget(width, height, { samples })
+    const pixels = new Uint8Array(width * height * 4)
+
+    const restore = this.hideWorkshop()
+    const loan = aspectLoan(width, height)
+
+    try {
+      // Only a perspective one is lent an aspect, and only for the rounding: the size asked for
+      // keeps the view's own shape, so an orthographic frustum is already framed for it.
+      if (camera instanceof PerspectiveCamera) loan.frame(camera)
+
+      gl.setRenderTarget(target)
+      gl.render(this.viewport.scene, camera)
+      gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
+
+      const image = context.createImageData(width, height)
+      flipToSrgbInto(image.data, pixels, width, height)
+      context.putImageData(image, 0, 0)
+
+      const blob = await context.canvas.convertToBlob({ type: 'image/png' })
+      return new Uint8Array(await blob.arrayBuffer())
+    } finally {
+      gl.setRenderTarget(null)
+      target.dispose()
+      loan.restore()
+      restore()
+      this.redraw()
     }
   }
 
   setMotion(held: Set<MotionId>): void {
     this.held.clear()
     for (const motion of held) this.held.add(motion)
-    if (this.flying && this.held.size > 0) this.viewport.requestRender()
+    if (this.flying && this.held.size > 0) this.redraw()
   }
 
-  /** Whether the right button is down, which is the whole of what flying means here. */
-  private get flying(): boolean {
-    return this.flownFrom !== null
+  /**
+   * Whether the right button is down, which is the whole of what flying means here.
+   *
+   * Public because a key can mean two things at once: ⇧A opens the Add menu and is also
+   * boost-strafe-left, and the held set cannot tell them apart — Shift is down either way.
+   */
+  get flying(): boolean {
+    return this.flownWith !== null
   }
 
   dispose(): void {
+    // A preview left running would keep posing a model whose caches this method is about to drop.
+    cancelAnimationFrame(this.previewFrame)
+    this.previewFrame = 0
+    this.heldPreview = null
+
     this.stopPaletteWatch?.()
     this.stopPaletteWatch = null
 
     const canvas = this.viewport.canvas
-    canvas?.removeEventListener('pointermove', this.onPointerMove)
     canvas?.removeEventListener('pointerdown', this.onPointerDown)
     canvas?.removeEventListener('contextmenu', this.onContextMenu)
     window.removeEventListener('pointerup', this.onPointerUp)
 
+    this.gizmo?.removeEventListener('axis-changed', this.onGizmoAxisChanged)
     this.gizmo?.removeEventListener('dragging-changed', this.onDraggingChanged)
     this.gizmo?.removeEventListener('objectChange', this.onGizmoChange)
     this.gizmo?.removeEventListener('mouseDown', this.onGizmoGrab)
@@ -1176,9 +2088,16 @@ export class SceneRenderer {
     this.wireMaterial.dispose()
     this.paneMaterials.dispose()
     this.bvh.dispose()
+    this.skin.dispose()
+    this.retarget.dispose()
+    this.clipSources.dispose()
+    this.bundled.clear()
+    this.iks.clear()
 
     this.grid?.dispose()
     this.grid = null
+    this.ground.dispose()
+    this.aids.dispose()
 
     this.viewport.dispose()
   }
@@ -1216,10 +2135,15 @@ export class SceneRenderer {
    * hand, since three.js never reads `fov` back on its own.
    */
   configure(next: ViewportOptions): void {
-    const gridMoved = next.showGrid !== this.view.showGrid || next.gridSize !== this.view.gridSize
-    const lensMoved = next.fieldOfView !== this.view.fieldOfView
-    const shadowsResized = next.shadowMapSize !== this.view.shadowMapSize
-    const shadowsMoved = shadowsResized || next.shadowQuality !== this.view.shadowQuality
+    const held = this.view
+    const gridMoved = next.showGrid !== held.showGrid || next.gridSize !== held.gridSize
+    const lensMoved = next.fieldOfView !== held.fieldOfView
+    // The cap moves the size a light is actually given, so a quality change resizes maps too.
+    const shadowsResized =
+      shadowMapSizeFor(next.quality, next.shadowMapSize) !==
+      shadowMapSizeFor(held.quality, held.shadowMapSize)
+    const shadowsMoved =
+      shadowsResized || next.shadowQuality !== held.shadowQuality || next.shadows !== held.shadows
 
     this.view = next
 
@@ -1231,16 +2155,44 @@ export class SceneRenderer {
     this.applySnap()
 
     const gl = this.viewport.gl
-    if (gl) applyShadowQuality(gl, next.shadowQuality)
-    // Every light, not only the ones built after the change: the map is allocated per light.
-    // Every light, not only the ones built after the change: a map is allocated per light, and
-    // the frustum of a directional one is sized from the grid the scene is laid out against.
-    if (shadowsResized || gridMoved) {
-      for (const object of this.objects.values()) this.tuneShadow(object)
+    if (gl) {
+      applyShadowQuality(gl, next.shadowQuality)
+      applyShadows(gl, next.shadows, this.viewport.scene)
     }
+    this.viewport.setPixelRatio(pixelRatioFor(next.quality))
+
+    // Every light, not only the ones built after the change: a map is allocated per light, and
+    // the grid is the floor under the reach a directional one is given.
+    if (shadowsResized || gridMoved) this.tuneShadows()
 
     if (gridMoved && this.viewport.canvas) this.applyPalette()
-    if (gridMoved || lensMoved || shadowsMoved) this.viewport.requestRender()
+    if (aidsMoved(held, next)) this.refreshAids()
+    if (helperVisibilityMoved(held, next)) this.showAidsForSelection()
+    if (next.stats !== held.stats) this.reportStats()
+    if (gridMoved || lensMoved || shadowsMoved) this.redraw()
+  }
+
+  /**
+   * The boxes, origins and normals, rebuilt from what is on stage and what the settings ask for.
+   *
+   * Called from `apply`, which runs on every state change — a selection, a frame of a slider
+   * drag. Nothing asked for and nothing drawn is the ordinary case and has to cost nothing: the
+   * three palette reads below are `getComputedStyle` calls, on a DOM React has just touched.
+   */
+  private refreshAids(): void {
+    const wants =
+      this.view.boundingBoxes !== 'off' ||
+      this.view.origins ||
+      this.view.normals ||
+      !this.aids.idle()
+    if (!wants) return
+
+    this.aids.apply(this.objects, this.selectedIds, this.view, {
+      box: this.viewport.paletteToken('--color-accent'),
+      origin: this.viewport.paletteToken('--color-muted'),
+      normal: this.viewport.paletteToken('--color-accent'),
+    })
+    this.redraw()
   }
 
   private applySnap(): void {
@@ -1263,24 +2215,84 @@ export class SceneRenderer {
     if (!this.viewport.canvas) return
 
     this.applyPalette()
+    // A ground with no colour of its own reads the palette like a mesh does, and `applyPalette`
+    // does not reach it: it is not a node, so the loop below never walks it.
+    this.applyGround()
 
     const nodes = [...this.applied.values()]
     this.applied.clear()
     for (const node of nodes) this.syncNode(node)
+    this.poseMarkers(nodes)
 
-    this.viewport.requestRender()
+    this.redraw()
   }
 
-  /** The backdrop, unless a sky is hanging behind the scene — in which case the sky is it. */
+  /**
+   * The half of a document that belongs to no node, pushed into three.js.
+   *
+   * Compared field by field rather than by reference: a command replaces the whole world object
+   * for a one-field edit, and prefiltering an environment or rebuilding a ground on every apply
+   * would cost a mip chain per keystroke.
+   */
+  private applyWorld(wanted: SceneWorld): void {
+    const held = this.world
+    this.world = wanted
+
+    if (this.environment) {
+      void this.sky.apply(this.environment, wanted.environment)
+      if (wanted.envIntensity !== held.envIntensity) {
+        // A MULTIPLIER over the studio's own strength, never the strength itself: the viewport
+        // has always lit at `STUDIO_INTENSITY`, and a document opening at 1 would relight every
+        // scene ever saved. One means « as before ».
+        this.environment.setIntensity(STUDIO_INTENSITY * wanted.envIntensity)
+      }
+      if (wanted.envRotation !== held.envRotation) this.environment.setRotation(wanted.envRotation)
+    }
+
+    if (wanted.fog !== held.fog) applyFog(this.viewport.scene, wanted.fog)
+
+    const gl = this.viewport.gl
+    if (gl && (wanted.toneMapping !== held.toneMapping || wanted.exposure !== held.exposure)) {
+      applyToneMapping(gl, wanted.toneMapping, wanted.exposure)
+    }
+
+    if (wanted.ground !== held.ground) this.applyGround()
+    if (wanted.background !== held.background) this.paintBackground()
+  }
+
+  private applyGround(): void {
+    this.ground.apply(this.world.ground, this.viewport.paletteToken('--color-mesh'))
+    this.redraw()
+  }
+
+  /**
+   * What hangs behind the scene.
+   *
+   * A sky asked to light the scene without being SEEN is the case that makes this more than a
+   * colour: the environment keeps prefiltering — the reflections stay — and only the picture
+   * stops being drawn. That is what `setBackgroundVisible` is for, and why the choice is settled
+   * here rather than by whoever loads the sky.
+   */
   private paintBackground(): void {
+    const wanted = this.world.background
     // A scene drawn for compositing keeps nothing behind it: a backdrop would hide every clip
-    // this one is laid over, and the sky — when there is one — is scenery the user asked for.
-    if (this.transparent && !this.sky.showsSky()) {
+    // this one is laid over. It outranks the document — a montage never asked for a backdrop.
+    const shows = !this.transparent && wanted.kind === 'environment'
+    this.environment?.setBackgroundVisible(shows)
+    // Only the picture carries it, so any other backdrop puts it back to sharp rather than
+    // leaving the previous softening on the next sky that hangs there.
+    this.environment?.setBackgroundBlur(wanted.kind === 'environment' ? wanted.blur : 0)
+
+    if (shows && this.sky.showsSky()) return
+
+    if (this.transparent || wanted.kind === 'transparent') {
       this.viewport.scene.background = null
       return
     }
-    if (this.sky.showsSky()) return
-    this.viewport.setBackgroundColor(this.viewport.paletteToken('--color-viewport'))
+
+    this.viewport.setBackgroundColor(
+      wanted.kind === 'color' ? wanted.color : this.viewport.paletteToken('--color-viewport'),
+    )
   }
 
   /** Pulls the studio palette off the canvas, so the viewport follows a theme change with it. */
@@ -1290,6 +2302,10 @@ export class SceneRenderer {
     const line = this.viewport.paletteToken('--color-viewport-line')
 
     this.meshColor = this.viewport.paletteToken('--color-mesh')
+    // `elevated` is what a marker is made of and `muted` what outlines it: the fill sits a step
+    // off the viewport so the body reads as an object, and the edges carry the shape.
+    this.markerColor = this.viewport.paletteToken('--color-elevated')
+    this.markerEdge = this.viewport.paletteToken('--color-muted')
     this.paintBackground()
 
     if (this.grid) {
@@ -1305,6 +2321,10 @@ export class SceneRenderer {
     // Divisions equal to the extent, so one square is one metre whatever the size.
     const size = this.view.gridSize
     this.grid = new GridHelper(size, size, axis || undefined, line || undefined)
+    // JUST under the zero plane, where a floor laid on it hides the grid rather than fighting it
+    // for the same depth. Coplanar, the two flickered against each other square by square, and a
+    // level that lays its own ground had the reference grid drawn across it.
+    this.grid.position.y = -GRID_SINKAGE
     this.viewport.scene.add(this.grid)
   }
 
@@ -1316,6 +2336,12 @@ export class SceneRenderer {
   private syncNode(node: SceneNode): void {
     const previous = this.applied.get(node.id)
     if (previous === node) return
+
+    // Past that guard something about this node really changed — its shape, or where it stands,
+    // and from here neither can be told from the other. A selection changes no node, so it never
+    // reaches here: that walk was 12 % of the CPU of one click on 8 000 nodes, measured 20/08.
+    this.contentChanged = true
+    this.placementChanged = true
 
     // A model is its file: pointing a node at another asset is a different object, not an edit
     // of this one. Released and rebuilt — patching it would leave the old file on screen and
@@ -1347,31 +2373,89 @@ export class SceneRenderer {
     if (previous?.castShadow !== node.castShadow || previous.receiveShadow !== node.receiveShadow) {
       applyShadowFlags(object, node.castShadow, receivesShadow(node), this.belongsToAnotherNode)
     }
-    if (node.type === 'light') this.tuneShadow(object)
+    // The shadows are NOT tuned here: their reach is read off what the scene occupies, and a
+    // light synced before the set it lights would measure half a level. `apply` does it once
+    // the last node is in place.
+
+    // Before anything is retargeted onto it: the document is where a bone's role was PUT RIGHT,
+    // and the port would otherwise go on reading roles off names that lied.
+    if (node.type === 'model' && node.model.rig) this.learnRig(node.model.rig)
 
     // The clips of a model that is already on stage. Skipped for one still loading: `buildModel`
     // binds what the file brought the moment it lands, and applies this reference there.
     if (node.type === 'model' && this.animations.has(node.id)) {
-      this.animations.apply(node.id, node.model.animation ?? null)
-      this.viewport.requestRender()
+      this.animations.apply(node.id, node.model.lanes ?? [])
+      this.ensureBundled(node.id, node.model.lanes ?? [])
+      this.holdPreview(node.id)
+      this.redraw()
     }
 
     // A carried object holds a transform relative to the pivot, and the state holds one relative
     // to the scene: writing the second into the first mid-drag teleports it. The release puts
     // the truth back, so an undo during a gesture repaints everything but where things are.
-    if (object.parent !== this.pivot) {
-      const { position, rotation, scale } = node.transform
-      object.position.set(position.x, position.y, position.z)
-      object.rotation.set(rotation.x, rotation.y, rotation.z)
-      object.scale.set(scale.x, scale.y, scale.z)
-    }
-    object.visible = node.visible
+    if (object.parent !== this.pivot) applyTransform(object, node.transform)
+    object.visible = drawsNode(this.isolation, node.id, node.visible)
 
     const helper = this.helpers.get(node.id)
     if (helper) {
-      helper.visible = node.visible
+      helper.visible = object.visible
       // After the move, never before: the helper draws where the light was until it is told.
       helper.update()
+    }
+  }
+
+  /**
+   * What the VIEWPORT hides, on top of what the document already does.
+   *
+   * A pass of its own because nothing about the nodes changed: `syncNode` skips a node it has
+   * already applied, so an isolation pushed through the document would never reach the screen.
+   */
+  setIsolation(isolation: Isolation): void {
+    this.isolation = isolation
+    // Here rather than in `applyVisibility`: this is the one call of the three that CHANGES what
+    // is visible, and `statsOf` skips a hidden mesh — see there.
+    this.contentChanged = true
+    this.applyVisibility()
+    this.showAidsForSelection()
+    this.refreshAids()
+    this.reportStats()
+    this.redraw()
+  }
+
+  /**
+   * Every node's `visible`, from what the document says and what the viewport hides over it.
+   *
+   * It does NOT mark the counters stale, though hiding a mesh moves them: two of its three
+   * callers RESTORE a visibility they had just set aside — `asDocumented` and the workshop's
+   * own — and marking here made every read under an isolation walk the whole scene again.
+   */
+  private applyVisibility(): void {
+    for (const [id, node] of this.applied) {
+      const object = this.objects.get(id)
+      if (object) object.visible = drawsNode(this.isolation, id, node.visible)
+    }
+  }
+
+  /**
+   * Runs something against the scene the DOCUMENT describes, with whatever the viewport is
+   * hiding put back for the length of the call.
+   *
+   * `Object3D.visible` is the one flag three.js draws, picks, counts AND exports through, so an
+   * isolation left in place reaches all four — a `.glb` written mid-isolation comes out amputated,
+   * and `onlyVisible` makes that a silent success rather than an error. Isolating is a way of
+   * LOOKING; anything that leaves the viewport has to see past it.
+   */
+  private asDocumented<T>(run: () => T): T {
+    if (!isolating(this.isolation)) return run()
+
+    for (const [id, node] of this.applied) {
+      const object = this.objects.get(id)
+      if (object) object.visible = node.visible
+    }
+    try {
+      return run()
+    } finally {
+      this.applyVisibility()
     }
   }
 
@@ -1387,8 +2471,13 @@ export class SceneRenderer {
   ): void {
     if (node.type === 'mesh' && object instanceof Mesh) {
       const before = previous?.type === 'mesh' ? previous : null
-      if (before?.geometry !== node.geometry) {
-        applyGeometry(object, node.geometry)
+      // The tiling too, and not only the shape: the repeat lives in the UVs, so changing it is
+      // rebuilding the geometry — a material comparison alone would leave the floor stretched.
+      if (
+        before?.geometry !== node.geometry ||
+        before.material.tilesPerMetre !== node.material.tilesPerMetre
+      ) {
+        applyGeometry(object, node.geometry, node.material.tilesPerMetre)
         // The edges were built from the shape that just went: rebuilt, or they outline a mesh
         // that no longer exists.
         if (this.needsEdges()) this.applyDisplay(object)
@@ -1404,7 +2493,17 @@ export class SceneRenderer {
 
     if (node.type === 'light' && object instanceof Light) {
       const before = previous?.type === 'light' ? previous : null
-      if (before?.light !== node.light) applyLight(object, node.light)
+      if (before?.light === node.light) return
+
+      applyLight(object, node.light)
+
+      const marker = this.markers.get(node.id)
+      // Everything the body reads — the colour it glows, the cone its doors open to — is written
+      // into the one already hanging there. The kind is compared rather than assumed, but no
+      // command changes it today: `setLightOn` refuses a node whose kind differs from the anchor,
+      // and a kind that did change would leave the three.js light itself the wrong class.
+      if (marker && before?.light.kind === node.light.kind) applyLightBody(marker, node.light)
+      else this.dressLight(node.id, object, node.light)
       return
     }
 
@@ -1424,6 +2523,20 @@ export class SceneRenderer {
       if (before?.model.textures !== node.model.textures) {
         this.modelMaps.get(node.id)?.apply(node.model.textures)
       }
+      return
+    }
+
+    if (node.type === 'camera' && object instanceof PerspectiveCamera) {
+      const before = previous?.type === 'camera' ? previous : null
+      // The lens, and the frustum drawn from it: a helper left alone would keep outlining the
+      // field of view the camera had before the inspector changed it.
+      if (before?.camera !== node.camera) applyCamera(object, node.camera)
+      return
+    }
+
+    if (node.type === 'path') {
+      const before = previous?.type === 'path' ? previous : null
+      if (before?.path !== node.path) applyPath(object, node.path, this.meshColor)
       return
     }
 
@@ -1447,22 +2560,33 @@ export class SceneRenderer {
     if (node.type === 'sprite') return this.buildSprite(node)
     if (node.type === 'text') return this.buildText(node)
     if (node.type === 'camera') return this.buildCamera(node)
+    if (node.type === 'path') return buildPath(node.path, this.meshColor)
     // A group is its transform and nothing else: an empty object others hang from.
     return new Object3D()
   }
 
   /**
-   * A camera of the scene, drawn as the frustum it sees — the helper is what makes it clickable
-   * and readable, since a camera itself draws nothing.
+   * A camera of the scene: the body one sees and clicks, and the frustum selection adds to it.
    *
-   * Hung UNDER the camera rather than beside it, unlike a light's helper: this one has to follow
-   * the object it draws through every move, and a camera is aimed far more often than a lamp.
+   * The body hangs UNDER the camera, so it follows every move; the frustum hangs BESIDE it, in
+   * the scene, like a light's helper — and that is not a preference. `CameraHelper` sets
+   * `this.matrix = camera.matrixWorld` with `matrixAutoUpdate` off, so it places itself ON the
+   * camera: made a child of it, that matrix applied TWICE and the outline was drawn at double
+   * the camera's placement. A camera at (0, 2, 6) had its frustum floating at (0, 4, 12), which
+   * is what a selection looked like until Alban pointed at it.
+   *
+   * The body carries no name of its own, so a click on it walks up to the camera's id.
    */
   private buildCamera(node: SceneNode & { type: 'camera' }): Object3D {
     const camera = new PerspectiveCamera(node.camera.fov, 1, node.camera.near, node.camera.far)
     const helper = new CameraHelper(camera)
-    // The helper reads the camera's world matrix, which is only right once three has updated it.
-    camera.add(helper)
+    this.viewport.scene.add(helper)
+    const body = cameraBody(this.markerColor, this.markerEdge)
+    camera.add(body)
+    // Kept beside the light helpers, and for the same reason: the preview hides all of them on
+    // every frame it draws, and finding them by walking each node's children would be a scan.
+    this.frustums.set(node.id, helper)
+    this.markers.set(node.id, body)
     return camera
   }
 
@@ -1504,7 +2628,7 @@ export class SceneRenderer {
     // that was there before the face arrived — an empty one at first, the previous words after an
     // edit — and outline a mesh that no longer exists until they are built again.
     if (this.needsEdges()) this.applyDisplay(object)
-    this.viewport.requestRender()
+    this.redraw()
   }
 
   /**
@@ -1529,12 +2653,16 @@ export class SceneRenderer {
 
       // The instance, never the cached source: its materials are shared with every other node
       // built from the same file, and `createModelTextures` is what clones them before writing.
-      const maps = createModelTextures(this.textureCache, holder, this.viewport.requestRender, () =>
-        reportFailure(
-          'scene.texture',
-          assetId,
-          new Error('this model carries no material a map can be written into'),
-        ),
+      const maps = createModelTextures(
+        this.textureCache,
+        holder,
+        () => this.redraw(),
+        () =>
+          reportFailure(
+            'scene.texture',
+            assetId,
+            new Error('this model carries no material a map can be written into'),
+          ),
       )
       this.modelMaps.set(node.id, maps)
       if (applied.type === 'model') maps.apply(applied.model.textures)
@@ -1543,10 +2671,25 @@ export class SceneRenderer {
       // carry them, and a clip addresses its targets by name — so the source's drive any
       // instance built from it.
       this.animations.add(node.id, holder, clipsOf(source))
-      if (applied.type === 'model') this.animations.apply(node.id, applied.model.animation ?? null)
+      if (applied.type === 'model') {
+        this.animations.apply(node.id, applied.model.lanes ?? [])
+        this.ensureBundled(node.id, applied.model.lanes ?? [])
+      }
       this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
-      this.bindSkeleton(node.id, holder)
-      this.options.onBones?.(node.id, this.bonesOf(holder))
+
+      // The document's own rig, put back on. Its weights are NOT saved with it — they are derived
+      // from mesh and rig, like a BVH — so they are worked out again on every load. The skeleton
+      // is reported before that finishes: a rig that takes a minute to bind still has bones the
+      // inspector can name at once.
+      const held = applied.type === 'model' ? applied.model.rig : undefined
+      if (held) void this.skinModel(node.id, holder, held)
+
+      // Read once and used twice: whether this model has bones at all is the same question the
+      // helper asks, and answering it in two places is how the two came to disagree. The COUNT
+      // and not the named ones — an export that stripped joint names still has a rig to draw.
+      const rig = rigStateOf(holder, clipsOf(source))
+      this.bindSkeleton(node.id, holder, rig.boneCount > 0)
+      this.options.onRig?.(node.id, rig)
       // The bones arrive a tick after the sync that laid the timeline over the scene, so a track
       // on one of them would drive nothing at all until the next edit.
       this.applyPoses()
@@ -1558,14 +2701,18 @@ export class SceneRenderer {
         this.belongsToAnotherNode,
       )
       // The count is a count of what is really there: a model's triangles arrive with its file,
-      // which is a tick after the `apply` that asked for it.
+      // which is a tick after the `apply` that asked for it. It is also what the scene now
+      // OCCUPIES, so the lights are re-cut against a set that just grew by a whole model.
+      this.contentChanged = true
+      this.placementChanged = true
+      this.tuneShadowsIfMoved()
       this.reportStats()
       // Same reason, same place: what the file brought was not there when the mode was applied,
       // and a model landing into a wireframe scene would be the one thing still drawn shaded.
       if (this.needsEdges()) this.applyDisplay(holder)
-      // A dense model is what makes a click cost a frame — measured in `scene-picking.bench.ts`.
+      // A dense model is what makes a click cost a frame — measured in `scenePicking.bench.ts`.
       // Off the UI thread, and after the render: the viewport shows the file before the tree.
-      this.viewport.requestRender()
+      this.redraw()
       // Reported rather than swallowed, and under a scope of its own: `reportFailure` says a
       // subject once per scope, so sharing `scene.model` would let a tree that failed swallow the
       // message of a load that fails later for the same asset — two failures nothing relates.
@@ -1573,6 +2720,89 @@ export class SceneRenderer {
     })
 
     return holder
+  }
+
+  /** Told once per skeleton, not per model: it is filed by what its bones ARE. */
+  private learnRig(rig: Rig): void {
+    const roles: Record<string, HumanoidRole> = {}
+    for (const bone of rig.bones) if (bone.role) roles[bone.name] = bone.role
+    if (Object.keys(roles).length === 0) return
+
+    const profile = {
+      signature: skeletonSignatureOf(rig.bones.map(bone => bone.name)),
+      roles,
+    }
+    this.retarget.remember(profile)
+    // Out to whoever keeps them: a mapping put right in one document is the same mapping the
+    // next document of this project needs, and the port dies with the viewport.
+    this.options.onProfile?.(profile)
+  }
+
+  /**
+   * Loads whatever clips a model's blocks name that its own file did not bring, once each, and
+   * lets go of the ones no block names any more. Called wherever lanes are applied: a block can
+   * be dropped long after the file it plays on landed.
+   */
+  private ensureBundled(nodeId: string, lanes: readonly ClipLane[]): void {
+    const held = this.bundled.get(nodeId) ?? new Map<string, string>()
+    this.bundled.set(nodeId, held)
+    const wanted = new Map(foreignClipsOf(lanes).map(clip => [clip.key, clip]))
+
+    for (const clip of wanted.values()) {
+      if (held.has(clip.key)) continue
+
+      // Acquired HERE and not inside the adoption: released while the read is still in flight,
+      // a reference taken afterwards would never be given back.
+      held.set(clip.key, clip.url)
+      void this.adopt(nodeId, clip, this.clipSources.acquire(clip.url))
+    }
+    for (const [key, url] of [...held]) {
+      if (wanted.has(key)) continue
+
+      held.delete(key)
+      this.clipSources.release(url)
+    }
+  }
+
+  /**
+   * Replays a clip the model's own file never held on THIS model's skeleton, which is the whole
+   * point: it was authored for a rig nobody here has.
+   */
+  private async adopt(nodeId: string, clip: ForeignClip, loading: Promise<Object3D | null>) {
+    const holder = this.objects.get(nodeId)
+    if (!holder) return
+
+    try {
+      // Nothing of the source ever enters the scene: a file dropped for its animation carries a
+      // whole character with it, and only its skeleton is any use here.
+      const source = await loading
+      if (!source) return
+
+      // The first clip and only it: one file IS one animation, however many it spells.
+      const first = clipsOf(source)[0]
+      if (!first) throw new Error('this file carries no animation')
+
+      // Before the retarget and not after: it is the only moment both skeletons are in hand, and
+      // it is what lets the screen say WHICH joint the motion has nothing to drive.
+      this.options.onClipFit?.(nodeId, clip.key, retargetFitOf(holder, source))
+
+      const adapted = (await this.retarget.adapt(holder, source, [first]))?.[0]
+      if (!adapted || this.objects.get(nodeId) !== holder) return
+
+      // Named by the studio, always: Tripo spells its only clip `NlaTrack` and Uthana's spells
+      // nothing at all, and neither may reach the screen.
+      adapted.name = clip.label
+      this.animations.addClip(nodeId, clip.key, adapted)
+      this.options.onClips?.(
+        nodeId,
+        this.animations.fileNamesOf(nodeId),
+        this.animations.lengthsOf(nodeId),
+      )
+      this.redraw()
+    } catch (error) {
+      // Under a scope of its own: a failing animation must not swallow what a failing model says.
+      reportFailure('scene.animation', clip.url, error)
+    }
   }
 
   /** Every mesh a model brought, given the tree that makes picking it cheap. */
@@ -1594,7 +2824,7 @@ export class SceneRenderer {
       }
     }
 
-    this.viewport.requestRender()
+    this.redraw()
     if (failures.length > 0) throw failures[0]
   }
 
@@ -1604,25 +2834,57 @@ export class SceneRenderer {
     applyWireOverlay(object, this.needsEdges(), this.wireMaterial, this.quadEdges)
   }
 
-  /** What a light's shadow is sized against: the settings for the map, the grid for the reach. */
-  private tuneShadow(light: Object3D): void {
-    resizeShadowMap(light, this.view.shadowMapSize)
-    fitShadowCamera(light, this.view.gridSize)
+  /**
+   * The reach only has to be read again when something MOVED. A selection moves nothing, and
+   * `apply` runs on every state change. The settings call `tuneShadows` directly instead: a map
+   * that was resized has to be rebuilt whether or not the set stands where it stood.
+   */
+  private tuneShadowsIfMoved(): void {
+    if (!this.placementChanged) return
+    this.tuneShadows()
+    this.placementChanged = false
+  }
+
+  /** Every light at once, against a reach measured once. */
+  private tuneShadows(): void {
+    const size = shadowMapSizeFor(this.view.quality, this.view.shadowMapSize)
+    const framed: Object3D[] = []
+    for (const [id, object] of this.objects) {
+      if (this.applied.get(id)?.type !== 'light') continue
+      resizeShadowMap(object, size)
+      if (needsShadowFrustum(object)) framed.push(object)
+    }
+    // The scene is walked only if some light would read the answer: a set lit by a hemisphere
+    // and a point light has no box to size, and measuring it would be a pass for nothing.
+    if (framed.length === 0) return
+
+    const reach = this.measureShadowReach()
+    for (const light of framed) fitShadowCamera(light, reach)
+  }
+
+  /**
+   * How far the shadows have to reach: what the scene OCCUPIES, never the grid. The grid is a
+   * FLOOR under the answer, so an empty scene still gets a frustum and the first mesh laid down
+   * casts something.
+   */
+  private measureShadowReach(): number {
+    const bounds = boundsOf(this.framedObjects())
+    if (bounds.isEmpty()) return this.view.gridSize
+
+    const size = bounds.getSize(new ThreeVector3())
+    // The diagonal, not the width: a sun comes in at an angle, and a frustum cut to the exact
+    // width of the set clips the shadow its far corner throws across it.
+    return Math.max(Math.max(size.x, size.z) * Math.SQRT2, this.view.gridSize)
   }
 
   private buildMesh(node: SceneNode & { type: 'mesh' }): Mesh {
     const material = new MeshStandardMaterial()
     applyMaterial(material, node.material, this.meshColor)
 
-    const mesh = new Mesh(geometryFor(node.geometry), material)
+    const mesh = new Mesh(tiledGeometry(node.geometry, node.material.tilesPerMetre), material)
     // A texture arrives long after the frame that asked for it: the render is requested again
     // when it lands, or the viewport would show the mesh untextured until something else moved.
-    const textures = createMaterialTextures(
-      this.textureCache,
-      mesh,
-      material,
-      this.viewport.requestRender,
-    )
+    const textures = createMaterialTextures(this.textureCache, mesh, material, () => this.redraw())
     textures.apply(node.material)
     this.textures.set(node.id, textures)
 
@@ -1636,7 +2898,7 @@ export class SceneRenderer {
     const sprite = new Sprite(material)
     // Like a mesh's maps: the picture arrives long after the frame that asked for it, and the
     // render has to be asked for again when it lands.
-    const texture = createSpriteTexture(this.textureCache, material, this.viewport.requestRender)
+    const texture = createSpriteTexture(this.textureCache, material, () => this.redraw())
     texture.apply(node.sprite)
     this.spriteMaps.set(node.id, texture)
 
@@ -1658,7 +2920,45 @@ export class SceneRenderer {
       this.helpers.set(node.id, helper)
       this.viewport.scene.add(helper)
     }
+
+    // Hung under the light so it travels with it, and so a click on it walks up to the light's
+    // id. An ambient lamp gets one too: it is the only thing in the viewport that can select it.
+    this.dressLight(node.id, light, node.light)
     return light
+  }
+
+  /**
+   * Markers set right AFTER their nodes are hung: held at their own size whatever scale a node
+   * carries, and — for a lamp — turned to where its light actually goes.
+   *
+   * A pass of its own, and not part of `syncNode`, because both readings walk the chain of
+   * PARENTS: a node built during the sync hangs from the scene until `hangFromParent` moves it,
+   * so posing it any earlier would answer against the place it no longer is.
+   */
+  private poseMarkers(nodes: readonly SceneNode[]): void {
+    for (const node of nodes) {
+      const marker = this.markers.get(node.id)
+      if (!marker) continue
+
+      holdMarkerSize(marker)
+      if (node.type === 'light') aimLightMarker(marker, node.light)
+    }
+  }
+
+  /** The body a lamp is drawn as, built from its descriptor and put in place of the last one. */
+  private dressLight(id: string, light: Light, descriptor: LightDescriptor): void {
+    const worn = this.markers.get(id)
+
+    // Hung before the old one goes: freeing the last user of a material destroys its GL program,
+    // and three would compile it again on the very next frame.
+    const body = lightBody(descriptor, this.markerColor, this.markerEdge)
+    light.add(body)
+    this.markers.set(id, body)
+
+    if (worn) {
+      light.remove(worn)
+      disposeTree(worn)
+    }
   }
 
   /** The object a node hangs from, or the scene for a node that hangs from nothing. */
@@ -1690,6 +2990,8 @@ export class SceneRenderer {
   }
 
   private release(id: string): void {
+    this.contentChanged = true
+    this.placementChanged = true
     // Read before `applied` is emptied: the reference the cache holds is keyed by what the node
     // pointed at, and nothing else remembers it.
     const applied = this.applied.get(id)
@@ -1697,7 +2999,12 @@ export class SceneRenderer {
     // Before the instance goes: a mixer holding actions keeps every bone of a released model
     // alive with it.
     this.animations.remove(id)
+    // Its share of every animation file it played: the last node to let go frees the parse.
+    for (const url of this.bundled.get(id)?.values() ?? []) this.clipSources.release(url)
+    this.bundled.delete(id)
     this.unbindSkeleton(id)
+    this.iks.delete(id)
+    this.stopSkinning(id)
 
     this.applied.delete(id)
 
@@ -1734,6 +3041,21 @@ export class SceneRenderer {
       helper.dispose()
       this.helpers.delete(id)
     }
+
+    // The frustum stands in the SCENE, beside its camera rather than under it — see `buildCamera`
+    // — so removing the node leaves it drawn over nothing until it is taken out by hand.
+    const frustum = this.frustums.get(id)
+    if (frustum) {
+      this.viewport.scene.remove(frustum)
+      frustum.dispose()
+      this.frustums.delete(id)
+    }
+
+    // The body hangs under the node, so it goes with it — but nothing above frees what it is made
+    // of: an ambient lamp draws no helper, and its whole shape would leak on every delete.
+    const marker = this.markers.get(id)
+    if (marker) disposeTree(marker)
+    this.markers.delete(id)
   }
 
   private selectedObjects(): Object3D[] {
@@ -1754,6 +3076,15 @@ export class SceneRenderer {
     if (boneObject) {
       if (this.mode === 'select') gizmo.detach()
       else gizmo.attach(boneObject)
+      return
+    }
+
+    const knob = this.pickedKnob()
+    if (knob) {
+      // Translate only: a control point is a position, and rotating or scaling one would ask
+      // the gizmo to write something the descriptor has no room for.
+      if (this.mode === 'translate') gizmo.attach(knob)
+      else gizmo.detach()
       return
     }
 
@@ -1782,7 +3113,10 @@ export class SceneRenderer {
 
   private readonly onGizmoChange = (): void => {
     this.dragged = true
-    this.viewport.requestRender()
+    // A box that stayed behind while its object moved is a box that says nothing. Re-reading a
+    // bounding box is cheap — building one is not, which is why this is not `refreshAids`.
+    this.aids.refreshBoxes()
+    this.redraw()
   }
 
   /**
@@ -1804,6 +3138,14 @@ export class SceneRenderer {
 
     if (moves) {
       this.options.onTransform(moves)
+      return
+    }
+
+    const point = this.pickedPathPoint
+    const knob = this.pickedKnob()
+    if (point && knob) {
+      // The knob's own position IS the control point: both live in the rail's frame.
+      this.options.onPathPoint?.(point.nodeId, point.index, plainVector(knob.position))
       return
     }
 
@@ -1842,37 +3184,125 @@ export class SceneRenderer {
     return rest
   }
 
+  /**
+   * A hand has let go of a camera, and which camera decides where it is written: a locked pane
+   * edits the DOCUMENT, every other one moves the view, which is session state.
+   */
+  private reportCameraSettled(pane: number): void {
+    // Pane 0 draws with the viewport's own camera whatever its view says — it can be lent none,
+    // so an orbit there moves the VIEW even where a camera was picked for it.
+    const view = pane === 0 ? 'free' : this.paneViews[pane]
+    const object = isCameraView(view) ? this.cameraObject(view.nodeId) : null
+
+    if (isCameraView(view) && object) {
+      this.options.onCameraMoved?.(view.nodeId, transformOf(object))
+      return
+    }
+    if (pane === 0) this.options.onView?.(this.viewPlacement())
+  }
+
   /** Aims the gizmo at a bone, or lets go of the one it held. */
   setPickedBone(picked: { nodeId: string; bone: string } | null): void {
     this.pickedBone = picked
     this.attachGizmo()
-    this.viewport.requestRender()
+    this.redraw()
+  }
+
+  /**
+   * Aims the gizmo at one control point of a rail, or lets go of it.
+   *
+   * A point is not a node, exactly as a bone is not: it has no id in the document, cannot be
+   * renamed, hidden or deleted on its own. `LightDescriptor` says why that matters — a node
+   * nobody can rename is a property that leaked into the tree.
+   */
+  setPickedPathPoint(picked: { nodeId: string; index: number } | null): void {
+    this.pickedPathPoint = picked
+    this.attachGizmo()
+    this.redraw()
+  }
+
+  /**
+   * The knob of the point picked, while one is picked and its rail is still being worked on.
+   *
+   * The rail matters as much as the knob: a point is let go of by a click in the VIEWPORT, and
+   * the tree selects through another door entirely — without this the gizmo stayed on a knob the
+   * selection had hidden, while the object just picked in the tree got none.
+   */
+  private pickedKnob(): Object3D | null {
+    const picked = this.pickedPathPoint
+    if (!picked || !this.workedRailIds().has(picked.nodeId)) return null
+    return this.objects.get(picked.nodeId)?.getObjectByName(knobName(picked.index)) ?? null
   }
 
   /** Redraws nodes from what was last applied, undoing what a gesture moved without meaning to. */
   private resync(moves: readonly NodeMove[]): void {
+    const back: SceneNode[] = []
     for (const move of moves) {
       const node = this.applied.get(move.id)
       if (!node) continue
       this.applied.delete(move.id)
       this.syncNode(node)
+      back.push(node)
     }
-    this.viewport.requestRender()
+    this.poseMarkers(back)
+    this.redraw()
   }
 
-  private readonly onPointerMove = (): void => {
+  /**
+   * Read back from what is TRUE rather than left to the events that turn it on: a release
+   * swallowed by a native menu, or a drag ended off the window, would leave the views frozen for
+   * good, and a frozen viewport picks with the camera of a pane one has left — nothing selects.
+   */
+  private syncPaneFreeze(): void {
+    // `flownWith === 2`, not `flying`: a flight under the LEFT button is orbiting at the same
+    // time, and freezing would take that orbit away — see `startFlight`.
+    this.viewport.freezePanes(this.gizmo?.dragging === true || this.flownWith === 2)
+  }
+
+  private readonly onPointerAim = (event: PointerEvent): void => {
+    // A drag nobody holds any more. `TransformControls.pointerUp` returns before clearing
+    // `dragging` unless the button released is the LEFT one, so a right click mid-drag — the fly
+    // camera's own button — leaves it set for good, and the views frozen with it. No button down
+    // is the one reading that cannot lie; clearing it dispatches, so the freeze lifts by itself.
+    if (event.buttons === 0 && this.gizmo?.dragging) this.gizmo.dragging = false
+
+    // Any movement repairs a freeze that outlived its gesture.
+    this.syncPaneFreeze()
     this.aimGizmo()
+    // The store settles for itself whether this is news — see `setActivePane`.
+    this.options.onPane?.(this.viewport.activePane)
+  }
+
+  private startFlight(event: PointerEvent): void {
+    this.flownFrom = { x: event.clientX, y: event.clientY }
+    this.flownWith = event.button
+    this.flew = false
+    // The RIGHT button only. `freezePanes` ends in `armOrbits(null)`, which sets
+    // `controls.enabled = false` on the main orbit — freezing under the left button would cost
+    // that button the rotation it is held down for.
+    if (event.button === 2) this.viewport.freezePanes(true)
+    // Before the first frame of the flight, or its opening step spans the whole idle time.
+    this.viewport.resetClock()
+    this.redraw()
+  }
+
+  /** `buttons === 0` is the reading that cannot lie: pressing both and letting go out of order
+   * would otherwise leave a flight armed under a hand that holds nothing. */
+  private endFlight(button: number, event: PointerEvent): void {
+    if (this.flownWith !== button && event.buttons !== 0) return
+
+    const froze = this.flownWith === 2
+    this.flownFrom = null
+    this.flownWith = null
+    this.held.clear()
+    // Only what froze thaws: the left button never froze anything, and thawing would re-arm the
+    // orbits it never took. Asked rather than asserted, a handle may still be held under it.
+    if (froze) this.syncPaneFreeze()
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button === 2) {
-      this.flownFrom = { x: event.clientX, y: event.clientY }
-      this.flew = false
-      const orbit = this.viewport.orbit
-      if (orbit) orbit.enabled = false
-      // Before the first frame of the flight, or its opening step spans the whole idle time.
-      this.viewport.resetClock()
-      this.viewport.requestRender()
+      this.startFlight(event)
       return
     }
     if (event.button !== 0 || this.gizmo?.dragging) return
@@ -1883,6 +3313,9 @@ export class SceneRenderer {
     // those are the very keys that add to a selection. Picking on release, and only if the
     // pointer never moved, is what stops a recentring gesture from unpicking what it passes over.
     this.pressed = { x: event.clientX, y: event.clientY }
+    // ADDED to the left button, never substituted for what it already did: it goes on orbiting
+    // through `OrbitControls` and picking on release, and only gains the keys.
+    this.startFlight(event)
   }
 
   private readonly onPointerUp = (event: PointerEvent): void => {
@@ -1892,24 +3325,38 @@ export class SceneRenderer {
       // camera.
       const still = !this.flew && this.held.size === 0 && wasClick(this.flownFrom, event)
 
-      this.flownFrom = null
-      this.held.clear()
-      const orbit = this.viewport.orbit
-      if (orbit) orbit.enabled = true
+      this.endFlight(2, event)
 
       // Never in pose mode: there a click names a bone, and a bone is not a node the menu could
-      // act on.
-      if (still && !this.poseMode) {
-        const id = this.nodeAt(event)
-        if (id) this.options.onContextMenu?.(id)
+      // act on. And never through the preview, for the reason the left button gives below: it is
+      // drawn through another camera, so a ray cast from the pane underneath names whatever the
+      // picture happens to be covering.
+      if (still && !this.poseMode && !this.viewport.insetHasPointer(event)) {
+        // A knob raises the menu of its POINT, and picks it on the way: what the menu acts on is
+        // then what the gizmo holds, rather than two different things under one pointer.
+        const knob = this.pathPointAt(event)
+        if (knob) {
+          this.options.onSelectPathPoint?.(knob)
+          this.options.onPathPointMenu?.(knob.nodeId, knob.index)
+          return
+        }
+
+        this.options.onContextMenu?.(this.nodeAt(event) ?? null)
       }
       return
     }
     if (event.button !== 0) return
 
     const pressed = this.pressed
+    const flew = this.flew
     this.pressed = null
-    if (!wasClick(pressed, event)) return
+    this.endFlight(0, event)
+    // A flight that moved the camera is not a click, even when the pointer never left its pixel:
+    // the keyboard did the moving. The same reading the right button already makes for its menu.
+    if (flew || !wasClick(pressed, event)) return
+    // A click in the preview picks nothing: it is drawn through another camera, so a ray cast
+    // from the pane underneath would select whatever the picture happens to be covering.
+    if (this.viewport.insetHasPointer(event)) return
 
     this.aimGizmo()
 
@@ -1920,15 +3367,200 @@ export class SceneRenderer {
       if (!ndc) return
 
       // The camera of the view under the pointer, never the main one — `nodeAt` says why.
-      const picked = nearestBone(this.projectedBones(this.cameraInHand()), { x: ndc.x, y: ndc.y })
+      const picked = nearestProjected(this.projectedBones(this.cameraInHand()), {
+        x: ndc.x,
+        y: ndc.y,
+      })
       this.options.onSelectBone?.(picked ? { nodeId: picked.nodeId, bone: picked.bone } : null)
       return
+    }
+
+    // Alt AND shift lays a point at the end of the rail, wherever the pointer is — the gesture
+    // that draws a trajectory click by click. Tested before the knobs and before the line, or
+    // whatever the pointer happened to be over would take the click out of a run of them.
+    // The pair is RESERVED, so a click that lays no point lays nothing else either: falling
+    // through would insert on the line under it, or toggle the selection mid-trajectory.
+    if (event.altKey && event.shiftKey) {
+      const spot = this.railSpotAt(event)
+      if (spot) this.options.onAppendPathPoint?.(spot.nodeId, spot.point)
+      return
+    }
+
+    // A knob of a rail already selected names a POINT, not the rail again: that is the one way
+    // to reach a sub-element the tree has no row for.
+    const knob = this.pathPointAt(event)
+    if (knob) {
+      this.options.onSelectPathPoint?.(knob)
+      return
+    }
+
+    // Alt on the LINE of a selected rail poses a point in the stretch it was clicked on. Alt
+    // rather than a plain click, which still has to be able to pick what stands behind the rail.
+    if (event.altKey) {
+      const spot = this.pathSegmentAt(event)
+      if (spot) {
+        this.options.onAddPathPoint?.(spot.nodeId, spot.index)
+        return
+      }
     }
 
     // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
     const extending = event.shiftKey || event.metaKey || event.ctrlKey
     const id = this.nodeAt(event)
     this.options.onSelect(id ? [id] : [], extending ? 'toggle' : 'replace')
+    // Whatever was picked before belongs to a rail that may no longer be the selection.
+    if (this.pickedPathPoint) this.options.onSelectPathPoint?.(null)
+  }
+
+  /**
+   * The control point the pointer is over, on a rail being WORKED ON — otherwise the knobs of
+   * every rail would take clicks meant for what stands behind them.
+   *
+   * On the SCREEN rather than through a ray, for the reason `nearestProjected` carries: a knob
+   * keeps its size on screen, and its world radius is whatever the last camera to draw it left
+   * behind. A ray answered with that one, so in a quad view a knob could be unreachable where it
+   * was plainly visible. It also settles what a ray never could — the curve lies right across
+   * its own control points, so the nearest INTERSECTION was often the line.
+   */
+  private pathPointAt(event: PointerEvent): { nodeId: string; index: number } | null {
+    const ndc = this.viewport.pointerNdcOf(event)
+    if (!ndc) return null
+
+    const picked = nearestProjected(
+      this.projectedKnobs(this.cameraInHand()),
+      { x: ndc.x, y: ndc.y },
+      KNOB_REACH,
+    )
+    return picked ? { nodeId: picked.nodeId, index: picked.index } : null
+  }
+
+  /** Every knob of every rail being worked on, as the screen sees it. */
+  private projectedKnobs(camera: Camera): ProjectedKnob[] {
+    const projected: ProjectedKnob[] = []
+
+    for (const rail of this.workedRails()) {
+      for (const knob of rail.children) {
+        const index = knobIndexOf(knob.name)
+        if (index === null) continue
+
+        knob.getWorldPosition(RAIL_SPOT)
+        RAIL_SPOT.project(camera)
+        projected.push({ nodeId: rail.name, index, x: RAIL_SPOT.x, y: RAIL_SPOT.y, z: RAIL_SPOT.z })
+      }
+    }
+
+    return projected
+  }
+
+  /**
+   * The stretch of rail the pointer is over, as an index into its control points: the point a
+   * click poses goes right after it.
+   *
+   * The line is sampled by arc length, so the vertex three hands back IS an abscissa — which is
+   * what `segmentAt` converts back into a stretch. Knobs are picked on the screen instead, so a
+   * ray is now cast for the CURVE alone.
+   *
+   * The grab around that curve is set per rail and never left at three's own: its default is one
+   * WORLD UNIT, which on a rail five units long is a tube wide enough to swallow clicks meant for
+   * whatever stands beside it — and ⌥ writes a point into the document. Put back afterwards, the
+   * raycaster being the one every other pick goes through: a light is picked by the LINES of its
+   * helper. Measured from the rail's own origin rather than from where the ray lands, the point
+   * not being known before the hit.
+   */
+  private pathSegmentAt(event: PointerEvent): { nodeId: string; index: number } | null {
+    const ndc = this.viewport.pointerNdcOf(event)
+    if (!ndc) return null
+
+    this.pointer.set(ndc.x, ndc.y)
+    const camera = this.cameraInHand()
+    this.raycaster.setFromCamera(this.pointer, camera)
+
+    const nearest = withHeldFuzz(this.raycaster, () => {
+      let found: Intersection | null = null
+
+      for (const rail of this.workedRails()) {
+        this.raycaster.params.Line.threshold = screenScale(
+          camera,
+          rail.getWorldPosition(RAIL_SPOT),
+          LINE_GRAB,
+        )
+        for (const hit of this.raycaster.intersectObject(rail, true)) {
+          if (hit.object.name !== PATH_CURVE_NAME || hit.index === undefined) continue
+          if (!found || hit.distance < found.distance) found = hit
+        }
+      }
+
+      return found
+    })
+    if (!nearest || nearest.index === undefined) return null
+
+    const nodeId = nearest.object.parent?.name
+    const node = nodeId ? this.applied.get(nodeId) : null
+    if (!nodeId || node?.type !== 'path') return null
+
+    // The MIDDLE of the sample three hands back: `index` names where the segment starts, so
+    // reading it straight puts a click in the last sixty-fourth before a control point into the
+    // stretch before it.
+    return { nodeId, index: segmentAt(node.path, (nearest.index + 0.5) / PATH_SAMPLES) }
+  }
+
+  /**
+   * Where a click lands on the ONE rail being worked on, in that rail's own frame.
+   *
+   * Nothing for a pointer with two rails under it: extending whichever came first would pose a
+   * point on a rail nobody aimed at, and a gesture repeated ten times would scatter half of them.
+   */
+  private railSpotAt(event: PointerEvent): { nodeId: string; point: PlainVector3 } | null {
+    const worked = this.workedRailIds()
+    if (worked.size !== 1) return null
+
+    const [nodeId] = [...worked]
+    const ndc = this.viewport.pointerNdcOf(event)
+    if (!nodeId || !ndc) return null
+
+    const rail = this.objects.get(nodeId)
+    const node = this.applied.get(nodeId)
+    const anchor = node?.type === 'path' ? node.path.points.at(-1) : null
+    if (!rail || !anchor) return null
+
+    const camera = this.cameraInHand()
+    this.pointer.set(ndc.x, ndc.y)
+    this.raycaster.setFromCamera(this.pointer, camera)
+
+    // Up the chain, not down it: a rail parented to a group reads its own placement off that
+    // group's matrix, and `updateMatrixWorld` would compose against whatever it last held.
+    rail.updateWorldMatrix(true, false)
+    RAIL_ANCHOR.copy(anchor)
+    const spot =
+      this.sceneryUnder() ??
+      spotOnRay(
+        this.raycaster.ray,
+        rail.localToWorld(RAIL_ANCHOR),
+        camera.getWorldDirection(RAIL_FACING),
+      )
+    if (!spot) return null
+
+    return { nodeId, point: plainVector(rail.worldToLocal(spot)) }
+  }
+
+  /**
+   * What the RAY IN HAND meets of the scenery — `railSpotAt` casts it. Nearest first, and the
+   * nearest that a document point may sit ON: see `isScenery` for the three it walks past.
+   *
+   * No fuzz on lines or clouds either: a point aimed into the void must not land on the edges
+   * hung under a camera as though they were a surface.
+   */
+  private sceneryUnder(): Vector3 | null {
+    const hits = withHeldFuzz(this.raycaster, () => {
+      this.raycaster.params.Line.threshold = 0
+      this.raycaster.params.Points.threshold = 0
+      return this.raycaster.intersectObjects([...this.objects.values()], true)
+    })
+
+    return (
+      hits.find(hit => isScenery(hit.object, id => this.applied.get(id)?.type === 'path'))?.point ??
+      null
+    )
   }
 
   /** The node the pointer is over, or nothing for a ray that met only the void. */
@@ -1943,8 +3575,13 @@ export class SceneRenderer {
     this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
 
     // Helpers are what makes a light clickable, and recursively: it is one of their children
-    // that the ray actually meets. Both they and the light carry the node's id.
-    const targets = [...this.objects.values(), ...this.helpers.values()]
+    // that the ray actually meets. Both they and the light carry the node's id. Only the ones on
+    // SCREEN: three's raycaster does not read `visible`, so a hidden helper would go on catching
+    // clicks over empty space and selecting a lamp nobody could see.
+    const targets = [
+      ...this.objects.values(),
+      ...[...this.helpers.values()].filter(helper => helper.visible),
+    ]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
     return hit ? nodeIdOf(hit.object, name => this.objects.has(name)) : null
   }
@@ -1991,13 +3628,36 @@ export class SceneRenderer {
   // Without this the OS menu opens on the very gesture that starts flying.
   private readonly onContextMenu = (event: Event): void => event.preventDefault()
 
-  private readonly onDraggingChanged = (event: { value: unknown }): void => {
-    const orbit = this.viewport.orbit
-    if (orbit) orbit.enabled = event.value !== true && !this.flying
+  /**
+   * On the way IN to an axis, never on the way back to `null`: there is no plane to turn once
+   * nothing is held, and this fires on both edges — half the walks would be for no one.
+   */
+  private readonly onGizmoAxisChanged = (): void => {
+    if (this.gizmo?.axis) this.refreshGizmoMatrices()
+  }
+
+  // No need for the event's own value: three writes the property before it dispatches.
+  private readonly onDraggingChanged = (): void => {
+    // A handle taken under the left button ends the flight that button armed: dragging a gizmo
+    // and flying at once would move the camera and the object on one gesture.
+    if (this.gizmo?.dragging === true && this.flownWith === 0) {
+      this.flownFrom = null
+      this.flownWith = null
+      this.held.clear()
+    }
+    this.syncPaneFreeze()
   }
 
   /** Reports whether the camera is still flying, which is what keeps the loop alive. */
   private advance(delta: number): boolean {
+    // Before the panes are drawn and after everything that writes a pose — the head, a clip, a
+    // gizmo on the handle: whatever moved, the chain reaches for where the target stands NOW.
+    for (const chain of this.iks.values()) chain.update()
+    // After the chains, never before: the joints have to show where the bones ENDED UP.
+    for (const joints of this.joints.values()) {
+      if (joints.points.visible) joints.refresh()
+    }
+
     const moving = this.flying && this.held.size > 0
     if (moving) {
       // Remembered rather than read back at the release: the keys are let go of first, and the
@@ -2005,8 +3665,9 @@ export class SceneRenderer {
       this.flew = true
       this.fly(delta)
     }
-    // Both, never short-circuited: a clip has to keep running while the camera flies over it.
-    return this.animations.update(delta) || moving
+    // The clips do not appear here: they stand where the head put them, and the head is advanced
+    // by `useAnimationPlayback`, which calls `setPlayhead` and asks for a frame of its own.
+    return moving
   }
 
   private fly(delta: number): void {
@@ -2052,8 +3713,30 @@ function receivesShadow(node: SceneNode): boolean {
   return canReceiveShadow(node) && node.receiveShadow
 }
 
+/** Whether anything the drawn aids are built from moved — see `refreshAids`, which is not cheap. */
+function aidsMoved(held: ViewportOptions, next: ViewportOptions): boolean {
+  return (
+    held.boundingBoxes !== next.boundingBoxes ||
+    held.origins !== next.origins ||
+    held.normals !== next.normals ||
+    held.normalLength !== next.normalLength
+  )
+}
+
+/** The two that only turn existing helpers on and off, which costs a flag apiece. */
+function helperVisibilityMoved(held: ViewportOptions, next: ViewportOptions): boolean {
+  return held.lightHelpers !== next.lightHelpers || held.cameraHelpers !== next.cameraHelpers
+}
+
+/**
+ * Whether a model has to be built again rather than patched.
+ *
+ * A rig counts as much as an asset: putting one on replaces every mesh by a skinned one and hangs
+ * bones under the holder, which is a different object graph and not an edit of this one.
+ */
 function pointsElsewhere(previous: ModelNode, node: SceneNode): boolean {
-  return node.type === 'model' && previous.model.assetId !== node.model.assetId
+  if (node.type !== 'model') return true
+  return previous.model.assetId !== node.model.assetId || previous.model.rig !== node.model.rig
 }
 
 function disposeMaterial(mesh: Mesh): void {

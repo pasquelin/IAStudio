@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SpriteDescriptor } from '@shared/domain/scene'
 import type { GestureProps } from '@/design/styles'
-import { spriteFields, withField } from '@/engines/scene/property-fields'
+import { spriteFields, withField } from '@/engines/scene/propertyFields'
 import { PictureField } from './PictureField'
 import { DescriptorSection } from './DescriptorSection'
 
@@ -24,11 +24,13 @@ export function SpriteSection({ sprite, fallbackColor, onChange, gesture }: Spri
       fields={fields}
       onChange={(name, value) => onChange(withField(sprite, name, value))}
       gesture={gesture}
+      scId="sprite"
     >
       <PictureField
         label={t('inspector.fields.map', 'map')}
         value={sprite.map?.assetId ?? null}
         onChange={assetId => onChange({ ...sprite, map: assetId === null ? null : { assetId } })}
+        scId="sprite.map"
       />
     </DescriptorSection>
   )

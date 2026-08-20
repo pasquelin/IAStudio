@@ -3,7 +3,7 @@ import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
-import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './source-files'
+import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './sourceFiles'
 
 const MAIN = dirname(fileURLToPath(import.meta.url))
 
@@ -257,11 +257,10 @@ describe('the main process', () => {
  *
  * It runs from here, of all places, because it reads the tree off the disk: `src/shared` is
  * compiled for the web as well, where `node:fs` has no types and no business being imported.
- */
-/**
+ *
  * Reading and parsing every file of the project is not a unit test's usual budget: 2.5 s idle,
  * and past the shared 15 s the moment a dozen other suites share the machine. `WHOLE_PROJECT`
- * comes from `source-files.ts` with the sweep it belongs to, rather than being raised for
+ * comes from `sourceFiles.ts` with the sweep it belongs to, rather than being raised for
  * everyone — the rest of this file has no business taking that long.
  */
 describe('the registries', () => {
@@ -354,7 +353,7 @@ describe('the registries', () => {
     const main = sourceFiles(MAIN)
 
     expect(main.filter(path => path.endsWith('-fixtures.ts'))).toEqual([])
-    expect(main.some(path => path.endsWith('job-manager.ts'))).toBe(true)
+    expect(main.some(path => path.endsWith('jobManager.ts'))).toBe(true)
   })
 })
 
@@ -464,7 +463,7 @@ describe('the words nobody puts in a tag', () => {
     WHOLE_PROJECT,
   )
 
-  // That the four trees were actually opened is held by `source-files.test.ts`, on the walk both
+  // That the four trees were actually opened is held by `sourceFiles.test.ts`, on the walk both
   // guards borrow — an empty result here proves nothing unless the files were read.
 
   it('would see a sentence parked in a constant', () => {
@@ -481,7 +480,7 @@ describe('the words nobody puts in a tag', () => {
 
   it('reads a module whose generic arrow would open a tag in JSX', () => {
     // Without the comma: `<T,>` stays a generic even in TSX, so the probe this inherited proved
-    // nothing — it passed in either mode. `app/document-io.ts:105` writes the shape that breaks.
+    // nothing — it passed in either mode. `app/documentIo.ts:105` writes the shape that breaks.
     const code = "const asIs = <S>(state: S): unknown => state\nconst label = 'Delete this project'"
 
     expect(boundSentencesIn('probe.ts', code)).toHaveLength(1)

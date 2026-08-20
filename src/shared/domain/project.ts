@@ -1,7 +1,7 @@
 import { byCodeUnit } from '../text'
 import type { AccountSummary } from './account'
-import { ASSET_FOLDERS } from './asset'
-import { DOCUMENTS_FOLDER } from './document'
+import { DEFAULT_ASSET_FOLDERS } from './asset'
+import { parentOf } from './folder'
 
 export const MANIFEST_VERSION = 1
 
@@ -18,7 +18,26 @@ export const MANIFEST_FILE = '.project.json'
 /** What projects made before the rename carry. Read, never written — see `openManifest`. */
 export const LEGACY_MANIFEST_FILE = 'project.json'
 
-export const CATALOG_FILE = '.index/catalog.db'
+/**
+ * The machine's own folder inside a project. Named on its own because three separate readers now
+ * need to SAY it rather than sit under it: the folders below, `MACHINE_FOLDERS`, and the
+ * `.gitignore` the version panel writes — and three spellings of one folder is how one of them
+ * ends up pointing at a folder nothing creates.
+ */
+export const INDEX_FOLDER = '.index'
+
+export const CATALOG_FILE = `${INDEX_FOLDER}/catalog.db`
+
+/**
+ * Where a move that is under way writes down what it has already done.
+ *
+ * Moving three hundred files is not one operation the filesystem can undo: it is three hundred,
+ * and a machine that stops in the middle leaves the project half moved. The journal is what lets
+ * the next opening finish the job — see `fileJournal.ts`.
+ *
+ * Under `.index/` because it is machinery the studio can rebuild, not the user's work.
+ */
+export const PENDING_FILES_FILE = `${INDEX_FOLDER}/pending-files.ndjson`
 
 export type Manifest = {
   version: number
@@ -224,31 +243,100 @@ export function withoutRecentProject(
 }
 
 /**
- * Subfolders created when a project is opened — see spec § 5. The asset folders are derived
- * from `ASSET_FOLDERS` rather than relisted, so adding a kind cannot leave the writer pointing
- * at a folder this never created.
- */
-/**
  * Rebuildable cache, not user content: proxies, waveforms and filmstrips of ingested media.
  * Named rather than spelled out at each use — the folder the ingest writes into and the folder
  * the project creates have to be the same string.
  */
-export const PROXIES_FOLDER = '.index/proxies'
-export const PEAKS_FOLDER = '.index/peaks'
-export const FILMSTRIPS_FOLDER = '.index/filmstrips'
+export const PROXIES_FOLDER = `${INDEX_FOLDER}/proxies`
+export const PEAKS_FOLDER = `${INDEX_FOLDER}/peaks`
+export const FILMSTRIPS_FOLDER = `${INDEX_FOLDER}/filmstrips`
 /**
  * Stills for the assets that are not pictures: a mesh's, brought down with its bytes, and a
  * rush's — the library's when it came from there, one grabbed by ffmpeg when it came off a disk.
  */
-export const POSTERS_FOLDER = '.index/posters'
+export const POSTERS_FOLDER = `${INDEX_FOLDER}/posters`
+/**
+ * What the explorer draws on its tiles, for every file it shows — asset or not. Beside the
+ * catalogue rather than beside the file: `.index/` is thrown away without breaking anything,
+ * and a project that changes machine carries its own previews.
+ */
+export const THUMBNAILS_FOLDER = '.index/thumbnails'
+/**
+ * How much of the disk those previews may take, per project, before the least recently read of
+ * them are dropped. A folder of ten thousand pictures would otherwise grow without end.
+ */
+export const THUMBNAILS_MAX_BYTES = 200 * 1024 * 1024
+/**
+ * How large one is rendered — ONE size for every reader, the tree's little slot included, which
+ * the browser then draws smaller. Here because the main process renders them and cannot read the
+ * renderer; `MAX_THUMBNAIL`, the gauge the grid zooms to, IS this number.
+ */
+export const THUMBNAIL_SIZE = 208
 
-export const PROJECT_FOLDERS: readonly string[] = [
-  'assets',
-  ...Object.values(ASSET_FOLDERS),
-  DOCUMENTS_FOLDER,
-  '.index',
+/**
+ * The machine's own, created with the project and never the user's to touch: hidden, read-only,
+ * rebuildable. Every one of them sits under a leading dot, which is what `isStudioPrivate` reads
+ * instead of this list — a list is what gets a fifth entry added without the predicate hearing
+ * about it.
+ */
+export const MACHINE_FOLDERS: readonly string[] = [
+  INDEX_FOLDER,
   PROXIES_FOLDER,
   PEAKS_FOLDER,
   FILMSTRIPS_FOLDER,
   POSTERS_FOLDER,
+  THUMBNAILS_FOLDER,
 ]
+
+/**
+ * What a new project opens with — ORDINARY folders from the first second, renamed, filled and
+ * thrown away like any the user makes. They are a starting point, not a layout the studio reads
+ * anything back from.
+ *
+ * Derived from `DEFAULT_ASSET_FOLDERS` rather than relisted, so adding a kind cannot leave the
+ * writer pointing at a folder this never created. `assets/` and `documents/` are no longer among
+ * them: a document lands in `documents/` when nothing says otherwise and the folder appears with
+ * the first save, exactly as an import recreates `Images/`.
+ */
+export const STARTER_FOLDERS: readonly string[] = Object.values(DEFAULT_ASSET_FOLDERS)
+
+/**
+ * The one folder every asset used to be filed under, back when the tree was the studio's.
+ *
+ * Nothing writes into it any more and nothing is migrated out of it: a project made before the
+ * change keeps its files exactly where they are, and the next import lands in `Images/` beside
+ * them. That leaves a project wearing two trees, which is a decision rather than an accident —
+ * named here only so the studio can SAY it once, in the journal, instead of leaving the user to
+ * work it out from a folder that appeared on its own.
+ */
+export const LEGACY_ASSETS_FOLDER = 'assets'
+
+/**
+ * Whether an asset that just landed at `path` was filed in the DEFAULT folder for its kind.
+ *
+ * Half of what says a project wears two trees, and the free half: the other is whether the old
+ * folder is still there, which only the disk knows. Asked FIRST, so a project that never had one
+ * does not pay a `stat` per import to be told so.
+ *
+ * False for a second pull, which keeps the path the row already had — under `assets/img` for a
+ * project of that age — and false for a file the user has since filed deeper. Neither is the
+ * studio choosing a tree.
+ */
+export function landedInDefaultFolder(path: string | undefined, folder: string): boolean {
+  return path !== undefined && parentOf(path) === folder
+}
+
+/**
+ * How far the pass reconciling the catalogue with the project folder has got.
+ *
+ * `total` is 0 until the pass knows how much it will read — and stays 0 for the ordinary pass,
+ * where every row is where the catalogue says and nothing is read at all. A window shows the
+ * counts only once there is something to count.
+ */
+export type RescanState = {
+  running: boolean
+  done: number
+  total: number
+}
+
+export const IDLE_RESCAN: RescanState = { running: false, done: 0, total: 0 }

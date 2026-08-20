@@ -9,14 +9,14 @@ import {
   FADE_BAND,
   RULER_HEIGHT,
   type Viewport,
-} from './timeline-geometry'
+} from './timelineGeometry'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import {
   DEFAULT_TRACK_HEIGHT,
   EMPTY_SEQUENCE,
   type Clip,
   type SequenceState,
-} from './timeline-state'
+} from './timelineState'
 
 const viewport: Viewport = { scale: 100 / 1_000_000, offset: 0, scrollTop: 0 }
 const size = { width: 800, height: 200 }
@@ -43,7 +43,7 @@ function spyContext() {
   const images: Rect[] = []
 
   // The glyphs drawn from an `@mdi/js` path, with where and in what ink. `Path2D` is a holder
-  // under jsdom (`test-setup`), so what comes back is the `d` string the painter chose.
+  // under jsdom (`testSetup`), so what comes back is the `d` string the painter chose.
   const glyphs: { d: string; x: number; y: number; ink: string }[] = []
   let origin: Point = { x: 0, y: 0 }
 

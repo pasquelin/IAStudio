@@ -35,7 +35,11 @@ export function familyOf(surface: ToolSurface): SurfaceFamily {
   return surface === HOME_SURFACE ? 'home' : 'workspaces'
 }
 
-export type ToolZone = 'left' | 'right' | 'top' | 'bottom'
+/**
+ * Where a tool hangs. The bottom band is TWO zones sharing one height: whichever of them is alone
+ * runs under the opposite column, and together they split the width between them.
+ */
+export type ToolZone = 'left' | 'right' | 'top' | 'bottomLeft' | 'bottomRight'
 
 export type ToolId =
   | 'layers'
@@ -43,30 +47,32 @@ export type ToolId =
   | 'lights'
   | 'timeline'
   | 'explorer'
+  | 'git'
+  | 'history'
   | 'scene'
   | 'models'
   | 'generator'
   | 'inspector'
   | 'assets'
-  | 'skybox'
-  | 'channels'
-  | 'styles'
-  | 'view'
   | 'projects'
   | 'library'
-  | 'documents'
+  | 'animations'
+  | 'text'
 
 /**
- * The panels the upper half of a WORKSPACE's left column is reserved for: choosing a model, then
- * filling its form. Nothing else may sit in that half of a workspace, and neither sits anywhere
- * else — `tool.test.ts` enforces both directions, and both are scoped to `WORKSPACE_IDS`. The
- * home is outside the rule and always was: it generates nothing, and its upper left holds the
- * projects.
+ * The panels the upper half of a WORKSPACE's left column is reserved for: what the Scenario API
+ * offers. A model to pick, its form to fill, and the assets the account holds. Nothing else may
+ * sit in that half of a workspace, and none of the three sits anywhere else — `tool.test.ts`
+ * enforces both directions, and both are scoped to `WORKSPACE_IDS`. The home is outside the rule
+ * and always was: it calls no model, and its upper left holds the projects.
  *
- * The upper half of every space's left column, so generating — the one thing every space does —
- * keeps the same place in each, under the same button that creates a document.
+ * The half used to be generation ALONE, and the shelf lay in the bottom band or the right column
+ * depending on the space. What that arrangement said was "the shelf belongs to the document in
+ * front of you", and it is the opposite of what the shelf is: nothing in it is in the project
+ * until it is pulled down. Read together, the three answer one question — what can I get from
+ * Scenario — and the half under them answers the other: what is already mine, on my disk.
  */
-export const GENERATION_TOOLS: readonly ToolId[] = ['models', 'generator']
+export const SCENARIO_TOOLS: readonly ToolId[] = ['models', 'generator', 'assets']
 
 /**
  * A zone is cut in two, and each half shows one tool at a time. The rail draws the same cut as
@@ -78,10 +84,9 @@ export const GENERATION_TOOLS: readonly ToolId[] = ['models', 'generator']
 export type ToolSlot = 'primary' | 'secondary'
 
 /**
- * Where a tool sits. A tool may declare **more than one**, for disjoint sets of surfaces:
- * the asset shelf belongs in the bottom strip nearly everywhere, and in the column beside the
- * montage in Video and Audio, where dragging a take onto a track is the gesture the space is
- * built around.
+ * Where a tool sits. A tool may declare **more than one**, for disjoint sets of surfaces: the
+ * Explorer sits in the same half of every space and of the home, but only the home's asks for a
+ * project first — a space is a project already being edited.
  *
  * Two invariants hold across the placements of one tool, and `tool.test.ts` enforces them:
  * their surfaces never overlap, and they share a slot — a tool that changed half as well as
@@ -94,6 +99,18 @@ export type ToolPlacement = {
   /** Surfaces the tool belongs to. Spelled out even when it is all of them: a panel that
    * never chose is a panel nobody decided about. */
   surfaces: readonly ToolSurface[]
+  /**
+   * What has to exist for this placement to be offered at all — absent rather than disabled,
+   * because neither is something the reader can act on from the rail.
+   *
+   * On the PLACEMENT rather than on the tool, and the Explorer is why: it needs a project on the
+   * home, where offering it would say « no project open » beside the very shelf that opens one,
+   * and needs nothing in a space, which is already a project being edited.
+   *
+   * The state itself is not answered here — `shared/` holds no runtime dependency — but which
+   * question to ask is a property of the panel, and it belongs beside the panel.
+   */
+  requires?: 'project' | 'model' | 'git'
 }
 
 export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
@@ -104,10 +121,14 @@ export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
  * across the whole width, and cutting it leaves two panels too narrow to be either.
  */
 export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
-  // The upper half of the left column is generation, and only generation, in every space: the
-  // same two panels in the same place, right under the button that makes a document.
+  // The upper half of the left column is the Scenario side, in every space: the same three
+  // panels in the same place, right under the button that makes a document.
   { id: 'models', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
-  { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
+  // Generating without a model is impossible, so it is absent rather than disabled.
+  { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS, requires: 'model' },
+  // Last of the three, so entering a space still lands on the models: a half with nothing chosen
+  // opens on the first tool it declares, and choosing a model is where every space starts.
+  { id: 'assets', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
 
   // The lower half: the documents to produce into. Its own half rather than a third turn in the
   // upper one, so the generator stays visible WHILE the Explorer is read.
@@ -116,52 +137,27 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The upper right, in rail order. Every tool here takes its turn with the others its space
   // declares — the order below is the order their icons stack.
   //
-  // The sky controls stay on the right rather than following the generator: they steer a
-  // document that is already there, which is what the panels around them do.
-  { id: 'skybox', zone: 'right', slot: 'primary', surfaces: ['skyboxes'] },
-  // How the viewport is being looked at, never what it holds. Beside the sky's own controls
-  // rather than under them: the centre carries the toolbar and the rulers, and a menu laid
-  // over the picture covers the one thing the space exists to show.
-  { id: 'view', zone: 'right', slot: 'primary', surfaces: ['skyboxes'] },
   { id: 'layers', zone: 'right', slot: 'primary', surfaces: ['image'] },
-  // The eight channels of a material, first in Textures for the same reason the sky controls come
-  // first in Skyboxes: it is what the space is for. In the column rather than the band, so a
-  // channel and the shelf a picture is dragged from stay on screen together.
-  { id: 'channels', zone: 'right', slot: 'primary', surfaces: ['textures'] },
-  // Saved ways of reading a material, beside the channels they read. In the upper half so the
-  // inspector keeps the lower one: a style is saved FROM the inspector, and a panel that took
-  // its place would hide the settings one is capturing at the moment of capturing them.
-  { id: 'styles', zone: 'right', slot: 'primary', surfaces: ['textures'] },
+  // Beside the stack rather than inside the inspector: what a caption is SET IN is read while it
+  // is being typed, and an inspector folded away takes the whole type panel with it.
+  { id: 'text', zone: 'right', slot: 'primary', surfaces: ['image'] },
   // The outliner of the scene, which the Explorer used to hold in this one workspace — it now
   // lists the documents of the project in every space, which is a different question.
   { id: 'scene', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'lights', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'meshes', zone: 'right', slot: 'primary', surfaces: ['3d'] },
-  // Where a take is dragged onto a track, the shelf and the montage have to be on screen
-  // together — and the montage owns the band, so the shelf takes the column. 3D joined them
-  // when its own timeline did: the rule is the band's, not the montage's.
-  //
-  // Declared AFTER the three 3D panels, and it matters: a half with nothing chosen shows the
-  // first tool it declares, so a shelf listed above them would open in front of the outliner
-  // every time the space is entered.
-  { id: 'assets', zone: 'right', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
+  // What a character can be made to play, on the right where the panels that steer a document
+  // already are. Its rows are dragged onto the band below, which is why the two face each other.
+  { id: 'animations', zone: 'right', slot: 'primary', surfaces: ['3d'] },
 
   // The other half of the right column, and always up: what is selected is read WHILE a
   // model is chosen and a prompt written, and in an editor the inspector is never the panel
   // you have to switch away to.
   { id: 'inspector', zone: 'right', slot: 'secondary', surfaces: WORKSPACE_IDS },
 
-  // The shelf belongs in the bottom band wherever the band is free: it is a shelf, read across
-  // the width, and the column is where the things that act on the document live.
-  {
-    id: 'assets',
-    zone: 'bottom',
-    slot: 'primary',
-    surfaces: ['image', 'textures', 'skyboxes'],
-  },
   // The band is the timeline's, across the whole width — that is how time is read, in Audio and
   // Video as in 3D, where an animation runs along the same line a montage does.
-  { id: 'timeline', zone: 'bottom', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
+  { id: 'timeline', zone: 'bottomRight', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
 
   // The home's own, and they serve it ALONE — a column beside an editor is for what acts on what
   // is in front of you, and each of these reads the studio rather than a document.
@@ -173,21 +169,93 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // panel that answered a question instead of offering a way in was a panel between the reader
   // and the projects.
   //
-  // What that leaves is one half per column, and the halves are the same ones every space uses:
-  // the left is what one opens FROM, the right is what one opens. No `secondary` on this surface
-  // at all, which is why `tool.test.ts` scopes the "both halves are used" checks to the
-  // workspaces — a rail with one row and no separator is the honest drawing of one half.
+  // The halves are the same ones every space uses: the left is what one opens FROM, the right is
+  // what one opens.
   //
   // The upper left, which the home alone leaves for something other than generation: it makes no
   // document, so the half goes to what one produces IN — the projects, the first thing anyone
-  // comes to this screen for, and now the only thing this column offers.
+  // comes to this screen for.
   { id: 'projects', zone: 'left', slot: 'primary', surfaces: [HOME_SURFACE] },
 
-  // The right column, in rail order: what the account holds outside this project, then the
-  // documents inside it. Two ways into something, which is what this screen is for.
+  // Under them, the project that is open, read as a folder. The same half it occupies in every
+  // space, which is not a preference: `tool.test.ts` holds a tool to ONE slot across all of its
+  // placements, so a panel that changed rows of the rail depending on where you came from is a
+  // panel this registry cannot express.
+  //
+  // It replaces the flat list of documents this screen carried until 17 August. That list showed
+  // the studio's own documents and nothing else; the folder holds them and everything the user
+  // put beside them, which is what an entry point should offer a way into.
+  //
+  // Offered only while a project IS open: the panel would otherwise stand on the home saying
+  // that nothing is open, beside the shelf whose whole purpose is to open one. Here and not on
+  // the workspace placement above, a space being a project already being edited.
+  {
+    id: 'explorer',
+    zone: 'left',
+    slot: 'secondary',
+    surfaces: [HOME_SURFACE],
+    requires: 'project',
+  },
+
+  // The right column: what the account holds outside this project — a way into something, which
+  // is what this screen is for.
   { id: 'library', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
-  { id: 'documents', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
+
+  // The project's own history, in the half the project's own FOLDER occupies — it answers about
+  // the same files, and the two are read one after the other rather than side by side. Declared
+  // last so the Explorer stays what an untouched half opens on, in every surface: the folder is
+  // what one reaches for, and the versions are what one goes to look at.
+  //
+  // Every surface, and one placement rather than two: a tool is held to one slot across all of
+  // its placements, and splitting these would only be a way of writing the same slot twice.
+  //
+  // Offered only while a project IS open, for the reason the Explorer gives above: what is
+  // versioned is a project folder, and there is nothing to say about one that is not open. In a
+  // space that is always true; on the home it is the whole point.
+  {
+    id: 'git',
+    zone: 'left',
+    slot: 'secondary',
+    surfaces: [...WORKSPACE_IDS, HOME_SURFACE],
+    requires: 'project',
+  },
+
+  // The versions themselves, in the band — where the timeline is, and for the same reason: both
+  // are read ACROSS, one commit or one frame at a time, and a branch graph in a 280 px column is
+  // a graph nobody can follow. The column beside it holds the files of whichever version is
+  // picked, which is why the band and not a second column.
+  //
+  // Declared after the shelf and the montage, so entering a space still opens on the panel that
+  // space is for. Someone who wants the history asks for it.
+  //
+  // The home as well, which reverses what this said until 17 August — and the argument it
+  // reversed is worth keeping, because it still holds for the eight panels the home lost on
+  // 13 August: a panel that answers a question about the studio stands between the reader and
+  // their projects. The history is not one of those. It answers a question about the project
+  // that is OPEN, and the Git panel already sits in the home's left column saying what has
+  // changed — a reader who can see that and not what came before it is reading half a sentence.
+  //
+  // `git` and not `project`: a folder git is not tracking has no versions to read, and this one
+  // takes the whole width of the band to say so. The Git panel carries that sentence, with the
+  // button that acts on it; here it was a strip of nothing across the foot of the window.
+  {
+    id: 'history',
+    zone: 'bottomRight',
+    slot: 'primary',
+    surfaces: [...WORKSPACE_IDS, HOME_SURFACE],
+    requires: 'git',
+  },
 ]
+
+/**
+ * The panels as a closed list, for the doors that publish one — the tool schema an MCP client
+ * reads, and the validator behind it.
+ *
+ * Derived from the placements rather than written out: a panel with nowhere to sit is one the
+ * rail never draws and `revealTool` refuses, so the placements ARE the list. A third copy of the
+ * sixteen names is what this avoids, and it had already drifted once.
+ */
+export const TOOL_IDS: readonly ToolId[] = [...new Set(TOOL_PLACEMENTS.map(({ id }) => id))]
 
 /**
  * Any placement of a tool, for the questions a surface does not change — its slot, and
@@ -222,7 +290,8 @@ export function workspacePlacementsOf(id: unknown): ToolPlacement[] {
 /**
  * Where a tool sits **on this surface**, or `null` if it does not serve it. This is what a
  * caller wants whenever it is about to open one: `placementOf` would answer with whichever
- * placement was declared first, which for the asset shelf is the wrong zone half the time.
+ * placement was declared first, which for the Explorer is the one that asks for no project —
+ * offered on the home, where there may not be one.
  */
 export function placementIn(id: unknown, surface: ToolSurface): ToolPlacement | null {
   return placementsOf(id).find(placement => serves(placement, surface)) ?? null
@@ -232,11 +301,19 @@ export function serves(placement: ToolPlacement, surface: ToolSurface): boolean 
   return placement.surfaces.includes(surface)
 }
 
-export const TOOL_ZONES: readonly ToolZone[] = ['left', 'right', 'top', 'bottom']
+export const TOOL_ZONES: readonly ToolZone[] = ['left', 'right', 'top', 'bottomLeft', 'bottomRight']
+
+/** The band's two halves, in the order they are drawn. */
+export const BOTTOM_ZONES: readonly ToolZone[] = ['bottomLeft', 'bottomRight']
+
+/** Whether the zone is one of the band's halves, which share a height and a resize handle. */
+export function isBottom(zone: ToolZone): boolean {
+  return zone === 'bottomLeft' || zone === 'bottomRight'
+}
 
 /** Horizontal zones: their size is set as a height, not a width. */
 export function isHorizontal(zone: ToolZone): boolean {
-  return zone === 'top' || zone === 'bottom'
+  return zone === 'top' || isBottom(zone)
 }
 
 /**

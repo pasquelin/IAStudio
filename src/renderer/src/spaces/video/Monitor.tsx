@@ -6,6 +6,7 @@ import {
   mdiPlay,
   mdiSkipPrevious,
   mdiTelevisionPlay,
+  mdiViewSplitVertical,
 } from '@mdi/js'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -13,28 +14,28 @@ import { EmptyState } from '@/design/EmptyState'
 import { MonitorFrame } from '@/design/MonitorFrame'
 import { TOOLBAR_LABEL } from '@/design/styles'
 import { Timecode } from '@/design/Timecode'
-import { Toolbar, type ToolbarItem } from '@/design/Toolbar'
-import { createStudioSink } from '@/engines/timeline/sink-port'
-import { createSoundPort } from '@/engines/timeline/sound-port'
+import { Toolbar } from '@/design/Toolbar/Toolbar'
+import type { ToolbarItem } from '@/design/Toolbar/tools'
+import { createSoundPort } from '@/engines/timeline/soundPort'
 import { transports } from '@/engines/timeline/playback'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
-import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
+import type { SequenceState, Us } from '@/engines/timeline/timelineState'
+import { useLatest } from '@/hooks/useLatest'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
-import { assetsById, useAssets } from '@/stores/assets'
 import { useBinding } from '@/stores/bindings'
 import { playbackOf, usePlayback } from '@/stores/playback'
-import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/scene-sources'
 import { useScenes } from '@/stores/scenes'
-import { useSceneViews } from '@/stores/scene-views'
+import { useSceneViews } from '@/stores/sceneViews'
+import { montageSink } from './montageSink'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
 const MAX_DECODERS = 2
 
 /**
  * Pictures answer to memory rather than to silicon. Four per monitor, and a sequence mounts two —
- * so eight 4K bitmaps at worst, against the 96 MB `image-cache` holds for the rest of the window.
+ * so eight 4K bitmaps at worst, against the 96 MB `imageCache` holds for the rest of the window.
  * A reasoned number, not a measured one: measuring it wants the application running.
  */
 const MAX_PICTURES = 4
@@ -58,6 +59,11 @@ export type MonitorProps = {
    * on the take being trimmed would be the source monitor copied onto the second screen.
    */
   program?: boolean
+  /**
+   * The one-clip half beside this monitor, when there is one to show and hide. Absent leaves the
+   * button out — the source monitor has no second half of its own to offer.
+   */
+  clipHalf?: { shown: boolean; onToggle: () => void }
 }
 
 /**
@@ -73,6 +79,7 @@ export function Monitor({
   placeholder,
   keyboard = false,
   program = false,
+  clipHalf,
 }: MonitorProps) {
   const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
@@ -84,7 +91,7 @@ export function Monitor({
     height: sequence.settings.height,
   })
   /** Where this monitor stands, for a redraw that no state change of its own asked for. */
-  const playhead = useRef(sequence.playhead)
+  const playhead = useLatest(sequence.playhead)
   // Published rather than held: the timeline's own bar draws the same transport, and neither of
   // the two trees contains the other — see `stores/playback`.
   const playing = usePlayback(state => playbackOf(state, owner))
@@ -98,15 +105,7 @@ export function Monitor({
     const created = new TimelineEngine({
       // The 3D is rendered at the SEQUENCE's frame size, never the monitor's: what a montage
       // composites has to be the same picture whichever window is looking at it.
-      openSink: createStudioSink({
-        sceneOf: montageSceneOf,
-        wantScene: loadSceneSource,
-        viewOf: montageViewOf,
-        // A Map, never an object: indexing it with brackets answers `undefined` for every asset
-        // there is, which sent every model down the media path to be written off as undecodable.
-        assetOf: assetId => assetsById(useAssets.getState()).get(assetId) ?? null,
-        size: () => frameSize.current,
-      }),
+      openSink: montageSink(() => frameSize.current),
       sound,
       // The output is the master clock whenever it runs: driving sound from the frame loop
       // drifts against it audibly in under a minute, and both media then tell a different time.
@@ -132,7 +131,6 @@ export function Monitor({
   // The engine holds decoders and textures, never the stack: every state change is pushed in.
   useEffect(() => {
     frameSize.current = { width: sequence.settings.width, height: sequence.settings.height }
-    playhead.current = sequence.playhead
     engine.current?.apply(sequence)
   }, [sequence])
 
@@ -149,7 +147,7 @@ export function Monitor({
     return () => {
       for (const stop of stops) stop()
     }
-  }, [])
+  }, [playhead])
 
   // Published by name so the timeline strip can drive it: the space bar is pressed on a tool
   // window, and neither tree contains the other.
@@ -221,6 +219,18 @@ export function Monitor({
           },
         ]
       : []),
+    ...(clipHalf
+      ? [
+          {
+            id: 'clipHalf',
+            labelKey: 'transport.showSource',
+            descriptionKey: 'transport.showSourceHint',
+            icon: mdiViewSplitVertical,
+            pressed: clipHalf.shown,
+            separatorBefore: true,
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -234,6 +244,7 @@ export function Monitor({
           onTool={id => {
             if (id === 'rewind') return rewind()
             if (id === 'mirror') return showReturn()
+            if (id === 'clipHalf') return clipHalf?.onToggle()
             return toggle()
           }}
           extras={

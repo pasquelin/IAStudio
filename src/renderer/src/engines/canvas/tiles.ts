@@ -1,5 +1,5 @@
 import { clamp } from '@shared/numeric'
-import type { Rect } from './canvas-state'
+import type { Rect } from './canvasState'
 import type { Size } from '../core/geometry'
 
 /**

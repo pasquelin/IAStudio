@@ -1,6 +1,10 @@
 import { bound } from '@shared/numeric'
+import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
-import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { PropertyLabel } from './PropertyLabel'
+import { ResetButton } from './ResetButton'
+import { Slider } from './Slider'
+import { FIELD_ROW, type GestureProps } from './styles'
 
 export type SliderFieldProps = GestureProps & {
   label: string
@@ -9,6 +13,10 @@ export type SliderFieldProps = GestureProps & {
   max: number
   step: number
   onChange: (value: number) => void
+  /** The handle the MCP steers this field by. Never a translated word. */
+  scId?: string
+  /** Puts the value back where it started. Absent while it already stands there. */
+  onReset?: () => void
 }
 
 /**
@@ -22,32 +30,32 @@ export function SliderField({
   max,
   step,
   onChange,
+  scId,
+  onReset,
   onGestureStart,
   onGestureEnd,
 }: SliderFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      <span title={label} className={FIELD_LABEL}>
-        {label}
-      </span>
+      <PropertyLabel label={label} />
 
-      <input
-        type="range"
+      <Slider
         value={value}
         min={min}
         max={max}
         step={step}
-        onChange={event => onChange(bound(Number(event.target.value), { min, max, step }))}
-        // A slider drag is a pointer gesture from the first frame; keyboard steps report the
-        // same way, and a focus that changes nothing costs an empty gesture, not an entry.
-        onPointerDown={() => onGestureStart?.()}
-        onPointerUp={() => onGestureEnd?.()}
-        onFocus={() => onGestureStart?.()}
-        onBlur={() => onGestureEnd?.()}
-        className="accent-accent h-(--sc-control) min-w-0 flex-1"
+        onChange={raw => onChange(bound(raw, { min, max, step }))}
+        scId={scId}
+        onGestureStart={onGestureStart}
+        onGestureEnd={onGestureEnd}
+        className="flex-1"
       />
 
       <Readout values={[value]} />
+
+      <FieldActions>
+        <ResetButton onReset={onReset} />
+      </FieldActions>
     </label>
   )
 }

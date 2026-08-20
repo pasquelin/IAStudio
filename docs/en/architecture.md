@@ -17,12 +17,13 @@ up. Looking for how to *use* it? See [user-guide.md](user-guide.md).
 6. [Engines](#engines)
 7. [Generation, end to end](#generation-end-to-end)
 8. [Projects and the catalogue](#projects-and-the-catalogue)
-9. [The design system](#the-design-system)
-10. [Internationalisation](#internationalisation)
-11. [Configuration](#configuration)
-12. [Testing](#testing)
-13. [Adding things](#adding-things)
-14. [Shipping a version](#shipping-a-version)
+9. [Version control](#version-control)
+10. [The design system](#the-design-system)
+11. [Internationalisation](#internationalisation)
+12. [Configuration](#configuration)
+13. [Testing](#testing)
+14. [Adding things](#adding-things)
+15. [Shipping a version](#shipping-a-version)
 
 ---
 
@@ -118,7 +119,7 @@ Every long task is **cancellable**, **reports progress**, and runs in a pool bou
 `better-sqlite3` is synchronous: a heavy query on the main process blocks every window, so
 non-trivial catalogue queries go through `worker_threads`.
 
-Three threads exist for exactly that reason. `main/project/catalog-worker.ts` owns the database
+Three threads exist for exactly that reason. `main/project/catalogWorker.ts` owns the database
 and answers a message loop, so a search across thousands of assets never freezes a window.
 `renderer/src/engines/audio/audio.worker.ts` runs the sound chain off the window's thread, with
 sample buffers **transferred** rather than copied. And `renderer/src/engines/scene/bvh.worker.ts`
@@ -134,9 +135,9 @@ refused send was an assurance no test could reach — emptied, the gate stayed g
 nothing can read is a register nothing measures**, which is the remedy `framingPlacement` already
 got when it left `frameSelection`.
 
-**And two processes, for what must not share a heap.** `main/media/peaks-worker.ts` reduces a
+**And two processes, for what must not share a heap.** `main/media/peaksWorker.ts` reduces a
 waveform in a `utilityProcess`: an hour of PCM measured 129 ms on the main thread, and every
-window of the studio waited it out. `main/dictation/stt-worker.ts` holds Parakeet — six
+window of the studio waited it out. `main/dictation/sttWorker.ts` holds Parakeet — six
 hundred million parameters, 640 MB of weights — in a `utilityProcess` of its own. A thread would
 not have done: it shares its process's heap and lifetime, so the 700 MB would stay in the main
 process's footprint and a crash in the native addon would take the studio with it. Everything
@@ -196,19 +197,19 @@ src/main/
 ├── scenario/
 │   ├── client.ts            the @scenario-labs/sdk client, built from stored credentials
 │   ├── credentials.ts       reading, validating, and reporting auth state
-│   ├── model-registry.ts    GET /models/{id} → FieldDescriptor[]
-│   ├── model-catalog.ts     paginated model listing, cached
-│   ├── job-manager.ts       the queue, the concurrency, the polling
+│   ├── modelRegistry.ts     GET /models/{id} → FieldDescriptor[]
+│   ├── modelCatalog.ts      paginated model listing, cached
+│   ├── jobManager.ts        the queue, the concurrency, the polling
 │   ├── runner.ts            what actually calls generate
 │   ├── schema.ts            schema translation and model family inference
 │   ├── retry.ts             exponential backoff, taken out of the JobManager and shared
-│   ├── asset-catalog.ts     the remote library, read and paginated
-│   ├── asset-normalizer.ts  an API asset brought back to the studio's shape
-│   ├── owner-scope.ts       which project the active key opens onto
-│   ├── filter-expression.ts the search translated for the API
+│   ├── assetCatalog.ts      the remote library, read and paginated
+│   ├── assetNormalizer.ts   an API asset brought back to the studio's shape
+│   ├── ownerScope.ts        which project the active key opens onto
+│   ├── filterExpression.ts  the search translated for the API
 │   ├── limits.ts            the batch sizes the API imposes
-│   ├── prompt-assist.ts     variants, translation, style reading
-│   ├── assist-queue.ts      the bounded queue of background assistance
+│   ├── promptAssist.ts      variants, translation, style reading
+│   ├── assistQueue.ts       the bounded queue of background assistance
 │   ├── uploader.ts          sending a file up to the library
 │   ├── cost.ts              what a generation would cost, without running it
 │   ├── usage.ts             the units spent, and the price list
@@ -216,18 +217,18 @@ src/main/
 ├── project/
 │   ├── store.ts             create and open a project folder, read/write the manifest
 │   ├── catalog.ts           the SQLite asset index
-│   ├── catalog-thread.ts    the worker carrying it, and its protocol
-│   ├── activity-log.ts      what the studio did and failed to do
+│   ├── catalogThread.ts     the worker carrying it, and its protocol
+│   ├── activityLog.ts       what the studio did and failed to do
 │   ├── documents.ts         the atomic write of a document
 │   ├── sqlite.ts            the SqliteDriver port
-│   ├── sqlite-native.ts     better-sqlite3 — production
-│   └── sqlite-memory.ts     node:sqlite — tests
+│   ├── sqliteNative.ts      better-sqlite3 — production
+│   └── sqliteMemory.ts      node:sqlite — tests
 ├── assets/
-│   ├── local-backend.ts     the project's assets, on disk
-│   ├── cloud-backend.ts     the same ones, on the library's side
-│   ├── sync-plan.ts         what two sides would have to do about each other
+│   ├── localBackend.ts      the project's assets, on disk
+│   ├── cloudBackend.ts      the same ones, on the library's side
+│   ├── syncPlan.ts          what two sides would have to do about each other
 │   ├── collector.ts         what a generation drops into the project
-│   ├── auto-caption.ts      naming a picture from what the API sees in it
+│   ├── autoCaption.ts       naming a picture from what the API sees in it
 │   └── protocol.ts          the scenario:// protocol
 ├── dictation/               speech recognition: permissions, model, segmenting, handlers
 ├── assistant/               the assistant's thinking, behind a port, and how its reply is read
@@ -269,8 +270,8 @@ is assumed. Bypassing the queue with a direct SDK call is how you get a burst of
 ### Two asset backends, one planner
 
 The project and the account's library are two stores, served by two backends of the same shape:
-`local-backend.ts` for the folder on disk, `cloud-backend.ts` for the API. What decides what
-should move between them lives elsewhere, and is **pure**: `sync-plan.ts`.
+`localBackend.ts` for the folder on disk, `cloudBackend.ts` for the API. What decides what
+should move between them lives elsewhere, and is **pure**: `syncPlan.ts`.
 
 That separation carries two promises:
 
@@ -291,7 +292,7 @@ mean rewriting every row on every key change — and showing a stale answer in b
 
 ### The activity journal
 
-`project/activity-log.ts` keeps account of what the studio did and failed to do. Three decisions
+`project/activityLog.ts` keeps account of what the studio did and failed to do. Three decisions
 are frozen into it, each answering a precise defect:
 
 - **`record` returns immediately.** It is called from failure paths: a journal that made its
@@ -329,11 +330,26 @@ load.
 ### One action registry, two readers
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) declares what the studio can be asked to do —
-eleven actions, their fields, and **what each one commits** (`none`, `asset`, `credits`). It has two
-readers, and **neither of them decides**:
+one family per `*Actions.ts` module, their fields, **what each one commits** (`none`, `files`,
+`asset`, `remote`, `credits`) and **which door offers it** (`reach`). **The count is not written
+here**: it rises with every batch, and `exhaustive.test.ts` holds it to the `ActionName` union. It
+has two readers, and **neither of them decides**:
 
-- **the assistant**, inside the window, which lists it to its model as a vocabulary;
-- **`main/mcp/tools.ts`**, which republishes it as MCP tools for a client outside.
+- **the assistant**, inside the window, which lists the `both` share to its model — eleven actions;
+- **`main/mcp/tools.ts`**, which republishes **all** of it as MCP tools for a client outside.
+
+**The asymmetry is forced, not tasteful.** The assistant's catalogue goes out in a prompt capped by
+`INSTRUCTION_MAX` at ten thousand characters, of which four thousand are left for the person's own
+sentence — `brain.test.ts` holds that floor. Publishing the families a program drives (files, layers,
+scene, git) there would eat that margin, and the sentence is what the truncation would take off.
+`tools/list` has no cap.
+
+**`validatesInput` (`assistantAction.ts`) is the whole of the input validation**, derived from the
+fields and sitting on `runConfirmedAction`. Nothing upstream does it: the IPC boundary checks the
+envelope, the reply parser checks the NAME, and the MCP server passes `params.arguments` through
+untouched — its `additionalProperties: false` is a promise to the client, not an enforcement. It
+refuses **before** the confirmation question, or a bad input would have the person asked to approve
+a spend that was never going to happen.
 
 The name changes dialect on the way — `command.run` becomes `command_run`, because the tool-name
 grammar takes no dot — and `actionOfTool` walks it back. **One substitution, never a second column
@@ -346,9 +362,17 @@ composes the round trip the IPC does not have in that direction: `invoke` goes u
 back, a `callId` sews the halves together, and **every way of failing answers**, because at the
 other end there is a client that would otherwise sit there.
 
-`commitmentOfCommand` is **the one level derived rather than declared**, and the one guarded command
-by command: five canvas commands flatten and upload the picture, which creates a permanent asset. A
-miss there would go through with nothing downstream to catch it.
+**The declared level is only a floor.** `raises` lifts it from the call's own input —
+`commitmentOfCommand` for `command.run`, an `amend` for `git.commit` — and `asksItself` marks the
+action whose handler raises its OWN question, which is why its level stays at the floor.
+`commitmentOfCommand` is the one guarded command by command: five canvas commands flatten and
+upload the picture, which creates a permanent asset. A miss there would go through with nothing
+downstream to catch it.
+
+**`files` is deliberately narrow** — destroying, moving, renaming, rewriting the working tree,
+closing a tab that holds unsaved work — and never "anything that writes": a new folder and a
+duplicate take nothing away from anyone, and a studio that asked about those would teach its user to
+click Allow without reading.
 
 ### The MCP door, and its four locks
 
@@ -389,7 +413,7 @@ src/renderer/src/
 │   ├── textures/   a material's channels, and their tiled preview
 │   └── skyboxes/   the immersive sky and its three flat projections
 ├── panels/       the twenty-seven dockable tools
-├── home/         the home screen and its two bands — a page, not a layout
+├── home/         the home screen and its three bands — a page, not a layout
 ├── settings/     the settings window, loaded on demand
 ├── usage/        the consumption window, likewise
 ├── licences/     the licences window, likewise
@@ -397,7 +421,7 @@ src/renderer/src/
 ├── stores/       zustand: documents, tools, layouts, models, assets, jobs, settings, keymap
 ├── hooks/        shortcuts, native menu, density, window state, debounce…
 ├── helpers/      pure functions, all unit-tested
-├── services/     the bridge accessor and failure-message mapping
+├── services/     the bridge accessor and failure message mapping
 ├── i18n/         the window-side i18next setup
 ├── types/        `window.studio`, declared global — the renderer's only types file
 ├── main.tsx      the entry — everything it reaches statically is in the first screen
@@ -434,7 +458,7 @@ undoes the gain while breaking nothing visible — the worst kind of regression,
 stopwatch sees.
 
 **The panels went out in their turn**, and that is what shrank the neighbours list.
-`app/tool-components.ts` used to import them all outright; it now declares, per panel, **the
+`app/toolComponents.ts` used to import them all outright; it now declares, per panel, **the
 module to load and what its header does** — that second half is needed, because the title row lays
 itself out on the first paint and a separator arriving a frame later would shift a row already on
 screen. Measured at the same commit on both sides, preloads counted, no sourcemaps:
@@ -443,7 +467,7 @@ screen. Measured at the same commit on both sides, preloads counted, no sourcema
 > **A glob on the folder would remove the copy of each panel's name, and it was written then taken
 > back out.** `eager-graph.test.ts` walks **static** imports: a glob is invisible to it, and the
 > very guard that watches this property would have stayed green whatever the glob did to the entry
-> chunk. The copy stays, and `tool-components.test.ts` holds it — a `layers` naming the meshes
+> chunk. The copy stays, and `toolComponents.test.ts` holds it — a `layers` naming the meshes
 > module would swap the two in silence.
 
 **Two neighbours remain**, and neither is an editor: they are helpers something on the first
@@ -472,7 +496,7 @@ Their callbacks are kept stable for that memo to bite.
 `sequence.mirror` opens a second window mirroring the Program monitor, for a second screen. **The
 IPC bridge carries one thing only: opening that window** (`main/window/mirror.ts`). Everything else
 — the edit, the playhead, playback — travels over a `BroadcastChannel`
-(`spaces/video/mirror-channel.ts`).
+(`spaces/video/mirrorChannel.ts`).
 
 **This is no way around invariant 2**, which guards the boundary between PROCESSES. Both windows
 load the same renderer bundle: they already share `SequenceState` as a type, and routing it through
@@ -509,9 +533,11 @@ That is why the tool registry lives in `shared/` and not in the renderer: the ma
 `{ id, zone, slot, workspaces }` in order to offer only what the section can open, and duplicating
 it would degrade `ToolId` to `string`.
 
-A tool may declare **more than one placement**, for disjoint sets of workspaces — the shelf sits in
-the bottom strip nearly everywhere, and in the right column in Video, Audio and 3D, where a
-timeline owns the strip. `tool.test.ts` locks the two invariants that keep this legible: the workspaces of two
+A tool may declare **more than one placement**, for disjoint sets of workspaces — the Explorer
+holds the same half in every workspace and on the home, but only the home's asks for an open
+project. **No tool declares two workspace halves since 17 August**, the shelf having given up its
+second one when it moved into the left column.
+`tool.test.ts` locks the two invariants that keep this legible: the workspaces of two
 placements never overlap, and the placements of one tool share a slot — a tool that changed half as
 well as zone would land in a different row of the rail depending on where you came from.
 
@@ -520,7 +546,7 @@ well as zone would land in a different row of the rail depending on where you ca
 
 **Two rules escape the registry**, and only two, because they depend on state or on the workspace,
 where `shared/` holds no runtime dependency. Hence a layer above it, in
-`helpers/tool-registry.ts`, rather than inside:
+`helpers/toolRegistry.ts`, rather than inside:
 
 - the generator is offered only where a model is chosen or preferred;
 - a half nobody has chosen for shows the **first panel the workspace declares there**. It holds
@@ -665,7 +691,7 @@ form that silently loses a field is worse than an ugly one.
 generations get, not a fixed rate. At a fixed rate, four concurrent generations ask for 120
 requests a minute against the hundred the API grants — the limiter then holds every poll, the SDK
 retries, and **a generation that is running and being paid for is reported as a rate-limit failure
-fifteen seconds in**. The budget itself is *derived* from the constants of `rate-limiter.ts` rather
+fifteen seconds in**. The budget itself is *derived* from the constants of `rateLimiter.ts` rather
 than written out, precisely so it cannot go quietly false the day one of them is tuned.
 
 **Step 5b reads a price out of two shapes of answer, because the reference and the server do not
@@ -690,7 +716,7 @@ ceiling, only a cliff — type slower than its delay and every keystroke becomes
 same estimate is never bought twice, and it does not retry.
 
 **`DynamicForm` is lazy-loaded**, and the three functions that call zod live in
-`helpers/dynamic-form-schema`, apart from `helpers/dynamic-form`. The two halves go together:
+`helpers/dynamicFormSchema`, apart from `helpers/dynamicForm`. The two halves go together:
 without the second, `referencePictures` kept zod in the eager graph. zod, `react-hook-form` and
 `@hookform/resolvers` are at **zero** in the initial chunk, which drops from 2,030.50 to
 1,810.88 kB — measured by VLQ-decoding the sourcemaps, and locked by tests that read the source.
@@ -707,29 +733,142 @@ The **catalogue** is `.index/catalog.db`, a SQLite index of every asset: id, nam
 location, tags, timestamps, and the path when the asset is local. It exists so the asset shelf
 can search thousands of items without touching the filesystem, and so a project remains portable.
 
-**It does not rebuild.** No rescan of `assets/` refills the catalogue: it fills up as you generate
-and import, never after the fact. Deleting it loses the names, the tags, the dimensions, the
-generation recipe, `derivedFrom`, the `sourcePath` of linked media and the activity journal — the
-files remain, and nothing says what they are any more.
+**It does not rebuild.** Nothing guesses again what a file IS: the catalogue fills up as you
+generate and import. Deleting it loses the names, the tags, the dimensions, the generation recipe,
+`derivedFrom`, the `sourcePath` of linked media and the activity journal — the files remain, and
+nothing says what they are any more. `.scenario/items.json` is what is left to read that day: a
+backup keyed by content fingerprint, written after every reconciliation pass that changed
+something, which the studio never reads of its own accord.
+
+**A pass puts it back in agreement with the disk**, which is not rebuilding it. `catalogRescan.ts`
+runs in the catalogue's thread when a project opens and when a window comes back to the front
+(5 s floor, one pass at a time): it finds a file moved outside the studio by its content
+fingerprint and refiles its row (`repath`), and it DATES an absence — `missing_at` — without ever
+dropping a row. Two passes give the same state. On an ambiguous fingerprint it does nothing:
+rewriting the path of a row nobody asked to move is the one failure a reconciliation must not
+have. `search` and `countByType` hide what is dated, so the trash — which dates rather than
+deletes — gives a whole row back if the file comes out of it.
 
 Assets are either `local` (a file in the project) or `cloud` (still only on Scenario). A local
 image is served to the renderer as `scenario://<id>`.
 
-**Documents** are JSON files under `documents/`, one per document, **named after the document** —
-`Niveau.scene`, `Bande annonce.seq`. Its id lives in the envelope (format version 3) rather than
+**Documents** are files filed wherever the user wants them — `documents/` is only where a
+first save lands, and `documents.list()` walks the whole project to find them. One per document,
+**named after the document** —
+`Niveau.gltf`, `Bande annonce.otio`. Its id lives in the envelope (format version 3) rather than
 in the file name: that is what lets a document be renamed, open or not, without becoming a
 different document — the layout, the recent list and every tab are keyed by that id. A file
-written before that version wears its id as its name (`<id>.scene`) and is read exactly as
+written before that version wears its id as its name (`<id>.gltf`) and is read exactly as
 before; nothing is rewritten on opening, the stamp comes with the next save. The folder has the last word: a file whose header claims a kind its
 extension denies is refused rather than opened in the wrong editor. Writing goes through a
 staging file and a `rename`, which is atomic within one folder, so a crash mid-write can never
 leave a truncated document where the work was.
 
-The body belongs to the space that wrote it: the main process never reads into it, it stamps an
-envelope and hands it back untouched. A space that learns to save therefore needs no channel of
-its own. **All six kinds can write themselves today** — image, scene, sequence, audio, skybox and
-texture, declared in one place, `IO_BY_KIND` in `app/document-io.ts`. A kind absent from
-that table has a Save that does nothing, rather than one that writes an empty body.
+The body belongs to the space that wrote it, and a table by extension
+(`main/project/documentBody.ts`) says how it is spelt. **Four open formats, and the studio's
+envelope for everything else.**
+
+One mechanism holds all four: the **window** produces the standard structure, since it alone holds
+the catalogue, the scene and the GPU; a document's `content` IS that structure; and the **main
+process writes the syntax and reads it back**, never parsing the studio's state. What the standard
+does not carry travels where the standard reserves room for third parties, and the state goes
+there **verbatim** — reading back is then one pass, and no rule has to be kept in step on two
+sides. A file of ours reads from there; a file from elsewhere is rebuilt from the standard part
+alone, and what the standard cannot say is simply absent.
+
+For the **scene** and the **sky** it is glTF 2.0, under the same extension — the file's own
+metadata says which of the two kinds it holds, never the extension. The header travels on `asset`,
+the one member the format requires and that nothing can push further down: behind a large scene's
+list of root nodes it fell outside the bounded head read, and the document vanished from the
+listing.
+
+For the **material** it is MaterialX 1.39: a `standard_surface` fed by `tiledimage` nodes, with
+the studio's state in a custom attribute the specification requires a reader to preserve. Unlike
+glTF, this format has a real **head** — the root is the first line — so listing never opens a
+material whole.
+
+For the **montage** the file IS the open format: there is no envelope to put a header in, so the
+main process parses the OpenTimelineIO on the way in and on the way out, and refuses to write a
+body that is not a montage.
+
+For the **image** the file is an OpenRaster container — a ZIP, no longer a folder. The main
+process packs and unpacks it: `mimetype` first and stored, `stack.xml`, the `mergedimage.png` the
+specification requires, one PNG per surface under `data/`, and the studio's own state under
+`scenario/`. The window produces the stack (a document's `content` IS that stack, as JSON) and
+the surfaces beside it, as bytes; the main process writes the syntax. **A listing reads only the
+first kilobytes of a container** — the studio envelope is written second and uncompressed, or
+listing a project would open a hundred megabytes per document.
+
+**The studio's envelope is no longer any kind's format**: it stays the fallback for an extension
+the table does not name, and the **migration reprieve** for documents already on disk — a scene or
+a material written before this switch opens unchanged, and it is the file itself, not its
+extension, that decides which spelling it belongs to.
+
+**A file that comes back enriched refuses to save.** A scene reopened in Blender returns holding
+`meshes` and `accessors`; its `extras` are still ours, so it lists and it opens — and a write
+recomposes the WHOLE document from the state. Since a glTF is linked by index, carrying those
+parts across half way does not produce a half-right file but a broken one: the studio refuses and
+leaves the file as it is. The same refusal covers a sky holding a whole scene and a material
+holding more than one (`incomplete` in `IO_BY_KIND`).
+
+Either way a space that learns to save needs no channel of its own. **All six kinds can write
+themselves today** — image, scene, sequence, audio, skybox and texture, declared in one place,
+`IO_BY_KIND` in `app/documentIo.ts`. A kind absent from that table has a Save that does nothing,
+rather than one that writes an empty body.
+
+**No kind is written as a FOLDER any more.** The image was, `Planche.ora/` holding a manifest and
+one PNG per layer; a folder wearing a document's extension today is the user's own material, and
+the walk goes into it.
+
+**Pixels no longer cross the boundary as base64.** A 4K stack of ten layers was hundreds of
+megabytes of text, held at the same instant by the window that encodes and the process that
+decodes. `LayerPixels`, `OraSurface` and a document's parts carry `Uint8Array`; the engine
+extracts through a canvas and a blob, and restores through an object URL it revokes — a layer's
+data URL otherwise sat in the loader's cache for the whole session, that cache being keyed on the
+entire string.
+
+---
+
+## Version control
+
+The Git panel works on the open project's folder. Everything below lives in the main process
+(`main/git/`); the renderer only asks and displays.
+
+**git is a program you spawn, not a library you call.** The consequence fits in one question: the
+machine may not have it. macOS answers by offering to install the command line tools, a bare
+Windows install has no git whatsoever. So the question is asked when the project opens, never at
+the first commit — a panel that discovered it then would have let somebody prepare a commit that
+cannot happen. What the panel looks at is **a single union** of five states (`GitRepository`, in
+`shared/domain/git.ts`): no project · no binary · repository not initialised · ready · an error
+carrying git's own line, credentials stripped. A status plus three booleans would allow "no
+project open AND files changed", a shape somebody eventually renders.
+
+**Whatever CONFIGURES git is dropped from the environment before every command.** Everything
+starting with `GIT_`, plus the three settings git reads without a prefix — `PAGER`, `EDITOR`,
+`SSH_ASKPASS`. The rest is kept, `HTTPS_PROXY` and `SSH_AUTH_SOCK` first among them. The reason is
+not theoretical: an inherited `GIT_DIR` points somewhere else, an inherited `GIT_EDITOR` opens a
+window nobody can see, and simple-git refuses most of them outright — the command then fails
+before it even spawns. **Put plainly, from a user's side**: exporting these in your shell changes
+nothing in the studio, and that is deliberate.
+
+**No prompt, ever.** `GIT_TERMINAL_PROMPT=0`, an empty `GIT_ASKPASS`, and `BatchMode=yes` for ssh.
+A studio window has no terminal to answer in: git left free to ask would wait for ever, on a
+command the user has no way to cancel. **The cost is worth stating**: a key protected by a
+passphrase, with no agent loaded, fails rather than asking for it.
+
+**One git at a time, per project.** Git takes `.git/index.lock` for the duration of any command
+that writes, and a second one arriving meanwhile **dies rather than waits** — two windows
+refreshing together is enough to produce it. simple-git's own scheduler queues in order, which is
+why the studio carries no second queue of its own.
+
+**A token belongs to a HOST, never to a project or a remote.** One personal token opens every
+repository somebody has on GitHub; asking for it per project would be asking for the same string
+over and over. A company server keeps its own. The renderer can ask **whether** a host has one,
+and can set one; it can never read one back. That is invariant 1 word for word, and it is the
+shape the API key already has.
+
+**Everything coming from the renderer is validated before it reaches git** — paths, refs, messages,
+hashes, remote URLs (`main/git/validation.ts`).
 
 ---
 
@@ -839,10 +978,12 @@ everything above it. It is a domain decision, not a style one.
 
 ## Internationalisation
 
-One directory per language in `src/shared/i18n/` — `fr/` and `en/`, twelve JSON sections each
-(`inspector`, `commands`, `settings`, `usage`, `activity`, `shell`, `image`, `texture`, `scene`,
-`assets`, `models`, `common`), merged back into a single object by the directory's index. Both
-languages are kept at strict parity. They live in `shared/` because the native menu is built by
+One directory per language in `src/shared/i18n/` — `fr/` and `en/`, one JSON section per
+functional surface, merged back into a single object by the directory's index. **Their number is
+written nowhere, and this paragraph does not write it either**: `ls src/shared/i18n/fr/` is the
+authority, and `main/i18n-sections.test.ts` reads the directory instead of holding a list. A count
+written here goes stale at the next surface — it claimed twelve while the directory held fifteen.
+Both languages are kept at strict parity. They live in `shared/` because the native menu is built by
 the main process and the UI by the renderer, and the two must say the same thing.
 
 The split is a **storage** choice, not a contract one: the namespace stays single, and
@@ -852,10 +993,10 @@ The split is a **storage** choice, not a contract one: the namespace stays singl
 `./fr` as the directory, so **the typecheck stays green**; Vite reads the JSON, the named export
 is gone, and `TRANSLATIONS.fr` is undefined at run time — the whole language. So it is not the
 compiler that guards this case but that suite, and it alone. It also holds the line between the
-two kinds of import: in `en/index.ts`, twelve **type** imports point at `../fr/` — that is how an
-English section's expected shape is derived from its twin rather than copied out — and twelve
-**value** imports point at `./`. A value import straying into `fr/` compiles green and renders a
-whole section in French.
+two kinds of import: in `en/index.ts`, one **type** import per section points at `../fr/` — that is
+how an English section's expected shape is derived from its twin rather than copied out — and as
+many **value** imports point at `./`. A value import straying into `fr/` compiles green and
+renders a whole section in French.
 
 ### A branch older than the split conflicts: what to do
 
@@ -874,8 +1015,8 @@ The right move, in this order:
 1. list the keys the branch was adding, before resolving anything —
    `git diff <base>...<branch> -- src/shared/i18n/fr.json`;
 2. write them into the section of their surface, on both sides (`fr/<section>.json` and
-   `en/<section>.json`); a new root belonging to none of the twelve calls for a decision between
-   an existing section and a thirteenth file, which has to be declared in **both** `index.ts`;
+   `en/<section>.json`); a new root belonging to no section calls for a decision between an
+   existing section and one more file, which has to be declared in **both** `index.ts`;
 3. `git rm` the two flat files only then;
 4. replay `main/i18n-sections.test.ts` and the typecheck, then check the key count grew by the
    number listed in step 1.
@@ -1016,7 +1157,7 @@ rendered verbatim is a way to the screen**, and the rule that follows holds for 
 script carries the fact (`unmodified: true`), the render carries the sentence, and the sentence
 comes from a bundle.
 
-**Fixtures are out of EVERY sweep — `*-fixtures.ts` and `*-fixtures.tsx`, in both guards.** A fixture builds the data a suite asserts on and reaches no screen: measured, none of the 23 fixture files in `src/` is imported by production code. The label it carries is the one the API returns, not a word this studio writes. It is a **decision**, taken on 11/08: forcing a fixture through a bundle key makes nothing truer and reads worse.
+**Fixtures are out of EVERY sweep — `*-fixtures.ts` and `*-fixtures.tsx`, in both guards.** A fixture builds the data a suite asserts on and reaches no screen: measured, no fixture file in `src/` is imported by production code. The label it carries is the one the API returns, not a word this studio writes. It is a **decision**, taken on 11/08: forcing a fixture through a bundle key makes nothing truer and reads worse.
 
 **What the exclusion would cost if it drifted, and the guard that stops it**: a file named `*-fixtures.ts` imported by a panel would be invisible to both guards — two blind spots on one file, neither of which would say a word. `main/import-cycles.test.ts`, § *what a shipped file may reach*, refuses that import. It judges the RESOLVED path, so an alias, a `.js` spelt for a `.ts` and Vite's `?worker` suffix all land in the same place. **What it cannot see**, and says so: a worker named through `new URL(…, import.meta.url)` is a URL, not an import.
 
@@ -1130,11 +1271,14 @@ opaquely.
 
 ## Testing
 
-**Over 8,100 tests across more than 570 files**, run by Vitest — the exact figure moves with every
-merge, and `pnpm test` states it. Unit tests are colocated (`*.test.ts` next to the code) and
+**Over 9,000 tests across nearly 700 files**, run by Vitest — the exact figure moves with every
+merge, and `pnpm test` states it (9,315 across 686 on 2026-08-17). Unit tests are colocated (`*.test.ts` next to the code) and
 written in the same movement as the code, never after.
 
-`pnpm validate` — typecheck, lint, format check, tests — must be green before any commit.
+`pnpm validate` must be green before any commit. It chains the links `package.json` declares, and
+that is where they are read: spelling them out here would make a second list, and a second list
+drifts the day a link is added — which is what happened to the CI job, now calling the command
+itself.
 
 **No coverage measurement**, removed on 2026-08-13: it was paid on every loop for a benefit that
 did not repay the time it took from features ([ADR-14](../ci/adr/ADR-14-portee-de-la-validation-continue.md)).
@@ -1153,7 +1297,7 @@ and the panels through Testing Library.
 | A workspace | `WORKSPACE_IDS`, then its icon and family in `helpers/workspaces.ts` — the compiler asks for both |
 | An IPC channel | `shared/ipc.ts` first, then the handler; the signature is derived, so start from the contract |
 | A mesh or light kind | `mesh-primitives.ts` / `light-types.ts` — the toolbar, the panels and the native menu all read those tables |
-| An image tool | `spaces/image/image-tools.ts`, in the right group |
+| An image tool | `spaces/image/imageTools.ts`, in the right group |
 | A shared visual shape | `design/`, one component per file, plus its test |
 
 Two rules that save the most time: check that a helper does not already exist before writing one,
