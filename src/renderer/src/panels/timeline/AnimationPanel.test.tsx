@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { meshNode, modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
@@ -10,6 +10,7 @@ import { useSceneViews } from '@/stores/sceneViews'
 import { useAnimationViews } from '@/stores/animationView'
 import { useModelClips } from '@/stores/modelClips'
 import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
+import { SCENE_NODE_DRAG_TYPE } from '@/panels/scene/dragged'
 import { AnimationPanel } from './AnimationPanel'
 
 const DOCUMENT = 'doc-1'
@@ -26,6 +27,61 @@ function withSelectedCube(): void {
     animation: { ...EMPTY_SCENE.animation, sheet: ['cube-1'] },
   })
 }
+
+/*
+ * Dropping an object of the outliner onto the band. Both halves were found by hand, at the screen,
+ * and neither showed as an error of any kind — a browser refuses a drop in silence.
+ *
+ * The PANEL takes the drop and not the canvas, because an empty band draws no canvas at all: the
+ * empty state stands there instead, and that is precisely when a first object is dropped.
+ *
+ * And the effect has to be `move`: the outliner arms its rows with `effectAllowed = 'move'`, and
+ * a drop asking for `copy` is refused by the platform with nothing happening.
+ */
+describe('an object dropped onto the band', () => {
+  const transfer = (type: string, payload: unknown) => ({
+    types: [type],
+    getData: (asked: string) => (asked === type ? JSON.stringify(payload) : ''),
+    dropEffect: 'none',
+  })
+
+  beforeEach(() => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [meshNode('cube-1'), meshNode('sphere-1')],
+      selectedIds: [],
+      animation: { ...EMPTY_SCENE.animation, sheet: [] },
+    })
+    useAnimationViews.setState({ views: {} })
+  })
+
+  it('lands on an EMPTY band, where no canvas is drawn to receive it', () => {
+    const { container } = render(<AnimationPanel documentId={DOCUMENT} />)
+    const panel = container.firstElementChild
+    if (!panel) throw new Error('no panel')
+
+    fireEvent.drop(panel, {
+      dataTransfer: transfer(SCENE_NODE_DRAG_TYPE, { nodeIds: ['sphere-1'] }),
+    })
+
+    expect(timelineOf().sheet).toEqual(['sphere-1'])
+    expect(screen.getByTestId('anim-subject-sphere-1')).toBeInTheDocument()
+  })
+
+  // `copy` is what draws the `+` under the pointer, and it is only askable because `dragChannel`
+  // allows both effects: a target may not ask for one its source forbade, and `move` alone left
+  // every surface that ADDS unable to say so.
+  it('asks for copy, which is the cursor that says the drop will work', () => {
+    const { container } = render(<AnimationPanel documentId={DOCUMENT} />)
+    const panel = container.firstElementChild
+    if (!panel) throw new Error('no panel')
+    const carried = transfer(SCENE_NODE_DRAG_TYPE, { nodeIds: ['cube-1'] })
+
+    fireEvent.dragOver(panel, { dataTransfer: carried })
+
+    expect(carried.dropEffect).toBe('copy')
+  })
+})
 
 describe('AnimationPanel', () => {
   beforeEach(() => {

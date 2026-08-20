@@ -15,7 +15,6 @@ import { frameDuration, snapToFrame, type Us } from '@shared/domain/time'
 import {
   editCameraShot,
   moveAnimationKey,
-  putOnAnimationSheet,
   takeOffAnimationSheet,
   unkeySubject,
 } from '@/engines/scene/animationCommands'
@@ -25,7 +24,7 @@ import { assetClip, bundledClip, clipKeyOf, embeddedClip, type ClipRef } from '@
 import { draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
 import { newId } from '@/helpers/ids'
 import { ANIMATION_DRAG_TYPE, draggedAnimationOf } from '@/panels/animations/dragged'
-import { draggedSceneNodesOf, SCENE_NODE_DRAG_TYPE } from '@/panels/scene/dragged'
+import { SCENE_NODE_DRAG_TYPE } from '@/panels/scene/dragged'
 import { multi, removeModelClip, setModelLanes } from '@/engines/scene/commands'
 import {
   clipsDuplicated,
@@ -408,17 +407,9 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
    * one: a channel holds keys, and a subject line is the object itself.
    */
   const onDrop = (event: DragEvent<HTMLCanvasElement>): void => {
-    // Objects dragged from the outliner, which land ANYWHERE on the band rather than on a row:
-    // they are not laid at a time, they are put on the sheet — the gesture is "these ones are
-    // animated", and where the pointer let go says nothing about it.
-    const carried = event.dataTransfer.getData(SCENE_NODE_DRAG_TYPE)
-    const nodes = carried ? draggedSceneNodesOf(JSON.parse(carried)) : null
-    if (nodes) {
-      event.preventDefault()
-      const command = putOnAnimationSheet(sceneOf(useScenes.getState(), documentId), nodes.nodeIds)
-      if (command) useScenes.getState().runCommand(documentId, command)
-      return
-    }
+    // Objects from the outliner are NOT read here: the panel takes them, because an empty band
+    // draws no canvas and that is exactly when a first object is dropped. Left alone, they bubble.
+    if (event.dataTransfer.getData(SCENE_NODE_DRAG_TYPE)) return
 
     const written = event.dataTransfer.getData(ANIMATION_DRAG_TYPE)
     // Started before anything else is worked out: a `DragEvent` is recycled once the handler

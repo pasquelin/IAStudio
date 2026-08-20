@@ -1,7 +1,9 @@
 import { mdiRhombus } from '@mdi/js'
-import { useMemo } from 'react'
+import { useMemo, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
+import { putOnAnimationSheet } from '@/engines/scene/animationCommands'
+import { draggedSceneNodesOf, SCENE_NODE_DRAG_TYPE } from '@/panels/scene/dragged'
 import { clipKeyOf, clipLane, MAIN_LANE_ID } from '@shared/domain/scene'
 import { animationRows, type ClipBlock, type SheetLane } from '@/engines/scene/animationRows'
 import { clipSpanOf } from '@/engines/scene/clipBlend'
@@ -84,8 +86,38 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
     return animationRows(timeline, { nodes, expanded, lanes: sheetLanes, order })
   }, [timeline, nodes, expanded, lengths, order, t])
 
+  /*
+   * The whole PANEL takes the drop, not the canvas: an empty band draws no canvas at all — the
+   * empty state stands in its place — so the one moment a first object is most wanted is the one
+   * moment there would be nothing to let go over. The headers column is no target either.
+   *
+   * `move` rather than `copy`, and it is not a nicety: the outliner arms its rows with
+   * `effectAllowed = 'move'`, and a browser refuses a drop whose effect the source did not allow
+   * — silently, nothing happening at all.
+   */
+  const onDropNodes = (event: DragEvent<HTMLDivElement>): void => {
+    const carried = event.dataTransfer.getData(SCENE_NODE_DRAG_TYPE)
+    const dragged = carried ? draggedSceneNodesOf(JSON.parse(carried)) : null
+    if (!dragged) return
+
+    event.preventDefault()
+    const command = putOnAnimationSheet(sceneOf(useScenes.getState(), documentId), dragged.nodeIds)
+    if (command) useScenes.getState().runCommand(documentId, command)
+  }
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div
+      className="flex h-full min-h-0 flex-col"
+      onDragOver={event => {
+        if (!event.dataTransfer.types.includes(SCENE_NODE_DRAG_TYPE)) return
+        event.preventDefault()
+        // `copy`, which is what draws the `+` under the pointer: the object is ADDED to the band
+        // and stays in the scene, so nothing is being moved anywhere. It is only askable because
+        // `dragChannel` allows both — see there.
+        event.dataTransfer.dropEffect = 'copy'
+      }}
+      onDrop={onDropNodes}
+    >
       {rows.length === 0 ? (
         <EmptyState icon={mdiRhombus} message={t('animation.noTrack')} />
       ) : (
