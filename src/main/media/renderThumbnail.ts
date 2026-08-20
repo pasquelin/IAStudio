@@ -22,7 +22,9 @@ export async function renderThumbnail(file: string, size: number): Promise<Uint8
   // asked for through the asset scheme, drew fine.
   if (extname(file).toLowerCase() === '.ora') {
     const { containerPictureOf } = await import('@main/assets/openRasterFile')
-    const picture = await containerPictureOf(file)
+    // The size is what decides which picture comes back: `reduced` never upscales, so a tile
+    // asking for more than a thumbnail may hold has to be given the flatten.
+    const picture = await containerPictureOf(file, size)
     return picture ? reduced(nativeImage.createFromBuffer(Buffer.from(picture)), size) : null
   }
 

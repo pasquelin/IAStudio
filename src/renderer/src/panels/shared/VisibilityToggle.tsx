@@ -24,10 +24,10 @@ export function VisibilityToggle({ visible, label, description, onToggle }: Visi
       description={description}
       tooltip={TIP_RIGHT}
       variant="row"
-      // The icon is the whole of what a sighted eye reads here, and a screen reader hears none
-      // of it: without this the button announced the same thing hidden or shown. The padlock
-      // beside it already says its state this way.
-      active={visible}
+      // ANNOUNCED, not painted — `active` would do both. The icon is the whole of what a sighted
+      // eye reads here and a screen reader hears none of it, but every row is visible by default,
+      // so painting them all left a permanent square the colour of the row's own hover.
+      aria-pressed={visible}
       onPointerDown={event => event.stopPropagation()}
       onDoubleClick={event => event.stopPropagation()}
       onClick={event => {

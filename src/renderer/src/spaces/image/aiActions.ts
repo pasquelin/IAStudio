@@ -1,7 +1,8 @@
+import i18next from 'i18next'
 import type { FieldDescriptor, ModelFamily } from '@shared/domain/model'
 import { layerById } from '@/engines/canvas/canvasState'
 import { modelForFamily } from '@/helpers/modelForFamily'
-import { reportFailure } from '@/services/diagnostics'
+import { reportNotice } from '@/services/diagnostics'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useModels } from '@/stores/models'
 import { fillEditFields } from './aiFields'
@@ -81,13 +82,10 @@ export async function prepareEdit(
   const mask =
     masked && wantsMask && layer?.mask?.enabled === true ? await host.maskSnapshot(layer.id) : null
 
-  if (masked && !wantsMask) {
-    reportFailure(
-      'canvas.edit',
-      documentId,
-      new Error('this model takes no mask, so the whole picture will be regenerated'),
-    )
-  }
+  // A NOTICE, not a failure: the edit goes through, with less than it was asked for. Reported as
+  // a failure it said the send had failed while it was succeeding — and said it once per model,
+  // where every send deserves the warning.
+  if (masked && !wantsMask) reportNotice('canvas.edit', i18next.t('imageEdit.maskIgnored'))
 
   // Sequenced rather than raced: when the second upload fails, the first has already created a
   // permanent asset in the account, and `Promise.all` left it there unnamed and untraceable.

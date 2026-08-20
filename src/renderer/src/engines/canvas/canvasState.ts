@@ -371,6 +371,15 @@ export function isGroup(layer: Layer): layer is GroupLayer {
 }
 
 /**
+ * Whether the layer's texture is rebuilt from its state rather than held as its pixels. A caption
+ * and a shape are, so a document-wide turn cannot be left to their surfaces: the next redraw
+ * would lay them out flat again, under a transform conjugated for pixels that turned.
+ */
+export function isRedrawn(layer: Layer): layer is TextLayer | ShapeLayer {
+  return layer.kind === 'text' || layer.kind === 'shape'
+}
+
+/**
  * Every layer of the stack, groups included, depth first and bottom first. Groups nest, so no
  * caller may assume `state.layers` is the whole document.
  */

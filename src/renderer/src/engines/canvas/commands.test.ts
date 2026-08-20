@@ -867,6 +867,34 @@ describe('flipping and turning the whole document', () => {
     expect(transformOf(after)).toMatchObject({ scaleX: 0.5, scaleY: 2 })
   })
 
+  const captioned = (x: number, y: number): CanvasState => ({
+    ...DEFAULT_CANVAS,
+    width: 100,
+    height: 200,
+    layers: [textLayer('t', 'test', { x, y }, { width: 40, height: 10 })],
+    activeLayerId: 't',
+  })
+
+  /** What a paragraph's grips describe: its own box, where its transform puts it. */
+  const captionFrame = (state: CanvasState): Rect => {
+    const layer = state.layers[0]
+    if (layer?.kind !== 'text' || !layer.box) throw new Error('the fixture has no caption')
+
+    const box = { width: state.width, height: state.height }
+    return mapRect(layerMatrix(layer.transform, box), { x: 0, y: 0, ...layer.box })
+  }
+
+  /**
+   * The words are redrawn from the state, so a turned surface lasts until the next edit while the
+   * box never turned at all. The caption covered [10, 50] × [20, 30], which a clockwise turn in a
+   * 100 × 200 frame sends to [170, 180] × [10, 50].
+   */
+  it('carries a caption to the place the turn sends its box', () => {
+    const [after] = roundTrip(captioned(10, 20), rotateImage(true, turns()))
+
+    expect(captionFrame(after)).toMatchObject(near({ x: 170, y: 10, width: 10, height: 40 }))
+  })
+
   // Four quarter turns are one full turn, and one full turn is where the document started.
   it('comes back to its own frame after four turns', () => {
     let state = placed(10, 20)

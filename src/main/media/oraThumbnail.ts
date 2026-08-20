@@ -1,11 +1,6 @@
 import { nativeImage } from 'electron'
+import { ORA_THUMBNAIL_SIDE } from '@shared/domain/openRaster'
 import { probePng } from './png'
-
-/**
- * The longest side a `Thumbnails/thumbnail.png` may have. The OpenRaster spec says at most
- * 256 × 256, and a container that writes its flatten there instead weighs twice its own picture.
- */
-const ORA_THUMBNAIL_SIDE = 256
 
 /**
  * A picture reduced to what the container's thumbnail may hold, or `undefined` when there is

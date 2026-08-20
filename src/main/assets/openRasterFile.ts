@@ -6,6 +6,8 @@ import {
   ORA_MERGED_PATH,
   ORA_MIMETYPE,
   ORA_STUDIO_PATH,
+  ORA_THUMBNAIL_PATH,
+  ORA_THUMBNAIL_SIDE,
   ORA_VERSION,
   type OraDocument,
   type OraGroup,
@@ -18,8 +20,6 @@ import { attribute, escapeXml, unescapeXml } from '@shared/domain/xmlText'
 import { clamp } from '@shared/numeric'
 
 const MIMETYPE_PATH = 'mimetype'
-/** At most 256 px a side, by the spec — and what a reader wanting a tile asks for first. */
-const THUMBNAIL_PATH = 'Thumbnails/thumbnail.png'
 const STACK_PATH = 'stack.xml'
 
 /** The attributes every node writes, whichever kind it is. */
@@ -101,7 +101,7 @@ export function packOpenRaster(
 
   // Before the surfaces, and that ordering is the point: a streaming reader after one tile of a
   // grid finds it in the head of the file, instead of walking every layer to reach the tail.
-  if (thumbnail && thumbnail.byteLength > 0) files[THUMBNAIL_PATH] = stored(thumbnail)
+  if (thumbnail && thumbnail.byteLength > 0) files[ORA_THUMBNAIL_PATH] = stored(thumbnail)
 
   const written = new Set<string>()
   for (const surface of surfaces) {
@@ -311,21 +311,38 @@ async function mergedPictureIn(
 }
 
 /**
- * The picture of a container ON DISK, streamed — its own thumbnail when it carries one, its
- * flatten otherwise. `null` for every file that is not a container.
+ * The picture of a container ON DISK, streamed. `null` for every file that is not a container.
  *
- * Written once because two readers wanted it — the asset scheme and the Explorer's tiles — and
- * each had begun writing its own copy of the same dynamic imports and the same swallow.
+ * `fitting` is the longest side the caller can use, and it is what decides. A tile that asks for
+ * 256 or less takes the container's own thumbnail, which weighs kilobytes; everyone else takes
+ * the FLATTEN. Preferring the thumbnail by default served a 256 px picture to the asset scheme,
+ * which is what every inspector preview and every layer sourced from a `.ora` reads.
  */
-export async function containerPictureOf(file: string): Promise<Uint8Array | null> {
+export async function containerPictureOf(
+  file: string,
+  fitting?: number,
+): Promise<Uint8Array | null> {
   if (!file.toLowerCase().endsWith('.ora')) return null
 
   try {
     const { createReadStream } = await import('node:fs')
-    // The thumbnail first: it sits in the head of the file and weighs kilobytes, where the
-    // flatten is the whole picture — several megabytes inflated, once per tile of a grid.
-    const small = await mergedPictureIn(createReadStream(file), THUMBNAIL_PATH)
-    return small ?? (await mergedPictureIn(createReadStream(file)))
+    const small =
+      fitting !== undefined && fitting <= ORA_THUMBNAIL_SIDE
+        ? await mergedPictureIn(createReadStream(file), ORA_THUMBNAIL_PATH)
+        : null
+
+    const streamed = small ?? (await mergedPictureIn(createReadStream(file)))
+    if (streamed) return streamed
+
+    // AN ASSURANCE, not a measured fix: `Unzip` reads local headers only, so an entry carrying
+    // its sizes in a data descriptor is one this cannot reach — and `unzipSync`, which reads the
+    // central directory, could. No writer here emits one, so the case is unproven either way.
+    const { readFile } = await import('node:fs/promises')
+    const whole = unzipSync(await readFile(file), {
+      filter: one => one.name === ORA_MERGED_PATH,
+    })
+
+    return whole[ORA_MERGED_PATH] ?? null
   } catch {
     // A file that will not read is answered as every caller answers what it cannot serve.
     return null

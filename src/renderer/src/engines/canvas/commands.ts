@@ -12,6 +12,7 @@ import {
   DEFAULT_CANVAS,
   groupLayer,
   isGroup,
+  isRedrawn,
   layerById,
   mapLayers,
   pixelLayer,
@@ -621,8 +622,11 @@ export function duplicateLayer(
  * would shift a nested layer once per level of nesting and tear groups away from what surrounds
  * them.
  */
-function moveLayers(state: CanvasState, change: (transform: Transform) => Transform): Layer[] {
-  return state.layers.map(layer => ({ ...layer, transform: change(layer.transform) }))
+function moveLayers(
+  state: CanvasState,
+  change: (transform: Transform, layer: Layer) => Transform,
+): Layer[] {
+  return state.layers.map(layer => ({ ...layer, transform: change(layer.transform, layer) }))
 }
 
 /** The corner of a layer's own pixels. One point is enough once the linear half is right. */
@@ -639,8 +643,8 @@ function remapped(
   state: CanvasState,
   size: Size,
   map: (point: Point) => Point,
-  linear: (transform: Transform) => Transform,
-  carried: (point: Point) => Point = point => point,
+  linear: (transform: Transform, layer: Layer) => Transform,
+  carried: (point: Point, layer: Layer) => Point = point => point,
 ): CanvasState {
   const box = { width: state.width, height: state.height }
 
@@ -648,11 +652,11 @@ function remapped(
     ...state,
     width: size.width,
     height: size.height,
-    layers: moveLayers(state, transform =>
+    layers: moveLayers(state, (transform, layer) =>
       anchoredAt(
-        linear(transform),
+        linear(transform, layer),
         size,
-        carried(HELD),
+        carried(HELD, layer),
         map(applyTo(layerMatrix(transform, box), HELD)),
       ),
     ),
@@ -751,6 +755,10 @@ export type TurnPort = { turn: (clockwise: boolean) => void }
  * same turn: the two scales trade places, the two skews trade places and change sign, the angle
  * is untouched. Turning the transform instead would leave each texture holding the sides the
  * document no longer has, and cost half of every layer to the recut that follows.
+ *
+ * Except where the pixels cannot carry it: a caption and a shape are redrawn from their state, so
+ * their turned texture lasts until the next edit and their own box never turned at all. Those take
+ * the quarter in their ANGLE, which is what the whole document did before the pixels took over.
  */
 export function rotateImage(clockwise: boolean, port: TurnPort): Command<CanvasState> {
   const turned = (state: CanvasState, way: boolean): CanvasState => {
@@ -761,14 +769,18 @@ export function rotateImage(clockwise: boolean, port: TurnPort): Command<CanvasS
       state,
       { width: state.height, height: state.width },
       turn,
-      transform => ({
-        ...transform,
-        scaleX: transform.scaleY,
-        scaleY: transform.scaleX,
-        skewX: -transform.skewY,
-        skewY: -transform.skewX,
-      }),
-      turn,
+      (transform, layer) =>
+        isRedrawn(layer)
+          ? { ...transform, rotation: transform.rotation + (way ? Math.PI / 2 : -Math.PI / 2) }
+          : {
+              ...transform,
+              scaleX: transform.scaleY,
+              scaleY: transform.scaleX,
+              skewX: -transform.skewY,
+              skewY: -transform.skewX,
+            },
+      // A redrawn layer's content stayed where it was, so the corner it is anchored by did too.
+      (point, layer) => (isRedrawn(layer) ? point : turn(point)),
     )
   }
 

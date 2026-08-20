@@ -38,6 +38,12 @@ export const ORA_HEAD_LIMIT = 64 * 1024
 /** The flatten, at the container's root, where every other application looks for it. */
 export const ORA_MERGED_PATH = 'mergedimage.png'
 
+/** The optional small picture, which the spec caps at 256 px a side. */
+export const ORA_THUMBNAIL_PATH = 'Thumbnails/thumbnail.png'
+
+/** That cap. A reader wanting more than this has to take the flatten instead. */
+export const ORA_THUMBNAIL_SIDE = 256
+
 /**
  * Where a surface may sit inside the container, and the only shapes one may have.
  *

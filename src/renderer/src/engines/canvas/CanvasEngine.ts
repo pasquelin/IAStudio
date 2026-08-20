@@ -30,6 +30,7 @@ import {
   allLayers,
   IDENTITY,
   isGroup,
+  isRedrawn,
   layerById,
   type AdjustmentLayer,
   type CanvasState,
@@ -869,7 +870,18 @@ export class CanvasEngine {
     this.publishSelection(null)
     const { width, height } = this.state
 
-    for (const surface of this.surfaces.values()) {
+    // A caption and a shape take the turn in their transform instead — see `rotateImage`. Their
+    // own space did not turn, so neither their words nor the mask over them may: the drawing key
+    // is dropped so the next reconcile lays them out again at the sides the document now has.
+    const flat = new Set<string>()
+    for (const layer of allLayers(this.state.layers)) {
+      if (!isRedrawn(layer)) continue
+      flat.add(layer.id).add(maskKey(layer.id))
+      this.drawings.delete(layer.id)
+    }
+
+    for (const [key, surface] of this.surfaces) {
+      if (flat.has(key)) continue
       const texture = RenderTexture.create({ width: height, height: width, resolution: 1 })
 
       const carried = new Sprite(surface.texture)
@@ -2194,6 +2206,10 @@ export class CanvasEngine {
     // matches the frame: one held across a crop or a turn holds the sides the document dropped.
     const held = this.departed.get(key)
     if (held) {
+      // Its bytes leave the pool with it, or `kept` only ever climbs: a dozen merge-then-undo
+      // cycles then put it past the budget with `departed` empty, and the next departure evicts
+      // the surface it was just handed — the layer comes back blank, which is the whole defect.
+      this.kept -= bytesOf(held.texture)
       this.departed.delete(key)
       if (held.texture.width === this.state.width && held.texture.height === this.state.height) {
         this.surfaces.set(key, held)
@@ -2629,8 +2645,7 @@ export class CanvasEngine {
     // Its own pixels only: a caption and a shape are redrawn WHOLE whenever anything about them
     // changes, so a stroke laid on one would be wiped with no history entry to bring it back —
     // recolouring a rectangle would take the paint over it away. Their masks are never redrawn.
-    const redrawn = layer.kind === 'text' || layer.kind === 'shape'
-    if (redrawn && this.painting !== 'mask') return null
+    if (isRedrawn(layer) && this.painting !== 'mask') return null
 
     const surface = this.activeSurface()
     // No surface means the layer carries no mask while the brush aims at one: there is nothing

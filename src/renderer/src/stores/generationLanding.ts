@@ -2,6 +2,7 @@ import type { Asset, AssetType } from '@shared/domain/asset'
 import type { DocumentKind } from '@shared/domain/document'
 import { isFinished, type Job } from '@shared/domain/job'
 import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 import { useAssets } from './assets'
 import { activeIdOfKind, useDocuments } from './documents'
 import { useJobs } from './jobs'
@@ -89,7 +90,17 @@ export function createGenerationLanding({
     // launched from the image space and awaited in the audio space finds no picture in it — and
     // `refresh` hands back a read already in flight, which may have been sent before the
     // collector wrote the outputs. Either way the claim is already spent, and nothing retries.
-    const rows = await bridge.assets.search({ types: [...types], limit: SETTLE_LIMIT })
+    // The claim is already spent by `settle`, so a read that throws loses a generation that was
+    // PAID for — and, unhandled, takes an unhandled rejection with it. The `refresh` this
+    // replaced could not reject; this one reaches the catalogue over IPC.
+    const rows = await bridge.assets
+      .search({ types: [...types], limit: SETTLE_LIMIT })
+      .catch(error => {
+        reportFailure('canvas.place', kind, error)
+        return null
+      })
+
+    if (!rows) return
     const { documents } = useDocuments.getState()
     // The shelf still has to hear about them: it is what the browser shows.
     void useAssets.getState().refresh()

@@ -78,6 +78,9 @@
     "fitHint": "Ajuster l’image à la fenêtre",
     "actualHint": "Taille réelle — un pixel de l’image pour un pixel d’écran"
   },
+  "imageEdit": {
+    "maskIgnored": "Ce modèle ne prend pas de masque, l’image entière sera donc régénérée."
+  },
   "layers": {
     "add": "Ajouter un calque",
     "addHint": "Ajouter un calque transparent au-dessus de la pile",

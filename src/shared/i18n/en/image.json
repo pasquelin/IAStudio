@@ -78,6 +78,9 @@
     "fitHint": "Fit the image to the window",
     "actualHint": "Actual size — one image pixel per screen pixel"
   },
+  "imageEdit": {
+    "maskIgnored": "This model takes no mask, so the whole image will be regenerated."
+  },
   "layers": {
     "add": "Add a layer",
     "addHint": "Add a transparent layer on top of the stack",
