@@ -46,10 +46,14 @@ export function pitchTowards(height: number, distance: number, targetHeight = 0)
   return Math.atan2(targetHeight - height, distance)
 }
 
-/** A camera on the +Z axis, aimed by its pitch alone — see `pitchTowards`. */
-function aimedCamera(height: number, distance: number, targetHeight = 0): SceneNode {
+/**
+ * A camera on the +Z axis, aimed by its pitch alone — see `pitchTowards`. `distance` is measured
+ * from what it LOOKS AT, which is at the origin unless `targetZ` says otherwise: a camera placed
+ * at its distance from zero would frame the origin rather than the subject standing away from it.
+ */
+function aimedCamera(height: number, distance: number, targetHeight = 0, targetZ = 0): SceneNode {
   const rotation = { x: pitchTowards(height, distance, targetHeight), y: 0, z: 0 }
-  return cameraNode(transformAt({ x: 0, y: height, z: distance }, rotation))
+  return cameraNode(transformAt({ x: 0, y: height, z: targetZ + distance }, rotation))
 }
 
 /**
@@ -67,13 +71,21 @@ function floor(size: number): SceneNode {
   )
 }
 
-/** A stand-in the size of a person — what the three character templates frame. */
+/**
+ * A stand-in the size of a person — what the three character templates frame.
+ *
+ * Off the origin, which the playground turned into an eight-metre hole: framed there, the two
+ * templates that show a silhouette opened on one standing over a void.
+ */
 function standIn(): SceneNode {
   return meshNode(
     { kind: 'capsule', radius: 0.3, height: 1.2, capSegments: 8, radialSegments: 16 },
-    { transform: transformAt({ x: 0, y: 0.9, z: 0 }) },
+    { transform: transformAt({ x: 0, y: 0.9, z: STAND_IN_Z }) },
   )
 }
+
+/** Clear of the pit, on the floor band the two framed views open on. */
+const STAND_IN_Z = 10
 
 const KEY_LIGHT: Vector3 = { x: 5, y: 10, z: 7.5 }
 
@@ -208,10 +220,16 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
       camera: 'firstPerson',
     }),
 
-  thirdPerson: () => characterView([standIn(), aimedCamera(2.4, 5, 1)], { camera: 'thirdPerson' }),
+  // The camera stands back BEHIND the stand-in, which stands at z = 10 — over the shoulder means
+  // both on the same axis, and the aim is at chest height.
+  thirdPerson: () =>
+    characterView([standIn(), aimedCamera(2.4, 5, 1, STAND_IN_Z)], { camera: 'thirdPerson' }),
 
   topDown: () =>
-    characterView([standIn(), aimedCamera(16, 11, 0.9)], { camera: 'topDown', moveSpeed: 6 }),
+    characterView([standIn(), aimedCamera(16, 11, 0.9, STAND_IN_Z)], {
+      camera: 'topDown',
+      moveSpeed: 6,
+    }),
 }
 
 /**

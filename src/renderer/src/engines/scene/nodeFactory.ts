@@ -176,13 +176,15 @@ export function textNode(): SceneNode {
 }
 
 /** An empty node others hang from. Its transform moves everything under it, and nothing else. */
-export function groupNode(transform = IDENTITY_TRANSFORM): SceneNode {
+export function groupNode(transform = IDENTITY_TRANSFORM, name = 'Group'): SceneNode {
   return {
     id: newId(),
     parentId: null,
-    // Named after its class like every other node: a scene whose contents are called `Groupe`
-    // in French and `Group` in English cannot be shared between the two.
-    name: 'Group',
+    // Named after its class by default, like every other node: a scene whose contents are called
+    // `Groupe` in French and `Group` in English cannot be shared between the two. A caller that
+    // builds a set names its parts in English for the same reason — three rows reading `Group`
+    // are three rows one has to open to tell apart.
+    name,
     visible: true,
     transform,
     ...shadowDefaults({ type: 'group' }),

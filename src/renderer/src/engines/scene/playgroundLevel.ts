@@ -13,12 +13,17 @@
 import type { MaterialDescriptor, Vector3 } from '@shared/domain/scene'
 import { groupNode, meshNode, transformAt } from './nodeFactory'
 import { defaultMeshMaterial } from './checkerTextures'
-import type { SceneNode } from './sceneState'
+import { IDENTITY_TRANSFORM, type SceneNode } from './sceneState'
 
 /** Metres. The dalle is `FLOOR` on a side, with a square hole of `PIT` at its centre. */
 const FLOOR = 40
 const PIT = 8
 const WALL_HEIGHT = 3
+
+/** The slope, in the three numbers that have to agree: its pitch, its half-length, its half-rise. */
+const RAMP_PITCH = 0.25
+const RAMP_RUN = 4.5
+const RAMP_RISE = RAMP_RUN * Math.sin(RAMP_PITCH)
 
 /** A quarter of a metre per checker square is unreadable; one per metre is what a floor wants. */
 function tiled(metres: number): MaterialDescriptor {
@@ -94,18 +99,28 @@ function climbs(parentId: string): SceneNode[] {
 
   return [
     // Some fourteen degrees, which is a slope one walks up rather than slides down.
+    //
+    // A POSITIVE pitch about X raises the -Z end, which is the end the landing waits at: the
+    // sign was the other way round, and the ramp climbed away from its landing with its foot
+    // buried under the floor. The height is what puts that foot back on the ground —
+    // `RAMP_RISE` is half the slope's rise, and the centre stands exactly that far up.
     meshNode(
-      { kind: 'box', width: 4, height: 0.3, depth: 9 },
+      { kind: 'box', width: 4, height: 0.3, depth: RAMP_RUN * 2 },
       {
-        transform: transformAt({ x: -12, y: 0.9, z: 4 }, { x: -0.25, y: 0, z: 0 }),
-        material: tiled(9),
+        transform: transformAt({ x: -12, y: RAMP_RISE, z: 4 }, { x: RAMP_PITCH, y: 0, z: 0 }),
+        material: tiled(RAMP_RUN * 2),
         parentId,
       },
     ),
-    // Where the ramp arrives: a landing, or a climb ends in mid-air.
+    // Where the ramp arrives, at the height it arrives AT: a landing half a metre off is a step
+    // nobody asked for, and a climb that ends in mid-air is worse.
     meshNode(
       { kind: 'box', width: 4, height: 0.3, depth: 4 },
-      { transform: transformAt({ x: -12, y: 1.95, z: -2 }), material: tiled(4), parentId },
+      {
+        transform: transformAt({ x: -12, y: RAMP_RISE * 2, z: -2 }),
+        material: tiled(4),
+        parentId,
+      },
     ),
     ...steps,
   ]
@@ -156,9 +171,9 @@ function obstacles(parentId: string): SceneNode[] {
  * reads, and the families are also how one hides half the level to look at the other.
  */
 export function playgroundNodes(): SceneNode[] {
-  const ground = groupNode()
-  const enclosure = groupNode()
-  const course = groupNode()
+  const ground = groupNode(IDENTITY_TRANSFORM, 'Ground')
+  const enclosure = groupNode(IDENTITY_TRANSFORM, 'Enclosure')
+  const course = groupNode(IDENTITY_TRANSFORM, 'Course')
 
   return [
     ground,

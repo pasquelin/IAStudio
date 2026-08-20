@@ -48,6 +48,34 @@ describe('the playground level', () => {
     expect(nodes.filter(node => node.transform.position.x === 12).length).toBeGreaterThanOrEqual(5)
   })
 
+  /**
+   * The ramp was pitched the other way: it climbed AWAY from its landing, its foot buried under
+   * the floor and the landing floating two metres up, connected to nothing. Nothing saw it —
+   * the case above only asked that some node be tilted at all.
+   */
+  it('lands the ramp on its landing, and rests its foot on the floor', () => {
+    const level = meshes(playgroundNodes())
+    // A box that is tilted: the floor bands are tilted too, being planes laid flat.
+    const ramp = level.find(
+      node =>
+        node.type === 'mesh' && node.geometry.kind === 'box' && node.transform.rotation.x !== 0,
+    )
+    const landing = level.find(
+      node => node.transform.position.x === -12 && node.transform.rotation.x === 0,
+    )
+    if (ramp?.type !== 'mesh' || ramp.geometry.kind !== 'box' || !landing)
+      throw new Error('no ramp')
+
+    const rise = (ramp.geometry.depth / 2) * Math.sin(ramp.transform.rotation.x)
+    const run = (ramp.geometry.depth / 2) * Math.cos(ramp.transform.rotation.x)
+
+    // The high end is the one the landing waits at — towards -Z — and it arrives at its height.
+    expect(ramp.transform.position.z - run).toBeLessThan(landing.transform.position.z + 2)
+    expect(ramp.transform.position.y + rise).toBeCloseTo(landing.transform.position.y, 1)
+    // And the low end is on the ground rather than under it.
+    expect(ramp.transform.position.y - rise).toBeCloseTo(0, 1)
+  })
+
   it('raises the jump blocks one above the other, or there is nothing to miss', () => {
     const heights = meshes(playgroundNodes())
       .filter(node => node.transform.position.z === -15)
@@ -69,7 +97,7 @@ describe('the playground level', () => {
     const nodes = playgroundNodes()
     const groups = nodes.filter(node => node.type === 'group')
 
-    expect(groups).toHaveLength(3)
+    expect(groups.map(group => group.name)).toEqual(['Ground', 'Enclosure', 'Course'])
     expect(nodes.filter(node => node.parentId === null)).toEqual(groups)
   })
 
