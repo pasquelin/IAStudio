@@ -6,7 +6,7 @@ import { canvasOf, useCanvases } from './canvases'
 import { installDocument } from './document-fixtures'
 import { useDocuments } from './documents'
 import { claimOnSubmit } from './generationClaims'
-import { flush } from './generation-fixtures'
+import { catalogueHolds, flush } from './generation-fixtures'
 import { connectImageGeneration } from './imageGeneration'
 import { job } from './job-fixtures'
 import { useJobs } from './jobs'
@@ -28,10 +28,10 @@ const done: Job = job({ id: 'job-1', label: 'Scenario Flux.1', status: 'succeede
 beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
   useJobs.setState({ jobs: [] })
-  useAssets.setState({
-    items: [],
-    refresh: async () => void useAssets.setState({ items: [picture] }),
-  })
+  useAssets.setState({ items: [] })
+  // Through the shared fixture, which answers the catalogue where the landing actually asks:
+  // spelling it here by hand is what left this suite behind when that seam changed.
+  catalogueHolds([picture])
 })
 
 /**

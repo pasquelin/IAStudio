@@ -14,6 +14,7 @@ import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { registerFace } from '@/engines/canvas/canvasFonts'
 import {
+  canMergeDown,
   layerBelow,
   layerById,
   shapeLayer,
@@ -21,7 +22,12 @@ import {
   type ShapeKind,
 } from '@/engines/canvas/canvasState'
 import { CanvasEngine } from '@/engines/canvas/CanvasEngine'
-import { DEFAULT_BRUSH, resizedBrush, type BrushSettings } from '@/engines/canvas/brush'
+import {
+  DEFAULT_BRUSH,
+  readsBrushSetting,
+  resizedBrush,
+  type BrushSettings,
+} from '@/engines/canvas/brush'
 import { ImageDocumentBrush } from './ImageDocumentBrush'
 import { ImageDocumentText } from './ImageDocumentText'
 import { RULER_SIZE } from '@/engines/canvas/CanvasOverlay'
@@ -67,6 +73,7 @@ import { placeAsset } from '../placeAsset'
 import { revealAssets } from '@/helpers/revealPanel'
 import { holdCanvas } from '../canvasHosts'
 import { pixelPort } from '../pixelPort'
+import { turnPort } from '../turnPort'
 import { ZoomBar } from '../ZoomBar'
 
 export type ImageDocumentProps = { documentId: string }
@@ -92,6 +99,8 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   // `useState` and a new branch in the mapping below.
   const [modes, setModes] = useState<Record<string, string>>(DEFAULT_MODES)
   const [brush, setBrush] = useState<BrushSettings>(DEFAULT_BRUSH)
+  /** Whether a model edit is being flattened and uploaded — the AI group is greyed while it is. */
+  const [preparing, setPreparing] = useState(false)
 
   const canvas = useCanvases(state => canvasOf(state, documentId))
   const view = useCanvasViews(state => canvasViewOf(state, documentId))
@@ -234,6 +243,9 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   )
 
   const mode = modes[tool]
+  // Read by the memoised `run` below, which must not be rebuilt every time the armed tool
+  // changes — the shortcut listener it feeds would be torn down and hung again with it.
+  const armed = useLatest(canvasToolFor(tool, mode) ?? 'move')
 
   useEffect(() => {
     const canvasTool = canvasToolFor(tool, mode)
@@ -302,9 +314,20 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           return
         }
         case 'canvas.brushLarger':
-          return setBrush(current => resizedBrush(current, 'larger'))
-        case 'canvas.brushSmaller':
-          return setBrush(current => resizedBrush(current, 'smaller'))
+        case 'canvas.brushSmaller': {
+          // With the pointer or the crop armed, the settings are not on screen: the brackets
+          // moved a number nobody could see, and the surprise arrived at the next stroke.
+          if (!readsBrushSetting(armed.current, 'size')) return
+          const way = command === 'canvas.brushLarger' ? 'larger' : 'smaller'
+          return setBrush(current => resizedBrush(current, way))
+        }
+        case 'canvas.selectAll': {
+          const stack = canvasOf(useCanvases.getState(), documentId)
+          return useCanvasViews.getState().setSelection(documentId, {
+            kind: 'rect',
+            rect: { x: 0, y: 0, width: stack.width, height: stack.height },
+          })
+        }
         case 'canvas.deselect':
           return useCanvasViews.getState().setSelection(documentId, null)
         // Both no-ops without a frame on screen, which is what makes ⏎ and ⎋ safe to bind here:
@@ -330,9 +353,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           // Prepared, never submitted: the form opens filled and the user is the one who runs it.
           // Reported rather than swallowed — the panel opening is what says something WAS prepared,
           // and nothing at all was what a refusal looked like.
-          void prepareEdit(documentId, edit, host, bridge.scenario).catch(error =>
-            reportFailure('canvas.edit', documentId, error),
-          )
+          setPreparing(true)
+          void prepareEdit(documentId, edit, host, bridge.scenario)
+            .catch(error => reportFailure('canvas.edit', documentId, error))
+            .finally(() => setPreparing(false))
           return
         }
         case 'canvas.mergeDown': {
@@ -340,9 +364,11 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           // This handler is memoised: a captured stack goes stale the moment the selection moves.
           const stack = canvasOf(useCanvases.getState(), documentId)
           const active = stack.activeLayerId
-          const below = active ? layerBelow(stack.layers, active) : null
-          // Nothing under it at its own level: no merge to offer, and nothing to say about it.
-          if (!host || !active || !below) return
+          // The very test the menu greys its row with — read from both sides, like
+          // `canRemoveLayer`, so a row is never offered for a gesture this will decline.
+          if (!host || !active || !canMergeDown(stack)) return
+          const below = layerBelow(stack.layers, active)
+          if (!below) return
           // Composed before the command, which is the last moment the upper layer's pixels exist.
           host.mergeInto(below.id, active)
           return useCanvases.getState().runCommand(documentId, mergeDown(active))
@@ -363,16 +389,22 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         case 'canvas.flipVertical':
           return useCanvases.getState().runCommand(documentId, flipImage('vertical'))
         case 'canvas.rotateCw':
-          return useCanvases.getState().runCommand(documentId, rotateImage(true))
         case 'canvas.rotateCcw':
-          return useCanvases.getState().runCommand(documentId, rotateImage(false))
+          // The port turns the pixels, from inside the command — so an undo unturns them. Done
+          // here instead, ⌘Z gave back a portrait frame over landscape textures.
+          return useCanvases
+            .getState()
+            .runCommand(
+              documentId,
+              rotateImage(command === 'canvas.rotateCw', turnPort(documentId)),
+            )
         case 'canvas.undo':
           return useCanvases.getState().undo(documentId)
         case 'canvas.redo':
           return useCanvases.getState().redo(documentId)
       }
     },
-    [documentId, pick, t],
+    [armed, documentId, pick, t],
   )
 
   useShortcuts({
@@ -414,14 +446,18 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       })),
       // No `activeMode`, and that is what makes it a menu of actions rather than a choice of
       // tool: none of its rows can be armed, so the click opens what hovering would have.
-      AI_EDIT_TOOL,
+      //
+      // Greyed while one is being prepared: flattening the document and uploading it takes as
+      // long as the network does, and until the generator opened there was nothing at all on
+      // screen to say the click had been heard.
+      { ...AI_EDIT_TOOL, disabled: preparing },
       ...CROP_TOOLS.map(entry => ({
         ...entry,
         disabled: !cropFrame,
         shortcut: keyFor(entry.command),
       })),
     ]
-  }, [modes, bindings, label, cropFrame])
+  }, [modes, bindings, label, cropFrame, preparing])
 
   // Read off the registry rather than written on the buttons: a key remapped in the settings
   // has to move on the bar with it.

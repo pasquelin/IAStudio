@@ -397,7 +397,13 @@ describe('job manager', () => {
     manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
-    expect(sleeps).toEqual([1000, 2000])
+    // Doubling, within the ±20 % the jitter spreads them over — three jobs that take a 429
+    // together must not come back together, which an exact sequence would forbid.
+    expect(sleeps).toHaveLength(2)
+    expect(sleeps[0]).toBeGreaterThanOrEqual(800)
+    expect(sleeps[0]).toBeLessThanOrEqual(1200)
+    expect(sleeps[1]).toBeGreaterThanOrEqual(1600)
+    expect(sleeps[1]).toBeLessThanOrEqual(2400)
     expect(manager.list()[0]?.status).toBe('succeeded')
   })
 

@@ -33,7 +33,7 @@ describe('createRetry', () => {
   })
 
   it('doubles the wait between attempts', async () => {
-    const sleep = vi.fn(async () => {})
+    const sleep = vi.fn(async (_ms: number) => {})
     const retry = createRetry({ maxRetries: () => 3, sleep, backoffBaseMs: 10 })
 
     let attempts = 0
@@ -44,7 +44,28 @@ describe('createRetry', () => {
     })
 
     await expect(retry(action)).resolves.toBe(3)
-    expect(sleep.mock.calls).toEqual([[10], [20]])
+    // Doubling, spread over ±20 %: an exact sequence would forbid the jitter, and without it
+    // three jobs that take a 429 together come back together — the burst the backoff is for.
+    const waits = sleep.mock.calls.map(([ms]) => ms)
+    expect(waits).toHaveLength(2)
+    expect(waits[0]).toBeGreaterThanOrEqual(8)
+    expect(waits[0]).toBeLessThanOrEqual(12)
+    expect(waits[1]).toBeGreaterThanOrEqual(16)
+    expect(waits[1]).toBeLessThanOrEqual(24)
+  })
+
+  // Ten retries is what the preferences allow, and an uncapped doubling makes the last wait
+  // alone eight and a half minutes — with the job holding a concurrency slot throughout.
+  it('caps one wait however many attempts have failed', async () => {
+    const sleep = vi.fn(async (_ms: number) => {})
+    const retry = createRetry({ maxRetries: () => 10, sleep, backoffBaseMs: 1000 })
+
+    const action = vi.fn(async () => {
+      throw apiError(429)
+    })
+
+    await expect(retry(action)).rejects.toThrow()
+    for (const [ms] of sleep.mock.calls) expect(ms).toBeLessThanOrEqual(36_000)
   })
 
   it('rethrows what no retry can fix, without waiting first', async () => {

@@ -26,6 +26,12 @@ export type CanvasHost = {
    * engine's own `snapshot` that produced the bytes.
    */
   forgetPicture: (assetId: string) => Promise<void>
+  /**
+   * Turns every surface a quarter, which no state can do for itself. Published here so the ONE
+   * command that turns a document reaches the engine the same way from the toolbar and from the
+   * assistant — the two used to have different answers, and only one of them turned the pixels.
+   */
+  turnQuarter: (clockwise: boolean) => void
 }
 
 const registry = createHostRegistry<CanvasHost>()

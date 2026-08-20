@@ -38,6 +38,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'skybox.source': 'document',
   'skybox.export': 'document',
   'canvas.layer': 'document',
+  'canvas.place': 'document',
   // With the document, not the shelf: what these three sites are about is a document that does
   // not measure its picture. The asset is the victim, the document is the subject — and reading
   // them by subject is how a user finds the tab to fix.

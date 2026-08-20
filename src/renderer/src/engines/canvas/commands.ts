@@ -3,6 +3,7 @@ import type { BlendMode } from '@shared/domain/canvasBlend'
 import { clamp } from '@shared/numeric'
 import type { Command } from '../core/history'
 import type { Point, Size } from '../core/geometry'
+import { anchoredAt, applyTo, layerMatrix } from './layerSpace'
 import {
   allLayers,
   canMoveLayer,
@@ -11,6 +12,7 @@ import {
   DEFAULT_CANVAS,
   groupLayer,
   isGroup,
+  isRedrawn,
   layerById,
   mapLayers,
   pixelLayer,
@@ -48,17 +50,23 @@ export function addLayer(layer: Layer): Command<CanvasState> {
 export function removeLayer(id: string): Command<CanvasState> {
   // Restructuring: removing a group takes its whole subtree, which no field-by-field inverse
   // would put back at the right depth.
-  return restructure(`layer:remove:${id}`, state => {
-    const target = layerById(state, id)
-    if (!target) return state
+  return restructure(
+    `layer:remove:${id}`,
+    // Guarded here as well as in `refuses`: a redo replays `apply` against whatever state the
+    // stack has reached, which is not the one the command was pushed against.
+    state => (refusesRemoval(state, id) ? state : withoutLayer(state, id)),
+    state => refusesRemoval(state, id),
+  )
+}
 
-    // A document with an empty stack cannot be painted on — and a GROUP carries its subtree out
-    // with it, so what matters is what stays, not how many layers the document has. See
-    // `canRemoveLayer`, which the panel reads to grey the same gesture.
-    if (!canRemoveLayer(state.layers, target)) return state
-
-    return withoutLayer(state, id)
-  })
+/**
+ * A document with an empty stack cannot be painted on — and a GROUP carries its subtree out with
+ * it, so what matters is what stays, not how many layers the document has. See `canRemoveLayer`,
+ * which the panel reads to grey the same gesture.
+ */
+function refusesRemoval(state: CanvasState, id: string): boolean {
+  const target = layerById(state, id)
+  return !target || !canRemoveLayer(state.layers, target)
 }
 
 /**
@@ -90,22 +98,27 @@ export function moveLayer(
   parentId: string | null,
   index: number,
 ): Command<CanvasState> {
-  return restructure(`layer:move:${id}`, state => {
-    const layer = layerById(state, id)
-    if (!layer || !canMoveLayer(state, id, parentId)) return state
+  return restructure(
+    `layer:move:${id}`,
+    state => {
+      const layer = layerById(state, id)
+      // Guarded here as well as in `refuses`, for the state a redo replays against.
+      if (!layer || !canMoveLayer(state, id, parentId)) return state
 
-    const without = mapLayers(state.layers, current => (current.id === id ? null : current))
-    if (parentId === null) return { ...state, layers: insertedAt(without, layer, index) }
+      const without = mapLayers(state.layers, current => (current.id === id ? null : current))
+      if (parentId === null) return { ...state, layers: insertedAt(without, layer, index) }
 
-    return {
-      ...state,
-      layers: mapLayers(without, current =>
-        current.id === parentId && isGroup(current)
-          ? { ...current, children: insertedAt(current.children, layer, index) }
-          : current,
-      ),
-    }
-  })
+      return {
+        ...state,
+        layers: mapLayers(without, current =>
+          current.id === parentId && isGroup(current)
+            ? { ...current, children: insertedAt(current.children, layer, index) }
+            : current,
+        ),
+      }
+    },
+    state => !layerById(state, id) || !canMoveLayer(state, id, parentId),
+  )
 }
 
 export function setLayerBlend(id: string, blend: BlendMode): Command<CanvasState> {
@@ -332,6 +345,11 @@ export function translateLayer(id: string, x: number, y: number): Command<Canvas
 export type PixelPort = {
   /** `false` when the patch has been thrown away, and the entry can no longer be replayed. */
   restore: (patchId: string, side: 'before' | 'after') => boolean
+  /**
+   * Told when a replay found nothing. The tiles can go without anyone hearing — a resurface
+   * drops them all — and the entry left behind is a ⌘Z that visibly does nothing.
+   */
+  lost: (patchId: string) => void
 }
 
 /**
@@ -348,11 +366,11 @@ export function paintPixels(patchId: string, port: PixelPort): Command<CanvasSta
     id: `pixels:${patchId}`,
     apply: state => {
       if (recorded) recorded = false
-      else port.restore(patchId, 'after')
+      else if (!port.restore(patchId, 'after')) port.lost(patchId)
       return state
     },
     revert: state => {
-      port.restore(patchId, 'before')
+      if (!port.restore(patchId, 'before')) port.lost(patchId)
       return state
     },
   }
@@ -471,6 +489,7 @@ export function selectLayer(state: CanvasState, id: string | null): CanvasState 
 function restructure(
   commandId: string,
   change: (state: CanvasState) => CanvasState,
+  refuses?: (state: CanvasState) => boolean,
 ): Command<CanvasState> {
   let before: CanvasState | null = null
 
@@ -481,6 +500,7 @@ function restructure(
       return change(state)
     },
     revert: () => before ?? DEFAULT_CANVAS,
+    refuses,
   }
 }
 
@@ -602,8 +622,45 @@ export function duplicateLayer(
  * would shift a nested layer once per level of nesting and tear groups away from what surrounds
  * them.
  */
-function moveLayers(state: CanvasState, change: (transform: Transform) => Transform): Layer[] {
-  return state.layers.map(layer => ({ ...layer, transform: change(layer.transform) }))
+function moveLayers(
+  state: CanvasState,
+  change: (transform: Transform, layer: Layer) => Transform,
+): Layer[] {
+  return state.layers.map(layer => ({ ...layer, transform: change(layer.transform, layer) }))
+}
+
+/** The corner of a layer's own pixels. One point is enough once the linear half is right. */
+const HELD: Point = { x: 0, y: 0 }
+
+/**
+ * Every layer carried through a map of the whole document. The caller writes the linear half —
+ * the scales, the angles — and this solves `x`/`y` so the content lands where the map sends it.
+ *
+ * Solved against the box the surfaces will have AFTER the change: a surface is document-sized,
+ * so a resample moves the pivot `origin × box` under every layer at the same time.
+ */
+function remapped(
+  state: CanvasState,
+  size: Size,
+  map: (point: Point) => Point,
+  linear: (transform: Transform, layer: Layer) => Transform,
+  carried: (point: Point, layer: Layer) => Point = point => point,
+): CanvasState {
+  const box = { width: state.width, height: state.height }
+
+  return {
+    ...state,
+    width: size.width,
+    height: size.height,
+    layers: moveLayers(state, (transform, layer) =>
+      anchoredAt(
+        linear(transform, layer),
+        size,
+        carried(HELD, layer),
+        map(applyTo(layerMatrix(transform, box), HELD)),
+      ),
+    ),
+  }
 }
 
 /**
@@ -631,26 +688,28 @@ export function resizeCanvas(
  * Resamples everything. The layers scale with the frame, which is what makes this different
  * from `resizeCanvas`: the frame moves there, and the content moves here.
  *
- * The pixels themselves are not resampled yet — the textures keep their original size and the
- * transforms carry the factor. That is milestone 10's, with the export.
+ * `x`/`y` are SOLVED, never scaled: `CanvasEngine.resurface` carries the surfaces to the new
+ * size, so the pivot — a fraction of the box — moves with them, and scaling `x` alone left the
+ * content half a document away.
+ *
+ * Exact while the two factors agree. They differ only on a non-proportional resample of a TURNED
+ * layer, where the true map is not a scale at all but a shear the transform cannot hold.
  */
 export function resizeImage(width: number, height: number): Command<CanvasState> {
   return restructure('canvas:resample', state => {
     const scaleX = sided(width) / state.width
     const scaleY = sided(height) / state.height
 
-    return {
-      ...state,
-      width: sided(width),
-      height: sided(height),
-      layers: moveLayers(state, transform => ({
+    return remapped(
+      state,
+      { width: sided(width), height: sided(height) },
+      point => ({ x: point.x * scaleX, y: point.y * scaleY }),
+      transform => ({
         ...transform,
-        x: transform.x * scaleX,
-        y: transform.y * scaleY,
         scaleX: transform.scaleX * scaleX,
         scaleY: transform.scaleY * scaleY,
-      })),
-    }
+      }),
+    )
   })
 }
 
@@ -660,39 +719,80 @@ export type FlipAxis = 'horizontal' | 'vertical'
  * Mirrors the whole document. A negative scale rather than rewritten pixels: the layers keep
  * their textures, so flipping and flipping back is exactly the identity — which rewriting them
  * would not be, once resampling has rounded a pixel twice.
+ *
+ * The angles turn with the scale, and `x`/`y` are SOLVED rather than written: mirroring flips
+ * the direction a turned layer sweeps, and `x` is not the position of the content once a scale
+ * or a turn is on — writing `width - x` put the whole layer one document outside the frame.
  */
 export function flipImage(axis: FlipAxis): Command<CanvasState> {
-  return restructure(`canvas:flip:${axis}`, state => ({
-    ...state,
-    layers: moveLayers(state, transform =>
-      axis === 'horizontal'
-        ? { ...transform, scaleX: -transform.scaleX, x: state.width - transform.x }
-        : { ...transform, scaleY: -transform.scaleY, y: state.height - transform.y },
+  return restructure(`canvas:flip:${axis}`, state =>
+    remapped(
+      state,
+      { width: state.width, height: state.height },
+      point =>
+        axis === 'horizontal'
+          ? { x: state.width - point.x, y: point.y }
+          : { x: point.x, y: state.height - point.y },
+      transform => ({
+        ...transform,
+        rotation: -transform.rotation,
+        skewX: -transform.skewX,
+        skewY: -transform.skewY,
+        ...(axis === 'horizontal' ? { scaleX: -transform.scaleX } : { scaleY: -transform.scaleY }),
+      }),
     ),
-  }))
+  )
 }
 
-/**
- * Turns the document a quarter turn. The frame turns with it — a portrait becomes a landscape,
- * which is the whole point — and each layer turns about the document's centre rather than its
- * own, or a stack would fan out instead of turning as one picture.
- */
-export function rotateImage(clockwise: boolean): Command<CanvasState> {
-  return restructure(`canvas:rotate:${clockwise ? 'cw' : 'ccw'}`, state => {
-    const quarter = clockwise ? Math.PI / 2 : -Math.PI / 2
+/** The engine's half of a document-wide turn: the pixels, which no state can hold. */
+export type TurnPort = { turn: (clockwise: boolean) => void }
 
-    return {
-      ...state,
-      width: state.height,
-      height: state.width,
-      layers: moveLayers(state, transform => ({
-        ...transform,
-        rotation: transform.rotation + quarter,
-        x: clockwise ? state.height - transform.y : transform.y,
-        y: clockwise ? transform.x : state.width - transform.x,
-      })),
-    }
-  })
+/**
+ * Turns the document a quarter turn, pixels included. The frame turns with it — a portrait
+ * becomes a landscape — and each layer turns about the document's centre rather than its own.
+ *
+ * The PIXELS carry the turn, so what is left here is the layer's own placement conjugated by the
+ * same turn: the two scales trade places, the two skews trade places and change sign, the angle
+ * is untouched. Turning the transform instead would leave each texture holding the sides the
+ * document no longer has, and cost half of every layer to the recut that follows.
+ *
+ * Except where the pixels cannot carry it: a caption and a shape are redrawn from their state, so
+ * their turned texture lasts until the next edit and their own box never turned at all. Those take
+ * the quarter in their ANGLE, which is what the whole document did before the pixels took over.
+ */
+export function rotateImage(clockwise: boolean, port: TurnPort): Command<CanvasState> {
+  const turned = (state: CanvasState, way: boolean): CanvasState => {
+    const turn = (point: Point): Point =>
+      way ? { x: state.height - point.y, y: point.x } : { x: point.y, y: state.width - point.x }
+
+    return remapped(
+      state,
+      { width: state.height, height: state.width },
+      turn,
+      (transform, layer) =>
+        isRedrawn(layer)
+          ? { ...transform, rotation: transform.rotation + (way ? Math.PI / 2 : -Math.PI / 2) }
+          : {
+              ...transform,
+              scaleX: transform.scaleY,
+              scaleY: transform.scaleX,
+              skewX: -transform.skewY,
+              skewY: -transform.skewX,
+            },
+      // A redrawn layer's content stayed where it was, so the corner it is anchored by did too.
+      (point, layer) => (isRedrawn(layer) ? point : turn(point)),
+    )
+  }
+
+  return {
+    id: `canvas:rotate:${clockwise ? 'cw' : 'ccw'}`,
+    // The pixels first, then the state that reports them — the order merging and cropping use.
+    apply: state => (port.turn(clockwise), turned(state, clockwise)),
+    // And back, both halves: a turn undone has to UNTURN the surfaces. Left to the caller, the
+    // undo restored a portrait frame over landscape textures, and the recut that followed took
+    // half of every layer.
+    revert: state => (port.turn(!clockwise), turned(state, !clockwise)),
+  }
 }
 
 /**

@@ -280,6 +280,10 @@
       "title": "Snap",
       "help": "Makes what is dragged stick to guides, to the image edges and to its centre, within a few pixels."
     },
+    "canvasSelectAll": {
+      "title": "Select all",
+      "help": "Selects the whole document, which the system’s own select-all cannot do on an image."
+    },
     "canvasDeselect": {
       "title": "Deselect",
       "help": "Drops the selected region, so the brush reaches the whole layer again."
@@ -365,10 +369,6 @@
       "title": "Hand tool",
       "help": "Arms the hand: a drag pans the view without touching the document. Holding space does the same without changing tool."
     },
-    "canvasToolScale": {
-      "title": "Scale tool",
-      "help": "Arms scaling: the active layer’s handles resize it, and Shift keeps its proportions."
-    },
     "canvasToolCrop": {
       "title": "Crop tool",
       "help": "Arms the crop frame. Draw a frame, then ⏎ to crop or ⎋ to drop it."
@@ -424,10 +424,6 @@
     "canvasToolEraser": {
       "title": "Eraser tool",
       "help": "Arms the point eraser: it clears where the hand passes, bounded by the selection when there is one."
-    },
-    "canvasToolEraserSelection": {
-      "title": "Selective eraser",
-      "help": "Arms the selective eraser: one click clears everything the selection encloses at once, rather than rubbing it out."
     },
     "canvasToolFill": {
       "title": "Paint bucket tool",

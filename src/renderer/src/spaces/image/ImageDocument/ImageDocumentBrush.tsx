@@ -5,7 +5,12 @@ import { cn } from '@/helpers/cn'
 import { CONTROL } from '@/design/styles'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import type { CanvasTool } from '@/engines/canvas/canvasTool'
-import { BRUSH_SETTINGS_BY_TOOL, BRUSH_SIZE, type BrushSettings } from '@/engines/canvas/brush'
+import {
+  BRUSH_SETTINGS_BY_TOOL,
+  BRUSH_SIZE,
+  type BrushSetting,
+  type BrushSettings,
+} from '@/engines/canvas/brush'
 import { MenuButton } from '@/design/MenuButton'
 import { fieldHandle } from '@/design/scHandle'
 import { SliderField } from '@/design/SliderField'
@@ -16,7 +21,9 @@ import { SliderField } from '@/design/SliderField'
  * a swatch is not a value anyone drags along a track.
  */
 const BRUSH_FIELDS: readonly {
-  of: 'size' | 'hardness' | 'opacity'
+  // The type, not the union written out again: a fourth setting added to `BrushSettings` would
+  // simply have been left out here, in silence, by the very list that exists to offer them.
+  of: BrushSetting
   /** Spelled out rather than built from `of`: a composed key is one no search can find. */
   labelKey: string
   min: number

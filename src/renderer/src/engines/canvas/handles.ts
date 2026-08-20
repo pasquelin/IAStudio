@@ -1,5 +1,5 @@
 import type { Rect, Transform } from './canvasState'
-import { applyTo, layerMatrix } from './layerSpace'
+import { anchoredAt, applyTo, layerMatrix } from './layerSpace'
 import { crisp, toScreen, type Viewport } from './viewport'
 import type { Point, Size } from '../core/geometry'
 
@@ -370,25 +370,12 @@ export function resizeBy(
     scaleY: floored(transform.scaleY * scaleY),
   }
 
-  // Re-anchored where the layer is actually drawn, never inside the un-turned box: `x` and `y`
-  // carry the point the rotation is applied about, so a correction solved before the turn moves
-  // that point too, and the anchored edge swings away by `(I − R) · correction`. At a quarter
-  // turn that is the whole displacement — the edge one is pulling against left the screen.
-  //
-  // Exact in one step: the matrix is affine in `x`/`y` with a unit coefficient, so translating
-  // the transform translates the rendered point by the same amount.
   // The corner the hand is pulling AGAINST, in the frame it is gripping — the picture's when the
   // layer holds one. Solved against the document instead, the anchored edge of a photo that does
   // not fill its surface would drift by the margin `containIn` left around it.
   const held = { x: frame.x + anchor.x * frame.width, y: frame.y + anchor.y * frame.height }
-  const before = applyTo(layerMatrix(transform, document), held)
-  const after = applyTo(layerMatrix(scaled, document), held)
 
-  return {
-    ...scaled,
-    x: scaled.x + before.x - after.x,
-    y: scaled.y + before.y - after.y,
-  }
+  return anchoredAt(scaled, document, held, applyTo(layerMatrix(transform, document), held))
 }
 
 /**

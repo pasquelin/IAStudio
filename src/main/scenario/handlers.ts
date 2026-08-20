@@ -88,15 +88,20 @@ export function registerScenarioHandlers({
    * whereas a cold listing paginates a whole catalogue before the job is even queued. A missing
    * name is a cosmetic problem; refusing to run over one is not.
    */
-  handle(CHANNELS.scenarioGenerate, async (_event, modelId, body) => {
-    const id = parseModelId(modelId)
-    const label = await models
-      .describe(id)
-      .then(descriptor => descriptor.name)
-      .catch(() => id)
+  // Reduced like its neighbours: a throw from `parseGenerationBody` crossed the IPC raw, missing
+  // the journal `recordFailuresTo` keeps — and the Generate button, which has no catch of its
+  // own, then did nothing and said nothing.
+  handle(CHANNELS.scenarioGenerate, (_event, modelId, body) =>
+    reduced(async () => {
+      const id = parseModelId(modelId)
+      const label = await models
+        .describe(id)
+        .then(descriptor => descriptor.name)
+        .catch(() => id)
 
-    return jobs.submit({ id }, label, parseGenerationBody(body))
-  })
+      return jobs.submit({ id }, label, parseGenerationBody(body))
+    }),
+  )
 
   // What is priced is a target, exactly as what is submitted is. Where the figure sits in the
   // answer is `cost.ts`'s business, not this one's.
@@ -108,7 +113,9 @@ export function registerScenarioHandlers({
     reduced(() => uploads.upload(parseAssetName(name), parseBase64(image))),
   )
 
-  handle(CHANNELS.scenarioCancelJob, (_event, jobId) => jobs.cancel(parseJobId(jobId)))
+  handle(CHANNELS.scenarioCancelJob, (_event, jobId) =>
+    reduced(() => jobs.cancel(parseJobId(jobId))),
+  )
 
   handle(CHANNELS.scenarioListJobs, () => jobs.list())
 }

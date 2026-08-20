@@ -1,15 +1,20 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
-import { describe, expect, it } from 'vitest'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   isOraGroup,
   ORA_MERGED_PATH,
   ORA_MIMETYPE,
+  ORA_THUMBNAIL_PATH,
+  ORA_THUMBNAIL_SIDE,
   type OraDocument,
   type OraLayer,
   type OraStack,
   type OraSurface,
 } from '@shared/domain/openRaster'
-import { oraHeadIn, packOpenRaster, unpackOpenRaster } from './openRasterFile'
+import { containerPictureOf, oraHeadIn, packOpenRaster, unpackOpenRaster } from './openRasterFile'
 
 /** One transparent pixel, which is all any of this needs to be real PNG bytes. */
 const PNG = Uint8Array.from(
@@ -72,11 +77,27 @@ describe('writing an OpenRaster container', () => {
     expect(entriesOf(bytes).mimetype).toBe(ORA_MIMETYPE)
   })
 
-  it('writes the flattened picture the spec requires, and a thumbnail', () => {
+  it('writes the flattened picture the spec requires', () => {
     const entries = entriesOf(packOpenRaster(document()))
 
     expect(entries['mergedimage.png']).toBeDefined()
-    expect(entries['Thumbnails/thumbnail.png']).toBeDefined()
+  })
+
+  /**
+   * The flatten used to be written a second time under `Thumbnails/`, which the spec forbids
+   * past 256 px and which doubled the size of every container — on disk, and again on each read.
+   * The entry is optional, so nothing is better than something out of spec.
+   */
+  it('leaves the thumbnail out rather than writing the flatten twice', () => {
+    const entries = entriesOf(packOpenRaster(document()))
+
+    expect(entries['Thumbnails/thumbnail.png']).toBeUndefined()
+  })
+
+  it('writes the thumbnail it is handed', () => {
+    const entries = entriesOf(packOpenRaster(document(), '', strToU8('tiny')))
+
+    expect(entries['Thumbnails/thumbnail.png']).toBe('tiny')
   })
 
   it('names each layer in the stack, top first, with the bytes beside it', () => {
@@ -436,5 +457,60 @@ describe('reading an OpenRaster container back', () => {
 
   it('refuses bytes that are not an OpenRaster container', () => {
     expect(() => unpackOpenRaster(packOpenRaster(document()).slice(0, 20))).toThrow()
+  })
+})
+
+describe('containerPictureOf', () => {
+  // Told apart by their BYTES rather than by their pixels: what is under test is which entry the
+  // reader picks, and it hands back what it read without decoding it.
+  const FLATTEN = strToU8('the whole picture')
+  const THUMB = strToU8('the small one')
+
+  let folder = ''
+
+  beforeEach(async () => {
+    folder = await mkdtemp(join(tmpdir(), 'ora-picture-'))
+  })
+
+  afterEach(async () => {
+    await rm(folder, { recursive: true, force: true })
+  })
+
+  const written = async (entries: Record<string, Uint8Array>): Promise<string> => {
+    const file = join(folder, 'picture.ora')
+    await writeFile(file, zipSync({ mimetype: [strToU8(ORA_MIMETYPE), { level: 0 }], ...entries }))
+    return file
+  }
+
+  /**
+   * The asset scheme routes every `scenario://asset/…` through this, so a layer sourced from a
+   * container reads it too: answered the thumbnail, a 4K picture arrived 256 px wide and was
+   * stretched over the whole document.
+   */
+  it('gives the flatten to a caller that names no size', async () => {
+    const file = await written({ [ORA_MERGED_PATH]: FLATTEN, [ORA_THUMBNAIL_PATH]: THUMB })
+
+    await expect(containerPictureOf(file)).resolves.toEqual(FLATTEN)
+  })
+
+  it('gives the thumbnail to a tile small enough for it', async () => {
+    const file = await written({ [ORA_MERGED_PATH]: FLATTEN, [ORA_THUMBNAIL_PATH]: THUMB })
+
+    await expect(containerPictureOf(file, ORA_THUMBNAIL_SIDE)).resolves.toEqual(THUMB)
+  })
+
+  // `reduced` never upscales, so a bigger tile handed the thumbnail draws visibly softer than
+  // every other format at the same size.
+  it('gives the flatten to a tile bigger than a thumbnail may be', async () => {
+    const file = await written({ [ORA_MERGED_PATH]: FLATTEN, [ORA_THUMBNAIL_PATH]: THUMB })
+
+    await expect(containerPictureOf(file, ORA_THUMBNAIL_SIDE * 2)).resolves.toEqual(FLATTEN)
+  })
+
+  // Every container the studio writes as a DOCUMENT carries none — see `documentBody`.
+  it('falls back to the flatten when the container carries no thumbnail', async () => {
+    const file = await written({ [ORA_MERGED_PATH]: FLATTEN })
+
+    await expect(containerPictureOf(file, ORA_THUMBNAIL_SIDE)).resolves.toEqual(FLATTEN)
   })
 })

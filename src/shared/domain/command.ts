@@ -103,6 +103,7 @@ export type CommandId =
   | 'canvas.rulers'
   | 'canvas.guides'
   | 'canvas.clearGuides'
+  | 'canvas.selectAll'
   | 'canvas.deselect'
   | 'canvas.cropApply'
   | 'canvas.cropCancel'
@@ -123,7 +124,6 @@ export type CommandId =
   | 'canvas.snap'
   | 'canvas.toolMove'
   | 'canvas.toolHand'
-  | 'canvas.toolScale'
   | 'canvas.toolCrop'
   | 'canvas.toolSelectRectangle'
   | 'canvas.toolSelectEllipse'
@@ -138,7 +138,6 @@ export type CommandId =
   | 'canvas.toolPencil'
   | 'canvas.toolText'
   | 'canvas.toolEraser'
-  | 'canvas.toolEraserSelection'
   | 'canvas.toolFill'
   | 'canvas.toolPicker'
   | 'canvas.brushSmaller'
@@ -180,7 +179,13 @@ export type MenuCheck = CommandId | `scene.display:${DisplayMode}`
  * A fact of the document in front, so only the renderer holds it. Named after the ROW it opens
  * rather than after the state behind it: the template reads this beside the item it enables.
  */
-export type MenuAbility = 'scene.exportSelection'
+export type MenuAbility =
+  | 'scene.exportSelection'
+  // Both refuse in silence from the menu, and both are correctly greyed in the Layers panel —
+  // the native row was the one path that said nothing: a mask needs a selection to cut from,
+  // and a merge needs a layer underneath at the same level.
+  | 'canvas.maskFromSelection'
+  | 'canvas.mergeDown'
 
 /**
  * What a command is: where it applies, what it is called, what it does in plain words, and the
@@ -846,6 +851,13 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: null,
   }),
   command({
+    id: 'canvas.selectAll',
+    scope: 'canvas',
+    titleKey: 'commands.canvasSelectAll.title',
+    helpKey: 'commands.canvasSelectAll.help',
+    defaultBinding: 'Meta+KeyA',
+  }),
+  command({
     id: 'canvas.deselect',
     scope: 'canvas',
     titleKey: 'commands.canvasDeselect.title',
@@ -961,13 +973,6 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: 'KeyH',
   }),
   command({
-    id: 'canvas.toolScale',
-    scope: 'canvas',
-    titleKey: 'commands.canvasToolScale.title',
-    helpKey: 'commands.canvasToolScale.help',
-    defaultBinding: 'KeyK',
-  }),
-  command({
     id: 'canvas.toolCrop',
     scope: 'canvas',
     titleKey: 'commands.canvasToolCrop.title',
@@ -1064,13 +1069,6 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasToolEraser.title',
     helpKey: 'commands.canvasToolEraser.help',
     defaultBinding: 'KeyE',
-  }),
-  command({
-    id: 'canvas.toolEraserSelection',
-    scope: 'canvas',
-    titleKey: 'commands.canvasToolEraserSelection.title',
-    helpKey: 'commands.canvasToolEraserSelection.help',
-    defaultBinding: null,
   }),
   command({
     id: 'canvas.toolFill',

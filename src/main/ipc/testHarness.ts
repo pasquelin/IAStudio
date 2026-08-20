@@ -49,8 +49,13 @@ export function mockElectron(): {
     buildFromTemplate: (template: unknown) => unknown
     setApplicationMenu: (menu: unknown) => void
   }
+  nativeImage: { createFromBuffer: (bytes: Buffer) => { isEmpty: () => boolean } }
 } {
   return {
+    // Always empty, which is the honest answer without a live app: every caller of `nativeImage`
+    // in the main is written to fall back when the decode gives nothing, and a double that
+    // pretended to resize would test the fallback and nothing else.
+    nativeImage: { createFromBuffer: () => ({ isEmpty: () => true }) },
     ipcMain: { handle: (channel, handler) => void registered.set(channel, handler) },
     app: {
       on: (event, listener) =>

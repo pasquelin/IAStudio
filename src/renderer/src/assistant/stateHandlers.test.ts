@@ -243,6 +243,7 @@ describe('exporting the document in front', () => {
       flatten: async () => new Uint8Array(0),
       snapshot: async () => PIXEL,
       forgetPicture: async () => {},
+      turnQuarter: () => undefined,
     }))
   }
 

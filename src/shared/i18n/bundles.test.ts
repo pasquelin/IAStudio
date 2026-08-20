@@ -832,10 +832,6 @@ describe('the translation bundles', () => {
     home: { reads: ['début', 'accueil'], separates: 'the Home key, and the home screen' },
     light: { reads: ['lumière', 'clair'], separates: 'a scene light, and the light theme' },
     media: { reads: ['média', 'médias'], separates: "one file's section, and the setting for all" },
-    'merge down': {
-      reads: ['fusionner vers le bas', 'fusionner avec le calque du dessous'],
-      separates: 'the command palette, where a title is short, and the layer menu, which explains',
-    },
     metalness: {
       reads: ['métallicité', 'métal'],
       separates:

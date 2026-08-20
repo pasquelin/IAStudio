@@ -40,6 +40,10 @@ export function ToolbarTool({ tool, active, tip, onTool, onMode }: ToolbarToolPr
       shortcut={tool.modes ? armed?.shortcut : tool.shortcut}
       tooltip={tip}
       active={active}
+      // An armed tool is something one ACTIONS, which `CLAUDE.md` gives the full accent — and
+      // `active` alone paints it `elevated`, the very colour the hover uses. The bar then said
+      // the same thing about the tool under the pointer and the tool in the hand.
+      accented={active}
       // A menu of actions acts too, whether or not its registry says so: none of its rows can be
       // armed, so the button it opens from has no pressed state either.
       acts={tool.acts === true || opensOnClick}

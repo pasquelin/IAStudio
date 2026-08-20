@@ -663,6 +663,12 @@ export type LogScope =
   | 'skybox.source'
   | 'skybox.export'
   | 'canvas.layer'
+  /**
+   * Laying an asset down as a layer — a drop, or a double-click in the shelf. Apart from
+   * `canvas.layer` above, which is SPONTANEOUS: that one comes from a mount effect and must
+   * speak once, while this is a gesture and answers every time the hand repeats it.
+   */
+  | 'canvas.place'
   // Not `assets.open`, and the split is the point: the document DOES open here, and the code
   // carries on building it. What is reported is that it could not take the size of the picture
   // behind it — which matters because ⌘S writes the document's size back over that picture.
@@ -740,6 +746,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'skybox.source',
   'skybox.export',
   'canvas.layer',
+  'canvas.place',
   'canvas.size',
   'canvas.flatten',
   'canvas.edit',

@@ -6,15 +6,20 @@
  * the scaffolding a seam needs to be watched at all.
  */
 import type { Asset } from '@shared/domain/asset'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from './assets'
 
 /**
  * The catalogue as the main process would answer it once the ingest is done.
  *
- * `refresh` is what a seam calls rather than waiting on the coalesced invalidation, so this is
- * where an asset appears — never before the job reports.
+ * Answered by the BRIDGE, because that is where the landing asks: the shelf is filtered by the
+ * space in front and its refresh is coalesced, so a seam reading it would miss a picture whose
+ * space is not the one open — and would sometimes read a page sent before the outputs existed.
+ *
+ * The shelf is filled too, for the assertions that look at what the browser would show.
  */
 export function catalogueHolds(assets: readonly Asset[]): void {
+  installFakeBridge({ assets: { search: () => Promise.resolve([...assets]) } })
   useAssets.setState({ refresh: async () => void useAssets.setState({ items: assets }) })
 }
 

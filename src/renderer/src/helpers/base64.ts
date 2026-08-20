@@ -12,3 +12,17 @@ export function bytesToBase64(bytes: Uint8Array): string {
   }
   return btoa(chunks.join(''))
 }
+
+/**
+ * The way back — beside the way out, which is the whole point: two modules had written this,
+ * under the same name, with two different loops and no test between them.
+ *
+ * Takes a `data:` URL or bare base64 alike: `indexOf(',')` answers −1 for the second, and
+ * `slice(0)` is the whole string. `CanvasEngine.snapshot` hands back the bare form.
+ */
+export function bytesFromBase64(encoded: string): Uint8Array {
+  const binary = atob(encoded.slice(encoded.indexOf(',') + 1))
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
+  return bytes
+}

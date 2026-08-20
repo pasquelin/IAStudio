@@ -371,6 +371,15 @@ export function isGroup(layer: Layer): layer is GroupLayer {
 }
 
 /**
+ * Whether the layer's texture is rebuilt from its state rather than held as its pixels. A caption
+ * and a shape are, so a document-wide turn cannot be left to their surfaces: the next redraw
+ * would lay them out flat again, under a transform conjugated for pixels that turned.
+ */
+export function isRedrawn(layer: Layer): layer is TextLayer | ShapeLayer {
+  return layer.kind === 'text' || layer.kind === 'shape'
+}
+
+/**
  * Every layer of the stack, groups included, depth first and bottom first. Groups nest, so no
  * caller may assume `state.layers` is the whole document.
  */
@@ -419,6 +428,27 @@ export function canRemoveLayer(layers: readonly Layer[], layer: Layer): boolean 
   const leaving = new Set(allLayers([layer]).map(one => one.id))
 
   return allLayers(layers).some(one => !isGroup(one) && !leaving.has(one.id))
+}
+
+/**
+ * Whether there is a layer under the armed one, at its own level — what a merge needs.
+ *
+ * Read from both sides like `canRemoveLayer`: the menu greys its row with it, and the handler
+ * runs the same test before merging.
+ */
+export function canMergeDown(state: CanvasState): boolean {
+  const active = state.activeLayerId
+  return active !== null && layerBelow(state.layers, active) !== null
+}
+
+/**
+ * Whether a mask can be cut from the selection: a layer to wear it, and a region to cut.
+ *
+ * The selection is passed rather than read, because it lives in the VIEW store and this module
+ * knows nothing of stores — the two halves of the question are held apart in the app.
+ */
+export function canMaskFromSelection(state: CanvasState, hasSelection: boolean): boolean {
+  return hasSelection && state.activeLayerId !== null
 }
 
 /**

@@ -1,15 +1,29 @@
-import type { Asset } from '@shared/domain/asset'
+import type { Asset, AssetType } from '@shared/domain/asset'
 import type { DocumentKind } from '@shared/domain/document'
 import { isFinished, type Job } from '@shared/domain/job'
+import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 import { useAssets } from './assets'
 import { activeIdOfKind, useDocuments } from './documents'
 import { useJobs } from './jobs'
+
+/**
+ * How far back the settle looks. A generation's rows are the newest in the catalogue, and a
+ * batch is a handful — this is the margin for the ingests that landed alongside it.
+ */
+const SETTLE_LIMIT = 200
 
 /** What one workspace needs said about where its generations land. Everything else is shared. */
 export type GenerationLanding = {
   kind: DocumentKind
   /** Which of a generation's outputs this workspace can take. The rest stays on the shelf. */
   accepts: (asset: Asset) => boolean
+  /**
+   * The kinds `accepts` can ever say yes to — what the catalogue is ASKED for when a job lands.
+   * Written beside the predicate rather than derived from it: a query takes types, a predicate
+   * answers about one asset, and neither can be turned into the other.
+   */
+  types: readonly AssetType[]
   /**
    * How much of a batch it keeps, and the only thing the three workspaces ever differed on: a
    * sky is one sky and a scene one model, while a canvas gives every picture a layer of its own
@@ -46,6 +60,7 @@ export type LandingChannel = {
 export function createGenerationLanding({
   kind,
   accepts,
+  types,
   takes,
   land,
 }: GenerationLanding): LandingChannel {
@@ -67,10 +82,28 @@ export function createGenerationLanding({
    * collector wrote, so the two are joined on `jobId` — the only identifier both sides share.
    */
   const settleInto = async (settled: ReadonlyMap<string, string>): Promise<void> => {
-    await useAssets.getState().refresh()
+    const bridge = getBridge()
+    if (!bridge) return
 
-    const { items } = useAssets.getState()
+    // Asked of the catalogue directly, never of `useAssets.items`. Two reasons, and each one
+    // loses the result on its own: that list is FILTERED by the space in front — a generation
+    // launched from the image space and awaited in the audio space finds no picture in it — and
+    // `refresh` hands back a read already in flight, which may have been sent before the
+    // collector wrote the outputs. Either way the claim is already spent, and nothing retries.
+    // The claim is already spent by `settle`, so a read that throws loses a generation that was
+    // PAID for — and, unhandled, takes an unhandled rejection with it. The `refresh` this
+    // replaced could not reject; this one reaches the catalogue over IPC.
+    const rows = await bridge.assets
+      .search({ types: [...types], limit: SETTLE_LIMIT })
+      .catch(error => {
+        reportFailure('canvas.place', kind, error)
+        return null
+      })
+
+    if (!rows) return
     const { documents } = useDocuments.getState()
+    // The shelf still has to hear about them: it is what the browser shows.
+    void useAssets.getState().refresh()
 
     for (const [jobId, documentId] of settled) {
       // The tab may have been closed while the job ran: writing into it would resurrect a
@@ -78,8 +111,8 @@ export function createGenerationLanding({
       if (!documents[documentId]) continue
 
       // In catalogue order, which is the order they were rendered. Stopped at the first match
-      // when that is all this workspace takes: `items` is the project's whole catalogue.
-      for (const asset of items) {
+      // when that is all this workspace takes.
+      for (const asset of rows) {
         if (asset.jobId !== jobId || !accepts(asset)) continue
 
         land(documentId, asset)

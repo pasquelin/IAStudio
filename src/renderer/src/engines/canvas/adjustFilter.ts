@@ -1,5 +1,8 @@
 import { defaultFilterVert, Filter } from 'pixi.js'
 import { adjustUniformsOf, type AdjustmentStack } from '@shared/domain/adjustments'
+// The weights themselves, read rather than written a third time: this pass, the three.js one and
+// the texture chunks all declared the same three numbers.
+import { LUMA } from '@/engines/texture/derive/glsl'
 
 /**
  * Colour grading as one filter pass. The GLSL is the one `engines/gpu/passes/adjust.ts` grades
@@ -21,7 +24,7 @@ uniform float uSaturation;
 uniform float uTemperature;
 uniform float uTint;
 
-const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+${LUMA}
 
 // Middle grey in sRGB, which is what a layer's texture holds. The three.js pass grades linear
 // light and pivots at 0.18; pivoting there on sRGB pixels brightens the whole picture instead

@@ -1,4 +1,4 @@
-import { isLocalPicture } from '@shared/domain/asset'
+import { isLocalPicture, PICTURES } from '@shared/domain/asset'
 import { createGenerationLanding } from './generationLanding'
 import { setSkyboxSource } from './skyboxes'
 
@@ -10,6 +10,7 @@ const landing = createGenerationLanding({
   kind: 'skybox',
   // A generation can answer several pictures; the first that decodes is the sky.
   accepts: isLocalPicture,
+  types: PICTURES,
   takes: 'first',
   land: setSkyboxSource,
 })

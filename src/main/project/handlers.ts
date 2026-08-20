@@ -11,6 +11,7 @@ import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { isPngBytes, probePng } from '@main/media/png'
 import { packOpenRaster, unpackOpenRaster } from '@main/assets/openRasterFile'
+import { oraThumbnailOf } from '@main/media/oraThumbnail'
 import { ORA_MERGED_PATH } from '@shared/domain/openRaster'
 import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/localBackend'
@@ -475,7 +476,9 @@ export function registerProjectHandlers({
     const merged = request.document.surfaces.find(one => one.path === ORA_MERGED_PATH)?.png
     if (!merged || !isPngBytes(merged)) throw new Error('expected a PNG payload')
 
-    const bytes = packOpenRaster(request.document)
+    // The flatten reduced to the 256 px the spec allows, rather than the flatten again: written
+    // whole it doubled the file and put it out of spec, and every read inflated the copy.
+    const bytes = packOpenRaster(request.document, '', oraThumbnailOf(merged))
     // Read off the FLATTEN the container carries, not off the container: what the shelf and the
     // inspector show of a `.ora` is its `mergedimage.png`, and its dimensions are the picture's.
     const probe = probePng(merged) ?? undefined

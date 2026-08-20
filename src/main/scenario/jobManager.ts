@@ -171,6 +171,13 @@ const RETAINED_JOBS = 200
 const SETTLED_FOR_GOOD: ReadonlySet<ApiFailure> = new Set(['not-found'])
 
 /**
+ * How many times a job may go back in the queue after losing its connection mid-follow. Past
+ * this it is reported failed, and the note left on disk lets the next launch collect its output
+ * — the outcome the studio had before, minus the false report on a short outage.
+ */
+const MAX_RESUMES = 3
+
+/**
  * The API spells eight states, the studio has five. `warming-up` and `finalizing` are running
  * states, not states of their own; an unknown one is treated as running, so a status Scenario
  * adds keeps the job polling instead of declaring an outcome nobody understood.
@@ -236,6 +243,12 @@ type Entry = {
   discreet: boolean
   /** Resolved once the job has settled, for a caller that awaits its outcome rather than watching. */
   settled: ((job: Job) => void) | null
+  /**
+   * How many times the connection has been lost while FOLLOWING this job. Bounded because the
+   * queue is not a retry loop: without a ceiling, a network that stays down puts the same job
+   * back for ever, and it holds a concurrency slot on every pass.
+   */
+  resumes: number
   /** Captured when the user asked for it: the credits and the output belong to that account. */
   account: JobAccount | null
   /** Kept beside the account itself, because it is the half that survives the session. */
@@ -576,6 +589,22 @@ export function createJobManager({
       }
 
       const failure = failureOf(error)
+
+      // A job that already has a remote id is RUNNING on the server, and paid for. Losing the
+      // network while following it says nothing about the job — reported as failed, the bar read
+      // « échec » over a generation that went on to succeed, and only the next launch of the
+      // studio picked its outputs up. Put back in the queue instead: `execute` follows a job it
+      // already has an id for rather than submitting it again.
+      if (
+        entry.remoteId !== null &&
+        !SETTLED_FOR_GOOD.has(failure) &&
+        entry.resumes < MAX_RESUMES
+      ) {
+        entry.resumes += 1
+        queue.push(entry.job.id)
+        return
+      }
+
       entry.done = SETTLED_FOR_GOOD.has(failure)
       settle(entry, 'failed', failure)
     }
@@ -624,6 +653,7 @@ export function createJobManager({
     const entry: Entry = {
       job,
       discreet,
+      resumes: 0,
       settled: settledCallback,
       account: active?.account ?? null,
       accountId: active?.id ?? null,
@@ -672,6 +702,7 @@ export function createJobManager({
           job,
           // Nothing discreet is ever written down, so nothing resumed can be one.
           discreet: false,
+          resumes: 0,
           settled: null,
           account: accounts.of(remembered.accountId),
           accountId: remembered.accountId,

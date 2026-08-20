@@ -7,6 +7,7 @@ const engine = (label: string): CanvasHost => ({
   flatten: () => Promise.resolve(new Uint8Array(0)),
   snapshot: () => Promise.resolve(label),
   forgetPicture: () => Promise.resolve(),
+  turnQuarter: () => undefined,
 })
 
 describe('the canvas host registry', () => {

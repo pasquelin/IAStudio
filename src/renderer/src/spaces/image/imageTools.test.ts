@@ -36,8 +36,8 @@ describe('image tools', () => {
     for (const tool of IMAGE_TOOLS) expect(tool.icon).toBeTruthy()
   })
 
-  it('gives the eraser two modes, so it opens a flyout', () => {
-    expect(toolById('eraser')?.modes).toHaveLength(2)
+  it('gives the pointer two modes, so it opens a flyout', () => {
+    expect(toolById('pointer')?.modes).toHaveLength(2)
   })
 
   it('leaves a single-purpose tool without modes, so its button acts directly', () => {
@@ -45,6 +45,8 @@ describe('image tools', () => {
     // an id that no longer resolves passes while testing nothing.
     expect(toolById('fill')?.modes).toBeUndefined()
     expect(toolById('picker')?.modes).toBeUndefined()
+    // The eraser lost its second mode with the gesture that never existed behind it.
+    expect(toolById('eraser')?.modes).toBeUndefined()
   })
 
   it('names every mode through i18n too', () => {

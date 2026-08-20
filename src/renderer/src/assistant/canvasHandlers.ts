@@ -60,6 +60,7 @@ import {
 } from '@/engines/canvas/commands'
 import type { Command } from '@/engines/core/history'
 import { newId } from '@/helpers/ids'
+import { turnPort } from '@/spaces/image/turnPort'
 import { canvasOf, selectLayerIn, useCanvases } from '@/stores/canvases'
 import { activeImageId, useDocuments } from '@/stores/documents'
 import type { ActionHandlers } from './actionHandler'
@@ -95,10 +96,13 @@ function run(documentId: string, commands: Commands): ActionOutcome {
   return { ok: true }
 }
 
-/** Edits the image in front, whatever the stack holds. */
-function edit(build: (state: CanvasState) => Commands): ActionOutcome {
+/**
+ * Edits the image in front, whatever the stack holds. The document's id is handed to the builder
+ * as well as its state: a command that reaches the ENGINE — a quarter turn — needs to say which.
+ */
+function edit(build: (state: CanvasState, documentId: string) => Commands): ActionOutcome {
   const open = mounted()
-  return open ? run(open.documentId, build(open.state)) : refused('wrongSurface')
+  return open ? run(open.documentId, build(open.state, open.documentId)) : refused('wrongSurface')
 }
 
 /**
@@ -463,11 +467,16 @@ function crop(input: Record<string, unknown>): ActionOutcome {
   return edit(() => [cropToRect({ x, y, width, height })])
 }
 
-const TURNS: Record<string, () => Command<CanvasState>> = {
+/**
+ * The four document-wide turns. A quarter turn takes the document it runs on, because it turns
+ * the PIXELS through that document's engine — the mirrors do not, a negative scale being the
+ * whole of what they change.
+ */
+const TURNS: Record<string, (documentId: string) => Command<CanvasState>> = {
   flipHorizontal: () => flipImage('horizontal'),
   flipVertical: () => flipImage('vertical'),
-  rotateClockwise: () => rotateImage(true),
-  rotateAnticlockwise: () => rotateImage(false),
+  rotateClockwise: documentId => rotateImage(true, turnPort(documentId)),
+  rotateAnticlockwise: documentId => rotateImage(false, turnPort(documentId)),
 }
 
 // A layer wearing no mask is refused rather than given a record with no pixels behind it:
@@ -515,7 +524,7 @@ export const CANVAS_HANDLERS: ActionHandlers = {
   'canvas.crop': crop,
   'canvas.orient': input => {
     const turn = TURNS[textOf(input, 'turn') ?? '']
-    return turn ? edit(() => [turn()]) : refused('badInput')
+    return turn ? edit((_state, documentId) => [turn(documentId)]) : refused('badInput')
   },
   'layer.add': newLayer,
   'layer.remove': input => editLayer(input, layer => [removeLayer(layer.id)]),

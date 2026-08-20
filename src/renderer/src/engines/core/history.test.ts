@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   canRedo,
   canUndo,
+  composed,
   emptyHistory,
   HISTORY_LIMIT,
   redo,
@@ -81,6 +82,38 @@ describe('history', () => {
       ;[value, history] = run(value, history, add(1))
     }
     expect(history.past).toHaveLength(HISTORY_LIMIT)
+  })
+})
+
+describe('composed', () => {
+  const declined = (id: string): Command<number> => ({ ...add(1), id, refuses: () => true })
+
+  // A gesture where one of three nodes cannot move is still a gesture, and it is the WHOLE that
+  // is pushed — otherwise the two that did move have no ⌘Z of their own.
+  it('runs a gesture whose parts do not all refuse', () => {
+    const [value, history] = run(0, emptyHistory<number>(), composed('g', [declined('a'), add(2)]))
+
+    expect(value).toBe(3)
+    expect(history.past).toHaveLength(1)
+  })
+
+  it('refuses a gesture every part of which refuses', () => {
+    const [value, history] = run(
+      0,
+      emptyHistory<number>(),
+      composed('g', [declined('a'), declined('b')]),
+    )
+
+    expect(value).toBe(0)
+    expect(history.past).toEqual([])
+  })
+
+  // `addClips([])` and `multi(id, [])` both reach this: nothing to do pushes nothing, where the
+  // entry it used to push was a ⌘Z that did nothing and looked like a ⌘Z that was ignored.
+  it('refuses a gesture with no parts at all', () => {
+    const [, history] = run(0, emptyHistory<number>(), composed('g', []))
+
+    expect(history.past).toEqual([])
   })
 })
 

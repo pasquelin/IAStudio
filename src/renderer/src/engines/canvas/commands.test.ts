@@ -43,7 +43,10 @@ import {
   pixelLayer,
   textLayer,
   type CanvasState,
+  type Rect,
+  type Transform,
 } from './canvasState'
+import { applyTo, layerMatrix, mapRect } from './layerSpace'
 
 const second = layerFixture()
 
@@ -336,6 +339,48 @@ describe('resizeCanvas against resizeImage', () => {
     expect(layerById(after, 'a')?.transform.scaleY).toBe(0.5)
   })
 
+  /**
+   * The pixels are carried over unscaled into the bigger surface, so they still occupy the OLD
+   * 100 × 100 region of it — and a resample has to land that region on the whole new frame.
+   * Scaling `x` alone left it at half the document away, and asserting the factors alone could
+   * not see it.
+   */
+  it('lands the pixels on the frame they were resampled onto', () => {
+    const before = { ...stack('a'), width: 100, height: 100 }
+    const [after] = roundTrip(before, resizeImage(200, 200))
+    const transform = layerById(after, 'a')?.transform
+    if (!transform) throw new Error('the fixture has no layer')
+    const matrix = layerMatrix(transform, { width: after.width, height: after.height })
+
+    expect(applyTo(matrix, { x: 0, y: 0 })).toMatchObject({
+      x: expect.closeTo(0, 6),
+      y: expect.closeTo(0, 6),
+    })
+    expect(applyTo(matrix, { x: 100, y: 100 })).toMatchObject({
+      x: expect.closeTo(200, 6),
+      y: expect.closeTo(200, 6),
+    })
+  })
+
+  it('carries a displaced layer to the place the resample sends it', () => {
+    const before = {
+      ...stack('a'),
+      width: 100,
+      height: 100,
+      layers: [{ ...pixelLayer('a', 'A'), transform: { ...IDENTITY, x: 10, y: 20 } }],
+    }
+    const [after] = roundTrip(before, resizeImage(200, 200))
+    const transform = layerById(after, 'a')?.transform
+    if (!transform) throw new Error('the fixture has no layer')
+
+    expect(
+      applyTo(layerMatrix(transform, { width: after.width, height: after.height }), {
+        x: 0,
+        y: 0,
+      }),
+    ).toMatchObject({ x: expect.closeTo(20, 6), y: expect.closeTo(40, 6) })
+  })
+
   it('refuses a frame with no surface rather than producing one', () => {
     const [after] = roundTrip(stack('a'), resizeCanvas(0, -5, { x: 0, y: 0 }))
 
@@ -614,10 +659,34 @@ describe('translateLayer', () => {
 })
 
 describe('paintPixels', () => {
-  function port() {
+  function port(answers = true) {
     const calls: string[] = []
-    return { calls, restore: (id: string, side: string) => (calls.push(`${id}:${side}`), true) }
+    const lost: string[] = []
+    return {
+      calls,
+      lost: (id: string) => void lost.push(id),
+      losses: lost,
+      restore: (id: string, side: string) => (calls.push(`${id}:${side}`), answers),
+    }
   }
+
+  // A resurface drops every tile without telling the stack, and the entry left behind is a ⌘Z
+  // that visibly does nothing. The port is told so it can take the entry off.
+  it('reports a replay that found nothing', () => {
+    const spy = port(false)
+    const command = paintPixels('p1', spy)
+    command.revert(DEFAULT_CANVAS)
+
+    expect(spy.losses).toEqual(['p1'])
+  })
+
+  it('says nothing when the tiles are still there', () => {
+    const spy = port()
+    const command = paintPixels('p1', spy)
+    command.revert(DEFAULT_CANVAS)
+
+    expect(spy.losses).toEqual([])
+  })
 
   // The layer already holds the "after" pixels when the entry is pushed.
   it('asks for nothing on the apply that pushes it', () => {
@@ -646,28 +715,78 @@ describe('paintPixels', () => {
 })
 
 describe('flipping and turning the whole document', () => {
-  const placed = (x: number, y: number): CanvasState => ({
+  const holding = (transform: Transform): CanvasState => ({
     ...DEFAULT_CANVAS,
     width: 100,
     height: 200,
-    layers: [{ ...pixelLayer('a', 'A'), transform: { ...IDENTITY, x, y } }],
+    layers: [{ ...pixelLayer('a', 'A'), transform }],
     activeLayerId: 'a',
   })
 
+  const placed = (x: number, y: number): CanvasState => holding({ ...IDENTITY, x, y })
+
+  const turnedBy = (rotation: number): CanvasState => holding({ ...IDENTITY, rotation })
+
   const transformOf = (state: CanvasState) => state.layers[0]?.transform
+
+  /**
+   * Where the layer's pixels actually land in the document. Asserted instead of the transform
+   * it holds: `x` is not the position of the content once a scale or a turn is on, so a suite
+   * that reads `x` alone stays green while the whole layer sits outside the frame.
+   */
+  const contentOf = (state: CanvasState): Rect => {
+    const box = { width: state.width, height: state.height }
+    const transform = transformOf(state)
+    if (!transform) throw new Error('the fixture has no layer')
+
+    return mapRect(layerMatrix(transform, box), { x: 0, y: 0, ...box })
+  }
+
+  const near = (rect: Rect) => ({
+    x: expect.closeTo(rect.x, 6),
+    y: expect.closeTo(rect.y, 6),
+    width: expect.closeTo(rect.width, 6),
+    height: expect.closeTo(rect.height, 6),
+  })
 
   // A negative scale rather than rewritten pixels: flipping twice is exactly the identity, which
   // resampling twice would not be.
   it('mirrors without touching a single pixel', () => {
     const [after] = roundTrip(placed(10, 20), flipImage('horizontal'))
 
-    expect(transformOf(after)).toMatchObject({ scaleX: -1, x: 90 })
+    expect(transformOf(after)).toMatchObject({ scaleX: -1 })
+  })
+
+  // The frame is [0, 100]: a layer that sat at [10, 110] mirrors onto [-10, 90]. Writing
+  // `width - x` sent it to [90, 190] — one whole document out, and the screen went blank.
+  it('mirrors the pixels onto the other side of the frame', () => {
+    const [after] = roundTrip(placed(10, 20), flipImage('horizontal'))
+
+    expect(contentOf(after)).toMatchObject(near({ x: -10, y: 20, width: 100, height: 200 }))
   })
 
   it('mirrors the other way on the other axis', () => {
     const [after] = roundTrip(placed(10, 20), flipImage('vertical'))
 
-    expect(transformOf(after)).toMatchObject({ scaleY: -1, y: 180 })
+    expect(transformOf(after)).toMatchObject({ scaleY: -1 })
+    expect(contentOf(after)).toMatchObject(near({ x: 10, y: -20, width: 100, height: 200 }))
+  })
+
+  // The layer covers the frame exactly, so mirroring must leave it covering the frame exactly.
+  it('leaves a layer that fills the frame filling it', () => {
+    const [after] = roundTrip(placed(0, 0), flipImage('horizontal'))
+
+    expect(contentOf(after)).toMatchObject(near({ x: 0, y: 0, width: 100, height: 200 }))
+  })
+
+  // A turned layer sweeps the other way once mirrored: the angles turn with the scale, or the
+  // content lands somewhere the mirror never sent it.
+  it('mirrors a turned layer onto its own reflection', () => {
+    const turned = turnedBy(Math.PI / 6)
+    const [after] = roundTrip(turned, flipImage('horizontal'))
+    const before = contentOf(turned)
+
+    expect(contentOf(after)).toMatchObject(near({ ...before, x: 100 - before.x - before.width }))
   })
 
   it('puts everything back on an undo', () => {
@@ -677,29 +796,109 @@ describe('flipping and turning the whole document', () => {
     expect(reverted).toEqual(before)
   })
 
+  /** Records which way the engine was told to turn its pixels, and in what order. */
+  const turns = () => {
+    const asked: boolean[] = []
+    return Object.assign({ turn: (clockwise: boolean) => void asked.push(clockwise) }, { asked })
+  }
+
+  /**
+   * The pixels turn from INSIDE the command, so an undo unturns them. Driven by the caller
+   * instead, ⌘Z restored a portrait frame over landscape textures and the recut that followed
+   * took half of every layer — the very loss this command exists to avoid.
+   */
+  it('turns the pixels one way and back on an undo', () => {
+    const port = turns()
+    const command = rotateImage(true, port)
+
+    const after = command.apply(placed(10, 20))
+    command.revert(after)
+
+    expect(port.asked).toEqual([true, false])
+  })
+
+  it('turns them the other way on a redo', () => {
+    const port = turns()
+    const command = rotateImage(true, port)
+    const after = command.apply(placed(10, 20))
+    command.apply(command.revert(after))
+
+    expect(port.asked).toEqual([true, false, true])
+  })
+
   // The frame turns with the picture: a portrait becomes a landscape.
   it('swaps the sides of the frame a quarter turn', () => {
-    const [after] = roundTrip(placed(10, 20), rotateImage(true))
+    const [after] = roundTrip(placed(10, 20), rotateImage(true, turns()))
 
     expect(after).toMatchObject({ width: 200, height: 100 })
   })
 
-  it('turns every layer a quarter turn with it', () => {
-    const [after] = roundTrip(placed(10, 20), rotateImage(true))
+  /**
+   * The turn lives in the pixels — `CanvasEngine.turnQuarter` transposes the surfaces first — so
+   * the angle is NOT what to assert here. What the eye checks is that a layer filling the frame
+   * still fills it once the frame has traded its sides.
+   */
+  it('leaves a layer that fills the frame filling the turned one', () => {
+    const [after] = roundTrip(placed(0, 0), rotateImage(true, turns()))
 
-    expect(transformOf(after)?.rotation).toBeCloseTo(Math.PI / 2)
+    expect(contentOf(after)).toMatchObject(near({ x: 0, y: 0, width: 200, height: 100 }))
+  })
+
+  // The layer covered [10, 110] × [20, 220]; turning that clockwise in a 100 × 200 frame sends
+  // its corners to (180, 10) and (−20, 110).
+  it('carries a displaced layer to the place the turn sends it', () => {
+    const [after] = roundTrip(placed(10, 20), rotateImage(true, turns()))
+
+    expect(contentOf(after)).toMatchObject(near({ x: -20, y: 10, width: 200, height: 100 }))
   })
 
   it('turns the other way when asked', () => {
-    const [after] = roundTrip(placed(10, 20), rotateImage(false))
+    const [after] = roundTrip(placed(10, 20), rotateImage(false, turns()))
 
-    expect(transformOf(after)?.rotation).toBeCloseTo(-Math.PI / 2)
+    expect(contentOf(after)).toMatchObject(near({ x: 20, y: -10, width: 200, height: 100 }))
+  })
+
+  // Two scales that differ have to trade places with the sides they scale, or a layer stretched
+  // across a portrait comes back stretched across the width of a landscape.
+  it('trades the two scales of a stretched layer', () => {
+    const stretched = holding({ ...IDENTITY, scaleX: 2, scaleY: 0.5 })
+    const [after] = roundTrip(stretched, rotateImage(true, turns()))
+
+    expect(transformOf(after)).toMatchObject({ scaleX: 0.5, scaleY: 2 })
+  })
+
+  const captioned = (x: number, y: number): CanvasState => ({
+    ...DEFAULT_CANVAS,
+    width: 100,
+    height: 200,
+    layers: [textLayer('t', 'test', { x, y }, { width: 40, height: 10 })],
+    activeLayerId: 't',
+  })
+
+  /** What a paragraph's grips describe: its own box, where its transform puts it. */
+  const captionFrame = (state: CanvasState): Rect => {
+    const layer = state.layers[0]
+    if (layer?.kind !== 'text' || !layer.box) throw new Error('the fixture has no caption')
+
+    const box = { width: state.width, height: state.height }
+    return mapRect(layerMatrix(layer.transform, box), { x: 0, y: 0, ...layer.box })
+  }
+
+  /**
+   * The words are redrawn from the state, so a turned surface lasts until the next edit while the
+   * box never turned at all. The caption covered [10, 50] × [20, 30], which a clockwise turn in a
+   * 100 × 200 frame sends to [170, 180] × [10, 50].
+   */
+  it('carries a caption to the place the turn sends its box', () => {
+    const [after] = roundTrip(captioned(10, 20), rotateImage(true, turns()))
+
+    expect(captionFrame(after)).toMatchObject(near({ x: 170, y: 10, width: 10, height: 40 }))
   })
 
   // Four quarter turns are one full turn, and one full turn is where the document started.
   it('comes back to its own frame after four turns', () => {
     let state = placed(10, 20)
-    for (let turn = 0; turn < 4; turn += 1) [state] = roundTrip(state, rotateImage(true))
+    for (let turn = 0; turn < 4; turn += 1) [state] = roundTrip(state, rotateImage(true, turns()))
 
     expect(state).toMatchObject({ width: 100, height: 200 })
   })
