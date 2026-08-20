@@ -22,6 +22,8 @@ function shippedFolder(): string {
   return folder
 }
 
+const PROJECT = '/projects/One.scenario'
+
 let catalog: AsyncCatalog
 let written: Asset[]
 
@@ -38,13 +40,26 @@ function backend(): LocalBackend {
       createdAt: '2026-08-20T10:00:00.000Z',
     }
     written.push(asset)
+    onDisk.add(`${PROJECT}/${asset.path}`)
     return catalog.add(asset)
+  }
+
+  const replaceBytes = async (assetId: string): Promise<Asset> => {
+    const held = await catalog.find(assetId)
+    if (!held) throw new Error(`asset ${assetId} is not in the catalogue`)
+
+    written.push(held)
+    onDisk.add(`${PROJECT}/${held.path}`)
+    return held
   }
 
   // Everything else of the backend is out of reach of this handler, and a double that pretended
   // otherwise would be describing a contract this file does not read.
-  return { importFromBytes } as unknown as LocalBackend
+  return { importFromBytes, replaceBytes } as unknown as LocalBackend
 }
+
+/** What the project folder still holds, as the handler asks the disk about it. */
+let onDisk: Set<string>
 
 function install(folder: string, ids = 0): Promise<InstalledCheckerTexture[]> {
   let minted = ids
@@ -53,6 +68,8 @@ function install(folder: string, ids = 0): Promise<InstalledCheckerTexture[]> {
     assets: backend(),
     newAssetId: () => `asset_${(minted += 1)}`,
     folder: () => folder,
+    projectPath: () => PROJECT,
+    exists: file => onDisk.has(file),
   })
 
   return invokeChannel(CHANNELS.texturesInstallBundled) as Promise<InstalledCheckerTexture[]>
@@ -66,6 +83,7 @@ describe('the working textures shipped with the app', () => {
     // handle for the whole run — see `no-unclosed-memory-database`.
     onTestFinished(catalog.close)
     written = []
+    onDisk = new Set()
   })
 
   it('puts all four into the project, under the names a document refers to them by', async () => {
@@ -96,5 +114,19 @@ describe('the working textures shipped with the app', () => {
 
     expect(second).toEqual(first)
     expect(written).toEqual([])
+  })
+
+  // A row left behind by a file deleted in the Finder: every primitive of that project would
+  // otherwise be born wearing a map that resolves to nothing.
+  it('writes again the one whose file has gone, keeping the id its scenes point at', async () => {
+    const folder = shippedFolder()
+    const first = await install(folder)
+    onDisk.delete(`${PROJECT}/Textures/CheckerLarge.png`)
+    written = []
+
+    const second = await install(folder, 100)
+
+    expect(written.map(asset => asset.name)).toEqual(['CheckerLarge'])
+    expect(second).toEqual(first)
   })
 })

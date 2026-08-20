@@ -111,7 +111,7 @@ describe('materialFields', () => {
   it('stands the viewport colour in for a material that carries none', () => {
     const fields = materialFields(DEFAULT_MATERIAL, '#868a91')
 
-    expect(names(fields)).toEqual(['color', 'roughness', 'metalness'])
+    expect(names(fields)).toEqual(['color', 'roughness', 'metalness', 'uvScale'])
     expect(fields[0]?.value).toBe('#868a91')
   })
 

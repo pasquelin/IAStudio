@@ -41,11 +41,12 @@ export function meshNode(
     transform = IDENTITY_TRANSFORM,
     material = defaultMeshMaterial(),
     castShadow,
+    parentId = null,
   }: MeshOptions = {},
 ): SceneNode {
   return {
     id: newId(),
-    parentId: null,
+    parentId,
     name: classNameOf(geometry.kind),
     visible: true,
     transform,
@@ -63,6 +64,8 @@ export type MeshOptions = {
   material?: MaterialDescriptor
   /** A floor throws no shadow, and taking it out of the depth pass is the point of saying so. */
   castShadow?: boolean
+  /** Hangs it under a group — what a level built of thirty parts needs to stay readable. */
+  parentId?: string | null
 }
 
 export function lightNode(light: LightDescriptor, position: Vector3): SceneNode {

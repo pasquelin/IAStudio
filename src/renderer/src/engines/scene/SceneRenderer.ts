@@ -78,7 +78,6 @@ import { railsInUse, shotCameras, shotOfCameraAt } from './cameraShots'
 import {
   buildPath,
   cameraBody,
-  geometryFor,
   helperFor,
   knobIndexOf,
   knobName,
@@ -98,6 +97,7 @@ import {
   applySprite,
   lightFor,
   showPathKnobs,
+  tiledGeometry,
   standardMaterialOf,
 } from './threeSync'
 import {
@@ -127,7 +127,7 @@ import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
 import { nearestProjected, type Projected, type ProjectedBone } from './bonePicking'
 import { rigStateOf, type RigState } from './rigState'
-import { evenSize, flipInto, flipToSrgbInto, frameTimes, type FilmRequest } from './film'
+import { evenSize, flipToSrgbInto, frameTimes, type FilmRequest } from './film'
 import { captureSize, type CaptureQuality } from '@shared/domain/sceneCapture'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import {
@@ -1903,7 +1903,10 @@ export class SceneRenderer {
         gl.render(this.viewport.scene, camera)
         gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
 
-        flipInto(image.data, pixels, width, height)
+        // Encoded like a still is, and for the same reason: a render target holds the WORKING
+        // space whatever its texture says, so the frames went into their PNGs linear — washed
+        // out, and dark in the mid-tones. Read off three 0.185 rather than deduced.
+        flipToSrgbInto(image.data, pixels, width, height)
         context.putImageData(image, 0, 0)
         const blob = await surface.convertToBlob({ type: 'image/png' })
         index += 1
@@ -1940,8 +1943,13 @@ export class SceneRenderer {
     // The pane in hand when there are four of them; the whole canvas when there is one. A quad
     // layout captured at the canvas's shape would show more scene than the pane it was asked of.
     const pane = this.viewport.activePaneRegion()
+    const shown = pane ?? { width: canvas.clientWidth, height: canvas.clientHeight }
+    // Times the device ratio, because both measures above are CSS pixels while the frame on
+    // screen is drawn at the buffer's own: « view size » on a 2× display gave back half the
+    // definition of what was being looked at.
+    const ratio = gl.getPixelRatio()
     const { width, height } = captureSize(
-      pane ?? { width: canvas.clientWidth, height: canvas.clientHeight },
+      { width: shown.width * ratio, height: shown.height * ratio },
       quality,
     )
 
@@ -2403,8 +2411,10 @@ export class SceneRenderer {
   ): void {
     if (node.type === 'mesh' && object instanceof Mesh) {
       const before = previous?.type === 'mesh' ? previous : null
-      if (before?.geometry !== node.geometry) {
-        applyGeometry(object, node.geometry)
+      // The tiling too, and not only the shape: the repeat lives in the UVs, so changing it is
+      // rebuilding the geometry — a material comparison alone would leave the floor stretched.
+      if (before?.geometry !== node.geometry || before.material.uvScale !== node.material.uvScale) {
+        applyGeometry(object, node.geometry, node.material.uvScale)
         // The edges were built from the shape that just went: rebuilt, or they outline a mesh
         // that no longer exists.
         if (this.needsEdges()) this.applyDisplay(object)
@@ -2767,7 +2777,7 @@ export class SceneRenderer {
     const material = new MeshStandardMaterial()
     applyMaterial(material, node.material, this.meshColor)
 
-    const mesh = new Mesh(geometryFor(node.geometry), material)
+    const mesh = new Mesh(tiledGeometry(node.geometry, node.material.uvScale), material)
     // A texture arrives long after the frame that asked for it: the render is requested again
     // when it lands, or the viewport would show the mesh untextured until something else moved.
     const textures = createMaterialTextures(this.textureCache, mesh, material, () => this.redraw())

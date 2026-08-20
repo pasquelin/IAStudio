@@ -35,8 +35,13 @@ export type CaptureSize = { width: number; height: number }
  * capture asked for too early gives a picture rather than nothing.
  */
 export function captureSize(view: CaptureSize, quality: CaptureQuality): CaptureSize {
-  const height = quality === 'view' ? Math.round(view.height) : HEIGHTS[quality]
-  const aspect = view.height > 0 ? view.width / view.height : 16 / 9
+  // A view of no height falls back to 1080p AND to 16:9 — both halves, which is what makes the
+  // fallback worth anything: taking the height alone from a panel that has none writes a picture
+  // one pixel tall, and `view` is the quality the keyboard command takes.
+  const measured = view.height > 0
+  const height =
+    quality === 'view' ? (measured ? Math.round(view.height) : HEIGHTS.fullHd) : HEIGHTS[quality]
+  const aspect = measured ? view.width / view.height : 16 / 9
 
   return {
     width: Math.max(1, Math.round(height * aspect)),

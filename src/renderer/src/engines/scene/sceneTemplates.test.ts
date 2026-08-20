@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
+import { SCENE_TEMPLATE_IDS, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { rememberCheckerTextures, forgetCheckerTextures } from './checkerTextures'
 import { pitchTowards, sceneFromTemplate } from './sceneTemplates'
 import type { SceneNode } from './sceneState'
@@ -17,11 +17,18 @@ describe('sceneFromTemplate', () => {
     expect(sceneFromTemplate('empty').nodes.filter(node => node.type === 'mesh')).toEqual([])
   })
 
-  it('gives the basic one a floor, a camera and no selection', () => {
+  it('gives the basic one a floor, a cube to scale it by, a camera and no selection', () => {
     const scene = sceneFromTemplate('basic')
 
-    expect(typesIn(scene.nodes)).toEqual(['mesh', 'light', 'light', 'camera'])
+    expect(typesIn(scene.nodes)).toEqual(['mesh', 'mesh', 'light', 'light', 'camera'])
     expect(scene.selectedIds).toEqual([])
+  })
+
+  // What sent the first batch back: one stretch of the checker over twenty metres reads as a blur.
+  it('tiles a floor by the metre rather than stretching one picture over it', () => {
+    const floor = sceneFromTemplate('basic').nodes.find(node => node.type === 'mesh')
+
+    expect(floor?.type === 'mesh' && floor.material.uvScale).toBe(20)
   })
 
   it('lays the floor flat and keeps it out of the shadow pass', () => {
@@ -37,7 +44,8 @@ describe('sceneFromTemplate', () => {
   })
 
   it('stands a person-sized stand-in in the two templates that frame one', () => {
-    for (const id of ['thirdPerson', 'topDown'] as const) {
+    const framed: SceneTemplateId[] = ['thirdPerson', 'topDown']
+    for (const id of framed) {
       const capsule = sceneFromTemplate(id).nodes.find(
         node => node.type === 'mesh' && node.geometry.kind === 'capsule',
       )
@@ -62,8 +70,21 @@ describe('sceneFromTemplate', () => {
   it('aims the first-person camera at the horizon, at eye height', () => {
     const camera = sceneFromTemplate('firstPerson').nodes.find(node => node.type === 'camera')
 
-    expect(camera?.transform.position).toEqual({ x: 0, y: 1.7, z: 0 })
+    expect(camera?.transform.position.y).toBe(1.7)
     expect(camera?.transform.rotation).toEqual({ x: 0, y: 0, z: 0 })
+  })
+
+  // Three cadrages over an empty floor proved nothing: what makes them worth picking is a set
+  // one can climb, fall off and bump into — the same one for the three.
+  it('opens the three character views on the same level, moving only the camera', () => {
+    const shapesOf = (id: SceneTemplateId): string =>
+      sceneFromTemplate(id)
+        .nodes.filter(node => node.type === 'mesh')
+        .map(node => (node.type === 'mesh' ? node.geometry.kind : ''))
+        .join()
+
+    expect(shapesOf('topDown')).toBe(shapesOf('thirdPerson'))
+    expect(shapesOf('firstPerson').split(',').length).toBeGreaterThan(15)
   })
 
   it('builds a fresh scene each time, sharing no id with the last', () => {

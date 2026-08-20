@@ -52,6 +52,7 @@ function sceneOf(count: number): DocumentFile {
       color: null,
       roughness: 1,
       metalness: 0,
+      uvScale: 1,
       map: { assetId: 'asset_00000000-0000-0000-0000-000000000000' },
       normalMap: null,
       roughnessMap: null,

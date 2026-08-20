@@ -10,18 +10,22 @@ import {
 import { DEFAULT_ASSET_FOLDERS, withoutSourcePath, type Asset } from '@shared/domain/asset'
 import { pathIn } from '@shared/domain/folder'
 import { CHANNELS } from '@shared/ipc'
+import { ownFileOf } from './protocol'
 import { handle } from '@main/ipc/handle'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import type { LocalBackend } from './localBackend'
 
 /** Not exported: nothing outside this file builds one, and `unused:main` reads exports. */
 type BundledTextureDeps = {
-  /** Rejects while a project is being left, which is answered as « nothing installed ». */
   catalog: () => AsyncCatalog
   assets: LocalBackend
   newAssetId: () => string
   /** Where the shipped textures sit — injected like everything else that touches the disk. */
   folder: () => string
+  /** The open project's folder, which is what a stored path is relative to. */
+  projectPath: () => string
+  /** Whether a file is still there. Injected, exactly as `assets:absent` takes it. */
+  exists: (file: string) => boolean
 }
 
 /** Where one lands in the project, and where it is looked for before being copied again. */
@@ -36,19 +40,36 @@ function pathOf(id: CheckerTextureId): string {
  * an asset id, and the `.gltf` it is written as has to point at a picture another application
  * can open. A texture living only inside the app would leave every exported scene bare.
  *
- * Idempotent through the catalogue: a project that already files one at its path keeps that row,
- * ids included, so reopening a project does not pile up copies.
+ * Idempotent through the catalogue AND the disk: a project that files one at its path keeps that
+ * row, ids included — unless its file is gone, in which case it is copied again rather than left
+ * as a reference every mesh resolves to nothing.
+ *
+ * **Two angles blind, in clear.** An asset RENAMED in the shelf moves its file, so the next open
+ * installs a second copy under a new id — the old meshes go on resolving, which is why this is
+ * the cheap end of the trade. And a foreign file already sitting at that exact path makes the
+ * copy land suffixed, again at every open. Both want an identity that is not the path — a hash —
+ * and neither has been seen in practice.
  */
 export function registerBundledTextureHandlers({
   catalog,
   assets,
   newAssetId,
   folder,
+  projectPath,
+  exists,
 }: BundledTextureDeps): void {
   const install = async (id: CheckerTextureId): Promise<Asset> => {
-    const held = await catalog().search({ path: pathOf(id) })
-    const first = held[0]
-    if (first) return first
+    const held = (await catalog().search({ path: pathOf(id) }))[0]
+    // The row alone is not enough: a texture deleted in the Finder leaves it behind, and every
+    // primitive of that project would then be born wearing a map that resolves to no file.
+    const file = held ? ownFileOf(projectPath(), held) : null
+    if (held && file !== null && exists(file)) return held
+
+    const bytes = await readFile(join(folder(), checkerTextureFile(id)))
+
+    // The SAME asset when the row is still there: its id is what the scenes of this project
+    // already point at, and a fresh one would leave every one of them resolving to nothing.
+    if (held) return withoutSourcePath(await assets.replaceBytes(held.id, bytes, '.png'))
 
     return withoutSourcePath(
       await assets.importFromBytes(
@@ -61,7 +82,7 @@ export function registerBundledTextureHandlers({
           extension: '.png',
           map: 'baseColor',
         },
-        await readFile(join(folder(), checkerTextureFile(id))),
+        bytes,
       ),
     )
   }

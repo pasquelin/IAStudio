@@ -23,9 +23,11 @@ import {
   isSceneTemplateId,
   type SceneTemplateId,
 } from '@shared/domain/sceneTemplate'
+import { defaultMeshMaterial } from './checkerTextures'
 import { createDefaultScene } from './defaultScene'
 import { presetPatch } from './environmentPresets'
 import { cameraNode, lightNode, meshNode, pathNode } from './nodeFactory'
+import { playgroundNodes } from './playgroundLevel'
 import { IDENTITY_TRANSFORM, type SceneNode, type SceneState } from './sceneState'
 
 const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }
@@ -55,11 +57,18 @@ function aimedCamera(height: number, distance: number, targetHeight = 0): SceneN
   return cameraNode(at({ x: 0, y: height, z: distance }, rotation))
 }
 
-/** The working floor: wearing the checker, catching shadows, throwing none. */
+/**
+ * The working floor: wearing the checker, catching shadows, throwing none — and tiled one square
+ * per metre, where a single stretch of the picture over sixty makes a floor read as a blur.
+ */
 function floor(size: number): SceneNode {
   return meshNode(
     { kind: 'plane', width: size, height: size },
-    { transform: at(ORIGIN, LYING_FLAT), castShadow: false },
+    {
+      transform: at(ORIGIN, LYING_FLAT),
+      material: { ...defaultMeshMaterial(), uvScale: size },
+      castShadow: false,
+    },
   )
 }
 
@@ -91,6 +100,7 @@ const BACKDROP: MaterialDescriptor = {
   color: '#f2f2f4',
   roughness: 1,
   metalness: 0,
+  uvScale: 1,
   map: null,
   normalMap: null,
   roughnessMap: null,
@@ -116,8 +126,20 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // bare — an unlit scene reads as a broken viewport, not as a document waiting to be filled.
   empty: () => ({ nodes: createDefaultScene().nodes }),
 
-  // A floor, a sun, a fill and a camera: the shortest scene a model can be judged in.
-  basic: () => ({ nodes: [floor(20), sun(2), ambient(0.6), aimedCamera(2, 6, 0.5)] }),
+  // A floor, a sun, a fill, a camera — and a cube of one metre. The cube is what says how big a
+  // metre is here, and it is the first thing to delete once a model of one's own arrives.
+  basic: () => ({
+    nodes: [
+      floor(20),
+      meshNode(
+        { kind: 'box', width: 1, height: 1, depth: 1 },
+        { transform: at({ x: 0, y: 0.5, z: 0 }) },
+      ),
+      sun(2),
+      ambient(0.6),
+      aimedCamera(2, 6, 0.5),
+    ],
+  }),
 
   // The product preset brings the light ground and the filmic grading; what is added here is the
   // backdrop that turns a floor into a set, and the three-point rig standing on it.
@@ -172,21 +194,38 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
     play: { ...WALKING, camera: 'firstPerson' },
   }),
 
-  // The three below differ by where the camera stands and by nothing else — which is what these
-  // three views ARE. The stand-in is what makes a framing mean something before anything is
-  // modelled.
+  // The three below open on the SAME level and differ by where the camera stands — which is what
+  // these three views are. A cadrage over an empty floor proved nothing: what makes them worth
+  // picking is a set one can climb, fall off and bump into.
   firstPerson: () => ({
-    nodes: [floor(60), sun(2), ambient(0.6), cameraNode(at({ x: 0, y: 1.7, z: 0 }))],
+    nodes: [
+      ...playgroundNodes(),
+      sun(2.4, { x: 14, y: 18, z: 10 }),
+      ambient(0.5),
+      cameraNode(at({ x: 0, y: 1.7, z: 14 })),
+    ],
     play: { ...WALKING, camera: 'firstPerson' },
   }),
 
   thirdPerson: () => ({
-    nodes: [floor(60), sun(2), ambient(0.6), standIn(), aimedCamera(2.2, 4.5, 1)],
+    nodes: [
+      ...playgroundNodes(),
+      sun(2.4, { x: 14, y: 18, z: 10 }),
+      ambient(0.5),
+      standIn(),
+      aimedCamera(2.4, 5, 1),
+    ],
     play: { ...WALKING, camera: 'thirdPerson' },
   }),
 
   topDown: () => ({
-    nodes: [floor(60), sun(2), ambient(0.6), standIn(), aimedCamera(12, 8, 0.9)],
+    nodes: [
+      ...playgroundNodes(),
+      sun(2.4, { x: 14, y: 18, z: 10 }),
+      ambient(0.5),
+      standIn(),
+      aimedCamera(16, 11, 0.9),
+    ],
     play: { ...WALKING, camera: 'topDown', moveSpeed: 6 },
   }),
 }
