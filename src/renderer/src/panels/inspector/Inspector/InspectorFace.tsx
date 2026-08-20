@@ -13,7 +13,7 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useSelection } from '@/stores/selection'
 import { ClipInspector } from '../ClipInspector'
 import { FileInspector } from '../FileInspector'
-import { LayerInspector } from '../LayerInspector'
+import { LayerInspector } from '../LayerInspector/LayerInspector'
 import { SceneInspector } from '../SceneInspector'
 import { SkyboxInspector } from '../SkyboxInspector/SkyboxInspector'
 import { TextureInspector } from '../TextureInspector/TextureInspector'
@@ -60,18 +60,11 @@ export function InspectorFace() {
       )
     }
 
-    case 'layer': {
-      // Guarded on the owner, as the clip and track faces are: the image in front is not
-      // necessarily the one this layer was picked in. `canvas` is null without an image, which
-      // is what makes the owner check enough on its own.
-      const layer =
-        canvas && selection.ownerId === imageId ? layerById(canvas, selection.ids[0] ?? null) : null
-      return imageId && layer ? (
-        <LayerInspector documentId={imageId} layer={layer} />
-      ) : (
-        <InspectorEmpty />
-      )
-    }
+    // Not a case of its own, unlike the clip and track faces: which layer is read below, from
+    // `activeLayerId` — the answer the stack highlights, and the one a layer born on the canvas
+    // sets without ever posting a selection.
+    case 'layer':
+      break
 
     case 'track': {
       const track =
@@ -85,6 +78,11 @@ export function InspectorFace() {
       )
     }
   }
+
+  // Before the three below, which answer for a document of another kind: an image in front is
+  // the one document whose inspected thing is a layer.
+  const layer = canvas ? layerById(canvas, canvas.activeLayerId) : null
+  if (imageId && layer) return <LayerInspector documentId={imageId} layer={layer} />
 
   // `none` and `node` both land here, and deliberately: neither names a thing the document in
   // front might not hold. Nothing was clicked at all, or a scene node was — and a scene says

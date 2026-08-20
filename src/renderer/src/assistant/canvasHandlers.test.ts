@@ -88,6 +88,33 @@ describe('building a stack', () => {
     expect(canvas().layers.at(-1)?.name).toBe('Ciel')
   })
 
+  /** A client has a rectangle, not a hand: the box is what it names, and the two points follow. */
+  it('draws a shape from the box a client names', async () => {
+    await runAction('layer.add', {
+      kind: 'shape',
+      name: 'Cadre',
+      shape: 'rectangle',
+      x: 10,
+      y: 20,
+      width: 100,
+      height: 50,
+      fill: 0xff0000,
+    })
+
+    const added = canvas().layers.at(-1)
+    expect(added?.kind === 'shape' && added.to).toEqual({ x: 100, y: 50 })
+    expect(added?.kind === 'shape' && added.fill).toBe(0xff0000)
+    expect(added?.transform.x).toBe(10)
+  })
+
+  // A shape with no box is a layer with nothing on it, which nothing on screen could show.
+  it('refuses a shape that names no box', async () => {
+    expect(await runAction('layer.add', { kind: 'shape', name: 'Cadre' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
   // A row in the panel that changes nothing is the one thing a layer must never be.
   it('refuses an adjustment layer that names no dial', async () => {
     expect(await runAction('layer.add', { kind: 'adjustment', name: 'Étalonnage' })).toEqual({

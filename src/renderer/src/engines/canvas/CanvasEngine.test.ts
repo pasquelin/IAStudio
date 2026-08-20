@@ -15,6 +15,7 @@ import {
   textLayer,
   UNLOCKED,
   type CanvasState,
+  type DrawnShape,
   type Layer,
   type Rect,
   type Transform,
@@ -370,6 +371,8 @@ type Harness = {
   selections: CanvasSelection[]
   /** Where a caption was asked for, in document coordinates. */
   captions: Point[]
+  /** Every shape a drag finished on: where its box starts, and what the layer will hold. */
+  shapes: { at: Point; drawn: DrawnShape }[]
   /** The frames the engine settled a crop drag on, each of which becomes one history entry. */
   crops: Rect[]
   /** Whether a frame is drawn, reported on every change: what greys the bar's Accept and Cancel. */
@@ -403,6 +406,7 @@ function mounted(
   const viewports: Viewport[] = []
   const selections: CanvasSelection[] = []
   const captions: Point[] = []
+  const shapes: { at: Point; drawn: DrawnShape }[] = []
   const crops: Rect[] = []
   const cropFrames: boolean[] = []
   const calls: string[] = []
@@ -420,6 +424,7 @@ function mounted(
       onViewport: viewport => viewports.push(viewport),
       onSelection: selection => selections.push(selection),
       onText: at => captions.push(at),
+      onShape: (at, drawn) => shapes.push({ at, drawn }),
       onCrop: rect => crops.push(rect),
       onCropFrame: framed => cropFrames.push(framed),
       onHost: () => undefined,
@@ -448,6 +453,7 @@ function mounted(
     viewports,
     selections,
     captions,
+    shapes,
     crops,
     cropFrames,
     guides: { calls },
@@ -1791,6 +1797,18 @@ describe('painting inside a selection', () => {
 
     expect(stencilled()).toBe(true)
   })
+
+  it('puts the bucket on screen without waiting for another gesture', async () => {
+    const { engine, host } = await mounted()
+    engine.setTool('fill')
+    // A render aimed at no target is a render of the stage: what the window actually shows.
+    const presented = (): number => gpu.renders - gpu.painted.length
+    const before = presented()
+
+    press(host, 200, 200)
+
+    expect(presented()).toBeGreaterThan(before)
+  })
 })
 
 describe('making a mask of a selection', () => {
@@ -2075,55 +2093,21 @@ describe('adjustment layers', () => {
 })
 
 describe('drawing a shape', () => {
-  it('draws into the armed layer when the hand comes up, and not before', async () => {
-    const { engine, host } = await mounted()
+  it('asks the stack for a layer when the hand comes up, and not before', async () => {
+    const { engine, host, shapes } = await mounted()
     engine.setTool('shape')
-    gpu.painted = []
 
     press(host, 200, 200)
     drag(host, 300, 260)
-    // The undo tiles are photographed on the way, into textures of their own; what must not be
-    // written yet is the layer, or every intermediate shape would stay behind.
-    expect(gpu.painted).not.toContain(0)
+    // A layer per pointer move would be a hundred entries in the history for one gesture.
+    expect(shapes).toEqual([])
 
     release()
-    expect(gpu.painted).toContain(0)
+    expect(shapes).toHaveLength(1)
   })
 
-  it('reports one patch, so one shape undoes in one go', async () => {
+  it('writes no pixel of its own, which is what keeps the shape editable', async () => {
     const { engine, host, patches } = await mounted()
-    engine.setTool('shape')
-
-    press(host, 200, 200)
-    drag(host, 300, 260)
-    release()
-
-    expect(patches).toHaveLength(1)
-  })
-
-  // Six modes, one tool: the bar says which shape the next drag draws.
-  it('draws whichever of the six was armed', async () => {
-    const { engine, host } = await mounted()
-    engine.setTool('shape')
-    engine.setShape('star', 5)
-    gpu.painted = []
-
-    press(host, 200, 200)
-    drag(host, 300, 260)
-    release()
-
-    expect(gpu.painted).toContain(0)
-  })
-
-  it('draws nothing on a layer whose pixels are padlocked', async () => {
-    const { engine, host, patches } = await mounted(
-      stacked([
-        {
-          ...pixelLayer('layer-1', 'Background'),
-          locked: { pixels: true, position: false, alpha: false },
-        },
-      ]),
-    )
     engine.setTool('shape')
     gpu.painted = []
 
@@ -2133,6 +2117,78 @@ describe('drawing a shape', () => {
 
     expect(gpu.painted).not.toContain(0)
     expect(patches).toEqual([])
+  })
+
+  // Six modes, one tool: the bar says which shape the next drag draws.
+  it('hands over whichever of the six was armed, and its point count', async () => {
+    const { engine, host, shapes } = await mounted()
+    engine.setTool('shape')
+    engine.setShape('star', 7)
+
+    press(host, 200, 200)
+    drag(host, 300, 260)
+    release()
+
+    expect(shapes[0]?.drawn.shape).toBe('star')
+    expect(shapes[0]?.drawn.sides).toBe(7)
+  })
+
+  /**
+   * A layer draws into a texture of its own, from (0, 0), and its transform is what puts it back
+   * where the hand drew it: a point left in document space would draw outside the texture.
+   */
+  it('hands the two points over in the space of the layer itself', async () => {
+    const { engine, host, shapes } = await mounted()
+    engine.setTool('shape')
+
+    press(host, 200, 200)
+    drag(host, 300, 260)
+    release()
+    const far = { ...shapes[0] }
+
+    press(host, 100, 120)
+    drag(host, 200, 180)
+    release()
+
+    for (const one of shapes) {
+      expect(one.drawn.from.x).toBeGreaterThanOrEqual(0)
+      expect(one.drawn.from.y).toBeGreaterThanOrEqual(0)
+    }
+    // The same drag, moved: the shape is the same and only where its box starts differs.
+    expect(shapes[1]?.drawn).toEqual(far.drawn)
+    expect(shapes[1]?.at).not.toEqual(far.at)
+  })
+
+  it('stores the square shift really drew, not the rectangle the pointer traced', async () => {
+    const { engine, host, shapes } = await mounted()
+    engine.setTool('shape')
+    engine.setShape('rectangle', 5)
+
+    press(host, 200, 200)
+    host.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: 300, clientY: 240, shiftKey: true }),
+    )
+    release()
+
+    expect(shapes[0]?.drawn.to.x).toBeCloseTo(shapes[0]?.drawn.to.y ?? 0)
+  })
+
+  it('lands even over a layer whose pixels are padlocked, having none of its own', async () => {
+    const { engine, host, shapes } = await mounted(
+      stacked([
+        {
+          ...pixelLayer('layer-1', 'Background'),
+          locked: { pixels: true, position: false, alpha: false },
+        },
+      ]),
+    )
+    engine.setTool('shape')
+
+    press(host, 200, 200)
+    drag(host, 300, 260)
+    release()
+
+    expect(shapes).toHaveLength(1)
   })
 })
 
@@ -2488,6 +2544,7 @@ function silentOptions(): ConstructorParameters<typeof CanvasEngine>[0] {
     onCropFrame: nothing,
     onHost: nothing,
     onText: nothing,
+    onShape: nothing,
     onCrop: nothing,
     guides: { add: () => '', move: nothing, remove: nothing, beginDrag: nothing, endDrag: nothing },
     layers: { translate: nothing, transform: nothing, beginDrag: nothing, endDrag: nothing },

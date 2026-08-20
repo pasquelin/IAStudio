@@ -13,7 +13,7 @@ import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { registerFace } from '@/engines/canvas/canvasFonts'
-import { layerBelow, textLayer } from '@/engines/canvas/canvasState'
+import { layerBelow, shapeLayer, textLayer, type ShapeKind } from '@/engines/canvas/canvasState'
 import { CanvasEngine } from '@/engines/canvas/CanvasEngine'
 import { DEFAULT_BRUSH, resizedBrush, type BrushSettings } from '@/engines/canvas/brush'
 import { ImageDocumentBrush } from './ImageDocumentBrush'
@@ -97,6 +97,8 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   // What a fresh caption says. Held in a ref so the effect that builds the engine does not
   // depend on the language, which would remount it — and lose every layer's texture.
   const caption = useLatest(t('imageTools.textDefault'))
+  // What the stack calls a shape the hand just drew. Held for the same reason the caption is.
+  const shapeName = useLatest((kind: ShapeKind) => t(`layers.shapeName_${kind}`))
 
   useEffect(() => {
     const element = hostRef.current
@@ -121,6 +123,13 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         useCanvases
           .getState()
           .runCommand(documentId, addLayer(textLayer(newId(), caption.current, at))),
+      onShape: (at, drawn) =>
+        useCanvases
+          .getState()
+          .runCommand(
+            documentId,
+            addLayer(shapeLayer(newId(), shapeName.current(drawn.shape), at, drawn)),
+          ),
       onCrop: rect => useCanvases.getState().runCommand(documentId, cropToRect(rect)),
       onCropFrame: framed => views().setCropFrame(documentId, framed),
       guides: guidePort(documentId),
@@ -141,7 +150,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       created.dispose()
       engine.current = null
     }
-  }, [documentId, caption])
+  }, [documentId, caption, shapeName])
 
   // After the engine is registered, never before: the pixels are handed to it, and it has to be
   // reachable.

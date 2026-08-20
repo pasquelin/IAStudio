@@ -28,7 +28,8 @@ import {
 } from '@/engines/canvas/commands'
 import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
 import { useCanvases } from '@/stores/canvases'
-import { FontField } from './FontField'
+import { FontField } from '../FontField'
+import { LayerShapeSection } from './LayerShapeSection'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 
 export type LayerInspectorProps = { documentId: string; layer: Layer }
@@ -151,6 +152,8 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           />
         </PropertySection>
       )}
+
+      {layer.kind === 'shape' && <LayerShapeSection layer={layer} edit={edit} />}
 
       {layer.kind === 'adjustment' && (
         <PropertySection title={t(`adjustment.${layer.adjustment}`)}>

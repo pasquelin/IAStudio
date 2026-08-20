@@ -22,7 +22,7 @@ import { newId } from '@/helpers/ids'
 import { isTyping } from '@/helpers/typing'
 import { reportFailure } from '@/services/diagnostics'
 import { mountApplication } from '../core/mount'
-import { onPaletteChange, token, tokenAsFont } from '../core/palette'
+import { hexOf, onPaletteChange, token, tokenAsFont } from '../core/palette'
 import { createAdjustFilter, type AdjustFilter } from './adjustFilter'
 import { captionsSetIn, faceUrlOf, familyStack, type FaceRegistrar } from './canvasFonts'
 import {
@@ -32,9 +32,12 @@ import {
   layerById,
   type AdjustmentLayer,
   type CanvasState,
+  type DrawnShape,
   type GroupLayer,
   type Layer,
   type Rect,
+  type ShapeKind,
+  type ShapeLayer,
   type TextLayer,
   type Transform,
   WHITE,
@@ -64,7 +67,13 @@ import {
   type HandleId,
 } from './handles'
 import { resizeCursor, rotateCursor, UPRIGHT, type Facing } from './cursors'
-import { CanvasOverlay, RULER_SIZE, type OverlayColors, type OverlayScene } from './CanvasOverlay'
+import {
+  CanvasOverlay,
+  RULER_SIZE,
+  type OverlayColors,
+  type OverlayScene,
+  type PendingShape,
+} from './CanvasOverlay'
 import {
   boxEdges,
   guideNear,
@@ -78,11 +87,11 @@ import {
 import { PixelPatches, type PatchSide } from './PixelPatches'
 import { cropRect, resizeCrop } from './crop'
 import {
+  constrainedTo,
+  localShape,
   paintShape,
-  shapeBounds,
   shapeGeometry,
   type ShapeGeometry,
-  type ShapeKind,
 } from './shapeGeometry'
 import type { Point, Size } from '../core/geometry'
 import { blurRadius, DEFAULT_BRUSH, readsBrushSetting, type BrushSettings } from './brush'
@@ -144,6 +153,8 @@ export type CanvasEngineOptions = {
   onHost: (size: Size) => void
   /** Where a caption was asked for. The layer it becomes is the stack's to make. */
   onText: (at: Point) => void
+  /** A shape the hand finished drawing, and where its box starts. Same split as `onText`. */
+  onShape: (at: Point, drawn: DrawnShape) => void
   /**
    * The frame a crop drag settled on, in document units. Same split as `onText`: the engine
    * knows where the pointer went, the document's history knows what that means.
@@ -266,6 +277,37 @@ function strokeWidth(brushSize: number): number {
   return Math.max(1, brushSize / 4)
 }
 
+/** The shape a layer holds, back as geometry — its two points are already in its own space. */
+function shapeOf(layer: ShapeLayer): ShapeGeometry {
+  return shapeGeometry(layer.shape, layer.from, layer.to, {
+    sides: layer.sides,
+    constrain: false,
+  })
+}
+
+/**
+ * What a drawn layer's texture was last rasterized from — an unchanged key costs no redraw.
+ * `null` for a layer that holds its own pixels, which no state can redraw.
+ */
+function drawingKey(layer: Layer): string | null {
+  if (layer.kind === 'text') {
+    return `${layer.text}|${layer.size}|${layer.color}|${fontKey(layer.font)}`
+  }
+  if (layer.kind !== 'shape') return null
+
+  return [
+    layer.shape,
+    layer.from.x,
+    layer.from.y,
+    layer.to.x,
+    layer.to.y,
+    layer.sides,
+    layer.fill,
+    layer.stroke?.color,
+    layer.stroke?.width,
+  ].join('|')
+}
+
 /**
  * A canvas as PNG bytes. Two spellings and no way round it: a window's canvas answers through a
  * callback, a worker's through a promise, and Pixi publishes both as optional.
@@ -298,8 +340,11 @@ type Gesture =
   | { kind: 'crop'; from: Point }
   /** Pulling one grip of the placed crop frame. `origin` is the frame the drag started on. */
   | { kind: 'cropHandle'; handle: HandleId; origin: Rect }
-  /** `from` is where the drag began; the shape is redrawn from it on every move. */
-  | { kind: 'shape'; from: Point; target: BrushTarget }
+  /**
+   * The drag's two points, in document units. `to` is held rather than derived on release: it is
+   * the point AFTER shift has been applied, and the layer must store the square that was drawn.
+   */
+  | { kind: 'shape'; from: Point; to: Point }
   /** `origin` is the transform the layer had when the drag began: every step is absolute. */
   | { kind: 'handle'; id: string; handle: HandleId; from: Point; origin: Transform }
   /** Turning by the zone outside a corner. `center` is the middle the layer pivots about. */
@@ -448,8 +493,8 @@ export class CanvasEngine {
   private clipping: { holder: Container; stencil: Graphics } | null = null
   /** One grading pass per adjustment layer, holding the filter it applies. */
   private readonly adjustments = new Map<string, AdjustPass>()
-  /** What each text layer was last drawn with, so unchanged words cost no rasterization. */
-  private readonly wordings = new Map<string, string>()
+  /** What each drawn layer — a caption, a shape — was last rasterized from, so a redraw is rare. */
+  private readonly drawings = new Map<string, string>()
   /** Regions asked of masks that did not exist yet — see `fillMaskFromSelection`. */
   private readonly pendingMaskFills = new Map<string, readonly Point[]>()
   /** Pictures composed for layers that do not exist yet — see `flattenInto`. */
@@ -767,9 +812,9 @@ export class CanvasEngine {
       this.adjustments.delete(id)
     }
 
-    for (const id of this.wordings.keys()) {
+    for (const id of this.drawings.keys()) {
       // Its texture went with it, so the words have to be drawn again on the way back.
-      if (!kept.has(id)) this.wordings.delete(id)
+      if (!kept.has(id)) this.drawings.delete(id)
     }
 
     const clipping = new Set(layers.filter(layer => layer.clipped).map(layer => layer.id))
@@ -1558,7 +1603,7 @@ export class CanvasEngine {
     this.pendingSnapshots.clear()
     for (const picture of this.pendingPictures.values()) picture.destroy(true)
     this.pendingPictures.clear()
-    this.wordings.clear()
+    this.drawings.clear()
     this.dropClipping()
     this.isolation?.destroy()
     this.isolation = null
@@ -1623,7 +1668,7 @@ export class CanvasEngine {
         crop: this.cropping,
         handles: this.activeCorners(),
         lit: this.hover?.kind === 'handle' ? this.hover.id : null,
-        pending: this.pending,
+        pending: this.pendingShape(),
         selection: this.selection,
         // Not while the tool is refusing: a ring is a promise that a dab lands there.
         brushRadius: this.ringed() && !this.refuses() ? this.brush.size / 2 : null,
@@ -1637,9 +1682,24 @@ export class CanvasEngine {
    * stand still.
    */
   private marching(): boolean {
-    return (
-      selectionOutline(this.selection).length > 0 || this.pending !== null || this.cropping !== null
-    )
+    return selectionOutline(this.selection).length > 0 || this.cropping !== null
+  }
+
+  /**
+   * The shape under the hand, dressed in the paint it will be committed with — the overlay draws
+   * what will land, not a marquee around where it will.
+   *
+   * Stroked rather than filled for the two that have no inside; the brush size is the width,
+   * which is the one control the bar already offers.
+   */
+  private pendingShape(): PendingShape | null {
+    const shape = this.pending
+    if (!shape) return null
+
+    const color = hexOf(this.brush.color)
+    return shape.kind === 'line' || shape.kind === 'arrow'
+      ? { shape, fill: null, stroke: { color, width: strokeWidth(this.brush.size) } }
+      : { shape, fill: color, stroke: null }
   }
 
   private render(): void {
@@ -1650,19 +1710,17 @@ export class CanvasEngine {
     // Read before the build: a picture is drawn once, when its surface comes into existence —
     // which is also the only moment the engine can know the layer at all.
     const born = !this.surfaces.has(layer.id)
-    // Words are redrawn whenever they change, unlike pixels, which are what the layer holds. The
-    // face counts as a change: without it, setting a caption in another font is an edit the
-    // screen never shows, and a face the page was never asked for.
-    const wording =
-      layer.kind === 'text'
-        ? `${layer.text}|${layer.size}|${layer.color}|${fontKey(layer.font)}`
-        : null
+    // Words and shapes are redrawn whenever they change, unlike pixels, which are what the layer
+    // holds. The face counts as a change: without it, setting a caption in another font is an
+    // edit the screen never shows, and a face the page was never asked for.
+    const drawn = drawingKey(layer)
     const surface = this.buildSurface(layer.id, layer.kind === 'pixel' ? layer.fill : undefined)
     if (!surface) return
 
-    if (wording !== null && this.wordings.get(layer.id) !== wording) {
-      this.wordings.set(layer.id, wording)
+    if (drawn !== null && this.drawings.get(layer.id) !== drawn) {
+      this.drawings.set(layer.id, drawn)
       if (layer.kind === 'text') this.drawText(surface, layer)
+      if (layer.kind === 'shape') this.drawShape(surface, layer)
     }
 
     // A flatten composed its picture before the command ran; this is the surface it was for.
@@ -1724,6 +1782,24 @@ export class CanvasEngine {
     void this.registerFace(layer).catch(error =>
       reportFailure('font.face', layer.font.family, error),
     )
+  }
+
+  /**
+   * The shape, drawn into the layer's own texture at the layer's origin. `clear: true`, so
+   * recolouring one replaces it rather than laying the new paint over the old.
+   */
+  private drawShape(surface: LayerSurface, layer: ShapeLayer): void {
+    const renderer = this.app?.renderer
+    if (!renderer) return
+
+    const drawing = new Graphics()
+    paintShape(drawing, shapeOf(layer))
+    if (layer.fill !== null) drawing.fill({ color: layer.fill })
+    if (layer.stroke) drawing.stroke({ color: layer.stroke.color, width: layer.stroke.width })
+
+    renderer.render({ container: drawing, target: surface.texture, clear: true })
+    drawing.destroy()
+    this.render()
   }
 
   /**
@@ -1914,6 +1990,9 @@ export class CanvasEngine {
       // white, black or red background in one gesture, and a region its flat colour.
       this.fill(target.surface, this.brush.color, target.toSurface)
       this.endPixels()
+      // The renderer runs on demand, so a texture written outside a gesture is a texture nobody
+      // presents: the bucket only appeared once a pan or a zoom booked the next frame.
+      this.render()
       return
     }
 
@@ -1964,11 +2043,9 @@ export class CanvasEngine {
     }
 
     if (this.tool === 'shape') {
-      const target = this.paintTarget()
-      if (!target) return
-
-      this.beginPixels(target)
-      this.gesture = { kind: 'shape', from: point, target }
+      // No paint target and no undo tiles: a shape lands as a layer of its own, so the armed
+      // layer is neither written to nor required to exist.
+      this.gesture = { kind: 'shape', from: point, to: point }
       return
     }
 
@@ -2270,11 +2347,12 @@ export class CanvasEngine {
         return
       }
       case 'shape': {
-        // Previewed in the overlay, not in the layer: drawing into the texture on every move
-        // would leave every intermediate shape behind, since a texture keeps what it is given.
-        this.pending = shapeGeometry(this.shapeKind, gesture.from, point, {
+        // Previewed in the overlay, not in the layer: a layer per pointer move would be a
+        // hundred entries in the history for one gesture.
+        gesture.to = constrainedTo(this.shapeKind, gesture.from, point, event.shiftKey)
+        this.pending = shapeGeometry(this.shapeKind, gesture.from, gesture.to, {
           sides: this.shapeSides,
-          constrain: event.shiftKey,
+          constrain: false,
         })
         this.overlay.invalidate()
         return
@@ -2304,7 +2382,7 @@ export class CanvasEngine {
     // One history entry per gesture: a command per dab, or per pointer move, would make ⌘Z useless.
     if (LAYER_DRAGS.has(gesture.kind)) this.options.layers.endDrag()
     if (gesture.kind === 'paint') this.endPixels()
-    if (gesture.kind === 'shape') this.commitShape(gesture.target)
+    if (gesture.kind === 'shape') this.commitShape(gesture.from, gesture.to)
     // A click that carved nothing out is how every editor deselects. Left standing, a zero-area
     // selection is a stencil nothing gets through, and the document stops taking paint at all.
     if (gesture.kind === 'select' && isEmptySelection(this.selection)) this.publishSelection(null)
@@ -2598,37 +2676,28 @@ export class CanvasEngine {
     this.overlay.invalidate()
   }
 
-  /** Draws the previewed shape into the armed layer, once, when the hand comes up. */
-  private commitShape(target: BrushTarget): void {
-    const renderer = this.app?.renderer
-    const shape = this.pending
+  /**
+   * Hands the drawn shape over as a LAYER, once, when the hand comes up — rasterizing it into the
+   * armed layer would make the fill of a rectangle drawn an hour ago something only undo can fix.
+   */
+  private commitShape(from: Point, to: Point): void {
+    const drawn = this.pending
     this.pending = null
     this.overlay.invalidate()
-    if (!renderer || !shape) return
+    if (!drawn) return
 
-    const drawing = new Graphics()
-    paintShape(drawing, shape)
-    // Stroked rather than filled for the two that have no inside; the brush size is the width,
-    // which is the one control the bar already offers.
-    if (shape.kind === 'line' || shape.kind === 'arrow') {
-      drawing.stroke({
-        color: this.brush.color,
-        width: strokeWidth(this.brush.size),
-        alpha: this.brush.opacity,
-      })
-    } else {
-      drawing.fill({ color: this.brush.color, alpha: this.brush.opacity })
-    }
+    const line = drawn.kind === 'line' || drawn.kind === 'arrow'
+    const width = strokeWidth(this.brush.size)
+    const local = localShape(this.shapeKind, from, to, this.shapeSides, line ? width : 0)
 
-    this.patches?.touch(mapRect(target.toSurface, shapeBounds(shape, this.brush.size)))
-    renderer.render({
-      container: this.inSurfaceSpace(target.toSurface, this.clipped(drawing)),
-      target: target.surface.texture,
-      clear: false,
+    this.options.onShape(local.at, {
+      shape: this.shapeKind,
+      from: local.from,
+      to: local.to,
+      sides: this.shapeSides,
+      fill: line ? null : this.brush.color,
+      stroke: line ? { color: this.brush.color, width } : null,
     })
-    drawing.destroy()
-    this.endPixels()
-    this.render()
   }
 
   private pick(point: Point): void {

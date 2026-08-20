@@ -7,7 +7,12 @@ import { BODY_PARTS } from '@shared/domain/humanoid'
 import { ROOT_MOTIONS } from '@shared/domain/scene'
 import { EASINGS } from '@shared/domain/animation'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
-import { ADJUSTMENT_KINDS, LAYER_KINDS, type LayerKind } from '@/engines/canvas/canvasState'
+import {
+  ADJUSTMENT_KINDS,
+  LAYER_KINDS,
+  SHAPE_KINDS,
+  type LayerKind,
+} from '@/engines/canvas/canvasState'
 import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timelineState'
 import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
@@ -61,6 +66,9 @@ const COMPOSED_KEYS: readonly string[] = [
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}Hint`),
   ...BLEND_MODES.map(mode => `blend.${mode}`),
   ...LAYER_KINDS.map(kind => `inspector.layerKind_${kind}`),
+  // What a shape layer is CALLED when the hand finishes drawing it. A kind with no name would
+  // put a raw key in the stack, on the one row the user has to find the shape back by.
+  ...SHAPE_KINDS.map(kind => `layers.shapeName_${kind}`),
   // What the inspector says an imported model IS. A state with no sentence would read as the
   // raw key on the one surface that tells a user their model cannot be animated yet.
   ...RIG_STATUSES.map(status => `inspector.rigStatus_${status}`),
@@ -138,6 +146,7 @@ describe('the lists behind those keys', () => {
       group: true,
       adjustment: true,
       text: true,
+      shape: true,
     }
 
     expect([...LAYER_KINDS].sort()).toEqual(Object.keys(all).sort())

@@ -37,6 +37,7 @@ function recorder(): { context: OverlayContext; calls: Call[] } {
     lineTo: record('lineTo'),
     arc: record('arc'),
     stroke: record('stroke'),
+    fill: record('fill'),
     fillRect: record('fillRect'),
     strokeRect: record('strokeRect'),
     fillText: record('fillText'),
@@ -395,23 +396,46 @@ describe('the tool chrome', () => {
     expect(opsOf(calls, 'setLineDash')).toEqual([[[]]])
   })
 
-  it('outlines the shape under the hand with the same ants as a selection', () => {
+  /**
+   * A marquee has to close, and a closed arrow draws its shaft twice — which is exactly what the
+   * ants used to show. The path is the one the GPU is handed on release, so what the hand sees is
+   * what lands.
+   */
+  it('draws the shape under the hand as it will land, open ends and all', () => {
     const { context, calls } = recorder()
     drawOverlay(
       context,
-      toolScene({ pending: { kind: 'line', from: { x: 10, y: 20 }, to: { x: 40, y: 60 } } }),
+      toolScene({
+        pending: {
+          shape: { kind: 'line', from: { x: 10, y: 20 }, to: { x: 40, y: 60 } },
+          fill: null,
+          stroke: { color: '#ff0000', width: 4 },
+        },
+      }),
     )
 
-    expect(opsOf(calls, 'moveTo')).toEqual([
-      [27.5, 51.5],
-      [27.5, 51.5],
-    ])
-    expect(opsOf(calls, 'lineTo').slice(0, 2)).toEqual([
-      [87.5, 131.5],
-      [27.5, 51.5],
-    ])
-    expect(opsOf(calls, 'setLineDash')).toEqual([[[]], [[]], [[5, 4]], [[]]])
-    expect(opsOf(calls, 'strokeStyle')).toEqual([['#frame'], ['#light'], ['#dark']])
+    expect(opsOf(calls, 'moveTo')).toEqual([[27, 51]])
+    expect(opsOf(calls, 'lineTo')).toEqual([[87, 131]])
+    expect(opsOf(calls, 'strokeStyle')).toEqual([['#frame'], ['#ff0000']])
+    expect(opsOf(calls, 'fill')).toEqual([])
+  })
+
+  it('fills the shapes that have an inside, in the colour the bar is holding', () => {
+    const { context, calls } = recorder()
+    drawOverlay(
+      context,
+      toolScene({
+        pending: {
+          shape: { kind: 'rectangle', x: 10, y: 20, width: 30, height: 40 },
+          fill: '#00ff00',
+          stroke: null,
+        },
+      }),
+    )
+
+    expect(opsOf(calls, 'fillStyle')).toContainEqual(['#00ff00'])
+    expect(opsOf(calls, 'fill')).toEqual([[]])
+    expect(opsOf(calls, 'stroke')).toEqual([])
   })
 
   it('lays the marquee down first, then the shape, then the crop over both', () => {
@@ -420,13 +444,17 @@ describe('the tool chrome', () => {
       context,
       toolScene({
         selection: { kind: 'rect', rect: RECT },
-        pending: { kind: 'line', from: { x: 50, y: 50 }, to: { x: 60, y: 70 } },
+        pending: {
+          shape: { kind: 'line', from: { x: 50, y: 50 }, to: { x: 60, y: 70 } },
+          fill: null,
+          stroke: { color: '#ff0000', width: 2 },
+        },
         crop: RECT,
       }),
     )
 
     const marquee = calls.findIndex(call => call.op === 'moveTo' && call.args[0] === 27.5)
-    const shape = calls.findIndex(call => call.op === 'moveTo' && call.args[0] === 107.5)
+    const shape = calls.findIndex(call => call.op === 'moveTo' && call.args[0] === 107)
     const scrim = calls.findIndex(call => call.op === 'fillRect')
 
     expect(marquee).toBeGreaterThanOrEqual(0)
@@ -435,11 +463,17 @@ describe('the tool chrome', () => {
     expect(scrim).toBeGreaterThan(shape)
   })
 
-  it('asks for no path at all for a shape with no vertex', () => {
+  it('paints nothing at all for a shape with no vertex', () => {
     const { context, calls } = recorder()
-    drawOverlay(context, toolScene({ pending: { kind: 'polygon', points: [] } }))
+    drawOverlay(
+      context,
+      toolScene({
+        pending: { shape: { kind: 'polygon', points: [] }, fill: '#00ff00', stroke: null },
+      }),
+    )
 
-    expect(opsOf(calls, 'beginPath')).toEqual([])
+    expect(opsOf(calls, 'fill')).toEqual([])
+    expect(opsOf(calls, 'stroke')).toEqual([])
   })
 
   it('dims the four bands the crop would cut, then frames and grips what it keeps', () => {

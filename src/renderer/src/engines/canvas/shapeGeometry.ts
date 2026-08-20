@@ -6,10 +6,8 @@
  * is now — so one gesture describes them all.
  */
 import { clamp } from '@shared/numeric'
-import type { Rect } from './canvasState'
+import type { Rect, ShapeKind } from './canvasState'
 import type { Point } from '../core/geometry'
-
-export type ShapeKind = 'rectangle' | 'line' | 'arrow' | 'ellipse' | 'polygon' | 'star'
 
 export type ShapeGeometry =
   | { kind: 'rectangle'; x: number; y: number; width: number; height: number }
@@ -25,16 +23,6 @@ export type ShapeOptions = {
   /** Shift held: squares, circles, and lines snapped to 45°. */
   constrain: boolean
 }
-
-/** Figma's order, which is the order of the menu the user reads. */
-export const SHAPE_KINDS: readonly ShapeKind[] = [
-  'rectangle',
-  'line',
-  'arrow',
-  'ellipse',
-  'polygon',
-  'star',
-]
 
 export const MIN_SIDES = 3
 export const MAX_SIDES = 12
@@ -118,6 +106,46 @@ export function shapeOutline(shape: ShapeGeometry): Point[] {
   }
 }
 
+/**
+ * Where a constrained drag really lands, so a stored shape needs no memory of the key that was
+ * held: a square is a rectangle whose far corner was moved, not a rectangle plus a flag.
+ */
+export function constrainedTo(kind: ShapeKind, from: Point, to: Point, constrain: boolean): Point {
+  if (!constrain) return to
+  if (kind === 'line' || kind === 'arrow') return snapped(from, to)
+  // A ring is drawn from its centre outwards, so holding shift changes nothing about it.
+  if (kind === 'polygon' || kind === 'star') return to
+
+  const { width, height } = box(from, to, true)
+  return {
+    x: from.x + width * direction(to.x - from.x),
+    y: from.y + height * direction(to.y - from.y),
+  }
+}
+
+/**
+ * The same drag, moved so the shape's box starts at the origin: a layer draws into a texture of
+ * its own, from (0, 0), and its transform is what puts it back where the hand drew it.
+ *
+ * Derived from the bounds rather than from the two points: a polygon is drawn from its CENTRE, so
+ * the corner of its box is neither of them.
+ */
+export function localShape(
+  kind: ShapeKind,
+  from: Point,
+  to: Point,
+  sides: number,
+  strokeWidth: number,
+): { at: Point; from: Point; to: Point } {
+  const bounds = shapeBounds(
+    shapeGeometry(kind, from, to, { sides, constrain: false }),
+    strokeWidth,
+  )
+  const moved = (point: Point): Point => ({ x: point.x - bounds.x, y: point.y - bounds.y })
+
+  return { at: { x: bounds.x, y: bounds.y }, from: moved(from), to: moved(to) }
+}
+
 /** What a shape dirties, widened by the stroke it is drawn with — the undo tiles need it. */
 export function shapeBounds(shape: ShapeGeometry, width: number): Rect {
   const outline = shapeOutline(shape)
@@ -144,16 +172,18 @@ export type ShapePath = {
   lineTo: (x: number, y: number) => unknown
 }
 
-export function paintShape(path: ShapePath, shape: ShapeGeometry): void {
+/** `false` when the shape has no vertex at all, so a caller can leave its brush alone. */
+export function paintShape(path: ShapePath, shape: ShapeGeometry): boolean {
   const outline = shapeOutline(shape)
   const first = outline[0]
-  if (!first) return
+  if (!first) return false
 
   path.moveTo(first.x, first.y)
   for (const point of outline.slice(1)) path.lineTo(point.x, point.y)
   // Closed by hand: a line and an arrow are open, and closing them here is what gives the two
   // that do have an inside one to fill.
   if (shape.kind !== 'line' && shape.kind !== 'arrow') path.lineTo(first.x, first.y)
+  return true
 }
 
 /** Normalised so width and height are never negative: dragging up-left is still a rectangle. */
