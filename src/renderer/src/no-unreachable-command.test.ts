@@ -82,6 +82,12 @@ const COMBINATORS: readonly string[] = [
   'setTransform',
   'moveNodes',
   'recordMove',
+  // The band's own three. A channel is OPENED by keying a subject — `keyNode` mints it — and the
+  // panel offers no other way either; a key is written and taken back by `keySubject` and
+  // `unkeySubject`, which alone know what a channel's value is measured against.
+  'addAnimationTrack',
+  'setAnimationKey',
+  'removeAnimationKey',
 ]
 
 /**
@@ -130,20 +136,6 @@ const NOT_PUBLISHED: readonly string[] = [
   'addGuide',
   'moveGuide',
   'removeGuide',
-  // The scene: what a model plays.
-  'setModelLanes',
-  // The animation band: keys, tracks, the shots a rail is bound to, and what a recorded move
-  // becomes.
-  'addAnimationTrack',
-  'removeAnimationTrack',
-  'setAnimationKey',
-  'removeAnimationKey',
-  'keyNode',
-  'keySubject',
-  'unkeySubject',
-  'moveAnimationKey',
-  'reorderCameraShots',
-  'railForShot',
 ]
 
 describe('what edits a document, and what an outside client may ask for', () => {

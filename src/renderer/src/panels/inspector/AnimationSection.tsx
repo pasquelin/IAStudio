@@ -21,7 +21,7 @@ import { INLINE_LINK } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
 import { addModelClip, removeModelClip, setModelLanes } from '@/engines/scene/commands'
-import { laneHolding, lanesWith, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
+import { laneHolding, lanesWith, MAX_FADE, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import type { ModelNode } from '@/engines/scene/sceneState'
 import { clipLabel } from '@/helpers/clipLabel'
@@ -36,9 +36,6 @@ export type AnimationSectionProps = {
   node: ModelNode
   edit: SceneEdit
 }
-
-/** Seconds. Past a second a transition stops reading as one move joining another. */
-const MAX_FADE = 1
 
 /**
  * What an imported model can be made to play, and what stands in the way when it cannot.

@@ -1,5 +1,7 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
-import { HUMANOID_ROLES } from './humanoid'
+import { TRACK_PROPERTIES } from './animation'
+import { BODY_PARTS, HUMANOID_ROLES } from './humanoid'
+import { CLIP_SOURCES, ROOT_MOTIONS } from './scene'
 
 /**
  * Making a character move — its skeleton, the handles a joint reaches for, and the blocks laid
@@ -25,6 +27,28 @@ const BONE: ActionField = {
   labelKey: 'assistant.fields.boneName',
   required: true,
 }
+
+/**
+ * Copied from `engines/scene/clipBlend`, which this side of the boundary may not import — the
+ * same bargain the montage family struck, and `rigHandlers.test.ts` holds the copy to its
+ * original. Past a second a fade stops reading as one move joining another.
+ */
+const CLIP_SPEED = Object.freeze({ min: 0.1, max: 4 })
+const MAX_FADE = 1
+
+/** The channel a key is laid on, named by the id `scene.state` hands over. */
+const TRACK: ActionField = {
+  key: 'trackId',
+  kind: 'text',
+  labelKey: 'assistant.fields.channelId',
+  required: true,
+}
+
+/** A subject of the band: a node, or one bone of the model it holds. */
+const SUBJECT: readonly ActionField[] = [
+  NODE,
+  { key: 'bone', kind: 'text', labelKey: 'assistant.fields.boneName', required: false },
+]
 
 export const RIG_ACTIONS: readonly AssistantAction[] = [
   action({
@@ -133,6 +157,22 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
+    /**
+     * The three places a motion can come from, in one list — the picker's own library tab. A
+     * client that could only lay an asset would be blind to what the model's own file carries.
+     */
+    name: 'animations.list',
+    titleKey: 'assistant.actions.animationsList.title',
+    descriptionKey: 'assistant.actions.animationsList.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [NODE],
+  }),
+  action({
+    /**
+     * A block laid on the band, from any of the three sources. `assetId` names a clip of the
+     * library and `clipName` one of the two others, so exactly one of them belongs to a call.
+     */
     name: 'animation.add',
     titleKey: 'assistant.actions.animationAdd.title',
     descriptionKey: 'assistant.actions.animationAdd.description',
@@ -140,7 +180,15 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     reach: 'mcp',
     fields: [
       NODE,
-      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
+      {
+        key: 'source',
+        kind: 'choice',
+        labelKey: 'assistant.fields.clipSource',
+        required: false,
+        options: CLIP_SOURCES,
+      },
+      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: false },
+      { key: 'clipName', kind: 'text', labelKey: 'assistant.fields.clipName', required: false },
     ],
   }),
   action({
@@ -152,6 +200,72 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     fields: [
       NODE,
       { key: 'clipId', kind: 'text', labelKey: 'assistant.fields.clipId', required: true },
+    ],
+  }),
+  action({
+    /**
+     * What one block of the band plays, and how it joins its neighbours — the inspector's own
+     * section, whose every control writes the whole set of lanes back.
+     *
+     * Seconds across the boundary, microseconds inside: `offsetSeconds` is where playback starts
+     * INSIDE the clip, `startSeconds` where the block sits on the band. The two are three's clock
+     * and the band's, and they are never handed to one another.
+     */
+    name: 'animation.block',
+    titleKey: 'assistant.actions.animationBlock.title',
+    descriptionKey: 'assistant.actions.animationBlock.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      NODE,
+      { key: 'clipId', kind: 'text', labelKey: 'assistant.fields.clipId', required: true },
+      {
+        key: 'startSeconds',
+        kind: 'number',
+        labelKey: 'assistant.fields.startSeconds',
+        required: false,
+        min: 0,
+      },
+      {
+        key: 'offsetSeconds',
+        kind: 'number',
+        labelKey: 'assistant.fields.offsetSeconds',
+        required: false,
+        min: 0,
+      },
+      {
+        key: 'speed',
+        kind: 'number',
+        labelKey: 'assistant.fields.speed',
+        required: false,
+        min: CLIP_SPEED.min,
+        max: CLIP_SPEED.max,
+      },
+      { key: 'loop', kind: 'boolean', labelKey: 'assistant.fields.clipLoop', required: false },
+      // One value for both edges, as the slider writes it: what is being set is how this move
+      // JOINS its neighbours, and a block whose two ends faded differently would have no such thing.
+      {
+        key: 'fadeSeconds',
+        kind: 'number',
+        labelKey: 'assistant.fields.clipFade',
+        required: false,
+        min: 0,
+        max: MAX_FADE,
+      },
+      {
+        key: 'rootMotion',
+        kind: 'choice',
+        labelKey: 'assistant.fields.rootMotion',
+        required: false,
+        options: ROOT_MOTIONS,
+      },
+      {
+        key: 'part',
+        kind: 'choice',
+        labelKey: 'assistant.fields.bodyPart',
+        required: false,
+        options: BODY_PARTS,
+      },
     ],
   }),
   action({
@@ -180,5 +294,123 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     reach: 'mcp',
     fields: [{ key: 'on', kind: 'boolean', labelKey: 'assistant.fields.autoKey', required: true }],
+  }),
+  action({
+    /**
+     * One key on every channel of one subject, holding where it STANDS — the band's own diamond,
+     * which Blender spells `LocRotScale`. It opens the channels the subject lacks, because
+     * demanding one first would be asking for the thing already standing in the viewport.
+     *
+     * `property` narrows it to a single channel, which is what a client driving one axis wants.
+     */
+    name: 'key.pose',
+    titleKey: 'assistant.actions.keyPose.title',
+    descriptionKey: 'assistant.actions.keyPose.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      ...SUBJECT,
+      {
+        key: 'timeSeconds',
+        kind: 'number',
+        labelKey: 'assistant.fields.timeSeconds',
+        required: false,
+        min: 0,
+      },
+      {
+        key: 'property',
+        kind: 'choice',
+        labelKey: 'assistant.fields.trackProperty',
+        required: false,
+        options: TRACK_PROPERTIES,
+      },
+    ],
+  }),
+  action({
+    // The counterpart, and it has to exist: a pose one cannot undo is a pose one is stuck with.
+    name: 'key.clear',
+    titleKey: 'assistant.actions.keyClear.title',
+    descriptionKey: 'assistant.actions.keyClear.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      ...SUBJECT,
+      {
+        key: 'timeSeconds',
+        kind: 'number',
+        labelKey: 'assistant.fields.timeSeconds',
+        required: false,
+        min: 0,
+      },
+    ],
+  }),
+  action({
+    // The band's toolbar button: every channel of every subject at once, on the channels that
+    // already exist. It opens none — that is `key.pose`'s errand, one subject at a time.
+    name: 'key.all',
+    titleKey: 'assistant.actions.keyAll.title',
+    descriptionKey: 'assistant.actions.keyAll.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'timeSeconds',
+        kind: 'number',
+        labelKey: 'assistant.fields.timeSeconds',
+        required: false,
+        min: 0,
+      },
+    ],
+  }),
+  action({
+    name: 'key.move',
+    titleKey: 'assistant.actions.keyMove.title',
+    descriptionKey: 'assistant.actions.keyMove.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      TRACK,
+      {
+        key: 'fromSeconds',
+        kind: 'number',
+        labelKey: 'assistant.fields.fromSeconds',
+        required: true,
+        min: 0,
+      },
+      {
+        key: 'toSeconds',
+        kind: 'number',
+        labelKey: 'assistant.fields.toSeconds',
+        required: true,
+        min: 0,
+      },
+    ],
+  }),
+  action({
+    // The channel row's own bin. No twin that ADDS one: a channel is opened by keying a subject,
+    // and the panel offers no other way either.
+    name: 'channel.remove',
+    titleKey: 'assistant.actions.channelRemove.title',
+    descriptionKey: 'assistant.actions.channelRemove.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [TRACK],
+  }),
+  action({
+    /**
+     * How one WORKS on a channel rather than what one made — muted, solo, locked — so it goes
+     * through the store without an entry in the history, exactly as a montage's flags do.
+     */
+    name: 'channel.flags',
+    titleKey: 'assistant.actions.channelFlags.title',
+    descriptionKey: 'assistant.actions.channelFlags.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      TRACK,
+      { key: 'muted', kind: 'boolean', labelKey: 'assistant.fields.muted', required: false },
+      { key: 'solo', kind: 'boolean', labelKey: 'assistant.fields.solo', required: false },
+      { key: 'locked', kind: 'boolean', labelKey: 'assistant.fields.locked', required: false },
+    ],
   }),
 ]

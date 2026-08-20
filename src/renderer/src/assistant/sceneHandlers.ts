@@ -47,6 +47,8 @@ import {
   editCameraShot,
   lensToCommand,
   movesToCommand,
+  railForShot,
+  reorderCameraShots,
 } from '@/engines/scene/animationCommands'
 import {
   withMovedPoint,
@@ -55,7 +57,7 @@ import {
   withPointAtEnd,
   withoutPoint,
 } from '@/engines/scene/cameraPath'
-import { newShotAt } from '@/engines/scene/cameraShots'
+import { newShotAt, shotsWithCameraMoved } from '@/engines/scene/cameraShots'
 import {
   GEOMETRY_SPECS,
   LIGHT_SPECS,
@@ -244,6 +246,11 @@ function readState(): ActionOutcome {
       // What drives the cameras: without them a client can open a shot and never edit one, since
       // `camera.rail` and `camera.target` name it by the id only this list hands over.
       shots: open.state.animation.shots,
+      // The band's own half. `channel.remove` and `key.move` name a channel by the id only this
+      // hands over, and `animation.settings` writes the two numbers beside it.
+      fps: open.state.animation.fps,
+      duration: open.state.animation.duration,
+      tracks: open.state.animation.tracks,
       // The flat list the state itself holds — the tree is derived from `parentId`, and handing
       // one over would be a second shape of the same thing for a client to walk.
       nodes: open.state.nodes.map(node => ({
@@ -765,6 +772,32 @@ export const SCENE_HANDLERS: ActionHandlers = {
         ...(easing === undefined ? {} : { easing }),
       })
     }),
+
+  // Through the panel's own command, which lays the rail AND binds it in one entry: a rail added
+  // without its shot would be a line nothing runs on.
+  'camera.addRail': input =>
+    editShot(input, (shot, state) => {
+      const camera = nodeById(state, shot.cameraId)
+      return camera?.type === 'camera' ? railForShot(camera, shot) : null
+    }),
+
+  'camera.reorder': input => {
+    const open = mounted()
+    if (!open) return refused('wrongSurface')
+
+    const nodeId = textOf(input, 'nodeId') ?? ''
+    // `shotsWithCameraMoved` answers `null` for a camera with no line on the band, and reports
+    // the steps it could actually take — a line already at the top moves by none.
+    const moved = shotsWithCameraMoved(
+      open.state.animation.shots,
+      nodeId,
+      numberOf(input, 'by') ?? 0,
+    )
+    if (!moved || moved.steps === 0) return refused('badInput')
+
+    useScenes.getState().runCommand(open.documentId, reorderCameraShots(nodeId, moved.shots))
+    return { ok: true, data: { steps: moved.steps } }
+  },
 
   'camera.target': input =>
     editShot(input, (shot, state) => {

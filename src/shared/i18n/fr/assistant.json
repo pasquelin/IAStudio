@@ -621,6 +621,14 @@
         "title": "Faire courir une caméra sur un chemin",
         "description": "Lie un chemin au plan désigné, que la caméra parcourt alors pendant toute la durée du plan, à vitesse régulière le long de sa longueur. Sans chemin, le plan ne déplace plus la caméra. Un départ plus grand que l’arrivée fait rouler le chemin à l’envers."
       },
+      "cameraAddRail": {
+        "title": "Poser un chemin sous une caméra",
+        "description": "Crée un chemin là où la caméra se tient, orienté dans sa ligne de visée, et le lie au plan en un seul geste. L’action voisine lie un chemin qui existe déjà, quand celle-ci en fabrique un — un chemin ne conduit rien sans un plan pour le parcourir."
+      },
+      "cameraReorder": {
+        "title": "Changer le rang d’une caméra sur la bande",
+        "description": "Monte ou descend la ligne d’une caméra, ce qui décide de ce que le film regarde quand deux plans se recouvrent. Le nombre est un nombre de rangs, négatif pour descendre, et la réponse dit de combien la ligne a pu bouger."
+      },
       "cameraTarget": {
         "title": "Donner une cible à une caméra",
         "description": "Oriente la caméra du plan désigné vers un objet — qu’elle suit même s’il est animé — ou vers un point fixe. Sans objet ni point, la caméra reste orientée par sa seule rotation."
@@ -677,9 +685,17 @@
         "title": "Retirer une poignée",
         "description": "Enlève une chaîne et la poignée qu’elle atteignait, toutes les deux, car une poignée laissée derrière serait un os que rien ne pilote."
       },
+      "animationsList": {
+        "title": "Lister ce qu’un personnage peut jouer",
+        "description": "Rend les trois provenances d’un mouvement — les clips que porte le fichier du modèle, les animations livrées avec le studio, et celles que la bibliothèque du projet garde — puis les blocs déjà posés sur sa bande."
+      },
       "animationAdd": {
         "title": "Poser un bloc d’animation",
-        "description": "Pose sur la bande d’un personnage une animation que la bibliothèque du projet porte. La bande est créée si le personnage n’en avait aucune."
+        "description": "Pose sur la bande d’un personnage un mouvement venu de l’une des trois provenances. L’identifiant nomme un asset de la bibliothèque, le nom nomme les deux autres, et un seul des deux appartient à un appel. La bande est créée si le personnage n’en avait aucune."
+      },
+      "animationBlock": {
+        "title": "Régler un bloc d’animation",
+        "description": "Change la place d’un bloc sur la bande, son départ à l’intérieur du mouvement, sa vitesse, sa boucle, la longueur de ses fondus, ce qu’il fait du déplacement de la racine et la partie du corps qu’il pilote. Le bloc est réécrit sur place, les autres couches restant intactes."
       },
       "animationRemove": {
         "title": "Retirer un bloc d’animation",
@@ -692,6 +708,30 @@
       "animationAutoKey": {
         "title": "Activer la pose automatique de clés",
         "description": "Décide si déplacer un os écrit une clé au passage. C’est un état de session, comme toute façon de regarder une scène, et rien n’en est enregistré avec le document."
+      },
+      "keyPose": {
+        "title": "Poser une clé sur un sujet",
+        "description": "Écrit une clé sur chaque canal d’un objet ou d’un os, à l’instant donné ou à la tête de lecture, en tenant la pose où il se trouve. Les canaux qui manquent sont ouverts au passage, puisque exiger une piste d’abord serait réclamer ce qui se tient déjà dans la vue."
+      },
+      "keyClear": {
+        "title": "Retirer les clés d’un sujet",
+        "description": "Reprend la clé que chaque canal d’un objet ou d’un os tient à cet instant. Sans ce geste une pose serait sans retour, et rien d’autre du panneau n’en enlève une."
+      },
+      "keyAll": {
+        "title": "Poser une clé sur tout ce qui est animé",
+        "description": "Écrit une clé sur chaque canal déjà ouvert de la scène, à l’instant donné ou à la tête de lecture. N’en ouvre aucun, ce qui distingue ce geste de la pose sur un sujet."
+      },
+      "keyMove": {
+        "title": "Déplacer une clé",
+        "description": "Fait glisser une clé le long de son canal, en gardant sa valeur. Une clé qui arrive sur un instant qu’une autre occupe la remplace, deux clés sur une image étant un état qu’aucune lecture ne saurait relire."
+      },
+      "channelRemove": {
+        "title": "Retirer un canal d’animation",
+        "description": "Enlève un canal et les clés qu’il portait. Un canal verrouillé est refusé plutôt que laissé en place en silence."
+      },
+      "channelFlags": {
+        "title": "Régler les fanions d’un canal",
+        "description": "Rend un canal muet, le met en solo, ou le verrouille. C’est une façon de travailler et non une modification du document, donc rien ne s’ajoute à l’historique."
       },
       "viewDisplay": {
         "title": "Choisir la façon de dessiner la scène",
@@ -1055,7 +1095,19 @@
       "pointIndex": "Rang du point de contrôle, compté depuis le premier",
       "pointX": "Point en largeur",
       "pointY": "Point en hauteur",
-      "pointZ": "Point vers l’observateur"
+      "pointZ": "Point vers l’observateur",
+      "clipSource": "Provenance du mouvement, le fichier du modèle, les animations livrées, ou la bibliothèque du projet",
+      "clipName": "Nom du mouvement, tel que la liste des animations le rend",
+      "offsetSeconds": "Départ à l’intérieur du mouvement, en secondes",
+      "clipLoop": "Le bloc rejoue sans fin",
+      "clipFade": "Longueur du fondu aux deux bouts du bloc, en secondes",
+      "rootMotion": "Ce que le bloc fait du déplacement de la racine",
+      "bodyPart": "Partie du corps que le bloc pilote",
+      "channelId": "Identifiant du canal d’animation",
+      "timeSeconds": "Instant sur la bande, en secondes, à défaut la tête de lecture",
+      "trackProperty": "Canal visé, à défaut tous ceux du sujet",
+      "fromSeconds": "Instant de départ, en secondes",
+      "toSeconds": "Instant d’arrivée, en secondes"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

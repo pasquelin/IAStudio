@@ -178,6 +178,8 @@ export type ClipSource =
   | { kind: 'bundled'; name: string }
   | { kind: 'asset'; assetId: string; name: string }
 
+export const CLIP_SOURCES: readonly ClipSource['kind'][] = ['embedded', 'bundled', 'asset']
+
 /**
  * What a block's clip is filed under, wherever a player or a length is kept by name.
  *

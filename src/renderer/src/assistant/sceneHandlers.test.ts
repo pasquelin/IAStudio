@@ -271,6 +271,40 @@ describe('what a shot does with its camera', () => {
     }
   }
 
+  /** The inspector's own button: one gesture makes the rail AND binds it, so one ⌘Z takes both. */
+  it('lays a rail where the camera stands and binds it in one entry', async () => {
+    const opened = await runAction('camera.shot', { nodeId: await cameraId() })
+    const shotId = opened.ok ? (opened.data as { shotId: string }).shotId : ''
+
+    expect(await runAction('camera.addRail', { shotId })).toEqual({ ok: true })
+
+    const laid = scene().nodes.find(node => node.type === 'path')
+    expect(scene().animation.shots[0]?.motion).toMatchObject({ pathId: laid?.id })
+
+    useScenes.getState().undo(DOCUMENT)
+    expect(scene().nodes.some(node => node.type === 'path')).toBe(false)
+    expect(scene().animation.shots[0]?.motion).toBeUndefined()
+  })
+
+  it('takes a camera’s line up the band, and refuses one that cannot move', async () => {
+    const first = await cameraId()
+    const second = await cameraId()
+    await runAction('camera.shot', { nodeId: first })
+    await runAction('camera.shot', { nodeId: second })
+
+    // The stack decides what the film looks through, and a camera new to the band arrives on top:
+    // the first one is at the bottom, so the only way it can go is up.
+    expect(await runAction('camera.reorder', { nodeId: first, by: -1 })).toMatchObject({
+      ok: true,
+      data: { steps: -1 },
+    })
+    expect(scene().animation.shots[0]?.cameraId).toBe(first)
+    expect(await runAction('camera.reorder', { nodeId: 'node-z', by: 1 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
   it('binds a rail to a shot, taking the whole of it forwards by default', async () => {
     const { shotId, pathId } = await shotOnRail()
 

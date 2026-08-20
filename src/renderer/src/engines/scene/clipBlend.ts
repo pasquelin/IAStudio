@@ -16,6 +16,9 @@ export const MIN_SPEED = 0.1
 /** Past four times, a motion reads as a glitch rather than as a faster move. */
 export const MAX_SPEED = 4
 
+/** Seconds. Past a second a transition stops reading as one move joining another. */
+export const MAX_FADE = 1
+
 /**
  * How much band a block takes: what the document says, else the file's length at the speed it
  * plays. `0` while the file has not landed — its length lives in the GLB.

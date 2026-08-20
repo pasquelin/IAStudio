@@ -621,6 +621,14 @@
         "title": "Run a camera along a path",
         "description": "Binds a path to the named shot: the camera travels it for the whole of the shot, at a steady speed along its length. With no path, the shot no longer moves the camera. A start past the end runs the path backwards."
       },
+      "cameraAddRail": {
+        "title": "Lay a rail under a camera",
+        "description": "Makes a rail where the camera stands, aimed down its line of sight, and binds it to the shot in one gesture. The action beside it binds a rail that already exists; this one makes it, because a rail drives nothing without a shot to run it."
+      },
+      "cameraReorder": {
+        "title": "Move a camera’s line on the band",
+        "description": "Takes a camera’s line up or down, which settles what the film looks through where two shots overlap. The number is a count of rows, negative to go down, and the answer says how far the line could actually move."
+      },
       "cameraTarget": {
         "title": "Give a camera something to aim at",
         "description": "Aims the camera of the named shot at an object — which it follows even when animated — or at a fixed point. With neither, the camera stays aimed by its own rotation alone."
@@ -677,9 +685,17 @@
         "title": "Remove a handle",
         "description": "Takes a chain and the handle it reached for, both: a handle left behind would be a bone nothing drives."
       },
+      "animationsList": {
+        "title": "List what a character can play",
+        "description": "Answers the three places a motion comes from — the clips the model’s own file carries, the animations shipped with the studio, and the ones the project library keeps — then the blocks already laid on its band."
+      },
       "animationAdd": {
         "title": "Lay an animation block",
-        "description": "Lays on a character’s band an animation the project library holds. The band is made if the character had none."
+        "description": "Lays on a character’s band a motion from one of the three sources. The id names an asset of the library, the name names the two others, and exactly one of them belongs to a call. The band is made if the character had none."
+      },
+      "animationBlock": {
+        "title": "Set an animation block",
+        "description": "Changes where a block sits on the band, where playback starts inside the motion, its speed, its looping, the length of its fades, what it does with the movement of the root, and the part of the body it drives. The block is rewritten in place, every other lane left untouched."
       },
       "animationRemove": {
         "title": "Take an animation block off",
@@ -692,6 +708,30 @@
       "animationAutoKey": {
         "title": "Turn automatic keying on",
         "description": "Decides whether moving a bone writes a key as it goes. It is session state, as every way of looking at a scene is, and none of it is saved with the document."
+      },
+      "keyPose": {
+        "title": "Key a subject",
+        "description": "Writes a key on every channel of an object or a bone, at the instant given or at the playhead, holding the pose it stands in. The channels it lacks are opened on the way, since demanding a track first would be asking for the thing already standing in the viewport."
+      },
+      "keyClear": {
+        "title": "Take a subject’s keys off",
+        "description": "Takes back the key every channel of an object or a bone holds at that instant. Without this a pose would be one nobody could undo, and nothing else in the panel removes one."
+      },
+      "keyAll": {
+        "title": "Key everything animated",
+        "description": "Writes a key on every channel the scene has already opened, at the instant given or at the playhead. It opens none, which is what tells this apart from keying one subject."
+      },
+      "keyMove": {
+        "title": "Move a key",
+        "description": "Slides a key along its channel, keeping its value. A key landing on an instant another already holds replaces it, two keys on one frame being a state no evaluation can read twice."
+      },
+      "channelRemove": {
+        "title": "Remove an animation channel",
+        "description": "Takes a channel away, and the keys it carried with it. A locked channel is refused rather than silently left standing."
+      },
+      "channelFlags": {
+        "title": "Set a channel’s flags",
+        "description": "Mutes a channel, plays it alone, or locks it. It is how one WORKS rather than a change to the document, so nothing is added to the history."
       },
       "viewDisplay": {
         "title": "Choose how the scene is drawn",
@@ -1055,7 +1095,19 @@
       "pointIndex": "Index of the control point, counted from the first",
       "pointX": "Point across the width",
       "pointY": "Point up the height",
-      "pointZ": "Point towards the viewer"
+      "pointZ": "Point towards the viewer",
+      "clipSource": "Where the motion comes from, the model’s own file, the shipped animations, or the project’s library",
+      "clipName": "Name of the motion, as the animation listing hands it over",
+      "offsetSeconds": "Where playback starts inside the motion, in seconds",
+      "clipLoop": "The block plays over and over",
+      "clipFade": "Length of the fade at both ends of the block, in seconds",
+      "rootMotion": "What the block does with the movement of the root",
+      "bodyPart": "Part of the body the block drives",
+      "channelId": "Id of the animation channel",
+      "timeSeconds": "Instant on the band, in seconds, or the playhead when absent",
+      "trackProperty": "Channel aimed at, or all the subject’s when absent",
+      "fromSeconds": "Instant to start from, in seconds",
+      "toSeconds": "Instant to land on, in seconds"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

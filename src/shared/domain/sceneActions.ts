@@ -499,6 +499,31 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
+     * A rail LAID where the camera stands, aimed down its line of sight, and bound to the shot in
+     * one gesture — the inspector's own button. `camera.rail` binds one that already exists; this
+     * makes one, because a rail drives nothing without a shot to run it.
+     */
+    name: 'camera.addRail',
+    titleKey: 'assistant.actions.cameraAddRail.title',
+    descriptionKey: 'assistant.actions.cameraAddRail.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [{ key: 'shotId', kind: 'text', labelKey: 'assistant.fields.shotId', required: true }],
+  }),
+  action({
+    /**
+     * A camera's line moved up or down the band, which is what settles what the film looks
+     * through: the stack decides, so moving a line changes the cut.
+     */
+    name: 'camera.reorder',
+    titleKey: 'assistant.actions.cameraReorder.title',
+    descriptionKey: 'assistant.actions.cameraReorder.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [NODE, { key: 'by', kind: 'integer', labelKey: 'assistant.fields.by', required: true }],
+  }),
+  action({
+    /**
      * What a shot aims its camera at: a node it follows, a fixed point, or nothing at all —
      * which leaves the camera aimed by its own rotation.
      */
