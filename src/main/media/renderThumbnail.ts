@@ -21,10 +21,8 @@ export async function renderThumbnail(file: string, size: number): Promise<Uint8
   // Without this, every layered picture in the Explorer drew a blank tile — while the same file,
   // asked for through the asset scheme, drew fine.
   if (extname(file).toLowerCase() === '.ora') {
-    const { containerPictureOf } = await import('@main/assets/openRasterFile')
-    // The size is what decides which picture comes back: `reduced` never upscales, so a tile
-    // asking for more than a thumbnail may hold has to be given the flatten.
-    const picture = await containerPictureOf(file, size)
+    const { containerTileOf } = await import('@main/assets/openRasterFile')
+    const picture = await containerTileOf(file)
     return picture ? reduced(nativeImage.createFromBuffer(Buffer.from(picture)), size) : null
   }
 
