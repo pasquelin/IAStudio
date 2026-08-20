@@ -2236,6 +2236,31 @@ describe('captions', () => {
     expect(captions).toEqual([{ layerId: 't' }])
   })
 
+  /**
+   * A field draws the caption while it is being typed, so the sprite steps aside — and drawing
+   * into a texture nobody can see would be a Pixi `Text` and a full frame per KEYSTROKE.
+   */
+  it('rasterizes nothing while a field is typing the caption', async () => {
+    const { engine } = await mounted(caption('Bonjour'))
+    engine.setEditingText('t')
+    gpu.painted = []
+
+    engine.apply(caption('Bonjour !'))
+
+    expect(gpu.painted).toEqual([])
+  })
+
+  it('draws it once when the field lets go, not once per letter', async () => {
+    const { engine } = await mounted(caption('Bonjour'))
+    engine.setEditingText('t')
+    engine.apply(caption('Bonjour !'))
+    gpu.painted = []
+
+    engine.setEditingText(null)
+
+    expect(gpu.painted).toHaveLength(1)
+  })
+
   it('opens a fresh box beside a caption, not on it', async () => {
     const { engine, host, captions } = await mounted(caption('Bonjour'))
     engine.setTool('text')

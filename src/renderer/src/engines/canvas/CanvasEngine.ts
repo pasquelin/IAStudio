@@ -16,13 +16,14 @@ import {
 } from 'pixi.js'
 import { assetUrl } from '@shared/domain/asset'
 import type { BlendMode } from '@shared/domain/canvasBlend'
+import { colourOf } from '@shared/domain/color'
 import { fontKey } from '@shared/domain/font'
 import { bytesToBase64 } from '@/helpers/base64'
 import { newId } from '@/helpers/ids'
 import { isTyping } from '@/helpers/typing'
 import { reportFailure } from '@/services/diagnostics'
 import { mountApplication } from '../core/mount'
-import { hexOf, onPaletteChange, token, tokenAsFont } from '../core/palette'
+import { onPaletteChange, token, tokenAsFont } from '../core/palette'
 import { createAdjustFilter, type AdjustFilter } from './adjustFilter'
 import { captionsSetIn, faceUrlOf, familyStack, type FaceRegistrar } from './canvasFonts'
 import {
@@ -1739,7 +1740,7 @@ export class CanvasEngine {
     const shape = this.pending
     if (!shape) return null
 
-    const color = hexOf(this.brush.color)
+    const color = colourOf(this.brush.color)
     return shape.kind === 'line' || shape.kind === 'arrow'
       ? { shape, fill: null, stroke: { color, width: strokeWidth(this.brush.size) } }
       : { shape, fill: color, stroke: null }
@@ -1760,7 +1761,11 @@ export class CanvasEngine {
     const surface = this.buildSurface(layer.id, layer.kind === 'pixel' ? layer.fill : undefined)
     if (!surface) return
 
-    if (drawn !== null && this.drawings.get(layer.id) !== drawn) {
+    // Never while a field is drawing the caption: its sprite is hidden, so rasterizing it would
+    // be a Pixi `Text` and a full frame per KEYSTROKE, for a texture nobody can see. The key is
+    // left unwritten on purpose — the redraw then happens once, when the field lets go.
+    const typing = layer.id === this.editing
+    if (drawn !== null && !typing && this.drawings.get(layer.id) !== drawn) {
       this.drawings.set(layer.id, drawn)
       if (layer.kind === 'text') this.drawText(surface, layer)
       if (layer.kind === 'shape') this.drawShape(surface, layer)

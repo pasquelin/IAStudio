@@ -2,7 +2,7 @@ import { useEffect, useRef, type CSSProperties, type KeyboardEvent } from 'react
 import { toDegrees } from '@shared/domain/angles'
 import { familyStack } from '@/engines/canvas/canvasFonts'
 import { setLayerText } from '@/engines/canvas/commands'
-import { hexOf } from '@/engines/core/palette'
+import { colourOf } from '@shared/domain/color'
 import { toScreen, type Viewport } from '@/engines/canvas/viewport'
 import type { TextLayer } from '@/engines/canvas/canvasState'
 import { useCanvases } from '@/stores/canvases'
@@ -61,7 +61,7 @@ export function ImageDocumentText({
     lineHeight: `${layer.size * layer.lineHeight * viewport.scale}px`,
     letterSpacing: (layer.tracking / 1000) * layer.size * viewport.scale,
     textAlign: layer.align,
-    color: hexOf(layer.color),
+    color: colourOf(layer.color),
   }
 
   const finish = (event: KeyboardEvent<HTMLTextAreaElement>): void => {

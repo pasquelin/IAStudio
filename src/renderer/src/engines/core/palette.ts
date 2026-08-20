@@ -26,11 +26,6 @@ export function tokenAsHex(element: Element, name: string, fallback: number): nu
   return Number.isNaN(parsed) ? fallback : parsed
 }
 
-/** `tokenAsHex` the other way: what a 2D context and an `<input type="color">` both speak. */
-export function hexOf(value: number): string {
-  return `#${Math.max(0, Math.trunc(value)).toString(16).padStart(6, '0')}`
-}
-
 /**
  * A canvas font shorthand whose SIZE is a token and whose family is the caller's — no token names
  * a family for a canvas, and reading `--font-sans` would change the face a painter draws with.
