@@ -16,6 +16,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'scene.animation': 'document',
   'scene.export': 'document',
   'scene.render': 'document',
+  // With the document although what it writes lands in the project: the subject is the scene
+  // that could not be drawn, and the tab is what the user has to act on.
+  'scene.capture': 'document',
   // With the document, as every other export is: it writes outside the project, and what its
   // failure says something about is the sequence that was open.
   'sequence.export': 'document',

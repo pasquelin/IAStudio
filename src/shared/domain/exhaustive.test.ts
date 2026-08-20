@@ -182,6 +182,7 @@ describe('the lists that stand for a union', () => {
       'scene.animation': true,
       'scene.export': true,
       'scene.render': true,
+      'scene.capture': true,
       'sequence.export': true,
       'sequence.import': true,
       'document.export': true,
