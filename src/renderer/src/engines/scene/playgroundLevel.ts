@@ -20,8 +20,12 @@ import { IDENTITY_TRANSFORM, type SceneNode } from './sceneState'
 const HALF_X = 20
 const HALF_Z = 16
 
-/** The floor is a SLAB, not a plane: one sees it from below, and its flanks are what wall the court. */
-const FLOOR_DEPTH = 3
+/**
+ * The floor is a SLAB, not a plane — one sees it from below. THIN, though: a three-metre one was
+ * tried and it is a mass the orbiting camera spends its time inside, and from inside a solid one
+ * sees the back of its faces, which is to say straight through the level.
+ */
+const FLOOR_DEPTH = 0.5
 const WALL_HEIGHT = 4
 const WALL_THICKNESS = 0.5
 
@@ -93,9 +97,41 @@ const climbSurface = (): MaterialDescriptor => surface('#d08c3a', 'checkerLarge'
 const obstacleSurface = (): MaterialDescriptor => surface('#4e5661', 'gridSmall')
 const startSurface = (): MaterialDescriptor => surface('#3d7ab8', 'checkerSmall')
 
+const COURT_WALL = 0.4
+
+/**
+ * The four sides of the sunken court, standing from its floor to the walked one.
+ *
+ * Their own slabs rather than the flanks of the floor: the floor is thin, so it has no flanks to
+ * speak of. They sit OUTSIDE the court's rectangle, tucked under the bands around it, which is
+ * what keeps the opening exactly `COURT_HALF_X` by `COURT_HALF_Z`.
+ */
+function courtWalls(parentId: string): SceneNode[] {
+  // Up to the UNDERSIDE of the floor, never through it: overlapping would leave two faces
+  // fighting for the same depth all round the opening.
+  const height = { y0: COURT_FLOOR, y1: -FLOOR_DEPTH }
+  const outerX = COURT_HALF_X + COURT_WALL
+  const outerZ = COURT_HALF_Z + COURT_WALL
+
+  const sides: [Bounds, string][] = [
+    [{ x0: -outerX, x1: outerX, z0: -outerZ, z1: -COURT_HALF_Z, ...height }, 'Court Wall North'],
+    [{ x0: -outerX, x1: outerX, z0: COURT_HALF_Z, z1: outerZ, ...height }, 'Court Wall South'],
+    [
+      { x0: -outerX, x1: -COURT_HALF_X, z0: -COURT_HALF_Z, z1: COURT_HALF_Z, ...height },
+      'Court Wall West',
+    ],
+    [
+      { x0: COURT_HALF_X, x1: outerX, z0: -COURT_HALF_Z, z1: COURT_HALF_Z, ...height },
+      'Court Wall East',
+    ],
+  ]
+
+  return sides.map(([bounds, name]) => slab(bounds, name, groundSurface(), parentId))
+}
+
 /**
  * The floor, as four slabs around the court — a solid cannot be pierced, and the court is the
- * whole point: the flanks of these four are what wall it, so it needs no lining of its own.
+ * whole point: what a fall, a jump and the plank across it are all tested against.
  */
 function floorSlabs(parentId: string): SceneNode[] {
   const walked = { y0: -FLOOR_DEPTH, y1: 0 }
@@ -119,7 +155,7 @@ function floorSlabs(parentId: string): SceneNode[] {
       {
         x0: -COURT_HALF_X,
         x1: COURT_HALF_X,
-        y0: -FLOOR_DEPTH,
+        y0: COURT_FLOOR - FLOOR_DEPTH,
         y1: COURT_FLOOR,
         z0: -COURT_HALF_Z,
         z1: COURT_HALF_Z,
@@ -176,7 +212,7 @@ function courtStair(parentId: string): SceneNode[] {
       {
         x0: x1 - STEP_RUN,
         x1,
-        y0: -FLOOR_DEPTH,
+        y0: COURT_FLOOR,
         y1: COURT_FLOOR + (index + 1) * STEP_RISE,
         // The southern half of the court, clear of the plank that crosses its middle.
         z0: 1,
@@ -312,6 +348,7 @@ export function playgroundNodes(): SceneNode[] {
   return [
     ground,
     ...floorSlabs(ground.id),
+    ...courtWalls(ground.id),
     enclosure,
     ...walls(enclosure.id),
     course,

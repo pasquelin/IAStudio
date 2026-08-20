@@ -99,7 +99,9 @@ function ambient(intensity: number): SceneNode {
  */
 function skyLight(intensity: number): SceneNode {
   return lightNode(
-    { kind: 'hemisphere', skyColor: '#b7d3f5', groundColor: '#5b5347', intensity },
+    // A PALE ground colour, because the set has a pale floor: what bounces back is what stops a
+    // wall in shade from going to the value of the sky behind it.
+    { kind: 'hemisphere', skyColor: '#c2d8f2', groundColor: '#9a9384', intensity },
     { x: 0, y: 24, z: 0 },
   )
 }
@@ -139,11 +141,12 @@ const WALKING: Partial<ScenePlay> = { eyeHeight: EYE_HEIGHT, moveSpeed: 4, gravi
  */
 function characterView(view: readonly SceneNode[], play: Partial<ScenePlay>): Template {
   return {
-    nodes: [...playgroundNodes(), sun(2.2, { x: 22, y: 26, z: 16 }), skyLight(0.9), ...view],
-    // The sky as the backdrop, and the haze that gives a set depth — the same outdoor preset the
-    // architecture template takes. Under the studio default the level stood in a black void,
-    // which reads as a broken viewport rather than as somewhere to walk.
-    world: presetPatch('outdoor'),
+    nodes: [...playgroundNodes(), sun(2.2, { x: 22, y: 26, z: 16 }), skyLight(1.3), ...view],
+    // The outdoor preset for its haze and its grading, but a PLAIN SKY behind rather than the
+    // procedural studio: that one is nearly black, and a wall turned away from the sun landed on
+    // the same value as the background — which reads as a wall that vanishes when one turns.
+    // The colour is the haze's own, so the horizon closes instead of ending on a line.
+    world: { ...presetPatch('outdoor'), background: { kind: 'color', color: '#b6c6d8' } },
     play: { ...WALKING, ...play },
   }
 }

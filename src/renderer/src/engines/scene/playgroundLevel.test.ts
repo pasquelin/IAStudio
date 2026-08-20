@@ -63,14 +63,33 @@ describe('the playground level', () => {
 
   /**
    * A `plane` is one-sided: seen from below, the floor of the level simply vanished and the set
-   * hung in the air. A slab also gives the sunken court its walls, at no extra part.
+   * hung in the air.
+   *
+   * THIN, though. A three-metre slab was tried, and an orbiting camera spends its time inside
+   * that mass — from inside a solid one sees the back of its faces, which is to say straight
+   * through the level. What Alban saw as walls disappearing was this.
    */
-  it('builds the floor as a solid, so it is there from underneath', () => {
+  it('builds the floor as a solid thin enough not to swallow the camera', () => {
     const floor = boxOf(named(playgroundNodes(), 'Floor North') as SceneNode)
 
     expect(floor).not.toBeNull()
-    expect(floor && floor.y1 - floor.y0).toBeGreaterThan(0.5)
+    expect(floor && floor.y1 - floor.y0).toBeGreaterThan(0)
+    expect(floor && floor.y1 - floor.y0).toBeLessThanOrEqual(0.5)
     expect(floor?.y1).toBeCloseTo(0)
+  })
+
+  /**
+   * With a thin floor the court has no flanks to be walled by, so it gets its own four sides.
+   * Without them one stands in the court and sees the sky through the ground beside it.
+   */
+  it('lines the court on all four sides, from its floor up to the walked one', () => {
+    const walls = meshes(playgroundNodes())
+      .filter(node => node.name.startsWith('Court Wall '))
+      .map(boxOf)
+      .filter(box => box !== null)
+
+    expect(walls).toHaveLength(4)
+    for (const wall of walls) expect(wall.y0).toBeLessThan(wall.y1)
   })
 
   it('leaves the court open, which is what a fall is tested against', () => {

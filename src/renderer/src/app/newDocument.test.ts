@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { FileFacts } from '@shared/domain/fileInfo'
 import type { NamedDocumentPlace, NewDocumentAsk } from '@shared/domain/newDocument'
+import { CHECKER_TEXTURE_IDS } from '@shared/domain/checkerTexture'
 import { forgetCheckerTextures } from '@/engines/scene/checkerTextures'
 import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
@@ -246,7 +247,10 @@ describe('createDocumentIn', () => {
         assets: {
           installBundledTextures: () =>
             new Promise(resolve => {
-              setTimeout(() => resolve([{ id: 'checkerLarge', assetId: 'asset_checker' }]), 0)
+              setTimeout(
+                () => resolve(CHECKER_TEXTURE_IDS.map(id => ({ id, assetId: `asset_${id}` }))),
+                0,
+              )
             }),
         },
       })
