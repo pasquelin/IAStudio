@@ -200,7 +200,7 @@ it for its tools, with every parameter of every action.
 | **The image** | the layer stack: add, style, place, group, merge, crop | nothing |
 | **The edit** | Video and Audio: lay a clip, move it, trim it, cut it, set fades, level and speed, keep the tracks. Exporting the document writes the **cut** as OpenTimelineIO, never a film — the frame-by-frame render needs a session nothing outside can hold | nothing, except the export |
 | **Sky and material** | adjust a sky's image, place its sun, fill a material's channels and render it | nothing |
-| **3D** | the scene: place an object, turn it, light it, paint it, reparent it, and look at it — from one side, in one of the ways of drawing | nothing |
+| **3D** | the scene: place an object, turn it, light it, paint it, reparent it, and look at it — from one side, in one of the ways of drawing. The setting too: what lights the scene, what hangs behind it, its haze, its ground and its rendering | nothing |
 | **Characters** | make a model animatable, add or remove a bone, tie it to a joint of the standard, put a handle on it, lay an animation block, set length and rate | nothing |
 | **Versions** | read the repository and its history, stage, record, branch, shelve, settle a conflict, fetch, publish | **files**, for whatever rewrites the working tree; **a server**, for publishing |
 | **Settings** | read and change the settings, press the buttons of the window, list the accounts, switch to one, rename one | **files**, for the two buttons nothing takes back |

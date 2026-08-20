@@ -661,6 +661,26 @@
         "title": "Choose how the scene is drawn",
         "description": "Switches the main view to shaded, wireframe, material-only or one of the other ways of drawing. The menu command only cycles from one to the next; this one names which."
       },
+      "worldEnvironment": {
+        "title": "Choose what lights the scene",
+        "description": "Lights the scene either by the procedural studio or by a sky of the project, named by its asset identifier, and sets how strong that lighting is and how far it is turned about the vertical."
+      },
+      "worldBackground": {
+        "title": "Choose what hangs behind the scene",
+        "description": "Puts the environment itself behind the scene, a flat colour, or nothing at all — the last leaving the background transparent, which is what a capture meant to be laid over something else needs."
+      },
+      "worldFog": {
+        "title": "Set the haze of the scene",
+        "description": "Turns the haze off, fades it between two distances, or thickens it with depth. The colour and the distances belong to the shape that was chosen, and are left exactly as they were otherwise."
+      },
+      "worldGround": {
+        "title": "Set the ground of the scene",
+        "description": "Shows or hides the ground the scene owns, and sets its colour, its side, its opacity and whether shadows land on it. That ground belongs to the document, unlike the grid, which is a setting of the application."
+      },
+      "worldRender": {
+        "title": "Set how the scene is rendered",
+        "description": "Chooses how high dynamic range is brought down to the screen, and by how many stops it is exposed. Both belong to the document rather than to the window that happens to be looking at it."
+      },
       "gitStatus": {
         "title": "Read the repository",
         "description": "Returns the branch, what it tracks, how far ahead or behind it is, and every changed file with the half of git it sits in. Also says when the project has no repository at all."
@@ -931,7 +951,14 @@
       "tagName": "Tag name",
       "stashIndex": "Place in the shelf, newest first",
       "settings": "Settings to change, by section",
-      "accountId": "Account identifier"
+      "accountId": "Account identifier",
+      "environmentKind": "Where the lighting comes from: the studio or a sky",
+      "backgroundKind": "What hangs behind: the environment, a colour, or nothing",
+      "fogKind": "Shape of the haze: none, linear or exponential",
+      "fogDensity": "Density of the exponential haze",
+      "groundSize": "Side of the ground, in scene units",
+      "receiveShadow": "Shadows land on the ground",
+      "toneMapping": "How high dynamic range is brought down to the screen"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

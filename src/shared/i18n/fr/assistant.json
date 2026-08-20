@@ -661,6 +661,26 @@
         "title": "Choisir la façon de dessiner la scène",
         "description": "Passe la vue principale en ombré, en fil de fer, en matière seule ou dans l’une des autres façons de dessiner. La commande de menu ne fait que tourner d’une à l’autre, quand celle-ci nomme laquelle."
       },
+      "worldEnvironment": {
+        "title": "Choisir ce qui éclaire la scène",
+        "description": "Éclaire la scène par le studio procédural ou par un ciel du projet, nommé par son identifiant d’asset, et règle l’intensité de cet éclairage ainsi que sa rotation autour de la verticale."
+      },
+      "worldBackground": {
+        "title": "Choisir ce qui est derrière la scène",
+        "description": "Pose derrière la scène l’environnement lui-même, une couleur unie, ou rien du tout — ce dernier cas laissant le fond transparent, ce que veut une capture destinée à être posée sur autre chose."
+      },
+      "worldFog": {
+        "title": "Régler la brume de la scène",
+        "description": "Éteint la brume, la fait fondre entre deux distances, ou l’épaissit avec la profondeur. La couleur et les distances ne valent que pour la forme choisie, et sont laissées telles quelles sinon."
+      },
+      "worldGround": {
+        "title": "Régler le sol de la scène",
+        "description": "Montre ou cache le sol que la scène possède, et règle sa couleur, son côté, son opacité et le fait qu’il reçoive les ombres. Ce sol appartient au document, à la différence de la grille, qui est un réglage de l’application."
+      },
+      "worldRender": {
+        "title": "Régler le rendu de la scène",
+        "description": "Choisit comment la plage dynamique est ramenée sur l’écran, et de combien de diaphragmes elle est exposée. Les deux appartiennent au document, pas à la fenêtre qui le regarde."
+      },
       "gitStatus": {
         "title": "Lire le dépôt",
         "description": "Rend la branche, ce qu’elle suit, son avance ou son retard, et chaque fichier modifié avec la moitié de git où il se trouve. Dit aussi quand le projet n’a aucun dépôt."
@@ -931,7 +951,14 @@
       "tagName": "Nom de l’étiquette",
       "stashIndex": "Place dans la pile, la plus récente d’abord",
       "settings": "Réglages à changer, par section",
-      "accountId": "Identifiant du compte"
+      "accountId": "Identifiant du compte",
+      "environmentKind": "Source de l’éclairage, le studio ou un ciel",
+      "backgroundKind": "Ce qui est derrière, l’environnement, une couleur, ou rien",
+      "fogKind": "Forme de la brume, aucune, linéaire ou exponentielle",
+      "fogDensity": "Densité de la brume exponentielle",
+      "groundSize": "Côté du sol, en unités de scène",
+      "receiveShadow": "Le sol reçoit les ombres",
+      "toneMapping": "Façon de ramener la plage dynamique sur l’écran"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

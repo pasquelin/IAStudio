@@ -1,6 +1,16 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { readColor } from '@shared/domain/color'
-import { DISPLAY_MODES, VIEW_DIRECTIONS, type Vector3 } from '@shared/domain/scene'
+import {
+  BACKGROUND_KINDS,
+  DISPLAY_MODES,
+  ENVIRONMENT_KINDS,
+  FOG_KINDS,
+  STUDIO_ENVIRONMENT,
+  TONE_MAPPINGS,
+  VIEW_DIRECTIONS,
+  type SceneWorld,
+  type Vector3,
+} from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import {
   addNode,
@@ -13,7 +23,9 @@ import {
   setNodeVisible,
   setSelection,
   setTransform,
+  setWorld,
 } from '@/engines/scene/commands'
+import { backgroundOfKind, fogOfKind } from '@/engines/scene/sceneWorld'
 import { EASINGS, POINT_TARGET, type CameraShot } from '@shared/domain/animation'
 import { addCameraShot, bindRailToShot, editCameraShot } from '@/engines/scene/animationCommands'
 import { newShotAt } from '@/engines/scene/cameraShots'
@@ -88,7 +100,9 @@ function readState(): ActionOutcome {
     data: {
       documentId: open.documentId,
       selectedIds: open.state.selectedIds,
-      environment: open.state.world.environment,
+      // The whole world and not its environment alone: the fog, the backdrop, the ground and the
+      // grading are document values, and a client that can write them has to be able to read them.
+      world: open.state.world,
       // What drives the cameras: without them a client can open a shot and never edit one, since
       // `camera.rail` and `camera.target` name it by the id only this list hands over.
       shots: open.state.animation.shots,
@@ -207,8 +221,121 @@ function reparent(input: Record<string, unknown>): ActionOutcome {
   )
 }
 
+/** A patch of the world of the scene in front. Naming no field at all is a refusal, not a no-op. */
+function editWorld(patch: Partial<SceneWorld>): ActionOutcome {
+  return Object.keys(patch).length === 0 ? refused('badInput') : edit(() => setWorld(patch))
+}
+
+function worldEnvironment(input: Record<string, unknown>): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
+
+  const kind = oneOf(input, 'kind', ENVIRONMENT_KINDS)
+  const assetId = textOf(input, 'assetId')
+  // A sky named outright is a sky chosen, so `kind` is what a client says only to put one out.
+  // Asking for `skybox` without naming one has no answer here: the panel takes the first sky of
+  // the project, which from outside would be a reference nobody picked.
+  if (kind === 'skybox' && assetId === null) return refused('badInput')
+
+  const intensity = numberOf(input, 'intensity')
+  const rotation = numberOf(input, 'rotation')
+
+  return editWorld({
+    ...(assetId === null
+      ? kind === 'studio'
+        ? { environment: STUDIO_ENVIRONMENT }
+        : {}
+      : { environment: { kind: 'skybox', assetId } }),
+    ...(intensity === null ? {} : { envIntensity: intensity }),
+    // Radians, as every other angle a document stores — the panel is what shows degrees.
+    ...(rotation === null ? {} : { envRotation: rotation }),
+  })
+}
+
+function worldBackground(input: Record<string, unknown>): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
+
+  const kind = oneOf(input, 'kind', BACKGROUND_KINDS)
+  if (!kind) return refused('badInput')
+
+  // Through the switch the panel uses, so a form that gains a shape gains it here too — then the
+  // two values this call may carry are written over what that switch settled for.
+  const background = backgroundOfKind(kind, open.state.world.background)
+  if (background.kind === 'transparent') return editWorld({ background })
+
+  return editWorld({
+    background:
+      background.kind === 'color'
+        ? { kind: 'color', color: textOf(input, 'color') ?? background.color }
+        : { kind: 'environment', blur: numberOf(input, 'blur') ?? background.blur },
+  })
+}
+
+function worldFog(input: Record<string, unknown>): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
+
+  const kind = oneOf(input, 'kind', FOG_KINDS)
+  if (!kind) return refused('badInput')
+
+  const fog = fogOfKind(kind, open.state.world.fog)
+  if (fog.kind === 'none') return editWorld({ fog })
+
+  const color = textOf(input, 'color') ?? fog.color
+
+  return editWorld({
+    fog:
+      fog.kind === 'linear'
+        ? {
+            ...fog,
+            color,
+            near: numberOf(input, 'near') ?? fog.near,
+            far: numberOf(input, 'far') ?? fog.far,
+          }
+        : { ...fog, color, density: numberOf(input, 'density') ?? fog.density },
+  })
+}
+
+function worldGround(input: Record<string, unknown>): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
+
+  const ground = open.state.world.ground
+  const size = numberOf(input, 'size')
+  const opacity = numberOf(input, 'opacity')
+  const color = textOf(input, 'color')
+  // `undefined` and not `false`: a call naming the size alone must not put the ground out.
+  const written = {
+    ...(input.visible === undefined ? {} : { visible: boolOf(input, 'visible') }),
+    ...(color === null ? {} : { color }),
+    ...(size === null ? {} : { size }),
+    ...(opacity === null ? {} : { opacity }),
+    ...(input.receiveShadow === undefined ? {} : { receiveShadow: boolOf(input, 'receiveShadow') }),
+  }
+
+  return Object.keys(written).length === 0
+    ? refused('badInput')
+    : editWorld({ ground: { ...ground, ...written } })
+}
+
 export const SCENE_HANDLERS: ActionHandlers = {
   'scene.state': readState,
+
+  'world.environment': worldEnvironment,
+  'world.background': worldBackground,
+  'world.fog': worldFog,
+  'world.ground': worldGround,
+
+  'world.render': input => {
+    const toneMapping = oneOf(input, 'toneMapping', TONE_MAPPINGS)
+    const exposure = numberOf(input, 'exposure')
+
+    return editWorld({
+      ...(toneMapping === null ? {} : { toneMapping }),
+      ...(exposure === null ? {} : { exposure }),
+    })
+  },
   'node.add': add,
   'node.select': select,
   'node.reparent': reparent,
