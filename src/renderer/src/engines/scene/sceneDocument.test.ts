@@ -1,6 +1,6 @@
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_WORLD, MESH_ENTRIES, TEXTURE_SLOTS } from '@shared/domain/scene'
+import { DEFAULT_WORLD, MESH_ENTRIES, TEXTURE_SLOTS, TILES_PER_METRE } from '@shared/domain/scene'
 import { MESH_PRIMITIVES } from './meshPrimitives'
 import { LIGHT_TYPES } from './lightTypes'
 import {
@@ -577,6 +577,28 @@ describe('sceneFromPayload', () => {
     const [node] = sceneFromPayload({ nodes: [nodeWith({ material: stripped })] }).nodes
 
     expect(node?.type === 'mesh' && node.material.normalMap).toBe(null)
+  })
+
+  /**
+   * The bounds were declared and read by nobody: a file holding zero collapsed every UV onto one
+   * texel, which shows as a mesh painted flat with no way to tell why. Clamped rather than
+   * refused — dropping the node would lose the shape as well as its tiling.
+   */
+  it('holds a tiling density inside its bounds instead of dropping the node', () => {
+    const nodes = [
+      nodeWith({ material: { ...DEFAULT_MATERIAL, tilesPerMetre: 0 } }),
+      nodeWith({ material: { ...DEFAULT_MATERIAL, tilesPerMetre: 5000 } }),
+    ]
+
+    const revived = sceneFromPayload({ nodes }).nodes
+
+    expect(revived).toHaveLength(2)
+    expect(revived[0]?.type === 'mesh' && revived[0].material.tilesPerMetre).toBe(
+      TILES_PER_METRE.min,
+    )
+    expect(revived[1]?.type === 'mesh' && revived[1].material.tilesPerMetre).toBe(
+      TILES_PER_METRE.max,
+    )
   })
 
   it('revives a sprite missing a measured field with the default for it', () => {

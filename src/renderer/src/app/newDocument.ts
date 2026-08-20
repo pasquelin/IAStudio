@@ -6,6 +6,7 @@ import {
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { parentOf } from '@shared/domain/folder'
 import { DEFAULT_SCENE_TEMPLATE, type SceneTemplateId } from '@shared/domain/sceneTemplate'
+import { ensureCheckerTextures } from '@/engines/scene/checkerTextures'
 import { seedSceneTemplate } from '@/stores/scenes'
 import { takenDocumentNames, untitledDocumentName, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -103,8 +104,14 @@ async function named(
   // Before the tab opens, and that order is the whole mechanism: `restoreDocument` puts the
   // studio default in a document that holds nothing, and holding the template's scene already is
   // what stops it.
-  if (created.kind === 'scene')
+  if (created.kind === 'scene') {
+    // Awaited, and this is the ONLY place it can be: a template lays its shapes down before any
+    // editor mounts, so the hook that installs the working textures has not run yet — every
+    // shape of the first 3D document of a session was born bare, saved that way, and there is
+    // no second chance once the ids are in the file.
+    await ensureCheckerTextures(useProject.getState().project?.path ?? '')
     seedSceneTemplate(created.id, of?.template ?? DEFAULT_SCENE_TEMPLATE)
+  }
 
   openDocument(created)
   return created

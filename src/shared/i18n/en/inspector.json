@@ -93,7 +93,7 @@
       "target": "Target",
       "roughness": "Roughness",
       "metalness": "Metalness",
-      "uvScale": "Tiling",
+      "tilesPerMetre": "Tiles per metre",
       "map": "Texture",
       "opacity": "Opacity",
       "normalMap": "Normals",

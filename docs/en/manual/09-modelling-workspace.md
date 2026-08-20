@@ -10,8 +10,33 @@ The workspace where you build a scene with volume: objects, lights, a camera tha
 
 The **+** button on the left rail creates a fresh scene. A project must be open.
 
-A new scene contains a chequered floor — the **grid** — and nothing else. It is black until a light
-is placed: that is normal, and the Lights panel says so.
+The window that opens asks for a name, then **what the scene opens on**: eight templates, under
+the name. The choice applies at creation only — an open scene does not change template.
+
+| Template | What it lays down |
+|---|---|
+| **Empty** | three lights and nothing else. The starting point for building everything yourself |
+| **Basic** | a floor, a sun, a fill light, a camera, and a one-metre cube — the cube says how big a metre is, so delete it as soon as an object of your own arrives |
+| **Photo studio** | a white curved backdrop, a floor, and three lights placed as in a studio |
+| **Cinematic** | a wide floor, a raking light, a camera and its **rail** — the shot is already a move |
+| **Architecture** | a very wide floor, a low sun, a sky, and a camera at eye height |
+| **First person**, **Third person**, **Top down** | all three open on the **test level** below, and differ only in where the camera stands |
+
+A scene is black until a light is placed: that is normal, and the Lights panel says so. Only the
+**Empty** template can take you there, by deleting its lights.
+
+### The test level
+
+The three character templates open on a set built to be **walked**: a floor 40 m by 32, a wall
+around it, a sunken court with its stair, a plank across it, a terrace and its ramp, a balcony,
+three jump blocks at widening gaps, pillars, and a blue pad on the floor marking the start.
+
+Every part is a shape of the studio, filed under three groups — **Ground**, **Enclosure**,
+**Course** — in the Scene panel. Everything there moves, resizes and deletes like any other
+object: it is a working set, not a fixed one.
+
+The colours say a role: grey for what is walked on, dark grey for walls and what is gone round,
+**orange for everything that is climbed** — ramp, steps, blocks, balcony.
 
 ---
 
@@ -457,7 +482,7 @@ its radius, a torus shows its tube, a spot shows its angle.
 | **Identity** | the name, editable |
 | **Transform** | Position, Rotation, Scale — three numbers each (X, Y, Z). A childless sprite selected on its own has no Rotation row: it would show nowhere |
 | **Geometry** | what defines the shape: radius, width, segments… |
-| **Material** | Colour, Roughness, Metalness, and five texture slots |
+| **Material** | Colour, Roughness, Metalness, Tiles per metre, and five texture slots |
 
 #### Every geometry field
 
@@ -495,6 +520,18 @@ result you cannot predict without trying.
 The five texture slots — **Texture**, **Normals**, **Roughness map**, **Metalness map**, **Ambient
 occlusion** — take images from the project. The **Choose a texture** button opens the list;
 **Remove the texture** empties it.
+
+**Every new shape arrives already dressed** in a working chequer. It is there for three things:
+judging a scale, seeing a texture stretch, and telling one face from another. Replace it whenever
+you like — it is a starting point, not a decoration.
+
+Four chequers are copied into the project's **Textures** folder the first time a scene asks for
+one: `CheckerLarge`, `CheckerSmall`, `GridLarge`, `GridSmall`. They are project images like any
+other.
+
+**Tiles per metre** says how many squares fit in a metre. At `1`, one square is one metre — on a
+3 m wall as on a 40 m floor, the squares stay square and the same size. Raise it to `2` for an
+object looked at close up.
 
 ### For a light
 
@@ -597,6 +634,33 @@ at what height. It appears in no render.
 | **Grid size** | its extent in metres — one square is always 1 m | 20 |
 
 Hide it to judge an image with nothing around it.
+
+It sits **just below** the zero level: a floor resting on it hides the grid rather than letting it
+show through. On the templates that lay a floor down — the test level among them — it therefore
+disappears of its own accord, with nothing to untick.
+
+---
+
+## Capturing the view
+
+**View ▸ Capture the view** saves a picture of the 3D view into the project's **Images** folder. What
+is captured is what the viewport draws — **minus** the grid, the transform handles, the rails and
+the light markers: a picture, not a screenshot.
+
+The button's menu offers four sizes:
+
+| Choice | Height of the picture |
+|---|---|
+| **View size** | the panel's own, on screen |
+| **1080p** | 1080 pixels |
+| **1440p** | 1440 pixels |
+| **4K** | 2160 pixels |
+
+**Only the height is imposed**: the width follows the shape of the panel, so the picture shows
+exactly what you were looking at — no more, no less. A narrow panel therefore gives a narrow
+picture, and that is deliberate. Widen the panel before capturing if you want a wide picture.
+
+The picture appears among the project's assets like any other.
 
 ---
 

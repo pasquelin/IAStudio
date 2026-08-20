@@ -49,12 +49,13 @@ export function meshNode(
     material = defaultMeshMaterial(),
     castShadow,
     parentId = null,
+    name = classNameOf(geometry.kind),
   }: MeshOptions = {},
 ): SceneNode {
   return {
     id: newId(),
     parentId,
-    name: classNameOf(geometry.kind),
+    name,
     visible: true,
     transform,
     ...shadowDefaults({ type: 'mesh' }),
@@ -73,6 +74,12 @@ export type MeshOptions = {
   castShadow?: boolean
   /** Hangs it under a group — what a level built of thirty parts needs to stay readable. */
   parentId?: string | null
+  /**
+   * English like every other node name, and for the same reason as a group's. Left out, a mesh
+   * is named after its class: fine for one added by hand, useless for a set of thirty where
+   * eleven rows would read `Box`.
+   */
+  name?: string
 }
 
 export function lightNode(light: LightDescriptor, position: Vector3): SceneNode {

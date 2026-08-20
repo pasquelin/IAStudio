@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { FileFacts } from '@shared/domain/fileInfo'
 import type { NamedDocumentPlace, NewDocumentAsk } from '@shared/domain/newDocument'
+import { forgetCheckerTextures } from '@/engines/scene/checkerTextures'
 import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -229,6 +230,33 @@ describe('createDocumentIn', () => {
         'light',
         'camera',
       ])
+    })
+
+    /**
+     * The defect this guards, and it reached the screen: a template lays its shapes down BEFORE
+     * any editor mounts, so the hook that installs the working textures had not run — every
+     * shape of the first 3D document of a session was born grey, and saved that way for good.
+     *
+     * The install resolves on a later turn here, which is the whole point: awaiting it is what
+     * the door has to do, not hoping it already happened.
+     */
+    it('dresses the shapes a template lays down, however late the textures land', async () => {
+      forgetCheckerTextures()
+      installFakeBridge({
+        assets: {
+          installBundledTextures: () =>
+            new Promise(resolve => {
+              setTimeout(() => resolve([{ id: 'checkerLarge', assetId: 'asset_checker' }]), 0)
+            }),
+        },
+      })
+
+      const made = await createDocumentIn('3d', { title: 'Niveau' })
+      const bare = sceneOf(useScenes.getState(), made?.id ?? '').nodes.filter(
+        node => node.type === 'mesh' && node.material.map === null,
+      )
+
+      expect(bare).toEqual([])
     })
 
     it('leaves the other kinds alone', async () => {

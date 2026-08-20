@@ -431,6 +431,12 @@ const KNOB_REACH = 0.025
 const DEFAULT_VIEW_DISTANCE = 8
 
 /**
+ * How far under zero the reference grid sits. Small enough to read as the ground plane, wide
+ * enough that no depth buffer confuses the two.
+ */
+const GRID_SINKAGE = 0.02
+
+/**
  * The node types an automatic framing counts — see `frameContents`. Lights and cameras are
  * placed away from what they light or watch, and a group is only ever as big as its children,
  * which are counted on their own.
@@ -595,6 +601,8 @@ export class SceneRenderer {
   private readonly gizmoRegion = new Vector4()
   private viewHelper: ViewHelper | null = null
   private grid: GridHelper | null = null
+  /** Dropped whenever the scene may have moved — see `measureShadowReach`. */
+  private shadowReach: number | null = null
   private mode: TransformMode = 'select'
   private snapping = false
   private space: TransformSpace = 'world'
@@ -783,6 +791,9 @@ export class SceneRenderer {
     // node was rebuilt under an unchanged timeline, and that node would stand in its rest pose.
     // It costs nothing on a scene with no track, and the loop is over driven nodes, not all.
     this.applyPoses()
+    // After every node is placed and posed: the reach is measured off where things actually
+    // stand, and a set that grew by one block re-cuts the frustum of every light at once.
+    this.tuneShadows()
     this.applyCameraShots()
     this.showAidsForSelection()
     // After the transforms and the poses: a box is read off where an object actually stands.
@@ -2121,10 +2132,8 @@ export class SceneRenderer {
     this.viewport.setPixelRatio(pixelRatioFor(next.quality))
 
     // Every light, not only the ones built after the change: a map is allocated per light, and
-    // the frustum of a directional one is sized from the grid the scene is laid out against.
-    if (shadowsResized || gridMoved) {
-      for (const object of this.objects.values()) this.tuneShadow(object)
-    }
+    // the grid is the floor under the reach a directional one is given.
+    if (shadowsResized || gridMoved) this.tuneShadows()
 
     if (gridMoved && this.viewport.canvas) this.applyPalette()
     if (aidsMoved(held, next)) this.refreshAids()
@@ -2282,6 +2291,10 @@ export class SceneRenderer {
     // Divisions equal to the extent, so one square is one metre whatever the size.
     const size = this.view.gridSize
     this.grid = new GridHelper(size, size, axis || undefined, line || undefined)
+    // JUST under the zero plane, where a floor laid on it hides the grid rather than fighting it
+    // for the same depth. Coplanar, the two flickered against each other square by square, and a
+    // level that lays its own ground had the reference grid drawn across it.
+    this.grid.position.y = -GRID_SINKAGE
     this.viewport.scene.add(this.grid)
   }
 
@@ -2324,7 +2337,9 @@ export class SceneRenderer {
     if (previous?.castShadow !== node.castShadow || previous.receiveShadow !== node.receiveShadow) {
       applyShadowFlags(object, node.castShadow, receivesShadow(node), this.belongsToAnotherNode)
     }
-    if (node.type === 'light') this.tuneShadow(object)
+    // The shadows are NOT tuned here: their reach is read off what the scene occupies, and a
+    // light synced before the set it lights would measure half a level. `apply` does it once
+    // the last node is in place.
 
     // Before anything is retargeted onto it: the document is where a bone's role was PUT RIGHT,
     // and the port would otherwise go on reading roles off names that lied.
@@ -2413,8 +2428,11 @@ export class SceneRenderer {
       const before = previous?.type === 'mesh' ? previous : null
       // The tiling too, and not only the shape: the repeat lives in the UVs, so changing it is
       // rebuilding the geometry — a material comparison alone would leave the floor stretched.
-      if (before?.geometry !== node.geometry || before.material.uvScale !== node.material.uvScale) {
-        applyGeometry(object, node.geometry, node.material.uvScale)
+      if (
+        before?.geometry !== node.geometry ||
+        before.material.tilesPerMetre !== node.material.tilesPerMetre
+      ) {
+        applyGeometry(object, node.geometry, node.material.tilesPerMetre)
         // The edges were built from the shape that just went: rebuilt, or they outline a mesh
         // that no longer exists.
         if (this.needsEdges()) this.applyDisplay(object)
@@ -2767,17 +2785,50 @@ export class SceneRenderer {
     applyWireOverlay(object, this.needsEdges(), this.wireMaterial, this.quadEdges)
   }
 
-  /** What a light's shadow is sized against: the settings for the map, the grid for the reach. */
+  /** Every light at once, against a reach measured once. */
+  private tuneShadows(): void {
+    this.shadowReach = null
+    for (const [id, object] of this.objects) {
+      if (this.applied.get(id)?.type === 'light') this.tuneShadow(object)
+    }
+  }
+
+  /** What a light's shadow is sized against: the settings for the map, the CONTENT for the reach. */
   private tuneShadow(light: Object3D): void {
     resizeShadowMap(light, shadowMapSizeFor(this.view.quality, this.view.shadowMapSize))
-    fitShadowCamera(light, this.view.gridSize)
+    this.shadowReach ??= this.measureShadowReach()
+    fitShadowCamera(light, this.shadowReach)
+  }
+
+  /**
+   * How far the shadows have to reach: what the scene OCCUPIES, never the grid.
+   *
+   * Sized from the grid was the first design, and it is the very trap `shadows` describes — a
+   * twenty-metre grid over a forty-metre level leaves half of it throwing nothing, with a clean
+   * cut across the floor and no hint as to why. The grid is a floor for it, not a measure: an
+   * empty scene still gets a frustum, so the first mesh laid down casts something.
+   *
+   * Measured once per pass and held in `shadowReach`, so a set of a thousand parts is walked
+   * once rather than once per light.
+   */
+  private measureShadowReach(): number {
+    const bounds = new Box3()
+    for (const [id, object] of this.objects) {
+      if (FRAMED_NODES.has(this.applied.get(id)?.type ?? 'group')) bounds.expandByObject(object)
+    }
+    if (bounds.isEmpty()) return this.view.gridSize
+
+    const size = bounds.getSize(new ThreeVector3())
+    // The diagonal, not the width: a sun comes in at an angle, and a frustum cut to the exact
+    // width of the set clips the shadow its far corner throws across it.
+    return Math.max(Math.max(size.x, size.z) * Math.SQRT2, this.view.gridSize)
   }
 
   private buildMesh(node: SceneNode & { type: 'mesh' }): Mesh {
     const material = new MeshStandardMaterial()
     applyMaterial(material, node.material, this.meshColor)
 
-    const mesh = new Mesh(tiledGeometry(node.geometry, node.material.uvScale), material)
+    const mesh = new Mesh(tiledGeometry(node.geometry, node.material.tilesPerMetre), material)
     // A texture arrives long after the frame that asked for it: the render is requested again
     // when it lands, or the viewport would show the mesh untextured until something else moved.
     const textures = createMaterialTextures(this.textureCache, mesh, material, () => this.redraw())

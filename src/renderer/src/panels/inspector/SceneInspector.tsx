@@ -167,10 +167,12 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
             gesture={edit.gesture}
           />
           {/* The very section a mesh gets: a text is lit the same way and wears the same
-              descriptor, so neither has to know the other exists. */}
+              descriptor, so neither has to know the other exists. Minus the tiling — a text's
+              outline is not a primitive, and its UVs never go through `uvTiling`. */}
           <MaterialSection
             material={text.material}
             fallbackColor={meshColor}
+            tiling={false}
             onChange={material =>
               edit.run(setMaterialOn(selection, changedFields(text.material, material)))
             }

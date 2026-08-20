@@ -28,7 +28,7 @@ describe('sceneFromTemplate', () => {
   it('tiles a floor by the metre rather than stretching one picture over it', () => {
     const floor = sceneFromTemplate('basic').nodes.find(node => node.type === 'mesh')
 
-    expect(floor?.type === 'mesh' && floor.material.uvScale).toBe(20)
+    expect(floor?.type === 'mesh' && floor.material.tilesPerMetre).toBe(1)
   })
 
   it('lays the floor flat and keeps it out of the shadow pass', () => {
