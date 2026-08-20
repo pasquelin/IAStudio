@@ -22,6 +22,8 @@ export type PictureTrait =
   | 'layerMask'
   | 'adjustmentLayer'
   | 'liveText'
+  /** A shape kept as its geometry rather than as pixels — as lossy to flatten as live text. */
+  | 'vectorShape'
   | 'layerTransform'
   | 'blendMode'
   | 'layerOpacity'
@@ -35,6 +37,7 @@ export const PICTURE_TRAITS: readonly PictureTrait[] = [
   'layerMask',
   'adjustmentLayer',
   'liveText',
+  'vectorShape',
   'layerTransform',
   'blendMode',
   'layerOpacity',
@@ -292,7 +295,16 @@ const FLAT: FormatCapability = carrying('picture', [])
 const OPEN_RASTER: FormatCapability = carrying(
   'picture',
   ['layers', 'groups', 'blendMode', 'layerOpacity'],
-  ['layerMask', 'adjustmentLayer', 'liveText', 'layerTransform', 'clipping', 'layerLock', 'guides'],
+  [
+    'layerMask',
+    'adjustmentLayer',
+    'liveText',
+    'vectorShape',
+    'layerTransform',
+    'clipping',
+    'layerLock',
+    'guides',
+  ],
 )
 
 /**

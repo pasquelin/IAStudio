@@ -102,9 +102,57 @@ describe('building a stack', () => {
     })
 
     const added = canvas().layers.at(-1)
-    expect(added?.kind === 'shape' && added.to).toEqual({ x: 100, y: 50 })
-    expect(added?.kind === 'shape' && added.fill).toBe(0xff0000)
-    expect(added?.transform.x).toBe(10)
+    if (added?.kind !== 'shape') throw new Error('the layer added is not a shape')
+
+    // Read through the transform, which is where the box really lands: the layer's own space
+    // starts at the corner of what the shape REACHES, a stroke's overhang included.
+    expect({ x: added.transform.x + added.from.x, y: added.transform.y + added.from.y }).toEqual({
+      x: 10,
+      y: 20,
+    })
+    expect({ x: added.transform.x + added.to.x, y: added.transform.y + added.to.y }).toEqual({
+      x: 110,
+      y: 70,
+    })
+    expect(added.fill).toBe(0xff0000)
+  })
+
+  /**
+   * A line and an arrow have no inside: `paintShape` leaves their path open on purpose, so a
+   * fill paints nothing at all. The layer listed in the stack and drew a blank.
+   */
+  it('strokes the two shapes that have no inside, rather than filling them', async () => {
+    await runAction('layer.add', {
+      kind: 'shape',
+      name: 'Trait',
+      shape: 'line',
+      width: 100,
+      height: 100,
+      fill: 0x00ff00,
+    })
+
+    const added = canvas().layers.at(-1)
+    expect(added?.kind === 'shape' && added.fill).toBeNull()
+    expect(added?.kind === 'shape' && added.stroke?.color).toBe(0x00ff00)
+  })
+
+  // A ring reaches its far point from the CENTRE, so a box wider than it is tall used to put the
+  // top of the star at a negative y — outside the layer's texture, and clipped away.
+  it('keeps a star inside its own texture whatever the box is shaped like', async () => {
+    await runAction('layer.add', {
+      kind: 'shape',
+      name: 'Étoile',
+      shape: 'star',
+      width: 200,
+      height: 50,
+    })
+
+    const added = canvas().layers.at(-1)
+    if (added?.kind !== 'shape') throw new Error('the layer added is not a shape')
+
+    expect(added.from.x).toBeGreaterThanOrEqual(0)
+    expect(added.from.y).toBeGreaterThanOrEqual(0)
+    expect(added.to.y).toBeGreaterThanOrEqual(0)
   })
 
   // A shape with no box is a layer with nothing on it, which nothing on screen could show.

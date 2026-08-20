@@ -15,7 +15,8 @@ export type ImageDocumentTextProps = {
   /** What the rulers take from the top and the left, which the host's origin sits after. */
   inset: number
   label: string
-  onDone: () => void
+  /** Named, never implied: a click elsewhere opens the NEXT caption before this one lets go. */
+  onDone: (layerId: string) => void
 }
 
 /**
@@ -67,7 +68,16 @@ export function ImageDocumentText({
   const finish = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
     // Escape ends the session; Enter does not, since a caption has lines. That is Photoshop's
     // split too, and the one place a text field must not answer Enter with a commit.
-    if (event.key === 'Escape') onDone()
+    if (event.key === 'Escape') onDone(layer.id)
+  }
+
+  /**
+   * A control of the studio taking the focus does NOT end the session — the type panel exists to
+   * be read WHILE the caption is typed, and closing on its first click deleted the caption that
+   * had not been typed into yet. The canvas focuses nothing, so a click on it still ends it.
+   */
+  const left = (next: EventTarget | null): void => {
+    if (next === null) onDone(layer.id)
   }
 
   return (
@@ -77,7 +87,7 @@ export function ImageDocumentText({
       value={layer.text}
       onChange={event => edit.run(setLayerText(layer.id, { text: event.target.value }))}
       onKeyDown={finish}
-      onBlur={onDone}
+      onBlur={event => left(event.relatedTarget)}
       spellCheck={false}
       style={style}
       // No border and no padding: every pixel of the box is where the words go, or the field and

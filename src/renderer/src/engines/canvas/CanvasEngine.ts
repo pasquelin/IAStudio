@@ -40,6 +40,7 @@ import {
   type Rect,
   type ShapeKind,
   type ShapeLayer,
+  type TextAlign,
   type TextLayer,
   type Transform,
   WHITE,
@@ -61,6 +62,7 @@ import {
   HANDLE_GRAB,
   layerCornersOf,
   resizeBy,
+  resizedBox,
   rotateBy,
   ROTATE_REACH,
   wholeOf,
@@ -93,6 +95,7 @@ import {
   constrainedTo,
   localShape,
   paintShape,
+  shapeBounds,
   shapeGeometry,
   type ShapeGeometry,
 } from './shapeGeometry'
@@ -159,6 +162,11 @@ export type CanvasEngineOptions = {
    * The layer it becomes, and the editor it opens, are the stack's to make.
    */
   onText: (asked: { layerId: string } | { at: Point; box: Size }) => void
+  /**
+   * A caption's box, pulled by one of its grips: the new box, and where its top-left corner now
+   * sits in the document — a north or west grip moves both at once.
+   */
+  onTextBox: (layerId: string, box: Size, at: Point) => void
   /** A shape the hand finished drawing, and where its box starts. Same split as `onText`. */
   onShape: (at: Point, drawn: DrawnShape) => void
   /**
@@ -289,6 +297,13 @@ function strokeWidth(brushSize: number): number {
  */
 const MIN_TEXT_DRAG = 8
 
+/** Where a block of words hangs in its box. `justify` fills the width, so it starts at the edge. */
+function alignedIn(align: TextAlign, box: number, block: number): number {
+  if (align === 'center') return Math.max(0, (box - block) / 2)
+  if (align === 'right') return Math.max(0, box - block)
+  return 0
+}
+
 /** The shape a layer holds, back as geometry — its two points are already in its own space. */
 function shapeOf(layer: ShapeLayer): ShapeGeometry {
   return shapeGeometry(layer.shape, layer.from, layer.to, {
@@ -368,6 +383,8 @@ type Gesture =
   | { kind: 'shape'; from: Point; to: Point }
   /** Sizing a caption's box by its diagonal. A drag of nothing at all is a click, which opens one. */
   | { kind: 'text'; from: Point; to: Point }
+  /** Pulling one grip of a caption's box. `box` and `origin` are what it stood at when taken. */
+  | { kind: 'textBox'; id: string; handle: HandleId; box: Size; origin: Transform }
   /** `origin` is the transform the layer had when the drag began: every step is absolute. */
   | { kind: 'handle'; id: string; handle: HandleId; from: Point; origin: Transform }
   /** Turning by the zone outside a corner. `center` is the middle the layer pivots about. */
@@ -383,17 +400,13 @@ const NO_GESTURE: Gesture = { kind: 'none' }
 const RINGED_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'pencil', 'eraser'])
 
 /**
- * The tools that write on the armed layer's surface, and so the ones a layer can refuse. The
- * text tool is not one: it places a caption of its own rather than writing on what is armed.
+ * The tools that write on the armed layer's surface, and so the ones a layer can refuse. Neither
+ * the text tool nor the shape tool is one: each lands a LAYER of its own rather than writing on
+ * what is armed, so a padlock on the armed layer has nothing to say about them — and a cursor
+ * that answers `not-allowed` over a gesture that works is worse than no cursor at all.
  * The eyedropper reads, and the selection tools carve out a region rather than a layer.
  */
-const WRITING_TOOLS: ReadonlySet<CanvasTool> = new Set([
-  'brush',
-  'pencil',
-  'eraser',
-  'fill',
-  'shape',
-])
+const WRITING_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'pencil', 'eraser', 'fill'])
 
 /** Which gestures hold a layer open in the history, so releasing one closes its entry. */
 const LAYER_DRAGS: ReadonlySet<Gesture['kind']> = new Set(['move', 'handle', 'rotate'])
@@ -587,7 +600,11 @@ export class CanvasEngine {
    * Keyed on the state's identity, as `apply` keys its own work: `apply` replaces it wholesale,
    * so the document's size and the armed id ride along with the tree.
    */
-  private corners: { of: CanvasState | null; box: Corners | null } = { of: null, box: null }
+  private corners: { of: CanvasState | null; tool: CanvasTool | null; box: Corners | null } = {
+    of: null,
+    tool: null,
+    box: null,
+  }
   private pointer: Point | null = null
   private selection: CanvasSelection = null
   /** Which of the three the region tool draws. Pushed in by the bar, like the tool itself. */
@@ -1830,6 +1847,11 @@ export class CanvasEngine {
         letterSpacing: (layer.tracking / 1000) * layer.size,
       },
     })
+    // Pixi's `align` only ranks the LINES against each other, inside a block sized to the widest
+    // of them: on a single line it changes nothing at all. Hanging the block off the box's own
+    // edge is what makes the four buttons of the paragraph panel do anything.
+    text.x = alignedIn(layer.align, layer.box.width, text.width)
+
     renderer.render({ container: text, target: surface.texture, clear: true })
     text.destroy()
     this.render()
@@ -2095,6 +2117,23 @@ export class CanvasEngine {
     }
 
     if (this.tool === 'text') {
+      // A grip of the armed caption's box comes first, exactly as the move tool's do: a press on
+      // one resizes the box, a press anywhere else opens or edits a caption.
+      const armed = this.activeLayer()
+      const frame = this.hoverBox()
+      const grip = frame && this.chromeAt(frame, point)
+      if (armed?.kind === 'text' && grip?.kind === 'handle') {
+        this.options.layers.beginDrag()
+        this.gesture = {
+          kind: 'textBox',
+          id: armed.id,
+          handle: grip.id,
+          box: armed.box,
+          origin: armed.transform,
+        }
+        return
+      }
+
       // A caption already under the hand is the one the click edits. Without this, every click
       // with the tool armed stacked one more layer on the last.
       const caption = this.captionAt(point)
@@ -2178,22 +2217,24 @@ export class CanvasEngine {
   }
 
   /**
-   * The rect a layer's grips describe: the picture it holds where it holds one, its whole
-   * surface otherwise.
+   * The rect a layer's grips describe: what its content really occupies, in its own space.
    *
-   * A layer painted by hand has no better answer — every pixel of its surface is fair game. One
-   * holding a photo does: `containIn` shrank it to fit and centred it, so the surface is mostly
-   * transparent margin, and gripping that is gripping nothing. This is what every other editor
-   * frames for a picture layer.
+   * `contents` knows it for a photo, which `containIn` shrank and centred — its surface is mostly
+   * transparent margin, and gripping that is gripping nothing. A caption and a shape carry it in
+   * their own state. Only pixels painted by hand can reach every corner of the document.
    */
-  private frameOf(layerId: string): Rect {
-    return this.contents.get(layerId) ?? wholeOf(this.documentSize())
+  private frameOf(layer: Layer): Rect {
+    const laid = this.contents.get(layer.id)
+    if (laid) return laid
+    if (layer.kind === 'text') return { x: 0, y: 0, ...layer.box }
+    if (layer.kind === 'shape') return shapeBounds(shapeOf(layer), layer.stroke?.width ?? 0)
+    return wholeOf(this.documentSize())
   }
 
   /** `null` for a group, which has no texture of its own and so no box to grab. */
   private cornersOf(layer: Layer): Corners | null {
     if (!this.state || isGroup(layer)) return null
-    return layerCornersOf(layer.transform, this.documentSize(), this.frameOf(layer.id))
+    return layerCornersOf(layer.transform, this.documentSize(), this.frameOf(layer))
   }
 
   /**
@@ -2202,12 +2243,17 @@ export class CanvasEngine {
    * per pointer move, and pay for every layer in the document to answer about one.
    */
   private activeCorners(): Corners | null {
-    if (this.tool !== 'move') return null
-    if (this.corners.of === this.state) return this.corners.box
+    // The text tool shows them too: a caption whose box is never drawn is a box nobody can aim
+    // at, resize, or even tell apart from the words that spill out of it.
+    if (this.tool !== 'move' && this.tool !== 'text') return null
+    if (this.corners.of === this.state && this.corners.tool === this.tool) return this.corners.box
 
     const layer = this.activeLayer()
-    const box = layer && !layer.locked.position ? this.cornersOf(layer) : null
-    this.corners = { of: this.state, box }
+    // The text tool shows the box of a CAPTION and of nothing else: the frame of a pixel layer
+    // is the whole document, which says nothing about where the next click would type.
+    const drawable = this.tool === 'text' ? layer?.kind === 'text' : true
+    const box = layer && drawable && !layer.locked.position ? this.cornersOf(layer) : null
+    this.corners = { of: this.state, tool: this.tool, box }
     return box
   }
 
@@ -2247,9 +2293,11 @@ export class CanvasEngine {
   private paintTarget(): BrushTarget | null {
     const layer = this.activeLayer()
     if (!layer || isGroup(layer) || layer.locked.pixels) return null
-    // Its own pixels only: a caption is redrawn whole whenever a letter changes, so a stroke laid
-    // on it would be wiped with no history entry to bring it back. Its mask is never redrawn.
-    if (layer.kind === 'text' && this.painting !== 'mask') return null
+    // Its own pixels only: a caption and a shape are redrawn WHOLE whenever anything about them
+    // changes, so a stroke laid on one would be wiped with no history entry to bring it back —
+    // recolouring a rectangle would take the paint over it away. Their masks are never redrawn.
+    const redrawn = layer.kind === 'text' || layer.kind === 'shape'
+    if (redrawn && this.painting !== 'mask') return null
 
     const surface = this.activeSurface()
     // No surface means the layer carries no mask while the brush aims at one: there is nothing
@@ -2377,6 +2425,8 @@ export class CanvasEngine {
         return
       }
       case 'handle': {
+        const held = this.state && layerById(this.state, gesture.id)
+        if (!held) return
         // The same frame the grips were drawn on: solved against the document instead, a pull on
         // a photo that does not fill its surface would scale from the wrong corner.
         const next = resizeBy(
@@ -2385,7 +2435,7 @@ export class CanvasEngine {
           this.documentSize(),
           point,
           event.shiftKey,
-          this.frameOf(gesture.id),
+          this.frameOf(held),
         )
         this.options.layers.transform(gesture.id, next)
         return
@@ -2427,6 +2477,23 @@ export class CanvasEngine {
         gesture.to = point
         this.textBox = box(gesture.from, point, false)
         this.overlay.invalidate()
+        return
+      }
+      case 'textBox': {
+        const back = invert(layerMatrix(gesture.origin, this.documentSize()))
+        if (!back) return
+
+        const next = resizedBox(gesture.handle, gesture.box, applyTo(back, point))
+        // The origin moved with a north or west grip, and it moved in the LAYER's space: taken
+        // through the matrix without its translation, which is what turns it back into document
+        // units under a rotation.
+        const spun = { ...layerMatrix(gesture.origin, this.documentSize()), tx: 0, ty: 0 }
+        const shifted = applyTo(spun, next)
+        this.options.onTextBox(
+          gesture.id,
+          { width: next.width, height: next.height },
+          { x: gesture.origin.x + shifted.x, y: gesture.origin.y + shifted.y },
+        )
         return
       }
     }

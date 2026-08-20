@@ -33,6 +33,7 @@ import {
   flipImage,
   mergeDown,
   removeLayer,
+  resizeCaption,
   rotateImage,
 } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
@@ -140,6 +141,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         useCanvases.getState().runCommand(documentId, addLayer(born))
         setEditing(id)
       },
+      // The box and where it now starts, in one entry: a north grip moves both, and two commands
+      // would be two steps of undo for one pull.
+      onTextBox: (layerId, box, at) =>
+        useCanvases.getState().runCommand(documentId, resizeCaption(layerId, box, at)),
       onShape: (at, drawn) =>
         useCanvases
           .getState()
@@ -212,15 +217,21 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
    * Ends a typing session. A caption nobody typed into is REMOVED rather than left standing: an
    * empty text layer draws nothing at all, and a stack full of them is what a mis-click leaves.
    */
-  const endTyping = useCallback((): void => {
-    // Read from the store rather than from `typing`: the last keystroke is written asynchronously,
-    // and a captured layer is one render old exactly when it matters.
-    const layer = editing ? layerById(canvasOf(useCanvases.getState(), documentId), editing) : null
-    if (layer?.kind === 'text' && layer.text.trim() === '') {
-      useCanvases.getState().runCommand(documentId, removeLayer(layer.id))
-    }
-    setEditing(null)
-  }, [documentId, editing])
+  const endTyping = useCallback(
+    (closed: string): void => {
+      // Read from the store rather than from `typing`: the last keystroke is written
+      // asynchronously, and a captured layer is one render old exactly when it matters.
+      const layer = layerById(canvasOf(useCanvases.getState(), documentId), closed)
+      if (layer?.kind === 'text' && layer.text.trim() === '') {
+        useCanvases.getState().runCommand(documentId, removeLayer(closed))
+      }
+      // Only while it is still the caption on screen. A click elsewhere on the canvas opens the
+      // NEXT one before this blur is delivered, and closing then shut the editor that click had
+      // just opened — and deleted the empty caption it had just made.
+      setEditing(current => (current === closed ? null : current))
+    },
+    [documentId],
+  )
 
   const mode = modes[tool]
 
