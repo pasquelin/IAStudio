@@ -313,13 +313,13 @@ close button never goes**, and the panel's name keeps its size.
 | **Git** | left | 2nd | everywhere *(with a project open)* | what has changed in the project folder since the last recorded version |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
 | **Timeline** | bottom | 1st | Video, Audio, 3D | the sequence being edited, or the animation |
-| **History** | bottom | 1st | everywhere *(with a project open)* | the project's recorded versions, and what each one changed |
+| **History** | bottom | 1st | everywhere *(with the project folder tracked by git)* | the project's recorded versions, and what each one changed |
 
 > **"Everywhere" means the workspaces, not the home screen.** The home has panels of its own —
 > five — that this table does not list. **Three belong to both**: the Explorer and Git in the
-> left column, and History in a bottom strip the home did not have before. All three appear only
-> with a project open: with none, the home is the screen it has always been — two columns and
-> nothing below.
+> left column, and History in a bottom strip the home did not have before. The Explorer and Git
+> appear only with a project open, and **History only if that project is tracked by git**: with
+> no project, the home is the screen it has always been — two columns and nothing below.
 
 **The left column reads in two parts: what Scenario offers, then what is already yours.** Above,
 **Models**, **Generate** and **Assets**, which take turns — a model to choose, its form, and the
@@ -360,8 +360,10 @@ starts, and the shelf is asked for. The lower half opens on the **Explorer**, ev
 | **Textures** | *nothing* | History |
 | **Skyboxes** | *nothing* | History |
 
-> **History needs a project open.** With none, the bottom strip of those three workspaces shows
-> nothing — the zone is there, and it is empty.
+> **History needs a folder tracked by git.** Until tracking is in place — no project open, or a
+> project whose folder is not tracked — the bottom strip of those three workspaces **goes away**:
+> it takes no room at all. The Git panel says where this project stands, and carries the button
+> that sets tracking up.
 
 As soon as you click an icon, that half remembers **your** choice and does not move again, until
 you click another one or reset the layout.

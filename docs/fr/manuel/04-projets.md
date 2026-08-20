@@ -660,13 +660,14 @@ qu’il était avant qu’elle commence.
 
 ## Relire les versions — le panneau Historique
 
-Le panneau **Historique** occupe la bande du bas et demande **un projet ouvert**. Il montre les
-versions enregistrées de **toutes les branches à la fois**, pas seulement celle où vous êtes : le
-panneau Git écrit, celui-ci relit, et les deux regardent le même dossier.
+Le panneau **Historique** occupe la bande du bas et demande **un dossier suivi par git**. Il
+montre les versions enregistrées de **toutes les branches à la fois**, pas seulement celle où vous
+êtes : le panneau Git écrit, celui-ci relit, et les deux regardent le même dossier.
 
-> Tant que le suivi des versions n’est pas en place, le panneau le dit en une ligne et renvoie au
-> panneau Git, qui porte l’écran et le bouton. Le suivi en place mais rien d’enregistré encore :
-> **Aucune version enregistrée pour l’instant.**
+> Tant que le suivi des versions n’est pas en place, **le panneau n’est pas proposé du tout** : ni
+> son icône dans le rail, ni la bande du bas, qui ne prend alors aucune place. C’est le panneau
+> Git qui dit où en est ce projet, et qui porte le bouton. Le suivi en place mais rien
+> d’enregistré encore : **Aucune version enregistrée pour l’instant.**
 
 ### Ce que porte une ligne
 

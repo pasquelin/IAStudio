@@ -637,12 +637,13 @@ before the merge started.
 
 ## Reading versions back — the History panel
 
-The **History** panel sits in the bottom band and wants **a project open**. It shows the recorded
-versions of **every branch at once**, not only the one you are on: the Git panel writes, this one
-reads back, and both are looking at the same folder.
+The **History** panel sits in the bottom band and wants **a folder tracked by git**. It shows the
+recorded versions of **every branch at once**, not only the one you are on: the Git panel writes,
+this one reads back, and both are looking at the same folder.
 
-> While version tracking is not set up, the panel says so in one line and points at the Git panel,
-> which carries the screen and the button. Tracking set up but nothing recorded yet: **No version
+> While version tracking is not set up, **the panel is not offered at all**: no icon in the rail,
+> and no bottom band either — it takes no room. The Git panel is what says where this project
+> stands, and what carries the button. Tracking set up but nothing recorded yet: **No version
 > recorded so far.**
 
 ### What a row carries

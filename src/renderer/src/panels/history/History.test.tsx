@@ -1,15 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { GitCommit, GitCommitFile, GitRepository } from '@shared/domain/git'
+import type { GitCommit, GitCommitFile } from '@shared/domain/git'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { HISTORY_PAGE, useGit } from '@/stores/git'
+import { gitReadyRepository } from '@/stores/git-fixtures'
 import { History } from './History'
 
-const READY: GitRepository = {
-  kind: 'ready',
-  status: { branch: 'main', head: 'a3f9c1e', upstream: null, ahead: 0, behind: 0, files: [] },
-}
+const READY = gitReadyRepository()
 
 const commit = (hash: string, message: string, ...parents: string[]): GitCommit => ({
   hash,
@@ -32,17 +30,6 @@ beforeEach(() =>
 )
 
 describe('the history before there is one', () => {
-  /**
-   * The Git panel is looking at the same folder and carries the screen that explains the four
-   * states before `ready`, with the button that acts on them. Saying it twice would be twice.
-   */
-  it('sends the reader to the Git panel rather than repeating its screens', async () => {
-    installFakeBridge({ git: { read: () => Promise.resolve({ kind: 'uninitialised' }) } })
-    render(<History />)
-
-    expect(await screen.findByText(/panneau Git dit où en est ce projet/)).toBeTruthy()
-  })
-
   it('says so when the folder is versioned but holds no version yet', async () => {
     installFakeBridge({
       git: { read: () => Promise.resolve(READY), log: () => Promise.resolve([]) },

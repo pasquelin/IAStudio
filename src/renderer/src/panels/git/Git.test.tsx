@@ -1,22 +1,15 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { GitRepository, GitStatus } from '@shared/domain/git'
+import type { GitRepository } from '@shared/domain/git'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useGit } from '@/stores/git'
+import { gitReadyRepository, gitStatus } from '@/stores/git-fixtures'
 import { useProject } from '@/stores/project'
 import { Git } from './Git'
 
-const CLEAN: GitStatus = {
-  branch: 'main',
-  head: 'a3f9c1e',
-  upstream: null,
-  ahead: 0,
-  behind: 0,
-  files: [],
-}
-
-const CLEAN_READY: GitRepository = { kind: 'ready', status: CLEAN }
+const CLEAN = gitStatus()
+const CLEAN_READY = gitReadyRepository()
 
 beforeEach(() => {
   useGit.setState({ repository: { kind: 'no-project' }, busy: false, message: '', amend: false })

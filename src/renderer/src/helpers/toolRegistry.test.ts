@@ -6,15 +6,19 @@ import type { WorkspaceId } from '@shared/domain/workspace'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
 import { preferModels } from '@/stores/settings-fixtures'
+import { useGit } from '@/stores/git'
+import { trackByGit } from '@/stores/git-fixtures'
 import { useProject } from '@/stores/project'
 import { useAvailableTools } from '@/hooks/useAvailableTools'
 import { shownTool, toolIcon, toolStateOf, TOOLS, type ToolState } from './toolRegistry'
 
 /** What a workspace answers to: a project is always open in one, by definition. */
-const WITH_MODEL: ToolState = { hasModel: true, hasProject: true }
-const NO_MODEL: ToolState = { hasModel: false, hasProject: true }
+const WITH_MODEL: ToolState = { hasModel: true, hasProject: true, hasGit: true }
+const NO_MODEL: ToolState = { hasModel: false, hasProject: true, hasGit: true }
 /** The home before anything has been opened, which is where a launch starts. */
-const NO_PROJECT: ToolState = { hasModel: false, hasProject: false }
+const NO_PROJECT: ToolState = { hasModel: false, hasProject: false, hasGit: false }
+/** A project open in a folder git is not tracking, which is every folder until `git init`. */
+const NO_GIT: ToolState = { hasModel: true, hasProject: true, hasGit: false }
 
 /** The half of `toolStateOf` these cases are about, read where they used to read it alone. */
 const hasModelIn = (surface: Parameters<typeof toolStateOf>[0]): boolean =>
@@ -39,6 +43,7 @@ beforeEach(() => {
   useModels.setState({ selected: {} })
   useSettings.setState({ settings: DEFAULT_SETTINGS })
   useProject.setState({ project: null })
+  useGit.setState({ repository: { kind: 'no-project' } })
 })
 
 describe('the generator', () => {
@@ -115,6 +120,54 @@ describe('the explorer on the home', () => {
   it('leaves its half empty rather than standing something else in it', () => {
     expect(shownTool('explorer', 'left', 'secondary', HOME_SURFACE, NO_PROJECT)).toBeNull()
     expect(shownTool('explorer', 'left', 'secondary', HOME_SURFACE, WITH_MODEL)).toBe('explorer')
+  })
+})
+
+// The band is the widest surface of the window, and a folder git is not tracking has no versions
+// to put in it. The Git panel carries that sentence, and the button that acts on it.
+describe('the history over a folder git is not tracking', () => {
+  it('is absent from the rail, and there the moment git answers about the folder', () => {
+    openProject()
+    expect(idsOf('bottomRight', 'image')).toEqual([])
+
+    trackByGit()
+    expect(idsOf('bottomRight', 'image')).toEqual(['history'])
+  })
+
+  /**
+   * A command git refused says nothing about the folder — `no-identity` is what everybody meets
+   * on their first commit — and the band is where the versions behind it are read. Taking it away
+   * there tears the whole right column down and puts it back on the next refresh.
+   */
+  it('stays while a command failed, which is not a folder without versions', () => {
+    openProject()
+    useGit.setState({ repository: { kind: 'failed', reason: 'no-identity', detail: '' } })
+
+    expect(idsOf('bottomRight', 'image')).toEqual(['history'])
+  })
+
+  // The repository is corrected asynchronously: a project closed still reads `ready` until the
+  // next status lands, and the band went on offering the versions of the folder that just left.
+  it('goes as soon as the project does, without waiting for git to be asked again', () => {
+    trackByGit()
+    openProject()
+    expect(idsOf('bottomRight', 'image')).toEqual(['history'])
+
+    useProject.setState({ project: null })
+    expect(idsOf('bottomRight', 'image')).toEqual([])
+  })
+
+  // The band would otherwise open on it by itself: it is the only panel that half declares in
+  // half the sections, so an untouched layout stood a strip of nothing across the window.
+  it('leaves the band empty rather than opening on itself', () => {
+    expect(shownTool(null, 'bottomRight', 'primary', 'image', NO_GIT)).toBeNull()
+    expect(shownTool('history', 'bottomRight', 'primary', 'image', NO_GIT)).toBeNull()
+  })
+
+  // Where the montage shares the half, it is what the band falls back to — the same substitution
+  // the generator's absence already makes in the left column.
+  it('gives the half to the montage where the section has one', () => {
+    expect(shownTool('history', 'bottomRight', 'primary', 'video', NO_GIT)).toBe('timeline')
   })
 })
 

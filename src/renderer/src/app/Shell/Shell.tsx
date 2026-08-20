@@ -9,6 +9,7 @@ import { AssetPicker } from '../AssetPicker/AssetPicker'
 import { showWorkspace } from '../dockviewApi'
 import { guardUnsavedWork } from '../unsavedGuard'
 import { useAutosave } from '@/hooks/useAutosave'
+import { useGitWatch } from '@/hooks/useGitWatch'
 import { AssistantEntry } from '@/assistant/AssistantEntry'
 import { AssistantOverlay } from '@/assistant/AssistantOverlay/AssistantOverlay'
 import { AssistantStatus } from '@/assistant/AssistantStatus'
@@ -50,6 +51,12 @@ export function Shell() {
   // The window is the one that holds documents, so it is the one that must not go quietly.
   useEffect(() => guardUnsavedWork(window), [])
   useAutosave()
+
+  // Here rather than in the two panels that draw it: whether git holds the folder decides whether
+  // the band offers the history at all, so the answer has to exist while both are closed. The
+  // WATCH and not `useGitStatus` — the root subscribed to the status redraws the whole window
+  // every time a file the studio itself wrote changed it.
+  useGitWatch()
 
   const homeEnabled = useSettings(state => state.settings.home.enabled)
   // The setting wins over the session: turning the home off must take it off the screen it is

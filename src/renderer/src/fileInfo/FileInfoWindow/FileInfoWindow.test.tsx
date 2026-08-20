@@ -5,19 +5,12 @@ import { fileInfoRoute, type FileFacts } from '@shared/domain/fileInfo'
 import type { GitRepository } from '@shared/domain/git'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useGit } from '@/stores/git'
+import { gitReadyRepository } from '@/stores/git-fixtures'
 import { FileInfoWindow } from './FileInfoWindow'
 
-const VERSIONED: GitRepository = {
-  kind: 'ready',
-  status: {
-    branch: 'main',
-    head: 'a3f9c1e',
-    upstream: null,
-    ahead: 0,
-    behind: 0,
-    files: [{ path: 'Images/facade.jpg', change: 'modified', stage: 'unstaged' }],
-  },
-}
+const VERSIONED = gitReadyRepository({
+  files: [{ path: 'Images/facade.jpg', change: 'modified', stage: 'unstaged' }],
+})
 
 const FACTS: FileFacts = {
   kind: 'file',
