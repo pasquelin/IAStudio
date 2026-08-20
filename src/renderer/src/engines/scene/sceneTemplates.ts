@@ -140,6 +140,10 @@ const WALKING: Partial<ScenePlay> = { eyeHeight: EYE_HEIGHT, moveSpeed: 4, gravi
 function characterView(view: readonly SceneNode[], play: Partial<ScenePlay>): Template {
   return {
     nodes: [...playgroundNodes(), sun(2.2, { x: 22, y: 26, z: 16 }), skyLight(0.9), ...view],
+    // The sky as the backdrop, and the haze that gives a set depth — the same outdoor preset the
+    // architecture template takes. Under the studio default the level stood in a black void,
+    // which reads as a broken viewport rather than as somewhere to walk.
+    world: presetPatch('outdoor'),
     play: { ...WALKING, ...play },
   }
 }

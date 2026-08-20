@@ -31,9 +31,16 @@ const COURT_HALF_Z = 4
 const COURT_FLOOR = -2.5
 
 const TERRACE_HEIGHT = 1.5
-const TERRACE_EDGE_X = -2
-const TERRACE_EDGE_Z = -9
-const BALCONY_HEIGHT = 3
+const TERRACE_EDGE_X = -8
+const TERRACE_EDGE_Z = -10
+const WALKWAY_HEIGHT = 3
+
+/**
+ * The set is read from the start pad, looking down −Z, and everything is placed against that:
+ * the court dead ahead with its plank, the stair out of it to the east, the walkway over it, the
+ * terrace and its ramp to the west, the jumps along the north wall.
+ */
+const START_Z = 10
 
 /** The six planes that bound a block — a part says where it STOPS, and its neighbour starts there. */
 type Bounds = { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number }
@@ -75,19 +82,16 @@ function slab(
  * A fresh descriptor per call, never one shared: a material is part of the node, and two nodes
  * holding the same object would be edited together by accident.
  */
-function surface(
-  color: string,
-  texture: CheckerTextureId = 'checkerLarge',
-  tilesPerMetre = 1,
-): MaterialDescriptor {
-  return { ...defaultMeshMaterial(texture), color, tilesPerMetre }
+function surface(color: string, texture: CheckerTextureId = 'gridLarge'): MaterialDescriptor {
+  return { ...defaultMeshMaterial(texture), color }
 }
 
-const groundSurface = (): MaterialDescriptor => surface('#8b95a1')
-const wallSurface = (): MaterialDescriptor => surface('#5c6570', 'gridLarge')
-const climbSurface = (): MaterialDescriptor => surface('#c1873f', 'checkerLarge', 2)
-const obstacleSurface = (): MaterialDescriptor => surface('#454c56', 'checkerSmall', 2)
-const startSurface = (): MaterialDescriptor => surface('#3d7ab8', 'gridSmall', 2)
+/** The density is left at the studio default of one everywhere: what changes is WHICH grid. */
+const groundSurface = (): MaterialDescriptor => surface('#9aa4b0')
+const wallSurface = (): MaterialDescriptor => surface('#6a737f')
+const climbSurface = (): MaterialDescriptor => surface('#d08c3a', 'checkerLarge')
+const obstacleSurface = (): MaterialDescriptor => surface('#4e5661', 'gridSmall')
+const startSurface = (): MaterialDescriptor => surface('#3d7ab8', 'checkerSmall')
 
 /**
  * The floor, as four slabs around the court — a solid cannot be pierced, and the court is the
@@ -125,7 +129,7 @@ function floorSlabs(parentId: string): SceneNode[] {
       parentId,
     ),
     slab(
-      { x0: -1.5, x1: 1.5, y0: 0, y1: 0.05, z0: 8.5, z1: 11.5 },
+      { x0: -1.5, x1: 1.5, y0: 0, y1: 0.05, z0: START_Z - 1.5, z1: START_Z + 1.5 },
       'Start',
       startSurface(),
       parentId,
@@ -174,8 +178,9 @@ function courtStair(parentId: string): SceneNode[] {
         x1,
         y0: -FLOOR_DEPTH,
         y1: COURT_FLOOR + (index + 1) * STEP_RISE,
-        z0: -3,
-        z1: 0,
+        // The southern half of the court, clear of the plank that crosses its middle.
+        z0: 1,
+        z1: COURT_HALF_Z,
       },
       `Court Step ${index + 1}`,
       climbSurface(),
@@ -214,7 +219,7 @@ function terrace(parentId: string): SceneNode[] {
       { kind: 'box', width: RAMP_WIDTH, height: 0.4, depth: RAMP_RUN },
       {
         transform: transformAt(
-          { x: -6, y: TERRACE_HEIGHT / 2, z: TERRACE_EDGE_Z + RAMP_RUN / 2 },
+          { x: -14, y: TERRACE_HEIGHT / 2, z: TERRACE_EDGE_Z + RAMP_RUN / 2 },
           { x: Math.atan2(TERRACE_HEIGHT, RAMP_RUN), y: 0, z: 0 },
         ),
         material: climbSurface(),
@@ -225,23 +230,28 @@ function terrace(parentId: string): SceneNode[] {
   ]
 }
 
-/** A walkway over the court on two legs — the height a fall is judged from. */
-function balcony(parentId: string): SceneNode[] {
+/**
+ * A walkway ACROSS the court on two legs — the height a fall is judged from.
+ *
+ * North of the plank, and never between the start pad and the court: laid there it stood three
+ * metres up right in front of where one begins, and hid the whole set behind it.
+ */
+function walkway(parentId: string): SceneNode[] {
   const legs: [number, string][] = [
-    [-COURT_HALF_X - 1, 'Balcony Leg West'],
-    [COURT_HALF_X + 1, 'Balcony Leg East'],
+    [-COURT_HALF_X - 1.5, 'Walkway Leg West'],
+    [COURT_HALF_X + 1.5, 'Walkway Leg East'],
   ]
 
   return [
     slab(
-      { x0: -12, x1: 12, y0: BALCONY_HEIGHT, y1: BALCONY_HEIGHT + 0.3, z0: 6, z1: 8 },
-      'Balcony',
+      { x0: -9, x1: 9, y0: WALKWAY_HEIGHT, y1: WALKWAY_HEIGHT + 0.3, z0: -3.2, z1: -1.6 },
+      'Walkway',
       climbSurface(),
       parentId,
     ),
     ...legs.map(([x, name]) =>
       slab(
-        { x0: x - 0.4, x1: x + 0.4, y0: 0, y1: BALCONY_HEIGHT, z0: 6.6, z1: 7.4 },
+        { x0: x - 0.3, x1: x + 0.3, y0: 0, y1: WALKWAY_HEIGHT, z0: -3, z1: -1.8 },
         name,
         obstacleSurface(),
         parentId,
@@ -253,7 +263,7 @@ function balcony(parentId: string): SceneNode[] {
 /** Three blocks at rising heights, the gaps between them widening: the question a jump answers. */
 function jumps(parentId: string): SceneNode[] {
   const gaps = [1.5, 2.4, 3.4]
-  let x = 4
+  let x = 3
 
   return gaps.map((gap, index) => {
     const bounds = { x0: x, x1: x + 2, y0: 0, y1: 0.6 + index * 0.6, z0: -14, z1: -12 }
@@ -265,10 +275,11 @@ function jumps(parentId: string): SceneNode[] {
 
 /** Pillars to go round, and the plank across the court — precision rather than speed. */
 function obstacles(parentId: string): SceneNode[] {
+  // In the open floor the course leaves free, never in the way of a climb or a jump.
   const pillars: [number, number, string][] = [
-    [-13, 8, 'Pillar West'],
-    [13, -9, 'Pillar East'],
-    [-9, 12, 'Pillar South'],
+    [-14, 6, 'Pillar West'],
+    [14, 8, 'Pillar East'],
+    [12, -6, 'Pillar North'],
   ]
 
   return [
@@ -278,6 +289,8 @@ function obstacles(parentId: string): SceneNode[] {
         { transform: transformAt({ x, y: 1.6, z }), material: obstacleSurface(), parentId, name },
       ),
     ),
+    // Flush with the floor it spans, so crossing the court is a matter of aim rather than of a
+    // step up. Clear of the stair to its south and of the walkway to its north.
     slab(
       { x0: -COURT_HALF_X, x1: COURT_HALF_X, y0: -0.15, y1: 0, z0: -0.6, z1: 0.6 },
       'Plank',
@@ -304,7 +317,7 @@ export function playgroundNodes(): SceneNode[] {
     course,
     ...courtStair(course.id),
     ...terrace(course.id),
-    ...balcony(course.id),
+    ...walkway(course.id),
     ...jumps(course.id),
     ...obstacles(course.id),
   ]
