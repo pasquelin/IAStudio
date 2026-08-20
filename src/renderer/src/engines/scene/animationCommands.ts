@@ -488,6 +488,62 @@ export function bindRailToShot(
   return editCameraShot(shot.id, { motion })
 }
 
+/**
+ * Puts objects on the band, or takes them off it — the gesture that decides what is animated.
+ *
+ * `null` when it would change nothing, so a press on what is already there costs no undo. What
+ * is taken off keeps its keys: a track still holds its line, by the rule in `animationRows`,
+ * which is what stops a removal from hiding an animation.
+ */
+export function putOnAnimationSheet(
+  state: SceneState,
+  nodeIds: readonly string[],
+): Command<SceneState> | null {
+  const held = state.animation.sheet
+  const added = nodeIds.filter(id => !held.includes(id))
+  if (added.length === 0) return null
+
+  return {
+    id: `sheet:add:${added.join(',')}`,
+    apply: current => writeSheet(current, [...current.animation.sheet, ...added]),
+    revert: current =>
+      writeSheet(
+        current,
+        current.animation.sheet.filter(id => !added.includes(id)),
+      ),
+  }
+}
+
+/** Takes one object off the band. Its keys stay — see `putOnAnimationSheet`. */
+export function takeOffAnimationSheet(
+  state: SceneState,
+  nodeId: string,
+): Command<SceneState> | null {
+  const at = state.animation.sheet.indexOf(nodeId)
+  if (at === -1) return null
+
+  return {
+    id: `sheet:remove:${nodeId}`,
+    apply: current =>
+      writeSheet(
+        current,
+        current.animation.sheet.filter(id => id !== nodeId),
+      ),
+    // Back where it stood, not at the end: a sheet somebody arranged is not one to reshuffle.
+    revert: current =>
+      writeSheet(current, [
+        ...current.animation.sheet.slice(0, at),
+        nodeId,
+        ...current.animation.sheet.slice(at),
+      ]),
+  }
+}
+
+const writeSheet = (state: SceneState, sheet: readonly string[]): SceneState => ({
+  ...state,
+  animation: { ...state.animation, sheet },
+})
+
 /** How long the whole thing runs, and how finely it is cut. */
 export function setTimelineSettings(
   settings: Partial<{ duration: Us; fps: number }>,
