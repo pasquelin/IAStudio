@@ -39,17 +39,32 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # The latest PUBLISHED release, drafts and pre-releases excluded — `/releases/latest`
-      # already filters both. A repository with no release yet answers 404, and that is the
-      # normal case before the first version: the step leaves no file behind and the page
-      # keeps the wording it ships with.
+      # The release that FIRED this run, when one did: `/releases/latest` is a separate resource
+      # and it is eventually consistent — read ten seconds after v1.0.0 went public, on 20/08, it
+      # still answered v0.2.0, and the site advertised the previous version with the previous
+      # download links, from a green run. The event payload carries the release itself, so there
+      # is nothing to ask. `/releases/latest` stays the source for a dispatch or a push, and it
+      # answers 404 before the first release — the normal case, where the page keeps its wording.
+      #
+      # Drafts and pre-releases: `/releases/latest` filters both, the payload does not, so the
+      # two flags are read here or a published pre-release would land on the site.
       - name: Write the release manifest
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_DRAFT: ${{ github.event.release.draft }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           set -euo pipefail
 
-          if ! gh api "repos/${GITHUB_REPOSITORY}/releases/latest" > release.json 2>/dev/null; then
+          source="repos/${GITHUB_REPOSITORY}/releases/latest"
+          if [ -n "${RELEASE_TAG:-}" ] \
+            && [ "${RELEASE_DRAFT:-}" = "false" ] \
+            && [ "${RELEASE_PRERELEASE:-}" = "false" ]; then
+            source="repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}"
+          fi
+
+          if ! gh api "$source" > release.json 2>/dev/null; then
             echo "No published release yet — the page keeps its built-in wording." \
               >> "$GITHUB_STEP_SUMMARY"
             exit 0
