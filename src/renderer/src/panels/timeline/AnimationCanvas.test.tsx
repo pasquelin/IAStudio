@@ -49,7 +49,7 @@ const modelWithClip = () => {
 }
 
 const blockRows = () =>
-  animationRows(timelineWith([]), {
+  animationRows(timelineWith([], { sheet: ['perso'] }), {
     nodes: [{ id: 'perso', name: 'Perso' }],
     expanded: new Set(['perso']),
     lanes: [
@@ -147,6 +147,9 @@ describe('dragging a clip block', () => {
     })
     Object.defineProperty(event, 'dataTransfer', {
       value: {
+        // `types` as a real one always carries it: a target asks what is FLYING before the drop,
+        // and a double without it answers nothing where the platform would answer.
+        types: [ANIMATION_DRAG_TYPE],
         getData: (type: string) => (type === ANIMATION_DRAG_TYPE ? JSON.stringify(payload) : ''),
       },
     })

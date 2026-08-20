@@ -82,7 +82,7 @@ const paintOf = (rows: Parameters<typeof paintAnimation>[1]['rows'], playhead = 
 }
 
 const rowsOf = (tracks: Parameters<typeof timelineWith>[0], blocks?: readonly ClipBlock[]) =>
-  animationRows(timelineWith(tracks), {
+  animationRows(timelineWith(tracks, { sheet: ['cube'] }), {
     nodes: [{ id: 'cube', name: 'Circle' }],
     // A lane shows inside its object's track, so the cube has to be unfolded for one to be drawn.
     expanded: new Set(blocks ? ['cube'] : []),

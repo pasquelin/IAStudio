@@ -1,7 +1,9 @@
 import { mdiRhombus } from '@mdi/js'
-import { useMemo } from 'react'
+import { useMemo, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
+import { putOnAnimationSheet } from '@/engines/scene/animationCommands'
+import { sceneNodeDrag } from '@/panels/scene/dragged'
 import { clipKeyOf, clipLane, MAIN_LANE_ID } from '@shared/domain/scene'
 import { animationRows, type ClipBlock, type SheetLane } from '@/engines/scene/animationRows'
 import { clipSpanOf } from '@/engines/scene/clipBlend'
@@ -45,12 +47,28 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
 
     // A block's width comes from the ENGINE: the length of a clip lives in the GLB, and a model
     // still loading has none — it simply has no block yet rather than a block of no width.
+    // Only for the models the band actually SHOWS. Built for every model of the scene, this loop
+    // made a lane, a blocks array and an i18n call for each — and `animationRows` reads them only
+    // for the objects on the sheet, so on 8 000 models with three on the band it threw 7 997 away.
+    // The sheet, whoever holds a track, and whoever PLAYS a clip — exactly who `animationRows`
+    // gives a line to. A model animated from elsewhere is on none of the first two, and building
+    // no lane for it would leave its line empty where the whole point is to trim the block.
+    const onBand = new Set([
+      ...timeline.sheet,
+      ...timeline.tracks.map(track => track.target.nodeId),
+      ...nodes.flatMap(node =>
+        node.type === 'model' && (node.model.lanes ?? []).some(lane => lane.clips.length > 0)
+          ? node.id
+          : [],
+      ),
+    ])
+
     const sheetLanes: SheetLane[] = []
     for (const node of byId.values()) {
-      if (node.type !== 'model') continue
+      if (node.type !== 'model' || !onBand.has(node.id)) continue
 
-      // A model always shows a lane, empty or not: an object's track is where an animation is
-      // dropped, and one that appears only once something plays has nowhere to receive the first.
+      // A model on the band always shows a lane, empty or not: an object's track is where an
+      // animation is dropped, and one appearing only once something plays can receive nothing.
       const lanes = node.model.lanes ?? [clipLane(MAIN_LANE_ID)]
 
       for (const [rank, lane] of lanes.entries()) {
@@ -84,8 +102,30 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
     return animationRows(timeline, { nodes, expanded, lanes: sheetLanes, order })
   }, [timeline, nodes, expanded, lengths, order, t])
 
+  /**
+   * The PANEL takes the drop, never the canvas: an empty band draws no canvas at all — the empty
+   * state stands there — and that is the very moment a first object is dropped.
+   */
+  const onDropNodes = (event: DragEvent<HTMLDivElement>): void => {
+    const nodeIds = sceneNodeDrag.idsFrom(event)
+    if (nodeIds.length === 0) return
+
+    event.preventDefault()
+    const command = putOnAnimationSheet(sceneOf(useScenes.getState(), documentId), nodeIds)
+    if (command) useScenes.getState().runCommand(documentId, command)
+  }
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div
+      className="flex h-full min-h-0 flex-col"
+      onDragOver={event => {
+        if (!sceneNodeDrag.carries(event)) return
+        event.preventDefault()
+        // The `+` under the pointer, which its channel allows — see `panels/scene/dragged`.
+        event.dataTransfer.dropEffect = 'copy'
+      }}
+      onDrop={onDropNodes}
+    >
       {rows.length === 0 ? (
         <EmptyState icon={mdiRhombus} message={t('animation.noTrack')} />
       ) : (

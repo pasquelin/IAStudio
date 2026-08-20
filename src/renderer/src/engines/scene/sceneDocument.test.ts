@@ -650,6 +650,53 @@ describe('the timeline a file holds', () => {
     expect(read(undefined)).toEqual(EMPTY_TIMELINE)
   })
 
+  /*
+   * Who is on the band travels with the DOCUMENT: it is a choice somebody made, so reopening the
+   * file — here or in another window — has to give the same band back. A field that reads back
+   * empty leaves a scene looking unanimated while its keys are still there.
+   */
+  /*
+   * Deleting an object leaves its id on the sheet in MEMORY, so an undo gives the object its line
+   * back. Writing it would be another matter: a file would gather one ghost per object ever
+   * deleted, and nothing anywhere would ever clear them.
+   */
+  it('leaves the objects the scene has lost out of the file', () => {
+    const state: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a')],
+      animation: { ...EMPTY_TIMELINE, sheet: ['a', 'gone'] },
+    }
+
+    expect(scenePayload(state).animation.sheet).toEqual(['a'])
+    expect(state.animation.sheet).toEqual(['a', 'gone'])
+  })
+
+  it('carries the sheet through a save and a read, in order', () => {
+    const state: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b')],
+      animation: { ...EMPTY_TIMELINE, sheet: ['b', 'a'] },
+    }
+
+    expect(reread(state).animation.sheet).toEqual(['b', 'a'])
+  })
+
+  // A file that HAS a sheet is taken as it stands: rebuilding it from the tracks would put back
+  // an object somebody took off on purpose, and it would come back at every open.
+  it('leaves an empty sheet empty, even where tracks say who is animated', () => {
+    expect(read({ tracks: [trackPayload], sheet: [] }).sheet).toEqual([])
+  })
+
+  // The recovery, and it runs ONCE: a file written before the sheet existed has none, and its
+  // animated objects would otherwise come back with nowhere to be seen.
+  it('recovers the sheet from what is animated where the file has none', () => {
+    expect(read({ tracks: [trackPayload] }).sheet).toEqual(['cube'])
+  })
+
+  it('keeps only the ids of a sheet a hand has edited into something else', () => {
+    expect(read({ tracks: [], sheet: ['cube', 7, null, 'lamp'] }).sheet).toEqual(['cube', 'lamp'])
+  })
+
   it('reads a track back whole, keys included', () => {
     const timeline = read({ duration: 8, fps: 30, tracks: [trackPayload] })
 

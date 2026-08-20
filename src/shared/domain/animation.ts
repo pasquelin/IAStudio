@@ -119,6 +119,39 @@ export type AnimationTimeline = {
   tracks: readonly AnimationTrack[]
   /** Empty on every document written before shots existed, which is what makes them optional. */
   shots: readonly CameraShot[]
+  /**
+   * Which objects the band SHOWS, by node id, in the order they were put there.
+   *
+   * A choice the person makes, never a consequence of what the scene holds: a house is scenery
+   * and a character in front of it is animated, and only they can say which is which. Deriving
+   * it from the scene put every object on the sheet — 8 000 blocks meant 24 009 buttons and
+   * 99,2 % of the window's DOM, measured 20/08.
+   */
+  sheet: readonly string[]
+}
+
+/**
+ * The sheet a file written before sheets existed comes back with: whoever is ALREADY animated,
+ * once each. A RECOVERY and nothing more — from then on the sheet is what the person put there,
+ * and this is never consulted again.
+ *
+ * `playing` is for the models whose lane actually carries a clip. A model with an empty lane is
+ * one nobody has animated yet, and it belongs on the sheet no more than a wall does.
+ */
+export function sheetFromAnimated(
+  tracks: readonly AnimationTrack[],
+  shots: readonly CameraShot[],
+  playing: readonly string[] = [],
+): string[] {
+  // Through a `Set`, which keeps each one at its first place: dedup by `includes` in a loop is
+  // quadratic, and a document of a few thousand animated nodes paid 62 ms for it — measured 20/08.
+  return [
+    ...new Set([
+      ...tracks.map(track => track.target.nodeId),
+      ...shots.map(shot => shot.cameraId),
+      ...playing,
+    ]),
+  ]
 }
 
 export const ZERO: Vector3 = Object.freeze({ x: 0, y: 0, z: 0 })
@@ -138,6 +171,7 @@ export const EMPTY_TIMELINE: AnimationTimeline = Object.freeze({
   fps: DEFAULT_FPS,
   tracks: [],
   shots: [],
+  sheet: [],
 })
 
 /**

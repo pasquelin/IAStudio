@@ -34,6 +34,7 @@ import {
   DEFAULT_FPS,
   EASINGS,
   EMPTY_TIMELINE,
+  sheetFromAnimated,
   TRACK_PROPERTIES,
   type AnimationTimeline,
   type AnimationTrack,
@@ -69,7 +70,20 @@ export type ScenePayload = {
 }
 
 export function scenePayload(state: SceneState): ScenePayload {
-  return { nodes: state.nodes, world: state.world, animation: state.animation }
+  const alive = new Set(state.nodes.map(node => node.id))
+  const sheet = state.animation.sheet.filter(id => alive.has(id))
+
+  return {
+    nodes: state.nodes,
+    world: state.world,
+    // The sheet WITHOUT the objects the scene has lost. Deleting one leaves its id behind on
+    // purpose — an undo then gives the object its line back — but writing it would let a file
+    // gather ghosts nobody ever clears, one per object ever deleted.
+    animation:
+      sheet.length === state.animation.sheet.length
+        ? state.animation
+        : { ...state.animation, sheet },
+  }
 }
 
 /**
@@ -90,13 +104,24 @@ export function sceneFromPayload(payload: unknown): SceneState {
    * shadows, and requiring the flags would have emptied each of them at load, silently, since a
    * dropped node looks exactly like one that was never there.
    */
+  const kept = nodes.filter(isSceneNode).map(revived)
+
   return {
-    nodes: nodes.filter(isSceneNode).map(revived),
+    nodes: kept,
     selectedIds: [],
     // The root `environment` is where the sky lived before the world existed — see `readWorld`.
     world: readWorld(payload.world, payload.environment),
-    animation: readTimeline(payload.animation),
+    animation: readTimeline(payload.animation, kept),
   }
+}
+
+/** The models whose lane actually carries a clip — see `sheetFromAnimated`. */
+function playingModels(nodes: readonly SceneNode[]): string[] {
+  return nodes.flatMap(node =>
+    node.type === 'model' && (node.model.lanes ?? []).some(lane => lane.clips.length > 0)
+      ? node.id
+      : [],
+  )
 }
 
 /**
@@ -340,7 +365,7 @@ function isOptionalTextureOverrides(value: unknown): boolean {
  * the rule the nodes already follow: a project folder is user territory, and one malformed track
  * must not cost the animation around it.
  */
-function readTimeline(value: unknown): AnimationTimeline {
+function readTimeline(value: unknown, nodes: readonly SceneNode[]): AnimationTimeline {
   if (!isRecord(value)) return EMPTY_TIMELINE
 
   const tracks = Array.isArray(value.tracks) ? value.tracks.filter(isTrack) : []
@@ -355,7 +380,23 @@ function readTimeline(value: unknown): AnimationTimeline {
     fps: fps > 0 ? fps : DEFAULT_FPS,
     tracks,
     shots,
+    sheet: readSheet(value.sheet, tracks, shots, playingModels(nodes)),
   }
+}
+
+/**
+ * Which objects the band shows. Without one, rebuilt ONCE from what is animated — a file written
+ * before sheets existed would come back with its animated objects nowhere to be seen. WITH one,
+ * taken as it stands, empty included: rebuilding would put back what someone removed on purpose.
+ */
+function readSheet(
+  value: unknown,
+  tracks: readonly AnimationTrack[],
+  shots: readonly CameraShot[],
+  playing: readonly string[],
+): string[] {
+  if (Array.isArray(value)) return value.filter(id => typeof id === 'string')
+  return sheetFromAnimated(tracks, shots, playing)
 }
 
 /**

@@ -111,7 +111,7 @@ describe('pointing at the animation band', () => {
 
 describe('pointing at a clip block', () => {
   const laneWith = (...blocks: readonly ClipBlock[]): HitContext => ({
-    rows: animationRows(timelineWith([]), {
+    rows: animationRows(timelineWith([], { sheet: ['perso'] }), {
       nodes: [{ id: 'perso', name: 'Perso' }],
       expanded: new Set(['perso']),
       lanes: [{ nodeId: 'perso', laneId: 'main', name: 'Animation 1', blocks }],

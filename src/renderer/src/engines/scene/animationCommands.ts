@@ -42,6 +42,10 @@ import {
  * additive design exists to avoid.
  */
 
+/**
+ * The sheet is deliberately LEFT ALONE here: a revert would have had to put it back too, in every
+ * command that writes a track. `animationRows` gives a line to whoever holds one instead.
+ */
 const write = (
   state: SceneState,
   change: (tracks: readonly AnimationTrack[]) => AnimationTrack[],
@@ -481,6 +485,75 @@ export function bindRailToShot(
 
   return editCameraShot(shot.id, { motion })
 }
+
+/**
+ * Puts objects on the band, or takes them off it — the gesture that decides what is animated.
+ *
+ * `null` when it would change nothing, so a press on what is already there costs no undo. What
+ * is taken off keeps its keys: a track still holds its line, by the rule in `animationRows`,
+ * which is what stops a removal from hiding an animation.
+ */
+export function putOnAnimationSheet(
+  state: SceneState,
+  nodeIds: readonly string[],
+): Command<SceneState> | null {
+  // Sets on both sides: `includes` in a filter is quadratic, and putting a selection of a few
+  // thousand on the band paid 61 ms for it, its undo as much again — measured 20/08.
+  const held = new Set(state.animation.sheet)
+  const added = [...new Set(nodeIds)].filter(id => !held.has(id))
+  if (added.length === 0) return null
+
+  const wanted = new Set(added)
+
+  return {
+    // Its LENGTH and its first, never the ids themselves: a whole selection joined made a 147 KiB
+    // string, held for as long as the command sat in the undo stack, that nobody ever reads.
+    id: `sheet:add:${added.length}:${added[0]}`,
+    apply: current => writeSheet(current, [...current.animation.sheet, ...added]),
+    revert: current =>
+      writeSheet(
+        current,
+        current.animation.sheet.filter(id => !wanted.has(id)),
+      ),
+  }
+}
+
+/**
+ * Takes objects off the band. Their keys stay — see `putOnAnimationSheet`.
+ *
+ * The whole selection in ONE command, never one per object: six taken off in a single gesture
+ * have to come back in a single undo.
+ */
+export function takeOffAnimationSheet(
+  state: SceneState,
+  nodeIds: readonly string[],
+): Command<SceneState> | null {
+  // Captured with their places, so a revert puts them back WHERE they stood: a sheet somebody
+  // arranged is not one to reshuffle. Through a `Set`, for the reason `putOnAnimationSheet` gives.
+  const wanted = new Set(nodeIds)
+  const taken = state.animation.sheet.flatMap((id, at) => (wanted.has(id) ? { id, at } : []))
+  if (taken.length === 0) return null
+
+  return {
+    id: `sheet:remove:${taken.length}:${taken[0]?.id}`,
+    apply: current =>
+      writeSheet(
+        current,
+        current.animation.sheet.filter(id => !wanted.has(id)),
+      ),
+    revert: current => {
+      const back = [...current.animation.sheet]
+      // Ascending, so each insertion lands on a list that already holds everything before it.
+      for (const one of taken) back.splice(one.at, 0, one.id)
+      return writeSheet(current, back)
+    },
+  }
+}
+
+const writeSheet = (state: SceneState, sheet: readonly string[]): SceneState => ({
+  ...state,
+  animation: { ...state.animation, sheet },
+})
 
 /** How long the whole thing runs, and how finely it is cut. */
 export function setTimelineSettings(

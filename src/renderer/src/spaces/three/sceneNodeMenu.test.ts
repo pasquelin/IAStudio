@@ -14,13 +14,21 @@ const onRename = vi.fn()
 const hidden = (node: SceneNode): SceneNode => ({ ...node, visible: false })
 
 /** Raises the menu, since a native one leaves nothing on screen for a case to read. */
-function raise(node: SceneNode = meshNode('box-1')): void {
-  openSceneNodeMenu({ node, canFrame: true, t: i18next.t, run, onToggleVisible, onRename })
+function raise(node: SceneNode = meshNode('box-1'), onSheet = false): void {
+  openSceneNodeMenu({
+    node,
+    canFrame: true,
+    t: i18next.t,
+    run,
+    onToggleVisible,
+    onSheet,
+    onRename,
+  })
 }
 
 /** The same from the viewport, which has no name to open and therefore no rename to hand back. */
 function raiseInViewport(node: SceneNode = meshNode('box-1')): void {
-  openSceneNodeMenu({ node, canFrame: true, t: i18next.t, run, onToggleVisible })
+  openSceneNodeMenu({ node, canFrame: true, t: i18next.t, run, onToggleVisible, onSheet: false })
 }
 
 describe('what the 3D space offers to do with a node', () => {
@@ -37,10 +45,24 @@ describe('what the 3D space offers to do with a node', () => {
       'Renommer l’objet',
       'Dupliquer',
       'Grouper',
+      'Ajouter à la bande d’animation',
       'Cadrer la sélection',
       'Masquer l’objet',
       'Supprimer',
     ])
+  })
+
+  /*
+   * One row whose LABEL flips, never two rows appearing and vanishing: a menu of changing length
+   * is one a hand cannot learn, which is the rule at the head of this file. The eye row does the
+   * same, and this one follows it.
+   */
+  it('offers to take an object off the band once it is on it, in the same row', () => {
+    raise(meshNode('box-1'), true)
+
+    expect(menu.labels()).toContain('Retirer de la bande d’animation')
+    expect(menu.labels()).not.toContain('Ajouter à la bande d’animation')
+    expect(menu.labels()).toHaveLength(7)
   })
 
   // A viewport draws no name to type over, so the row that would open one has nowhere to land.
@@ -58,6 +80,7 @@ describe('what the 3D space offers to do with a node', () => {
       t: i18next.t,
       run,
       onToggleVisible,
+      onSheet: false,
     })
 
     expect(menu.offers('Cadrer la sélection')).toBe(false)

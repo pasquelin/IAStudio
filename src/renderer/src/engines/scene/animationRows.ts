@@ -11,6 +11,7 @@ import { reconcileOrder } from '@shared/domain/order'
 import type { Us } from '@shared/domain/time'
 import { ROW_PADDING } from '../timeline/timelineGeometry'
 import { shotCameras } from './cameraShots'
+import { drivenNodes } from './animationEval'
 
 /** One object, or one bone of one object. Its channels are the tracks that drive it. */
 export type Subject = {
@@ -160,10 +161,8 @@ export function orderedSubjects(
 
 export type RowsOptions = {
   /**
-   * The objects on stage, in outliner order. EVERY one gets a line, keyed or not: a scene's
-   * objects already exist, so a band that showed only those with a track made a person create
-   * something before they could see anything — which is the whole reason the old panel read as
-   * empty while a cube stood in the viewport.
+   * The objects on stage — read for their NAMES and to know which still exist, never to decide
+   * who gets a line. `timeline.sheet` decides that, and it is what the person put there.
    */
   nodes: readonly SheetNode[]
   /** Which subjects are unfolded. Absent from the set means folded, so a new one arrives folded. */
@@ -262,10 +261,31 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
   // are left out of the arrangement below.
   for (const cameraId of onAir) push(cameraId, barsOf(timeline, cameraId, named))
 
-  /** The objects first, in the order the scene holds them, then the bones keyed inside them. */
+  /*
+   * Who gets a line: what the person PUT on the sheet, plus whoever HOLDS a track. A house is
+   * scenery and a character in front of it is animated — only the person can say which, and
+   * deriving it from the scene put 8 000 blocks and 24 009 buttons on the band, measured 20/08.
+   */
+  // Whoever holds a track, and whoever PLAYS a clip: an animation applied from the Animations
+  // panel or the Inspector never touches the sheet, and its model would play in the viewport with
+  // no line to trim it on — while saving and reopening the same document gave it one, because
+  // `sheetFromAnimated` counts it. Live and reloaded disagreed.
+  const keyed = [
+    ...drivenNodes(timeline),
+    ...(options.lanes ?? []).flatMap(lane => (lane.blocks.length > 0 ? lane.nodeId : [])),
+  ]
+  // The sheet first, then whoever holds a track. Through a `Set`, which keeps each one at its
+  // FIRST place — an object both on the sheet and keyed appears where the sheet put it.
+  const shown = [...new Set([...timeline.sheet, ...keyed])].filter(id => named.has(id))
+  const isShown = new Set(shown)
+
+  /** The objects first, in the order the sheet holds them, then the bones keyed inside them. */
   const natural = [
-    ...options.nodes.map(node => node.id).filter(id => !onAir.includes(id)),
-    ...[...grouped.keys()].filter(key => !named.has(key)),
+    ...shown.filter(id => !onAir.includes(id)),
+    // A bone is keyed inside its object, so it rides on the object's own place on the sheet.
+    ...[...grouped.entries()]
+      .filter(([key, tracks]) => !named.has(key) && isShown.has(tracks[0]?.target.nodeId ?? ''))
+      .map(([key]) => key),
   ]
 
   for (const key of orderedSubjects(natural, options.order ?? [])) push(key)

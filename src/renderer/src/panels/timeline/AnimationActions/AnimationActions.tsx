@@ -14,6 +14,7 @@ import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { TimelineTransport } from '../TimelineTransport'
 import { AnimationActionsKeyButton } from './AnimationActionsKeyButton'
+import { AnimationActionsSheetButton } from './AnimationActionsSheetButton'
 import { AnimationActionsRenderButton } from './AnimationActionsRenderButton'
 import { AnimationActionsShotButton } from './AnimationActionsShotButton'
 
@@ -88,6 +89,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
         active={autoKey}
         onClick={() => useAnimationViews.getState().setAutoKey(documentId, !autoKey)}
       />
+      <AnimationActionsSheetButton documentId={documentId} />
       <AnimationActionsKeyButton documentId={documentId} />
       <AnimationActionsShotButton documentId={documentId} />
 

@@ -115,6 +115,9 @@ const THROUGH_A_COMMAND: Readonly<Record<string, string>> = {
   groupNodes: 'scene.group',
   addNodes: 'scene.duplicate',
   removeNodes: 'scene.delete',
+  // The same bargain for who is ON the animation band: the selection, then the command beside it.
+  putOnAnimationSheet: 'scene.addToSheet',
+  takeOffAnimationSheet: 'scene.removeFromSheet',
 }
 
 /**
