@@ -804,6 +804,10 @@ describe('the translation bundles', () => {
     added: { reads: ['ajouté le', 'ajouté'], separates: "a file's date field, and a git status" },
     back: { reads: ['de dos', 'précédent'], separates: 'a 3D view, and the explorer step back' },
     changed: { reads: ['modifiés', 'modifié'], separates: 'a count of files, and one file' },
+    character: {
+      reads: ['personnage', 'caractère'],
+      separates: 'what a skeleton is laid on, and the half of a type panel that is not a paragraph',
+    },
     crop: {
       reads: ['rogner', 'recadrage'],
       separates: 'the audio tool, which trims, and the image tool, which reframes',
