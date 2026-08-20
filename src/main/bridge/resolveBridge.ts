@@ -1,5 +1,4 @@
 import { mkdir, writeFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { APP_NAME } from '@shared/constants'
 import { exists } from '@main/persistence'
@@ -29,8 +28,13 @@ export class ResolveNotInstalledError extends Error {}
  * writing the macOS one on Windows would land a script under a `Library` folder nothing reads.
  *
  * `%APPDATA%` on Windows, and `Support` sits INSIDE the product folder there alone.
+ *
+ * Neither argument has a default: a case that names no platform asserts a different tree per
+ * machine, and the compiler is what keeps that from being written — except on Windows, where
+ * `%APPDATA%` OUTRANKS the home it is handed: a case there writes into the real Resolve tree
+ * unless it clears the variable first.
  */
-export function resolveHome(home = homedir(), platform = process.platform): string {
+export function resolveHome(home: string, platform: NodeJS.Platform): string {
   if (platform === 'win32') {
     const roaming = process.env.APPDATA ?? join(home, 'AppData', 'Roaming')
     return join(roaming, 'Blackmagic Design', 'DaVinci Resolve', 'Support')
@@ -45,11 +49,11 @@ export function resolveHome(home = homedir(), platform = process.platform): stri
  * Where Resolve looks, per user. `Fusion/Scripts/Utility` rather than `Comp` or `Tool`: those
  * two are offered only while a composition is open, and this one runs from the edit page.
  */
-export function resolveScriptFolder(home = homedir(), platform = process.platform): string {
+export function resolveScriptFolder(home: string, platform: NodeJS.Platform): string {
   return join(resolveHome(home, platform), 'Fusion', 'Scripts', 'Utility')
 }
 
-export const resolveScriptPath = (home = homedir(), platform = process.platform): string =>
+export const resolveScriptPath = (home: string, platform: NodeJS.Platform): string =>
   join(resolveScriptFolder(home, platform), SCRIPT_FILE)
 
 /**
@@ -140,13 +144,16 @@ window:Hide()
  * The caller is expected to have ASKED: this drops a file into another application's folder on
  * somebody's machine, which is the one thing in this repository that leaves its own sandbox.
  */
-export async function installResolveScript(home = homedir()): Promise<string> {
+export async function installResolveScript(
+  home: string,
+  platform: NodeJS.Platform,
+): Promise<string> {
   // Resolve's own folder is READ, never made: creating a Blackmagic tree on a machine with no
   // Resolve leaves a folder nobody asked for, holding a script nothing will ever read.
-  if (!(await exists(resolveHome(home)))) throw new ResolveNotInstalledError()
+  if (!(await exists(resolveHome(home, platform)))) throw new ResolveNotInstalledError()
 
   // `Utility` itself IS made: Resolve only writes it once somebody has saved a script from it.
-  await mkdir(resolveScriptFolder(home), { recursive: true })
-  await writeFile(resolveScriptPath(home), resolveScriptText(), 'utf8')
-  return resolveScriptPath(home)
+  await mkdir(resolveScriptFolder(home, platform), { recursive: true })
+  await writeFile(resolveScriptPath(home, platform), resolveScriptText(), 'utf8')
+  return resolveScriptPath(home, platform)
 }

@@ -1,3 +1,4 @@
+import { homedir } from 'node:os'
 import { BrowserWindow, clipboard, shell } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import type { SettingActionId } from '@shared/domain/settingsRegistry'
@@ -62,7 +63,7 @@ export function runSettingAction({
         // Revealed once written, which is the whole of the feedback: a file dropped in another
         // application's folder that nobody is shown is a file nobody trusts. And SAID when it
         // could not be — no Resolve on this machine is the ordinary case, not a fault to log.
-        void installResolveScript().then(
+        void installResolveScript(homedir(), process.platform).then(
           written => shell.showItemInFolder(written),
           (error: unknown) => {
             log.error('resolve bridge', String(error))

@@ -32,7 +32,7 @@ describe('where Resolve reads a script', () => {
    * open, and this script runs from the edit page.
    */
   it('names the per-user Utility folder, under the application support tree', () => {
-    expect(resolveScriptFolder(home)).toBe(
+    expect(resolveScriptFolder(home, 'darwin')).toBe(
       join(
         home,
         'Library',
@@ -47,7 +47,7 @@ describe('where Resolve reads a script', () => {
   })
 
   it('writes a .lua, which is the one language Resolve needs nothing installed for', () => {
-    expect(resolveScriptPath(home).endsWith('.lua')).toBe(true)
+    expect(resolveScriptPath(home, 'darwin').endsWith('.lua')).toBe(true)
   })
 
   /**
@@ -116,25 +116,27 @@ describe('installing it', () => {
    * holding a script nothing will ever read, is worse than a refusal that says why.
    */
   it('refuses, and makes nothing, where there is no Resolve', async () => {
-    await expect(installResolveScript(home)).rejects.toBeInstanceOf(ResolveNotInstalledError)
-    await expect(stat(resolveHome(home))).rejects.toThrow()
+    await expect(installResolveScript(home, 'darwin')).rejects.toBeInstanceOf(
+      ResolveNotInstalledError,
+    )
+    await expect(stat(resolveHome(home, 'darwin'))).rejects.toThrow()
   })
 
   it('creates the folders Resolve has not made yet, and answers where it wrote', async () => {
-    await mkdir(resolveHome(home), { recursive: true })
+    await mkdir(resolveHome(home, 'darwin'), { recursive: true })
 
-    const written = await installResolveScript(home)
+    const written = await installResolveScript(home, 'darwin')
 
-    expect(written).toBe(resolveScriptPath(home))
+    expect(written).toBe(resolveScriptPath(home, 'darwin'))
     expect(await readFile(written, 'utf8')).toBe(resolveScriptText())
   })
 
   /** Installing twice is what a studio update means, and it must not fail on the second. */
   it('writes over a script already there', async () => {
-    await mkdir(resolveHome(home), { recursive: true })
-    await installResolveScript(home)
-    await installResolveScript(home)
+    await mkdir(resolveHome(home, 'darwin'), { recursive: true })
+    await installResolveScript(home, 'darwin')
+    await installResolveScript(home, 'darwin')
 
-    expect(await readFile(resolveScriptPath(home), 'utf8')).toBe(resolveScriptText())
+    expect(await readFile(resolveScriptPath(home, 'darwin'), 'utf8')).toBe(resolveScriptText())
   })
 })

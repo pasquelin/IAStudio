@@ -1,9 +1,10 @@
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { simpleGit } from 'simple-git'
+import { simpleGit, type SimpleGit } from 'simple-git'
 import { beforeAll, describe, expect, it, onTestFinished } from 'vitest'
-import type { GitStatus } from '@shared/domain/git'
+import { GIT_FOLDER, type GitStatus } from '@shared/domain/git'
+import { exists } from '@main/persistence'
 import { detectGit, gitVersionProbe } from './binary'
 import { GITIGNORE_FILE, openRepository, type Repository } from './repository'
 
@@ -113,6 +114,10 @@ async function repositoryWithACommit(): Promise<Repository> {
   await repository.commit('premiere version', false, AUTHOR)
   return repository
 }
+
+/** Git itself, on a repository this file built — for what the port does not carry. */
+const gitAt = (repository: Repository): SimpleGit =>
+  simpleGit({ baseDir: repository.root, maxConcurrentProcesses: 1 })
 
 describe('what the tick does', () => {
   it('moves a file into what the next version will record', async ({ skip }) => {
@@ -304,12 +309,28 @@ async function repositoryInConflict(): Promise<Repository> {
   await repository.stage(['notes.txt'])
   await repository.commit('sur le tronc', false, AUTHOR)
 
-  // `merge` is not on the port — the studio pulls, and a pull is what produces one of these —
-  // so it is run straight at git here. It REFUSES, and that refusal is the whole setup: the
-  // rejection is swallowed so the cases below can look at what it left behind.
-  await simpleGit({ baseDir: repository.root, maxConcurrentProcesses: 1 })
-    .raw(['merge', 'essai-lumiere'])
-    .catch(() => {})
+  // `merge` is not on the port — the studio pulls, and a pull is what produces one of these — so
+  // it is run straight at git here. It REFUSES, and that refusal is the whole setup. The identity
+  // travels per command, as `commit` does: a runner has no global one and cannot guess a mail
+  // address from a hostname with no domain, so `merge` stopped on that instead of on the conflict.
+  const outcome = await gitAt(repository)
+    .raw([
+      '-c',
+      `user.name=${AUTHOR.name}`,
+      '-c',
+      `user.email=${AUTHOR.email}`,
+      'merge',
+      'essai-lumiere',
+    ])
+    .then(() => 'the merge went through', String)
+
+  // A merge that failed for any OTHER reason leaves no conflict, and the cases below then read a
+  // settled repository and pass on nothing — said here, where git's own sentence is still to hand.
+  // Read off `MERGE_HEAD` and not off `status()`: the port is what the cases measure, so a decor
+  // built on it would make the first of them tautological.
+  if (!(await exists(join(repository.root, GIT_FOLDER, 'MERGE_HEAD')))) {
+    throw new Error(`the setup left no conflict to look at: ${outcome}`)
+  }
 
   return repository
 }
