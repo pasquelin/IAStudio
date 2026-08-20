@@ -203,9 +203,10 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // The three below open on the SAME level and differ by where the camera stands — which is what
   // these three views are. A cadrage over an empty floor proved nothing: what makes them worth
   // picking is a set one can climb, fall off and bump into.
-  firstPerson: () => characterView([cameraNode(transformAt({ x: 0, y: 1.7, z: 14 }))], {
-    camera: 'firstPerson',
-  }),
+  firstPerson: () =>
+    characterView([cameraNode(transformAt({ x: 0, y: 1.7, z: 14 }))], {
+      camera: 'firstPerson',
+    }),
 
   thirdPerson: () => characterView([standIn(), aimedCamera(2.4, 5, 1)], { camera: 'thirdPerson' }),
 
