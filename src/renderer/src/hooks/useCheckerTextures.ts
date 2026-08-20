@@ -7,23 +7,23 @@ import { useProject } from '@/stores/project'
 let running: { path: string; work: Promise<void> } | null = null
 
 function install(path: string): Promise<void> {
-  if (running?.path === path) return running.work
+  // Asked on the way BACK as much as on the way in: a slow install for the project one has just
+  // left resolves after the next one has answered, and would hand every new primitive the asset
+  // ids of a project this window no longer has open.
+  const isCurrent = (): boolean => running?.path === path
+  if (isCurrent()) return running?.work ?? Promise.resolve()
 
   const work = (getBridge()?.assets.installBundledTextures() ?? Promise.resolve([]))
     .then(installed => {
-      // Checked on the way BACK, not only on the way in: a slow install for the project one has
-      // just left resolves after the next one has answered, and would hand every new primitive
-      // the asset ids of a project this window no longer has open.
-      if (running?.path === path) rememberCheckerTextures(installed)
+      if (isCurrent()) rememberCheckerTextures(installed)
     })
     // Silent on purpose: a project whose textures cannot be written gives plain primitives,
     // which is a legitimate state — see `checkerTextures`. Forgotten rather than kept, so a
     // remount asks again instead of leaving the project bare for the rest of the session.
     .catch(() => {
-      if (running?.path === path) {
-        running = null
-        forgetCheckerTextures()
-      }
+      if (!isCurrent()) return
+      running = null
+      forgetCheckerTextures()
     })
 
   running = { path, work }

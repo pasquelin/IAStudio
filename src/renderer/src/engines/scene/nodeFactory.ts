@@ -30,6 +30,13 @@ function classNameOf(kind: string): string {
   return `${kind.charAt(0).toUpperCase()}${kind.slice(1)}`
 }
 
+/** Where a node stands, at the scale it is built at — what every template and level places by. */
+export function transformAt(position: Vector3, rotation: Vector3 = ORIGIN): Transform {
+  return { ...IDENTITY_TRANSFORM, position, rotation }
+}
+
+const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }
+
 /**
  * A solid, named after its class like every other node. The one place a mesh is built: the Add
  * menu and the scene templates both come through here, so neither can hand out a mesh wearing a
