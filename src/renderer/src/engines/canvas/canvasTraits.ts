@@ -25,6 +25,7 @@ const HELD_BY_LAYER: readonly [CapabilityTrait, (layer: Layer) => boolean][] = [
   ['layerMask', layer => layer.mask?.enabled === true],
   ['adjustmentLayer', layer => layer.kind === 'adjustment'],
   ['liveText', layer => layer.kind === 'text'],
+  ['vectorShape', layer => layer.kind === 'shape'],
   ['layerTransform', layer => !isPlacedOnly(layer.transform)],
   ['blendMode', layer => layer.blend !== 'normal'],
   ['layerOpacity', layer => layer.opacity !== 1 || layer.fillOpacity !== 1],

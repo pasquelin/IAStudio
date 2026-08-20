@@ -27,16 +27,33 @@ export function LayerShapeSection({ layer, edit }: LayerShapeSectionProps) {
   // where reading `layer.stroke` again would be `ShapeStroke | null` all over.
   const stroke = layer.stroke
 
+  // A line and an arrow have no inside: `paintShape` leaves their path open, so the fill toggle
+  // would be a control that says the shape is filled while nothing is painted.
+  const closed = layer.shape !== 'line' && layer.shape !== 'arrow'
+
   return (
     <PropertySection title={t('inspector.shape')}>
-      <ToggleField
-        label={t('inspector.shapeFilled')}
-        value={layer.fill !== null}
-        onChange={filled => edit.run(setLayerShape(layer.id, { fill: filled ? INK : null }))}
-        scId="layer.shapeFilled"
-      />
+      {closed && (
+        <ToggleField
+          label={t('inspector.shapeFilled')}
+          value={layer.fill !== null}
+          // Never both off: a shape with neither paints nothing, and a layer nobody can see is
+          // a row in the stack with no way back from it.
+          onChange={filled =>
+            edit.run(
+              setLayerShape(layer.id, {
+                fill: filled ? INK : null,
+                ...(filled || stroke
+                  ? {}
+                  : { stroke: { color: INK, width: DEFAULT_STROKE_WIDTH } }),
+              }),
+            )
+          }
+          scId="layer.shapeFilled"
+        />
+      )}
 
-      {layer.fill !== null && (
+      {closed && layer.fill !== null && (
         <ColorField
           label={t('inspector.shapeFill')}
           value={colourOf(layer.fill)}
@@ -46,18 +63,25 @@ export function LayerShapeSection({ layer, edit }: LayerShapeSectionProps) {
         />
       )}
 
-      <ToggleField
-        label={t('inspector.shapeStroked')}
-        value={layer.stroke !== null}
-        onChange={stroked =>
-          edit.run(
-            setLayerShape(layer.id, {
-              stroke: stroked ? { color: INK, width: DEFAULT_STROKE_WIDTH } : null,
-            }),
-          )
-        }
-        scId="layer.shapeStroked"
-      />
+      {/* Not offered on a line or an arrow: their stroke is the whole of what they draw, so a
+          switch that takes it away is a switch that erases the layer. */}
+      {closed && (
+        <ToggleField
+          label={t('inspector.shapeStroked')}
+          value={stroke !== null}
+          onChange={stroked =>
+            edit.run(
+              setLayerShape(layer.id, {
+                stroke: stroked ? { color: INK, width: DEFAULT_STROKE_WIDTH } : null,
+                // The other half of the same rule: dropping the stroke of an unfilled shape
+                // would leave nothing at all on screen.
+                ...(stroked || layer.fill !== null ? {} : { fill: INK }),
+              }),
+            )
+          }
+          scId="layer.shapeStroked"
+        />
+      )}
 
       {stroke && (
         <>

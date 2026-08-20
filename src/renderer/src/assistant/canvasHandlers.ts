@@ -18,6 +18,8 @@ import {
   type DrawnShape,
   type Layer,
 } from '@/engines/canvas/canvasState'
+import { localShape } from '@/engines/canvas/shapeGeometry'
+import type { Point } from '@/engines/core/geometry'
 import {
   addLayer,
   cropToRect,
@@ -140,32 +142,52 @@ function readState(): ActionOutcome {
  * A shape from a box rather than from a drag: a client has a rectangle, not a hand. The two
  * points are the box's own corners, which is what the layer stores.
  */
-function drawnShape(input: Record<string, unknown>): DrawnShape | null {
+function drawnShape(input: Record<string, unknown>): { at: Point; drawn: DrawnShape } | null {
   const shape = oneOf(input, 'shape', SHAPE_KINDS)
   const width = numberOf(input, 'width')
   const height = numberOf(input, 'height')
   if (!shape || width === null || height === null || width <= 0 || height <= 0) return null
 
-  // A ring is drawn from its centre outwards, so the box's middle is where its drag began.
+  const ink = numberOf(input, 'fill') ?? 0x000000
+  // Open by nature: a line and an arrow have no inside, so filling one paints nothing at all.
+  const open = shape === 'line' || shape === 'arrow'
+  const sides = numberOf(input, 'sides') ?? DEFAULT_SHAPE_SIDES
+  // A ring is drawn from its CENTRE outwards, so the box's middle is where its drag began, and
+  // its far point is the corner — a point on the middle of an edge would ignore one axis.
   const ring = shape === 'polygon' || shape === 'star'
+  const from = ring ? { x: width / 2, y: height / 2 } : { x: 0, y: 0 }
+  const to = { x: width, y: height }
+
+  // Through the very helper the hand's own drag goes through: a ring reaches past the corner it
+  // was given, and a point left negative falls outside the layer's texture and is clipped away.
+  const local = localShape(shape, from, to, sides, open ? DEFAULT_STROKE_WIDTH : 0)
   return {
-    shape,
-    from: ring ? { x: width / 2, y: height / 2 } : { x: 0, y: 0 },
-    to: ring ? { x: width, y: height / 2 } : { x: width, y: height },
-    sides: numberOf(input, 'sides') ?? DEFAULT_SHAPE_SIDES,
-    fill: numberOf(input, 'fill') ?? 0x000000,
-    stroke: null,
+    at: local.at,
+    drawn: {
+      shape,
+      from: local.from,
+      to: local.to,
+      sides,
+      fill: open ? null : ink,
+      stroke: open ? { color: ink, width: DEFAULT_STROKE_WIDTH } : null,
+    },
   }
 }
+
+/** What an assistant-drawn line is stroked with, having no brush size to read one from. */
+const DEFAULT_STROKE_WIDTH = 2
 
 function born(input: Record<string, unknown>, id: string, name: string): Layer | null {
   switch (oneOf(input, 'kind', ['pixel', 'text', 'adjustment', 'shape'])) {
     case 'pixel':
       return pixelLayer(id, name)
     case 'shape': {
-      const drawn = drawnShape(input)
+      const made = drawnShape(input)
+      if (!made) return null
+      // `x` and `y` name where the client wants the BOX, and `localShape` says how far the shape
+      // reaches past it — a stroke widens the box on every side.
       const at = { x: numberOf(input, 'x') ?? 0, y: numberOf(input, 'y') ?? 0 }
-      return drawn ? shapeLayer(id, name, at, drawn) : null
+      return shapeLayer(id, name, { x: at.x + made.at.x, y: at.y + made.at.y }, made.drawn)
     }
     case 'text':
       // `textLayer` names the layer after its own text; `name` is required here and is what a

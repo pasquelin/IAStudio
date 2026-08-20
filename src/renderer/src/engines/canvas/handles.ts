@@ -47,6 +47,31 @@ export function handleDirection(handle: HandleId): Point {
   return { x: 1 - 2 * anchor.x, y: 1 - 2 * anchor.y }
 }
 
+/** No box collapses to nothing: a caption one pixel wide wraps every word onto its own line. */
+const MIN_BOX = 8
+
+/**
+ * Where a grip drags a BOX to, in that box's own space — the edges it names move, the others
+ * hold. Its origin moves with a north or west grip, which is why a rectangle comes back rather
+ * than a size: the caller owes the layer that displacement.
+ *
+ * Apart from `resizeBy`, which scales a whole layer: a caption's box is resized rather than
+ * stretched, so its words keep the body they were set in and simply wrap somewhere else.
+ */
+export function resizedBox(handle: HandleId, box: Size, local: Point): Rect {
+  const west = handle.includes('w')
+  const east = handle.includes('e')
+  const north = handle.startsWith('n')
+  const south = handle.startsWith('s')
+
+  const left = west ? Math.min(local.x, box.width - MIN_BOX) : 0
+  const top = north ? Math.min(local.y, box.height - MIN_BOX) : 0
+  const right = east ? Math.max(local.x, left + MIN_BOX) : box.width
+  const bottom = south ? Math.max(local.y, top + MIN_BOX) : box.height
+
+  return { x: left, y: top, width: right - left, height: bottom - top }
+}
+
 /** Half the side of the square a grip is drawn as, in screen pixels — grips ignore the zoom. */
 const HANDLE_SIZE = 4
 

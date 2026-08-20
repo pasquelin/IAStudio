@@ -372,6 +372,8 @@ type Harness = {
   selections: CanvasSelection[]
   /** Every caption the hand asked for: a layer to edit, or a box to open a fresh one in. */
   captions: ({ layerId: string } | { at: Point; box: Size })[]
+  /** Every pull of a caption box's grip: the box it reached, and where its corner now sits. */
+  boxes: { layerId: string; box: Size; at: Point }[]
   /** Every shape a drag finished on: where its box starts, and what the layer will hold. */
   shapes: { at: Point; drawn: DrawnShape }[]
   /** The frames the engine settled a crop drag on, each of which becomes one history entry. */
@@ -407,6 +409,7 @@ function mounted(
   const viewports: Viewport[] = []
   const selections: CanvasSelection[] = []
   const captions: Harness['captions'] = []
+  const boxes: Harness['boxes'] = []
   const shapes: { at: Point; drawn: DrawnShape }[] = []
   const crops: Rect[] = []
   const cropFrames: boolean[] = []
@@ -425,6 +428,7 @@ function mounted(
       onViewport: viewport => viewports.push(viewport),
       onSelection: selection => selections.push(selection),
       onText: asked => captions.push(asked),
+      onTextBox: (layerId, box, at) => boxes.push({ layerId, box, at }),
       onShape: (at, drawn) => shapes.push({ at, drawn }),
       onCrop: rect => crops.push(rect),
       onCropFrame: framed => cropFrames.push(framed),
@@ -454,6 +458,7 @@ function mounted(
     viewports,
     selections,
     captions,
+    boxes,
     shapes,
     crops,
     cropFrames,
@@ -2261,6 +2266,40 @@ describe('captions', () => {
     expect(gpu.painted).toHaveLength(1)
   })
 
+  /** 1:1 and no rulers, or a grip's screen pixel is not the document one a press names. */
+  const BARE_VIEW = { ...VIEW_1_1, rulers: false, guides: false, snap: false }
+
+  /** The caption ARMED, which is what a box is drawn on — `stacked` arms the background. */
+  const armedCaption = (): CanvasState => ({ ...caption('Bonjour'), activeLayerId: 't' })
+
+  // A caption's box is RESIZED, never stretched: the words keep the body they were set in.
+  it('pulls the box by its grip instead of scaling the layer', async () => {
+    const { engine, host, boxes, layers } = await mounted(armedCaption(), 'text')
+    engine.setView(BARE_VIEW)
+
+    // The south-east grip of the default box, which starts at the caption's own corner.
+    press(host, 10 + DEFAULT_TEXT_BOX.width, 20 + DEFAULT_TEXT_BOX.height)
+    drag(host, 200, 100)
+
+    expect(boxes.at(-1)?.box).toEqual({ width: 190, height: 80 })
+    // The layer's own transform is untouched: a pull on the box is not a pull on the picture.
+    expect(layers.some(call => call.startsWith('transform:'))).toBe(false)
+  })
+
+  it('moves the corner with a north-west grip, so the far edge holds still', async () => {
+    const { engine, host, boxes } = await mounted(armedCaption(), 'text')
+    engine.setView(BARE_VIEW)
+
+    press(host, 10, 20)
+    drag(host, 60, 70)
+
+    expect(boxes.at(-1)?.at).toEqual({ x: 60, y: 70 })
+    expect(boxes.at(-1)?.box).toEqual({
+      width: DEFAULT_TEXT_BOX.width - 50,
+      height: DEFAULT_TEXT_BOX.height - 50,
+    })
+  })
+
   it('opens a fresh box beside a caption, not on it', async () => {
     const { engine, host, captions } = await mounted(caption('Bonjour'))
     engine.setTool('text')
@@ -2607,6 +2646,7 @@ function silentOptions(): ConstructorParameters<typeof CanvasEngine>[0] {
     onCropFrame: nothing,
     onHost: nothing,
     onText: nothing,
+    onTextBox: nothing,
     onShape: nothing,
     onCrop: nothing,
     guides: { add: () => '', move: nothing, remove: nothing, beginDrag: nothing, endDrag: nothing },
@@ -3298,10 +3338,17 @@ describe('a tool that can do nothing here', () => {
     expect(await hoveringWith('brush', padlocked())).toBe('not-allowed')
   })
 
-  it('refuses the eraser, the bucket and the shapes on the same layer', async () => {
+  it('refuses the eraser and the bucket on the same layer', async () => {
     expect(await hoveringWith('eraser', padlocked())).toBe('not-allowed')
     expect(await hoveringWith('fill', padlocked())).toBe('not-allowed')
-    expect(await hoveringWith('shape', padlocked())).toBe('not-allowed')
+  })
+
+  /**
+   * The shape tool writes no pixel of the armed layer — it lands one of its own — so a padlock
+   * there has nothing to say about it. The cursor promised a refusal the gesture never made.
+   */
+  it('lets the shape tool through over a padlocked layer, having nothing to write on it', async () => {
+    expect(await hoveringWith('shape', padlocked())).toBe('')
   })
 
   // Its own padlock: a layer free to take paint can still be pinned where it stands.
@@ -3711,6 +3758,28 @@ describe('the grips offered on the armed layer', () => {
     const pinned = layerFixture({ locked: { ...UNLOCKED, position: true } })
 
     expect(await chromeOf('move', pinned)).toHaveLength(0)
+  })
+
+  /**
+   * The text tool shows them too, and on the caption's OWN box: nothing knew what a caption
+   * occupied, so the grips were drawn on the frame of the whole document — a box the size of the
+   * picture, whatever the words were, and no way to tell where the next click would type.
+   */
+  it('draws them on the box of a caption while the text tool is armed', async () => {
+    const grips = await chromeOf('text', textLayer('t', 'Bonjour', { x: 10, y: 20 }))
+
+    const near = (at: Point): boolean =>
+      grips.some(([x = -1, y = -1]) => Math.abs(x - at.x) <= 5 && Math.abs(y - at.y) <= 5)
+
+    expect(grips).toHaveLength(8)
+    // The north-west grip sits on the caption's corner, not on the document's, and the
+    // south-east one on the far corner of the BOX — well inside a 1024² document.
+    expect(near({ x: 10, y: 20 })).toBe(true)
+    expect(near({ x: 10 + DEFAULT_TEXT_BOX.width, y: 20 + DEFAULT_TEXT_BOX.height })).toBe(true)
+  })
+
+  it('draws none over a layer that holds no caption, since none has a box', async () => {
+    expect(await chromeOf('text', layerFixture())).toHaveLength(0)
   })
 })
 

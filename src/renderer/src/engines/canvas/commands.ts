@@ -2,6 +2,7 @@ import type { AdjustmentStack } from '@shared/domain/adjustments'
 import type { BlendMode } from '@shared/domain/canvasBlend'
 import { clamp } from '@shared/numeric'
 import type { Command } from '../core/history'
+import type { Point, Size } from '../core/geometry'
 import {
   allLayers,
   canMoveLayer,
@@ -200,6 +201,30 @@ export function setLayerText(
         if (layer.id !== id || layer.kind !== 'text') return layer
         previous ??= layer
         return { ...layer, ...changes }
+      }),
+    }),
+    revert: state => ({
+      ...state,
+      layers: mapLayers(state.layers, layer => (layer.id === id && previous ? previous : layer)),
+    }),
+  }
+}
+
+/**
+ * A caption's box and where it starts, together. One command rather than two: a north or west
+ * grip moves both at once, and two entries would be two steps of undo for one pull.
+ */
+export function resizeCaption(id: string, box: Size, at: Point): Command<CanvasState> {
+  let previous: TextLayer | null = null
+
+  return {
+    id: `layer:caption-box:${id}`,
+    apply: state => ({
+      ...state,
+      layers: mapLayers(state.layers, layer => {
+        if (layer.id !== id || layer.kind !== 'text') return layer
+        previous ??= layer
+        return { ...layer, box, transform: { ...layer.transform, x: at.x, y: at.y } }
       }),
     }),
     revert: state => ({
