@@ -9,7 +9,11 @@ import {
   setPath,
 } from '@/engines/scene/commands'
 import { withoutPoint } from '@/engines/scene/cameraPath'
-import { removeCameraShot } from '@/engines/scene/animationCommands'
+import {
+  putOnAnimationSheet,
+  removeCameraShot,
+  takeOffAnimationSheet,
+} from '@/engines/scene/animationCommands'
 import { nodeById, selectedNodes } from '@/engines/scene/sceneState'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { sceneEngineOf } from '@/stores/sceneEngines'
@@ -104,6 +108,20 @@ export function runSceneCommand(documentId: string, command: CommandId): boolean
     case 'scene.frame':
       sceneEngineOf(documentId)?.frameSelection()
       return true
+
+    // Who is on the band. The selection, never a list to pick from: a map of thousands of
+    // objects is not one anybody scrolls through — one clicks the character and asks for this.
+    case 'scene.addToSheet': {
+      const command = putOnAnimationSheet(sceneOf(store, documentId), selectedIds)
+      if (command) store.runCommand(documentId, command)
+      return true
+    }
+
+    case 'scene.removeFromSheet': {
+      const command = takeOffAnimationSheet(sceneOf(store, documentId), selectedIds)
+      if (command) store.runCommand(documentId, command)
+      return true
+    }
 
     case 'scene.delete':
       // A picked control point is taken first: point and rail are one selection seen at two

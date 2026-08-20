@@ -422,6 +422,11 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           { type: 'separator' },
           commandItem('scene.duplicate', t.commands.sceneDuplicate.title),
           commandItem('scene.group', t.commands.sceneGroup.title),
+          // Both, where the context menu shows one at a time: a row is posted before anything is
+          // selected, so it cannot know which of the two the hand will want. Each does nothing
+          // where it does not apply, which a menu row is allowed to do and a context row is not.
+          commandItem('scene.addToSheet', t.commands.sceneAddToSheet.title),
+          commandItem('scene.removeFromSheet', t.commands.sceneRemoveFromSheet.title),
           commandItem('scene.delete', t.commands.sceneDelete.title),
         ]
       : []

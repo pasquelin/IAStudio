@@ -1,4 +1,4 @@
-import { mdiContentCut, mdiContentDuplicate, mdiDeleteOutline } from '@mdi/js'
+import { mdiContentCut, mdiContentDuplicate, mdiDeleteOutline, mdiPlaylistRemove } from '@mdi/js'
 import {
   useCallback,
   useEffect,
@@ -12,13 +12,20 @@ import {
 import { useTranslation } from 'react-i18next'
 import { showContextMenu } from '@/helpers/contextMenu'
 import { frameDuration, snapToFrame, type Us } from '@shared/domain/time'
-import { editCameraShot, moveAnimationKey, unkeySubject } from '@/engines/scene/animationCommands'
+import {
+  editCameraShot,
+  moveAnimationKey,
+  putOnAnimationSheet,
+  takeOffAnimationSheet,
+  unkeySubject,
+} from '@/engines/scene/animationCommands'
 import { removePickedShot } from '@/spaces/three/sceneCommands'
 import { draggedShot } from '@/engines/scene/cameraShots'
 import { assetClip, bundledClip, clipKeyOf, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
 import { newId } from '@/helpers/ids'
 import { ANIMATION_DRAG_TYPE, draggedAnimationOf } from '@/panels/animations/dragged'
+import { draggedSceneNodesOf, SCENE_NODE_DRAG_TYPE } from '@/panels/scene/dragged'
 import { multi, removeModelClip, setModelLanes } from '@/engines/scene/commands'
 import {
   clipsDuplicated,
@@ -340,6 +347,29 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   /** The three block gestures, where a key alone would leave them undiscoverable. */
   const onContextMenu = (event: ReactMouseEvent<HTMLCanvasElement>): void => {
     const hit = hitAnimation(hitContext(), pointIn(event))
+
+    // A subject line: the one thing to do with it is to take it off the band. `takeOff` answers
+    // nothing for a line the sheet does not name — a bone, or an object here because it holds a
+    // track — and no menu opens, which is the honest answer rather than a row that does nothing.
+    if (hit?.kind === 'row') {
+      const row = latest.current.rows.find(candidate => candidate.id === hit.rowId)
+      // A channel and a lane belong to the object above them: neither is a line one takes off.
+      if (row?.kind !== 'subject') return
+      const command = takeOffAnimationSheet(sceneOf(useScenes.getState(), documentId), [hit.rowId])
+      if (!command) return
+
+      event.preventDefault()
+      void showContextMenu([
+        {
+          label: t('animation.removeFromSheet', { name: row.name }),
+          icon: mdiPlaylistRemove,
+          tooltip: t('animation.removeFromSheetHint'),
+          onSelect: () => useScenes.getState().runCommand(documentId, command),
+        },
+      ])
+      return
+    }
+
     if (hit?.kind !== 'block') return
 
     event.preventDefault()
@@ -378,6 +408,18 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
    * one: a channel holds keys, and a subject line is the object itself.
    */
   const onDrop = (event: DragEvent<HTMLCanvasElement>): void => {
+    // Objects dragged from the outliner, which land ANYWHERE on the band rather than on a row:
+    // they are not laid at a time, they are put on the sheet — the gesture is "these ones are
+    // animated", and where the pointer let go says nothing about it.
+    const carried = event.dataTransfer.getData(SCENE_NODE_DRAG_TYPE)
+    const nodes = carried ? draggedSceneNodesOf(JSON.parse(carried)) : null
+    if (nodes) {
+      event.preventDefault()
+      const command = putOnAnimationSheet(sceneOf(useScenes.getState(), documentId), nodes.nodeIds)
+      if (command) useScenes.getState().runCommand(documentId, command)
+      return
+    }
+
     const written = event.dataTransfer.getData(ANIMATION_DRAG_TYPE)
     // Started before anything else is worked out: a `DragEvent` is recycled once the handler
     // returns, so `droppedAsset` has to read it now even though it answers later.
@@ -575,7 +617,9 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       // Without the `preventDefault` on drag-over the drop never fires at all.
       onDragOver={event => {
         const carried =
-          event.dataTransfer.types.includes(ANIMATION_DRAG_TYPE) || carriesMotion(event)
+          event.dataTransfer.types.includes(ANIMATION_DRAG_TYPE) ||
+          event.dataTransfer.types.includes(SCENE_NODE_DRAG_TYPE) ||
+          carriesMotion(event)
         if (!carried) return
         event.preventDefault()
         event.dataTransfer.dropEffect = 'copy'

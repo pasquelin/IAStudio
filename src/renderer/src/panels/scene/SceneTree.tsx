@@ -11,6 +11,7 @@ import { openSceneNodeMenu } from '@/spaces/three/sceneNodeMenu'
 import { runSceneCommand, toggleNodeVisible } from '@/spaces/three/sceneCommands'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
+import { SCENE_NODE_DRAG_TYPE } from './dragged'
 
 /** The synthetic root. It is not a node: it has no transform, no visibility and no delete. */
 const SCENE_ROOT = 'scene-root'
@@ -78,6 +79,16 @@ export function SceneTree({ documentId }: { documentId: string }) {
         // Opened, or the node just moved would vanish into a folded branch.
         if (wanted) setExpandedIds(current => new Set(current).add(wanted))
       }}
+      // A second channel beside the tree's own, which reparents: this one is what the animation
+      // band reads to put an object on itself. The tree knows nothing of it, and it knows nothing
+      // of the tree — see `onDragStart` on `Tree`.
+      onDragStart={(item, event) => {
+        if (!item.node) return
+        // The whole selection when the row dragged is part of it, so six objects land in one
+        // gesture; the row alone otherwise, which is what dragging an unselected row means.
+        const dragged = selectedIds.includes(item.node.id) ? selectedIds : [item.node.id]
+        event.dataTransfer.setData(SCENE_NODE_DRAG_TYPE, JSON.stringify({ nodeIds: dragged }))
+      }}
       onSelect={(ids, mode) => selectIn(documentId, ids, mode)}
       onToggle={id =>
         setExpandedIds(current => {
@@ -100,6 +111,7 @@ export function SceneTree({ documentId }: { documentId: string }) {
           t,
           run: command => runSceneCommand(documentId, command),
           onToggleVisible: () => toggleNodeVisible(documentId, node.id),
+          onSheet: sceneOf(useScenes.getState(), documentId).animation.sheet.includes(node.id),
           onRename: () => openRename(node.id),
         })
       }}

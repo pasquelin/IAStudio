@@ -4,6 +4,8 @@ import {
   mdiEyeOffOutline,
   mdiEyeOutline,
   mdiFolderPlusOutline,
+  mdiPlaylistPlus,
+  mdiPlaylistRemove,
   mdiRenameOutline,
   mdiTrashCanOutline,
 } from '@mdi/js'
@@ -23,6 +25,11 @@ export type SceneNodeMenuProps = {
   run: (command: CommandId) => void
   /** The eye of a row, which is not a command of the space — see the row itself. */
   onToggleVisible: () => void
+  /**
+   * Whether this node already has a line on the animation band. It flips the LABEL of one row,
+   * never the length of the menu — the same shape the eye row takes, and the rule above.
+   */
+  onSheet: boolean
   /**
    * Opens the name for typing. Absent in the viewport, which draws no name to type over: there
    * the node is renamed from the outliner or from the inspector's own field. The one row that
@@ -54,6 +61,7 @@ export function openSceneNodeMenu({
   t,
   run,
   onToggleVisible,
+  onSheet,
   onRename,
 }: SceneNodeMenuProps): void {
   // Named by the registry rather than by keys written again here: the row then says exactly what
@@ -82,6 +90,12 @@ export function openSceneNodeMenu({
       : []),
     command('scene.duplicate', mdiContentCopy),
     command('scene.group', mdiFolderPlusOutline),
+    // On or off the band, by the same shape the eye row takes: one row whose label flips, so the
+    // menu keeps its length. Both sides act on the selection, like every other row here.
+    command(
+      onSheet ? 'scene.removeFromSheet' : 'scene.addToSheet',
+      onSheet ? mdiPlaylistRemove : mdiPlaylistPlus,
+    ),
     { ...command('scene.frame', mdiCropFree), disabled: !canFrame },
     {
       label: node.visible ? t('scene.hide') : t('scene.show'),

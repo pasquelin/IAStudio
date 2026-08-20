@@ -514,28 +514,34 @@ export function putOnAnimationSheet(
   }
 }
 
-/** Takes one object off the band. Its keys stay — see `putOnAnimationSheet`. */
+/**
+ * Takes objects off the band. Their keys stay — see `putOnAnimationSheet`.
+ *
+ * The whole selection in ONE command, never one per object: six taken off in a single gesture
+ * have to come back in a single undo.
+ */
 export function takeOffAnimationSheet(
   state: SceneState,
-  nodeId: string,
+  nodeIds: readonly string[],
 ): Command<SceneState> | null {
-  const at = state.animation.sheet.indexOf(nodeId)
-  if (at === -1) return null
+  // Captured with their places, so a revert puts them back WHERE they stood: a sheet somebody
+  // arranged is not one to reshuffle.
+  const taken = state.animation.sheet.flatMap((id, at) => (nodeIds.includes(id) ? { id, at } : []))
+  if (taken.length === 0) return null
 
   return {
-    id: `sheet:remove:${nodeId}`,
+    id: `sheet:remove:${taken.map(one => one.id).join(',')}`,
     apply: current =>
       writeSheet(
         current,
-        current.animation.sheet.filter(id => id !== nodeId),
+        current.animation.sheet.filter(id => !nodeIds.includes(id)),
       ),
-    // Back where it stood, not at the end: a sheet somebody arranged is not one to reshuffle.
-    revert: current =>
-      writeSheet(current, [
-        ...current.animation.sheet.slice(0, at),
-        nodeId,
-        ...current.animation.sheet.slice(at),
-      ]),
+    revert: current => {
+      const back = [...current.animation.sheet]
+      // Ascending, so each insertion lands on a list that already holds everything before it.
+      for (const one of taken) back.splice(one.at, 0, one.id)
+      return writeSheet(current, back)
+    },
   }
 }
 

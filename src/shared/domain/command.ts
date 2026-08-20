@@ -58,6 +58,8 @@ export type CommandId =
   | 'scene.hide'
   | 'scene.showAll'
   | 'scene.add'
+  | 'scene.addToSheet'
+  | 'scene.removeFromSheet'
   | 'scene.group'
   | 'scene.duplicate'
   | 'scene.copy'
@@ -521,6 +523,24 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneAdd.title',
     helpKey: 'commands.sceneAdd.help',
     defaultBinding: 'Shift+KeyA',
+  }),
+  /*
+   * Who is ON the animation band. Bound to nothing: the band shows what somebody put there, and
+   * a key pressed by accident over a scene of thousands would fill it with what nobody chose.
+   */
+  command({
+    id: 'scene.addToSheet',
+    scope: 'scene',
+    titleKey: 'commands.sceneAddToSheet.title',
+    helpKey: 'commands.sceneAddToSheet.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.removeFromSheet',
+    scope: 'scene',
+    titleKey: 'commands.sceneRemoveFromSheet.title',
+    helpKey: 'commands.sceneRemoveFromSheet.help',
+    defaultBinding: null,
   }),
   // `⌘G` as in every editor that groups: the key is taken by nothing else in this scope.
   command({

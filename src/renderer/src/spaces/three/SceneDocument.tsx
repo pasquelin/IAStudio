@@ -177,6 +177,7 @@ function openNodeMenu(documentId: string, nodeId: string | null): void {
     t: i18next.t,
     run: command => runSceneCommand(documentId, command),
     onToggleVisible: () => toggleNodeVisible(documentId, node.id),
+    onSheet: scene.animation.sheet.includes(nodeId),
   })
 }
 
