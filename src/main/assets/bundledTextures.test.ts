@@ -1,7 +1,7 @@
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { CHANNELS } from '@shared/ipc'
 import type { InstalledCheckerTexture } from '@shared/domain/checkerTexture'
@@ -62,6 +62,9 @@ describe('the working textures shipped with the app', () => {
   beforeEach(() => {
     resetHandlers()
     catalog = memoryCatalog()
+    // Given back at the end of the case that opened it: a database left open holds its file
+    // handle for the whole run — see `no-unclosed-memory-database`.
+    onTestFinished(catalog.close)
     written = []
   })
 

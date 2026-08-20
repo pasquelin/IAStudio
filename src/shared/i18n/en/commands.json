@@ -134,7 +134,7 @@
     },
     "sceneCapture": {
       "title": "Capture the view",
-      "help": "Saves a picture of the 3D view into the project's images — without the grid, the handles or the rails. The menu offers definitions larger than the panel's own."
+      "help": "Saves an image of the 3D view into the project’s images — without the grid, the handles or the rails. The menu offers definitions larger than the panel’s own."
     },
     "sceneAdd": {
       "title": "Add",

@@ -174,7 +174,7 @@
     },
     "templateHints": {
       "empty": "Trois lumières, et rien d’autre à retirer",
-      "basic": "Un sol, un soleil et une caméra : de quoi juger un modèle tout de suite",
+      "basic": "Un sol, un soleil et une caméra — de quoi juger un modèle tout de suite",
       "photoStudio": "Un fond, trois lumières et une caméra cadrée, pour présenter un objet",
       "cinematic": "Une caméra sur rail, une lumière basse et de la brume, pour un mouvement",
       "archvis": "Un ciel, un soleil incliné et un sol large, caméra à hauteur d’œil",

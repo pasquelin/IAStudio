@@ -179,7 +179,7 @@
       "cinematic": "A camera on a rail, a low key light and haze, for a move",
       "archvis": "A sky, a low sun and a wide floor, camera at eye height",
       "firstPerson": "The camera at eye height, ready to walk",
-      "thirdPerson": "The camera behind a stand-in's shoulder",
+      "thirdPerson": "The camera behind a stand-in’s shoulder",
       "topDown": "The camera looking down on the scene"
     },
     "folderField": "Location",

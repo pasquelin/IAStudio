@@ -73,6 +73,9 @@ export function NewDocumentTemplates({ value, onChange }: NewDocumentTemplatesPr
                 <button
                   type="button"
                   aria-pressed={value === id}
+                  // On the element that wears the skin: `rowSkin` publishes the picked state
+                  // through it, and a background painted without it says nothing to a reader.
+                  data-selected={value === id || undefined}
                   data-sc={`field:document.template.${id}`}
                   {...HINT_BOTTOM(t(`documents.templateHints.${id}`))}
                   onClick={() => onChange(id)}

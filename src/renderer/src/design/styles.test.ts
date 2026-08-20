@@ -181,7 +181,12 @@ describe('the row skin and the state it publishes', () => {
    * answers the pointer. The cost was stated when it was taken — nothing distinguishes a line one
    * can open from a line one only reads, and what says a row opens is its tooltip.
    */
-  const MAY_FILL_UNDER_THE_POINTER = ['../home/sections/Tools/ToolsGroup.tsx']
+  const MAY_FILL_UNDER_THE_POINTER = [
+    '../home/sections/Tools/ToolsGroup.tsx',
+    // Back to two on 2026-08-20: the tiles a new scene picks its template from. A tile in the
+    // same strict sense — a still and a name, and nothing else on it that looks like a control.
+    '../newDocument/NewDocumentWindow/NewDocumentTemplates.tsx',
+  ]
 
   /**
    * Repo-wide rather than by folder, and that is the point: a row of the inspector drawn from

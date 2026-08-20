@@ -501,13 +501,6 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     }))
 
   /**
-   * What the viewport does, as opposed to what the scene holds — the 3D counterpart of the
-   * canvas rows above, and the reason the 3D bar could go from twenty-three buttons to eight.
-   *
-   * All seven rows were reachable by pointer through that bar alone. They are settings one
-   * changes once a session, not gestures repeated by the minute, which is what a menu is for.
-   */
-  /**
    * A still of the view, at the definition each row names. Under the view rows rather than
    * beside the exports: what this writes is a picture OF the scene, not the scene itself.
    */
@@ -523,6 +516,13 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           },
     )
 
+  /**
+   * What the viewport does, as opposed to what the scene holds — the 3D counterpart of the
+   * canvas rows above, and the reason the 3D bar could go from twenty-three buttons to eight.
+   *
+   * All seven rows were reachable by pointer through that bar alone. They are settings one
+   * changes once a session, not gestures repeated by the minute, which is what a menu is for.
+   */
   const sceneViewMenu: MenuItemConstructorOptions[] =
     workspace === '3d'
       ? [
