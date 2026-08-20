@@ -180,6 +180,8 @@ type ChannelMethod = {
 
   [CHANNELS.mirrorOpen]: StudioBridge['mirror']['open']
 
+  [CHANNELS.helpOpen]: StudioBridge['help']['open']
+
   [CHANNELS.fileInfoOpen]: StudioBridge['fileInfo']['open']
 
   [CHANNELS.newDocumentAsk]: StudioBridge['newDocument']['ask']

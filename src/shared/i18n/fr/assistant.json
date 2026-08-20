@@ -361,6 +361,10 @@
         "title": "Lire le ciel en cours d’édition",
         "description": "Rend le ciel devant — sa source équirectangulaire, ses réglages d’image, la position et la couleur de son soleil, et ce que son environnement éclaire — plus ce qui l’a produit s’il vient d’une génération."
       },
+      "skyboxView": {
+        "title": "Régler la façon de regarder un ciel",
+        "description": "Choisit la projection sous laquelle le ciel est dessiné, l’ouverture de l’objectif, et si les objets d’essai s’y tiennent. C’est un état de session, comme toute façon de regarder un document, et rien n’en est enregistré."
+      },
       "skyboxAdjust": {
         "title": "Régler l’image d’un ciel",
         "description": "Change l’exposition, le contraste, la saturation, la température, la teinte, la rotation d’horizon ou le flou. Chaque champ est facultatif, et ce qui n’est pas donné reste tel quel."
@@ -524,6 +528,10 @@
       "mirrorOpen": {
         "title": "Ouvrir le retour vidéo",
         "description": "Ouvre la fenêtre de retour, ou la ramène devant si elle est déjà là. Elle montre ce que le montage joue, sans rien porter du travail."
+      },
+      "helpOpen": {
+        "title": "Ouvrir une fenêtre d’aide",
+        "description": "Ouvre le manuel utilisateur, la fenêtre des licences ou celle de la consommation, ou la ramène devant si elle est déjà là. Ce sont les trois entrées du menu Aide, et aucune commande du registre ne les atteint."
       },
       "updatesInstall": {
         "title": "Installer la mise à jour téléchargée",
@@ -752,6 +760,14 @@
       "viewDisplay": {
         "title": "Choisir la façon de dessiner la scène",
         "description": "Passe la vue principale en ombré, en fil de fer, en matière seule ou dans l’une des autres façons de dessiner. La commande de menu ne fait que tourner d’une à l’autre, quand celle-ci nomme laquelle."
+      },
+      "sceneCapture": {
+        "title": "Prendre une image de la vue 3D",
+        "description": "Écrit une image de ce que la vue montre dans les images du projet, à la définition demandée. Le cadrage ne change jamais — seul le nombre de pixels bouge, sinon la capture montrerait autre chose que l’écran."
+      },
+      "worldPreset": {
+        "title": "Appliquer un décor tout prêt",
+        "description": "Règle d’un coup l’éclairage, le fond, la brume et le rendu d’une scène pour un genre de rendu. Chaque décor n’écrit que les champs dont il parle et laisse le reste tel quel, donc un sol allumé le reste."
       },
       "layerLock": {
         "title": "Verrouiller un calque",
@@ -1129,7 +1145,19 @@
       "maskRemove": "Retirer le masque du calque",
       "guideId": "Identifiant du repère",
       "guideAxis": "Sens du repère, vertical en x ou horizontal en y",
-      "guidePosition": "Place du repère, en coordonnées du document"
+      "guidePosition": "Place du repère, en coordonnées du document",
+      "helpPage": "Fenêtre d’aide à ouvrir",
+      "captureQuality": "Définition de la capture, à défaut celle de la vue elle-même",
+      "environmentPreset": "Décor tout prêt à appliquer",
+      "skyboxView": "Projection sous laquelle regarder le ciel",
+      "fieldOfView": "Ouverture de l’objectif, en degrés",
+      "probes": "Montrer les objets d’essai dans le ciel",
+      "roughnessMin": "Plancher de la rugosité que la carte remappe",
+      "roughnessMax": "Plafond de la rugosité que la carte remappe",
+      "metalnessMin": "Plancher de l’aspect métallique que la carte remappe",
+      "metalnessMax": "Plafond de l’aspect métallique que la carte remappe",
+      "previewShape": "Forme sur laquelle juger la matière",
+      "tilingPreview": "Multiplicateur de répétition de l’aperçu, 1, 2 ou 4"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

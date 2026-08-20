@@ -62,6 +62,20 @@ describe('what surrounds the documents', () => {
     expect(open).toHaveBeenCalled()
   })
 
+  /** The three of the Help menu are windows of the main process, so no command reaches them. */
+  it('opens a help window by name, and refuses a page nothing offers', async () => {
+    const open = vi.fn(async () => {})
+    installFakeBridge({ help: { open } })
+
+    expect(await runAction('help.open', { page: 'manual' })).toMatchObject({ ok: true })
+    expect(open).toHaveBeenCalledWith('manual')
+
+    expect(await runAction('help.open', { page: 'about' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
   it('opens the settings on a section it knows, and refuses one it does not', async () => {
     const open = vi.fn(async () => {})
     installFakeBridge({ settings: { open } })

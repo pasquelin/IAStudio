@@ -1,6 +1,7 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { EASINGS } from './animation'
 import { FONT_SOURCES } from './font'
+import { CAPTURE_QUALITIES } from './sceneCapture'
 import {
   BACKGROUND_BLUR,
   BACKGROUND_KINDS,
@@ -80,6 +81,13 @@ const count = (key: string, min: number, max: number): ActionField => ({
 
 /** A size in scene units, which is never zero: a degenerate primitive is a mesh that vanishes. */
 const SMALLEST = 0.001
+
+/**
+ * The ready-made worlds the environment panel offers. Written out because their table lives in
+ * `engines/scene/environmentPresets`, which this side may not import — `sceneHandlers.test.ts`
+ * holds the copy to `ENVIRONMENT_PRESETS`.
+ */
+const ENVIRONMENT_PRESETS: readonly string[] = ['neutral', 'studio', 'product', 'outdoor', 'night']
 
 /**
  * The parameters of a primitive, in ONE action rather than fourteen.
@@ -600,6 +608,50 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
         labelKey: 'assistant.fields.displayMode',
         required: true,
         options: DISPLAY_MODES,
+      },
+    ],
+  }),
+  action({
+    /**
+     * A still of the view, into the project's pictures. The keyboard and the palette take the
+     * view's own pixels; the four qualities are the menu's rows, and this is the only door onto
+     * the other three.
+     *
+     * `none` for the reason `command.run scene.capture` already is: the picture lands in the
+     * project's own library, which the studio treats as no question asked.
+     */
+    name: 'scene.capture',
+    titleKey: 'assistant.actions.sceneCapture.title',
+    descriptionKey: 'assistant.actions.sceneCapture.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'quality',
+        kind: 'choice',
+        labelKey: 'assistant.fields.captureQuality',
+        required: false,
+        options: CAPTURE_QUALITIES,
+      },
+    ],
+  }),
+  action({
+    /**
+     * A ready-made world, in one call — the flyout of the environment panel. Each one is a PATCH
+     * and leaves what it is not about exactly as it was, so a ground somebody turned on stays on.
+     */
+    name: 'world.preset',
+    titleKey: 'assistant.actions.worldPreset.title',
+    descriptionKey: 'assistant.actions.worldPreset.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'preset',
+        kind: 'choice',
+        labelKey: 'assistant.fields.environmentPreset',
+        required: true,
+        options: ENVIRONMENT_PRESETS,
       },
     ],
   }),

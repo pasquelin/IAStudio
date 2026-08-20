@@ -361,6 +361,10 @@
         "title": "Read the sky being edited",
         "description": "Answers the sky in front — its equirectangular source, its image settings, where its sun sits and what colour it is, and what its environment lights — plus what produced it when it came from a generation."
       },
+      "skyboxView": {
+        "title": "Set how a sky is looked at",
+        "description": "Chooses the projection the sky is drawn under, how wide the lens opens, and whether the test objects stand in it. It is session state, as every way of looking at a document is, and none of it is saved."
+      },
       "skyboxAdjust": {
         "title": "Adjust a sky’s image",
         "description": "Changes exposure, contrast, saturation, temperature, tint, horizon rotation or blur. Every field is optional, and what is not given is left as it was."
@@ -524,6 +528,10 @@
       "mirrorOpen": {
         "title": "Open the video return",
         "description": "Opens the return window, or brings it to the front when it is already there. It shows what the edit plays, and carries none of the editing."
+      },
+      "helpOpen": {
+        "title": "Open a help window",
+        "description": "Opens the user manual, the licences window or the one showing what has been spent, or brings it to the front when it is already there. These are the three entries of the Help menu, and no command of the registry reaches them."
       },
       "updatesInstall": {
         "title": "Install the downloaded update",
@@ -752,6 +760,14 @@
       "viewDisplay": {
         "title": "Choose how the scene is drawn",
         "description": "Switches the main view to shaded, wireframe, material-only or one of the other ways of drawing. The menu command only cycles from one to the next; this one names which."
+      },
+      "sceneCapture": {
+        "title": "Take a still of the 3D view",
+        "description": "Writes a still of what the view shows into the project’s images, at the size asked for. The framing never changes — only the pixel count does, or the capture would show something other than the screen."
+      },
+      "worldPreset": {
+        "title": "Apply a ready-made world",
+        "description": "Sets the lighting, the backdrop, the haze and the grading of a scene in one call, for a kind of look. Each one writes only the fields it is about and leaves the rest as they were, so a ground somebody turned on stays on."
       },
       "layerLock": {
         "title": "Lock a layer",
@@ -1129,7 +1145,19 @@
       "maskRemove": "Take the mask off the layer",
       "guideId": "Id of the guide",
       "guideAxis": "Which way the guide runs, upright on x or flat on y",
-      "guidePosition": "Where the guide sits, in document coordinates"
+      "guidePosition": "Where the guide sits, in document coordinates",
+      "helpPage": "Which help window to open",
+      "captureQuality": "How big the still comes out, or the view’s own pixels when absent",
+      "environmentPreset": "Which ready-made world to apply",
+      "skyboxView": "Which projection to look at the sky under",
+      "fieldOfView": "How wide the lens opens, in degrees",
+      "probes": "Show the test objects standing in the sky",
+      "roughnessMin": "Floor of the roughness the map is remapped into",
+      "roughnessMax": "Ceiling of the roughness the map is remapped into",
+      "metalnessMin": "Floor of the metalness the map is remapped into",
+      "metalnessMax": "Ceiling of the metalness the map is remapped into",
+      "previewShape": "Which shape to judge the material on",
+      "tilingPreview": "Repeat multiplier of the preview, 1, 2 or 4"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

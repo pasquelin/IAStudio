@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AnimationTrack } from '@shared/domain/animation'
+import type { Asset } from '@shared/domain/asset'
 import { assistantAction, type ActionName } from '@shared/domain/assistant'
 import { TEXTURE_SLOTS, type SceneWorld } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
+import { ENVIRONMENT_PRESETS } from '@/engines/scene/environmentPresets'
 import { createNodeOf } from '@/engines/scene/nodeFactory'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { GEOMETRY_SPECS, type PropertySpec } from '@/engines/scene/propertyFields'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
@@ -477,6 +480,47 @@ describe('hierarchy and selection', () => {
  * The two the native menu offers by name and no command can — `scene.display` cycles, and
  * cycling to a chosen mode means counting the ones in between.
  */
+describe('a still of the view, and a world in one call', () => {
+  const CAPTURED: Asset = {
+    id: 'asset-still',
+    name: 'Scène',
+    type: 'image',
+    location: 'local',
+    tags: [],
+    createdAt: '2026-08-20T10:00:00.000Z',
+  }
+
+  it('offers exactly the ready-made worlds the engine declares', () => {
+    const field = assistantAction('world.preset')?.fields.find(one => one.key === 'preset')
+
+    expect([...(field?.options ?? [])]).toEqual([...ENVIRONMENT_PRESETS])
+  })
+
+  it('writes what a preset is about and leaves the rest of the world alone', async () => {
+    await runAction('world.ground', { visible: true, size: 12 })
+
+    expect(await runAction('world.preset', { preset: 'night' })).toEqual({ ok: true })
+
+    expect(scene().world).toMatchObject({ envIntensity: 0.15, exposure: 1.6 })
+    // `night` says nothing about a ground, so the one turned on stays exactly as it was.
+    expect(scene().world.ground).toMatchObject({ visible: true, size: 12 })
+  })
+
+  it('captures at the quality asked for, and refuses while no viewport is mounted', async () => {
+    const captureStill = vi.fn(async () => new Uint8Array([1]))
+    const savePicture = vi.fn(async () => CAPTURED)
+    installFakeBridge({ assets: { savePicture } })
+    registerSceneEngine(DOCUMENT, { captureStill } as unknown as SceneRenderer)
+
+    expect(await runAction('scene.capture', { quality: 'ultraHd' })).toEqual({ ok: true })
+    expect(captureStill).toHaveBeenCalledWith('ultraHd')
+    expect(savePicture).toHaveBeenCalled()
+
+    forgetSceneEngine(DOCUMENT)
+    expect(await runAction('scene.capture', {})).toEqual({ ok: false, refusal: 'failed' })
+  })
+})
+
 describe('how the scene is looked at', () => {
   it('points the main view at a side, through the engine that owns the camera', async () => {
     const viewFrom = vi.fn()

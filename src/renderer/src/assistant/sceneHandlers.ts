@@ -19,7 +19,10 @@ import {
   type TextureSlot,
   type Vector3,
 } from '@shared/domain/scene'
+import { CAPTURE_QUALITIES, DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { SECOND } from '@shared/domain/time'
+import { captureSceneView } from '@/helpers/captureSceneView'
+import { ENVIRONMENT_PRESETS, presetPatch } from '@/engines/scene/environmentPresets'
 import {
   addNode,
   multi,
@@ -875,6 +878,24 @@ export const SCENE_HANDLERS: ActionHandlers = {
 
     engine.viewFrom(direction)
     return { ok: true }
+  },
+
+  /**
+   * The same function the menu row and the keyboard go through. It answers whether the still
+   * landed, and a viewport that is not mounted is what makes that answer `false` — the row has
+   * nothing to do with a silence, a client does.
+   */
+  'scene.capture': async input => {
+    const open = mounted()
+    const quality = oneOf(input, 'quality', CAPTURE_QUALITIES) ?? DEFAULT_CAPTURE_QUALITY
+    if (!open) return refused('wrongSurface')
+
+    return (await captureSceneView(open.documentId, quality)) ? { ok: true } : refused('failed')
+  },
+
+  'world.preset': input => {
+    const preset = oneOf(input, 'preset', ENVIRONMENT_PRESETS)
+    return preset === null ? refused('badInput') : editWorld(() => presetPatch(preset))
   },
 
   'view.display': input => {

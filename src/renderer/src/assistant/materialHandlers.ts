@@ -1,6 +1,6 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { HEX_COLOR } from '@shared/domain/color'
-import type { SkyboxContent } from '@shared/domain/skybox'
+import { SKYBOX_VIEWS, type SkyboxContent } from '@shared/domain/skybox'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import type { Command } from '@/engines/core/history'
 import {
@@ -10,9 +10,10 @@ import {
   setSunSetting,
 } from '@/engines/skybox/commands'
 import { setChannel, setPreview, setTextureMaterial } from '@/engines/texture/commands'
-import type { TextureState } from '@/engines/texture/textureState'
+import { PREVIEW_SHAPES, TILING_PREVIEWS, type TextureState } from '@/engines/texture/textureState'
 import { activeSkyboxId, activeTextureId, useDocuments } from '@/stores/documents'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
+import { skyboxViewOf, useSkyboxViews } from '@/stores/skyboxViews'
 import { useStyles } from '@/stores/styles'
 import { textureOf, useTextures } from '@/stores/textures'
 import { withAsset, type ActionHandlers } from './actionHandler'
@@ -137,6 +138,9 @@ function readSky(): ActionOutcome {
       adjustments: open.state.adjustments,
       sun: open.state.sun,
       environment: open.state.environment,
+      // How it is being LOOKED at, which `skybox.view` writes: a client that could write it
+      // without reading it back would be half served.
+      view: skyboxViewOf(useSkyboxViews.getState(), open.documentId),
       ...(open.state.generation === undefined ? {} : { generation: open.state.generation }),
     },
   }
@@ -181,6 +185,35 @@ function vectorCommands(
   })
 }
 
+type RangeKey = 'roughnessRange' | 'metalnessRange'
+
+const RANGE_KEYS: readonly RangeKey[] = ['roughnessRange', 'metalnessRange']
+
+/**
+ * The double handles of the panel, written a bound at a time: a client raising a floor keeps the
+ * ceiling it never read. Named `roughnessMin` and its three neighbours, since a range is two
+ * numbers and a field carries one.
+ */
+function rangeCommands(
+  input: Record<string, unknown>,
+  state: TextureState,
+): Command<TextureState>[] {
+  return RANGE_KEYS.flatMap(key => {
+    const stem = key.replace('Range', '')
+    const min = numberOf(input, `${stem}Min`)
+    const max = numberOf(input, `${stem}Max`)
+
+    return min === null && max === null
+      ? []
+      : [
+          setTextureMaterial(key, {
+            min: min ?? state.material[key].min,
+            max: max ?? state.material[key].max,
+          }),
+        ]
+  })
+}
+
 function material(input: Record<string, unknown>): ActionOutcome {
   const open = materialOpen()
   if (!open) return refused('wrongSurface')
@@ -191,6 +224,7 @@ function material(input: Record<string, unknown>): ActionOutcome {
   return runMaterial([
     ...dialsOf(input, MATERIAL_DIALS),
     ...vectorCommands(input, open.state),
+    ...rangeCommands(input, open.state),
     ...(colour === null ? [] : [setTextureMaterial('color', colour)]),
     ...(emissive === null ? [] : [setTextureMaterial('emissive', emissive)]),
     ...switchesOf<TextureState>(input, {
@@ -200,6 +234,12 @@ function material(input: Record<string, unknown>): ActionOutcome {
 }
 
 function preview(input: Record<string, unknown>): ActionOutcome {
+  const shape = oneOf(input, 'shape', PREVIEW_SHAPES)
+  const times = numberOf(input, 'tilingPreview')
+  // One, two or four: a bound cannot say « three is not offered », so the refusal is here.
+  const repeat = TILING_PREVIEWS.find(candidate => candidate === times) ?? null
+  if (times !== null && repeat === null) return refused('badInput')
+
   return runMaterial([
     ...dialsOf(input, PREVIEW_DIALS),
     ...switchesOf<TextureState>(input, {
@@ -207,7 +247,30 @@ function preview(input: Record<string, unknown>): ActionOutcome {
       autoSpin: value => setPreview('autoSpin', value),
       showSeam: value => setPreview('showSeam', value),
     }),
+    ...(shape === null ? [] : [setPreview('shape', shape)]),
+    ...(repeat === null ? [] : [setPreview('tilingPreview', repeat)]),
   ])
+}
+
+/**
+ * How a sky is being looked at. Session state through the store, never a command: it is not the
+ * document, exactly as the 3D space's own display mode is not.
+ */
+function skyboxView(input: Record<string, unknown>): ActionOutcome {
+  const open = skyOpen()
+  if (!open) return refused('wrongSurface')
+
+  const view = oneOf(input, 'view', SKYBOX_VIEWS)
+  const fieldOfView = numberOf(input, 'fieldOfView')
+  const patch = {
+    ...(view === null ? {} : { view }),
+    ...(fieldOfView === null ? {} : { fieldOfView }),
+    ...(input.probes === undefined ? {} : { probes: boolOf(input, 'probes') }),
+  }
+  if (Object.keys(patch).length === 0) return refused('badInput')
+
+  useSkyboxViews.getState().set(open.documentId, patch)
+  return { ok: true }
 }
 
 function readMaterial(): ActionOutcome {
@@ -253,6 +316,7 @@ async function channel(input: Record<string, unknown>): Promise<ActionOutcome> {
 
 export const MATERIAL_HANDLERS: ActionHandlers = {
   'skybox.state': readSky,
+  'skybox.view': skyboxView,
   'skybox.adjust': adjust,
   'skybox.resetAdjustments': () => runSky([resetAdjustments()]),
   'skybox.sun': sun,
