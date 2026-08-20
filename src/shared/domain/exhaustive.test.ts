@@ -30,6 +30,7 @@ import {
   type ModelPeriod,
   type ModelSort,
 } from './model'
+import { FONT_SOURCES, type FontSource } from './font'
 import { TEXTURE_SLOTS, type TextureSlot } from './scene'
 import { SETTING_ACTION_IDS, type SettingActionId } from './settingAction'
 import { NAMED_KEYS, type NamedKey } from './shortcut'
@@ -261,6 +262,14 @@ describe('the lists that stand for a union', () => {
     expect(sorted(SETTING_ACTION_IDS)).toEqual(sorted(Object.keys(all)))
   })
 
+  // Read by `layer.text`, which offers the two as a choice: a third source no list named would be
+  // a face a client could not ask for.
+  it('names every place a typeface comes from', () => {
+    const all: Record<FontSource, true> = { embedded: true, system: true }
+
+    expect(sorted(FONT_SOURCES)).toEqual(sorted(Object.keys(all)))
+  })
+
   it('names every texture slot a material carries', () => {
     const all: Record<TextureSlot, true> = {
       map: true,
@@ -421,6 +430,9 @@ describe('the lists that stand for a union', () => {
       'layer.group': true,
       'layer.ungroup': true,
       'layer.mergeDown': true,
+      'layer.lock': true,
+      'layer.shape': true,
+      'layer.adjustment': true,
       'sequence.state': true,
       'sequence.seek': true,
       'clip.add': true,
@@ -495,6 +507,11 @@ describe('the lists that stand for a union', () => {
       'node.select': true,
       'view.direction': true,
       'view.display': true,
+      'world.environment': true,
+      'world.background': true,
+      'world.fog': true,
+      'world.ground': true,
+      'world.render': true,
       'rig.state': true,
       'rig.fit': true,
       'rig.clear': true,

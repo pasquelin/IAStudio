@@ -125,6 +125,7 @@ export function Models() {
       <ModelsSelected model={selected} picture={selected ? pictureOf(selected) : undefined} />
 
       <CollectionBar
+        scId="models"
         state={collection}
         onChange={next => setCollection(family, next)}
         facets={facets}

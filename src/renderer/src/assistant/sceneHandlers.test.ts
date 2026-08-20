@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { assistantAction, type ActionName } from '@shared/domain/assistant'
+import type { SceneWorld } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
@@ -433,5 +435,155 @@ describe('how the scene is looked at', () => {
     expect(displayOfPane(sceneViewOf(useSceneViews.getState(), DOCUMENT).displays, 0)).toBe(
       'wireframe',
     )
+  })
+})
+
+/** The half of the document that belongs to no node — lit, backed, floored and graded. */
+describe('the world of the scene', () => {
+  it('reads back every part of it, and not the environment alone', async () => {
+    await runAction('world.fog', { kind: 'exp2', density: 0.05 })
+    await runAction('world.render', { toneMapping: 'aces', exposure: 1.4 })
+
+    const outcome = await runAction('scene.state', {})
+    const read = outcome.ok ? (outcome.data as { world: SceneWorld }).world : null
+
+    expect(read?.fog).toEqual({ kind: 'exp2', color: expect.any(String), density: 0.05 })
+    expect(read?.toneMapping).toBe('aces')
+    expect(read?.exposure).toBe(1.4)
+    expect(read?.ground).toEqual(scene().world.ground)
+  })
+
+  it('lights the scene by a named sky, and puts it back out', async () => {
+    expect(await runAction('world.environment', { assetId: 'sky-1', intensity: 1.5 })).toEqual({
+      ok: true,
+    })
+    expect(scene().world.environment).toEqual({ kind: 'skybox', assetId: 'sky-1' })
+    expect(scene().world.envIntensity).toBe(1.5)
+
+    await runAction('world.environment', { kind: 'studio' })
+
+    expect(scene().world.environment).toEqual({ kind: 'studio' })
+  })
+
+  /**
+   * The panel answers this one by taking the first sky of the project. From outside that would be
+   * a reference nobody picked, so the call is refused rather than guessed at.
+   */
+  it('refuses a sky nobody named', async () => {
+    expect(await runAction('world.environment', { kind: 'skybox' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  /**
+   * `transparent` is the shape a client most wants and no other call offers: a capture with
+   * nothing behind the subject. The colour is written by the same call rather than by a second.
+   */
+  it('paints the backdrop, and takes it away entirely', async () => {
+    await runAction('world.background', { kind: 'color', color: '#123456' })
+
+    expect(scene().world.background).toEqual({ kind: 'color', color: '#123456' })
+
+    await runAction('world.background', { kind: 'transparent' })
+
+    expect(scene().world.background).toEqual({ kind: 'transparent' })
+  })
+
+  it('takes the distances of a linear haze, and forgets them when it is turned off', async () => {
+    await runAction('world.fog', { kind: 'linear', color: '#334455', near: 5, far: 90 })
+
+    expect(scene().world.fog).toEqual({ kind: 'linear', color: '#334455', near: 5, far: 90 })
+
+    await runAction('world.fog', { kind: 'none' })
+
+    expect(scene().world.fog).toEqual({ kind: 'none' })
+  })
+
+  /**
+   * The switch the panel uses answers with the DEFAULTS of the shape it opens, so re-asserting
+   * the shape in hand to change one value took the other two back to 10 and 60 in silence.
+   */
+  it('keeps the distances when only the colour of the same haze is named', async () => {
+    await runAction('world.fog', { kind: 'linear', near: 5, far: 90 })
+    await runAction('world.fog', { kind: 'linear', color: '#ff0000' })
+
+    expect(scene().world.fog).toEqual({ kind: 'linear', color: '#ff0000', near: 5, far: 90 })
+  })
+
+  it('keeps the softening of a backdrop re-asserted as itself', async () => {
+    await runAction('world.background', { kind: 'environment', blur: 0.5 })
+    await runAction('world.background', { kind: 'environment' })
+
+    expect(scene().world.background).toEqual({ kind: 'environment', blur: 0.5 })
+  })
+
+  /** A key a client believes took must never get a silent yes — the rule of `validatesInput`. */
+  it('refuses a value that belongs to another shape, rather than dropping it', async () => {
+    expect(await runAction('world.fog', { kind: 'exp2', near: 5 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(await runAction('world.background', { kind: 'transparent', color: '#000000' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    // Both readings of this call contradict each other: putting the sky out, and naming one.
+    expect(await runAction('world.environment', { kind: 'studio', assetId: 'sky-1' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  /** The trap of an optional boolean: read as `false`, a call about the size would hide the floor. */
+  it('leaves the ground showing when only its size is named', async () => {
+    await runAction('world.ground', { visible: true })
+    await runAction('world.ground', { size: 60 })
+
+    expect(scene().world.ground).toMatchObject({ visible: true, size: 60 })
+  })
+
+  it('refuses a call that names nothing at all', async () => {
+    expect(await runAction('world.ground', {})).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await runAction('world.render', {})).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await runAction('world.environment', {})).toEqual({ ok: false, refusal: 'badInput' })
+  })
+
+  /**
+   * `no-unreachable-command` holds `setWorld` as PUBLISHED, which it now is — and a patch command
+   * says nothing about its fields. This is what names the members no action writes, so a member
+   * added to the world does not gain a door by accident.
+   */
+  it('names the members of the world nothing can write', async () => {
+    const world: readonly ActionName[] = [
+      'world.environment',
+      'world.background',
+      'world.fog',
+      'world.ground',
+      'world.render',
+    ]
+    const written = new Set(
+      world.flatMap(name => assistantAction(name)?.fields ?? []).map(field => field.key),
+    )
+
+    const reached: Record<keyof SceneWorld, boolean> = {
+      environment: written.has('kind'),
+      envIntensity: written.has('intensity'),
+      envRotation: written.has('rotation'),
+      background: written.has('blur'),
+      fog: written.has('density'),
+      toneMapping: written.has('toneMapping'),
+      exposure: written.has('exposure'),
+      ground: written.has('receiveShadow'),
+      // How a set is WALKED. Nothing reads it yet either — see `ScenePlay`, whose own note says
+      // it is written by templates and by nothing else.
+      play: false,
+    }
+
+    expect(
+      Object.entries(reached)
+        .filter(([, held]) => !held)
+        .map(([member]) => member),
+    ).toEqual(['play'])
   })
 })

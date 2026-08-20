@@ -1,6 +1,17 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { readColor } from '@shared/domain/color'
-import { DISPLAY_MODES, VIEW_DIRECTIONS, type Vector3 } from '@shared/domain/scene'
+import {
+  BACKGROUND_KINDS,
+  DISPLAY_MODES,
+  ENVIRONMENT_KINDS,
+  FOG_KINDS,
+  STUDIO_ENVIRONMENT,
+  TONE_MAPPINGS,
+  VIEW_DIRECTIONS,
+  type EnvironmentRef,
+  type SceneWorld,
+  type Vector3,
+} from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import {
   addNode,
@@ -13,7 +24,9 @@ import {
   setNodeVisible,
   setSelection,
   setTransform,
+  setWorld,
 } from '@/engines/scene/commands'
+import { backgroundOfKind, fogOfKind } from '@/engines/scene/sceneWorld'
 import { EASINGS, POINT_TARGET, type CameraShot } from '@shared/domain/animation'
 import { addCameraShot, bindRailToShot, editCameraShot } from '@/engines/scene/animationCommands'
 import { newShotAt } from '@/engines/scene/cameraShots'
@@ -88,7 +101,9 @@ function readState(): ActionOutcome {
     data: {
       documentId: open.documentId,
       selectedIds: open.state.selectedIds,
-      environment: open.state.world.environment,
+      // The whole world and not its environment alone: the fog, the backdrop, the ground and the
+      // grading are document values, and a client that can write them has to be able to read them.
+      world: open.state.world,
       // What drives the cameras: without them a client can open a shot and never edit one, since
       // `camera.rail` and `camera.target` name it by the id only this list hands over.
       shots: open.state.animation.shots,
@@ -207,8 +222,133 @@ function reparent(input: Record<string, unknown>): ActionOutcome {
   )
 }
 
+// `editNode`'s twin for the half of the document that belongs to no node. An empty patch is a
+// refusal rather than a no-op: a client that named nothing meant something.
+function editWorld(build: (world: SceneWorld) => Partial<SceneWorld>): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
+
+  const patch = build(open.state.world)
+  if (Object.keys(patch).length === 0) return refused('badInput')
+
+  useScenes.getState().runCommand(open.documentId, setWorld(patch))
+  return { ok: true }
+}
+
+function worldEnvironment(input: Record<string, unknown>): ActionOutcome {
+  const kind = oneOf(input, 'kind', ENVIRONMENT_KINDS)
+  const assetId = textOf(input, 'assetId')
+  // The panel answers `skybox` by taking the first sky of the project, which from outside would
+  // be a reference nobody picked. `studio` beside a sky is the opposite of both readings of it.
+  if (kind === 'skybox' && assetId === null) return refused('badInput')
+  if (kind === 'studio' && assetId !== null) return refused('badInput')
+
+  const intensity = numberOf(input, 'intensity')
+  const rotation = numberOf(input, 'rotation')
+  // A sky named outright is a sky chosen, so `kind` is what a client says only to put one out.
+  const environment: EnvironmentRef | null =
+    assetId !== null ? { kind: 'skybox', assetId } : kind === 'studio' ? STUDIO_ENVIRONMENT : null
+
+  return editWorld(() => ({
+    ...(environment === null ? {} : { environment }),
+    ...(intensity === null ? {} : { envIntensity: intensity }),
+    // Radians, as every other angle a document stores — the panel is what shows degrees.
+    ...(rotation === null ? {} : { envRotation: rotation }),
+  }))
+}
+
+function worldBackground(input: Record<string, unknown>): ActionOutcome {
+  const kind = oneOf(input, 'kind', BACKGROUND_KINDS)
+  if (!kind) return refused('badInput')
+  // `blur` belongs to one shape only, and a key a client believes took must never get a silent
+  // yes — the very rule `validatesInput` is written for, one level down.
+  if (kind !== 'environment' && input.blur !== undefined) return refused('badInput')
+  if (kind !== 'color' && input.color !== undefined) return refused('badInput')
+
+  return editWorld(world => {
+    // The switch the panel uses, and ONLY when the shape changes: it answers with the defaults of
+    // the shape it opens, so re-asserting the shape in hand would take the blur back to zero.
+    const background =
+      world.background.kind === kind ? world.background : backgroundOfKind(kind, world.background)
+
+    if (background.kind === 'color') {
+      return { background: { ...background, color: readColor(input, 'color', background.color) } }
+    }
+
+    return background.kind === 'environment'
+      ? { background: { ...background, blur: numberOf(input, 'blur') ?? background.blur } }
+      : { background }
+  })
+}
+
+function worldFog(input: Record<string, unknown>): ActionOutcome {
+  const kind = oneOf(input, 'kind', FOG_KINDS)
+  if (!kind) return refused('badInput')
+  const named = ['color', 'near', 'far', 'density'].filter(key => input[key] !== undefined)
+  const belongs =
+    kind === 'linear' ? ['color', 'near', 'far'] : kind === 'exp2' ? ['color', 'density'] : []
+  if (named.some(key => !belongs.includes(key))) return refused('badInput')
+
+  return editWorld(world => {
+    // Switched only when the shape changes, for the reason `worldBackground` gives: `fogOfKind`
+    // answers with the defaults of the shape it opens, distances included.
+    const fog = world.fog.kind === kind ? world.fog : fogOfKind(kind, world.fog)
+    if (fog.kind === 'none') return { fog }
+
+    const painted = { ...fog, color: readColor(input, 'color', fog.color) }
+
+    return {
+      fog:
+        painted.kind === 'linear'
+          ? {
+              ...painted,
+              near: numberOf(input, 'near') ?? painted.near,
+              far: numberOf(input, 'far') ?? painted.far,
+            }
+          : { ...painted, density: numberOf(input, 'density') ?? painted.density },
+    }
+  })
+}
+
+function worldGround(input: Record<string, unknown>): ActionOutcome {
+  const size = numberOf(input, 'size')
+  const opacity = numberOf(input, 'opacity')
+
+  return editWorld(world => {
+    // `undefined` and not `false`: a call naming the size alone must not put the ground out.
+    const written = {
+      ...(input.visible === undefined ? {} : { visible: boolOf(input, 'visible') }),
+      ...(input.color === undefined
+        ? {}
+        : { color: readColor(input, 'color', world.ground.color ?? '') }),
+      ...(size === null ? {} : { size }),
+      ...(opacity === null ? {} : { opacity }),
+      ...(input.receiveShadow === undefined
+        ? {}
+        : { receiveShadow: boolOf(input, 'receiveShadow') }),
+    }
+
+    return Object.keys(written).length === 0 ? {} : { ground: { ...world.ground, ...written } }
+  })
+}
+
 export const SCENE_HANDLERS: ActionHandlers = {
   'scene.state': readState,
+
+  'world.environment': worldEnvironment,
+  'world.background': worldBackground,
+  'world.fog': worldFog,
+  'world.ground': worldGround,
+
+  'world.render': input => {
+    const toneMapping = oneOf(input, 'toneMapping', TONE_MAPPINGS)
+    const exposure = numberOf(input, 'exposure')
+
+    return editWorld(() => ({
+      ...(toneMapping === null ? {} : { toneMapping }),
+      ...(exposure === null ? {} : { exposure }),
+    }))
+  },
   'node.add': add,
   'node.select': select,
   'node.reparent': reparent,

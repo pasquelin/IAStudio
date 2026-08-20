@@ -62,6 +62,9 @@ const COMPOSED_KEYS: readonly string[] = [
   // The sentence beside each of them. A menu row explains what it does, and the explanation is
   // composed the same way the label is — so it goes missing the same way, and is caught here.
   ...ADJUSTMENT_KINDS.map(kind => `adjustment.${kind}Hint`),
+  // The label as well as the sentence, since the padlocks compose their key from `LOCK_KEYS`:
+  // written out, the three labels were literals that `known-keys` read, and it no longer can.
+  ...LAYER_LOCKS.map(padlock => padlock.labelKey),
   ...LAYER_LOCKS.map(padlock => `${padlock.labelKey}Hint`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}Hint`),
   ...BLEND_MODES.map(mode => `blend.${mode}`),

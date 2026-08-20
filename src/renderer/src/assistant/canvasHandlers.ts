@@ -2,6 +2,7 @@ import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { packedColour } from '@shared/domain/color'
 import { toRadians } from '@shared/domain/angles'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
+import { embeddedFontOf, FONT_SOURCES, type FontRef } from '@shared/domain/font'
 import {
   ADJUSTMENT_KINDS,
   adjustmentLayer,
@@ -9,6 +10,7 @@ import {
   canMoveLayer,
   DEFAULT_SHAPE_SIDES,
   layerById,
+  LOCK_KEYS,
   pixelLayer,
   SHAPE_KINDS,
   shapeLayer,
@@ -18,7 +20,12 @@ import {
   type DrawnShape,
   type Layer,
 } from '@/engines/canvas/canvasState'
-import { localShape } from '@/engines/canvas/shapeGeometry'
+import {
+  DEFAULT_STROKE_WIDTH,
+  isOpenShape,
+  localShape,
+  SHAPE_INK,
+} from '@/engines/canvas/shapeGeometry'
 import type { Point, Size } from '@/engines/core/geometry'
 import {
   addLayer,
@@ -33,10 +40,13 @@ import {
   resizeCanvas,
   resizeImage,
   rotateImage,
+  setLayerAdjustment,
   setLayerBlend,
   setLayerClipped,
   setLayerFillOpacity,
+  setLayerLocks,
   setLayerOpacity,
+  setLayerShape,
   setLayerText,
   setLayerTransform,
   setLayerVisible,
@@ -123,11 +133,22 @@ function readState(): ActionOutcome {
         kind: layer.kind,
         visible: layer.visible,
         opacity: layer.opacity,
+        // The three that were written and never read: a client could raise `fillOpacity`, lock a
+        // layer and carve a mask, and had no way of learning that any of it had taken.
+        fillOpacity: layer.fillOpacity,
+        locked: layer.locked,
+        ...(layer.mask ? { mask: layer.mask } : {}),
         blend: layer.blend,
         clipped: layer.clipped,
         transform: layer.transform,
         ...(layer.kind === 'text'
-          ? { text: layer.text, size: layer.size, align: layer.align, box: layer.box }
+          ? {
+              text: layer.text,
+              size: layer.size,
+              align: layer.align,
+              box: layer.box,
+              font: layer.font,
+            }
           : {}),
         ...(layer.kind === 'adjustment' ? { adjustment: layer.adjustment } : {}),
         ...(layer.kind === 'shape'
@@ -148,9 +169,8 @@ function drawnShape(input: Record<string, unknown>): { at: Point; drawn: DrawnSh
   const height = numberOf(input, 'height')
   if (!shape || width === null || height === null || width <= 0 || height <= 0) return null
 
-  const ink = numberOf(input, 'fill') ?? 0x000000
-  // Open by nature: a line and an arrow have no inside, so filling one paints nothing at all.
-  const open = shape === 'line' || shape === 'arrow'
+  const ink = packedColour(textOf(input, 'fill') ?? '') ?? SHAPE_INK
+  const open = isOpenShape(shape)
   const sides = numberOf(input, 'sides') ?? DEFAULT_SHAPE_SIDES
   // A ring is drawn from its CENTRE outwards, so the box's middle is where its drag began, and
   // its far point is the corner — a point on the middle of an edge would ignore one axis.
@@ -173,9 +193,6 @@ function drawnShape(input: Record<string, unknown>): { at: Point; drawn: DrawnSh
     },
   }
 }
-
-/** What an assistant-drawn line is stroked with, having no brush size to read one from. */
-const DEFAULT_STROKE_WIDTH = 2
 
 /** The other axis of a box a client half-named, giving a point caption one for the first time. */
 const DEFAULT_PARAGRAPH: Size = { width: 480, height: 120 }
@@ -253,6 +270,17 @@ function transform(input: Record<string, unknown>): ActionOutcome {
   ])
 }
 
+/**
+ * The face, or nothing when `embedded` is claimed for a family the studio does not ship — the one
+ * promise `source` carries is that the document opens the same elsewhere, and that one would not.
+ */
+function fontRefOf(input: Record<string, unknown>, family: string): FontRef | null {
+  const shipped = embeddedFontOf(family) !== null
+  const source = oneOf(input, 'fontSource', FONT_SOURCES) ?? (shipped ? 'embedded' : 'system')
+
+  return source === 'embedded' && !shipped ? null : { source, family }
+}
+
 function text(input: Record<string, unknown>): ActionOutcome {
   const colour = packedColour(textOf(input, 'color') ?? '')
   const size = numberOf(input, 'size')
@@ -262,6 +290,11 @@ function text(input: Record<string, unknown>): ActionOutcome {
   const tracking = numberOf(input, 'tracking')
   const width = numberOf(input, 'width')
   const height = numberOf(input, 'height')
+  const family = textOf(input, 'fontFamily')
+  const font = family === null ? null : fontRefOf(input, family)
+  // An `embedded` face the studio does not ship: refused rather than written as a reference that
+  // will not resolve on the next machine.
+  if (family !== null && font === null) return refused('badInput')
 
   return editLayer(input, layer =>
     // The command only touches a text layer, so a pixel layer named here would be reported as
@@ -270,6 +303,7 @@ function text(input: Record<string, unknown>): ActionOutcome {
       ? [
           setLayerText(layer.id, {
             ...(written === null ? {} : { text: written }),
+            ...(font === null ? {} : { font }),
             ...(size === null ? {} : { size }),
             ...(colour === null ? {} : { color: colour }),
             ...(align === null ? {} : { align }),
@@ -290,6 +324,76 @@ function text(input: Record<string, unknown>): ActionOutcome {
         ]
       : [],
   )
+}
+
+function locks(input: Record<string, unknown>): ActionOutcome {
+  return editLayer(input, layer => {
+    const named = LOCK_KEYS.filter(padlock => input[padlock] !== undefined)
+    // A call naming no padlock at all is a refusal, which `run` makes of an empty list.
+    if (named.length === 0) return []
+
+    const wanted = Object.fromEntries(named.map(padlock => [padlock, boolOf(input, padlock)]))
+    return [setLayerLocks(layer.id, { ...layer.locked, ...wanted })]
+  })
+}
+
+function shape(input: Record<string, unknown>): ActionOutcome {
+  const fill = packedColour(textOf(input, 'fill') ?? '')
+  const stroke = packedColour(textOf(input, 'stroke') ?? '')
+  const strokeWidth = numberOf(input, 'strokeWidth')
+  const sides = numberOf(input, 'sides')
+  const filled = input.filled === undefined ? null : boolOf(input, 'filled')
+  const stroked = input.stroked === undefined ? null : boolOf(input, 'stroked')
+
+  return editLayer(input, layer => {
+    // A line and an arrow have no inside, and the panel hides the switch for them: filling one
+    // from outside would answer `ok` for paint nobody can see.
+    if (layer.kind !== 'shape') return []
+    if (isOpenShape(layer.shape) && (filled !== null || fill !== null)) return []
+
+    const painted =
+      filled === null ? (fill ?? layer.fill) : filled ? (fill ?? layer.fill ?? SHAPE_INK) : null
+    const keeps = stroked === null && stroke === null && strokeWidth === null
+    const outlined =
+      stroked === false
+        ? null
+        : keeps
+          ? layer.stroke
+          : {
+              color: stroke ?? layer.stroke?.color ?? SHAPE_INK,
+              width: strokeWidth ?? layer.stroke?.width ?? DEFAULT_STROKE_WIDTH,
+            }
+
+    // The panel answers this by switching the other one back on, which is right under a finger
+    // and wrong here: a client that asked for both to go hears that it cannot have that.
+    if (painted === null && outlined === null) return []
+
+    return [
+      setLayerShape(layer.id, {
+        fill: painted,
+        stroke: outlined,
+        ...(sides === null ? {} : { sides }),
+      }),
+    ]
+  })
+}
+
+/**
+ * The one dial the layer carries. A field naming another is refused rather than dropped: written
+ * into the stack it would be carried, neutral and invisible, by a pass that never reads it.
+ */
+function adjustment(input: Record<string, unknown>): ActionOutcome {
+  return editLayer(input, layer => {
+    if (layer.kind !== 'adjustment') return []
+
+    const named = ADJUSTMENT_KINDS.filter(kind => input[kind] !== undefined)
+    if (named.length !== 1 || named[0] !== layer.adjustment) return []
+
+    const value = numberOf(input, layer.adjustment)
+    return value === null
+      ? []
+      : [setLayerAdjustment(layer.id, { ...layer.values, [layer.adjustment]: value })]
+  })
 }
 
 function duplicate(input: Record<string, unknown>): ActionOutcome {
@@ -378,6 +482,9 @@ export const CANVAS_HANDLERS: ActionHandlers = {
       : editLayer(input, layer => [renameLayer(layer.id, name)])
   },
   'layer.style': style,
+  'layer.lock': locks,
+  'layer.shape': shape,
+  'layer.adjustment': adjustment,
   'layer.transform': transform,
   'layer.text': text,
   'layer.move': input => {

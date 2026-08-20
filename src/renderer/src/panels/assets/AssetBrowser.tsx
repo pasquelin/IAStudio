@@ -473,7 +473,7 @@ export function AssetBrowser() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <CollectionBar state={collection} onChange={setCollection} facets={facets} />
+      <CollectionBar scId="assets" state={collection} onChange={setCollection} facets={facets} />
       <ImportProgress />
       <Collection
         label={t('panels.assets')}

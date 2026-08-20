@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { assistantAction, type ActionName } from '@shared/domain/assistant'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
+import { EMBEDDED_FONTS } from '@shared/domain/font'
 import {
   ADJUSTMENT_KINDS,
   DEFAULT_CANVAS,
+  DIAL_RANGE,
   LAYER_KINDS,
   pixelLayer,
   textLayer,
   type CanvasState,
 } from '@/engines/canvas/canvasState'
+import { MAX_SIDES, MIN_SIDES } from '@/engines/canvas/shapeGeometry'
 import { installIn } from '@/stores/document-fixtures'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
@@ -25,6 +28,10 @@ function withLayers(...layers: CanvasState['layers']): void {
 }
 
 const layerIds = (): string[] => canvas().layers.map(layer => layer.id)
+
+/** By name rather than by index: a layer the stack was asked to add does not land at a known one. */
+const layerNamed = (name: string): CanvasState['layers'][number] | undefined =>
+  canvas().layers.find(layer => layer.name === name)
 
 beforeEach(() => {
   withLayers(pixelLayer('layer-a', 'Fond'), pixelLayer('layer-b', 'Sujet'))
@@ -48,6 +55,24 @@ describe('what the registry offers a layer', () => {
     expect(optionsOf('layer.add', 'kind')).toEqual(
       LAYER_KINDS.filter(kind => kind !== 'group').sort(),
     )
+  })
+
+  /**
+   * The BOUNDS travel the same way as the options, and were the half nothing held: a schema that
+   * offers a wider swing than the slider is a client told it may write what the panel cannot.
+   */
+  it('bounds every dial exactly as the engine does', () => {
+    const boundsOf = (name: ActionName, key: string) => {
+      const field = assistantAction(name)?.fields.find(one => one.key === key)
+      return { min: field?.min, max: field?.max }
+    }
+
+    for (const kind of ADJUSTMENT_KINDS) {
+      expect(boundsOf('layer.adjustment', kind), kind).toEqual(DIAL_RANGE[kind])
+    }
+
+    expect(boundsOf('layer.shape', 'sides')).toEqual({ min: MIN_SIDES, max: MAX_SIDES })
+    expect(boundsOf('layer.add', 'sides')).toEqual({ min: MIN_SIDES, max: MAX_SIDES })
   })
 })
 
@@ -98,7 +123,7 @@ describe('building a stack', () => {
       y: 20,
       width: 100,
       height: 50,
-      fill: 0xff0000,
+      fill: '#ff0000',
     })
 
     const added = canvas().layers.at(-1)
@@ -128,7 +153,7 @@ describe('building a stack', () => {
       shape: 'line',
       width: 100,
       height: 100,
-      fill: 0x00ff00,
+      fill: '#00ff00',
     })
 
     const added = canvas().layers.at(-1)
@@ -321,6 +346,152 @@ describe('styling and placing a layer', () => {
 
     await runAction('layer.text', { layerId: 'layer-t', color: '#ff8800' })
     expect(canvas().layers[0]).toMatchObject({ color: 0xff8800 })
+  })
+
+  /**
+   * `fonts.list` named faces nothing could then set — the one action of discovery this registry
+   * published with no way to act on what it found.
+   */
+  it('sets the typeface, telling a shipped face from an installed one', async () => {
+    withLayers(textLayer('layer-t', 'Titre', { x: 0, y: 0 }))
+
+    await runAction('layer.text', { layerId: 'layer-t', fontFamily: 'Helvetica Neue' })
+    expect(canvas().layers[0]).toMatchObject({
+      font: { source: 'system', family: 'Helvetica Neue' },
+    })
+
+    const shipped = EMBEDDED_FONTS[0]?.family ?? ''
+    await runAction('layer.text', { layerId: 'layer-t', fontFamily: shipped })
+
+    expect(canvas().layers[0]).toMatchObject({ font: { source: 'embedded', family: shipped } })
+  })
+
+  /**
+   * `source` carries one promise — that the document opens the same on the next machine — and an
+   * `embedded` face the studio does not ship breaks exactly that one, silently.
+   */
+  it('refuses a face claimed as shipped that the studio does not ship', async () => {
+    withLayers(textLayer('layer-t', 'Titre', { x: 0, y: 0 }))
+
+    const outcome = await runAction('layer.text', {
+      layerId: 'layer-t',
+      fontFamily: 'Helvetica Neue',
+      fontSource: 'embedded',
+    })
+
+    expect(outcome).toEqual({ ok: false, refusal: 'badInput' })
+  })
+})
+
+describe('the padlocks of a layer', () => {
+  it('sets the one it was given and leaves the others alone', async () => {
+    await runAction('layer.lock', { layerId: 'layer-a', pixels: true })
+
+    expect(canvas().layers[0]?.locked).toEqual({ pixels: true, position: false, alpha: false })
+
+    await runAction('layer.lock', { layerId: 'layer-a', alpha: true })
+
+    expect(canvas().layers[0]?.locked).toEqual({ pixels: true, position: false, alpha: true })
+  })
+
+  it('refuses a call that names no padlock', async () => {
+    expect(await runAction('layer.lock', { layerId: 'layer-a' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+})
+
+describe('repainting a shape long after it was drawn', () => {
+  const drawn = async (): Promise<string> => {
+    const made = await runAction('layer.add', {
+      kind: 'shape',
+      name: 'Cadre',
+      shape: 'rectangle',
+      width: 100,
+      height: 50,
+    })
+    return made.ok ? (made.data as { layerId: string }).layerId : ''
+  }
+
+  it('changes the fill and the outline of a shape already on the stack', async () => {
+    const layerId = await drawn()
+
+    await runAction('layer.shape', {
+      layerId,
+      fill: '#ff0000',
+      stroke: '#0000ff',
+      strokeWidth: 6,
+    })
+
+    expect(layerNamed('Cadre')).toMatchObject({
+      fill: 0xff0000,
+      stroke: { color: 0x0000ff, width: 6 },
+    })
+  })
+
+  // The panel hides the fill switch for these two, and `paintShape` leaves their path open: an
+  // `ok` here would be paint nobody can see.
+  it('refuses to fill a line, which has no inside', async () => {
+    const made = await runAction('layer.add', {
+      kind: 'shape',
+      name: 'Trait',
+      shape: 'line',
+      width: 100,
+      height: 0.5,
+    })
+    const layerId = made.ok ? (made.data as { layerId: string }).layerId : ''
+
+    expect(await runAction('layer.shape', { layerId, filled: true })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(layerNamed('Trait')).toMatchObject({ fill: null })
+  })
+
+  /**
+   * The panel answers this by switching the other one back on, which is right under a finger and
+   * wrong from outside: a client that asked for both to go hears that it cannot have that.
+   */
+  it('refuses to leave a shape with neither fill nor outline', async () => {
+    const layerId = await drawn()
+    await runAction('layer.shape', { layerId, filled: true, stroked: false })
+
+    expect(await runAction('layer.shape', { layerId, filled: false })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(layerNamed('Cadre')).toMatchObject({ fill: expect.any(Number) })
+  })
+})
+
+describe('the dial of an adjustment layer', () => {
+  const adjusting = async (): Promise<string> => {
+    const made = await runAction('layer.add', {
+      kind: 'adjustment',
+      name: 'Expo',
+      adjustment: 'exposure',
+    })
+    return made.ok ? (made.data as { layerId: string }).layerId : ''
+  }
+
+  it('moves the dial the layer carries', async () => {
+    const layerId = await adjusting()
+
+    await runAction('layer.adjustment', { layerId, exposure: 1.5 })
+
+    expect(layerNamed('Expo')).toMatchObject({ values: { exposure: 1.5, contrast: 1 } })
+  })
+
+  // Written into the stack it would be carried, neutral and invisible, by a pass that never
+  // reads it — so the call says so instead.
+  it('refuses a dial that is not the layer’s own', async () => {
+    const layerId = await adjusting()
+
+    expect(await runAction('layer.adjustment', { layerId, contrast: 1.4 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
   })
 })
 

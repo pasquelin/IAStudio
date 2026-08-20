@@ -1,10 +1,19 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { EASINGS } from './animation'
 import {
+  BACKGROUND_BLUR,
+  BACKGROUND_KINDS,
   DISPLAY_MODES,
+  ENV_INTENSITY,
+  ENVIRONMENT_KINDS,
+  EXPOSURE,
+  FOG_DENSITY,
+  FOG_KINDS,
+  GROUND_SIZE,
   LIGHT_ENTRIES,
   MESH_ENTRIES,
   OBJECT_ENTRIES,
+  TONE_MAPPINGS,
   VIEW_DIRECTIONS,
 } from './scene'
 
@@ -339,6 +348,151 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
         labelKey: 'assistant.fields.displayMode',
         required: true,
         options: DISPLAY_MODES,
+      },
+    ],
+  }),
+  /**
+   * The half of a 3D document that belongs to no node — what lights it, what hangs behind it,
+   * what it stands on. Five actions rather than one, following the sections of the panel that
+   * writes them: each of these unions carries its own fields, and a single flat call would offer
+   * a density to a linear fog.
+   */
+  action({
+    name: 'world.environment',
+    titleKey: 'assistant.actions.worldEnvironment.title',
+    descriptionKey: 'assistant.actions.worldEnvironment.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'kind',
+        kind: 'choice',
+        labelKey: 'assistant.fields.environmentKind',
+        required: false,
+        options: ENVIRONMENT_KINDS,
+      },
+      // Names the sky, and naming one is enough: a document lit by an asset is `skybox` by that
+      // fact alone, which spares a client two calls to do one thing.
+      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: false },
+      {
+        key: 'intensity',
+        kind: 'number',
+        labelKey: 'assistant.fields.intensity',
+        required: false,
+        min: ENV_INTENSITY.min,
+        max: ENV_INTENSITY.max,
+      },
+      { key: 'rotation', kind: 'number', labelKey: 'assistant.fields.rotationY', required: false },
+    ],
+  }),
+  action({
+    name: 'world.background',
+    titleKey: 'assistant.actions.worldBackground.title',
+    descriptionKey: 'assistant.actions.worldBackground.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'kind',
+        kind: 'choice',
+        labelKey: 'assistant.fields.backgroundKind',
+        required: true,
+        options: BACKGROUND_KINDS,
+      },
+      { key: 'color', kind: 'color', labelKey: 'assistant.fields.colour', required: false },
+      {
+        key: 'blur',
+        kind: 'number',
+        labelKey: 'assistant.fields.blur',
+        required: false,
+        min: BACKGROUND_BLUR.min,
+        max: BACKGROUND_BLUR.max,
+      },
+    ],
+  }),
+  action({
+    name: 'world.fog',
+    titleKey: 'assistant.actions.worldFog.title',
+    descriptionKey: 'assistant.actions.worldFog.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'kind',
+        kind: 'choice',
+        labelKey: 'assistant.fields.fogKind',
+        required: true,
+        options: FOG_KINDS,
+      },
+      { key: 'color', kind: 'color', labelKey: 'assistant.fields.colour', required: false },
+      { key: 'near', kind: 'number', labelKey: 'assistant.fields.near', required: false },
+      { key: 'far', kind: 'number', labelKey: 'assistant.fields.far', required: false },
+      {
+        key: 'density',
+        kind: 'number',
+        labelKey: 'assistant.fields.fogDensity',
+        required: false,
+        min: FOG_DENSITY.min,
+        max: FOG_DENSITY.max,
+      },
+    ],
+  }),
+  action({
+    name: 'world.ground',
+    titleKey: 'assistant.actions.worldGround.title',
+    descriptionKey: 'assistant.actions.worldGround.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'visible', kind: 'boolean', labelKey: 'assistant.fields.visible', required: false },
+      { key: 'color', kind: 'color', labelKey: 'assistant.fields.colour', required: false },
+      {
+        key: 'size',
+        kind: 'number',
+        labelKey: 'assistant.fields.groundSize',
+        required: false,
+        min: GROUND_SIZE.min,
+        max: GROUND_SIZE.max,
+      },
+      {
+        key: 'opacity',
+        kind: 'number',
+        labelKey: 'assistant.fields.opacity',
+        required: false,
+        min: 0,
+        max: 1,
+      },
+      {
+        key: 'receiveShadow',
+        kind: 'boolean',
+        labelKey: 'assistant.fields.receiveShadow',
+        required: false,
+      },
+    ],
+  }),
+  action({
+    name: 'world.render',
+    titleKey: 'assistant.actions.worldRender.title',
+    descriptionKey: 'assistant.actions.worldRender.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'toneMapping',
+        kind: 'choice',
+        labelKey: 'assistant.fields.toneMapping',
+        required: false,
+        options: TONE_MAPPINGS,
+      },
+      {
+        key: 'exposure',
+        kind: 'number',
+        // Its own label: this one multiplies what three.js maps down, where `exposure` elsewhere
+        // is a count of stops on a grading dial. One sentence for two quantities said neither.
+        labelKey: 'assistant.fields.toneExposure',
+        required: false,
+        min: EXPOSURE.min,
+        max: EXPOSURE.max,
       },
     ],
   }),

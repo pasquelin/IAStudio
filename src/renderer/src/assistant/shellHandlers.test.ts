@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SttState } from '@shared/domain/dictation'
+import { EMBEDDED_FONTS } from '@shared/domain/font'
 import type { UpdateState } from '@shared/domain/update'
 import type { Language } from '@shared/i18n/languages'
 import { toolIsShown } from '@/helpers/revealPanel'
@@ -19,7 +20,19 @@ describe('what surrounds the documents', () => {
   it('answers the account, the window and the update without being told anything', async () => {
     expect(await runAction('auth.state', {})).toMatchObject({ ok: true })
     expect(await runAction('updates.state', {})).toMatchObject({ ok: true })
-    expect(await runAction('fonts.list', {})).toMatchObject({ ok: true })
+  })
+
+  /**
+   * The three faces that ship, which bare families left unnameable: `layer.text` takes a source
+   * as well, and a machine that has one of them installed offers it under the very same name.
+   */
+  it('names the shipped typefaces beside the installed ones, each with where it comes from', async () => {
+    const outcome = await runAction('fonts.list', {})
+    const listed = outcome.ok ? (outcome.data as { source: string; family: string }[]) : []
+
+    expect(listed.filter(font => font.source === 'embedded').map(font => font.family)).toEqual(
+      EMBEDDED_FONTS.map(font => font.family),
+    )
   })
 
   /**

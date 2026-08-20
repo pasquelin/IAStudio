@@ -21,6 +21,7 @@ function renderBar(facets: FacetDescriptor[], props = {}) {
   const onChange = vi.fn()
   render(
     <CollectionBar
+      scId="assets"
       state={DEFAULT_COLLECTION_STATE}
       onChange={onChange}
       facets={facets}

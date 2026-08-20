@@ -251,7 +251,7 @@
       },
       "layerText": {
         "title": "Set a text layer’s words",
-        "description": "Changes what a text layer says, the size it says it at, or its colour. Refuses a layer that holds pixels rather than words, which the command would otherwise leave untouched."
+        "description": "Changes what a text layer says, the typeface and size it says it at, its colour, its alignment and its box. Refuses a layer that holds pixels rather than words, which the command would otherwise leave untouched."
       },
       "layerMove": {
         "title": "Reorder a layer",
@@ -487,7 +487,7 @@
       },
       "fontsList": {
         "title": "List the installed fonts",
-        "description": "Answers the font families this machine has, one weight each. It is what a text layer can be written in."
+        "description": "Answers the typefaces a text can be set in, the ones that ship with the studio first, then the ones installed on this machine. Each comes with where it is from, which setting a face needs as much as its name."
       },
       "favoritesList": {
         "title": "List the pinned recipes",
@@ -539,7 +539,7 @@
       },
       "sceneState": {
         "title": "Read the scene being edited",
-        "description": "Returns every node of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected and what lights the scene."
+        "description": "Returns every node of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the whole setting of the scene."
       },
       "nodeAdd": {
         "title": "Add an object to the scene",
@@ -660,6 +660,38 @@
       "viewDisplay": {
         "title": "Choose how the scene is drawn",
         "description": "Switches the main view to shaded, wireframe, material-only or one of the other ways of drawing. The menu command only cycles from one to the next; this one names which."
+      },
+      "layerLock": {
+        "title": "Lock a layer",
+        "description": "Sets or lifts the three padlocks of a layer, the one on its pixels, the one on its place and the one on its transparency. They stop the hand on the canvas; a value written by another action goes through, as it does from the panels."
+      },
+      "layerShape": {
+        "title": "Repaint a shape",
+        "description": "Changes the fill, the outline, the stroke width and the number of sides of a shape already drawn, without drawing it again. Taking away the fill and the outline at once is refused, as it would leave nothing to see."
+      },
+      "layerAdjustment": {
+        "title": "Set an adjustment layer",
+        "description": "Moves the one dial an adjustment layer carries — exposure, contrast, saturation or temperature. Naming any dial other than its own is refused rather than quietly dropped on the floor."
+      },
+      "worldEnvironment": {
+        "title": "Choose what lights the scene",
+        "description": "Lights the scene either by the procedural studio or by a sky of the project, named by its asset identifier, and sets how strong that lighting is and how far it is turned about the vertical."
+      },
+      "worldBackground": {
+        "title": "Choose what hangs behind the scene",
+        "description": "Puts the environment itself behind the scene, a flat colour, or nothing at all — the last leaving the background transparent, which is what a capture meant to be laid over something else needs."
+      },
+      "worldFog": {
+        "title": "Set the haze of the scene",
+        "description": "Turns the haze off, fades it between two distances, or thickens it with depth. The colour and the distances belong to the shape that was chosen, and are left exactly as they were otherwise."
+      },
+      "worldGround": {
+        "title": "Set the ground of the scene",
+        "description": "Shows or hides the ground the scene owns, and sets its colour, its side, its opacity and whether shadows land on it. That ground belongs to the document, unlike the grid, which is a setting of the application."
+      },
+      "worldRender": {
+        "title": "Set how the scene is rendered",
+        "description": "Chooses how high dynamic range is brought down to the screen, and by how many stops it is exposed. Both belong to the document rather than to the window that happens to be looking at it."
       },
       "gitStatus": {
         "title": "Read the repository",
@@ -931,7 +963,25 @@
       "tagName": "Tag name",
       "stashIndex": "Place in the shelf, newest first",
       "settings": "Settings to change, by section",
-      "accountId": "Account identifier"
+      "accountId": "Account identifier",
+      "lockPixels": "Lock the pixels of the layer",
+      "lockPosition": "Lock the place of the layer",
+      "lockAlpha": "Lock the transparency of the layer",
+      "shapeFilled": "The shape is filled",
+      "shapeFill": "Fill colour, as #rrggbb",
+      "shapeStroked": "The shape has an outline",
+      "shapeStroke": "Outline colour, as #rrggbb",
+      "strokeWidth": "Outline width, in pixels",
+      "fontFamily": "Name of the typeface, as the font list gives it",
+      "fontSource": "Where the typeface comes from, shipped with the studio or installed on the machine",
+      "environmentKind": "Where the lighting comes from: the studio or a sky",
+      "backgroundKind": "What hangs behind: the environment, a colour, or nothing",
+      "fogKind": "Shape of the haze: none, linear or exponential",
+      "fogDensity": "Density of the exponential haze",
+      "groundSize": "Side of the ground, in scene units",
+      "receiveShadow": "Shadows land on the ground",
+      "toneMapping": "How high dynamic range is brought down to the screen",
+      "toneExposure": "Exposure multiplier of the render, 1 leaving it as it is"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

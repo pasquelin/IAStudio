@@ -10,9 +10,9 @@ import { ToggleField } from '@/design/ToggleField'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
 import {
+  DIAL_RANGE,
   IDENTITY,
   isGroup,
-  type AdjustmentKind,
   type Layer,
   type Transform,
 } from '@/engines/canvas/canvasState'
@@ -36,15 +36,6 @@ export type LayerInspectorProps = { documentId: string; layer: Layer }
 
 /** An opacity nobody has touched. Named rather than written twice, once per row. */
 const FULL = 1
-
-/** How far each dial swings. Its name is its key: `AdjustmentKind` is a subset of the stack. */
-const DIAL_RANGE: Readonly<Record<AdjustmentKind, { min: number; max: number }>> = {
-  // Stops, so ±3 is the range a photograph is recoverable within.
-  exposure: { min: -3, max: 3 },
-  contrast: { min: 0, max: 2 },
-  saturation: { min: 0, max: 2 },
-  temperature: { min: -1, max: 1 },
-}
 
 /**
  * One layer, read out and edited. Its own section rather than the scene's `TransformSection`:

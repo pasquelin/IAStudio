@@ -12,6 +12,7 @@ import {
   type FacetOption,
 } from '@/helpers/collectionState'
 import { HINT_TOP, TIP_BOTTOM } from '@/helpers/tooltip'
+import { fieldHandle } from '../scHandle'
 import { CONTROL, PANEL_BAR, PANEL_HEAD } from '../styles'
 import { ToolButton } from '../ToolButton'
 import { UiIcon } from '../UiIcon'
@@ -30,6 +31,12 @@ const FACETS_BEFORE_FOLD = 2
 export type CollectionLayout = 'stacked' | 'inline' | 'header'
 
 export type CollectionBarProps = {
+  /**
+   * Which collection this bar drives, for the handles it writes. Required, and that is the point:
+   * three panels can be docked at once, and one shared `field:collection.search` would leave a
+   * script driving whichever of the three the DOM happened to hold first.
+   */
+  scId: string
   state: CollectionState
   onChange: (next: CollectionState) => void
   facets?: readonly FacetDescriptor[]
@@ -52,6 +59,7 @@ export type CollectionBarProps = {
 
 /** Search, facets, sort, view and thumbnail size. It filters nothing — it reports intent. */
 export function CollectionBar({
+  scId,
   state,
   onChange,
   facets,
@@ -82,6 +90,7 @@ export function CollectionBar({
       />
       <input
         type="search"
+        data-sc={fieldHandle(`${scId}.search`)}
         value={state.search}
         // The placeholder says it, but only until the field is typed in.
         {...TIP_BOTTOM(t('collection.search'), undefined, t('collection.searchHint'))}
@@ -99,7 +108,7 @@ export function CollectionBar({
         layout="bar"
         label={facet.label}
         // The facet's own key: its label is what the panel that declared it chose to show.
-        scId={`collection.facet.${facet.key}`}
+        scId={`${scId}.facet.${facet.key}`}
         hint={TIP_BOTTOM(facet.label)}
         // The facet's own name stands for "no choice": once a value is picked, the closed control
         // shows the value and what it filters on is nowhere on screen.
@@ -117,7 +126,7 @@ export function CollectionBar({
     <SelectField
       layout="bar"
       label={t('collection.sort')}
-      scId="collection.sort"
+      scId={`${scId}.sort`}
       hint={TIP_BOTTOM(t('collection.sort'))}
       options={sorts}
       value={state.sort ?? sorts[0]?.value ?? ''}

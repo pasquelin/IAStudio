@@ -29,6 +29,9 @@ export type LayerLocks = {
 
 export const UNLOCKED: LayerLocks = { pixels: false, position: false, alpha: false }
 
+/** The three, in the order every surface offers them — the panel's rows, and `layer.lock`. */
+export const LOCK_KEYS: readonly (keyof LayerLocks)[] = ['pixels', 'position', 'alpha']
+
 export type Rect = { x: number; y: number; width: number; height: number }
 
 /** Origin is a fraction of the bounding box, so a resize does not move the pivot. */
@@ -117,6 +120,18 @@ export const ADJUSTMENT_KINDS: readonly AdjustmentKind[] = [
   'saturation',
   'temperature',
 ]
+
+/**
+ * How far each dial swings. Beside the kinds rather than in the panel that draws them: the slider
+ * and the schema of `layer.adjustment` publish the same range, and a second copy would drift.
+ */
+export const DIAL_RANGE: Readonly<Record<AdjustmentKind, { min: number; max: number }>> = {
+  // Stops, so ±3 is the range a photograph is recoverable within.
+  exposure: { min: -3, max: 3 },
+  contrast: { min: 0, max: 2 },
+  saturation: { min: 0, max: 2 },
+  temperature: { min: -1, max: 1 },
+}
 
 export type AdjustmentLayer = LayerBase & {
   kind: 'adjustment'

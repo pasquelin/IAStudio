@@ -7,6 +7,7 @@ import { TIP_RIGHT } from '@/helpers/tooltip'
 import type { CanvasTool } from '@/engines/canvas/canvasTool'
 import { BRUSH_SETTINGS_BY_TOOL, BRUSH_SIZE, type BrushSettings } from '@/engines/canvas/brush'
 import { MenuButton } from '@/design/MenuButton'
+import { fieldHandle } from '@/design/scHandle'
 import { SliderField } from '@/design/SliderField'
 
 /**
@@ -58,6 +59,7 @@ export function ImageDocumentBrush({
       */}
       <input
         type="color"
+        data-sc={fieldHandle('brush.color')}
         {...TIP_RIGHT(t('imageTools.color'), undefined, t('imageTools.colorHint'))}
         value={colourOf(brush.color)}
         onChange={event =>

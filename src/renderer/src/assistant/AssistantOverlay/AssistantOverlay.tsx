@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ASSISTANT_MODELS } from '@shared/domain/assistant'
 import { Button } from '@/design/Button'
 import { QuietNote } from '@/design/QuietNote'
+import { fieldHandle } from '@/design/scHandle'
 import { SelectField } from '@/design/SelectField'
 import { Spinner } from '@/design/Spinner'
 import { ToolButton } from '@/design/ToolButton'
@@ -241,6 +242,9 @@ export function AssistantOverlay() {
               block around it is the field. */}
             <textarea
               ref={field}
+              // The one field of the studio a client most wants to fill, and it had no name a
+              // script could reach: the guard reads per FILE, and the model picker below it answers.
+              data-sc={fieldHandle('assistant.draft')}
               rows={3}
               value={draft}
               placeholder={t('assistant.placeholder')}
