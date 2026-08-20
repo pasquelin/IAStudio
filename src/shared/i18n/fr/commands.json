@@ -132,6 +132,10 @@
       "title": "Mode de rendu",
       "help": "Fait défiler ce que le viewport dessine : les surfaces, leurs arêtes seules, ou les deux ensemble. Le menu du bouton permet de choisir directement."
     },
+    "sceneCapture": {
+      "title": "Capturer la vue",
+      "help": "Enregistre une image de la vue 3D dans les images du projet — sans la grille, les poignées ni les rails. Le menu propose des définitions plus grandes que celle du panneau."
+    },
     "sceneAdd": {
       "title": "Ajouter",
       "help": "Ouvre la liste de ce que la scène peut recevoir — mailles, lumières et objets. Un clic droit dans le vide ouvre la même liste."

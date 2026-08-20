@@ -11,12 +11,17 @@ import {
   DEFAULT_EXP2_FOG,
   DEFAULT_GROUND,
   DEFAULT_LINEAR_FOG,
+  DEFAULT_PLAY,
   DEFAULT_WORLD,
   ENV_INTENSITY,
   EXPOSURE,
+  EYE_HEIGHT,
   FOG_DENSITY,
+  GRAVITY,
   GROUND_SIZE,
+  MOVE_SPEED,
   NO_FOG,
+  PLAY_CAMERAS,
   readEnvironment,
   STUDIO_ENVIRONMENT,
   TONE_MAPPINGS,
@@ -24,6 +29,7 @@ import {
   type EnvironmentRef,
   type FogDescriptor,
   type GroundDescriptor,
+  type ScenePlay,
   type SceneWorld,
 } from '@shared/domain/scene'
 import { isRecord, oneOf, readBoolean, readNumber, readString } from '@shared/guards'
@@ -51,6 +57,7 @@ export function readWorld(value: unknown, legacyEnvironment: unknown): SceneWorl
     toneMapping: oneOf(TONE_MAPPINGS, held.toneMapping, DEFAULT_WORLD.toneMapping),
     exposure: readBounded(held, 'exposure', DEFAULT_WORLD.exposure, EXPOSURE),
     ground: readGround(held.ground),
+    play: readPlay(held.play),
   }
 }
 
@@ -96,6 +103,22 @@ function readFog(value: unknown): FogDescriptor {
     }
   }
   return NO_FOG
+}
+
+/**
+ * The play settings a file holds. Read like everything else here although nothing flies a scene
+ * yet: a document written by a template says how it means to be walked, and a reader that
+ * dropped it would lose that at the first save.
+ */
+function readPlay(value: unknown): ScenePlay {
+  if (!isRecord(value)) return DEFAULT_PLAY
+
+  return {
+    camera: oneOf(PLAY_CAMERAS, value.camera, DEFAULT_PLAY.camera),
+    eyeHeight: readBounded(value, 'eyeHeight', DEFAULT_PLAY.eyeHeight, EYE_HEIGHT),
+    moveSpeed: readBounded(value, 'moveSpeed', DEFAULT_PLAY.moveSpeed, MOVE_SPEED),
+    gravity: readBounded(value, 'gravity', DEFAULT_PLAY.gravity, GRAVITY),
+  }
 }
 
 function readGround(value: unknown): GroundDescriptor {

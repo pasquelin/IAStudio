@@ -175,7 +175,8 @@
     "imageTools": "Outils",
     "usage": "Consommation…",
     "sceneDisplay": "Mode de rendu",
-    "sceneView": "Point de vue"
+    "sceneView": "Point de vue",
+    "sceneCapture": "Capturer la vue"
   },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"

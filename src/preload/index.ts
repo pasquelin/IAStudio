@@ -21,6 +21,7 @@ import {
   type SceneAddRequest,
   type SceneDisplayRequest,
   type SceneViewRequest,
+  type SceneCaptureCommand,
   type SceneExportCommand,
   type SkyboxExportCommand,
   type TextureExportCommand,
@@ -164,6 +165,7 @@ const bridge: StudioBridge = {
     saveLayered: request => ipcRenderer.invoke(CHANNELS.assetsSaveLayered, request),
     readLayered: assetId => ipcRenderer.invoke(CHANNELS.assetsReadLayered, assetId),
     saveTexture: request => ipcRenderer.invoke(CHANNELS.assetsSaveTexture, request),
+    installBundledTextures: () => ipcRenderer.invoke(CHANNELS.texturesInstallBundled),
     extractTextures: assetId => ipcRenderer.invoke(CHANNELS.assetsExtractTextures, assetId),
     update: (assetId, changes) => ipcRenderer.invoke(CHANNELS.assetsUpdate, assetId, changes),
     remove: (assetIds, alsoRemote) =>
@@ -275,6 +277,7 @@ const bridge: StudioBridge = {
     onSceneView: callback => subscribe<SceneViewRequest>(EVENTS.sceneView, callback),
     onSceneDisplay: callback => subscribe<SceneDisplayRequest>(EVENTS.sceneDisplay, callback),
     onSceneExport: callback => subscribe<SceneExportCommand>(EVENTS.sceneExport, callback),
+    onSceneCapture: callback => subscribe<SceneCaptureCommand>(EVENTS.sceneCapture, callback),
     onTextureExport: callback => subscribe<TextureExportCommand>(EVENTS.textureExport, callback),
     onSkyboxExport: callback => subscribe<SkyboxExportCommand>(EVENTS.skyboxExport, callback),
   },

@@ -39,6 +39,46 @@ export function flipInto(
   }
 }
 
+/**
+ * The 256 values of a linear channel, encoded to sRGB. Built once: the alternative is a `pow`
+ * per subpixel, which is 25 million of them on a 4K still.
+ */
+const SRGB = new Uint8Array(256)
+for (let value = 0; value < 256; value += 1) {
+  const linear = value / 255
+  const encoded = linear <= 0.0031308 ? linear * 12.92 : 1.055 * linear ** (1 / 2.4) - 0.055
+  SRGB[value] = Math.round(encoded * 255)
+}
+
+/**
+ * The same flip, encoding the colour on the way — for pixels read back out of a RENDER TARGET.
+ *
+ * three.js writes the working space into a target whatever its texture says (`WebGLRenderer`,
+ * the colour space it picks for anything that is not the canvas), so those pixels are LINEAR
+ * while a PNG is read as sRGB. Written straight out, a still comes back visibly washed out and
+ * dark in the mid-tones.
+ *
+ * Alpha is left alone: it is linear by definition, and encoding it would make everything
+ * transparent slightly opaque.
+ */
+export function flipToSrgbInto(
+  into: Uint8ClampedArray,
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+): void {
+  flipInto(into, pixels, width, height)
+
+  // Flat over the flipped buffer rather than folded into the loop above: the row arithmetic is
+  // written once, and a run of `set` per row is what a JavaScript engine turns into a memcpy.
+  // Alpha is skipped — it is linear by definition, and encoding it would lift every transparency.
+  for (let at = 0; at < into.length; at += 4) {
+    into[at] = SRGB[into[at] ?? 0] ?? 0
+    into[at + 1] = SRGB[into[at + 1] ?? 0] ?? 0
+    into[at + 2] = SRGB[into[at + 2] ?? 0] ?? 0
+  }
+}
+
 /** The same, into a buffer of its own — what a test reads, and what a one-off caller wants. */
 export function flipRows(pixels: Uint8Array, width: number, height: number): Uint8ClampedArray {
   const flipped = new Uint8ClampedArray(pixels.length)

@@ -157,6 +157,31 @@
     "renameHint": "Changes the document’s name everywhere it is written — its file included",
     "deleteHint": "Removes the document from the project, its file included",
     "nameField": "Name",
+    "templateField": "Starting template",
+    "templateGroups": {
+      "general": "General",
+      "character": "Character"
+    },
+    "templates": {
+      "empty": "Empty",
+      "basic": "Basic",
+      "photoStudio": "Photo studio",
+      "cinematic": "Cinematic",
+      "archvis": "Architecture",
+      "firstPerson": "First person",
+      "thirdPerson": "Third person",
+      "topDown": "Top down"
+    },
+    "templateHints": {
+      "empty": "Three lights, and nothing else to take away",
+      "basic": "A floor, a sun and a camera: enough to judge a model straight away",
+      "photoStudio": "A backdrop, three lights and a framed camera, to present an object",
+      "cinematic": "A camera on a rail, a low key light and haze, for a move",
+      "archvis": "A sky, a low sun and a wide floor, camera at eye height",
+      "firstPerson": "The camera at eye height, ready to walk",
+      "thirdPerson": "The camera behind a stand-in's shoulder",
+      "topDown": "The camera looking down on the scene"
+    },
     "folderField": "Location",
     "folderHint": "Chooses the project folder the document will be saved in",
     "folderEmpty": "No sub-folder",

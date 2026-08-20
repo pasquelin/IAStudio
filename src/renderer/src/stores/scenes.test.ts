@@ -12,6 +12,7 @@ import {
   isSceneDirty,
   sceneOf,
   sceneStore,
+  seedSceneTemplate,
   useScenes,
 } from './scenes'
 
@@ -156,6 +157,29 @@ describe('ensure', () => {
     const first = sceneOf(useScenes.getState(), 'doc-1').nodes[0]?.id
     const second = sceneOf(useScenes.getState(), 'doc-2').nodes[0]?.id
     expect(first).not.toBe(second)
+  })
+})
+
+describe('seedSceneTemplate', () => {
+  beforeEach(() => {
+    clearScenes()
+  })
+
+  it('fills a new document with what its template opens on', () => {
+    seedSceneTemplate('doc-1', 'topDown')
+    const scene = sceneOf(useScenes.getState(), 'doc-1')
+
+    expect(scene.nodes.some(node => node.type === 'camera')).toBe(true)
+    expect(scene.world.play.camera).toBe('topDown')
+  })
+
+  // The tab may already have been restored from disk by the time this runs on a slow machine,
+  // and a template written over a saved scene would be the work lost.
+  it('never writes over a scene that is already there', () => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    seedSceneTemplate('doc-1', 'basic')
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes).toEqual([box])
   })
 })
 

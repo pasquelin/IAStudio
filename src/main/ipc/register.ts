@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { app } from 'electron'
 import { registerAssetHandlers } from '@main/assets/handlers'
+import { registerBundledTextureHandlers } from '@main/assets/bundledTextures'
+import { bundledTextures, resourcesRoot } from '@main/resources'
 import { registerDiagnosticsHandlers } from '@main/diagnostics/handlers'
 import { createInstalledFonts } from '@main/fonts/disk'
 import { registerAnimationHandlers } from '@main/animations'
@@ -72,6 +74,12 @@ export function registerIpc(services: Services): void {
   })
   registerScenarioHandlers(services)
   registerProjectHandlers({ ...services, record: entry => services.journal.record(entry) })
+  registerBundledTextureHandlers({
+    catalog: () => services.project.catalog(),
+    assets: services.assets,
+    newAssetId: services.newAssetId,
+    folder: () => bundledTextures(resourcesRoot()),
+  })
   const git = registerGitHandlers({
     // The same file and the same keychain the API key already uses. A second store would be a
     // second place a secret can be left behind on a machine somebody stops trusting.

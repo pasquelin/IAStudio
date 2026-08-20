@@ -654,6 +654,7 @@
       "filePath": "Path inside the project, with / between segments",
       "filePaths": "Paths inside the project, with / between segments",
       "folderPath": "Folder path",
+      "template": "What the scene opens on",
       "hidden": "Include hidden entries",
       "jobId": "Job identifier",
       "timeoutMs": "How long to wait at most, in milliseconds",

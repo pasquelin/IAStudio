@@ -1,6 +1,7 @@
 import type { Asset } from '@shared/domain/asset'
 import { ASSET_HOST, POSTER_HOST, THUMB_HOST } from '@shared/domain/asset'
 import { ANIMATION_HOST } from '@shared/domain/animationLibrary'
+import { TEMPLATE_HOST } from '@shared/domain/sceneTemplate'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
 import { orWhenGone } from '@main/project/store'
 import { posterFileOf, servedFileOf, type AssetResolvers } from './protocol'
@@ -15,6 +16,8 @@ export type AssetResolverDeps = {
   thumbnailOf: (relative: string) => Promise<string | null>
   /** A folder shipped beside the app, which is why no project takes part in answering. */
   bundledAnimation: (id: string) => Promise<string | null>
+  /** The same, for the still drawn of a scene template — named by its FILE, not by an id. */
+  bundledTemplate: (file: string) => Promise<string | null>
 }
 
 /**
@@ -46,5 +49,8 @@ export function createAssetResolvers(deps: AssetResolverDeps): AssetResolvers {
     // A folder's name alone means its clip, a name going deeper means that very file: the
     // document holds the animation's NAME, and nothing in it says which file is inside.
     [ANIMATION_HOST]: id => deps.bundledAnimation(id),
+    // Absent until someone has drawn it: the window then draws the template's glyph instead,
+    // which is what makes shipping a picture per template optional rather than required.
+    [TEMPLATE_HOST]: file => deps.bundledTemplate(file),
   }
 }

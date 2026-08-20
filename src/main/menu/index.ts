@@ -79,6 +79,7 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
       viewFrom: request => sendToFront(EVENTS.sceneView, request),
       setDisplay: request => sendToFront(EVENTS.sceneDisplay, request),
       exportScene: command => sendToFront(EVENTS.sceneExport, command),
+      captureScene: command => sendToFront(EVENTS.sceneCapture, command),
       exportTexture: command => sendToFront(EVENTS.textureExport, command),
       exportSkybox: command => sendToFront(EVENTS.skyboxExport, command),
     },

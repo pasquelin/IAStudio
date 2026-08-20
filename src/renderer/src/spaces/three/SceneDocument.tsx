@@ -14,11 +14,12 @@ import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { addNodeTo } from '@/hooks/useAddNode'
 import { useAnimationPlayback } from '@/hooks/useAnimationPlayback'
+import { useCheckerTextures } from '@/hooks/useCheckerTextures'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useExportMenu } from '@/hooks/useExportMenu'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
-import { useDocumentIsInFront } from '@/stores/documents'
+import { documentExportName, useDocumentIsInFront, useDocuments } from '@/stores/documents'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useSettings } from '@/stores/settings'
@@ -28,7 +29,9 @@ import { assetVersionOf } from '@/stores/assets'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import type { NodeMove, SceneNode } from '@/engines/scene/sceneState'
 import { useModelClips } from '@/stores/modelClips'
-import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
+import { forgetSceneEngine, registerSceneEngine, sceneEngineOf } from '@/stores/sceneEngines'
+import { bytesToBase64 } from '@/helpers/base64'
+import { DEFAULT_CAPTURE_QUALITY, type CaptureQuality } from '@shared/domain/sceneCapture'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { addModelTo, isSceneDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { displayOfPane, useSceneViews, sceneViewOf } from '@/stores/sceneViews'
@@ -73,6 +76,29 @@ async function exportScene(
     if (encoded) await bridge.scene.export({ name: folder, format, data: encoded.bytes })
   } catch (error) {
     reportFailure('scene.export', format, error)
+  }
+}
+
+/**
+ * A still of the view, into the project's pictures — where every other image of the project
+ * lives, so it is one drag away from a montage and one click away from being posted.
+ *
+ * The picture is named after the document: two captures of one scene are two assets, the second
+ * suffixed by the writer, which is what a series of takes wants.
+ */
+async function captureView(documentId: string, quality: CaptureQuality): Promise<void> {
+  const bridge = getBridge()
+  const engine = sceneEngineOf(documentId)
+  if (!bridge || !engine) return
+
+  try {
+    const png = await engine.captureStill(quality)
+    await bridge.assets.savePicture({
+      name: documentExportName(useDocuments.getState(), documentId, 'scene'),
+      png: bytesToBase64(png),
+    })
+  } catch (error) {
+    reportFailure('scene.capture', quality, error)
   }
 }
 
@@ -352,11 +378,23 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   // scene's ONE clock, and closing a panel must not stop a character walking in the viewport.
   useAnimationPlayback(documentId, view.playing, scene.animation.duration)
 
+  // Here rather than in the studio: a project only ever painted in has no business gaining four
+  // texture assets, and by the time a hand reaches the Add menu the ids are known.
+  useCheckerTextures()
+
   // Subscribed here rather than in `useNativeMenu`: an export reads the three.js objects, and
   // this component is the only thing that holds them.
   useExportMenu(active, bridge =>
     bridge.menu.onSceneExport(({ format, scope }) => {
       void exportScene(documentId, format, scope)
+    }),
+  )
+
+  // The same reason, and the same arming: a capture reads the live renderer, and two open scenes
+  // would otherwise both answer one click of the row.
+  useExportMenu(active, bridge =>
+    bridge.menu.onSceneCapture(({ quality }) => {
+      void captureView(documentId, quality)
     }),
   )
 
@@ -408,6 +446,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return setLocalFrame(current => !current)
         case 'scene.display':
           return cycleDisplay()
+        // The keyboard and the palette take the view's own size; the menu rows carry the rest.
+        case 'scene.capture':
+          return void captureView(documentId, DEFAULT_CAPTURE_QUALITY)
         case 'scene.skeletons':
           return useSceneViews.getState().setSkeletons(documentId, !view.skeletons)
         case 'scene.poseMode':

@@ -1,6 +1,7 @@
 import { action, type ActionCommitment, type AssistantAction } from './assistantAction'
 import { COMMAND_REGISTRY, type CommandId } from './command'
 import { MODEL_FAMILIES } from './model'
+import { SCENE_TEMPLATE_IDS } from './sceneTemplate'
 import { WORKSPACE_IDS } from './workspace'
 
 /**
@@ -80,6 +81,15 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
       // creation puts a field on screen that only a person can fill, and the call waits it out.
       { key: 'title', kind: 'text', labelKey: 'assistant.fields.title', required: false },
       { key: 'folder', kind: 'text', labelKey: 'assistant.fields.folderPath', required: false },
+      // What a scene opens on. Read only when a title was given: with none the window opens, and
+      // the person in front of it picks the template themselves.
+      {
+        key: 'template',
+        kind: 'choice',
+        labelKey: 'assistant.fields.template',
+        required: false,
+        options: SCENE_TEMPLATE_IDS,
+      },
     ],
   }),
   action({

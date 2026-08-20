@@ -1,7 +1,14 @@
 import { mdiCubeOutline } from '@mdi/js'
-import type { LightDescriptor, Vector3 } from '@shared/domain/scene'
+import type {
+  GeometryDescriptor,
+  LightDescriptor,
+  MaterialDescriptor,
+  Transform,
+  Vector3,
+} from '@shared/domain/scene'
 import { DEFAULT_CAMERA, DEFAULT_PATH } from '@shared/domain/scene'
 import { newId } from '@/helpers/ids'
+import { defaultMeshMaterial } from './checkerTextures'
 import { lightByKind } from './lightTypes'
 import { primitiveByKind } from './meshPrimitives'
 import { CAMERA_ICON, GROUP_ICON, MODEL_ICON, PATH_ICON, SPRITE_ICON, TEXT_ICON } from './nodeKinds'
@@ -21,6 +28,41 @@ import {
  */
 function classNameOf(kind: string): string {
   return `${kind.charAt(0).toUpperCase()}${kind.slice(1)}`
+}
+
+/**
+ * A solid, named after its class like every other node. The one place a mesh is built: the Add
+ * menu and the scene templates both come through here, so neither can hand out a mesh wearing a
+ * material the other does not — which is what the working texture depends on.
+ */
+export function meshNode(
+  geometry: GeometryDescriptor,
+  {
+    transform = IDENTITY_TRANSFORM,
+    material = defaultMeshMaterial(),
+    castShadow,
+  }: MeshOptions = {},
+): SceneNode {
+  return {
+    id: newId(),
+    parentId: null,
+    name: classNameOf(geometry.kind),
+    visible: true,
+    transform,
+    ...shadowDefaults({ type: 'mesh' }),
+    ...(castShadow === undefined ? {} : { castShadow }),
+    type: 'mesh',
+    geometry,
+    material,
+  }
+}
+
+/** What a caller may settle about a mesh. Everything left out is what the Add menu would give. */
+export type MeshOptions = {
+  transform?: Transform
+  material?: MaterialDescriptor
+  /** A floor throws no shadow, and taking it out of the depth pass is the point of saying so. */
+  castShadow?: boolean
 }
 
 export function lightNode(light: LightDescriptor, position: Vector3): SceneNode {
@@ -54,16 +96,19 @@ export function modelNode(assetId: string, name: string): SceneNode {
   }
 }
 
-/** A camera of the scene: what a render looks through, placed like anything else. */
-export function cameraNode(): SceneNode {
+/**
+ * A camera of the scene: what a render looks through, placed like anything else. Back and up a
+ * little by default — a camera born inside the object at the centre would show nothing at all.
+ */
+export function cameraNode(
+  transform: Transform = { ...IDENTITY_TRANSFORM, position: { x: 0, y: 2, z: 6 } },
+): SceneNode {
   return {
     id: newId(),
     parentId: null,
     name: 'Camera',
     visible: true,
-    // Back and up a little, looking at the origin is the job of whoever aims it — a camera born
-    // inside the object at the centre would show nothing at all.
-    transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 2, z: 6 } },
+    transform,
     ...shadowDefaults({ type: 'camera' }),
     type: 'camera',
     camera: DEFAULT_CAMERA,
@@ -158,19 +203,7 @@ export function iconOf(node: SceneNode): string {
  */
 export function createNodeOf(kind: string): SceneNode | null {
   const primitive = primitiveByKind(kind)
-  if (primitive) {
-    return {
-      id: newId(),
-      parentId: null,
-      name: classNameOf(kind),
-      visible: true,
-      transform: IDENTITY_TRANSFORM,
-      ...shadowDefaults({ type: 'mesh' }),
-      type: 'mesh',
-      geometry: primitive.create(),
-      material: DEFAULT_MATERIAL,
-    }
-  }
+  if (primitive) return meshNode(primitive.create())
 
   if (kind === 'camera') return cameraNode()
   if (kind === 'sprite') return spriteNode()

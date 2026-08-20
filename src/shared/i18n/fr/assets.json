@@ -157,6 +157,31 @@
     "renameHint": "Change le nom du document, partout où il est écrit — son fichier compris",
     "deleteHint": "Retire le document du projet, son fichier compris",
     "nameField": "Nom",
+    "templateField": "Modèle de départ",
+    "templateGroups": {
+      "general": "Général",
+      "character": "Personnage"
+    },
+    "templates": {
+      "empty": "Vide",
+      "basic": "Base",
+      "photoStudio": "Studio photo",
+      "cinematic": "Cinéma",
+      "archvis": "Architecture",
+      "firstPerson": "1re personne",
+      "thirdPerson": "3e personne",
+      "topDown": "Vue de dessus"
+    },
+    "templateHints": {
+      "empty": "Trois lumières, et rien d’autre à retirer",
+      "basic": "Un sol, un soleil et une caméra : de quoi juger un modèle tout de suite",
+      "photoStudio": "Un fond, trois lumières et une caméra cadrée, pour présenter un objet",
+      "cinematic": "Une caméra sur rail, une lumière basse et de la brume, pour un mouvement",
+      "archvis": "Un ciel, un soleil incliné et un sol large, caméra à hauteur d’œil",
+      "firstPerson": "La caméra à hauteur d’œil, prête à marcher",
+      "thirdPerson": "La caméra derrière l’épaule d’une silhouette",
+      "topDown": "La caméra en plongée, au-dessus de la scène"
+    },
     "folderField": "Emplacement",
     "folderHint": "Choisit le dossier du projet où le document sera enregistré",
     "folderEmpty": "Aucun sous-dossier",

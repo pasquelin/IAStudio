@@ -6,6 +6,7 @@ import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { useSelection } from '@/stores/selection'
+import { sceneOf, useScenes } from '@/stores/scenes'
 import { createDocumentIn } from './newDocument'
 
 const openDocument = vi.fn()
@@ -202,6 +203,33 @@ describe('createDocumentIn', () => {
       const made = await createDocumentIn('3d', { title: 'Niveau' })
 
       expect(made?.path).toBe('documents/Niveau.gltf')
+    })
+  })
+
+  // Filled before the tab opens: a scene that held nothing would be given the studio default by
+  // `restoreDocument`, and the template would be lost between the window and the viewport.
+  describe('what a new scene opens on', () => {
+    it('holds the template the window answered with', async () => {
+      answering({ title: 'Plateau', folder: 'documents', template: 'topDown' })
+
+      const made = await createDocumentIn('3d')
+
+      expect(sceneOf(useScenes.getState(), made?.id ?? '').world.play.camera).toBe('topDown')
+    })
+
+    it('takes the studio default for a caller that names none', async () => {
+      const made = await createDocumentIn('3d', { title: 'Niveau' })
+      const scene = sceneOf(useScenes.getState(), made?.id ?? '')
+
+      // `basic`: a floor, a sun, a fill and a camera.
+      expect(scene.nodes.map(node => node.type)).toEqual(['mesh', 'light', 'light', 'camera'])
+    })
+
+    it('leaves the other kinds alone', async () => {
+      const made = await createDocumentIn('image', { title: 'Planche' })
+
+      expect(made?.kind).toBe('image')
+      expect(sceneOf(useScenes.getState(), made?.id ?? '').nodes).toEqual([])
     })
   })
 })

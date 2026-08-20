@@ -8,6 +8,7 @@ vi.mock('electron', () => ({ net: {}, protocol: {} }))
 const { createAssetResolvers } = await import('./assetResolvers')
 const { ASSET_HOST, POSTER_HOST, THUMB_HOST } = await import('@shared/domain/asset')
 const { FAVORITE_HOST } = await import('@shared/domain/favorite')
+const { TEMPLATE_HOST } = await import('@shared/domain/sceneTemplate')
 const { CATALOGUE_CLOSED } = await import('@main/project/catalogClient')
 const { NoProjectError } = await import('@main/project/store')
 
@@ -30,6 +31,7 @@ const resolversReading = (findAsset: () => Promise<Asset | null>) =>
     favouriteThumbnail: () => '/userData/favorites/favorite_1.png',
     thumbnailOf: () => Promise.resolve(null),
     bundledAnimation: id => Promise.resolve(`/resources/animations/${id}`),
+    bundledTemplate: file => Promise.resolve(`/resources/templates/${file}`),
   })
 
 describe('what the asset scheme resolves', () => {
@@ -52,6 +54,7 @@ describe('what the asset scheme resolves', () => {
       favouriteThumbnail: () => null,
       thumbnailOf: () => Promise.resolve(null),
       bundledAnimation: id => Promise.resolve(`/resources/animations/${id}`),
+    bundledTemplate: file => Promise.resolve(`/resources/templates/${file}`),
     })
 
     await expect(resolvers[ASSET_HOST]?.('asset-1')).resolves.toBeNull()
@@ -92,6 +95,7 @@ describe('what the asset scheme resolves', () => {
       favouriteThumbnail: () => '/userData/favorites/favorite_1.png',
       thumbnailOf: relative => Promise.resolve(`${PROJECT}/.index/thumbs/${relative}.png`),
       bundledAnimation: id => Promise.resolve(`/resources/animations/${id}`),
+      bundledTemplate: file => Promise.resolve(`/resources/templates/${file}`),
     })
 
     await expect(resolvers[FAVORITE_HOST]?.('favorite_1')).resolves.toBe(
@@ -99,6 +103,23 @@ describe('what the asset scheme resolves', () => {
     )
     await expect(resolvers[THUMB_HOST]?.('folder/file.png')).resolves.toBe(
       `${PROJECT}/.index/thumbs/folder/file.png.png`,
+    )
+  })
+
+  // Shipped beside the app and common to every project, like the animations: the window asks
+  // for one before any project is open, when the new-document window is drawing its tiles.
+  it('serves a template still with no project open', async () => {
+    const resolvers = createAssetResolvers({
+      projectPath: () => null,
+      findAsset: () => Promise.resolve(null),
+      favouriteThumbnail: () => null,
+      thumbnailOf: () => Promise.resolve(null),
+      bundledAnimation: id => Promise.resolve(`/resources/animations/${id}`),
+      bundledTemplate: file => Promise.resolve(`/resources/templates/${file}`),
+    })
+
+    await expect(resolvers[TEMPLATE_HOST]?.('basic.png')).resolves.toBe(
+      '/resources/templates/basic.png',
     )
   })
 })

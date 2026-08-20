@@ -166,6 +166,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       // every caller of it falls back to opening a flat picture.
       readLayered: () => Promise.resolve(null),
       saveTexture: () => Promise.reject(new Error('no project')),
+      installBundledTextures: () => Promise.resolve([]),
       extractTextures: () => Promise.reject(new Error('no project')),
       update: () => Promise.reject(new Error('no project')),
       remove: () => Promise.resolve(),
@@ -307,6 +308,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onSceneView: noSubscription,
       onSceneDisplay: noSubscription,
       onSceneExport: noSubscription,
+      onSceneCapture: noSubscription,
       onTextureExport: noSubscription,
       onSkyboxExport: noSubscription,
       ...overrides.menu,

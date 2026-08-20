@@ -13,6 +13,7 @@ import {
   VIEW_DIRECTIONS,
   VIEWPORT_QUALITIES,
 } from '../domain/scene'
+import { CAPTURE_QUALITIES } from '../domain/sceneCapture'
 import { TOOL_PLACEMENTS } from '../domain/tool'
 import { ASSET_BADGES } from '../domain/asset'
 import { FILE_DOMAINS } from '../domain/fileRole'
@@ -1168,6 +1169,9 @@ const DYNAMIC_KEYS: readonly string[] = [
     `sceneViews.${direction}Hint`,
   ]),
   ...explained('sceneDisplay.', DISPLAY_MODES),
+  // The definitions the capture row offers. Composed in the MAIN process, out of reach of the
+  // renderer's guard — a fifth one without its line would read as its own key inside a menu.
+  ...CAPTURE_QUALITIES.map(quality => `sceneCaptureQualities.${quality}`),
   // The unions of `domain/scene` the 3D inspector composes a label AND a sentence from, none of
   // them listed until now: a value without its line reads as its own key, on the very rows a
   // select explains itself with.

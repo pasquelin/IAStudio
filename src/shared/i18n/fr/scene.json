@@ -203,6 +203,15 @@
     "topHint": "Regarde la scène de haut, sans perspective",
     "bottomHint": "Regarde la scène de dessous, sans perspective"
   },
+  "sceneCaptureQualities": {
+    "view": "Taille de la vue",
+    "fullHd": "1080p",
+    "quadHd": "1440p",
+    "ultraHd": "4K"
+  },
+  "sceneCapture": {
+    "failed": "La vue n’a pas pu être capturée."
+  },
   "sceneCounters": {
     "title": "Ce que la scène coûte",
     "triangles": "Triangles",

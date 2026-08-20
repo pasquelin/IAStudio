@@ -127,7 +127,8 @@ import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
 import { nearestProjected, type Projected, type ProjectedBone } from './bonePicking'
 import { rigStateOf, type RigState } from './rigState'
-import { evenSize, flipInto, frameTimes, type FilmRequest } from './film'
+import { evenSize, flipInto, flipToSrgbInto, frameTimes, type FilmRequest } from './film'
+import { captureSize, type CaptureQuality } from '@shared/domain/sceneCapture'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import {
   createModelCache,
@@ -1915,6 +1916,68 @@ export class SceneRenderer {
       restore()
       // Where the head was before the film was asked for: a render is not an edit.
       this.setPlayhead(head)
+      this.redraw()
+    }
+  }
+
+  /**
+   * One still of the view being worked in, encoded as a PNG — what is posted, and what a
+   * template thumbnail is drawn with.
+   *
+   * Off screen and through the same door a film goes through: `hideWorkshop` takes the grid, the
+   * gizmos, the rails and the light bodies out, so what comes back is the SCENE and not a
+   * picture of the workshop around it. The framing never changes — only the pixel count does.
+   *
+   * The colour is encoded on the way out (`flipToSrgbInto`): three writes the working space into
+   * a render target, and a linear buffer written straight into a PNG comes out washed out.
+   */
+  async captureStill(quality: CaptureQuality): Promise<Uint8Array> {
+    const gl = this.viewport.gl
+    if (!gl) throw new Error('this scene has no viewport mounted to capture from')
+
+    const camera = this.cameraInHand()
+    const canvas = gl.domElement
+    // The pane in hand when there are four of them; the whole canvas when there is one. A quad
+    // layout captured at the canvas's shape would show more scene than the pane it was asked of.
+    const pane = this.viewport.activePaneRegion()
+    const { width, height } = captureSize(
+      pane ?? { width: canvas.clientWidth, height: canvas.clientHeight },
+      quality,
+    )
+
+    const context = new OffscreenCanvas(width, height).getContext('2d')
+    if (!context) throw new Error('no 2d context to read the still back through')
+
+    // Antialiased, unlike a film's frames: a still is looked at, and the resolve happens at the
+    // end of `render` — so the read below already has the resolved texture. Capped at four,
+    // which is where the eye stops paying for the memory a 4K target multiplies.
+    const samples = Math.min(4, gl.capabilities.maxSamples)
+    const target = new WebGLRenderTarget(width, height, { samples })
+    const pixels = new Uint8Array(width * height * 4)
+
+    const restore = this.hideWorkshop()
+    const loan = aspectLoan(width, height)
+
+    try {
+      // Only a perspective one is lent an aspect, and only for the rounding: the size asked for
+      // keeps the view's own shape, so an orthographic frustum is already framed for it.
+      if (camera instanceof PerspectiveCamera) loan.frame(camera)
+
+      gl.setRenderTarget(target)
+      gl.render(this.viewport.scene, camera)
+      gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
+
+      const image = context.createImageData(width, height)
+      flipToSrgbInto(image.data, pixels, width, height)
+      context.putImageData(image, 0, 0)
+
+      const blob = await context.canvas.convertToBlob({ type: 'image/png' })
+      return new Uint8Array(await blob.arrayBuffer())
+    } finally {
+      gl.setRenderTarget(null)
+      target.dispose()
+      loan.restore()
+      restore()
       this.redraw()
     }
   }

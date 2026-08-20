@@ -10,6 +10,7 @@ import {
   MESH_ENTRIES,
   VIEW_DIRECTIONS,
 } from '@shared/domain/scene'
+import { CAPTURE_QUALITIES } from '@shared/domain/sceneCapture'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
@@ -26,6 +27,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   viewFrom: () => {},
   setDisplay: () => {},
   exportScene: () => {},
+  captureScene: () => {},
   exportTexture: () => {},
   exportSkybox: () => {},
   ...overrides,
@@ -177,6 +179,35 @@ describe('the 3D View rows', () => {
 
     activate(rows.find(row => row.label === 'Filaire'))
     expect(setDisplay).toHaveBeenCalledWith({ mode: 'wireframe' })
+  })
+
+  it('offers one capture row per definition, in the 3D workspace alone', () => {
+    expect(submenuOf(viewOf(), 'Capturer la vue')).toHaveLength(CAPTURE_QUALITIES.length)
+    expect(labels(viewOf({ workspace: 'video' }))).not.toContain('Capturer la vue')
+  })
+
+  it('captures at the definition the row names', () => {
+    const captureScene = vi.fn()
+    const rows = submenuOf(
+      submenuOf(menuTemplate(options({ actions: actions({ captureScene }) })), 'Affichage'),
+      'Capturer la vue',
+    )
+
+    activate(rows.find(row => row.label === '4K'))
+    expect(captureScene).toHaveBeenCalledWith({ quality: 'ultraHd' })
+  })
+
+  // The row at the view's own size IS the command, which is what makes the capture remappable —
+  // and what stops `can be reached` from calling a keyless command unreachable.
+  it('fires the command itself for the row that takes the view as it is', () => {
+    const runCommand = vi.fn()
+    const rows = submenuOf(
+      submenuOf(menuTemplate(options({ actions: actions({ runCommand }) })), 'Affichage'),
+      'Capturer la vue',
+    )
+
+    activate(rows.find(row => row.label === 'Taille de la vue'))
+    expect(runCommand).toHaveBeenCalledWith('scene.capture')
   })
 
   /**

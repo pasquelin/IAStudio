@@ -6,6 +6,8 @@ import { assetClip } from '@shared/domain/scene'
 import { newId } from '@/helpers/ids'
 import { modelNode } from '@/engines/scene/nodeFactory'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
+import { sceneFromTemplate } from '@/engines/scene/sceneTemplates'
+import type { SceneTemplateId } from '@shared/domain/sceneTemplate'
 import type { SelectionMode } from '@/helpers/selection'
 import { createDocumentStore } from './documentStore'
 import { useSelection } from './selection'
@@ -18,6 +20,16 @@ export const useScenes = store.use
 export const sceneOf = store.stateOf
 export const sceneHistoryOf = store.historyOf
 export const isSceneDirty = store.isDirty
+
+/**
+ * Fills a freshly made document with what its template opens on, before any editor mounts.
+ *
+ * `ensure`, so this never writes over a scene already there — and the state being present is
+ * exactly what stops `restoreDocument` from putting the studio default in its place.
+ */
+export function seedSceneTemplate(documentId: string, template: SceneTemplateId): void {
+  store.use.getState().ensure(documentId, () => sceneFromTemplate(template))
+}
 
 /**
  * A flag of an animation track, written without an entry in the history — how one works, not what

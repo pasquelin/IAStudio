@@ -26,6 +26,25 @@ describe('reading a world back', () => {
     expect(readWorld({ exposure: -4 }, undefined).exposure).toBe(0)
   })
 
+  // Nothing flies a scene yet, so this is what keeps a template's intent alive across a save.
+  it('keeps the play settings a template wrote, and bounds a hand-edited one', () => {
+    expect(readWorld({ play: { camera: 'topDown', moveSpeed: 6 } }, undefined).play).toEqual({
+      camera: 'topDown',
+      eyeHeight: 1.7,
+      moveSpeed: 6,
+      gravity: 0,
+    })
+    expect(readWorld({ play: { moveSpeed: 4000 } }, undefined).play.moveSpeed).toBe(50)
+  })
+
+  it('opens a document written before the play settings existed on the studio default', () => {
+    expect(readWorld({ envIntensity: 1 }, undefined).play).toEqual(DEFAULT_WORLD.play)
+  })
+
+  it('refuses a camera mode no player could honour', () => {
+    expect(readWorld({ play: { camera: 'helicopter' } }, undefined).play.camera).toBe('orbit')
+  })
+
   it('refuses a colour background with no colour rather than painting black', () => {
     expect(readWorld({ background: { kind: 'color' } }, undefined).background).toEqual({
       kind: 'environment',

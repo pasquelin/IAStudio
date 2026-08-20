@@ -89,6 +89,7 @@
       "scene.texture": "A texture could not be loaded",
       "scene.animation": "An animation could not be laid on the character",
       "scene.export": "Exporting the scene failed",
+      "scene.capture": "Capturing the 3D view failed",
       "texture.map": "A texture channel could not be loaded",
       "texture.channel": "An image could not go into a channel",
       "texture.seam": "The seams could not be measured",

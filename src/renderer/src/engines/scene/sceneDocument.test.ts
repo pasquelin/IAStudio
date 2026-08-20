@@ -337,6 +337,9 @@ describe('sceneFromPayload', () => {
         toneMapping: 'aces',
         exposure: 1.2,
         ground: { visible: true, color: '#ffffff', size: 40, opacity: 0.5, receiveShadow: true },
+        // Nothing reads these yet, and that is exactly why they are here: a template says how a
+        // scene means to be walked, and a save that dropped it would lose the template's intent.
+        play: { camera: 'thirdPerson', eyeHeight: 1.7, moveSpeed: 4, gravity: 9.81 },
       },
     }
 
