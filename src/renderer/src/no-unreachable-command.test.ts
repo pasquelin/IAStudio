@@ -127,15 +127,17 @@ const THROUGH_A_COMMAND: Readonly<Record<string, string>> = {
  * driving the 3D space runs into first.
  */
 const NOT_PUBLISHED: readonly string[] = [
-  // The canvas: a mask, a caption's own box, guides, and the paint itself — which needs a live
-  // GPU surface rather than a command, see the head of `canvasActions.ts`.
-  'setLayerMask',
-  'resizeCaption',
-  'translateLayer',
+  // A stroke goes through the engine's GPU surface and its patch history: this takes a live PORT,
+  // not a path, and publishing it needs an engine API that does not exist — see `canvasActions.ts`.
   'paintPixels',
-  'addGuide',
-  'moveGuide',
-  'removeGuide',
+  // The drag's own half of `layer.transform`: an absolute x and y, so a gesture coalesced into
+  // one entry keeps the last apply. An action names the transform whole and goes through
+  // `setLayerTransform` — a second door onto the same edit is an edit published twice.
+  'translateLayer',
+  // The grip's half of the pair `layer.text` and `layer.transform` already publish: it writes a
+  // caption's box AND its corner in ONE entry, because a north or west grip pulls both at once.
+  // A call names them one after the other and pays two undos, which no hand can do.
+  'resizeCaption',
 ]
 
 describe('what edits a document, and what an outside client may ask for', () => {

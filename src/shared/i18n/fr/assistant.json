@@ -225,6 +225,22 @@
         "title": "Retourner ou pivoter l’image",
         "description": "Reflète l’image selon un axe, ou la fait pivoter d’un quart de tour dans un sens ou dans l’autre. Un quart de tour échange la largeur et la hauteur du cadre, donc un portrait devient un paysage."
       },
+      "layerMask": {
+        "title": "Régler le masque d’un calque",
+        "description": "Dit si un masque cache ce qu’il couvre et s’il suit le calque quand il se déplace, ou le retire tout à fait. Un calque qui n’en porte aucun est refusé — creuser un masque appartient au moteur, par la commande qui le fait depuis la sélection."
+      },
+      "guideAdd": {
+        "title": "Poser un repère",
+        "description": "Pose un repère vertical ou horizontal à l’endroit donné, en coordonnées du document, et répond l’identifiant qu’il vient de recevoir. Les deux actions voisines le déplacent et le retirent par cet identifiant."
+      },
+      "guideMove": {
+        "title": "Déplacer un repère",
+        "description": "Change la place d’un repère, en coordonnées du document, comme le ferait un glissé depuis la règle. Un identifiant que rien ne porte est refusé."
+      },
+      "guideRemove": {
+        "title": "Retirer un repère",
+        "description": "Enlève un repère de l’image, comme le fait un glissé qui le ramène sur sa règle. Retirer tous les repères d’un coup est une commande du registre, à lancer autrement."
+      },
       "layerAdd": {
         "title": "Ajouter un calque",
         "description": "Pose un calque de pixels, de texte ou de réglage au sommet de la pile de l’image devant, et répond avec l’identifiant qui lui a été donné. Un calque de réglage doit nommer le réglage qu’il porte."
@@ -1107,7 +1123,13 @@
       "timeSeconds": "Instant sur la bande, en secondes, à défaut la tête de lecture",
       "trackProperty": "Canal visé, à défaut tous ceux du sujet",
       "fromSeconds": "Instant de départ, en secondes",
-      "toSeconds": "Instant d’arrivée, en secondes"
+      "toSeconds": "Instant d’arrivée, en secondes",
+      "maskEnabled": "Le masque cache ce qu’il couvre",
+      "maskLinked": "Le masque suit le calque quand il se déplace",
+      "maskRemove": "Retirer le masque du calque",
+      "guideId": "Identifiant du repère",
+      "guideAxis": "Sens du repère, vertical en x ou horizontal en y",
+      "guidePosition": "Place du repère, en coordonnées du document"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

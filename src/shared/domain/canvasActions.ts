@@ -31,6 +31,16 @@ const LAYER: ActionField = {
  */
 const SIDES = { min: 3, max: 12 }
 
+/** The two a guide may run along, held to `Guide['axis']` by `canvasHandlers.test.ts`. */
+const GUIDE_AXES: readonly string[] = ['x', 'y']
+
+const GUIDE: ActionField = {
+  key: 'guideId',
+  kind: 'text',
+  labelKey: 'assistant.fields.guideId',
+  required: true,
+}
+
 export const CANVAS_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'canvas.state',
@@ -450,5 +460,76 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
         options: ['flipHorizontal', 'flipVertical', 'rotateClockwise', 'rotateAnticlockwise'],
       },
     ],
+  }),
+  action({
+    /**
+     * What an existing mask DOES: whether it hides anything, and whether it travels with the layer.
+     * Carving one is `canvas.maskFromSelection`, a command, because the pixels are the engine's —
+     * so a layer wearing none is refused rather than given an empty one that hides everything.
+     */
+    name: 'layer.mask',
+    titleKey: 'assistant.actions.layerMask.title',
+    descriptionKey: 'assistant.actions.layerMask.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      LAYER,
+      {
+        key: 'enabled',
+        kind: 'boolean',
+        labelKey: 'assistant.fields.maskEnabled',
+        required: false,
+      },
+      { key: 'linked', kind: 'boolean', labelKey: 'assistant.fields.maskLinked', required: false },
+      { key: 'remove', kind: 'boolean', labelKey: 'assistant.fields.maskRemove', required: false },
+    ],
+  }),
+  action({
+    // Pulled off a ruler on screen, and named by value here. It answers the id it was born with,
+    // which is what the two beside it take.
+    name: 'guide.add',
+    titleKey: 'assistant.actions.guideAdd.title',
+    descriptionKey: 'assistant.actions.guideAdd.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'axis',
+        kind: 'choice',
+        labelKey: 'assistant.fields.guideAxis',
+        required: true,
+        options: GUIDE_AXES,
+      },
+      {
+        key: 'position',
+        kind: 'number',
+        labelKey: 'assistant.fields.guidePosition',
+        required: true,
+      },
+    ],
+  }),
+  action({
+    name: 'guide.move',
+    titleKey: 'assistant.actions.guideMove.title',
+    descriptionKey: 'assistant.actions.guideMove.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      GUIDE,
+      {
+        key: 'position',
+        kind: 'number',
+        labelKey: 'assistant.fields.guidePosition',
+        required: true,
+      },
+    ],
+  }),
+  action({
+    name: 'guide.remove',
+    titleKey: 'assistant.actions.guideRemove.title',
+    descriptionKey: 'assistant.actions.guideRemove.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [GUIDE],
   }),
 ]

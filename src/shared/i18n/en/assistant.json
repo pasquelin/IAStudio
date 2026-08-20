@@ -225,6 +225,22 @@
         "title": "Flip or turn the image",
         "description": "Mirrors the image across an axis, or turns it a quarter turn either way. A turn swaps the frame’s width and height, so a portrait becomes a landscape."
       },
+      "layerMask": {
+        "title": "Set a layer’s mask",
+        "description": "Says whether a mask hides what it covers and whether it travels with the layer, or takes it off altogether. A layer wearing none is refused — carving a mask belongs to the engine, through the command that makes one from the selection."
+      },
+      "guideAdd": {
+        "title": "Lay a guide",
+        "description": "Lays an upright or a flat guide at the place given, in document coordinates, and answers the id it was just born with. The two actions beside it move it and take it away by that id."
+      },
+      "guideMove": {
+        "title": "Move a guide",
+        "description": "Changes where a guide sits, in document coordinates, as a drag from the ruler would. An id nothing answers to is refused."
+      },
+      "guideRemove": {
+        "title": "Remove a guide",
+        "description": "Takes a guide off the image, as a drag that drops it back on its ruler does. Clearing every guide at once is a command of the registry, fired another way."
+      },
       "layerAdd": {
         "title": "Add a layer",
         "description": "Puts a new pixel, text or adjustment layer on top of the stack of the image in front, and answers with the id it was given. An adjustment layer must name the dial it carries."
@@ -1107,7 +1123,13 @@
       "timeSeconds": "Instant on the band, in seconds, or the playhead when absent",
       "trackProperty": "Channel aimed at, or all the subject’s when absent",
       "fromSeconds": "Instant to start from, in seconds",
-      "toSeconds": "Instant to land on, in seconds"
+      "toSeconds": "Instant to land on, in seconds",
+      "maskEnabled": "The mask hides what it covers",
+      "maskLinked": "The mask travels with the layer when it moves",
+      "maskRemove": "Take the mask off the layer",
+      "guideId": "Id of the guide",
+      "guideAxis": "Which way the guide runs, upright on x or flat on y",
+      "guidePosition": "Where the guide sits, in document coordinates"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

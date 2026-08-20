@@ -15,6 +15,7 @@ import { MAX_SIDES, MIN_SIDES } from '@/engines/canvas/shapeGeometry'
 import { installIn } from '@/stores/document-fixtures'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
+import { GUIDE_AXES } from './canvasHandlers'
 import { runAction } from './executor'
 
 const DOCUMENT = 'doc-image'
@@ -510,5 +511,74 @@ describe('the frame itself', () => {
 
     await runAction('canvas.orient', { turn: 'rotateClockwise' })
     expect(canvas()).toMatchObject({ width: 200, height: 100 })
+  })
+})
+
+describe('what a mask does, once the engine has carved one', () => {
+  const masked = () => ({
+    ...pixelLayer('layer-a', 'Fond'),
+    mask: { enabled: true, linked: true },
+  })
+
+  it('says whether it hides and whether it travels, one field at a time', async () => {
+    withLayers(masked(), pixelLayer('layer-b', 'Sujet'))
+
+    expect(await runAction('layer.mask', { layerId: 'layer-a', linked: false })).toEqual({
+      ok: true,
+    })
+    expect(canvas().layers[0]?.mask).toEqual({ enabled: true, linked: false })
+  })
+
+  it('takes it off, and refuses to say what it does in the same breath', async () => {
+    withLayers(masked())
+
+    expect(
+      await runAction('layer.mask', { layerId: 'layer-a', remove: true, enabled: false }),
+    ).toEqual({ ok: false, refusal: 'badInput' })
+
+    expect(await runAction('layer.mask', { layerId: 'layer-a', remove: true })).toEqual({
+      ok: true,
+    })
+    expect(canvas().layers[0]?.mask).toBeUndefined()
+  })
+
+  /** Carving one is the engine's, through a command: a record with no pixels behind it hides all. */
+  it('refuses a layer wearing none rather than giving it an empty one', async () => {
+    expect(await runAction('layer.mask', { layerId: 'layer-a', enabled: false })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+})
+
+describe('the guides of an image', () => {
+  it('offers exactly the two ways a guide may run', () => {
+    expect([
+      ...(assistantAction('guide.add')?.fields.find(f => f.key === 'axis')?.options ?? []),
+    ]).toEqual([...GUIDE_AXES])
+  })
+
+  it('lays one, moves it, and takes it away by the id it answered', async () => {
+    const laid = await runAction('guide.add', { axis: 'x', position: 120 })
+    const guideId = laid.ok ? (laid.data as { guideId: string }).guideId : ''
+
+    expect(canvas().guides).toEqual([{ id: guideId, axis: 'x', position: 120 }])
+
+    expect(await runAction('guide.move', { guideId, position: 40 })).toEqual({ ok: true })
+    expect(canvas().guides[0]?.position).toBe(40)
+
+    expect(await runAction('guide.remove', { guideId })).toEqual({ ok: true })
+    expect(canvas().guides).toEqual([])
+  })
+
+  it('refuses an id nothing answers to rather than writing nothing', async () => {
+    expect(await runAction('guide.move', { guideId: 'guide-z', position: 40 })).toEqual({
+      ok: false,
+      refusal: 'notFound',
+    })
+    expect(await runAction('guide.remove', { guideId: 'guide-z' })).toEqual({
+      ok: false,
+      refusal: 'notFound',
+    })
   })
 })
