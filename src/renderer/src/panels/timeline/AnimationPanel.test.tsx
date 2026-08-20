@@ -17,12 +17,13 @@ const DOCUMENT = 'doc-1'
 const timelineOf = () => sceneOf(useScenes.getState(), DOCUMENT).animation
 const tracks = () => timelineOf().tracks
 
-/** A scene with one cube, picked — which is what the add buttons read. */
+/** A scene with one cube, picked and ON the band — which is what the add buttons read. */
 function withSelectedCube(): void {
   installScene(DOCUMENT, {
     ...EMPTY_SCENE,
     nodes: [meshNode('cube-1')],
     selectedIds: ['cube-1'],
+    animation: { ...EMPTY_SCENE.animation, sheet: ['cube-1'] },
   })
 }
 
@@ -110,6 +111,7 @@ describe('AnimationPanel and the bones of a rig', () => {
       ...EMPTY_SCENE,
       nodes: [modelNodeFixture('perso')],
       selectedIds: ['perso'],
+      animation: { ...EMPTY_SCENE.animation, sheet: ['perso'] },
     })
     useSceneViews.setState({ views: {} })
     useModelClips.setState({ clips: {}, rigs: {} })
@@ -172,16 +174,22 @@ describe('the request, clause by clause', () => {
     useAnimationViews.setState({ views: {} })
   })
 
-  it('« voir mes objets » — every object of the scene has its line, unprompted', () => {
+  /*
+   * The clause CHANGED, and this case changed with it: the band used to show every object of the
+   * scene, which put 8 000 blocks and 24 009 buttons on it. A house is scenery and a character in
+   * front of it is animated — only the person can say which, so only what they put there shows.
+   */
+  it('« ce que j’y mets » — the objects of the sheet have a line, the others none', () => {
     installScene(DOCUMENT, {
       ...EMPTY_SCENE,
       nodes: [meshNode('cube-1'), meshNode('sphere-1')],
       selectedIds: [],
+      animation: { ...EMPTY_SCENE.animation, sheet: ['cube-1'] },
     })
     render(<AnimationPanel documentId={DOCUMENT} />)
 
     expect(screen.getByTestId('anim-subject-cube-1')).toBeInTheDocument()
-    expect(screen.getByTestId('anim-subject-sphere-1')).toBeInTheDocument()
+    expect(screen.queryByTestId('anim-subject-sphere-1')).not.toBeInTheDocument()
   })
 
   it('« mettre des points clés » — one press keys the object, whatever it held before', async () => {

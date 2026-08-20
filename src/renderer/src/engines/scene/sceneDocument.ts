@@ -34,6 +34,7 @@ import {
   DEFAULT_FPS,
   EASINGS,
   EMPTY_TIMELINE,
+  sheetFromAnimated,
   TRACK_PROPERTIES,
   type AnimationTimeline,
   type AnimationTrack,
@@ -90,13 +91,24 @@ export function sceneFromPayload(payload: unknown): SceneState {
    * shadows, and requiring the flags would have emptied each of them at load, silently, since a
    * dropped node looks exactly like one that was never there.
    */
+  const kept = nodes.filter(isSceneNode).map(revived)
+
   return {
-    nodes: nodes.filter(isSceneNode).map(revived),
+    nodes: kept,
     selectedIds: [],
     // The root `environment` is where the sky lived before the world existed — see `readWorld`.
     world: readWorld(payload.world, payload.environment),
-    animation: readTimeline(payload.animation),
+    animation: readTimeline(payload.animation, kept),
   }
+}
+
+/** The models whose lane actually carries a clip — see `sheetFromAnimated`. */
+function playingModels(nodes: readonly SceneNode[]): string[] {
+  return nodes.flatMap(node =>
+    node.type === 'model' && (node.model.lanes ?? []).some(lane => lane.clips.length > 0)
+      ? node.id
+      : [],
+  )
 }
 
 /**
@@ -340,7 +352,7 @@ function isOptionalTextureOverrides(value: unknown): boolean {
  * the rule the nodes already follow: a project folder is user territory, and one malformed track
  * must not cost the animation around it.
  */
-function readTimeline(value: unknown): AnimationTimeline {
+function readTimeline(value: unknown, nodes: readonly SceneNode[]): AnimationTimeline {
   if (!isRecord(value)) return EMPTY_TIMELINE
 
   const tracks = Array.isArray(value.tracks) ? value.tracks.filter(isTrack) : []
@@ -355,7 +367,26 @@ function readTimeline(value: unknown): AnimationTimeline {
     fps: fps > 0 ? fps : DEFAULT_FPS,
     tracks,
     shots,
+    sheet: readSheet(value.sheet, tracks, shots, playingModels(nodes)),
   }
+}
+
+/**
+ * Which objects the band shows. A RECOVERY, not a rule: a file written before the sheet existed
+ * has none, and its animated objects would come back with nowhere to be seen. Read from what is
+ * animated exactly once, and written out from then on.
+ *
+ * A file that HAS a sheet is taken as it stands, empty included — an empty band is a legitimate
+ * state, and rebuilding it from the tracks would put back what someone removed on purpose.
+ */
+function readSheet(
+  value: unknown,
+  tracks: readonly AnimationTrack[],
+  shots: readonly CameraShot[],
+  playing: readonly string[],
+): string[] {
+  if (Array.isArray(value)) return value.filter(id => typeof id === 'string')
+  return sheetFromAnimated(tracks, shots, playing)
 }
 
 /**

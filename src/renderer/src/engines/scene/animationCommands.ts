@@ -42,6 +42,12 @@ import {
  * additive design exists to avoid.
  */
 
+/**
+ * The sheet is deliberately LEFT ALONE here. Adding the keyed object to it was the first design,
+ * and it broke undo: a revert would have had to put the sheet back as well, in every command that
+ * writes a track. A band shows the sheet OR whoever holds a track — see `animationRows` — so
+ * nothing can be keyed into invisibility, and taking a track away takes its line with it.
+ */
 const write = (
   state: SceneState,
   change: (tracks: readonly AnimationTrack[]) => AnimationTrack[],

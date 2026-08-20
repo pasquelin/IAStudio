@@ -160,10 +160,8 @@ export function orderedSubjects(
 
 export type RowsOptions = {
   /**
-   * The objects on stage, in outliner order. EVERY one gets a line, keyed or not: a scene's
-   * objects already exist, so a band that showed only those with a track made a person create
-   * something before they could see anything — which is the whole reason the old panel read as
-   * empty while a cube stood in the viewport.
+   * The objects on stage — read for their NAMES and to know which still exist, never to decide
+   * who gets a line. `timeline.sheet` decides that, and it is what the person put there.
    */
   nodes: readonly SheetNode[]
   /** Which subjects are unfolded. Absent from the set means folded, so a new one arrives folded. */
@@ -262,10 +260,27 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
   // are left out of the arrangement below.
   for (const cameraId of onAir) push(cameraId, barsOf(timeline, cameraId, named))
 
-  /** The objects first, in the order the scene holds them, then the bones keyed inside them. */
+  /*
+   * Who gets a line: what the person PUT on the sheet, plus whoever HOLDS a track. A house is
+   * scenery and a character in front of it is animated — only the person can say which, and
+   * deriving it from the scene put 8 000 blocks and 24 009 buttons on the band, measured 20/08.
+   *
+   * The second half is not a second rule: keying an object is that same choice made, and without
+   * it a track could be undone into invisibility. It also keeps the commands out of the sheet
+   * entirely, so an undo has nothing extra to put back.
+   */
+  const keyed = [...grouped.values()].flatMap(tracks => tracks[0]?.target.nodeId ?? [])
+  const onSheet = new Set([...timeline.sheet, ...keyed].filter(id => named.has(id)))
+
+  /** The objects first, in the order the sheet holds them, then the bones keyed inside them. */
   const natural = [
-    ...options.nodes.map(node => node.id).filter(id => !onAir.includes(id)),
-    ...[...grouped.keys()].filter(key => !named.has(key)),
+    ...[...timeline.sheet, ...keyed].filter(
+      (id, at, all) => onSheet.has(id) && !onAir.includes(id) && all.indexOf(id) === at,
+    ),
+    // A bone is keyed inside its object, so it rides on the object's own place on the sheet.
+    ...[...grouped.entries()]
+      .filter(([key, tracks]) => !named.has(key) && onSheet.has(tracks[0]?.target.nodeId ?? ''))
+      .map(([key]) => key),
   ]
 
   for (const key of orderedSubjects(natural, options.order ?? [])) push(key)

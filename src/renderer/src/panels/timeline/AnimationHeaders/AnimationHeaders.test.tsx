@@ -26,11 +26,12 @@ function withTwoChannels(): void {
   installScene(DOCUMENT, two.apply(one.apply(base)))
 }
 
+/** The cube is ON the band here — which is what these cases are about, never who put it there. */
 const rowsOf = (expanded: string[] = []) =>
-  animationRows(timelineOf(), {
-    nodes: [{ id: 'cube-1', name: 'Cube' }],
-    expanded: new Set(expanded),
-  })
+  animationRows(
+    { ...timelineOf(), sheet: ['cube-1'] },
+    { nodes: [{ id: 'cube-1', name: 'Cube' }], expanded: new Set(expanded) },
+  )
 
 const headers = (expanded: string[] = []) => {
   cleanup()
@@ -115,7 +116,9 @@ describe('the column beside the band', () => {
     expect(tracks().map(track => track.id)).toEqual(['t2'])
   })
 
-  it('shows the object even before it holds a single channel', () => {
+  // On the band and holding nothing yet: the line is where the first key gets posed, so it has
+  // to be there before there is anything on it. Who put it there is `animationRows`' own case.
+  it('shows an object of the band even before it holds a single channel', () => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [meshNode('cube-1')] })
     headers()
 
@@ -207,7 +210,10 @@ describe('arranging the lines', () => {
     render(
       <AnimationHeaders
         documentId={DOCUMENT}
-        rows={animationRows(timelineOf(), { nodes: TWO, expanded: new Set() })}
+        rows={animationRows(
+          { ...timelineOf(), sheet: TWO.map(node => node.id) },
+          { nodes: TWO, expanded: new Set() },
+        )}
       />,
     )
   })
@@ -251,7 +257,11 @@ describe('a line of the sheet dragged by its grip', () => {
   function Sheet() {
     const order = useAnimationViews(state => animationViewOf(state, DOCUMENT).order)
     const rows = useMemo(
-      () => animationRows(timelineOf(), { nodes: THREE, expanded: new Set(), order }),
+      () =>
+        animationRows(
+          { ...timelineOf(), sheet: THREE.map(node => node.id) },
+          { nodes: THREE, expanded: new Set(), order },
+        ),
       [order],
     )
     return <AnimationHeaders documentId={DOCUMENT} rows={rows} />
@@ -335,16 +345,19 @@ describe('the line of a sub-track', () => {
 
   const showLanes = (...laneIds: string[]) => {
     cleanup()
-    const rows = animationRows(timelineOf(), {
-      nodes: [{ id: 'perso', name: 'Perso' }],
-      expanded: new Set(['perso']),
-      lanes: laneIds.map(laneId => ({
-        nodeId: 'perso',
-        laneId,
-        name: `Anim. ${laneId}`,
-        blocks: [],
-      })),
-    })
+    const rows = animationRows(
+      { ...timelineOf(), sheet: ['perso'] },
+      {
+        nodes: [{ id: 'perso', name: 'Perso' }],
+        expanded: new Set(['perso']),
+        lanes: laneIds.map(laneId => ({
+          nodeId: 'perso',
+          laneId,
+          name: `Anim. ${laneId}`,
+          blocks: [],
+        })),
+      },
+    )
     return render(<AnimationHeaders documentId={DOCUMENT} rows={rows} />)
   }
 

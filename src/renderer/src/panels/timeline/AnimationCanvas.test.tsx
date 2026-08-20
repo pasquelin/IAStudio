@@ -49,7 +49,7 @@ const modelWithClip = () => {
 }
 
 const blockRows = () =>
-  animationRows(timelineWith([]), {
+  animationRows(timelineWith([], { sheet: ['perso'] }), {
     nodes: [{ id: 'perso', name: 'Perso' }],
     expanded: new Set(['perso']),
     lanes: [

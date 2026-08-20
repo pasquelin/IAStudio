@@ -16,11 +16,16 @@ const CUBE = [{ id: 'cube', name: 'Circle' }]
 
 const key = (seconds: number) => ({ time: seconds * SECOND, value: { x: 0, y: 0, z: 0 } })
 
+/**
+ * The sheet holds the nodes handed in, unless a case says otherwise: what a band SHOWS is what
+ * somebody put there, and a case about the order of the lines is not a case about who is on them.
+ */
 const rowsOf = (
   tracks: Parameters<typeof timelineWith>[0],
   expanded: string[] = [],
   nodes = CUBE,
-) => animationRows(timelineWith(tracks), { nodes, expanded: new Set(expanded) })
+  sheet: string[] = nodes.map(node => node.id),
+) => animationRows(timelineWith(tracks, { sheet }), { nodes, expanded: new Set(expanded) })
 
 describe('the camera lines', () => {
   const CAMERAS = [
@@ -76,8 +81,51 @@ describe('the camera lines', () => {
       { nodes: CAMERAS, expanded: new Set(['cam-a']) },
     )
 
-    expect(rows.map(row => row.kind)).toEqual(['subject', 'channel', 'subject'])
+    // `cam-b` is on no sheet and holds nothing, so it has no line — it used to get one purely
+    // for standing in the scene, which is what put 8 000 blocks on the band.
+    expect(rows.map(row => row.kind)).toEqual(['subject', 'channel'])
     expect(rows[0] && trackIdsOf(rows[0])).toEqual(['t1'])
+  })
+})
+
+/*
+ * A band shows what somebody PUT on it. Deriving it from the scene was the first design and it
+ * could not hold: a house is scenery and a character in front of it is animated, and only the
+ * person can say which is which — 8 000 blocks meant 24 009 buttons, measured 20/08.
+ */
+describe('who is on the band', () => {
+  const TWO = [
+    { id: 'house', name: 'House' },
+    { id: 'walker', name: 'Walker' },
+  ]
+
+  it('leaves out an object the sheet does not name, however much the scene holds it', () => {
+    const rows = animationRows(timelineWith([], { sheet: ['walker'] }), {
+      nodes: TWO,
+      expanded: new Set(),
+    })
+
+    expect(rows.map(row => row.id)).toEqual(['walker'])
+  })
+
+  it('shows nothing at all when the sheet is empty', () => {
+    const rows = animationRows(timelineWith([], { sheet: [] }), {
+      nodes: TWO,
+      expanded: new Set(),
+    })
+
+    expect(rows).toEqual([])
+  })
+
+  // An id left over from an object since deleted draws no hole, exactly as an arrangement entry
+  // for a departed object draws none.
+  it('skips an id the scene no longer holds', () => {
+    const rows = animationRows(timelineWith([], { sheet: ['walker', 'gone'] }), {
+      nodes: TWO,
+      expanded: new Set(),
+    })
+
+    expect(rows.map(row => row.id)).toEqual(['walker'])
   })
 })
 
@@ -198,7 +246,11 @@ describe('arranging the lines', () => {
   ]
 
   const arranged = (order: string[]) =>
-    animationRows(timelineWith([]), { nodes: THREE, expanded: new Set(), order }).map(row => row.id)
+    animationRows(timelineWith([], { sheet: THREE.map(node => node.id) }), {
+      nodes: THREE,
+      expanded: new Set(),
+      order,
+    }).map(row => row.id)
 
   it('shows the lines in the order the user arranged, not the scene order', () => {
     expect(arranged(['c', 'a', 'b'])).toEqual(['c', 'a', 'b'])
@@ -231,7 +283,11 @@ describe('the lanes of an object', () => {
   })
 
   const withLanes = (lanes: SheetLane[], expanded: string[] = ['cube']) =>
-    animationRows(timelineWith([]), { nodes: CUBE, expanded: new Set(expanded), lanes })
+    animationRows(timelineWith([], { sheet: ['cube'] }), {
+      nodes: CUBE,
+      expanded: new Set(expanded),
+      lanes,
+    })
 
   it('stays folded inside the track of its object, never at the foot of the sheet', () => {
     const rows = withLanes([sheetLane('main', [block('walk')])], [])
