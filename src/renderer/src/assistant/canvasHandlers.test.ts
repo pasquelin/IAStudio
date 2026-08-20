@@ -163,20 +163,37 @@ describe('building a stack', () => {
     })
   })
 
-  /** One axis at a time: a client naming only a width must not flatten the height with it. */
-  it('resizes a caption box on the axis it names, and on that one only', async () => {
+  /**
+   * A caption added by a client is a POINT one, having no box — naming a width is what gives it
+   * one. The other axis then starts at the paragraph default rather than at nothing.
+   */
+  it('gives a point caption a box the first time a client names one', async () => {
     await runAction('layer.add', { kind: 'text', name: 'Titre', text: 'Bonjour' })
     const id = canvas().layers.at(-1)?.id
-    const before = canvas().layers.at(-1)
+    expect(canvas().layers.at(-1)?.kind === 'text' && canvas().layers.at(-1)).toMatchObject({
+      box: null,
+    })
 
     await runAction('layer.text', { layerId: id, width: 900, align: 'center' })
 
     const written = canvas().layers.at(-1)
-    expect(written?.kind === 'text' && written.box.width).toBe(900)
-    expect(written?.kind === 'text' && written.box.height).toBe(
-      before?.kind === 'text' ? before.box.height : 0,
-    )
-    expect(written?.kind === 'text' && written.align).toBe('center')
+    if (written?.kind !== 'text') throw new Error('the layer is not a caption')
+    expect(written.box?.width).toBe(900)
+    expect(written.box?.height).toBeGreaterThan(0)
+    expect(written.align).toBe('center')
+  })
+
+  /** One axis at a time: a client naming only a width must not flatten the height with it. */
+  it('resizes a caption box on the axis it names, and on that one only', async () => {
+    await runAction('layer.add', { kind: 'text', name: 'Titre', text: 'Bonjour' })
+    const id = canvas().layers.at(-1)?.id
+    await runAction('layer.text', { layerId: id, width: 900, height: 400 })
+
+    await runAction('layer.text', { layerId: id, width: 500 })
+
+    const written = canvas().layers.at(-1)
+    if (written?.kind !== 'text') throw new Error('the layer is not a caption')
+    expect(written.box).toEqual({ width: 500, height: 400 })
   })
 
   // A row in the panel that changes nothing is the one thing a layer must never be.

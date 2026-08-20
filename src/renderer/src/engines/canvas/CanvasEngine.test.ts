@@ -8,7 +8,6 @@ import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import {
   adjustmentLayer,
   DEFAULT_CANVAS,
-  DEFAULT_TEXT_BOX,
   groupLayer,
   IDENTITY,
   isGroup,
@@ -28,6 +27,7 @@ import { FALLBACK_COLORS, OVERLAY_TOKENS } from './CanvasEngine'
 import type { CanvasTool } from './canvasTool'
 import type { CanvasSelection } from './canvasSelection'
 import type { Point, Size } from '../core/geometry'
+import { ROTATE_REACH } from './handles'
 import { RULER_SIZE } from './CanvasOverlay'
 import { DEFAULT_VIEW, toDocument, type Viewport } from './viewport'
 
@@ -68,6 +68,8 @@ const EXTRACTED = Uint8Array.from([137, 80, 78, 71])
 
 const gpu: {
   renders: number
+  /** How many passes were cut to a mask — what tells a paragraph's words from a point caption's. */
+  masked: number
   texturesCreated: number
   texturesDestroyed: number
   /** Every attach and detach: the cost a restack pays, and the one a repaint must not. */
@@ -98,6 +100,7 @@ const gpu: {
   resizes: number
 } = {
   renders: 0,
+  masked: 0,
   texturesCreated: 0,
   texturesDestroyed: 0,
   mutations: 0,
@@ -254,9 +257,12 @@ vi.mock('pixi.js', () => {
       readonly canvas = document.createElement('canvas')
       readonly stage = new Container()
       readonly renderer = {
-        render: (options?: { target?: { id: number } }) => {
+        render: (options?: { target?: { id: number }; container?: { mask?: object | null } }) => {
           gpu.renders += 1
           if (options?.target) gpu.painted.push(options.target.id)
+          // Read HERE and not off the container afterwards: a pass frees its own holder, so the
+          // mask is gone by the time a case could look for it.
+          if (options?.container?.mask) gpu.masked += 1
         },
         extract: {
           pixels: (options: {
@@ -371,7 +377,7 @@ type Harness = {
   /** Every selection the engine carved out, in the order it published them. */
   selections: CanvasSelection[]
   /** Every caption the hand asked for: a layer to edit, or a box to open a fresh one in. */
-  captions: ({ layerId: string } | { at: Point; box: Size })[]
+  captions: ({ layerId: string } | { at: Point; box: Size | null })[]
   /** Every pull of a caption box's grip: the box it reached, and where its corner now sits. */
   boxes: { layerId: string; box: Size; at: Point }[]
   /** Every shape a drag finished on: where its box starts, and what the layer will hold. */
@@ -493,6 +499,9 @@ const VIEW_1_1 = { ...DEFAULT_VIEW, viewport: { x: 0, y: 0, scale: 1 } }
 /** Saved pixels, as they now cross: bytes, never base64 — see `LayerPixels`. */
 const SAVED = Uint8Array.from([65, 66, 67])
 
+/** A box, which makes a caption a PARAGRAPH — the kind a drag opens, and the only kind with one. */
+const PARAGRAPH: Size = { width: 480, height: 120 }
+
 const nextFrame = (): Promise<void> =>
   new Promise(resolve => requestAnimationFrame(() => resolve()))
 
@@ -596,6 +605,7 @@ afterEach(() => {
 
 beforeEach(() => {
   gpu.renders = 0
+  gpu.masked = 0
   gpu.texturesCreated = 0
   gpu.texturesDestroyed = 0
   gpu.mutations = 0
@@ -2199,20 +2209,39 @@ describe('drawing a shape', () => {
 })
 
 describe('captions', () => {
+  /** A PARAGRAPH caption, which is what a drag opens — see the two cases just below. */
   const caption = (text: string, size = 48): CanvasState =>
     stacked([
       pixelLayer('layer-1', 'Background'),
-      { ...textLayer('t', text, { x: 10, y: 20 }), size },
+      { ...textLayer('t', text, { x: 10, y: 20 }, PARAGRAPH), size },
     ])
 
-  it('opens a box of the default size where a click landed', async () => {
+  /**
+   * The two kinds Photoshop has, and the two gestures that tell them apart. A click opens a POINT
+   * caption: no box, so nothing wraps and nothing can be hidden — its line simply grows.
+   */
+  it('opens a caption with no box at all where a click landed', async () => {
     const { engine, host, captions } = await mounted()
     engine.setTool('text')
 
     press(host, 300, 250)
     release()
 
-    expect(captions).toEqual([{ at: { x: 300, y: 250 }, box: DEFAULT_TEXT_BOX }])
+    expect(captions).toEqual([{ at: { x: 300, y: 250 }, box: null }])
+  })
+
+  /**
+   * A paragraph's words are CUT to its box — hidden, not spilled, as they are in Photoshop and
+   * InDesign. Nothing is lost: widening the box brings the rest back.
+   */
+  it('cuts a paragraph to its box, and leaves a point caption uncut', async () => {
+    const { engine } = await mounted(caption('Bonjour'))
+    expect(gpu.masked).toBeGreaterThan(0)
+
+    gpu.masked = 0
+    engine.apply(stacked([{ ...textLayer('t', 'Bonjour', { x: 10, y: 20 }), size: 60 }]))
+
+    expect(gpu.masked).toBe(0)
   })
 
   // The diagonal is the box, exactly as a shape's is: that is the second half of the gesture.
@@ -2278,12 +2307,26 @@ describe('captions', () => {
     engine.setView(BARE_VIEW)
 
     // The south-east grip of the default box, which starts at the caption's own corner.
-    press(host, 10 + DEFAULT_TEXT_BOX.width, 20 + DEFAULT_TEXT_BOX.height)
+    press(host, 10 + PARAGRAPH.width, 20 + PARAGRAPH.height)
     drag(host, 200, 100)
 
     expect(boxes.at(-1)?.box).toEqual({ width: 190, height: 80 })
     // The layer's own transform is untouched: a pull on the box is not a pull on the picture.
     expect(layers.some(call => call.startsWith('transform:'))).toBe(false)
+  })
+
+  // Shift holds the ratio, as it does on every other box of the studio.
+  it('keeps the box in its own proportions while shift is held', async () => {
+    const { engine, host, boxes } = await mounted(armedCaption(), 'text')
+    engine.setView(BARE_VIEW)
+
+    press(host, 10 + PARAGRAPH.width, 20 + PARAGRAPH.height)
+    drag(host, 300, 400, true)
+
+    const pulled = boxes.at(-1)?.box
+    expect((pulled?.height ?? 0) / (pulled?.width ?? 1)).toBeCloseTo(
+      PARAGRAPH.height / PARAGRAPH.width,
+    )
   })
 
   it('moves the corner with a north-west grip, so the far edge holds still', async () => {
@@ -2295,9 +2338,42 @@ describe('captions', () => {
 
     expect(boxes.at(-1)?.at).toEqual({ x: 60, y: 70 })
     expect(boxes.at(-1)?.box).toEqual({
-      width: DEFAULT_TEXT_BOX.width - 50,
-      height: DEFAULT_TEXT_BOX.height - 50,
+      width: PARAGRAPH.width - 50,
+      height: PARAGRAPH.height - 50,
     })
+  })
+
+  /**
+   * The ring outside a corner turns a caption as it turns any other layer. It was the one grip
+   * of the eight that lied: drawn, hovered, and answered by nothing.
+   */
+  it('turns the caption by the ring outside a corner', async () => {
+    const { engine, host, layers } = await mounted(armedCaption(), 'text')
+    engine.setView(BARE_VIEW)
+
+    // Well outside the north-west corner, which is where the rotation zone reaches.
+    press(host, 10 - ROTATE_REACH / 2, 20 - ROTATE_REACH / 2)
+    drag(host, 200, 300)
+
+    expect(layers.some(call => call.startsWith('transform:'))).toBe(true)
+  })
+
+  /**
+   * ⌘ held moves the block instead of taking the click — the reflex Photoshop, Illustrator and
+   * InDesign all answer to, and the only way to place a caption without stopping typing it.
+   */
+  it('moves the caption under a held command key rather than editing it', async () => {
+    const { engine, host, layers, captions } = await mounted(armedCaption(), 'text')
+    engine.setView(BARE_VIEW)
+
+    host.dispatchEvent(
+      new PointerEvent('pointerdown', { clientX: 100, clientY: 60, metaKey: true }),
+    )
+    drag(host, 300, 260)
+
+    expect(layers.some(call => call.startsWith('translate:'))).toBe(true)
+    // And it is NOT read as a click on the caption, which would have opened the editor instead.
+    expect(captions).toEqual([])
   })
 
   it('opens a fresh box beside a caption, not on it', async () => {
@@ -3766,7 +3842,7 @@ describe('the grips offered on the armed layer', () => {
    * picture, whatever the words were, and no way to tell where the next click would type.
    */
   it('draws them on the box of a caption while the text tool is armed', async () => {
-    const grips = await chromeOf('text', textLayer('t', 'Bonjour', { x: 10, y: 20 }))
+    const grips = await chromeOf('text', textLayer('t', 'Bonjour', { x: 10, y: 20 }, PARAGRAPH))
 
     const near = (at: Point): boolean =>
       grips.some(([x = -1, y = -1]) => Math.abs(x - at.x) <= 5 && Math.abs(y - at.y) <= 5)
@@ -3775,7 +3851,7 @@ describe('the grips offered on the armed layer', () => {
     // The north-west grip sits on the caption's corner, not on the document's, and the
     // south-east one on the far corner of the BOX — well inside a 1024² document.
     expect(near({ x: 10, y: 20 })).toBe(true)
-    expect(near({ x: 10 + DEFAULT_TEXT_BOX.width, y: 20 + DEFAULT_TEXT_BOX.height })).toBe(true)
+    expect(near({ x: 10 + PARAGRAPH.width, y: 20 + PARAGRAPH.height })).toBe(true)
   })
 
   it('draws none over a layer that holds no caption, since none has a box', async () => {

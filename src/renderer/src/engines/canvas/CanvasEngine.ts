@@ -33,7 +33,6 @@ import {
   layerById,
   type AdjustmentLayer,
   type CanvasState,
-  DEFAULT_TEXT_BOX,
   type DrawnShape,
   type GroupLayer,
   type Layer,
@@ -161,7 +160,7 @@ export type CanvasEngineOptions = {
    * A caption the hand asked for: a layer already there to edit, or a fresh box to open one in.
    * The layer it becomes, and the editor it opens, are the stack's to make.
    */
-  onText: (asked: { layerId: string } | { at: Point; box: Size }) => void
+  onText: (asked: { layerId: string } | { at: Point; box: Size | null }) => void
   /**
    * A caption's box, pulled by one of its grips: the new box, and where its top-left corner now
    * sits in the document — a north or west grip moves both at once.
@@ -297,6 +296,8 @@ function strokeWidth(brushSize: number): number {
  */
 const MIN_TEXT_DRAG = 8
 
+const sizeOf = (rect: Rect): Size => ({ width: rect.width, height: rect.height })
+
 /** Where a block of words hangs in its box. `justify` fills the width, so it starts at the edge. */
 function alignedIn(align: TextAlign, box: number, block: number): number {
   if (align === 'center') return Math.max(0, (box - block) / 2)
@@ -323,7 +324,8 @@ function drawingKey(layer: Layer): string | null {
       layer.size,
       layer.color,
       fontKey(layer.font),
-      layer.box.width,
+      layer.box?.width,
+      layer.box?.height,
       layer.align,
       layer.lineHeight,
       layer.tracking,
@@ -617,6 +619,8 @@ export class CanvasEngine {
   private textBox: Rect | null = null
   /** The caption a field is typing: drawn by that field, so its own sprite stands aside. */
   private editing: string | null = null
+  /** The paragraph captions holding more words than their box shows — the ⊞ grip says so. */
+  private readonly overflowing = new Set<string>()
   /**
    * The crop frame, once placed. Outlives its drag on purpose — that is what makes the grips
    * real, and what ⏎ applies and ⎋ drops. Session state, like the selection: a frame nobody
@@ -1728,6 +1732,7 @@ export class CanvasEngine {
         lit: this.hover?.kind === 'handle' ? this.hover.id : null,
         pending: this.pendingShape(),
         textBox: this.textBox,
+        overflowing: this.overflowing.has(this.state.activeLayerId ?? ''),
         selection: this.selection,
         // Not while the tool is refusing: a ring is a promise that a dab lands there.
         brushRadius: this.ringed() && !this.refuses() ? this.brush.size / 2 : null,
@@ -1832,6 +1837,7 @@ export class CanvasEngine {
     const renderer = this.app?.renderer
     if (!renderer) return
 
+    const box = layer.box
     const text = new Text({
       text: layer.text,
       style: {
@@ -1839,10 +1845,9 @@ export class CanvasEngine {
         fontSize: layer.size,
         fill: layer.color,
         align: layer.align,
-        // Wrapped, never cut: a caption that outgrows its box spills past it, as one does in
-        // Photoshop — which is why the texture is the document's size and not the box's.
-        wordWrap: true,
-        wordWrapWidth: layer.box.width,
+        // A POINT caption never wraps: its line grows, and only a typed return breaks it.
+        wordWrap: box !== null,
+        wordWrapWidth: box?.width,
         lineHeight: layer.size * layer.lineHeight,
         letterSpacing: (layer.tracking / 1000) * layer.size,
       },
@@ -1850,9 +1855,27 @@ export class CanvasEngine {
     // Pixi's `align` only ranks the LINES against each other, inside a block sized to the widest
     // of them: on a single line it changes nothing at all. Hanging the block off the box's own
     // edge is what makes the four buttons of the paragraph panel do anything.
-    text.x = alignedIn(layer.align, layer.box.width, text.width)
+    if (box) text.x = alignedIn(layer.align, box.width, text.width)
 
-    renderer.render({ container: text, target: surface.texture, clear: true })
+    // What the layer really occupies, which the grips and the hit test both read back. A point
+    // caption has no box of its own, so the block it drew IS its box.
+    this.contents.set(layer.id, { x: text.x, y: 0, width: text.width, height: text.height })
+    // Hidden rather than spilled, as a paragraph is in Photoshop and InDesign: what outgrows the
+    // box is still in the layer, and widening it brings the rest back. The grip that says so
+    // reads this, so it has to be dropped as readily as it is set.
+    const spills = box !== null && text.height > box.height
+    if (spills !== this.overflowing.has(layer.id)) this.overlay.invalidate()
+    if (spills) this.overflowing.add(layer.id)
+    else this.overflowing.delete(layer.id)
+
+    const container = box ? this.boxed(text, box) : text
+    renderer.render({ container, target: surface.texture, clear: true })
+    if (container !== text) {
+      // The words leave first, so the holder takes only its own stencil down with it.
+      container.mask = null
+      container.removeChild(text)
+      container.destroy({ children: true })
+    }
     text.destroy()
     this.render()
 
@@ -1881,6 +1904,22 @@ export class CanvasEngine {
     renderer.render({ container: drawing, target: surface.texture, clear: true })
     drawing.destroy()
     this.render()
+  }
+
+  /**
+   * A paragraph's words, cut to its box. Built and freed per pass, unlike the brush's stencil:
+   * a caption is rasterized when it changes, not sixty times a second.
+   */
+  private boxed(text: Text, box: Size): Container {
+    const stencil = new Graphics()
+    stencil.rect(0, 0, box.width, box.height)
+    stencil.fill({ color: 0xffffff })
+
+    const holder = new Container()
+    holder.addChild(stencil)
+    holder.addChild(text)
+    holder.mask = stencil
+    return holder
   }
 
   /**
@@ -2122,14 +2161,41 @@ export class CanvasEngine {
       const armed = this.activeLayer()
       const frame = this.hoverBox()
       const grip = frame && this.chromeAt(frame, point)
-      if (armed?.kind === 'text' && grip?.kind === 'handle') {
+      if (armed?.kind === 'text' && grip) {
+        this.options.layers.beginDrag()
+        // The ring outside a corner turns the caption, exactly as it turns any other layer: a box
+        // that could be pulled but never turned was the one grip of the eight that lied.
+        this.gesture =
+          grip.kind === 'handle'
+            ? {
+                kind: 'textBox',
+                id: armed.id,
+                handle: grip.id,
+                // A POINT caption has no box: pulling a grip is what gives it one, starting from
+                // what its words already occupy — which is how it becomes a paragraph.
+                box: armed.box ?? sizeOf(this.frameOf(armed)),
+                origin: armed.transform,
+              }
+            : {
+                kind: 'rotate',
+                id: armed.id,
+                center: centerOf(frame.corners),
+                from: point,
+                origin: armed.transform,
+              }
+        return
+      }
+
+      // Held, the caption moves under the hand rather than taking the click — the reflex every
+      // type tool of the trade answers to, and the one that lets a block be placed while it is
+      // still being typed.
+      if (event.metaKey && armed?.kind === 'text') {
         this.options.layers.beginDrag()
         this.gesture = {
-          kind: 'textBox',
+          kind: 'move',
           id: armed.id,
-          handle: grip.id,
-          box: armed.box,
-          origin: armed.transform,
+          from: point,
+          origin: { x: armed.transform.x, y: armed.transform.y },
         }
         return
       }
@@ -2224,9 +2290,12 @@ export class CanvasEngine {
    * their own state. Only pixels painted by hand can reach every corner of the document.
    */
   private frameOf(layer: Layer): Rect {
+    // A PARAGRAPH is framed by its box and not by its words: what outgrows it is hidden, and a
+    // frame drawn on the words would sit around what nobody can see.
+    if (layer.kind === 'text' && layer.box) return { x: 0, y: 0, ...layer.box }
+
     const laid = this.contents.get(layer.id)
     if (laid) return laid
-    if (layer.kind === 'text') return { x: 0, y: 0, ...layer.box }
     if (layer.kind === 'shape') return shapeBounds(shapeOf(layer), layer.stroke?.width ?? 0)
     return wholeOf(this.documentSize())
   }
@@ -2483,7 +2552,7 @@ export class CanvasEngine {
         const back = invert(layerMatrix(gesture.origin, this.documentSize()))
         if (!back) return
 
-        const next = resizedBox(gesture.handle, gesture.box, applyTo(back, point))
+        const next = resizedBox(gesture.handle, gesture.box, applyTo(back, point), event.shiftKey)
         // The origin moved with a north or west grip, and it moved in the LAYER's space: taken
         // through the matrix without its translation, which is what turns it back into document
         // units under a rotation.
@@ -2829,7 +2898,8 @@ export class CanvasEngine {
     this.options.onText(
       dragged
         ? { at: { x: drawn.x, y: drawn.y }, box: { width: drawn.width, height: drawn.height } }
-        : { at: from, box: DEFAULT_TEXT_BOX },
+        : // A plain click opens a POINT caption: no box, no wrapping, and its line simply grows.
+          { at: from, box: null },
     )
   }
 
@@ -2842,9 +2912,14 @@ export class CanvasEngine {
       const back = invert(layerMatrix(layer.transform, size))
       if (!back) continue
 
+      // The frame answers for both kinds: a paragraph is its box, a point caption is its words.
+      const frame = this.frameOf(layer)
       const local = applyTo(back, point)
       const inside =
-        local.x >= 0 && local.y >= 0 && local.x <= layer.box.width && local.y <= layer.box.height
+        local.x >= frame.x &&
+        local.y >= frame.y &&
+        local.x <= frame.x + frame.width &&
+        local.y <= frame.y + frame.height
       if (inside) return layer
     }
     return null

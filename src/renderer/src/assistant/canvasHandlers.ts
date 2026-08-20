@@ -19,7 +19,7 @@ import {
   type Layer,
 } from '@/engines/canvas/canvasState'
 import { localShape } from '@/engines/canvas/shapeGeometry'
-import type { Point } from '@/engines/core/geometry'
+import type { Point, Size } from '@/engines/core/geometry'
 import {
   addLayer,
   cropToRect,
@@ -177,6 +177,9 @@ function drawnShape(input: Record<string, unknown>): { at: Point; drawn: DrawnSh
 /** What an assistant-drawn line is stroked with, having no brush size to read one from. */
 const DEFAULT_STROKE_WIDTH = 2
 
+/** The other axis of a box a client half-named, giving a point caption one for the first time. */
+const DEFAULT_PARAGRAPH: Size = { width: 480, height: 120 }
+
 function born(input: Record<string, unknown>, id: string, name: string): Layer | null {
   switch (oneOf(input, 'kind', ['pixel', 'text', 'adjustment', 'shape'])) {
     case 'pixel':
@@ -272,10 +275,17 @@ function text(input: Record<string, unknown>): ActionOutcome {
             ...(align === null ? {} : { align }),
             ...(lineHeight === null ? {} : { lineHeight }),
             ...(tracking === null ? {} : { tracking }),
-            // One axis at a time: a client naming only a width must not flatten the height.
+            // One axis at a time: a client naming only a width must not flatten the height. A
+            // POINT caption has no box at all, so naming one is what gives it a box — and
+            // `DEFAULT_PARAGRAPH` is what the other axis then starts at.
             ...(width === null && height === null
               ? {}
-              : { box: { width: width ?? layer.box.width, height: height ?? layer.box.height } }),
+              : {
+                  box: {
+                    width: width ?? layer.box?.width ?? DEFAULT_PARAGRAPH.width,
+                    height: height ?? layer.box?.height ?? DEFAULT_PARAGRAPH.height,
+                  },
+                }),
           }),
         ]
       : [],

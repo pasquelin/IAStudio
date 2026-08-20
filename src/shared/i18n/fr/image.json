@@ -183,6 +183,8 @@
     "align_right": "Aligner à droite",
     "align_justify": "Justifier",
     "boxWidth": "Largeur de la zone",
-    "boxHeight": "Hauteur de la zone"
+    "boxHeight": "Hauteur de la zone",
+    "flow": "Zone de texte",
+    "intoParagraph": "Donner une zone"
   }
 }

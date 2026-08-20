@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { toDegrees } from '@shared/domain/angles'
 import { familyStack } from '@/engines/canvas/canvasFonts'
 import { setLayerText } from '@/engines/canvas/commands'
@@ -37,6 +37,12 @@ export function ImageDocumentText({
 }: ImageDocumentTextProps) {
   const field = useRef<HTMLTextAreaElement>(null)
   const edit = useDocumentEdit(useCanvases, documentId)
+  /**
+   * Whether ⌘ is down. Held, the field stops taking the pointer so the canvas underneath gets
+   * the drag and moves the block — the reflex Photoshop, Illustrator and InDesign all answer to,
+   * and the only way to place a caption without first stopping typing it.
+   */
+  const [passing, setPassing] = useState(false)
 
   // The whole of a typing session is ONE history entry: a command per keystroke would evict
   // everything before it from the stack.
@@ -48,12 +54,47 @@ export function ImageDocumentText({
     return () => store.endGesture(documentId)
   }, [documentId])
 
+  /**
+   * A point caption's field follows its own words. Measured off `scrollWidth` rather than
+   * computed from the font: the browser has already laid the line out, and asking it is the only
+   * way to agree with what it drew — a field one letter too narrow would wrap a line that never
+   * wraps.
+   */
+  useEffect(() => {
+    const element = field.current
+    if (!element || layer.box) return
+
+    element.style.width = '0'
+    element.style.width = `${element.scrollWidth}px`
+    element.style.height = '0'
+    element.style.height = `${element.scrollHeight}px`
+  }, [layer.box, layer.text, layer.size, layer.font, layer.tracking, viewport.scale])
+
+  useEffect(() => {
+    const read = (event: globalThis.KeyboardEvent): void => setPassing(event.metaKey)
+    // `blur` too: the window losing focus never delivers the keyup, and the field would stay
+    // deaf to the pointer with nothing on screen saying why.
+    const drop = (): void => setPassing(false)
+
+    window.addEventListener('keydown', read)
+    window.addEventListener('keyup', read)
+    window.addEventListener('blur', drop)
+    return () => {
+      window.removeEventListener('keydown', read)
+      window.removeEventListener('keyup', read)
+      window.removeEventListener('blur', drop)
+    }
+  }, [])
+
   const at = toScreen(viewport, layer.transform)
   const style: CSSProperties = {
     left: at.x + inset,
     top: at.y + inset,
-    width: layer.box.width * viewport.scale,
-    height: layer.box.height * viewport.scale,
+    // A POINT caption is sized by its own words: `auto` on both axes, and the effect below keeps
+    // the field just wide enough for the line, which never wraps.
+    width: layer.box ? layer.box.width * viewport.scale : 'auto',
+    height: layer.box ? layer.box.height * viewport.scale : 'auto',
+    whiteSpace: layer.box ? 'pre-wrap' : 'pre',
     // Around the top-left corner, which is where the engine places the words themselves.
     transformOrigin: '0 0',
     transform: `rotate(${toDegrees(layer.transform.rotation)}deg) scale(${layer.transform.scaleX}, ${layer.transform.scaleY})`,
@@ -63,6 +104,8 @@ export function ImageDocumentText({
     letterSpacing: (layer.tracking / 1000) * layer.size * viewport.scale,
     textAlign: layer.align,
     color: colourOf(layer.color),
+    // Held, the drag belongs to the canvas under this field — the focus stays here either way.
+    pointerEvents: passing ? 'none' : 'auto',
   }
 
   const finish = (event: KeyboardEvent<HTMLTextAreaElement>): void => {

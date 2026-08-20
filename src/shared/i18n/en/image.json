@@ -183,6 +183,8 @@
     "align_right": "Align right",
     "align_justify": "Justify",
     "boxWidth": "Box width",
-    "boxHeight": "Box height"
+    "boxHeight": "Box height",
+    "flow": "Text box",
+    "intoParagraph": "Give it a box"
   }
 }
