@@ -19,10 +19,10 @@ export type EnvironmentFallback = {
 const ENV_FILE = join('secrets', '.env')
 /** What marks the project root, and so how far up the search for the secrets may go. */
 const MANIFEST_FILE = 'package.json'
-const KEY_VARIABLE = 'SCENARIO_API_KEY'
-const SECRET_VARIABLE = 'SCENARIO_API_SECRET'
+const KEY_VARIABLE = 'PROVIDER_API_KEY'
+const SECRET_VARIABLE = 'PROVIDER_API_SECRET'
 /** Optional: what the development account is called in the switch, beside the stored ones. */
-const NAME_VARIABLE = 'SCENARIO_ACCOUNT_NAME'
+const NAME_VARIABLE = 'PROVIDER_ACCOUNT_NAME'
 
 function unquote(value: string): string {
   const quoted = /^(["'])(.*)\1$/.exec(value)

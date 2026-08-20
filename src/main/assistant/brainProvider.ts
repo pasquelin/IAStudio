@@ -80,7 +80,7 @@ async function answerFrom(
   return assetId === undefined ? '' : await readText(assetId)
 }
 
-export function createScenarioBrain({ run, readText, model }: BrainDeps): AssistantBrain {
+export function createProviderBrain({ run, readText, model }: BrainDeps): AssistantBrain {
   /** One round trip: run the model, read the asset it wrote, hand back text and what it cost. */
   const ask = async (
     request: AssistantThought,

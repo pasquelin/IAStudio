@@ -81,7 +81,7 @@ export function Models() {
   // nothing — or too little to fill the panel — while the catalogue still has more.
   const catalogue = usePages(
     ['models', query],
-    from => getBridge()?.scenario.searchModels({ ...query, limit: PAGE_LIMIT, ...from }),
+    from => getBridge()?.provider.searchModels({ ...query, limit: PAGE_LIMIT, ...from }),
     {
       enabled: authenticated,
       fill: { wanted: PAGE_LIMIT, max: AUTOMATIC_PULLS },

@@ -6,7 +6,7 @@ import { useProject } from '@/stores/project'
 import { Breadcrumb } from './Breadcrumb'
 
 const project = (name: string): Project => ({
-  path: `/Users/someone/Films/${name}.scenario`,
+  path: `/Users/someone/Films/${name}.iastudio`,
   manifest: {
     version: 1,
     name,

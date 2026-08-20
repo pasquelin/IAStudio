@@ -14,7 +14,7 @@ import {
 import { CLOUD_ORDERS, type CloudQuery, type ExploreQuery } from '@shared/domain/cloudAsset'
 
 import { SYNC_POLICIES, type SyncPolicy } from '@shared/domain/sync'
-import { GET_BULK_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
+import { GET_BULK_MAX, PAGE_SIZE_MAX } from '@main/provider/limits'
 
 /**
  * What the renderer is allowed to ask of the library.

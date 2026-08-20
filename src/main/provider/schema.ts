@@ -6,7 +6,7 @@ import type { FieldDescriptor, FieldKind, ModelFamily } from '@shared/domain/mod
  * the SDK: this is the boundary with the outside world, and it must survive the day Scenario
  * adds a field we know nothing about.
  */
-export type ScenarioInput = {
+export type ProviderInput = {
   name: string
   type: string
   label?: string
@@ -39,7 +39,7 @@ function isInteger(value: number | undefined): boolean {
   return value !== undefined && Number.isInteger(value)
 }
 
-function kindOf(input: ScenarioInput): FieldKind {
+function kindOf(input: ProviderInput): FieldKind {
   if (input.name === 'seed') return 'seed'
 
   switch (input.type) {
@@ -74,7 +74,7 @@ function humanize(text: string): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1)
 }
 
-function labelOf(input: ScenarioInput): string {
+function labelOf(input: ProviderInput): string {
   return input.label ?? humanize(input.name)
 }
 
@@ -86,7 +86,7 @@ function labelOf(input: ScenarioInput): string {
  * Only letters and separators qualify. A digit means a code rather than a word — `mp3_44100_128`,
  * `480p`, `1:1` — and humanising those would trade an odd label for a wrong one.
  */
-function optionsOf(input: ScenarioInput): FieldDescriptor['options'] {
+function optionsOf(input: ProviderInput): FieldDescriptor['options'] {
   if (!input.allowedValues?.length) return undefined
 
   return input.allowedValues.map(value => {
@@ -100,7 +100,7 @@ function optionsOf(input: ScenarioInput): FieldDescriptor['options'] {
  * input: a model Scenario just added must stay usable, and must never make the form
  * disappear — see spec § 6.
  */
-export function translateSchema(inputs: readonly ScenarioInput[] | undefined): FieldDescriptor[] {
+export function translateSchema(inputs: readonly ProviderInput[] | undefined): FieldDescriptor[] {
   if (!inputs) return []
 
   return inputs.map(input => {

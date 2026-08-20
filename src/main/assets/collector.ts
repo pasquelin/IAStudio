@@ -1,9 +1,9 @@
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import { assetTypeOfRemote, workspaceOfType } from '@shared/domain/assetKind'
 import { generatedAssetName } from '@shared/domain/assetName'
-import { channelFromScenarioType } from '@shared/domain/texture'
+import { channelFromProviderType } from '@shared/domain/texture'
 import type { WorkspaceId } from '@shared/domain/workspace'
-import type { AssetCollector } from '@main/scenario/jobManager'
+import type { AssetCollector } from '@main/provider/jobManager'
 import type { LocalBackend } from './localBackend'
 
 /**
@@ -100,7 +100,7 @@ export function createAssetCollector({
         continue
       }
 
-      const source = channelFromScenarioType(remote.metadataType)
+      const source = channelFromProviderType(remote.metadataType)
       const type = assetTypeOfRemote(remote)
       if (!type) continue
 

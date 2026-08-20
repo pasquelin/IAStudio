@@ -42,7 +42,7 @@ export function usePlanAccess(): PlanAccess | null {
 
     let live = true
     void getBridge()
-      ?.scenario.plan()
+      ?.provider.plan()
       .then(plan => {
         if (live) setAccess(plan)
       })

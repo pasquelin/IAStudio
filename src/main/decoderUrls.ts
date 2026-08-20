@@ -19,7 +19,7 @@
  */
 
 /** What a removed default becomes: no scheme resolves it, so an accidental use fails by name. */
-export const UNSET_DECODER_URL = 'scenario:decoder-path-unset'
+export const UNSET_DECODER_URL = 'provider:decoder-path-unset'
 
 /** The two three.js modules that name their decoders by URL. */
 export const DECODER_MODULES = ['DRACOLoader.js', 'KTX2Loader.js']

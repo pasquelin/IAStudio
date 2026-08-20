@@ -57,7 +57,7 @@ function linkedFileOf(asset: Asset): string | null {
 }
 
 /**
- * Declares the scheme before the app is ready. Required for `img-src scenario:` to be honoured
+ * Declares the scheme before the app is ready. Required for `img-src ia-studio:` to be honoured
  * and for the renderer to fetch over it at all; Electron ignores the call afterwards.
  */
 export function registerAssetScheme(): void {

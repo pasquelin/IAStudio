@@ -24,7 +24,7 @@ export function useFamilyModels(family: ModelFamily | null): ModelSummary[] {
 
     let live = true
     void getBridge()
-      ?.scenario.searchModels({ family, limit: PICKER_LIMIT })
+      ?.provider.searchModels({ family, limit: PICKER_LIMIT })
       .then(page => {
         if (live) setModels(page.items)
       })

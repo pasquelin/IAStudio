@@ -17,7 +17,7 @@ export const ORA_MIMETYPE = 'image/openraster'
 export const ORA_VERSION = '0.0.3'
 
 /** Where the studio's own state rides inside the container. */
-export const ORA_STUDIO_PATH = 'scenario/document.json'
+export const ORA_STUDIO_PATH = 'iastudio/document.json'
 
 /**
  * The document's envelope — who it is, and which asset it edits — inside the container.

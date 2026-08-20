@@ -7,7 +7,7 @@ import {
   PROMPT_SUGGESTIONS_MAX,
 } from '@shared/domain/promptAssist'
 import { invoke, resetHandlers } from '@main/ipc/testHarness'
-import { registerScenarioHandlers, type ScenarioHandlerDeps } from './handlers'
+import { registerProviderHandlers, type ProviderHandlerDeps } from './handlers'
 import type { AssetUploader } from './uploader'
 import type { JobManager } from './jobManager'
 import type { ModelRegistry } from './modelRegistry'
@@ -67,8 +67,8 @@ const usage = reader()
 const estimateCost: CostEstimator = () => Promise.resolve(null)
 
 /** Every dependency stubbed, so a case names only the one it is about. */
-function register(overrides: Partial<ScenarioHandlerDeps> = {}): void {
-  registerScenarioHandlers({
+function register(overrides: Partial<ProviderHandlerDeps> = {}): void {
+  registerProviderHandlers({
     models: registry(),
     jobs,
     prompts,
@@ -93,8 +93,8 @@ describe('scenario handlers', () => {
       models: registry({ search: () => Promise.reject(failing) }),
     })
 
-    await expect(invoke(CHANNELS.scenarioSearchModels)).rejects.toThrow('rate-limited')
-    await expect(invoke(CHANNELS.scenarioSearchModels)).rejects.not.toThrow(LEAKY)
+    await expect(invoke(CHANNELS.providerSearchModels)).rejects.toThrow('rate-limited')
+    await expect(invoke(CHANNELS.providerSearchModels)).rejects.not.toThrow(LEAKY)
   })
 
   it('rejects a query asking for more than one page of models', async () => {
@@ -103,7 +103,7 @@ describe('scenario handlers', () => {
       models: registry({ search }),
     })
 
-    await expect(invoke(CHANNELS.scenarioSearchModels, { limit: 10_000 })).rejects.toThrow()
+    await expect(invoke(CHANNELS.providerSearchModels, { limit: 10_000 })).rejects.toThrow()
     expect(search).not.toHaveBeenCalled()
   })
 
@@ -113,7 +113,7 @@ describe('scenario handlers', () => {
       models: registry({ describe: () => Promise.reject(failing) }),
     })
 
-    await expect(invoke(CHANNELS.scenarioDescribeModel, 'model_flux')).rejects.toThrow('not-found')
+    await expect(invoke(CHANNELS.providerDescribeModel, 'model_flux')).rejects.toThrow('not-found')
   })
 
   it('rejects a malformed model identifier before reaching the registry', async () => {
@@ -122,7 +122,7 @@ describe('scenario handlers', () => {
       models: registry({ describe }),
     })
 
-    await expect(invoke(CHANNELS.scenarioDescribeModel, '   ')).rejects.toThrow()
+    await expect(invoke(CHANNELS.providerDescribeModel, '   ')).rejects.toThrow()
     expect(describe).not.toHaveBeenCalled()
   })
 
@@ -134,7 +134,7 @@ describe('scenario handlers', () => {
       })
 
       await expect(
-        invoke(CHANNELS.scenarioSuggestPrompts, { modelId: 'model_flux', prompt: 'a boulder' }),
+        invoke(CHANNELS.providerSuggestPrompts, { modelId: 'model_flux', prompt: 'a boulder' }),
       ).resolves.toEqual([{ text: 'rewritten', parameters: {} }])
       expect(suggest).toHaveBeenCalledWith({ modelId: 'model_flux', prompt: 'a boulder' })
     })
@@ -146,7 +146,7 @@ describe('scenario handlers', () => {
       })
 
       await expect(
-        invoke(CHANNELS.scenarioSuggestPrompts, { prompt: 'a boulder' }),
+        invoke(CHANNELS.providerSuggestPrompts, { prompt: 'a boulder' }),
       ).rejects.toThrow()
       expect(suggest).not.toHaveBeenCalled()
     })
@@ -160,7 +160,7 @@ describe('scenario handlers', () => {
       })
 
       await expect(
-        invoke(CHANNELS.scenarioSuggestPrompts, {
+        invoke(CHANNELS.providerSuggestPrompts, {
           modelId: 'model_flux',
           prompt: 'x'.repeat(PROMPT_INPUT_MAX + 1),
         }),
@@ -175,7 +175,7 @@ describe('scenario handlers', () => {
       })
 
       await expect(
-        invoke(CHANNELS.scenarioSuggestPrompts, {
+        invoke(CHANNELS.providerSuggestPrompts, {
           modelId: 'model_flux',
           numResults: PROMPT_SUGGESTIONS_MAX + 1,
         }),
@@ -189,7 +189,7 @@ describe('scenario handlers', () => {
         prompts: assistant({ suggest: () => Promise.reject(failing) }),
       })
 
-      const refused = invoke(CHANNELS.scenarioSuggestPrompts, { modelId: 'model_flux' })
+      const refused = invoke(CHANNELS.providerSuggestPrompts, { modelId: 'model_flux' })
 
       await expect(refused).rejects.toThrow('rate-limited')
     })
@@ -204,7 +204,7 @@ describe('scenario handlers', () => {
         prompts: assistant({ translate }),
       })
 
-      await expect(invoke(CHANNELS.scenarioTranslatePrompt, 'un rocher moussu')).resolves.toEqual({
+      await expect(invoke(CHANNELS.providerTranslatePrompt, 'un rocher moussu')).resolves.toEqual({
         text: 'a mossy boulder',
         detectedLanguage: 'french',
       })
@@ -217,7 +217,7 @@ describe('scenario handlers', () => {
         prompts: assistant({ translate }),
       })
 
-      await expect(invoke(CHANNELS.scenarioTranslatePrompt, '   ')).rejects.toThrow()
+      await expect(invoke(CHANNELS.providerTranslatePrompt, '   ')).rejects.toThrow()
       expect(translate).not.toHaveBeenCalled()
     })
   })
@@ -232,7 +232,7 @@ describe('scenario handlers', () => {
       })
 
       await expect(
-        invoke(CHANNELS.scenarioDescribeStyle, ['asset_one', 'asset_two']),
+        invoke(CHANNELS.providerDescribeStyle, ['asset_one', 'asset_two']),
       ).resolves.toEqual({ description: 'muted greens', synthesis: 'two pictures' })
       expect(describeStyle).toHaveBeenCalledWith(['asset_one', 'asset_two'])
     })
@@ -243,7 +243,7 @@ describe('scenario handlers', () => {
         prompts: assistant({ describeStyle }),
       })
 
-      await expect(invoke(CHANNELS.scenarioDescribeStyle, [])).rejects.toThrow()
+      await expect(invoke(CHANNELS.providerDescribeStyle, [])).rejects.toThrow()
       expect(describeStyle).not.toHaveBeenCalled()
     })
 
@@ -255,7 +255,7 @@ describe('scenario handlers', () => {
 
       const tooMany = Array.from({ length: PROMPT_IMAGES_MAX + 1 }, (_unused, at) => `asset_${at}`)
 
-      await expect(invoke(CHANNELS.scenarioDescribeStyle, tooMany)).rejects.toThrow()
+      await expect(invoke(CHANNELS.providerDescribeStyle, tooMany)).rejects.toThrow()
       expect(describeStyle).not.toHaveBeenCalled()
     })
   })
@@ -269,7 +269,7 @@ describe('scenario handlers', () => {
         usage: reader({ report }),
       })
 
-      await expect(invoke(CHANNELS.scenarioUsageReport, 31)).rejects.toThrow()
+      await expect(invoke(CHANNELS.providerUsageReport, 31)).rejects.toThrow()
       expect(report).toHaveBeenCalledWith(31)
     })
 
@@ -280,7 +280,7 @@ describe('scenario handlers', () => {
         usage: reader({ report }),
       })
 
-      await expect(invoke(CHANNELS.scenarioUsageReport, 45)).rejects.toThrow()
+      await expect(invoke(CHANNELS.providerUsageReport, 45)).rejects.toThrow()
       expect(report).not.toHaveBeenCalled()
     })
 
@@ -291,11 +291,11 @@ describe('scenario handlers', () => {
       })
 
       const cursors = { 'acc-1': 100 }
-      await expect(invoke(CHANNELS.scenarioUsageEvents, 7, cursors)).resolves.toEqual(EMPTY_PAGE)
+      await expect(invoke(CHANNELS.providerUsageEvents, 7, cursors)).resolves.toEqual(EMPTY_PAGE)
       expect(events).toHaveBeenCalledWith(7, cursors)
 
-      await expect(invoke(CHANNELS.scenarioUsageEvents, 7, { 'acc-1': -1 })).rejects.toThrow()
-      await expect(invoke(CHANNELS.scenarioUsageEvents, 7, 100)).rejects.toThrow()
+      await expect(invoke(CHANNELS.providerUsageEvents, 7, { 'acc-1': -1 })).rejects.toThrow()
+      await expect(invoke(CHANNELS.providerUsageEvents, 7, 100)).rejects.toThrow()
     })
 
     it('reduces a refused usage call to a code like every other channel', async () => {
@@ -304,7 +304,7 @@ describe('scenario handlers', () => {
         usage: reader({ report: () => Promise.reject(failing) }),
       })
 
-      const refused = invoke(CHANNELS.scenarioUsageReport, 31)
+      const refused = invoke(CHANNELS.providerUsageReport, 31)
 
       await expect(refused).rejects.toThrow('rate-limited')
       await expect(refused).rejects.not.toThrow(LEAKY)
@@ -320,7 +320,7 @@ describe('scenario handlers', () => {
 
       const target = { id: 'model_flux' }
       await expect(
-        invoke(CHANNELS.scenarioEstimateCost, target, { prompt: 'a rock' }),
+        invoke(CHANNELS.providerEstimateCost, target, { prompt: 'a rock' }),
       ).resolves.toEqual({ creativeUnits: 12 })
       expect(estimate).toHaveBeenCalledWith(target, { prompt: 'a rock' })
     })
@@ -331,9 +331,9 @@ describe('scenario handlers', () => {
         estimateCost: estimate,
       })
 
-      await expect(invoke(CHANNELS.scenarioEstimateCost, { id: '  ' }, {})).rejects.toThrow()
+      await expect(invoke(CHANNELS.providerEstimateCost, { id: '  ' }, {})).rejects.toThrow()
       await expect(
-        invoke(CHANNELS.scenarioEstimateCost, { id: 'model_flux' }, 'not a body'),
+        invoke(CHANNELS.providerEstimateCost, { id: 'model_flux' }, 'not a body'),
       ).rejects.toThrow()
       expect(estimate).not.toHaveBeenCalled()
     })

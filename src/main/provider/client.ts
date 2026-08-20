@@ -114,7 +114,7 @@ export async function testAuthentication(client: AuthProbe): Promise<AuthState> 
 export type ClientProvider = {
   /** `null` when no credentials are available, from the settings or from `secrets/.env`. */
   get: () => Scenario | null
-  /** Same, but throws — every `scenario:*` handler needs a client to do anything at all. */
+  /** Same, but throws — every `provider:*` handler needs a client to do anything at all. */
   require: () => Scenario
   authState: () => Promise<AuthState>
 }

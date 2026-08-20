@@ -7,7 +7,7 @@ import {
   type EnvironmentFallback,
 } from './credentials'
 
-const DEV_ENV = 'SCENARIO_API_KEY=env_key\nSCENARIO_API_SECRET=env_secret\n'
+const DEV_ENV = 'PROVIDER_API_KEY=env_key\nPROVIDER_API_SECRET=env_secret\n'
 
 function fallback(content: string | null, packaged = false): EnvironmentFallback {
   return { packaged, read: () => content }
@@ -94,21 +94,21 @@ describe('the development account', () => {
   })
 
   it('takes its name from the file', () => {
-    const named = `${DEV_ENV}SCENARIO_ACCOUNT_NAME=Développement\n`
+    const named = `${DEV_ENV}PROVIDER_ACCOUNT_NAME=Développement\n`
 
     expect(environmentAccount(fallback(named))?.name).toBe('Développement')
   })
 
   it('falls back to a default name when the file does not give one', () => {
     expect(environmentAccount(fallback(DEV_ENV))?.name).toBe('Development')
-    expect(environmentAccount(fallback(`${DEV_ENV}SCENARIO_ACCOUNT_NAME=   \n`))?.name).toBe(
+    expect(environmentAccount(fallback(`${DEV_ENV}PROVIDER_ACCOUNT_NAME=   \n`))?.name).toBe(
       'Development',
     )
   })
 
   // A `.env` to tidy up is never a reason to withhold the only key a fresh checkout has.
   it('clamps a name too long rather than refusing the account', () => {
-    const long = `${DEV_ENV}SCENARIO_ACCOUNT_NAME=${'n'.repeat(200)}\n`
+    const long = `${DEV_ENV}PROVIDER_ACCOUNT_NAME=${'n'.repeat(200)}\n`
 
     expect(environmentAccount(fallback(long))?.name).toHaveLength(ACCOUNT_NAME_MAX_LENGTH)
   })
@@ -118,7 +118,7 @@ describe('the development account', () => {
   })
 
   it('ignores a file that only carries half the pair', () => {
-    expect(environmentAccount(fallback('SCENARIO_API_KEY=env_key'))).toBeNull()
+    expect(environmentAccount(fallback('PROVIDER_API_KEY=env_key'))).toBeNull()
   })
 
   it('tolerates a missing file', () => {

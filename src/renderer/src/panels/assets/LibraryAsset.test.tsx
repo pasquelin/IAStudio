@@ -50,7 +50,7 @@ describe('a library line the catalogue does not hold', () => {
     useCloud.getState().clear()
     menu = fakeMenu()
     installFakeBridge({ menu: menu.bridge })
-    withProject('/Users/someone/Reel.scenario')
+    withProject('/Users/someone/Reel.iastudio')
   })
 
   it('offers the one thing the line is for', async () => {

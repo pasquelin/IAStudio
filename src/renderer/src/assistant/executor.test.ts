@@ -239,7 +239,7 @@ describe('choosing and preparing a model', () => {
 
   it('searches the catalogue and answers what it found', async () => {
     installFakeBridge({
-      scenario: {
+      provider: {
         searchModels: () => Promise.resolve({ items: [aModel('model_z', 'Knight')], cursor: null }),
       },
     })
@@ -291,7 +291,7 @@ describe('submitting what was prepared', () => {
 describe('the prompt assistance, now asked for', () => {
   it('writes variants for the model the generator has armed', async () => {
     const suggestPrompts = vi.fn(() => Promise.resolve([{ text: 'a knight', parameters: {} }]))
-    installFakeBridge({ scenario: { suggestPrompts } })
+    installFakeBridge({ provider: { suggestPrompts } })
     const stop = registerGenerator(aGenerator({ body: () => ({ modelId: 'model_x', values: {} }) }))
 
     const outcome = await runAction('prompt.suggest', { draft: 'un chevalier' })
@@ -313,7 +313,7 @@ describe('the prompt assistance, now asked for', () => {
 
   it('translates what it was handed, and says which language it recognised', async () => {
     installFakeBridge({
-      scenario: {
+      provider: {
         translatePrompt: () => Promise.resolve({ text: 'a knight', detectedLanguage: 'french' }),
       },
     })
@@ -326,7 +326,7 @@ describe('the prompt assistance, now asked for', () => {
 
   it('reads the style off the pictures the form carries, never off a named list', async () => {
     const describeStyle = vi.fn(() => Promise.resolve({ description: 'flat', synthesis: '' }))
-    installFakeBridge({ scenario: { describeStyle } })
+    installFakeBridge({ provider: { describeStyle } })
     const stop = registerGenerator(aGenerator({ references: () => ['asset_1'] }))
 
     const outcome = await runAction('prompt.describeStyle', {})
@@ -381,7 +381,7 @@ describe('asking before acting', () => {
     const ask = vi.fn(() => Promise.resolve(true))
     const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
     installFakeBridge({
-      scenario: { estimateCost: () => Promise.resolve({ creativeUnits: 4 }) },
+      provider: { estimateCost: () => Promise.resolve({ creativeUnits: 4 }) },
     })
     const stopGenerator = registerGenerator(
       aGenerator({ body: () => ({ modelId: 'model_x', values: { prompt: 'a knight' } }), submit }),
@@ -443,7 +443,7 @@ describe('asking before acting', () => {
     const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
     let count = 1
     installFakeBridge({
-      scenario: { estimateCost: () => Promise.resolve({ creativeUnits: 4 }) },
+      provider: { estimateCost: () => Promise.resolve({ creativeUnits: 4 }) },
     })
     const stopGenerator = registerGenerator(
       aGenerator({ body: () => ({ modelId: 'model_x', values: { count } }), submit }),
@@ -477,7 +477,7 @@ describe('asking before acting', () => {
 
   it('says the estimate is unknown rather than inventing one', async () => {
     const ask = vi.fn(() => Promise.resolve(false))
-    installFakeBridge({ scenario: { estimateCost: () => Promise.reject(new Error('no price')) } })
+    installFakeBridge({ provider: { estimateCost: () => Promise.reject(new Error('no price')) } })
     const stopGenerator = registerGenerator(aGenerator())
     const stopConfirmer = registerConfirmer(ask)
 
@@ -532,7 +532,7 @@ describe('what an armed studio lets through without asking', () => {
 
   it('spends up to the budget, then asks again', async () => {
     arm({ delegateBudget: 5 })
-    installFakeBridge({ scenario: { estimateCost: () => Promise.resolve({ creativeUnits: 3 }) } })
+    installFakeBridge({ provider: { estimateCost: () => Promise.resolve({ creativeUnits: 3 }) } })
     const stopGenerator = registerGenerator(
       aGenerator({ submit: () => Promise.resolve(jobOf({ id: 'job_1' })) }),
     )
@@ -550,7 +550,7 @@ describe('what an armed studio lets through without asking', () => {
   /** A ceiling cannot bound a cost nobody knows, so an unpriced spend is asked about regardless. */
   it('asks about a spend the API declined to price, whatever the budget', async () => {
     arm({ delegateBudget: 10_000 })
-    installFakeBridge({ scenario: { estimateCost: () => Promise.reject(new Error('no price')) } })
+    installFakeBridge({ provider: { estimateCost: () => Promise.reject(new Error('no price')) } })
     const stopGenerator = registerGenerator(aGenerator())
 
     expect(await runConfirmedAction('generator.submit', {})).toEqual({

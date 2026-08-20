@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ACTION_REGISTRY, INSTRUCTION_MAX } from '@shared/domain/assistant'
 import type { Job } from '@shared/domain/job'
 import { createAssetText } from './assetText'
-import { createScenarioBrain } from './brainScenario'
+import { createProviderBrain } from './brainProvider'
 import { actionCatalogue, instructionFor, preambleLength, recentHistory } from './instruction'
 import { jsonIn, parseReply } from './reply'
 
@@ -195,7 +195,7 @@ describe('reading the asset the model wrote', () => {
 
 describe('thinking', () => {
   it('answers the reply and what it cost', async () => {
-    const brain = createScenarioBrain({
+    const brain = createProviderBrain({
       run: () => Promise.resolve(succeeded()),
       readText: () => Promise.resolve('{"say":"Opening.","calls":[]}'),
       model: () => 'claude-haiku-4-5',
@@ -210,7 +210,7 @@ describe('thinking', () => {
 
   it('sends the history as text inputs, capped at what the API takes', async () => {
     const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
-    const brain = createScenarioBrain({
+    const brain = createProviderBrain({
       run,
       readText: () => Promise.resolve('{"say":"ok","calls":[]}'),
       model: () => 'claude-haiku-4-5',
@@ -233,7 +233,7 @@ describe('thinking', () => {
   it('asks once more, quoting the fault, and charges for both', async () => {
     const answers = ['I think you want a 3D file!', '{"say":"Opening.","calls":[]}']
     const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
-    const brain = createScenarioBrain({
+    const brain = createProviderBrain({
       run,
       readText: () => Promise.resolve(answers.shift() ?? ''),
       model: () => 'claude-haiku-4-5',
@@ -247,7 +247,7 @@ describe('thinking', () => {
   })
 
   it('gives up after the second, saying nothing rather than throwing', async () => {
-    const brain = createScenarioBrain({
+    const brain = createProviderBrain({
       run: () => Promise.resolve(succeeded()),
       readText: () => Promise.resolve('still not JSON'),
       model: () => 'claude-haiku-4-5',
@@ -260,7 +260,7 @@ describe('thinking', () => {
 
   // A job that failed was still paid for, and the total the modal shows has to say so.
   it('counts what a failed job cost', async () => {
-    const brain = createScenarioBrain({
+    const brain = createProviderBrain({
       run: () => Promise.resolve({ ...succeeded([], 0.75), status: 'failed', error: 'rejected' }),
       readText: () => Promise.resolve(''),
       model: () => 'claude-haiku-4-5',
@@ -271,7 +271,7 @@ describe('thinking', () => {
 
   it('reads no asset when the job produced none', async () => {
     const readText = vi.fn(() => Promise.resolve(''))
-    const brain = createScenarioBrain({
+    const brain = createProviderBrain({
       run: () => Promise.resolve(succeeded([])),
       readText,
       model: () => 'claude-haiku-4-5',

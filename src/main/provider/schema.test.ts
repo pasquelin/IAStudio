@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SKYBOX_TAG } from '@shared/domain/model'
-import { familyOf, translateSchema, type ScenarioInput } from './schema'
+import { familyOf, translateSchema, type ProviderInput } from './schema'
 
 describe('translateSchema', () => {
   it('turns a bounded integer into an integer field', () => {
@@ -134,7 +134,7 @@ describe('translateSchema', () => {
   })
 
   it('keeps every input, unknown ones included', () => {
-    const inputs: ScenarioInput[] = [
+    const inputs: ProviderInput[] = [
       { name: 'a', type: 'string' },
       { name: 'b', type: 'inputs_array' },
       { name: 'c', type: 'model' },
@@ -249,7 +249,7 @@ describe('familyOf', () => {
    * model's field — which is what keeps invariant 5 whole for inpainting.
    */
   it('carries the field a mask input masks', () => {
-    const inputs: ScenarioInput[] = [
+    const inputs: ProviderInput[] = [
       { name: 'image', type: 'file', kind: 'image' },
       { name: 'mask', type: 'file', kind: 'image', maskFrom: 'image' },
     ]

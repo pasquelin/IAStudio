@@ -29,7 +29,7 @@ import type {
 } from '@shared/ipc'
 import { isPngBytes } from '@main/media/png'
 import { pathSegment, withinCodePoints } from '@main/validation'
-import { base64Payload } from '@main/scenario/validation'
+import { base64Payload } from '@main/provider/validation'
 
 const manifest = z.object({
   // Capped, not merely floored, exactly as `documentEnvelope` below — and for a heavier reason.

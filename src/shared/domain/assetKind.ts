@@ -1,5 +1,5 @@
 import { ASSET_TYPES, type AssetType } from './asset'
-import { channelFromScenarioType } from './texture'
+import { channelFromProviderType } from './texture'
 import type { WorkspaceId } from './workspace'
 
 /**
@@ -99,7 +99,7 @@ export function assetTypeOfRemote({
   metadataType,
   mimeType,
 }: RemoteTyping): AssetType | null {
-  if (metadataType !== undefined && channelFromScenarioType(metadataType)) return 'texture'
+  if (metadataType !== undefined && channelFromProviderType(metadataType)) return 'texture'
 
   const byKind = kind === undefined ? undefined : TYPE_BY_KIND[kind]
   if (byKind !== undefined && byKind !== 'image') return byKind

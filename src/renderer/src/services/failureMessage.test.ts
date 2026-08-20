@@ -13,7 +13,7 @@ describe('failure message', () => {
    */
   it('reads the code out of the message Electron wraps around it', () => {
     const wrapped = new Error(
-      "Error invoking remote method 'scenario:search-models': Error: rate-limited",
+      "Error invoking remote method 'provider:search-models': Error: rate-limited",
     )
 
     expect(failureKeyOf(wrapped)).toBe('errors.rateLimited')

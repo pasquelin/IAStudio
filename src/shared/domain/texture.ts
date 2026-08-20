@@ -46,7 +46,7 @@ export type ChannelSource = {
  *
  * `emissive` is absent because no Scenario model produces one — it is only ever local.
  */
-export const CHANNEL_BY_SCENARIO_TYPE: Record<string, ChannelSource> = {
+export const CHANNEL_BY_PROVIDER_TYPE: Record<string, ChannelSource> = {
   'texture-albedo': { channel: 'baseColor' },
   'texture-normal': { channel: 'normal' },
   'texture-height': { channel: 'height' },
@@ -65,8 +65,8 @@ export const CHANNEL_BY_SCENARIO_TYPE: Record<string, ChannelSource> = {
  * or a type this build has never heard of. Unknown is not an error: the API adds types without
  * warning, and one of them must land in the project as an ordinary picture rather than vanish.
  */
-export function channelFromScenarioType(metadataType: string | undefined): ChannelSource | null {
-  return metadataType === undefined ? null : (CHANNEL_BY_SCENARIO_TYPE[metadataType] ?? null)
+export function channelFromProviderType(metadataType: string | undefined): ChannelSource | null {
+  return metadataType === undefined ? null : (CHANNEL_BY_PROVIDER_TYPE[metadataType] ?? null)
 }
 
 /** What a seam reading means, in words. A ratio is a number nobody reads without a scale. */

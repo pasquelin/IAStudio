@@ -1,7 +1,7 @@
 import {
   FEATURED_TAG,
   PERIOD_DAYS,
-  SCENARIO_MAINTAINER,
+  PROVIDER_MAINTAINER,
   SYSTEM_TAG_PREFIX,
   tagOfFamily,
   type ModelDescriptor,
@@ -12,7 +12,7 @@ import {
   type ModelSummary,
 } from '@shared/domain/model'
 import type { WatchCredentials } from './credentialsWatch'
-import { familyOf, translateSchema, type ScenarioInput } from './schema'
+import { familyOf, translateSchema, type ProviderInput } from './schema'
 
 /**
  * A model as the API returns it, reduced to what the studio reads. Narrower than the SDK
@@ -31,7 +31,7 @@ export type RemoteModel = {
   /** Pictures the model's owner published. Measured: 628 of the 640 public models have some. */
   exampleAssetIds?: readonly string[]
   /**
-   * Read against `SCENARIO_MAINTAINER`. Listing, search index and `GET /models/{id}` all carry
+   * Read against `PROVIDER_MAINTAINER`. Listing, search index and `GET /models/{id}` all carry
    * it — measured on every public model of all three, unlike `accessRestrictions` below.
    */
   complianceMetadata?: { maintainer?: string }
@@ -51,7 +51,7 @@ export type RemoteModel = {
    * does not carry the field. That is why the search path is graded from `grades` below.
    */
   accessRestrictions?: number | null
-  inputs?: readonly ScenarioInput[]
+  inputs?: readonly ProviderInput[]
 }
 
 type RemoteAsset = {
@@ -161,7 +161,7 @@ type Grades = Map<string, number>
  * second owner, the whole catalogue turns community and nothing reddens. Left as is knowingly.
  */
 const isOfficial = (model: RemoteModel): boolean =>
-  model.privacy === 'public' && model.complianceMetadata?.maintainer === SCENARIO_MAINTAINER
+  model.privacy === 'public' && model.complianceMetadata?.maintainer === PROVIDER_MAINTAINER
 
 function summaryOf(model: RemoteModel, grades: Grades): ModelSummary {
   const tags = model.tags ?? []

@@ -29,7 +29,7 @@ describe('formatDay', () => {
    * two panes away, with nothing on screen accounting for the gap.
    *
    * `dayOf` is IMPORTED rather than restated, and that is the point of the case. It sat in
-   * `main/scenario/` at first, out of the renderer's reach, so this test recopied its `slice(0, 10)`
+   * `main/provider/` at first, out of the renderer's reach, so this test recopied its `slice(0, 10)`
    * — a copy that would keep passing the day the real rule started reading a local day. It moved to
    * `shared/domain/usage.ts`, which both sides already import, so the pair is now held against the
    * function the chart actually counts with.

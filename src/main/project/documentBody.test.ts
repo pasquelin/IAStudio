@@ -53,7 +53,7 @@ const timeline = (studio: Record<string, unknown> = {}): string =>
   JSON.stringify({
     OTIO_SCHEMA: 'Timeline.1',
     name: 'Bande',
-    metadata: { scenario: studio },
+    metadata: { iastudio: studio },
     global_start_time: null,
     tracks: { OTIO_SCHEMA: 'Stack.1', children: [] },
   })
@@ -514,7 +514,7 @@ describe('a sky held as glTF', () => {
 
     expect(line.startsWith('{"asset":')).toBe(true)
     expect(JSON.parse(`${line.replace(/,$/, '')}}`)).toMatchObject({
-      asset: { extras: { scenario: { documentKind: 'skybox' } } },
+      asset: { extras: { iastudio: { documentKind: 'skybox' } } },
     })
   })
 
@@ -575,8 +575,8 @@ describe('a material held as MaterialX', () => {
     const written = asText(material.write(materialDocument()))
 
     expect(written.startsWith('<?xml version="1.0"?>\n<materialx version="1.39"')).toBe(true)
-    expect(written).toContain('<standard_surface name="SR_scenario" type="surfaceshader">')
-    expect(written).toContain('<surfacematerial name="scenario_material" type="material">')
+    expect(written).toContain('<standard_surface name="SR_iastudio" type="surfaceshader">')
+    expect(written).toContain('<surfacematerial name="iastudio_material" type="material">')
   })
 
   /**
@@ -635,7 +635,7 @@ describe('what a listing pays per document', () => {
   let root = ''
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'scenario-heads-'))
+    root = await mkdtemp(join(tmpdir(), 'ia-studio-heads-'))
   })
 
   const laid = async (name: string, body: string): Promise<string> => {

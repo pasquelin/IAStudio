@@ -112,7 +112,7 @@ function suggestPrompts(input: Record<string, unknown>): Promise<ActionOutcome> 
   if (!prepared) return Promise.resolve(refused('generatorClosed'))
 
   return withBridge(bridge =>
-    bridge.scenario.suggestPrompts({
+    bridge.provider.suggestPrompts({
       modelId: prepared.modelId,
       prompt: textOf(input, 'draft') ?? '',
     }),
@@ -128,7 +128,7 @@ function describeStyle(): Promise<ActionOutcome> {
   // channel refuses an empty list anyway.
   if (references.length === 0) return Promise.resolve(refused('noReference'))
 
-  return withBridge(bridge => bridge.scenario.describeStyle(references))
+  return withBridge(bridge => bridge.provider.describeStyle(references))
 }
 
 export const CORE_HANDLERS: ActionHandlers = {
@@ -142,7 +142,7 @@ export const CORE_HANDLERS: ActionHandlers = {
   'models.search': input => {
     const family = oneOf(input, 'family', MODEL_FAMILIES)
     return withBridge(async bridge => {
-      const page = await bridge.scenario.searchModels({
+      const page = await bridge.provider.searchModels({
         search: textOf(input, 'query') ?? '',
         ...(family ? { family } : {}),
       })
@@ -166,7 +166,7 @@ export const CORE_HANDLERS: ActionHandlers = {
   'jobs.list': () => ({ ok: true, data: useJobs.getState().jobs }),
 
   'prompt.translate': input =>
-    withBridge(bridge => bridge.scenario.translatePrompt(textOf(input, 'text') ?? '')),
+    withBridge(bridge => bridge.provider.translatePrompt(textOf(input, 'text') ?? '')),
 
   /**
    * Recognised here, carried out by the conversation itself — see `say` in `stores/assistant`.

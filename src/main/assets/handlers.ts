@@ -12,16 +12,16 @@ import {
   persistableFailure,
   quietlyReducedBy,
   reducedBy,
-} from '@main/scenario/client'
-import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
+} from '@main/provider/client'
+import type { RemoteAssetCatalog } from '@main/provider/assetCatalog'
 import {
   filterExpression,
   publicFeedFilter,
   NEWEST_FIRST,
   NSFW_EMPTY,
-} from '@main/scenario/filterExpression'
-import { remoteTypesFor } from '@main/scenario/remoteTypes'
-import { OFFSET_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
+} from '@main/provider/filterExpression'
+import { remoteTypesFor } from '@main/provider/remoteTypes'
+import { OFFSET_MAX, PAGE_SIZE_MAX } from '@main/provider/limits'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import type { ActivityLog } from '@main/project/activityLog'
 import type { AutoCaption, DescribeAssets } from './autoCaption'

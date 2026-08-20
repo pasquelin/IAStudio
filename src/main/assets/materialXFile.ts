@@ -24,10 +24,10 @@ import { attribute, escapeXml, unescapeXml } from '@shared/domain/xmlText'
  * specification and against the `.mtlx` files the distribution ships.
  */
 
-const GRAPH = 'NG_scenario'
-const SURFACE = 'SR_scenario'
-const MATERIAL = 'scenario_material'
-const DISPLACE = 'DS_scenario'
+const GRAPH = 'NG_iastudio'
+const SURFACE = 'SR_iastudio'
+const MATERIAL = 'iastudio_material'
+const DISPLACE = 'DS_iastudio'
 
 /** Trailing zeros make a file that differs from itself between two identical saves. */
 const num = (value: number): string => String(Number(value.toFixed(6)))

@@ -69,7 +69,7 @@ describe('jobs store', () => {
     const stopProgress = vi.fn()
     const stopChanges = vi.fn()
     installFakeBridge({
-      scenario: {
+      provider: {
         onProgress: () => stopProgress,
         onJobsChanged: callback => {
           listeners.push(callback)
@@ -91,7 +91,7 @@ describe('jobs store', () => {
 
   it('puts a freshly submitted job at the top of the list', async () => {
     installFakeBridge({
-      scenario: {
+      provider: {
         generate: () => Promise.resolve(job({ id: 'job_new', status: 'queued', progress: 0 })),
       },
     })

@@ -10,7 +10,7 @@ function page(events: readonly UsageEvent[]): UsageEventPage {
 
 function install(events: readonly UsageEvent[]) {
   installFakeBridge({
-    scenario: { usageEvents: () => Promise.resolve(page(events)) },
+    provider: { usageEvents: () => Promise.resolve(page(events)) },
   })
 }
 

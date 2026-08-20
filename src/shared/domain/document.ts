@@ -101,7 +101,7 @@ export const DOCUMENTS_FOLDER = 'documents'
  * Here rather than in each format: they were spelt twice, and two spellings of an invariant are
  * free to drift the day one is edited — which is the very argument each of them carried.
  */
-export const STUDIO_METADATA_KEY = 'scenario'
+export const STUDIO_METADATA_KEY = 'iastudio'
 
 export const DOCUMENT_ID_KEY = 'documentId'
 

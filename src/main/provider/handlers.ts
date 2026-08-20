@@ -24,7 +24,7 @@ import {
   parseUsagePeriod,
 } from './validation'
 
-export type ScenarioHandlerDeps = {
+export type ProviderHandlerDeps = {
   models: ModelRegistry
   jobs: JobManager
   prompts: PromptAssist
@@ -36,9 +36,9 @@ export type ScenarioHandlerDeps = {
   estimateCost: CostEstimator
 }
 
-const reduced = reducedBy('scenario')
+const reduced = reducedBy('provider')
 
-export function registerScenarioHandlers({
+export function registerProviderHandlers({
   models,
   jobs,
   prompts,
@@ -46,38 +46,38 @@ export function registerScenarioHandlers({
   usage,
   plan,
   estimateCost,
-}: ScenarioHandlerDeps): void {
-  handle(CHANNELS.scenarioUsageReport, (_event, period) =>
+}: ProviderHandlerDeps): void {
+  handle(CHANNELS.providerUsageReport, (_event, period) =>
     reduced(() => usage.report(parseUsagePeriod(period))),
   )
 
-  handle(CHANNELS.scenarioUsageEvents, (_event, period, cursors) =>
+  handle(CHANNELS.providerUsageEvents, (_event, period, cursors) =>
     reduced(() => usage.events(parseUsagePeriod(period), parseUsageCursors(cursors))),
   )
 
-  handle(CHANNELS.scenarioSearchModels, (_event, query) =>
+  handle(CHANNELS.providerSearchModels, (_event, query) =>
     reduced(() => models.search(parseModelQuery(query))),
   )
 
-  handle(CHANNELS.scenarioModelPreviews, (_event, assetIds) =>
+  handle(CHANNELS.providerModelPreviews, (_event, assetIds) =>
     reduced(() => models.previews(parseModelIds(assetIds))),
   )
 
-  handle(CHANNELS.scenarioDescribeModel, (_event, modelId) =>
+  handle(CHANNELS.providerDescribeModel, (_event, modelId) =>
     reduced(() => models.describe(parseModelId(modelId))),
   )
 
-  handle(CHANNELS.scenarioPlan, () => reduced(() => plan.access()))
+  handle(CHANNELS.providerPlan, () => reduced(() => plan.access()))
 
-  handle(CHANNELS.scenarioSuggestPrompts, (_event, request) =>
+  handle(CHANNELS.providerSuggestPrompts, (_event, request) =>
     reduced(() => prompts.suggest(parseSuggestPrompts(request))),
   )
 
-  handle(CHANNELS.scenarioTranslatePrompt, (_event, draft) =>
+  handle(CHANNELS.providerTranslatePrompt, (_event, draft) =>
     reduced(() => prompts.translate(parsePromptDraft(draft))),
   )
 
-  handle(CHANNELS.scenarioDescribeStyle, (_event, images) =>
+  handle(CHANNELS.providerDescribeStyle, (_event, images) =>
     reduced(() => prompts.describeStyle(parseReferenceImages(images))),
   )
 
@@ -91,7 +91,7 @@ export function registerScenarioHandlers({
   // Reduced like its neighbours: a throw from `parseGenerationBody` crossed the IPC raw, missing
   // the journal `recordFailuresTo` keeps — and the Generate button, which has no catch of its
   // own, then did nothing and said nothing.
-  handle(CHANNELS.scenarioGenerate, (_event, modelId, body) =>
+  handle(CHANNELS.providerGenerate, (_event, modelId, body) =>
     reduced(async () => {
       const id = parseModelId(modelId)
       const label = await models
@@ -105,17 +105,17 @@ export function registerScenarioHandlers({
 
   // What is priced is a target, exactly as what is submitted is. Where the figure sits in the
   // answer is `cost.ts`'s business, not this one's.
-  handle(CHANNELS.scenarioEstimateCost, (_event, target, body) =>
+  handle(CHANNELS.providerEstimateCost, (_event, target, body) =>
     reduced(() => estimateCost(parseJobTarget(target), parseGenerationBody(body))),
   )
 
-  handle(CHANNELS.scenarioUploadAsset, (_event, name, image) =>
+  handle(CHANNELS.providerUploadAsset, (_event, name, image) =>
     reduced(() => uploads.upload(parseAssetName(name), parseBase64(image))),
   )
 
-  handle(CHANNELS.scenarioCancelJob, (_event, jobId) =>
+  handle(CHANNELS.providerCancelJob, (_event, jobId) =>
     reduced(() => jobs.cancel(parseJobId(jobId))),
   )
 
-  handle(CHANNELS.scenarioListJobs, () => jobs.list())
+  handle(CHANNELS.providerListJobs, () => jobs.list())
 }
