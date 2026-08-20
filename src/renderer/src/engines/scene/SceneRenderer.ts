@@ -609,6 +609,15 @@ export class SceneRenderer {
   private readonly gizmoRegion = new Vector4()
   private viewHelper: ViewHelper | null = null
   private grid: GridHelper | null = null
+  /**
+   * Two things move separately and are read by different passes, which is why they are two flags
+   * and not one: WHAT the scene holds, which the counters read, and WHERE it stands, which the
+   * shadow reach reads. A pose displaces without adding; hiding a mesh subtracts without moving.
+   */
+  private contentChanged = true
+  private placementChanged = true
+  /** What the model costs, held between the passes that cannot have changed it. */
+  private modelStats: SceneStats = EMPTY_STATS
   private mode: TransformMode = 'select'
   private snapping = false
   private space: TransformSpace = 'world'
@@ -799,7 +808,7 @@ export class SceneRenderer {
     this.applyPoses()
     // After every node is placed and posed: the reach is measured off where things actually
     // stand, and a set that grew by one block re-cuts the frustum of every light at once.
-    this.tuneShadows()
+    this.tuneShadowsIfMoved()
     this.applyCameraShots()
     this.showAidsForSelection()
     // After the transforms and the poses: a box is read off where an object actually stands.
@@ -1047,6 +1056,10 @@ export class SceneRenderer {
     const timeline = this.timeline
     if (timeline.tracks.length === 0) return
 
+    // A pose displaces without adding anything, so the counters are left alone and only the
+    // shadow reach has to be read again.
+    this.placementChanged = true
+
     for (const nodeId of drivenNodes(timeline)) {
       const object = this.objects.get(nodeId)
       const rest = this.applied.get(nodeId)?.transform
@@ -1250,8 +1263,16 @@ export class SceneRenderer {
     // What the MODEL costs, so an isolation does not make the triangle count drop — `statsOf`
     // skips an invisible mesh, and hiding something to look past it is not making it cheaper.
     this.asDocumented(() => {
+      // Only when the set moved. `apply` runs on every state change, a selection included, and
+      // walking every geometry of the scene again for a number no selection can move was 12 % of
+      // the CPU of one click on 8 000 nodes — measured 20/08. The selected side is walked every
+      // time on purpose: it is bounded by what is selected, which is usually one thing.
+      if (this.contentChanged) {
+        this.modelStats = statsOf(this.objects.values())
+        this.contentChanged = false
+      }
       const selected = this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
-      report(statsOf(this.objects.values()), statsOf(selected))
+      report(this.modelStats, statsOf(selected))
     })
   }
 
@@ -2316,6 +2337,12 @@ export class SceneRenderer {
     const previous = this.applied.get(node.id)
     if (previous === node) return
 
+    // Past that guard something about this node really changed — its shape, or where it stands,
+    // and from here neither can be told from the other. A selection changes no node, so it never
+    // reaches here: that walk was 12 % of the CPU of one click on 8 000 nodes, measured 20/08.
+    this.contentChanged = true
+    this.placementChanged = true
+
     // A model is its file: pointing a node at another asset is a different object, not an edit
     // of this one. Released and rebuilt — patching it would leave the old file on screen and
     // its reference held for good, since `release` only ever knows the asset applied last.
@@ -2394,6 +2421,8 @@ export class SceneRenderer {
 
   /** Every node's `visible`, from what the document says and what the viewport hides over it. */
   private applyVisibility(): void {
+    // `statsOf` skips an invisible mesh, so hiding one moves the count as surely as removing it.
+    this.contentChanged = true
     for (const [id, node] of this.applied) {
       const object = this.objects.get(id)
       if (object) object.visible = drawsNode(this.isolation, id, node.visible)
@@ -2665,7 +2694,11 @@ export class SceneRenderer {
         this.belongsToAnotherNode,
       )
       // The count is a count of what is really there: a model's triangles arrive with its file,
-      // which is a tick after the `apply` that asked for it.
+      // which is a tick after the `apply` that asked for it. It is also what the scene now
+      // OCCUPIES, so the lights are re-cut against a set that just grew by a whole model.
+      this.contentChanged = true
+      this.placementChanged = true
+      this.tuneShadowsIfMoved()
       this.reportStats()
       // Same reason, same place: what the file brought was not there when the mode was applied,
       // and a model landing into a wireframe scene would be the one thing still drawn shaded.
@@ -2792,6 +2825,17 @@ export class SceneRenderer {
     // The mode itself lands per pane, at render time; what an arriving object needs here is its
     // edges, which are geometry rather than a flag.
     applyWireOverlay(object, this.needsEdges(), this.wireMaterial, this.quadEdges)
+  }
+
+  /**
+   * The reach only has to be read again when something MOVED. A selection moves nothing, and
+   * `apply` runs on every state change. The settings call `tuneShadows` directly instead: a map
+   * that was resized has to be rebuilt whether or not the set stands where it stood.
+   */
+  private tuneShadowsIfMoved(): void {
+    if (!this.placementChanged) return
+    this.tuneShadows()
+    this.placementChanged = false
   }
 
   /** Every light at once, against a reach measured once. */
@@ -2939,6 +2983,8 @@ export class SceneRenderer {
   }
 
   private release(id: string): void {
+    this.contentChanged = true
+    this.placementChanged = true
     // Read before `applied` is emptied: the reference the cache holds is keyed by what the node
     // pointed at, and nothing else remembers it.
     const applied = this.applied.get(id)

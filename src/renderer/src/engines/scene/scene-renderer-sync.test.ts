@@ -19,6 +19,7 @@ import {
   modelNodeFixture,
   spriteNodeFixture,
 } from './scene-fixtures'
+import type { SceneStats } from './sceneStats'
 import { EMPTY_SCENE, type SceneNode, type SceneState } from './sceneState'
 
 /**
@@ -318,6 +319,40 @@ describe('a scene told what changed', () => {
       expect(one?.scene).toBe(both?.scene)
       expect(one?.selected).toBeGreaterThan(0)
       expect(one?.selected).toBeLessThan(one?.scene ?? 0)
+
+      renderer.dispose()
+    })
+
+    /**
+     * Counting walks every geometry of the scene, and `apply` runs on every state change — a
+     * selection included. On 8 000 nodes that walk was 12 % of the CPU of one click, measured
+     * 20/08, for a number no selection can move.
+     *
+     * Read on the IDENTITY of what is reported, which is what says the walk did not happen:
+     * `statsOf` builds a fresh object every time it runs. The nodes are the same OBJECTS from one
+     * pass to the next, as a selection leaves them — rebuilt ones would be a real edit.
+     */
+    it('does not count the scene again when only the selection moved', () => {
+      const reported: SceneStats[] = []
+      const renderer = new SceneRenderer({
+        onSelect: vi.fn(),
+        onTransform: vi.fn(),
+        onStats: scene => reported.push(scene),
+      })
+      const nodes = [meshNode('box-1'), meshNode('box-2')]
+
+      renderer.apply({ ...EMPTY_SCENE, nodes })
+      const counted = reported.at(-1)
+      renderer.apply({ ...EMPTY_SCENE, nodes, selectedIds: ['box-1'] })
+      renderer.apply({ ...EMPTY_SCENE, nodes, selectedIds: ['box-2'] })
+
+      expect(reported.at(-1)).toBe(counted)
+
+      // And a node that really arrives is counted again, or the whole thing would be frozen.
+      renderer.apply({ ...EMPTY_SCENE, nodes: [...nodes, meshNode('box-3')] })
+
+      expect(reported.at(-1)).not.toBe(counted)
+      expect(reported.at(-1)?.triangles).toBeGreaterThan(counted?.triangles ?? 0)
 
       renderer.dispose()
     })
