@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import type { InstalledCheckerTexture } from '@shared/domain/checkerTexture'
+import {
+  DEFAULT_CHECKER_TEXTURE,
+  type InstalledCheckerTexture,
+} from '@shared/domain/checkerTexture'
 import { DEFAULT_MATERIAL } from './sceneState'
 import {
   checkerTextureRef,
@@ -9,7 +12,7 @@ import {
 } from './checkerTextures'
 
 const INSTALLED: InstalledCheckerTexture[] = [
-  { id: 'checkerLarge', assetId: 'asset_checker' },
+  { id: DEFAULT_CHECKER_TEXTURE, assetId: 'asset_default' },
   { id: 'gridSmall', assetId: 'asset_grid' },
 ]
 
@@ -20,7 +23,7 @@ afterEach(() => {
 describe('the working textures of a project', () => {
   it('dresses a new mesh once the project holds them', () => {
     rememberCheckerTextures(INSTALLED)
-    expect(defaultMeshMaterial().map).toEqual({ assetId: 'asset_checker' })
+    expect(defaultMeshMaterial().map).toEqual({ assetId: 'asset_default' })
   })
 
   it('leaves a mesh in plain paint while the project holds none', () => {
@@ -37,7 +40,7 @@ describe('the working textures of a project', () => {
   it('answers the reference of the one asked for', () => {
     rememberCheckerTextures(INSTALLED)
     expect(checkerTextureRef('gridSmall')).toEqual({ assetId: 'asset_grid' })
-    expect(checkerTextureRef('gridLarge')).toBeNull()
+    expect(checkerTextureRef('checkerSmall')).toBeNull()
   })
 
   // Leaving a project must not leave its ids behind: the next one has assets of its own, and a
