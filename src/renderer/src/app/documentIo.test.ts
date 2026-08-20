@@ -117,6 +117,7 @@ function fakeCanvas(overrides: Omit<Partial<CanvasHost>, 'snapshot'> = {}): Canv
     restoreSnapshot: () => Promise.resolve(),
     flatten: () => Promise.resolve<Uint8Array<ArrayBuffer> | null>(FLATTEN),
     forgetPicture: () => Promise.resolve(),
+    turnQuarter: () => undefined,
     ...overrides,
   }
 

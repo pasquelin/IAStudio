@@ -19,28 +19,12 @@ export function snapTargets(state: CanvasState, axis: Axis): number[] {
 }
 
 /**
- * The target within `tolerance`, or the value untouched. Nearest wins — two guides a pixel apart
- * would otherwise hand the drag to whichever was declared first.
- */
-export function snapValue(value: number, targets: readonly number[], tolerance: number): number {
-  let best: number | null = null
-  let bestDistance = tolerance
-
-  for (const target of targets) {
-    const distance = Math.abs(target - value)
-    if (distance <= bestDistance) {
-      best = target
-      bestDistance = distance
-    }
-  }
-  return best ?? value
-}
-
-/**
  * How far a moving box has to be nudged for one of its `edges` to land on a target. Zero when
  * none is close enough. A dragged layer has three candidate edges per axis — its two sides and
- * its middle — and the nearest pairing of any edge with any target wins, which is why this
- * cannot be `snapValue` applied to one of them.
+ * its middle — and the nearest pairing of any edge with any target wins.
+ *
+ * One edge is the single-value case, and there used to be a `snapValue` beside this for it:
+ * `value + snapOffset([value], …)` is that function exactly, both branches included.
  */
 export function snapOffset(
   edges: readonly number[],

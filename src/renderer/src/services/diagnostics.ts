@@ -41,6 +41,9 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   // Picking an edit from the Image menu is a gesture too, and it was the one refusal of that menu
   // that said nothing at all — the caller swallowed everything it threw.
   'canvas.edit',
+  // A drop and a double-click are gestures: a cloud row that has not been downloaded yet is
+  // dropped again precisely because the first attempt did nothing visible.
+  'canvas.place',
   // ⌘S is a gesture, and the half that reaches the asset can fail while the document is written.
   'assets.save',
   // ⇧⌘S is the same kind of gesture: asked again precisely because the first said nothing.

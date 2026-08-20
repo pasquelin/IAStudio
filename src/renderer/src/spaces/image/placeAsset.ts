@@ -19,7 +19,13 @@ import type { PictureMeasure } from './pictureSize'
  * what is in it. `addLayer` arms it, so the brush lands on what was just dropped.
  */
 export function placeAsset(documentId: string, asset: Asset): void {
-  if (!isLocalPicture(asset)) return
+  if (!isLocalPicture(asset)) {
+    // Said rather than swallowed, exactly as `placeTextureChannel` says it: `AssetDropTarget`
+    // cannot refuse this one while it flies — a drag announces its TYPE and not where its file
+    // is — so the refusal can only be spoken here, and a silent drop is the worse of the two.
+    reportFailure('canvas.place', asset.id, new Error(`${asset.name} has no local file yet`))
+    return
+  }
 
   useCanvases.getState().runCommand(documentId, addLayer(sourceLayer(asset)))
 }
@@ -40,8 +46,19 @@ async function becomeContainer(documentId: string, asset: Asset): Promise<boolea
   if (!layered) return false
 
   const { canvasFromOra } = await import('@/engines/canvas/oraDocument')
+  const { withinCeiling } = await import('./pictureSize')
+  const opened = canvasFromOra(layered).state
+
+  // The ceiling bites here too. This path never went through it — a 12000² container opened at
+  // its full size, which is the very thing the ceiling exists to refuse, and ⌘S then wrote that
+  // size back. Said out loud for the same reason the flat path says it.
+  const held = withinCeiling(opened)
+  if (held.width !== opened.width || held.height !== opened.height) {
+    reportFailure('canvas.size', asset.name, new Error('picture opened below its own size'))
+  }
+
   const canvases = useCanvases.getState()
-  canvases.replace(documentId, canvasFromOra(layered).state)
+  canvases.replace(documentId, { ...opened, width: held.width, height: held.height })
   canvases.markSaved(documentId, canvasStore.markOf(useCanvases.getState(), documentId))
   return true
 }
@@ -69,7 +86,12 @@ export async function becomeAsset(
   asset: Asset,
   measure?: PictureMeasure,
 ): Promise<void> {
-  if (!isLocalPicture(asset)) return
+  if (!isLocalPicture(asset)) {
+    // Same refusal, same reason as `placeAsset`: a double-click on a cloud row that has not been
+    // downloaded opened nothing and said nothing.
+    reportFailure('canvas.place', asset.id, new Error(`${asset.name} has no local file yet`))
+    return
+  }
   // A container opens as the stack it holds. Its pixels arrive later, at `rehydrateDocument`:
   // no engine is mounted yet — the tab is being made — so there is nothing to hand them to.
   if (await becomeContainer(documentId, asset)) return

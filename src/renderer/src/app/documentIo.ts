@@ -473,10 +473,16 @@ const IMAGE_IO: DocumentIo = {
     // Through the stack rather than by name alone: a container written elsewhere names its
     // surfaces its own way, and only the stack says which layer each belongs to. The ids it
     // invents are positional, so the same file gives the same ones the state was built with.
-    for (const pixels of canvasFromOraContent(content, parts).pixels) {
-      // Nothing is rethrown into a mount effect that has nowhere to show it — see `restoreDocument`.
-      void host.restoreSnapshot(pixels).catch(() => undefined)
-    }
+    // Sequenced, not fired all at once: each of these decodes a PNG and renders it, and a
+    // twenty-layer container launched twenty of them into the same frame. Opening does not need
+    // to be parallel, it needs not to saturate.
+    void (async () => {
+      for (const pixels of canvasFromOraContent(content, parts).pixels) {
+        // Nothing is rethrown into a mount effect that has nowhere to show it — see
+        // `restoreDocument`.
+        await host.restoreSnapshot(pixels).catch(() => undefined)
+      }
+    })()
   },
   /**
    * The container is read a SECOND time here — `becomeAsset` read it to build the stack, and no
@@ -488,8 +494,9 @@ const IMAGE_IO: DocumentIo = {
     const layered = host ? await getBridge()?.assets.readLayered(assetId) : null
     if (!host || !layered) return
 
+    // Sequenced for the reason `rehydrate` above is.
     for (const pixels of canvasFromOra(layered).pixels) {
-      void host.restoreSnapshot(pixels).catch(() => undefined)
+      await host.restoreSnapshot(pixels).catch(() => undefined)
     }
   },
   writeAsset: async (documentId, target, captured) => {

@@ -26,7 +26,6 @@ import {
   mdiLasso,
   mdiPencil,
   mdiRectangleOutline,
-  mdiResize,
   mdiSelectDrag,
   mdiSelectionDrag,
   mdiStarOutline,
@@ -55,7 +54,6 @@ export type ToolCommand = { command: CommandId; tool: string; mode?: string }
 export const TOOL_COMMANDS: readonly ToolCommand[] = [
   { command: 'canvas.toolMove', tool: 'pointer', mode: 'move' },
   { command: 'canvas.toolHand', tool: 'pointer', mode: 'hand' },
-  { command: 'canvas.toolScale', tool: 'pointer', mode: 'scale' },
   { command: 'canvas.toolCrop', tool: 'frame', mode: 'crop' },
   { command: 'canvas.toolSelectRectangle', tool: 'region', mode: 'rectangle' },
   { command: 'canvas.toolSelectEllipse', tool: 'region', mode: 'ellipse' },
@@ -69,8 +67,7 @@ export const TOOL_COMMANDS: readonly ToolCommand[] = [
   { command: 'canvas.toolBrush', tool: 'paint', mode: 'brush' },
   { command: 'canvas.toolPencil', tool: 'paint', mode: 'pencil' },
   { command: 'canvas.toolText', tool: 'text', mode: 'text' },
-  { command: 'canvas.toolEraser', tool: 'eraser', mode: 'point' },
-  { command: 'canvas.toolEraserSelection', tool: 'eraser', mode: 'selection' },
+  { command: 'canvas.toolEraser', tool: 'eraser' },
   { command: 'canvas.toolFill', tool: 'fill' },
   { command: 'canvas.toolPicker', tool: 'picker' },
 ]
@@ -114,12 +111,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
         labelKey: 'imageTools.hand',
         descriptionKey: 'imageTools.handHint',
         icon: mdiHandBackRight,
-      },
-      {
-        id: 'scale',
-        labelKey: 'imageTools.scale',
-        descriptionKey: 'imageTools.scaleHint',
-        icon: mdiResize,
       },
     ],
   },
@@ -301,20 +292,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
     descriptionKey: 'imageTools.eraserHint',
     icon: mdiEraser,
     separatorBefore: true,
-    modes: [
-      {
-        id: 'point',
-        labelKey: 'imageTools.eraserPoint',
-        descriptionKey: 'imageTools.eraserPointHint',
-        icon: mdiEraser,
-      },
-      {
-        id: 'selection',
-        labelKey: 'imageTools.eraserSelection',
-        descriptionKey: 'imageTools.eraserSelectionHint',
-        icon: mdiSelectionDrag,
-      },
-    ],
   },
   {
     id: 'fill',

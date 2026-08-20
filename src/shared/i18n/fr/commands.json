@@ -280,6 +280,10 @@
       "title": "Magnétisme",
       "help": "Fait coller ce qu’on déplace aux repères, aux bords de l’image et à son centre, à quelques pixels près."
     },
+    "canvasSelectAll": {
+      "title": "Tout sélectionner",
+      "help": "Sélectionne le document entier, ce que la sélection système ne sait pas faire sur une image."
+    },
     "canvasDeselect": {
       "title": "Désélectionner",
       "help": "Abandonne la région sélectionnée : le pinceau retrouve tout le calque."
@@ -365,10 +369,6 @@
       "title": "Outil Main",
       "help": "Arme la main : un glissement fait défiler la vue sans rien toucher au document. La barre d’espace fait la même chose sans changer d’outil."
     },
-    "canvasToolScale": {
-      "title": "Outil Échelle",
-      "help": "Arme la mise à l’échelle : les poignées du calque actif le redimensionnent, et MAJ conserve ses proportions."
-    },
     "canvasToolCrop": {
       "title": "Outil Recadrage",
       "help": "Arme le cadre de recadrage. Poser un cadre, puis ⏎ pour rogner ou ⎋ pour abandonner."
@@ -424,10 +424,6 @@
     "canvasToolEraser": {
       "title": "Outil Gomme",
       "help": "Arme la gomme ponctuelle : elle efface là où la main passe, bornée par la sélection s’il y en a une."
-    },
-    "canvasToolEraserSelection": {
-      "title": "Gomme sélective",
-      "help": "Arme la gomme sélective : un clic efface d’un coup tout ce que la sélection enferme, au lieu de le frotter."
     },
     "canvasToolFill": {
       "title": "Outil Pot de peinture",

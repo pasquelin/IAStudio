@@ -110,18 +110,10 @@ export function serveAssets(resolvers: AssetResolvers): void {
 
 /** `null` for anything that is not a container, which is every other file this scheme serves. */
 async function flattenedContainer(file: string): Promise<Uint8Array | null> {
-  if (!file.toLowerCase().endsWith('.ora')) return null
-
-  try {
-    const [{ mergedPictureOf }, { readFile }] = await Promise.all([
-      import('./openRasterFile'),
-      import('node:fs/promises'),
-    ])
-    return mergedPictureOf(await readFile(file))
-  } catch {
-    // A file that will not read is answered as the scheme answers everything it cannot serve.
-    return null
-  }
+  // Streamed by the reader itself, not read whole: this answers one request per tile of a grid,
+  // and a container of ten 4K layers is hundreds of megabytes in the process owning every window.
+  const { containerPictureOf } = await import('./openRasterFile')
+  return await containerPictureOf(file)
 }
 
 /**

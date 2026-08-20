@@ -422,6 +422,27 @@ export function canRemoveLayer(layers: readonly Layer[], layer: Layer): boolean 
 }
 
 /**
+ * Whether there is a layer under the armed one, at its own level — what a merge needs.
+ *
+ * Read from both sides like `canRemoveLayer`: the menu greys its row with it, and the handler
+ * runs the same test before merging.
+ */
+export function canMergeDown(state: CanvasState): boolean {
+  const active = state.activeLayerId
+  return active !== null && layerBelow(state.layers, active) !== null
+}
+
+/**
+ * Whether a mask can be cut from the selection: a layer to wear it, and a region to cut.
+ *
+ * The selection is passed rather than read, because it lives in the VIEW store and this module
+ * knows nothing of stores — the two halves of the question are held apart in the app.
+ */
+export function canMaskFromSelection(state: CanvasState, hasSelection: boolean): boolean {
+  return hasSelection && state.activeLayerId !== null
+}
+
+/**
  * Whether a layer may hang at that level: under a GROUP, never under itself, and never under one
  * of its own descendants — the last would cut the branch out of the tree.
  *

@@ -86,8 +86,14 @@ function sideCount(sides: number): number {
   return Math.round(clamp(sides, MIN_SIDES, MAX_SIDES))
 }
 
-/** How many segments an ellipse is outlined with — enough to read as a curve at any zoom. */
-const ELLIPSE_SEGMENTS = 48
+/**
+ * How many segments an ellipse is outlined with — enough to read as a curve at any zoom.
+ *
+ * Shared with the marquee, which draws the same curve at the same zooms: the two held their own
+ * copies of the same number, and a finer marquee beside a coarser shape is not a choice anyone
+ * would make on purpose.
+ */
+export const ELLIPSE_SEGMENTS = 48
 
 /**
  * The shape as one closed polyline, in document coordinates. One form for the six, so the

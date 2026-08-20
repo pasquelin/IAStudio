@@ -374,13 +374,24 @@ describe('ImageDocument', () => {
 
   describe('the bracket keys', () => {
     it('steps the size up and down through the registry, not by a listener of its own', () => {
-      armed()
+      armedWith('KeyP')
 
       press('BracketRight')
       expect(setBrush).toHaveBeenLastCalledWith(expect.objectContaining({ size: 34 }))
 
       press('BracketLeft')
       expect(setBrush).toHaveBeenLastCalledWith(expect.objectContaining({ size: 24 }))
+    })
+
+    // The settings are not on screen under the pointer, so a bracket there moved a number nobody
+    // could see — and the surprise arrived at the first stroke, long after the key.
+    it('does nothing under a tool that shows no size', () => {
+      armedWith('KeyV')
+      setBrush.mockClear()
+
+      press('BracketRight')
+
+      expect(setBrush).not.toHaveBeenCalled()
     })
 
     it('leaves the colour alone while it resizes', () => {
@@ -397,12 +408,13 @@ describe('ImageDocument', () => {
     expect(setTool).toHaveBeenCalledWith('picker')
   })
 
-  it('opens the eraser modes on hover', async () => {
+  // The paint group, the eraser having become a single button when the mode behind its second
+  // row turned out to arm the very same gesture.
+  it('opens a group’s modes on hover', async () => {
     render(<ImageDocument documentId="doc-1" />)
-    await userEvent.hover(screen.getByRole('button', { name: /^Gomme ponctuelle/ }))
-    expect(
-      await screen.findByRole('menuitemradio', { name: 'Gomme sélective' }),
-    ).toBeInTheDocument()
+    await userEvent.hover(screen.getByRole('button', { name: /^Pinceau/ }))
+    // A regex, not the bare label: a row that carries a key wears it in its accessible name.
+    expect(await screen.findByRole('menuitemradio', { name: /^Crayon/ })).toBeInTheDocument()
   })
 
   it('draws no history button of its own', () => {

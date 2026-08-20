@@ -72,11 +72,27 @@ describe('writing an OpenRaster container', () => {
     expect(entriesOf(bytes).mimetype).toBe(ORA_MIMETYPE)
   })
 
-  it('writes the flattened picture the spec requires, and a thumbnail', () => {
+  it('writes the flattened picture the spec requires', () => {
     const entries = entriesOf(packOpenRaster(document()))
 
     expect(entries['mergedimage.png']).toBeDefined()
-    expect(entries['Thumbnails/thumbnail.png']).toBeDefined()
+  })
+
+  /**
+   * The flatten used to be written a second time under `Thumbnails/`, which the spec forbids
+   * past 256 px and which doubled the size of every container — on disk, and again on each read.
+   * The entry is optional, so nothing is better than something out of spec.
+   */
+  it('leaves the thumbnail out rather than writing the flatten twice', () => {
+    const entries = entriesOf(packOpenRaster(document()))
+
+    expect(entries['Thumbnails/thumbnail.png']).toBeUndefined()
+  })
+
+  it('writes the thumbnail it is handed', () => {
+    const entries = entriesOf(packOpenRaster(document(), '', strToU8('tiny')))
+
+    expect(entries['Thumbnails/thumbnail.png']).toBe('tiny')
   })
 
   it('names each layer in the stack, top first, with the bytes beside it', () => {

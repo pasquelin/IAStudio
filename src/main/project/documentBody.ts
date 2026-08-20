@@ -216,6 +216,15 @@ const OPEN_RASTER: DocumentBodyFormat = {
       parts: surfaces,
     }
   },
+  /**
+   * NO `Thumbnails/thumbnail.png`, and it is a decision rather than an oversight: making one
+   * needs `nativeImage`, which needs a live app, which this module must not require — its whole
+   * suite runs without one. `savePicture` writes an asset and has an app, so it passes one.
+   *
+   * What it costs: a third-party file manager that reads only that entry draws a blank tile.
+   * Every ORA reader has `mergedimage.png`, which the spec REQUIRES and this always writes, and
+   * the studio's own tiles fall back to it — so nothing inside the app notices.
+   */
   write: document =>
     packOpenRaster(
       { stack: parseOraStack(JSON.parse(document.content)), surfaces: document.parts ?? [] },

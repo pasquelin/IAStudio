@@ -1,4 +1,4 @@
-import { isLocalPicture } from '@shared/domain/asset'
+import { isLocalPicture, PICTURES } from '@shared/domain/asset'
 import { placeAsset } from '@/spaces/image/placeAsset'
 import { createGenerationLanding } from './generationLanding'
 
@@ -9,6 +9,7 @@ import { createGenerationLanding } from './generationLanding'
 const landing = createGenerationLanding({
   kind: 'image',
   accepts: isLocalPicture,
+  types: PICTURES,
   takes: 'every',
   land: placeAsset,
 })

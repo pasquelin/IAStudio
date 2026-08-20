@@ -12,6 +12,7 @@ export type MenuButtonProps = Pick<
   | 'description'
   | 'shortcut'
   | 'active'
+  | 'accented'
   | 'acts'
   | 'disabled'
   | 'variant'

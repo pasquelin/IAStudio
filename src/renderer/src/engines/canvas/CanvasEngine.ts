@@ -52,7 +52,7 @@ import {
   type CanvasSelection,
   type SelectionShape,
 } from './canvasSelection'
-import { composite, maskKey, placement, type CompositeNode } from './compositor'
+import { composite, isMaskKey, maskKey, placement, type CompositeNode } from './compositor'
 import { applyTo, compose, invert, layerMatrix, mapRect, type Affine } from './layerSpace'
 import {
   centerOf,
@@ -83,11 +83,10 @@ import {
   GUIDE_GRAB,
   snapOffset,
   snapTargets,
-  snapValue,
   SNAP_TOLERANCE,
   type Axis,
 } from './guides'
-import { PixelPatches, type PatchSide } from './PixelPatches'
+import { PATCH_BUDGET, PixelPatches, type PatchSide } from './PixelPatches'
 import { cropRect, resizeCrop } from './crop'
 import {
   box,
@@ -496,6 +495,43 @@ function readColors(element: HTMLElement): OverlayColors {
   }
 }
 
+const bytesOf = (texture: RenderTexture): number => texture.width * texture.height * 4
+
+/**
+ * What the surfaces of departed layers may hold on the card, and it is a SECOND pool beside the
+ * undo tiles rather than a share of theirs — a quarter of their budget, so an image tab is
+ * capped at `PATCH_BUDGET` + this + its live surfaces, not at twice the tiles.
+ *
+ * Sized for the gesture it exists for: merging or removing hands back one surface, and the undo
+ * that wants it comes within a few steps. Holding a whole flatten of a large document is not
+ * what this buys.
+ */
+const DEPARTED_BUDGET = PATCH_BUDGET / 4
+
+/**
+ * How many engines of this window hold each asset URL.
+ *
+ * `Assets` is a singleton of the WINDOW, so an engine unloading on its own dispose took the
+ * texture away from every other tab still drawing that same picture — the survivor then reloaded
+ * and re-decoded it. Counted here because that is where the cache lives: at the module.
+ */
+const leases = new Map<string, number>()
+
+function lease(url: string): void {
+  leases.set(url, (leases.get(url) ?? 0) + 1)
+}
+
+/** Whether that was the LAST holder — the only moment the window's cache may let it go. */
+function released(url: string): boolean {
+  const held = (leases.get(url) ?? 1) - 1
+  if (held > 0) {
+    leases.set(url, held)
+    return false
+  }
+  leases.delete(url)
+  return true
+}
+
 /**
  * The Pixi side of an image document. It owns the pixels — a GPU texture per layer — and the
  * view they are seen through; the stack, its order and its opacities are read from the state it
@@ -510,6 +546,24 @@ export class CanvasEngine {
   private host: HTMLElement | null = null
   private readonly world = new Container()
   private readonly surfaces = new Map<string, LayerSurface>()
+  /**
+   * Surfaces of layers that left the stack, held in case they come back. Merging, flattening and
+   * removing a layer are all undoable, and the tree an undo restores says nothing about pixels:
+   * destroyed here, a layer came back holding its fill and nothing that had been painted on it.
+   *
+   * Oldest evicted first, under the same budget as the undo tiles. What eviction costs is the
+   * undo of a very old merge on a very large document, which is the same bargain `PixelPatches`
+   * already makes — and the alternative is holding every departed texture for the session.
+   */
+  private readonly departed = new Map<string, LayerSurface>()
+  /** What `departed` holds, in bytes — kept running rather than re-summed on every insert. */
+  private kept = 0
+  /** The pointer this panel holds for the length of a gesture — see `capture`. */
+  private captured: number | null = null
+  /** Every URL this engine put in the window's asset cache, so `dispose` can take them back. */
+  private readonly loaded = new Set<string>()
+  /** The viewport the world was last moved to — see `applyViewport`. `null` until the first one. */
+  private applied: Viewport | null = null
   /**
    * Where the picture actually landed inside each layer's surface — what `containIn` worked out
    * when it was drawn, kept so the handles can grip the photo rather than the document.
@@ -527,12 +581,12 @@ export class CanvasEngine {
   /** Built on the first isolated group, and only then: most documents never hold one. */
   private isolation: AlphaFilter | null = null
   /**
-   * The stencil pass in flight, and the stencil it owns. Held as the pair because they are not
-   * the same thing to free: the holder's other children are borrowed — the brush's stamp lives
-   * as long as the engine, a tool's drawing is freed by the tool — and only the stencil is the
-   * pass's own.
+   * The stencil pass in flight, the selection it was cut from, and the stencil it owns. Held as
+   * the triple because they are not the same thing to free: the holder's other children are
+   * borrowed — the brush's stamp lives as long as the engine — and only the stencil is the
+   * pass's own. `of` keeps it while that very selection object is still the one.
    */
-  private clipping: { holder: Container; stencil: Graphics } | null = null
+  private clipping: { of: CanvasSelection; holder: Container; stencil: Graphics } | null = null
   /** One grading pass per adjustment layer, holding the filter it applies. */
   private readonly adjustments = new Map<string, AdjustPass>()
   /** What each drawn layer — a caption, a shape — was last rasterized from, so a redraw is rare. */
@@ -792,7 +846,56 @@ export class CanvasEngine {
         this.contents.set(id, { ...laid, x: laid.x - from.x, y: laid.y - from.y })
       }
       this.patches?.dropAll()
+      this.forgetHeld()
     }
+  }
+
+  /**
+   * Turns the pixels of every surface a quarter, into a transposed texture — the same order as
+   * `applyCrop`: the pixels before the state, so the `apply` the command triggers finds them
+   * already the right size and leaves them alone.
+   *
+   * The turn is in the PIXELS rather than in the layer transforms, and that is what keeps a
+   * surface document-sized. Left to the transforms, the sprite would turn while its texture kept
+   * the old sides, and `resurface` would recut a portrait texture to a landscape frame — half
+   * of every layer, gone, with the undo tiles that could have brought it back.
+   *
+   * Exact both ways: a quarter turn permutes pixels, it never resamples one.
+   */
+  turnQuarter(clockwise: boolean): void {
+    const renderer = this.app?.renderer
+    if (!renderer || !this.state) return
+
+    this.publishSelection(null)
+    const { width, height } = this.state
+
+    for (const surface of this.surfaces.values()) {
+      const texture = RenderTexture.create({ width: height, height: width, resolution: 1 })
+
+      const carried = new Sprite(surface.texture)
+      carried.rotation = clockwise ? Math.PI / 2 : -Math.PI / 2
+      carried.position.set(clockwise ? height : 0, clockwise ? 0 : width)
+      renderer.render({ container: carried, target: texture, clear: true })
+      carried.destroy({ texture: false, textureSource: false })
+
+      surface.sprite.texture = texture
+      surface.texture.destroy(true)
+      surface.texture = texture
+    }
+
+    // The remembered picture rects live in surface pixels, so they turn with them — left alone,
+    // a placed photo's grips would hold the box the document had before the turn.
+    for (const [id, laid] of this.contents) {
+      this.contents.set(id, {
+        x: clockwise ? height - laid.y - laid.height : laid.y,
+        y: clockwise ? laid.x : width - laid.x - laid.width,
+        width: laid.height,
+        height: laid.width,
+      })
+    }
+    this.patches?.dropAll()
+    // Every held surface now holds the sides the document has just traded away.
+    this.forgetHeld()
   }
 
   /** The stack, made real on the GPU: one texture per paintable layer, in the stack's order. */
@@ -841,9 +944,16 @@ export class CanvasEngine {
 
     for (const [id, surface] of this.surfaces) {
       if (kept.has(id)) continue
-      surface.sprite.destroy()
-      // The texture lives on the GPU: dropping the reference is not enough.
-      surface.texture.destroy(true)
+      // Held rather than destroyed: the command that took this layer out of the stack is
+      // undoable, and its pixels are not in the state that would come back.
+      //
+      // MASKS ARE NOT HELD, and that is a decision rather than an oversight. A mask is keyed on
+      // the layer that wears it and carries no identity of its own, so a mask REMOVED and a mask
+      // CREATED afterwards are the same key: holding one would hand a fresh mask the pixels of
+      // the old one, silently. The cost is that ⌘Z on a removed mask still gives back a white
+      // one — the smaller of the two wrongs, and the only one the state can tell apart.
+      if (isMaskKey(id)) this.drop(surface)
+      else this.hold(id, surface)
       this.surfaces.delete(id)
       this.contents.delete(id)
     }
@@ -876,6 +986,51 @@ export class CanvasEngine {
       this.destroyClip(clip)
       this.clips.delete(id)
     }
+  }
+
+  /**
+   * Keeps a departed surface against the undo that may bring its layer back, evicting the least
+   * recently held once what is kept passes `DEPARTED_BUDGET`.
+   *
+   * BLIND SPOT, and it is the price of holding anything at all: an eviction tells nobody. The
+   * history entry stays on the stack, and undoing back past an evicted surface gives the layer
+   * back EMPTY — which is what happened to every one of them before this existed, so the bargain
+   * is a smaller version of the same one `PixelPatches` already makes with its tiles. What it
+   * does not have is `PixelPatches`'s `onDropped`, which takes the dead entry off the stack.
+   */
+  private hold(key: string, surface: LayerSurface): void {
+    const replaced = this.departed.get(key)
+    if (replaced) this.kept -= bytesOf(replaced.texture)
+    this.drop(replaced)
+    this.departed.delete(key)
+
+    this.departed.set(key, surface)
+    this.kept += bytesOf(surface.texture)
+
+    for (const [oldest, held] of this.departed) {
+      if (this.kept <= DEPARTED_BUDGET) break
+      this.kept -= bytesOf(held.texture)
+      this.drop(held)
+      this.departed.delete(oldest)
+    }
+  }
+
+  /**
+   * Frees every held surface. What a recut, a resample or a turn makes of all of them at once:
+   * they hold the sides the document no longer has, so `buildSurface` would refuse each in turn
+   * — and until then they sit on the card for nothing.
+   */
+  private forgetHeld(): void {
+    for (const held of this.departed.values()) this.drop(held)
+    this.departed.clear()
+    this.kept = 0
+  }
+
+  private drop(surface: LayerSurface | undefined): void {
+    if (!surface) return
+    surface.sprite.destroy()
+    // The texture lives on the GPU: dropping the reference is not enough.
+    surface.texture.destroy(true)
   }
 
   /** Bottom first, so the last node of a level is the one the eye sees on top. */
@@ -994,7 +1149,13 @@ export class CanvasEngine {
 
     // Never `visible` or `alpha` on the container: it holds the layers it grades, so hiding it
     // would hide the whole stack under it. Hiding a grading is dropping its pass.
-    pass.filters = layer.visible ? [pass.filter] : []
+    //
+    // Written only when it turns, exactly as `syncGroup` writes its own: Pixi copies and freezes
+    // the array on every assignment, and this runs for every grading on every state handed in —
+    // sixty times a second while a layer is dragged.
+    if (layer.visible !== (pass.filters ?? []).length > 0) {
+      pass.filters = layer.visible ? [pass.filter] : []
+    }
     pass.filter.grade(layer.values)
   }
 
@@ -1043,6 +1204,13 @@ export class CanvasEngine {
 
     // The scheme carries no extension, so nothing in the URL tells Pixi what to make of it.
     const texture = await Assets.load({ src: url, parser: 'texture' })
+    // Nothing here ever gave these back: a placed photo cost its own surface twice on the card —
+    // the layer's, and the source it was drawn from — for the whole session, closed tab included.
+    // Leased rather than simply remembered, because the cache is the window's: see `leases`.
+    if (!this.loaded.has(url)) {
+      this.loaded.add(url)
+      lease(url)
+    }
     // Read after the await: the document can be closed, or the layer removed and rebuilt, while
     // it is in flight. Compared by identity rather than by key — an undo and a redo put a fresh
     // surface under the same id, and the one captured above has had its texture destroyed.
@@ -1051,10 +1219,20 @@ export class CanvasEngine {
     const renderer = this.app?.renderer
     if (!renderer || !this.state) return
 
-    const laid = containIn(texture, { width: this.state.width, height: this.state.height })
+    // Centred for a PICTURE being placed, at the origin for pixels being restored — and `clear`
+    // is what tells them apart, being true only on the restore path. A layer of a foreign `.ora`
+    // is not document-sized, and centring it displaced it a second time: the container's own
+    // `x`/`y` are already in the transform, so the picture landed one half-margin out.
+    const laid = clear
+      ? { x: 0, y: 0, width: texture.width, height: texture.height }
+      : containIn(texture, { width: this.state.width, height: this.state.height })
     // Remembered here because here is where it is known: the handles need the rect the picture
     // occupies, and nothing else in the engine ever works it out.
     this.contents.set(layerId, laid)
+    // Landed after an await, so the state has NOT moved: the memoised grips are keyed on it and
+    // would go on holding the whole document around a photo that covers part of it.
+    this.corners = { of: null, tool: null, box: null }
+    this.overlay.invalidate()
     const sprite = new Sprite(texture)
     sprite.position.set(laid.x, laid.y)
     sprite.setSize(laid.width, laid.height)
@@ -1103,11 +1281,21 @@ export class CanvasEngine {
     // typically), and swallowing it would lose it in both the engine and the store.
     const echo = this.published !== null && sameViewport(view.viewport, this.published)
     this.view = { ...view, viewport: echo ? (this.publishing ?? view.viewport) : view.viewport }
+    // The overlay hears about EVERY view, not only the ones that move the world: the rulers, the
+    // guides and the snapping live in this same object, and they change with the viewport still.
+    this.overlay.invalidate()
     this.applyViewport()
   }
 
   private applyViewport(): void {
     const { x, y, scale } = this.view.viewport
+    // Nothing moved since it was last APPLIED, so nothing is redrawn: every frame of a pan comes
+    // through here twice — the pointer, then the store's echo — and the second composited the
+    // whole document again over identical numbers. Against what was APPLIED and not against the
+    // node, whose default a mount already matches.
+    if (this.applied && sameViewport(this.applied, this.view.viewport)) return
+    this.applied = { x, y, scale }
+
     this.world.position.set(x, y)
     this.world.scale.set(scale)
     // A zoom slides the grips out from under a still hand. Not while a gesture is open: that one
@@ -1397,14 +1585,14 @@ export class CanvasEngine {
   }
 
   /**
-   * The whole document as one picture, or a region of it — the flatten `mergedimage.png` holds,
-   * and what every other application draws of a `.ora`.
+   * The whole document as one picture — the flatten `mergedimage.png` holds, and what every
+   * other application draws of a `.ora`.
    *
    * Extracted rather than composited by hand: the world IS the composited tree, and the GPU has
    * it. Through a canvas and a blob rather than a data URL, so the bytes are never a string.
    */
-  async flatten(region?: Rect): Promise<Uint8Array<ArrayBuffer> | null> {
-    const frame = region ?? this.documentRect()
+  async flatten(): Promise<Uint8Array<ArrayBuffer> | null> {
+    const frame = this.documentRect()
     if (!frame || !this.state) return null
 
     return await this.pngOf(this.world, new Rectangle(frame.x, frame.y, frame.width, frame.height))
@@ -1414,8 +1602,8 @@ export class CanvasEngine {
    * The same picture as base64. What an edit sends to the API, which takes the payload alone —
    * a `data:image/png;base64,` reaching it is part of the picture.
    */
-  async snapshot(region?: Rect): Promise<string | null> {
-    const png = await this.flatten(region)
+  async snapshot(): Promise<string | null> {
+    const png = await this.flatten()
     return png && bytesToBase64(png)
   }
 
@@ -1460,12 +1648,27 @@ export class CanvasEngine {
     const frame = this.documentRect()
     if (!mask || !frame) return null
 
-    // Framed on the document like the picture it masks: extracting the sprite bare would drop
-    // the transform `place` put on it, and the mask would arrive offset from what it masks.
-    const png = await this.pngOf(
-      mask.sprite,
-      new Rectangle(frame.x, frame.y, frame.width, frame.height),
-    )
+    // Rendered through a holder, and that is the whole of the fix: Pixi REPLACES the local
+    // transform of whatever it is handed as the root, so extracting the sprite itself dropped
+    // the placement `place` had put on it — the mask arrived at the origin while the picture
+    // beside it carried its layers' moves, and a moved layer was repainted in the wrong region.
+    // A child keeps its own transform, exactly as the layers under `this.world` do.
+    // A sprite of its own on the same texture, rather than the stack's: borrowing that one would
+    // take it out of the tree, and `reconcile` only puts sprites back when the placement
+    // signature changes — which borrowing does not.
+    const layer = this.state ? layerById(this.state, layerId) : null
+    const placed = new Sprite(mask.texture)
+    if (layer) this.place(placed, surfaceTransform(layer, true), mask.texture)
+
+    const holder = new Container()
+    holder.addChild(placed)
+
+    const png = await this.pngOf(holder, new Rectangle(frame.x, frame.y, frame.width, frame.height))
+
+    // The texture belongs to the surface, so it does not go with the sprite that borrowed it.
+    placed.destroy({ texture: false, textureSource: false })
+    holder.destroy()
+
     return png && bytesToBase64(png)
   }
 
@@ -1540,6 +1743,9 @@ export class CanvasEngine {
     try {
       await this.loadInto(key, url, true)
     } finally {
+      // Given back here already, so `dispose` has nothing left to give back for this one. A blob
+      // URL is this engine's alone, so no other holder can be waiting on it.
+      if (this.loaded.delete(url)) released(url)
       await Assets.unload(url).catch(() => undefined)
       URL.revokeObjectURL(url)
     }
@@ -1652,8 +1858,22 @@ export class CanvasEngine {
     this.patches?.dispose()
     this.patches = null
 
+    // Given back to the window's cache, which no engine owns and none of them was emptying —
+    // but only what no OTHER engine is still drawing. `Assets` reloads what a later mount asks
+    // for again.
+    for (const url of this.loaded) {
+      if (released(url)) void Assets.unload(url).catch(() => undefined)
+    }
+    this.loaded.clear()
+    // A remount starts from nothing applied, or the first viewport of the new world would be
+    // taken for one already on screen.
+    this.applied = null
+
     for (const surface of this.surfaces.values()) surface.texture.destroy(true)
     this.surfaces.clear()
+    // Their sprites hang from nothing, so `app.destroy` will not reach them the way it reaches
+    // the stack's.
+    this.forgetHeld()
     this.contents.clear()
     // The tree is gone, so no placement holds: kept, it would make the replay in a remount find
     // the signature unchanged and skip the `attach` that is now the only way anything is hung.
@@ -1866,6 +2086,8 @@ export class CanvasEngine {
     // What the layer really occupies, which the grips and the hit test both read back. A point
     // caption has no box of its own, so the block it drew IS its box.
     this.contents.set(layer.id, { x: text.x, y: 0, width: text.width, height: text.height })
+    // A face landing re-draws the caption outside any `apply`: the memoised grips have to hear it.
+    this.corners = { of: null, tool: null, box: null }
     // Hidden rather than spilled, as a paragraph is in Photoshop and InDesign: what outgrows the
     // box is still in the layer, and widening it brings the rest back. The grip that says so
     // reads this, so it has to be dropped as readily as it is set.
@@ -1968,6 +2190,19 @@ export class CanvasEngine {
     // would take a stroke and never show it. `mount` replays the state.
     if (!this.app || !this.state) return null
 
+    // A layer coming back from an undo takes its own pixels again. Only when the surface still
+    // matches the frame: one held across a crop or a turn holds the sides the document dropped.
+    const held = this.departed.get(key)
+    if (held) {
+      this.departed.delete(key)
+      if (held.texture.width === this.state.width && held.texture.height === this.state.height) {
+        this.surfaces.set(key, held)
+        return held
+      }
+      held.sprite.destroy()
+      held.texture.destroy(true)
+    }
+
     const texture = RenderTexture.create({
       width: this.state.width,
       height: this.state.height,
@@ -2064,10 +2299,9 @@ export class CanvasEngine {
   /** Magnetism is a screen-space feeling: the tolerance shrinks in document units as you zoom. */
   private snapped(value: number, axis: Axis): number {
     if (!this.view.snap || !this.state) return value
-    return snapValue(
-      value,
-      snapTargets(this.state, axis),
-      SNAP_TOLERANCE / this.view.viewport.scale,
+    return (
+      value +
+      snapOffset([value], snapTargets(this.state, axis), SNAP_TOLERANCE / this.view.viewport.scale)
     )
   }
 
@@ -2097,6 +2331,9 @@ export class CanvasEngine {
     const host = this.toHost(event)
     const point = toDocument(this.view.viewport, host)
     this.pointer = host
+
+    // Held from here to `endGesture`, so a drag that leaves the panel keeps being followed.
+    if (event.button === 0 || event.button === 1) this.capture(event)
 
     // Middle button pans whatever the tool: it is the one gesture no tool may take over. It can
     // land mid-drag, so whatever was open is closed rather than abandoned — a guide gesture left
@@ -2596,16 +2833,41 @@ export class CanvasEngine {
   }
 
   private readonly onPointerUp = (event: PointerEvent): void => {
+    // Whatever is still held down keeps the gesture open: a right button let go during a drag
+    // used to close it, and a guide let go over the canvas was thrown away by the ruler test.
+    if (event.buttons !== 0) return
+
     // The corner counts: a guide dropped anywhere on the chrome is a guide thrown away.
     const onChrome = this.inRuler(this.toHost(event)) !== null
     this.forgetHover()
     this.endGesture(onChrome)
   }
 
+  /**
+   * Makes the panel the one thing this pointer talks to, so a drag that leaves it goes on being
+   * followed. Without it the moves stop at the edge and the gesture commits wherever it was last
+   * seen INSIDE — dragging a layer, a marquee or a crop grip to the border was impossible.
+   *
+   * Only a real pointer: a synthesised event names an id no browser is tracking, and asking to
+   * capture it throws. The gesture runs either way, it just stops following the hand.
+   */
+  private capture(event: PointerEvent): void {
+    if (!event.isTrusted) return
+
+    this.host?.setPointerCapture(event.pointerId)
+    this.captured = event.pointerId
+  }
+
+  private release(): void {
+    if (this.captured !== null) this.host?.releasePointerCapture(this.captured)
+    this.captured = null
+  }
+
   /** Closes whatever gesture is open, exactly once, whether it ended or was taken over. */
   private endGesture(dropped = false): void {
     const gesture = this.gesture
     this.gesture = NO_GESTURE
+    this.release()
 
     if (gesture.kind === 'guide') {
       if (dropped) this.options.guides.remove(gesture.id)
@@ -2838,6 +3100,24 @@ export class CanvasEngine {
    * bucket. Handed back unchanged when nothing is selected, which is the common case.
    */
   private clipped(container: Container): Container {
+    if (!this.selection) {
+      this.dropClipping()
+      return container
+    }
+
+    // Kept while the selection is the same OBJECT, and it is replaced wholesale by
+    // `setSelection` — so this cache cannot drift. Rebuilt per dab it re-ran the trigonometry of
+    // an ellipse and re-tessellated a thousand-point lasso on every frame of a stroke, which is
+    // the hottest gesture there is.
+    const held = this.clipping
+    if (held?.of === this.selection) {
+      // Only the stencil stays between passes — index 0, put there first below. What follows it
+      // is whatever the LAST pass was drawing, and it belongs to its owner, not to this holder.
+      held.holder.removeChildren(1)
+      held.holder.addChild(container)
+      return held.holder
+    }
+
     const outline = selectionOutline(this.selection)
     const first = outline[0]
     if (!first) {
@@ -2854,10 +3134,8 @@ export class CanvasEngine {
     holder.addChild(stencil)
     holder.addChild(container)
     holder.mask = stencil
-    // Rebuilt per pass rather than kept: a held stencil would have to be invalidated on every
-    // selection change.
     this.dropClipping()
-    this.clipping = { holder, stencil }
+    this.clipping = { of: this.selection, holder, stencil }
     return holder
   }
 
@@ -2978,12 +3256,20 @@ export class CanvasEngine {
 
   private pick(point: Point): void {
     const renderer = this.app?.renderer
+    const layer = this.activeLayer()
     const surface = this.activeSurface()
-    if (!renderer || !surface || !this.state) return
+    if (!renderer || !layer || isGroup(layer) || !surface) return
 
-    const x = Math.floor(point.x)
-    const y = Math.floor(point.y)
-    if (x < 0 || y < 0 || x >= this.state.width || y >= this.state.height) return
+    // A sprite's frame is read in its TEXTURE's space, not the document's — the same conversion
+    // every other pixel gesture makes. Read straight from the document, the eyedropper answered
+    // for a texel the cursor was nowhere near as soon as the layer had been moved or scaled.
+    const toSurface = invert(this.surfaceMatrix(layer, false, surface))
+    if (!toSurface) return
+
+    const local = applyTo(toSurface, point)
+    const x = Math.floor(local.x)
+    const y = Math.floor(local.y)
+    if (x < 0 || y < 0 || x >= surface.texture.width || y >= surface.texture.height) return
 
     // One pixel, not the whole layer: extracting a 1024² sprite to read a single colour means a
     // 4 MB allocation and a synchronous `readPixels` that stalls the pipeline on every click.
@@ -2991,6 +3277,13 @@ export class CanvasEngine {
       target: surface.sprite,
       frame: new Rectangle(x, y, 1, 1),
     })
+
+    // Nothing was painted there. Answering black would put a colour in the swatch that the
+    // document does not hold, and the next stroke would lay it down.
+    //
+    // A buffer that carries no alpha channel at all is a different thing from one that says
+    // transparent, and it keeps the reading it already had.
+    if (pixels.pixels.length > 3 && pixels.pixels[3] === 0) return
 
     const red = pixels.pixels[0] ?? 0
     const green = pixels.pixels[1] ?? 0

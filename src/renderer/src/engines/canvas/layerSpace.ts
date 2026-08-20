@@ -84,6 +84,20 @@ export function applyTo(matrix: Affine, point: Point): Point {
 }
 
 /**
+ * The same transform, moved so that `held` — a point in the layer's own pixels — lands on
+ * `target` in the document. Solved rather than written: `x`/`y` are NOT where the content is
+ * once a scale or a turn is on, and the pivot term `origin × box` moves with the box.
+ *
+ * Exact in one step: the matrix is affine in `x`/`y` with a unit coefficient, so translating the
+ * transform translates the drawn point by the same amount.
+ */
+export function anchoredAt(transform: Transform, box: Size, held: Point, target: Point): Transform {
+  const drawn = applyTo(layerMatrix(transform, box), held)
+
+  return { ...transform, x: transform.x + target.x - drawn.x, y: transform.y + target.y - drawn.y }
+}
+
+/**
  * The box that holds a mapped rectangle. Its four corners are mapped and re-bounded rather than
  * its origin and size scaled: under a rotation the latter is not a rectangle at all, and the
  * tiles a stroke photographs have to cover every pixel it can reach.

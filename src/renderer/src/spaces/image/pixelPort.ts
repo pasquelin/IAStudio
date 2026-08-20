@@ -23,9 +23,13 @@ export function pixelPort(documentId: string, host: () => PixelHost | null): Pix
   const store = () => useCanvases.getState()
   const restore = (patchId: string, side: PatchSide): boolean =>
     host()?.restorePixels(patchId, side) ?? false
+  // Deferred, because this is answered from inside the store's own apply: cutting the stack
+  // there would be a `set` within a `set`, and the entry being replayed is still on it.
+  const lost = (patchId: string): void =>
+    queueMicrotask(() => store().forgetThrough(documentId, `pixels:${patchId}`))
 
   return {
-    record: patchId => store().runCommand(documentId, paintPixels(patchId, { restore })),
+    record: patchId => store().runCommand(documentId, paintPixels(patchId, { restore, lost })),
     drop: patchId => store().forgetThrough(documentId, `pixels:${patchId}`),
   }
 }

@@ -702,7 +702,12 @@ describe('mounting', () => {
     expect(gpu.texturesCreated).toBe(2)
   })
 
-  it('destroys the texture of a layer that left the stack', async () => {
+  /**
+   * Held rather than destroyed: merging, flattening and removing are all undoable, and the tree
+   * an undo restores says nothing about pixels. Destroyed here, the layer came back holding its
+   * fill and nothing that had been painted on it.
+   */
+  it('keeps the texture of a layer that left the stack, against the undo', async () => {
     const { engine } = await mounted({
       ...DEFAULT_CANVAS,
       layers: [pixelLayer('a', 'A'), pixelLayer('b', 'B')],
@@ -711,7 +716,35 @@ describe('mounting', () => {
 
     engine.apply({ ...DEFAULT_CANVAS, layers: [pixelLayer('a', 'A')], activeLayerId: 'a' })
 
-    expect(gpu.texturesDestroyed).toBe(1)
+    expect(gpu.texturesDestroyed).toBe(0)
+  })
+
+  it('gives that very texture back when the layer returns, without building another', async () => {
+    const two = {
+      ...DEFAULT_CANVAS,
+      layers: [pixelLayer('a', 'A'), pixelLayer('b', 'B')],
+      activeLayerId: 'a',
+    }
+    const { engine } = await mounted(two)
+
+    engine.apply({ ...DEFAULT_CANVAS, layers: [pixelLayer('a', 'A')], activeLayerId: 'a' })
+    const built = gpu.texturesCreated
+    engine.apply(two)
+
+    expect(gpu.texturesCreated).toBe(built)
+  })
+
+  it('frees what it was holding when the engine goes', async () => {
+    const { engine } = await mounted({
+      ...DEFAULT_CANVAS,
+      layers: [pixelLayer('a', 'A'), pixelLayer('b', 'B')],
+      activeLayerId: 'a',
+    })
+    engine.apply({ ...DEFAULT_CANVAS, layers: [pixelLayer('a', 'A')], activeLayerId: 'a' })
+
+    engine.dispose()
+
+    expect(gpu.texturesDestroyed).toBe(2)
   })
 
   /**
@@ -1631,8 +1664,12 @@ describe('loading a picture into a layer', () => {
     expect(gpu.loaded.map(asked => asked.src)).toContain('scenario://asset/asset-7')
   })
 
-  // The pixels went with the surface, so the asset is the only picture left to draw.
-  it('goes back to the asset once the layer has left the stack and returned', async () => {
+  /**
+   * The surface is held for exactly this, so the saved pixels come back with the layer — the
+   * asset is what it was BORN from, not what an undo owes the user. Redrawn from the asset, a
+   * merge undone would give back the picture and lose every stroke laid on it since.
+   */
+  it('keeps the pixels it had once the layer has left the stack and returned', async () => {
     const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
     const { engine } = await mounted()
     await engine.restoreSnapshot({ layerId: 'a', mask: false, data: SAVED })
@@ -1644,7 +1681,7 @@ describe('loading a picture into a layer', () => {
     engine.apply(stacked([laid]))
     await flushMicrotasks()
 
-    expect(gpu.loaded).toEqual([{ src: 'scenario://asset/asset-7', parser: 'texture' }])
+    expect(gpu.loaded).toEqual([])
   })
 
   it('does nothing at all for a layer it does not hold', async () => {

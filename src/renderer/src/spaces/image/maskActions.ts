@@ -1,3 +1,4 @@
+import { canMaskFromSelection } from '@/engines/canvas/canvasState'
 import { setLayerMask } from '@/engines/canvas/commands'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews } from '@/stores/canvasViews'
@@ -17,7 +18,8 @@ export function maskFromSelection(documentId: string, host: MaskHost): void {
   const canvas = canvasOf(useCanvases.getState(), documentId)
   const layerId = canvas.activeLayerId
   const selection = selectionOf(useCanvasViews.getState(), documentId)
-  if (!layerId || !selection) return
+  // The very test the menu greys its row with — read from both sides, like `canRemoveLayer`.
+  if (!canMaskFromSelection(canvas, selection !== null) || !layerId || !selection) return
 
   useCanvases
     .getState()

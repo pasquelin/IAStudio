@@ -7,7 +7,7 @@ import {
   type OraStack,
   type OraSurface,
 } from '@shared/domain/openRaster'
-import { BLEND_MODES, type BlendMode } from '@shared/domain/canvasBlend'
+import { blendOfComposite, type BlendMode } from '@shared/domain/canvasBlend'
 import { isRecord } from '@shared/guards'
 import type { LayerPixels } from './CanvasEngine'
 import { layerPixelPath, layerPixelsNamed } from './layerPixelPath'
@@ -26,11 +26,6 @@ import {
 const PLAIN = 'svg:src-over'
 
 const compositeOf = (blend: BlendMode): string => (blend === 'normal' ? PLAIN : `svg:${blend}`)
-
-function blendOf(composite: string): BlendMode {
-  const name = composite.replace(/^svg:/, '')
-  return BLEND_MODES.find(mode => mode === name) ?? 'normal'
-}
 
 function nodeOf(layer: Layer, held: ReadonlySet<string>): OraNode | null {
   const shared = {
@@ -131,7 +126,7 @@ function layersFromNodes(
       ...layerBase(`ora-${at.next}`, node.name),
       visible: node.visible,
       opacity: node.opacity,
-      blend: blendOf(node.composite),
+      blend: blendOfComposite(node.composite),
       transform: { ...IDENTITY, x: node.x, y: node.y },
     }
 

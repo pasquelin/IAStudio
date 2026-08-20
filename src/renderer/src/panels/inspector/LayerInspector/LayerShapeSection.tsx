@@ -4,17 +4,20 @@ import { NumberField } from '@/design/NumberField'
 import { PropertySection } from '@/design/PropertySection'
 import { ToggleField } from '@/design/ToggleField'
 import { colourOf, packedColour } from '@shared/domain/color'
-import { isOpenShape, MAX_SIDES, MIN_SIDES } from '@/engines/canvas/shapeGeometry'
+import {
+  DEFAULT_STROKE_WIDTH,
+  isOpenShape,
+  MAX_SIDES,
+  MIN_SIDES,
+  // Imported, never written again: this panel held its own copy, so a shape ticked here and one
+  // the assistant drew would have stopped agreeing the day the value moved.
+  SHAPE_INK as INK,
+} from '@/engines/canvas/shapeGeometry'
 import { setLayerShape } from '@/engines/canvas/commands'
 import type { CanvasState, ShapeLayer } from '@/engines/canvas/canvasState'
 import type { DocumentEdit } from '@/hooks/useDocumentEdit'
 
 export type LayerShapeSectionProps = { layer: ShapeLayer; edit: DocumentEdit<CanvasState> }
-
-/** The paint the shape falls back to when it is switched on, so a tick is never a no-op. */
-const INK = 0x000000
-
-const DEFAULT_STROKE_WIDTH = 2
 
 /**
  * The paint of a shape layer, editable long after the drag that drew it — which is the whole

@@ -196,6 +196,7 @@ describe('the lists that stand for a union', () => {
       'skybox.source': true,
       'skybox.export': true,
       'canvas.layer': true,
+      'canvas.place': true,
       'canvas.size': true,
       'canvas.flatten': true,
       'canvas.edit': true,

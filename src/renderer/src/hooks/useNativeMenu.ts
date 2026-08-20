@@ -5,6 +5,9 @@ import { availableToolIds } from '@/helpers/toolRegistry'
 import { getBridge } from '@/services/bridge'
 import { routeCommand } from '@/services/commandRouter'
 import { addNodeTo } from '@/hooks/useAddNode'
+import { canMaskFromSelection, canMergeDown } from '@/engines/canvas/canvasState'
+import { canvasOf, useCanvases } from '@/stores/canvases'
+import { selectionOf, useCanvasViews } from '@/stores/canvasViews'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { displayOfPane, MAIN_SCENE_PANE, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { sceneEngineOf } from '@/stores/sceneEngines'
@@ -47,6 +50,29 @@ function sceneMenuState(): SceneMenuState {
 }
 
 /**
+ * The image document's half: the two Image rows that refuse in silence when the stack cannot
+ * answer them.
+ *
+ * Through the two exported predicates rather than by re-deriving them, exactly as
+ * `canRemoveLayer` is read from both sides: the handler that RUNS the gesture reads the same
+ * answer, so a row can never be offered for something the handler will decline. Spelt again here,
+ * the mask row was enabled with a selection and no active layer — and clicking it did nothing.
+ */
+function canvasAbilities(): MenuAbility[] {
+  const documentId = activeIdOfKind(useDocuments.getState(), 'image')
+  if (!documentId) return []
+
+  const stack = canvasOf(useCanvases.getState(), documentId)
+  const selected = selectionOf(useCanvasViews.getState(), documentId) !== null
+  const abilities: MenuAbility[] = []
+
+  if (canMaskFromSelection(stack, selected)) abilities.push('canvas.maskFromSelection')
+  if (canMergeDown(stack)) abilities.push('canvas.mergeDown')
+
+  return abilities
+}
+
+/**
  * What was last sent, so an identical context is not sent twice.
  *
  * The main process already drops a rebuild that changes nothing, and that was enough while this
@@ -61,6 +87,12 @@ let publishedScene = ''
 
 /** The git half, for the same reason: `busy` flips twice a command and moves no row. */
 let publishedGitKind = ''
+
+/**
+ * The image half, and it belongs to that same family: dragging a layer rewrites `useCanvases`
+ * on every pointer move, and none of those frames moves a row.
+ */
+let publishedCanvas = ''
 
 function sceneSignature(state: SceneMenuState): string {
   return `${state.checked.join('|')}/${state.abilities.join('|')}`
@@ -78,13 +110,22 @@ function publishMenuContext(): void {
   const surface = toolSurface()
   const tools = availableToolIds(surface)
   const scene = sceneMenuState()
+  const canvas = canvasAbilities()
+  const abilities = [...scene.abilities, ...canvas]
 
-  const signature = JSON.stringify([surface, tools, scene.checked, scene.abilities])
+  const signature = JSON.stringify([surface, tools, scene.checked, abilities])
   if (signature === published) return
   published = signature
   publishedScene = sceneSignature(scene)
+  publishedCanvas = canvas.join('|')
 
-  void getBridge()?.window.setWorkspace(surface, tools, scene.checked, scene.abilities)
+  void getBridge()?.window.setWorkspace(surface, tools, scene.checked, abilities)
+}
+
+/** The listener of the two image stores — a layer drag writes one on every pointer move. */
+function publishIfCanvasChanged(): void {
+  if (canvasAbilities().join('|') === publishedCanvas) return
+  publishMenuContext()
 }
 
 /**
@@ -131,6 +172,7 @@ export function useNativeMenu(): void {
     published = ''
     publishedScene = ''
     publishedGitKind = ''
+    publishedCanvas = ''
     // The persisted workspace is restored without going through `setActiveWorkspace`, so the
     // menu would sit on the default until the user switched spaces by hand.
     publishMenuContext()
@@ -147,6 +189,10 @@ export function useNativeMenu(): void {
     // scene decides whether the menu offers to export a selection.
     for (const store of [useSceneViews, useScenes])
       stopPublishing.push(store.subscribe(publishIfSceneChanged))
+    // The image stores belong to that second family too: a layer drag writes `useCanvases` on
+    // every pointer move, and what the two Image rows need from it changes far more rarely.
+    for (const store of [useCanvases, useCanvasViews])
+      stopPublishing.push(store.subscribe(publishIfCanvasChanged))
     // `useGit` belongs to that second family rather than the first: the history is offered only
     // over a folder under version control, but `busy` flips on every command and moves no row.
     stopPublishing.push(useGit.subscribe(publishIfGitChanged))

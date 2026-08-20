@@ -24,6 +24,10 @@ export function VisibilityToggle({ visible, label, description, onToggle }: Visi
       description={description}
       tooltip={TIP_RIGHT}
       variant="row"
+      // The icon is the whole of what a sighted eye reads here, and a screen reader hears none
+      // of it: without this the button announced the same thing hidden or shown. The padlock
+      // beside it already says its state this way.
+      active={visible}
       onPointerDown={event => event.stopPropagation()}
       onDoubleClick={event => event.stopPropagation()}
       onClick={event => {

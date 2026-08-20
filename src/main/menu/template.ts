@@ -368,6 +368,12 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   }
 
   /**
+   * Greyed rather than dropped, as `Export ▸ Selection` above: a row that comes and goes is one
+   * the eye has to look for. `undefined` for the rows nothing decides, which is most of them.
+   */
+  const ableTo = (ability: MenuAbility): boolean => abilities.includes(ability)
+
+  /**
    * A row that is exactly a command: its label, its accelerator and what it fires all come from
    * the registry, so a title translated once is never translated again for the menu.
    */
@@ -448,7 +454,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       { ...roleItem('cut'), registerAccelerator: false },
       { ...roleItem('copy'), registerAccelerator: false },
       { ...roleItem('paste'), registerAccelerator: false },
-      roleItem('selectAll'),
+      // Unreserved like the clipboard above, and for the same reason: reserved, AppKit serves
+      // ⌘A to the menu and the window never sees it — on a canvas the native role selects
+      // nothing, so the key was dead AND unbindable.
+      { ...roleItem('selectAll'), registerAccelerator: false },
       ...sceneEditItems,
     ],
   }
@@ -560,7 +569,6 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
             submenu: [
               commandItem('canvas.toolMove', t.commands.canvasToolMove.title),
               commandItem('canvas.toolHand', t.commands.canvasToolHand.title),
-              commandItem('canvas.toolScale', t.commands.canvasToolScale.title),
               { type: 'separator' },
               commandItem('canvas.toolCrop', t.commands.canvasToolCrop.title),
               { type: 'separator' },
@@ -578,7 +586,6 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
               commandItem('canvas.toolBrush', t.commands.canvasToolBrush.title),
               commandItem('canvas.toolPencil', t.commands.canvasToolPencil.title),
               commandItem('canvas.toolEraser', t.commands.canvasToolEraser.title),
-              commandItem('canvas.toolEraserSelection', t.commands.canvasToolEraserSelection.title),
               commandItem('canvas.toolFill', t.commands.canvasToolFill.title),
               { type: 'separator' },
               commandItem('canvas.toolText', t.commands.canvasToolText.title),
@@ -598,7 +605,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           {
             label: t.menu.image,
             submenu: [
-              commandItem('canvas.mergeDown', t.commands.canvasMergeDown.title),
+              {
+                ...commandItem('canvas.mergeDown', t.commands.canvasMergeDown.title),
+                enabled: ableTo('canvas.mergeDown'),
+              },
               commandItem('canvas.flatten', t.commands.canvasFlatten.title),
               { type: 'separator' },
               commandItem('canvas.flipHorizontal', t.commands.canvasFlipHorizontal.title),
@@ -609,7 +619,13 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
               { type: 'separator' },
               // Implemented, tested, and reachable by nothing at all until now: no default key
               // and no row anywhere.
-              commandItem('canvas.maskFromSelection', t.commands.canvasMaskFromSelection.title),
+              {
+                ...commandItem(
+                  'canvas.maskFromSelection',
+                  t.commands.canvasMaskFromSelection.title,
+                ),
+                enabled: ableTo('canvas.maskFromSelection'),
+              },
               { type: 'separator' },
               // The only way in: none of the five carries a default shortcut, deliberately —
               // they spend credit, and a key pressed by accident has no business spending any.

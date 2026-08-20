@@ -98,6 +98,7 @@
       "skybox.source": "The sky image could not be loaded",
       "skybox.export": "Exporting the sky failed",
       "canvas.layer": "A layer could not be loaded",
+      "canvas.place": "That image could not be laid on the document",
       "canvas.size": "This image could not keep its own size",
       "canvas.flatten": "The original image could not be updated, its format being unable to hold this work. It was left untouched — use Save as.",
       "canvas.edit": "The image could not be sent to the model",

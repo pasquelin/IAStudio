@@ -1,4 +1,5 @@
 import { Container, Graphics, Sprite, Texture, type Application, type TextureSource } from 'pixi.js'
+import { bytesFromBase64 } from '@/helpers/base64'
 import { createClock, type Clock } from './clock'
 import { createDecoderPool, type DecoderPool, type SinkLike } from './decoderPool'
 import { playbackToken } from './playback'
@@ -97,17 +98,6 @@ function place(target: Container, placement: Placement): void {
 /** The sequence canvas, behind every layer — see `--color-monitor`. */
 const CANVAS_TOKEN = '--color-monitor'
 const CANVAS_FALLBACK = 0x000000
-
-/**
- * The bytes behind a `data:` URL. Pixi hands a picture back as one, and what crosses to the
- * main process is bytes — encoding them again as text would cost a third of the size per frame.
- */
-export function bytesOfDataUrl(url: string): Uint8Array {
-  const binary = atob(url.slice(url.indexOf(',') + 1))
-  const bytes = new Uint8Array(binary.length)
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
-  return bytes
-}
 
 /** What a renderer must offer to take a frame now rather than at its next pass. */
 export type TextureUploader = { initSource: (source: TextureSource) => void }
@@ -444,7 +434,7 @@ export class TimelineEngine {
     if (!application) return null
 
     const url = await application.renderer.extract.base64({ target: this.frame, format: 'png' })
-    return bytesOfDataUrl(url)
+    return bytesFromBase64(url)
   }
 
   /** The sequence canvas, in its own pixels — what every layer is composited against. */

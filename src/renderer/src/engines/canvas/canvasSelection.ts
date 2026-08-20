@@ -1,5 +1,5 @@
 import type { Rect } from './canvasState'
-import { box } from './shapeGeometry'
+import { box, ELLIPSE_SEGMENTS } from './shapeGeometry'
 import type { Point } from '../core/geometry'
 
 /**
@@ -36,12 +36,6 @@ export function extendLasso(selection: CanvasSelection, point: Point): CanvasSel
   if (selection?.kind !== 'lasso') return selection
   return { kind: 'lasso', points: [...selection.points, point] }
 }
-
-/**
- * How many segments an ellipse is drawn with. Enough that the marquee reads as a curve at any
- * zoom the canvas allows, and few enough that the overlay redraws in a fraction of a frame.
- */
-const ELLIPSE_SEGMENTS = 48
 
 /**
  * The outline to stroke, in document coordinates and closed — one shape for the three, so the

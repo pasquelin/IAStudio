@@ -18,6 +18,7 @@ import { attribute, escapeXml, unescapeXml } from '@shared/domain/xmlText'
 import { clamp } from '@shared/numeric'
 
 const MIMETYPE_PATH = 'mimetype'
+/** At most 256 px a side, by the spec — and what a reader wanting a tile asks for first. */
 const THUMBNAIL_PATH = 'Thumbnails/thumbnail.png'
 const STACK_PATH = 'stack.xml'
 
@@ -77,20 +78,30 @@ function stackXml(stack: OraStack, written: ReadonlySet<string>): string {
  * `mimetype` goes in FIRST and uncompressed — the one structural rule of the format, and the one
  * whose breach makes the file open nowhere with nothing to say why.
  *
- * The thumbnail is the flatten again rather than a downscale: resizing belongs to a graphics
- * context, which the main process has none of, and a thumbnail no bigger than the picture is
- * within spec. It is what stops a file manager showing a blank tile.
+ * `thumbnail` is written as `Thumbnails/thumbnail.png` when one is handed in, and the caller is
+ * the one that made it: resizing belongs to a graphics context, and this module stays pure so it
+ * can be tested without one. Handed nothing, the entry is LEFT OUT — the flatten used to be
+ * written there a second time, which the spec forbids past 256 px and which doubled the size of
+ * every file the studio wrote, on disk and again on every read.
  *
  * A surface whose path this file would not have written is DROPPED rather than written where it
  * says: these come across a boundary, and an entry naming its way out of the container would be
  * written back out by whoever unpacks one.
  */
-export function packOpenRaster({ stack, surfaces }: OraDocument, envelope = ''): Uint8Array {
+export function packOpenRaster(
+  { stack, surfaces }: OraDocument,
+  envelope = '',
+  thumbnail?: Uint8Array,
+): Uint8Array {
   const files: Zippable = {
     [MIMETYPE_PATH]: [strToU8(ORA_MIMETYPE), { level: 0 }],
     // Second, and stored: `oraEnvelopeIn` reads it out of the head of the file alone.
     ...(envelope ? { [ORA_ENVELOPE_PATH]: stored(strToU8(envelope)) } : {}),
   }
+
+  // Before the surfaces, and that ordering is the point: a streaming reader after one tile of a
+  // grid finds it in the head of the file, instead of walking every layer to reach the tail.
+  if (thumbnail && thumbnail.byteLength > 0) files[THUMBNAIL_PATH] = stored(thumbnail)
 
   const written = new Set<string>()
   for (const surface of surfaces) {
@@ -100,8 +111,6 @@ export function packOpenRaster({ stack, surfaces }: OraDocument, envelope = ''):
     if (written.has(surface.path)) continue
     written.add(surface.path)
     files[surface.path] = stored(surface.png)
-    // The spec asks for a thumbnail, and the flatten is the only picture this process holds.
-    if (surface.path === ORA_MERGED_PATH) files[THUMBNAIL_PATH] = stored(surface.png)
   }
 
   // After the surfaces, and that ordering is the point: the tree may only name what went in.
@@ -185,7 +194,10 @@ function readNodes(xml: string): OraNode[] {
     const group: OraGroup = {
       ...baseFrom(tag),
       kind: 'group',
-      isolation: attribute(tag, 'isolation') === 'isolate' ? 'isolate' : 'auto',
+      // `isolate` is the DEFAULT the layer-stack spec gives a group, so an absent attribute is
+      // an isolated group — read the other way round, a GIMP group that says nothing came back
+      // rewritten as `auto`, which is a change to the standard half of someone else's file.
+      isolation: attribute(tag, 'isolation') === 'auto' ? 'auto' : 'isolate',
       children: [],
     }
     push(group)
@@ -259,19 +271,63 @@ function concatBytes(chunks: readonly Uint8Array[]): Uint8Array {
 }
 
 /**
- * The flatten alone, for a reader that wants a picture rather than a document — `null` for bytes
- * that are not a container.
+ * The flatten alone, read as the file arrives rather than after all of it is in memory.
  *
- * `filter` so the layers are never inflated: this answers the asset scheme, which is asked once
- * per tile of a grid, and a shelf of layered pictures would otherwise decompress every layer of
- * every one of them to draw a thumbnail.
+ * `mergedimage.png` sits near the head of a container the studio wrote, and the streaming reader
+ * needs no central directory to find it — so a shelf of layered pictures is drawn without ever
+ * holding a whole document. Read whole, one 4K layered picture was hundreds of megabytes in the
+ * process that owns every window, once per tile.
+ *
+ * `null` when the stream ends without it, which is every file that is not a container.
  */
-export function mergedPictureOf(bytes: Uint8Array): Uint8Array | null {
+async function mergedPictureIn(
+  chunks: AsyncIterable<Uint8Array>,
+  wanted: string = ORA_MERGED_PATH,
+): Promise<Uint8Array | null> {
+  const parts: Uint8Array[] = []
+  let complete = false
+
+  const reader = new Unzip(entry => {
+    if (entry.name !== wanted) return
+    entry.ondata = (_error, chunk, final) => {
+      parts.push(chunk)
+      if (final) complete = true
+    }
+    entry.start()
+  })
+  reader.register(UnzipInflate)
+
   try {
-    return (
-      unzipSync(bytes, { filter: entry => entry.name === ORA_MERGED_PATH })[ORA_MERGED_PATH] ?? null
-    )
+    for await (const chunk of chunks) {
+      reader.push(chunk, false)
+      // Everything after it is layers, and inflating those is what this exists to avoid.
+      if (complete) break
+    }
   } catch {
+    return null
+  }
+
+  return complete ? concatBytes(parts) : null
+}
+
+/**
+ * The picture of a container ON DISK, streamed — its own thumbnail when it carries one, its
+ * flatten otherwise. `null` for every file that is not a container.
+ *
+ * Written once because two readers wanted it — the asset scheme and the Explorer's tiles — and
+ * each had begun writing its own copy of the same dynamic imports and the same swallow.
+ */
+export async function containerPictureOf(file: string): Promise<Uint8Array | null> {
+  if (!file.toLowerCase().endsWith('.ora')) return null
+
+  try {
+    const { createReadStream } = await import('node:fs')
+    // The thumbnail first: it sits in the head of the file and weighs kilobytes, where the
+    // flatten is the whole picture — several megabytes inflated, once per tile of a grid.
+    const small = await mergedPictureIn(createReadStream(file), THUMBNAIL_PATH)
+    return small ?? (await mergedPictureIn(createReadStream(file)))
+  } catch {
+    // A file that will not read is answered as every caller answers what it cannot serve.
     return null
   }
 }

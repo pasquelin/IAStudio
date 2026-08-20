@@ -1,6 +1,7 @@
 import type { FieldDescriptor, ModelFamily } from '@shared/domain/model'
 import { layerById } from '@/engines/canvas/canvasState'
 import { modelForFamily } from '@/helpers/modelForFamily'
+import { reportFailure } from '@/services/diagnostics'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useModels } from '@/stores/models'
 import { fillEditFields } from './aiFields'
@@ -70,14 +71,28 @@ export async function prepareEdit(
 
   const canvas = canvasOf(useCanvases.getState(), documentId)
   const layer = layerById(canvas, canvas.activeLayerId)
+  // Asked of the model FIRST, for the reason the image field is asked above: an upload is a
+  // permanent asset in the user's library, and a model with nowhere to put a mask must not cost
+  // one. Sent to such a model the mask was uploaded, then quietly dropped by `fillEditFields`,
+  // and the whole picture was regenerated while the user believed a region had been protected.
+  const wantsMask = descriptor.fields.some(field => field.maskFrom !== undefined)
   // `enabled`, not merely present: the canvas does not honour a mask whose box is unticked, and
   // sending it would ask the model to repaint a region nothing on screen shows.
-  const mask = masked && layer?.mask?.enabled === true ? await host.maskSnapshot(layer.id) : null
+  const mask =
+    masked && wantsMask && layer?.mask?.enabled === true ? await host.maskSnapshot(layer.id) : null
 
-  const [imageId, maskId] = await Promise.all([
-    bridge.uploadAsset(`${documentId}.png`, image),
-    mask ? bridge.uploadAsset(`${documentId}-mask.png`, mask) : Promise.resolve(null),
-  ])
+  if (masked && !wantsMask) {
+    reportFailure(
+      'canvas.edit',
+      documentId,
+      new Error('this model takes no mask, so the whole picture will be regenerated'),
+    )
+  }
+
+  // Sequenced rather than raced: when the second upload fails, the first has already created a
+  // permanent asset in the account, and `Promise.all` left it there unnamed and untraceable.
+  const imageId = await bridge.uploadAsset(`${documentId}.png`, image)
+  const maskId = mask ? await bridge.uploadAsset(`${documentId}-mask.png`, mask) : null
 
   const values = fillEditFields(descriptor.fields, {
     image: imageId,

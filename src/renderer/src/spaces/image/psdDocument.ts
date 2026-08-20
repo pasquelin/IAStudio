@@ -6,17 +6,11 @@ import {
   type OraNode,
 } from '@shared/domain/openRaster'
 import { psdBlendOf } from '@shared/domain/psdBlend'
-import type { BlendMode } from '@shared/domain/canvasBlend'
+import { blendOfComposite } from '@shared/domain/canvasBlend'
 
 /**
  * Composed HERE, unlike `.ora`: a PSD carries raw pixels, and only this side decodes a PNG.
  */
-
-/** What the studio's stack calls a composite, back to a blend the table knows. */
-const blendOf = (composite: string): BlendMode => {
-  const name = composite.replace(/^svg:/, '')
-  return name === 'src-over' ? 'normal' : (name as BlendMode)
-}
 
 async function bitmapOf(png: Uint8Array): Promise<ImageBitmap> {
   // `slice`, so the blob owns bytes nothing else is about to reuse: the snapshots come off one
@@ -71,7 +65,7 @@ export async function psdBytesOf({ stack, surfaces }: OraDocument): Promise<Uint
       hidden: !visible,
       // The table answers a name of this very union; `shared/` spells it as text rather than
       // importing the package's type, which would tie the domain to the writer it feeds.
-      blendMode: psdBlendOf(blendOf(layer.composite)) as Layer['blendMode'],
+      blendMode: psdBlendOf(blendOfComposite(layer.composite)) as Layer['blendMode'],
       left: layer.x,
       top: layer.y,
       canvas: canvasOf(await bitmapOf(png)),
