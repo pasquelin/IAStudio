@@ -5,6 +5,7 @@ import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asse
 import type { FavoriteRecipe } from './domain/favorite'
 import type { FileFacts } from './domain/fileInfo'
 import type { FileHistory, FileOutcome } from './domain/fileOp'
+import type { NamedDocumentPlace, NewDocumentAsk } from './domain/newDocument'
 import type { FolderEntry } from './domain/folder'
 import type { OraDocument } from './domain/openRaster'
 import type { MaterialStyle } from './domain/style'
@@ -132,6 +133,11 @@ export type Channels = {
    * held to a single lowercase word (`ipc.test.ts`), which `file-info:` is not.
    */
   fileInfoOpen: 'window:file-info'
+
+  /** Under `window:` for the reason `fileInfoOpen` is: opening one is the whole of it. */
+  newDocumentAsk: 'window:new-document'
+  newDocumentRequest: 'window:new-document-request'
+  newDocumentAnswer: 'window:new-document-answer'
 
   gitRead: 'git:read'
   gitInit: 'git:init'
@@ -316,6 +322,10 @@ export const CHANNELS: Channels = {
   projectFileFacts: 'project:file-facts',
 
   fileInfoOpen: 'window:file-info',
+
+  newDocumentAsk: 'window:new-document',
+  newDocumentRequest: 'window:new-document-request',
+  newDocumentAnswer: 'window:new-document-answer',
 
   gitRead: 'git:read',
   gitInit: 'git:init',
@@ -1659,6 +1669,19 @@ export type StudioBridge = {
   fileInfo: {
     /** A path relative to the project folder — the spelling every panel names a file with. */
     open: (relative: string) => Promise<void>
+  }
+  /**
+   * Naming a document, in a window of its own rather than a modal drawn over the studio.
+   *
+   * Three halves, and two windows: the studio ASKS and waits, the new window READS what was
+   * asked and ANSWERS it. Closing that window is the answer `null` — cancelling has to mean
+   * nothing was made, and the close button is the plainest way to say it.
+   */
+  newDocument: {
+    ask: (ask: NewDocumentAsk) => Promise<NamedDocumentPlace | null>
+    /** What the open window was asked, or `null` when nothing is pending. */
+    request: () => Promise<NewDocumentAsk | null>
+    answer: (place: NamedDocumentPlace | null) => Promise<void>
   }
   menu: {
     /**

@@ -6,7 +6,6 @@ import { useTools } from '@/stores/tools'
 import { HomeView } from '@/home/HomeView/HomeView'
 import { DocumentArea } from '../DocumentArea'
 import { AssetPicker } from '../AssetPicker/AssetPicker'
-import { DocumentNameDialog } from '../DocumentNameDialog'
 import { showWorkspace } from '../dockviewApi'
 import { guardUnsavedWork } from '../unsavedGuard'
 import { useAutosave } from '@/hooks/useAutosave'
@@ -141,12 +140,9 @@ export function Shell() {
       {/* Over everything, and mounted whether or not it shows: it is the window's confirmer, and
           an action that needs a yes must be able to raise one from a closed modal. */}
       <AssistantOverlay />
-      {/* After the assistant, and over it: a sentence said to it can ask for a document, and the
-          field that names one would otherwise open behind the conversation that asked for it. */}
-      <DocumentNameDialog />
       {/* The window a slot browses the whole project from. Mounted here rather than by the
-          inspector, for the reason the namer is: a panel that happened to be closed would leave
-          the browse button with nobody to ask. */}
+          inspector: a panel that happened to be closed would leave the browse button with
+          nobody to ask. */}
       <AssetPicker />
       <TooltipHost />
     </div>

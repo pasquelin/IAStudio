@@ -9,7 +9,6 @@ import { takenDocumentNames, untitledDocumentName, useDocuments } from '@/stores
 import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { getBridge } from '@/services/bridge'
-import { mountedDocumentNamer } from './documentName'
 import { openDocument } from './dockviewApi'
 
 /**
@@ -62,27 +61,29 @@ async function named(
   const kind = kindForWorkspace(workspace)
   if (kind === null || !useProject.getState().project) return null
 
-  // Already named: no field is raised at all. There is nothing left to ask, and asking would
+  // Already named: no window is opened at all. There is nothing left to ask, and asking would
   // hold a caller outside the window on a question only the person in front of it can answer.
-  const ask = called ? null : mountedDocumentNamer()
+  const namer = called ? null : getBridge()?.newDocument
   let of: { title: string; folder?: string } | undefined = called
 
-  if (ask) {
-    // The folders first, and this is the only place they are read for a creation: what they hold
-    // is both what the name field proposes and what it refuses.
+  if (namer) {
+    // The folders first: what they hold is what the suggested name has to step over.
     await useDocuments.getState().relist()
 
     const folder = await startingFolder()
-    const takenIn = (asked: string): ReturnType<typeof takenDocumentNames> =>
-      takenDocumentNames(useDocuments.getState(), asked)
+    const state = useDocuments.getState()
 
-    const place = await ask({
+    const place = await namer.ask({
       kind,
       folder,
-      suggested: untitledDocumentName(takenIn(folder), kind),
-      takenIn,
+      suggested: untitledDocumentName(takenDocumentNames(state, folder), kind),
+      projectName: useProject.getState().project?.manifest.name ?? '',
+      // The tabs, which the window cannot read: it lists the project FOLDER for itself, and a
+      // document opened and never saved is in no folder to be found.
+      open: Object.values(state.documents),
     })
-    // Called off. Nothing is made — no tab, no file — which is what cancelling has to mean.
+    // Called off — the window was closed, or Cancel was pressed. Nothing is made, no tab and no
+    // file, which is what cancelling has to mean.
     if (place === null) return null
 
     of = place

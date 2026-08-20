@@ -54,7 +54,9 @@ export function FolderPicker({ value, onChange, rootName, labels, actions }: Fol
   const trail = folderTrail(value)
 
   return (
-    <div className="flex flex-col gap-2">
+    // Fills whatever height it is given, the columns taking the slack: this browses a window,
+    // and a fixed box would leave a strip of nothing under it with the buttons floating there.
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
       {/* Where the document will be written, ABOVE the columns — the way the save panel puts its
           own. The lit rows say it too, but only to whoever reads three columns at once.
 
@@ -69,7 +71,9 @@ export function FolderPicker({ value, onChange, rootName, labels, actions }: Fol
         aria-label={labels.columns}
         // `panel`, darker than the dialog it sits on: the studio's surfaces are recessed, and a
         // browser drawn in the dialog's own fill reads as a stretch of nothing with a border.
-        className="border-border bg-panel h-64 overflow-x-auto rounded-(--radius-sc-sm) border"
+        // Grows with the window down to a floor: under three rows a column browser is a slot,
+        // and the walk it is there to show no longer reads.
+        className="border-border bg-panel min-h-48 flex-1 overflow-x-auto rounded-(--radius-sc-sm) border"
       >
         <div className="flex h-full min-w-min">
           {columns.map((column, index) => (

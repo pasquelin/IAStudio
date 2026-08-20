@@ -6,6 +6,7 @@ import { fileInfoRoute } from '@shared/domain/fileInfo'
 import { LICENCES_ROUTE } from '@shared/domain/licence'
 import { MANUAL_ROUTE } from '@shared/domain/manual'
 import { MIRROR_ROUTE } from '@shared/domain/mirror'
+import { NEW_DOCUMENT_ROUTE } from '@shared/domain/newDocument'
 import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
 import { USAGE_ROUTE } from '@shared/domain/usage'
 import { TRANSLATIONS } from '@shared/i18n'
@@ -329,6 +330,23 @@ export function openFileInfoWindow(path: string): BrowserWindow {
     height: 560,
     minWidth: 380,
     minHeight: 320,
+  })
+}
+
+/**
+ * What a document about to be made is called and where it goes — a window, not a modal drawn
+ * over the studio: it is moved, put beside the folder one is looking at, and closed the way
+ * every other window is, which is what closing it has to mean here (nothing is made).
+ *
+ * The floor is read off the browser rather than chosen: three 160 px columns and their rules —
+ * under that the walk is three slots of clipped names.
+ */
+export function openNewDocumentWindow(): BrowserWindow {
+  return openAuxiliaryWindow(NEW_DOCUMENT_ROUTE, {
+    width: 860,
+    height: 640,
+    minWidth: 720,
+    minHeight: 520,
   })
 }
 

@@ -253,6 +253,11 @@ const bridge: StudioBridge = {
   fileInfo: {
     open: relative => ipcRenderer.invoke(CHANNELS.fileInfoOpen, relative),
   },
+  newDocument: {
+    ask: request => ipcRenderer.invoke(CHANNELS.newDocumentAsk, request),
+    request: () => ipcRenderer.invoke(CHANNELS.newDocumentRequest),
+    answer: place => ipcRenderer.invoke(CHANNELS.newDocumentAnswer, place),
+  },
   window: {
     toggleFullScreen: () => ipcRenderer.invoke(CHANNELS.windowToggleFullScreen),
     state: () => ipcRenderer.invoke(CHANNELS.windowState),

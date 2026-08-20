@@ -34,6 +34,7 @@ import { registerRenderHandlers } from '@main/render/handlers'
 import { registerUpdateHandlers } from '@main/update/handlers'
 import { registerFileInfoWindow } from '@main/window/fileInfo'
 import { registerMirrorWindow } from '@main/window/mirror'
+import { registerNewDocumentWindow } from '@main/window/newDocument'
 import { markSettingsPending, openSettingsWindow } from '@main/window/windows'
 import type { Services } from '@main/services'
 
@@ -42,6 +43,7 @@ export function registerIpc(services: Services): void {
   registerWindowControls()
   registerMirrorWindow()
   registerFileInfoWindow()
+  registerNewDocumentWindow()
   registerContextMenu()
   registerMenuHandlers()
   registerDiagnosticsHandlers(() => services.journal)

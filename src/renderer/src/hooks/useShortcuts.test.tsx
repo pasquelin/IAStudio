@@ -269,7 +269,7 @@ describe('useShortcuts', () => {
   })
 
   /**
-   * `DocumentNameDialog` shields the surfaces behind it with `stopPropagation` on a React
+   * A modal — `AssetPicker` — shields the surfaces behind it with `stopPropagation` on a React
    * handler, which runs from the root container — ahead of `window` in bubble, behind it in
    * capture. Moving the command lookup to capture let `Delete` reach `scene.delete` from a
    * button inside an open dialog, where `isTyping` is false.

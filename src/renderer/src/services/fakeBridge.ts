@@ -275,6 +275,13 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       open: () => Promise.resolve(),
       ...overrides.fileInfo,
     },
+    newDocument: {
+      // Nobody to name it: the default answer is the one a window nobody opened gives.
+      ask: () => Promise.resolve(null),
+      request: () => Promise.resolve(null),
+      answer: () => Promise.resolve(),
+      ...overrides.newDocument,
+    },
     window: {
       toggleFullScreen: () => Promise.resolve(),
       state: () => Promise.resolve({ active: true, fullScreen: false, maximized: false }),

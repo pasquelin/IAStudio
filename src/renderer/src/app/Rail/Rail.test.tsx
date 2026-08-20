@@ -30,6 +30,11 @@ describe('Rail', () => {
   })
 
   it('creates a document in the active workspace and opens it', async () => {
+    // The naming window answers, which is what a person in front of it would do: the default
+    // bridge answers `null`, and cancelling makes nothing at all.
+    installFakeBridge({
+      newDocument: { ask: () => Promise.resolve({ title: 'Niveau', folder: 'documents' }) },
+    })
     render(<Rail side="left" />)
     await userEvent.click(screen.getByRole('button', { name: 'Nouveau document' }))
 

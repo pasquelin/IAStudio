@@ -4,6 +4,7 @@ import { isFileInfoRoute } from '@shared/domain/fileInfo'
 import { isLicencesRoute } from '@shared/domain/licence'
 import { isManualRoute } from '@shared/domain/manual'
 import { isMirrorRoute } from '@shared/domain/mirror'
+import { isNewDocumentRoute } from '@shared/domain/newDocument'
 import { isSettingsRoute } from '@shared/domain/settings'
 import { isUsageRoute } from '@shared/domain/usage'
 import { UNKNOWN_SYSTEM_LANGUAGE } from '@shared/i18n'
@@ -67,6 +68,11 @@ const FileInfoWindow = lazy(async () => ({
   default: (await import('@/fileInfo/FileInfoWindow/FileInfoWindow')).FileInfoWindow,
 }))
 
+/** Split like its neighbours: it opens on the plus button, and nowhere near the first frame. */
+const NewDocumentWindow = lazy(async () => ({
+  default: (await import('@/newDocument/NewDocumentWindow/NewDocumentWindow')).NewDocumentWindow,
+}))
+
 /**
  * Every application window loads the same bundle and reads the route from the fragment: the
  * i18n bootstrap, the tokens and the bridge are shared, and navigation is locked, so the
@@ -113,6 +119,13 @@ function Route({ hash }: { hash: string }) {
     return (
       <Suspense fallback={null}>
         <FileInfoWindow />
+      </Suspense>
+    )
+  }
+  if (isNewDocumentRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <NewDocumentWindow />
       </Suspense>
     )
   }

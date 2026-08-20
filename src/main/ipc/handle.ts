@@ -181,6 +181,10 @@ type ChannelMethod = {
 
   [CHANNELS.fileInfoOpen]: StudioBridge['fileInfo']['open']
 
+  [CHANNELS.newDocumentAsk]: StudioBridge['newDocument']['ask']
+  [CHANNELS.newDocumentRequest]: StudioBridge['newDocument']['request']
+  [CHANNELS.newDocumentAnswer]: StudioBridge['newDocument']['answer']
+
   [CHANNELS.menuPopup]: StudioBridge['menu']['popup']
 
   [CHANNELS.updateState]: StudioBridge['updates']['state']
