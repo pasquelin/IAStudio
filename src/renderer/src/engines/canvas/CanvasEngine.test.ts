@@ -513,6 +513,15 @@ function press(host: HTMLElement, x: number, y: number, button = 0): void {
 }
 
 /**
+ * The event the browser actually sends for a second click. NOT `pointerdown` with `detail: 2`,
+ * which no browser emits — measured in Electron: `pointerdown` carries `detail: 0` every time,
+ * and a test hand-building one asserts a branch the app can never reach.
+ */
+function doubleClick(host: HTMLElement, x: number, y: number): void {
+  host.dispatchEvent(new MouseEvent('dblclick', { clientX: x, clientY: y, detail: 2 }))
+}
+
+/**
  * What the overlay put on screen, in order: the rectangles it filled — the grips — and the
  * circles it traced — the brush ring. The overlay paints only when its canvas hands out a 2D
  * context, and `testSetup` denies one to the whole renderer, so lending it a recorder for the
@@ -2341,6 +2350,62 @@ describe('captions', () => {
       width: PARAGRAPH.width - 50,
       height: PARAGRAPH.height - 50,
     })
+  })
+
+  /**
+   * The reflex Photoshop answers to: with the move tool armed, a double click on the words opens
+   * them. Before this, a caption could only be reopened by arming the text tool first.
+   */
+  it('reopens the armed caption on a double click with the move tool', async () => {
+    const { engine, host, captions } = await mounted(armedCaption(), 'move')
+    engine.setView(BARE_VIEW)
+
+    doubleClick(host, 20, 40)
+
+    expect(captions).toEqual([{ layerId: 't' }])
+  })
+
+  // A single click still moves the block: the door is the SECOND click, never the first.
+  it('moves the caption on a single click rather than opening it', async () => {
+    const { engine, host, captions, layers } = await mounted(armedCaption(), 'move')
+    engine.setView(BARE_VIEW)
+
+    press(host, 20, 40)
+    drag(host, 60, 90)
+    release(60, 90)
+
+    // Where the caption ENDED UP: it started at (10, 20) and the hand moved by (40, 50).
+    expect(layers).toContain('translate:t:50:70')
+    expect(captions).toEqual([])
+  })
+
+  // Locking a caption's POSITION keeps the words still; it was never meant to lock editing them.
+  it('opens a caption whose position is padlocked', async () => {
+    const armed = armedCaption()
+    const { engine, host, captions } = await mounted(
+      {
+        ...armed,
+        layers: armed.layers.map(layer =>
+          layer.id === 't' ? { ...layer, locked: { ...layer.locked, position: true } } : layer,
+        ),
+      },
+      'move',
+    )
+    engine.setView(BARE_VIEW)
+
+    doubleClick(host, 20, 40)
+
+    expect(captions).toEqual([{ layerId: 't' }])
+  })
+
+  // The other tools own the double click too — the text tool opens a caption on a single one.
+  it('leaves a double click alone while another tool is armed', async () => {
+    const { engine, host, captions } = await mounted(armedCaption(), 'brush')
+    engine.setView(BARE_VIEW)
+
+    doubleClick(host, 20, 40)
+
+    expect(captions).toEqual([])
   })
 
   /**
