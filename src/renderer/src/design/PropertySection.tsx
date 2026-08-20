@@ -1,6 +1,7 @@
 import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import { useSectionFolds } from '@/stores/sectionFolds'
 import { PROPERTY_BODY } from './styles'
 import { UiIcon } from './UiIcon'
 import { HINT_LEFT } from '@/helpers/tooltip'
@@ -23,7 +24,19 @@ export function PropertySection({
   scId,
 }: PropertySectionProps) {
   const { t } = useTranslation()
-  const [open, setOpen] = useState(defaultOpen)
+  const id = useId()
+  const stamp = useSectionFolds(state => state.stamp)
+  const wanted = useSectionFolds(state => state.wanted)
+  const [held, setHeld] = useState({ stamp, open: defaultOpen })
+
+  // Adjusted during the render rather than in an effect, the way `useCatalogueAssets` takes a new
+  // question: an effect would fold the section one frame after the press, visibly.
+  if (held.stamp !== stamp) setHeld({ stamp, open: wanted })
+
+  const open = held.open
+  // What the title button reads to know whether it has anything left to fold. The subscription is
+  // dropped when the face changes, so sections that went away stop answering for it.
+  useEffect(() => useSectionFolds.getState().noteSection(id, open), [id, open])
 
   return (
     <section className="border-border border-b last:border-b-0">
@@ -36,7 +49,7 @@ export function PropertySection({
           aria-expanded={open}
           data-sc={scId && `section:${scId}`}
           {...HINT_LEFT(t(open ? 'inspector.sectionFoldHint' : 'inspector.sectionUnfoldHint'))}
-          onClick={() => setOpen(current => !current)}
+          onClick={() => setHeld(current => ({ ...current, open: !current.open }))}
           className={cn(
             'text-text flex h-(--sc-control) w-full cursor-pointer items-center gap-2',
             'text-tiny border-none bg-transparent px-2 text-left font-medium tracking-wide uppercase',

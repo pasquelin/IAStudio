@@ -36,7 +36,6 @@
     "background_transparentHint": "Nothing behind the scene, so the image can be laid over something else",
     "backgroundColor": "Backdrop colour",
     "backgroundBlur": "Backdrop blur",
-    "backgroundNoSkyHint": "No sky is chosen, so the backdrop falls back to the studio colour",
 
     "ground": "Ground",
     "groundVisible": "Show the ground",

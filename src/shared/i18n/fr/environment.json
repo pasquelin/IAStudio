@@ -36,7 +36,6 @@
     "background_transparentHint": "Rien derrière la scène, pour poser l’image sur autre chose",
     "backgroundColor": "Couleur du fond",
     "backgroundBlur": "Flou du fond",
-    "backgroundNoSkyHint": "Aucun ciel n’est choisi, donc le fond retombe sur la couleur du studio",
 
     "ground": "Sol",
     "groundVisible": "Afficher le sol",
