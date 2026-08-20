@@ -262,6 +262,7 @@ describe('the lists that stand for a union', () => {
       projects: true,
       library: true,
       animations: true,
+      text: true,
     }
 
     expect(sorted(TOOL_IDS)).toEqual(sorted(Object.keys(all)))

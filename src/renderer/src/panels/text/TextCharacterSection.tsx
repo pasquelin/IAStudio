@@ -23,7 +23,7 @@ export function TextCharacterSection({ documentId, layer }: TextCharacterSection
   const edit = useDocumentEdit(useCanvases, documentId)
 
   return (
-    <PropertySection title={t('text.character')}>
+    <PropertySection title={t('text.character')} scId="text.character">
       <FontField
         label={t('text.font')}
         value={layer.font}
@@ -33,6 +33,7 @@ export function TextCharacterSection({ documentId, layer }: TextCharacterSection
 
       <NumberField
         label={t('text.size')}
+        scId="text.size"
         value={layer.size}
         min={1}
         step={1}
@@ -43,6 +44,7 @@ export function TextCharacterSection({ documentId, layer }: TextCharacterSection
       {/* A multiple rather than a point count: a caption set bigger keeps its leading. */}
       <NumberField
         label={t('text.lineHeight')}
+        scId="text.lineHeight"
         value={layer.lineHeight}
         min={0.5}
         max={4}
@@ -53,6 +55,7 @@ export function TextCharacterSection({ documentId, layer }: TextCharacterSection
 
       <NumberField
         label={t('text.tracking')}
+        scId="text.tracking"
         value={layer.tracking}
         min={-TRACKING_REACH}
         max={TRACKING_REACH}

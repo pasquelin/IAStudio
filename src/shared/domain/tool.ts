@@ -79,6 +79,7 @@ export const TOOL_IDS: readonly ToolId[] = [
   'projects',
   'library',
   'animations',
+  'text',
 ]
 
 /**

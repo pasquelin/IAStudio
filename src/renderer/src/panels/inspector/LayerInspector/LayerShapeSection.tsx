@@ -32,7 +32,7 @@ export function LayerShapeSection({ layer, edit }: LayerShapeSectionProps) {
   const closed = layer.shape !== 'line' && layer.shape !== 'arrow'
 
   return (
-    <PropertySection title={t('inspector.shape')}>
+    <PropertySection title={t('inspector.shape')} scId="shape">
       {closed && (
         <ToggleField
           label={t('inspector.shapeFilled')}
@@ -98,6 +98,7 @@ export function LayerShapeSection({ layer, edit }: LayerShapeSectionProps) {
           />
           <NumberField
             label={t('inspector.shapeStrokeWidth')}
+            scId="shape.strokeWidth"
             value={stroke.width}
             min={1}
             step={1}
@@ -110,6 +111,7 @@ export function LayerShapeSection({ layer, edit }: LayerShapeSectionProps) {
       {ring && (
         <NumberField
           label={t('inspector.shapeSides')}
+          scId="shape.sides"
           value={layer.sides}
           min={MIN_SIDES}
           max={MAX_SIDES}
