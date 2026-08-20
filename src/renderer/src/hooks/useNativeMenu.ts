@@ -9,6 +9,7 @@ import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { displayOfPane, MAIN_SCENE_PANE, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, useScenes } from '@/stores/scenes'
+import { useGit } from '@/stores/git'
 import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
@@ -58,6 +59,9 @@ let published = ''
 /** The scene's half of it, so the writes that change no row are dismissed without pricing the rest. */
 let publishedScene = ''
 
+/** The git half, for the same reason: `busy` flips twice a command and moves no row. */
+let publishedGitKind = ''
+
 function sceneSignature(state: SceneMenuState): string {
   return `${state.checked.join('|')}/${state.abilities.join('|')}`
 }
@@ -97,6 +101,20 @@ function publishIfSceneChanged(): void {
 }
 
 /**
+ * The same guard for git: only which state the repository is IN can add or remove a row.
+ *
+ * The kind is recorded HERE rather than in `publishMenuContext`, which returns early when the
+ * context has not moved: two kinds that offer the same panels would leave it on the first of
+ * them, and every `busy` flip after that would pay a full registry walk to find that out.
+ */
+function publishIfGitChanged(): void {
+  const { kind } = useGit.getState().repository
+  if (kind === publishedGitKind) return
+  publishedGitKind = kind
+  publishMenuContext()
+}
+
+/**
  * Wires the native menu to the shell. Without this listener, "View ▸ Tool windows" would emit
  * into the void and the menu entries would silently do nothing.
  */
@@ -112,6 +130,7 @@ export function useNativeMenu(): void {
     // duplicate, and the menu would sit on what the PREVIOUS window happened to leave behind.
     published = ''
     publishedScene = ''
+    publishedGitKind = ''
     // The persisted workspace is restored without going through `setActiveWorkspace`, so the
     // menu would sit on the default until the user switched spaces by hand.
     publishMenuContext()
@@ -128,6 +147,9 @@ export function useNativeMenu(): void {
     // scene decides whether the menu offers to export a selection.
     for (const store of [useSceneViews, useScenes])
       stopPublishing.push(store.subscribe(publishIfSceneChanged))
+    // `useGit` belongs to that second family rather than the first: the history is offered only
+    // over a folder under version control, but `busy` flips on every command and moves no row.
+    stopPublishing.push(useGit.subscribe(publishIfGitChanged))
 
     // Through `revealTool`, which resolves the zone: a tool sits in different ones depending on
     // the workspace, and the menu is built once for the whole app.

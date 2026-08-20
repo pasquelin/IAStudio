@@ -10,19 +10,15 @@ import { HistoryList } from './HistoryList'
 /**
  * The versions recorded in the project folder, across every branch.
  *
- * The states before `ready` are said in one line here rather than repeated in full: the Git panel
- * is looking at the same folder and carries the screen that explains them, with the button that
- * acts on them. Saying it twice over one folder would be saying it twice.
+ * A folder git does not hold is not drawn here at all — `requires: 'git'` keeps the panel off the
+ * rail, and the Git panel carries the screen that explains why with the button that acts on it. A
+ * command it REFUSED still lands here, on the versions read before it: that is what they are for.
  */
 export function History() {
   const { t } = useTranslation()
-  const { repository, commits } = useGitHistory()
+  const commits = useGitHistory()
   const picked = useGit(state => state.picked)
   const pickedFiles = useGit(state => state.pickedFiles)
-
-  if (repository.kind !== 'ready') {
-    return <EmptyState icon={toolIcon('history')} message={t('git.historyUnavailable')} />
-  }
 
   if (commits.length === 0) {
     return <EmptyState icon={toolIcon('history')} message={t('git.historyEmpty')} />

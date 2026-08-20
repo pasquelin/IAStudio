@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
+import { trackByGit } from '@/stores/git-fixtures'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
@@ -20,6 +21,9 @@ describe('Rail', () => {
     useDocuments.setState({ documents: {} })
     useLayouts.setState({ activeWorkspace: '3d', home: false, layout: null })
     useModels.setState({ selected: {} })
+    // The rail offers the history only over a folder git is tracking, and every case below is
+    // about which icons the columns carry rather than about that condition.
+    trackByGit()
     const stamp = '2026-08-07T10:00:00.000Z'
     useProject.setState({
       project: {

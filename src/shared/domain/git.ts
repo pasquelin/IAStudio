@@ -128,6 +128,17 @@ export type GitRepository =
   | { kind: 'failed'; reason: GitFailure; detail: string }
 
 /**
+ * Whether git holds this folder at all, which is what decides that the studio has versions to
+ * READ. The three states before `ready` each mean there is nothing to read — no project, no
+ * binary, no repository — while `failed` is a COMMAND that was refused and says nothing about the
+ * folder: `no-identity` is what everybody meets on their first commit, over a history intact
+ * behind it.
+ */
+export function gitHoldsFolder(repository: GitRepository): boolean {
+  return repository.kind === 'ready' || repository.kind === 'failed'
+}
+
+/**
  * The letter each change wears, which is git's own vocabulary and not a language.
  *
  * Here rather than in the bundles: `M` is `M` in French, and putting it there put seven values

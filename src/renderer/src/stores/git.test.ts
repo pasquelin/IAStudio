@@ -1,12 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import type { GitRepository } from '@shared/domain/git'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { GitRemote, GitRepository } from '@shared/domain/git'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useGit } from './git'
+import { gitReadyRepository } from './git-fixtures'
 
-const READY: GitRepository = {
-  kind: 'ready',
-  status: { branch: 'main', head: 'a3f9c1e', upstream: null, ahead: 0, behind: 0, files: [] },
-}
+const READY = gitReadyRepository()
+const ORIGIN: GitRemote = { name: 'origin', url: 'https://example.test/one.git' }
 
 beforeEach(() => useGit.setState({ repository: { kind: 'no-project' }, busy: false }))
 
@@ -97,6 +96,76 @@ describe('what one signal costs in git processes', () => {
 
     await useGit.getState().refresh()
     expect(reads).toBe(2)
+  })
+
+  /** The server is read on the same signal, by the same askers — three of them since 20 August. */
+  it('runs one remote read for the askers that ask together', async () => {
+    let reads = 0
+    installFakeBridge({
+      git: {
+        remotes: () => {
+          reads += 1
+          return Promise.resolve([ORIGIN])
+        },
+      },
+    })
+
+    await Promise.all([useGit.getState().readRemotes(), useGit.getState().readRemotes()])
+
+    expect(reads).toBe(1)
+  })
+
+  /**
+   * The one asker that must never take the shared answer: it was given before the remote existed,
+   * and the bar would show « no server » under a server the user has just named.
+   */
+  it('does not hand a remote just added the read that was already out', async () => {
+    const settle: ((answer: GitRemote[]) => void)[] = []
+    installFakeBridge({
+      git: {
+        addRemote: () => Promise.resolve(READY),
+        remotes: () =>
+          new Promise<GitRemote[]>(done => {
+            settle.push(done)
+          }),
+      },
+    })
+
+    const early = useGit.getState().readRemotes()
+    const added = useGit.getState().addRemote('origin', ORIGIN.url)
+    await vi.waitFor(() => expect(settle).toHaveLength(2))
+
+    // The read that was out answers what git knew BEFORE the remote was named.
+    settle[0]?.([])
+    settle[1]?.([ORIGIN])
+    await Promise.all([early, added])
+
+    expect(useGit.getState().remote).toEqual(ORIGIN)
+  })
+
+  /** The same the other way round: the slow one lands LAST, and must still not have the say. */
+  it('drops a remote read that lands after the one that replaced it', async () => {
+    const settle: ((answer: GitRemote[]) => void)[] = []
+    installFakeBridge({
+      git: {
+        addRemote: () => Promise.resolve(READY),
+        remotes: () =>
+          new Promise<GitRemote[]>(done => {
+            settle.push(done)
+          }),
+      },
+    })
+
+    const early = useGit.getState().readRemotes()
+    const added = useGit.getState().addRemote('origin', ORIGIN.url)
+    await vi.waitFor(() => expect(settle).toHaveLength(2))
+
+    settle[1]?.([ORIGIN])
+    await added
+    settle[0]?.([])
+    await early
+
+    expect(useGit.getState().remote).toEqual(ORIGIN)
   })
 
   /**

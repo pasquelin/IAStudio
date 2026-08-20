@@ -323,13 +323,14 @@ garde sa taille.
 | **Git** | gauche | 2de | partout *(si un projet est ouvert)* | ce qui a changé dans le dossier du projet depuis la dernière version enregistrée |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
 | **Timeline** | bas | 1re | Vidéo, Audio, 3D | la séquence en cours de montage, ou l’animation |
-| **Historique** | bas | 1re | partout *(si un projet est ouvert)* | les versions enregistrées du projet, et ce que chacune a changé |
+| **Historique** | bas | 1re | partout *(si le dossier du projet est suivi par git)* | les versions enregistrées du projet, et ce que chacune a changé |
 
 > **« Partout » veut dire les espaces de travail, pas l’accueil.** L’accueil a ses propres
 > panneaux — cinq — que ce tableau ne liste pas. **Trois sont communs aux deux** : l’Explorateur
 > et Git dans la colonne de gauche, l’Historique dans une bande basse que l’accueil n’avait pas
-> avant. Tous trois ne s’affichent qu’avec un projet ouvert : sans projet, l’accueil est celui
-> qu’il a toujours été, deux colonnes et rien en bas.
+> avant. L’Explorateur et Git ne s’affichent qu’avec un projet ouvert, et **l’Historique
+> seulement si ce projet est suivi par git** : sans projet, l’accueil est celui qu’il a toujours
+> été, deux colonnes et rien en bas.
 
 **La colonne de gauche se lit en deux temps : ce que Scenario propose, puis ce qui est déjà à
 vous.** En haut, **Modèles**, **Génération** et **Assets**, qui se relaient — un modèle à choisir,
@@ -372,8 +373,10 @@ l’**Explorateur**, partout aussi.
 | **Textures** | *rien* | Historique |
 | **Skyboxes** | *rien* | Historique |
 
-> **L’Historique demande un projet ouvert.** Sans projet, la bande basse de ces trois espaces
-> n’affiche rien — la zone est là, elle est vide.
+> **L’Historique demande un dossier suivi par git.** Tant que le suivi n’est pas en place — pas
+> de projet ouvert, ou un projet dont le dossier n’est pas suivi — la bande basse de ces trois
+> espaces **disparaît** : elle ne prend aucune place. Le panneau Git dit où en est ce projet, et
+> porte le bouton qui met le suivi en place.
 
 Dès que vous cliquez une icône, cette moitié retient **votre** choix et ne bouge plus, jusqu’à ce
 que vous en cliquiez une autre ou que vous réinitialisiez la disposition.

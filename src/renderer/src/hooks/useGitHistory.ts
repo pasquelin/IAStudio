@@ -1,12 +1,7 @@
 import { useEffect } from 'react'
-import type { GitCommit, GitRepository } from '@shared/domain/git'
+import type { GitCommit } from '@shared/domain/git'
 import { useGit } from '@/stores/git'
 import { useGitStatus } from './useGitStatus'
-
-export type GitHistory = {
-  repository: GitRepository
-  commits: readonly GitCommit[]
-}
 
 /**
  * The history, re-read whenever the repository has moved under it.
@@ -16,7 +11,7 @@ export type GitHistory = {
  * status itself is kept honest by `useGitStatus`, which this leans on rather than repeating —
  * so mounting this hook keeps both panels current from one set of subscriptions.
  */
-export function useGitHistory(): GitHistory {
+export function useGitHistory(): readonly GitCommit[] {
   const repository = useGitStatus()
   const commits = useGit(state => state.commits)
   const readHistory = useGit(state => state.readHistory)
@@ -28,5 +23,5 @@ export function useGitHistory(): GitHistory {
     void readHistory(false)
   }, [readHistory, head, branch])
 
-  return { repository, commits }
+  return commits
 }

@@ -110,7 +110,7 @@ export type ToolPlacement = {
    * The state itself is not answered here — `shared/` holds no runtime dependency — but which
    * question to ask is a property of the panel, and it belongs beside the panel.
    */
-  requires?: 'project' | 'model'
+  requires?: 'project' | 'model' | 'git'
 }
 
 export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
@@ -232,15 +232,18 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // reversed is worth keeping, because it still holds for the eight panels the home lost on
   // 13 August: a panel that answers a question about the studio stands between the reader and
   // their projects. The history is not one of those. It answers a question about the project
-  // that is OPEN, it is offered only while one is (`requires`), and the Git panel already sits
-  // in the home's left column saying what has changed — a reader who can see that and not what
-  // came before it is reading half a sentence.
+  // that is OPEN, and the Git panel already sits in the home's left column saying what has
+  // changed — a reader who can see that and not what came before it is reading half a sentence.
+  //
+  // `git` and not `project`: a folder git is not tracking has no versions to read, and this one
+  // takes the whole width of the band to say so. The Git panel carries that sentence, with the
+  // button that acts on it; here it was a strip of nothing across the foot of the window.
   {
     id: 'history',
     zone: 'bottomRight',
     slot: 'primary',
     surfaces: [...WORKSPACE_IDS, HOME_SURFACE],
-    requires: 'project',
+    requires: 'git',
   },
 ]
 

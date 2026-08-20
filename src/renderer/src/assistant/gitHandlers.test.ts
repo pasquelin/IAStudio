@@ -3,12 +3,10 @@ import { ACTION_REGISTRY, commitmentOfCall, needsConfirmation } from '@shared/do
 import type { GitRepository } from '@shared/domain/git'
 import type { GitDiff } from '@shared/domain/gitDiff'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { gitReadyRepository } from '@/stores/git-fixtures'
 import { runAction } from './executor'
 
-const READY: GitRepository = {
-  kind: 'ready',
-  status: { branch: 'main', head: 'abc123', upstream: null, ahead: 0, behind: 0, files: [] },
-}
+const READY = gitReadyRepository({ head: 'abc123' })
 
 beforeEach(() => {
   installFakeBridge()

@@ -119,6 +119,10 @@ export const useGit = create<GitState>()((set, get) => {
   let running = 0
   /** The status read that is out, shared by every panel that asks while it is. */
   let reading: Promise<GitRepository> | null = null
+  /** The same for the server, which three mounts of the git watch ask for on one event. */
+  let readingRemotes: Promise<GitRemote[]> | null = null
+  /** Which remote read is current, so one that lands late does not overwrite the one after it. */
+  let remotesRead = 0
   /** Whether a page of history is already on its way. */
   let paging = false
   /**
@@ -273,12 +277,32 @@ export const useGit = create<GitState>()((set, get) => {
     stopComparing: () => set({ compared: null, diff: null }),
 
     readRemotes: async () => {
-      const [first] = (await gitBridge()?.remotes()) ?? []
+      if (!readingRemotes) {
+        const answer = gitBridge()?.remotes()
+        if (!answer) {
+          set({ remote: null })
+          return
+        }
+        const started = (remotesRead += 1)
+        readingRemotes = answer.finally(() => {
+          // Only while it is still the current one: an older read landing late would otherwise
+          // clear the handle of the read that replaced it, and the sharing above with it.
+          if (remotesRead === started) readingRemotes = null
+        })
+      }
+
+      const asked = remotesRead
+      const [first] = await readingRemotes
+      // A later read has been started since. This answer describes the folder as it was before
+      // it, and writing it would put « no server » back under one just named.
+      if (remotesRead !== asked) return
       set({ remote: first ?? null })
     },
 
     addRemote: async (name, url) => {
       await run(gitBridge()?.addRemote(name, url))
+      // A read still out was taken before this remote existed, so it is not the answer to it.
+      readingRemotes = null
       await get().readRemotes()
     },
     fetch: () => reachOut(() => gitBridge()?.fetch()),

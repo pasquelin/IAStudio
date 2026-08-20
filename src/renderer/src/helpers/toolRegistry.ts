@@ -23,7 +23,9 @@ import {
   type ToolSurface,
   type ToolZone,
 } from '@shared/domain/tool'
+import { gitHoldsFolder } from '@shared/domain/git'
 import { NODE_KINDS } from '@/engines/scene/nodeKinds'
+import { useGit } from '@/stores/git'
 import { useProject } from '@/stores/project'
 import { modelForFamily } from './modelForFamily'
 import { familyOfSurface } from './workspaces'
@@ -106,27 +108,24 @@ export function toolIcon(id: ToolId): string {
   return ICONS[id]
 }
 
-/**
- * The two answers the shared registry cannot give — they depend on state, and `shared/` holds
- * no runtime dependency. Hence a layer here, above the registry rather than in it.
- */
+/** The answers the shared registry cannot give: they depend on state, which `shared/` cannot read. */
 export function toolStateOf(surface: ToolSurface): ToolState {
   const family = familyOfSurface(surface)
   return {
     hasModel: Boolean(family && modelForFamily(family)),
     hasProject: useProject.getState().project !== null,
+    hasGit: gitHoldsFolder(useGit.getState().repository),
   }
 }
 
-/**
- * What a surface can offer beyond what the registry declares — the two rules that depend on
- * state, and so cannot live in `shared/`.
- */
+/** What a surface can offer beyond what the registry declares, each rule answered from a store. */
 export type ToolState = {
   /** A model to generate with: one chosen in the Models panel, or one preferred in the settings. */
   hasModel: boolean
   /** A project folder open, which is what the Explorer reads. */
   hasProject: boolean
+  /** Git holding the project folder, so there are versions to read. Kept honest by the shell. */
+  hasGit: boolean
 }
 
 /**
@@ -141,6 +140,9 @@ function canOffer(id: ToolId, surface: ToolSurface, state: ToolState): boolean {
 
   if (requires === 'model') return state.hasModel
   if (requires === 'project') return state.hasProject
+  // `git` implies `project`, and the conjunction is not redundant: the repository is corrected
+  // asynchronously, so a project just closed still reads `ready` until the next status lands.
+  if (requires === 'git') return state.hasProject && state.hasGit
   return true
 }
 
