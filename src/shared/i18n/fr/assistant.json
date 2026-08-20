@@ -601,6 +601,62 @@
         "title": "Regarder la scène depuis une face",
         "description": "Place la caméra de la vue principale face au dessus, au dessous, à l’avant, à l’arrière, à la gauche ou à la droite de la scène. C’est un déplacement, donc rien ne s’ajoute à l’historique."
       },
+      "rigState": {
+        "title": "Lire le squelette d’un personnage",
+        "description": "Rend les os d’un modèle avec leurs rôles, les poignées que ses articulations atteignent, les blocs posés sur sa bande, et ce que le moteur a mesuré de la maille."
+      },
+      "rigFit": {
+        "title": "Rendre un modèle animable",
+        "description": "Pose sur la maille le squelette que le studio ajuste à ce qu’il en a mesuré. Refuse tant que le moteur n’a pas lu le modèle, ce qui est une attente et non une faute."
+      },
+      "rigClear": {
+        "title": "Retirer le squelette d’un modèle",
+        "description": "Rend le modèle à son état de maille, sans os ni poignées. Le geste s’annule comme tous les autres de la scène."
+      },
+      "rigHands": {
+        "title": "Ajouter les os des doigts",
+        "description": "Pose les trente os de doigts au repos sur les mains que le squelette porte déjà. Sans mains reconnues, rien n’est écrit."
+      },
+      "boneAdd": {
+        "title": "Ajouter un os",
+        "description": "Accroche un os sous celui qui est nommé, exactement à sa place — le manipulateur est ce qui le met où il doit aller. Son nom est composé de celui du parent."
+      },
+      "boneRemove": {
+        "title": "Retirer un os",
+        "description": "Sort un os du squelette et raccroche ses enfants là où il était accroché, de sorte qu’un coude s’en aille et que la main reste."
+      },
+      "boneRename": {
+        "title": "Renommer un os",
+        "description": "Change le nom d’un os, ses enfants suivant tout seuls. Un nom déjà pris est refusé plutôt qu’écrit à moitié."
+      },
+      "boneRole": {
+        "title": "Dire quelle articulation un os EST",
+        "description": "Rattache un os à l’une des articulations du standard humanoïde, ou à aucune quand le rôle est laissé vide. L’os qui tenait ce rôle le perd dans le même mouvement."
+      },
+      "ikAdd": {
+        "title": "Poser une poignée sur une articulation",
+        "description": "Ajoute une poignée qu’une articulation atteint, et la chaîne qui la suit — les deux os au-dessus tournent pour l’accompagner, ce qui pose un pied au sol ou une main sur une prise."
+      },
+      "ikRemove": {
+        "title": "Retirer une poignée",
+        "description": "Enlève une chaîne et la poignée qu’elle atteignait, toutes les deux, car une poignée laissée derrière serait un os que rien ne pilote."
+      },
+      "animationAdd": {
+        "title": "Poser un bloc d’animation",
+        "description": "Pose sur la bande d’un personnage une animation que la bibliothèque du projet porte. La bande est créée si le personnage n’en avait aucune."
+      },
+      "animationRemove": {
+        "title": "Retirer un bloc d’animation",
+        "description": "Enlève un bloc de la bande, où qu’il se trouve. La bande reste, vide s’il le faut."
+      },
+      "animationSettings": {
+        "title": "Régler la bande d’animation",
+        "description": "Change la durée de la bande, sa cadence en images par seconde, ou les deux. Ce qui n’est pas nommé n’est pas touché."
+      },
+      "animationAutoKey": {
+        "title": "Activer la pose automatique de clés",
+        "description": "Décide si déplacer un os écrit une clé au passage. C’est un état de session, comme toute façon de regarder une scène, et rien n’en est enregistré avec le document."
+      },
       "viewDisplay": {
         "title": "Choisir la façon de dessiner la scène",
         "description": "Passe la vue principale en ombré, en fil de fer, en matière seule ou dans l’une des autres façons de dessiner. La commande de menu ne fait que tourner d’une à l’autre, quand celle-ci nomme laquelle."
@@ -746,6 +802,13 @@
       "viewDirection": "Face depuis laquelle regarder",
       "displayMode": "Façon de dessiner la scène",
       "settingsAction": "Bouton des réglages",
+      "boneName": "Nom de l’os",
+      "parentBone": "Os auquel accrocher",
+      "boneRole": "Articulation du standard humanoïde",
+      "chainId": "Identifiant de la chaîne",
+      "clipId": "Identifiant du bloc",
+      "fps": "Images par seconde",
+      "autoKey": "Poser une clé à chaque déplacement",
       "timeoutMs": "Attente maximale, en millisecondes",
       "days": "Fenêtre en jours",
       "assetId": "Identifiant de l’asset",

@@ -601,6 +601,62 @@
         "title": "Look at the scene from one side",
         "description": "Puts the main view’s camera above, below, in front of, behind, to the left or to the right of the scene. It is a move, so it adds nothing to the history."
       },
+      "rigState": {
+        "title": "Read a character’s skeleton",
+        "description": "Returns a model’s bones with their roles, the handles its joints reach for, the blocks laid on its band, and what the engine measured of the mesh."
+      },
+      "rigFit": {
+        "title": "Make a model animatable",
+        "description": "Puts on the mesh the skeleton the studio fits to what it measured of it. Refuses while the engine has not read the model, which is a wait rather than a fault."
+      },
+      "rigClear": {
+        "title": "Take a model’s skeleton off",
+        "description": "Returns the model to being a mesh, with no bones and no handles. The gesture undoes like every other one of the scene."
+      },
+      "rigHands": {
+        "title": "Add the finger bones",
+        "description": "Puts the thirty finger bones at rest on whatever hands the skeleton already holds. With no hands recognised, nothing is written."
+      },
+      "boneAdd": {
+        "title": "Add a bone",
+        "description": "Hangs a bone under the one named, resting exactly on it — the gizmo is what puts it where it belongs. Its name is composed from the parent’s."
+      },
+      "boneRemove": {
+        "title": "Remove a bone",
+        "description": "Takes a bone out of the skeleton and hangs its children where it hung: an elbow leaves, the hand stays."
+      },
+      "boneRename": {
+        "title": "Rename a bone",
+        "description": "Changes a bone’s name, its children following on their own. A name already taken is refused rather than half written."
+      },
+      "boneRole": {
+        "title": "Say which joint a bone IS",
+        "description": "Ties a bone to one of the joints of the humanoid standard, or to none when the role is left out. Whatever bone held that role loses it in the same move."
+      },
+      "ikAdd": {
+        "title": "Put a handle on a joint",
+        "description": "Adds a handle a joint reaches for, and the chain that follows it — the two bones above turn to come along, which is what puts a foot on the ground or a hand on a grip."
+      },
+      "ikRemove": {
+        "title": "Remove a handle",
+        "description": "Takes a chain and the handle it reached for, both: a handle left behind would be a bone nothing drives."
+      },
+      "animationAdd": {
+        "title": "Lay an animation block",
+        "description": "Lays on a character’s band an animation the project library holds. The band is made if the character had none."
+      },
+      "animationRemove": {
+        "title": "Take an animation block off",
+        "description": "Removes a block from the band, wherever it sat. The band stays, empty if it has to."
+      },
+      "animationSettings": {
+        "title": "Set the animation band",
+        "description": "Changes the band’s length, its rate in frames per second, or both. Whatever is not named is left alone."
+      },
+      "animationAutoKey": {
+        "title": "Turn automatic keying on",
+        "description": "Decides whether moving a bone writes a key as it goes. It is session state, as every way of looking at a scene is, and none of it is saved with the document."
+      },
       "viewDisplay": {
         "title": "Choose how the scene is drawn",
         "description": "Switches the main view to shaded, wireframe, material-only or one of the other ways of drawing. The menu command only cycles from one to the next; this one names which."
@@ -746,6 +802,13 @@
       "viewDirection": "Side to look from",
       "displayMode": "How the scene is drawn",
       "settingsAction": "Settings button",
+      "boneName": "Bone name",
+      "parentBone": "Bone to hang it under",
+      "boneRole": "Joint of the humanoid standard",
+      "chainId": "Chain identifier",
+      "clipId": "Block identifier",
+      "fps": "Frames per second",
+      "autoKey": "Write a key on every move",
       "timeoutMs": "How long to wait at most, in milliseconds",
       "days": "Window in days",
       "assetId": "Asset identifier",

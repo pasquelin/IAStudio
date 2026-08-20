@@ -217,11 +217,9 @@ export function hasChildren(nodes: readonly SceneNode[], id: string): boolean {
 
 const SHADOW_CASTING_LIGHTS: readonly LightDescriptor['kind'][] = ['directional', 'spot', 'point']
 
-export const IDENTITY_TRANSFORM: Transform = {
-  position: { x: 0, y: 0, z: 0 },
-  rotation: { x: 0, y: 0, z: 0 },
-  scale: { x: 1, y: 1, z: 1 },
-}
+// Re-exported rather than moved away from its readers: it lives beside `Transform` now, because
+// `shared/domain/rig.ts` rests a new bone on it and cannot reach into the renderer.
+export { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 
 export const DEFAULT_MATERIAL: MaterialDescriptor = {
   kind: 'standard',

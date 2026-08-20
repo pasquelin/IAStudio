@@ -1,6 +1,6 @@
 import { isRecord } from '../guards'
 import { isHumanoidRole, type HumanoidRole } from './humanoid'
-import { isTransform, type Transform } from './transform'
+import { IDENTITY_TRANSFORM, isTransform, type Transform } from './transform'
 
 /**
  * A skeleton the studio owns, as the document holds it.
@@ -92,6 +92,20 @@ export function rigWithBones(
 ): RigBone[] | null {
   const next = [...bones, ...added]
   return rigFaultOf(next) === null ? next : null
+}
+
+/**
+ * A bone hung under another, resting exactly ON it — the gizmo is what puts it where it belongs.
+ *
+ * Named after its parent rather than from a word, so a document written in one language reads the
+ * same in another, and so the name is free without a counter to keep.
+ */
+export function childBone(bones: readonly RigBone[], parent: string): RigBone {
+  const taken = new Set(bones.map(bone => bone.name))
+  let name = `${parent}.1`
+  for (let index = 2; taken.has(name); index += 1) name = `${parent}.${index}`
+
+  return { name, parent, rest: IDENTITY_TRANSFORM }
 }
 
 /**
