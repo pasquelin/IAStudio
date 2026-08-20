@@ -1,32 +1,26 @@
 import { describe, expect, it } from 'vitest'
-import { draggedSceneNodesOf } from './dragged'
+import { sceneNodeDrag } from './dragged'
+
+const armed = () => ({
+  dataTransfer: {
+    effectAllowed: 'uninitialized' as string,
+    types: [] as string[],
+    setData: () => undefined,
+    getData: () => '',
+  },
+})
 
 /*
- * The payload crosses a `dataTransfer` as text, so nothing about it is typed on arrival. Read
- * rather than trusted: a drag from another application carries whatever it likes under a type
- * name it chose, and the band would otherwise put ids that are not ids on the sheet.
+ * One row, two gestures: dropped on another row it REPARENTS (a move), dropped on the band it
+ * ADDS (a copy, and the effect that draws the `+`). A target may only ask for an effect its
+ * source allowed, and `Tree` arms its own channel before this one — `copy` alone overwrote that
+ * and left every reparenting drag refused in SILENCE, which jsdom does not model.
  */
-describe('what the outliner hands the band', () => {
-  it('reads the ids of the objects dragged', () => {
-    expect(draggedSceneNodesOf({ nodeIds: ['walker', 'house'] })).toEqual({
-      nodeIds: ['walker', 'house'],
-    })
-  })
+describe('dragging an object of the outliner', () => {
+  it('allows both, because one row is dropped on the band AND on another row', () => {
+    const event = armed()
+    sceneNodeDrag.start(event as never, ['walker'])
 
-  it('keeps the strings and drops what is not one', () => {
-    expect(draggedSceneNodesOf({ nodeIds: ['walker', 7, null, 'house'] })).toEqual({
-      nodeIds: ['walker', 'house'],
-    })
-  })
-
-  it('answers nothing for a payload that names no object at all', () => {
-    expect(draggedSceneNodesOf({ nodeIds: [] })).toBeNull()
-    expect(draggedSceneNodesOf({ nodeIds: [7, null] })).toBeNull()
-  })
-
-  it('answers nothing for a payload of another shape entirely', () => {
-    expect(draggedSceneNodesOf({ kind: 'embedded', clip: 'walk' })).toBeNull()
-    expect(draggedSceneNodesOf('walker')).toBeNull()
-    expect(draggedSceneNodesOf(null)).toBeNull()
+    expect(event.dataTransfer.effectAllowed).toBe('copyMove')
   })
 })

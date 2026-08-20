@@ -10,7 +10,7 @@ import { useSceneViews } from '@/stores/sceneViews'
 import { useAnimationViews } from '@/stores/animationView'
 import { useModelClips } from '@/stores/modelClips'
 import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
-import { SCENE_NODE_DRAG_TYPE } from '@/panels/scene/dragged'
+import { sceneNodeDrag } from '@/panels/scene/dragged'
 import { AnimationPanel } from './AnimationPanel'
 
 const DOCUMENT = 'doc-1'
@@ -39,11 +39,22 @@ function withSelectedCube(): void {
  * a drop asking for `copy` is refused by the platform with nothing happening.
  */
 describe('an object dropped onto the band', () => {
-  const transfer = (type: string, payload: unknown) => ({
-    types: [type],
-    getData: (asked: string) => (asked === type ? JSON.stringify(payload) : ''),
-    dropEffect: 'none',
-  })
+  /** Armed through the CHANNEL itself, so the case cannot drift from how a row is really carried. */
+  const carrying = (...nodeIds: string[]) => {
+    const written = new Map<string, string>()
+    const dataTransfer = {
+      effectAllowed: 'uninitialized',
+      dropEffect: 'none',
+      types: [] as string[],
+      setData: (type: string, value: string) => {
+        written.set(type, value)
+        dataTransfer.types = [...written.keys()]
+      },
+      getData: (type: string) => written.get(type) ?? '',
+    }
+    sceneNodeDrag.start({ dataTransfer } as never, nodeIds)
+    return dataTransfer
+  }
 
   beforeEach(() => {
     installScene(DOCUMENT, {
@@ -60,22 +71,19 @@ describe('an object dropped onto the band', () => {
     const panel = container.firstElementChild
     if (!panel) throw new Error('no panel')
 
-    fireEvent.drop(panel, {
-      dataTransfer: transfer(SCENE_NODE_DRAG_TYPE, { nodeIds: ['sphere-1'] }),
-    })
+    fireEvent.drop(panel, { dataTransfer: carrying('sphere-1') })
 
     expect(timelineOf().sheet).toEqual(['sphere-1'])
     expect(screen.getByTestId('anim-subject-sphere-1')).toBeInTheDocument()
   })
 
-  // `copy` is what draws the `+` under the pointer, and it is only askable because `dragChannel`
-  // allows both effects: a target may not ask for one its source forbade, and `move` alone left
-  // every surface that ADDS unable to say so.
+  // `copy` draws the `+` under the pointer, and a target may not ask for an effect its source
+  // forbade — `move` alone left every surface that ADDS unable to say the drop would work.
   it('asks for copy, which is the cursor that says the drop will work', () => {
     const { container } = render(<AnimationPanel documentId={DOCUMENT} />)
     const panel = container.firstElementChild
     if (!panel) throw new Error('no panel')
-    const carried = transfer(SCENE_NODE_DRAG_TYPE, { nodeIds: ['cube-1'] })
+    const carried = carrying('cube-1')
 
     fireEvent.dragOver(panel, { dataTransfer: carried })
 

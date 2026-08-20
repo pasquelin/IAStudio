@@ -655,6 +655,22 @@ describe('the timeline a file holds', () => {
    * file — here or in another window — has to give the same band back. A field that reads back
    * empty leaves a scene looking unanimated while its keys are still there.
    */
+  /*
+   * Deleting an object leaves its id on the sheet in MEMORY, so an undo gives the object its line
+   * back. Writing it would be another matter: a file would gather one ghost per object ever
+   * deleted, and nothing anywhere would ever clear them.
+   */
+  it('leaves the objects the scene has lost out of the file', () => {
+    const state: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a')],
+      animation: { ...EMPTY_TIMELINE, sheet: ['a', 'gone'] },
+    }
+
+    expect(scenePayload(state).animation.sheet).toEqual(['a'])
+    expect(state.animation.sheet).toEqual(['a', 'gone'])
+  })
+
   it('carries the sheet through a save and a read, in order', () => {
     const state: SceneState = {
       ...EMPTY_SCENE,

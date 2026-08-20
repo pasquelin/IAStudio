@@ -11,7 +11,7 @@ import { openSceneNodeMenu } from '@/spaces/three/sceneNodeMenu'
 import { runSceneCommand, toggleNodeVisible } from '@/spaces/three/sceneCommands'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
-import { SCENE_NODE_DRAG_TYPE } from './dragged'
+import { sceneNodeDrag } from './dragged'
 
 /** The synthetic root. It is not a node: it has no transform, no visibility and no delete. */
 const SCENE_ROOT = 'scene-root'
@@ -86,8 +86,10 @@ export function SceneTree({ documentId }: { documentId: string }) {
         if (!item.node) return
         // The whole selection when the row dragged is part of it, so six objects land in one
         // gesture; the row alone otherwise, which is what dragging an unselected row means.
-        const dragged = selectedIds.includes(item.node.id) ? selectedIds : [item.node.id]
-        event.dataTransfer.setData(SCENE_NODE_DRAG_TYPE, JSON.stringify({ nodeIds: dragged }))
+        sceneNodeDrag.start(
+          event,
+          selectedIds.includes(item.node.id) ? selectedIds : [item.node.id],
+        )
       }}
       onSelect={(ids, mode) => selectIn(documentId, ids, mode)}
       onToggle={id =>

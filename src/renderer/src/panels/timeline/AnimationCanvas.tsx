@@ -24,7 +24,7 @@ import { assetClip, bundledClip, clipKeyOf, embeddedClip, type ClipRef } from '@
 import { draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
 import { newId } from '@/helpers/ids'
 import { ANIMATION_DRAG_TYPE, draggedAnimationOf } from '@/panels/animations/dragged'
-import { SCENE_NODE_DRAG_TYPE } from '@/panels/scene/dragged'
+import { sceneNodeDrag } from '@/panels/scene/dragged'
 import { multi, removeModelClip, setModelLanes } from '@/engines/scene/commands'
 import {
   clipsDuplicated,
@@ -350,12 +350,17 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     // A subject line: the one thing to do with it is to take it off the band. `takeOff` answers
     // nothing for a line the sheet does not name — a bone, or an object here because it holds a
     // track — and no menu opens, which is the honest answer rather than a row that does nothing.
-    if (hit?.kind === 'row') {
+    // `key` and `shot` as well as `row`: `hitAnimation` answers those the moment the pointer is
+    // within reach of a key or over a camera's bar, so a densely keyed line — the one most likely
+    // to be taken off — could not be right-clicked at all.
+    if (hit && hit.kind !== 'block' && hit.kind !== 'blockEdge' && hit.kind !== 'ruler') {
       const row = latest.current.rows.find(candidate => candidate.id === hit.rowId)
       // A channel and a lane belong to the object above them: neither is a line one takes off.
       if (row?.kind !== 'subject') return
       const command = takeOffAnimationSheet(sceneOf(useScenes.getState(), documentId), [hit.rowId])
-      if (!command) return
+      // A camera holding a shot keeps its line whatever the sheet says — `animationRows` pushes
+      // it on its own — so taking it off would bank an undo and change nothing on screen.
+      if (!command || row.bars) return
 
       event.preventDefault()
       void showContextMenu([
@@ -409,7 +414,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   const onDrop = (event: DragEvent<HTMLCanvasElement>): void => {
     // Objects from the outliner are NOT read here: the panel takes them, because an empty band
     // draws no canvas and that is exactly when a first object is dropped. Left alone, they bubble.
-    if (event.dataTransfer.getData(SCENE_NODE_DRAG_TYPE)) return
+    if (sceneNodeDrag.carries(event)) return
 
     const written = event.dataTransfer.getData(ANIMATION_DRAG_TYPE)
     // Started before anything else is worked out: a `DragEvent` is recycled once the handler
@@ -609,7 +614,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       onDragOver={event => {
         const carried =
           event.dataTransfer.types.includes(ANIMATION_DRAG_TYPE) ||
-          event.dataTransfer.types.includes(SCENE_NODE_DRAG_TYPE) ||
+          sceneNodeDrag.carries(event) ||
           carriesMotion(event)
         if (!carried) return
         event.preventDefault()

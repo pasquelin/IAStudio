@@ -1,22 +1,12 @@
-import { isRecord } from '@shared/guards'
+import { dragListChannel } from '@/helpers/drag'
 
 /**
- * What a row of the outliner carries while it is dragged, and what the animation band reads when
- * it is let go over it.
+ * What a row of the outliner carries, and what the animation band reads when it is let go over it.
  *
- * In a module of its own because both halves need it — the same reason `panels/animations/dragged`
- * has one: a type imported back from the panel by its target closes an import cycle, and
- * `import-cycles.test.ts` holds those at zero.
+ * BOTH effects, and this channel is the one place in the studio where that is right: one row
+ * serves two gestures. Dropped on another row it REPARENTS, which is a move; dropped on the band
+ * it ADDS, which is a copy and is what draws the `+`. A target may only ask for an effect its
+ * source allowed, and `Tree` arms its own channel first — announcing `copy` alone here overwrote
+ * that and left every reparenting drag refused in SILENCE, which jsdom cannot see.
  */
-export type DraggedSceneNodes = { nodeIds: readonly string[] }
-
-/** The drag format. Namespaced so a file dropped from the desktop is never read as one of these. */
-export const SCENE_NODE_DRAG_TYPE = 'application/x-scenario-scene-node'
-
-/** What was dropped, or nothing: the payload crossed a `dataTransfer` as text and is not typed. */
-export function draggedSceneNodesOf(value: unknown): DraggedSceneNodes | null {
-  if (!isRecord(value) || !Array.isArray(value.nodeIds)) return null
-
-  const nodeIds = value.nodeIds.filter(id => typeof id === 'string')
-  return nodeIds.length === 0 ? null : { nodeIds }
-}
+export const sceneNodeDrag = dragListChannel('application/x-scenario-scene-node', 'copyMove')

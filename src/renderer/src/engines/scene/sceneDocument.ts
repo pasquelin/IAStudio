@@ -70,7 +70,20 @@ export type ScenePayload = {
 }
 
 export function scenePayload(state: SceneState): ScenePayload {
-  return { nodes: state.nodes, world: state.world, animation: state.animation }
+  const alive = new Set(state.nodes.map(node => node.id))
+  const sheet = state.animation.sheet.filter(id => alive.has(id))
+
+  return {
+    nodes: state.nodes,
+    world: state.world,
+    // The sheet WITHOUT the objects the scene has lost. Deleting one leaves its id behind on
+    // purpose — an undo then gives the object its line back — but writing it would let a file
+    // gather ghosts nobody ever clears, one per object ever deleted.
+    animation:
+      sheet.length === state.animation.sheet.length
+        ? state.animation
+        : { ...state.animation, sheet },
+  }
 }
 
 /**

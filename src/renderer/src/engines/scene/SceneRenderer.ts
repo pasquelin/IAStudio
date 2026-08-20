@@ -2412,6 +2412,9 @@ export class SceneRenderer {
    */
   setIsolation(isolation: Isolation): void {
     this.isolation = isolation
+    // Here rather than in `applyVisibility`: this is the one call of the three that CHANGES what
+    // is visible, and `statsOf` skips a hidden mesh — see there.
+    this.contentChanged = true
     this.applyVisibility()
     this.showAidsForSelection()
     this.refreshAids()
@@ -2419,10 +2422,14 @@ export class SceneRenderer {
     this.redraw()
   }
 
-  /** Every node's `visible`, from what the document says and what the viewport hides over it. */
+  /**
+   * Every node's `visible`, from what the document says and what the viewport hides over it.
+   *
+   * It does NOT mark the counters stale, though hiding a mesh moves them: two of its three
+   * callers RESTORE a visibility they had just set aside — `asDocumented` and the workshop's
+   * own — and marking here made every read under an isolation walk the whole scene again.
+   */
   private applyVisibility(): void {
-    // `statsOf` skips an invisible mesh, so hiding one moves the count as surely as removing it.
-    this.contentChanged = true
     for (const [id, node] of this.applied) {
       const object = this.objects.get(id)
       if (object) object.visible = drawsNode(this.isolation, id, node.visible)

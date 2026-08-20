@@ -3,7 +3,7 @@ import { useMemo, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { putOnAnimationSheet } from '@/engines/scene/animationCommands'
-import { draggedSceneNodesOf, SCENE_NODE_DRAG_TYPE } from '@/panels/scene/dragged'
+import { sceneNodeDrag } from '@/panels/scene/dragged'
 import { clipKeyOf, clipLane, MAIN_LANE_ID } from '@shared/domain/scene'
 import { animationRows, type ClipBlock, type SheetLane } from '@/engines/scene/animationRows'
 import { clipSpanOf } from '@/engines/scene/clipBlend'
@@ -50,9 +50,18 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
     // Only for the models the band actually SHOWS. Built for every model of the scene, this loop
     // made a lane, a blocks array and an i18n call for each — and `animationRows` reads them only
     // for the objects on the sheet, so on 8 000 models with three on the band it threw 7 997 away.
-    // The sheet AND whoever holds a track, which is exactly who `animationRows` gives a line to:
-    // a model keyed but off the sheet has a line, and it would show up without its lanes.
-    const onBand = new Set([...timeline.sheet, ...timeline.tracks.map(t => t.target.nodeId)])
+    // The sheet, whoever holds a track, and whoever PLAYS a clip — exactly who `animationRows`
+    // gives a line to. A model animated from elsewhere is on none of the first two, and building
+    // no lane for it would leave its line empty where the whole point is to trim the block.
+    const onBand = new Set([
+      ...timeline.sheet,
+      ...timeline.tracks.map(track => track.target.nodeId),
+      ...nodes.flatMap(node =>
+        node.type === 'model' && (node.model.lanes ?? []).some(lane => lane.clips.length > 0)
+          ? node.id
+          : [],
+      ),
+    ])
 
     const sheetLanes: SheetLane[] = []
     for (const node of byId.values()) {
@@ -98,12 +107,11 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
    * state stands there — and that is the very moment a first object is dropped.
    */
   const onDropNodes = (event: DragEvent<HTMLDivElement>): void => {
-    const carried = event.dataTransfer.getData(SCENE_NODE_DRAG_TYPE)
-    const dragged = carried ? draggedSceneNodesOf(JSON.parse(carried)) : null
-    if (!dragged) return
+    const nodeIds = sceneNodeDrag.idsFrom(event)
+    if (nodeIds.length === 0) return
 
     event.preventDefault()
-    const command = putOnAnimationSheet(sceneOf(useScenes.getState(), documentId), dragged.nodeIds)
+    const command = putOnAnimationSheet(sceneOf(useScenes.getState(), documentId), nodeIds)
     if (command) useScenes.getState().runCommand(documentId, command)
   }
 
@@ -111,11 +119,9 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
     <div
       className="flex h-full min-h-0 flex-col"
       onDragOver={event => {
-        if (!event.dataTransfer.types.includes(SCENE_NODE_DRAG_TYPE)) return
+        if (!sceneNodeDrag.carries(event)) return
         event.preventDefault()
-        // `copy`, which is what draws the `+` under the pointer: the object is ADDED to the band
-        // and stays in the scene, so nothing is being moved anywhere. It is only askable because
-        // `dragChannel` allows both — see there.
+        // The `+` under the pointer, which its channel allows — see `panels/scene/dragged`.
         event.dataTransfer.dropEffect = 'copy'
       }}
       onDrop={onDropNodes}

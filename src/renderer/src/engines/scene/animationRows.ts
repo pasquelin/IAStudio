@@ -11,6 +11,7 @@ import { reconcileOrder } from '@shared/domain/order'
 import type { Us } from '@shared/domain/time'
 import { ROW_PADDING } from '../timeline/timelineGeometry'
 import { shotCameras } from './cameraShots'
+import { drivenNodes } from './animationEval'
 
 /** One object, or one bone of one object. Its channels are the tracks that drive it. */
 export type Subject = {
@@ -265,7 +266,14 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
    * scenery and a character in front of it is animated — only the person can say which, and
    * deriving it from the scene put 8 000 blocks and 24 009 buttons on the band, measured 20/08.
    */
-  const keyed = [...grouped.values()].flatMap(tracks => tracks[0]?.target.nodeId ?? [])
+  // Whoever holds a track, and whoever PLAYS a clip: an animation applied from the Animations
+  // panel or the Inspector never touches the sheet, and its model would play in the viewport with
+  // no line to trim it on — while saving and reopening the same document gave it one, because
+  // `sheetFromAnimated` counts it. Live and reloaded disagreed.
+  const keyed = [
+    ...drivenNodes(timeline),
+    ...(options.lanes ?? []).flatMap(lane => (lane.blocks.length > 0 ? lane.nodeId : [])),
+  ]
   // The sheet first, then whoever holds a track. Through a `Set`, which keeps each one at its
   // FIRST place — an object both on the sheet and keyed appears where the sheet put it.
   const shown = [...new Set([...timeline.sheet, ...keyed])].filter(id => named.has(id))

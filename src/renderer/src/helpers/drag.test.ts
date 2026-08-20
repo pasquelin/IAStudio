@@ -23,25 +23,31 @@ describe('a drag of our own', () => {
   })
 
   /*
-   * A target may only ask for an effect its SOURCE allowed. Armed with `move` alone, every
-   * surface that ADDS rather than moves — the animation band takes an object and leaves it in
-   * the scene — could not ask for `copy`, which is the effect that draws the `+` under the
-   * pointer. Without it a drop that would work looks exactly like one that would not, and a
-   * mismatch is refused by the platform in silence, with no error anywhere.
+   * A target may only ask for an effect its SOURCE allowed, and a mismatch is refused by the
+   * platform in silence. `move` by default, which is what most drags of this studio mean — a row
+   * reparented, a tab reordered — and the channel whose drop ADDS says so when it is built,
+   * rather than every source of the studio being widened for one of them.
    */
-  it('allows BOTH effects, so a target that adds can show the + that says so', () => {
+  it('allows move by default, which is what a row moved or a tab reordered means', () => {
     const event = armed()
     dragChannel('application/x-test').start(event as never, 'row-1')
 
-    expect(event.dataTransfer.effectAllowed).toBe('copyMove')
+    expect(event.dataTransfer.effectAllowed).toBe('move')
+  })
+
+  it('takes the effect its channel was built with, so a drop that ADDS can show the +', () => {
+    const event = armed()
+    dragChannel('application/x-test', 'copy').start(event as never, 'row-1')
+
+    expect(event.dataTransfer.effectAllowed).toBe('copy')
   })
 
   it('carries a handful as one, and gives them back in order', () => {
     const event = armed()
-    const channel = dragListChannel('application/x-test-list')
+    const channel = dragListChannel('application/x-test-list', 'copy')
     channel.start(event as never, ['a', 'b', 'c'])
 
     expect(channel.idsFrom(event as never)).toEqual(['a', 'b', 'c'])
-    expect(event.dataTransfer.effectAllowed).toBe('copyMove')
+    expect(event.dataTransfer.effectAllowed).toBe('copy')
   })
 })

@@ -22,15 +22,20 @@ export type DragChannel = {
   idFrom: (event: DragLike) => string | null
 }
 
-export function dragChannel(type: string): DragChannel {
+/**
+ * `effect` is what a target is ALLOWED to ask for, and the default is what most drags mean: a row
+ * moved, a tab reordered. A channel whose drop ADDS says `copy` here — that is the effect drawing
+ * the `+` under the pointer, and asking for one the source forbade is refused in silence.
+ */
+export function dragChannel(
+  type: string,
+  effect: DataTransfer['effectAllowed'] = 'move',
+): DragChannel {
   return {
     start: (event, id) => {
       if (!event.dataTransfer) return
       event.dataTransfer.setData(type, id)
-      // BOTH: a target may only ask for an effect its source allowed, so `move` alone left every
-      // surface that ADDS unable to show the `+` that says a drop will work — and a mismatch is
-      // refused by the platform in silence. Each target still says which of the two it means.
-      event.dataTransfer.effectAllowed = 'copyMove'
+      event.dataTransfer.effectAllowed = effect
     },
     carries: event => event.dataTransfer?.types.includes(type) ?? false,
     idFrom: event => event.dataTransfer?.getData(type) || null,
@@ -55,10 +60,13 @@ export type DragListChannel = {
  * The platform still answers nothing until the drop itself, so a target asked at HOVER cannot
  * read what is coming. Whoever needs to know before then keeps it in state, as `Tree` does.
  */
-export function dragListChannel(type: string): DragListChannel {
+export function dragListChannel(
+  type: string,
+  effect: DataTransfer['effectAllowed'] = 'move',
+): DragListChannel {
   // Built ON the single channel rather than beside it: what differs is how the payload is
   // written, and nothing about how a `DataTransfer` is armed or read.
-  const one = dragChannel(type)
+  const one = dragChannel(type, effect)
 
   return {
     start: (event, ids) => one.start(event, ids.join('\n')),
