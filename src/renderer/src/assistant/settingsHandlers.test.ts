@@ -134,9 +134,9 @@ describe('the accounts', () => {
     const rename = vi.fn(async () => ({ accounts: ACCOUNTS }))
     installFakeBridge({ accounts: { rename } })
 
-    expect(await runAction('accounts.rename', { accountId: 'acc-2', name: 'Studio' })).toMatchObject(
-      { ok: true },
-    )
+    expect(
+      await runAction('accounts.rename', { accountId: 'acc-2', name: 'Studio' }),
+    ).toMatchObject({ ok: true })
     expect(rename).toHaveBeenCalledWith('acc-2', 'Studio')
   })
 })

@@ -72,9 +72,7 @@ export const ASSET_HANDLERS: ActionHandlers = {
   // `false` says there was no file to show, which is a real answer for a library-only asset
   // rather than a failure — hence `notFound` and not `failed`.
   'asset.reveal': async input => {
-    const outcome = await withBridge(bridge =>
-      bridge.assets.reveal(textOf(input, 'assetId') ?? ''),
-    )
+    const outcome = await withBridge(bridge => bridge.assets.reveal(textOf(input, 'assetId') ?? ''))
     return outcome.ok && outcome.data === false ? refused('notFound') : outcome
   },
 }

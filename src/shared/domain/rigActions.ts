@@ -87,7 +87,11 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.boneRename.description',
     commitment: 'none',
     reach: 'mcp',
-    fields: [NODE, BONE, { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true }],
+    fields: [
+      NODE,
+      BONE,
+      { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true },
+    ],
   }),
   action({
     // The roles keep the standard's own spelling, untranslated: they are the identifiers of the
@@ -123,7 +127,10 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.ikRemove.description',
     commitment: 'none',
     reach: 'mcp',
-    fields: [NODE, { key: 'chainId', kind: 'text', labelKey: 'assistant.fields.chainId', required: true }],
+    fields: [
+      NODE,
+      { key: 'chainId', kind: 'text', labelKey: 'assistant.fields.chainId', required: true },
+    ],
   }),
   action({
     name: 'animation.add',

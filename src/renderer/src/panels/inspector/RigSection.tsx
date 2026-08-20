@@ -263,4 +263,3 @@ function roleOf(node: ModelNode, bone: string): HumanoidRole | undefined {
 function roleRead(value: string): HumanoidRole | null {
   return isHumanoidRole(value) ? value : null
 }
-

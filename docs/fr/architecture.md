@@ -339,9 +339,10 @@ de se charger.
 ### Un registre d’actions, deux lecteurs
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) déclare ce que le studio sait faire sur demande —
-**cent cinquante actions en treize familles**, une famille par module `*Actions.ts`, leurs
-champs, **ce que chacune engage** (`none`, `files`, `asset`, `remote`, `credits`) et **quelle porte l’offre**
-(`reach`). Il a deux lecteurs, et **aucun des deux ne décide** :
+une famille par module `*Actions.ts`, leurs champs, **ce que chacune engage** (`none`, `files`,
+`asset`, `remote`, `credits`) et **quelle porte l’offre** (`reach`). **Le nombre n’est pas écrit
+ici** : il monte à chaque lot, et `exhaustive.test.ts` le tient contre l’union `ActionName`. Il a
+deux lecteurs, et **aucun des deux ne décide** :
 
 - **l’assistant**, dans la fenêtre, qui liste à son modèle la part `both` — onze actions ;
 - **`main/mcp/tools.ts`**, qui republie **tout** en outils MCP pour un client extérieur.

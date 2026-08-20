@@ -19,11 +19,11 @@ l’ayez vu à l’écran** — d’où que vienne la demande.
 
 Elles n’en voient pas la même part, et c’est délibéré. **L’assistant en connaît onze**, celles
 d’une phrase parlée : ouvrir un espace, chercher un modèle, préparer une génération. **Le point
-d’entrée en offre cent cinquante**, tout ce qu’un programme conduit délibérément — l’arbre des
-fichiers, la pile de calques, le montage, le ciel, la matière, la scène 3D, le dépôt git, la
-bibliothèque distante. La raison est prosaïque : le modèle qui lit vos phrases reçoit le catalogue
-entier avant chacune d’elles, et cent cinquante actions n’y laisseraient plus de place pour la
-phrase.
+d’entrée les offre toutes**, tout ce qu’un programme conduit délibérément — l’arbre des fichiers,
+la pile de calques, le montage, le ciel, la matière, la scène 3D, le squelette d’un personnage, le
+dépôt git, la bibliothèque distante, les panneaux du studio. La raison est prosaïque : le modèle
+qui lit vos phrases reçoit le catalogue entier avant chacune d’elles, et le catalogue entier n’y
+laisserait plus de place pour la phrase.
 
 ---
 
@@ -187,27 +187,27 @@ n’est parti.
 
 ## Le catalogue
 
-**Cent cinquante actions, en treize familles.** Le tableau ci-dessous dit ce que chacune couvre
-et ce qu’elle **engage** — c’est cette dernière colonne qui décide si le studio vous demandera
-quelque chose. La liste exacte, avec le détail de chaque paramètre, est ce que votre client
-affiche quand vous lui demandez ses outils : elle n’est pas recopiée ici, parce qu’elle bouge et
-que lui la lit à la source.
+**Quatorze familles.** Le tableau ci-dessous dit ce que chacune couvre et ce qu’elle **engage** —
+c’est cette dernière colonne qui décide si le studio vous demandera quelque chose. Ni le nombre
+d’actions ni la liste exacte ne sont recopiés ici : ils bougent, et **c’est votre client qui les
+lit à la source** quand vous lui demandez ses outils, avec le détail de chaque paramètre.
 
 | La famille | Ce qu’elle couvre | Ce qu’elle engage |
 |---|---|---|
 | **Le studio** | ce qui est ouvert, quel document est devant, ce qui vient de se passer | rien |
-| **Les fichiers** | ouvrir un projet, lister, chercher, déplacer, copier, renommer, mettre à la corbeille | **des fichiers** pour ce qui déplace ou détruit |
+| **Les fichiers** | ouvrir un projet, le renommer, lister, chercher, déplacer, copier, renommer, mettre à la corbeille, montrer dans le gestionnaire de fichiers, annuler et refaire le dernier lot | **des fichiers** pour ce qui déplace ou détruit |
 | **Les documents** | ouvrir, mettre devant, renommer, fermer, exporter dans le projet | **des fichiers** pour fermer, renommer et exporter |
 | **Générer** | lire les entrées d’un modèle, chiffrer, préparer, lancer, attendre, annuler | **des unités créatives** pour lancer, et pour lancer seulement |
-| **La bibliothèque** | chercher, lire, étiqueter et retirer des assets | **des fichiers** pour retirer |
+| **La bibliothèque** | chercher, lire, étiqueter, légender, retirer des assets, repérer ceux dont le fichier a disparu, extraire les textures d’un modèle | **des fichiers** pour retirer, **un serveur** pour retirer aussi de la bibliothèque distante |
 | **La bibliothèque distante** | parcourir la vôtre et le flux public, chercher des ressemblances, prévoir, rapatrier, envoyer | **un asset** pour envoyer |
 | **L’image** | la pile de calques : ajouter, styler, placer, grouper, fusionner, recadrer | rien |
 | **Le montage** | Vidéo et Audio : poser un bloc, le déplacer, le rogner, le couper, régler fondus, niveau et vitesse, tenir les pistes. L’export du document sort la **coupe** en OpenTimelineIO, jamais un film — le rendu image par image demande une session que rien d’extérieur ne peut tenir | rien, sauf l’export |
 | **Le ciel et la matière** | régler l’image d’un ciel, y placer le soleil, remplir les canaux d’une matière et la rendre | rien |
-| **La 3D** | la scène : poser un objet, l’orienter, l’éclairer, le peindre, le rattacher | rien |
+| **La 3D** | la scène : poser un objet, l’orienter, l’éclairer, le peindre, le rattacher, et la regarder — depuis une face, dans l’une des façons de dessiner | rien |
+| **Les personnages** | rendre un modèle animable, ajouter ou retirer un os, lui donner une articulation du standard, poser une poignée qu’il atteint, poser un bloc d’animation, régler durée et cadence | rien |
 | **Le versionnage** | lire le dépôt et l’historique, indexer, enregistrer, brancher, remiser, trancher un conflit, rapatrier, publier | **des fichiers** pour ce qui réécrit la copie de travail, **un serveur** pour publier |
-| **Les réglages** | lire et changer les réglages, lister les comptes, en activer un | rien |
-| **Autour des documents** | la fenêtre, le compte, les mises à jour, les polices, les recettes épinglées, les styles de matière | **des fichiers** pour supprimer un style |
+| **Les réglages** | lire et changer les réglages, actionner les boutons de la fenêtre, lister les comptes, en activer un, en renommer un | **des fichiers** pour les deux boutons que rien ne reprend |
+| **Autour des documents** | la fenêtre, le compte, les mises à jour, les polices, les recettes épinglées, les styles de matière, les panneaux du studio, la dictée | **des fichiers** pour supprimer un style et pour installer une mise à jour |
 
 **Ce que l’assistant en connaît, lui, tient en onze**, et ce sont celles d’une demande parlée :
 lancer une commande, ouvrir un espace, chercher et choisir un modèle, préparer une génération, la
@@ -277,9 +277,11 @@ distante.
 > *Cette action va publier vers un serveur, hors de cette machine. Elle ne coûte aucune unité
 > créative, et rien ici ne la rattrape.*
 
-Une seule action porte ce niveau, et elle mérite d’être nommée : **envoyer une branche vers un
-dépôt git distant**. Toutes les autres restent au bord de la machine, y compris rapatrier —
-lequel réécrit votre copie de travail et vous demande donc au titre des fichiers.
+Deux demandes portent ce niveau, et elles méritent d’être nommées : **envoyer une branche vers un
+dépôt git distant**, et **retirer un asset en demandant qu’il le soit aussi de la bibliothèque
+distante** — l’API n’a ni suppression unitaire ni retour en arrière. Toutes les autres restent au
+bord de la machine, y compris rapatrier — lequel réécrit votre copie de travail et vous demande
+donc au titre des fichiers.
 
 Dans les quatre cas, deux boutons : **Autoriser** et **Refuser**. Refuser n’exécute rien, et
 l’assistant en tient compte pour la suite de sa demande.
@@ -319,8 +321,7 @@ Une action refusée dit toujours pourquoi. Les motifs, et ce qu’ils veulent di
 | Le message | Ce qui s’est passé |
 |---|---|
 | *Cette commande n’existe pas dans le studio.* | l’identifiant demandé ne correspond à rien |
-| *Cette commande appartient au menu de l’application, qui la déclenche lui-même.* | certaines commandes ne sont pas à prendre par ce chemin |
-| *Cette commande s’adresse à un document qui n’est pas au premier plan.* | mettez le bon onglet devant, et redemandez |
+| *Aucune surface du studio n’était là pour prendre cette commande.* | ouvrez le document ou le panneau auquel elle s’adresse, et redemandez |
 | *Le Générateur n’était pas ouvert. Il vient de l’être.* | rien n’a échoué : redemandez la même chose |
 | *Le Générateur n’a aucun modèle armé pour l’instant.* | choisissez un modèle avant de préparer |
 | *La génération n’est pas partie.* | l’envoi a échoué en aval — rien n’a été dépensé |
@@ -332,6 +333,11 @@ Une action refusée dit toujours pourquoi. Les motifs, et ce qu’ils veulent di
 | *La demande est restée à l’écran sans réponse, et a été abandonnée.* | les deux minutes sont passées |
 | *Le formulaire ne porte aucune image de référence dont lire le style.* | posez une image sur le formulaire d’abord |
 | *Le formulaire a changé depuis l’annonce du coût. Rien n’a été envoyé — redemandez pour obtenir un nouveau chiffre.* | ce qui a été chiffré est ce qui part, jamais autre chose |
+| *Ce que vous nommez n’existe pas.* | la demande était bien formée et sa cible est absente — c’est le motif le plus fréquent, et il porte sur un identifiant plutôt que sur des paramètres |
+| *Aucun projet n’est ouvert.* | un chemin est relatif à un projet, et il n’y en a pas pour l’être |
+| *Un client extérieur ne peut pas faire cela.* | jamais votre refus à vous : armer la délégation ne s’écrit que dans la fenêtre des réglages |
+| *Le document au premier plan n’a rien que ceci puisse rendre.* | un ciel vide, une matière sans canal, une scène sans caméra |
+| *Cela a été tenté et n’a pas abouti.* | l’activité récente en porte la raison ; ce n’est pas ce qui a été transmis |
 
 Les deux motifs de fenêtre — *aucune fenêtre au premier plan*, *aucune fenêtre pour
 donner l’accord* — **ne se rencontrent que depuis un programme extérieur**. L’assistant, lui, est
@@ -341,9 +347,13 @@ dans la fenêtre : il y a toujours quelqu’un pour être demandé.
 
 ## Ce que ce chemin ne fait pas
 
-- **Il ne rend jamais une clé API ni un secret.** Il peut dire quels comptes existent et lequel est
-  actif, jamais ce qu’ils contiennent, et il ne peut pas en ajouter. Ce qui part vers Scenario part
-  comme d’habitude, avec vos identifiants, depuis votre machine.
+- **Il ne rend jamais une clé API ni un secret.** Il peut dire quels comptes existent, lequel est
+  actif, et renommer l’étiquette de l’un d’eux — jamais ce qu’ils contiennent, et il ne peut ni en
+  ajouter ni en supprimer. Ce qui part vers Scenario part comme d’habitude, avec vos identifiants,
+  depuis votre machine.
+- **Il ne s’autorise rien lui-même.** Les quatre lignes qui laissent passer un engagement sans
+  question ne s’écrivent que dans la fenêtre des réglages : un client qui demande à les changer
+  s’entend répondre non.
 - **Il ne dépense jamais de lui-même.** Une seule action dépense — lancer la génération préparée —
   et elle demande, avec son estimation.
 - **Il ne survit pas à la fermeture.** Le studio fermé, le point d’entrée n’existe plus, et le

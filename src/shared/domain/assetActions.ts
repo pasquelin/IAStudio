@@ -133,7 +133,9 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.assetExtractTextures.description',
     commitment: 'none',
     reach: 'mcp',
-    fields: [{ key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true }],
+    fields: [
+      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
+    ],
   }),
   action({
     name: 'asset.reveal',
@@ -141,7 +143,9 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.assetReveal.description',
     commitment: 'none',
     reach: 'mcp',
-    fields: [{ key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true }],
+    fields: [
+      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
+    ],
   }),
   action({
     name: 'assets.absent',

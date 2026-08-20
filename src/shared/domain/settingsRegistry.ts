@@ -727,7 +727,6 @@ export const ACTION_REGISTRY: readonly SettingAction[] = [
   },
 ]
 
-
 export function actionsIn(section: SettingsSectionId): readonly SettingAction[] {
   return ACTION_REGISTRY.filter(action => action.section === section)
 }

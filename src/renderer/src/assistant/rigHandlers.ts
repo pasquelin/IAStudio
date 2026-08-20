@@ -110,9 +110,7 @@ function addAnimation(input: Record<string, unknown>): ActionOutcome {
   const asset = assetsById(useAssets.getState()).get(assetId)
   if (!asset) return refused('notFound')
 
-  return editModelOf(input, node =>
-    addModelClip(node.id, assetClip(newId(), asset.id, asset.name)),
-  )
+  return editModelOf(input, node => addModelClip(node.id, assetClip(newId(), asset.id, asset.name)))
 }
 
 function timelineSettings(input: Record<string, unknown>): ActionOutcome {
