@@ -12,8 +12,8 @@ import { DISPLAY_UNITS, SHADOW_MAP_SIZES, SHADOW_QUALITIES, VIEWPORT_QUALITIES }
 import type { SettingActionId } from './settingAction'
 import type { SettingPath, SettingValue, ValueAt } from './settingsPath'
 
-// Re-exported so the twenty callers that ask this module for the ids keep working: what moved is
-// where they are DECLARED, and only because the registry is too heavy for the opening chunk.
+// Re-exported so the callers that ask this module for the ids keep working: what moved is where
+// they are DECLARED, and only because the registry is too heavy for the opening chunk.
 export { SETTING_ACTION_IDS, type SettingActionId } from './settingAction'
 
 /**

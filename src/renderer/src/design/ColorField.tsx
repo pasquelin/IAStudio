@@ -1,4 +1,5 @@
 import { cn } from '@/helpers/cn'
+import { fieldHandle } from './scHandle'
 import { FieldActions } from './FieldActions'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
@@ -31,7 +32,7 @@ export function ColorField({
 
       <input
         type="color"
-        data-sc={scId && `field:${scId}`}
+        data-sc={scId && fieldHandle(scId)}
         // Named here rather than by the label around it: that label also holds the hexadecimal,
         // and a swatch called "Colour #ff0000" is a swatch nobody can find.
         aria-label={label}

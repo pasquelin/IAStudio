@@ -30,21 +30,16 @@ import { boolOf, numberOf, oneOf, textOf } from './actionInputs'
 
 /**
  * The skeleton of a character, the handles its joints reach for, and the blocks laid on its band.
- *
- * Every edit goes through the command the inspector and the band already run, so it lands in the
- * scene's own history and ⌘Z takes it back. Nothing is rebuilt here.
+ * Every edit runs the command the inspector runs, so ⌘Z takes it back. Nothing is rebuilt here.
  */
 
-/** The 3D tab in front and the model named in it, or the reason there is none. */
-function model(
-  input: Record<string, unknown>,
-): { documentId: string; state: SceneState; node: ModelNode } | null {
+/** The 3D tab in front and the model named in it, or nothing — which reads as `wrongSurface`. */
+function model(input: Record<string, unknown>): { documentId: string; node: ModelNode } | null {
   const documentId = activeSceneId(useDocuments.getState())
   if (documentId === null) return null
 
-  const state = sceneOf(useScenes.getState(), documentId)
-  const node = nodeById(state, textOf(input, 'nodeId') ?? '')
-  return node?.type === 'model' ? { documentId, state, node } : null
+  const node = nodeById(sceneOf(useScenes.getState(), documentId), textOf(input, 'nodeId') ?? '')
+  return node?.type === 'model' ? { documentId, node } : null
 }
 
 /** Runs one command on the model named, refusing before it rather than writing nothing. */
@@ -68,10 +63,8 @@ function boneOf(node: ModelNode, name: string | null): string | null {
 }
 
 /**
- * The skeleton the studio fits to the mesh it has measured.
- *
- * `null` bounds mean the engine has not read the model yet, which is a wait rather than a fault —
- * and a fit refused by `rigFitFaultOf` is a mesh the studio cannot rig at all.
+ * The skeleton the studio fits to the mesh it has measured. `null` bounds mean the engine has not
+ * read the model yet, which is a wait rather than a fault.
  */
 function fitRig(input: Record<string, unknown>): ActionOutcome {
   const open = model(input)
@@ -104,11 +97,14 @@ function rigState(input: Record<string, unknown>): ActionOutcome {
   }
 }
 
-/** A block on the band, from an asset of the library — the gesture the animations panel makes. */
+/**
+ * A block on the band, from an asset of the library. The kind is checked as `addAnimationTo`
+ * checks it: a mesh laid on a band would be a block that plays nothing.
+ */
 function addAnimation(input: Record<string, unknown>): ActionOutcome {
-  const assetId = textOf(input, 'assetId') ?? ''
-  const asset = assetsById(useAssets.getState()).get(assetId)
+  const asset = assetsById(useAssets.getState()).get(textOf(input, 'assetId') ?? '')
   if (!asset) return refused('notFound')
+  if (asset.type !== 'animation') return refused('badInput')
 
   return editModelOf(input, node => addModelClip(node.id, assetClip(newId(), asset.id, asset.name)))
 }
@@ -132,88 +128,74 @@ function timelineSettings(input: Record<string, unknown>): ActionOutcome {
 }
 
 export const RIG_HANDLERS: ActionHandlers = {
-  'rig.state': input => Promise.resolve(rigState(input)),
-  'rig.fit': input => Promise.resolve(fitRig(input)),
-  'rig.clear': input => Promise.resolve(editModelOf(input, node => setModelRig(node.id, null))),
-  'rig.hands': input => Promise.resolve(editModelOf(input, node => addRigHands(node.id))),
+  'rig.state': rigState,
+  'rig.fit': fitRig,
+  'rig.clear': input => editModelOf(input, node => setModelRig(node.id, null)),
+  'rig.hands': input => editModelOf(input, node => addRigHands(node.id)),
 
   'bone.add': input =>
-    Promise.resolve(
-      editModelOf(input, node => {
-        const parent = boneOf(node, textOf(input, 'parent'))
-        return parent === null
-          ? null
-          : addRigBone(node.id, childBone(node.model.rig?.bones ?? [], parent))
-      }),
-    ),
+    editModelOf(input, node => {
+      const parent = boneOf(node, textOf(input, 'parent'))
+      return parent === null
+        ? null
+        : addRigBone(node.id, childBone(node.model.rig?.bones ?? [], parent))
+    }),
 
   'bone.remove': input =>
-    Promise.resolve(
-      editModelOf(input, node => {
-        const bone = boneOf(node, textOf(input, 'bone'))
-        return bone === null ? null : removeRigBone(node.id, bone)
-      }),
-    ),
+    editModelOf(input, node => {
+      const bone = boneOf(node, textOf(input, 'bone'))
+      return bone === null ? null : removeRigBone(node.id, bone)
+    }),
 
   'bone.rename': input =>
-    Promise.resolve(
-      editModelOf(input, node => {
-        const bone = boneOf(node, textOf(input, 'bone'))
-        const name = textOf(input, 'name') ?? ''
-        // A name already taken is refused here rather than by the command, which writes nothing
-        // for a duplicate — and a client told `ok` would believe the rename took.
-        return bone === null || node.model.rig?.bones.some(one => one.name === name)
-          ? null
-          : renameRigBone(node.id, bone, name)
-      }),
-    ),
+    editModelOf(input, node => {
+      const bone = boneOf(node, textOf(input, 'bone'))
+      const name = textOf(input, 'name') ?? ''
+      // A name already taken is refused here rather than by the command, which writes nothing for
+      // a duplicate — and a client told `ok` would believe the rename took.
+      return bone === null || node.model.rig?.bones.some(one => one.name === name)
+        ? null
+        : renameRigBone(node.id, bone, name)
+    }),
 
   'bone.role': input =>
-    Promise.resolve(
-      editModelOf(input, node => {
-        const bone = boneOf(node, textOf(input, 'bone'))
-        const role: HumanoidRole | null = oneOf(input, 'role', HUMANOID_ROLES)
-        return bone === null ? null : setRigBoneRole(node.id, bone, role)
-      }),
-    ),
+    editModelOf(input, node => {
+      const bone = boneOf(node, textOf(input, 'bone'))
+      const role: HumanoidRole | null = oneOf(input, 'role', HUMANOID_ROLES)
+      return bone === null ? null : setRigBoneRole(node.id, bone, role)
+    }),
 
   'ik.add': input =>
-    Promise.resolve(
-      editModelOf(input, node => {
-        const bone = boneOf(node, textOf(input, 'bone'))
-        return bone === null ? null : addIkChain(node.id, bone)
-      }),
-    ),
+    editModelOf(input, node => {
+      const bone = boneOf(node, textOf(input, 'bone'))
+      return bone === null ? null : addIkChain(node.id, bone)
+    }),
 
   'ik.remove': input =>
-    Promise.resolve(
-      editModelOf(input, node => {
-        const chainId = textOf(input, 'chainId') ?? ''
-        return node.model.rig?.ik?.some(chain => chain.id === chainId)
-          ? removeIkChain(node.id, chainId)
-          : null
-      }),
-    ),
+    editModelOf(input, node => {
+      const chainId = textOf(input, 'chainId') ?? ''
+      return node.model.rig?.ik?.some(chain => chain.id === chainId)
+        ? removeIkChain(node.id, chainId)
+        : null
+    }),
 
-  'animation.add': input => Promise.resolve(addAnimation(input)),
+  'animation.add': addAnimation,
 
   'animation.remove': input =>
-    Promise.resolve(
-      editModelOf(input, node => {
-        const clipId = textOf(input, 'clipId') ?? ''
-        return node.model.lanes?.some(lane => lane.clips.some(clip => clip.id === clipId))
-          ? removeModelClip(node.id, clipId)
-          : null
-      }),
-    ),
+    editModelOf(input, node => {
+      const clipId = textOf(input, 'clipId') ?? ''
+      return node.model.lanes?.some(lane => lane.clips.some(clip => clip.id === clipId))
+        ? removeModelClip(node.id, clipId)
+        : null
+    }),
 
-  'animation.settings': input => Promise.resolve(timelineSettings(input)),
+  'animation.settings': timelineSettings,
 
   'animation.autoKey': input => {
     const documentId = activeSceneId(useDocuments.getState())
-    if (documentId === null) return Promise.resolve(refused('wrongSurface'))
+    if (documentId === null) return refused('wrongSurface')
 
     useAnimationViews.getState().setAutoKey(documentId, boolOf(input, 'on'))
-    return Promise.resolve({ ok: true })
+    return { ok: true }
   },
 }

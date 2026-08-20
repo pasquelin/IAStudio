@@ -35,10 +35,8 @@ export function revealTool(tool: ToolId): boolean {
 }
 
 /**
- * Whether this surface is showing that panel right now.
- *
- * A half that was never named shows the first tool its placement declares, so what is up cannot
- * be read off the arrangement alone — `shownTool` is what resolves the two.
+ * Whether this surface is showing that panel right now. A half that was never named shows the
+ * first tool its placement declares, so the arrangement alone does not answer it.
  */
 export function toolIsShown(tool: ToolId, surface: ToolSurface): boolean {
   const placement = placementIn(tool, surface)

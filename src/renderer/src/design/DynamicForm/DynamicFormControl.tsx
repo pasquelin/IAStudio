@@ -7,6 +7,7 @@ import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { useModelText } from '@/hooks/useModelText'
 import { AssetDropField } from '../AssetDropField'
+import { fieldHandle } from '../scHandle'
 import { FIELD, FIELD_FILL } from '../styles'
 import { ToolButton } from '../ToolButton'
 
@@ -39,7 +40,7 @@ export function DynamicFormControl({
    * a sentence the Scenario API writes, and the `id` beside it comes from `useId` — `:r7:` names
    * nothing a script could work out. This is the form a client most wants to fill.
    */
-  const handle = `field:generation.${field.key}`
+  const handle = fieldHandle(`generation.${field.key}`)
 
   switch (field.kind) {
     case 'longText':

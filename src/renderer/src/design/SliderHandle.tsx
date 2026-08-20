@@ -1,4 +1,5 @@
 import { cn } from '@/helpers/cn'
+import { fieldHandle } from './scHandle'
 import { SLIDER_HANDLE, type GestureProps } from './styles'
 
 export type SliderHandleProps = GestureProps & {
@@ -42,7 +43,7 @@ export function SliderHandle({
       id={id}
       aria-label={label}
       aria-describedby={describedBy}
-      data-sc={scId && `field:${scId}`}
+      data-sc={scId && fieldHandle(scId)}
       value={value}
       min={min}
       max={max}

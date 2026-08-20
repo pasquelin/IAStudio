@@ -14,14 +14,13 @@ import { useProject } from '@/stores/project'
 import { useTools } from '@/stores/tools'
 
 /**
- * Where a command goes, and whether anything took it.
+ * Where a command goes, and whether anything took it — one router for the three doors that fire
+ * one: the native menu, the assistant, and an MCP client on the other side of the machine.
  *
- * ONE router for the three doors that fire one — the native menu, the assistant, and an MCP
- * client on the other side of the machine. Two of them held a switch of their own until this
- * existed, and the copies had already parted company: fourteen commands the tool schema offered
- * could not run at all, ten of them without a single test saying so.
+ * `nothingToDo` is told apart from `noSurface` because a caller reads them differently: a space
+ * already at the end of the bar is not a studio showing the wrong thing.
  */
-export type CommandRouting = 'ran' | 'noSurface' | 'noBridge'
+export type CommandRouting = 'ran' | 'noSurface' | 'nothingToDo' | 'noBridge'
 
 /** Runs it through the bridge, or says the window has none — a mirror, a test with no preload. */
 function through(run: (bridge: StudioBridge) => void): CommandRouting {
@@ -34,15 +33,10 @@ function through(run: (bridge: StudioBridge) => void): CommandRouting {
 
 /** The space the bar would move: the one in front, since a command names no other. */
 function moveActiveSpace(move: 'left' | 'right'): CommandRouting {
-  return applyWorkspaceMove(useLayouts.getState().activeWorkspace, move) ? 'ran' : 'noSurface'
+  return applyWorkspaceMove(useLayouts.getState().activeWorkspace, move) ? 'ran' : 'nothingToDo'
 }
 
-/**
- * Push-to-talk, as a press and a release rolled into one.
- *
- * The key reports both halves and this has neither, so it toggles on what the engine is doing —
- * which is also what a person means by "start dictating" from outside the window.
- */
+/** Push-to-talk with neither half: it toggles on what the engine is doing. */
 function toggleDictation(): CommandRouting {
   const dictation = useDictation.getState()
   void dictation.setHeld(dictation.state !== 'listening')
@@ -116,12 +110,9 @@ function runHere(command: CommandId): CommandRouting | null {
 }
 
 /**
- * Fires one command wherever it belongs, and says whether it landed.
- *
- * The answer is what an MCP client needs and a menu row does not: `publishCommand` is memoryless
- * and filtered by scope on the subscriber's side, so a command sent while nothing of that scope
- * is mounted vanishes in silence — right for a menu, whose rows grey out, and a lie to a caller
- * that was told it ran.
+ * Fires one command wherever it belongs, and says whether it landed — which an MCP client needs
+ * and a menu row does not: `publishCommand` is memoryless, so a command sent while nothing of
+ * that scope is mounted vanishes in silence.
  */
 export function routeCommand(command: CommandId): CommandRouting {
   const here = runHere(command)

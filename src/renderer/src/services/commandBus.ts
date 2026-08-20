@@ -37,11 +37,8 @@ export function subscribeToCommands(listener: Listener): () => void {
 }
 
 /**
- * Declares a surface as able to act on this scope, until the returned function is called.
- *
- * Kept beside the bus rather than derived from the listeners: publishing is memoryless, so a
- * caller that needs an ANSWER — an MCP client — has no other way to tell a command that ran from
- * one that fell into an empty room.
+ * Declares a surface as able to act on this scope, until the returned function is called. It is
+ * the only way a caller can tell a command that ran from one that fell into an empty room.
  */
 export function armCommandScope(scope: CommandScope): () => void {
   armed.set(scope, (armed.get(scope) ?? 0) + 1)

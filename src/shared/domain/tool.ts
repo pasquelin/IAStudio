@@ -60,29 +60,6 @@ export type ToolId =
   | 'text'
 
 /**
- * The same panels as a list, for the doors that publish a closed set of them — the tool schema
- * an MCP client reads, and the validator behind it. `exhaustive.test.ts` ties the two together.
- */
-export const TOOL_IDS: readonly ToolId[] = [
-  'layers',
-  'meshes',
-  'lights',
-  'timeline',
-  'explorer',
-  'git',
-  'history',
-  'scene',
-  'models',
-  'generator',
-  'inspector',
-  'assets',
-  'projects',
-  'library',
-  'animations',
-  'text',
-]
-
-/**
  * The panels the upper half of a WORKSPACE's left column is reserved for: what the Scenario API
  * offers. A model to pick, its form to fill, and the assets the account holds. Nothing else may
  * sit in that half of a workspace, and none of the three sits anywhere else — `tool.test.ts`
@@ -266,6 +243,16 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
     requires: 'project',
   },
 ]
+
+/**
+ * The panels as a closed list, for the doors that publish one — the tool schema an MCP client
+ * reads, and the validator behind it.
+ *
+ * Derived from the placements rather than written out: a panel with nowhere to sit is one the
+ * rail never draws and `revealTool` refuses, so the placements ARE the list. A third copy of the
+ * sixteen names is what this avoids, and it had already drifted once.
+ */
+export const TOOL_IDS: readonly ToolId[] = [...new Set(TOOL_PLACEMENTS.map(({ id }) => id))]
 
 /**
  * Any placement of a tool, for the questions a surface does not change — its slot, and

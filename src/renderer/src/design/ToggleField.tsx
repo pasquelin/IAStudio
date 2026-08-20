@@ -1,5 +1,6 @@
 import { FieldActions } from './FieldActions'
 import { PropertyLabel } from './PropertyLabel'
+import { fieldHandle } from './scHandle'
 import { CHECKBOX, FIELD_ROW } from './styles'
 import { cn } from '@/helpers/cn'
 
@@ -25,7 +26,7 @@ export function ToggleField({ label, value, onChange, scId }: ToggleFieldProps) 
           held its name to a gauge that read « Projette une … ». */}
       <input
         type="checkbox"
-        data-sc={scId && `field:${scId}`}
+        data-sc={scId && fieldHandle(scId)}
         checked={value}
         onChange={event => onChange(event.target.checked)}
         // `mr-auto` rather than a filler element: the box keeps its size and takes the column.

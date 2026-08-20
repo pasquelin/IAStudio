@@ -107,18 +107,27 @@ describe('a control the studio can be driven by', () => {
    * the tree — `section:transform` folds, `field:transform.position.x` takes a value. Two kinds
    * and no more: the rule once offered `link:` and `action:` as facts, and nothing wrote either.
    *
-   * Counted per ATTRIBUTE rather than per file, which is the difference between a rule and a
-   * coincidence: a file carrying one prefixed handle and one bare one passed on the first.
+   * Every handle of the window, not the design system's alone: twenty-four are written by hand
+   * outside it — the settings, git, the new-document window — and the rule that reached those
+   * accepted any spelling. Both forms of the attribute are read, `{…}` and `"…"`.
    */
   it('says what kind of thing it names, not only which one', () => {
-    const HANDLES = /data-sc=\{([^}]*)\}/g
-    const unprefixed = CONTROLS.flatMap(([path, source]) =>
+    const HANDLES = /data-sc=(\{[^}]*\}?|"[^"]*")/g
+    const KIND = /^[{"`]*(section|field):|Handle\(/
+    // A handle held in a variable is answered by how that variable was BUILT — the generation
+    // form spends one across seven branches rather than composing it seven times.
+    const composed = (source: string, written: string): boolean =>
+      /^\{\w+\}$/.test(written) &&
+      new RegExp(`const ${written.slice(1, -1)} = (field|section)Handle\\(`).test(source)
+
+    const unprefixed = Object.entries(WINDOW_SOURCES).flatMap(([path, source]) =>
       [...source.matchAll(HANDLES)]
-        .filter(match => !/`(section|field):\$\{/.test(match[1] ?? ''))
-        .map(match => `${path} — ${match[1] ?? ''}`),
+        .map(match => (match[1] ?? '').replace(/^\{scId && /, ''))
+        .filter(written => !KIND.test(written) && !composed(source, written))
+        .map(written => `${path} — ${written}`),
     )
 
-    expect(unprefixed).toEqual([])
+    expect(unprefixed.sort()).toEqual([])
   })
 
   /**

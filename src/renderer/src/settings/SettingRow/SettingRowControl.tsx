@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { SettingValue } from '@shared/domain/settingsPath'
+import { fieldHandle } from '@/design/scHandle'
 import {
   boundsOf,
   optionLabel,
@@ -40,6 +41,7 @@ function decimalsOf(step: number | undefined): number {
 export function SettingRowControl({
   descriptor,
   id,
+  scId,
   describedBy,
   value,
   onChange,
@@ -59,9 +61,7 @@ export function SettingRowControl({
       return (
         <select
           id={id}
-          // Composed from `id`, which carries the setting's own path — one spelling for every
-          // control of this window, whether it comes from the design system or not.
-          data-sc={`field:${id}`}
+          data-sc={fieldHandle(scId)}
           aria-describedby={describedBy}
           className={SETTING_SELECT}
           value={String(value ?? '')}
@@ -86,7 +86,7 @@ export function SettingRowControl({
       return (
         <input
           id={id}
-          data-sc={`field:${id}`}
+          data-sc={fieldHandle(scId)}
           aria-describedby={describedBy}
           className="input input-sm w-24"
           type="number"
@@ -106,7 +106,7 @@ export function SettingRowControl({
         <div className="flex items-center gap-2">
           <Slider
             id={id}
-            scId={id}
+            scId={scId}
             describedBy={describedBy}
             className="w-40"
             min={descriptor.min}
@@ -129,7 +129,7 @@ export function SettingRowControl({
       return (
         <input
           id={id}
-          data-sc={`field:${id}`}
+          data-sc={fieldHandle(scId)}
           aria-describedby={describedBy}
           className="toggle toggle-sm"
           type="checkbox"
@@ -142,6 +142,7 @@ export function SettingRowControl({
       return (
         <SettingRowColorControl
           id={id}
+          scId={scId}
           describedBy={describedBy}
           value={value}
           onChange={onChange}
@@ -153,6 +154,7 @@ export function SettingRowControl({
         <SettingRowPathControl
           descriptor={descriptor}
           id={id}
+          scId={scId}
           describedBy={describedBy}
           stored={value}
           onCommit={commitOrUnset}
@@ -164,6 +166,7 @@ export function SettingRowControl({
         <SettingRowTextControl
           descriptor={descriptor}
           id={id}
+          scId={scId}
           describedBy={describedBy}
           stored={value}
           onCommit={commitOrUnset}

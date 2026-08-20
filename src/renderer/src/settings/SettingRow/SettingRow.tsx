@@ -59,6 +59,7 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
       <SettingRowControl
         descriptor={descriptor}
         id={id}
+        scId={`setting.${descriptor.path}`}
         describedBy={describedBy}
         value={value}
         onChange={next => stage(descriptor.path, next)}

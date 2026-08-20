@@ -8,12 +8,9 @@ import {
 import { useSettings } from '@/stores/settings'
 
 /**
- * Moves a space one place along the bar and writes the new order, or answers `null` when it is
- * already at the end.
- *
- * The four ways of asking share it — the drag, the keyboard, the pill's menu and a command — so
- * that the refusal and the write are decided once. The caller is handed the new order for the
- * announcement it may want to make; nothing here speaks.
+ * Moves a space one place along the bar and writes the new order, or `null` at the end of it. The
+ * three ways of asking for a STEP share it — the keyboard, the pill's menu, a command — and are
+ * handed the new order for the announcement they may want to make; nothing here speaks.
  */
 export function applyWorkspaceMove(
   id: WorkspaceId,

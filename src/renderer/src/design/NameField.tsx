@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { fieldHandle } from './scHandle'
 import { FIELD_FILL } from './styles'
 import { isComposing } from '@/helpers/composition'
 
@@ -37,7 +38,7 @@ export function NameField({
       // second click to type into what one asked for reads as the gesture having failed.
       autoFocus
       type="text"
-      data-sc={scId && `field:${scId}`}
+      data-sc={scId && fieldHandle(scId)}
       value={name}
       aria-label={label}
       placeholder={placeholder}

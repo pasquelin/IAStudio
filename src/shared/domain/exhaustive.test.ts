@@ -31,8 +31,8 @@ import {
   type ModelSort,
 } from './model'
 import { TEXTURE_SLOTS, type TextureSlot } from './scene'
+import { SETTING_ACTION_IDS, type SettingActionId } from './settingAction'
 import { NAMED_KEYS, type NamedKey } from './shortcut'
-import { TOOL_IDS, type ToolId } from './tool'
 
 /**
  * Each of these lists is walked to check something else — the i18n bundles above all, which are
@@ -243,29 +243,22 @@ describe('the lists that stand for a union', () => {
     expect(sorted(NAMED_KEYS)).toEqual(sorted(Object.keys(all)))
   })
 
-  // A panel missing from the list is one `panel.open` refuses as an unknown value — declared in
-  // TypeScript, drawn by the rail, and unreachable by anything that reads the tool schema.
-  it('names every panel the studio can put up', () => {
-    const all: Record<ToolId, true> = {
-      layers: true,
-      meshes: true,
-      lights: true,
-      timeline: true,
-      explorer: true,
-      git: true,
-      history: true,
-      scene: true,
-      models: true,
-      generator: true,
-      inspector: true,
-      assets: true,
-      projects: true,
-      library: true,
-      animations: true,
-      text: true,
+  /**
+   * The ids were derived from the registry until `settingAction.ts` had to leave it — the action
+   * catalogue closes a field over them and cannot pull every setting's help text into the opening
+   * chunk with it. A hand-written list standing for a union is exactly what this file is for.
+   */
+  it('names every button the settings window offers', () => {
+    const all: Record<SettingActionId, true> = {
+      'advanced.openSettingsFile': true,
+      'advanced.openLogFolder': true,
+      'advanced.openDevtools': true,
+      'advanced.copyMcpCommand': true,
+      'advanced.installResolveBridge': true,
+      'advanced.reset': true,
     }
 
-    expect(sorted(TOOL_IDS)).toEqual(sorted(Object.keys(all)))
+    expect(sorted(SETTING_ACTION_IDS)).toEqual(sorted(Object.keys(all)))
   })
 
   it('names every texture slot a material carries', () => {

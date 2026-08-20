@@ -27,6 +27,9 @@ import { mountedGenerator } from './generatorBridge'
 const ROUTED: Record<CommandRouting, ActionOutcome> = {
   ran: { ok: true },
   noSurface: refused('wrongSurface'),
+  // What the command names is there, and there is nothing left for it to do — a space already at
+  // the end of the bar. `failed` would blame the studio for what is a fact of the input.
+  nothingToDo: refused('notFound'),
   noBridge: refused('noBridge'),
 }
 

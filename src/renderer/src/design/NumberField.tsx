@@ -12,6 +12,7 @@ import { bound, type NumericBounds } from '@shared/numeric'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
 import { FieldActions } from './FieldActions'
+import { fieldHandle } from './scHandle'
 import { FIELD_FILL, FIELD_ROW, type GestureProps } from './styles'
 
 export type NumberFieldProps = NumericBounds &
@@ -270,7 +271,7 @@ export function NumberField({
           setTyped(null)
           onGestureEnd?.()
         }}
-        data-sc={scId && `field:${scId}`}
+        data-sc={scId && fieldHandle(scId)}
         // The scrub cursor is what makes the gesture discoverable at all — and it gives way to
         // the caret on focus, for the same reason the press does: a field being typed in is text.
         className={cn(

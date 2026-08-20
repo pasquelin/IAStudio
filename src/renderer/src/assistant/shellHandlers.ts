@@ -1,6 +1,6 @@
-import { refused } from '@shared/domain/assistant'
+import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { isSettingsSection } from '@shared/domain/settings'
-import { TOOL_IDS } from '@shared/domain/tool'
+import { TOOL_IDS, type ToolId } from '@shared/domain/tool'
 import { closeTool, revealTool, toolIsShown } from '@/helpers/revealPanel'
 import { availableToolIds } from '@/helpers/toolRegistry'
 import { useDictation } from '@/stores/dictation'
@@ -14,6 +14,14 @@ import { boolOf, oneOf, textOf } from './actionInputs'
  * Every one of these is a pass-through to a channel of `shared/ipc.ts`, and that is the whole of
  * what they are: the work already lives in the main process, it simply had no door.
  */
+
+/** Opens or closes the panel named, which both answer `false` for one this surface does not serve. */
+function showPanel(input: Record<string, unknown>, run: (panel: ToolId) => boolean): ActionOutcome {
+  const panel = oneOf(input, 'panel', TOOL_IDS)
+  if (!panel) return refused('badInput')
+
+  return run(panel) ? { ok: true } : refused('wrongSurface')
+}
 
 export const SHELL_HANDLERS: ActionHandlers = {
   'auth.state': () => withBridge(bridge => bridge.settings.authState()),
@@ -61,32 +69,16 @@ export const SHELL_HANDLERS: ActionHandlers = {
 
   'updates.install': () => withBridge(bridge => bridge.updates.install()),
 
-  /**
-   * What the panels the surface in front actually carries, with the half each sits in and
-   * whether it is up. Named rather than the whole registry: a tool the current surface does not
-   * serve cannot be opened, and offering it would be offering a refusal.
-   */
+  // Only what this surface serves: a panel it does not carry cannot be opened there, so offering
+  // it would be offering a refusal.
   'panels.list': () => {
     const surface = toolSurface()
-    return Promise.resolve({
-      ok: true,
-      data: availableToolIds(surface).map(id => ({ id, open: toolIsShown(id, surface) })),
-    })
+    const panels = availableToolIds(surface).map(id => ({ id, open: toolIsShown(id, surface) }))
+    return { ok: true, data: panels }
   },
 
-  'panel.open': input => {
-    const panel = oneOf(input, 'panel', TOOL_IDS)
-    if (!panel) return Promise.resolve(refused('badInput'))
-
-    return Promise.resolve(revealTool(panel) ? { ok: true } : refused('wrongSurface'))
-  },
-
-  'panel.close': input => {
-    const panel = oneOf(input, 'panel', TOOL_IDS)
-    if (!panel) return Promise.resolve(refused('badInput'))
-
-    return Promise.resolve(closeTool(panel) ? { ok: true } : refused('wrongSurface'))
-  },
+  'panel.open': input => showPanel(input, revealTool),
+  'panel.close': input => showPanel(input, closeTool),
 
   'dictation.state': () => withBridge(bridge => bridge.dictation.state()),
 

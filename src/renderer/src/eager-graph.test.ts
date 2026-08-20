@@ -187,6 +187,18 @@ describe('the opening chunk', () => {
     expect(files).not.toContain('../../shared/domain/settingsSearch.ts')
   })
 
+  /**
+   * The handler table reaches all fourteen families — the canvas, the scene, the rig, git, the
+   * timeline — for a door that is off by default and never called at launch. `remoteActions.ts`
+   * imports it on the call for that reason, and this is what keeps the edge dynamic.
+   */
+  it('never reaches the action handlers, which the MCP door loads on its first call', () => {
+    const { files } = GRAPH
+
+    expect([...files].filter(path => path.endsWith('Handlers.ts')).sort()).toEqual([])
+    expect(files).not.toContain('./assistant/executor.ts')
+  })
+
   // The heaviest row of the table, and the one that was described but never held: six editors,
   // megabytes between them, of which a session opens one or two.
   it('never reaches an editor', () => {

@@ -6,6 +6,7 @@ import { PROPERTY_BODY } from './styles'
 import { UiIcon } from './UiIcon'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useTranslation } from 'react-i18next'
+import { sectionHandle } from './scHandle'
 
 export type PropertySectionProps = {
   title: string
@@ -47,7 +48,7 @@ export function PropertySection({
         <button
           type="button"
           aria-expanded={open}
-          data-sc={scId && `section:${scId}`}
+          data-sc={scId && sectionHandle(scId)}
           {...HINT_LEFT(t(open ? 'inspector.sectionFoldHint' : 'inspector.sectionUnfoldHint'))}
           onClick={() => setHeld(current => ({ ...current, open: !current.open }))}
           className={cn(

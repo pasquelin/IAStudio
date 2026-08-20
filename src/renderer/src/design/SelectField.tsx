@@ -3,6 +3,7 @@ import { useId, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { FieldActions } from './FieldActions'
 import { PropertyLabel } from './PropertyLabel'
+import { fieldHandle } from './scHandle'
 import { CONTROL, FIELD_ROW, NATIVE_SELECT } from './styles'
 import { UiIcon } from './UiIcon'
 
@@ -96,7 +97,7 @@ export function SelectField<V extends string>({
         id={id}
         // Only where no visible name is drawn, for the reason above.
         aria-label={layout === 'row' ? undefined : label}
-        data-sc={scId && `field:${scId}`}
+        data-sc={scId && fieldHandle(scId)}
         value={unnamed ? UNNAMED : (value ?? UNNAMED)}
         onChange={event => {
           const picked = options.find(option => option.value === event.target.value)

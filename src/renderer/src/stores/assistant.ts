@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import { HISTORY_MAX, type AssistantModel } from '@shared/domain/assistant'
 import type { ConfirmRequest } from '@/assistant/confirm'
 import { assistantHistory, type AssistantStep, type AssistantTurn } from '@/assistant/conversation'
-import { runConfirmedAction } from '@/assistant/executor'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from './settings'
 
@@ -176,6 +175,9 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
      */
     const steps: AssistantStep[] = []
     try {
+      // On the turn rather than at launch, as `remoteActions.ts` loads it: the table reaches all
+      // fourteen families, and a studio nobody speaks to has no use for any of them.
+      const { runConfirmedAction } = await import('@/assistant/executor')
       for (const call of answer.calls) {
         const outcome = await runConfirmedAction(call.action, call.input)
         steps.push({ action: call.action, refusal: outcome.ok ? null : outcome.refusal })

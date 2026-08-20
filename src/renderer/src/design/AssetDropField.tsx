@@ -5,6 +5,7 @@ import { ASSET_TYPES, assetUrl, posterUrl, type Asset } from '@shared/domain/ass
 import { cn } from '@/helpers/cn'
 import { AssetDropTarget } from './AssetDropTarget'
 import { FIELD_FILL, FIELD_THUMBNAIL } from './styles'
+import { fieldHandle } from './scHandle'
 import { Thumbnail } from './Thumbnail'
 import { UiIcon } from './UiIcon'
 
@@ -81,7 +82,7 @@ export function AssetDropField({
       <input
         id={id}
         type="text"
-        data-sc={scId && `field:${scId}`}
+        data-sc={scId && fieldHandle(scId)}
         placeholder={placeholder}
         className={FIELD_FILL}
         {...registration}

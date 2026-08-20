@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { fieldHandle } from '@/design/scHandle'
 import { isComposing } from '@/helpers/composition'
 import type { CommittedProps } from './controls'
 
@@ -7,6 +8,7 @@ import type { CommittedProps } from './controls'
 export function SettingRowTextControl({
   descriptor,
   id,
+  scId,
   describedBy,
   stored,
   onCommit,
@@ -41,7 +43,7 @@ export function SettingRowTextControl({
   return (
     <input
       id={id}
-      data-sc={`field:${id}`}
+      data-sc={fieldHandle(scId)}
       aria-describedby={describedBy}
       className="input input-sm w-full max-w-xs"
       type="text"

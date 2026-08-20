@@ -1,7 +1,6 @@
 import { assistantAction } from '@shared/domain/assistant'
 import type { ActionOutcome } from '@shared/domain/assistant'
 import { getBridge } from '@/services/bridge'
-import { runConfirmedAction } from './executor'
 
 /**
  * Actions asked for from OUTSIDE this window — today, by an MCP client.
@@ -39,6 +38,12 @@ async function runFor(action: string, input: Record<string, unknown>): Promise<A
   if (!known) return { ok: false, refusal: 'badInput' }
 
   try {
+    /**
+     * Loaded on the call rather than at launch, and this is the one edge that decides it: the
+     * handler table reaches all fourteen families — the canvas, the scene, the rig, git — some
+     * thirty modules the opening chunk has no use for, on a door that is off by default.
+     */
+    const { runConfirmedAction } = await import('./executor')
     return await runConfirmedAction(known.name, input)
   } catch {
     // Nothing may leave this window unanswered: the client on the other end waits two minutes

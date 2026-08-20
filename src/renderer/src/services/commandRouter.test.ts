@@ -65,12 +65,16 @@ describe('a command that belongs to a surface', () => {
 })
 
 describe('a command the application performs itself', () => {
-  it('opens the settings window', () => {
-    expect(routeCommand('app.settings')).toBe('ran')
-  })
+  it('opens the settings window, and toggles full screen, through the main process', () => {
+    const open = vi.fn(async () => {})
+    const toggleFullScreen = vi.fn(async () => {})
+    installFakeBridge({ settings: { open }, window: { toggleFullScreen } })
 
-  it('toggles full screen', () => {
+    expect(routeCommand('app.settings')).toBe('ran')
+    expect(open).toHaveBeenCalledWith('general')
+
     expect(routeCommand('window.fullScreen')).toBe('ran')
+    expect(toggleFullScreen).toHaveBeenCalled()
   })
 
   it('picks a folder for a new project', () => {
@@ -138,10 +142,12 @@ describe('moving a space along the bar', () => {
     })
   })
 
+  // Told apart from `noSurface`: the studio is showing exactly what the command names, and there
+  // is simply nowhere left to move it.
   it('refuses rather than pretending, at the end of the bar', () => {
     useLayouts.setState({ activeWorkspace: 'image' })
 
-    expect(routeCommand('spaces.moveLeft')).toBe('noSurface')
+    expect(routeCommand('spaces.moveLeft')).toBe('nothingToDo')
   })
 })
 
@@ -151,21 +157,44 @@ describe('moving a space along the bar', () => {
  * studio cannot keep. Fourteen of the hundred and twenty were in that state.
  */
 describe('the registry as a whole', () => {
-  it('leaves no command that could not run whatever the studio is showing', () => {
-    const scopes = new Set(COMMAND_REGISTRY.map(descriptor => descriptor.scope))
-    const disarms = [...scopes].map(scope => armCommandScope(scope))
+  /**
+   * `global` and `spaces` have no surface to mount, so nothing ever arms them — `armCommandScope`
+   * is called from `useShortcuts` alone, and every caller of that passes a document scope. The
+   * bus can therefore never carry one, and `runHere` is the whole of their routing.
+   *
+   * Asked of the SCOPES rather than of the ids: a case is what makes a command runnable, and this
+   * fails on the next `global` command added without one. Arming those two scopes to make the
+   * sweep below pass would have hidden exactly that.
+   */
+  it('answers itself for every command no surface can take', () => {
+    // `document.save` and `document.saveAs` want a tab, and the spaces one that can still move.
     useDocuments.setState({ activeId: 'doc-1' })
-    const drop = registerChatPanel({ toggle: () => {} })
-    // The space at the end of the bar cannot move that way, which is a fact of the order rather
-    // than of the routing — asked from the other end, both moves answer.
     useLayouts.setState({ activeWorkspace: 'video' })
+    const drop = registerChatPanel({ toggle: () => {} })
 
-    const stranded = COMMAND_REGISTRY.map(descriptor => descriptor.id).filter(
-      id => routeCommand(id) !== 'ran',
-    )
+    const unrouted = COMMAND_REGISTRY.filter(
+      descriptor => descriptor.scope === 'global' || descriptor.scope === 'spaces',
+    ).filter(descriptor => routeCommand(descriptor.id) === 'noSurface')
 
-    expect(stranded).toEqual([])
+    expect(unrouted.map(descriptor => descriptor.id)).toEqual([])
     drop()
+  })
+
+  it('leaves no command of a mounted surface that could not run', () => {
+    const surfaceScopes = [
+      ...new Set(
+        COMMAND_REGISTRY.map(descriptor => descriptor.scope).filter(
+          scope => scope !== 'global' && scope !== 'spaces',
+        ),
+      ),
+    ]
+    const disarms = surfaceScopes.map(scope => armCommandScope(scope))
+
+    const stranded = COMMAND_REGISTRY.filter(descriptor =>
+      surfaceScopes.some(scope => scope === descriptor.scope),
+    ).filter(descriptor => routeCommand(descriptor.id) !== 'ran')
+
+    expect(stranded.map(descriptor => descriptor.id)).toEqual([])
     for (const disarm of disarms) disarm()
   })
 })

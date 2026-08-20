@@ -1,6 +1,7 @@
 import { FieldActions } from './FieldActions'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
+import { fieldHandle } from './scHandle'
 import { FIELD_FILL, FIELD_ROW, type GestureProps } from './styles'
 
 export type TextFieldProps = GestureProps & {
@@ -39,7 +40,7 @@ export function TextField({
 
       <input
         type="text"
-        data-sc={scId && `field:${scId}`}
+        data-sc={scId && fieldHandle(scId)}
         value={value}
         onChange={event => onChange(event.target.value)}
         // One entry per session at the field, not one per keystroke.

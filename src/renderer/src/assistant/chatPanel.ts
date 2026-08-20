@@ -1,11 +1,8 @@
 import { createMountedHost } from '@/helpers/hostRegistry'
 
 /**
- * The assistant's own window, reachable from code that may not import its store.
- *
- * Registered rather than called directly to break an import loop: the conversation store imports
- * the executor so a turn can run a confirmed action, so nothing the executor reaches may import
- * that store back. `⌘K` is toggled rather than opened — it is what one presses to leave, too.
+ * The assistant's own window, registered rather than imported: the conversation store imports the
+ * executor, so nothing the executor reaches may import that store back.
  */
 export type ChatPanel = { toggle: () => void }
 
