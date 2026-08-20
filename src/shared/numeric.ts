@@ -4,6 +4,15 @@ export function clamp(value: number, low: number, high: number): number {
 }
 
 /**
+ * `clamp` where the floor wins: bounds that cross answer `low`, never a `high` below it. A span
+ * narrower than its content produces exactly that — a surface wider than its window, a fade longer
+ * than its clip — and `clamp` would answer the negative bound, putting the thing out of reach.
+ */
+export function clampAtLeast(value: number, low: number, high: number): number {
+  return Math.max(low, Math.min(high, value))
+}
+
+/**
  * Rounds to the nearest step. `toPrecision` on the way out because binary floats leave a tail:
  * without it a roughness dragged past 0.3 reads 0.30000000000000004 in the field.
  */

@@ -2,9 +2,10 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FileOutcome } from '@shared/domain/fileOp'
+import { ContextMenu } from '@/design/ContextMenu'
 import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useProject } from '@/stores/project'
-import { ProjectMenu } from './ProjectMenu'
+import { ProjectMenuRows } from './ProjectMenuRows'
 
 const PATH = '/projects/summer'
 
@@ -18,8 +19,13 @@ const install = (overrides: BridgeOverrides = {}): void => {
   installFakeBridge({ ...overrides, diagnostics: { report } })
 }
 
+/** At the pointer, as the shelf's row raises them. */
 const open = (onClose = vi.fn(), onRename?: () => void): void => {
-  render(<ProjectMenu path={PATH} at={{ x: 10, y: 10 }} onClose={onClose} onRename={onRename} />)
+  render(
+    <ContextMenu at={{ x: 10, y: 10 }} onClose={onClose}>
+      <ProjectMenuRows path={PATH} onClose={onClose} onRename={onRename} />
+    </ContextMenu>,
+  )
 }
 
 beforeEach(() => {

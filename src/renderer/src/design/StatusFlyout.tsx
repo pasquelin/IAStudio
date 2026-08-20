@@ -1,7 +1,7 @@
 import { useCallback, useState, type ReactNode } from 'react'
+import { TIP_TOP } from '@/helpers/tooltip'
 import { Flyout } from './Flyout'
 import { STATUS_BUTTON } from './styles'
-import { TIP_TOP } from '@/helpers/tooltip'
 
 export type StatusFlyoutProps = {
   /** The tooltip's title. The face carries the visible words, so this names the button. */
@@ -17,8 +17,8 @@ export type StatusFlyoutProps = {
 }
 
 /**
- * A status-line button that raises a panel above itself. Written three times over — the journal,
- * the generations, the tasks — down to the `w-12` of the bar and the `size={12}` of the chevron.
+ * A status-line button that raises a panel above itself. Three wear it — the journal, the
+ * generations, the tasks — and the two reporting progress share `StatusProgressFace`.
  */
 export function StatusFlyout({ label, hint, face, panel, onOpen }: StatusFlyoutProps) {
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)

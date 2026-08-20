@@ -1,3 +1,5 @@
+import { clampAtLeast } from '@shared/numeric'
+
 /**
  * What the three virtualized surfaces of the studio agree on.
  *
@@ -37,4 +39,37 @@ export type Columns = {
 export function columnsIn(width: number, aim: number): Columns {
   const columns = Math.max(1, Math.floor((width + GAP) / (Math.max(aim, 1) + GAP)))
   return { columns, columnWidth: (width - (columns - 1) * GAP) / columns }
+}
+
+export type VirtualFocus = {
+  /** Where the cells are looked for — the surface's own scroll container. */
+  scroller: HTMLElement | null | undefined
+  /** Brings the virtual ROW holding a cell into view. The virtualizer's own method. */
+  scrollToIndex: (row: number) => void
+  /** How many cells there are, which is what an arrow walking past the end is held to. */
+  count: number
+  /** The attribute a cell carries its index in — one surface numbers cells, the other rows. */
+  attribute: 'data-cell' | 'data-row'
+  /** How many cells a virtual row holds. One for a list, which is why it defaults. */
+  columns?: number
+}
+
+/**
+ * Moves the focus to cell `index`, scrolling the row that holds it into view first — the roving
+ * tab stop both `Collection` and `Tree` walk with the arrows.
+ */
+export function focusVirtualCell(
+  index: number,
+  { scroller, scrollToIndex, count, attribute, columns = 1 }: VirtualFocus,
+): void {
+  const bounded = clampAtLeast(index, 0, count - 1)
+  scrollToIndex(Math.floor(bounded / columns))
+
+  const focus = (): void => {
+    scroller?.querySelector<HTMLElement>(`[${attribute}="${bounded}"]`)?.focus()
+  }
+  // Twice: the cell is already mounted in the common case, and only a scroll that revealed a new
+  // row needs the frame the virtualizer takes to render it.
+  focus()
+  requestAnimationFrame(focus)
 }

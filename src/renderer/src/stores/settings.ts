@@ -7,7 +7,7 @@ import {
   type SettingsSectionId,
 } from '@shared/domain/settings'
 import { partialFor, type SettingPath, type SettingValue } from '@shared/domain/settingsPath'
-import { getBridge } from '@/services/bridge'
+import { connectThroughBridge, getBridge } from '@/services/bridge'
 
 const UNKNOWN_AUTH: AuthState = { authenticated: false, reason: 'missing' }
 
@@ -44,10 +44,7 @@ export const useSettings = create<SettingsState>()((set, get) => ({
   loaded: false,
   authKnown: false,
 
-  connect: async () => {
-    const bridge = getBridge()
-    if (!bridge) return () => {}
-
+  connect: connectThroughBridge(async bridge => {
     let pushed = false
     const stop = bridge.settings.onChange(settings => {
       pushed = true
@@ -78,7 +75,7 @@ export const useSettings = create<SettingsState>()((set, get) => ({
     await Promise.all([readSettings, readAuth])
 
     return stop
-  },
+  }),
 
   write: async partial => {
     const bridge = getBridge()

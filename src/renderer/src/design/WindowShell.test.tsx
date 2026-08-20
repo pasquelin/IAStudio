@@ -18,6 +18,18 @@ describe('WindowShell', () => {
     expect(screen.getByRole('button', { name: 'Un' })).toBeInTheDocument()
   })
 
+  // The five windows drew their title as bare words, so a reader was told nothing about which
+  // window it had landed in. The licences window was the one that still had its own heading.
+  it('names the window with a heading rather than bare words', () => {
+    render(
+      <WindowShell title="Titre">
+        <p>Le contenu</p>
+      </WindowShell>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Titre' })).toBeInTheDocument()
+  })
+
   /**
    * A window that reads as ONE block asks for no column, and an empty one is not the same thing:
    * 224 px of nothing down the left edge is what the file information window looked like before

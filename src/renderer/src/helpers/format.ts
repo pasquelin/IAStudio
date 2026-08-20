@@ -159,6 +159,15 @@ export function formatDecimal(
   ).format(value)
 }
 
+/**
+ * Compute Units, grouped for reading. Decimals only below ten: a studio racks up thousands, where
+ * a fractional unit is noise, but a single cheap call costs a fraction and rounding it to zero
+ * would read as "this was free".
+ */
+export function formatUnits(units: number, locale: string): string {
+  return formatDecimal(units, locale, { digits: units !== 0 && Math.abs(units) < 10 ? 2 : 0 })
+}
+
 /** The four the studio ever reaches: an asset larger than a tebibyte is not a thing it makes. */
 export type ByteUnit = 'byte' | 'kibibyte' | 'mebibyte' | 'gibibyte'
 

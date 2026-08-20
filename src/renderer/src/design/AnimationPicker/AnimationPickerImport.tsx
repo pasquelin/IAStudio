@@ -4,6 +4,7 @@ import { ANIMATION_EXTENSIONS } from '@shared/domain/animationLibrary'
 import { extensionOf } from '@shared/domain/fileName'
 import type { ClipSource } from '@shared/domain/scene'
 import { Button } from '../Button'
+import { QuietNote } from '../QuietNote'
 import { getBridge } from '@/services/bridge'
 
 export type AnimationPickerImportProps = {
@@ -37,11 +38,11 @@ export function AnimationPickerImport({ onChoose }: AnimationPickerImportProps) 
 
   return (
     <div className="flex flex-col gap-2 p-2">
-      <p className="text-muted text-tiny">
+      <QuietNote>
         {t('inspector.animationImportHint', { formats: ANIMATION_EXTENSIONS.join(' · ') })}
-      </p>
+      </QuietNote>
       <Button onClick={() => void bring()}>{t('inspector.animationImportPick')}</Button>
-      {refused && <p className="text-muted text-tiny">{t('inspector.animationImportRefused')}</p>}
+      {refused && <QuietNote>{t('inspector.animationImportRefused')}</QuietNote>}
     </div>
   )
 }

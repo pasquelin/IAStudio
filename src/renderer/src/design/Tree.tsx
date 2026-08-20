@@ -10,6 +10,7 @@ import { useRowHeight } from '@/hooks/useRowHeight'
 import { rowDrag } from './rowDrag'
 import { ROW_LINE, rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
+import { focusVirtualCell } from './virtual'
 
 export type TreeNode = { id: string; parentId: string | null }
 
@@ -378,18 +379,13 @@ export function Tree<T extends TreeNode>({
   // height the previous density gave them.
   useRemeasure(virtualizer, rowPixels)
 
-  const focusRow = (index: number): void => {
-    const bounded = Math.max(0, Math.min(index, slots.length - 1))
-    virtualizer.scrollToIndex(bounded)
-
-    const focus = (): void => {
-      scroller.current?.querySelector<HTMLElement>(`[data-row="${bounded}"]`)?.focus()
-    }
-    // Twice: the row is already mounted in the common case, and only a scroll that revealed a
-    // new one needs the frame the virtualizer takes to render it.
-    focus()
-    requestAnimationFrame(focus)
-  }
+  const focusRow = (index: number): void =>
+    focusVirtualCell(index, {
+      scroller: scroller.current,
+      scrollToIndex: row => virtualizer.scrollToIndex(row),
+      count: slots.length,
+      attribute: 'data-row',
+    })
 
   const selected = new Set(selectedIds)
   const anchor = selectedIds.at(-1)

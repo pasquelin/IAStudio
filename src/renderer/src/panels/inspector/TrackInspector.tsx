@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { NumberField } from '@/design/NumberField'
 import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
-import { ToolButton } from '@/design/ToolButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
+import { TrackFlagButton } from '@/panels/timeline/TrackFlagButton'
 import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
 import {
   clampTrackHeight,
@@ -36,17 +36,14 @@ export function TrackInspector({ documentId, track }: TrackInspectorProps) {
       </PropertySection>
 
       <PropertySection title={t('inspector.state')}>
-        {/* The same control as the header column, from the same table: a switch that looks
-            different depending on where it is found reads as two different switches. */}
         {TRACK_FLAGS.map(flag => (
           <PropertyRow key={flag.key} label={t(`inspector.${flag.key}`)}>
-            <ToolButton
-              icon={flag.iconFor(track[flag.key])}
-              label={t(flag.labelKey, { name: track.name })}
+            <TrackFlagButton
+              flag={flag}
+              on={track[flag.key]}
+              name={track.name}
               tooltip={TIP_LEFT}
-              variant="header"
-              active={track[flag.key]}
-              onClick={() => write(current => ({ ...current, [flag.key]: !current[flag.key] }))}
+              onToggle={next => write(current => ({ ...current, [flag.key]: next }))}
             />
           </PropertyRow>
         ))}

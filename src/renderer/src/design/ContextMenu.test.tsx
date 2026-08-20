@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { HINT_RIGHT } from '@/helpers/tooltip'
+import type { ContextMenuAt } from '@/hooks/useContextMenu'
 import { ContextMenu } from './ContextMenu'
 import { MenuRow } from './MenuRow'
 
@@ -60,7 +61,7 @@ describe('a menu at the pointer', () => {
    */
   describe('kept apart from what it was raised over', () => {
     function Host({ spy }: { spy: (kind: string) => void }) {
-      const [at, setAt] = useState<{ x: number; y: number } | null>(null)
+      const [at, setAt] = useState<ContextMenuAt | null>(null)
 
       return (
         <div

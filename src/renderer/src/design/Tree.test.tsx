@@ -834,6 +834,16 @@ describe('Tree', () => {
     expect(screen.getAllByRole('treeitem')[0]).toHaveFocus()
   })
 
+  it('stops at the last row rather than wrapping back to the first', async () => {
+    renderTree()
+
+    const rows = screen.getAllByRole('treeitem')
+    rows.at(-1)?.focus()
+    await userEvent.keyboard('{ArrowDown}')
+
+    expect(rows.at(-1)).toHaveFocus()
+  })
+
   it('toggles from the chevron without selecting the row underneath', async () => {
     const onSelect = vi.fn()
     const onToggle = vi.fn()

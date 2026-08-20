@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import type { SettingPath } from '@shared/domain/settingsPath'
 import { SETTING_REGISTRY } from '@shared/domain/settingsRegistry'
-import { cn } from '@/helpers/cn'
 import { WindowNavItem } from '@/design/WindowNav/WindowNavItem'
 import { useSettingsDraft } from '@/stores/settingsDraft'
+import { SettingStagedDot } from '../SettingStagedDot'
 import type { SettingsSection } from '../sections'
 
 /** Whether anything under a section is staged — its own settings, or a sub-section's. */
@@ -55,15 +55,12 @@ export function SettingsWindowNavigationEntry({
       }
     >
       {t(section.labelKey)}
-      {staged && (
-        <span
-          title={t('settings.modified')}
-          className={cn(
-            'size-1.5 shrink-0 rounded-full',
-            active ? 'bg-primary-content' : 'bg-primary',
-          )}
-        />
-      )}
+      {/* The ink only: on a selected entry the column is painted `bg-primary` itself. */}
+      <SettingStagedDot
+        staged={staged}
+        label={t('settings.modified')}
+        className={active ? 'bg-primary-content' : undefined}
+      />
     </WindowNavItem>
   )
 }

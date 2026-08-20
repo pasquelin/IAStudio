@@ -15,9 +15,10 @@ import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer
 import { addNodeTo } from '@/hooks/useAddNode'
 import { useAnimationPlayback } from '@/hooks/useAnimationPlayback'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useExportMenu } from '@/hooks/useExportMenu'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
-import { useDocuments } from '@/stores/documents'
+import { useDocumentIsInFront } from '@/stores/documents'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useSettings } from '@/stores/settings'
@@ -193,7 +194,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const modified = useScenes(state => isSceneDirty(state, documentId))
   const bindings = useBindingOverrides()
   const label = useShortcutLabel()
-  const active = useDocuments(state => state.activeId === documentId)
+  const active = useDocumentIsInFront(documentId)
   const viewport = useSettings(state => state.settings.three)
   const view = useSceneViews(state => sceneViewOf(state, documentId))
 
@@ -352,16 +353,12 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useAnimationPlayback(documentId, view.playing, scene.animation.duration)
 
   // Subscribed here rather than in `useNativeMenu`: an export reads the three.js objects, and
-  // this component is the only thing that holds them. Only while this tab is in front, or two
-  // open scenes would both answer one menu click.
-  useEffect(() => {
-    const bridge = getBridge()
-    if (!bridge || !active) return
-
-    return bridge.menu.onSceneExport(({ format, scope }) => {
+  // this component is the only thing that holds them.
+  useExportMenu(active, bridge =>
+    bridge.menu.onSceneExport(({ format, scope }) => {
       void exportScene(documentId, format, scope)
-    })
-  }, [documentId, active])
+    }),
+  )
 
   /**
    * Which view a display command lands on: the one the pointer is over, as every modelling

@@ -64,7 +64,9 @@ export function WindowShell({
         style={DRAGGABLE}
         className="text-body flex shrink-0 items-center pt-2 pr-4 pb-2 pl-24 font-medium"
       >
-        {title}
+        {/* A heading rather than bare words: it is the only thing naming the window to a reader,
+            and Tailwind's preflight leaves an `h1` at the size its container gives it. */}
+        <h1>{title}</h1>
         {headerActions}
       </header>
 

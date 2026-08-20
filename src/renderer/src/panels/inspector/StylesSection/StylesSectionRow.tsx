@@ -2,6 +2,7 @@ import { mdiDotsHorizontal } from '@mdi/js'
 import { memo, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MaterialStyle } from '@shared/domain/style'
+import { ContextMenu } from '@/design/ContextMenu'
 import { FieldActions } from '@/design/FieldActions'
 import { InlineRename } from '@/design/InlineRename'
 import { MenuButton } from '@/design/MenuButton'
@@ -10,7 +11,6 @@ import { cn } from '@/helpers/cn'
 import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { useContextMenu } from '@/hooks/useContextMenu'
 import { useStyles } from '@/stores/styles'
-import { StylesSectionMenu } from './StylesSectionMenu'
 import { StylesSectionMenuRows, STYLE_MENU_ROWS } from './StylesSectionMenuRows'
 
 export type StylesSectionRowProps = {
@@ -93,7 +93,9 @@ export const StylesSectionRow = memo(function StylesSectionRow({
       )}
 
       {menu.at && (
-        <StylesSectionMenu id={style.id} at={menu.at} onRename={startRename} onClose={menu.close} />
+        <ContextMenu at={menu.at} onClose={menu.close}>
+          <StylesSectionMenuRows id={style.id} onRename={startRename} onClose={menu.close} />
+        </ContextMenu>
       )}
     </li>
   )

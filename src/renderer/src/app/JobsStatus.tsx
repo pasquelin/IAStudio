@@ -1,11 +1,8 @@
-import { mdiChevronUp } from '@mdi/js'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
-import { ProgressBar } from '@/design/ProgressBar'
 import { StatusFlyout } from '@/design/StatusFlyout'
-import { UiIcon } from '@/design/UiIcon'
-import { formatPercent } from '@/helpers/format'
+import { StatusProgressFace } from '@/design/StatusProgressFace'
 import { Jobs } from '@/panels/jobs/Jobs'
 import { useJobs } from '@/stores/jobs'
 
@@ -30,7 +27,7 @@ function summarize(jobs: readonly Job[]): Summary {
  * full list is one click away.
  */
 export function JobsStatus() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const jobs = useJobs(state => state.jobs)
 
   const { count, ratio, failed } = useMemo(() => summarize(jobs), [jobs])
@@ -45,18 +42,9 @@ export function JobsStatus() {
     <StatusFlyout
       label={t('jobs.open')}
       hint={t('jobs.openHint')}
-      face={
-        <>
-          <span>{label}</span>
-          {count > 0 && (
-            <>
-              <ProgressBar ratio={ratio} label={label} className="w-12" />
-              <span>{formatPercent(ratio, i18n.language)}</span>
-            </>
-          )}
-          <UiIcon path={mdiChevronUp} size={12} />
-        </>
-      }
+      // No bar once everything has stopped: what is left on screen is a count of failures, and a
+      // bar under it would report the progress of nothing.
+      face={<StatusProgressFace label={label} ratio={count > 0 ? ratio : undefined} />}
       panel={
         <div className="max-h-80 w-80 overflow-auto">
           <Jobs />

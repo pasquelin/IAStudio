@@ -11,8 +11,9 @@ import { openAsset } from '@/helpers/openAsset'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
+import { useExportMenu } from '@/hooks/useExportMenu'
 import { useShortcuts } from '@/hooks/useShortcuts'
-import { documentExportName, useDocuments } from '@/stores/documents'
+import { documentExportName, useDocumentIsInFront, useDocuments } from '@/stores/documents'
 import { runTask } from '@/stores/tasks'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
@@ -65,7 +66,7 @@ export function TextureDocument({ documentId }: { documentId: string }) {
 
   const texture = useTextures(state => textureOf(state, documentId))
   const inspected = useTextureViews(state => inspectedChannel(state, documentId))
-  const active = useDocuments(state => state.activeId === documentId)
+  const active = useDocumentIsInFront(documentId)
 
   useDocumentTitle(
     documentId,
@@ -87,17 +88,11 @@ export function TextureDocument({ documentId }: { documentId: string }) {
 
   useShortcuts({ scope: 'texture', enabled: active, documentId, onCommand })
 
-  // Only while this tab is in front. The event goes to the window, not to a document, so two
-  // open textures would otherwise both answer one click of the same menu row — and both would
-  // open a folder dialog.
-  useEffect(() => {
-    const bridge = getBridge()
-    if (!bridge || !active) return
-
-    return bridge.menu.onTextureExport(({ target }) => {
+  useExportMenu(active, bridge =>
+    bridge.menu.onTextureExport(({ target }) => {
       void exportTexture(documentId, target)
-    })
-  }, [documentId, active])
+    }),
+  )
 
   useEffect(() => {
     const element = host.current
@@ -178,7 +173,7 @@ export function TextureDocument({ documentId }: { documentId: string }) {
       )}
 
       {!texture.channels.baseColor && !flat && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="pointer-events-none absolute inset-0">
           <EmptyState icon={mdiTextureBox} message={t('texture.dropSource')} />
         </div>
       )}

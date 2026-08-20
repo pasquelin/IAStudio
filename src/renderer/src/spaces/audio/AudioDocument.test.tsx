@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
+import type * as Bridge from '@/services/bridge'
 import { canUndo } from '@/engines/core/history'
 import {
   chainOf,
@@ -41,7 +42,10 @@ vi.mock('./useWaveSurfer', () => ({
   useWaveSurfer: () => ({ playing: false, currentTime: 0, toggle: vi.fn(), seek: vi.fn() }),
 }))
 
-vi.mock('@/services/bridge', () => ({
+// Partial: the stores this document pulls in reach for the rest of the module, and a total mock
+// would have to grow an entry every time the bridge gains one.
+vi.mock('@/services/bridge', async importOriginal => ({
+  ...(await importOriginal<typeof Bridge>()),
   getBridge: () => ({ assets: { saveAudio } }),
 }))
 

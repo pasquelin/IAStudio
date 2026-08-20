@@ -1,9 +1,9 @@
 import { mdiDotsHorizontal } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { useContextMenu } from '@/hooks/useContextMenu'
+import { ContextMenu } from '@/design/ContextMenu'
 import { MenuButton } from '@/design/MenuButton'
 import { ResizeHandle } from '@/design/ResizeHandle'
-import { ToolButton } from '@/design/ToolButton'
 import { moveTrack } from '@/engines/timeline/commands'
 import {
   clampTrackHeight,
@@ -17,8 +17,8 @@ import { isTyping } from '@/helpers/typing'
 import { isTrackSelected, useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
 import { TimelineRow } from '../TimelineRow/TimelineRow'
+import { TrackFlagButton } from '../TrackFlagButton'
 import { TRACK_FLAGS } from '../trackFlags'
-import { TrackMenu } from '../TrackMenu/TrackMenu'
 import { TrackMenuRows, TRACK_MENU_ROWS } from '../TrackMenu/TrackMenuRows'
 import { TrackHeadersName } from './TrackHeadersName'
 
@@ -97,14 +97,13 @@ export function TrackHeadersRow({
 
       <div className="flex items-center gap-0.5">
         {TRACK_FLAGS.map(flag => (
-          <ToolButton
+          <TrackFlagButton
             key={flag.key}
-            icon={flag.iconFor(track[flag.key])}
-            label={t(flag.labelKey, { name: track.name })}
+            flag={flag}
+            on={track[flag.key]}
+            name={track.name}
             tooltip={TIP_RIGHT}
-            variant="header"
-            active={track[flag.key]}
-            onClick={() => write(current => ({ ...current, [flag.key]: !current[flag.key] }))}
+            onToggle={next => write(current => ({ ...current, [flag.key]: next }))}
           />
         ))}
         {/* The keyboard's way to the same three rows: `contextmenu` from Shift+F10 targets the
@@ -127,7 +126,11 @@ export function TrackHeadersRow({
         onSize={height => write(current => ({ ...current, height: clampTrackHeight(height) }))}
       />
 
-      {menu.at && <TrackMenu {...rows} at={menu.at} onClose={menu.close} />}
+      {menu.at && (
+        <ContextMenu at={menu.at} onClose={menu.close}>
+          <TrackMenuRows {...rows} onClose={menu.close} />
+        </ContextMenu>
+      )}
     </TimelineRow>
   )
 }

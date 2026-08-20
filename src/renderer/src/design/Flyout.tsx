@@ -1,5 +1,6 @@
 import { useCallback, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { clampAtLeast } from '@shared/numeric'
 import { cn } from '@/helpers/cn'
 import { useDismiss } from '@/hooks/useDismiss'
 import { useMenuKeys } from '@/hooks/useMenuKeys'
@@ -61,7 +62,7 @@ const OFFSET = 2
 
 /** Kept inside the window: rows drawn past its edge cannot be reached, by pointer or by key. */
 function clamped(wanted: number, size: number, within: number): number {
-  return Math.max(0, Math.min(wanted, within - size))
+  return clampAtLeast(wanted, 0, within - size)
 }
 
 /**

@@ -28,7 +28,7 @@ import { clipLabel } from '@/helpers/clipLabel'
 import { newId } from '@/helpers/ids'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { clipsOfNode, rigOfNode, useModelClips } from '@/stores/modelClips'
-import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { useScenePreview, useSceneViews } from '@/stores/sceneViews'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
 
 export type AnimationSectionProps = {
@@ -50,7 +50,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   const { t } = useTranslation()
   const clips = useModelClips(state => clipsOfNode(state, documentId, node.id))
   const rig = useModelClips(state => rigOfNode(state, documentId, node.id))
-  const preview = useSceneViews(state => sceneViewOf(state, documentId).preview)
+  const preview = useScenePreview(documentId)
   const picked = useAnimationViews(state => animationViewOf(state, documentId).pickedBlock)
   const [open, setOpen] = useState(false)
   const [opener, setOpener] = useState<HTMLElement | null>(null)

@@ -19,6 +19,7 @@ import { claimOnSubmit } from '@/stores/generationClaims'
 import { useSettings } from '@/stores/settings'
 import { DynamicForm } from '@/design/dynamicFormLazy'
 import { FormHeader } from '@/design/FormHeader'
+import { PANEL_SCROLL } from '@/design/styles'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
@@ -142,7 +143,7 @@ export function Generator() {
   const generate = (values: FormValues): void => void runGeneration(values)
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-auto">
+    <div className={PANEL_SCROLL}>
       <FormHeader title={descriptor.data?.name ?? t('collection.loading')} />
 
       {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}

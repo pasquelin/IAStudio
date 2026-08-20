@@ -14,8 +14,9 @@ import { loadTexture } from '@/engines/scene/textureCache'
 import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useExportMenu } from '@/hooks/useExportMenu'
 import { isSkyboxDirty, setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
-import { documentExportName, useDocuments } from '@/stores/documents'
+import { documentExportName, useDocumentIsInFront, useDocuments } from '@/stores/documents'
 import { runTask } from '@/stores/tasks'
 import { useSkyboxViews, skyboxViewOf } from '@/stores/skyboxViews'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
@@ -63,8 +64,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   const engine = useRef<SkyboxRenderer | null>(null)
 
   const content = useSkyboxes(state => skyboxOf(state, documentId))
-  // A hidden tab stays mounted: without this, two skies would answer the same key.
-  const active = useDocuments(state => state.activeId === documentId)
+  const active = useDocumentIsInFront(documentId)
 
   // Held in a store rather than here: the controls that set these live in the View panel, and
   // the centre carries the toolbar and the rulers only. Session state all the same — none of it
@@ -80,17 +80,11 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
 
   useRestoredDocument(documentId)
 
-  // Only while this tab is in front. The event goes to the window, not to a document, so two
-  // open skies would otherwise both answer one click of the same menu row — and both would open
-  // a folder dialog.
-  useEffect(() => {
-    const bridge = getBridge()
-    if (!bridge || !active) return
-
-    return bridge.menu.onSkyboxExport(command => {
+  useExportMenu(active, bridge =>
+    bridge.menu.onSkyboxExport(command => {
       void exportSkybox(documentId, command)
-    })
-  }, [documentId, active])
+    }),
+  )
 
   useEffect(() => {
     const element = host.current
@@ -185,7 +179,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
       <div ref={host} className="absolute inset-0" />
 
       {!content.source && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="pointer-events-none absolute inset-0">
           <EmptyState icon={mdiCubeOutline} message={t('skybox.noSource')} />
         </div>
       )}

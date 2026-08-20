@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Job, JobProgress, JobTarget } from '@shared/domain/job'
-import { getBridge } from '@/services/bridge'
+import { connectThroughBridge, getBridge } from '@/services/bridge'
 import { useAssets } from './assets'
 
 type JobsState = {
@@ -28,10 +28,7 @@ export const useJobs = create<JobsState>()((set, get) => ({
   jobs: [],
   bodies: {},
 
-  connect: async () => {
-    const bridge = getBridge()
-    if (!bridge) return () => {}
-
+  connect: connectThroughBridge(async bridge => {
     const stopProgress = bridge.scenario.onProgress(progress => get().apply(progress))
 
     // The whole list, because the main process alone knows when it gains or loses an entry: a
@@ -58,7 +55,7 @@ export const useJobs = create<JobsState>()((set, get) => ({
       stopProgress()
       stopChanges()
     }
-  },
+  }),
 
   // Merged in place rather than refetching the list: a progress event arrives every couple of
   // seconds per job, and replacing the array would restart every animation in the bar.

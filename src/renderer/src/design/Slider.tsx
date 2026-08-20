@@ -1,6 +1,7 @@
 import { cn } from '@/helpers/cn'
+import { SliderHandle } from './SliderHandle'
 import { SliderRail } from './SliderRail'
-import { SLIDER_HANDLE, SLIDER_TRACK, type GestureProps } from './styles'
+import { SLIDER_TRACK, type GestureProps } from './styles'
 
 export type SliderProps = GestureProps & {
   value: number
@@ -32,26 +33,27 @@ export function Slider({
   onGestureEnd,
 }: SliderProps) {
   return (
-    <div className={cn(SLIDER_TRACK, className)}>
+    // A slider drag is a pointer gesture from the first frame. Taken on the track rather than on
+    // the handle, as `RangeField` takes it: the handle covers this box entirely, so the press
+    // reaches here either way, and both sliders then open a gesture the same way.
+    <div
+      className={cn(SLIDER_TRACK, className)}
+      onPointerDown={() => onGestureStart?.()}
+      onPointerUp={() => onGestureEnd?.()}
+    >
       <SliderRail from={min} to={value} min={min} max={max} />
 
-      <input
-        type="range"
-        id={id}
-        aria-describedby={describedBy}
-        data-sc={scId && `field:${scId}`}
+      <SliderHandle
         value={value}
+        onChange={onChange}
         min={min}
         max={max}
         step={step}
-        onChange={event => onChange(Number(event.target.value))}
-        // A slider drag is a pointer gesture from the first frame; keyboard steps report the
-        // same way, and a focus that changes nothing costs an empty gesture, not an entry.
-        onPointerDown={() => onGestureStart?.()}
-        onPointerUp={() => onGestureEnd?.()}
-        onFocus={() => onGestureStart?.()}
-        onBlur={() => onGestureEnd?.()}
-        className={SLIDER_HANDLE}
+        id={id}
+        describedBy={describedBy}
+        scId={scId}
+        onGestureStart={onGestureStart}
+        onGestureEnd={onGestureEnd}
       />
     </div>
   )

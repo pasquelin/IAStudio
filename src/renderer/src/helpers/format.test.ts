@@ -7,6 +7,7 @@ import {
   formatDecimal,
   formatMoment,
   formatPercent,
+  formatUnits,
   kept,
   formatList,
   type ByteUnit,
@@ -91,6 +92,21 @@ describe('writing a number', () => {
   it('drops the zeros a whole number does not need', () => {
     expect(formatDecimal(1, 'fr', { digits: 2 })).toBe('1')
     expect(formatDecimal(1.5, 'fr', { digits: 2 })).toBe('1,5')
+  })
+})
+
+describe('formatUnits', () => {
+  it('groups thousands without pretending to a precision nobody spends', () => {
+    expect(formatUnits(1240, 'fr-FR')).toMatch(/1\s?240/)
+  })
+
+  // Rounding a cheap call to zero would read as "this was free".
+  it('keeps decimals for the small amounts a single call costs', () => {
+    expect(formatUnits(0.25, 'en-US')).toBe('0.25')
+  })
+
+  it('writes a true zero as zero', () => {
+    expect(formatUnits(0, 'en-US')).toBe('0')
   })
 })
 

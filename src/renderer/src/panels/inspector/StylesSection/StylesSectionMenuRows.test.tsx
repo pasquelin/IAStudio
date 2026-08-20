@@ -1,13 +1,19 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
-import { StylesSectionMenu } from './StylesSectionMenu'
+import { ContextMenu } from '@/design/ContextMenu'
+import { StylesSectionMenuRows } from './StylesSectionMenuRows'
 
+/** At the pointer, as the style row raises them. */
 const open = (): void => {
-  render(<StylesSectionMenu id="s1" at={{ x: 10, y: 10 }} onRename={vi.fn()} onClose={vi.fn()} />)
+  render(
+    <ContextMenu at={{ x: 10, y: 10 }} onClose={vi.fn()}>
+      <StylesSectionMenuRows id="s1" onRename={vi.fn()} onClose={vi.fn()} />
+    </ContextMenu>,
+  )
 }
 
-describe('StylesSectionMenu', () => {
+describe('StylesSectionMenuRows', () => {
   it('says what each row does to the style rather than reading it back', () => {
     open()
 

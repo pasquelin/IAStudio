@@ -302,3 +302,15 @@ export function displayOfPane(displays: readonly DisplayMode[], pane: number): D
 export function sceneViewOf(state: SceneViewsState, documentId: string): SceneView {
   return state.views[documentId] ?? DEFAULT_SCENE_VIEW
 }
+
+/**
+ * Narrowed here rather than at each call site: subscribing to the whole view redraws a header on a
+ * camera dragged in another pane.
+ */
+export function useScenePlayhead(documentId: string): Us {
+  return useSceneViews(state => sceneViewOf(state, documentId).playhead)
+}
+
+export function useScenePreview(documentId: string): WatchedPreview | null {
+  return useSceneViews(state => sceneViewOf(state, documentId).preview)
+}

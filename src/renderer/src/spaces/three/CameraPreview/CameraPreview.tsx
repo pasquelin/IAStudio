@@ -14,6 +14,7 @@ import { selectedNodes } from '@/engines/scene/sceneState'
 import { previewRect, type PaneRect } from '@/engines/viewport/panes'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
+import { usePointerDrag } from '@/hooks/usePointerDrag'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
@@ -36,7 +37,7 @@ export function CameraPreview({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const host = useRef<HTMLDivElement>(null)
   const body = useRef<HTMLDivElement>(null)
-  const drag = useRef<{ pointerId: number; x: number; y: number } | null>(null)
+  const drag = usePointerDrag<{ x: number; y: number }>()
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [picture, setPicture] = useState<PaneRect | null>(null)
 
@@ -131,25 +132,21 @@ export function CameraPreview({ documentId }: { documentId: string }) {
     // while somebody aims at Enlarge is a preview nobody can enlarge.
     if (event.target instanceof Element && event.target.closest('button')) return
 
-    event.currentTarget.setPointerCapture(event.pointerId)
-    drag.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY }
+    drag.start(event, { x: event.clientX, y: event.clientY })
   }
 
   const onDragMove = (event: ReactPointerEvent<HTMLDivElement>): void => {
-    // Only the drag that STARTED here: a mouse has no implicit capture, so a move with the
-    // button held from elsewhere reaches this too, and would jump the preview from a stale origin.
-    const held = drag.current
-    if (!held || held.pointerId !== event.pointerId) return
+    const held = drag.matching(event)
+    if (!held) return
 
-    drag.current = { pointerId: held.pointerId, x: event.clientX, y: event.clientY }
+    // Read before the origin moves on: the offset is the step this move made, not the whole drag.
+    const { x, y } = held
+    held.x = event.clientX
+    held.y = event.clientY
     useSceneViews.getState().setPreviewOffset(documentId, {
-      x: previewOffset.x + event.clientX - held.x,
-      y: previewOffset.y + event.clientY - held.y,
+      x: previewOffset.x + event.clientX - x,
+      y: previewOffset.y + event.clientY - y,
     })
-  }
-
-  const endDrag = (): void => {
-    drag.current = null
   }
 
   return (
@@ -193,9 +190,9 @@ export function CameraPreview({ documentId }: { documentId: string }) {
           // viewport, which read it as an orbit and turned the scene instead of moving this.
           onPointerDown={full ? undefined : onGrab}
           onPointerMove={onDragMove}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-          onLostPointerCapture={endDrag}
+          onPointerUp={drag.cancel}
+          onPointerCancel={drag.cancel}
+          onLostPointerCapture={drag.cancel}
         >
           {/* What the engine paints into: the frame WHOLE, so the picture is the preview and not
               a letterbox between two bars. Everything else floats over it. */}

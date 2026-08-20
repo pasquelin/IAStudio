@@ -1,22 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { dayOf } from '@shared/domain/usage'
 import { formatMoment } from '@/helpers/format'
-import { formatDay, formatMoney, formatUnits, shareOf } from './format'
-
-describe('formatUnits', () => {
-  it('groups thousands without pretending to a precision nobody spends', () => {
-    expect(formatUnits(1240, 'fr-FR')).toMatch(/1\s?240/)
-  })
-
-  // Rounding a cheap call to zero would read as "this was free".
-  it('keeps decimals for the small amounts a single call costs', () => {
-    expect(formatUnits(0.25, 'en-US')).toBe('0.25')
-  })
-
-  it('writes a true zero as zero', () => {
-    expect(formatUnits(0, 'en-US')).toBe('0')
-  })
-})
+import { formatDay, formatMoney, shareOf } from './format'
 
 describe('formatMoney', () => {
   it('follows the locale, not the currency', () => {

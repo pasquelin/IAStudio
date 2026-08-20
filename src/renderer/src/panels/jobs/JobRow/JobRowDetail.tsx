@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { Job } from '@shared/domain/job'
 import { failureMessageKey } from '@/services/failureMessage'
-import { formatUnits } from '@/usage/format'
+import { formatUnits } from '@/helpers/format'
 
 /** What the row says under its bar: why it failed, or what it cost. Never both. */
 export function JobRowDetail({ job }: { job: Job }) {

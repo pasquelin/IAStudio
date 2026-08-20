@@ -56,7 +56,7 @@ import { trackIdsOf, type AnimationRow } from '@/engines/scene/animationRows'
 import { clamp } from '@shared/numeric'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { useSceneViews, sceneViewOf } from '@/stores/sceneViews'
+import { useScenePlayhead, useSceneViews } from '@/stores/sceneViews'
 
 export type AnimationCanvasProps = {
   documentId: string
@@ -152,7 +152,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   const grabbed = useRef<Grab | null>(null)
 
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
-  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
+  const playhead = useScenePlayhead(documentId)
   const view = useAnimationViews(state => animationViewOf(state, documentId))
 
   // Keyed on the array, whose identity is stable: building the set in a selector would hand

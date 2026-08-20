@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { DownloadProgress, InputDevice, SttFailure, SttState } from '@shared/domain/dictation'
-import { getBridge } from '@/services/bridge'
+import { connectThroughBridge, getBridge } from '@/services/bridge'
 import {
   listInputDevices,
   MicrophoneRefused,
@@ -102,10 +102,7 @@ export const useDictation = create<DictationState>()((set, get) => ({
   failure: null,
   devices: [],
 
-  connect: async () => {
-    const bridge = getBridge()
-    if (!bridge) return () => {}
-
+  connect: connectThroughBridge(async bridge => {
     let pushed = false
     const stop = bridge.dictation.onEvent(event => {
       pushed = true
@@ -143,7 +140,7 @@ export const useDictation = create<DictationState>()((set, get) => ({
       stop()
       void closeCapture()
     }
-  },
+  }),
 
   start: async () => {
     const bridge = getBridge()

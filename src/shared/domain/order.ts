@@ -1,3 +1,5 @@
+import { clamp } from '../numeric'
+
 /**
  * Reconciling a stored order with the registry this build declares. The bar of spaces and the
  * home's bands both need it, and both had written it out — the subtle half, where a newcomer
@@ -46,7 +48,7 @@ export function movedWithin(ids: readonly string[], id: string, by: number): rea
   const from = ids.indexOf(id)
   if (from === -1 || by === 0) return ids
 
-  const to = Math.min(Math.max(from + by, 0), ids.length - 1)
+  const to = clamp(from + by, 0, ids.length - 1)
   if (to === from) return ids
 
   const moved = [...ids]

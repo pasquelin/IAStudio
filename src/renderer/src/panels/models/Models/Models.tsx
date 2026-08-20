@@ -5,6 +5,7 @@ import type { ModelSummary } from '@shared/domain/model'
 import { failureKeyOf } from '@/services/failureMessage'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
+import { QuietNote } from '@/design/QuietNote'
 import { isFiltered } from '@/helpers/collectionState'
 import { useDebounced, SEARCH_DELAY_MS } from '@/hooks/useDebounced'
 import { useLazyPreviews } from '@/hooks/useLazyPreviews'
@@ -176,7 +177,11 @@ export function Models() {
           }
           footer={
             catalogue.fetchingMore ? (
-              <p className="text-muted text-tiny py-2 text-center">{t('collection.loading')}</p>
+              // Not `standalone`: its `py-6` is the room an empty list gives a sentence, and this
+              // one sits under a full grid that is still paging.
+              <div className="py-2 text-center">
+                <QuietNote>{t('collection.loading')}</QuietNote>
+              </div>
             ) : null
           }
         />

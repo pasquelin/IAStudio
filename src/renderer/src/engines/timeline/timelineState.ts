@@ -9,7 +9,7 @@ import {
   type Us,
 } from '@shared/domain/time'
 import { isRecord, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
-import { clamp } from '@shared/numeric'
+import { clamp, clampAtLeast } from '@shared/numeric'
 
 // Re-exported where the montage has always read them from: a scene's animation is written in the
 // same unit, so the definition moved to `shared/` where both sides may reach it.
@@ -288,8 +288,8 @@ export function clipFrom(clip: Clip, time: Us): Clip {
  * Trimming a clip shorter than its own ramps is the ordinary way to get there.
  */
 export function clampFades(clip: Clip): Clip {
-  const fadeIn = Math.max(0, Math.min(clip.fadeIn, clip.duration))
-  const fadeOut = Math.max(0, Math.min(clip.fadeOut, clip.duration - fadeIn))
+  const fadeIn = clampAtLeast(clip.fadeIn, 0, clip.duration)
+  const fadeOut = clampAtLeast(clip.fadeOut, 0, clip.duration - fadeIn)
   return fadeIn === clip.fadeIn && fadeOut === clip.fadeOut ? clip : { ...clip, fadeIn, fadeOut }
 }
 

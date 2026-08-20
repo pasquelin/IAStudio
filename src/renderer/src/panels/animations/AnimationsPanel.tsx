@@ -1,34 +1,25 @@
 import { mdiRunFast } from '@mdi/js'
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { BundledAnimation } from '@shared/domain/animationLibrary'
 import { clipKeyOf, DEFAULT_CLIP, type ClipRef, type ClipSource } from '@shared/domain/scene'
 import { EmptyState } from '@/design/EmptyState'
 import { laneHolding } from '@/engines/scene/clipBlend'
 import { addModelClip, removeModelClip } from '@/engines/scene/commands'
 import { nodeById, type SceneState } from '@/engines/scene/sceneState'
 import { clipLabel } from '@/helpers/clipLabel'
+import { useBundledAnimations } from '@/hooks/useBundledAnimations'
 import { newId } from '@/helpers/ids'
 import { clipsOfNode, useModelClips } from '@/stores/modelClips'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { sceneViewOf, useSceneViews, type WatchedPreview } from '@/stores/sceneViews'
+import { useScenePreview, useSceneViews, type WatchedPreview } from '@/stores/sceneViews'
 import { AnimationsPanelRow } from './AnimationsPanelRow'
 
 /** What a character can be made to play: the clips its file brought, and those the app ships with. */
 export function AnimationsPanel() {
   const { t } = useTranslation()
   const documentId = useDocuments(activeSceneId)
-  const [bundled, setBundled] = useState<readonly BundledAnimation[]>([])
-  const preview = useSceneViews(state => sceneViewOf(state, documentId ?? '').preview)
-
-  useEffect(() => {
-    let alive = true
-    void window.studio.animations.list().then(found => {
-      if (alive) setBundled(found)
-    })
-    return () => void (alive = false)
-  }, [])
+  const bundled = useBundledAnimations()
+  const preview = useScenePreview(documentId ?? '')
 
   // The model in front, since a clip its file brought is only playable on IT.
   const nodeId = useScenes(state => {

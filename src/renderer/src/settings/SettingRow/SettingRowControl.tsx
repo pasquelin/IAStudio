@@ -10,6 +10,7 @@ import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
 import { Slider } from '@/design/Slider'
 import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { SETTING_SELECT } from '../settingStyles'
 import type { Labelled } from './controls'
 import { SettingRowColorControl } from './SettingRowColorControl'
 import { SettingRowPathControl } from './SettingRowPathControl'
@@ -59,7 +60,7 @@ export function SettingRowControl({
         <select
           id={id}
           aria-describedby={describedBy}
-          className="select select-sm w-full max-w-xs"
+          className={SETTING_SELECT}
           value={String(value ?? '')}
           // Handed back as the option declared it, not as the string the DOM carries: a
           // numeric choice would otherwise be stored as `'3'` and refused by zod.

@@ -1,4 +1,5 @@
 import { readString } from '../guards'
+import { clamp } from '../numeric'
 
 /**
  * A colour as this studio writes them: `#rrggbb`, what `<input type="color">` reports and the
@@ -69,7 +70,7 @@ export function linearRgbOf(colour: string): [number, number, number] {
 
 /** The way back, for a file written elsewhere. Out-of-range channels are clamped, never wrapped. */
 export function colourFromLinearRgb(linear: readonly number[]): string {
-  return toHex([0, 1, 2].map(index => toSrgb(Math.min(Math.max(linear[index] ?? 0, 0), 1)) * 255))
+  return toHex([0, 1, 2].map(index => toSrgb(clamp(linear[index] ?? 0, 0, 1)) * 255))
 }
 
 /** Relative luminance, WCAG 2.x. Expects the `#rrggbb` shape above; anything else reads as black. */

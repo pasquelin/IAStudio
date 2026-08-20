@@ -372,6 +372,52 @@ describe('SettingsWindow', () => {
   })
 
   /**
+   * The family picker was written by hand outside `SettingLine`, so it offered neither of the
+   * two things every neighbouring setting does: nothing said the choice was waiting for Apply,
+   * and there was no way back to what the application ships with — "ask every time".
+   */
+  it('offers the way back to asking every time, and marks the choice until it is applied', async () => {
+    installFakeBridge({
+      scenario: {
+        searchModels: () =>
+          Promise.resolve({
+            items: [
+              {
+                id: 'model_flux',
+                name: 'Flux',
+                family: 'image',
+                source: 'scenario',
+                origin: 'official',
+                featured: false,
+                capabilities: ['txt2img'],
+                tags: [],
+              },
+            ],
+            cursor: null,
+          }),
+      },
+    })
+
+    render(<SettingsWindow />)
+    await userEvent.click(within(navigation()).getByRole('button', { name: 'Image' }))
+
+    const picker = await screen.findByLabelText(/Modèle par défaut/)
+    // The line itself, not the window: every other row carries a dot of its own.
+    const row = picker.closest('div')?.parentElement
+    const restore = within(row!).getByRole('button', { name: /Restaurer/ })
+    expect(restore).toBeDisabled()
+    expect(row?.querySelector('.bg-primary.invisible')).not.toBeNull()
+
+    await userEvent.selectOptions(picker, 'model_flux')
+    expect(restore).toBeEnabled()
+    expect(row?.querySelector('.bg-primary.invisible')).toBeNull()
+
+    await userEvent.click(restore)
+    expect(useSettingsDraft.getState().pending).toEqual({ generation: { defaultModels: {} } })
+    expect(picker).toHaveValue('')
+  })
+
+  /**
    * A default the plan cannot run is a generation that fails every time the generator opens,
    * with nothing on this screen having said so. A native `<option>` carries no tooltip, so the
    * reason is suffixed onto the label — greying a name out silently is the failure to avoid.

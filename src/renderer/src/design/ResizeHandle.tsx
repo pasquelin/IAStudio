@@ -1,5 +1,6 @@
-import { useCallback, useRef, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, type PointerEvent as ReactPointerEvent } from 'react'
 import { cn } from '@/helpers/cn'
+import { usePointerDrag } from '@/hooks/usePointerDrag'
 
 export type ResizeHandleProps = {
   /** `vertical` moves up and down and sets a height; `horizontal` sets a width. */
@@ -10,7 +11,7 @@ export type ResizeHandleProps = {
   onSize: (size: number, available: number) => void
 }
 
-type Drag = { pointerId: number; position: number; size: number; available: number }
+type Drag = { position: number; size: number; available: number }
 
 /**
  * Resize handle. Captures the pointer so the gesture survives a cursor leaving the handle —
@@ -23,22 +24,21 @@ type Drag = { pointerId: number; position: number; size: number; available: numb
  * the documents area, and the one between a zone's two halves.
  */
 export function ResizeHandle({ axis, invert = false, size, onSize }: ResizeHandleProps) {
-  const drag = useRef<Drag | null>(null)
+  const drag = usePointerDrag<Drag>()
   const lying = axis === 'vertical'
 
   const onMove = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
-      // Only a drag that STARTED on this handle counts. A mouse has no implicit capture, so
-      // a move with the button held from elsewhere reaches us too — and would resize from a
-      // stale origin, or from zero, collapsing the panel to nothing.
-      const current = drag.current
-      if (!current || current.pointerId !== event.pointerId) return
+      // Only a drag that STARTED on this handle counts, or the panel would be resized from a
+      // stale origin, or from zero, collapsing it to nothing.
+      const current = drag.matching(event)
+      if (!current) return
 
       const position = lying ? event.clientY : event.clientX
       const delta = position - current.position
       onSize(current.size + delta * (invert ? -1 : 1), current.available)
     },
-    [invert, lying, onSize],
+    [drag, invert, lying, onSize],
   )
 
   return (
@@ -46,21 +46,19 @@ export function ResizeHandle({ axis, invert = false, size, onSize }: ResizeHandl
       role="separator"
       aria-orientation={lying ? 'horizontal' : 'vertical'}
       onPointerDown={event => {
-        event.currentTarget.setPointerCapture(event.pointerId)
         const parent = event.currentTarget.parentElement
-        drag.current = {
-          pointerId: event.pointerId,
+        drag.start(event, {
           position: lying ? event.clientY : event.clientX,
           size,
           available: lying
             ? (parent?.clientHeight ?? window.innerHeight)
             : (parent?.clientWidth ?? window.innerWidth),
-        }
+        })
       }}
       onPointerMove={onMove}
-      onPointerUp={() => (drag.current = null)}
-      onPointerCancel={() => (drag.current = null)}
-      onLostPointerCapture={() => (drag.current = null)}
+      onPointerUp={drag.cancel}
+      onPointerCancel={drag.cancel}
+      onLostPointerCapture={drag.cancel}
       className={cn(
         'shrink-0 bg-transparent',
         lying

@@ -9,7 +9,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useSoundTransport } from '@/hooks/useSoundTransport'
 import { useSplitPair } from '@/hooks/useSplitPair'
 import { audioHistoryOf, isAudioEditDirty, useAudioEdits } from '@/stores/audioEdits'
-import { useDocuments } from '@/stores/documents'
+import { useDocumentIsInFront } from '@/stores/documents'
 import { isClipMonitorShown, useMonitorPair } from '@/stores/monitorPair'
 import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { exportOtio, exportOtioz, exportStems } from '@/app/otioExport'
@@ -28,9 +28,7 @@ export type AudioDocumentProps = { documentId: string }
  */
 export function AudioDocument({ documentId }: AudioDocumentProps) {
   const sequence = useSequences(state => sequenceOf(state, documentId))
-  // Dockview keeps hidden tabs mounted: without this every open take would answer the space bar
-  // at once, and the playback token would arbitrate a fight nobody started.
-  const active = useDocuments(state => state.activeId === documentId)
+  const active = useDocumentIsInFront(documentId)
 
   // Both halves, as closing this document already asks of both: a take's file holds the chain of
   // edits over its sample AND the montage under it, and either alone leaves work unaccounted for.

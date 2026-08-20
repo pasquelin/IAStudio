@@ -1,13 +1,14 @@
 import { useCallback, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/helpers/cn'
+import type { ContextMenuAt } from '@/hooks/useContextMenu'
 import { useDismiss } from '@/hooks/useDismiss'
 import { useMenuKeys } from '@/hooks/useMenuKeys'
 import { MENU_SURFACE } from './styles'
 
 export type ContextMenuProps = {
-  /** Where the pointer was. Viewport coordinates, as a right-click reports them. */
-  at: { x: number; y: number }
+  /** Where the pointer was — `useContextMenu` is what produces it. */
+  at: ContextMenuAt
   onClose: () => void
   children: ReactNode
 }

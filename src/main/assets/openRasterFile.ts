@@ -15,6 +15,7 @@ import {
   type OraSurface,
 } from '@shared/domain/openRaster'
 import { attribute, escapeXml, unescapeXml } from '@shared/domain/xmlText'
+import { clamp } from '@shared/numeric'
 
 const MIMETYPE_PATH = 'mimetype'
 const THUMBNAIL_PATH = 'Thumbnails/thumbnail.png'
@@ -131,7 +132,7 @@ function opacityIn(text: string): number {
   // through the guard below it would make every layer of a writer that omits opacity invisible.
   if (text === '') return 1
   const value = Number(text)
-  return Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 1
+  return Number.isFinite(value) ? clamp(value, 0, 1) : 1
 }
 
 function baseFrom(tag: string): OraNodeBase {

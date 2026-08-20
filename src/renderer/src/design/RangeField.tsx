@@ -3,8 +3,9 @@ import { bound } from '@shared/numeric'
 import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
 import { PropertyLabel } from './PropertyLabel'
+import { SliderHandle } from './SliderHandle'
 import { SliderRail } from './SliderRail'
-import { FIELD_ROW, SLIDER_HANDLE, SLIDER_TRACK, type GestureProps } from './styles'
+import { FIELD_ROW, SLIDER_TRACK, type GestureProps } from './styles'
 
 /** Both ends of one value, kept in order. Declared here rather than imported from an engine:
  * `design/` describes controls, and a field that reached into a workspace would tie the two. */
@@ -16,10 +17,7 @@ export type RangeValue = { min: number; max: number }
  *
  * At module scope because it depends on nothing, and this field sits on the drag path twice.
  */
-const HANDLE = cn(
-  SLIDER_HANDLE,
-  'pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto',
-)
+const HANDLE = 'pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto'
 
 export type RangeFieldProps = GestureProps & {
   label: string
@@ -83,30 +81,28 @@ export function RangeField({
       >
         <SliderRail from={value.min} to={value.max} min={min} max={max} />
 
-        <input
-          type="range"
-          aria-label={fromLabel}
-          data-sc={scId && `field:${scId}.min`}
+        <SliderHandle
+          label={fromLabel}
+          scId={scId && `${scId}.min`}
           value={value.min}
           min={min}
           max={max}
           step={step}
-          onChange={event => set('min', Number(event.target.value))}
-          onFocus={() => onGestureStart?.()}
-          onBlur={() => onGestureEnd?.()}
+          onChange={raw => set('min', raw)}
+          onGestureStart={onGestureStart}
+          onGestureEnd={onGestureEnd}
           className={cn(HANDLE, fromOnTop && 'z-1')}
         />
-        <input
-          type="range"
-          aria-label={toLabel}
-          data-sc={scId && `field:${scId}.max`}
+        <SliderHandle
+          label={toLabel}
+          scId={scId && `${scId}.max`}
           value={value.max}
           min={min}
           max={max}
           step={step}
-          onChange={event => set('max', Number(event.target.value))}
-          onFocus={() => onGestureStart?.()}
-          onBlur={() => onGestureEnd?.()}
+          onChange={raw => set('max', raw)}
+          onGestureStart={onGestureStart}
+          onGestureEnd={onGestureEnd}
           className={HANDLE}
         />
       </div>

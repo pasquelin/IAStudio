@@ -1,5 +1,4 @@
 import {
-  useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
@@ -8,6 +7,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
 import { formatDecimal, parseDecimal } from '@/helpers/format'
+import { usePointerDrag } from '@/hooks/usePointerDrag'
 import { bound, type NumericBounds } from '@shared/numeric'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
@@ -63,7 +63,6 @@ const FAST_MULTIPLIER = 10
  * whether Shift was down at the last move, since letting go of it has to rebase the drag.
  */
 type Drag = {
-  pointerId: number
   x: number
   from: number
   last: number
@@ -93,7 +92,7 @@ export function NumberField({
   onReset,
   action,
 }: NumberFieldProps) {
-  const drag = useRef<Drag | null>(null)
+  const drag = usePointerDrag<Drag>()
   /**
    * What is in the field while it is being typed in. Held apart from `value` so a half-written
    * number survives the render its own keystroke causes: "0." parses to 0, and echoing the
@@ -123,21 +122,19 @@ export function NumberField({
   /** `scrubbing` from the first pixel on the label, from `SCRUB_SLACK` on the field. */
   const startDrag = (event: ReactPointerEvent<Element>, scrubbing: boolean): void => {
     if (event.button !== PRIMARY_BUTTON) return
-    event.currentTarget.setPointerCapture(event.pointerId)
-    drag.current = {
-      pointerId: event.pointerId,
+    drag.start(event, {
       x: event.clientX,
       from: value,
       last: value,
       scrubbing,
       fast: event.shiftKey,
-    }
+    })
     if (scrubbing) onGestureStart?.()
   }
 
   const onPointerMove = (event: ReactPointerEvent<Element>): void => {
-    const started = drag.current
-    if (!started || started.pointerId !== event.pointerId) return
+    const started = drag.matching(event)
+    if (!started) return
 
     if (!started.scrubbing) {
       if (Math.abs(event.clientX - started.x) < SCRUB_SLACK) return
@@ -186,11 +183,7 @@ export function NumberField({
   }
 
   const endDrag = (event: ReactPointerEvent<Element>): void => {
-    const started = drag.current
-    if (started?.pointerId !== event.pointerId) return
-    drag.current = null
-    event.currentTarget.releasePointerCapture(event.pointerId)
-    if (started.scrubbing) onGestureEnd?.()
+    if (drag.end(event)?.scrubbing) onGestureEnd?.()
   }
 
   /**
@@ -202,7 +195,7 @@ export function NumberField({
     // A release the press never armed — a right button — is not a click on this field, and
     // focusing on it would answer a gesture `onPointerDown` declined.
     if (event.button !== PRIMARY_BUTTON) return
-    const scrubbed = drag.current?.scrubbing === true
+    const scrubbed = drag.held()?.scrubbing === true
     const field = event.currentTarget
     endDrag(event)
     if (!scrubbed) field.focus()

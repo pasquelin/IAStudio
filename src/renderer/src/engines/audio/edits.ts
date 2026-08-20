@@ -1,5 +1,5 @@
 import { isRecord, readNumber, readPositive, readString } from '@shared/guards'
-import { clamp } from '@shared/numeric'
+import { clamp, clampAtLeast } from '@shared/numeric'
 import type { Command } from '@/engines/core/history'
 import {
   CLIP_EDGES,
@@ -232,10 +232,10 @@ export function replayEdits(
 /** A region clamped to the take it belongs to, or nothing when it has collapsed. */
 export function clampRegion(region: Region, data: AudioData): Region | null {
   const total = durationOf(data)
-  // Not `clamp`: `durationOf` divides by a sample rate, so a negative total is not ruled out by
-  // the expression itself, and `clamp` would then answer that negative bound instead of zero.
-  const from = Math.max(0, Math.min(total, region.from))
-  const to = Math.max(from, Math.min(total, region.to))
+  // `durationOf` divides by a sample rate, so a negative total is not ruled out by the expression
+  // itself — hence the floor-first bound rather than `clamp`.
+  const from = clampAtLeast(region.from, 0, total)
+  const to = clampAtLeast(region.to, from, total)
   return to > from ? { from, to } : null
 }
 
