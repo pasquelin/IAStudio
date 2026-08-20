@@ -2122,14 +2122,39 @@ export class CanvasEngine {
       const armed = this.activeLayer()
       const frame = this.hoverBox()
       const grip = frame && this.chromeAt(frame, point)
-      if (armed?.kind === 'text' && grip?.kind === 'handle') {
+      if (armed?.kind === 'text' && grip) {
+        this.options.layers.beginDrag()
+        // The ring outside a corner turns the caption, exactly as it turns any other layer: a box
+        // that could be pulled but never turned was the one grip of the eight that lied.
+        this.gesture =
+          grip.kind === 'handle'
+            ? {
+                kind: 'textBox',
+                id: armed.id,
+                handle: grip.id,
+                box: armed.box,
+                origin: armed.transform,
+              }
+            : {
+                kind: 'rotate',
+                id: armed.id,
+                center: centerOf(frame.corners),
+                from: point,
+                origin: armed.transform,
+              }
+        return
+      }
+
+      // Held, the caption moves under the hand rather than taking the click — the reflex every
+      // type tool of the trade answers to, and the one that lets a block be placed while it is
+      // still being typed.
+      if (event.metaKey && armed?.kind === 'text') {
         this.options.layers.beginDrag()
         this.gesture = {
-          kind: 'textBox',
+          kind: 'move',
           id: armed.id,
-          handle: grip.id,
-          box: armed.box,
-          origin: armed.transform,
+          from: point,
+          origin: { x: armed.transform.x, y: armed.transform.y },
         }
         return
       }

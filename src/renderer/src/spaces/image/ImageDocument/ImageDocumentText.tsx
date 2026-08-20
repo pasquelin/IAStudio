@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { toDegrees } from '@shared/domain/angles'
 import { familyStack } from '@/engines/canvas/canvasFonts'
 import { setLayerText } from '@/engines/canvas/commands'
@@ -37,6 +37,12 @@ export function ImageDocumentText({
 }: ImageDocumentTextProps) {
   const field = useRef<HTMLTextAreaElement>(null)
   const edit = useDocumentEdit(useCanvases, documentId)
+  /**
+   * Whether ⌘ is down. Held, the field stops taking the pointer so the canvas underneath gets
+   * the drag and moves the block — the reflex Photoshop, Illustrator and InDesign all answer to,
+   * and the only way to place a caption without first stopping typing it.
+   */
+  const [passing, setPassing] = useState(false)
 
   // The whole of a typing session is ONE history entry: a command per keystroke would evict
   // everything before it from the stack.
@@ -47,6 +53,22 @@ export function ImageDocumentText({
     store.beginGesture(documentId)
     return () => store.endGesture(documentId)
   }, [documentId])
+
+  useEffect(() => {
+    const read = (event: globalThis.KeyboardEvent): void => setPassing(event.metaKey)
+    // `blur` too: the window losing focus never delivers the keyup, and the field would stay
+    // deaf to the pointer with nothing on screen saying why.
+    const drop = (): void => setPassing(false)
+
+    window.addEventListener('keydown', read)
+    window.addEventListener('keyup', read)
+    window.addEventListener('blur', drop)
+    return () => {
+      window.removeEventListener('keydown', read)
+      window.removeEventListener('keyup', read)
+      window.removeEventListener('blur', drop)
+    }
+  }, [])
 
   const at = toScreen(viewport, layer.transform)
   const style: CSSProperties = {
@@ -63,6 +85,8 @@ export function ImageDocumentText({
     letterSpacing: (layer.tracking / 1000) * layer.size * viewport.scale,
     textAlign: layer.align,
     color: colourOf(layer.color),
+    // Held, the drag belongs to the canvas under this field — the focus stays here either way.
+    pointerEvents: passing ? 'none' : 'auto',
   }
 
   const finish = (event: KeyboardEvent<HTMLTextAreaElement>): void => {

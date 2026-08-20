@@ -28,6 +28,7 @@ import { FALLBACK_COLORS, OVERLAY_TOKENS } from './CanvasEngine'
 import type { CanvasTool } from './canvasTool'
 import type { CanvasSelection } from './canvasSelection'
 import type { Point, Size } from '../core/geometry'
+import { ROTATE_REACH } from './handles'
 import { RULER_SIZE } from './CanvasOverlay'
 import { DEFAULT_VIEW, toDocument, type Viewport } from './viewport'
 
@@ -2298,6 +2299,39 @@ describe('captions', () => {
       width: DEFAULT_TEXT_BOX.width - 50,
       height: DEFAULT_TEXT_BOX.height - 50,
     })
+  })
+
+  /**
+   * The ring outside a corner turns a caption as it turns any other layer. It was the one grip
+   * of the eight that lied: drawn, hovered, and answered by nothing.
+   */
+  it('turns the caption by the ring outside a corner', async () => {
+    const { engine, host, layers } = await mounted(armedCaption(), 'text')
+    engine.setView(BARE_VIEW)
+
+    // Well outside the north-west corner, which is where the rotation zone reaches.
+    press(host, 10 - ROTATE_REACH / 2, 20 - ROTATE_REACH / 2)
+    drag(host, 200, 300)
+
+    expect(layers.some(call => call.startsWith('transform:'))).toBe(true)
+  })
+
+  /**
+   * ⌘ held moves the block instead of taking the click — the reflex Photoshop, Illustrator and
+   * InDesign all answer to, and the only way to place a caption without stopping typing it.
+   */
+  it('moves the caption under a held command key rather than editing it', async () => {
+    const { engine, host, layers, captions } = await mounted(armedCaption(), 'text')
+    engine.setView(BARE_VIEW)
+
+    host.dispatchEvent(
+      new PointerEvent('pointerdown', { clientX: 100, clientY: 60, metaKey: true }),
+    )
+    drag(host, 300, 260)
+
+    expect(layers.some(call => call.startsWith('translate:'))).toBe(true)
+    // And it is NOT read as a click on the caption, which would have opened the editor instead.
+    expect(captions).toEqual([])
   })
 
   it('opens a fresh box beside a caption, not on it', async () => {

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_CANVAS, textLayer, type TextLayer } from '@/engines/canvas/canvasState'
@@ -58,6 +58,31 @@ describe('ImageDocumentText', () => {
     expect(field().style.top).toBe('100px')
     expect(field().style.width).toBe('200px')
     expect(field().style.fontSize).toBe('96px')
+  })
+
+  /**
+   * The field lies over the canvas, so it takes every drag — including the one meant to move the
+   * block. Held, ⌘ hands the pointer back to the canvas underneath without giving up the focus.
+   */
+  it('hands the pointer back to the canvas while the command key is held', () => {
+    show()
+    expect(field().style.pointerEvents).toBe('auto')
+
+    fireEvent.keyDown(window, { key: 'Meta', metaKey: true })
+    expect(field().style.pointerEvents).toBe('none')
+
+    fireEvent.keyUp(window, { key: 'Meta', metaKey: false })
+    expect(field().style.pointerEvents).toBe('auto')
+  })
+
+  // The window losing focus never delivers the keyup: the field would stay deaf to the pointer.
+  it('takes the pointer back when the window loses focus mid-hold', () => {
+    show()
+    fireEvent.keyDown(window, { key: 'Meta', metaKey: true })
+
+    fireEvent.blur(window)
+
+    expect(field().style.pointerEvents).toBe('auto')
   })
 
   // A caption has lines: Enter makes one, and only Escape ends the session.

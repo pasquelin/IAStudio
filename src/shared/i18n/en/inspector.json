@@ -93,7 +93,7 @@
       "target": "Target",
       "roughness": "Roughness",
       "metalness": "Metalness",
-    "uvScale": "Tiling",
+      "uvScale": "Tiling",
       "map": "Texture",
       "opacity": "Opacity",
       "normalMap": "Normals",

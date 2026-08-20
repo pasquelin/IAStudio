@@ -64,10 +64,12 @@ export function resizedBox(handle: HandleId, box: Size, local: Point): Rect {
   const north = handle.startsWith('n')
   const south = handle.startsWith('s')
 
-  const left = west ? Math.min(local.x, box.width - MIN_BOX) : 0
-  const top = north ? Math.min(local.y, box.height - MIN_BOX) : 0
-  const right = east ? Math.max(local.x, left + MIN_BOX) : box.width
-  const bottom = south ? Math.max(local.y, top + MIN_BOX) : box.height
+  // Rounded: a box is a count of document pixels, and a drag at 57 % zoom otherwise lands on
+  // 627.6371549601888 — a number the panel shows in full and nobody can read back.
+  const left = west ? Math.round(Math.min(local.x, box.width - MIN_BOX)) : 0
+  const top = north ? Math.round(Math.min(local.y, box.height - MIN_BOX)) : 0
+  const right = east ? Math.round(Math.max(local.x, left + MIN_BOX)) : box.width
+  const bottom = south ? Math.round(Math.max(local.y, top + MIN_BOX)) : box.height
 
   return { x: left, y: top, width: right - left, height: bottom - top }
 }
