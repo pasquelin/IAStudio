@@ -675,12 +675,15 @@ describe('the line a pane draws above what it shows', () => {
 const spellsOutHandle = spellsOut(SLIDER_HANDLE.split(' '))
 
 /**
- * The two files that may hold a `<input type="range">`, and the rule is about the RAIL: the
- * studio drew three of them — a native track, a hand-made one and daisyUI's — before this list
- * existed, and each was written by a site reaching for the input on its own. A fourth would
- * arrive the same way and pass every other guard, each of them reading tokens it wears properly.
+ * The one file that may hold a `<input type="range">`, and the rule is about the RAIL: the studio
+ * drew three of them — a native track, a hand-made one and daisyUI's — before this list existed,
+ * and each was written by a site reaching for the input on its own. A fourth would arrive the same
+ * way and pass every other guard, each of them reading tokens it wears properly.
+ *
+ * It named two until `SliderHandle` was pulled out of them: `Slider` and `RangeField` now compose
+ * it, and a range input is written in exactly one place.
  */
-const SLIDER_OWNERS = ['./RangeField.tsx', './Slider.tsx']
+const SLIDER_OWNERS = ['./SliderHandle.tsx']
 
 describe('the slider of the studio', () => {
   it('is the only kind of input allowed to be a range', () => {
@@ -691,12 +694,21 @@ describe('the slider of the studio', () => {
     expect(offenders).toEqual([])
   })
 
-  it('is written by the two that own it, so the rule cannot pass on a studio without sliders', () => {
+  it('is written by the one that owns it, so the rule cannot pass on a studio without sliders', () => {
     const owners = WRITTEN_SOURCES.filter(([, source]) => source.includes('type="range"')).map(
       ([path]) => path,
     )
 
     expect(owners.sort()).toEqual(SLIDER_OWNERS)
+  })
+
+  /** Named rather than counted. **Blind**: raw text, so a mention in a comment reads as a wearer. */
+  it('is worn by the two it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(([, source]) => /\bSliderHandle\b/.test(source))
+      .map(([path]) => path)
+      .filter(path => !SLIDER_OWNERS.includes(path))
+
+    expect(wearing.sort()).toEqual(['./RangeField.tsx', './Slider.tsx'])
   })
 
   it('wears the shared handle rather than writing it out again', () => {

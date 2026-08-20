@@ -9,6 +9,23 @@ export function getBridge(): StudioBridge | null {
   return typeof studio === 'undefined' ? null : studio
 }
 
+/** Nothing was subscribed to, so unsubscribing is a no-op. One identity, shared by every store. */
+const NOTHING_TO_STOP = (): void => {}
+
+/**
+ * A store's `connect`, for the seven that need the bridge to subscribe to anything. Without one —
+ * a test, a plain browser — there is nothing to listen to and nothing to unsubscribe from, which
+ * is the answer, not a failure.
+ */
+export function connectThroughBridge(
+  join: (bridge: StudioBridge) => Promise<() => void>,
+): () => Promise<() => void> {
+  return async () => {
+    const bridge = getBridge()
+    return bridge ? join(bridge) : NOTHING_TO_STOP
+  }
+}
+
 /**
  * The version half of the bridge, answered as something that may not be there.
  *

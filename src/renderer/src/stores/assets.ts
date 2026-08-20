@@ -19,7 +19,7 @@ import {
 } from '@shared/domain/assetName'
 import { nameFailureOf } from '@shared/domain/fileName'
 import { isRecord } from '@shared/guards'
-import { getBridge } from '@/services/bridge'
+import { connectThroughBridge, getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 
 type AssetsState = {
@@ -337,13 +337,11 @@ export const useAssets = create<AssetsState>()(
           return reading
         },
 
-        connect: () => {
-          const bridge = getBridge()
-          // Through `invalidate` like every other site that says the catalogue moved, so the
-          // coalescing holds: an extraction writing six pictures is one read, not six.
-          const stop = bridge?.assets.onChanged(() => get().invalidate())
-          return Promise.resolve(stop ?? (() => {}))
-        },
+        // Through `invalidate` like every other site that says the catalogue moved, so the
+        // coalescing holds: an extraction writing six pictures is one read, not six.
+        connect: connectThroughBridge(async bridge =>
+          bridge.assets.onChanged(() => get().invalidate()),
+        ),
 
         invalidate: () => {
           if (pending) clearTimeout(pending)

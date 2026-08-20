@@ -10,7 +10,7 @@ import { useRemeasure } from '@/hooks/useRemeasure'
 import { useRowHeight, type RowHeight } from '@/hooks/useRowHeight'
 import { rowDrag } from '../rowDrag'
 import { CollectionCell } from './CollectionCell'
-import { GAP, PREFETCH_ROWS } from '../virtual'
+import { focusVirtualCell, GAP, PREFETCH_ROWS } from '../virtual'
 
 /** Breathing room between list rows. Rows that touch read as one block rather than a list. */
 const ROW_GAP = 4
@@ -234,18 +234,14 @@ export function Collection<T extends { id: string }>({
     onSelect?.(item, ids, mode)
   }
 
-  const focusCell = (index: number): void => {
-    const bounded = Math.max(0, Math.min(index, items.length - 1))
-    virtualizer.scrollToIndex(Math.floor(bounded / columns))
-
-    const focus = (): void => {
-      scroller.current?.querySelector<HTMLElement>(`[data-cell="${bounded}"]`)?.focus()
-    }
-    // Twice: the cell is already mounted in the common case, and only a scroll that revealed a
-    // new row needs the frame the virtualizer takes to render it.
-    focus()
-    requestAnimationFrame(focus)
-  }
+  const focusCell = (index: number): void =>
+    focusVirtualCell(index, {
+      scroller: scroller.current,
+      scrollToIndex: row => virtualizer.scrollToIndex(row),
+      count: items.length,
+      attribute: 'data-cell',
+      columns,
+    })
 
   const onCellKeyDown = (index: number, event: KeyboardEvent): void => {
     if (event.key === 'ArrowRight') focusCell(index + 1)

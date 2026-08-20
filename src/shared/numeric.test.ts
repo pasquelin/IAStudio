@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bound, clamp, percentIn, snap } from './numeric'
+import { bound, clamp, clampAtLeast, percentIn, snap } from './numeric'
 
 describe('clamp', () => {
   it('leaves a value inside its bounds alone', () => {
@@ -9,6 +9,19 @@ describe('clamp', () => {
   it('holds a value at the bound it crossed', () => {
     expect(clamp(-3, 0, 10)).toBe(0)
     expect(clamp(30, 0, 10)).toBe(10)
+  })
+})
+
+describe('clampAtLeast', () => {
+  it('holds a value at the bound it crossed, like clamp', () => {
+    expect(clampAtLeast(-3, 0, 10)).toBe(0)
+    expect(clampAtLeast(30, 0, 10)).toBe(10)
+  })
+
+  // The whole reason it exists: a window narrower than what it shows, a clip shorter than its fade.
+  it('answers the floor when the bounds cross, where clamp answers the ceiling', () => {
+    expect(clampAtLeast(50, 0, -20)).toBe(0)
+    expect(clamp(50, 0, -20)).toBe(-20)
   })
 })
 

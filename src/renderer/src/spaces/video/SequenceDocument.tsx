@@ -13,7 +13,7 @@ import {
   type Us,
 } from '@/engines/timeline/timelineState'
 import { clamp } from '@shared/numeric'
-import { useDocuments } from '@/stores/documents'
+import { useDocumentIsInFront } from '@/stores/documents'
 import { isClipMonitorShown, useMonitorPair } from '@/stores/monitorPair'
 import { playbackOf, usePlayback } from '@/stores/playback'
 import { mirrorMessageOf, openMirrorChannel } from './mirrorChannel'
@@ -34,9 +34,7 @@ export type SequenceDocumentProps = { documentId: string }
 export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const { t } = useTranslation()
   const sequence = useSequences(state => sequenceOf(state, documentId))
-  // Dockview keeps hidden tabs mounted: without this every open sequence would answer the
-  // space bar at once, and the playback token would arbitrate a fight nobody started.
-  const active = useDocuments(state => state.activeId === documentId)
+  const active = useDocumentIsInFront(documentId)
 
   useDocumentTitle(
     documentId,

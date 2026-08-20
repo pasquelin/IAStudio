@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { formatUnits } from '@/usage/format'
+import { formatUnits } from '@/helpers/format'
 import { INTERACTIVE_REQUESTS_PER_MINUTE, type CostEstimate } from '@shared/domain/job'
 import type { FieldDescriptor } from '@shared/domain/model'
 import type { FormValues } from '@/helpers/dynamicForm'

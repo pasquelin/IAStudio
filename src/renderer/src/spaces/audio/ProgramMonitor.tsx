@@ -18,16 +18,12 @@ import { paintOn } from '@/engines/core/canvas2d'
 import type { Size } from '@/engines/core/geometry'
 import { paintProgram, programViewport, readProgramPalette } from '@/engines/timeline/programWave'
 import { xToTime, type Viewport } from '@/engines/timeline/timelineGeometry'
-import { clampViewport, revealTime } from '@/engines/timeline/viewport'
+import { clampViewport } from '@/engines/timeline/viewport'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
-import {
-  sequenceDuration,
-  type Clip,
-  type SequenceState,
-  type Us,
-} from '@/engines/timeline/timelineState'
+import { useViewFollowsHead } from '@/hooks/useViewFollowsHead'
+import { sequenceDuration, type SequenceState, type Us } from '@/engines/timeline/timelineState'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
-import { usePeaks } from '@/stores/peaks'
+import { peaksOf, usePeaks } from '@/stores/peaks'
 import { OutputMeter } from './OutputMeter'
 import { SpectrumBand } from './SpectrumBand'
 import type { SoundTransport } from '@/hooks/useSoundTransport'
@@ -81,12 +77,6 @@ export function ProgramMonitor({ sequence, transport, onSeek, clipHalf }: Progra
   // Read on paint rather than subscribed to: a waveform arriving is a repaint, never a render.
   const latest = useRef(sequence)
 
-  const peaksOf = useCallback((clip: Clip): Float32Array | null => {
-    const peaks = usePeaks.getState()
-    peaks.request(clip.assetId)
-    return peaks.byAsset[clip.assetId] ?? null
-  }, [])
-
   // Read on paint like the montage beside it, and for the same reason: what a wheel changes is
   // the picture, never the markup.
   const view = useRef(zoom)
@@ -125,7 +115,7 @@ export function ProgramMonitor({ sequence, transport, onSeek, clipHalf }: Progra
         viewportFor(size.width),
       )
     })
-  }, [peaksOf, curves, viewportFor])
+  }, [curves, viewportFor])
 
   /**
    * The view sits in this effect beside the montage, and that is load-bearing: it is read on
@@ -179,17 +169,13 @@ export function ProgramMonitor({ sequence, transport, onSeek, clipHalf }: Progra
     { rows: false },
   )
 
-  /**
-   * Playback drags the view along, but only once the head has left it — and only while zoomed in.
-   * Fitted to the width there is nowhere to scroll to, and `revealTime` hands the same viewport
-   * back rather than writing one.
-   */
-  useEffect(() => {
-    if (!view.current || box.current.width === 0) return
-
-    const revealed = revealTime(view.current, sequence.playhead, box.current.width)
-    if (revealed !== view.current) setZoom(revealed)
-  }, [sequence.playhead])
+  // Only while zoomed in: fitted to the width there is nowhere to scroll to, and a null view is
+  // what says the montage is whole on screen.
+  useViewFollowsHead(
+    sequence.playhead,
+    () => view.current && { viewport: view.current, width: box.current.width },
+    setZoom,
+  )
 
   const onTool = (id: string): void => {
     if (id === 'rewind') return transport.rewind()

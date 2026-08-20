@@ -5,11 +5,17 @@ import type { ModelSummary } from '@shared/domain/model'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { cn } from '@/helpers/cn'
 import { MediaTile } from '@/design/MediaTile'
+import { TILE_MARK } from '@/design/styles'
 
-/** The tile's corner label: a standing, or the reason the model cannot be picked. */
+/**
+ * The tile's corner label: a standing, or the reason the model cannot be picked. On the plate
+ * every other mark sits on — `px-1` over its own padding, this one carrying words rather than a
+ * glyph.
+ */
 const BADGE = cn(
-  'bg-chassis/75 text-text absolute top-1 right-1 max-w-[calc(100%-0.5rem)]',
-  'truncate rounded-(--radius-sc-sm) px-1 py-px text-micro leading-tight',
+  TILE_MARK,
+  'text-text absolute top-1 right-1 max-w-[calc(100%-0.5rem)]',
+  'truncate px-1 text-micro leading-tight',
 )
 
 /**

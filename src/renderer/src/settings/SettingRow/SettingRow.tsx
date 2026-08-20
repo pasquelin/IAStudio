@@ -1,10 +1,8 @@
-import { mdiRestore } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { defaultAt } from '@shared/domain/settingsPath'
 import { descriptorAt, type SettingDescriptor } from '@shared/domain/settingsRegistry'
-import { UiIcon } from '@/design/UiIcon'
-import { TIP_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from '../SettingLine'
+import { SettingRestoreButton } from '../SettingRestoreButton'
 import { useSettingsDraft, useSettingValue } from '@/stores/settingsDraft'
 import { WINDOW_HELP } from '@/design/windowStyles'
 import { SettingRowControl } from './SettingRowControl'
@@ -66,19 +64,10 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
         onChange={next => stage(descriptor.path, next)}
       />
 
-      <button
-        type="button"
-        // The studio's tooltip rather than `title`: the native one comes with the OS delay and
-        // none of the theme, and this window now mounts the shared host like every other.
-        {...TIP_LEFT(t('settings.restoreDefault'), false, t('settings.restoreDefaultHint'))}
-        // Kept in place rather than unmounted: a button appearing between the control and the
-        // edge would shift the whole row the moment a value is touched.
-        className="btn btn-ghost btn-xs btn-square"
-        disabled={!restorable}
-        onClick={() => stage(descriptor.path, fallback)}
-      >
-        <UiIcon path={mdiRestore} size={14} className={restorable ? '' : 'opacity-0'} />
-      </button>
+      <SettingRestoreButton
+        restorable={restorable}
+        onRestore={() => stage(descriptor.path, fallback)}
+      />
     </SettingLine>
   )
 }

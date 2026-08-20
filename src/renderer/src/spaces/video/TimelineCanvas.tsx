@@ -35,13 +35,7 @@ import {
   type Clip,
   type SequenceState,
 } from '@/engines/timeline/timelineState'
-import {
-  clampViewport,
-  fitToWidth,
-  revealTime,
-  zoomAt,
-  ZOOM_STEP,
-} from '@/engines/timeline/viewport'
+import { clampViewport, fitToWidth, zoomAt, ZOOM_STEP } from '@/engines/timeline/viewport'
 import { assetIdFromDrag, carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
 import { cn } from '@/helpers/cn'
 import { showContextMenu } from '@/helpers/contextMenu'
@@ -50,10 +44,11 @@ import { carriesScene, droppedSceneId } from '@/helpers/sceneDrag'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
+import { useViewFollowsHead } from '@/hooks/useViewFollowsHead'
 import { assetsById, useAssets } from '@/stores/assets'
 import { documentExportName, useDocuments } from '@/stores/documents'
 import { runTask } from '@/stores/tasks'
-import { usePeaks } from '@/stores/peaks'
+import { peaksOf, usePeaks } from '@/stores/peaks'
 import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { useSelection } from '@/stores/selection'
 import { addSceneToSequence, sequenceOf, useSequences } from '@/stores/sequences'
@@ -131,17 +126,6 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
     [byId, stored],
   )
 
-  const peaksOf = useCallback((clip: Clip): Float32Array | null => {
-    // Read out of the store rather than subscribed to: the component has no use for the table,
-    // only the canvas has, and subscribing to it re-rendered the strip once per sound of a
-    // project as the waveforms came back.
-    const peaks = usePeaks.getState()
-    // Asked for while painting, answered on a later frame: the fetch is one round trip, and
-    // the clip draws as a rectangle until it lands.
-    peaks.request(clip.assetId)
-    return peaks.byAsset[clip.assetId] ?? null
-  }, [])
-
   // A trim stops where the media does, and only the catalogue knows how far that is.
   const mediaExtents = useCallback(
     (assetId: string): MediaExtent => mediaExtentOf(byId.get(assetId) ?? null),
@@ -170,7 +154,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
   useEffect(() => {
     latest.current = { sequence, viewport, options: { labelOf: nameOf, peaksOf, posterOf } }
     paint()
-  }, [sequence, viewport, nameOf, peaksOf, posterOf, paint])
+  }, [sequence, viewport, nameOf, posterOf, paint])
 
   const setViewport = useCallback(
     (next: Viewport): void => {
@@ -180,23 +164,11 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
     [documentId],
   )
 
-  // The strip follows the playhead out of the frame — zoomed in, playing ran off the right edge
-  // within seconds and the montage stayed on a moment nobody was watching any more.
-  //
-  // On the PLAYHEAD alone, and the viewport read out of the ref rather than depended on: woken
-  // by the view as well, this pulled the strip back onto the playhead the instant the hand tool
-  // dragged it away, and chased its own clamped write when there was nowhere left to scroll.
-  useEffect(() => {
-    // A strip that has not been laid out yet says nothing about what is on screen, and every
-    // instant reads as off-frame against a width of zero.
-    if (size.current.width === 0) return
-
-    const current = latest.current.viewport
-    // Identity, which `revealTime` guarantees while the playhead is inside the frame: a montage
-    // that fits on screen must not scroll at all.
-    const revealed = revealTime(current, sequence.playhead, size.current.width)
-    if (revealed !== current) setViewport(revealed)
-  }, [sequence.playhead, setViewport])
+  useViewFollowsHead(
+    sequence.playhead,
+    () => ({ viewport: latest.current.viewport, width: size.current.width }),
+    setViewport,
+  )
 
   // Native and non-passive: React delivers `wheel` passively, where `preventDefault` is a no-op
   // and the whole window scrolls behind the timeline instead.

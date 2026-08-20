@@ -1,7 +1,14 @@
+import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor, DocumentWrite } from '@shared/domain/document'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { documentForAsset, documentsIn, panelIds, useDocuments } from './documents'
+import {
+  documentForAsset,
+  documentsIn,
+  panelIds,
+  useDocumentIsInFront,
+  useDocuments,
+} from './documents'
 import { showPanels } from './layout-fixtures'
 import { useLayouts } from './layouts'
 
@@ -545,5 +552,25 @@ describe('sharing a listing', () => {
 
     expect(list).toHaveBeenCalledTimes(2)
     expect(useDocuments.getState().stored).toHaveLength(1)
+  })
+
+  /**
+   * What the six document components arm their menus and their shortcut scopes on. A hidden tab
+   * stays mounted, so an answer of `true` for anything but the tab in front is two documents
+   * answering one press of the same key.
+   */
+  it('tells the tab in front from every other open one', () => {
+    useDocuments.setState({ documents: {}, activeId: 'doc-front', recent: {} })
+
+    const front = renderHook(() => useDocumentIsInFront('doc-front'))
+    const behind = renderHook(() => useDocumentIsInFront('doc-behind'))
+
+    expect(front.result.current).toBe(true)
+    expect(behind.result.current).toBe(false)
+
+    act(() => useDocuments.getState().activate('doc-behind'))
+
+    expect(front.result.current).toBe(false)
+    expect(behind.result.current).toBe(true)
   })
 })

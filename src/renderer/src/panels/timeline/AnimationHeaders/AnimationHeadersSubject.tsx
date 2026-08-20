@@ -11,9 +11,10 @@ import { newId } from '@/helpers/ids'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { useAnimationViews } from '@/stores/animationView'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
-import { useSceneViews, sceneViewOf } from '@/stores/sceneViews'
+import { useScenePlayhead } from '@/stores/sceneViews'
 import { TimelineRow } from '../TimelineRow/TimelineRow'
 import type { RowReorder } from '../TimelineRow/rowReorder'
+import { TrackFlagButton } from '../TrackFlagButton'
 import { isFlagOnAll, TRACK_FLAGS } from '../trackFlags'
 
 /** A row id back into the pair its channels are addressed by — the inverse of `subjectKey`. */
@@ -44,7 +45,7 @@ export function AnimationHeadersSubject({
   shown: readonly string[]
 }) {
   const { t } = useTranslation()
-  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
+  const playhead = useScenePlayhead(documentId)
   const fps = useScenes(state => sceneOf(state, documentId).animation.fps)
 
   const at = snapToFrame(playhead, fps)
@@ -116,17 +117,13 @@ export function AnimationHeadersSubject({
           onClick={key}
         />
         {TRACK_FLAGS.map(flag => (
-          <ToolButton
+          <TrackFlagButton
             key={flag.key}
-            icon={flag.iconFor(isFlagOnAll(row.tracks, flag))}
-            label={t(flag.labelKey, { name: row.name })}
+            flag={flag}
+            on={isFlagOnAll(row.tracks, flag)}
+            name={row.name}
             tooltip={TIP_RIGHT}
-            variant="header"
-            active={isFlagOnAll(row.tracks, flag)}
-            onClick={() => {
-              // Every channel takes the opposite of what they ALL are, so a mixed subject turns
-              // fully on rather than each channel flipping its own way.
-              const next = !isFlagOnAll(row.tracks, flag)
+            onToggle={next => {
               for (const track of row.tracks) {
                 writeAnimationTrack(documentId, track.id, current => ({
                   ...current,

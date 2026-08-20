@@ -206,7 +206,7 @@ export function lanesMoved(
   by: number,
 ): readonly ClipLane[] | null {
   const at = lanes.findIndex(lane => lane.id === id)
-  const to = Math.min(Math.max(at + by, 0), lanes.length - 1)
+  const to = clamp(at + by, 0, lanes.length - 1)
   if (at === -1 || to === at) return null
 
   const next = [...lanes]

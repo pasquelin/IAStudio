@@ -407,6 +407,15 @@ function asNameFailure(error: unknown): DocumentNameFailure {
 }
 
 /**
+ * Whether the centre is showing this document, subscribed. A hidden tab stays MOUNTED, so whatever
+ * answers the window rather than a document — a menu row, a shortcut scope, the video return — has
+ * to be armed on the tab in front and on no other.
+ */
+export function useDocumentIsInFront(documentId: string): boolean {
+  return useDocuments(state => state.activeId === documentId)
+}
+
+/**
  * Bumped per listing, so one that comes back late cannot install itself — and one PER QUESTION.
  *
  * A shared counter looked harmless and was not: the Explorer relists from a mount effect while

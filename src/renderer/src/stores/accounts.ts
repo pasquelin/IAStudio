@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { AccountFailure, AccountsResult, AccountSummary } from '@shared/domain/account'
 import type { StudioBridge } from '@shared/ipc'
-import { getBridge } from '@/services/bridge'
+import { connectThroughBridge, getBridge } from '@/services/bridge'
 import { useSettings } from './settings'
 
 /** Why an account could not be saved, including a refusal that never reached the main process. */
@@ -65,10 +65,7 @@ export const useAccounts = create<AccountsState>()((set, get) => {
   return {
     accounts: [],
 
-    connect: async () => {
-      const bridge = getBridge()
-      if (!bridge) return () => {}
-
+    connect: connectThroughBridge(async bridge => {
       let pushed = false
       const stop = bridge.accounts.onChange(accounts => {
         pushed = true
@@ -85,7 +82,7 @@ export const useAccounts = create<AccountsState>()((set, get) => {
       }
 
       return stop
-    },
+    }),
 
     add: (name, key, secret) => mutate(accounts => accounts.add(name, key, secret)),
 

@@ -1,5 +1,6 @@
 import type { SettingDescriptor } from '@shared/domain/settingsRegistry'
 import { SettingRow } from './SettingRow/SettingRow'
+import { SETTING_COLUMN } from './settingStyles'
 
 /**
  * A run of settings. Used both by a section showing what it owns and by the search showing
@@ -7,7 +8,7 @@ import { SettingRow } from './SettingRow/SettingRow'
  */
 export function SettingList({ descriptors }: { descriptors: readonly SettingDescriptor[] }) {
   return (
-    <div className="flex max-w-2xl flex-col">
+    <div className={SETTING_COLUMN}>
       {descriptors.map(descriptor => (
         <SettingRow key={descriptor.path} descriptor={descriptor} />
       ))}

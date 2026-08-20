@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
 import { HINT_RIGHT } from '@/helpers/tooltip'
+import type { ContextMenuAt } from '@/hooks/useContextMenu'
 import { DERIVE_LABELS, type ChannelDerivation } from './derivation'
 
 export type ChannelsSectionMenuProps = {
   derivation: ChannelDerivation
-  at: { x: number; y: number }
+  at: ContextMenuAt
   onClose: () => void
 }
 

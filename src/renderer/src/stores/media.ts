@@ -6,7 +6,7 @@ import {
   type MediaCapabilities,
 } from '@shared/domain/media'
 import { withoutKey } from '@/helpers/objects'
-import { getBridge } from '@/services/bridge'
+import { connectThroughBridge, getBridge } from '@/services/bridge'
 import { useAssets } from './assets'
 
 type MediaState = {
@@ -31,16 +31,13 @@ export const useMedia = create<MediaState>()((set, get) => ({
   progress: {},
   capabilities: { ffmpeg: true },
 
-  connect: async () => {
-    const bridge = getBridge()
-    if (!bridge) return () => {}
-
+  connect: connectThroughBridge(async bridge => {
     const stop = bridge.media.onProgress(progress => get().apply(progress))
     // Not awaited: the caller unsubscribes with what this returns, and holding it back for an
     // IPC round trip leaves a second subscription alive next to the first.
     void get().refreshCapabilities()
     return stop
-  },
+  }),
 
   refreshCapabilities: async () => {
     const capabilities = await getBridge()?.media.capabilities()

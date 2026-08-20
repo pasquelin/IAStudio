@@ -1,21 +1,24 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { TrackMenu } from './TrackMenu'
+import { ContextMenu } from '@/design/ContextMenu'
+import { TrackMenuRows } from './TrackMenuRows'
 
+/** At the pointer, as the header column raises them. */
 const open = (canRise = true, canFall = true): void => {
   render(
-    <TrackMenu
-      at={{ x: 10, y: 10 }}
-      documentId="seq-1"
-      trackId="t1"
-      canRise={canRise}
-      canFall={canFall}
-      onClose={vi.fn()}
-    />,
+    <ContextMenu at={{ x: 10, y: 10 }} onClose={vi.fn()}>
+      <TrackMenuRows
+        documentId="seq-1"
+        trackId="t1"
+        canRise={canRise}
+        canFall={canFall}
+        onClose={vi.fn()}
+      />
+    </ContextMenu>,
   )
 }
 
-describe('TrackMenu', () => {
+describe('TrackMenuRows', () => {
   it('says what each row does to the track rather than reading it back', () => {
     open()
 

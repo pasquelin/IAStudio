@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
 import { peaksFromSamples } from '@/engines/audio/audioData'
+import type { Clip } from '@/engines/timeline/timelineState'
 import { decodeAsset } from '@/helpers/audioDecode'
 import { getBridge } from '@/services/bridge'
 
@@ -96,3 +97,17 @@ export const usePeaks = create<PeaksState>()((set, get) => {
     },
   }
 })
+
+/**
+ * A clip's waveform for a PAINTER, asking for it on the way — what the strip and the programme
+ * monitor both hand their painter.
+ *
+ * Read out of the store rather than subscribed to: only the canvas has any use for the table, and
+ * subscribing re-rendered the strip once per sound of a project as the waveforms came back. The
+ * fetch is one round trip, so the clip draws as a rectangle until it lands.
+ */
+export function peaksOf(clip: Clip): Float32Array | null {
+  const peaks = usePeaks.getState()
+  peaks.request(clip.assetId)
+  return peaks.byAsset[clip.assetId] ?? null
+}

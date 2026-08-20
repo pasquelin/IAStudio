@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { WINDOW_ROW } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
+import { SettingStagedDot } from './SettingStagedDot'
 
 export type SettingLineProps = {
   title: ReactNode
@@ -38,11 +39,7 @@ export function SettingLine({
 }: SettingLineProps) {
   const heading = (
     <>
-      <span
-        aria-hidden={!staged}
-        {...(staged && stagedLabel !== undefined && { title: stagedLabel })}
-        className={cn('bg-primary size-1.5 shrink-0 rounded-full', !staged && 'invisible')}
-      />
+      <SettingStagedDot staged={staged} label={stagedLabel} />
       {title}
     </>
   )

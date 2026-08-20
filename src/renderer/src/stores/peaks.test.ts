@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { usePeaks } from './peaks'
+import { makeClip } from '@/engines/timeline/timelineState'
+import { peaksOf, usePeaks } from './peaks'
 
 const peaks = vi.fn((assetId: string) => Promise.resolve(waveforms[assetId] ?? null))
 let waveforms: Record<string, Float32Array | null> = {}
@@ -102,5 +103,31 @@ describe('usePeaks', () => {
     const { byAsset } = usePeaks.getState()
     expect(byAsset['asset-599']).toBeDefined()
     expect('asset-0' in byAsset).toBe(false)
+  })
+})
+
+describe('peaksOf, what a painter asks a clip for', () => {
+  beforeEach(() => {
+    peaks.mockClear()
+    waveforms = {}
+    usePeaks.setState({ byAsset: {} })
+  })
+
+  const clip = makeClip({ id: 'clip-1', assetId: 'asset-1', start: 0, duration: 1_000_000 })
+
+  it('draws nothing on the first ask and the waveform once it has landed', async () => {
+    waveforms['asset-1'] = take()
+
+    expect(peaksOf(clip)).toBeNull()
+    await settle()
+
+    expect(peaksOf(clip)).toBe(usePeaks.getState().byAsset['asset-1'])
+  })
+
+  it('asks once however many frames paint the same clip', () => {
+    peaksOf(clip)
+    peaksOf(clip)
+
+    expect(peaks).toHaveBeenCalledTimes(1)
   })
 })

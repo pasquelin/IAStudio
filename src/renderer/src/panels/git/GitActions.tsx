@@ -1,8 +1,6 @@
-import { mdiRefresh } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
+import { GitRefreshButton } from '@/panels/shared/GitRefreshButton'
 
 /**
  * The panel's title row.
@@ -14,18 +12,7 @@ import { useGit } from '@/stores/git'
  */
 export function GitActions() {
   const { t } = useTranslation()
-  const busy = useGit(state => state.busy)
   const refresh = useGit(state => state.refresh)
 
-  return (
-    <ToolButton
-      icon={mdiRefresh}
-      label={t('git.refresh')}
-      description={t('git.refreshHint')}
-      tooltip={TIP_BOTTOM}
-      variant="header"
-      disabled={busy}
-      onClick={() => void refresh()}
-    />
-  )
+  return <GitRefreshButton description={t('git.refreshHint')} onClick={() => void refresh()} />
 }

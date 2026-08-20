@@ -1,7 +1,5 @@
-import { mdiRefresh } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { GitRefreshButton } from '@/panels/shared/GitRefreshButton'
 import { useGit } from '@/stores/git'
 
 /**
@@ -13,17 +11,11 @@ import { useGit } from '@/stores/git'
  */
 export function HistoryActions() {
   const { t } = useTranslation()
-  const busy = useGit(state => state.busy)
   const readHistory = useGit(state => state.readHistory)
 
   return (
-    <ToolButton
-      icon={mdiRefresh}
-      label={t('git.refresh')}
+    <GitRefreshButton
       description={t('git.historyRefreshHint')}
-      tooltip={TIP_BOTTOM}
-      variant="header"
-      disabled={busy}
       onClick={() => void readHistory(false)}
     />
   )

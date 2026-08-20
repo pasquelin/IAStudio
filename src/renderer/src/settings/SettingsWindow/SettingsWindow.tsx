@@ -6,6 +6,7 @@ import { matchSettings } from '@shared/domain/settingsSearch'
 import { cn } from '@/helpers/cn'
 import { WindowShell } from '@/design/WindowShell'
 import { WindowNav } from '@/design/WindowNav/WindowNav'
+import { WindowSearch } from '@/design/WindowSearch'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
 import { useAccounts } from '@/stores/accounts'
@@ -83,19 +84,8 @@ export function SettingsWindow() {
       footer={<SettingsWindowDraftBar />}
       nav={
         <>
-          {/*
-            Outside the scrolling part, deliberately. Inside it the field was `w-full` of a box
-            the scrollbar had already taken its width from, so it narrowed and widened as the
-            list grew past the window — and it scrolled away with the sections it filters.
-          */}
-          <input
-            type="search"
-            className="input input-xs w-full shrink-0"
-            aria-label={t('settings.search')}
-            placeholder={t('settings.search')}
-            value={query}
-            onChange={event => setQuery(event.target.value)}
-          />
+          {/* Outside the scrolling part, deliberately — the component says why. */}
+          <WindowSearch label={t('settings.search')} value={query} onChange={setQuery} />
 
           <WindowNav>
             {SETTINGS_SECTIONS.map(entry => (

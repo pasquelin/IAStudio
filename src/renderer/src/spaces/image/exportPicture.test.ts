@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as Bridge from '@/services/bridge'
 import { installDocument, retitleDocument } from '@/stores/document-fixtures'
 import { exportPicture, type ExportHost } from './exportPicture'
 
@@ -8,7 +9,10 @@ const written = vi.fn<(name: string, image: string) => Promise<string | null>>((
   Promise.resolve('/Users/someone/Pictures/Sky.png'),
 )
 
-vi.mock('@/services/bridge', () => ({
+// Partial: the stores this pulls in reach for the rest of the module, and a total mock would have
+// to grow an entry every time the bridge gains one.
+vi.mock('@/services/bridge', async importOriginal => ({
+  ...(await importOriginal<typeof Bridge>()),
   getBridge: () => ({ dialog: { exportPicture: (...args: [string, string]) => written(...args) } }),
 }))
 

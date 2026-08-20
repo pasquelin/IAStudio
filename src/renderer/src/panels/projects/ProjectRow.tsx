@@ -3,13 +3,13 @@ import { memo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { RecentProject } from '@shared/domain/project'
 import { useContextMenu } from '@/hooks/useContextMenu'
+import { ContextMenu } from '@/design/ContextMenu'
 import { MenuButton } from '@/design/MenuButton'
 import { Row } from '@/design/Row'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { timeAgo } from '@/helpers/relativeTime'
 import { InlineRename } from '@/design/InlineRename'
 import { ROW_LINE } from '@/design/styles'
-import { ProjectMenu } from './ProjectMenu/ProjectMenu'
 import { ProjectMenuRows, PROJECT_MENU_ROWS } from './ProjectMenu/ProjectMenuRows'
 
 export type ProjectRowProps = {
@@ -138,12 +138,13 @@ export const ProjectRow = memo(function ProjectRow({
           the shelf with the arrows would never reach the answer it exists to give. */}
       {when && <span className="sr-only">{t('home.projects.openedAt', { when })}</span>}
       {menu.at && (
-        <ProjectMenu
-          path={project.path}
-          at={menu.at}
-          onClose={menu.close}
-          onRename={onRenameStart && startRename}
-        />
+        <ContextMenu at={menu.at} onClose={menu.close}>
+          <ProjectMenuRows
+            path={project.path}
+            onClose={menu.close}
+            onRename={onRenameStart && startRename}
+          />
+        </ContextMenu>
       )}
     </div>
   )

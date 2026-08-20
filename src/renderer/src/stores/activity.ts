@@ -9,7 +9,7 @@ import {
   type ActivityLevel,
   type ActivityTopic,
 } from '@shared/domain/activity'
-import { getBridge } from '@/services/bridge'
+import { connectThroughBridge, getBridge } from '@/services/bridge'
 
 /**
  * How many failures the studio shows at once before it stops stacking them.
@@ -51,14 +51,11 @@ export const useActivity = create<ActivityState>()((set, get) => ({
   topics: [],
   unread: [],
 
-  connect: async () => {
-    const bridge = getBridge()
-    if (!bridge) return () => {}
-
+  connect: connectThroughBridge(async bridge => {
     const stop = bridge.activity.onEntries(entries => get().append(entries))
     await get().reload()
     return stop
-  },
+  }),
 
   reload: async () => {
     set({ entries: (await getBridge()?.activity.read({ limit: ACTIVITY_WINDOW })) ?? [] })

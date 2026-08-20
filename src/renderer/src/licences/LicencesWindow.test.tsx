@@ -23,6 +23,20 @@ describe('LicencesWindow', () => {
   })
 
   /**
+   * The frame the four other windows outside the docks already wore. This one wrote it out again
+   * — its own container, its own dragged header, its own tooltip host — which is how a window
+   * ends up looking like a second application beside the one it opens from.
+   */
+  it('wears the shared window frame rather than one of its own', () => {
+    render(<LicencesWindow />)
+
+    expect(screen.getByText('Licences')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toContainElement(
+      screen.getByRole('button', { name: /FFmpeg/ }),
+    )
+  })
+
+  /**
    * The window renders its own React tree, so the shell's `TooltipHost` never reached it. A
    * closed `<Tooltip>` renders nothing at all, so hovering is the only assertion that says the
    * host is mounted — and the sentence follows the state, since one row does both gestures.

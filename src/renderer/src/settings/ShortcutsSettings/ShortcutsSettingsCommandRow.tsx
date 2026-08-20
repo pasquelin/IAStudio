@@ -1,4 +1,4 @@
-import { mdiAlertCircleOutline, mdiRestore } from '@mdi/js'
+import { mdiAlertCircleOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { bindingOf, type BindingOverrides, type CommandDescriptor } from '@shared/domain/command'
 import type { Signature } from '@shared/domain/shortcut'
@@ -6,8 +6,9 @@ import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useChordCapture } from '@/hooks/useChordCapture'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
-import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from '../SettingLine'
+import { SettingRestoreButton } from '../SettingRestoreButton'
 import { WINDOW_HELP } from '@/design/windowStyles'
 
 export function ShortcutsSettingsCommandRow({
@@ -67,19 +68,11 @@ export function ShortcutsSettingsCommandRow({
           {capturing ? t('settings.pressAKey') : label(binding) || t('settings.unbound')}
         </button>
 
-        <button
-          type="button"
-          {...TIP_LEFT(
-            `${t('settings.restoreDefault')} — ${t(descriptor.titleKey)}`,
-            false,
-            t('settings.restoreDefaultHint'),
-          )}
-          className="btn btn-ghost btn-xs btn-square"
-          disabled={!remapped}
-          onClick={() => onBind(null)}
-        >
-          <UiIcon path={mdiRestore} size={14} className={remapped ? '' : 'opacity-0'} />
-        </button>
+        <SettingRestoreButton
+          restorable={remapped}
+          of={t(descriptor.titleKey)}
+          onRestore={() => onBind(null)}
+        />
       </>
     </SettingLine>
   )

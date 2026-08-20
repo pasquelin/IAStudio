@@ -2,6 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { clamp } from '@shared/numeric'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { scrollOffsetWithin, scrollParentOf } from '@/helpers/scrollParent'
+import { useElementWidth } from '@/hooks/useElementWidth'
 import { useReachEnd } from '@/hooks/useReachEnd'
 import { useRemeasure } from '@/hooks/useRemeasure'
 import { useScrollHost } from '@/hooks/useScrollHost'
@@ -65,7 +66,9 @@ export function Masonry<T extends { id: string }>({
   const published = useScrollHost()
   /** `undefined` while nothing has been looked for yet; `null` once nothing was found. */
   const [scroller, setScroller] = useState<HTMLElement | null | undefined>(undefined)
-  const [width, setWidth] = useState(0)
+  // An integer, and that is the point rather than a detail: `laneWidth` is a float derived from it,
+  // and a fractional pixel of a resize would otherwise re-estimate all N cells (invariant 6).
+  const width = useElementWidth(host)
   const [scrollMargin, setScrollMargin] = useState(0)
 
   // The page's own scroller when a page publishes one, and a walk up the tree only where none
@@ -78,21 +81,6 @@ export function Masonry<T extends { id: string }>({
     if (published === null) return
     setScroller(published ?? scrollParentOf(host.current))
   }, [published])
-
-  useEffect(() => {
-    const element = host.current
-    if (!element) return
-
-    const observer = new ResizeObserver(entries => {
-      const measured = entries[0]?.contentRect.width
-      // Rounded: the observer reports fractions of a pixel, `laneWidth` is a float derived from
-      // it, and every frame of a resize would otherwise re-estimate all N cells (invariant 6).
-      if (measured !== undefined) setWidth(Math.round(measured))
-    })
-
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
 
   /**
    * Where this grid starts inside the scroll container.

@@ -3,7 +3,7 @@ import { assistantAction, confirmKey } from '@shared/domain/assistant'
 import { Button } from '@/design/Button'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant } from '@/stores/assistant'
-import { formatUnits } from '@/usage/format'
+import { formatUnits } from '@/helpers/format'
 import type { ConfirmRequest } from '../confirm'
 import { OVERLAY_CARD } from './overlayStyles'
 

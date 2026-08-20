@@ -1,11 +1,11 @@
 import { mdiFileOutline, mdiPackageVariantClosed } from '@mdi/js'
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { BundledAnimation } from '@shared/domain/animationLibrary'
 import type { ClipSource } from '@shared/domain/scene'
+import { QuietNote } from '../QuietNote'
 import { Row } from '../Row'
 import { rowSkin } from '../styles'
 import { clipLabel } from '@/helpers/clipLabel'
+import { useBundledAnimations } from '@/hooks/useBundledAnimations'
 import { useProjectAnimations } from '@/hooks/useProjectAnimations'
 import { clipsOfNode, useModelClips } from '@/stores/modelClips'
 import { assetIcon } from '@/helpers/workspaces'
@@ -29,20 +29,16 @@ export function AnimationPickerLibrary({
   onChoose,
 }: AnimationPickerLibraryProps) {
   const { t } = useTranslation()
-  const [bundled, setBundled] = useState<readonly BundledAnimation[]>([])
+  const bundled = useBundledAnimations()
   const own = useModelClips(state => clipsOfNode(state, documentId, nodeId))
   const motions = useProjectAnimations()
 
-  useEffect(() => {
-    let alive = true
-    void window.studio.animations.list().then(found => {
-      if (alive) setBundled(found)
-    })
-    return () => void (alive = false)
-  }, [])
-
   if (own.length === 0 && bundled.length === 0 && motions.length === 0) {
-    return <p className="text-muted text-tiny p-2">{t('inspector.animationLibraryEmpty')}</p>
+    return (
+      <div className="p-2">
+        <QuietNote>{t('inspector.animationLibraryEmpty')}</QuietNote>
+      </div>
+    )
   }
 
   /**

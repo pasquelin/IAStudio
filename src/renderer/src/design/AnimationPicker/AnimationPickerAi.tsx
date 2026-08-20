@@ -1,6 +1,7 @@
 import { mdiRobotOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { motionProvidersOf } from '@shared/domain/rigProvider'
+import { QuietNote } from '../QuietNote'
 import { Row } from '../Row'
 import { rigServiceNote } from '@/helpers/rigServiceNote'
 import { useFamilyModels } from '@/hooks/useFamilyModels'
@@ -19,7 +20,11 @@ export function AnimationPickerAi() {
   const providers = motionProvidersOf(useFamilyModels('3d'))
 
   if (providers.length === 0) {
-    return <p className="text-muted text-tiny p-2">{t('inspector.animationAiNone')}</p>
+    return (
+      <div className="p-2">
+        <QuietNote>{t('inspector.animationAiNone')}</QuietNote>
+      </div>
+    )
   }
 
   return (

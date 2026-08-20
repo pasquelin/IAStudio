@@ -1,10 +1,8 @@
-import { mdiChevronUp } from '@mdi/js'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ProgressBar } from '@/design/ProgressBar'
 import { ProgressRow } from '@/design/ProgressRow'
 import { StatusFlyout } from '@/design/StatusFlyout'
-import { UiIcon } from '@/design/UiIcon'
+import { StatusProgressFace } from '@/design/StatusProgressFace'
 import { formatPercent } from '@/helpers/format'
 import { useTasks } from '@/stores/tasks'
 
@@ -31,14 +29,7 @@ export function TasksStatus() {
     <StatusFlyout
       label={t('tasks.open')}
       hint={t('tasks.openHint')}
-      face={
-        <>
-          <span>{label}</span>
-          <ProgressBar ratio={ratio} label={label} className="w-12" />
-          <span>{formatPercent(ratio, i18n.language)}</span>
-          <UiIcon path={mdiChevronUp} size={12} />
-        </>
-      }
+      face={<StatusProgressFace label={label} ratio={ratio} />}
       panel={
         <ul className="max-h-80 w-80 overflow-auto">
           {rows.map(row => (

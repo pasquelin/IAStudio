@@ -18,7 +18,7 @@ import { newShotAt, shotOfCameraAt } from '@/engines/scene/cameraShots'
 import { newId } from '@/helpers/ids'
 import { selectedNodes } from '@/engines/scene/sceneState'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
-import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { sceneViewOf, useScenePlayhead, useSceneViews } from '@/stores/sceneViews'
 import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -57,7 +57,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // snapshot on every call, and the render loop never settles.
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const animation = useScenes(state => sceneOf(state, documentId).animation)
-  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
+  const playhead = useScenePlayhead(documentId)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
   const world = useScenes(state => sceneOf(state, documentId).world)
   const lockedAxes = useScenes(state => sceneOf(state, documentId).lockedAxes)

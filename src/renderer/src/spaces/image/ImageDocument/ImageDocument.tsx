@@ -31,7 +31,7 @@ import { newId } from '@/helpers/ids'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { canvasOf, isCanvasDirty, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, canvasViewOf, cropFrameOf } from '@/stores/canvasViews'
-import { useDocuments } from '@/stores/documents'
+import { useDocumentIsInFront } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from '../canvasView'
 import { guidePort } from '../guidePort'
 import {
@@ -92,7 +92,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const cropFrame = useCanvasViews(state => cropFrameOf(state, documentId))
   const bindings = useBindingOverrides()
   const label = useShortcutLabel()
-  const active = useDocuments(state => state.activeId === documentId)
+  const active = useDocumentIsInFront(documentId)
 
   // What a fresh caption says. Held in a ref so the effect that builds the engine does not
   // depend on the language, which would remount it — and lose every layer's texture.

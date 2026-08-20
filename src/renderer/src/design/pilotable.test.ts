@@ -10,9 +10,13 @@ const FIELDS: Record<string, string> = import.meta.glob('./*Field.tsx', {
   eager: true,
 })
 
-/** The surfaces a script steers besides the fields: the fold, and the link row. */
+/**
+ * The surfaces a script steers besides the fields: the fold, the link row, and the slider handle —
+ * that last one writes the `data-sc` its two fields used to write themselves, and the `*Field` glob
+ * above cannot see it.
+ */
 const SURFACES: Record<string, string> = import.meta.glob(
-  ['./PropertySection.tsx', './LinkField/LinkField.tsx'],
+  ['./PropertySection.tsx', './LinkField/LinkField.tsx', './SliderHandle.tsx'],
   { query: '?raw', import: 'default', eager: true },
 )
 
@@ -29,7 +33,7 @@ const ALL = { ...FIELDS, ...SURFACES }
 describe('a control the studio can be driven by', () => {
   it('finds the controls at all, so the rules below cannot pass on an empty glob', () => {
     expect(Object.keys(FIELDS).length).toBeGreaterThan(5)
-    expect(Object.keys(SURFACES).length).toBe(2)
+    expect(Object.keys(SURFACES).length).toBe(3)
   })
 
   /**

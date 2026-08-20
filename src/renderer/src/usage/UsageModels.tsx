@@ -3,7 +3,8 @@ import type { UsageReport } from '@shared/domain/usage'
 import { UsageTable } from './UsageTable/UsageTable'
 import { UsageTableHeadCell } from './UsageTable/UsageTableHeadCell'
 import { UsageTableRow } from './UsageTable/UsageTableRow'
-import { formatUnits, shareOf } from './format'
+import { formatUnits } from '@/helpers/format'
+import { shareOf } from './format'
 import { WINDOW_CAPTION } from '@/design/windowStyles'
 
 /** What each model cost, which is the one question a spend table exists to answer. */

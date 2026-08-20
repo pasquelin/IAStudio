@@ -253,12 +253,15 @@ describe('the opening chunk', () => {
   })
 
   // The chart library is the reason this one is deferred, more than the window's own weight.
-  // `format.ts` is the exception, and it earns it: a job row prices a run in the units the
-  // window totals (`panels/jobs/JobRow/JobRowDetail.tsx`), and the status bar carries those rows.
+  // `formatUnits` used to be the exception that let `./usage/format.ts` in: a job row prices a run
+  // in the units the window totals, and the status bar carries those rows. It lives in
+  // `helpers/format.ts` now, which the opening chunk already reaches — hence the second assertion,
+  // without which moving it back would read as a win while only shifting the weight.
   it('never reaches the usage window, nor what draws its charts', () => {
     const { files, packages } = GRAPH
 
-    expect([...files].filter(path => path.startsWith('./usage/'))).toEqual(['./usage/format.ts'])
+    expect([...files].filter(path => path.startsWith('./usage/'))).toEqual([])
+    expect(files).toContain('./helpers/format.ts')
     expect(packages).not.toContain('recharts')
   })
 })

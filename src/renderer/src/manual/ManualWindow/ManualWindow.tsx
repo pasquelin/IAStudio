@@ -8,6 +8,7 @@ import { WindowShell } from '@/design/WindowShell'
 import { WINDOW_CAPTION } from '@/design/windowStyles'
 import { WindowNav } from '@/design/WindowNav/WindowNav'
 import { WindowNavItem } from '@/design/WindowNav/WindowNavItem'
+import { WindowSearch } from '@/design/WindowSearch'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useMarkdownComponents } from '@/hooks/useMarkdownComponents'
 import { ManualWindowBody } from './ManualWindowBody'
@@ -82,16 +83,8 @@ export function ManualWindow() {
       navLabel={t('manual.chapters')}
       nav={
         <>
-          {/* Outside the scrolling list, as the settings search is: a field that scrolls away
-              with what it filters is a field one has to go looking for. */}
-          <input
-            type="search"
-            className="input input-xs w-full shrink-0"
-            aria-label={t('manual.search')}
-            placeholder={t('manual.search')}
-            value={query}
-            onChange={event => setQuery(event.target.value)}
-          />
+          {/* Outside the scrolling list, as the settings search is — the component says why. */}
+          <WindowSearch label={t('manual.search')} value={query} onChange={setQuery} />
 
           <WindowNav>
             {chapters.map(entry => (

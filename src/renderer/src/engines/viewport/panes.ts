@@ -1,3 +1,5 @@
+import { clampAtLeast } from '@shared/numeric'
+
 /**
  * How a viewport's surface is divided, and where each division lands.
  *
@@ -116,8 +118,8 @@ function movedInside(
 ): PaneRect {
   return {
     ...rect,
-    x: Math.max(0, Math.min(width - rect.width, rect.x + offset.x)),
-    y: Math.max(0, Math.min(height - rect.height, rect.y + offset.y)),
+    x: clampAtLeast(rect.x + offset.x, 0, width - rect.width),
+    y: clampAtLeast(rect.y + offset.y, 0, height - rect.height),
   }
 }
 

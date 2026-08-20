@@ -10,7 +10,7 @@ import { ToggleField } from '../ToggleField'
 import { ToolButton } from '../ToolButton'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { useScenePreview, useSceneViews } from '@/stores/sceneViews'
 
 export type AnimationPickerPreviewProps = {
   documentId: string
@@ -36,7 +36,7 @@ export function AnimationPickerPreview({
   clipId,
 }: AnimationPickerPreviewProps) {
   const { t } = useTranslation()
-  const preview = useSceneViews(state => sceneViewOf(state, documentId).preview)
+  const preview = useScenePreview(documentId)
   const lanes = useScenes(state => {
     const node = sceneOf(state, documentId).nodes.find(one => one.id === nodeId)
     // NO_LANES and never a fresh `[]`: a selector handing zustand a new array on every render
