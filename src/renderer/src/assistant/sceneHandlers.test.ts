@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AnimationTrack } from '@shared/domain/animation'
 import { assistantAction, type ActionName } from '@shared/domain/assistant'
-import type { SceneWorld } from '@shared/domain/scene'
+import { TEXTURE_SLOTS, type SceneWorld } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
+import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
+import { createNodeOf } from '@/engines/scene/nodeFactory'
+import { GEOMETRY_SPECS, type PropertySpec } from '@/engines/scene/propertyFields'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { installScene } from '@/stores/scene-fixtures'
@@ -161,17 +165,48 @@ describe('placing and dressing an object', () => {
 
   /**
    * A hemisphere light has no `color` at all — it carries a sky colour and a ground colour — so
-   * writing one would add a field its kind does not have.
+   * naming one is refused rather than filed against a field the kind does not have.
    */
-  it('leaves a hemisphere light’s two colours alone while taking its intensity', async () => {
+  it('takes a hemisphere light’s own two colours, and refuses the one it has not', async () => {
     const added = await runAction('node.add', { kind: 'hemisphere', name: 'Ciel' })
     const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
 
-    await runAction('node.light', { nodeId, color: '#ff0000', intensity: 3 })
+    expect(await runAction('node.light', { nodeId, color: '#ff0000', intensity: 3 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+
+    await runAction('node.light', { nodeId, skyColor: '#ff0000', intensity: 3 })
 
     const light = nodeNamed('Ciel')
-    expect(light).toMatchObject({ light: { kind: 'hemisphere', intensity: 3 } })
+    expect(light).toMatchObject({
+      light: { kind: 'hemisphere', intensity: 3, skyColor: '#ff0000' },
+    })
     expect(light?.type === 'light' && 'color' in light.light).toBe(false)
+  })
+
+  /** A cone belongs to a spot, and its target is three numbers that land as one field. */
+  it('writes the cone and the target of a spot, and refuses a cone on a point light', async () => {
+    const spot = await runAction('node.add', { kind: 'spot', name: 'Poursuite' })
+    const point = await runAction('node.add', { kind: 'point', name: 'Bougie' })
+    const spotId = spot.ok ? (spot.data as { nodeId: string }).nodeId : ''
+    const pointId = point.ok ? (point.data as { nodeId: string }).nodeId : ''
+
+    await runAction('node.light', {
+      nodeId: spotId,
+      angle: 0.4,
+      penumbra: 0.25,
+      distance: 12,
+      targetY: 2,
+    })
+
+    expect(nodeNamed('Poursuite')).toMatchObject({
+      light: { kind: 'spot', angle: 0.4, penumbra: 0.25, distance: 12, target: { y: 2 } },
+    })
+    expect(await runAction('node.light', { nodeId: pointId, angle: 0.4 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
   })
 })
 
@@ -585,5 +620,332 @@ describe('the world of the scene', () => {
         .filter(([, held]) => !held)
         .map(([member]) => member),
     ).toEqual(['play'])
+  })
+})
+
+/**
+ * The bounds a client is offered against the ones the inspector enforces. A schema that swings
+ * wider than the field is a client told it may write what the panel cannot — and the registry
+ * lives in `shared/`, which cannot import the tables, so the copy is held from this side.
+ */
+describe('what the registry offers a node', () => {
+  const fieldOf = (name: ActionName, key: string) =>
+    assistantAction(name)?.fields.find(field => field.key === key)
+
+  /** Every spec that names a field, whatever the primitive holding it. */
+  const specsByName = (): Map<string, PropertySpec[]> => {
+    const held = new Map<string, PropertySpec[]>()
+
+    for (const specs of Object.values(GEOMETRY_SPECS)) {
+      for (const [name, spec] of Object.entries(specs)) {
+        held.set(name, [...(held.get(name) ?? []), spec])
+      }
+    }
+
+    return held
+  }
+
+  /** A bound only holds where EVERY kind carrying the name has one — otherwise it is open. */
+  const across = (specs: readonly PropertySpec[], edge: 'min' | 'max'): number | undefined => {
+    const bounds = specs.map(spec =>
+      spec.control === 'color' || spec.control === 'vector3'
+        ? undefined
+        : (spec[edge] ?? undefined),
+    )
+    if (bounds.some(bound => bound === undefined)) return undefined
+
+    return edge === 'min' ? Math.min(...bounds.map(Number)) : Math.max(...bounds.map(Number))
+  }
+
+  it('bounds every primitive parameter as the union of what the kinds declare', () => {
+    for (const [name, specs] of specsByName()) {
+      const field = fieldOf('node.geometry', name)
+
+      expect({ min: field?.min, max: field?.max }, name).toEqual({
+        min: across(specs, 'min'),
+        max: across(specs, 'max'),
+      })
+    }
+  })
+
+  /** Counted, never measured: a segment and a half is a primitive three.js refuses to build. */
+  it('publishes a whole number wherever the engine steps by one', () => {
+    const counted = Object.values(GEOMETRY_SPECS).flatMap(specs =>
+      Object.entries(specs)
+        .filter(([, spec]) => spec.control !== 'color' && spec.step === 1)
+        .map(([key]) => key),
+    )
+
+    expect(
+      [...new Set(counted)].filter(key => fieldOf('node.geometry', key)?.kind !== 'integer'),
+    ).toEqual([])
+  })
+
+  it('names every map slot the material holds, on both actions that take one', () => {
+    const takers: readonly ActionName[] = ['node.material', 'model.textures']
+
+    for (const name of takers) {
+      expect([...(fieldOf(name, 'textures')?.options ?? [])].sort(), name).toEqual(
+        [...TEXTURE_SLOTS].sort(),
+      )
+    }
+  })
+})
+
+describe('what a node is made of', () => {
+  const meshNamed = async (kind: string, name: string): Promise<string> => {
+    const added = await runAction('node.add', { kind, name })
+    return added.ok ? (added.data as { nodeId: string }).nodeId : ''
+  }
+
+  it('writes the parameters of the primitive it was built from', async () => {
+    const nodeId = await meshNamed('torusKnot', 'Nœud')
+
+    await runAction('node.geometry', { nodeId, radius: 2, p: 3, q: 5 })
+
+    expect(nodeNamed('Nœud')).toMatchObject({
+      geometry: { kind: 'torusKnot', radius: 2, p: 3, q: 5, tube: 0.2 },
+    })
+  })
+
+  it('refuses a parameter the shape has not got, rather than filing it', async () => {
+    const nodeId = await meshNamed('box', 'Caisse')
+
+    expect(await runAction('node.geometry', { nodeId, radius: 2 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(nodeNamed('Caisse')?.type === 'mesh' && 'radius' in nodeNamed('Caisse')!).toBe(false)
+  })
+
+  /**
+   * The narrowing the registry cannot do: it publishes one segment as the floor because a torus
+   * takes one, and a capsule's ring falls apart below three.
+   */
+  it('refuses a count the kind in hand puts out of range', async () => {
+    const capsule = await meshNamed('capsule', 'Gélule')
+    const torus = await meshNamed('torus', 'Anneau')
+
+    expect(await runAction('node.geometry', { nodeId: capsule, radialSegments: 1 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(await runAction('node.geometry', { nodeId: torus, radialSegments: 1 })).toMatchObject({
+      ok: true,
+    })
+  })
+
+  it('throws and catches shadows, and refuses the half a light cannot hold', async () => {
+    const mesh = await meshNamed('box', 'Caisse')
+    const lamp = await meshNamed('point', 'Lampe')
+
+    await runAction('node.shadow', { nodeId: mesh, castShadow: true, receiveShadow: true })
+    await runAction('node.shadow', { nodeId: lamp, castShadow: true })
+
+    expect(nodeNamed('Caisse')).toMatchObject({ castShadow: true, receiveShadow: true })
+    expect(nodeNamed('Lampe')).toMatchObject({ castShadow: true })
+    expect(await runAction('node.shadow', { nodeId: lamp, receiveShadow: true })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  it('dresses a mesh in the project’s own maps, and takes one back off', async () => {
+    const nodeId = await meshNamed('plane', 'Mur')
+
+    await runAction('node.material', {
+      nodeId,
+      tilesPerMetre: 2,
+      textures: { map: 'asset-albedo', normalMap: 'asset-normal' },
+    })
+    expect(nodeNamed('Mur')).toMatchObject({
+      material: { tilesPerMetre: 2, map: { assetId: 'asset-albedo' } },
+    })
+
+    await runAction('node.material', { nodeId, textures: { normalMap: '' } })
+    expect(nodeNamed('Mur')).toMatchObject({
+      material: { map: { assetId: 'asset-albedo' }, normalMap: null },
+    })
+  })
+
+  it('paints a text with the very action a mesh takes, minus the tiling', async () => {
+    const nodeId = await meshNamed('text', 'Titre')
+
+    await runAction('node.material', { nodeId, color: '#00ff00' })
+    expect(nodeNamed('Titre')).toMatchObject({ material: { color: '#00ff00' } })
+
+    expect(await runAction('node.material', { nodeId, tilesPerMetre: 2 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  it('sets the words, the face and the shape of a text', async () => {
+    const nodeId = await meshNamed('text', 'Titre')
+
+    await runAction('node.text', {
+      nodeId,
+      value: 'Bonjour',
+      fontFamily: 'IBM Plex Mono',
+      textSize: 2,
+      textDepth: 0,
+    })
+
+    expect(nodeNamed('Titre')).toMatchObject({
+      text: { value: 'Bonjour', font: { family: 'IBM Plex Mono', source: 'embedded' }, size: 2 },
+    })
+  })
+
+  it('tints and fades a sprite, and takes its picture away', async () => {
+    const nodeId = await meshNamed('sprite', 'Panneau')
+
+    await runAction('node.sprite', { nodeId, opacity: 0.5, map: 'asset-picture' })
+    expect(nodeNamed('Panneau')).toMatchObject({
+      sprite: { opacity: 0.5, map: { assetId: 'asset-picture' } },
+    })
+
+    await runAction('node.sprite', { nodeId, map: '' })
+    expect(nodeNamed('Panneau')).toMatchObject({ sprite: { map: null } })
+  })
+
+  it('overrides a model’s maps, and gives them all back on an empty set', async () => {
+    const added = await runAction('node.addModel', { assetId: 'asset-mesh', name: 'Chevalier' })
+    const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
+
+    await runAction('model.textures', { nodeId, textures: { map: 'asset-albedo' } })
+    expect(nodeNamed('Chevalier')).toMatchObject({
+      model: { textures: { map: { assetId: 'asset-albedo' } } },
+    })
+
+    await runAction('model.textures', { nodeId, textures: {} })
+
+    const bare = nodeNamed('Chevalier')
+    expect(bare).toMatchObject({ model: { assetId: 'asset-mesh' } })
+    expect(bare?.type === 'model' && bare.model.textures).toBeUndefined()
+  })
+})
+
+describe('the shape of a rail', () => {
+  const railId = async (): Promise<string> => {
+    const added = await runAction('node.add', { kind: 'path', name: 'Rail' })
+    return added.ok ? (added.data as { nodeId: string }).nodeId : ''
+  }
+
+  const points = () => {
+    const node = nodeNamed('Rail')
+    return node?.type === 'path' ? node.path.points : []
+  }
+
+  it('sets the tension and the closing, and refuses a call that names neither', async () => {
+    const nodeId = await railId()
+
+    await runAction('node.path', { nodeId, tension: 0, closed: true })
+    expect(nodeNamed('Rail')).toMatchObject({ path: { tension: 0, closed: true } })
+
+    expect(await runAction('node.path', { nodeId })).toEqual({ ok: false, refusal: 'badInput' })
+  })
+
+  it('lays a point where it was aimed, and slips one halfway after a named one', async () => {
+    const nodeId = await railId()
+
+    await runAction('path.addPoint', { nodeId, pointX: 4, pointY: 1, pointZ: -8 })
+    expect(points().at(-1)).toEqual({ x: 4, y: 1, z: -8 })
+
+    await runAction('path.addPoint', { nodeId, index: 0 })
+    expect(points()[1]).toEqual({ x: 0, y: 0, z: -2.5 })
+  })
+
+  it('refuses a point that is both aimed at and placed by rank', async () => {
+    const nodeId = await railId()
+
+    expect(
+      await runAction('path.addPoint', { nodeId, index: 0, pointX: 1, pointY: 0, pointZ: 0 }),
+    ).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await runAction('path.addPoint', { nodeId, pointX: 1 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  it('moves a point, and refuses a rank naming none', async () => {
+    const nodeId = await railId()
+
+    await runAction('path.movePoint', { nodeId, index: 1, pointY: 3 })
+    expect(points()[1]).toEqual({ x: 0, y: 3, z: -5 })
+
+    expect(await runAction('path.movePoint', { nodeId, index: 7, pointY: 3 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  /** Two points is the floor: one point is not a line, and the refusal is what says so. */
+  it('drops a point, and refuses to take a rail below two', async () => {
+    const nodeId = await railId()
+
+    await runAction('path.addPoint', { nodeId })
+    expect(points()).toHaveLength(3)
+
+    await runAction('path.removePoint', { nodeId, index: 2 })
+    expect(points()).toHaveLength(2)
+
+    expect(await runAction('path.removePoint', { nodeId, index: 1 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+})
+
+/**
+ * The half of `node.transform` and `node.camera` that no other test reaches: tracks ADD to what
+ * is underneath, so a value written raw onto a keyed node springs back the moment it is played.
+ */
+describe('a node an animation already drives', () => {
+  const keyedTrack = (nodeId: string): AnimationTrack => ({
+    id: 'track-position',
+    name: 'Position',
+    index: 0,
+    muted: false,
+    solo: false,
+    locked: false,
+    target: { nodeId, property: 'position' },
+    rest: IDENTITY_TRANSFORM,
+    keys: [],
+  })
+
+  function installKeyedBox(): string {
+    const fresh = createDefaultScene()
+    const box = createNodeOf('box')
+    const nodeId = box?.id ?? ''
+
+    installScene(DOCUMENT, {
+      ...fresh,
+      nodes: box ? [{ ...box, name: 'Caisse' }] : [],
+      selectedIds: [],
+      animation: { ...fresh.animation, tracks: [keyedTrack(nodeId)] },
+    })
+
+    return nodeId
+  }
+
+  it('writes a key rather than a move while auto-key records', async () => {
+    const nodeId = installKeyedBox()
+    await runAction('animation.autoKey', { on: true })
+
+    await runAction('node.transform', { nodeId, positionY: 2 })
+
+    expect(scene().animation.tracks[0]?.keys).toEqual([{ time: 0, value: { x: 0, y: 2, z: 0 } }])
+    // Left where it rests: the channel adds the two metres back on top of it.
+    expect(nodeNamed('Caisse')?.transform.position).toEqual({ x: 0, y: 0, z: 0 })
+  })
+
+  it('moves the node itself when nothing records', async () => {
+    const nodeId = installKeyedBox()
+    await runAction('animation.autoKey', { on: false })
+
+    await runAction('node.transform', { nodeId, positionY: 2 })
+
+    expect(scene().animation.tracks[0]?.keys).toEqual([])
+    expect(nodeNamed('Caisse')?.transform.position).toMatchObject({ y: 2 })
   })
 })

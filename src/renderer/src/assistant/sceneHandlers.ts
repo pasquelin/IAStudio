@@ -1,5 +1,6 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { readColor } from '@shared/domain/color'
+import { FONT_SOURCES, type FontRef } from '@shared/domain/font'
 import {
   BACKGROUND_KINDS,
   DISPLAY_MODES,
@@ -9,37 +10,76 @@ import {
   TONE_MAPPINGS,
   VIEW_DIRECTIONS,
   type EnvironmentRef,
+  type MaterialDescriptor,
+  type ModelRef,
+  type PathDescriptor,
   type SceneWorld,
+  type SpriteDescriptor,
+  type TextDescriptor,
+  type TextureSlot,
   type Vector3,
 } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import {
   addNode,
+  multi,
   removeNode,
   renameNode,
   reparentNode,
   setCamera,
+  setGeometry,
   setLight,
-  setMeshMaterial,
+  setMaterialOn,
+  setModelTextures,
   setNodeVisible,
+  setPath,
   setSelection,
-  setTransform,
+  setShadowOn,
+  setSpriteOn,
+  setTextOn,
   setWorld,
 } from '@/engines/scene/commands'
 import { backgroundOfKind, fogOfKind } from '@/engines/scene/sceneWorld'
 import { EASINGS, POINT_TARGET, type CameraShot } from '@shared/domain/animation'
-import { addCameraShot, bindRailToShot, editCameraShot } from '@/engines/scene/animationCommands'
+import {
+  addCameraShot,
+  bindRailToShot,
+  editCameraShot,
+  lensToCommand,
+  movesToCommand,
+} from '@/engines/scene/animationCommands'
+import {
+  withMovedPoint,
+  withPointAfter,
+  withPointAppended,
+  withPointAtEnd,
+  withoutPoint,
+} from '@/engines/scene/cameraPath'
 import { newShotAt } from '@/engines/scene/cameraShots'
+import {
+  GEOMETRY_SPECS,
+  LIGHT_SPECS,
+  withField,
+  type PropertySpec,
+} from '@/engines/scene/propertyFields'
 import { newId } from '@/helpers/ids'
+import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import type { Command } from '@/engines/core/history'
 import { createNodeOf, modelNode } from '@/engines/scene/nodeFactory'
-import { canReparent, nodeById, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
+import {
+  canCastShadow,
+  canReceiveShadow,
+  canReparent,
+  nodeById,
+  type SceneNode,
+  type SceneState,
+} from '@/engines/scene/sceneState'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { MAIN_SCENE_PANE, useSceneViews } from '@/stores/sceneViews'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { type ActionHandlers } from './actionHandler'
-import { boolOf, numberOf, oneOf, textOf, textsOf } from './actionInputs'
+import { boolOf, numberOf, oneOf, recordOf, textOf, textsOf } from './actionInputs'
 
 /**
  * The scene graph, driven by value.
@@ -70,13 +110,13 @@ function edit(build: () => Command<SceneState>): ActionOutcome {
  */
 function editNode(
   input: Record<string, unknown>,
-  build: (node: SceneNode) => Command<SceneState> | null,
+  build: (node: SceneNode, documentId: string) => Command<SceneState> | null,
 ): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface')
 
   const node = nodeById(open.state, textOf(input, 'nodeId') ?? '')
-  const command = node && build(node)
+  const command = node && build(node, open.documentId)
   if (!command) return refused('badInput')
 
   useScenes.getState().runCommand(open.documentId, command)
@@ -90,6 +130,103 @@ function vectorOf(input: Record<string, unknown>, of: string, current: Vector3):
     y: numberOf(input, `${of}Y`) ?? current.y,
     z: numberOf(input, `${of}Z`) ?? current.z,
   }
+}
+
+/** The specs of one shape, read by name — the tables are keyed by kind and typed per kind. */
+type Specs = { readonly [name: string]: PropertySpec | undefined }
+
+/** Everything a call names apart from the node itself: what the descriptor must answer for. */
+function namedFields(input: Record<string, unknown>): string[] {
+  return Object.keys(input).filter(key => key !== 'nodeId')
+}
+
+/**
+ * Whether a number sits inside what the field's own control ENFORCES.
+ *
+ * A slider's ends are its travel, not a limit — the number field beside it takes anything typed —
+ * so only a `number` spec refuses here, exactly as `NumberField` does on screen.
+ */
+function withinSpec(spec: PropertySpec | undefined, value: number): boolean {
+  if (spec?.control !== 'number') return true
+  return (
+    (spec.min === undefined || value >= spec.min) && (spec.max === undefined || value <= spec.max)
+  )
+}
+
+/**
+ * The numbers a call writes onto one descriptor, or a refusal.
+ *
+ * Refused for a field the shape does not carry, and for one outside its own bounds: the registry
+ * can only publish the UNION over kinds — a torus takes one radial segment where a capsule takes
+ * three — and this is where the kind in hand narrows it.
+ */
+function numbersFor(
+  input: Record<string, unknown>,
+  descriptor: object,
+  specs: Specs,
+): Record<string, number> | null {
+  const written: Record<string, number> = {}
+
+  for (const name of namedFields(input)) {
+    const value = numberOf(input, name)
+    if (value === null || !(name in descriptor) || !withinSpec(specs[name], value)) return null
+    written[name] = value
+  }
+
+  return written
+}
+
+/** The axes of a light's target, which travel as three numbers and land as one field. */
+const TARGET_AXES: readonly string[] = ['targetX', 'targetY', 'targetZ']
+
+/** The three of a rail's point, read the same way. */
+const POINT_AXES: readonly string[] = ['pointX', 'pointY', 'pointZ']
+
+/** The mirror of what `setShadowOn` SKIPS — and a skipped node leaves a command that reads as done. */
+function canShadow(
+  node: SceneNode,
+  changes: { castShadow?: boolean; receiveShadow?: boolean },
+): boolean {
+  if (changes.castShadow !== undefined && !canCastShadow(node)) return false
+  return changes.receiveShadow === undefined || canReceiveShadow(node)
+}
+
+/** A picture named by id, or none — an empty id is the map taken off. */
+function assetRef(input: Record<string, unknown>, key: string): { assetId: string } | null {
+  const assetId = textOf(input, key)
+  return assetId === null ? null : { assetId }
+}
+
+/** The typeface a call names, either half of it, over the one the node already wears. */
+function fontFrom(input: Record<string, unknown>, current: FontRef): FontRef | null {
+  const family = textOf(input, 'fontFamily')
+  const source = oneOf(input, 'fontSource', FONT_SOURCES)
+  if (family === null && source === null) return null
+
+  return { family: family ?? current.family, source: source ?? current.source }
+}
+
+/**
+ * The map slots a call names, as a material stores them.
+ *
+ * An empty id takes the map OFF, and a slot left unnamed is left alone: `null` and "absent" are
+ * two different answers, and a client that could only ever add a map would have no way back.
+ */
+function texturesFrom(
+  input: Record<string, unknown>,
+): Partial<Record<TextureSlot, { assetId: string } | null>> | null {
+  if (input.textures === undefined) return {}
+
+  const asked = recordOf(input, 'textures')
+  if (!asked) return null
+
+  const slots: Record<string, { assetId: string } | null> = {}
+  for (const [slot, value] of Object.entries(asked)) {
+    if (typeof value !== 'string') return null
+    slots[slot] = value.trim() === '' ? null : { assetId: value }
+  }
+
+  return slots
 }
 
 function readState(): ActionOutcome {
@@ -126,6 +263,26 @@ function readState(): ActionOutcome {
       })),
     },
   }
+}
+
+/**
+ * The rail one call reshapes, written whole — `setPath` takes the descriptor, and the three
+ * gestures a rail offers all land there.
+ *
+ * A change that hands the same points back is a refusal rather than a no-op: every helper of
+ * `cameraPath` answers that way when it declines — an index naming no point, or a rail already
+ * down to the two a line needs.
+ */
+function editPath(
+  input: Record<string, unknown>,
+  change: (path: PathDescriptor) => PathDescriptor,
+): ActionOutcome {
+  return editNode(input, node => {
+    if (node.type !== 'path') return null
+
+    const next = change(node.path)
+    return next === node.path ? null : setPath(node.id, next)
+  })
 }
 
 /**
@@ -366,41 +523,225 @@ export const SCENE_HANDLERS: ActionHandlers = {
   'node.visible': input =>
     editNode(input, node => setNodeVisible(node.id, boolOf(input, 'visible'))),
 
+  /**
+   * Through the very translation a gizmo drag goes through, and that is not a detail: tracks ADD
+   * to the pose underneath, so a move written under a keyed node springs straight back and the
+   * caller is told it took. Recording — `animation.autoKey` — is what decides which of the two
+   * this becomes.
+   */
   'node.transform': input =>
-    editNode(input, node =>
-      setTransform(node.id, {
-        position: vectorOf(input, 'position', node.transform.position),
-        // Radians in the state and radians here: unlike a layer's single angle, three Euler
-        // angles in degrees would have to be converted back for every read of `scene.state`.
-        rotation: vectorOf(input, 'rotation', node.transform.rotation),
-        scale: vectorOf(input, 'scale', node.transform.scale),
-      }),
-    ),
+    editNode(input, (node, documentId) => {
+      const keying = sceneKeyingAt(documentId)
 
-  // Text wears the same material as a mesh, but `setMeshMaterial` writes only a mesh's — the two
-  // are separate commands, so a text node here would be a silent no-op.
+      return movesToCommand(
+        keying.state,
+        [
+          {
+            id: node.id,
+            transform: {
+              position: vectorOf(input, 'position', node.transform.position),
+              // Radians in the state and radians here: unlike a layer's single angle, three Euler
+              // angles in degrees would have to be converted back for every read of `scene.state`.
+              rotation: vectorOf(input, 'rotation', node.transform.rotation),
+              scale: vectorOf(input, 'scale', node.transform.scale),
+            },
+          },
+        ],
+        keying.at,
+        keying.recording,
+      )
+    }),
+
   'node.material': input =>
-    editNode(input, node =>
-      node.type !== 'mesh'
-        ? null
-        : setMeshMaterial(node.id, {
-            ...node.material,
-            color: readColor(input, 'color', node.material.color ?? ''),
-            roughness: numberOf(input, 'roughness') ?? node.material.roughness,
-            metalness: numberOf(input, 'metalness') ?? node.material.metalness,
-          }),
-    ),
+    editNode(input, node => {
+      if (node.type !== 'mesh' && node.type !== 'text') return null
+      // A text's outline is not a primitive, so its UVs never go through the tiling — the field
+      // the inspector drops for a text is refused here rather than filed and ignored.
+      if (node.type === 'text' && input.tilesPerMetre !== undefined) return null
 
+      const textures = texturesFrom(input)
+      if (!textures) return null
+
+      const roughness = numberOf(input, 'roughness')
+      const metalness = numberOf(input, 'metalness')
+      const tilesPerMetre = numberOf(input, 'tilesPerMetre')
+      const changes: Partial<MaterialDescriptor> = {
+        ...(input.color === undefined
+          ? {}
+          : { color: readColor(input, 'color', node.material.color ?? '') }),
+        ...(roughness === null ? {} : { roughness }),
+        ...(metalness === null ? {} : { metalness }),
+        ...(tilesPerMetre === null ? {} : { tilesPerMetre }),
+        ...textures,
+      }
+
+      return Object.keys(changes).length === 0 ? null : setMaterialOn([node], changes)
+    }),
+
+  'node.geometry': input =>
+    editNode(input, node => {
+      if (node.type !== 'mesh') return null
+
+      const written = numbersFor(input, node.geometry, GEOMETRY_SPECS[node.geometry.kind])
+      if (!written || Object.keys(written).length === 0) return null
+
+      // The whole descriptor at once rather than one field per command: `setGeometryOn` is built
+      // from the geometry as it stands when the command is MADE, so chaining three would keep
+      // only the last. `withField` is what the inspector folds a field in with.
+      return setGeometry(
+        node.id,
+        Object.entries(written).reduce(
+          (geometry, [name, value]) => withField(geometry, name, value),
+          node.geometry,
+        ),
+      )
+    }),
+
+  'node.shadow': input =>
+    editNode(input, node => {
+      const changes = {
+        ...(input.castShadow === undefined ? {} : { castShadow: boolOf(input, 'castShadow') }),
+        ...(input.receiveShadow === undefined
+          ? {}
+          : { receiveShadow: boolOf(input, 'receiveShadow') }),
+      }
+      if (Object.keys(changes).length === 0) return null
+
+      // `setShadowOn` skips a node that cannot hold what it was given — a light catches nothing —
+      // and a skipped node leaves an empty command, which reads as done. Refused instead.
+      return canShadow(node, changes) ? setShadowOn([node], changes) : null
+    }),
+
+  'node.sprite': input =>
+    editNode(input, node => {
+      if (node.type !== 'sprite') return null
+
+      const opacity = numberOf(input, 'opacity')
+      const changes: Partial<SpriteDescriptor> = {
+        ...(input.color === undefined
+          ? {}
+          : { color: readColor(input, 'color', node.sprite.color ?? '') }),
+        ...(opacity === null ? {} : { opacity }),
+        ...(input.map === undefined ? {} : { map: assetRef(input, 'map') }),
+      }
+
+      return Object.keys(changes).length === 0 ? null : setSpriteOn([node], changes)
+    }),
+
+  'node.text': input =>
+    editNode(input, node => {
+      if (node.type !== 'text') return null
+
+      const font = fontFrom(input, node.text.font)
+      const value = textOf(input, 'value')
+      const curveSegments = numberOf(input, 'curveSegments')
+      // Their own keys because a geometry already holds both: a box has a depth in scene units
+      // and a letter has one out of its own plane, and one word for the two said neither.
+      const size = numberOf(input, 'textSize')
+      const depth = numberOf(input, 'textDepth')
+
+      const changes: Partial<TextDescriptor> = {
+        ...(value === null ? {} : { value }),
+        ...(font === null ? {} : { font }),
+        ...(curveSegments === null ? {} : { curveSegments }),
+        ...(size === null ? {} : { size }),
+        ...(depth === null ? {} : { depth }),
+      }
+
+      return Object.keys(changes).length === 0 ? null : setTextOn([node], changes)
+    }),
+
+  'node.path': input =>
+    editPath(input, path => {
+      const tension = numberOf(input, 'tension')
+      // The same rail back is what `editPath` reads as a refusal: a call that named nothing meant
+      // something, and a spread would otherwise hand back a fresh object that changed nothing.
+      if (tension === null && input.closed === undefined) return path
+
+      return {
+        ...path,
+        ...(tension === null ? {} : { tension }),
+        ...(input.closed === undefined ? {} : { closed: boolOf(input, 'closed') }),
+      }
+    }),
+
+  'path.addPoint': input => {
+    const index = numberOf(input, 'index')
+    const aimed = POINT_AXES.filter(axis => input[axis] !== undefined)
+    // A point AIMED at is laid past the last one, as a click in the viewport lays it; an index
+    // says "halfway after this one" instead. Naming both would be naming two places at once.
+    if (aimed.length > 0 && index !== null) return refused('badInput')
+    if (aimed.length > 0 && aimed.length < POINT_AXES.length) return refused('badInput')
+
+    return editPath(input, path => {
+      if (aimed.length === 0)
+        return index === null ? withPointAtEnd(path) : withPointAfter(path, index)
+
+      // Every axis is named, so nothing of the fallback is read.
+      return withPointAppended(path, vectorOf(input, 'point', { x: 0, y: 0, z: 0 }))
+    })
+  },
+
+  'path.movePoint': input =>
+    editPath(input, path => {
+      const index = numberOf(input, 'index') ?? -1
+      const held = path.points[index]
+      return held ? withMovedPoint(path, index, vectorOf(input, 'point', held)) : path
+    }),
+
+  'path.removePoint': input =>
+    editPath(input, path => withoutPoint(path, numberOf(input, 'index') ?? -1)),
+
+  'model.textures': input =>
+    editNode(input, node => {
+      if (node.type !== 'model') return null
+
+      const asked = texturesFrom(input)
+      if (!asked) return null
+
+      // The whole set, as `setModelTextures` takes it: a slot left out of the record is a slot
+      // put back to the map the file itself carries, which is what an empty id says too.
+      const textures: ModelRef['textures'] = {}
+      for (const [slot, ref] of Object.entries(asked)) {
+        if (ref) textures[slot as TextureSlot] = ref
+      }
+
+      return setModelTextures(node.id, textures)
+    }),
+
+  /**
+   * The lens, through the same translation the inspector's own field goes through: a camera whose
+   * `fov` is keyed reads the descriptor PLUS what its channel adds, so a number written raw lands
+   * wherever that sum falls. `lensToCommand` reads the lens off the node it is handed, which is
+   * why the other two fields travel inside it rather than in a command after it.
+   */
   'node.camera': input =>
-    editNode(input, node =>
-      node.type !== 'camera'
-        ? null
-        : setCamera(node.id, {
-            fov: numberOf(input, 'fov') ?? node.camera.fov,
-            near: numberOf(input, 'near') ?? node.camera.near,
-            far: numberOf(input, 'far') ?? node.camera.far,
-          }),
-    ),
+    editNode(input, (node, documentId) => {
+      if (node.type !== 'camera') return null
+
+      const fov = numberOf(input, 'fov')
+      const camera = {
+        fov: fov ?? node.camera.fov,
+        near: numberOf(input, 'near') ?? node.camera.near,
+        far: numberOf(input, 'far') ?? node.camera.far,
+      }
+      if (fov === null) return setCamera(node.id, camera)
+
+      const keying = sceneKeyingAt(documentId)
+      return multi(`camera:${node.id}`, [
+        // Written first and then again by the lens where nothing records it: the keyed branch
+        // writes no descriptor at all, and near and far would be lost with it.
+        setCamera(node.id, camera),
+        lensToCommand(
+          keying.state.animation,
+          [{ ...node, camera }],
+          'fov',
+          fov,
+          keying.at,
+          keying.recording,
+        ),
+      ])
+    }),
 
   // Seconds here, microseconds in the timeline: a client counting a shot in `Us` would be one
   // unit away from a film six orders of magnitude too long, with nothing on screen to say so.
@@ -447,18 +788,42 @@ export const SCENE_HANDLERS: ActionHandlers = {
       })
     }),
 
+  /**
+   * Whatever the kind in hand carries, folded in one field at a time — a hemisphere has a sky and
+   * a ground colour where every other light has one, and a cone belongs to a spot alone. A field
+   * the shape has no room for is refused: `withField` writes by computed key without checking,
+   * and a light given a `penumbra` it never had is a document that no longer describes anything.
+   */
   'node.light': input =>
     editNode(input, node => {
       if (node.type !== 'light') return null
-      const intensity = numberOf(input, 'intensity')
 
-      return setLight(node.id, {
-        ...node.light,
-        // A hemisphere light has no `color` at all — a sky and a ground colour instead — so the
-        // field is written only where the kind carries one.
-        ...('color' in node.light ? { color: readColor(input, 'color', node.light.color) } : {}),
-        ...(intensity === null ? {} : { intensity }),
-      })
+      const specs: Specs = LIGHT_SPECS[node.light.kind]
+      let light = node.light
+
+      for (const name of namedFields(input)) {
+        if (TARGET_AXES.includes(name)) {
+          if (!('target' in node.light)) return null
+          continue
+        }
+        if (!(name in node.light)) return null
+
+        const value = numberOf(input, name)
+        if (value === null) {
+          // A colour: the fallback is unreachable, `validatesInput` having agreed it is a hex.
+          light = withField(light, name, readColor(input, name, ''))
+          continue
+        }
+
+        if (!withinSpec(specs[name], value)) return null
+        light = withField(light, name, value)
+      }
+
+      if ('target' in node.light && TARGET_AXES.some(axis => input[axis] !== undefined)) {
+        light = withField(light, 'target', vectorOf(input, 'target', node.light.target))
+      }
+
+      return light === node.light ? null : setLight(node.id, light)
     }),
 
   /**

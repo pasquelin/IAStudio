@@ -567,11 +567,47 @@
       },
       "nodeMaterial": {
         "title": "Set an object’s material",
-        "description": "Changes the colour, roughness or metalness of a mesh. Refuses a node that carries no mesh material, which the command would otherwise leave untouched."
+        "description": "Changes the colour, roughness, metalness, tiling density and five maps of a mesh or a text. A slot named with an empty id is a map taken off. Tiling is refused on a text, whose outline is not a primitive."
+      },
+      "nodeGeometry": {
+        "title": "Set the parameters of a primitive",
+        "description": "Changes the measurements and segment counts of the shape a mesh was built from. Each primitive carries its own, which reading the scene hands over — a field that does not belong to the shape is refused rather than ignored."
+      },
+      "nodeShadow": {
+        "title": "Set an object’s shadows",
+        "description": "Says whether an object throws a shadow and whether it catches the ones others throw. A light catches none, a sprite does neither, and the field the object cannot hold is refused."
+      },
+      "nodeSprite": {
+        "title": "Set a sprite",
+        "description": "Changes the tint, the opacity and the image of a sprite, which always faces the camera. An empty id takes the image off and leaves the plain coloured quad."
+      },
+      "nodeText": {
+        "title": "Set a 3D text",
+        "description": "Changes the words, the typeface, the size, the depth out of its own plane and the curve fineness of a text. Its material is set through the material action, like a mesh’s."
+      },
+      "nodePath": {
+        "title": "Set the shape of a rail",
+        "description": "Changes the tension of a rail, from 0 angular to 1 round, and whether it closes back on itself. Its control points are added, moved and dropped by the three actions beside this one."
+      },
+      "pathAddPoint": {
+        "title": "Add a point to a rail",
+        "description": "Lays a control point. With coordinates, it is added past the last one, where it was aimed. With an index, it is slipped just after that point, halfway to its neighbour. With neither, it extends the rail off its end."
+      },
+      "pathMovePoint": {
+        "title": "Move a point of a rail",
+        "description": "Changes the coordinates of a control point, in the rail’s own frame — so moving the rail moves the whole trajectory. An index naming no point is refused."
+      },
+      "pathRemovePoint": {
+        "title": "Remove a point from a rail",
+        "description": "Drops a control point. A rail never falls below two points, one point being no line, and the call is refused there."
+      },
+      "modelTextures": {
+        "title": "Override a model’s maps",
+        "description": "Points the maps of an imported model at images of the project, slot by slot. Whatever is not named goes back to the map the file itself carries, and an empty set gives them all back."
       },
       "nodeLight": {
         "title": "Set a light",
-        "description": "Changes the colour or the intensity of a light. Only these two, because the rest of a light’s fields differ from one kind to another."
+        "description": "Changes everything the kind of light in hand carries — its colour, intensity, range, decay, the width and softness of its cone, its target, and the two colours of a hemisphere light. A field the kind does not carry is refused."
       },
       "nodeCamera": {
         "title": "Set a camera lens",
@@ -981,7 +1017,45 @@
       "groundSize": "Side of the ground, in scene units",
       "receiveShadow": "Shadows land on the ground",
       "toneMapping": "How high dynamic range is brought down to the screen",
-      "toneExposure": "Exposure multiplier of the render, 1 leaving it as it is"
+      "toneExposure": "Exposure multiplier of the render, 1 leaving it as it is",
+      "depth": "Depth",
+      "radius": "Radius",
+      "radiusTop": "Top radius, 0 making a cone",
+      "radiusBottom": "Bottom radius",
+      "innerRadius": "Inner radius",
+      "outerRadius": "Outer radius",
+      "tube": "Tube radius",
+      "segments": "Segments around the axis",
+      "capSegments": "Segments of one cap",
+      "radialSegments": "Segments around the tube",
+      "widthSegments": "Segments of longitude",
+      "heightSegments": "Segments of latitude",
+      "tubularSegments": "Segments along the tube",
+      "p": "Turns around the knot’s axis",
+      "q": "Turns around the torus",
+      "castShadow": "The object throws a shadow",
+      "skyColour": "Colour coming from the sky, as #rrggbb",
+      "groundColour": "Colour coming from the ground, as #rrggbb",
+      "distance": "Range past which the light no longer reaches, 0 being unbounded",
+      "decay": "How fast the light falls off with distance, 2 being physical",
+      "angle": "Half-angle of the cone, in radians",
+      "penumbra": "Softness of the cone’s edge, from 0 sharp to 1 diffuse",
+      "targetX": "Target across the width",
+      "targetY": "Target up the height",
+      "targetZ": "Target towards the viewer",
+      "tilesPerMetre": "Repeats of the maps per metre",
+      "textures": "Maps by slot, an empty id taking off the one that was there",
+      "map": "Id of the image, or nothing for none at all",
+      "value": "Words to set",
+      "textSize": "Size of the letters, in scene units",
+      "textDepth": "Depth of the letters out of their own surface, 0 leaving them flat",
+      "curveSegments": "How finely the curves are cut",
+      "tension": "Tension of the rail, from 0 angular to 1 round",
+      "closed": "The rail closes back on itself",
+      "pointIndex": "Index of the control point, counted from the first",
+      "pointX": "Point across the width",
+      "pointY": "Point up the height",
+      "pointZ": "Point towards the viewer"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

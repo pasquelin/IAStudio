@@ -567,11 +567,47 @@
       },
       "nodeMaterial": {
         "title": "Régler la matière d’un objet",
-        "description": "Change la couleur, la rugosité ou l’aspect métallique d’une maille. Refuse un objet qui ne porte pas de matière de maille, que la commande laisserait sinon intact."
+        "description": "Change la couleur, la rugosité, l’aspect métallique, la densité de tuilage et les cinq cartes d’une maille ou d’un texte. Une carte nommée avec un identifiant vide est une carte retirée. Le tuilage est refusé sur un texte, dont le contour n’est pas une primitive."
+      },
+      "nodeGeometry": {
+        "title": "Régler les paramètres d’une primitive",
+        "description": "Change les mesures et les découpages de la forme dont une maille a été construite. Chaque primitive porte les siens, que la lecture de la scène rend — un champ qui n’appartient pas à la forme est refusé plutôt qu’ignoré."
+      },
+      "nodeShadow": {
+        "title": "Régler les ombres d’un objet",
+        "description": "Dit si un objet projette une ombre et s’il reçoit celles des autres. Une lumière n’en reçoit aucune, un panneau ne fait ni l’un ni l’autre, et le champ que l’objet ne peut pas porter est refusé."
+      },
+      "nodeSprite": {
+        "title": "Régler un panneau",
+        "description": "Change la teinte, l’opacité et l’image d’un panneau, qui fait toujours face à la caméra. Un identifiant vide retire l’image et laisse le carré coloré."
+      },
+      "nodeText": {
+        "title": "Régler un texte 3D",
+        "description": "Change les mots, la police, le corps, l’épaisseur du relief et la finesse des courbes d’un texte. Sa matière se règle par l’action de matière, comme celle d’une maille."
+      },
+      "nodePath": {
+        "title": "Régler la forme d’un chemin",
+        "description": "Change la tension d’un chemin, de 0 anguleux à 1 arrondi, et le fait qu’il se referme sur lui-même. Ses points de contrôle s’ajoutent, se déplacent et se retirent par les trois actions voisines."
+      },
+      "pathAddPoint": {
+        "title": "Ajouter un point à un chemin",
+        "description": "Pose un point de contrôle. Avec des coordonnées, il est ajouté après le dernier, là où il est visé. Avec un rang, il est glissé juste après ce point, à mi-distance du suivant. Sans rien, il prolonge le chemin par le bout."
+      },
+      "pathMovePoint": {
+        "title": "Déplacer un point d’un chemin",
+        "description": "Change les coordonnées d’un point de contrôle, dans le repère propre du chemin — bouger le chemin bouge donc toute la trajectoire. Un rang qui ne désigne aucun point est refusé."
+      },
+      "pathRemovePoint": {
+        "title": "Retirer un point d’un chemin",
+        "description": "Retire un point de contrôle. Un chemin ne descend jamais sous deux points, car un point n’est pas une ligne, et la demande est alors refusée."
+      },
+      "modelTextures": {
+        "title": "Remplacer les cartes d’un modèle",
+        "description": "Pointe les cartes d’un modèle importé vers des images du projet, emplacement par emplacement. Ce qui n’est pas nommé revient à la carte que le fichier lui-même porte, et un ensemble vide les rend toutes."
       },
       "nodeLight": {
         "title": "Régler une lumière",
-        "description": "Change la couleur ou l’intensité d’une lumière. Ces deux-là seulement, parce que le reste des champs d’une lumière diffère d’une sorte à l’autre."
+        "description": "Change tout ce que porte la sorte de lumière visée — sa couleur, son intensité, sa portée, son atténuation, l’ouverture et le fondu de son cône, sa cible, et les deux couleurs d’une lumière hémisphérique. Un champ que la sorte ne porte pas est refusé."
       },
       "nodeCamera": {
         "title": "Régler l’objectif d’une caméra",
@@ -981,7 +1017,45 @@
       "groundSize": "Côté du sol, en unités de scène",
       "receiveShadow": "Le sol reçoit les ombres",
       "toneMapping": "Façon de ramener la plage dynamique sur l’écran",
-      "toneExposure": "Multiplicateur d’exposition du rendu, 1 laissant tel quel"
+      "toneExposure": "Multiplicateur d’exposition du rendu, 1 laissant tel quel",
+      "depth": "Profondeur",
+      "radius": "Rayon",
+      "radiusTop": "Rayon supérieur, 0 donnant un cône",
+      "radiusBottom": "Rayon inférieur",
+      "innerRadius": "Rayon intérieur",
+      "outerRadius": "Rayon extérieur",
+      "tube": "Rayon du tube",
+      "segments": "Nombre de segments autour de l’axe",
+      "capSegments": "Nombre de segments d’une calotte",
+      "radialSegments": "Nombre de segments autour du tube",
+      "widthSegments": "Nombre de segments en longitude",
+      "heightSegments": "Nombre de segments en latitude",
+      "tubularSegments": "Nombre de segments le long du tube",
+      "p": "Nombre de tours autour de l’axe du nœud",
+      "q": "Nombre de tours autour du tore",
+      "castShadow": "L’objet projette une ombre",
+      "skyColour": "Couleur venue du ciel, en #rrggbb",
+      "groundColour": "Couleur venue du sol, en #rrggbb",
+      "distance": "Portée au-delà de laquelle la lumière ne va plus, 0 étant sans limite",
+      "decay": "Vitesse d’atténuation avec la distance, 2 étant physique",
+      "angle": "Demi-ouverture du cône, en radians",
+      "penumbra": "Fondu du bord du cône, de 0 net à 1 diffus",
+      "targetX": "Cible en largeur",
+      "targetY": "Cible en hauteur",
+      "targetZ": "Cible vers l’observateur",
+      "tilesPerMetre": "Répétitions des cartes par mètre",
+      "textures": "Cartes par emplacement, un identifiant vide retirant celle qui y était",
+      "map": "Identifiant de l’image, ou rien pour n’en mettre aucune",
+      "value": "Mots à écrire",
+      "textSize": "Corps des lettres, en unités de scène",
+      "textDepth": "Épaisseur du relief des lettres, 0 les laissant plates",
+      "curveSegments": "Finesse de découpe des courbes",
+      "tension": "Tension du chemin, de 0 anguleux à 1 arrondi",
+      "closed": "Le chemin se referme sur lui-même",
+      "pointIndex": "Rang du point de contrôle, compté depuis le premier",
+      "pointX": "Point en largeur",
+      "pointY": "Point en hauteur",
+      "pointZ": "Point vers l’observateur"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",
