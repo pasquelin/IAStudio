@@ -26,6 +26,10 @@ function withLayers(...layers: CanvasState['layers']): void {
 
 const layerIds = (): string[] => canvas().layers.map(layer => layer.id)
 
+/** By name rather than by index: a layer the stack was asked to add does not land at a known one. */
+const layerNamed = (name: string): CanvasState['layers'][number] | undefined =>
+  canvas().layers.find(layer => layer.name === name)
+
 beforeEach(() => {
   withLayers(pixelLayer('layer-a', 'Fond'), pixelLayer('layer-b', 'Sujet'))
 })
@@ -321,6 +325,121 @@ describe('styling and placing a layer', () => {
 
     await runAction('layer.text', { layerId: 'layer-t', color: '#ff8800' })
     expect(canvas().layers[0]).toMatchObject({ color: 0xff8800 })
+  })
+
+  /**
+   * `fonts.list` named faces nothing could then set — the one action of discovery this registry
+   * published with no way to act on what it found.
+   */
+  it('sets the typeface, telling a shipped face from an installed one', async () => {
+    withLayers(textLayer('layer-t', 'Titre', { x: 0, y: 0 }))
+
+    await runAction('layer.text', { layerId: 'layer-t', fontFamily: 'Helvetica Neue' })
+    expect(canvas().layers[0]).toMatchObject({
+      font: { source: 'system', family: 'Helvetica Neue' },
+    })
+
+    await runAction('layer.text', {
+      layerId: 'layer-t',
+      fontFamily: 'Helvetica Neue',
+      fontSource: 'embedded',
+    })
+    expect(canvas().layers[0]).toMatchObject({
+      font: { source: 'embedded', family: 'Helvetica Neue' },
+    })
+  })
+})
+
+describe('the padlocks of a layer', () => {
+  it('sets the one it was given and leaves the others alone', async () => {
+    await runAction('layer.lock', { layerId: 'layer-a', pixels: true })
+
+    expect(canvas().layers[0]?.locked).toEqual({ pixels: true, position: false, alpha: false })
+
+    await runAction('layer.lock', { layerId: 'layer-a', alpha: true })
+
+    expect(canvas().layers[0]?.locked).toEqual({ pixels: true, position: false, alpha: true })
+  })
+
+  it('refuses a call that names no padlock', async () => {
+    expect(await runAction('layer.lock', { layerId: 'layer-a' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+})
+
+describe('repainting a shape long after it was drawn', () => {
+  const drawn = async (): Promise<string> => {
+    const made = await runAction('layer.add', {
+      kind: 'shape',
+      name: 'Cadre',
+      shape: 'rectangle',
+      width: 100,
+      height: 50,
+    })
+    return made.ok ? (made.data as { layerId: string }).layerId : ''
+  }
+
+  it('changes the fill and the outline of a shape already on the stack', async () => {
+    const layerId = await drawn()
+
+    await runAction('layer.shape', {
+      layerId,
+      fill: '#ff0000',
+      stroke: '#0000ff',
+      strokeWidth: 6,
+    })
+
+    expect(layerNamed('Cadre')).toMatchObject({
+      fill: 0xff0000,
+      stroke: { color: 0x0000ff, width: 6 },
+    })
+  })
+
+  /**
+   * The panel answers this by switching the other one back on, which is right under a finger and
+   * wrong from outside: a client that asked for both to go hears that it cannot have that.
+   */
+  it('refuses to leave a shape with neither fill nor outline', async () => {
+    const layerId = await drawn()
+    await runAction('layer.shape', { layerId, filled: true, stroked: false })
+
+    expect(await runAction('layer.shape', { layerId, filled: false })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(layerNamed('Cadre')).toMatchObject({ fill: expect.any(Number) })
+  })
+})
+
+describe('the dial of an adjustment layer', () => {
+  const adjusting = async (): Promise<string> => {
+    const made = await runAction('layer.add', {
+      kind: 'adjustment',
+      name: 'Expo',
+      adjustment: 'exposure',
+    })
+    return made.ok ? (made.data as { layerId: string }).layerId : ''
+  }
+
+  it('moves the dial the layer carries', async () => {
+    const layerId = await adjusting()
+
+    await runAction('layer.adjustment', { layerId, exposure: 1.5 })
+
+    expect(layerNamed('Expo')).toMatchObject({ values: { exposure: 1.5, contrast: 1 } })
+  })
+
+  // Written into the stack it would be carried, neutral and invisible, by a pass that never
+  // reads it — so the call says so instead.
+  it('refuses a dial that is not the layer’s own', async () => {
+    const layerId = await adjusting()
+
+    expect(await runAction('layer.adjustment', { layerId, contrast: 1.4 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
   })
 })
 

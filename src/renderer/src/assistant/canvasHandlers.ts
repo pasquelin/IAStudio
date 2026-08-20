@@ -2,6 +2,7 @@ import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { packedColour } from '@shared/domain/color'
 import { toRadians } from '@shared/domain/angles'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
+import { embeddedFontOf, FONT_SOURCES } from '@shared/domain/font'
 import {
   ADJUSTMENT_KINDS,
   adjustmentLayer,
@@ -33,10 +34,13 @@ import {
   resizeCanvas,
   resizeImage,
   rotateImage,
+  setLayerAdjustment,
   setLayerBlend,
   setLayerClipped,
   setLayerFillOpacity,
+  setLayerLocks,
   setLayerOpacity,
+  setLayerShape,
   setLayerText,
   setLayerTransform,
   setLayerVisible,
@@ -123,11 +127,22 @@ function readState(): ActionOutcome {
         kind: layer.kind,
         visible: layer.visible,
         opacity: layer.opacity,
+        // The three that were written and never read: a client could raise `fillOpacity`, lock a
+        // layer and carve a mask, and had no way of learning that any of it had taken.
+        fillOpacity: layer.fillOpacity,
+        locked: layer.locked,
+        ...(layer.mask ? { mask: layer.mask } : {}),
         blend: layer.blend,
         clipped: layer.clipped,
         transform: layer.transform,
         ...(layer.kind === 'text'
-          ? { text: layer.text, size: layer.size, align: layer.align, box: layer.box }
+          ? {
+              text: layer.text,
+              size: layer.size,
+              align: layer.align,
+              box: layer.box,
+              font: layer.font,
+            }
           : {}),
         ...(layer.kind === 'adjustment' ? { adjustment: layer.adjustment } : {}),
         ...(layer.kind === 'shape'
@@ -262,6 +277,12 @@ function text(input: Record<string, unknown>): ActionOutcome {
   const tracking = numberOf(input, 'tracking')
   const width = numberOf(input, 'width')
   const height = numberOf(input, 'height')
+  const family = textOf(input, 'fontFamily')
+  // Deduced when it is not named, and the studio's own face wins: a machine may have a font of
+  // the same name installed, and the one that ships is the one another machine will also have.
+  const source =
+    oneOf(input, 'fontSource', FONT_SOURCES) ??
+    (embeddedFontOf(family ?? '') ? 'embedded' : 'system')
 
   return editLayer(input, layer =>
     // The command only touches a text layer, so a pixel layer named here would be reported as
@@ -270,6 +291,7 @@ function text(input: Record<string, unknown>): ActionOutcome {
       ? [
           setLayerText(layer.id, {
             ...(written === null ? {} : { text: written }),
+            ...(family === null ? {} : { font: { source, family } }),
             ...(size === null ? {} : { size }),
             ...(colour === null ? {} : { color: colour }),
             ...(align === null ? {} : { align }),
@@ -290,6 +312,86 @@ function text(input: Record<string, unknown>): ActionOutcome {
         ]
       : [],
   )
+}
+
+function locks(input: Record<string, unknown>): ActionOutcome {
+  return editLayer(input, layer => {
+    const wanted = {
+      ...layer.locked,
+      ...(input.pixels === undefined ? {} : { pixels: boolOf(input, 'pixels') }),
+      ...(input.position === undefined ? {} : { position: boolOf(input, 'position') }),
+      ...(input.alpha === undefined ? {} : { alpha: boolOf(input, 'alpha') }),
+    }
+
+    // A call naming no padlock at all is a refusal, which `run` makes of an empty list.
+    return input.pixels === undefined && input.position === undefined && input.alpha === undefined
+      ? []
+      : [setLayerLocks(layer.id, wanted)]
+  })
+}
+
+/** The paint a shape falls back to when it is switched on, so a `true` is never a no-op. */
+const INK = 0x000000
+
+function shape(input: Record<string, unknown>): ActionOutcome {
+  const fill = packedColour(textOf(input, 'fill') ?? '')
+  const stroke = packedColour(textOf(input, 'stroke') ?? '')
+  const strokeWidth = numberOf(input, 'strokeWidth')
+  const sides = numberOf(input, 'sides')
+
+  return editLayer(input, layer => {
+    if (layer.kind !== 'shape') return []
+
+    const painted =
+      input.filled === undefined
+        ? fill === null
+          ? layer.fill
+          : fill
+        : boolOf(input, 'filled')
+          ? (fill ?? layer.fill ?? INK)
+          : null
+
+    const outlined =
+      input.stroked !== undefined && !boolOf(input, 'stroked')
+        ? null
+        : input.stroked === undefined && stroke === null && strokeWidth === null
+          ? layer.stroke
+          : {
+              color: stroke ?? layer.stroke?.color ?? INK,
+              width: strokeWidth ?? layer.stroke?.width ?? DEFAULT_STROKE_WIDTH,
+            }
+
+    // The panel answers this by switching the other one back on, which is right under a finger and
+    // wrong here: a client that asked for both to go has to hear that it cannot have that, rather
+    // than be handed a shape it did not ask for.
+    if (painted === null && outlined === null) return []
+
+    return [
+      setLayerShape(layer.id, {
+        fill: painted,
+        stroke: outlined,
+        ...(sides === null ? {} : { sides }),
+      }),
+    ]
+  })
+}
+
+/**
+ * The one dial the layer carries. A field naming another is refused rather than dropped: written
+ * into the stack it would be carried, neutral and invisible, by a pass that never reads it.
+ */
+function adjustment(input: Record<string, unknown>): ActionOutcome {
+  return editLayer(input, layer => {
+    if (layer.kind !== 'adjustment') return []
+
+    const named = ADJUSTMENT_KINDS.filter(kind => input[kind] !== undefined)
+    if (named.length !== 1 || named[0] !== layer.adjustment) return []
+
+    const value = numberOf(input, layer.adjustment)
+    return value === null
+      ? []
+      : [setLayerAdjustment(layer.id, { ...layer.values, [layer.adjustment]: value })]
+  })
 }
 
 function duplicate(input: Record<string, unknown>): ActionOutcome {
@@ -378,6 +480,9 @@ export const CANVAS_HANDLERS: ActionHandlers = {
       : editLayer(input, layer => [renameLayer(layer.id, name)])
   },
   'layer.style': style,
+  'layer.lock': locks,
+  'layer.shape': shape,
+  'layer.adjustment': adjustment,
   'layer.transform': transform,
   'layer.text': text,
   'layer.move': input => {

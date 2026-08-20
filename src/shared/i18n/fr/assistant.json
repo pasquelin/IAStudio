@@ -661,6 +661,18 @@
         "title": "Choisir la façon de dessiner la scène",
         "description": "Passe la vue principale en ombré, en fil de fer, en matière seule ou dans l’une des autres façons de dessiner. La commande de menu ne fait que tourner d’une à l’autre, quand celle-ci nomme laquelle."
       },
+      "layerLock": {
+        "title": "Verrouiller un calque",
+        "description": "Pose ou retire les trois verrous d’un calque, celui de ses pixels, celui de sa place et celui de sa transparence. Un verrou posé fait refuser les modifications correspondantes, y compris celles demandées depuis l’extérieur."
+      },
+      "layerShape": {
+        "title": "Repeindre une forme",
+        "description": "Change le remplissage, le contour, l’épaisseur du trait et le nombre de côtés d’une forme déjà dessinée, sans la redessiner. Retirer le remplissage et le contour à la fois est refusé, cela ne laisserait rien à voir."
+      },
+      "layerAdjustment": {
+        "title": "Régler un calque de correction",
+        "description": "Déplace le cadran que porte un calque de correction — exposition, contraste, saturation ou température. Nommer un autre cadran que le sien est refusé plutôt qu’ignoré en silence."
+      },
       "worldEnvironment": {
         "title": "Choisir ce qui éclaire la scène",
         "description": "Éclaire la scène par le studio procédural ou par un ciel du projet, nommé par son identifiant d’asset, et règle l’intensité de cet éclairage ainsi que sa rotation autour de la verticale."
@@ -952,6 +964,16 @@
       "stashIndex": "Place dans la pile, la plus récente d’abord",
       "settings": "Réglages à changer, par section",
       "accountId": "Identifiant du compte",
+      "lockPixels": "Verrouiller les pixels du calque",
+      "lockPosition": "Verrouiller la place du calque",
+      "lockAlpha": "Verrouiller la transparence du calque",
+      "shapeFilled": "La forme est remplie",
+      "shapeFill": "Couleur de remplissage, en #rrggbb",
+      "shapeStroked": "La forme a un contour",
+      "shapeStroke": "Couleur du contour, en #rrggbb",
+      "strokeWidth": "Épaisseur du contour, en pixels",
+      "fontFamily": "Nom de la police, tel que la liste des polices le rend",
+      "fontSource": "Provenance de la police, livrée avec le studio ou installée sur la machine",
       "environmentKind": "Source de l’éclairage, le studio ou un ciel",
       "backgroundKind": "Ce qui est derrière, l’environnement, une couleur, ou rien",
       "fogKind": "Forme de la brume, aucune, linéaire ou exponentielle",

@@ -661,6 +661,18 @@
         "title": "Choose how the scene is drawn",
         "description": "Switches the main view to shaded, wireframe, material-only or one of the other ways of drawing. The menu command only cycles from one to the next; this one names which."
       },
+      "layerLock": {
+        "title": "Lock a layer",
+        "description": "Sets or lifts the three padlocks of a layer, the one on its pixels, the one on its place and the one on its transparency. A padlock that is on refuses the matching edits, including those asked for from outside."
+      },
+      "layerShape": {
+        "title": "Repaint a shape",
+        "description": "Changes the fill, the outline, the stroke width and the number of sides of a shape already drawn, without drawing it again. Taking away the fill and the outline at once is refused, as it would leave nothing to see."
+      },
+      "layerAdjustment": {
+        "title": "Set an adjustment layer",
+        "description": "Moves the one dial an adjustment layer carries — exposure, contrast, saturation or temperature. Naming any dial other than its own is refused rather than quietly dropped on the floor."
+      },
       "worldEnvironment": {
         "title": "Choose what lights the scene",
         "description": "Lights the scene either by the procedural studio or by a sky of the project, named by its asset identifier, and sets how strong that lighting is and how far it is turned about the vertical."
@@ -952,6 +964,16 @@
       "stashIndex": "Place in the shelf, newest first",
       "settings": "Settings to change, by section",
       "accountId": "Account identifier",
+      "lockPixels": "Lock the pixels of the layer",
+      "lockPosition": "Lock the place of the layer",
+      "lockAlpha": "Lock the transparency of the layer",
+      "shapeFilled": "The shape is filled",
+      "shapeFill": "Fill colour, as #rrggbb",
+      "shapeStroked": "The shape has an outline",
+      "shapeStroke": "Outline colour, as #rrggbb",
+      "strokeWidth": "Outline width, in pixels",
+      "fontFamily": "Name of the typeface, as the font list gives it",
+      "fontSource": "Where the typeface comes from, shipped with the studio or installed on the machine",
       "environmentKind": "Where the lighting comes from: the studio or a sky",
       "backgroundKind": "What hangs behind: the environment, a colour, or nothing",
       "fogKind": "Shape of the haze: none, linear or exponential",
