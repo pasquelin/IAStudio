@@ -19,6 +19,7 @@ import {
   type Layer,
   type LayerLocks,
   type Rect,
+  type ShapeLayer,
   type TextLayer,
   type Transform,
 } from './canvasState'
@@ -182,7 +183,12 @@ export function setLayerAdjustment(id: string, values: AdjustmentStack): Command
 /** The words of a caption, and how they are set. Its own command, like the grading values. */
 export function setLayerText(
   id: string,
-  changes: Partial<Pick<TextLayer, 'text' | 'font' | 'size' | 'color'>>,
+  changes: Partial<
+    Pick<
+      TextLayer,
+      'text' | 'font' | 'size' | 'color' | 'box' | 'align' | 'lineHeight' | 'tracking'
+    >
+  >,
 ): Command<CanvasState> {
   let previous: TextLayer | null = null
 
@@ -192,6 +198,30 @@ export function setLayerText(
       ...state,
       layers: mapLayers(state.layers, layer => {
         if (layer.id !== id || layer.kind !== 'text') return layer
+        previous ??= layer
+        return { ...layer, ...changes }
+      }),
+    }),
+    revert: state => ({
+      ...state,
+      layers: mapLayers(state.layers, layer => (layer.id === id && previous ? previous : layer)),
+    }),
+  }
+}
+
+/** The paint of a shape, and how many points it has. Its own command, like a caption's words. */
+export function setLayerShape(
+  id: string,
+  changes: Partial<Pick<ShapeLayer, 'sides' | 'fill' | 'stroke'>>,
+): Command<CanvasState> {
+  let previous: ShapeLayer | null = null
+
+  return {
+    id: `layer:shape:${id}`,
+    apply: state => ({
+      ...state,
+      layers: mapLayers(state.layers, layer => {
+        if (layer.id !== id || layer.kind !== 'shape') return layer
         previous ??= layer
         return { ...layer, ...changes }
       }),

@@ -1,5 +1,6 @@
 import { mdiTune } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
+import { colourOf, packedColour } from '@shared/domain/color'
 import { cn } from '@/helpers/cn'
 import { CONTROL } from '@/design/styles'
 import { TIP_RIGHT } from '@/helpers/tooltip'
@@ -58,9 +59,9 @@ export function ImageDocumentBrush({
       <input
         type="color"
         {...TIP_RIGHT(t('imageTools.color'), undefined, t('imageTools.colorHint'))}
-        value={`#${brush.color.toString(16).padStart(6, '0')}`}
+        value={colourOf(brush.color)}
         onChange={event =>
-          onBrush({ ...brush, color: Number.parseInt(event.target.value.slice(1), 16) })
+          onBrush({ ...brush, color: packedColour(event.target.value) ?? brush.color })
         }
         className={cn(CONTROL, 'w-(--sc-control) cursor-pointer border-none p-0.5')}
       />

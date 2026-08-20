@@ -44,6 +44,7 @@ vi.mock('@/engines/canvas/CanvasEngine', () => {
       setBrush = setBrush
       loadInto = vi.fn(() => Promise.resolve())
       setSelection = vi.fn()
+      setEditingText = vi.fn()
       setSelectionShape = vi.fn()
       setShape = setShape
       snapshot = vi.fn(() => Promise.resolve('data:image/png;base64,AAAA'))

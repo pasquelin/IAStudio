@@ -13,10 +13,17 @@ import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { registerFace } from '@/engines/canvas/canvasFonts'
-import { layerBelow, textLayer } from '@/engines/canvas/canvasState'
+import {
+  layerBelow,
+  layerById,
+  shapeLayer,
+  textLayer,
+  type ShapeKind,
+} from '@/engines/canvas/canvasState'
 import { CanvasEngine } from '@/engines/canvas/CanvasEngine'
 import { DEFAULT_BRUSH, resizedBrush, type BrushSettings } from '@/engines/canvas/brush'
 import { ImageDocumentBrush } from './ImageDocumentBrush'
+import { ImageDocumentText } from './ImageDocumentText'
 import { RULER_SIZE } from '@/engines/canvas/CanvasOverlay'
 import { useBindingOverrides } from '@/stores/bindings'
 import {
@@ -25,6 +32,7 @@ import {
   flatten,
   flipImage,
   mergeDown,
+  removeLayer,
   rotateImage,
 } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
@@ -94,9 +102,14 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const label = useShortcutLabel()
   const active = useDocumentIsInFront(documentId)
 
-  // What a fresh caption says. Held in a ref so the effect that builds the engine does not
-  // depend on the language, which would remount it — and lose every layer's texture.
-  const caption = useLatest(t('imageTools.textDefault'))
+  /** The caption being typed, if one is. Session state: nothing about it goes out with the file. */
+  const [editing, setEditing] = useState<string | null>(null)
+
+  // What the stack calls a caption while it has no words. Held in a ref so the effect that builds
+  // the engine does not depend on the language, which would remount it — and lose every texture.
+  const caption = useLatest(t('imageTools.textName'))
+  // What the stack calls a shape the hand just drew. Held for the same reason the caption is.
+  const shapeName = useLatest((kind: ShapeKind) => t(`layers.shapeName_${kind}`))
 
   useEffect(() => {
     const element = hostRef.current
@@ -117,10 +130,23 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       onHost: size => views().setHost(documentId, size),
       // Read through the ref rather than captured: rebuilding the engine on a language change
       // would take the GPU context — and the pixels in it — down with it.
-      onText: at =>
+      onText: asked => {
+        if ('layerId' in asked) return setEditing(asked.layerId)
+
+        // Born EMPTY, and named after its kind while it has no words: a caption that opens on
+        // "Your text" is a caption every user has to clear before typing their own.
+        const id = newId()
+        const born = { ...textLayer(id, '', asked.at, asked.box), name: caption.current }
+        useCanvases.getState().runCommand(documentId, addLayer(born))
+        setEditing(id)
+      },
+      onShape: (at, drawn) =>
         useCanvases
           .getState()
-          .runCommand(documentId, addLayer(textLayer(newId(), caption.current, at))),
+          .runCommand(
+            documentId,
+            addLayer(shapeLayer(newId(), shapeName.current(drawn.shape), at, drawn)),
+          ),
       onCrop: rect => useCanvases.getState().runCommand(documentId, cropToRect(rect)),
       onCropFrame: framed => views().setCropFrame(documentId, framed),
       guides: guidePort(documentId),
@@ -141,7 +167,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       created.dispose()
       engine.current = null
     }
-  }, [documentId, caption])
+  }, [documentId, caption, shapeName])
 
   // After the engine is registered, never before: the pixels are handed to it, and it has to be
   // reachable.
@@ -172,6 +198,29 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   useEffect(() => {
     engine.current?.setBrush(brush)
   }, [brush])
+
+  // The layer steps aside while the field draws it, so the words are drawn once and by one thing.
+  useEffect(() => {
+    engine.current?.setEditingText(editing)
+  }, [editing])
+
+  /** The caption being typed, read back from the stack: the field edits the layer, not a copy. */
+  const typed = editing ? layerById(canvas, editing) : null
+  const typing = typed?.kind === 'text' ? typed : null
+
+  /**
+   * Ends a typing session. A caption nobody typed into is REMOVED rather than left standing: an
+   * empty text layer draws nothing at all, and a stack full of them is what a mis-click leaves.
+   */
+  const endTyping = useCallback((): void => {
+    // Read from the store rather than from `typing`: the last keystroke is written asynchronously,
+    // and a captured layer is one render old exactly when it matters.
+    const layer = editing ? layerById(canvasOf(useCanvases.getState(), documentId), editing) : null
+    if (layer?.kind === 'text' && layer.text.trim() === '') {
+      useCanvases.getState().runCommand(documentId, removeLayer(layer.id))
+    }
+    setEditing(null)
+  }, [documentId, editing])
 
   const mode = modes[tool]
 
@@ -397,6 +446,17 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
             `CanvasEngine.mount`. The cursor goes on the host rather than the canvas, which Pixi
             owns and replaces on every mount. */}
         <div ref={hostRef} className="absolute inset-0" style={{ cursor: cursorFor(tool, mode) }} />
+
+        {typing && (
+          <ImageDocumentText
+            documentId={documentId}
+            layer={typing}
+            viewport={view.viewport}
+            inset={rulerInset}
+            label={t('imageTools.textEditing')}
+            onDone={endTyping}
+          />
+        )}
 
         {/* Inside the rulers rather than over them: the toolbar covered the first twenty pixels
             of both graduations — the corner one reads a position from. A margin, so the gap the

@@ -15,6 +15,7 @@ import { definition as meshes } from '@/panels/meshes'
 import { definition as models } from '@/panels/models'
 import { definition as projects } from '@/panels/projects'
 import { definition as scene } from '@/panels/scene'
+import { definition as text } from '@/panels/text'
 import { definition as timeline } from '@/panels/timeline'
 import { isKnownTool, TOOL_ENTRIES, toolDefinition } from './toolComponents'
 
@@ -42,6 +43,7 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   projects,
   library,
   animations,
+  text,
 }
 
 const IDS = Object.keys(PANELS).filter(isKnownTool)

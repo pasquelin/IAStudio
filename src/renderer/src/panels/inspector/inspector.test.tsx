@@ -861,13 +861,17 @@ describe('inspector panel', () => {
     expect(screen.getByRole('spinbutton', { name: /Gain/ })).toBeInTheDocument()
   })
 
-  // The image in front is not necessarily the one the layer was picked in.
-  it('says nothing for a layer picked in another document', () => {
+  /**
+   * The armed layer of the image in FRONT, whatever a selection posted elsewhere still says. One
+   * answer rather than two: the stack highlights `activeLayerId`, and a panel reading a second
+   * source emptied itself over the very layer the stack showed picked.
+   */
+  it('describes the armed layer of the image in front, not one picked elsewhere', () => {
     installCanvas('doc-1')
     useSelection.getState().selectLayer('elsewhere', 'layer-1')
     render(<Content />)
 
-    expect(screen.queryByText('Composition')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Composition/ })).toBeInTheDocument()
   })
 
   /**
@@ -991,13 +995,12 @@ describe('inspector panel', () => {
       expect(screen.getByRole('button', { name: /Environnement/ })).toBeInTheDocument()
     })
 
-    it('says nothing at all when the document in front is neither', () => {
+    /** An image opens with a layer armed, so there is always one to describe — see above. */
+    it('describes the armed layer when the document in front is an image', () => {
       installCanvas('doc-1')
       render(<Content />)
 
-      expect(
-        screen.getByText('Sélectionnez un élément pour voir ses propriétés.'),
-      ).toBeInTheDocument()
+      expect(screen.queryByText('Sélectionnez un élément pour voir ses propriétés.')).toBeNull()
       expect(screen.queryByLabelText('Rugosité')).toBeNull()
     })
   })

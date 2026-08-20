@@ -3,10 +3,13 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   adjustmentLayer,
+  DEFAULT_SHAPE_SIDES,
   groupLayer,
   pixelLayer,
+  shapeLayer,
   textLayer,
   type Layer,
+  type ShapeLayer,
 } from '@/engines/canvas/canvasState'
 import { addLayer } from '@/engines/canvas/commands'
 import { installCanvas } from '@/stores/canvas-fixtures'
@@ -119,6 +122,73 @@ describe('LayerInspector', () => {
       show()
 
       expect(screen.queryByLabelText('Exposition')).not.toBeInTheDocument()
+    })
+  })
+
+  /** A shape kept as geometry is a shape whose paint is still editable — the whole point of it. */
+  describe('a shape', () => {
+    const drawn = (over: Partial<ShapeLayer> = {}): ShapeLayer => ({
+      ...shapeLayer(
+        's',
+        'Rectangle',
+        { x: 4, y: 4 },
+        {
+          shape: 'rectangle',
+          from: { x: 0, y: 0 },
+          to: { x: 20, y: 10 },
+          sides: DEFAULT_SHAPE_SIDES,
+          fill: 0x000000,
+          stroke: null,
+        },
+      ),
+      ...over,
+    })
+
+    const showing = (layer: ShapeLayer): void => {
+      useCanvases.getState().runCommand(DOCUMENT, addLayer(layer))
+      render(<LayerInspector documentId={DOCUMENT} layer={layer} />)
+    }
+
+    it('recolours a shape drawn long ago', () => {
+      showing(drawn())
+
+      fireEvent.change(screen.getByLabelText('Couleur de remplissage'), {
+        target: { value: '#ff0000' },
+      })
+
+      const written = stack().layers.at(-1)
+      expect(written?.kind === 'shape' && written.fill).toBe(0xff0000)
+    })
+
+    it('empties the inside, which is what an outlined rectangle is', async () => {
+      showing(drawn())
+
+      await userEvent.click(screen.getByLabelText('Remplir'))
+
+      const written = stack().layers.at(-1)
+      expect(written?.kind === 'shape' && written.fill).toBeNull()
+    })
+
+    it('gives a stroke a width once there is one to widen', async () => {
+      showing(drawn({ stroke: { color: 0x000000, width: 2 } }))
+
+      fireEvent.change(screen.getByLabelText('Épaisseur'), { target: { value: '8' } })
+
+      const written = stack().layers.at(-1)
+      expect(written?.kind === 'shape' && written.stroke?.width).toBe(8)
+    })
+
+    // A rectangle has no point count, and a field that means nothing is a field that misleads.
+    it('counts points on a shape drawn from a centre', () => {
+      showing(drawn({ shape: 'star' }))
+
+      expect(screen.getByLabelText('Points')).toBeInTheDocument()
+    })
+
+    it('counts none on one drawn corner to corner', () => {
+      showing(drawn())
+
+      expect(screen.queryByLabelText('Points')).not.toBeInTheDocument()
     })
   })
 

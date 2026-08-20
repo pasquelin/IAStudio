@@ -7,7 +7,7 @@ import { BLEND_MODES, type BlendMode } from '@shared/domain/canvasBlend'
 import { DEFAULT_FONT, readFontRef, type FontRef } from '@shared/domain/font'
 import { isRecord, oneOf } from '@shared/guards'
 import { clamp } from '@shared/numeric'
-import type { Point } from '../core/geometry'
+import type { Point, Size } from '../core/geometry'
 
 /**
  * An image document, as plain data. It holds no Pixi object on purpose: an engine is rebuilt
@@ -147,6 +147,10 @@ export function adjustmentLayer(
  * Words rather than pixels. Kept as text so it stays editable and stays sharp at any zoom — a
  * caption rasterized at the moment it was typed is a caption nobody can fix a typo in.
  */
+export type TextAlign = 'left' | 'center' | 'right' | 'justify'
+
+export const TEXT_ALIGNS: readonly TextAlign[] = ['left', 'center', 'right', 'justify']
+
 export type TextLayer = LayerBase & {
   kind: 'text'
   text: string
@@ -160,28 +164,98 @@ export type TextLayer = LayerBase & {
   size: number
   /** Packed RGB, the form Pixi takes. */
   color: number
+  /**
+   * What the words wrap inside, in document units. Words are never CUT to it: a caption that
+   * outgrows its box spills past it, exactly as one does in Photoshop.
+   */
+  box: Size
+  align: TextAlign
+  /** A multiple of the size, so a caption keeps its leading when it is set bigger. */
+  lineHeight: number
+  /** Thousandths of an em, the unit a type panel shows — Photoshop's own. */
+  tracking: number
 }
 
 export const DEFAULT_TEXT_SIZE = 48
 
-export function textLayer(id: string, text: string, at: Point): TextLayer {
+/** What a single click opens. A drag names its own, and this is what a click has instead. */
+export const DEFAULT_TEXT_BOX: Size = { width: 480, height: 120 }
+
+export const DEFAULT_LINE_HEIGHT = 1.2
+
+export function textLayer(id: string, text: string, at: Point, box = DEFAULT_TEXT_BOX): TextLayer {
   return {
+    // Named after its words, and after the KIND while it has none: a nameless row in the stack
+    // is a row nobody can find the caption back by.
     ...layerBase(id, text),
     kind: 'text',
     text,
     font: DEFAULT_FONT,
     size: DEFAULT_TEXT_SIZE,
     color: 0x000000,
+    box,
+    align: 'left',
+    lineHeight: DEFAULT_LINE_HEIGHT,
+    tracking: 0,
     transform: { ...IDENTITY, x: at.x, y: at.y },
   }
 }
 
-export type Layer = PixelLayer | GroupLayer | AdjustmentLayer | TextLayer
+/**
+ * Which shape a shape layer holds. Declared here rather than beside the arithmetic that derives
+ * it: `shapeGeometry` reads this file, and a stored layer must not depend on a Pixi-facing module.
+ */
+export type ShapeKind = 'rectangle' | 'line' | 'arrow' | 'ellipse' | 'polygon' | 'star'
+
+/** Figma's order, which is the order of the menu the user reads. */
+export const SHAPE_KINDS: readonly ShapeKind[] = [
+  'rectangle',
+  'line',
+  'arrow',
+  'ellipse',
+  'polygon',
+  'star',
+]
+
+export type ShapeStroke = { color: number; width: number }
+
+/**
+ * A shape kept as its two points rather than as pixels, so it stays editable: changing the fill
+ * of a rectangle drawn an hour ago redraws it, where a rasterized one would have to be undone.
+ */
+export type ShapeLayer = LayerBase & {
+  kind: 'shape'
+  shape: ShapeKind
+  /** The drag's two points, in the layer's own space — its origin is its box's top-left corner. */
+  from: Point
+  to: Point
+  /** Vertex count for the polygon and point count for the star; the four others ignore it. */
+  sides: number
+  /** `null` leaves the inside empty, which is what an outlined rectangle is. */
+  fill: number | null
+  stroke: ShapeStroke | null
+}
+
+export const DEFAULT_SHAPE_SIDES = 5
+
+/** A shape without the layer around it: what the hand drew, before the stack names and places it. */
+export type DrawnShape = Pick<ShapeLayer, 'shape' | 'from' | 'to' | 'sides' | 'fill' | 'stroke'>
+
+export function shapeLayer(id: string, name: string, at: Point, drawn: DrawnShape): ShapeLayer {
+  return {
+    ...layerBase(id, name),
+    kind: 'shape',
+    ...drawn,
+    transform: { ...IDENTITY, x: at.x, y: at.y },
+  }
+}
+
+export type Layer = PixelLayer | GroupLayer | AdjustmentLayer | TextLayer | ShapeLayer
 
 export type LayerKind = Layer['kind']
 
 /** All of them: the inspector names each one from a bundle, and a nameless one shows its key. */
-export const LAYER_KINDS: readonly LayerKind[] = ['pixel', 'group', 'adjustment', 'text']
+export const LAYER_KINDS: readonly LayerKind[] = ['pixel', 'group', 'adjustment', 'text', 'shape']
 
 const GUIDE_AXES: readonly ('x' | 'y')[] = ['x', 'y']
 
@@ -423,6 +497,25 @@ function reviveLayer(raw: unknown, seen: Set<string>): Layer | null {
       font: readFontRef(source.font),
       size: typeof source.size === 'number' ? source.size : DEFAULT_TEXT_SIZE,
       color: typeof source.color === 'number' ? source.color : 0x000000,
+      // A file written before captions had a box reads back with the one a click opens, rather
+      // than with none: a width of zero wraps every caption to one letter per line.
+      box: reviveBox(source.box),
+      align: oneOf(TEXT_ALIGNS, source.align, 'left'),
+      lineHeight: typeof source.lineHeight === 'number' ? source.lineHeight : DEFAULT_LINE_HEIGHT,
+      tracking: typeof source.tracking === 'number' ? source.tracking : 0,
+    }
+  }
+
+  if (source.kind === 'shape') {
+    return {
+      ...base,
+      kind: 'shape',
+      shape: oneOf(SHAPE_KINDS, source.shape, 'rectangle'),
+      from: revivePoint(source.from),
+      to: revivePoint(source.to),
+      sides: typeof source.sides === 'number' ? source.sides : DEFAULT_SHAPE_SIDES,
+      fill: typeof source.fill === 'number' ? source.fill : null,
+      stroke: reviveStroke(source.stroke),
     }
   }
 
@@ -486,6 +579,32 @@ function reviveAdjustment(raw: unknown): AdjustmentKind {
     return RETIRED_ADJUSTMENTS[raw] ?? 'exposure'
   }
   return oneOf(ADJUSTMENT_KINDS, raw, 'exposure')
+}
+
+function reviveBox(raw: unknown): Size {
+  if (!isRecord(raw)) return DEFAULT_TEXT_BOX
+  const read = (value: unknown, fallback: number): number =>
+    typeof value === 'number' && value > 0 ? value : fallback
+
+  return {
+    width: read(raw.width, DEFAULT_TEXT_BOX.width),
+    height: read(raw.height, DEFAULT_TEXT_BOX.height),
+  }
+}
+
+/** A shape whose two points collapse has no size, which nothing on screen could ever hold. */
+function revivePoint(raw: unknown): Point {
+  if (!isRecord(raw)) return { x: 0, y: 0 }
+  return {
+    x: typeof raw.x === 'number' ? raw.x : 0,
+    y: typeof raw.y === 'number' ? raw.y : 0,
+  }
+}
+
+function reviveStroke(raw: unknown): ShapeStroke | null {
+  if (!isRecord(raw)) return null
+  if (typeof raw.color !== 'number' || typeof raw.width !== 'number') return null
+  return { color: raw.color, width: raw.width }
 }
 
 function reviveTransform(raw: unknown): Transform {

@@ -73,7 +73,8 @@
     "size": "Taille",
     "hardness": "Dureté",
     "opacity": "Opacité",
-    "textDefault": "Votre texte"
+    "textName": "Texte",
+    "textEditing": "Saisie du texte"
   },
   "imageView": {
     "zoom": "{{value}} — taille réelle",
@@ -92,6 +93,12 @@
     "showHint": "Afficher ce calque",
     "hideHint": "Masquer ce calque sans le supprimer",
     "untitled": "Calque {{n}}",
+    "shapeName_rectangle": "Rectangle",
+    "shapeName_line": "Trait",
+    "shapeName_arrow": "Flèche",
+    "shapeName_ellipse": "Ellipse",
+    "shapeName_polygon": "Polygone",
+    "shapeName_star": "Étoile",
     "noDocument": "Ouvrez une image pour voir ses calques.",
     "locks": "Verrous",
     "locksHint": "Verrouiller les pixels, la position ou la transparence",
@@ -160,5 +167,22 @@
     "contrastHint": "Écarte les tons clairs des tons sombres, ou les rapproche",
     "saturationHint": "Ravive les couleurs ou les éteint, jusqu’au gris",
     "temperatureHint": "Réchauffe vers l’orange ou refroidit vers le bleu"
+  },
+  "text": {
+    "noCaption": "Choisissez un calque de texte, ou tracez-en un avec l’outil Texte.",
+    "character": "Caractère",
+    "paragraph": "Paragraphe",
+    "font": "Police",
+    "size": "Corps",
+    "lineHeight": "Interligne",
+    "tracking": "Approche",
+    "colour": "Couleur",
+    "align": "Alignement",
+    "align_left": "Aligner à gauche",
+    "align_center": "Centrer",
+    "align_right": "Aligner à droite",
+    "align_justify": "Justifier",
+    "boxWidth": "Largeur de la zone",
+    "boxHeight": "Hauteur de la zone"
   }
 }

@@ -3,7 +3,7 @@ import type { Guide, Rect } from './canvasState'
 import { cropChrome } from './crop'
 import { gripRects, HANDLE_IDS, outlinePoints, type Corners, type HandleId } from './handles'
 import { rulerStep, tickLabel, ticks } from './rulers'
-import { shapeOutline, type ShapeGeometry } from './shapeGeometry'
+import { paintShape, type ShapeGeometry } from './shapeGeometry'
 import { crisp, toScreen, visibleRect, type Viewport } from './viewport'
 import type { Point, Size } from '../core/geometry'
 
@@ -28,6 +28,7 @@ export type OverlayContext = Pick<
   | 'lineTo'
   | 'arc'
   | 'stroke'
+  | 'fill'
   | 'fillRect'
   | 'strokeRect'
   | 'fillText'
@@ -130,6 +131,16 @@ export const RULER_SIZE = 20
 const MINOR_TICK = 4
 
 /**
+ * A shape mid-drag, with the paint it will be committed with. Colours as CSS rather than as the
+ * `0xrrggbb` the engine holds: this is drawn by a 2D context, which speaks neither.
+ */
+export type PendingShape = {
+  shape: ShapeGeometry
+  fill: string | null
+  stroke: { color: string; width: number } | null
+}
+
+/**
  * What the active tool has on screen right now, in DOCUMENT units — the engine hands over its
  * state rather than a painter closed over itself. That is what makes the chrome readable from a
  * test: jsdom hands out no 2D context, so a painter the engine kept could never be run.
@@ -145,8 +156,10 @@ export type ToolChrome = {
   handles: Corners | null
   /** The grip under the pointer, drawn a pixel wider. `null` when the hand is elsewhere. */
   lit: HandleId | null
-  /** The shape under the hand, outlined until it is committed to the layer. */
-  pending: ShapeGeometry | null
+  /** The shape under the hand, drawn as it will land — not as a marquee around where it will. */
+  pending: PendingShape | null
+  /** The box a text drag is sizing. A frame, not a shape: nothing is painted where it stands. */
+  textBox: Rect | null
   selection: CanvasSelection
   /**
    * Half the brush, in DOCUMENT units, while a painting tool is armed — `null` for every other
@@ -242,7 +255,8 @@ function drawGuides(context: OverlayContext, scene: OverlayScene): void {
 
 function drawTools(context: OverlayContext, scene: OverlayScene, phase: number): void {
   drawSelection(context, scene, phase)
-  drawPending(context, scene, phase)
+  drawPending(context, scene)
+  drawTextBox(context, scene, phase)
   drawCrop(context, scene, phase)
   drawGrips(context, scene)
   // Last: the ring stands in for the cursor, and a cursor is never under what it points at.
@@ -281,12 +295,57 @@ function drawSelection(context: OverlayContext, scene: OverlayScene, phase: numb
   ants(context, () => tracePath(context, scene.viewport, outline), phase, scene.colors)
 }
 
-function drawPending(context: OverlayContext, scene: OverlayScene, phase: number): void {
-  const shape = scene.tools.pending
-  if (!shape) return
+/**
+ * The shape as it will land, painted rather than outlined in ants. Through `paintShape`, the very
+ * path the GPU is handed on release: a marquee has to close, and a closed arrow draws its shaft
+ * twice.
+ */
+function drawPending(context: OverlayContext, scene: OverlayScene): void {
+  const pending = scene.tools.pending
+  if (!pending) return
 
-  const outline = shapeOutline(shape)
-  ants(context, () => tracePath(context, scene.viewport, outline), phase, scene.colors)
+  const at = (x: number, y: number): Point => toScreen(scene.viewport, { x, y })
+  context.beginPath()
+  const traced = paintShape(
+    {
+      moveTo: (x, y) => {
+        const screen = at(x, y)
+        context.moveTo(screen.x, screen.y)
+      },
+      lineTo: (x, y) => {
+        const screen = at(x, y)
+        context.lineTo(screen.x, screen.y)
+      },
+    },
+    pending.shape,
+  )
+  if (!traced) return
+
+  if (pending.fill !== null) {
+    context.fillStyle = pending.fill
+    context.fill()
+  }
+  if (pending.stroke) {
+    context.strokeStyle = pending.stroke.color
+    context.lineWidth = Math.max(1, pending.stroke.width * scene.viewport.scale)
+    context.stroke()
+    context.lineWidth = 1
+  }
+}
+
+/** The box a caption is being sized into: a frame, drawn in the same ants a marquee is. */
+function drawTextBox(context: OverlayContext, scene: OverlayScene, phase: number): void {
+  const rect = scene.tools.textBox
+  if (!rect) return
+
+  const at = toScreen(scene.viewport, rect)
+  const far = toScreen(scene.viewport, { x: rect.x + rect.width, y: rect.y + rect.height })
+  ants(
+    context,
+    () => traceRect(context, { ...at, width: far.x - at.x, height: far.y - at.y }),
+    phase,
+    scene.colors,
+  )
 }
 
 function drawCrop(context: OverlayContext, scene: OverlayScene, phase: number): void {

@@ -37,6 +37,11 @@ export function packedColour(colour: string): number | null {
   return HEX_COLOR.test(colour) ? Number.parseInt(colour.slice(1), 16) : null
 }
 
+/** The other way: the `0xrrggbb` an engine stores, as the `#rrggbb` a swatch and a 2D context take. */
+export function colourOf(packed: number): string {
+  return `#${clamp(Math.trunc(packed), 0, 0xffffff).toString(16).padStart(6, '0')}`
+}
+
 const CHANNEL_WEIGHTS = [0.2126, 0.7152, 0.0722]
 
 /** A tuple rather than an array: `#rrggbb` has exactly three, and a caller that reads them by

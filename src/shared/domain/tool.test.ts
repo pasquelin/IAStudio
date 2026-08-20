@@ -246,7 +246,7 @@ describe('the rail order of the upper right', () => {
   // What the right keeps once the Explorer has gone left: what acts on the document that is
   // already open, and only that.
   it('reads the panels of the document, and no longer the Explorer', () => {
-    expect(upperRightIn('image')).toEqual(['layers'])
+    expect(upperRightIn('image')).toEqual(['layers', 'text'])
   })
 
   it('reads the scene in 3D, and no longer the shelf', () => {

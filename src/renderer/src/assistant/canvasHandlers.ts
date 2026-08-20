@@ -7,10 +7,15 @@ import {
   adjustmentLayer,
   allLayers,
   canMoveLayer,
+  DEFAULT_SHAPE_SIDES,
   layerById,
   pixelLayer,
+  SHAPE_KINDS,
+  shapeLayer,
+  TEXT_ALIGNS,
   textLayer,
   type CanvasState,
+  type DrawnShape,
   type Layer,
 } from '@/engines/canvas/canvasState'
 import {
@@ -119,17 +124,49 @@ function readState(): ActionOutcome {
         blend: layer.blend,
         clipped: layer.clipped,
         transform: layer.transform,
-        ...(layer.kind === 'text' ? { text: layer.text, size: layer.size } : {}),
+        ...(layer.kind === 'text'
+          ? { text: layer.text, size: layer.size, align: layer.align, box: layer.box }
+          : {}),
         ...(layer.kind === 'adjustment' ? { adjustment: layer.adjustment } : {}),
+        ...(layer.kind === 'shape'
+          ? { shape: layer.shape, fill: layer.fill, stroke: layer.stroke }
+          : {}),
       })),
     },
   }
 }
 
+/**
+ * A shape from a box rather than from a drag: a client has a rectangle, not a hand. The two
+ * points are the box's own corners, which is what the layer stores.
+ */
+function drawnShape(input: Record<string, unknown>): DrawnShape | null {
+  const shape = oneOf(input, 'shape', SHAPE_KINDS)
+  const width = numberOf(input, 'width')
+  const height = numberOf(input, 'height')
+  if (!shape || width === null || height === null || width <= 0 || height <= 0) return null
+
+  // A ring is drawn from its centre outwards, so the box's middle is where its drag began.
+  const ring = shape === 'polygon' || shape === 'star'
+  return {
+    shape,
+    from: ring ? { x: width / 2, y: height / 2 } : { x: 0, y: 0 },
+    to: ring ? { x: width, y: height / 2 } : { x: width, y: height },
+    sides: numberOf(input, 'sides') ?? DEFAULT_SHAPE_SIDES,
+    fill: numberOf(input, 'fill') ?? 0x000000,
+    stroke: null,
+  }
+}
+
 function born(input: Record<string, unknown>, id: string, name: string): Layer | null {
-  switch (oneOf(input, 'kind', ['pixel', 'text', 'adjustment'])) {
+  switch (oneOf(input, 'kind', ['pixel', 'text', 'adjustment', 'shape'])) {
     case 'pixel':
       return pixelLayer(id, name)
+    case 'shape': {
+      const drawn = drawnShape(input)
+      const at = { x: numberOf(input, 'x') ?? 0, y: numberOf(input, 'y') ?? 0 }
+      return drawn ? shapeLayer(id, name, at, drawn) : null
+    }
     case 'text':
       // `textLayer` names the layer after its own text; `name` is required here and is what a
       // client will look the layer up by, so it wins.
@@ -195,6 +232,11 @@ function text(input: Record<string, unknown>): ActionOutcome {
   const colour = packedColour(textOf(input, 'color') ?? '')
   const size = numberOf(input, 'size')
   const written = textOf(input, 'text')
+  const align = oneOf(input, 'align', TEXT_ALIGNS)
+  const lineHeight = numberOf(input, 'lineHeight')
+  const tracking = numberOf(input, 'tracking')
+  const width = numberOf(input, 'width')
+  const height = numberOf(input, 'height')
 
   return editLayer(input, layer =>
     // The command only touches a text layer, so a pixel layer named here would be reported as
@@ -205,6 +247,13 @@ function text(input: Record<string, unknown>): ActionOutcome {
             ...(written === null ? {} : { text: written }),
             ...(size === null ? {} : { size }),
             ...(colour === null ? {} : { color: colour }),
+            ...(align === null ? {} : { align }),
+            ...(lineHeight === null ? {} : { lineHeight }),
+            ...(tracking === null ? {} : { tracking }),
+            // One axis at a time: a client naming only a width must not flatten the height.
+            ...(width === null && height === null
+              ? {}
+              : { box: { width: width ?? layer.box.width, height: height ?? layer.box.height } }),
           }),
         ]
       : [],

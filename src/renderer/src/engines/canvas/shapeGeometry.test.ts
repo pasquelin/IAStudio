@@ -3,12 +3,12 @@ import {
   MAX_SIDES,
   MIN_SIDES,
   paintShape,
-  SHAPE_KINDS,
   shapeBounds,
   shapeGeometry,
   shapeOutline,
   type ShapePath,
 } from './shapeGeometry'
+import { SHAPE_KINDS } from './canvasState'
 
 const FREE = { sides: 5, constrain: false }
 const HELD = { sides: 5, constrain: true }

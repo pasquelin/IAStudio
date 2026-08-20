@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Job } from '@shared/domain/job'
 import { job as jobOf } from '@/stores/job-fixtures'
+import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
+import { layerFixture } from '@/engines/canvas/canvas-fixtures'
+import { installCanvas } from '@/stores/canvas-fixtures'
 import { addClip } from '@/engines/timeline/commands'
 import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
 import { useAssets } from '@/stores/assets'
@@ -53,6 +56,24 @@ describe('Inspector, on what a panel selected', () => {
   it('asks for a selection when there is none', () => {
     render(<Inspector />)
     expect(screen.getByText(/Sélectionnez un élément/)).toBeInTheDocument()
+  })
+
+  /**
+   * The stack highlights `activeLayerId`, and a layer born on the canvas — a caption, a shape —
+   * arms it without posting a selection: reading the selection alone left the panel empty over
+   * the very layer the stack showed picked.
+   */
+  it('reads the armed layer of the image in front, selection or not', () => {
+    installCanvas('image-1', {
+      ...DEFAULT_CANVAS,
+      layers: [layerFixture({ name: 'Paint' })],
+      activeLayerId: 'layer-2',
+    })
+
+    render(<Inspector />)
+
+    expect(screen.getByText('Paint')).toBeInTheDocument()
+    expect(screen.queryByText(/Sélectionnez un élément/)).not.toBeInTheDocument()
   })
 
   /**
