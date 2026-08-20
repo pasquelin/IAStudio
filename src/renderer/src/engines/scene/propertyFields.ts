@@ -1,6 +1,7 @@
 import {
   DEFAULT_CAMERA,
   isVector3,
+  UV_SCALE,
   type CameraDescriptor,
   type GeometryDescriptor,
   type LightDescriptor,
@@ -139,6 +140,9 @@ export const MATERIAL_SPECS: MaterialSpecs = {
   color: COLOR,
   roughness: UNIT,
   metalness: UNIT,
+  // A whole number of repeats: half a checker square at the seam of a floor is a texture that
+  // looks misaligned rather than tiled.
+  uvScale: { control: 'number', min: UV_SCALE.min, max: UV_SCALE.max, step: UV_SCALE.step },
 }
 
 /** Exhaustive like the material's, minus the map, which no control describes. */

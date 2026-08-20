@@ -19,4 +19,10 @@ describe('captureSize', () => {
   it('answers on a panel that has not been laid out yet, rather than nothing at all', () => {
     expect(captureSize({ width: 0, height: 0 }, 'ultraHd')).toEqual({ width: 3840, height: 2160 })
   })
+
+  // The one the keyboard command takes: reading the height of a panel that has none wrote a
+  // picture one pixel tall into the project, and nothing said so.
+  it('falls back to a full picture at the view quality too, not to a single pixel', () => {
+    expect(captureSize({ width: 0, height: 0 }, 'view')).toEqual({ width: 1920, height: 1080 })
+  })
 })

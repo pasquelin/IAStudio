@@ -56,15 +56,36 @@ export function giveSecondUvSet(geometry: BufferGeometry): void {
  * A geometry cannot be mutated into another shape, so this one swaps it — and disposes the one
  * it replaces. Left behind, every character typed in a radius field leaks a buffer on the GPU.
  */
-export function applyGeometry(mesh: Mesh, descriptor: GeometryDescriptor): void {
+export function applyGeometry(mesh: Mesh, descriptor: GeometryDescriptor, uvScale = 1): void {
   const previous = mesh.geometry
-  const next = geometryFor(descriptor)
+  const next = tiledGeometry(descriptor, uvScale)
   // The new shape inherits the second UV set, or an occlusion map already in place would stop
   // doing anything the moment a radius is nudged.
   if (previous.attributes.uv1) giveSecondUvSet(next)
 
   mesh.geometry = next
   previous.dispose()
+}
+
+/**
+ * The shape, with its maps repeated across it — one square of the checker per unit on a floor
+ * that asks for it.
+ *
+ * On the UVs rather than on the texture, because the engine shares one `Texture` between every
+ * mesh that wears it: a repeat set there would follow that picture onto every other mesh. Baked
+ * UVs are also plain glTF, which every reader understands without an extension.
+ */
+export function tiledGeometry(descriptor: GeometryDescriptor, uvScale = 1): BufferGeometry {
+  const geometry = geometryFor(descriptor)
+  const uv = geometry.attributes.uv
+  if (uvScale === 1 || !uv) return geometry
+
+  for (let at = 0; at < uv.count; at += 1) {
+    uv.setXY(at, uv.getX(at) * uvScale, uv.getY(at) * uvScale)
+  }
+  uv.needsUpdate = true
+
+  return geometry
 }
 
 /**

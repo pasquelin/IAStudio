@@ -228,6 +228,7 @@ export const DEFAULT_MATERIAL: MaterialDescriptor = {
   color: null,
   roughness: 1,
   metalness: 0,
+  uvScale: 1,
   map: null,
   normalMap: null,
   roughnessMap: null,

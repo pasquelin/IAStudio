@@ -10,10 +10,21 @@ function install(path: string): Promise<void> {
   if (running?.path === path) return running.work
 
   const work = (getBridge()?.assets.installBundledTextures() ?? Promise.resolve([]))
-    .then(rememberCheckerTextures)
+    .then(installed => {
+      // Checked on the way BACK, not only on the way in: a slow install for the project one has
+      // just left resolves after the next one has answered, and would hand every new primitive
+      // the asset ids of a project this window no longer has open.
+      if (running?.path === path) rememberCheckerTextures(installed)
+    })
     // Silent on purpose: a project whose textures cannot be written gives plain primitives,
-    // which is a legitimate state — see `checkerTextures`.
-    .catch(() => forgetCheckerTextures())
+    // which is a legitimate state — see `checkerTextures`. Forgotten rather than kept, so a
+    // remount asks again instead of leaving the project bare for the rest of the session.
+    .catch(() => {
+      if (running?.path === path) {
+        running = null
+        forgetCheckerTextures()
+      }
+    })
 
   running = { path, work }
   return work

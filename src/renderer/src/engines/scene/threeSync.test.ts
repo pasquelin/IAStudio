@@ -1,5 +1,6 @@
 import {
   AmbientLight,
+  type BufferGeometry,
   CameraHelper,
   DirectionalLight,
   HemisphereLight,
@@ -26,6 +27,7 @@ import {
   giveSecondUvSet,
   showPathKnobs,
   standardMaterialOf,
+  tiledGeometry,
 } from './threeSync'
 
 describe('applyMaterial', () => {
@@ -127,6 +129,38 @@ describe('applyGeometry', () => {
     applyGeometry(mesh, { kind: 'box', width: 2, height: 1, depth: 1 })
 
     expect(dispose).toHaveBeenCalled()
+  })
+})
+
+/**
+ * A floor of forty metres wearing one stretch of the checker reads as a blur — which is what
+ * sent this batch back. The repeat rides on the UVs and not on the texture, because the engine
+ * shares one `Texture` between every mesh that asks for the same picture.
+ */
+describe('tiledGeometry', () => {
+  const uvOf = (geometry: BufferGeometry): number =>
+    Number(geometry.attributes.uv?.getX(1) ?? Number.NaN)
+
+  it('repeats the maps across the shape, by whole squares', () => {
+    const plain = tiledGeometry({ kind: 'plane', width: 40, height: 40 })
+    const tiled = tiledGeometry({ kind: 'plane', width: 40, height: 40 }, 40)
+
+    expect(uvOf(tiled)).toBeCloseTo(uvOf(plain) * 40)
+  })
+
+  it('leaves the shape untouched at one, which is what stretching whole means', () => {
+    const geometry = tiledGeometry({ kind: 'plane', width: 2, height: 2 }, 1)
+
+    expect(uvOf(geometry)).toBeCloseTo(1)
+  })
+
+  // The one that reaches the screen: a mesh built with a scale, not only one edited into it.
+  it('is what a mesh is born with, and what a change of scale rebuilds', () => {
+    const mesh = new Mesh(tiledGeometry({ kind: 'plane', width: 4, height: 4 }, 4))
+    expect(uvOf(mesh.geometry)).toBeCloseTo(4)
+
+    applyGeometry(mesh, { kind: 'plane', width: 4, height: 4 }, 8)
+    expect(uvOf(mesh.geometry)).toBeCloseTo(8)
   })
 })
 

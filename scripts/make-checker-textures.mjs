@@ -11,6 +11,7 @@
  *
  * Usage : node scripts/make-checker-textures.mjs
  */
+import { Buffer } from 'node:buffer'
 import { deflateSync } from 'node:zlib'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'

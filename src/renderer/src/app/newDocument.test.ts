@@ -221,8 +221,14 @@ describe('createDocumentIn', () => {
       const made = await createDocumentIn('3d', { title: 'Niveau' })
       const scene = sceneOf(useScenes.getState(), made?.id ?? '')
 
-      // `basic`: a floor, a sun, a fill and a camera.
-      expect(scene.nodes.map(node => node.type)).toEqual(['mesh', 'light', 'light', 'camera'])
+      // `basic`: a floor, a cube of one metre, a sun, a fill and a camera.
+      expect(scene.nodes.map(node => node.type)).toEqual([
+        'mesh',
+        'mesh',
+        'light',
+        'light',
+        'camera',
+      ])
     })
 
     it('leaves the other kinds alone', async () => {

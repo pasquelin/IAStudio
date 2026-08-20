@@ -19,6 +19,9 @@ import { getBridge } from './bridge'
  */
 const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'scene.export',
+  // A menu row pressed again after a failure, like its export neighbours: silenced from the
+  // second press, a capture that writes nothing looks exactly like one that worked.
+  'scene.capture',
   'image.export',
   'document.save',
   'document.close',

@@ -79,6 +79,8 @@ export function registerIpc(services: Services): void {
     assets: services.assets,
     newAssetId: services.newAssetId,
     folder: () => bundledTextures(resourcesRoot()),
+    projectPath: () => services.project.path(),
+    exists: services.exists,
   })
   const git = registerGitHandlers({
     // The same file and the same keychain the API key already uses. A second store would be a

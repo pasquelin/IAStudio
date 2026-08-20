@@ -1,5 +1,6 @@
 import {
   DataTexture,
+  RepeatWrapping,
   TextureLoader,
   UnsignedByteType,
   type ColorSpace,
@@ -132,6 +133,11 @@ export function createTextureCache(
       // NOT over a float decode: a `.hdr` or an `.exr` comes back linear already, and stamping
       // sRGB over it has the shader decode a second time — a sky visibly darker than its file.
       if (texture.type === UnsignedByteType) texture.colorSpace = colorSpace
+      // Repeating rather than clamped, for every picture: a mesh asking for its maps to be tiled
+      // does it through its UVs, and against the default those go past 1 by stretching the last
+      // texel across the whole floor. Nothing changes for a shape whose UVs stay inside 0..1.
+      texture.wrapS = RepeatWrapping
+      texture.wrapT = RepeatWrapping
       return texture
     },
     free: texture => texture.dispose(),

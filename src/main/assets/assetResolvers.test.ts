@@ -54,7 +54,7 @@ describe('what the asset scheme resolves', () => {
       favouriteThumbnail: () => null,
       thumbnailOf: () => Promise.resolve(null),
       bundledAnimation: id => Promise.resolve(`/resources/animations/${id}`),
-    bundledTemplate: file => Promise.resolve(`/resources/templates/${file}`),
+      bundledTemplate: file => Promise.resolve(`/resources/templates/${file}`),
     })
 
     await expect(resolvers[ASSET_HOST]?.('asset-1')).resolves.toBeNull()
