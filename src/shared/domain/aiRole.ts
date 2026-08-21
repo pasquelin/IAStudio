@@ -73,6 +73,20 @@ export type RoleProvider =
  */
 export type RoleChoices = Readonly<Partial<Record<AiRoleId, RoleProvider>>>
 
+/**
+ * The choices that apply, the default overlaid by what one project overrides.
+ *
+ * A shallow merge, per ROLE: overriding the assistant in a project leaves every other role on the
+ * default rather than resetting them. `null` for no project open — the default then stands alone.
+ */
+export function roleChoicesFor(
+  defaults: RoleChoices,
+  byProject: Readonly<Record<string, RoleChoices>>,
+  projectPath: string | null,
+): RoleChoices {
+  return projectPath === null ? defaults : { ...defaults, ...byProject[projectPath] }
+}
+
 /** What a role can actually be served by on this machine, right now. */
 export type RoleOffer = {
   readonly localModelId: string | null

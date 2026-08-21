@@ -6,6 +6,7 @@ import {
   DICTATION_ROLE,
   partsOfRole,
   providerFor,
+  roleChoicesFor,
   type RoleChoices,
   type RoleOffer,
 } from './aiRole'
@@ -53,6 +54,37 @@ describe('partsOfRole', () => {
   it('answers nothing for a role that is not a pair', () => {
     expect(partsOfRole(ASSISTANT_ROLE)).toBeNull()
     expect(partsOfRole(DICTATION_ROLE)).toBeNull()
+  })
+})
+
+describe('roleChoicesFor', () => {
+  const defaults: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'scenario' } }
+  const byProject = { '/work/client': { [DICTATION_ROLE]: { kind: 'scenario' } } as RoleChoices }
+
+  it('stands on the default alone when no project is open', () => {
+    expect(roleChoicesFor(defaults, byProject, null)).toEqual(defaults)
+  })
+
+  // Per ROLE: overriding one in a project must not reset the others to nothing.
+  it('overlays what a project overrides without dropping the rest', () => {
+    expect(roleChoicesFor(defaults, byProject, '/work/client')).toEqual({
+      [ASSISTANT_ROLE]: { kind: 'scenario' },
+      [DICTATION_ROLE]: { kind: 'scenario' },
+    })
+  })
+
+  it('leaves the default alone for a project that overrides nothing', () => {
+    expect(roleChoicesFor(defaults, byProject, '/work/other')).toEqual(defaults)
+  })
+
+  it('lets a project override a role the default already set', () => {
+    const overriding: Record<string, RoleChoices> = {
+      '/work/client': { [ASSISTANT_ROLE]: { kind: 'local', modelId: 'x' } },
+    }
+
+    expect(roleChoicesFor(defaults, overriding, '/work/client')).toEqual({
+      [ASSISTANT_ROLE]: { kind: 'local', modelId: 'x' },
+    })
   })
 })
 

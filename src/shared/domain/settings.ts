@@ -1,6 +1,7 @@
 import type { LanguagePreference } from '../i18n/languages'
 // From the model module rather than from the registry: `shellActions.ts` reads this file, and the
 // registry reads it back — `import-cycles.test.ts` holds that count at zero.
+import type { AiRoleId, RoleProvider } from './aiRole'
 import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistantModel'
 import type { BindingOverrides } from './command'
 import type { DictationMode } from './dictation'
@@ -123,6 +124,21 @@ export type Settings = {
      * project ever opened, which is the cost of not losing a choice the user made.
      */
     projectAccounts: Record<string, string>
+  }
+  /**
+   * Which provider serves each AI role — see `docs/ci/adr/ADR-21-…`.
+   *
+   * `roles` is the default that follows the person; `projectRoles` is what one project overrides,
+   * BY FOLDER, exactly as `storage.projectAccounts` already does for the account. Kept out of
+   * `.project.json` for the reason that index exists: a choice written into the manifest would
+   * travel with a shared project, and land someone else on a model they never picked.
+   *
+   * Both are partial. An absent role is "no choice made", which is NOT "none" — `providerFor`
+   * then answers with what the machine actually offers, and the local side wins by default.
+   */
+  ai: {
+    roles: Partial<Record<AiRoleId, RoleProvider>>
+    projectRoles: Record<string, Partial<Record<AiRoleId, RoleProvider>>>
   }
   /**
    * The 3D workspace. A branch of its own rather than nested under a `spaces` one: every branch
@@ -294,6 +310,9 @@ export const DEFAULT_SETTINGS: Settings = {
   workspaces: { order: [...WORKSPACE_IDS] },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
   generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {}, captionArrivals: true },
+  // Empty on a fresh install, and that is the point: no choice made means the local side is
+  // taken wherever it can serve, so the studio works before anyone has an account.
+  ai: { roles: {}, projectRoles: {} },
   three: {
     showGrid: true,
     gridSize: 20,

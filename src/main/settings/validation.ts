@@ -230,7 +230,26 @@ const dictation = z.object({
   inputDeviceId: z.string().min(1).optional(),
 })
 
+/**
+ * A provider, as narrow as the union it mirrors: a `kind` this does not name is dropped rather
+ * than stored, so a hand-edited file cannot point a role at something nothing can serve.
+ */
+const roleProvider = z.union([
+  z.object({ kind: z.literal('local'), modelId: z.string().min(1) }),
+  z.object({ kind: z.literal('scenario') }),
+])
+
+const roleChoices = z.record(z.string().min(1), roleProvider)
+
+// Declared here or dropped in silence, the same trap `storage.projectAccounts` carries: a zod
+// object STRIPS what it does not name, and this branch is reparsed on every settings write.
+const ai = z.object({
+  roles: roleChoices.optional(),
+  projectRoles: z.record(z.string().min(1), roleChoices).optional(),
+})
+
 const partialSettings = z.object({
+  ai: ai.optional(),
   general: general.optional(),
   home: home.optional(),
   workspaces: workspaces.optional(),
