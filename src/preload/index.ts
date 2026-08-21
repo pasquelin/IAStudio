@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { AccountSummary } from '@shared/domain/account'
 import type { ActivityEntry } from '@shared/domain/activity'
+import type { AiOverview } from '@shared/domain/aiOverview'
 import type { CommandId } from '@shared/domain/command'
 import type { TaskProgress } from '@shared/domain/taskProgress'
 import type { SttEvent } from '@shared/domain/dictation'
@@ -237,6 +238,14 @@ const bridge: StudioBridge = {
     think: request => ipcRenderer.invoke(CHANNELS.assistantThink, request),
     onAction: callback => subscribe<AssistantActionRequest>(EVENTS.assistantAction, callback),
     actionResult: result => ipcRenderer.invoke(CHANNELS.assistantActionResult, result),
+  },
+  ai: {
+    overview: () => ipcRenderer.invoke(CHANNELS.aiOverview),
+    choose: (role, provider, scope) => ipcRenderer.invoke(CHANNELS.aiChoose, role, provider, scope),
+    install: modelId => ipcRenderer.invoke(CHANNELS.aiInstall, modelId),
+    cancelInstall: () => ipcRenderer.invoke(CHANNELS.aiCancelInstall),
+    remove: modelId => ipcRenderer.invoke(CHANNELS.aiRemove, modelId),
+    onChanged: callback => subscribe<AiOverview>(EVENTS.ai, callback),
   },
   dictation: {
     state: () => ipcRenderer.invoke(CHANNELS.dictationState),

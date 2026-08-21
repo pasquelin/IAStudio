@@ -164,6 +164,12 @@ type ChannelMethod = {
   [CHANNELS.assistantThink]: StudioBridge['assistant']['think']
   [CHANNELS.assistantActionResult]: StudioBridge['assistant']['actionResult']
 
+  [CHANNELS.aiOverview]: StudioBridge['ai']['overview']
+  [CHANNELS.aiChoose]: StudioBridge['ai']['choose']
+  [CHANNELS.aiInstall]: StudioBridge['ai']['install']
+  [CHANNELS.aiCancelInstall]: StudioBridge['ai']['cancelInstall']
+  [CHANNELS.aiRemove]: StudioBridge['ai']['remove']
+
   [CHANNELS.dictationState]: StudioBridge['dictation']['state']
   [CHANNELS.dictationStart]: StudioBridge['dictation']['start']
   [CHANNELS.dictationStop]: StudioBridge['dictation']['stop']
