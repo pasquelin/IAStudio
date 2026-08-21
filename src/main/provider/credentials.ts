@@ -24,6 +24,24 @@ const SECRET_VARIABLE = 'PROVIDER_API_SECRET'
 /** Optional: what the development account is called in the switch, beside the stored ones. */
 const NAME_VARIABLE = 'PROVIDER_ACCOUNT_NAME'
 
+/**
+ * What these three were called before 21/08. Read, never written — the same shape as
+ * `LEGACY_MANIFEST_FILE`.
+ *
+ * `secrets/.env` is git-ignored, so the rename could not reach a single real one: every existing
+ * checkout and worktree would have come up "not connected" with nothing anywhere saying why, which
+ * is precisely the silent failure this file exists to prevent.
+ */
+const PREVIOUS_NAMES: Record<string, string> = {
+  [KEY_VARIABLE]: 'SCENARIO_API_KEY',
+  [SECRET_VARIABLE]: 'SCENARIO_API_SECRET',
+  [NAME_VARIABLE]: 'SCENARIO_ACCOUNT_NAME',
+}
+
+/** The current name wins, so a `.env` carrying both is never ambiguous. */
+const read = (variables: Map<string, string>, name: string): string | undefined =>
+  variables.get(name) ?? variables.get(PREVIOUS_NAMES[name] ?? '')
+
 function unquote(value: string): string {
   const quoted = /^(["'])(.*)\1$/.exec(value)
   return quoted?.[2] ?? value
@@ -62,13 +80,13 @@ export function environmentAccount(fallback: EnvironmentFallback): StoredAccount
   if (content === null) return null
 
   const variables = parseEnvFile(content)
-  const key = variables.get(KEY_VARIABLE)
-  const secret = variables.get(SECRET_VARIABLE)
+  const key = read(variables, KEY_VARIABLE)
+  const secret = read(variables, SECRET_VARIABLE)
   if (!key || !secret) return null
 
   // Clamped, not refused: a name too long is a `.env` to tidy up, never a reason to withhold
   // the only key a fresh checkout has.
-  const named = variables.get(NAME_VARIABLE)?.trim().slice(0, ACCOUNT_NAME_MAX_LENGTH)
+  const named = read(variables, NAME_VARIABLE)?.trim().slice(0, ACCOUNT_NAME_MAX_LENGTH)
 
   return {
     id: ENVIRONMENT_ACCOUNT_ID,

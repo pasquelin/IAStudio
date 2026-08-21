@@ -85,6 +85,30 @@ describe('the development account', () => {
     })
   })
 
+  /**
+   * `secrets/.env` is git-ignored, so the 21/08 rename of these variables could not reach a single
+   * real one. Without this, every existing checkout came up "not connected" with nothing anywhere
+   * saying which of the two names it should carry.
+   */
+  it('still reads the names these variables had before the rename', () => {
+    const previous = 'SCENARIO_API_KEY=old_key\nSCENARIO_API_SECRET=old_secret\n'
+
+    expect(environmentAccount(fallback(previous))?.credentials).toEqual({
+      key: 'old_key',
+      secret: 'old_secret',
+    })
+  })
+
+  // A file holding both is a checkout half-way through the rename, and it must not be ambiguous.
+  it('prefers the current name over the previous one', () => {
+    const both = `${DEV_ENV}SCENARIO_API_KEY=old_key\nSCENARIO_API_SECRET=old_secret\n`
+
+    expect(environmentAccount(fallback(both))?.credentials).toEqual({
+      key: 'env_key',
+      secret: 'env_secret',
+    })
+  })
+
   // The origin is what decides both the permission and whether it may be persisted, and the id
   // is fixed because activating it has to survive a relaunch.
   it('carries its origin and keeps a fixed id', () => {
