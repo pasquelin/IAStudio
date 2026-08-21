@@ -1,4 +1,4 @@
-import type { MemoryDomain, MemorySnapshot } from '@shared/domain/aiMemory'
+import type { MemoryDomain, ProbeSnapshot } from '@shared/domain/aiMemory'
 import { isRecord } from '@shared/guards'
 
 /** What a probe can say about the GPU. Nothing about its memory — see `gpuIdentityOf`. */
@@ -109,14 +109,6 @@ export type ProbeBudget = {
   readonly headroomBytes: number
   readonly rendererReservedBytes: number
 }
-
-/**
- * A snapshot that may sort a catalogue and explain a refusal, and that ADMITS NOTHING — R1.
- *
- * The `source: 'probe'` narrowing is carried in the TYPE so an admission rule can demand
- * `{ source: 'runtime' }` and have R1 redden at the typecheck, the way `readonly` carries R2.
- */
-export type ProbeSnapshot = MemorySnapshot & { readonly source: 'probe' }
 
 /**
  * `rendererReservedBytes` comes off the BUDGET alone: the budget is gross, while a free-memory

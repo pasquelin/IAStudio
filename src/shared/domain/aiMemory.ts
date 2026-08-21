@@ -42,6 +42,15 @@ export type MemorySnapshot = {
 }
 
 /**
+ * A reading a runtime answered for. An admission rule asks for one, so a probe cannot be passed
+ * to it — R1 stops an accident, not a forgery: `source` is self-declared, unlike a minted id.
+ */
+export type RuntimeSnapshot = MemorySnapshot & { readonly source: 'runtime' }
+
+/** What a probe answered. It sorts a catalogue and explains a refusal; it admits nothing — R1. */
+export type ProbeSnapshot = MemorySnapshot & { readonly source: 'probe' }
+
+/**
  * Whether a runtime's bytes may enter a release plan RIGHT NOW.
  *
  * Two arguments, and that is the whole point: no residency answers on its own, so the value moves
