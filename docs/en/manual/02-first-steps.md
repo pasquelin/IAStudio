@@ -49,11 +49,11 @@ The distributed application already carries those binaries.
 
 ## Step 2 — Get an API key
 
-The studio makes nothing itself. It asks Scenario, and Scenario needs to know who is asking. That
+The studio makes nothing itself. It asks the generation service, and that service needs to know who is asking. That
 is what the **API key** and the **API secret** are for: a username and a password, reserved for
 programs.
 
-1. Create or open your account at [app.scenario.com](https://app.scenario.com).
+1. Create or open your account with your generation provider.
 2. Find the API keys section in your account settings.
 3. Create a key. The site gives you **two strings**: a key and a secret.
 4. **Copy them straight away.** The secret is often shown only once.
@@ -67,24 +67,24 @@ programs.
 ## Step 3 — Connect your account
 
 1. Open settings: `⌘,` on macOS, `Ctrl+,` on Windows and Linux. Or through the menu —
-   **Scenario Studio ▸ Settings…** on macOS, **File ▸ Settings…** elsewhere, since only macOS
+   **IA Studio ▸ Settings…** on macOS, **File ▸ Settings…** elsewhere, since only macOS
    has an application menu.
 2. In the list on the left, click **Account**.
 3. Give it a **name** — whatever you like: "Studio", "Personal", your first name.
 4. Paste your key into **API key**, your secret into **API secret**.
 5. Click **Add an account**.
 
-**Why a name?** Because the studio holds several. An API key carries its own Scenario project, and
+**Why a name?** Because the studio holds several. An API key carries its own remote project, and
 you can move between them from the title bar. For a first account the name does not matter — put
 down whatever comes to mind.
 
-The studio checks with Scenario immediately. Three possible answers:
+The studio checks with the provider immediately. Three possible answers:
 
 | What appears | What it means |
 |---|---|
 | A green **In use** badge on the account's row | all is well, you can close settings |
 | **Invalid API key or secret.** | one of the two strings is wrong — often a stray space at the start or end |
-| **Cannot reach Scenario. Check your connection.** | it is not your key, it is your internet connection |
+| **Cannot reach the generation service. Check your connection.** | it is not your key, it is your internet connection |
 
 **Where your credentials go.** They are encrypted by your system's keychain — Keychain on macOS,
 the credential manager on Windows, the desktop keyring on Linux — and filed with the studio's
@@ -154,7 +154,7 @@ The chapter [Projects](04-projects.md) details each folder.
 
 At the top of the window, click **Image**.
 
-On the left, the **Models** panel fills up. These are the Scenario catalogue models capable of
+On the left, the **Models** panel fills up. These are the remote catalogue models capable of
 making images. There are many.
 
 For a first try, pick one at random among the featured ones: click a thumbnail. Its name appears

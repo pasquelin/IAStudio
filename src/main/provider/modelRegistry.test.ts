@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { SCENARIO_MAINTAINER, SKYBOX_TAG, SYSTEM_TAG_PREFIX } from '@shared/domain/model'
+import { PROVIDER_MAINTAINER, SKYBOX_TAG, SYSTEM_TAG_PREFIX } from '@shared/domain/model'
 import { createCredentialsWatch } from './credentialsWatch'
 import {
   createModelRegistry,
@@ -16,13 +16,13 @@ const registryOf = (options: Omit<RegistryOptions, 'watch'>): ModelRegistry =>
   createModelRegistry({ ...options, watch: () => () => {} })
 
 /** What the catalogue answers for a model Scenario publishes — see `isOfficial`, which needs both. */
-const SCENARIO_OWNED = {
+const PROVIDER_OWNED = {
   privacy: 'public',
-  complianceMetadata: { maintainer: SCENARIO_MAINTAINER },
+  complianceMetadata: { maintainer: PROVIDER_MAINTAINER },
 }
 
 const FLUX: RemoteModel = {
-  ...SCENARIO_OWNED,
+  ...PROVIDER_OWNED,
   id: 'model_flux',
   name: 'Flux',
   capabilities: ['txt2img', 'img2img'],
@@ -42,10 +42,10 @@ const VEO: RemoteModel = { id: 'model_veo', name: 'Veo', capabilities: ['txt2vid
 /**
  * Shaped after `model_scenario-skybox-flux`: a panorama model answers the image capabilities,
  * and it is maintained by Scenario while carrying no `sc:scenario` tag — see
- * `SCENARIO_MAINTAINER` for what that combination cost.
+ * `PROVIDER_MAINTAINER` for what that combination cost.
  */
 const SKY: RemoteModel = {
-  ...SCENARIO_OWNED,
+  ...PROVIDER_OWNED,
   id: 'model_sky',
   name: 'Scenario Skybox Flux.1',
   capabilities: ['txt2img', 'img2img'],
@@ -54,7 +54,7 @@ const SKY: RemoteModel = {
 
 /** Shaped after `model_ideogram-remove-background`: a cutout model answers `img2img` too. */
 const CUTOUT: RemoteModel = {
-  ...SCENARIO_OWNED,
+  ...PROVIDER_OWNED,
   id: 'model_cutout',
   name: 'Ideogram Remove Background',
   capabilities: ['img2img'],
@@ -268,7 +268,7 @@ describe('model registry', () => {
     expect(items[0]?.requiredPlanLevel).toBeUndefined()
   })
 
-  /** The tag `SCENARIO_MAINTAINER` replaces missed `SKY`, and with it the whole Skyboxes space. */
+  /** The tag `PROVIDER_MAINTAINER` replaces missed `SKY`, and with it the whole Skyboxes space. */
   it('reads authorship from the maintainer, which the official tag only half covers', async () => {
     const registry = registryOf({ catalog: publicCatalog([FLUX, SKY, VEO]) })
 
@@ -286,7 +286,7 @@ describe('model registry', () => {
    * "Community" then hid the only models nobody else can see.
    */
   it('never calls a private model official, whoever maintains it', async () => {
-    const mine: RemoteModel = { ...SCENARIO_OWNED, privacy: 'private', id: 'model_mine' }
+    const mine: RemoteModel = { ...PROVIDER_OWNED, privacy: 'private', id: 'model_mine' }
     const registry = registryOf({
       catalog: spiedCatalog({ private: [mine], public: [FLUX] }).catalog,
     })

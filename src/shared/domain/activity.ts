@@ -12,7 +12,7 @@
  *
  * `detail` carries `describeFailure` and nothing else. An SDK error message embeds the request
  * that produced it, so it carries the `Authorization` header, so it carries the API key — see
- * `scenario/client.ts`. A journal is a file on disk that a user may well send to someone.
+ * `provider/client.ts`. A journal is a file on disk that a user may well send to someone.
  */
 export type ActivityLevel = 'info' | 'warn' | 'error'
 

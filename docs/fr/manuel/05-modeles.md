@@ -9,7 +9,7 @@
 Le programme distant qui fabrique. Vous lui donnez une phrase, et parfois une image ; il rend
 une image, une vidéo, un son ou un objet 3D.
 
-Il y a **plusieurs centaines de modèles** dans le catalogue Scenario, et ils ne savent pas tous
+Il y a **plusieurs centaines de modèles** dans le catalogue distant, et ils ne savent pas tous
 faire la même chose. Certains sont excellents pour les personnages et médiocres pour les
 paysages. Certains ne prennent que du texte, d’autres exigent une image de départ. Certains
 rendent en dix secondes, d’autres en trois minutes.
@@ -68,7 +68,7 @@ selon l’espace, parce qu’ils n’ont pas de sens partout.
 
 | Valeur | Ce que ça veut dire |
 |---|---|
-| **Officiel** | publié par Scenario |
+| **Officiel** | publié par le fournisseur |
 | **Communauté** | publié par quelqu’un d’autre |
 
 ### Capacité — ce que le modèle sait recevoir et rendre

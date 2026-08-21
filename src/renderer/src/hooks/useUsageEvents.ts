@@ -40,7 +40,7 @@ export function useUsageEvents(period: UsagePeriod): EventsState {
 
     let live = true
 
-    bridge.scenario
+    bridge.provider
       .usageEvents(period, cursors)
       .then(answered => {
         if (!live) return

@@ -11,7 +11,7 @@ const versions: RuntimeVersions = {
 
 describe('aboutInfo', () => {
   it('shows the product name, not the binary name', () => {
-    expect(aboutInfo('fr', versions).applicationName).toBe('Scenario Studio')
+    expect(aboutInfo('fr', versions).applicationName).toBe('IA Studio')
   })
 
   it('separates the release from the build, as the native panel expects', () => {

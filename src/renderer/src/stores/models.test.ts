@@ -41,7 +41,7 @@ describe('choosing a model', () => {
    */
   describe('what survives a restart', () => {
     const stored = (family: ModelFamily): { selections?: Record<string, readonly string[]> } => {
-      const raw = localStorage.getItem('scenario-studio:models')
+      const raw = localStorage.getItem('ia-studio:models')
       return raw ? (JSON.parse(raw).state?.collections?.[family] ?? {}) : {}
     }
 

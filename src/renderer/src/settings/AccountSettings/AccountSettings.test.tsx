@@ -117,8 +117,8 @@ describe('AccountSettings', () => {
     ['invalid-credentials', 'Clé ou secret API invalide.'],
     ['forbidden', 'Cette clé API n’a pas les droits requis.'],
     ['rate-limited', 'Trop de requêtes. Nouvelle tentative en cours…'],
-    ['server', 'Le service Scenario est momentanément indisponible.'],
-    ['network', 'Impossible de joindre Scenario. Vérifiez votre connexion.'],
+    ['server', 'Le service de génération est momentanément indisponible.'],
+    ['network', 'Impossible de joindre le service de génération. Vérifiez votre connexion.'],
     ['unexpected', 'Une erreur inattendue est survenue.'],
   ])('translates the %s failure into its own message', async (reason, message) => {
     installFakeBridge({
@@ -175,7 +175,7 @@ describe('AccountSettings', () => {
 
     expect(screen.getByRole('button', { name: 'Supprimer' })).toHaveAttribute(
       'data-tooltip-content',
-      'Oublie la clé sur cette machine ; le compte Scenario n’est pas touché',
+      'Oublie la clé sur cette machine ; le compte distant n’est pas touché',
     )
   })
 

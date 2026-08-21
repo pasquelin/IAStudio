@@ -91,7 +91,7 @@ export function groupFields(fields: readonly FieldDescriptor[]): [string, FieldD
  * Values are handed over as they stand — a local asset id or a data URL — because the field
  * cannot say which one the user gave it. A local id is not one the API has ever heard of: the
  * main process rewrites it on the way out, through the same translator a generation goes
- * through (`main/scenario/assetInputs.ts`), sending the file if it has never gone up.
+ * through (`main/provider/assetInputs.ts`), sending the file if it has never gone up.
  */
 export function referencePictures(
   fields: readonly FieldDescriptor[],

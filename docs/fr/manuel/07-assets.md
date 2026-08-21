@@ -14,7 +14,7 @@ laquelle vous piochez.
 
 **Où il se trouve : dans la colonne de gauche, moitié haute, dans tous les espaces.** Sous les
 **Modèles** et la **Génération**, avec lesquels il se relaie — les trois panneaux qui répondent à
-la même question, « qu’est-ce que Scenario me propose ».
+la même question, « qu’est-ce que le fournisseur me propose ».
 
 Cliquez son icône dans le rail de gauche pour l’amener devant : c’est le troisième des trois, et
 la moitié s’ouvre sur les Modèles tant que vous n’avez rien demandé.
@@ -149,7 +149,7 @@ de l’asset lui-même :
 | **Renommer** | ouvre le nom sur la vignette elle-même | tous |
 | **Afficher dans le dossier** | ouvre le gestionnaire de fichiers sur le fichier | tous |
 
-**Renommer ne change le nom que dans ce projet** — celui du compte Scenario ne bouge pas. Un même
+**Renommer ne change le nom que dans ce projet** — celui du compte distant ne bouge pas. Un même
 asset est tiré dans plusieurs projets et nommé pour ce que chacun en fait. Le nom est aussi
 modifiable dans l’Inspecteur, d’un double-clic sur la ligne **Nom**, et dans l’Explorateur.
 
@@ -293,7 +293,7 @@ votre gestionnaire de fichiers, le fichier déjà sélectionné.
 
 ## La bibliothèque de votre compte
 
-Votre projet est un dossier sur votre disque. Votre compte Scenario, lui, a sa propre
+Votre projet est un dossier sur votre disque. Votre compte distant, lui, a sa propre
 bibliothèque, en ligne. Les deux existent séparément, et **rien ne circule entre eux sans que
 vous le demandiez**.
 

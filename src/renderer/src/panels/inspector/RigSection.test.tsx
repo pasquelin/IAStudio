@@ -170,7 +170,7 @@ describe('RigSection', () => {
     maxSize?: number,
   ): void {
     installFakeBridge({
-      scenario: {
+      provider: {
         searchModels: () =>
           Promise.resolve({
             items: models.map(model => ({ ...RIGGER, ...model })),

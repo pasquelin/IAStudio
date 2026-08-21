@@ -88,7 +88,7 @@ export function useCostEstimate(
 
       lastSentAt = Date.now()
       const ticket = ++asked.current
-      void bridge.scenario
+      void bridge.provider
         .estimateCost({ id: targetId }, body)
         // Cleared rather than kept: a figure that could not be refreshed is a figure about a
         // form the user has since changed. The body is forgotten with it, or a call that failed

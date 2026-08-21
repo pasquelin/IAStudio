@@ -26,7 +26,7 @@
     "retryHint": "Asks for the usage again, in case the refusal came from the network",
     "empty": "No activity over this period.",
     "noAccount": "No API key stored. Add one in the settings to see your usage.",
-    "noBalance": "The Scenario API exposes no balance: these figures are what was spent, never what is left.",
+    "noBalance": "The generation API exposes no balance: these figures are what was spent, never what is left.",
     "mixedAccounts": "The total adds up keys billed separately — it matches no single invoice.",
     "countedInUtc": "Days and times on this screen are counted in UTC, the way the API dates them. Your local day therefore need not line up with the bars of the chart.",
     "total": "Total spent",

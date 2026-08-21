@@ -85,7 +85,7 @@ export const MODEL_FAMILIES: readonly ModelFamily[] = [
 
 /**
  * Who published the model. The API exposes no author name — only an opaque `authorId` — so
- * `SCENARIO_MAINTAINER` is the closest thing to an authorship signal there is to filter on.
+ * `PROVIDER_MAINTAINER` is the closest thing to an authorship signal there is to filter on.
  */
 export type ModelOrigin = 'official' | 'community'
 
@@ -114,7 +114,7 @@ export const MODEL_IDS_BATCH_LIMIT = 100
  * Neither Scenario Skybox was in it, which is how "Official" emptied a space whose every model
  * Scenario maintains.
  */
-export const SCENARIO_MAINTAINER = 'Scenario'
+export const PROVIDER_MAINTAINER = 'Scenario'
 
 /** Scenario's own highlight, and the badge their grid shows: 29 of the 640 public models. */
 export const FEATURED_TAG = 'sc:featured'

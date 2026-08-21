@@ -42,7 +42,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onChange: noSubscription,
       ...overrides.accounts,
     },
-    scenario: {
+    provider: {
       searchModels: () => Promise.resolve({ items: [], cursor: null }),
       modelPreviews: () => Promise.resolve({}),
       describeModel: () => Promise.reject(new Error('no model')),
@@ -61,7 +61,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onJobsChanged: noSubscription,
       usageReport: () => Promise.reject(new Error('no usage')),
       usageEvents: () => Promise.reject(new Error('no usage')),
-      ...overrides.scenario,
+      ...overrides.provider,
     },
     project: {
       create: () => Promise.reject(new Error('no project')),

@@ -875,7 +875,7 @@
       },
       "accountsList": {
         "title": "List the accounts",
-        "description": "Returns the Scenario accounts this studio holds, saying which one is active and which may be renamed or removed. No key or secret is ever returned."
+        "description": "Returns the generation accounts this studio holds, saying which one is active and which may be renamed or removed. No key or secret is ever returned."
       },
       "accountsActivate": {
         "title": "Switch account",

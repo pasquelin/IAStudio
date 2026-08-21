@@ -517,7 +517,7 @@ export const useTools = create<ToolsState>()(
         }),
     }),
     {
-      name: 'scenario-studio:tools',
+      name: 'ia-studio:tools',
       // Bumped whenever a `ToolId` is renamed or dropped, RE-HUNG ON ANOTHER HALF, or the shape
       // changes: a stale entry would reach a tool no version knows, which `isKnownTool` drops —
       // a blank half where a panel used to be. `shownTool` substituting the half's first tool is

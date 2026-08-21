@@ -18,7 +18,7 @@ const principal = resolve('src/main')
  */
 function strippedDecoderUrls(): Plugin {
   return {
-    name: 'scenario:stripped-decoder-urls',
+    name: 'provider:stripped-decoder-urls',
     transform(source, id) {
       if (!DECODER_MODULES.includes(basename(id))) return null
 

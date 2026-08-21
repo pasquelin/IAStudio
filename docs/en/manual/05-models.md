@@ -9,7 +9,7 @@
 The distant program that makes things. You give it a sentence, and sometimes an image; it returns
 an image, a video, a sound or a 3D object.
 
-There are **several hundred models** in the Scenario catalogue, and they cannot all do the same
+There are **several hundred models** in the remote catalogue, and they cannot all do the same
 thing. Some are excellent at characters and mediocre at landscapes. Some take only text, others
 require a starting image. Some return in ten seconds, others in three minutes.
 
@@ -65,7 +65,7 @@ workspace, because they do not make sense everywhere.
 
 | Value | What it means |
 |---|---|
-| **Official** | published by Scenario |
+| **Official** | published by the provider |
 | **Community** | published by somebody else |
 
 ### Capability — what the model can take in and give back

@@ -10,7 +10,7 @@ const EMPTY_EVENTS: UsageEventPage = { events: [], cursors: {}, more: false }
 
 function install(answered: UsageReport, events: UsageEventPage = EMPTY_EVENTS) {
   installFakeBridge({
-    scenario: {
+    provider: {
       usageReport: () => Promise.resolve(answered),
       usageEvents: () => Promise.resolve(events),
     },
@@ -185,7 +185,7 @@ describe('UsageWindow', () => {
   it('leaves the activity log unread until its section is opened', async () => {
     const usageEvents = vi.fn(() => Promise.resolve(EMPTY_EVENTS))
     installFakeBridge({
-      scenario: { usageReport: () => Promise.resolve(report()), usageEvents },
+      provider: { usageReport: () => Promise.resolve(report()), usageEvents },
     })
 
     render(<UsageWindow />)
@@ -199,7 +199,7 @@ describe('UsageWindow', () => {
 
   it('offers the retry rather than an empty screen when the call is refused', async () => {
     installFakeBridge({
-      scenario: {
+      provider: {
         usageReport: () => Promise.reject(new Error('unexpected')),
         usageEvents: () => Promise.resolve(EMPTY_EVENTS),
       },

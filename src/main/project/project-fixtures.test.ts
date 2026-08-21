@@ -21,7 +21,7 @@ const bodyOf = (kind: DocumentKind): string =>
           name: kind,
           // What `otioBody` stamps on every save, so what is written here comes back byte for
           // byte: the id, and which of the two kinds `.otio` names this file is.
-          metadata: { scenario: { documentId: `doc-${kind}`, documentKind: kind } },
+          metadata: { iastudio: { documentId: `doc-${kind}`, documentKind: kind } },
           tracks: { OTIO_SCHEMA: 'Stack.1', children: [] },
         },
         null,
@@ -117,7 +117,7 @@ describe('the project fixture', () => {
             `composite-op="svg:src-over" src="data/p_a.png"/>` +
             `</stack></image>\n`,
         ),
-        'scenario/document.json': strToU8('{"layers":[]}'),
+        'iastudio/document.json': strToU8('{"layers":[]}'),
       }),
     )
 

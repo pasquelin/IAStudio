@@ -22,11 +22,10 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const PRODUCT_NAME = 'Scenario Studio'
 const PLIST_BUDDY = '/usr/libexec/PlistBuddy'
 
 /** Stamped into the bundle so the work is skipped when it is already done — icon included. */
-const STAMP_KEY = 'ScenarioStudioIdentity'
+const STAMP_KEY = 'DevAppIdentity'
 
 /** The sizes an `.icns` is expected to carry, as `iconutil` names them. */
 const ICON_SIZES = [
@@ -56,12 +55,19 @@ const projectRoot = process.argv[2]
   : dirname(dirname(fileURLToPath(import.meta.url)))
 const iconSource = join(projectRoot, 'build', 'icon.png')
 
+// READ, never spelt again: this file sits outside `src/`, so neither the typecheck nor
+// `constants.test.ts` — which pins `APP_NAME` against this very field — could catch a copy drifting
+// here. The manifest is already in hand for `createRequire` below.
+const { productName: PRODUCT_NAME } = JSON.parse(
+  readFileSync(join(projectRoot, 'package.json'), 'utf8'),
+)
+
 /**
  * Builds the `.icns` macOS reads from the same PNG electron-builder packages, so the icon in
  * development and the icon in a release can never drift apart.
  */
 function buildIcns(target) {
-  const iconset = mkdtempSync(join(tmpdir(), 'scenario-icon-')) + '.iconset'
+  const iconset = mkdtempSync(join(tmpdir(), 'ia-studio-icon-')) + '.iconset'
   execFileSync('mkdir', ['-p', iconset])
 
   try {

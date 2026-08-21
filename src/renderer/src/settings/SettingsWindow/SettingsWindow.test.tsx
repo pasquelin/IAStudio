@@ -330,7 +330,7 @@ describe('SettingsWindow', () => {
           return Promise.resolve(DEFAULT_SETTINGS)
         },
       },
-      scenario: {
+      provider: {
         searchModels: () =>
           Promise.resolve({
             items: [
@@ -378,7 +378,7 @@ describe('SettingsWindow', () => {
    */
   it('offers the way back to asking every time, and marks the choice until it is applied', async () => {
     installFakeBridge({
-      scenario: {
+      provider: {
         searchModels: () =>
           Promise.resolve({
             items: [
@@ -427,7 +427,7 @@ describe('SettingsWindow', () => {
       // Without a key there is no plan to read, and nothing is greyed out — which is the whole
       // point of the fallback, and would make this case pass on the wrong reason.
       settings: { authState: () => Promise.resolve({ authenticated: true }) },
-      scenario: {
+      provider: {
         searchModels: () =>
           Promise.resolve({
             items: [
@@ -473,7 +473,7 @@ describe('SettingsWindow', () => {
           }),
         authState: () => Promise.resolve({ authenticated: true }),
       },
-      scenario: {
+      provider: {
         searchModels: () =>
           Promise.resolve({
             items: [

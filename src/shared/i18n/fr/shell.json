@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Scenario Studio"
+    "name": "IA Studio"
   },
   "workspaces": {
     "navigation": "Espaces de travail",
@@ -170,7 +170,7 @@
     "clearGuides": "Effacer les repères",
     "snap": "Magnétisme",
     "help": "Aide",
-    "about": "À propos de {{name}}",
+    "about": "À propos d’{{name}}",
     "licences": "Licences",
     "manual": "Manuel utilisateur",
     "imageTools": "Outils",
@@ -220,7 +220,7 @@
     },
     "library": {
       "fetch": "Récupérer « {{name}} » dans le projet",
-      "none": "La bibliothèque de votre compte Scenario est vide, ou aucune clé API n’est renseignée."
+      "none": "La bibliothèque de votre compte est vide, ou aucune clé API n’est renseignée."
     },
     "spotlight": {
       "resume": "Reprendre où vous en étiez",
@@ -231,7 +231,7 @@
       "running_other": "{{count, number}} générations en cours",
       "runningBody": "Elles continuent pendant que vous travaillez, et atterrissent dans le document qui les a demandées.",
       "connect": "Connecter une clé API",
-      "connectBody": "Les modèles, la génération et la bibliothèque partagée demandent une clé et un secret Scenario. Collez-les dans Réglages ▸ Compte — ils sont chiffrés par le trousseau du système et ne quittent jamais cette machine. Tout ce qui est sur votre disque fonctionne sans.",
+      "connectBody": "Les modèles, la génération et la bibliothèque partagée demandent une clé et un secret d’API. Collez-les dans Réglages ▸ Compte — ils sont chiffrés par le trousseau du système et ne quittent jamais cette machine. Tout ce qui est sur votre disque fonctionne sans.",
       "connectAction": "Saisir la clé API",
       "ready": "Tout est prêt",
       "readyBody": "{{project}} est ouvert et ne contient encore rien. Choisissez un espace et créez-y la première pièce.",

@@ -1214,7 +1214,7 @@ export class CanvasEngine {
   /**
    * Draws a picture into a layer's texture, laid inside the document without deforming it.
    *
-   * `url` is a `scenario://asset/<id>`: the renderer has no filesystem, and the main process
+   * `url` is a `ia-studio://asset/<id>`: the renderer has no filesystem, and the main process
    * serves the scheme against the catalogue.
    */
   async loadInto(layerId: string, url: string, clear = false): Promise<void> {

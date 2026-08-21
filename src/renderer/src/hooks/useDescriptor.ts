@@ -7,7 +7,7 @@ export function useDescriptor(modelId: string | null) {
   return useQuery<ModelDescriptor | null>({
     queryKey: ['model', modelId],
     queryFn: () =>
-      modelId ? (getBridge()?.scenario.describeModel(modelId) ?? null) : Promise.resolve(null),
+      modelId ? (getBridge()?.provider.describeModel(modelId) ?? null) : Promise.resolve(null),
     enabled: modelId !== null,
   })
 }

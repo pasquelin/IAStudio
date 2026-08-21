@@ -354,7 +354,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           // Reported rather than swallowed — the panel opening is what says something WAS prepared,
           // and nothing at all was what a refusal looked like.
           setPreparing(true)
-          void prepareEdit(documentId, edit, host, bridge.scenario)
+          void prepareEdit(documentId, edit, host, bridge.provider)
             .catch(error => reportFailure('canvas.edit', documentId, error))
             .finally(() => setPreparing(false))
           return

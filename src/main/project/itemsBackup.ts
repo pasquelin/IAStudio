@@ -8,7 +8,7 @@ import type { RescanReport } from './catalogRescan'
  * Where the backup sits. Under a dot, so it is the studio's own by the one rule that says so —
  * shown to a reader who asks, refused by every gesture, and never walked into by a listing.
  */
-export const ITEMS_BACKUP = '.scenario/items.json'
+export const ITEMS_BACKUP = '.ia-studio/items.json'
 
 const ITEMS_BACKUP_VERSION = 1
 

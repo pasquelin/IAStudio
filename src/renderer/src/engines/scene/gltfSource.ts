@@ -84,8 +84,8 @@ export function createGltfSource(rendererOf: () => WebGLRenderer | null): GltfSo
   }
 
   const parse = async (bytes: ArrayBuffer, url: string): Promise<Object3D> => {
-    // Routed by the BYTES, never by the name: an asset reaches this side as `scenario://asset/<id>`
-    // and an animation as `scenario://animation/walk` — neither spells an extension, and this side
+    // Routed by the BYTES, never by the name: an asset reaches this side as `ia-studio://asset/<id>`
+    // and an animation as `ia-studio://animation/walk` — neither spells an extension, and this side
     // holds no catalogue to ask.
     const format = meshFormatOf(new Uint8Array(bytes))
     if (format === 'gltf' || format === null) return gltfOf(bytes, url)

@@ -68,7 +68,7 @@ La petite marque sur une vignette de l’*étagère*, qui dit où en est ce fich
 compte actif. Voir [Les assets](07-assets.md).
 
 **Bibliothèque** *(du compte)*
-Le stock d’assets qui vit en ligne, du côté de votre compte Scenario — par opposition au
+Le stock d’assets qui vit en ligne, du côté de votre compte distant — par opposition au
 *projet*, qui est un dossier sur votre disque. Les deux sont séparés et rien ne circule entre eux
 sans une action de votre part. Aujourd’hui, seul le sens **projet → bibliothèque** a un bouton
 (**Envoyer**).
@@ -118,13 +118,13 @@ Ce qu’un *modèle* sait faire, écrit en abrégé. Le catalogue les affiche co
 | txt2audio | texte vers son |
 
 **Catalogue**
-La liste des *modèles* disponibles sur Scenario. Plusieurs centaines. Le panneau **Modèles** ne
+La liste des *modèles* disponibles chez le fournisseur. Plusieurs centaines. Le panneau **Modèles** ne
 vous montre à chaque fois que ceux qui savent fabriquer ce que l’*espace de travail* en cours
 fabrique.
 
 **Clé API**
-Votre identifiant auprès de Scenario, l’équivalent d’un nom d’utilisateur. Elle va toujours avec
-un *secret API*. Toutes deux se prennent sur [app.scenario.com](https://app.scenario.com), et se
+Votre identifiant auprès du fournisseur, l’équivalent d’un nom d’utilisateur. Elle va toujours avec
+un *secret API*. Toutes deux se prennent sur le tableau de bord de votre fournisseur, et se
 collent dans Réglages → **Compte**.
 
 **Clip**
@@ -135,7 +135,7 @@ plusieurs clips ; couper un clip ne touche jamais le fichier d’origine.
 Une clé API enregistrée, sous un nom que vous choisissez. Le studio en tient **plusieurs**, et le
 sélecteur de la barre de titre passe de l’un à l’autre.
 
-Chaque clé porte **son propre projet Scenario** — ses modèles, ses assets, son crédit. Changer de
+Chaque clé porte **son propre projet distant** — ses modèles, ses assets, son crédit. Changer de
 compte change donc la bibliothèque distante que vous parcourez, **jamais** les fichiers de votre
 projet local, qui sont sur votre disque et n’appartiennent à aucun compte.
 
@@ -292,7 +292,7 @@ Une montée depuis le silence (fondu d’entrée) ou une descente vers lui (fond
 ## G
 
 **Générer**
-Demander à un *modèle* de fabriquer quelque chose. La demande part chez Scenario, revient sous
+Demander à un *modèle* de fabriquer quelque chose. La demande part chez le fournisseur, revient sous
 forme de *tâche*, et le résultat atterrit dans vos *assets*.
 
 **Gizmo**
@@ -602,7 +602,7 @@ places, leurs *matières* et leur animation. C’est le *document* de cet espace
 `.gltf`.
 
 **Secret API**
-La seconde moitié de vos identifiants Scenario, l’équivalent d’un mot de passe. Il va toujours
+La seconde moitié de vos identifiants d’API, l’équivalent d’un mot de passe. Il va toujours
 avec une *clé API*, et ne s’affiche jamais en clair une fois enregistré.
 
 **Sélection** *(dans une image)*
@@ -684,7 +684,7 @@ vous regardez n’y a pas accès : il sait seulement si la connexion fonctionne.
 ## U
 
 **Unité créative** *(UC)*
-Ce qu’une génération dépense sur votre compte Scenario. C’est le service qui fixe le tarif,
+Ce qu’une génération dépense sur votre compte distant. C’est le service qui fixe le tarif,
 jamais le studio : une vidéo ne coûte pas ce que coûte une image, et deux modèles d’images ne
 coûtent pas la même chose non plus.
 

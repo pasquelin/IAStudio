@@ -48,7 +48,7 @@ describe('project store', () => {
   let clock: string
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'scenario-project-'))
+    root = await mkdtemp(join(tmpdir(), 'ia-studio-project-'))
     onChange = vi.fn()
     clock = '2026-08-06T10:00:00.000Z'
     store = createProjectStore({

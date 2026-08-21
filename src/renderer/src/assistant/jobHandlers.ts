@@ -94,7 +94,7 @@ export const JOB_HANDLERS: ActionHandlers = {
 
   'model.schema': input =>
     asking(() =>
-      withBridge(bridge => bridge.scenario.describeModel(textOf(input, 'modelId') ?? '')),
+      withBridge(bridge => bridge.provider.describeModel(textOf(input, 'modelId') ?? '')),
     ),
 
   // `null` is a legitimate answer and travels as one: the API declines to price some models, and
@@ -102,7 +102,7 @@ export const JOB_HANDLERS: ActionHandlers = {
   'cost.estimate': input =>
     asking(() =>
       withBridge(bridge =>
-        bridge.scenario.estimateCost(
+        bridge.provider.estimateCost(
           { id: textOf(input, 'modelId') ?? '' },
           recordOf(input, 'parameters') ?? {},
         ),
@@ -111,7 +111,7 @@ export const JOB_HANDLERS: ActionHandlers = {
 
   'usage.report': input =>
     withBridge(bridge =>
-      bridge.scenario.usageReport(PERIODS.get(textOf(input, 'days') ?? '') ?? DEFAULT_USAGE_PERIOD),
+      bridge.provider.usageReport(PERIODS.get(textOf(input, 'days') ?? '') ?? DEFAULT_USAGE_PERIOD),
     ),
 
   // `false` says nothing was running under that id, which is a click that arrived late rather

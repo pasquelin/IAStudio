@@ -73,7 +73,7 @@ describe('createDocumentFiles', () => {
   let documents: DocumentFiles
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'scenario-documents-'))
+    root = await mkdtemp(join(tmpdir(), 'ia-studio-documents-'))
     documents = documentFilesAt(root, NOW)
   })
 
@@ -292,11 +292,11 @@ describe('createDocumentFiles', () => {
    */
   it('writes a sky as glTF, and finds it again by its own head', async () => {
     const sky = JSON.stringify({
-      asset: { version: '2.0', generator: 'Scenario Studio' },
+      asset: { version: '2.0', generator: 'IA Studio' },
       scene: 0,
       scenes: [{ name: 'Crépuscule', nodes: [0] }],
       nodes: [{ name: 'Sun', rotation: [0, 0, 0, 1] }],
-      extras: { scenario: { sun: { intensity: 2 } } },
+      extras: { iastudio: { sun: { intensity: 2 } } },
     })
     await documents.write('doc-sky', 'skybox', { title: 'Crépuscule', content: sky })
 
@@ -310,7 +310,7 @@ describe('createDocumentFiles', () => {
     expect(onDisk).toMatchObject({ asset: { version: '2.0' }, scene: 0 })
 
     await documents.rename('doc-sky', 'skybox', 'Aube')
-    expect((await documents.read('doc-sky', 'skybox'))?.content).toContain('"scenario"')
+    expect((await documents.read('doc-sky', 'skybox'))?.content).toContain('"iastudio"')
     expect(await readdir(join(root, 'documents'))).toEqual(['Aube.gltf'])
   })
 
@@ -341,7 +341,7 @@ describe('createDocumentFiles', () => {
     // Real MaterialX, not a spelling of the studio's own wearing the extension.
     const onDisk = await readFile(join(root, 'documents', 'Laiton.mtlx'), 'utf8')
     expect(onDisk.startsWith('<?xml version="1.0"?>\n<materialx version="1.39"')).toBe(true)
-    expect(onDisk).toContain('<standard_surface name="SR_scenario" type="surfaceshader">')
+    expect(onDisk).toContain('<standard_surface name="SR_iastudio" type="surfaceshader">')
 
     await documents.rename('doc-mat', 'texture', 'Bronze')
     expect(await readdir(join(root, 'documents'))).toEqual(['Bronze.mtlx'])
@@ -1193,7 +1193,7 @@ describe('createDocumentFiles', () => {
       JSON.stringify({
         OTIO_SCHEMA: 'Timeline.1',
         name: 'Bande',
-        metadata: { scenario: studio },
+        metadata: { iastudio: studio },
         global_start_time: null,
         tracks: { OTIO_SCHEMA: 'Stack.1', children: [] },
       })
@@ -1276,7 +1276,7 @@ describe('createDocumentFiles', () => {
       JSON.stringify({
         asset: { version: '2.0' },
         scene: 0,
-        scenes: [{ nodes: [], extras: { scenario: studio } }],
+        scenes: [{ nodes: [], extras: { iastudio: studio } }],
         nodes: [],
       })
 

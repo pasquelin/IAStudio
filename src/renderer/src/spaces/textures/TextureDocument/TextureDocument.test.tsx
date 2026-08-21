@@ -106,7 +106,7 @@ describe('TextureDocument', () => {
       useTextureViews.getState().inspect(DOCUMENT, 'normal')
       render(<TextureDocument documentId={DOCUMENT} />)
 
-      expect(screen.getByRole('presentation')).toHaveAttribute('src', 'scenario://asset/normal-1')
+      expect(screen.getByRole('presentation')).toHaveAttribute('src', 'ia-studio://asset/normal-1')
     })
 
     it('draws nothing flat while the material is what is shown', () => {

@@ -68,7 +68,7 @@ Le moins cher suffit pour ouvrir un espace ou chercher un modèle. Les autres ti
 demande qui enchaîne trois ou quatre actions.
 
 > **Il n’y a ni second compte, ni seconde clé à saisir.** L’assistant réfléchit sur un modèle du
-> catalogue Scenario, avec la connexion que vous avez déjà. C’est aussi pour cette raison que
+> catalogue distant, avec la connexion que vous avez déjà. C’est aussi pour cette raison que
 > **réfléchir se paie** — voir juste en dessous.
 
 ### Ce que ça coûte
@@ -349,7 +349,7 @@ dans la fenêtre : il y a toujours quelqu’un pour être demandé.
 
 - **Il ne rend jamais une clé API ni un secret.** Il peut dire quels comptes existent, lequel est
   actif, et renommer l’étiquette de l’un d’eux — jamais ce qu’ils contiennent, et il ne peut ni en
-  ajouter ni en supprimer. Ce qui part vers Scenario part comme d’habitude, avec vos identifiants,
+  ajouter ni en supprimer. Ce qui part vers le fournisseur part comme d’habitude, avec vos identifiants,
   depuis votre machine.
 - **Il ne s’autorise rien lui-même.** Les quatre lignes qui laissent passer un engagement sans
   question ne s’écrivent que dans la fenêtre des réglages : un client qui demande à les changer

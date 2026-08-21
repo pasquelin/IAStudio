@@ -90,20 +90,20 @@ export type Channels = {
   accountsRemove: 'accounts:remove'
   accountsActivate: 'accounts:activate'
 
-  scenarioSearchModels: 'scenario:search-models'
-  scenarioModelPreviews: 'scenario:model-previews'
-  scenarioDescribeModel: 'scenario:describe-model'
-  scenarioPlan: 'scenario:plan'
-  scenarioSuggestPrompts: 'scenario:suggest-prompts'
-  scenarioTranslatePrompt: 'scenario:translate-prompt'
-  scenarioDescribeStyle: 'scenario:describe-style'
-  scenarioGenerate: 'scenario:generate'
-  scenarioEstimateCost: 'scenario:estimate-cost'
-  scenarioUploadAsset: 'scenario:upload-asset'
-  scenarioCancelJob: 'scenario:cancel-job'
-  scenarioListJobs: 'scenario:list-jobs'
-  scenarioUsageReport: 'scenario:usage-report'
-  scenarioUsageEvents: 'scenario:usage-events'
+  providerSearchModels: 'provider:search-models'
+  providerModelPreviews: 'provider:model-previews'
+  providerDescribeModel: 'provider:describe-model'
+  providerPlan: 'provider:plan'
+  providerSuggestPrompts: 'provider:suggest-prompts'
+  providerTranslatePrompt: 'provider:translate-prompt'
+  providerDescribeStyle: 'provider:describe-style'
+  providerGenerate: 'provider:generate'
+  providerEstimateCost: 'provider:estimate-cost'
+  providerUploadAsset: 'provider:upload-asset'
+  providerCancelJob: 'provider:cancel-job'
+  providerListJobs: 'provider:list-jobs'
+  providerUsageReport: 'provider:usage-report'
+  providerUsageEvents: 'provider:usage-events'
 
   projectCreate: 'project:create'
   projectOpen: 'project:open'
@@ -289,20 +289,20 @@ export const CHANNELS: Channels = {
   accountsRemove: 'accounts:remove',
   accountsActivate: 'accounts:activate',
 
-  scenarioSearchModels: 'scenario:search-models',
-  scenarioModelPreviews: 'scenario:model-previews',
-  scenarioDescribeModel: 'scenario:describe-model',
-  scenarioPlan: 'scenario:plan',
-  scenarioSuggestPrompts: 'scenario:suggest-prompts',
-  scenarioTranslatePrompt: 'scenario:translate-prompt',
-  scenarioDescribeStyle: 'scenario:describe-style',
-  scenarioGenerate: 'scenario:generate',
-  scenarioEstimateCost: 'scenario:estimate-cost',
-  scenarioUploadAsset: 'scenario:upload-asset',
-  scenarioCancelJob: 'scenario:cancel-job',
-  scenarioListJobs: 'scenario:list-jobs',
-  scenarioUsageReport: 'scenario:usage-report',
-  scenarioUsageEvents: 'scenario:usage-events',
+  providerSearchModels: 'provider:search-models',
+  providerModelPreviews: 'provider:model-previews',
+  providerDescribeModel: 'provider:describe-model',
+  providerPlan: 'provider:plan',
+  providerSuggestPrompts: 'provider:suggest-prompts',
+  providerTranslatePrompt: 'provider:translate-prompt',
+  providerDescribeStyle: 'provider:describe-style',
+  providerGenerate: 'provider:generate',
+  providerEstimateCost: 'provider:estimate-cost',
+  providerUploadAsset: 'provider:upload-asset',
+  providerCancelJob: 'provider:cancel-job',
+  providerListJobs: 'provider:list-jobs',
+  providerUsageReport: 'provider:usage-report',
+  providerUsageEvents: 'provider:usage-events',
 
   projectCreate: 'project:create',
   projectOpen: 'project:open',
@@ -956,7 +956,7 @@ export type StudioBridge = {
     /** Every window follows the switch: the account is owned by the main process. */
     onChange: (callback: (accounts: AccountSummary[]) => void) => Unsubscribe
   }
-  scenario: {
+  provider: {
     searchModels: (query?: ModelQuery) => Promise<ModelPage>
     /** Signed picture URL per asset id, absent for the ones the API has nothing for. */
     modelPreviews: (assetIds: readonly string[]) => Promise<Record<string, string>>

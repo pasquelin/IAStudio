@@ -62,7 +62,7 @@ describe('Models panel', () => {
     const searchModels = vi.fn((_query?: ModelQuery): Promise<ModelPage> =>
       Promise.resolve({ items: [], cursor: null }),
     )
-    installFakeBridge({ scenario: { searchModels } })
+    installFakeBridge({ provider: { searchModels } })
     useLayouts.setState({ activeWorkspace: '3d' })
 
     renderPanel()
@@ -73,7 +73,7 @@ describe('Models panel', () => {
 
   it('shows the models it received', async () => {
     installFakeBridge({
-      scenario: {
+      provider: {
         searchModels: () => Promise.resolve({ items: [model('flux'), model('veo')], cursor: null }),
       },
     })
@@ -92,7 +92,7 @@ describe('Models panel', () => {
     const searchModels = vi.fn((_query?: ModelQuery): Promise<ModelPage> =>
       Promise.resolve({ items: [], cursor: null }),
     )
-    installFakeBridge({ scenario: { searchModels } })
+    installFakeBridge({ provider: { searchModels } })
 
     renderPanel()
 
@@ -110,7 +110,7 @@ describe('Models panel', () => {
     const searchModels = vi.fn((query?: ModelQuery): Promise<ModelPage> =>
       Promise.resolve((query?.cursor ? pages[1] : pages[0]) ?? { items: [], cursor: null }),
     )
-    installFakeBridge({ scenario: { searchModels } })
+    installFakeBridge({ provider: { searchModels } })
 
     renderPanel()
 
@@ -131,7 +131,7 @@ describe('Models panel', () => {
     const searchModels = vi.fn((query?: ModelQuery): Promise<ModelPage> =>
       Promise.resolve((query?.cursor ? pages[1] : pages[0]) ?? { items: [], cursor: null }),
     )
-    installFakeBridge({ scenario: { searchModels } })
+    installFakeBridge({ provider: { searchModels } })
 
     renderPanel()
 
@@ -146,7 +146,7 @@ describe('Models panel', () => {
     const searchModels = vi.fn((): Promise<ModelPage> =>
       Promise.resolve({ items: [], cursor: 'l:public:0:more' }),
     )
-    installFakeBridge({ scenario: { searchModels } })
+    installFakeBridge({ provider: { searchModels } })
 
     renderPanel()
 
@@ -160,7 +160,7 @@ describe('Models panel', () => {
   // Left on "loading" forever, a refused request looks like a panel that never finishes.
   it('says why it has nothing rather than loading forever', async () => {
     installFakeBridge({
-      scenario: { searchModels: () => Promise.reject(new Error('rate-limited')) },
+      provider: { searchModels: () => Promise.reject(new Error('rate-limited')) },
     })
 
     renderPanel()
@@ -175,7 +175,7 @@ describe('Models panel', () => {
       { items: [model('flux')], cursor: null },
     ]
     installFakeBridge({
-      scenario: {
+      provider: {
         searchModels: query =>
           Promise.resolve((query?.cursor ? pages[1] : pages[0]) ?? { items: [], cursor: null }),
       },
@@ -193,7 +193,7 @@ describe('Models panel', () => {
   it('resolves the example picture only for the cards that lack a thumbnail', async () => {
     const modelPreviews = vi.fn(() => Promise.resolve({}))
     installFakeBridge({
-      scenario: {
+      provider: {
         searchModels: () =>
           Promise.resolve({
             items: [
@@ -214,7 +214,7 @@ describe('Models panel', () => {
 
   it('remembers the chosen model per family', async () => {
     installFakeBridge({
-      scenario: { searchModels: () => Promise.resolve({ items: [model('flux')], cursor: null }) },
+      provider: { searchModels: () => Promise.resolve({ items: [model('flux')], cursor: null }) },
     })
 
     renderPanel()
@@ -230,7 +230,7 @@ describe('Models panel', () => {
   it('shows the preferred model as chosen where nothing was picked by hand', async () => {
     preferModels({ image: 'flux' })
     installFakeBridge({
-      scenario: { searchModels: () => Promise.resolve({ items: [model('flux')], cursor: null }) },
+      provider: { searchModels: () => Promise.resolve({ items: [model('flux')], cursor: null }) },
     })
 
     renderPanel()
@@ -243,7 +243,7 @@ describe('Models panel', () => {
 
   it('tells an empty catalogue from a filter that matched nothing', async () => {
     installFakeBridge({
-      scenario: { searchModels: () => Promise.resolve({ items: [], cursor: null }) },
+      provider: { searchModels: () => Promise.resolve({ items: [], cursor: null }) },
     })
 
     const { rerender } = renderPanel()
@@ -265,7 +265,7 @@ describe('Models panel', () => {
    */
   it('reads the filters of the space it shows, not those of the space next door', async () => {
     installFakeBridge({
-      scenario: { searchModels: () => Promise.resolve({ items: [], cursor: null }) },
+      provider: { searchModels: () => Promise.resolve({ items: [], cursor: null }) },
     })
     useModels.setState({
       collections: { image: { ...DEFAULT_COLLECTION_STATE, search: 'nothing' } },
@@ -287,7 +287,7 @@ describe('Models panel', () => {
     const searchModels = vi.fn((_query?: ModelQuery): Promise<ModelPage> =>
       Promise.resolve({ items: [], cursor: null }),
     )
-    installFakeBridge({ scenario: { searchModels } })
+    installFakeBridge({ provider: { searchModels } })
     useModels.setState({
       collections: { image: { ...DEFAULT_COLLECTION_STATE, search: 'flux' } },
     })
@@ -316,7 +316,7 @@ describe('Models panel', () => {
     /** Graded 50 against a plan worth 25, beside one graded 25 that the plan does cover. */
     beforeEach(() => {
       installFakeBridge({
-        scenario: {
+        provider: {
           searchModels: () =>
             Promise.resolve({
               items: [
@@ -380,7 +380,7 @@ describe('Models panel', () => {
     // Being wrong here hides models the user is paying for, so an unread plan refuses nothing.
     it('refuses nothing when the plan cannot be read', async () => {
       installFakeBridge({
-        scenario: {
+        provider: {
           searchModels: () =>
             Promise.resolve({ items: [model('pro', { requiredPlanLevel: 50 })], cursor: null }),
           plan: () => Promise.resolve(null),

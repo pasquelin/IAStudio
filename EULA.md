@@ -1,4 +1,4 @@
-# Conditions d'utilisation de Scenario Studio
+# Conditions d'utilisation d'IA Studio
 
 Version 1.0 — 8 août 2026
 © 2026 Alban Pasquelin. Tous droits réservés.
@@ -28,7 +28,7 @@ Ce droit porte sur l'usage du logiciel. Il n'emporte aucune cession de propriét
   fenêtre Aide ▸ Licences.
 - Décompiler ou désassembler l'application au-delà de ce que le droit applicable autorise
   sans qu'il soit possible d'y renoncer par contrat.
-- Utiliser le nom « Scenario Studio », son icône ou son identité visuelle pour désigner un
+- Utiliser le nom « IA Studio », son icône ou son identité visuelle pour désigner un
   autre logiciel ou un service.
 
 ## 4. Propriété
@@ -49,29 +49,26 @@ programme séparé, sous licence GPL ou LGPL selon la plateforme ; ses sources c
 sont mises à disposition sur la page de la release, et les droits que la GPL vous confère sur
 FFmpeg ne sont en rien restreints par le présent texte.
 
-## 6. Service Scenario, clés et coûts
+## 6. Service de génération, clés et coûts
 
-L'application n'est **ni éditée, ni approuvée, ni soutenue par Scenario Labs**. « Scenario »
-et l'API Scenario sont la propriété de leurs titulaires respectifs ; leur mention ici est
-descriptive.
+L'application ne donne accès à aucun service de génération et n'est affiliée à aucun
+fournisseur. Elle utilise **la clé API que vous fournissez**, sous votre compte et sous
+votre responsabilité :
 
-L'application ne donne accès à aucun service de génération. Elle utilise **la clé API que
-vous fournissez**, sous votre compte et sous votre responsabilité :
-
-- l'usage que vous en faites est soumis aux conditions de Scenario Labs, que vous acceptez
-  directement auprès d'eux ;
+- l'usage que vous en faites est soumis aux conditions de votre fournisseur, que vous
+  acceptez directement auprès de lui ;
 - les unités créatives consommées, les dépassements et la facturation sont à votre charge ;
 - une interruption, une modification ou une suppression du service tiers ne relève pas de
   l'éditeur de l'application.
 
 Votre clé et votre secret sont chiffrés par le magasin de secrets de votre système
-d'exploitation et ne quittent jamais votre machine autrement que vers l'API Scenario.
+d'exploitation et ne quittent jamais votre machine autrement que vers l'API de génération.
 
 ## 7. Contenus que vous produisez
 
 L'éditeur ne revendique aucun droit sur les images, vidéos, modèles, textures, sons ou
 projets que vous créez avec l'application. Les droits attachés aux contenus générés dépendent
-des conditions de Scenario Labs et des modèles employés — c'est à vous de les vérifier pour
+des conditions de votre fournisseur et des modèles employés — c'est à vous de les vérifier pour
 votre usage.
 
 ## 8. Mises à jour
@@ -128,4 +125,4 @@ consommateur résidant dans l'Union européenne, les règles de compétence prot
 
 ## 14. Contact
 
-Alban Pasquelin — https://github.com/pasquelin/scenario
+Alban Pasquelin — https://github.com/pasquelin/IAStudio

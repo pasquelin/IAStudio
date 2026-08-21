@@ -29,20 +29,20 @@ export const useJobs = create<JobsState>()((set, get) => ({
   bodies: {},
 
   connect: connectThroughBridge(async bridge => {
-    const stopProgress = bridge.scenario.onProgress(progress => get().apply(progress))
+    const stopProgress = bridge.provider.onProgress(progress => get().apply(progress))
 
     // The whole list, because the main process alone knows when it gains or loses an entry: a
     // job picked up from a previous session, and one that left because its project closed. It
     // replaces the array, which `apply` below avoids doing — but only a handful of times in a
     // session, and `JobRow` is keyed by id, so nothing on screen jumps.
     let pushed = false
-    const stopChanges = bridge.scenario.onJobsChanged(jobs => {
+    const stopChanges = bridge.provider.onJobsChanged(jobs => {
       pushed = true
       set({ jobs })
     })
 
     try {
-      const jobs = await bridge.scenario.listJobs()
+      const jobs = await bridge.provider.listJobs()
       // A list announced while the read was in flight is newer than what the read answered —
       // and jobs are picked up at project open, which is exactly when a window is connecting.
       if (!pushed) set({ jobs })
@@ -84,13 +84,13 @@ export const useJobs = create<JobsState>()((set, get) => ({
     const bridge = getBridge()
     if (!bridge) return null
 
-    const job = await bridge.scenario.generate(target.id, body)
+    const job = await bridge.provider.generate(target.id, body)
 
     set(state => ({ jobs: [job, ...state.jobs], bodies: { ...state.bodies, [job.id]: body } }))
     return job
   },
 
   cancel: async jobId => {
-    await getBridge()?.scenario.cancelJob(jobId)
+    await getBridge()?.provider.cancelJob(jobId)
   },
 }))

@@ -46,8 +46,8 @@ publié demain aura, lui aussi, le sien — sans mise à jour du studio.
 | Un **carré de couleur** | une couleur | un clic ouvre le sélecteur du système |
 | Un **nombre avec un dé** 🎲 | la *graine* — voir plus bas | un nombre, ou un clic sur le dé |
 
-> **Une image posée sur un formulaire part chez Scenario au moment de générer.** Le modèle
-> tourne sur les serveurs de Scenario : il ne peut lire que ce que la bibliothèque du compte
+> **Une image posée sur un formulaire part chez le fournisseur au moment de générer.** Le modèle
+> tourne sur les serveurs du fournisseur : il ne peut lire que ce que la bibliothèque du compte
 > contient. Le studio envoie donc l’asset du projet, garde le lien entre les deux, et n’envoie
 > rien la fois suivante. Vous la retrouvez dans **Votre bibliothèque**, sur l’accueil.
 >
@@ -362,7 +362,7 @@ le reste en file.
 Ce nombre se règle : **Réglages ▸ Génération ▸ Générations simultanées**, de 1 à 16.
 
 > **Augmenter ce nombre n’accélère pas le service.** Cela rend seulement plus probable que
-> Scenario refuse vos demandes en trop. La file existe justement pour étaler une rafale plutôt
+> le fournisseur refuse vos demandes en trop. La file existe justement pour étaler une rafale plutôt
 > que de la faire rejeter. Trois est un bon équilibre.
 
 ### Les reprises automatiques
@@ -378,7 +378,7 @@ Quatre par défaut.
 
 ### Fermer le studio n’annule pas une génération
 
-**Une génération lancée continue chez Scenario, que le studio soit ouvert ou non.** Ce qui manquait
+**Une génération lancée continue chez le fournisseur, que le studio soit ouvert ou non.** Ce qui manquait
 jusqu’ici, c’est qu’il sache la retrouver au retour : c’est fait. En quittant, il note les
 demandes encore en cours ; au lancement suivant, il les reprend là où elles en sont et leur
 résultat rejoint vos assets comme si de rien n’était.
@@ -394,7 +394,7 @@ Trois précisions qui décident de ce que vous verrez :
   d’un modèle, qui dure des heures, et assez court pour qu’un projet abandonné en pleine
   génération ne traîne pas ses notes indéfiniment.
 
-**Une annulation, elle, arrête vraiment la demande** — chez Scenario, pas seulement dans
+**Une annulation, elle, arrête vraiment la demande** — chez le fournisseur, pas seulement dans
 l’affichage.
 
 ### Changer de compte n’interrompt pas une génération en cours
@@ -463,10 +463,10 @@ de relancer, ce qui est la façon la plus rapide d’explorer une piste.
 |---|---|---|
 | **Aucun identifiant enregistré.** | aucune clé API | **Réglages ▸ Compte** |
 | **Clé ou secret API invalide.** | une des deux chaînes est fausse | vérifier, souvent un espace en trop |
-| **Cette clé API n’a pas les droits requis.** | la clé existe mais ne peut pas faire cela | vérifier votre plan sur app.scenario.com |
+| **Cette clé API n’a pas les droits requis.** | la clé existe mais ne peut pas faire cela | vérifier votre plan chez votre fournisseur |
 | **Trop de requêtes. Nouvelle tentative en cours…** | vous avez dépassé le débit autorisé | rien, le studio réessaie tout seul |
-| **Le service Scenario est momentanément indisponible.** | panne côté serveur | réessayer plus tard |
-| **Impossible de joindre Scenario. Vérifiez votre connexion.** | votre connexion internet | vérifier le réseau |
+| **Le service de génération est momentanément indisponible.** | panne côté serveur | réessayer plus tard |
+| **Impossible de joindre le service de génération. Vérifiez votre connexion.** | votre connexion internet | vérifier le réseau |
 | **La génération a échoué.** | le modèle a refusé la demande | souvent un paramètre hors limites, ou un prompt refusé |
 | **Impossible d’enregistrer le résultat sur le disque.** | le dossier du projet n’est plus accessible | disque plein, projet déplacé, droits en écriture |
 | **Valeur invalide.** | un champ du formulaire | le champ concerné est signalé |

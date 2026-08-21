@@ -1,4 +1,4 @@
-# Scenario Studio — architecture
+# IA Studio — architecture
 
 Comment le studio est bâti, et pourquoi il l’est ainsi. Écrit pour qui reprend le code. Vous
 cherchez plutôt comment *s’en servir* ? Voir [guide-utilisateur.md](guide-utilisateur.md).
@@ -36,7 +36,7 @@ Electron, trois cibles, un dépôt.
         │  processus principal   Node, tous droits    │
         │                                             │
         │  · identifiants API, chiffrés par l'OS      │
-        │  · client SDK Scenario                      │
+        │  · client SDK du fournisseur                │
         │  · JobManager — le seul qui poll            │
         │  · ModelRegistry — schémas → descripteurs   │
         │  · catalogue SQLite, dossiers de projet     │
@@ -159,7 +159,7 @@ côtés l’importent ; aucun ne peut dériver.
 renderer                    preload                  main
 ────────                    ───────                  ────
 getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
-  .scenario                 exposeInMainWorld       handler dérivé du canal
+  .provider                 exposeInMainWorld       handler dérivé du canal
   .searchModels(q)          contextBridge           renvoie des données typées
 ```
 
@@ -170,7 +170,7 @@ Vingt et un préfixes, dont les plus chargés :
 
 | Famille | Nb | Ce qu’elle porte |
 |---|---|---|
-| `scenario:*` | 13 | recherche de modèles, description, génération, contrôle des jobs |
+| `provider:*` | 13 | recherche de modèles, description, génération, contrôle des jobs |
 | `assets:*` / `cloud:*` | 9 + 6 | catalogue du projet, ingestion, et la bibliothèque du compte |
 | `dictation:*` | 8 | permissions du micro, modèle, session de reconnaissance |
 | `settings:*` / `accounts:*` | 6 + 5 | lecture, écriture, identifiants, état d’authentification |
@@ -188,7 +188,7 @@ d’exécuter une commande, ou de déposer un nœud dans la scène.
 La séparation n’est pas cosmétique : **chaque `on…` du pont s’abonne à exactement une entrée de
 `EVENTS`**, et chaque méthode d’appel à exactement une de `CHANNELS`.
 
-Les fichiers locaux sont servis au renderer par un protocole `scenario://`. L’URL est dérivée de
+Les fichiers locaux sont servis au renderer par un protocole `ia-studio://`. L’URL est dérivée de
 l’identifiant de l’asset : une grille de vignettes ne coûte donc aucun IPC — et le renderer ne
 manipule toujours aucun chemin de fichier.
 
@@ -198,7 +198,7 @@ manipule toujours aucun chemin de fichier.
 
 ```
 src/main/
-├── scenario/
+├── provider/
 │   ├── client.ts            le client @scenario-labs/sdk, bâti sur les identifiants stockés
 │   ├── credentials.ts       lecture, validation, état d'authentification
 │   ├── modelRegistry.ts     GET /models/{id} → FieldDescriptor[]
@@ -217,7 +217,7 @@ src/main/
 │   ├── uploader.ts          l'envoi d'un fichier vers la bibliothèque
 │   ├── cost.ts              ce qu'une génération coûterait, sans la lancer
 │   ├── usage.ts             les unités consommées et la grille de prix
-│   └── handlers.ts          les canaux scenario:*
+│   └── handlers.ts          les canaux provider:*
 ├── project/
 │   ├── store.ts             créer et ouvrir un dossier de projet, lire/écrire le manifeste
 │   ├── catalog.ts           l'index SQLite des assets
@@ -233,7 +233,7 @@ src/main/
 │   ├── syncPlan.ts          ce que deux côtés devraient faire l'un de l'autre
 │   ├── collector.ts         ce qu'une génération dépose dans le projet
 │   ├── autoCaption.ts       nommer une image d'après ce que l’API y voit
-│   └── protocol.ts          le protocole scenario://
+│   └── protocol.ts          le protocole ia-studio://
 ├── dictation/               la reconnaissance vocale : permissions, modèle, découpage, handlers
 ├── assistant/               la pensée de l'assistant, derrière un port, et ce qu'on en relit
 ├── mcp/                     le même catalogue d'actions, offert à un client extérieur
@@ -690,12 +690,12 @@ Confondre les deux faisait évincer un rush pour un logo posé au-dessus.
 
 ```
 1. l'utilisateur choisit un modèle   panneau Modèles → stores/models
-2. le renderer demande son schéma    scenario:describe-model
+2. le renderer demande son schéma    provider:describe-model
 3. le main le récupère               GET /models/{id}
 4. le ModelRegistry traduit          schéma JSON → FieldDescriptor[]
 5. DynamicForm le rend               react-hook-form + un schéma zod bâti sur les descripteurs
-5b. le prix s'affiche                scenario:estimate-cost → POST ?dryRun=true → 200 (402 en repli)
-6. soumission                        scenario:generate
+5b. le prix s'affiche                provider:estimate-cost → POST ?dryRun=true → 200 (402 en repli)
+6. soumission                        provider:generate
 7. le JobManager met en file         concurrence bornée
 8. il poll                           jobs.retrieve — 2 s est le PLANCHER, pas la cadence
 9. la progression remonte            evt:job-progress → ligne d'état
@@ -722,7 +722,7 @@ faux en silence le jour où l’une d’elles bouge.
 **L’étape 5b lit un prix dans deux formes de réponse, parce que la référence et le serveur ne
 disent pas la même chose.** Un `?dryRun=true` ne crée aucun job et ne dépense rien. La référence
 documente un **402** portant `estimatedCost` ; le serveur, observé sur les deux endpoints, répond
-**200** avec `creativeUnitsCost` à côté d’un `job` vide. `main/scenario/cost.ts` lit les deux, le
+**200** avec `creativeUnitsCost` à côté d’un `job` vide. `main/provider/cost.ts` lit les deux, le
 200 d’abord, le 402 en repli — un 500 ou un réseau mort remonte comme n’importe quelle panne,
 jusqu’au journal.
 
@@ -763,7 +763,7 @@ pour qu’un projet reste transportable.
 **Il ne se reconstruit pas.** Rien ne redevine ce qu’un fichier EST : le catalogue se remplit au
 fil des générations et des imports. Le supprimer perd les noms, les étiquettes, les dimensions, la
 recette de génération, `derivedFrom`, le `sourcePath` des médias liés et le journal d’activité —
-les fichiers restent, plus rien ne dit ce qu’ils sont. `.scenario/items.json` est ce qui reste à
+les fichiers restent, plus rien ne dit ce qu’ils sont. `.ia-studio/items.json` est ce qui reste à
 lire ce jour-là : une sauvegarde indexée par empreinte de contenu, écrite après chaque passe de
 réconciliation qui a changé quelque chose, que le studio ne relit jamais de lui-même.
 
@@ -777,8 +777,8 @@ seule panne qu’une réconciliation ne doit pas avoir. `search` et `countByType
 daté, si bien que la corbeille — qui date au lieu d’effacer — rend une ligne entière si le fichier
 en ressort.
 
-Un asset est soit `local` (un fichier du projet), soit `cloud` (encore uniquement chez Scenario).
-Une image locale est servie au renderer sous la forme `scenario://<id>`.
+Un asset est soit `local` (un fichier du projet), soit `cloud` (encore uniquement chez le fournisseur).
+Une image locale est servie au renderer sous la forme `ia-studio://<id>`.
 
 Les **documents** sont des fichiers rangés où l’utilisateur veut — `documents/` n’est que le
 dossier où atterrit une première sauvegarde, et `documents.list()` parcourt le projet entier pour
@@ -823,7 +823,7 @@ d’écrire un corps qui n’est pas un montage.
 Pour l’**image**, le fichier est une archive OpenRaster — un ZIP, et non plus un dossier. Le
 principal l’empaquette et la dépaquette : `mimetype` en premier et stocké, `stack.xml`,
 `mergedimage.png` que la spécification exige, un PNG par surface sous `data/`, et l’état du studio
-sous `scenario/`. La fenêtre produit la pile (le `content` du document EST cette pile, en JSON) et
+sous `provider/`. La fenêtre produit la pile (le `content` du document EST cette pile, en JSON) et
 les surfaces à côté, en octets ; le principal écrit la syntaxe. **Un listing ne lit que les
 premiers kilooctets du conteneur** — l’enveloppe du studio y est écrite deuxième et non
 compressée, sans quoi lister un projet ouvrirait cent mégaoctets par document.
@@ -1128,7 +1128,7 @@ libellé, il en fait une infobulle.
 
 ### Le seul dictionnaire indexé sur du texte, et pourquoi
 
-**L’API Scenario ne connaît pas la langue** — ni `Accept-Language`, ni paramètre de locale sur
+**L’API de génération ne connaît pas la langue** — ni `Accept-Language`, ni paramètre de locale sur
 `models.retrieve`, rien dans le SDK. Le texte qu’un modèle publie pour ses propres entrées
 (« Target size », « Max splat points », et les phrases d’explication sous elles) est donc traduit
 ici ou nulle part.
@@ -1140,7 +1140,7 @@ une **phrase que le modèle a écrite**, pas un nom de champ : indexer sur la cl
 
 Trois conséquences, dont une à accepter :
 
-- **un libellé changé côté Scenario retombe en anglais** au lieu d’échouer. `normalizeModelText`
+- **un libellé changé côté fournisseur retombe en anglais** au lieu d’échouer. `normalizeModelText`
   absorbe ce qui ne coûte rien à absorber — casse, espaces, apostrophe et tiret typographiques,
   ponctuation finale — et le repli est **la phrase anglaise elle-même, jamais une clé**. Le pire
   cas est donc l’écran d’avant, pas un écran cassé ;
@@ -1163,7 +1163,7 @@ est ce qui **s’est passé**, y compris ce que rien ne facture (`subscription`,
 `assistant-message`). Les deux listes se recouvrent aux trois quarts, d’où **une seule table de
 libellés que les deux consultent** — donc
 **une clé de bundle par valeur**, tenue par `bundles.test.ts` comme le sont déjà les canaux PBR et
-les portées du journal. Une action ajoutée par Scenario sans sa ligne fait rougir la garde.
+les portées du journal. Une action ajoutée par le fournisseur sans sa ligne fait rougir la garde.
 
 La règle qui départage les deux :
 
@@ -1296,7 +1296,7 @@ compilation le graverait dans `out/`, et un `.asar` s’ouvre avec un éditeur d
 
 | Variable | Qui s’en sert |
 |---|---|
-| `SCENARIO_API_KEY`, `SCENARIO_API_SECRET` | le client API, en repli |
+| `PROVIDER_API_KEY`, `PROVIDER_API_SECRET` | le client API, en repli |
 | `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | le packaging uniquement — jamais à l’exécution |
 
 Les identifiants enregistrés dans les réglages **priment** sur ceux du `.env`. Le fichier est une

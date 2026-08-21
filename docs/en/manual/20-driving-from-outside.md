@@ -68,7 +68,7 @@ The cheapest is enough to open a workspace or search for a model. The others hol
 request that chains three or four actions.
 
 > **There is no second account and no second key to enter.** The assistant thinks on a model of
-> the Scenario catalogue, over the connection you already have. That is also why **thinking is
+> the remote catalogue, over the connection you already have. That is also why **thinking is
 > paid for** — see just below.
 
 ### What it costs
@@ -340,7 +340,7 @@ program outside**. The assistant is in the window: there is always someone there
 
 - **It never returns an API key or a secret.** It can say which accounts exist, which one is
   active, and rename the label of one — never what they hold, and it can neither add one nor
-  delete one. What goes to Scenario goes as usual, with your credentials, from your machine.
+  delete one. What goes to the provider goes as usual, with your credentials, from your machine.
 - **It arms nothing for itself.** The four lines that let a commitment through without a question
   are written in the settings window and nowhere else: a client asking to change them is told no.
 - **It never spends on its own.** One action spends — starting the prepared generation — and it

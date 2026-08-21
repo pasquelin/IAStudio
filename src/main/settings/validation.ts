@@ -28,7 +28,7 @@ import {
 import { HEX_COLOR } from '@shared/domain/color'
 import type { AccountBook, Credentials } from './accounts'
 
-// Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
+// Built from the shared unions, never retyped — the same reason `provider/validation.ts` gives:
 // a hand-copied list silently stops accepting what the panel offers.
 const scale = boundsOf('appearance.fontScale')
 

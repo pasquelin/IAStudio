@@ -90,7 +90,7 @@ export function createPlanReader({
         // before this feature existed. Letting it throw would empty the panel over a nicety.
         // `describeFailure`, never the raw error: an SDK message embeds the request that
         // produced it, so `String(error)` would write the API key into the log file.
-        log.warn('scenario', `GET /teams refused, nothing greyed out: ${describeFailure(error)}`)
+        log.warn('provider', `GET /teams refused, nothing greyed out: ${describeFailure(error)}`)
       }
 
       cached = { at: now(), value }

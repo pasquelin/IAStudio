@@ -30,7 +30,7 @@
       "project": "Projet",
       "shell": "Interface"
     },
-    "projectNotAProject": "Ce dossier n’est pas un projet Scenario",
+    "projectNotAProject": "Ce dossier n’est pas un projet IA Studio",
     "projectUnreadable": "Le manifeste de ce projet est illisible : il a été tronqué ou modifié à la main",
     "projectTooNew": "Ce projet a été créé par une version plus récente du studio ; mettez le studio à jour pour l’ouvrir",
     "projectNotCreated": "Le projet n’a pas pu être créé dans ce dossier",
@@ -82,7 +82,7 @@
     "captioned_other": "{{count, number}} assets nommés",
     "captionFailed": "Le nommage a échoué",
     "tagsNotSynced": "Les tags de « {{name}} » n’ont pas rejoint la bibliothèque",
-    "apiRefused": "L’API Scenario a refusé une requête",
+    "apiRefused": "L’API de génération a refusé une requête",
     "scope": {
       "scene.model": "Un modèle 3D n’a pas pu être chargé",
       "scene.bvh": "Un modèle 3D n’a pas pu être préparé pour la sélection",

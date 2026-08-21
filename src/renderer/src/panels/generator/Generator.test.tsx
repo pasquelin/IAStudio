@@ -70,7 +70,7 @@ describe('Generator', () => {
     preferModels({ image: 'model_flux', upscale: 'model_big' })
 
     bridge = installFakeBridge({
-      scenario: {
+      provider: {
         describeModel: (modelId: string) =>
           DESCRIPTORS[modelId]
             ? Promise.resolve(DESCRIPTORS[modelId])
@@ -94,7 +94,7 @@ describe('Generator', () => {
    * Generate would have run Flux on it.
    */
   it('opens on the model an edit prepared, not on the one the workspace holds', async () => {
-    await prepareEdit(DOCUMENT, 'enlarge', host, bridge.scenario)
+    await prepareEdit(DOCUMENT, 'enlarge', host, bridge.provider)
     renderPanel()
 
     expect(await screen.findByText('Magnific Upscaler')).toBeInTheDocument()
@@ -105,7 +105,7 @@ describe('Generator', () => {
   // family of wherever the user now is. `connectPreparation` is what the application branches.
   it('comes back to the workspace family once the preparation is closed', async () => {
     const stop = connectPreparation()
-    await prepareEdit(DOCUMENT, 'enlarge', host, bridge.scenario)
+    await prepareEdit(DOCUMENT, 'enlarge', host, bridge.provider)
 
     useLayouts.setState({ activeWorkspace: 'video' })
     preferModels({ video: 'model_flux' })
@@ -117,7 +117,7 @@ describe('Generator', () => {
 
   // Choosing a model by hand is taking the generator back from whatever prepared it.
   it('drops the preparation once a model is picked in the panel', async () => {
-    await prepareEdit(DOCUMENT, 'enlarge', host, bridge.scenario)
+    await prepareEdit(DOCUMENT, 'enlarge', host, bridge.provider)
 
     useModels.getState().select('image', 'model_flux')
     renderPanel()
@@ -175,7 +175,7 @@ describe('Generator', () => {
       })
 
       installFakeBridge({
-        scenario: {
+        provider: {
           describeModel: () =>
             Promise.resolve({
               ...descriptor('model_flux', 'Flux', 'image'),
@@ -201,7 +201,7 @@ describe('Generator', () => {
     // Being wrong here blocks a model the user is paying for, so an unread plan refuses nothing.
     it('generates as before when the plan cannot be read', async () => {
       installFakeBridge({
-        scenario: {
+        provider: {
           describeModel: () =>
             Promise.resolve({
               ...descriptor('model_flux', 'Flux', 'image'),

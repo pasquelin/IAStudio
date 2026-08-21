@@ -10,6 +10,12 @@ import {
 import { SECOND, type Us } from '@shared/domain/time'
 import type { Transform } from '@shared/domain/scene'
 import type { AnimationTimeline, AnimationTrack } from '@shared/domain/animation'
+
+/**
+ * What the scene's own animation is called inside an exported glTF — the name Blender and every
+ * other reader shows in its action list. It is the studio's, so it carries the studio's name.
+ */
+const STUDIO_CLIP_NAME = 'IA Studio'
 import { poseAt, tracksFor } from './animationEval'
 
 /** A node the file will hold, and the poses its tracks are measured against. */
@@ -124,7 +130,7 @@ export function timelineClip(
 
   return tracks.length === 0
     ? null
-    : new AnimationClip('Scenario', seconds(timeline.duration), tracks)
+    : new AnimationClip(STUDIO_CLIP_NAME, seconds(timeline.duration), tracks)
 }
 
 /** Which channels a node has: itself, plus one per bone any track names. */

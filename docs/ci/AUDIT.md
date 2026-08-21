@@ -39,8 +39,8 @@ départ : les ADR de `docs/ci/adr/` s’y réfèrent au lieu de le reparaphraser
 | Bundling | electron-vite 5. Main à **4 entrées** (`index`, `catalogWorker`, `peaksWorker`, `sttWorker`), preload forcé CJS, renderer à 2 HTML. Sortie `out/` | `electron.vite.config.ts` |
 | Build vs packaging | `pnpm build` = sources → `out/`. **`pnpm dist` packageait déjà** et produit un `.dmg` | `scripts/dist.sh` |
 | Packaging | `electron-builder 26.15.3`, configuration externalisée et complète | `electron-builder.yml` |
-| `appId` | `com.scenario.app` — déjà arrêté | `electron-builder.yml:1` |
-| `productName` | `Scenario Studio`, dans `package.json` seulement, volontairement absent du YAML | `src/shared/constants.test.ts` |
+| `appId` | `com.pasquelin.iastudio` — déjà arrêté | `electron-builder.yml:1` |
+| `productName` | `IA Studio`, dans `package.json` seulement, volontairement absent du YAML | `src/shared/constants.test.ts` |
 | Cibles déclarées | mac `dmg`+`zip` `[arm64, x64]`, win `nsis` `[x64]`, linux `AppImage`+`deb` | `electron-builder.yml` |
 | Icônes | `build/icon.svg` et `build/icon.png` 1024×1024. Pas de `.icns`/`.ico` — sans conséquence : electron-builder 26 rasterise le SVG à 1024 | `iconConverter.js:242` |
 | Entitlements | Une seule clé, `allow-jit`, avec justification écrite du refus des deux autres | `build/entitlements.mac.plist` |
@@ -48,7 +48,7 @@ départ : les ADR de `docs/ci/adr/` s’y réfèrent au lieu de le reparaphraser
 | `publish:` | **Absent** — aucun canal de mise à jour configuré | — |
 | `electron-updater` | **Absent** du projet | — |
 | CI | **`.github/` n’existait pas.** Aucun workflow, aucune release publiée | — |
-| Dépôt | `git@github.com:pasquelin/scenario.git` — **public** | — |
+| Dépôt | `git@github.com:pasquelin/IAStudio.git` — **public** | — |
 | Branche par défaut | `feat/scenario-pipeline` ; `main` local en avance de **83 commits** sur `origin/main` | — |
 | Dépendances natives | **`better-sqlite3` 13.0.3 seule.** 8 prebuilds N-API, les 4 cibles couvertes. `fsevents` en dev/darwin | — |
 | Lockfile multi-OS | Rollup, esbuild, Tailwind oxide, lightningcss : les 4 cibles présentes | `pnpm-lock.yaml` |

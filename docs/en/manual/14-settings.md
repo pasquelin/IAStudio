@@ -76,7 +76,7 @@ you write in them: a prompt written in English stays in English.
 
 > **The generation form follows too, but not always all the way.** The names of the settings a
 > model offers — and the explanatory sentences under them — are written by the model, and the
-> Scenario API only ever returns them in English. The studio translates them itself. A setting it
+> generation API only ever returns them in English. The studio translates them itself. A setting it
 > does not know yet therefore stays **in English** rather than disappearing, and a model published
 > tomorrow arrives in its original wording.
 >
@@ -117,7 +117,7 @@ What is set **on the home itself**, and not here: which bands are shown — see
 
 *API credentials, encrypted by the system keychain.*
 
-This is where you connect the studio to [Scenario](https://www.scenario.com). Without this step,
+This is where you connect the studio to your generation service. Without this step,
 anything to do with generation stays inert: the model catalogue is empty, the **Generate** button
 does not answer.
 
@@ -126,7 +126,7 @@ does not answer.
 Not one. You can store as many API keys as you like, each under a name you choose — "Studio",
 "Client X", "Personal".
 
-**Why that is useful.** An API key **carries its own Scenario project**: its models, its assets, its
+**Why that is useful.** An API key **carries its own remote project**: its models, its assets, its
 credit. Switching accounts changes **the remote library** you browse.
 
 > **It never touches your local project.** Your folders, your images, your edits are on your disk
@@ -143,7 +143,7 @@ The form, below the list. Three fields:
 | **API key** | your identifier, visible as you type it |
 | **API secret** | your password, masked with dots |
 
-Take the key and the secret from [app.scenario.com](https://app.scenario.com), in your account
+Take the key and the secret from your provider, in your account
 settings. Then **Add an account** — the button reads "Adding…" while it writes.
 
 **The button stays off** until all three fields are valid.
@@ -205,7 +205,7 @@ so: "This account comes from `secrets/.env`: edit that file to rename or remove 
 
 ### When the list is empty
 
-> "No account yet. Add an API key to reach the Scenario library."
+> "No account yet. Add an API key to reach the remote library."
 
 Nothing is stored, and nothing works: no catalogue, no generation.
 
@@ -664,9 +664,9 @@ Opens your file manager where your settings are saved, in a file called `setting
 
 | System | Where |
 |---|---|
-| macOS | `~/Library/Application Support/Scenario Studio/settings.json` |
-| Windows | `%APPDATA%\Scenario Studio\settings.json` |
-| Linux | `~/.config/Scenario Studio/settings.json` |
+| macOS | `~/Library/Application Support/IA Studio/settings.json` |
+| Windows | `%APPDATA%\IA Studio\settings.json` |
+| Linux | `~/.config/IA Studio/settings.json` |
 
 Useful to copy them before moving to another machine, or to send to someone helping you understand
 a problem.

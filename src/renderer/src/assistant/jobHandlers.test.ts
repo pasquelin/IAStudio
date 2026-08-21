@@ -96,7 +96,7 @@ describe('before a generation', () => {
       tags: [],
       fields: [],
     }
-    installFakeBridge({ scenario: { describeModel: vi.fn(async () => schema) } })
+    installFakeBridge({ provider: { describeModel: vi.fn(async () => schema) } })
     expect(await runAction('model.schema', { modelId: 'model-1' })).toEqual({
       ok: true,
       data: schema,
@@ -114,7 +114,7 @@ describe('before a generation', () => {
   // `null` is a legitimate answer and travels as one: the API declines to price some models, and
   // a figure invented to fill the field would be worse than admitting there is none.
   it('carries an absent estimate across rather than filling it in', async () => {
-    installFakeBridge({ scenario: { estimateCost: vi.fn(async () => null) } })
+    installFakeBridge({ provider: { estimateCost: vi.fn(async () => null) } })
 
     expect(await runAction('cost.estimate', { modelId: 'model-1', parameters: {} })).toEqual({
       ok: true,
@@ -139,7 +139,7 @@ describe('cancelling and counting', () => {
 
   it('reads the usage over the window asked for, and the default otherwise', async () => {
     const usageReport = vi.fn(async () => report())
-    installFakeBridge({ scenario: { usageReport } })
+    installFakeBridge({ provider: { usageReport } })
 
     await runAction('usage.report', { days: '7' })
     expect(usageReport).toHaveBeenCalledWith(7)

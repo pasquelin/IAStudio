@@ -6,7 +6,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'"
     />
-    <title>Scenario Studio</title>
+    <title>IA Studio</title>
     <style>
       * {
         margin: 0;
@@ -83,30 +83,59 @@
   </head>
   <body>
     <div class="top">
+      <!--
+        The icon's robot, without its chassis: this surface already paints the same gradient the
+        chassis carries, so drawing it again would put a tile on a tile. Coordinates are the 1024
+        grid of `build/icon.svg`, brought here by one transform.
+
+        COPIED, not shared, and nothing compares the two shapes: this page is a separate Vite entry
+        under `default-src 'none'`, so it cannot import the file. `splash.test.ts` pins the COLOURS
+        against it and the geometry against no one — change the robot in `build/icon.svg` and this
+        one keeps the old body, silently. Redraw both, or teach the test to compare the paths.
+      -->
       <svg class="mark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-        <path
-          fill="#fff"
-          opacity="1"
-          d="M 256.211609 219.877777 L 503.321014 365.44278 L 256.211609 511.007751 L 9.102222 365.44278 Z"
-        />
-        <path
-          fill="#fff"
-          opacity="0.78"
-          d="M 256.211609 147.059967 L 503.321014 292.624969 L 256.211609 438.189972 L 9.102222 292.624969 Z"
-        />
-        <path
-          fill="#fff"
-          opacity="0.6"
-          d="M 256.211609 74.312775 L 503.321014 219.877777 L 256.211609 365.44278 L 9.102222 219.877777 Z"
-        />
-        <path
-          fill="#fff"
-          opacity="0.42"
-          d="M 256.211609 1.494995 L 503.321014 147.059967 L 256.211609 292.624969 L 9.102222 147.059967 Z"
-        />
+        <defs>
+          <linearGradient id="splashShell" x1="0" y1="0" x2="0.3" y2="1">
+            <stop offset="0" stop-color="#ffffff" />
+            <stop offset="1" stop-color="#d3d9e4" />
+          </linearGradient>
+        </defs>
+        <g transform="translate(-170 -110) scale(0.75)">
+          <path d="M 512 272 L 512 234" stroke="#8fb4f7" stroke-width="15" stroke-linecap="round" />
+          <circle cx="512" cy="214" r="27" fill="#6193f3" />
+          <path
+            d="M 654 616 L 728 560"
+            stroke="url(#splashShell)"
+            stroke-width="44"
+            stroke-linecap="round"
+          />
+          <path
+            d="M 370 616 L 298 668"
+            stroke="url(#splashShell)"
+            stroke-width="44"
+            stroke-linecap="round"
+          />
+          <path d="M 736 552 L 812 476" stroke="#aab3c2" stroke-width="26" stroke-linecap="round" />
+          <path d="M 818 470 L 844 444" stroke="#346ef2" stroke-width="35" stroke-linecap="round" />
+          <rect x="316" y="378" width="30" height="76" rx="15" fill="#aab3c2" />
+          <rect x="678" y="378" width="30" height="76" rx="15" fill="#aab3c2" />
+          <rect x="478" y="516" width="68" height="46" fill="#c2c9d6" />
+          <rect x="372" y="556" width="280" height="198" rx="58" fill="url(#splashShell)" />
+          <rect x="344" y="286" width="336" height="250" rx="78" fill="url(#splashShell)" />
+          <rect x="378" y="338" width="268" height="122" rx="61" fill="#14161c" />
+          <circle cx="452" cy="399" r="31" fill="#6193f3" />
+          <circle cx="572" cy="399" r="31" fill="#6193f3" />
+          <circle cx="443" cy="389" r="10" fill="#ffffff" opacity="0.85" />
+          <circle cx="563" cy="389" r="10" fill="#ffffff" opacity="0.85" />
+          <rect x="470" y="488" width="84" height="13" rx="6" fill="#aab3c2" />
+          <rect x="436" y="598" width="152" height="106" rx="34" fill="#346ef2" />
+          <rect x="466" y="628" width="92" height="13" rx="6" fill="#ffffff" opacity="0.95" />
+          <rect x="466" y="654" width="68" height="13" rx="6" fill="#ffffff" opacity="0.7" />
+          <rect x="466" y="680" width="44" height="13" rx="6" fill="#ffffff" opacity="0.45" />
+        </g>
       </svg>
       <div>
-        <div class="name">Scenario Studio</div>
+        <div class="name">IA Studio</div>
         <div class="version" id="version"></div>
       </div>
     </div>

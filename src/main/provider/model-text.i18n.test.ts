@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { translateModelText } from '@shared/i18n'
-import { translateSchema, type ScenarioInput } from './schema'
+import { translateSchema, type ProviderInput } from './schema'
 
 /**
  * What `GET /models/{modelId}` answered on 11/08/2026, copied field for field, for five models
@@ -16,7 +16,7 @@ import { translateSchema, type ScenarioInput } from './schema'
  * A suite that called the API would test the network instead. The date above is what to compare
  * against when this list stops matching what Scenario sends.
  */
-const INPUTS: readonly ScenarioInput[] = [
+const INPUTS: readonly ProviderInput[] = [
   {
     name: 'prompt',
     type: 'string',

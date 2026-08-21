@@ -22,7 +22,7 @@ export function useUsageReport(period: UsagePeriod): UsageState {
 
     let live = true
 
-    bridge.scenario
+    bridge.provider
       .usageReport(period)
       .then(value => {
         if (live) setAnswer({ period, token: attempt, value, failure: null })

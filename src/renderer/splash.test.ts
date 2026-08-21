@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import icon from '../../build/icon.svg?raw'
 import stylesheet from './src/index.css?raw'
 import splash from './splash.html?raw'
 
@@ -25,8 +26,11 @@ function reference(): string {
   return block
 }
 
-/** Mirrors build/icon.svg, so the splash and the Dock icon read as one object. */
-const ICON_GRADIENT = ['#3b4256', '#22242a', '#191a1c']
+/**
+ * READ from build/icon.svg rather than restated, so the splash and the Dock icon read as one
+ * object. A hand-copied list held three greys and went stale the day the mark became a robot.
+ */
+const ICON_COLOURS = icon.match(/#[0-9a-fA-F]{6}\b/g) ?? []
 
 describe('splash palette', () => {
   for (const { value, token } of FROM_TOKENS) {
@@ -42,10 +46,16 @@ describe('splash palette', () => {
     })
   }
 
-  it('introduces no colour beyond the tokens and the icon gradient', () => {
-    const allowed = new Set([...ICON_GRADIENT, ...FROM_TOKENS.map(({ value }) => value)])
+  it('introduces no colour beyond the tokens and the icon', () => {
+    const allowed = new Set([...ICON_COLOURS, ...FROM_TOKENS.map(({ value }) => value)])
     const used = new Set(splash.match(/#[0-9a-fA-F]{6}\b/g) ?? [])
 
     expect([...used].filter(colour => !allowed.has(colour))).toEqual([])
+  })
+
+  // An empty allow-list would let the case above pass on any splash at all: the icon has to have
+  // been READ for reading it to prove anything.
+  it('reads the icon it compares against', () => {
+    expect(ICON_COLOURS.length).toBeGreaterThan(3)
   })
 })

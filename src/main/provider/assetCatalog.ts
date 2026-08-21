@@ -127,9 +127,9 @@ export function assetCatalogOf(backend: AssetBackend): RemoteAssetCatalog {
         ...(collectionId ? { collectionId } : {}),
       }
 
-      log.info('scenario', `GET /assets ${JSON.stringify(params)}`)
+      log.info('provider', `GET /assets ${JSON.stringify(params)}`)
       const page = await backend.list(params)
-      log.info('scenario', `GET /assets → ${page.assets.length} assets`)
+      log.info('provider', `GET /assets → ${page.assets.length} assets`)
 
       return {
         // A record we cannot show is dropped, not turned into a blank cell: the library holds
@@ -157,9 +157,9 @@ export function assetCatalogOf(backend: AssetBackend): RemoteAssetCatalog {
         offset,
       }
 
-      log.info('scenario', `POST /search/assets ${JSON.stringify(params)}`)
+      log.info('provider', `POST /search/assets ${JSON.stringify(params)}`)
       const page = await backend.search(params)
-      log.info('scenario', `POST /search/assets → ${page.hits.length}/${page.estimatedTotalHits}`)
+      log.info('provider', `POST /search/assets → ${page.hits.length}/${page.estimatedTotalHits}`)
 
       return {
         assets: page.hits.map(cloudAssetOfHit).filter(asset => asset !== null),
@@ -173,7 +173,7 @@ export function assetCatalogOf(backend: AssetBackend): RemoteAssetCatalog {
       // Batched here rather than at the call sites: 200 is one of four different bulk limits,
       // and going over one is refused whole rather than partly served.
       for (const batch of chunk(assetIds, GET_BULK_MAX)) {
-        log.info('scenario', `POST /assets/get-bulk ${batch.length} ids`)
+        log.info('provider', `POST /assets/get-bulk ${batch.length} ids`)
         const { assets } = await backend.getBulk({ assetIds: batch })
         collected.push(...assets.map(cloudAssetOfListing).filter(asset => asset !== null))
       }
@@ -182,7 +182,7 @@ export function assetCatalogOf(backend: AssetBackend): RemoteAssetCatalog {
     },
 
     updateTags: async (assetId, add, remove) => {
-      log.info('scenario', `PUT /assets/${assetId}/tags +${add.length} -${remove.length}`)
+      log.info('provider', `PUT /assets/${assetId}/tags +${add.length} -${remove.length}`)
       // `strict: false` makes it idempotent — adding a tag an asset already carries is not an
       // error worth failing a bulk tagging over.
       await backend.updateTags(assetId, {
@@ -195,13 +195,13 @@ export function assetCatalogOf(backend: AssetBackend): RemoteAssetCatalog {
     deleteMany: async assetIds => {
       // There is no single-asset delete endpoint; the bulk one is the only door, capped at 100.
       for (const batch of chunk(assetIds, DELETE_MAX)) {
-        log.info('scenario', `DELETE /assets ${batch.length} ids`)
+        log.info('provider', `DELETE /assets ${batch.length} ids`)
         await backend.deleteMultiple({ assetIds: batch })
       }
     },
 
     downloadUrl: async (assetId, targetFormat) => {
-      log.info('scenario', `POST /assets/${assetId}/download ${targetFormat ?? ''}`)
+      log.info('provider', `POST /assets/${assetId}/download ${targetFormat ?? ''}`)
       const { url } = await backend.requestDownload(assetId, {
         ...(targetFormat ? { targetFormat } : {}),
       })

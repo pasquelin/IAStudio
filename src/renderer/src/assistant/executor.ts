@@ -180,7 +180,7 @@ async function estimateOfSubmission(): Promise<number | null> {
   if (!prepared || !bridge) return null
 
   try {
-    const estimate = await bridge.scenario.estimateCost({ id: prepared.modelId }, prepared.values)
+    const estimate = await bridge.provider.estimateCost({ id: prepared.modelId }, prepared.values)
     return estimate?.creativeUnits ?? null
   } catch {
     return null

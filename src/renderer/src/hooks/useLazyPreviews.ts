@@ -44,7 +44,7 @@ export function useLazyPreviews() {
       for (const id of batch) pending.current.delete(id)
 
       void getBridge()
-        ?.scenario.modelPreviews(batch)
+        ?.provider.modelPreviews(batch)
         .then(found => setUrls(current => ({ ...current, ...found })))
         .catch(() => {
           // Forgotten, not remembered as done: a batch lost to a dropped connection would

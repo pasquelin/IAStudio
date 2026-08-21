@@ -7,7 +7,7 @@ import {
   type EnvironmentFallback,
 } from './credentials'
 
-const DEV_ENV = 'SCENARIO_API_KEY=env_key\nSCENARIO_API_SECRET=env_secret\n'
+const DEV_ENV = 'PROVIDER_API_KEY=env_key\nPROVIDER_API_SECRET=env_secret\n'
 
 function fallback(content: string | null, packaged = false): EnvironmentFallback {
   return { packaged, read: () => content }
@@ -85,6 +85,30 @@ describe('the development account', () => {
     })
   })
 
+  /**
+   * `secrets/.env` is git-ignored, so the 21/08 rename of these variables could not reach a single
+   * real one. Without this, every existing checkout came up "not connected" with nothing anywhere
+   * saying which of the two names it should carry.
+   */
+  it('still reads the names these variables had before the rename', () => {
+    const previous = 'SCENARIO_API_KEY=old_key\nSCENARIO_API_SECRET=old_secret\n'
+
+    expect(environmentAccount(fallback(previous))?.credentials).toEqual({
+      key: 'old_key',
+      secret: 'old_secret',
+    })
+  })
+
+  // A file holding both is a checkout half-way through the rename, and it must not be ambiguous.
+  it('prefers the current name over the previous one', () => {
+    const both = `${DEV_ENV}SCENARIO_API_KEY=old_key\nSCENARIO_API_SECRET=old_secret\n`
+
+    expect(environmentAccount(fallback(both))?.credentials).toEqual({
+      key: 'env_key',
+      secret: 'env_secret',
+    })
+  })
+
   // The origin is what decides both the permission and whether it may be persisted, and the id
   // is fixed because activating it has to survive a relaunch.
   it('carries its origin and keeps a fixed id', () => {
@@ -94,21 +118,21 @@ describe('the development account', () => {
   })
 
   it('takes its name from the file', () => {
-    const named = `${DEV_ENV}SCENARIO_ACCOUNT_NAME=Développement\n`
+    const named = `${DEV_ENV}PROVIDER_ACCOUNT_NAME=Développement\n`
 
     expect(environmentAccount(fallback(named))?.name).toBe('Développement')
   })
 
   it('falls back to a default name when the file does not give one', () => {
     expect(environmentAccount(fallback(DEV_ENV))?.name).toBe('Development')
-    expect(environmentAccount(fallback(`${DEV_ENV}SCENARIO_ACCOUNT_NAME=   \n`))?.name).toBe(
+    expect(environmentAccount(fallback(`${DEV_ENV}PROVIDER_ACCOUNT_NAME=   \n`))?.name).toBe(
       'Development',
     )
   })
 
   // A `.env` to tidy up is never a reason to withhold the only key a fresh checkout has.
   it('clamps a name too long rather than refusing the account', () => {
-    const long = `${DEV_ENV}SCENARIO_ACCOUNT_NAME=${'n'.repeat(200)}\n`
+    const long = `${DEV_ENV}PROVIDER_ACCOUNT_NAME=${'n'.repeat(200)}\n`
 
     expect(environmentAccount(fallback(long))?.name).toHaveLength(ACCOUNT_NAME_MAX_LENGTH)
   })
@@ -118,7 +142,7 @@ describe('the development account', () => {
   })
 
   it('ignores a file that only carries half the pair', () => {
-    expect(environmentAccount(fallback('SCENARIO_API_KEY=env_key'))).toBeNull()
+    expect(environmentAccount(fallback('PROVIDER_API_KEY=env_key'))).toBeNull()
   })
 
   it('tolerates a missing file', () => {

@@ -313,7 +313,7 @@
  * `default` is what paints the window before the renderer has published the attribute.
  */
 @plugin 'daisyui/theme' {
-  name: 'scenario-dark';
+  name: 'iastudio-dark';
   default: true;
   prefersdark: true;
   color-scheme: dark;
@@ -368,7 +368,7 @@
  * them would leave the panels white and the viewport dark.
  */
 @plugin 'daisyui/theme' {
-  name: 'scenario-light';
+  name: 'iastudio-light';
   color-scheme: light;
 
   --color-base-100: #f5f6f8;

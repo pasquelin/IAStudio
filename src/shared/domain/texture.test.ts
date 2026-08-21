@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  channelFromScenarioType,
+  channelFromProviderType,
   seamVerdict,
-  CHANNEL_BY_SCENARIO_TYPE,
+  CHANNEL_BY_PROVIDER_TYPE,
   DEFAULT_TEXTURE_MATERIAL,
   isPbrChannel,
   PBR_CHANNELS,
@@ -51,20 +51,20 @@ describe('isPbrChannel', () => {
   })
 })
 
-describe('channelFromScenarioType', () => {
+describe('channelFromProviderType', () => {
   it('reads the six channels the texture converter answers with', () => {
-    expect(channelFromScenarioType('texture-albedo')?.channel).toBe('baseColor')
-    expect(channelFromScenarioType('texture-normal')?.channel).toBe('normal')
-    expect(channelFromScenarioType('texture-height')?.channel).toBe('height')
-    expect(channelFromScenarioType('texture-metallic')?.channel).toBe('metalness')
-    expect(channelFromScenarioType('texture-ao')?.channel).toBe('ao')
-    expect(channelFromScenarioType('texture-edge')?.channel).toBe('edge')
+    expect(channelFromProviderType('texture-albedo')?.channel).toBe('baseColor')
+    expect(channelFromProviderType('texture-normal')?.channel).toBe('normal')
+    expect(channelFromProviderType('texture-height')?.channel).toBe('height')
+    expect(channelFromProviderType('texture-metallic')?.channel).toBe('metalness')
+    expect(channelFromProviderType('texture-ao')?.channel).toBe('ao')
+    expect(channelFromProviderType('texture-edge')?.channel).toBe('edge')
   })
 
   // The converter answers with smoothness; the studio stores roughness. Same picture, read
   // the other way round — so the channel is roughness and the flag says which way.
   it('files a smoothness map as an inverted roughness', () => {
-    expect(channelFromScenarioType('texture-smoothness')).toEqual({
+    expect(channelFromProviderType('texture-smoothness')).toEqual({
       channel: 'roughness',
       inverted: true,
     })
@@ -72,27 +72,27 @@ describe('channelFromScenarioType', () => {
 
   // The other family says roughness where the first says smoothness: no flag there.
   it('takes a 3d roughness map at face value', () => {
-    expect(channelFromScenarioType('3d-texture-roughness')).toEqual({ channel: 'roughness' })
+    expect(channelFromProviderType('3d-texture-roughness')).toEqual({ channel: 'roughness' })
   })
 
   it('reads the channels a textured mesh answers with', () => {
-    expect(channelFromScenarioType('3d-texture-albedo')?.channel).toBe('baseColor')
-    expect(channelFromScenarioType('3d-texture-normal')?.channel).toBe('normal')
-    expect(channelFromScenarioType('3d-texture-metallic')?.channel).toBe('metalness')
+    expect(channelFromProviderType('3d-texture-albedo')?.channel).toBe('baseColor')
+    expect(channelFromProviderType('3d-texture-normal')?.channel).toBe('normal')
+    expect(channelFromProviderType('3d-texture-metallic')?.channel).toBe('metalness')
   })
 
   // The API adds types without warning, and one of them must land as an ordinary picture
   // rather than vanish from the project.
   it('answers null for a type it has never heard of', () => {
-    expect(channelFromScenarioType('inference-txt2img')).toBeNull()
-    expect(channelFromScenarioType('texture-occlusion-v2')).toBeNull()
-    expect(channelFromScenarioType(undefined)).toBeNull()
+    expect(channelFromProviderType('inference-txt2img')).toBeNull()
+    expect(channelFromProviderType('texture-occlusion-v2')).toBeNull()
+    expect(channelFromProviderType(undefined)).toBeNull()
   })
 
   // Swept over the whole table rather than a handful: this is the one asymmetry between the
   // two families, and reading a normal or a height backwards would be invisible until render.
   it('never inverts anything but a smoothness map', () => {
-    const inverted = Object.entries(CHANNEL_BY_SCENARIO_TYPE)
+    const inverted = Object.entries(CHANNEL_BY_PROVIDER_TYPE)
       .filter(([, source]) => source.inverted)
       .map(([type]) => type)
 
@@ -100,7 +100,7 @@ describe('channelFromScenarioType', () => {
   })
 
   it('only ever answers with a channel the domain declares', () => {
-    for (const source of Object.values(CHANNEL_BY_SCENARIO_TYPE)) {
+    for (const source of Object.values(CHANNEL_BY_PROVIDER_TYPE)) {
       expect(isPbrChannel(source.channel)).toBe(true)
     }
   })

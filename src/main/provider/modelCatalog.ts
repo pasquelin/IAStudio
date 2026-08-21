@@ -53,9 +53,9 @@ export function catalogOf(client: Scenario): ModelCatalog {
           : {}),
       }
 
-      log.info('scenario', `GET /models ${JSON.stringify(params)}`)
+      log.info('provider', `GET /models ${JSON.stringify(params)}`)
       const page = await client.models.list(params)
-      log.info('scenario', `GET /models → ${page.models.length} models`)
+      log.info('provider', `GET /models → ${page.models.length} models`)
 
       return {
         models: page.models,
@@ -68,9 +68,9 @@ export function catalogOf(client: Scenario): ModelCatalog {
       // catalogue listing sets — see the note above.
       const params = { query, limit, offset, public: true }
 
-      log.info('scenario', `POST /search/models ${JSON.stringify(params)}`)
+      log.info('provider', `POST /search/models ${JSON.stringify(params)}`)
       const page = await client.search.modelSearch(params)
-      log.info('scenario', `POST /search/models → ${page.hits.length}/${page.estimatedTotalHits}`)
+      log.info('provider', `POST /search/models → ${page.hits.length}/${page.estimatedTotalHits}`)
 
       return {
         models: page.hits,
@@ -88,7 +88,7 @@ export function catalogOf(client: Scenario): ModelCatalog {
      * Third-party models have no training images here. Their example assets do have one.
      */
     assetUrls: async assetIds => {
-      log.info('scenario', `POST /assets/get-bulk ${assetIds.length} ids`)
+      log.info('provider', `POST /assets/get-bulk ${assetIds.length} ids`)
       const { assets } = await client.assets.getBulk({ assetIds: [...assetIds] })
       return assets
     },

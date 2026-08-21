@@ -29,7 +29,7 @@ const reported = vi.fn<(entry: LogEntry) => Promise<void>>()
 
 /** Only the parts of a written timeline these cases read back. */
 type WrittenTimeline = {
-  metadata: { scenario: { documentId?: string; playhead?: number; audioEdits?: unknown } }
+  metadata: { iastudio: { documentId?: string; playhead?: number; audioEdits?: unknown } }
   tracks: { children: { children: { media_reference: { target_url?: string; name: string } }[] }[] }
 }
 
@@ -113,7 +113,7 @@ describe('what a save writes for a montage', () => {
   it('remembers which document the file is', () => {
     heldIn('Bande.otio')
 
-    expect(written(sequencePayload(ONE_CLIP, 'doc-1')).metadata.scenario.documentId).toBe('doc-1')
+    expect(written(sequencePayload(ONE_CLIP, 'doc-1')).metadata.iastudio.documentId).toBe('doc-1')
   })
 
   it('indents, the file being one another application and a hand both read', () => {
@@ -142,14 +142,14 @@ describe('what a save writes for a montage', () => {
     sequenceFromPayload(
       {
         OTIO_SCHEMA: 'Timeline.1',
-        metadata: { scenario: { audioEdits: { 'clip-a': [] }, playhead: 9_000_000 } },
+        metadata: { iastudio: { audioEdits: { 'clip-a': [] }, playhead: 9_000_000 } },
         tracks: { OTIO_SCHEMA: 'Stack.1', children: [] },
       },
       'doc-1',
     )
 
     const studio = written(sequencePayload({ ...ONE_CLIP, playhead: 42 }, 'doc-1')).metadata
-      .scenario
+      .iastudio
 
     expect(studio.audioEdits).toEqual({ 'clip-a': [] })
     expect(studio.playhead).toBe(42)
@@ -285,7 +285,7 @@ function holdsScene(id: string): void {
 const sceneClip = (): unknown =>
   timelineHolding(
     { OTIO_SCHEMA: 'MissingReference.1', name: 'Scène', metadata: {}, available_range: null },
-    { scenario: { id: 'c1', assetId: '', sceneId: 'scene-1' } },
+    { iastudio: { id: 'c1', assetId: '', sceneId: 'scene-1' } },
   )
 
 /** A timeline as another application writes one: a media named by path, and no studio metadata. */

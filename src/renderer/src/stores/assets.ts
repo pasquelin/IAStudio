@@ -411,7 +411,7 @@ export const useAssets = create<AssetsState>()(
       }
     },
     {
-      name: 'scenario-studio:assets',
+      name: 'ia-studio:assets',
       version: COLLECTION_PERSIST_VERSION,
       /**
        * The store used to persist a bare `view`, before the state became a whole

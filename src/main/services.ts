@@ -52,7 +52,7 @@ import { createAssetText } from './assistant/assetText'
 import { createRemoteActions, type RemoteActions } from './mcp/asking'
 import { createMcpControl, type McpControl } from './mcp/control'
 import type { AssistantBrain } from './assistant/brainPort'
-import { createScenarioBrain } from './assistant/brainScenario'
+import { createProviderBrain } from './assistant/brainProvider'
 import { createSession, type DictationSession } from './dictation/session'
 import { fetchModel, modelIsComplete } from './dictation/modelDownload'
 import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/modelStore'
@@ -90,8 +90,8 @@ import {
   type AssetCollector,
   type JobAccount,
   type JobManager,
-} from './scenario/jobManager'
-import { runnerOf } from './scenario/runner'
+} from './provider/jobManager'
+import { runnerOf } from './provider/runner'
 import type { AskUser } from './project/documentDialogs'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import { createFileOps, type FileOps } from './project/fileOps'
@@ -106,12 +106,12 @@ import { createProjectStore, openFailureKey, orWhenGone, type ProjectStore } fro
 import { createReconciler, type Reconciler } from './project/reconcile'
 import { createActivityLog, type ActivityLog } from './project/activityLog'
 import { openCatalogThread } from './project/catalogThread'
-import { catalogOf } from './scenario/modelCatalog'
-import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './scenario/uploader'
-import { createAssetInputResolver } from './scenario/assetInputs'
-import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './scenario/assetCatalog'
-import { generationOfMetadata } from './scenario/assetNormalizer'
-import { createOwnerScope, type OwnerScope } from './scenario/ownerScope'
+import { catalogOf } from './provider/modelCatalog'
+import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './provider/uploader'
+import { createAssetInputResolver } from './provider/assetInputs'
+import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './provider/assetCatalog'
+import { generationOfMetadata } from './provider/assetNormalizer'
+import { createOwnerScope, type OwnerScope } from './provider/ownerScope'
 import { accountFingerprint } from './settings/accounts'
 import { createCloudBackend, type CloudBackend } from './assets/cloudBackend'
 import { isRecord } from '@shared/guards'
@@ -120,18 +120,18 @@ import {
   createClientProvider,
   recordFailuresTo,
   type ClientProvider,
-} from './scenario/client'
-import { costEstimatorOf, type CostEstimator } from './scenario/cost'
-import { createUsageReader, type UsageReader } from './scenario/usage'
-import { createJobStore } from './scenario/jobStore'
-import { createRateLimiters, limitedTransport } from './scenario/rateLimiter'
-import { createCredentialsWatch } from './scenario/credentialsWatch'
-import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
-import { createModelRegistry, type ModelRegistry } from './scenario/modelRegistry'
-import { createPlanReader, teamsOf, type PlanReader } from './scenario/plan'
-import { createAssistQueue } from './scenario/assistQueue'
-import { createPromptAssist, type PromptAssist } from './scenario/promptAssist'
-import { promptAssistApiOf } from './scenario/promptAssistApi'
+} from './provider/client'
+import { costEstimatorOf, type CostEstimator } from './provider/cost'
+import { createUsageReader, type UsageReader } from './provider/usage'
+import { createJobStore } from './provider/jobStore'
+import { createRateLimiters, limitedTransport } from './provider/rateLimiter'
+import { createCredentialsWatch } from './provider/credentialsWatch'
+import { createFileSystemFallback, environmentAccount } from './provider/credentials'
+import { createModelRegistry, type ModelRegistry } from './provider/modelRegistry'
+import { createPlanReader, teamsOf, type PlanReader } from './provider/plan'
+import { createAssistQueue } from './provider/assistQueue'
+import { createPromptAssist, type PromptAssist } from './provider/promptAssist'
+import { promptAssistApiOf } from './provider/promptAssistApi'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type AccountChange, type SettingsStore } from './settings/store'
 import { buildMenu } from './menu'
@@ -450,7 +450,7 @@ export function createServices(settings: SettingsStore): Services {
   const limiters = createRateLimiters({
     now: () => performance.now(),
     delay,
-    onSaturated: () => log.info('scenario', 'rate limit reached, requests are queueing'),
+    onSaturated: () => log.info('provider', 'rate limit reached, requests are queueing'),
   })
 
   // One transport for every client: the one in force, the one a resumed job needs, and the one
@@ -737,7 +737,7 @@ export function createServices(settings: SettingsStore): Services {
   recordFailuresTo((scope, detail) => {
     journal.record({
       level: 'error',
-      topic: scope === 'scenario' ? 'generation' : 'library',
+      topic: scope === 'provider' ? 'generation' : 'library',
       messageKey: 'activity.apiRefused',
       detail,
     })
@@ -1246,7 +1246,7 @@ export function createServices(settings: SettingsStore): Services {
    * difference is what keeps every sentence typed at the assistant out of the jobs bar and its
    * answers out of the asset browser — see `JobManager.run`.
    */
-  const brain = createScenarioBrain({
+  const brain = createProviderBrain({
     run: body => jobs.run({ id: ASSISTANT_MODEL_ID }, ASSISTANT_MODEL_ID, body),
     readText: createAssetText({
       retrieve: async assetId => (await client.require().assets.retrieve(assetId)).asset,

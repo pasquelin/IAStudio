@@ -1,4 +1,4 @@
-appId: com.scenario.app
+appId: com.pasquelin.iastudio
 # `productName` is deliberately absent: electron-builder would prefer it over the one in
 # package.json, which is the copy `shared/constants.test.ts` pins to APP_NAME. Declaring it
 # here would leave the shipped name unguarded.
@@ -23,7 +23,7 @@ artifactName: ${name}-${version}-${platform}-${arch}.${ext}
 publish:
   provider: github
   owner: pasquelin
-  repo: scenario
+  repo: IAStudio
   releaseType: draft
 
 files:
@@ -122,7 +122,7 @@ mac:
     # key is missing when the microphone is first touched. Not localised: an Info.plist string
     # needs an `InfoPlist.strings` per language, which electron-builder does not assemble.
     NSMicrophoneUsageDescription:
-      Scenario Studio uses the microphone to turn what you say into text, on this computer.
+      IA Studio uses the microphone to turn what you say into text, on this computer.
       Nothing you say is sent anywhere.
   # `notarize` is deliberately left at its default rather than pinned to false: electron-builder
   # only notarises what it managed to sign, so an unsigned build skips it on its own — and the
@@ -175,16 +175,16 @@ nsis:
 linux:
   icon: build/icon.svg
   category: Graphics
-  synopsis: Image, video, 3D, audio, texture and skybox creation on the Scenario API
+  synopsis: Image, video, 3D, audio, texture and skybox creation studio
   maintainer: Alban Pasquelin <alban.pasquelin@gmail.com>
   # The one surface of the studio that ships its wording instead of reading it: a `.desktop` file
   # is written at build time and read by the desktop shell, long before any bundle is loaded. It
   # localises the only way it can — one key per locale, `Comment` being the C fallback.
   desktop:
     entry:
-      StartupWMClass: Scenario Studio
-      Comment: Image, video, 3D, audio, texture and skybox creation on the Scenario API
-      Comment[fr]: Création d’images, vidéos, modèles 3D, audio, textures et skyboxes sur l’API Scenario
+      StartupWMClass: IA Studio
+      Comment: Image, video, 3D, audio, texture and skybox creation studio
+      Comment[fr]: Studio de création d’images, vidéos, modèles 3D, audio, textures et skyboxes
   target: [AppImage, deb]
 
 appImage:

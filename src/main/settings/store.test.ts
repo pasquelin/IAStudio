@@ -377,7 +377,7 @@ describe('carrying a single-credential install over', () => {
     store.settleAccounts()
 
     expect(adapter.raw.has('credentials')).toBe(false)
-    expect(String(adapter.raw.get('accounts'))).toContain('"name":"Scenario"')
+    expect(String(adapter.raw.get('accounts'))).toContain(`"name":"${DEFAULT_ACCOUNT_NAME}"`)
     expect(store.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
   })
 

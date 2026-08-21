@@ -4,9 +4,9 @@ Ce dossier est **ignoré par git**. Il ne contient que des identifiants de déve
 
 | Variable | Rôle |
 |---|---|
-| `SCENARIO_API_KEY` | Clé API Scenario |
-| `SCENARIO_API_SECRET` | Secret API Scenario |
-| `SCENARIO_ACCOUNT_NAME` | Nom du compte de développement dans le sélecteur. Optionnel — « Development » par défaut |
+| `PROVIDER_API_KEY` | Clé de l'API de génération |
+| `PROVIDER_API_SECRET` | Secret de l'API de génération |
+| `PROVIDER_ACCOUNT_NAME` | Nom du compte de développement dans le sélecteur. Optionnel — « Development » par défaut |
 | `APPLE_ID` | Identifiant Apple Developer, pour la notarisation macOS |
 | `APPLE_APP_SPECIFIC_PASSWORD` | Mot de passe d'application dédié, créé sur appleid.apple.com |
 | `APPLE_TEAM_ID` | Identifiant d'équipe Apple Developer |

@@ -19,7 +19,7 @@ const given = (accounts: AccountSummary[], authenticated = true): void => {
 }
 
 const buttonFor = (name: string): HTMLElement =>
-  screen.getByRole('button', { name: `Compte Scenario${NO_BREAK_SPACE}: ${name}` })
+  screen.getByRole('button', { name: `Compte${NO_BREAK_SPACE}: ${name}` })
 
 const openMenu = async (name: string): Promise<void> => {
   await userEvent.click(buttonFor(name))

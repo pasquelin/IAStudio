@@ -19,7 +19,7 @@ import { createCredentialVault } from '@main/git/credentials'
 import { registerGitHandlers } from '@main/git/handlers'
 import { createElectronAdapter } from '@main/settings/adapter'
 import { registerProjectHandlers } from '@main/project/handlers'
-import { registerScenarioHandlers } from '@main/scenario/handlers'
+import { registerProviderHandlers } from '@main/provider/handlers'
 import { TRANSLATIONS } from '@shared/i18n'
 import { CURRENT } from '@main/logFile'
 import { runSettingAction } from '@main/settings/actions'
@@ -74,7 +74,7 @@ export function registerIpc(services: Services): void {
       },
     }),
   })
-  registerScenarioHandlers(services)
+  registerProviderHandlers(services)
   registerProjectHandlers({ ...services, record: entry => services.journal.record(entry) })
   registerBundledTextureHandlers({
     catalog: () => services.project.catalog(),

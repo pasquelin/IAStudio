@@ -116,7 +116,7 @@ function startUp(splash: Splash, settings: SettingsStore): void {
 }
 
 function bootstrap(): void {
-  // Must run before the app is ready: afterwards Electron ignores it, `img-src scenario:` in
+  // Must run before the app is ready: afterwards Electron ignores it, `img-src ia-studio:` in
   // the CSP is never honoured, and every local thumbnail comes back blank.
   registerAssetScheme()
 
