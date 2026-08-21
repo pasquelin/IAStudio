@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { SPLASH_BACKGROUND_COLOR } from '@shared/constants'
 import icon from '../../build/icon.svg?raw'
 import stylesheet from './src/index.css?raw'
 import splash from './splash.html?raw'
@@ -18,6 +19,9 @@ const FROM_TOKENS = [
   { value: '#91959b', token: '--color-muted' },
   { value: '#34363a', token: '--color-border' },
   { value: '#346ef2', token: '--color-accent' },
+  { value: '#6193f3', token: '--color-accent-ink' },
+  { value: '#202124', token: '--color-surface' },
+  { value: '#191a1c', token: '--color-panel' },
 ]
 
 function reference(): string {
@@ -54,6 +58,16 @@ describe('splash palette', () => {
       expect(reference()).toContain(`${token}: ${value};`)
     })
   }
+
+  /**
+   * The window is created with that colour so the first frame is not a flash, and it was left on
+   * the old gradient's middle stop when this page went flat — grey for a few frames, then the
+   * page. It is a copy of what the sheet below paints, so it is pinned to it.
+   */
+  it('is what the window paints before the page does', () => {
+    expect(splash).toContain(SPLASH_BACKGROUND_COLOR.dark)
+    expect(splash).toContain(SPLASH_BACKGROUND_COLOR.light)
+  })
 
   it('introduces no colour beyond the tokens and the icon', () => {
     const allowed = new Set([...ICON_COLOURS, ...FROM_TOKENS.map(({ value }) => value)])

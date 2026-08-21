@@ -5,8 +5,10 @@ import { describe, expect, it } from 'vitest'
  * GitHub Pages serves nothing above `docs/`, so the site's favicon is a COPY of the application
  * icon rather than a link to it, and nothing else compares the two.
  *
- * **The blind spot, in the open**: `apple-touch-icon.png` beside it is a flattened RENDER of that
- * same file, and no test reopens it — a stale one shows on an iOS home screen and nowhere else.
+ * **Two blind spots, in the open, and the second is the costly one.** `apple-touch-icon.png` beside
+ * it is a flattened RENDER no test reopens — a stale one shows on an iOS home screen alone. But
+ * `build/icon.png` is a render too, and it SHIPS: About panel, Windows and Linux window icon, dev
+ * Dock. A redrawn `icon.svg` reddens both guards here, and the packaged icon keeps the old mark.
  */
 const fileAt = (path: string): string =>
   readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8')
