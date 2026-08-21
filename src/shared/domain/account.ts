@@ -15,8 +15,14 @@ export type AccountSummary = {
 
 export const ACCOUNT_NAME_MAX_LENGTH = 60
 
-/** What a single-credential install becomes when it grows a list. */
-export const DEFAULT_ACCOUNT_NAME = 'Scenario'
+/**
+ * What a single-credential install becomes when it grows a list.
+ *
+ * Untranslated, like `DEFAULT_ENVIRONMENT_ACCOUNT_NAME` below: it is a label the user may rename,
+ * not a word of the interface. It named the provider until 21/08 — and that label shows in the
+ * title bar's account switch, which made it the last screen still saying who the API belongs to.
+ */
+export const DEFAULT_ACCOUNT_NAME = 'Default'
 
 /**
  * The id the development account always takes. Fixed rather than generated so that activating

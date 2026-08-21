@@ -519,7 +519,7 @@ Le menu du système — en haut de l’écran sur macOS, en haut de la fenêtre 
 | **Affichage** | Modules, Réinitialiser la disposition, Plein écran, zoom de l’image |
 | **Objets** | **Ajouter ▸ Maille**, **Ajouter ▸ Lumière** — dans l’espace Modélisation |
 | **Fenêtre** | les commandes de fenêtre du système |
-| **Aide** | À propos de IA Studio, Consommation…, Licences |
+| **Aide** | À propos d’IA Studio, Consommation…, Licences |
 
 Les raccourcis affichés dans les menus sont **ceux que vous avez réglés**.
 
@@ -560,7 +560,7 @@ le dit et renvoie aux réglages.
 
 ### La fenêtre des licences
 
-**Aide ▸ Licences** liste les logiciels que IA Studio embarque : nom, version, et nom court
+**Aide ▸ Licences** liste les logiciels qu’IA Studio embarque : nom, version, et nom court
 de la licence (`MIT`, `Apache-2.0`…). Cliquez une ligne : le **texte entier** se déplie, et le
 lien vers les sources s’affiche quand la licence l’exige.
 

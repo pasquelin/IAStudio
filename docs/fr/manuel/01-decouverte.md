@@ -9,7 +9,7 @@
 Vous décrivez ce que vous voulez, avec des mots. Un ordinateur distant le fabrique. Vous
 récupérez le résultat chez vous, et vous continuez à travailler dessus.
 
-Voilà l’idée entière. Ce que IA Studio ajoute par rapport à un site web où l’on tape une
+Voilà l’idée entière. Ce qu’IA Studio ajoute par rapport à un site web où l’on tape une
 phrase et où l’on télécharge une image, c’est **tout ce qui vient après** :
 
 - vos créations sont **rangées** dans un projet, sur votre disque, pas dans un dossier
@@ -158,11 +158,11 @@ réseau de neurones. Le studio est fait pour être conduit, pas compris.
 
 Autant le dire tout de suite, cela évite de le chercher.
 
-- **Il ne travaille pas hors ligne pour générer.** La fabrication se passe sur les serveurs de
-  du fournisseur. Sans connexion, vous pouvez ouvrir, monter, régler et enregistrer, mais pas créer
+- **Il ne travaille pas hors ligne pour générer.** La fabrication se passe sur les serveurs du
+  fournisseur. Sans connexion, vous pouvez ouvrir, monter, régler et enregistrer, mais pas créer
   de nouveau contenu.
 - **Il n’est pas gratuit à l’usage.** Chaque génération consomme le crédit de votre compte
-  du fournisseur. Le studio ne vous le facture pas — il ne fait que transmettre — mais votre compte,
+  distant. Le studio ne vous le facture pas — il ne fait que transmettre — mais votre compte,
   lui, compte.
 - **Il ne remplace pas Photoshop, ni Blender, ni Premiere.** Il en fait une part utile, dans un
   seul endroit, autour de la génération. Le chapitre

@@ -85,8 +85,13 @@
     <div class="top">
       <!--
         The icon's robot, without its chassis: this surface already paints the same gradient the
-        chassis carries, so drawing it again would put a tile on a tile. Scaled and centred out of
-        the 1024 grid `build/icon.svg` is drawn on, which stays the one place the shape is authored.
+        chassis carries, so drawing it again would put a tile on a tile. Coordinates are the 1024
+        grid of `build/icon.svg`, brought here by one transform.
+
+        COPIED, not shared, and nothing compares the two shapes: this page is a separate Vite entry
+        under `default-src 'none'`, so it cannot import the file. `splash.test.ts` pins the COLOURS
+        against it and the geometry against no one — change the robot in `build/icon.svg` and this
+        one keeps the old body, silently. Redraw both, or teach the test to compare the paths.
       -->
       <svg class="mark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
         <defs>

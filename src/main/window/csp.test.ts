@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { ASSET_SCHEME } from '@shared/domain/asset'
 
 /**
  * The policies, read as data — and from the main process for the reasons `theme.test.ts` gives.
@@ -64,11 +65,17 @@ describe('the window policy', () => {
     expect(directive('connect-src')).toContain('data:')
   })
 
-  // The asset scheme is fetched, not just linked: the monitor reads a rush through it.
+  /**
+   * The asset scheme is fetched, not just linked: the monitor reads a rush through it.
+   *
+   * Taken from `ASSET_SCHEME` rather than spelt again: `protocol.handle` registers whatever that
+   * constant says, so a policy naming a different scheme leaves every picture, video and thumbnail
+   * blank — and `GLTFLoader` swallows the refusal, as the case above records.
+   */
   it('lets the asset scheme be fetched and shown', () => {
-    expect(directive('connect-src')).toContain('ia-studio:')
-    expect(directive('img-src')).toContain('ia-studio:')
-    expect(directive('media-src')).toContain('ia-studio:')
+    expect(directive('connect-src')).toContain(`${ASSET_SCHEME}:`)
+    expect(directive('img-src')).toContain(`${ASSET_SCHEME}:`)
+    expect(directive('media-src')).toContain(`${ASSET_SCHEME}:`)
   })
 
   /**

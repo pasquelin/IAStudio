@@ -12,18 +12,19 @@
  * and no rule is kept in step on two sides.
  */
 
+import { STUDIO_METADATA_KEY } from './studioMetadata'
 import { isRecord } from '../guards'
 
 export const MTLX_VERSION = '1.39'
 
 /**
  * Element and attribute names are ASCII letters, digits and `_` only, never a dot — § MaterialX
- * Names. So `iastudiostate`, where OTIO writes `metadata.iastudio` and glTF an `extras` member.
+ * Names, which is why the domain key is glued to the word rather than joined by one.
  */
-export const MTLX_STUDIO_ATTR = 'iastudiostate'
+export const MTLX_STUDIO_ATTR = `${STUDIO_METADATA_KEY}state`
 
 /** The envelope, written BEFORE the state so a bounded head read reaches it whatever the state weighs. */
-export const MTLX_ENVELOPE_ATTR = 'iastudiodocument'
+export const MTLX_ENVELOPE_ATTR = `${STUDIO_METADATA_KEY}document`
 
 /**
  * How much of a `.mtlx` is read to find its envelope. Larger than an OpenRaster head because the

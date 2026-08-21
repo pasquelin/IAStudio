@@ -12,6 +12,7 @@ import {
   type MtlxValue,
   type MtlxWrap,
 } from '@shared/domain/materialX'
+import { STUDIO_METADATA_KEY } from '@shared/domain/studioMetadata'
 import { isRecord } from '@shared/guards'
 import { attribute, escapeXml, unescapeXml } from '@shared/domain/xmlText'
 
@@ -24,10 +25,10 @@ import { attribute, escapeXml, unescapeXml } from '@shared/domain/xmlText'
  * specification and against the `.mtlx` files the distribution ships.
  */
 
-const GRAPH = 'NG_iastudio'
-const SURFACE = 'SR_iastudio'
-const MATERIAL = 'iastudio_material'
-const DISPLACE = 'DS_iastudio'
+const GRAPH = `NG_${STUDIO_METADATA_KEY}`
+const SURFACE = `SR_${STUDIO_METADATA_KEY}`
+const MATERIAL = `${STUDIO_METADATA_KEY}_material`
+const DISPLACE = `DS_${STUDIO_METADATA_KEY}`
 
 /** Trailing zeros make a file that differs from itself between two identical saves. */
 const num = (value: number): string => String(Number(value.toFixed(6)))

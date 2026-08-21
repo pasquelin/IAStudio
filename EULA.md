@@ -1,4 +1,4 @@
-# Conditions d'utilisation de IA Studio
+# Conditions d'utilisation d'IA Studio
 
 Version 1.0 — 8 août 2026
 © 2026 Alban Pasquelin. Tous droits réservés.

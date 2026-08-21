@@ -102,5 +102,6 @@ fichier modifié devrait lui-même être publié.
   de non-affiliation — ce qui atténuait sans régler. La décision produit a été rendue : le studio
   s’appelle **IA Studio**, son `appId` est `com.pasquelin.iastudio`, et plus aucun identifiant du
   dépôt ne porte le mot. Ce qui subsiste est technique et nominatif — le paquet
-  `@scenario-labs/sdk`, les URL `*.scenario.com` et les variables `SCENARIO_API_*` — tant que
-  l’application appelle cette API.
+  `@scenario-labs/sdk`, les URL `*.scenario.com`, et les valeurs que leur API RENVOIE
+  (`PROVIDER_MAINTAINER`, les tags `sc:*`) — tant que l’application appelle cette API. Les
+  variables d’environnement, elles, sont les nôtres : elles ont suivi, en `PROVIDER_API_*`.
