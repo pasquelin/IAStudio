@@ -32,6 +32,15 @@ function reference(): string {
  */
 const ICON_COLOURS = icon.match(/#[0-9a-fA-F]{6}\b/g) ?? []
 
+/**
+ * Every drawn shape of an SVG source, whitespace collapsed so an indent or a Prettier-inserted
+ * space before `/>` is not read as a different mark.
+ */
+const shapesOf = (svg: string): string[] =>
+  (svg.match(/<(?:path|circle|rect)\b[^>]*>/g) ?? []).map(shape =>
+    shape.replace(/\s+/g, ' ').replace(' />', '/>'),
+  )
+
 describe('splash palette', () => {
   for (const { value, token } of FROM_TOKENS) {
     it(`still carries ${token}`, () => {
@@ -57,5 +66,21 @@ describe('splash palette', () => {
   // been READ for reading it to prove anything.
   it('reads the icon it compares against', () => {
     expect(ICON_COLOURS.length).toBeGreaterThan(3)
+  })
+})
+
+describe('splash mark', () => {
+  /**
+   * The colours alone left the GEOMETRY compared to nothing: a redrawn icon kept its palette and
+   * the splash kept the old letters, silently. The tile is the icon's alone — this surface paints
+   * it — so the mark is contained BY the icon rather than equal to it.
+   */
+  it('draws the shapes the icon draws', () => {
+    expect(shapesOf(icon)).toEqual(expect.arrayContaining(shapesOf(splash)))
+  })
+
+  // Containment holds trivially on a splash that draws nothing at all.
+  it('draws a mark rather than nothing', () => {
+    expect(shapesOf(splash).length).toBeGreaterThan(2)
   })
 })
