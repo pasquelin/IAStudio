@@ -27,7 +27,7 @@ const asset = (fields: Partial<Asset>): Asset => ({
   ...fields,
 })
 
-const PROJECT = resolve('/projects/My project.scenario')
+const PROJECT = resolve('/projects/My project')
 
 describe('asset file resolution', () => {
   it('resolves a path stored by the catalogue', () => {

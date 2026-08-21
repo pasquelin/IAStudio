@@ -57,7 +57,7 @@ export async function fetchStt(options = {}) {
   const destination = options.destination ?? DESTINATION
   const verify = options.verify ?? true
 
-  const work = mkdtempSync(join(tmpdir(), 'scenario-stt-'))
+  const work = mkdtempSync(join(tmpdir(), 'ia-studio-stt-'))
   rmSync(destination, { recursive: true, force: true })
   mkdirSync(destination, { recursive: true })
 

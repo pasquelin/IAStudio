@@ -20,7 +20,7 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
   return answer as T
 }
 
-const PROJECT = '/Users/someone/Films/Reel.scenario'
+const PROJECT = '/Users/someone/Films/Reel'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',

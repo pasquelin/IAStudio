@@ -19,7 +19,7 @@ import type { AsyncCatalog } from './catalogClient'
 
 vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
-const PROJECT = '/Users/someone/Films/Reel.scenario'
+const PROJECT = '/Users/someone/Films/Reel'
 
 const MANIFEST = { version: 1, name: 'Reel', createdAt: '', updatedAt: '' }
 
@@ -488,7 +488,7 @@ describe('project handlers', () => {
     // those as the project in front would swap the studio out from under whoever renamed it.
     it('tells nobody when it is another project on the shelf', async () => {
       const window = openWindow()
-      renaming('/Users/someone/Films/Other.scenario')
+      renaming('/Users/someone/Films/Other')
 
       await invoke(CHANNELS.projectRename, PROJECT, 'Summer')
 

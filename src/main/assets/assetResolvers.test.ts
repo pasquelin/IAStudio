@@ -12,7 +12,7 @@ const { TEMPLATE_HOST } = await import('@shared/domain/sceneTemplate')
 const { CATALOGUE_CLOSED } = await import('@main/project/catalogClient')
 const { NoProjectError } = await import('@main/project/store')
 
-const PROJECT = '/projects/My project.scenario'
+const PROJECT = '/projects/My project'
 
 const asset = (fields: Partial<Asset>): Asset => ({
   id: 'asset-1',

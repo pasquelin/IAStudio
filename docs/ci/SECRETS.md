@@ -164,8 +164,8 @@ Dans le résumé du run, l’avertissement **« UNSIGNED build »** doit avoir d
 plateforme concernée. Puis, sur le `.dmg` téléchargé :
 
 ```bash
-codesign --verify --deep --strict --verbose=2 /Applications/Scenario\ Studio.app
-spctl --assess --type execute --verbose /Applications/Scenario\ Studio.app
+codesign --verify --deep --strict --verbose=2 /Applications/IA\ Studio.app
+spctl --assess --type execute --verbose /Applications/IA\ Studio.app
 # attendu : "accepted", "source=Notarized Developer ID"
 ```
 

@@ -261,7 +261,7 @@ export async function fetchFfmpeg(platform, arch, options = {}) {
 
   rmSync(destination, { recursive: true, force: true })
   mkdirSync(destination, { recursive: true })
-  const work = mkdtempSync(join(tmpdir(), 'scenario-ffmpeg-'))
+  const work = mkdtempSync(join(tmpdir(), 'ia-studio-ffmpeg-'))
 
   try {
     for (const archive of target.archives) {
@@ -335,7 +335,7 @@ export async function fetchFfmpeg(platform, arch, options = {}) {
 
 /** Fetches every target into a scratch folder and prints what to paste back into `TARGETS`. */
 async function printDigests() {
-  const scratch = mkdtempSync(join(tmpdir(), 'scenario-ffmpeg-digests-'))
+  const scratch = mkdtempSync(join(tmpdir(), 'ia-studio-ffmpeg-digests-'))
   try {
     for (const key of Object.keys(TARGETS)) {
       const [platform, arch] = key.split('-')

@@ -22,7 +22,7 @@ function shippedFolder(): string {
   return folder
 }
 
-const PROJECT = '/projects/One.scenario'
+const PROJECT = '/projects/One'
 
 let catalog: AsyncCatalog
 let written: Asset[]

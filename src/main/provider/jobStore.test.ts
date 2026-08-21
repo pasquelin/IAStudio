@@ -26,7 +26,7 @@ describe('job store', () => {
   let store: JobStore
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'scenario-jobs-'))
+    root = await mkdtemp(join(tmpdir(), 'ia-studio-jobs-'))
     store = createJobStore(
       () => root,
       () => NOW,
