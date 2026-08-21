@@ -22,6 +22,8 @@ type DedicatedPath =
   | 'home.sections'
   | 'storage.recentProjects'
   | 'storage.projectAccounts'
+  | 'ai.roles'
+  | 'ai.projectRoles'
   | 'workspaces.order'
 
 /**

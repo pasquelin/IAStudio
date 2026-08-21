@@ -116,6 +116,11 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
   },
   ...MODEL_FAMILY_SECTIONS,
   {
+    id: 'ai',
+    labelKey: 'settings.ai',
+    descriptionKey: 'settings.aiDescription',
+  },
+  {
     id: 'spaces',
     labelKey: 'settings.spaces',
     descriptionKey: 'settings.spacesDescription',

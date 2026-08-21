@@ -125,6 +125,7 @@ function movedKey(before: AccountBook, after: AccountBook): boolean {
 function merge(base: Settings, partial: PartialSettings): Settings {
   return {
     general: { ...base.general, ...partial.general },
+    ai: { ...base.ai, ...partial.ai },
     home: { ...base.home, ...partial.home },
     workspaces: { ...base.workspaces, ...partial.workspaces },
     appearance: { ...base.appearance, ...partial.appearance },

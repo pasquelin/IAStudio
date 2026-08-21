@@ -1,0 +1,50 @@
+{
+  "aiRoles": {
+    "assistant": "Assistant",
+    "dictation": "Dictée"
+  },
+  "aiClouds": {
+    "scenario": "Scenario",
+    "scenarioHint": "Génère sur les serveurs Scenario. Rien à installer."
+  },
+  "aiModels": {
+    "reading": "Lecture de la machine…",
+    "empty": "Aucun emploi n’a de fournisseur à proposer sur cette machine.",
+    "generationGroup": "Génération",
+    "standaloneGroup": "Assistant et voix",
+    "machineMemory": "{{available}} libres sur {{total}}",
+    "machineDisk": "{{free}} sur le disque",
+    "appliesNow": "Un choix fait ici s’applique tout de suite — Annuler ne le reprend pas.",
+    "scope": "Ces choix valent pour",
+    "scope_app": "l’application",
+    "scope_project": "ce projet",
+    "chosenAtProject": "propre au projet",
+    "candidates": "Modèles pour {{role}}",
+    "automatic": "Automatique",
+    "automaticHint": "Le studio prend le meilleur fournisseur disponible, le local d’abord.",
+    "providerNone": "aucun fournisseur",
+    "notInstalledYet": "À installer avant de pouvoir servir cet emploi.",
+    "install": "Installer",
+    "installHint": "Télécharge {{size}} de poids sur cette machine",
+    "installing": "Téléchargement du modèle",
+    "cancelInstall": "Annuler",
+    "cancelInstallHint": "Arrête le téléchargement. Ce qui est déjà reçu est gardé pour la reprise",
+    "remove": "Supprimer",
+    "removeHint": "Efface les fichiers. Le choix qui nomme ce modèle est gardé",
+    "verdict": "{{word}} — {{detail}}",
+    "fit": {
+      "compatible": "compatible",
+      "slow": "lent",
+      "experimental": "expérimental",
+      "insufficient-memory": "place insuffisante",
+      "incompatible": "non pris en charge",
+      "unknown": "non vérifié"
+    },
+    "detail": {
+      "memory": "{{needed}} demandés, {{available}} de mémoire libre",
+      "disk": "{{needed}} à télécharger, {{free}} libres sur le disque",
+      "refused": "le format ou la provenance de ce modèle n’est pas admis",
+      "runtime": "le runtime {{runtime}} ne répond pas sur cette machine"
+    }
+  }
+}

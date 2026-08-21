@@ -1,0 +1,111 @@
+import { memo } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { AiOverview, ChoiceScope, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
+import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { useBytes } from '@/hooks/useBytes'
+import type { ModelFitSentence } from '@/hooks/useModelFit'
+import { useAiModels } from '@/stores/aiModels'
+import { AiCandidateRow } from './AiCandidateRow'
+import { AiChoiceRow } from './AiChoiceRow'
+import { roleLabel } from './roleLabel'
+
+export type AiRoleRowProps = {
+  row: RoleRow
+  /** The install in flight when it is one of THIS row's candidates, so the others hold their render. */
+  installing: AiOverview['installing']
+  /** Whether some install holds the disk, wherever it was begun. */
+  busy: boolean
+  /** Where a click writes — the application default, or the open project alone. */
+  scope: ChoiceScope
+  fitOf: (candidate: ModelCandidate) => ModelFitSentence
+}
+
+/**
+ * One EMPLOYMENT and what serves it, never one model. Folded by default — a default that works
+ * needs no attention — and unfolded it shows every candidate, those too heavy included.
+ */
+export const AiRoleRow = memo(function AiRoleRow({
+  row,
+  installing,
+  busy,
+  scope,
+  fitOf,
+}: AiRoleRowProps) {
+  const { t } = useTranslation()
+  const bytes = useBytes()
+  const chooseAiProvider = useAiModels(state => state.chooseAiProvider)
+
+  const label = roleLabel(row.role, t)
+  // Captured so the narrowing survives into the callback below, which a property access does not.
+  const provider = row.provider
+  // What SERVES the role, which is not always what was chosen: a model since uninstalled falls
+  // back, and the summary has to say what answers today rather than what was asked for.
+  const served =
+    provider?.kind === 'local'
+      ? row.candidates.find(candidate => candidate.model.id === provider.modelId)
+      : undefined
+  // The controls, unlike the summary, show the scope BEING EDITED: a radio reading the effect
+  // would leave a click writing a scope that already agreed, doing nothing and saying nothing.
+  const editing = row.chosen[scope]
+
+  return (
+    <details className="border-base-300 border-b last:border-b-0">
+      <summary className="flex cursor-pointer items-center gap-2 py-3">
+        <span className="flex-1">{label}</span>
+        {row.chosen.project !== null && (
+          <span className="badge badge-sm">{t('aiModels.chosenAtProject')}</span>
+        )}
+        <span className={WINDOW_CAPTION}>
+          {served && `${served.model.name} · ${bytes(served.model.reservationBytes)}`}
+          {provider?.kind === 'cloud' && t(`aiClouds.${provider.providerId}`)}
+          {provider === null && t('aiModels.providerNone')}
+        </span>
+      </summary>
+
+      <fieldset className="pb-3">
+        <legend className="sr-only">{t('aiModels.candidates', { role: label })}</legend>
+        <ul>
+          <AiChoiceRow
+            role={row.role}
+            choice="automatic"
+            label={t('aiModels.automatic')}
+            hint={t('aiModels.automaticHint')}
+            checked={editing === null}
+            onChoose={() => void chooseAiProvider(row.role, null, scope)}
+          />
+
+          {row.candidates.map(candidate => (
+            <AiCandidateRow
+              key={candidate.model.id}
+              role={row.role}
+              candidate={candidate}
+              chosen={editing?.kind === 'local' && editing.modelId === candidate.model.id}
+              fit={fitOf(candidate)}
+              progress={installing?.modelId === candidate.model.id ? installing.progress : null}
+              busy={busy}
+              onChoose={() =>
+                void chooseAiProvider(
+                  row.role,
+                  { kind: 'local', modelId: candidate.model.id },
+                  scope,
+                )
+              }
+            />
+          ))}
+
+          {row.clouds.map(providerId => (
+            <AiChoiceRow
+              key={providerId}
+              role={row.role}
+              choice={providerId}
+              label={t(`aiClouds.${providerId}`)}
+              hint={t(`aiClouds.${providerId}Hint`)}
+              checked={editing?.kind === 'cloud' && editing.providerId === providerId}
+              onChoose={() => void chooseAiProvider(row.role, { kind: 'cloud', providerId }, scope)}
+            />
+          ))}
+        </ul>
+      </fieldset>
+    </details>
+  )
+})

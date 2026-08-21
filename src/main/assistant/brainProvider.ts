@@ -3,8 +3,8 @@ import type { Job } from '@shared/domain/job'
 import { log } from '@main/log'
 import type { AssistantThought } from '@shared/domain/assistant'
 import type { AssistantBrain } from './brainPort'
-import { instructionFor, recentHistory } from './instruction'
-import { parseReply } from './reply'
+import { retriedAnswer, turnsWith, type BrainAttempt } from './brainRetry'
+import { instructionFor } from './instruction'
 
 /**
  * The assistant's thinking, run on Scenario's own catalogue model.
@@ -45,9 +45,7 @@ function bodyFor(
 } {
   // The complaint rides with the history rather than in the instruction: the instruction already
   // states the format, and saying it a second time there displaced the sentence being answered.
-  // Trimmed once, at the end: the history arrives already bounded by the channel, so trimming it
-  // before adding the complaint could only ever drop the complaint's room and nothing else.
-  const inputs = recentHistory(complaint ? [...request.history, complaint] : request.history)
+  const inputs = turnsWith(request.history, complaint)
 
   return {
     instruction: instructionFor(request.utterance),
@@ -55,21 +53,6 @@ function bodyFor(
     numOutputs: 1,
     ...(inputs.length > 0 ? { textInputs: inputs } : {}),
   }
-}
-
-/**
- * What the model was told it got wrong, on the one retry it is given.
- *
- * Quoting the answer back is the part that works: a model told only "that was not JSON" tends to
- * produce the same thing again. Bounded, because a model that answered an essay would otherwise
- * spend the whole history budget explaining itself.
- */
-function complaintAbout(answer: string): string {
-  return [
-    'Your previous answer could not be read. It must be one JSON object with the keys "say" and',
-    '"calls", and nothing else around it. This is what you sent:',
-    answer.slice(0, 500),
-  ].join('\n')
 }
 
 async function answerFrom(
@@ -86,7 +69,7 @@ export function createProviderBrain({ run, readText, model }: BrainDeps): Assist
     request: AssistantThought,
     chosen: AssistantModel,
     complaint?: string,
-  ): Promise<{ answer: string; cost: number }> => {
+  ): Promise<BrainAttempt> => {
     const job = await run(bodyFor(request, chosen, complaint))
     const cost = job.cost ?? 0
 
@@ -99,36 +82,11 @@ export function createProviderBrain({ run, readText, model }: BrainDeps): Assist
   }
 
   return {
-    think: async request => {
+    think: request => {
+      // Read once, outside the retry: a setting changed between two attempts would have the model
+      // complained to be a different one from the model that answered.
       const chosen = model()
-      const first = await ask(request, chosen)
-      const reply = parseReply(first.answer)
-      if (reply) return { ...reply, cost: first.cost }
-
-      /**
-       * One retry, and only one. A model that cannot answer the shape twice will not answer it
-       * the third time either, and every attempt is a creative unit off the person's balance —
-       * measured at 0.75 for the cheapest of them.
-       *
-       * Caught, and the reason is the figure rather than the failure: the first pass SUCCEEDED
-       * and was billed. A rejection escaping here — the job refused, a rate limit, the CDN the
-       * answer is read from being unreachable — took `think` down with it, the window marked the
-       * turn lost, and the running total never learnt about the units already spent. What the
-       * modal exists to show is exactly the cost nobody would otherwise see.
-       */
-      log.warn('assistant', 'unreadable answer, asking once more')
-      const second = await ask(request, chosen, complaintAbout(first.answer)).catch(
-        (error: unknown) => {
-          log.warn('assistant', `the second attempt failed: ${String(error)}`)
-          return { answer: '', cost: 0 }
-        },
-      )
-      const retried = parseReply(second.answer)
-      const cost = first.cost + second.cost
-
-      // Said plainly rather than thrown: the caller has a person waiting, and "I did not
-      // understand" is a better answer than a stack trace — and the cost was still incurred.
-      return retried ? { ...retried, cost } : { say: '', calls: [], cost }
+      return retriedAnswer(complaint => ask(request, chosen, complaint))
     },
   }
 }

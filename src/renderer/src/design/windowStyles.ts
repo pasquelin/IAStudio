@@ -19,6 +19,12 @@ export const WINDOW_CAPTION = 'text-base-content/70 text-xs'
  */
 export const WINDOW_HELP = cn(WINDOW_CAPTION, 'max-w-lg')
 
+/**
+ * The heading over a run of rows — a scope of shortcuts, a section of results, a family of AI
+ * employments. Written out three times before it was named, and a fourth spelling read differently.
+ */
+export const WINDOW_GROUP_LABEL = 'text-base-content/70 text-tiny mb-1 tracking-wide uppercase'
+
 /** A line of a list here: a setting, a search hit, a chapter. The direction stays at the call. */
 export const WINDOW_ROW = 'border-base-300 flex gap-2 border-b py-3 last:border-b-0'
 

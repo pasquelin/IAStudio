@@ -101,19 +101,28 @@ export function recentHistory(history: readonly string[], limit = HISTORY_MAX): 
  * could quietly eat it.
  */
 export function instructionFor(utterance: string): string {
-  const preamble = [
-    ROLE,
-    '',
-    'Catalogue:',
-    actionCatalogue(),
-    '',
-    FORMAT,
-    '',
-    'The person says:',
-    '',
-  ].join('\n')
+  // Composed once and its length handed on: `utteranceWithin` used to build the whole catalogue a
+  // second time just to measure it, on every turn.
+  const preamble = preambleFor()
+  return preamble + utteranceWithin(utterance, preamble.length)
+}
 
-  return preamble + utterance.slice(0, Math.max(0, INSTRUCTION_MAX - preamble.length))
+/**
+ * Everything but the person's sentence — for a door that speaks in TURNS rather than taking one
+ * instruction. There the sentence must be the LAST turn, or the model answers the one before it.
+ */
+export function studioBriefing(): string {
+  return [ROLE, '', 'Catalogue:', actionCatalogue(), '', FORMAT].join('\n')
+}
+
+const preambleFor = (): string => `${studioBriefing()}\n\nThe person says:\n\n`
+
+/**
+ * The sentence, cut to what the preamble leaves of the budget. A long paste is cut; it is not.
+ * `spent` lets a caller that already built the preamble say so rather than have it rebuilt.
+ */
+export function utteranceWithin(utterance: string, spent = preambleFor().length): string {
+  return utterance.slice(0, Math.max(0, INSTRUCTION_MAX - spent))
 }
 
 /** What the fixed part of an instruction costs, leaving the rest of the budget to the sentence. */

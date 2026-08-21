@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, net, shell, systemPreferences } from 'elect
 import { randomUUID } from 'node:crypto'
 import { existsSync, readdirSync } from 'node:fs'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
-import { availableParallelism } from 'node:os'
+import { availableParallelism, totalmem } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
@@ -53,9 +53,21 @@ import { createRemoteActions, type RemoteActions } from './mcp/asking'
 import { createMcpControl, type McpControl } from './mcp/control'
 import type { AssistantBrain } from './assistant/brainPort'
 import { createProviderBrain } from './assistant/brainProvider'
+import { createLocalBrain } from './assistant/brainLocal'
+import { createRoutedBrain } from './assistant/brainRouted'
 import { createSession, type DictationSession } from './dictation/session'
-import { fetchModel, modelIsComplete } from './dictation/modelDownload'
-import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/modelStore'
+import { STT_MODEL } from '@shared/domain/dictation'
+import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
+import { createAiManager, type AiManager } from './ai/manager'
+import { shippedModel } from './ai/catalogue'
+import { electronHardwarePort } from './ai/electronHardwarePort'
+import { electronOllamaPort } from './ai/electronOllamaPort'
+import { hardwareProbe, probeSnapshot } from './ai/hardwareProbe'
+import { readyCloudsOf } from './ai/cloudReadiness'
+import { fileRuntime, type LocalRuntimes } from './ai/localRuntimes'
+import { fetchModel, modelIsComplete } from './ai/modelInstall'
+import { createDownloadHost, defaultModelFolder, ensureFolder } from './ai/modelStore'
+import { createOllamaClient, ollamaLocalRuntime } from './ai/ollamaRuntime'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
 import { openSttProcess } from './dictation/sttProcess'
 import { adoptFile } from './media/adoptFile'
@@ -204,6 +216,8 @@ export type Services = {
   remoteActions: RemoteActions
   /** The MCP server, off unless the setting says otherwise. Followed from `index.ts`. */
   mcp: McpControl
+  /** Which AI serves each role, what the machine holds, and what may be installed. */
+  ai: AiManager
   /** Speaking instead of typing. Holds the engine, the model and the state of a session. */
   dictation: DictationSession
   /** Opens the system screen where microphone access is granted back after a refusal. */
@@ -539,6 +553,17 @@ export function createServices(settings: SettingsStore): Services {
   }
 
   /**
+   * The manager's overview is pulled from inputs it cannot watch — the open project, and the
+   * clouds a key is held for. This is the nudge, and it is owed at EVERY one of them: without it a
+   * settings window left open keeps a stale path, stale badges and a stale list of providers.
+   */
+  const republishAi = (after: string): void => {
+    void ai.refresh().catch((error: unknown) => {
+      log.warn('ai', `republishing after ${after} failed: ${String(error)}`)
+    })
+  }
+
+  /**
    * Puts the studio back on the account a project last worked under, so reopening it lands on the
    * library it was filled from rather than on whichever key was last switched to elsewhere.
    *
@@ -566,6 +591,7 @@ export function createServices(settings: SettingsStore): Services {
       // cost a refetch of the model catalogue and the plan for nothing.
       if (change.credentialsChanged) credentials.changed()
       broadcast(EVENTS.accountsChanged, change.accounts)
+      republishAi('an account change')
 
       opened?.record({
         level: 'info',
@@ -658,6 +684,8 @@ export function createServices(settings: SettingsStore): Services {
       // `activate` finishes before it publishes — so a move this session interrupted is already
       // a row at the right path rather than one this pass would go looking for.
       if (current) reconciler.request()
+
+      republishAi('a project change')
     },
     settle: async () => {
       // Both before the catalogue stops answering: the journal writes into it, and the pending
@@ -1013,27 +1041,89 @@ export function createServices(settings: SettingsStore): Services {
     }
   }
 
-  // The model is read from where the user pointed, or from beside the settings file. Read on
-  // every call rather than kept: the folder is a setting, and it can change while the studio
-  // is open.
+  /**
+   * 🛑 PROVISIONAL, and named so rather than hidden: ADR-19 lists `appBudgetBytes` and
+   * `headroomBytes` under what it does NOT decide, and nothing has measured them.
+   *
+   * Half the machine, minus two gigabytes of headroom — enough for the manager to compute a
+   * verdict, and wrong for a reason nobody has established. The first measurement that says
+   * otherwise replaces this, and it should carry that measurement in its JSDoc.
+   */
+  const PROVISIONAL_BUDGET = {
+    appBudgetBytes: Math.round(totalmem() / 2),
+    headroomBytes: 2_000_000_000,
+    // What the viewport was measured holding with a 3D scene open, 2026-08-21.
+    rendererReservedBytes: 475_000_000,
+  }
+
+  // Where the user pointed, or beside the settings file. Read on every call rather than kept:
+  // the folder is a setting, and it can change while the studio is open.
   const modelFolder = (): string =>
     settings.read().dictation.modelFolder ?? defaultModelFolder(app.getPath('userData'))
 
   const downloads = createDownloadHost()
 
+  /**
+   * 🛑 The ONE place the wiring names a cloud — ADR-21 § C as amended: what proves an account is
+   * held, and what thinks for it. A second cloud adds a line here and touches nothing else.
+   *
+   * `held` asks whether a key is HELD, not whether it works: probing costs a round trip, and a
+   * revoked key is refused where it is used rather than hidden from the manager. `brain` is a
+   * getter because it is built further down, once the job manager exists.
+   */
+  const clouds: Record<string, { held: () => boolean; brain: () => AssistantBrain }> = {
+    scenario: {
+      held: () => settings.readCredentials() !== null,
+      brain: () => providerBrain,
+    },
+  }
+
+  /**
+   * What each LOADER can do on this machine — the unit ADR-20 writes its whitelist on, and ONE
+   * table: a runtime that installs but cannot converse, or the reverse, would otherwise read as
+   * ready on one side and be unreachable on the other.
+   */
+  const runtimes: LocalRuntimes = {
+    'sherpa-onnx': fileRuntime({
+      // One folder for the whole catalogue, which holds while it holds ONE fetched model: the
+      // manifests name their own files, so a second sharing a file name would read as installed.
+      folderFor: () => modelFolder(),
+      isComplete: (model, folder) => modelIsComplete(downloads, model, folder),
+      fetch: async (model, folder, onProgress, signal) => {
+        await ensureFolder(folder)
+        // Nothing sweeps the `.part` files first, and that is the point: an interrupted download
+        // resumes from what already arrived. A leftover that is not a prefix of what is being
+        // fetched cannot survive anyway — it fails its digest and is removed there.
+        await fetchModel(downloads, model, { folder, onProgress, signal })
+      },
+      removeFiles: async (model, folder) => {
+        for (const file of model.files) await rm(join(folder, file.name), { force: true })
+      },
+    }),
+    ollama: ollamaLocalRuntime(createOllamaClient(electronOllamaPort())),
+  }
+
+  const ai = createAiManager({
+    facts: () => hardwareProbe(electronHardwarePort(modelFolder)),
+    snapshotOf: facts => probeSnapshot(facts, PROVISIONAL_BUDGET, Date.now()),
+    settings: () => settings.read(),
+    writeSettings: partial => settings.write(partial),
+    currentProjectPath: () => project.current()?.path ?? null,
+    readyClouds: () => readyCloudsOf(clouds),
+    runtimes,
+    emit: overview => broadcast(EVENTS.ai, overview),
+    log: (level, message) => log[level]('ai', message),
+  })
+
   const dictation = createSession({
     modelFolder,
     vadPath: () => bundledVad(resourcesRoot()),
     settings: () => settings.read().dictation,
-    modelIsReady: () => modelIsComplete(downloads, modelFolder()),
-    download: async (onProgress, signal) => {
-      const folder = modelFolder()
-      await ensureFolder(folder)
-      // Nothing sweeps the `.part` files first, and that is the point: an interrupted download
-      // resumes from what already arrived. A leftover that is not a prefix of what is being
-      // fetched cannot survive anyway — it fails its digest and is removed there.
-      await fetchModel(downloads, { folder, onProgress, signal })
-    },
+    modelIsReady: () => modelIsComplete(downloads, STT_MODEL, modelFolder()),
+    // Through the manager, which holds the ONE install lock: the status line and the manager
+    // screen fetch the same files into the same folder, and two streams onto one `.part` would
+    // fail a digest rather than a download.
+    download: (onProgress, signal) => ai.installModel(STT_MODEL, onProgress, signal),
     requestMicrophone: () =>
       requestMicrophone({
         platform: process.platform,
@@ -1246,7 +1336,7 @@ export function createServices(settings: SettingsStore): Services {
    * difference is what keeps every sentence typed at the assistant out of the jobs bar and its
    * answers out of the asset browser — see `JobManager.run`.
    */
-  const brain = createProviderBrain({
+  const providerBrain = createProviderBrain({
     run: body => jobs.run({ id: ASSISTANT_MODEL_ID }, ASSISTANT_MODEL_ID, body),
     readText: createAssetText({
       retrieve: async assetId => (await client.require().assets.retrieve(assetId)).asset,
@@ -1255,6 +1345,25 @@ export function createServices(settings: SettingsStore): Services {
       download: async url => await (await fetch(url)).text(),
     }),
     model: () => settings.read().assistant.model,
+  })
+
+  /**
+   * WHICH brain answers is the manager's decision, asked on every turn — ADR-21 § A: the assistant
+   * is an employment like any other, served by a model on this machine or by a registered cloud,
+   * the local side winning by default.
+   */
+  const brain = createRoutedBrain({
+    providerOf: () => ai.providerOf(ASSISTANT_ROLE),
+    modelOf: shippedModel,
+    // Both halves are required, and neither is guessed: a runtime that cannot converse and a
+    // manifest with no window are the two ways a local model has nothing to answer with.
+    localBrain: model => {
+      const chat = runtimes[model.loader]?.chat
+      if (!chat || model.contextTokens === undefined) return null
+
+      return createLocalBrain({ chat, modelId: model.id, contextTokens: model.contextTokens })
+    },
+    cloudBrain: id => clouds[id]?.brain() ?? null,
   })
 
   // To the studio window alone, and it says when there is none — which is the difference between
@@ -1372,6 +1481,7 @@ export function createServices(settings: SettingsStore): Services {
     assistant: brain,
     remoteActions,
     mcp,
+    ai,
     dictation,
     openMicrophoneSettings: () => openMicrophoneSettings(url => void shell.openExternal(url)),
     link: async (source, type) =>
@@ -1449,9 +1559,12 @@ export function createServices(settings: SettingsStore): Services {
       // asking the API again would cost a call to learn something it already told us.
       return state.authenticated && owner !== null ? { ...state, ownerId: owner } : state
     },
-    // Every window carries the switch, not just the one that made it: the studio and the
-    // settings window both show which account is active.
-    broadcastAccounts: accounts => broadcast(EVENTS.accountsChanged, accounts),
+    // Every window carries the switch, not just the one that made it — and so does the AI
+    // manager, for which clouds are ready is one of the inputs its overview is pulled from.
+    broadcastAccounts: accounts => {
+      broadcast(EVENTS.accountsChanged, accounts)
+      republishAi('an account change')
+    },
     updates: createUpdates({
       // Through `default`: `autoUpdater` is a defineProperty getter, which the ESM loader cannot
       // see as a named export. Measured under Electron 43 — the named read answers `undefined`.

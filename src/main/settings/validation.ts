@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { isCloudProviderId } from '@shared/domain/aiCloud'
+import type { RoleProvider } from '@shared/domain/aiRole'
 import { ASSISTANT_MODELS } from '@shared/domain/assistant'
 import { LANGUAGE_PREFERENCES } from '@shared/i18n/languages'
 import {
@@ -230,7 +232,48 @@ const dictation = z.object({
   inputDeviceId: z.string().min(1).optional(),
 })
 
+/**
+ * A provider, as narrow as the union it mirrors: a `kind` this does not name is dropped rather
+ * than stored, so a hand-edited file cannot point a role at something nothing can serve.
+ *
+ * Exported because the IPC gate parses the very same shape (`main/ai/validation.ts`), and two
+ * spellings of it would let a choice pass the door and be stripped by the store.
+ */
+export const roleProvider = z.union([
+  z.object({ kind: z.literal('local'), modelId: z.string().min(1) }),
+  // The id is checked against the REGISTRY, so a cloud added is stored without touching this and
+  // a cloud removed stops being read back — a role then falls back rather than pointing nowhere.
+  z.object({
+    kind: z.literal('cloud'),
+    providerId: z.string().refine(id => isCloudProviderId(id)),
+  }),
+])
+
+/**
+ * One unreadable choice costs its own line and nothing else, exactly as `shortcuts.overrides`
+ * above: the whole file goes through ONE `safeParse`, so without the `.catch` a single role
+ * pointing at a cloud that has since left the registry — the case this schema's own note
+ * advertises — would reset the theme, the projects folder and every binding along with it.
+ */
+const roleChoices = z
+  .record(z.string().min(1), roleProvider.nullable().catch(null))
+  .transform(entries =>
+    Object.fromEntries(
+      // Predicated rather than plain: a bare filter leaves `null` in the value type, and the
+      // stored shape has no room for one.
+      Object.entries(entries).filter((entry): entry is [string, RoleProvider] => entry[1] !== null),
+    ),
+  )
+
+// Declared here or dropped in silence, the same trap `storage.projectAccounts` carries: a zod
+// object STRIPS what it does not name, and this branch is reparsed on every settings write.
+const ai = z.object({
+  roles: roleChoices.optional(),
+  projectRoles: z.record(z.string().min(1), roleChoices).optional(),
+})
+
 const partialSettings = z.object({
+  ai: ai.optional(),
   general: general.optional(),
   home: home.optional(),
   workspaces: workspaces.optional(),

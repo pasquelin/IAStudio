@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { sectionEntry } from '@shared/domain/settingsRegistry'
 import { hitId, sectionsOf, type SearchHit } from '@shared/domain/settingsSearch'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { WINDOW_CAPTION, WINDOW_GROUP_LABEL } from '@/design/windowStyles'
+import { cn } from '@/helpers/cn'
 import { SettingList } from '../SettingList'
 import { SettingsWindowResultRow } from './SettingsWindowResultRow'
 
@@ -34,7 +35,7 @@ export function SettingsWindowSearchResults({
             type="button"
             {...HINT_RIGHT(t('settings.searchSectionHint'))}
             onClick={() => onGo(section)}
-            className="text-base-content/70 hover:text-base-content text-tiny mb-1 tracking-wide uppercase"
+            className={cn(WINDOW_GROUP_LABEL, 'hover:text-base-content')}
           >
             {t(sectionEntry(section)?.labelKey ?? '')}
           </button>

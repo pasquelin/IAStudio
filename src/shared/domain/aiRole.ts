@@ -1,0 +1,155 @@
+import { CAPABILITIES_BY_FAMILY, type ModelFamily } from './model'
+
+/**
+ * What an AI is FOR — see `docs/ci/adr/ADR-21-le-fournisseur-se-choisit-par-emploi.md`.
+ *
+ * A space does not have "an AI": image alone has six roles, and `inpaint` is not `txt2img`. Two
+ * roles belong to no space at all. The vocabulary is the one the Scenario catalogue already uses,
+ * so the local side plugs into it rather than opening a second catalogue nothing could reconcile.
+ */
+
+/**
+ * `<family>/<capability>` for generation, or one of the two standalone roles.
+ *
+ * Branded like `RuntimeEndpointId`, and for the same reason: it keys the stored preference, and a
+ * malformed key in a record reads as "no choice made" rather than reddening anywhere.
+ */
+export type AiRoleId = string & { readonly brand: unique symbol }
+
+/** Answers questions, and is the one role a person converses with. */
+export const ASSISTANT_ROLE = 'assistant' as AiRoleId
+
+/** Turns speech into text. The only role already served locally today. */
+export const DICTATION_ROLE = 'dictation' as AiRoleId
+
+/** The two roles no space holds. Exported because they are the only ones a bundle NAMES. */
+export const STANDALONE_ROLES: readonly AiRoleId[] = [ASSISTANT_ROLE, DICTATION_ROLE]
+
+/**
+ * The only way to name a generation role. It throws rather than answering null: a role is composed
+ * from constants at a call site, so a malformed one is a programming error.
+ */
+export function aiRoleId(family: ModelFamily, capability: string): AiRoleId {
+  if (!CAPABILITIES_BY_FAMILY[family].includes(capability)) {
+    throw new Error(`not a capability of ${family}: ${capability}`)
+  }
+
+  // The one cast of this module beyond the two constants: a brand is unforgeable anywhere but here.
+  return `${family}/${capability}` as AiRoleId
+}
+
+/**
+ * Every role the studio has, generation and standalone.
+ *
+ * Derived from `CAPABILITIES_BY_FAMILY` rather than listed: a family that gains a capability gains
+ * its role, and a list written here would drift the day one is added.
+ */
+export function allRoles(): readonly AiRoleId[] {
+  const generation = Object.entries(CAPABILITIES_BY_FAMILY).flatMap(([family, capabilities]) =>
+    capabilities.map(capability => `${family}/${capability}` as AiRoleId),
+  )
+
+  return [...STANDALONE_ROLES, ...generation]
+}
+
+/** Whether the role belongs to a space, as opposed to being one of the two standalone ones. */
+export function isGenerationRole(role: AiRoleId): boolean {
+  return partsOfRole(role) !== null
+}
+
+/** What the role is made of, for a caller that needs to label it. `null` for a standalone one. */
+export function partsOfRole(role: AiRoleId): { family: ModelFamily; capability: string } | null {
+  const [family, capability, ...rest] = role.split('/')
+  if (rest.length > 0 || family === undefined || capability === undefined) return null
+  if (!(family in CAPABILITIES_BY_FAMILY)) return null
+
+  return { family: family as ModelFamily, capability }
+}
+
+/**
+ * Who serves a role: a model on this machine, or one of the clouds `aiCloud.ts` lists.
+ *
+ * A cloud is named by its ID, never by a member of this union — decided 21/08, amending ADR-21
+ * § C: one cloud is registered today, and a second must arrive as an entry in a list rather than
+ * as a branch everything already written has to learn about.
+ */
+export type RoleProvider =
+  | { readonly kind: 'local'; readonly modelId: string }
+  | { readonly kind: 'cloud'; readonly providerId: string }
+
+/**
+ * What the person chose, per role. Absent means "no choice", which is NOT the same as "none":
+ * `providerFor` then answers with what is actually available.
+ */
+export type RoleChoices = Readonly<Partial<Record<AiRoleId, RoleProvider>>>
+
+/**
+ * The choices that apply, the default overlaid by what one project overrides.
+ *
+ * A shallow merge, per ROLE: overriding the assistant in a project leaves every other role on the
+ * default rather than resetting them. `null` for no project open — the default then stands alone.
+ */
+export function roleChoicesFor(
+  defaults: RoleChoices,
+  byProject: Readonly<Record<string, RoleChoices>>,
+  projectPath: string | null,
+): RoleChoices {
+  return projectPath === null ? defaults : { ...defaults, ...byProject[projectPath] }
+}
+
+/**
+ * What a role can actually be served by on this machine, right now — two lists, and the FIRST of
+ * each is what the role takes on its own.
+ *
+ * Lists rather than one id each: a choice was made among several, and comparing it to the default
+ * alone would drop it in silence.
+ */
+export type RoleOffer = {
+  /** Every model installed AND usable, in the order the catalogue offers them. */
+  readonly localModelIds: readonly string[]
+  /**
+   * Every model installed, whatever this machine thinks of it. A superset of the above, and it is
+   * what an explicit CHOICE is honoured against — see `providerFor`.
+   */
+  readonly installedModelIds: readonly string[]
+  /** Every cloud that both serves this role and has an account behind it. */
+  readonly cloudIds: readonly string[]
+}
+
+/**
+ * What serves a role, choice or not.
+ *
+ * The LOCAL side wins by default — the whole point of ADR-21 § B: the application has to be useful
+ * with no account at all. A key present ADDS a provider to the choice; it does not take the lead.
+ * A choice the machine can no longer honour falls back rather than failing.
+ *
+ * 🛑 A chosen local model is honoured while it is INSTALLED, not while the machine judges it
+ * comfortable. The verdict moves under a running conversation — a resident model makes the machine
+ * read as smaller than it is, since nothing here subtracts what it already occupies (ADR-19's
+ * `runtimeBytes`, unwired). What the person asked for stands until they unask it.
+ *
+ * 🛑 And where it cannot stand, it falls back LOCALLY or not at all: choosing this machine is also
+ * choosing not to pay, so no reading of any kind may turn that choice into a billed call.
+ */
+export function providerFor(
+  role: AiRoleId,
+  choices: RoleChoices,
+  offer: RoleOffer,
+): RoleProvider | null {
+  const chosen = choices[role]
+
+  if (chosen?.kind === 'local' && offer.installedModelIds.includes(chosen.modelId)) return chosen
+  if (chosen?.kind === 'cloud' && offer.cloudIds.includes(chosen.providerId)) return chosen
+
+  const model = offer.localModelIds[0]
+  if (model !== undefined) return { kind: 'local', modelId: model }
+
+  // 🛑 A local choice falls back to another LOCAL model, never to a cloud — decided 21/08, and
+  // measured before it was: a runtime that stopped answering reads as "not installed" here, so an
+  // Ollama nobody started moved the next sentence to a BILLED cloud without a word. Answering
+  // nothing lets the assistant say why; billing someone for asking their own machine cannot.
+  if (chosen?.kind === 'local') return null
+
+  const cloud = offer.cloudIds[0]
+  return cloud === undefined ? null : { kind: 'cloud', providerId: cloud }
+}

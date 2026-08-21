@@ -1,4 +1,6 @@
 import type { AccountSummary, AccountsResult } from './domain/account'
+import type { AiOverview, ChoiceScope } from './domain/aiOverview'
+import type { AiRoleId, RoleProvider } from './domain/aiRole'
 import type { BundledAnimation } from './domain/animationLibrary'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
@@ -233,6 +235,12 @@ export type Channels = {
   dictationCancelDownload: 'dictation:cancel-download'
   dictationOpenPrivacy: 'dictation:open-privacy'
 
+  aiOverview: 'ai:overview'
+  aiChoose: 'ai:choose'
+  aiInstall: 'ai:install'
+  aiCancelInstall: 'ai:cancel-install'
+  aiRemove: 'ai:remove'
+
   sceneExport: 'scene:export'
   montageExport: 'montage:export'
   montageImport: 'montage:import'
@@ -424,6 +432,12 @@ export const CHANNELS: Channels = {
   dictationDownloadModel: 'dictation:download-model',
   dictationCancelDownload: 'dictation:cancel-download',
   dictationOpenPrivacy: 'dictation:open-privacy',
+
+  aiOverview: 'ai:overview',
+  aiChoose: 'ai:choose',
+  aiInstall: 'ai:install',
+  aiCancelInstall: 'ai:cancel-install',
+  aiRemove: 'ai:remove',
 
   sceneExport: 'scene:export',
   montageExport: 'montage:export',
@@ -832,6 +846,7 @@ export const EVENTS = {
   mediaProgress: 'evt:media-progress',
   assistantAction: 'evt:assistant-action',
   dictation: 'evt:dictation',
+  ai: 'evt:ai',
   log: 'evt:log',
   projectChanged: 'evt:project-changed',
   projectFolderChanged: 'evt:project-folder-changed',
@@ -1624,6 +1639,34 @@ export type StudioBridge = {
     onAction: (callback: (request: AssistantActionRequest) => void) => Unsubscribe
     /** What that window made of it, quoting the `callId` it was asked under. */
     actionResult: (result: AssistantActionResult) => Promise<void>
+  }
+  /**
+   * The model manager: which AI serves each role, what the machine can hold, and what to install.
+   *
+   * Everything answers the WHOLE overview rather than a delta. It is read when a screen opens and
+   * after a gesture, never in a loop, and one row of it depends on a memory reading the window
+   * does not hold — a partial answer would have the two sides disagree.
+   */
+  ai: {
+    overview: () => Promise<AiOverview>
+    /**
+     * Writes the choice for a role, or clears it with `null` — which is not "none": the role
+     * falls back to whatever the machine offers, and the local side wins.
+     *
+     * `scope` decides where it lands: the application default, or the open project alone. Asking
+     * for `project` with none open is refused rather than silently written to the default.
+     */
+    choose: (
+      role: AiRoleId,
+      provider: RoleProvider | null,
+      scope: ChoiceScope,
+    ) => Promise<AiOverview>
+    /** Fetches a model's files. One at a time: a second would compete for the same disk. */
+    install: (modelId: string) => Promise<AiOverview>
+    cancelInstall: () => Promise<AiOverview>
+    /** Deletes the files. The choices that named it are left alone — they fall back on their own. */
+    remove: (modelId: string) => Promise<AiOverview>
+    onChanged: (callback: (overview: AiOverview) => void) => Unsubscribe
   }
   dictation: {
     /** The state as it stands, for a window that arrives after the events it missed. */

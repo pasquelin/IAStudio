@@ -139,18 +139,23 @@ function fontLicences() {
 }
 
 /**
- * What dictation ships that npm does not describe.
+ * What the AI side ships, or points at, that npm does not describe.
  *
- * The addon is collected like any package; these two are not packages. The detector sits in
+ * The addon is collected like any package; these are not packages. The detector sits in
  * `resources/stt/`, fetched by `pnpm stt:fetch`. ONNX Runtime is inside the platform packages
  * of sherpa-onnx as four dynamic libraries, and it is Microsoft's, not theirs — a notice that
  * named only sherpa-onnx would attribute their work to someone else.
  *
- * The recognition model is listed although it is downloaded by the user rather than shipped:
- * CC-BY-4.0 asks for attribution wherever the work is used, and the licence text is offered by
- * link because that is what that licence itself asks for.
+ * The two models are listed although they are downloaded rather than shipped: their licences ask
+ * for attribution wherever the work is used, and the texts are offered by link because that is
+ * what those licences themselves ask for.
+ *
+ * 🛑 Written by hand, where ADR-20 § E asks that this READ the manifests of `main/ai/catalogue.ts`.
+ * It cannot yet: this file strips types on the way in and resolves no `@shared/` alias, so
+ * importing the catalogue would fail on its first import. A model added there and forgotten here
+ * is reddened by nothing.
  */
-function dictationLicences() {
+function modelLicences() {
   return [
     {
       name: 'ONNX Runtime',
@@ -193,6 +198,22 @@ function dictationLicences() {
         'Full terms: https://creativecommons.org/licenses/by/4.0/legalcode',
       ].join('\n'),
       sources: 'https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3',
+    },
+    {
+      name: 'Llama 3.2 3B',
+      version: 'Q4_K_M',
+      spdx: 'LicenseRef-Llama-3.2-Community',
+      text: [
+        'The language model the assistant runs on when it runs on this machine. It is NOT',
+        'shipped with the application and its bytes never pass through it: Ollama pulls it on',
+        'request, into its own store, and `ollama rm llama3.2:3b` removes it.',
+        '',
+        'Built with Llama. Created by Meta, and quantised and republished by the Ollama project.',
+        '',
+        'The licence is not on the SPDX list, hence the LicenseRef. Full terms:',
+        'https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/LICENSE',
+      ].join('\n'),
+      sources: 'https://ollama.com/library/llama3.2',
     },
   ]
 }
@@ -251,7 +272,7 @@ function renderNotices(entries) {
 const licences = [
   ffmpegLicence(),
   ...fontLicences(),
-  ...dictationLicences(),
+  ...modelLicences(),
   ...SHIPPED.map(collect),
 ].sort((one, other) => one.name.localeCompare(other.name))
 

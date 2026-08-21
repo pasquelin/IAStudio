@@ -10,6 +10,7 @@ import { WindowSearch } from '@/design/WindowSearch'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
 import { useAccounts } from '@/stores/accounts'
+import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
 import { isSettingsDraftDirty, useSettingsDraft } from '@/stores/settingsDraft'
 import { SettingActions } from '../SettingActions/SettingActions'
@@ -28,6 +29,12 @@ import { SettingsWindowSearchResults } from './SettingsWindowSearchResults'
  * Nothing is written until Apply or OK: an editing buffer holds the changes, and Cancel drops
  * them. Writing on the spot left no way back from a settings session — the per-row ↺ restores
  * the FACTORY value, not the one held before the window opened.
+ *
+ * ONE exception, and it is named rather than discovered — decided 21/08: a provider chosen in the
+ * AI section is written on the spot. The manager owns that write because it re-judges every
+ * candidate and re-broadcasts the overview, and a choice merely staged could not be re-judged —
+ * the row would state who serves a role for a choice nothing had written. The section says so on
+ * screen; Cancel does not take one back.
  */
 export function SettingsWindow() {
   const { t } = useTranslation()
@@ -39,15 +46,16 @@ export function SettingsWindow() {
 
   const connect = useSettings(state => state.connect)
   const connectAccounts = useAccounts(state => state.connect)
+  const connectAiModels = useAiModels(state => state.connect)
 
   // Connected here rather than from the account section: a subscription opened by a leaf is
   // torn down and rebuilt every time the user walks the section tree.
   useEffect(() => {
-    const subscriptions = [connect(), connectAccounts()]
+    const subscriptions = [connect(), connectAccounts(), connectAiModels()]
     return () => {
       for (const subscription of subscriptions) void subscription.then(stop => stop())
     }
-  }, [connect, connectAccounts])
+  }, [connect, connectAccounts, connectAiModels])
 
   // Asked for while already open: the window moves instead of reloading, which would throw
   // away a half-typed key. The search is dropped with it — results shown over a section the

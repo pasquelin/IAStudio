@@ -6,6 +6,7 @@ import type {
   CommandScope,
 } from '@shared/domain/command'
 import type { Signature } from '@shared/domain/shortcut'
+import { WINDOW_GROUP_LABEL } from '@/design/windowStyles'
 import { ShortcutsSettingsCommandRow } from './ShortcutsSettingsCommandRow'
 
 export function ShortcutsSettingsScope({
@@ -31,9 +32,7 @@ export function ShortcutsSettingsScope({
 
   return (
     <section>
-      <h3 className="text-base-content/70 text-tiny mb-1 tracking-wide uppercase">
-        {t(`settings.scope.${scope}`)}
-      </h3>
+      <h3 className={WINDOW_GROUP_LABEL}>{t(`settings.scope.${scope}`)}</h3>
 
       {descriptors.map(descriptor => (
         <ShortcutsSettingsCommandRow

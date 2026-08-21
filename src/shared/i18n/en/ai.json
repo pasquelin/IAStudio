@@ -1,0 +1,50 @@
+{
+  "aiRoles": {
+    "assistant": "Assistant",
+    "dictation": "Dictation"
+  },
+  "aiClouds": {
+    "scenario": "Scenario",
+    "scenarioHint": "Generates on Scenario’s servers. Nothing to install."
+  },
+  "aiModels": {
+    "reading": "Reading the machine…",
+    "empty": "No employment has a provider to offer on this machine.",
+    "generationGroup": "Generation",
+    "standaloneGroup": "Assistant and voice",
+    "machineMemory": "{{available}} free of {{total}}",
+    "machineDisk": "{{free}} on disk",
+    "appliesNow": "A choice made here applies at once — Cancel does not take it back.",
+    "scope": "These choices apply to",
+    "scope_app": "the application",
+    "scope_project": "this project",
+    "chosenAtProject": "set for this project",
+    "candidates": "Models for {{role}}",
+    "automatic": "Automatic",
+    "automaticHint": "The studio takes the best provider available, local first.",
+    "providerNone": "no provider",
+    "notInstalledYet": "Install it before it can serve this employment.",
+    "install": "Install",
+    "installHint": "Downloads {{size}} of weights onto this machine",
+    "installing": "Downloading the model",
+    "cancelInstall": "Cancel",
+    "cancelInstallHint": "Stops the download. What already arrived is kept, to resume from",
+    "remove": "Remove",
+    "removeHint": "Deletes the files. The choice that names this model is kept",
+    "verdict": "{{word}} — {{detail}}",
+    "fit": {
+      "compatible": "compatible",
+      "slow": "slow",
+      "experimental": "experimental",
+      "insufficient-memory": "not enough room",
+      "incompatible": "not supported",
+      "unknown": "unverified"
+    },
+    "detail": {
+      "memory": "{{needed}} asked for, {{available}} of memory free",
+      "disk": "{{needed}} to download, {{free}} free on disk",
+      "refused": "the format or the provenance of this model is not admitted",
+      "runtime": "the {{runtime}} runtime is not answering on this machine"
+    }
+  }
+}

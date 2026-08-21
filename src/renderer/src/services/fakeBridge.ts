@@ -5,7 +5,16 @@ import type { FileOutcome } from '@shared/domain/fileOp'
 import { IDLE_RESCAN } from '@shared/domain/project'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { DEFAULT_LANGUAGE } from '@shared/i18n/languages'
+import type { AiOverview } from '@shared/domain/aiOverview'
 import type { LogEntry, StudioBridge, TraceEntry } from '@shared/ipc'
+
+/** A machine that answers nothing, which is what a test gets unless it says otherwise. */
+const EMPTY_AI_OVERVIEW: AiOverview = {
+  roles: [],
+  machine: { physicalBytes: 0, availableBytes: 0, diskFreeBytes: null, gpu: null },
+  projectPath: null,
+  installing: null,
+}
 
 const noSubscription = (): (() => void) => () => {}
 
@@ -255,6 +264,15 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onAction: noSubscription,
       actionResult: () => Promise.resolve(),
       ...overrides.assistant,
+    },
+    ai: {
+      overview: () => Promise.resolve(EMPTY_AI_OVERVIEW),
+      choose: () => Promise.resolve(EMPTY_AI_OVERVIEW),
+      install: () => Promise.resolve(EMPTY_AI_OVERVIEW),
+      cancelInstall: () => Promise.resolve(EMPTY_AI_OVERVIEW),
+      remove: () => Promise.resolve(EMPTY_AI_OVERVIEW),
+      onChanged: noSubscription,
+      ...overrides.ai,
     },
     dictation: {
       state: () => Promise.resolve({ state: 'idle', download: null, failure: null }),
