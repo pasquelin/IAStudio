@@ -77,13 +77,17 @@ de plus, pas une refonte.
 
 ### D. Le choix vit globalement, et un projet le SURCHARGE
 
+> 🛑 **Le logement est AMENDÉ — voir l'amendement du 21 août 2026 en fin de fichier.** La surcharge
+> vit dans les réglages d'application, indexée par dossier ; `.project.json` ne gagne aucun champ.
+
 > Les réglages d'application portent le défaut de chaque emploi et le compte actif. Un projet ne
 > stocke **que ce qui diffère**.
 
 `[M]` C'est le motif `Governed<T>` du lot 0, déjà écrit et gardé (`shared/domain/aiMemory.ts`) :
 `requested` d'un côté, une borne de l'autre, composés par `effectiveOf` — jamais un champ dérivé
-stocké deux fois. `.project.json` ne gagne qu'un champ **optionnel**, donc les projets existants
-restent lisibles sans migration.
+stocké deux fois. ~~`.project.json` ne gagne qu'un champ **optionnel**, donc les projets existants
+restent lisibles sans migration.~~ **Faux depuis l'amendement** : le manifeste n'est pas touché,
+donc la question de la migration ne se pose pas.
 
 **Pourquoi pas uniquement par projet** : chaque nouveau projet demanderait de tout re-choisir, y
 compris quand il n'y a qu'un compte — le cas le plus courant. **Pourquoi pas globalement seul** :
@@ -178,3 +182,40 @@ la réponse honnête tant que rien ne sait lui parler. `main/ai/cloudReadiness.t
 n'a jamais été publiée, donc aucun `{ kind: 'scenario' }` n'existe sur disque chez qui que ce soit.
 Un tel objet serait de toute façon **retiré en silence** par zod, le piège que `settings/validation.ts`
 écrit déjà en tête.
+
+## Amendement du 21 août 2026 — la surcharge par projet reste dans les réglages, et `.project.json` ne gagne rien
+
+**Le § D est amendé par décision d'Alban.** Il écrivait que « `.project.json` ne gagne qu'un champ
+**optionnel** », et la ligne des Conséquences en faisait le logement de la surcharge. L'arbitrage
+retenu est l'inverse : **la surcharge par projet vit dans les réglages d'application, indexée par
+dossier**, exactement comme `storage.projectAccounts` le fait déjà pour le compte. Le manifeste ne
+gagne aucun champ.
+
+> Un projet ne stocke que ce qui diffère — **et ce « stocke » est celui du studio, pas celui du
+> dossier.** `settings.ai.projectRoles[chemin]` est ce qui diffère ; `.project.json` reste
+> `version`, `name`, `createdAt`, `updatedAt`.
+
+**Deux raisons, la seconde décisive.**
+
+`[M]` **Un identifiant de compte est frappé LOCALEMENT** : `addAccount` en mint un neuf
+(`main/settings/accounts.ts:69` le dit déjà pour une autre raison — « removing a key and adding it
+back mints a fresh one »). Un compte écrit dans un manifeste ne désignerait donc rien sur une
+seconde machine. La moitié « compte » de la portée par projet ne PEUT pas voyager dans le fichier,
+et loger l'autre moitié ailleurs qu'elle aurait donné deux endroits pour une question.
+
+**Un choix écrit dans le manifeste voyage avec un projet partagé**, et pose à quelqu'un d'autre un
+modèle qu'il n'a pas choisi. `providerFor` retombe bien quand le modèle n'est pas installé, donc le
+dégât est borné — mais il est silencieux, et le studio n'aurait aucune façon de dire à qui la
+préférence appartient.
+
+**Ce que le § D gardait de vrai reste vrai** : le choix vit globalement et un projet le surcharge,
+par le motif `Governed<T>`, jamais un champ dérivé stocké deux fois. Seul le LOGEMENT change.
+
+**Conséquence sur la ligne des Conséquences** : « Le switch de compte de la barre de titre gagne une
+portée » reste due et est livrée — le menu du switch nomme le projet pour lequel il vaut. C'est
+`storage.projectAccounts` qu'il écrit, ce qui n'a jamais demandé de champ au manifeste.
+
+`[M]` **Un défaut du lot 5 tombe avec cet amendement** : rien ne rediffusait l'aperçu quand le
+projet ouvert changeait, donc une fenêtre de réglages laissée ouverte gardait un `projectPath`, des
+badges « propre au projet » et un sélecteur de portée périmés. `AiManager.refresh()` est appelé
+depuis `project.onChange` (`main/services.ts`), et `main/ai/manager.test.ts` en fait foi.

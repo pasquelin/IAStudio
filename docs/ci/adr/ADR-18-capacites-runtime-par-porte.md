@@ -295,6 +295,37 @@ dire, et cela donne à la conséquence écrite pour `context: 'per-install'` —
 et rabattons nos bornes dessus » — un contenu opératoire : sur `/v1`, **rabattre est la seule
 option**, puisque élargir est impossible.
 
-`[?]` Le seuil exact auquel le studio rencontrerait le mur n'est pas mesuré : il faudrait brancher
-l'assistant, avec son vrai préambule et `HISTORY_MAX = 10`, sur Ollama. Ce qui est établi est le
-mécanisme.
+~~`[?]` Le seuil exact auquel le studio rencontrerait le mur n'est pas mesuré : il faudrait brancher
+l'assistant, avec son vrai préambule et `HISTORY_MAX = 10`, sur Ollama.~~ **Branché le 21/08 — voir
+l'amendement ci-dessous.**
+
+---
+
+## Amendement du 21 août 2026 — l'assistant EST branché, et deux mesures s'ajoutent
+
+`[M]` **Le studio parle à `llama3.2:3b` par `/api/chat`, et cela marche de bout en bout.** Mesuré
+en pilotant l'application par CDP : « open the 3d workspace and create a document » rend
+`{"say":"Opening a 3D file.","calls":[{"action":"workspace.open","input":{"workspace":"3d",
+"createDocument":true}}]}` en **3,8 s** chargement du modèle compris, pour un coût de 0. Le
+préambule complet — le catalogue d'actions — a donc bien survécu au voyage.
+
+`[M]` **`format: "json"` existe sur cette porte et rend un objet propre.** L'ADR ne le mentionnait
+pas, et c'est la mesure qui change le plus la fiabilité : la reprise à une seule chance
+(`brainRetry.ts`) était écrite pour un modèle de cloud sans mode JSON, et ici elle ne sert
+quasiment plus. Ce n'est PAS un huitième axe — c'est une option de requête, pas une propriété que
+l'ordonnanceur lit.
+
+`[M]` **Le coût du contexte se chiffre en deux points, pas un.** `/api/ps` rend **5,42 Go** à
+`num_ctx: 4096` et **8,21 Go** à `8192` — le second confirme la campagne du matin. Le manifeste
+demande 8192 et réserve les 8,21 Go, parce que le préambule seul pèse quelque quinze cents jetons
+et que `HISTORY_MAX` en vaut dix : 4096 serait dépensé avant que la conversation commence.
+
+`[M]` **La troncature par la tête est traitée dans le code plutôt que subie.**
+`main/assistant/promptWindow.ts` rabat l'HISTORIQUE contre la fenêtre déclarée, jamais le
+préambule, et dit `overrun` quand l'instruction seule ne tient pas — le seul cas où il ne reste
+rien à faire. Le ratio sert de garde-fou : **4,19 caractères par jeton mesuré** sur du texte de
+cette forme, et le code compte **3**, un sous-comptage délibéré — surestimer les jetons coûte un
+tour d'historique, les sous-estimer coûte le préambule.
+
+`[?]` **Ce que cet amendement ne mesure toujours pas** : le seuil exact en tours réels avant que la
+fenêtre déborde. Le rabattement le rend inoffensif ; il ne le chiffre pas.

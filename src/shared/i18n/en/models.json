@@ -106,6 +106,8 @@
     "none": "No account yet. Add an API key to reach the remote library.",
     "switch": "Account: {{name}}",
     "switchHint": "Pick the API key to generate on, or add one",
+    "scopeProject": "Remembered for the {{project}} project",
+    "scopeApp": "No project open — this choice holds for the studio",
     "manage": "Manage accounts…",
     "notConnected": "Not connected",
     "fromEnvFile": "secrets/.env",

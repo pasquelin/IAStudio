@@ -15,6 +15,7 @@ export function localModel(over: Partial<LocalModel> = {}): LocalModel {
     licenceUrl: 'https://example.invalid/licence',
     source: 'https://example.invalid/model',
     files: [{ role: 'encoder', name: 'e.onnx', url: 'https://x/e', bytes: GIBI, sha256: 'a' }],
+    diskBytes: GIBI,
     reservationBytes: 2 * GIBI,
     ...over,
   }

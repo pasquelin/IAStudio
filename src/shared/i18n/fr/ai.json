@@ -14,6 +14,7 @@
     "standaloneGroup": "Assistant et voix",
     "machineMemory": "{{available}} libres sur {{total}}",
     "machineDisk": "{{free}} sur le disque",
+    "appliesNow": "Un choix fait ici s’applique tout de suite — Annuler ne le reprend pas.",
     "scope": "Ces choix valent pour",
     "scope_app": "l’application",
     "scope_project": "ce projet",
@@ -42,7 +43,8 @@
     "detail": {
       "memory": "{{needed}} demandés, {{available}} de mémoire libre",
       "disk": "{{needed}} à télécharger, {{free}} libres sur le disque",
-      "refused": "le format ou la provenance de ce modèle n’est pas admis"
+      "refused": "le format ou la provenance de ce modèle n’est pas admis",
+      "runtime": "le runtime {{runtime}} ne répond pas sur cette machine"
     }
   }
 }

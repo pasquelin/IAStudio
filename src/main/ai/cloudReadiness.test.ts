@@ -6,8 +6,8 @@ const anId = CLOUD_IDS[0] ?? ''
 
 describe('readyCloudsOf', () => {
   it('answers for a registered cloud whose account is held', () => {
-    expect(readyCloudsOf({ [anId]: () => true })).toEqual([anId])
-    expect(readyCloudsOf({ [anId]: () => false })).toEqual([])
+    expect(readyCloudsOf({ [anId]: { held: () => true } })).toEqual([anId])
+    expect(readyCloudsOf({ [anId]: { held: () => false } })).toEqual([])
   })
 
   // The honest answer until something can actually talk to it, and the blind spot the module
@@ -18,6 +18,6 @@ describe('readyCloudsOf', () => {
 
   // The REGISTRY decides what exists; credentials only say whether it can answer.
   it('ignores credentials held for a cloud nothing registers', () => {
-    expect(readyCloudsOf({ nowhere: () => true })).toEqual([])
+    expect(readyCloudsOf({ nowhere: { held: () => true } })).toEqual([])
   })
 })

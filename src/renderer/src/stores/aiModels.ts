@@ -18,7 +18,8 @@ type AiModelsState = {
    *
    * 🛑 Written ON THE SPOT, where every other screen of this window stages into `settingsDraft`
    * and waits for Apply: the manager owns the write, since it re-judges every candidate and
-   * re-broadcasts the overview. Cancel therefore does not take a role choice back. To settle.
+   * re-broadcasts the overview, and a staged choice could not be re-judged. Cancel therefore does
+   * not take a role choice back — settled 21/08, and written into `SettingsWindow`'s own contract.
    */
   chooseAiProvider: (
     role: AiRoleId,

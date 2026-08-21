@@ -217,6 +217,7 @@ export const STT_MODEL: LocalModel = {
   licenceUrl: 'https://creativecommons.org/licenses/by/4.0/legalcode',
   source: 'https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3',
   files: STT_MODEL_FILES,
+  diskBytes: STT_MODEL_BYTES,
   // `[M]` The JSDoc of `armIdle` announced "returning around 700 MB" — a subtraction rather than a
   // measurement, which R2 of ADR-19 forbids. Kept as the reservation until a runtime answers.
   reservationBytes: 700_000_000,

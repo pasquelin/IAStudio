@@ -2,31 +2,12 @@ import { net } from 'electron'
 import { createReadStream } from 'node:fs'
 import { mkdir, open as openFile, rename, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
+import { chunksOf } from '@main/netStream'
 import type { DownloadHost, DownloadResponse } from './modelInstall'
 
 /** Where the model lands when the user has not pointed somewhere else. */
 export function defaultModelFolder(userData: string): string {
   return join(userData, 'models', 'stt')
-}
-
-/**
- * Reads a `fetch` body as chunks. `Response.body` is a web stream, which is async-iterable in
- * Node but not in the DOM types Electron's renderer half pulls in — so the reader is driven by
- * hand, once, here.
- */
-async function* chunksOf(body: ReadableStream<Uint8Array> | null): AsyncIterable<Uint8Array> {
-  if (!body) return
-
-  const reader = body.getReader()
-  try {
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) return
-      if (value) yield value
-    }
-  } finally {
-    reader.releaseLock()
-  }
 }
 
 /**

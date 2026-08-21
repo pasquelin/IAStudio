@@ -1,0 +1,97 @@
+import { describe, expect, it } from 'vitest'
+import type { ChatRequest } from '@main/ai/localRuntimes'
+import { createLocalBrain } from './brainLocal'
+
+const brainAnswering = (answers: readonly string[]) => {
+  const asked: ChatRequest[] = []
+  let turn = 0
+
+  const chat = (request: ChatRequest) => {
+    asked.push(request)
+    return Promise.resolve(answers[turn++] ?? '')
+  }
+
+  return {
+    brain: createLocalBrain({ chat, modelId: 'llama3.2:3b', contextTokens: 8192 }),
+    asked,
+  }
+}
+
+const REPLY = '{"say":"Opening it.","calls":[]}'
+
+describe('the local brain', () => {
+  it('reads the answer the model wrote', async () => {
+    const { brain } = brainAnswering([REPLY])
+
+    await expect(brain.think({ utterance: 'open the 3d space', history: [] })).resolves.toEqual({
+      say: 'Opening it.',
+      calls: [],
+      cost: 0,
+    })
+  })
+
+  it('asks the model for one JSON object, in the window its manifest declares', async () => {
+    const { brain, asked } = brainAnswering([REPLY])
+
+    await brain.think({ utterance: 'hello', history: [] })
+
+    expect(asked[0]).toMatchObject({ model: 'llama3.2:3b', contextTokens: 8192, json: true })
+  })
+
+  /**
+   * 🛑 The catalogue goes in a `system` turn and the sentence just typed is the LAST turn. Burying
+   * it in the briefing had the model answer the turn before it — the cloud door does not have this
+   * failure, because there the instruction is a field beside the inputs rather than one turn.
+   */
+  it('puts the briefing first and the sentence last', async () => {
+    const { brain, asked } = brainAnswering([REPLY])
+
+    await brain.think({ utterance: 'open the 3d space', history: ['earlier'] })
+
+    const messages = asked[0]?.messages ?? []
+    expect(messages[0]?.role).toBe('system')
+    expect(messages[0]?.content).not.toContain('open the 3d space')
+    expect(messages.slice(1)).toEqual([
+      { role: 'user', content: 'earlier' },
+      { role: 'user', content: 'open the 3d space' },
+    ])
+  })
+
+  /**
+   * 🛑 A runtime that overruns its window truncates silently and cuts from the HEAD, where the
+   * preamble sits — ADR-18. The oldest turns are dropped HERE so the loss is ours to choose.
+   */
+  it('drops the oldest turns rather than letting the runtime eat the preamble', async () => {
+    const { brain, asked } = brainAnswering([REPLY])
+
+    await brain.think({ utterance: 'hello', history: ['x'.repeat(30_000), 'recent'] })
+
+    expect(asked[0]?.messages.slice(1)).toEqual([
+      { role: 'user', content: 'recent' },
+      { role: 'user', content: 'hello' },
+    ])
+  })
+
+  // The same one retry the cloud brain gets, and for the same reason: a model told only "that was
+  // not JSON" tends to produce the same thing again, so it is shown what it sent.
+  it('asks once more, quoting back what could not be read', async () => {
+    const { brain, asked } = brainAnswering(['I would love to help!', REPLY])
+
+    await expect(brain.think({ utterance: 'hello', history: [] })).resolves.toMatchObject({
+      say: 'Opening it.',
+    })
+    expect(asked).toHaveLength(2)
+    expect(JSON.stringify(asked[1]?.messages)).toContain('I would love to help!')
+  })
+
+  // A person is waiting, and "I did not understand" beats a stack trace.
+  it('says nothing rather than raising when two attempts are both unreadable', async () => {
+    const { brain } = brainAnswering(['nope', 'still nope'])
+
+    await expect(brain.think({ utterance: 'hello', history: [] })).resolves.toEqual({
+      say: '',
+      calls: [],
+      cost: 0,
+    })
+  })
+})

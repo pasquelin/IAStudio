@@ -130,8 +130,8 @@ export type Settings = {
    *
    * `roles` is the default that follows the person; `projectRoles` is what one project overrides,
    * BY FOLDER, exactly as `storage.projectAccounts` already does for the account. Kept out of
-   * `.project.json` for the reason that index exists: a choice written into the manifest would
-   * travel with a shared project, and land someone else on a model they never picked.
+   * `.project.json`, which ADR-21 § D asked for and its amendment of 21/08 reversed: an account id
+   * is minted locally, so half the scope could never travel anyway.
    *
    * Both are partial. An absent role is "no choice made", which is NOT "none" — `providerFor`
    * then answers with what the machine actually offers, and the local side wins by default.

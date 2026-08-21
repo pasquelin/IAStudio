@@ -47,7 +47,28 @@ export type LocalModel = {
   readonly licenceUrl: string
   /** Where the weights are published, for the attribution the licence may ask for. */
   readonly source: string
+  /**
+   * The files the studio fetches ITSELF, each with the digest it is checked against.
+   *
+   * Empty for a model a runtime pulls on its own: none of its bytes pass through here, so there
+   * is no url to resolve and no digest we could verify. What it weighs is `diskBytes`.
+   */
   readonly files: readonly ModelFile[]
+  /**
+   * What the weights take on disk — what a disk verdict is read against, and the figure shown.
+   *
+   * Declared rather than summed from `files`, because a runtime-pulled model has no file list
+   * here. A model that DOES ship one must declare their sum, and `catalogue.test.ts` says so.
+   */
+  readonly diskBytes: number
+  /**
+   * The context window the studio asks the runtime for, in tokens.
+   *
+   * Absent for a model that holds no conversation — recognition reads audio. Where it is present
+   * it is a REQUEST, honoured only where the runtime declares `context: 'per-request'` (ADR-18);
+   * elsewhere it is the ceiling our own prompt is trimmed against.
+   */
+  readonly contextTokens?: number
   /**
    * What it is expected to take once loaded. A RESERVATION, never a measured peak — R3 of ADR-19.
    *
@@ -55,11 +76,6 @@ export type LocalModel = {
    * the runtime reports 4.03 GB loaded, 8.21 GB at a 8192 context.
    */
   readonly reservationBytes: number
-}
-
-/** What the files weigh on disk, which is what a download has to fetch. */
-export function downloadBytesOf(model: LocalModel): number {
-  return model.files.reduce((total, file) => total + file.bytes, 0)
 }
 
 /** Bytes across the whole model, not within the file being fetched. */

@@ -1,29 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  admitsLoad,
-  downloadBytesOf,
-  modelRefusalOf,
-  type LocalModel,
-  type ModelFormat,
-  type ModelLoader,
-} from './localModel'
-
-const model = (over: Partial<LocalModel> = {}): LocalModel => ({
-  id: 'parakeet',
-  name: 'Parakeet TDT 0.6b v3',
-  format: 'onnx',
-  loader: 'sherpa-onnx',
-  rank: 1,
-  licence: 'CC-BY-4.0',
-  licenceUrl: 'https://creativecommons.org/licenses/by/4.0/legalcode',
-  source: 'https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3',
-  files: [
-    { role: 'encoder', name: 'encoder.onnx', url: 'https://x/e', bytes: 652_184_281, sha256: 'a' },
-    { role: 'tokens', name: 'tokens.txt', url: 'https://x/t', bytes: 93_939, sha256: 'b' },
-  ],
-  reservationBytes: 700_000_000,
-  ...over,
-})
+import { admitsLoad, modelRefusalOf, type ModelFormat, type ModelLoader } from './localModel'
+import { localModel } from './localModel-fixtures'
 
 describe('admitsLoad', () => {
   // ADR-20 § A: the whitelist is written on PAIRS, because what makes the studio's ONNX safe is a
@@ -49,26 +26,22 @@ describe('admitsLoad', () => {
   })
 })
 
-describe('downloadBytesOf', () => {
-  it('counts what the files weigh, not what the model reserves', () => {
-    expect(downloadBytesOf(model())).toBe(652_278_220)
-  })
-})
-
 describe('modelRefusalOf', () => {
   it('lets through a shipped model whose pair is admitted', () => {
-    expect(modelRefusalOf(model())).toBeNull()
+    expect(modelRefusalOf(localModel())).toBeNull()
   })
 
   it('refuses a pair the whitelist does not admit', () => {
-    expect(modelRefusalOf(model({ format: 'pickle' }))).toBe('format-not-admitted')
-    expect(modelRefusalOf(model({ format: 'onnx', loader: 'ollama' }))).toBe('format-not-admitted')
+    expect(modelRefusalOf(localModel({ format: 'pickle' }))).toBe('format-not-admitted')
+    expect(modelRefusalOf(localModel({ format: 'onnx', loader: 'ollama' }))).toBe(
+      'format-not-admitted',
+    )
   })
 
   // ADR-20 § B: supplying one's own manifest must never be the consequence of a click on
   // "Install". The catalogue refuses it; an explicit gesture elsewhere is what admits it.
   it('keeps a manifest supplied by the person out of the catalogue', () => {
-    expect(modelRefusalOf(model({ rank: 3 }))).toBe('unverified-provenance')
-    expect(modelRefusalOf(model({ rank: 2 }))).toBeNull()
+    expect(modelRefusalOf(localModel({ rank: 3 }))).toBe('unverified-provenance')
+    expect(modelRefusalOf(localModel({ rank: 2 }))).toBeNull()
   })
 })

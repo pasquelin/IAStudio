@@ -5,6 +5,7 @@ import type { AccountsResult, AccountSummary } from '@shared/domain/account'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAccounts } from '@/stores/accounts'
+import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { AccountSelect } from './AccountSelect'
 
@@ -13,10 +14,19 @@ const client: AccountSummary = { id: 'b', name: 'Client X', active: false }
 
 const given = (accounts: AccountSummary[], authenticated = true): void => {
   useAccounts.setState({ accounts })
+  useProject.setState({ project: null })
   useSettings.setState({
     auth: authenticated ? { authenticated: true } : { authenticated: false, reason: 'missing' },
   })
 }
+
+const withProject = (name: string): void =>
+  useProject.setState({
+    project: {
+      path: `/projects/${name}`,
+      manifest: { version: 1, name, createdAt: '2026-08-21', updatedAt: '2026-08-21' },
+    },
+  })
 
 const buttonFor = (name: string): HTMLElement =>
   screen.getByRole('button', { name: `Compte${NO_BREAK_SPACE}: ${name}` })
@@ -143,6 +153,30 @@ describe('AccountSelect', () => {
 
     expect(open).toHaveBeenCalledWith('account')
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  /**
+   * Switching with a project open records the key against that folder, so reopening it lands on
+   * the same library — ADR-21 § D. The button that does that says so rather than leaving it to be
+   * discovered on the next opening.
+   */
+  it('names the project a switch would be remembered for', async () => {
+    given([studio, client])
+    withProject('Affiche')
+    render(<AccountSelect />)
+    await openMenu('Studio')
+
+    expect(screen.getByText('Retenu pour le projet Affiche')).toBeInTheDocument()
+  })
+
+  it('says the choice is the studio’s own while no project is open', async () => {
+    given([studio, client])
+    render(<AccountSelect />)
+    await openMenu('Studio')
+
+    expect(
+      screen.getByText('Aucun projet ouvert — ce choix vaut pour le studio'),
+    ).toBeInTheDocument()
   })
 
   it('lights up in the half-opaque shade this bar answers with', () => {

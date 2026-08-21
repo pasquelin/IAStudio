@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MachineSummary, ModelCandidate } from '@shared/domain/aiOverview'
-import { downloadBytesOf } from '@shared/domain/localModel'
 import { fitAllowsUse, type FitObstacle } from '@shared/domain/modelFit'
 import { useBytes } from './useBytes'
 
@@ -11,6 +10,7 @@ import { useBytes } from './useBytes'
  */
 export const FIT_DETAIL_KEYS: Record<FitObstacle, string> = {
   refused: 'aiModels.detail.refused',
+  runtime: 'aiModels.detail.runtime',
   disk: 'aiModels.detail.disk',
   memory: 'aiModels.detail.memory',
   tight: 'aiModels.detail.memory',
@@ -51,11 +51,13 @@ export function useModelFit(
               detail: t(FIT_DETAIL_KEYS[candidate.obstacle], {
                 needed: bytes(
                   candidate.obstacle === 'disk'
-                    ? downloadBytesOf(candidate.model)
+                    ? candidate.model.diskBytes
                     : candidate.model.reservationBytes,
                 ),
                 available: bytes(available),
                 free: free === null ? '' : bytes(free),
+                // Data, not a word of the interface: a runtime is called what it is called.
+                runtime: candidate.model.loader,
               }),
             })
 

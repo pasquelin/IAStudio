@@ -53,14 +53,21 @@ import { createRemoteActions, type RemoteActions } from './mcp/asking'
 import { createMcpControl, type McpControl } from './mcp/control'
 import type { AssistantBrain } from './assistant/brainPort'
 import { createProviderBrain } from './assistant/brainProvider'
+import { createLocalBrain } from './assistant/brainLocal'
+import { createRoutedBrain } from './assistant/brainRouted'
 import { createSession, type DictationSession } from './dictation/session'
 import { STT_MODEL } from '@shared/domain/dictation'
+import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import { createAiManager, type AiManager } from './ai/manager'
+import { shippedModel } from './ai/catalogue'
 import { electronHardwarePort } from './ai/electronHardwarePort'
+import { electronOllamaPort } from './ai/electronOllamaPort'
 import { hardwareProbe, probeSnapshot } from './ai/hardwareProbe'
 import { readyCloudsOf } from './ai/cloudReadiness'
+import { fileRuntime, type LocalRuntimes } from './ai/localRuntimes'
 import { fetchModel, modelIsComplete } from './ai/modelInstall'
 import { createDownloadHost, defaultModelFolder, ensureFolder } from './ai/modelStore'
+import { createOllamaClient, ollamaLocalRuntime } from './ai/ollamaRuntime'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
 import { openSttProcess } from './dictation/sttProcess'
 import { adoptFile } from './media/adoptFile'
@@ -546,6 +553,17 @@ export function createServices(settings: SettingsStore): Services {
   }
 
   /**
+   * The manager's overview is pulled from inputs it cannot watch — the open project, and the
+   * clouds a key is held for. This is the nudge, and it is owed at EVERY one of them: without it a
+   * settings window left open keeps a stale path, stale badges and a stale list of providers.
+   */
+  const republishAi = (after: string): void => {
+    void ai.refresh().catch((error: unknown) => {
+      log.warn('ai', `republishing after ${after} failed: ${String(error)}`)
+    })
+  }
+
+  /**
    * Puts the studio back on the account a project last worked under, so reopening it lands on the
    * library it was filled from rather than on whichever key was last switched to elsewhere.
    *
@@ -573,6 +591,7 @@ export function createServices(settings: SettingsStore): Services {
       // cost a refetch of the model catalogue and the plan for nothing.
       if (change.credentialsChanged) credentials.changed()
       broadcast(EVENTS.accountsChanged, change.accounts)
+      republishAi('an account change')
 
       opened?.record({
         level: 'info',
@@ -665,6 +684,8 @@ export function createServices(settings: SettingsStore): Services {
       // `activate` finishes before it publishes — so a move this session interrupted is already
       // a row at the right path rather than one this pass would go looking for.
       if (current) reconciler.request()
+
+      republishAi('a project change')
     },
     settle: async () => {
       // Both before the catalogue stops answering: the journal writes into it, and the pending
@@ -1042,30 +1063,54 @@ export function createServices(settings: SettingsStore): Services {
 
   const downloads = createDownloadHost()
 
+  /**
+   * 🛑 The ONE place the wiring names a cloud — ADR-21 § C as amended: what proves an account is
+   * held, and what thinks for it. A second cloud adds a line here and touches nothing else.
+   *
+   * `held` asks whether a key is HELD, not whether it works: probing costs a round trip, and a
+   * revoked key is refused where it is used rather than hidden from the manager. `brain` is a
+   * getter because it is built further down, once the job manager exists.
+   */
+  const clouds: Record<string, { held: () => boolean; brain: () => AssistantBrain }> = {
+    scenario: {
+      held: () => settings.readCredentials() !== null,
+      brain: () => providerBrain,
+    },
+  }
+
+  /**
+   * What each LOADER can do on this machine — the unit ADR-20 writes its whitelist on, and ONE
+   * table: a runtime that installs but cannot converse, or the reverse, would otherwise read as
+   * ready on one side and be unreachable on the other.
+   */
+  const runtimes: LocalRuntimes = {
+    'sherpa-onnx': fileRuntime({
+      // One folder for the whole catalogue, which holds while it holds ONE fetched model: the
+      // manifests name their own files, so a second sharing a file name would read as installed.
+      folderFor: () => modelFolder(),
+      isComplete: (model, folder) => modelIsComplete(downloads, model, folder),
+      fetch: async (model, folder, onProgress, signal) => {
+        await ensureFolder(folder)
+        // Nothing sweeps the `.part` files first, and that is the point: an interrupted download
+        // resumes from what already arrived. A leftover that is not a prefix of what is being
+        // fetched cannot survive anyway — it fails its digest and is removed there.
+        await fetchModel(downloads, model, { folder, onProgress, signal })
+      },
+      removeFiles: async (model, folder) => {
+        for (const file of model.files) await rm(join(folder, file.name), { force: true })
+      },
+    }),
+    ollama: ollamaLocalRuntime(createOllamaClient(electronOllamaPort())),
+  }
+
   const ai = createAiManager({
     facts: () => hardwareProbe(electronHardwarePort(modelFolder)),
     snapshotOf: facts => probeSnapshot(facts, PROVISIONAL_BUDGET, Date.now()),
     settings: () => settings.read(),
     writeSettings: partial => settings.write(partial),
     currentProjectPath: () => project.current()?.path ?? null,
-    // Whether a key is HELD, not whether it works: probing costs a round trip, and a revoked key
-    // is refused where it is used rather than hidden from the manager. A table keyed by cloud id,
-    // which is where the studio OWNS credentials — a second cloud adds a line, never a branch.
-    readyClouds: () => readyCloudsOf({ scenario: () => settings.readCredentials() !== null }),
-    // One folder for the whole catalogue, which holds while it holds ONE model: the manifests
-    // name their own files, so a second model sharing a file name would read as installed.
-    folderFor: () => modelFolder(),
-    isInstalled: model => modelIsComplete(downloads, model, modelFolder()),
-    install: async (model, folder, onProgress, signal) => {
-      await ensureFolder(folder)
-      // Nothing sweeps the `.part` files first, and that is the point: an interrupted download
-      // resumes from what already arrived. A leftover that is not a prefix of what is being
-      // fetched cannot survive anyway — it fails its digest and is removed there.
-      await fetchModel(downloads, model, { folder, onProgress, signal })
-    },
-    removeFiles: async (model, folder) => {
-      for (const file of model.files) await rm(join(folder, file.name), { force: true })
-    },
+    readyClouds: () => readyCloudsOf(clouds),
+    runtimes,
     emit: overview => broadcast(EVENTS.ai, overview),
     log: (level, message) => log[level]('ai', message),
   })
@@ -1291,7 +1336,7 @@ export function createServices(settings: SettingsStore): Services {
    * difference is what keeps every sentence typed at the assistant out of the jobs bar and its
    * answers out of the asset browser — see `JobManager.run`.
    */
-  const brain = createProviderBrain({
+  const providerBrain = createProviderBrain({
     run: body => jobs.run({ id: ASSISTANT_MODEL_ID }, ASSISTANT_MODEL_ID, body),
     readText: createAssetText({
       retrieve: async assetId => (await client.require().assets.retrieve(assetId)).asset,
@@ -1300,6 +1345,25 @@ export function createServices(settings: SettingsStore): Services {
       download: async url => await (await fetch(url)).text(),
     }),
     model: () => settings.read().assistant.model,
+  })
+
+  /**
+   * WHICH brain answers is the manager's decision, asked on every turn — ADR-21 § A: the assistant
+   * is an employment like any other, served by a model on this machine or by a registered cloud,
+   * the local side winning by default.
+   */
+  const brain = createRoutedBrain({
+    providerOf: () => ai.providerOf(ASSISTANT_ROLE),
+    modelOf: shippedModel,
+    // Both halves are required, and neither is guessed: a runtime that cannot converse and a
+    // manifest with no window are the two ways a local model has nothing to answer with.
+    localBrain: model => {
+      const chat = runtimes[model.loader]?.chat
+      if (!chat || model.contextTokens === undefined) return null
+
+      return createLocalBrain({ chat, modelId: model.id, contextTokens: model.contextTokens })
+    },
+    cloudBrain: id => clouds[id]?.brain() ?? null,
   })
 
   // To the studio window alone, and it says when there is none — which is the difference between
@@ -1495,9 +1559,12 @@ export function createServices(settings: SettingsStore): Services {
       // asking the API again would cost a call to learn something it already told us.
       return state.authenticated && owner !== null ? { ...state, ownerId: owner } : state
     },
-    // Every window carries the switch, not just the one that made it: the studio and the
-    // settings window both show which account is active.
-    broadcastAccounts: accounts => broadcast(EVENTS.accountsChanged, accounts),
+    // Every window carries the switch, not just the one that made it — and so does the AI
+    // manager, for which clouds are ready is one of the inputs its overview is pulled from.
+    broadcastAccounts: accounts => {
+      broadcast(EVENTS.accountsChanged, accounts)
+      republishAi('an account change')
+    },
     updates: createUpdates({
       // Through `default`: `autoUpdater` is a defineProperty getter, which the ESM loader cannot
       // see as a named export. Measured under Electron 43 — the named read answers `undefined`.

@@ -28,6 +28,7 @@ The terms below govern these components. They are not affected by the licence of
 | IBM Plex Serif | shipped with the application | OFL-1.1 |
 | immer | 11.1.16 | MIT |
 | Lato | shipped with the application | OFL-1.1 |
+| Llama 3.2 3B | Q4_K_M | LicenseRef-Llama-3.2-Community |
 | mediabunny | 1.53.1 | MPL-2.0 |
 | ONNX Runtime | 1.27.0 | MIT |
 | opentype.js | 2.0.0 | MIT |
@@ -831,6 +832,27 @@ INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
+```
+## Llama 3.2 3B
+
+Version: Q4_K_M  
+Licence: LicenseRef-Llama-3.2-Community
+
+Corresponding sources:
+
+```
+https://ollama.com/library/llama3.2
+```
+
+```
+The language model the assistant runs on when it runs on this machine. It is NOT
+shipped with the application and its bytes never pass through it: Ollama pulls it on
+request, into its own store, and `ollama rm llama3.2:3b` removes it.
+
+Built with Llama. Created by Meta, and quantised and republished by the Ollama project.
+
+The licence is not on the SPDX list, hence the LicenseRef. Full terms:
+https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/LICENSE
 ```
 ## mediabunny
 

@@ -27,6 +27,8 @@ export type OverviewInput = {
   /** What the catalogue offers for a role, in the order it offers them. */
   readonly modelsFor: (role: AiRoleId) => readonly LocalModel[]
   readonly isInstalled: (model: LocalModel) => boolean
+  /** Whether the runtime that would host this model is answering — see `localRuntimes.ts`. */
+  readonly runtimeReady: (model: LocalModel) => boolean
   /** The clouds an account is held for. What each of them SERVES is its own declaration. */
   readonly readyClouds: readonly string[]
   readonly installing: { readonly modelId: string; readonly progress: DownloadProgress } | null
@@ -49,6 +51,7 @@ function rowFor(role: AiRoleId, input: OverviewInput, choices: RoleChoices): Rol
       snapshot: input.snapshot,
       diskFreeBytes: input.facts.diskFreeBytes,
       installed,
+      runtimeReady: input.runtimeReady(model),
     }
 
     return { model, installed, ...fitReadingOf(model, offer) }
@@ -62,6 +65,7 @@ function rowFor(role: AiRoleId, input: OverviewInput, choices: RoleChoices): Rol
     role,
     provider: providerFor(role, choices, {
       localModelIds: localOptionsFor(candidates),
+      installedModelIds: candidates.filter(one => one.installed).map(one => one.model.id),
       cloudIds: clouds,
     }),
     chosen: chosenPerScope(role, input),

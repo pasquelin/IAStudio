@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto'
 import {
-  downloadBytesOf,
   PART_SUFFIX,
   type DownloadProgress,
   type LocalModel,
@@ -161,7 +160,7 @@ export async function fetchModel(
   model: LocalModel,
   options: DownloadOptions,
 ): Promise<void> {
-  const total = downloadBytesOf(model)
+  const total = model.diskBytes
   let done = 0
 
   for (const file of model.files) {

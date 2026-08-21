@@ -107,6 +107,11 @@ export function roleChoicesFor(
 export type RoleOffer = {
   /** Every model installed AND usable, in the order the catalogue offers them. */
   readonly localModelIds: readonly string[]
+  /**
+   * Every model installed, whatever this machine thinks of it. A superset of the above, and it is
+   * what an explicit CHOICE is honoured against — see `providerFor`.
+   */
+  readonly installedModelIds: readonly string[]
   /** Every cloud that both serves this role and has an account behind it. */
   readonly cloudIds: readonly string[]
 }
@@ -117,6 +122,12 @@ export type RoleOffer = {
  * The LOCAL side wins by default — the whole point of ADR-21 § B: the application has to be useful
  * with no account at all. A key present ADDS a provider to the choice; it does not take the lead.
  * A choice the machine can no longer honour falls back rather than failing.
+ *
+ * 🛑 A chosen local model is honoured while it is INSTALLED, not while the machine judges it
+ * comfortable. The verdict moves under a running conversation — a resident model makes the machine
+ * read as smaller than it is, since nothing here subtracts what it already occupies (ADR-19's
+ * `runtimeBytes`, unwired) — and dropping the choice silently moves the next sentence to a BILLED
+ * cloud. What the person asked for stands until they unask it.
  */
 export function providerFor(
   role: AiRoleId,
@@ -125,7 +136,7 @@ export function providerFor(
 ): RoleProvider | null {
   const chosen = choices[role]
 
-  if (chosen?.kind === 'local' && offer.localModelIds.includes(chosen.modelId)) return chosen
+  if (chosen?.kind === 'local' && offer.installedModelIds.includes(chosen.modelId)) return chosen
   if (chosen?.kind === 'cloud' && offer.cloudIds.includes(chosen.providerId)) return chosen
 
   const model = offer.localModelIds[0]

@@ -5,6 +5,7 @@ import type { DownloadProgress, LocalModel } from '@shared/domain/localModel'
 import type { PartialSettings, Settings } from '@shared/domain/settings'
 import { shippedModel, shippedModels, shippedModelsFor } from './catalogue'
 import type { HardwareFacts } from './hardwareProbe'
+import { runtimeReadingsOf, type LocalRuntimes } from './localRuntimes'
 import { aiOverviewOf } from './overview'
 
 /**
@@ -20,15 +21,8 @@ export type ManagerDeps = {
   currentProjectPath: () => string | null
   /** The clouds an account is held for. What each SERVES is declared in `aiCloud.ts`, not here. */
   readyClouds: () => readonly string[]
-  folderFor: (model: LocalModel) => string
-  isInstalled: (model: LocalModel) => Promise<boolean>
-  install: (
-    model: LocalModel,
-    folder: string,
-    onProgress: (progress: DownloadProgress) => void,
-    signal: AbortSignal,
-  ) => Promise<void>
-  removeFiles: (model: LocalModel, folder: string) => Promise<void>
+  /** What can install and what can converse, by LOADER — never a branch on a model's id. */
+  runtimes: LocalRuntimes
   /** Pushed on every change, so a window that did not ask still follows an install. */
   emit: (overview: AiOverview) => void
   log: (level: 'info' | 'warn' | 'error', message: string) => void
@@ -36,6 +30,18 @@ export type ManagerDeps = {
 
 export type AiManager = {
   overview: () => Promise<AiOverview>
+  /**
+   * Re-publishes for a change the manager cannot see — an open project, an account. Without it a
+   * settings window left open keeps a stale path, stale badges and a scope selector writing where
+   * nobody is looking.
+   */
+  refresh: () => Promise<void>
+  /**
+   * What serves one role right now, re-composed rather than remembered: a model uninstalled
+   * outside the studio would leave a turn reaching nothing. `[M]` ~2–4 ms warm against an
+   * inference of several seconds — under 0.1 % of the turn it precedes.
+   */
+  providerOf: (role: AiRoleId) => Promise<RoleProvider | null>
   choose: (role: AiRoleId, provider: RoleProvider | null, scope: ChoiceScope) => Promise<AiOverview>
   install: (modelId: string) => Promise<AiOverview>
   cancelInstall: () => Promise<AiOverview>
@@ -71,18 +77,16 @@ export function createAiManager(deps: ManagerDeps): AiManager {
   let running: RunningInstall | null = null
 
   /**
-   * Asked of the disk on every compose rather than remembered: a model deleted from the folder
-   * outside the studio would otherwise keep reading as present until a relaunch.
+   * Asked of every runtime on each compose rather than remembered: a model deleted outside the
+   * studio — from the folder, or by `ollama rm` — would otherwise read as present until a relaunch.
    */
-  async function installedIds(): Promise<ReadonlySet<string>> {
-    const models = shippedModels()
-    const answers = await Promise.all(models.map(model => deps.isInstalled(model)))
-
-    return new Set(models.filter((_model, index) => answers[index]).map(model => model.id))
-  }
-
   async function compose(): Promise<AiOverview> {
-    const [facts, installed] = await Promise.all([deps.facts(), installedIds()])
+    const [facts, readings] = await Promise.all([
+      deps.facts(),
+      runtimeReadingsOf(deps.runtimes, shippedModels(), (loader, why) =>
+        deps.log('info', `${loader} is not answering: ${why}`),
+      ),
+    ])
     const stored = deps.settings()
 
     return aiOverviewOf({
@@ -92,7 +96,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       projectChoices: stored.ai.projectRoles,
       projectPath: deps.currentProjectPath(),
       modelsFor: shippedModelsFor,
-      isInstalled: model => installed.has(model.id),
+      isInstalled: model => readings.get(model.loader)?.installed.has(model.id) === true,
+      runtimeReady: model => readings.get(model.loader)?.ready === true,
       readyClouds: deps.readyClouds(),
       installing:
         running === null ? null : { modelId: running.modelId, progress: running.progress },
@@ -124,9 +129,13 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
   async function fetchFiles(model: LocalModel, abort: AbortController): Promise<void> {
     try {
-      await deps.install(
+      const runtime = deps.runtimes[model.loader]
+      // Raised rather than logged: `installModel` is the door the dictation session takes, and it
+      // tells a runtime that is missing from a network that gave up on the class of what is thrown.
+      if (!runtime) throw new Error(`no runtime for ${model.loader}`)
+
+      await runtime.install(
         model,
-        deps.folderFor(model),
         progress => {
           if (running === null) return
 
@@ -189,6 +198,16 @@ export function createAiManager(deps: ManagerDeps): AiManager {
   return {
     overview: compose,
 
+    // Unconditional, and `published` is deliberately NOT read as "someone is listening": a window
+    // that only ever asked for `overview()` never filled it, and it is exactly the window this
+    // exists for. The compose it costs is a few milliseconds, once per project or account change.
+    refresh: async () => {
+      await announce()
+    },
+
+    providerOf: async role =>
+      (await compose()).roles.find(row => row.role === role)?.provider ?? null,
+
     choose: async (role, provider, scope) => {
       const stored = deps.settings()
 
@@ -236,14 +255,23 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
     cancelInstall: async () => {
       running?.abort.abort()
-      return compose()
+      // What the download's own `finally` just announced, rather than a second reading of the same
+      // machine — the same trade `install` makes five lines below.
+      return published ?? compose()
     },
 
     remove: async modelId => {
       const model = shippedModel(modelId)
       if (model === null) return compose()
 
-      await deps.removeFiles(model, deps.folderFor(model))
+      try {
+        await deps.runtimes[model.loader]?.remove(model)
+      } catch (error) {
+        // Swallowed exactly as `install` swallows its own: a window asked, and what it needs back
+        // is the state the studio is in. Removing is a NETWORK call for a runtime that pulls its
+        // own weights, where deleting files barely ever failed.
+        deps.log('warn', `removing ${modelId} failed: ${String(error)}`)
+      }
       // The choices that named it are left alone: `providerFor` falls back on its own, and
       // clearing them would lose a preference the person would want back after reinstalling.
       return announce()

@@ -1,21 +1,43 @@
-import { DICTATION_ROLE, type AiRoleId } from '@shared/domain/aiRole'
+import { ASSISTANT_ROLE, DICTATION_ROLE, type AiRoleId } from '@shared/domain/aiRole'
 import { STT_MODEL } from '@shared/domain/dictation'
 import { modelRefusalOf, type LocalModel } from '@shared/domain/localModel'
 
 /**
- * The models the application ships with — rank 1 of ADR-20, versioned with the binary.
+ * The one model a runtime pulls for itself rather than one the studio fetches — hence no `files`
+ * and no digest: none of its bytes pass through here. Its `id` IS the tag Ollama knows it by.
  *
- * It holds ONE model, and that is a measurement rather than a gap: the recognition model is the
- * only one this studio can both install and run today. A catalogue listing what it cannot install
- * would show the person entries that lead nowhere, and a plausible catalogue costs more than a
- * short one.
+ * `[M]` Every figure measured 2026-08-21 against Ollama 0.4.6 on Apple M2 Max. `/api/tags` gives
+ * 2 019 393 189 bytes on disk and `gguf`; `/api/ps` gives 5.42 GB loaded at a 4096 window and
+ * 8.21 GB at 8192. The larger window is what is asked for and what the reservation is written
+ * against: the studio's preamble alone is some fifteen hundred tokens, and `HISTORY_MAX` is ten
+ * blocks — 4096 would be spent before the conversation started.
+ */
+const LLAMA_MODEL: LocalModel = {
+  id: 'llama3.2:3b',
+  name: 'Llama 3.2 3B',
+  format: 'gguf',
+  loader: 'ollama',
+  rank: 1,
+  // Not on the SPDX list, so a `LicenseRef-`, which is what SPDX itself says to write for one.
+  licence: 'LicenseRef-Llama-3.2-Community',
+  licenceUrl: 'https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/LICENSE',
+  source: 'https://ollama.com/library/llama3.2',
+  files: [],
+  diskBytes: 2_019_393_189,
+  contextTokens: 8192,
+  reservationBytes: 8_207_560_704,
+}
+
+/**
+ * The models the application ships the MANIFEST of — rank 1 of ADR-20, versioned with the binary.
  *
- * What it takes to grow: a model whose weights the studio fetches itself needs nothing but its
- * manifest; one a runtime pulls for itself — `ollama pull`, measured working on 2026-08-21 — needs
- * the adapter that asks, which does not exist yet.
+ * Two, and the pair is the point: one whose weights the studio fetches file by file against a
+ * digest, one a runtime pulls for itself. A model enters this list only once something can install
+ * it — a plausible catalogue costs more than a short one, because its entries lead nowhere.
  */
 const SHIPPED: readonly { readonly role: AiRoleId; readonly model: LocalModel }[] = [
   { role: DICTATION_ROLE, model: STT_MODEL },
+  { role: ASSISTANT_ROLE, model: LLAMA_MODEL },
 ]
 
 /** Every shipped model, whatever role it serves. */

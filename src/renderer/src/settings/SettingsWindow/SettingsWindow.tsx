@@ -29,6 +29,12 @@ import { SettingsWindowSearchResults } from './SettingsWindowSearchResults'
  * Nothing is written until Apply or OK: an editing buffer holds the changes, and Cancel drops
  * them. Writing on the spot left no way back from a settings session — the per-row ↺ restores
  * the FACTORY value, not the one held before the window opened.
+ *
+ * ONE exception, and it is named rather than discovered — decided 21/08: a provider chosen in the
+ * AI section is written on the spot. The manager owns that write because it re-judges every
+ * candidate and re-broadcasts the overview, and a choice merely staged could not be re-judged —
+ * the row would state who serves a role for a choice nothing had written. The section says so on
+ * screen; Cancel does not take one back.
  */
 export function SettingsWindow() {
   const { t } = useTranslation()

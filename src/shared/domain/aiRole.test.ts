@@ -12,10 +12,12 @@ import {
   type RoleProvider,
 } from './aiRole'
 
+/** Installed defaults to what is usable: the two only part where a machine says no. */
 const offer = (over: Partial<RoleOffer> = {}): RoleOffer => ({
   localModelIds: [],
   cloudIds: [],
   ...over,
+  installedModelIds: over.installedModelIds ?? over.localModelIds ?? [],
 })
 
 /** A cloud, named by an id the way every one of them is — never by a member of the union. */
@@ -173,5 +175,24 @@ describe('providerFor', () => {
     expect(
       providerFor(ASSISTANT_ROLE, second, offer({ localModelIds: ['llama', 'mistral'] })),
     ).toEqual({ kind: 'local', modelId: 'mistral' })
+  })
+
+  /**
+   * 🛑 A resident model makes the machine read as smaller than it is — nothing subtracts what it
+   * already occupies — so the verdict moves UNDER a running conversation. Dropping the choice then
+   * moved the next sentence to a billed cloud without a word.
+   */
+  it('honours a chosen model the machine has stopped calling comfortable', () => {
+    const chosen: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'local', modelId: 'llama' } }
+    const tight = offer({ localModelIds: [], installedModelIds: ['llama'], cloudIds: ['scenario'] })
+
+    expect(providerFor(ASSISTANT_ROLE, chosen, tight)).toEqual({ kind: 'local', modelId: 'llama' })
+  })
+
+  // Installed is not the same as present: a model uninstalled since is gone from both lists.
+  it('still falls back when the chosen model is not installed at all', () => {
+    const chosen: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'local', modelId: 'llama' } }
+
+    expect(providerFor(ASSISTANT_ROLE, chosen, offer({ cloudIds: ['scenario'] }))).toEqual(CLOUD)
   })
 })

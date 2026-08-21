@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelCandidate } from '@shared/domain/aiOverview'
 import type { AiRoleId } from '@shared/domain/aiRole'
-import { downloadBytesOf, type DownloadProgress } from '@shared/domain/localModel'
+import type { DownloadProgress } from '@shared/domain/localModel'
 import { fitAllowsDownload } from '@shared/domain/modelFit'
 import { taskRatio } from '@shared/domain/taskProgress'
 import { ProgressBar } from '@/design/ProgressBar'
@@ -43,7 +43,7 @@ export const AiCandidateRow = memo(function AiCandidateRow({
   const cancelAiInstall = useAiModels(state => state.cancelAiInstall)
   const removeAiModel = useAiModels(state => state.removeAiModel)
 
-  const size = bytes(downloadBytesOf(candidate.model))
+  const size = bytes(candidate.model.diskBytes)
 
   return (
     <AiChoiceRow

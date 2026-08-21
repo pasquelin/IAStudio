@@ -44,6 +44,7 @@ const input = (over: Partial<OverviewInput> = {}): OverviewInput => ({
   projectPath: null,
   modelsFor: role => (role === DICTATION_ROLE ? [PARAKEET] : []),
   isInstalled: () => true,
+  runtimeReady: () => true,
   readyClouds: [],
   installing: null,
   ...over,

@@ -1,5 +1,5 @@
 import type { Compatibility, MemorySnapshot } from './aiMemory'
-import { downloadBytesOf, modelRefusalOf, type LocalModel } from './localModel'
+import { modelRefusalOf, type LocalModel } from './localModel'
 
 /**
  * How a model stands against THIS machine — the verdict a manager shows on every candidate.
@@ -13,6 +13,14 @@ export type MachineOffer = {
   readonly snapshot: MemorySnapshot
   readonly diskFreeBytes: number | null
   readonly installed: boolean
+  /**
+   * Whether the runtime that would host this model is answering.
+   *
+   * Its own field rather than folded into `installed`: a runtime the studio does not start —
+   * Ollama is one — leaves a model that is perfectly compatible with nowhere to run, and the two
+   * ask for opposite gestures. Always true for a loader the application ships with.
+   */
+  readonly runtimeReady: boolean
 }
 
 /**
@@ -22,16 +30,20 @@ export type MachineOffer = {
  * that is full as much as for a machine that is small, and a screen that explained the second
  * where the first is true would be telling the person to free the wrong thing.
  */
-export type FitObstacle = 'refused' | 'disk' | 'memory' | 'tight'
+export type FitObstacle = 'refused' | 'runtime' | 'disk' | 'memory' | 'tight'
 
 /** The one decision the verdict and the sentence beside it both read, so neither can drift. */
 export function fitObstacleOf(model: LocalModel, offer: MachineOffer): FitObstacle | null {
   if (modelRefusalOf(model) !== null) return 'refused'
 
+  // Before the disk and before the memory: neither figure changes anything while the runtime that
+  // would hold the model is not answering, and what it asks for is a different gesture entirely.
+  if (!offer.runtimeReady) return 'runtime'
+
   // Disk is checked before memory, and only when the model is not already here: a model that will
   // not fit on the disk cannot be tried at all, whatever the memory says.
   if (!offer.installed && offer.diskFreeBytes !== null) {
-    if (offer.diskFreeBytes < downloadBytesOf(model)) return 'disk'
+    if (offer.diskFreeBytes < model.diskBytes) return 'disk'
   }
 
   if (model.reservationBytes > offer.snapshot.availableBytes) return 'memory'
@@ -43,8 +55,13 @@ export function fitObstacleOf(model: LocalModel, offer: MachineOffer): FitObstac
   return null
 }
 
+/**
+ * `runtime` reads as `incompatible`, and that is the point of `FitObstacle` existing: the verdict
+ * says the studio cannot run this here and now, and only the obstacle can name what to do about it.
+ */
 const VERDICT: Record<FitObstacle, Compatibility> = {
   refused: 'incompatible',
+  runtime: 'incompatible',
   disk: 'insufficient-memory',
   memory: 'insufficient-memory',
   tight: 'slow',
@@ -79,9 +96,10 @@ export function fitAllowsUse(fit: Compatibility): boolean {
 
 /**
  * Whether fetching the weights is worth the disk. A machine too small today may not be tomorrow,
- * so `memory` and `tight` still download; a pair the whitelist refuses never loads, and a disk
- * MEASURED too full now would take the fetch to `ENOSPC`.
+ * so `memory` and `tight` still download; a pair the whitelist refuses never loads, a disk
+ * MEASURED too full now would take the fetch to `ENOSPC`, and a runtime that pulls its own weights
+ * has to be answering for anything to be asked of it at all.
  */
 export function fitAllowsDownload(obstacle: FitObstacle | null): boolean {
-  return obstacle !== 'refused' && obstacle !== 'disk'
+  return obstacle !== 'refused' && obstacle !== 'runtime' && obstacle !== 'disk'
 }

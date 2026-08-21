@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { MemorySnapshot, MemorySource } from './aiMemory'
 import type { LocalModel } from './localModel'
+import { localModel } from './localModel-fixtures'
 import { fitAllowsUse, fitObstacleOf, fitOf, type MachineOffer } from './modelFit'
 
 const GIGA = 1_000_000_000
@@ -17,24 +18,15 @@ const snapshot = (availableBytes: number, source: MemorySource = 'runtime'): Mem
   availableBytes,
 })
 
-const model = (over: Partial<LocalModel> = {}): LocalModel => ({
-  id: 'llama',
-  name: 'Llama 3.2 3B',
-  format: 'gguf',
-  loader: 'ollama',
-  rank: 1,
-  licence: 'LLAMA-3.2',
-  licenceUrl: 'https://example.invalid/licence',
-  source: 'https://example.invalid/model',
-  files: [{ role: 'weights', name: 'w.gguf', url: 'https://x/w', bytes: 2 * GIGA, sha256: 'a' }],
-  reservationBytes: 4 * GIGA,
-  ...over,
-})
+/** A model that weighs two gigabytes and reserves four, whatever else the fixture defaults to. */
+const model = (over: Partial<LocalModel> = {}): LocalModel =>
+  localModel({ diskBytes: 2 * GIGA, reservationBytes: 4 * GIGA, ...over })
 
 const offer = (over: Partial<MachineOffer> = {}): MachineOffer => ({
   snapshot: snapshot(40 * GIGA),
   diskFreeBytes: 300 * GIGA,
   installed: false,
+  runtimeReady: true,
   ...over,
 })
 

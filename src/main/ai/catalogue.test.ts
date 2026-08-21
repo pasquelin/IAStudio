@@ -20,11 +20,34 @@ describe('the shipped catalogue', () => {
     expect(shippedModelsFor(DICTATION_ROLE)).toEqual([STT_MODEL])
   })
 
-  // Measured rather than a gap: the assistant has no shipped model because the studio cannot yet
-  // install one — `ollama pull` works, the adapter that asks for it does not exist.
-  it('offers nothing for a role it cannot install for', () => {
-    expect(shippedModelsFor(ASSISTANT_ROLE)).toEqual([])
-    expect(rolesWithLocalOption()).toEqual([DICTATION_ROLE])
+  it('serves a model this machine can run to the assistant', () => {
+    expect(shippedModelsFor(ASSISTANT_ROLE).map(model => model.loader)).toEqual(['ollama'])
+    expect(rolesWithLocalOption()).toEqual([DICTATION_ROLE, ASSISTANT_ROLE])
+  })
+
+  /**
+   * The figure a disk verdict and the size on screen are both read from. A model that ships a file
+   * list must agree with it — `diskBytes` is declared rather than summed only because a
+   * runtime-pulled model has no list here, and the two must not drift for the ones that do.
+   */
+  it('declares on disk exactly what the files it ships weigh', () => {
+    const drifted = shippedModels()
+      .filter(model => model.files.length > 0)
+      .filter(model => model.diskBytes !== model.files.reduce((sum, file) => sum + file.bytes, 0))
+
+    expect(drifted).toEqual([])
+  })
+
+  /**
+   * A conversation needs a window, and the brain reads it to decide what to trim. Without one it
+   * would fall back on Ollama's own 2048, and the studio's preamble would be cut from the HEAD.
+   */
+  it('gives every model that answers the assistant a context window', () => {
+    const windowless = shippedModelsFor(ASSISTANT_ROLE).filter(
+      model => model.contextTokens === undefined,
+    )
+
+    expect(windowless).toEqual([])
   })
 
   it('finds a model by the id its manifest carries', () => {
