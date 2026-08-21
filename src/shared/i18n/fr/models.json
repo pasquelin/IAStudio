@@ -106,6 +106,7 @@
     "none": "Aucun compte pour l’instant. Ajoutez une clé API pour accéder à la bibliothèque distante.",
     "switch": "Compte : {{name}}",
     "switchHint": "Choisir la clé API sur laquelle générer, ou en ajouter une",
+    "connectedClouds": "{{count, number}} services connectés",
     "scopeProject": "Retenu pour le projet {{project}}",
     "scopeApp": "Aucun projet ouvert — ce choix vaut pour le studio",
     "manage": "Gérer les comptes…",

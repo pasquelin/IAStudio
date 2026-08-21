@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MachineSummary, ModelCandidate } from '@shared/domain/aiOverview'
-import { fitAllowsUse, type FitObstacle } from '@shared/domain/modelFit'
+import type { FitObstacle } from '@shared/domain/modelFit'
 import { useBytes } from './useBytes'
 
 /**
@@ -61,10 +61,9 @@ export function useModelFit(
               }),
             })
 
-      // No note on this one: the verdict already names what stands in the way.
-      if (!fitAllowsUse(candidate.fit)) return { verdict, note: undefined, usable: false }
-      // Storable, but it would serve nothing: `providerFor` only hands a role a model that is
-      // both installed and usable, so a choice made here would fall back without a word.
+      // 🛑 The verdict INFORMS and never locks: what this machine can hold is the person's call,
+      // and a row they cannot click is a row that decided for them. Only "not here yet" stops a
+      // choice, because there is nothing to choose.
       if (!candidate.installed) {
         return { verdict, note: t('aiModels.notInstalledYet'), usable: false }
       }

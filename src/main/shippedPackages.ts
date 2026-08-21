@@ -24,6 +24,7 @@ export const SHIPPED: string[] = [
   'electron-updater',
   'fflate',
   'mediabunny',
+  'node-llama-cpp',
   'opentype.js',
   'pixi.js',
   'sherpa-onnx-node',

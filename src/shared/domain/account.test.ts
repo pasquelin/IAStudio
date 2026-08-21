@@ -4,10 +4,11 @@ import {
   checkAccountName,
   type AccountSummary,
 } from '@shared/domain/account'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 
 const existing: AccountSummary[] = [
-  { id: 'a', name: 'Studio', active: true },
-  { id: 'b', name: 'Client X', active: false },
+  { id: 'a', name: 'Studio', providerId: SCENARIO_CLOUD, active: true },
+  { id: 'b', name: 'Client X', providerId: SCENARIO_CLOUD, active: false },
 ]
 
 describe('checkAccountName', () => {

@@ -1,3 +1,6 @@
+import type { LocalFieldOverrides, LocalModality } from './localFields'
+import type { ModelFamily } from './model'
+
 /**
  * What a local model declares about itself — see
  * `docs/ci/adr/ADR-20-surface-de-confiance-des-poids.md`.
@@ -30,6 +33,17 @@ export type ModelFile = {
   readonly url: string
   readonly bytes: number
   readonly sha256: string
+  /**
+   * The commit the URL is pinned to. `/resolve/main/` is MUTABLE — a repository owner can push a
+   * different file behind the same address, and the digest then refuses a download nobody broke.
+   */
+  readonly revision?: string
+  /**
+   * Where the weights are published, when the file is fetched from a MIRROR. A third party's
+   * `license:` field is not a licence: what governs is the upstream one, and this is what says
+   * which upstream. Absent when the file comes from the publisher itself.
+   */
+  readonly upstream?: string
 }
 
 export type LocalModel = {
@@ -72,10 +86,26 @@ export type LocalModel = {
   /**
    * What it is expected to take once loaded. A RESERVATION, never a measured peak — R3 of ADR-19.
    *
-   * Measured 2026-08-21 on the case that proves the gap: `llama3.2:3b` weighs 2.02 GB on disk and
-   * the runtime reports 4.03 GB loaded, 8.21 GB at a 8192 context.
+   * `[?]` for every catalogue entry but the recognition model: the figures come from what a
+   * publisher announces, not from a runtime this studio has asked. The verdict says `unknown`
+   * where no runtime answered, which is the honest reading of an unmeasured number.
    */
   readonly reservationBytes: number
+  /**
+   * The space this model serves, when it serves one. Absent for a model that answers a ROLE —
+   * the assistant and dictation belong to no space, and never appear in the Models panel.
+   */
+  readonly family?: ModelFamily
+  /** What it does within its family, in the vocabulary `CAPABILITIES_BY_FAMILY` already uses. */
+  readonly capabilities?: readonly string[]
+  /** Which form it offers. A modality, never a model: see `localFields.ts`. */
+  readonly modality?: LocalModality
+  /** What this entry disagrees with in its modality's form — bounds and defaults only. */
+  readonly fieldOverrides?: LocalFieldOverrides
+  /** Shipped beside the catalogue, so a card draws with no network and no dead link. */
+  readonly thumbnail?: string
+  /** One line under the name, in the publisher's words. Data, not a word of the interface. */
+  readonly summary?: string
 }
 
 /** Bytes across the whole model, not within the file being fetched. */

@@ -61,13 +61,13 @@ import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import { createAiManager, type AiManager } from './ai/manager'
 import { shippedModel } from './ai/catalogue'
 import { electronHardwarePort } from './ai/electronHardwarePort'
-import { electronOllamaPort } from './ai/electronOllamaPort'
+import { electronLlamaPort } from './ai/electronLlamaPort'
+import { llamaLocalRuntime } from './ai/llamaRuntime'
 import { hardwareProbe, probeSnapshot } from './ai/hardwareProbe'
 import { readyCloudsOf } from './ai/cloudReadiness'
 import { fileRuntime, type LocalRuntimes } from './ai/localRuntimes'
 import { fetchModel, modelIsComplete } from './ai/modelInstall'
 import { createDownloadHost, defaultModelFolder, ensureFolder } from './ai/modelStore'
-import { createOllamaClient, ollamaLocalRuntime } from './ai/ollamaRuntime'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
 import { openSttProcess } from './dictation/sttProcess'
 import { adoptFile } from './media/adoptFile'
@@ -1083,24 +1083,33 @@ export function createServices(settings: SettingsStore): Services {
    * table: a runtime that installs but cannot converse, or the reverse, would otherwise read as
    * ready on one side and be unreachable on the other.
    */
+  // One folder for the whole catalogue: the manifests name their own files, so two models sharing
+  // a file name would read as installed. Shared by every runtime whose weights the studio fetches.
+  const fetchedFiles = fileRuntime({
+    folderFor: () => modelFolder(),
+    isComplete: (model, folder) => modelIsComplete(downloads, model, folder),
+    fetch: async (model, folder, onProgress, signal) => {
+      await ensureFolder(folder)
+      // Nothing sweeps the `.part` files first, and that is the point: an interrupted download
+      // resumes from what already arrived. A leftover that is not a prefix of what is being
+      // fetched cannot survive anyway — it fails its digest and is removed there.
+      await fetchModel(downloads, model, { folder, onProgress, signal })
+    },
+    removeFiles: async (model, folder) => {
+      for (const file of model.files) await rm(join(folder, file.name), { force: true })
+    },
+  })
+
   const runtimes: LocalRuntimes = {
-    'sherpa-onnx': fileRuntime({
-      // One folder for the whole catalogue, which holds while it holds ONE fetched model: the
-      // manifests name their own files, so a second sharing a file name would read as installed.
-      folderFor: () => modelFolder(),
-      isComplete: (model, folder) => modelIsComplete(downloads, model, folder),
-      fetch: async (model, folder, onProgress, signal) => {
-        await ensureFolder(folder)
-        // Nothing sweeps the `.part` files first, and that is the point: an interrupted download
-        // resumes from what already arrived. A leftover that is not a prefix of what is being
-        // fetched cannot survive anyway — it fails its digest and is removed there.
-        await fetchModel(downloads, model, { folder, onProgress, signal })
-      },
-      removeFiles: async (model, folder) => {
-        for (const file of model.files) await rm(join(folder, file.name), { force: true })
-      },
+    'sherpa-onnx': fetchedFiles,
+    llamacpp: llamaLocalRuntime({
+      files: fetchedFiles,
+      // The FIRST file: a split GGUF names its shards `-00001-of-0000N`, and llama.cpp is handed
+      // the first one and finds the rest beside it.
+      weightsOf: model => join(modelFolder(), model.files[0]?.name ?? ''),
+      port: electronLlamaPort(),
+      modelOf: shippedModel,
     }),
-    ollama: ollamaLocalRuntime(createOllamaClient(electronOllamaPort())),
   }
 
   const ai = createAiManager({

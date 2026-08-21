@@ -17,13 +17,16 @@ export type CloudProvider = {
   readonly standalone: readonly AiRoleId[]
 }
 
+/** The one cloud the studio was built on: a stored key written before clouds were a list is one. */
+export const SCENARIO_CLOUD: CloudProviderId = 'scenario'
+
 /**
  * The registry, and the ONE place a cloud is named. `[M]` Scenario serves generation — the
  * catalogue this studio is built on — and the assistant, which runs on `model_scenario-llm`, an
  * ordinary model of it. Dictation is absent: nothing here turns speech into text off this machine.
  */
 export const CLOUD_PROVIDERS: readonly CloudProvider[] = [
-  { id: 'scenario', families: MODEL_FAMILIES, standalone: [ASSISTANT_ROLE] },
+  { id: SCENARIO_CLOUD, families: MODEL_FAMILIES, standalone: [ASSISTANT_ROLE] },
 ]
 
 export const CLOUD_IDS: readonly CloudProviderId[] = CLOUD_PROVIDERS.map(one => one.id)

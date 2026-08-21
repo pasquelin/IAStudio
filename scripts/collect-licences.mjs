@@ -199,23 +199,34 @@ function modelLicences() {
       ].join('\n'),
       sources: 'https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3',
     },
-    {
-      name: 'Llama 3.2 3B',
-      version: 'Q4_K_M',
-      spdx: 'LicenseRef-Llama-3.2-Community',
-      text: [
-        'The language model the assistant runs on when it runs on this machine. It is NOT',
-        'shipped with the application and its bytes never pass through it: Ollama pulls it on',
-        'request, into its own store, and `ollama rm llama3.2:3b` removes it.',
-        '',
-        'Built with Llama. Created by Meta, and quantised and republished by the Ollama project.',
-        '',
-        'The licence is not on the SPDX list, hence the LicenseRef. Full terms:',
-        'https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/LICENSE',
-      ].join('\n'),
-      sources: 'https://ollama.com/library/llama3.2',
-    },
+    ...qwenLicences(),
   ]
+}
+
+/**
+ * The assistant's models, one notice per catalogue entry. Apache-2.0 asks for the notice wherever
+ * the work is used, and these are downloaded rather than shipped — the licence travels all the same.
+ *
+ * Spelled from the same list the catalogue holds, so a fifth entry cannot ship without its line:
+ * `catalogue.test.ts` confronts `shippedModels()` with what this writes.
+ */
+function qwenLicences() {
+  const sizes = ['0.5B', '1.5B', '7B', '14B']
+
+  return sizes.map(size => ({
+    name: `Qwen2.5 ${size} Instruct`,
+    version: 'Q4_K_M',
+    spdx: 'Apache-2.0',
+    text: [
+      `The language model the assistant runs on when it runs on this machine, in its ${size} size.`,
+      'It is NOT shipped with the application: it is fetched on request into the user data folder,',
+      'against a published digest, and removed from the model manager.',
+      '',
+      'Copyright the Qwen team, Alibaba Cloud. Licensed under the Apache License, Version 2.0.',
+      'Full terms: https://www.apache.org/licenses/LICENSE-2.0',
+    ].join('\n'),
+    sources: `https://huggingface.co/Qwen/Qwen2.5-${size}-Instruct-GGUF`,
+  }))
 }
 
 /**

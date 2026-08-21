@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { isCloudProviderId } from '@shared/domain/aiCloud'
+import { isCloudProviderId, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import type { RoleProvider } from '@shared/domain/aiRole'
 import { ASSISTANT_MODELS } from '@shared/domain/assistant'
 import { LANGUAGE_PREFERENCES } from '@shared/i18n/languages'
@@ -360,23 +360,32 @@ const storedAccount = z.object({
   id: accountId,
   name: accountName,
   credentials: storedCredentials,
+  // Absent on every key written before clouds became a list, and `providerOf` reads that absence
+  // as Scenario — which is why no stored file has to be rewritten.
+  providerId: z.string().min(1).optional(),
 })
 
 const storedBook = z.object({
   // `catch` per entry rather than on the array: one unreadable account costs its own row, not
   // every key the user holds.
   accounts: z.array(storedAccount.nullable().catch(null)),
-  // Caught for the same reason as an entry: a corrupt `activeId` must cost the pointer, not
-  // the whole book.
-  activeId: z.string().min(1).nullable().catch(null),
+  // The shape written since clouds became a list. Caught like an entry: a corrupt pointer costs
+  // the pointer, not the whole book.
+  activeByProvider: z.record(z.string().min(1), z.string().min(1)).catch({}).optional(),
+  // What the same file held before. Read only to be MIGRATED below — never written again.
+  activeId: z.string().min(1).nullable().catch(null).optional(),
 })
 
 /**
  * Reads a book back from disk, keeping whatever still parses — and repairing nothing.
  *
  * The repair is `settleBook`, and it runs one step later, inside `withEnvironment`. It has to:
- * the `activeId` on disk may well name the development account, which lives in a file and not
- * in this blob, and repointing it here would send every launch to the wrong key.
+ * the choice on disk may well name the development account, which lives in a file and not in this
+ * blob, and repointing it here would send every launch to the wrong key.
+ *
+ * A book written before clouds became a list carries `activeId` and no `providerId` anywhere: its
+ * pointer is read as Scenario's, which is what it always was. Nothing is rewritten until the next
+ * write, and `settleBook` repairs whatever the migration could not name.
  *
  * Null means the blob is not a book at all, which is what tells the caller to look for a lone
  * pair to migrate instead.
@@ -385,8 +394,10 @@ export function parseStoredAccounts(plain: string): AccountBook | null {
   const parsed = storedBook.safeParse(JSON.parse(plain))
   if (!parsed.success) return null
 
+  const migrated = parsed.data.activeId ? { [SCENARIO_CLOUD]: parsed.data.activeId } : {}
+
   return {
     accounts: parsed.data.accounts.filter(entry => entry !== null),
-    activeId: parsed.data.activeId,
+    activeByProvider: parsed.data.activeByProvider ?? migrated,
   }
 }

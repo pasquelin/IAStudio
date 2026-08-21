@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import type { ModelCandidate } from '@shared/domain/aiOverview'
 import type { AiRoleId } from '@shared/domain/aiRole'
 import type { DownloadProgress } from '@shared/domain/localModel'
-import { fitAllowsDownload } from '@shared/domain/modelFit'
 import { taskRatio } from '@shared/domain/taskProgress'
 import { ProgressBar } from '@/design/ProgressBar'
 import { HINT_LEFT } from '@/helpers/tooltip'
@@ -83,17 +82,17 @@ export const AiCandidateRow = memo(function AiCandidateRow({
           {t('aiModels.remove')}
         </button>
       ) : (
-        fitAllowsDownload(candidate.obstacle) && (
-          <button
-            type="button"
-            {...HINT_LEFT(t('aiModels.installHint', { size }))}
-            className="btn btn-sm"
-            disabled={busy}
-            onClick={() => void installAiModel(candidate.model.id)}
-          >
-            {t('aiModels.install')}
-          </button>
-        )
+        // Offered whatever the machine thinks of it: hiding the button decided for the person, and
+        // a download that will not fit says so when it fails rather than never being offered.
+        <button
+          type="button"
+          {...HINT_LEFT(t('aiModels.installHint', { size }))}
+          className="btn btn-sm"
+          disabled={busy}
+          onClick={() => void installAiModel(candidate.model.id)}
+        >
+          {t('aiModels.install')}
+        </button>
       )}
     </AiChoiceRow>
   )

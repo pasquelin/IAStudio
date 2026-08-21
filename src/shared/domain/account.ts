@@ -5,6 +5,12 @@
 export type AccountSummary = {
   id: string
   name: string
+  /**
+   * Which cloud the key opens — the switch groups by it, and one key is active per group.
+   * Absent means `scenario`, the same reading `StoredAccount.providerId` gives its own absence.
+   */
+  providerId?: string
+  /** Active FOR ITS CLOUD. Two providers each have one, and they are not exclusive. */
   active: boolean
   /**
    * Whether the studio may rename or remove it. A window is told the permission and not where

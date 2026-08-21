@@ -7,6 +7,21 @@
     "scenario": "Scenario",
     "scenarioHint": "Generates on Scenario’s servers. Nothing to install."
   },
+  "localFields": {
+    "prompt": "Description",
+    "negativePrompt": "Avoid",
+    "seed": "Seed",
+    "seedHelp": "The same number gives the same image back. Leave it empty to vary.",
+    "temperature": "Temperature",
+    "temperatureHelp": "Low, the model plays safe. High, it takes more chances.",
+    "topP": "Top-p",
+    "maxTokens": "Maximum length",
+    "width": "Width",
+    "height": "Height",
+    "steps": "Steps",
+    "stepsHelp": "More steps refine the image and lengthen the computation.",
+    "cfgScale": "Faithfulness to the description"
+  },
   "aiModels": {
     "reading": "Reading the machine…",
     "empty": "No employment has a provider to offer on this machine.",

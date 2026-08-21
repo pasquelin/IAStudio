@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { AccountFailure, AccountsResult, AccountSummary } from '@shared/domain/account'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import type { StudioBridge } from '@shared/ipc'
 import { connectThroughBridge, getBridge } from '@/services/bridge'
 import { useSettings } from './settings'
@@ -21,6 +22,24 @@ type AccountsState = {
 
 export function activeAccount(accounts: readonly AccountSummary[]): AccountSummary | null {
   return accounts.find(account => account.active) ?? null
+}
+
+/**
+ * The keys, grouped by the cloud they open, in the order the accounts arrive. One key is active
+ * per group and they are not exclusive: Scenario serves images while another cloud serves text.
+ */
+export function accountsByProvider(
+  accounts: readonly AccountSummary[],
+): readonly { providerId: string; accounts: readonly AccountSummary[] }[] {
+  const groups = new Map<string, AccountSummary[]>()
+  for (const account of accounts) {
+    const provider = account.providerId ?? SCENARIO_CLOUD
+    const held = groups.get(provider)
+    if (held) held.push(account)
+    else groups.set(provider, [account])
+  }
+
+  return [...groups].map(([providerId, held]) => ({ providerId, accounts: held }))
 }
 
 /**

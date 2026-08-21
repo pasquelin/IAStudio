@@ -28,12 +28,16 @@ The terms below govern these components. They are not affected by the licence of
 | IBM Plex Serif | shipped with the application | OFL-1.1 |
 | immer | 11.1.16 | MIT |
 | Lato | shipped with the application | OFL-1.1 |
-| Llama 3.2 3B | Q4_K_M | LicenseRef-Llama-3.2-Community |
 | mediabunny | 1.53.1 | MPL-2.0 |
+| node-llama-cpp | 3.20.0 | MIT |
 | ONNX Runtime | 1.27.0 | MIT |
 | opentype.js | 2.0.0 | MIT |
 | Parakeet TDT 0.6b v3 | int8 | CC-BY-4.0 |
 | pixi.js | 8.19.0 | MIT |
+| Qwen2.5 0.5B Instruct | Q4_K_M | Apache-2.0 |
+| Qwen2.5 1.5B Instruct | Q4_K_M | Apache-2.0 |
+| Qwen2.5 14B Instruct | Q4_K_M | Apache-2.0 |
+| Qwen2.5 7B Instruct | Q4_K_M | Apache-2.0 |
 | react | 19.2.8 | MIT |
 | react-dom | 19.2.8 | MIT |
 | react-hook-form | 7.85.0 | MIT |
@@ -833,27 +837,6 @@ DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
-## Llama 3.2 3B
-
-Version: Q4_K_M  
-Licence: LicenseRef-Llama-3.2-Community
-
-Corresponding sources:
-
-```
-https://ollama.com/library/llama3.2
-```
-
-```
-The language model the assistant runs on when it runs on this machine. It is NOT
-shipped with the application and its bytes never pass through it: Ollama pulls it on
-request, into its own store, and `ollama rm llama3.2:3b` removes it.
-
-Built with Llama. Created by Meta, and quantised and republished by the Ollama project.
-
-The licence is not on the SPDX list, hence the LicenseRef. Full terms:
-https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/LICENSE
-```
 ## mediabunny
 
 Version: 1.53.1  
@@ -1240,6 +1223,34 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   This Source Code Form is "Incompatible With Secondary Licenses", as
   defined by the Mozilla Public License, v. 2.0.
 ```
+## node-llama-cpp
+
+Version: 3.20.0  
+Licence: MIT
+
+```
+MIT License
+
+Copyright (c) 2023 Gilad S.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
 ## ONNX Runtime
 
 Version: 1.27.0  
@@ -1334,6 +1345,82 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+```
+## Qwen2.5 0.5B Instruct
+
+Version: Q4_K_M  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF
+```
+
+```
+The language model the assistant runs on when it runs on this machine, in its 0.5B size.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright the Qwen team, Alibaba Cloud. Licensed under the Apache License, Version 2.0.
+Full terms: https://www.apache.org/licenses/LICENSE-2.0
+```
+## Qwen2.5 1.5B Instruct
+
+Version: Q4_K_M  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF
+```
+
+```
+The language model the assistant runs on when it runs on this machine, in its 1.5B size.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright the Qwen team, Alibaba Cloud. Licensed under the Apache License, Version 2.0.
+Full terms: https://www.apache.org/licenses/LICENSE-2.0
+```
+## Qwen2.5 14B Instruct
+
+Version: Q4_K_M  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/Qwen/Qwen2.5-14B-Instruct-GGUF
+```
+
+```
+The language model the assistant runs on when it runs on this machine, in its 14B size.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright the Qwen team, Alibaba Cloud. Licensed under the Apache License, Version 2.0.
+Full terms: https://www.apache.org/licenses/LICENSE-2.0
+```
+## Qwen2.5 7B Instruct
+
+Version: Q4_K_M  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF
+```
+
+```
+The language model the assistant runs on when it runs on this machine, in its 7B size.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright the Qwen team, Alibaba Cloud. Licensed under the Apache License, Version 2.0.
+Full terms: https://www.apache.org/licenses/LICENSE-2.0
 ```
 ## react
 

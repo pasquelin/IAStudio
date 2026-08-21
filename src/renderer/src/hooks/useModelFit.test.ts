@@ -47,14 +47,19 @@ describe('useModelFit', () => {
     expect(fitFor(candidate('insufficient-memory', 'memory')).verdict).toMatch(/mémoire/)
   })
 
-  // Nothing is hidden and everything is explained: a row that cannot be picked always carries
-  // its reason, in the verdict itself or in the note under it.
-  it('never leaves a row unpickable without saying why', () => {
+  // 🛑 The verdict informs, it never locks — decided 21/08. A model this machine judges badly is
+  // still pickable, WITH its reason: what the machine can hold is the person's call.
+  it('leaves a badly judged model pickable, and says why it is judged badly', () => {
     const refused = fitFor(candidate('incompatible', 'refused'))
+
+    expect(refused.usable).toBe(true)
+    expect(refused.verdict).toMatch(/provenance/)
+  })
+
+  // The one thing that still cannot be picked, because there is nothing to pick yet.
+  it('leaves a model that is not here unpickable, and says so', () => {
     const missing = fitFor(candidate('compatible', null, false))
 
-    expect(refused.usable).toBe(false)
-    expect(refused.verdict).toMatch(/provenance/)
     expect(missing.usable).toBe(false)
     expect(missing.note).toMatch(/installer/)
   })

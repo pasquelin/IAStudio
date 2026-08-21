@@ -5,6 +5,7 @@ import {
   type AccountFailure,
   type AccountSummary,
 } from '@shared/domain/account'
+import { SCENARIO_CLOUD, type CloudProviderId } from '@shared/domain/aiCloud'
 
 export type Credentials = {
   key: string
@@ -28,18 +29,31 @@ export type StoredAccount = {
   credentials: Credentials
   /** Absent means `keychain`: that is what every account read back from the store is. */
   origin?: AccountOrigin
+  /**
+   * Which cloud the key opens. Absent means `scenario` — every key written before clouds became a
+   * list is one, so the migration is the absence itself and no file has to be rewritten.
+   */
+  providerId?: CloudProviderId
 }
 
 const isEnvironment = (account: StoredAccount): boolean => account.origin === 'environment'
 
-/** Every account the studio holds, and which one its calls go through. */
+const providerOf = (account: StoredAccount): CloudProviderId => account.providerId ?? SCENARIO_CLOUD
+
+/**
+ * Every account the studio holds, and which one its calls go through PER CLOUD.
+ *
+ * One active key per provider rather than one overall: Scenario serves images and another cloud
+ * might serve text, so making them exclusive would lose one the moment the other is picked. A
+ * generation is billed to a key, and the key is chosen by the model — never by a global mode.
+ */
 export type AccountBook = {
   accounts: readonly StoredAccount[]
-  /** Null when the book is empty. Always names a held account otherwise. */
-  activeId: string | null
+  /** Provider id to account id. A provider with no entry has no active key. */
+  activeByProvider: Readonly<Record<string, string>>
 }
 
-export const EMPTY_BOOK: AccountBook = { accounts: [], activeId: null }
+export const EMPTY_BOOK: AccountBook = { accounts: [], activeByProvider: {} }
 
 /** Carries the reason as a code: a handler translates it, it is never shown as written. */
 export class AccountError extends Error {
@@ -53,14 +67,24 @@ export function summariesOf(book: AccountBook): AccountSummary[] {
   return book.accounts.map(account => ({
     id: account.id,
     name: account.name,
-    active: account.id === book.activeId,
+    // Absent for Scenario, exactly as the stored account leaves it absent: the reader defaults the
+    // same way, and every summary carrying a field nobody set would be noise on the wire.
+    ...(account.providerId ? { providerId: account.providerId } : {}),
+    active: book.activeByProvider[providerOf(account)] === account.id,
     // Absent rather than false: an ordinary account is not "one that is not read-only".
     ...(isEnvironment(account) ? { readOnly: true } : {}),
   }))
 }
 
+/** The key in force for one cloud. `null` when none of its accounts is active, or it holds none. */
+function credentialsFor(book: AccountBook, provider: CloudProviderId): Credentials | null {
+  const id = book.activeByProvider[provider]
+  return book.accounts.find(account => account.id === id)?.credentials ?? null
+}
+
+/** The Scenario key, which is what every call written before clouds became a list still means. */
 export function activeCredentials(book: AccountBook): Credentials | null {
-  return book.accounts.find(account => account.id === book.activeId)?.credentials ?? null
+  return credentialsFor(book, SCENARIO_CLOUD)
 }
 
 /**
@@ -130,7 +154,15 @@ export function withoutEnvironment(book: AccountBook): AccountBook {
  */
 export function addAccount(book: AccountBook, account: StoredAccount): AccountBook {
   const accounts = [...book.accounts, { ...account, name: requireName(account.name, book) }]
-  return { accounts, activeId: book.activeId ?? account.id }
+  const provider = providerOf(account)
+  // Active only where its cloud had none: a second key must not redirect every call the moment it
+  // is saved — the user was configuring, not switching. The FIRST key of a cloud is different:
+  // without it that cloud has nothing at all.
+  const activeByProvider = book.activeByProvider[provider]
+    ? book.activeByProvider
+    : { ...book.activeByProvider, [provider]: account.id }
+
+  return { accounts, activeByProvider }
 }
 
 export function renameAccount(book: AccountBook, id: string, name: string): AccountBook {
@@ -150,15 +182,31 @@ export function renameAccount(book: AccountBook, id: string, name: string): Acco
  * left with no account at all while others are held would read as a broken sign-out.
  */
 export function removeAccount(book: AccountBook, id: string): AccountBook {
+  const provider = providerOf(requireHeld(book, id))
   requireWritable(book, id)
   const accounts = book.accounts.filter(account => account.id !== id)
 
-  return { accounts, activeId: book.activeId === id ? (accounts[0]?.id ?? null) : book.activeId }
+  if (book.activeByProvider[provider] !== id) return { ...book, accounts }
+
+  // Falls back inside its OWN cloud: being left with no key there while others are held would
+  // read as a broken sign-out, and a key of another cloud cannot answer for this one.
+  const successor = accounts.find(account => providerOf(account) === provider)
+  const rest = Object.fromEntries(
+    Object.entries(book.activeByProvider).filter(([key]) => key !== provider),
+  )
+
+  return {
+    accounts,
+    activeByProvider: successor ? { ...rest, [provider]: successor.id } : rest,
+  }
 }
 
 export function activateAccount(book: AccountBook, id: string): AccountBook {
-  requireHeld(book, id)
-  return { ...book, activeId: id }
+  const account = requireHeld(book, id)
+  return {
+    ...book,
+    activeByProvider: { ...book.activeByProvider, [providerOf(account)]: id },
+  }
 }
 
 /**
@@ -167,13 +215,19 @@ export function activateAccount(book: AccountBook, id: string): AccountBook {
  * the switch showed yesterday.
  */
 export function bookFromCredentials(credentials: Credentials, id: string): AccountBook {
-  return { accounts: [{ id, name: DEFAULT_ACCOUNT_NAME, credentials }], activeId: id }
+  return {
+    accounts: [{ id, name: DEFAULT_ACCOUNT_NAME, credentials }],
+    activeByProvider: { [SCENARIO_CLOUD]: id },
+  }
 }
 
 /**
- * Settles a book read back from disk: drops entries sharing an id, and repoints an `activeId`
- * that names nothing. Repairing beats refusing — the alternative is a studio that cannot reach
- * the API and cannot say which of its keys is at fault.
+ * Settles a book read back from disk: drops entries sharing an id, and repoints every choice that
+ * names nothing — or names a key of another cloud. Repairing beats refusing: the alternative is a
+ * studio that cannot reach the API and cannot say which of its keys is at fault.
+ *
+ * Every cloud that HOLDS a key ends up with an active one, which is what makes an absent entry
+ * mean "this cloud has no key" rather than "nothing was chosen yet".
  */
 export function settleBook(book: AccountBook): AccountBook {
   const seen = new Set<string>()
@@ -183,6 +237,18 @@ export function settleBook(book: AccountBook): AccountBook {
     return true
   })
 
-  const active = accounts.some(account => account.id === book.activeId)
-  return { accounts, activeId: active ? book.activeId : (accounts[0]?.id ?? null) }
+  const activeByProvider: Record<string, string> = {}
+  for (const account of accounts) {
+    const provider = providerOf(account)
+    if (activeByProvider[provider]) continue
+
+    const chosen = accounts.find(
+      candidate =>
+        candidate.id === book.activeByProvider[provider] && providerOf(candidate) === provider,
+    )
+    // The head of that cloud's own list, which is where `withEnvironment` puts the `.env` account.
+    activeByProvider[provider] = chosen?.id ?? account.id
+  }
+
+  return { accounts, activeByProvider }
 }
