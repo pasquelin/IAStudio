@@ -87,7 +87,7 @@ There are six kinds of document, one per workspace:
 
 ### 4. A **model**
 
-The distant program that makes things. There are several hundred in the Scenario catalogue, and
+The distant program that makes things. There are several hundred in the remote catalogue, and
 they cannot all do the same thing: one draws images from text, another turns an image into a 3D
 object, a third composes music.
 
@@ -109,7 +109,7 @@ It is the most important field in the generation form. A few principles, develop
 
 A request being made.
 
-You press **Generate**, and the request leaves for Scenario. It does not come straight back:
+You press **Generate**, and the request leaves for the provider. It does not come straight back:
 depending on the model, it takes anywhere from a few seconds to several minutes. Meanwhile, the
 request lives in the **status line**, at the bottom of the window, with a progress bar, and you can
 keep working — or cancel it.
@@ -141,7 +141,7 @@ below. You can hide one, move it up, move it down, delete it. That is what makes
 |---|---|
 | **A computer** | macOS, Windows or Linux |
 | **An internet connection** | to generate. To work on what you already have, no |
-| **A Scenario account** | with an API key and an API secret — see [First steps](02-first-steps.md) |
+| **An account with a generation provider** | with an API key and an API secret — see [First steps](02-first-steps.md) |
 
 **What you do not need**: to know how to draw, how to program, or what a neural network is. The
 studio is made to be driven, not understood.
@@ -152,9 +152,9 @@ studio is made to be driven, not understood.
 
 Better said now — it saves you looking.
 
-- **It does not work offline to generate.** The making happens on Scenario's servers. Without a
+- **It does not work offline to generate.** The making happens on the provider's servers. Without a
   connection you can open, edit, adjust and save, but not create new content.
-- **It is not free to use.** Every generation consumes credit on your Scenario account. The studio
+- **It is not free to use.** Every generation consumes credit on your remote account. The studio
   does not bill you — it only forwards — but your account does count.
 - **It does not replace Photoshop, Blender or Premiere.** It does a useful part of each, in one
   place, around generation. The chapter [What does not exist yet](18-limits.md) says exactly where

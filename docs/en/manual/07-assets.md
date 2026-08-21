@@ -13,7 +13,7 @@ It is the equivalent of a content browser — the library of raw material you dr
 
 **Where it sits: in the left column, upper half, in every workspace.** Under **Models** and
 **Generate**, with which it takes turns — the three panels that answer the same question, "what
-does Scenario offer me".
+does the provider offer me".
 
 Click its icon in the left rail to bring it forward: it is the third of the three, and the half
 opens on Models until you ask for something else.
@@ -147,7 +147,7 @@ asset itself:
 | **Rename** | opens the name on the thumbnail itself | all |
 | **Show in folder** | opens the file manager on the file | all |
 
-**Renaming changes the name in this project only** — the one on the Scenario account stays as it
+**Renaming changes the name in this project only** — the one on the remote account stays as it
 is. One asset is pulled into several projects and named for what each one does with it. The name
 can also be changed in the Inspector, by double-clicking the **Name** row, and in the Explorer.
 
@@ -288,7 +288,7 @@ manager, with the file already selected.
 
 ## Your account's library
 
-Your project is a folder on your disk. Your Scenario account has a library of its own, online.
+Your project is a folder on your disk. Your remote account has a library of its own, online.
 The two exist separately, and **nothing travels between them unless you ask**.
 
 > **"Asking" does not mean "asking from this shelf".** Two gestures made elsewhere send a picture

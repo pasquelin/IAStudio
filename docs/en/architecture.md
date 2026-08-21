@@ -36,7 +36,7 @@ Electron, three targets, one repository.
         │  main process         Node, full privilege  │
         │                                             │
         │  · API credentials, encrypted by the OS     │
-        │  · Scenario SDK client                      │
+        │  · provider SDK client                      │
         │  · JobManager — the only thing that polls   │
         │  · ModelRegistry — schemas → descriptors    │
         │  · SQLite catalogue, project folders        │
@@ -155,7 +155,7 @@ sides import it; neither can drift.
 renderer                    preload                  main
 ────────                    ───────                  ────
 getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
-  .scenario                 exposeInMainWorld       handlers derived from the channel
+  .provider                 exposeInMainWorld       handlers derived from the channel
   .searchModels(q)          contextBridge           returns typed data
 ```
 
@@ -166,7 +166,7 @@ Twenty-one prefixes, the busiest being:
 
 | Family | Count | What it carries |
 |---|---|---|
-| `scenario:*` | 13 | model search, model description, generation, job control |
+| `provider:*` | 13 | model search, model description, generation, job control |
 | `assets:*` / `cloud:*` | 9 + 6 | project catalogue, ingestion, and the account's library |
 | `dictation:*` | 8 | microphone permissions, model, recognition session |
 | `settings:*` / `accounts:*` | 6 + 5 | read, write, credentials, authentication state |
@@ -194,7 +194,7 @@ never handles a file path.
 
 ```
 src/main/
-├── scenario/
+├── provider/
 │   ├── client.ts            the @scenario-labs/sdk client, built from stored credentials
 │   ├── credentials.ts       reading, validating, and reporting auth state
 │   ├── modelRegistry.ts     GET /models/{id} → FieldDescriptor[]
@@ -213,7 +213,7 @@ src/main/
 │   ├── uploader.ts          sending a file up to the library
 │   ├── cost.ts              what a generation would cost, without running it
 │   ├── usage.ts             the units spent, and the price list
-│   └── handlers.ts          the scenario:* channels
+│   └── handlers.ts          the provider:* channels
 ├── project/
 │   ├── store.ts             create and open a project folder, read/write the manifest
 │   ├── catalog.ts           the SQLite asset index
@@ -667,12 +667,12 @@ a logo laid over it.
 
 ```
 1. user picks a model            Models panel → stores/models
-2. renderer asks for its schema  scenario:describe-model
+2. renderer asks for its schema  provider:describe-model
 3. main fetches it               GET /models/{id}
 4. ModelRegistry translates      JSON schema → FieldDescriptor[]
 5. DynamicForm renders it        react-hook-form + a zod schema built from the descriptors
-5b. the price shows up           scenario:estimate-cost → POST ?dryRun=true → 200 (402 as fallback)
-6. user submits                  scenario:generate
+5b. the price shows up           provider:estimate-cost → POST ?dryRun=true → 200 (402 as fallback)
+6. user submits                  provider:generate
 7. JobManager queues it          bounded concurrency
 8. it polls                      jobs.retrieve — 2 s is the FLOOR, not the rate
 9. progress flows back           evt:job-progress → status line
@@ -697,7 +697,7 @@ than written out, precisely so it cannot go quietly false the day one of them is
 **Step 5b reads a price out of two shapes of answer, because the reference and the server do not
 agree.** A `?dryRun=true` creates no job and spends nothing. The reference documents a **402**
 carrying `estimatedCost`; the server, observed on both endpoints, answers **200** with
-`creativeUnitsCost` beside an empty `job`. `main/scenario/cost.ts` reads both, the 200 first and
+`creativeUnitsCost` beside an empty `job`. `main/provider/cost.ts` reads both, the 200 first and
 the 402 as a fallback — a 500 or a dead network is thrown on, so it reaches the log like every
 other failure.
 
@@ -749,7 +749,7 @@ rewriting the path of a row nobody asked to move is the one failure a reconcilia
 have. `search` and `countByType` hide what is dated, so the trash — which dates rather than
 deletes — gives a whole row back if the file comes out of it.
 
-Assets are either `local` (a file in the project) or `cloud` (still only on Scenario). A local
+Assets are either `local` (a file in the project) or `cloud` (still only on the provider). A local
 image is served to the renderer as `ia-studio://<id>`.
 
 **Documents** are files filed wherever the user wants them — `documents/` is only where a
@@ -794,7 +794,7 @@ body that is not a montage.
 For the **image** the file is an OpenRaster container — a ZIP, no longer a folder. The main
 process packs and unpacks it: `mimetype` first and stored, `stack.xml`, the `mergedimage.png` the
 specification requires, one PNG per surface under `data/`, and the studio's own state under
-`scenario/`. The window produces the stack (a document's `content` IS that stack, as JSON) and
+`provider/`. The window produces the stack (a document's `content` IS that stack, as JSON) and
 the surfaces beside it, as bytes; the main process writes the syntax. **A listing reads only the
 first kilobytes of a container** — the studio envelope is written second and uncompressed, or
 listing a project would open a hundred megabytes per document.
@@ -1082,7 +1082,7 @@ into a tooltip.
 
 ### The one dictionary indexed on text, and why
 
-**The Scenario API has no notion of language** — no `Accept-Language`, no locale parameter on
+**The generation API has no notion of language** — no `Accept-Language`, no locale parameter on
 `models.retrieve`, nothing in the SDK. The text a model publishes for its own inputs ("Target
 size", "Max splat points", and the explanatory sentences under them) is therefore translated here
 or nowhere.
@@ -1094,7 +1094,7 @@ points" and leave its description in English right underneath.
 
 Three consequences, one of them to be accepted:
 
-- **a label changed on Scenario's side falls back to English** rather than failing.
+- **a label changed on the provider's side falls back to English** rather than failing.
   `normalizeModelText` absorbs what costs nothing to absorb — case, whitespace, typographic
   apostrophes and dashes, trailing punctuation — and the fallback is **the English sentence
   itself, never a key**. The worst case is the screen as it was, not a broken one;
@@ -1117,7 +1117,7 @@ together is a trap. `USAGE_ACTIONS` is what gets **billed**; `USAGE_EVENT_ACTION
 `assistant-message`). The two overlap by three quarters, hence **a single label table both read
 from** — so **one bundle key per
 value**, held by `bundles.test.ts` the way the PBR channels and the journal's scopes already are.
-An action Scenario adds without its line turns the guard red.
+An action the provider adds without its line turns the guard red.
 
 The rule that tells them apart:
 
@@ -1234,7 +1234,7 @@ would carve it into `out/`, and an `.asar` opens in a text editor.
 
 | Variable | Used by |
 |---|---|
-| `SCENARIO_API_KEY`, `SCENARIO_API_SECRET` | the API client, as a fallback |
+| `PROVIDER_API_KEY`, `PROVIDER_API_SECRET` | the API client, as a fallback |
 | `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | packaging only — never at runtime |
 
 Credentials saved in the settings **win** over the ones in `.env`. The file is a convenience for

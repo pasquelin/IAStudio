@@ -728,7 +728,7 @@ est dans la scène, pas là où il est dans son groupe.
 l’arbre de la scène, le nom et la place de chaque objet, les caméras et les lumières
 directionnelles, ponctuelles et coniques. Ce que le standard ne porte pas — la forme des
 primitives, les matières, les rails, les plans de caméra, l’animation — voyage dans le même
-fichier mais **n’est lu que par Scenario**. Rien ne se perd d’un enregistrement à l’autre ; ce qui
+fichier mais **n’est lu que par IA Studio**. Rien ne se perd d’un enregistrement à l’autre ; ce qui
 s’ouvre ailleurs est plus pauvre que ce que vous voyez ici.
 
 Un onglet dont le travail n’est pas encore écrit porte **un point** (`•`) à côté de son nom. Le
@@ -749,7 +749,7 @@ largeur de l’écran.
 
 ### Ce qu’un modèle apporte déjà
 
-Un personnage généré par Scenario — par un modèle *texte vers mouvement*, ou une capture depuis une
+Un personnage généré à distance — par un modèle *texte vers mouvement*, ou une capture depuis une
 vidéo — arrive avec ses **séquences d’animation** dans le fichier. Sélectionnez-le, et l’Inspecteur
 offre la section **Animation** :
 
@@ -856,13 +856,13 @@ Le bouton ouvre un petit volet, à côté de lui, avec deux réglages.
 | Réglage | Ce qu’il propose |
 |---|---|
 | **Type de personnage** | **Automatique**, **Humain**, **Animal**, **Autre** |
-| **Service** | **Automatique — le studio**, puis les services Scenario qui savent le faire |
+| **Service** | **Automatique — le studio**, puis les services distants qui savent le faire |
 
 **Le studio ne pose qu’un squelette HUMANOÏDE** — hanches, colonne, deux bras, deux jambes. Choisir
 **Animal** ou **Autre** affiche la raison et **grise Créer le squelette** : mieux vaut le dire que
 poser des hanches sur un cheval et vous laisser le découvrir.
 
-> **Les services Scenario sont listés, et aucun n’est choisissable aujourd’hui.** Chacun porte la
+> **Les services distants sont listés, et aucun n’est choisissable aujourd’hui.** Chacun porte la
 > raison qui l’en empêche — l’abonnement qui manque, la taille du modèle, ou qu’il n’est **pas
 > encore branché**. Le studio, lui, le fait **lui-même et gratuitement**, sans limite de taille :
 > c’est le sens d’« Automatique — le studio », et c’est ce que **Créer le squelette** lance.
@@ -881,7 +881,7 @@ déroule un volet sous lui, avec trois onglets.
 |---|---|
 | **Bibliothèque** | tout ce qui est déjà sous la main, en une seule liste : les séquences que le fichier du personnage porte, celles livrées avec le studio, et les animations rangées dans le projet |
 | **Import** | un fichier pris sur le disque — `.glb`, `.gltf`, `.fbx` |
-| **IA** | les modèles Scenario qui **fabriquent** un mouvement |
+| **IA** | les modèles distants qui **fabriquent** un mouvement |
 
 **L’onglet Bibliothèque n’est pas le panneau *Animations*** décrit plus bas, et les deux listes ne
 se valent pas : l’onglet compte une source de plus — les animations rangées dans le projet — et il

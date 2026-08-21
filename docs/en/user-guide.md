@@ -16,7 +16,7 @@ first appears, then repeated in the [glossary](manual/17-glossary.md).
 
 IA Studio is an application that installs on your computer. It can **make** images, videos,
 sounds, 3D objects, materials and skies — by asking artificial-intelligence models, online, at
-[Scenario](https://www.scenario.com). And it can then **assemble, adjust and file them**, on your
+a generation provider. And it can then **assemble, adjust and file them**, on your
 machine, without sending them anywhere.
 
 ---
@@ -73,7 +73,7 @@ image in your project.
 **1. Connect your account.**
 Open settings with `⌘,` (macOS) or `Ctrl+,` (Windows, Linux). Go to **Account**. Give the account a
 **name**, then paste your **API key** and **API secret**, taken from
-[app.scenario.com](https://app.scenario.com). Click **Add an account**: the studio checks them
+your provider's dashboard. Click **Add an account**: the studio checks them
 straight away and puts a green **In use** badge on the row.
 
 **2. Create a project.**
@@ -136,16 +136,16 @@ The keyboard symbols, once and for all:
 
 **Your credentials never leave your machine.** They are encrypted by your operating system's
 keychain — the same vault that holds your passwords — and only the part of the software that talks
-to Scenario can reach them. The screen you are looking at never knows what your key is: it only
+to the provider can reach them. The screen you are looking at never knows what your key is: it only
 knows whether it is connected.
 
-**Neither do your files.** Your projects are ordinary folders on your disk. What goes to Scenario
+**Neither do your files.** Your projects are ordinary folders on your disk. What goes to the provider
 is what you ask it to generate: the text of your prompt and, where relevant, the image you supply
 as input.
 
 **One exception, and it is ticked by default** — but it does not touch your files. The **Name
 fetched assets** setting, under **Settings ▸ Generation**, asks the API to name a picture that
-arrives without a useful one. **No byte leaves your disk**: that picture is already at Scenario,
+arrives without a useful one. **No byte leaves your disk**: that picture is already at the provider,
 since that is where it came from, and the studio sends only its id. What does get spent is
 **creative units**, with no click from you — the one place where the studio spends of its own
 accord. Untick it and that stops; [chapter 14](manual/14-settings.md) covers it.

@@ -109,7 +109,7 @@ Chaque canal a une **origine** :
 
 | Origine | Ce que ça veut dire |
 |---|---|
-| **Généré** | produit par un modèle Scenario — il est figé |
+| **Généré** | produit par un modèle distant — il est figé |
 | **Dérivé** | calculé par le studio depuis un autre canal, à la demande |
 | **Importé** | une image que vous avez posée vous-même |
 
@@ -214,7 +214,7 @@ Certains logiciels appellent cela « brillance » (*glossiness* ou *smoothness*)
 exactement l’inverse : brillance 0,9 = rugosité 0,1. **Le studio dit toujours rugosité**, partout —
 un mot pour une grandeur, ici comme dans l’espace Modélisation.
 
-Ce n’est pas qu’une question de vocabulaire : certains modèles Scenario répondent en *brillance*.
+Ce n’est pas qu’une question de vocabulaire : certains modèles distants répondent en *brillance*.
 Le studio garde alors les pixels tels qu’ils sont arrivés et retourne la lecture au moment de
 l’affichage. Vous n’avez rien à faire, et vous ne verrez jamais une matière éclairée à l’envers.
 
@@ -385,7 +385,7 @@ l'OpenGL ; Unreal attend du DirectX. L'export retourne donc le vert pour Unreal,
 autres. Et si vous aviez coché **Inverser le vert** parce que votre normale était arrivée en
 DirectX, l'export le sait : il ne retourne pas deux fois.
 
-**La rugosité rangée à l'envers.** Le convertisseur de Scenario répond parfois avec une carte de
+**La rugosité rangée à l'envers.** Le convertisseur distant répond parfois avec une carte de
 *lissage* — la même image lue dans l'autre sens. Le studio la garde telle qu'elle est arrivée et
 retient qu'elle est inversée. Un fichier `_Roughness` contient donc bien de la rugosité, et le
 `_MaskMap` d'Unity bien du lissage : le nom du fichier dit ce qu'il y a dedans.

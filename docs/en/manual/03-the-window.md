@@ -207,7 +207,7 @@ On the right of the title bar: a coloured dot, a name, a chevron.
 One click opens the list of your accounts, the current one ticked, plus **Manage accounts…**,
 which leads to the settings. With no account stored, the button goes straight to the settings.
 
-> **Switching accounts changes the library, not your work.** Each API key carries its own Scenario
+> **Switching accounts changes the library, not your work.** Each API key carries its own remote
 > project — its models, its assets, its credit. Your local project is on your disk and belongs to
 > no account.
 
@@ -229,7 +229,7 @@ zone's cut: the icons above it open in the first half, those below in the second
 |---|---|
 | **+** (blue button) | creates a **new document** in the active workspace — on the home, a **new project** |
 | *separator* | |
-| **Upper half** icons | Models, Generate, then Assets — what Scenario offers; the home puts **Your projects** there |
+| **Upper half** icons | Models, Generate, then Assets — what the provider offers; the home puts **Your projects** there |
 | *separator* | |
 | **Lower half** icons | the Explorer then Git, on the home as in the workspaces |
 | At the bottom | Timeline then History, depending on the workspace; on the home, History alone |
@@ -301,7 +301,7 @@ close button never goes**, and the panel's name keeps its size.
 
 | Panel | Zone | Half | Visible in | What it is |
 |---|---|---|---|---|
-| **Models** | left | 1st | everywhere | the Scenario catalogue, filtered on the active workspace |
+| **Models** | left | 1st | everywhere | the remote catalogue, filtered on the active workspace |
 | **Generate** | left | 1st | everywhere *(if a model is chosen)* | the chosen model's form |
 | **Assets** | left | 1st | everywhere | the shelf: what the project holds, what your key owns, what is being made |
 | **Layers** | right | 1st | Image | the layer stack of the open image |
@@ -321,7 +321,7 @@ close button never goes**, and the panel's name keeps its size.
 > appear only with a project open, and **History only if that project is tracked by git**: with
 > no project, the home is the screen it has always been — two columns and nothing below.
 
-**The left column reads in two parts: what Scenario offers, then what is already yours.** Above,
+**The left column reads in two parts: what the provider offers, then what is already yours.** Above,
 **Models**, **Generate** and **Assets**, which take turns — a model to choose, its form, and the
 shelf of what it makes. Below, the **Explorer** and **Git**, which take turns as well: your
 project folder, and what has changed in it.
@@ -531,7 +531,7 @@ window's footer for the others:
 
 - **the euro amount is indicative.** Computed from the public prepaid pack grid: an order of
   magnitude, not an invoice;
-- **there is no balance.** The Scenario API only exposes what has been spent, never what is left.
+- **there is no balance.** The generation API only exposes what has been spent, never what is left.
   No figure will tell you how much you can still generate;
 - **this screen's days and hours are counted in UTC**, as the API dates them. A day's bar therefore
   need not follow your own calendar;

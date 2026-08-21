@@ -109,7 +109,7 @@ Each channel has an **origin**:
 
 | Origin | What it means |
 |---|---|
-| **Generated** | produced by a Scenario model — it is fixed |
+| **Generated** | produced by a remote model — it is fixed |
 | **Derived** | computed by the studio from another channel, on demand |
 | **Imported** | an image you placed yourself |
 
@@ -214,7 +214,7 @@ Some applications call this "glossiness" or "smoothness", which is exactly the i
 0.9 = roughness 0.1. **The studio always says roughness**, everywhere — one word for one quantity,
 here as in the Modelling workspace.
 
-This is not only vocabulary: some Scenario models answer in *glossiness*. The studio then keeps the
+This is not only vocabulary: some remote models answer in *glossiness*. The studio then keeps the
 pixels exactly as they arrived and flips the reading at display time. You have nothing to do, and you
 will never see a material lit inside out.
 
@@ -379,7 +379,7 @@ OpenGL; Unreal expects DirectX. So the export flips the green for Unreal, and fo
 if you had ticked **Invert green** because your normal had arrived as DirectX, the export knows:
 it does not flip twice.
 
-**Roughness stored the other way round.** Scenario's converter sometimes answers with a
+**Roughness stored the other way round.** The remote converter sometimes answers with a
 *smoothness* map — the same picture read the other way. The studio keeps it as it arrived and
 remembers that it is inverted. So a `_Roughness` file does hold roughness, and Unity's `_MaskMap`
 does hold smoothness: the file name says what is inside it.

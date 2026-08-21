@@ -313,7 +313,7 @@ rebrancher le compte.
 
 ## Travailler avec deux comptes
 
-Chaque clé API porte **son propre** projet Scenario : ses modèles, ses assets, son crédit.
+Chaque clé API porte **son propre** projet distant : ses modèles, ses assets, son crédit.
 
 1. **Réglages ▸ Compte** : ajoutez-en un second, avec son nom à lui ;
 2. **Utiliser ce compte** bascule ;

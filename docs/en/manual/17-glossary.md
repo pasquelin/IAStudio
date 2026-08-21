@@ -22,7 +22,7 @@ panel, the *playhead*, the frame around a selection. Adjustable in Settings → 
 A stored API key, under a name you choose. The studio holds **several**, and the switcher in the
 title bar moves between them.
 
-Each key carries **its own Scenario project** — its models, its assets, its credit. Switching
+Each key carries **its own remote project** — its models, its assets, its credit. Switching
 accounts therefore changes the remote library you browse, **never** the files in your local project,
 which are on your disk and belong to no account.
 
@@ -41,12 +41,12 @@ A greyscale image marking the places ambient light struggles to reach: hollows, 
 adds depth to a material that looked flat.
 
 **API key**
-Your identifier with Scenario, the equivalent of a username. It always goes with an *API secret*.
-Both are taken from [app.scenario.com](https://app.scenario.com) and pasted into Settings →
+Your identifier with the provider, the equivalent of a username. It always goes with an *API secret*.
+Both are taken from your provider's dashboard and pasted into Settings →
 **Account**.
 
 **API secret**
-The second half of your Scenario credentials, the equivalent of a password. It always goes with an
+The second half of your API credentials, the equivalent of a password. It always goes with an
 *API key*, and is never displayed in the clear once stored.
 
 **Asset**
@@ -118,7 +118,7 @@ What a *model* can do, written in shorthand. The catalogue shows them as filters
 | txt2audio | text to sound |
 
 **Catalogue**
-The list of *models* available on Scenario. Several hundred. The **Models** panel only ever shows you
+The list of *models* available from the provider. Several hundred. The **Models** panel only ever shows you
 the ones that can make what the current *workspace* makes.
 
 **Channel** *(of a texture)*
@@ -144,7 +144,7 @@ The gap between dark and light areas. Below 1, the image flattens and goes grey;
 and loses detail at the extremes.
 
 **Creative unit** *(CU)*
-What a generation spends on your Scenario account. The service sets the rate, never the studio: a
+What a generation spends on your remote account. The service sets the rate, never the studio: a
 video does not cost what an image costs, and two image models do not cost the same either.
 
 You meet it in three places: the **Generate** button carries an estimate — `~12 CU` — before you
@@ -271,7 +271,7 @@ The document keeps its layers. Flattening is not destructive here.
 ## G
 
 **Generate**
-To ask a *model* to make something. The request leaves for Scenario, comes back as a *job*, and the
+To ask a *model* to make something. The request leaves for the provider, comes back as a *job*, and the
 result lands in your *assets*.
 
 **Gizmo**
@@ -381,7 +381,7 @@ move it down, delete it.
 That is what makes an image **editable** instead of a final flat.
 
 **Library** *(of the account)*
-The stock of assets living online, on your Scenario account's side — as opposed to the *project*,
+The stock of assets living online, on your remote account's side — as opposed to the *project*,
 which is a folder on your disk. The two are separate and nothing travels between them without an
 action of yours. Today only the **project → library** direction has a button (**Send**).
 

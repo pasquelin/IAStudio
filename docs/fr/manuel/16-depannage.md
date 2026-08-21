@@ -18,9 +18,9 @@ chercher plus loin : il nomme l’objet en cause et dit ce qui a échoué.
 |---|---|
 | « La génération « … » a échoué », « Génération « … » annulée », « 2 assets générés dans Image et Modélisation » | Génération |
 | « Impossible d’importer « … » », « « … » est illisible » | Import |
-| « Impossible d’envoyer « … » », « Les tags de « … » n’ont pas rejoint la bibliothèque », « L’API Scenario a refusé une requête », « Le fichier n’a pas pu être affiché » | Bibliothèque |
+| « Impossible d’envoyer « … » », « Les tags de « … » n’ont pas rejoint la bibliothèque », « L’API de génération a refusé une requête », « Le fichier n’a pas pu être affiché » | Bibliothèque |
 | « L’enregistrement du document a échoué », « Un calque n’a pas pu être chargé », « L’export de la scène a échoué » | Document |
-| « Ce dossier n’est pas un projet Scenario », « Le projet n’a pas pu être créé dans ce dossier », « Ce fichier n’a pas pu être ouvert par le système » | Projet |
+| « Ce dossier n’est pas un projet IA Studio », « Le projet n’a pas pu être créé dans ce dossier », « Ce fichier n’a pas pu être ouvert par le système » | Projet |
 | « Une partie de l’interface n’a pas pu s’afficher », « L’agencement enregistré d’un espace était illisible » | Interface |
 
 Filtrez par **niveau** — information, avertissement, échec — ou par **sujet** : chacun est un
@@ -87,7 +87,7 @@ panneau **Modèles** quand il ne peut rien afficher.
 **Ce que ça veut dire.** Aucun compte n’est enregistré, ou celui qui l’est a été supprimé.
 
 **Quoi faire.** Réglages (`⌘,`) → **Compte** → donnez un nom, collez votre clé et votre secret →
-**Ajouter un compte**. Ils se prennent sur [app.scenario.com](https://app.scenario.com).
+**Ajouter un compte**. Ils se prennent sur le tableau de bord de votre fournisseur.
 
 ### « Le trousseau n’a pas rendu vos comptes. Réessayez après l’avoir déverrouillé — rien n’a été modifié. »
 
@@ -115,7 +115,7 @@ branché, il n’y a rien à lister.
 1. **vérifiez qu’il n’y a pas d’espace** collé au début ou à la fin de ce que vous avez copié.
    C’est de très loin la cause la plus fréquente ;
 2. **vérifiez que vous n’avez pas inversé** la clé et le secret ;
-3. **regénérez le couple** sur [app.scenario.com](https://app.scenario.com) et recollez-le.
+3. **regénérez le couple** sur le tableau de bord de votre fournisseur et recollez-le.
 
 > **Ce message ne se répare pas tout seul.** Le studio ne réessaie **jamais** une clé invalide,
 > quel que soit le réglage « Tentatives maximum » : réessayer ne la corrigerait pas, cela ne ferait
@@ -126,11 +126,11 @@ branché, il n’y a rien à lister.
 **Ce que ça veut dire.** La clé est valide, mais elle n’a pas le droit de faire ce que vous venez
 de demander — ou votre plan ne le couvre pas.
 
-**Quoi faire.** Vérifiez sur [app.scenario.com](https://app.scenario.com) les permissions de la
+**Quoi faire.** Vérifiez sur le tableau de bord de votre fournisseur les permissions de la
 clé et l’état de votre abonnement. Une clé restreinte à la lecture, par exemple, peut lister des
 modèles sans pouvoir lancer une génération.
 
-### « Impossible de joindre Scenario. Vérifiez votre connexion. »
+### « Impossible de joindre le service de génération. Vérifiez votre connexion. »
 
 **Ce que ça veut dire.** La demande n’est jamais arrivée. Ce n’est pas un refus du service, c’est
 le trajet qui a échoué.
@@ -142,13 +142,13 @@ le trajet qui a échoué.
 3. réessayez : le studio le fait déjà tout seul (voir plus bas), mais une coupure longue épuise
    ses tentatives.
 
-### « Le service Scenario est momentanément indisponible. »
+### « Le service de génération est momentanément indisponible. »
 
 **Ce que ça veut dire.** Le service a répondu, mais pour dire qu’il a un problème de son côté.
 Cela ne vient pas de vous.
 
 **Quoi faire.** Attendre. Le studio réessaie tout seul, en espaçant ses tentatives. Si cela dure,
-allez voir [status.scenario.com](https://status.scenario.com) ou le support de Scenario.
+allez voir la page d’état de votre fournisseur, ou son support.
 
 ### « Ressource introuvable. »
 
@@ -285,7 +285,7 @@ Le studio ne réessaie que **ce qu’un nouvel essai peut réparer**.
 |---|---|
 | Trop de requêtes | **oui** |
 | Service indisponible | **oui** |
-| Impossible de joindre Scenario | **oui** |
+| Impossible de joindre le service de génération | **oui** |
 | Clé ou secret invalide | non |
 | Droits insuffisants | non |
 | Ressource introuvable | non |
@@ -405,7 +405,7 @@ du message.
 | Ce que dit le détail | Ce qui s’est passé | Quoi faire |
 |---|---|---|
 | `no destination` | **la cause ordinaire** : aucun espace ne sait ouvrir ce type d’asset | le clic droit liste ce que cet asset sait devenir |
-| `not on disk` | l’asset est dans votre bibliothèque Scenario, pas encore sur ce disque | le récupérer dans le projet — voir [Assets](07-assets.md) |
+| `not on disk` | l’asset est dans votre bibliothèque distante, pas encore sur ce disque | le récupérer dans le projet — voir [Assets](07-assets.md) |
 | `no project` | aucun projet n’est ouvert, et un document est un fichier : il lui faut un dossier | ouvrir ou créer un projet |
 | `no document` | le document n’a pas pu être créé | vérifier que le dossier du projet est accessible en écriture |
 

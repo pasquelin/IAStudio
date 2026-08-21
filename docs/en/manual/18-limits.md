@@ -275,7 +275,7 @@ without that refusal, saving would erase those clips from the file. Bring the mi
 the project, open the edit again, and saving works once more.
 
 And what that format does not carry as a standard — fades, gains, image and sound links, the 3D
-scene behind a live clip — travels in the file but **is read by Scenario alone**.
+scene behind a live clip — travels in the file but **is read by IA Studio alone**.
 
 ### A sequence's settings are fixed
 
@@ -500,20 +500,20 @@ These are not gaps: they are accepted boundaries.
 
 ### It does not work offline to generate
 
-The making happens on Scenario's servers. Without a connection you can open, retouch, edit and save —
+The making happens on the provider's servers. Without a connection you can open, retouch, edit and save —
 but not create new content.
 
 ### It is not free to use
 
-Every generation consumes credit on your Scenario account. The studio bills you nothing: it forwards.
+Every generation consumes credit on your remote account. The studio bills you nothing: it forwards.
 But your account does count.
 
 **And it cannot tell you what is left.** The **Help ▸ Usage…** window shows what has been spent
-over 7, 31 or 120 days — never a balance, because the Scenario API exposes none. The euro amount
+over 7, 31 or 120 days — never a balance, because the generation API exposes none. The euro amount
 beside it is computed from the public prepaid pack grid: an order of magnitude, not your invoice.
 
 What it can tell you is what a generation is about to cost: the **Generate** button carries an
-estimate before you press it. How much is left to pay for it is something your Scenario account
+estimate before you press it. How much is left to pay for it is something your remote account
 knows and the studio does not.
 
 ### It does not replace Photoshop, Blender or Premiere

@@ -306,7 +306,7 @@ account again.
 
 ## Work with two accounts
 
-Each API key carries **its own** Scenario project: its models, its assets, its credit.
+Each API key carries **its own** remote project: its models, its assets, its credit.
 
 1. **Settings ▸ Account**: add a second one, with a name of its own;
 2. **Use this account** switches;

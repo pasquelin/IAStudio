@@ -288,7 +288,7 @@ tant que c’est le cas : sans ce refus, enregistrer effacerait ces clips du fic
 médias manquants dans le projet, rouvrez le montage, et l’enregistrement redevient possible.
 
 Et ce que ce format ne porte pas en standard — fondus, gains, liens image/son, scène 3D d’un clip
-vivant — voyage dans le fichier mais **n’est lu que par Scenario**.
+vivant — voyage dans le fichier mais **n’est lu que par IA Studio**.
 
 ### Les réglages d’une séquence sont figés
 
@@ -517,22 +517,22 @@ Ce ne sont pas des manques : ce sont des bornes assumées.
 
 ### Il ne travaille pas hors ligne pour générer
 
-La fabrication se passe sur les serveurs de Scenario. Sans connexion, vous pouvez ouvrir,
+La fabrication se passe sur les serveurs du fournisseur. Sans connexion, vous pouvez ouvrir,
 retoucher, monter, enregistrer — mais pas créer de nouveau contenu.
 
 ### Il n’est pas gratuit à l’usage
 
-Chaque génération consomme le crédit de votre compte Scenario. Le studio ne vous facture rien : il
+Chaque génération consomme le crédit de votre compte distant. Le studio ne vous facture rien : il
 transmet. Mais votre compte, lui, compte.
 
 **Et il ne peut pas vous dire ce qu’il vous reste.** La fenêtre **Aide ▸ Consommation…** montre ce
-qui a été dépensé sur 7, 31 ou 120 jours — jamais un solde, parce que l’API Scenario n’en expose
+qui a été dépensé sur 7, 31 ou 120 jours — jamais un solde, parce que l’API de génération n’en expose
 aucun. Le montant en euros qui l’accompagne est calculé sur la grille publique des packs
 prépayés : un ordre de grandeur, pas votre facture.
 
 Ce qu’il sait dire, en revanche, c’est ce qu’une génération va coûter : le bouton **Générer**
 porte une estimation avant que vous appuyiez. Combien il vous reste pour la payer, c’est votre
-compte Scenario qui le sait, pas le studio.
+compte distant qui le sait, pas le studio.
 
 ### Il ne remplace pas Photoshop, Blender ni Premiere
 

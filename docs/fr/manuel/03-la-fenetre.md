@@ -214,7 +214,7 @@ Un clic ouvre la liste de vos comptes, celui en cours étant coché, plus **Gér
 mène aux réglages. Sans aucun compte enregistré, le bouton va directement aux réglages.
 
 > **Changer de compte change la bibliothèque, pas votre travail.** Chaque clé API porte son propre
-> projet Scenario — ses modèles, ses assets, son crédit. Votre projet local est sur votre disque et
+> projet distant — ses modèles, ses assets, son crédit. Votre projet local est sur votre disque et
 > n’appartient à aucun compte.
 
 Les clés se tapent dans les réglages, et nulle part ailleurs.
@@ -236,7 +236,7 @@ dessous dans la seconde.
 |---|---|
 | **+** (bouton bleu) | crée un **nouveau document** dans l’espace actif — à l’accueil, un **nouveau projet** |
 | *séparateur* | |
-| Icônes de la **moitié haute** | Modèles, Génération, puis Assets — ce que Scenario propose ; l’accueil y met **Vos projets** |
+| Icônes de la **moitié haute** | Modèles, Génération, puis Assets — ce que le fournisseur propose ; l’accueil y met **Vos projets** |
 | *séparateur* | |
 | Icônes de la **moitié basse** | l’Explorateur puis Git, à l’accueil comme dans les espaces |
 | Tout en bas | Timeline puis Historique, selon l’espace ; à l’accueil, l’Historique seul |
@@ -311,7 +311,7 @@ garde sa taille.
 
 | Panneau | Zone | Moitié | Visible dans | Ce que c’est |
 |---|---|---|---|---|
-| **Modèles** | gauche | 1re | partout | le catalogue Scenario, filtré sur l’espace actif |
+| **Modèles** | gauche | 1re | partout | le catalogue distant, filtré sur l’espace actif |
 | **Génération** | gauche | 1re | partout *(si un modèle est choisi)* | le formulaire du modèle choisi |
 | **Assets** | gauche | 1re | partout | l’étagère : ce que le projet tient, ce que votre clé possède, ce qui est en train d’être produit |
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
@@ -332,7 +332,7 @@ garde sa taille.
 > seulement si ce projet est suivi par git** : sans projet, l’accueil est celui qu’il a toujours
 > été, deux colonnes et rien en bas.
 
-**La colonne de gauche se lit en deux temps : ce que Scenario propose, puis ce qui est déjà à
+**La colonne de gauche se lit en deux temps : ce que le fournisseur propose, puis ce qui est déjà à
 vous.** En haut, **Modèles**, **Génération** et **Assets**, qui se relaient — un modèle à choisir,
 son formulaire, et l’étagère de ce qu’il produit. En bas, l’**Explorateur** et **Git**, qui se
 relaient aussi : le dossier de votre projet, et ce qui y a changé.
@@ -546,7 +546,7 @@ en pied de fenêtre pour les autres :
 
 - **le montant en euros est indicatif.** Calculé sur la grille publique des packs prépayés : un
   ordre de grandeur, pas une facture ;
-- **il n’y a pas de solde.** L’API Scenario n’expose que ce qui a été dépensé, jamais ce qui
+- **il n’y a pas de solde.** L’API de génération n’expose que ce qui a été dépensé, jamais ce qui
   reste. Aucun chiffre ne dira combien vous pouvez encore générer ;
 - **les jours et les heures de cet écran sont comptés en UTC**, comme l’API les date. La barre
   d’une journée ne suit donc pas forcément votre calendrier ;

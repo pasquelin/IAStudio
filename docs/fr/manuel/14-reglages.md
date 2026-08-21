@@ -80,7 +80,7 @@ vous écrivez dedans : un prompt écrit en anglais reste en anglais.
 
 > **Le formulaire de génération suit aussi, mais pas toujours jusqu’au bout.** Les noms des
 > réglages qu’un modèle propose — et les phrases d’explication sous eux — sont écrits par le
-> modèle, et l’API Scenario ne les rend qu’en anglais. Le studio les traduit lui-même. Un réglage
+> modèle, et l’API de génération ne les rend qu’en anglais. Le studio les traduit lui-même. Un réglage
 > qu’il ne connaît pas encore reste donc **en anglais** plutôt que de disparaître, et un modèle
 > publié demain arrive dans sa langue d’origine.
 >
@@ -123,7 +123,7 @@ Ce qui se règle **sur l’accueil lui-même**, et pas ici : quelles bandes sont
 
 *Identifiants API, chiffrés par le trousseau du système.*
 
-C’est ici qu’on branche le studio à [Scenario](https://www.scenario.com). Sans cette étape, tout
+C’est ici qu’on branche le studio à votre service de génération. Sans cette étape, tout
 ce qui touche à la génération reste inerte : le catalogue de modèles est vide, le bouton
 **Générer** ne répond pas.
 
@@ -132,7 +132,7 @@ ce qui touche à la génération reste inerte : le catalogue de modèles est vid
 Pas un seul. Vous pouvez enregistrer autant de clés API que vous voulez, chacune sous un nom que
 vous choisissez — « Studio », « Client X », « Perso ».
 
-**Pourquoi c’est utile.** Une clé API **porte son propre projet Scenario** : ses modèles, ses
+**Pourquoi c’est utile.** Une clé API **porte son propre projet distant** : ses modèles, ses
 assets, son crédit. Changer de compte change **la bibliothèque distante** que vous parcourez.
 
 > **Cela ne touche jamais votre projet local.** Vos dossiers, vos images, vos montages sont sur
@@ -149,7 +149,7 @@ Le formulaire, sous la liste. Trois champs :
 | **Clé API** | votre identifiant, visible pendant que vous le tapez |
 | **Secret API** | votre mot de passe, masqué par des points |
 
-Prenez la clé et le secret sur [app.scenario.com](https://app.scenario.com), dans les réglages de
+Prenez la clé et le secret chez votre fournisseur, dans les réglages de
 votre compte. Puis **Ajouter un compte** — le bouton affiche « Ajout… » le temps de l’écriture.
 
 **Le bouton reste éteint** tant que les trois champs ne sont pas valides.
@@ -215,7 +215,7 @@ retirer. »
 
 ### Quand la liste est vide
 
-> « Aucun compte pour l’instant. Ajoutez une clé API pour accéder à la bibliothèque Scenario. »
+> « Aucun compte pour l’instant. Ajoutez une clé API pour accéder à la bibliothèque distante. »
 
 Rien n’est enregistré, et rien ne fonctionne : ni catalogue, ni génération.
 

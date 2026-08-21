@@ -17,7 +17,7 @@ nécessaire, il est expliqué à l’endroit où il apparaît, puis rappelé dan
 
 IA Studio est un logiciel qui s’installe sur votre ordinateur. Il sait **fabriquer** des
 images, des vidéos, des sons, des objets en 3D, des matières et des ciels — en demandant à des
-modèles d’intelligence artificielle, en ligne, chez [Scenario](https://www.scenario.com). Et il
+modèles d’intelligence artificielle, en ligne, chez un fournisseur de génération. Et il
 sait ensuite **les assembler, les régler et les ranger**, chez vous, sans les renvoyer nulle
 part.
 
@@ -75,7 +75,7 @@ première image dans votre projet.
 **1. Branchez votre compte.**
 Ouvrez les réglages avec `⌘,` (macOS) ou `Ctrl+,` (Windows, Linux). Allez dans **Compte**.
 Donnez un **nom** au compte, puis collez votre **clé API** et votre **secret API**, pris sur
-[app.scenario.com](https://app.scenario.com). Cliquez **Ajouter un compte** : le studio vérifie
+chez votre fournisseur. Cliquez **Ajouter un compte** : le studio vérifie
 tout de suite et pose une pastille verte **Utilisé** sur la ligne.
 
 **2. Créez un projet.**
@@ -138,17 +138,17 @@ Les symboles du clavier, une fois pour toutes :
 
 **Vos identifiants ne quittent jamais votre machine.** Ils sont chiffrés par le trousseau de
 votre système d’exploitation — le même coffre-fort que celui qui garde vos mots de passe — et
-seule la partie du logiciel qui parle à Scenario y a accès. L’écran que vous regardez, lui, ne
+seule la partie du logiciel qui parle au fournisseur y a accès. L’écran que vous regardez, lui, ne
 sait jamais quelle est votre clé : il sait seulement s’il est connecté ou non.
 
 **Vos fichiers non plus.** Vos projets sont des dossiers ordinaires sur votre disque. Ce qui part
-vers Scenario, c’est ce que vous demandez de générer : le texte de votre prompt et, le cas échéant,
+vers le fournisseur, c’est ce que vous demandez de générer : le texte de votre prompt et, le cas échéant,
 l’image que vous fournissez en entrée.
 
 **Une exception, et elle est cochée par défaut** — mais elle ne touche pas vos fichiers. Le
 réglage **Nommer les assets rapatriés**, dans **Réglages ▸ Génération**, demande à l’API de nommer
 une image qui arrive sans nom utile. **Aucun octet ne quitte votre disque** : cette image-là est
-déjà chez Scenario, puisqu’elle en vient, et le studio n’envoie que son identifiant. Ce qui se
+déjà chez le fournisseur, puisqu’elle en vient, et le studio n’envoie que son identifiant. Ce qui se
 dépense, en revanche, ce sont des **unités créatives**, sans clic de votre part — c’est le seul
 endroit où le studio dépense de lui-même. Décochez-le et cela s’arrête ; le
 [chapitre 14](manuel/14-reglages.md) le détaille.

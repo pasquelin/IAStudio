@@ -51,11 +51,11 @@ forme d’onde. L’application distribuée, elle, porte déjà ces binaires.
 
 ## Étape 2 — Obtenir une clé API
 
-Le studio ne fabrique rien lui-même. Il demande à Scenario, et Scenario a besoin de savoir qui
+Le studio ne fabrique rien lui-même. Il demande au service de génération, et celui-ci a besoin de savoir qui
 demande. C’est le rôle de la **clé API** et du **secret API** : un identifiant et un mot de
 passe, réservés aux programmes.
 
-1. Créez ou ouvrez votre compte sur [app.scenario.com](https://app.scenario.com).
+1. Créez ou ouvrez votre compte chez votre fournisseur de génération.
 2. Cherchez la section des clés API dans les réglages de votre compte.
 3. Créez une clé. Le site vous donne **deux chaînes de caractères** : une clé et un secret.
 4. **Copiez-les tout de suite.** Le secret n’est souvent affiché qu’une fois.
@@ -77,16 +77,16 @@ passe, réservés aux programmes.
 5. Cliquez **Ajouter un compte**.
 
 **Pourquoi un nom ?** Parce que le studio en tient plusieurs. Une clé API porte son propre projet
-Scenario, et vous pouvez passer de l’un à l’autre depuis la barre de titre. Pour un premier
+distant, et vous pouvez passer de l’un à l’autre depuis la barre de titre. Pour un premier
 compte, le nom n’a aucune importance — mettez ce qui vous vient.
 
-Le studio vérifie immédiatement auprès de Scenario. Trois réponses possibles :
+Le studio vérifie immédiatement auprès du fournisseur. Trois réponses possibles :
 
 | Ce qui s’affiche | Ce que ça veut dire |
 |---|---|
 | Une pastille verte **Utilisé** sur la ligne du compte | tout va bien, vous pouvez fermer les réglages |
 | **Clé ou secret API invalide.** | une des deux chaînes est fausse — souvent un espace collé en trop au début ou à la fin |
-| **Impossible de joindre Scenario. Vérifiez votre connexion.** | ce n’est pas votre clé, c’est votre connexion internet |
+| **Impossible de joindre le service de génération. Vérifiez votre connexion.** | ce n’est pas votre clé, c’est votre connexion internet |
 
 **Où vont vos identifiants.** Ils sont chiffrés par le trousseau de votre système — Keychain sur
 macOS, le gestionnaire d’identifiants sur Windows, le trousseau du bureau sur Linux — et rangés
@@ -157,7 +157,7 @@ Le chapitre [Les projets](04-projets.md) détaille chaque dossier.
 
 En haut de la fenêtre, cliquez sur **Image**.
 
-À gauche, le panneau **Modèles** se remplit. Ce sont les modèles du catalogue Scenario capables
+À gauche, le panneau **Modèles** se remplit. Ce sont les modèles du catalogue distant capables
 de fabriquer des images. Il y en a beaucoup.
 
 Pour un premier essai, prenez-en un au hasard parmi ceux mis en avant : cliquez sur une

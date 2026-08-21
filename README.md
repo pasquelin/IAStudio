@@ -61,7 +61,7 @@ to come.
 ## Getting started
 
 **Requirements** — Node **24** (the version in `.nvmrc`, which is also what CI runs), [pnpm](https://pnpm.io), macOS / Windows / Linux, and a
-Scenario API key and secret from [app.scenario.com](https://app.scenario.com).
+API key and secret from your generation provider.
 
 ```bash
 pnpm install
@@ -72,8 +72,8 @@ pnpm start
 Then open **Settings** (`⌘,` / `Ctrl+,`) and enter your API key and secret. They are encrypted
 with the OS keychain and never leave the main process.
 
-In development you can drop them in `secrets/.env` instead (`SCENARIO_API_KEY`,
-`SCENARIO_API_SECRET`) — read at runtime, never bundled, and always outranked by what you save in
+In development you can drop them in `secrets/.env` instead (`PROVIDER_API_KEY`,
+`PROVIDER_API_SECRET`) — read at runtime, never bundled, and always outranked by what you save in
 Settings. See [`secrets/README.md`](secrets/README.md).
 
 Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained:
@@ -106,7 +106,7 @@ Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained
 ```
 src/
 ├── main/          Electron main process — the only side that holds secrets
-│   ├── scenario/    API client, model registry, job manager, credentials
+│   ├── provider/    API client, model registry, job manager, credentials
 │   ├── project/     project folders, manifest, SQLite catalogue
 │   ├── settings/    encrypted store and its handlers
 │   ├── assets/      asset ingestion and the ia-studio:// protocol
@@ -178,20 +178,14 @@ LGPL-2.1 elsewhere. Its corresponding sources are attached to every release. The
 
 ---
 
-## Trademarks and independence
+## Independence
 
-This is an **independent project**, developed personally by Alban Pasquelin. It is **not
-published, endorsed, supported by, or affiliated with Scenario Labs**.
+This is an **independent project**, developed personally by Alban Pasquelin. Its name, its
+icon and its interface are its own, and it reproduces no third party's brand.
 
-“Scenario”, the Scenario API and any associated signs are trademarks of their respective
-owners. They are named here **descriptively and nominatively only**, to identify the
-third-party service this application can connect to — no other wording would allow it. No
-logo, typeface, brand asset or visual identity belonging to Scenario Labs is reproduced
-anywhere in this repository: every screenshot shows this application's own interface, and
-every icon is its own.
-
-The application **provides no generation service and resells none**. It connects to the
-public API using **the key you supply, under your own account**: your use of it is governed
-by Scenario Labs' own terms, which you accept directly with them, and the cost is yours.
+The application **provides no generation service and resells none**. It connects to a
+generation API using **the key you supply, under your own account**: your use of that
+service is governed by its own provider's terms, which you accept directly with them, and
+the cost is yours.
 
 © 2026 Alban Pasquelin.
