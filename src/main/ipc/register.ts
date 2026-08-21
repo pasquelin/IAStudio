@@ -12,6 +12,7 @@ import { registerFavoriteHandlers } from '@main/favorites/handlers'
 import { registerStyleHandlers } from '@main/styles/handlers'
 import { readFavoriteThumbnail } from '@main/favorites/thumbnail'
 import { registerAssistantHandlers } from '@main/assistant/handlers'
+import { registerAiHandlers } from '@main/ai/handlers'
 import { registerDictationHandlers } from '@main/dictation/handlers'
 import { registerMediaHandlers } from '@main/media/handlers'
 import { registerMenuHandlers } from '@main/menu'
@@ -129,6 +130,7 @@ export function registerIpc(services: Services): void {
     brain: services.assistant,
     settleAction: services.remoteActions.settle,
   })
+  registerAiHandlers(services.ai)
   registerDictationHandlers({
     session: services.dictation,
     openPrivacySettings: services.openMicrophoneSettings,

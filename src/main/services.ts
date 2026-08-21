@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, net, shell, systemPreferences } from 'elect
 import { randomUUID } from 'node:crypto'
 import { existsSync, readdirSync } from 'node:fs'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
-import { availableParallelism } from 'node:os'
+import { availableParallelism, totalmem } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
@@ -55,6 +55,9 @@ import type { AssistantBrain } from './assistant/brainPort'
 import { createProviderBrain } from './assistant/brainProvider'
 import { createSession, type DictationSession } from './dictation/session'
 import { STT_MODEL } from '@shared/domain/dictation'
+import { createAiManager, type AiManager } from './ai/manager'
+import { electronHardwarePort } from './ai/electronHardwarePort'
+import { hardwareProbe, probeSnapshot } from './ai/hardwareProbe'
 import { fetchModel, modelIsComplete } from './ai/modelInstall'
 import { createDownloadHost, defaultModelFolder, ensureFolder } from './ai/modelStore'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
@@ -205,6 +208,8 @@ export type Services = {
   remoteActions: RemoteActions
   /** The MCP server, off unless the setting says otherwise. Followed from `index.ts`. */
   mcp: McpControl
+  /** Which AI serves each role, what the machine holds, and what may be installed. */
+  ai: AiManager
   /** Speaking instead of typing. Holds the engine, the model and the state of a session. */
   dictation: DictationSession
   /** Opens the system screen where microphone access is granted back after a refusal. */
@@ -1017,6 +1022,21 @@ export function createServices(settings: SettingsStore): Services {
   // The model is read from where the user pointed, or from beside the settings file. Read on
   // every call rather than kept: the folder is a setting, and it can change while the studio
   // is open.
+  /**
+   * 🛑 PROVISIONAL, and named so rather than hidden: ADR-19 lists `appBudgetBytes` and
+   * `headroomBytes` under what it does NOT decide, and nothing has measured them.
+   *
+   * Half the machine, minus two gigabytes of headroom — enough for the manager to compute a
+   * verdict, and wrong for a reason nobody has established. The first measurement that says
+   * otherwise replaces this, and it should carry that measurement in its JSDoc.
+   */
+  const PROVISIONAL_BUDGET = {
+    appBudgetBytes: Math.round(totalmem() / 2),
+    headroomBytes: 2_000_000_000,
+    // What the viewport was measured holding with a 3D scene open, 2026-08-21.
+    rendererReservedBytes: 475_000_000,
+  }
+
   const modelFolder = (): string =>
     settings.read().dictation.modelFolder ?? defaultModelFolder(app.getPath('userData'))
 
@@ -1373,6 +1393,32 @@ export function createServices(settings: SettingsStore): Services {
     assistant: brain,
     remoteActions,
     mcp,
+    ai: createAiManager({
+      facts: () => hardwareProbe(electronHardwarePort(app.getPath('userData'))),
+      snapshot: async () =>
+        probeSnapshot(
+          await hardwareProbe(electronHardwarePort(app.getPath('userData'))),
+          PROVISIONAL_BUDGET,
+          Date.now(),
+        ),
+      settings: () => settings.read(),
+      writeSettings: partial => settings.write(partial),
+      currentProjectPath: () => project.current()?.path ?? null,
+      // Whether a key is HELD, not whether it works: probing costs a round trip, and a
+      // revoked key is refused where it is used rather than hidden from the manager.
+      scenarioReady: () => settings.readCredentials() !== null,
+      folderFor: () => modelFolder(),
+      isInstalled: model => modelIsComplete(downloads, model, modelFolder()),
+      install: async (model, folder, onProgress, signal) => {
+        await ensureFolder(folder)
+        await fetchModel(downloads, model, { folder, onProgress, signal })
+      },
+      removeFiles: async (model, folder) => {
+        for (const file of model.files) await rm(join(folder, file.name), { force: true })
+      },
+      emit: overview => broadcast(EVENTS.ai, overview),
+      log: (level, message) => log[level]('ai', message),
+    }),
     dictation,
     openMicrophoneSettings: () => openMicrophoneSettings(url => void shell.openExternal(url)),
     link: async (source, type) =>

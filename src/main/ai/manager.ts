@@ -15,7 +15,7 @@ export type ManagerDeps = {
   facts: () => Promise<HardwareFacts>
   snapshot: () => Promise<MemorySnapshot>
   settings: () => Settings
-  writeSettings: (partial: PartialSettings) => Promise<unknown>
+  writeSettings: (partial: PartialSettings) => unknown
   currentProjectPath: () => string | null
   /** Whether an account could answer at all. A role is not offered Scenario without one. */
   scenarioReady: () => boolean
