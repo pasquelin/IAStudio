@@ -7,7 +7,7 @@ import type {
   SttState,
 } from '@shared/domain/dictation'
 import { sttModelPaths } from '@shared/domain/dictation'
-import { ChecksumMismatch } from './modelDownload'
+import { ChecksumMismatch } from '../ai/modelInstall'
 import type { SttClient } from './sttClient'
 
 /**

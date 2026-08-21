@@ -10,7 +10,7 @@ import {
 
 const model = (over: Partial<LocalModel> = {}): LocalModel => ({
   id: 'parakeet',
-  title: 'Parakeet TDT 0.6b v3',
+  name: 'Parakeet TDT 0.6b v3',
   format: 'onnx',
   loader: 'sherpa-onnx',
   rank: 1,

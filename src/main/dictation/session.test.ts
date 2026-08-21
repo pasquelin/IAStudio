@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { SttEvent } from '@shared/domain/dictation'
-import { ChecksumMismatch } from './modelDownload'
+import { ChecksumMismatch } from '../ai/modelInstall'
 import { createSession, MAX_RESTARTS, type EngineListeners, type SessionHost } from './session'
 import type { SttClient } from './sttClient'
 

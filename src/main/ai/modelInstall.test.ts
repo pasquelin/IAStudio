@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { STT_MODEL_BYTES, STT_MODEL_FILES, type SttModelFile } from '@shared/domain/dictation'
+import { STT_MODEL, STT_MODEL_BYTES, STT_MODEL_FILES } from '@shared/domain/dictation'
+import type { ModelFile } from '@shared/domain/localModel'
 import {
   ChecksumMismatch,
   DownloadCancelled,
@@ -8,7 +9,7 @@ import {
   fetchModelFile,
   modelIsComplete,
   type DownloadHost,
-} from './modelDownload'
+} from './modelInstall'
 
 const bytesOf = (text: string): Uint8Array => new TextEncoder().encode(text)
 const digestOf = (text: string): string => createHash('sha256').update(text).digest('hex')
@@ -18,7 +19,7 @@ const digestOf = (text: string): string => createHash('sha256').update(text).dig
  * an argument, so nothing here has to reach into the shared manifest — and a test that mutated
  * it would leak into the next one.
  */
-const fileOf = (content: string, name = 'encoder.int8.onnx'): SttModelFile => ({
+const fileOf = (content: string, name = 'encoder.int8.onnx'): ModelFile => ({
   role: 'encoder',
   name,
   url: `https://models.test/${name}`,
@@ -115,6 +116,8 @@ const options = (onProgress = vi.fn(), signal?: AbortSignal) => ({
   onProgress,
   signal,
   alreadyDone: 0,
+  // The whole set the bar is drawn against, handed in now that the installer serves any model.
+  total: STT_MODEL_BYTES,
 })
 
 describe('fetchModelFile', () => {
@@ -296,7 +299,7 @@ describe('fetchModel', () => {
     for (const file of STT_MODEL_FILES) disk.set(`/models/${file.name}`, 'here')
     const onProgress = vi.fn()
 
-    await fetchModel(host, { folder: '/models', onProgress })
+    await fetchModel(host, STT_MODEL, { folder: '/models', onProgress })
 
     expect(requests).toEqual([])
     expect(onProgress).toHaveBeenLastCalledWith({
@@ -313,7 +316,7 @@ describe('fetchModel', () => {
     // The third is served nothing, so it fails its digest — which is what ends the run, and
     // shows the run is sequential rather than a fan-out that happens to finish in order.
     await expect(
-      fetchModel(host, { folder: '/models', onProgress: vi.fn() }),
+      fetchModel(host, STT_MODEL, { folder: '/models', onProgress: vi.fn() }),
     ).rejects.toBeInstanceOf(ChecksumMismatch)
 
     expect(requests.map(request => request.url)).toEqual([
@@ -329,12 +332,12 @@ describe('modelIsComplete', () => {
 
   it('is true only when every file is present', async () => {
     const { host, disk } = harness()
-    expect(await modelIsComplete(host, '/models')).toBe(false)
+    expect(await modelIsComplete(host, STT_MODEL, '/models')).toBe(false)
 
     for (const file of STT_MODEL_FILES) disk.set(`/models/${file.name}`, 'here')
-    expect(await modelIsComplete(host, '/models')).toBe(true)
+    expect(await modelIsComplete(host, STT_MODEL, '/models')).toBe(true)
 
     disk.delete(`/models/${missing.name}`)
-    expect(await modelIsComplete(host, '/models')).toBe(false)
+    expect(await modelIsComplete(host, STT_MODEL, '/models')).toBe(false)
   })
 })

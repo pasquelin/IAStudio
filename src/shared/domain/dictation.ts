@@ -3,6 +3,7 @@
  * agree on. The engine itself runs in a `utilityProcess` and never appears here.
  */
 import { clamp } from '../numeric'
+import type { DownloadProgress, LocalModel, ModelFile } from './localModel'
 
 /**
  * Where a dictation session stands. Flat strings rather than a discriminated union: what a
@@ -44,8 +45,7 @@ export const STT_ERROR_CODES: readonly SttErrorCode[] = [
  */
 export type SttFailure = { code: SttErrorCode; message: string }
 
-/** Bytes across the whole model, not within the file being fetched. */
-export type DownloadProgress = { received: number; total: number }
+export type { DownloadProgress } from './localModel'
 
 export type SttEvent =
   | { type: 'state'; state: SttState }
@@ -152,14 +152,13 @@ export function toFloat(samples: Int16Array): Float32Array {
  */
 export type SttModelRole = 'encoder' | 'decoder' | 'joiner' | 'tokens'
 
-export type SttModelFile = {
-  /** What the engine asks for. Named, so nothing has to spell the four file names again. */
-  role: SttModelRole
-  name: string
-  url: string
-  bytes: number
-  sha256: string
-}
+/**
+ * One file of the model, and what proves it arrived intact.
+ *
+ * Narrows `ModelFile.role` to the four the engine asks for: the manifest describes any model, this
+ * one is the recognition model and nothing else may take its place.
+ */
+export type SttModelFile = ModelFile & { role: SttModelRole }
 
 const MODEL_BASE =
   'https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/main'
@@ -202,6 +201,28 @@ export const STT_MODEL_FILES: readonly SttModelFile[] = [
 export const STT_MODEL_BYTES = STT_MODEL_FILES.reduce((total, file) => total + file.bytes, 0)
 
 /**
+ * The recognition model as the catalogue holds it — the same files, plus what ADR-20 asks any
+ * model to declare: its format, its loader, its licence and its rank.
+ *
+ * `[M]` The pair `onnx` × `sherpa-onnx` is the one measured admission of the whitelist: the studio
+ * never deserialises the ONNX, it hands paths to an addon that registers no operator library.
+ */
+export const STT_MODEL: LocalModel = {
+  id: 'parakeet-tdt-0.6b-v3-int8',
+  name: 'Parakeet TDT 0.6b v3',
+  format: 'onnx',
+  loader: 'sherpa-onnx',
+  rank: 1,
+  licence: 'CC-BY-4.0',
+  licenceUrl: 'https://creativecommons.org/licenses/by/4.0/legalcode',
+  source: 'https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3',
+  files: STT_MODEL_FILES,
+  // `[M]` The JSDoc of `armIdle` announced "returning around 700 MB" — a subtraction rather than a
+  // measurement, which R2 of ADR-19 forbids. Kept as the reservation until a runtime answers.
+  reservationBytes: 700_000_000,
+}
+
+/**
  * Where each file of the model sits, once it is on disk.
  *
  * Read from the same table the download uses, rather than spelled out again where the engine is
@@ -219,6 +240,3 @@ export function sttModelPaths(
   // roles are the four files.
   return paths as Record<SttModelRole, string>
 }
-
-/** Suffix of a download in flight. An orphan is kept, not swept: a resume starts from it. */
-export const PART_SUFFIX = '.part'

@@ -34,8 +34,11 @@ export type ModelFile = {
 
 export type LocalModel = {
   readonly id: string
-  /** Shown as written. A model name is a proper noun, so it is never translated. */
-  readonly title: string
+  /**
+   * `name` rather than `title`, and the guard's own reason applies: this is DOCUMENT DATA, not a
+   * word of the interface. A model is called what its publisher calls it, in every language.
+   */
+  readonly name: string
   readonly format: ModelFormat
   readonly loader: ModelLoader
   readonly rank: ProvenanceRank
@@ -58,6 +61,12 @@ export type LocalModel = {
 export function downloadBytesOf(model: LocalModel): number {
   return model.files.reduce((total, file) => total + file.bytes, 0)
 }
+
+/** Bytes across the whole model, not within the file being fetched. */
+export type DownloadProgress = { received: number; total: number }
+
+/** Suffix of a download in flight. An orphan is kept, not swept: a resume starts from it. */
+export const PART_SUFFIX = '.part'
 
 /**
  * Whether the studio may load this pair, per ADR-20 § A: a pair is admitted when the loader, AS

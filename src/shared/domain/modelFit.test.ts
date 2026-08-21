@@ -19,7 +19,7 @@ const snapshot = (availableBytes: number, source: MemorySource = 'runtime'): Mem
 
 const model = (over: Partial<LocalModel> = {}): LocalModel => ({
   id: 'llama',
-  title: 'Llama 3.2 3B',
+  name: 'Llama 3.2 3B',
   format: 'gguf',
   loader: 'ollama',
   rank: 1,

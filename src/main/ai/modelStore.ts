@@ -2,7 +2,7 @@ import { net } from 'electron'
 import { createReadStream } from 'node:fs'
 import { mkdir, open as openFile, rename, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { DownloadHost, DownloadResponse } from './modelDownload'
+import type { DownloadHost, DownloadResponse } from './modelInstall'
 
 /** Where the model lands when the user has not pointed somewhere else. */
 export function defaultModelFolder(userData: string): string {

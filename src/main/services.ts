@@ -54,8 +54,9 @@ import { createMcpControl, type McpControl } from './mcp/control'
 import type { AssistantBrain } from './assistant/brainPort'
 import { createProviderBrain } from './assistant/brainProvider'
 import { createSession, type DictationSession } from './dictation/session'
-import { fetchModel, modelIsComplete } from './dictation/modelDownload'
-import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/modelStore'
+import { STT_MODEL } from '@shared/domain/dictation'
+import { fetchModel, modelIsComplete } from './ai/modelInstall'
+import { createDownloadHost, defaultModelFolder, ensureFolder } from './ai/modelStore'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
 import { openSttProcess } from './dictation/sttProcess'
 import { adoptFile } from './media/adoptFile'
@@ -1025,14 +1026,14 @@ export function createServices(settings: SettingsStore): Services {
     modelFolder,
     vadPath: () => bundledVad(resourcesRoot()),
     settings: () => settings.read().dictation,
-    modelIsReady: () => modelIsComplete(downloads, modelFolder()),
+    modelIsReady: () => modelIsComplete(downloads, STT_MODEL, modelFolder()),
     download: async (onProgress, signal) => {
       const folder = modelFolder()
       await ensureFolder(folder)
       // Nothing sweeps the `.part` files first, and that is the point: an interrupted download
       // resumes from what already arrived. A leftover that is not a prefix of what is being
       // fetched cannot survive anyway — it fails its digest and is removed there.
-      await fetchModel(downloads, { folder, onProgress, signal })
+      await fetchModel(downloads, STT_MODEL, { folder, onProgress, signal })
     },
     requestMicrophone: () =>
       requestMicrophone({
