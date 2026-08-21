@@ -9,13 +9,17 @@ import {
   roleChoicesFor,
   type RoleChoices,
   type RoleOffer,
+  type RoleProvider,
 } from './aiRole'
 
 const offer = (over: Partial<RoleOffer> = {}): RoleOffer => ({
-  localModelId: null,
-  scenarioReady: false,
+  localModelIds: [],
+  cloudIds: [],
   ...over,
 })
+
+/** A cloud, named by an id the way every one of them is — never by a member of the union. */
+const CLOUD: RoleProvider = { kind: 'cloud', providerId: 'scenario' }
 
 describe('aiRoleId', () => {
   it('names a capability of a family', () => {
@@ -58,8 +62,8 @@ describe('partsOfRole', () => {
 })
 
 describe('roleChoicesFor', () => {
-  const defaults: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'scenario' } }
-  const byProject = { '/work/client': { [DICTATION_ROLE]: { kind: 'scenario' } } as RoleChoices }
+  const defaults: RoleChoices = { [ASSISTANT_ROLE]: CLOUD }
+  const byProject: Record<string, RoleChoices> = { '/work/client': { [DICTATION_ROLE]: CLOUD } }
 
   it('stands on the default alone when no project is open', () => {
     expect(roleChoicesFor(defaults, byProject, null)).toEqual(defaults)
@@ -68,8 +72,8 @@ describe('roleChoicesFor', () => {
   // Per ROLE: overriding one in a project must not reset the others to nothing.
   it('overlays what a project overrides without dropping the rest', () => {
     expect(roleChoicesFor(defaults, byProject, '/work/client')).toEqual({
-      [ASSISTANT_ROLE]: { kind: 'scenario' },
-      [DICTATION_ROLE]: { kind: 'scenario' },
+      [ASSISTANT_ROLE]: CLOUD,
+      [DICTATION_ROLE]: CLOUD,
     })
   })
 
@@ -93,7 +97,7 @@ describe('providerFor', () => {
 
   // ADR-21 § B: the application has to be useful with no account at all.
   it('serves a role locally when nothing was chosen and a model is there', () => {
-    expect(providerFor(ASSISTANT_ROLE, noChoice, offer({ localModelId: 'llama' }))).toEqual({
+    expect(providerFor(ASSISTANT_ROLE, noChoice, offer({ localModelIds: ['llama'] }))).toEqual({
       kind: 'local',
       modelId: 'llama',
     })
@@ -102,14 +106,16 @@ describe('providerFor', () => {
   // A key present ADDS a provider to the choice; it does not take the lead.
   it('still prefers the local model when an account is also ready', () => {
     expect(
-      providerFor(ASSISTANT_ROLE, noChoice, offer({ localModelId: 'llama', scenarioReady: true })),
+      providerFor(
+        ASSISTANT_ROLE,
+        noChoice,
+        offer({ localModelIds: ['llama'], cloudIds: ['scenario'] }),
+      ),
     ).toEqual({ kind: 'local', modelId: 'llama' })
   })
 
-  it('falls back to Scenario when no local model serves the role', () => {
-    expect(providerFor(ASSISTANT_ROLE, noChoice, offer({ scenarioReady: true }))).toEqual({
-      kind: 'scenario',
-    })
+  it('falls back to a cloud when no local model serves the role', () => {
+    expect(providerFor(ASSISTANT_ROLE, noChoice, offer({ cloudIds: ['scenario'] }))).toEqual(CLOUD)
   })
 
   // The role says so at its own place, instead of a global banner condemning the whole app.
@@ -118,11 +124,25 @@ describe('providerFor', () => {
   })
 
   it('honours an explicit choice over the default', () => {
-    const chosen: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'scenario' } }
+    const chosen: RoleChoices = { [ASSISTANT_ROLE]: CLOUD }
 
     expect(
-      providerFor(ASSISTANT_ROLE, chosen, offer({ localModelId: 'llama', scenarioReady: true })),
-    ).toEqual({ kind: 'scenario' })
+      providerFor(
+        ASSISTANT_ROLE,
+        chosen,
+        offer({ localModelIds: ['llama'], cloudIds: ['scenario'] }),
+      ),
+    ).toEqual(CLOUD)
+  })
+
+  /**
+   * A cloud is one entry of a list, never a member of the union: a choice pointing at one the
+   * registry no longer holds falls back, the way a model uninstalled since does.
+   */
+  it('falls back from a cloud that is no longer offered', () => {
+    const chosen: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'cloud', providerId: 'gone' } }
+
+    expect(providerFor(ASSISTANT_ROLE, chosen, offer({ cloudIds: ['scenario'] }))).toEqual(CLOUD)
   })
 
   // A model uninstalled since the choice was stored, or an account removed: the role keeps
@@ -130,18 +150,28 @@ describe('providerFor', () => {
   it('falls back when the choice can no longer be honoured', () => {
     const stale: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'local', modelId: 'gone' } }
 
-    expect(providerFor(ASSISTANT_ROLE, stale, offer({ scenarioReady: true }))).toEqual({
-      kind: 'scenario',
-    })
+    expect(providerFor(ASSISTANT_ROLE, stale, offer({ cloudIds: ['scenario'] }))).toEqual(CLOUD)
     expect(providerFor(ASSISTANT_ROLE, stale, offer())).toBeNull()
   })
 
   it('keeps the choice of one role out of another', () => {
-    const chosen: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'scenario' } }
+    const chosen: RoleChoices = { [ASSISTANT_ROLE]: CLOUD }
 
-    expect(providerFor(DICTATION_ROLE, chosen, offer({ localModelId: 'parakeet' }))).toEqual({
+    expect(providerFor(DICTATION_ROLE, chosen, offer({ localModelIds: ['parakeet'] }))).toEqual({
       kind: 'local',
       modelId: 'parakeet',
     })
+  })
+
+  /**
+   * Comparing the choice to the DEFAULT — the first usable model — dropped it in silence the
+   * moment a role had two, and the screen then ticked the first while the second was stored.
+   */
+  it('honours a chosen model that is not the one the role would take on its own', () => {
+    const second: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'local', modelId: 'mistral' } }
+
+    expect(
+      providerFor(ASSISTANT_ROLE, second, offer({ localModelIds: ['llama', 'mistral'] })),
+    ).toEqual({ kind: 'local', modelId: 'mistral' })
   })
 })

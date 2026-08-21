@@ -1,5 +1,6 @@
 import { readFile, statfs } from 'node:fs/promises'
 import { availableParallelism, freemem, totalmem } from 'node:os'
+import { dirname } from 'node:path'
 import { app } from 'electron'
 import type { HardwarePort } from './hardwareProbe'
 
@@ -19,10 +20,25 @@ async function linuxAvailableBytes(): Promise<number | null> {
 }
 
 /**
- * The real machine behind `HardwarePort` — the only file of the probe that touches Electron or
- * `os`, which is what keeps `hardwareProbe` testable without either.
+ * Free space on the volume a path names, walking up to a folder that exists: the model folder is
+ * created at install time, and a path that is not there yet still names a volume.
  */
-export function electronHardwarePort(userDataPath: string): HardwarePort {
+async function freeBytesAt(path: string): Promise<number> {
+  for (let at = path; ; at = dirname(at)) {
+    try {
+      const stats = await statfs(at)
+      return stats.bavail * stats.bsize
+    } catch (error) {
+      if (dirname(at) === at) throw error
+    }
+  }
+}
+
+/**
+ * The real machine behind `HardwarePort` — the only file of the probe that touches Electron or
+ * `os`. `weightsPath` is a getter: the model folder is a setting, and it moves while this runs.
+ */
+export function electronHardwarePort(weightsPath: () => string): HardwarePort {
   return {
     platform: () => process.platform,
     arch: () => process.arch,
@@ -33,9 +49,9 @@ export function electronHardwarePort(userDataPath: string): HardwarePort {
     // an under-estimate everywhere, and only Linux offers a better reading without a subprocess.
     availableBytes: () =>
       process.platform === 'linux' ? linuxAvailableBytes() : Promise.resolve(freemem()),
-    // Where the weights would land, not where the app is installed: a read-only volume would
-    // answer for a disk nothing is ever written to.
-    diskFreeBytes: () => statfs(userDataPath).then(stats => stats.bavail * stats.bsize),
+    // The volume the weights would land ON, which is the model folder and not the application:
+    // that folder is a setting, and pointing it at an external disk is what the setting is for.
+    diskFreeBytes: () => freeBytesAt(weightsPath()),
     // `complete` rather than `basic`: same four keys, but only `complete` fills `glRenderer`.
     gpuInfo: () => app.getGPUInfo('complete'),
   }

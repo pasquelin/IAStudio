@@ -64,6 +64,9 @@ déjà une carte **en expliquant pourquoi**. ADR-19 l'exigeait, « ou il y en au
 
 ### C. Deux fournisseurs RÉELS, et aucune abstraction pour ceux qu'on n'a pas appelés
 
+> 🛑 **Ce paragraphe est AMENDÉ — voir l'amendement du 21 août 2026 en fin de fichier.** Le cloud
+> est devenu une liste, et `scenario` n'est plus une valeur de l'union.
+
 > `fournisseur = local(modèle) | scenario(compte)`. Rien d'autre.
 
 `[?]` Aucun second cloud n'a été appelé depuis ce dépôt. Écrire une abstraction « cloud »
@@ -134,3 +137,44 @@ sort d'un projet ouvert dont le modèle surchargé a été désinstallé.
 déplacés depuis `main/dictation/`)* · `main/settings/accounts.ts` · `main/services.ts` ·
 `renderer/src/hooks/usePlanRefusal.ts` · `renderer/src/panels/{models,generator}` ·
 `shared/i18n/{fr,en}/`.
+
+## Amendement du 21 août 2026 — le cloud est une LISTE, et `scenario` n'est plus un membre de l'union
+
+**Le § C est amendé par décision d'Alban.** Il écrivait
+`fournisseur = local(modèle) | scenario(compte)`, « rien d'autre », et refusait toute abstraction
+cloud au motif qu'aucun second cloud n'avait été appelé depuis ce dépôt. L'arbitrage retenu est
+l'inverse : **Scenario appartient à une liste de fournisseurs cloud dont il est le seul membre
+aujourd'hui, et aucun cas particulier ne se code sur son nom.**
+
+> `fournisseur = local(modèle) | cloud(identifiant)`. Ce qu'un cloud SERT est une **donnée** qu'il
+> déclare dans le registre, jamais une condition écrite ailleurs.
+
+`shared/domain/aiCloud.ts` porte `CLOUD_PROVIDERS`, et une entrée y déclare les familles de
+génération qu'elle publie et les emplois transverses qu'elle sert. `cloudsServing(role)` lit cette
+déclaration ; rien ne branche sur un nom. Le mot `scenario` n'apparaît plus qu'à **deux** endroits :
+l'`id` de son entrée, et la clé de la table de `services.ts` qui possède ses identifiants
+(`readyCloudsOf`). Les libellés suivent le même chemin — `aiClouds.<id>` et `aiClouds.<id>Hint`,
+listés dans `DYNAMIC_KEYS` **depuis le registre**, donc un second cloud arrive sans toucher la garde.
+
+**Ce que l'amendement CORRIGE, et qui était visible à l'écran.** Le premier jet lisait un booléen
+global « un compte est-il détenu ? » et l'offrait à tous les emplois : le gestionnaire proposait
+donc **Scenario pour la dictée**, alors que rien dans ce dépôt ne transforme la parole en texte
+ailleurs que sur cette machine. Sa première correction fut un `scenarioServes(role)` avec un
+`role !== DICTATION_ROLE` — exactement le cas par cas que cet amendement interdit. La forme
+retenue le supprime : la dictée n'est listée par aucune entrée, donc aucun cloud ne lui est offert,
+et **aucune condition n'est écrite à son sujet.**
+
+**Ce que le § C gardait de vrai reste vrai** : on n'écrit pas d'adaptateur pour un cloud qu'on n'a
+jamais appelé. Le registre ne décrit pas *comment* parler à un fournisseur — il ne dit que ce qu'il
+sert et sous quel identifiant. Le jour où un second arrive, il apporte son adaptateur ET sa ligne
+de disponibilité ; ce qui a été retiré, c'est l'obligation de rouvrir chaque fichier qui nommait
+`scenario`.
+
+`[?]` **Un angle mort, écrit plutôt que caché** : rien ne vérifie que tout cloud enregistré possède
+une ligne dans la table de disponibilité de `services.ts`. Un cloud sans ligne n'est jamais prêt —
+la réponse honnête tant que rien ne sait lui parler. `main/ai/cloudReadiness.ts` porte cette phrase.
+
+`[M]` **Aucune migration n'est due** : la branche `ai` des réglages est née dans ce même chantier et
+n'a jamais été publiée, donc aucun `{ kind: 'scenario' }` n'existe sur disque chez qui que ce soit.
+Un tel objet serait de toute façon **retiré en silence** par zod, le piège que `settings/validation.ts`
+écrit déjà en tête.

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { SttEvent } from '@shared/domain/dictation'
-import { ChecksumMismatch } from '../ai/modelInstall'
+import { ChecksumMismatch, DownloadCancelled } from '../ai/modelInstall'
 import { createSession, MAX_RESTARTS, type EngineListeners, type SessionHost } from './session'
 import type { SttClient } from './sttClient'
 
@@ -408,11 +408,15 @@ describe('fetching the model', () => {
     expect(states()).toEqual(['downloadingModel', 'idle'])
   })
 
+  /**
+   * `DownloadCancelled` and not a bare `Error`: the installer is what raises it, and the cancel
+   * may have come from the manager screen rather than from this session's own signal.
+   */
   it('goes back to asking when the download is cancelled', async () => {
     const { session, states } = harness({
       download: (_report, signal) =>
         new Promise((_resolve, reject) => {
-          signal.addEventListener('abort', () => reject(new Error('cancelled')))
+          signal.addEventListener('abort', () => reject(new DownloadCancelled('cancelled')))
         }),
     })
 

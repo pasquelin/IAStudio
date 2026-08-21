@@ -7,7 +7,7 @@ import type {
   SttState,
 } from '@shared/domain/dictation'
 import { sttModelPaths } from '@shared/domain/dictation'
-import { ChecksumMismatch } from '../ai/modelInstall'
+import { ChecksumMismatch, DownloadCancelled } from '../ai/modelInstall'
 import type { SttClient } from './sttClient'
 
 /**
@@ -272,7 +272,9 @@ export function createSession(host: SessionHost): DictationSession {
       } catch (error) {
         download = null
         // A cancelled download is a decision, not a fault: it goes back to where it started.
-        if (downloading.signal.aborted) publish('modelMissing')
+        // Read off the error rather than off this session's own signal — the manager holds the
+        // install lock, so the cancel may have come from its screen instead of from here.
+        if (error instanceof DownloadCancelled) publish('modelMissing')
         // Told apart because they lead somewhere different: a network that failed is worth
         // retrying, a file that failed its digest was deleted and says so.
         else if (error instanceof ChecksumMismatch) refuse('modelChecksumMismatch', error)

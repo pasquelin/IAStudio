@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isCloudProviderId } from '@shared/domain/aiCloud'
 import { ASSISTANT_MODELS } from '@shared/domain/assistant'
 import { LANGUAGE_PREFERENCES } from '@shared/i18n/languages'
 import {
@@ -236,7 +237,12 @@ const dictation = z.object({
  */
 const roleProvider = z.union([
   z.object({ kind: z.literal('local'), modelId: z.string().min(1) }),
-  z.object({ kind: z.literal('scenario') }),
+  // The id is checked against the REGISTRY, so a cloud added is stored without touching this and
+  // a cloud removed stops being read back — a role then falls back rather than pointing nowhere.
+  z.object({
+    kind: z.literal('cloud'),
+    providerId: z.string().refine(id => isCloudProviderId(id)),
+  }),
 ])
 
 const roleChoices = z.record(z.string().min(1), roleProvider)

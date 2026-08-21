@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { MemorySnapshot, MemorySource } from './aiMemory'
 import type { LocalModel } from './localModel'
-import { fitAllowsUse, fitOf, type MachineOffer } from './modelFit'
+import { fitAllowsUse, fitObstacleOf, fitOf, type MachineOffer } from './modelFit'
 
 const GIGA = 1_000_000_000
 
@@ -76,6 +76,26 @@ describe('fitOf', () => {
   // A probe reports absence rather than guessing zero, and absence must not read as "no space".
   it('does not refuse on a disk reading it could not take', () => {
     expect(fitOf(model(), offer({ diskFreeBytes: null }))).toBe('compatible')
+  })
+})
+
+describe('fitObstacleOf', () => {
+  /**
+   * The verdict says `insufficient-memory` for both, and a screen reading it alone would tell
+   * someone to close applications when what is full is their disk.
+   */
+  it('tells a full disk from a machine that is too small', () => {
+    expect(fitObstacleOf(model(), offer({ diskFreeBytes: GIGA }))).toBe('disk')
+    expect(fitObstacleOf(model({ reservationBytes: 50 * GIGA }), offer())).toBe('memory')
+    expect(fitOf(model(), offer({ diskFreeBytes: GIGA }))).toBe(
+      fitOf(model({ reservationBytes: 50 * GIGA }), offer()),
+    )
+  })
+
+  it('names nothing standing in the way when the model simply fits', () => {
+    expect(fitObstacleOf(model(), offer())).toBeNull()
+    // `unknown` is a reading of the SOURCE, not an obstacle: nothing is in the way either.
+    expect(fitObstacleOf(model(), offer({ snapshot: snapshot(40 * GIGA, 'probe') }))).toBeNull()
   })
 })
 

@@ -423,6 +423,7 @@ export type SettingsSectionId =
   | 'generation.upscale'
   | 'generation.background-removal'
   | 'generation.vectorization'
+  | 'ai'
   | 'spaces'
   | 'spaces.three'
   | 'shortcuts'
@@ -444,6 +445,7 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'generation.upscale',
   'generation.background-removal',
   'generation.vectorization',
+  'ai',
   'spaces',
   'spaces.three',
   'shortcuts',

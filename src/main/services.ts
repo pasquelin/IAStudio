@@ -58,6 +58,7 @@ import { STT_MODEL } from '@shared/domain/dictation'
 import { createAiManager, type AiManager } from './ai/manager'
 import { electronHardwarePort } from './ai/electronHardwarePort'
 import { hardwareProbe, probeSnapshot } from './ai/hardwareProbe'
+import { readyCloudsOf } from './ai/cloudReadiness'
 import { fetchModel, modelIsComplete } from './ai/modelInstall'
 import { createDownloadHost, defaultModelFolder, ensureFolder } from './ai/modelStore'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
@@ -1019,9 +1020,6 @@ export function createServices(settings: SettingsStore): Services {
     }
   }
 
-  // The model is read from where the user pointed, or from beside the settings file. Read on
-  // every call rather than kept: the folder is a setting, and it can change while the studio
-  // is open.
   /**
    * 🛑 PROVISIONAL, and named so rather than hidden: ADR-19 lists `appBudgetBytes` and
    * `headroomBytes` under what it does NOT decide, and nothing has measured them.
@@ -1037,24 +1035,50 @@ export function createServices(settings: SettingsStore): Services {
     rendererReservedBytes: 475_000_000,
   }
 
+  // Where the user pointed, or beside the settings file. Read on every call rather than kept:
+  // the folder is a setting, and it can change while the studio is open.
   const modelFolder = (): string =>
     settings.read().dictation.modelFolder ?? defaultModelFolder(app.getPath('userData'))
 
   const downloads = createDownloadHost()
+
+  const ai = createAiManager({
+    facts: () => hardwareProbe(electronHardwarePort(modelFolder)),
+    snapshotOf: facts => probeSnapshot(facts, PROVISIONAL_BUDGET, Date.now()),
+    settings: () => settings.read(),
+    writeSettings: partial => settings.write(partial),
+    currentProjectPath: () => project.current()?.path ?? null,
+    // Whether a key is HELD, not whether it works: probing costs a round trip, and a revoked key
+    // is refused where it is used rather than hidden from the manager. A table keyed by cloud id,
+    // which is where the studio OWNS credentials — a second cloud adds a line, never a branch.
+    readyClouds: () => readyCloudsOf({ scenario: () => settings.readCredentials() !== null }),
+    // One folder for the whole catalogue, which holds while it holds ONE model: the manifests
+    // name their own files, so a second model sharing a file name would read as installed.
+    folderFor: () => modelFolder(),
+    isInstalled: model => modelIsComplete(downloads, model, modelFolder()),
+    install: async (model, folder, onProgress, signal) => {
+      await ensureFolder(folder)
+      // Nothing sweeps the `.part` files first, and that is the point: an interrupted download
+      // resumes from what already arrived. A leftover that is not a prefix of what is being
+      // fetched cannot survive anyway — it fails its digest and is removed there.
+      await fetchModel(downloads, model, { folder, onProgress, signal })
+    },
+    removeFiles: async (model, folder) => {
+      for (const file of model.files) await rm(join(folder, file.name), { force: true })
+    },
+    emit: overview => broadcast(EVENTS.ai, overview),
+    log: (level, message) => log[level]('ai', message),
+  })
 
   const dictation = createSession({
     modelFolder,
     vadPath: () => bundledVad(resourcesRoot()),
     settings: () => settings.read().dictation,
     modelIsReady: () => modelIsComplete(downloads, STT_MODEL, modelFolder()),
-    download: async (onProgress, signal) => {
-      const folder = modelFolder()
-      await ensureFolder(folder)
-      // Nothing sweeps the `.part` files first, and that is the point: an interrupted download
-      // resumes from what already arrived. A leftover that is not a prefix of what is being
-      // fetched cannot survive anyway — it fails its digest and is removed there.
-      await fetchModel(downloads, STT_MODEL, { folder, onProgress, signal })
-    },
+    // Through the manager, which holds the ONE install lock: the status line and the manager
+    // screen fetch the same files into the same folder, and two streams onto one `.part` would
+    // fail a digest rather than a download.
+    download: (onProgress, signal) => ai.installModel(STT_MODEL, onProgress, signal),
     requestMicrophone: () =>
       requestMicrophone({
         platform: process.platform,
@@ -1393,32 +1417,7 @@ export function createServices(settings: SettingsStore): Services {
     assistant: brain,
     remoteActions,
     mcp,
-    ai: createAiManager({
-      facts: () => hardwareProbe(electronHardwarePort(app.getPath('userData'))),
-      snapshot: async () =>
-        probeSnapshot(
-          await hardwareProbe(electronHardwarePort(app.getPath('userData'))),
-          PROVISIONAL_BUDGET,
-          Date.now(),
-        ),
-      settings: () => settings.read(),
-      writeSettings: partial => settings.write(partial),
-      currentProjectPath: () => project.current()?.path ?? null,
-      // Whether a key is HELD, not whether it works: probing costs a round trip, and a
-      // revoked key is refused where it is used rather than hidden from the manager.
-      scenarioReady: () => settings.readCredentials() !== null,
-      folderFor: () => modelFolder(),
-      isInstalled: model => modelIsComplete(downloads, model, modelFolder()),
-      install: async (model, folder, onProgress, signal) => {
-        await ensureFolder(folder)
-        await fetchModel(downloads, model, { folder, onProgress, signal })
-      },
-      removeFiles: async (model, folder) => {
-        for (const file of model.files) await rm(join(folder, file.name), { force: true })
-      },
-      emit: overview => broadcast(EVENTS.ai, overview),
-      log: (level, message) => log[level]('ai', message),
-    }),
+    ai,
     dictation,
     openMicrophoneSettings: () => openMicrophoneSettings(url => void shell.openExternal(url)),
     link: async (source, type) =>

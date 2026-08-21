@@ -69,6 +69,16 @@ export function reclaimableOf(residency: Residency, releaseConfirmed: boolean): 
 export type Compatibility =
   'compatible' | 'slow' | 'experimental' | 'insufficient-memory' | 'incompatible' | 'unknown'
 
+/** The values beside the type, so the bundles are checked against them rather than a copy. */
+export const COMPATIBILITIES: readonly Compatibility[] = [
+  'compatible',
+  'slow',
+  'experimental',
+  'insufficient-memory',
+  'incompatible',
+  'unknown',
+]
+
 /**
  * What put a bound on a setting — temporary, and never written to disk. One member because
  * ADR-19 defers the pressure LEVELS, not the identity of whatever bounds.

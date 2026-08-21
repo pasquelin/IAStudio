@@ -7,6 +7,7 @@ import {
   type SettingSectionEntry,
 } from '@shared/domain/settingsRegistry'
 import { AccountSettings } from './AccountSettings/AccountSettings'
+import { AiSettings } from './AiSettings/AiSettings'
 import { DictationSettings } from './DictationSettings'
 import { MediaSettings } from './MediaSettings'
 import { ShortcutsSettings } from './ShortcutsSettings/ShortcutsSettings'
@@ -28,6 +29,7 @@ export type SettingsSection = SettingSectionEntry & {
  */
 const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   account: AccountSettings,
+  ai: AiSettings,
   shortcuts: ShortcutsSettings,
   media: MediaSettings,
   dictation: DictationSettings,

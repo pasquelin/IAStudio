@@ -1,6 +1,7 @@
 import type { AiRoleId, RoleProvider } from './aiRole'
 import type { Compatibility } from './aiMemory'
 import type { DownloadProgress, LocalModel } from './localModel'
+import type { FitObstacle } from './modelFit'
 
 /**
  * What the manager screen reads — one row per ROLE, never one per model.
@@ -18,17 +19,28 @@ export type ModelCandidate = {
   readonly installed: boolean
   /** `insufficient-memory` and `incompatible` are shown, greyed, WITH their reason — never hidden. */
   readonly fit: Compatibility
+  /** What the reason NAMES. Carried rather than recomputed: the machine decides, the window says. */
+  readonly obstacle: FitObstacle | null
 }
 
 export type RoleRow = {
   readonly role: AiRoleId
   /** What serves it right now, choice or default. `null` when nothing can. */
   readonly provider: RoleProvider | null
-  /** Where the choice was written, or `null` when nothing was chosen and the default stands. */
-  readonly chosenAt: ChoiceScope | null
+  /**
+   * What EACH scope holds, `null` where nothing was chosen — never what serves.
+   *
+   * Both, because a screen edits one scope while the summary shows the effect of both: reading
+   * the effect back into the controls left a click writing a scope that already agreed, doing
+   * nothing and saying nothing.
+   */
+  readonly chosen: Readonly<Record<ChoiceScope, RoleProvider | null>>
   readonly candidates: readonly ModelCandidate[]
-  /** Whether an account could serve this role, which decides if Scenario is offered at all. */
-  readonly scenarioReady: boolean
+  /**
+   * The clouds offered for this role — those that serve it AND have an account behind them.
+   * Empty is an ordinary answer: dictation is served on this machine or not at all.
+   */
+  readonly clouds: readonly string[]
 }
 
 /** What the machine offers, as the screen states it above the rows. */

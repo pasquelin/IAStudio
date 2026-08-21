@@ -22,7 +22,8 @@ export const ASSISTANT_ROLE = 'assistant' as AiRoleId
 /** Turns speech into text. The only role already served locally today. */
 export const DICTATION_ROLE = 'dictation' as AiRoleId
 
-const STANDALONE: readonly AiRoleId[] = [ASSISTANT_ROLE, DICTATION_ROLE]
+/** The two roles no space holds. Exported because they are the only ones a bundle NAMES. */
+export const STANDALONE_ROLES: readonly AiRoleId[] = [ASSISTANT_ROLE, DICTATION_ROLE]
 
 /**
  * The only way to name a generation role. It throws rather than answering null: a role is composed
@@ -48,7 +49,12 @@ export function allRoles(): readonly AiRoleId[] {
     capabilities.map(capability => `${family}/${capability}` as AiRoleId),
   )
 
-  return [...STANDALONE, ...generation]
+  return [...STANDALONE_ROLES, ...generation]
+}
+
+/** Whether the role belongs to a space, as opposed to being one of the two standalone ones. */
+export function isGenerationRole(role: AiRoleId): boolean {
+  return partsOfRole(role) !== null
 }
 
 /** What the role is made of, for a caller that needs to label it. `null` for a standalone one. */
@@ -61,11 +67,15 @@ export function partsOfRole(role: AiRoleId): { family: ModelFamily; capability: 
 }
 
 /**
- * Who serves a role. Two REAL providers, and no abstraction for clouds never called from here —
- * writing one would produce types that are plausible and false, and nobody could say which.
+ * Who serves a role: a model on this machine, or one of the clouds `aiCloud.ts` lists.
+ *
+ * A cloud is named by its ID, never by a member of this union — decided 21/08, amending ADR-21
+ * § C: one cloud is registered today, and a second must arrive as an entry in a list rather than
+ * as a branch everything already written has to learn about.
  */
 export type RoleProvider =
-  { readonly kind: 'local'; readonly modelId: string } | { readonly kind: 'scenario' }
+  | { readonly kind: 'local'; readonly modelId: string }
+  | { readonly kind: 'cloud'; readonly providerId: string }
 
 /**
  * What the person chose, per role. Absent means "no choice", which is NOT the same as "none":
@@ -87,10 +97,18 @@ export function roleChoicesFor(
   return projectPath === null ? defaults : { ...defaults, ...byProject[projectPath] }
 }
 
-/** What a role can actually be served by on this machine, right now. */
+/**
+ * What a role can actually be served by on this machine, right now — two lists, and the FIRST of
+ * each is what the role takes on its own.
+ *
+ * Lists rather than one id each: a choice was made among several, and comparing it to the default
+ * alone would drop it in silence.
+ */
 export type RoleOffer = {
-  readonly localModelId: string | null
-  readonly scenarioReady: boolean
+  /** Every model installed AND usable, in the order the catalogue offers them. */
+  readonly localModelIds: readonly string[]
+  /** Every cloud that both serves this role and has an account behind it. */
+  readonly cloudIds: readonly string[]
 }
 
 /**
@@ -107,9 +125,12 @@ export function providerFor(
 ): RoleProvider | null {
   const chosen = choices[role]
 
-  if (chosen?.kind === 'local' && chosen.modelId === offer.localModelId) return chosen
-  if (chosen?.kind === 'scenario' && offer.scenarioReady) return chosen
+  if (chosen?.kind === 'local' && offer.localModelIds.includes(chosen.modelId)) return chosen
+  if (chosen?.kind === 'cloud' && offer.cloudIds.includes(chosen.providerId)) return chosen
 
-  if (offer.localModelId !== null) return { kind: 'local', modelId: offer.localModelId }
-  return offer.scenarioReady ? { kind: 'scenario' } : null
+  const model = offer.localModelIds[0]
+  if (model !== undefined) return { kind: 'local', modelId: model }
+
+  const cloud = offer.cloudIds[0]
+  return cloud === undefined ? null : { kind: 'cloud', providerId: cloud }
 }

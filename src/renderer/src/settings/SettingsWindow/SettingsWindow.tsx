@@ -10,6 +10,7 @@ import { WindowSearch } from '@/design/WindowSearch'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
 import { useAccounts } from '@/stores/accounts'
+import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
 import { isSettingsDraftDirty, useSettingsDraft } from '@/stores/settingsDraft'
 import { SettingActions } from '../SettingActions/SettingActions'
@@ -39,15 +40,16 @@ export function SettingsWindow() {
 
   const connect = useSettings(state => state.connect)
   const connectAccounts = useAccounts(state => state.connect)
+  const connectAiModels = useAiModels(state => state.connect)
 
   // Connected here rather than from the account section: a subscription opened by a leaf is
   // torn down and rebuilt every time the user walks the section tree.
   useEffect(() => {
-    const subscriptions = [connect(), connectAccounts()]
+    const subscriptions = [connect(), connectAccounts(), connectAiModels()]
     return () => {
       for (const subscription of subscriptions) void subscription.then(stop => stop())
     }
-  }, [connect, connectAccounts])
+  }, [connect, connectAccounts, connectAiModels])
 
   // Asked for while already open: the window moves instead of reloading, which would throw
   // away a half-typed key. The search is dropped with it — results shown over a section the

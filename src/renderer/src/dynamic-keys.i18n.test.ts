@@ -30,6 +30,7 @@ import { DOCUMENT_KINDS } from '@shared/domain/document'
 import { SCENE_TEMPLATE_GROUPS, SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { FILE_KINDS } from '@shared/domain/folder'
 import { FILE_INFO_SECTIONS } from '@/fileInfo/sections'
+import { FIT_DETAIL_KEYS } from '@/hooks/useModelFit'
 
 function resolve(code: Language, key: string): unknown {
   // Widened, not cast: the bundle's inferred type has no index signature, and every key here is
@@ -127,6 +128,9 @@ const COMPOSED_KEYS: readonly string[] = [
     `documents.templateHints.${id}`,
   ]),
   ...SCENE_TEMPLATE_GROUPS.map(group => `documents.templateGroups.${group}`),
+  // What stands between a model and this machine, said with the figures. Read off the table the
+  // compiler holds one entry per obstacle in, so an obstacle added cannot arrive without a line.
+  ...Object.values(FIT_DETAIL_KEYS),
 ]
 
 describe('the keys the renderer composes', () => {

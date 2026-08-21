@@ -20,6 +20,9 @@ import { FILE_DOMAINS } from '../domain/fileRole'
 import { GIT_CHANGES, GIT_FAILURE_KEYS, GIT_REF_KINDS, GIT_STAGES } from '../domain/git'
 import { ASSISTANT_MODELS } from '../domain/assistant'
 import { STT_ERROR_CODES } from '../domain/dictation'
+import { CLOUD_IDS } from '../domain/aiCloud'
+import { COMPATIBILITIES } from '../domain/aiMemory'
+import { STANDALONE_ROLES } from '../domain/aiRole'
 import { breakableSpots } from './typography'
 import { isRecord } from '../guards'
 import { foldForSearch } from '../text'
@@ -1237,6 +1240,15 @@ const DYNAMIC_KEYS: readonly string[] = [
   // What the microphone answered, said in the language of whoever is reading. The detail of a
   // failure never reaches the screen — it names a file path — so the code is all there is.
   ...STT_ERROR_CODES.map(code => `dictation.errors.${code}`),
+  // The two employments no space holds. The generation ones are named by `families` and
+  // `capabilities` above, which the manager reuses rather than opening a second vocabulary.
+  ...STANDALONE_ROLES.map(role => `aiRoles.${role}`),
+  // The verdict the machine returns on a model. A value without its word would put a raw key on
+  // the one line that says whether an AI can run here at all.
+  ...COMPATIBILITIES.map(fit => `aiModels.fit.${fit}`),
+  // A cloud is named by its REGISTRY entry, so the second one to arrive needs no code change —
+  // and no line here either. Without its two keys it would offer itself as `aiClouds.x`.
+  ...CLOUD_IDS.flatMap(id => [`aiClouds.${id}`, `aiClouds.${id}Hint`]),
 ]
 
 /**

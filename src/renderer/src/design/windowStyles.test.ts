@@ -58,13 +58,14 @@ describe('the line of a list in an app window', () => {
 
   // The partner of the rules above, named rather than counted: a count stays green when one
   // line drops the constant and another picks it up, which is the drift this lot closed.
-  it('is worn by the three lines it was extracted from', () => {
+  it('is worn by every line of these windows that has this shape', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && /\bWINDOW_ROW(?:_BUTTON)?\b/.test(source),
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
       '../manual/ManualWindow/ManualWindowResults.tsx',
+      '../settings/AiSettings/AiChoiceRow.tsx',
       '../settings/SettingLine.tsx',
       '../settings/SettingsWindow/SettingsWindowResultRow.tsx',
     ])

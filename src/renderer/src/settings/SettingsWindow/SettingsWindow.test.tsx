@@ -116,6 +116,7 @@ describe('SettingsWindow', () => {
       'Agrandissement',
       'Détourage',
       'Vectorisation',
+      'Modèles d’IA',
       'Espaces de travail',
       'Modélisation',
       'Raccourcis',
