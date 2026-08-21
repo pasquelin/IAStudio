@@ -153,8 +153,8 @@ peuvent changer à chaud · le format d'un graphe.
 | Vérification | Résultat qui casse la décision |
 |---|---|
 | **`advisory` contre `owned`** — chercher si un runtime **cède contractuellement** sa politique de résidence : un mode documenté qui la désactive, une API qui en transfère la propriété | **RENDUE le 21/08, et l'axe NE fusionne PAS — mais pas pour la raison écrite ici.** Un mode documenté existe bel et bien (`llama-server --models-max 0`) : le critère est donc atteint, et la ligne aurait dû fusionner l'axe. Deux faits l'en empêchent, tous deux découverts le même jour — voir l'amendement. |
-| Dépasser la fenêtre de contexte de la porte `/v1` avec le préambule complet | Si la troncature est silencieuse **et** sans effet observable sur les réponses, `context` cesse d'être un axe |
-| Annuler à mi-inférence sur chaque pile | Si aucune n'annule autrement qu'en mourant, `cancellation` se réduit à un booléen |
+| ~~Dépasser la fenêtre de contexte de la porte `/v1` avec le préambule complet~~ **RENDUE le 21/08** | **`context` est CONFIRMÉ comme axe.** La troncature est bien silencieuse — HTTP 200, `finish_reason: "stop"` — mais son effet est massif et observable, et **elle coupe la TÊTE** : voir l'amendement |
+| ~~Annuler à mi-inférence sur chaque pile~~ **partiellement rendue le 21/08** | Ollama annule **sans mourir** (`cooperative`), donc la réduction à un booléen ne se déclenche pas. Il en faudrait d'autres pour rendre la ligne entièrement |
 
 ## Conséquences
 
@@ -272,3 +272,29 @@ footprint d'un processus. C'est un écart entre deux façons de compter, et c'es
 `[?]` **La version mesurée n'est pas celle qui a été lue.** Le code d'Ollama lu date du 20/08/2026 ;
 la machine porte la **0.4.6**. Les deux concordent sur `keep_alive`, ce qui est un signal fort, mais
 aucune mesure ci-dessus ne vaut pour une version qu'on n'a pas exécutée.
+
+### 🛑 `context` est confirmé comme axe, et le défaut est pire que « silencieux »
+
+`[M]` La ligne d'invalidation prévoyait que `context` cesse d'être un axe si la troncature était
+silencieuse **et sans effet observable**. Mesuré le 21/08 avec un repère placé en **tête** de
+prompt : elle est silencieuse — **HTTP 200, `finish_reason: "stop"`, jamais `length`, aucune
+erreur, sur les deux portes** — et son seul indice est `prompt_tokens`, qui **plafonne à 2048**
+que le prompt en fasse 3 700 ou 58 000. Mais l'effet est massif : le repère disparaît dès qu'on
+dépasse.
+
+**Et la coupe se fait par la TÊTE.** Le modèle répond avec du contenu de la **fin** du prompt —
+« Ligne de remplissage numéro 5912 » sur un prompt de 6 000 lignes. **Or le préambule du studio
+est en tête** : `instruction.ts:103-112` y concatène le catalogue complet des actions. Sous
+dépassement, **c'est le préambule système qui est jeté en premier**, et l'historique récent qui
+survit. L'assistant perdrait ses instructions en gardant la conversation, sans une ligne de
+journal.
+
+`[M]` **La porte native s'en sort, `/v1` non** : `options: { num_ctx: 16384 }` sur `/api/chat`
+porte `prompt_tokens` à 16384. C'est exactement ce que `per-request` contre `per-install` veut
+dire, et cela donne à la conséquence écrite pour `context: 'per-install'` — « nous la découvrons
+et rabattons nos bornes dessus » — un contenu opératoire : sur `/v1`, **rabattre est la seule
+option**, puisque élargir est impossible.
+
+`[?]` Le seuil exact auquel le studio rencontrerait le mur n'est pas mesuré : il faudrait brancher
+l'assistant, avec son vrai préambule et `HISTORY_MAX = 10`, sur Ollama. Ce qui est établi est le
+mécanisme.
