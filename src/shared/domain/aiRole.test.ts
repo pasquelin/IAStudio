@@ -125,6 +125,19 @@ describe('providerFor', () => {
     expect(providerFor(ASSISTANT_ROLE, noChoice, offer())).toBeNull()
   })
 
+  // Locally it may still fall back: another model on this machine is what the person asked for.
+  it('falls back to another local model when the chosen one has gone', () => {
+    const chosen: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'local', modelId: 'gone' } }
+
+    expect(
+      providerFor(
+        ASSISTANT_ROLE,
+        chosen,
+        offer({ localModelIds: ['llama'], installedModelIds: ['llama'], cloudIds: ['scenario'] }),
+      ),
+    ).toEqual({ kind: 'local', modelId: 'llama' })
+  })
+
   it('honours an explicit choice over the default', () => {
     const chosen: RoleChoices = { [ASSISTANT_ROLE]: CLOUD }
 
@@ -147,12 +160,11 @@ describe('providerFor', () => {
     expect(providerFor(ASSISTANT_ROLE, chosen, offer({ cloudIds: ['scenario'] }))).toEqual(CLOUD)
   })
 
-  // A model uninstalled since the choice was stored, or an account removed: the role keeps
-  // working on what is left rather than failing on a preference nothing can honour.
-  it('falls back when the choice can no longer be honoured', () => {
+  // A model uninstalled since the choice was stored: the role keeps working on what is LEFT ON
+  // THIS MACHINE rather than failing — and answers nothing when there is nothing left.
+  it('answers nothing when a stale local choice has no local successor', () => {
     const stale: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'local', modelId: 'gone' } }
 
-    expect(providerFor(ASSISTANT_ROLE, stale, offer({ cloudIds: ['scenario'] }))).toEqual(CLOUD)
     expect(providerFor(ASSISTANT_ROLE, stale, offer())).toBeNull()
   })
 
@@ -189,10 +201,14 @@ describe('providerFor', () => {
     expect(providerFor(ASSISTANT_ROLE, chosen, tight)).toEqual({ kind: 'local', modelId: 'llama' })
   })
 
-  // Installed is not the same as present: a model uninstalled since is gone from both lists.
-  it('still falls back when the chosen model is not installed at all', () => {
+  /**
+   * 🛑 Measured before it was decided: a runtime that stopped answering — an Ollama nobody
+   * started — empties both lists exactly as an uninstall does, and the old fallback moved the next
+   * sentence to a BILLED cloud without a word. Choosing this machine is also choosing not to pay.
+   */
+  it('answers nothing when the chosen model is not installed at all', () => {
     const chosen: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'local', modelId: 'llama' } }
 
-    expect(providerFor(ASSISTANT_ROLE, chosen, offer({ cloudIds: ['scenario'] }))).toEqual(CLOUD)
+    expect(providerFor(ASSISTANT_ROLE, chosen, offer({ cloudIds: ['scenario'] }))).toBeNull()
   })
 })

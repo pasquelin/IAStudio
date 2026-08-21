@@ -30,6 +30,7 @@ import { DOCUMENT_KINDS } from '@shared/domain/document'
 import { SCENE_TEMPLATE_GROUPS, SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { FILE_KINDS } from '@shared/domain/folder'
 import { FILE_INFO_SECTIONS } from '@/fileInfo/sections'
+import { CHOICE_SCOPES } from '@shared/domain/aiOverview'
 import { FIT_DETAIL_KEYS } from '@/hooks/useModelFit'
 
 function resolve(code: Language, key: string): unknown {
@@ -131,6 +132,9 @@ const COMPOSED_KEYS: readonly string[] = [
   // What stands between a model and this machine, said with the figures. Read off the table the
   // compiler holds one entry per obstacle in, so an obstacle added cannot arrive without a line.
   ...Object.values(FIT_DETAIL_KEYS),
+  // What the manager's choices apply to. A third scope without its word would put a raw key in the
+  // select that decides where every choice of that screen lands.
+  ...CHOICE_SCOPES.map(scope => `aiModels.scope_${scope}`),
 ]
 
 describe('the keys the renderer composes', () => {

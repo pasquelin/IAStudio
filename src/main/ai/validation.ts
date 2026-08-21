@@ -1,28 +1,28 @@
 import { z } from 'zod'
 import type { ChoiceScope } from '@shared/domain/aiOverview'
-import { isCloudProviderId } from '@shared/domain/aiCloud'
 import type { AiRoleId, RoleProvider } from '@shared/domain/aiRole'
+import { roleProvider } from '@main/settings/validation'
 
 /**
  * What a window sends when it picks a provider for a role.
  *
  * Throws rather than falling back: the choice decides which AI answers, and a provider nothing can
  * serve would leave the role pointing at nowhere. `null` is a real answer — it CLEARS the choice.
- * The cloud ids come from the registry, so a cloud added is accepted without touching this.
+ * The shape is the STORE's own, so a choice cannot pass this door and be stripped on the way in.
  */
-const provider = z.union([
-  z.object({ kind: z.literal('local'), modelId: z.string().min(1) }),
-  z.object({
-    kind: z.literal('cloud'),
-    providerId: z.string().refine(id => isCloudProviderId(id)),
-  }),
-])
-
 const choice = z.object({
   role: z.string().min(1),
-  provider: provider.nullable(),
+  provider: roleProvider.nullable(),
   scope: z.enum(['app', 'project']),
 })
+
+/**
+ * The id of a model a window names. `String(value)` was coercing rather than refusing — it makes
+ * `"[object Object]"` out of anything and sends it down to the catalogue.
+ */
+export function parseModelId(value: unknown): string {
+  return z.string().min(1).parse(value)
+}
 
 export function parseChoice(
   role: unknown,

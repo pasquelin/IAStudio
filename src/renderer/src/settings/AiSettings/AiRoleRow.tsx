@@ -36,11 +36,14 @@ export const AiRoleRow = memo(function AiRoleRow({
   const chooseAiProvider = useAiModels(state => state.chooseAiProvider)
 
   const label = roleLabel(row.role, t)
+  // Captured so the narrowing survives into the callback below, which a property access does not.
+  const provider = row.provider
   // What SERVES the role, which is not always what was chosen: a model since uninstalled falls
   // back, and the summary has to say what answers today rather than what was asked for.
-  const served = row.candidates.find(
-    candidate => row.provider?.kind === 'local' && candidate.model.id === row.provider.modelId,
-  )
+  const served =
+    provider?.kind === 'local'
+      ? row.candidates.find(candidate => candidate.model.id === provider.modelId)
+      : undefined
   // The controls, unlike the summary, show the scope BEING EDITED: a radio reading the effect
   // would leave a click writing a scope that already agreed, doing nothing and saying nothing.
   const editing = row.chosen[scope]
@@ -54,8 +57,8 @@ export const AiRoleRow = memo(function AiRoleRow({
         )}
         <span className={WINDOW_CAPTION}>
           {served && `${served.model.name} · ${bytes(served.model.reservationBytes)}`}
-          {row.provider?.kind === 'cloud' && t(`aiClouds.${row.provider.providerId}`)}
-          {row.provider === null && t('aiModels.providerNone')}
+          {provider?.kind === 'cloud' && t(`aiClouds.${provider.providerId}`)}
+          {provider === null && t('aiModels.providerNone')}
         </span>
       </summary>
 

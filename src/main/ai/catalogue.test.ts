@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ASSISTANT_ROLE, DICTATION_ROLE } from '@shared/domain/aiRole'
 import { STT_MODEL } from '@shared/domain/dictation'
+import licences from '@shared/licences.json'
 import {
   catalogueRefusals,
   rolesWithLocalOption,
@@ -14,6 +15,20 @@ describe('the shipped catalogue', () => {
   // enters the studio. A guard rather than a comment, so a model added later cannot slip past.
   it('holds nothing the whitelist refuses', () => {
     expect(catalogueRefusals()).toEqual([])
+  })
+
+  /**
+   * ADR-20 § E asks that a licence travel WITH the weights. `collect-licences.mjs` cannot read
+   * these manifests — it strips types and resolves no `@shared/` alias, and says so — so the
+   * notices are retyped there by hand. This is what makes the omission redden: a third model
+   * added without its line ships with no attribution, and no gate would have said a word.
+   */
+  it('gives every shipped model its line in the collected notices', () => {
+    const collected = new Map(licences.map(entry => [entry.name, entry.spdx]))
+
+    for (const model of shippedModels()) {
+      expect(collected.get(model.name), `${model.name} has no notice`).toBe(model.licence)
+    }
   })
 
   it('serves the recognition model to the dictation role', () => {

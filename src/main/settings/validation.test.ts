@@ -148,6 +148,48 @@ describe('salvaging the bar order', () => {
   })
 })
 
+/**
+ * A role choice names a cloud from a registry that can lose an entry between two builds — the
+ * `ai` schema advertises exactly that. One such line must cost its own line and nothing else.
+ */
+describe('salvaging the AI role choices', () => {
+  const withTheme = (ai: unknown): unknown => ({ ai, appearance: { theme: 'light' } })
+
+  it('drops a choice naming a cloud this build no longer holds, keeping the rest', () => {
+    const salvaged = salvagePartialSettings(
+      withTheme({
+        roles: {
+          assistant: { kind: 'cloud', providerId: 'nowhere' },
+          'image/txt2img': { kind: 'local', modelId: 'llama3.2:3b' },
+        },
+      }),
+    )
+
+    expect(salvaged.ai?.roles).toEqual({
+      'image/txt2img': { kind: 'local', modelId: 'llama3.2:3b' },
+    })
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+
+  // The whole file goes through one `safeParse`: without the per-entry catch, this line took the
+  // theme, the projects folder and every binding down with it.
+  it('keeps the other settings when a choice is not a provider at all', () => {
+    const salvaged = salvagePartialSettings(withTheme({ roles: { assistant: 'llama' } }))
+
+    expect(salvaged.ai?.roles).toEqual({})
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+
+  it('keeps the other settings when a project override is unreadable', () => {
+    const salvaged = salvagePartialSettings(
+      withTheme({ projectRoles: { '/a/project': { assistant: { kind: 'nether' } } } }),
+    )
+
+    expect(salvaged.ai?.projectRoles).toEqual({ '/a/project': {} })
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+})
+
 /** The home's band order is written by the same kind of gesture, and costs the same if refused. */
 describe('salvaging the home section order', () => {
   const withTheme = (home: unknown): unknown => ({ home, appearance: { theme: 'light' } })

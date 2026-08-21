@@ -88,15 +88,24 @@ export const PART_SUFFIX = '.part'
  * Whether the studio may load this pair, per ADR-20 § A: a pair is admitted when the loader, AS
  * CONFIGURED HERE, cannot execute code the file supplies.
  *
- * `pickle` is refused for every loader, and not "with a warning": the format executes arbitrary
- * code at read time. ONNX is admitted for `sherpa-onnx` alone, on a MEASURED property of that
- * loader — it registers no operator library and exposes no field to pass one — verified against
- * ONNX Runtime 1.27.1 on 2026-08-21.
+ * A LIST of what is admitted, never a list of what is refused: written the other way round, a
+ * fourth loader entering `ModelLoader` would be admitted for every format nobody thought to
+ * exclude. Here the compiler asks for its line, and the line asks for a measurement.
+ *
+ * `pickle` appears nowhere, and not "with a warning": the format executes arbitrary code at read
+ * time. ONNX is admitted for `sherpa-onnx` alone, on a MEASURED property of that loader — it
+ * registers no operator library and exposes no field to pass one — verified against ONNX
+ * Runtime 1.27.1 on 2026-08-21. `[?]` `llamacpp` is wired to nothing and measured by nobody; its
+ * line reproduces what the previous form admitted rather than deciding anything new.
  */
+const ADMITTED: Record<ModelLoader, readonly ModelFormat[]> = {
+  'sherpa-onnx': ['onnx'],
+  ollama: ['gguf', 'safetensors'],
+  llamacpp: ['gguf', 'safetensors'],
+}
+
 export function admitsLoad(format: ModelFormat, loader: ModelLoader): boolean {
-  if (format === 'pickle') return false
-  if (format === 'onnx') return loader === 'sherpa-onnx'
-  return true
+  return ADMITTED[loader].includes(format)
 }
 
 /** Why a model cannot be offered at all, whatever the machine could hold. */

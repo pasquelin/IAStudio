@@ -185,8 +185,12 @@ export async function modelIsComplete(
   model: LocalModel,
   folder: string,
 ): Promise<boolean> {
-  for (const file of model.files) {
-    if (!(await host.exists(host.join(folder, file.name)))) return false
-  }
-  return true
+  // At once, and the lost short-circuit costs nothing: a `stat` that fails is as cheap as one that
+  // succeeds, and this sits on every compose — so on every assistant turn, four latencies deep on
+  // a model folder the setting lets someone point at an external disk.
+  const present = await Promise.all(
+    model.files.map(file => host.exists(host.join(folder, file.name))),
+  )
+
+  return present.every(Boolean)
 }

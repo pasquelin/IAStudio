@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AiOverview, ChoiceScope, RoleRow } from '@shared/domain/aiOverview'
+import {
+  CHOICE_SCOPES,
+  type AiOverview,
+  type ChoiceScope,
+  type RoleRow,
+} from '@shared/domain/aiOverview'
 import { isGenerationRole } from '@shared/domain/aiRole'
 import { WINDOW_CAPTION, WINDOW_GROUP_LABEL, WINDOW_HELP } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
@@ -11,8 +16,6 @@ import { SettingLine } from '../SettingLine'
 import { SETTING_COLUMN, SETTING_SELECT } from '../settingStyles'
 import { AiRoleRow } from './AiRoleRow'
 import { gpuName } from './gpuName'
-
-const SCOPES: readonly ChoiceScope[] = ['app', 'project']
 
 const SCOPE_FIELD = 'setting-ai-scope'
 
@@ -52,22 +55,26 @@ export function AiSettings() {
     ]
   }, [overview?.roles, t])
 
+  // On the machine alone, never on the whole overview: a download re-publishes every four
+  // mebibytes and `announceProgress` deliberately keeps this member's reference, which depending
+  // on the overview would have thrown away.
+  const summary = overview?.machine ?? null
   const machine = useMemo(() => {
-    if (overview === null) return ''
+    if (summary === null) return ''
 
     return [
       t('aiModels.machineMemory', {
-        total: bytes(overview.machine.physicalBytes),
-        available: bytes(overview.machine.availableBytes),
+        total: bytes(summary.physicalBytes),
+        available: bytes(summary.availableBytes),
       }),
-      overview.machine.gpu === null ? null : gpuName(overview.machine.gpu),
-      overview.machine.diskFreeBytes === null
+      summary.gpu === null ? null : gpuName(summary.gpu),
+      summary.diskFreeBytes === null
         ? null
-        : t('aiModels.machineDisk', { free: bytes(overview.machine.diskFreeBytes) }),
+        : t('aiModels.machineDisk', { free: bytes(summary.diskFreeBytes) }),
     ]
       .filter(part => part !== null)
       .join(' · ')
-  }, [overview, t, bytes])
+  }, [summary, t, bytes])
 
   if (overview === null) return <p className={WINDOW_HELP}>{t('aiModels.reading')}</p>
 
@@ -94,7 +101,7 @@ export function AiSettings() {
             value={writesTo}
             onChange={event => setScope(event.target.value === 'project' ? 'project' : 'app')}
           >
-            {SCOPES.map(value => (
+            {CHOICE_SCOPES.map(value => (
               <option key={value} value={value}>
                 {t(`aiModels.scope_${value}`)}
               </option>

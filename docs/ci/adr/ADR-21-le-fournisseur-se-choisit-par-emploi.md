@@ -47,7 +47,10 @@ emplois n'ont pas d'espace du tout.
 d'avance où chercher, et le studio ne pourrait pas dire « cet emploi-ci tourne chez toi, celui-là
 non ».
 
-### B. Le fournisseur d'un emploi est `local` ou `scenario`, et le local est le DÉFAUT
+### B. Le fournisseur d'un emploi est `local` ou un cloud, et le local est le DÉFAUT
+
+> 🛑 **Ce titre disait « `local` ou `scenario` »** — corrigé par l'amendement du 21 août 2026 en
+> fin de fichier, qui a fait du cloud une liste. Le reste du paragraphe est inchangé.
 
 > **Le défaut d'un emploi est le meilleur fournisseur réellement DISPONIBLE.** Sans compte, seul
 > le local l'est.

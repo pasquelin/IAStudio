@@ -14,6 +14,9 @@ import type { FitObstacle } from './modelFit'
 /** Where a choice came from, which is what tells "inherited" from "set here". */
 export type ChoiceScope = 'app' | 'project'
 
+/** The values beside the type: the scope selector composes a key per member, and a guard reads it. */
+export const CHOICE_SCOPES: readonly ChoiceScope[] = ['app', 'project']
+
 export type ModelCandidate = {
   readonly model: LocalModel
   readonly installed: boolean

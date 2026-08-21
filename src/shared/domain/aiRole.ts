@@ -126,8 +126,10 @@ export type RoleOffer = {
  * 🛑 A chosen local model is honoured while it is INSTALLED, not while the machine judges it
  * comfortable. The verdict moves under a running conversation — a resident model makes the machine
  * read as smaller than it is, since nothing here subtracts what it already occupies (ADR-19's
- * `runtimeBytes`, unwired) — and dropping the choice silently moves the next sentence to a BILLED
- * cloud. What the person asked for stands until they unask it.
+ * `runtimeBytes`, unwired). What the person asked for stands until they unask it.
+ *
+ * 🛑 And where it cannot stand, it falls back LOCALLY or not at all: choosing this machine is also
+ * choosing not to pay, so no reading of any kind may turn that choice into a billed call.
  */
 export function providerFor(
   role: AiRoleId,
@@ -141,6 +143,12 @@ export function providerFor(
 
   const model = offer.localModelIds[0]
   if (model !== undefined) return { kind: 'local', modelId: model }
+
+  // 🛑 A local choice falls back to another LOCAL model, never to a cloud — decided 21/08, and
+  // measured before it was: a runtime that stopped answering reads as "not installed" here, so an
+  // Ollama nobody started moved the next sentence to a BILLED cloud without a word. Answering
+  // nothing lets the assistant say why; billing someone for asking their own machine cannot.
+  if (chosen?.kind === 'local') return null
 
   const cloud = offer.cloudIds[0]
   return cloud === undefined ? null : { kind: 'cloud', providerId: cloud }

@@ -11,7 +11,7 @@ export function defaultModelFolder(userData: string): string {
 }
 
 /**
- * The real world, for `modelDownload`.
+ * The real world, for `modelInstall`.
  *
  * `net.fetch` rather than the global one, for the same reason the asset download uses it: it
  * goes through Electron's own network stack, so a proxy the operating system knows about is

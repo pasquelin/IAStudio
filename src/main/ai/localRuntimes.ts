@@ -5,7 +5,11 @@ export type ChatTurn = { readonly role: 'system' | 'user' | 'assistant'; readonl
 
 export type ChatRequest = {
   readonly model: string
-  /** The window asked for. Honoured where the runtime declares `context: 'per-request'` — ADR-18. */
+  /**
+   * The window asked for. ADR-18 makes this conditional on a runtime DECLARING
+   * `context: 'per-request'`; nothing declares anything yet, so the one adapter there is sends it
+   * unconditionally. Written rather than promised: a runtime that ignores the field gets it anyway.
+   */
   readonly contextTokens: number
   readonly messages: readonly ChatTurn[]
   /** Whether the answer must be one JSON object. Stated by the caller: nothing here guesses. */

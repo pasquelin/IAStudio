@@ -4,7 +4,7 @@ import { STT_MODEL_BYTES } from '@shared/domain/dictation'
 import { ProgressBar } from '@/design/ProgressBar'
 import { STATUS_BUTTON } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
-import { formatBytes } from '@/helpers/format'
+import { useBytes } from '@/hooks/useBytes'
 import { useDictation } from '@/hooks/useDictation'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { DictationStatusListening } from './DictationStatusListening'
@@ -21,9 +21,9 @@ import { DictationStatusListening } from './DictationStatusListening'
  * started the session may be behind a panel, in another workspace, or scrolled past.
  */
 export function DictationStatus() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const dictation = useDictation()
-  const bytes = (value: number) => formatBytes(value, unit => t(`units.${unit}`), i18n.language)
+  const bytes = useBytes()
 
   if (!dictation.enabled) return null
 

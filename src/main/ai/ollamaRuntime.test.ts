@@ -47,6 +47,31 @@ describe('linesOf', () => {
 
     expect(lines).toEqual(['{"a":1}', '{"b":2}'])
   })
+
+  // A stranger on 11434 answering without ever sending a newline: held to a bound rather than
+  // grown until the main process gives out.
+  it('refuses a line that never ends', async () => {
+    const endless = async function* (): AsyncIterable<string> {
+      for (;;) yield 'x'.repeat(64 * 1024)
+    }
+
+    const read = async (): Promise<void> => {
+      for await (const line of linesOf(endless())) void line
+    }
+
+    await expect(read()).rejects.toThrow(/longer than/)
+  })
+
+  // The bound is on ONE line, never on the buffer: a fast local pull hands over a megabyte of
+  // whole lines in a single read whenever the kernel coalesces, and refusing it would abort a
+  // download that is going perfectly well.
+  it('takes a burst of whole lines larger than the bound', async () => {
+    const burst = `${'{"a":1}\n'.repeat(200_000)}`
+    let count = 0
+    for await (const line of linesOf(streamOf([burst]))) if (line !== '') count += 1
+
+    expect(count).toBe(200_000)
+  })
 })
 
 describe('the Ollama client', () => {
@@ -162,6 +187,20 @@ describe('the Ollama client', () => {
     })
 
     await expect(createOllamaClient(port).remove('nope:0b')).rejects.toThrow(/404/)
+  })
+
+  // A refusal whose body never ends: read to the head and left, which cancels the stream. Reading
+  // it whole would hang the removal for ever, and holding it whole would grow without a bound.
+  it('gives up on a refusal that never stops talking', async () => {
+    const endless = async function* (): AsyncIterable<string> {
+      for (;;) yield 'nope '.repeat(64)
+    }
+
+    const port: OllamaPort = {
+      send: () => Promise.resolve({ ok: false, status: 500, chunks: endless() }),
+    }
+
+    await expect(createOllamaClient(port).remove('nope:0b')).rejects.toThrow(/500/)
   })
 
   /**

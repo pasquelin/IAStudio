@@ -1,7 +1,7 @@
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import type { AiManager } from './manager'
-import { parseChoice } from './validation'
+import { parseChoice, parseModelId } from './validation'
 
 export function registerAiHandlers(manager: AiManager): void {
   handle(CHANNELS.aiOverview, () => manager.overview())
@@ -13,7 +13,7 @@ export function registerAiHandlers(manager: AiManager): void {
     return manager.choose(choice.role, choice.provider, choice.scope)
   })
 
-  handle(CHANNELS.aiInstall, (_event, modelId) => manager.install(String(modelId)))
+  handle(CHANNELS.aiInstall, (_event, modelId) => manager.install(parseModelId(modelId)))
   handle(CHANNELS.aiCancelInstall, () => manager.cancelInstall())
-  handle(CHANNELS.aiRemove, (_event, modelId) => manager.remove(String(modelId)))
+  handle(CHANNELS.aiRemove, (_event, modelId) => manager.remove(parseModelId(modelId)))
 }

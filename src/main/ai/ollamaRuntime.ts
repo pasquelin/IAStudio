@@ -68,6 +68,11 @@ export async function* linesOf(chunks: AsyncIterable<string>): AsyncIterable<str
     held += chunk
     const parts = held.split('\n')
     held = parts.pop() ?? ''
+    // The TAIL, and only after the split: what must not grow is a line with no end. Bounding the
+    // buffer BEFORE splitting refuses a read that merely delivered a megabyte of whole lines at
+    // once, which a fast local pull does whenever the kernel coalesces.
+    if (held.length > BODY_MAX) throw new Error(`a line longer than ${BODY_MAX} characters`)
+
     for (const part of parts) if (part.trim() !== '') yield part
   }
 
@@ -90,6 +95,9 @@ function rowOf(line: string): Record<string, unknown> | null {
  * process without end.
  */
 const BODY_MAX = 1024 * 1024
+
+/** What of a refusal reaches the journal. Also the bound on what is held while draining one. */
+const REFUSAL_HEAD = 200
 
 async function jsonBody(reply: OllamaReply, what: string): Promise<Record<string, unknown>> {
   let body = ''
@@ -135,11 +143,17 @@ export function createOllamaClient(port: OllamaPort): OllamaClient {
      */
     pull: async (name, onReceived, signal) => {
       const reply = await port.send('POST', '/api/pull', { model: name, stream: true }, signal)
-      if (!reply.ok) throw new Error(`pull refused: HTTP ${reply.status}`)
+      // Through `jsonBody`, which READS the body: throwing on the status alone never started the
+      // generator, so `chunksOf` never reached its `finally` and the socket stayed open. It says
+      // why in passing — a refusal names the tag it could not find.
+      if (!reply.ok) await jsonBody(reply, 'pull')
 
       // Per DIGEST, because `total` is a layer's and not the model's: summing the lines would
       // count the same bytes again on every report.
       const received = new Map<string, number>()
+      // Carried as a running total rather than resummed: the map is walked and a fresh array
+      // allocated on every NDJSON line, and Ollama sends one about every sixty milliseconds.
+      let total = 0
       let arrived = false
 
       for await (const line of linesOf(reply.chunks)) {
@@ -152,8 +166,10 @@ export function createOllamaClient(port: OllamaPort): OllamaClient {
 
         const digest = readString(row, 'digest', '')
         if (digest !== '') {
-          received.set(digest, readNumber(row, 'completed', 0))
-          onReceived([...received.values()].reduce((total, bytes) => total + bytes, 0))
+          const bytes = readNumber(row, 'completed', 0)
+          total += bytes - (received.get(digest) ?? 0)
+          received.set(digest, bytes)
+          onReceived(total)
         }
       }
 
@@ -172,12 +188,18 @@ export function createOllamaClient(port: OllamaPort): OllamaClient {
         { model: name },
         AbortSignal.timeout(COMMAND_TIMEOUT_MS),
       )
-      // Drained rather than abandoned: a body left unread holds the connection open until the
-      // collector runs, and a refusal says why in it.
+      // The head of the body, and no more: leaving this loop early CANCELS the stream — that is
+      // what `chunksOf` does in its `finally` — so the connection closes rather than leaking.
+      // Slicing each chunk bounded nothing: the string was free to grow one chunk at a time.
       let body = ''
-      for await (const chunk of reply.chunks) body += chunk.slice(0, BODY_MAX)
+      for await (const chunk of reply.chunks) {
+        body += chunk
+        if (body.length >= REFUSAL_HEAD) break
+      }
 
-      if (!reply.ok) throw new Error(`delete refused: HTTP ${reply.status} ${body.slice(0, 200)}`)
+      if (!reply.ok) {
+        throw new Error(`delete refused: HTTP ${reply.status} ${body.slice(0, REFUSAL_HEAD)}`)
+      }
     },
 
     /**
