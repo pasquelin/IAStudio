@@ -8,8 +8,14 @@
 > explicites et des critères d'invalidation nommés. Les marquer `Accepté` dirait qu'elles ont été
 > vérifiées, ce qui est faux, et effacerait la distinction que tout leur contenu sert à construire.
 
-**Provenance.** Chaque affirmation porte un marqueur : `[M]` mesuré — lu dans le dépôt, avec
-`fichier:ligne` · `[D]` documenté — source nommée · `[?]` aucune donnée, et c'est dit.
+**Provenance.** Chaque affirmation porte un marqueur : `[M]` **mesuré ici** — soit lu dans un
+dépôt avec `fichier:ligne`, soit obtenu en exécutant, le protocole étant alors cité · `[D]`
+documenté — source nommée · `[?]` aucune donnée, et c'est dit.
+
+> **La définition de `[M]` a été élargie le 21/08**, et il faut le dire : elle promettait
+> « lu dans **le** dépôt, avec `fichier:ligne` ». Les amendements y logent désormais des lectures
+> de dépôts **étrangers** et des mesures d'**exécution**, qui n'ont pas de `fichier:ligne`. Le
+> marqueur promettait donc autre chose que ce qu'il portait.
 
 ## Contexte
 
@@ -68,7 +74,7 @@ Une ligne par valeur d'énumération, et ce que l'ordonnanceur en fait :
 
 | Axe · valeur | Ce que l'ordonnanceur fait **différemment** |
 |---|---|
-| `residency: owned` | Nous décidons du chargement et de la libération. Ses octets sont **récupérables** : un plan de libération peut compter dessus. |
+| `residency: owned` | Nous décidons du chargement et de la libération. ~~Ses octets sont **récupérables** : un plan de libération peut compter dessus.~~ **La seconde phrase est FAUSSE — voir l'amendement du 21 août 2026.** Nous tenons le cycle de vie ; nous ne tenons pas le retour des octets, qui **ne deviennent récupérables qu'après une re-mesure qui le confirme, exactement comme `advisory`.** |
 | `residency: advisory` | Un processus étranger garde **sa** politique. Nous pouvons demander ; il peut refuser pour des raisons invisibles d'ici. Les octets ne deviennent récupérables qu'**après** une re-mesure qui le confirme, et aucun plan ne les engage à l'avance. |
 | `residency: opaque` | Nombre non fiable au budget, **jamais** récupérable. La seule libération garantie est l'arrêt du processus : un job qui a besoin de cette place est planifié comme si elle n'existait pas. |
 | `memoryReporting: authoritative` | Alimente `MemorySnapshot.source = 'runtime'` et sert à l'admission (ADR-19). |
@@ -105,17 +111,23 @@ faux, et personne ne pourrait dire lesquels.
 
 | | llama.cpp *(embarqué)* | MLX | Ollama `/api/chat` | Ollama `/v1/chat/completions` | Runtime à graphe |
 |---|---|---|---|---|---|
-| `residency` | `owned` `[?]` | `owned` `[?]` | `advisory` — `keep_alive` accepté `[D]` | **`advisory`** — `keep_alive` **ignoré** ✅ | `opaque` `[?]` |
-| `memoryReporting` | `[?]` | `[?]` | `[?]` | `[?]` | `[?]` |
-| `context` | `[?]` | `[?]` | `[D]` `num_ctx` en `options`, **à confirmer** | **`per-install`** — non réglable ✅ | s.o. |
-| `progress` | `[?]` | `[?]` | `[?]` | `[?]` | `push` `[D]` |
-| `cancellation` | `[?]` | `[?]` | `[?]` | `[?]` | `[?]` |
-| `submission` | `params` `[?]` | `params` `[?]` | `params` `[?]` | `params` `[?]` | **`workflow-graph`** `[D]` |
-| `occupancy` | `[?]` | `[?]` | `[?]` | `[?]` | `[?]` |
+| `residency` | `owned` `[M]` — la C API donne `llama_model_load_from_file` / `llama_model_free` au client | `owned` `[M]` — cycle de vie porté par les `mx.array` | **`advisory`** `[M]` — `keep_alive` honoré, mesuré | **`advisory`** — `keep_alive` **ignoré** ✅ `[M]` | `opaque` `[?]` |
+| `memoryReporting` | `[?]` | `[?]` | **rapporte** `[M]` — `size` et `size_vram`, autorité non tranchée | idem — même serveur | `[?]` |
+| `context` | `[?]` | `[?]` | **`per-request`** ✅ `[M]` — `options.num_ctx` déplace l'allocation | **`per-install`** — non réglable ✅ `[M]` | s.o. |
+| `progress` | `[?]` | `[?]` | **`push`** ✅ `[M]` — 118 fragments, le premier à 67 ms | `[?]` | `push` `[D]` |
+| `cancellation` | `[?]` | `[?]` | **`cooperative`** ✅ `[M]` — couper la requête ne tue pas le serveur | `[?]` | `[?]` |
+| `submission` | `params` `[?]` | `params` `[?]` | `params` `[M]` | `params` `[M]` | **`workflow-graph`** `[D]` |
+| `occupancy` | `[?]` | `[?]` | **`multi-job`** ✅ `[M]` — deux requêtes concurrentes, **un** modèle chargé | idem — même serveur | `[?]` |
 
 **Un tableau plausible coûterait plus qu'un tableau vide.** Chaque case se remplit par une
 vérification nommée — charger, demander une libération, re-mesurer, annuler à mi-course, dépasser
 le contexte — avant qu'on y écrive quoi que ce soit.
+
+**Les cases ✅ ont été remplies le 21/08 par exécution**, contre Ollama **0.4.6** sur Apple M2 Max,
+modèle `llama3.2:3b`. Les deux colonnes Ollama partagent un serveur : ce qui ne dépend pas de la
+porte y est reporté à l'identique, et **ce qui en dépend est précisément ce que cette ADR
+existe pour dire**. Les colonnes llama.cpp et MLX restent `[?]` sur tout ce qui demande une
+exécution — leur `residency` seule est établie, et par lecture de source.
 
 ## Alternatives écartées
 
@@ -140,7 +152,7 @@ peuvent changer à chaud · le format d'un graphe.
 
 | Vérification | Résultat qui casse la décision |
 |---|---|
-| **`advisory` contre `owned`** — chercher si un runtime **cède contractuellement** sa politique de résidence : un mode documenté qui la désactive, une API qui en transfère la propriété | **Seule une cession documentée fusionne l'axe.** Une série de demandes honorées ne le fusionne pas : dix succès sur dix ne donnent pas le contrôle, ils donnent dix succès. Un processus étranger applique sa politique pour des raisons invisibles d'ici — mise à jour, pression système, autre client. |
+| **`advisory` contre `owned`** — chercher si un runtime **cède contractuellement** sa politique de résidence : un mode documenté qui la désactive, une API qui en transfère la propriété | **RENDUE le 21/08, et l'axe NE fusionne PAS — mais pas pour la raison écrite ici.** Un mode documenté existe bel et bien (`llama-server --models-max 0`) : le critère est donc atteint, et la ligne aurait dû fusionner l'axe. Deux faits l'en empêchent, tous deux découverts le même jour — voir l'amendement. |
 | Dépasser la fenêtre de contexte de la porte `/v1` avec le préambule complet | Si la troncature est silencieuse **et** sans effet observable sur les réponses, `context` cesse d'être un axe |
 | Annuler à mi-inférence sur chaque pile | Si aucune n'annule autrement qu'en mourant, `cancellation` se réduit à un booléen |
 
@@ -159,10 +171,104 @@ peuvent changer à chaud · le format d'un graphe.
   en message `cancel`, et `main/dictation/session.ts` porte déjà le drapeau `discarding` qui
   empêche un résultat tardif d'atterrir `[M]`.
 - **Dépendance de compilation** : `RuntimeOccupancy.reclaimable` d'ADR-19 est dérivé de `residency`
-  déclaré ici, et `RuntimeEndpointId` y est la clé de `runtimeBytes`. **Cette ADR précède ADR-19 :
-  son énumération et son type marqué doivent exister avant qu'ADR-19 compile.**
+  déclaré ici **et d'une libération re-mesurée** — jamais de `residency` seul, voir l'amendement du
+  21 août 2026 — et `RuntimeEndpointId` y est la clé de `runtimeBytes`. **Cette ADR précède
+  ADR-19 : son énumération et son type marqué doivent exister avant qu'ADR-19 compile.**
 
 **Fichiers** : `shared/domain/aiRuntime.ts` *(neuf)* · `shared/domain/assistantModel.ts` ·
 `shared/domain/job.ts` · `main/assistant/{validation.ts,instruction.ts,brainProvider.ts}` ·
 `renderer/src/stores/assistant.ts` · `main/provider/jobManager.ts` · `main/processClient.ts` ·
 `preload/index.ts` · `renderer/src/stores/jobs.ts`.
+
+---
+
+## Amendement du 21 août 2026 — `owned` dit qui tient le cycle de vie, jamais que les octets rentrent
+
+**Une phrase de la version initiale était fausse**, et c'est la seule que le lot 0 avait déjà
+transformée en code : « Ses octets sont **récupérables** : un plan de libération peut compter
+dessus. » Non. `owned` dit que **nous** décidons du chargement et de la libération. Il ne dit rien
+de ce que l'allocateur, le système ou un cache intercalé font ensuite.
+
+**Deux mesures indépendantes, le 21/08, et c'est leur convergence qui tranche.**
+
+`[M]` **Par lecture de source des runtimes** — les deux runtimes réellement `owned` ont chacun un cache
+entre eux et le système. llama.cpp en `LLAMA_LOAD_MODE_MMAP` (`llama.h:205-212`) tient ses poids
+en **page cache** : le nombre est juste, mais libérer ne rend pas ce qu'on croit, et il faut
+`LLAMA_LOAD_MODE_NONE` ou `MLOCK` pour que « chargé » veuille dire « résident ». MLX rend au cache
+de son allocateur et non au système — `memory.h:11-14`, « will not always match memory use
+reported by the system because it does not include cached memory buffers » ; la re-mesure honnête
+y vaut `get_active_memory() + get_cache_memory()`, et le plan n'est tenu qu'après `clear_cache()`.
+
+`[M]` **Par mesure locale du viewport du studio** — le cas le plus `owned` qui soit : le **studio lui-même**. Son
+processus GPU passe de 107 Mo à 475 Mo à l'ouverture d'une scène 3D, puis ses documents sont
+fermés — `documents: []`, `canvases: 0` — et il se stabilise à **353 Mo**. **246 Mo ne reviennent
+pas**, dont 239 Mo de mémoire graphique, et le plateau tient plusieurs minutes. Nous possédions
+ces octets de bout en bout ; ils ne sont pas rentrés.
+
+**Ce qui change.** `residency` garde ses trois valeurs et son sens — **seule la conséquence
+écrite sur `owned` est retirée**. La dérivation devient : `opaque` jamais récupérable ; **`owned`
+et `advisory` récupérables seulement après une re-mesure qui le confirme.** C'est R2 d'ADR-19
+appliqué partout au lieu d'être suspendu pour un cas, et le lot 0 avait déjà rendu la correction
+possible en faisant de `reclaimableOf` une fonction à **deux** arguments plutôt qu'une projection
+de `residency`.
+
+**Ce que ça coûte, et c'est assumé** : l'ordonnanceur ne peut plus rien engager d'avance, même sur
+ce qu'il possède. Un plan de libération se vérifie ; il ne se prévoit pas.
+
+`[M]` **Une seconde conséquence de V3, qui ne change pas l'énumération mais son usage** :
+`residency` est une propriété de l'**instance**, jamais de la famille de runtime. Le même
+`llama-server` est `advisory` avec `--models-max 4` et `owned` avec `--models-max 0` — et il
+**republie sa politique** par `GET /props` (`server-models.cpp:1881-1882`), donc elle se vérifie.
+Ne pas coder `residency` en dur par produit.
+
+`[M]` **Et le cas fondateur de cette ADR est CONFIRMÉ, plus fortement qu'il n'était écrit.**
+Ollama ne cède pas : `keep_alive: -1` devient `math.MaxInt64` (`api/types.go:1253-1254`), soit un
+minuteur d'inactivité de ~292 ans — pas un épinglage — et **trois chemins l'écrasent à zéro sans
+le regarder** (`sched.go:265-268`, `:326`, `:1632`). Ce que `-1` achète est une **priorité** dans
+l'ordre des victimes, pas une immunité. **Le piège vaut d'être écrit** : ce fait est lu dans le
+code, quand la FAQ affirme « any negative number which will keep the model loaded in memory »
+sans réserve. Qui s'en tient à la documentation conclut l'inverse de la vérité.
+
+`[?]` **Portée de la lecture `llama-server`** : « le même binaire est `advisory` avec
+`--models-max 4` et `owned` avec `0` » est une **traduction d'un drapeau étranger dans notre
+taxonomie**, donc une déduction. Seul « il republie sa politique par `GET /props` » est mesuré.
+
+### Le tableau se remplit — Ollama, par exécution
+
+`[M]` Mesuré le 21/08 contre **Ollama 0.4.6** sur Apple M2 Max, modèle `llama3.2:3b`. **Le fait
+fondateur de cette ADR est reproduit à l'exécution** : `keep_alive: -1` sur `/api/chat` rend une
+expiration en **2318** — `math.MaxInt64` nanosecondes, exactement ce que la lecture du code annonçait
+code — quand la **même valeur sur `/v1/chat/completions` rend 300 s**, le défaut. Une porte
+honore, l'autre ignore, sur le même serveur et le même modèle.
+
+`[M]` `context` est **`per-request`** sur la porte native, et l'effet se chiffre :
+`options.num_ctx: 8192` fait passer l'occupation rapportée de **4,03 Go à 8,21 Go**. Sur `/v1`,
+aucun effet — ce qui confirme `per-install`. `[M]` `progress` est **`push`** : 118 fragments, le
+premier à 67 ms. `[M]` `cancellation` est **`cooperative`** : couper la requête HTTP à mi-course
+laisse le serveur vivant et le modèle chargé. `[M]` `occupancy` est **`multi-job`** : deux
+requêtes concurrentes aboutissent avec **un seul** modèle chargé.
+
+### 🛑 Ce que la même campagne a montré, et qui renverse l'intuition
+
+`[M]` **Ollama libère en TUANT son processus.** Le modèle vit dans un `ollama_llama_server`
+enfant ; sur `keep_alive: 0` ce processus **disparaît en moins de 300 ms** et le système reprend
+tout. Le studio, lui, est `owned` sur son propre viewport et **ne rend rien** — 246 Mo restent
+après fermeture, mesuré le même jour.
+
+**L'`advisory` rend donc tout, et le `owned` ne rend rien.** Ce n'est pas `residency` qui prédit la
+récupérabilité : c'est **si la libération tue un processus**. C'est une seconde raison, indépendante
+de la première, de retirer cette promesse à `owned` — et elle explique pourquoi la ligne
+d'invalidation « `advisory` contre `owned` » ne fusionne pas l'axe alors que **son critère est
+atteint** : `--models-max 0` est bien un mode documenté qui désactive la politique, mais depuis cet
+amendement les deux valeurs produisent le **même** `reclaimable`. Fusionner ferait perdre la seule
+chose que l'axe dit encore, et qui reste utile ailleurs — **qui décide**, dont dépendent la
+topologie, `cancellation`, et le droit de tuer.
+
+`[?]` **Un écart que V13 doit trancher, et qu'on ne conclut pas ici** : `/api/ps` annonce
+**4,03 Go** quand `footprint` ne voit que **981 Mo** pour le runner. Facteur 4. Ce n'est **pas**
+une preuve que le runtime surestime — sur Metal, une part des allocations peut échapper au
+footprint d'un processus. C'est un écart entre deux façons de compter, et c'est l'objet même de V13.
+
+`[?]` **La version mesurée n'est pas celle qui a été lue.** Le code d'Ollama lu date du 20/08/2026 ;
+la machine porte la **0.4.6**. Les deux concordent sur `keep_alive`, ce qui est un signal fort, mais
+aucune mesure ci-dessus ne vaut pour une version qu'on n'a pas exécutée.

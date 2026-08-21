@@ -44,14 +44,13 @@ export type MemorySnapshot = {
 /**
  * Whether a runtime's bytes may enter a release plan RIGHT NOW.
  *
- * Two arguments, and that is the whole point: read off `residency` alone, `advisory` would be
- * false forever and a foreign process that did give memory back would go on being planned around
- * as though it had not. Its answer therefore changes over time while the capabilities do not.
+ * Two arguments, and that is the whole point: no residency answers on its own, so the value moves
+ * over time while the capabilities stand still. `owned` earns no exemption — it says who holds the
+ * lifecycle, never that the bytes come back — which was measured twice: a page cache sits under a
+ * memory-mapped model, and this studio's own GPU process kept 246 MB after closing every document.
  */
 export function reclaimableOf(residency: Residency, releaseConfirmed: boolean): boolean {
-  if (residency === 'owned') return true
-  if (residency === 'opaque') return false
-  return releaseConfirmed
+  return residency === 'opaque' ? false : releaseConfirmed
 }
 
 /**

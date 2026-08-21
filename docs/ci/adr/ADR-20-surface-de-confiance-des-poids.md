@@ -31,12 +31,17 @@ digest prouve que les octets correspondent au manifeste — **rien d'autre**.
 | ONNX × **sherpa-onnx-node tel qu'il est configuré ici** | `[M]` Le studio ne désérialise jamais l'ONNX : il passe des chemins à l'addon (`sttWorker.ts:79-89`), dont la seule configuration est `featConfig` + `modelConfig{transducer, tokens, modelType, numThreads}` — **aucun enregistrement de bibliothèque d'opérateurs**, et `shared/types/sherpa-onnx-node.d.ts` (`OfflineModelConfig`) n'expose aucun champ pour en faire un. `[M]` ONNX Runtime est chargé par l'addon, sous forme de dylibs embarquées dans ses paquets de plateforme (`scripts/collect-licences.mjs:154-166`). | **admis** — sur une propriété **mesurée du chargeur** |
 | ONNX × chargeur exposant l'enregistrement d'opérateurs | `[?]` | **non admis tant que non vérifié** |
 
-`[?]` **Reste ouvert, et écrit plutôt que comblé** : qu'un graphe ONNX forgé puisse à lui seul
-induire ONNX Runtime à charger du code natif, sans appel d'enregistrement. Ce n'est pas répondable
-en lisant ce dépôt — c'est une propriété d'ONNX Runtime, pas du studio. **C'est précisément
-pourquoi l'axe est le couple et non le format** : ce qui rend l'ONNX de la dictée sûr aujourd'hui
-est une propriété du chargeur, qui est mesurable ici, et non une propriété du format, qui ne
-l'est pas.
+~~`[?]` **Reste ouvert, et écrit plutôt que comblé** : qu'un graphe ONNX forgé puisse à lui seul
+induire ONNX Runtime à charger du code natif, sans appel d'enregistrement.~~ **RENDU le 21/08 :
+il ne le peut pas, sur ORT 1.27.1 — voir l'amendement**, qui montre en outre que la raison est
+plus forte qu'écrit ici (aucune structure du format ne nomme une bibliothèque). `[?]` **Ce qui
+reste ouvert** est autre chose : une exécution obtenue par corruption mémoire dans le parseur ou
+un noyau, et les paquets `win32-x64` / `linux-x64`, non inspectés.
+
+**L'axe reste le couple et non le format**, et le 21/08 lui a donné son meilleur argument : le
+`dlopen` que cette section cherchait existe bel et bien dans le binaire livré — **mais pour
+(`.fst`, OpenFst)**, pas pour l'ONNX. Un format sûr chez un chargeur, dangereux chez un autre,
+dans la même bibliothèque.
 
 ### B. Trois rangs de provenance. Le rang décide, jamais l'URL ni le digest
 
@@ -73,10 +78,10 @@ par le studio ne doit pas rouvrir ce qu'ils ferment.
 | Vérifiable avant exécution | Non vérifiable |
 |---|---|
 | digest et taille de chaque fichier `[M]` | ce que le modèle produit |
-| nombres magiques du format | qu'un ONNX ne charge pas d'opérateur natif `[?]` |
+| nombres magiques du format | ~~qu'un ONNX ne charge pas d'opérateur natif `[?]`~~ **vérifié le 21/08 sur ORT 1.27.1 / `darwin-arm64` — passe à gauche, SOUS les réserves de l'amendement** (rien sur la corruption mémoire, `win32`/`linux` non inspectés) |
 | rang de provenance du manifeste | ce que fait un processus Python après son démarrage |
 | licence **déclarée** | licence **réelle** d'un poids |
-| que le graphe ne nomme aucun nœud inconnu à l'installation | qu'il n'en résolve pas un à l'exécution `[?]` |
+| que le graphe NOMME un nœud inconnu à l'installation — vérifiable, **et sans valeur de garantie** | ~~qu'il n'en résolve pas un à l'exécution `[?]`~~ **mesuré le 21/08 : il en résout, par quatre chemins — voir l'amendement** |
 
 Ce qui n'est pas vérifiable n'est jamais présenté comme vérifié.
 
@@ -111,8 +116,8 @@ non technique.
 | Vérification | Résultat qui casse la décision |
 |---|---|
 | Recenser, parmi les modèles réellement visés, ceux qui n'existent **que** sous un format pickle | Si des modèles indispensables sont exclus, c'est un arbitrage explicite — jamais un assouplissement silencieux |
-| Répondre au `[?]` d'ONNX Runtime : un graphe seul peut-il faire charger du code natif | Si oui, le couple ONNX × sherpa sort de la liste blanche telle qu'elle est écrite |
-| Un graphe peut-il résoudre un nœud non déclaré à l'exécution | Si oui, la vérification à l'installation ne prouve rien, et il faut l'écrire |
+| ~~Répondre au `[?]` d'ONNX Runtime : un graphe seul peut-il faire charger du code natif~~ **RENDUE le 21/08** | **NON** sur ORT 1.27.1 : le couple reste admis. Mais la campagne a trouvé le `dlopen` ailleurs — **(`.fst`, OpenFst) ne passe pas le critère**, voir l'amendement |
+| ~~Un graphe peut-il résoudre un nœud non déclaré à l'exécution~~ **RENDUE le 21/08** | **OUI**, par quatre chemins mesurés. La vérification à l'installation ne prouve donc rien, et le § D est réécrit dans l'amendement |
 
 ## Conséquences
 
@@ -128,3 +133,89 @@ non technique.
 `main/dictation/modelDownload.ts` · `scripts/collect-licences.mjs` · `src/shared/licences.json`
 *(généré)* · `THIRD-PARTY-NOTICES.md` *(généré)* · `src/main/licences.test.ts` ·
 `main/mcp/access.ts` · `main/window/{permissions.ts,navigation.ts}` · `electron-builder.yml`.
+
+---
+
+## Amendement du 21 août 2026 — les deux `[?]` du § D sont rendus, et ils ne vont pas dans le même sens
+
+### ONNX : le couple RESTE admis, pour une raison plus forte que celle qui était écrite
+
+`[M]` Lu sur ONNX Runtime **1.27.1**, la version exacte qu'embarque `sherpa-onnx-darwin-arm64@1.13.5`.
+**Un graphe seul ne peut pas faire charger de code natif.** Devant un domaine d'opérateur inconnu,
+ORT **échoue, il ne cherche pas** (`graph.cc:3592-3608`, « is not a registered function/op ») — il
+n'existe aucune branche « sinon, charger une bibliothèque nommée d'après le domaine ». `PyOp` /
+`ENABLE_LANGUAGE_INTEROP_OPS`, le mécanisme historique qui aurait répondu « oui », est
+**incompilable** : le dossier `language_interop_ops/` est absent de l'arbre, aucune option cmake ne
+l'active, et le binaire livré n'en porte aucune chaîne. `external_data` est confiné — chemin absolu
+refusé, canonisation, descendance vérifiée (`tensorprotoutils.cc:418-468`) — et **les trois messages
+de cette garde sont présents dans le `.dylib` d'ici**, ce qui compte car la garde est récente.
+
+**La nuance renforce l'ADR** : la sûreté ne tient pas seulement à ce que le studio s'abstienne
+d'appeler `RegisterCustomOpsLibrary`. Elle tient à ce qu'**aucune structure du format ONNX ne
+désigne une bibliothèque** — `FunctionProto` (`onnx.proto:947-990`) n'a ni champ chemin ni champ
+bibliothèque, et ORT ne lit aucune option de session depuis le modèle.
+
+`[?]` **Ce que ce verdict ne couvre pas, et qu'il ne faut pas laisser croire** : rien sur une
+exécution obtenue par corruption mémoire dans le parseur protobuf ou dans un noyau CPU. Un `.onnx`
+d'origine inconnue reste une entrée non fiable donnée à ~27 Mo de C++. Les paquets `win32-x64` et
+`linux-x64` n'ont pas été inspectés.
+
+### 🛑 Le vrai `dlopen` du dossier est ailleurs : (`.fst`, OpenFst) ne passe PAS le critère
+
+`[M]` `libsherpa-onnx-c-api.dylib` **importe `_dlopen`**, alors que QNN — le seul `dlopen` des
+sources de sherpa — n'est pas compilé dans ce binaire. Le site d'appel, retrouvé au désassemblage,
+est `fst::GenericRegister::LoadEntryFromSharedObject`, et la chaîne `-fst.so` est dans le binaire.
+`[D]` OpenFst : `Fst::Read`, devant un type d'arc inconnu, construit `<type>-fst.so` **depuis
+l'en-tête du fichier lu** et le `dlopen`.
+
+**C'est exactement la propriété que le critère du § A cherche, trouvée sur un format voisin.** Un
+`.onnx` ne l'atteint pas ; un `.fst` — graphe HLG, lexique, deux objets courants en reconnaissance
+vocale — l'atteint. **Ce couple est à évaluer séparément, et il ne passe pas tel quel.** Ne pas
+laisser un `.fst` entrer dans la liste blanche par ressemblance avec l'ONNX.
+
+### Runtime à graphe : la ligne du § D disait le contraire de ce qui est mesuré
+
+`[M]` **Un graphe résout des types de nœuds non déclarés à l'exécution, par quatre chemins**, sur
+ComfyUI (`76135e5`) comme sur InvokeAI (`8e71a8a`). **(1)** L'**expansion** : un nœud rend un
+sous-graphe dont les `class_type` sont résolus **sans repasser par `validate_prompt`**
+(`execution.py:589-596`), mécanisme officiel et documenté. **(2)** Le serveur **réécrit** un
+`class_type` inconnu vers un autre **avant** de valider (`server.py:1110` avant `:1112`). **(3)** Un
+type **connu** exécute du code fourni par le graphe — `GLSLShader` est un nœud **du cœur** dont
+l'entrée est du GLSL libre (`nodes_glsl.py:695-711`) ; côté tiers c'est du Python — `[D]`
+CVE-2024-21576, **CVSS 10.0**, avis publié et non lecture de source. **(4)** La table **change
+entre deux vérifications** : ComfyUI-Manager fait
+maintenant partie du produit (`cli_args.py:161-164`) avec installation par HTTP et un
+`/manager/reboot` qui est un `os.execv`, et `--disable-manager-ui` laisse tourner les installations
+programmées ; sur InvokeAI, `POST /api/v2/custom_nodes/install` fait `git clone` puis `exec_module`
+**sans redémarrage**, sous un admin rendu **inconditionnel** quand `multiuser` est faux — le défaut.
+
+`[M]` **Et le nom n'identifie rien** : un `class_type` du format API est un **nom nu**, sans
+version ni éditeur ni espace de noms (`node_replace_manager.py:14-17`), et `/object_info` ne rend
+aucune version. Le format *workflow* porte `cnr_id`/`ver`, **que rien dans le runtime ne lit**.
+Piège pour une vérification naïve : dans un workflow à sous-graphes, `nodes[].type` rend un
+**UUID**, les vrais types vivant dans `definitions.subgraphs[]`.
+
+**La ligne du § D devient donc :**
+
+> **La liste des types qu'un graphe NOMME est close et vérifiable ; ce que le graphe EXÉCUTE ne
+> l'est pas, et aucune vérification statique ne le rendra tel.**
+
+Ce qui borne l'exécution n'est pas une lecture du graphe mais **un runtime contraint** :
+`--disable-all-custom-nodes` avec `--whitelist-custom-nodes`, `--disable-api-nodes`, pas de
+Manager, et une revérification de la table **au moment de soumettre** plutôt qu'à l'installation.
+`[D]` Le projet place lui-même la frontière du mauvais côté pour nous : son `SECURITY.md` exclut
+« issues that require a specific custom node to be installed » et ne promet quelque chose que pour
+un workflow « using only built-in nodes ». **Le § C tient donc plus que jamais** — un runtime que
+la personne a démarré est le sien ; un runtime que le studio démarre engage le studio, et son jeu
+de nœuds est de la surface de confiance.
+
+`[?]` Rien n'a été exécuté : tout est lu en source. L'aplatissement des sous-graphes par le
+frontend est `[D]` et non `[M]`.
+
+### Deux pointeurs du corps à connaître
+
+`[M]` `sttWorker.ts:79-89` (§ A) est court d'une ligne : `numThreads`, que la phrase cite comme
+faisant partie de la configuration, est en **90**. Lire `:79-91`. `[M]` Et
+`collect-licences.mjs:157` déclare ONNX Runtime en **`1.27.0`** quand le binaire livré rend
+**`1.27.1`** — `THIRD-PARTY-NOTICES.md` et `src/shared/licences.json` sont donc générés faux.
+Corriger le collecteur touche six fichiers ensemble (§ Conséquences) : **ce n'est pas fait ici**.

@@ -29,14 +29,18 @@ describe('effectiveOf', () => {
 })
 
 describe('reclaimableOf', () => {
-  it('counts on what we own, and on what is opaque never', () => {
-    expect(reclaimableOf('owned', false)).toBe(true)
+  it('never counts on what is opaque, confirmed or not', () => {
     expect(reclaimableOf('opaque', true)).toBe(false)
+    expect(reclaimableOf('opaque', false)).toBe(false)
   })
 
-  // The two calls a one-argument derivation cannot tell apart — see `reclaimableOf`.
-  it('waits for a confirmed release before counting on an advisory runtime', () => {
+  // The pairs a one-argument derivation cannot tell apart. `owned` sits here rather than beside
+  // `opaque` because holding the lifecycle is not the same as getting the bytes back — measured
+  // on this studio's own GPU process, which kept 246 MB after closing every document.
+  it('waits for a confirmed release on both of the other two, and then counts on them', () => {
     expect(reclaimableOf('advisory', false)).toBe(false)
     expect(reclaimableOf('advisory', true)).toBe(true)
+    expect(reclaimableOf('owned', false)).toBe(false)
+    expect(reclaimableOf('owned', true)).toBe(true)
   })
 })
