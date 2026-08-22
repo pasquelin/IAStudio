@@ -107,6 +107,15 @@ const SOURCE_VIDEO: LocalFieldTemplate = {
   required: false,
 }
 
+/** The take a generation reworks. Empty, the model composes from the words alone. */
+const SOURCE_AUDIO: LocalFieldTemplate = {
+  key: 'audio',
+  kind: 'raw',
+  labelKey: 'localFields.audio',
+  helpKey: 'localFields.audioHelp',
+  required: false,
+}
+
 const MASK: LocalFieldTemplate = {
   key: 'mask',
   kind: 'image',
@@ -276,6 +285,7 @@ const TEMPLATES: Record<LocalModality, readonly LocalFieldTemplate[]> = {
   audio: [
     PROMPT,
     NEGATIVE_PROMPT,
+    SOURCE_AUDIO,
     {
       key: 'seconds',
       kind: 'number',

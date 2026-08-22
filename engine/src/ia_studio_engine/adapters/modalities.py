@@ -114,11 +114,46 @@ def _video_kwargs(params: dict[str, Any]) -> dict[str, Any]:
     return kwargs
 
 
+def _read_wave(path: str) -> Any:
+    """
+    A take as the tensor a pipeline takes, `[channels, samples]`, through the standard library.
+
+    🛑 **PCM WAV only, and nothing converts.** `soundfile` and `torchaudio` would each add a
+    dependency and a licence for a header read here in ten lines — and what the studio itself
+    writes for a sound IS a WAV, so a generation can always be reworked. A take imported from
+    elsewhere in another container raises, and says which file it could not read.
+    """
+    import wave
+
+    import numpy
+    import torch
+
+    with wave.open(path, "rb") as file:
+        if file.getsampwidth() != 2:
+            raise ValueError(f"not 16-bit PCM audio: {path}")
+        channels = file.getnchannels()
+        frames = numpy.frombuffer(file.readframes(file.getnframes()), dtype="<i2")
+
+    samples = frames.reshape(-1, channels).T.astype("float32") / 32768.0
+    return torch.from_numpy(samples)
+
+
 def _audio_kwargs(params: dict[str, Any]) -> dict[str, Any]:
+    """
+    A source take switches ACE-Step into `cover` on its own, and it is what gives the duration —
+    passing one anyway would crop or stretch what the person handed in.
+    """
     kwargs = _shared_kwargs(params)
     seconds = _number(params, "seconds")
     if seconds is not None:
         kwargs["audio_end_in_s"] = float(seconds)
+
+    source = _number(params, "audio")
+    if source is None:
+        return kwargs
+
+    kwargs.pop("audio_end_in_s", None)
+    kwargs["src_audio"] = _read_wave(str(source))
     return kwargs
 
 

@@ -33,7 +33,9 @@
     "strength": "Écart à l’image de départ",
     "strengthHelp": "Sans effet si aucune image de départ n’est donnée.",
     "video": "Séquence de départ",
-    "videoHelp": "Laissez vide pour composer la séquence d’après la description seule."
+    "videoHelp": "Laissez vide pour composer la séquence d’après la description seule.",
+    "audio": "Prise de départ",
+    "audioHelp": "Un WAV 16 bits. Laissez vide pour composer d’après la description seule."
   },
   "aiModels": {
     "reading": "Lecture de la machine…",
