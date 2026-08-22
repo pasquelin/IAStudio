@@ -54,6 +54,22 @@ beforeAll(() => {
        }) + '\\n')
      })`,
   )
+  writeFileSync(
+    scriptAt('holdsChild.js'),
+    `const { spawn } = require('node:child_process')
+     const { writeFileSync } = require('node:fs')
+     const net = require('node:net')
+     const kid = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+       stdio: 'ignore',
+     })
+     writeFileSync(process.env.CHILD_PID_FILE, String(kid.pid))
+     const socket = net.connect(process.argv[process.argv.indexOf('--socket') + 1], () => {
+       socket.write(JSON.stringify({
+         v: ${PROTOCOL_VERSION}, evt: 'engine.hello',
+         engine: '0.0.0', protocol: ${PROTOCOL_VERSION}, python: '3.12.0', platform: 'test',
+       }) + '\\n')
+     })`,
+  )
 })
 
 afterAll(() => rmSync(folder, { recursive: true, force: true }))
@@ -148,6 +164,28 @@ describe('the death of the engine', () => {
     await vi.waitFor(() => expect(seen.deaths).toHaveLength(1), 5_000)
     expect(seen.deaths[0]?.message).toContain('the stand-in engine exited with code 0')
     port.kill()
+  })
+
+  it('kills the door processes the engine started, not only the engine', async () => {
+    const { readFileSync } = await import('node:fs')
+    const pidFile = join(folder, 'child.pid')
+    vi.stubEnv('CHILD_PID_FILE', pidFile)
+    const port = openPythonProcess({
+      command: process.execPath,
+      args: [scriptAt('holdsChild.js')],
+      sources: folder,
+      processName: 'the stand-in engine',
+      shutdownGraceMs: 50,
+    })
+    const seen = watch(port)
+    await vi.waitFor(() => expect(seen.frames).toHaveLength(1), 5_000)
+    const childPid = Number(readFileSync(pidFile, 'utf8'))
+    expect(childPid).toBeGreaterThan(0)
+
+    port.kill()
+    await vi.waitFor(() => {
+      expect(() => process.kill(childPid, 0)).toThrow()
+    }, 2_000)
   })
 })
 

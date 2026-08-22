@@ -96,10 +96,7 @@ export function createDecoderPool({
    * Two ceilings, because the two kinds are scarce for different reasons. Insertion order is
    * recency order, so dropping from the front drops the least recently used of the kind.
    *
-   * Only settled sinks are counted and dropped: one still in flight has no known kind, and
-   * evicting for it costs a reopen of something that was already there. It is bounded a moment
-   * later, when it settles and calls this again — and an evicted opening was closed on arrival
-   * either way, so nothing is held longer than before.
+   * Only settled sinks are counted and dropped: one still in flight has no known kind.
    */
   const evict = (keep?: string): void => {
     const counted = (assetId: string): boolean => settled.has(assetId) && assetId !== keep
@@ -128,6 +125,9 @@ export function createDecoderPool({
     let opening = sinks.get(assetId)
     if (opening) touch(assetId, opening)
     else {
+      // A burst of 3D clips otherwise opened one WebGL context each before any settled.
+      const inFlight = [...sinks.keys()].filter(id => !settled.has(id)).length
+      if (inFlight >= maxPictures) return null
       opening = open(assetId)
       sinks.set(assetId, opening)
       evict()

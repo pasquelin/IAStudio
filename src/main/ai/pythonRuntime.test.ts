@@ -283,3 +283,31 @@ describe('the door a request names', () => {
     expect(held.job).toHaveBeenLastCalledWith('models.unload', { door: 'engine/diffusion' })
   })
 })
+
+describe('unloading', () => {
+  it('does not start the engine to unload nothing', async () => {
+    const started = vi.fn(() => Promise.resolve(null))
+    const { runtime } = harness({}, { engine: started, running: () => null })
+
+    await runtime.unload?.()
+
+    expect(started).not.toHaveBeenCalled()
+  })
+
+  it('forgets what it held even when the door refuses the unload', async () => {
+    const doors = [
+      { door: 'engine/diffusion', tensorBytes: 1, heldBytes: 2, device: 'mps', backend: 'pytorch' },
+    ]
+    const held = harness({
+      memory: () => Promise.resolve(doors),
+      job: op =>
+        op === 'models.unload'
+          ? Promise.reject(new Error('door-gone'))
+          : Promise.resolve(settled({ heldBytes: 2 })),
+    })
+    await held.runtime.load?.(MODEL, { onProgress: () => {} })
+
+    await expect(held.runtime.unload?.()).rejects.toThrow(/door-gone/)
+    expect((await held.runtime.read([MODEL])).loaded).toBeNull()
+  })
+})

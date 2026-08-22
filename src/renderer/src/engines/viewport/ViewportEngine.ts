@@ -751,6 +751,7 @@ export class ViewportEngine {
     this.disposeInset()
 
     const canvas = this.renderer?.domElement
+    this.renderer?.forceContextLoss()
     this.renderer?.dispose()
     this.renderer = null
 

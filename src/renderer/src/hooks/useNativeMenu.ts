@@ -181,8 +181,15 @@ export function useNativeMenu(): void {
     // which scene is in front decides what the ticks read.
     // `useProject` is among them because the home offers the Explorer only while a project is
     // open: without it the row would stay in the menu until something else happened to publish.
-    const stopPublishing = [useLayouts, useModels, useSettings, useDocuments, useProject].map(
-      store => store.subscribe(publishMenuContext),
+    const stopPublishing = [useLayouts, useSettings, useDocuments, useProject].map(store =>
+      store.subscribe(publishMenuContext),
+    )
+    // Search keystrokes used to rebuild the native menu: only the chosen model moves a row.
+    stopPublishing.push(
+      useModels.subscribe((state, previous) => {
+        if (state.selected === previous.selected && state.prepared === previous.prepared) return
+        publishMenuContext()
+      }),
     )
     // The two written far too often are subscribed apart, through the guard that prices a tick
     // and an ability before a context. `useScenes` is one of them because what is PICKED in a

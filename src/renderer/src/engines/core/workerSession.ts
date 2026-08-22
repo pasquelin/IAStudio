@@ -54,5 +54,12 @@ export function createWorkerSession<
           reject(error instanceof Error ? error : new Error(String(error)))
         }
       }),
+    dispose: (): void => {
+      const error = new Error('the worker was stopped')
+      for (const waiting of pending.values()) waiting.reject(error)
+      pending.clear()
+      worker?.terminate()
+      worker = null
+    },
   }
 }

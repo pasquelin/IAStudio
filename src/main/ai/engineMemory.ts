@@ -15,19 +15,14 @@ export function endpointOfDoor(door: string): RuntimeEndpointId | null {
   if (!runtime || !name || rest.length > 0) return null
 
   try {
-    return runtimeEndpointId(runtime, name)
+    // `engine/diffusion` is `diffusers/diffusion` — process name vs scheduler key.
+    return runtimeEndpointId(runtime === 'engine' ? 'diffusers' : runtime, name)
   } catch {
     return null
   }
 }
 
-/**
- * Whether a door's bytes may enter a release plan.
- *
- * `true`, and it is a MEASUREMENT rather than a courtesy: killing the process returns them, which
- * is what `_worker_left` proves by forgetting the door outright. This is the one runtime of the
- * studio whose release needs no confirmation, because release means death.
- */
+/** Killing the process returns the bytes (`_worker_left`). Release means death, so no confirmation. */
 const RECLAIMABLE = true
 
 export function occupancyOfDoors(

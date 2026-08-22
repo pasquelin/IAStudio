@@ -29,6 +29,8 @@ export type PythonRuntimeDeps = FileRuntimeDeps & {
   /** The engine only if it is ALREADY running. Reading the catalogue must never start one. */
   running: () => PythonClient | null
   log: (level: 'info' | 'warn', message: string) => void
+  /** Called when a load or generation starts; the returned function runs when it ends. */
+  onUsed?: (modelId: string) => (() => void) | void
 }
 
 export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
@@ -87,34 +89,41 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
       const engine = await deps.engine()
       if (!engine) throw new Error('the local AI engine is not answering')
 
-      const door = engineDoorOf(model.modality)
-      const settled = await engine.job(
-        'models.load',
-        { modelId: model.id, folder: deps.folderFor(model), door },
-        { onStep: options.onProgress, signal: options.signal },
-      )
+      const done = deps.onUsed?.(model.id)
+      try {
+        const door = engineDoorOf(model.modality)
+        const settled = await engine.job(
+          'models.load',
+          { modelId: model.id, folder: deps.folderFor(model), door },
+          { onStep: options.onProgress, signal: options.signal },
+        )
 
-      held.set(door, model.id)
-      // A MEASUREMENT, where `reservationBytes` is only what a publisher announced — R3. A backend
-      // that answered nothing leaves the reservation, which is the only other figure there is.
-      return settled.heldBytes ?? model.reservationBytes
+        held.set(door, model.id)
+        return settled.heldBytes ?? model.reservationBytes
+      } finally {
+        done?.()
+      }
     },
 
     unload: async (endpoint?: RuntimeEndpointId) => {
-      // Named or all of them, and never a default: waking a door this runtime never loaded into
-      // would fork a Python process to free what it does not hold.
       const doors: readonly string[] = endpoint
         ? [engineDoorOfEndpoint(endpoint)]
         : [...held.keys()]
       const asked = doors.filter(door => held.has(door))
       if (asked.length === 0) return
 
-      const engine = await deps.engine()
-      if (!engine) return
+      const engine = deps.running()
+      if (!engine) {
+        for (const door of asked) held.delete(door)
+        return
+      }
 
       for (const door of asked) {
-        await engine.job('models.unload', { door })
-        held.delete(door)
+        try {
+          await engine.job('models.unload', { door })
+        } finally {
+          held.delete(door)
+        }
       }
     },
 
@@ -122,26 +131,29 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
       const engine = await deps.engine()
       if (!engine) throw new Error('the local AI engine is not answering')
 
-      const settled = await engine.job(
-        'generate',
-        {
-          ...request.fields,
-          prompt: request.prompt,
-          destination: request.destination,
-          door: engineDoorOf(request.modality),
-        },
-        { onStep: request.onProgress, signal: request.signal },
-      )
+      const done = deps.onUsed?.(request.model)
+      try {
+        const settled = await engine.job(
+          'generate',
+          {
+            ...request.fields,
+            prompt: request.prompt,
+            destination: request.destination,
+            door: engineDoorOf(request.modality),
+          },
+          { onStep: request.onProgress, signal: request.signal },
+        )
 
-      const path = settled.path
-      if (path === undefined) throw new Error('the engine answered no path for the generation')
+        const path = settled.path
+        if (path === undefined) throw new Error('the engine answered no path for the generation')
 
-      return {
-        path,
-        // Reported rather than assumed: a model that fell back to the CPU runs at forty times the
-        // time it should, and that is indistinguishable from a slow machine unless it is said.
-        device: settled.device ?? 'unknown',
-        backend: settled.backend ?? 'unknown',
+        return {
+          path,
+          device: settled.device ?? 'unknown',
+          backend: settled.backend ?? 'unknown',
+        }
+      } finally {
+        done?.()
       }
     },
   }

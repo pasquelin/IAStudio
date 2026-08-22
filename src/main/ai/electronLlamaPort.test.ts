@@ -12,6 +12,8 @@ const prompt = vi.fn(() => Promise.resolve('{"say":"done","calls":[]}'))
 const createContext = vi.fn(() =>
   Promise.resolve({ getSequence: () => ({}), dispose: () => Promise.resolve() }),
 )
+const disposeModel = vi.fn(() => Promise.resolve())
+const disposeLlama = vi.fn(() => Promise.resolve())
 const seeded: (string | undefined)[] = []
 const contextSizes: unknown[] = []
 
@@ -21,7 +23,7 @@ vi.mock('node-llama-cpp', () => ({
       loadModel: () =>
         Promise.resolve({
           size: 1_000,
-          dispose: () => Promise.resolve(),
+          dispose: disposeModel,
           createContext: (options: { contextSize?: unknown }) => {
             contextSizes.push(options.contextSize)
             return createContext()
@@ -29,6 +31,7 @@ vi.mock('node-llama-cpp', () => ({
         }),
       getGrammarFor: () => Promise.resolve({}),
       getVramState: () => Promise.resolve({ total: 0, used: 0, free: 0, unifiedSize: 0 }),
+      dispose: disposeLlama,
     }),
   LlamaChatSession: class {
     constructor(options: { systemPrompt?: string }) {
@@ -115,5 +118,17 @@ describe('electronLlamaPort', () => {
       freeBytes: 0,
       unifiedBytes: 0,
     })
+  })
+
+  it('lets the addon go when the weights are dropped', async () => {
+    disposeModel.mockClear()
+    disposeLlama.mockClear()
+    const port = electronLlamaPort()
+    await port.load('/weights/qwen.gguf', { onProgress: () => {} })
+    await port.unload()
+
+    expect(disposeModel).toHaveBeenCalledOnce()
+    expect(disposeLlama).toHaveBeenCalledOnce()
+    expect(port.loaded()).toBeNull()
   })
 })

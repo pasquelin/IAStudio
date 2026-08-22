@@ -57,6 +57,24 @@ describe('decoder pool', () => {
     expect(sink.getSample).toHaveBeenCalledWith(2.5)
   })
 
+  it('does not open past the picture ceiling while others are still arriving', async () => {
+    let release: () => void = () => {}
+    const gate = new Promise<void>(ok => (release = ok))
+    const open = vi.fn(async (assetId: string) => {
+      await gate
+      return fakeSink(assetId, false)
+    })
+    const pool = createDecoderPool({ open, maxDecoders: 4, maxPictures: 2 })
+
+    void pool.frameAt('a', 0)
+    void pool.frameAt('b', 0)
+    await Promise.resolve()
+    await pool.frameAt('c', 0)
+    release()
+
+    expect(open).toHaveBeenCalledTimes(2)
+  })
+
   it('evicts the least recently used sink past the limit', async () => {
     const sinks = new Map<string, ReturnType<typeof fakeSink>>()
     const open = vi.fn(async (assetId: string) => {

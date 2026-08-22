@@ -22,13 +22,12 @@ export type PythonPort = {
 }
 
 /**
- * How long a killed engine is given to let its doors go before it is killed outright.
+ * How long a killed engine is given to let its doors go before the whole group is killed.
  *
- * A door holds gigabytes of device memory and is a CHILD of the engine: killed without a chance to
- * close, the child is orphaned and nothing on the machine gives those bytes back. The engine
- * answers SIGTERM by leaving its `finally`, which closes every door — that is what this waits for.
+ * The worker waits up to 10 s on its child; 5 s used to SIGKILL the engine first and orphan
+ * that child, which kept the GPU until a manual kill.
  */
-const SHUTDOWN_GRACE_MS = 5_000
+const SHUTDOWN_GRACE_MS = 15_000
 
 export type PythonProcessOptions = {
   /** The interpreter. Passed in rather than resolved here: packaging is not this file's business. */
@@ -50,6 +49,8 @@ export type PythonProcessOptions = {
   sources: string
   /** Told the process is gone, so whoever holds this port can drop it. */
   onExit?: () => void
+  /** Tests pass a short grace so a tree-kill is observable without waiting the production 15 s. */
+  shutdownGraceMs?: number
 }
 
 let opened = 0
@@ -71,6 +72,7 @@ export function openPythonProcess({
   processName,
   sources,
   onExit = () => {},
+  shutdownGraceMs = SHUTDOWN_GRACE_MS,
 }: PythonProcessOptions): PythonPort {
   const endpoint = endpointOf()
   const frameListeners: ((frame: EngineFrame) => void)[] = []
@@ -132,6 +134,8 @@ export function openPythonProcess({
   server.listen(endpoint, () => {
     child = spawn(command, [...args, '--socket', endpoint], {
       stdio: ['ignore', 'pipe', 'pipe'],
+      // Own group: SIGKILL of this pid then reaches the door processes, which inherit it.
+      detached: process.platform !== 'win32',
       env: {
         ...process.env,
         PYTHONPATH: sources,
@@ -182,9 +186,28 @@ export function openPythonProcess({
       // SIGTERM, then a grace period, then SIGKILL. The engine catches the first and closes its
       // doors on the way out; the second is for the one that does not answer — a worker
       // mid-inference does not read a socket, and a device call does not interrupt.
-      leaving.kill()
-      const forced = setTimeout(() => leaving.kill('SIGKILL'), SHUTDOWN_GRACE_MS)
-      // Otherwise the timer holds the event loop open for five seconds past every quit.
+      const pid = leaving.pid
+      const signalTree = (signal: NodeJS.Signals): void => {
+        if (pid === undefined) {
+          leaving.kill(signal)
+          return
+        }
+        if (process.platform === 'win32') {
+          spawn('taskkill', ['/PID', String(pid), '/T', '/F'], {
+            stdio: 'ignore',
+            windowsHide: true,
+          })
+          return
+        }
+        try {
+          process.kill(-pid, signal)
+        } catch {
+          leaving.kill(signal)
+        }
+      }
+      signalTree('SIGTERM')
+      const forced = setTimeout(() => signalTree('SIGKILL'), shutdownGraceMs)
+      // Otherwise the timer holds the event loop open past every quit.
       forced.unref()
       leaving.once('exit', () => clearTimeout(forced))
     },

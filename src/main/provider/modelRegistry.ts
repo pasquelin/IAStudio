@@ -131,6 +131,8 @@ export type RegistryOptions = {
 const DEFAULT_TTL_MS = 10 * 60 * 1000
 const DEFAULT_LIMIT = 24
 const PAGE_SIZE = 100
+/** Stale entries used to sit in these maps for the life of the process. */
+const MAX_CACHED = 64
 
 /**
  * Filters the API cannot apply — family, capability, community-only — are applied here, so a
@@ -398,6 +400,34 @@ export function createModelRegistry({
   const fresh = <T>(entry: Cached<T> | null | undefined): T | null =>
     entry && now() - entry.at < ttlMs ? entry.value : null
 
+  const prune = <T>(map: Map<string, Cached<T>>): void => {
+    for (const [key, entry] of map) {
+      if (now() - entry.at >= ttlMs) map.delete(key)
+    }
+    while (map.size > MAX_CACHED) {
+      const oldest = map.keys().next().value
+      if (oldest === undefined) break
+      map.delete(oldest)
+    }
+  }
+
+  const remember = <T>(map: Map<string, Cached<T>>, key: string, value: T): void => {
+    map.delete(key)
+    map.set(key, { at: now(), value })
+    prune(map)
+  }
+
+  const withLiveLocals = (page: ModelPage, query: ModelQuery): ModelPage => {
+    if (query.cursor !== undefined) return page
+
+    const since = query.since ? cutoff(query.since, now()) : null
+    const locals = localSummaries().filter(summary => matches(summary, query, since))
+    const seen = new Set(locals.map(summary => summary.id))
+    const remotes = page.items.filter(item => item.runsOn !== LOCAL_RUNTIME && !seen.has(item.id))
+    const limit = query.limit ?? DEFAULT_LIMIT
+    return { items: [...locals, ...remotes].slice(0, limit), cursor: page.cursor }
+  }
+
   // The form a model on this machine offers, derived from its MODALITY — see `localFields.ts`.
   const describedLocally = (modelId: string): ModelDescriptor | null => {
     const model = localModels().find(one => one.id === modelId)
@@ -442,7 +472,7 @@ export function createModelRegistry({
       fields: translateSchema(model.inputs),
     }
 
-    descriptors.set(modelId, { at: now(), value })
+    remember(descriptors, modelId, value)
     return value
   }
 
@@ -491,7 +521,7 @@ export function createModelRegistry({
             ...(cursor.token ? { token: cursor.token } : {}),
           })
 
-    fetched.set(key, { at: now(), value: page })
+    remember(fetched, key, page)
     return page
   }
 
@@ -523,7 +553,7 @@ export function createModelRegistry({
     search: async query => {
       const key = JSON.stringify(query)
       const cached = fresh(pages.get(key))
-      if (cached) return cached
+      if (cached) return withLiveLocals(cached, query)
 
       const limit = query.limit ?? DEFAULT_LIMIT
       const since = query.since ? cutoff(query.since, now()) : null
@@ -589,7 +619,7 @@ export function createModelRegistry({
       }
 
       const value: ModelPage = { items, cursor: cursor ? serialize(cursor) : null }
-      pages.set(key, { at: now(), value })
+      remember(pages, key, value)
       return value
     },
 
@@ -610,7 +640,7 @@ export function createModelRegistry({
           const assets = await catalog().assetUrls(batch)
           const found = new Map(assets.map(asset => [asset.id, showable(asset)]))
 
-          for (const id of batch) previews.set(id, { at: now(), value: found.get(id) ?? null })
+          for (const id of batch) remember(previews, id, found.get(id) ?? null)
         }),
       )
 

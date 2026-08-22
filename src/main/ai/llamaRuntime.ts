@@ -44,6 +44,8 @@ export type LlamaRuntimeDeps = {
   port: LlamaPort
   /** Looked up by the id a request names, because a chat request carries no manifest. */
   modelOf: (modelId: string) => LocalModel | null
+  /** Called when a load or turn starts; the returned function runs when it ends. */
+  onUsed?: (modelId: string) => (() => void) | void
 }
 
 export function llamaLocalRuntime(deps: LlamaRuntimeDeps): LocalRuntime {
@@ -67,16 +69,26 @@ export function llamaLocalRuntime(deps: LlamaRuntimeDeps): LocalRuntime {
     install: deps.files.install,
     remove: deps.files.remove,
 
-    load: (model, options) => deps.port.load(deps.weightsOf(model), options),
+    load: async (model, options) => {
+      const done = deps.onUsed?.(model.id)
+      try {
+        return await deps.port.load(deps.weightsOf(model), options)
+      } finally {
+        done?.()
+      }
+    },
     unload: deps.port.unload,
 
     chat: async request => {
       const model = deps.modelOf(request.model)
-      // Raised rather than answered empty: an empty answer reads as a model that had nothing to
-      // add, where this is the studio having nothing to run.
       if (model === null) throw new Error(`${request.model} is not in the catalogue`)
 
-      return await deps.port.chat(request, deps.weightsOf(model))
+      const done = deps.onUsed?.(model.id)
+      try {
+        return await deps.port.chat(request, deps.weightsOf(model))
+      } finally {
+        done?.()
+      }
     },
   }
 }

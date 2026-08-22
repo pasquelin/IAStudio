@@ -67,9 +67,6 @@ function startUp(splash: Splash, settings: SettingsStore): void {
     // Not awaited with the rest: the recognition process holds no state worth settling, and a
     // model still loading would otherwise keep the studio on screen for seconds.
     services.dictation.dispose()
-    // Same reason, and it matters more: a `utilityProcess` dies with the app, a spawned
-    // interpreter does not — and its worker holds gigabytes of device memory nothing gives back.
-    services.disposeAiEngine()
     // The note of what is still running goes out with the journal: a job whose submission
     // landed in the last moments would otherwise be lost, and it has already been paid for.
     // The manifest stamp joins them — quitting right after a save is the ordinary way to do it.
@@ -79,6 +76,7 @@ function startUp(splash: Splash, settings: SettingsStore): void {
     // whatever takes the port after this process is gone. `void` here undid the very thing it
     // claimed to do.
     return Promise.all([
+      services.disposeAiEngine(),
       services.journal.flush(),
       services.flushJobs(),
       services.project.settled(),

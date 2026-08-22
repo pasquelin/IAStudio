@@ -195,6 +195,78 @@ def test_leaves_a_backend_that_answered_no_number_absent() -> None:
     assert router.ledger.as_frame() == {"doors": []}
 
 
+def test_an_unload_that_holds_nothing_leaves_the_door_absent() -> None:
+    """An unload that omitted device used to no-op, so the load's gigabytes stayed in the ledger."""
+    router, _written, workers = harness()
+    router.submit("models.load", {}, job="local_a1")
+    run = workers[0].sent[0]["id"]
+    router.said(
+        {
+            "v": 1,
+            "id": run,
+            "ok": {
+                "door": "engine/diffusion",
+                "heldBytes": 8_890_220_544,
+                "device": "mps",
+                "backend": "pytorch",
+            },
+        }
+    )
+
+    router.submit("models.unload", {}, job="local_a2")
+    unload = workers[0].sent[1]["id"]
+    router.said(
+        {
+            "v": 1,
+            "id": unload,
+            "ok": {
+                "door": "engine/diffusion",
+                "heldBytes": 0,
+                "device": "mps",
+                "backend": "pytorch",
+            },
+        }
+    )
+
+    assert router.ledger.as_frame() == {"doors": []}
+
+
+def test_an_unload_that_still_holds_bytes_replaces_the_record() -> None:
+    router, _written, workers = harness()
+    router.submit("models.load", {}, job="local_a1")
+    run = workers[0].sent[0]["id"]
+    router.said(
+        {
+            "v": 1,
+            "id": run,
+            "ok": {
+                "door": "engine/diffusion",
+                "heldBytes": 100,
+                "device": "mps",
+                "backend": "pytorch",
+            },
+        }
+    )
+
+    router.submit("models.unload", {}, job="local_a2")
+    unload = workers[0].sent[1]["id"]
+    router.said(
+        {
+            "v": 1,
+            "id": unload,
+            "ok": {
+                "door": "engine/diffusion",
+                "heldBytes": 12,
+                "device": "mps",
+                "backend": "pytorch",
+            },
+        }
+    )
+
+    [door] = router.ledger.as_frame()["doors"]
+    assert door["heldBytes"] == 12
+
+
 def test_a_door_that_died_holds_nothing_in_the_ledger() -> None:
     router, _written, workers = harness()
     router.submit("models.load", {}, job="local_a1")

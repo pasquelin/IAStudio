@@ -60,7 +60,13 @@ def queued_handlers(door: str, adapter: DiffusersAdapter, loop: WorkerLoop) -> d
 
     def unload(_params: dict[str, Any]) -> dict[str, Any]:
         adapter.unload()
-        return {"door": door, "heldBytes": adapter.held_bytes(), "tensorBytes": 0}
+        frame = memory_frame(adapter.device(), adapter.backend(), door)
+        held = adapter.held_bytes()
+        return {
+            **frame,
+            "heldBytes": 0 if held is None else held,
+            "tensorBytes": frame["tensorBytes"] or 0,
+        }
 
     def generate(params: dict[str, Any]) -> dict[str, Any]:
         job = params.get("jobId")

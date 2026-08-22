@@ -734,6 +734,21 @@ describe('model registry', () => {
       ])
     })
 
+    it('shows a local model added after the listing was cached', async () => {
+      let locals: ReturnType<typeof localModel>[] = []
+      const registry = registryOf({
+        catalog: publicCatalog([FLUX]),
+        localModels: () => locals,
+        ttlMs: 60_000,
+      })
+
+      await registry.search({})
+      locals = [LOCAL]
+      const page = await registry.search({})
+
+      expect(page.items.map(one => one.id)).toContain('local_diffusion')
+    })
+
     /**
      * The assistant and the recognition model answer a ROLE, and the manager screen is where those
      * are chosen. A model with no family in a space's panel would be a row nothing can generate.

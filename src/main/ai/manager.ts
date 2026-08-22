@@ -50,6 +50,13 @@ export type ManagerDeps = {
    * moves in seconds, not in milliseconds. A load always reads afresh, whatever this says (R2).
    */
   factsTtlMs?: number
+  /**
+   * Minutes of silence after which every resident door is dropped. `0` keeps them.
+   * Dictation already had this; llama and diffusion did not, so they sat in VRAM all session.
+   */
+  idleUnloadMinutes?: () => number
+  /** Tests inject a clock. Production uses `setTimeout`. */
+  schedule?: (run: () => void, ms: number) => () => void
 }
 
 export type AiManager = {
@@ -77,6 +84,12 @@ export type AiManager = {
   load: (modelId: string) => Promise<AiOverview>
   cancelLoad: () => Promise<AiOverview>
   unload: (modelId: string) => Promise<AiOverview>
+  /** Rearms idle unload and the admission LRU. */
+  noteUse: (modelId: string) => void
+  /** Marks the model busy until the returned function runs. */
+  hold: (modelId: string) => () => void
+  /** Drops the idle timer. Called when the application is going away. */
+  dispose: () => void
   /** Records a model the person supplied — rank 3 of ADR-20, and the gesture is theirs. */
   addOwnModel: (model: LocalModel) => Promise<AiOverview>
   /**
@@ -106,6 +119,7 @@ type RunningInstall = {
 }
 
 const DEFAULT_FACTS_TTL_MS = 3000
+const DEFAULT_IDLE_UNLOAD_MINUTES = 10
 
 /** How much a load must have advanced before it is worth telling every window about. */
 const LOAD_STEP = 0.01
@@ -137,6 +151,15 @@ export function createAiManager(deps: ManagerDeps): AiManager {
    */
   const occupancy = new Map<RuntimeEndpointId, RuntimeOccupancy & { modelId: string }>()
   const lastUsedAt = new Map<RuntimeEndpointId, number>()
+  let busy = 0
+  const schedule =
+    deps.schedule ??
+    ((run, ms) => {
+      const timer = setTimeout(run, ms)
+      timer.unref?.()
+      return () => clearTimeout(timer)
+    })
+  let cancelIdle: (() => void) | null = null
 
   const modelOf = (modelId: string): LocalModel | null =>
     modelWith(modelId, deps.settings().ai.ownModels)
@@ -333,8 +356,53 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
   /** Frees a DOOR and forgets what it held. A release is never added back to a reading — R2. */
   const release = async (endpoint: RuntimeEndpointId): Promise<void> => {
-    await deps.runtimes[loaderOf(endpoint)]?.unload?.(endpoint)
-    occupancy.delete(endpoint)
+    try {
+      await deps.runtimes[loaderOf(endpoint)]?.unload?.(endpoint)
+    } finally {
+      occupancy.delete(endpoint)
+    }
+  }
+
+  const armIdle = (): void => {
+    cancelIdle?.()
+    cancelIdle = null
+    const minutes = deps.idleUnloadMinutes?.() ?? DEFAULT_IDLE_UNLOAD_MINUTES
+    if (minutes <= 0 || occupancy.size === 0) return
+
+    cancelIdle = schedule(() => {
+      if (loading !== null || busy > 0) {
+        armIdle()
+        return
+      }
+      void (async () => {
+        for (const endpoint of [...occupancy.keys()]) {
+          if (loading !== null || busy > 0) break
+          await release(endpoint)
+        }
+        if (occupancy.size > 0) armIdle()
+        await announce()
+      })()
+    }, minutes * 60_000)
+  }
+
+  const markUsed = (modelId: string): void => {
+    const model = modelOf(modelId)
+    if (!model) return
+
+    const endpoint = endpointOf(model.loader, model.modality)
+    if (!occupancy.has(endpoint)) return
+
+    lastUsedAt.set(endpoint, deps.now())
+    armIdle()
+  }
+
+  const hold = (modelId: string): (() => void) => {
+    markUsed(modelId)
+    busy += 1
+    return () => {
+      busy = Math.max(0, busy - 1)
+      if (busy === 0) armIdle()
+    }
   }
 
   /**
@@ -407,6 +475,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
       occupancy.set(endpoint, { bytes, reclaimable: true, modelId: model.id })
       lastUsedAt.set(endpoint, deps.now())
+      armIdle()
     } catch (error) {
       // No figures: only the admission weighed bytes, and a runtime that refused for its own
       // reasons — a cancellation among them — would be borrowing them from an unrelated reading.
@@ -538,6 +607,13 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       return published ?? compose()
     },
 
+    noteUse: markUsed,
+    hold,
+    dispose: () => {
+      cancelIdle?.()
+      cancelIdle = null
+    },
+
     unload: async modelId => {
       const model = modelOf(modelId)
       if (model === null) return compose()
@@ -546,6 +622,10 @@ export function createAiManager(deps: ManagerDeps): AiManager {
         await release(endpointOf(model.loader, model.modality))
       } catch (error) {
         deps.log('warn', `unloading ${modelId} failed: ${String(error)}`)
+      }
+      if (occupancy.size === 0) {
+        cancelIdle?.()
+        cancelIdle = null
       }
       return announce()
     },

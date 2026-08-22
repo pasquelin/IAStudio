@@ -13,7 +13,7 @@ const diffusion: EngineDoorMemory = {
 
 describe('the door the engine names', () => {
   it('is the endpoint the scheduler keys its bytes by', () => {
-    expect(endpointOfDoor('engine/diffusion')).toBe(runtimeEndpointId('engine', 'diffusion'))
+    expect(endpointOfDoor('engine/diffusion')).toBe(runtimeEndpointId('diffusers', 'diffusion'))
   })
 
   /** A key not minted here fails to index `runtimeBytes`, so a bad spelling is dropped, not cast. */
@@ -43,7 +43,7 @@ describe('what a release plan may count on', () => {
   it('keys each door apart', () => {
     const held = occupancyOfDoors([diffusion, { ...diffusion, door: 'engine/audio', heldBytes: 7 }])
 
-    expect(Object.keys(held).sort()).toEqual(['engine/audio', 'engine/diffusion'])
+    expect(Object.keys(held).sort()).toEqual(['diffusers/audio', 'diffusers/diffusion'])
   })
 
   /** A door that never answered is absent from the ledger, and absent is what reads `unknown`. */

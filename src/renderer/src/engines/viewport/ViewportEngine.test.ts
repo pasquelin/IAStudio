@@ -20,6 +20,7 @@ import { INSET_CADENCE_MS, ViewportEngine } from './ViewportEngine'
  * count for a viewport that measures only its trihedron.
  */
 const disposed = vi.fn()
+const contextLost = vi.fn()
 const sized = vi.fn()
 const pixelRatio = vi.fn()
 const rendered = vi.fn()
@@ -59,6 +60,7 @@ vi.mock('three', async importOriginal => ({
 
     setPixelRatio = pixelRatio
     setSize = sized
+    forceContextLoss = contextLost
     dispose = disposed
     setViewport = viewported
     setScissor = scissored
@@ -1146,6 +1148,7 @@ describe('a viewport', () => {
       engine.dispose()
 
       expect(host.querySelector('canvas')).toBeNull()
+      expect(contextLost).toHaveBeenCalled()
       expect(disposed).toHaveBeenCalled()
     })
 

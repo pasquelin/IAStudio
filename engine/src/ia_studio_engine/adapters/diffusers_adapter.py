@@ -227,11 +227,23 @@ class DiffusersAdapter:
         return self.loaded
 
     def unload(self) -> None:
-        """Answering does not prove the bytes came back — ADR-19. § L.1 is what will measure it."""
-        import torch
-
+        """Drops the pipeline object, then asks the cache. ADR-19: the figure is what we re-read."""
+        held = self.loaded
         self.loaded = None
         self._derived.clear()
+        if held is None:
+            return
+
+        pipeline = held.pipeline
+        del held
+        del pipeline
+        import gc
+
+        gc.collect()
+        try:
+            import torch
+        except ImportError:
+            return
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
         elif torch.cuda.is_available():
@@ -282,12 +294,7 @@ class DiffusersAdapter:
         steps = int(kwargs.get("num_inference_steps", held.default_steps))
 
         def between_steps(_pipeline: Any, step: int, _timestep: Any, state: dict) -> dict:
-            """
-            Called by diffusers between two denoise steps — the only place a cancel can land.
-
-            A device call does not interrupt, so nothing is killed: the loop is ASKED to stop and
-            it is here that it notices. Invariant 6 of `CLAUDE.md` lives on this callback.
-            """
+            """The only place a cancel can land — a device call does not interrupt (Invariant 6)."""
             if stopping is not None and stopping():
                 raise CancelledError("the generation was cancelled")
             if on_step is not None:

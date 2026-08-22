@@ -97,6 +97,7 @@ const manager = (over: Partial<ManagerDeps> = {}) =>
     emit: () => {},
     log: () => {},
     now: () => 0,
+    idleUnloadMinutes: () => 0,
     ...over,
   })
 
@@ -322,6 +323,38 @@ describe('holding a model in memory', () => {
     expect(candidateOf(held, QWEN.id)?.loaded).toBe(true)
 
     await ai.unload(QWEN.id)
+    expect(candidateOf(await ai.overview(), QWEN.id)?.loaded).toBe(false)
+  })
+
+  it('unloads a model left idle, and a use postpones that', async () => {
+    const armed: { run: (() => void) | null } = { run: null }
+    const unload = vi.fn()
+    const runtime = holdingRuntime()
+    const ai = manager({
+      idleUnloadMinutes: () => 10,
+      schedule: (run, ms) => {
+        expect(ms).toBe(10 * 60_000)
+        armed.run = run
+        return () => {
+          armed.run = null
+        }
+      },
+      runtimes: {
+        'sherpa-onnx': {
+          ...runtime,
+          unload: async () => {
+            unload()
+            await runtime.unload?.()
+          },
+        },
+      },
+    })
+
+    await ai.load(QWEN.id)
+    expect(armed.run).not.toBeNull()
+    ai.noteUse(QWEN.id)
+    armed.run?.()
+    await vi.waitFor(() => expect(unload).toHaveBeenCalledOnce())
     expect(candidateOf(await ai.overview(), QWEN.id)?.loaded).toBe(false)
   })
 

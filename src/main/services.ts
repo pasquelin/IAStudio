@@ -251,7 +251,7 @@ export type Services = {
    * gives them back — the SIGTERM handler written into `core/supervisor.py` never fires unless
    * somebody sends the signal.
    */
-  disposeAiEngine: () => void
+  disposeAiEngine: () => Promise<void>
   /** Opens the system screen where microphone access is granted back after a refusal. */
   openMicrophoneSettings: () => void
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
@@ -1203,6 +1203,9 @@ export function createServices(settings: SettingsStore): Services {
   // One port, held: it owns the addon, so the memory reading and the inference are the same
   // process's — which is what lets a snapshot say `runtime` rather than `probe`.
   const llama = electronLlamaPort()
+  let hold =
+    (_modelId: string): (() => void) =>
+    () => {}
 
   /** A model the person supplied names its own file; everything else lands in the model folder. */
   const weightsOf = (model: LocalModel): string =>
@@ -1248,12 +1251,14 @@ export function createServices(settings: SettingsStore): Services {
       engine: () => engine.engine(),
       running: () => engine.current(),
       log: (level: 'info' | 'warn', message: string) => log[level]('ai', message),
+      onUsed: modelId => hold(modelId),
     }),
     llamacpp: llamaLocalRuntime({
       files: fetchedFiles,
       weightsOf,
       port: llama,
       modelOf,
+      onUsed: modelId => hold(modelId),
     }),
   }
 
@@ -1270,6 +1275,7 @@ export function createServices(settings: SettingsStore): Services {
     log: (level, message) => log[level]('ai', message),
     now: Date.now,
   })
+  hold = ai.hold
 
   /** The whole of rank 3's gesture: a picker, a header, an entry. */
   const addOwnAiModel = async (): Promise<AiOverview> => {
@@ -1711,7 +1717,11 @@ export function createServices(settings: SettingsStore): Services {
     settings,
     favorites,
     styles,
-    disposeAiEngine: () => engine.dispose(),
+    disposeAiEngine: async () => {
+      ai.dispose()
+      engine.dispose()
+      await llama.unload()
+    },
     client,
     models,
     jobs,

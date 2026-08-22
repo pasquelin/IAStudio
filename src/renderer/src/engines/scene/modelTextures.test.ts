@@ -94,6 +94,22 @@ describe('createModelTextures', () => {
     expect(materialOf(instance).map).toBe(fileMap)
   })
 
+  it('disposes the cloned materials, not the ones the file still holds', () => {
+    const scripted = scriptedTextureCache()
+    const { source } = loadedModel()
+    const instance = instanceOf(source)
+    const textures = createModelTextures(scripted.cache, instance, onChange)
+    const clone = materialOf(instance)
+    const file = materialOf(source)
+    const disposeClone = vi.spyOn(clone, 'dispose')
+    const disposeFile = vi.spyOn(file, 'dispose')
+
+    textures.dispose()
+
+    expect(disposeClone).toHaveBeenCalledOnce()
+    expect(disposeFile).not.toHaveBeenCalled()
+  })
+
   /**
    * Taken at build time rather than at the first override, and the display modes are why: one
    * swaps `mesh.material` for a stand-in shared by the whole scene, so a late copy would clone the

@@ -34,4 +34,14 @@ describe('createWorkerSession', () => {
     fake.reply({ id, value: 'ok' })
     await expect(pending).resolves.toEqual({ id, value: 'ok' })
   })
+
+  it('rejects what is in flight and terminates the worker', async () => {
+    const fake = fakeWorker()
+    const session = createWorkerSession<{ id: number }, Answer>(() => fake.worker)
+    const pending = session.send({ id: session.nextId() })
+    session.dispose()
+
+    await expect(pending).rejects.toThrow(/stopped/)
+    expect(fake.worker.terminate).toHaveBeenCalledOnce()
+  })
 })

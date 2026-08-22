@@ -53,9 +53,16 @@ export function electronLlamaPort(): LlamaPort {
       // judged able to hold ONE would be asked for, and the second load fails.
       await loaded?.model.dispose()
     } finally {
-      // Forgotten even where the dispose rejected, or `loaded()` goes on naming weights that are
-      // gone — and the screen keeps offering to unload them.
       loaded = null
+    }
+    // The typings we ship omit `dispose`; the addon still exposes it and it is what frees Metal.
+    const addon = llama as { dispose?: () => Promise<void> } | null
+    llama = null
+    json = null
+    try {
+      await addon?.dispose?.()
+    } catch {
+      // The weights are already gone; a failed addon dispose must not block the next load.
     }
   }
 

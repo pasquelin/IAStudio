@@ -436,7 +436,7 @@ export class TimelineEngine {
     this.unfollow?.()
     this.unfollow = null
     this.application?.renderer.off('resize', this.layout)
-    this.application?.destroy(true, { children: true, texture: true })
+    this.application?.destroy(true, { children: true, texture: true, textureSource: true })
     this.application = null
     this.sprites.clear()
     this.painted.clear()

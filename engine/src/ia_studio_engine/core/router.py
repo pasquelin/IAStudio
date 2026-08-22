@@ -83,14 +83,19 @@ class DoorRouter:
 
     def _remember(self, door: str, answer: dict[str, Any]) -> None:
         held = answer.get("heldBytes")
-        # A backend that does not answer is left ABSENT rather than recorded at zero: ADR-19 R1
-        # turns on the difference between "it holds nothing" and "nobody could say".
-        # `device` and `backend` are REQUIRED, not defaulted to "": an answer that omits them —
-        # an unload, measured — would otherwise replace a good record with two empty strings, and
-        # every later reading would see blanks instead of an absence.
+        # ADR-19 R1: no answer is absence, not zero. Zero after unload is measured absence,
+        # so the door is forgotten. `device`/`backend` are required when bytes remain —
+        # an unload omitting them would replace a good record with empty strings.
         device = answer.get("device")
         backend = answer.get("backend")
-        if not isinstance(held, int) or not isinstance(device, str) or not isinstance(backend, str):
+        if not isinstance(held, int):
+            return
+
+        door = str(answer.get("door", DIFFUSION_DOOR))
+        if held == 0:
+            self.ledger.forget(door)
+            return
+        if not isinstance(device, str) or not isinstance(backend, str):
             return
 
         self.ledger.record(
