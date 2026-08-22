@@ -8,6 +8,7 @@ download 682 MB to be green. What loading a real pipeline does is proven by the 
 from pathlib import Path
 
 from ia_studio_engine.adapters.diffusers_adapter import DiffusersAdapter, LoadedModel
+from ia_studio_engine.adapters.modalities import MODALITIES
 
 
 def test_refuses_a_folder_that_is_not_one(tmp_path: Path) -> None:
@@ -37,7 +38,7 @@ def test_sees_python_hidden_a_folder_down(tmp_path: Path) -> None:
 
 def test_unload_drops_the_pipeline_it_held() -> None:
     """`loaded = None` alone leaves the nn.Module cycle alive; the adapter must drop the object."""
-    adapter = DiffusersAdapter()
+    adapter = DiffusersAdapter(MODALITIES["image"])
     adapter.loaded = LoadedModel(
         model_id="sana",
         device="cpu",
@@ -45,6 +46,8 @@ def test_unload_drops_the_pipeline_it_held() -> None:
         bytes_resident=1,
         tensor_bytes=1,
         load_ms=1,
+        takes_step_callback=False,
+        default_steps=1,
     )
 
     adapter.unload()
