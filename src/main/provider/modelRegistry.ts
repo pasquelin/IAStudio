@@ -442,11 +442,24 @@ export function createModelRegistry({
     const model = localModels().find(one => one.id === modelId)
     if (!model) return null
 
-    const summary = localSummaryOf(model)
-    if (!summary) return null
-
     return {
-      ...summary,
+      // 🛑 A model this machine holds NEVER reaches the API, whatever is missing from its
+      // manifest. `localSummaryOf` answers null for one that names no family, and falling through
+      // to `described` then sent a local id to Scenario — measured: `404 Model ssd-1b not found`,
+      // journalled as a generation failure, and on another endpoint it would have been paid for.
+      // A manifest that says too little is a defect of ours, and it is answered from here.
+      ...(localSummaryOf(model) ?? {
+        id: model.id,
+        name: model.name,
+        family: 'other',
+        runsOn: LOCAL_RUNTIME,
+        source: model.source,
+        origin: 'community',
+        featured: false,
+        capabilities: model.capabilities ?? [],
+        tags: [],
+        thumbnail: modelThumbnailUrl(model),
+      }),
       // `text` where a manifest names no modality: a form that disappeared would be worse than one
       // knob too many, which is the whole of invariant 5.
       fields: localFieldsOf(model.modality ?? 'text', model.fieldOverrides ?? {}, translate),

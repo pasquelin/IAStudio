@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { aiRoleId, allRoles, ASSISTANT_ROLE, DICTATION_ROLE } from '@shared/domain/aiRole'
+import {
+  aiRoleId,
+  allRoles,
+  ASSISTANT_ROLE,
+  DICTATION_ROLE,
+  partsOfRole,
+  type AiRoleId,
+} from '@shared/domain/aiRole'
 import { STT_MODEL } from '@shared/domain/dictation'
+import type { LocalModel } from '@shared/domain/localModel'
 import licences from '@shared/licences.json'
 import {
   catalogueRefusals,
@@ -158,3 +166,30 @@ describe('how many employments one download answers for', () => {
     expect(rolesServedBy('not-a-shipped-model')).toBe(0)
   })
 })
+
+describe('what a manifest owes the panel', () => {
+  /**
+   * 🛑 Measured 2026-08-22, and it cost a request to the API: without a family,
+   * `localSummaryOf` answers null, `describedLocally` fell through, and a LOCAL model id was sent
+   * to Scenario — `404 Model ssd-1b not found`, journalled as a generation failure. Fifteen of
+   * twenty-nine entries were in that state. The registry no longer falls through, and this keeps
+   * the manifests themselves honest: a model filed under an employment says which one.
+   */
+  it('gives every generation model the family and capability its employment names', () => {
+    const naked = allRoles()
+      .flatMap(role => shippedModelsFor(role).map(model => ({ role, model })))
+      .filter(({ role, model }) => partsOfRole(role) !== null && !servesTheRole(model, role))
+      .map(({ role, model }) => `${model.id} under ${role}`)
+
+    expect(naked).toEqual([])
+  })
+})
+
+/** Whether the manifest itself says it serves this employment, rather than the JSON key alone. */
+function servesTheRole(model: LocalModel, role: AiRoleId): boolean {
+  const parts = partsOfRole(role)
+  if (!parts) return false
+
+  const withinFamily = model.family === parts.family && (model.capabilities ?? []).length > 0
+  return withinFamily || (model.serves ?? []).includes(role)
+}

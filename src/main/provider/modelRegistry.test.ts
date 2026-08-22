@@ -695,6 +695,30 @@ describe('model registry', () => {
       ])
     })
 
+    /**
+     * 🛑 Measured 2026-08-22: a manifest naming no family made `localSummaryOf` answer null, the
+     * lookup fell through to the API, and a LOCAL id was sent to Scenario — `404 Model ssd-1b not
+     * found`, journalled as a generation failure. A model on this machine never reaches the API,
+     * whatever its manifest is missing: what is missing is a defect of ours, answered from here.
+     */
+    it('never asks the API about a model this machine holds, however thin its manifest', async () => {
+      const thin = localModel({ id: 'local_thin', name: 'Thin', modality: 'image' })
+      // `retrieve` rejects: reaching the API at all is what this test refuses, and a rejection
+      // says so where a silent answer would let the call through unnoticed.
+      const catalog = (): ModelCatalog => ({
+        list: () => Promise.resolve({ models: [], token: null }),
+        search: () => Promise.resolve({ models: [], token: null }),
+        retrieve: () => Promise.reject(new Error('not asked')),
+        assetUrls: () => Promise.resolve([]),
+      })
+      const registry = registryOf({ catalog, localModels: () => [thin] })
+
+      const descriptor = await registry.describe('local_thin')
+
+      expect(descriptor.name).toBe('Thin')
+      expect(descriptor.fields.map(field => field.key)).toContain('prompt')
+    })
+
     it('describes a model with no inputs as a form with no field, not as a failure', async () => {
       const registry = registryOf({ catalog: publicCatalog([VEO]) })
       await expect(registry.describe('model_veo')).resolves.toMatchObject({ fields: [] })
