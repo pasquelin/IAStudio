@@ -13,6 +13,7 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { PYTHON as INTERPRETER_VERSION } from './fetch-engine.mjs'
 import { sourceArchives as FFMPEG_SOURCES, TARGETS as FFMPEG_TARGETS } from './fetch-ffmpeg.mjs'
 import { VAD as STT_VAD } from './fetch-stt.mjs'
 // A `.ts` from a `.mjs`: Node 24 strips the types on the way in. Worth the novelty here — the
@@ -20,8 +21,12 @@ import { VAD as STT_VAD } from './fetch-stt.mjs'
 // and the same goes for the list of what is shipped.
 import { isCopyleft, NO_VERSION } from '../src/shared/domain/licence.ts'
 import { SHIPPED } from '../src/main/shippedPackages.ts'
+import { BUILD_ONLY_PYTHON, ENGINE_PACKAGE, INTERPRETER } from '../src/main/pythonPackages.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+/** Written by `collect-python-licences.mjs` from a materialised environment, and committed. */
+const PYTHON_LICENCES = join(ROOT, 'engine', 'licences.json')
 const OUTPUT = join(ROOT, 'src', 'shared', 'licences.json')
 const NOTICES = join(ROOT, 'THIRD-PARTY-NOTICES.md')
 
@@ -200,6 +205,7 @@ function modelLicences() {
       sources: 'https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3',
     },
     ...qwenLicences(),
+    ...pythonLicences(),
     {
       name: 'Sana 600M',
       version: '1024px, fp16',
@@ -215,6 +221,48 @@ function modelLicences() {
       sources: 'https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers',
     },
   ]
+}
+
+/**
+ * The Python side, which npm cannot see at all — the third source § F.4 of the engine spec named.
+ *
+ * `uv.lock` carries names and versions and NO licence, so the licence comes from
+ * `src/main/pythonPackages.ts` and the version from the lock. A package in the lock that neither
+ * list classifies makes `python-licences.test.ts` go red, which is what asks for the decision.
+ */
+function pythonLicences() {
+  const read = existsSync(PYTHON_LICENCES) ? JSON.parse(readFileSync(PYTHON_LICENCES, 'utf8')) : {}
+
+  const interpreter = {
+    name: INTERPRETER.name,
+    version: INTERPRETER_VERSION,
+    spdx: INTERPRETER.spdx,
+    text: [
+      'The interpreter the local AI engine runs on. It IS in the installer, beside ffmpeg.',
+      '',
+      `Copyright ${INTERPRETER.holder}. Licensed under ${INTERPRETER.spdx}.`,
+      `Source: ${INTERPRETER.source}`,
+    ].join('\n'),
+    sources: INTERPRETER.source,
+  }
+
+  const packages = Object.entries(read)
+    .filter(([name]) => !BUILD_ONLY_PYTHON.includes(name) && name !== ENGINE_PACKAGE)
+    .map(([name, entry]) => ({
+      name,
+      version: entry.version ?? NO_VERSION,
+      spdx: entry.spdx ?? NO_VERSION,
+      text: [
+        'Part of the environment a local generation runs in. It is NOT shipped with the',
+        'application: it is fetched on first use, and removed with the engine.',
+        '',
+        `Licensed under ${entry.spdx ?? 'a licence its metadata does not state'}.`,
+        ...(entry.home ? [`Source: ${entry.home}`] : []),
+      ].join('\n'),
+      ...(entry.home ? { sources: entry.home } : {}),
+    }))
+
+  return [interpreter, ...packages]
 }
 
 /**
