@@ -1,0 +1,30 @@
+[project]
+name = "ia-studio-engine"
+dynamic = ["version"]
+description = "The local AI engine of IA Studio: a supervised Python process that measures and executes."
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+# The core carries no tensor library, and the empty list IS the measurement rather than an
+# oversight: `import torch` costs 620 ms warm and 8.7 s cold on the machine this was measured on,
+# which is why the core stays at the 10 ms of a bare interpreter. Workers pay it, once, and stay
+# alive. The `llm`, `diffusion`, `audio` and `3d` groups land with the worker that needs them.
+core = []
+
+[dependency-groups]
+dev = ["pytest>=8.4", "ruff>=0.14"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# One truth for the version: `__init__.py` holds it, the manifest reads it.
+[tool.hatch.version]
+path = "src/ia_studio_engine/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ia_studio_engine"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

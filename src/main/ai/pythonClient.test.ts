@@ -1,0 +1,137 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  createPythonClient,
+  HELLO_TIMEOUT_MS,
+  REQUEST_TIMEOUT_MS,
+  type PythonListeners,
+} from './pythonClient'
+import type { PythonPort } from './pythonProcess'
+import { PROTOCOL_VERSION, type EngineFrame, type EngineRequest } from './pythonProtocol'
+
+function harness() {
+  const sent: EngineRequest[] = []
+  const frames: ((frame: EngineFrame) => void)[] = []
+  const deaths: ((error: Error) => void)[] = []
+
+  const port: PythonPort = {
+    postMessage: message => sent.push(message),
+    onMessage: listener => frames.push(listener),
+    onFailure: listener => deaths.push(listener),
+    kill: vi.fn(),
+  }
+
+  const listeners: PythonListeners = { onFailure: vi.fn() }
+
+  return {
+    client: createPythonClient(port, listeners),
+    port,
+    listeners,
+    sent,
+    say: (frame: EngineFrame) => frames.forEach(listener => listener(frame)),
+    crash: (error: Error) => deaths.forEach(listener => listener(error)),
+  }
+}
+
+const greeting = (protocol = PROTOCOL_VERSION): EngineFrame => ({
+  v: PROTOCOL_VERSION,
+  evt: 'engine.hello',
+  engine: '0.1.0',
+  protocol,
+  python: '3.12.2',
+  platform: 'darwin',
+})
+
+const machine = {
+  platform: 'darwin',
+  machine: 'arm64',
+  pythonVersion: '3.12.2',
+  cpuCount: 12,
+  totalBytes: 103_079_215_104,
+}
+
+beforeEach(() => vi.useFakeTimers())
+afterEach(() => vi.useRealTimers())
+
+describe('the handshake', () => {
+  it('is answered by the greeting the engine sends unasked', async () => {
+    const { client, say } = harness()
+    say(greeting())
+
+    await expect(client.ready).resolves.toMatchObject({ python: '3.12.2' })
+  })
+
+  /** A stale engine would answer half the vocabulary and fail at whichever call needed the rest. */
+  it('kills an engine that speaks another protocol rather than degrading', async () => {
+    const { client, port, say } = harness()
+    say(greeting(PROTOCOL_VERSION + 1))
+
+    await expect(client.ready).rejects.toThrow(String(PROTOCOL_VERSION + 1))
+    expect(port.kill).toHaveBeenCalled()
+  })
+
+  /** Reading a Python stack can fail — and it can also hang, which no exit code ever reports. */
+  it('gives up on an engine that never greets', async () => {
+    const { client, port } = harness()
+    await vi.advanceTimersByTimeAsync(HELLO_TIMEOUT_MS)
+
+    await expect(client.ready).rejects.toThrow(/greet/)
+    expect(port.kill).toHaveBeenCalled()
+  })
+
+  it('answers the handshake with a death that happened before it, not the session', async () => {
+    const { client, listeners, crash } = harness()
+    crash(new Error('the engine exited with code 1'))
+
+    await expect(client.ready).rejects.toThrow('exited with code 1')
+    expect(listeners.onFailure).not.toHaveBeenCalled()
+  })
+})
+
+describe('asking the engine what machine it runs on', () => {
+  it('sends one run and reads what came back', async () => {
+    const { client, sent, say } = harness()
+    say(greeting())
+    await client.ready
+
+    const asked = client.hardware()
+    expect(sent).toEqual([{ v: PROTOCOL_VERSION, id: 1, op: 'hardware.info', params: {} }])
+
+    say({ v: PROTOCOL_VERSION, id: 1, ok: machine })
+    await expect(asked).resolves.toEqual(machine)
+  })
+
+  it('rejects with what the engine refused it for', async () => {
+    const { client, say } = harness()
+    say(greeting())
+    await client.ready
+
+    const asked = client.hardware()
+    say({ v: PROTOCOL_VERSION, id: 1, err: { code: 'failed', message: 'the device is gone' } })
+
+    await expect(asked).rejects.toThrow('the device is gone')
+  })
+
+  /** An engine that stops answering is dead, whatever the process table says. */
+  it('declares an engine that never answers dead, and stops holding it', async () => {
+    const { client, port, listeners, say } = harness()
+    say(greeting())
+    await client.ready
+
+    // Asserted BEFORE the clock turns: the rejection lands while the timers run, and a handler
+    // attached after it would be one vitest reports as an unhandled rejection.
+    const asked = expect(client.hardware()).rejects.toThrow(/did not answer/)
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS)
+    await asked
+    expect(listeners.onFailure).toHaveBeenCalled()
+    expect(port.kill).toHaveBeenCalled()
+  })
+
+  it('refuses to ask anything of an engine that already died', async () => {
+    const { client, say, crash } = harness()
+    say(greeting())
+    await client.ready
+    crash(new Error('the engine exited with code 9'))
+
+    await expect(client.hardware()).rejects.toThrow(/gone/)
+  })
+})
