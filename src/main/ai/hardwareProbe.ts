@@ -145,15 +145,15 @@ export type ProbeBudget = {
 }
 
 /**
- * The pot the weights actually come out of. 🛑 On `split` a system reading answers for the WRONG
- * memory, and it is wrong in BOTH directions — which is why this is not a refinement.
+ * The pot the weights actually come out of — a runtime's own reading whenever there is one.
+ *
+ * 🛑 On BOTH domains, and the unified case is the one that was wrong: `[M]` on this M2 Max,
+ * `os.freemem()` answers 27,0 GiB while llama.cpp answers 77,8 GiB allocatable — the difference is
+ * 29,9 GiB of inactive pages the system reading does not count. Reading the system there because
+ * "it is the same memory" threw away the better of two readings and refused models that fit.
  */
-function potOf(
-  facts: HardwareFacts,
-  domain: MemoryDomain,
-  budget: ProbeBudget,
-): { capacity: number; free: number } {
-  if (domain === 'split' && facts.vram !== null) {
+function potOf(facts: HardwareFacts, budget: ProbeBudget): { capacity: number; free: number } {
+  if (facts.vram !== null) {
     return { capacity: facts.vram.totalBytes, free: facts.vram.freeBytes }
   }
 
@@ -181,7 +181,7 @@ export function memorySnapshotOf(
   // composed anywhere else must not be able to zero the machine.
   const reading = usable(facts.vram)
   const domain = memoryDomainOf(facts.platform, facts.arch, reading)
-  const pot = potOf({ ...facts, vram: reading }, domain, budget)
+  const pot = potOf({ ...facts, vram: reading }, budget)
   const allowed = pot.capacity - budget.rendererReservedBytes
 
   return {

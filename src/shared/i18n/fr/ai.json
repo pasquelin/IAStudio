@@ -77,6 +77,7 @@
     "ownModelHelp": "Un fichier de poids GGUF déjà sur cette machine. Sa licence n’est pas connue du studio.",
     "addOwnModel": "Ajouter un fichier…",
     "ownModelUnreadable": "Ce fichier n’est pas un GGUF que le studio sait lire.",
-    "loadBeyondMachine": "Chargement impossible : {{needed}} demandés, {{available}} disponibles."
+    "loadBeyondMachine": "Chargement impossible : {{needed}} demandés, {{available}} disponibles.",
+    "noLocalEngine": "Aucun modèle local pour cet emploi : le studio n’embarque pas encore de moteur capable de le servir."
   }
 }

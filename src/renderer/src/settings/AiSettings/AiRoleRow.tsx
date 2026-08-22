@@ -1,7 +1,8 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AiOverview, ChoiceScope, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { WINDOW_CAPTION, WINDOW_HELP, WINDOW_ROW } from '@/design/windowStyles'
+import { cn } from '@/helpers/cn'
 import { useBytes } from '@/hooks/useBytes'
 import type { ModelFitSentence } from '@/hooks/useModelFit'
 import { useAiModels } from '@/stores/aiModels'
@@ -76,6 +77,14 @@ export const AiRoleRow = memo(function AiRoleRow({
             checked={editing === null}
             onChoose={() => void chooseAiProvider(row.role, null, scope)}
           />
+
+          {/* 🛑 Said rather than left blank: an employment with no local candidate is a list with
+              nothing but the clouds in it, and silence there reads as something broken. What is
+              missing is an ENGINE, not a manifest — the studio carries llama.cpp and sherpa-onnx,
+              and nothing that draws. */}
+          {row.candidates.length === 0 && (
+            <li className={cn(WINDOW_ROW, WINDOW_HELP)}>{t('aiModels.noLocalEngine')}</li>
+          )}
 
           {row.candidates.map(candidate => (
             <AiCandidateRow

@@ -66,6 +66,7 @@ describe('the line of a list in an app window', () => {
     expect(wearing.sort()).toEqual([
       '../manual/ManualWindow/ManualWindowResults.tsx',
       '../settings/AiSettings/AiChoiceRow.tsx',
+      '../settings/AiSettings/AiRoleRow.tsx',
       '../settings/SettingLine.tsx',
       '../settings/SettingsWindow/SettingsWindowResultRow.tsx',
     ])

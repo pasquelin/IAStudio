@@ -196,14 +196,20 @@ describe('memorySnapshotOf', () => {
     expect(memorySnapshotOf(split, budget, 0).availableBytes).toBe(5_000_000_000)
   })
 
-  // A unified machine draws from ONE pot, so the video reading is the same memory the budget
-  // already bounds: budgeting it a second time would halve what the machine actually offers.
-  it('keeps the system budget on a unified machine, whatever the card reports', () => {
+  /**
+   * 🛑 On a unified machine too, and this is the case that was wrong: `[M]` on an M2 Max with
+   * 96 GiB, `os.freemem()` answers 27,0 GiB where llama.cpp answers 77,8 GiB allocatable — the
+   * 29,9 GiB of inactive pages the system reading never counts. Reading the system there because
+   * "it is the same memory" threw away the better of two readings.
+   */
+  it('weighs a unified machine against the runtime reading too, not the system one', () => {
     const unified = facts({
-      vram: { totalBytes: 96_000_000_000, freeBytes: 1_000_000_000, unifiedBytes: 96_000_000_000 },
+      freeBytes: 27_000_000_000,
+      vram: { totalBytes: 77_800_000_000, freeBytes: 77_800_000_000, unifiedBytes: 77_800_000_000 },
     })
 
-    expect(memorySnapshotOf(unified, budget, 0).availableBytes).toBe(37_500_000_000)
+    // The card's own free figure, less the window and the headroom — not the 27 GiB `freemem` saw.
+    expect(memorySnapshotOf(unified, budget, 0).availableBytes).toBe(75_300_000_000)
   })
 
   /**
