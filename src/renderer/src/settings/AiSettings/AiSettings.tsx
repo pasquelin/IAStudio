@@ -14,6 +14,7 @@ import { useModelFit } from '@/hooks/useModelFit'
 import { useAiModels } from '@/stores/aiModels'
 import { SettingLine } from '../SettingLine'
 import { SETTING_COLUMN, SETTING_SELECT } from '../settingStyles'
+import { AiOllamaOffer } from './AiOllamaOffer'
 import { AiRoleRow } from './AiRoleRow'
 import { gpuName } from './gpuName'
 
@@ -110,6 +111,12 @@ export function AiSettings() {
           the manager owns the write because it re-judges the candidates — see `SettingsWindow`. */}
       <p className={cn(WINDOW_HELP, 'mb-4')}>{t('aiModels.appliesNow')}</p>
 
+      <section className="mb-4">
+        <h3 className={WINDOW_GROUP_LABEL}>{t('aiModels.sourceOllama')}</h3>
+        <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
+        <AiOllamaOffer offer={overview.ollama} busy={busy} />
+      </section>
+
       {overview.projectPath !== null && (
         <SettingLine title={t('aiModels.scope')} labelFor={SCOPE_FIELD}>
           <select
@@ -156,7 +163,6 @@ export function AiSettings() {
                   installing={heldBy(row, overview.installing)}
                   busy={busy}
                   scope={writesTo}
-                  ollama={overview.ollama}
                   fitOf={fitOf}
                 />
               ))}

@@ -1,13 +1,7 @@
 import { mdiInformationOutline } from '@mdi/js'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type {
-  AiOverview,
-  ChoiceScope,
-  ModelCandidate,
-  OllamaOffer,
-  RoleRow,
-} from '@shared/domain/aiOverview'
+import type { AiOverview, ChoiceScope, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
 import { partsOfRole } from '@shared/domain/aiRole'
 import { MODEL_SOURCES, sourceOf, type ModelSource } from '@shared/domain/localModel'
 import { UiIcon } from '@/design/UiIcon'
@@ -17,7 +11,6 @@ import { useAiModels } from '@/stores/aiModels'
 import { useModels } from '@/stores/models'
 import { AiCandidateRow } from './AiCandidateRow'
 import { AiChoiceRow } from './AiChoiceRow'
-import { AiOllamaOffer } from './AiOllamaOffer'
 import { roleLabel } from './roleLabel'
 
 const SOURCE_KEY: Record<ModelSource, string> = {
@@ -36,8 +29,6 @@ export type AiRoleRowProps = {
   busy: boolean
   /** Where a click writes — the application default, or the open project alone. */
   scope: ChoiceScope
-  /** The Ollama group, empty or in flight — the same offer on every employment. */
-  ollama: OllamaOffer
   fitOf: (candidate: ModelCandidate) => ModelFitSentence
 }
 
@@ -51,7 +42,6 @@ export const AiRoleRow = memo(function AiRoleRow({
   loading,
   busy,
   scope,
-  ollama,
   fitOf,
 }: AiRoleRowProps) {
   const { t } = useTranslation()
@@ -70,6 +60,25 @@ export const AiRoleRow = memo(function AiRoleRow({
   // The controls, unlike the summary, show the scope BEING EDITED: a radio reading the effect
   // would leave a click writing a scope that already agreed, doing nothing and saying nothing.
   const editing = row.chosen[scope]
+  const openId = editing?.kind === 'local' ? editing.modelId : (served?.model.id ?? null)
+
+  const rowOf = (candidate: ModelCandidate, chosen: boolean) => (
+    <AiCandidateRow
+      key={candidate.model.id}
+      role={row.role}
+      candidate={candidate}
+      chosen={chosen}
+      fit={fitOf(candidate)}
+      progress={installing?.modelId === candidate.model.id ? installing.progress : null}
+      loading={loading?.modelId === candidate.model.id ? loading.ratio : null}
+      busy={busy}
+      onChoose={() => {
+        void chooseAiProvider(row.role, { kind: 'local', modelId: candidate.model.id }, scope)
+        const parts = partsOfRole(row.role)
+        if (parts) selectFamilyModel(parts.family, candidate.model.id)
+      }}
+    />
+  )
 
   return (
     <details className="border-base-300 border-b last:border-b-0">
@@ -124,7 +133,10 @@ export const AiRoleRow = memo(function AiRoleRow({
 
           {MODEL_SOURCES.map(source => {
             const candidates = row.candidates.filter(one => sourceOf(one.model) === source)
-            if (candidates.length === 0 && source !== 'ollama') return null
+            if (candidates.length === 0) return null
+
+            const shown = candidates.filter(one => one.model.id === openId)
+            const folded = candidates.filter(one => one.model.id !== openId)
 
             return (
               <li key={source}>
@@ -136,32 +148,25 @@ export const AiRoleRow = memo(function AiRoleRow({
                   <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
                 )}
                 <ul>
-                  {source === 'ollama' && candidates.length === 0 && (
-                    <AiOllamaOffer offer={ollama} busy={busy} />
+                  {shown.map(candidate =>
+                    rowOf(
+                      candidate,
+                      editing?.kind === 'local' && editing.modelId === candidate.model.id,
+                    ),
                   )}
-                  {candidates.map(candidate => (
-                    <AiCandidateRow
-                      key={candidate.model.id}
-                      role={row.role}
-                      candidate={candidate}
-                      chosen={editing?.kind === 'local' && editing.modelId === candidate.model.id}
-                      fit={fitOf(candidate)}
-                      progress={
-                        installing?.modelId === candidate.model.id ? installing.progress : null
-                      }
-                      loading={loading?.modelId === candidate.model.id ? loading.ratio : null}
-                      busy={busy}
-                      onChoose={() => {
-                        void chooseAiProvider(
-                          row.role,
-                          { kind: 'local', modelId: candidate.model.id },
-                          scope,
-                        )
-                        const parts = partsOfRole(row.role)
-                        if (parts) selectFamilyModel(parts.family, candidate.model.id)
-                      }}
-                    />
-                  ))}
+                  {folded.length > 0 && (
+                    <li>
+                      <details>
+                        <summary
+                          className={WINDOW_CAPTION}
+                          onClick={event => event.stopPropagation()}
+                        >
+                          {t('aiModels.otherModels', { count: folded.length })}
+                        </summary>
+                        <ul>{folded.map(candidate => rowOf(candidate, false))}</ul>
+                      </details>
+                    </li>
+                  )}
                 </ul>
               </li>
             )

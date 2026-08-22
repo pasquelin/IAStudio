@@ -96,16 +96,16 @@ describe('AiSettings', () => {
    * Nothing is hidden and everything is explained: a model the machine cannot take stays on
    * screen, unpickable, carrying the figures that say why.
    */
-  it('keeps a model too heavy visible, greyed, with its reason', () => {
+  it('keeps a model too heavy reachable, greyed, with its reason', () => {
     show()
 
+    fireEvent.click(screen.getByText(/autre modèle/))
     const radio = screen.getByRole('radio', { name: /HiDream/ })
     expect(radio).toBeDisabled()
-    // The figures, not only the word: "too heavy" without a number cannot be acted on.
     expect(screen.getByText(/place insuffisante — 48/)).toBeInTheDocument()
   })
 
-  it('does not list Ollama models that serve another employment', () => {
+  it('names Ollama once, without listing models that serve another employment', () => {
     show(
       overview({
         ollama: {
@@ -119,9 +119,9 @@ describe('AiSettings', () => {
       }),
     )
 
-    expect(screen.getByText('Ollama')).toBeInTheDocument()
+    expect(screen.getAllByText('Ollama')).toHaveLength(1)
     expect(screen.queryByText(/alpha:1/)).not.toBeInTheDocument()
-    expect(screen.getByText(/Pas de modèle Ollama pour ce travail/)).toBeInTheDocument()
+    expect(screen.getByText(/Ollama · 2/)).toBeInTheDocument()
   })
 
   it('offers to install Ollama when it is not on this computer', () => {
@@ -135,6 +135,7 @@ describe('AiSettings', () => {
     )
 
     expect(screen.getByText(/n’est pas sur cet ordinateur/)).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Installer Ollama' })).toHaveLength(1)
     fireEvent.click(screen.getByRole('button', { name: 'Installer Ollama' }))
     expect(installOllama).toHaveBeenCalledOnce()
   })
@@ -170,10 +171,11 @@ describe('AiSettings', () => {
 
     expect(screen.getByText('Sur cet ordinateur')).toBeInTheDocument()
     expect(screen.getByText(/Le studio fait tourner le modèle ici/)).toBeInTheDocument()
-    expect(screen.getByText('Ollama')).toBeInTheDocument()
-    expect(screen.getByText(/Un autre programme, sur cet ordinateur/)).toBeInTheDocument()
+    expect(screen.getAllByText('Ollama').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText(/Un autre programme, sur cet ordinateur/).length).toBeGreaterThan(0)
     expect(screen.getByText('En ligne')).toBeInTheDocument()
     expect(screen.getByText(/Les serveurs Scenario/)).toBeInTheDocument()
+    expect(screen.getByText('qwen3:8b')).toBeInTheDocument()
   })
 
   it('writes the choice for the role the candidate belongs to', () => {
