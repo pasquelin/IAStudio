@@ -79,6 +79,11 @@ const BY_ROLE: ReadonlyMap<AiRoleId, readonly LocalModel[]> = (() => {
     map.set(entry.role, held)
   }
 
+  // Lightest first, HERE and not in the order the JSON happens to be written: an entry reaching a
+  // role through `serves` lands after the ones filed under it, whatever it weighs — and the first
+  // usable entry is what a role takes on its own.
+  for (const held of map.values()) held.sort((one, other) => one.diskBytes - other.diskBytes)
+
   return map
 })()
 
