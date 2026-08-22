@@ -21,6 +21,15 @@ export type PythonPort = {
   kill: () => void
 }
 
+/**
+ * How long a killed engine is given to let its doors go before it is killed outright.
+ *
+ * A door holds gigabytes of device memory and is a CHILD of the engine: killed without a chance to
+ * close, the child is orphaned and nothing on the machine gives those bytes back. The engine
+ * answers SIGTERM by leaving its `finally`, which closes every door — that is what this waits for.
+ */
+const SHUTDOWN_GRACE_MS = 5_000
+
 export type PythonProcessOptions = {
   /** The interpreter. Passed in rather than resolved here: packaging is not this file's business. */
   command: string
@@ -153,8 +162,18 @@ export function openPythonProcess({
       dead = true
       close()
       connection?.destroy()
-      // Both: the engine leaves on its own when the stream ends, the signal answers the one that does not.
-      child?.kill()
+
+      const leaving = child
+      if (!leaving) return
+
+      // SIGTERM, then a grace period, then SIGKILL. The engine catches the first and closes its
+      // doors on the way out; the second is for the one that does not answer — a worker
+      // mid-inference does not read a socket, and a device call does not interrupt.
+      leaving.kill()
+      const forced = setTimeout(() => leaving.kill('SIGKILL'), SHUTDOWN_GRACE_MS)
+      // Otherwise the timer holds the event loop open for five seconds past every quit.
+      forced.unref()
+      leaving.once('exit', () => clearTimeout(forced))
     },
   }
 }

@@ -1,19 +1,19 @@
 """
-The engine's TECHNICAL queue: what a worker holds and in which order, and what a cancel drops.
+The engine's TECHNICAL queue: what one worker holds, in which order, and what a cancel drops.
 
 Named `jobqueue` and never `scheduler`, and it is the only MECHANICAL hold on the invariant that
 the main process decides while the engine measures and executes — a file named "scheduler" ends up
 becoming one, and two schedulers contradict each other on the one resource that matters.
 
-Not wired yet: phase 1 answers `hardware.info` and holds no job. It is here, and tested, because
-the name is the invariant.
+It orders what ONE door holds. It arbitrates between none.
 """
 
 from __future__ import annotations
 
-from collections import deque
+import queue
+import threading
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -21,30 +21,80 @@ from typing import Any
 class Job:
     id: int
     op: str
-    params: dict[str, Any]
+    params: dict[str, Any] = field(default_factory=dict)
+
+
+class CancelledError(Exception):
+    """Raised inside a running job when the studio asked for it to stop."""
 
 
 class JobQueue:
-    """First in, first out. It orders what one worker holds; it arbitrates between nothing."""
+    """
+    First in, first out, drained by ONE thread.
+
+    Serialising is the first material exception of § A.5: two jobs entering a door a cycle apart
+    race on a device the main process cannot see. The worker serialises and SAYS so; it does not
+    reorder, and it never touches another door.
+    """
 
     def __init__(self) -> None:
-        self._waiting: deque[Job] = deque()
-
-    def __len__(self) -> int:
-        return len(self._waiting)
+        self._waiting: queue.SimpleQueue[Job | None] = queue.SimpleQueue()
+        self._lock = threading.Lock()
+        # What is queued but not yet handed out, so a cancel can drop it before it ever runs.
+        self._pending: set[int] = set()
+        self._running: int | None = None
+        self._stop = threading.Event()
 
     def submit(self, job: Job) -> None:
-        self._waiting.append(job)
+        with self._lock:
+            self._pending.add(job.id)
+        self._waiting.put(job)
 
     def cancel(self, job_id: int) -> bool:
-        """`False` for one it never held, or one already handed out — a fact, not a failure."""
-        for job in self._waiting:
-            if job.id == job_id:
-                self._waiting.remove(job)
+        """
+        `True` when this queue knows the job — waiting or running.
+
+        A waiting job is dropped before it costs anything; a running one is FLAGGED, and it is the
+        job's own loop that notices. Nothing is killed from here: a device call does not interrupt.
+        """
+        with self._lock:
+            if job_id in self._pending:
+                self._pending.discard(job_id)
+                return True
+            if self._running == job_id:
+                self._stop.set()
                 return True
         return False
 
+    def cancelled(self) -> bool:
+        """Read by the running job, between two steps. Its own loop is what makes a cancel real."""
+        return self._stop.is_set()
+
     def drain(self) -> Iterator[Job]:
-        """Hands out what is waiting, in order. A job cancelled mid-drain is never handed out."""
-        while self._waiting:
-            yield self._waiting.popleft()
+        """
+        Hands out what is waiting, blocking until there is something or the queue closes.
+
+        A job cancelled while it waited is never handed out, which is the whole reason a cancel
+        costs nothing before a job starts.
+        """
+        while True:
+            job = self._waiting.get()
+            if job is None:
+                return
+
+            with self._lock:
+                if job.id not in self._pending:
+                    continue
+                self._pending.discard(job.id)
+                self._running = job.id
+                self._stop.clear()
+
+            try:
+                yield job
+            finally:
+                with self._lock:
+                    self._running = None
+                    self._stop.clear()
+
+    def close(self) -> None:
+        self._waiting.put(None)

@@ -8,11 +8,13 @@ substitute a model. A refusal travels back with its reason and the main process 
 
 from __future__ import annotations
 
+import json
 import threading
 from collections.abc import Callable
 from typing import Any
 
 from ia_studio_engine import PROTOCOL_VERSION
+from ia_studio_engine.core.memory import DoorMemory, MemoryLedger
 from ia_studio_engine.core.workers import WorkerProcess
 from ia_studio_engine.protocol.envelope import encode_event
 
@@ -26,9 +28,10 @@ Spawn = Callable[[Callable[[dict], None], Callable[[], None]], WorkerProcess]
 class DoorRouter:
     """One door, started on first ask. A worker that never had to run is one that costs nothing."""
 
-    def __init__(self, send: Send, spawn: Spawn) -> None:
+    def __init__(self, send: Send, spawn: Spawn, ledger: MemoryLedger | None = None) -> None:
         self._send = send
         self._spawn = spawn
+        self.ledger = ledger if ledger is not None else MemoryLedger()
         self._worker: WorkerProcess | None = None
         self._lock = threading.Lock()
         # Which JOB each run of the worker belongs to, so its answer can be named on the way out.
@@ -37,6 +40,12 @@ class DoorRouter:
         self._runs: dict[int, str] = {}
 
     def _worker_said(self, frame: dict[str, Any]) -> None:
+        # An EVENT belongs to no run and is passed straight through: `job.progress` is the only
+        # thing a job says while it runs, and a router that only knew about answers dropped it.
+        if "evt" in frame:
+            self._send(json.dumps({**frame, "v": PROTOCOL_VERSION}, separators=(",", ":")) + "\n")
+            return
+
         run = frame.get("id")
         with self._lock:
             job = self._runs.pop(run, None) if isinstance(run, int) else None
@@ -52,7 +61,31 @@ class DoorRouter:
             )
             return
 
-        self._send(encode_event("job.completed", job=job, **(frame.get("ok") or {})))
+        answer = frame.get("ok") or {}
+        # Every door answer carries what it holds NOW, so the ledger follows a load, a generation
+        # and an unload without a second round trip asking.
+        if isinstance(answer, dict) and "heldBytes" in answer:
+            self._remember(answer)
+
+        self._send(encode_event("job.completed", job=job, **answer))
+
+    def _remember(self, answer: dict[str, Any]) -> None:
+        held = answer.get("heldBytes")
+        tensors = answer.get("tensorBytes")
+        # A backend that does not answer is left ABSENT rather than recorded at zero: ADR-19 R1
+        # turns on the difference between "it holds nothing" and "nobody could say".
+        if not isinstance(held, int) or not isinstance(tensors, int):
+            return
+
+        self.ledger.record(
+            DoorMemory(
+                door=str(answer.get("door", DIFFUSION_DOOR)),
+                tensor_bytes=tensors,
+                held_bytes=held,
+                device=str(answer.get("device", "")),
+                backend=str(answer.get("backend", "")),
+            )
+        )
 
     def _worker_left(self) -> None:
         """
@@ -65,6 +98,8 @@ class DoorRouter:
             orphans = list(self._runs.values())
             self._runs.clear()
             self._worker = None
+        # Its process is gone, so it holds nothing — a measurement, not an assumption.
+        self.ledger.forget(DIFFUSION_DOOR)
 
         for job in orphans:
             self._send(
@@ -91,7 +126,35 @@ class DoorRouter:
         worker.send({"v": PROTOCOL_VERSION, "id": run, "op": op, "params": params})
         return {"jobId": job}
 
+    def cancel(self, job: str) -> dict[str, Any]:
+        """
+        Asks the door to drop a job, BY JOB — the studio never learns a door's own numbering.
+
+        Answered here and not queued: a cancel that waited behind the job it stops would be
+        useless. What it reaches is the door's reading thread, which is why that thread exists.
+        """
+        with self._lock:
+            run = next((one for one, held in self._runs.items() if held == job), None)
+            worker = self._worker
+
+        if run is None or worker is None:
+            return {"cancelled": False}
+
+        # A run of its OWN, and never the one it stops: reusing that number makes the door answer
+        # the cancel under the job's id, which settles the job as completed and drops the
+        # `cancelled` error that follows. Measured — it read as a success on the first try.
+        worker.send(
+            {
+                "v": PROTOCOL_VERSION,
+                "id": worker.next_run(),
+                "op": "engine.cancel",
+                "params": {"run": run},
+            }
+        )
+        return {"cancelled": True}
+
     def close(self) -> None:
+        self.ledger.forget(DIFFUSION_DOOR)
         with self._lock:
             if self._worker is not None:
                 self._worker.close()

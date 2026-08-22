@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import argparse
 import platform
+import signal
 import socket
 import sys
+import threading
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
 
@@ -35,7 +37,22 @@ HANDLERS: Mapping[str, Handler] = {"hardware.info": lambda _params: hardware_inf
 
 #: What the core hands to a door rather than answering itself. Each reads gigabytes or runs for
 #: seconds, so each answers with the job it opened and pushes its result as an event.
-ROUTED_OPS = ("models.load", "models.unload", "generate", "worker.status")
+ROUTED_OPS = ("models.load", "models.unload", "generate", "worker.status", "memory.info")
+
+
+def memory_handlers(router: DoorRouter) -> dict[str, Handler]:
+    """
+    What the core answers about memory WITHOUT waking a door: the last thing each one reported.
+
+    Asked, never computed — no caller may add back what a release was expected to return, which is
+    R2 of ADR-19. A door that never answered is absent here, and absent is what makes the main
+    read `unknown` rather than a zero it would trust.
+    """
+    return {
+        "memory.ledger": lambda _params: router.ledger.as_frame(),
+        # Routed, but never QUEUED: a cancel that waited behind the job it stops stops nothing.
+        CANCEL_OP: lambda params: router.cancel(str(params.get("jobId", ""))),
+    }
 
 
 def routed_handlers(router: DoorRouter) -> dict[str, Handler]:
@@ -93,12 +110,6 @@ def serve(
             send(encode_event("runtime.error", message=str(error)))
             continue
 
-        # A cancel ENDS its run, and answering is not a courtesy: the studio holds the promise of
-        # that run until a frame settles it, so silence here leaves a caller waiting for ever.
-        if request.op == CANCEL_OP:
-            send(encode_error(request.id, "cancelled", "the run was cancelled"))
-            continue
-
         send(_answer(request, handlers))
 
 
@@ -106,13 +117,18 @@ Stream = tuple[Iterable[bytes], Callable[[str], None], Callable[[], None]]
 
 
 def _open_stream(path: str) -> Stream:
+    # The loop answers on one thread and a door's pump pushes events on another: a frame written
+    # half way through another is not a frame, and NDJSON has no way back from an interleave.
+    writing = threading.Lock()
+
     if sys.platform == "win32":
         # `[?]` Never run: no Windows machine has measured this. Node serves a named pipe as a byte
         # stream and Python opens it as a file — the spec keeps § L.4 open on exactly this line.
         pipe = open(path, "r+b", buffering=0)  # noqa: SIM115 — it lives as long as the process
 
         def write_pipe(line: str) -> None:
-            pipe.write(line.encode("utf-8"))
+            with writing:
+                pipe.write(line.encode("utf-8"))
 
         return iter(lambda: pipe.read(65536), b""), write_pipe, pipe.close
 
@@ -120,7 +136,8 @@ def _open_stream(path: str) -> Stream:
     connection.connect(path)
 
     def write_socket(line: str) -> None:
-        connection.sendall(line.encode("utf-8"))
+        with writing:
+            connection.sendall(line.encode("utf-8"))
 
     return iter(lambda: connection.recv(65536), b""), write_socket, connection.close
 
@@ -132,8 +149,18 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     chunks, send, close = _open_stream(options.socket)
     router = DoorRouter(send, spawn_diffusion)
+
+    # A door is a child of THIS process, and the default SIGTERM handler ends Python without
+    # running a `finally`. Without this, killing the engine orphans a worker holding gigabytes of
+    # device memory that nothing on the machine will ever give back.
+    def leave(_signal: int, _frame: object) -> None:
+        raise SystemExit(0)
+
+    signal.signal(signal.SIGTERM, leave)
+    signal.signal(signal.SIGINT, leave)
+
     try:
-        serve(chunks, send, {**HANDLERS, **routed_handlers(router)})
+        serve(chunks, send, {**HANDLERS, **memory_handlers(router), **routed_handlers(router)})
     finally:
         router.close()
         close()

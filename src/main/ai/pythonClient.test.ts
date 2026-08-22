@@ -232,3 +232,85 @@ describe('opening a job on a door', () => {
     await expect(running).rejects.toThrow(/gone/)
   })
 })
+
+describe('watching a job that runs for seconds', () => {
+  const opened = async () => {
+    const held = harness()
+    held.say(greeting())
+    await held.client.ready
+    return held
+  }
+
+  const runs = async (held: Awaited<ReturnType<typeof opened>>, watch = {}) => {
+    const running = held.client.job('generate', {}, watch)
+    held.say({ v: PROTOCOL_VERSION, id: 1, ok: { jobId: 'local_1' } })
+    // Fake timers hold the microtask chain that `job` awaits; nothing shorter flushes it.
+    await vi.advanceTimersByTimeAsync(0)
+    // Wrapped: `await runs(...)` would unwrap the job's own promise and wait for it to settle.
+    return { running }
+  }
+
+  /** The only thing a denoise says while it runs, and it belongs to no run. */
+  it('reports each step the door pushed', async () => {
+    const held = await opened()
+    const steps: number[] = []
+    const { running } = await runs(held, { onStep: (ratio: number) => steps.push(ratio) })
+
+    held.say({ v: PROTOCOL_VERSION, evt: 'job.progress', job: 'local_1', ratio: 0.25 })
+    held.say({ v: PROTOCOL_VERSION, evt: 'job.progress', job: 'local_1', ratio: 0.5 })
+    held.say({ v: PROTOCOL_VERSION, evt: 'job.completed', job: 'local_1', path: '/tmp/x.png' })
+
+    await running
+    expect(steps).toEqual([0.25, 0.5])
+  })
+
+  /** A step is not an answer: reporting one must never settle the job it belongs to. */
+  it('does not settle a job that only reported progress', async () => {
+    const held = await opened()
+    const { running } = await runs(held)
+    let settled = false
+    void running.then(() => (settled = true))
+
+    held.say({ v: PROTOCOL_VERSION, evt: 'job.progress', job: 'local_1', ratio: 0.9 })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(settled).toBe(false)
+    held.say({ v: PROTOCOL_VERSION, evt: 'job.completed', job: 'local_1' })
+    await running
+  })
+
+  it('asks the engine to drop the job when the caller aborts', async () => {
+    const held = await opened()
+    const stop = new AbortController()
+    const { running } = await runs(held, { signal: stop.signal })
+
+    stop.abort()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(held.sent.at(-1)).toMatchObject({ op: 'engine.cancel', params: { jobId: 'local_1' } })
+    held.say({
+      v: PROTOCOL_VERSION,
+      evt: 'job.failed',
+      job: 'local_1',
+      code: 'cancelled',
+      message: 'stopped',
+    })
+    await expect(running).rejects.toThrow('cancelled: stopped')
+  })
+
+  /** The door reports what it holds on every answer, and a name it does not read is dropped. */
+  it('keeps the memory a door reported when it settled', async () => {
+    const held = await opened()
+    const { running } = await runs(held)
+
+    held.say({
+      v: PROTOCOL_VERSION,
+      evt: 'job.completed',
+      job: 'local_1',
+      heldBytes: 7_766_163_456,
+      tensorBytes: 7_036_681_984,
+    })
+
+    await expect(running).resolves.toMatchObject({ heldBytes: 7_766_163_456 })
+  })
+})

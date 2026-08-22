@@ -5,10 +5,13 @@ import {
   CANCEL_OP,
   engineRequest,
   isHello,
+  isJobProgress,
   isSettledJob,
   PROTOCOL_VERSION,
   readHardware,
+  readMemoryLedger,
   readOpenedJob,
+  type EngineDoorMemory,
   type EngineFrame,
   type EngineHardware,
   type EngineHello,
@@ -34,6 +37,13 @@ export const REQUEST_TIMEOUT_MS = 5_000
 
 const GONE = 'the local AI engine is gone'
 
+/** What a caller wants to know while a job runs, and what stops it. */
+type EngineJobWatch = {
+  /** From 0 to 1, pushed between two steps by the door itself. */
+  readonly onStep?: (ratio: number) => void
+  readonly signal?: AbortSignal
+}
+
 export type PythonListeners = {
   /** The engine failed AFTER it greeted — as opposed to failing to greet at all. */
   onFailure: (error: Error) => void
@@ -44,10 +54,19 @@ export type PythonClient = {
   ready: Promise<EngineHello>
   hardware: () => Promise<EngineHardware>
   /**
+   * What every door last reported, ASKED and never computed — R2 of ADR-19: no caller may add back
+   * what a release was expected to return. Answered by the core, so it wakes no door.
+   */
+  memory: () => Promise<readonly EngineDoorMemory[]>
+  /**
    * Opens a JOB on a door and waits for the event that settles it — reading gigabytes and running
    * an inference are the two things `REQUEST_TIMEOUT_MS` must never bound.
    */
-  job: (op: EngineJobOp, params: Readonly<Record<string, unknown>>) => Promise<EngineSettledJob>
+  job: (
+    op: EngineJobOp,
+    params: Readonly<Record<string, unknown>>,
+    watch?: EngineJobWatch,
+  ) => Promise<EngineSettledJob>
   close: () => void
 }
 
@@ -104,12 +123,21 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
   /** Keyed by JOB and not by run: the run that opened one was answered turns earlier. */
   const jobs = new Map<
     string,
-    { resolve: (job: EngineSettledJob) => void; reject: (error: Error) => void }
+    {
+      resolve: (job: EngineSettledJob) => void
+      reject: (error: Error) => void
+      onStep?: (ratio: number) => void
+    }
   >()
   let nextJob = 1
 
   port.onMessage(frame => {
     if (!('evt' in frame)) return
+
+    if (isJobProgress(frame)) {
+      jobs.get(frame.job)?.onStep?.(frame.ratio)
+      return
+    }
 
     if (isSettledJob(frame)) {
       const waiting = jobs.get(frame.job)
@@ -179,13 +207,30 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
       return readHardware(answer)
     },
 
-    job: async (op, params) => {
+    memory: async () => {
+      if (closed) throw new Error(GONE)
+
+      const answer = await beforeDeadline(
+        client.send(id => engineRequest(id, 'memory.ledger')),
+        'memory.ledger',
+      )
+      return readMemoryLedger(answer)
+    },
+
+    job: async (op, params, watch = {}) => {
       if (closed) throw new Error(GONE)
 
       const id = `local_${nextJob++}`
       const settled = new Promise<EngineSettledJob>((resolve, reject) => {
-        jobs.set(id, { resolve, reject })
+        jobs.set(id, { resolve, reject, onStep: watch.onStep })
       })
+
+      // Cancelled by JOB: the engine's own numbering is its business, and it is the door's reading
+      // thread that answers — which is the whole reason that thread exists.
+      const drop = (): void => {
+        void client.send(run => engineRequest(run, CANCEL_OP, { jobId: id })).catch(() => {})
+      }
+      watch.signal?.addEventListener('abort', drop, { once: true })
 
       try {
         const opened = await beforeDeadline(
@@ -200,10 +245,13 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
         // The job never opened, so nothing will ever settle it: dropped here or held for the rest
         // of the session.
         jobs.delete(id)
+        watch.signal?.removeEventListener('abort', drop)
         throw error
       }
 
-      return settled
+      if (watch.signal?.aborted) drop()
+
+      return settled.finally(() => watch.signal?.removeEventListener('abort', drop))
     },
 
     close: () => {
