@@ -2502,7 +2502,12 @@
       ],
       "diskBytes": 11101501890,
       "reservationBytes": 5550750945,
-      "thumbnail": "acestep-v15-xl-turbo.png"
+      "thumbnail": "acestep-v15-xl-turbo.png",
+      "family": "audio",
+      "capabilities": [
+        "txt2audio",
+        "audio2audio"
+      ]
     },
     {
       "id": "acestep-v15-xl-base",
@@ -2703,7 +2708,12 @@
       ],
       "diskBytes": 11521597756,
       "reservationBytes": 5760798878,
-      "thumbnail": "acestep-v15-xl-base.png"
+      "thumbnail": "acestep-v15-xl-base.png",
+      "family": "audio",
+      "capabilities": [
+        "txt2audio",
+        "audio2audio"
+      ]
     },
     {
       "id": "acestep-v15-xl-sft",
@@ -2904,7 +2914,12 @@
       ],
       "diskBytes": 11521597756,
       "reservationBytes": 5760798878,
-      "thumbnail": "acestep-v15-xl-sft.png"
+      "thumbnail": "acestep-v15-xl-sft.png",
+      "family": "audio",
+      "capabilities": [
+        "txt2audio",
+        "audio2audio"
+      ]
     }
   ],
   "3d/txt23d": [

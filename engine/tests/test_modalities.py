@@ -137,3 +137,32 @@ def test_a_mesh_from_a_picture_drops_the_description_it_replaces() -> None:
     assert asked["image"] == "/project/a.png"
     assert "prompt" not in asked
     assert asked["output_type"] == "mesh"
+
+
+def test_a_source_take_is_what_gives_a_generation_its_length() -> None:
+    """
+    Passing a duration beside one would crop or stretch what the person handed in.
+
+    `_read_wave` is stood in for: it needs numpy and torch, and the gate installs neither —
+    what it reads off a real file is proven by the end-to-end run.
+    """
+    import ia_studio_engine.adapters.modalities as modalities
+
+    original = modalities._read_wave
+    modalities._read_wave = lambda path: f"tensor:{path}"
+    try:
+        asked = MODALITIES["audio"].kwargs(
+            {"prompt": "a beat", "audio": "/project/take.wav", "seconds": 30}
+        )
+    finally:
+        modalities._read_wave = original
+
+    assert asked["src_audio"] == "tensor:/project/take.wav"
+    assert "audio_end_in_s" not in asked
+
+
+def test_a_take_without_one_keeps_the_duration_that_was_asked_for() -> None:
+    asked = MODALITIES["audio"].kwargs({"prompt": "a beat", "seconds": 30})
+
+    assert asked["audio_end_in_s"] == 30.0
+    assert "src_audio" not in asked

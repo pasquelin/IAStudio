@@ -33,7 +33,9 @@
     "strength": "Distance from the starting image",
     "strengthHelp": "Without effect when no starting image is given.",
     "video": "Starting sequence",
-    "videoHelp": "Leave it empty to compose the sequence from the description alone."
+    "videoHelp": "Leave it empty to compose the sequence from the description alone.",
+    "audio": "Starting take",
+    "audioHelp": "A 16-bit WAV. Leave it empty to compose from the description alone."
   },
   "aiModels": {
     "reading": "Reading the machine…",
