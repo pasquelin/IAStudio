@@ -15,6 +15,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
 
 from ia_studio_engine import PROTOCOL_VERSION, __version__
+from ia_studio_engine.core.router import DoorRouter, spawn_diffusion
 from ia_studio_engine.hardware.probe import hardware_info
 from ia_studio_engine.protocol.envelope import (
     EnvelopeError,
@@ -31,6 +32,23 @@ Handler = Callable[[dict[str, Any]], Any]
 CANCEL_OP = "engine.cancel"
 
 HANDLERS: Mapping[str, Handler] = {"hardware.info": lambda _params: hardware_info()}
+
+#: What the core hands to a door rather than answering itself. Each reads gigabytes or runs for
+#: seconds, so each answers with the job it opened and pushes its result as an event.
+ROUTED_OPS = ("models.load", "models.unload", "generate", "worker.status")
+
+
+def routed_handlers(router: DoorRouter) -> dict[str, Handler]:
+    def route(op: str) -> Handler:
+        def submit(params: dict[str, Any]) -> Any:
+            job = params.get("jobId")
+            if not isinstance(job, str) or not job:
+                raise ValueError("a routed op carries the job it belongs to")
+            return router.submit(op, params, job)
+
+        return submit
+
+    return {op: route(op) for op in ROUTED_OPS}
 
 
 def hello() -> str:
@@ -58,9 +76,14 @@ def serve(
     chunks: Iterable[bytes],
     send: Callable[[str], None],
     handlers: Mapping[str, Handler] = HANDLERS,
+    greeting: str | None = None,
 ) -> None:
-    """Greets, then answers until the stream ends. The end of the stream IS the shutdown."""
-    send(hello())
+    """
+    Greets, then answers until the stream ends. The end of the stream IS the shutdown.
+
+    A worker speaks the same loop over its own socket, and says who it is in its own greeting.
+    """
+    send(greeting if greeting is not None else hello())
 
     for line in frames(chunks):
         try:
@@ -108,9 +131,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     options = parser.parse_args(argv)
 
     chunks, send, close = _open_stream(options.socket)
+    router = DoorRouter(send, spawn_diffusion)
     try:
-        serve(chunks, send)
+        serve(chunks, send, {**HANDLERS, **routed_handlers(router)})
     finally:
+        router.close()
         close()
     return 0
 

@@ -35,6 +35,7 @@ function harness(outcomes: readonly boolean[] = []) {
       const client: PythonClient = {
         ready: greets ? Promise.resolve(HELLO) : Promise.reject(new Error('it did not greet')),
         hardware: vi.fn(),
+        job: vi.fn(),
         close: vi.fn(),
       }
       opened.push(client)

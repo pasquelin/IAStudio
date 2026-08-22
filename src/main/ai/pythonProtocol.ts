@@ -12,8 +12,14 @@ import { z } from 'zod'
  */
 export const PROTOCOL_VERSION = 1
 
-/** What the engine answers today. Nothing else: no model, no worker, no tensor library. */
+/** What the core answers itself, in the same turn. */
 export type EngineOp = 'hardware.info'
+
+/**
+ * What the core hands to a DOOR instead of answering. Each reads gigabytes or runs for seconds, so
+ * each answers with the job it opened and pushes its result as an event.
+ */
+export type EngineJobOp = 'models.load' | 'models.unload' | 'generate' | 'worker.status'
 
 /** Drops a request the engine still holds. Posted by `processClient` when a caller aborts. */
 export const CANCEL_OP = 'engine.cancel'
@@ -21,12 +27,16 @@ export const CANCEL_OP = 'engine.cancel'
 export type EngineRequest = {
   readonly v: number
   readonly id: number
-  readonly op: EngineOp | typeof CANCEL_OP
+  readonly op: EngineOp | EngineJobOp | typeof CANCEL_OP
   readonly params: Readonly<Record<string, unknown>>
 }
 
-export function engineRequest(id: number, op: EngineOp | typeof CANCEL_OP): EngineRequest {
-  return { v: PROTOCOL_VERSION, id, op, params: {} }
+export function engineRequest(
+  id: number,
+  op: EngineOp | EngineJobOp | typeof CANCEL_OP,
+  params: Readonly<Record<string, unknown>> = {},
+): EngineRequest {
+  return { v: PROTOCOL_VERSION, id, op, params }
 }
 
 /**
@@ -42,6 +52,26 @@ const hello = z.object({
   platform: z.string(),
 })
 
+/**
+ * A job settling. It carries no run id: the run that opened it was answered long before, and what
+ * a door produced belongs to the JOB — the shape `JobRunner` already speaks.
+ */
+const settledJob = z.object({
+  v: z.number(),
+  evt: z.union([z.literal('job.completed'), z.literal('job.failed')]),
+  job: z.string(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+  path: z.string().optional(),
+  device: z.string().optional(),
+  backend: z.string().optional(),
+  bytes: z.number().nullable().optional(),
+  loadMs: z.number().optional(),
+  generateMs: z.number().optional(),
+  door: z.string().optional(),
+  loaded: z.string().nullable().optional(),
+})
+
 /** What the engine says about a frame it could not read: there is no run id to answer under. */
 const noticed = z.object({ v: z.number(), evt: z.string(), message: z.string() })
 
@@ -54,9 +84,10 @@ const refused = z.object({
 /** `ok` is REQUIRED, which is what keeps a refusal from reading as an answer settled with nothing. */
 const settled = z.object({ v: z.number(), id: z.number(), ok: z.unknown() })
 
-const frame = z.union([hello, noticed, refused, settled])
+const frame = z.union([hello, settledJob, noticed, refused, settled])
 
 export type EngineHello = z.infer<typeof hello>
+export type EngineSettledJob = z.infer<typeof settledJob>
 export type EngineFrame = z.infer<typeof frame>
 
 /** `null` for a line this protocol cannot read — the caller logs it rather than guessing at it. */
@@ -73,6 +104,17 @@ export function readFrame(line: string): EngineFrame | null {
 
 export function isHello(value: EngineFrame): value is EngineHello {
   return 'evt' in value && value.evt === 'engine.hello'
+}
+
+export function isSettledJob(value: EngineFrame): value is EngineSettledJob {
+  return 'job' in value
+}
+
+/** What a routed op answers in the same turn: the job it opened, never its result. */
+const opened = z.object({ jobId: z.string() })
+
+export function readOpenedJob(value: unknown): string {
+  return opened.parse(value).jobId
 }
 
 /**
