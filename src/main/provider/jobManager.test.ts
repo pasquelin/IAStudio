@@ -338,6 +338,109 @@ describe('job manager', () => {
     expect(peak).toBe(2)
   })
 
+  /**
+   * Two exclusive doors on one GPU fight. A job on this machine takes the local slot; a cloud
+   * job does not, so an image denoise does not hold a 3D generation that runs somewhere else.
+   */
+  it('lets a cloud job start while this machine is already generating', async () => {
+    const started: string[] = []
+    const release: Record<string, () => void> = {}
+
+    const { manager } = harness({
+      concurrency: () => 2,
+      isLocalTarget: id => id === 'sana',
+      runner: {
+        submit: target =>
+          new Promise(resolve => {
+            started.push(target.id)
+            release[target.id] = () => resolve(remote('success'))
+          }),
+      },
+    })
+
+    manager.submit({ id: 'sana' }, 'Sana', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
+    await settled()
+
+    expect(started.sort()).toEqual(['model_flux', 'sana'])
+
+    release['sana']?.()
+    release['model_flux']?.()
+    await settled()
+  })
+
+  /**
+   * A FIFO that only looks at the head would keep Flux queued behind Shap-E while Sana holds the
+   * local slot. The cloud job must overtake.
+   */
+  it('starts a cloud job even when a local one is waiting behind another', async () => {
+    const started: string[] = []
+    const release: Record<string, () => void> = {}
+
+    const { manager } = harness({
+      concurrency: () => 1,
+      isLocalTarget: id => id !== 'model_flux',
+      runner: {
+        submit: target =>
+          new Promise(resolve => {
+            started.push(target.id)
+            release[target.id] = () => resolve(remote('success'))
+          }),
+      },
+    })
+
+    manager.submit({ id: 'sana' }, 'Sana', {})
+    await settled()
+    manager.submit({ id: 'shap-e' }, 'Shap-E', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
+    await settled()
+
+    expect(started).toEqual(['sana', 'model_flux'])
+
+    release['sana']?.()
+    await settled()
+    expect(started).toContain('shap-e')
+    release['shap-e']?.()
+    release['model_flux']?.()
+    await settled()
+  })
+
+  it('never runs two jobs on this machine at once', async () => {
+    let active = 0
+    let peak = 0
+    const release: (() => void)[] = []
+
+    const { manager } = harness({
+      concurrency: () => 4,
+      isLocalTarget: () => true,
+      runner: {
+        submit: () => {
+          active++
+          peak = Math.max(peak, active)
+          return new Promise(resolve =>
+            release.push(() => {
+              active--
+              resolve(remote('success'))
+            }),
+          )
+        },
+      },
+    })
+
+    manager.submit({ id: 'sana' }, 'Sana', {})
+    manager.submit({ id: 'shap-e' }, 'Shap-E', {})
+    await settled()
+
+    expect(peak).toBe(1)
+
+    while (release.length > 0) {
+      release.shift()?.()
+      await settled()
+    }
+
+    expect(peak).toBe(1)
+  })
+
   it('follows the progress the API reports', async () => {
     const statuses = [remote('queued', { progress: 0 }), remote('in-progress', { progress: 0.4 })]
     const { manager, progress } = harness({

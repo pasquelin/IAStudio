@@ -1215,6 +1215,7 @@ export function createServices(settings: SettingsStore): Services {
 
   const modelOf = (modelId: string): LocalModel | null =>
     modelWith(modelId, settings.read().ai.ownModels)
+  const isLocalTarget = (targetId: string): boolean => modelOf(targetId) !== null
 
   /**
    * The local AI engine, supervised. Started on the first ask and never at launch: forking Python
@@ -1478,22 +1479,29 @@ export function createServices(settings: SettingsStore): Services {
       const generate = model ? runtimes[model.loader]?.generate : undefined
       if (!model || !generate) throw new Error(`nothing here generates with ${request.model}`)
 
-      // The main process owns where it lands, and the engine only fills it — which is what makes
-      // the file ours to file and ours to delete.
-      const folder = join(app.getPath('temp'), 'ia-studio-generations')
-      await ensureFolder(folder)
+      const release = ai.hold(request.model)
+      try {
+        await ai.ensureLoaded(request.model)
 
-      return await generate({
-        model: model.id,
-        modality: request.modality,
-        prompt: request.prompt,
-        fields: request.fields,
-        // The extension follows the MODALITY: the collector reads it back off the path to file
-        // the asset, so a video written as `.png` lands as a picture nothing can play.
-        destination: join(folder, `${request.jobId}.${outputExtensionOf(request.modality)}`),
-        onProgress: request.onProgress,
-        signal: request.signal,
-      })
+        // The main process owns where it lands, and the engine only fills it — which is what makes
+        // the file ours to file and ours to delete.
+        const folder = join(app.getPath('temp'), 'ia-studio-generations')
+        await ensureFolder(folder)
+
+        return await generate({
+          model: model.id,
+          modality: request.modality,
+          prompt: request.prompt,
+          fields: request.fields,
+          // The extension follows the MODALITY: the collector reads it back off the path to file
+          // the asset, so a video written as `.png` lands as a picture nothing can play.
+          destination: join(folder, `${request.jobId}.${outputExtensionOf(request.modality)}`),
+          onProgress: request.onProgress,
+          signal: request.signal,
+        })
+      } finally {
+        release()
+      }
     },
 
     chat: async request => {
@@ -1527,7 +1535,7 @@ export function createServices(settings: SettingsStore): Services {
     runner: createRoutedJobRunner({
       local: localJobs,
       cloud: () => (scenario ? runnerOf(scenario) : null),
-      isLocalTarget: targetId => modelOf(targetId) !== null,
+      isLocalTarget,
     }),
     // Routed like the runner, and by the same question: a job id says which of the two owns what
     // it produced. A local generation needs no account, so it is collected with none held.
@@ -1569,7 +1577,7 @@ export function createServices(settings: SettingsStore): Services {
     // Routed on WHERE the target runs: a local model needs its picture off the disk, and
     // uploading it to an account would be a transfer nobody asked for.
     resolveAssetInputs: (body, target) =>
-      modelOf(target.id) ? localAssetInputs.resolveBody(body) : assetInputs.resolveBody(body),
+      isLocalTarget(target.id) ? localAssetInputs.resolveBody(body) : assetInputs.resolveBody(body),
     persist: (unfinished, handled) => {
       // 🛑 A local job is never written down: its whole state lived in the memory of the process
       // that ran it, so a launch that resumed one would poll a runner that has never heard of it.
@@ -1584,6 +1592,8 @@ export function createServices(settings: SettingsStore): Services {
       })
     },
     concurrency: () => settings.read().generation.concurrentJobs,
+    localConcurrency: () => 1,
+    isLocalTarget,
     maxRetries: () => settings.read().generation.maxRetries,
     onProgress: progress => broadcast(EVENTS.jobProgress, progress),
     onListChanged: list => broadcast(EVENTS.jobsChanged, list),
