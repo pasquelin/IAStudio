@@ -77,7 +77,10 @@ export function AiSettings() {
       summary.gpu === null ? null : gpuName(summary.gpu),
       // The video memory when a runtime answered for it, and nothing at all otherwise: a machine
       // with a dedicated card is judged on THIS figure, so leaving it unsaid would hide the reason.
-      summary.vram === null
+      // Falsy and not `=== null`: the type says `| null`, but this crosses IPC, and a summary
+      // written before the field existed simply has no key — measured, it took the panel down
+      // with `Cannot read properties of undefined (reading 'totalBytes')`.
+      !summary.vram
         ? null
         : t('aiModels.machineVram', {
             total: bytes(summary.vram.totalBytes),
