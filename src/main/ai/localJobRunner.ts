@@ -1,4 +1,5 @@
-import { PROMPT_FIELD_KEY } from '@shared/domain/localFields'
+import type { AssetType } from '@shared/domain/asset'
+import { assetTypeOfModality, PROMPT_FIELD_KEY } from '@shared/domain/localFields'
 import type { LocalModel } from '@shared/domain/localModel'
 import type { JobRunner, RemoteJob } from '@main/provider/jobManager'
 import type { ChatRequest, GenerateResult } from './localRuntimes'
@@ -18,7 +19,19 @@ type LocalJob = {
   /** What the model answered, once it has. Read through `outputOf`. */
   answer: string
   /** Where a generation landed, for whoever files it. Empty for a job that produced a sentence. */
-  produced: GenerateResult | null
+  produced: LocalProduction | null
+}
+
+/**
+ * A file a generation wrote, with what it was asked for.
+ *
+ * The prompt and the shelf travel WITH the file: the collector runs turns later, when the body
+ * that carried them is gone, and naming an asset after the model that answered rather than after
+ * what was asked makes a shelf where everything of one model reads the same.
+ */
+type LocalProduction = GenerateResult & {
+  readonly type: AssetType
+  readonly prompt: string
 }
 
 export type LocalJobDeps = {
@@ -53,7 +66,7 @@ export type LocalJobRunner = JobRunner & {
   /** What a finished job answered, or nothing — for whoever files it. */
   outputOf: (jobId: string) => string | null
   /** The file a finished generation wrote, or nothing. It is the caller's to file, and to delete. */
-  producedBy: (jobId: string) => GenerateResult | null
+  producedBy: (jobId: string) => LocalProduction | null
   /** Whether this runner is the one that owns a job id, which is how a caller routes a poll. */
   owns: (jobId: string) => boolean
 }
@@ -94,7 +107,12 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
     jobId: string,
     body: Record<string, unknown>,
   ): Promise<void> => {
-    job.produced = await deps.generate({
+    const type = model.modality ? assetTypeOfModality(model.modality) : null
+    // Refused rather than filed somewhere: a modality with no shelf has nowhere for its output to
+    // land, and writing the file anyway would leave bytes nothing ever points at.
+    if (!type) throw new Error(`${model.modality} produces nothing this project can hold`)
+
+    const written = await deps.generate({
       model: model.id,
       prompt: promptOf(body),
       fields: body,
@@ -103,6 +121,8 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
       onProgress: ratio => (job.progress = ratio),
       signal: job.abort.signal,
     })
+
+    job.produced = { ...written, type, prompt: promptOf(body) }
   }
 
   const run = async (

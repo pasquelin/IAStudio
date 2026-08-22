@@ -71,6 +71,8 @@ import { llamaLocalRuntime } from './ai/llamaRuntime'
 import { hardwareProbe, memorySnapshotOf } from './ai/hardwareProbe'
 import { readyCloudsOf } from './ai/cloudReadiness'
 import { createLocalJobRunner } from './ai/localJobRunner'
+import { createRoutedCollector } from './ai/routedCollector'
+import { createLocalCollector } from './assets/localCollector'
 import { createPythonClient } from './ai/pythonClient'
 import { openPythonProcess } from './ai/pythonProcess'
 import { pythonRuntime } from './ai/pythonRuntime'
@@ -117,7 +119,6 @@ import type Scenario from '@scenario-labs/sdk'
 import {
   createJobManager,
   type AssetCollector,
-  type CollectedOutputs,
   type JobAccount,
   type JobManager,
 } from './provider/jobManager'
@@ -1478,9 +1479,20 @@ export function createServices(settings: SettingsStore): Services {
     log: (level, message) => log[level]('ai', message),
   })
 
-  /** What a local job leaves behind: nothing remote, so nothing to bring down. */
-  const collectNothing = (): Promise<CollectedOutputs> =>
-    Promise.resolve({ ids: [], workspaces: [] })
+  /**
+   * What a generation made HERE leaves behind: a file the studio owns, filed and then dropped.
+   *
+   * Nothing is retrieved and nothing is downloaded, which is why the cloud collector cannot serve
+   * — every branch of it turns on a remote asset id there is none of.
+   */
+  const collectLocal = createLocalCollector({
+    producedBy: jobId => localJobs.producedBy(jobId),
+    readFile: path => readFile(path),
+    discard: path => rm(path, { force: true }),
+    backend: assets,
+    newId: newAssetId,
+    log: (level, message) => log[level]('ai', message),
+  })
 
   const accountOn = (scenario: Scenario | null): JobAccount => ({
     runner: createRoutedJobRunner({
@@ -1488,7 +1500,13 @@ export function createServices(settings: SettingsStore): Services {
       cloud: () => (scenario ? runnerOf(scenario) : null),
       isLocalTarget: targetId => modelOf(targetId) !== null,
     }),
-    collect: scenario ? collectorOf(scenario) : collectNothing,
+    // Routed like the runner, and by the same question: a job id says which of the two owns what
+    // it produced. A local generation needs no account, so it is collected with none held.
+    collect: createRoutedCollector({
+      local: collectLocal,
+      cloud: () => (scenario ? collectorOf(scenario) : null),
+      owns: jobId => localJobs.owns(jobId),
+    }),
   })
 
   const jobStore = createJobStore(() => app.getPath('userData'))
