@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ASSISTANT_ROLE, DICTATION_ROLE } from '@shared/domain/aiRole'
+import { aiRoleId, ASSISTANT_ROLE, DICTATION_ROLE } from '@shared/domain/aiRole'
 import { STT_MODEL } from '@shared/domain/dictation'
 import licences from '@shared/licences.json'
 import {
@@ -42,7 +42,22 @@ describe('the shipped catalogue', () => {
 
     expect(shippedModelsFor(ASSISTANT_ROLE).length).toBeGreaterThan(1)
     expect([...loaders]).toEqual(['llamacpp'])
-    expect(rolesWithLocalOption()).toEqual([DICTATION_ROLE, ASSISTANT_ROLE])
+  })
+
+  /**
+   * The two roles no catalogue entry can be missing FIRST, whatever else grows beside them: a
+   * pinned list would go red at every role added, which says nothing about either of these.
+   */
+  it('serves the two roles that came before any generation did', () => {
+    expect(rolesWithLocalOption()).toContain(DICTATION_ROLE)
+    expect(rolesWithLocalOption()).toContain(ASSISTANT_ROLE)
+  })
+
+  it('offers an image role a model that generates rather than converses', () => {
+    const image = shippedModelsFor(aiRoleId('image', 'txt2img'))
+
+    expect(image.length).toBeGreaterThan(0)
+    expect(new Set(image.map(model => model.modality))).toEqual(new Set(['image']))
   })
 
   // Lightest first, because the FIRST usable entry is what a role takes on its own.

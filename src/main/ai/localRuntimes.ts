@@ -69,6 +69,27 @@ export type ChatRequest = {
   readonly signal?: AbortSignal
 }
 
+/** What a generation on this machine is asked for. The fields a modality does not use are absent. */
+export type GenerateRequest = {
+  readonly model: string
+  readonly prompt: string
+  /** Straight from the dynamic form, so a modality gains a field without this type changing. */
+  readonly fields: Readonly<Record<string, unknown>>
+  /** Where the result may be written. Owned by the main process, never by the runtime. */
+  readonly destination: string
+  /** From 0 to 1, as the runtime counts it. One that reports nothing simply never calls it. */
+  readonly onProgress: (ratio: number) => void
+  readonly signal?: AbortSignal
+}
+
+export type GenerateResult = {
+  /** The file that was written. It is the main process's to file, and to delete. */
+  readonly path: string
+  /** What actually ran it, so a silent CPU fallback is visible rather than read as a slow machine. */
+  readonly device: string
+  readonly backend: string
+}
+
 /** What a load reports while it runs, and what stops it. */
 export type LoadOptions = {
   /** From 0 to 1, as the runtime counts it. A runtime reporting nothing simply never calls it. */
@@ -94,6 +115,14 @@ export type LocalRuntime = {
   remove: (model: LocalModel) => Promise<void>
   /** Absent for a runtime that holds no conversation — recognition reads audio. */
   chat?: (request: ChatRequest) => Promise<string>
+  /**
+   * Produces something that is not a sentence, and answers WHERE it landed.
+   *
+   * A path and never bytes: an image crossing a control frame is a frame nothing can journal or
+   * replay, and `sttProtocol.ts` settled the rule once for 640 MB of weights. The main process
+   * files what the path names into the project, which it already knows how to do.
+   */
+  generate?: (request: GenerateRequest) => Promise<GenerateResult>
   /**
    * Holds the weights in memory, and answers what they take once resident — a MEASUREMENT, where
    * `reservationBytes` is only what a publisher announced. Absent for a runtime that holds

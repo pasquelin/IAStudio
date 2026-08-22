@@ -8,6 +8,7 @@ import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import type { LocalModel } from '@shared/domain/localModel'
+import { needsOwnFolder } from '@shared/domain/localModel'
 import {
   ASSET_ID_PREFIX,
   DEFAULT_ASSET_FOLDERS,
@@ -43,6 +44,7 @@ import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
 import {
   bundledAnimations,
+  bundledEngine,
   bundledFfmpeg,
   bundledModels,
   bundledTemplates,
@@ -69,6 +71,10 @@ import { llamaLocalRuntime } from './ai/llamaRuntime'
 import { hardwareProbe, memorySnapshotOf } from './ai/hardwareProbe'
 import { readyCloudsOf } from './ai/cloudReadiness'
 import { createLocalJobRunner } from './ai/localJobRunner'
+import { createPythonClient } from './ai/pythonClient'
+import { openPythonProcess } from './ai/pythonProcess'
+import { pythonRuntime } from './ai/pythonRuntime'
+import { createPythonSupervisor } from './ai/pythonSupervisor'
 import { fileRuntime, type LocalRuntimes } from './ai/localRuntimes'
 import { ownModelFrom } from './ai/ownModel'
 import { createRoutedJobRunner } from './ai/routedJobRunner'
@@ -1149,14 +1155,19 @@ export function createServices(settings: SettingsStore): Services {
   }
 
   /**
+   * Where a model's files land. One folder for the whole catalogue — the manifests name their own
+   * files — EXCEPT for a loader handed a FOLDER: two of those would overwrite each other's index.
+   */
+  const folderFor = (model: LocalModel): string =>
+    needsOwnFolder(model.loader) ? join(modelFolder(), model.id) : modelFolder()
+
+  /**
    * What each LOADER can do on this machine — the unit ADR-20 writes its whitelist on, and ONE
    * table: a runtime that installs but cannot converse, or the reverse, would otherwise read as
    * ready on one side and be unreachable on the other.
    */
-  // One folder for the whole catalogue: the manifests name their own files, so two models sharing
-  // a file name would read as installed. Shared by every runtime whose weights the studio fetches.
   const fetchedFiles = fileRuntime({
-    folderFor: () => modelFolder(),
+    folderFor,
     isComplete: (model, folder) => modelIsComplete(downloads, model, folder),
     fetch: async (model, folder, onProgress, signal) => {
       await ensureFolder(folder)
@@ -1166,6 +1177,13 @@ export function createServices(settings: SettingsStore): Services {
       await fetchModel(downloads, model, { folder, onProgress, signal })
     },
     removeFiles: async (model, folder) => {
+      // The whole folder when it is the model's own, which is what takes its subfolders with it;
+      // file by file when it is shared, where a recursive remove would take the catalogue.
+      if (needsOwnFolder(model.loader)) {
+        await rm(folder, { recursive: true, force: true })
+        return
+      }
+
       for (const file of model.files) await rm(join(folder, file.name), { force: true })
     },
   })
@@ -1183,8 +1201,40 @@ export function createServices(settings: SettingsStore): Services {
   const modelOf = (modelId: string): LocalModel | null =>
     modelWith(modelId, settings.read().ai.ownModels)
 
+  /**
+   * The local AI engine, supervised. Started on the first ask and never at launch: forking Python
+   * to be told nothing is installed would cost a start-up nobody asked for.
+   */
+  const engine = createPythonSupervisor({
+    open: listeners => {
+      const bundled = bundledEngine(resourcesRoot(), process.platform)
+      return createPythonClient(
+        openPythonProcess({
+          command: bundled.python,
+          args: ['-m', 'ia_studio_engine.core.supervisor'],
+          processName: 'the local AI engine',
+        }),
+        listeners,
+      )
+    },
+    now: Date.now,
+    delay: ms => new Promise(resolve => setTimeout(resolve, ms)),
+  })
+
   const runtimes: LocalRuntimes = {
     'sherpa-onnx': fetchedFiles,
+    diffusers: pythonRuntime({
+      folderFor,
+      isComplete: (model, folder) => modelIsComplete(downloads, model, folder),
+      fetch: async (model, folder, onProgress, signal) => {
+        await ensureFolder(folder)
+        await fetchModel(downloads, model, { folder, onProgress, signal })
+      },
+      removeFiles: (_model: LocalModel, folder: string) =>
+        rm(folder, { recursive: true, force: true }),
+      engine: () => engine.engine(),
+      log: (level: 'info' | 'warn', message: string) => log[level]('ai', message),
+    }),
     llamacpp: llamaLocalRuntime({
       files: fetchedFiles,
       weightsOf,
@@ -1396,6 +1446,26 @@ export function createServices(settings: SettingsStore): Services {
    * the queue, the concurrency bound and the retries, and keeps knowing about ONE runner.
    */
   const localJobs = createLocalJobRunner({
+    generate: async request => {
+      const model = modelOf(request.model)
+      const generate = model ? runtimes[model.loader]?.generate : undefined
+      if (!model || !generate) throw new Error(`nothing here generates with ${request.model}`)
+
+      // The main process owns where it lands, and the engine only fills it — which is what makes
+      // the file ours to file and ours to delete.
+      const folder = join(app.getPath('temp'), 'ia-studio-generations')
+      await ensureFolder(folder)
+
+      return await generate({
+        model: model.id,
+        prompt: request.prompt,
+        fields: request.fields,
+        destination: join(folder, `${request.jobId}.png`),
+        onProgress: request.onProgress,
+        signal: request.signal,
+      })
+    },
+
     chat: async request => {
       const model = modelOf(request.model)
       const chat = model ? runtimes[model.loader]?.chat : undefined

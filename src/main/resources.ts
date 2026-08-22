@@ -66,3 +66,33 @@ export function bundledModels(root: string): string {
 export function bundledTemplates(root: string): string {
   return join(root, 'templates')
 }
+
+/**
+ * The Python that runs the local AI engine, and the engine's own sources beside it.
+ *
+ * Shipped like ffmpeg — `extraResources`, outside the asar, because an interpreter has to be
+ * executable on disk to be spawned. `[?]` **Nothing fetches it yet**: no `pnpm engine:fetch`
+ * exists and `before-pack.mjs` does not carry it, so this names where it WILL live. A run that
+ * does not find it reads as a runtime that is not answering, which is the honest thing to say.
+ *
+ * 🛑 Measured 2026-08-22: an environment the person installs themselves will NOT load under the
+ * hardened runtime — every Mach-O has to carry OUR signature or `dlopen` refuses it for a Team ID
+ * mismatch. What lands here is an archive this build signed, never a `uv pip install`.
+ */
+export function bundledEngine(
+  root: string,
+  platform: NodeJS.Platform,
+): {
+  python: string
+  sources: string
+} {
+  const home = join(root, 'engine')
+  return {
+    // Windows puts the interpreter at the root of its tree rather than under `bin`.
+    python:
+      platform === 'win32'
+        ? join(home, 'python', 'python.exe')
+        : join(home, 'python', 'bin', 'python3'),
+    sources: join(home, 'src'),
+  }
+}

@@ -10,6 +10,7 @@ const runnerWith = (over: Partial<LocalJobDeps> = {}) => {
 
   return createLocalJobRunner({
     chat: () => Promise.resolve('a picture of a cat'),
+    generate: () => Promise.resolve({ path: '/tmp/out.png', device: 'mps', backend: 'pytorch' }),
     modelOf: id => (id === MODEL.id ? MODEL : null),
     newId: () => `${(count += 1)}`,
     log: () => {},
@@ -79,5 +80,81 @@ describe('the local job runner', () => {
 
     expect(runner.owns(submitted.jobId)).toBe(true)
     expect(runner.owns('job_from_the_cloud')).toBe(false)
+  })
+})
+
+const IMAGE_MODEL = localModel({
+  id: 'local_image',
+  loader: 'diffusers',
+  format: 'safetensors',
+  modality: 'image',
+})
+
+describe('a model that produces something other than a sentence', () => {
+  const imageRunner = (over: Partial<LocalJobDeps> = {}) =>
+    runnerWith({ modelOf: id => (id === IMAGE_MODEL.id ? IMAGE_MODEL : null), ...over })
+
+  /** An image is not a sentence, and calling `chat` for one answered an empty string. */
+  it('is generated rather than conversed with', async () => {
+    const conversed = vi.fn()
+    const runner = imageRunner({ chat: conversed })
+
+    const { jobId } = await runner.submit({ id: IMAGE_MODEL.id }, { prompt: 'a red cube' })
+    await settled()
+
+    expect(conversed).not.toHaveBeenCalled()
+    expect(runner.producedBy(jobId)).toEqual({
+      path: '/tmp/out.png',
+      device: 'mps',
+      backend: 'pytorch',
+    })
+  })
+
+  it('is handed the prompt and the rest of the form', async () => {
+    const generate = vi.fn(() =>
+      Promise.resolve({ path: '/tmp/out.png', device: 'mps', backend: 'pytorch' }),
+    )
+    const runner = imageRunner({ generate })
+
+    await runner.submit({ id: IMAGE_MODEL.id }, { prompt: 'a red cube', steps: 8 })
+    await settled()
+
+    expect(generate).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: 'a red cube', fields: { prompt: 'a red cube', steps: 8 } }),
+    )
+  })
+
+  /** A denoise counts its steps, where a sentence has no fraction of a whole to report. */
+  it('reports the fraction the door pushed rather than a half', async () => {
+    const runner = imageRunner({
+      generate: request => {
+        request.onProgress(0.75)
+        return Promise.resolve({ path: '/tmp/out.png', device: 'mps', backend: 'pytorch' })
+      },
+    })
+
+    const { jobId } = await runner.submit({ id: IMAGE_MODEL.id }, { prompt: 'x' })
+    expect((await runner.poll(jobId)).progress).toBe(0.75)
+  })
+
+  it('fails readably when nothing here generates for that model', async () => {
+    const runner = imageRunner({
+      generate: () => Promise.reject(new Error('nothing here generates with local_image')),
+    })
+
+    const { jobId } = await runner.submit({ id: IMAGE_MODEL.id }, { prompt: 'x' })
+    await settled()
+
+    expect((await runner.poll(jobId)).status).toBe('failure')
+    expect(runner.producedBy(jobId)).toBeNull()
+  })
+
+  it('leaves a conversation producing nothing to file', async () => {
+    const runner = runnerWith()
+    const { jobId } = await runner.submit({ id: MODEL.id }, { prompt: 'hello' })
+    await settled()
+
+    expect(runner.producedBy(jobId)).toBeNull()
+    expect(runner.outputOf(jobId)).toBe('a picture of a cat')
   })
 })

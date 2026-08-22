@@ -226,6 +226,17 @@ export function modelRefusalOf(model: LocalModel): ModelRefusal | null {
 }
 
 /**
+ * Whether this loader is handed a FOLDER rather than a file.
+ *
+ * `from_pretrained` reads a whole tree — `model_index.json` at the root, one folder per component
+ * — so two such models sharing the catalogue's single folder would overwrite each other's index
+ * and read as one broken model. A loader handed a file has no such problem, and keeps sharing.
+ */
+export function needsOwnFolder(loader: ModelLoader): boolean {
+  return loader === 'diffusers'
+}
+
+/**
  * Whether the studio vouches for where this model came from. Rank 3 is the person's own file:
  * its licence is unknown, so it stays out of the notices and says so on screen.
  */

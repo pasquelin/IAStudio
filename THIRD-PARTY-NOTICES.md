@@ -47,6 +47,7 @@ The terms below govern these components. They are not affected by the licence of
 | react-tooltip | 6.0.8 | MIT |
 | recharts | 3.10.1 | MIT |
 | remark-gfm | 4.0.1 | MIT |
+| Sana 600M | 1024px, fp16 | Apache-2.0 |
 | sherpa-onnx-node | 1.13.5 | Apache-2.0 |
 | Silero VAD | v5 | MIT |
 | simple-git | 3.36.0 | MIT |
@@ -1674,6 +1675,25 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+## Sana 600M
+
+Version: 1024px, fp16  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers
+```
+
+```
+The image model the studio generates with when it generates on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data
+folder, against a published digest, and removed from the model manager.
+
+Copyright NVIDIA Corporation and the Sana authors. Licensed under the Apache License,
+Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
 ```
 ## sherpa-onnx-node
 
