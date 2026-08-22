@@ -174,6 +174,7 @@ const DOM_BOUND = [
   // Not for a DOM either: it reads the sentences out of the French bundle, which only the
   // renderer setup initialises.
   'src/renderer/src/hooks/useModelFit.test.ts',
+  'src/renderer/src/hooks/useModelReach.test.ts',
   'src/renderer/src/hooks/usePlanRefusal.test.ts',
   'src/renderer/src/hooks/useReloadKey.test.ts',
   'src/renderer/src/hooks/useShortcutLabel.test.ts',

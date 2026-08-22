@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelSummary } from '@shared/domain/model'
+import type { ModelRefusalWord } from '@/hooks/useModelReach'
 import { Thumbnail } from '@/design/Thumbnail'
 import { Row } from '@/design/Row'
 
@@ -32,7 +33,7 @@ export const ModelsRow = memo(function ModelsRow({
 }: {
   model: ModelSummary
   picture?: string
-  refusal?: string
+  refusal?: ModelRefusalWord
 }) {
   const { t } = useTranslation()
 
@@ -42,8 +43,8 @@ export const ModelsRow = memo(function ModelsRow({
       title={model.name}
       // The subtitle says what the model IS; the refusal says why it is out of reach, and it
       // replaces the standing rather than crowding a 10px line with both.
-      subtitle={refusal ? t('models.planLocked') : subtitleOf(model, t)}
-      hint={refusal}
+      subtitle={refusal ? refusal.word : subtitleOf(model, t)}
+      hint={refusal?.hint}
     />
   )
 })

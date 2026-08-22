@@ -12,9 +12,18 @@ import { usePlanRefusal } from './usePlanRefusal'
  * download is the ONE case that answers a second thing — `fetchable` — so a click can offer it
  * rather than leaving a dimmed tile the person can only wonder about.
  */
+/** The word a tile shows for a refusal, and the sentence its tooltip explains it with. */
+export type ModelRefusalWord = { word: string; hint: string }
+
 export type ModelReach = {
-  /** Said on the tile and in its tooltip. `undefined` when nothing stands in the way. */
-  refusal: string | undefined
+  /**
+   * The two words the tile shows, and the sentence its tooltip explains them with.
+   *
+   * The word is carried rather than spelled by the tile: a local model depends on no
+   * subscription, and a badge fixed on "beyond your plan" said exactly that about eight models
+   * whose only problem was not being downloaded yet.
+   */
+  refusal: ModelRefusalWord | undefined
   /** Whether the studio can fix it by fetching the weights, rather than the person by buying. */
   fetchable: boolean
 }
@@ -26,14 +35,18 @@ export function useModelReach(plan: PlanAccess | null): (model: ModelSummary) =>
   const refusalFor = usePlanRefusal(plan)
 
   return useMemo(() => {
-    const notHere = t('models.notInstalled')
+    const absent = { word: t('models.notInstalled'), hint: t('models.notInstalledHint') }
 
     return model => {
-      const beyondPlan = refusalFor(model.requiredPlanLevel)
-      if (beyondPlan !== undefined) return { refusal: beyondPlan, fetchable: false }
+      // 🛑 Before the plan, and never after: a model of THIS machine answers to no subscription,
+      // and asking first said "beyond your plan" about weights that were only missing.
+      // `installed` is absent for a cloud model, where there is nothing to fetch.
+      if (model.installed === false) return { refusal: absent, fetchable: true }
 
-      // `installed` is absent for a model that runs in a cloud, where there is nothing to fetch.
-      return model.installed === false ? { refusal: notHere, fetchable: true } : WITHIN
+      const beyond = refusalFor(model.requiredPlanLevel)
+      return beyond === undefined
+        ? WITHIN
+        : { refusal: { word: t('models.planLocked'), hint: beyond }, fetchable: false }
     }
   }, [refusalFor, t])
 }
