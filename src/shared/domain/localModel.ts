@@ -127,6 +127,19 @@ export type LocalModel = {
   /** One line under the name, in the publisher's words. Data, not a word of the interface. */
   readonly summary?: string
   /**
+   * Whether this ONE model may be read from `.bin` tensors rather than safetensors alone.
+   *
+   * 🛑 It weakens a rule, so it is written per entry and never per loader. What still protects,
+   * and both were measured: `torch.load` has refused pickles by default since PyTorch 2.6, so a
+   * `.bin` carrying a `__reduce__` does not run — and every file this manifest names carries a
+   * digest pinned to a commit, so what lands on the disk cannot change under the same address.
+   * What it does NOT protect against is the publisher itself, which safetensors would.
+   *
+   * Shap-E is why it exists: it is the only 3D pipeline diffusers 0.40 carries, and its renderer
+   * is published in `.bin` alone — measured 2026-08-22. Without this, the studio has no 3D at all.
+   */
+  readonly readsTorchWeights?: boolean
+  /**
    * Where the weights ALREADY sit — an absolute path, for a model the person pointed at.
    *
    * Absent for everything the studio fetches itself, whose files land in the model folder under

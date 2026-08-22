@@ -280,7 +280,13 @@ const TEMPLATES: Record<LocalModality, readonly LocalFieldTemplate[]> = {
     cfgScale({ default: 3.5, max: 20 }),
     SEED,
   ],
-  mesh: [PROMPT, steps({ default: 25, max: 100 }), cfgScale({ default: 15, max: 30 }), SEED],
+  mesh: [
+    PROMPT,
+    SOURCE_IMAGE,
+    steps({ default: 25, max: 100 }),
+    cfgScale({ default: 15, max: 30 }),
+    SEED,
+  ],
 }
 
 /**

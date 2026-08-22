@@ -91,6 +91,8 @@ The terms below govern these components. They are not affected by the licence of
 | Sana 1600M | shipped with the application | Apache-2.0 |
 | Sana 600M | shipped with the application | Apache-2.0 |
 | setuptools | 84.0.0 | MIT |
+| Shap-E | shipped with the application | MIT |
+| Shap-E Image | shipped with the application | MIT |
 | shellingham | 1.5.4 | ISC License |
 | sherpa-onnx-node | 1.13.5 | Apache-2.0 |
 | Silero VAD | v5 | MIT |
@@ -2548,6 +2550,51 @@ application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT.
 Source: https://github.com/pypa/setuptools
+```
+## Shap-E
+
+Version: shipped with the application  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://huggingface.co/openai/shap-e
+```
+
+```
+Shap-E, texte vers maillage, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright OpenAI. Its text encoder is a CLIP model — text_encoder/config.json names
+openai/clip-vit-large-patch14, whose repository card states no licence of its own.
+
+This download carries `.bin` tensors, which the studio otherwise refuses: Shap-E publishes
+its renderer in that form alone. What still guards it: torch has refused to unpickle by
+default since 2.6, and every file above is pinned to a digest.
+
+Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
+```
+## Shap-E Image
+
+Version: shipped with the application  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://huggingface.co/openai/shap-e-img2img
+```
+
+```
+Shap-E, image vers maillage, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright OpenAI. Same renderer, and the same `.bin` reservation as Shap-E above.
+
+Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## shellingham
 
