@@ -15,8 +15,7 @@ export function endpointOfDoor(door: string): RuntimeEndpointId | null {
   if (!runtime || !name || rest.length > 0) return null
 
   try {
-    // `engine/diffusion` is `diffusers/diffusion` — process name vs scheduler key.
-    return runtimeEndpointId(runtime === 'engine' ? 'diffusers' : runtime, name)
+    return runtimeEndpointId(runtime, name)
   } catch {
     return null
   }
