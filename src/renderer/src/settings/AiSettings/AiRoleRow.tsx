@@ -132,7 +132,7 @@ export const AiRoleRow = memo(function AiRoleRow({
                 {source === 'studio' && (
                   <p className={WINDOW_CAPTION}>{t('aiModels.sourceStudioHelp')}</p>
                 )}
-                {source === 'ollama' && candidates.length > 0 && (
+                {source === 'ollama' && (
                   <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
                 )}
                 <ul>
@@ -170,6 +170,7 @@ export const AiRoleRow = memo(function AiRoleRow({
           {row.clouds.length > 0 && (
             <li>
               <h4 className={WINDOW_GROUP_LABEL}>{t('aiModels.sourceCloud')}</h4>
+              <p className={WINDOW_CAPTION}>{t('aiModels.sourceCloudHelp')}</p>
               <ul>
                 {row.clouds.map(providerId => (
                   <AiChoiceRow

@@ -169,8 +169,11 @@ describe('AiSettings', () => {
     )
 
     expect(screen.getByText('Sur cet ordinateur')).toBeInTheDocument()
+    expect(screen.getByText(/Le studio fait tourner le modèle ici/)).toBeInTheDocument()
     expect(screen.getByText('Ollama')).toBeInTheDocument()
+    expect(screen.getByText(/Un autre programme, sur cet ordinateur/)).toBeInTheDocument()
     expect(screen.getByText('En ligne')).toBeInTheDocument()
+    expect(screen.getByText(/Les serveurs Scenario/)).toBeInTheDocument()
   })
 
   it('writes the choice for the role the candidate belongs to', () => {
