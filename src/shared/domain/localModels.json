@@ -581,7 +581,11 @@
       ],
       "diskBytes": 9725473769,
       "reservationBytes": 4862736884,
-      "thumbnail": "sana-1600m-1024.png"
+      "thumbnail": "sana-1600m-1024.png",
+      "family": "image",
+      "capabilities": [
+        "txt2img"
+      ]
     },
     {
       "id": "sana15-1-6b",
@@ -710,7 +714,11 @@
       ],
       "diskBytes": 9725777659,
       "reservationBytes": 4862888829,
-      "thumbnail": "sana15-1-6b.png"
+      "thumbnail": "sana15-1-6b.png",
+      "family": "image",
+      "capabilities": [
+        "txt2img"
+      ]
     },
     {
       "id": "qwen-image",
@@ -951,7 +959,11 @@
       ],
       "diskBytes": 57704575013,
       "reservationBytes": 28852287506,
-      "thumbnail": "qwen-image.png"
+      "thumbnail": "qwen-image.png",
+      "family": "image",
+      "capabilities": [
+        "txt2img"
+      ]
     }
   ],
   "video/txt2video": [
@@ -2331,7 +2343,11 @@
       ],
       "diskBytes": 90097556380,
       "reservationBytes": 45048778190,
-      "thumbnail": "wan21-i2v-14b-480p.png"
+      "thumbnail": "wan21-i2v-14b-480p.png",
+      "family": "video",
+      "capabilities": [
+        "img2video"
+      ]
     }
   ],
   "audio/txt2audio": [
@@ -3075,7 +3091,11 @@
       "diskBytes": 4900982950,
       "reservationBytes": 2450491475,
       "thumbnail": "shap-e.png",
-      "readsTorchWeights": true
+      "readsTorchWeights": true,
+      "family": "3d",
+      "capabilities": [
+        "txt23d"
+      ]
     }
   ],
   "3d/img23d": [
@@ -3113,7 +3133,11 @@
       "thumbnail": "triposr.png",
       "distribution": "direct-download",
       "licenceStatus": "commercial",
-      "runtimeStatus": "plugin-required"
+      "runtimeStatus": "plugin-required",
+      "family": "3d",
+      "capabilities": [
+        "img23d"
+      ]
     },
     {
       "id": "shap-e-img2img",
@@ -3243,7 +3267,11 @@
       "diskBytes": 5978254144,
       "reservationBytes": 2989127072,
       "thumbnail": "shap-e-img2img.png",
-      "readsTorchWeights": true
+      "readsTorchWeights": true,
+      "family": "3d",
+      "capabilities": [
+        "img23d"
+      ]
     },
     {
       "id": "trellis2-4b",
@@ -3423,7 +3451,11 @@
       "thumbnail": "trellis2-4b.png",
       "distribution": "direct-download",
       "licenceStatus": "commercial",
-      "runtimeStatus": "plugin-required"
+      "runtimeStatus": "plugin-required",
+      "family": "3d",
+      "capabilities": [
+        "img23d"
+      ]
     }
   ],
   "image/controlnet": [
@@ -3569,6 +3601,10 @@
       },
       "serves": [
         "texture/controlnet_texture"
+      ],
+      "family": "image",
+      "capabilities": [
+        "controlnet"
       ]
     }
   ],
@@ -3621,6 +3657,10 @@
       },
       "serves": [
         "texture/reference_texture"
+      ],
+      "family": "image",
+      "capabilities": [
+        "reference"
       ]
     }
   ],
@@ -3675,7 +3715,11 @@
       "thumbnail": "mmaudio-small-44k.png",
       "distribution": "direct-download",
       "licenceStatus": "non-commercial",
-      "runtimeStatus": "plugin-required"
+      "runtimeStatus": "plugin-required",
+      "family": "audio",
+      "capabilities": [
+        "video2audio"
+      ]
     },
     {
       "id": "mmaudio-medium-44k",
@@ -3727,7 +3771,11 @@
       "thumbnail": "mmaudio-medium-44k.png",
       "distribution": "direct-download",
       "licenceStatus": "non-commercial",
-      "runtimeStatus": "plugin-required"
+      "runtimeStatus": "plugin-required",
+      "family": "audio",
+      "capabilities": [
+        "video2audio"
+      ]
     },
     {
       "id": "mmaudio-large-44k",
@@ -3779,7 +3827,11 @@
       "thumbnail": "mmaudio-large-44k.png",
       "distribution": "direct-download",
       "licenceStatus": "non-commercial",
-      "runtimeStatus": "plugin-required"
+      "runtimeStatus": "plugin-required",
+      "family": "audio",
+      "capabilities": [
+        "video2audio"
+      ]
     }
   ],
   "3d/3d23d": [
@@ -3844,6 +3896,10 @@
       "runtimeStatus": "plugin-required",
       "serves": [
         "3d/txt23d"
+      ],
+      "family": "3d",
+      "capabilities": [
+        "3d23d"
       ]
     },
     {
@@ -4003,6 +4059,10 @@
       "runtimeStatus": "plugin-required",
       "serves": [
         "3d/img23d"
+      ],
+      "family": "3d",
+      "capabilities": [
+        "3d23d"
       ]
     }
   ]
