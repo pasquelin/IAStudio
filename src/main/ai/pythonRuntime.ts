@@ -50,7 +50,7 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
       // Its processes went with it, so it holds nothing — a measurement, not an assumption.
       if (!engine) {
         held.clear()
-        return { ...onDisk, loaded: null }
+        return { ...onDisk, loaded: new Set() }
       }
 
       // The LEDGER and never `worker.status`: the core answers this itself, where asking a door
@@ -67,7 +67,9 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
 
       return {
         ...onDisk,
-        loaded: models.find(model => [...held.values()].includes(model.id))?.id ?? null,
+        loaded: new Set(
+          models.filter(model => [...held.values()].includes(model.id)).map(model => model.id),
+        ),
       }
     },
 
@@ -111,11 +113,8 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
       }
 
       for (const door of asked) {
-        try {
-          await engine.job('models.unload', { door })
-        } finally {
-          held.delete(door)
-        }
+        await engine.job('models.unload', { door })
+        held.delete(door)
       }
     },
 

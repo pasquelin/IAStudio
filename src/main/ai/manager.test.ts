@@ -35,7 +35,7 @@ const SNAPSHOT: MemorySnapshot = {
 
 /** A runtime that installs nothing and holds nothing — what most of these cases need behind them. */
 const idleRuntime = (install: LocalRuntime['install'] = () => Promise.resolve()): LocalRuntime => ({
-  read: () => Promise.resolve({ ready: true, installed: new Set<string>(), loaded: null }),
+  read: () => Promise.resolve({ ready: true, installed: new Set<string>(), loaded: new Set() }),
   install,
   remove: () => Promise.resolve(),
 })
@@ -272,24 +272,24 @@ describe('the AI manager', () => {
  * gestures ADR-21 § D asks for are about.
  */
 const holdingRuntime = (over: Partial<LocalRuntime> = {}): LocalRuntime => {
-  let held: string | null = null
+  const held = new Set<string>()
 
   return {
     read: models =>
       Promise.resolve({
         ready: true,
         installed: new Set(models.map(model => model.id)),
-        loaded: held,
+        loaded: new Set(models.filter(model => held.has(model.id)).map(model => model.id)),
       }),
     install: () => Promise.resolve(),
     remove: () => Promise.resolve(),
     load: (model, options) => {
       options.onProgress(0.5)
-      held = model.id
+      held.add(model.id)
       return Promise.resolve(3 * GIBI)
     },
     unload: () => {
-      held = null
+      held.clear()
       return Promise.resolve()
     },
     ...over,
@@ -583,6 +583,29 @@ describe('what a compose costs', () => {
   })
 
   /**
+   * A loader answers on several doors. One `loaded` id used to drop the other door from occupancy
+   * on the next compose, so admission over-committed and idle never freed it.
+   */
+  it('keeps both doors of one loader after a compose', async () => {
+    const sana = localModel({ id: 'sana', loader: 'diffusers', modality: 'image' })
+    const shap = localModel({ id: 'shap', loader: 'diffusers', modality: 'mesh' })
+    const ai = manager({
+      settings: () => ({
+        ...DEFAULT_SETTINGS,
+        ai: { ...DEFAULT_SETTINGS.ai, ownModels: [sana, shap] },
+      }),
+      runtimes: { diffusers: holdingRuntime() },
+    })
+
+    await ai.load(sana.id)
+    await ai.load(shap.id)
+
+    const after = await ai.overview()
+    expect(candidateOf(after, sana.id)?.loaded).toBe(true)
+    expect(candidateOf(after, shap.id)?.loaded).toBe(true)
+  })
+
+  /**
    * `[M]` `providerOf` used to compose the WHOLE overview and throw twenty rows away, on every
    * assistant turn — every runtime asked, every catalogue file stat'd. One role asks about the
    * models that role could take, and nothing else.
@@ -593,7 +616,7 @@ describe('what a compose costs', () => {
       ...idleRuntime(),
       read: models => {
         asked.push(models.map(model => model.id))
-        return Promise.resolve({ ready: true, installed: new Set<string>(), loaded: null })
+        return Promise.resolve({ ready: true, installed: new Set<string>(), loaded: new Set() })
       },
     })
 

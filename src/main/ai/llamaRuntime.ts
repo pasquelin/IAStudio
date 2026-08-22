@@ -52,11 +52,14 @@ export function llamaLocalRuntime(deps: LlamaRuntimeDeps): LocalRuntime {
   return {
     // `ready` is the ADDON's, never the disk's: weights that are present with nothing able to open
     // them read as a runtime that is not answering, which is the gesture the screen has to ask for.
-    read: async models => ({
-      ...(await deps.files.read(models)),
-      ready: deps.port.ready(),
-      loaded: residentAmong(models),
-    }),
+    read: async models => {
+      const id = residentAmong(models)
+      return {
+        ...(await deps.files.read(models)),
+        ready: deps.port.ready(),
+        loaded: new Set(id === null ? [] : [id]),
+      }
+    },
 
     install: deps.files.install,
     remove: deps.files.remove,

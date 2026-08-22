@@ -71,13 +71,15 @@ describe('reading what the engine holds', () => {
   it('is ready with no engine running, because installing needs none', async () => {
     const { runtime } = harness({}, { running: () => null })
 
-    expect(await runtime.read([MODEL])).toMatchObject({ ready: true, loaded: null })
+    const reading = await runtime.read([MODEL])
+    expect(reading.ready).toBe(true)
+    expect(reading.loaded.size).toBe(0)
   })
 
   it('holds nothing before a load', async () => {
     const { runtime } = harness()
 
-    expect((await runtime.read([MODEL])).loaded).toBeNull()
+    expect((await runtime.read([MODEL])).loaded.size).toBe(0)
   })
 
   it('names what it loaded once a door holds bytes for it', async () => {
@@ -88,7 +90,7 @@ describe('reading what the engine holds', () => {
 
     await held.runtime.load?.(MODEL, { onProgress: () => {} })
 
-    expect((await held.runtime.read([MODEL])).loaded).toBe('sana')
+    expect((await held.runtime.read([MODEL])).loaded).toEqual(new Set(['sana']))
   })
 
   /**
@@ -110,11 +112,11 @@ describe('reading what the engine holds', () => {
         ]),
     })
     await zeroed.runtime.load?.(MODEL, { onProgress: () => {} })
-    expect((await zeroed.runtime.read([MODEL])).loaded).toBeNull()
+    expect((await zeroed.runtime.read([MODEL])).loaded.size).toBe(0)
 
     const silent = harness()
     await silent.runtime.load?.(MODEL, { onProgress: () => {} })
-    expect((await silent.runtime.read([MODEL])).loaded).toBe('sana')
+    expect((await silent.runtime.read([MODEL])).loaded).toEqual(new Set(['sana']))
   })
 
   /** Its processes went with it, so it holds nothing — a measurement, not an assumption. */
@@ -122,7 +124,7 @@ describe('reading what the engine holds', () => {
     const held = harness({}, { running: () => null })
     await held.runtime.load?.(MODEL, { onProgress: () => {} })
 
-    expect((await held.runtime.read([MODEL])).loaded).toBeNull()
+    expect((await held.runtime.read([MODEL])).loaded.size).toBe(0)
   })
 })
 
@@ -249,6 +251,16 @@ describe('the door a request names', () => {
    * Freeing "the last one loaded" would kill the wrong process while the plan recorded the other
    * as freed, and the bytes of the first could never be reclaimed.
    */
+  it('names both residents after two loads', async () => {
+    const held = harness()
+    await held.runtime.load?.({ ...MODEL, modality: 'image' }, { onProgress: () => {} })
+    await held.runtime.load?.({ ...MODEL, id: 'shap', modality: 'mesh' }, { onProgress: () => {} })
+
+    expect(await held.runtime.read([MODEL, { ...MODEL, id: 'shap', modality: 'mesh' }])).toEqual(
+      expect.objectContaining({ loaded: new Set(['sana', 'shap']) }),
+    )
+  })
+
   it('frees the door a plan named, and leaves the other resident', async () => {
     const held = harness()
     await held.runtime.load?.({ ...MODEL, modality: 'image' }, { onProgress: () => {} })
@@ -286,7 +298,7 @@ describe('unloading', () => {
     expect(started).not.toHaveBeenCalled()
   })
 
-  it('forgets what it held even when the door refuses the unload', async () => {
+  it('keeps what it held when the door refuses the unload', async () => {
     const doors = [
       { door: 'engine/diffusion', tensorBytes: 1, heldBytes: 2, device: 'mps', backend: 'pytorch' },
     ]
@@ -300,6 +312,6 @@ describe('unloading', () => {
     await held.runtime.load?.(MODEL, { onProgress: () => {} })
 
     await expect(held.runtime.unload?.()).rejects.toThrow(/door-gone/)
-    expect((await held.runtime.read([MODEL])).loaded).toBeNull()
+    expect((await held.runtime.read([MODEL])).loaded).toEqual(new Set(['sana']))
   })
 })

@@ -175,8 +175,8 @@ export type RuntimeReading = {
   readonly ready: boolean
   /** The ids of the models handed in that it holds. Empty when it did not answer. */
   readonly installed: ReadonlySet<string>
-  /** The one model resident in memory, of those handed in. `null` when none is. */
-  readonly loaded: string | null
+  /** The models resident in memory, of those handed in. Empty when none is. */
+  readonly loaded: ReadonlySet<string>
 }
 
 /**
@@ -186,7 +186,7 @@ export type RuntimeReading = {
  */
 export type LocalRuntimes = Readonly<Partial<Record<ModelLoader, LocalRuntime>>>
 
-const ABSENT: RuntimeReading = { ready: false, installed: new Set(), loaded: null }
+const ABSENT: RuntimeReading = { ready: false, installed: new Set(), loaded: new Set() }
 
 /**
  * What each loader answers for the models that name it.
@@ -255,7 +255,7 @@ export function fileRuntime(deps: FileRuntimeDeps): LocalRuntime {
         ready: true,
         installed: new Set(models.filter((_model, index) => answers[index]).map(model => model.id)),
         // Nothing is held between calls: the engine is opened per session and closed with it.
-        loaded: null,
+        loaded: new Set(),
       }
     },
 

@@ -206,7 +206,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       // modalities holds two, and forgetting only the first would over-commit the second.
       for (const endpoint of endpointsOf(loader)) {
         const held = occupancy.get(endpoint)
-        if (held && reading.loaded !== held.modelId) occupancy.delete(endpoint)
+        if (held && !reading.loaded.has(held.modelId)) occupancy.delete(endpoint)
       }
     }
   }
@@ -227,7 +227,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       projectPath: deps.currentProjectPath(),
       modelsFor: models,
       isInstalled: model => readings.get(model.loader)?.installed.has(model.id) === true,
-      isLoaded: model => readings.get(model.loader)?.loaded === model.id,
+      isLoaded: model => readings.get(model.loader)?.loaded.has(model.id) === true,
       isHoldable: model => deps.runtimes[model.loader]?.load !== undefined,
       runtimeReady: model => readings.get(model.loader)?.ready === true,
       readyClouds: deps.readyClouds(),
@@ -356,14 +356,19 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     if (minutes <= 0 || occupancy.size === 0) return
 
     cancelIdle = schedule(() => {
-      if (disposed || loading !== null || working.size > 0) {
+      if (disposed || loading !== null) {
         if (!disposed) armIdle()
         return
       }
       void (async () => {
         for (const endpoint of [...occupancy.keys()]) {
-          if (disposed || loading !== null || working.size > 0) break
-          await release(endpoint)
+          if (disposed || loading !== null) break
+          if ((working.get(endpoint) ?? 0) > 0) continue
+          try {
+            await release(endpoint)
+          } catch (error) {
+            deps.log('warn', `idle unload of ${endpoint} failed: ${String(error)}`)
+          }
         }
         if (!disposed && occupancy.size > 0) armIdle()
         if (!disposed) await announce()

@@ -6,7 +6,7 @@ import { llamaLocalRuntime, type LlamaPort } from './llamaRuntime'
 const MODEL = localModel({ id: 'qwen', loader: 'llamacpp' })
 
 const files = (over: Partial<LocalRuntime> = {}): LocalRuntime => ({
-  read: () => Promise.resolve({ ready: true, installed: new Set(['qwen']), loaded: null }),
+  read: () => Promise.resolve({ ready: true, installed: new Set(['qwen']), loaded: new Set() }),
   install: () => Promise.resolve(),
   remove: () => Promise.resolve(),
   ...over,
@@ -87,8 +87,8 @@ describe('llamaLocalRuntime', () => {
     const weights = `/models/${MODEL.files[0]?.name ?? 'qwen'}`
     const held = runtime({ port: port({ loaded: () => weights }) })
 
-    expect((await held.read([MODEL])).loaded).toBe('qwen')
-    expect((await runtime().read([MODEL])).loaded).toBeNull()
+    expect((await held.read([MODEL])).loaded).toEqual(new Set(['qwen']))
+    expect((await runtime().read([MODEL])).loaded.size).toBe(0)
   })
 
   it('holds and frees the weights through the port', async () => {
