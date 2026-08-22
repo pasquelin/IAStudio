@@ -5,12 +5,16 @@ import {
   CANCEL_OP,
   engineRequest,
   isHello,
+  isSettledJob,
   PROTOCOL_VERSION,
   readHardware,
+  readOpenedJob,
   type EngineFrame,
   type EngineHardware,
   type EngineHello,
+  type EngineJobOp,
   type EngineRequest,
+  type EngineSettledJob,
 } from './pythonProtocol'
 
 /**
@@ -39,6 +43,11 @@ export type PythonClient = {
   /** Resolves on the greeting, rejects when the versions disagree or none arrives in time. */
   ready: Promise<EngineHello>
   hardware: () => Promise<EngineHardware>
+  /**
+   * Opens a JOB on a door and waits for the event that settles it — reading gigabytes and running
+   * an inference are the two things `REQUEST_TIMEOUT_MS` must never bound.
+   */
+  job: (op: EngineJobOp, params: Readonly<Record<string, unknown>>) => Promise<EngineSettledJob>
   close: () => void
 }
 
@@ -92,8 +101,28 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
     cancel: id => engineRequest(id, CANCEL_OP),
   })
 
+  /** Keyed by JOB and not by run: the run that opened one was answered turns earlier. */
+  const jobs = new Map<
+    string,
+    { resolve: (job: EngineSettledJob) => void; reject: (error: Error) => void }
+  >()
+  let nextJob = 1
+
   port.onMessage(frame => {
     if (!('evt' in frame)) return
+
+    if (isSettledJob(frame)) {
+      const waiting = jobs.get(frame.job)
+      jobs.delete(frame.job)
+      if (!waiting) return
+
+      if (frame.evt === 'job.completed') waiting.resolve(frame)
+      else
+        waiting.reject(
+          new Error(`${frame.code ?? 'failed'}: ${frame.message ?? 'the door refused'}`),
+        )
+      return
+    }
 
     if (!isHello(frame)) {
       // `runtime.error`: the engine could not read a frame, and there is no run to answer under.
@@ -118,7 +147,13 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
     waiting?.resolve(frame)
   })
 
-  port.onFailure(error => fail(error))
+  port.onFailure(error => {
+    // Every job in flight belongs to the process that just died, and nothing will ever settle it.
+    const waiting = [...jobs.values()]
+    jobs.clear()
+    for (const slot of waiting) slot.reject(new Error(GONE))
+    fail(error)
+  })
 
   const beforeDeadline = <T>(work: Promise<T>, what: string): Promise<T> =>
     new Promise<T>((resolve, reject) => {
@@ -144,8 +179,38 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
       return readHardware(answer)
     },
 
+    job: async (op, params) => {
+      if (closed) throw new Error(GONE)
+
+      const id = `local_${nextJob++}`
+      const settled = new Promise<EngineSettledJob>((resolve, reject) => {
+        jobs.set(id, { resolve, reject })
+      })
+
+      try {
+        const opened = await beforeDeadline(
+          client.send(run => engineRequest(run, op, { ...params, jobId: id })),
+          op,
+        )
+        // The door answers the job it opened, and a door answering another one is a door this
+        // client would wait on for ever.
+        if (readOpenedJob(opened) !== id)
+          throw new Error(`the engine opened another job than ${id}`)
+      } catch (error) {
+        // The job never opened, so nothing will ever settle it: dropped here or held for the rest
+        // of the session.
+        jobs.delete(id)
+        throw error
+      }
+
+      return settled
+    },
+
     close: () => {
       closed = true
+      const orphans = [...jobs.values()]
+      jobs.clear()
+      for (const slot of orphans) slot.reject(new Error(GONE))
       clearTimeout(greeting)
       const waiting = settleReady
       settleReady = null

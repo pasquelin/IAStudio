@@ -5,8 +5,37 @@ d'Electron, qui **mesure et exécute** — jamais un second ordonnanceur.
 
 ## Ce qu'il est aujourd'hui
 
-Le socle et le tuyau. Le noyau se connecte, se présente, répond `hardware.info`, et rien d'autre.
-Aucun worker, aucun modèle, aucun tenseur.
+Le socle, le tuyau, et **une porte** : `engine/diffusion`. Le noyau se connecte, se présente,
+répond `hardware.info`, et route vers un worker ce qu'il ne peut pas répondre lui-même —
+`models.load`, `models.unload`, `generate`, `worker.status`.
+
+**Le noyau n'importe jamais torch.** Mesuré le 22/08 sur la chaîne complète : le noyau salue à
+**33 ms**, le worker paie l'import une fois, et le modèle reste chaud entre deux générations.
+
+## Les portes
+
+Une porte est un **processus**, et c'est ce qu'un plan de libération peut tuer. Le noyau la
+démarre à la première demande — une porte que personne n'a demandée est un processus qui n'a
+jamais tourné — et lui parle par un `socketpair` hérité, dans le même NDJSON.
+
+| Porte | Adapter | Backend |
+|---|---|---|
+| `engine/diffusion` | `diffusers_adapter` | PyTorch (MPS, CUDA ou CPU, **rapporté** par run) |
+
+**Une op routée répond IMMÉDIATEMENT avec le job qu'elle a ouvert**, jamais avec son résultat :
+un chargement lit des gigaoctets et une génération dure des secondes. Le résultat arrive en
+`job.completed` ou `job.failed`.
+
+## Ce que le moteur ne décide pas
+
+Il **mesure et exécute**. Il peut refuser pour ce qu'il est seul à voir — aucun modèle chargé, un
+dossier de poids qui porte du Python — et il ne **replanifie jamais**.
+
+**Une garde à connaître** : l'adapter refuse un dossier de poids contenant un `.py`, **avant tout
+import**. Mesuré le 22/08 : `trust_remote_code=False` ne protège PAS un dossier local dont
+l'architecture est connue de Transformers — le `.py` s'exécute sans que rien ne soit demandé. Ce
+qui protège vraiment est la liste de fichiers du manifeste, côté studio ; ceci est le second
+verrou, et il nomme le fichier plutôt que de faire confiance à un drapeau.
 
 ## Le partage des rôles
 
@@ -55,6 +84,14 @@ uv run --project engine pytest engine/tests
 ```
 
 `uv` matérialise l'environnement seul ; aucun `pip install` n'est à lancer. Python 3.12 minimum.
+
+**La porte n'installe JAMAIS le groupe `diffusion`** — elle téléchargerait 682 Mo pour être verte.
+Les tests d'`engine/tests` sont écrits pour n'en avoir aucun besoin : ce qu'un vrai backend fait
+est prouvé par une exécution de bout en bout, pas par la porte. Pour travailler sur un worker :
+
+```bash
+uv pip install --project engine --extra diffusion
+```
 
 ## Angle mort connu
 

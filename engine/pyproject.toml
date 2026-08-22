@@ -11,6 +11,15 @@ dependencies = []
 # which is why the core stays at the 10 ms of a bare interpreter. Workers pay it, once, and stay
 # alive. The `llm`, `diffusion`, `audio` and `3d` groups land with the worker that needs them.
 core = []
+# The door that holds tensors. NEVER installed by `pnpm engine:check`: the gate would then
+# download 682 Mo to be green, and the tests of `engine/tests` are written to need none of it.
+diffusion = [
+  "torch>=2.6",          # 2.6 is where `torch.load` stopped unpickling by default — spec § I.2
+  "diffusers>=0.40",
+  "transformers>=5.0",
+  "accelerate>=1.0",
+  "safetensors>=0.4",
+]
 
 [dependency-groups]
 dev = ["pytest>=8.4", "ruff>=0.14"]

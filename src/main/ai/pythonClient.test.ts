@@ -135,3 +135,100 @@ describe('asking the engine what machine it runs on', () => {
     await expect(client.hardware()).rejects.toThrow(/gone/)
   })
 })
+
+describe('opening a job on a door', () => {
+  const opened = async () => {
+    const held = harness()
+    held.say(greeting())
+    await held.client.ready
+    return held
+  }
+
+  /** Reading gigabytes and running an inference are the two things a deadline must never bound. */
+  it('waits for the event, not for the answer that opened the job', async () => {
+    const held = await opened()
+    const running = held.client.job('generate', { prompt: 'a cat' })
+
+    held.say({ v: PROTOCOL_VERSION, id: 1, ok: { jobId: 'local_1' } })
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS * 4)
+
+    held.say({
+      v: PROTOCOL_VERSION,
+      evt: 'job.completed',
+      job: 'local_1',
+      path: '/tmp/out.png',
+      device: 'mps',
+    })
+
+    await expect(running).resolves.toMatchObject({ path: '/tmp/out.png', device: 'mps' })
+  })
+
+  it('carries the job it opened down to the engine', async () => {
+    const held = await opened()
+    void held.client.job('models.load', { folder: '/weights' })
+
+    expect(held.sent[0]).toMatchObject({
+      op: 'models.load',
+      params: { folder: '/weights', jobId: 'local_1' },
+    })
+  })
+
+  it('rejects with the reason the door refused for', async () => {
+    const held = await opened()
+    const running = held.client.job('models.load', {})
+    held.say({ v: PROTOCOL_VERSION, id: 1, ok: { jobId: 'local_1' } })
+
+    held.say({
+      v: PROTOCOL_VERSION,
+      evt: 'job.failed',
+      job: 'local_1',
+      code: 'memory',
+      message: 'no room',
+    })
+
+    await expect(running).rejects.toThrow('memory: no room')
+  })
+
+  /** A door answering another job than the one asked for is one this client would wait on for ever. */
+  it('refuses an engine that opened another job than the one asked for', async () => {
+    const held = await opened()
+    const running = held.client.job('generate', {})
+
+    held.say({ v: PROTOCOL_VERSION, id: 1, ok: { jobId: 'local_999' } })
+
+    await expect(running).rejects.toThrow(/another job/)
+  })
+
+  /** A job that never opened is one nothing will ever settle — held, it would leak for the session. */
+  it('holds nothing for a job the engine never opened', async () => {
+    const held = await opened()
+    const refused = expect(held.client.job('generate', {})).rejects.toThrow(/did not answer/)
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS)
+    await refused
+
+    // The engine is dead after a deadline, so a late frame for that job must find nobody waiting.
+    expect(() =>
+      held.say({ v: PROTOCOL_VERSION, evt: 'job.completed', job: 'local_1', path: '/tmp/x.png' }),
+    ).not.toThrow()
+  })
+
+  it('drops every job in flight when the engine dies', async () => {
+    const held = await opened()
+    const running = held.client.job('generate', {})
+    held.say({ v: PROTOCOL_VERSION, id: 1, ok: { jobId: 'local_1' } })
+
+    held.crash(new Error('the engine exited with code 1'))
+
+    await expect(running).rejects.toThrow(/gone/)
+  })
+
+  it('drops every job in flight when the studio closes the engine', async () => {
+    const held = await opened()
+    const running = held.client.job('generate', {})
+    held.say({ v: PROTOCOL_VERSION, id: 1, ok: { jobId: 'local_1' } })
+
+    held.client.close()
+
+    await expect(running).rejects.toThrow(/gone/)
+  })
+})
