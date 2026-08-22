@@ -2,17 +2,49 @@ import { runtimeEndpointId, type RuntimeEndpointId } from '@shared/domain/aiRunt
 import type { DownloadProgress, LocalModel, ModelLoader } from '@shared/domain/localModel'
 
 /**
- * The door each loader answers on — what `MemorySnapshot.runtimeBytes` is keyed by, and what an
- * admission plan names when it asks for something to be released.
+ * The door a loader answers on FOR A GIVEN MODALITY — what `MemorySnapshot.runtimeBytes` is keyed
+ * by, and what an admission plan names when it asks for something released.
  *
- * One door per loader today, so the mapping is total. A loader offering two — Ollama's own
- * `/api/chat` beside its OpenAI-compatible one — would key them apart here, which is exactly what
- * `RuntimeEndpointId` was branded for.
+ * A function and not a `Record`, and the difference is not cosmetic: a `Record<ModelLoader, …>` can
+ * only ever hold ONE door per loader, and an adapter serving two modalities — the same Python
+ * runtime answering for images and for text — needs two. That is precisely what
+ * `RuntimeEndpointId` was branded for, and the table shape forbade.
+ *
+ * A loader absent from this table answers on `<loader>/embedded`, which is what every runtime that
+ * holds its weights in its own process does.
  */
-export const ENDPOINT_BY_LOADER: Readonly<Record<ModelLoader, RuntimeEndpointId>> = {
-  'sherpa-onnx': runtimeEndpointId('sherpa-onnx', 'embedded'),
-  ollama: runtimeEndpointId('ollama', 'api-chat'),
-  llamacpp: runtimeEndpointId('llamacpp', 'embedded'),
+const DOORS_BY_LOADER: Readonly<Partial<Record<ModelLoader, Readonly<Record<string, string>>>>> = {
+  ollama: { '*': 'api-chat' },
+  // One process per modality, because a process is what a release plan can kill. `*` is what an
+  // unnamed modality falls back on, never a door of its own.
+  diffusers: {
+    image: 'diffusion',
+    video: 'diffusion',
+    audio: 'audio',
+    mesh: '3d',
+    '*': 'diffusion',
+  },
+}
+
+export function endpointOf(loader: ModelLoader, modality?: string): RuntimeEndpointId {
+  const doors = DOORS_BY_LOADER[loader]
+  if (!doors) return runtimeEndpointId(loader, 'embedded')
+
+  const door = (modality && doors[modality]) ?? doors['*']
+  return runtimeEndpointId(loader, door ?? 'embedded')
+}
+
+/**
+ * Every door a loader answers on, which is what an inverse map is built from.
+ *
+ * Enumerated rather than derived from a `Record`: with one door per loader an inverse was a
+ * one-liner, and with several it is the only way to answer "which loader owns this door".
+ */
+export function endpointsOf(loader: ModelLoader): readonly RuntimeEndpointId[] {
+  const doors = DOORS_BY_LOADER[loader]
+  if (!doors) return [runtimeEndpointId(loader, 'embedded')]
+
+  return [...new Set(Object.values(doors))].map(door => runtimeEndpointId(loader, door))
 }
 
 /** One turn of a conversation. Roles, because that is how a chat door takes a prompt. */

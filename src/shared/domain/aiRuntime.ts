@@ -65,6 +65,30 @@ export type Submission = 'params' | 'workflow-graph'
  */
 export type ProcessOccupancy = 'multi-job' | 'exclusive-process'
 
+/**
+ * How a DEVICE is contended for, which two processes can do without either being busy.
+ *
+ * The axis ADR-18 did not have, and it is separate on purpose: adding `exclusive-device` to
+ * `ProcessOccupancy` would put two decisions on one axis, and a saturated GPU is not a busy
+ * process. The ADR already keeps `residency` and `memoryReporting` apart for the same reason.
+ */
+export type DeviceContention = 'shared' | 'exclusive'
+
+/**
+ * What a worker ANNOUNCES about one door, at its handshake. Never a constant of the TypeScript.
+ *
+ * `[?]` No diffusion workload has been measured on any class of machine, here or on a dedicated
+ * card, so no value below is decided — only the AXES are. A worker knows its backend, its adapter,
+ * its model and its machine; the TypeScript knows none of the four.
+ */
+export type PortOccupancy = {
+  /** ADR-18, UNCHANGED: how many jobs this PROCESS holds. */
+  readonly process: ProcessOccupancy
+  readonly device: DeviceContention
+  /** Chiffré. `null` when the worker bounds nothing itself. */
+  readonly maxConcurrent: number | null
+}
+
 export type RuntimeCapabilities = {
   residency: Residency
   memoryReporting: MemoryReporting

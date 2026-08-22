@@ -61,3 +61,56 @@ describe('modelRefusalOf', () => {
     expect(modelRefusalOf(localModel({ rank: 3, format: 'pickle' }))).toBe('format-not-admitted')
   })
 })
+
+describe('a manifest that names code beside the weights', () => {
+  /**
+   * Measured 2026-08-22: on a local folder whose architecture Transformers knows,
+   * `from_pretrained` runs a `.py` sitting beside the weights without asking, and
+   * `trust_remote_code=False` does not fire. The whitelist is written on (format, loader) and
+   * cannot see a file, so this is the only place such an entry is stopped.
+   */
+  it('is refused whatever its format and loader', () => {
+    const model = localModel({
+      format: 'safetensors',
+      loader: 'diffusers',
+      files: [
+        { role: 'weights', name: 'model.safetensors', url: 'u', bytes: 1, sha256: 'a' },
+        { role: 'code', name: 'custom_model.py', url: 'u', bytes: 1, sha256: 'b' },
+      ],
+    })
+
+    expect(modelRefusalOf(model)).toBe('weights-carry-code')
+  })
+
+  it('is refused for a compiled module as much as for a source one', () => {
+    for (const name of ['pipeline.pyc', 'fast.so', 'helper.dylib', 'plugin.dll', 'run.PY']) {
+      const model = localModel({
+        format: 'safetensors',
+        loader: 'diffusers',
+        files: [{ role: 'weights', name, url: 'u', bytes: 1, sha256: 'a' }],
+      })
+
+      expect(modelRefusalOf(model)).toBe('weights-carry-code')
+    }
+  })
+
+  it('admits weights and their configuration', () => {
+    const model = localModel({
+      format: 'safetensors',
+      loader: 'diffusers',
+      files: [
+        {
+          role: 'weights',
+          name: 'transformer/diffusion_pytorch_model.safetensors',
+          url: 'u',
+          bytes: 1,
+          sha256: 'a',
+        },
+        { role: 'config', name: 'model_index.json', url: 'u', bytes: 1, sha256: 'b' },
+        { role: 'tokenizer', name: 'tokenizer/tokenizer.model', url: 'u', bytes: 1, sha256: 'c' },
+      ],
+    })
+
+    expect(modelRefusalOf(model)).toBeNull()
+  })
+})

@@ -18,10 +18,15 @@ export type ModelFormat = 'safetensors' | 'gguf' | 'onnx' | 'pickle'
 export const MODEL_FORMATS: readonly ModelFormat[] = ['safetensors', 'gguf', 'onnx', 'pickle']
 
 /** What opens the weights. The pair, not the format, is what the whitelist is written on. */
-export type ModelLoader = 'sherpa-onnx' | 'ollama' | 'llamacpp'
+export type ModelLoader = 'sherpa-onnx' | 'ollama' | 'llamacpp' | 'diffusers'
 
 /** The values beside the type, so a table keyed by loader can be walked without a cast. */
-export const MODEL_LOADERS: readonly ModelLoader[] = ['sherpa-onnx', 'ollama', 'llamacpp']
+export const MODEL_LOADERS: readonly ModelLoader[] = [
+  'sherpa-onnx',
+  'ollama',
+  'llamacpp',
+  'diffusers',
+]
 
 /**
  * Where the manifest came from, which is what decides how much the studio vouches for it.
@@ -159,6 +164,22 @@ const ADMITTED: Record<ModelLoader, readonly ModelFormat[]> = {
   'sherpa-onnx': ['onnx'],
   ollama: ['gguf', 'safetensors'],
   llamacpp: ['gguf', 'safetensors'],
+  /**
+   * safetensors ALONE, and the line was measured on 2026-08-22 rather than assumed.
+   *
+   * `use_safetensors=True` raises `OSError` on a folder holding only a `pytorch_model.bin` — it
+   * refuses rather than falling back, which is what this line rests on. Underneath, `torch.load`
+   * has refused pickles by default since PyTorch 2.6: a `.bin` carrying a `__reduce__` that runs a
+   * command was refused twice over.
+   *
+   * 🛑 **`trust_remote_code=False` does NOT close the third hole**, and that is the measurement
+   * that matters here: on a LOCAL folder whose architecture Transformers knows, the `.py` beside
+   * the weights is executed without anything being asked
+   * (`transformers/dynamic_module_utils.py:788` — the guard only fires when there is no local
+   * code). What keeps such a file off the disk is the manifest, whose every entry carries a
+   * digest, and `noPythonInWeights` refuses one that names a `.py` at all.
+   */
+  diffusers: ['safetensors'],
 }
 
 export function admitsLoad(format: ModelFormat, loader: ModelLoader): boolean {
@@ -166,7 +187,28 @@ export function admitsLoad(format: ModelFormat, loader: ModelLoader): boolean {
 }
 
 /** Why a model cannot be offered at all, whatever the machine could hold. */
-export type ModelRefusal = 'format-not-admitted'
+export type ModelRefusal = 'format-not-admitted' | 'weights-carry-code'
+
+/**
+ * Extensions that are CODE, whatever the manifest calls them.
+ *
+ * Measured 2026-08-22, and this list exists because of it: on a local folder whose architecture
+ * Transformers knows, `from_pretrained` executes a `.py` sitting beside the weights **without
+ * asking**, and `trust_remote_code=False` does not fire — the guard only looks at code it would
+ * have to fetch. What keeps such a file off the disk is the manifest, and until this nothing
+ * stopped a manifest from simply naming one.
+ *
+ * `.pyc` and `.pyd` are here because a compiled module loads the same way a source one does.
+ */
+const CODE_EXTENSIONS: readonly string[] = ['.py', '.pyc', '.pyd', '.pyw', '.so', '.dylib', '.dll']
+
+/** Whether any file this manifest names would put executable code beside the weights. */
+export function weightsCarryCode(model: LocalModel): boolean {
+  return model.files.some(file => {
+    const name = file.name.toLowerCase()
+    return CODE_EXTENSIONS.some(extension => name.endsWith(extension))
+  })
+}
 
 /**
  * Whether a model may enter the catalogue, and why not.
@@ -176,7 +218,11 @@ export type ModelRefusal = 'format-not-admitted'
  * they already hold. What rank 3 earns is a mark, never a lock.
  */
 export function modelRefusalOf(model: LocalModel): ModelRefusal | null {
-  return admitsLoad(model.format, model.loader) ? null : 'format-not-admitted'
+  if (!admitsLoad(model.format, model.loader)) return 'format-not-admitted'
+
+  // The whitelist is written on (format, loader) and cannot see a FILE. A manifest naming a `.py`
+  // passes `admitsLoad` and hands the loader something it will run — measured, § I.2.
+  return weightsCarryCode(model) ? 'weights-carry-code' : null
 }
 
 /**
