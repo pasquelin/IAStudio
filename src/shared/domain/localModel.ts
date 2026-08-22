@@ -18,7 +18,7 @@ export type ModelFormat = 'safetensors' | 'gguf' | 'onnx' | 'pickle'
 export const MODEL_FORMATS: readonly ModelFormat[] = ['safetensors', 'gguf', 'onnx', 'pickle']
 
 /** What opens the weights. The pair, not the format, is what the whitelist is written on. */
-export type ModelLoader = 'sherpa-onnx' | 'ollama' | 'llamacpp' | 'diffusers'
+export type ModelLoader = 'sherpa-onnx' | 'ollama' | 'llamacpp' | 'diffusers' | 'plugin'
 
 /** The values beside the type, so a table keyed by loader can be walked without a cast. */
 export const MODEL_LOADERS: readonly ModelLoader[] = [
@@ -26,6 +26,7 @@ export const MODEL_LOADERS: readonly ModelLoader[] = [
   'ollama',
   'llamacpp',
   'diffusers',
+  'plugin',
 ]
 
 /**
@@ -141,6 +142,12 @@ export type LocalModel = {
   readonly thumbnail?: string
   /** One line under the name, in the publisher's words. Data, not a word of the interface. */
   readonly summary?: string
+  /** Where the weights come from. `direct-download` where a manifest says nothing. */
+  readonly distribution?: ModelDistribution
+  /** What the licence permits, as the catalogue presents it. `commercial` by default. */
+  readonly licenceStatus?: LicenceStatus
+  /** Whether anything here can run it today. `supported` by default. */
+  readonly runtimeStatus?: RuntimeStatus
   /** What this completes, when it completes something rather than standing alone. */
   readonly attaches?: ModelAttachment
   /**
@@ -218,14 +225,44 @@ const ADMITTED: Record<ModelLoader, readonly ModelFormat[]> = {
    * digest, and `noPythonInWeights` refuses one that names a `.py` at all.
    */
   diffusers: ['safetensors'],
+  /**
+   * EMPTY, and never consulted: nothing here opens these weights, which is what `plugin` names.
+   * `modelRefusalOf` reads the runtime status first, so this line exists for the compiler and
+   * becomes the real gate the day such a loader is wired — with a measurement, like the others.
+   */
+  plugin: [],
 }
 
 export function admitsLoad(format: ModelFormat, loader: ModelLoader): boolean {
   return ADMITTED[loader].includes(format)
 }
 
+/**
+ * Where the weights come from — and the studio REDISTRIBUTES none of them but the interpreter.
+ *
+ * `direct-download` is the whole catalogue: the manifest names the publisher's own address, and
+ * the person's machine fetches from there. What the studio ships is a pointer and a digest, which
+ * is why a licence that forbids redistribution does not, by itself, keep a model out.
+ */
+export type ModelDistribution = 'bundled' | 'direct-download' | 'user-import'
+
+/**
+ * What the licence permits, as the catalogue PRESENTS it — never a legal opinion.
+ *
+ * `commercial` is the only one held to `ADMITTED_LICENCES`: it is the promise that a studio sold
+ * to someone may generate with it. The others are offered with the reservation shown on screen,
+ * because the person downloads them from the publisher and answers for their own use.
+ * `unsupported-region` is the one that keeps a model out entirely — a licence that excludes the
+ * territory the studio is used from is not a reservation, it is an absence of permission.
+ */
+export type LicenceStatus = 'commercial' | 'non-commercial' | 'restricted' | 'unsupported-region'
+
+/** Whether anything here can actually RUN it today. Orthogonal to the licence, and to the disk. */
+export type RuntimeStatus = 'supported' | 'plugin-required' | 'unsupported'
+
 /** Why a model cannot be offered at all, whatever the machine could hold. */
-export type ModelRefusal = 'format-not-admitted' | 'weights-carry-code' | 'licence-not-admitted'
+export type ModelRefusal =
+  'format-not-admitted' | 'weights-carry-code' | 'licence-not-admitted' | 'licence-excludes-region'
 
 /**
  * The licences the studio may offer a download of — SPDX identifiers, and the list IS the policy.
@@ -250,14 +287,29 @@ const ADMITTED_LICENCES: readonly string[] = [
 ]
 
 /**
- * Whether the studio may offer this model at all, on its licence.
+ * Whether the studio may present this model as COMMERCIALLY safe.
  *
- * Rank 3 is exempt and that is the whole distinction: it is the person's OWN file, already on
- * their disk. The studio neither fetched it nor vouches for it — `provenanceUnverified` says so
- * on screen — and refusing it would be the studio deciding what someone may open locally.
+ * The strict list applies to that promise alone — amended 2026-08-22. The studio redistributes
+ * nothing: a manifest names the publisher's address and a digest, so a licence that forbids
+ * redistribution says nothing about whether the person may fetch it themselves. What the others
+ * get is a reservation shown on screen, not an exclusion.
+ *
+ * Rank 3 is exempt whatever it says: the person's OWN file, already on their disk.
  */
 export function licenceAdmitted(model: LocalModel): boolean {
-  return model.rank === 3 || ADMITTED_LICENCES.includes(model.licence)
+  if (model.rank === 3 || licenceStatusOf(model) !== 'commercial') return true
+
+  return ADMITTED_LICENCES.includes(model.licence)
+}
+
+/** `commercial` where a manifest says nothing — every entry written before the three dimensions. */
+export function licenceStatusOf(model: LocalModel): LicenceStatus {
+  return model.licenceStatus ?? 'commercial'
+}
+
+/** `supported` where a manifest says nothing: it is what every entry did before this existed. */
+export function runtimeStatusOf(model: LocalModel): RuntimeStatus {
+  return model.runtimeStatus ?? 'supported'
 }
 
 /**
@@ -289,7 +341,16 @@ export function weightsCarryCode(model: LocalModel): boolean {
  * they already hold. What rank 3 earns is a mark, never a lock.
  */
 export function modelRefusalOf(model: LocalModel): ModelRefusal | null {
-  if (!admitsLoad(model.format, model.loader)) return 'format-not-admitted'
+  // Before everything else, and it is not a reservation: a licence that excludes the territory
+  // the studio is used from grants no permission at all, whoever does the downloading.
+  if (licenceStatusOf(model) === 'unsupported-region') return 'licence-excludes-region'
+
+  // The pair is judged only where a runtime can actually OPEN the weights. A format that nothing
+  // deserialises executes nothing: what ADR-20 guards is the read, and there is no read here. The
+  // day `runtimeStatus` becomes `supported`, this line judges it again.
+  if (runtimeStatusOf(model) === 'supported' && !admitsLoad(model.format, model.loader)) {
+    return 'format-not-admitted'
+  }
 
   // The whitelist is written on (format, loader) and cannot see a FILE. A manifest naming a `.py`
   // passes `admitsLoad` and hands the loader something it will run — measured, § I.2.

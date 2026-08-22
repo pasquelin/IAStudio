@@ -165,9 +165,6 @@ const FETCHED_ON_REQUEST = [
   'against a published digest, and removed from the model manager.',
 ].join('\n')
 
-const APACHE_TERMS = 'Full terms: https://www.apache.org/licenses/LICENSE-2.0'
-const MIT_TERMS = 'Full terms: https://opensource.org/licenses/MIT'
-
 /**
  * What is true of ONE model and of no other: who holds the copyright, and what its own components
  * were read to be. Keyed by manifest id, so a model with nothing particular to say needs no line.
@@ -221,6 +218,11 @@ const MODEL_NOTES = {
     'Only the SDXL set is fetched: the repository ships four adapters and two image encoders,',
     'for two model families.',
   ],
+  'mmaudio-small-44k': ['Copyright the MMAudio authors.'],
+  'mmaudio-medium-44k': ['Copyright the MMAudio authors.'],
+  'mmaudio-large-44k': ['Copyright the MMAudio authors.'],
+  'trellis2-4b': ['Copyright Microsoft.'],
+  triposr: ['Copyright Stability AI and Tripo AI.'],
   'shap-e-img2img': [
     'Copyright OpenAI. Same renderer, and the same `.bin` reservation as Shap-E above.',
   ],
@@ -237,7 +239,7 @@ function catalogueLicences() {
 
   return Object.values(catalogue)
     .flat()
-    .filter(model => model.loader === 'diffusers')
+    .filter(model => model.loader === 'diffusers' || model.loader === 'plugin')
     .map(model => ({
       name: model.name,
       spdx: model.licence,
@@ -247,7 +249,16 @@ function catalogueLicences() {
         '',
         ...(MODEL_NOTES[model.id] ?? []),
         '',
-        `Licensed under ${model.licence}. ${model.licence === 'MIT' ? MIT_TERMS : APACHE_TERMS}`,
+        `Licensed under ${model.licence}. Full terms: ${model.licenceUrl}`,
+        ...(model.licenceStatus === 'non-commercial'
+          ? ['', 'NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.']
+          : []),
+        ...(model.runtimeStatus === 'plugin-required'
+          ? ['', 'No engine in this studio opens these weights yet: they are listed so the choice']
+          : []),
+        ...(model.runtimeStatus === 'plugin-required'
+          ? ['is visible, and fetched from the publisher rather than from us.']
+          : []),
       ].join('\n'),
       sources: model.source,
     }))

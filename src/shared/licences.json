@@ -318,6 +318,24 @@
     "unmodified": true
   },
   {
+    "name": "MMAudio Large",
+    "spdx": "CC-BY-NC-4.0",
+    "text": "MMAudio large, 44 kHz, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the MMAudio authors.\n\nLicensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/\n\nNON-COMMERCIAL ONLY. These weights may not be used in a commercial project.\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "sources": "https://huggingface.co/hkchengrex/MMAudio"
+  },
+  {
+    "name": "MMAudio Medium",
+    "spdx": "CC-BY-NC-4.0",
+    "text": "MMAudio medium, 44 kHz, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the MMAudio authors.\n\nLicensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/\n\nNON-COMMERCIAL ONLY. These weights may not be used in a commercial project.\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "sources": "https://huggingface.co/hkchengrex/MMAudio"
+  },
+  {
+    "name": "MMAudio Small",
+    "spdx": "CC-BY-NC-4.0",
+    "text": "MMAudio small, 44 kHz, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the MMAudio authors.\n\nLicensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/\n\nNON-COMMERCIAL ONLY. These weights may not be used in a commercial project.\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "sources": "https://huggingface.co/hkchengrex/MMAudio"
+  },
+  {
     "name": "Mochi 1",
     "spdx": "Apache-2.0",
     "text": "Mochi 1 preview, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Genmo.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
@@ -660,6 +678,18 @@
     "spdx": "Apache 2.0 License",
     "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache 2.0 License.\nSource: https://github.com/huggingface/transformers",
     "sources": "https://github.com/huggingface/transformers"
+  },
+  {
+    "name": "TRELLIS.2 4B",
+    "spdx": "MIT",
+    "text": "TRELLIS.2, 4B, image vers 3D, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Microsoft.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "sources": "https://huggingface.co/microsoft/TRELLIS.2-4B"
+  },
+  {
+    "name": "TripoSR",
+    "spdx": "MIT",
+    "text": "TripoSR, image vers 3D, leger, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Stability AI and Tripo AI.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "sources": "https://huggingface.co/stabilityai/TripoSR"
   },
   {
     "name": "typer",

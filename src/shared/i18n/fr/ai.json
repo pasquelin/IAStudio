@@ -74,7 +74,8 @@
       "memory": "{{needed}} demandés, {{available}} de mémoire libre",
       "disk": "{{needed}} à télécharger, {{free}} libres sur le disque",
       "refused": "le format ou la provenance de ce modèle n’est pas admis",
-      "runtime": "le runtime {{runtime}} ne répond pas sur cette machine"
+      "runtime": "le runtime {{runtime}} ne répond pas sur cette machine",
+      "plugin": "aucun moteur de ce studio ne sait encore ouvrir ce modèle"
     },
     "machineVram": "{{free}} libres sur {{total}} de mémoire vidéo",
     "load": "Charger",
