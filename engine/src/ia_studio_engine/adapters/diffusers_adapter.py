@@ -93,7 +93,7 @@ def machine_memory(device: str) -> dict[str, int | None]:
 def _default_steps(pipeline: Any) -> int:
     """
     What the pipeline runs when the form left the field empty — StableAudio runs 100 where a
-    literal 20 was assumed, and the reported ratio then climbs to five before the job ends.
+    literal 20 was assumed, and the reported ratio then climbs to five.
     """
     import inspect
 
@@ -103,9 +103,8 @@ def _default_steps(pipeline: Any) -> int:
 
 def _takes_step_callback(pipeline: Any) -> bool:
     """
-    Whether this pipeline lets a caller in between two steps — read, since `ShapEPipeline` does
-    not and passing one raises `TypeError`. 🛑 A cancel lands on that callback and nowhere else:
-    without one the job runs to its last step whatever is asked.
+    🛑 A cancel lands on `callback_on_step_end` and nowhere else. Read, since `ShapEPipeline`
+    does not take one and passing it raises `TypeError`.
     """
     import inspect
 
@@ -162,10 +161,8 @@ class DiffusersAdapter:
     def refuse_reason(folder: str) -> str | None:
         """
         Read BEFORE any import: a refusal must not cost the 8.7 s `import torch` costs cold.
-
-        A `.py` beside the weights is executed by `from_pretrained` on a LOCAL folder without
-        asking — measured, spec § I.2, where `trust_remote_code=False` does NOT stop it. The
-        manifest is what keeps one off the disk; this names the file rather than trusting a flag.
+        A `.py` beside local weights runs without asking — spec § I.2,
+        `trust_remote_code=False` does not stop it.
         """
         path = Path(folder)
         if not path.is_dir():

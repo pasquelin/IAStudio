@@ -1,9 +1,6 @@
 """
-What every door is: one process, one adapter, one modality, one model at a time.
-
-It refuses for what it alone can see — no model loaded, a device that failed, weights that carry
-Python — and it never REPLANS: it does not free another door, does not reorder between doors, does
-not substitute a model. A refusal travels back with its reason, and the main process makes the plan.
+One process, one adapter, one modality, one model. It never replans — it does not free another
+door, does not substitute a model. A refusal travels back, and the main process makes the plan.
 """
 
 from __future__ import annotations

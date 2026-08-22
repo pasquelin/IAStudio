@@ -3,30 +3,22 @@ import type { LocalModel } from '@shared/domain/localModel'
 import type { ChatRequest, LoadOptions, LocalRuntime } from './localRuntimes'
 
 /**
- * llama.cpp as a runtime of this studio: the weights are ORDINARY FILES the studio fetches
- * itself — digest, resume and progress bar included — so installing is already solved by
- * `fileRuntime`. Only conversing is new, and it is what this adds.
- *
- * In process, unlike the server this replaces: nothing to install, nothing to start, nothing for
- * the person to keep running. That is the whole reason it is here.
+ * llama.cpp as a runtime: weights are ordinary files `fileRuntime` already fetches. Only
+ * conversing is new, and it runs in process — nothing to install, nothing to keep running.
  */
 
 /** The inference itself, injected: everything above it is testable without a native addon. */
 export type LlamaPort = {
   /**
-   * Whether the addon this build carries can actually load a model on THIS machine. Answered
-   * rather than assumed: a native module is built per platform, and one that failed to load is
-   * the ordinary case on a machine nobody built for.
+   * Whether the addon this build carries can load a model on THIS machine. Answered rather than
+   * assumed: a native module is built per platform, and one that failed to load is ordinary.
    */
   ready: () => boolean
   /** The weights file held in memory right now, or nothing. */
   loaded: () => string | null
   /**
-   * Holds the weights in memory and answers what they take once resident.
-   *
-   * The figure is MEASURED by the runtime, unlike `reservationBytes`, which is what a publisher
-   * announced. Rejects when the machine refuses the load, which is the readable failure the
-   * screen needs — never a freeze.
+   * Holds the weights and answers what they take once resident — MEASURED, unlike
+   * `reservationBytes`. Rejects when the machine refuses the load, never a freeze.
    */
   load: (weights: string, options: LoadOptions) => Promise<number>
   unload: () => Promise<void>
@@ -81,8 +73,7 @@ export function llamaLocalRuntime(deps: LlamaRuntimeDeps): LocalRuntime {
 
     chat: async request => {
       const model = deps.modelOf(request.model)
-      // Raised rather than answered empty: an empty answer reads as a model that had nothing to
-      // add, where this is the studio having nothing to run.
+      // Raised rather than answered empty: an empty answer reads as a model that had nothing to add.
       if (model === null) throw new Error(`${request.model} is not in the catalogue`)
 
       const done = deps.onUsed?.(model.id)

@@ -3,10 +3,7 @@ import { runtimeEndpointId, type RuntimeEndpointId } from '@shared/domain/aiRunt
 import type { EngineDoorMemory } from './pythonProtocol'
 
 /**
- * What the engine reports turned into what `admissionFor` reads.
- *
- * The DOOR is the unit on both sides — `engine/diffusion` is a process, and a process is what a
- * release plan can kill and what actually gives its bytes back.
+ * Engine door readings as what `admissionFor` reads. A door is a process a release plan can kill.
  */
 
 /** `<runtime>/<door>`, which the engine already speaks. A door it spells otherwise is dropped. */

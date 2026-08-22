@@ -3,12 +3,8 @@ import type { ChatRequest, ChatTurn, LoadOptions } from './localRuntimes'
 import type { LlamaPort } from './llamaRuntime'
 
 /**
- * llama.cpp in this process — the addon ships a prebuilt binary per platform, Metal on Apple
- * Silicon and CUDA or Vulkan elsewhere, so nothing is compiled here and nothing is installed by
- * the person.
- *
- * 🛑 Imported LAZILY, and that is not an optimisation: loading the addon opens the GPU, and doing
- * it at boot would delay the first window for a session that may never say a word to the assistant.
+ * llama.cpp in process — the addon ships a prebuilt binary per platform. 🛑 Imported LAZILY:
+ * loading it opens the GPU, and doing that at boot delays the first window of a silent session.
  */
 
 /** One model held at a time: a second would take the memory of the first without freeing it. */
@@ -137,10 +133,9 @@ export function electronLlamaPort(): LlamaPort {
           systemPrompt: briefing,
         })
 
-        // 🛑 Everything BUT the last turn, and the briefing put back at the head. `setChatHistory`
-        // REPLACES what the constructor seeded, so passing the spoken turns alone dropped the
-        // briefing entirely; and leaving the last user turn in made `prompt` merge it with itself,
-        // sending the sentence twice.
+        // 🛑 Everything BUT the last turn, briefing put back at the head: `setChatHistory`
+        // REPLACES what the constructor seeded, and leaving the last user turn in made `prompt`
+        // merge it with itself.
         const spoken = request.messages.filter(isSpoken)
         const earlier = spoken.slice(0, -1).map(historyItemOf)
         if (earlier.length > 0) {

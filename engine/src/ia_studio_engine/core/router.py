@@ -1,10 +1,6 @@
 """
-What the core does with a request it cannot answer itself: hand it to the door that can, and turn
-what comes back into the studio's vocabulary.
-
-The core decides NOTHING here. It does not choose a device, does not choose a door, does not free
-another one, does not substitute a model. The door travels ON the request, because the main
-process is the only side that knows which model was picked for which employment.
+Hands a request to the door that can answer it. The core decides nothing here: the door travels
+ON the request, because only the main process knows which model was picked for which employment.
 """
 
 from __future__ import annotations
@@ -21,10 +17,9 @@ from ia_studio_engine.protocol.envelope import encode_event
 
 DIFFUSION_DOOR = "engine/diffusion"
 
-#: Every door there is, and the module that IS one. A door is a PROCESS, which is what a release
-#: plan can kill: an 80 GB video model has no business in the process holding an image.
-#:
-#: The pairing with a modality lives in `localRuntimes.ts` — one table, on the side that decides.
+#: Every door there is, and the module that IS one. A door is a PROCESS: an 80 GB video model
+#: has no business in the process holding an image. Pairing with a modality lives in
+#: `localRuntimes.ts` — one table, on the side that decides.
 DOOR_MODULES: dict[str, str] = {
     DIFFUSION_DOOR: "ia_studio_engine.workers.diffusion",
     "engine/video": "ia_studio_engine.workers.video",
@@ -45,10 +40,8 @@ class DoorRouter:
         self.ledger = ledger if ledger is not None else MemoryLedger()
         self._workers: dict[str, WorkerProcess] = {}
         self._lock = threading.Lock()
-        # Which JOB each run belongs to, keyed by the door that numbers it: two doors number their
-        # runs from 1 apiece, so the run alone names two jobs and settles the wrong one.
-        # Read by a pump thread and written by the loop, hence the lock rather than a reliance on
-        # what CPython happens to make atomic.
+        # Which JOB each run belongs to, keyed by the door that numbers it: two doors number
+        # from 1 apiece. Read by a pump thread and written by the loop, hence the lock.
         self._runs: dict[tuple[str, int], str] = {}
 
     def _worker_said(self, door: str, frame: dict[str, Any]) -> None:
@@ -109,10 +102,8 @@ class DoorRouter:
 
     def _worker_left(self, door: str) -> None:
         """
-        A door that died holds every job it was given, and none of them will ever settle.
-
-        This is the second material exception of § A.5: the worker abandons and REPORTS. What it
-        does not do is decide to unload another door and try again.
+        A door that died holds every job it was given. § A.5 exception 2: the worker abandons
+        and reports. It does not unload another door and try again.
         """
         with self._lock:
             orphans = [self._runs.pop(key) for key in list(self._runs) if key[0] == door]
@@ -148,10 +139,8 @@ class DoorRouter:
 
     def submit(self, op: str, params: dict[str, Any], job: str) -> dict[str, Any]:
         """
-        Answers IMMEDIATELY with the job it opened. The result arrives as an event.
-
-        A load reads gigabytes and a generation runs for seconds: an answer that waited for either
-        would hold the core's loop, and the studio would have no way to cancel what it started.
+        Answers IMMEDIATELY with the job it opened. Waiting for a load or a generation would hold
+        the core's loop, and the studio would have no way to cancel what it started.
         """
         door = str(params.get("door", DIFFUSION_DOOR))
         # Refused rather than started: spawning `-m` on a module that does not exist forks a
@@ -170,9 +159,7 @@ class DoorRouter:
     def cancel(self, job: str) -> dict[str, Any]:
         """
         Asks the door to drop a job, BY JOB — the studio never learns a door's own numbering.
-
-        Answered here and not queued: a cancel that waited behind the job it stops would be
-        useless. What it reaches is the door's reading thread, which is why that thread exists.
+        Answered here, not queued: a cancel that waited behind the job it stops would be useless.
         """
         with self._lock:
             key = next((one for one, held in self._runs.items() if held == job), None)

@@ -23,8 +23,7 @@ const settled = (over: Partial<EngineSettledJob> = {}): EngineSettledJob => ({
 function harness(over: Partial<PythonClient> = {}, deps: Partial<PythonRuntimeDeps> = {}) {
   // Wrapped rather than defaulted: a test that supplies its own answer must still be the one the
   // spy records, or the assertion reads a call nobody made.
-  const answers = over.job ?? (() => Promise.resolve(settled()))
-  const job = vi.fn(answers)
+  const job = vi.fn(over.job ?? (() => Promise.resolve(settled())))
   const memory = vi.fn(over.memory ?? (() => Promise.resolve([])))
 
   const client = { ...over, job, memory } as unknown as PythonClient
@@ -58,8 +57,7 @@ describe('reading what the engine holds', () => {
 
   /**
    * Measured 2026-08-22: forking the interpreter and reading `engine.hello` costs 28,8 ms,
-   * median of five. A reading runs on every window that connects, and paying that to be told
-   * nothing is loaded is a start-up nobody asked for.
+   * median of five.
    */
   it('never starts the engine to answer what is on the disk', async () => {
     const started = vi.fn(() => Promise.resolve(null))
@@ -70,11 +68,6 @@ describe('reading what the engine holds', () => {
     expect(started).not.toHaveBeenCalled()
   })
 
-  /**
-   * `ready` follows the DISK and not the process: a model is installable whether or not a Python
-   * process happens to be running, and reading `false` here would grey out the install button of
-   * a runtime that is perfectly able to install.
-   */
   it('is ready with no engine running, because installing needs none', async () => {
     const { runtime } = harness({}, { running: () => null })
 
@@ -206,7 +199,6 @@ describe('generating', () => {
     expect(await held.runtime.generate?.(request)).toMatchObject({ device: 'unknown' })
   })
 
-  /** A generation that answered no path produced nothing, and filing nothing would be worse. */
   it('refuses an answer that carries no path', async () => {
     const held = harness()
 

@@ -2,10 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import type { ChatHistoryItem } from 'node-llama-cpp'
 
 /**
- * The addon stands in, and only the two calls that carry a conversation are watched.
- *
- * `node-llama-cpp` opens a GPU and reads gigabytes of weights; what has to be exercised here is
- * what the studio HANDS it — which is where the briefing was being dropped.
+ * The addon stands in. `node-llama-cpp` opens a GPU and reads gigabytes; what is exercised here
+ * is what the studio HANDS it — which is where the briefing was being dropped.
  */
 const setChatHistory = vi.fn<(history: ChatHistoryItem[]) => void>()
 const prompt = vi.fn(() => Promise.resolve('{"say":"done","calls":[]}'))
@@ -105,12 +103,8 @@ describe('electronLlamaPort', () => {
   })
 
   /**
-   * `[M]` 46 ms to open the addon here, 0 ms to read. What that buys is a verdict rather than a
-   * guess: waiting for someone to speak to the assistant first left every candidate reading
-   * `unknown`, and the machine line showing a figure a third of the truth.
-   *
-   * Reported as it stands, zeroes included — what an empty reading MEANS is the probe's to decide,
-   * and deciding it twice is how two answers drift apart.
+   * `[M]` 46 ms to open the addon here, 0 ms to read. Zeroes included: what an empty reading
+   * MEANS is the probe's to decide, and deciding it twice is how answers drift.
    */
   it('opens the addon to answer, and reports what it said', async () => {
     await expect(electronLlamaPort().vram()).resolves.toEqual({

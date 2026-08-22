@@ -45,9 +45,8 @@ export type ManagerDeps = {
   log: (level: 'info' | 'warn' | 'error', message: string) => void
   now: () => number
   /**
-   * How long a machine reading stays fresh. `[M]` A compose costs a `getGPUInfo`, a `statfs`, a
-   * memory reading and a VRAM reading, and it runs on every assistant turn — while what it reads
-   * moves in seconds, not in milliseconds. A load always reads afresh, whatever this says (R2).
+   * How long a machine reading stays fresh. `[M]` A compose costs `getGPUInfo` + `statfs` + two
+   * memory readings on every assistant turn. A load always reads afresh, whatever this says (R2).
    */
   factsTtlMs?: number
   /** `0` keeps them. Dictation already had this; llama and diffusion sat in VRAM all session. */
@@ -60,14 +59,12 @@ export type AiManager = {
   overview: () => Promise<AiOverview>
   /**
    * Re-publishes for a change the manager cannot see — an open project, an account. Without it a
-   * settings window left open keeps a stale path, stale badges and a scope selector writing where
-   * nobody is looking.
+   * settings window left open keeps a stale path and a scope selector writing where nobody looks.
    */
   refresh: () => Promise<void>
   /**
    * What serves one role right now, re-composed rather than remembered: a model uninstalled
-   * outside the studio would leave a turn reaching nothing. ONE row, and only the runtimes that
-   * role could reach are asked.
+   * outside the studio would leave a turn reaching nothing.
    */
   providerOf: (role: AiRoleId) => Promise<RoleProvider | null>
   choose: (role: AiRoleId, provider: RoleProvider | null, scope: ChoiceScope) => Promise<AiOverview>
@@ -163,11 +160,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     modelWith(modelId, deps.settings().ai.ownModels)
 
   /**
-   * The machine, re-read only once it has gone stale. `GpuIdentity` cannot change under a running
-   * process; `freemem`, `statfs` and the VRAM can, and are what the window is short.
-   *
-   * The PROMISE is shared, not only its value: every window asks on connecting, so two composes
-   * crossing before the first resolved paid two `getGPUInfo` for one answer.
+   * Re-read once stale; the PROMISE is shared, not only its value. Two composes crossing paid
+   * two `getGPUInfo` for one answer. `GpuIdentity` cannot change; `freemem` and VRAM can.
    */
   let cachedFacts: { at: number; facts: Promise<HardwareFacts> } | null = null
   const ttl = deps.factsTtlMs ?? DEFAULT_FACTS_TTL_MS
@@ -191,11 +185,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
   }
 
   /**
-   * What each loader answers for, asked afresh rather than remembered.
-   *
-   * 🛑 NOT cached, and the reason has not gone away: a model deleted outside the studio — from the
-   * folder, or by `ollama rm` — would read as present until a relaunch. What IS narrowed is the
-   * question: a caller wanting one role asks only about the models that role could take.
+   * 🛑 NOT cached: a model deleted outside the studio would read as present until a relaunch.
+   * A caller wanting one role asks only about the models that role could take.
    */
   const readingsOf = async (
     models: readonly LocalModel[],
@@ -205,19 +196,14 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     )
 
   /**
-   * Drops what a door no longer holds.
-   *
-   * 🛑 The port decides on its own: a turn on another model makes it swap the weights, so what was
-   * "activated" is gone and nothing said so. Remembering the bytes anyway had the next admission
-   * weigh an occupation that had ended.
+   * 🛑 The port swaps weights on its own: remembering the bytes of a model it already dropped
+   * had the next admission weigh an occupation that had ended.
    */
   const reconcile = (readings: ReadonlyMap<ModelLoader, RuntimeReading>): void => {
     for (const [loader, reading] of readings) {
-      // Only what this reading COVERED: `providerOf` narrows the models to one role, so a loader
-      // absent from the map was never asked — and forgetting its bytes would let the next
-      // admission over-commit what is still resident.
-      // Every door of the loader: one that answers for two modalities holds two, and forgetting
-      // only the first would let the next admission over-commit what the second still holds.
+      // Only what this reading COVERED: `providerOf` narrows to one role, so a loader absent
+      // from the map was never asked. Every door of the loader: one that answers for two
+      // modalities holds two, and forgetting only the first would over-commit the second.
       for (const endpoint of endpointsOf(loader)) {
         const held = occupancy.get(endpoint)
         if (held && reading.loaded !== held.modelId) occupancy.delete(endpoint)
@@ -412,10 +398,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
   }
 
   /**
-   * What stands between this model and the memory, or `null` when nothing does.
-   *
-   * `null` with no runtime reading is the honest answer: R1 forbids admitting on a probe, so the
-   * load is attempted and the RUNTIME does the refusing — still readable, and never a freeze.
+   * `null` with no runtime reading is honest: R1 forbids admitting on a probe, so the load is
+   * attempted and the RUNTIME refuses — still readable, never a freeze.
    */
   const admit = async (model: LocalModel): Promise<LoadRefusal | null> => {
     // Fresh, whatever the TTL says: R2 of ADR-19 asks a plan to be weighed against a reading taken

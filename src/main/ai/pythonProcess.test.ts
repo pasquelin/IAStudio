@@ -6,12 +6,8 @@ import { openPythonProcess, type PythonPort } from './pythonProcess'
 import { PROTOCOL_VERSION, type EngineFrame } from './pythonProtocol'
 
 /**
- * A stand-in engine, in Node rather than in Python: what is under test is the socket, the framing
- * and the death of a process — none of which knows what language the other end is written in. The
- * real engine is covered by `engine/tests`, which the same gate runs.
- *
- * A file rather than `node -e`: node parses `--socket` as one of ITS options when the script came
- * from `-e`, and exits 9 before the code ever runs.
+ * A stand-in engine in Node: the socket, the framing and the death of a process. A file rather
+ * than `node -e`: node parses `--socket` as one of ITS options and exits 9 before the code runs.
  */
 const STAND_IN = `
 const net = require('node:net')

@@ -12,12 +12,8 @@ import type {
 import { engineDoorOf, engineDoorOfEndpoint, fileRuntime } from './localRuntimes'
 
 /**
- * The engine, as a `LocalRuntime` — the same contract llama.cpp and sherpa-onnx already answer.
- *
- * Installing is not the engine's business: the studio fetches the weights itself, with the digest,
- * the resume and the progress bar `modelInstall.ts` already carries. What the engine adds is
- * everything a Python backend can do and Node cannot — load, unload, generate — and it is handed
- * PATHS to weights the main process has already admitted.
+ * The engine as a `LocalRuntime`. Installing stays in `modelInstall.ts`; this adds load, unload
+ * and generate, and is handed PATHS the main process has already admitted.
  */
 
 export type PythonRuntimeDeps = FileRuntimeDeps & {
@@ -39,24 +35,17 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
   const files = fileRuntime(deps)
 
   /**
-   * What each door of this engine was loaded with — a MAP and not one slot, because a door is a
-   * process and two modalities are two processes that can be resident at the same moment.
-   *
-   * 🛑 A backend that counts no bytes — the CPU one, where `_held_bytes` answers `None` — reports
-   * nothing to the ledger, so a door that DIED leaves its entry here until the engine itself
-   * goes. The studio then reads a model as resident that is not. Written rather than guessed at:
-   * the alternative was clearing the map on an empty ledger, which on that backend is every
-   * reading, and the model could then never be freed at all.
+   * 🛑 A backend that counts no bytes never reaches the ledger, so a died door stays here until
+   * the engine itself goes. Clearing the map on an empty ledger made the model unfreeable.
    */
   const held = new Map<string, string>()
 
   return {
     read: async (models): Promise<RuntimeReading> => {
       const onDisk = await files.read(models)
-      // Never STARTED here, only read if already up: a reading runs on every window that
-      // connects, and forking the interpreter costs 28,8 ms to answer that nothing is loaded.
-      // `ready` follows the disk, which is what the row needs — a model is installable whether
-      // or not a Python process happens to be running.
+      // Never STARTED here: a reading runs on every window that connects, and forking costs
+      // 28,8 ms to answer that nothing is loaded. `ready` follows the disk — installing needs
+      // no Python process.
       const engine = deps.running()
       // Its processes went with it, so it holds nothing — a measurement, not an assumption.
       if (!engine) {
@@ -76,8 +65,10 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
         deps.log('info', `the engine answered nothing for its memory: ${String(error)}`)
       }
 
-      const resident = models.find(model => [...held.values()].includes(model.id))
-      return { ...onDisk, loaded: resident?.id ?? null }
+      return {
+        ...onDisk,
+        loaded: models.find(model => [...held.values()].includes(model.id))?.id ?? null,
+      }
     },
 
     install: (model, onProgress: (progress: DownloadProgress) => void, signal) =>
@@ -108,10 +99,9 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
     },
 
     unload: async (endpoint?: RuntimeEndpointId) => {
-      const doors: readonly string[] = endpoint
-        ? [engineDoorOfEndpoint(endpoint)]
-        : [...held.keys()]
-      const asked = doors.filter(door => held.has(door))
+      const asked = (endpoint ? [engineDoorOfEndpoint(endpoint)] : [...held.keys()]).filter(door =>
+        held.has(door),
+      )
       if (asked.length === 0) return
 
       const engine = deps.running()

@@ -7,11 +7,9 @@ import { log } from '@main/log'
 import { readFrame, type EngineFrame, type EngineRequest } from './pythonProtocol'
 
 /**
- * The engine process and the socket it answers on. `child_process.spawn` and not `forkedWorker.ts`,
- * whose `utilityProcess.fork` only ever launches Node; the port contract is the same one.
- *
- * A socket rather than stdio, and not for latency — both are under 0.05 ms at the size of a control
- * frame. **stdout is shared**: one Python warning corrupts it, and a PyTorch stack writes them.
+ * `child_process.spawn`, not `forkedWorker.ts` (`utilityProcess.fork` only launches Node). Socket
+ * rather than stdio: both are under 0.05 ms, but **stdout is shared** — one Python warning, or a
+ * PyTorch stack, corrupts it.
  */
 export type PythonPort = {
   postMessage: (message: EngineRequest) => void
@@ -38,11 +36,8 @@ export type PythonProcessOptions = {
    */
   processName: string
   /**
-   * Where the engine's own package lives, put on `PYTHONPATH`.
-   *
-   * `-m` puts the CWD on `sys.path`, and a packaged application's CWD is `/` or the home folder —
-   * so without this the interpreter answers `ModuleNotFoundError` and leaves before saying a word.
-   * An end-to-end harness that exports the variable itself hides exactly this.
+   * `PYTHONPATH` to the engine package. `-m` puts the CWD on `sys.path`, and a packaged app's
+   * CWD is `/`. An end-to-end harness that exports the variable itself hides exactly this.
    */
   sources: string
   /** Told the process is gone, so whoever holds this port can drop it. */
