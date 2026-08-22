@@ -11,7 +11,7 @@
   "models": {
     "none": "No model in this workspace.",
     "noSelection": "No model chosen",
-    "pickOne": "Pick one from the list",
+    "pickOne": "Nothing is billed until you pick a model.",
     "origin": "Origin",
     "official": "Official",
     "community": "Community",

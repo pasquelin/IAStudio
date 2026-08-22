@@ -83,8 +83,8 @@ export type RoleProvider =
   | { readonly kind: 'cloud'; readonly providerId: string }
 
 /**
- * What the person chose, per role. Absent means "no choice", which is NOT the same as "none":
- * `providerFor` then answers with what is actually available.
+ * What the person chose, per role. Absent means none: nothing is billed, nothing answers,
+ * until they pick. `providerFor` does not fill the gap.
  */
 export type RoleChoices = Readonly<Partial<Record<AiRoleId, RoleProvider>>>
 
@@ -103,11 +103,10 @@ export function roleChoicesFor(
 }
 
 /**
- * What a role can actually be served by on this machine, right now — two lists, and the FIRST of
- * each is what the role takes on its own.
+ * What a role can actually be served by on this machine, right now.
  *
- * Lists rather than one id each: a choice was made among several, and comparing it to the default
- * alone would drop it in silence.
+ * Lists rather than one id each: a choice was made among several, and comparing it to a default
+ * alone would drop it in silence. There is no default — see `providerFor`.
  */
 export type RoleOffer = {
   /** Every model installed AND usable, in the order the catalogue offers them. */
@@ -122,19 +121,14 @@ export type RoleOffer = {
 }
 
 /**
- * What serves a role, choice or not.
+ * What serves a role — only an explicit choice, never a fill-in.
  *
- * The LOCAL side wins by default — the whole point of ADR-21 § B: the application has to be useful
- * with no account at all. A key present ADDS a provider to the choice; it does not take the lead.
- * A choice the machine can no longer honour falls back rather than failing.
+ * 🛑 A key present is not a subscription to spend. Scenario is offered, never assumed: a role
+ * with no choice answers nothing, even when an account is ready and even when a local model
+ * is installed. Billing is a radio the person ticks.
  *
  * 🛑 A chosen local model is honoured while it is INSTALLED, not while the machine judges it
- * comfortable. The verdict moves under a running conversation — a resident model makes the machine
- * read as smaller than it is, since nothing here subtracts what it already occupies (ADR-19's
- * `runtimeBytes`, unwired). What the person asked for stands until they unask it.
- *
- * 🛑 And where it cannot stand, it falls back LOCALLY or not at all: choosing this machine is also
- * choosing not to pay, so no reading of any kind may turn that choice into a billed call.
+ * comfortable. Where it cannot stand, it falls back LOCALLY or not at all — never to a cloud.
  */
 export function providerFor(
   role: AiRoleId,
@@ -146,15 +140,13 @@ export function providerFor(
   if (chosen?.kind === 'local' && offer.installedModelIds.includes(chosen.modelId)) return chosen
   if (chosen?.kind === 'cloud' && offer.cloudIds.includes(chosen.providerId)) return chosen
 
-  const model = offer.localModelIds[0]
-  if (model !== undefined) return { kind: 'local', modelId: model }
-
   // 🛑 A local choice falls back to another LOCAL model, never to a cloud — decided 21/08, and
   // measured before it was: a runtime that stopped answering reads as "not installed" here, so an
-  // Ollama nobody started moved the next sentence to a BILLED cloud without a word. Answering
-  // nothing lets the assistant say why; billing someone for asking their own machine cannot.
-  if (chosen?.kind === 'local') return null
+  // Ollama nobody started moved the next sentence to a BILLED cloud without a word.
+  if (chosen?.kind === 'local') {
+    const model = offer.localModelIds[0]
+    return model === undefined ? null : { kind: 'local', modelId: model }
+  }
 
-  const cloud = offer.cloudIds[0]
-  return cloud === undefined ? null : { kind: 'cloud', providerId: cloud }
+  return null
 }

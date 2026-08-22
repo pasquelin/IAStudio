@@ -7,7 +7,7 @@ import { cn } from '@/helpers/cn'
 export type AiChoiceRowProps = {
   /** The radio group: one provider serves a role, so picking one drops the last. */
   role: AiRoleId
-  /** Which choice this is, within the role — a model id, or `automatic`, or `scenario`. */
+  /** Which choice this is, within the role — a model id, or `none`, or `scenario`. */
   choice: string
   label: string
   /** The figures beside the name — a size, a verdict. */

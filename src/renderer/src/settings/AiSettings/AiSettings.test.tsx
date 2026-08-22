@@ -75,6 +75,14 @@ describe('AiSettings', () => {
 
   // One line per EMPLOYMENT, never one per model: the screen answers "what serves dictation",
   // which is the question somebody opens it with.
+  it('warns that nothing is billed until a provider is chosen', () => {
+    show(overview({ roles: [row({ provider: null })] }))
+
+    expect(
+      screen.getByText(/Rien n’est facturé tant que vous n’en avez pas validé un/),
+    ).toBeInTheDocument()
+  })
+
   it('shows one line per employment, with what serves it', () => {
     show(overview({ roles: [row(), row({ role: aiRoleId('image', 'inpaint'), candidates: [] })] }))
 
@@ -137,9 +145,9 @@ describe('AiSettings', () => {
     expect(install).toHaveBeenCalledWith('parakeet')
   })
 
-  // The default that works has to be reachable again: without it, a choice made once could never
-  // be given back to the studio.
-  it('offers a way back to the automatic choice', () => {
+  // The empty choice has to be reachable again: without it, a choice made once could never
+  // be given back, and a billed provider would stay selected.
+  it('offers a way back to no provider', () => {
     const choose = vi.fn(() => Promise.resolve(overview()))
     installFakeBridge({ ai: { choose } })
     show(
@@ -148,7 +156,7 @@ describe('AiSettings', () => {
       }),
     )
 
-    fireEvent.click(screen.getByRole('radio', { name: /Automatique/ }))
+    fireEvent.click(screen.getByRole('radio', { name: /Aucun/ }))
 
     expect(choose).toHaveBeenCalledWith(DICTATION_ROLE, null, 'app')
   })

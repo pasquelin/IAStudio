@@ -134,8 +134,8 @@ export type Settings = {
    * `.project.json`, which ADR-21 § D asked for and its amendment of 21/08 reversed: an account id
    * is minted locally, so half the scope could never travel anyway.
    *
-   * Both are partial. An absent role is "no choice made", which is NOT "none" — `providerFor`
-   * then answers with what the machine actually offers, and the local side wins by default.
+   * Both are partial. An absent role is none: `providerFor` answers nothing until the person
+   * picks, so an account on file never spends on its own.
    */
   ai: {
     roles: Partial<Record<AiRoleId, RoleProvider>>

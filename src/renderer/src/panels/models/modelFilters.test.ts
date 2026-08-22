@@ -127,6 +127,12 @@ describe('model filters', () => {
       expect(queryFrom(DEFAULT_COLLECTION_STATE, '3d', '', CLOUDS)).toMatchObject({ family: '3d' })
     })
 
+    it('stays on this machine until a cloud is ticked', () => {
+      expect(queryFrom(DEFAULT_COLLECTION_STATE, 'image', '', CLOUDS)).toMatchObject({
+        runsOn: LOCAL_RUNTIME,
+      })
+    })
+
     /**
      * Exact equality rather than an absence: a capability the bar kept from another space is
      * dropped, while origin and search, which every model carries, stay.
@@ -141,6 +147,7 @@ describe('model filters', () => {
         sort: 'relevance',
         origin: 'official',
         search: 'flux',
+        runsOn: LOCAL_RUNTIME,
       })
     })
 
@@ -247,7 +254,7 @@ describe('model filters', () => {
           '',
           [],
         ),
-      ).not.toHaveProperty('runsOn')
+      ).toMatchObject({ runsOn: LOCAL_RUNTIME })
       expect(facetsFor('image', identity, []).at(0)?.options).toHaveLength(1)
     })
 

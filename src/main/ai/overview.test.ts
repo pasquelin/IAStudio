@@ -148,8 +148,8 @@ describe('aiOverviewOf', () => {
     })
   })
 
-  // A model nobody downloaded would have the role answer nothing until someone noticed.
-  it('takes no local option from a model that is not installed', () => {
+  // An account on file is not a choice: Scenario stays offered, never assumed.
+  it('takes no cloud from an account when nothing was chosen', () => {
     const overview = aiOverviewOf(
       input({
         modelsFor: role => (role === ASSISTANT_ROLE ? [PARAKEET] : []),
@@ -158,9 +158,7 @@ describe('aiOverviewOf', () => {
       }),
     )
 
-    expect(rowOf(overview, ASSISTANT_ROLE)?.provider).toEqual({
-      kind: 'cloud',
-      providerId: CLOUD_IDS[0],
-    })
+    expect(rowOf(overview, ASSISTANT_ROLE)?.provider).toBeNull()
+    expect(rowOf(overview, ASSISTANT_ROLE)?.clouds).toEqual(CLOUD_IDS)
   })
 })

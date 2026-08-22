@@ -97,27 +97,17 @@ describe('roleChoicesFor', () => {
 describe('providerFor', () => {
   const noChoice: RoleChoices = {}
 
-  // ADR-21 § B: the application has to be useful with no account at all.
-  it('serves a role locally when nothing was chosen and a model is there', () => {
-    expect(providerFor(ASSISTANT_ROLE, noChoice, offer({ localModelIds: ['llama'] }))).toEqual({
-      kind: 'local',
-      modelId: 'llama',
-    })
-  })
-
-  // A key present ADDS a provider to the choice; it does not take the lead.
-  it('still prefers the local model when an account is also ready', () => {
+  // A key present is not a subscription to spend, and an installed model is not a choice.
+  it('answers nothing until a provider is chosen, even when one could serve', () => {
+    expect(providerFor(ASSISTANT_ROLE, noChoice, offer({ localModelIds: ['llama'] }))).toBeNull()
+    expect(providerFor(ASSISTANT_ROLE, noChoice, offer({ cloudIds: ['scenario'] }))).toBeNull()
     expect(
       providerFor(
         ASSISTANT_ROLE,
         noChoice,
         offer({ localModelIds: ['llama'], cloudIds: ['scenario'] }),
       ),
-    ).toEqual({ kind: 'local', modelId: 'llama' })
-  })
-
-  it('falls back to a cloud when no local model serves the role', () => {
-    expect(providerFor(ASSISTANT_ROLE, noChoice, offer({ cloudIds: ['scenario'] }))).toEqual(CLOUD)
+    ).toBeNull()
   })
 
   // The role says so at its own place, instead of a global banner condemning the whole app.
@@ -138,7 +128,7 @@ describe('providerFor', () => {
     ).toEqual({ kind: 'local', modelId: 'llama' })
   })
 
-  it('honours an explicit choice over the default', () => {
+  it('honours an explicit choice over an installed local model', () => {
     const chosen: RoleChoices = { [ASSISTANT_ROLE]: CLOUD }
 
     expect(
@@ -151,13 +141,13 @@ describe('providerFor', () => {
   })
 
   /**
-   * A cloud is one entry of a list, never a member of the union: a choice pointing at one the
-   * registry no longer holds falls back, the way a model uninstalled since does.
+   * A cloud is one entry of a list, never a member of the union. A choice pointing at one the
+   * registry no longer holds answers nothing — switching to another billed cloud is not a fallback.
    */
-  it('falls back from a cloud that is no longer offered', () => {
+  it('answers nothing when the chosen cloud is no longer offered', () => {
     const chosen: RoleChoices = { [ASSISTANT_ROLE]: { kind: 'cloud', providerId: 'gone' } }
 
-    expect(providerFor(ASSISTANT_ROLE, chosen, offer({ cloudIds: ['scenario'] }))).toEqual(CLOUD)
+    expect(providerFor(ASSISTANT_ROLE, chosen, offer({ cloudIds: ['scenario'] }))).toBeNull()
   })
 
   // A model uninstalled since the choice was stored: the role keeps working on what is LEFT ON
@@ -171,10 +161,8 @@ describe('providerFor', () => {
   it('keeps the choice of one role out of another', () => {
     const chosen: RoleChoices = { [ASSISTANT_ROLE]: CLOUD }
 
-    expect(providerFor(DICTATION_ROLE, chosen, offer({ localModelIds: ['parakeet'] }))).toEqual({
-      kind: 'local',
-      modelId: 'parakeet',
-    })
+    expect(providerFor(DICTATION_ROLE, chosen, offer({ localModelIds: ['parakeet'] }))).toBeNull()
+    expect(providerFor(ASSISTANT_ROLE, chosen, offer({ cloudIds: ['scenario'] }))).toEqual(CLOUD)
   })
 
   /**

@@ -96,7 +96,10 @@ describe('Models panel', () => {
     renderPanel()
 
     await waitFor(() => expect(searchModels).toHaveBeenCalled())
-    expect(searchModels.mock.calls[0]?.[0]).toMatchObject({ family: '3d' })
+    expect(searchModels.mock.calls[0]?.[0]).toMatchObject({
+      family: '3d',
+      runsOn: LOCAL_RUNTIME,
+    })
   })
 
   it('shows the models it received', async () => {

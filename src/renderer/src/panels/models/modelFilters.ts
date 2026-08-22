@@ -128,7 +128,8 @@ function chosen<T extends string>(
 }
 
 /**
- * Turns what the bar holds into what the API is asked. Only some of it narrows server-side —
+ * Turns what the bar holds into what the API is asked. `runsOn` defaults to this machine:
+ * an account is not a reason to list billed models. Only some of it narrows server-side —
  * family and capability are applied by the registry, which is why walking is bounded there.
  *
  * Every value is checked against what THIS family offers. Not because the state travels between
@@ -143,7 +144,7 @@ export function queryFrom(
   search: string,
   clouds: readonly string[],
 ): ModelQuery {
-  const runsOn = chosen(state, RUNTIME_FACET, [LOCAL_RUNTIME, ...clouds])
+  const runsOn = chosen(state, RUNTIME_FACET, [LOCAL_RUNTIME, ...clouds]) ?? LOCAL_RUNTIME
   const capabilities = offered(state, CAPABILITY_FACET, CAPABILITIES_BY_FAMILY[family])
   // One parameter for both: the API matches a publisher exactly as it matches any other tag.
   const tags = [
@@ -157,7 +158,7 @@ export function queryFrom(
   return {
     family,
     sort: MODEL_SORTS.find(candidate => candidate === state.sort) ?? 'relevance',
-    ...(runsOn ? { runsOn } : {}),
+    runsOn,
     ...(trimmed ? { search: trimmed } : {}),
     ...(origin ? { origin } : {}),
     ...(capabilities.length ? { capabilities } : {}),

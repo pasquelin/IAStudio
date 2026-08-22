@@ -54,7 +54,7 @@ sont des panneaux qui vous disent ce qu’il leur manque pour se remplir.
 | « Ouvrez un projet pour voir ses assets. » | idem, pour l’étagère |
 | « Ouvrez une scène pour voir son contenu. » | le panneau **Scène** attend une scène ouverte |
 | « Ouvrez une scène pour voir ses mailles. » / « Ouvrez une scène pour voir ses lumières. » | idem, pour les deux panneaux voisins |
-| « Aucun modèle choisi » / « Choisissez-en un dans la liste » | le panneau Génération attend qu’un modèle soit sélectionné |
+| « Aucun modèle choisi » / « Rien n’est facturé tant qu’aucun modèle n’est choisi. » | aucun modèle n’a été validé — Scenario n’est pas utilisé tant que vous n’en choisissez pas un |
 | « Ce modèle n’attend aucun paramètre. » | c’est normal : certains modèles ne prennent qu’un prompt |
 | « Aucun résultat pour ce filtre. » | votre recherche ne trouve rien ; élargissez-la |
 | « Aucun réglage ne correspond à cette recherche. » | idem, dans la fenêtre des réglages |

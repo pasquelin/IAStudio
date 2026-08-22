@@ -52,7 +52,7 @@ telling you what they are missing in order to fill up.
 | "Open a project to see its assets." | the same, for the shelf |
 | "Open a scene to see its contents." | the **Scene** panel is waiting for an open scene |
 | "Open a scene to see its meshes." / "Open a scene to see its lights." | the same, for the two neighbouring panels |
-| "No model chosen" / "Pick one from the list" | the Generation panel is waiting for a model to be selected |
+| "No model chosen" / "Nothing is billed until you pick a model." | no model has been confirmed — Scenario is unused until you pick one |
 | "This model takes no parameters." | that is normal: some models take only a prompt |
 | "No result for this filter." | your search finds nothing; widen it |
 | "No setting matches this search." | the same, in the settings window |

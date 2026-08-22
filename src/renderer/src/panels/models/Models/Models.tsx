@@ -1,7 +1,7 @@
 import { mdiCubeScan } from '@mdi/js'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LOCAL_RUNTIME, type ModelSummary } from '@shared/domain/model'
+import type { ModelSummary } from '@shared/domain/model'
 import { CLOUD_IDS } from '@shared/domain/aiCloud'
 import { failureKeyOf } from '@/services/failureMessage'
 import { Collection } from '@/design/Collection/Collection'
@@ -73,13 +73,10 @@ export function Models() {
   const search = settled.family === family ? settled.search : ''
   // No memo, and only for this one: react-query hashes the key structurally, so a fresh object
   // costs nothing, and `queryFrom` translates nothing.
-  // A cloud is offered only where a key is held, and without one the panel narrows to this
-  // machine rather than going quiet: the studio has to be useful with no account at all.
+  // A cloud is offered only where a key is held. The listing itself stays on this machine
+  // until the person ticks Scenario — an account is not a reason to show billed models.
   const clouds = authenticated ? CLOUD_IDS : NO_CLOUDS
-  const query = {
-    ...queryFrom(collection, family, search, clouds),
-    ...(authenticated ? {} : { runsOn: LOCAL_RUNTIME }),
-  }
+  const query = queryFrom(collection, family, search, clouds)
 
   // Memoised, unlike the query above: building the facets translates up to twenty-five labels
   // through i18next — measured at 376 µs, against 1 µs for the query — and this panel re-renders

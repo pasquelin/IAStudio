@@ -25,8 +25,8 @@ export type AiRoleRowProps = {
 }
 
 /**
- * One EMPLOYMENT and what serves it, never one model. Folded by default — a default that works
- * needs no attention — and unfolded it shows every candidate, those too heavy included.
+ * One EMPLOYMENT and what serves it, never one model. Folded by default — a choice already
+ * made needs no attention — and unfolded it shows every candidate, those too heavy included.
  */
 export const AiRoleRow = memo(function AiRoleRow({
   row,
@@ -72,9 +72,9 @@ export const AiRoleRow = memo(function AiRoleRow({
         <ul>
           <AiChoiceRow
             role={row.role}
-            choice="automatic"
-            label={t('aiModels.automatic')}
-            hint={t('aiModels.automaticHint')}
+            choice="none"
+            label={t('aiModels.none')}
+            hint={t('aiModels.noneHint')}
             checked={editing === null}
             onChoose={() => void chooseAiProvider(row.role, null, scope)}
           />
@@ -87,6 +87,14 @@ export const AiRoleRow = memo(function AiRoleRow({
               No `role="alert"`, which DaisyUI's own examples carry: that is a live region, and
               this is a standing state rather than something that just happened — announced on
               every render, it would interrupt for news that is not new. */}
+          {provider === null && (
+            <li className="py-2">
+              <span className="alert alert-warning alert-soft">
+                <UiIcon path={mdiInformationOutline} />
+                {t('aiModels.chooseProvider')}
+              </span>
+            </li>
+          )}
           {row.candidates.length === 0 && (
             <li className="py-2">
               <span className="alert alert-info alert-soft">

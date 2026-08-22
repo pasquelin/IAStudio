@@ -11,7 +11,7 @@
   "models": {
     "none": "Aucun modèle dans cet espace.",
     "noSelection": "Aucun modèle choisi",
-    "pickOne": "Choisissez-en un dans la liste",
+    "pickOne": "Rien n’est facturé tant qu’aucun modèle n’est choisi.",
     "origin": "Origine",
     "official": "Officiel",
     "community": "Communauté",
