@@ -94,6 +94,9 @@
     "addOwnModel": "Ajouter un fichier…",
     "ownModelUnreadable": "Ce fichier n’est pas un GGUF que le studio sait lire.",
     "loadBeyondMachine": "Chargement impossible : {{needed}} demandés, {{available}} disponibles.",
-    "noLocalEngine": "Aucun modèle local pour cet emploi : le catalogue n’en propose aucun aujourd’hui."
+    "noLocalEngine": "Aucun modèle local pour cet emploi : le catalogue n’en propose aucun aujourd’hui.",
+    "servesRoles_one": "{{count, number}} emploi",
+    "servesRoles_many": "{{count, number}} emplois",
+    "servesRoles_other": "{{count, number}} emplois"
   }
 }

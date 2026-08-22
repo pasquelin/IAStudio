@@ -11,7 +11,7 @@ import {
 } from '@shared/domain/localModel'
 import type { PartialSettings, Settings } from '@shared/domain/settings'
 import { admissionFor } from './admission'
-import { catalogueWith, modelsForWith, modelWith } from './catalogue'
+import { catalogueWith, modelsForWith, modelWith, rolesServedBy } from './catalogue'
 import { asRuntimeSnapshot, type HardwareFacts } from './hardwareProbe'
 import {
   endpointOf,
@@ -235,6 +235,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       isLoaded: model => readings.get(model.loader)?.loaded.has(model.id) === true,
       isHoldable: model => deps.runtimes[model.loader]?.load !== undefined,
       runtimeReady: model => readings.get(model.loader)?.ready === true,
+      rolesServedBy,
       readyClouds: deps.readyClouds(),
       installing:
         running === null ? null : { modelId: running.modelId, progress: running.progress },

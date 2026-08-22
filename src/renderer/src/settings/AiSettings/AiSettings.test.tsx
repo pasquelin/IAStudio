@@ -14,6 +14,7 @@ const PARAKEET: ModelCandidate = {
   holdable: true,
   unverified: false,
   supplied: false,
+  serves: 1,
   fit: 'compatible',
   obstacle: null,
 }
@@ -25,6 +26,7 @@ const HUGE: ModelCandidate = {
   holdable: true,
   unverified: false,
   supplied: false,
+  serves: 1,
   fit: 'insufficient-memory',
   obstacle: 'memory',
 }

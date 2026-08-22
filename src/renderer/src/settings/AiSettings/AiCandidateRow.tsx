@@ -46,7 +46,14 @@ export const AiCandidateRow = memo(function AiCandidateRow({
       choice={candidate.model.id}
       // Data, not a word of the interface: a model is called what its publisher calls it.
       label={candidate.model.name}
-      caption={`${bytes(candidate.model.diskBytes)} · ${fit.verdict}`}
+      // What one download answers for, and it is said only when it is more than one: a figure
+      // on every row would be noise, where "serves six employments" beside 4.47 GB is the whole
+      // difference between this catalogue's lightest entry and its heaviest.
+      caption={[
+        bytes(candidate.model.diskBytes),
+        ...(candidate.serves > 1 ? [t('aiModels.servesRoles', { count: candidate.serves })] : []),
+        fit.verdict,
+      ].join(' · ')}
       // The provenance comes FIRST when there is one to say: it qualifies everything after it.
       hint={
         candidate.unverified

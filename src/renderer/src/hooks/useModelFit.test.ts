@@ -28,6 +28,7 @@ const candidate = (
   holdable: true,
   unverified: false,
   supplied: false,
+  serves: 1,
   fit,
   obstacle,
 })

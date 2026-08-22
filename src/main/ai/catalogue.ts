@@ -96,6 +96,26 @@ const ALL: readonly LocalModel[] = [...new Map(SHIPPED.map(e => [e.model.id, e.m
 
 const NONE: readonly LocalModel[] = []
 
+/**
+ * How many employments one model answers for — the inverse of `BY_ROLE`, built with it.
+ *
+ * What it is FOR: a person choosing between twenty-five downloads has no way to see that one of
+ * them serves six employments and another serves one, and the difference is 4 GB against 133.
+ */
+const ROLES_BY_MODEL: ReadonlyMap<string, number> = (() => {
+  const counted = new Map<string, number>()
+  for (const [, models] of BY_ROLE) {
+    for (const model of models) counted.set(model.id, (counted.get(model.id) ?? 0) + 1)
+  }
+
+  return counted
+})()
+
+/** How many employments this model serves, of those the catalogue files it under. */
+export function rolesServedBy(modelId: string): number {
+  return ROLES_BY_MODEL.get(modelId) ?? 0
+}
+
 /** Every shipped model, whatever role it serves. */
 export function shippedModels(): readonly LocalModel[] {
   return ALL
