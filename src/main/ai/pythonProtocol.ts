@@ -12,14 +12,15 @@ import { z } from 'zod'
  */
 export const PROTOCOL_VERSION = 1
 
-/** What the core answers itself, in the same turn. */
-export type EngineOp = 'hardware.info'
+/** What the core answers itself, in the same turn — neither wakes a door. */
+export type EngineOp = 'hardware.info' | 'memory.ledger'
 
 /**
  * What the core hands to a DOOR instead of answering. Each reads gigabytes or runs for seconds, so
  * each answers with the job it opened and pushes its result as an event.
  */
-export type EngineJobOp = 'models.load' | 'models.unload' | 'generate' | 'worker.status'
+export type EngineJobOp =
+  'models.load' | 'models.unload' | 'generate' | 'worker.status' | 'memory.info'
 
 /** Drops a request the engine still holds. Posted by `processClient` when a caller aborts. */
 export const CANCEL_OP = 'engine.cancel'
@@ -53,8 +54,22 @@ const hello = z.object({
 })
 
 /**
+ * A job reporting how far it is. Pushed between two denoise steps — the only place a long job can
+ * say anything, and the only place a cancel can land.
+ */
+const jobProgress = z.object({
+  v: z.number(),
+  evt: z.literal('job.progress'),
+  job: z.string(),
+  ratio: z.number(),
+})
+
+/**
  * A job settling. It carries no run id: the run that opened it was answered long before, and what
  * a door produced belongs to the JOB — the shape `JobRunner` already speaks.
+ *
+ * 🛑 **A zod object DROPS what it does not name.** The engine answered `bytesResident` while this
+ * named `bytes`, and the reading vanished in silence — every field a door sends belongs here.
  */
 const settledJob = z.object({
   v: z.number(),
@@ -70,6 +85,10 @@ const settledJob = z.object({
   generateMs: z.number().optional(),
   door: z.string().optional(),
   loaded: z.string().nullable().optional(),
+  tensorBytes: z.number().nullable().optional(),
+  heldBytes: z.number().nullable().optional(),
+  machine: z.unknown().optional(),
+  cancelled: z.boolean().optional(),
 })
 
 /** What the engine says about a frame it could not read: there is no run id to answer under. */
@@ -84,9 +103,10 @@ const refused = z.object({
 /** `ok` is REQUIRED, which is what keeps a refusal from reading as an answer settled with nothing. */
 const settled = z.object({ v: z.number(), id: z.number(), ok: z.unknown() })
 
-const frame = z.union([hello, settledJob, noticed, refused, settled])
+const frame = z.union([hello, jobProgress, settledJob, noticed, refused, settled])
 
 export type EngineHello = z.infer<typeof hello>
+export type EngineJobProgress = z.infer<typeof jobProgress>
 export type EngineSettledJob = z.infer<typeof settledJob>
 export type EngineFrame = z.infer<typeof frame>
 
@@ -107,7 +127,11 @@ export function isHello(value: EngineFrame): value is EngineHello {
 }
 
 export function isSettledJob(value: EngineFrame): value is EngineSettledJob {
-  return 'job' in value
+  return 'job' in value && value.evt !== 'job.progress'
+}
+
+export function isJobProgress(value: EngineFrame): value is EngineJobProgress {
+  return 'evt' in value && value.evt === 'job.progress'
 }
 
 /** What a routed op answers in the same turn: the job it opened, never its result. */
@@ -135,4 +159,32 @@ export type EngineHardware = z.infer<typeof hardware>
 /** Throws on a shape the engine should never send: it is our own code, one version out of step. */
 export function readHardware(value: unknown): EngineHardware {
   return hardware.parse(value)
+}
+
+/**
+ * What one door holds, as its own backend counts it.
+ *
+ * Two numbers and not one, measured 2026-08-22: loading Sana 600M moved the allocator by 8.84 GB
+ * and the driver by 8.89, then a generation moved the driver by 5.67 more while the allocator did
+ * not move at all. **Admission reads `heldBytes`** — tensors alone under-report a door
+ * mid-generation by two thirds.
+ */
+const doorMemory = z.object({
+  door: z.string(),
+  tensorBytes: z.number(),
+  heldBytes: z.number(),
+  device: z.string(),
+  backend: z.string(),
+})
+
+/**
+ * What every door last reported. A door that never answered is ABSENT rather than zero: ADR-19 R1
+ * turns on that difference — absent reads `unknown`, where a zero would be trusted.
+ */
+const ledger = z.object({ doors: z.array(doorMemory) })
+
+export type EngineDoorMemory = z.infer<typeof doorMemory>
+
+export function readMemoryLedger(value: unknown): readonly EngineDoorMemory[] {
+  return ledger.parse(value).doors
 }

@@ -43,11 +43,12 @@ def test_reports_an_unreadable_frame_rather_than_dying_on_it() -> None:
     assert "ok" in answer
 
 
-def test_a_cancel_ends_its_run_rather_than_leaving_the_studio_waiting() -> None:
+def test_a_cancel_is_an_op_like_another_when_no_door_holds_the_job() -> None:
+    """Routed to the door by `memory_handlers`; with no handler wired it is simply unknown."""
     _greeting, answer = run(ask("engine.cancel", request_id=5))
 
     assert answer["id"] == 5
-    assert answer["err"]["code"] == "cancelled"
+    assert answer["err"]["code"] == "unknown-op"
 
 
 def test_a_handler_that_raises_answers_its_run_rather_than_the_stream() -> None:

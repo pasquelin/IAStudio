@@ -13,9 +13,12 @@ never sufficient — what protects is the manifest listing every file that reach
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from ia_studio_engine.core.jobqueue import CancelledError
 
 
 class LoadRefusedError(Exception):
@@ -31,16 +34,59 @@ def _device() -> str:
     return "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def _resident_bytes(device: str) -> int | None:
-    """`None` where the backend does not answer — an unread reading is never given a value."""
+def _tensor_bytes(device: str) -> int | None:
+    """What the ALLOCATOR counts: live tensors. `None` where the backend does not answer."""
     import torch
 
     if device == "mps":
         return int(torch.mps.current_allocated_memory())
     if device == "cuda":
-        total, free = torch.cuda.mem_get_info()
-        return int(free - total)
+        return int(torch.cuda.memory_allocated())
     return None
+
+
+def _held_bytes(device: str) -> int | None:
+    """
+    What was taken FROM THE POT, cache included — the number admission needs.
+
+    Measured 2026-08-22: a generation moved the driver by 5.67 GB while the allocator did not move
+    at all, so counting tensors alone under-reports a door mid-generation by two thirds.
+    """
+    import torch
+
+    if device == "mps":
+        return int(torch.mps.driver_allocated_memory())
+    if device == "cuda":
+        # `(free, total)`, in that order — the reverse reads negative, which no admission survives.
+        free, total = torch.cuda.mem_get_info()
+        return int(total - free)
+    return None
+
+
+def machine_memory(device: str) -> dict[str, int | None]:
+    """
+    The pot itself. `freeBytes` is `None` on `mps`, and that is the measurement rather than a gap.
+
+    Measured 2026-08-22 with the studio running and a viewport open: `recommended_max_memory()`
+    answered 83.49 GB unchanged while `vm_stat` showed **319 MB actually free** at the peak.
+    Metal's ceiling is what THIS PROCESS may take, never what the machine has left — deriving
+    `total - held` from it would have told admission 68 GB were free while the machine was at its
+    knees. On `unified` the viewport draws from the same pot and no backend counter sees it, which
+    is exactly what `MemorySnapshot.rendererReservedBytes` exists for.
+
+    `unifiedBytes` MEASURES the domain: greater than zero on a SoC, zero on a dedicated card.
+    """
+    import torch
+
+    if device == "mps":
+        ceiling = int(torch.mps.recommended_max_memory())
+        return {"totalBytes": ceiling, "freeBytes": None, "unifiedBytes": ceiling}
+    if device == "cuda":
+        # A dedicated card has its own pot, and `mem_get_info` answers for the DEVICE rather than
+        # for this process — `[?]` never run here, no such machine.
+        free, total = torch.cuda.mem_get_info()
+        return {"totalBytes": int(total), "freeBytes": int(free), "unifiedBytes": 0}
+    return {"totalBytes": None, "freeBytes": None, "unifiedBytes": None}
 
 
 @dataclass
@@ -49,7 +95,20 @@ class LoadedModel:
     device: str
     pipeline: Any
     bytes_resident: int | None
+    tensor_bytes: int | None
     load_ms: float
+
+
+def memory_frame(device: str, backend: str, door: str) -> dict[str, Any]:
+    """What a door answers for `memory.info`. Every number is READ, none is derived."""
+    return {
+        "door": door,
+        "tensorBytes": _tensor_bytes(device),
+        "heldBytes": _held_bytes(device),
+        "device": device,
+        "backend": backend,
+        "machine": machine_memory(device),
+    }
 
 
 class DiffusersAdapter:
@@ -60,6 +119,10 @@ class DiffusersAdapter:
 
     def backend(self) -> str:
         return "pytorch"
+
+    def held_bytes(self) -> int | None:
+        """What the door holds RIGHT NOW — read after an unload, never derived from one."""
+        return _held_bytes(_device())
 
     def device(self) -> str:
         return _device()
@@ -90,6 +153,18 @@ class DiffusersAdapter:
         self.unload()
         device = _device()
         started = time.perf_counter_ns()
+        import torch
+        from diffusers.utils import logging as diffusers_logging
+
+        # tqdm writes to stderr, and the studio journals a worker's stderr as an ERROR line. Left
+        # on, a twenty-step denoise files twenty error lines for a job that went perfectly.
+        # Progress belongs to `job.progress`, which the callback below pushes.
+        diffusers_logging.disable_progress_bar()
+
+        # `variant` picks which FILES are read; it does NOT set the compute dtype. Measured
+        # 2026-08-22 on Sana 600M: with `variant="fp16"` alone the transformer and the VAE came
+        # back `float32`, and only the text encoder was narrow. `dtype` is what makes it 3.21 Md
+        # parameters at two bytes rather than four.
         pipeline = DiffusionPipeline.from_pretrained(
             folder,
             # Refuses rather than falling back to a pickle — measured, not assumed.
@@ -97,14 +172,21 @@ class DiffusersAdapter:
             trust_remote_code=False,
             local_files_only=True,
             variant="fp16",
+            dtype=torch.float16,
         ).to(device)
+
+        # Trades a little speed for a peak that fits: a denoise otherwise materialises the whole
+        # attention matrix at once, which is where a machine with room for the weights still OOMs.
+        if hasattr(pipeline, "enable_attention_slicing"):
+            pipeline.enable_attention_slicing()
         load_ms = (time.perf_counter_ns() - started) / 1e6
 
         self.loaded = LoadedModel(
             model_id=model_id,
             device=device,
             pipeline=pipeline,
-            bytes_resident=_resident_bytes(device),
+            bytes_resident=_held_bytes(device),
+            tensor_bytes=_tensor_bytes(device),
             load_ms=load_ms,
         )
         return self.loaded
@@ -119,7 +201,14 @@ class DiffusersAdapter:
         elif torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-    def generate(self, params: dict[str, Any], destination: str) -> dict[str, Any]:
+    def generate(
+        self,
+        params: dict[str, Any],
+        destination: str,
+        door: str,
+        on_step: Callable[[int, int], None] | None = None,
+        stopping: Callable[[], bool] | None = None,
+    ) -> dict[str, Any]:
         """Writes a file and answers its PATH: a control frame that grows cannot be replayed."""
         held = self.loaded
         if held is None:
@@ -129,20 +218,40 @@ class DiffusersAdapter:
         if not isinstance(prompt, str) or not prompt:
             raise LoadRefusedError("a generation needs a prompt")
 
+        steps = int(params.get("steps", 20))
+
+        def between_steps(_pipeline: Any, step: int, _timestep: Any, state: dict) -> dict:
+            """
+            Called by diffusers between two denoise steps — the only place a cancel can land.
+
+            A device call does not interrupt, so nothing is killed: the loop is ASKED to stop and
+            it is here that it notices. Invariant 6 of `CLAUDE.md` lives on this callback.
+            """
+            if stopping is not None and stopping():
+                raise CancelledError("the generation was cancelled")
+            if on_step is not None:
+                on_step(step + 1, steps)
+            return state
+
         started = time.perf_counter_ns()
         image = held.pipeline(
             prompt=prompt,
-            num_inference_steps=int(params.get("steps", 20)),
+            num_inference_steps=steps,
             height=int(params.get("height", 512)),
             width=int(params.get("width", 512)),
+            callback_on_step_end=between_steps,
         ).images[0]
         generate_ms = (time.perf_counter_ns() - started) / 1e6
 
         image.save(destination)
         return {
             "path": destination,
+            "door": door,
             "device": held.device,
             "backend": self.backend(),
             "generateMs": round(generate_ms, 1),
-            "bytesResident": _resident_bytes(held.device),
+            # `heldBytes` and `tensorBytes` are the names the ledger reads. A third spelling is
+            # dropped in silence by a zod object that does not name it — measured, this one was.
+            "heldBytes": _held_bytes(held.device),
+            "tensorBytes": _tensor_bytes(held.device),
         }
