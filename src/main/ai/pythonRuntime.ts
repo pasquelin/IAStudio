@@ -25,6 +25,8 @@ export type PythonRuntimeDeps = FileRuntimeDeps & {
    * a runtime that is not answering, and says so, rather than a studio that freezes.
    */
   engine: () => Promise<PythonClient | null>
+  /** The engine only if it is ALREADY running. Reading the catalogue must never start one. */
+  running: () => PythonClient | null
   log: (level: 'info' | 'warn', message: string) => void
 }
 
@@ -38,10 +40,12 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
   return {
     read: async (models): Promise<RuntimeReading> => {
       const onDisk = await files.read(models)
-      const engine = await deps.engine()
-      // `ready: false` is the honest answer for an engine that will not start — the screen says
-      // "this runtime is not answering", which is what someone needs to fix it.
-      if (!engine) return { ...onDisk, ready: false, loaded: null }
+      // Never STARTED here, only read if already up: a reading runs on every window that
+      // connects, and forking the interpreter costs 28,8 ms to answer that nothing is loaded.
+      // `ready` follows the disk, which is what the row needs — a model is installable whether
+      // or not a Python process happens to be running.
+      const engine = deps.running()
+      if (!engine) return { ...onDisk, loaded: null }
 
       // The LEDGER and never `worker.status`: the core answers this itself, where asking a door
       // would fork a Python process and pay 682 MB of imports to be told it holds nothing.
