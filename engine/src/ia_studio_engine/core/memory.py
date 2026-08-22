@@ -19,15 +19,12 @@ class DoorMemory:
     """
     What one door holds, as the backend itself counts it.
 
-    Two numbers and not one, measured 2026-08-22 on this Mac: loading Sana 600M moved
-    `current_allocated_memory` by 8.84 GB and `driver_allocated_memory` by 8.89 GB, then a
-    generation moved the driver by another 5.67 GB while allocated did not move at all. **The
-    allocator counts live tensors; the driver counts what was taken from the pot.** Admission needs
-    the second — the first would under-report a door mid-generation by two thirds.
+    `held_bytes` is what the DRIVER took from the pot, never what the tensors weigh. Measured
+    2026-08-22: a generation moved the driver by 5.67 GB while the allocator did not move at all,
+    so counting tensors would under-report a door mid-generation by two thirds.
     """
 
     door: str
-    tensor_bytes: int
     held_bytes: int
     device: str
     backend: str
@@ -35,7 +32,6 @@ class DoorMemory:
     def as_frame(self) -> dict[str, Any]:
         return {
             "door": self.door,
-            "tensorBytes": self.tensor_bytes,
             "heldBytes": self.held_bytes,
             "device": self.device,
             "backend": self.backend,

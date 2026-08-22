@@ -44,7 +44,10 @@ export function createPythonSupervisor(host: PythonSupervisorHost): PythonSuperv
   let gaveUp = false
   /** Shared by every caller that arrives while one start is still running. */
   let starting: Promise<PythonClient | null> | null = null
-  /** Set by `dispose` while a start is in flight: what arrives after it must not be held. */
+  /**
+   * Set by `dispose`, and never cleared: the studio is going away, and an engine started after
+   * that is one nothing is left to stop. A supervisor is not reopened, it is rebuilt.
+   */
   let disposed = false
   let failures: number[] = []
 
@@ -91,11 +94,13 @@ export function createPythonSupervisor(host: PythonSupervisorHost): PythonSuperv
 
   return {
     engine: () => {
+      // `disposed` is read here and not only inside `start`: without it a caller arriving during
+      // shutdown would spawn an interpreter the quit has no way left to kill.
+      if (disposed) return Promise.resolve(null)
       if (client) return Promise.resolve(client)
       if (gaveUp) return Promise.resolve(null)
       if (starting) return starting
 
-      disposed = false
       starting = start().finally(() => {
         starting = null
       })

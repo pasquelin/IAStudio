@@ -9,7 +9,6 @@ from ia_studio_engine.core.memory import DoorMemory, MemoryLedger
 
 DIFFUSION = DoorMemory(
     door="engine/diffusion",
-    tensor_bytes=8_844_678_144,
     held_bytes=8_890_220_544,
     device="mps",
     backend="pytorch",
@@ -22,14 +21,13 @@ def test_answers_what_a_door_last_reported() -> None:
 
     [door] = ledger.as_frame()["doors"]
     assert door["heldBytes"] == 8_890_220_544
-    assert door["tensorBytes"] == 8_844_678_144
     assert (door["device"], door["backend"]) == ("mps", "pytorch")
 
 
 def test_a_door_that_answered_twice_is_read_once() -> None:
     ledger = MemoryLedger()
     ledger.record(DIFFUSION)
-    ledger.record(DoorMemory("engine/diffusion", 0, 100_270_080, "mps", "pytorch"))
+    ledger.record(DoorMemory("engine/diffusion", 100_270_080, "mps", "pytorch"))
 
     [door] = ledger.as_frame()["doors"]
     assert door["heldBytes"] == 100_270_080
@@ -56,7 +54,7 @@ def test_forgetting_a_door_it_never_held_is_not_a_failure() -> None:
 def test_each_door_answers_for_itself() -> None:
     ledger = MemoryLedger()
     ledger.record(DIFFUSION)
-    ledger.record(DoorMemory("engine/audio", 1, 2, "cpu", "onnx"))
+    ledger.record(DoorMemory("engine/audio", 2, "cpu", "onnx"))
 
     assert {door["door"] for door in ledger.as_frame()["doors"]} == {
         "engine/diffusion",

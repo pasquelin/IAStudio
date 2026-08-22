@@ -84,6 +84,10 @@ class WorkerLoop:
 
     def _work(self) -> None:
         for job in self.queue.drain():
+            if job.cancelled:
+                self.send(encode_error(job.id, "cancelled", "the job was cancelled before it ran"))
+                continue
+
             handler = self._queued[job.op]
             try:
                 self.send(encode_ok(job.id, handler(job.params)))

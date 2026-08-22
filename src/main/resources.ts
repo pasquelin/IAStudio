@@ -71,9 +71,8 @@ export function bundledTemplates(root: string): string {
  * The Python that runs the local AI engine, and the engine's own sources beside it.
  *
  * Shipped like ffmpeg — `extraResources`, outside the asar, because an interpreter has to be
- * executable on disk to be spawned. `[?]` **Nothing fetches it yet**: no `pnpm engine:fetch`
- * exists and `before-pack.mjs` does not carry it, so this names where it WILL live. A run that
- * does not find it reads as a runtime that is not answering, which is the honest thing to say.
+ * executable on disk to be spawned. Fetched by `pnpm engine:fetch`, and by `before-pack.mjs` per
+ * target. A run that does not find it reads as a runtime that is not answering.
  *
  * 🛑 Measured 2026-08-22: an environment the person installs themselves will NOT load under the
  * hardened runtime — every Mach-O has to carry OUR signature or `dlopen` refuses it for a Team ID

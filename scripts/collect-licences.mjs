@@ -230,6 +230,9 @@ function modelLicences() {
  * `src/main/pythonPackages.ts` and the version from the lock. A package in the lock that neither
  * list classifies makes `python-licences.test.ts` go red, which is what asks for the decision.
  */
+/** What a licence column says for a package whose metadata states none. Never a version word. */
+const UNSTATED_LICENCE = 'unstated'
+
 function pythonLicences() {
   const read = existsSync(PYTHON_LICENCES) ? JSON.parse(readFileSync(PYTHON_LICENCES, 'utf8')) : {}
 
@@ -251,7 +254,9 @@ function pythonLicences() {
     .map(([name, entry]) => ({
       name,
       version: entry.version ?? NO_VERSION,
-      spdx: entry.spdx ?? NO_VERSION,
+      // NOT `NO_VERSION`, which reads "shipped with the application" — a sentence about a
+      // version, printed in the licence column of a package whose metadata states none.
+      spdx: entry.spdx ?? UNSTATED_LICENCE,
       text: [
         'Part of the environment a local generation runs in. It is NOT shipped with the',
         'application: it is fetched on first use, and removed with the engine.',

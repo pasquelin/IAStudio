@@ -71,19 +71,22 @@ class DoorRouter:
 
     def _remember(self, answer: dict[str, Any]) -> None:
         held = answer.get("heldBytes")
-        tensors = answer.get("tensorBytes")
         # A backend that does not answer is left ABSENT rather than recorded at zero: ADR-19 R1
         # turns on the difference between "it holds nothing" and "nobody could say".
-        if not isinstance(held, int) or not isinstance(tensors, int):
+        # `device` and `backend` are REQUIRED, not defaulted to "": an answer that omits them —
+        # an unload, measured — would otherwise replace a good record with two empty strings, and
+        # every later reading would see blanks instead of an absence.
+        device = answer.get("device")
+        backend = answer.get("backend")
+        if not isinstance(held, int) or not isinstance(device, str) or not isinstance(backend, str):
             return
 
         self.ledger.record(
             DoorMemory(
                 door=str(answer.get("door", DIFFUSION_DOOR)),
-                tensor_bytes=tensors,
                 held_bytes=held,
-                device=str(answer.get("device", "")),
-                backend=str(answer.get("backend", "")),
+                device=device,
+                backend=backend,
             )
         )
 

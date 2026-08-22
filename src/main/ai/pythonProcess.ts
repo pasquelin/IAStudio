@@ -40,6 +40,14 @@ export type PythonProcessOptions = {
    * reaches no screen.
    */
   processName: string
+  /**
+   * Where the engine's own package lives, put on `PYTHONPATH`.
+   *
+   * `-m` puts the CWD on `sys.path`, and a packaged application's CWD is `/` or the home folder —
+   * so without this the interpreter answers `ModuleNotFoundError` and leaves before saying a word.
+   * An end-to-end harness that exports the variable itself hides exactly this.
+   */
+  sources: string
   /** Told the process is gone, so whoever holds this port can drop it. */
   onExit?: () => void
 }
@@ -61,6 +69,7 @@ export function openPythonProcess({
   command,
   args,
   processName,
+  sources,
   onExit = () => {},
 }: PythonProcessOptions): PythonPort {
   const endpoint = endpointOf()
@@ -123,8 +132,12 @@ export function openPythonProcess({
   server.listen(endpoint, () => {
     child = spawn(command, [...args, '--socket', endpoint], {
       stdio: ['ignore', 'pipe', 'pipe'],
-      // Otherwise a Python stack trace sits in a buffer while the studio wonders why nothing came.
-      env: { ...process.env, PYTHONUNBUFFERED: '1' },
+      env: {
+        ...process.env,
+        PYTHONPATH: sources,
+        // Otherwise a Python stack trace sits in a buffer while the studio wonders why nothing came.
+        PYTHONUNBUFFERED: '1',
+      },
     })
 
     const journal = (level: 'info' | 'error') => (chunk: Buffer) => {

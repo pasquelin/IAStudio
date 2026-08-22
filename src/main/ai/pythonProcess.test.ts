@@ -43,6 +43,17 @@ beforeAll(() => {
   folder = mkdtempSync(join(tmpdir(), 'ias-engine-test-'))
   writeFileSync(scriptAt('standIn.js'), STAND_IN)
   writeFileSync(scriptAt('leaves.js'), 'process.exit(0)')
+  // Says where its package was put, through the socket — which is the channel that exists.
+  writeFileSync(
+    scriptAt('saysSources.js'),
+    `const net = require('node:net')
+     const socket = net.connect(process.argv[process.argv.indexOf('--socket') + 1], () => {
+       socket.write(JSON.stringify({
+         v: ${PROTOCOL_VERSION}, evt: 'engine.hello', engine: '0.0.0',
+         protocol: ${PROTOCOL_VERSION}, python: process.env.PYTHONPATH ?? '', platform: 'test',
+       }) + '\\n')
+     })`,
+  )
 })
 
 afterAll(() => rmSync(folder, { recursive: true, force: true }))
@@ -60,6 +71,7 @@ const open = (script: string, onExit?: () => void): PythonPort =>
   openPythonProcess({
     command: process.execPath,
     args: [scriptAt(script)],
+    sources: folder,
     processName: 'the stand-in engine',
     onExit,
   })
@@ -104,6 +116,7 @@ describe('the death of the engine', () => {
     const port = openPythonProcess({
       command: 'ia-studio-no-such-interpreter',
       args: [],
+      sources: folder,
       processName: 'the stand-in engine',
       onExit: () => (left = true),
     })
@@ -134,6 +147,27 @@ describe('the death of the engine', () => {
 
     await vi.waitFor(() => expect(seen.deaths).toHaveLength(1), 5_000)
     expect(seen.deaths[0]?.message).toContain('the stand-in engine exited with code 0')
+    port.kill()
+  })
+})
+
+describe('where the engine finds its own package', () => {
+  /**
+   * `-m` puts the CWD on `sys.path`, and a packaged application's CWD is `/` or the home folder.
+   * Without `PYTHONPATH` the interpreter answers `ModuleNotFoundError` and leaves before saying a
+   * word — and an end-to-end harness that exports the variable itself hides exactly this.
+   */
+  it('is carried to the process rather than left to the working directory', async () => {
+    const port = openPythonProcess({
+      command: process.execPath,
+      args: [scriptAt('saysSources.js')],
+      sources: '/somewhere/engine/src',
+      processName: 'the stand-in engine',
+    })
+    const seen = watch(port)
+
+    await vi.waitFor(() => expect(seen.frames).toHaveLength(1), 5_000)
+    expect(seen.frames[0]).toMatchObject({ python: '/somewhere/engine/src' })
     port.kill()
   })
 })

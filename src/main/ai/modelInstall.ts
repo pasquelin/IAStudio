@@ -10,6 +10,7 @@ import {
 // kilobytes at a time, and reporting each would push twenty thousand events through the IPC for
 // the encoder alone — each broadcast to every window, to move a bar of sixty steps.
 import { PROGRESS_STEP } from '@shared/domain/taskProgress'
+import { pathParentOf } from '@shared/domain/fileName'
 
 /**
  * Installing any local model — the dictation downloader, freed from the dictation.
@@ -79,12 +80,6 @@ function abortIfCancelled(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw new DownloadCancelled('the model download was cancelled')
 }
 
-/** Where a file lands, whatever separator the host joins with. */
-function parentOf(path: string): string {
-  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
-  return cut > 0 ? path.slice(0, cut) : path
-}
-
 /**
  * Fetches one file, resuming a `.part` when there is one.
  *
@@ -103,7 +98,7 @@ export async function fetchModelFile(
   abortIfCancelled(options.signal)
 
   // Before the `.part` is opened, and cheap on a folder that is already there.
-  await host.ensureFolder(parentOf(target))
+  await host.ensureFolder(pathParentOf(target))
 
   const onDisk = await host.sizeOf(part)
   // A `.part` at least as long as the file it claims to be is not a resume point: the URL

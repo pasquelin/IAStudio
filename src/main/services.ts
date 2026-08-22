@@ -241,6 +241,15 @@ export type Services = {
   addOwnAiModel: () => Promise<AiOverview>
   /** Speaking instead of typing. Holds the engine, the model and the state of a session. */
   dictation: DictationSession
+  /**
+   * Lets the local AI engine go, with the door it started.
+   *
+   * Beside `dictation` and for the same reason: a `utilityProcess` dies with the app, a spawned
+   * interpreter does not. Its worker holds gigabytes of device memory, and nothing on the machine
+   * gives them back — the SIGTERM handler written into `core/supervisor.py` never fires unless
+   * somebody sends the signal.
+   */
+  disposeAiEngine: () => void
   /** Opens the system screen where microphone access is granted back after a refusal. */
   openMicrophoneSettings: () => void
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
@@ -1213,13 +1222,14 @@ export function createServices(settings: SettingsStore): Services {
         openPythonProcess({
           command: bundled.python,
           args: ['-m', 'ia_studio_engine.core.supervisor'],
+          sources: bundled.sources,
           processName: 'the local AI engine',
         }),
         listeners,
       )
     },
     now: Date.now,
-    delay: ms => new Promise(resolve => setTimeout(resolve, ms)),
+    delay: ms => sleepFor(ms),
   })
 
   const runtimes: LocalRuntimes = {
@@ -1687,6 +1697,7 @@ export function createServices(settings: SettingsStore): Services {
     settings,
     favorites,
     styles,
+    disposeAiEngine: () => engine.dispose(),
     client,
     models,
     jobs,

@@ -124,3 +124,32 @@ def test_a_queued_job_that_raises_answers_its_run_rather_than_the_stream() -> No
     assert answer["id"] == 3
     assert answer["err"]["message"] == "the device is gone"
     held.close()
+
+
+def test_a_job_cancelled_before_it_ran_is_still_answered() -> None:
+    """
+    The failure this whole split exists to prevent: a silent drop leaves the studio holding a
+    promise for ever. The ordinary case is a `generate` queued behind a cold `import torch`.
+    """
+    holding = threading.Event()
+
+    def queued(_loop: WorkerLoop) -> dict:
+        def slow(_params: dict) -> dict:
+            holding.wait(timeout=5)
+            return {}
+
+        return {"generate": slow}
+
+    held = Harness(queued)
+    # The first holds the job thread, so the second is still waiting when the cancel lands.
+    held.send(ask("generate", 1))
+    held.send(ask("generate", 2))
+    held.send(ask("engine.cancel", 3, run=2))
+
+    frames = held.frames(2)
+    holding.set()
+
+    assert frames[1]["ok"] == {"cancelled": True}
+    [settled] = [one for one in held.frames(2) if one.get("id") == 2]
+    assert settled["err"]["code"] == "cancelled"
+    held.close()
