@@ -27,7 +27,8 @@
     "notInstalled": "Pas encore téléchargé",
     "downloadThis": "Télécharger ce modèle ?",
     "downloadThisHint": "{{name}} — {{size}} à récupérer chez son éditeur. Le studio ne redistribue rien.",
-    "download": "Télécharger"
+    "download": "Télécharger",
+    "notInstalledHint": "Les poids ne sont pas sur cette machine. Cliquez pour les récupérer chez leur éditeur."
   },
   "modelTags": {
     "textToImage": "Depuis un texte",

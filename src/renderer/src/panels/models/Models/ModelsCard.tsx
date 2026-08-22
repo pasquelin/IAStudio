@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next'
 import { memo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelSummary } from '@shared/domain/model'
+import type { ModelRefusalWord } from '@/hooks/useModelReach'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { cn } from '@/helpers/cn'
 import { MediaTile } from '@/design/MediaTile'
@@ -22,14 +23,18 @@ const BADGE = cn(
  * The tile's corner label. The refusal outranks "featured": a highlighted model the plan will
  * not run is first of all one that cannot be picked, and the tile has room for one label.
  */
-function badgeFor(model: ModelSummary, refusal: string | undefined, t: TFunction): ReactNode {
+function badgeFor(
+  model: ModelSummary,
+  refusal: ModelRefusalWord | undefined,
+  t: TFunction,
+): ReactNode {
   // Left, not right: the badge already sits against the tile's right edge, and this panel is
   // docked to a side — a tooltip opening outward would leave the window. HINT and not TIP:
   // the badge's own words are on screen, so this explains them instead of repeating them.
   if (refusal) {
     return (
-      <span {...HINT_LEFT(refusal)} className={BADGE}>
-        {t('models.planLocked')}
+      <span {...HINT_LEFT(refusal.hint)} className={BADGE}>
+        {refusal.word}
       </span>
     )
   }
@@ -50,7 +55,7 @@ export const ModelsCard = memo(function ModelsCard({
 }: {
   model: ModelSummary
   picture?: string
-  refusal?: string
+  refusal?: ModelRefusalWord
 }) {
   const { t } = useTranslation()
 

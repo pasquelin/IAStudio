@@ -27,7 +27,8 @@
     "notInstalled": "Not downloaded yet",
     "downloadThis": "Download this model?",
     "downloadThisHint": "{{name}} — {{size}} fetched from its publisher. The studio redistributes nothing.",
-    "download": "Download"
+    "download": "Download",
+    "notInstalledHint": "The weights are not on this machine. Click to fetch them from their publisher."
   },
   "modelTags": {
     "textToImage": "From text",
