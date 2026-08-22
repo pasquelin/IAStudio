@@ -122,6 +122,8 @@ export type RegistryOptions = {
    * which answer a role and belong to no panel. Read on each call: one is added while this runs.
    */
   localModels: () => readonly LocalModel[]
+  /** Whether a local model's weights are on this disk. Read per call: an install lands mid-panel. */
+  isInstalled: (modelId: string) => boolean
   /** Names the knobs of a local model's form. The main process holds the language as a service. */
   translate: (key: string) => string
   ttlMs?: number
@@ -219,7 +221,7 @@ function summaryOf(model: RemoteModel, grades: Grades): ModelSummary {
  * `null` for a model with no family: the assistant and the recognition model answer a ROLE, and
  * the manager screen is where those are chosen. They never appear in a space's panel.
  */
-function localSummaryOf(model: LocalModel): ModelSummary | null {
+function localSummaryOf(model: LocalModel, installed: boolean): ModelSummary | null {
   if (model.family === undefined) return null
 
   return {
@@ -231,6 +233,8 @@ function localSummaryOf(model: LocalModel): ModelSummary | null {
     // `origin` says who PUBLISHES, and nothing running on this machine is published by the cloud
     // the studio was built on — which is what `official` means here.
     origin: 'community',
+    installed,
+    diskBytes: model.diskBytes,
     featured: false,
     capabilities: model.capabilities ?? [],
     tags: [],
@@ -374,6 +378,7 @@ export function createModelRegistry({
   catalog,
   watch,
   localModels,
+  isInstalled,
   translate,
   ttlMs = DEFAULT_TTL_MS,
   now = Date.now,
@@ -448,13 +453,15 @@ export function createModelRegistry({
       // to `described` then sent a local id to Scenario — measured: `404 Model ssd-1b not found`,
       // journalled as a generation failure, and on another endpoint it would have been paid for.
       // A manifest that says too little is a defect of ours, and it is answered from here.
-      ...(localSummaryOf(model) ?? {
+      ...(localSummaryOf(model, isInstalled(model.id)) ?? {
         id: model.id,
         name: model.name,
         family: 'other',
         runsOn: LOCAL_RUNTIME,
         source: model.source,
         origin: 'community',
+        installed: isInstalled(model.id),
+        diskBytes: model.diskBytes,
         featured: false,
         capabilities: model.capabilities ?? [],
         tags: [],
@@ -473,11 +480,19 @@ export function createModelRegistry({
    * is held by the TTL. The list is a handful of manifests and it moves once a gesture.
    */
   let summarised: { of: readonly LocalModel[]; items: readonly ModelSummary[] } | null = null
+  let installedMark = ''
 
   const localSummaries = (): readonly ModelSummary[] => {
     const own = localModels()
-    if (summarised?.of !== own) {
-      summarised = { of: own, items: own.flatMap(model => localSummaryOf(model) ?? []) }
+    // Recomposed on the LIST and on what is installed: memoising on the list alone left a model
+    // greyed as absent for the rest of the session after its download landed.
+    const present = own.map(model => isInstalled(model.id)).join()
+    if (summarised?.of !== own || installedMark !== present) {
+      installedMark = present
+      summarised = {
+        of: own,
+        items: own.flatMap(model => localSummaryOf(model, isInstalled(model.id)) ?? []),
+      }
     }
 
     return summarised.items

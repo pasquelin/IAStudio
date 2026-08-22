@@ -532,12 +532,24 @@ export function createServices(settings: SettingsStore): Services {
     return merged.all
   }
 
+  /**
+   * What is on the disk, answered by the manager — which is built AFTER the registry that asks.
+   *
+   * A box rather than a forward `let`: the registry keeps this function for the life of the
+   * process and asks it per summary, so what it reads has to be able to change under it. Empty
+   * until the manager fills it, which reads as "not here yet" — the honest answer meanwhile.
+   */
+  const installedLocally = { ids: (): ReadonlySet<string> => new Set<string>() }
+
   const models = createModelRegistry({
     catalog: () => catalogOf(client.require()),
     watch: credentials.watch,
     // The two catalogues merge in `catalogue.ts` and nowhere else: one panel, one set of filters,
     // and a model that says where it runs — ADR-21 as amended.
     localModels: mergedCatalogue,
+    // Deferred: the registry is built before the manager, and what is installed changes
+    // under it — a download landing must ungrey the card it was greying.
+    isInstalled: modelId => installedLocally.ids().has(modelId),
     translate: key => textAt(TRANSLATIONS[language()], key),
   })
 
@@ -1278,6 +1290,8 @@ export function createServices(settings: SettingsStore): Services {
     now: Date.now,
   })
   hold = ai.hold
+  // Filled here rather than captured above: the registry was built first and asks per summary.
+  installedLocally.ids = () => ai.installedIds()
 
   /** The whole of rank 3's gesture: a picker, a header, an entry. */
   const addOwnAiModel = async (): Promise<AiOverview> => {
