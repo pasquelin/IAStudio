@@ -110,6 +110,14 @@ export type LocalModel = {
   readonly family?: ModelFamily
   /** What it does within its family, in the vocabulary `CAPABILITIES_BY_FAMILY` already uses. */
   readonly capabilities?: readonly string[]
+  /**
+   * Employments OUTSIDE its family that these same weights serve — `<family>/<capability>`.
+   *
+   * A texture is an image, and a model that draws one draws the other: what differs is where the
+   * result is filed, never the pipeline. Written as whole roles rather than as a second family,
+   * because a model has one family — the one its card is filed under.
+   */
+  readonly serves?: readonly string[]
   /** Which form it offers. A modality, never a model: see `localFields.ts`. */
   readonly modality?: LocalModality
   /** What this entry disagrees with in its modality's form — bounds and defaults only. */

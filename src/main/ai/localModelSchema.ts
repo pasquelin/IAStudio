@@ -40,6 +40,7 @@ export const localModelSchema: z.ZodType<LocalModel> = z.object({
   // served a space would come back off the disk serving none — and vanish from every panel.
   family: z.enum(MODEL_FAMILIES).optional(),
   capabilities: z.array(z.string()).optional(),
+  serves: z.array(z.string()).optional(),
   fieldOverrides: z
     .record(
       z.string(),

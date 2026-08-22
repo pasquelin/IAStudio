@@ -155,10 +155,9 @@ function fontLicences() {
  * for attribution wherever the work is used, and the texts are offered by link because that is
  * what those licences themselves ask for.
  *
- * 🛑 Written by hand, where ADR-20 § E asks that this READ the manifests of `main/ai/catalogue.ts`.
- * It cannot yet: this file strips types on the way in and resolves no `@shared/` alias, so
- * importing the catalogue would fail on its first import. A model added there and forgotten here
- * is reddened by nothing.
+ * The catalogue half is READ from `localModels.json`, which ADR-20 § E asks for: a model added
+ * there can no longer ship without its notice. Importing `catalogue.ts` still cannot be done —
+ * this file strips types and resolves no `@shared/` alias — but the manifests are plain JSON.
  */
 /** How every catalogue model arrives, said once — a third one adds a TEXT, not this paragraph. */
 const FETCHED_ON_REQUEST = [
@@ -167,6 +166,72 @@ const FETCHED_ON_REQUEST = [
 ].join('\n')
 
 const APACHE_TERMS = 'Full terms: https://www.apache.org/licenses/LICENSE-2.0'
+const MIT_TERMS = 'Full terms: https://opensource.org/licenses/MIT'
+
+/**
+ * What is true of ONE model and of no other: who holds the copyright, and what its own components
+ * were read to be. Keyed by manifest id, so a model with nothing particular to say needs no line.
+ */
+const MODEL_NOTES = {
+  'sana-600m-1024': [
+    'Copyright NVIDIA Corporation and the Sana authors.',
+    '',
+    'THE DOWNLOAD CARRIES MORE THAN ONE LICENCE, measured on 2026-08-22. Its text encoder is a',
+    'Gemma 2 model: text_encoder/config.json names google/gemma-2-2b-it, and the 5.2 GB it',
+    'weighs are governed by the Gemma Terms of Use rather than by Apache-2.0.',
+    'Full terms: https://ai.google.dev/gemma/terms',
+  ],
+  'sana-1600m-1024': ['Copyright NVIDIA Corporation and the Sana authors.'],
+  'sana15-1-6b': ['Copyright NVIDIA Corporation and the Sana authors.'],
+  'ssd-1b': [
+    'Copyright Segmind.',
+    '',
+    'Its components, read on 2026-08-22: two CLIP text encoders and a VAE, none of whose',
+    'configuration names an upstream repository. SSD-1B is published by Segmind as a distillation',
+    'of Stable Diffusion XL 1.0, whose own weights are released under CreativeML Open RAIL++-M.',
+  ],
+  'qwen-image': ['Copyright Alibaba Group and the Qwen authors.'],
+  'qwen-image-edit': ['Copyright Alibaba Group and the Qwen authors.'],
+  'cogvideox-2b': ['Copyright the CogVideoX authors, Zhipu AI.'],
+  'wan21-t2v-1-3b': [
+    'Copyright Alibaba Group and the Wan authors.',
+    '',
+    'Its UMT5 text encoder is 22.7 GB of the 28.9 this weighs — read on 2026-08-22.',
+  ],
+  'wan22-ti2v-5b': ['Copyright Alibaba Group and the Wan authors.'],
+  'wan21-i2v-14b-480p': ['Copyright Alibaba Group and the Wan authors.'],
+  'mochi-1-preview': ['Copyright Genmo.'],
+  'acestep-v15-xl-base': ['Copyright the ACE-Step authors.'],
+  'acestep-v15-xl-turbo': ['Copyright the ACE-Step authors.'],
+  'acestep-v15-xl-sft': ['Copyright the ACE-Step authors.'],
+}
+
+/**
+ * One notice per catalogue entry, read off the manifests rather than retyped beside them.
+ *
+ * The dictation model is NOT here — it lives in `dictation.ts` and keeps its own block above.
+ */
+function catalogueLicences() {
+  const path = join(ROOT, 'src', 'shared', 'domain', 'localModels.json')
+  const catalogue = JSON.parse(readFileSync(path, 'utf8'))
+
+  return Object.values(catalogue)
+    .flat()
+    .filter(model => model.loader === 'diffusers')
+    .map(model => ({
+      name: model.name,
+      spdx: model.licence,
+      text: [
+        `${model.summary}, one of the models the studio generates with on this machine.`,
+        FETCHED_ON_REQUEST,
+        '',
+        ...(MODEL_NOTES[model.id] ?? []),
+        '',
+        `Licensed under ${model.licence}. ${model.licence === 'MIT' ? MIT_TERMS : APACHE_TERMS}`,
+      ].join('\n'),
+      sources: model.source,
+    }))
+}
 
 function modelLicences() {
   return [
@@ -214,72 +279,7 @@ function modelLicences() {
     },
     ...qwenLicences(),
     ...pythonLicences(),
-    {
-      name: 'Sana 600M',
-      version: '1024px, fp16',
-      spdx: 'Apache-2.0',
-      text: [
-        'The image model the studio generates with when it generates on this machine.',
-        FETCHED_ON_REQUEST,
-        '',
-        'Copyright NVIDIA Corporation and the Sana authors. Licensed under the Apache License,',
-        `Version 2.0. ${APACHE_TERMS}`,
-        '',
-        'THE DOWNLOAD CARRIES MORE THAN ONE LICENCE, measured on 2026-08-22. Its text encoder',
-        'is a Gemma 2 model: text_encoder/config.json names google/gemma-2-2b-it, and the',
-        '5.2 GB it weighs are governed by the Gemma Terms of Use rather than by Apache-2.0.',
-        'Full terms: https://ai.google.dev/gemma/terms',
-      ].join('\n'),
-      sources: 'https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers',
-    },
-    {
-      name: 'SSD-1B',
-      version: 'fp16',
-      spdx: 'Apache-2.0',
-      text: [
-        'The second image model the studio can generate with on this machine, offered beside',
-        'Sana so the choice of what a machine can hold belongs to the person.',
-        FETCHED_ON_REQUEST,
-        '',
-        `Copyright Segmind. Licensed under the Apache License, Version 2.0. ${APACHE_TERMS}`,
-        '',
-        'Its components, read on 2026-08-22: two CLIP text encoders and a VAE, none of whose',
-        'configuration names an upstream repository. SSD-1B is published by Segmind as a',
-        'distillation of Stable Diffusion XL 1.0, whose own weights are released under the',
-        'CreativeML Open RAIL++-M licence: https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0',
-      ].join('\n'),
-      sources: 'https://huggingface.co/segmind/SSD-1B',
-    },
-    {
-      name: 'CogVideoX 2B',
-      version: '2b',
-      spdx: 'Apache-2.0',
-      text: [
-        'The lighter of the two models the studio makes video with on this machine.',
-        FETCHED_ON_REQUEST,
-        '',
-        `Copyright the CogVideoX authors, Zhipu AI. Licensed under the Apache License, Version 2.0. ${APACHE_TERMS}`,
-        '',
-        'Its components, read on 2026-08-22: a T5 text encoder, a 3D VAE and a transformer, none',
-        'of whose configuration names an upstream repository.',
-      ].join('\n'),
-      sources: 'https://huggingface.co/zai-org/CogVideoX-2b',
-    },
-    {
-      name: 'Wan 2.1 T2V 1.3B',
-      version: '1.3B',
-      spdx: 'Apache-2.0',
-      text: [
-        'The heavier of the two models the studio makes video with on this machine.',
-        FETCHED_ON_REQUEST,
-        '',
-        `Copyright Alibaba Group and the Wan authors. Licensed under the Apache License, Version 2.0. ${APACHE_TERMS}`,
-        '',
-        'Its components, read on 2026-08-22: a UMT5 text encoder — which is 22.7 GB of the 28.9',
-        'this weighs — a VAE and a transformer, none naming an upstream repository.',
-      ].join('\n'),
-      sources: 'https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers',
-    },
+    ...catalogueLicences(),
   ]
 }
 

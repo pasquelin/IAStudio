@@ -1,4 +1,10 @@
-import { aiRoleId, ASSISTANT_ROLE, DICTATION_ROLE, type AiRoleId } from '@shared/domain/aiRole'
+import {
+  aiRoleId,
+  ASSISTANT_ROLE,
+  DICTATION_ROLE,
+  partsOfRole,
+  type AiRoleId,
+} from '@shared/domain/aiRole'
 import { STT_MODEL } from '@shared/domain/dictation'
 import { modelRefusalOf, type LocalModel } from '@shared/domain/localModel'
 import localModels from '@shared/domain/localModels.json'
@@ -30,9 +36,17 @@ function catalogueEntries(): readonly { role: AiRoleId; model: LocalModel }[] {
  */
 function rolesOf(model: LocalModel, key: AiRoleId): readonly AiRoleId[] {
   const family = model.family
-  if (!family || !model.capabilities) return [key]
+  const withinFamily =
+    family && model.capabilities ? model.capabilities.map(one => aiRoleId(family, one)) : []
 
-  return [...new Set([key, ...model.capabilities.map(one => aiRoleId(family, one))])]
+  // `serves` is already `<family>/<capability>`, and `partsOfRole` is what refuses a malformed
+  // one — a role composed from data cannot be trusted the way one composed from constants is.
+  const elsewhere = (model.serves ?? []).flatMap(role => {
+    const parts = partsOfRole(role as AiRoleId)
+    return parts ? [aiRoleId(parts.family, parts.capability)] : []
+  })
+
+  return [...new Set([key, ...withinFamily, ...elsewhere])]
 }
 
 /**
