@@ -43,6 +43,53 @@ export type AssetInputResolver = {
   resolvePictureIds: (images: readonly string[]) => Promise<string[]>
 }
 
+const isLocal = (value: string): boolean => value.startsWith(ASSET_ID_PREFIX)
+
+/**
+ * Every local asset id a generation body carries, rewritten into whatever the runtime takes —
+ * a remote id for the cloud, a path on this disk for the engine.
+ *
+ * A list of pictures is observed: `referenceImages` is a `file_array`. Reaching under an object
+ * is an ASSURANCE, not a fix for anything seen — the SDK types a model input that carries its
+ * own inputs, and no model on this account publishes one. Left in because the failure it guards
+ * is silent: an id that stays local is submitted and answers as though nothing was given.
+ *
+ * One value at a time rather than in parallel: the two doors share an in-flight map, or the same
+ * never-sent picture goes up twice.
+ */
+export async function rewriteAssetIds(
+  body: Record<string, unknown>,
+  replace: (assetId: string) => Promise<unknown>,
+): Promise<Record<string, unknown>> {
+  const seen = new WeakSet<object>()
+
+  const rewrite = async (value: unknown): Promise<unknown> => {
+    if (typeof value === 'string') return isLocal(value) ? await replace(value) : value
+
+    if (typeof value !== 'object' || value === null) return value
+    // Only the envelope of a body is validated (`parseGenerationBody`), so what is walked here is
+    // renderer-shaped: a structured clone keeps the cycles it may hold, and walking one in the
+    // main process would freeze every window rather than come back.
+    if (seen.has(value)) return value
+    seen.add(value)
+
+    if (Array.isArray(value)) {
+      const list: unknown[] = []
+      for (const held of value) list.push(await rewrite(held))
+      return list
+    }
+
+    const rewritten: Record<string, unknown> = {}
+    for (const [key, held] of Object.entries(value)) rewritten[key] = await rewrite(held)
+    return rewritten
+  }
+
+  const resolved: Record<string, unknown> = {}
+  seen.add(body)
+  for (const [key, value] of Object.entries(body)) resolved[key] = await rewrite(value)
+  return resolved
+}
+
 export function createAssetInputResolver({
   find,
   push,
@@ -97,8 +144,6 @@ export function createAssetInputResolver({
       return await sendOnce(localId, owner)
     }
 
-  const isLocal = (value: string): boolean => value.startsWith(ASSET_ID_PREFIX)
-
   const resolvePictureIds = async (images: readonly string[]): Promise<string[]> => {
     const remoteIdOf = remoteIdIn(activeOwnerId())
     const resolved: string[] = []
@@ -110,45 +155,8 @@ export function createAssetInputResolver({
     return resolved
   }
 
-  const resolveBody = async (body: Record<string, unknown>) => {
-    const remoteIdOf = remoteIdIn(activeOwnerId())
-
-    const seen = new WeakSet<object>()
-
-    /** One value at a time, for the reason `resolvePictureIds` gives above. */
-    const rewrite = async (value: unknown): Promise<unknown> => {
-      if (typeof value === 'string') return isLocal(value) ? await remoteIdOf(value) : value
-
-      if (typeof value !== 'object' || value === null) return value
-      // Only the envelope of a body is validated (`parseGenerationBody`), so what is walked here
-      // is renderer-shaped: a structured clone keeps the cycles it may hold, and walking one in
-      // the main process would freeze every window rather than come back.
-      if (seen.has(value)) return value
-      seen.add(value)
-
-      if (Array.isArray(value)) {
-        const list: unknown[] = []
-        for (const held of value) list.push(await rewrite(held))
-        return list
-      }
-
-      const rewritten: Record<string, unknown> = {}
-      for (const [key, held] of Object.entries(value)) rewritten[key] = await rewrite(held)
-      return rewritten
-    }
-
-    /**
-     * A list of pictures is observed — `referenceImages` is a `file_array`. Reaching under an
-     * object is an ASSURANCE, not a fix for anything seen: the SDK types a model input that
-     * carries its own inputs, and no model on this account publishes one. Left in because the
-     * failure it guards is silent — an id that stays local is submitted, paid for, and answers
-     * as though no reference had been given.
-     */
-    const resolved: Record<string, unknown> = {}
-    seen.add(body)
-    for (const [key, value] of Object.entries(body)) resolved[key] = await rewrite(value)
-    return resolved
-  }
+  const resolveBody = (body: Record<string, unknown>) =>
+    rewriteAssetIds(body, remoteIdIn(activeOwnerId()))
 
   return { resolveBody, resolvePictureIds }
 }

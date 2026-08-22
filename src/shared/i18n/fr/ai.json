@@ -25,7 +25,13 @@
     "framesHelp": "Le nombre d’images de la séquence produite.",
     "fps": "Images par seconde",
     "seconds": "Durée",
-    "secondsHelp": "La durée du son produit, en secondes."
+    "secondsHelp": "La durée du son produit, en secondes.",
+    "image": "Image de départ",
+    "imageHelp": "Laissez vide pour dessiner d’après la description seule.",
+    "mask": "Masque",
+    "maskHelp": "Les zones peintes du masque sont celles que le modèle refait.",
+    "strength": "Écart à l’image de départ",
+    "strengthHelp": "Sans effet si aucune image de départ n’est donnée."
   },
   "aiModels": {
     "reading": "Lecture de la machine…",

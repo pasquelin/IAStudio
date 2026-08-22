@@ -66,3 +66,55 @@ def test_an_image_is_written_where_the_main_process_said() -> None:
     MODALITIES["image"].write(result, "/tmp/out.png", {})
 
     assert image.written == "/tmp/out.png"
+
+
+def image_kwargs_with(loaded, **params):
+    """
+    A stand-in `diffusers.utils`, because the gate installs no tensor library.
+
+    `load_image` is imported INSIDE the function, so the module has to exist at call time and
+    not before — which is exactly what makes this substitution possible without diffusers.
+    """
+    import sys
+    import types
+
+    stand_in = types.ModuleType("diffusers.utils")
+    stand_in.load_image = loaded
+    sys.modules.setdefault("diffusers", types.ModuleType("diffusers"))
+    sys.modules["diffusers.utils"] = stand_in
+    try:
+        return MODALITIES["image"].kwargs({"prompt": "a cat", **params})
+    finally:
+        del sys.modules["diffusers.utils"]
+
+
+def test_an_image_generation_asks_for_no_picture_when_none_was_given() -> None:
+    asked = MODALITIES["image"].kwargs({"prompt": "a cat", "width": 512, "height": 512})
+
+    assert "image" not in asked and asked["width"] == 512
+
+
+def test_the_picture_the_main_process_resolved_reaches_the_pipeline() -> None:
+    asked = image_kwargs_with(lambda path: f"opened:{path}", image="/project/a.png")
+
+    assert asked["image"] == "opened:/project/a.png"
+
+
+def test_a_size_is_dropped_once_a_picture_is_there() -> None:
+    """The pipeline reads the dimensions off the picture; passing both resizes it unasked."""
+    asked = image_kwargs_with(lambda path: path, image="/project/a.png", width=512, height=512)
+
+    assert "width" not in asked and "height" not in asked
+
+
+def test_a_mask_is_what_says_the_generation_repaints_inside_it() -> None:
+    asked = image_kwargs_with(lambda path: path, image="/a.png", mask="/m.png", strength=0.5)
+
+    # Refused by an inpainting pipeline that was handed a mask, so it never travels with one.
+    assert asked["mask_image"] == "/m.png" and "strength" not in asked
+
+
+def test_how_far_from_its_source_a_generation_may_go() -> None:
+    asked = image_kwargs_with(lambda path: path, image="/a.png", strength=0.5)
+
+    assert asked["strength"] == 0.5

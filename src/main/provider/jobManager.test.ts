@@ -213,7 +213,12 @@ describe('job manager', () => {
     })
     await settled()
 
-    expect(resolveAssetInputs).toHaveBeenCalledWith({ image: 'asset_local', prompt: 'a fox' })
+    // The TARGET travels with the body: a picture is turned into a remote id for the cloud and
+    // into a path on this disk for a model that runs here, and only the target says which.
+    expect(resolveAssetInputs).toHaveBeenCalledWith(
+      { image: 'asset_local', prompt: 'a fox' },
+      { id: 'model_flux' },
+    )
     expect(submit).toHaveBeenCalledWith(
       { id: 'model_flux' },
       { image: 'asset_remote', prompt: 'a fox' },

@@ -144,6 +144,9 @@ class DiffusersAdapter:
         # process that imports a video backend is not the one a release plan kills for an image.
         self.modality = modality
         self.loaded: LoadedModel | None = None
+        # Pipelines derived from the loaded one by `from_pipe`. They SHARE its components, so
+        # they cost no weights — dropped with it, or they would hold a model an unload freed.
+        self._derived: dict[str, Any] = {}
 
     def backend(self) -> str:
         return "pytorch"
@@ -228,10 +231,35 @@ class DiffusersAdapter:
         import torch
 
         self.loaded = None
+        self._derived.clear()
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
         elif torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+    def _for(self, kwargs: dict[str, Any]) -> Any:
+        """
+        The pipeline the ARGUMENTS call for, derived from the one that is loaded.
+
+        `from_pipe` reuses the components already resident rather than reading the weights again:
+        one download, one residency, three employments. Which of the three is read off the
+        arguments — a mask means inpainting, a picture alone means editing — so nothing has to
+        carry the employment down here, and diffusers reads the same signal at its own door.
+        """
+        held = self.loaded
+        assert held is not None
+
+        if "image" not in kwargs:
+            return held.pipeline
+
+        from diffusers import AutoPipelineForImage2Image, AutoPipelineForInpainting
+
+        wanted = AutoPipelineForInpainting if "mask_image" in kwargs else AutoPipelineForImage2Image
+        derived = self._derived.get(wanted.__name__)
+        if derived is None:
+            derived = wanted.from_pipe(held.pipeline)
+            self._derived[wanted.__name__] = derived
+        return derived
 
     def generate(
         self,
@@ -266,11 +294,12 @@ class DiffusersAdapter:
                 on_step(step + 1, steps)
             return state
 
+        pipeline = self._for(kwargs)
         if held.takes_step_callback:
             kwargs["callback_on_step_end"] = between_steps
 
         started = time.perf_counter_ns()
-        result = held.pipeline(**kwargs)
+        result = pipeline(**kwargs)
         generate_ms = (time.perf_counter_ns() - started) / 1e6
 
         self.modality.write(result, destination, params)

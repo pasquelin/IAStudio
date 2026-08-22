@@ -97,11 +97,16 @@ export type JobManagerDeps = {
   concurrency: () => number
   maxRetries: () => number
   /**
-   * Turns the local asset ids a body carries into the ones the API answers to, sending a file
-   * up where it has no twin yet. Injected rather than reached for: it needs the catalogue and
-   * the cloud backend, neither of which this file knows anything about.
+   * The pictures a body names, turned into what the TARGET's runtime takes: an id the API
+   * answers to — sending the file up where it has no twin yet — or a path on this disk for a
+   * model that runs here. The target is not decoration, and neither is the injection: sending a
+   * picture to an account to run a generation that never leaves the machine is a transfer nobody
+   * asked for, and this file knows nothing of the catalogue or the cloud backend.
    */
-  resolveAssetInputs: (body: Record<string, unknown>) => Promise<Record<string, unknown>>
+  resolveAssetInputs: (
+    body: Record<string, unknown>,
+    target: JobTarget,
+  ) => Promise<Record<string, unknown>>
   onProgress: (progress: JobProgress) => void
   /** Told when the list gains or loses an entry. See `onJobsChanged` in `shared/ipc.ts`. */
   onListChanged: (jobs: readonly Job[]) => void
@@ -565,7 +570,7 @@ export function createJobManager({
       // any size: done before the job exists, it holds the channel open with nothing queued on
       // screen and outside this loop's concurrency bound. Retried like the submission beside it —
       // it is the longer of the two on the wire, so it is the one a dropped connection finds.
-      const body = await withRetry(() => resolveAssetInputs(entry.body))
+      const body = await withRetry(() => resolveAssetInputs(entry.body, target))
       const submitted = await withRetry(() => bound.runner.submit(target, body))
       entry.remoteId = submitted.jobId
       if (submitted.cost !== undefined) entry.job.cost = submitted.cost

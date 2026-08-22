@@ -59,6 +59,35 @@ def _sized_kwargs(params: dict[str, Any]) -> dict[str, Any]:
     return kwargs
 
 
+def _image_kwargs(params: dict[str, Any]) -> dict[str, Any]:
+    """
+    The same knobs, plus the picture a generation edits — the main process resolved it to a PATH.
+
+    A size is dropped once a picture is there: the pipeline reads the dimensions off it, and
+    passing both makes it resize to something nobody asked for.
+    """
+    kwargs = _sized_kwargs(params)
+    source = _number(params, "image")
+    if source is None:
+        return kwargs
+
+    from diffusers.utils import load_image
+
+    kwargs.pop("width", None)
+    kwargs.pop("height", None)
+    kwargs["image"] = load_image(str(source))
+
+    mask = _number(params, "mask")
+    if mask is not None:
+        kwargs["mask_image"] = load_image(str(mask))
+
+    strength = _number(params, "strength")
+    # Refused by an inpainting pipeline that was handed no mask, and meaningless without a source.
+    if strength is not None and mask is None:
+        kwargs["strength"] = float(strength)
+    return kwargs
+
+
 def _video_kwargs(params: dict[str, Any]) -> dict[str, Any]:
     """`[?]` **Never run**: no video model is admitted — the lightest weighs 28.9 GB."""
     kwargs = _sized_kwargs(params)
@@ -141,7 +170,7 @@ class Modality:
 
 
 MODALITIES: dict[str, Modality] = {
-    "image": Modality(_sized_kwargs, _write_image),
+    "image": Modality(_image_kwargs, _write_image),
     "video": Modality(_video_kwargs, _write_video),
     "audio": Modality(_audio_kwargs, _write_audio),
     "mesh": Modality(_mesh_kwargs, _write_mesh),

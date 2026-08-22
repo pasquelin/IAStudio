@@ -115,3 +115,26 @@ describe('the shipped catalogue', () => {
     expect(new Set(models.map(model => model.id)).size).toBe(models.length)
   })
 })
+
+describe('one entry, several employments', () => {
+  /**
+   * `img2img` and `inpaint` run on the weights `txt2img` already downloaded. Three entries would
+   * fetch the same 4.47 GB three times, show three cards, and let deleting one take the other
+   * two's files — what tells the three apart is the FORM, never a second manifest.
+   */
+  it('serves editing and repainting from the entry that serves drawing', () => {
+    const drawing = shippedModelsFor(aiRoleId('image', 'txt2img'))
+    const editing = shippedModelsFor(aiRoleId('image', 'img2img'))
+    const repainting = shippedModelsFor(aiRoleId('image', 'inpaint'))
+
+    expect(editing.length).toBeGreaterThan(0)
+    expect(editing).toEqual(repainting)
+    expect(drawing).toEqual(expect.arrayContaining([...editing]))
+  })
+
+  it('lists a model that serves three employments once, not three times', () => {
+    const ids = shippedModels().map(model => model.id)
+
+    expect(ids.filter(id => id === 'ssd-1b')).toEqual(['ssd-1b'])
+  })
+})

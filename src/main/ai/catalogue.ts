@@ -1,4 +1,4 @@
-import { ASSISTANT_ROLE, DICTATION_ROLE, type AiRoleId } from '@shared/domain/aiRole'
+import { aiRoleId, ASSISTANT_ROLE, DICTATION_ROLE, type AiRoleId } from '@shared/domain/aiRole'
 import { STT_MODEL } from '@shared/domain/dictation'
 import { modelRefusalOf, type LocalModel } from '@shared/domain/localModel'
 import localModels from '@shared/domain/localModels.json'
@@ -11,8 +11,28 @@ import localModels from '@shared/domain/localModels.json'
  */
 function catalogueEntries(): readonly { role: AiRoleId; model: LocalModel }[] {
   return Object.entries(localModels).flatMap(([role, models]) =>
-    (models as LocalModel[]).map(model => ({ role: role as AiRoleId, model })),
+    (models as LocalModel[]).flatMap(model =>
+      rolesOf(model, role as AiRoleId).map(one => ({
+        role: one,
+        model,
+      })),
+    ),
   )
+}
+
+/**
+ * Every employment one entry serves — its JSON key, plus one per capability it declares.
+ *
+ * ONE entry and not three, and the difference is gigabytes: `img2img` and `inpaint` run on the
+ * weights `txt2img` already downloaded, so three entries would fetch the same 4.47 GB three
+ * times, show three cards, and let deleting one take the other two's files. What tells the three
+ * apart is the FORM — a starting image, a mask — never a second manifest.
+ */
+function rolesOf(model: LocalModel, key: AiRoleId): readonly AiRoleId[] {
+  const family = model.family
+  if (!family || !model.capabilities) return [key]
+
+  return [...new Set([key, ...model.capabilities.map(one => aiRoleId(family, one))])]
 }
 
 /**
@@ -52,7 +72,8 @@ const BY_ID: ReadonlyMap<string, LocalModel> = new Map(
   SHIPPED.map(entry => [entry.model.id, entry.model]),
 )
 
-const ALL: readonly LocalModel[] = SHIPPED.map(entry => entry.model)
+/** ONCE each, however many employments it serves: one manifest is one card and one download. */
+const ALL: readonly LocalModel[] = [...new Map(SHIPPED.map(e => [e.model.id, e.model])).values()]
 
 const NONE: readonly LocalModel[] = []
 
