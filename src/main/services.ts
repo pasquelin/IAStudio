@@ -1479,24 +1479,29 @@ export function createServices(settings: SettingsStore): Services {
       const generate = model ? runtimes[model.loader]?.generate : undefined
       if (!model || !generate) throw new Error(`nothing here generates with ${request.model}`)
 
-      await ai.ensureLoaded(request.model)
+      const release = ai.hold(request.model)
+      try {
+        await ai.ensureLoaded(request.model)
 
-      // The main process owns where it lands, and the engine only fills it — which is what makes
-      // the file ours to file and ours to delete.
-      const folder = join(app.getPath('temp'), 'ia-studio-generations')
-      await ensureFolder(folder)
+        // The main process owns where it lands, and the engine only fills it — which is what makes
+        // the file ours to file and ours to delete.
+        const folder = join(app.getPath('temp'), 'ia-studio-generations')
+        await ensureFolder(folder)
 
-      return await generate({
-        model: model.id,
-        modality: request.modality,
-        prompt: request.prompt,
-        fields: request.fields,
-        // The extension follows the MODALITY: the collector reads it back off the path to file
-        // the asset, so a video written as `.png` lands as a picture nothing can play.
-        destination: join(folder, `${request.jobId}.${outputExtensionOf(request.modality)}`),
-        onProgress: request.onProgress,
-        signal: request.signal,
-      })
+        return await generate({
+          model: model.id,
+          modality: request.modality,
+          prompt: request.prompt,
+          fields: request.fields,
+          // The extension follows the MODALITY: the collector reads it back off the path to file
+          // the asset, so a video written as `.png` lands as a picture nothing can play.
+          destination: join(folder, `${request.jobId}.${outputExtensionOf(request.modality)}`),
+          onProgress: request.onProgress,
+          signal: request.signal,
+        })
+      } finally {
+        release()
+      }
     },
 
     chat: async request => {

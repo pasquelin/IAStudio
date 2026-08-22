@@ -369,6 +369,42 @@ describe('job manager', () => {
     await settled()
   })
 
+  /**
+   * A FIFO that only looks at the head would keep Flux queued behind Shap-E while Sana holds the
+   * local slot. The cloud job must overtake.
+   */
+  it('starts a cloud job even when a local one is waiting behind another', async () => {
+    const started: string[] = []
+    const release: Record<string, () => void> = {}
+
+    const { manager } = harness({
+      concurrency: () => 1,
+      isLocalTarget: id => id !== 'model_flux',
+      runner: {
+        submit: target =>
+          new Promise(resolve => {
+            started.push(target.id)
+            release[target.id] = () => resolve(remote('success'))
+          }),
+      },
+    })
+
+    manager.submit({ id: 'sana' }, 'Sana', {})
+    await settled()
+    manager.submit({ id: 'shap-e' }, 'Shap-E', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
+    await settled()
+
+    expect(started).toEqual(['sana', 'model_flux'])
+
+    release['sana']?.()
+    await settled()
+    expect(started).toContain('shap-e')
+    release['shap-e']?.()
+    release['model_flux']?.()
+    await settled()
+  })
+
   it('never runs two jobs on this machine at once', async () => {
     let active = 0
     let peak = 0

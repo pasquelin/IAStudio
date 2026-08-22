@@ -451,43 +451,55 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       : { reason: 'failed', modelId: model.id }
   }
 
+  let loadFlight: Promise<void> | null = null
+
   const runLoad = async (model: LocalModel): Promise<void> => {
-    const load = deps.runtimes[model.loader]?.load
-    const endpoint = endpointOf(model.loader, model.modality)
+    if (loading?.modelId === model.id && loadFlight) return loadFlight
+    if (loading !== null) throw new Error(`busy loading ${loading.modelId}`)
 
-    const abort = new AbortController()
-    loading = { modelId: model.id, ratio: 0, abort }
-    loadFailure = null
-    await announce()
+    const work = (async () => {
+      const load = deps.runtimes[model.loader]?.load
+      const endpoint = endpointOf(model.loader, model.modality)
 
-    try {
-      loadFailure = await admit(model)
-      if (loadFailure !== null) return
-      if (!load) throw new Error(`nothing here holds ${model.id} in memory`)
+      const abort = new AbortController()
+      loading = { modelId: model.id, ratio: 0, abort }
+      loadFailure = null
+      await announce()
 
-      const bytes = await load(model, {
-        onProgress: ratio => {
-          // Gated: a runtime reports per block of tensors — hundreds of ticks a second — and each
-          // one clones the whole overview to every window. A bar of a hundred steps is a bar.
-          if (loading === null || ratio - loading.ratio < LOAD_STEP) return
+      try {
+        loadFailure = await admit(model)
+        if (loadFailure !== null) return
+        if (!load) throw new Error(`nothing here holds ${model.id} in memory`)
 
-          loading.ratio = ratio
-          republish({ loading: { modelId: loading.modelId, ratio } })
-        },
-        signal: abort.signal,
-      })
+        const bytes = await load(model, {
+          onProgress: ratio => {
+            // Gated: a runtime reports per block of tensors — hundreds of ticks a second — and each
+            // one clones the whole overview to every window. A bar of a hundred steps is a bar.
+            if (loading === null || ratio - loading.ratio < LOAD_STEP) return
 
-      occupancy.set(endpoint, { bytes, reclaimable: true, modelId: model.id })
-      lastUsedAt.set(endpoint, deps.now())
-      armIdle()
-    } catch (error) {
-      // No figures: only the admission weighed bytes, and a runtime that refused for its own
-      // reasons — a cancellation among them — would be borrowing them from an unrelated reading.
-      loadFailure = { reason: 'failed', modelId: model.id }
-      deps.log('warn', `loading ${model.id} failed: ${String(error)}`)
-    } finally {
-      loading = null
-    }
+            loading.ratio = ratio
+            republish({ loading: { modelId: loading.modelId, ratio } })
+          },
+          signal: abort.signal,
+        })
+
+        occupancy.set(endpoint, { bytes, reclaimable: true, modelId: model.id })
+        lastUsedAt.set(endpoint, deps.now())
+        armIdle()
+      } catch (error) {
+        // No figures: only the admission weighed bytes, and a runtime that refused for its own
+        // reasons — a cancellation among them — would be borrowing them from an unrelated reading.
+        loadFailure = { reason: 'failed', modelId: model.id }
+        deps.log('warn', `loading ${model.id} failed: ${String(error)}`)
+      } finally {
+        loading = null
+      }
+    })()
+
+    loadFlight = work.finally(() => {
+      if (loadFlight === work) loadFlight = null
+    })
+    await loadFlight
   }
 
   return {
@@ -600,7 +612,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
     load: async modelId => {
       const model = modelOf(modelId)
-      if (model === null || loading !== null) return compose()
+      if (model === null) return compose()
+      if (loading !== null && loading.modelId !== modelId) return compose()
 
       await runLoad(model)
       return announce()
@@ -610,7 +623,6 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       const model = modelOf(modelId)
       if (model === null) throw new Error(`${modelId} is not in the catalogue`)
       if (occupancy.get(endpointOf(model.loader, model.modality))?.modelId === modelId) return
-      if (loading !== null) throw new Error(`busy loading ${loading.modelId}`)
 
       await runLoad(model)
       await announce()
