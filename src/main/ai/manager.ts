@@ -105,6 +105,11 @@ export type AiManager = {
   dispose: () => void
   /** A catalogue id, including one Ollama just listed. Unknown is expected. */
   lookup: (modelId: string) => LocalModel | null
+  /**
+   * Drops the discovered listing so the next compose re-asks. A tag deleted outside must not
+   * keep being served from cache; the stored choice is left alone.
+   */
+  forgetDiscovered: () => void
   /** Records a model the person supplied — rank 3 of ADR-20, and the gesture is theirs. */
   addOwnModel: (model: LocalModel) => Promise<AiOverview>
   /**
@@ -191,8 +196,13 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     })
   let cancelIdle: (() => void) | null = null
 
+  const ttl = deps.factsTtlMs ?? DEFAULT_FACTS_TTL_MS
   let lastDiscovered: readonly LocalModel[] = []
   let cachedDiscovered: { at: number; models: Promise<readonly LocalModel[]> } | null = null
+
+  function forgetDiscovered(): void {
+    cachedDiscovered = null
+  }
 
   const discover = (): Promise<readonly LocalModel[]> => {
     if (cachedDiscovered !== null && deps.now() - cachedDiscovered.at < ttl) {
@@ -205,7 +215,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
         return models
       })
       .catch((error: unknown) => {
-        cachedDiscovered = null
+        forgetDiscovered()
         throw error
       })
     cachedDiscovered = { at: deps.now(), models: reading }
@@ -220,7 +230,6 @@ export function createAiManager(deps: ManagerDeps): AiManager {
    * two `getGPUInfo` for one answer. `GpuIdentity` cannot change; `freemem` and VRAM can.
    */
   let cachedFacts: { at: number; facts: Promise<HardwareFacts> } | null = null
-  const ttl = deps.factsTtlMs ?? DEFAULT_FACTS_TTL_MS
 
   const facts = (): Promise<HardwareFacts> => {
     if (cachedFacts !== null && deps.now() - cachedFacts.at < ttl) return cachedFacts.facts
@@ -604,6 +613,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
     lookup: modelId => modelOf(modelId),
 
+    forgetDiscovered,
+
     providerOf: async role => {
       const stored = deps.settings()
       // Only what this role could take: a turn going to a cloud used to ask every loader on the
@@ -631,7 +642,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
         // Swallowed rather than raised: a window asked, and what it needs back is the state the
         // studio is in — the reason lives in the journal.
         await installModel(model, () => {})
-        cachedDiscovered = null
+        forgetDiscovered()
       } catch (error) {
         deps.log('warn', `install of ${modelId} stopped: ${String(error)}`)
       }
@@ -669,7 +680,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
       try {
         await deps.runtimes[model.loader]?.remove(model)
-        cachedDiscovered = null
+        forgetDiscovered()
       } catch (error) {
         // Swallowed exactly as `install` swallows its own: a window asked, and what it needs back
         // is the state the studio is in. Removing is a NETWORK call for a runtime that pulls its

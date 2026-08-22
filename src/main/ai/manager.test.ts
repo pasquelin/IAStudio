@@ -136,6 +136,53 @@ describe('the AI manager', () => {
     expect(row?.candidates.some(one => one.model.id === 'qwen3:8b')).toBe(true)
   })
 
+  /**
+   * A tag deleted outside the studio is gone from the listing. The stored choice stays: wiping
+   * it would lose a preference the person would want back after they restore the tag.
+   */
+  it('keeps the stored choice when a discovered tag disappears', async () => {
+    const qwen = ollamaModel({ name: 'qwen3:8b', size: 5_000_000_000 })
+    expect(qwen).not.toBeNull()
+    if (!qwen) return
+
+    let listed: readonly LocalModel[] = [qwen]
+    const written: PartialSettings[] = []
+    const stored: Settings = {
+      ...DEFAULT_SETTINGS,
+      ai: {
+        ...DEFAULT_SETTINGS.ai,
+        roles: { [ASSISTANT_ROLE]: { kind: 'local', modelId: 'qwen3:8b' } },
+      },
+    }
+    const ai = manager({
+      settings: () => stored,
+      writeSettings: partial => {
+        written.push(partial)
+      },
+      runtimes: {
+        'sherpa-onnx': idleRuntime(),
+        ollama: {
+          ...idleRuntime(),
+          discover: () => Promise.resolve(listed),
+          read: () =>
+            Promise.resolve({
+              ready: true,
+              installed: new Set(listed.map(model => model.id)),
+              loaded: new Set(),
+            }),
+        },
+      },
+    })
+
+    expect(candidateOf(await ai.overview(), 'qwen3:8b')).toBeDefined()
+    listed = []
+    ai.forgetDiscovered()
+
+    expect(candidateOf(await ai.overview(), 'qwen3:8b')).toBeUndefined()
+    expect(written).toEqual([])
+    expect(stored.ai.roles[ASSISTANT_ROLE]).toEqual({ kind: 'local', modelId: 'qwen3:8b' })
+  })
+
   it('writes every employment of one pick in a single settings save', async () => {
     const written: PartialSettings[] = []
     await manager({

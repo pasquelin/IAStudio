@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, net, shell, systemPreferences } from 'electron'
+import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readdirSync } from 'node:fs'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
@@ -69,6 +70,7 @@ import { catalogueWith, modelWith } from './ai/catalogue'
 import { electronHardwarePort } from './ai/electronHardwarePort'
 import { electronLlamaPort } from './ai/electronLlamaPort'
 import { llamaLocalRuntime } from './ai/llamaRuntime'
+import { ensureOllama } from './ai/ensureOllama'
 import { ollamaHttpPort, ollamaLocalRuntime } from './ai/ollamaRuntime'
 import { hardwareProbe, memorySnapshotOf } from './ai/hardwareProbe'
 import { readyCloudsOf } from './ai/cloudReadiness'
@@ -1268,6 +1270,32 @@ export function createServices(settings: SettingsStore): Services {
     onUsed: modelId => hold(modelId),
   })
 
+  const ollamaPort = ollamaHttpPort()
+  const startOllama = ensureOllama({
+    platform: process.platform,
+    env: process.env,
+    exists: existsSync,
+    // Detached and unref'd: a ChildProcess handle would be a way to kill a service we don't own.
+    spawn: (command, args) => {
+      const child = spawn(command, [...args], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+      })
+      child.unref()
+      child.on('error', error => {
+        log.warn('ai', `local chat service did not start: ${String(error)}`)
+      })
+    },
+    ping: () =>
+      ollamaPort.tags().then(
+        () => true,
+        () => false,
+      ),
+  })
+
+  let forgetDiscovered = (): void => {}
+  let refreshOverview = (): Promise<void> => Promise.resolve()
   const runtimes: LocalRuntimes = {
     'sherpa-onnx': fetchedFiles,
     diffusers: engineRuntime,
@@ -1279,7 +1307,15 @@ export function createServices(settings: SettingsStore): Services {
       modelOf,
       onUsed: modelId => hold(modelId),
     }),
-    ollama: ollamaLocalRuntime(ollamaHttpPort()),
+    ollama: ollamaLocalRuntime(ollamaPort, {
+      ensure: startOllama,
+      onStale: () => {
+        forgetDiscovered()
+        void refreshOverview().catch((error: unknown) => {
+          log.warn('ai', `overview unpublished after a stale local model: ${String(error)}`)
+        })
+      },
+    }),
   }
 
   const ai = createAiManager({
@@ -1297,6 +1333,8 @@ export function createServices(settings: SettingsStore): Services {
   })
   hold = ai.hold
   lookup = modelId => ai.lookup(modelId)
+  forgetDiscovered = () => ai.forgetDiscovered()
+  refreshOverview = () => ai.refresh()
   // Filled here rather than captured above: the registry was built first and asks per summary.
   installedLocally.ids = () => ai.installedIds()
 

@@ -34,12 +34,46 @@ describe('ollamaLocalRuntime', () => {
     expect(reading.installed.has('qwen3:8b')).toBe(true)
   })
 
-  it('reads not ready when nothing answers — the studio does not start Ollama', async () => {
+  it('reads not ready when nothing answers and nothing can start it', async () => {
     const reading = await ollamaLocalRuntime(
       port({ tags: () => Promise.reject(new Error('ECONNREFUSED')) }),
     ).read([QWEN])
 
     expect(reading).toEqual({ ready: false, installed: new Set(), loaded: new Set() })
+  })
+
+  it('retries the listing after ensure brings the service up', async () => {
+    let up = false
+    const tags = vi.fn(() =>
+      up
+        ? Promise.resolve([{ name: 'qwen3:8b', size: 5_000_000_000 }])
+        : Promise.reject(new Error('ECONNREFUSED')),
+    )
+    const reading = await ollamaLocalRuntime(port({ tags }), {
+      ensure: async () => {
+        up = true
+        return true
+      },
+    }).read([QWEN])
+
+    expect(reading.ready).toBe(true)
+    expect(reading.installed.has('qwen3:8b')).toBe(true)
+    expect(tags).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not call remove when a chat fails — a missing tag is not ours to delete', async () => {
+    const remove = vi.fn()
+    const onStale = vi.fn()
+    const runtime = ollamaLocalRuntime(
+      port({ remove, chat: () => Promise.reject(new Error('404')) }),
+      {
+        onStale,
+      },
+    )
+
+    await expect(runtime.chat?.(request)).rejects.toThrow(/404/)
+    expect(remove).not.toHaveBeenCalled()
+    expect(onStale).toHaveBeenCalledOnce()
   })
 
   it('discovers chat tags and skips embeddings', async () => {

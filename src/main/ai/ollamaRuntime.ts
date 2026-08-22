@@ -1,5 +1,6 @@
 import type { DownloadProgress } from '@shared/domain/localModel'
 import { ollamaModel, type OllamaTag } from '@shared/domain/ollamaModel'
+import { isRecord } from '@shared/guards'
 import type { ChatRequest, LocalRuntime } from './localRuntimes'
 
 export type OllamaPort = {
@@ -14,7 +15,9 @@ export type OllamaPort = {
 }
 
 const ORIGIN = 'http://127.0.0.1:11434'
-const TAGS_MS = 2000
+const TAGS_MS = 2_000
+const DOWN_MS = 10_000
+const FRESH_MS = 3_000
 
 export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): OllamaPort {
   const url = (path: string) => `${origin}${path}`
@@ -25,15 +28,11 @@ export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): Oll
       if (!response.ok) throw new Error(`ollama /api/tags ${response.status}`)
 
       const body: unknown = await response.json()
-      const models =
-        body && typeof body === 'object' && 'models' in body && Array.isArray(body.models)
-          ? body.models
-          : []
+      const models = isRecord(body) && Array.isArray(body.models) ? body.models : []
 
       return models.flatMap((entry: unknown): OllamaTag[] => {
-        if (!entry || typeof entry !== 'object') return []
-        const name = 'name' in entry ? entry.name : undefined
-        const size = 'size' in entry ? entry.size : undefined
+        if (!isRecord(entry)) return []
+        const { name, size } = entry
         if (typeof name !== 'string' || name === '' || typeof size !== 'number') return []
         return [{ name, size }]
       })
@@ -61,11 +60,11 @@ export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): Oll
           if (line.trim() === '') continue
           try {
             const event: unknown = JSON.parse(line)
-            if (!event || typeof event !== 'object') continue
-            const total = 'total' in event && typeof event.total === 'number' ? event.total : null
-            const completed =
-              'completed' in event && typeof event.completed === 'number' ? event.completed : 0
-            if (total !== null) onProgress({ received: completed, total })
+            if (!isRecord(event) || typeof event.total !== 'number') continue
+            onProgress({
+              received: typeof event.completed === 'number' ? event.completed : 0,
+              total: event.total,
+            })
           } catch {
             // A truncated frame is ordinary on a cancelled pull.
           }
@@ -100,57 +99,63 @@ export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): Oll
       if (!response.ok) throw new Error(`ollama /api/chat ${response.status}`)
 
       const body: unknown = await response.json()
-      const message =
-        body &&
-        typeof body === 'object' &&
-        'message' in body &&
-        body.message &&
-        typeof body.message === 'object'
-          ? body.message
-          : null
-      const content =
-        message && 'content' in message && typeof message.content === 'string'
-          ? message.content
-          : ''
-      return content
+      if (!isRecord(body) || !isRecord(body.message)) return ''
+      return typeof body.message.content === 'string' ? body.message.content : ''
     },
   }
 }
 
+export type OllamaRuntimeHooks = {
+  /** Starts the service if it is already on this machine. Absent: the studio does not start it. */
+  ensure?: () => Promise<boolean>
+  /** A listing just went stale — a tag deleted outside, a chat that found nothing. Never a delete. */
+  onStale?: () => void
+}
+
 /**
- * Ollama as a runtime. The studio does not start it: `ready: false` is ordinary when nothing
- * answers on :11434.
+ * Ollama as a runtime. Starting is `ensure`'s job; this runtime never stops or uninstalls it.
  */
-export function ollamaLocalRuntime(port: OllamaPort): LocalRuntime {
+export function ollamaLocalRuntime(port: OllamaPort, hooks: OllamaRuntimeHooks = {}): LocalRuntime {
   let inflight: Promise<readonly OllamaTag[]> | null = null
   let lastOk: { at: number; tags: readonly OllamaTag[] } | null = null
   let downAt: number | null = null
 
-  const listed = (): Promise<readonly OllamaTag[]> => {
+  function remember(tags: readonly OllamaTag[]): readonly OllamaTag[] {
+    lastOk = { at: Date.now(), tags }
+    downAt = null
+    return tags
+  }
+
+  async function fetchTags(): Promise<readonly OllamaTag[]> {
+    try {
+      return remember(await port.tags())
+    } catch (error: unknown) {
+      if (hooks.ensure && (await hooks.ensure())) {
+        try {
+          return remember(await port.tags())
+        } catch {
+          // Still down after a start: mark it, same as the first refusal.
+        }
+      }
+      downAt = Date.now()
+      lastOk = null
+      throw error
+    }
+  }
+
+  function listed(): Promise<readonly OllamaTag[]> {
     const now = Date.now()
-    if (downAt !== null && now - downAt < 10_000) return Promise.reject(new Error('ollama down'))
-    if (lastOk !== null && now - lastOk.at < 3000) return Promise.resolve(lastOk.tags)
+    if (downAt !== null && now - downAt < DOWN_MS) return Promise.reject(new Error('ollama down'))
+    if (lastOk !== null && now - lastOk.at < FRESH_MS) return Promise.resolve(lastOk.tags)
     if (inflight) return inflight
 
-    inflight = port
-      .tags()
-      .then(tags => {
-        lastOk = { at: Date.now(), tags }
-        downAt = null
-        return tags
-      })
-      .catch((error: unknown) => {
-        downAt = Date.now()
-        lastOk = null
-        throw error
-      })
-      .finally(() => {
-        inflight = null
-      })
+    inflight = fetchTags().finally(() => {
+      inflight = null
+    })
     return inflight
   }
 
-  const forgetTags = (): void => {
+  function forgetTags(): void {
     lastOk = null
     downAt = null
     inflight = null
@@ -191,6 +196,14 @@ export function ollamaLocalRuntime(port: OllamaPort): LocalRuntime {
       await port.remove(model.id)
       forgetTags()
     },
-    chat: request => port.chat(request),
+    chat: async request => {
+      try {
+        return await port.chat(request)
+      } catch (error: unknown) {
+        forgetTags()
+        hooks.onStale?.()
+        throw error
+      }
+    },
   }
 }

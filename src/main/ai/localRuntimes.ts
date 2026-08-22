@@ -182,7 +182,7 @@ export type LocalRuntime = {
 }
 
 export type RuntimeReading = {
-  /** `false` is ordinary, not a failure: the studio does not start Ollama. */
+  /** `false` is ordinary: the service is not answering and could not be started. */
   readonly ready: boolean
   /** The ids of the models handed in that it holds. Empty when it did not answer. */
   readonly installed: ReadonlySet<string>
