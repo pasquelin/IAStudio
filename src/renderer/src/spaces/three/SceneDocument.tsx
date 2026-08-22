@@ -6,6 +6,7 @@ import { withMovedPoint, withPointAfter, withPointAppended } from '@/engines/sce
 import { setPath, setTransform } from '@/engines/scene/commands'
 import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
 import { nodeById } from '@/engines/scene/sceneState'
@@ -13,7 +14,7 @@ import { movesToCommand } from '@/engines/scene/animationCommands'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { addNodeTo } from '@/hooks/useAddNode'
-import { useAnimationPlayback } from '@/hooks/useAnimationPlayback'
+import { SceneClock } from './SceneClock'
 import { useCheckerTextures } from '@/hooks/useCheckerTextures'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useExportMenu } from '@/hooks/useExportMenu'
@@ -34,7 +35,7 @@ import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { addModelTo, isSceneDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
-import { displayOfPane, useSceneViews, sceneViewOf } from '@/stores/sceneViews'
+import { displayOfPane, sceneViewChromeOf, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { skeletonProfilesOf, useSkeletonProfiles } from '@/stores/skeletonProfiles'
 import { useProject } from '@/stores/project'
 import { nextDisplayMode } from '@/engines/scene/sceneView'
@@ -186,6 +187,7 @@ const MESHES: readonly AssetType[] = ['mesh']
 export function SceneDocument({ documentId }: { documentId: string }) {
   const host = useRef<HTMLDivElement>(null)
   const engine = useRef<SceneRenderer | null>(null)
+  const [live, setLive] = useState<SceneRenderer | null>(null)
   const [mode, setMode] = useState<TransformMode>('select')
   const [localFrame, setLocalFrame] = useState(false)
   /** What the scene costs, as the engine counts it — see `SceneRendererOptions.onStats`. */
@@ -200,7 +202,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const label = useShortcutLabel()
   const active = useDocumentIsInFront(documentId)
   const viewport = useSettings(state => state.settings.three)
-  const view = useSceneViews(state => sceneViewOf(state, documentId))
+  const view = useSceneViews(useShallow(state => sceneViewChromeOf(state, documentId)))
 
   // Before the renderer mounts: a saved document comes back from the project, a new one from
   // the default scene — an unlit viewport reads as broken rather than as empty.
@@ -260,12 +262,14 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
     renderer.mount(element)
     engine.current = renderer
+    setLive(renderer)
     // Registered so a panel that is not the viewport can ask it to draw a film — and forgotten
     // below, or an engine whose canvas is gone would still be handed out.
     registerSceneEngine(documentId, renderer)
     return () => {
       renderer.dispose()
       engine.current = null
+      setLive(null)
       forgetSceneEngine(documentId)
       // The names came out of files this viewport parsed; nothing outside it can answer for them.
       useModelClips.getState().forget(documentId)
@@ -341,20 +345,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.setPaneViews(view.panes)
   }, [view.panes])
-
-  // The head is session state React owns; the engine is told where it stands, never the reverse.
-  useEffect(() => {
-    engine.current?.setPlayhead(view.playhead)
-  }, [view.playhead])
-
-  // The block being watched, on the engine's own clock — the head stays where it was left.
-  useEffect(() => {
-    engine.current?.setPreview(view.preview)
-  }, [view.preview])
-
-  // Here rather than in the timeline panel, which is a tool window one may close: the head is the
-  // scene's ONE clock, and closing a panel must not stop a character walking in the viewport.
-  useAnimationPlayback(documentId, view.playing, scene.animation.duration)
 
   // Here rather than in the studio: a project only ever painted in has no business gaining four
   // texture assets, and by the time a hand reaches the Add menu the ids are known.
@@ -571,6 +561,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     >
       {/* The renderer makes its own canvas in here — see `SceneRenderer.mount`. */}
       <div ref={host} className="absolute inset-0" />
+      <SceneClock documentId={documentId} duration={scene.animation.duration} renderer={live} />
       <SceneCounters scene={stats.scene} selected={stats.selected} />
       <CameraPreview documentId={documentId} />
       {view.quad && (

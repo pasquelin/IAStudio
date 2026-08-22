@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
-import { afterEach, beforeAll } from 'vitest'
+import { afterEach, beforeAll, vi } from 'vitest'
+
+vi.mock('three/addons/libs/meshopt_decoder.module.js', () => ({
+  MeshoptDecoder: { supported: true, ready: Promise.resolve() },
+}))
 import {
   handleRequest,
   type AudioWorkerRequest,

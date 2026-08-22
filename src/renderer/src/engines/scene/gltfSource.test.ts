@@ -57,6 +57,7 @@ const setDecoderPath = vi.fn()
 const setTranscoderPath = vi.fn()
 const setDRACOLoader = vi.fn()
 const setKTX2Loader = vi.fn()
+const setMeshoptDecoder = vi.fn()
 const disposeDraco = vi.fn()
 const disposeKtx2 = vi.fn()
 
@@ -65,11 +66,16 @@ const disposeKtx2 = vi.fn()
  * module is about is the wiring around them: which paths they are given, and when the GPU is
  * questioned.
  */
+vi.mock('three/addons/libs/meshopt_decoder.module.js', () => ({
+  MeshoptDecoder: { supported: true, ready: Promise.resolve() },
+}))
+
 vi.mock('three/addons/loaders/GLTFLoader.js', () => ({
   GLTFLoader: class {
     parseAsync = parseAsync
     setDRACOLoader = setDRACOLoader
     setKTX2Loader = setKTX2Loader
+    setMeshoptDecoder = setMeshoptDecoder
   },
 }))
 
@@ -128,6 +134,12 @@ describe('createGltfSource', () => {
 
     expect(setDRACOLoader).toHaveBeenCalled()
     expect(setKTX2Loader).toHaveBeenCalled()
+  })
+
+  it('hands the Meshopt WASM decoder to the loader that needs it', () => {
+    createGltfSource(() => null)
+
+    expect(setMeshoptDecoder).toHaveBeenCalled()
   })
 
   it('reads the scene out of what the loader brings back', async () => {

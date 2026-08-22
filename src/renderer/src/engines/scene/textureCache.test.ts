@@ -248,11 +248,11 @@ const SOURCES: Record<string, string> = import.meta.glob(
  * which built a `TextureLoader` of its own to fill the very port this module declares.
  */
 describe('the one texture loader', () => {
-  it('is built in exactly one place', () => {
+  it('does not build a TextureLoader — PNG and JPEG decode off the UI thread', () => {
     const building = Object.entries(SOURCES)
       .filter(([, source]) => source.includes('new TextureLoader('))
       .map(([path]) => path)
 
-    expect(building).toEqual(['./textureCache.ts'])
+    expect(building).toEqual([])
   })
 })

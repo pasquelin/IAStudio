@@ -33,6 +33,7 @@ export function LoadableImage({
       src={src}
       alt=""
       loading="lazy"
+      decoding="async"
       draggable={draggable}
       onError={onError}
       className={className}

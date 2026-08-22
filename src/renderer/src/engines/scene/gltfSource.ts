@@ -3,6 +3,7 @@ import type { BufferGeometry, Texture, WebGLRenderer } from 'three'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
 import { materialDefOf, textureSlotsOf } from '@shared/domain/gltf'
 import { meshFormatOf, type MeshFormat } from '@shared/domain/meshFormat'
 import { reportFailure } from '@/services/diagnostics'
@@ -56,6 +57,8 @@ export function createGltfSource(rendererOf: () => WebGLRenderer | null): GltfSo
 
   const ktx2 = new KTX2Loader().setTranscoderPath(KTX2_PATH)
   loader.setKTX2Loader(ktx2)
+  // WASM inlined in the module — unlike Draco/KTX2, nothing to fetch at runtime.
+  loader.setMeshoptDecoder(MeshoptDecoder)
 
   let detected = false
 

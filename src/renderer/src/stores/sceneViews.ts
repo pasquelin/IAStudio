@@ -311,6 +311,28 @@ export function sceneViewOf(state: SceneViewsState, documentId: string): SceneVi
 }
 
 /**
+ * Everything a viewport document paints, minus the clock. Used with `useShallow` so a playhead
+ * write does not rebuild the toolbar host.
+ */
+export function sceneViewChromeOf(state: SceneViewsState, documentId: string) {
+  const view = sceneViewOf(state, documentId)
+  return {
+    snapping: view.snapping,
+    isolation: view.isolation,
+    poseMode: view.poseMode,
+    pickedBone: view.pickedBone,
+    pickedPathPoint: view.pickedPathPoint,
+    projection: view.projection,
+    displays: view.displays,
+    quadEdges: view.quadEdges,
+    skeletons: view.skeletons,
+    quad: view.quad,
+    panes: view.panes,
+    activePane: view.activePane,
+  }
+}
+
+/**
  * Narrowed here rather than at each call site: subscribing to the whole view redraws a header on a
  * camera dragged in another pane.
  */
@@ -320,4 +342,35 @@ export function useScenePlayhead(documentId: string): Us {
 
 export function useScenePreview(documentId: string): WatchedPreview | null {
   return useSceneViews(state => sceneViewOf(state, documentId).preview)
+}
+
+/**
+ * Whether a view write should refresh a montage looking through that scene.
+ *
+ * Playhead, playing and preview are the scene's OWN clock: a live clip on a sequence seeks at
+ * the sequence's head, and redrawing it sixty times a second for a clock it does not show is
+ * two extra 3D frames per tick.
+ */
+export function sceneViewAffectsMontage(previous: SceneView, next: SceneView): boolean {
+  return (
+    previous.panes !== next.panes ||
+    previous.camera !== next.camera ||
+    previous.projection !== next.projection ||
+    previous.displays !== next.displays ||
+    previous.quad !== next.quad ||
+    previous.quadEdges !== next.quadEdges ||
+    previous.skeletons !== next.skeletons ||
+    previous.isolation !== next.isolation
+  )
+}
+
+/** Walks every open view: a sequence may composite several scenes. */
+export function sceneViewsAffectMontage(previous: SceneViewsState, next: SceneViewsState): boolean {
+  if (previous.views === next.views) return false
+
+  const ids = new Set([...Object.keys(previous.views), ...Object.keys(next.views)])
+  for (const id of ids) {
+    if (sceneViewAffectsMontage(sceneViewOf(previous, id), sceneViewOf(next, id))) return true
+  }
+  return false
 }

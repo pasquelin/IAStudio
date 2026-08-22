@@ -127,7 +127,8 @@ import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
 import { nearestProjected, type Projected, type ProjectedBone } from './bonePicking'
 import { rigStateOf, type RigState } from './rigState'
-import { evenSize, flipToSrgbInto, frameTimes, type FilmRequest } from './film'
+import { evenSize, frameTimes, type FilmRequest } from './film'
+import { encodeFilmFrameOffThread } from './filmEncodePort'
 import { captureSize, type CaptureQuality } from '@shared/domain/sceneCapture'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import {
@@ -1916,13 +1917,6 @@ export class SceneRenderer {
     const { width, height } = evenSize(request)
     const target = new WebGLRenderTarget(width, height)
     const pixels = new Uint8Array(width * height * 4)
-    const surface = new OffscreenCanvas(width, height)
-    const context = surface.getContext('2d')
-    if (!context) throw new Error('no 2d context to read the frames back through')
-
-    // Hoisted with the pixel buffer: at 1920×1080 an `ImageData` per frame is 8 MB of churn, and
-    // a thousand-frame film would hand the collector sixteen gigabytes for nothing.
-    const image = context.createImageData(width, height)
 
     const restore = this.hideWorkshop()
     const loan = aspectLoan(width, height)
@@ -1944,14 +1938,8 @@ export class SceneRenderer {
         gl.render(this.viewport.scene, camera)
         gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
 
-        // Encoded like a still is, and for the same reason: a render target holds the WORKING
-        // space whatever its texture says, so the frames went into their PNGs linear — washed
-        // out, and dark in the mid-tones. Read off three 0.185 rather than deduced.
-        flipToSrgbInto(image.data, pixels, width, height)
-        context.putImageData(image, 0, 0)
-        const blob = await surface.convertToBlob({ type: 'image/png' })
         index += 1
-        await onFrame(index, new Uint8Array(await blob.arrayBuffer()))
+        await onFrame(index, await encodeFilmFrameOffThread(pixels, width, height))
       }
     } finally {
       gl.setRenderTarget(null)
@@ -1994,9 +1982,6 @@ export class SceneRenderer {
       quality,
     )
 
-    const context = new OffscreenCanvas(width, height).getContext('2d')
-    if (!context) throw new Error('no 2d context to read the still back through')
-
     // Antialiased, unlike a film's frames: a still is looked at, and the resolve happens at the
     // end of `render` — so the read below already has the resolved texture. Capped at four,
     // which is where the eye stops paying for the memory a 4K target multiplies.
@@ -2016,12 +2001,7 @@ export class SceneRenderer {
       gl.render(this.viewport.scene, camera)
       gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
 
-      const image = context.createImageData(width, height)
-      flipToSrgbInto(image.data, pixels, width, height)
-      context.putImageData(image, 0, 0)
-
-      const blob = await context.canvas.convertToBlob({ type: 'image/png' })
-      return new Uint8Array(await blob.arrayBuffer())
+      return await encodeFilmFrameOffThread(pixels, width, height)
     } finally {
       gl.setRenderTarget(null)
       target.dispose()
