@@ -3781,5 +3781,229 @@
       "licenceStatus": "non-commercial",
       "runtimeStatus": "plugin-required"
     }
+  ],
+  "3d/3d23d": [
+    {
+      "id": "trellis-text-large",
+      "name": "TRELLIS Text",
+      "summary": "TRELLIS texte vers 3D, large",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "mesh",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/microsoft/TRELLIS-text-large",
+      "files": [
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_flow_txt_dit_L_64l8p2_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS-text-large/resolve/4aad9f4a110329a410974d7f41ce5333a9a1fc87/ckpts/slat_flow_txt_dit_L_64l8p2_fp16.json",
+          "bytes": 441,
+          "sha256": "cd504d21edd8e57056988141889c13f6cd16605cedf418de5dc079b767d9830a",
+          "revision": "4aad9f4a110329a410974d7f41ce5333a9a1fc87"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_flow_txt_dit_L_64l8p2_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS-text-large/resolve/4aad9f4a110329a410974d7f41ce5333a9a1fc87/ckpts/slat_flow_txt_dit_L_64l8p2_fp16.safetensors",
+          "bytes": 1178589272,
+          "sha256": "3e6609ba6ce2d9e6442a04c06043b0f927bdc5bc21d34795b72811d668a401e3",
+          "revision": "4aad9f4a110329a410974d7f41ce5333a9a1fc87"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/ss_flow_txt_dit_L_16l8_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS-text-large/resolve/4aad9f4a110329a410974d7f41ce5333a9a1fc87/ckpts/ss_flow_txt_dit_L_16l8_fp16.json",
+          "bytes": 384,
+          "sha256": "ea3ce3f8442188e6803c38f1064674d36abe4f6d0de13936f9d2154d6b774c52",
+          "revision": "4aad9f4a110329a410974d7f41ce5333a9a1fc87"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/ss_flow_txt_dit_L_16l8_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS-text-large/resolve/4aad9f4a110329a410974d7f41ce5333a9a1fc87/ckpts/ss_flow_txt_dit_L_16l8_fp16.safetensors",
+          "bytes": 1105604976,
+          "sha256": "fbe712778a6a62fb7df44467972939b3c33e503fd971076caa4cd673e1aa37a3",
+          "revision": "4aad9f4a110329a410974d7f41ce5333a9a1fc87"
+        },
+        {
+          "role": "index",
+          "name": "pipeline.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS-text-large/resolve/4aad9f4a110329a410974d7f41ce5333a9a1fc87/pipeline.json",
+          "bytes": 2131,
+          "sha256": "7663d444948b8b9630506bffcdf6fe3edaf87b696ce2f53caa4f64f7e53a2b52",
+          "revision": "4aad9f4a110329a410974d7f41ce5333a9a1fc87"
+        }
+      ],
+      "diskBytes": 2284197204,
+      "reservationBytes": 1142098602,
+      "thumbnail": "trellis-text-large.png",
+      "distribution": "direct-download",
+      "licenceStatus": "commercial",
+      "runtimeStatus": "plugin-required",
+      "serves": [
+        "3d/txt23d"
+      ]
+    },
+    {
+      "id": "trellis-image-large",
+      "name": "TRELLIS Image",
+      "summary": "TRELLIS image vers 3D, large",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "mesh",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/microsoft/TRELLIS-image-large",
+      "files": [
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_dec_gs_swin8_B_64l8gs32_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/slat_dec_gs_swin8_B_64l8gs32_fp16.json",
+          "bytes": 843,
+          "sha256": "ebe9d3eade6d9cb7662efae109197e97d7ab58aebd5e8ede0c8991dfce88a06a",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_dec_gs_swin8_B_64l8gs32_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/slat_dec_gs_swin8_B_64l8gs32_fp16.safetensors",
+          "bytes": 171450952,
+          "sha256": "38c84bcef5ce0af1f48b1b5558dabc7575a13346043c41a7e0610f1fa619a161",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_dec_mesh_swin8_B_64l8m256c_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/slat_dec_mesh_swin8_B_64l8m256c_fp16.json",
+          "bytes": 372,
+          "sha256": "293900795cb69cc972d1a20a4940ee12f7e007952c2ae92d128dda91b96ac317",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_dec_mesh_swin8_B_64l8m256c_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/slat_dec_mesh_swin8_B_64l8m256c_fp16.safetensors",
+          "bytes": 181903412,
+          "sha256": "3e87aba94b5786407eb06d0502c1ed0885a0027a3f2b8537bfe15b0a92c01859",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_dec_rf_swin8_B_64l8r16_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/slat_dec_rf_swin8_B_64l8r16_fp16.json",
+          "bytes": 396,
+          "sha256": "9b46a04602988b9cd83f1d0537de1cb93c4c1b6d35a0bbbcb07bb37bac66b766",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_dec_rf_swin8_B_64l8r16_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/slat_dec_rf_swin8_B_64l8r16_fp16.safetensors",
+          "bytes": 171450488,
+          "sha256": "737da6578d01948016b7c39786113af0d64a46f7922f6b8b5e698b84643be514",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_enc_swin8_B_64l8_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/slat_enc_swin8_B_64l8_fp16.json",
+          "bytes": 321,
+          "sha256": "7b7e2bd3e831bdd5a6129cea36424a47ad73c1b9ad109d1de54e0f14af4d28a2",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_enc_swin8_B_64l8_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/slat_enc_swin8_B_64l8_fp16.safetensors",
+          "bytes": 173242816,
+          "sha256": "21dceac6bee917ab6458ff52c9757ba89a779d03031c7bd17f9e7f0103bfd436",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_flow_img_dit_L_64l8p2_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/slat_flow_img_dit_L_64l8p2_fp16.json",
+          "bytes": 442,
+          "sha256": "c0a9bd57227f55cf75ff02562c27bb05c50174f06955f56a79dea2982fd7a8f9",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_flow_img_dit_L_64l8p2_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/slat_flow_img_dit_L_64l8p2_fp16.safetensors",
+          "bytes": 1203755136,
+          "sha256": "693fb2a58ad497bd222007301eeec49d14d60f8c12d2f2f00c221fa747b4c66c",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/ss_dec_conv3d_16l8_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/ss_dec_conv3d_16l8_fp16.json",
+          "bytes": 245,
+          "sha256": "646781293f1cda74720de85d1cef50a957fb4aebd9a4bd014e454e32f2330ac5",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/ss_dec_conv3d_16l8_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/ss_dec_conv3d_16l8_fp16.safetensors",
+          "bytes": 147591972,
+          "sha256": "1c76d4a40519aa2d711cc263a8404105231ac26db31d946bed48b84fee79009a",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/ss_enc_conv3d_16l8_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/ss_enc_conv3d_16l8_fp16.json",
+          "bytes": 244,
+          "sha256": "12efe92a0d7dcd790f251acb94a6950957ea4398268e2838ef7319c3f20b071e",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/ss_enc_conv3d_16l8_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/ss_enc_conv3d_16l8_fp16.safetensors",
+          "bytes": 119068016,
+          "sha256": "107874eeaa0feb82f51b19db5da7db534fb7e7f19e5a122b9ff1bc2e258bfc6d",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/ss_flow_img_dit_L_16l8_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/ss_flow_img_dit_L_16l8_fp16.json",
+          "bytes": 385,
+          "sha256": "bf69161da7ece9a87394dd4441f0cfa6d4261696a214a8f68388c81fa9a6b5b7",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/ss_flow_img_dit_L_16l8_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/ckpts/ss_flow_img_dit_L_16l8_fp16.safetensors",
+          "bytes": 1130770840,
+          "sha256": "96dc6bfd4136fd950af564dd16b4ae533c9ba6af8f26c670646b2a9f2789b1db",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        },
+        {
+          "role": "index",
+          "name": "pipeline.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS-image-large/resolve/25e0d31ffbebe4b5a97464dd851910efc3002d96/pipeline.json",
+          "bytes": 1987,
+          "sha256": "2686b6c9b3b0a100b544d5f9dc7b3ecb15c9d98be9852d68e8731bd8dbe52a42",
+          "revision": "25e0d31ffbebe4b5a97464dd851910efc3002d96"
+        }
+      ],
+      "diskBytes": 3299238867,
+      "reservationBytes": 1649619433,
+      "thumbnail": "trellis-image-large.png",
+      "distribution": "direct-download",
+      "licenceStatus": "commercial",
+      "runtimeStatus": "plugin-required",
+      "serves": [
+        "3d/img23d"
+      ]
+    }
   ]
 }

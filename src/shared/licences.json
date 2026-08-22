@@ -680,6 +680,18 @@
     "sources": "https://github.com/huggingface/transformers"
   },
   {
+    "name": "TRELLIS Image",
+    "spdx": "MIT",
+    "text": "TRELLIS image vers 3D, large, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "sources": "https://huggingface.co/microsoft/TRELLIS-image-large"
+  },
+  {
+    "name": "TRELLIS Text",
+    "spdx": "MIT",
+    "text": "TRELLIS texte vers 3D, large, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "sources": "https://huggingface.co/microsoft/TRELLIS-text-large"
+  },
+  {
     "name": "TRELLIS.2 4B",
     "spdx": "MIT",
     "text": "TRELLIS.2, 4B, image vers 3D, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Microsoft.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
