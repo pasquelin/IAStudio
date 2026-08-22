@@ -103,6 +103,7 @@ export function createDownloadHost(): DownloadHost {
     },
 
     join,
+    ensureFolder,
   }
 }
 

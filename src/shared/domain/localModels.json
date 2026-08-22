@@ -128,5 +128,135 @@
       "reservationBytes": 16000000000,
       "thumbnail": "qwen2.5-14b-instruct-q4.png"
     }
+  ],
+  "image/txt2img": [
+    {
+      "id": "sana-600m-1024",
+      "name": "Sana 600M",
+      "summary": "Sana 600M 1024px, fp16",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "image",
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers",
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/model_index.json",
+          "bytes": 401,
+          "sha256": "5692423f50e7908bec51264ad39e5a9b7566970600f6089a0a40759524f5569b",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/tokenizer/special_tokens_map.json",
+          "bytes": 636,
+          "sha256": "baec30ea10906f16adb8c18af7a34023002c1746542612b8b41c9f09e1351351",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/tokenizer/tokenizer.json",
+          "bytes": 34362873,
+          "sha256": "5f7eee611703c5ce5d1eee32d9cdcfe465647b8aff0c1dfb3bed7ad7dbb05060",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer.model",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/tokenizer/tokenizer.model",
+          "bytes": 4241003,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/tokenizer/tokenizer_config.json",
+          "bytes": 46996,
+          "sha256": "cb32b7929c62608d46572e813112b3ad8a841fb98fdd6a4da8559e368a951c89",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/transformer/config.json",
+          "bytes": 495,
+          "sha256": "38916317861688918bee963c296ee0f9e939b6d2fd4f5e9f6908f2b9a9179fa6",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/transformer/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 1183558264,
+          "sha256": "712b69e1e14ac7ece99e35b257927c4e0cf8ba2c24eb49574301ff0b10069298",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/scheduler/scheduler_config.json",
+          "bytes": 840,
+          "sha256": "70e8603120cc387316aa3bc7f08cb2872f6b6eb6eff6f25df1b88b6b76389e81",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/text_encoder/config.json",
+          "bytes": 875,
+          "sha256": "3b45a277b19814724be26e4985dd24c5c3efb01bebe5139af77f99254101961a",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.fp16-00001-of-00002.safetensors",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/text_encoder/model.fp16-00001-of-00002.safetensors",
+          "bytes": 4988024144,
+          "sha256": "e909230aabafad02d097c7dc02f2ae062b4e6b0593477c1f07679d277e09ce71",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.fp16-00002-of-00002.safetensors",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/text_encoder/model.fp16-00002-of-00002.safetensors",
+          "bytes": 240691624,
+          "sha256": "48e14f6b7a917e54cabc4ff2047ac2bfe0dae663e771eed3a8acf4ea27dcac18",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors.index.fp16.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/text_encoder/model.safetensors.index.fp16.json",
+          "bytes": 23935,
+          "sha256": "430ee03cbca19125be92ee9220e8c72a37a91d26db57a297f9e113bc6e37eb56",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/vae/config.json",
+          "bytes": 1280,
+          "sha256": "4e5669aa03caa77615b73b21c9347c384cb11124a9590683e32a510df0176eb4",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers/resolve/28f3af7689de15f3883d5863059a2fca0aa9b829/vae/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 1249044836,
+          "sha256": "15a4b09e56d95b768a0ec9da50b702e21d920333fc9b3480d66bb5c7fad9d87f",
+          "revision": "28f3af7689de15f3883d5863059a2fca0aa9b829"
+        }
+      ],
+      "diskBytes": 7699998202,
+      "reservationBytes": 7766163456
+    }
   ]
 }

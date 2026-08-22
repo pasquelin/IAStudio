@@ -200,6 +200,20 @@ function modelLicences() {
       sources: 'https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3',
     },
     ...qwenLicences(),
+    {
+      name: 'Sana 600M',
+      version: '1024px, fp16',
+      spdx: 'Apache-2.0',
+      text: [
+        'The image model the studio generates with when it generates on this machine.',
+        'It is NOT shipped with the application: it is fetched on request into the user data',
+        'folder, against a published digest, and removed from the model manager.',
+        '',
+        'Copyright NVIDIA Corporation and the Sana authors. Licensed under the Apache License,',
+        'Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0',
+      ].join('\n'),
+      sources: 'https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers',
+    },
   ]
 }
 

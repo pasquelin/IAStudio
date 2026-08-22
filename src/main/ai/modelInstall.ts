@@ -38,6 +38,14 @@ export type DownloadHost = {
   rename: (from: string, to: string) => Promise<void>
   exists: (path: string) => Promise<boolean>
   join: (folder: string, name: string) => string
+  /**
+   * Creates the folder a file is about to be written into, parents included.
+   *
+   * A manifest file name may carry a PATH — `transformer/diffusion_pytorch_model.safetensors` is
+   * how a diffusers model is laid out, and the loader reads that shape rather than a flat folder.
+   * Without this the download fails on the first nested name with an ENOENT nobody can read.
+   */
+  ensureFolder: (folder: string) => Promise<void>
 }
 
 /** An open `.part`, for the length of one file. */
@@ -71,6 +79,12 @@ function abortIfCancelled(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw new DownloadCancelled('the model download was cancelled')
 }
 
+/** Where a file lands, whatever separator the host joins with. */
+function parentOf(path: string): string {
+  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  return cut > 0 ? path.slice(0, cut) : path
+}
+
 /**
  * Fetches one file, resuming a `.part` when there is one.
  *
@@ -87,6 +101,9 @@ export async function fetchModelFile(
   const part = partOf(target)
 
   abortIfCancelled(options.signal)
+
+  // Before the `.part` is opened, and cheap on a folder that is already there.
+  await host.ensureFolder(parentOf(target))
 
   const onDisk = await host.sizeOf(part)
   // A `.part` at least as long as the file it claims to be is not a resume point: the URL

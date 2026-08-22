@@ -10,6 +10,7 @@ const localRunner = (): LocalJobRunner => ({
   poll: jobId => Promise.resolve(answered(jobId)),
   cancel: () => Promise.resolve(),
   outputOf: () => null,
+  producedBy: () => null,
   owns: jobId => jobId.startsWith('local_'),
 })
 

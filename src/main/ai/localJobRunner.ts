@@ -1,12 +1,13 @@
 import { PROMPT_FIELD_KEY } from '@shared/domain/localFields'
 import type { LocalModel } from '@shared/domain/localModel'
 import type { JobRunner, RemoteJob } from '@main/provider/jobManager'
-import type { ChatRequest } from './localRuntimes'
+import type { ChatRequest, GenerateResult } from './localRuntimes'
 
 /**
  * Generations run on THIS machine, behind the shape the job manager already speaks.
  *
- * 🛑 Blind spot: what a local job produces is TEXT, and nothing files text into a project yet.
+ * Routed by MODALITY and not by calling `chat` outright: an image is not a sentence, and a runtime
+ * that produces one answers a PATH. Which of the two a model wants is on the manifest.
  */
 
 /** What a job on this machine amounts to. Statuses are the API's own words — see `JobStatus`. */
@@ -16,14 +17,30 @@ type LocalJob = {
   abort: AbortController
   /** What the model answered, once it has. Read through `outputOf`. */
   answer: string
+  /** Where a generation landed, for whoever files it. Empty for a job that produced a sentence. */
+  produced: GenerateResult | null
 }
 
 export type LocalJobDeps = {
   /** The one round trip. Rejects on an abort, which is what `cancel` turns into a failure. */
   chat: (request: ChatRequest) => Promise<string>
+  /**
+   * Produces something that is not a sentence. Absent for a model whose loader has no `generate`,
+   * which is what makes an image target refuse readably instead of answering an empty string.
+   */
+  generate: (request: LocalGenerateRequest) => Promise<GenerateResult>
   modelOf: (modelId: string) => LocalModel | null
   newId: () => string
   log: (level: 'info' | 'warn', message: string) => void
+}
+
+type LocalGenerateRequest = {
+  readonly model: string
+  readonly prompt: string
+  readonly fields: Readonly<Record<string, unknown>>
+  readonly jobId: string
+  readonly onProgress: (ratio: number) => void
+  readonly signal: AbortSignal
 }
 
 /**
@@ -35,6 +52,8 @@ const REMEMBERED = 64
 export type LocalJobRunner = JobRunner & {
   /** What a finished job answered, or nothing — for whoever files it. */
   outputOf: (jobId: string) => string | null
+  /** The file a finished generation wrote, or nothing. It is the caller's to file, and to delete. */
+  producedBy: (jobId: string) => GenerateResult | null
   /** Whether this runner is the one that owns a job id, which is how a caller routes a poll. */
   owns: (jobId: string) => boolean
 }
@@ -59,15 +78,48 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
     }
   }
 
-  const run = async (job: LocalJob, model: LocalModel, prompt: string): Promise<void> => {
+  const converse = async (job: LocalJob, model: LocalModel, prompt: string): Promise<void> => {
+    job.answer = await deps.chat({
+      model: model.id,
+      contextTokens: model.contextTokens ?? 0,
+      messages: [{ role: 'user', content: prompt }],
+      json: false,
+      signal: job.abort.signal,
+    })
+  }
+
+  const produce = async (
+    job: LocalJob,
+    model: LocalModel,
+    jobId: string,
+    body: Record<string, unknown>,
+  ): Promise<void> => {
+    job.produced = await deps.generate({
+      model: model.id,
+      prompt: promptOf(body),
+      fields: body,
+      jobId,
+      // A real fraction, pushed between two denoise steps — where a sentence has none to give.
+      onProgress: ratio => (job.progress = ratio),
+      signal: job.abort.signal,
+    })
+  }
+
+  const run = async (
+    job: LocalJob,
+    model: LocalModel,
+    jobId: string,
+    body: Record<string, unknown>,
+  ): Promise<void> => {
     try {
-      job.answer = await deps.chat({
-        model: model.id,
-        contextTokens: model.contextTokens ?? 0,
-        messages: [{ role: 'user', content: prompt }],
-        json: false,
-        signal: job.abort.signal,
-      })
+      // The manifest says which, and a modality it does not carry is a conversation — the only
+      // thing this ran before there was anything else to run.
+      if (model.modality === 'text' || model.modality === undefined) {
+        await converse(job, model, promptOf(body))
+      } else {
+        await produce(job, model, jobId, body)
+      }
+
       job.status = 'success'
       job.progress = 1
     } catch (error) {
@@ -95,14 +147,17 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
       // whole nobody knows, so a job that started is halfway and finishing is what moves the bar.
       const job: LocalJob = {
         status: model === null ? 'failure' : 'in-progress',
+        // A generation counts its steps and overwrites this at the first one; a conversation never
+        // will, which is why a half is the only honest figure a sentence can start on.
         progress: model === null ? 0 : 0.5,
         abort: new AbortController(),
         answer: '',
+        produced: null,
       }
 
       jobs.set(jobId, job)
       forget()
-      if (model !== null) void run(job, model, promptOf(body))
+      if (model !== null) void run(job, model, jobId, body)
 
       return Promise.resolve(answerFor(jobId, job))
     },
@@ -122,6 +177,8 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
     },
 
     outputOf: jobId => jobs.get(jobId)?.answer ?? null,
+
+    producedBy: jobId => jobs.get(jobId)?.produced ?? null,
 
     owns: jobId => jobs.has(jobId),
   }

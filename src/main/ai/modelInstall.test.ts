@@ -33,6 +33,8 @@ const fileOf = (content: string, name = 'encoder.int8.onnx'): ModelFile => ({
  */
 function harness(served: Record<string, string[]> = {}) {
   const disk = new Map<string, string>()
+  /** The folders the install asked for, so a nested file name can be shown to create its own. */
+  const made: string[] = []
   const requests: { url: string; range: number }[] = []
   const opened: { path: string; resume: boolean }[] = []
   const closed: string[] = []
@@ -94,11 +96,16 @@ function harness(served: Record<string, string[]> = {}) {
     },
     exists: path => Promise.resolve(disk.has(path)),
     join: (folder, name) => `${folder}/${name}`,
+    ensureFolder: folder => {
+      made.push(folder)
+      return Promise.resolve()
+    },
   }
 
   return {
     host,
     disk,
+    made,
     requests,
     opened,
     closed,
@@ -354,5 +361,27 @@ describe('modelIsComplete', () => {
 
     disk.set('/elsewhere/mine.gguf', 'weights')
     expect(await modelIsComplete(host, supplied, '/models')).toBe(true)
+  })
+})
+
+describe('a manifest whose file names carry a path', () => {
+  /**
+   * How a diffusers model is laid out — `model_index.json` at the root, one folder per component.
+   * Without the folder being made first the write fails on an ENOENT nobody can read.
+   */
+  it('creates the folder each file lands in', async () => {
+    const held = harness({
+      'https://models.test/transformer/model.safetensors': ['weights'],
+    })
+
+    await fetchModelFile(held.host, fileOf('weights', 'transformer/model.safetensors'), {
+      folder: '/models',
+      signal: new AbortController().signal,
+      onProgress: () => {},
+      alreadyDone: 0,
+      total: 7,
+    })
+
+    expect(held.made).toContain('/models/transformer')
   })
 })
