@@ -1,8 +1,9 @@
+import { mdiInformationOutline } from '@mdi/js'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AiOverview, ChoiceScope, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
-import { WINDOW_CAPTION, WINDOW_HELP, WINDOW_ROW } from '@/design/windowStyles'
-import { cn } from '@/helpers/cn'
+import { UiIcon } from '@/design/UiIcon'
+import { WINDOW_CAPTION } from '@/design/windowStyles'
 import { useBytes } from '@/hooks/useBytes'
 import type { ModelFitSentence } from '@/hooks/useModelFit'
 import { useAiModels } from '@/stores/aiModels'
@@ -81,9 +82,18 @@ export const AiRoleRow = memo(function AiRoleRow({
           {/* 🛑 Said rather than left blank: an employment with no local candidate is a list with
               nothing but the clouds in it, and silence there reads as something broken. What is
               missing is an ENGINE, not a manifest — the studio carries llama.cpp and sherpa-onnx,
-              and nothing that draws. */}
+              and nothing that draws.
+
+              No `role="alert"`, which DaisyUI's own examples carry: that is a live region, and
+              this is a standing state rather than something that just happened — announced on
+              every render, it would interrupt for news that is not new. */}
           {row.candidates.length === 0 && (
-            <li className={cn(WINDOW_ROW, WINDOW_HELP)}>{t('aiModels.noLocalEngine')}</li>
+            <li className="py-2">
+              <span className="alert alert-info alert-soft">
+                <UiIcon path={mdiInformationOutline} />
+                {t('aiModels.noLocalEngine')}
+              </span>
+            </li>
           )}
 
           {row.candidates.map(candidate => (
