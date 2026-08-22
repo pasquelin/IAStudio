@@ -633,7 +633,7 @@ export function createJobManager({
       : running - localRunning < concurrency()
 
   const pump = (): void => {
-    for (;;) {
+    while (true) {
       const index = queue.findIndex(id => {
         const entry = entries.get(id)
         return !entry || entry.cancelled || canStart(entry)
