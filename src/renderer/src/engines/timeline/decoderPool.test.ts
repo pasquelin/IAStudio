@@ -66,13 +66,16 @@ describe('decoder pool', () => {
     })
     const pool = createDecoderPool({ open, maxDecoders: 4, maxPictures: 2 })
 
-    void pool.frameAt('a', 0)
-    void pool.frameAt('b', 0)
+    const first = pool.frameAt('a', 0)
+    const second = pool.frameAt('b', 0)
     await Promise.resolve()
     await pool.frameAt('c', 0)
-    release()
-
     expect(open).toHaveBeenCalledTimes(2)
+    release()
+    await Promise.all([first, second])
+    await pool.frameAt('c', 0)
+
+    expect(open).toHaveBeenCalledTimes(3)
   })
 
   it('evicts the least recently used sink past the limit', async () => {

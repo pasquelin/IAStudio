@@ -148,7 +148,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
    */
   const occupancy = new Map<RuntimeEndpointId, RuntimeOccupancy & { modelId: string }>()
   const lastUsedAt = new Map<RuntimeEndpointId, number>()
-  let busy = 0
+  const working = new Map<RuntimeEndpointId, number>()
+  let disposed = false
   const schedule =
     deps.schedule ??
     ((run, ms) => {
@@ -353,31 +354,33 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
   /** Frees a DOOR and forgets what it held. A release is never added back to a reading — R2. */
   const release = async (endpoint: RuntimeEndpointId): Promise<void> => {
+    if (disposed || (working.get(endpoint) ?? 0) > 0) return
     try {
       await deps.runtimes[loaderOf(endpoint)]?.unload?.(endpoint)
     } finally {
-      occupancy.delete(endpoint)
+      if (!disposed && (working.get(endpoint) ?? 0) === 0) occupancy.delete(endpoint)
     }
   }
 
   const armIdle = (): void => {
     cancelIdle?.()
     cancelIdle = null
+    if (disposed) return
     const minutes = deps.idleUnloadMinutes?.() ?? DEFAULT_IDLE_UNLOAD_MINUTES
     if (minutes <= 0 || occupancy.size === 0) return
 
     cancelIdle = schedule(() => {
-      if (loading !== null || busy > 0) {
-        armIdle()
+      if (disposed || loading !== null || working.size > 0) {
+        if (!disposed) armIdle()
         return
       }
       void (async () => {
         for (const endpoint of [...occupancy.keys()]) {
-          if (loading !== null || busy > 0) break
+          if (disposed || loading !== null || working.size > 0) break
           await release(endpoint)
         }
-        if (occupancy.size > 0) armIdle()
-        await announce()
+        if (!disposed && occupancy.size > 0) armIdle()
+        if (!disposed) await announce()
       })()
     }, minutes * 60_000)
   }
@@ -394,11 +397,17 @@ export function createAiManager(deps: ManagerDeps): AiManager {
   }
 
   const hold = (modelId: string): (() => void) => {
+    const model = modelOf(modelId)
+    if (!model || disposed) return () => {}
+
+    const endpoint = endpointOf(model.loader, model.modality)
     markUsed(modelId)
-    busy += 1
+    working.set(endpoint, (working.get(endpoint) ?? 0) + 1)
     return () => {
-      busy = Math.max(0, busy - 1)
-      if (busy === 0) armIdle()
+      const left = (working.get(endpoint) ?? 1) - 1
+      if (left <= 0) working.delete(endpoint)
+      else working.set(endpoint, left)
+      if (!disposed && working.size === 0) armIdle()
     }
   }
 
@@ -416,12 +425,16 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     )
     if (snapshot === null) return null
 
+    const active = new Set(working.keys())
+    if (loading) {
+      const held = modelOf(loading.modelId)
+      if (held) active.add(endpointOf(held.loader, held.modality))
+    }
+
     const admission = admissionFor(
       snapshot,
       { endpoint: endpointOf(model.loader, model.modality), needBytes: model.reservationBytes },
-      // Nothing is `active`: a door is either loading — and this is the load — or idle, since one
-      // load runs at a time and a turn holds its door for the length of one answer.
-      { active: new Set(), lastUsedAt },
+      { active, lastUsedAt },
     )
 
     if (admission.verdict === 'release-first') {
@@ -607,6 +620,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     noteUse: markUsed,
     hold,
     dispose: () => {
+      disposed = true
       cancelIdle?.()
       cancelIdle = null
     },

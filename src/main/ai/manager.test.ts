@@ -326,7 +326,7 @@ describe('holding a model in memory', () => {
     expect(candidateOf(await ai.overview(), QWEN.id)?.loaded).toBe(false)
   })
 
-  it('unloads a model left idle, and a use postpones that', async () => {
+  it('unloads a model left idle when nothing is using it', async () => {
     const armed: { run: (() => void) | null } = { run: null }
     const unload = vi.fn()
     const runtime = holdingRuntime()
@@ -351,11 +351,44 @@ describe('holding a model in memory', () => {
     })
 
     await ai.load(QWEN.id)
-    expect(armed.run).not.toBeNull()
-    ai.noteUse(QWEN.id)
     armed.run?.()
     await vi.waitFor(() => expect(unload).toHaveBeenCalledOnce())
     expect(candidateOf(await ai.overview(), QWEN.id)?.loaded).toBe(false)
+  })
+
+  it('does not unload a model while a job holds it', async () => {
+    const armed: { run: (() => void) | null } = { run: null }
+    const unload = vi.fn()
+    const runtime = holdingRuntime()
+    const ai = manager({
+      idleUnloadMinutes: () => 10,
+      schedule: (run, _ms) => {
+        armed.run = run
+        return () => {
+          armed.run = null
+        }
+      },
+      runtimes: {
+        'sherpa-onnx': {
+          ...runtime,
+          unload: async () => {
+            unload()
+            await runtime.unload?.()
+          },
+        },
+      },
+    })
+
+    await ai.load(QWEN.id)
+    const release = ai.hold(QWEN.id)
+    armed.run?.()
+    await Promise.resolve()
+    expect(unload).not.toHaveBeenCalled()
+    expect(candidateOf(await ai.overview(), QWEN.id)?.loaded).toBe(true)
+
+    release()
+    armed.run?.()
+    await vi.waitFor(() => expect(unload).toHaveBeenCalledOnce())
   })
 
   /**

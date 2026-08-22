@@ -191,7 +191,7 @@ export function openPythonProcess({
           return
         }
         if (process.platform === 'win32') {
-          spawn('taskkill', ['/PID', String(pid), '/T', '/F'], {
+          spawn('taskkill', ['/PID', String(pid), '/T', ...(signal === 'SIGKILL' ? ['/F'] : [])], {
             stdio: 'ignore',
             windowsHide: true,
           })

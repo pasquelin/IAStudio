@@ -400,6 +400,15 @@ export function createModelRegistry({
   const fresh = <T>(entry: Cached<T> | null | undefined): T | null =>
     entry && now() - entry.at < ttlMs ? entry.value : null
 
+  const take = <T>(map: Map<string, Cached<T>>, key: string): T | null => {
+    const entry = map.get(key)
+    const value = fresh(entry)
+    if (value === null || entry === undefined) return null
+    map.delete(key)
+    map.set(key, entry)
+    return value
+  }
+
   const prune = <T>(map: Map<string, Cached<T>>): void => {
     for (const [key, entry] of map) {
       if (now() - entry.at >= ttlMs) map.delete(key)
@@ -552,7 +561,7 @@ export function createModelRegistry({
   return {
     search: async query => {
       const key = JSON.stringify(query)
-      const cached = fresh(pages.get(key))
+      const cached = take(pages, key)
       if (cached) return withLiveLocals(cached, query)
 
       const limit = query.limit ?? DEFAULT_LIMIT
