@@ -22,6 +22,7 @@ The terms below govern these components. They are not affected by the licence of
 | certifi | 2026.7.22 | MPL-2.0 |
 | charset-normalizer | 3.5.1 | MIT |
 | click | 8.4.2 | BSD-3-Clause |
+| CogVideoX 2B | 2b | Apache-2.0 |
 | CPython | 3.12.14 | PSF-2.0 |
 | daisyui | 5.7.16 | MIT |
 | diffusers | 0.40.0 | Apache 2.0 License |
@@ -100,6 +101,7 @@ The terms below govern these components. They are not affected by the licence of
 | typing-extensions | 4.16.0 | PSF-2.0 |
 | urllib3 | 2.7.0 | MIT |
 | utif | 3.1.0 | MIT |
+| Wan 2.1 T2V 1.3B | 1.3B | Apache-2.0 |
 | wavesurfer.js | 7.12.11 | BSD-3-Clause |
 | zipp | 4.1.0 | MIT |
 | zod | 4.4.3 | MIT |
@@ -454,6 +456,27 @@ application: it is fetched on first use, and removed with the engine.
 
 Licensed under BSD-3-Clause.
 Source: https://github.com/pallets/click/
+```
+## CogVideoX 2B
+
+Version: 2b  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/zai-org/CogVideoX-2b
+```
+
+```
+The lighter of the two models the studio makes video with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright the CogVideoX authors, Zhipu AI. Licensed under the Apache License, Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
+
+Its components, read on 2026-08-22: a T5 text encoder, a 3D VAE and a transformer, none
+of whose configuration names an upstream repository.
 ```
 ## CPython
 
@@ -2714,6 +2737,27 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+## Wan 2.1 T2V 1.3B
+
+Version: 1.3B  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers
+```
+
+```
+The heavier of the two models the studio makes video with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright Alibaba Group and the Wan authors. Licensed under the Apache License, Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
+
+Its components, read on 2026-08-22: a UMT5 text encoder — which is 22.7 GB of the 28.9
+this weighs — a VAE and a transformer, none naming an upstream repository.
 ```
 ## wavesurfer.js
 

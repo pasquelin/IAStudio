@@ -74,5 +74,18 @@ export const UNREAD_ON_THIS_PLATFORM: readonly string[] = [
   'triton',
 ]
 
+/**
+ * 🛑 **Locked, distributed everywhere, and their licences have NOT been read yet.**
+ *
+ * Different from `UNREAD_ON_THIS_PLATFORM`, and the difference decides what closes the hole:
+ * those never materialise here at all, these simply have not been collected since they were
+ * added — `collect-python-licences.mjs` reads a package's own `METADATA`, which asks for the
+ * 682 Mo environment to exist on disk. One run of the collector empties this list.
+ *
+ * Written rather than filtered away in silence: what a release ships under them is stated by
+ * nobody until that run happens.
+ */
+export const UNREAD_PENDING_COLLECTION: readonly string[] = ['imageio', 'imageio-ffmpeg']
+
 /** The engine's own package. It is the studio's code, under the studio's licence. */
 export const ENGINE_PACKAGE = 'ia-studio-engine'

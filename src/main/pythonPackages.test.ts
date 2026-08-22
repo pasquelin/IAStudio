@@ -7,6 +7,7 @@ import {
   ENGINE_PACKAGE,
   INTERPRETER,
   UNREAD_ON_THIS_PLATFORM,
+  UNREAD_PENDING_COLLECTION,
 } from './pythonPackages'
 
 const ROOT = join(import.meta.dirname, '..', '..')
@@ -39,6 +40,7 @@ describe('what the Python side distributes', () => {
       ...Object.keys(pythonLicences()),
       ...BUILD_ONLY_PYTHON,
       ...UNREAD_ON_THIS_PLATFORM,
+      ...UNREAD_PENDING_COLLECTION,
       ENGINE_PACKAGE,
     ])
 
