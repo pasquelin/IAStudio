@@ -14,26 +14,55 @@ The terms below govern these components. They are not affected by the licence of
 | @scenario-labs/sdk | 3.0.0 | MIT |
 | @tanstack/react-query | 5.101.4 | MIT |
 | @tanstack/react-virtual | 3.14.9 | MIT |
+| accelerate | 1.14.0 | Apache |
 | ag-psd | 31.0.2 | MIT |
+| annotated-doc | 0.0.5 | MIT |
+| anyio | 4.14.2 | MIT |
 | better-sqlite3 | 13.0.3 | MIT |
+| certifi | 2026.7.22 | MPL-2.0 |
+| charset-normalizer | 3.5.1 | MIT |
+| click | 8.4.2 | BSD-3-Clause |
+| CPython | 3.12.14 | PSF-2.0 |
 | daisyui | 5.7.16 | MIT |
+| diffusers | 0.40.0 | Apache 2.0 License |
 | dockview-react | 8.1.0 | MIT |
 | electron | 43.4.0 | MIT |
 | electron-store | 11.0.2 | MIT |
 | electron-updater | 6.8.9 | MIT |
 | fflate | 0.8.3 | MIT |
 | FFmpeg | 7.1.1 / 7.1.5 | GPL-3.0-or-later / LGPL-2.1-or-later |
+| filelock | 3.32.3 | MIT |
+| fsspec | 2026.7.0 | BSD-3-Clause |
+| h11 | 0.16.0 | MIT |
+| hf-xet | 1.6.0 | Apache-2.0 |
+| httpcore | 1.0.9 | BSD-3-Clause |
+| httpx | 0.28.1 | BSD-3-Clause |
+| huggingface-hub | 1.28.0 | Apache-2.0 |
 | i18next | 26.3.6 | MIT |
 | IBM Plex Mono | shipped with the application | OFL-1.1 |
 | IBM Plex Serif | shipped with the application | OFL-1.1 |
+| idna | 3.19 | BSD-3-Clause |
 | immer | 11.1.16 | MIT |
+| importlib-metadata | 9.0.0 | Apache-2.0 |
+| jinja2 | 3.1.6 | BSD License |
 | Lato | shipped with the application | OFL-1.1 |
+| markdown-it-py | 4.2.0 | MIT License |
+| markupsafe | 3.0.3 | BSD-3-Clause |
+| mdurl | 0.1.2 | MIT License |
 | mediabunny | 1.53.1 | MPL-2.0 |
+| mpmath | 1.3.0 | BSD |
+| networkx | 3.6.1 | BSD-3-Clause |
 | node-llama-cpp | 3.20.0 | MIT |
+| numpy | 2.5.2 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 |
 | ONNX Runtime | 1.27.0 | MIT |
 | opentype.js | 2.0.0 | MIT |
+| packaging | 26.3 | Apache-2.0 OR BSD-2-Clause |
 | Parakeet TDT 0.6b v3 | int8 | CC-BY-4.0 |
+| pillow | 12.3.0 | MIT-CMU |
 | pixi.js | 8.19.0 | MIT |
+| psutil | 7.2.2 | BSD-3-Clause |
+| pygments | 2.21.0 | BSD-2-Clause |
+| pyyaml | 6.0.3 | MIT |
 | Qwen2.5 0.5B Instruct | Q4_K_M | Apache-2.0 |
 | Qwen2.5 1.5B Instruct | Q4_K_M | Apache-2.0 |
 | Qwen2.5 14B Instruct | Q4_K_M | Apache-2.0 |
@@ -46,17 +75,32 @@ The terms below govern these components. They are not affected by the licence of
 | react-markdown | 10.1.0 | MIT |
 | react-tooltip | 6.0.8 | MIT |
 | recharts | 3.10.1 | MIT |
+| regex | 2026.7.19 | Apache-2.0 AND CNRI-Python |
 | remark-gfm | 4.0.1 | MIT |
+| requests | 2.34.2 | Apache-2.0 |
+| rich | 15.0.0 | MIT |
+| safetensors | 0.8.0 | Apache Software License |
 | Sana 600M | 1024px, fp16 | Apache-2.0 |
+| setuptools | 84.0.0 | MIT |
+| shellingham | 1.5.4 | ISC License |
 | sherpa-onnx-node | 1.13.5 | Apache-2.0 |
 | Silero VAD | v5 | MIT |
 | simple-git | 3.36.0 | MIT |
+| sympy | 1.14.0 | BSD |
 | tailwind-merge | 3.6.0 | MIT |
 | tailwindcss | 4.3.3 | MIT |
 | three | 0.185.1 | MIT |
 | three-mesh-bvh | 0.9.14 | MIT |
+| tokenizers | 0.22.2 | Apache Software License |
+| torch | 2.13.0 | Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT |
+| tqdm | 4.70.0 | MPL-2.0 AND MIT |
+| transformers | 5.15.1 | Apache 2.0 License |
+| typer | 0.27.1 | MIT |
+| typing-extensions | 4.16.0 | PSF-2.0 |
+| urllib3 | 2.7.0 | MIT |
 | utif | 3.1.0 | MIT |
 | wavesurfer.js | 7.12.11 | BSD-3-Clause |
+| zipp | 4.1.0 | MIT |
 | zod | 4.4.3 | MIT |
 | zustand | 5.0.15 | MIT |
 
@@ -241,6 +285,24 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+## accelerate
+
+Version: 1.14.0  
+Licence: Apache
+
+Corresponding sources:
+
+```
+https://github.com/huggingface/accelerate
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache.
+Source: https://github.com/huggingface/accelerate
+```
 ## ag-psd
 
 Version: 31.0.2  
@@ -274,6 +336,42 @@ SOFTWARE.
 Any image or brush files included in this repository are not covered by this
 license and belong to their copyright holders.
 ```
+## annotated-doc
+
+Version: 0.0.5  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/fastapi/annotated-doc
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT.
+Source: https://github.com/fastapi/annotated-doc
+```
+## anyio
+
+Version: 4.14.2  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/agronholm/anyio
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT.
+Source: https://github.com/agronholm/anyio
+```
 ## better-sqlite3
 
 Version: 13.0.3  
@@ -302,6 +400,77 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+## certifi
+
+Version: 2026.7.22  
+Licence: MPL-2.0
+
+Corresponding sources:
+
+```
+https://github.com/certifi/python-certifi
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MPL-2.0.
+Source: https://github.com/certifi/python-certifi
+```
+## charset-normalizer
+
+Version: 3.5.1  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/jawah/charset_normalizer
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT.
+Source: https://github.com/jawah/charset_normalizer
+```
+## click
+
+Version: 8.4.2  
+Licence: BSD-3-Clause
+
+Corresponding sources:
+
+```
+https://github.com/pallets/click/
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD-3-Clause.
+Source: https://github.com/pallets/click/
+```
+## CPython
+
+Version: 3.12.14  
+Licence: PSF-2.0
+
+Corresponding sources:
+
+```
+https://github.com/astral-sh/python-build-standalone
+```
+
+```
+The interpreter the local AI engine runs on. It IS in the installer, beside ffmpeg.
+
+Copyright the Python Software Foundation. Licensed under PSF-2.0.
+Source: https://github.com/astral-sh/python-build-standalone
+```
 ## daisyui
 
 Version: 5.7.16  
@@ -329,6 +498,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+## diffusers
+
+Version: 0.40.0  
+Licence: Apache 2.0 License
+
+Corresponding sources:
+
+```
+https://github.com/huggingface/diffusers
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache 2.0 License.
+Source: https://github.com/huggingface/diffusers
 ```
 ## dockview-react
 
@@ -463,6 +650,132 @@ The build differs per platform, and so do its terms:
 Both families oblige us to offer FFmpeg’s corresponding sources, below. They are
 attached to every release of IA Studio alongside the installers, and each binary
 prints the configuration it was built with under `ffmpeg -buildconf`.
+```
+## filelock
+
+Version: 3.32.3  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/tox-dev/py-filelock
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT.
+Source: https://github.com/tox-dev/py-filelock
+```
+## fsspec
+
+Version: 2026.7.0  
+Licence: BSD-3-Clause
+
+Corresponding sources:
+
+```
+https://github.com/fsspec/filesystem_spec
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD-3-Clause.
+Source: https://github.com/fsspec/filesystem_spec
+```
+## h11
+
+Version: 0.16.0  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/python-hyper/h11
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT.
+Source: https://github.com/python-hyper/h11
+```
+## hf-xet
+
+Version: 1.6.0  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://github.com/huggingface/xet-core.git
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache-2.0.
+Source: https://github.com/huggingface/xet-core.git
+```
+## httpcore
+
+Version: 1.0.9  
+Licence: BSD-3-Clause
+
+Corresponding sources:
+
+```
+https://github.com/encode/httpcore
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD-3-Clause.
+Source: https://github.com/encode/httpcore
+```
+## httpx
+
+Version: 0.28.1  
+Licence: BSD-3-Clause
+
+Corresponding sources:
+
+```
+https://github.com/encode/httpx
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD-3-Clause.
+Source: https://github.com/encode/httpx
+```
+## huggingface-hub
+
+Version: 1.28.0  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://github.com/huggingface/huggingface_hub
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache-2.0.
+Source: https://github.com/huggingface/huggingface_hub
 ```
 ## i18next
 
@@ -704,6 +1017,24 @@ DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
+## idna
+
+Version: 3.19  
+Licence: BSD-3-Clause
+
+Corresponding sources:
+
+```
+https://github.com/kjd/idna
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD-3-Clause.
+Source: https://github.com/kjd/idna
+```
 ## immer
 
 Version: 11.1.16  
@@ -731,6 +1062,42 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+## importlib-metadata
+
+Version: 9.0.0  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://github.com/python/importlib_metadata
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache-2.0.
+Source: https://github.com/python/importlib_metadata
+```
+## jinja2
+
+Version: 3.1.6  
+Licence: BSD License
+
+Corresponding sources:
+
+```
+https://github.com/pallets/jinja/
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD License.
+Source: https://github.com/pallets/jinja/
 ```
 ## Lato
 
@@ -837,6 +1204,60 @@ INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
+```
+## markdown-it-py
+
+Version: 4.2.0  
+Licence: MIT License
+
+Corresponding sources:
+
+```
+https://github.com/executablebooks/markdown-it-py
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT License.
+Source: https://github.com/executablebooks/markdown-it-py
+```
+## markupsafe
+
+Version: 3.0.3  
+Licence: BSD-3-Clause
+
+Corresponding sources:
+
+```
+https://github.com/pallets/markupsafe/
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD-3-Clause.
+Source: https://github.com/pallets/markupsafe/
+```
+## mdurl
+
+Version: 0.1.2  
+Licence: MIT License
+
+Corresponding sources:
+
+```
+https://github.com/executablebooks/mdurl
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT License.
+Source: https://github.com/executablebooks/mdurl
 ```
 ## mediabunny
 
@@ -1224,6 +1645,42 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   This Source Code Form is "Incompatible With Secondary Licenses", as
   defined by the Mozilla Public License, v. 2.0.
 ```
+## mpmath
+
+Version: 1.3.0  
+Licence: BSD
+
+Corresponding sources:
+
+```
+https://github.com/fredrik-johansson/mpmath
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD.
+Source: https://github.com/fredrik-johansson/mpmath
+```
+## networkx
+
+Version: 3.6.1  
+Licence: BSD-3-Clause
+
+Corresponding sources:
+
+```
+https://github.com/networkx/networkx
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD-3-Clause.
+Source: https://github.com/networkx/networkx
+```
 ## node-llama-cpp
 
 Version: 3.20.0  
@@ -1251,6 +1708,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+## numpy
+
+Version: 2.5.2  
+Licence: BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0
+
+Corresponding sources:
+
+```
+https://github.com/numpy/numpy
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0.
+Source: https://github.com/numpy/numpy
 ```
 ## ONNX Runtime
 
@@ -1297,6 +1772,24 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
+## packaging
+
+Version: 26.3  
+Licence: Apache-2.0 OR BSD-2-Clause
+
+Corresponding sources:
+
+```
+https://github.com/pypa/packaging
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache-2.0 OR BSD-2-Clause.
+Source: https://github.com/pypa/packaging
+```
 ## Parakeet TDT 0.6b v3
 
 Version: int8  
@@ -1318,6 +1811,24 @@ Created by NVIDIA, as part of the NeMo toolkit, and converted to ONNX by the
 sherpa-onnx project.
 
 Full terms: https://creativecommons.org/licenses/by/4.0/legalcode
+```
+## pillow
+
+Version: 12.3.0  
+Licence: MIT-CMU
+
+Corresponding sources:
+
+```
+https://github.com/python-pillow/Pillow
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT-CMU.
+Source: https://github.com/python-pillow/Pillow
 ```
 ## pixi.js
 
@@ -1346,6 +1857,60 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+```
+## psutil
+
+Version: 7.2.2  
+Licence: BSD-3-Clause
+
+Corresponding sources:
+
+```
+https://github.com/giampaolo/psutil
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD-3-Clause.
+Source: https://github.com/giampaolo/psutil
+```
+## pygments
+
+Version: 2.21.0  
+Licence: BSD-2-Clause
+
+Corresponding sources:
+
+```
+https://github.com/pygments/pygments
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD-2-Clause.
+Source: https://github.com/pygments/pygments
+```
+## pyyaml
+
+Version: 6.0.3  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/yaml/pyyaml
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT.
+Source: https://github.com/yaml/pyyaml
 ```
 ## Qwen2.5 0.5B Instruct
 
@@ -1647,6 +2212,24 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+## regex
+
+Version: 2026.7.19  
+Licence: Apache-2.0 AND CNRI-Python
+
+Corresponding sources:
+
+```
+https://github.com/mrabarnett/mrab-regex
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache-2.0 AND CNRI-Python.
+Source: https://github.com/mrabarnett/mrab-regex
+```
 ## remark-gfm
 
 Version: 4.0.1  
@@ -1676,6 +2259,60 @@ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
+## requests
+
+Version: 2.34.2  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://github.com/psf/requests
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache-2.0.
+Source: https://github.com/psf/requests
+```
+## rich
+
+Version: 15.0.0  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/Textualize/rich
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT.
+Source: https://github.com/Textualize/rich
+```
+## safetensors
+
+Version: 0.8.0  
+Licence: Apache Software License
+
+Corresponding sources:
+
+```
+https://github.com/huggingface/safetensors
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache Software License.
+Source: https://github.com/huggingface/safetensors
+```
 ## Sana 600M
 
 Version: 1024px, fp16  
@@ -1694,6 +2331,42 @@ folder, against a published digest, and removed from the model manager.
 
 Copyright NVIDIA Corporation and the Sana authors. Licensed under the Apache License,
 Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
+```
+## setuptools
+
+Version: 84.0.0  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/pypa/setuptools
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT.
+Source: https://github.com/pypa/setuptools
+```
+## shellingham
+
+Version: 1.5.4  
+Licence: ISC License
+
+Corresponding sources:
+
+```
+https://github.com/sarugaku/shellingham
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under ISC License.
+Source: https://github.com/sarugaku/shellingham
 ```
 ## sherpa-onnx-node
 
@@ -1727,6 +2400,24 @@ Licence: MIT
 
 ```
 See readme.md of the package.
+```
+## sympy
+
+Version: 1.14.0  
+Licence: BSD
+
+Corresponding sources:
+
+```
+https://github.com/sympy/sympy
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD.
+Source: https://github.com/sympy/sympy
 ```
 ## tailwind-merge
 
@@ -1840,6 +2531,132 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+## tokenizers
+
+Version: 0.22.2  
+Licence: Apache Software License
+
+Corresponding sources:
+
+```
+https://github.com/huggingface/tokenizers
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache Software License.
+Source: https://github.com/huggingface/tokenizers
+```
+## torch
+
+Version: 2.13.0  
+Licence: Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT
+
+Corresponding sources:
+
+```
+https://github.com/pytorch/pytorch
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT.
+Source: https://github.com/pytorch/pytorch
+```
+## tqdm
+
+Version: 4.70.0  
+Licence: MPL-2.0 AND MIT
+
+Corresponding sources:
+
+```
+https://github.com/tqdm/tqdm
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MPL-2.0 AND MIT.
+Source: https://github.com/tqdm/tqdm
+```
+## transformers
+
+Version: 5.15.1  
+Licence: Apache 2.0 License
+
+Corresponding sources:
+
+```
+https://github.com/huggingface/transformers
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache 2.0 License.
+Source: https://github.com/huggingface/transformers
+```
+## typer
+
+Version: 0.27.1  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/fastapi/typer
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT.
+Source: https://github.com/fastapi/typer
+```
+## typing-extensions
+
+Version: 4.16.0  
+Licence: PSF-2.0
+
+Corresponding sources:
+
+```
+https://github.com/python/typing_extensions
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under PSF-2.0.
+Source: https://github.com/python/typing_extensions
+```
+## urllib3
+
+Version: 2.7.0  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/urllib3/urllib3
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT.
+Source: https://github.com/urllib3/urllib3
+```
 ## utif
 
 Version: 3.1.0  
@@ -1903,6 +2720,24 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+## zipp
+
+Version: 4.1.0  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/jaraco/zipp
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the
+application: it is fetched on first use, and removed with the engine.
+
+Licensed under MIT.
+Source: https://github.com/jaraco/zipp
 ```
 ## zod
 

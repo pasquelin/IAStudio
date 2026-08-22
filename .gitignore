@@ -31,6 +31,8 @@ __pycache__/
 # model weights, never committed.
 resources/ffmpeg/
 resources/stt/
+# L'interpréteur du moteur — 67 Mo, écrit par `pnpm engine:fetch` contre un digest épinglé.
+resources/engine/
 src/renderer/public/decoders/
 
 # Signing material. A safety net, never a permission: certificates belong in the GitHub

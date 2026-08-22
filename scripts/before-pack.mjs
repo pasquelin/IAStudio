@@ -1,6 +1,7 @@
 /**
  * Fetches what the studio ships beside itself, right before electron-builder packs a target:
- * the ffmpeg of that target, and the voice detector dictation listens through.
+ * the ffmpeg of that target, the voice detector dictation listens through, and the interpreter
+ * the local AI engine runs on.
  *
  * A single `pnpm dist` builds several targets — macOS ships arm64 and x64 from one run — while
  * `resources/ffmpeg/` holds one platform's binaries at a time. Left to a manual
@@ -14,6 +15,7 @@
  * race over the folder.
  */
 import { Arch } from 'electron-builder'
+import { fetchEngine } from './fetch-engine.mjs'
 import { fetchFfmpeg } from './fetch-ffmpeg.mjs'
 import { fetchStt } from './fetch-stt.mjs'
 
@@ -34,4 +36,9 @@ export default async function beforePack(context) {
   // hook that runs before each pack — and re-fetching 640 KB costs nothing worth optimising.
   console.log('Fetching the voice detector')
   await fetchStt()
+
+  // Per target for the same reason ffmpeg is: an interpreter is a native binary, and the second
+  // bundle of a two-arch run would otherwise carry the first one's.
+  console.log(`Fetching the AI engine interpreter for ${platform}-${arch}`)
+  await fetchEngine(platform, arch)
 }
