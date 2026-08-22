@@ -33,9 +33,6 @@ type Dressed = {
  * file's own, and hand `PaneMemory` a material it takes for the model's — losing the real one for
  * the rest of the session. Taking the copy at build time, before anything dresses the scene, is
  * what makes the slots hold their own material like `createMaterialTextures` does.
- *
- * Cloned materials are disposed here: the instance is an Object3D holder, so SceneRenderer.release
- * never sees them as a Mesh. File maps stay with the source cache.
  */
 export function createModelTextures(
   cache: TextureCache,
@@ -89,6 +86,7 @@ export function createModelTextures(
     apply: overrides => slots.apply(overrides ?? {}),
     dispose: () => {
       slots.clear()
+      // Cloned copies only — SceneRenderer.release never sees them; file maps stay with the cache.
       for (const { material } of dressed) material.dispose()
     },
   }

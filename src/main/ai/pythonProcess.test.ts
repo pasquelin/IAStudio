@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
@@ -167,7 +167,6 @@ describe('the death of the engine', () => {
   })
 
   it('kills the door processes the engine started, not only the engine', async () => {
-    const { readFileSync } = await import('node:fs')
     const pidFile = join(folder, 'child.pid')
     vi.stubEnv('CHILD_PID_FILE', pidFile)
     const port = openPythonProcess({

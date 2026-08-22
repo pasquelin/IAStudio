@@ -50,10 +50,7 @@ export type ManagerDeps = {
    * moves in seconds, not in milliseconds. A load always reads afresh, whatever this says (R2).
    */
   factsTtlMs?: number
-  /**
-   * Minutes of silence after which every resident door is dropped. `0` keeps them.
-   * Dictation already had this; llama and diffusion did not, so they sat in VRAM all session.
-   */
+  /** `0` keeps them. Dictation already had this; llama and diffusion sat in VRAM all session. */
   idleUnloadMinutes?: () => number
   /** Tests inject a clock. Production uses `setTimeout`. */
   schedule?: (run: () => void, ms: number) => () => void

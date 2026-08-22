@@ -99,6 +99,8 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
         )
 
         held.set(door, model.id)
+        // A MEASUREMENT, where `reservationBytes` is only what a publisher announced — R3. A backend
+        // that answered nothing leaves the reservation, which is the only other figure there is.
         return settled.heldBytes ?? model.reservationBytes
       } finally {
         done?.()
@@ -149,6 +151,8 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
 
         return {
           path,
+          // Reported rather than assumed: a model that fell back to the CPU runs at forty times the
+          // time it should, and that is indistinguishable from a slow machine unless it is said.
           device: settled.device ?? 'unknown',
           backend: settled.backend ?? 'unknown',
         }

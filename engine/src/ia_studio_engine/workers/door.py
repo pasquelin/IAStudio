@@ -17,12 +17,7 @@ from ia_studio_engine.adapters.modalities import Modality
 from ia_studio_engine.protocol.envelope import encode_event
 from ia_studio_engine.workers.base import WorkerLoop, worker_hello
 
-#: What a door announces about how many jobs it takes.
-#:
-#: `[?]` **Not a measurement.** No diffusion workload has been run concurrently on any class of
-#: machine, so this is the conservative reading and it is written as such: the queue serialises,
-#: so ONE job at a time is what a door actually does today. § L.8 is the spike that would
-#: replace these values — the axes are frozen, the values are not.
+#: `[?]` Not measured. The queue serialises, so one job at a time. § L.8 would replace these values.
 OCCUPANCY = {"process": "exclusive-process", "device": "exclusive", "maxConcurrent": 1}
 
 

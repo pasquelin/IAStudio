@@ -81,6 +81,8 @@ export function llamaLocalRuntime(deps: LlamaRuntimeDeps): LocalRuntime {
 
     chat: async request => {
       const model = deps.modelOf(request.model)
+      // Raised rather than answered empty: an empty answer reads as a model that had nothing to
+      // add, where this is the studio having nothing to run.
       if (model === null) throw new Error(`${request.model} is not in the catalogue`)
 
       const done = deps.onUsed?.(model.id)

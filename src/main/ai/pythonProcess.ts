@@ -22,8 +22,6 @@ export type PythonPort = {
 }
 
 /**
- * How long a killed engine is given to let its doors go before the whole group is killed.
- *
  * The worker waits up to 10 s on its child; 5 s used to SIGKILL the engine first and orphan
  * that child, which kept the GPU until a manual kill.
  */
