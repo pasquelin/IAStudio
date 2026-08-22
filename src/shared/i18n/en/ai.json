@@ -74,7 +74,8 @@
       "memory": "{{needed}} asked for, {{available}} of memory free",
       "disk": "{{needed}} to download, {{free}} free on disk",
       "refused": "the format or the provenance of this model is not admitted",
-      "runtime": "the {{runtime}} runtime is not answering on this machine"
+      "runtime": "the {{runtime}} runtime is not answering on this machine",
+      "plugin": "no engine in this studio can open this model yet"
     },
     "machineVram": "{{free}} free of {{total}} video memory",
     "load": "Load",

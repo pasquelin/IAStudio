@@ -42,6 +42,11 @@ export const localModelSchema: z.ZodType<LocalModel> = z.object({
   capabilities: z.array(z.string()).optional(),
   serves: z.array(z.string()).optional(),
   readsTorchWeights: z.boolean().optional(),
+  distribution: z.enum(['bundled', 'direct-download', 'user-import']).optional(),
+  licenceStatus: z
+    .enum(['commercial', 'non-commercial', 'restricted', 'unsupported-region'])
+    .optional(),
+  runtimeStatus: z.enum(['supported', 'plugin-required', 'unsupported']).optional(),
   attaches: z
     .object({
       model: z.string().min(1),

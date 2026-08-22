@@ -1,5 +1,5 @@
 import type { Compatibility, MemorySnapshot } from './aiMemory'
-import { modelRefusalOf, type LocalModel } from './localModel'
+import { modelRefusalOf, runtimeStatusOf, type LocalModel } from './localModel'
 
 /**
  * How a model stands against THIS machine — the verdict a manager shows on every candidate.
@@ -30,11 +30,15 @@ export type MachineOffer = {
  * that is full as much as for a machine that is small, and a screen that explained the second
  * where the first is true would be telling the person to free the wrong thing.
  */
-export type FitObstacle = 'refused' | 'runtime' | 'disk' | 'memory' | 'tight'
+export type FitObstacle = 'refused' | 'plugin' | 'runtime' | 'disk' | 'memory' | 'tight'
 
 /** The one decision the verdict and the sentence beside it both read, so neither can drift. */
 export function fitObstacleOf(model: LocalModel, offer: MachineOffer): FitObstacle | null {
   if (modelRefusalOf(model) !== null) return 'refused'
+
+  // Before the runtime that would HOST it: a model nothing here can open does not become usable
+  // because a process answered. The download is still offered — see the note at the bottom.
+  if (runtimeStatusOf(model) !== 'supported') return 'plugin'
 
   // Before the disk and before the memory: neither figure changes anything while the runtime that
   // would hold the model is not answering, and what it asks for is a different gesture entirely.
@@ -61,6 +65,7 @@ export function fitObstacleOf(model: LocalModel, offer: MachineOffer): FitObstac
  */
 const VERDICT: Record<FitObstacle, Compatibility> = {
   refused: 'incompatible',
+  plugin: 'incompatible',
   runtime: 'incompatible',
   disk: 'insufficient-memory',
   memory: 'insufficient-memory',
@@ -98,4 +103,8 @@ export function fitAllowsUse(fit: Compatibility): boolean {
  * 🛑 There is deliberately no `fitAllowsDownload`. It gated the Install button on the verdict, so
  * a machine judged too small was never OFFERED the download — the screen decided instead of the
  * person. What a machine can hold is the person's call; the verdict is what tells them.
+ *
+ * The same holds for `plugin`, and it is a DECISION of 2026-08-22: a model no runtime here can
+ * open is still offered, with the reservation on screen. The studio distributes none of these
+ * bytes — it names the publisher's address — so the download is the person's to make.
  */

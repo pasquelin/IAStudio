@@ -3080,6 +3080,42 @@
   ],
   "3d/img23d": [
     {
+      "id": "triposr",
+      "name": "TripoSR",
+      "summary": "TripoSR, image vers 3D, leger",
+      "format": "pickle",
+      "loader": "plugin",
+      "modality": "mesh",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/stabilityai/TripoSR",
+      "files": [
+        {
+          "role": "index",
+          "name": "config.yaml",
+          "url": "https://huggingface.co/stabilityai/TripoSR/resolve/5b521936b01fbe1890f6f9baed0254ab6351c04a/config.yaml",
+          "bytes": 987,
+          "sha256": "74ca708ce086bf68e97709ea6b3d91f14717921c04691e84043f0eb8fcc68e62",
+          "revision": "5b521936b01fbe1890f6f9baed0254ab6351c04a"
+        },
+        {
+          "role": "index",
+          "name": "model.ckpt",
+          "url": "https://huggingface.co/stabilityai/TripoSR/resolve/5b521936b01fbe1890f6f9baed0254ab6351c04a/model.ckpt",
+          "bytes": 1677246742,
+          "sha256": "429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee",
+          "revision": "5b521936b01fbe1890f6f9baed0254ab6351c04a"
+        }
+      ],
+      "diskBytes": 1677247729,
+      "reservationBytes": 838623864,
+      "thumbnail": "triposr.png",
+      "distribution": "direct-download",
+      "licenceStatus": "commercial",
+      "runtimeStatus": "plugin-required"
+    },
+    {
       "id": "shap-e-img2img",
       "name": "Shap-E Image",
       "summary": "Shap-E, image vers maillage",
@@ -3208,6 +3244,186 @@
       "reservationBytes": 2989127072,
       "thumbnail": "shap-e-img2img.png",
       "readsTorchWeights": true
+    },
+    {
+      "id": "trellis2-4b",
+      "name": "TRELLIS.2 4B",
+      "summary": "TRELLIS.2, 4B, image vers 3D",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "mesh",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/microsoft/TRELLIS.2-4B",
+      "files": [
+        {
+          "role": "ckpts",
+          "name": "ckpts/shape_dec_next_dc_f16c32_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/shape_dec_next_dc_f16c32_fp16.json",
+          "bytes": 678,
+          "sha256": "5f1b856dffce79466fb18f5f0eefc08f08c673b24b3c05b20359c0b6d318a209",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/shape_dec_next_dc_f16c32_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/shape_dec_next_dc_f16c32_fp16.safetensors",
+          "bytes": 948490494,
+          "sha256": "e3b718d3e43e4f8780e9a24ac6fff231811a67e3b058e336e10fe654c911d581",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/shape_enc_next_dc_f16c32_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/shape_enc_next_dc_f16c32_fp16.json",
+          "bytes": 653,
+          "sha256": "5a960a5c419d70f8d4a7a6b6e52ae689cd948c88bd7ed92346adfbf82cd12007",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/shape_enc_next_dc_f16c32_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/shape_enc_next_dc_f16c32_fp16.safetensors",
+          "bytes": 708797208,
+          "sha256": "f37c5ff5b983b68e9946060000f09bc131f3e84318a2c8b7430a81e4b4636c41",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_flow_img2shape_dit_1_3B_1024_bf16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/slat_flow_img2shape_dit_1_3B_1024_bf16.json",
+          "bytes": 458,
+          "sha256": "7ebd6d367393f52fee9e92c2b3d727a9026a338549c6a6fa84c7ea122140ffdd",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_flow_img2shape_dit_1_3B_1024_bf16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/slat_flow_img2shape_dit_1_3B_1024_bf16.safetensors",
+          "bytes": 2584574424,
+          "sha256": "07cd0596f634c5adc1890023d16023afc5eed02fb84b22bb23aff5bf0030fbbd",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_flow_img2shape_dit_1_3B_512_bf16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/slat_flow_img2shape_dit_1_3B_512_bf16.json",
+          "bytes": 458,
+          "sha256": "ddbd7a1d34ce9a8e7af2f6ef9ae686d9ab49f69e62dacb98d8409b511cdbd5e2",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_flow_img2shape_dit_1_3B_512_bf16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/slat_flow_img2shape_dit_1_3B_512_bf16.safetensors",
+          "bytes": 2584574424,
+          "sha256": "ec5e0917ef9b7e25ad51dffc7d19687a42019871f94239f2fa7f86264c55b70f",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_flow_imgshape2tex_dit_1_3B_1024_bf16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/slat_flow_imgshape2tex_dit_1_3B_1024_bf16.json",
+          "bytes": 458,
+          "sha256": "31f4fdad9974930e5e9324ac9dfb6ef7de6b30cea51854ba515ef827a8d353b2",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_flow_imgshape2tex_dit_1_3B_1024_bf16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/slat_flow_imgshape2tex_dit_1_3B_1024_bf16.safetensors",
+          "bytes": 2584672728,
+          "sha256": "580401269059a339b8318ab9ced459a13ba63391721c83a6c383198c29e77686",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_flow_imgshape2tex_dit_1_3B_512_bf16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/slat_flow_imgshape2tex_dit_1_3B_512_bf16.json",
+          "bytes": 458,
+          "sha256": "3093796257a62f838d2e5578ac4580ca3b7d88d10b87d348065d3fdfcc4c2077",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/slat_flow_imgshape2tex_dit_1_3B_512_bf16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/slat_flow_imgshape2tex_dit_1_3B_512_bf16.safetensors",
+          "bytes": 2584672728,
+          "sha256": "8371aa1c5d13be79dcd5ddfd2cf3835e902e204dc34427169a1c702828e1a94d",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/ss_flow_img_dit_1_3B_64_bf16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/ss_flow_img_dit_1_3B_64_bf16.json",
+          "bytes": 467,
+          "sha256": "6cdfb636854f60ffcadd8c49244169cd449f34c5ccdb55b5ff7c04678f9c399e",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/ss_flow_img_dit_1_3B_64_bf16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/ss_flow_img_dit_1_3B_64_bf16.safetensors",
+          "bytes": 2584426920,
+          "sha256": "ca01377c485bec418076d38ee80166d32dc776d744f2553b835cba1e97a7abf6",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/tex_dec_next_dc_f16c32_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/tex_dec_next_dc_f16c32_fp16.json",
+          "bytes": 705,
+          "sha256": "22074e4ab5b28e2b72d33a3fe61bf416134b89e12d0fc5c729f37da75da0c4d1",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/tex_dec_next_dc_f16c32_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/tex_dec_next_dc_f16c32_fp16.safetensors",
+          "bytes": 948458812,
+          "sha256": "97ea69addea2ecd9312910f5f548234665eef51c088386180b7cd5b258645e3c",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/tex_enc_next_dc_f16c32_fp16.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/tex_enc_next_dc_f16c32_fp16.json",
+          "bytes": 676,
+          "sha256": "22d78e219c9df19b00f7f97db5889bafdf18ee57fedf853cd888e5afbfa0ad6c",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "ckpts",
+          "name": "ckpts/tex_enc_next_dc_f16c32_fp16.safetensors",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/ckpts/tex_enc_next_dc_f16c32_fp16.safetensors",
+          "bytes": 708797208,
+          "sha256": "dd109f75f84b90fa411554ed6b0e4a87f430841163156fc0ebda2ebdc4752493",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "index",
+          "name": "pipeline.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/pipeline.json",
+          "bytes": 4186,
+          "sha256": "222c359ab1ed9bc6735a640a34f95d47f8681b9bc4aaa101bfb80274676253c6",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        },
+        {
+          "role": "index",
+          "name": "texturing_pipeline.json",
+          "url": "https://huggingface.co/microsoft/TRELLIS.2-4B/resolve/af44b45f2e35a493886929c6d786e563ec68364d/texturing_pipeline.json",
+          "bytes": 2965,
+          "sha256": "64009974a391fe9c948b2943fd2846dc4526bc569c1d56dafb8f9e5c181fcac3",
+          "revision": "af44b45f2e35a493886929c6d786e563ec68364d"
+        }
+      ],
+      "diskBytes": 16237477108,
+      "reservationBytes": 8118738554,
+      "thumbnail": "trellis2-4b.png",
+      "distribution": "direct-download",
+      "licenceStatus": "commercial",
+      "runtimeStatus": "plugin-required"
     }
   ],
   "image/controlnet": [
@@ -3406,6 +3622,164 @@
       "serves": [
         "texture/reference_texture"
       ]
+    }
+  ],
+  "audio/video2audio": [
+    {
+      "id": "mmaudio-small-44k",
+      "name": "MMAudio Small",
+      "summary": "MMAudio small, 44 kHz",
+      "format": "pickle",
+      "loader": "plugin",
+      "modality": "audio",
+      "rank": 1,
+      "licence": "CC-BY-NC-4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "source": "https://huggingface.co/hkchengrex/MMAudio",
+      "files": [
+        {
+          "role": "ext_weights",
+          "name": "ext_weights/best_netG.pt",
+          "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/ext_weights/best_netG.pt",
+          "bytes": 449217313,
+          "sha256": "970ca75ee4d5ce583e9396a4534acb14971ea2b4f1c22e038f476680c868a789",
+          "revision": "eb13a1a98fdbec91753775c57b074ccdfc60587c"
+        },
+        {
+          "role": "ext_weights",
+          "name": "ext_weights/synchformer_state_dict.pth",
+          "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/ext_weights/synchformer_state_dict.pth",
+          "bytes": 950058171,
+          "sha256": "8aff082f2df5c3bc52759db0c865c7ee772ae6400b860d1b7e90413f2defb67c",
+          "revision": "eb13a1a98fdbec91753775c57b074ccdfc60587c"
+        },
+        {
+          "role": "ext_weights",
+          "name": "ext_weights/v1-44.pth",
+          "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/ext_weights/v1-44.pth",
+          "bytes": 1221942998,
+          "sha256": "ab6cc15dc31947675f75c950c41f4dcfd0d6d1817555ac871f809ec388e4651a",
+          "revision": "eb13a1a98fdbec91753775c57b074ccdfc60587c"
+        },
+        {
+          "role": "weights",
+          "name": "weights/mmaudio_small_44k.pth",
+          "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/weights/mmaudio_small_44k.pth",
+          "bytes": 629946624,
+          "sha256": "11fd92e860a58f0fac972706dd06034e49dceff2e1450bbde5703785c812b0f1",
+          "revision": "eb13a1a98fdbec91753775c57b074ccdfc60587c"
+        }
+      ],
+      "diskBytes": 3251165106,
+      "reservationBytes": 1625582553,
+      "thumbnail": "mmaudio-small-44k.png",
+      "distribution": "direct-download",
+      "licenceStatus": "non-commercial",
+      "runtimeStatus": "plugin-required"
+    },
+    {
+      "id": "mmaudio-medium-44k",
+      "name": "MMAudio Medium",
+      "summary": "MMAudio medium, 44 kHz",
+      "format": "pickle",
+      "loader": "plugin",
+      "modality": "audio",
+      "rank": 1,
+      "licence": "CC-BY-NC-4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "source": "https://huggingface.co/hkchengrex/MMAudio",
+      "files": [
+        {
+          "role": "ext_weights",
+          "name": "ext_weights/best_netG.pt",
+          "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/ext_weights/best_netG.pt",
+          "bytes": 449217313,
+          "sha256": "970ca75ee4d5ce583e9396a4534acb14971ea2b4f1c22e038f476680c868a789",
+          "revision": "eb13a1a98fdbec91753775c57b074ccdfc60587c"
+        },
+        {
+          "role": "ext_weights",
+          "name": "ext_weights/synchformer_state_dict.pth",
+          "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/ext_weights/synchformer_state_dict.pth",
+          "bytes": 950058171,
+          "sha256": "8aff082f2df5c3bc52759db0c865c7ee772ae6400b860d1b7e90413f2defb67c",
+          "revision": "eb13a1a98fdbec91753775c57b074ccdfc60587c"
+        },
+        {
+          "role": "ext_weights",
+          "name": "ext_weights/v1-44.pth",
+          "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/ext_weights/v1-44.pth",
+          "bytes": 1221942998,
+          "sha256": "ab6cc15dc31947675f75c950c41f4dcfd0d6d1817555ac871f809ec388e4651a",
+          "revision": "eb13a1a98fdbec91753775c57b074ccdfc60587c"
+        },
+        {
+          "role": "weights",
+          "name": "weights/mmaudio_medium_44k.pth",
+          "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/weights/mmaudio_medium_44k.pth",
+          "bytes": 2487535109,
+          "sha256": "3c6b01b5767a92f71529474faffedca2309416ff822b57b0c8d18be218cfb41a",
+          "revision": "eb13a1a98fdbec91753775c57b074ccdfc60587c"
+        }
+      ],
+      "diskBytes": 5108753591,
+      "reservationBytes": 2554376795,
+      "thumbnail": "mmaudio-medium-44k.png",
+      "distribution": "direct-download",
+      "licenceStatus": "non-commercial",
+      "runtimeStatus": "plugin-required"
+    },
+    {
+      "id": "mmaudio-large-44k",
+      "name": "MMAudio Large",
+      "summary": "MMAudio large, 44 kHz",
+      "format": "pickle",
+      "loader": "plugin",
+      "modality": "audio",
+      "rank": 1,
+      "licence": "CC-BY-NC-4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "source": "https://huggingface.co/hkchengrex/MMAudio",
+      "files": [
+        {
+          "role": "ext_weights",
+          "name": "ext_weights/best_netG.pt",
+          "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/ext_weights/best_netG.pt",
+          "bytes": 449217313,
+          "sha256": "970ca75ee4d5ce583e9396a4534acb14971ea2b4f1c22e038f476680c868a789",
+          "revision": "eb13a1a98fdbec91753775c57b074ccdfc60587c"
+        },
+        {
+          "role": "ext_weights",
+          "name": "ext_weights/synchformer_state_dict.pth",
+          "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/ext_weights/synchformer_state_dict.pth",
+          "bytes": 950058171,
+          "sha256": "8aff082f2df5c3bc52759db0c865c7ee772ae6400b860d1b7e90413f2defb67c",
+          "revision": "eb13a1a98fdbec91753775c57b074ccdfc60587c"
+        },
+        {
+          "role": "ext_weights",
+          "name": "ext_weights/v1-44.pth",
+          "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/ext_weights/v1-44.pth",
+          "bytes": 1221942998,
+          "sha256": "ab6cc15dc31947675f75c950c41f4dcfd0d6d1817555ac871f809ec388e4651a",
+          "revision": "eb13a1a98fdbec91753775c57b074ccdfc60587c"
+        },
+        {
+          "role": "weights",
+          "name": "weights/mmaudio_large_44k.pth",
+          "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/weights/mmaudio_large_44k.pth",
+          "bytes": 4120388840,
+          "sha256": "b3094f49ec67847dc5cf989982033b674574fd35f313d2fe4e54de8998a576dd",
+          "revision": "eb13a1a98fdbec91753775c57b074ccdfc60587c"
+        }
+      ],
+      "diskBytes": 6741607322,
+      "reservationBytes": 3370803661,
+      "thumbnail": "mmaudio-large-44k.png",
+      "distribution": "direct-download",
+      "licenceStatus": "non-commercial",
+      "runtimeStatus": "plugin-required"
     }
   ]
 }

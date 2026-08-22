@@ -56,6 +56,9 @@ The terms below govern these components. They are not affected by the licence of
 | markupsafe | 3.0.3 | BSD-3-Clause |
 | mdurl | 0.1.2 | MIT License |
 | mediabunny | 1.53.1 | MPL-2.0 |
+| MMAudio Large | shipped with the application | CC-BY-NC-4.0 |
+| MMAudio Medium | shipped with the application | CC-BY-NC-4.0 |
+| MMAudio Small | shipped with the application | CC-BY-NC-4.0 |
 | Mochi 1 | shipped with the application | Apache-2.0 |
 | mpmath | 1.3.0 | BSD |
 | networkx | 3.6.1 | BSD-3-Clause |
@@ -109,6 +112,8 @@ The terms below govern these components. They are not affected by the licence of
 | torch | 2.13.0 | Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT |
 | tqdm | 4.70.0 | MPL-2.0 AND MIT |
 | transformers | 5.15.1 | Apache 2.0 License |
+| TRELLIS.2 4B | shipped with the application | MIT |
+| TripoSR | shipped with the application | MIT |
 | typer | 0.27.1 | MIT |
 | typing-extensions | 4.16.0 | PSF-2.0 |
 | urllib3 | 2.7.0 | MIT |
@@ -1785,6 +1790,81 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   This Source Code Form is "Incompatible With Secondary Licenses", as
   defined by the Mozilla Public License, v. 2.0.
 ```
+## MMAudio Large
+
+Version: shipped with the application  
+Licence: CC-BY-NC-4.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/hkchengrex/MMAudio
+```
+
+```
+MMAudio large, 44 kHz, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright the MMAudio authors.
+
+Licensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/
+
+NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.
+
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible, and fetched from the publisher rather than from us.
+```
+## MMAudio Medium
+
+Version: shipped with the application  
+Licence: CC-BY-NC-4.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/hkchengrex/MMAudio
+```
+
+```
+MMAudio medium, 44 kHz, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright the MMAudio authors.
+
+Licensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/
+
+NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.
+
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible, and fetched from the publisher rather than from us.
+```
+## MMAudio Small
+
+Version: shipped with the application  
+Licence: CC-BY-NC-4.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/hkchengrex/MMAudio
+```
+
+```
+MMAudio small, 44 kHz, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright the MMAudio authors.
+
+Licensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/
+
+NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.
+
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible, and fetched from the publisher rather than from us.
+```
 ## Mochi 1
 
 Version: shipped with the application  
@@ -2917,6 +2997,52 @@ application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache 2.0 License.
 Source: https://github.com/huggingface/transformers
+```
+## TRELLIS.2 4B
+
+Version: shipped with the application  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://huggingface.co/microsoft/TRELLIS.2-4B
+```
+
+```
+TRELLIS.2, 4B, image vers 3D, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright Microsoft.
+
+Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
+
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible, and fetched from the publisher rather than from us.
+```
+## TripoSR
+
+Version: shipped with the application  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://huggingface.co/stabilityai/TripoSR
+```
+
+```
+TripoSR, image vers 3D, leger, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright Stability AI and Tripo AI.
+
+Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
+
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible, and fetched from the publisher rather than from us.
 ```
 ## typer
 
