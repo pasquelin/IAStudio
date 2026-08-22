@@ -326,6 +326,26 @@ describe('holding a model in memory', () => {
     expect(candidateOf(await ai.overview(), QWEN.id)?.loaded).toBe(false)
   })
 
+  it('does not reload a model that is already on its door', async () => {
+    const runtime = holdingRuntime()
+    const load = vi.fn(runtime.load)
+    const ai = manager({ runtimes: { 'sherpa-onnx': { ...runtime, load } } })
+
+    await ai.ensureLoaded(QWEN.id)
+    await ai.ensureLoaded(QWEN.id)
+
+    expect(load).toHaveBeenCalledOnce()
+  })
+
+  it('refuses to generate when the machine has no room', async () => {
+    const ai = manager({
+      runtimes: { 'sherpa-onnx': holdingRuntime() },
+      snapshotOf: () => runtimeSnapshot(GIBI / 2),
+    })
+
+    await expect(ai.ensureLoaded(QWEN.id)).rejects.toThrow(/needs/)
+  })
+
   it('unloads a model left idle when nothing is using it', async () => {
     const armed: { run: (() => void) | null } = { run: null }
     const unload = vi.fn()

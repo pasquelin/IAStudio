@@ -95,6 +95,13 @@ export type JobManagerDeps = {
    */
   persist: (jobs: readonly PersistedJob[], handled: readonly string[]) => void
   concurrency: () => number
+  /**
+   * How many jobs that run on THIS machine may occupy the GPU at once. Cloud jobs ignore it.
+   * Absent, and a target this machine holds, means one — two exclusive doors on one GPU fight.
+   */
+  localConcurrency?: () => number
+  /** Whether the target is a model this machine holds. Absent, every job uses `concurrency`. */
+  isLocalTarget?: (targetId: string) => boolean
   maxRetries: () => number
   /**
    * The pictures a body names, turned into what the TARGET's runtime takes: an id the API
@@ -284,6 +291,8 @@ export function createJobManager({
   projectPath,
   persist,
   concurrency,
+  localConcurrency,
+  isLocalTarget,
   maxRetries,
   resolveAssetInputs,
   onProgress,
@@ -298,6 +307,7 @@ export function createJobManager({
   const entries = new Map<string, Entry>()
   const queue: string[] = []
   let running = 0
+  let localRunning = 0
 
   /**
    * How long to wait before asking again, given how many jobs are being followed at once.
@@ -615,9 +625,22 @@ export function createJobManager({
     }
   }
 
+  const onThisMachine = isLocalTarget ?? (() => false)
+
+  const canStart = (entry: Entry): boolean =>
+    onThisMachine(entry.job.targetId)
+      ? localRunning < (localConcurrency?.() ?? 1)
+      : running - localRunning < concurrency()
+
   const pump = (): void => {
-    while (running < concurrency()) {
-      const id = queue.shift()
+    for (;;) {
+      const index = queue.findIndex(id => {
+        const entry = entries.get(id)
+        return !entry || entry.cancelled || canStart(entry)
+      })
+      if (index < 0) return
+
+      const id = queue.splice(index, 1)[0]
       if (id === undefined) return
 
       const entry = entries.get(id)
@@ -628,9 +651,12 @@ export function createJobManager({
         continue
       }
 
+      const local = onThisMachine(entry.job.targetId)
       running++
+      if (local) localRunning++
       void execute(entry).finally(() => {
         running--
+        if (local) localRunning--
         pump()
       })
     }

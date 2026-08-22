@@ -76,6 +76,11 @@ export type AiManager = {
    * reports: the load of a fourteen-billion-parameter model is tens of seconds of disk.
    */
   load: (modelId: string) => Promise<AiOverview>
+  /**
+   * A generation that skipped this drew with whatever was already resident — another model's
+   * weights, or nothing.
+   */
+  ensureLoaded: (modelId: string) => Promise<void>
   cancelLoad: () => Promise<AiOverview>
   unload: (modelId: string) => Promise<AiOverview>
   /** Rearms idle unload and the admission LRU. */
@@ -599,6 +604,23 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
       await runLoad(model)
       return announce()
+    },
+
+    ensureLoaded: async modelId => {
+      const model = modelOf(modelId)
+      if (model === null) throw new Error(`${modelId} is not in the catalogue`)
+      if (occupancy.get(endpointOf(model.loader, model.modality))?.modelId === modelId) return
+      if (loading !== null) throw new Error(`busy loading ${loading.modelId}`)
+
+      await runLoad(model)
+      await announce()
+      if (loadFailure === null) return
+      if (loadFailure.reason === 'beyond-machine') {
+        throw new Error(
+          `${loadFailure.modelId} needs ${loadFailure.neededBytes} bytes, ${loadFailure.availableBytes} free`,
+        )
+      }
+      throw new Error(`loading ${loadFailure.modelId} failed`)
     },
 
     cancelLoad: async () => {
