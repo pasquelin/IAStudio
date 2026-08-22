@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { MODEL_PERIODS, MODEL_SORTS } from '@shared/domain/model'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import { LOCAL_RUNTIME, MODEL_PERIODS, MODEL_SORTS } from '@shared/domain/model'
 import { parseModelQuery, parseStoredJobs } from './validation'
 
 describe('model query validation', () => {
@@ -26,6 +27,14 @@ describe('model query validation', () => {
   // `limit` sizes the walk the registry performs before answering.
   it('refuses a page size that would freeze the main process', () => {
     expect(() => parseModelQuery({ limit: 10_000 })).toThrow()
+  })
+
+  /**
+   * Dropped, Zod strips it and the registry walks Scenario beside the local catalogue.
+   */
+  it('keeps where a model runs', () => {
+    expect(parseModelQuery({ runsOn: LOCAL_RUNTIME })).toEqual({ runsOn: LOCAL_RUNTIME })
+    expect(parseModelQuery({ runsOn: SCENARIO_CLOUD })).toEqual({ runsOn: SCENARIO_CLOUD })
   })
 })
 

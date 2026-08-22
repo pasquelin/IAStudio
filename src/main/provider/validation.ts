@@ -77,6 +77,8 @@ const modelQuery = z.object({
   // Built from the shared unions, never retyped: a hand-copied list silently stops accepting
   // what the panel offers — `sort: 'oldest'` reached the UI while this schema still refused it.
   family: z.enum(MODEL_FAMILIES).optional(),
+  // Dropped, the panel's "this machine" never reaches the registry, which then walks Scenario.
+  runsOn: facetValue.optional(),
   search: z.string().trim().max(200).optional(),
   origin: z.enum(MODEL_ORIGINS).optional(),
   capabilities: z.array(facetValue).max(20).optional(),
