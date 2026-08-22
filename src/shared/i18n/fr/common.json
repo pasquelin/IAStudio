@@ -5,7 +5,8 @@
     "removeTool": "Retirer le module",
     "retry": "Réessayer",
     "retryHint": "Retente le rendu de cette zone, sans redémarrer le studio",
-    "generateHint": "Lance la génération avec les réglages ci-dessus ; elle se suit dans la barre des générations"
+    "generateHint": "Lance la génération avec les réglages ci-dessus ; elle se suit dans la barre des générations",
+    "cancel": "Annuler"
   },
   "jobs": {
     "none": "Aucune génération en cours.",

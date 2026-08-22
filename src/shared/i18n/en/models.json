@@ -23,7 +23,11 @@
     "period": "Date",
     "publisher": "Publisher",
     "runtime": "Runs",
-    "runsLocally": "On this machine"
+    "runsLocally": "On this machine",
+    "notInstalled": "Not downloaded yet",
+    "downloadThis": "Download this model?",
+    "downloadThisHint": "{{name}} — {{size}} fetched from its publisher. The studio redistributes nothing.",
+    "download": "Download"
   },
   "modelTags": {
     "textToImage": "From text",

@@ -23,7 +23,11 @@
     "period": "Date",
     "publisher": "Éditeur",
     "runtime": "Tourne",
-    "runsLocally": "Sur cette machine"
+    "runsLocally": "Sur cette machine",
+    "notInstalled": "Pas encore téléchargé",
+    "downloadThis": "Télécharger ce modèle ?",
+    "downloadThisHint": "{{name}} — {{size}} à récupérer chez son éditeur. Le studio ne redistribue rien.",
+    "download": "Télécharger"
   },
   "modelTags": {
     "textToImage": "Depuis un texte",

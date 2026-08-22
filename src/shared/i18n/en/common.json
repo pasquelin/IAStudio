@@ -5,7 +5,8 @@
     "removeTool": "Remove tool",
     "retry": "Try again",
     "retryHint": "Renders this area again, without restarting the studio",
-    "generateHint": "Starts the generation with the settings above; it is followed in the generations bar"
+    "generateHint": "Starts the generation with the settings above; it is followed in the generations bar",
+    "cancel": "Cancel"
   },
   "jobs": {
     "none": "No generation running.",

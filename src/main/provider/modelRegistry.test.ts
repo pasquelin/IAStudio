@@ -23,11 +23,14 @@ import {
  * catalogue is empty by default — the cases that care about it hand one in.
  */
 const registryOf = (
-  options: Omit<RegistryOptions, 'watch' | 'localModels' | 'translate'> &
-    Partial<Pick<RegistryOptions, 'localModels' | 'translate'>>,
+  options: Omit<RegistryOptions, 'watch' | 'localModels' | 'translate' | 'isInstalled'> &
+    Partial<Pick<RegistryOptions, 'localModels' | 'translate' | 'isInstalled'>>,
 ): ModelRegistry =>
   createModelRegistry({
     localModels: () => [],
+    // Present by default: a case about the panel's shape should not have to say so, and the two
+    // that care about the download hand in their own answer.
+    isInstalled: () => true,
     // What a bundle would answer, without one: the labels of a local form are keys until a
     // language names them, and nothing here is a screen.
     translate: key => key,
@@ -583,6 +586,7 @@ describe('model registry', () => {
       catalog: spied.catalog,
       watch: watch.watch,
       localModels: () => [],
+      isInstalled: () => true,
       translate: key => key,
     })
 

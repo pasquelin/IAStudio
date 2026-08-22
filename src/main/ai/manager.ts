@@ -68,6 +68,14 @@ export type AiManager = {
    */
   providerOf: (role: AiRoleId) => Promise<RoleProvider | null>
   choose: (role: AiRoleId, provider: RoleProvider | null, scope: ChoiceScope) => Promise<AiOverview>
+  /**
+   * The ids whose weights are on this disk, read off the last runtime reading.
+   *
+   * Synchronous and never a probe: the model panel asks it once per summary, on every keystroke
+   * of its search field. Empty until a reading has landed, which reads as "not here yet" — the
+   * honest answer while nothing has said otherwise.
+   */
+  installedIds: () => ReadonlySet<string>
   install: (modelId: string) => Promise<AiOverview>
   cancelInstall: () => Promise<AiOverview>
   remove: (modelId: string) => Promise<AiOverview>
@@ -200,11 +208,16 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       deps.log('info', `${loader} is not answering: ${why}`),
     )
 
+  /** What the last reading said is on the disk — see `installedIds`. */
+  let onDisk: ReadonlySet<string> = new Set()
+
   /**
    * 🛑 The port swaps weights on its own: remembering the bytes of a model it already dropped
    * had the next admission weigh an occupation that had ended.
    */
   const reconcile = (readings: ReadonlyMap<ModelLoader, RuntimeReading>): void => {
+    onDisk = new Set([...readings.values()].flatMap(reading => [...reading.installed]))
+
     for (const [loader, reading] of readings) {
       // Only what this reading COVERED: `providerOf` narrows to one role, so a loader absent
       // from the map was never asked. Every door of the loader: one that answers for two
@@ -505,6 +518,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
   return {
     overview: compose,
+
+    installedIds: () => onDisk,
 
     // Unconditional, and `published` is deliberately NOT read as "someone is listening": a window
     // that only ever asked for `overview()` never filled it, and it is exactly the window this

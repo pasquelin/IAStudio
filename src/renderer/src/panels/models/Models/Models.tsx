@@ -1,5 +1,5 @@
 import { mdiCubeScan } from '@mdi/js'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_RUNTIME, type ModelSummary } from '@shared/domain/model'
 import { CLOUD_IDS } from '@shared/domain/aiCloud'
@@ -13,7 +13,8 @@ import { useLazyPreviews } from '@/hooks/useLazyPreviews'
 import { usePages } from '@/hooks/usePages'
 import { useModelForFamily } from '@/hooks/useModelForFamily'
 import { usePlanAccess } from '@/hooks/usePlanAccess'
-import { usePlanRefusal } from '@/hooks/usePlanRefusal'
+import { useModelReach } from '@/hooks/useModelReach'
+import { ModelDownloadDialog } from './ModelDownloadDialog'
 import { getBridge } from '@/services/bridge'
 import { useLayouts } from '@/stores/layouts'
 import { modelCollectionOf, useModels } from '@/stores/models'
@@ -60,7 +61,8 @@ export function Models() {
   const authenticated = useSettings(state => state.auth.authenticated)
   const plan = usePlanAccess()
 
-  const refusalFor = usePlanRefusal(plan)
+  const reachOf = useModelReach(plan)
+  const [offered, setOffered] = useState<ModelSummary | null>(null)
 
   // Debounced WITH the family it was typed under, because the two now change independently: the
   // search text used to be shared, so leaving a space never altered it. It does now, and a word
@@ -145,32 +147,35 @@ export function Models() {
         sorts={sorts}
       />
 
+      {offered && <ModelDownloadDialog model={offered} onClose={() => setOffered(null)} />}
+
       <div className="min-h-0 flex-1">
         <Collection
           label={t('panels.models')}
           items={items}
           state={collection}
           selectedIds={selectedId ? [selectedId] : []}
-          onSelect={model => select(model.family, model.id)}
+          // A tile whose weights are absent OFFERS the download rather than doing nothing: it is
+          // the one refusal the studio can lift itself, and a dimmed tile with no way forward is
+          // what sent people looking through the settings for a button.
+          onSelect={model =>
+            reachOf(model).fetchable ? setOffered(model) : select(model.family, model.id)
+          }
           onReachEnd={catalogue.more}
           onVisible={onVisible}
           // The same answer greys the cell and explains it, so a row cannot end up dimmed with
           // nothing to say why.
-          isDisabled={model => refusalFor(model.requiredPlanLevel) !== undefined}
+          // Greyed, but still reachable when the studio can fetch it — see `onSelect`.
+          isDisabled={model => {
+            const reach = reachOf(model)
+            return reach.refusal !== undefined && !reach.fetchable
+          }}
           rowHeight={ROW_HEIGHT}
           renderCard={model => (
-            <ModelsCard
-              model={model}
-              picture={pictureOf(model)}
-              refusal={refusalFor(model.requiredPlanLevel)}
-            />
+            <ModelsCard model={model} picture={pictureOf(model)} refusal={reachOf(model).refusal} />
           )}
           renderRow={model => (
-            <ModelsRow
-              model={model}
-              picture={pictureOf(model)}
-              refusal={refusalFor(model.requiredPlanLevel)}
-            />
+            <ModelsRow model={model} picture={pictureOf(model)} refusal={reachOf(model).refusal} />
           )}
           empty={
             <EmptyState

@@ -212,6 +212,16 @@ export type ModelSummary = {
    */
   source: string
   origin: ModelOrigin
+  /**
+   * Whether the weights are on THIS disk — absent for a model that runs in a cloud, where there
+   * is nothing to install and the question means nothing.
+   *
+   * A model of this machine that has not been fetched cannot generate: the panel greys it and
+   * offers the download, rather than letting a click end in a failure the person cannot read.
+   */
+  installed?: boolean
+  /** What the download weighs. Absent for a cloud model, which downloads nothing. */
+  diskBytes?: number
   featured: boolean
   capabilities: readonly string[]
   tags: readonly string[]
