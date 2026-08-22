@@ -1082,7 +1082,12 @@
       ],
       "diskBytes": 13775527819,
       "reservationBytes": 6887763909,
-      "thumbnail": "cogvideox-2b.png"
+      "thumbnail": "cogvideox-2b.png",
+      "family": "video",
+      "capabilities": [
+        "txt2video",
+        "video2video"
+      ]
     },
     {
       "id": "wan21-t2v-1-3b",
@@ -1251,7 +1256,12 @@
       ],
       "diskBytes": 28928887859,
       "reservationBytes": 14464443929,
-      "thumbnail": "wan21-t2v-1-3b.png"
+      "thumbnail": "wan21-t2v-1-3b.png",
+      "family": "video",
+      "capabilities": [
+        "txt2video",
+        "video2video"
+      ]
     },
     {
       "id": "wan22-ti2v-5b",
@@ -1431,8 +1441,9 @@
       "thumbnail": "wan22-ti2v-5b.png",
       "family": "video",
       "capabilities": [
+        "img2video",
         "txt2video",
-        "img2video"
+        "video2video"
       ]
     },
     {
@@ -1706,7 +1717,11 @@
       ],
       "diskBytes": 133509480644,
       "reservationBytes": 66754740322,
-      "thumbnail": "mochi-1-preview.png"
+      "thumbnail": "mochi-1-preview.png",
+      "family": "video",
+      "capabilities": [
+        "txt2video"
+      ]
     }
   ],
   "image/img2img": [
@@ -3178,6 +3193,204 @@
       "reservationBytes": 2989127072,
       "thumbnail": "shap-e-img2img.png",
       "readsTorchWeights": true
+    }
+  ],
+  "image/controlnet": [
+    {
+      "id": "controlnet-canny-sdxl",
+      "name": "ControlNet Canny SDXL",
+      "summary": "ControlNet Canny pour SDXL",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "image",
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0",
+      "files": [
+        {
+          "role": "index",
+          "name": "000004_scribble_concat.webp",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/000004_scribble_concat.webp",
+          "bytes": 306526,
+          "sha256": "afdc8ee34ef5643f70616a0580cc3d243c9e2cc51b2814bbbb72d8927832587e",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "000006_scribble_concat.webp",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/000006_scribble_concat.webp",
+          "bytes": 280926,
+          "sha256": "88ee19e247edfa12c426a01a200eac8aba6c7b29ff3a39c3bc45094cf900baa6",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "000010_scribble_concat.webp",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/000010_scribble_concat.webp",
+          "bytes": 783370,
+          "sha256": "ae59f5271f8acd7b367f8468ae8c28d57aff7610184aeb576b1193420eb45e92",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "000013_scribble_concat.webp",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/000013_scribble_concat.webp",
+          "bytes": 740832,
+          "sha256": "1c165cbbb06c9690704f2c2d516678798fc93c5fe11ae7610e82497ba5e5600a",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "000016_scribble_concat.webp",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/000016_scribble_concat.webp",
+          "bytes": 395580,
+          "sha256": "c6bf8c4f4200ff053e9e13c0dce45fdc7e3e328cdff8ac3e9fdaa7efd736f766",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "000028_scribble_concat.webp",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/000028_scribble_concat.webp",
+          "bytes": 254000,
+          "sha256": "cd810d7b43ac72bc8c18db371cdc5bad033de33e6b7f30d77b76d37f6c15bb90",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "000031_scribble_concat.webp",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/000031_scribble_concat.webp",
+          "bytes": 543908,
+          "sha256": "fe8eaf05f36e3d2f6436ff02073b5136a444d104ade29699d087a3efa6a70c98",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "000034_scribble_concat.webp",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/000034_scribble_concat.webp",
+          "bytes": 878502,
+          "sha256": "1835598c864685e99b283e71153b8f6b0f8d7c1ff06f038ea7950e345e712631",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "000059_scribble_concat.webp",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/000059_scribble_concat.webp",
+          "bytes": 455202,
+          "sha256": "139ad54a383a4fe0d2c4fbf182298015095dd3c3fda80d7946ec4c68e901bb9b",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "000078_scribble_concat.webp",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/000078_scribble_concat.webp",
+          "bytes": 250912,
+          "sha256": "6439d410d7cb9d6449c81d2659d7c6d0d6bec40c883fe7d736dd67f14a6b5161",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "000097_scribble_concat.webp",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/000097_scribble_concat.webp",
+          "bytes": 457080,
+          "sha256": "677b0cc7d4b105e5373fa05e86bb3da487b3b268703df7a9facc89c0564bbde0",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "config.json",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/config.json",
+          "bytes": 1235,
+          "sha256": "b5b8f9a7619c9452f19407ef73a01ce3f061fcf932de43ddbaca336d12d02801",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/diffusion_pytorch_model.safetensors",
+          "bytes": 2502139104,
+          "sha256": "bf47cd757ceaf2572c53321329ef819ea38c09a6e3783588387913cd94dff47c",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "diffusion_pytorch_model_V2.safetensors",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/diffusion_pytorch_model_V2.safetensors",
+          "bytes": 2502139104,
+          "sha256": "b3e4ac47bc814019d50dc842f579301440deb6d8f09ee1b91a30f527ace1b852",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        },
+        {
+          "role": "index",
+          "name": "masonry.webp",
+          "url": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0/resolve/1271357eda52d54b857c650cacb5b51144643ccb/masonry.webp",
+          "bytes": 5660816,
+          "sha256": "b3de2a1f1c6d10d0d183f288b372a4253e7bf0dfc8332626fef01b57f2b20f36",
+          "revision": "1271357eda52d54b857c650cacb5b51144643ccb"
+        }
+      ],
+      "diskBytes": 5015287097,
+      "reservationBytes": 2507643548,
+      "thumbnail": "controlnet-canny-sdxl.png",
+      "attaches": {
+        "model": "ssd-1b",
+        "as": "controlnet"
+      },
+      "serves": [
+        "texture/controlnet_texture"
+      ]
+    }
+  ],
+  "image/reference": [
+    {
+      "id": "ip-adapter-sdxl",
+      "name": "IP-Adapter SDXL",
+      "summary": "IP-Adapter pour SDXL",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "image",
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/h94/IP-Adapter",
+      "files": [
+        {
+          "role": "sdxl_models",
+          "name": "sdxl_models/image_encoder/config.json",
+          "url": "https://huggingface.co/h94/IP-Adapter/resolve/018e402774aeeddd60609b4ecdb7e298259dc729/sdxl_models/image_encoder/config.json",
+          "bytes": 2013,
+          "sha256": "1d53c2b4b74c5f85171d313adda3e3b8771ff5c698ee66a29710d0ac822298e4",
+          "revision": "018e402774aeeddd60609b4ecdb7e298259dc729"
+        },
+        {
+          "role": "sdxl_models",
+          "name": "sdxl_models/image_encoder/model.safetensors",
+          "url": "https://huggingface.co/h94/IP-Adapter/resolve/018e402774aeeddd60609b4ecdb7e298259dc729/sdxl_models/image_encoder/model.safetensors",
+          "bytes": 3689912664,
+          "sha256": "657723e09f46a7c3957df651601029f66b1748afb12b419816330f16ed45d64d",
+          "revision": "018e402774aeeddd60609b4ecdb7e298259dc729"
+        },
+        {
+          "role": "sdxl_models",
+          "name": "sdxl_models/ip-adapter_sdxl.safetensors",
+          "url": "https://huggingface.co/h94/IP-Adapter/resolve/018e402774aeeddd60609b4ecdb7e298259dc729/sdxl_models/ip-adapter_sdxl.safetensors",
+          "bytes": 702585376,
+          "sha256": "ba1002529e783604c5f326d49f0122025392d1d20ac8d573b3eeb3e6dea4ebb6",
+          "revision": "018e402774aeeddd60609b4ecdb7e298259dc729"
+        }
+      ],
+      "diskBytes": 4392500053,
+      "reservationBytes": 2196250026,
+      "thumbnail": "ip-adapter-sdxl.png",
+      "attaches": {
+        "model": "ssd-1b",
+        "as": "ip-adapter",
+        "subfolder": "sdxl_models",
+        "weightName": "ip-adapter_sdxl.safetensors"
+      },
+      "serves": [
+        "texture/reference_texture"
+      ]
     }
   ]
 }

@@ -1248,6 +1248,7 @@ export function createServices(settings: SettingsStore): Services {
       },
       removeFiles: (_model: LocalModel, folder: string) =>
         rm(folder, { recursive: true, force: true }),
+      baseOf: model => (model.attaches ? modelOf(model.attaches.model) : null),
       engine: () => engine.engine(),
       running: () => engine.current(),
       log: (level: 'info' | 'warn', message: string) => log[level]('ai', message),

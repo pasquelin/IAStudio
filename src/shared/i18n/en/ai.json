@@ -31,7 +31,9 @@
     "mask": "Mask",
     "maskHelp": "The painted areas of the mask are the ones the model redoes.",
     "strength": "Distance from the starting image",
-    "strengthHelp": "Without effect when no starting image is given."
+    "strengthHelp": "Without effect when no starting image is given.",
+    "video": "Starting sequence",
+    "videoHelp": "Leave it empty to compose the sequence from the description alone."
   },
   "aiModels": {
     "reading": "Reading the machine…",

@@ -89,11 +89,28 @@ def _image_kwargs(params: dict[str, Any]) -> dict[str, Any]:
 
 
 def _video_kwargs(params: dict[str, Any]) -> dict[str, Any]:
-    """`[?]` **Never run**: no video model is admitted — the lightest weighs 28.9 GB."""
+    """
+    A sequence to rework replaces the size and the frame count: both are read off it, and passing
+    them anyway resamples what the person handed in.
+    """
     kwargs = _sized_kwargs(params)
     frames = _number(params, "frames")
     if frames is not None:
         kwargs["num_frames"] = int(frames)
+
+    source = _number(params, "video")
+    if source is None:
+        return kwargs
+
+    from diffusers.utils import load_video
+
+    for read_off_the_source in ("width", "height", "num_frames"):
+        kwargs.pop(read_off_the_source, None)
+    kwargs["video"] = load_video(str(source))
+
+    strength = _number(params, "strength")
+    if strength is not None:
+        kwargs["strength"] = float(strength)
     return kwargs
 
 

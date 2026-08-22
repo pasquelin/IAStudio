@@ -120,6 +120,12 @@
     "sources": "https://huggingface.co/zai-org/CogVideoX-2b"
   },
   {
+    "name": "ControlNet Canny SDXL",
+    "spdx": "Apache-2.0",
+    "text": "ControlNet Canny pour SDXL, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the xinsir authors. A control network run BESIDE a base model, never alone.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "sources": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0"
+  },
+  {
     "name": "CPython",
     "version": "3.12.14",
     "spdx": "PSF-2.0",
@@ -262,6 +268,12 @@
     "spdx": "Apache-2.0",
     "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0.\nSource: https://github.com/python/importlib_metadata",
     "sources": "https://github.com/python/importlib_metadata"
+  },
+  {
+    "name": "IP-Adapter SDXL",
+    "spdx": "Apache-2.0",
+    "text": "IP-Adapter pour SDXL, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Tencent AI Lab. Adapter weights grafted onto a base model, never alone.\n\nOnly the SDXL set is fetched: the repository ships four adapters and two image encoders,\nfor two model families.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "sources": "https://huggingface.co/h94/IP-Adapter"
   },
   {
     "name": "jinja2",

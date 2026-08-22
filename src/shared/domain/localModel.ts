@@ -58,6 +58,21 @@ export type ModelFile = {
   readonly upstream?: string
 }
 
+/**
+ * How a set of weights ATTACHES to another rather than standing on its own.
+ *
+ * `controlnet` is a second network the pipeline runs beside its own; `ip-adapter` are weights
+ * grafted onto the attention of the one already loaded. Neither generates anything alone, so an
+ * entry carrying this names the model it completes — and that one is what gets loaded first.
+ */
+export type ModelAttachment = {
+  readonly model: string
+  readonly as: 'controlnet' | 'ip-adapter'
+  /** Where inside the download the weights sit, for a repository shipping several sets. */
+  readonly subfolder?: string
+  readonly weightName?: string
+}
+
 export type LocalModel = {
   readonly id: string
   /**
@@ -126,6 +141,8 @@ export type LocalModel = {
   readonly thumbnail?: string
   /** One line under the name, in the publisher's words. Data, not a word of the interface. */
   readonly summary?: string
+  /** What this completes, when it completes something rather than standing alone. */
+  readonly attaches?: ModelAttachment
   /**
    * Whether this ONE model may be read from `.bin` tensors rather than safetensors alone.
    *

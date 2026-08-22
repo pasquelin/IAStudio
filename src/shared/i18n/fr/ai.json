@@ -31,7 +31,9 @@
     "mask": "Masque",
     "maskHelp": "Les zones peintes du masque sont celles que le modèle refait.",
     "strength": "Écart à l’image de départ",
-    "strengthHelp": "Sans effet si aucune image de départ n’est donnée."
+    "strengthHelp": "Sans effet si aucune image de départ n’est donnée.",
+    "video": "Séquence de départ",
+    "videoHelp": "Laissez vide pour composer la séquence d’après la description seule."
   },
   "aiModels": {
     "reading": "Lecture de la machine…",
