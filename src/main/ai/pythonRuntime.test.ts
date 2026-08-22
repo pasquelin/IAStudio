@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { localModel } from '@shared/domain/localModel-fixtures'
 import type { PythonClient } from './pythonClient'
 import type { EngineSettledJob } from './pythonProtocol'
+import type { GenerateRequest } from './localRuntimes'
+import { runtimeEndpointId } from '@shared/domain/aiRuntime'
 import { pythonRuntime, type PythonRuntimeDeps } from './pythonRuntime'
 
 const MODEL = localModel({
@@ -96,9 +98,35 @@ describe('reading what the engine holds', () => {
     expect((await held.runtime.read([MODEL])).loaded).toBe('sana')
   })
 
-  /** The id alone survives an engine that died; the ledger alone cannot name what is resident. */
-  it('forgets what it loaded once no door holds anything', async () => {
-    const held = harness()
+  /**
+   * A door answering ZERO is a release confirmed. A door that is ABSENT is not a denial: a
+   * backend with no counter — the CPU one — never reaches the ledger at all, and clearing on
+   * that silence left a model nothing could ever free.
+   */
+  it('forgets a door that answered zero, and keeps one the ledger never named', async () => {
+    const zeroed = harness({
+      memory: () =>
+        Promise.resolve([
+          {
+            door: 'engine/diffusion',
+            heldBytes: 0,
+            tensorBytes: 0,
+            device: 'cpu',
+            backend: 'pytorch',
+          },
+        ]),
+    })
+    await zeroed.runtime.load?.(MODEL, { onProgress: () => {} })
+    expect((await zeroed.runtime.read([MODEL])).loaded).toBeNull()
+
+    const silent = harness()
+    await silent.runtime.load?.(MODEL, { onProgress: () => {} })
+    expect((await silent.runtime.read([MODEL])).loaded).toBe('sana')
+  })
+
+  /** Its processes went with it, so it holds nothing — a measurement, not an assumption. */
+  it('forgets everything once the engine is no longer running', async () => {
+    const held = harness({}, { running: () => null })
     await held.runtime.load?.(MODEL, { onProgress: () => {} })
 
     expect((await held.runtime.read([MODEL])).loaded).toBeNull()
@@ -112,7 +140,7 @@ describe('loading', () => {
 
     expect(held.job).toHaveBeenCalledWith(
       'models.load',
-      { modelId: 'sana', folder: '/models/sana' },
+      { modelId: 'sana', folder: '/models/sana', door: 'engine/diffusion' },
       expect.anything(),
     )
   })
@@ -138,8 +166,9 @@ describe('loading', () => {
 })
 
 describe('generating', () => {
-  const request = {
+  const request: GenerateRequest = {
     model: 'sana',
+    modality: 'image',
     prompt: 'a red cube',
     fields: { steps: 8 },
     destination: '/tmp/out.png',
@@ -152,7 +181,7 @@ describe('generating', () => {
 
     expect(held.job).toHaveBeenCalledWith(
       'generate',
-      { steps: 8, prompt: 'a red cube', destination: '/tmp/out.png' },
+      { steps: 8, prompt: 'a red cube', destination: '/tmp/out.png', door: 'engine/diffusion' },
       expect.anything(),
     )
   })
@@ -182,5 +211,75 @@ describe('generating', () => {
     const held = harness()
 
     await expect(held.runtime.generate?.(request)).rejects.toThrow(/no path/)
+  })
+})
+
+describe('the door a request names', () => {
+  it('sends a video to a process of its own rather than to the image door', async () => {
+    const held = harness({ job: () => Promise.resolve(settled({ path: '/tmp/out.mp4' })) })
+
+    await held.runtime.generate?.({
+      model: 'wan',
+      modality: 'video',
+      prompt: 'a wave',
+      fields: {},
+      destination: '/tmp/out.mp4',
+      onProgress: () => {},
+    })
+
+    expect(held.job).toHaveBeenCalledWith(
+      'generate',
+      expect.objectContaining({ door: 'engine/video' }),
+      expect.anything(),
+    )
+  })
+
+  /** Waking a door this runtime never loaded into would fork a process to free what it has not. */
+  it('asks nothing at all when nothing was loaded through it', async () => {
+    const held = harness()
+
+    await held.runtime.unload?.()
+
+    expect(held.job).not.toHaveBeenCalled()
+  })
+
+  it('frees the door that is holding, not the one a default would name', async () => {
+    const held = harness()
+    await held.runtime.load?.({ ...MODEL, modality: 'mesh' }, { onProgress: () => {} })
+
+    await held.runtime.unload?.()
+
+    expect(held.job).toHaveBeenLastCalledWith('models.unload', { door: 'engine/3d' })
+  })
+
+  /**
+   * A door is a PROCESS, so two modalities are two residents at once — and a release names one.
+   * Freeing "the last one loaded" would kill the wrong process while the plan recorded the other
+   * as freed, and the bytes of the first could never be reclaimed.
+   */
+  it('frees the door a plan named, and leaves the other resident', async () => {
+    const held = harness()
+    await held.runtime.load?.({ ...MODEL, modality: 'image' }, { onProgress: () => {} })
+    await held.runtime.load?.({ ...MODEL, id: 'shap', modality: 'mesh' }, { onProgress: () => {} })
+
+    await held.runtime.unload?.(runtimeEndpointId('diffusers', 'diffusion'))
+
+    expect(held.job).toHaveBeenLastCalledWith('models.unload', { door: 'engine/diffusion' })
+    await held.runtime.unload?.()
+    expect(held.job).toHaveBeenLastCalledWith('models.unload', { door: 'engine/3d' })
+  })
+
+  /**
+   * A backend that counts no bytes — the CPU one — never reaches the ledger, and a reading used
+   * to clear what was loaded on that silence: the model could then never be freed at all.
+   */
+  it('keeps what it loaded through a reading that measured nothing', async () => {
+    const held = harness()
+    await held.runtime.load?.(MODEL, { onProgress: () => {} })
+
+    await held.runtime.read([MODEL])
+    await held.runtime.unload?.()
+
+    expect(held.job).toHaveBeenLastCalledWith('models.unload', { door: 'engine/diffusion' })
   })
 })

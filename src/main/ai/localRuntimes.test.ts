@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { runtimeEndpointId } from '@shared/domain/aiRuntime'
 import { MODEL_LOADERS } from '@shared/domain/localModel'
-import { endpointOf, endpointsOf } from './localRuntimes'
+import { endpointOf, endpointsOf, engineDoorOf } from './localRuntimes'
+import { endpointOfDoor } from './engineMemory'
 import type { LocalModel } from '@shared/domain/localModel'
 import { localModel } from '@shared/domain/localModel-fixtures'
 import { fileRuntime, runtimeReadingsOf, type LocalRuntime } from './localRuntimes'
@@ -140,6 +141,7 @@ describe('every door a loader answers on', () => {
       runtimeEndpointId('diffusers', '3d'),
       runtimeEndpointId('diffusers', 'audio'),
       runtimeEndpointId('diffusers', 'diffusion'),
+      runtimeEndpointId('diffusers', 'video'),
     ])
   })
 
@@ -147,5 +149,23 @@ describe('every door a loader answers on', () => {
     for (const loader of MODEL_LOADERS) {
       expect(endpointsOf(loader)).toContain(endpointOf(loader))
     }
+  })
+})
+
+describe('engineDoorOf', () => {
+  it('names the door the engine itself answers under', () => {
+    expect(engineDoorOf('image')).toBe('engine/diffusion')
+  })
+
+  // A door is what a release plan KILLS, and a video model weighs tens of gigabytes: co-located,
+  // freeing one would take the other down with it.
+  it('gives a video a process of its own rather than the image one', () => {
+    expect(engineDoorOf('video')).not.toBe(engineDoorOf('image'))
+  })
+
+  // `endpointOfDoor` reads the same format the other way, and a key not minted here fails to
+  // index the record it addresses.
+  it('mints what the memory ledger reads back', () => {
+    expect(endpointOfDoor(engineDoorOf('mesh'))).toBe(engineDoorOf('mesh'))
   })
 })

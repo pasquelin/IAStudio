@@ -131,6 +131,167 @@
   ],
   "image/txt2img": [
     {
+      "id": "ssd-1b",
+      "name": "SSD-1B",
+      "summary": "Segmind Stable Diffusion 1B, fp16",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "image",
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/segmind/SSD-1B",
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/model_index.json",
+          "bytes": 577,
+          "sha256": "2f4d71b6da5648627b9a2848b7f430d2294e95abbc5d3282dddd438bf8b466da",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/scheduler/scheduler_config.json",
+          "bytes": 474,
+          "sha256": "e0140f54cf0f8a5fb1cf8140caa95c1e733b6d9fa45c5e859aae43f3b9a45648",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/text_encoder/config.json",
+          "bytes": 560,
+          "sha256": "32d8cadf544d77c231efa1381145ac7e8f4cc88f581455c3c5f6369364474c83",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.fp16.safetensors",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/text_encoder/model.fp16.safetensors",
+          "bytes": 246144864,
+          "sha256": "5487ea0eee9c9a9bff8abd097908d4deff3ae1fa87b3b67397f8b9538139d447",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "text-encoder-2",
+          "name": "text_encoder_2/config.json",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/text_encoder_2/config.json",
+          "bytes": 570,
+          "sha256": "79b0f15ad762cf9c2992d50f9679d08c6cb477a50c88d41e216fc2d886e37abb",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "text-encoder-2",
+          "name": "text_encoder_2/model.fp16.safetensors",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/text_encoder_2/model.fp16.safetensors",
+          "bytes": 1389382880,
+          "sha256": "d3df577f6e3799c8e1bd9b40e30133710e02e8e25d0ce48cdcc790e7dfe12d6d",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/tokenizer/merges.txt",
+          "bytes": 524619,
+          "sha256": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/tokenizer/special_tokens_map.json",
+          "bytes": 472,
+          "sha256": "c4864a9376a8401918425bed71fc14fc0e81f9b59ec45c1cf96cccb2df508eac",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/tokenizer/tokenizer_config.json",
+          "bytes": 737,
+          "sha256": "19d7b034cb0cc3ce9766c2231373ab8aa8991fc72e2c8f76558bfaae3de0d563",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/tokenizer/vocab.json",
+          "bytes": 1059962,
+          "sha256": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "tokenizer-2",
+          "name": "tokenizer_2/merges.txt",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/tokenizer_2/merges.txt",
+          "bytes": 524619,
+          "sha256": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "tokenizer-2",
+          "name": "tokenizer_2/special_tokens_map.json",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/tokenizer_2/special_tokens_map.json",
+          "bytes": 460,
+          "sha256": "f118ab3a983206e4f32583448de6bd6aae4ee21869135cef1f5848a753cdaab6",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "tokenizer-2",
+          "name": "tokenizer_2/tokenizer_config.json",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/tokenizer_2/tokenizer_config.json",
+          "bytes": 725,
+          "sha256": "c9d23941f76a41cbd50eda9290f57be7828f0a7a677939e9ef181f7e12bd1bdf",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "tokenizer-2",
+          "name": "tokenizer_2/vocab.json",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/tokenizer_2/vocab.json",
+          "bytes": 1059962,
+          "sha256": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "weights",
+          "name": "unet/config.json",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/unet/config.json",
+          "bytes": 1768,
+          "sha256": "34e7893a088737536ce0accd3f9d891c01d092886f88bbfa64a9091cb2501d13",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "weights",
+          "name": "unet/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/unet/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 2662790608,
+          "sha256": "40d8ea9159f3e875278dacc7879442d58c45850cf13c62f5e26681061c51829a",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/vae/config.json",
+          "bytes": 602,
+          "sha256": "2e425cbde02bdb63e43e8d49db7e14a941a76bb7b2058761200c72dc3d6344fd",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/segmind/SSD-1B/resolve/60987f37e94cd59c36b1cba832b9f97b57395a10/vae/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 167335342,
+          "sha256": "6353737672c94b96174cb590f711eac6edf2fcce5b6e91aa9d73c5adc589ee48",
+          "revision": "60987f37e94cd59c36b1cba832b9f97b57395a10"
+        }
+      ],
+      "diskBytes": 4468829801,
+      "reservationBytes": 4496703488,
+      "thumbnail": "ssd-1b.png"
+    },
+    {
       "id": "sana-600m-1024",
       "name": "Sana 600M",
       "summary": "Sana 600M 1024px, fp16",
@@ -256,7 +417,8 @@
         }
       ],
       "diskBytes": 7699998202,
-      "reservationBytes": 7766163456
+      "reservationBytes": 7766163456,
+      "thumbnail": "sana-600m-1024.png"
     }
   ]
 }

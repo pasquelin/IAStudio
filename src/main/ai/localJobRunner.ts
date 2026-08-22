@@ -1,5 +1,10 @@
 import type { AssetType } from '@shared/domain/asset'
-import { assetTypeOfModality, PROMPT_FIELD_KEY } from '@shared/domain/localFields'
+import {
+  assetTypeOfModality,
+  producesFile,
+  PROMPT_FIELD_KEY,
+  type ProducingModality,
+} from '@shared/domain/localFields'
 import type { LocalModel } from '@shared/domain/localModel'
 import type { JobRunner, RemoteJob } from '@main/provider/jobManager'
 import type { ChatRequest, GenerateResult } from './localRuntimes'
@@ -49,6 +54,8 @@ export type LocalJobDeps = {
 
 type LocalGenerateRequest = {
   readonly model: string
+  /** Which door answers, and what extension the file lands under. Read off the manifest. */
+  readonly modality: ProducingModality
   readonly prompt: string
   readonly fields: Readonly<Record<string, unknown>>
   readonly jobId: string
@@ -107,13 +114,16 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
     jobId: string,
     body: Record<string, unknown>,
   ): Promise<void> => {
-    const type = model.modality ? assetTypeOfModality(model.modality) : null
+    const modality = model.modality
     // Refused rather than filed somewhere: a modality with no shelf has nowhere for its output to
     // land, and writing the file anyway would leave bytes nothing ever points at.
-    if (!type) throw new Error(`${model.modality} produces nothing this project can hold`)
+    if (!modality || !producesFile(modality)) {
+      throw new Error(`${modality} produces nothing this project can hold`)
+    }
 
     const written = await deps.generate({
       model: model.id,
+      modality,
       prompt: promptOf(body),
       fields: body,
       jobId,
@@ -122,7 +132,7 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
       signal: job.abort.signal,
     })
 
-    job.produced = { ...written, type, prompt: promptOf(body) }
+    job.produced = { ...written, type: assetTypeOfModality(modality), prompt: promptOf(body) }
   }
 
   const run = async (
@@ -134,10 +144,10 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
     try {
       // The manifest says which, and a modality it does not carry is a conversation — the only
       // thing this ran before there was anything else to run.
-      if (model.modality === 'text' || model.modality === undefined) {
-        await converse(job, model, promptOf(body))
-      } else {
+      if (model.modality && producesFile(model.modality)) {
         await produce(job, model, jobId, body)
+      } else {
+        await converse(job, model, promptOf(body))
       }
 
       job.status = 'success'

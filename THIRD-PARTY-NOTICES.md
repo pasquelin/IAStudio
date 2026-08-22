@@ -86,6 +86,7 @@ The terms below govern these components. They are not affected by the licence of
 | sherpa-onnx-node | 1.13.5 | Apache-2.0 |
 | Silero VAD | v5 | MIT |
 | simple-git | 3.36.0 | MIT |
+| SSD-1B | fp16 | Apache-2.0 |
 | sympy | 1.14.0 | BSD |
 | tailwind-merge | 3.6.0 | MIT |
 | tailwindcss | 4.3.3 | MIT |
@@ -2326,11 +2327,16 @@ https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers
 
 ```
 The image model the studio generates with when it generates on this machine.
-It is NOT shipped with the application: it is fetched on request into the user data
-folder, against a published digest, and removed from the model manager.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
 
 Copyright NVIDIA Corporation and the Sana authors. Licensed under the Apache License,
 Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
+
+THE DOWNLOAD CARRIES MORE THAN ONE LICENCE, measured on 2026-08-22. Its text encoder
+is a Gemma 2 model: text_encoder/config.json names google/gemma-2-2b-it, and the
+5.2 GB it weighs are governed by the Gemma Terms of Use rather than by Apache-2.0.
+Full terms: https://ai.google.dev/gemma/terms
 ```
 ## setuptools
 
@@ -2400,6 +2406,30 @@ Licence: MIT
 
 ```
 See readme.md of the package.
+```
+## SSD-1B
+
+Version: fp16  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/segmind/SSD-1B
+```
+
+```
+The second image model the studio can generate with on this machine, offered beside
+Sana so the choice of what a machine can hold belongs to the person.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright Segmind. Licensed under the Apache License, Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
+
+Its components, read on 2026-08-22: two CLIP text encoders and a VAE, none of whose
+configuration names an upstream repository. SSD-1B is published by Segmind as a
+distillation of Stable Diffusion XL 1.0, whose own weights are released under the
+CreativeML Open RAIL++-M licence: https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0
 ```
 ## sympy
 

@@ -20,7 +20,12 @@
     "height": "Height",
     "steps": "Steps",
     "stepsHelp": "More steps refine the image and lengthen the computation.",
-    "cfgScale": "Faithfulness to the description"
+    "cfgScale": "Faithfulness to the description",
+    "frames": "Frames",
+    "framesHelp": "How many frames the produced sequence holds.",
+    "fps": "Frames per second",
+    "seconds": "Duration",
+    "secondsHelp": "How long the produced sound runs, in seconds."
   },
   "aiModels": {
     "reading": "Reading the machine…",
@@ -78,6 +83,6 @@
     "addOwnModel": "Add a file…",
     "ownModelUnreadable": "This file is not a GGUF the studio can read.",
     "loadBeyondMachine": "Could not load: {{needed}} asked for, {{available}} available.",
-    "noLocalEngine": "No local model for this employment: the studio carries no engine able to serve it yet."
+    "noLocalEngine": "No local model for this employment: the catalogue offers none today."
   }
 }

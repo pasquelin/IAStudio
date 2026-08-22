@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   admitsLoad,
+  licenceAdmitted,
   modelRefusalOf,
   provenanceUnverified,
   type ModelFormat,
@@ -112,5 +113,31 @@ describe('a manifest that names code beside the weights', () => {
     })
 
     expect(modelRefusalOf(model)).toBeNull()
+  })
+})
+
+describe('licenceAdmitted', () => {
+  it('admits the licences that permit redistribution and commercial use', () => {
+    for (const licence of ['MIT', 'Apache-2.0', 'BSD-3-Clause', 'CC-BY-4.0']) {
+      expect(licenceAdmitted(localModel({ licence }))).toBe(true)
+    }
+  })
+
+  // A LIST of what is admitted: written the other way round, every licence nobody thought to
+  // exclude walks in — which is how OpenRAIL, the Gemma terms and `other` would enter.
+  it('refuses what the policy does not name, whatever the download weighs', () => {
+    for (const licence of ['creativeml-openrail-m', 'gemma', 'other', 'CC-BY-NC-4.0', '']) {
+      expect(licenceAdmitted(localModel({ licence }))).toBe(false)
+    }
+  })
+
+  it('refuses a model the catalogue offers under a licence off the list', () => {
+    expect(modelRefusalOf(localModel({ licence: 'gemma' }))).toBe('licence-not-admitted')
+  })
+
+  // The person's OWN file, already on their disk: the studio neither fetched it nor vouches for
+  // it, and refusing it would be the studio deciding what someone may open locally.
+  it('leaves a supplied file alone, whose licence nobody here can know', () => {
+    expect(licenceAdmitted(localModel({ rank: 3, licence: '' }))).toBe(true)
   })
 })

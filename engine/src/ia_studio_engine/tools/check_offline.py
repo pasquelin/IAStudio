@@ -78,8 +78,9 @@ def main(argv: list[str] | None = None) -> int:
     # Imported AFTER the cut: an import that reaches the network is exactly one of the eight
     # families, and importing first would let it through unseen.
     from ia_studio_engine.adapters.diffusers_adapter import DiffusersAdapter
+    from ia_studio_engine.adapters.modalities import MODALITIES
 
-    adapter = DiffusersAdapter()
+    adapter = DiffusersAdapter(MODALITIES["image"])
     # A real file and not `/dev/null`: the writer picks its encoder off the extension, and a
     # generation that cannot be written is not a generation this proved anything about.
     written = Path(tempfile.mkdtemp()) / "offline-check.png"

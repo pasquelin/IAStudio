@@ -43,6 +43,15 @@ class WorkerProcess:
         # would interleave mid-line without this.
         self._writing = threading.Lock()
         self._pump = threading.Thread(target=self._read, daemon=True)
+
+    def start(self) -> None:
+        """
+        Separate from the spawn so a caller can register the worker BEFORE it can answer.
+
+        A door that dies at import would otherwise report itself gone while the router still had
+        nothing to forget, and the dead process would be recorded a moment later — alive to
+        everyone, answering nobody, and never restarted.
+        """
         self._pump.start()
 
     def _read(self) -> None:
@@ -79,7 +88,7 @@ class WorkerProcess:
         self._next_id += 1
         return run
 
-    def close(self) -> None:
+    def begin_close(self) -> None:
         """Closing the socket IS the shutdown: the worker's loop ends when its stream does."""
         self._closing = True
         # `shutdown` before `close`: it ends the blocking `recv` of the pump thread, where closing
@@ -88,9 +97,16 @@ class WorkerProcess:
         with contextlib.suppress(OSError):
             self._socket.shutdown(socket.SHUT_RDWR)
         self._socket.close()
+
+    def wait_closed(self) -> None:
+        """Split from the ask, so several doors leave at once rather than one timeout at a time."""
         try:
             self._process.wait(timeout=10)
         except subprocess.TimeoutExpired:
             # A worker mid-inference does not read its socket, and a device call does not interrupt.
             self._process.kill()
             self._process.wait()
+
+    def close(self) -> None:
+        self.begin_close()
+        self.wait_closed()

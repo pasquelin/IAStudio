@@ -53,18 +53,24 @@ describe('the shipped catalogue', () => {
     expect(rolesWithLocalOption()).toContain(ASSISTANT_ROLE)
   })
 
-  it('offers an image role a model that generates rather than converses', () => {
+  // Several, from the lightest up, for the reason the assistant already has: what a machine can
+  // hold is the person's call, and one entry chosen for them is not a choice.
+  it('offers an image role a range of models that generate rather than converse', () => {
     const image = shippedModelsFor(aiRoleId('image', 'txt2img'))
 
-    expect(image.length).toBeGreaterThan(0)
+    expect(image.length).toBeGreaterThan(1)
     expect(new Set(image.map(model => model.modality))).toEqual(new Set(['image']))
   })
 
-  // Lightest first, because the FIRST usable entry is what a role takes on its own.
+  // Lightest first, because the FIRST usable entry is what a role takes on its own. Every role
+  // and not the assistant alone: the one pinned to a role went green on the day a second one
+  // gained a second model, and said nothing about it.
   it('orders each role from the lightest model up', () => {
-    const sizes = shippedModelsFor(ASSISTANT_ROLE).map(model => model.diskBytes)
+    for (const role of rolesWithLocalOption()) {
+      const sizes = shippedModelsFor(role).map(model => model.diskBytes)
 
-    expect(sizes).toEqual([...sizes].sort((one, other) => one - other))
+      expect(sizes, role).toEqual([...sizes].sort((one, other) => one - other))
+    }
   })
 
   /**

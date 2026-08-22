@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ia_studio_engine.adapters.modalities import Modality
 from ia_studio_engine.core.jobqueue import CancelledError
 
 
@@ -89,6 +90,28 @@ def machine_memory(device: str) -> dict[str, int | None]:
     return {"totalBytes": None, "freeBytes": None, "unifiedBytes": None}
 
 
+def _default_steps(pipeline: Any) -> int:
+    """
+    What the pipeline runs when the form left the field empty — StableAudio runs 100 where a
+    literal 20 was assumed, and the reported ratio then climbs to five before the job ends.
+    """
+    import inspect
+
+    asked = inspect.signature(pipeline.__call__).parameters.get("num_inference_steps")
+    return asked.default if asked is not None and isinstance(asked.default, int) else 20
+
+
+def _takes_step_callback(pipeline: Any) -> bool:
+    """
+    Whether this pipeline lets a caller in between two steps — read, since `ShapEPipeline` does
+    not and passing one raises `TypeError`. 🛑 A cancel lands on that callback and nowhere else:
+    without one the job runs to its last step whatever is asked.
+    """
+    import inspect
+
+    return "callback_on_step_end" in inspect.signature(pipeline.__call__).parameters
+
+
 @dataclass
 class LoadedModel:
     model_id: str
@@ -97,6 +120,8 @@ class LoadedModel:
     bytes_resident: int | None
     tensor_bytes: int | None
     load_ms: float
+    takes_step_callback: bool
+    default_steps: int
 
 
 def memory_frame(device: str, backend: str, door: str) -> dict[str, Any]:
@@ -114,7 +139,10 @@ def memory_frame(device: str, backend: str, door: str) -> dict[str, Any]:
 class DiffusersAdapter:
     """Holds at most one pipeline. What it holds and what it costs are ANSWERED, never guessed."""
 
-    def __init__(self) -> None:
+    def __init__(self, modality: Modality) -> None:
+        # A door serves ONE modality, and it is handed in rather than read off a request: the
+        # process that imports a video backend is not the one a release plan kills for an image.
+        self.modality = modality
         self.loaded: LoadedModel | None = None
 
     def backend(self) -> str:
@@ -190,6 +218,8 @@ class DiffusersAdapter:
             bytes_resident=_held_bytes(device),
             tensor_bytes=_tensor_bytes(device),
             load_ms=load_ms,
+            takes_step_callback=_takes_step_callback(pipeline),
+            default_steps=_default_steps(pipeline),
         )
         return self.loaded
 
@@ -220,7 +250,8 @@ class DiffusersAdapter:
         if not isinstance(prompt, str) or not prompt:
             raise LoadRefusedError("a generation needs a prompt")
 
-        steps = int(params.get("steps", 20))
+        kwargs = self.modality.kwargs(params)
+        steps = int(kwargs.get("num_inference_steps", held.default_steps))
 
         def between_steps(_pipeline: Any, step: int, _timestep: Any, state: dict) -> dict:
             """
@@ -235,17 +266,14 @@ class DiffusersAdapter:
                 on_step(step + 1, steps)
             return state
 
+        if held.takes_step_callback:
+            kwargs["callback_on_step_end"] = between_steps
+
         started = time.perf_counter_ns()
-        image = held.pipeline(
-            prompt=prompt,
-            num_inference_steps=steps,
-            height=int(params.get("height", 512)),
-            width=int(params.get("width", 512)),
-            callback_on_step_end=between_steps,
-        ).images[0]
+        result = held.pipeline(**kwargs)
         generate_ms = (time.perf_counter_ns() - started) / 1e6
 
-        image.save(destination)
+        self.modality.write(result, destination, params)
         return {
             "path": destination,
             "door": door,

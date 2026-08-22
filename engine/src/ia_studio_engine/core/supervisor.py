@@ -17,7 +17,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
 
 from ia_studio_engine import PROTOCOL_VERSION, __version__
-from ia_studio_engine.core.router import DoorRouter, spawn_diffusion
+from ia_studio_engine.core.router import DoorRouter, spawn_door
 from ia_studio_engine.hardware.probe import hardware_info
 from ia_studio_engine.protocol.envelope import (
     EnvelopeError,
@@ -148,7 +148,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     options = parser.parse_args(argv)
 
     chunks, send, close = _open_stream(options.socket)
-    router = DoorRouter(send, spawn_diffusion)
+    router = DoorRouter(send, spawn_door)
 
     # A door is a child of THIS process, and the default SIGTERM handler ends Python without
     # running a `finally`. Without this, killing the engine orphans a worker holding gigabytes of
