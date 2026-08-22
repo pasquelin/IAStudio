@@ -49,6 +49,24 @@
     "sources": "https://github.com/huggingface/accelerate"
   },
   {
+    "name": "ACE-Step 1.5 XL",
+    "spdx": "MIT",
+    "text": "ACE-Step 1.5 XL base, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the ACE-Step authors.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
+    "sources": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers"
+  },
+  {
+    "name": "ACE-Step 1.5 XL SFT",
+    "spdx": "MIT",
+    "text": "ACE-Step 1.5 XL, affine, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the ACE-Step authors.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
+    "sources": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers"
+  },
+  {
+    "name": "ACE-Step 1.5 XL Turbo",
+    "spdx": "MIT",
+    "text": "ACE-Step 1.5 XL turbo, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the ACE-Step authors.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
+    "sources": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers"
+  },
+  {
     "name": "ag-psd",
     "version": "31.0.2",
     "spdx": "MIT",
@@ -97,9 +115,8 @@
   },
   {
     "name": "CogVideoX 2B",
-    "version": "2b",
     "spdx": "Apache-2.0",
-    "text": "The lighter of the two models the studio makes video with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the CogVideoX authors, Zhipu AI. Licensed under the Apache License, Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0\n\nIts components, read on 2026-08-22: a T5 text encoder, a 3D VAE and a transformer, none\nof whose configuration names an upstream repository.",
+    "text": "CogVideoX 2B, 49 frames at 720x480, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the CogVideoX authors, Zhipu AI.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/zai-org/CogVideoX-2b"
   },
   {
@@ -289,6 +306,12 @@
     "unmodified": true
   },
   {
+    "name": "Mochi 1",
+    "spdx": "Apache-2.0",
+    "text": "Mochi 1 preview, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Genmo.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "sources": "https://huggingface.co/genmo/mochi-1-preview"
+  },
+  {
     "name": "mpmath",
     "version": "1.3.0",
     "spdx": "BSD",
@@ -375,6 +398,18 @@
     "spdx": "MIT",
     "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/yaml/pyyaml",
     "sources": "https://github.com/yaml/pyyaml"
+  },
+  {
+    "name": "Qwen-Image",
+    "spdx": "Apache-2.0",
+    "text": "Qwen-Image, 20B, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Alibaba Group and the Qwen authors.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "sources": "https://huggingface.co/Qwen/Qwen-Image"
+  },
+  {
+    "name": "Qwen-Image-Edit",
+    "spdx": "Apache-2.0",
+    "text": "Qwen-Image Edit, 20B, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Alibaba Group and the Qwen authors.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "sources": "https://huggingface.co/Qwen/Qwen-Image-Edit"
   },
   {
     "name": "Qwen2.5 0.5B Instruct",
@@ -487,10 +522,21 @@
     "sources": "https://github.com/huggingface/safetensors"
   },
   {
-    "name": "Sana 600M",
-    "version": "1024px, fp16",
+    "name": "SANA 1.5 1.6B",
     "spdx": "Apache-2.0",
-    "text": "The image model the studio generates with when it generates on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright NVIDIA Corporation and the Sana authors. Licensed under the Apache License,\nVersion 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0\n\nTHE DOWNLOAD CARRIES MORE THAN ONE LICENCE, measured on 2026-08-22. Its text encoder\nis a Gemma 2 model: text_encoder/config.json names google/gemma-2-2b-it, and the\n5.2 GB it weighs are governed by the Gemma Terms of Use rather than by Apache-2.0.\nFull terms: https://ai.google.dev/gemma/terms",
+    "text": "SANA 1.5, 1.6B, 1024px, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright NVIDIA Corporation and the Sana authors.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "sources": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers"
+  },
+  {
+    "name": "Sana 1600M",
+    "spdx": "Apache-2.0",
+    "text": "Sana 1600M, 1024px, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright NVIDIA Corporation and the Sana authors.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "sources": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers"
+  },
+  {
+    "name": "Sana 600M",
+    "spdx": "Apache-2.0",
+    "text": "Sana 600M 1024px, fp16, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright NVIDIA Corporation and the Sana authors.\n\nTHE DOWNLOAD CARRIES MORE THAN ONE LICENCE, measured on 2026-08-22. Its text encoder is a\nGemma 2 model: text_encoder/config.json names google/gemma-2-2b-it, and the 5.2 GB it\nweighs are governed by the Gemma Terms of Use rather than by Apache-2.0.\nFull terms: https://ai.google.dev/gemma/terms\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers"
   },
   {
@@ -528,9 +574,8 @@
   },
   {
     "name": "SSD-1B",
-    "version": "fp16",
     "spdx": "Apache-2.0",
-    "text": "The second image model the studio can generate with on this machine, offered beside\nSana so the choice of what a machine can hold belongs to the person.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Segmind. Licensed under the Apache License, Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0\n\nIts components, read on 2026-08-22: two CLIP text encoders and a VAE, none of whose\nconfiguration names an upstream repository. SSD-1B is published by Segmind as a\ndistillation of Stable Diffusion XL 1.0, whose own weights are released under the\nCreativeML Open RAIL++-M licence: https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0",
+    "text": "Segmind Stable Diffusion 1B, fp16, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Segmind.\n\nIts components, read on 2026-08-22: two CLIP text encoders and a VAE, none of whose\nconfiguration names an upstream repository. SSD-1B is published by Segmind as a distillation\nof Stable Diffusion XL 1.0, whose own weights are released under CreativeML Open RAIL++-M.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/segmind/SSD-1B"
   },
   {
@@ -620,11 +665,22 @@
     "text": "MIT License\n\nCopyright (c) 2017 Photopea\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE."
   },
   {
-    "name": "Wan 2.1 T2V 1.3B",
-    "version": "1.3B",
+    "name": "Wan 2.1 I2V 14B",
     "spdx": "Apache-2.0",
-    "text": "The heavier of the two models the studio makes video with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Alibaba Group and the Wan authors. Licensed under the Apache License, Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0\n\nIts components, read on 2026-08-22: a UMT5 text encoder — which is 22.7 GB of the 28.9\nthis weighs — a VAE and a transformer, none naming an upstream repository.",
+    "text": "Wan 2.1 image vers video, 14B, 480p, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Alibaba Group and the Wan authors.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "sources": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
+  },
+  {
+    "name": "Wan 2.1 T2V 1.3B",
+    "spdx": "Apache-2.0",
+    "text": "Wan 2.1 text-to-video, 1.3B, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Alibaba Group and the Wan authors.\n\nIts UMT5 text encoder is 22.7 GB of the 28.9 this weighs — read on 2026-08-22.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
+  },
+  {
+    "name": "Wan 2.2 TI2V 5B",
+    "spdx": "Apache-2.0",
+    "text": "Wan 2.2, texte et image vers video, 5B, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Alibaba Group and the Wan authors.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "sources": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers"
   },
   {
     "name": "wavesurfer.js",

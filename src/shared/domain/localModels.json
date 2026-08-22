@@ -294,7 +294,12 @@
       "capabilities": [
         "txt2img",
         "img2img",
-        "inpaint"
+        "inpaint",
+        "outpaint"
+      ],
+      "serves": [
+        "texture/txt2img_texture",
+        "texture/img2img_texture"
       ]
     },
     {
@@ -424,7 +429,529 @@
       ],
       "diskBytes": 7699998202,
       "reservationBytes": 7766163456,
-      "thumbnail": "sana-600m-1024.png"
+      "thumbnail": "sana-600m-1024.png",
+      "family": "image",
+      "capabilities": [
+        "txt2img"
+      ],
+      "serves": [
+        "texture/txt2img_texture"
+      ]
+    },
+    {
+      "id": "sana-1600m-1024",
+      "name": "Sana 1600M",
+      "summary": "Sana 1600M, 1024px",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "image",
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers",
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/model_index.json",
+          "bytes": 401,
+          "sha256": "5692423f50e7908bec51264ad39e5a9b7566970600f6089a0a40759524f5569b",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/scheduler/scheduler_config.json",
+          "bytes": 840,
+          "sha256": "70e8603120cc387316aa3bc7f08cb2872f6b6eb6eff6f25df1b88b6b76389e81",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/text_encoder/config.json",
+          "bytes": 875,
+          "sha256": "3b45a277b19814724be26e4985dd24c5c3efb01bebe5139af77f99254101961a",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.fp16-00001-of-00002.safetensors",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/text_encoder/model.fp16-00001-of-00002.safetensors",
+          "bytes": 4988024144,
+          "sha256": "e909230aabafad02d097c7dc02f2ae062b4e6b0593477c1f07679d277e09ce71",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.fp16-00002-of-00002.safetensors",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/text_encoder/model.fp16-00002-of-00002.safetensors",
+          "bytes": 240691624,
+          "sha256": "48e14f6b7a917e54cabc4ff2047ac2bfe0dae663e771eed3a8acf4ea27dcac18",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors.index.fp16.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/text_encoder/model.safetensors.index.fp16.json",
+          "bytes": 23935,
+          "sha256": "430ee03cbca19125be92ee9220e8c72a37a91d26db57a297f9e113bc6e37eb56",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors.index.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/text_encoder/model.safetensors.index.json",
+          "bytes": 22495,
+          "sha256": "92764588f700e36874c52f9f05bba143857e5069fc69b14450f907a1cdf879ed",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/tokenizer/special_tokens_map.json",
+          "bytes": 636,
+          "sha256": "baec30ea10906f16adb8c18af7a34023002c1746542612b8b41c9f09e1351351",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/tokenizer/tokenizer.json",
+          "bytes": 34362873,
+          "sha256": "5f7eee611703c5ce5d1eee32d9cdcfe465647b8aff0c1dfb3bed7ad7dbb05060",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer.model",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/tokenizer/tokenizer.model",
+          "bytes": 4241003,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/tokenizer/tokenizer_config.json",
+          "bytes": 46996,
+          "sha256": "cb32b7929c62608d46572e813112b3ad8a841fb98fdd6a4da8559e368a951c89",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/transformer/config.json",
+          "bytes": 496,
+          "sha256": "41d305ca78eb33f4690573d73cee4d8a138efc8f51a410bad1d051907e1bc7f2",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/transformer/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 3208971144,
+          "sha256": "30cadbc6ebe74168f109fa14f1bf88badbc18cfad2a673f100322fb49a443c9c",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.safetensors.index.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/transformer/diffusion_pytorch_model.safetensors.index.json",
+          "bytes": 40191,
+          "sha256": "89a9c8fdea099ea5ead1f8d603a2adad59486fd50f04aa7f75b247c21842221e",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/vae/config.json",
+          "bytes": 1280,
+          "sha256": "4e5669aa03caa77615b73b21c9347c384cb11124a9590683e32a510df0176eb4",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers/resolve/ac0da2ff55fbe434795be0dce883042e4d49e2fc/vae/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 1249044836,
+          "sha256": "15a4b09e56d95b768a0ec9da50b702e21d920333fc9b3480d66bb5c7fad9d87f",
+          "revision": "ac0da2ff55fbe434795be0dce883042e4d49e2fc"
+        }
+      ],
+      "diskBytes": 9725473769,
+      "reservationBytes": 4862736884,
+      "thumbnail": "sana-1600m-1024.png"
+    },
+    {
+      "id": "sana15-1-6b",
+      "name": "SANA 1.5 1.6B",
+      "summary": "SANA 1.5, 1.6B, 1024px",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "image",
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers",
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/model_index.json",
+          "bytes": 401,
+          "sha256": "f2c25169ee98af8964867731386345d89772f8bfb00d9e712f4398b6eb79f201",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/scheduler/scheduler_config.json",
+          "bytes": 840,
+          "sha256": "f9256042828841b26561487c7e0c33fff8717e98ac0fef5c1f6d05bfdd66e908",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/text_encoder/config.json",
+          "bytes": 890,
+          "sha256": "733f241a6692770dfba10383e2c5a56a4f88b320732d9ee8fa16118737eca84d",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00001-of-00002.safetensors",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/text_encoder/model-00001-of-00002.safetensors",
+          "bytes": 4988024144,
+          "sha256": "e909230aabafad02d097c7dc02f2ae062b4e6b0593477c1f07679d277e09ce71",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00002-of-00002.safetensors",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/text_encoder/model-00002-of-00002.safetensors",
+          "bytes": 240691624,
+          "sha256": "48e14f6b7a917e54cabc4ff2047ac2bfe0dae663e771eed3a8acf4ea27dcac18",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors.index.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/text_encoder/model.safetensors.index.json",
+          "bytes": 22495,
+          "sha256": "92764588f700e36874c52f9f05bba143857e5069fc69b14450f907a1cdf879ed",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/tokenizer/special_tokens_map.json",
+          "bytes": 636,
+          "sha256": "baec30ea10906f16adb8c18af7a34023002c1746542612b8b41c9f09e1351351",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/tokenizer/tokenizer.json",
+          "bytes": 34362873,
+          "sha256": "5f7eee611703c5ce5d1eee32d9cdcfe465647b8aff0c1dfb3bed7ad7dbb05060",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer.model",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/tokenizer/tokenizer.model",
+          "bytes": 4241003,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/tokenizer/tokenizer_config.json",
+          "bytes": 46996,
+          "sha256": "cb32b7929c62608d46572e813112b3ad8a841fb98fdd6a4da8559e368a951c89",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/transformer/config.json",
+          "bytes": 593,
+          "sha256": "70863bf60b87cbeab5780c9827ffc5b880cd1ec9ce22bf033409b7e257e8fc68",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/transformer/diffusion_pytorch_model.safetensors",
+          "bytes": 3209339048,
+          "sha256": "300b4109622d8ffd12d827a4127d2f82f102e3b9a0d413285f6bcf46729a3e54",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/vae/config.json",
+          "bytes": 1280,
+          "sha256": "ba6f3d3e44d75d44fdd3760097c069173b5b925e6d14604d5d3582628d09cca6",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers/resolve/b77948f2b4eed5c728e9b828ccff07f7427b43cc/vae/diffusion_pytorch_model.safetensors",
+          "bytes": 1249044836,
+          "sha256": "dfd991d1b54ffabf22745c5885589d8f2a7bc59930d95d92bd741c4fc64454bb",
+          "revision": "b77948f2b4eed5c728e9b828ccff07f7427b43cc"
+        }
+      ],
+      "diskBytes": 9725777659,
+      "reservationBytes": 4862888829,
+      "thumbnail": "sana15-1-6b.png"
+    },
+    {
+      "id": "qwen-image",
+      "name": "Qwen-Image",
+      "summary": "Qwen-Image, 20B",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "image",
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/Qwen/Qwen-Image",
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/model_index.json",
+          "bytes": 443,
+          "sha256": "9fb9557c1e5bafb3a582af8407b5a7ad8a8bcbdb20dde4d248bbb4718e1654bd",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/scheduler/scheduler_config.json",
+          "bytes": 485,
+          "sha256": "069f27554bc5155c1d60672e606dc072bc8b65f9afdd17f3be3b38c38c07c25a",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/text_encoder/config.json",
+          "bytes": 3217,
+          "sha256": "081d41bae4c75815afde340b5cee39d9c71febe3fc3146e0366a75a45da0c04b",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/generation_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/text_encoder/generation_config.json",
+          "bytes": 244,
+          "sha256": "45b75d70ff5862fddbedd7d32e3d0965a894eceb67a2b9fe53192555124f965e",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00001-of-00004.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/text_encoder/model-00001-of-00004.safetensors",
+          "bytes": 4968243304,
+          "sha256": "d725335e4ea2399be706469e4b8807716a8fa64bd03468252e9f7acf2415fee4",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00002-of-00004.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/text_encoder/model-00002-of-00004.safetensors",
+          "bytes": 4991495816,
+          "sha256": "b1830db6908dcc76df3a71492acbcf2b8cac130114cf1f3c2d9edae8de8c6de3",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00003-of-00004.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/text_encoder/model-00003-of-00004.safetensors",
+          "bytes": 4932751040,
+          "sha256": "09c1807c6d00d7cab94f7db39d4c02ebb8537225ccde383861ac48db97945aa6",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00004-of-00004.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/text_encoder/model-00004-of-00004.safetensors",
+          "bytes": 1691924384,
+          "sha256": "5dd068336d14d45ffb43cef374d286cc6ba9d8741b028f90a7d040d847961f4a",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors.index.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/text_encoder/model.safetensors.index.json",
+          "bytes": 57655,
+          "sha256": "4be35310ddc165e46e88de4c3fec8c1210014b0b8717f4544d82cc740814ae0c",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/added_tokens.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/tokenizer/added_tokens.json",
+          "bytes": 605,
+          "sha256": "58b54bbe36fc752f79a24a271ef66a0a0830054b4dfad94bde757d851968060b",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/chat_template.jinja",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/tokenizer/chat_template.jinja",
+          "bytes": 2427,
+          "sha256": "44d5f08f3f72b837eaad09f13a54c1f9f4eb58d75240334548b7fd52a5437fa5",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/tokenizer/merges.txt",
+          "bytes": 1671853,
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/tokenizer/special_tokens_map.json",
+          "bytes": 613,
+          "sha256": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/tokenizer/tokenizer_config.json",
+          "bytes": 4686,
+          "sha256": "0a04a9d7d4a62b28482bdfe726c122756de85714fb64166ace92ae75b8f57614",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/tokenizer/vocab.json",
+          "bytes": 3383407,
+          "sha256": "87a257b04b17642a0688c98cd1df89c398bda4fee532d6f88b38a659ecb4ac8d",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/transformer/config.json",
+          "bytes": 371,
+          "sha256": "1bd1ef23f159b4eb3c894eaecc2ac2b9ab5ad31ca1bf8ecc0b0f71081f0730b5",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00001-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/transformer/diffusion_pytorch_model-00001-of-00009.safetensors",
+          "bytes": 4989364312,
+          "sha256": "9f33a59093af3abcc2836d4cf4b7bd122c238ca70a26c70f34fdde64646b3bcd",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00002-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/transformer/diffusion_pytorch_model-00002-of-00009.safetensors",
+          "bytes": 4984214160,
+          "sha256": "49d580e85b932e15c226e68a9d5549629878d3a128da7662d28401956cee0238",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00003-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/transformer/diffusion_pytorch_model-00003-of-00009.safetensors",
+          "bytes": 4946470000,
+          "sha256": "0d72f0cbd0d6c2bdc2e1e73e41ac143452fc9e4570d1362203498832302de69f",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00004-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/transformer/diffusion_pytorch_model-00004-of-00009.safetensors",
+          "bytes": 4984213736,
+          "sha256": "ee87991bfa1bc8e7553034b07099151532524101ca1581c4f3a86292814e9f0d",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00005-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/transformer/diffusion_pytorch_model-00005-of-00009.safetensors",
+          "bytes": 4946471896,
+          "sha256": "83291a65be26fe688db4cf81383749831b623a6fcb1a71c851bafb55ddc0058d",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00006-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/transformer/diffusion_pytorch_model-00006-of-00009.safetensors",
+          "bytes": 4946451560,
+          "sha256": "61e936a995e7f4ce08d44b9d6ffb56dc65dd61200288876ee2fda72da322583d",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00007-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/transformer/diffusion_pytorch_model-00007-of-00009.safetensors",
+          "bytes": 4908690520,
+          "sha256": "854bc9e4a65c11c256f2fef31606a6407e9a425e8bde394db8be71416c515ead",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00008-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/transformer/diffusion_pytorch_model-00008-of-00009.safetensors",
+          "bytes": 4984232856,
+          "sha256": "caedc7cc2914ab113cfbb3684cf072350201182ae8de1a7308e419385987ae40",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00009-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/transformer/diffusion_pytorch_model-00009-of-00009.safetensors",
+          "bytes": 1170918840,
+          "sha256": "ae0fef149890f61d54572baa1e806de97156c7ec5b7bbbbbbf27a2d87f33af61",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.safetensors.index.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/transformer/diffusion_pytorch_model.safetensors.index.json",
+          "bytes": 198887,
+          "sha256": "adeb4aa7230a3940cdfb4f6d7be4131a13cd5275d612fb9f8be90ede8d965b29",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/vae/config.json",
+          "bytes": 730,
+          "sha256": "e4e61b7553f930e9eabf8935f0a77e6d004cc3ee67a601a56ef03cc41ccada68",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image/resolve/75e0b4be04f60ec59a75f475837eced720f823b6/vae/diffusion_pytorch_model.safetensors",
+          "bytes": 253806966,
+          "sha256": "0c8bc8b758c649abef9ea407b95408389a3b2f610d0d10fcb054fe171d0a8344",
+          "revision": "75e0b4be04f60ec59a75f475837eced720f823b6"
+        }
+      ],
+      "diskBytes": 57704575013,
+      "reservationBytes": 28852287506,
+      "thumbnail": "qwen-image.png"
     }
   ],
   "video/txt2video": [
@@ -725,6 +1252,1644 @@
       "diskBytes": 28928887859,
       "reservationBytes": 14464443929,
       "thumbnail": "wan21-t2v-1-3b.png"
+    },
+    {
+      "id": "wan22-ti2v-5b",
+      "name": "Wan 2.2 TI2V 5B",
+      "summary": "Wan 2.2, texte et image vers video, 5B",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "video",
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/model_index.json",
+          "bytes": 499,
+          "sha256": "6a72faeb564b0e894aea8fc4ef27241106eb739e8584e869b61589a65473add7",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/scheduler/scheduler_config.json",
+          "bytes": 820,
+          "sha256": "571a3eed68bcd943a61b9fea8efa9e141472216ada59f928c8b5128ce24b32e0",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/text_encoder/config.json",
+          "bytes": 855,
+          "sha256": "a2bcb24699f6c009a2427432bdd483ef8b2b42a712abc9503759cdc77d171f07",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00001-of-00003.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/text_encoder/model-00001-of-00003.safetensors",
+          "bytes": 4935812536,
+          "sha256": "a8e861969c7433e707cc5a74065d795d36cca07ec96eb6763eb4083df7248f58",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00002-of-00003.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/text_encoder/model-00002-of-00003.safetensors",
+          "bytes": 4983103192,
+          "sha256": "d57d948ece4837d850b7a859a4415121d57cacf8b9ee1d4db200c67f592902d7",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00003-of-00003.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/text_encoder/model-00003-of-00003.safetensors",
+          "bytes": 1442935480,
+          "sha256": "0da9ee284e21d1406df708788db1d502d95d75f69faa25cd26151bf8829b7c5f",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors.index.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/text_encoder/model.safetensors.index.json",
+          "bytes": 22476,
+          "sha256": "31c4c7bcce679eaa0dd4667462394ddb013dc2f748e0bffc893dc9146a320dab",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/tokenizer/special_tokens_map.json",
+          "bytes": 7079,
+          "sha256": "456b58fd240a06c743a7c2cf8008bec501240d68ebd1fc4018ea569505fea270",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/spiece.model",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/tokenizer/spiece.model",
+          "bytes": 4548313,
+          "sha256": "e3909a67b780650b35cf529ac782ad2b6b26e6d1f849d3fbb6a872905f452458",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/tokenizer/tokenizer.json",
+          "bytes": 16837459,
+          "sha256": "20a46ac256746594ed7e1e3ef733b83fbc5a6f0922aa7480eda961743de080ef",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/tokenizer/tokenizer_config.json",
+          "bytes": 61758,
+          "sha256": "1d8d2a216bf8e70ac15b7ddcea566c4dd0433c024b39a58ca5e4c66bd78defbd",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/config.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/transformer/config.json",
+          "bytes": 495,
+          "sha256": "dc00d9866e72cf77db6b531aaa33be4dc7148fef9338442bd0ae9181f7075e9b",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00001-of-00005.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/transformer/diffusion_pytorch_model-00001-of-00005.safetensors",
+          "bytes": 4978254344,
+          "sha256": "511bec832a201caa410d09c5ce7dbbf8ad2708c345d82038f684fc74cce982be",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00002-of-00005.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/transformer/diffusion_pytorch_model-00002-of-00005.safetensors",
+          "bytes": 4846784976,
+          "sha256": "7c42724912b1911429125dc50c0e9a49ccbada5a601b657d4ed2e15e7597c193",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00003-of-00005.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/transformer/diffusion_pytorch_model-00003-of-00005.safetensors",
+          "bytes": 4972658392,
+          "sha256": "e9c3d0c76de786566382f8258101fea973ae37681c6e9fe0e5fe1fb93b806424",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00004-of-00005.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/transformer/diffusion_pytorch_model-00004-of-00005.safetensors",
+          "bytes": 4846785080,
+          "sha256": "a331121771790939678db6f585553fd5184609f7d02593c699a4d241b0d834c5",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00005-of-00005.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/transformer/diffusion_pytorch_model-00005-of-00005.safetensors",
+          "bytes": 354751840,
+          "sha256": "78b655685c47efdb2349f36826bb101264e9f212a16325d584aeb5f53c88e719",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.safetensors.index.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/transformer/diffusion_pytorch_model.safetensors.index.json",
+          "bytes": 73297,
+          "sha256": "d6c1f72d86fbddef8fb5ef1c03f5b56b2bfdb6ae58032db98c6019fd1dae9021",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/vae/config.json",
+          "bytes": 1701,
+          "sha256": "d996c340fe9a7df5d7371f76a7d8d6956f6c98256080074d8434fa5eeac11360",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers/resolve/b8fff7315c768468a5333511427288870b2e9635/vae/diffusion_pytorch_model.safetensors",
+          "bytes": 2818777808,
+          "sha256": "62cd18f19438e35b32ac63020e2852f566e9b02f46b6cdbd87972a356e3c6f4b",
+          "revision": "b8fff7315c768468a5333511427288870b2e9635"
+        }
+      ],
+      "diskBytes": 34201418400,
+      "reservationBytes": 17100709200,
+      "thumbnail": "wan22-ti2v-5b.png",
+      "family": "video",
+      "capabilities": [
+        "txt2video",
+        "img2video"
+      ]
+    },
+    {
+      "id": "mochi-1-preview",
+      "name": "Mochi 1",
+      "summary": "Mochi 1 preview",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "video",
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/genmo/mochi-1-preview",
+      "files": [
+        {
+          "role": "assets",
+          "name": "assets/grid.gif",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/assets/grid.gif",
+          "bytes": 59735957,
+          "sha256": "85588586e345d5302112486b34a59c34240ab759c3048f0abc3868d8f3fdaa5d",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "index",
+          "name": "decoder.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/decoder.safetensors",
+          "bytes": 1450122828,
+          "sha256": "641920faaf20e5404ddb5553ce3e295c21ed9b4bc5f6fe7c930811b84099cb14",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "index",
+          "name": "dit.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/dit.safetensors",
+          "bytes": 40110801256,
+          "sha256": "5c273a0d4fbb0de835e31b7cb5228089ba0ee54d4c3a087e81d354cef3d8bbf1",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "index",
+          "name": "encoder.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/encoder.safetensors",
+          "bytes": 388912864,
+          "sha256": "d3a8827a66b58a479d97420a9bf77e59078d88f538298469d8db28c37bd556ae",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/model_index.json",
+          "bytes": 408,
+          "sha256": "db470a8c28b77125d74cb955f277c20b9f629e01b177dd352d7ec396ccad3d85",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/scheduler/scheduler_config.json",
+          "bytes": 299,
+          "sha256": "e76276322d53cda452afe406d3c1e6a1a8bdc9de3fae3a32c831f4b8e41890f4",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/text_encoder/config.json",
+          "bytes": 781,
+          "sha256": "e2502471a5c7b13c12e62dd2f068d714a284b259a11ffbdefeb58af37cba1a60",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00001-of-00002.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/text_encoder/model-00001-of-00002.safetensors",
+          "bytes": 4994582224,
+          "sha256": "ec87bffd1923e8b2774a6d240c922a41f6143081d52cf83b8fe39e9d838c893e",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00001-of-00004.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/text_encoder/model-00001-of-00004.safetensors",
+          "bytes": 4989319680,
+          "sha256": "7a68b2c8c080696a10109612a649bc69330991ecfea65930ccfdfbdb011f2686",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00002-of-00002.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/text_encoder/model-00002-of-00002.safetensors",
+          "bytes": 4530066360,
+          "sha256": "a5640855b301fcdbceddfa90ae8066cd9414aff020552a201a255ecf2059da00",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00002-of-00004.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/text_encoder/model-00002-of-00004.safetensors",
+          "bytes": 4999830656,
+          "sha256": "b8ed6556d7507e38af5b428c605fb2a6f2bdb7e80bd481308b865f7a40c551ca",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00003-of-00004.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/text_encoder/model-00003-of-00004.safetensors",
+          "bytes": 4865612720,
+          "sha256": "c831635f83041f83faf0024b39c6ecb21b45d70dd38a63ea5bac6c7c6e5e558c",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00004-of-00004.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/text_encoder/model-00004-of-00004.safetensors",
+          "bytes": 4194506688,
+          "sha256": "02a5f2d69205be92ad48fe5d712d38c2ff55627969116aeffc58bd75a28da468",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors.index.json",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/text_encoder/model.safetensors.index.json",
+          "bytes": 19886,
+          "sha256": "a545bb25dc0f423d84be7b577311bba8bb7c6931f1eefcea65fc8b0a61a60a76",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/added_tokens.json",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/tokenizer/added_tokens.json",
+          "bytes": 2593,
+          "sha256": "ea5a91a3234f66ea642c8e672d67f0f493759a9bee6910ae304ea9b9492118b5",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/tokenizer/special_tokens_map.json",
+          "bytes": 2543,
+          "sha256": "7a1985a994c41886db38c719d2a3d2f40606663cc19d7c5d6a85d349320e06d2",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/spiece.model",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/tokenizer/spiece.model",
+          "bytes": 791656,
+          "sha256": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/tokenizer/tokenizer_config.json",
+          "bytes": 20618,
+          "sha256": "a821b0b127e1deb7bcdad0a493fb817d4efd90e6a46a2c3cdc21228d5492b2a9",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/config.json",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/transformer/config.json",
+          "bytes": 396,
+          "sha256": "592148b13b5b7ab182c266f73a8d35ef6a427775e45e573bc7359b01d8824d1a",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00001-of-00005.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/transformer/diffusion_pytorch_model-00001-of-00005.safetensors",
+          "bytes": 9907773000,
+          "sha256": "9b5db44998e2ce04a55b2688b881567b81577a38f4b63ce89d1ce0f81840de17",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00002-of-00005.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/transformer/diffusion_pytorch_model-00002-of-00005.safetensors",
+          "bytes": 9966828288,
+          "sha256": "8d8a5a5dab5132531b0dd8bbb6148db875f9f8ca32e759095329623f6e7de2d4",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00003-of-00005.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/transformer/diffusion_pytorch_model-00003-of-00005.safetensors",
+          "bytes": 9966828288,
+          "sha256": "a2a4516c2f821b161b37005ef796f35252a5c7045f6046139ca4d206bb627564",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00004-of-00005.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/transformer/diffusion_pytorch_model-00004-of-00005.safetensors",
+          "bytes": 9891306008,
+          "sha256": "57a1e86cd5b566aab4c910767fccedbd2a9b29172c820b2a37d8ae706108f0df",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00005-of-00005.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/transformer/diffusion_pytorch_model-00005-of-00005.safetensors",
+          "bytes": 378102568,
+          "sha256": "69296ea436e319c26eab46197365b5f95cb0a20c8f982876d016513a77bdcd3c",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.bf16-00001-of-00003.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/transformer/diffusion_pytorch_model.bf16-00001-of-00003.safetensors",
+          "bytes": 9937333040,
+          "sha256": "29f767d34af7bfba3a216def2d1a45c23f0a71ce69ead170af92328e0605eb1a",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.bf16-00002-of-00003.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/transformer/diffusion_pytorch_model.bf16-00002-of-00003.safetensors",
+          "bytes": 9929099008,
+          "sha256": "fd0c821a4ed49847f30f4baed76136b5f0e3077d95538469e196ecca50259713",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.bf16-00003-of-00003.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/transformer/diffusion_pytorch_model.bf16-00003-of-00003.safetensors",
+          "bytes": 189051592,
+          "sha256": "e94bb39dec286bafcd626252a2e26f00ea36a900bd813bf8b0e3cc17493a49db",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.safetensors.index.bf16.json",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/transformer/diffusion_pytorch_model.safetensors.index.bf16.json",
+          "bytes": 117567,
+          "sha256": "710411b966b38d2f213e700da6db573df45dae85bf93e173fdde8db1577beed4",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.safetensors.index.json",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/transformer/diffusion_pytorch_model.safetensors.index.json",
+          "bytes": 112212,
+          "sha256": "fd8b3d287217ba81ed50e3160d3bb05d5f11b263dc105fcaf7ade6750e401b9b",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/vae/config.json",
+          "bytes": 1234,
+          "sha256": "ef3433936ef0e152607387858b1a0e833cd7b8cd7253d31baa0f9d3f5975835c",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.bf16.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/vae/diffusion_pytorch_model.bf16.safetensors",
+          "bytes": 919549966,
+          "sha256": "fecceadc048487f07cad99f6f5fbbf691f7385573d53cea2f06e461b3a9721ea",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/genmo/mochi-1-preview/resolve/14be5fcea23095ed330cb214647916a451e38b6e/vae/diffusion_pytorch_model.safetensors",
+          "bytes": 1839047460,
+          "sha256": "0d74f617ddcaa1b4a53884581d8d21b6836761f6175b20e3df177d4a12ed77df",
+          "revision": "14be5fcea23095ed330cb214647916a451e38b6e"
+        }
+      ],
+      "diskBytes": 133509480644,
+      "reservationBytes": 66754740322,
+      "thumbnail": "mochi-1-preview.png"
+    }
+  ],
+  "image/img2img": [
+    {
+      "id": "qwen-image-edit",
+      "name": "Qwen-Image-Edit",
+      "summary": "Qwen-Image Edit, 20B",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "image",
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/Qwen/Qwen-Image-Edit",
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/model_index.json",
+          "bytes": 512,
+          "sha256": "d41bd16f816a0b78c773bf2dce6feeff08aa1438065fa83fc3ccc4f6087c86c0",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "processor",
+          "name": "processor/added_tokens.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/processor/added_tokens.json",
+          "bytes": 605,
+          "sha256": "58b54bbe36fc752f79a24a271ef66a0a0830054b4dfad94bde757d851968060b",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "processor",
+          "name": "processor/chat_template.jinja",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/processor/chat_template.jinja",
+          "bytes": 1017,
+          "sha256": "a0bc6f6fc7a29a80017a433e8f03a1cc1236e838a944a2d034295a60c4f2fddb",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "processor",
+          "name": "processor/merges.txt",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/processor/merges.txt",
+          "bytes": 1671853,
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "processor",
+          "name": "processor/preprocessor_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/processor/preprocessor_config.json",
+          "bytes": 788,
+          "sha256": "9ff8a240516e4ef986717597bb2c5fff3e4d4c0951d02b7dee949ceb369b5b03",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "processor",
+          "name": "processor/special_tokens_map.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/processor/special_tokens_map.json",
+          "bytes": 613,
+          "sha256": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "processor",
+          "name": "processor/tokenizer.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/processor/tokenizer.json",
+          "bytes": 11421896,
+          "sha256": "9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "processor",
+          "name": "processor/tokenizer_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/processor/tokenizer_config.json",
+          "bytes": 4727,
+          "sha256": "1b20115c83f30580a8c0fc330f47fad9222dccd4f739fe2d48e62ee93d28ac19",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "processor",
+          "name": "processor/video_preprocessor_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/processor/video_preprocessor_config.json",
+          "bytes": 904,
+          "sha256": "d4397fb8765d3fb56db022e5a14ce58dbcc144093c49ea1ab96787fb7951facb",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "processor",
+          "name": "processor/vocab.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/processor/vocab.json",
+          "bytes": 2776833,
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/scheduler/scheduler_config.json",
+          "bytes": 485,
+          "sha256": "42e69429b12cb418527feba57b8d8458aeeb35098f55d247d4c44dc4e4e7bf39",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/text_encoder/config.json",
+          "bytes": 3217,
+          "sha256": "f807e3d717d5455f8f4a1f66bcf05f32fa7d0511fef2e7e7c63e7ed4163bf147",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/generation_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/text_encoder/generation_config.json",
+          "bytes": 244,
+          "sha256": "ab516dcf219b00258020a368515f66e04c5f512af93c0d8077f3c6b1021d1c71",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00001-of-00004.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/text_encoder/model-00001-of-00004.safetensors",
+          "bytes": 4968243304,
+          "sha256": "d725335e4ea2399be706469e4b8807716a8fa64bd03468252e9f7acf2415fee4",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00002-of-00004.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/text_encoder/model-00002-of-00004.safetensors",
+          "bytes": 4991495816,
+          "sha256": "b1830db6908dcc76df3a71492acbcf2b8cac130114cf1f3c2d9edae8de8c6de3",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00003-of-00004.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/text_encoder/model-00003-of-00004.safetensors",
+          "bytes": 4932751040,
+          "sha256": "09c1807c6d00d7cab94f7db39d4c02ebb8537225ccde383861ac48db97945aa6",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00004-of-00004.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/text_encoder/model-00004-of-00004.safetensors",
+          "bytes": 1691924384,
+          "sha256": "5dd068336d14d45ffb43cef374d286cc6ba9d8741b028f90a7d040d847961f4a",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors.index.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/text_encoder/model.safetensors.index.json",
+          "bytes": 57655,
+          "sha256": "4be35310ddc165e46e88de4c3fec8c1210014b0b8717f4544d82cc740814ae0c",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/added_tokens.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/tokenizer/added_tokens.json",
+          "bytes": 605,
+          "sha256": "58b54bbe36fc752f79a24a271ef66a0a0830054b4dfad94bde757d851968060b",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/chat_template.jinja",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/tokenizer/chat_template.jinja",
+          "bytes": 2427,
+          "sha256": "44d5f08f3f72b837eaad09f13a54c1f9f4eb58d75240334548b7fd52a5437fa5",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/tokenizer/merges.txt",
+          "bytes": 1671853,
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/tokenizer/special_tokens_map.json",
+          "bytes": 613,
+          "sha256": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/tokenizer/tokenizer_config.json",
+          "bytes": 4686,
+          "sha256": "0a04a9d7d4a62b28482bdfe726c122756de85714fb64166ace92ae75b8f57614",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/tokenizer/vocab.json",
+          "bytes": 3383407,
+          "sha256": "87a257b04b17642a0688c98cd1df89c398bda4fee532d6f88b38a659ecb4ac8d",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/transformer/config.json",
+          "bytes": 339,
+          "sha256": "249d908c3ec1ecef0998c6aca3571224ebeb5f504236e2752e1c3d651e4f0a09",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00001-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/transformer/diffusion_pytorch_model-00001-of-00009.safetensors",
+          "bytes": 4989364312,
+          "sha256": "2003cdd961d3a94897f70a49c4cda975e9f92dd938adfeeba4f335f695570310",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00002-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/transformer/diffusion_pytorch_model-00002-of-00009.safetensors",
+          "bytes": 4984214160,
+          "sha256": "d20abf545941bbffe26e201276226332e6ad6a2d3d7a7a18fb45ec7006fcdc8a",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00003-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/transformer/diffusion_pytorch_model-00003-of-00009.safetensors",
+          "bytes": 4946470000,
+          "sha256": "1e4d15c80d388b630a97347694914cbc58ea9dc40e472305add52981ca02e856",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00004-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/transformer/diffusion_pytorch_model-00004-of-00009.safetensors",
+          "bytes": 4984213736,
+          "sha256": "e5baa4c61fbce2011ea179122a8dc4bfaefb5387feeee5eff765fb237977cbd1",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00005-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/transformer/diffusion_pytorch_model-00005-of-00009.safetensors",
+          "bytes": 4946471896,
+          "sha256": "c08a2489c7e11f09c9fd4aae929085a31199699f1fa4a2dd95fc65d1ab5c223c",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00006-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/transformer/diffusion_pytorch_model-00006-of-00009.safetensors",
+          "bytes": 4946451560,
+          "sha256": "901dfafc0de496f358e27b81af4155b889080aebd4417909303c70a260885fff",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00007-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/transformer/diffusion_pytorch_model-00007-of-00009.safetensors",
+          "bytes": 4908690520,
+          "sha256": "e8d9a14e343d841e425bb4f68c4be44b96d94730d328a175f4549bdde9114c96",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00008-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/transformer/diffusion_pytorch_model-00008-of-00009.safetensors",
+          "bytes": 4984232856,
+          "sha256": "f57b82e08f23a33af5a2a6dbf586180b4f5c9e69487d49112544ca5e8fe0d94e",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00009-of-00009.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/transformer/diffusion_pytorch_model-00009-of-00009.safetensors",
+          "bytes": 1170918840,
+          "sha256": "b068de3d8644da55bc75f156ba50cd374f397f2fc49c8e8e00c0392db7cd3a70",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.safetensors.index.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/transformer/diffusion_pytorch_model.safetensors.index.json",
+          "bytes": 198887,
+          "sha256": "adeb4aa7230a3940cdfb4f6d7be4131a13cd5275d612fb9f8be90ede8d965b29",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/vae/config.json",
+          "bytes": 730,
+          "sha256": "4bcfd1c616b09ff99fbb2d759646d904d47e596ace2a0fa3bb9d258b321485e5",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen-Image-Edit/resolve/ac7f9318f633fc4b5778c59367c8128225f1e3de/vae/diffusion_pytorch_model.safetensors",
+          "bytes": 253806966,
+          "sha256": "0c8bc8b758c649abef9ea407b95408389a3b2f610d0d10fcb054fe171d0a8344",
+          "revision": "ac7f9318f633fc4b5778c59367c8128225f1e3de"
+        }
+      ],
+      "diskBytes": 57720454286,
+      "reservationBytes": 28860227143,
+      "thumbnail": "qwen-image-edit.png",
+      "family": "image",
+      "capabilities": [
+        "img2img"
+      ]
+    }
+  ],
+  "video/img2video": [
+    {
+      "id": "wan21-i2v-14b-480p",
+      "name": "Wan 2.1 I2V 14B",
+      "summary": "Wan 2.1 image vers video, 14B, 480p",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "video",
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers",
+      "files": [
+        {
+          "role": "image-encoder",
+          "name": "image_encoder/config.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/image_encoder/config.json",
+          "bytes": 582,
+          "sha256": "e8f874059bfc3b819410eaf4a3e7753b04dadeb1ef8e2a20825c96739f4ec2d5",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "image-encoder",
+          "name": "image_encoder/model.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/image_encoder/model.safetensors",
+          "bytes": 1264217760,
+          "sha256": "f5c0bbf4f43f319a80335387d371742333807589c5bb4130a1a2a5d4abf6bf72",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "image-processor",
+          "name": "image_processor/preprocessor_config.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/image_processor/preprocessor_config.json",
+          "bytes": 478,
+          "sha256": "b832cbb47ae2ad80b428b7f31ae0a856137f3e465e6622d03e27754ec2f1aace",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/model_index.json",
+          "bytes": 567,
+          "sha256": "76a80dafb52eddc6220cef1d91c1aa02b949624f5d90676e60818d811777d144",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/scheduler/scheduler_config.json",
+          "bytes": 751,
+          "sha256": "3fed2abbd9bbc301a74db01947198057ec5049808910dccab320925bf27bea6e",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/text_encoder/config.json",
+          "bytes": 854,
+          "sha256": "4087b6192155a4643f6d29fd326c4610103130674011ef4d0a53f8bce5de967d",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00001-of-00005.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/text_encoder/model-00001-of-00005.safetensors",
+          "bytes": 4972389712,
+          "sha256": "c0ef3a140898e228a3520c9adec60743d2e8e5b3d229651bb37f1a3921919f99",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00002-of-00005.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/text_encoder/model-00002-of-00005.safetensors",
+          "bytes": 4899225672,
+          "sha256": "481c7b2b39771c44df6dd8d13ee12ed072d731b4a650bd092885d4d52db229ad",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00003-of-00005.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/text_encoder/model-00003-of-00005.safetensors",
+          "bytes": 4966309504,
+          "sha256": "f93148bcc04052a169e1e49bfcf6125df6cf9bf243cb9c627da75266cf8e35c3",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00004-of-00005.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/text_encoder/model-00004-of-00005.safetensors",
+          "bytes": 4999880704,
+          "sha256": "a451792c739c05bca4606190cc2dd16731411bac03b4cf6aacc5767321f857c9",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model-00005-of-00005.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/text_encoder/model-00005-of-00005.safetensors",
+          "bytes": 2885866152,
+          "sha256": "7e76e18d224531b8197a46231cb53daf7f2f6ca707130252becf933026ac4eea",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors.index.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/text_encoder/model.safetensors.index.json",
+          "bytes": 22476,
+          "sha256": "8af791f24a6447aa30c95786f40adf23d3c9df97470d2f36159c8f1113f120b4",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/tokenizer/special_tokens_map.json",
+          "bytes": 7079,
+          "sha256": "456b58fd240a06c743a7c2cf8008bec501240d68ebd1fc4018ea569505fea270",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/spiece.model",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/tokenizer/spiece.model",
+          "bytes": 4548313,
+          "sha256": "e3909a67b780650b35cf529ac782ad2b6b26e6d1f849d3fbb6a872905f452458",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/tokenizer/tokenizer.json",
+          "bytes": 16837459,
+          "sha256": "20a46ac256746594ed7e1e3ef733b83fbc5a6f0922aa7480eda961743de080ef",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/tokenizer/tokenizer_config.json",
+          "bytes": 61758,
+          "sha256": "1d8d2a216bf8e70ac15b7ddcea566c4dd0433c024b39a58ca5e4c66bd78defbd",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/config.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/config.json",
+          "bytes": 466,
+          "sha256": "9c718e887b11a0f6f8ed654c0abab0f3a829bc2899912214ad229c79f03e4271",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00001-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00001-of-00014.safetensors",
+          "bytes": 4929161040,
+          "sha256": "b4602c35fa0519750a42c03e3f296c02d542291e344c4d702522cddbd1711f13",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00002-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00002-of-00014.safetensors",
+          "bytes": 4951011392,
+          "sha256": "1cb4cbb7f3437995d73dd430a3072199ff246f8858b517a2e9c79dea7851302a",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00003-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00003-of-00014.safetensors",
+          "bytes": 4951011392,
+          "sha256": "a3883790719aceb84739eaf31d3ca2b1888f9b99d325c59bce65197100e2080c",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00004-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00004-of-00014.safetensors",
+          "bytes": 4951093744,
+          "sha256": "670827570d41b40e9898eeaf29b787074fd4315fe143017593b43e88e5736fdf",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00005-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00005-of-00014.safetensors",
+          "bytes": 4846133208,
+          "sha256": "c0b79116cec6a4715814177bcff74ac8d58960623b892cdd03850516a9b9eb09",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00006-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00006-of-00014.safetensors",
+          "bytes": 4846133208,
+          "sha256": "f4e9d59722d8ca75f6f5a04ad9f46af9c9afc24544f8fd02406d8304512ce579",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00007-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00007-of-00014.safetensors",
+          "bytes": 4846133208,
+          "sha256": "75615923dbaaf21e606fceead6e264e601f5ff520e7469e9e72b456199d18597",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00008-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00008-of-00014.safetensors",
+          "bytes": 4846133208,
+          "sha256": "fb89b408716cae8a59750f99c79a49afe781f01a0bc735b95431418c5fdad4dd",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00009-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00009-of-00014.safetensors",
+          "bytes": 4846133208,
+          "sha256": "8278860d50fdc7f742ce60341b6c2fad12a719e420957c8164fc7358d4504889",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00010-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00010-of-00014.safetensors",
+          "bytes": 4846133208,
+          "sha256": "86f4c9bf482b87b9b6c931c734b283c0f7327ab2ba15afc5a3c924decc5b5293",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00011-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00011-of-00014.safetensors",
+          "bytes": 4846133208,
+          "sha256": "9107b2123676231e456c90d6a19d77aad814b13939c9201ea8669c7a5669e7d3",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00012-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00012-of-00014.safetensors",
+          "bytes": 4846133208,
+          "sha256": "668374699d704a57a21905276f74627b3a2d79f674a64dc09196774f5b287d1f",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00013-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00013-of-00014.safetensors",
+          "bytes": 4846133208,
+          "sha256": "b9abef6af4f824d4dcdc06c55c3fa3ecbba6fe8f834136ccfc4922a8656d14ae",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00014-of-00014.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model-00014-of-00014.safetensors",
+          "bytes": 2182996112,
+          "sha256": "b2cf8333afb3155fe35fbb31dc3fa5a0be80d6bbed021e40ee8dd0ecc478952d",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.safetensors.index.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/transformer/diffusion_pytorch_model.safetensors.index.json",
+          "bytes": 120925,
+          "sha256": "03fd99aaaa2613aa31f261a6b679f764f6e033f01235093c08714a5f91dd1885",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/vae/config.json",
+          "bytes": 724,
+          "sha256": "f0c1cc1d7decb5badc384f54691746a27a9aeff49f7ebca974e583389342d527",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers/resolve/b184e23a8a16b20f108f727c902e769e873ffc73/vae/diffusion_pytorch_model.safetensors",
+          "bytes": 507591892,
+          "sha256": "d6e524b3fffede1787a74e81b30976dce5400c4439ba64222168e607ed19e793",
+          "revision": "b184e23a8a16b20f108f727c902e769e873ffc73"
+        }
+      ],
+      "diskBytes": 90097556380,
+      "reservationBytes": 45048778190,
+      "thumbnail": "wan21-i2v-14b-480p.png"
+    }
+  ],
+  "audio/txt2audio": [
+    {
+      "id": "acestep-v15-xl-turbo",
+      "name": "ACE-Step 1.5 XL Turbo",
+      "summary": "ACE-Step 1.5 XL turbo",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "audio",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers",
+      "files": [
+        {
+          "role": "condition-encoder",
+          "name": "condition_encoder/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/condition_encoder/config.json",
+          "bytes": 502,
+          "sha256": "76e9eeba7b3248500cd0f5fb7ecd66129af0c9ea98ffb762bd8879753595233b",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "condition-encoder",
+          "name": "condition_encoder/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/condition_encoder/diffusion_pytorch_model.safetensors",
+          "bytes": 1218676312,
+          "sha256": "ca111ca95858c8d3c3678c986dda03df20778c0de009f57109c1052866d522b2",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/model_index.json",
+          "bytes": 491,
+          "sha256": "26f44f97c4908851f19dbff6c25c6dfcbe17b9c74c152cc0535c47b82b80a250",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/scheduler/scheduler_config.json",
+          "bytes": 484,
+          "sha256": "173036e3885cdd41b7af2d2918d4bfb316d789b2ebc17f4534b2d3d2aa824fa2",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/text_encoder/config.json",
+          "bytes": 1354,
+          "sha256": "c55e1b1f5e665d7c65661a6c278cbdd31c48a31565fa4218c06cd56078224ddc",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/text_encoder/model.safetensors",
+          "bytes": 1191586416,
+          "sha256": "0437e45c94563b09e13cb7a64478fc406947a93cb34a7e05870fc8dcd48e23fd",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/added_tokens.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/tokenizer/added_tokens.json",
+          "bytes": 707,
+          "sha256": "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/chat_template.jinja",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/tokenizer/chat_template.jinja",
+          "bytes": 4116,
+          "sha256": "87a2728cb8dc9fe424d624542f6060ec05a1d285ebbec578bb078900e33396b5",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/tokenizer/merges.txt",
+          "bytes": 1671853,
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/tokenizer/special_tokens_map.json",
+          "bytes": 613,
+          "sha256": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/tokenizer/tokenizer.json",
+          "bytes": 11423705,
+          "sha256": "def76fb086971c7867b829c23a26261e38d9d74e02139253b38aeb9df8b4b50a",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/tokenizer/tokenizer_config.json",
+          "bytes": 5404,
+          "sha256": "443bfa629eb16387a12edbf92a76f6a6f10b2af3b53d87ba1550adfcf45f7fa0",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/tokenizer/vocab.json",
+          "bytes": 2776833,
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/transformer/config.json",
+          "bytes": 1303,
+          "sha256": "6b6753b2833681bb0ad3363be71cafaa2b0a751146bbeb4e8ae485a407fa5775",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+          "bytes": 4986971904,
+          "sha256": "814723a63ba0b11dc4a7e8a5d43b8107c947fcdb5ab1e30c65469252272b35d7",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00002-of-00002.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/transformer/diffusion_pytorch_model-00002-of-00002.safetensors",
+          "bytes": 3350889672,
+          "sha256": "38ab6a8443be10b3c4bb0b784a5b78d471358d1b4982c139cb7893c455670b67",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.safetensors.index.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/transformer/diffusion_pytorch_model.safetensors.index.json",
+          "bytes": 58395,
+          "sha256": "51489f1d0c00a262324fd2aa3fd2dab559cd84493da312c89677bced3bd82b0c",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/vae/config.json",
+          "bytes": 438,
+          "sha256": "164a21874900efa4813175f812a7816408551b8c5ac38f2deb65347acb2fc3eb",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers/resolve/200ba991ae448051e14b0183157e35c2d27c9fb0/vae/diffusion_pytorch_model.safetensors",
+          "bytes": 337431388,
+          "sha256": "da17edb604c40deaf09e9b24974e590d1ca83a374070e5d0884cfa4bed9a99b0",
+          "revision": "200ba991ae448051e14b0183157e35c2d27c9fb0"
+        }
+      ],
+      "diskBytes": 11101501890,
+      "reservationBytes": 5550750945,
+      "thumbnail": "acestep-v15-xl-turbo.png"
+    },
+    {
+      "id": "acestep-v15-xl-base",
+      "name": "ACE-Step 1.5 XL",
+      "summary": "ACE-Step 1.5 XL base",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "audio",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers",
+      "files": [
+        {
+          "role": "audio-detokenizer",
+          "name": "audio_token_detokenizer/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/audio_token_detokenizer/config.json",
+          "bytes": 522,
+          "sha256": "ad6c2d3ad7ed738408858fbe8a51f8c8c3125e8f83b4d2330cb823636954cf15",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "audio-detokenizer",
+          "name": "audio_token_detokenizer/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/audio_token_detokenizer/diffusion_pytorch_model.safetensors",
+          "bytes": 210026424,
+          "sha256": "744612a9406114fc5b3661e3682f9bd835dc737538b9777124c874303bbbb837",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "audio-tokenizer",
+          "name": "audio_tokenizer/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/audio_tokenizer/config.json",
+          "bytes": 637,
+          "sha256": "a2b4deb216c81ad40b38fe25551f976ff167a3f124e09ae91efc8e34d1bf6874",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "audio-tokenizer",
+          "name": "audio_tokenizer/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/audio_tokenizer/diffusion_pytorch_model.safetensors",
+          "bytes": 210068124,
+          "sha256": "f8f46814109ba8bb451fef2122cb7ff58093856a9f2e5464e32f06b71404973b",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "condition-encoder",
+          "name": "condition_encoder/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/condition_encoder/config.json",
+          "bytes": 502,
+          "sha256": "76e9eeba7b3248500cd0f5fb7ecd66129af0c9ea98ffb762bd8879753595233b",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "condition-encoder",
+          "name": "condition_encoder/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/condition_encoder/diffusion_pytorch_model.safetensors",
+          "bytes": 1218676312,
+          "sha256": "fce7eb21fbc46733ec9047c141e88e0aaaa4dfe1c5bfd8c28707435e5b83d1c2",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/model_index.json",
+          "bytes": 650,
+          "sha256": "462e7e6fe6be7e1a4376ce7494f3f581faf0d73e2a2f5fb47d161ef1428684e8",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/scheduler/scheduler_config.json",
+          "bytes": 484,
+          "sha256": "173036e3885cdd41b7af2d2918d4bfb316d789b2ebc17f4534b2d3d2aa824fa2",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/text_encoder/config.json",
+          "bytes": 1354,
+          "sha256": "c55e1b1f5e665d7c65661a6c278cbdd31c48a31565fa4218c06cd56078224ddc",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/text_encoder/model.safetensors",
+          "bytes": 1191586416,
+          "sha256": "0437e45c94563b09e13cb7a64478fc406947a93cb34a7e05870fc8dcd48e23fd",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/added_tokens.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/tokenizer/added_tokens.json",
+          "bytes": 707,
+          "sha256": "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/chat_template.jinja",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/tokenizer/chat_template.jinja",
+          "bytes": 4116,
+          "sha256": "87a2728cb8dc9fe424d624542f6060ec05a1d285ebbec578bb078900e33396b5",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/tokenizer/merges.txt",
+          "bytes": 1671853,
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/tokenizer/special_tokens_map.json",
+          "bytes": 613,
+          "sha256": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/tokenizer/tokenizer.json",
+          "bytes": 11423705,
+          "sha256": "def76fb086971c7867b829c23a26261e38d9d74e02139253b38aeb9df8b4b50a",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/tokenizer/tokenizer_config.json",
+          "bytes": 5404,
+          "sha256": "443bfa629eb16387a12edbf92a76f6a6f10b2af3b53d87ba1550adfcf45f7fa0",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/tokenizer/vocab.json",
+          "bytes": 2776833,
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/transformer/config.json",
+          "bytes": 1303,
+          "sha256": "e439da129abf783fdf01d167bc5350d1496dd83f3973eb4d8e1dfb2beeb72b93",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+          "bytes": 4986971904,
+          "sha256": "04e9876c702eaee95b754bd9be274ec51269e30cc5335767e657a5481414bfc4",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00002-of-00002.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/transformer/diffusion_pytorch_model-00002-of-00002.safetensors",
+          "bytes": 3350889672,
+          "sha256": "79a5f07a1a9c3bbf13ac6c6a6afccea204ac87e129674e64b81dd8f653be5350",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.safetensors.index.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/transformer/diffusion_pytorch_model.safetensors.index.json",
+          "bytes": 58395,
+          "sha256": "51489f1d0c00a262324fd2aa3fd2dab559cd84493da312c89677bced3bd82b0c",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/vae/config.json",
+          "bytes": 438,
+          "sha256": "164a21874900efa4813175f812a7816408551b8c5ac38f2deb65347acb2fc3eb",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers/resolve/8f40447d21ee59ad4dcee6c99ce248027410bfec/vae/diffusion_pytorch_model.safetensors",
+          "bytes": 337431388,
+          "sha256": "da17edb604c40deaf09e9b24974e590d1ca83a374070e5d0884cfa4bed9a99b0",
+          "revision": "8f40447d21ee59ad4dcee6c99ce248027410bfec"
+        }
+      ],
+      "diskBytes": 11521597756,
+      "reservationBytes": 5760798878,
+      "thumbnail": "acestep-v15-xl-base.png"
+    },
+    {
+      "id": "acestep-v15-xl-sft",
+      "name": "ACE-Step 1.5 XL SFT",
+      "summary": "ACE-Step 1.5 XL, affine",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "audio",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers",
+      "files": [
+        {
+          "role": "audio-detokenizer",
+          "name": "audio_token_detokenizer/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/audio_token_detokenizer/config.json",
+          "bytes": 522,
+          "sha256": "ad6c2d3ad7ed738408858fbe8a51f8c8c3125e8f83b4d2330cb823636954cf15",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "audio-detokenizer",
+          "name": "audio_token_detokenizer/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/audio_token_detokenizer/diffusion_pytorch_model.safetensors",
+          "bytes": 210026424,
+          "sha256": "744612a9406114fc5b3661e3682f9bd835dc737538b9777124c874303bbbb837",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "audio-tokenizer",
+          "name": "audio_tokenizer/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/audio_tokenizer/config.json",
+          "bytes": 637,
+          "sha256": "a2b4deb216c81ad40b38fe25551f976ff167a3f124e09ae91efc8e34d1bf6874",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "audio-tokenizer",
+          "name": "audio_tokenizer/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/audio_tokenizer/diffusion_pytorch_model.safetensors",
+          "bytes": 210068124,
+          "sha256": "f8f46814109ba8bb451fef2122cb7ff58093856a9f2e5464e32f06b71404973b",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "condition-encoder",
+          "name": "condition_encoder/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/condition_encoder/config.json",
+          "bytes": 502,
+          "sha256": "76e9eeba7b3248500cd0f5fb7ecd66129af0c9ea98ffb762bd8879753595233b",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "condition-encoder",
+          "name": "condition_encoder/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/condition_encoder/diffusion_pytorch_model.safetensors",
+          "bytes": 1218676312,
+          "sha256": "ca111ca95858c8d3c3678c986dda03df20778c0de009f57109c1052866d522b2",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/model_index.json",
+          "bytes": 650,
+          "sha256": "462e7e6fe6be7e1a4376ce7494f3f581faf0d73e2a2f5fb47d161ef1428684e8",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/scheduler/scheduler_config.json",
+          "bytes": 484,
+          "sha256": "173036e3885cdd41b7af2d2918d4bfb316d789b2ebc17f4534b2d3d2aa824fa2",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/text_encoder/config.json",
+          "bytes": 1354,
+          "sha256": "c55e1b1f5e665d7c65661a6c278cbdd31c48a31565fa4218c06cd56078224ddc",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/text_encoder/model.safetensors",
+          "bytes": 1191586416,
+          "sha256": "0437e45c94563b09e13cb7a64478fc406947a93cb34a7e05870fc8dcd48e23fd",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/added_tokens.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/tokenizer/added_tokens.json",
+          "bytes": 707,
+          "sha256": "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/chat_template.jinja",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/tokenizer/chat_template.jinja",
+          "bytes": 4116,
+          "sha256": "87a2728cb8dc9fe424d624542f6060ec05a1d285ebbec578bb078900e33396b5",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/tokenizer/merges.txt",
+          "bytes": 1671853,
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/tokenizer/special_tokens_map.json",
+          "bytes": 613,
+          "sha256": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/tokenizer/tokenizer.json",
+          "bytes": 11423705,
+          "sha256": "def76fb086971c7867b829c23a26261e38d9d74e02139253b38aeb9df8b4b50a",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/tokenizer/tokenizer_config.json",
+          "bytes": 5404,
+          "sha256": "443bfa629eb16387a12edbf92a76f6a6f10b2af3b53d87ba1550adfcf45f7fa0",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/tokenizer/vocab.json",
+          "bytes": 2776833,
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/transformer/config.json",
+          "bytes": 1303,
+          "sha256": "e439da129abf783fdf01d167bc5350d1496dd83f3973eb4d8e1dfb2beeb72b93",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+          "bytes": 4986971904,
+          "sha256": "ff703cdc1db9d1db0883347ba906f4eb28f23f6bd8d9bc63c9471072dfb39f24",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model-00002-of-00002.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/transformer/diffusion_pytorch_model-00002-of-00002.safetensors",
+          "bytes": 3350889672,
+          "sha256": "2b9c9d3bc5f63cd24b862fe76ed93f21b6848df0c8969615e5c86c0115669465",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "weights",
+          "name": "transformer/diffusion_pytorch_model.safetensors.index.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/transformer/diffusion_pytorch_model.safetensors.index.json",
+          "bytes": 58395,
+          "sha256": "51489f1d0c00a262324fd2aa3fd2dab559cd84493da312c89677bced3bd82b0c",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/vae/config.json",
+          "bytes": 438,
+          "sha256": "164a21874900efa4813175f812a7816408551b8c5ac38f2deb65347acb2fc3eb",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers/resolve/4bf7b60a63b27144f539f980927eeb89f5f912b0/vae/diffusion_pytorch_model.safetensors",
+          "bytes": 337431388,
+          "sha256": "da17edb604c40deaf09e9b24974e590d1ca83a374070e5d0884cfa4bed9a99b0",
+          "revision": "4bf7b60a63b27144f539f980927eeb89f5f912b0"
+        }
+      ],
+      "diskBytes": 11521597756,
+      "reservationBytes": 5760798878,
+      "thumbnail": "acestep-v15-xl-sft.png"
     }
   ]
 }

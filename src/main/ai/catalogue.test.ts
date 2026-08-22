@@ -123,13 +123,14 @@ describe('one entry, several employments', () => {
    * two's files — what tells the three apart is the FORM, never a second manifest.
    */
   it('serves editing and repainting from the entry that serves drawing', () => {
-    const drawing = shippedModelsFor(aiRoleId('image', 'txt2img'))
-    const editing = shippedModelsFor(aiRoleId('image', 'img2img'))
-    const repainting = shippedModelsFor(aiRoleId('image', 'inpaint'))
+    const idsFor = (capability: string) =>
+      shippedModelsFor(aiRoleId('image', capability)).map(model => model.id)
 
-    expect(editing.length).toBeGreaterThan(0)
-    expect(editing).toEqual(repainting)
-    expect(drawing).toEqual(expect.arrayContaining([...editing]))
+    for (const capability of ['txt2img', 'img2img', 'inpaint', 'outpaint']) {
+      expect(idsFor(capability), capability).toContain('ssd-1b')
+    }
+    // And a texture is an image: the same weights, filed on another shelf.
+    expect(shippedModelsFor(aiRoleId('texture', 'txt2img_texture')).length).toBeGreaterThan(0)
   })
 
   it('lists a model that serves three employments once, not three times', () => {
