@@ -24,8 +24,7 @@ export const HELLO_TIMEOUT_MS = 10_000
 
 /**
  * The whole of the health check, and it costs nothing while nothing is in flight: an engine that
- * stops answering is dead, whatever the process table says. A heartbeat beside this would be a
- * second timer measuring the same thing, on a process that has no long op to hide behind yet.
+ * stops answering is dead, whatever the process table says. A heartbeat would measure the same.
  */
 export const REQUEST_TIMEOUT_MS = 5_000
 
@@ -102,17 +101,10 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
       return
     }
 
-    clearTimeout(greeting)
-    const waiting = settleReady
-    settleReady = null
-    if (!waiting) return
-
+    // Killed, never degraded: a stale engine sitting in a cache would answer half the vocabulary
+    // and fail at whichever call happened to need the other half.
     if (frame.protocol !== PROTOCOL_VERSION) {
-      // Killed, never degraded: a stale engine sitting in a cache would answer half the vocabulary
-      // and fail at whichever call happened to need the other half.
-      closed = true
-      port.kill()
-      waiting.reject(
+      fail(
         new Error(
           `the engine speaks protocol ${frame.protocol}, the studio speaks ${PROTOCOL_VERSION}`,
         ),
@@ -120,7 +112,10 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
       return
     }
 
-    waiting.resolve(frame)
+    clearTimeout(greeting)
+    const waiting = settleReady
+    settleReady = null
+    waiting?.resolve(frame)
   })
 
   port.onFailure(error => fail(error))

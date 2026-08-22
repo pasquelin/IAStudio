@@ -73,18 +73,24 @@ export function openPythonProcess({
   }
 
   const server = createServer(socket => {
+    // One engine per port: a second connection would replace the first, and the frames of a run
+    // in flight would go to a socket nobody reads.
+    if (connection) {
+      socket.destroy()
+      return
+    }
+
     connection = socket
     // Control frames are small and answered one at a time: Nagle would hold each one back.
     socket.setNoDelay(true)
 
     let pending = ''
     socket.on('data', chunk => {
-      pending += chunk.toString('utf8')
-      for (let cut = pending.indexOf('\n'); cut >= 0; cut = pending.indexOf('\n')) {
-        const line = pending.slice(0, cut).trim()
-        pending = pending.slice(cut + 1)
-        if (!line) continue
+      // The tail is whatever follows the last newline, and it waits here for the rest of its frame.
+      const lines = (pending + chunk.toString('utf8')).split('\n')
+      pending = lines.pop() ?? ''
 
+      for (const line of lines.map(read => read.trim()).filter(Boolean)) {
         const frame = readFrame(line)
         if (!frame) log.warn('engine', `dropped a frame it could not read: ${line.slice(0, 200)}`)
         else for (const listener of frameListeners) listener(frame)
@@ -120,8 +126,10 @@ export function openPythonProcess({
     child.stderr?.on('data', journal('error'))
 
     child.on('error', error => {
+      // No `exit` follows an ENOENT, so this is the only place the holder is told it is gone.
       close()
       fail(error)
+      onExit()
     })
 
     child.on('exit', code => {
@@ -140,10 +148,12 @@ export function openPythonProcess({
     onMessage: listener => frameListeners.push(listener),
     onFailure: listener => failureListeners.push(listener),
     kill: () => {
+      // Marked dead FIRST: a process killed on purpose still reports its exit, and a port that
+      // announced it would spend a restart budget on a death the caller asked for.
+      dead = true
       close()
       connection?.destroy()
-      // Both, and in this order: the engine leaves on its own when the stream ends, and the signal
-      // is what answers the one that does not.
+      // Both: the engine leaves on its own when the stream ends, the signal answers the one that does not.
       child?.kill()
     },
   }

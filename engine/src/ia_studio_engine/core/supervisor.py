@@ -70,9 +70,10 @@ def serve(
             send(encode_event("runtime.error", message=str(error)))
             continue
 
-        # Cancelling is about the envelope, not about a capability: it drops a request this engine
-        # is holding. It holds none while every op answers in the same turn, so it drops nothing.
+        # A cancel ENDS its run, and answering is not a courtesy: the studio holds the promise of
+        # that run until a frame settles it, so silence here leaves a caller waiting for ever.
         if request.op == CANCEL_OP:
+            send(encode_error(request.id, "cancelled", "the run was cancelled"))
             continue
 
         send(_answer(request, handlers))

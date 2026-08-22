@@ -90,6 +90,16 @@ describe('holding one engine', () => {
 
     expect(engine?.close).toHaveBeenCalled()
   })
+
+  /** Otherwise the engine that greeted after the ask to quit is one nobody will ever close. */
+  it('lets go of an engine that greets after the studio went away', async () => {
+    const held = harness()
+    const starting = held.supervisor.engine()
+    held.supervisor.dispose()
+
+    expect(await starting).toBeNull()
+    expect(held.opened[0]?.close).toHaveBeenCalled()
+  })
 })
 
 describe('restarting an engine that will not stay', () => {

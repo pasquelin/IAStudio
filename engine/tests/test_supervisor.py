@@ -43,8 +43,11 @@ def test_reports_an_unreadable_frame_rather_than_dying_on_it() -> None:
     assert "ok" in answer
 
 
-def test_a_cancel_for_a_run_it_does_not_hold_is_answered_by_silence() -> None:
-    assert len(run(ask("engine.cancel"))) == 1
+def test_a_cancel_ends_its_run_rather_than_leaving_the_studio_waiting() -> None:
+    _greeting, answer = run(ask("engine.cancel", request_id=5))
+
+    assert answer["id"] == 5
+    assert answer["err"]["code"] == "cancelled"
 
 
 def test_a_handler_that_raises_answers_its_run_rather_than_the_stream() -> None:

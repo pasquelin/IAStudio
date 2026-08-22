@@ -31,13 +31,13 @@ export type PythonSupervisor = {
   dispose: () => void
 }
 
-type EngineState = 'idle' | 'starting' | 'ready' | 'unavailable'
-
 export function createPythonSupervisor(host: PythonSupervisorHost): PythonSupervisor {
-  let state: EngineState = 'idle'
   let client: PythonClient | null = null
+  let gaveUp = false
   /** Shared by every caller that arrives while one start is still running. */
   let starting: Promise<PythonClient | null> | null = null
+  /** Set by `dispose` while a start is in flight: what arrives after it must not be held. */
+  let disposed = false
   let failures: number[] = []
 
   const recentFailures = (): number => {
@@ -49,21 +49,24 @@ export function createPythonSupervisor(host: PythonSupervisorHost): PythonSuperv
     // The client has already killed the port; what is left is to forget it and count the death.
     client = null
     failures.push(host.now())
-    if (state !== 'unavailable') state = 'idle'
     log.error('engine', `the local AI engine died: ${error.message}`)
   }
 
   const start = async (): Promise<PythonClient | null> => {
-    while (recentFailures() < MAX_FAILURES) {
-      const attempts = failures.length
-      if (attempts > 0)
-        await host.delay(Math.min(BACKOFF_BASE_MS * 2 ** (attempts - 1), BACKOFF_CAP_MS))
+    for (let recent = recentFailures(); recent < MAX_FAILURES; recent = recentFailures()) {
+      if (recent > 0)
+        await host.delay(Math.min(BACKOFF_BASE_MS * 2 ** (recent - 1), BACKOFF_CAP_MS))
 
       const attempt = host.open({ onFailure: died })
       try {
         await attempt.ready
+        // An engine that greeted after the studio asked to go away is one nobody will ever close.
+        if (disposed) {
+          attempt.close()
+          return null
+        }
+
         client = attempt
-        state = 'ready'
         return attempt
       } catch (error) {
         failures.push(host.now())
@@ -73,7 +76,7 @@ export function createPythonSupervisor(host: PythonSupervisorHost): PythonSuperv
 
     // Said rather than looped on: an engine that dies on its handshake would otherwise be forked
     // again by every caller, for as long as anyone asks for a model.
-    state = 'unavailable'
+    gaveUp = true
     log.error('engine', `the local AI engine failed ${MAX_FAILURES} times over; it is not ready`)
     return null
   }
@@ -81,10 +84,10 @@ export function createPythonSupervisor(host: PythonSupervisorHost): PythonSuperv
   return {
     engine: () => {
       if (client) return Promise.resolve(client)
-      if (state === 'unavailable') return Promise.resolve(null)
+      if (gaveUp) return Promise.resolve(null)
       if (starting) return starting
 
-      state = 'starting'
+      disposed = false
       starting = start().finally(() => {
         starting = null
       })
@@ -92,9 +95,9 @@ export function createPythonSupervisor(host: PythonSupervisorHost): PythonSuperv
     },
 
     dispose: () => {
+      disposed = true
       client?.close()
       client = null
-      if (state !== 'unavailable') state = 'idle'
     },
   }
 }

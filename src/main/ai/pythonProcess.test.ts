@@ -56,11 +56,12 @@ function watch(port: PythonPort) {
   return { frames, deaths }
 }
 
-const open = (script: string): PythonPort =>
+const open = (script: string, onExit?: () => void): PythonPort =>
   openPythonProcess({
     command: process.execPath,
     args: [scriptAt(script)],
     processName: 'the stand-in engine',
+    onExit,
   })
 
 describe('the socket the engine answers on', () => {
@@ -97,16 +98,33 @@ describe('the socket the engine answers on', () => {
 })
 
 describe('the death of the engine', () => {
-  it('reports a process that could never be started', async () => {
+  /** No `exit` follows an ENOENT, so the holder hears about it here or nowhere. */
+  it('reports a process that could never be started, and says it is gone', async () => {
+    let left = false
     const port = openPythonProcess({
       command: 'ia-studio-no-such-interpreter',
       args: [],
       processName: 'the stand-in engine',
+      onExit: () => (left = true),
     })
     const seen = watch(port)
 
     await vi.waitFor(() => expect(seen.deaths).toHaveLength(1), 5_000)
+    expect(left).toBe(true)
     port.kill()
+  })
+
+  /** A restart budget must not spend an attempt on a death the studio itself asked for. */
+  it('says nothing of an exit that was asked for', async () => {
+    let left = false
+    const port = open('standIn.js', () => (left = true))
+    const seen = watch(port)
+
+    await vi.waitFor(() => expect(seen.frames).toHaveLength(1), 5_000)
+    port.kill()
+    await vi.waitFor(() => expect(left).toBe(true), 5_000)
+
+    expect(seen.deaths).toEqual([])
   })
 
   /** Whatever the code: a clean exit leaves the same callers waiting as a crash. */
