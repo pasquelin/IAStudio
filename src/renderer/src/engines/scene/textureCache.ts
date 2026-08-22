@@ -1,11 +1,10 @@
 import {
   DataTexture,
   RepeatWrapping,
-  TextureLoader,
+  Texture,
   UnsignedByteType,
   type ColorSpace,
   type Loader,
-  type Texture,
 } from 'three'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
 import { decoderFor, type PictureDecoder } from '@shared/domain/pictureDecoder'
@@ -40,13 +39,21 @@ export const loadTexture: TextureSource = async url => {
   // for and no three loader reads. The one path that does need every byte asks for them here.
   if (decoder === 'tiff') return tiffTexture(new Uint8Array(await blob.arrayBuffer()))
 
-  const object = URL.createObjectURL(blob)
-
-  try {
-    return await (await loaderFor(decoder)).loadAsync(object)
-  } finally {
-    URL.revokeObjectURL(object)
+  // HDR/EXR have no `<img>` decoder. PNG/JPEG/WebP go through `createImageBitmap`, which Chromium
+  // decodes on a thread that is not this one — `TextureLoader` would decode on the UI thread.
+  if (decoder === 'radiance' || decoder === 'openexr') {
+    const object = URL.createObjectURL(blob)
+    try {
+      return await (await loaderFor(decoder)).loadAsync(object)
+    } finally {
+      URL.revokeObjectURL(object)
+    }
   }
+
+  const bitmap = await createImageBitmap(blob)
+  const texture = new Texture(bitmap)
+  texture.needsUpdate = true
+  return texture
 }
 
 /**
@@ -63,7 +70,7 @@ async function loaderFor(decoder: PictureDecoder | null): Promise<Loader<Texture
   if (decoder === 'openexr') {
     return new (await import('three/addons/loaders/EXRLoader.js')).EXRLoader()
   }
-  return new TextureLoader()
+  throw new Error(`no three loader for ${decoder ?? 'this picture'}`)
 }
 
 /**

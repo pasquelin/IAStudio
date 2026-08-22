@@ -19,7 +19,7 @@ import { ActivityListMessage } from './ActivityListMessage'
  */
 export function ActivityListRow({ entry, time }: { entry: ActivityEntry; time: string }) {
   return (
-    <li className="flex items-start gap-2 px-2 py-1.5">
+    <div role="listitem" className="flex items-start gap-2 px-2 py-1.5">
       <UiIcon
         path={GLYPHS[entry.level]}
         size={14}
@@ -27,6 +27,6 @@ export function ActivityListRow({ entry, time }: { entry: ActivityEntry; time: s
       />
       <ActivityListMessage entry={entry} />
       <span className="text-muted text-tiny shrink-0 tabular-nums">{time}</span>
-    </li>
+    </div>
   )
 }

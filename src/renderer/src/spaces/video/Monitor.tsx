@@ -27,7 +27,7 @@ import { reportFailure } from '@/services/diagnostics'
 import { useBinding } from '@/stores/bindings'
 import { playbackOf, usePlayback } from '@/stores/playback'
 import { useScenes } from '@/stores/scenes'
-import { useSceneViews } from '@/stores/sceneViews'
+import { sceneViewsAffectMontage, useSceneViews } from '@/stores/sceneViews'
 import { montageSink } from './montageSink'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
@@ -128,11 +128,21 @@ export function Monitor({
     }
   }, [owner, onTime])
 
-  // The engine holds decoders and textures, never the stack: every state change is pushed in.
+  // Tracks and settings, never the playhead: `apply` seeks, and a scrub would otherwise decode
+  // every frame twice — once here, once from the transport. Read from the ref so this effect
+  // does not restart when only the head moved.
+  const latestSequence = useLatest(sequence)
   useEffect(() => {
-    frameSize.current = { width: sequence.settings.width, height: sequence.settings.height }
-    engine.current?.apply(sequence)
-  }, [sequence])
+    const held = latestSequence.current
+    frameSize.current = { width: held.settings.width, height: held.settings.height }
+    engine.current?.apply(held)
+  }, [sequence.tracks, sequence.settings, sequence.selectedId, latestSequence])
+
+  useEffect(() => {
+    const current = engine.current
+    if (!current || current.playing()) return
+    void current.seek(sequence.playhead)
+  }, [sequence.playhead])
 
   // What makes a 3D clip LIVE: a scene edited in its own tab changes no sequence at all, so
   // nothing above would repaint. Redrawn at the head it already stands on — a scene sink reads
@@ -141,11 +151,13 @@ export function Monitor({
     const redraw = (): void => {
       void engine.current?.seek(playhead.current)
     }
-    // Two stores, one reason: a scene edited in its own tab, and a camera moved in it, both
-    // change what this monitor should show while changing no sequence at all.
-    const stops = [useScenes.subscribe(redraw), useSceneViews.subscribe(redraw)]
+    const stopScenes = useScenes.subscribe(redraw)
+    const stopViews = useSceneViews.subscribe((next, prev) => {
+      if (sceneViewsAffectMontage(prev, next)) redraw()
+    })
     return () => {
-      for (const stop of stops) stop()
+      stopScenes()
+      stopViews()
     }
   }, [playhead])
 

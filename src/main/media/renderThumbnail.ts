@@ -1,4 +1,5 @@
 import { nativeImage } from 'electron'
+import { readFile } from 'node:fs/promises'
 import { extname } from 'node:path'
 
 /**
@@ -35,7 +36,10 @@ export async function renderThumbnail(file: string, size: number): Promise<Uint8
 
   if (!DECODABLE.includes(extname(file).toLowerCase())) return null
 
-  return reduced(nativeImage.createFromPath(file), size)
+  // Read first, then decode: `createFromPath` is sync on the whole file, which is the main
+  // thread waiting on disk AND on Chromium. The decode is still sync — nativeImage has no
+  // other door — but the bytes arrive without blocking the event loop on I/O.
+  return reduced(nativeImage.createFromBuffer(await readFile(file)), size)
 }
 
 /**

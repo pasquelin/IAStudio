@@ -9,13 +9,16 @@ vi.mock('@/services/bridge', () => ({
   getBridge: () => ({ assets: { peaks } }),
 }))
 
-const decodeAsset = vi.hoisted(() =>
-  vi.fn((_assetId: string) =>
-    Promise.resolve({ sampleRate: 100, channels: [new Float32Array(200).fill(0.5)] }),
-  ),
-)
+const peaksFromBytesOffThread = vi.hoisted(() => vi.fn(async () => new Float32Array(2 * 50 * 2)))
 
-vi.mock('@/helpers/audioDecode', () => ({ decodeAsset }))
+vi.mock('@/engines/audio/decodePort', () => ({
+  peaksFromBytesOffThread,
+  decodeBytesOffThread: vi.fn(),
+}))
+
+vi.mock('@/helpers/assetFetch', () => ({
+  fetchAsset: () => Promise.resolve({ arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) }),
+}))
 
 /** A three-minute take, as it is written at ingest: 50 pairs a second, two floats a pair. */
 const TAKE_FLOATS = 180 * 50 * 2
@@ -28,7 +31,7 @@ async function settle(): Promise<void> {
 describe('usePeaks', () => {
   beforeEach(() => {
     peaks.mockClear()
-    decodeAsset.mockClear()
+    peaksFromBytesOffThread.mockClear()
     waveforms = {}
     usePeaks.setState({ byAsset: {} })
   })
@@ -46,7 +49,7 @@ describe('usePeaks', () => {
   })
 
   it('remembers that an asset has nothing to draw, rather than asking again', async () => {
-    decodeAsset.mockRejectedValueOnce(new Error('not sound'))
+    peaksFromBytesOffThread.mockRejectedValueOnce(new Error('not sound'))
 
     usePeaks.getState().request('asset-mute')
     await settle()
@@ -67,7 +70,7 @@ describe('usePeaks', () => {
 
     // Two seconds at 50 pairs a second, two floats a pair.
     expect(usePeaks.getState().byAsset['asset-fresh']).toHaveLength(2 * 50 * 2)
-    expect(decodeAsset).toHaveBeenCalledWith('asset-fresh')
+    expect(peaksFromBytesOffThread).toHaveBeenCalled()
   })
 
   it('reads the file the ingest wrote rather than the take, whenever there is one', async () => {
@@ -76,7 +79,7 @@ describe('usePeaks', () => {
     usePeaks.getState().request('asset-1')
     await settle()
 
-    expect(decodeAsset).not.toHaveBeenCalled()
+    expect(peaksFromBytesOffThread).not.toHaveBeenCalled()
   })
 
   it('stays under its budget rather than growing for the life of the session', async () => {
