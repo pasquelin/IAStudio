@@ -148,6 +148,22 @@ describe('the shipped catalogue', () => {
     expect(modelWith('qwen3:8b', [], [qwen])).toBe(qwen)
   })
 
+  it('offers a discovered image tag to drawing, not to the assistant', () => {
+    const flux = ollamaModel({
+      name: 'x/flux2-klein',
+      size: 8_000_000_000,
+      capabilities: ['image'],
+    })
+    expect(flux).not.toBeNull()
+    if (!flux) return
+
+    expect(
+      modelsForWith(aiRoleId('image', 'txt2img'), [], [flux]).map(model => model.id),
+    ).toContain('x/flux2-klein')
+    expect(modelsForWith(ASSISTANT_ROLE, [], [flux])).not.toContainEqual(flux)
+    expect(modelsForWith(aiRoleId('video', 'txt2video'), [], [flux])).not.toContainEqual(flux)
+  })
+
   it('lists every shipped model once', () => {
     const models = shippedModels()
 

@@ -1,7 +1,19 @@
+import { writeFile } from 'node:fs/promises'
 import type { DownloadProgress } from '@shared/domain/localModel'
 import { ollamaModel, type OllamaTag } from '@shared/domain/ollamaModel'
 import { isRecord } from '@shared/guards'
 import type { ChatRequest, LocalRuntime } from './localRuntimes'
+
+type OllamaImageRequest = {
+  readonly model: string
+  readonly prompt: string
+  readonly width?: number
+  readonly height?: number
+  readonly steps?: number
+  readonly seed?: number
+  readonly onProgress: (ratio: number) => void
+  readonly signal?: AbortSignal
+}
 
 export type OllamaPort = {
   tags: () => Promise<readonly OllamaTag[]>
@@ -12,6 +24,7 @@ export type OllamaPort = {
   ) => Promise<void>
   remove: (name: string) => Promise<void>
   chat: (request: ChatRequest) => Promise<string>
+  generateImage: (request: OllamaImageRequest) => Promise<readonly string[]>
 }
 
 const ORIGIN = 'http://127.0.0.1:11434'
@@ -34,7 +47,12 @@ export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): Oll
         if (!isRecord(entry)) return []
         const { name, size } = entry
         if (typeof name !== 'string' || name === '' || typeof size !== 'number') return []
-        return [{ name, size }]
+        const capabilities = Array.isArray(entry.capabilities)
+          ? entry.capabilities.filter((cap): cap is string => typeof cap === 'string')
+          : undefined
+        return [
+          { name, size, ...(capabilities && capabilities.length > 0 ? { capabilities } : {}) },
+        ]
       })
     },
 
@@ -102,6 +120,53 @@ export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): Oll
       if (!isRecord(body) || !isRecord(body.message)) return ''
       return typeof body.message.content === 'string' ? body.message.content : ''
     },
+
+    generateImage: async request => {
+      const response = await send(url('/api/generate'), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: request.model,
+          prompt: request.prompt,
+          stream: true,
+          ...(request.width !== undefined ? { width: request.width } : {}),
+          ...(request.height !== undefined ? { height: request.height } : {}),
+          ...(request.steps !== undefined ? { steps: request.steps } : {}),
+          ...(request.seed !== undefined ? { options: { seed: request.seed } } : {}),
+        }),
+        signal: request.signal,
+      })
+      if (!response.ok) throw new Error(`ollama /api/generate ${response.status}`)
+      if (!response.body) return []
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let rest = ''
+      let images: string[] = []
+      for (;;) {
+        const { done, value } = await reader.read()
+        rest += decoder.decode(value ?? new Uint8Array(), { stream: !done })
+        const lines = rest.split('\n')
+        rest = done ? '' : (lines.pop() ?? '')
+        for (const line of lines) {
+          if (line.trim() === '') continue
+          try {
+            const event: unknown = JSON.parse(line)
+            if (!isRecord(event)) continue
+            const total = typeof event.total === 'number' ? event.total : null
+            const completed = typeof event.completed === 'number' ? event.completed : 0
+            if (total !== null && total > 0) request.onProgress(completed / total)
+            if (Array.isArray(event.images)) {
+              images = event.images.filter((one): one is string => typeof one === 'string')
+            }
+          } catch {
+            // A truncated frame is ordinary on a cancelled generate.
+          }
+        }
+        if (done) break
+      }
+      return images
+    },
   }
 }
 
@@ -110,6 +175,12 @@ export type OllamaRuntimeHooks = {
   ensure?: () => Promise<boolean>
   /** A listing just went stale — a tag deleted outside, a chat that found nothing. Never a delete. */
   onStale?: () => void
+  writeFile?: (path: string, bytes: Uint8Array) => Promise<void>
+}
+
+function intOf(fields: Readonly<Record<string, unknown>>, key: string): number | undefined {
+  const value = fields[key]
+  return typeof value === 'number' && Number.isFinite(value) ? Math.trunc(value) : undefined
 }
 
 /**
@@ -199,6 +270,32 @@ export function ollamaLocalRuntime(port: OllamaPort, hooks: OllamaRuntimeHooks =
     chat: async request => {
       try {
         return await port.chat(request)
+      } catch (error: unknown) {
+        forgetTags()
+        hooks.onStale?.()
+        throw error
+      }
+    },
+    generate: async request => {
+      if (request.modality !== 'image') {
+        throw new Error(`${request.modality} is not an image this runtime draws`)
+      }
+      try {
+        const images = await port.generateImage({
+          model: request.model,
+          prompt: request.prompt,
+          width: intOf(request.fields, 'width'),
+          height: intOf(request.fields, 'height'),
+          steps: intOf(request.fields, 'steps'),
+          seed: intOf(request.fields, 'seed'),
+          onProgress: request.onProgress,
+          signal: request.signal,
+        })
+        const [encoded] = images
+        if (encoded === undefined) throw new Error('ollama returned no image')
+        const bytes = Buffer.from(encoded, 'base64')
+        await (hooks.writeFile ?? writeFile)(request.destination, bytes)
+        return { path: request.destination, device: 'local', backend: 'ollama' }
       } catch (error: unknown) {
         forgetTags()
         hooks.onStale?.()

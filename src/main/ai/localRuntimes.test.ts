@@ -139,6 +139,7 @@ describe('the door a loader answers on', () => {
    */
   it('differs by modality for a loader that serves several', () => {
     expect(endpointOf('diffusers', 'image')).not.toBe(endpointOf('diffusers', 'mesh'))
+    expect(endpointOf('ollama', 'image')).not.toBe(endpointOf('ollama'))
   })
 
   it('falls back rather than minting a door for a modality nobody declared', () => {

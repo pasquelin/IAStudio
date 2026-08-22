@@ -16,6 +16,7 @@ const port = (over: Partial<OllamaPort> = {}): OllamaPort => ({
   pull: () => Promise.resolve(),
   remove: () => Promise.resolve(),
   chat: () => Promise.resolve('answered'),
+  generateImage: () => Promise.resolve([]),
   ...over,
 })
 
@@ -119,5 +120,50 @@ describe('ollamaLocalRuntime', () => {
     expect(pull).toHaveBeenCalledWith('qwen3:8b', expect.any(Function), expect.any(AbortSignal))
     expect(remove).toHaveBeenCalledWith('qwen3:8b')
     expect(chat).toHaveBeenCalledWith(request)
+  })
+
+  it('discovers an image-generation tag as an image model', async () => {
+    const runtime = ollamaLocalRuntime(
+      port({
+        tags: () =>
+          Promise.resolve([
+            { name: 'x/z-image-turbo', size: 6_000_000_000, capabilities: ['image'] },
+          ]),
+      }),
+    )
+
+    expect((await runtime.discover?.())?.[0]).toMatchObject({
+      id: 'x/z-image-turbo',
+      family: 'image',
+      modality: 'image',
+    })
+  })
+
+  it('writes the generated picture and does not delete the tag', async () => {
+    const remove = vi.fn()
+    const writeFile = vi.fn(() => Promise.resolve())
+    const runtime = ollamaLocalRuntime(
+      port({
+        remove,
+        generateImage: async request => {
+          request.onProgress(1)
+          return ['aGVsbG8=']
+        },
+      }),
+      { writeFile },
+    )
+
+    const written = await runtime.generate?.({
+      model: 'x/z-image-turbo',
+      modality: 'image',
+      prompt: 'a cat',
+      fields: { width: 1024, height: 1024 },
+      destination: '/tmp/cat.png',
+      onProgress: () => {},
+    })
+
+    expect(written?.path).toBe('/tmp/cat.png')
+    expect(writeFile).toHaveBeenCalledWith('/tmp/cat.png', Buffer.from('hello'))
+    expect(remove).not.toHaveBeenCalled()
   })
 })

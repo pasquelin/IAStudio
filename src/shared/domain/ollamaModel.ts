@@ -1,12 +1,14 @@
-import { ASSISTANT_ROLE } from './aiRole'
+import { aiRoleId, ASSISTANT_ROLE, type AiRoleId } from './aiRole'
 import type { LocalModel } from './localModel'
 
 /**
- * A row `/api/tags` answers — name and size are what the catalogue needs; the rest is decoration.
+ * A row `/api/tags` answers — name and size are what the catalogue needs; capabilities, when
+ * present, say what the weights actually do.
  */
 export type OllamaTag = {
   readonly name: string
   readonly size: number
+  readonly capabilities?: readonly string[]
 }
 
 /**
@@ -15,15 +17,17 @@ export type OllamaTag = {
  */
 const NOT_CHAT = /embed|whisper|\btts\b|bark|xtts|\brvc\b|all-minilm/i
 
-/**
- * A discovered Ollama tag as a catalogue entry, or nothing when it cannot serve an employment.
- *
- * Rank 2: the studio named the endpoint, not the weights. `restricted` rather than `commercial` —
- * nothing here has read a licence. Empty `files`: Ollama pulls; no digest we could verify.
- */
-export function ollamaModel(tag: OllamaTag): LocalModel | null {
-  if (NOT_CHAT.test(tag.name)) return null
+/** Names that generate a picture, used only when `/api/show` named no capability. */
+const IMAGE_NAME = /flux|z-image|sdxl|stable-diffusion|image-turbo|\bimagen\b/i
 
+function capabilitiesOf(tag: OllamaTag): readonly string[] {
+  if (tag.capabilities && tag.capabilities.length > 0) return tag.capabilities
+  if (NOT_CHAT.test(tag.name)) return ['embedding']
+  if (IMAGE_NAME.test(tag.name)) return ['image']
+  return ['completion']
+}
+
+function baseOf(tag: OllamaTag): Omit<LocalModel, 'modality'> {
   return {
     id: tag.name,
     name: tag.name,
@@ -37,12 +41,44 @@ export function ollamaModel(tag: OllamaTag): LocalModel | null {
     diskBytes: tag.size,
     reservationBytes: tag.size,
     contextTokens: 4096,
-    modality: 'text',
     licenceStatus: 'restricted',
   }
 }
 
-/** Every discovered chat model serves the assistant and nothing else — never 3D, never TTS. */
-export function rolesOfOllamaModel(model: LocalModel): readonly (typeof ASSISTANT_ROLE)[] {
-  return model.loader === 'ollama' ? [ASSISTANT_ROLE] : []
+/**
+ * A discovered Ollama tag as a catalogue entry, or nothing when it cannot serve an employment.
+ *
+ * Rank 2: the studio named the endpoint, not the weights. Capabilities come from Ollama when it
+ * sends them; a llama is never filed as an image model.
+ */
+export function ollamaModel(tag: OllamaTag): LocalModel | null {
+  if (NOT_CHAT.test(tag.name)) return null
+
+  const caps = capabilitiesOf(tag)
+  if (caps.includes('embedding')) return null
+
+  if (caps.includes('image')) {
+    return {
+      ...baseOf(tag),
+      family: 'image',
+      capabilities: ['txt2img'],
+      serves: [aiRoleId('texture', 'txt2img_texture')],
+      modality: 'image',
+    }
+  }
+
+  if (caps.includes('completion') || caps.includes('vision') || caps.includes('tools')) {
+    return { ...baseOf(tag), modality: 'text' }
+  }
+
+  return null
+}
+
+/** What a discovered Ollama model may be chosen for — never a role it cannot produce. */
+export function rolesOfOllamaModel(model: LocalModel): readonly AiRoleId[] {
+  if (model.loader !== 'ollama') return []
+  if (model.family === 'image') {
+    return [aiRoleId('image', 'txt2img'), aiRoleId('texture', 'txt2img_texture')]
+  }
+  return [ASSISTANT_ROLE]
 }
