@@ -20,7 +20,7 @@
     "gitDescription": "Suivi des versions du dossier de projet, par git. Ne concerne que vos fichiers.",
     "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
     "dictationDescription": "Dicter un texte au lieu de le taper. Tout se passe sur cet ordinateur : rien de ce que vous dites n’est envoyé nulle part.",
-    "aiDescription": "Quelle IA sert chaque emploi — un modèle installé sur cette machine, ou un service en ligne. Le local est le défaut quand la machine peut le tenir.",
+    "aiDescription": "Quelle IA sert chaque emploi. Le studio ici, Ollama ici aussi, ou Scenario en ligne.",
     "theme": {
       "title": "Thème",
       "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour. « Système » suit le réglage de votre ordinateur et bascule tout seul, par exemple le soir venu.",

@@ -109,7 +109,6 @@ export function AiSettings() {
       {/* The one screen of this window that does not wait for Apply, said rather than discovered:
           the manager owns the write because it re-judges the candidates — see `SettingsWindow`. */}
       <p className={cn(WINDOW_HELP, 'mb-4')}>{t('aiModels.appliesNow')}</p>
-      <p className={cn(WINDOW_HELP, 'mb-4')}>{t('aiModels.sourcesIntro')}</p>
 
       {overview.projectPath !== null && (
         <SettingLine title={t('aiModels.scope')} labelFor={SCOPE_FIELD}>

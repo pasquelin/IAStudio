@@ -2,6 +2,7 @@ import { mdiInformationOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { OllamaOffer } from '@shared/domain/aiOverview'
 import { UiIcon } from '@/design/UiIcon'
+import { WINDOW_HELP } from '@/design/windowStyles'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useAiModels } from '@/stores/aiModels'
 import { AiFlightRow } from './AiFlightRow'
@@ -12,6 +13,10 @@ function ollamaHelpKey(offer: OllamaOffer): string {
   if (!offer.ready) return 'aiModels.ollamaHelpDown'
   if (offer.names.length === 0) return 'aiModels.ollamaHelpEmpty'
   return 'aiModels.ollamaHelpElsewhere'
+}
+
+function needsInstall(offer: OllamaOffer): boolean {
+  return !offer.installed && !offer.ready
 }
 
 export type AiOllamaOfferProps = {
@@ -25,6 +30,7 @@ export function AiOllamaOffer({ offer, busy }: AiOllamaOfferProps) {
   const { t } = useTranslation()
   const installOllama = useAiModels(state => state.installOllama)
   const cancelInstallOllama = useAiModels(state => state.cancelInstallOllama)
+  const line = t(ollamaHelpKey(offer))
 
   if (offer.progress !== null) {
     return (
@@ -40,13 +46,13 @@ export function AiOllamaOffer({ offer, busy }: AiOllamaOfferProps) {
     )
   }
 
-  return (
-    <li className="flex flex-col items-start gap-2 py-2">
-      <span className="alert alert-info alert-soft">
-        <UiIcon path={mdiInformationOutline} />
-        {t(ollamaHelpKey(offer), { names: offer.names.join(', ') })}
-      </span>
-      {!offer.installed && !offer.ready && (
+  if (needsInstall(offer) || offer.failed) {
+    return (
+      <li className="flex flex-col items-start gap-2 py-2">
+        <span className="alert alert-info alert-soft">
+          <UiIcon path={mdiInformationOutline} />
+          {line}
+        </span>
         <button
           type="button"
           className="btn btn-sm"
@@ -56,7 +62,13 @@ export function AiOllamaOffer({ offer, busy }: AiOllamaOfferProps) {
         >
           {t('aiModels.installOllama')}
         </button>
-      )}
+      </li>
+    )
+  }
+
+  return (
+    <li className="py-2">
+      <p className={WINDOW_HELP}>{line}</p>
     </li>
   )
 }

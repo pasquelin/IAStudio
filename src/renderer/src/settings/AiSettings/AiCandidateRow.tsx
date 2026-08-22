@@ -54,7 +54,6 @@ export const AiCandidateRow = memo(function AiCandidateRow({
         bytes(candidate.model.diskBytes),
         ...(candidate.serves > 1 ? [t('aiModels.servesRoles', { count: candidate.serves })] : []),
         fit.verdict,
-        ...(candidate.model.licence !== '' ? [candidate.model.licence] : []),
       ].join(' · ')}
       // The provenance comes FIRST when there is one to say: it qualifies everything after it.
       hint={
@@ -67,7 +66,7 @@ export const AiCandidateRow = memo(function AiCandidateRow({
       onChoose={onChoose}
       picture={<Thumbnail url={modelThumbnailUrl(candidate.model)} className="size-8" />}
     >
-      <AiPublisherLink url={candidate.model.source} />
+      {chosen && <AiPublisherLink url={candidate.model.source} />}
       <AiModelActions candidate={candidate} progress={progress} loading={loading} busy={busy} />
     </AiChoiceRow>
   )

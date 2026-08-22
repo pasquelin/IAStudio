@@ -105,7 +105,7 @@ describe('AiSettings', () => {
     expect(screen.getByText(/place insuffisante — 48/)).toBeInTheDocument()
   })
 
-  it('names Ollama on an employment it cannot serve and lists the models it does have', () => {
+  it('does not list Ollama models that serve another employment', () => {
     show(
       overview({
         ollama: {
@@ -120,8 +120,8 @@ describe('AiSettings', () => {
     )
 
     expect(screen.getByText('Ollama')).toBeInTheDocument()
-    expect(screen.getByText(/alpha:1/)).toBeInTheDocument()
-    expect(screen.getByText(/emploi qu’ils savent faire/)).toBeInTheDocument()
+    expect(screen.queryByText(/alpha:1/)).not.toBeInTheDocument()
+    expect(screen.getByText(/Pas de modèle Ollama pour ce travail/)).toBeInTheDocument()
   })
 
   it('offers to install Ollama when it is not on this computer', () => {
@@ -190,12 +190,21 @@ describe('AiSettings', () => {
     )
   })
 
-  it('offers the publisher card as an outward https link', () => {
-    show()
+  it('offers the publisher card on the chosen model, not on the others', () => {
+    show(
+      overview({
+        roles: [
+          row({
+            chosen: { app: { kind: 'local', modelId: 'parakeet' }, project: null },
+          }),
+        ],
+      }),
+    )
 
-    const card = screen.getAllByRole('link', { name: 'Fiche éditeur' })[0]
-    expect(card).toHaveAttribute('href', 'https://example.invalid/model')
-    expect(card).toHaveAttribute('target', '_blank')
+    const cards = screen.getAllByRole('link', { name: 'Fiche éditeur' })
+    expect(cards).toHaveLength(1)
+    expect(cards[0]).toHaveAttribute('href', 'https://example.invalid/model')
+    expect(cards[0]).toHaveAttribute('target', '_blank')
   })
 
   it('hides the publisher card when the model has no https page', () => {
