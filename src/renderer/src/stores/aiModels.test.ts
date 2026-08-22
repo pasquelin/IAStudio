@@ -5,9 +5,11 @@ import { useAiModels } from './aiModels'
 
 const overview = (over: Partial<AiOverview> = {}): AiOverview => ({
   roles: [],
-  machine: { physicalBytes: 0, availableBytes: 0, diskFreeBytes: null, gpu: null },
+  machine: { physicalBytes: 0, availableBytes: 0, diskFreeBytes: null, gpu: null, vram: null },
   projectPath: null,
   installing: null,
+  loading: null,
+  loadFailure: null,
   ...over,
 })
 

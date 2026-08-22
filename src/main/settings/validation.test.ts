@@ -6,7 +6,8 @@ import {
   SETTING_REGISTRY,
   type SettingDescriptor,
 } from '@shared/domain/settingsRegistry'
-import { parsePartialSettings, salvagePartialSettings } from './validation'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import { parsePartialSettings, parseStoredAccounts, salvagePartialSettings } from './validation'
 
 /** A value the descriptor itself says is acceptable — no second table of examples to maintain. */
 function acceptable(descriptor: SettingDescriptor): SettingValue {
@@ -145,6 +146,40 @@ describe('salvaging the bar order', () => {
 
     expect(salvaged.workspaces?.order ?? []).toEqual([])
     expect(salvaged.appearance?.theme).toBe('light')
+  })
+})
+
+/**
+ * A book written before clouds became a list carries `activeId` and no `providerId` anywhere. Its
+ * pointer is Scenario's — which is what it always was — and nothing on disk is rewritten for it.
+ */
+describe('reading an account book back', () => {
+  const key = { key: 'api_k', secret: 's3cr3t' }
+
+  it('reads an old pointer as the Scenario one', () => {
+    const book = parseStoredAccounts(
+      JSON.stringify({ accounts: [{ id: 'a', name: 'Studio', credentials: key }], activeId: 'a' }),
+    )
+
+    expect(book?.activeByProvider).toEqual({ [SCENARIO_CLOUD]: 'a' })
+  })
+
+  it('keeps a pointer per cloud once one is written', () => {
+    const book = parseStoredAccounts(
+      JSON.stringify({
+        accounts: [{ id: 'g', name: 'Google', credentials: key, providerId: 'google' }],
+        activeByProvider: { google: 'g' },
+      }),
+    )
+
+    expect(book?.activeByProvider).toEqual({ google: 'g' })
+    expect(book?.accounts[0]?.providerId).toBe('google')
+  })
+
+  it('answers an empty choice for a book that names none', () => {
+    const book = parseStoredAccounts(JSON.stringify({ accounts: [], activeId: null }))
+
+    expect(book?.activeByProvider).toEqual({})
   })
 })
 

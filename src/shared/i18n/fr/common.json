@@ -40,7 +40,8 @@
     "audio": "Audio",
     "image": "Image",
     "mesh": "Modèle 3D",
-    "bundle": "Montage et médias"
+    "bundle": "Montage et médias",
+    "weights": "Poids de modèle"
   },
   "sorts": {
     "relevance": "Qualité : les meilleurs",

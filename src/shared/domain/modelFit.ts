@@ -95,11 +95,7 @@ export function fitAllowsUse(fit: Compatibility): boolean {
 }
 
 /**
- * Whether fetching the weights is worth the disk. A machine too small today may not be tomorrow,
- * so `memory` and `tight` still download; a pair the whitelist refuses never loads, a disk
- * MEASURED too full now would take the fetch to `ENOSPC`, and a runtime that pulls its own weights
- * has to be answering for anything to be asked of it at all.
+ * 🛑 There is deliberately no `fitAllowsDownload`. It gated the Install button on the verdict, so
+ * a machine judged too small was never OFFERED the download — the screen decided instead of the
+ * person. What a machine can hold is the person's call; the verdict is what tells them.
  */
-export function fitAllowsDownload(obstacle: FitObstacle | null): boolean {
-  return obstacle !== 'refused' && obstacle !== 'runtime' && obstacle !== 'disk'
-}

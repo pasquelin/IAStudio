@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import type { Job } from '@shared/domain/job'
 import type { ModelSummary } from '@shared/domain/model'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
@@ -36,6 +37,7 @@ const aModel = (id: string, name: string): ModelSummary => ({
   id,
   name,
   family: '3d',
+  runsOn: SCENARIO_CLOUD,
   source: 'scenario',
   origin: 'official',
   featured: false,

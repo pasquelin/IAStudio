@@ -11,9 +11,11 @@ import type { LogEntry, StudioBridge, TraceEntry } from '@shared/ipc'
 /** A machine that answers nothing, which is what a test gets unless it says otherwise. */
 const EMPTY_AI_OVERVIEW: AiOverview = {
   roles: [],
-  machine: { physicalBytes: 0, availableBytes: 0, diskFreeBytes: null, gpu: null },
+  machine: { physicalBytes: 0, availableBytes: 0, diskFreeBytes: null, gpu: null, vram: null },
   projectPath: null,
   installing: null,
+  loading: null,
+  loadFailure: null,
 }
 
 const noSubscription = (): (() => void) => () => {}
@@ -271,6 +273,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       install: () => Promise.resolve(EMPTY_AI_OVERVIEW),
       cancelInstall: () => Promise.resolve(EMPTY_AI_OVERVIEW),
       remove: () => Promise.resolve(EMPTY_AI_OVERVIEW),
+      load: () => Promise.resolve(EMPTY_AI_OVERVIEW),
+      cancelLoad: () => Promise.resolve(EMPTY_AI_OVERVIEW),
+      unload: () => Promise.resolve(EMPTY_AI_OVERVIEW),
+      addOwnModel: () => Promise.resolve(EMPTY_AI_OVERVIEW),
       onChanged: noSubscription,
       ...overrides.ai,
     },

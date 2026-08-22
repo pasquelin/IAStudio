@@ -18,14 +18,16 @@ vi.mock('node:fs/promises', () => ({
 
 const { electronHardwarePort } = await import('./electronHardwarePort')
 
-const port = (weights = '/models/stt') => electronHardwarePort(() => weights)
+const vram = vi.fn(() => Promise.resolve(null))
+
+const port = (weights = '/models') => electronHardwarePort(() => weights, vram)
 
 describe('electronHardwarePort', () => {
   // The model folder is a setting, and pointing it at an external disk is what it is for: read
   // on the application's own volume, every verdict would answer for the wrong one.
   it('reads free space on the volume the weights would land on', async () => {
     await expect(port().diskFreeBytes()).resolves.toBe(4_096_000)
-    expect(statfs).toHaveBeenCalledWith('/models/stt')
+    expect(statfs).toHaveBeenCalledWith('/models')
   })
 
   // The folder is created at install time, so it is normally absent when the screen first asks.
@@ -33,7 +35,7 @@ describe('electronHardwarePort', () => {
     statfs.mockRejectedValueOnce(new Error('ENOENT'))
 
     await expect(port().diskFreeBytes()).resolves.toBe(4_096_000)
-    expect(statfs).toHaveBeenLastCalledWith('/models')
+    expect(statfs).toHaveBeenLastCalledWith('/')
   })
 
   // `basic` and `complete` carry the same four keys, but only `complete` fills `glRenderer` —

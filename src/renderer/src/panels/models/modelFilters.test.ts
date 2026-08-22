@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import { LOCAL_RUNTIME } from '@shared/domain/model'
 import { DEFAULT_COLLECTION_STATE, type CollectionState } from '@/helpers/collectionState'
 import {
   CAPABILITY_FACET,
@@ -7,6 +9,7 @@ import {
   PERIOD_FACET,
   PUBLISHER_FACET,
   queryFrom,
+  RUNTIME_FACET,
   sortOptions,
   TAG_FACET,
 } from './modelFilters'
@@ -17,15 +20,25 @@ function stateWith(overrides: Partial<CollectionState>): CollectionState {
   return { ...DEFAULT_COLLECTION_STATE, ...overrides }
 }
 
+/** What an account is held for. One cloud is registered, and the panel offers it. */
+const CLOUDS: readonly string[] = [SCENARIO_CLOUD]
+
 describe('model filters', () => {
   /**
    * Measured over the 642 public models: `class`, `performanceStats` and the author name come
    * back empty on every one. A category, author or rating facet would filter nothing at all.
    */
   it('offers only the facets the API can answer', () => {
-    const keys = facetsFor('image', identity).map(facet => facet.key)
+    const keys = facetsFor('image', identity, CLOUDS).map(facet => facet.key)
 
-    expect(keys).toEqual([ORIGIN_FACET, CAPABILITY_FACET, TAG_FACET, PUBLISHER_FACET, PERIOD_FACET])
+    expect(keys).toEqual([
+      RUNTIME_FACET,
+      ORIGIN_FACET,
+      CAPABILITY_FACET,
+      TAG_FACET,
+      PUBLISHER_FACET,
+      PERIOD_FACET,
+    ])
     // Category and collections are empty on all 642 public models, even through
     // `GET /models/{id}`; every public model shares one opaque `authorId`.
     expect(keys).not.toContain('category')
@@ -33,7 +46,9 @@ describe('model filters', () => {
   })
 
   it('offers the capabilities of the family at hand', () => {
-    const capability = facetsFor('video', identity).find(facet => facet.key === CAPABILITY_FACET)
+    const capability = facetsFor('video', identity, CLOUDS).find(
+      facet => facet.key === CAPABILITY_FACET,
+    )
 
     expect(capability?.options.map(option => option.value)).toEqual([
       'txt2video',
@@ -44,7 +59,8 @@ describe('model filters', () => {
 
   // Families the API describes no capability or tag for must not show an empty menu.
   it('drops the facets the family has nothing for', () => {
-    expect(facetsFor('other', identity).map(facet => facet.key)).toEqual([
+    expect(facetsFor('other', identity, CLOUDS).map(facet => facet.key)).toEqual([
+      RUNTIME_FACET,
       ORIGIN_FACET,
       PERIOD_FACET,
     ])
@@ -55,8 +71,12 @@ describe('model filters', () => {
    * workspace, a publisher whose only possible answer is "no result".
    */
   it('offers only the publishers of the family at hand', () => {
-    const forImage = facetsFor('image', identity).find(facet => facet.key === PUBLISHER_FACET)
-    const forVideo = facetsFor('video', identity).find(facet => facet.key === PUBLISHER_FACET)
+    const forImage = facetsFor('image', identity, CLOUDS).find(
+      facet => facet.key === PUBLISHER_FACET,
+    )
+    const forVideo = facetsFor('video', identity, CLOUDS).find(
+      facet => facet.key === PUBLISHER_FACET,
+    )
     const values = (facet?: { options: readonly { value: string }[] }) =>
       facet?.options.map(option => option.value) ?? []
 
@@ -73,7 +93,7 @@ describe('model filters', () => {
    * actually did was show `Text to Image` inside an otherwise French interface.
    */
   it('sends the tag the API matches, and shows the words a reader reads', () => {
-    const tag = facetsFor('video', identity).find(facet => facet.key === TAG_FACET)
+    const tag = facetsFor('video', identity, CLOUDS).find(facet => facet.key === TAG_FACET)
 
     expect(tag?.options).toContainEqual({ value: 'First Frame', label: 'modelTags.firstFrame' })
   })
@@ -83,7 +103,7 @@ describe('model filters', () => {
    * standing in as its own label is what keeps a tag nobody named from ever showing one.
    */
   it('shows an unnamed tag as the publisher wrote it, never as a key', () => {
-    const tag = facetsFor('video', identity).find(facet => facet.key === TAG_FACET)
+    const tag = facetsFor('video', identity, CLOUDS).find(facet => facet.key === TAG_FACET)
 
     expect(tag?.options).toContainEqual({ value: 'I2V', label: 'I2V' })
   })
@@ -93,7 +113,7 @@ describe('model filters', () => {
    * excluded every model the facet could match, so the menu's only possible answer was none.
    */
   it('offers no tag that names a family of its own', () => {
-    const tag = facetsFor('image', identity).find(facet => facet.key === TAG_FACET)
+    const tag = facetsFor('image', identity, CLOUDS).find(facet => facet.key === TAG_FACET)
 
     expect(tag?.options.map(option => option.value)).not.toContain('image-upscale')
   })
@@ -104,7 +124,7 @@ describe('model filters', () => {
 
   describe('query', () => {
     it('always narrows to the workspace family', () => {
-      expect(queryFrom(DEFAULT_COLLECTION_STATE, '3d', '')).toMatchObject({ family: '3d' })
+      expect(queryFrom(DEFAULT_COLLECTION_STATE, '3d', '', CLOUDS)).toMatchObject({ family: '3d' })
     })
 
     /**
@@ -116,7 +136,7 @@ describe('model filters', () => {
         selections: { [ORIGIN_FACET]: ['official'], [CAPABILITY_FACET]: ['txt2video'] },
       })
 
-      expect(queryFrom(state, 'image', 'flux')).toEqual({
+      expect(queryFrom(state, 'image', 'flux', CLOUDS)).toEqual({
         family: 'image',
         sort: 'relevance',
         origin: 'official',
@@ -127,18 +147,20 @@ describe('model filters', () => {
     it('carries the chosen capability of the family at hand', () => {
       const state = stateWith({ selections: { [CAPABILITY_FACET]: ['img2video'] } })
 
-      expect(queryFrom(state, 'video', '')).toMatchObject({
+      expect(queryFrom(state, 'video', '', CLOUDS)).toMatchObject({
         family: 'video',
         capabilities: ['img2video'],
       })
     })
 
     it('leaves out a search that is only whitespace', () => {
-      expect(queryFrom(DEFAULT_COLLECTION_STATE, 'image', '   ')).not.toHaveProperty('search')
+      expect(queryFrom(DEFAULT_COLLECTION_STATE, 'image', '   ', CLOUDS)).not.toHaveProperty(
+        'search',
+      )
     })
 
     it('trims the search rather than sending the spaces along', () => {
-      expect(queryFrom(DEFAULT_COLLECTION_STATE, 'image', '  flux ')).toMatchObject({
+      expect(queryFrom(DEFAULT_COLLECTION_STATE, 'image', '  flux ', CLOUDS)).toMatchObject({
         search: 'flux',
       })
     })
@@ -148,7 +170,7 @@ describe('model filters', () => {
         selections: { [ORIGIN_FACET]: ['official'], [CAPABILITY_FACET]: ['txt2img', 'inpaint'] },
       })
 
-      expect(queryFrom(state, 'image', '')).toMatchObject({
+      expect(queryFrom(state, 'image', '', CLOUDS)).toMatchObject({
         origin: 'official',
         capabilities: ['txt2img', 'inpaint'],
       })
@@ -158,7 +180,7 @@ describe('model filters', () => {
     it('ignores an origin it does not recognize', () => {
       const state = stateWith({ selections: { [ORIGIN_FACET]: ['whoever'] } })
 
-      expect(queryFrom(state, 'image', '')).not.toHaveProperty('origin')
+      expect(queryFrom(state, 'image', '', CLOUDS)).not.toHaveProperty('origin')
     })
 
     /**
@@ -170,7 +192,7 @@ describe('model filters', () => {
         selections: { [TAG_FACET]: ['I2V'], [PUBLISHER_FACET]: ['Kling'] },
       })
 
-      expect(queryFrom(state, 'video', '').tags).toEqual(['I2V', 'Kling'])
+      expect(queryFrom(state, 'video', '', CLOUDS).tags).toEqual(['I2V', 'Kling'])
     })
 
     /**
@@ -183,7 +205,7 @@ describe('model filters', () => {
         selections: { [CAPABILITY_FACET]: ['txt2img'], [PUBLISHER_FACET]: ['Kling'] },
       })
 
-      const query = queryFrom(state, '3d', '')
+      const query = queryFrom(state, '3d', '', CLOUDS)
 
       expect(query).not.toHaveProperty('capabilities')
       expect(query).not.toHaveProperty('tags')
@@ -194,24 +216,43 @@ describe('model filters', () => {
         selections: { [TAG_FACET]: ['I2V'], [PERIOD_FACET]: ['week'] },
       })
 
-      expect(queryFrom(state, 'video', '')).toMatchObject({ tags: ['I2V'], since: 'week' })
+      expect(queryFrom(state, 'video', '', CLOUDS)).toMatchObject({ tags: ['I2V'], since: 'week' })
     })
 
     // A persisted state can hold a span the facet no longer offers.
     it('ignores a period it does not recognize', () => {
       const state = stateWith({ selections: { [PERIOD_FACET]: ['fortnight'] } })
 
-      expect(queryFrom(state, 'image', '')).not.toHaveProperty('since')
+      expect(queryFrom(state, 'image', '', CLOUDS)).not.toHaveProperty('since')
     })
 
     it('falls back to relevance for an unknown sort', () => {
-      expect(queryFrom(stateWith({ sort: 'nonsense' }), 'image', '')).toMatchObject({
+      expect(queryFrom(stateWith({ sort: 'nonsense' }), 'image', '', CLOUDS)).toMatchObject({
         sort: 'relevance',
       })
     })
 
+    /**
+     * ADR-21 as amended: a model knows where it runs, and the panel narrows to a place rather
+     * than switching "to the cloud". A cloud nobody holds a key for is not one of the places.
+     */
+    it('narrows to where a model runs, and offers no cloud without an account', () => {
+      const state = stateWith({ selections: { [RUNTIME_FACET]: [LOCAL_RUNTIME] } })
+
+      expect(queryFrom(state, 'image', '', CLOUDS)).toMatchObject({ runsOn: LOCAL_RUNTIME })
+      expect(
+        queryFrom(
+          stateWith({ selections: { [RUNTIME_FACET]: [SCENARIO_CLOUD] } }),
+          'image',
+          '',
+          [],
+        ),
+      ).not.toHaveProperty('runsOn')
+      expect(facetsFor('image', identity, []).at(0)?.options).toHaveLength(1)
+    })
+
     it('asks for the recent order when it is chosen', () => {
-      expect(queryFrom(stateWith({ sort: 'recent' }), 'image', '')).toMatchObject({
+      expect(queryFrom(stateWith({ sort: 'recent' }), 'image', '', CLOUDS)).toMatchObject({
         sort: 'recent',
       })
     })

@@ -1,5 +1,6 @@
 import {
   CAPABILITIES_BY_FAMILY,
+  LOCAL_RUNTIME,
   MODEL_ORIGINS,
   MODEL_PERIODS,
   MODEL_SORTS,
@@ -17,6 +18,7 @@ import {
   type FacetDescriptor,
 } from '@/helpers/collectionState'
 
+export const RUNTIME_FACET = 'runtime'
 export const ORIGIN_FACET = 'origin'
 export const CAPABILITY_FACET = 'capability'
 export const TAG_FACET = 'tag'
@@ -27,12 +29,30 @@ export const PERIOD_FACET = 'period'
 type Translate = (key: string) => string
 
 /**
- * The facets the API can actually answer. Category, author, rating and generation time are
- * absent on purpose: measured over the 642 public models, `class`, `performanceStats` and the
- * author name come back empty on every single one — a filter for them would filter nothing.
+ * The facets the API can actually answer, plus the one it cannot: WHERE a model runs.
+ *
+ * Category, author, rating and generation time are absent on purpose: measured over the 642 public
+ * models, `class`, `performanceStats` and the author name come back empty on every single one.
+ *
+ * `clouds` is what an account is held for, and a cloud with none is not offered — a filter whose
+ * only possible answer is "no result" is worse than no filter. The local option is always there:
+ * this machine needs no account.
  */
-export function facetsFor(family: ModelFamily, t: Translate): FacetDescriptor[] {
+export function facetsFor(
+  family: ModelFamily,
+  t: Translate,
+  clouds: readonly string[],
+): FacetDescriptor[] {
   const facets: FacetDescriptor[] = []
+
+  facets.push({
+    key: RUNTIME_FACET,
+    label: t('models.runtime'),
+    options: [
+      { value: LOCAL_RUNTIME, label: t('models.runsLocally') },
+      ...clouds.map(value => ({ value, label: t(`aiClouds.${value}`) })),
+    ],
+  })
 
   facets.push({
     key: ORIGIN_FACET,
@@ -117,7 +137,13 @@ function chosen<T extends string>(
  * selected while the query carries a value, and the panel comes back empty with nothing on
  * screen to relax. That is the shape the crossing bug took, and it outlived the crossing.
  */
-export function queryFrom(state: CollectionState, family: ModelFamily, search: string): ModelQuery {
+export function queryFrom(
+  state: CollectionState,
+  family: ModelFamily,
+  search: string,
+  clouds: readonly string[],
+): ModelQuery {
+  const runsOn = chosen(state, RUNTIME_FACET, [LOCAL_RUNTIME, ...clouds])
   const capabilities = offered(state, CAPABILITY_FACET, CAPABILITIES_BY_FAMILY[family])
   // One parameter for both: the API matches a publisher exactly as it matches any other tag.
   const tags = [
@@ -131,6 +157,7 @@ export function queryFrom(state: CollectionState, family: ModelFamily, search: s
   return {
     family,
     sort: MODEL_SORTS.find(candidate => candidate === state.sort) ?? 'relevance',
+    ...(runsOn ? { runsOn } : {}),
     ...(trimmed ? { search: trimmed } : {}),
     ...(origin ? { origin } : {}),
     ...(capabilities.length ? { capabilities } : {}),

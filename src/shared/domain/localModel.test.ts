@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { admitsLoad, modelRefusalOf, type ModelFormat, type ModelLoader } from './localModel'
+import {
+  admitsLoad,
+  modelRefusalOf,
+  provenanceUnverified,
+  type ModelFormat,
+  type ModelLoader,
+} from './localModel'
 import { localModel } from './localModel-fixtures'
 
 describe('admitsLoad', () => {
@@ -38,10 +44,20 @@ describe('modelRefusalOf', () => {
     )
   })
 
-  // ADR-20 § B: supplying one's own manifest must never be the consequence of a click on
-  // "Install". The catalogue refuses it; an explicit gesture elsewhere is what admits it.
-  it('keeps a manifest supplied by the person out of the catalogue', () => {
-    expect(modelRefusalOf(localModel({ rank: 3 }))).toBe('unverified-provenance')
-    expect(modelRefusalOf(localModel({ rank: 2 }))).toBeNull()
+  /**
+   * ADR-20 § B as amended: supplying one's own manifest is admitted under an EXPLICIT gesture, and
+   * that gesture exists. What rank 3 earns is a mark — never a refusal, which used to make the
+   * rank unreachable and every model of it read as incompatible.
+   */
+  it('admits a manifest the person supplied, and marks it', () => {
+    expect(modelRefusalOf(localModel({ rank: 3 }))).toBeNull()
+    expect(provenanceUnverified(localModel({ rank: 3 }))).toBe(true)
+    expect(provenanceUnverified(localModel({ rank: 1 }))).toBe(false)
+  })
+
+  // The whitelist is what decides, and it decides for the person's own file exactly as it does
+  // for a shipped one: pointing at something is not a reason to open it.
+  it('refuses a format the loader does not admit, whoever supplied it', () => {
+    expect(modelRefusalOf(localModel({ rank: 3, format: 'pickle' }))).toBe('format-not-admitted')
   })
 })

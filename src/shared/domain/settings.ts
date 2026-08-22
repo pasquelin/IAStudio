@@ -6,6 +6,7 @@ import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistantModel'
 import type { BindingOverrides } from './command'
 import type { DictationMode } from './dictation'
 import type { ApiFailure } from './failure'
+import type { LocalModel } from './localModel'
 import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
 import type { RecentProject } from './project'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
@@ -139,6 +140,14 @@ export type Settings = {
   ai: {
     roles: Partial<Record<AiRoleId, RoleProvider>>
     projectRoles: Record<string, Partial<Record<AiRoleId, RoleProvider>>>
+    /**
+     * The models the person supplied themselves — rank 3 of ADR-20, and the ONE place they live.
+     *
+     * A manifest apiece rather than a path apiece: what a GGUF header answers is read once, at the
+     * moment they point at the file, and a header re-read on every compose would open every one of
+     * their files on every assistant turn.
+     */
+    ownModels: LocalModel[]
   }
   /**
    * The 3D workspace. A branch of its own rather than nested under a `spaces` one: every branch
@@ -312,7 +321,7 @@ export const DEFAULT_SETTINGS: Settings = {
   generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {}, captionArrivals: true },
   // Empty on a fresh install, and that is the point: no choice made means the local side is
   // taken wherever it can serve, so the studio works before anyone has an account.
-  ai: { roles: {}, projectRoles: {} },
+  ai: { roles: {}, projectRoles: {}, ownModels: [] },
   three: {
     showGrid: true,
     gridSize: 20,

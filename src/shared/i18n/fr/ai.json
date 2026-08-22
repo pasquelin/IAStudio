@@ -7,6 +7,21 @@
     "scenario": "Scenario",
     "scenarioHint": "Génère sur les serveurs Scenario. Rien à installer."
   },
+  "localFields": {
+    "prompt": "Description",
+    "negativePrompt": "À éviter",
+    "seed": "Graine",
+    "seedHelp": "Le même nombre redonne la même image. Laissez vide pour varier.",
+    "temperature": "Température",
+    "temperatureHelp": "Bas, le modèle reste prudent. Haut, il ose davantage.",
+    "topP": "Top-p",
+    "maxTokens": "Longueur maximale",
+    "width": "Largeur",
+    "height": "Hauteur",
+    "steps": "Étapes",
+    "stepsHelp": "Plus d’étapes affinent l’image et allongent le calcul.",
+    "cfgScale": "Fidélité à la description"
+  },
   "aiModels": {
     "reading": "Lecture de la machine…",
     "empty": "Aucun emploi n’a de fournisseur à proposer sur cette machine.",
@@ -45,6 +60,23 @@
       "disk": "{{needed}} à télécharger, {{free}} libres sur le disque",
       "refused": "le format ou la provenance de ce modèle n’est pas admis",
       "runtime": "le runtime {{runtime}} ne répond pas sur cette machine"
-    }
+    },
+    "machineVram": "{{free}} libres sur {{total}} de mémoire vidéo",
+    "load": "Charger",
+    "loadHint": "Met les poids en mémoire pour que les réponses soient immédiates",
+    "loading": "Chargement du modèle",
+    "cancelLoad": "Annuler",
+    "cancelLoadHint": "Arrête le chargement et rend la mémoire déjà prise",
+    "unload": "Décharger",
+    "unloadHint": "Rend la mémoire. Le modèle reste installé sur le disque",
+    "loadFailed": "Le chargement s’est arrêté. Le journal dit pourquoi.",
+    "forget": "Retirer",
+    "forgetHint": "Retire l’entrée de la liste. Votre fichier reste où il est",
+    "unverifiedProvenance": "provenance non vérifiée",
+    "ownModel": "Vos propres modèles",
+    "ownModelHelp": "Un fichier de poids GGUF déjà sur cette machine. Sa licence n’est pas connue du studio.",
+    "addOwnModel": "Ajouter un fichier…",
+    "ownModelUnreadable": "Ce fichier n’est pas un GGUF que le studio sait lire.",
+    "loadBeyondMachine": "Chargement impossible : {{needed}} demandés, {{available}} disponibles."
   }
 }

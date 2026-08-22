@@ -42,11 +42,11 @@ function brainFor(
  */
 export function createRoutedBrain(deps: RoutedBrainDeps): AssistantBrain {
   return {
-    think: async request => {
+    think: async (request, signal) => {
       const [brain, why] = brainFor(deps, await deps.providerOf())
       if (brain === null) throw new Error(`nothing serves the assistant: ${why}`)
 
-      return await brain.think(request)
+      return await brain.think(request, signal)
     },
   }
 }

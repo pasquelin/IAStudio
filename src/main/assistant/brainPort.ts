@@ -13,5 +13,12 @@ import type { AssistantAnswer, AssistantThought } from '@shared/domain/assistant
  * keep in step, and the drift would be silent.
  */
 export type AssistantBrain = {
-  think: (request: AssistantThought) => Promise<AssistantAnswer>
+  /**
+   * `signal` stops a turn that nobody is waiting for any more — a window closed mid-answer.
+   *
+   * Optional because a cloud brain has nothing to stop that matters: the request is already paid
+   * for. A turn run in THIS process is the one invariant 6 is about, and it is the one that would
+   * otherwise generate to its ceiling with no reader.
+   */
+  think: (request: AssistantThought, signal?: AbortSignal) => Promise<AssistantAnswer>
 }

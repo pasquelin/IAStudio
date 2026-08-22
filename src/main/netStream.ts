@@ -26,13 +26,3 @@ export async function* chunksOf(
     reader.releaseLock()
   }
 }
-
-/** The same bytes as text. Streaming, so a character split across two chunks is held, not mangled. */
-export async function* decodedText(chunks: AsyncIterable<Uint8Array>): AsyncIterable<string> {
-  const decoder = new TextDecoder()
-
-  for await (const chunk of chunks) yield decoder.decode(chunk, { stream: true })
-
-  const tail = decoder.decode()
-  if (tail !== '') yield tail
-}

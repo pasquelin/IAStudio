@@ -245,6 +245,10 @@ const bridge: StudioBridge = {
     install: modelId => ipcRenderer.invoke(CHANNELS.aiInstall, modelId),
     cancelInstall: () => ipcRenderer.invoke(CHANNELS.aiCancelInstall),
     remove: modelId => ipcRenderer.invoke(CHANNELS.aiRemove, modelId),
+    load: modelId => ipcRenderer.invoke(CHANNELS.aiLoad, modelId),
+    cancelLoad: () => ipcRenderer.invoke(CHANNELS.aiCancelLoad),
+    unload: modelId => ipcRenderer.invoke(CHANNELS.aiUnload, modelId),
+    addOwnModel: () => ipcRenderer.invoke(CHANNELS.aiAddOwnModel),
     onChanged: callback => subscribe<AiOverview>(EVENTS.ai, callback),
   },
   dictation: {

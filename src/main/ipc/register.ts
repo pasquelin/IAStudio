@@ -130,7 +130,7 @@ export function registerIpc(services: Services): void {
     brain: services.assistant,
     settleAction: services.remoteActions.settle,
   })
-  registerAiHandlers(services.ai)
+  registerAiHandlers({ manager: services.ai, addOwnModel: services.addOwnAiModel })
   registerDictationHandlers({
     session: services.dictation,
     openPrivacySettings: services.openMicrophoneSettings,

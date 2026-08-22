@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { AccountsResult, AccountSummary } from '@shared/domain/account'
 import type { AuthState } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { activeAccount, useAccounts } from './accounts'
+import { accountsByProvider, activeAccount, useAccounts } from './accounts'
 import { useSettings } from './settings'
 
 const studio: AccountSummary = { id: 'a', name: 'Studio', active: true }
@@ -10,6 +10,33 @@ const client: AccountSummary = { id: 'b', name: 'Client X', active: false }
 
 const result = (accounts: AccountSummary[]): Promise<AccountsResult> =>
   Promise.resolve({ accounts })
+
+/**
+ * The switch groups by cloud, one active key per group. A summary with no `providerId` is a key
+ * stored before clouds became a list, and it reads as Scenario — the same default the main
+ * process gives its own absence.
+ */
+describe('accountsByProvider', () => {
+  const google: AccountSummary = { id: 'g', name: 'Perso', providerId: 'google', active: true }
+
+  it('keeps one group while one cloud is held', () => {
+    expect(accountsByProvider([studio, client])).toEqual([
+      { providerId: 'scenario', accounts: [studio, client] },
+    ])
+  })
+
+  it('splits the keys by the cloud each one opens', () => {
+    const groups = accountsByProvider([studio, google, client])
+
+    expect(groups.map(group => group.providerId)).toEqual(['scenario', 'google'])
+    expect(groups[0]?.accounts).toEqual([studio, client])
+    expect(groups[1]?.accounts).toEqual([google])
+  })
+
+  it('answers nothing for a book that holds nothing', () => {
+    expect(accountsByProvider([])).toEqual([])
+  })
+})
 
 describe('useAccounts', () => {
   beforeEach(() => {

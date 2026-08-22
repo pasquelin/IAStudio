@@ -1,7 +1,8 @@
 import { mdiCubeScan } from '@mdi/js'
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ModelSummary } from '@shared/domain/model'
+import { LOCAL_RUNTIME, type ModelSummary } from '@shared/domain/model'
+import { CLOUD_IDS } from '@shared/domain/aiCloud'
 import { failureKeyOf } from '@/services/failureMessage'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
@@ -36,6 +37,9 @@ const ROW_HEIGHT = 40
  */
 const AUTOMATIC_PULLS = 6
 
+/** Never rebuilt: a fresh empty array per render would invalidate the memo that reads it. */
+const NO_CLOUDS: readonly string[] = []
+
 /**
  * The model browser. It follows the active workspace — Image shows image models, 3D shows 3D
  * models — because the title bar already says which one is active; type tabs would repeat it.
@@ -67,12 +71,18 @@ export function Models() {
   const search = settled.family === family ? settled.search : ''
   // No memo, and only for this one: react-query hashes the key structurally, so a fresh object
   // costs nothing, and `queryFrom` translates nothing.
-  const query = queryFrom(collection, family, search)
+  // A cloud is offered only where a key is held, and without one the panel narrows to this
+  // machine rather than going quiet: the studio has to be useful with no account at all.
+  const clouds = authenticated ? CLOUD_IDS : NO_CLOUDS
+  const query = {
+    ...queryFrom(collection, family, search, clouds),
+    ...(authenticated ? {} : { runsOn: LOCAL_RUNTIME }),
+  }
 
   // Memoised, unlike the query above: building the facets translates up to twenty-five labels
   // through i18next — measured at 376 µs, against 1 µs for the query — and this panel re-renders
   // on every keystroke in its search field.
-  const facets = useMemo(() => facetsFor(family, t), [family, t])
+  const facets = useMemo(() => facetsFor(family, t, clouds), [family, t, clouds])
   const sorts = useMemo(() => sortOptions(t), [t])
 
   // The walk covers private models then public ones, and a model listed in both would otherwise
@@ -83,7 +93,6 @@ export function Models() {
     ['models', query],
     from => getBridge()?.provider.searchModels({ ...query, limit: PAGE_LIMIT, ...from }),
     {
-      enabled: authenticated,
       fill: { wanted: PAGE_LIMIT, max: AUTOMATIC_PULLS },
       // The walk lists the private models then the public ones, and one can be in both: a run of
       // pages this panel has already shown is ordinary here, and is not the end of the catalogue.
@@ -113,7 +122,11 @@ export function Models() {
 
   const selected = selectedId ? (catalogue.byId.get(selectedId) ?? null) : null
 
-  if (!authenticated) return <MissingCredentials icon={mdiCubeScan} />
+  // Said only once there is nothing else to show: a machine holding local models has a panel to
+  // draw, and telling it there is no key would hide the very models that need none.
+  if (!authenticated && items.length === 0 && !catalogue.fetching) {
+    return <MissingCredentials icon={mdiCubeScan} />
+  }
 
   // Without this the panel sits on "loading" forever when the API refuses the request.
   if (catalogue.refusal !== null) {

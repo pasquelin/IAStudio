@@ -40,7 +40,8 @@
     "audio": "Audio",
     "image": "Image",
     "mesh": "3D model",
-    "bundle": "Edit with its media"
+    "bundle": "Edit with its media",
+    "weights": "Model weights"
   },
   "sorts": {
     "relevance": "Quality: highest first",

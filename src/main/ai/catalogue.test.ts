@@ -35,9 +35,21 @@ describe('the shipped catalogue', () => {
     expect(shippedModelsFor(DICTATION_ROLE)).toEqual([STT_MODEL])
   })
 
-  it('serves a model this machine can run to the assistant', () => {
-    expect(shippedModelsFor(ASSISTANT_ROLE).map(model => model.loader)).toEqual(['ollama'])
+  // Several, from the lightest up: what a machine can hold is the person's call, so the catalogue
+  // offers a range rather than one entry chosen for them.
+  it('offers the assistant a range of models this studio can run itself', () => {
+    const loaders = new Set(shippedModelsFor(ASSISTANT_ROLE).map(model => model.loader))
+
+    expect(shippedModelsFor(ASSISTANT_ROLE).length).toBeGreaterThan(1)
+    expect([...loaders]).toEqual(['llamacpp'])
     expect(rolesWithLocalOption()).toEqual([DICTATION_ROLE, ASSISTANT_ROLE])
+  })
+
+  // Lightest first, because the FIRST usable entry is what a role takes on its own.
+  it('orders each role from the lightest model up', () => {
+    const sizes = shippedModelsFor(ASSISTANT_ROLE).map(model => model.diskBytes)
+
+    expect(sizes).toEqual([...sizes].sort((one, other) => one - other))
   })
 
   /**

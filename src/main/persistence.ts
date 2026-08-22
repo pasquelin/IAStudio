@@ -1,4 +1,4 @@
-import { access, rename, rm, writeFile } from 'node:fs/promises'
+import { access, open, rename, rm, writeFile } from 'node:fs/promises'
 
 /**
  * How the studio writes the small files it keeps for the user — the job notes, the pinned
@@ -85,3 +85,17 @@ export const exists = (path: string): Promise<boolean> =>
     () => true,
     () => false,
   )
+
+/** The head of a file and no more of it — what keeps a listing from reading a project whole. */
+export async function firstBytes(file: string, limit: number): Promise<Buffer> {
+  const handle = await open(file, 'r')
+  try {
+    // `allocUnsafe`: every byte handed back is one `read` wrote, and zeroing the rest per document
+    // is work a listing pays for nothing.
+    const buffer = Buffer.allocUnsafe(limit)
+    const { bytesRead } = await handle.read(buffer, 0, limit, 0)
+    return buffer.subarray(0, bytesRead)
+  } finally {
+    await handle.close()
+  }
+}

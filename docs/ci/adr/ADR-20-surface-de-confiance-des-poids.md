@@ -219,3 +219,57 @@ faisant partie de la configuration, est en **90**. Lire `:79-91`. `[M]` Et
 `collect-licences.mjs:157` déclare ONNX Runtime en **`1.27.0`** quand le binaire livré rend
 **`1.27.1`** — `THIRD-PARTY-NOTICES.md` et `src/shared/licences.json` sont donc générés faux.
 Corriger le collecteur touche six fichiers ensemble (§ Conséquences) : **ce n'est pas fait ici**.
+
+---
+
+## Amendement du 21 août 2026 — le rang 3 existe, et voici à quoi il ressemble
+
+Le § B admet le rang 3 « et l'action est explicite ». Cette phrase est restée une intention :
+`modelRefusalOf` refusait le rang 3 **en bloc**, donc aucun geste ne pouvait l'atteindre. Un rang
+admis par l'ADR et refusé par le code n'est pas un rang.
+
+### Le geste, en trois temps
+
+1. **La personne désigne un fichier de poids.** Un sélecteur natif, filtré sur `.gguf`, ouvert
+   depuis l'écran du gestionnaire. Ni URL, ni JSON, ni collage : **un fichier sur ce disque**.
+2. **Le studio lit ce qu'il peut de l'en-tête.** `shared/domain/gguf.ts` marche les métadonnées du
+   format et en tire trois choses : `general.name`, `general.architecture` et
+   `<architecture>.context_length`. Le système de fichiers donne la quatrième, la taille.
+3. **L'entrée est enregistrée, marquée.** `rank: 3`, `licence: ''`, `weightsPath` pointant sur leur
+   fichier, et `provenanceUnverified` répond `true` — l'écran écrit « provenance non vérifiée » et
+   le collecteur de licences ne la voit jamais.
+
+### Ce qui n'est PAS demandé, et pourquoi
+
+**Rien.** Le corps de cette ADR n'exige pas qu'on interroge la personne, il exige que l'action soit
+explicite — et pointer un fichier l'est. Ce que l'en-tête ne dit pas est **déduit et annoncé**
+plutôt que demandé :
+
+| Champ | D'où il vient | Ce qu'il vaut |
+|---|---|---|
+| `name` | `general.name`, sinon le nom du fichier | une donnée, jamais un mot d'interface |
+| `contextTokens` | `<arch>.context_length`, sinon 4096 | `[?]` le repli n'est mesuré contre rien |
+| `diskBytes` | `stat` | exact |
+| `reservationBytes` | `diskBytes × 1,2` | `[?]` une ESTIMATION, R3 d'ADR-19 — le premier chargement mesure la vraie taille et c'est elle qui est retenue ensuite |
+| `licence` | rien | vide, et c'est la marque |
+
+**Un formulaire à remplir aurait été pire** : il demanderait à quelqu'un de recopier ce que le
+fichier porte déjà, et la valeur saisie ferait autorité contre la valeur lue.
+
+### Ce que le rang 3 ne gagne pas
+
+- **Il ne gagne pas la liste blanche du § A.** `admitsLoad('gguf', 'llamacpp')` reste ce qui décide,
+  et un fichier d'un autre format n'entre pas parce que quelqu'un l'a désigné.
+- **Il ne gagne pas les notices.** Sa licence est inconnue ; l'écrire dans
+  `THIRD-PARTY-NOTICES.md` serait affirmer ce que personne n'a lu.
+- **Il ne gagne pas le disque du studio.** « Supprimer » retire l'entrée et **laisse le fichier** :
+  il est à la personne, le studio n'a été que pointé dessus. L'écran dit « Retirer », pas
+  « Supprimer », et c'est la seule ligne du gestionnaire où les deux mots diffèrent.
+
+### `[?]` Ce que cet amendement ne couvre pas
+
+Rien n'inspecte le CONTENU d'un GGUF au-delà de son en-tête : les tenseurs sont passés à llama.cpp
+tels quels. Le critère du § A dit que le couple est admis parce que **le chargeur** ne peut pas
+exécuter de code que le fichier fournit ; il ne dit rien d'une corruption mémoire dans le parseur
+de llama.cpp, exactement comme le verdict ONNX ne dit rien de celui d'ONNX Runtime. Un fichier de
+poids d'origine inconnue reste une entrée non fiable donnée à du C++.

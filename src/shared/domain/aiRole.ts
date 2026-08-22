@@ -42,14 +42,19 @@ export function aiRoleId(family: ModelFamily, capability: string): AiRoleId {
  * Every role the studio has, generation and standalone.
  *
  * Derived from `CAPABILITIES_BY_FAMILY` rather than listed: a family that gains a capability gains
- * its role, and a list written here would drift the day one is added.
+ * its role, and a list written here would drift the day one is added. Built ONCE: it is walked on
+ * every compose, so on every assistant turn, and rebuilding twenty-one entries there is twenty-one
+ * allocations for a list nothing can change.
  */
-export function allRoles(): readonly AiRoleId[] {
-  const generation = Object.entries(CAPABILITIES_BY_FAMILY).flatMap(([family, capabilities]) =>
+const ALL_ROLES: readonly AiRoleId[] = [
+  ...STANDALONE_ROLES,
+  ...Object.entries(CAPABILITIES_BY_FAMILY).flatMap(([family, capabilities]) =>
     capabilities.map(capability => `${family}/${capability}` as AiRoleId),
-  )
+  ),
+]
 
-  return [...STANDALONE_ROLES, ...generation]
+export function allRoles(): readonly AiRoleId[] {
+  return ALL_ROLES
 }
 
 /** Whether the role belongs to a space, as opposed to being one of the two standalone ones. */

@@ -1,4 +1,19 @@
+import { runtimeEndpointId, type RuntimeEndpointId } from '@shared/domain/aiRuntime'
 import type { DownloadProgress, LocalModel, ModelLoader } from '@shared/domain/localModel'
+
+/**
+ * The door each loader answers on — what `MemorySnapshot.runtimeBytes` is keyed by, and what an
+ * admission plan names when it asks for something to be released.
+ *
+ * One door per loader today, so the mapping is total. A loader offering two — Ollama's own
+ * `/api/chat` beside its OpenAI-compatible one — would key them apart here, which is exactly what
+ * `RuntimeEndpointId` was branded for.
+ */
+export const ENDPOINT_BY_LOADER: Readonly<Record<ModelLoader, RuntimeEndpointId>> = {
+  'sherpa-onnx': runtimeEndpointId('sherpa-onnx', 'embedded'),
+  ollama: runtimeEndpointId('ollama', 'api-chat'),
+  llamacpp: runtimeEndpointId('llamacpp', 'embedded'),
+}
 
 /** One turn of a conversation. Roles, because that is how a chat door takes a prompt. */
 export type ChatTurn = { readonly role: 'system' | 'user' | 'assistant'; readonly content: string }
@@ -14,6 +29,19 @@ export type ChatRequest = {
   readonly messages: readonly ChatTurn[]
   /** Whether the answer must be one JSON object. Stated by the caller: nothing here guesses. */
   readonly json: boolean
+  /**
+   * Stops the generation. Invariant 6 of `CLAUDE.md`: every long task is cancellable, and a turn
+   * run in this process is the longest of them — a closed window otherwise leaves the model
+   * generating to its ceiling with nobody to answer.
+   */
+  readonly signal?: AbortSignal
+}
+
+/** What a load reports while it runs, and what stops it. */
+export type LoadOptions = {
+  /** From 0 to 1, as the runtime counts it. A runtime reporting nothing simply never calls it. */
+  readonly onProgress: (ratio: number) => void
+  readonly signal?: AbortSignal
 }
 
 /**
@@ -34,6 +62,14 @@ export type LocalRuntime = {
   remove: (model: LocalModel) => Promise<void>
   /** Absent for a runtime that holds no conversation — recognition reads audio. */
   chat?: (request: ChatRequest) => Promise<string>
+  /**
+   * Holds the weights in memory, and answers what they take once resident — a MEASUREMENT, where
+   * `reservationBytes` is only what a publisher announced. Absent for a runtime that holds
+   * nothing between calls.
+   */
+  load?: (model: LocalModel, options: LoadOptions) => Promise<number>
+  /** Frees whatever it holds. Answering does not prove the bytes came back — ADR-19. */
+  unload?: () => Promise<void>
 }
 
 export type RuntimeReading = {
@@ -41,6 +77,8 @@ export type RuntimeReading = {
   readonly ready: boolean
   /** The ids of the models handed in that it holds. Empty when it did not answer. */
   readonly installed: ReadonlySet<string>
+  /** The one model resident in memory, of those handed in. `null` when none is. */
+  readonly loaded: string | null
 }
 
 /**
@@ -50,7 +88,7 @@ export type RuntimeReading = {
  */
 export type LocalRuntimes = Readonly<Partial<Record<ModelLoader, LocalRuntime>>>
 
-const ABSENT: RuntimeReading = { ready: false, installed: new Set() }
+const ABSENT: RuntimeReading = { ready: false, installed: new Set(), loaded: null }
 
 /**
  * What each loader answers for the models that name it.
@@ -118,6 +156,8 @@ export function fileRuntime(deps: FileRuntimeDeps): LocalRuntime {
       return {
         ready: true,
         installed: new Set(models.filter((_model, index) => answers[index]).map(model => model.id)),
+        // Nothing is held between calls: the engine is opened per session and closed with it.
+        loaded: null,
       }
     },
 

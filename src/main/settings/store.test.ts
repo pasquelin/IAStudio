@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_ACCOUNT_NAME, ENVIRONMENT_ACCOUNT_ID } from '@shared/domain/account'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { StoredAccount } from './accounts'
 import { memoryAdapter, type MemoryAdapter } from './memoryAdapter'
@@ -117,7 +118,7 @@ describe('settings store', () => {
   it('stores the whole book encrypted, never in clear', () => {
     storeWithAccount()
     expect(String(adapter.raw.get('accounts'))).toBe(
-      'enc:{"accounts":[{"id":"id-1","name":"Studio","credentials":{"key":"api_k","secret":"s3cr3t"}}],"activeId":"id-1"}',
+      'enc:{"accounts":[{"id":"id-1","name":"Studio","credentials":{"key":"api_k","secret":"s3cr3t"}}],"activeByProvider":{"scenario":"id-1"}}',
     )
   })
 
@@ -292,7 +293,9 @@ describe('the development account in the store', () => {
 
     expect(written).toEqual({
       accounts: [{ id: 'id-1', name: 'Studio', credentials: { key: 'api_k', secret: 's3cr3t' } }],
-      activeId: ENVIRONMENT_ACCOUNT_ID,
+      // The CHOICE travels verbatim, even naming the account that lives in a file rather than
+      // here: `withEnvironment` hands it back its account on the next read.
+      activeByProvider: { [SCENARIO_CLOUD]: ENVIRONMENT_ACCOUNT_ID },
     })
   })
 

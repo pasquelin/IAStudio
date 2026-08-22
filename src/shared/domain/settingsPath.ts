@@ -8,9 +8,9 @@ export type SettingValue = string | number | boolean
  * Branches whose editor is a screen rather than a control per leaf — the default model of a
  * family is picked from a catalogue fetched at runtime, a keyboard binding is captured by
  * pressing it, the home's sections are ordered on the home itself, the spaces are dragged into
- * order on the bar that shows them, and the recent projects — like the account each of them works
- * under — are written by opening one and by the switch in the title bar. None of which is a list
- * anyone can write down.
+ * order on the bar that shows them, the models the person supplied are added by pointing at a
+ * file, and the recent projects — like the account each of them works under — are written by
+ * opening one and by the switch in the title bar. None of which is a list anyone can write down.
  *
  * Named by full path, not by key: excluding `'defaultModels'` wherever it appears would also
  * swallow a future `appearance.defaultModels`, and a leaf missing from `SettingPath` is a leaf
@@ -24,6 +24,7 @@ type DedicatedPath =
   | 'storage.projectAccounts'
   | 'ai.roles'
   | 'ai.projectRoles'
+  | 'ai.ownModels'
   | 'workspaces.order'
 
 /**

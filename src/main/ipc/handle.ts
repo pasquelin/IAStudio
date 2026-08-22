@@ -169,6 +169,10 @@ type ChannelMethod = {
   [CHANNELS.aiInstall]: StudioBridge['ai']['install']
   [CHANNELS.aiCancelInstall]: StudioBridge['ai']['cancelInstall']
   [CHANNELS.aiRemove]: StudioBridge['ai']['remove']
+  [CHANNELS.aiLoad]: StudioBridge['ai']['load']
+  [CHANNELS.aiCancelLoad]: StudioBridge['ai']['cancelLoad']
+  [CHANNELS.aiUnload]: StudioBridge['ai']['unload']
+  [CHANNELS.aiAddOwnModel]: StudioBridge['ai']['addOwnModel']
 
   [CHANNELS.dictationState]: StudioBridge['dictation']['state']
   [CHANNELS.dictationStart]: StudioBridge['dictation']['start']

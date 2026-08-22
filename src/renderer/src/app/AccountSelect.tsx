@@ -1,11 +1,13 @@
 import { mdiCloudOutline, mdiCogOutline } from '@mdi/js'
+import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MenuRow } from '@/design/MenuRow'
 import { Separator } from '@/design/Separator'
 import { TitleBarSelect } from '@/design/TitleBarSelect'
+import { WINDOW_GROUP_LABEL } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { activeAccount, useAccounts } from '@/stores/accounts'
+import { accountsByProvider, activeAccount, useAccounts } from '@/stores/accounts'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 
@@ -30,10 +32,15 @@ export function AccountSelect() {
   const openSection = useSettings(state => state.openSection)
   const project = useProject(state => state.project)
 
-  const active = activeAccount(accounts)
   const manage = (): void => openSection('account')
 
-  const name = active?.name ?? t('accounts.notConnected')
+  const groups = accountsByProvider(accounts)
+  // One cloud connected: its key, as the button always read. Several: no single key is "the"
+  // active one any more — they are one per cloud — so the button counts and the menu details.
+  const name =
+    groups.length > 1
+      ? t('accounts.connectedClouds', { count: groups.length })
+      : (activeAccount(accounts)?.name ?? t('accounts.notConnected'))
   const scope = project
     ? t('accounts.scopeProject', { project: project.manifest.name })
     : t('accounts.scopeApp')
@@ -69,19 +76,31 @@ export function AccountSelect() {
             {scope}
           </p>
 
-          {accounts.map(account => (
-            <MenuRow
-              key={account.id}
-              label={account.name}
-              icon={mdiCloudOutline}
-              checked={account.active}
-              tick="one-of"
-              tip={HINT_RIGHT(t('accounts.useHint'))}
-              onSelect={() => {
-                close()
-                void activate(account.id)
-              }}
-            />
+          {groups.map(group => (
+            <Fragment key={group.providerId}>
+              {/* Named only when there are several: one cloud needs no heading to tell it apart,
+                  and a `menuitem` is what the arrow keys walk — a heading is not one. */}
+              {groups.length > 1 && (
+                <p role="presentation" className={cn(WINDOW_GROUP_LABEL, 'px-2 pt-1')}>
+                  {t(`aiClouds.${group.providerId}`)}
+                </p>
+              )}
+
+              {group.accounts.map(account => (
+                <MenuRow
+                  key={account.id}
+                  label={account.name}
+                  icon={mdiCloudOutline}
+                  checked={account.active}
+                  tick="one-of"
+                  tip={HINT_RIGHT(t('accounts.useHint'))}
+                  onSelect={() => {
+                    close()
+                    void activate(account.id)
+                  }}
+                />
+              ))}
+            </Fragment>
           ))}
 
           {accounts.length > 0 && <Separator orientation="horizontal" className="self-center" />}

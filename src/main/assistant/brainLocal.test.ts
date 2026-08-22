@@ -84,6 +84,20 @@ describe('the local brain', () => {
     expect(JSON.stringify(asked[1]?.messages)).toContain('I would love to help!')
   })
 
+  /**
+   * Invariant 6: a turn run in this process generates to its ceiling, and a window closed
+   * mid-answer would leave it running with nobody to read it. The signal is what stops it, and it
+   * has to reach the runtime — not merely be accepted at the top.
+   */
+  it('hands the runtime what stops a turn nobody is waiting for any more', async () => {
+    const { brain, asked } = brainAnswering([REPLY])
+    const abort = new AbortController()
+
+    await brain.think({ utterance: 'hello', history: [] }, abort.signal)
+
+    expect(asked[0]?.signal).toBe(abort.signal)
+  })
+
   // A person is waiting, and "I did not understand" beats a stack trace.
   it('says nothing rather than raising when two attempts are both unreadable', async () => {
     const { brain } = brainAnswering(['nope', 'still nope'])

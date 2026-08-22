@@ -3,6 +3,9 @@ allowBuilds:
   electron: true
   electron-winstaller: false
   esbuild: true
+  # Its postinstall picks the prebuilt binary for this machine — Metal, CUDA or Vulkan. Refused,
+  # the package installs without the one file that makes it run.
+  node-llama-cpp: true
 minimumReleaseAgeExclude:
   - immer@11.1.16
   - jscpd-darwin-arm64@5.0.15

@@ -21,7 +21,9 @@
     "capability": "Capability",
     "tag": "Tag",
     "period": "Date",
-    "publisher": "Publisher"
+    "publisher": "Publisher",
+    "runtime": "Runs",
+    "runsLocally": "On this machine"
   },
   "modelTags": {
     "textToImage": "From text",
@@ -106,6 +108,7 @@
     "none": "No account yet. Add an API key to reach the remote library.",
     "switch": "Account: {{name}}",
     "switchHint": "Pick the API key to generate on, or add one",
+    "connectedClouds": "{{count, number}} services connected",
     "scopeProject": "Remembered for the {{project}} project",
     "scopeApp": "No project open — this choice holds for the studio",
     "manage": "Manage accounts…",

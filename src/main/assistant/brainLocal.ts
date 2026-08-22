@@ -39,7 +39,7 @@ function messagesFor(
 }
 
 export function createLocalBrain({ chat, modelId, contextTokens }: LocalBrainDeps): AssistantBrain {
-  const ask = async (request: AssistantThought, complaint?: string) => {
+  const ask = async (request: AssistantThought, signal?: AbortSignal, complaint?: string) => {
     const briefing = studioBriefing()
     const said = utteranceWithin(request.utterance)
     // Raising the window here would quietly ask for memory nothing budgeted: the reservation was
@@ -60,10 +60,13 @@ export function createLocalBrain({ chat, modelId, contextTokens }: LocalBrainDep
         messages: messagesFor(briefing, window.history, said),
         contextTokens,
         json: true,
+        ...(signal ? { signal } : {}),
       }),
       cost: 0,
     }
   }
 
-  return { think: request => retriedAnswer(complaint => ask(request, complaint)) }
+  return {
+    think: (request, signal) => retriedAnswer(complaint => ask(request, signal, complaint)),
+  }
 }

@@ -7,7 +7,7 @@ const parakeet = localModel({ id: 'parakeet', loader: 'sherpa-onnx' })
 const llama = localModel({ id: 'llama3.2:3b', loader: 'ollama', files: [] })
 
 const holding = (installed: string[]): LocalRuntime => ({
-  read: () => Promise.resolve({ ready: true, installed: new Set(installed) }),
+  read: () => Promise.resolve({ ready: true, installed: new Set(installed), loaded: null }),
   install: () => Promise.resolve(),
   remove: () => Promise.resolve(),
 })
@@ -20,7 +20,7 @@ describe('runtimeReadingsOf', () => {
         ...holding([]),
         read: (models: readonly LocalModel[]) => {
           seen.push([...models])
-          return Promise.resolve({ ready: true, installed: new Set<string>() })
+          return Promise.resolve({ ready: true, installed: new Set<string>(), loaded: null })
         },
       },
     }
@@ -43,7 +43,7 @@ describe('runtimeReadingsOf', () => {
 
     const readings = await runtimeReadingsOf(runtimes, [llama], (_loader, why) => said.push(why))
 
-    expect(readings.get('ollama')).toEqual({ ready: false, installed: new Set() })
+    expect(readings.get('ollama')).toEqual({ ready: false, installed: new Set(), loaded: null })
     expect(said).toEqual([expect.stringContaining('ECONNREFUSED')])
   })
 
@@ -51,7 +51,7 @@ describe('runtimeReadingsOf', () => {
   it('reads a loader nothing wires as one that is not answering', async () => {
     const readings = await runtimeReadingsOf({}, [llama], () => {})
 
-    expect(readings.get('ollama')).toEqual({ ready: false, installed: new Set() })
+    expect(readings.get('ollama')).toEqual({ ready: false, installed: new Set(), loaded: null })
   })
 
   it('keeps the answer of each loader to its own models', async () => {
@@ -79,6 +79,9 @@ describe('fileRuntime', () => {
     await expect(runtime.read([parakeet, localModel({ id: 'other' })])).resolves.toEqual({
       ready: true,
       installed: new Set(['parakeet']),
+      // It fetches weights and holds nothing between calls: what is resident is another
+      // runtime's question entirely.
+      loaded: null,
     })
   })
 

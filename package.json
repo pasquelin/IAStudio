@@ -34,7 +34,9 @@
     "manual:collect": "node scripts/collect-manual.ts",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",
     "decoders:copy": "node scripts/copy-decoders.mjs",
-    "postinstall": "node scripts/dev-app-identity.mjs && node scripts/copy-decoders.mjs"
+    "postinstall": "node scripts/dev-app-identity.mjs && node scripts/copy-decoders.mjs",
+    "models:pin": "node scripts/pin-models.mjs",
+    "models:thumbnails": "node scripts/make-model-thumbnails.mjs"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",
@@ -47,6 +49,7 @@
     "electron-updater": "^6.8.9",
     "fflate": "^0.8.3",
     "mediabunny": "^1.53.1",
+    "node-llama-cpp": "^3.20.0",
     "opentype.js": "^2.0.0",
     "pixi.js": "8.19.0",
     "react-is": "^19.2.8",

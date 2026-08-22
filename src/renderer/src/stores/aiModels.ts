@@ -30,6 +30,19 @@ type AiModelsState = {
   installAiModel: (modelId: string) => Promise<void>
   cancelAiInstall: () => Promise<void>
   removeAiModel: (modelId: string) => Promise<void>
+  /** Holds the weights in memory, or leaves `overview.loadFailure` saying why it could not. */
+  loadAiModel: (modelId: string) => Promise<void>
+  cancelAiLoad: () => Promise<void>
+  unloadAiModel: (modelId: string) => Promise<void>
+  /**
+   * Asks for a weights file and records what its header says.
+   *
+   * The only command of this store that can FAIL in a way the overview cannot carry: the gesture
+   * belongs to one window, so its refusal is kept here rather than broadcast to every other.
+   */
+  addOwnAiModel: () => Promise<void>
+  /** Why the last supplied file was refused, or nothing. Cleared by the next attempt. */
+  ownModelFailure: 'unreadable' | null
 }
 
 /**
@@ -45,6 +58,7 @@ export const useAiModels = create<AiModelsState>()(set => {
 
   return {
     overview: null,
+    ownModelFailure: null,
 
     connect: connectThroughBridge(async bridge => {
       let pushed = false
@@ -70,5 +84,19 @@ export const useAiModels = create<AiModelsState>()(set => {
     installAiModel: modelId => command(bridge => bridge.ai.install(modelId)),
     cancelAiInstall: () => command(bridge => bridge.ai.cancelInstall()),
     removeAiModel: modelId => command(bridge => bridge.ai.remove(modelId)),
+    loadAiModel: modelId => command(bridge => bridge.ai.load(modelId)),
+    cancelAiLoad: () => command(bridge => bridge.ai.cancelLoad()),
+    unloadAiModel: modelId => command(bridge => bridge.ai.unload(modelId)),
+
+    addOwnAiModel: async () => {
+      set({ ownModelFailure: null })
+      try {
+        await command(bridge => bridge.ai.addOwnModel())
+      } catch {
+        // One reason, and it is the only one a person can act on: the file they pointed at is not
+        // a weights file this studio can read. The journal holds what actually happened.
+        set({ ownModelFailure: 'unreadable' })
+      }
+    },
   }
 })

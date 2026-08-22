@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import type { Job } from '@shared/domain/job'
 import type { ModelDescriptor } from '@shared/domain/model'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -89,6 +90,7 @@ describe('before a generation', () => {
       id: 'model-1',
       name: 'Stone',
       family: 'texture',
+      runsOn: SCENARIO_CLOUD,
       source: 'scenario',
       origin: 'official',
       featured: false,

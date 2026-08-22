@@ -7,6 +7,21 @@
     "scenario": "Scenario",
     "scenarioHint": "Generates on Scenario’s servers. Nothing to install."
   },
+  "localFields": {
+    "prompt": "Description",
+    "negativePrompt": "Avoid",
+    "seed": "Seed",
+    "seedHelp": "The same number gives the same image back. Leave it empty to vary.",
+    "temperature": "Temperature",
+    "temperatureHelp": "Low, the model plays safe. High, it takes more chances.",
+    "topP": "Top-p",
+    "maxTokens": "Maximum length",
+    "width": "Width",
+    "height": "Height",
+    "steps": "Steps",
+    "stepsHelp": "More steps refine the image and lengthen the computation.",
+    "cfgScale": "Faithfulness to the description"
+  },
   "aiModels": {
     "reading": "Reading the machine…",
     "empty": "No employment has a provider to offer on this machine.",
@@ -45,6 +60,23 @@
       "disk": "{{needed}} to download, {{free}} free on disk",
       "refused": "the format or the provenance of this model is not admitted",
       "runtime": "the {{runtime}} runtime is not answering on this machine"
-    }
+    },
+    "machineVram": "{{free}} free of {{total}} video memory",
+    "load": "Load",
+    "loadHint": "Holds the weights in memory so answers come back at once",
+    "loading": "Loading the model",
+    "cancelLoad": "Cancel",
+    "cancelLoadHint": "Stops the load and gives back the memory already taken",
+    "unload": "Unload",
+    "unloadHint": "Gives the memory back. The model stays installed on disk",
+    "loadFailed": "The load stopped. The journal says why.",
+    "forget": "Forget",
+    "forgetHint": "Removes the entry from the list. Your file stays where it is",
+    "unverifiedProvenance": "unverified provenance",
+    "ownModel": "Your own models",
+    "ownModelHelp": "A GGUF weights file already on this machine. The studio does not know its licence.",
+    "addOwnModel": "Add a file…",
+    "ownModelUnreadable": "This file is not a GGUF the studio can read.",
+    "loadBeyondMachine": "Could not load: {{needed}} asked for, {{available}} available."
   }
 }
