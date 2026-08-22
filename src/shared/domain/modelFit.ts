@@ -21,6 +21,8 @@ export type MachineOffer = {
    * ask for opposite gestures. Always true for a loader the application ships with.
    */
   readonly runtimeReady: boolean
+  /** NVIDIA CUDA. TRELLIS's kernels do not run on Metal. Absent is "no". */
+  readonly hasCuda?: boolean
 }
 
 /**
@@ -30,7 +32,7 @@ export type MachineOffer = {
  * that is full as much as for a machine that is small, and a screen that explained the second
  * where the first is true would be telling the person to free the wrong thing.
  */
-export type FitObstacle = 'refused' | 'plugin' | 'runtime' | 'disk' | 'memory' | 'tight'
+export type FitObstacle = 'refused' | 'plugin' | 'runtime' | 'disk' | 'memory' | 'tight' | 'cuda'
 
 /** The one decision the verdict and the sentence beside it both read, so neither can drift. */
 export function fitObstacleOf(model: LocalModel, offer: MachineOffer): FitObstacle | null {
@@ -39,6 +41,8 @@ export function fitObstacleOf(model: LocalModel, offer: MachineOffer): FitObstac
   // Before the runtime that would HOST it: a model nothing here can open does not become usable
   // because a process answered. The download is still offered — see the note at the bottom.
   if (runtimeStatusOf(model) !== 'supported') return 'plugin'
+
+  if (model.needsCuda === true && offer.hasCuda !== true) return 'cuda'
 
   // Before the disk and before the memory: neither figure changes anything while the runtime that
   // would hold the model is not answering, and what it asks for is a different gesture entirely.
@@ -66,6 +70,7 @@ export function fitObstacleOf(model: LocalModel, offer: MachineOffer): FitObstac
 const VERDICT: Record<FitObstacle, Compatibility> = {
   refused: 'incompatible',
   plugin: 'incompatible',
+  cuda: 'incompatible',
   runtime: 'incompatible',
   disk: 'insufficient-memory',
   memory: 'insufficient-memory',

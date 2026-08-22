@@ -24,15 +24,14 @@ Ce qui diffère entre deux portes est une modalité et un nom : la boucle est é
 
 | Porte | Modalité | Adapter | Backend |
 |---|---|---|---|
-| `engine/diffusion` | image | `diffusers_adapter` | PyTorch (MPS, CUDA ou CPU, **rapporté** par run) |
-| `engine/video` | vidéo | `diffusers_adapter` | idem |
-| `engine/audio` | son | `diffusers_adapter` | idem |
-| `engine/3d` | maillage | `diffusers_adapter` | idem |
+| `engine/diffusion` | image | `RoutingAdapter` (diffusers, plugin au swap) | PyTorch (MPS, CUDA ou CPU, **rapporté** par run) |
+| `engine/video` | vidéo | idem | idem |
+| `engine/audio` | son | idem | idem |
+| `engine/3d` | maillage | idem | idem |
 
-🛑 **Trois de ces quatre portes n'ont jamais tourné** : aucun modèle vidéo, audio ou 3D n'entre au
-catalogue aujourd'hui — mesuré le 22/08, le plus léger modèle vidéo pèse 28,9 Go, ACE-Step n'a pas
-de pipeline dans diffusers 0.40, et Shap-E ne publie son renderer qu'en pickle, que l'ADR-20
-refuse.
+Les familles hors diffusers (TripoSR, TRELLIS, TRELLIS.2, MMAudio) passent par `plugin_adapter.py`.
+TripoSR est vendu sous `vendor/tsr` (MIT, `weights_only=True`). TRELLIS / TRELLIS.2 demandent
+CUDA — sur Metal la carte le dit. MMAudio tourne sur MPS. Extra `plugin`, pas dans `engine:check`.
 
 **Une op routée répond IMMÉDIATEMENT avec le job qu'elle a ouvert**, jamais avec son résultat :
 un chargement lit des gigaoctets et une génération dure des secondes. Le résultat arrive en

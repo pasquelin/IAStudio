@@ -11,6 +11,7 @@ import { useBytes } from './useBytes'
 export const FIT_DETAIL_KEYS: Record<FitObstacle, string> = {
   refused: 'aiModels.detail.refused',
   plugin: 'aiModels.detail.plugin',
+  cuda: 'aiModels.detail.cuda',
   runtime: 'aiModels.detail.runtime',
   disk: 'aiModels.detail.disk',
   memory: 'aiModels.detail.memory',

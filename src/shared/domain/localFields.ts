@@ -116,6 +116,14 @@ const SOURCE_AUDIO: LocalFieldTemplate = {
   required: false,
 }
 
+const LYRICS: LocalFieldTemplate = {
+  key: 'lyrics',
+  kind: 'longText',
+  labelKey: 'localFields.lyrics',
+  helpKey: 'localFields.lyricsHelp',
+  required: false,
+}
+
 const MASK: LocalFieldTemplate = {
   key: 'mask',
   kind: 'image',
@@ -254,6 +262,7 @@ const TEMPLATES: Record<LocalModality, readonly LocalFieldTemplate[]> = {
   video: [
     PROMPT,
     NEGATIVE_PROMPT,
+    SOURCE_IMAGE,
     SOURCE_VIDEO,
     side('width', { default: 832, max: 1280, step: 16 }),
     side('height', { default: 480, max: 720, step: 16 }),
@@ -284,8 +293,9 @@ const TEMPLATES: Record<LocalModality, readonly LocalFieldTemplate[]> = {
   ],
   audio: [
     PROMPT,
-    NEGATIVE_PROMPT,
     SOURCE_AUDIO,
+    SOURCE_VIDEO,
+    LYRICS,
     {
       key: 'seconds',
       kind: 'number',
@@ -294,15 +304,15 @@ const TEMPLATES: Record<LocalModality, readonly LocalFieldTemplate[]> = {
       required: false,
       default: 10,
       min: 1,
-      max: 300,
+      max: 600,
       step: 0.5,
     },
-    steps({ default: 50, max: 200 }),
+    steps({ default: 8, max: 200 }),
     cfgScale({ default: 3.5, max: 20 }),
     SEED,
   ],
   mesh: [
-    PROMPT,
+    { ...PROMPT, required: false },
     SOURCE_IMAGE,
     steps({ default: 25, max: 100 }),
     cfgScale({ default: 15, max: 30 }),

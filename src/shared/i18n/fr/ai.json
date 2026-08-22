@@ -35,7 +35,9 @@
     "video": "Séquence de départ",
     "videoHelp": "Laissez vide pour composer la séquence d’après la description seule.",
     "audio": "Prise de départ",
-    "audioHelp": "Un WAV 16 bits. Laissez vide pour composer d’après la description seule."
+    "audioHelp": "Un WAV 16 bits. Laissez vide pour composer d’après la description seule.",
+    "lyrics": "Paroles",
+    "lyricsHelp": "Optionnel. Structurez avec [verse], [chorus], [bridge]."
   },
   "aiModels": {
     "reading": "Lecture de la machine…",
@@ -75,7 +77,8 @@
       "disk": "{{needed}} à télécharger, {{free}} libres sur le disque",
       "refused": "le format ou la provenance de ce modèle n’est pas admis",
       "runtime": "le runtime {{runtime}} ne répond pas sur cette machine",
-      "plugin": "aucun moteur de ce studio ne sait encore ouvrir ce modèle"
+      "plugin": "aucun moteur de ce studio ne sait encore ouvrir ce modèle",
+      "cuda": "ce modèle demande un GPU NVIDIA (CUDA)"
     },
     "machineVram": "{{free}} libres sur {{total}} de mémoire vidéo",
     "load": "Charger",
@@ -97,6 +100,8 @@
     "noLocalEngine": "Aucun modèle local pour cet emploi : le catalogue n’en propose aucun aujourd’hui.",
     "servesRoles_one": "{{count, number}} emploi",
     "servesRoles_many": "{{count, number}} emplois",
-    "servesRoles_other": "{{count, number}} emplois"
+    "servesRoles_other": "{{count, number}} emplois",
+    "publisherCard": "Fiche éditeur",
+    "publisherCardHint": "Ouvre la page Hugging Face de ce modèle dans le navigateur"
   }
 }

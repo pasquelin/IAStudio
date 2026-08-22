@@ -46,6 +46,14 @@ describe('fitOf', () => {
     expect(fitOf(model({ format: 'pickle' }), offer())).toBe('incompatible')
   })
 
+  it('lets a plugin pickle through, and names CUDA when the machine has none', () => {
+    expect(
+      fitOf(model({ format: 'pickle', loader: 'plugin', runtimeStatus: 'supported' }), offer()),
+    ).toBe('compatible')
+    expect(fitObstacleOf(model({ needsCuda: true }), offer())).toBe('cuda')
+    expect(fitObstacleOf(model({ needsCuda: true }), offer({ hasCuda: true }))).toBeNull()
+  })
+
   it('refuses a model that does not fit in memory', () => {
     expect(fitOf(model({ reservationBytes: 50 * GIGA }), offer())).toBe('insufficient-memory')
   })

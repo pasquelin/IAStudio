@@ -47,6 +47,7 @@ export const localModelSchema: z.ZodType<LocalModel> = z.object({
     .enum(['commercial', 'non-commercial', 'restricted', 'unsupported-region'])
     .optional(),
   runtimeStatus: z.enum(['supported', 'plugin-required', 'unsupported']).optional(),
+  needsCuda: z.boolean().optional(),
   attaches: z
     .object({
       model: z.string().min(1),

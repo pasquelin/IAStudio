@@ -85,7 +85,30 @@ export const UNREAD_ON_THIS_PLATFORM: readonly string[] = [
  * Written rather than filtered away in silence: what a release ships under them is stated by
  * nobody until that run happens.
  */
-export const UNREAD_PENDING_COLLECTION: readonly string[] = ['imageio', 'imageio-ffmpeg']
+export const UNREAD_PENDING_COLLECTION: readonly string[] = [
+  'imageio',
+  'imageio-ffmpeg',
+  'antlr4-python3-runtime',
+  'einops',
+  'omegaconf',
+  'trimesh',
+  'attrs',
+  'jsonschema',
+  'jsonschema-specifications',
+  'lazy-loader',
+  'llvmlite',
+  'numba',
+  'platformdirs',
+  'pooch',
+  'pymatting',
+  'referencing',
+  'rembg',
+  'rpds-py',
+  'scikit-image',
+  'scipy',
+  'tifffile',
+  'torchaudio',
+]
 
 /** The engine's own package. It is the studio's code, under the studio's licence. */
 export const ENGINE_PACKAGE = 'ia-studio-engine'

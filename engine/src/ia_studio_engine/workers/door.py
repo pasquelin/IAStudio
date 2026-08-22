@@ -11,6 +11,7 @@ from typing import Any
 
 from ia_studio_engine.adapters.diffusers_adapter import DiffusersAdapter, memory_frame
 from ia_studio_engine.adapters.modalities import Modality
+from ia_studio_engine.adapters.routing_adapter import RoutingAdapter
 from ia_studio_engine.protocol.envelope import encode_event
 from ia_studio_engine.workers.base import WorkerLoop, worker_hello
 
@@ -18,7 +19,7 @@ from ia_studio_engine.workers.base import WorkerLoop, worker_hello
 OCCUPANCY = {"process": "exclusive-process", "device": "exclusive", "maxConcurrent": 1}
 
 
-def inline_handlers(door: str, adapter: DiffusersAdapter) -> dict[str, Any]:
+def inline_handlers(door: str, adapter: DiffusersAdapter | RoutingAdapter) -> dict[str, Any]:
     """Answered in the reading turn: no device call, so a running job never delays one."""
 
     def status(_params: dict[str, Any]) -> dict[str, Any]:
@@ -50,7 +51,9 @@ def _attachment_of(params: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def queued_handlers(door: str, adapter: DiffusersAdapter, loop: WorkerLoop) -> dict[str, Any]:
+def queued_handlers(
+    door: str, adapter: DiffusersAdapter | RoutingAdapter, loop: WorkerLoop
+) -> dict[str, Any]:
     """Everything that touches the device, serialised by the queue — § A.5, exception 1."""
 
     def load(params: dict[str, Any]) -> dict[str, Any]:
@@ -102,7 +105,7 @@ def serve(door: str, modality: Modality, argv: list[str] | None = None) -> int:
     if len(arguments) != 1:
         raise SystemExit(f"{door} is started with one inherited fd, got {arguments}")
 
-    adapter = DiffusersAdapter(modality)
+    adapter = RoutingAdapter(modality)
     connection = socket.socket(fileno=int(arguments[0]))
     WorkerLoop(
         connection,

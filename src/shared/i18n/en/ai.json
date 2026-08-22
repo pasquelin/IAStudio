@@ -35,7 +35,9 @@
     "video": "Starting sequence",
     "videoHelp": "Leave it empty to compose the sequence from the description alone.",
     "audio": "Starting take",
-    "audioHelp": "A 16-bit WAV. Leave it empty to compose from the description alone."
+    "audioHelp": "A 16-bit WAV. Leave it empty to compose from the description alone.",
+    "lyrics": "Lyrics",
+    "lyricsHelp": "Optional. Structure them with [verse], [chorus], [bridge]."
   },
   "aiModels": {
     "reading": "Reading the machine…",
@@ -75,7 +77,8 @@
       "disk": "{{needed}} to download, {{free}} free on disk",
       "refused": "the format or the provenance of this model is not admitted",
       "runtime": "the {{runtime}} runtime is not answering on this machine",
-      "plugin": "no engine in this studio can open this model yet"
+      "plugin": "no engine in this studio can open this model yet",
+      "cuda": "this model needs an NVIDIA GPU (CUDA)"
     },
     "machineVram": "{{free}} free of {{total}} video memory",
     "load": "Load",
@@ -97,6 +100,8 @@
     "noLocalEngine": "No local model for this employment: the catalogue offers none today.",
     "servesRoles_one": "{{count, number}} employment",
     "servesRoles_many": "{{count, number}} employments",
-    "servesRoles_other": "{{count, number}} employments"
+    "servesRoles_other": "{{count, number}} employments",
+    "publisherCard": "Publisher card",
+    "publisherCardHint": "Opens this model’s Hugging Face page in the browser"
   }
 }

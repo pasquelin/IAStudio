@@ -585,6 +585,9 @@
       "family": "image",
       "capabilities": [
         "txt2img"
+      ],
+      "serves": [
+        "texture/txt2img_texture"
       ]
     },
     {
@@ -718,6 +721,9 @@
       "family": "image",
       "capabilities": [
         "txt2img"
+      ],
+      "serves": [
+        "texture/txt2img_texture"
       ]
     },
     {
@@ -963,6 +969,9 @@
       "family": "image",
       "capabilities": [
         "txt2img"
+      ],
+      "serves": [
+        "texture/txt2img_texture"
       ]
     }
   ],
@@ -3091,11 +3100,11 @@
       "diskBytes": 4900982950,
       "reservationBytes": 2450491475,
       "thumbnail": "shap-e.png",
-      "readsTorchWeights": true,
       "family": "3d",
       "capabilities": [
         "txt23d"
-      ]
+      ],
+      "readsTorchWeights": true
     }
   ],
   "3d/img23d": [
@@ -3131,13 +3140,12 @@
       "diskBytes": 1677247729,
       "reservationBytes": 838623864,
       "thumbnail": "triposr.png",
-      "distribution": "direct-download",
-      "licenceStatus": "commercial",
-      "runtimeStatus": "plugin-required",
       "family": "3d",
       "capabilities": [
         "img23d"
-      ]
+      ],
+      "distribution": "direct-download",
+      "licenceStatus": "commercial"
     },
     {
       "id": "shap-e-img2img",
@@ -3267,11 +3275,11 @@
       "diskBytes": 5978254144,
       "reservationBytes": 2989127072,
       "thumbnail": "shap-e-img2img.png",
-      "readsTorchWeights": true,
       "family": "3d",
       "capabilities": [
         "img23d"
-      ]
+      ],
+      "readsTorchWeights": true
     },
     {
       "id": "trellis2-4b",
@@ -3449,13 +3457,13 @@
       "diskBytes": 16237477108,
       "reservationBytes": 8118738554,
       "thumbnail": "trellis2-4b.png",
-      "distribution": "direct-download",
-      "licenceStatus": "commercial",
-      "runtimeStatus": "plugin-required",
       "family": "3d",
       "capabilities": [
         "img23d"
-      ]
+      ],
+      "distribution": "direct-download",
+      "licenceStatus": "commercial",
+      "needsCuda": true
     }
   ],
   "image/controlnet": [
@@ -3595,16 +3603,16 @@
       "diskBytes": 5015287097,
       "reservationBytes": 2507643548,
       "thumbnail": "controlnet-canny-sdxl.png",
+      "family": "image",
+      "capabilities": [
+        "controlnet"
+      ],
       "attaches": {
         "model": "ssd-1b",
         "as": "controlnet"
       },
       "serves": [
         "texture/controlnet_texture"
-      ],
-      "family": "image",
-      "capabilities": [
-        "controlnet"
       ]
     }
   ],
@@ -3649,6 +3657,10 @@
       "diskBytes": 4392500053,
       "reservationBytes": 2196250026,
       "thumbnail": "ip-adapter-sdxl.png",
+      "family": "image",
+      "capabilities": [
+        "reference"
+      ],
       "attaches": {
         "model": "ssd-1b",
         "as": "ip-adapter",
@@ -3657,10 +3669,6 @@
       },
       "serves": [
         "texture/reference_texture"
-      ],
-      "family": "image",
-      "capabilities": [
-        "reference"
       ]
     }
   ],
@@ -3713,13 +3721,12 @@
       "diskBytes": 3251165106,
       "reservationBytes": 1625582553,
       "thumbnail": "mmaudio-small-44k.png",
-      "distribution": "direct-download",
-      "licenceStatus": "non-commercial",
-      "runtimeStatus": "plugin-required",
       "family": "audio",
       "capabilities": [
         "video2audio"
-      ]
+      ],
+      "distribution": "direct-download",
+      "licenceStatus": "non-commercial"
     },
     {
       "id": "mmaudio-medium-44k",
@@ -3769,13 +3776,12 @@
       "diskBytes": 5108753591,
       "reservationBytes": 2554376795,
       "thumbnail": "mmaudio-medium-44k.png",
-      "distribution": "direct-download",
-      "licenceStatus": "non-commercial",
-      "runtimeStatus": "plugin-required",
       "family": "audio",
       "capabilities": [
         "video2audio"
-      ]
+      ],
+      "distribution": "direct-download",
+      "licenceStatus": "non-commercial"
     },
     {
       "id": "mmaudio-large-44k",
@@ -3825,13 +3831,12 @@
       "diskBytes": 6741607322,
       "reservationBytes": 3370803661,
       "thumbnail": "mmaudio-large-44k.png",
-      "distribution": "direct-download",
-      "licenceStatus": "non-commercial",
-      "runtimeStatus": "plugin-required",
       "family": "audio",
       "capabilities": [
         "video2audio"
-      ]
+      ],
+      "distribution": "direct-download",
+      "licenceStatus": "non-commercial"
     }
   ],
   "3d/3d23d": [
@@ -3891,16 +3896,16 @@
       "diskBytes": 2284197204,
       "reservationBytes": 1142098602,
       "thumbnail": "trellis-text-large.png",
-      "distribution": "direct-download",
-      "licenceStatus": "commercial",
-      "runtimeStatus": "plugin-required",
-      "serves": [
-        "3d/txt23d"
-      ],
       "family": "3d",
       "capabilities": [
         "3d23d"
-      ]
+      ],
+      "distribution": "direct-download",
+      "licenceStatus": "commercial",
+      "serves": [
+        "3d/txt23d"
+      ],
+      "needsCuda": true
     },
     {
       "id": "trellis-image-large",
@@ -4054,16 +4059,16 @@
       "diskBytes": 3299238867,
       "reservationBytes": 1649619433,
       "thumbnail": "trellis-image-large.png",
-      "distribution": "direct-download",
-      "licenceStatus": "commercial",
-      "runtimeStatus": "plugin-required",
-      "serves": [
-        "3d/img23d"
-      ],
       "family": "3d",
       "capabilities": [
         "3d23d"
-      ]
+      ],
+      "distribution": "direct-download",
+      "licenceStatus": "commercial",
+      "serves": [
+        "3d/img23d"
+      ],
+      "needsCuda": true
     }
   ]
 }

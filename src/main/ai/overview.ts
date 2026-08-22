@@ -71,6 +71,9 @@ export function rowFor(role: AiRoleId, input: OverviewInput, choices: RoleChoice
       diskFreeBytes: input.facts.diskFreeBytes,
       installed,
       runtimeReady: input.runtimeReady(model),
+      hasCuda:
+        input.facts.gpu?.vendorId === 0x10de ||
+        /NVIDIA|GeForce|Quadro|Tesla|CUDA/i.test(input.facts.gpu?.renderer ?? ''),
     }
 
     return {

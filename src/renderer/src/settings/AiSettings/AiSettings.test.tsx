@@ -110,6 +110,21 @@ describe('AiSettings', () => {
     )
   })
 
+  it('offers the publisher card as an outward https link', () => {
+    show()
+
+    const card = screen.getAllByRole('link', { name: 'Fiche éditeur' })[0]
+    expect(card).toHaveAttribute('href', 'https://example.invalid/model')
+    expect(card).toHaveAttribute('target', '_blank')
+  })
+
+  it('hides the publisher card when the model has no https page', () => {
+    const own = { ...PARAKEET, model: localModel({ source: '' }) }
+    show(overview({ roles: [row({ candidates: [own] })] }))
+
+    expect(screen.queryByRole('link', { name: 'Fiche éditeur' })).not.toBeInTheDocument()
+  })
+
   // Through the manager, so a download begun here and one begun elsewhere cannot compete for the
   // same files: the manager holds the only install lock.
   it('installs a candidate through the manager', () => {

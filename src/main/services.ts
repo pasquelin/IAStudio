@@ -1250,23 +1250,26 @@ export function createServices(settings: SettingsStore): Services {
     delay: ms => sleepFor(ms),
   })
 
+  const engineRuntime = pythonRuntime({
+    folderFor,
+    isComplete: (model, folder) => modelIsComplete(downloads, model, folder),
+    fetch: async (model, folder, onProgress, signal) => {
+      await ensureFolder(folder)
+      await fetchModel(downloads, model, { folder, onProgress, signal })
+    },
+    removeFiles: (_model: LocalModel, folder: string) =>
+      rm(folder, { recursive: true, force: true }),
+    baseOf: model => (model.attaches ? modelOf(model.attaches.model) : null),
+    engine: () => engine.engine(),
+    running: () => engine.current(),
+    log: (level: 'info' | 'warn', message: string) => log[level]('ai', message),
+    onUsed: modelId => hold(modelId),
+  })
+
   const runtimes: LocalRuntimes = {
     'sherpa-onnx': fetchedFiles,
-    diffusers: pythonRuntime({
-      folderFor,
-      isComplete: (model, folder) => modelIsComplete(downloads, model, folder),
-      fetch: async (model, folder, onProgress, signal) => {
-        await ensureFolder(folder)
-        await fetchModel(downloads, model, { folder, onProgress, signal })
-      },
-      removeFiles: (_model: LocalModel, folder: string) =>
-        rm(folder, { recursive: true, force: true }),
-      baseOf: model => (model.attaches ? modelOf(model.attaches.model) : null),
-      engine: () => engine.engine(),
-      running: () => engine.current(),
-      log: (level: 'info' | 'warn', message: string) => log[level]('ai', message),
-      onUsed: modelId => hold(modelId),
-    }),
+    diffusers: engineRuntime,
+    plugin: engineRuntime,
     llamacpp: llamaLocalRuntime({
       files: fetchedFiles,
       weightsOf,

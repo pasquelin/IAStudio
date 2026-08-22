@@ -117,6 +117,24 @@ describe('the shipped catalogue', () => {
     expect(shippedModel('not-a-shipped-model')).toBeNull()
   })
 
+  it('opens every generating model rather than leaving it plugin-required', () => {
+    const closed = shippedModels()
+      .filter(model => model.modality && model.modality !== 'text')
+      .filter(model => model.runtimeStatus === 'plugin-required')
+      .map(model => model.id)
+
+    expect(closed).toEqual([])
+  })
+
+  it('gives every generating model a family and a capability', () => {
+    const bare = shippedModels()
+      .filter(model => model.modality && model.modality !== 'text')
+      .filter(model => !model.family || !model.capabilities?.length)
+      .map(model => model.id)
+
+    expect(bare).toEqual([])
+  })
+
   it('lists every shipped model once', () => {
     const models = shippedModels()
 

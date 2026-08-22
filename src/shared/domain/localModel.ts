@@ -148,6 +148,11 @@ export type LocalModel = {
   readonly licenceStatus?: LicenceStatus
   /** Whether anything here can run it today. `supported` by default. */
   readonly runtimeStatus?: RuntimeStatus
+  /**
+   * The official pipelines for these weights are CUDA kernels (spconv, nvdiffrast). MPS and CPU
+   * cannot open them; the verdict says so rather than offering a Generate that dies at import.
+   */
+  readonly needsCuda?: boolean
   /** What this completes, when it completes something rather than standing alone. */
   readonly attaches?: ModelAttachment
   /**
@@ -226,11 +231,11 @@ const ADMITTED: Record<ModelLoader, readonly ModelFormat[]> = {
    */
   diffusers: ['safetensors'],
   /**
-   * EMPTY, and never consulted: nothing here opens these weights, which is what `plugin` names.
-   * `modelRefusalOf` reads the runtime status first, so this line exists for the compiler and
-   * becomes the real gate the day such a loader is wired — with a measurement, like the others.
+   * safetensors, and pickle only through `torch.load(..., weights_only=True)` — measured on
+   * PyTorch 2.6, the same property Shap-E's `readsTorchWeights` rests on. The adapter is OURS
+   * (`plugin_adapter.py`); a `.py` beside the weights is still refused by `weightsCarryCode`.
    */
-  plugin: [],
+  plugin: ['safetensors', 'pickle'],
 }
 
 export function admitsLoad(format: ModelFormat, loader: ModelLoader): boolean {
@@ -362,12 +367,12 @@ export function modelRefusalOf(model: LocalModel): ModelRefusal | null {
 /**
  * Whether this loader is handed a FOLDER rather than a file.
  *
- * `from_pretrained` reads a whole tree — `model_index.json` at the root, one folder per component
- * — so two such models sharing the catalogue's single folder would overwrite each other's index
- * and read as one broken model. A loader handed a file has no such problem, and keeps sharing.
+ * `from_pretrained` and the plugin trees (`pipeline.json`, `config.yaml`) occupy the folder
+ * root, so two of them sharing the catalogue's single folder overwrite each other's index.
+ * A loader handed a file has no such problem, and keeps sharing.
  */
 export function needsOwnFolder(loader: ModelLoader): boolean {
-  return loader === 'diffusers'
+  return loader === 'diffusers' || loader === 'plugin'
 }
 
 /**

@@ -79,12 +79,21 @@ describe('the modalities that write a file', () => {
   it('counts frames and a rate for a video, where an image has neither', () => {
     const keys = localFieldsOf('video', {}, shout).map(field => field.key)
 
-    expect(keys).toEqual(expect.arrayContaining(['frames', 'fps']))
+    expect(keys).toEqual(expect.arrayContaining(['frames', 'fps', 'image']))
     expect(localFieldsOf('image', {}, shout).map(field => field.key)).not.toContain('frames')
   })
 
-  it('asks a sound how long it runs', () => {
-    expect(localFieldsOf('audio', {}, shout).map(field => field.key)).toContain('seconds')
+  it('asks a sound how long it runs, and for lyrics ACE-Step 1.5 takes', () => {
+    const keys = localFieldsOf('audio', {}, shout).map(field => field.key)
+
+    expect(keys).toEqual(expect.arrayContaining(['seconds', 'lyrics', 'video']))
+    expect(keys).not.toContain('negativePrompt')
+  })
+
+  it('lets a mesh skip the description when a picture is there', () => {
+    const prompt = localFieldsOf('mesh', {}, shout).find(field => field.key === 'prompt')
+
+    expect(prompt?.required).toBe(false)
   })
 
   // Measured 2026-08-22 against `ShapEPipeline.__call__`: it takes neither a size nor a negative

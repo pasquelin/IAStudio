@@ -3,6 +3,7 @@ import {
   admitsLoad,
   licenceAdmitted,
   modelRefusalOf,
+  needsOwnFolder,
   provenanceUnverified,
   type ModelFormat,
   type ModelLoader,
@@ -20,10 +21,15 @@ describe('admitsLoad', () => {
 
   // Refused, and not "with a warning": pickle executes arbitrary code at read time, and an
   // opt-out that can be configured is one that gets disarmed in silence.
-  it('refuses pickle for every loader', () => {
-    const loaders: readonly ModelLoader[] = ['sherpa-onnx', 'ollama', 'llamacpp']
+  it('refuses pickle for every loader that does not use weights_only', () => {
+    const loaders: readonly ModelLoader[] = ['sherpa-onnx', 'ollama', 'llamacpp', 'diffusers']
 
     for (const loader of loaders) expect(admitsLoad('pickle', loader)).toBe(false)
+  })
+
+  it('admits pickle for the plugin adapter, which loads with weights_only', () => {
+    expect(admitsLoad('pickle', 'plugin')).toBe(true)
+    expect(admitsLoad('safetensors', 'plugin')).toBe(true)
   })
 
   it('admits the formats designed not to execute anything', () => {
@@ -113,6 +119,15 @@ describe('a manifest that names code beside the weights', () => {
     })
 
     expect(modelRefusalOf(model)).toBeNull()
+  })
+})
+
+describe('needsOwnFolder', () => {
+  it('gives folder trees their own directory, and file loaders the shared one', () => {
+    expect(needsOwnFolder('diffusers')).toBe(true)
+    expect(needsOwnFolder('plugin')).toBe(true)
+    expect(needsOwnFolder('llamacpp')).toBe(false)
+    expect(needsOwnFolder('sherpa-onnx')).toBe(false)
   })
 })
 

@@ -24,6 +24,18 @@ diffusion = [
   "imageio>=2.34",
   "imageio-ffmpeg>=0.5",
 ]
+# TripoSR / TRELLIS / MMAudio. NEVER installed by `pnpm engine:check`.
+plugin = [
+  "torch>=2.6",
+  "einops>=0.7",
+  "omegaconf>=2.3",
+  "trimesh>=4.0",
+  "pillow>=10.0",
+  "huggingface-hub>=0.24",
+  "imageio>=2.34",
+  "rembg>=2.0",
+  "torchaudio>=2.6",
+]
 
 [dependency-groups]
 dev = ["pytest>=8.4", "ruff>=0.14"]

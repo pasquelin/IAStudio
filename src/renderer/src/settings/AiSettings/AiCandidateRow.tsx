@@ -8,6 +8,7 @@ import { useBytes } from '@/hooks/useBytes'
 import type { ModelFitSentence } from '@/hooks/useModelFit'
 import { AiChoiceRow } from './AiChoiceRow'
 import { AiModelActions } from './AiModelActions'
+import { AiPublisherLink } from './AiPublisherLink'
 
 export type AiCandidateRowProps = {
   role: AiRoleId
@@ -65,6 +66,7 @@ export const AiCandidateRow = memo(function AiCandidateRow({
       onChoose={onChoose}
       picture={<Thumbnail url={modelThumbnailUrl(candidate.model)} className="size-8" />}
     >
+      <AiPublisherLink url={candidate.model.source} />
       <AiModelActions candidate={candidate} progress={progress} loading={loading} busy={busy} />
     </AiChoiceRow>
   )

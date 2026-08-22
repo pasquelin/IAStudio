@@ -26,6 +26,17 @@ def _number(params: dict[str, Any], key: str) -> Any:
     return None if value is None or value == "" else value
 
 
+def _text(params: dict[str, Any], key: str) -> str | None:
+    value = params.get(key)
+    return value if isinstance(value, str) and value else None
+
+
+def _open_image(path: Any) -> Any:
+    from diffusers.utils import load_image
+
+    return load_image(str(path))
+
+
 def _generator(params: dict[str, Any]) -> Any:
     """The seed on the CPU whatever the device: `torch.Generator("mps")` does not exist."""
     seed = _number(params, "seed")
@@ -38,7 +49,10 @@ def _generator(params: dict[str, Any]) -> Any:
 
 
 def _shared_kwargs(params: dict[str, Any]) -> dict[str, Any]:
-    kwargs: dict[str, Any] = {"prompt": params["prompt"]}
+    kwargs: dict[str, Any] = {}
+    prompt = _text(params, "prompt")
+    if prompt is not None:
+        kwargs["prompt"] = prompt
     for ours, theirs in COMMON_KEYS.items():
         value = _number(params, ours)
         if value is not None:
@@ -61,25 +75,21 @@ def _sized_kwargs(params: dict[str, Any]) -> dict[str, Any]:
 
 def _image_kwargs(params: dict[str, Any]) -> dict[str, Any]:
     """
-    The same knobs, plus the picture a generation edits — the main process resolved it to a PATH.
-
-    A size is dropped once a picture is there: the pipeline reads the dimensions off it, and
-    passing both makes it resize to something nobody asked for.
+    Same knobs, plus the picture a generation edits. Size is dropped once a picture is there:
+    the pipeline reads the dimensions off it, and passing both resizes unasked.
     """
     kwargs = _sized_kwargs(params)
     source = _number(params, "image")
     if source is None:
         return kwargs
 
-    from diffusers.utils import load_image
-
     kwargs.pop("width", None)
     kwargs.pop("height", None)
-    kwargs["image"] = load_image(str(source))
+    kwargs["image"] = _open_image(source)
 
     mask = _number(params, "mask")
     if mask is not None:
-        kwargs["mask_image"] = load_image(str(mask))
+        kwargs["mask_image"] = _open_image(mask)
 
     strength = _number(params, "strength")
     # Refused by an inpainting pipeline that was handed no mask, and meaningless without a source.
@@ -89,28 +99,27 @@ def _image_kwargs(params: dict[str, Any]) -> dict[str, Any]:
 
 
 def _video_kwargs(params: dict[str, Any]) -> dict[str, Any]:
-    """
-    A sequence to rework replaces the size and the frame count: both are read off it, and passing
-    them anyway resamples what the person handed in.
-    """
+    """A sequence replaces size and frame count. A still is I2V and keeps the size."""
     kwargs = _sized_kwargs(params)
     frames = _number(params, "frames")
     if frames is not None:
         kwargs["num_frames"] = int(frames)
 
-    source = _number(params, "video")
-    if source is None:
+    sequence = _number(params, "video")
+    if sequence is not None:
+        from diffusers.utils import load_video
+
+        for read_off_the_source in ("width", "height", "num_frames"):
+            kwargs.pop(read_off_the_source, None)
+        kwargs["video"] = load_video(str(sequence))
+        strength = _number(params, "strength")
+        if strength is not None:
+            kwargs["strength"] = float(strength)
         return kwargs
 
-    from diffusers.utils import load_video
-
-    for read_off_the_source in ("width", "height", "num_frames"):
-        kwargs.pop(read_off_the_source, None)
-    kwargs["video"] = load_video(str(source))
-
-    strength = _number(params, "strength")
-    if strength is not None:
-        kwargs["strength"] = float(strength)
+    still = _number(params, "image")
+    if still is not None:
+        kwargs["image"] = _open_image(still)
     return kwargs
 
 
@@ -139,41 +148,40 @@ def _read_wave(path: str) -> Any:
 
 
 def _audio_kwargs(params: dict[str, Any]) -> dict[str, Any]:
-    """
-    A source take switches ACE-Step into `cover` on its own, and it is what gives the duration —
-    passing one anyway would crop or stretch what the person handed in.
-    """
+    """ACE-Step 1.5: `audio_duration` and `lyrics`. A source take is `src_audio`."""
     kwargs = _shared_kwargs(params)
+    lyrics = _text(params, "lyrics")
+    if lyrics is not None:
+        kwargs["lyrics"] = lyrics
+
     seconds = _number(params, "seconds")
     if seconds is not None:
-        kwargs["audio_end_in_s"] = float(seconds)
+        kwargs["audio_duration"] = float(seconds)
 
+    kwargs.pop("negative_prompt", None)
     source = _number(params, "audio")
     if source is None:
         return kwargs
 
-    kwargs.pop("audio_end_in_s", None)
+    kwargs.pop("audio_duration", None)
     kwargs["src_audio"] = _read_wave(str(source))
+    kwargs["task_type"] = "cover"
     return kwargs
 
 
 def _mesh_kwargs(params: dict[str, Any]) -> dict[str, Any]:
     """
     `mesh` and not the default `pil`: ShapE renders preview images unless asked for geometry.
-
-    A picture REPLACES the description rather than joining it: `ShapEImg2ImgPipeline` takes an
-    image and no prompt at all, and passing both raises before a single step runs.
+    A picture REPLACES the prompt: ShapEImg2ImgPipeline raises if both are passed.
     """
     kwargs = {**_shared_kwargs(params), "output_type": "mesh"}
     source = _number(params, "image")
     if source is None:
         return kwargs
 
-    from diffusers.utils import load_image
-
     kwargs.pop("prompt", None)
     kwargs.pop("negative_prompt", None)
-    kwargs["image"] = load_image(str(source))
+    kwargs["image"] = _open_image(source)
     return kwargs
 
 
@@ -182,39 +190,30 @@ def _write_image(result: Any, destination: str, _params: dict[str, Any]) -> None
 
 
 def _write_video(result: Any, destination: str, params: dict[str, Any]) -> None:
-    """
-    `[?]` **Never run, and it would fail today**: `export_to_video` writes through `imageio` and
-    `imageio-ffmpeg`, which the `diffusion` group does not declare — read in its source on
-    2026-08-22. It raises a named `ImportError` rather than a nude one, so the day a video model
-    is admitted the message says what to add.
-    """
     from diffusers.utils import export_to_video
 
     fps = _number(params, "fps")
     export_to_video(result.frames[0], destination, fps=int(fps) if fps is not None else 16)
 
 
-def _write_audio(result: Any, destination: str, _params: dict[str, Any]) -> None:
-    """
-    16-bit PCM through the standard library: `soundfile` would add a dependency, a licence line
-    and a bundled libsndfile for a header that is written here in ten lines.
-
-    `[?]` **Never run.** No audio model is admitted to the catalogue — ACE-Step has no pipeline in
-    diffusers 0.40, and what does have one is non-commercial or gated (measured 2026-08-22).
-    """
+def _write_audio(result: Any, destination: str, params: dict[str, Any]) -> None:
+    """16-bit PCM via the stdlib. ACE-Step keeps `sample_rate` on the pipeline."""
     import wave
 
     import numpy
 
-    audio = numpy.asarray(result.audios[0])
-    # `(channels, samples)` is what a pipeline hands back, and a wave file takes the transpose.
+    held = result.audios[0]
+    audio = held.detach().cpu().float().numpy() if hasattr(held, "detach") else numpy.asarray(held)
     frames = audio if audio.ndim == 1 else audio.T
+    rate = getattr(result, "sampling_rate", None)
+    if rate is None:
+        rate = _number(params, "samplingRate")
+    if rate is None:
+        raise ValueError("audio has no sampling rate")
     with wave.open(destination, "wb") as file:
         file.setnchannels(1 if frames.ndim == 1 else frames.shape[1])
         file.setsampwidth(2)
-        # The PIPELINE's rate, never ours: 44 100 written for a model that sampled at 16 000 plays
-        # back at three times the speed, with nothing to say it went wrong.
-        file.setframerate(int(result.sampling_rate))
+        file.setframerate(int(rate))
         file.writeframes((numpy.clip(frames, -1.0, 1.0) * 32767).astype("<i2").tobytes())
 
 

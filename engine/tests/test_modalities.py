@@ -17,6 +17,27 @@ def kwargs_of(modality: str, **params: Any) -> dict[str, Any]:
     return MODALITIES[modality].kwargs({"prompt": "a cat", **params})
 
 
+def kwargs_with(modality: str, *, load_image: Any, **params: Any) -> dict[str, Any]:
+    """Stand-in `diffusers.utils`: `load_image` is imported inside the kwargs function, not here."""
+    import sys
+    import types
+
+    stand_in = types.ModuleType("diffusers.utils")
+    stand_in.load_image = load_image
+    sys.modules.setdefault("diffusers", types.ModuleType("diffusers"))
+    sys.modules["diffusers.utils"] = stand_in
+    try:
+        return kwargs_of(modality, **params)
+    finally:
+        del sys.modules["diffusers.utils"]
+
+
+def test_an_empty_prompt_is_not_sent() -> None:
+    asked = MODALITIES["image"].kwargs({"prompt": "", "width": 512})
+
+    assert "prompt" not in asked
+
+
 def test_the_studio_field_names_reach_the_pipeline_as_its_own() -> None:
     asked = kwargs_of("image", steps=8, cfgScale=4.5, negativePrompt="blur")
 
@@ -42,8 +63,28 @@ def test_a_video_counts_its_frames() -> None:
     assert kwargs_of("video", frames=81)["num_frames"] == 81
 
 
+def test_a_video_still_reaches_the_pipeline_as_an_image() -> None:
+    asked = kwargs_with(
+        "video",
+        load_image=lambda path: f"opened:{path}",
+        prompt="walk",
+        image="/project/a.png",
+    )
+
+    assert asked["image"] == "opened:/project/a.png"
+    assert "video" not in asked
+
+
 def test_a_sound_carries_how_long_it_runs() -> None:
-    assert kwargs_of("audio", seconds=12)["audio_end_in_s"] == 12.0
+    assert kwargs_of("audio", seconds=12)["audio_duration"] == 12.0
+
+
+def test_lyrics_reach_the_pipeline() -> None:
+    assert kwargs_of("audio", lyrics="[verse]\nhello")["lyrics"] == "[verse]\nhello"
+
+
+def test_empty_lyrics_are_not_sent() -> None:
+    assert "lyrics" not in kwargs_of("audio", lyrics="")
 
 
 def test_a_mesh_asks_for_geometry_rather_than_a_preview() -> None:
@@ -68,26 +109,6 @@ def test_an_image_is_written_where_the_main_process_said() -> None:
     assert image.written == "/tmp/out.png"
 
 
-def image_kwargs_with(loaded, **params):
-    """
-    A stand-in `diffusers.utils`, because the gate installs no tensor library.
-
-    `load_image` is imported INSIDE the function, so the module has to exist at call time and
-    not before — which is exactly what makes this substitution possible without diffusers.
-    """
-    import sys
-    import types
-
-    stand_in = types.ModuleType("diffusers.utils")
-    stand_in.load_image = loaded
-    sys.modules.setdefault("diffusers", types.ModuleType("diffusers"))
-    sys.modules["diffusers.utils"] = stand_in
-    try:
-        return MODALITIES["image"].kwargs({"prompt": "a cat", **params})
-    finally:
-        del sys.modules["diffusers.utils"]
-
-
 def test_an_image_generation_asks_for_no_picture_when_none_was_given() -> None:
     asked = MODALITIES["image"].kwargs({"prompt": "a cat", "width": 512, "height": 512})
 
@@ -95,44 +116,40 @@ def test_an_image_generation_asks_for_no_picture_when_none_was_given() -> None:
 
 
 def test_the_picture_the_main_process_resolved_reaches_the_pipeline() -> None:
-    asked = image_kwargs_with(lambda path: f"opened:{path}", image="/project/a.png")
+    asked = kwargs_with("image", load_image=lambda path: f"opened:{path}", image="/project/a.png")
 
     assert asked["image"] == "opened:/project/a.png"
 
 
 def test_a_size_is_dropped_once_a_picture_is_there() -> None:
     """The pipeline reads the dimensions off the picture; passing both resizes it unasked."""
-    asked = image_kwargs_with(lambda path: path, image="/project/a.png", width=512, height=512)
+    asked = kwargs_with(
+        "image", load_image=lambda path: path, image="/project/a.png", width=512, height=512
+    )
 
     assert "width" not in asked and "height" not in asked
 
 
 def test_a_mask_is_what_says_the_generation_repaints_inside_it() -> None:
-    asked = image_kwargs_with(lambda path: path, image="/a.png", mask="/m.png", strength=0.5)
+    asked = kwargs_with(
+        "image", load_image=lambda path: path, image="/a.png", mask="/m.png", strength=0.5
+    )
 
     # Refused by an inpainting pipeline that was handed a mask, so it never travels with one.
     assert asked["mask_image"] == "/m.png" and "strength" not in asked
 
 
 def test_how_far_from_its_source_a_generation_may_go() -> None:
-    asked = image_kwargs_with(lambda path: path, image="/a.png", strength=0.5)
+    asked = kwargs_with("image", load_image=lambda path: path, image="/a.png", strength=0.5)
 
     assert asked["strength"] == 0.5
 
 
 def test_a_mesh_from_a_picture_drops_the_description_it_replaces() -> None:
     """`ShapEImg2ImgPipeline` takes an image and NO prompt: both raise before a step runs."""
-    import sys
-    import types
-
-    stand_in = types.ModuleType("diffusers.utils")
-    stand_in.load_image = lambda path: path
-    sys.modules.setdefault("diffusers", types.ModuleType("diffusers"))
-    sys.modules["diffusers.utils"] = stand_in
-    try:
-        asked = MODALITIES["mesh"].kwargs({"prompt": "a shark", "image": "/project/a.png"})
-    finally:
-        del sys.modules["diffusers.utils"]
+    asked = kwargs_with(
+        "mesh", load_image=lambda path: path, prompt="a shark", image="/project/a.png"
+    )
 
     assert asked["image"] == "/project/a.png"
     assert "prompt" not in asked
@@ -158,11 +175,18 @@ def test_a_source_take_is_what_gives_a_generation_its_length() -> None:
         modalities._read_wave = original
 
     assert asked["src_audio"] == "tensor:/project/take.wav"
-    assert "audio_end_in_s" not in asked
+    assert asked["task_type"] == "cover"
+    assert "audio_duration" not in asked
+
+
+def test_ace_step_is_not_handed_a_negative_prompt() -> None:
+    asked = kwargs_of("audio", negativePrompt="noise")
+
+    assert "negative_prompt" not in asked
 
 
 def test_a_take_without_one_keeps_the_duration_that_was_asked_for() -> None:
     asked = MODALITIES["audio"].kwargs({"prompt": "a beat", "seconds": 30})
 
-    assert asked["audio_end_in_s"] == 30.0
+    assert asked["audio_duration"] == 30.0
     assert "src_audio" not in asked

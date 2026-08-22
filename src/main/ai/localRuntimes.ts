@@ -28,6 +28,7 @@ const DOORS_BY_LOADER: Readonly<Partial<Record<ModelLoader, Readonly<Record<stri
   ollama: { '*': 'api-chat' },
   // `*` is what an unnamed modality falls back on, never a door of its own.
   diffusers: { ...DIFFUSERS_DOORS, '*': 'diffusion' },
+  plugin: { ...DIFFUSERS_DOORS, '*': 'diffusion' },
 }
 
 /** What the Python engine calls itself, and the only runtime whose doors are its processes. */

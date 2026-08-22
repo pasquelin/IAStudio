@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ia_studio_engine.adapters.modalities import Modality
+from ia_studio_engine.adapters.modalities import MODALITIES, Modality
 from ia_studio_engine.core.jobqueue import CancelledError
 
 
@@ -118,7 +118,36 @@ VIDEO_TO_VIDEO = {
     "CogVideoXPipeline": "CogVideoXVideoToVideoPipeline",
     "WanPipeline": "WanVideoToVideoPipeline",
     "WanImageToVideoPipeline": "WanVideoToVideoPipeline",
+    "MochiPipeline": "MochiVideoToVideoPipeline",
 }
+
+
+def accepted_kwargs(pipeline: Any, kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Drop arguments the resident class did not declare — a T2V still must not become TypeError."""
+    import inspect
+
+    try:
+        parameters = inspect.signature(pipeline.__call__).parameters
+    except (TypeError, ValueError):
+        return kwargs
+    if any(item.kind is inspect.Parameter.VAR_KEYWORD for item in parameters.values()):
+        return kwargs
+    return {key: value for key, value in kwargs.items() if key in parameters}
+
+
+def generation_refusal(kwargs: dict[str, Any]) -> str | None:
+    """A prompt, or a source the modality already turned into a pipeline argument."""
+    if kwargs.get("prompt") or any(key in kwargs for key in ("image", "video", "src_audio")):
+        return None
+    return "a generation needs a prompt"
+
+
+def tune_pipeline(pipeline: Any) -> None:
+    """Slicing and tiling keep the peak in RAM. Slicing: +50 ms / 2 % on Sana 600M."""
+    for knob in ("enable_attention_slicing", "enable_vae_slicing", "enable_vae_tiling"):
+        enable = getattr(pipeline, knob, None)
+        if callable(enable):
+            enable()
 
 
 def _attached(pipeline: Any, attachment: dict[str, Any], device: str) -> Any:
@@ -248,12 +277,7 @@ class DiffusersAdapter:
         if attachment is not None:
             pipeline = _attached(pipeline, attachment, device)
 
-        # Measured 2026-08-22 on Sana 600M: slicing costs **+50 ms on 3 289**, or 2 %, and buys a
-        # peak that fits — a denoise otherwise materialises the whole attention matrix at once,
-        # which is where a machine with room for the weights still runs out. Kept on the number,
-        # not on the belief.
-        if hasattr(pipeline, "enable_attention_slicing"):
-            pipeline.enable_attention_slicing()
+        tune_pipeline(pipeline)
         load_ms = (time.perf_counter_ns() - started) / 1e6
 
         self.loaded = LoadedModel(
@@ -293,22 +317,23 @@ class DiffusersAdapter:
 
     def _wanted_class(self, kwargs: dict[str, Any]) -> Any:
         """
-        Which pipeline the ARGUMENTS call for — a mask means repainting, a picture means editing,
-        a sequence means reworking. Nothing carries the employment down here.
-
-        Video goes through a TABLE where images go through an `AutoPipelineFor…`: diffusers
-        publishes no auto-pipeline for video, read on 2026-08-22.
+        Which pipeline the ARGUMENTS call for. Video goes through a TABLE: diffusers
+        publishes no `AutoPipelineForVideoToVideo`, read on 2026-08-22.
         """
-        import diffusers
-
         if "video" in kwargs:
+            import diffusers
+
             held = self.loaded
             assert held is not None
             wanted = VIDEO_TO_VIDEO.get(type(held.pipeline).__name__)
-            return getattr(diffusers, wanted) if wanted else None
+            return getattr(diffusers, wanted, None) if wanted else None
 
-        if "image" not in kwargs:
+        # Image employments only. A mesh picture is Shap-E; a video picture is I2V — neither
+        # is `AutoPipelineForImage2Image`. Import stays below: the gate has no diffusers.
+        if "image" not in kwargs or self.modality is not MODALITIES["image"]:
             return None
+
+        import diffusers
 
         return (
             diffusers.AutoPipelineForInpainting
@@ -349,11 +374,11 @@ class DiffusersAdapter:
         if held is None:
             raise LoadRefusedError("no model is loaded")
 
-        prompt = params.get("prompt")
-        if not isinstance(prompt, str) or not prompt:
-            raise LoadRefusedError("a generation needs a prompt")
-
         kwargs = self.modality.kwargs(params)
+        refusal = generation_refusal(kwargs)
+        if refusal is not None:
+            raise LoadRefusedError(refusal)
+
         steps = int(kwargs.get("num_inference_steps", held.default_steps))
 
         def between_steps(_pipeline: Any, step: int, _timestep: Any, state: dict) -> dict:
@@ -367,12 +392,17 @@ class DiffusersAdapter:
         pipeline = self._for(kwargs)
         if held.takes_step_callback:
             kwargs["callback_on_step_end"] = between_steps
+        kwargs = accepted_kwargs(pipeline, kwargs)
 
         started = time.perf_counter_ns()
         result = pipeline(**kwargs)
         generate_ms = (time.perf_counter_ns() - started) / 1e6
 
-        self.modality.write(result, destination, params)
+        write_params = dict(params)
+        sample_rate = getattr(pipeline, "sample_rate", None)
+        if sample_rate is not None:
+            write_params["samplingRate"] = int(sample_rate)
+        self.modality.write(result, destination, write_params)
         return {
             "path": destination,
             "door": door,
