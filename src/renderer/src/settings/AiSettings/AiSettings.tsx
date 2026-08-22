@@ -101,7 +101,7 @@ export function AiSettings() {
   const writesTo = overview.projectPath === null ? 'app' : (scope ?? scopeOf(overview))
   // Announced to every row rather than derived per row: what it says is that the disk is taken,
   // which is true of the whole screen.
-  const busy = overview.installing !== null
+  const busy = overview.installing !== null || overview.ollama.progress !== null
 
   return (
     <div className={SETTING_COLUMN}>
@@ -109,6 +109,7 @@ export function AiSettings() {
       {/* The one screen of this window that does not wait for Apply, said rather than discovered:
           the manager owns the write because it re-judges the candidates — see `SettingsWindow`. */}
       <p className={cn(WINDOW_HELP, 'mb-4')}>{t('aiModels.appliesNow')}</p>
+      <p className={cn(WINDOW_HELP, 'mb-4')}>{t('aiModels.sourcesIntro')}</p>
 
       {overview.projectPath !== null && (
         <SettingLine title={t('aiModels.scope')} labelFor={SCOPE_FIELD}>
@@ -156,6 +157,7 @@ export function AiSettings() {
                   installing={heldBy(row, overview.installing)}
                   busy={busy}
                   scope={writesTo}
+                  ollama={overview.ollama}
                   fitOf={fitOf}
                 />
               ))}

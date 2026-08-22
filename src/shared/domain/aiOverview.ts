@@ -110,8 +110,19 @@ export type AiOverview = {
   /** What the last load refused, or nothing. Cleared by the next load, never by a compose. */
   readonly loadFailure: LoadRefusal | null
   /**
-   * Whether Ollama is answering, and how many of its models the catalogue accepted.
-   * The settings screen always talks about it — hiding the group looked like it did not exist.
+   * Whether Ollama is on this computer, whether it is answering, and the models it listed.
+   * The settings screen always names the three sources so a person can pick among them.
    */
-  readonly ollama: { readonly ready: boolean; readonly available: number }
+  readonly ollama: OllamaOffer
+}
+
+export type OllamaOffer = {
+  readonly ready: boolean
+  /** A binary was found on this computer — usual locations or a studio copy. */
+  readonly installed: boolean
+  readonly names: readonly string[]
+  /** 0 to 1 while the official archive is being fetched. `null` when nothing is in flight. */
+  readonly progress: number | null
+  /** The last official-archive install did not land. Cleared by the next try. */
+  readonly failed: boolean
 }

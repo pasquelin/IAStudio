@@ -169,6 +169,8 @@ type ChannelMethod = {
   [CHANNELS.aiChooseMany]: StudioBridge['ai']['chooseMany']
   [CHANNELS.aiInstall]: StudioBridge['ai']['install']
   [CHANNELS.aiCancelInstall]: StudioBridge['ai']['cancelInstall']
+  [CHANNELS.aiInstallOllama]: StudioBridge['ai']['installOllama']
+  [CHANNELS.aiCancelInstallOllama]: StudioBridge['ai']['cancelInstallOllama']
   [CHANNELS.aiRemove]: StudioBridge['ai']['remove']
   [CHANNELS.aiLoad]: StudioBridge['ai']['load']
   [CHANNELS.aiCancelLoad]: StudioBridge['ai']['cancelLoad']

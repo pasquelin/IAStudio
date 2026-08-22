@@ -30,6 +30,8 @@ export function registerAiHandlers({ manager, addOwnModel }: AiHandlerDeps): voi
 
   handle(CHANNELS.aiInstall, (_event, modelId) => manager.install(parseModelId(modelId)))
   handle(CHANNELS.aiCancelInstall, () => manager.cancelInstall())
+  handle(CHANNELS.aiInstallOllama, () => manager.installOllama())
+  handle(CHANNELS.aiCancelInstallOllama, () => manager.cancelInstallOllama())
   handle(CHANNELS.aiRemove, (_event, modelId) => manager.remove(parseModelId(modelId)))
   handle(CHANNELS.aiLoad, (_event, modelId) => manager.load(parseModelId(modelId)))
   handle(CHANNELS.aiCancelLoad, () => manager.cancelLoad())

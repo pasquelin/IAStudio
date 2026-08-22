@@ -54,7 +54,10 @@ const input = (over: Partial<OverviewInput> = {}): OverviewInput => ({
   loading: null,
   loadFailure: null,
   ollamaReady: false,
-  ollamaAvailable: 0,
+  ollamaInstalled: false,
+  ollamaNames: [],
+  ollamaProgress: null,
+  ollamaFailed: false,
   ...over,
 })
 
@@ -66,11 +69,28 @@ describe('aiOverviewOf', () => {
    * Twenty-one rows, most of them empty, would bury the two that answer. A role with no
    * candidate and no account has nothing to offer and nothing to explain.
    */
-  it('says whether Ollama is answering, so the settings screen can talk about it', () => {
-    expect(aiOverviewOf(input()).ollama).toEqual({ ready: false, available: 0 })
-    expect(aiOverviewOf(input({ ollamaReady: true, ollamaAvailable: 2 })).ollama).toEqual({
+  it('says whether Ollama is on this computer and which models it listed', () => {
+    expect(aiOverviewOf(input()).ollama).toEqual({
+      ready: false,
+      installed: false,
+      names: [],
+      progress: null,
+      failed: false,
+    })
+    expect(
+      aiOverviewOf(
+        input({
+          ollamaReady: true,
+          ollamaInstalled: true,
+          ollamaNames: ['alpha:1', 'beta:2'],
+        }),
+      ).ollama,
+    ).toEqual({
       ready: true,
-      available: 2,
+      installed: true,
+      names: ['alpha:1', 'beta:2'],
+      progress: null,
+      failed: false,
     })
   })
 

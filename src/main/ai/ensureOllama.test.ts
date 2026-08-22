@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ensureOllama, ollamaBinary, type EnsureOllama } from './ensureOllama'
+import { ensureOllama, ollamaBinary, ollamaInstalled, type EnsureOllama } from './ensureOllama'
 
 function deps(over: Partial<EnsureOllama> = {}): EnsureOllama {
   return {
@@ -51,6 +51,35 @@ describe('ollamaBinary', () => {
       'D:\\tools\\ollama.exe',
       'E:\\bin\\ollama.exe',
     ])
+  })
+
+  it('searches a studio copy after the usual locations, with that platform separator', () => {
+    expect(ollamaBinary('linux', {}, '/var/studio/ollama')).toEqual([
+      '/usr/local/bin/ollama',
+      '/usr/bin/ollama',
+      '/snap/bin/ollama',
+      '/var/studio/ollama/ollama',
+      '/var/studio/ollama/bin/ollama',
+    ])
+    expect(ollamaBinary('win32', { LOCALAPPDATA: 'D:\\Local' }, 'E:\\studio\\ollama')).toEqual([
+      'D:\\Local\\Programs\\Ollama\\ollama.exe',
+      'E:\\studio\\ollama\\ollama.exe',
+      'E:\\studio\\ollama\\bin\\ollama.exe',
+    ])
+  })
+})
+
+describe('ollamaInstalled', () => {
+  it('is true when any search path exists, including a studio copy', () => {
+    expect(ollamaInstalled('linux', {}, () => false)).toBe(false)
+    expect(
+      ollamaInstalled(
+        'linux',
+        {},
+        path => path === '/var/studio/ollama/bin/ollama',
+        '/var/studio/ollama',
+      ),
+    ).toBe(true)
   })
 })
 

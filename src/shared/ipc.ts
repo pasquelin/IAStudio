@@ -240,6 +240,8 @@ export type Channels = {
   aiChooseMany: 'ai:choose-many'
   aiInstall: 'ai:install'
   aiCancelInstall: 'ai:cancel-install'
+  aiInstallOllama: 'ai:install-ollama'
+  aiCancelInstallOllama: 'ai:cancel-install-ollama'
   aiRemove: 'ai:remove'
   aiLoad: 'ai:load'
   aiCancelLoad: 'ai:cancel-load'
@@ -443,6 +445,8 @@ export const CHANNELS: Channels = {
   aiChooseMany: 'ai:choose-many',
   aiInstall: 'ai:install',
   aiCancelInstall: 'ai:cancel-install',
+  aiInstallOllama: 'ai:install-ollama',
+  aiCancelInstallOllama: 'ai:cancel-install-ollama',
   aiRemove: 'ai:remove',
   aiLoad: 'ai:load',
   aiCancelLoad: 'ai:cancel-load',
@@ -1678,6 +1682,9 @@ export type StudioBridge = {
     /** Fetches a model's files. One at a time: a second would compete for the same disk. */
     install: (modelId: string) => Promise<AiOverview>
     cancelInstall: () => Promise<AiOverview>
+    /** Puts Ollama on this computer when it is missing. Same disk lock as a model install. */
+    installOllama: () => Promise<AiOverview>
+    cancelInstallOllama: () => Promise<AiOverview>
     /**
      * Deletes the files. The choices that named it are left alone — they fall back on their own.
      *

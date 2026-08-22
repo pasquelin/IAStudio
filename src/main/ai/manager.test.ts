@@ -99,6 +99,8 @@ const manager = (over: Partial<ManagerDeps> = {}) =>
     log: () => {},
     now: () => 0,
     idleUnloadMinutes: () => 0,
+    ollamaInstalled: () => false,
+    installOllama: () => Promise.resolve(),
     ...over,
   })
 
@@ -181,6 +183,45 @@ describe('the AI manager', () => {
     expect(candidateOf(await ai.overview(), 'qwen3:8b')).toBeUndefined()
     expect(written).toEqual([])
     expect(stored.ai.roles[ASSISTANT_ROLE]).toEqual({ kind: 'local', modelId: 'qwen3:8b' })
+  })
+
+  it('says Ollama is missing until a binary is on this computer', async () => {
+    expect((await manager().overview()).ollama.installed).toBe(false)
+    expect((await manager({ ollamaInstalled: () => true }).overview()).ollama.installed).toBe(true)
+  })
+
+  it('reports the official-archive install until it lands', async () => {
+    let release!: () => void
+    const held = new Promise<void>(ok => {
+      release = ok
+    })
+    const seen: (number | null)[] = []
+    const ai = manager({
+      installOllama: async onProgress => {
+        onProgress(0.4)
+        await held
+      },
+      emit: overview => seen.push(overview.ollama.progress),
+    })
+
+    const running = ai.installOllama()
+    await vi.waitFor(() => {
+      expect(seen).toContain(0.4)
+    })
+    release()
+    const done = await running
+
+    expect(done.ollama.progress).toBeNull()
+    expect(done.ollama.failed).toBe(false)
+  })
+
+  it('keeps the Install offer and says so when the official archive did not land', async () => {
+    const overview = await manager({
+      installOllama: () => Promise.reject(new Error('zstd is not on this computer')),
+    }).installOllama()
+
+    expect(overview.ollama.installed).toBe(false)
+    expect(overview.ollama.failed).toBe(true)
   })
 
   it('writes every employment of one pick in a single settings save', async () => {

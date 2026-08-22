@@ -53,7 +53,7 @@ const overview = (over: Partial<AiOverview> = {}): AiOverview => ({
   installing: null,
   loading: null,
   loadFailure: null,
-  ollama: { ready: false, available: 0 },
+  ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
   ...over,
 })
 
@@ -105,16 +105,50 @@ describe('AiSettings', () => {
     expect(screen.getByText(/place insuffisante — 48/)).toBeInTheDocument()
   })
 
-  it('names Ollama on an employment it cannot serve, and points to Assistant', () => {
+  it('names Ollama on an employment it cannot serve and lists the models it does have', () => {
     show(
       overview({
-        ollama: { ready: true, available: 2 },
+        ollama: {
+          ready: true,
+          installed: true,
+          names: ['alpha:1', 'beta:2'],
+          progress: null,
+          failed: false,
+        },
         roles: [row({ role: aiRoleId('image', 'txt2img'), candidates: [PARAKEET] })],
       }),
     )
 
     expect(screen.getByText('Ollama')).toBeInTheDocument()
-    expect(screen.getByText(/Ses modèles de conversation sont sous Assistant/)).toBeInTheDocument()
+    expect(screen.getByText(/alpha:1/)).toBeInTheDocument()
+    expect(screen.getByText(/emploi qu’ils savent faire/)).toBeInTheDocument()
+  })
+
+  it('offers to install Ollama when it is not on this computer', () => {
+    const installOllama = vi.fn(() => Promise.resolve(overview()))
+    installFakeBridge({ ai: { installOllama } })
+    show(
+      overview({
+        ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
+        roles: [row({ role: aiRoleId('image', 'txt2img'), candidates: [PARAKEET] })],
+      }),
+    )
+
+    expect(screen.getByText(/n’est pas sur cet ordinateur/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Installer Ollama' }))
+    expect(installOllama).toHaveBeenCalledOnce()
+  })
+
+  it('says the install failed without pretending Ollama is here', () => {
+    show(
+      overview({
+        ollama: { ready: false, installed: false, names: [], progress: null, failed: true },
+        roles: [row({ role: aiRoleId('image', 'txt2img'), candidates: [PARAKEET] })],
+      }),
+    )
+
+    expect(screen.getByText(/n’a pas marché/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Installer Ollama' })).toBeInTheDocument()
   })
 
   it('groups Ollama models away from the studio catalogue', () => {
@@ -128,10 +162,15 @@ describe('AiSettings', () => {
         files: [],
       }),
     }
-    show(overview({ roles: [row({ candidates: [PARAKEET, ollama] })] }))
+    show(
+      overview({
+        roles: [row({ candidates: [PARAKEET, ollama], clouds: ['scenario'] })],
+      }),
+    )
 
-    expect(screen.getByText('IA Studio')).toBeInTheDocument()
+    expect(screen.getByText('Sur cet ordinateur')).toBeInTheDocument()
     expect(screen.getByText('Ollama')).toBeInTheDocument()
+    expect(screen.getByText('En ligne')).toBeInTheDocument()
   })
 
   it('writes the choice for the role the candidate belongs to', () => {

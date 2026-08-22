@@ -10,6 +10,7 @@ import {
   type ModelLoader,
 } from '@shared/domain/localModel'
 import type { PartialSettings, Settings } from '@shared/domain/settings'
+import { DownloadCancelled } from './modelInstall'
 import { admissionFor } from './admission'
 import { catalogueWith, modelsForWith, modelWith, rolesServedBy } from './catalogue'
 import { asRuntimeSnapshot, type HardwareFacts } from './hardwareProbe'
@@ -54,6 +55,10 @@ export type ManagerDeps = {
   idleUnloadMinutes?: () => number
   /** Tests inject a clock. Production uses `setTimeout`. */
   schedule?: (run: () => void, ms: number) => () => void
+  /** Whether an Ollama binary is on this computer — usual locations or a studio copy. */
+  ollamaInstalled: () => boolean
+  /** Fetches the official archive into the studio folder when none is on this computer. */
+  installOllama: (onProgress: (ratio: number) => void, signal: AbortSignal) => Promise<void>
 }
 
 export type AiManager = {
@@ -84,6 +89,9 @@ export type AiManager = {
   installedIds: () => ReadonlySet<string>
   install: (modelId: string) => Promise<AiOverview>
   cancelInstall: () => Promise<AiOverview>
+  /** Puts Ollama on this computer when it is missing. One at a time, like a model install. */
+  installOllama: () => Promise<AiOverview>
+  cancelInstallOllama: () => Promise<AiOverview>
   remove: (modelId: string) => Promise<AiOverview>
   /**
    * Holds the weights in memory, or says why it could not — never a freeze. Cancellable, and it
@@ -176,6 +184,10 @@ const loaderOf = (endpoint: RuntimeEndpointId): ModelLoader => {
 export function createAiManager(deps: ManagerDeps): AiManager {
   // At most one install runs: a second would compete for the same disk and the same bar.
   let running: RunningInstall | null = null
+  let ollamaAbort: AbortController | null = null
+  let ollamaProgress: number | null = null
+  let ollamaFailed = false
+  let ollamaDone: Promise<AiOverview> | null = null
   let loading: { modelId: string; ratio: number; abort: AbortController } | null = null
   let loadFailure: LoadRefusal | null = null
 
@@ -307,7 +319,10 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       loading: loading === null ? null : { modelId: loading.modelId, ratio: loading.ratio },
       loadFailure,
       ollamaReady: readings.get('ollama')?.ready === true,
-      ollamaAvailable: 0,
+      ollamaInstalled: deps.ollamaInstalled(),
+      ollamaNames: [],
+      ollamaProgress,
+      ollamaFailed,
     }
   }
 
@@ -317,11 +332,13 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     const own = stored.ai.ownModels
     const [machine, discovered] = await Promise.all([facts(), discover()])
     const readings = await readingsOf(catalogueWith(own, discovered))
-    const ollama = discovered.filter(model => model.loader === 'ollama').length
+    const ollamaNames = discovered
+      .filter(model => model.loader === 'ollama')
+      .map(model => model.name)
 
     return aiOverviewOf({
       ...inputFrom(machine, readings, stored, role => modelsForWith(role, own, discovered)),
-      ollamaAvailable: ollama,
+      ollamaNames,
     })
   }
 
@@ -346,6 +363,35 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
     published = { ...published, ...patch }
     deps.emit(published)
+  }
+
+  function reportOllamaProgress(ratio: number): void {
+    ollamaProgress = ratio
+    if (published === null) {
+      void announce()
+      return
+    }
+    republish({ ollama: { ...published.ollama, progress: ratio } })
+  }
+
+  async function runOllamaInstall(): Promise<AiOverview> {
+    ollamaAbort = new AbortController()
+    ollamaProgress = 0
+    ollamaFailed = false
+    void announce()
+    try {
+      await deps.installOllama(reportOllamaProgress, ollamaAbort.signal)
+      forgetDiscovered()
+    } catch (error) {
+      if (!(error instanceof DownloadCancelled)) {
+        ollamaFailed = true
+        deps.log('warn', `Ollama install stopped: ${String(error)}`)
+      }
+    } finally {
+      ollamaAbort = null
+      ollamaProgress = null
+    }
+    return announce()
   }
 
   async function fetchFiles(model: LocalModel, abort: AbortController): Promise<void> {
@@ -401,6 +447,10 @@ export function createAiManager(deps: ManagerDeps): AiManager {
   ): Promise<void> {
     // Aborted counts as busy: the lock is held until the host rejects, and joining an entry on
     // its way out hands back a promise already rejecting, with nothing started behind it.
+    if (ollamaAbort !== null) {
+      return Promise.reject(new Error('busy with ollama'))
+    }
+
     if (running !== null && (running.modelId !== model.id || running.abort.signal.aborted)) {
       // Rejected rather than thrown: one channel for one failure, whatever the caller awaits on.
       return Promise.reject(new Error(`busy with ${running.modelId}`))
@@ -635,6 +685,24 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     chooseMany,
 
     installModel,
+
+    installOllama: () => {
+      if (ollamaDone) return ollamaDone
+      if (running !== null) {
+        deps.log('warn', 'Ollama install skipped: a model download already holds the disk')
+        return compose()
+      }
+
+      ollamaDone = runOllamaInstall().finally(() => {
+        ollamaDone = null
+      })
+      return ollamaDone
+    },
+
+    cancelInstallOllama: async () => {
+      ollamaAbort?.abort()
+      return published ?? compose()
+    },
 
     install: async modelId => {
       const model = modelOf(modelId)

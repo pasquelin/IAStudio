@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, net, shell, systemPreferences } from 'elect
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readdirSync } from 'node:fs'
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { availableParallelism, totalmem } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
@@ -70,7 +70,14 @@ import { catalogueWith, modelWith } from './ai/catalogue'
 import { electronHardwarePort } from './ai/electronHardwarePort'
 import { electronLlamaPort } from './ai/electronLlamaPort'
 import { llamaLocalRuntime } from './ai/llamaRuntime'
-import { ensureOllama } from './ai/ensureOllama'
+import { ensureOllama, ollamaInstalled } from './ai/ensureOllama'
+import {
+  extractOllamaArchive,
+  fetchOllamaArchive,
+  installOllama,
+  needsZstd,
+  zstdOnPath,
+} from './ai/installOllama'
 import { ollamaHttpPort, ollamaLocalRuntime } from './ai/ollamaRuntime'
 import { hardwareProbe, memorySnapshotOf } from './ai/hardwareProbe'
 import { readyCloudsOf } from './ai/cloudReadiness'
@@ -1271,9 +1278,11 @@ export function createServices(settings: SettingsStore): Services {
   })
 
   const ollamaPort = ollamaHttpPort()
+  const ollamaDir = join(app.getPath('userData'), 'ollama')
   const startOllama = ensureOllama({
     platform: process.platform,
     env: process.env,
+    extraDir: ollamaDir,
     exists: existsSync,
     // Detached and unref'd: a ChildProcess handle would be a way to kill a service we don't own.
     spawn: (command, args) => {
@@ -1330,6 +1339,24 @@ export function createServices(settings: SettingsStore): Services {
     emit: overview => broadcast(EVENTS.ai, overview),
     log: (level, message) => log[level]('ai', message),
     now: Date.now,
+    ollamaInstalled: () => ollamaInstalled(process.platform, process.env, existsSync, ollamaDir),
+    installOllama: (onProgress, signal) =>
+      installOllama({
+        platform: process.platform,
+        arch: process.arch,
+        env: process.env,
+        extraDir: ollamaDir,
+        exists: existsSync,
+        ensureFolder,
+        download: fetchOllamaArchive,
+        extract: extractOllamaArchive,
+        remove: path => rm(path, { force: true }),
+        chmod: path => chmod(path, 0o755),
+        ensure: startOllama,
+        canUnpack: kind => !needsZstd(kind) || zstdOnPath(),
+        onProgress,
+        signal,
+      }),
   })
   hold = ai.hold
   lookup = modelId => ai.lookup(modelId)

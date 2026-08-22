@@ -9,6 +9,8 @@ export type EnsureOllama = {
   readonly ping: () => Promise<boolean>
   readonly wait?: (ms: number) => Promise<void>
   readonly now?: () => number
+  /** Where a studio-installed copy lives, if one does. Searched after the usual locations. */
+  readonly extraDir?: string
 }
 
 const SETTLE_MS = 200
@@ -29,10 +31,14 @@ function kept(paths: readonly (string | undefined)[]): string[] {
 }
 
 /**
- * Usual install locations. Joins follow the handed-in platform, not this process's — a Windows
- * path asserted on a Mac would otherwise go through posix `join`.
+ * Usual install locations, then an optional studio copy, then PATH. Joins follow the handed-in
+ * platform, not this process's — a Windows path asserted on a Mac would otherwise go through posix.
  */
-export function ollamaBinary(platform: NodeJS.Platform, env: NodeJS.ProcessEnv): string[] {
+export function ollamaBinary(
+  platform: NodeJS.Platform,
+  env: NodeJS.ProcessEnv,
+  extraDir?: string,
+): string[] {
   const { join } = pathOf(platform)
   const exe = platform === 'win32' ? 'ollama.exe' : 'ollama'
 
@@ -59,7 +65,20 @@ export function ollamaBinary(platform: NodeJS.Platform, env: NodeJS.ProcessEnv):
     ])
   }
 
-  return [...known, ...pathEntries(platform, env).map(dir => join(dir, exe))]
+  return [
+    ...known,
+    ...(extraDir ? [join(extraDir, exe), join(extraDir, 'bin', exe)] : []),
+    ...pathEntries(platform, env).map(dir => join(dir, exe)),
+  ]
+}
+
+export function ollamaInstalled(
+  platform: NodeJS.Platform,
+  env: NodeJS.ProcessEnv,
+  exists: (path: string) => boolean,
+  extraDir?: string,
+): boolean {
+  return ollamaBinary(platform, env, extraDir).some(exists)
 }
 
 /**
@@ -89,7 +108,7 @@ export function ensureOllama(deps: EnsureOllama): () => Promise<boolean> {
   async function run(): Promise<boolean> {
     if (await deps.ping()) return true
 
-    const binary = ollamaBinary(deps.platform, deps.env).find(deps.exists)
+    const binary = ollamaBinary(deps.platform, deps.env, deps.extraDir).find(deps.exists)
     if (binary === undefined) return false
     if (lastSpawnAt !== null && now() - lastSpawnAt < SPAWN_COOLDOWN_MS) return false
 

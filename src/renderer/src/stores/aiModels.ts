@@ -33,6 +33,8 @@ type AiModelsState = {
   /** Fetches a model's files. Resolves once the download ends, progress arriving meanwhile. */
   installAiModel: (modelId: string) => Promise<void>
   cancelAiInstall: () => Promise<void>
+  installOllama: () => Promise<void>
+  cancelInstallOllama: () => Promise<void>
   removeAiModel: (modelId: string) => Promise<void>
   /** Holds the weights in memory, or leaves `overview.loadFailure` saying why it could not. */
   loadAiModel: (modelId: string) => Promise<void>
@@ -88,6 +90,8 @@ export const useAiModels = create<AiModelsState>()(set => {
     chooseAiProviders: (writes, scope) => command(bridge => bridge.ai.chooseMany(writes, scope)),
     installAiModel: modelId => command(bridge => bridge.ai.install(modelId)),
     cancelAiInstall: () => command(bridge => bridge.ai.cancelInstall()),
+    installOllama: () => command(bridge => bridge.ai.installOllama()),
+    cancelInstallOllama: () => command(bridge => bridge.ai.cancelInstallOllama()),
     removeAiModel: modelId => command(bridge => bridge.ai.remove(modelId)),
     loadAiModel: modelId => command(bridge => bridge.ai.load(modelId)),
     cancelAiLoad: () => command(bridge => bridge.ai.cancelLoad()),

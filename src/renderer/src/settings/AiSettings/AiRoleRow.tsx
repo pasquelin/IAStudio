@@ -1,7 +1,13 @@
 import { mdiInformationOutline } from '@mdi/js'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AiOverview, ChoiceScope, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
+import type {
+  AiOverview,
+  ChoiceScope,
+  ModelCandidate,
+  OllamaOffer,
+  RoleRow,
+} from '@shared/domain/aiOverview'
 import { partsOfRole } from '@shared/domain/aiRole'
 import { MODEL_SOURCES, sourceOf, type ModelSource } from '@shared/domain/localModel'
 import { UiIcon } from '@/design/UiIcon'
@@ -11,18 +17,13 @@ import { useAiModels } from '@/stores/aiModels'
 import { useModels } from '@/stores/models'
 import { AiCandidateRow } from './AiCandidateRow'
 import { AiChoiceRow } from './AiChoiceRow'
+import { AiOllamaOffer } from './AiOllamaOffer'
 import { roleLabel } from './roleLabel'
 
 const SOURCE_KEY: Record<ModelSource, string> = {
-  studio: 'app.name',
+  studio: 'aiModels.sourceStudio',
   ollama: 'aiModels.sourceOllama',
   custom: 'aiModels.sourceCustom',
-}
-
-function ollamaHelpKey(offer: { ready: boolean; available: number }): string {
-  if (!offer.ready) return 'aiModels.ollamaHelpDown'
-  if (offer.available === 0) return 'aiModels.ollamaHelpEmpty'
-  return 'aiModels.ollamaHelpElsewhere'
 }
 
 export type AiRoleRowProps = {
@@ -35,6 +36,8 @@ export type AiRoleRowProps = {
   busy: boolean
   /** Where a click writes — the application default, or the open project alone. */
   scope: ChoiceScope
+  /** The Ollama group, empty or in flight — the same offer on every employment. */
+  ollama: OllamaOffer
   fitOf: (candidate: ModelCandidate) => ModelFitSentence
 }
 
@@ -48,12 +51,12 @@ export const AiRoleRow = memo(function AiRoleRow({
   loading,
   busy,
   scope,
+  ollama,
   fitOf,
 }: AiRoleRowProps) {
   const { t } = useTranslation()
   const chooseAiProvider = useAiModels(state => state.chooseAiProvider)
   const selectFamilyModel = useModels(state => state.select)
-  const ollama = useAiModels(state => state.overview?.ollama) ?? { ready: false, available: 0 }
 
   const label = roleLabel(row.role, t)
   // Captured so the narrowing survives into the callback below, which a property access does not.
@@ -126,17 +129,15 @@ export const AiRoleRow = memo(function AiRoleRow({
             return (
               <li key={source}>
                 <h4 className={WINDOW_GROUP_LABEL}>{t(SOURCE_KEY[source])}</h4>
-                {source === 'ollama' && (
+                {source === 'studio' && (
+                  <p className={WINDOW_CAPTION}>{t('aiModels.sourceStudioHelp')}</p>
+                )}
+                {source === 'ollama' && candidates.length > 0 && (
                   <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
                 )}
                 <ul>
                   {source === 'ollama' && candidates.length === 0 && (
-                    <li className="py-2">
-                      <span className="alert alert-info alert-soft">
-                        <UiIcon path={mdiInformationOutline} />
-                        {t(ollamaHelpKey(ollama))}
-                      </span>
-                    </li>
+                    <AiOllamaOffer offer={ollama} busy={busy} />
                   )}
                   {candidates.map(candidate => (
                     <AiCandidateRow
