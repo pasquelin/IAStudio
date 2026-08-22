@@ -14,7 +14,8 @@ import { admissionFor } from './admission'
 import { catalogueWith, modelsForWith, modelWith } from './catalogue'
 import { asRuntimeSnapshot, type HardwareFacts } from './hardwareProbe'
 import {
-  ENDPOINT_BY_LOADER,
+  endpointOf,
+  endpointsOf,
   runtimeReadingsOf,
   type LocalRuntimes,
   type RuntimeReading,
@@ -109,9 +110,11 @@ const DEFAULT_FACTS_TTL_MS = 3000
 /** How much a load must have advanced before it is worth telling every window about. */
 const LOAD_STEP = 0.01
 
-/** The loader a door belongs to — the inverse of `ENDPOINT_BY_LOADER`, built once. */
+/** The loader a door belongs to, built once. A loader may answer on SEVERAL — see `endpointsOf`. */
 const LOADER_BY_ENDPOINT: ReadonlyMap<RuntimeEndpointId, ModelLoader> = new Map(
-  MODEL_LOADERS.map(loader => [ENDPOINT_BY_LOADER[loader], loader]),
+  MODEL_LOADERS.flatMap(loader =>
+    endpointsOf(loader).map((door): [RuntimeEndpointId, ModelLoader] => [door, loader]),
+  ),
 )
 
 const loaderOf = (endpoint: RuntimeEndpointId): ModelLoader => {
@@ -192,9 +195,12 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       // Only what this reading COVERED: `providerOf` narrows the models to one role, so a loader
       // absent from the map was never asked — and forgetting its bytes would let the next
       // admission over-commit what is still resident.
-      const endpoint = ENDPOINT_BY_LOADER[loader]
-      const held = occupancy.get(endpoint)
-      if (held && reading.loaded !== held.modelId) occupancy.delete(endpoint)
+      // Every door of the loader: one that answers for two modalities holds two, and forgetting
+      // only the first would let the next admission over-commit what the second still holds.
+      for (const endpoint of endpointsOf(loader)) {
+        const held = occupancy.get(endpoint)
+        if (held && reading.loaded !== held.modelId) occupancy.delete(endpoint)
+      }
     }
   }
 
@@ -325,10 +331,10 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     return entry.done
   }
 
-  /** Frees a door and forgets what it held. A release is never added back to a reading — R2. */
-  const release = async (loader: ModelLoader): Promise<void> => {
-    await deps.runtimes[loader]?.unload?.()
-    occupancy.delete(ENDPOINT_BY_LOADER[loader])
+  /** Frees a DOOR and forgets what it held. A release is never added back to a reading — R2. */
+  const release = async (endpoint: RuntimeEndpointId): Promise<void> => {
+    await deps.runtimes[loaderOf(endpoint)]?.unload?.()
+    occupancy.delete(endpoint)
   }
 
   /**
@@ -347,7 +353,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
     const admission = admissionFor(
       snapshot,
-      { endpoint: ENDPOINT_BY_LOADER[model.loader], needBytes: model.reservationBytes },
+      { endpoint: endpointOf(model.loader, model.modality), needBytes: model.reservationBytes },
       // Nothing is `active`: a door is either loading — and this is the load — or idle, since one
       // load runs at a time and a turn holds its door for the length of one answer.
       { active: new Set(), lastUsedAt },
@@ -355,7 +361,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
     if (admission.verdict === 'release-first') {
       for (const door of admission.release) {
-        await release(loaderOf(door))
+        await release(door)
       }
     }
 
@@ -375,7 +381,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
   const runLoad = async (model: LocalModel): Promise<void> => {
     const load = deps.runtimes[model.loader]?.load
-    const endpoint = ENDPOINT_BY_LOADER[model.loader]
+    const endpoint = endpointOf(model.loader, model.modality)
 
     const abort = new AbortController()
     loading = { modelId: model.id, ratio: 0, abort }
@@ -496,9 +502,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       if (isSuppliedModel(model)) {
         // Freed FIRST: once it is out of the catalogue no row offers to unload it any more, and
         // the runtime would go on holding its weights with nothing left to say so.
-        if (occupancy.get(ENDPOINT_BY_LOADER[model.loader])?.modelId === modelId) {
-          await release(model.loader)
-        }
+        const endpoint = endpointOf(model.loader, model.modality)
+        if (occupancy.get(endpoint)?.modelId === modelId) await release(endpoint)
 
         const stored = deps.settings()
         await deps.writeSettings({
@@ -538,7 +543,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       if (model === null) return compose()
 
       try {
-        await release(model.loader)
+        await release(endpointOf(model.loader, model.modality))
       } catch (error) {
         deps.log('warn', `unloading ${modelId} failed: ${String(error)}`)
       }

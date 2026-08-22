@@ -32,8 +32,13 @@ Handler = Callable[[dict[str, Any]], Any]
 CANCEL_OP = "engine.cancel"
 
 
-def worker_hello(door: str, backend: str, device: str) -> str:
-    """A worker names its DOOR, not its runtime: that is what keys `MemorySnapshot.runtimeBytes`."""
+def worker_hello(door: str, backend: str, device: str, occupancy: dict[str, Any]) -> str:
+    """
+    A worker names its DOOR, not its runtime: that is what keys `MemorySnapshot.runtimeBytes`.
+
+    Occupancy is ANNOUNCED and never compiled: it depends on the backend, the adapter, the model
+    and the machine, and the main process knows none of the four. It reads, orders and decides.
+    """
     return encode_event(
         "worker.hello",
         door=door,
@@ -41,6 +46,7 @@ def worker_hello(door: str, backend: str, device: str) -> str:
         protocol=PROTOCOL_VERSION,
         backend=backend,
         device=device,
+        occupancy=occupancy,
     )
 
 

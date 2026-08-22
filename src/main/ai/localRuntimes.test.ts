@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
+import { runtimeEndpointId } from '@shared/domain/aiRuntime'
+import { MODEL_LOADERS } from '@shared/domain/localModel'
+import { endpointOf, endpointsOf } from './localRuntimes'
 import type { LocalModel } from '@shared/domain/localModel'
 import { localModel } from '@shared/domain/localModel-fixtures'
 import { fileRuntime, runtimeReadingsOf, type LocalRuntime } from './localRuntimes'
@@ -109,5 +112,40 @@ describe('fileRuntime', () => {
     await runtime.remove(parakeet)
 
     expect(removeFiles).toHaveBeenCalledWith(parakeet, '/elsewhere')
+  })
+})
+
+describe('the door a loader answers on', () => {
+  it('is its embedded one when it holds the weights in its own process', () => {
+    expect(endpointOf('llamacpp')).toBe(runtimeEndpointId('llamacpp', 'embedded'))
+  })
+
+  /**
+   * The reason this stopped being a `Record`: one can only ever hold ONE door per loader, and the
+   * same Python runtime answers for images and for meshes from two processes.
+   */
+  it('differs by modality for a loader that serves several', () => {
+    expect(endpointOf('diffusers', 'image')).not.toBe(endpointOf('diffusers', 'mesh'))
+  })
+
+  it('falls back rather than minting a door for a modality nobody declared', () => {
+    expect(endpointOf('diffusers', 'unheard-of')).toBe(endpointOf('diffusers'))
+  })
+})
+
+describe('every door a loader answers on', () => {
+  /** An inverse map is built from this: a door missing here has no loader, and a plan throws. */
+  it('holds each of them once', () => {
+    expect([...endpointsOf('diffusers')].sort()).toEqual([
+      runtimeEndpointId('diffusers', '3d'),
+      runtimeEndpointId('diffusers', 'audio'),
+      runtimeEndpointId('diffusers', 'diffusion'),
+    ])
+  })
+
+  it('covers what `endpointOf` can answer, for every loader', () => {
+    for (const loader of MODEL_LOADERS) {
+      expect(endpointsOf(loader)).toContain(endpointOf(loader))
+    }
   })
 })

@@ -54,6 +54,26 @@ const hello = z.object({
 })
 
 /**
+ * A door announcing itself. It arrives whenever a worker starts, which is why occupancy is DATA
+ * here rather than a constant: it depends on the backend, the adapter, the model and the machine,
+ * and the TypeScript knows none of the four.
+ */
+const workerHello = z.object({
+  v: z.number(),
+  evt: z.literal('worker.hello'),
+  door: z.string(),
+  engine: z.string(),
+  protocol: z.number(),
+  backend: z.string(),
+  device: z.string(),
+  occupancy: z.object({
+    process: z.union([z.literal('multi-job'), z.literal('exclusive-process')]),
+    device: z.union([z.literal('shared'), z.literal('exclusive')]),
+    maxConcurrent: z.number().nullable(),
+  }),
+})
+
+/**
  * A job reporting how far it is. Pushed between two denoise steps — the only place a long job can
  * say anything, and the only place a cancel can land.
  */
@@ -103,10 +123,11 @@ const refused = z.object({
 /** `ok` is REQUIRED, which is what keeps a refusal from reading as an answer settled with nothing. */
 const settled = z.object({ v: z.number(), id: z.number(), ok: z.unknown() })
 
-const frame = z.union([hello, jobProgress, settledJob, noticed, refused, settled])
+const frame = z.union([hello, workerHello, jobProgress, settledJob, noticed, refused, settled])
 
 export type EngineHello = z.infer<typeof hello>
 export type EngineJobProgress = z.infer<typeof jobProgress>
+export type EngineWorkerHello = z.infer<typeof workerHello>
 export type EngineSettledJob = z.infer<typeof settledJob>
 export type EngineFrame = z.infer<typeof frame>
 
@@ -132,6 +153,10 @@ export function isSettledJob(value: EngineFrame): value is EngineSettledJob {
 
 export function isJobProgress(value: EngineFrame): value is EngineJobProgress {
   return 'evt' in value && value.evt === 'job.progress'
+}
+
+export function isWorkerHello(value: EngineFrame): value is EngineWorkerHello {
+  return 'evt' in value && value.evt === 'worker.hello'
 }
 
 /** What a routed op answers in the same turn: the job it opened, never its result. */

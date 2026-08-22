@@ -6,7 +6,12 @@ import {
   type PythonListeners,
 } from './pythonClient'
 import type { PythonPort } from './pythonProcess'
-import { PROTOCOL_VERSION, type EngineFrame, type EngineRequest } from './pythonProtocol'
+import {
+  PROTOCOL_VERSION,
+  type EngineFrame,
+  type EngineRequest,
+  type EngineWorkerHello,
+} from './pythonProtocol'
 
 function harness() {
   const sent: EngineRequest[] = []
@@ -312,5 +317,52 @@ describe('watching a job that runs for seconds', () => {
     })
 
     await expect(running).resolves.toMatchObject({ heldBytes: 7_766_163_456 })
+  })
+})
+
+describe('the doors that announced themselves', () => {
+  const workerHello: EngineWorkerHello = {
+    v: PROTOCOL_VERSION,
+    evt: 'worker.hello',
+    door: 'engine/diffusion',
+    engine: '0.1.0',
+    protocol: PROTOCOL_VERSION,
+    backend: 'pytorch',
+    device: 'mps',
+    occupancy: { process: 'exclusive-process', device: 'exclusive', maxConcurrent: 1 },
+  }
+
+  it('holds none before one has started', async () => {
+    const held = harness()
+    held.say(greeting())
+    await held.client.ready
+
+    expect(held.client.doors()).toEqual([])
+  })
+
+  /**
+   * A worker may start long after the engine did, so occupancy is DATA the door republishes and
+   * never a fact of the engine's own handshake.
+   */
+  it('holds what a door announced when it started', async () => {
+    const held = harness()
+    held.say(greeting())
+    await held.client.ready
+
+    held.say(workerHello)
+
+    expect(held.client.doors()).toEqual([workerHello])
+  })
+
+  it('reads a door that restarted once rather than twice', async () => {
+    const held = harness()
+    held.say(greeting())
+    await held.client.ready
+
+    held.say(workerHello)
+    held.say({ ...workerHello, occupancy: { ...workerHello.occupancy, maxConcurrent: 2 } })
+
+    expect(held.client.doors()).toHaveLength(1)
+    expect(held.client.doors()[0]?.occupancy.maxConcurrent).toBe(2)
   })
 })

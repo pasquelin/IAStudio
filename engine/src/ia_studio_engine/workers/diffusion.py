@@ -19,6 +19,14 @@ from ia_studio_engine.workers.base import WorkerLoop, worker_hello
 
 DOOR = "engine/diffusion"
 
+#: What this door announces about how many jobs it takes.
+#:
+#: `[?]` **Not a measurement.** No diffusion workload has been run concurrently on any class of
+#: machine, so this is the conservative reading and it is written as such: the queue serialises,
+#: so ONE job at a time is what the door actually does today. § L.8 is the spike that would
+#: replace these values — the axes are frozen, the values are not.
+OCCUPANCY = {"process": "exclusive-process", "device": "exclusive", "maxConcurrent": 1}
+
 
 def inline_handlers(adapter: DiffusersAdapter) -> dict[str, Any]:
     """Answered in the reading turn: no device call, so a running job never delays one."""
@@ -90,7 +98,7 @@ def main(argv: list[str] | None = None) -> int:
     connection = socket.socket(fileno=int(arguments[0]))
     WorkerLoop(
         connection,
-        worker_hello(DOOR, adapter.backend(), adapter.device()),
+        worker_hello(DOOR, adapter.backend(), adapter.device(), OCCUPANCY),
         inline_handlers(adapter),
         queued_handlers(adapter),
     ).run()

@@ -7,6 +7,7 @@ import {
   isHello,
   isJobProgress,
   isSettledJob,
+  isWorkerHello,
   PROTOCOL_VERSION,
   readHardware,
   readMemoryLedger,
@@ -18,6 +19,7 @@ import {
   type EngineJobOp,
   type EngineRequest,
   type EngineSettledJob,
+  type EngineWorkerHello,
 } from './pythonProtocol'
 
 /**
@@ -58,6 +60,8 @@ export type PythonClient = {
    * what a release was expected to return. Answered by the core, so it wakes no door.
    */
   memory: () => Promise<readonly EngineDoorMemory[]>
+  /** What each door that has started ANNOUNCED — its backend, its device and its occupancy. */
+  doors: () => readonly EngineWorkerHello[]
   /**
    * Opens a JOB on a door and waits for the event that settles it — reading gigabytes and running
    * an inference are the two things `REQUEST_TIMEOUT_MS` must never bound.
@@ -120,6 +124,9 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
     cancel: id => engineRequest(id, CANCEL_OP),
   })
 
+  /** What each door announced when it started. Empty until one does. */
+  const doors = new Map<string, EngineWorkerHello>()
+
   /** Keyed by JOB and not by run: the run that opened one was answered turns earlier. */
   const jobs = new Map<
     string,
@@ -149,6 +156,13 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
         waiting.reject(
           new Error(`${frame.code ?? 'failed'}: ${frame.message ?? 'the door refused'}`),
         )
+      return
+    }
+
+    if (isWorkerHello(frame)) {
+      // A door that started, with what it announced. Republished on every start, never a fact of
+      // the engine's own handshake — a worker may arrive long after the engine did.
+      doors.set(frame.door, frame)
       return
     }
 
@@ -206,6 +220,8 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
       )
       return readHardware(answer)
     },
+
+    doors: () => [...doors.values()],
 
     memory: async () => {
       if (closed) throw new Error(GONE)
