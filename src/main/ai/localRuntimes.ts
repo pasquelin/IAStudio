@@ -1,6 +1,11 @@
 import { runtimeEndpointId, type RuntimeEndpointId } from '@shared/domain/aiRuntime'
 import type { ProducingModality } from '@shared/domain/localFields'
-import type { DownloadProgress, LocalModel, ModelLoader } from '@shared/domain/localModel'
+import {
+  MODEL_LOADERS,
+  type DownloadProgress,
+  type LocalModel,
+  type ModelLoader,
+} from '@shared/domain/localModel'
 
 /**
  * The door a loader answers on FOR A GIVEN MODALITY — what `MemorySnapshot.runtimeBytes` is keyed
@@ -169,6 +174,11 @@ export type LocalRuntime = {
    * plan recorded the other as freed.
    */
   unload?: (endpoint?: RuntimeEndpointId) => Promise<void>
+  /**
+   * Models this runtime holds that are not in the shipped catalogue — Ollama tags. Absent for a
+   * runtime that only ever serves manifests we already have.
+   */
+  discover?: () => Promise<readonly LocalModel[]>
 }
 
 export type RuntimeReading = {
@@ -186,6 +196,20 @@ export type RuntimeReading = {
  * which is the honest answer while nothing can install for it.
  */
 export type LocalRuntimes = Readonly<Partial<Record<ModelLoader, LocalRuntime>>>
+
+/** Every runtime that can list models we did not ship, asked together. A throw is an empty list. */
+export async function discoveredOf(runtimes: LocalRuntimes): Promise<readonly LocalModel[]> {
+  const lists = await Promise.all(
+    MODEL_LOADERS.map(async loader => {
+      try {
+        return (await runtimes[loader]?.discover?.()) ?? []
+      } catch {
+        return []
+      }
+    }),
+  )
+  return lists.flat()
+}
 
 const ABSENT: RuntimeReading = { ready: false, installed: new Set(), loaded: new Set() }
 

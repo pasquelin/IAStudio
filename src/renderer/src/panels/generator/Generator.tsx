@@ -6,6 +6,7 @@ import { useDescriptor } from '@/hooks/useDescriptor'
 import { useModelForFamily } from '@/hooks/useModelForFamily'
 import { usePlanAccess } from '@/hooks/usePlanAccess'
 import { usePlanRefusal } from '@/hooks/usePlanRefusal'
+import { modelIsOnThisMachine } from '@/helpers/modelForFamily'
 import { workspaceById } from '@/helpers/workspaces'
 import { referencePictures, type FormValues } from '@/helpers/dynamicForm'
 import { registerGenerator } from '@/assistant/generatorBridge'
@@ -16,6 +17,7 @@ import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { claimOnSubmit } from '@/stores/generationClaims'
+import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
 import { DynamicForm } from '@/design/dynamicFormLazy'
 import { FormHeader } from '@/design/FormHeader'
@@ -51,7 +53,9 @@ export function Generator() {
   const modelId = useModelForFamily(family)
 
   const authenticated = useSettings(state => state.auth.authenticated)
+  const overview = useAiModels(state => state.overview)
   const project = useProject(state => state.project)
+  const onThisMachine = modelId !== null && modelIsOnThisMachine(modelId, overview)
   const submit = useJobs(state => state.submit)
 
   const descriptor = useDescriptor(modelId)
@@ -117,7 +121,15 @@ export function Generator() {
    */
   const refusal = refusalFor(descriptor.data?.requiredPlanLevel)
 
-  if (!authenticated) return <MissingCredentials icon={mdiCreationOutline} />
+  // A model of this machine needs no account. Asking for a key first hid the local catalogue
+  // behind a Scenario form, and sent people out of the studio to fetch one.
+  if (!authenticated && !onThisMachine) {
+    if (overview === null) {
+      return <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
+    }
+
+    return <MissingCredentials icon={mdiCreationOutline} />
+  }
 
   // A job collects into its own project and nowhere else, so generating without one produces
   // assets that land nowhere. The panel asks for a project rather than drawing a form whose

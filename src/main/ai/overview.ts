@@ -64,29 +64,32 @@ function localOptionsFor(candidates: readonly ModelCandidate[]): readonly string
  * twenty-one rows, their candidates and their verdicts, to read one field.
  */
 export function rowFor(role: AiRoleId, input: OverviewInput, choices: RoleChoices): RoleRow {
-  const candidates: readonly ModelCandidate[] = input.modelsFor(role).map(model => {
-    const installed = input.isInstalled(model)
-    const offer = {
-      snapshot: input.snapshot,
-      diskFreeBytes: input.facts.diskFreeBytes,
-      installed,
-      runtimeReady: input.runtimeReady(model),
-      hasCuda:
-        input.facts.gpu?.vendorId === 0x10de ||
-        /NVIDIA|GeForce|Quadro|Tesla|CUDA/i.test(input.facts.gpu?.renderer ?? ''),
-    }
+  const candidates: readonly ModelCandidate[] = input
+    .modelsFor(role)
+    .map(model => {
+      const installed = input.isInstalled(model)
+      const offer = {
+        snapshot: input.snapshot,
+        diskFreeBytes: input.facts.diskFreeBytes,
+        installed,
+        runtimeReady: input.runtimeReady(model),
+        hasCuda:
+          input.facts.gpu?.vendorId === 0x10de ||
+          /NVIDIA|GeForce|Quadro|Tesla|CUDA/i.test(input.facts.gpu?.renderer ?? ''),
+      }
 
-    return {
-      model,
-      installed,
-      loaded: input.isLoaded(model),
-      holdable: input.isHoldable(model),
-      unverified: provenanceUnverified(model),
-      supplied: isSuppliedModel(model),
-      serves: input.rolesServedBy(model.id),
-      ...fitReadingOf(model, offer),
-    }
-  })
+      return {
+        model,
+        installed,
+        loaded: input.isLoaded(model),
+        holdable: input.isHoldable(model),
+        unverified: provenanceUnverified(model),
+        supplied: isSuppliedModel(model),
+        serves: input.rolesServedBy(model.id),
+        ...fitReadingOf(model, offer),
+      }
+    })
+    .filter(one => one.obstacle !== 'runtime')
 
   // A key HELD is not an endpoint behind it: a cloud is offered only where it DECLARES serving
   // the role, or the screen says an employment is served when nothing serves it.

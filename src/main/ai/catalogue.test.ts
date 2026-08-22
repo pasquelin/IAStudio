@@ -12,12 +12,15 @@ import type { LocalModel } from '@shared/domain/localModel'
 import licences from '@shared/licences.json'
 import {
   catalogueRefusals,
+  modelsForWith,
+  modelWith,
   rolesServedBy,
   rolesWithLocalOption,
   shippedModel,
   shippedModels,
   shippedModelsFor,
 } from './catalogue'
+import { ollamaModel } from '@shared/domain/ollamaModel'
 
 describe('the shipped catalogue', () => {
   // ADR-20 § A puts the whitelist at the point of INSTALL, and the catalogue is where a model
@@ -133,6 +136,16 @@ describe('the shipped catalogue', () => {
       .map(model => model.id)
 
     expect(bare).toEqual([])
+  })
+
+  it('offers a discovered chat model to the assistant and not to generation', () => {
+    const qwen = ollamaModel({ name: 'qwen3:8b', size: 5_000_000_000 })
+    expect(qwen).not.toBeNull()
+    if (!qwen) return
+
+    expect(modelsForWith(ASSISTANT_ROLE, [], [qwen]).map(model => model.id)).toContain('qwen3:8b')
+    expect(modelsForWith(aiRoleId('image', 'txt2img'), [], [qwen])).not.toContainEqual(qwen)
+    expect(modelWith('qwen3:8b', [], [qwen])).toBe(qwen)
   })
 
   it('lists every shipped model once', () => {

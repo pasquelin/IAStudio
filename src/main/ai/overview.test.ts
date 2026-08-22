@@ -70,6 +70,24 @@ describe('aiOverviewOf', () => {
     expect(overview.roles.map(row => row.role)).toEqual([DICTATION_ROLE])
   })
 
+  it('hides a model whose runtime is not answering, rather than sending the person to start it', () => {
+    const ollama = localModel({
+      id: 'qwen3:8b',
+      format: 'gguf',
+      loader: 'ollama',
+      files: [],
+    })
+    const overview = aiOverviewOf(
+      input({
+        modelsFor: role => (role === ASSISTANT_ROLE ? [ollama] : []),
+        runtimeReady: () => false,
+        isInstalled: () => false,
+      }),
+    )
+
+    expect(rowOf(overview, ASSISTANT_ROLE)).toBeUndefined()
+  })
+
   it('offers every employment once an account could answer for them', () => {
     const overview = aiOverviewOf(input({ readyClouds: CLOUD_IDS }))
 

@@ -1,6 +1,7 @@
 import { mdiCubeScan } from '@mdi/js'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { familyChoiceWrites } from '@shared/domain/aiRole'
 import type { ModelSummary } from '@shared/domain/model'
 import { CLOUD_IDS } from '@shared/domain/aiCloud'
 import { failureKeyOf } from '@/services/failureMessage'
@@ -18,6 +19,8 @@ import { ModelDownloadDialog } from './ModelDownloadDialog'
 import { getBridge } from '@/services/bridge'
 import { useLayouts } from '@/stores/layouts'
 import { modelCollectionOf, useModels } from '@/stores/models'
+import { useAiModels } from '@/stores/aiModels'
+import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { workspaceById } from '@/helpers/workspaces'
 import { EmptyState } from '@/design/EmptyState'
@@ -58,6 +61,8 @@ export function Models() {
   // left this panel saying "no model chosen" about the very model the generator was running.
   const selectedId = useModelForFamily(family)
   const select = useModels(state => state.select)
+  const chooseAiProviders = useAiModels(state => state.chooseAiProviders)
+  const projectPath = useProject(state => state.project?.path ?? null)
   const authenticated = useSettings(state => state.auth.authenticated)
   const plan = usePlanAccess()
 
@@ -155,9 +160,17 @@ export function Models() {
           // A tile whose weights are absent OFFERS the download rather than doing nothing: it is
           // the one refusal the studio can lift itself, and a dimmed tile with no way forward is
           // what sent people looking through the settings for a button.
-          onSelect={model =>
-            reachOf(model).fetchable ? setOffered(model) : select(model.family, model.id)
-          }
+          onSelect={model => {
+            if (reachOf(model).fetchable) {
+              setOffered(model)
+              return
+            }
+            select(model.family, model.id)
+            const writes = familyChoiceWrites(model)
+            if (writes.length > 0) {
+              void chooseAiProviders(writes, projectPath === null ? 'app' : 'project')
+            }
+          }}
           onReachEnd={catalogue.more}
           onVisible={onVisible}
           // The same answer greys the cell and explains it, so a row cannot end up dimmed with

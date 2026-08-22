@@ -1,5 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import { LOCAL_RUNTIME } from '@shared/domain/model'
+import { aiRoleId } from '@shared/domain/aiRole'
+import { localModel } from '@shared/domain/localModel-fixtures'
+import type { AiOverview } from '@shared/domain/aiOverview'
+import { useAiModels } from '@/stores/aiModels'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { FieldDescriptor, ModelDescriptor } from '@shared/domain/model'
 import type { StudioBridge } from '@shared/ipc'
@@ -25,6 +30,10 @@ const PICTURE: FieldDescriptor = { key: 'image', kind: 'image', label: 'Image', 
 const DESCRIPTORS: Record<string, ModelDescriptor> = {
   model_flux: descriptor('model_flux', 'Flux', 'image'),
   model_big: descriptor('model_big', 'Magnific Upscaler', 'upscale'),
+  'ssd-1b': {
+    ...descriptor('ssd-1b', 'SSD-1B', 'image'),
+    runsOn: LOCAL_RUNTIME,
+  },
 }
 
 function descriptor(id: string, name: string, family: ModelDescriptor['family']): ModelDescriptor {
@@ -63,6 +72,7 @@ describe('Generator', () => {
   beforeEach(() => {
     installCanvas(DOCUMENT)
     useSettings.setState({ auth: { authenticated: true } })
+    useAiModels.setState({ overview: null })
     // A job collects into its own project and nowhere else, so the panel asks for one before it
     // draws a form. Every case below is about the form, and each of them needs one.
     useProject.setState({ project: PROJECT, known: true })
@@ -262,7 +272,7 @@ describe('the generator without a project', () => {
     expect(screen.queryByRole('button', { name: 'Créer un projet' })).toBeNull()
   })
 
-  // The key comes first: without it nothing generates at all, project or no project.
+  // A cloud model still needs a key. A model of this machine must not.
   it('asks for the credentials before the project', () => {
     useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
     useProject.setState({ project: null, known: true })
@@ -270,5 +280,67 @@ describe('the generator without a project', () => {
     renderPanel()
 
     expect(screen.queryByRole('button', { name: 'Ouvrir un projet' })).toBeNull()
+  })
+})
+
+describe('the generator on this machine', () => {
+  beforeEach(() => {
+    installCanvas(DOCUMENT)
+    useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
+    useProject.setState({ project: PROJECT, known: true })
+    useModels.setState({ selected: { image: 'ssd-1b' }, preset: {}, prepared: null })
+    useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
+    useLayouts.setState({ activeWorkspace: 'image' })
+    preferModels()
+    const overview: AiOverview = {
+      roles: [
+        {
+          role: aiRoleId('image', 'txt2img'),
+          provider: { kind: 'local', modelId: 'ssd-1b' },
+          chosen: { app: { kind: 'local', modelId: 'ssd-1b' }, project: null },
+          candidates: [
+            {
+              model: localModel({ id: 'ssd-1b', name: 'SSD-1B', family: 'image' }),
+              installed: true,
+              loaded: false,
+              holdable: true,
+              unverified: false,
+              supplied: false,
+              serves: 1,
+              fit: 'compatible',
+              obstacle: null,
+            },
+          ],
+          clouds: [],
+        },
+      ],
+      machine: {
+        physicalBytes: 1,
+        availableBytes: 1,
+        diskFreeBytes: 1,
+        gpu: null,
+        vram: null,
+      },
+      projectPath: PROJECT.path,
+      installing: null,
+      loading: null,
+      loadFailure: null,
+    }
+    useAiModels.setState({ overview })
+    installFakeBridge({
+      provider: {
+        describeModel: (modelId: string) =>
+          DESCRIPTORS[modelId]
+            ? Promise.resolve(DESCRIPTORS[modelId])
+            : Promise.reject(new Error('no model')),
+      },
+    })
+  })
+
+  it('draws the form without an account', async () => {
+    renderPanel()
+
+    expect(await screen.findByText('SSD-1B')).toBeInTheDocument()
+    expect(screen.queryByText(/identifiants/i)).toBeNull()
   })
 })

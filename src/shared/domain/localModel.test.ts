@@ -5,10 +5,19 @@ import {
   modelRefusalOf,
   needsOwnFolder,
   provenanceUnverified,
+  sourceOf,
   type ModelFormat,
   type ModelLoader,
 } from './localModel'
 import { localModel } from './localModel-fixtures'
+
+describe('sourceOf', () => {
+  it('groups by rank and loader rather than by a stored kind', () => {
+    expect(sourceOf(localModel())).toBe('studio')
+    expect(sourceOf(localModel({ loader: 'ollama', format: 'gguf' }))).toBe('ollama')
+    expect(sourceOf(localModel({ rank: 3 }))).toBe('custom')
+  })
+})
 
 describe('admitsLoad', () => {
   // ADR-20 § A: the whitelist is written on PAIRS, because what makes the studio's ONNX safe is a

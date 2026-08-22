@@ -54,6 +54,7 @@ export const AiCandidateRow = memo(function AiCandidateRow({
         bytes(candidate.model.diskBytes),
         ...(candidate.serves > 1 ? [t('aiModels.servesRoles', { count: candidate.serves })] : []),
         fit.verdict,
+        ...(candidate.model.licence !== '' ? [candidate.model.licence] : []),
       ].join(' · ')}
       // The provenance comes FIRST when there is one to say: it qualifies everything after it.
       hint={

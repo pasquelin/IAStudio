@@ -14,6 +14,7 @@ import { admissionFor } from './admission'
 import { catalogueWith, modelsForWith, modelWith, rolesServedBy } from './catalogue'
 import { asRuntimeSnapshot, type HardwareFacts } from './hardwareProbe'
 import {
+  discoveredOf,
   endpointOf,
   endpointsOf,
   runtimeReadingsOf,
@@ -68,6 +69,11 @@ export type AiManager = {
    */
   providerOf: (role: AiRoleId) => Promise<RoleProvider | null>
   choose: (role: AiRoleId, provider: RoleProvider | null, scope: ChoiceScope) => Promise<AiOverview>
+  /** One settings write for every employment a pick serves. Sequential `choose` dropped all but the last. */
+  chooseMany: (
+    writes: readonly { role: AiRoleId; provider: RoleProvider | null }[],
+    scope: ChoiceScope,
+  ) => Promise<AiOverview>
   /**
    * The ids whose weights are on this disk, read off the last runtime reading.
    *
@@ -97,6 +103,8 @@ export type AiManager = {
   hold: (modelId: string) => () => void
   /** Drops the idle timer. Called when the application is going away. */
   dispose: () => void
+  /** A catalogue id, including one Ollama just listed. Unknown is expected. */
+  lookup: (modelId: string) => LocalModel | null
   /** Records a model the person supplied — rank 3 of ADR-20, and the gesture is theirs. */
   addOwnModel: (model: LocalModel) => Promise<AiOverview>
   /**
@@ -113,6 +121,20 @@ export type AiManager = {
 /** Written without the role when clearing it, so the stored record does not keep a dead key. */
 function withoutRole(choices: RoleChoices, role: AiRoleId): RoleChoices {
   return Object.fromEntries(Object.entries(choices).filter(([key]) => key !== role))
+}
+
+function withWrites(
+  choices: RoleChoices,
+  writes: readonly { role: AiRoleId; provider: RoleProvider | null }[],
+): RoleChoices {
+  let next = choices
+  for (const write of writes) {
+    next =
+      write.provider === null
+        ? withoutRole(next, write.role)
+        : { ...next, [write.role]: write.provider }
+  }
+  return next
 }
 
 type RunningInstall = {
@@ -169,8 +191,29 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     })
   let cancelIdle: (() => void) | null = null
 
+  let lastDiscovered: readonly LocalModel[] = []
+  let cachedDiscovered: { at: number; models: Promise<readonly LocalModel[]> } | null = null
+
+  const discover = (): Promise<readonly LocalModel[]> => {
+    if (cachedDiscovered !== null && deps.now() - cachedDiscovered.at < ttl) {
+      return cachedDiscovered.models
+    }
+
+    const reading = discoveredOf(deps.runtimes)
+      .then(models => {
+        lastDiscovered = models
+        return models
+      })
+      .catch((error: unknown) => {
+        cachedDiscovered = null
+        throw error
+      })
+    cachedDiscovered = { at: deps.now(), models: reading }
+    return reading
+  }
+
   const modelOf = (modelId: string): LocalModel | null =>
-    modelWith(modelId, deps.settings().ai.ownModels)
+    modelWith(modelId, deps.settings().ai.ownModels, lastDiscovered)
 
   /**
    * Re-read once stale; the PROMISE is shared, not only its value. Two composes crossing paid
@@ -261,9 +304,12 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     // Read ONCE: `settings.read()` re-parses the whole stored tree, and this runs on every turn.
     const stored = deps.settings()
     const own = stored.ai.ownModels
-    const [machine, readings] = await Promise.all([facts(), readingsOf(catalogueWith(own))])
+    const [machine, discovered] = await Promise.all([facts(), discover()])
+    const readings = await readingsOf(catalogueWith(own, discovered))
 
-    return aiOverviewOf(inputFrom(machine, readings, stored, role => modelsForWith(role, own)))
+    return aiOverviewOf(
+      inputFrom(machine, readings, stored, role => modelsForWith(role, own, discovered)),
+    )
   }
 
   /** The last overview published, so a bar can move without asking the machine all over again. */
@@ -516,6 +562,34 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     await loadFlight
   }
 
+  async function chooseMany(
+    writes: readonly { role: AiRoleId; provider: RoleProvider | null }[],
+    scope: ChoiceScope,
+  ): Promise<AiOverview> {
+    const stored = deps.settings()
+
+    if (scope === 'app') {
+      await deps.writeSettings({ ai: { ...stored.ai, roles: withWrites(stored.ai.roles, writes) } })
+      return announce()
+    }
+
+    const path = deps.currentProjectPath()
+    // Refused rather than quietly written to the default: the person asked for THIS project,
+    // and silently changing everything would be the opposite of what they meant.
+    if (path === null) return compose()
+
+    await deps.writeSettings({
+      ai: {
+        ...stored.ai,
+        projectRoles: {
+          ...stored.ai.projectRoles,
+          [path]: withWrites(stored.ai.projectRoles[path] ?? {}, writes),
+        },
+      },
+    })
+    return announce()
+  }
+
   return {
     overview: compose,
 
@@ -528,43 +602,22 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       await announce()
     },
 
+    lookup: modelId => modelOf(modelId),
+
     providerOf: async role => {
       const stored = deps.settings()
       // Only what this role could take: a turn going to a cloud used to ask every loader on the
       // machine, and a turn going to llama.cpp used to stat the recognition model's four files.
-      const models = modelsForWith(role, stored.ai.ownModels)
+      const discovered = await discover()
+      const models = modelsForWith(role, stored.ai.ownModels, discovered)
       const [machine, readings] = await Promise.all([facts(), readingsOf(models)])
       const input = inputFrom(machine, readings, stored, () => models)
 
       return rowFor(role, input, effectiveChoices(input)).provider
     },
 
-    choose: async (role, provider, scope) => {
-      const stored = deps.settings()
-
-      if (scope === 'app') {
-        const roles =
-          provider === null
-            ? withoutRole(stored.ai.roles, role)
-            : { ...stored.ai.roles, [role]: provider }
-        await deps.writeSettings({ ai: { ...stored.ai, roles } })
-        return announce()
-      }
-
-      const path = deps.currentProjectPath()
-      // Refused rather than quietly written to the default: the person asked for THIS project,
-      // and silently changing everything would be the opposite of what they meant.
-      if (path === null) return compose()
-
-      const forProject = stored.ai.projectRoles[path] ?? {}
-      const updated =
-        provider === null ? withoutRole(forProject, role) : { ...forProject, [role]: provider }
-
-      await deps.writeSettings({
-        ai: { ...stored.ai, projectRoles: { ...stored.ai.projectRoles, [path]: updated } },
-      })
-      return announce()
-    },
+    choose: (role, provider, scope) => chooseMany([{ role, provider }], scope),
+    chooseMany,
 
     installModel,
 
@@ -578,6 +631,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
         // Swallowed rather than raised: a window asked, and what it needs back is the state the
         // studio is in — the reason lives in the journal.
         await installModel(model, () => {})
+        cachedDiscovered = null
       } catch (error) {
         deps.log('warn', `install of ${modelId} stopped: ${String(error)}`)
       }
@@ -615,6 +669,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
       try {
         await deps.runtimes[model.loader]?.remove(model)
+        cachedDiscovered = null
       } catch (error) {
         // Swallowed exactly as `install` swallows its own: a window asked, and what it needs back
         // is the state the studio is in. Removing is a NETWORK call for a runtime that pulls its

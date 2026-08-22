@@ -69,6 +69,7 @@ import { catalogueWith, modelWith } from './ai/catalogue'
 import { electronHardwarePort } from './ai/electronHardwarePort'
 import { electronLlamaPort } from './ai/electronLlamaPort'
 import { llamaLocalRuntime } from './ai/llamaRuntime'
+import { ollamaHttpPort, ollamaLocalRuntime } from './ai/ollamaRuntime'
 import { hardwareProbe, memorySnapshotOf } from './ai/hardwareProbe'
 import { readyCloudsOf } from './ai/cloudReadiness'
 import { createLocalJobRunner } from './ai/localJobRunner'
@@ -1225,8 +1226,9 @@ export function createServices(settings: SettingsStore): Services {
     // the first one and finds the rest beside it.
     model.weightsPath ?? join(modelFolder(), model.files[0]?.name ?? '')
 
-  const modelOf = (modelId: string): LocalModel | null =>
+  let lookup = (modelId: string): LocalModel | null =>
     modelWith(modelId, settings.read().ai.ownModels)
+  const modelOf = (modelId: string): LocalModel | null => lookup(modelId)
   const isLocalTarget = (targetId: string): boolean => modelOf(targetId) !== null
 
   /**
@@ -1277,6 +1279,7 @@ export function createServices(settings: SettingsStore): Services {
       modelOf,
       onUsed: modelId => hold(modelId),
     }),
+    ollama: ollamaLocalRuntime(ollamaHttpPort()),
   }
 
   const ai = createAiManager({
@@ -1293,6 +1296,7 @@ export function createServices(settings: SettingsStore): Services {
     now: Date.now,
   })
   hold = ai.hold
+  lookup = modelId => ai.lookup(modelId)
   // Filled here rather than captured above: the registry was built first and asks per summary.
   installedLocally.ids = () => ai.installedIds()
 

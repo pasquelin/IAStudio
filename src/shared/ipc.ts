@@ -237,6 +237,7 @@ export type Channels = {
 
   aiOverview: 'ai:overview'
   aiChoose: 'ai:choose'
+  aiChooseMany: 'ai:choose-many'
   aiInstall: 'ai:install'
   aiCancelInstall: 'ai:cancel-install'
   aiRemove: 'ai:remove'
@@ -439,6 +440,7 @@ export const CHANNELS: Channels = {
 
   aiOverview: 'ai:overview',
   aiChoose: 'ai:choose',
+  aiChooseMany: 'ai:choose-many',
   aiInstall: 'ai:install',
   aiCancelInstall: 'ai:cancel-install',
   aiRemove: 'ai:remove',
@@ -1667,6 +1669,10 @@ export type StudioBridge = {
     choose: (
       role: AiRoleId,
       provider: RoleProvider | null,
+      scope: ChoiceScope,
+    ) => Promise<AiOverview>
+    chooseMany: (
+      writes: readonly { role: AiRoleId; provider: RoleProvider | null }[],
       scope: ChoiceScope,
     ) => Promise<AiOverview>
     /** Fetches a model's files. One at a time: a second would compete for the same disk. */

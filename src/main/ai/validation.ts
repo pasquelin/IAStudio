@@ -35,3 +35,23 @@ export function parseChoice(
   // makes it valid is that the catalogue answers for it — an unknown one simply matches no row.
   return { ...parsed, role: parsed.role as AiRoleId }
 }
+
+const many = z.object({
+  writes: z.array(choice.omit({ scope: true })).min(1),
+  scope: z.enum(['app', 'project']),
+})
+
+export function parseChoices(
+  writes: unknown,
+  scope: unknown,
+): {
+  writes: readonly { role: AiRoleId; provider: RoleProvider | null }[]
+  scope: ChoiceScope
+} {
+  const parsed = many.parse({ writes, scope })
+  return {
+    scope: parsed.scope,
+    // Same brand crossing as `parseChoice`: the catalogue is what validates the role, not the cast.
+    writes: parsed.writes.map(one => ({ ...one, role: one.role as AiRoleId })),
+  }
+}

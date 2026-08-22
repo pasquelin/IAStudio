@@ -265,6 +265,17 @@ export type LicenceStatus = 'commercial' | 'non-commercial' | 'restricted' | 'un
 /** Whether anything here can actually RUN it today. Orthogonal to the licence, and to the disk. */
 export type RuntimeStatus = 'supported' | 'plugin-required' | 'unsupported'
 
+/** Where a local model comes from, as the manager groups it — derived, never stored on the choice. */
+export type ModelSource = 'studio' | 'ollama' | 'custom'
+
+export const MODEL_SOURCES: readonly ModelSource[] = ['studio', 'ollama', 'custom']
+
+export function sourceOf(model: LocalModel): ModelSource {
+  if (model.rank === 3) return 'custom'
+  if (model.loader === 'ollama') return 'ollama'
+  return 'studio'
+}
+
 /** Why a model cannot be offered at all, whatever the machine could hold. */
 export type ModelRefusal =
   'format-not-admitted' | 'weights-carry-code' | 'licence-not-admitted' | 'licence-excludes-region'

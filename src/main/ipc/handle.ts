@@ -166,6 +166,7 @@ type ChannelMethod = {
 
   [CHANNELS.aiOverview]: StudioBridge['ai']['overview']
   [CHANNELS.aiChoose]: StudioBridge['ai']['choose']
+  [CHANNELS.aiChooseMany]: StudioBridge['ai']['chooseMany']
   [CHANNELS.aiInstall]: StudioBridge['ai']['install']
   [CHANNELS.aiCancelInstall]: StudioBridge['ai']['cancelInstall']
   [CHANNELS.aiRemove]: StudioBridge['ai']['remove']

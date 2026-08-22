@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import type { MemorySnapshot } from '@shared/domain/aiMemory'
-import { aiRoleId, DICTATION_ROLE } from '@shared/domain/aiRole'
+import { aiRoleId, ASSISTANT_ROLE, DICTATION_ROLE } from '@shared/domain/aiRole'
+import { ollamaModel } from '@shared/domain/ollamaModel'
 import { STT_MODEL } from '@shared/domain/dictation'
 import type { DownloadProgress, LocalModel } from '@shared/domain/localModel'
 import { GIBI, localModel } from '@shared/domain/localModel-fixtures'
@@ -110,6 +111,52 @@ const candidateOf = (overview: AiOverview, modelId: string) =>
   overview.roles.flatMap(row => row.candidates).find(one => one.model.id === modelId)
 
 describe('the AI manager', () => {
+  it('lists a discovered Ollama chat model on the assistant', async () => {
+    const qwen = ollamaModel({ name: 'qwen3:8b', size: 5_000_000_000 })
+    expect(qwen).not.toBeNull()
+    if (!qwen) return
+
+    const overview = await manager({
+      runtimes: {
+        'sherpa-onnx': idleRuntime(),
+        ollama: {
+          ...idleRuntime(),
+          discover: () => Promise.resolve([qwen]),
+          read: () =>
+            Promise.resolve({
+              ready: true,
+              installed: new Set(['qwen3:8b']),
+              loaded: new Set(),
+            }),
+        },
+      },
+    }).overview()
+
+    const row = overview.roles.find(one => one.role === ASSISTANT_ROLE)
+    expect(row?.candidates.some(one => one.model.id === 'qwen3:8b')).toBe(true)
+  })
+
+  it('writes every employment of one pick in a single settings save', async () => {
+    const written: PartialSettings[] = []
+    await manager({
+      writeSettings: partial => {
+        written.push(partial)
+      },
+    }).chooseMany(
+      [
+        { role: aiRoleId('image', 'txt2img'), provider: { kind: 'local', modelId: 'ssd-1b' } },
+        { role: aiRoleId('image', 'inpaint'), provider: { kind: 'local', modelId: 'ssd-1b' } },
+      ],
+      'app',
+    )
+
+    expect(written).toHaveLength(1)
+    expect(written[0]?.ai?.roles).toMatchObject({
+      'image/txt2img': { kind: 'local', modelId: 'ssd-1b' },
+      'image/inpaint': { kind: 'local', modelId: 'ssd-1b' },
+    })
+  })
+
   /**
    * The status line and the manager screen fetch the same files into the same folder. Two
    * streams onto one `.part` would fail a digest rather than a download, so the second caller

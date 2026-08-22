@@ -2,7 +2,7 @@ import type { AiOverview } from '@shared/domain/aiOverview'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import type { AiManager } from './manager'
-import { parseChoice, parseModelId } from './validation'
+import { parseChoice, parseChoices, parseModelId } from './validation'
 
 export type AiHandlerDeps = {
   manager: AiManager
@@ -21,6 +21,11 @@ export function registerAiHandlers({ manager, addOwnModel }: AiHandlerDeps): voi
     // what arrives is `unknown` until this says otherwise.
     const choice = parseChoice(role, provider, scope)
     return manager.choose(choice.role, choice.provider, choice.scope)
+  })
+
+  handle(CHANNELS.aiChooseMany, (_event, writes, scope) => {
+    const parsed = parseChoices(writes, scope)
+    return manager.chooseMany(parsed.writes, parsed.scope)
   })
 
   handle(CHANNELS.aiInstall, (_event, modelId) => manager.install(parseModelId(modelId)))

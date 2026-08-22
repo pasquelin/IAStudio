@@ -242,6 +242,7 @@ const bridge: StudioBridge = {
   ai: {
     overview: () => ipcRenderer.invoke(CHANNELS.aiOverview),
     choose: (role, provider, scope) => ipcRenderer.invoke(CHANNELS.aiChoose, role, provider, scope),
+    chooseMany: (writes, scope) => ipcRenderer.invoke(CHANNELS.aiChooseMany, writes, scope),
     install: modelId => ipcRenderer.invoke(CHANNELS.aiInstall, modelId),
     cancelInstall: () => ipcRenderer.invoke(CHANNELS.aiCancelInstall),
     remove: modelId => ipcRenderer.invoke(CHANNELS.aiRemove, modelId),

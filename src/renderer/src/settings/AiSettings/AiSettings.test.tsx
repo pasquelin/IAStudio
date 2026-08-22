@@ -104,6 +104,23 @@ describe('AiSettings', () => {
     expect(screen.getByText(/place insuffisante — 48/)).toBeInTheDocument()
   })
 
+  it('groups Ollama models away from the studio catalogue', () => {
+    const ollama: ModelCandidate = {
+      ...PARAKEET,
+      model: localModel({
+        id: 'qwen3:8b',
+        name: 'qwen3:8b',
+        format: 'gguf',
+        loader: 'ollama',
+        files: [],
+      }),
+    }
+    show(overview({ roles: [row({ candidates: [PARAKEET, ollama] })] }))
+
+    expect(screen.getByText('IA Studio')).toBeInTheDocument()
+    expect(screen.getByText('Ollama')).toBeInTheDocument()
+  })
+
   it('writes the choice for the role the candidate belongs to', () => {
     const choose = vi.fn(() => Promise.resolve(overview()))
     installFakeBridge({ ai: { choose } })
@@ -227,7 +244,7 @@ describe('AiSettings', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ajouter un fichier…' }))
 
     expect(addOwnModel).toHaveBeenCalledOnce()
-    expect(await screen.findByText(/n’est pas un GGUF/)).toBeInTheDocument()
+    expect(await screen.findByText(/n’est pas un modèle/)).toBeInTheDocument()
   })
 
   /**

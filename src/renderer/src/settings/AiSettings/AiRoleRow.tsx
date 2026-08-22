@@ -2,14 +2,22 @@ import { mdiInformationOutline } from '@mdi/js'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AiOverview, ChoiceScope, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
+import { partsOfRole } from '@shared/domain/aiRole'
+import { MODEL_SOURCES, sourceOf, type ModelSource } from '@shared/domain/localModel'
 import { UiIcon } from '@/design/UiIcon'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
-import { useBytes } from '@/hooks/useBytes'
+import { WINDOW_CAPTION, WINDOW_GROUP_LABEL } from '@/design/windowStyles'
 import type { ModelFitSentence } from '@/hooks/useModelFit'
 import { useAiModels } from '@/stores/aiModels'
+import { useModels } from '@/stores/models'
 import { AiCandidateRow } from './AiCandidateRow'
 import { AiChoiceRow } from './AiChoiceRow'
 import { roleLabel } from './roleLabel'
+
+const SOURCE_KEY: Record<ModelSource, string> = {
+  studio: 'app.name',
+  ollama: 'aiModels.sourceOllama',
+  custom: 'aiModels.sourceCustom',
+}
 
 export type AiRoleRowProps = {
   row: RoleRow
@@ -37,8 +45,8 @@ export const AiRoleRow = memo(function AiRoleRow({
   fitOf,
 }: AiRoleRowProps) {
   const { t } = useTranslation()
-  const bytes = useBytes()
   const chooseAiProvider = useAiModels(state => state.chooseAiProvider)
+  const selectFamilyModel = useModels(state => state.select)
 
   const label = roleLabel(row.role, t)
   // Captured so the narrowing survives into the callback below, which a property access does not.
@@ -61,7 +69,7 @@ export const AiRoleRow = memo(function AiRoleRow({
           <span className="badge badge-sm">{t('aiModels.chosenAtProject')}</span>
         )}
         <span className={WINDOW_CAPTION}>
-          {served && `${served.model.name} · ${bytes(served.model.reservationBytes)}`}
+          {served && served.model.name}
           {provider?.kind === 'cloud' && t(`aiClouds.${provider.providerId}`)}
           {provider === null && t('aiModels.providerNone')}
         </span>
@@ -104,37 +112,62 @@ export const AiRoleRow = memo(function AiRoleRow({
             </li>
           )}
 
-          {row.candidates.map(candidate => (
-            <AiCandidateRow
-              key={candidate.model.id}
-              role={row.role}
-              candidate={candidate}
-              chosen={editing?.kind === 'local' && editing.modelId === candidate.model.id}
-              fit={fitOf(candidate)}
-              progress={installing?.modelId === candidate.model.id ? installing.progress : null}
-              loading={loading?.modelId === candidate.model.id ? loading.ratio : null}
-              busy={busy}
-              onChoose={() =>
-                void chooseAiProvider(
-                  row.role,
-                  { kind: 'local', modelId: candidate.model.id },
-                  scope,
-                )
-              }
-            />
-          ))}
+          {MODEL_SOURCES.map(source => {
+            const candidates = row.candidates.filter(one => sourceOf(one.model) === source)
+            if (candidates.length === 0) return null
 
-          {row.clouds.map(providerId => (
-            <AiChoiceRow
-              key={providerId}
-              role={row.role}
-              choice={providerId}
-              label={t(`aiClouds.${providerId}`)}
-              hint={t(`aiClouds.${providerId}Hint`)}
-              checked={editing?.kind === 'cloud' && editing.providerId === providerId}
-              onChoose={() => void chooseAiProvider(row.role, { kind: 'cloud', providerId }, scope)}
-            />
-          ))}
+            return (
+              <li key={source}>
+                <h4 className={WINDOW_GROUP_LABEL}>{t(SOURCE_KEY[source])}</h4>
+                <ul>
+                  {candidates.map(candidate => (
+                    <AiCandidateRow
+                      key={candidate.model.id}
+                      role={row.role}
+                      candidate={candidate}
+                      chosen={editing?.kind === 'local' && editing.modelId === candidate.model.id}
+                      fit={fitOf(candidate)}
+                      progress={
+                        installing?.modelId === candidate.model.id ? installing.progress : null
+                      }
+                      loading={loading?.modelId === candidate.model.id ? loading.ratio : null}
+                      busy={busy}
+                      onChoose={() => {
+                        void chooseAiProvider(
+                          row.role,
+                          { kind: 'local', modelId: candidate.model.id },
+                          scope,
+                        )
+                        const parts = partsOfRole(row.role)
+                        if (parts) selectFamilyModel(parts.family, candidate.model.id)
+                      }}
+                    />
+                  ))}
+                </ul>
+              </li>
+            )
+          })}
+
+          {row.clouds.length > 0 && (
+            <li>
+              <h4 className={WINDOW_GROUP_LABEL}>{t('aiModels.sourceCloud')}</h4>
+              <ul>
+                {row.clouds.map(providerId => (
+                  <AiChoiceRow
+                    key={providerId}
+                    role={row.role}
+                    choice={providerId}
+                    label={t(`aiClouds.${providerId}`)}
+                    hint={t(`aiClouds.${providerId}Hint`)}
+                    checked={editing?.kind === 'cloud' && editing.providerId === providerId}
+                    onChoose={() =>
+                      void chooseAiProvider(row.role, { kind: 'cloud', providerId }, scope)
+                    }
+                  />
+                ))}
+              </ul>
+            </li>
+          )}
         </ul>
       </fieldset>
     </details>

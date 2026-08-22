@@ -8,6 +8,7 @@ import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useDictationShortcut } from '@/hooks/useDictationShortcut'
 import { useWindowFit } from '@/hooks/useWindowFit'
 import { useAccounts } from '@/stores/accounts'
+import { useAiModels } from '@/stores/aiModels'
 import { useAssets } from '@/stores/assets'
 import { useTasks } from '@/stores/tasks'
 import { useJobs } from '@/stores/jobs'
@@ -31,6 +32,7 @@ export function Application() {
 
   const connectSettings = useSettings(state => state.connect)
   const connectAccounts = useAccounts(state => state.connect)
+  const connectAiModels = useAiModels(state => state.connect)
   const connectProject = useProject(state => state.connect)
   const connectJobs = useJobs(state => state.connect)
   const connectMedia = useMedia(state => state.connect)
@@ -44,6 +46,7 @@ export function Application() {
     const subscriptions = [
       connectSettings(),
       connectAccounts(),
+      connectAiModels(),
       connectProject(),
       connectJobs(),
       connectMedia(),
@@ -58,6 +61,7 @@ export function Application() {
   }, [
     connectSettings,
     connectAccounts,
+    connectAiModels,
     connectProject,
     connectJobs,
     connectMedia,

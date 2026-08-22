@@ -58,8 +58,6 @@ export function useModelFit(
                 ),
                 available: bytes(available),
                 free: free === null ? '' : bytes(free),
-                // Data, not a word of the interface: a runtime is called what it is called.
-                runtime: candidate.model.loader,
               }),
             })
 

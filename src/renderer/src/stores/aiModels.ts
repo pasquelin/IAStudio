@@ -26,6 +26,10 @@ type AiModelsState = {
     provider: RoleProvider | null,
     scope: ChoiceScope,
   ) => Promise<void>
+  chooseAiProviders: (
+    writes: readonly { role: AiRoleId; provider: RoleProvider | null }[],
+    scope: ChoiceScope,
+  ) => Promise<void>
   /** Fetches a model's files. Resolves once the download ends, progress arriving meanwhile. */
   installAiModel: (modelId: string) => Promise<void>
   cancelAiInstall: () => Promise<void>
@@ -81,6 +85,7 @@ export const useAiModels = create<AiModelsState>()(set => {
 
     chooseAiProvider: (role, provider, scope) =>
       command(bridge => bridge.ai.choose(role, provider, scope)),
+    chooseAiProviders: (writes, scope) => command(bridge => bridge.ai.chooseMany(writes, scope)),
     installAiModel: modelId => command(bridge => bridge.ai.install(modelId)),
     cancelAiInstall: () => command(bridge => bridge.ai.cancelInstall()),
     removeAiModel: modelId => command(bridge => bridge.ai.remove(modelId)),

@@ -6,6 +6,7 @@ import {
   type AiRoleId,
 } from '@shared/domain/aiRole'
 import { STT_MODEL } from '@shared/domain/dictation'
+import { CAPABILITIES_BY_FAMILY } from '@shared/domain/model'
 import { modelRefusalOf, type LocalModel } from '@shared/domain/localModel'
 import localModels from '@shared/domain/localModels.json'
 
@@ -139,20 +140,64 @@ export function rolesWithLocalOption(): readonly AiRoleId[] {
 /** The only loader a supplied file reaches today is llama.cpp, and it serves the conversation. */
 const OWN_MODEL_ROLE: AiRoleId = ASSISTANT_ROLE
 
-/** The catalogue as a whole — and the ONE place the shipped list and the supplied one meet. */
-export function catalogueWith(own: readonly LocalModel[]): readonly LocalModel[] {
-  return own.length === 0 ? ALL : [...ALL, ...own]
+/** The catalogue as a whole — shipped, supplied, and whatever a runtime discovered (Ollama). */
+export function catalogueWith(
+  own: readonly LocalModel[],
+  discovered: readonly LocalModel[] = [],
+): readonly LocalModel[] {
+  if (own.length === 0 && discovered.length === 0) return ALL
+
+  const seen = new Set(ALL.map(model => model.id))
+  const extra = [...own, ...discovered].filter(model => {
+    if (seen.has(model.id)) return false
+    seen.add(model.id)
+    return true
+  })
+  return extra.length === 0 ? ALL : [...ALL, ...extra]
 }
 
-/** What a role can be served by, from both lists. */
-export function modelsForWith(role: AiRoleId, own: readonly LocalModel[]): readonly LocalModel[] {
+/** Whether a discovered model (no family) or a declared one actually serves this role. */
+function discoveredServes(model: LocalModel, role: AiRoleId): boolean {
+  const family = model.family
+  const capabilities = model.capabilities
+  if (family && capabilities) {
+    const known = CAPABILITIES_BY_FAMILY[family]
+    return (
+      capabilities.some(
+        capability => known.includes(capability) && aiRoleId(family, capability) === role,
+      ) || (model.serves ?? []).includes(role)
+    )
+  }
+
+  return role === OWN_MODEL_ROLE
+}
+
+/** What a role can be served by, from the shipped list, the supplied one, and discoveries. */
+export function modelsForWith(
+  role: AiRoleId,
+  own: readonly LocalModel[],
+  discovered: readonly LocalModel[] = [],
+): readonly LocalModel[] {
   const shipped = shippedModelsFor(role)
-  return role === OWN_MODEL_ROLE && own.length > 0 ? [...shipped, ...own] : shipped
+  const extra = [
+    ...(role === OWN_MODEL_ROLE ? own : []),
+    ...discovered.filter(model => discoveredServes(model, role)),
+  ]
+  return extra.length === 0 ? shipped : [...shipped, ...extra]
 }
 
 /** One model by id, from either list. An unknown id is expected: manifests come and go. */
-export function modelWith(id: string, own: readonly LocalModel[]): LocalModel | null {
-  return BY_ID.get(id) ?? own.find(model => model.id === id) ?? null
+export function modelWith(
+  id: string,
+  own: readonly LocalModel[],
+  discovered: readonly LocalModel[] = [],
+): LocalModel | null {
+  return (
+    BY_ID.get(id) ??
+    own.find(model => model.id === id) ??
+    discovered.find(model => model.id === id) ??
+    null
+  )
 }
 
 /**
