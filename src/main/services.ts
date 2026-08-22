@@ -1234,6 +1234,7 @@ export function createServices(settings: SettingsStore): Services {
       removeFiles: (_model: LocalModel, folder: string) =>
         rm(folder, { recursive: true, force: true }),
       engine: () => engine.engine(),
+      running: () => engine.current(),
       log: (level: 'info' | 'warn', message: string) => log[level]('ai', message),
     }),
     llamacpp: llamaLocalRuntime({

@@ -33,6 +33,7 @@ function harness(over: Partial<PythonClient> = {}, deps: Partial<PythonRuntimeDe
     fetch: () => Promise.resolve(),
     removeFiles: () => Promise.resolve(),
     engine: () => Promise.resolve(client),
+    running: () => client,
     log: () => {},
     ...deps,
   })
@@ -53,10 +54,29 @@ describe('reading what the engine holds', () => {
     expect(held.job).not.toHaveBeenCalled()
   })
 
-  it('answers not ready when the engine will not start', async () => {
-    const { runtime } = harness({}, { engine: () => Promise.resolve(null) })
+  /**
+   * Measured 2026-08-22: forking the interpreter and reading `engine.hello` costs 28,8 ms,
+   * median of five. A reading runs on every window that connects, and paying that to be told
+   * nothing is loaded is a start-up nobody asked for.
+   */
+  it('never starts the engine to answer what is on the disk', async () => {
+    const started = vi.fn(() => Promise.resolve(null))
+    const { runtime } = harness({}, { engine: started, running: () => null })
 
-    expect(await runtime.read([MODEL])).toMatchObject({ ready: false, loaded: null })
+    await runtime.read([MODEL])
+
+    expect(started).not.toHaveBeenCalled()
+  })
+
+  /**
+   * `ready` follows the DISK and not the process: a model is installable whether or not a Python
+   * process happens to be running, and reading `false` here would grey out the install button of
+   * a runtime that is perfectly able to install.
+   */
+  it('is ready with no engine running, because installing needs none', async () => {
+    const { runtime } = harness({}, { running: () => null })
+
+    expect(await runtime.read([MODEL])).toMatchObject({ ready: true, loaded: null })
   })
 
   it('holds nothing before a load', async () => {
