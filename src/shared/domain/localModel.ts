@@ -187,7 +187,40 @@ export function admitsLoad(format: ModelFormat, loader: ModelLoader): boolean {
 }
 
 /** Why a model cannot be offered at all, whatever the machine could hold. */
-export type ModelRefusal = 'format-not-admitted' | 'weights-carry-code'
+export type ModelRefusal = 'format-not-admitted' | 'weights-carry-code' | 'licence-not-admitted'
+
+/**
+ * The licences the studio may offer a download of — SPDX identifiers, and the list IS the policy.
+ *
+ * A LIST of what is admitted, like `ADMITTED` above and for the same reason: written the other
+ * way round, a licence nobody thought to exclude would be admitted by default, and OpenRAIL, the
+ * Gemma terms and every `other` would walk in. What each of these permits is redistribution with
+ * the studio and commercial use by the person, which is the question `LICENSE` leaves to each
+ * third party — the studio's own PolyForm terms govern its code and nothing else.
+ *
+ * 🛑 **The angle this cannot see, and it is measured**: a manifest declares ONE licence for a
+ * package of weights that may hold several. Sana 600M is `apache-2.0` and its text encoder is
+ * `google/gemma-2-2b-it`, whose terms are neither Apache nor on this list. Nothing here reads
+ * inside a download — only the NOTICE names components, and only because someone wrote it.
+ */
+const ADMITTED_LICENCES: readonly string[] = [
+  'MIT',
+  'Apache-2.0',
+  'BSD-2-Clause',
+  'BSD-3-Clause',
+  'CC-BY-4.0',
+]
+
+/**
+ * Whether the studio may offer this model at all, on its licence.
+ *
+ * Rank 3 is exempt and that is the whole distinction: it is the person's OWN file, already on
+ * their disk. The studio neither fetched it nor vouches for it — `provenanceUnverified` says so
+ * on screen — and refusing it would be the studio deciding what someone may open locally.
+ */
+export function licenceAdmitted(model: LocalModel): boolean {
+  return model.rank === 3 || ADMITTED_LICENCES.includes(model.licence)
+}
 
 /**
  * Extensions that are CODE, whatever the manifest calls them.
@@ -222,7 +255,9 @@ export function modelRefusalOf(model: LocalModel): ModelRefusal | null {
 
   // The whitelist is written on (format, loader) and cannot see a FILE. A manifest naming a `.py`
   // passes `admitsLoad` and hands the loader something it will run — measured, § I.2.
-  return weightsCarryCode(model) ? 'weights-carry-code' : null
+  if (weightsCarryCode(model)) return 'weights-carry-code'
+
+  return licenceAdmitted(model) ? null : 'licence-not-admitted'
 }
 
 /**

@@ -483,7 +483,7 @@
     "name": "Sana 600M",
     "version": "1024px, fp16",
     "spdx": "Apache-2.0",
-    "text": "The image model the studio generates with when it generates on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data\nfolder, against a published digest, and removed from the model manager.\n\nCopyright NVIDIA Corporation and the Sana authors. Licensed under the Apache License,\nVersion 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "text": "The image model the studio generates with when it generates on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright NVIDIA Corporation and the Sana authors. Licensed under the Apache License,\nVersion 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0\n\nTHE DOWNLOAD CARRIES MORE THAN ONE LICENCE, measured on 2026-08-22. Its text encoder\nis a Gemma 2 model: text_encoder/config.json names google/gemma-2-2b-it, and the\n5.2 GB it weighs are governed by the Gemma Terms of Use rather than by Apache-2.0.\nFull terms: https://ai.google.dev/gemma/terms",
     "sources": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers"
   },
   {
@@ -518,6 +518,13 @@
     "version": "3.36.0",
     "spdx": "MIT",
     "text": "See readme.md of the package."
+  },
+  {
+    "name": "SSD-1B",
+    "version": "fp16",
+    "spdx": "Apache-2.0",
+    "text": "The second image model the studio can generate with on this machine, offered beside\nSana so the choice of what a machine can hold belongs to the person.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Segmind. Licensed under the Apache License, Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0\n\nIts components, read on 2026-08-22: two CLIP text encoders and a VAE, none of whose\nconfiguration names an upstream repository. SSD-1B is published by Segmind as a\ndistillation of Stable Diffusion XL 1.0, whose own weights are released under the\nCreativeML Open RAIL++-M licence: https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0",
+    "sources": "https://huggingface.co/segmind/SSD-1B"
   },
   {
     "name": "sympy",

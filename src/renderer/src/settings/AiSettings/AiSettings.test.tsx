@@ -206,13 +206,14 @@ describe('AiSettings', () => {
   })
 
   /**
-   * 🛑 An employment the studio carries no engine for shows the clouds and nothing else, and
-   * silence there reads as a screen that is broken. What is missing is an ENGINE, not a manifest.
+   * 🛑 An employment with no local candidate shows the clouds and nothing else, and silence there
+   * reads as a screen that is broken. What is missing is a MANIFEST and no longer an engine: the
+   * engine serves five modalities, and the catalogue is what has nothing to offer for this one.
    */
   it('says why an employment offers no local model rather than leaving a gap', () => {
     show(overview({ roles: [row({ candidates: [], clouds: ['scenario'] })] }))
 
-    expect(screen.getByText(/n’embarque pas encore de moteur/)).toBeInTheDocument()
+    expect(screen.getByText(/le catalogue n’en propose aucun/)).toBeInTheDocument()
   })
 
   // A scope with nothing to scope to would be a control that answers a question nobody asked.

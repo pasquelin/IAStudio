@@ -162,3 +162,33 @@ describe('a model that produces something other than a sentence', () => {
     expect(runner.outputOf(jobId)).toBe('a picture of a cat')
   })
 })
+
+describe('what a modality decides', () => {
+  const generating = (modality: 'video' | 'mesh') => {
+    const model = localModel({ id: 'local_one', loader: 'diffusers', modality })
+    const generate = vi.fn(() =>
+      Promise.resolve({ path: '/tmp/out', device: 'mps', backend: 'pytorch' }),
+    )
+
+    return { generate, runner: runnerWith({ generate, modelOf: () => model }) }
+  }
+
+  /** The door that answers and the extension the file lands under both follow from it. */
+  it('hands the runtime the modality its manifest declares', async () => {
+    const { generate, runner } = generating('video')
+
+    await runner.submit({ id: MODEL.id }, { prompt: 'a wave' })
+    await settled()
+
+    expect(generate).toHaveBeenCalledWith(expect.objectContaining({ modality: 'video' }))
+  })
+
+  it('files what came back on the shelf that modality lands on', async () => {
+    const { runner } = generating('mesh')
+
+    const submitted = await runner.submit({ id: MODEL.id }, { prompt: 'a shark' })
+    await settled()
+
+    expect(runner.producedBy(submitted.jobId)?.type).toBe('mesh')
+  })
+})

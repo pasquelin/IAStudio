@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from ia_studio_engine.core.router import DoorRouter
+from ia_studio_engine.core.router import DIFFUSION_DOOR, DoorRouter
 
 
 class StandInWorker:
@@ -27,26 +27,34 @@ class StandInWorker:
     def send(self, request: dict[str, Any]) -> None:
         self.sent.append(request)
 
-    def close(self) -> None:
+    def start(self) -> None:
+        self.started = True
+
+    def begin_close(self) -> None:
         self.closed = True
+
+    def wait_closed(self) -> None:
+        self.waited = True
 
 
 def harness() -> tuple[DoorRouter, list[dict], list[StandInWorker]]:
     written: list[dict] = []
     workers: list[StandInWorker] = []
-    answered: list[Any] = []
-    left: list[Any] = []
+    answered: dict[str, Any] = {}
+    left: dict[str, Any] = {}
 
-    def spawn(on_frame, on_gone):
+    def spawn(door, on_frame, on_gone):
         worker = StandInWorker()
+        worker.door = door
         workers.append(worker)
-        answered.append(on_frame)
-        left.append(on_gone)
+        answered[door] = on_frame
+        left[door] = on_gone
         return worker
 
     router = DoorRouter(lambda line: written.append(json.loads(line)), spawn)
-    router.said = lambda frame: answered[0](frame)  # type: ignore[attr-defined]
-    router.door_died = lambda: left[0]()  # type: ignore[attr-defined]
+    # The diffusion door by default, so a test that opens one says nothing about which.
+    router.said = lambda frame, door=DIFFUSION_DOOR: answered[door](frame)  # type: ignore[attr-defined]
+    router.door_died = lambda door=DIFFUSION_DOOR: left[door]()  # type: ignore[attr-defined]
     return router, written, workers
 
 
@@ -236,3 +244,65 @@ def test_cancelling_a_job_no_door_holds_is_a_fact_rather_than_a_failure() -> Non
     router, _written, _workers = harness()
 
     assert router.cancel("local_never") == {"cancelled": False}
+
+
+def test_a_door_nobody_named_is_refused_rather_than_started() -> None:
+    """A `-m` on a module that does not exist forks a process that dies at import, and the job
+    then reads `door-gone` — which sends a reader looking for a crash instead of a typo."""
+    router, _written, workers = harness()
+
+    with pytest.raises(ValueError):
+        router.submit("generate", {"door": "engine/nowhere"}, job="local_a1")
+
+    assert workers == []
+
+
+def test_two_modalities_are_two_processes() -> None:
+    """A door is what a release plan kills, and an 80 GB video has no place in an image's."""
+    router, _written, workers = harness()
+
+    router.submit("generate", {}, job="local_a1")
+    router.submit("generate", {"door": "engine/video"}, job="local_a2")
+
+    assert [worker.door for worker in workers] == [DIFFUSION_DOOR, "engine/video"]
+
+
+def test_two_doors_numbering_from_one_settle_their_own_job() -> None:
+    """Both number their runs from 1: the run alone names two jobs and settles the wrong one."""
+    router, written, workers = harness()
+    router.submit("generate", {}, job="local_image")
+    router.submit("generate", {"door": "engine/audio"}, job="local_sound")
+
+    router.said({"v": 1, "id": workers[1].sent[0]["id"], "ok": {}}, "engine/audio")
+
+    assert [frame["job"] for frame in written] == ["local_sound"]
+
+
+def test_a_door_that_dies_leaves_the_jobs_of_another_alone() -> None:
+    router, written, _workers = harness()
+    router.submit("generate", {}, job="local_image")
+    router.submit("generate", {"door": "engine/audio"}, job="local_sound")
+
+    router.door_died("engine/audio")
+
+    assert [frame["job"] for frame in written] == ["local_sound"]
+
+
+def test_closing_the_router_closes_every_door_it_started() -> None:
+    router, _written, workers = harness()
+    router.submit("generate", {}, job="local_a1")
+    router.submit("generate", {"door": "engine/3d"}, job="local_a2")
+
+    router.close()
+
+    assert [worker.closed for worker in workers] == [True, True]
+
+
+def test_a_door_answers_only_once_the_router_knows_about_it() -> None:
+    """Dying at import, it would report itself gone with nothing yet to forget — and be recorded
+    dead a moment later: alive to everyone, answering nobody, never restarted."""
+    router, _written, workers = harness()
+
+    router.submit("generate", {}, job="local_a1")
+
+    assert workers[0].started is True

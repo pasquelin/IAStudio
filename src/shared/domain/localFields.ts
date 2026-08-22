@@ -13,20 +13,46 @@ import type { AssetType } from './asset'
  */
 
 /** What a runtime takes, as far as a form is concerned. Never a model id, never a runtime name. */
-export type LocalModality = 'text' | 'image'
+export type LocalModality = 'text' | 'image' | 'video' | 'audio' | 'mesh'
+
+/** A modality that writes a FILE. Everything but `text`, which answers a sentence and files none. */
+export type ProducingModality = Exclude<LocalModality, 'text'>
 
 /**
- * The shelf a modality's output lands on, or `null` for one that produces no file.
- *
- * `text` answers `null` and that is the whole point of the function: a conversation produces a
- * sentence, and filing a sentence as an asset would put an empty tile in the browser.
+ * Whether this modality writes a file at all — the one narrowing, so nothing tests `=== 'text'`
+ * in three places and forgets the fourth.
  */
-export function assetTypeOfModality(modality: LocalModality): AssetType | null {
-  return modality === 'text' ? null : modality
+export function producesFile(modality: LocalModality): modality is ProducingModality {
+  return modality !== 'text'
 }
 
-/** The values beside the type, so a schema checks against them rather than against a copy. */
-export const LOCAL_MODALITIES: readonly LocalModality[] = ['text', 'image']
+/**
+ * The shelf a modality's output lands on.
+ *
+ * An identity, and it is the COMPILER that makes it worth writing: every producing modality is
+ * named after its shelf, so one added without a shelf to land on fails to compile here.
+ */
+export function assetTypeOfModality(modality: ProducingModality): AssetType {
+  return modality
+}
+
+const EXTENSIONS: Record<ProducingModality, string> = {
+  image: 'png',
+  video: 'mp4',
+  audio: 'wav',
+  mesh: 'ply',
+}
+
+/**
+ * The extension a generation of this modality lands under, without its dot — what the collector
+ * reads back off the path to file the asset.
+ *
+ * `ply` for a mesh because diffusers' own writer decides it: `export_to_ply` is what ShapE hands
+ * back, where a `.glb` would need a converter this studio does not carry.
+ */
+export function outputExtensionOf(modality: ProducingModality): string {
+  return EXTENSIONS[modality]
+}
 
 /**
  * One knob, before a language is chosen. `labelKey` rather than `label`: a descriptor field is
@@ -54,6 +80,60 @@ const SEED: LocalFieldTemplate = {
   labelKey: 'localFields.seed',
   helpKey: 'localFields.seedHelp',
   required: false,
+}
+
+const NEGATIVE_PROMPT: LocalFieldTemplate = {
+  key: 'negativePrompt',
+  kind: 'longText',
+  labelKey: 'localFields.negativePrompt',
+  required: false,
+}
+
+/** Written once and shared: three modalities count denoise steps, with bounds of their own. */
+function steps(base: { default: number; max: number }): LocalFieldTemplate {
+  return {
+    key: 'steps',
+    kind: 'integer',
+    labelKey: 'localFields.steps',
+    helpKey: 'localFields.stepsHelp',
+    required: false,
+    min: 1,
+    ...base,
+  }
+}
+
+function cfgScale(base: { default: number; max: number }): LocalFieldTemplate {
+  return {
+    key: 'cfgScale',
+    kind: 'number',
+    labelKey: 'localFields.cfgScale',
+    required: false,
+    min: 0,
+    step: 0.5,
+    group: 'advanced',
+    ...base,
+  }
+}
+
+/**
+ * A pixel side. Bounds are the runtime's: a model wanting others says so in its manifest.
+ *
+ * The step is a parameter because the DEFAULT has to sit on the grid it draws: the form renders a
+ * real `<input type="number">`, and a browser refuses to submit a `stepMismatch` — a video at
+ * 480 high on a grid of 64 is a generation that never starts.
+ */
+function side(
+  key: 'width' | 'height',
+  base: { default: number; max: number; step: number },
+): LocalFieldTemplate {
+  return {
+    key,
+    kind: 'integer',
+    labelKey: `localFields.${key}`,
+    required: false,
+    min: 256,
+    ...base,
+  }
 }
 
 /**
@@ -99,56 +179,72 @@ const TEMPLATES: Record<LocalModality, readonly LocalFieldTemplate[]> = {
   ],
   image: [
     PROMPT,
-    {
-      key: 'negativePrompt',
-      kind: 'longText',
-      labelKey: 'localFields.negativePrompt',
-      required: false,
-    },
-    {
-      key: 'width',
-      kind: 'integer',
-      labelKey: 'localFields.width',
-      required: false,
-      default: 1024,
-      min: 256,
-      max: 2048,
-      step: 64,
-    },
-    {
-      key: 'height',
-      kind: 'integer',
-      labelKey: 'localFields.height',
-      required: false,
-      default: 1024,
-      min: 256,
-      max: 2048,
-      step: 64,
-    },
-    {
-      key: 'steps',
-      kind: 'integer',
-      labelKey: 'localFields.steps',
-      helpKey: 'localFields.stepsHelp',
-      required: false,
-      default: 20,
-      min: 1,
-      max: 150,
-    },
-    {
-      key: 'cfgScale',
-      kind: 'number',
-      labelKey: 'localFields.cfgScale',
-      required: false,
-      default: 7,
-      min: 0,
-      max: 30,
-      step: 0.5,
-      group: 'advanced',
-    },
+    NEGATIVE_PROMPT,
+    side('width', { default: 1024, max: 2048, step: 64 }),
+    side('height', { default: 1024, max: 2048, step: 64 }),
+    steps({ default: 20, max: 150 }),
+    cfgScale({ default: 7, max: 30 }),
     SEED,
   ],
+  video: [
+    PROMPT,
+    NEGATIVE_PROMPT,
+    side('width', { default: 832, max: 1280, step: 16 }),
+    side('height', { default: 480, max: 720, step: 16 }),
+    {
+      key: 'frames',
+      kind: 'integer',
+      labelKey: 'localFields.frames',
+      helpKey: 'localFields.framesHelp',
+      required: false,
+      default: 81,
+      min: 9,
+      max: 241,
+      step: 4,
+    },
+    {
+      key: 'fps',
+      kind: 'integer',
+      labelKey: 'localFields.fps',
+      required: false,
+      default: 16,
+      min: 1,
+      max: 60,
+    },
+    steps({ default: 30, max: 100 }),
+    cfgScale({ default: 5, max: 20 }),
+    SEED,
+  ],
+  audio: [
+    PROMPT,
+    NEGATIVE_PROMPT,
+    {
+      key: 'seconds',
+      kind: 'number',
+      labelKey: 'localFields.seconds',
+      helpKey: 'localFields.secondsHelp',
+      required: false,
+      default: 10,
+      min: 1,
+      max: 300,
+      step: 0.5,
+    },
+    steps({ default: 50, max: 200 }),
+    cfgScale({ default: 3.5, max: 20 }),
+    SEED,
+  ],
+  mesh: [PROMPT, steps({ default: 25, max: 100 }), cfgScale({ default: 15, max: 30 }), SEED],
 }
+
+/**
+ * The values beside the type, so a schema checks against them rather than against a copy.
+ *
+ * Read off `TEMPLATES`, which the compiler holds complete: a modality added to the union without
+ * a form would otherwise be missing here in silence, and both readers are silent about it —
+ * `z.enum` would refuse a valid manifest, and the thumbnail generator would write no picture.
+ */
+// `as`: `Object.keys` widens to `string[]` where this record is keyed by the union itself.
+export const LOCAL_MODALITIES = Object.keys(TEMPLATES) as readonly LocalModality[]
 
 /**
  * What a manifest may disagree with, by field key. Bounds and defaults only — a model never adds

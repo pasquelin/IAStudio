@@ -20,6 +20,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pngOf, RGB } from './png.mjs'
+import { LOCAL_MODALITIES } from '../src/shared/domain/localFields.ts'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SIZE = 256
@@ -29,8 +30,11 @@ const CELL = SIZE / CELLS
 /**
  * Les vignettes génériques, par modalité — ce que reçoit un modèle ajouté à la main, dont rien
  * ne dit à quoi il ressemble. Leur graine est le mot lui-même, donc elles ne bougent jamais.
+ *
+ * Lues plutôt que recopiées : une modalité neuve sans vignette laisse une image cassée sur la
+ * carte de tout modèle qui n'en déclare pas, et rien ne rougirait.
  */
-const GENERIC = ['text', 'image']
+const GENERIC = LOCAL_MODALITIES
 
 /**
  * Le modèle de reconnaissance, qui vit dans `dictation.ts` et non dans le JSON du catalogue :

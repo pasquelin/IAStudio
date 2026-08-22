@@ -160,6 +160,14 @@ function fontLicences() {
  * importing the catalogue would fail on its first import. A model added there and forgotten here
  * is reddened by nothing.
  */
+/** How every catalogue model arrives, said once — a third one adds a TEXT, not this paragraph. */
+const FETCHED_ON_REQUEST = [
+  'It is NOT shipped with the application: it is fetched on request into the user data folder,',
+  'against a published digest, and removed from the model manager.',
+].join('\n')
+
+const APACHE_TERMS = 'Full terms: https://www.apache.org/licenses/LICENSE-2.0'
+
 function modelLicences() {
   return [
     {
@@ -212,13 +220,35 @@ function modelLicences() {
       spdx: 'Apache-2.0',
       text: [
         'The image model the studio generates with when it generates on this machine.',
-        'It is NOT shipped with the application: it is fetched on request into the user data',
-        'folder, against a published digest, and removed from the model manager.',
+        FETCHED_ON_REQUEST,
         '',
         'Copyright NVIDIA Corporation and the Sana authors. Licensed under the Apache License,',
-        'Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0',
+        `Version 2.0. ${APACHE_TERMS}`,
+        '',
+        'THE DOWNLOAD CARRIES MORE THAN ONE LICENCE, measured on 2026-08-22. Its text encoder',
+        'is a Gemma 2 model: text_encoder/config.json names google/gemma-2-2b-it, and the',
+        '5.2 GB it weighs are governed by the Gemma Terms of Use rather than by Apache-2.0.',
+        'Full terms: https://ai.google.dev/gemma/terms',
       ].join('\n'),
       sources: 'https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers',
+    },
+    {
+      name: 'SSD-1B',
+      version: 'fp16',
+      spdx: 'Apache-2.0',
+      text: [
+        'The second image model the studio can generate with on this machine, offered beside',
+        'Sana so the choice of what a machine can hold belongs to the person.',
+        FETCHED_ON_REQUEST,
+        '',
+        `Copyright Segmind. Licensed under the Apache License, Version 2.0. ${APACHE_TERMS}`,
+        '',
+        'Its components, read on 2026-08-22: two CLIP text encoders and a VAE, none of whose',
+        'configuration names an upstream repository. SSD-1B is published by Segmind as a',
+        'distillation of Stable Diffusion XL 1.0, whose own weights are released under the',
+        'CreativeML Open RAIL++-M licence: https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0',
+      ].join('\n'),
+      sources: 'https://huggingface.co/segmind/SSD-1B',
     },
   ]
 }

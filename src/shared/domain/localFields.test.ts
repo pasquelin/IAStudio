@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { localFieldKeys, localFieldsOf } from './localFields'
+import {
+  assetTypeOfModality,
+  localFieldKeys,
+  localFieldsOf,
+  LOCAL_MODALITIES,
+  outputExtensionOf,
+  producesFile,
+} from './localFields'
 
 const shout = (key: string): string => key.toUpperCase()
 
@@ -57,5 +64,74 @@ describe('localFieldKeys', () => {
     expect(keys).toContain('localFields.prompt')
     expect(keys).toContain('localFields.seedHelp')
     expect(new Set(keys).size).toBe(new Set(keys).size)
+  })
+})
+
+describe('the modalities that write a file', () => {
+  const producing = LOCAL_MODALITIES.filter(producesFile)
+
+  it('gives every one of them a prompt, whatever it produces', () => {
+    for (const modality of LOCAL_MODALITIES) {
+      expect(localFieldsOf(modality, {}, shout).map(field => field.key)).toContain('prompt')
+    }
+  })
+
+  it('counts frames and a rate for a video, where an image has neither', () => {
+    const keys = localFieldsOf('video', {}, shout).map(field => field.key)
+
+    expect(keys).toEqual(expect.arrayContaining(['frames', 'fps']))
+    expect(localFieldsOf('image', {}, shout).map(field => field.key)).not.toContain('frames')
+  })
+
+  it('asks a sound how long it runs', () => {
+    expect(localFieldsOf('audio', {}, shout).map(field => field.key)).toContain('seconds')
+  })
+
+  // Measured 2026-08-22 against `ShapEPipeline.__call__`: it takes neither a size nor a negative
+  // prompt, and a knob a pipeline refuses is a form that fails at the first generation.
+  it('offers a mesh neither a size nor a negative prompt', () => {
+    const keys = localFieldsOf('mesh', {}, shout).map(field => field.key)
+
+    for (const absent of ['width', 'height', 'negativePrompt']) expect(keys).not.toContain(absent)
+  })
+
+  it('files each of them on the shelf it is named after', () => {
+    for (const modality of producing) expect(assetTypeOfModality(modality)).toBe(modality)
+  })
+
+  // The collector reads the extension back off the path: a video written as `.png` lands as a
+  // picture nothing can play.
+  it('writes each of them under an extension of its own', () => {
+    const written = producing.map(outputExtensionOf)
+
+    expect(new Set(written).size).toBe(producing.length)
+  })
+
+  it('leaves a conversation writing no file at all', () => {
+    expect(producesFile('text')).toBe(false)
+  })
+})
+
+describe('a default that cannot be typed back in', () => {
+  /**
+   * The form renders a real `<input type="number">` with `min`/`max`/`step`, and a browser
+   * refuses to submit a `stepMismatch` — a default off its own grid is a generation that never
+   * starts, and nothing on screen says why.
+   */
+  it('puts every numeric default on the grid its own step draws', () => {
+    const offGrid = LOCAL_MODALITIES.flatMap(modality =>
+      localFieldsOf(modality, {}, shout)
+        .filter(field => typeof field.default === 'number' && field.step && field.min !== undefined)
+        // Within a hair of the grid rather than on it: 0.95 from 0 by 0.05 leaves 0.049999… in
+        // binary floating point, and a browser tolerates exactly that.
+        .filter(field => {
+          const step = Number(field.step)
+          const off = (Number(field.default) - Number(field.min)) % step
+          return Math.min(Math.abs(off), Math.abs(step - off)) > 1e-9
+        })
+        .map(field => `${modality}.${field.key}`),
+    )
+
+    expect(offGrid).toEqual([])
   })
 })

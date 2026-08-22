@@ -1,4 +1,5 @@
 import { runtimeEndpointId, type RuntimeEndpointId } from '@shared/domain/aiRuntime'
+import type { ProducingModality } from '@shared/domain/localFields'
 import type { DownloadProgress, LocalModel, ModelLoader } from '@shared/domain/localModel'
 
 /**
@@ -13,25 +14,35 @@ import type { DownloadProgress, LocalModel, ModelLoader } from '@shared/domain/l
  * A loader absent from this table answers on `<loader>/embedded`, which is what every runtime that
  * holds its weights in its own process does.
  */
+// One process per modality, because a process is what a release plan can kill — a video model
+// weighs tens of gigabytes, and co-located, freeing one door would take the other down with it.
+// Keyed by `ProducingModality`, so a modality added without a door of its own does not compile.
+const DIFFUSERS_DOORS: Readonly<Record<ProducingModality, string>> = {
+  image: 'diffusion',
+  video: 'video',
+  audio: 'audio',
+  mesh: '3d',
+}
+
 const DOORS_BY_LOADER: Readonly<Partial<Record<ModelLoader, Readonly<Record<string, string>>>>> = {
   ollama: { '*': 'api-chat' },
-  // One process per modality, because a process is what a release plan can kill. `*` is what an
-  // unnamed modality falls back on, never a door of its own.
-  diffusers: {
-    image: 'diffusion',
-    video: 'diffusion',
-    audio: 'audio',
-    mesh: '3d',
-    '*': 'diffusion',
-  },
+  // `*` is what an unnamed modality falls back on, never a door of its own.
+  diffusers: { ...DIFFUSERS_DOORS, '*': 'diffusion' },
+}
+
+/** What the Python engine calls itself, and the only runtime whose doors are its processes. */
+const ENGINE_RUNTIME = 'engine'
+
+/** The door name alone, read off the one table. `embedded` is what a loader naming none answers. */
+function doorOf(loader: ModelLoader, modality?: string): string {
+  const doors = DOORS_BY_LOADER[loader]
+  if (!doors) return 'embedded'
+
+  return (modality && doors[modality]) ?? doors['*'] ?? 'embedded'
 }
 
 export function endpointOf(loader: ModelLoader, modality?: string): RuntimeEndpointId {
-  const doors = DOORS_BY_LOADER[loader]
-  if (!doors) return runtimeEndpointId(loader, 'embedded')
-
-  const door = (modality && doors[modality]) ?? doors['*']
-  return runtimeEndpointId(loader, door ?? 'embedded')
+  return runtimeEndpointId(loader, doorOf(loader, modality))
 }
 
 /**
@@ -45,6 +56,23 @@ export function endpointsOf(loader: ModelLoader): readonly RuntimeEndpointId[] {
   if (!doors) return [runtimeEndpointId(loader, 'embedded')]
 
   return [...new Set(Object.values(doors))].map(door => runtimeEndpointId(loader, door))
+}
+
+/** The door as the ENGINE names it — what `endpointOfDoor` reads back the other way. */
+export function engineDoorOf(modality?: string): RuntimeEndpointId {
+  return runtimeEndpointId(ENGINE_RUNTIME, doorOf('diffusers', modality))
+}
+
+/**
+ * The same door, translated from the name an admission plan uses.
+ *
+ * 🛑 One door, two spellings: a plan says `diffusers/<door>` because it is keyed by LOADER, the
+ * engine says `engine/<door>` because that is what it calls itself. Translated in one place
+ * rather than left to a caller — the door half is identical, and it is the half that matters.
+ */
+export function engineDoorOfEndpoint(endpoint: RuntimeEndpointId): RuntimeEndpointId {
+  const [, door] = endpoint.split('/')
+  return runtimeEndpointId(ENGINE_RUNTIME, door ?? 'embedded')
 }
 
 /** One turn of a conversation. Roles, because that is how a chat door takes a prompt. */
@@ -72,6 +100,8 @@ export type ChatRequest = {
 /** What a generation on this machine is asked for. The fields a modality does not use are absent. */
 export type GenerateRequest = {
   readonly model: string
+  /** Which door answers, and what it writes. A door serves one, so nothing else names it. */
+  readonly modality: ProducingModality
   readonly prompt: string
   /** Straight from the dynamic form, so a modality gains a field without this type changing. */
   readonly fields: Readonly<Record<string, unknown>>
@@ -129,8 +159,15 @@ export type LocalRuntime = {
    * nothing between calls.
    */
   load?: (model: LocalModel, options: LoadOptions) => Promise<number>
-  /** Frees whatever it holds. Answering does not prove the bytes came back — ADR-19. */
-  unload?: () => Promise<void>
+  /**
+   * Frees a DOOR, or everything this runtime holds when none is named. Answering does not prove
+   * the bytes came back — ADR-19.
+   *
+   * The endpoint is not optional decoration: one door per modality means two can be resident at
+   * once, and an unload that freed "the last one loaded" would kill the wrong process while the
+   * plan recorded the other as freed.
+   */
+  unload?: (endpoint?: RuntimeEndpointId) => Promise<void>
 }
 
 export type RuntimeReading = {

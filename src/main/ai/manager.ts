@@ -333,7 +333,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
   /** Frees a DOOR and forgets what it held. A release is never added back to a reading — R2. */
   const release = async (endpoint: RuntimeEndpointId): Promise<void> => {
-    await deps.runtimes[loaderOf(endpoint)]?.unload?.()
+    await deps.runtimes[loaderOf(endpoint)]?.unload?.(endpoint)
     occupancy.delete(endpoint)
   }
 

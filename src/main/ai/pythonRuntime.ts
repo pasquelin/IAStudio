@@ -1,4 +1,5 @@
 import type { DownloadProgress, LocalModel } from '@shared/domain/localModel'
+import type { RuntimeEndpointId } from '@shared/domain/aiRuntime'
 import type { PythonClient } from './pythonClient'
 import type {
   FileRuntimeDeps,
@@ -8,7 +9,7 @@ import type {
   LocalRuntime,
   RuntimeReading,
 } from './localRuntimes'
-import { fileRuntime } from './localRuntimes'
+import { engineDoorOf, engineDoorOfEndpoint, fileRuntime } from './localRuntimes'
 
 /**
  * The engine, as a `LocalRuntime` — the same contract llama.cpp and sherpa-onnx already answer.
@@ -35,7 +36,17 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
   // through the engine would put a second copy of `modelInstall` in Python.
   const files = fileRuntime(deps)
 
-  let held: string | null = null
+  /**
+   * What each door of this engine was loaded with — a MAP and not one slot, because a door is a
+   * process and two modalities are two processes that can be resident at the same moment.
+   *
+   * 🛑 A backend that counts no bytes — the CPU one, where `_held_bytes` answers `None` — reports
+   * nothing to the ledger, so a door that DIED leaves its entry here until the engine itself
+   * goes. The studio then reads a model as resident that is not. Written rather than guessed at:
+   * the alternative was clearing the map on an empty ledger, which on that backend is every
+   * reading, and the model could then never be freed at all.
+   */
+  const held = new Map<string, string>()
 
   return {
     read: async (models): Promise<RuntimeReading> => {
@@ -45,23 +56,26 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
       // `ready` follows the disk, which is what the row needs — a model is installable whether
       // or not a Python process happens to be running.
       const engine = deps.running()
-      if (!engine) return { ...onDisk, loaded: null }
+      // Its processes went with it, so it holds nothing — a measurement, not an assumption.
+      if (!engine) {
+        held.clear()
+        return { ...onDisk, loaded: null }
+      }
 
       // The LEDGER and never `worker.status`: the core answers this itself, where asking a door
       // would fork a Python process and pay 682 MB of imports to be told it holds nothing.
       try {
-        const doors = await engine.memory()
-        // What we asked for, confirmed by a door that still holds bytes. Either half alone lies:
-        // the id without the ledger survives an engine that died, the ledger without the id
-        // cannot name what is resident.
-        const holding = doors.some(door => door.heldBytes > 0)
-        if (!holding || !models.some(model => model.id === held)) held = null
+        // A door answering ZERO is a release confirmed. One that is ABSENT is not a denial —
+        // a backend with no counter never appears here at all.
+        for (const door of await engine.memory()) {
+          if (door.heldBytes === 0) held.delete(door.door)
+        }
       } catch (error) {
         deps.log('info', `the engine answered nothing for its memory: ${String(error)}`)
-        held = null
       }
 
-      return { ...onDisk, loaded: held }
+      const resident = models.find(model => [...held.values()].includes(model.id))
+      return { ...onDisk, loaded: resident?.id ?? null }
     },
 
     install: (model, onProgress: (progress: DownloadProgress) => void, signal) =>
@@ -73,24 +87,35 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
       const engine = await deps.engine()
       if (!engine) throw new Error('the local AI engine is not answering')
 
+      const door = engineDoorOf(model.modality)
       const settled = await engine.job(
         'models.load',
-        { modelId: model.id, folder: deps.folderFor(model) },
+        { modelId: model.id, folder: deps.folderFor(model), door },
         { onStep: options.onProgress, signal: options.signal },
       )
 
-      held = model.id
+      held.set(door, model.id)
       // A MEASUREMENT, where `reservationBytes` is only what a publisher announced — R3. A backend
       // that answered nothing leaves the reservation, which is the only other figure there is.
       return settled.heldBytes ?? model.reservationBytes
     },
 
-    unload: async () => {
+    unload: async (endpoint?: RuntimeEndpointId) => {
+      // Named or all of them, and never a default: waking a door this runtime never loaded into
+      // would fork a Python process to free what it does not hold.
+      const doors: readonly string[] = endpoint
+        ? [engineDoorOfEndpoint(endpoint)]
+        : [...held.keys()]
+      const asked = doors.filter(door => held.has(door))
+      if (asked.length === 0) return
+
       const engine = await deps.engine()
       if (!engine) return
 
-      await engine.job('models.unload', {})
-      held = null
+      for (const door of asked) {
+        await engine.job('models.unload', { door })
+        held.delete(door)
+      }
     },
 
     generate: async (request: GenerateRequest): Promise<GenerateResult> => {
@@ -99,7 +124,12 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
 
       const settled = await engine.job(
         'generate',
-        { ...request.fields, prompt: request.prompt, destination: request.destination },
+        {
+          ...request.fields,
+          prompt: request.prompt,
+          destination: request.destination,
+          door: engineDoorOf(request.modality),
+        },
         { onStep: request.onProgress, signal: request.signal },
       )
 

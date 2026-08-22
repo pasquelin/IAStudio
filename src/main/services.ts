@@ -7,6 +7,7 @@ import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
 import type { AiOverview } from '@shared/domain/aiOverview'
+import { outputExtensionOf } from '@shared/domain/localFields'
 import type { LocalModel } from '@shared/domain/localModel'
 import { needsOwnFolder } from '@shared/domain/localModel'
 import {
@@ -1470,9 +1471,12 @@ export function createServices(settings: SettingsStore): Services {
 
       return await generate({
         model: model.id,
+        modality: request.modality,
         prompt: request.prompt,
         fields: request.fields,
-        destination: join(folder, `${request.jobId}.png`),
+        // The extension follows the MODALITY: the collector reads it back off the path to file
+        // the asset, so a video written as `.png` lands as a picture nothing can play.
+        destination: join(folder, `${request.jobId}.${outputExtensionOf(request.modality)}`),
         onProgress: request.onProgress,
         signal: request.signal,
       })

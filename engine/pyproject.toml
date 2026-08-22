@@ -19,6 +19,9 @@ diffusion = [
   "transformers>=5.0",
   "accelerate>=1.0",
   "safetensors>=0.4",
+  # `[?]` A video model would ALSO need `imageio` and `imageio-ffmpeg`, which `export_to_video`
+  # writes through. Not declared while none is admitted: adding one re-locks, and asks for the
+  # 682 Mo environment to be materialised for its licence notice alone.
 ]
 
 [dependency-groups]

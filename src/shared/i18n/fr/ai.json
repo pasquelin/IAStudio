@@ -20,7 +20,12 @@
     "height": "Hauteur",
     "steps": "Étapes",
     "stepsHelp": "Plus d’étapes affinent l’image et allongent le calcul.",
-    "cfgScale": "Fidélité à la description"
+    "cfgScale": "Fidélité à la description",
+    "frames": "Images",
+    "framesHelp": "Le nombre d’images de la séquence produite.",
+    "fps": "Images par seconde",
+    "seconds": "Durée",
+    "secondsHelp": "La durée du son produit, en secondes."
   },
   "aiModels": {
     "reading": "Lecture de la machine…",
@@ -78,6 +83,6 @@
     "addOwnModel": "Ajouter un fichier…",
     "ownModelUnreadable": "Ce fichier n’est pas un GGUF que le studio sait lire.",
     "loadBeyondMachine": "Chargement impossible : {{needed}} demandés, {{available}} disponibles.",
-    "noLocalEngine": "Aucun modèle local pour cet emploi : le studio n’embarque pas encore de moteur capable de le servir."
+    "noLocalEngine": "Aucun modèle local pour cet emploi : le catalogue n’en propose aucun aujourd’hui."
   }
 }

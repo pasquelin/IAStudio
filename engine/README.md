@@ -5,9 +5,10 @@ d'Electron, qui **mesure et exécute** — jamais un second ordonnanceur.
 
 ## Ce qu'il est aujourd'hui
 
-Le socle, le tuyau, et **une porte** : `engine/diffusion`. Le noyau se connecte, se présente,
+Le socle, le tuyau, et **quatre portes**, une par modalité. Le noyau se connecte, se présente,
 répond `hardware.info`, et route vers un worker ce qu'il ne peut pas répondre lui-même —
-`models.load`, `models.unload`, `generate`, `worker.status`.
+`models.load`, `models.unload`, `generate`, `worker.status`. **C'est le principal qui nomme la
+porte** sur chaque requête : lui seul sait quel modèle a été choisi pour quel emploi.
 
 **Le noyau n'importe jamais torch.** Mesuré le 22/08 sur la chaîne complète : le noyau salue à
 **33 ms**, le worker paie l'import une fois, et le modèle reste chaud entre deux générations.
@@ -18,9 +19,20 @@ Une porte est un **processus**, et c'est ce qu'un plan de libération peut tuer.
 démarre à la première demande — une porte que personne n'a demandée est un processus qui n'a
 jamais tourné — et lui parle par un `socketpair` hérité, dans le même NDJSON.
 
-| Porte | Adapter | Backend |
-|---|---|---|
-| `engine/diffusion` | `diffusers_adapter` | PyTorch (MPS, CUDA ou CPU, **rapporté** par run) |
+Ce qui diffère entre deux portes est une modalité et un nom : la boucle est écrite une fois
+(`workers/door.py`), et les quatre modules qui la nomment font quatre lignes chacun.
+
+| Porte | Modalité | Adapter | Backend |
+|---|---|---|---|
+| `engine/diffusion` | image | `diffusers_adapter` | PyTorch (MPS, CUDA ou CPU, **rapporté** par run) |
+| `engine/video` | vidéo | `diffusers_adapter` | idem |
+| `engine/audio` | son | `diffusers_adapter` | idem |
+| `engine/3d` | maillage | `diffusers_adapter` | idem |
+
+🛑 **Trois de ces quatre portes n'ont jamais tourné** : aucun modèle vidéo, audio ou 3D n'entre au
+catalogue aujourd'hui — mesuré le 22/08, le plus léger modèle vidéo pèse 28,9 Go, ACE-Step n'a pas
+de pipeline dans diffusers 0.40, et Shap-E ne publie son renderer qu'en pickle, que l'ADR-20
+refuse.
 
 **Une op routée répond IMMÉDIATEMENT avec le job qu'elle a ouvert**, jamais avec son résultat :
 un chargement lit des gigaoctets et une génération dure des secondes. Le résultat arrive en

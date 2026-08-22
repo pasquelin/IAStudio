@@ -1,15 +1,15 @@
-"""The `engine/diffusion` door. What it is lives in `door.py`; what differs is these two words."""
+"""The `engine/3d` door. What it is lives in `door.py`; what differs is these two words."""
 
 from __future__ import annotations
 
 from ia_studio_engine.adapters.modalities import MODALITIES
 from ia_studio_engine.workers.door import serve
 
-DOOR = "engine/diffusion"
+DOOR = "engine/3d"
 
 
 def main(argv: list[str] | None = None) -> int:
-    return serve(DOOR, MODALITIES["image"], argv)
+    return serve(DOOR, MODALITIES["mesh"], argv)
 
 
 if __name__ == "__main__":
