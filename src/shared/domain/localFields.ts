@@ -98,6 +98,15 @@ const SOURCE_IMAGE: LocalFieldTemplate = {
   required: false,
 }
 
+/** The sequence a generation reworks. Empty, the model draws the whole thing from the words. */
+const SOURCE_VIDEO: LocalFieldTemplate = {
+  key: 'video',
+  kind: 'raw',
+  labelKey: 'localFields.video',
+  helpKey: 'localFields.videoHelp',
+  required: false,
+}
+
 const MASK: LocalFieldTemplate = {
   key: 'mask',
   kind: 'image',
@@ -236,6 +245,7 @@ const TEMPLATES: Record<LocalModality, readonly LocalFieldTemplate[]> = {
   video: [
     PROMPT,
     NEGATIVE_PROMPT,
+    SOURCE_VIDEO,
     side('width', { default: 832, max: 1280, step: 16 }),
     side('height', { default: 480, max: 720, step: 16 }),
     {
@@ -260,6 +270,7 @@ const TEMPLATES: Record<LocalModality, readonly LocalFieldTemplate[]> = {
     },
     steps({ default: 30, max: 100 }),
     cfgScale({ default: 5, max: 20 }),
+    STRENGTH,
     SEED,
   ],
   audio: [

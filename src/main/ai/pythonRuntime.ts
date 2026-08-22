@@ -17,6 +17,8 @@ import { engineDoorOf, engineDoorOfEndpoint, fileRuntime } from './localRuntimes
  */
 
 export type PythonRuntimeDeps = FileRuntimeDeps & {
+  /** The model an attachment completes, so its folder can travel with the load. */
+  baseOf: (model: LocalModel) => LocalModel | null
   /**
    * The engine, started on first ask. `null` once it has died too often to keep trying — which is
    * a runtime that is not answering, and says so, rather than a studio that freezes.
@@ -27,6 +29,22 @@ export type PythonRuntimeDeps = FileRuntimeDeps & {
   log: (level: 'info' | 'warn', message: string) => void
   /** Called when a load or generation starts; the returned function runs when it ends. */
   onUsed?: (modelId: string) => (() => void) | void
+}
+
+/**
+ * What a door needs to graft one set of weights onto another, or nothing at all.
+ *
+ * Answers nothing when the base is unknown rather than sending a half plan: a door handed an
+ * attachment with no base to graft it onto would load neither, and say so from further away.
+ */
+function attachmentOf(model: LocalModel, base: LocalModel | null): Record<string, unknown> {
+  if (!model.attaches || !base) return {}
+
+  return {
+    attachAs: model.attaches.as,
+    attachSubfolder: model.attaches.subfolder,
+    attachWeightName: model.attaches.weightName,
+  }
 }
 
 export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
@@ -85,14 +103,19 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
       const done = deps.onUsed?.(model.id)
       try {
         const door = engineDoorOf(model.modality)
+        const base = deps.baseOf(model)
         const settled = await engine.job(
           'models.load',
           {
             modelId: model.id,
-            folder: deps.folderFor(model),
+            // The BASE's folder where this only completes it: the door loads that one, and the
+            // attachment is grafted onto the pipeline it holds.
+            folder: deps.folderFor(base ?? model),
+            attachFolder: base ? deps.folderFor(model) : undefined,
             door,
             // Declared per entry, never per loader — see `readsTorchWeights`.
             torchWeights: model.readsTorchWeights === true,
+            ...attachmentOf(model, base),
           },
           { onStep: options.onProgress, signal: options.signal },
         )

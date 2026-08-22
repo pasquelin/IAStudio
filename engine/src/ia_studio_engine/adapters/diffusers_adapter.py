@@ -111,6 +111,40 @@ def _takes_step_callback(pipeline: Any) -> bool:
     return "callback_on_step_end" in inspect.signature(pipeline.__call__).parameters
 
 
+#: Which pipeline reworks a sequence, by the one that was loaded — a table because diffusers
+#: publishes no `AutoPipelineForVideoToVideo`. A model absent here simply serves no such
+#: employment, and `_wanted_class` answers nothing rather than deriving something wrong.
+VIDEO_TO_VIDEO = {
+    "CogVideoXPipeline": "CogVideoXVideoToVideoPipeline",
+    "WanPipeline": "WanVideoToVideoPipeline",
+    "WanImageToVideoPipeline": "WanVideoToVideoPipeline",
+}
+
+
+def _attached(pipeline: Any, attachment: dict[str, Any], device: str) -> Any:
+    """
+    Weights grafted onto the pipeline that is already resident, never a second pipeline.
+
+    A ControlNet is a network run BESIDE the pipeline's own, so it changes the class; an
+    IP-Adapter is grafted onto the attention of the one already there, so it does not.
+    """
+    import torch
+    from diffusers import AutoPipelineForText2Image, ControlNetModel
+
+    if attachment["as"] == "ip-adapter":
+        pipeline.load_ip_adapter(
+            attachment["folder"],
+            subfolder=attachment.get("subfolder") or "",
+            weight_name=attachment.get("weight_name") or "",
+        )
+        return pipeline
+
+    control = ControlNetModel.from_pretrained(
+        attachment["folder"], use_safetensors=True, local_files_only=True, dtype=torch.float16
+    ).to(device)
+    return AutoPipelineForText2Image.from_pipe(pipeline, controlnet=control)
+
+
 @dataclass
 class LoadedModel:
     model_id: str
@@ -171,7 +205,13 @@ class DiffusersAdapter:
         stray = sorted(entry.name for entry in path.rglob("*.py"))
         return f"the weights carry python: {', '.join(stray[:3])}" if stray else None
 
-    def load(self, model_id: str, folder: str, torch_weights: bool = False) -> LoadedModel:
+    def load(
+        self,
+        model_id: str,
+        folder: str,
+        torch_weights: bool = False,
+        attachment: dict[str, Any] | None = None,
+    ) -> LoadedModel:
         refusal = self.refuse_reason(folder)
         if refusal is not None:
             raise LoadRefusedError(refusal)
@@ -204,6 +244,9 @@ class DiffusersAdapter:
             variant="fp16",
             dtype=torch.float16,
         ).to(device)
+
+        if attachment is not None:
+            pipeline = _attached(pipeline, attachment, device)
 
         # Measured 2026-08-22 on Sana 600M: slicing costs **+50 ms on 3 289**, or 2 %, and buys a
         # peak that fits — a denoise otherwise materialises the whole attention matrix at once,
@@ -248,24 +291,45 @@ class DiffusersAdapter:
         elif torch.cuda.is_available():
             torch.cuda.empty_cache()
 
+    def _wanted_class(self, kwargs: dict[str, Any]) -> Any:
+        """
+        Which pipeline the ARGUMENTS call for — a mask means repainting, a picture means editing,
+        a sequence means reworking. Nothing carries the employment down here.
+
+        Video goes through a TABLE where images go through an `AutoPipelineFor…`: diffusers
+        publishes no auto-pipeline for video, read on 2026-08-22.
+        """
+        import diffusers
+
+        if "video" in kwargs:
+            held = self.loaded
+            assert held is not None
+            wanted = VIDEO_TO_VIDEO.get(type(held.pipeline).__name__)
+            return getattr(diffusers, wanted) if wanted else None
+
+        if "image" not in kwargs:
+            return None
+
+        return (
+            diffusers.AutoPipelineForInpainting
+            if "mask_image" in kwargs
+            else diffusers.AutoPipelineForImage2Image
+        )
+
     def _for(self, kwargs: dict[str, Any]) -> Any:
         """
-        The pipeline the ARGUMENTS call for, derived from the one that is loaded.
+        The pipeline the arguments call for, DERIVED from the one that is loaded.
 
         `from_pipe` reuses the components already resident rather than reading the weights again:
-        one download, one residency, three employments. Which of the three is read off the
-        arguments — a mask means inpainting, a picture alone means editing — so nothing has to
-        carry the employment down here, and diffusers reads the same signal at its own door.
+        one download, one residency, several employments.
         """
         held = self.loaded
         assert held is not None
 
-        if "image" not in kwargs:
+        wanted = self._wanted_class(kwargs)
+        if wanted is None:
             return held.pipeline
 
-        from diffusers import AutoPipelineForImage2Image, AutoPipelineForInpainting
-
-        wanted = AutoPipelineForInpainting if "mask_image" in kwargs else AutoPipelineForImage2Image
         derived = self._derived.get(wanted.__name__)
         if derived is None:
             derived = wanted.from_pipe(held.pipeline)

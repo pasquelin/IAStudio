@@ -33,6 +33,7 @@ function harness(over: Partial<PythonClient> = {}, deps: Partial<PythonRuntimeDe
     isComplete: () => Promise.resolve(true),
     fetch: () => Promise.resolve(),
     removeFiles: () => Promise.resolve(),
+    baseOf: () => null,
     engine: () => Promise.resolve(client),
     running: () => client,
     log: () => {},
@@ -135,7 +136,13 @@ describe('loading', () => {
 
     expect(held.job).toHaveBeenCalledWith(
       'models.load',
-      { modelId: 'sana', folder: '/models/sana', door: 'engine/diffusion', torchWeights: false },
+      {
+        modelId: 'sana',
+        folder: '/models/sana',
+        attachFolder: undefined,
+        door: 'engine/diffusion',
+        torchWeights: false,
+      },
       expect.anything(),
     )
   })
@@ -328,6 +335,50 @@ describe('the weights a door may read', () => {
     expect(held.job).toHaveBeenCalledWith(
       'models.load',
       expect.objectContaining({ torchWeights: true }),
+      expect.anything(),
+    )
+  })
+})
+
+describe('weights that complete another model', () => {
+  const ADAPTER = localModel({
+    id: 'ip-adapter-sdxl',
+    loader: 'diffusers',
+    modality: 'image',
+    attaches: { model: 'ssd-1b', as: 'ip-adapter', subfolder: 'sdxl_models' },
+  })
+
+  /**
+   * The door holds ONE pipeline, and an attachment is not one: it grafts onto the base, so it is
+   * the base's folder that is loaded and the attachment travels beside it.
+   */
+  it('loads the model it completes, and hands the attachment beside it', async () => {
+    const base = localModel({ id: 'ssd-1b', loader: 'diffusers', modality: 'image' })
+    const held = harness({}, { baseOf: () => base })
+
+    await held.runtime.load?.(ADAPTER, { onProgress: () => {} })
+
+    expect(held.job).toHaveBeenCalledWith(
+      'models.load',
+      expect.objectContaining({
+        folder: '/models/ssd-1b',
+        attachFolder: '/models/ip-adapter-sdxl',
+        attachAs: 'ip-adapter',
+        attachSubfolder: 'sdxl_models',
+      }),
+      expect.anything(),
+    )
+  })
+
+  /** A door handed an attachment with no base would load neither, and say so from further away. */
+  it('sends no half plan when the base is unknown', async () => {
+    const held = harness({}, { baseOf: () => null })
+
+    await held.runtime.load?.(ADAPTER, { onProgress: () => {} })
+
+    expect(held.job).toHaveBeenCalledWith(
+      'models.load',
+      expect.objectContaining({ attachFolder: undefined }),
       expect.anything(),
     )
   })

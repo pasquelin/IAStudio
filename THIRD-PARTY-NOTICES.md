@@ -26,6 +26,7 @@ The terms below govern these components. They are not affected by the licence of
 | charset-normalizer | 3.5.1 | MIT |
 | click | 8.4.2 | BSD-3-Clause |
 | CogVideoX 2B | shipped with the application | Apache-2.0 |
+| ControlNet Canny SDXL | shipped with the application | Apache-2.0 |
 | CPython | 3.12.14 | PSF-2.0 |
 | daisyui | 5.7.16 | MIT |
 | diffusers | 0.40.0 | Apache 2.0 License |
@@ -48,6 +49,7 @@ The terms below govern these components. They are not affected by the licence of
 | idna | 3.19 | BSD-3-Clause |
 | immer | 11.1.16 | MIT |
 | importlib-metadata | 9.0.0 | Apache-2.0 |
+| IP-Adapter SDXL | shipped with the application | Apache-2.0 |
 | jinja2 | 3.1.6 | BSD License |
 | Lato | shipped with the application | OFL-1.1 |
 | markdown-it-py | 4.2.0 | MIT License |
@@ -546,6 +548,26 @@ It is NOT shipped with the application: it is fetched on request into the user d
 against a published digest, and removed from the model manager.
 
 Copyright the CogVideoX authors, Zhipu AI.
+
+Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
+```
+## ControlNet Canny SDXL
+
+Version: shipped with the application  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0
+```
+
+```
+ControlNet Canny pour SDXL, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright the xinsir authors. A control network run BESIDE a base model, never alone.
 
 Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
 ```
@@ -1175,6 +1197,29 @@ application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache-2.0.
 Source: https://github.com/python/importlib_metadata
+```
+## IP-Adapter SDXL
+
+Version: shipped with the application  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/h94/IP-Adapter
+```
+
+```
+IP-Adapter pour SDXL, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright Tencent AI Lab. Adapter weights grafted onto a base model, never alone.
+
+Only the SDXL set is fetched: the repository ships four adapters and two image encoders,
+for two model families.
+
+Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
 ```
 ## jinja2
 

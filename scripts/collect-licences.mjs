@@ -212,6 +212,15 @@ const MODEL_NOTES = {
     'its renderer in that form alone. What still guards it: torch has refused to unpickle by',
     'default since 2.6, and every file above is pinned to a digest.',
   ],
+  'controlnet-canny-sdxl': [
+    'Copyright the xinsir authors. A control network run BESIDE a base model, never alone.',
+  ],
+  'ip-adapter-sdxl': [
+    'Copyright Tencent AI Lab. Adapter weights grafted onto a base model, never alone.',
+    '',
+    'Only the SDXL set is fetched: the repository ships four adapters and two image encoders,',
+    'for two model families.',
+  ],
   'shap-e-img2img': [
     'Copyright OpenAI. Same renderer, and the same `.bin` reservation as Shap-E above.',
   ],

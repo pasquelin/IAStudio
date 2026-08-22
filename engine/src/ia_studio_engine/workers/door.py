@@ -36,6 +36,20 @@ def inline_handlers(door: str, adapter: DiffusersAdapter) -> dict[str, Any]:
     }
 
 
+def _attachment_of(params: dict[str, Any]) -> dict[str, Any] | None:
+    """Weights grafted onto the pipeline rather than being one — `attaches`, in `localModel.ts`."""
+    folder = params.get("attachFolder")
+    if not folder:
+        return None
+
+    return {
+        "folder": str(folder),
+        "as": str(params.get("attachAs", "")),
+        "subfolder": params.get("attachSubfolder"),
+        "weight_name": params.get("attachWeightName"),
+    }
+
+
 def queued_handlers(door: str, adapter: DiffusersAdapter, loop: WorkerLoop) -> dict[str, Any]:
     """Everything that touches the device, serialised by the queue — § A.5, exception 1."""
 
@@ -44,6 +58,7 @@ def queued_handlers(door: str, adapter: DiffusersAdapter, loop: WorkerLoop) -> d
             str(params["modelId"]),
             str(params["folder"]),
             torch_weights=bool(params.get("torchWeights", False)),
+            attachment=_attachment_of(params),
         )
         return {
             "door": door,

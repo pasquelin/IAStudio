@@ -42,6 +42,14 @@ export const localModelSchema: z.ZodType<LocalModel> = z.object({
   capabilities: z.array(z.string()).optional(),
   serves: z.array(z.string()).optional(),
   readsTorchWeights: z.boolean().optional(),
+  attaches: z
+    .object({
+      model: z.string().min(1),
+      as: z.enum(['controlnet', 'ip-adapter']),
+      subfolder: z.string().min(1).optional(),
+      weightName: z.string().min(1).optional(),
+    })
+    .optional(),
   fieldOverrides: z
     .record(
       z.string(),
