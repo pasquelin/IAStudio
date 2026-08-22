@@ -96,6 +96,13 @@
     "sources": "https://github.com/pallets/click/"
   },
   {
+    "name": "CogVideoX 2B",
+    "version": "2b",
+    "spdx": "Apache-2.0",
+    "text": "The lighter of the two models the studio makes video with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the CogVideoX authors, Zhipu AI. Licensed under the Apache License, Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0\n\nIts components, read on 2026-08-22: a T5 text encoder, a 3D VAE and a transformer, none\nof whose configuration names an upstream repository.",
+    "sources": "https://huggingface.co/zai-org/CogVideoX-2b"
+  },
+  {
     "name": "CPython",
     "version": "3.12.14",
     "spdx": "PSF-2.0",
@@ -611,6 +618,13 @@
     "version": "3.1.0",
     "spdx": "MIT",
     "text": "MIT License\n\nCopyright (c) 2017 Photopea\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE."
+  },
+  {
+    "name": "Wan 2.1 T2V 1.3B",
+    "version": "1.3B",
+    "spdx": "Apache-2.0",
+    "text": "The heavier of the two models the studio makes video with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Alibaba Group and the Wan authors. Licensed under the Apache License, Version 2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0\n\nIts components, read on 2026-08-22: a UMT5 text encoder — which is 22.7 GB of the 28.9\nthis weighs — a VAE and a transformer, none naming an upstream repository.",
+    "sources": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
   },
   {
     "name": "wavesurfer.js",

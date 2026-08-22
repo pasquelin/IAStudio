@@ -250,6 +250,36 @@ function modelLicences() {
       ].join('\n'),
       sources: 'https://huggingface.co/segmind/SSD-1B',
     },
+    {
+      name: 'CogVideoX 2B',
+      version: '2b',
+      spdx: 'Apache-2.0',
+      text: [
+        'The lighter of the two models the studio makes video with on this machine.',
+        FETCHED_ON_REQUEST,
+        '',
+        `Copyright the CogVideoX authors, Zhipu AI. Licensed under the Apache License, Version 2.0. ${APACHE_TERMS}`,
+        '',
+        'Its components, read on 2026-08-22: a T5 text encoder, a 3D VAE and a transformer, none',
+        'of whose configuration names an upstream repository.',
+      ].join('\n'),
+      sources: 'https://huggingface.co/zai-org/CogVideoX-2b',
+    },
+    {
+      name: 'Wan 2.1 T2V 1.3B',
+      version: '1.3B',
+      spdx: 'Apache-2.0',
+      text: [
+        'The heavier of the two models the studio makes video with on this machine.',
+        FETCHED_ON_REQUEST,
+        '',
+        `Copyright Alibaba Group and the Wan authors. Licensed under the Apache License, Version 2.0. ${APACHE_TERMS}`,
+        '',
+        'Its components, read on 2026-08-22: a UMT5 text encoder — which is 22.7 GB of the 28.9',
+        'this weighs — a VAE and a transformer, none naming an upstream repository.',
+      ].join('\n'),
+      sources: 'https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers',
+    },
   ]
 }
 
