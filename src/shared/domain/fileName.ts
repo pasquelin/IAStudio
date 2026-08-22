@@ -172,6 +172,23 @@ export function extensionOf(fileName: string): string {
 }
 
 /**
+ * The last segment of a path the OS wrote, whichever separator it used.
+ *
+ * `pathBaseNameOf` and not `baseNameOf`: `folder.ts` already exports a `parentOf` for the
+ * `/`-joined ids the explorer walks, and two functions of one word in two domains is how an
+ * auto-import lands on the wrong one.
+ */
+export function pathBaseNameOf(path: string): string {
+  return path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1)
+}
+
+/** The folder a path names, or the path itself when it names no folder. */
+export function pathParentOf(path: string): string {
+  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  return cut > 0 ? path.slice(0, cut) : path
+}
+
+/**
  * Whether two names are the same FILE, which is not the same question as being equal.
  *
  * Its one caller in each domain used to spell it out: renaming `Ruelle.png` to `ruelle.png` is

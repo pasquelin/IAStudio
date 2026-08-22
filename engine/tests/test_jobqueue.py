@@ -7,13 +7,17 @@ def job(job_id: int) -> Job:
     return Job(id=job_id, op="generate")
 
 
-def drained(queue: JobQueue) -> list[int]:
-    handed: list[int] = []
-    thread = threading.Thread(target=lambda: [handed.append(one.id) for one in queue.drain()])
+def drained(queue: JobQueue) -> list[Job]:
+    handed: list[Job] = []
+    thread = threading.Thread(target=lambda: [handed.append(one) for one in queue.drain()])
     thread.start()
     queue.close()
     thread.join(timeout=5)
     return handed
+
+
+def ids(queue: JobQueue) -> list[int]:
+    return [one.id for one in drained(queue)]
 
 
 def test_hands_jobs_out_in_the_order_they_arrived() -> None:
@@ -21,17 +25,26 @@ def test_hands_jobs_out_in_the_order_they_arrived() -> None:
     for job_id in [1, 2, 3]:
         queue.submit(job(job_id))
 
-    assert drained(queue) == [1, 2, 3]
+    assert ids(queue) == [1, 2, 3]
 
 
-def test_a_job_cancelled_before_it_ran_is_never_handed_out() -> None:
-    """A cancel that lands while a job waits costs nothing: it never reaches the device."""
+def test_a_job_cancelled_before_it_ran_is_handed_out_marked_rather_than_dropped() -> None:
+    """
+    It costs no device time, and it still has to be ANSWERED.
+
+    Dropped in silence — which is what this did — the studio holds the promise of that job for
+    ever. The ordinary case is not exotic: a `generate` queued behind a cold `import torch` is
+    cancellable long before the job thread reaches it.
+    """
     queue = JobQueue()
     for job_id in [1, 2]:
         queue.submit(job(job_id))
 
     assert queue.cancel(1) is True
-    assert drained(queue) == [2]
+    handed = drained(queue)
+
+    assert [one.id for one in handed] == [1, 2]
+    assert [one.cancelled for one in handed] == [True, False]
 
 
 def test_cancelling_what_it_never_held_is_a_fact_rather_than_a_failure() -> None:

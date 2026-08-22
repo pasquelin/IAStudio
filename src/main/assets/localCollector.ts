@@ -1,6 +1,7 @@
 import type { AssetType } from '@shared/domain/asset'
 import { workspaceOfType } from '@shared/domain/assetKind'
 import { generatedAssetName } from '@shared/domain/assetName'
+import { extensionOf, pathBaseNameOf } from '@shared/domain/fileName'
 import type { AssetCollector, CollectedOutputs } from '@main/provider/jobManager'
 import type { LocalBackend } from './localBackend'
 
@@ -39,11 +40,14 @@ export type LocalCollectorDeps = {
 
 const NOTHING: CollectedOutputs = { ids: [], workspaces: [] }
 
-/** The extension a file already carries, which is what the engine chose to write. */
-function extensionOf(path: string): string {
-  const name = path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1)
-  const dot = name.lastIndexOf('.')
-  return dot > 0 ? name.slice(dot + 1) : 'png'
+/**
+ * The extension the engine chose to write, WITHOUT its dot — which is what `WriteRequest` takes.
+ *
+ * `extensionOf` of `@shared/domain/fileName` keeps the dot, so the two cannot be one function;
+ * this leans on it rather than respelling a second `lastIndexOf` dance.
+ */
+function bareExtensionOf(path: string): string {
+  return extensionOf(pathBaseNameOf(path)).slice(1) || 'png'
 }
 
 export function createLocalCollector(deps: LocalCollectorDeps): AssetCollector {
@@ -60,7 +64,7 @@ export function createLocalCollector(deps: LocalCollectorDeps): AssetCollector {
         name: generatedAssetName({ prompt: produced.prompt, label: job.label, index: 0, total: 1 }),
         type: produced.type,
         jobId: job.id,
-        extension: extensionOf(produced.path),
+        extension: bareExtensionOf(produced.path),
       },
       bytes,
     )

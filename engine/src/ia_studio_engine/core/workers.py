@@ -13,6 +13,7 @@ import socket
 import subprocess
 import sys
 import threading
+import traceback
 from collections.abc import Callable
 from typing import Any
 
@@ -57,6 +58,11 @@ class WorkerProcess:
             # `close` pulls the socket out from under this thread on purpose. Without this the
             # engine writes a traceback on every ordinary shutdown, into the studio's own log.
             pass
+        except Exception:
+            # Anything else kills this thread, and a dead pump means every job in flight pends for
+            # ever while the worker looks alive. The door is declared gone instead, which fails
+            # them — a visible failure beats a silent wait.
+            traceback.print_exc()
 
         # The stream ended. Asked for, it is the shutdown; unasked, the door died mid-job and
         # whoever was waiting has to hear it rather than wait for ever.

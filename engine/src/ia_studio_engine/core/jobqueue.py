@@ -13,7 +13,7 @@ from __future__ import annotations
 import queue
 import threading
 from collections.abc import Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 
@@ -22,6 +22,8 @@ class Job:
     id: int
     op: str
     params: dict[str, Any] = field(default_factory=dict)
+    """Set when the job was dropped before it ran. It is handed out anyway, to be answered."""
+    cancelled: bool = False
 
 
 class CancelledError(Exception):
@@ -74,8 +76,8 @@ class JobQueue:
         """
         Hands out what is waiting, blocking until there is something or the queue closes.
 
-        A job cancelled while it waited is never handed out, which is the whole reason a cancel
-        costs nothing before a job starts.
+        A job cancelled while it waited is handed out MARKED rather than dropped: it costs no
+        device time, and it still has to be answered or the studio waits for it for ever.
         """
         while True:
             job = self._waiting.get()
@@ -83,11 +85,19 @@ class JobQueue:
                 return
 
             with self._lock:
-                if job.id not in self._pending:
-                    continue
+                dropped = job.id not in self._pending
+
+            # A job cancelled while it waited still has to be ANSWERED: the studio holds the
+            # promise of that job until a frame settles it, and dropping it in silence leaves a
+            # caller waiting for ever. The ordinary case is a `generate` queued behind a cold
+            # `import torch`, cancellable long before the job thread reaches it.
+            if dropped:
+                yield replace(job, cancelled=True)
+                continue
+
+            with self._lock:
                 self._pending.discard(job.id)
                 self._running = job.id
-                self._stop.clear()
 
             try:
                 yield job
