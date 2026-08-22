@@ -135,7 +135,7 @@ describe('loading', () => {
 
     expect(held.job).toHaveBeenCalledWith(
       'models.load',
-      { modelId: 'sana', folder: '/models/sana', door: 'engine/diffusion' },
+      { modelId: 'sana', folder: '/models/sana', door: 'engine/diffusion', torchWeights: false },
       expect.anything(),
     )
   })
@@ -313,5 +313,22 @@ describe('unloading', () => {
 
     await expect(held.runtime.unload?.()).rejects.toThrow(/door-gone/)
     expect((await held.runtime.read([MODEL])).loaded).toEqual(new Set(['sana']))
+  })
+})
+
+describe('the weights a door may read', () => {
+  /**
+   * Declared per ENTRY and never per loader: it weakens a rule, and Shap-E is the one model that
+   * needs it — the only 3D pipeline diffusers carries, published with a `.bin` renderer alone.
+   */
+  it('lets a door read torch tensors only where the manifest said so', async () => {
+    const held = harness()
+    await held.runtime.load?.({ ...MODEL, readsTorchWeights: true }, { onProgress: () => {} })
+
+    expect(held.job).toHaveBeenCalledWith(
+      'models.load',
+      expect.objectContaining({ torchWeights: true }),
+      expect.anything(),
+    )
   })
 })

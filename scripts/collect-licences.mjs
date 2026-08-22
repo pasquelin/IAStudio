@@ -204,6 +204,17 @@ const MODEL_NOTES = {
   'acestep-v15-xl-base': ['Copyright the ACE-Step authors.'],
   'acestep-v15-xl-turbo': ['Copyright the ACE-Step authors.'],
   'acestep-v15-xl-sft': ['Copyright the ACE-Step authors.'],
+  'shap-e': [
+    'Copyright OpenAI. Its text encoder is a CLIP model — text_encoder/config.json names',
+    'openai/clip-vit-large-patch14, whose repository card states no licence of its own.',
+    '',
+    'This download carries `.bin` tensors, which the studio otherwise refuses: Shap-E publishes',
+    'its renderer in that form alone. What still guards it: torch has refused to unpickle by',
+    'default since 2.6, and every file above is pinned to a digest.',
+  ],
+  'shap-e-img2img': [
+    'Copyright OpenAI. Same renderer, and the same `.bin` reservation as Shap-E above.',
+  ],
 }
 
 /**

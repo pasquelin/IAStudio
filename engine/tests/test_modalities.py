@@ -118,3 +118,22 @@ def test_how_far_from_its_source_a_generation_may_go() -> None:
     asked = image_kwargs_with(lambda path: path, image="/a.png", strength=0.5)
 
     assert asked["strength"] == 0.5
+
+
+def test_a_mesh_from_a_picture_drops_the_description_it_replaces() -> None:
+    """`ShapEImg2ImgPipeline` takes an image and NO prompt: both raise before a step runs."""
+    import sys
+    import types
+
+    stand_in = types.ModuleType("diffusers.utils")
+    stand_in.load_image = lambda path: path
+    sys.modules.setdefault("diffusers", types.ModuleType("diffusers"))
+    sys.modules["diffusers.utils"] = stand_in
+    try:
+        asked = MODALITIES["mesh"].kwargs({"prompt": "a shark", "image": "/project/a.png"})
+    finally:
+        del sys.modules["diffusers.utils"]
+
+    assert asked["image"] == "/project/a.png"
+    assert "prompt" not in asked
+    assert asked["output_type"] == "mesh"

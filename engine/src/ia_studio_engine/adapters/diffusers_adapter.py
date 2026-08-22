@@ -171,7 +171,7 @@ class DiffusersAdapter:
         stray = sorted(entry.name for entry in path.rglob("*.py"))
         return f"the weights carry python: {', '.join(stray[:3])}" if stray else None
 
-    def load(self, model_id: str, folder: str) -> LoadedModel:
+    def load(self, model_id: str, folder: str, torch_weights: bool = False) -> LoadedModel:
         refusal = self.refuse_reason(folder)
         if refusal is not None:
             raise LoadRefusedError(refusal)
@@ -195,8 +195,10 @@ class DiffusersAdapter:
         # parameters at two bytes rather than four.
         pipeline = DiffusionPipeline.from_pretrained(
             folder,
-            # Refuses rather than falling back to a pickle — measured, not assumed.
-            use_safetensors=True,
+            # Refuses rather than falling back to a pickle — measured, not assumed. `False` only
+            # where the MANIFEST said so: torch 2.6 still refuses to unpickle, and every file it
+            # names is pinned to a digest. See `readsTorchWeights` in `localModel.ts`.
+            use_safetensors=not torch_weights,
             trust_remote_code=False,
             local_files_only=True,
             variant="fp16",

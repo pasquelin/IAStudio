@@ -87,7 +87,13 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
         const door = engineDoorOf(model.modality)
         const settled = await engine.job(
           'models.load',
-          { modelId: model.id, folder: deps.folderFor(model), door },
+          {
+            modelId: model.id,
+            folder: deps.folderFor(model),
+            door,
+            // Declared per entry, never per loader — see `readsTorchWeights`.
+            torchWeights: model.readsTorchWeights === true,
+          },
           { onStep: options.onProgress, signal: options.signal },
         )
 

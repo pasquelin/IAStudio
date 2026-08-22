@@ -40,7 +40,11 @@ def queued_handlers(door: str, adapter: DiffusersAdapter, loop: WorkerLoop) -> d
     """Everything that touches the device, serialised by the queue — § A.5, exception 1."""
 
     def load(params: dict[str, Any]) -> dict[str, Any]:
-        held = adapter.load(str(params["modelId"]), str(params["folder"]))
+        held = adapter.load(
+            str(params["modelId"]),
+            str(params["folder"]),
+            torch_weights=bool(params.get("torchWeights", False)),
+        )
         return {
             "door": door,
             "heldBytes": held.bytes_resident,

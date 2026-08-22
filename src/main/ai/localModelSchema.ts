@@ -41,6 +41,7 @@ export const localModelSchema: z.ZodType<LocalModel> = z.object({
   family: z.enum(MODEL_FAMILIES).optional(),
   capabilities: z.array(z.string()).optional(),
   serves: z.array(z.string()).optional(),
+  readsTorchWeights: z.boolean().optional(),
   fieldOverrides: z
     .record(
       z.string(),

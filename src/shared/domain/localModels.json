@@ -2891,5 +2891,293 @@
       "reservationBytes": 5760798878,
       "thumbnail": "acestep-v15-xl-sft.png"
     }
+  ],
+  "3d/txt23d": [
+    {
+      "id": "shap-e",
+      "name": "Shap-E",
+      "summary": "Shap-E, texte vers maillage",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "mesh",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/openai/shap-e",
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/model_index.json",
+          "bytes": 458,
+          "sha256": "a039954b51ec9df6ae850f6cd4569e766514a218673739f50a73226a236fd2d1",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "prior",
+          "name": "prior/config.json",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/prior/config.json",
+          "bytes": 489,
+          "sha256": "adc182bfcce5b1f1b311c06c5f8bbc6d4bbbdf29f474460cc7a25815c40ab13f",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "prior",
+          "name": "prior/diffusion_pytorch_model.bin",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/prior/diffusion_pytorch_model.bin",
+          "bytes": 1262937295,
+          "sha256": "df21cb49c7f10eb02f6ce485a59c86601d03707b80d715335f0be6be89b1226e",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "prior",
+          "name": "prior/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/prior/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 631435880,
+          "sha256": "04ad95e7374796a817f5b5a32b885be457b013ffdadf5da2f99883886f417aac",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "renderer",
+          "name": "renderer/config.json",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/renderer/config.json",
+          "bytes": 496,
+          "sha256": "34a775996b2412e8703a4a9add265b2cd39b9e4c6b38db4442baaedb0319b220",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "renderer",
+          "name": "renderer/diffusion_pytorch_model.bin",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/renderer/diffusion_pytorch_model.bin",
+          "bytes": 905200536,
+          "sha256": "2751cbad694f7fef9022f88673c065df49283d977ff93e88e133f3585e2dfd28",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "renderer",
+          "name": "renderer/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/renderer/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 452597858,
+          "sha256": "394d52e159447b2bfb944d3bfa4f438180b72ba40644dc4c730282e7a9b62c65",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/scheduler/scheduler_config.json",
+          "bytes": 276,
+          "sha256": "dfbcacfd3b975b08c85c433a17a3d59101733a09ef21deb0d4718d27d6a6564c",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "shap_e_renderer",
+          "name": "shap_e_renderer/config.json",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/shap_e_renderer/config.json",
+          "bytes": 551,
+          "sha256": "a54045639b11b7bc650a9cd12dd228a14fa4f325896913fade7ed581cad25915",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "shap_e_renderer",
+          "name": "shap_e_renderer/diffusion_pytorch_model.bin",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/shap_e_renderer/diffusion_pytorch_model.bin",
+          "bytes": 905233202,
+          "sha256": "2b63c2b52fbff7cc2c0b88b196f169e8adbcc2c298cadab30afe63c8a7241a05",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/text_encoder/config.json",
+          "bytes": 626,
+          "sha256": "2aae30af8293e549e2b0f842c6f4bed27e370921d971882e90c0f1a32cef6e53",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.fp16.safetensors",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/text_encoder/model.fp16.safetensors",
+          "bytes": 247324608,
+          "sha256": "fc42badf529dd83f2f7c3d20fe6bda1e22036162f37c4c668b9e130884e20561",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/pytorch_model.bin",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/text_encoder/pytorch_model.bin",
+          "bytes": 494664885,
+          "sha256": "85f5bcf101dde33d8ab9f7e5e1678339fa4258ea07bc65e6ca66e01f9de99622",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/tokenizer/merges.txt",
+          "bytes": 524619,
+          "sha256": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/tokenizer/special_tokens_map.json",
+          "bytes": 472,
+          "sha256": "c4864a9376a8401918425bed71fc14fc0e81f9b59ec45c1cf96cccb2df508eac",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/tokenizer/tokenizer_config.json",
+          "bytes": 737,
+          "sha256": "19d7b034cb0cc3ce9766c2231373ab8aa8991fc72e2c8f76558bfaae3de0d563",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/openai/shap-e/resolve/7bd337afdea1c17842e1c3cc45c4e268356dba40/tokenizer/vocab.json",
+          "bytes": 1059962,
+          "sha256": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "revision": "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+        }
+      ],
+      "diskBytes": 4900982950,
+      "reservationBytes": 2450491475,
+      "thumbnail": "shap-e.png",
+      "readsTorchWeights": true
+    }
+  ],
+  "3d/img23d": [
+    {
+      "id": "shap-e-img2img",
+      "name": "Shap-E Image",
+      "summary": "Shap-E, image vers maillage",
+      "format": "safetensors",
+      "loader": "diffusers",
+      "modality": "mesh",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/openai/shap-e-img2img",
+      "files": [
+        {
+          "role": "image-encoder",
+          "name": "image_encoder/config.json",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/image_encoder/config.json",
+          "bytes": 560,
+          "sha256": "c21d1ee4d91ca9ffe576f3d554a21bfcf90224b51ce5646897e0be3e3c63ffe8",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "image-encoder",
+          "name": "image_encoder/model.fp16.safetensors",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/image_encoder/model.fp16.safetensors",
+          "bytes": 606409288,
+          "sha256": "4523175837d6342fd2d3ca38ce84912dbc722b556747c883b2842157e9a0f035",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "image-encoder",
+          "name": "image_encoder/pytorch_model.bin",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/image_encoder/pytorch_model.bin",
+          "bytes": 1212850925,
+          "sha256": "49767fbe1b9ea4688056a86db9404053b9a34c3f6a95776cb85622e7ea8a35ae",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "image-processor",
+          "name": "image_processor/preprocessor_config.json",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/image_processor/preprocessor_config.json",
+          "bytes": 315,
+          "sha256": "0a70aaa5de2ccb5e222b0e7e3ea347a3da051c3588c763cdd23b4d80bbf96b65",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/model_index.json",
+          "bytes": 465,
+          "sha256": "15b58743c262a37d08a74ffb247f306dce6fe56f2c82fb48a1bd6d088cdb73e0",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "prior",
+          "name": "prior/config.json",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/prior/config.json",
+          "bytes": 493,
+          "sha256": "275ccf865a54788bd1afe610ad32f1afb69332bf17fd46ba92ddd715c2db5da6",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "prior",
+          "name": "prior/diffusion_pytorch_model.bin",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/prior/diffusion_pytorch_model.bin",
+          "bytes": 1263994731,
+          "sha256": "5d293731644d9c6de6e7bd22bb1db5a52cb7b0f35ca452cbdbb8cf1bc727316e",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "prior",
+          "name": "prior/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/prior/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 631964448,
+          "sha256": "a6d92d12597b298dfb84b32ccfc74a94d2f25d7600f330b39722bd0f0835862e",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "renderer",
+          "name": "renderer/config.json",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/renderer/config.json",
+          "bytes": 496,
+          "sha256": "34a775996b2412e8703a4a9add265b2cd39b9e4c6b38db4442baaedb0319b220",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "renderer",
+          "name": "renderer/diffusion_pytorch_model.bin",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/renderer/diffusion_pytorch_model.bin",
+          "bytes": 905200536,
+          "sha256": "2751cbad694f7fef9022f88673c065df49283d977ff93e88e133f3585e2dfd28",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "renderer",
+          "name": "renderer/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/renderer/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 452597858,
+          "sha256": "394d52e159447b2bfb944d3bfa4f438180b72ba40644dc4c730282e7a9b62c65",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/scheduler/scheduler_config.json",
+          "bytes": 276,
+          "sha256": "dfbcacfd3b975b08c85c433a17a3d59101733a09ef21deb0d4718d27d6a6564c",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "shap_e_renderer",
+          "name": "shap_e_renderer/config.json",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/shap_e_renderer/config.json",
+          "bytes": 551,
+          "sha256": "a54045639b11b7bc650a9cd12dd228a14fa4f325896913fade7ed581cad25915",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        },
+        {
+          "role": "shap_e_renderer",
+          "name": "shap_e_renderer/diffusion_pytorch_model.bin",
+          "url": "https://huggingface.co/openai/shap-e-img2img/resolve/0e0aba80f08d368aaf6af9cb93583707481cc29b/shap_e_renderer/diffusion_pytorch_model.bin",
+          "bytes": 905233202,
+          "sha256": "2b63c2b52fbff7cc2c0b88b196f169e8adbcc2c298cadab30afe63c8a7241a05",
+          "revision": "0e0aba80f08d368aaf6af9cb93583707481cc29b"
+        }
+      ],
+      "diskBytes": 5978254144,
+      "reservationBytes": 2989127072,
+      "thumbnail": "shap-e-img2img.png",
+      "readsTorchWeights": true
+    }
   ]
 }

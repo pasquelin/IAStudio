@@ -547,6 +547,18 @@
     "sources": "https://github.com/pypa/setuptools"
   },
   {
+    "name": "Shap-E",
+    "spdx": "MIT",
+    "text": "Shap-E, texte vers maillage, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright OpenAI. Its text encoder is a CLIP model — text_encoder/config.json names\nopenai/clip-vit-large-patch14, whose repository card states no licence of its own.\n\nThis download carries `.bin` tensors, which the studio otherwise refuses: Shap-E publishes\nits renderer in that form alone. What still guards it: torch has refused to unpickle by\ndefault since 2.6, and every file above is pinned to a digest.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
+    "sources": "https://huggingface.co/openai/shap-e"
+  },
+  {
+    "name": "Shap-E Image",
+    "spdx": "MIT",
+    "text": "Shap-E, image vers maillage, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright OpenAI. Same renderer, and the same `.bin` reservation as Shap-E above.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
+    "sources": "https://huggingface.co/openai/shap-e-img2img"
+  },
+  {
     "name": "shellingham",
     "version": "1.5.4",
     "spdx": "ISC License",

@@ -107,11 +107,22 @@ def _audio_kwargs(params: dict[str, Any]) -> dict[str, Any]:
 
 def _mesh_kwargs(params: dict[str, Any]) -> dict[str, Any]:
     """
-    `[?]` **Never run**: Shap-E publishes its renderer as a pickle alone, which ADR-20 refuses.
-
     `mesh` and not the default `pil`: ShapE renders preview images unless asked for geometry.
+
+    A picture REPLACES the description rather than joining it: `ShapEImg2ImgPipeline` takes an
+    image and no prompt at all, and passing both raises before a single step runs.
     """
-    return {**_shared_kwargs(params), "output_type": "mesh"}
+    kwargs = {**_shared_kwargs(params), "output_type": "mesh"}
+    source = _number(params, "image")
+    if source is None:
+        return kwargs
+
+    from diffusers.utils import load_image
+
+    kwargs.pop("prompt", None)
+    kwargs.pop("negative_prompt", None)
+    kwargs["image"] = load_image(str(source))
+    return kwargs
 
 
 def _write_image(result: Any, destination: str, _params: dict[str, Any]) -> None:
