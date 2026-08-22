@@ -205,6 +205,16 @@ describe('AiSettings', () => {
     expect(await screen.findByText(/n’est pas un GGUF/)).toBeInTheDocument()
   })
 
+  /**
+   * 🛑 An employment the studio carries no engine for shows the clouds and nothing else, and
+   * silence there reads as a screen that is broken. What is missing is an ENGINE, not a manifest.
+   */
+  it('says why an employment offers no local model rather than leaving a gap', () => {
+    show(overview({ roles: [row({ candidates: [], clouds: ['scenario'] })] }))
+
+    expect(screen.getByText(/n’embarque pas encore de moteur/)).toBeInTheDocument()
+  })
+
   // A scope with nothing to scope to would be a control that answers a question nobody asked.
   it('does not ask where a choice lands while no project is open', () => {
     show(overview({ projectPath: null }))

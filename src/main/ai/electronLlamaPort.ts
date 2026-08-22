@@ -92,15 +92,25 @@ export function electronLlamaPort(): LlamaPort {
 
     unload: release,
 
-    // Opened only if the addon already is: asking for a reading is not a reason to open the GPU,
-    // and the probe asks on every compose.
+    /**
+     * `[M]` 46 ms to open the addon on this machine, 0 ms to read — paid once per process, and
+     * what it buys is a verdict instead of a guess: without it every candidate reads `unknown`
+     * until somebody has spoken to the assistant.
+     */
     vram: async () => {
-      if (refused || llama === null) return null
+      if (refused) return null
 
-      const state = await llama.getVramState()
-      // Reported as it stands, zeroes included: what an empty reading MEANS is the probe's to
-      // decide, and deciding it twice is how the two answers drift.
-      return { totalBytes: state.total, freeBytes: state.free, unifiedBytes: state.unifiedSize }
+      try {
+        const state = await (await require()).getVramState()
+        // Reported as it stands, zeroes included: what an empty reading MEANS is the probe's to
+        // decide, and deciding it twice is how the two answers drift.
+        return { totalBytes: state.total, freeBytes: state.free, unifiedBytes: state.unifiedSize }
+      } catch {
+        // A machine nobody built a binary for. Remembered, or every compose reopens the same
+        // failure — and answered as an absence, which is what the probe falls back from.
+        refused = true
+        return null
+      }
     },
 
     chat: async (request: ChatRequest, weights: string): Promise<string> => {

@@ -102,20 +102,15 @@ describe('electronLlamaPort', () => {
   })
 
   /**
-   * Asking for a reading is not a reason to open the GPU, and the probe asks on every compose.
-   * Once the addon IS open, what it answered is reported as it stands — zeroes included, because
-   * what an empty reading MEANS is the probe's to decide and deciding it twice makes two answers.
+   * `[M]` 46 ms to open the addon here, 0 ms to read. What that buys is a verdict rather than a
+   * guess: waiting for someone to speak to the assistant first left every candidate reading
+   * `unknown`, and the machine line showing a figure a third of the truth.
+   *
+   * Reported as it stands, zeroes included — what an empty reading MEANS is the probe's to decide,
+   * and deciding it twice is how two answers drift apart.
    */
-  it('opens nothing to answer, and reports what the addon said once it has', async () => {
-    const port = electronLlamaPort()
-    await expect(port.vram()).resolves.toBeNull()
-
-    await port.chat(
-      { model: 'qwen', contextTokens: 4_096, messages: [], json: false },
-      '/weights/qwen.gguf',
-    )
-
-    await expect(port.vram()).resolves.toEqual({
+  it('opens the addon to answer, and reports what it said', async () => {
+    await expect(electronLlamaPort().vram()).resolves.toEqual({
       totalBytes: 0,
       freeBytes: 0,
       unifiedBytes: 0,
