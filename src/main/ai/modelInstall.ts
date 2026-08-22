@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import {
+  isSuppliedModel,
   PART_SUFFIX,
   type DownloadProgress,
   type LocalModel,
@@ -185,6 +186,10 @@ export async function modelIsComplete(
   model: LocalModel,
   folder: string,
 ): Promise<boolean> {
+  // A model the person supplied is installed exactly while THEIR file is there: nothing was
+  // fetched into the model folder, and looking for it in there would read as never installed.
+  if (isSuppliedModel(model)) return await host.exists(model.weightsPath)
+
   // At once, and the lost short-circuit costs nothing: a `stat` that fails is as cheap as one that
   // succeeds, and this sits on every compose — so on every assistant turn, four latencies deep on
   // a model folder the setting lets someone point at an external disk.

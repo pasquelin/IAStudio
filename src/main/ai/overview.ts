@@ -1,4 +1,4 @@
-import type { AiOverview, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
+import type { AiOverview, LoadRefusal, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
 import {
   allRoles,
   providerFor,
@@ -8,7 +8,12 @@ import {
 } from '@shared/domain/aiRole'
 import { cloudsServing } from '@shared/domain/aiCloud'
 import type { MemorySnapshot } from '@shared/domain/aiMemory'
-import type { DownloadProgress, LocalModel } from '@shared/domain/localModel'
+import {
+  isSuppliedModel,
+  provenanceUnverified,
+  type DownloadProgress,
+  type LocalModel,
+} from '@shared/domain/localModel'
 import { fitAllowsUse, fitReadingOf } from '@shared/domain/modelFit'
 import type { HardwareFacts } from './hardwareProbe'
 
@@ -27,11 +32,17 @@ export type OverviewInput = {
   /** What the catalogue offers for a role, in the order it offers them. */
   readonly modelsFor: (role: AiRoleId) => readonly LocalModel[]
   readonly isInstalled: (model: LocalModel) => boolean
+  /** Whether the weights are resident in memory right now. */
+  readonly isLoaded: (model: LocalModel) => boolean
+  /** Whether the runtime that would host it can hold it in memory at all. */
+  readonly isHoldable: (model: LocalModel) => boolean
   /** Whether the runtime that would host this model is answering — see `localRuntimes.ts`. */
   readonly runtimeReady: (model: LocalModel) => boolean
   /** The clouds an account is held for. What each of them SERVES is its own declaration. */
   readonly readyClouds: readonly string[]
   readonly installing: { readonly modelId: string; readonly progress: DownloadProgress } | null
+  readonly loading: { readonly modelId: string; readonly ratio: number } | null
+  readonly loadFailure: LoadRefusal | null
 }
 
 /**
@@ -44,7 +55,13 @@ function localOptionsFor(candidates: readonly ModelCandidate[]): readonly string
   return candidates.filter(one => one.installed && fitAllowsUse(one.fit)).map(one => one.model.id)
 }
 
-function rowFor(role: AiRoleId, input: OverviewInput, choices: RoleChoices): RoleRow {
+/**
+ * One row, composed on its own — which is what lets `providerOf` answer for ONE role.
+ *
+ * `[M]` It used to compose the whole overview and throw twenty rows away, on every assistant turn:
+ * twenty-one rows, their candidates and their verdicts, to read one field.
+ */
+export function rowFor(role: AiRoleId, input: OverviewInput, choices: RoleChoices): RoleRow {
   const candidates: readonly ModelCandidate[] = input.modelsFor(role).map(model => {
     const installed = input.isInstalled(model)
     const offer = {
@@ -54,7 +71,15 @@ function rowFor(role: AiRoleId, input: OverviewInput, choices: RoleChoices): Rol
       runtimeReady: input.runtimeReady(model),
     }
 
-    return { model, installed, ...fitReadingOf(model, offer) }
+    return {
+      model,
+      installed,
+      loaded: input.isLoaded(model),
+      holdable: input.isHoldable(model),
+      unverified: provenanceUnverified(model),
+      supplied: isSuppliedModel(model),
+      ...fitReadingOf(model, offer),
+    }
   })
 
   // A key HELD is not an endpoint behind it: a cloud is offered only where it DECLARES serving
@@ -82,8 +107,13 @@ function chosenPerScope(role: AiRoleId, input: OverviewInput): RoleRow['chosen']
   return { app: input.choices[role] ?? null, project: forProject?.[role] ?? null }
 }
 
+/** The choices that apply, so a caller composing ONE row overlays the same two scopes. */
+export function effectiveChoices(input: OverviewInput): RoleChoices {
+  return roleChoicesFor(input.choices, input.projectChoices, input.projectPath)
+}
+
 export function aiOverviewOf(input: OverviewInput): AiOverview {
-  const choices = roleChoicesFor(input.choices, input.projectChoices, input.projectPath)
+  const choices = effectiveChoices(input)
 
   return {
     // Only the roles something could serve: twenty-one rows, most of them empty, would bury the
@@ -96,8 +126,17 @@ export function aiOverviewOf(input: OverviewInput): AiOverview {
       availableBytes: input.snapshot.availableBytes,
       diskFreeBytes: input.facts.diskFreeBytes,
       gpu: input.facts.gpu?.renderer ?? null,
+      vram:
+        input.facts.vram === null
+          ? null
+          : {
+              totalBytes: input.facts.vram.totalBytes,
+              freeBytes: input.facts.vram.freeBytes,
+            },
     },
     projectPath: input.projectPath,
     installing: input.installing,
+    loading: input.loading,
+    loadFailure: input.loadFailure,
   }
 }

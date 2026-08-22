@@ -56,6 +56,10 @@ asarUnpack:
   # them from disk by name. The rule above unpacks the addon alone, which loads and then fails
   # looking for a `libonnxruntime.dylib` still sealed in the archive.
   - '**/sherpa-onnx-*/**'
+  # llama.cpp is the same shape: `llama-addon.node` sits beside `libllama`, `libggml-base` and one
+  # `libggml-cpu-*` per micro-architecture, all opened from disk by name. Unpacking the addon
+  # alone gives a packaged build that loads it and then fails looking for its libraries.
+  - '**/@node-llama-cpp/**'
 
 # The encoder the studio ships with. `beforePack` fetches the one matching the target about to
 # be packed, so a run building several of them gives each its own. Outside the asar on purpose:
@@ -87,6 +91,12 @@ extraResources:
   # produced, and a readme has no business inside an application bundle.
   - from: resources/templates
     to: templates
+    filter: ['**/*.png']
+  # One picture per local model, about a kilobyte each, written by `pnpm models:thumbnails`.
+  # Shipped rather than fetched for the reason the whole catalogue is: they have its life cycle,
+  # so no link can die and a panel draws offline.
+  - from: resources/models
+    to: models
     filter: ['**/*.png']
   # Beside the application rather than only inside its Help window: a notice reachable only from
   # a running app is out of reach for whoever cannot start it, and the FFmpeg source offer has to

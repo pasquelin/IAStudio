@@ -1,4 +1,4 @@
-import { open, readFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import {
   DOCUMENT_ID_KEY,
   DOCUMENT_KIND_KEY,
@@ -21,6 +21,7 @@ import { isMtlxDocument, MTLX_HEAD_LIMIT } from '@shared/domain/materialX'
 import { isOtioTimeline, otioStudioMetadata } from '@shared/domain/otio'
 import { ORA_HEAD_LIMIT, ORA_MIMETYPE } from '@shared/domain/openRaster'
 import { isRecord, readString } from '@shared/guards'
+import { firstBytes } from '@main/persistence'
 import { mtlxHeadIn, readMaterialX, writeMaterialX } from '@main/assets/materialXFile'
 import {
   oraHeadIn,
@@ -69,20 +70,6 @@ const ENVELOPE_MARK = '"kind":"'
  * head — and a glTF exported into the project as a mesh carries nothing of the sort.
  */
 const STUDIO_MARK = `"${STUDIO_METADATA_KEY}"`
-
-/** The head of a file and no more of it — what keeps a listing from reading a project whole. */
-async function firstBytes(file: string, limit: number): Promise<Buffer> {
-  const handle = await open(file, 'r')
-  try {
-    // `allocUnsafe`: every byte handed back is one `read` wrote, and zeroing the rest per document
-    // is work a listing pays for nothing.
-    const buffer = Buffer.allocUnsafe(limit)
-    const { bytesRead } = await handle.read(buffer, 0, limit, 0)
-    return buffer.subarray(0, bytesRead)
-  } finally {
-    await handle.close()
-  }
-}
 
 /** The one every kind the studio invented is written in, and the one a listing reads short. */
 export const ENVELOPED: DocumentBodyFormat = {

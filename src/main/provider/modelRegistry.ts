@@ -1,5 +1,6 @@
 import {
   FEATURED_TAG,
+  LOCAL_RUNTIME,
   PERIOD_DAYS,
   PROVIDER_MAINTAINER,
   SYSTEM_TAG_PREFIX,
@@ -11,6 +12,9 @@ import {
   type ModelSort,
   type ModelSummary,
 } from '@shared/domain/model'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import { localFieldsOf } from '@shared/domain/localFields'
+import { modelThumbnailUrl, type LocalModel } from '@shared/domain/localModel'
 import type { WatchCredentials } from './credentialsWatch'
 import { familyOf, translateSchema, type ProviderInput } from './schema'
 
@@ -113,6 +117,13 @@ export type RegistryOptions = {
   catalog: () => ModelCatalog
   /** Required: everything cached here belongs to one account, and none of the keys say which. */
   watch: WatchCredentials
+  /**
+   * The models on THIS machine that serve a space — never the assistant or the recognition model,
+   * which answer a role and belong to no panel. Read on each call: one is added while this runs.
+   */
+  localModels: () => readonly LocalModel[]
+  /** Names the knobs of a local model's form. The main process holds the language as a service. */
+  translate: (key: string) => string
   ttlMs?: number
   now?: () => number
 }
@@ -170,6 +181,7 @@ function summaryOf(model: RemoteModel, grades: Grades): ModelSummary {
     // An unnamed model is still usable; showing its id beats showing nothing.
     name: model.name ?? model.id,
     family: familyOf(model.capabilities, tags),
+    runsOn: SCENARIO_CLOUD,
     source: model.source ?? 'other',
     origin: isOfficial(model) ? 'official' : 'community',
     featured: tags.includes(FEATURED_TAG),
@@ -196,6 +208,35 @@ function summaryOf(model: RemoteModel, grades: Grades): ModelSummary {
   }
 
   return summary
+}
+
+/**
+ * A model on THIS machine, as the panel reads it — the same shape as a cloud's, which is the whole
+ * point of merging the two catalogues: one set of filters, one search, one grid, `<DynamicForm/>`.
+ *
+ * `null` for a model with no family: the assistant and the recognition model answer a ROLE, and
+ * the manager screen is where those are chosen. They never appear in a space's panel.
+ */
+function localSummaryOf(model: LocalModel): ModelSummary | null {
+  if (model.family === undefined) return null
+
+  return {
+    id: model.id,
+    name: model.name,
+    family: model.family,
+    runsOn: LOCAL_RUNTIME,
+    source: model.source,
+    // `origin` says who PUBLISHES, and nothing running on this machine is published by the cloud
+    // the studio was built on — which is what `official` means here.
+    origin: 'community',
+    featured: false,
+    capabilities: model.capabilities ?? [],
+    tags: [],
+    // Always one: the manifest names its own, and a modality's generic picture stands in for a
+    // model the person supplied. A card with nothing to draw is what this exists to prevent.
+    thumbnail: modelThumbnailUrl(model),
+    ...(model.summary === undefined ? {} : { description: model.summary }),
+  }
 }
 
 /**
@@ -278,6 +319,7 @@ function showable(asset: RemoteAsset): string | null {
  */
 function matches(summary: ModelSummary, query: ModelQuery, since: string | null): boolean {
   if (query.family && summary.family !== query.family) return false
+  if (query.runsOn && summary.runsOn !== query.runsOn) return false
   if (query.origin && summary.origin !== query.origin) return false
 
   if (query.capabilities?.length) {
@@ -329,6 +371,8 @@ type Cached<T> = { at: number; value: T }
 export function createModelRegistry({
   catalog,
   watch,
+  localModels,
+  translate,
   ttlMs = DEFAULT_TTL_MS,
   now = Date.now,
 }: RegistryOptions): ModelRegistry {
@@ -353,6 +397,39 @@ export function createModelRegistry({
 
   const fresh = <T>(entry: Cached<T> | null | undefined): T | null =>
     entry && now() - entry.at < ttlMs ? entry.value : null
+
+  // The form a model on this machine offers, derived from its MODALITY — see `localFields.ts`.
+  const describedLocally = (modelId: string): ModelDescriptor | null => {
+    const model = localModels().find(one => one.id === modelId)
+    if (!model) return null
+
+    const summary = localSummaryOf(model)
+    if (!summary) return null
+
+    return {
+      ...summary,
+      // `text` where a manifest names no modality: a form that disappeared would be worse than one
+      // knob too many, which is the whole of invariant 5.
+      fields: localFieldsOf(model.modality ?? 'text', model.fieldOverrides ?? {}, translate),
+    }
+  }
+
+  /**
+   * What this machine offers the panel, recomposed only when the list itself changes.
+   *
+   * Read on every search — so on every keystroke of the browser's field — where the remote side
+   * is held by the TTL. The list is a handful of manifests and it moves once a gesture.
+   */
+  let summarised: { of: readonly LocalModel[]; items: readonly ModelSummary[] } | null = null
+
+  const localSummaries = (): readonly ModelSummary[] => {
+    const own = localModels()
+    if (summarised?.of !== own) {
+      summarised = { of: own, items: own.flatMap(model => localSummaryOf(model) ?? []) }
+    }
+
+    return summarised.items
+  }
 
   /** The one place a model's schema is fetched, cached per model for the registry's own TTL. */
   const described = async (modelId: string): Promise<ModelDescriptor> => {
@@ -457,7 +534,23 @@ export function createModelRegistry({
        * community models. Two entries of the same id would also collide as a React key.
        */
       const seen = new Set<string>()
-      let cursor: Cursor | null = deserialize(query.cursor) ?? startOf(query)
+
+      // The local catalogue rides on the FIRST page and is never paginated: it is a handful of
+      // manifests held in memory, so a cursor into it would be machinery for a list that cannot
+      // fill one screen. It comes first because it is the side that costs nothing to run.
+      if (query.cursor === undefined) {
+        for (const summary of localSummaries()) {
+          if (!matches(summary, query, since)) continue
+
+          seen.add(summary.id)
+          items.push(summary)
+        }
+      }
+
+      // Nothing remote is walked when the person asked for this machine alone: the pages could
+      // only be discarded, and each of them is a round trip.
+      let cursor: Cursor | null =
+        query.runsOn === LOCAL_RUNTIME ? null : (deserialize(query.cursor) ?? startOf(query))
       let walked = 0
 
       while (cursor && items.length < limit && walked < MAX_PAGES_PER_REQUEST) {
@@ -500,7 +593,7 @@ export function createModelRegistry({
       return value
     },
 
-    describe: modelId => described(modelId),
+    describe: async modelId => describedLocally(modelId) ?? (await described(modelId)),
 
     previews: async assetIds => {
       const wanted = [...new Set(assetIds)]

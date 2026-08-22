@@ -17,7 +17,9 @@ export type AiChoiceRowProps = {
   checked: boolean
   disabled?: boolean
   onChoose: () => void
-  /** What the row offers on its right: install, cancel, remove. */
+  /** Drawn between the radio and the name, for a choice that HAS a picture. */
+  picture?: ReactNode
+  /** What the row offers on its right: install, cancel, remove, load. */
   children?: ReactNode
 }
 
@@ -31,6 +33,7 @@ export function AiChoiceRow({
   checked,
   disabled,
   onChoose,
+  picture,
   children,
 }: AiChoiceRowProps) {
   return (
@@ -45,6 +48,7 @@ export function AiChoiceRow({
           disabled={disabled}
           onChange={onChoose}
         />
+        {picture}
         <span className="flex flex-col">
           <span>{label}</span>
           {caption && <span className={WINDOW_CAPTION}>{caption}</span>}

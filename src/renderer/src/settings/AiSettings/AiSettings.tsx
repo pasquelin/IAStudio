@@ -19,6 +19,11 @@ import { gpuName } from './gpuName'
 
 const SCOPE_FIELD = 'setting-ai-scope'
 
+/** What is in flight, when it belongs to THIS row — the others then hold their render. */
+function heldBy<T extends { modelId: string }>(row: RoleRow, flight: T | null): T | null {
+  return flight && row.candidates.some(one => one.model.id === flight.modelId) ? flight : null
+}
+
 /** Where the choices that apply were written, so reopening the screen lands on that side. */
 function scopeOf(overview: AiOverview): ChoiceScope {
   if (overview.projectPath === null) return 'app'
@@ -34,6 +39,8 @@ export function AiSettings() {
   const { t } = useTranslation()
   const bytes = useBytes()
   const overview = useAiModels(state => state.overview)
+  const addOwnAiModel = useAiModels(state => state.addOwnAiModel)
+  const ownModelFailure = useAiModels(state => state.ownModelFailure)
   // One control for the screen rather than one per row: the question is asked once — "these
   // choices are for what?" — and answered once. Seeded from what the rows say, so somebody whose
   // choices are project-scoped does not reopen on the other side.
@@ -68,6 +75,14 @@ export function AiSettings() {
         available: bytes(summary.availableBytes),
       }),
       summary.gpu === null ? null : gpuName(summary.gpu),
+      // The video memory when a runtime answered for it, and nothing at all otherwise: a machine
+      // with a dedicated card is judged on THIS figure, so leaving it unsaid would hide the reason.
+      summary.vram === null
+        ? null
+        : t('aiModels.machineVram', {
+            total: bytes(summary.vram.totalBytes),
+            free: bytes(summary.vram.freeBytes),
+          }),
       summary.diskFreeBytes === null
         ? null
         : t('aiModels.machineDisk', { free: bytes(summary.diskFreeBytes) }),
@@ -112,6 +127,18 @@ export function AiSettings() {
 
       {overview.roles.length === 0 && <p className={WINDOW_HELP}>{t('aiModels.empty')}</p>}
 
+      {/* One sentence per branch: only the admission weighed bytes, so only it may name them. */}
+      {overview.loadFailure !== null && (
+        <p className={cn(WINDOW_HELP, 'mb-2')} role="status">
+          {overview.loadFailure.reason === 'beyond-machine'
+            ? t('aiModels.loadBeyondMachine', {
+                needed: bytes(overview.loadFailure.neededBytes),
+                available: bytes(overview.loadFailure.availableBytes),
+              })
+            : t('aiModels.loadFailed')}
+        </p>
+      )}
+
       {groups.map(
         group =>
           group.rows.length > 0 && (
@@ -122,11 +149,8 @@ export function AiSettings() {
                   key={row.role}
                   row={row}
                   // Only the row that owns it: the others then hold their render while a bar moves.
-                  installing={
-                    row.candidates.some(one => one.model.id === overview.installing?.modelId)
-                      ? overview.installing
-                      : null
-                  }
+                  loading={heldBy(row, overview.loading)}
+                  installing={heldBy(row, overview.installing)}
                   busy={busy}
                   scope={writesTo}
                   fitOf={fitOf}
@@ -134,6 +158,23 @@ export function AiSettings() {
               ))}
             </section>
           ),
+      )}
+
+      <SettingLine title={t('aiModels.ownModel')} help={t('aiModels.ownModelHelp')}>
+        <button
+          type="button"
+          data-sc="field:ai.ownModel"
+          className="btn btn-sm"
+          onClick={() => void addOwnAiModel()}
+        >
+          {t('aiModels.addOwnModel')}
+        </button>
+      </SettingLine>
+
+      {ownModelFailure !== null && (
+        <p className={WINDOW_HELP} role="status">
+          {t('aiModels.ownModelUnreadable')}
+        </p>
       )}
     </div>
   )

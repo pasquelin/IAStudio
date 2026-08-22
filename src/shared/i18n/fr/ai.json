@@ -60,6 +60,23 @@
       "disk": "{{needed}} à télécharger, {{free}} libres sur le disque",
       "refused": "le format ou la provenance de ce modèle n’est pas admis",
       "runtime": "le runtime {{runtime}} ne répond pas sur cette machine"
-    }
+    },
+    "machineVram": "{{free}} libres sur {{total}} de mémoire vidéo",
+    "load": "Charger",
+    "loadHint": "Met les poids en mémoire pour que les réponses soient immédiates",
+    "loading": "Chargement du modèle",
+    "cancelLoad": "Annuler",
+    "cancelLoadHint": "Arrête le chargement et rend la mémoire déjà prise",
+    "unload": "Décharger",
+    "unloadHint": "Rend la mémoire. Le modèle reste installé sur le disque",
+    "loadFailed": "Le chargement s’est arrêté. Le journal dit pourquoi.",
+    "forget": "Retirer",
+    "forgetHint": "Retire l’entrée de la liste. Votre fichier reste où il est",
+    "unverifiedProvenance": "provenance non vérifiée",
+    "ownModel": "Vos propres modèles",
+    "ownModelHelp": "Un fichier de poids GGUF déjà sur cette machine. Sa licence n’est pas connue du studio.",
+    "addOwnModel": "Ajouter un fichier…",
+    "ownModelUnreadable": "Ce fichier n’est pas un GGUF que le studio sait lire.",
+    "loadBeyondMachine": "Chargement impossible : {{needed}} demandés, {{available}} disponibles."
   }
 }

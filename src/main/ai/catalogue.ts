@@ -1,4 +1,4 @@
-import { DICTATION_ROLE, type AiRoleId } from '@shared/domain/aiRole'
+import { ASSISTANT_ROLE, DICTATION_ROLE, type AiRoleId } from '@shared/domain/aiRole'
 import { STT_MODEL } from '@shared/domain/dictation'
 import { modelRefusalOf, type LocalModel } from '@shared/domain/localModel'
 import localModels from '@shared/domain/localModels.json'
@@ -31,24 +31,68 @@ const SHIPPED: readonly { readonly role: AiRoleId; readonly model: LocalModel }[
   ...catalogueEntries(),
 ]
 
+/**
+ * The same list, indexed the two ways it is ever read — built ONCE.
+ *
+ * `[M]` `shippedModelsFor` used to `filter` and `map` the frozen list per role, and a compose asks
+ * it once per role: twenty-two arrays allocated to answer a question whose answer cannot change.
+ */
+const BY_ROLE: ReadonlyMap<AiRoleId, readonly LocalModel[]> = (() => {
+  const map = new Map<AiRoleId, LocalModel[]>()
+  for (const entry of SHIPPED) {
+    const held = map.get(entry.role) ?? []
+    held.push(entry.model)
+    map.set(entry.role, held)
+  }
+
+  return map
+})()
+
+const BY_ID: ReadonlyMap<string, LocalModel> = new Map(
+  SHIPPED.map(entry => [entry.model.id, entry.model]),
+)
+
+const ALL: readonly LocalModel[] = SHIPPED.map(entry => entry.model)
+
+const NONE: readonly LocalModel[] = []
+
 /** Every shipped model, whatever role it serves. */
 export function shippedModels(): readonly LocalModel[] {
-  return SHIPPED.map(entry => entry.model)
+  return ALL
 }
 
 /** What the shipped catalogue offers for a role, in the order it offers them. */
 export function shippedModelsFor(role: AiRoleId): readonly LocalModel[] {
-  return SHIPPED.filter(entry => entry.role === role).map(entry => entry.model)
+  return BY_ROLE.get(role) ?? NONE
 }
 
 /** A shipped model by id, or nothing. Ids come from manifests, so an unknown one is expected. */
 export function shippedModel(id: string): LocalModel | null {
-  return SHIPPED.find(entry => entry.model.id === id)?.model ?? null
+  return BY_ID.get(id) ?? null
 }
 
 /** Which roles the shipped catalogue can serve at all, before any machine has a say. */
 export function rolesWithLocalOption(): readonly AiRoleId[] {
-  return [...new Set(SHIPPED.map(entry => entry.role))]
+  return [...BY_ROLE.keys()]
+}
+
+/** The only loader a supplied file reaches today is llama.cpp, and it serves the conversation. */
+const OWN_MODEL_ROLE: AiRoleId = ASSISTANT_ROLE
+
+/** The catalogue as a whole — and the ONE place the shipped list and the supplied one meet. */
+export function catalogueWith(own: readonly LocalModel[]): readonly LocalModel[] {
+  return own.length === 0 ? ALL : [...ALL, ...own]
+}
+
+/** What a role can be served by, from both lists. */
+export function modelsForWith(role: AiRoleId, own: readonly LocalModel[]): readonly LocalModel[] {
+  const shipped = shippedModelsFor(role)
+  return role === OWN_MODEL_ROLE && own.length > 0 ? [...shipped, ...own] : shipped
+}
+
+/** One model by id, from either list. An unknown id is expected: manifests come and go. */
+export function modelWith(id: string, own: readonly LocalModel[]): LocalModel | null {
+  return BY_ID.get(id) ?? own.find(model => model.id === id) ?? null
 }
 
 /**

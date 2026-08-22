@@ -11,6 +11,19 @@ import type { Residency, RuntimeEndpointId } from './aiRuntime'
 /** On `unified`, the renderer and the weights draw from ONE pot. Two budgets there would be false. */
 export type MemoryDomain = 'unified' | 'split'
 
+/**
+ * What an inference runtime reports about the video memory — the one reading of this domain that
+ * is neither a deduction nor a system call.
+ *
+ * `unifiedBytes` is the share the CPU and the GPU hold together, and it is what MEASURES the
+ * domain above: greater than zero on a SoC, zero on a dedicated card.
+ */
+export type VramReading = {
+  readonly totalBytes: number
+  readonly freeBytes: number
+  readonly unifiedBytes: number
+}
+
 /** `probe` may sort a catalogue and explain a refusal. It may never admit a job. */
 export type MemorySource = 'runtime' | 'probe' | 'none'
 

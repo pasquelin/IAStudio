@@ -57,6 +57,11 @@ export function bundledTextures(root: string): string {
   return join(root, 'textures')
 }
 
+/** The picture of each local model — one PNG named after the model it stands for. */
+export function bundledModels(root: string): string {
+  return join(root, 'models')
+}
+
 /** The still drawn of each scene template — one PNG named after the template it shows. */
 export function bundledTemplates(root: string): string {
   return join(root, 'templates')

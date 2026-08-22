@@ -2,6 +2,7 @@ import { readFile, statfs } from 'node:fs/promises'
 import { availableParallelism, freemem, totalmem } from 'node:os'
 import { dirname } from 'node:path'
 import { app } from 'electron'
+import type { VramReading } from '@shared/domain/aiMemory'
 import type { HardwarePort } from './hardwareProbe'
 
 /**
@@ -37,8 +38,14 @@ async function freeBytesAt(path: string): Promise<number> {
 /**
  * The real machine behind `HardwarePort` — the only file of the probe that touches Electron or
  * `os`. `weightsPath` is a getter: the model folder is a setting, and it moves while this runs.
+ *
+ * `vram` is the one reading `os` cannot give: it comes from the inference runtime, which is what
+ * makes a snapshot answer `runtime` and a verdict answer anything but `unknown`.
  */
-export function electronHardwarePort(weightsPath: () => string): HardwarePort {
+export function electronHardwarePort(
+  weightsPath: () => string,
+  vram: () => Promise<VramReading | null>,
+): HardwarePort {
   return {
     platform: () => process.platform,
     arch: () => process.arch,
@@ -54,5 +61,6 @@ export function electronHardwarePort(weightsPath: () => string): HardwarePort {
     diskFreeBytes: () => freeBytesAt(weightsPath()),
     // `complete` rather than `basic`: same four keys, but only `complete` fills `glRenderer`.
     gpuInfo: () => app.getGPUInfo('complete'),
+    vram,
   }
 }

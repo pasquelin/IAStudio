@@ -2,14 +2,12 @@ import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelCandidate } from '@shared/domain/aiOverview'
 import type { AiRoleId } from '@shared/domain/aiRole'
-import type { DownloadProgress } from '@shared/domain/localModel'
-import { taskRatio } from '@shared/domain/taskProgress'
-import { ProgressBar } from '@/design/ProgressBar'
-import { HINT_LEFT } from '@/helpers/tooltip'
+import { modelThumbnailUrl, type DownloadProgress } from '@shared/domain/localModel'
+import { Thumbnail } from '@/design/Thumbnail'
 import { useBytes } from '@/hooks/useBytes'
 import type { ModelFitSentence } from '@/hooks/useModelFit'
-import { useAiModels } from '@/stores/aiModels'
 import { AiChoiceRow } from './AiChoiceRow'
+import { AiModelActions } from './AiModelActions'
 
 export type AiCandidateRowProps = {
   role: AiRoleId
@@ -18,6 +16,8 @@ export type AiCandidateRowProps = {
   fit: ModelFitSentence
   /** The download in flight, when it is this model's. */
   progress: DownloadProgress | null
+  /** How far this model's load has got, from 0 to 1 — `null` when it is not the one loading. */
+  loading: number | null
   /** Whether some install already holds the disk — a second would compete with it. */
   busy: boolean
   onChoose: () => void
@@ -33,16 +33,12 @@ export const AiCandidateRow = memo(function AiCandidateRow({
   chosen,
   fit,
   progress,
+  loading,
   busy,
   onChoose,
 }: AiCandidateRowProps) {
   const { t } = useTranslation()
   const bytes = useBytes()
-  const installAiModel = useAiModels(state => state.installAiModel)
-  const cancelAiInstall = useAiModels(state => state.cancelAiInstall)
-  const removeAiModel = useAiModels(state => state.removeAiModel)
-
-  const size = bytes(candidate.model.diskBytes)
 
   return (
     <AiChoiceRow
@@ -50,50 +46,19 @@ export const AiCandidateRow = memo(function AiCandidateRow({
       choice={candidate.model.id}
       // Data, not a word of the interface: a model is called what its publisher calls it.
       label={candidate.model.name}
-      caption={`${size} · ${fit.verdict}`}
-      hint={fit.note}
+      caption={`${bytes(candidate.model.diskBytes)} · ${fit.verdict}`}
+      // The provenance comes FIRST when there is one to say: it qualifies everything after it.
+      hint={
+        candidate.unverified
+          ? [t('aiModels.unverifiedProvenance'), fit.note].filter(part => part).join(' · ')
+          : fit.note
+      }
       checked={chosen}
       disabled={!fit.usable}
       onChoose={onChoose}
+      picture={<Thumbnail url={modelThumbnailUrl(candidate.model)} className="size-8" />}
     >
-      {progress ? (
-        <span className="flex items-center gap-2">
-          <ProgressBar
-            ratio={taskRatio(progress.received, progress.total)}
-            label={t('aiModels.installing')}
-            className="w-24"
-          />
-          <button
-            type="button"
-            {...HINT_LEFT(t('aiModels.cancelInstallHint'))}
-            className="btn btn-sm"
-            onClick={() => void cancelAiInstall()}
-          >
-            {t('aiModels.cancelInstall')}
-          </button>
-        </span>
-      ) : candidate.installed ? (
-        <button
-          type="button"
-          {...HINT_LEFT(t('aiModels.removeHint'))}
-          className="btn btn-sm"
-          onClick={() => void removeAiModel(candidate.model.id)}
-        >
-          {t('aiModels.remove')}
-        </button>
-      ) : (
-        // Offered whatever the machine thinks of it: hiding the button decided for the person, and
-        // a download that will not fit says so when it fails rather than never being offered.
-        <button
-          type="button"
-          {...HINT_LEFT(t('aiModels.installHint', { size }))}
-          className="btn btn-sm"
-          disabled={busy}
-          onClick={() => void installAiModel(candidate.model.id)}
-        >
-          {t('aiModels.install')}
-        </button>
-      )}
+      <AiModelActions candidate={candidate} progress={progress} loading={loading} busy={busy} />
     </AiChoiceRow>
   )
 })

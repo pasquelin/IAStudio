@@ -21,7 +21,9 @@
     "capability": "Capacité",
     "tag": "Tag",
     "period": "Date",
-    "publisher": "Éditeur"
+    "publisher": "Éditeur",
+    "runtime": "Tourne",
+    "runsLocally": "Sur cette machine"
   },
   "modelTags": {
     "textToImage": "Depuis un texte",

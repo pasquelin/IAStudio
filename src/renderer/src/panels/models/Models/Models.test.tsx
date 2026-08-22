@@ -1,7 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ModelPage, ModelQuery, ModelSummary } from '@shared/domain/model'
+import {
+  LOCAL_RUNTIME,
+  type ModelPage,
+  type ModelQuery,
+  type ModelSummary,
+} from '@shared/domain/model'
 import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useLayouts } from '@/stores/layouts'
@@ -16,6 +22,7 @@ function model(id: string, overrides: Partial<ModelSummary> = {}): ModelSummary 
     id,
     name: `Model ${id}`,
     family: 'image',
+    runsOn: SCENARIO_CLOUD,
     source: 'scenario',
     origin: 'official',
     featured: false,
@@ -39,12 +46,31 @@ describe('Models panel', () => {
     useLayouts.setState({ activeWorkspace: 'image' })
   })
 
-  it('says what to do rather than showing an empty panel without credentials', () => {
+  /**
+   * Said only once the panel has nothing else to show — a machine holding local models has rows
+   * to draw, and telling it there is no key would hide the very models that need none.
+   */
+  it('says what to do rather than showing an empty panel without credentials', async () => {
     useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
     installFakeBridge()
     renderPanel()
 
-    expect(screen.getByText(/identifiants API/i)).toBeInTheDocument()
+    expect(await screen.findByText(/identifiants API/i)).toBeInTheDocument()
+  })
+
+  // The studio has to be useful with no account at all: what runs here needs none, and asking
+  // for it must not go anywhere near the catalogue.
+  it('narrows to this machine and still draws its models when no key is held', async () => {
+    useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
+    const searchModels = vi.fn((_query?: ModelQuery): Promise<ModelPage> =>
+      Promise.resolve({ items: [model('local_one', { runsOn: LOCAL_RUNTIME })], cursor: null }),
+    )
+    installFakeBridge({ provider: { searchModels } })
+
+    renderPanel()
+
+    expect(await screen.findByText('Model local_one')).toBeInTheDocument()
+    expect(searchModels.mock.calls[0]?.[0]).toMatchObject({ runsOn: LOCAL_RUNTIME })
   })
 
   // Saying the key is missing without a way to type it leaves the user hunting through menus.
@@ -54,7 +80,9 @@ describe('Models panel', () => {
     installFakeBridge({ settings: { open } })
     renderPanel()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Configurer les identifiants' }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Configurer les identifiants' }),
+    )
     expect(open).toHaveBeenCalledWith('account')
   })
 

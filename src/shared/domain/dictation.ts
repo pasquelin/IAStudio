@@ -221,6 +221,7 @@ export const STT_MODEL: LocalModel = {
   // `[M]` The JSDoc of `armIdle` announced "returning around 700 MB" — a subtraction rather than a
   // measurement, which R2 of ADR-19 forbids. Kept as the reservation until a runtime answers.
   reservationBytes: 700_000_000,
+  thumbnail: 'parakeet-tdt-0.6b-v3-int8.png',
 }
 
 /**

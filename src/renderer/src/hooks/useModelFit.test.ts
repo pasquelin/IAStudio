@@ -14,13 +14,23 @@ const machine = (diskFreeBytes: number | null): MachineSummary => ({
   availableBytes: 6 * GIBI,
   diskFreeBytes,
   gpu: null,
+  vram: null,
 })
 
 const candidate = (
   fit: Compatibility,
   obstacle: FitObstacle | null,
   installed = true,
-): ModelCandidate => ({ model: MODEL, installed, fit, obstacle })
+): ModelCandidate => ({
+  model: MODEL,
+  installed,
+  loaded: false,
+  holdable: true,
+  unverified: false,
+  supplied: false,
+  fit,
+  obstacle,
+})
 
 const fitFor = (one: ModelCandidate, diskFreeBytes: number | null = 500 * GIBI) =>
   renderHook(() => useModelFit(machine(diskFreeBytes))).result.current(one)

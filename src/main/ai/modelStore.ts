@@ -1,13 +1,45 @@
 import { net } from 'electron'
 import { createReadStream } from 'node:fs'
-import { mkdir, open as openFile, rename, rm, stat } from 'node:fs/promises'
+import { mkdir, open as openFile, readdir, rename, rm, rmdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chunksOf } from '@main/netStream'
+import { exists } from '@main/persistence'
 import type { DownloadHost, DownloadResponse } from './modelInstall'
 
-/** Where the model lands when the user has not pointed somewhere else. */
+/**
+ * Where every model of the catalogue lands when the user has not pointed somewhere else.
+ *
+ * `models`, and no longer `models/stt`: the folder holds the whole catalogue — the recognition
+ * model and every set of weights llama.cpp opens — and the name said otherwise. `migrateSttFolder`
+ * carries what an earlier version left one level down.
+ */
 export function defaultModelFolder(userData: string): string {
-  return join(userData, 'models', 'stt')
+  return join(userData, 'models')
+}
+
+/**
+ * Moves what an earlier version wrote under `models/stt` up into `models`.
+ *
+ * File by file rather than by renaming the folder: the destination already exists, and a version
+ * that ran both would have written into either. Anything it cannot move is left where it is — the
+ * cost is one re-download of a model that is still on the disk, never a deletion.
+ */
+export async function migrateSttFolder(folder: string): Promise<void> {
+  const previous = join(folder, 'stt')
+
+  const found = await readdir(previous).catch(() => null)
+  if (found === null) return
+
+  for (const name of found) {
+    // 🛑 Never over a name already taken above: `rename` overwrites, and the file up here is the
+    // one a later version wrote. Left behind, it costs a re-download; overwritten, it is lost.
+    const target = join(folder, name)
+    if (!(await exists(target))) await rename(join(previous, name), target).catch(() => {})
+  }
+
+  // `rmdir` and not a recursive `rm`: a folder still holding something is one this could not
+  // empty, and removing it anyway would delete exactly what was just protected.
+  await rmdir(previous).catch(() => {})
 }
 
 /**

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { rigFit } from '@/engines/scene/rigFit'
@@ -156,6 +157,7 @@ describe('RigSection', () => {
     id: 'model_x',
     name: 'X',
     family: '3d',
+    runsOn: SCENARIO_CLOUD,
     source: 'other',
     origin: 'official',
     featured: false,

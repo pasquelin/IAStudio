@@ -10,6 +10,10 @@ import { AiSettings } from './AiSettings'
 const PARAKEET: ModelCandidate = {
   model: localModel(),
   installed: true,
+  loaded: false,
+  holdable: true,
+  unverified: false,
+  supplied: false,
   fit: 'compatible',
   obstacle: null,
 }
@@ -17,6 +21,10 @@ const PARAKEET: ModelCandidate = {
 const HUGE: ModelCandidate = {
   model: localModel({ id: 'hidream', name: 'HiDream', reservationBytes: 48 * GIBI }),
   installed: false,
+  loaded: false,
+  holdable: true,
+  unverified: false,
+  supplied: false,
   fit: 'insufficient-memory',
   obstacle: 'memory',
 }
@@ -37,9 +45,12 @@ const overview = (over: Partial<AiOverview> = {}): AiOverview => ({
     availableBytes: 34 * GIBI,
     diskFreeBytes: 500 * GIBI,
     gpu: 'Apple M2 Max',
+    vram: null,
   },
   projectPath: null,
   installing: null,
+  loading: null,
+  loadFailure: null,
   ...over,
 })
 
@@ -123,6 +134,75 @@ describe('AiSettings', () => {
     fireEvent.click(screen.getByRole('radio', { name: /Automatique/ }))
 
     expect(choose).toHaveBeenCalledWith(DICTATION_ROLE, null, 'app')
+  })
+
+  /**
+   * "Activate" means RESIDENT, never hidden — ADR-21 § D. The two gestures are about MEMORY, and
+   * they sit beside the pair that is about the disk: a model can be installed and idle.
+   */
+  it('offers to hold an installed model in memory', () => {
+    const load = vi.fn(() => Promise.resolve(overview()))
+    installFakeBridge({ ai: { load } })
+    show()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Charger' }))
+
+    expect(load).toHaveBeenCalledWith('parakeet')
+  })
+
+  // The same button, the other way round: what is resident is what can be given back.
+  it('offers to give the memory back once a model is resident', () => {
+    const unload = vi.fn(() => Promise.resolve(overview()))
+    installFakeBridge({ ai: { unload } })
+    show(overview({ roles: [row({ candidates: [{ ...PARAKEET, loaded: true }] })] }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Décharger' }))
+
+    expect(unload).toHaveBeenCalledWith('parakeet')
+  })
+
+  /**
+   * 🛑 A failure the person can act on: the two figures the admission weighed, said in words —
+   * never a freeze, and never a stack trace.
+   */
+  it('says what a load asked for and what was left when it could not happen', () => {
+    show(
+      overview({
+        loadFailure: {
+          reason: 'beyond-machine',
+          modelId: 'parakeet',
+          neededBytes: 8 * GIBI,
+          availableBytes: 3 * GIBI,
+        },
+      }),
+    )
+
+    expect(screen.getByRole('status')).toHaveTextContent(/8,0 Gio.*3,0 Gio/)
+  })
+
+  // Their file, their disk: the word differs from "Supprimer" because the gesture does.
+  it('offers to forget a supplied model rather than to delete it, and says it is unvouched for', () => {
+    const supplied = { ...PARAKEET, unverified: true, supplied: true }
+    show(overview({ roles: [row({ candidates: [supplied] })] }))
+
+    expect(screen.getByRole('button', { name: 'Retirer' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Supprimer' })).not.toBeInTheDocument()
+    expect(screen.getByText(/provenance non vérifiée/)).toBeInTheDocument()
+  })
+
+  /**
+   * Rank 3 of ADR-20: the gesture is theirs, and so is its refusal — the studio cannot word a
+   * failure about a file it never saw anywhere but in the window that asked.
+   */
+  it('asks the main process for a weights file, and says when it cannot read one', async () => {
+    const addOwnModel = vi.fn(() => Promise.reject(new Error('not a GGUF')))
+    installFakeBridge({ ai: { addOwnModel } })
+    show()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter un fichier…' }))
+
+    expect(addOwnModel).toHaveBeenCalledOnce()
+    expect(await screen.findByText(/n’est pas un GGUF/)).toBeInTheDocument()
   })
 
   // A scope with nothing to scope to would be a control that answers a question nobody asked.

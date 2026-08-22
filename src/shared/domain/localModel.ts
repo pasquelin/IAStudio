@@ -1,3 +1,4 @@
+import { hostedUrl } from './asset'
 import type { LocalFieldOverrides, LocalModality } from './localFields'
 import type { ModelFamily } from './model'
 
@@ -13,8 +14,14 @@ import type { ModelFamily } from './model'
 /** Formats the studio can be handed. Whether one may be LOADED depends on the loader — see `admitsLoad`. */
 export type ModelFormat = 'safetensors' | 'gguf' | 'onnx' | 'pickle'
 
+/** The values beside the type, so a schema checks against them rather than against a copy. */
+export const MODEL_FORMATS: readonly ModelFormat[] = ['safetensors', 'gguf', 'onnx', 'pickle']
+
 /** What opens the weights. The pair, not the format, is what the whitelist is written on. */
 export type ModelLoader = 'sherpa-onnx' | 'ollama' | 'llamacpp'
+
+/** The values beside the type, so a table keyed by loader can be walked without a cast. */
+export const MODEL_LOADERS: readonly ModelLoader[] = ['sherpa-onnx', 'ollama', 'llamacpp']
 
 /**
  * Where the manifest came from, which is what decides how much the studio vouches for it.
@@ -106,6 +113,26 @@ export type LocalModel = {
   readonly thumbnail?: string
   /** One line under the name, in the publisher's words. Data, not a word of the interface. */
   readonly summary?: string
+  /**
+   * Where the weights ALREADY sit — an absolute path, for a model the person pointed at.
+   *
+   * Absent for everything the studio fetches itself, whose files land in the model folder under
+   * the names their manifest gives. Its presence is what says "there is nothing to download".
+   */
+  readonly weightsPath?: string
+}
+
+/**
+ * The host serving the picture of a local model — shipped under `resources/models`, like the
+ * template stills, and common to every project.
+ */
+export const MODEL_HOST = 'model'
+
+/** Where a card reads a model's picture from. No network, no dead link, and no third party. */
+export function modelThumbnailUrl(model: LocalModel): string {
+  // The generic picture of its modality where a manifest names none — which is every model the
+  // person supplied, since nothing can know what their file looks like.
+  return hostedUrl(MODEL_HOST, model.thumbnail ?? `${model.modality ?? 'text'}.png`)
 }
 
 /** Bytes across the whole model, not within the file being fetched. */
@@ -139,16 +166,35 @@ export function admitsLoad(format: ModelFormat, loader: ModelLoader): boolean {
 }
 
 /** Why a model cannot be offered at all, whatever the machine could hold. */
-export type ModelRefusal = 'format-not-admitted' | 'unverified-provenance'
+export type ModelRefusal = 'format-not-admitted'
 
 /**
  * Whether a model may enter the catalogue, and why not.
  *
- * Rank 3 is refused HERE and admitted by an explicit gesture elsewhere: ADR-20 asks that supplying
- * one's own manifest never be the consequence of a click on "Install".
+ * 🛑 Rank 3 is no longer refused here, and that is the amendment of 2026-08-21: ADR-20 § B admits
+ * it under an EXPLICIT gesture, and the gesture now exists — the person points at a weights file
+ * they already hold. What rank 3 earns is a mark, never a lock.
  */
 export function modelRefusalOf(model: LocalModel): ModelRefusal | null {
-  if (!admitsLoad(model.format, model.loader)) return 'format-not-admitted'
-  if (model.rank === 3) return 'unverified-provenance'
-  return null
+  return admitsLoad(model.format, model.loader) ? null : 'format-not-admitted'
+}
+
+/**
+ * Whether the studio vouches for where this model came from. Rank 3 is the person's own file:
+ * its licence is unknown, so it stays out of the notices and says so on screen.
+ */
+export function provenanceUnverified(model: LocalModel): boolean {
+  return model.rank === 3
+}
+
+/**
+ * Whether the weights are the person's own file rather than something the studio fetched.
+ *
+ * 🛑 The ONE reading of that, and it decides three gestures: nothing is downloaded, nothing is
+ * deleted, and the entry alone is dropped. Read off `rank` in one place and off `weightsPath` in
+ * another, the label said "delete" while the effect forgot — or the reverse, and the reverse
+ * erases a file that was only ever pointed at.
+ */
+export function isSuppliedModel(model: LocalModel): model is LocalModel & { weightsPath: string } {
+  return model.weightsPath !== undefined
 }

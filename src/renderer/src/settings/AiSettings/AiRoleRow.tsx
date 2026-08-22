@@ -13,6 +13,8 @@ export type AiRoleRowProps = {
   row: RoleRow
   /** The install in flight when it is one of THIS row's candidates, so the others hold their render. */
   installing: AiOverview['installing']
+  /** The load in flight, on the same terms — one at a time, and only the row that owns it. */
+  loading: AiOverview['loading']
   /** Whether some install holds the disk, wherever it was begun. */
   busy: boolean
   /** Where a click writes — the application default, or the open project alone. */
@@ -27,6 +29,7 @@ export type AiRoleRowProps = {
 export const AiRoleRow = memo(function AiRoleRow({
   row,
   installing,
+  loading,
   busy,
   scope,
   fitOf,
@@ -82,6 +85,7 @@ export const AiRoleRow = memo(function AiRoleRow({
               chosen={editing?.kind === 'local' && editing.modelId === candidate.model.id}
               fit={fitOf(candidate)}
               progress={installing?.modelId === candidate.model.id ? installing.progress : null}
+              loading={loading?.modelId === candidate.model.id ? loading.ratio : null}
               busy={busy}
               onChoose={() =>
                 void chooseAiProvider(

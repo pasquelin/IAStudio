@@ -21,7 +21,9 @@
     "capability": "Capability",
     "tag": "Tag",
     "period": "Date",
-    "publisher": "Publisher"
+    "publisher": "Publisher",
+    "runtime": "Runs",
+    "runsLocally": "On this machine"
   },
   "modelTags": {
     "textToImage": "From text",

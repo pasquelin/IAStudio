@@ -1,4 +1,11 @@
-import type { MemoryDomain, ProbeSnapshot } from '@shared/domain/aiMemory'
+import type {
+  MemoryDomain,
+  MemorySnapshot,
+  RuntimeOccupancy,
+  RuntimeSnapshot,
+  VramReading,
+} from '@shared/domain/aiMemory'
+import type { RuntimeEndpointId } from '@shared/domain/aiRuntime'
 import { isRecord } from '@shared/guards'
 
 /** What a probe can say about the GPU. Nothing about its memory — see `gpuIdentityOf`. */
@@ -27,6 +34,13 @@ export type HardwareFacts = {
   /** `null` when the path could not be stat'd; a probe reports absence rather than guessing zero. */
   readonly diskFreeBytes: number | null
   readonly gpu: GpuIdentity | null
+  /**
+   * What the GPU holds, ANSWERED by a runtime — `getVramState()` — and `null` where none did.
+   *
+   * The one reading of this whole file that does not come from the system: it is why a snapshot
+   * may say `runtime` at all, and why `admissionFor` finally has a producer.
+   */
+  readonly vram: VramReading | null
 }
 
 /**
@@ -44,6 +58,8 @@ export type HardwarePort = {
   diskFreeBytes: () => Promise<number | null>
   /** `app.getGPUInfo`. Typed `unknown` by Electron itself, so it is narrowed rather than trusted. */
   gpuInfo: () => Promise<unknown>
+  /** The inference runtime's own video-memory reading, or `null` where it cannot open the GPU. */
+  vram: () => Promise<VramReading | null>
 }
 
 const record = (value: unknown): Record<string, unknown> | null => (isRecord(value) ? value : null)
@@ -77,19 +93,36 @@ export function gpuIdentityOf(info: unknown): GpuIdentity | null {
 }
 
 /**
- * `[D]` Apple Silicon is unified, everything else is assumed split — a DEDUCTION from platform and
- * architecture, not a reading. A `split` machine has video memory this snapshot has no field for.
+ * Whether the CPU and the GPU draw from one pot — MEASURED where a runtime answered.
+ *
+ * `[D]` Without a reading it falls back to the deduction it has always made: Apple Silicon is
+ * unified, everything else is assumed split. `unifiedSize` is what `node-llama-cpp` documents as
+ * the shared portion, and it is greater than zero on a SoC alone.
  */
-export function memoryDomainOf(platform: NodeJS.Platform, arch: string): MemoryDomain {
+export function memoryDomainOf(
+  platform: NodeJS.Platform,
+  arch: string,
+  vram: VramReading | null,
+): MemoryDomain {
+  if (vram !== null) return vram.unifiedBytes > 0 ? 'unified' : 'split'
   return platform === 'darwin' && arch === 'arm64' ? 'unified' : 'split'
 }
 
-/** The probe holds the "absence rather than a guess" policy for both readings that may fail. */
+/**
+ * 🛑 A card of no capacity is not a card: a llama.cpp build with no GPU answers zeroes rather than
+ * refusing, and passed on that reads as a machine holding NOTHING — every model refused for want
+ * of memory it never needed, on a machine that runs them on its CPU perfectly well.
+ */
+const usable = (reading: VramReading | null): VramReading | null =>
+  reading !== null && reading.totalBytes > 0 ? reading : null
+
+/** The probe holds the "absence rather than a guess" policy for every reading that may fail. */
 export async function hardwareProbe(port: HardwarePort): Promise<HardwareFacts> {
-  const [availableBytes, diskFreeBytes, info] = await Promise.all([
+  const [availableBytes, diskFreeBytes, info, vram] = await Promise.all([
     port.availableBytes().catch(() => null),
     port.diskFreeBytes().catch(() => null),
     port.gpuInfo().catch(() => null),
+    port.vram().catch(() => null),
   ])
 
   return {
@@ -100,6 +133,7 @@ export async function hardwareProbe(port: HardwarePort): Promise<HardwareFacts> 
     freeBytes: availableBytes,
     diskFreeBytes,
     gpu: gpuIdentityOf(info),
+    vram: usable(vram),
   }
 }
 
@@ -111,28 +145,59 @@ export type ProbeBudget = {
 }
 
 /**
- * `rendererReservedBytes` comes off the BUDGET alone: the budget is gross, while a free-memory
- * reading is a residue the window is already out of. Taking it off both counted it twice.
+ * The pot the weights actually come out of. 🛑 On `split` a system reading answers for the WRONG
+ * memory, and it is wrong in BOTH directions — which is why this is not a refinement.
  */
-export function probeSnapshot(
+function potOf(
+  facts: HardwareFacts,
+  domain: MemoryDomain,
+  budget: ProbeBudget,
+): { capacity: number; free: number } {
+  if (domain === 'split' && facts.vram !== null) {
+    return { capacity: facts.vram.totalBytes, free: facts.vram.freeBytes }
+  }
+
+  return {
+    capacity: budget.appBudgetBytes,
+    free: facts.freeBytes ?? budget.appBudgetBytes,
+  }
+}
+
+/**
+ * The machine reading a verdict and an admission are both weighed against.
+ *
+ * `source` is `runtime` exactly when a runtime answered for the video memory, which is what R1 of
+ * ADR-19 asks: a probe alone sorts a catalogue and explains a refusal, and admits nothing.
+ * `rendererReservedBytes` comes off the CAPACITY alone — the free reading is a residue the window
+ * is already out of, and taking it off both counted it twice.
+ */
+export function memorySnapshotOf(
   facts: HardwareFacts,
   budget: ProbeBudget,
   at: number,
-): ProbeSnapshot {
-  const allowed = budget.appBudgetBytes - budget.rendererReservedBytes
+  runtimeBytes: Readonly<Record<RuntimeEndpointId, RuntimeOccupancy>> = {},
+): MemorySnapshot {
+  // Guarded here too: `hardwareProbe` normalises what a port answered, and a `HardwareFacts`
+  // composed anywhere else must not be able to zero the machine.
+  const reading = usable(facts.vram)
+  const domain = memoryDomainOf(facts.platform, facts.arch, reading)
+  const pot = potOf({ ...facts, vram: reading }, domain, budget)
+  const allowed = pot.capacity - budget.rendererReservedBytes
 
   return {
-    domain: memoryDomainOf(facts.platform, facts.arch),
-    source: 'probe',
+    domain,
+    source: reading === null ? 'probe' : 'runtime',
     at,
     physicalBytes: facts.physicalBytes,
-    appBudgetBytes: budget.appBudgetBytes,
+    appBudgetBytes: pot.capacity,
     rendererReservedBytes: budget.rendererReservedBytes,
-    runtimeBytes: {},
+    runtimeBytes,
     headroomBytes: budget.headroomBytes,
-    availableBytes: Math.max(
-      0,
-      Math.min(allowed, facts.freeBytes ?? allowed) - budget.headroomBytes,
-    ),
+    availableBytes: Math.max(0, Math.min(allowed, pot.free) - budget.headroomBytes),
   }
+}
+
+/** R1 of ADR-19, held by the type: the one door a runtime reading reaches an admission through. */
+export function asRuntimeSnapshot(snapshot: MemorySnapshot): RuntimeSnapshot | null {
+  return snapshot.source === 'runtime' ? { ...snapshot, source: 'runtime' } : null
 }

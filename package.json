@@ -35,7 +35,8 @@
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",
     "decoders:copy": "node scripts/copy-decoders.mjs",
     "postinstall": "node scripts/dev-app-identity.mjs && node scripts/copy-decoders.mjs",
-    "models:pin": "node scripts/pin-models.mjs"
+    "models:pin": "node scripts/pin-models.mjs",
+    "models:thumbnails": "node scripts/make-model-thumbnails.mjs"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",

@@ -6,6 +6,8 @@ import { availableParallelism, totalmem } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
+import type { AiOverview } from '@shared/domain/aiOverview'
+import type { LocalModel } from '@shared/domain/localModel'
 import {
   ASSET_ID_PREFIX,
   DEFAULT_ASSET_FOLDERS,
@@ -27,7 +29,7 @@ import type { PathKind } from '@shared/domain/settingsRegistry'
 import { ASSISTANT_MODEL_ID } from '@shared/domain/assistant'
 import type { AuthState } from '@shared/domain/settings'
 import { log } from './log'
-import { TRANSLATIONS, type Language } from '@shared/i18n'
+import { textAt, TRANSLATIONS, type Language } from '@shared/i18n'
 import { effectiveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
@@ -42,11 +44,12 @@ import { createFfmpegResolver } from './media/ffmpeg'
 import {
   bundledAnimations,
   bundledFfmpeg,
+  bundledModels,
   bundledTemplates,
   bundledVad,
   resourcesRoot,
 } from './resources'
-import { bundledTemplateFile } from './templateThumbnails'
+import { bundledFile } from './bundledFile'
 import { bundledAnimationFile } from './animations'
 import { createAssetText } from './assistant/assetText'
 import { createRemoteActions, type RemoteActions } from './mcp/asking'
@@ -59,15 +62,23 @@ import { createSession, type DictationSession } from './dictation/session'
 import { STT_MODEL } from '@shared/domain/dictation'
 import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import { createAiManager, type AiManager } from './ai/manager'
-import { shippedModel } from './ai/catalogue'
+import { catalogueWith, modelWith } from './ai/catalogue'
 import { electronHardwarePort } from './ai/electronHardwarePort'
 import { electronLlamaPort } from './ai/electronLlamaPort'
 import { llamaLocalRuntime } from './ai/llamaRuntime'
-import { hardwareProbe, probeSnapshot } from './ai/hardwareProbe'
+import { hardwareProbe, memorySnapshotOf } from './ai/hardwareProbe'
 import { readyCloudsOf } from './ai/cloudReadiness'
+import { createLocalJobRunner } from './ai/localJobRunner'
 import { fileRuntime, type LocalRuntimes } from './ai/localRuntimes'
+import { ownModelFrom } from './ai/ownModel'
+import { createRoutedJobRunner } from './ai/routedJobRunner'
 import { fetchModel, modelIsComplete } from './ai/modelInstall'
-import { createDownloadHost, defaultModelFolder, ensureFolder } from './ai/modelStore'
+import {
+  createDownloadHost,
+  defaultModelFolder,
+  ensureFolder,
+  migrateSttFolder,
+} from './ai/modelStore'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
 import { openSttProcess } from './dictation/sttProcess'
 import { adoptFile } from './media/adoptFile'
@@ -95,11 +106,12 @@ import { createTextureExtraction, type TextureExtraction } from './assets/textur
 import { broadcast, sendTo } from './ipc/broadcast'
 import { studioWindow } from './window/windows'
 import { setLogVerbosity } from './log'
-import { exists } from './persistence'
+import { exists, firstBytes } from './persistence'
 import type Scenario from '@scenario-labs/sdk'
 import {
   createJobManager,
   type AssetCollector,
+  type CollectedOutputs,
   type JobAccount,
   type JobManager,
 } from './provider/jobManager'
@@ -218,6 +230,8 @@ export type Services = {
   mcp: McpControl
   /** Which AI serves each role, what the machine holds, and what may be installed. */
   ai: AiManager
+  /** Rank 3's gesture, whole: a picker, a GGUF header, an entry. Rejects on a file it cannot read. */
+  addOwnAiModel: () => Promise<AiOverview>
   /** Speaking instead of typing. Holds the engine, the model and the state of a session. */
   dictation: DictationSession
   /** Opens the system screen where microphone access is granted back after a refusal. */
@@ -355,6 +369,14 @@ function pickImportPath(extension: string, language: Language): Promise<string |
   }).then(chosen => chosen[0] ?? null)
 }
 
+/** The weights file someone points at — rank 3 of ADR-20, and the gesture is theirs alone. */
+function pickWeights(language: Language): Promise<string | null> {
+  return openDialog({
+    properties: ['openFile'],
+    filters: [{ name: TRANSLATIONS[language].dialog.weights, extensions: ['gguf'] }],
+  }).then(chosen => chosen[0] ?? null)
+}
+
 /** Translated here, where the dialog opens: a native picker shows these names as they are. */
 function pickMedia(language: Language): Promise<string[]> {
   const t = TRANSLATIONS[language].dialog
@@ -477,9 +499,28 @@ export function createServices(settings: SettingsStore): Services {
     watch: credentials.watch,
     transport,
   })
+  /**
+   * The merged catalogue, rebuilt only when the supplied list itself moves.
+   *
+   * The registry memoises on the ARRAY it is handed, so a fresh one per call — which a merge is —
+   * defeated it, and the panel recomposed every summary on each keystroke of its search field.
+   */
+  let merged: { of: readonly LocalModel[]; all: readonly LocalModel[] } | null = null
+
+  const mergedCatalogue = (): readonly LocalModel[] => {
+    const own = settings.read().ai.ownModels
+    if (merged?.of !== own) merged = { of: own, all: catalogueWith(own) }
+
+    return merged.all
+  }
+
   const models = createModelRegistry({
     catalog: () => catalogOf(client.require()),
     watch: credentials.watch,
+    // The two catalogues merge in `catalogue.ts` and nowhere else: one panel, one set of filters,
+    // and a model that says where it runs — ADR-21 as amended.
+    localModels: mergedCatalogue,
+    translate: key => textAt(TRANSLATIONS[language()], key),
   })
 
   const plan = createPlanReader({
@@ -1045,12 +1086,16 @@ export function createServices(settings: SettingsStore): Services {
    * 🛑 PROVISIONAL, and named so rather than hidden: ADR-19 lists `appBudgetBytes` and
    * `headroomBytes` under what it does NOT decide, and nothing has measured them.
    *
-   * Half the machine, minus two gigabytes of headroom — enough for the manager to compute a
-   * verdict, and wrong for a reason nobody has established. The first measurement that says
-   * otherwise replaces this, and it should carry that measurement in its JSDoc.
+   * `[M]` Three quarters, not a half. At a half, a 16 GB machine offered 5.5 GB once the headroom
+   * and the window were taken off, and the 7B model — 8 GB reserved — was unusable on a machine
+   * that runs it. The figure is still a policy and not a measurement; what IS measured is that the
+   * previous one refused a model that works.
+   *
+   * On a machine with a dedicated card this is not what decides: the video memory is, and it is
+   * READ rather than budgeted — see `potOf` in `hardwareProbe.ts`.
    */
   const PROVISIONAL_BUDGET = {
-    appBudgetBytes: Math.round(totalmem() / 2),
+    appBudgetBytes: Math.round((totalmem() * 3) / 4),
     headroomBytes: 2_000_000_000,
     // What the viewport was measured holding with a 3D scene open, 2026-08-21.
     rendererReservedBytes: 475_000_000,
@@ -1061,7 +1106,32 @@ export function createServices(settings: SettingsStore): Services {
   const modelFolder = (): string =>
     settings.read().dictation.modelFolder ?? defaultModelFolder(app.getPath('userData'))
 
+  // Nothing waits on it: what it carries is a model already on the disk, and an install that
+  // reaches the new folder first simply downloads what the move would have brought.
+  void migrateSttFolder(modelFolder()).catch((error: unknown) => {
+    log.warn('ai', `moving the previous model folder failed: ${String(error)}`)
+  })
+
   const downloads = createDownloadHost()
+
+  /**
+   * Whether a Scenario key is held — a BOOLEAN, cached, because reading it opens the OS keychain
+   * and `safeStorage.decryptString` is synchronous on the main thread. It sat on every compose,
+   * so on every assistant turn.
+   *
+   * Invalidated by the credential watch, which is the channel that fires exactly when the ACTIVE
+   * key moves. **Blind spot, in clear**: `secrets/.env` stands in for an account in development
+   * and is reread on each `readBook()`, so editing it mid-session leaves this answer stale until
+   * an account changes or the studio restarts.
+   */
+  let scenarioKeyHeld: boolean | null = null
+  const heldScenarioKey = (): boolean => {
+    scenarioKeyHeld ??= settings.readCredentials() !== null
+    return scenarioKeyHeld
+  }
+  credentials.watch(() => {
+    scenarioKeyHeld = null
+  })
 
   /**
    * 🛑 The ONE place the wiring names a cloud — ADR-21 § C as amended: what proves an account is
@@ -1073,7 +1143,7 @@ export function createServices(settings: SettingsStore): Services {
    */
   const clouds: Record<string, { held: () => boolean; brain: () => AssistantBrain }> = {
     scenario: {
-      held: () => settings.readCredentials() !== null,
+      held: heldScenarioKey,
       brain: () => providerBrain,
     },
   }
@@ -1100,21 +1170,33 @@ export function createServices(settings: SettingsStore): Services {
     },
   })
 
+  // One port, held: it owns the addon, so the memory reading and the inference are the same
+  // process's — which is what lets a snapshot say `runtime` rather than `probe`.
+  const llama = electronLlamaPort()
+
+  /** A model the person supplied names its own file; everything else lands in the model folder. */
+  const weightsOf = (model: LocalModel): string =>
+    // The FIRST file: a split GGUF names its shards `-00001-of-0000N`, and llama.cpp is handed
+    // the first one and finds the rest beside it.
+    model.weightsPath ?? join(modelFolder(), model.files[0]?.name ?? '')
+
+  const modelOf = (modelId: string): LocalModel | null =>
+    modelWith(modelId, settings.read().ai.ownModels)
+
   const runtimes: LocalRuntimes = {
     'sherpa-onnx': fetchedFiles,
     llamacpp: llamaLocalRuntime({
       files: fetchedFiles,
-      // The FIRST file: a split GGUF names its shards `-00001-of-0000N`, and llama.cpp is handed
-      // the first one and finds the rest beside it.
-      weightsOf: model => join(modelFolder(), model.files[0]?.name ?? ''),
-      port: electronLlamaPort(),
-      modelOf: shippedModel,
+      weightsOf,
+      port: llama,
+      modelOf,
     }),
   }
 
   const ai = createAiManager({
-    facts: () => hardwareProbe(electronHardwarePort(modelFolder)),
-    snapshotOf: facts => probeSnapshot(facts, PROVISIONAL_BUDGET, Date.now()),
+    facts: () => hardwareProbe(electronHardwarePort(modelFolder, llama.vram)),
+    snapshotOf: (facts, runtimeBytes) =>
+      memorySnapshotOf(facts, PROVISIONAL_BUDGET, Date.now(), runtimeBytes),
     settings: () => settings.read(),
     writeSettings: partial => settings.write(partial),
     currentProjectPath: () => project.current()?.path ?? null,
@@ -1122,7 +1204,23 @@ export function createServices(settings: SettingsStore): Services {
     runtimes,
     emit: overview => broadcast(EVENTS.ai, overview),
     log: (level, message) => log[level]('ai', message),
+    now: Date.now,
   })
+
+  /** The whole of rank 3's gesture: a picker, a header, an entry. */
+  const addOwnAiModel = async (): Promise<AiOverview> => {
+    const picked = await pickWeights(language())
+    if (picked === null) return await ai.overview()
+
+    // A window of the head, never the whole file: a manifest is read out of the first pages, and
+    // these files run to gigabytes.
+    return await ai.addOwnModel(
+      await ownModelFrom(picked, {
+        readHead: firstBytes,
+        sizeOf: async path => (await stat(path)).size,
+      }),
+    )
+  }
 
   const dictation = createSession({
     modelFolder,
@@ -1184,7 +1282,13 @@ export function createServices(settings: SettingsStore): Services {
 
   // Rebuilt only when the client is, so every job of one account shares a single graph rather
   // than allocating its own — what matters is that a job holds ONE binding, not a fresh one.
-  let bound: { scenario: Scenario; id: string; account: JobAccount } | null = null
+  let bound: { scenario: Scenario | null; id: string; account: JobAccount } | null = null
+
+  /** The account id a job on THIS machine is filed under. Not a fingerprint: nothing was paid for. */
+  const LOCAL_ACCOUNT_ID = 'local'
+
+  /** A job of this machine, told from a cloud's by the id its runner minted. */
+  const isLocalJob = (remoteId: string): boolean => remoteId.startsWith('local_')
 
   const uploads = createAssetUploader(() => client.require().assets)
 
@@ -1287,9 +1391,34 @@ export function createServices(settings: SettingsStore): Services {
     }
   }
 
-  const accountOn = (scenario: Scenario): JobAccount => ({
-    runner: runnerOf(scenario),
-    collect: collectorOf(scenario),
+  /**
+   * Generations on this machine, behind the shape the job manager speaks — so it keeps holding
+   * the queue, the concurrency bound and the retries, and keeps knowing about ONE runner.
+   */
+  const localJobs = createLocalJobRunner({
+    chat: async request => {
+      const model = modelOf(request.model)
+      const chat = model ? runtimes[model.loader]?.chat : undefined
+      if (!chat) throw new Error(`nothing here converses with ${request.model}`)
+
+      return await chat(request)
+    },
+    modelOf,
+    newId: () => randomUUID(),
+    log: (level, message) => log[level]('ai', message),
+  })
+
+  /** What a local job leaves behind: nothing remote, so nothing to bring down. */
+  const collectNothing = (): Promise<CollectedOutputs> =>
+    Promise.resolve({ ids: [], workspaces: [] })
+
+  const accountOn = (scenario: Scenario | null): JobAccount => ({
+    runner: createRoutedJobRunner({
+      local: localJobs,
+      cloud: () => (scenario ? runnerOf(scenario) : null),
+      isLocalTarget: targetId => modelOf(targetId) !== null,
+    }),
+    collect: scenario ? collectorOf(scenario) : collectNothing,
   })
 
   const jobStore = createJobStore(() => app.getPath('userData'))
@@ -1298,13 +1427,15 @@ export function createServices(settings: SettingsStore): Services {
     accounts: {
       // Read once per job and kept, so a switch mid-flight does not have the new key asked about
       // the previous account's job id — see `JobAccount`.
+      // Answered even with no account at all: a generation on this machine needs none, and the
+      // routed runner refuses a CLOUD target readably rather than never being reached.
       active: () => {
-        const scenario = client.get()
+        const scenario = client.get() ?? null
         const held = settings.readCredentials()
-        if (!scenario || !held) return null
 
         if (bound?.scenario !== scenario) {
-          bound = { scenario, id: accountFingerprint(held), account: accountOn(scenario) }
+          const id = held ? accountFingerprint(held) : LOCAL_ACCOUNT_ID
+          bound = { scenario, id, account: accountOn(scenario) }
         }
 
         return { id: bound.id, account: bound.account }
@@ -1320,11 +1451,15 @@ export function createServices(settings: SettingsStore): Services {
     projectPath: () => project.current()?.path ?? null,
     resolveAssetInputs: assetInputs.resolveBody,
     persist: (unfinished, handled) => {
+      // 🛑 A local job is never written down: its whole state lived in the memory of the process
+      // that ran it, so a launch that resumed one would poll a runner that has never heard of it.
+      const stored = unfinished.filter(job => !isLocalJob(job.remoteId))
+
       // Nothing waits on this: the write is settled at quit and on a project change, which are
       // the two moments the process may not outlive it. Said out loud all the same — a full disk
       // or an unreadable file turns every note into a no-op, and the loss this whole mechanism
       // exists to prevent would then happen with nothing anywhere saying why.
-      void jobStore.write(unfinished, handled).catch((error: unknown) => {
+      void jobStore.write(stored, handled).catch((error: unknown) => {
         log.warn('jobs', `keeping notes of running jobs failed: ${String(error)}`)
       })
     },
@@ -1363,7 +1498,7 @@ export function createServices(settings: SettingsStore): Services {
    */
   const brain = createRoutedBrain({
     providerOf: () => ai.providerOf(ASSISTANT_ROLE),
-    modelOf: shippedModel,
+    modelOf,
     // Both halves are required, and neither is guessed: a runtime that cannot converse and a
     // manifest with no window are the two ways a local model has nothing to answer with.
     localBrain: model => {
@@ -1438,7 +1573,8 @@ export function createServices(settings: SettingsStore): Services {
       favouriteThumbnail: favoriteId => favorites.thumbnailPath(favoriteId),
       thumbnailOf: relative => thumbnails.of(relative),
       bundledAnimation: id => bundledAnimationFile(bundledAnimations(resourcesRoot()), id),
-      bundledTemplate: file => bundledTemplateFile(bundledTemplates(resourcesRoot()), file),
+      bundledTemplate: file => bundledFile(bundledTemplates(resourcesRoot()), file),
+      bundledModel: file => bundledFile(bundledModels(resourcesRoot()), file),
     }),
   )
 
@@ -1491,6 +1627,7 @@ export function createServices(settings: SettingsStore): Services {
     remoteActions,
     mcp,
     ai,
+    addOwnAiModel,
     dictation,
     openMicrophoneSettings: () => openMicrophoneSettings(url => void shell.openExternal(url)),
     link: async (source, type) =>

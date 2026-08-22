@@ -191,10 +191,20 @@ export function tagOfFamily(family: ModelFamily): string | undefined {
   return second ? undefined : only?.tag
 }
 
+/**
+ * Where a model runs, when it is not a cloud's: this machine.
+ *
+ * A value of `ModelSummary.runsOn` beside the cloud ids of `aiCloud.ts`, and NOT a second field —
+ * a model knows where it runs, and the panel never switches "to the cloud": ADR-21 as amended.
+ */
+export const LOCAL_RUNTIME = 'local'
+
 export type ModelSummary = {
   id: string
   name: string
   family: ModelFamily
+  /** `LOCAL_RUNTIME`, or the id of the cloud that serves it. What the Local/Scenario facet reads. */
+  runsOn: string
   /**
    * Where the model comes from — `scenario`, `civitai`, `huggingface`, … Left a plain string
    * rather than a union: the API adds values without warning, and an unknown origin must not
@@ -402,6 +412,8 @@ export const PERIOD_DAYS: Record<ModelPeriod, number> = {
 
 export type ModelQuery = {
   family?: ModelFamily
+  /** Narrows to what runs in one place — `LOCAL_RUNTIME`, or a cloud id. Applied by the registry. */
+  runsOn?: string
   search?: string
   origin?: ModelOrigin
   capabilities?: readonly string[]

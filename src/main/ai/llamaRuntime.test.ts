@@ -6,7 +6,7 @@ import { llamaLocalRuntime, type LlamaPort } from './llamaRuntime'
 const MODEL = localModel({ id: 'qwen', loader: 'llamacpp' })
 
 const files = (over: Partial<LocalRuntime> = {}): LocalRuntime => ({
-  read: () => Promise.resolve({ ready: true, installed: new Set(['qwen']) }),
+  read: () => Promise.resolve({ ready: true, installed: new Set(['qwen']), loaded: null }),
   install: () => Promise.resolve(),
   remove: () => Promise.resolve(),
   ...over,
@@ -14,7 +14,11 @@ const files = (over: Partial<LocalRuntime> = {}): LocalRuntime => ({
 
 const port = (over: Partial<LlamaPort> = {}): LlamaPort => ({
   ready: () => true,
+  loaded: () => null,
+  load: () => Promise.resolve(0),
+  unload: () => Promise.resolve(),
   chat: () => Promise.resolve('answered'),
+  vram: () => Promise.resolve(null),
   ...over,
 })
 
@@ -72,5 +76,33 @@ describe('llamaLocalRuntime', () => {
    */
   it('refuses a turn naming a model the catalogue does not hold', async () => {
     await expect(runtime().chat?.({ ...request, model: 'gone' })).rejects.toThrow(/catalogue/)
+  })
+
+  /**
+   * The port holds a FILE; the screen shows a MODEL. Reading the resident weights back through
+   * `weightsOf` is what turns one into the other — without it the row said nothing was loaded
+   * while the machine was holding gigabytes.
+   */
+  it('names the model whose weights are resident, of those it was asked about', async () => {
+    const weights = `/models/${MODEL.files[0]?.name ?? 'qwen'}`
+    const held = runtime({ port: port({ loaded: () => weights }) })
+
+    expect((await held.read([MODEL])).loaded).toBe('qwen')
+    expect((await runtime().read([MODEL])).loaded).toBeNull()
+  })
+
+  it('holds and frees the weights through the port', async () => {
+    const load = vi.fn(() => Promise.resolve(1_200))
+    const unload = vi.fn(() => Promise.resolve())
+    const local = runtime({ port: port({ load, unload }) })
+
+    expect(await local.load?.(MODEL, { onProgress: () => {} })).toBe(1_200)
+    expect(load).toHaveBeenCalledWith(
+      `/models/${MODEL.files[0]?.name ?? 'qwen'}`,
+      expect.anything(),
+    )
+
+    await local.unload?.()
+    expect(unload).toHaveBeenCalledOnce()
   })
 })

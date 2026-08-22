@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  asRuntimeSnapshot,
   gpuIdentityOf,
   hardwareProbe,
   memoryDomainOf,
-  probeSnapshot,
+  memorySnapshotOf,
   type HardwareFacts,
   type HardwarePort,
 } from './hardwareProbe'
@@ -29,6 +30,7 @@ const port = (over: Partial<HardwarePort> = {}): HardwarePort => ({
   availableBytes: () => Promise.resolve(60_000_000_000),
   diskFreeBytes: () => Promise.resolve(310_000_000_000),
   gpuInfo: () => Promise.resolve(REAL_GPU_INFO),
+  vram: () => Promise.resolve(null),
   ...over,
 })
 
@@ -40,6 +42,7 @@ const facts = (over: Partial<HardwareFacts> = {}): HardwareFacts => ({
   freeBytes: 60_000_000_000,
   diskFreeBytes: 310_000_000_000,
   gpu: null,
+  vram: null,
   ...over,
 })
 
@@ -111,15 +114,25 @@ describe('gpuIdentityOf', () => {
 })
 
 describe('memoryDomainOf', () => {
-  it('calls Apple Silicon unified and everything else split', () => {
-    expect(memoryDomainOf('darwin', 'arm64')).toBe('unified')
-    expect(memoryDomainOf('darwin', 'x64')).toBe('split')
-    expect(memoryDomainOf('win32', 'x64')).toBe('split')
-    expect(memoryDomainOf('linux', 'arm64')).toBe('split')
+  it('calls Apple Silicon unified and everything else split when nothing answered', () => {
+    expect(memoryDomainOf('darwin', 'arm64', null)).toBe('unified')
+    expect(memoryDomainOf('darwin', 'x64', null)).toBe('split')
+    expect(memoryDomainOf('win32', 'x64', null)).toBe('split')
+    expect(memoryDomainOf('linux', 'arm64', null)).toBe('split')
+  })
+
+  // The reading outranks the deduction, in BOTH directions: an ARM Mac in a virtual machine with
+  // a paravirtual GPU is split, and an SoC nobody thought of is unified.
+  it('takes a runtime reading over the deduction', () => {
+    const shared = { totalBytes: 8, freeBytes: 4, unifiedBytes: 8 }
+    const dedicated = { totalBytes: 8, freeBytes: 4, unifiedBytes: 0 }
+
+    expect(memoryDomainOf('linux', 'x64', shared)).toBe('unified')
+    expect(memoryDomainOf('darwin', 'arm64', dedicated)).toBe('split')
   })
 })
 
-describe('probeSnapshot', () => {
+describe('memorySnapshotOf', () => {
   const budget = {
     appBudgetBytes: 40_000_000_000,
     headroomBytes: 2_000_000_000,
@@ -129,7 +142,7 @@ describe('probeSnapshot', () => {
   // R1: a probe sorts a catalogue and explains a refusal. It may never admit a job, and `source`
   // is what says so — no runtime answered, so nothing here is an occupation.
   it('answers as a probe holding no runtime', () => {
-    const snapshot = probeSnapshot(facts(), budget, 1_700_000_000_000)
+    const snapshot = memorySnapshotOf(facts(), budget, 1_700_000_000_000)
 
     expect(snapshot.source).toBe('probe')
     expect(snapshot.runtimeBytes).toEqual({})
@@ -137,19 +150,21 @@ describe('probeSnapshot', () => {
   })
 
   it('takes the machine domain from the facts it was handed', () => {
-    expect(probeSnapshot(facts(), budget, 0).domain).toBe('unified')
-    expect(probeSnapshot(facts({ platform: 'win32', arch: 'x64' }), budget, 0).domain).toBe('split')
+    expect(memorySnapshotOf(facts(), budget, 0).domain).toBe('unified')
+    expect(memorySnapshotOf(facts({ platform: 'win32', arch: 'x64' }), budget, 0).domain).toBe(
+      'split',
+    )
   })
 
   // The window comes off the BUDGET, which is gross — never off a free-memory reading, which is a
   // residue the window is already out of. Taking it off both counted it twice.
   it('offers the budget less the window and the headroom', () => {
-    expect(probeSnapshot(facts(), budget, 0).availableBytes).toBe(37_500_000_000)
+    expect(memorySnapshotOf(facts(), budget, 0).availableBytes).toBe(37_500_000_000)
   })
 
   // The budget is a ceiling, not an entitlement: a machine with less free than that wins.
   it('never offers more than the machine actually has free', () => {
-    expect(probeSnapshot(facts({ freeBytes: 3_000_000_000 }), budget, 0).availableBytes).toBe(
+    expect(memorySnapshotOf(facts({ freeBytes: 3_000_000_000 }), budget, 0).availableBytes).toBe(
       1_000_000_000,
     )
   })
@@ -157,11 +172,61 @@ describe('probeSnapshot', () => {
   // A port that could not read free memory must not make the probe refuse everything: the budget
   // then stands alone, which is the honest reading of "we know what we allow, not what is left".
   it('falls back to the budget when free memory could not be read', () => {
-    expect(probeSnapshot(facts({ freeBytes: null }), budget, 0).availableBytes).toBe(37_500_000_000)
+    expect(memorySnapshotOf(facts({ freeBytes: null }), budget, 0).availableBytes).toBe(
+      37_500_000_000,
+    )
   })
 
   // Refusing is an answer; a negative figure would be read as a number and budgeted.
   it('answers zero rather than a negative when the reserves exceed what is free', () => {
-    expect(probeSnapshot(facts({ freeBytes: 1_000_000_000 }), budget, 0).availableBytes).toBe(0)
+    expect(memorySnapshotOf(facts({ freeBytes: 1_000_000_000 }), budget, 0).availableBytes).toBe(0)
+  })
+
+  // The whole of point B: on a machine with a dedicated card the weights come out of the VIDEO
+  // memory, and a system reading answers for the wrong pot — in both directions.
+  it('weighs a split machine against its video memory, not its system memory', () => {
+    const split = facts({
+      platform: 'linux',
+      arch: 'x64',
+      freeBytes: 60_000_000_000,
+      vram: { totalBytes: 8_000_000_000, freeBytes: 7_000_000_000, unifiedBytes: 0 },
+    })
+
+    // 7 GB free of the card, less the headroom — never the 60 GB of system memory free.
+    expect(memorySnapshotOf(split, budget, 0).availableBytes).toBe(5_000_000_000)
+  })
+
+  // A unified machine draws from ONE pot, so the video reading is the same memory the budget
+  // already bounds: budgeting it a second time would halve what the machine actually offers.
+  it('keeps the system budget on a unified machine, whatever the card reports', () => {
+    const unified = facts({
+      vram: { totalBytes: 96_000_000_000, freeBytes: 1_000_000_000, unifiedBytes: 96_000_000_000 },
+    })
+
+    expect(memorySnapshotOf(unified, budget, 0).availableBytes).toBe(37_500_000_000)
+  })
+
+  /**
+   * 🛑 A build with no GPU answers zeroes rather than refusing, and the port turns that into `null`
+   * — but if one ever reached here, a machine that runs models on its CPU would be told it holds
+   * nothing at all, and every candidate would read as too heavy.
+   */
+  it('never lets an empty card decide for a machine that has none', () => {
+    const cpuOnly = facts({
+      platform: 'linux',
+      arch: 'x64',
+      vram: { totalBytes: 0, freeBytes: 0, unifiedBytes: 0 },
+    })
+
+    expect(memorySnapshotOf(cpuOnly, budget, 0).availableBytes).toBe(37_500_000_000)
+  })
+
+  // R1 of ADR-19, held by the TYPE: a reading no runtime answered for cannot reach an admission
+  // at all, and this is the one door through which one that did can.
+  it('is a runtime reading exactly when a runtime answered for the memory', () => {
+    const answered = facts({ vram: { totalBytes: 8, freeBytes: 4, unifiedBytes: 0 } })
+
+    expect(asRuntimeSnapshot(memorySnapshotOf(facts(), budget, 0))).toBeNull()
+    expect(asRuntimeSnapshot(memorySnapshotOf(answered, budget, 0))?.source).toBe('runtime')
   })
 })

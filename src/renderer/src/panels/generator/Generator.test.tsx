@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { FieldDescriptor, ModelDescriptor } from '@shared/domain/model'
 import type { StudioBridge } from '@shared/ipc'
@@ -31,6 +32,7 @@ function descriptor(id: string, name: string, family: ModelDescriptor['family'])
     id,
     name,
     family,
+    runsOn: SCENARIO_CLOUD,
     source: 'scenario',
     origin: 'official',
     featured: false,

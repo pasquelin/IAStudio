@@ -340,4 +340,19 @@ describe('modelIsComplete', () => {
     disk.delete(`/models/${missing.name}`)
     expect(await modelIsComplete(host, STT_MODEL, '/models')).toBe(false)
   })
+
+  /**
+   * A model the person supplied is installed exactly while THEIR file is there. Looking for it in
+   * the model folder — where nothing was ever fetched — read it as never installed, which offered
+   * a download for a file already on the disk.
+   */
+  it('reads a supplied model against the file it names, not against the model folder', async () => {
+    const { host, disk } = harness()
+    const supplied = { ...STT_MODEL, files: [], weightsPath: '/elsewhere/mine.gguf' }
+
+    expect(await modelIsComplete(host, supplied, '/models')).toBe(false)
+
+    disk.set('/elsewhere/mine.gguf', 'weights')
+    expect(await modelIsComplete(host, supplied, '/models')).toBe(true)
+  })
 })

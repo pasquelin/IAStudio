@@ -240,6 +240,10 @@ export type Channels = {
   aiInstall: 'ai:install'
   aiCancelInstall: 'ai:cancel-install'
   aiRemove: 'ai:remove'
+  aiLoad: 'ai:load'
+  aiCancelLoad: 'ai:cancel-load'
+  aiUnload: 'ai:unload'
+  aiAddOwnModel: 'ai:add-own-model'
 
   sceneExport: 'scene:export'
   montageExport: 'montage:export'
@@ -438,6 +442,10 @@ export const CHANNELS: Channels = {
   aiInstall: 'ai:install',
   aiCancelInstall: 'ai:cancel-install',
   aiRemove: 'ai:remove',
+  aiLoad: 'ai:load',
+  aiCancelLoad: 'ai:cancel-load',
+  aiUnload: 'ai:unload',
+  aiAddOwnModel: 'ai:add-own-model',
 
   sceneExport: 'scene:export',
   montageExport: 'montage:export',
@@ -1664,8 +1672,30 @@ export type StudioBridge = {
     /** Fetches a model's files. One at a time: a second would compete for the same disk. */
     install: (modelId: string) => Promise<AiOverview>
     cancelInstall: () => Promise<AiOverview>
-    /** Deletes the files. The choices that named it are left alone — they fall back on their own. */
+    /**
+     * Deletes the files. The choices that named it are left alone — they fall back on their own.
+     *
+     * A model the PERSON supplied loses its entry and keeps its file: they put it there, and the
+     * studio was merely pointed at it.
+     */
     remove: (modelId: string) => Promise<AiOverview>
+    /**
+     * Holds the weights in memory — "activate", and nothing about visibility.
+     *
+     * Answers the overview whatever happened: a machine too small leaves `loadFailure` set with
+     * the two figures that were weighed, never an exception the window would have to word.
+     */
+    load: (modelId: string) => Promise<AiOverview>
+    cancelLoad: () => Promise<AiOverview>
+    unload: (modelId: string) => Promise<AiOverview>
+    /**
+     * Asks for a weights file and records what its header says — rank 3 of ADR-20.
+     *
+     * The picker is opened by the MAIN process, which is where a native dialog belongs, so this
+     * takes nothing: the gesture IS the argument. Answers the overview unchanged when the person
+     * closed the dialog, and rejects when the file is not one the studio can read.
+     */
+    addOwnModel: () => Promise<AiOverview>
     onChanged: (callback: (overview: AiOverview) => void) => Unsubscribe
   }
   dictation: {

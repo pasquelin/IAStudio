@@ -14,6 +14,9 @@ import type { FieldDescriptor } from './model'
 /** What a runtime takes, as far as a form is concerned. Never a model id, never a runtime name. */
 export type LocalModality = 'text' | 'image'
 
+/** The values beside the type, so a schema checks against them rather than against a copy. */
+export const LOCAL_MODALITIES: readonly LocalModality[] = ['text', 'image']
+
 /**
  * One knob, before a language is chosen. `labelKey` rather than `label`: a descriptor field is
  * screen text, and `no-hardcoded-text.test.ts` is right to refuse one written here.
@@ -23,8 +26,11 @@ export type LocalFieldTemplate = Omit<FieldDescriptor, 'label' | 'help'> & {
   helpKey?: string
 }
 
+/** The key every modality names its prompt by — read rather than spelled a second time. */
+export const PROMPT_FIELD_KEY = 'prompt'
+
 const PROMPT: LocalFieldTemplate = {
-  key: 'prompt',
+  key: PROMPT_FIELD_KEY,
   kind: 'longText',
   labelKey: 'localFields.prompt',
   required: true,

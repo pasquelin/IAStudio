@@ -28,6 +28,7 @@ import {
   VIEWPORT_QUALITIES,
 } from '@shared/domain/scene'
 import { HEX_COLOR } from '@shared/domain/color'
+import { localModelSchema } from '@main/ai/localModelSchema'
 import type { AccountBook, Credentials } from './accounts'
 
 // Built from the shared unions, never retyped — the same reason `provider/validation.ts` gives:
@@ -270,6 +271,9 @@ const roleChoices = z
 const ai = z.object({
   roles: roleChoices.optional(),
   projectRoles: z.record(z.string().min(1), roleChoices).optional(),
+  // `.catch([])` for the reason `roleChoices` carries its own: one hand-edited manifest must not
+  // reset the theme, the projects folder and every binding along with it.
+  ownModels: z.array(localModelSchema).catch([]).optional(),
 })
 
 const partialSettings = z.object({

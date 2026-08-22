@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -339,6 +340,7 @@ describe('SettingsWindow', () => {
                 id: 'model_flux',
                 name: 'Flux',
                 family: 'image',
+                runsOn: SCENARIO_CLOUD,
                 source: 'scenario',
                 origin: 'official',
                 featured: false,
@@ -387,6 +389,7 @@ describe('SettingsWindow', () => {
                 id: 'model_flux',
                 name: 'Flux',
                 family: 'image',
+                runsOn: SCENARIO_CLOUD,
                 source: 'scenario',
                 origin: 'official',
                 featured: false,
@@ -436,6 +439,7 @@ describe('SettingsWindow', () => {
                 id: 'model_seedance',
                 name: 'Seedance 2.0',
                 family: 'image',
+                runsOn: SCENARIO_CLOUD,
                 source: 'scenario',
                 origin: 'official',
                 featured: false,
@@ -482,6 +486,7 @@ describe('SettingsWindow', () => {
                 id: 'model_pro',
                 name: 'Seedance 2.0',
                 family: 'image',
+                runsOn: SCENARIO_CLOUD,
                 source: 'scenario',
                 origin: 'official',
                 featured: false,

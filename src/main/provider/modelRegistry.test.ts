@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
-import { PROVIDER_MAINTAINER, SKYBOX_TAG, SYSTEM_TAG_PREFIX } from '@shared/domain/model'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import {
+  LOCAL_RUNTIME,
+  PROVIDER_MAINTAINER,
+  SKYBOX_TAG,
+  SYSTEM_TAG_PREFIX,
+} from '@shared/domain/model'
+import { localModel } from '@shared/domain/localModel-fixtures'
 import { createCredentialsWatch } from './credentialsWatch'
 import {
   createModelRegistry,
@@ -11,9 +18,22 @@ import {
   type SearchRequest,
 } from './modelRegistry'
 
-/** The account switch is its own subject, below: everything else is built deaf to it. */
-const registryOf = (options: Omit<RegistryOptions, 'watch'>): ModelRegistry =>
-  createModelRegistry({ ...options, watch: () => () => {} })
+/**
+ * The account switch is its own subject, below: everything else is built deaf to it. The local
+ * catalogue is empty by default — the cases that care about it hand one in.
+ */
+const registryOf = (
+  options: Omit<RegistryOptions, 'watch' | 'localModels' | 'translate'> &
+    Partial<Pick<RegistryOptions, 'localModels' | 'translate'>>,
+): ModelRegistry =>
+  createModelRegistry({
+    localModels: () => [],
+    // What a bundle would answer, without one: the labels of a local form are keys until a
+    // language names them, and nothing here is a screen.
+    translate: key => key,
+    ...options,
+    watch: () => () => {},
+  })
 
 /** What the catalogue answers for a model Scenario publishes — see `isOfficial`, which needs both. */
 const PROVIDER_OWNED = {
@@ -168,6 +188,7 @@ describe('model registry', () => {
         id: 'model_flux',
         name: 'Flux',
         family: 'image',
+        runsOn: SCENARIO_CLOUD,
         source: 'scenario',
         origin: 'official',
         featured: false,
@@ -188,6 +209,7 @@ describe('model registry', () => {
         id: 'model_bare',
         name: 'model_bare',
         family: 'other',
+        runsOn: SCENARIO_CLOUD,
         source: 'other',
         origin: 'community',
         featured: false,
@@ -557,7 +579,12 @@ describe('model registry', () => {
   it('drops every cache on an account switch, without being told', async () => {
     const watch = createCredentialsWatch()
     const spied = spiedCatalog({ public: [FLUX] })
-    const registry = createModelRegistry({ catalog: spied.catalog, watch: watch.watch })
+    const registry = createModelRegistry({
+      catalog: spied.catalog,
+      watch: watch.watch,
+      localModels: () => [],
+      translate: key => key,
+    })
 
     await registry.search({})
     await registry.previews(['asset_a'])
@@ -680,6 +707,104 @@ describe('model registry', () => {
       await registry.describe('model_flux')
       await registry.describe('model_flux')
       expect(catalog).toHaveBeenCalledOnce()
+    })
+  })
+
+  /**
+   * The two catalogues merge here and nowhere else — ADR-21 as amended. What is checked is that a
+   * model on this machine reaches the SAME panel, through the same filters, with the same shape.
+   */
+  describe('the local catalogue', () => {
+    const LOCAL = localModel({
+      id: 'local_diffusion',
+      name: 'A model of this machine',
+      family: 'image',
+      capabilities: ['txt2img'],
+      modality: 'image',
+    })
+
+    it('offers a local model beside the cloud ones, saying where each runs', async () => {
+      const registry = registryOf({ catalog: publicCatalog([FLUX]), localModels: () => [LOCAL] })
+
+      const page = await registry.search({})
+
+      expect(page.items.map(one => [one.id, one.runsOn])).toEqual([
+        ['local_diffusion', LOCAL_RUNTIME],
+        ['model_flux', SCENARIO_CLOUD],
+      ])
+    })
+
+    /**
+     * The assistant and the recognition model answer a ROLE, and the manager screen is where those
+     * are chosen. A model with no family in a space's panel would be a row nothing can generate.
+     */
+    it('keeps a model that serves no space out of the panel', async () => {
+      const registry = registryOf({
+        catalog: publicCatalog([]),
+        localModels: () => [localModel({ id: 'qwen' })],
+      })
+
+      expect((await registry.search({})).items).toEqual([])
+    })
+
+    it('narrows a local model by family and by capability like any other', async () => {
+      const registry = registryOf({ catalog: publicCatalog([]), localModels: () => [LOCAL] })
+
+      expect((await registry.search({ family: 'image' })).items).toHaveLength(1)
+      expect((await registry.search({ family: 'video' })).items).toEqual([])
+      expect((await registry.search({ capabilities: ['img2img'] })).items).toEqual([])
+    })
+
+    /**
+     * 🛑 Asking for this machine must not walk the catalogue: the pages could only be discarded,
+     * and each of them is a round trip — on a studio that may hold no account at all.
+     */
+    it('asks the API nothing when the person narrowed to this machine', async () => {
+      const spied = spiedCatalog({ public: [FLUX] })
+      const registry = registryOf({ catalog: spied.catalog, localModels: () => [LOCAL] })
+
+      const page = await registry.search({ runsOn: LOCAL_RUNTIME })
+
+      expect(page.items.map(one => one.id)).toEqual(['local_diffusion'])
+      expect(spied.lists).toEqual([])
+    })
+
+    // A cursor means "further into the catalogue", and this machine's handful is not paginated:
+    // repeating it on every page would list the same rows forever.
+    it('rides on the first page alone', async () => {
+      const registry = registryOf({
+        catalog: publicCatalog(Array.from({ length: 60 }, (_, at) => ({ ...FLUX, id: `m_${at}` }))),
+        localModels: () => [LOCAL],
+      })
+
+      const first = await registry.search({ limit: 24 })
+      const second = await registry.search({ limit: 24, cursor: first.cursor ?? undefined })
+
+      expect(first.items[0]?.id).toBe('local_diffusion')
+      expect(second.items.map(one => one.id)).not.toContain('local_diffusion')
+    })
+
+    /**
+     * Invariant 5 held from the other side: a model on this machine has no server to ask, so its
+     * form comes from its MODALITY — and it is `<DynamicForm/>` that renders it, unchanged.
+     */
+    it('describes a local model from its modality, without a round trip', async () => {
+      const spied = spiedCatalog({ public: [FLUX] })
+      const registry = registryOf({ catalog: spied.catalog, localModels: () => [LOCAL] })
+
+      const described = await registry.describe('local_diffusion')
+
+      expect(described.fields.map(field => field.key)).toContain('steps')
+      expect(described.runsOn).toBe(LOCAL_RUNTIME)
+      expect(spied.lists).toEqual([])
+    })
+
+    // A card with nothing to draw is what the shipped pictures exist to prevent — and a model the
+    // person supplied gets the generic one of its modality rather than a broken tile.
+    it('always names a picture, shipped beside the catalogue', async () => {
+      const registry = registryOf({ catalog: publicCatalog([]), localModels: () => [LOCAL] })
+
+      expect((await registry.search({})).items[0]?.thumbnail).toContain('model/')
     })
   })
 })

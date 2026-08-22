@@ -1,13 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { AiOverview } from '@shared/domain/aiOverview'
 import type { MemorySnapshot } from '@shared/domain/aiMemory'
+import { aiRoleId, DICTATION_ROLE } from '@shared/domain/aiRole'
 import { STT_MODEL } from '@shared/domain/dictation'
 import type { DownloadProgress, LocalModel } from '@shared/domain/localModel'
-import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { GIBI, localModel } from '@shared/domain/localModel-fixtures'
+import { DEFAULT_SETTINGS, type PartialSettings, type Settings } from '@shared/domain/settings'
 import type { HardwareFacts } from './hardwareProbe'
 import { createAiManager, type ManagerDeps } from './manager'
 import type { LocalRuntime, LocalRuntimes } from './localRuntimes'
-
-const GIBI = 1024 * 1024 * 1024
 
 const FACTS: HardwareFacts = {
   platform: 'linux',
@@ -17,6 +18,7 @@ const FACTS: HardwareFacts = {
   freeBytes: 34 * GIBI,
   diskFreeBytes: 500 * GIBI,
   gpu: null,
+  vram: null,
 }
 
 const SNAPSHOT: MemorySnapshot = {
@@ -33,7 +35,7 @@ const SNAPSHOT: MemorySnapshot = {
 
 /** A runtime that installs nothing and holds nothing — what most of these cases need behind them. */
 const idleRuntime = (install: LocalRuntime['install'] = () => Promise.resolve()): LocalRuntime => ({
-  read: () => Promise.resolve({ ready: true, installed: new Set<string>() }),
+  read: () => Promise.resolve({ ready: true, installed: new Set<string>(), loaded: null }),
   install,
   remove: () => Promise.resolve(),
 })
@@ -94,12 +96,17 @@ const manager = (over: Partial<ManagerDeps> = {}) =>
     runtimes: { 'sherpa-onnx': idleRuntime(), ollama: idleRuntime() },
     emit: () => {},
     log: () => {},
+    now: () => 0,
     ...over,
   })
 
 const other = (id: string): LocalModel => ({ ...STT_MODEL, id })
 
 const nothing = (_progress: DownloadProgress): void => {}
+
+/** One candidate of the whole overview, whichever row holds it. */
+const candidateOf = (overview: AiOverview, modelId: string) =>
+  overview.roles.flatMap(row => row.candidates).find(one => one.model.id === modelId)
 
 describe('the AI manager', () => {
   /**
@@ -256,5 +263,277 @@ describe('the AI manager', () => {
     held.settle()
     await running
     expect((await ai.overview()).installing).toBeNull()
+  })
+})
+
+/**
+ * A runtime that HOLDS a model — what an idle one deliberately cannot do, and what the two
+ * gestures ADR-21 § D asks for are about.
+ */
+const holdingRuntime = (over: Partial<LocalRuntime> = {}): LocalRuntime => {
+  let held: string | null = null
+
+  return {
+    read: models =>
+      Promise.resolve({
+        ready: true,
+        installed: new Set(models.map(model => model.id)),
+        loaded: held,
+      }),
+    install: () => Promise.resolve(),
+    remove: () => Promise.resolve(),
+    load: (model, options) => {
+      options.onProgress(0.5)
+      held = model.id
+      return Promise.resolve(3 * GIBI)
+    },
+    unload: () => {
+      held = null
+      return Promise.resolve()
+    },
+    ...over,
+  }
+}
+
+/** A machine whose runtime ANSWERED for its memory — the only kind an admission may weigh. */
+const runtimeSnapshot = (availableBytes: number): MemorySnapshot => ({
+  ...SNAPSHOT,
+  source: 'runtime',
+  availableBytes,
+})
+
+const withOwnModel = (model: LocalModel): Settings => ({
+  ...DEFAULT_SETTINGS,
+  ai: { ...DEFAULT_SETTINGS.ai, ownModels: [model] },
+})
+
+describe('holding a model in memory', () => {
+  const QWEN = STT_MODEL
+
+  /**
+   * "Activate" means RESIDENT, never hidden — ADR-21 § D. What the runtime measured is what is
+   * remembered: `reservationBytes` is only what a publisher announced.
+   */
+  it('holds the weights, says so, and gives them back', async () => {
+    const ai = manager({ runtimes: { 'sherpa-onnx': holdingRuntime() } })
+
+    await ai.load(QWEN.id)
+    const held = await ai.overview()
+    expect(candidateOf(held, QWEN.id)?.loaded).toBe(true)
+
+    await ai.unload(QWEN.id)
+    expect(candidateOf(await ai.overview(), QWEN.id)?.loaded).toBe(false)
+  })
+
+  /**
+   * 🛑 The failure has to be READABLE — "8 GB asked for, 3 GB free" — and never a freeze. The two
+   * figures are the ones the admission weighed, not a second reading taken afterwards.
+   */
+  it('refuses a model beyond the machine with both figures, rather than trying it', async () => {
+    const load = vi.fn(() => Promise.resolve(0))
+    const ai = manager({
+      runtimes: { 'sherpa-onnx': holdingRuntime({ load }) },
+      snapshotOf: () => runtimeSnapshot(GIBI / 2),
+    })
+
+    const after = await ai.load(QWEN.id)
+
+    expect(after.loadFailure).toEqual({
+      modelId: QWEN.id,
+      neededBytes: QWEN.reservationBytes,
+      availableBytes: GIBI / 2,
+      reason: 'beyond-machine',
+    })
+    expect(load).not.toHaveBeenCalled()
+  })
+
+  /**
+   * R1 of ADR-19: a probe reading may never admit a job. With no runtime answering for the memory
+   * the load is ATTEMPTED and the runtime does the refusing — which is still readable, and is not
+   * the same thing as deciding on a figure nobody measured.
+   */
+  it('tries the load where no runtime answered for the memory', async () => {
+    const load = vi.fn(() => Promise.resolve(3 * GIBI))
+    const ai = manager({ runtimes: { 'sherpa-onnx': holdingRuntime({ load }) } })
+
+    await ai.load(QWEN.id)
+
+    expect(load).toHaveBeenCalledOnce()
+  })
+
+  // A load of a fourteen-billion-parameter model is tens of seconds of disk. Invariant 6: it
+  // reports, and it stops.
+  it('reports how far a load has got, and stops when asked', async () => {
+    const seen: (number | undefined)[] = []
+    let stop: (() => void) | undefined
+    const ai = manager({
+      emit: overview => seen.push(overview.loading?.ratio),
+      runtimes: {
+        'sherpa-onnx': holdingRuntime({
+          load: (_model, options) => {
+            options.onProgress(0.25)
+            return new Promise<number>((_ok, no) => {
+              stop = () => no(new Error('aborted'))
+              options.signal?.addEventListener('abort', () => stop?.())
+            })
+          },
+        }),
+      },
+    })
+
+    const loading = ai.load(QWEN.id)
+    await vi.waitFor(() => expect(seen).toContain(0.25))
+    await ai.cancelLoad()
+    await loading
+
+    expect((await ai.overview()).loading).toBeNull()
+    expect((await ai.overview()).loadFailure?.reason).toBe('failed')
+  })
+})
+
+describe('a model the person supplied', () => {
+  const OWN = localModel({
+    id: 'own-abc',
+    name: 'Their weights',
+    rank: 3,
+    loader: 'sherpa-onnx',
+    files: [],
+    weightsPath: '/elsewhere/mine.gguf',
+  })
+
+  /**
+   * Rank 3 of ADR-20 as amended: the entry is admitted and MARKED. A refusal made the whole rank
+   * unreachable, and every model of it read as incompatible.
+   */
+  it('offers it beside the shipped ones, marked as unvouched for', async () => {
+    const ai = manager({
+      settings: () => withOwnModel(OWN),
+      runtimes: { 'sherpa-onnx': holdingRuntime() },
+    })
+
+    const candidate = candidateOf(await ai.overview(), OWN.id)
+
+    expect(candidate?.unverified).toBe(true)
+    expect(candidate?.obstacle).not.toBe('refused')
+  })
+
+  /**
+   * 🛑 Their file, their disk. Removing a supplied model drops the ENTRY and never the weights —
+   * the studio was pointed at them, it did not put them there.
+   */
+  it('is removed from the list without its file being touched', async () => {
+    const remove = vi.fn(() => Promise.resolve())
+    let written: PartialSettings | null = null
+    const ai = manager({
+      settings: () => withOwnModel(OWN),
+      writeSettings: partial => (written = partial),
+      runtimes: { 'sherpa-onnx': holdingRuntime({ remove }) },
+    })
+
+    await ai.remove(OWN.id)
+
+    expect(remove).not.toHaveBeenCalled()
+    expect(written).toMatchObject({ ai: { ownModels: [] } })
+  })
+
+  /**
+   * 🛑 Freed before the entry goes: dropped from the catalogue, no row would offer to unload it,
+   * and the runtime would hold its weights with nothing left on screen to say so.
+   */
+  it('gives back the memory of one that was resident before forgetting it', async () => {
+    const unload = vi.fn(() => Promise.resolve())
+    const ai = manager({
+      settings: () => withOwnModel(OWN),
+      writeSettings: () => undefined,
+      runtimes: { 'sherpa-onnx': holdingRuntime({ unload }) },
+    })
+
+    await ai.load(OWN.id)
+    await ai.remove(OWN.id)
+
+    expect(unload).toHaveBeenCalledOnce()
+  })
+
+  // There is nothing to fetch: the weights are where they put them, which `weightsPath` says.
+  it('is never downloaded', async () => {
+    const install = vi.fn(() => Promise.resolve())
+    const ai = manager({
+      settings: () => withOwnModel(OWN),
+      runtimes: { 'sherpa-onnx': holdingRuntime({ install }) },
+    })
+
+    await ai.install(OWN.id)
+
+    expect(install).not.toHaveBeenCalled()
+  })
+
+  // Pointing at the same file twice is one entry: two rows naming one file would each offer to
+  // remove the other's.
+  it('replaces its own entry rather than appearing twice', async () => {
+    let written: PartialSettings | null = null
+    const ai = manager({
+      settings: () => withOwnModel(OWN),
+      writeSettings: partial => (written = partial),
+    })
+
+    await ai.addOwnModel({ ...OWN, name: 'Renamed' })
+
+    expect(written).toMatchObject({ ai: { ownModels: [{ id: OWN.id, name: 'Renamed' }] } })
+  })
+})
+
+describe('what a compose costs', () => {
+  /**
+   * `[M]` A compose reads `getGPUInfo`, a `statfs`, the memory and the video memory, and it runs
+   * on every assistant turn — while what it reads moves in seconds. The reading is re-taken once
+   * it has gone stale, and not before.
+   */
+  it('re-reads the machine only once its reading has gone stale', async () => {
+    const facts = vi.fn(() => Promise.resolve(FACTS))
+    let clock = 0
+    const ai = manager({ facts, now: () => clock, factsTtlMs: 1_000 })
+
+    await ai.overview()
+    await ai.overview()
+    expect(facts).toHaveBeenCalledOnce()
+
+    clock = 2_000
+    await ai.overview()
+    expect(facts).toHaveBeenCalledTimes(2)
+  })
+
+  /**
+   * 🛑 A narrowed reading covers ONE loader, and what it did not cover it cannot answer for.
+   * Forgetting those bytes let the next admission over-commit what the runtime still held.
+   */
+  it('keeps what a narrowed reading never asked about', async () => {
+    const ai = manager({ runtimes: { 'sherpa-onnx': holdingRuntime() } })
+
+    await ai.load(STT_MODEL.id)
+    // A role no `sherpa-onnx` model serves: the reading that follows names another loader entirely.
+    await ai.providerOf(aiRoleId('image', 'txt2img'))
+
+    expect(candidateOf(await ai.overview(), STT_MODEL.id)?.loaded).toBe(true)
+  })
+
+  /**
+   * `[M]` `providerOf` used to compose the WHOLE overview and throw twenty rows away, on every
+   * assistant turn — every runtime asked, every catalogue file stat'd. One role asks about the
+   * models that role could take, and nothing else.
+   */
+  it('asks only about the models the role it was given could take', async () => {
+    const asked: string[][] = []
+    const watching = (): LocalRuntime => ({
+      ...idleRuntime(),
+      read: models => {
+        asked.push(models.map(model => model.id))
+        return Promise.resolve({ ready: true, installed: new Set<string>(), loaded: null })
+      },
+    })
+
+    const ai = manager({ runtimes: { 'sherpa-onnx': watching(), llamacpp: watching() } })
+    await ai.providerOf(DICTATION_ROLE)
+
+    expect(asked).toEqual([[STT_MODEL.id]])
   })
 })

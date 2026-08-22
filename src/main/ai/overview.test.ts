@@ -20,6 +20,7 @@ const FACTS: HardwareFacts = {
   freeBytes: 34 * GIBI,
   diskFreeBytes: 500 * GIBI,
   gpu: { vendorId: null, deviceId: null, renderer: 'Apple M2 Max', machineModel: null },
+  vram: null,
 }
 
 const SNAPSHOT: MemorySnapshot = {
@@ -44,9 +45,13 @@ const input = (over: Partial<OverviewInput> = {}): OverviewInput => ({
   projectPath: null,
   modelsFor: role => (role === DICTATION_ROLE ? [PARAKEET] : []),
   isInstalled: () => true,
+  isLoaded: () => false,
+  isHoldable: () => true,
   runtimeReady: () => true,
   readyClouds: [],
   installing: null,
+  loading: null,
+  loadFailure: null,
   ...over,
 })
 
