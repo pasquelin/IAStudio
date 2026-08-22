@@ -37,6 +37,7 @@ const overviewOf = (row: RoleRow): AiOverview => ({
   installing: null,
   loading: null,
   loadFailure: null,
+  ollama: { ready: false, available: 0 },
 })
 
 beforeEach(() => {

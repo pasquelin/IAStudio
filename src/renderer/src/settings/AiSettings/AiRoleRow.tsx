@@ -19,6 +19,12 @@ const SOURCE_KEY: Record<ModelSource, string> = {
   custom: 'aiModels.sourceCustom',
 }
 
+function ollamaHelpKey(offer: { ready: boolean; available: number }): string {
+  if (!offer.ready) return 'aiModels.ollamaHelpDown'
+  if (offer.available === 0) return 'aiModels.ollamaHelpEmpty'
+  return 'aiModels.ollamaHelpElsewhere'
+}
+
 export type AiRoleRowProps = {
   row: RoleRow
   /** The install in flight when it is one of THIS row's candidates, so the others hold their render. */
@@ -47,6 +53,7 @@ export const AiRoleRow = memo(function AiRoleRow({
   const { t } = useTranslation()
   const chooseAiProvider = useAiModels(state => state.chooseAiProvider)
   const selectFamilyModel = useModels(state => state.select)
+  const ollama = useAiModels(state => state.overview?.ollama) ?? { ready: false, available: 0 }
 
   const label = roleLabel(row.role, t)
   // Captured so the narrowing survives into the callback below, which a property access does not.
@@ -114,12 +121,23 @@ export const AiRoleRow = memo(function AiRoleRow({
 
           {MODEL_SOURCES.map(source => {
             const candidates = row.candidates.filter(one => sourceOf(one.model) === source)
-            if (candidates.length === 0) return null
+            if (candidates.length === 0 && source !== 'ollama') return null
 
             return (
               <li key={source}>
                 <h4 className={WINDOW_GROUP_LABEL}>{t(SOURCE_KEY[source])}</h4>
+                {source === 'ollama' && (
+                  <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
+                )}
                 <ul>
+                  {source === 'ollama' && candidates.length === 0 && (
+                    <li className="py-2">
+                      <span className="alert alert-info alert-soft">
+                        <UiIcon path={mdiInformationOutline} />
+                        {t(ollamaHelpKey(ollama))}
+                      </span>
+                    </li>
+                  )}
                   {candidates.map(candidate => (
                     <AiCandidateRow
                       key={candidate.model.id}

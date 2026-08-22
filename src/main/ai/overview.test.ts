@@ -53,6 +53,8 @@ const input = (over: Partial<OverviewInput> = {}): OverviewInput => ({
   installing: null,
   loading: null,
   loadFailure: null,
+  ollamaReady: false,
+  ollamaAvailable: 0,
   ...over,
 })
 
@@ -64,6 +66,14 @@ describe('aiOverviewOf', () => {
    * Twenty-one rows, most of them empty, would bury the two that answer. A role with no
    * candidate and no account has nothing to offer and nothing to explain.
    */
+  it('says whether Ollama is answering, so the settings screen can talk about it', () => {
+    expect(aiOverviewOf(input()).ollama).toEqual({ ready: false, available: 0 })
+    expect(aiOverviewOf(input({ ollamaReady: true, ollamaAvailable: 2 })).ollama).toEqual({
+      ready: true,
+      available: 2,
+    })
+  })
+
   it('keeps only the employments something could serve', () => {
     const overview = aiOverviewOf(input())
 

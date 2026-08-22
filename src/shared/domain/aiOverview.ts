@@ -109,4 +109,9 @@ export type AiOverview = {
   readonly loading: { readonly modelId: string; readonly ratio: number } | null
   /** What the last load refused, or nothing. Cleared by the next load, never by a compose. */
   readonly loadFailure: LoadRefusal | null
+  /**
+   * Whether Ollama is answering, and how many of its models the catalogue accepted.
+   * The settings screen always talks about it — hiding the group looked like it did not exist.
+   */
+  readonly ollama: { readonly ready: boolean; readonly available: number }
 }

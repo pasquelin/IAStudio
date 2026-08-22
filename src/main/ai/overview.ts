@@ -45,6 +45,8 @@ export type OverviewInput = {
   readonly installing: { readonly modelId: string; readonly progress: DownloadProgress } | null
   readonly loading: { readonly modelId: string; readonly ratio: number } | null
   readonly loadFailure: LoadRefusal | null
+  readonly ollamaReady: boolean
+  readonly ollamaAvailable: number
 }
 
 /**
@@ -147,5 +149,6 @@ export function aiOverviewOf(input: OverviewInput): AiOverview {
     installing: input.installing,
     loading: input.loading,
     loadFailure: input.loadFailure,
+    ollama: { ready: input.ollamaReady, available: input.ollamaAvailable },
   }
 }

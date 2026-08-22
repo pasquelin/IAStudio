@@ -53,6 +53,7 @@ const overview = (over: Partial<AiOverview> = {}): AiOverview => ({
   installing: null,
   loading: null,
   loadFailure: null,
+  ollama: { ready: false, available: 0 },
   ...over,
 })
 
@@ -102,6 +103,18 @@ describe('AiSettings', () => {
     expect(radio).toBeDisabled()
     // The figures, not only the word: "too heavy" without a number cannot be acted on.
     expect(screen.getByText(/place insuffisante — 48/)).toBeInTheDocument()
+  })
+
+  it('names Ollama on an employment it cannot serve, and points to Assistant', () => {
+    show(
+      overview({
+        ollama: { ready: true, available: 2 },
+        roles: [row({ role: aiRoleId('image', 'txt2img'), candidates: [PARAKEET] })],
+      }),
+    )
+
+    expect(screen.getByText('Ollama')).toBeInTheDocument()
+    expect(screen.getByText(/Ses modèles de conversation sont sous Assistant/)).toBeInTheDocument()
   })
 
   it('groups Ollama models away from the studio catalogue', () => {

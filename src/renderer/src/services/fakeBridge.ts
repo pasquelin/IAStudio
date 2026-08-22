@@ -16,6 +16,7 @@ const EMPTY_AI_OVERVIEW: AiOverview = {
   installing: null,
   loading: null,
   loadFailure: null,
+  ollama: { ready: false, available: 0 },
 }
 
 const noSubscription = (): (() => void) => () => {}

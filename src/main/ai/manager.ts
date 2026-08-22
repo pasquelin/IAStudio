@@ -306,6 +306,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
         running === null ? null : { modelId: running.modelId, progress: running.progress },
       loading: loading === null ? null : { modelId: loading.modelId, ratio: loading.ratio },
       loadFailure,
+      ollamaReady: readings.get('ollama')?.ready === true,
+      ollamaAvailable: 0,
     }
   }
 
@@ -315,10 +317,12 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     const own = stored.ai.ownModels
     const [machine, discovered] = await Promise.all([facts(), discover()])
     const readings = await readingsOf(catalogueWith(own, discovered))
+    const ollama = discovered.filter(model => model.loader === 'ollama').length
 
-    return aiOverviewOf(
-      inputFrom(machine, readings, stored, role => modelsForWith(role, own, discovered)),
-    )
+    return aiOverviewOf({
+      ...inputFrom(machine, readings, stored, role => modelsForWith(role, own, discovered)),
+      ollamaAvailable: ollama,
+    })
   }
 
   /** The last overview published, so a bar can move without asking the machine all over again. */
