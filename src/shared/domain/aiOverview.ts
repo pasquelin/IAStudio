@@ -31,6 +31,14 @@ export type ModelCandidate = {
    * call — offering "Load" there produced a memory sentence about a gesture that does not exist.
    */
   readonly holdable: boolean
+  /**
+   * How many employments this ONE download answers for.
+   *
+   * Shown because the catalogue holds twenty-five models for nineteen employments, and the
+   * difference between them is not the quality: SSD-1B serves six for 4.47 GB where Mochi serves
+   * one for 133. Nothing here ranks them — the figure is said, and the choice stays the person's.
+   */
+  readonly serves: number
   /** `insufficient-memory` and `incompatible` are shown, greyed, WITH their reason — never hidden. */
   readonly fit: Compatibility
   /** What the reason NAMES. Carried rather than recomputed: the machine decides, the window says. */

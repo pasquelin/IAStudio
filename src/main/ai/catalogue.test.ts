@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { aiRoleId, ASSISTANT_ROLE, DICTATION_ROLE } from '@shared/domain/aiRole'
+import { aiRoleId, allRoles, ASSISTANT_ROLE, DICTATION_ROLE } from '@shared/domain/aiRole'
 import { STT_MODEL } from '@shared/domain/dictation'
 import licences from '@shared/licences.json'
 import {
   catalogueRefusals,
+  rolesServedBy,
   rolesWithLocalOption,
   shippedModel,
   shippedModels,
@@ -137,5 +138,23 @@ describe('one entry, several employments', () => {
     const ids = shippedModels().map(model => model.id)
 
     expect(ids.filter(id => id === 'ssd-1b')).toEqual(['ssd-1b'])
+  })
+})
+
+describe('how many employments one download answers for', () => {
+  /**
+   * The catalogue holds more models than employments, and the difference between them is not
+   * quality: one entry serves six for 4.47 GB where another serves one for 133. The figure is
+   * said on screen so the choice can be made on it — it ranks nothing.
+   */
+  it('counts every employment a model is filed under', () => {
+    expect(rolesServedBy('ssd-1b')).toBeGreaterThan(1)
+    expect(rolesServedBy('ssd-1b')).toBe(
+      allRoles().filter(role => shippedModelsFor(role).some(model => model.id === 'ssd-1b')).length,
+    )
+  })
+
+  it('answers nothing for a model the catalogue does not ship', () => {
+    expect(rolesServedBy('not-a-shipped-model')).toBe(0)
   })
 })

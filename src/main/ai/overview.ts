@@ -38,6 +38,8 @@ export type OverviewInput = {
   readonly isHoldable: (model: LocalModel) => boolean
   /** Whether the runtime that would host this model is answering — see `localRuntimes.ts`. */
   readonly runtimeReady: (model: LocalModel) => boolean
+  /** How many employments one download answers for — see `rolesServedBy` in `catalogue.ts`. */
+  readonly rolesServedBy: (modelId: string) => number
   /** The clouds an account is held for. What each of them SERVES is its own declaration. */
   readonly readyClouds: readonly string[]
   readonly installing: { readonly modelId: string; readonly progress: DownloadProgress } | null
@@ -78,6 +80,7 @@ export function rowFor(role: AiRoleId, input: OverviewInput, choices: RoleChoice
       holdable: input.isHoldable(model),
       unverified: provenanceUnverified(model),
       supplied: isSuppliedModel(model),
+      serves: input.rolesServedBy(model.id),
       ...fitReadingOf(model, offer),
     }
   })

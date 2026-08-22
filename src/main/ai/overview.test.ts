@@ -48,6 +48,7 @@ const input = (over: Partial<OverviewInput> = {}): OverviewInput => ({
   isLoaded: () => false,
   isHoldable: () => true,
   runtimeReady: () => true,
+  rolesServedBy: () => 1,
   readyClouds: [],
   installing: null,
   loading: null,
