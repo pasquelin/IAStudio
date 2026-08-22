@@ -82,6 +82,50 @@ const SEED: LocalFieldTemplate = {
   required: false,
 }
 
+/**
+ * The picture a generation starts FROM, and the area of it to redo. Both optional, and that is
+ * what makes one catalogue entry serve three employments: left empty the model draws from the
+ * description alone, filled it edits, filled with a mask it repaints inside it.
+ *
+ * `AutoPipelineForImage2Image` reads the same signal — the adapter derives its pipeline from
+ * which of the two arrived, so nothing has to carry the employment down to the engine.
+ */
+const SOURCE_IMAGE: LocalFieldTemplate = {
+  key: 'image',
+  kind: 'image',
+  labelKey: 'localFields.image',
+  helpKey: 'localFields.imageHelp',
+  required: false,
+}
+
+const MASK: LocalFieldTemplate = {
+  key: 'mask',
+  kind: 'image',
+  labelKey: 'localFields.mask',
+  helpKey: 'localFields.maskHelp',
+  required: false,
+  // What the file input above is masking — an edit action fills the pair without naming either.
+  maskFrom: 'image',
+}
+
+/**
+ * How far from the picture it started on. Shown always and IGNORED where none was given:
+ * `dependsOn` is an equality against one value, so "whenever a picture is there" cannot be
+ * spelled with it, and a knob that vanished on a value nobody typed would read as a bug.
+ */
+const STRENGTH: LocalFieldTemplate = {
+  key: 'strength',
+  kind: 'number',
+  labelKey: 'localFields.strength',
+  helpKey: 'localFields.strengthHelp',
+  required: false,
+  default: 0.8,
+  min: 0,
+  max: 1,
+  step: 0.05,
+  group: 'advanced',
+}
+
 const NEGATIVE_PROMPT: LocalFieldTemplate = {
   key: 'negativePrompt',
   kind: 'longText',
@@ -180,6 +224,9 @@ const TEMPLATES: Record<LocalModality, readonly LocalFieldTemplate[]> = {
   image: [
     PROMPT,
     NEGATIVE_PROMPT,
+    SOURCE_IMAGE,
+    MASK,
+    STRENGTH,
     side('width', { default: 1024, max: 2048, step: 64 }),
     side('height', { default: 1024, max: 2048, step: 64 }),
     steps({ default: 20, max: 150 }),

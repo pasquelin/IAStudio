@@ -141,6 +141,7 @@ import { openCatalogThread } from './project/catalogThread'
 import { catalogOf } from './provider/modelCatalog'
 import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './provider/uploader'
 import { createAssetInputResolver } from './provider/assetInputs'
+import { createLocalAssetInputResolver } from './ai/localAssetInputs'
 import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './provider/assetCatalog'
 import { generationOfMetadata } from './provider/assetNormalizer'
 import { createOwnerScope, type OwnerScope } from './provider/ownerScope'
@@ -1425,6 +1426,12 @@ export function createServices(settings: SettingsStore): Services {
     activeOwnerId: ownerScope.current,
   })
 
+  /** The same pictures, for a model that runs HERE: a path on this disk, and nothing sent. */
+  const localAssetInputs = createLocalAssetInputResolver({
+    find: assetId => project.catalog().find(assetId),
+    projectPath: () => project.path(),
+  })
+
   // Built here rather than beside the other Scenario services, because it needs the resolver
   // above and the resolver needs the project and the cloud backend.
   const prompts = createPromptAssist({
@@ -1552,7 +1559,10 @@ export function createServices(settings: SettingsStore): Services {
       },
     },
     projectPath: () => project.current()?.path ?? null,
-    resolveAssetInputs: assetInputs.resolveBody,
+    // Routed on WHERE the target runs: a local model needs its picture off the disk, and
+    // uploading it to an account would be a transfer nobody asked for.
+    resolveAssetInputs: (body, target) =>
+      modelOf(target.id) ? localAssetInputs.resolveBody(body) : assetInputs.resolveBody(body),
     persist: (unfinished, handled) => {
       // 🛑 A local job is never written down: its whole state lived in the memory of the process
       // that ran it, so a launch that resumed one would poll a runner that has never heard of it.

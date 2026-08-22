@@ -289,7 +289,13 @@
       ],
       "diskBytes": 4468829801,
       "reservationBytes": 4496703488,
-      "thumbnail": "ssd-1b.png"
+      "thumbnail": "ssd-1b.png",
+      "family": "image",
+      "capabilities": [
+        "txt2img",
+        "img2img",
+        "inpaint"
+      ]
     },
     {
       "id": "sana-600m-1024",

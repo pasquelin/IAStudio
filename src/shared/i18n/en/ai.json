@@ -25,7 +25,13 @@
     "framesHelp": "How many frames the produced sequence holds.",
     "fps": "Frames per second",
     "seconds": "Duration",
-    "secondsHelp": "How long the produced sound runs, in seconds."
+    "secondsHelp": "How long the produced sound runs, in seconds.",
+    "image": "Starting image",
+    "imageHelp": "Leave it empty to draw from the description alone.",
+    "mask": "Mask",
+    "maskHelp": "The painted areas of the mask are the ones the model redoes.",
+    "strength": "Distance from the starting image",
+    "strengthHelp": "Without effect when no starting image is given."
   },
   "aiModels": {
     "reading": "Reading the machine…",
