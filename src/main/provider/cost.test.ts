@@ -6,7 +6,9 @@ import { costEstimatorOf, type CostEstimator } from './cost'
 const refusedWith = (status: number, body: object): unknown =>
   APIError.generate(status, body, undefined, new Headers())
 
-const estimator = (answer: () => Promise<unknown>): CostEstimator => costEstimatorOf(vi.fn(answer))
+// Nothing runs here by default: the cases below are about what the API answers.
+const estimator = (answer: () => Promise<unknown>): CostEstimator =>
+  costEstimatorOf(vi.fn(answer), () => false)
 
 describe('cost estimate', () => {
   /**
@@ -49,7 +51,7 @@ describe('cost estimate', () => {
   it('asks whatever it was handed, with the body as it stands', async () => {
     const run = vi.fn(() => Promise.reject(refusedWith(402, { estimatedCost: 3 })))
     const target: JobTarget = { id: 'model_flux' }
-    await costEstimatorOf(run)(target, { prompt: 'a rock' })
+    await costEstimatorOf(run, () => false)(target, { prompt: 'a rock' })
 
     expect(run).toHaveBeenCalledWith(target, { prompt: 'a rock' })
   })
@@ -99,5 +101,21 @@ describe('cost estimate', () => {
     )
 
     await expect(estimate({ id: 'model_flux' }, {})).resolves.toBeNull()
+  })
+})
+
+describe('a model of this machine', () => {
+  /**
+   * 🛑 Measured on screen: an estimate for `ssd-1b` reached `runModel` and came back
+   * `404 Model ssd-1b not found`, journalled beside the generation's own failure — two error
+   * lines for one gesture, and a request spent asking a service about something it never had.
+   */
+  it('is never priced by the API, and nothing is asked', async () => {
+    const run = vi.fn(() => Promise.reject(new Error('the API must not be reached')))
+
+    const estimate = await costEstimatorOf(run, () => true)({ id: 'ssd-1b' }, { prompt: 'a cat' })
+
+    expect(estimate).toBeNull()
+    expect(run).not.toHaveBeenCalled()
   })
 })

@@ -34,8 +34,17 @@ function priceIn(payload: unknown): CostEstimate {
  * Only a 402 is swallowed. Anything else — a 500, a dead network, a key that expired — is thrown
  * on, so it reaches the log and the journal like every other failure.
  */
-export function costEstimatorOf(run: DryRun): CostEstimator {
+export function costEstimatorOf(
+  run: DryRun,
+  runsHere: (targetId: string) => boolean,
+): CostEstimator {
   return async (target, body) => {
+    // 🛑 A model of THIS machine is never priced by the API, and the reason is not only that it
+    // is free: measured on screen, an estimate for `ssd-1b` reached `runModel` and came back
+    // `404 Model ssd-1b not found`, journalled beside the generation's own failure — two error
+    // lines for one gesture, and a request spent asking a service about something it never had.
+    if (runsHere(target.id)) return null
+
     try {
       return priceIn(await run(target, body))
     } catch (error) {
