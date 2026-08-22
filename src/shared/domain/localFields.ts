@@ -1,4 +1,5 @@
 import type { FieldDescriptor } from './model'
+import type { AssetType } from './asset'
 
 /**
  * The form a LOCAL model offers, derived rather than declared per model — see
@@ -13,6 +14,16 @@ import type { FieldDescriptor } from './model'
 
 /** What a runtime takes, as far as a form is concerned. Never a model id, never a runtime name. */
 export type LocalModality = 'text' | 'image'
+
+/**
+ * The shelf a modality's output lands on, or `null` for one that produces no file.
+ *
+ * `text` answers `null` and that is the whole point of the function: a conversation produces a
+ * sentence, and filing a sentence as an asset would put an empty tile in the browser.
+ */
+export function assetTypeOfModality(modality: LocalModality): AssetType | null {
+  return modality === 'text' ? null : modality
+}
 
 /** The values beside the type, so a schema checks against them rather than against a copy. */
 export const LOCAL_MODALITIES: readonly LocalModality[] = ['text', 'image']

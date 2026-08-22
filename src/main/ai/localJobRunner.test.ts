@@ -103,10 +103,14 @@ describe('a model that produces something other than a sentence', () => {
     await settled()
 
     expect(conversed).not.toHaveBeenCalled()
+    // The prompt and the shelf travel WITH the file: the collector runs turns later, when the
+    // body that carried them is gone.
     expect(runner.producedBy(jobId)).toEqual({
       path: '/tmp/out.png',
       device: 'mps',
       backend: 'pytorch',
+      type: 'image',
+      prompt: 'a red cube',
     })
   })
 
