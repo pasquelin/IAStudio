@@ -273,6 +273,36 @@ réglable) et le backoff exponentiel sur 429 et 5xx — aucun seuil de débit n�
 aucun n’est supposé. Contourner la file par un appel direct au SDK, c’est ainsi qu’on récolte une
 rafale de 429.
 
+### Le moteur d’IA locale est un processus Python, et un `LocalRuntime` de plus
+
+Une image générée sur cette machine ne passe par aucune brique nouvelle du côté de l’ordonnancement :
+le moteur Python implémente le même `LocalRuntime` que llama.cpp et sherpa-onnx, et `AiManager`
+compose l’aperçu sans savoir lequel des trois répond.
+
+Le noyau du moteur **n’importe aucune bibliothèque de tenseurs** : il salue en 33 ms, là où
+`import torch` en coûte 620 à chaud et 8,7 secondes à froid. Ce sont les **workers** qui les
+paient, une fois, et qui restent en vie — un worker est un processus, et c’est précisément ce
+qu’un plan de libération mémoire peut tuer pour rendre des octets.
+
+Le dialogue passe par un socket unix — un named pipe sous Windows — en cadres NDJSON, un objet
+JSON par ligne. Pas par l’entrée standard, et la raison n’est pas la vitesse : **`stdout` est un
+canal partagé**, qu’un seul avertissement d’une bibliothèque Python corrompt, et une pile PyTorch
+en écrit. Le moteur parle en premier, comme le fait déjà le moteur de dictée : lire une pile
+Python peut échouer, et ça doit échouer à l’ouverture plutôt qu’à la première génération.
+
+**Des chemins, jamais des octets.** Une génération écrit son résultat dans un fichier que le
+principal possède, et l’événement porte le chemin ; le collecteur local le range dans le projet
+puis efface le passage de main — après l’import et jamais avant, sans quoi un import qui échoue
+perdrait la génération.
+
+**Le principal décide, le moteur mesure et exécute.** Le moteur peut refuser pour ce qu’il est
+seul à voir — aucun modèle chargé, des poids qui portent du Python — mais il ne replanifie jamais :
+il ne libère pas une autre porte, ne réordonne pas, ne substitue pas un modèle. C’est pour ça que
+le module s’appelle `core/jobqueue.py` et non `core/scheduler.py` : un fichier nommé « scheduler »
+finit par en devenir un, et deux ordonnanceurs se contredisent sur la seule ressource qui compte.
+
+Le détail, les mesures et les inconnues vivent dans la spécification du moteur, hors dépôt.
+
 ### Deux backends d’assets, un seul planificateur
 
 Le projet et la bibliothèque du compte sont deux stocks, servis par deux backends de même forme :
