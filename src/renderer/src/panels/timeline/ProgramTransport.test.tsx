@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { programOwner, transports } from '@/engines/timeline/playback'
 import { usePlayback } from '@/stores/playback'
 import { installSequence } from '@/stores/sequence-fixtures'
-import { sequenceOf, useSequences } from '@/stores/sequences'
+import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { ProgramTransport } from './ProgramTransport'
 
 const OWNER = programOwner('doc-1')
@@ -49,5 +49,14 @@ describe('ProgramTransport', () => {
 
     expect(pause).toHaveBeenCalledTimes(1)
     expect(sequenceOf(useSequences.getState(), 'doc-1').playhead).toBe(0)
+  })
+
+  it('does not rebuild a document that has already been dropped', async () => {
+    useSequences.getState().drop('doc-1')
+    render(<ProgramTransport documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Retour au début/ }))
+
+    expect(sequenceStore.hasState(useSequences.getState(), 'doc-1')).toBe(false)
   })
 })

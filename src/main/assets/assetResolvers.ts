@@ -1,11 +1,11 @@
 import type { Asset } from '@shared/domain/asset'
-import { ASSET_HOST, POSTER_HOST, THUMB_HOST } from '@shared/domain/asset'
+import { ASSET_HOST, MASTER_HOST, POSTER_HOST, THUMB_HOST } from '@shared/domain/asset'
 import { ANIMATION_HOST } from '@shared/domain/animationLibrary'
 import { TEMPLATE_HOST } from '@shared/domain/sceneTemplate'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
 import { MODEL_HOST } from '@shared/domain/localModel'
 import { orWhenGone } from '@main/project/store'
-import { posterFileOf, servedFileOf, type AssetResolvers } from './protocol'
+import { exportFileOf, posterFileOf, servedFileOf, type AssetResolvers } from './protocol'
 
 /** What the hosts read, each behind the narrowest port that answers for it. */
 export type AssetResolverDeps = {
@@ -43,6 +43,7 @@ export function createAssetResolvers(deps: AssetResolverDeps): AssetResolvers {
 
   return {
     [ASSET_HOST]: assetId => fileOf(assetId, servedFileOf),
+    [MASTER_HOST]: assetId => fileOf(assetId, exportFileOf),
     [POSTER_HOST]: assetId => fileOf(assetId, posterFileOf),
     [FAVORITE_HOST]: favoriteId => Promise.resolve(deps.favouriteThumbnail(favoriteId)),
     // Named by a PATH rather than by an id, alone among the four: the explorer draws files, and

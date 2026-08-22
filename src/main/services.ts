@@ -193,7 +193,7 @@ export type Services = {
    * Runs the resolved ffmpeg with those arguments. Exposed because a render encodes too, and a
    * second resolver is how two flows start disagreeing about which binary this machine has.
    */
-  encodeVideo: (args: readonly string[]) => Promise<void>
+  encodeVideo: (args: readonly string[], signal?: AbortSignal) => Promise<void>
   /** Names what arrives without a useful name. Never throws, never blocks its caller. */
   captionArrivals: AutoCaption
   /** Names a chosen selection, whatever it is already called. */
@@ -1757,10 +1757,10 @@ export function createServices(settings: SettingsStore): Services {
     pickPath,
     savePicture,
     pickSavePath,
-    encodeVideo: async args => {
+    encodeVideo: async (args, signal) => {
       const binary = ffmpeg.path()
       if (!binary) throw new Error('ffmpeg was not found')
-      await runProcess(binary, args)
+      await runProcess(binary, args, { signal })
     },
     // The same picker the settings use for a folder: a second dialog with slightly different
     // options is how two flows start behaving differently.

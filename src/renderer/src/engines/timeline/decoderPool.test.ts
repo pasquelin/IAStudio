@@ -1,13 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createDecoderPool, type VideoSampleLike } from './decoderPool'
 
-const fakeSink = (assetId: string, holdsDecoder = true) => ({
+const fakeSink = (assetId: string, holdsDecoder = true, stable = false) => ({
   getSample: vi.fn(async (seconds: number) => ({
     toVideoFrame: () => `${assetId}@${seconds}` as unknown as VideoFrame,
     close: vi.fn(),
   })),
   close: vi.fn(),
   holdsDecoder,
+  stable,
 })
 
 /** A pool over a fixed cast: `pictures` names the assets whose sink holds no decoder. */
@@ -26,6 +27,16 @@ const poolOver = (
 }
 
 describe('decoder pool', () => {
+  it('reports a still as stable only after it has opened', async () => {
+    const open = vi.fn(async () => fakeSink('logo', false, true))
+    const pool = createDecoderPool({ open, maxDecoders: 2, maxPictures: 4 })
+    expect(pool.stable('logo')).toBe(false)
+
+    await pool.frameAt('logo', 0)
+
+    expect(pool.stable('logo')).toBe(true)
+  })
+
   it('opens one sink per asset, not one per call', async () => {
     const open = vi.fn(async (assetId: string) => fakeSink(assetId))
     const pool = createDecoderPool({ open, maxDecoders: 3, maxPictures: 2 })
@@ -237,6 +248,7 @@ describe('decoder pool', () => {
         },
         close: vi.fn(),
         holdsDecoder: true,
+        stable: false,
       }),
       maxDecoders: 3,
       maxPictures: 2,
@@ -250,7 +262,12 @@ describe('decoder pool', () => {
       .fn<(seconds: number) => Promise<VideoSampleLike | null>>()
       .mockRejectedValueOnce(new Error('bad seek'))
       .mockResolvedValue(null)
-    const open = vi.fn(async () => ({ getSample, close: vi.fn(), holdsDecoder: true }))
+    const open = vi.fn(async () => ({
+      getSample,
+      close: vi.fn(),
+      holdsDecoder: true,
+      stable: false,
+    }))
     const pool = createDecoderPool({ open, maxDecoders: 3, maxPictures: 2 })
 
     await pool.frameAt('a', 0)

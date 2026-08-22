@@ -26,6 +26,7 @@ import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
 import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timelineGeometry'
 import type { Point, Size } from '@/engines/core/geometry'
 import { paintOn } from '@/engines/core/canvas2d'
+import { createFrameCoalesce } from '@/engines/core/frameCoalesce'
 import {
   clipById,
   clipEnd,
@@ -34,6 +35,7 @@ import {
   snapToFrame,
   type Clip,
   type SequenceState,
+  type Us,
 } from '@/engines/timeline/timelineState'
 import { clampViewport, fitToWidth, zoomAt, ZOOM_STEP } from '@/engines/timeline/viewport'
 import { assetIdFromDrag, carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
@@ -51,6 +53,7 @@ import { runTask } from '@/stores/tasks'
 import { peaksOf, usePeaks } from '@/stores/peaks'
 import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { useSelection } from '@/stores/selection'
+import { playbackHeadOf, usePlayback } from '@/stores/playback'
 import { addSceneToSequence, sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { exportSequence } from './sequenceExport'
@@ -76,8 +79,10 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // The gesture and the state it started from: one history entry per gesture, not per pixel.
   const dragging = useRef<{ gesture: Gesture; base: SequenceState } | null>(null)
+  const scrubCoalesce = useRef(createFrameCoalesce())
 
   const sequence = useSequences(state => sequenceOf(state, documentId))
+  const clockHead = usePlayback(state => playbackHeadOf(state, documentId))
   const viewport = useTimelineView(state => viewportOf(state, documentId))
   const byId = useAssets(assetsById)
   const stored = useDocuments(state => state.stored)
@@ -143,18 +148,26 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
 
   useEffect(() => {
     const stop = usePeaks.subscribe(repaint)
+    const coalesce = scrubCoalesce.current
     return () => {
       stop()
       if (queued.current) cancelAnimationFrame(queued.current)
+      coalesce.flush()
     }
   }, [repaint])
 
   useRepaintOnResize(canvasRef, paint)
 
+  const shownPlayhead = clockHead ?? sequence.playhead
+
   useEffect(() => {
-    latest.current = { sequence, viewport, options: { labelOf: nameOf, peaksOf, posterOf } }
+    latest.current = {
+      sequence: { ...sequence, playhead: shownPlayhead },
+      viewport,
+      options: { labelOf: nameOf, peaksOf, posterOf },
+    }
     paint()
-  }, [sequence, viewport, nameOf, posterOf, paint])
+  }, [sequence, shownPlayhead, viewport, nameOf, posterOf, paint])
 
   const setViewport = useCallback(
     (next: Viewport): void => {
@@ -165,7 +178,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
   )
 
   useViewFollowsHead(
-    sequence.playhead,
+    shownPlayhead,
     () => ({ viewport: latest.current.viewport, width: size.current.width }),
     setViewport,
   )
@@ -268,10 +281,18 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
     return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
   }
 
-  const scrubTo = (base: SequenceState, point: Point): void => {
-    const playhead = snapToFrame(xToTime(point.x, viewport), base.settings)
-    // The playhead is not an edit: it goes through `replace`, which skips the history.
+  const writePlayhead = (base: SequenceState, playhead: Us): void => {
     useSequences.getState().replace(documentId, { ...base, playhead })
+  }
+
+  const scrubTo = (base: SequenceState, point: Point, immediate = false): void => {
+    const playhead = snapToFrame(xToTime(point.x, viewport), base.settings)
+    if (immediate) {
+      writePlayhead(base, playhead)
+      return
+    }
+    // One seek per frame: a pointermove is faster than a GOP, and each extra ask was dropped.
+    scrubCoalesce.current.schedule(playhead, next => writePlayhead(base, next))
   }
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>): void => {
@@ -308,7 +329,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
     // Neither moves the montage, so neither selects anything either.
     if (gesture.kind === 'scrub' || gesture.kind === 'pan') {
       dragging.current = { gesture, base: sequence }
-      if (gesture.kind === 'scrub') scrubTo(sequence, point)
+      if (gesture.kind === 'scrub') scrubTo(sequence, point, true)
       return
     }
 

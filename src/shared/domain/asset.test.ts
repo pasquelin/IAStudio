@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assetBadgeOf,
   assetIdFromUrl,
+  assetMasterUrl,
   assetUrl,
   hostedParts,
   hostedUrl,
@@ -11,6 +12,7 @@ import {
   mediaDuration,
   posterUrl,
   withoutSourcePath,
+  MASTER_HOST,
   POSTER_HOST,
   type Asset,
 } from './asset'
@@ -28,6 +30,10 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
 describe('asset URLs', () => {
   it('round-trips an identifier', () => {
     expect(assetIdFromUrl(assetUrl('asset_1'))).toBe('asset_1')
+  })
+
+  it('names the original on a host of its own, so an export does not play the proxy', () => {
+    expect(hostedParts(assetMasterUrl('asset_1'))).toEqual({ host: MASTER_HOST, id: 'asset_1' })
   })
 
   it('survives an identifier needing encoding', () => {

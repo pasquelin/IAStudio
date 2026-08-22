@@ -1,6 +1,6 @@
 import { programOwner, transports } from '@/engines/timeline/playback'
-import { playbackOf, usePlayback } from '@/stores/playback'
-import { sequenceOf, useSequences } from '@/stores/sequences'
+import { playbackHeadOf, playbackOf, usePlayback } from '@/stores/playback'
+import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { TimelineTransport } from './TimelineTransport'
 
 export type ProgramTransportProps = { documentId: string }
@@ -16,11 +16,12 @@ export function ProgramTransport({ documentId }: ProgramTransportProps) {
   const sequence = useSequences(state => sequenceOf(state, documentId))
   const owner = programOwner(documentId)
   const playing = usePlayback(state => playbackOf(state, owner))
+  const clockHead = usePlayback(state => playbackHeadOf(state, documentId))
 
   return (
     <TimelineTransport
       playing={playing}
-      time={sequence.playhead}
+      time={clockHead ?? sequence.playhead}
       fps={sequence.settings.fps}
       onToggle={() => transports.toggle(owner)}
       onRewind={() => {
@@ -28,6 +29,8 @@ export function ProgramTransport({ documentId }: ProgramTransportProps) {
         // Through `replace`, outside the history, exactly as the monitor writes its own head:
         // moving the playhead is not an edit.
         const store = useSequences.getState()
+        if (!sequenceStore.hasState(store, documentId)) return
+        usePlayback.getState().setHead(documentId, 0)
         store.replace(documentId, { ...sequenceOf(store, documentId), playhead: 0 })
       }}
     />

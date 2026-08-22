@@ -19,6 +19,11 @@ export type SinkLike = {
    * counting it against the decoder budget evicted a rush that did need one.
    */
   holdsDecoder: boolean
+  /**
+   * True when every timestamp yields the same picture. A live 3D clip also holds no decoder,
+   * and skipping it would freeze the scene at the first frame.
+   */
+  stable: boolean
 }
 
 export type DecoderPoolDeps = {
@@ -38,6 +43,8 @@ export type DecoderPool = {
   undecodable: (assetId: string) => boolean
   /** Sinks held, both kinds together — decoders alone would not say what memory is spent. */
   openCount: () => number
+  /** Whether this asset is a still that has finished opening — skip the next upload. */
+  stable: (assetId: string) => boolean
   release: (assetId: string) => void
   dispose: () => void
 }
@@ -66,6 +73,7 @@ export function createDecoderPool({
    */
   const settled = new Set<string>()
   const pictures = new Set<string>()
+  const stables = new Set<string>()
 
   const touch = (assetId: string, opening: Promise<SinkLike>): void => {
     sinks.delete(assetId)
@@ -76,6 +84,7 @@ export function createDecoderPool({
     sinks.delete(assetId)
     settled.delete(assetId)
     pictures.delete(assetId)
+    stables.delete(assetId)
   }
 
   /** Closes whenever it finishes opening. A failed open is `sinkFor`'s business, not ours. */
@@ -131,6 +140,7 @@ export function createDecoderPool({
       if (sinks.has(assetId)) {
         settled.add(assetId)
         if (!sink.holdsDecoder) pictures.add(assetId)
+        if (sink.stable) stables.add(assetId)
         evict(assetId)
       }
       return sink
@@ -167,6 +177,8 @@ export function createDecoderPool({
 
     openCount: () => sinks.size,
 
+    stable: assetId => stables.has(assetId),
+
     release: assetId => {
       const opening = sinks.get(assetId)
       forget(assetId)
@@ -179,6 +191,7 @@ export function createDecoderPool({
       sinks.clear()
       settled.clear()
       pictures.clear()
+      stables.clear()
       undecodable.clear()
     },
   }

@@ -16,6 +16,7 @@ import { TOOLBAR_LABEL } from '@/design/styles'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
 import type { ToolbarItem } from '@/design/Toolbar/tools'
+import { createFrameCoalesce } from '@/engines/core/frameCoalesce'
 import { createSoundPort } from '@/engines/timeline/soundPort'
 import { transports } from '@/engines/timeline/playback'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
@@ -92,6 +93,7 @@ export function Monitor({
   })
   /** Where this monitor stands, for a redraw that no state change of its own asked for. */
   const playhead = useLatest(sequence.playhead)
+  const seekCoalesce = useRef(createFrameCoalesce())
   // Published rather than held: the timeline's own bar draws the same transport, and neither of
   // the two trees contains the other — see `stores/playback`.
   const playing = usePlayback(state => playbackOf(state, owner))
@@ -120,8 +122,10 @@ export function Monitor({
 
     engine.current = created
     void created.mount(element)
+    const coalesce = seekCoalesce.current
 
     return () => {
+      coalesce.cancel()
       created.dispose()
       engine.current = null
       usePlayback.getState().forget(owner)
@@ -141,7 +145,11 @@ export function Monitor({
   useEffect(() => {
     const current = engine.current
     if (!current || current.playing()) return
-    void current.seek(sequence.playhead)
+    seekCoalesce.current.schedule(sequence.playhead, time => {
+      const held = engine.current
+      if (!held || held.playing()) return
+      void held.seek(time)
+    })
   }, [sequence.playhead])
 
   // What makes a 3D clip LIVE: a scene edited in its own tab changes no sequence at all, so

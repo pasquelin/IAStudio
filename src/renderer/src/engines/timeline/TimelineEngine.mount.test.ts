@@ -143,6 +143,7 @@ const engineOver = (
             getSample: async () => ({ toVideoFrame: fakeFrame, close: vi.fn() }),
             close: vi.fn(),
             holdsDecoder: true,
+            stable: false,
           })
         : Promise.reject(new Error('no decoder in a test')),
     sound: silence(),
@@ -436,6 +437,7 @@ describe('mounting a monitor', () => {
           getSample: () => new Promise(resolve => pending.push(resolve)),
           close: vi.fn(),
           holdsDecoder: true,
+          stable: false,
         }),
       sound: silence(),
       maxDecoders: 1,

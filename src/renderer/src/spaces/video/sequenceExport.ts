@@ -57,7 +57,7 @@ export async function exportSequence({
   const host = offScreenHost(width, height)
 
   const engine = new TimelineEngine({
-    openSink: montageSink(() => ({ width, height })),
+    openSink: montageSink(() => ({ width, height }), undefined, true),
     // Nothing is listened to here, and an export that woke the audio output would talk over
     // whatever the studio is playing.
     sound: silentSound(),

@@ -13,7 +13,8 @@ vi.mock('@main/log', () => ({ log }))
 // case before it left behind.
 beforeEach(() => vi.clearAllMocks())
 
-const { assetFilePath, posterFileOf, servedFileOf, servedPath } = await import('./protocol')
+const { assetFilePath, exportFileOf, posterFileOf, servedFileOf, servedPath } =
+  await import('./protocol')
 const { ASSET_HOST, POSTER_HOST } = await import('@shared/domain/asset')
 const { FAVORITE_HOST } = await import('@shared/domain/favorite')
 
@@ -58,6 +59,15 @@ describe('what the scheme serves for an asset', () => {
     expect(path).toBe(join(PROJECT, 'assets/img/asset_1.png'))
   })
 
+  it('serves the proxy of a file the project owns, so a 4K generation does not freeze the monitor', () => {
+    const generated = asset({
+      path: 'Video/take.mp4',
+      proxyPath: '.index/proxies/a.mp4',
+      probe: { duration: 1, codec: 'avc1', width: 3840, height: 2160 },
+    })
+    expect(servedFileOf(PROJECT, generated)).toBe(join(PROJECT, '.index/proxies/a.mp4'))
+  })
+
   it('serves the proxy of a linked rush, which is the point of making one', () => {
     // ProRes is not something WebCodecs decodes: served as is, the monitor would stay black.
     const linked = asset({ sourcePath: '/Volumes/Rushes/a.mov', proxyPath: '.index/proxies/a.mp4' })
@@ -75,6 +85,26 @@ describe('what the scheme serves for an asset', () => {
 
   it('serves nothing for an asset that has no file yet', () => {
     expect(servedFileOf(PROJECT, asset({}))).toBeNull()
+  })
+})
+
+describe('what an export composites from', () => {
+  it('takes the original of a WebCodecs-readable file, even when a proxy exists', () => {
+    const generated = asset({
+      path: 'Video/take.mp4',
+      proxyPath: '.index/proxies/a.mp4',
+      probe: { duration: 1, codec: 'h264', width: 3840, height: 2160 },
+    })
+    expect(exportFileOf(PROJECT, generated)).toBe(join(PROJECT, 'Video/take.mp4'))
+  })
+
+  it('takes the proxy of a ProRes the project copied in, or the monitor would stay black', () => {
+    const copied = asset({
+      path: 'Video/take.mov',
+      proxyPath: '.index/proxies/a.mp4',
+      probe: { duration: 1, codec: 'prores', width: 3840, height: 2160 },
+    })
+    expect(exportFileOf(PROJECT, copied)).toBe(join(PROJECT, '.index/proxies/a.mp4'))
   })
 })
 

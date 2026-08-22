@@ -556,6 +556,12 @@ export const ASSET_SCHEME = 'ia-studio'
 export const ASSET_HOST = 'asset'
 
 /**
+ * The original bytes, for an export that must not downsample a 4K H.264 take the monitor
+ * plays through its proxy. Same scheme, different host, so the resolver cannot guess.
+ */
+export const MASTER_HOST = 'master'
+
+/**
  * The host that serves an asset's still rather than the asset itself. A host of its own, and not
  * a parameter on `asset`: one id names one file per host, and a mesh's `.glb` and its `.jpg` are
  * two files — the resolver would otherwise have to guess which of them a caller meant.
@@ -606,6 +612,10 @@ export function hostedIdFromUrl(url: string, host: string): string | null {
  */
 export function assetUrl(assetId: string): string {
   return hostedUrl(ASSET_HOST, assetId)
+}
+
+export function assetMasterUrl(assetId: string): string {
+  return hostedUrl(MASTER_HOST, assetId)
 }
 
 /**

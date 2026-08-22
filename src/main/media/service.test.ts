@@ -191,11 +191,28 @@ describe('the files a generation gets beside it', () => {
     expect(injected.save).toHaveBeenCalledWith('asset-1', { hash: 'abc123' })
   })
 
-  /**
-   * Two "apply" in a row on one take, which is a gesture away in the audio editor. The id names
-   * a row that already exists, so both runs write the same proxy and the same peaks — from two
-   * ffmpeg processes, over one another.
-   */
+  /** Two rows of the same bytes would both write `.index/proxies/abc123.mp4` at once. */
+  it('does not write the same proxy from two derivations of the same bytes at once', async () => {
+    const injected = deps()
+    let inflight = 0
+    let maxInflight = 0
+    injected.run = vi.fn(async () => {
+      inflight += 1
+      maxInflight = Math.max(maxInflight, inflight)
+      await new Promise(resolve => setTimeout(resolve, 15))
+      inflight -= 1
+      return Buffer.alloc(0)
+    })
+
+    const service = createMediaService(injected)
+    await Promise.all([
+      service.derive({ ...request, assetId: 'asset-1', probe }),
+      service.derive({ ...request, assetId: 'asset-2', probe }),
+    ])
+
+    expect(maxInflight).toBe(1)
+  })
+
   it('supersedes a derivation of the same asset still on its way', async () => {
     const injected = deps()
     let releaseHash = (): void => {}

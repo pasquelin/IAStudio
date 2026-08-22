@@ -1,4 +1,5 @@
 import { createStudioSink, type StudioSinkDeps } from '@/engines/timeline/sinkPort'
+import { fetchOriginalAsset } from '@/helpers/assetFetch'
 import { assetsById, useAssets } from '@/stores/assets'
 import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/sceneSources'
 
@@ -13,6 +14,7 @@ import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/sceneSo
 export function montageSink(
   size: StudioSinkDeps['size'],
   createStage?: StudioSinkDeps['createStage'],
+  original = false,
 ): ReturnType<typeof createStudioSink> {
   return createStudioSink({
     sceneOf: montageSceneOf,
@@ -23,5 +25,6 @@ export function montageSink(
     assetOf: assetId => assetsById(useAssets.getState()).get(assetId) ?? null,
     size,
     createStage,
+    readAsset: original ? async assetId => (await fetchOriginalAsset(assetId)).blob() : undefined,
   })
 }
