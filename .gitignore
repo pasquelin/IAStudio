@@ -21,6 +21,11 @@ CLAUDE.md
 .claude/
 # Sorties d'exécution, jamais du code
 logs/
+# L'environnement et les caches du moteur Python : uv les matérialise, git ne les porte pas.
+engine/.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
 
 # Shipped with the app, fetched by `pnpm ffmpeg:fetch` and `pnpm stt:fetch` — binaries and
 # model weights, never committed.
