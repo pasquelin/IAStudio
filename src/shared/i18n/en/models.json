@@ -124,7 +124,6 @@
     "scopeApp": "No project open — this choice holds for the studio",
     "manage": "Manage accounts…",
     "notConnected": "Not connected",
-    "fromEnvFile": "secrets/.env",
     "explanation": "Scenario opens the remote library. The other keys serve Assistant. Switching the Scenario account changes the library — never your local files.",
     "errors": {
       "empty": "A name is required.",
@@ -132,7 +131,6 @@
       "duplicate": "Another account already uses this name.",
       "unknown-account": "This account no longer exists.",
       "store-unreadable": "The keychain did not give your accounts back. Try again once it is unlocked — nothing was changed.",
-      "read-only-account": "This account comes from secrets/.env: edit that file to rename or remove it.",
       "unexpected": "The account could not be saved."
     },
     "useHint": "Every generation will run on this key from now on",

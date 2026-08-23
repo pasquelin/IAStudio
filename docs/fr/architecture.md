@@ -200,7 +200,7 @@ manipule toujours aucun chemin de fichier.
 src/main/
 ├── provider/
 │   ├── client.ts            le client @scenario-labs/sdk, bâti sur les identifiants stockés
-│   ├── credentials.ts       lecture, validation, état d'authentification
+│   ├── credentialsWatch.ts  quand la clé active change, ce qui doit se relire
 │   ├── modelRegistry.ts     GET /models/{id} → FieldDescriptor[]
 │   ├── modelCatalog.ts      listing paginé des modèles, mis en cache
 │   ├── jobManager.ts        la file, la concurrence, le polling
@@ -1329,20 +1329,11 @@ non typé par nature, et une valeur éditée à la main ou héritée d’une ver
 
 ### Ce que règle un développeur
 
-`secrets/.env`, lu **à l’exécution** par le processus principal, **en développement seulement**
-(`app.isPackaged === false`). Il n’est jamais passé au bundler : injecter un secret à la
-compilation le graverait dans `out/`, et un `.asar` s’ouvre avec un éditeur de texte.
-
-| Variable | Qui s’en sert |
-|---|---|
-| `PROVIDER_API_KEY`, `PROVIDER_API_SECRET` | le client API, en repli |
-| `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | le packaging uniquement — jamais à l’exécution |
-
-Les identifiants enregistrés dans les réglages **priment** sur ceux du `.env`. Le fichier est une
-commodité de développement, pas une seconde source de vérité.
-
 `ELECTRON_RENDERER_URL` est posée par electron-vite en mode watch : c’est elle qui fait charger
 la fenêtre depuis le serveur de développement plutôt que depuis le disque.
+
+Les clés API se saisissent dans les réglages, chiffrées par le trousseau. Le packaging lit
+`APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` et `APPLE_TEAM_ID` dans l’environnement s’ils y sont.
 
 ### Ce que l’environnement fournit sans qu’on le règle
 
@@ -1358,11 +1349,10 @@ lire plutôt que de les exiger.
 
 ### Ce dont le build a besoin
 
-`scripts/dist.sh` charge `secrets/.env` et appelle electron-builder. Laissées vides, les trois
-variables Apple lui font sauter la signature et la notarisation — il le journalise, et
-`pnpm dist` produit quand même une application. Elle n’est simplement pas signée, et Gatekeeper
-le signalera à la première ouverture. Les renseigner active la chaîne complète, sans toucher au
-code.
+`scripts/dist.sh` appelle electron-builder. Absentes de l’environnement, les trois variables
+Apple lui font sauter la signature et la notarisation — il le journalise, et `pnpm dist` produit
+quand même une application. Elle n’est simplement pas signée, et Gatekeeper le signalera à la
+première ouverture. Les renseigner active la chaîne complète, sans toucher au code.
 
 Le binaire ffmpeg se résout dans un ordre fixe — **embarqué**, puis **configuré**, puis le
 **`PATH`** — et rend null plutôt que de lever quand aucun des trois ne répond. L’interface sait

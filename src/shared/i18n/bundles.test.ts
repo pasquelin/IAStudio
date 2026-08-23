@@ -245,7 +245,6 @@ describe('the translation bundles', () => {
 
     const untranslatedOnPurpose = new Set([
       'about.copyright',
-      'accounts.fromEnvFile',
       'accounts.namePlaceholder',
       'app.name',
       'exportFormats.gltf',

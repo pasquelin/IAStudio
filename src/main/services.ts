@@ -171,7 +171,6 @@ import { createUsageReader, type UsageReader } from './provider/usage'
 import { createJobStore } from './provider/jobStore'
 import { createRateLimiters, limitedTransport } from './provider/rateLimiter'
 import { createCredentialsWatch } from './provider/credentialsWatch'
-import { createFileSystemFallback, environmentAccount } from './provider/credentials'
 import { createModelRegistry, type ModelRegistry } from './provider/modelRegistry'
 import { createPlanReader, teamsOf, type PlanReader } from './provider/plan'
 import { createAssistQueue } from './provider/assistQueue'
@@ -461,12 +460,7 @@ function machineLanguages(): string[] {
  * `lastProject` on its own, and every window replicates these settings.
  */
 export function createSettings(): SettingsStore {
-  // `isDevelopment`, arrived on main: the fallback reads a `.env` only outside a packaged run.
-  const fallback = createFileSystemFallback(app.getAppPath(), !isDevelopment)
-
   const settings = createSettingsStore(createElectronAdapter(), {
-    // Read afresh on every account read, so editing the file is enough to change the account.
-    environmentAccount: () => environmentAccount(fallback),
     onChange: current => {
       // Before the broadcast: the renderer reads `prefers-color-scheme` to resolve `system`,
       // and Chromium only answers with the new value once `themeSource` has moved.

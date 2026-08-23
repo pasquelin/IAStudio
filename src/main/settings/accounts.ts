@@ -12,31 +12,17 @@ export type Credentials = {
   secret: string
 }
 
-/**
- * Where an account is kept, which is what decides who may write it.
- *
- * Kept apart from the permission on purpose. Persistence follows ownership — only the keychain's
- * own accounts are written back to it — while "may the user rename this" is a separate question
- * that happens to answer the same way today. Read as one flag, a provisioned key that the
- * keychain owns and the user may not rename would be dropped on the next write.
- */
-type AccountOrigin = 'keychain' | 'environment'
-
 /** An account as the main process holds it — the only place the credentials exist in clear. */
 export type StoredAccount = {
   id: string
   name: string
   credentials: Credentials
-  /** Absent means `keychain`: that is what every account read back from the store is. */
-  origin?: AccountOrigin
   /**
    * Which cloud the key opens. Absent means `scenario` — every key written before clouds became a
    * list is one, so the migration is the absence itself and no file has to be rewritten.
    */
   providerId?: CloudProviderId
 }
-
-const isEnvironment = (account: StoredAccount): boolean => account.origin === 'environment'
 
 const providerOf = (account: StoredAccount): CloudProviderId => account.providerId ?? SCENARIO_CLOUD
 
@@ -71,8 +57,6 @@ export function summariesOf(book: AccountBook): AccountSummary[] {
     // same way, and every summary carrying a field nobody set would be noise on the wire.
     ...(account.providerId ? { providerId: account.providerId } : {}),
     active: book.activeByProvider[providerOf(account)] === account.id,
-    // Absent rather than false: an ordinary account is not "one that is not read-only".
-    ...(isEnvironment(account) ? { readOnly: true } : {}),
   }))
 }
 
@@ -121,33 +105,6 @@ function requireHeld(book: AccountBook, id: string): StoredAccount {
   return account
 }
 
-/** Activating the development account is fine; rewriting it here is what `secrets/.env` is for. */
-function requireWritable(book: AccountBook, id: string): void {
-  if (isEnvironment(requireHeld(book, id))) throw new AccountError('read-only-account')
-}
-
-/**
- * The book as the studio uses it: the development account first, then whatever the keychain
- * holds. First is what makes it the active one on a fresh checkout — `settleBook`, which the
- * caller runs next, repoints a choice that names nothing at the head of the list.
- *
- * Composed on every read and stripped before every write. The `.env` is the truth about that
- * account, so a copy in the keychain could only go stale.
- */
-export function withEnvironment(book: AccountBook, environment: StoredAccount | null): AccountBook {
-  // Duplicates are `settleBook`'s business too, and it keeps the first of them — this one.
-  return environment ? { ...book, accounts: [environment, ...book.accounts] } : book
-}
-
-/**
- * What the keychain may be handed: its own accounts, and the choice verbatim — even when that
- * choice names the development account. It records a choice, not a key, and `withEnvironment`
- * hands it back its account on the next read, or `settleBook` repoints it the day the file is gone.
- */
-export function withoutEnvironment(book: AccountBook): AccountBook {
-  return { ...book, accounts: book.accounts.filter(account => !isEnvironment(account)) }
-}
-
 /**
  * Adds an account, activating it only when it is the first. A second key must not redirect
  * every call the moment it is saved: the user was configuring, not switching.
@@ -166,7 +123,7 @@ export function addAccount(book: AccountBook, account: StoredAccount): AccountBo
 }
 
 export function renameAccount(book: AccountBook, id: string, name: string): AccountBook {
-  requireWritable(book, id)
+  requireHeld(book, id)
   const renamed = requireName(name, book, id)
 
   return {
@@ -183,7 +140,6 @@ export function renameAccount(book: AccountBook, id: string, name: string): Acco
  */
 export function removeAccount(book: AccountBook, id: string): AccountBook {
   const provider = providerOf(requireHeld(book, id))
-  requireWritable(book, id)
   const accounts = book.accounts.filter(account => account.id !== id)
 
   if (book.activeByProvider[provider] !== id) return { ...book, accounts }
@@ -246,7 +202,7 @@ export function settleBook(book: AccountBook): AccountBook {
       candidate =>
         candidate.id === book.activeByProvider[provider] && providerOf(candidate) === provider,
     )
-    // The head of that cloud's own list, which is where `withEnvironment` puts the `.env` account.
+    // The head of that cloud's own list, when the stored pointer names nothing here.
     activeByProvider[provider] = chosen?.id ?? account.id
   }
 

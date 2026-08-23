@@ -196,7 +196,7 @@ never handles a file path.
 src/main/
 ├── provider/
 │   ├── client.ts            the @scenario-labs/sdk client, built from stored credentials
-│   ├── credentials.ts       reading, validating, and reporting auth state
+│   ├── credentialsWatch.ts  when the active key changes, what must be reread
 │   ├── modelRegistry.ts     GET /models/{id} → FieldDescriptor[]
 │   ├── modelCatalog.ts      paginated model listing, cached
 │   ├── jobManager.ts        the queue, the concurrency, the polling
@@ -1228,20 +1228,11 @@ trusted.
 
 ### What a developer sets
 
-`secrets/.env`, read **at runtime** by the main process, **in development only**
-(`app.isPackaged === false`). It is never handed to the bundler: injecting a secret at build time
-would carve it into `out/`, and an `.asar` opens in a text editor.
-
-| Variable | Used by |
-|---|---|
-| `PROVIDER_API_KEY`, `PROVIDER_API_SECRET` | the API client, as a fallback |
-| `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | packaging only — never at runtime |
-
-Credentials saved in the settings **win** over the ones in `.env`. The file is a convenience for
-development, not a second source of truth.
-
 `ELECTRON_RENDERER_URL` is set by electron-vite in watch mode and is what makes the window load
 from the dev server rather than from disk.
+
+API keys are entered in Settings and encrypted by the keychain. Packaging reads `APPLE_ID`,
+`APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` from the environment if they are set.
 
 ### What the environment provides without being configured
 
@@ -1257,7 +1248,7 @@ read rather than demanded.
 
 ### What the build needs
 
-`scripts/dist.sh` loads `secrets/.env` and calls electron-builder. Left empty, the three Apple
+`scripts/dist.sh` calls electron-builder. Absent from the environment, the three Apple
 variables make it skip signing and notarisation — it logs that it did, and `pnpm dist` still
 produces an application. It is simply unsigned, and Gatekeeper will say so on first open.
 Filling them in enables the full chain with no code change.

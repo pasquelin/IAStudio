@@ -192,17 +192,6 @@ Three buttons per row:
 | **Rename** | replaces the row with a text field, with **Save** and **Cancel** |
 | **Remove** | deletes the account and its key |
 
-### The account that comes from a file
-
-If you launched the studio from its source code with a `secrets/.env` file, those credentials appear
-as **an ordinary account** in the list, with a grey `secrets/.env` badge.
-
-It is used like the others — the **Use this account** button works — but it has **no Rename and no
-Remove**: those two buttons are absent, not greyed out.
-
-This account is changed by editing the file. If you reach it by some other route, the studio says
-so: "This account comes from `secrets/.env`: edit that file to rename or remove it."
-
 ### When the list is empty
 
 > "No account yet. Add an API key to reach the remote library."

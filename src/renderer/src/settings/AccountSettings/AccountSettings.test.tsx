@@ -1,11 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  ENVIRONMENT_ACCOUNT_ID,
-  type AccountsResult,
-  type AccountSummary,
-} from '@shared/domain/account'
+import { type AccountsResult, type AccountSummary } from '@shared/domain/account'
 import type { ApiFailure } from '@shared/domain/failure'
 import type { AuthState } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -207,36 +203,5 @@ describe('AccountSettings', () => {
     render(<AccountSettings />)
     await userEvent.click(screen.getByRole('button', { name: 'Supprimer' }))
     expect(remove).toHaveBeenCalledWith('a')
-  })
-
-  describe('the development account', () => {
-    const environment: AccountSummary = {
-      id: ENVIRONMENT_ACCOUNT_ID,
-      name: 'Développement',
-      active: true,
-      readOnly: true,
-    }
-
-    beforeEach(() => {
-      installFakeBridge()
-      useAccounts.setState({ accounts: [environment, { ...studio, active: false }] })
-    })
-
-    // It is edited in `secrets/.env`. Buttons the main process could only refuse are worse than
-    // no buttons at all — and the stored account beside it must keep its own.
-    it('offers neither rename nor remove, and leaves the accounts beside it alone', () => {
-      render(<AccountSettings />)
-      const row = screen.getByText('Développement').closest('li')
-
-      expect(within(row ?? document.body).queryByRole('button', { name: 'Renommer' })).toBeNull()
-      expect(within(row ?? document.body).queryByRole('button', { name: 'Supprimer' })).toBeNull()
-      expect(screen.getAllByRole('button', { name: 'Renommer' })).toHaveLength(1)
-    })
-
-    it('says where it comes from', () => {
-      render(<AccountSettings />)
-
-      expect(screen.getByText('Développement').closest('li')).toHaveTextContent('secrets/.env')
-    })
   })
 })

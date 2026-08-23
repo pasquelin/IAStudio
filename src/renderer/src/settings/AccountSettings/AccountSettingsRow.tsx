@@ -87,7 +87,6 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
             {keyWorks ? t('accounts.active') : t('accounts.notConnected')}
           </span>
         )}
-        {account.readOnly && <span className="badge badge-sm">{t('accounts.fromEnvFile')}</span>}
       </span>
 
       {!account.active && (
@@ -101,27 +100,22 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
         </button>
       )}
 
-      {/* Edited in `secrets/.env`: buttons that could only be refused are worse than no buttons. */}
-      {!account.readOnly && (
-        <>
-          <button
-            type="button"
-            className="btn btn-sm btn-ghost"
-            {...HINT_LEFT(t('accounts.renameHint'))}
-            onClick={() => setDraft(account.name)}
-          >
-            {t('accounts.rename')}
-          </button>
-          <button
-            type="button"
-            className="btn btn-sm btn-ghost text-error"
-            {...HINT_LEFT(t('accounts.removeHint'))}
-            onClick={() => void remove(account.id)}
-          >
-            {t('accounts.remove')}
-          </button>
-        </>
-      )}
+      <button
+        type="button"
+        className="btn btn-sm btn-ghost"
+        {...HINT_LEFT(t('accounts.renameHint'))}
+        onClick={() => setDraft(account.name)}
+      >
+        {t('accounts.rename')}
+      </button>
+      <button
+        type="button"
+        className="btn btn-sm btn-ghost text-error"
+        {...HINT_LEFT(t('accounts.removeHint'))}
+        onClick={() => void remove(account.id)}
+      >
+        {t('accounts.remove')}
+      </button>
     </li>
   )
 }

@@ -401,9 +401,8 @@ const storedBook = z.object({
 /**
  * Reads a book back from disk, keeping whatever still parses — and repairing nothing.
  *
- * The repair is `settleBook`, and it runs one step later, inside `withEnvironment`. It has to:
- * the choice on disk may well name the development account, which lives in a file and not in this
- * blob, and repointing it here would send every launch to the wrong key.
+ * The repair is `settleBook`, and it runs one step later. A pointer that names nothing is
+ * repointed there, not here: this function only parses.
  *
  * A book written before clouds became a list carries `activeId` and no `providerId` anywhere: its
  * pointer is read as Scenario's, which is what it always was. Nothing is rewritten until the next

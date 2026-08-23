@@ -15,11 +15,8 @@ import {
   renameAccount,
   settleBook,
   summariesOf,
-  withEnvironment,
-  withoutEnvironment,
   type AccountBook,
   type Credentials,
-  type StoredAccount,
 } from './accounts'
 import { parseStoredAccounts, parseStoredCredentials, salvagePartialSettings } from './validation'
 
@@ -159,20 +156,11 @@ export type SettingsStoreOptions = {
   onChange?: (settings: Settings) => void
   /** Injected so a test can name the accounts it creates. */
   newAccountId?: () => string
-  /**
-   * The account `secrets/.env` stands for in development, read afresh each time: the file is
-   * the truth about it, and nothing here ever writes it back.
-   */
-  environmentAccount?: () => StoredAccount | null
 }
 
 export function createSettingsStore(
   adapter: PersistenceAdapter,
-  {
-    onChange,
-    newAccountId = () => `account_${randomUUID()}`,
-    environmentAccount = () => null,
-  }: SettingsStoreOptions = {},
+  { onChange, newAccountId = () => `account_${randomUUID()}` }: SettingsStoreOptions = {},
 ): SettingsStore {
   const read = (): Settings =>
     merge(DEFAULT_SETTINGS, salvagePartialSettings(adapter.read(SETTINGS_KEY)))
@@ -245,19 +233,11 @@ export function createSettingsStore(
     return credentials ? bookFromCredentials(credentials, MIGRATED_ACCOUNT_ID) : EMPTY_BOOK
   }
 
-  /**
-   * What the studio runs on: the keychain's accounts, plus the development one behind them,
-   * repaired once the list is whole. The repair comes last on purpose — a stored `activeId` may
-   * name the account that lives in a file, and judged against the blob alone it names nothing.
-   *
-   * Takes the persisted book so a caller holding one already need not read it twice.
-   */
-  const readBook = (persisted = persistedBook()): AccountBook =>
-    settleBook(withEnvironment(persisted, environmentAccount()))
+  /** The keychain's accounts, repaired. Takes a held book so a caller need not read it twice. */
+  const readBook = (persisted = persistedBook()): AccountBook => settleBook(persisted)
 
-  /** Only what the keychain owns: the development account is read back from its file. */
   const writeBook = (book: AccountBook): void => {
-    adapter.write(ACCOUNTS_KEY, adapter.encrypt(JSON.stringify(withoutEnvironment(book))))
+    adapter.write(ACCOUNTS_KEY, adapter.encrypt(JSON.stringify(book)))
   }
 
   /** Runs one change and reports whether it moved the active key — never guessed by a caller. */

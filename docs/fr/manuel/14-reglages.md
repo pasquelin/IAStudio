@@ -200,19 +200,6 @@ Trois boutons par ligne :
 | **Renommer** | remplace la ligne par un champ de saisie, avec **Enregistrer** et **Annuler** |
 | **Supprimer** | retire le compte et sa clé |
 
-### Le compte venu d’un fichier
-
-Si vous avez lancé le studio depuis son code source avec un fichier `secrets/.env`, ces
-identifiants apparaissent **comme un compte ordinaire** dans la liste, avec une étiquette grise
-`secrets/.env`.
-
-Il s’utilise comme les autres — le bouton **Utiliser ce compte** fonctionne — mais il n’a **ni
-Renommer ni Supprimer** : ces deux boutons sont absents, pas grisés.
-
-Ce compte se modifie en éditant le fichier. Si vous en croisez un par un autre chemin, le studio
-le dit : « Ce compte vient de `secrets/.env` : modifiez ce fichier pour le renommer ou le
-retirer. »
-
 ### Quand la liste est vide
 
 > « Aucun compte pour l’instant. Ajoutez une clé API pour accéder à la bibliothèque distante. »

@@ -124,7 +124,6 @@
     "scopeApp": "Aucun projet ouvert — ce choix vaut pour le studio",
     "manage": "Gérer les comptes…",
     "notConnected": "Non connecté",
-    "fromEnvFile": "secrets/.env",
     "explanation": "Scenario ouvre la bibliothèque distante. Les autres clés servent l’Assistant. Changer de compte Scenario change la bibliothèque — jamais vos fichiers locaux.",
     "errors": {
       "empty": "Un nom est obligatoire.",
@@ -132,7 +131,6 @@
       "duplicate": "Un autre compte porte déjà ce nom.",
       "unknown-account": "Ce compte n’existe plus.",
       "store-unreadable": "Le trousseau n’a pas rendu vos comptes. Réessayez après l’avoir déverrouillé — rien n’a été modifié.",
-      "read-only-account": "Ce compte vient de secrets/.env : modifiez ce fichier pour le renommer ou le retirer.",
       "unexpected": "Le compte n’a pas pu être enregistré."
     },
     "useHint": "Toutes les générations partiront désormais de cette clé",

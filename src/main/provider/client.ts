@@ -112,7 +112,7 @@ export async function testAuthentication(client: AuthProbe): Promise<AuthState> 
 }
 
 export type ClientProvider = {
-  /** `null` when no credentials are available, from the settings or from `secrets/.env`. */
+  /** `null` when no credentials are available. */
   get: () => Scenario | null
   /** Same, but throws — every `provider:*` handler needs a client to do anything at all. */
   require: () => Scenario
@@ -202,7 +202,7 @@ export function clientFor(credentials: Credentials, transport: Transport): Scena
 }
 
 export type ClientProviderDeps = {
-  /** `null` when neither the settings nor `secrets/.env` hold a usable key. */
+  /** `null` when the settings hold no usable key. */
   resolve: () => Credentials | null
   watch: WatchCredentials
   transport: Transport

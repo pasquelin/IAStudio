@@ -8,6 +8,5 @@ export const FAILURE_KEYS: Record<AccountSaveFailure, string> = {
   duplicate: 'accounts.errors.duplicate',
   'unknown-account': 'accounts.errors.unknown-account',
   'store-unreadable': 'accounts.errors.store-unreadable',
-  'read-only-account': 'accounts.errors.read-only-account',
   unexpected: 'accounts.errors.unexpected',
 }

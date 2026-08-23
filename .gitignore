@@ -4,9 +4,6 @@ out/
 release/
 .DS_Store
 *.log
-secrets/*
-!secrets/.env.example
-!secrets/README.md
 .playwright-mcp/
 # Doc écrite ailleurs et déposée ici — pas de la doc de projet
 docs/specs
