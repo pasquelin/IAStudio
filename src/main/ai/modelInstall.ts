@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import {
   isSuppliedModel,
+  needsOwnFolder,
   PART_SUFFIX,
   type DownloadProgress,
   type LocalModel,
@@ -251,6 +252,11 @@ export async function modelIsComplete(
   // `every` of nothing is true. Right for Ollama, which lists what it holds; a lie for a card
   // listed before its engine exists.
   if (model.files.length === 0) return model.loader === 'ollama'
+
+  // 🛑 `[M]` The folder first, for a loader that owns one: the catalogue holds 507 files across
+  // 40 models, 500 of them behind a folder that does not exist until something is installed —
+  // so a machine with nothing on it paid 507 stats per compose to answer "no".
+  if (needsOwnFolder(model.loader) && !(await host.exists(folder))) return false
 
   // At once, and the lost short-circuit costs nothing: a `stat` that fails is as cheap as one that
   // succeeds, and this sits on every compose — so on every assistant turn, four latencies deep on

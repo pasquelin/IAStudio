@@ -6,18 +6,12 @@ const anId = CLOUD_IDS[0] ?? ''
 
 describe('readyCloudsOf', () => {
   it('answers for a registered cloud whose account is held', () => {
-    expect(readyCloudsOf({ [anId]: { held: () => true } })).toEqual([anId])
-    expect(readyCloudsOf({ [anId]: { held: () => false } })).toEqual([])
+    expect(readyCloudsOf(new Set([anId]))).toEqual([anId])
+    expect(readyCloudsOf(new Set())).toEqual([])
   })
 
-  // The honest answer until something can actually talk to it, and the blind spot the module
-  // writes in clear: nothing checks that every registered cloud has a line in the table.
-  it('never readies a cloud the wiring has no credentials for', () => {
-    expect(readyCloudsOf({})).toEqual([])
-  })
-
-  // The REGISTRY decides what exists; credentials only say whether it can answer.
-  it('ignores credentials held for a cloud nothing registers', () => {
-    expect(readyCloudsOf({ nowhere: { held: () => true } })).toEqual([])
+  // The REGISTRY decides what exists; a held key only says whether it can answer.
+  it('ignores a key held for a cloud nothing registers', () => {
+    expect(readyCloudsOf(new Set(['nowhere']))).toEqual([])
   })
 })

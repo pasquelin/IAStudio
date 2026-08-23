@@ -6,7 +6,7 @@ import { chmod, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { availableParallelism, totalmem } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
-import { scenarioAccount, type AccountSummary } from '@shared/domain/account'
+import { activeProvidersOf, scenarioAccount, type AccountSummary } from '@shared/domain/account'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import { outputExtensionOf } from '@shared/domain/localFields'
 import type { LocalModel } from '@shared/domain/localModel'
@@ -529,11 +529,15 @@ export function createServices(settings: SettingsStore): Services {
    * The registry memoises on the ARRAY it is handed, so a fresh one per call — which a merge is —
    * defeated it, and the panel recomposed every summary on each keystroke of its search field.
    */
-  let merged: { of: readonly LocalModel[]; all: readonly LocalModel[] } | null = null
+  let merged: { of: string; all: readonly LocalModel[] } | null = null
 
   const mergedCatalogue = (): readonly LocalModel[] => {
     const own = settings.read().ai.ownModels
-    if (merged?.of !== own) merged = { of: own, all: catalogueWith(own) }
+    // 🛑 Keyed by the IDS and not by the array: `settings.read()` re-parses, and zod 4 hands back
+    // a fresh array every time — measured — so an identity check never held and the merge was
+    // rebuilt on every keystroke of the panel's search field, which is what it was written to stop.
+    const key = own.map(one => one.id).join('\u0000')
+    if (merged?.of !== key) merged = { of: key, all: catalogueWith(own) }
 
     return merged.all
   }
@@ -1151,20 +1155,20 @@ export function createServices(settings: SettingsStore): Services {
   const downloads = createDownloadHost()
 
   /**
-   * ADR-21 § C: what proves an account is held, and what thinks for it, keyed by the registry.
+   * ADR-21 § C: what thinks for each cloud, keyed by the registry. Whether a key is HELD is not
+   * here — one account listing answers it for every cloud at once (`activeProvidersOf`).
    * Scenario's brain is a getter because it is built further down.
    */
-  const clouds: Record<string, { held: () => boolean; brain: () => AssistantBrain }> = {}
+  const clouds: Record<string, { brain: () => AssistantBrain }> = {}
   for (const cloud of CLOUD_PROVIDERS) {
-    const held = (): boolean => settings.readCredentialsFor(cloud.id) !== null
     if (cloud.chat.kind === 'scenario') {
-      clouds[cloud.id] = { held, brain: () => providerBrain }
+      clouds[cloud.id] = { brain: () => providerBrain }
     } else {
       const http = createHttpChatBrain({
         chat: cloud.chat,
         credentials: () => settings.readCredentialsFor(cloud.id),
       })
-      clouds[cloud.id] = { held, brain: () => http }
+      clouds[cloud.id] = { brain: () => http }
     }
   }
 
@@ -1259,6 +1263,26 @@ export function createServices(settings: SettingsStore): Services {
 
   const ollamaPort = ollamaHttpPort()
   const ollamaDir = join(app.getPath('userData'), 'ollama')
+
+  const OLLAMA_LOOK_MS = 10_000
+  let installedOllama: { at: number; yes: boolean } | null = null
+
+  /**
+   * 🛑 `[M]` Remembered, and only for a window: the search joins the usual locations, a studio copy
+   * and ONE CANDIDATE PER PATH ENTRY — 46 on this machine — and `some` short-circuits on none of
+   * them while Ollama is absent. It sat on every compose, so on every assistant turn.
+   */
+  const ollamaIsInstalled = (): boolean => {
+    if (installedOllama !== null && Date.now() - installedOllama.at < OLLAMA_LOOK_MS) {
+      return installedOllama.yes
+    }
+
+    installedOllama = {
+      at: Date.now(),
+      yes: ollamaInstalled(process.platform, process.env, existsSync, ollamaDir),
+    }
+    return installedOllama.yes
+  }
   const startOllama = ensureOllama({
     platform: process.platform,
     env: process.env,
@@ -1314,14 +1338,16 @@ export function createServices(settings: SettingsStore): Services {
     settings: () => settings.read(),
     writeSettings: partial => settings.write(partial),
     currentProjectPath: () => project.current()?.path ?? null,
-    readyClouds: () => readyCloudsOf(clouds),
+    readyClouds: () => readyCloudsOf(activeProvidersOf(settings.accounts())),
     runtimes,
     emit: overview => broadcast(EVENTS.ai, overview),
     log: (level, message) => log[level]('ai', message),
     now: Date.now,
-    ollamaInstalled: () => ollamaInstalled(process.platform, process.env, existsSync, ollamaDir),
-    installOllama: (onProgress, signal) =>
-      installOllama({
+    ollamaInstalled: ollamaIsInstalled,
+    installOllama: async (onProgress, signal) => {
+      // The studio just put one there: the remembered answer would keep saying otherwise.
+      installedOllama = null
+      await installOllama({
         platform: process.platform,
         arch: process.arch,
         env: process.env,
@@ -1336,7 +1362,9 @@ export function createServices(settings: SettingsStore): Services {
         canUnpack: kind => !needsZstd(kind) || zstdOnPath(),
         onProgress,
         signal,
-      }),
+      })
+      installedOllama = null
+    },
   })
   hold = ai.hold
   lookup = modelId => ai.lookup(modelId)

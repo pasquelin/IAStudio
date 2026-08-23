@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   ACCOUNT_NAME_MAX_LENGTH,
+  activeProvidersOf,
   checkAccountName,
+  scenarioAccount,
   type AccountSummary,
 } from '@shared/domain/account'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
@@ -44,5 +46,32 @@ describe('checkAccountName', () => {
 
   it('still refuses a sibling name while being renamed', () => {
     expect(checkAccountName('Studio', existing, 'b')).toBe('duplicate')
+  })
+})
+
+describe('scenarioAccount', () => {
+  it('answers the active Scenario key, including one stored before clouds became a list', () => {
+    expect(scenarioAccount([{ id: 'a', name: 'Studio', active: true }])?.id).toBe('a')
+    expect(scenarioAccount(existing)?.id).toBe('a')
+  })
+
+  // A key active for its OWN cloud is not the Scenario one, and reading it as such is how a
+  // project ends up linked to a key that serves something else.
+  it('answers nothing when only another cloud has an active key', () => {
+    expect(
+      scenarioAccount([{ id: 'c', name: 'GPT', providerId: 'openai', active: true }]),
+    ).toBeNull()
+  })
+})
+
+describe('activeProvidersOf', () => {
+  it('names the cloud of every active key, once', () => {
+    const held = activeProvidersOf([
+      { id: 'a', name: 'Studio', active: true },
+      { id: 'b', name: 'Client X', providerId: SCENARIO_CLOUD, active: false },
+      { id: 'c', name: 'GPT', providerId: 'openai', active: true },
+    ])
+
+    expect([...held].sort()).toEqual(['openai', SCENARIO_CLOUD].sort())
   })
 })

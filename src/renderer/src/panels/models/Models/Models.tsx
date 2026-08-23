@@ -80,9 +80,15 @@ export function Models() {
   // costs nothing, and `queryFrom` translates nothing.
   // A cloud is offered only where a key is held. The listing itself stays on this machine
   // until the person ticks Scenario — an account is not a reason to show billed models.
-  const clouds = authenticated
-    ? CLOUD_PROVIDERS.filter(one => one.families.includes(family)).map(one => one.id)
-    : NO_CLOUDS
+  // Memoised BECAUSE the facets below depend on it: a fresh array per render defeated their memo
+  // for anyone holding a key, which is the case that matters.
+  const clouds = useMemo(
+    () =>
+      authenticated
+        ? CLOUD_PROVIDERS.filter(one => one.families.includes(family)).map(one => one.id)
+        : NO_CLOUDS,
+    [authenticated, family],
+  )
   const query = queryFrom(collection, family, search, clouds)
 
   // Memoised, unlike the query above: building the facets translates up to twenty-five labels

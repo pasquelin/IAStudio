@@ -10,11 +10,13 @@ import { fetchAsset } from '@/helpers/assetFetch'
  * holds an output device for as long as the tab lives.
  */
 export async function decodeAsset(assetId: string): Promise<AudioData> {
-  const bytes = await (await fetchAsset(assetId)).arrayBuffer()
   try {
-    return await decodeBytesOffThread(bytes.slice())
+    return await decodeBytesOffThread(await (await fetchAsset(assetId)).arrayBuffer())
   } catch {
-    return decodeHere(bytes)
+    // Read again rather than kept: the port TRANSFERS the buffer, so holding a copy for this
+    // path taxed every successful decode with the whole encoded file — 115 MB for ten minutes
+    // of stereo WAV — to serve a fallback that runs when the worker itself failed.
+    return decodeHere(await (await fetchAsset(assetId)).arrayBuffer())
   }
 }
 

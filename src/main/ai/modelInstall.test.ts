@@ -423,6 +423,28 @@ describe('modelIsComplete', () => {
     expect(await modelIsComplete(host, supplied, '/models')).toBe(true)
   })
 
+  /**
+   * `[M]` The catalogue holds 507 files across 40 models, 500 of them behind a folder a loader
+   * owns. On a machine with nothing installed that folder is absent, and asking after every file
+   * inside it cost 507 stats per compose to answer what one stat answers.
+   */
+  it('asks after no file of a loader-owned folder that is not there', async () => {
+    const { host, disk, sizes } = harness()
+    const sizeOf = vi.fn(host.sizeOf)
+    const engine: LocalModel = { ...STT_MODEL, loader: 'diffusers' }
+
+    expect(await modelIsComplete({ ...host, sizeOf }, engine, '/models/whisper')).toBe(false)
+    expect(sizeOf).not.toHaveBeenCalled()
+
+    disk.set('/models/whisper', '')
+    for (const file of STT_MODEL_FILES) {
+      disk.set(`/models/whisper/${file.name}`, 'here')
+      sizes.set(`/models/whisper/${file.name}`, file.bytes)
+    }
+    expect(await modelIsComplete({ ...host, sizeOf }, engine, '/models/whisper')).toBe(true)
+    expect(sizeOf).toHaveBeenCalledTimes(STT_MODEL_FILES.length)
+  })
+
   it('does not call a catalogue entry with nothing to fetch installed', async () => {
     const { host } = harness()
     const listed: LocalModel = { ...STT_MODEL, files: [], loader: 'plugin' }
