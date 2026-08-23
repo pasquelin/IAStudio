@@ -96,10 +96,9 @@ describe('AiSettings', () => {
    * Nothing is hidden and everything is explained: a model the machine cannot take stays on
    * screen, unpickable, carrying the figures that say why.
    */
-  it('keeps a model too heavy reachable, greyed, with its reason', () => {
+  it('keeps a model too heavy visible, greyed, with its reason', () => {
     show()
 
-    fireEvent.click(screen.getByText(/autre modèle/))
     const radio = screen.getByRole('radio', { name: /HiDream/ })
     expect(radio).toBeDisabled()
     expect(screen.getByText(/place insuffisante — 48/)).toBeInTheDocument()

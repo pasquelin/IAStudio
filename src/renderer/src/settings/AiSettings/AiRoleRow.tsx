@@ -34,7 +34,7 @@ export type AiRoleRowProps = {
 
 /**
  * One EMPLOYMENT and what serves it, never one model. Folded by default — a choice already
- * made needs no attention — and unfolded it shows every candidate, those too heavy included.
+ * made needs no attention — and unfolded it shows every local candidate, those too heavy included.
  */
 export const AiRoleRow = memo(function AiRoleRow({
   row,
@@ -60,25 +60,6 @@ export const AiRoleRow = memo(function AiRoleRow({
   // The controls, unlike the summary, show the scope BEING EDITED: a radio reading the effect
   // would leave a click writing a scope that already agreed, doing nothing and saying nothing.
   const editing = row.chosen[scope]
-  const openId = editing?.kind === 'local' ? editing.modelId : (served?.model.id ?? null)
-
-  const rowOf = (candidate: ModelCandidate, chosen: boolean) => (
-    <AiCandidateRow
-      key={candidate.model.id}
-      role={row.role}
-      candidate={candidate}
-      chosen={chosen}
-      fit={fitOf(candidate)}
-      progress={installing?.modelId === candidate.model.id ? installing.progress : null}
-      loading={loading?.modelId === candidate.model.id ? loading.ratio : null}
-      busy={busy}
-      onChoose={() => {
-        void chooseAiProvider(row.role, { kind: 'local', modelId: candidate.model.id }, scope)
-        const parts = partsOfRole(row.role)
-        if (parts) selectFamilyModel(parts.family, candidate.model.id)
-      }}
-    />
-  )
 
   return (
     <details className="border-base-300 border-b last:border-b-0">
@@ -135,9 +116,6 @@ export const AiRoleRow = memo(function AiRoleRow({
             const candidates = row.candidates.filter(one => sourceOf(one.model) === source)
             if (candidates.length === 0) return null
 
-            const shown = candidates.filter(one => one.model.id === openId)
-            const folded = candidates.filter(one => one.model.id !== openId)
-
             return (
               <li key={source}>
                 <h4 className={WINDOW_GROUP_LABEL}>{t(SOURCE_KEY[source])}</h4>
@@ -148,25 +126,29 @@ export const AiRoleRow = memo(function AiRoleRow({
                   <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
                 )}
                 <ul>
-                  {shown.map(candidate =>
-                    rowOf(
-                      candidate,
-                      editing?.kind === 'local' && editing.modelId === candidate.model.id,
-                    ),
-                  )}
-                  {folded.length > 0 && (
-                    <li>
-                      <details>
-                        <summary
-                          className={WINDOW_CAPTION}
-                          onClick={event => event.stopPropagation()}
-                        >
-                          {t('aiModels.otherModels', { count: folded.length })}
-                        </summary>
-                        <ul>{folded.map(candidate => rowOf(candidate, false))}</ul>
-                      </details>
-                    </li>
-                  )}
+                  {candidates.map(candidate => (
+                    <AiCandidateRow
+                      key={candidate.model.id}
+                      role={row.role}
+                      candidate={candidate}
+                      chosen={editing?.kind === 'local' && editing.modelId === candidate.model.id}
+                      fit={fitOf(candidate)}
+                      progress={
+                        installing?.modelId === candidate.model.id ? installing.progress : null
+                      }
+                      loading={loading?.modelId === candidate.model.id ? loading.ratio : null}
+                      busy={busy}
+                      onChoose={() => {
+                        void chooseAiProvider(
+                          row.role,
+                          { kind: 'local', modelId: candidate.model.id },
+                          scope,
+                        )
+                        const parts = partsOfRole(row.role)
+                        if (parts) selectFamilyModel(parts.family, candidate.model.id)
+                      }}
+                    />
+                  ))}
                 </ul>
               </li>
             )
