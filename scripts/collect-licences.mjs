@@ -215,6 +215,16 @@ const MODEL_NOTES = {
     'its renderer in that form alone. What still guards it: torch has refused to unpickle by',
     'default since 2.6, and every file above is pinned to a digest.',
   ],
+  instantmesh: [
+    'Copyright Tencent ARC Lab and the InstantMesh authors.',
+    '',
+    'THE DOWNLOAD CARRIES MORE THAN ONE ORIGIN, read on 2026-08-23. Apache-2.0 covers the two',
+    'TencentARC files — the reconstruction checkpoint and the white-background unet. The other',
+    'seventeen are sudo-ai/zero123plus-v1.2, whose repository card states no licence of its own.',
+    '',
+    'The unet lands under `unet/`, where the six-view pipeline reads it: the studio fetches the',
+    'base unet of zero123plus not at all, rather than 3.4 GB it would overwrite on load.',
+  ],
   panfusion: [
     'The files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). PanFusion publishes a',
     'Lightning checkpoint this studio cannot open. Generation uses MultiDiffusion circular padding.',

@@ -290,7 +290,7 @@
   {
     "name": "InstantMesh",
     "spdx": "Apache-2.0",
-    "text": "Image to mesh in about 10 s, regular faces. NVIDIA CUDA.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\nCopyright Tencent ARC Lab.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "text": "Image to mesh in about 10 s, regular faces. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Tencent ARC Lab.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/TencentARC/InstantMesh"
   },
   {

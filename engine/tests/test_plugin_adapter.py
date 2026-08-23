@@ -12,13 +12,14 @@ from ia_studio_engine.adapters.plugin_ids import CUDA_ONLY, PLUGIN_IDS, is_plugi
 from ia_studio_engine.adapters.routing_adapter import RoutingAdapter
 
 
-def test_the_eight_plugin_ids_are_named() -> None:
+def test_the_nine_plugin_ids_are_named() -> None:
     assert {
         "triposr",
         "trellis-text-large",
         "trellis-image-large",
         "trellis2-4b",
         "triposg",
+        "instantmesh",
         "mmaudio-small-44k",
         "mmaudio-medium-44k",
         "mmaudio-large-44k",
@@ -54,6 +55,7 @@ def test_unsupported_plugins_have_no_adapter() -> None:
 def test_trellis_is_cuda_only() -> None:
     assert "trellis-image-large" in CUDA_ONLY
     assert "triposg" in CUDA_ONLY
+    assert "instantmesh" in CUDA_ONLY
     assert "triposr" not in CUDA_ONLY
     assert "mmaudio-small-44k" not in CUDA_ONLY
 
@@ -64,6 +66,16 @@ def test_trellis_refuses_to_load_on_mps(monkeypatch: pytest.MonkeyPatch, tmp_pat
     monkeypatch.setattr(plugin_adapter, "_device", lambda: "mps")
     with pytest.raises(LoadRefusedError, match="CUDA"):
         PluginAdapter().load("trellis-image-large", str(tmp_path))
+
+
+def test_instantmesh_refuses_to_load_on_mps(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    import ia_studio_engine.adapters.plugin_adapter as plugin_adapter
+
+    monkeypatch.setattr(plugin_adapter, "_device", lambda: "mps")
+    with pytest.raises(LoadRefusedError, match="CUDA"):
+        PluginAdapter().load("instantmesh", str(tmp_path))
 
 
 def test_an_unknown_id_is_not_a_plugin_adapter(

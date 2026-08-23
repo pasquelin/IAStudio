@@ -291,8 +291,16 @@
       "reservationBytes": 4496703488,
       "thumbnail": "ssd-1b.png",
       "family": "image",
-      "capabilities": ["txt2img", "img2img", "inpaint", "outpaint"],
-      "serves": ["texture/txt2img_texture", "texture/img2img_texture"]
+      "capabilities": [
+        "txt2img",
+        "img2img",
+        "inpaint",
+        "outpaint"
+      ],
+      "serves": [
+        "texture/txt2img_texture",
+        "texture/img2img_texture"
+      ]
     },
     {
       "id": "sana-600m-1024",
@@ -423,8 +431,12 @@
       "reservationBytes": 7766163456,
       "thumbnail": "sana-600m-1024.png",
       "family": "image",
-      "capabilities": ["txt2img"],
-      "serves": ["texture/txt2img_texture"]
+      "capabilities": [
+        "txt2img"
+      ],
+      "serves": [
+        "texture/txt2img_texture"
+      ]
     },
     {
       "id": "sana-1600m-1024",
@@ -571,8 +583,12 @@
       "reservationBytes": 4862736884,
       "thumbnail": "sana-1600m-1024.png",
       "family": "image",
-      "capabilities": ["txt2img"],
-      "serves": ["texture/txt2img_texture"]
+      "capabilities": [
+        "txt2img"
+      ],
+      "serves": [
+        "texture/txt2img_texture"
+      ]
     },
     {
       "id": "sana15-1-6b",
@@ -703,8 +719,12 @@
       "reservationBytes": 4862888829,
       "thumbnail": "sana15-1-6b.png",
       "family": "image",
-      "capabilities": ["txt2img"],
-      "serves": ["texture/txt2img_texture"]
+      "capabilities": [
+        "txt2img"
+      ],
+      "serves": [
+        "texture/txt2img_texture"
+      ]
     },
     {
       "id": "qwen-image",
@@ -947,8 +967,12 @@
       "reservationBytes": 28852287506,
       "thumbnail": "qwen-image.png",
       "family": "image",
-      "capabilities": ["txt2img"],
-      "serves": ["texture/txt2img_texture"]
+      "capabilities": [
+        "txt2img"
+      ],
+      "serves": [
+        "texture/txt2img_texture"
+      ]
     }
   ],
   "video/txt2video": [
@@ -1081,7 +1105,10 @@
       "reservationBytes": 6887763909,
       "thumbnail": "cogvideox-2b.png",
       "family": "video",
-      "capabilities": ["txt2video", "video2video"]
+      "capabilities": [
+        "txt2video",
+        "video2video"
+      ]
     },
     {
       "id": "wan21-t2v-1-3b",
@@ -1252,7 +1279,10 @@
       "reservationBytes": 14464443929,
       "thumbnail": "wan21-t2v-1-3b.png",
       "family": "video",
-      "capabilities": ["txt2video", "video2video"]
+      "capabilities": [
+        "txt2video",
+        "video2video"
+      ]
     },
     {
       "id": "wan22-ti2v-5b",
@@ -1431,7 +1461,11 @@
       "reservationBytes": 17100709200,
       "thumbnail": "wan22-ti2v-5b.png",
       "family": "video",
-      "capabilities": ["img2video", "txt2video", "video2video"]
+      "capabilities": [
+        "img2video",
+        "txt2video",
+        "video2video"
+      ]
     },
     {
       "id": "mochi-1-preview",
@@ -1706,7 +1740,9 @@
       "reservationBytes": 66754740322,
       "thumbnail": "mochi-1-preview.png",
       "family": "video",
-      "capabilities": ["txt2video"]
+      "capabilities": [
+        "txt2video"
+      ]
     }
   ],
   "image/img2img": [
@@ -2023,7 +2059,9 @@
       "reservationBytes": 28860227143,
       "thumbnail": "qwen-image-edit.png",
       "family": "image",
-      "capabilities": ["img2img"]
+      "capabilities": [
+        "img2img"
+      ]
     }
   ],
   "video/img2video": [
@@ -2316,7 +2354,9 @@
       "reservationBytes": 45048778190,
       "thumbnail": "wan21-i2v-14b-480p.png",
       "family": "video",
-      "capabilities": ["img2video"]
+      "capabilities": [
+        "img2video"
+      ]
     }
   ],
   "audio/txt2audio": [
@@ -2489,7 +2529,10 @@
       "reservationBytes": 5550750945,
       "thumbnail": "acestep-v15-xl-turbo.png",
       "family": "audio",
-      "capabilities": ["txt2audio", "audio2audio"]
+      "capabilities": [
+        "txt2audio",
+        "audio2audio"
+      ]
     },
     {
       "id": "acestep-v15-xl-base",
@@ -2692,7 +2735,10 @@
       "reservationBytes": 5760798878,
       "thumbnail": "acestep-v15-xl-base.png",
       "family": "audio",
-      "capabilities": ["txt2audio", "audio2audio"]
+      "capabilities": [
+        "txt2audio",
+        "audio2audio"
+      ]
     },
     {
       "id": "acestep-v15-xl-sft",
@@ -2895,7 +2941,10 @@
       "reservationBytes": 5760798878,
       "thumbnail": "acestep-v15-xl-sft.png",
       "family": "audio",
-      "capabilities": ["txt2audio", "audio2audio"]
+      "capabilities": [
+        "txt2audio",
+        "audio2audio"
+      ]
     }
   ],
   "3d/txt23d": [
@@ -3053,7 +3102,9 @@
       "reservationBytes": 2450491475,
       "thumbnail": "shap-e.png",
       "family": "3d",
-      "capabilities": ["txt23d"],
+      "capabilities": [
+        "txt23d"
+      ],
       "readsTorchWeights": true
     }
   ],
@@ -3093,7 +3144,9 @@
       "reservationBytes": 838623864,
       "thumbnail": "triposr.png",
       "family": "3d",
-      "capabilities": ["img23d"],
+      "capabilities": [
+        "img23d"
+      ],
       "distribution": "direct-download",
       "licenceStatus": "commercial"
     },
@@ -3227,7 +3280,9 @@
       "reservationBytes": 2989127072,
       "thumbnail": "shap-e-img2img.png",
       "family": "3d",
-      "capabilities": ["img23d"],
+      "capabilities": [
+        "img23d"
+      ],
       "readsTorchWeights": true
     },
     {
@@ -3409,7 +3464,9 @@
       "reservationBytes": 8118738554,
       "thumbnail": "trellis2-4b.png",
       "family": "3d",
-      "capabilities": ["img23d"],
+      "capabilities": [
+        "img23d"
+      ],
       "distribution": "direct-download",
       "licenceStatus": "commercial",
       "needsCuda": true
@@ -3430,8 +3487,12 @@
       "diskBytes": 2500000000,
       "reservationBytes": 8000000000,
       "family": "3d",
-      "capabilities": ["img23d"],
-      "serves": ["3d/txt23d"],
+      "capabilities": [
+        "img23d"
+      ],
+      "serves": [
+        "3d/txt23d"
+      ],
       "runtimeStatus": "unsupported",
       "needsCuda": true
     },
@@ -3440,20 +3501,176 @@
       "name": "InstantMesh",
       "summary": "Image to mesh in about 10 s, regular faces. NVIDIA CUDA",
       "releasedAt": "2024-04-10",
-      "format": "safetensors",
+      "format": "pickle",
       "loader": "plugin",
       "modality": "mesh",
       "rank": 1,
       "licence": "Apache-2.0",
       "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
       "source": "https://huggingface.co/TencentARC/InstantMesh",
-      "files": [],
-      "diskBytes": 3500000000,
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/model_index.json",
+          "bytes": 2630,
+          "sha256": "68379107f5a6ed36ec5d8163c839cfad8c4f1eb72d9a2fe34085b4bf8d657275",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/scheduler/scheduler_config.json",
+          "bytes": 391,
+          "sha256": "e1e65eb35f07f2a83c34bfab2c72e28e8fc9eba8defdc7dd3142fa9dcbe437f3",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "processor",
+          "name": "feature_extractor_clip/preprocessor_config.json",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/feature_extractor_clip/preprocessor_config.json",
+          "bytes": 466,
+          "sha256": "205d45875859846dc1ca211b9a19f5db72f47e953b396954ee34d48d8e95c3c6",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "processor",
+          "name": "feature_extractor_vae/preprocessor_config.json",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/feature_extractor_vae/preprocessor_config.json",
+          "bytes": 369,
+          "sha256": "4fe6c317c287d93865e9322c3a6f5dfe9c5353e489ded6597d47c58e967f9664",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/text_encoder/config.json",
+          "bytes": 708,
+          "sha256": "59cfe16e7807e61afce3f0123222141d163432f16c17f53c50a8d4362dffe89c",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/text_encoder/model.safetensors",
+          "bytes": 680820392,
+          "sha256": "bc1827c465450322616f06dea41596eac7d493f4e95904dcb51f0fc745c4e13f",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/tokenizer/merges.txt",
+          "bytes": 524619,
+          "sha256": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/tokenizer/special_tokens_map.json",
+          "bytes": 460,
+          "sha256": "f118ab3a983206e4f32583448de6bd6aae4ee21869135cef1f5848a753cdaab6",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/tokenizer/tokenizer_config.json",
+          "bytes": 855,
+          "sha256": "516314ccab66918d7cb647480ac27abd3520d14e1e5825aac99f50c851c16071",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/tokenizer/vocab.json",
+          "bytes": 1059962,
+          "sha256": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/vae/config.json",
+          "bytes": 745,
+          "sha256": "d204d8c26f7b0b98a71f57d2b4e92f217016c34f30479915843f1a949ebb8253",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/vae/diffusion_pytorch_model.safetensors",
+          "bytes": 167335342,
+          "sha256": "3e4c08995484ee61270175e9e7a072b66a6e4eeb5f0c266667fe1f45b90daf9a",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "image-encoder",
+          "name": "vision_encoder/config.json",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/vision_encoder/config.json",
+          "bytes": 672,
+          "sha256": "c3696fae6f7e5429e71d0474139c7c5f462fa222a25ef436e686429dd90f7eb8",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "image-encoder",
+          "name": "vision_encoder/model.safetensors",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/vision_encoder/model.safetensors",
+          "bytes": 1264217240,
+          "sha256": "ae616c24393dd1854372b0639e5541666f7521cbe219669255e865cb7f89466a",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "unet",
+          "name": "unet/config.json",
+          "url": "https://huggingface.co/sudo-ai/zero123plus-v1.2/resolve/2da07e89919e1a130c9b5add1584c70c7aa065fd/unet/config.json",
+          "bytes": 1964,
+          "sha256": "3da423cd254e7b4f5911b9c72f3d4ee11807084bdb8914475ef72780a2ff95bc",
+          "revision": "2da07e89919e1a130c9b5add1584c70c7aa065fd"
+        },
+        {
+          "role": "unet",
+          "name": "unet/diffusion_pytorch_model.bin",
+          "url": "https://huggingface.co/TencentARC/InstantMesh/resolve/b785b4ecfb6636ef34a08c748f96f6a5686244d0/diffusion_pytorch_model.bin",
+          "bytes": 1732056502,
+          "sha256": "9d78d78421d1feb6871d13e13e86ed8099628648d7d9c51ffca9015b7d5fa3c4",
+          "upstream": "https://huggingface.co/sudo-ai/zero123plus-v1.2",
+          "revision": "b785b4ecfb6636ef34a08c748f96f6a5686244d0"
+        },
+        {
+          "role": "ckpts",
+          "name": "lrm/instant_nerf_large.ckpt",
+          "url": "https://huggingface.co/TencentARC/InstantMesh/resolve/b785b4ecfb6636ef34a08c748f96f6a5686244d0/instant_nerf_large.ckpt",
+          "bytes": 1514088389,
+          "sha256": "530a344ea9b856e012492b9644ab73532ddf7c06d548f60c489e49a528322fb9",
+          "revision": "b785b4ecfb6636ef34a08c748f96f6a5686244d0"
+        },
+        {
+          "role": "image-processor",
+          "name": "dino/config.json",
+          "url": "https://huggingface.co/facebook/dino-vitb16/resolve/f205d5d8e640a89a2b8ef0369670dfc37cc07fc2/config.json",
+          "bytes": 454,
+          "sha256": "b87c0270b97db085fd82cf114a761fd0f62ae7914fbd407c752a2260646b689c",
+          "revision": "f205d5d8e640a89a2b8ef0369670dfc37cc07fc2"
+        },
+        {
+          "role": "image-processor",
+          "name": "dino/preprocessor_config.json",
+          "url": "https://huggingface.co/facebook/dino-vitb16/resolve/f205d5d8e640a89a2b8ef0369670dfc37cc07fc2/preprocessor_config.json",
+          "bytes": 244,
+          "sha256": "44298553bf686c8c3d1b128f24fae01f76235f66bda5516f1c6c0c57bba1b47f",
+          "revision": "f205d5d8e640a89a2b8ef0369670dfc37cc07fc2"
+        }
+      ],
+      "diskBytes": 5360112404,
       "reservationBytes": 10000000000,
       "family": "3d",
-      "capabilities": ["img23d"],
-      "runtimeStatus": "unsupported",
-      "needsCuda": true
+      "capabilities": [
+        "img23d"
+      ],
+      "needsCuda": true,
+      "distribution": "direct-download"
     },
     {
       "id": "wonder3d",
@@ -3471,7 +3688,9 @@
       "diskBytes": 4000000000,
       "reservationBytes": 10000000000,
       "family": "3d",
-      "capabilities": ["img23d"],
+      "capabilities": [
+        "img23d"
+      ],
       "runtimeStatus": "unsupported",
       "needsCuda": true
     },
@@ -3491,8 +3710,12 @@
       "diskBytes": 5000000000,
       "reservationBytes": 12000000000,
       "family": "3d",
-      "capabilities": ["img23d"],
-      "serves": ["3d/txt23d"],
+      "capabilities": [
+        "img23d"
+      ],
+      "serves": [
+        "3d/txt23d"
+      ],
       "runtimeStatus": "unsupported",
       "needsCuda": true
     },
@@ -3512,11 +3735,13 @@
       "diskBytes": 5500000000,
       "reservationBytes": 12000000000,
       "family": "3d",
-      "capabilities": ["img23d"],
+      "capabilities": [
+        "img23d"
+      ],
       "runtimeStatus": "unsupported",
       "needsCuda": true
     },
-        {
+    {
       "id": "triposg",
       "name": "TripoSG",
       "summary": "High-fidelity geometry from one image, 8 GB VRAM. NVIDIA CUDA",
@@ -3750,12 +3975,16 @@
       "reservationBytes": 2507643548,
       "thumbnail": "controlnet-canny-sdxl.png",
       "family": "image",
-      "capabilities": ["controlnet"],
+      "capabilities": [
+        "controlnet"
+      ],
       "attaches": {
         "model": "ssd-1b",
         "as": "controlnet"
       },
-      "serves": ["texture/controlnet_texture"]
+      "serves": [
+        "texture/controlnet_texture"
+      ]
     }
   ],
   "image/reference": [
@@ -3800,14 +4029,18 @@
       "reservationBytes": 2196250026,
       "thumbnail": "ip-adapter-sdxl.png",
       "family": "image",
-      "capabilities": ["reference"],
+      "capabilities": [
+        "reference"
+      ],
       "attaches": {
         "model": "ssd-1b",
         "as": "ip-adapter",
         "subfolder": "sdxl_models",
         "weightName": "ip-adapter_sdxl.safetensors"
       },
-      "serves": ["texture/reference_texture"]
+      "serves": [
+        "texture/reference_texture"
+      ]
     }
   ],
   "audio/video2audio": [
@@ -3860,7 +4093,9 @@
       "reservationBytes": 1625582553,
       "thumbnail": "mmaudio-small-44k.png",
       "family": "audio",
-      "capabilities": ["video2audio"],
+      "capabilities": [
+        "video2audio"
+      ],
       "distribution": "direct-download",
       "licenceStatus": "non-commercial"
     },
@@ -3913,7 +4148,9 @@
       "reservationBytes": 2554376795,
       "thumbnail": "mmaudio-medium-44k.png",
       "family": "audio",
-      "capabilities": ["video2audio"],
+      "capabilities": [
+        "video2audio"
+      ],
       "distribution": "direct-download",
       "licenceStatus": "non-commercial"
     },
@@ -3966,7 +4203,9 @@
       "reservationBytes": 3370803661,
       "thumbnail": "mmaudio-large-44k.png",
       "family": "audio",
-      "capabilities": ["video2audio"],
+      "capabilities": [
+        "video2audio"
+      ],
       "distribution": "direct-download",
       "licenceStatus": "non-commercial"
     }
@@ -4030,10 +4269,14 @@
       "reservationBytes": 1142098602,
       "thumbnail": "trellis-text-large.png",
       "family": "3d",
-      "capabilities": ["3d23d"],
+      "capabilities": [
+        "3d23d"
+      ],
       "distribution": "direct-download",
       "licenceStatus": "commercial",
-      "serves": ["3d/txt23d"],
+      "serves": [
+        "3d/txt23d"
+      ],
       "needsCuda": true
     },
     {
@@ -4190,10 +4433,14 @@
       "reservationBytes": 1649619433,
       "thumbnail": "trellis-image-large.png",
       "family": "3d",
-      "capabilities": ["3d23d"],
+      "capabilities": [
+        "3d23d"
+      ],
       "distribution": "direct-download",
       "licenceStatus": "commercial",
-      "serves": ["3d/img23d"],
+      "serves": [
+        "3d/img23d"
+      ],
       "needsCuda": true
     }
   ],
@@ -4938,7 +5185,9 @@
       "reservationBytes": 16874174930,
       "thumbnail": "genex-world-initializer.png",
       "family": "skybox",
-      "capabilities": ["img2skybox"],
+      "capabilities": [
+        "img2skybox"
+      ],
       "distribution": "direct-download",
       "licenceStatus": "commercial"
     }

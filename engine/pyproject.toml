@@ -24,7 +24,7 @@ diffusion = [
   "imageio>=2.34",
   "imageio-ffmpeg>=0.5",
 ]
-# TripoSR / TRELLIS / MMAudio. NEVER installed by `pnpm engine:check`.
+# TripoSR / TRELLIS / TripoSG / InstantMesh / MMAudio. NEVER installed by `pnpm engine:check`.
 plugin = [
   "torch>=2.6",
   "einops>=0.7",
@@ -35,6 +35,9 @@ plugin = [
   "imageio>=2.34",
   "rembg>=2.0",
   "torchaudio>=2.6",
+  "torchvision>=0.21",
+  # InstantMesh reads its iso-surface out of a triplane grid with marching cubes.
+  "pymcubes>=0.1",
 ]
 
 [dependency-groups]

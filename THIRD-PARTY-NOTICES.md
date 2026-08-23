@@ -1289,9 +1289,9 @@ https://huggingface.co/TencentARC/InstantMesh
 ```
 
 ```
-Image to mesh in about 10 s, regular faces. NVIDIA CUDA.
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible. Nothing is fetched until a runtime can actually run them.
+Image to mesh in about 10 s, regular faces. NVIDIA CUDA, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
 
 Copyright Tencent ARC Lab.
 

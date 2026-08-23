@@ -15,6 +15,7 @@
  * it arrives and refuses a file that does not match, so a wrong figure here costs a refused
  * install — never a bad file at the path a runtime loads from.
  */
+import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -41,6 +42,17 @@ async function commitOf(repo, revision) {
   return (await json(`https://huggingface.co/api/models/${repo}/revision/${revision}`)).sha
 }
 
+/** Above this, a file without an `lfs` entry is a mistake to report rather than bytes to pull. */
+const SMALL_ENOUGH = 8 * 1024 * 1024
+
+async function digestOf(repo, revision, path) {
+  const url = `https://huggingface.co/${repo}/resolve/${revision}/${path}`
+  const response = await fetch(url, { redirect: 'follow' })
+  if (!response.ok) throw new Error(`${url} answered ${response.status}`)
+
+  return createHash('sha256').update(new Uint8Array(await response.arrayBuffer())).digest('hex')
+}
+
 async function entryOf(repo, revision, path) {
   const folder = path.includes('/') ? `/${path.slice(0, path.lastIndexOf('/'))}` : ''
   const tree = await json(`https://huggingface.co/api/models/${repo}/tree/${revision}${folder}`)
@@ -48,8 +60,11 @@ async function entryOf(repo, revision, path) {
   if (!found) throw new Error(`${path} is not in ${repo}@${revision}`)
 
   // A plain file has no `lfs`, and its `oid` is a GIT blob hash — not a SHA-256 of the contents.
-  // Saying so beats writing forty hex characters that would fail every download.
-  if (!found.lfs) throw new Error(`${path} is not an LFS file: no published SHA-256`)
+  // Those are configs and vocabularies, so the digest is read off the bytes themselves.
+  if (!found.lfs) {
+    if (found.size > SMALL_ENOUGH) throw new Error(`${path} is ${found.size} bytes and not LFS`)
+    return { bytes: found.size, sha256: await digestOf(repo, revision, path) }
+  }
 
   return { bytes: found.size, sha256: found.lfs.oid }
 }

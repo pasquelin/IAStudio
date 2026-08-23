@@ -1,5 +1,6 @@
 """
-Adapters for families diffusers does not open: TripoSR, TRELLIS, TRELLIS.2, TripoSG, MMAudio.
+Adapters for families diffusers does not open: TripoSR, TRELLIS, TRELLIS.2, TripoSG,
+InstantMesh, MMAudio.
 
 The Python is ours (vendored or an extra). Weights stay in the digested folder, with no `.py`.
 `torch.load(..., weights_only=True)` is the pickle path — PyTorch 2.6 refuses reducers.
@@ -107,6 +108,9 @@ class PluginAdapter:
         elif model_id == "triposg":
             self._handle = _load_triposg(folder)
             self._kind = "triposg"
+        elif model_id == "instantmesh":
+            self._handle = _load_instantmesh(folder)
+            self._kind = "instantmesh"
         elif model_id in MMAUDIO_WEIGHTS:
             self._handle = _load_mmaudio(model_id, folder, device)
             self._kind = "mmaudio"
@@ -153,6 +157,8 @@ class PluginAdapter:
             _run_trellis2(self._handle, params, destination)
         elif self._kind == "triposg":
             _run_triposg(self._handle, params, destination, held.device)
+        elif self._kind == "instantmesh":
+            _run_instantmesh(self._handle, params, destination, held.device)
         else:
             _run_mmaudio(self._handle, params, destination)
 
@@ -303,6 +309,93 @@ def _run_triposg(pipeline: Any, params: dict[str, Any], destination: str, device
     trimesh = _require("trimesh", "plugin")
     mesh = trimesh.Trimesh(outputs[0].astype("float32"), outputs[1])
     mesh.export(destination)
+
+
+# `configs/instant-nerf-large.yaml` of the InstantMesh repository. The checkpoint is loaded with
+# strict=True, so a figure that drifts refuses the load rather than opening a wrong model.
+INSTANT_NERF_LARGE = {
+    "encoder_feat_dim": 768,
+    "encoder_freeze": False,
+    "transformer_dim": 1024,
+    "transformer_layers": 16,
+    "transformer_heads": 16,
+    "triplane_low_res": 32,
+    "triplane_high_res": 64,
+    "triplane_dim": 80,
+    "rendering_samples_per_ray": 128,
+}
+
+
+def _load_instantmesh(folder: str) -> Any:
+    import torch
+
+    if not torch.cuda.is_available():
+        raise LoadRefusedError("InstantMesh needs CUDA")
+    _require("instantmesh.zero123plus", "plugin")
+    from diffusers import EulerAncestralDiscreteScheduler
+    from instantmesh.models.lrm import InstantNeRF
+    from instantmesh.zero123plus import Zero123PlusPipeline
+
+    root = Path(folder)
+    views = Zero123PlusPipeline.from_pretrained(
+        folder, local_files_only=True, torch_dtype=torch.float16
+    )
+    views.scheduler = EulerAncestralDiscreteScheduler.from_config(
+        views.scheduler.config, timestep_spacing="trailing"
+    )
+    views.to("cuda")
+
+    shape = InstantNeRF(encoder_model_name=str(root / "dino"), **INSTANT_NERF_LARGE)
+    weights = _torch_load(root / "lrm/instant_nerf_large.ckpt")
+    lrm = "lrm_generator."
+    shape.load_state_dict(
+        {key[len(lrm) :]: value for key, value in weights.items() if key.startswith(lrm)},
+        strict=True,
+    )
+    shape.to("cuda").eval()
+    return {"views": views, "shape": shape}
+
+
+def _run_instantmesh(
+    handle: dict[str, Any], params: dict[str, Any], destination: str, device: str
+) -> None:
+    image = params.get("image")
+    if not image:
+        raise LoadRefusedError(generation_refusal(params) or "a generation needs a picture")
+    import numpy as np
+    import torch
+    from einops import rearrange
+    from instantmesh.camera import get_zero123plus_input_cameras
+    from PIL import Image
+    from torchvision.transforms import v2
+
+    rembg = _require("rembg", "plugin")
+    picture = rembg.remove(Image.open(str(image)).convert("RGB"))
+    seed = int(params["seed"]) if params.get("seed") not in (None, "") else 1
+    steps = int(params["steps"]) if params.get("steps") not in (None, "") else 75
+    cfg = float(params["cfgScale"]) if params.get("cfgScale") not in (None, "") else 4.0
+
+    # One 640x960 sheet of six views, which the reconstruction reads as a batch of six.
+    sheet = handle["views"](
+        picture,
+        num_inference_steps=steps,
+        guidance_scale=cfg,
+        generator=torch.Generator(device=device).manual_seed(seed),
+    ).images[0]
+    views = torch.from_numpy(np.asarray(sheet, dtype=np.float32) / 255.0)
+    views = rearrange(views.permute(2, 0, 1).contiguous(), "c (n h) (m w) -> (n m) c h w", n=3, m=2)
+    views = v2.functional.resize(views.unsqueeze(0).to(device), 320, antialias=True).clamp(0, 1)
+
+    with torch.no_grad():
+        planes = handle["shape"].forward_planes(
+            views, get_zero123plus_input_cameras(batch_size=1, radius=4.0).to(device)
+        )
+        vertices, faces, colours = handle["shape"].extract_mesh(planes)
+
+    trimesh = _require("trimesh", "plugin")
+    # The repository's own glTF convention, which is the one this studio's viewer reads.
+    turned = vertices @ np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]])
+    trimesh.Trimesh(turned, faces, vertex_colors=colours).export(destination)
 
 
 def _load_mmaudio(model_id: str, folder: str, device: str) -> Any:
