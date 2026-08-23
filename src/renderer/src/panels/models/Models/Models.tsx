@@ -19,7 +19,6 @@ import { ModelDownloadDialog } from './ModelDownloadDialog'
 import { getBridge } from '@/services/bridge'
 import { modelCollectionOf, useModels } from '@/stores/models'
 import { useAiModels } from '@/stores/aiModels'
-import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { EmptyState } from '@/design/EmptyState'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
@@ -68,7 +67,9 @@ export function Models({ family }: ModelsProps) {
   const selectedId = useModelForFamily(family)
   const select = useModels(state => state.select)
   const chooseAiProvider = useAiModels(state => state.chooseAiProvider)
-  const projectPath = useProject(state => state.project?.path ?? null)
+  // 🛑 From the overview and not from `useProject`: this browser now also renders in the settings
+  // window, which never connects the project store — so the scope read `app` with a project open.
+  const projectPath = useAiModels(state => state.overview?.projectPath ?? null)
   const authenticated = useSettings(state => state.auth.authenticated)
   const plan = usePlanAccess()
 

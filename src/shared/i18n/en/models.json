@@ -24,7 +24,8 @@
     "modelScope_cloud": "Cloud",
     "modelScope_installed": "Installed",
     "modelInstalled": "Installed",
-    "modelScopeHint": "Narrows the list to that source"
+    "modelScopeHint": "Narrows the list to that source",
+    "followSelection": "Follow the selection"
   },
   "models": {
     "none": "No model in this workspace.",

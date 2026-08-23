@@ -1,14 +1,15 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { providerOfModel, type AiRoleId } from '@shared/domain/aiRole'
 import type { ModelSummary } from '@shared/domain/model'
 import type { PlanAccess } from '@shared/domain/plan'
 import { ModelPicker } from '@/design/ModelPicker/ModelPicker'
+import { ModelDownloadDialog } from '@/panels/models/Models/ModelDownloadDialog'
 import { runtimeLabel } from '@/helpers/runtimeLabel'
 import { useModelsForCapability } from '@/hooks/useModelsForCapability'
 import { useModelReach, type ModelRefusalWord } from '@/hooks/useModelReach'
 import { useModels } from '@/stores/models'
 import { useAiModels } from '@/stores/aiModels'
-import { useProject } from '@/stores/project'
 
 export type GeneratorModelProps = {
   capability: AiRoleId
@@ -45,20 +46,31 @@ export function GeneratorModel({ capability, modelId, name, plan }: GeneratorMod
   const models = useModelsForCapability(capability)
   const select = useModels(state => state.select)
   const chooseAiProvider = useAiModels(state => state.chooseAiProvider)
-  const projectPath = useProject(state => state.project?.path ?? null)
+  const projectPath = useAiModels(state => state.overview?.projectPath ?? null)
   const reachOf = useModelReach(plan)
 
   const refusalOf = (model: ModelSummary): ModelRefusalWord | undefined => reachOf(model).refusal
   const chosen = models.find(one => one.id === modelId)
+  const [offered, setOffered] = useState<ModelSummary | null>(null)
 
   return (
     <div className="px-2 pt-2">
+      {offered && <ModelDownloadDialog model={offered} onClose={() => setOffered(null)} />}
+
       <ModelPicker
         models={models}
         value={modelId}
         onChange={id => {
           const model = models.find(one => one.id === id)
           if (!model) return
+
+          // 🛑 The one refusal the studio can lift itself: arming weights that are not on the
+          // disk builds a generation that cannot run, where the offer to fetch them is right
+          // here. ADR-23 § D — the panel downloads or sends to configure, without leaving.
+          if (reachOf(model).fetchable) {
+            setOffered(model)
+            return
+          }
 
           select(capability, id)
           void chooseAiProvider(

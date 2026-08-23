@@ -109,7 +109,7 @@ export type ToolPlacement = {
    * The state itself is not answered here — `shared/` holds no runtime dependency — but which
    * question to ask is a property of the panel, and it belongs beside the panel.
    */
-  requires?: 'project' | 'model' | 'git'
+  requires?: 'project' | 'git'
 }
 
 export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']

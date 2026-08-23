@@ -24,7 +24,8 @@
     "modelScope_cloud": "Cloud",
     "modelScope_installed": "Installé",
     "modelInstalled": "Installé",
-    "modelScopeHint": "Restreint la liste à cette provenance"
+    "modelScopeHint": "Restreint la liste à cette provenance",
+    "followSelection": "Suivre la sélection"
   },
   "models": {
     "none": "Aucun modèle dans cet espace.",

@@ -1,13 +1,12 @@
 import { useMemo } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
-import { layerById } from '@/engines/canvas/canvasState'
 import type { AssetType } from '@shared/domain/asset'
 import { availableInputsOf, type GenerationInput } from '@/generation/generationInputs'
 import { resolveCapability, type CapabilityChoice } from '@/generation/capabilityResolver'
 import { workspaceById } from '@/helpers/workspaces'
 import { useAssets, assetsById } from '@/stores/assets'
-import { canvasOf, useCanvases } from '@/stores/canvases'
-import { activeImageId, activeSceneId, useDocuments } from '@/stores/documents'
+import { activeSceneId, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { latestGenerationIds, useJobs } from '@/stores/jobs'
@@ -45,17 +44,16 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
    * whole panel — form, picker and sources.
    */
   const sceneId = useDocuments(activeSceneId)
-  const meshes = useScenes(state => (sceneId ? selectedMeshesOf(sceneOf(state, sceneId)) : NONE))
+  // 🛑 `useShallow`, and it is not a nicety: the selector builds an array, zustand compares
+  // snapshots with `Object.is`, and a fresh one per render is an endless re-render the moment a
+  // scene holds one selected model.
+  const meshes = useScenes(
+    useShallow(state => (sceneId ? selectedMeshesOf(sceneOf(state, sceneId)) : NONE)),
+  )
 
   // § 24: what the last generation produced, so a chain starts from it without a round trip
   // through the shelf. Ids rather than rows, so a catalogue refresh does not re-render this.
   const producedIds = useJobs(latestGenerationIds)
-
-  const imageId = useDocuments(activeImageId)
-  const maskedLayer = useCanvases(state => (imageId ? maskedLayerNameOf(state, imageId) : null))
-  const picture = useDocuments(state =>
-    imageId ? (state.documents[imageId]?.title ?? null) : null,
-  )
 
   const inputs = useMemo(() => {
     const named = (ids: readonly string[]): { id: string; name: string; type: AssetType }[] =>
@@ -67,11 +65,9 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
     return availableInputsOf({
       selectedAssets: named(pickedIds),
       selectedMeshes: meshes,
-      activePicture: picture === null ? null : { name: picture },
-      activeMask: maskedLayer === null ? null : { name: maskedLayer },
       results: named(producedIds),
     })
-  }, [pickedIds, rows, meshes, picture, maskedLayer, producedIds])
+  }, [pickedIds, rows, meshes, producedIds])
 
   // Memoised with the inputs it reads: the resolution allocates a contract per required input,
   // and the panel re-renders on every keystroke of the form below it.
@@ -102,19 +98,4 @@ function selectedMeshesOf(
   )
 
   return picked.length === 0 ? NONE : picked
-}
-
-/**
- * The armed layer's name when its mask is ticked, and nothing otherwise. `enabled`, not merely
- * present: the canvas does not honour a mask whose box is unticked, and offering it would ask
- * the model to repaint a region nothing on screen shows.
- */
-function maskedLayerNameOf(
-  state: Parameters<typeof canvasOf>[0],
-  documentId: string,
-): string | null {
-  const canvas = canvasOf(state, documentId)
-  const layer = layerById(canvas, canvas.activeLayerId)
-
-  return layer?.mask?.enabled === true ? layer.name : null
 }

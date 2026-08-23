@@ -91,9 +91,22 @@ describe('an operation the person asked for', () => {
     expect(held).toBe(true)
   })
 
-  // What it cannot do is survive losing its inputs: the panel would offer a Generate that dies.
-  it('gives way once the context can no longer reach it', () => {
-    const { chosen, forced } = resolveCapability('image', [], aiRoleId('image', 'img2img'))
+  /**
+   * 🛑 It survives losing its inputs, and that is the point: an edit forces an employment AND
+   * fills its form — the flattened picture is uploaded into the preset, where the context cannot
+   * see it. Dropping it for being unreachable threw away the generation just prepared.
+   */
+  it('holds even where the context alone could not reach it', () => {
+    const forced = aiRoleId('image', 'img2img')
+    const { chosen, reachable } = resolveCapability('image', [], forced)
+
+    expect(chosen).toBe(forced)
+    expect(reachable).not.toContain(forced)
+  })
+
+  // A name no family declares has no contract, so there is nothing to honour.
+  it('falls back to the context for an employment of another family', () => {
+    const { chosen, forced } = resolveCapability('image', [], aiRoleId('3d', 'txt23d'))
 
     expect(chosen).toBe(aiRoleId('image', 'txt2img'))
     expect(forced).toBe(false)

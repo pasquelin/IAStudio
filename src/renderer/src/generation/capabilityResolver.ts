@@ -5,7 +5,7 @@ import {
   type AvailableInput,
   type CapabilityContract,
 } from '@shared/domain/aiCapability'
-import { aiRoleId, type AiRoleId } from '@shared/domain/aiRole'
+import { aiRoleId, partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
 import { CAPABILITIES_BY_FAMILY, type ModelFamily } from '@shared/domain/model'
 
 /** Which operation the workspace is about to run: detected, overridable, and never invented. */
@@ -43,9 +43,17 @@ export function resolveCapability(
   })
   const reachable = offered.map(one => one.role)
 
-  // What the person asked for wins while it still stands: a selection changing under their hand
-  // must not take the operation away from them.
-  if (forced && reachable.includes(forced)) return { chosen: forced, reachable, forced: true }
+  /**
+   * 🛑 What was asked for wins, reachable or not. An edit forces an employment AND fills its form
+   * — the flattened picture is already uploaded, in the preset, where the context cannot see it —
+   * so dropping it for being unreachable threw away the very generation it had just prepared.
+   * What refuses an empty required field is the form, one control away.
+   */
+  // Of THIS family, which the caller has already derived from the forced role when there is one:
+  // honouring a role of another family here would answer about a catalogue nobody asked for.
+  if (forced && partsOfRole(forced)?.family === family) {
+    return { chosen: forced, reachable, forced: true }
+  }
 
   const best = offered.reduce<{ role: AiRoleId; used: number } | null>((held, one) => {
     const used = depth(one.contract, available)

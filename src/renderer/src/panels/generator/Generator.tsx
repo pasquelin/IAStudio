@@ -1,5 +1,5 @@
 import { mdiCreationOutline } from '@mdi/js'
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
 import { useDescriptor } from '@/hooks/useDescriptor'
@@ -9,6 +9,7 @@ import { usePlanAccess } from '@/hooks/usePlanAccess'
 import { usePlanRefusal } from '@/hooks/usePlanRefusal'
 import { modelIsOnThisMachine } from '@/helpers/modelForCapability'
 import { referencePictures, type FormValues } from '@/helpers/dynamicForm'
+import { fillSourceFields } from '@/spaces/image/aiFields'
 import { registerGenerator } from '@/assistant/generatorBridge'
 import { dictationAccessory } from '@/dictation/DictationField'
 import { failureKeyOf } from '@/services/failureMessage'
@@ -51,7 +52,7 @@ export function Generator() {
   // It is deliberately not cleared once used: `DynamicForm` rebuilds its defaults whenever the
   // preset changes, so dropping it would blank the form under the hand that is filling it. It
   // stays until the next "regenerate" replaces it, which reads as the last settings used.
-  const preset = useModels(state =>
+  const prepared = useModels(state =>
     capability.chosen ? state.preset[capability.chosen] : undefined,
   )
   const modelId = useModelForCapability(capability.chosen)
@@ -67,6 +68,18 @@ export function Generator() {
   const submit = useJobs(state => state.submit)
 
   const descriptor = useDescriptor(modelId)
+
+  /**
+   * 🛑 What the form opens on: the values an edit prepared, over the sources the workspace holds.
+   *
+   * Without this the panel DREW the sources and sent none of them — while those same sources
+   * decided which operation ran. Selecting a picture switched the generator to image-to-image and
+   * left the picture behind.
+   */
+  const preset = useMemo(
+    () => ({ ...fillSourceFields(descriptor.data?.fields ?? [], inputs), ...prepared }),
+    [descriptor.data, inputs, prepared],
+  )
   // Before the guards below return early: a hook cannot be called conditionally.
   const cost = useCostEstimate(modelId, descriptor.data?.fields)
   const plan = usePlanAccess()
@@ -90,6 +103,12 @@ export function Generator() {
    */
   const [runningId, setRunningId] = useState<string | null>(null)
   const running = useJobs(state => state.jobs.find(job => job.id === runningId) ?? null)
+  /**
+   * 🛑 Closed BEFORE the round trip and not after it: `submit` reaches the main process, and a
+   * second press while it is in flight pays for two generations. `running` cannot answer for that
+   * window — the job has no id yet.
+   */
+  const [submitting, setSubmitting] = useState(false)
 
   /**
    * Runs the generation and answers the job, which the button's own handler discards.
@@ -101,11 +120,15 @@ export function Generator() {
     (values: FormValues): Promise<Job | null> => {
       if (!modelId) return Promise.resolve(null)
       const claim = claimOnSubmit()
-      return submit({ id: modelId }, values).then(job => {
-        claim(job)
-        setRunningId(job?.id ?? null)
-        return job
-      })
+      setSubmitting(true)
+
+      return submit({ id: modelId }, values)
+        .then(job => {
+          claim(job)
+          setRunningId(job?.id ?? null)
+          return job
+        })
+        .finally(() => setSubmitting(false))
     },
     [modelId, submit],
   )
@@ -180,10 +203,12 @@ export function Generator() {
       {modelId === null && (
         <EmptyState icon={mdiCreationOutline} message={t('generation.noModelForOperation')} />
       )}
-      {descriptor.isPending && (
+      {/* Both gated on a model: `useDescriptor(null)` is disabled, and a disabled query reads as
+          pending — so the two sentences were painted one under the other. */}
+      {modelId !== null && descriptor.isPending && (
         <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
       )}
-      {descriptor.isError && (
+      {modelId !== null && descriptor.isError && (
         <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(descriptor.error))} />
       )}
 
@@ -213,7 +238,11 @@ export function Generator() {
               // 🛑 The double-submission guard as well as the refusal: `submit` is a round trip,
               // and a second press before it answers pays for two generations.
               // `project` is not in this: the panel returns before the form when there is none.
-              busy={refusal !== undefined || (running !== null && !isFinished(running.status))}
+              busy={
+                refusal !== undefined ||
+                submitting ||
+                (running !== null && !isFinished(running.status))
+              }
               preset={preset}
               // Dictation alone now. Rewriting a prompt, translating it and reading the style of
               // the references left this panel for the assistant: they are things one ASKS for,

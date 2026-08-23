@@ -8,6 +8,7 @@ import { useAiModels } from '@/stores/aiModels'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FieldDescriptor, ModelDescriptor } from '@shared/domain/model'
+import type { Job } from '@shared/domain/job'
 import type { StudioBridge } from '@shared/ipc'
 import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -17,7 +18,10 @@ import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
 import { job } from '@/stores/job-fixtures'
 import { useJobs } from '@/stores/jobs'
+import type { Asset } from '@shared/domain/asset'
+import { useAssets } from '@/stores/assets'
 import { useProject } from '@/stores/project'
+import { useSelection } from '@/stores/selection'
 import { connectPreparation } from '@/stores/preparation'
 import { useSettings } from '@/stores/settings'
 import { chooseModels } from '@/stores/models-fixtures'
@@ -65,6 +69,21 @@ function renderPanel() {
   return render(withQueries(<Generator />))
 }
 
+/** A picture on the shelf, picked — the one source this panel can attach on its own. */
+function selectPicture(): void {
+  const picked: Asset = {
+    id: 'asset-picked',
+    name: 'concept.png',
+    type: 'image',
+    location: 'local',
+    createdAt: '2026-08-23T00:00:00.000Z',
+    tags: [],
+  }
+
+  useAssets.setState({ items: [picked] })
+  useSelection.getState().selectAssets([picked.id])
+}
+
 const PROJECT = {
   path: '/projects/demo',
   manifest: { version: 1, name: 'demo', createdAt: '', updatedAt: '' },
@@ -83,6 +102,8 @@ describe('Generator', () => {
     useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
     useLayouts.setState({ activeWorkspace: 'image' })
     useGeneration.setState({ forcedCapability: null })
+    useAssets.setState({ items: [] })
+    useSelection.getState().clear()
     // Both image employments, because a canvas is open above: the panel reads that as working
     // FROM the picture, and only the employment it settles on decides which model runs.
     chooseModels({
@@ -112,14 +133,27 @@ describe('Generator', () => {
   })
 
   /**
-   * The § 7 of the brief, on screen: a canvas open above reads as working FROM its picture, and
-   * nobody has to know that the word for it is `img2img`.
+   * The operation follows what is at hand, and nobody has to know the word for it is `img2img`.
+   * The picture is SELECTED: what the panel can send is what the catalogue holds a row for.
    */
-  it('reads the open canvas as the operation to run, and says which', async () => {
+  it('reads a selected picture as the operation to run, and says which', async () => {
+    selectPicture()
     renderPanel()
 
     await screen.findByText('Flux')
     expect(screen.getByLabelText('Opération')).toHaveValue('image/img2img')
+  })
+
+  /**
+   * 🛑 The sources are drawn AND sent: they decide which operation runs, so drawing one the
+   * request never carries would switch the model under the person and leave the picture behind.
+   */
+  it('opens the form on the picture it says it is working from', async () => {
+    selectPicture()
+    chooseModels({ [aiRoleId('image', 'img2img')]: 'model_flux' })
+    renderPanel()
+
+    expect(await screen.findByLabelText(/Image/)).toHaveValue('asset-picked')
   })
 
   /**
@@ -128,6 +162,7 @@ describe('Generator', () => {
    * be picked without leaving.
    */
   it('says an operation has no model rather than drawing an empty panel', async () => {
+    selectPicture()
     chooseModels({ [aiRoleId('image', 'txt2img')]: 'model_flux' })
     renderPanel()
 
@@ -441,6 +476,30 @@ describe('a generation in flight', () => {
     await generate()
 
     expect(await screen.findByRole('button', { name: /Générer/ })).toBeDisabled()
+  })
+
+  /**
+   * 🛑 The window the guard is FOR: while `submit` is in flight the job has no id yet, so
+   * following the job list cannot answer for it. Reading `running` alone left the button live
+   * for the whole round trip.
+   */
+  it('disarms it during the round trip, before any job id exists', async () => {
+    let answer: (settled: Job) => void = () => {}
+    installFakeBridge({
+      provider: {
+        describeModel: (modelId: string) =>
+          DESCRIPTORS[modelId]
+            ? Promise.resolve(DESCRIPTORS[modelId])
+            : Promise.reject(new Error('no model')),
+        generate: () => new Promise<Job>(resolve => (answer = resolve)),
+      },
+    })
+
+    renderPanel()
+    await generate()
+
+    expect(screen.getByRole('button', { name: /Générer/ })).toBeDisabled()
+    await act(async () => answer(job({ id: 'job_1', status: 'running' })))
   })
 
   it('offers to stop it, and asks the main process to', async () => {
