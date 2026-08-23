@@ -7,7 +7,6 @@ import { TitleBarSelect } from '@/design/TitleBarSelect'
 import { WINDOW_GROUP_LABEL } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { accountsByProvider, activeAccount, useAccounts } from '@/stores/accounts'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
@@ -94,13 +93,7 @@ export function AccountSelect() {
                   icon={mdiCloudOutline}
                   checked={account.active}
                   tick="one-of"
-                  tip={HINT_RIGHT(
-                    t(
-                      group.providerId === SCENARIO_CLOUD
-                        ? 'accounts.useHint'
-                        : 'accounts.useHintChat',
-                    ),
-                  )}
+                  tip={HINT_RIGHT(t('accounts.useHint'))}
                   onSelect={() => {
                     close()
                     void activate(account.id)

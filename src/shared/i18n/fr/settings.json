@@ -14,7 +14,7 @@
     "git": "Versions",
     "dictation": "Dictée",
     "ai": "Modèles d’IA",
-    "accountDescription": "Une clé par service, chiffrée par le trousseau. Scenario génère ; les autres servent l’Assistant.",
+    "accountDescription": "Une clé par service, chiffrée par le trousseau.",
     "appearanceDescription": "Thème et densité des contrôles.",
     "generationDescription": "File de génération et modèles par défaut, par famille.",
     "gitDescription": "Suivi des versions du dossier de projet, par git. Ne concerne que vos fichiers.",

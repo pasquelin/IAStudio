@@ -75,10 +75,7 @@ describe('AccountSelect', () => {
     await openMenu('Studio')
 
     const account = screen.getByRole('menuitemradio', { name: 'Studio' })
-    expect(account).toHaveAttribute(
-      'data-tooltip-content',
-      'Toutes les générations partiront désormais de cette clé',
-    )
+    expect(account).toHaveAttribute('data-tooltip-content', 'Cette clé sera celle de ce service')
     // A visible label answers for itself: an `aria-label` here would replace it (WCAG 2.5.3).
     expect(account).not.toHaveAttribute('aria-label')
     expect(screen.getByRole('menuitem', { name: 'Gérer les comptes…' })).toHaveAttribute(

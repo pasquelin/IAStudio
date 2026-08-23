@@ -14,7 +14,7 @@
     "git": "Versions",
     "dictation": "Dictation",
     "ai": "AI models",
-    "accountDescription": "One key per service, encrypted by the keychain. Scenario generates; the others serve Assistant.",
+    "accountDescription": "One key per service, encrypted by the keychain.",
     "appearanceDescription": "Theme and control density.",
     "generationDescription": "Generation queue and default models, per family.",
     "gitDescription": "Version tracking of the project folder, by git. Your files only.",
