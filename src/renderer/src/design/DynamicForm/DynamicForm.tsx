@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useId, useMemo, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import { ADVANCED_GROUP } from '@shared/domain/localFields'
 import type { FieldDescriptor } from '@shared/domain/model'
 import {
   buildBody,
@@ -20,6 +21,7 @@ import { useModelText } from '@/hooks/useModelText'
 import { Button } from '../Button'
 import { DynamicFormControl } from './DynamicFormControl'
 import { HINT_TOP } from '@/helpers/tooltip'
+import { sectionHandle } from '../scHandle'
 
 export type DynamicFormProps = {
   fields: readonly FieldDescriptor[]
@@ -80,7 +82,16 @@ export function DynamicForm({
   const formId = useId()
   const schema = useMemo(() => buildSchema(fields), [fields])
   const initial = useMemo(() => defaultValues(fields, preset), [fields, preset])
+  /**
+   * Whether the advanced group opens folded — § 14. Held here rather than derived, so unfolding
+   * it survives the model switch that follows: someone who opened the knobs meant to see them.
+   */
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const groups = useMemo(() => groupFields(fields), [fields])
+  // Split rather than reordered: the advanced knobs are drawn UNDER the button, and a fieldset
+  // hidden in place would leave the disclosure describing something above it.
+  const plain = groups.filter(([group]) => group !== ADVANCED_GROUP)
+  const advanced = groups.filter(([group]) => group === ADVANCED_GROUP)
   const dependencies = useMemo(() => dependencyKeys(fields), [fields])
 
   const { register, handleSubmit, watch, setValue, getValues, reset, formState } =
@@ -89,9 +100,17 @@ export function DynamicForm({
       defaultValues: initial,
     })
 
-  // Switching model swaps the whole descriptor set: keeping the previous values would carry a
-  // `guidance` from one model into another that never declared it.
-  useEffect(() => reset(initial), [initial, reset])
+  /**
+   * § 22: switching model keeps what the two have in common and drops the rest. `getValues()` is
+   * read INSIDE the effect, so it still answers with the form the previous descriptor built —
+   * `initial` above cannot see it, being computed during the render that already has the new
+   * fields.
+   */
+  useEffect(() => {
+    reset(defaultValues(fields, preset, getValues()))
+    // `initial` rather than `fields`: it is what changes when either half of it does, and
+    // depending on `getValues` would rerun this on nothing.
+  }, [initial, fields, preset, getValues, reset])
 
   // Subscribed, not rendered: `watch(callback)` reports every edit without making this component
   // a listener of its own form. The body is built the same way submitting builds it, so what is
@@ -115,6 +134,41 @@ export function DynamicForm({
     return <p className="text-muted p-2 text-xs">{t('generation.noParameter')}</p>
   }
 
+  const fieldsetOf = ([group, groupedFields]: (typeof groups)[number]) => (
+    <fieldset key={group} className="m-0 flex flex-col gap-2 border-0 p-0">
+      {group && group !== ADVANCED_GROUP && (
+        <legend className={cn(PANEL_GROUP_LABEL, 'p-0')}>{say(group)}</legend>
+      )}
+
+      {visibleFields(groupedFields, values).map(field => (
+        // Named THROUGH the label rather than by nesting the control in it: an accessory holds
+        // buttons, and everything a label wraps is read out as the control's own name.
+        <div key={field.key} className="flex flex-col gap-2 text-xs">
+          <label htmlFor={`${formId}${field.key}`} className="text-muted">
+            {say(field.label)}
+            {field.required && <span aria-hidden> *</span>}
+          </label>
+
+          <DynamicFormControl
+            id={`${formId}${field.key}`}
+            field={field}
+            registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
+            initial={initial[field.key]}
+            onRoll={() => setValue(field.key, randomSeed())}
+            accessory={accessory?.(field)}
+          />
+
+          {field.help && <span className="text-muted text-tiny">{say(field.help)}</span>}
+          {formState.errors[field.key] && (
+            <span role="alert" className="text-danger text-tiny">
+              {t('errors.invalidValue')}
+            </span>
+          )}
+        </div>
+      ))}
+    </fieldset>
+  )
+
   return (
     <form
       className="flex flex-col gap-3 p-2"
@@ -122,38 +176,7 @@ export function DynamicForm({
         void handleSubmit(submitted => onSubmit?.(buildBody(fields, submitted)))(event)
       }
     >
-      {groups.map(([group, groupedFields]) => (
-        <fieldset key={group} className="m-0 flex flex-col gap-2 border-0 p-0">
-          {group && <legend className={cn(PANEL_GROUP_LABEL, 'p-0')}>{say(group)}</legend>}
-
-          {visibleFields(groupedFields, values).map(field => (
-            // Named THROUGH the label rather than by nesting the control in it: an accessory
-            // holds buttons, and everything a label wraps is read out as the control's own name.
-            <div key={field.key} className="flex flex-col gap-2 text-xs">
-              <label htmlFor={`${formId}${field.key}`} className="text-muted">
-                {say(field.label)}
-                {field.required && <span aria-hidden> *</span>}
-              </label>
-
-              <DynamicFormControl
-                id={`${formId}${field.key}`}
-                field={field}
-                registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
-                initial={initial[field.key]}
-                onRoll={() => setValue(field.key, randomSeed())}
-                accessory={accessory?.(field)}
-              />
-
-              {field.help && <span className="text-muted text-tiny">{say(field.help)}</span>}
-              {formState.errors[field.key] && (
-                <span role="alert" className="text-danger text-tiny">
-                  {t('errors.invalidValue')}
-                </span>
-              )}
-            </div>
-          ))}
-        </fieldset>
-      ))}
+      {plain.map(fieldsetOf)}
 
       {submitLabel !== undefined && (
         <Button
@@ -168,6 +191,22 @@ export function DynamicForm({
               SIZE alone — an `opacity-70` read 3.03:1 on the accent, and this is a price. */}
           {submitNote && <span className="text-tiny ml-1.5">{submitNote}</span>}
         </Button>
+      )}
+
+      {/* Under the button, folded — § 14: seed, steps, guidance and strength are not what most
+          generations are about, and a panel that shows everything shows nothing. */}
+      {advanced.length > 0 && (
+        <details
+          open={advancedOpen}
+          onToggle={event => setAdvancedOpen(event.currentTarget.open)}
+          data-sc={sectionHandle('generation.advanced')}
+        >
+          <summary className={cn(PANEL_GROUP_LABEL, 'cursor-pointer p-0')}>
+            {say(ADVANCED_GROUP)}
+          </summary>
+
+          <div className="flex flex-col gap-2 pt-2">{advanced.map(fieldsetOf)}</div>
+        </details>
       )}
     </form>
   )

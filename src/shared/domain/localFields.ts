@@ -68,6 +68,14 @@ export type LocalFieldTemplate = Omit<FieldDescriptor, 'label' | 'help'> & {
 /** The key every modality names its prompt by — read rather than spelled a second time. */
 export const PROMPT_FIELD_KEY = 'prompt'
 
+/**
+ * The group a form folds away — § 14 of the unified panel.
+ *
+ * Shared because both sides write it: the templates below file their knobs under it, and the
+ * renderer decides what to fold on it. A second spelling would fold nothing and say nothing.
+ */
+export const ADVANCED_GROUP = 'advanced'
+
 const PROMPT: LocalFieldTemplate = {
   key: PROMPT_FIELD_KEY,
   kind: 'longText',
@@ -151,7 +159,7 @@ const STRENGTH: LocalFieldTemplate = {
   min: 0,
   max: 1,
   step: 0.05,
-  group: 'advanced',
+  group: ADVANCED_GROUP,
 }
 
 const NEGATIVE_PROMPT: LocalFieldTemplate = {
@@ -182,7 +190,7 @@ function cfgScale(base: { default: number; max: number }): LocalFieldTemplate {
     required: false,
     min: 0,
     step: 0.5,
-    group: 'advanced',
+    group: ADVANCED_GROUP,
     ...base,
   }
 }
@@ -235,7 +243,7 @@ const TEMPLATES: Record<LocalModality, readonly LocalFieldTemplate[]> = {
       min: 0,
       max: 1,
       step: 0.05,
-      group: 'advanced',
+      group: ADVANCED_GROUP,
     },
     {
       key: 'maxTokens',
@@ -245,7 +253,7 @@ const TEMPLATES: Record<LocalModality, readonly LocalFieldTemplate[]> = {
       default: 1024,
       min: 16,
       max: 32_768,
-      group: 'advanced',
+      group: ADVANCED_GROUP,
     },
     SEED,
   ],
