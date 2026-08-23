@@ -86,6 +86,8 @@
     "txt23d": "Text to 3D",
     "img23d": "Image to 3D",
     "3d23d": "3D to 3D",
+    "rig": "Rigging",
+    "motion": "Animation",
     "txt2audio": "Text to audio",
     "audio2audio": "Audio to audio",
     "video2audio": "Video to audio",
@@ -94,7 +96,10 @@
     "controlnet_texture": "Texture guidance",
     "reference_texture": "Texture reference",
     "txt2skybox": "Text to panorama",
-    "img2skybox": "Image to panorama"
+    "img2skybox": "Image to panorama",
+    "upscale": "Upscaling",
+    "cutout": "Background removal",
+    "vectorize": "Vectorisation"
   },
   "auth": {
     "key": "API key",

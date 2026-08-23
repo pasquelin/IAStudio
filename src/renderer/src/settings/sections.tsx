@@ -47,6 +47,9 @@ const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   'ai.audio': () => <AiSettings family="audio" />,
   'ai.texture': () => <AiSettings family="texture" />,
   'ai.skybox': () => <AiSettings family="skybox" />,
+  'ai.upscale': () => <AiSettings family="upscale" />,
+  'ai.background-removal': () => <AiSettings family="background-removal" />,
+  'ai.vectorization': () => <AiSettings family="vectorization" />,
 }
 
 function withContent(entry: SettingSectionEntry): SettingsSection {

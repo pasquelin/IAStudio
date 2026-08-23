@@ -64,8 +64,23 @@ describe('primaryRoleOf', () => {
     expect(primaryRoleOf('skybox')).toBe(aiRoleId('skybox', 'txt2skybox'))
   })
 
+  /**
+   * The three families the canvas edits reach for gained one on 2026-08-23, which is what lets a
+   * single preference table serve every employment. `other` is the one family that has none.
+   */
+  it('names the employment of a family that has exactly one', () => {
+    expect(primaryRoleOf('upscale')).toBe(aiRoleId('upscale', 'upscale'))
+    expect(primaryRoleOf('background-removal')).toBe(aiRoleId('background-removal', 'cutout'))
+  })
+
   it('answers nothing for a family that has no employment', () => {
-    expect(primaryRoleOf('upscale')).toBeNull()
+    expect(primaryRoleOf('other')).toBeNull()
+  })
+
+  // Appending is what keeps a family's default generation where it was: `3d` gained `rig` and
+  // `motion`, and text-to-3D is still what the space generates when nothing else is asked.
+  it('is unmoved by a capability appended to a family', () => {
+    expect(primaryRoleOf('3d')).toBe(aiRoleId('3d', 'txt23d'))
   })
 })
 

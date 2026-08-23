@@ -264,21 +264,96 @@ export type ModelSort = 'relevance' | 'recent' | 'oldest'
 export const MODEL_SORTS: readonly ModelSort[] = ['relevance', 'recent', 'oldest']
 
 /**
- * Capabilities worth offering as a filter, per family. Taken from the API's own enum, except
- * skybox: Scenario panoramas answer image capabilities and are found by tag. Combinations
- * like `controlnet_inpaint_ip_adapter` are filtered by their parts, not by name.
+ * Every capability a family has, and the ONE list a role may be composed from — `aiRoleId`
+ * refuses anything absent here, so a family with none can be served by nothing.
+ *
+ * Mostly the API's own enum. Five are the studio's own words, and they are NOT enum values:
+ * skybox panoramas answer image capabilities, and the last five of this record name employments
+ * the enum has no value for at all. What finds their models is `STUDIO_CAPABILITIES`, and a
+ * listing narrowed by one of them server-side answers nothing.
+ *
+ * ORDER IS A CONTRACT: `primaryRoleOf` takes the first, so a capability appended to a family
+ * leaves what that family generates by default alone. `rig` and `motion` are appended for that
+ * reason. Combinations like `controlnet_inpaint_ip_adapter` are filtered by their parts.
  */
 export const CAPABILITIES_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   image: ['txt2img', 'img2img', 'inpaint', 'outpaint', 'controlnet', 'reference'],
   video: ['txt2video', 'img2video', 'video2video'],
-  '3d': ['txt23d', 'img23d', '3d23d'],
+  '3d': ['txt23d', 'img23d', '3d23d', 'rig', 'motion'],
   audio: ['txt2audio', 'audio2audio', 'video2audio'],
   texture: ['txt2img_texture', 'img2img_texture', 'controlnet_texture', 'reference_texture'],
   skybox: ['txt2skybox', 'img2skybox'],
-  upscale: [],
-  'background-removal': [],
-  vectorization: [],
+  upscale: ['upscale'],
+  'background-removal': ['cutout'],
+  vectorization: ['vectorize'],
   other: [],
+}
+
+/**
+ * A capability the studio NAMES and the API's enum does not hold, with what finds its models.
+ *
+ * Without this a role like `3d/rig` would key a preference nothing could ever serve: `matches`
+ * narrows on the capabilities the API published, and no model publishes `rig`.
+ *
+ * Three shapes, and each one is measured rather than chosen:
+ *   - neither `answers` nor `tags` — every model of the family serves it. The three families
+ *     whose whole membership IS the employment: `FAMILY_TAGS` already filed them.
+ *   - `answers` and `tags` — the enum value is too coarse alone. Measured 2026-08-18: `3d23d`
+ *     covers 19 public models and 5 of them rig; the rest remesh, retexture, unwrap or segment.
+ *   - `tags` alone — no enum value narrows them at all. The motion models span `txt23d`,
+ *     `video23d` and `3d23d`, so a list built on the capability would be either three quarters
+ *     wrong or a list of everything.
+ *
+ * 🛑 The tags are AUTHORS' words, not Scenario's `sc:` namespace, so nothing makes them
+ * contractual. They are the only signal there is; a publisher who spells one differently
+ * disappears from the employment and nothing reddens.
+ */
+export type StudioCapability = {
+  capability: string
+  family: ModelFamily
+  /** The API capability its models actually answer, when one narrows them. */
+  answers?: string
+  /** Author tags, one of which a model must carry. Matched case-insensitively. */
+  tags?: readonly string[]
+  /** Author tags that disqualify: a rigger is not a motion generator, and both carry `Animation`. */
+  excludes?: readonly string[]
+}
+
+export const STUDIO_CAPABILITIES: readonly StudioCapability[] = [
+  { capability: 'rig', family: '3d', answers: '3d23d', tags: ['rigging'] },
+  { capability: 'motion', family: '3d', tags: ['motion', 'animation'], excludes: ['rigging'] },
+  { capability: 'upscale', family: 'upscale' },
+  { capability: 'cutout', family: 'background-removal' },
+  { capability: 'vectorize', family: 'vectorization' },
+]
+
+/** Whether the API's enum holds this capability, which is what decides if a filter may carry it. */
+export function isStudioCapability(capability: string): boolean {
+  return STUDIO_CAPABILITIES.some(entry => entry.capability === capability)
+}
+
+/** The rule that finds a studio capability's models, or nothing when it names none. */
+export function studioCapability(capability: string): StudioCapability | undefined {
+  return STUDIO_CAPABILITIES.find(entry => entry.capability === capability)
+}
+
+function ownsTag(tags: readonly string[], wanted: readonly string[]): boolean {
+  return tags.some(tag => wanted.includes(tag.toLowerCase()))
+}
+
+/**
+ * Whether a model of the right family serves this studio capability.
+ *
+ * Takes the two fields it reads rather than a `ModelSummary`: the catalogue answers one shape and
+ * `LocalModel` another, and both sides ask this question.
+ */
+export function servesStudioCapability(
+  entry: StudioCapability,
+  model: { capabilities: readonly string[]; tags: readonly string[] },
+): boolean {
+  if (entry.answers !== undefined && !model.capabilities.includes(entry.answers)) return false
+  if (entry.excludes && ownsTag(model.tags, entry.excludes)) return false
+  return entry.tags === undefined || ownsTag(model.tags, entry.tags)
 }
 
 /**

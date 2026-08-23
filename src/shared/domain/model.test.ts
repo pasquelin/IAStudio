@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CAPABILITIES_BY_FAMILY,
   FAMILY_TAGS,
+  isStudioCapability,
   MODEL_FAMILIES,
+  servesStudioCapability,
+  STUDIO_CAPABILITIES,
+  studioCapability,
   tagLabel,
   TAGS_BY_FAMILY,
   TAG_LABEL_KEY_LIST,
@@ -77,5 +82,85 @@ describe('the tags a facet menu offers', () => {
     expect(tagLabel('Multiview', key => `<${key}>`)).toBe('<modelTags.multiview>')
     // A tag the table has never heard of still has to read as something.
     expect(tagLabel('Nano Banana Pro', () => 'unreachable')).toBe('Nano Banana Pro')
+  })
+})
+
+/**
+ * The employments the studio names and the API's enum does not hold. A capability is what keys a
+ * stored preference, so one nothing can find would read as « no choice made » and never redden.
+ */
+describe('the capabilities the studio names itself', () => {
+  it('names one its family declares, so a role can be composed from it', () => {
+    const stray = STUDIO_CAPABILITIES.filter(
+      entry => !CAPABILITIES_BY_FAMILY[entry.family].includes(entry.capability),
+    )
+
+    expect(stray).toEqual([])
+  })
+
+  it('answers the rule that finds a studio capability, and nothing for an API one', () => {
+    expect(isStudioCapability('rig')).toBe(true)
+    expect(isStudioCapability('img23d')).toBe(false)
+    expect(studioCapability('img23d')).toBeUndefined()
+  })
+
+  /**
+   * MEASURED 2026-08-18: `3d23d` covers 19 public models and five of them rig. Without the tag
+   * the employment would offer remeshers, unwrappers and segmenters as riggers.
+   */
+  it('tells a rigger from the rest of what answers 3d23d', () => {
+    const rig = studioCapability('rig')
+    if (!rig) throw new Error('rig is a studio capability')
+
+    expect(servesStudioCapability(rig, { capabilities: ['3d23d'], tags: ['Rigging'] })).toBe(true)
+    expect(servesStudioCapability(rig, { capabilities: ['3d23d'], tags: ['Remesh'] })).toBe(false)
+    expect(servesStudioCapability(rig, { capabilities: ['img23d'], tags: ['Rigging'] })).toBe(false)
+  })
+
+  /**
+   * A rigger carries `Animation` too — `tripo-rigging-v2-5` does — so the motion employment is
+   * what a model is offered for only when it does NOT rig. The capability is deliberately not
+   * read: the motion models span `txt23d`, `video23d` and `3d23d`.
+   */
+  it('keeps a rigger out of the motion employment, whatever else it carries', () => {
+    const motion = studioCapability('motion')
+    if (!motion) throw new Error('motion is a studio capability')
+
+    expect(servesStudioCapability(motion, { capabilities: ['txt23d'], tags: ['Motion'] })).toBe(
+      true,
+    )
+    expect(
+      servesStudioCapability(motion, { capabilities: ['3d23d'], tags: ['Animation', 'Rigging'] }),
+    ).toBe(false)
+  })
+
+  // A family whose whole membership IS the employment narrows nothing: `FAMILY_TAGS` already
+  // filed those models, and asking for the capability again would refuse none of them.
+  it('lets every model of a single-employment family serve it', () => {
+    const upscale = studioCapability('upscale')
+    if (!upscale) throw new Error('upscale is a studio capability')
+
+    expect(servesStudioCapability(upscale, { capabilities: ['img2img'], tags: [] })).toBe(true)
+  })
+
+  // The author writes the tag; the studio must not depend on how they cased it.
+  it('reads an author tag in whatever case it was written', () => {
+    const rig = studioCapability('rig')
+    if (!rig) throw new Error('rig is a studio capability')
+
+    expect(servesStudioCapability(rig, { capabilities: ['3d23d'], tags: ['RIGGING'] })).toBe(true)
+  })
+})
+
+describe('the families that have an employment', () => {
+  /**
+   * `aiRoleId` refuses a capability its family does not declare, so a family with an empty list
+   * can be served by nothing at all — which is what kept upscaling, cutout and vectorisation on a
+   * second preference table until 2026-08-23.
+   */
+  it('leaves only `other` with none', () => {
+    const empty = MODEL_FAMILIES.filter(family => CAPABILITIES_BY_FAMILY[family].length === 0)
+
+    expect(empty).toEqual(['other'])
   })
 })

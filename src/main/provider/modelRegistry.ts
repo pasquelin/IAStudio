@@ -3,6 +3,8 @@ import {
   LOCAL_RUNTIME,
   PERIOD_DAYS,
   PROVIDER_MAINTAINER,
+  servesStudioCapability,
+  studioCapability,
   SYSTEM_TAG_PREFIX,
   tagOfFamily,
   type ModelDescriptor,
@@ -331,6 +333,20 @@ function showable(asset: RemoteAsset): string | null {
 }
 
 /**
+ * Whether the model serves this capability — the API's own enum, or one the studio names.
+ *
+ * A studio capability is never in `summary.capabilities`: no model publishes `rig`. It is
+ * decided by the rule `STUDIO_CAPABILITIES` carries, against the family the summary was filed
+ * under, so a filter on one answers the same models the employment offers.
+ */
+function serves(summary: ModelSummary, capability: string): boolean {
+  const studio = studioCapability(capability)
+  if (!studio) return summary.capabilities.includes(capability)
+
+  return summary.family === studio.family && servesStudioCapability(studio, summary)
+}
+
+/**
  * The whole narrowing, applied to every model whichever pass it came from.
  *
  * Nothing here is redundant with the request: the private listing accepts no `tags`, no sort
@@ -343,9 +359,8 @@ function matches(summary: ModelSummary, query: ModelQuery, since: string | null)
   if (query.runsOn && summary.runsOn !== query.runsOn) return false
   if (query.origin && summary.origin !== query.origin) return false
 
-  if (query.capabilities?.length) {
-    const held = new Set(summary.capabilities)
-    if (!query.capabilities.some(capability => held.has(capability))) return false
+  if (query.capabilities?.length && !query.capabilities.some(one => serves(summary, one))) {
+    return false
   }
 
   // Every chosen tag, unlike the API's union: a publisher AND a subject means both.

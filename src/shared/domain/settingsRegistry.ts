@@ -99,7 +99,13 @@ const MODEL_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
   },
 ]
 
-/** Employment screens. No `family:` — that field is the generation default picker. */
+/**
+ * Employment screens. No `family:` — that field is the generation default picker.
+ *
+ * The last three have no workspace of their own: they are the families the canvas edits reach
+ * for, and each has exactly one employment since 2026-08-23. Without a screen apiece, upscaling,
+ * cutout and vectorisation could be given no model at all.
+ */
 const AI_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
   { id: 'ai.image', labelKey: 'workspaces.image', parent: 'ai' },
   { id: 'ai.video', labelKey: 'workspaces.video', parent: 'ai' },
@@ -107,6 +113,9 @@ const AI_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
   { id: 'ai.audio', labelKey: 'workspaces.audio', parent: 'ai' },
   { id: 'ai.texture', labelKey: 'families.texture', parent: 'ai' },
   { id: 'ai.skybox', labelKey: 'workspaces.skyboxes', parent: 'ai' },
+  { id: 'ai.upscale', labelKey: 'families.upscale', parent: 'ai' },
+  { id: 'ai.background-removal', labelKey: 'families.background-removal', parent: 'ai' },
+  { id: 'ai.vectorization', labelKey: 'families.vectorization', parent: 'ai' },
 ]
 
 export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
