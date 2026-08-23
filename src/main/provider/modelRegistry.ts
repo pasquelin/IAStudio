@@ -6,6 +6,7 @@ import {
   SYSTEM_TAG_PREFIX,
   tagOfFamily,
   type ModelDescriptor,
+  type ModelFamily,
   type ModelPage,
   type ModelPeriod,
   type ModelQuery,
@@ -14,7 +15,7 @@ import {
 } from '@shared/domain/model'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { localFieldsOf } from '@shared/domain/localFields'
-import { modelThumbnailUrl, type LocalModel } from '@shared/domain/localModel'
+import { capabilitiesIn, modelThumbnailUrl, type LocalModel } from '@shared/domain/localModel'
 import type { WatchCredentials } from './credentialsWatch'
 import { familyOf, translateSchema, type ProviderInput } from './schema'
 
@@ -215,19 +216,25 @@ function summaryOf(model: RemoteModel, grades: Grades): ModelSummary {
 }
 
 /**
- * A model on THIS machine, as the panel reads it — the same shape as a cloud's, which is the whole
- * point of merging the two catalogues: one set of filters, one search, one grid, `<DynamicForm/>`.
+ * A model on THIS machine, as the panel reads it.
  *
- * `null` for a model with no family: the assistant and the recognition model answer a ROLE, and
- * the manager screen is where those are chosen. They never appear in a space's panel.
+ * `null` if it serves no space — no family, or not `asFamily` when one is given.
  */
-function localSummaryOf(model: LocalModel, installed: boolean): ModelSummary | null {
-  if (model.family === undefined) return null
+function localSummaryOf(
+  model: LocalModel,
+  installed: boolean,
+  asFamily?: ModelFamily,
+): ModelSummary | null {
+  const family = asFamily ?? model.family
+  if (family === undefined) return null
+
+  const capabilities = capabilitiesIn(model, family)
+  if (capabilities === null) return null
 
   return {
     id: model.id,
     name: model.name,
-    family: model.family,
+    family,
     runsOn: LOCAL_RUNTIME,
     source: model.source,
     // `origin` says who PUBLISHES, and nothing running on this machine is published by the cloud
@@ -237,7 +244,7 @@ function localSummaryOf(model: LocalModel, installed: boolean): ModelSummary | n
     ...(model.files.length === 0 ? { downloadable: false } : {}),
     diskBytes: model.diskBytes,
     featured: false,
-    capabilities: model.capabilities ?? [],
+    capabilities,
     tags: [],
     // Always one: the manifest names its own, and a modality's generic picture stands in for a
     // model the person supplied. A card with nothing to draw is what this exists to prevent.
@@ -436,7 +443,7 @@ export function createModelRegistry({
     if (query.cursor !== undefined) return page
 
     const since = query.since ? cutoff(query.since, now()) : null
-    const locals = localSummaries().filter(summary => matches(summary, query, since))
+    const locals = localSummaries(query.family).filter(summary => matches(summary, query, since))
     const seen = new Set(locals.map(summary => summary.id))
     const remotes = page.items.filter(item => item.runsOn !== LOCAL_RUNTIME && !seen.has(item.id))
     const limit = query.limit ?? DEFAULT_LIMIT
@@ -474,30 +481,8 @@ export function createModelRegistry({
     }
   }
 
-  /**
-   * What this machine offers the panel, recomposed only when the list itself changes.
-   *
-   * Read on every search — so on every keystroke of the browser's field — where the remote side
-   * is held by the TTL. The list is a handful of manifests and it moves once a gesture.
-   */
-  let summarised: { of: readonly LocalModel[]; items: readonly ModelSummary[] } | null = null
-  let installedMark = ''
-
-  const localSummaries = (): readonly ModelSummary[] => {
-    const own = localModels()
-    // Recomposed on the LIST and on what is installed: memoising on the list alone left a model
-    // greyed as absent for the rest of the session after its download landed.
-    const present = own.map(model => isInstalled(model.id)).join()
-    if (summarised?.of !== own || installedMark !== present) {
-      installedMark = present
-      summarised = {
-        of: own,
-        items: own.flatMap(model => localSummaryOf(model, isInstalled(model.id)) ?? []),
-      }
-    }
-
-    return summarised.items
-  }
+  const localSummaries = (asFamily?: ModelFamily): readonly ModelSummary[] =>
+    localModels().flatMap(model => localSummaryOf(model, isInstalled(model.id), asFamily) ?? [])
 
   /** The one place a model's schema is fetched, cached per model for the registry's own TTL. */
   const described = async (modelId: string): Promise<ModelDescriptor> => {
@@ -607,7 +592,7 @@ export function createModelRegistry({
       // manifests held in memory, so a cursor into it would be machinery for a list that cannot
       // fill one screen. It comes first because it is the side that costs nothing to run.
       if (query.cursor === undefined) {
-        for (const summary of localSummaries()) {
+        for (const summary of localSummaries(query.family)) {
           if (!matches(summary, query, since)) continue
 
           seen.add(summary.id)

@@ -1,3 +1,4 @@
+import { partsOfRole, type AiRoleId } from './aiRole'
 import { hostedUrl } from './asset'
 import type { LocalFieldOverrides, LocalModality } from './localFields'
 import type { ModelFamily } from './model'
@@ -188,6 +189,22 @@ export function modelThumbnailUrl(model: LocalModel): string {
   // The generic picture of its modality where a manifest names none — which is every model the
   // person supplied, since nothing can know what their file looks like.
   return hostedUrl(MODEL_HOST, model.thumbnail ?? `${model.modality ?? 'text'}.png`)
+}
+
+/**
+ * What this model offers in `family`, native or via `serves`.
+ * `null` if it does not serve that space.
+ */
+export function capabilitiesIn(model: LocalModel, family: ModelFamily): readonly string[] | null {
+  if (model.family === family) return model.capabilities ?? []
+
+  const capabilities: string[] = []
+  for (const role of model.serves ?? []) {
+    // `serves` is data; `partsOfRole` is what refuses a malformed one.
+    const parts = partsOfRole(role as AiRoleId)
+    if (parts?.family === family) capabilities.push(parts.capability)
+  }
+  return capabilities.length > 0 ? capabilities : null
 }
 
 /** Bytes across the whole model, not within the file being fetched. */
