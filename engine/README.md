@@ -30,10 +30,17 @@ Ce qui diffère entre deux portes est une modalité et un nom : la boucle est é
 | `engine/3d` | maillage | idem | idem |
 | `engine/skybox` | panorama 360 | idem | idem |
 
-Les familles hors diffusers (TripoSR, TRELLIS, TRELLIS.2, TripoSG, MMAudio) passent par
-`plugin_adapter.py`. TripoSR est vendu sous `vendor/tsr` (MIT, `weights_only=True`), TripoSG sous
-`vendor/triposg`. TRELLIS / TRELLIS.2 / TripoSG demandent CUDA — sur Metal la carte le dit.
+Les familles hors diffusers (TripoSR, TRELLIS, TRELLIS.2, TripoSG, InstantMesh, LGM, MMAudio)
+passent par `plugin_adapter.py`. TripoSR est vendu sous `vendor/tsr` (MIT, `weights_only=True`),
+TripoSG sous `vendor/triposg`, InstantMesh sous `vendor/instantmesh` (Apache-2.0) et LGM sous
+`vendor/lgm` (MIT). Tous sauf TripoSR et MMAudio demandent CUDA — sur Metal la carte le dit.
 MMAudio tourne sur MPS. Extra `plugin`, pas dans `engine:check`.
+
+**Deux extensions CUDA sont volontairement absentes, et ce n'est pas un oubli** : `nvdiffrast`
+(licence NVIDIA non commerciale) et `diff_gaussian_rasterization` (Inria, non commerciale). Le
+code vendu ne les atteint jamais — InstantMesh sort en couleurs de sommets plutôt qu'en carte de
+texture, LGM écrit son nuage de gaussiens plutôt qu'un maillage. Les rétablir changerait la
+licence de ce qui est distribué.
 
 **Une op routée répond IMMÉDIATEMENT avec le job qu'elle a ouvert**, jamais avec son résultat :
 un chargement lit des gigaoctets et une génération dure des secondes. Le résultat arrive en

@@ -198,26 +198,18 @@ describe('the shipped catalogue', () => {
     expect(model?.files.map(file => file.name)).toContain('lgm/model_fp16_fixrot.safetensors')
   })
 
-  it('leaves the three 3d stacks whose python is not vendored without files', () => {
+  it('leaves CraftsMan3D alone, the one 3d stack whose python is not vendored', () => {
     const closed = shippedModels()
       .filter(model => model.family === '3d')
       .filter(model => model.runtimeStatus === 'unsupported')
       .map(model => model.id)
 
-    expect(closed.sort()).toEqual(['craftsman3d', 'unique3d', 'wonder3d'])
+    expect(closed.sort()).toEqual(['craftsman3d'])
   })
 
   it('lists commercially licensed 3d engines beside the ones already wired', () => {
     expect(shippedModelsFor(aiRoleId('3d', 'img23d')).map(model => model.id)).toEqual(
-      expect.arrayContaining([
-        'triposr',
-        'instantmesh',
-        'unique3d',
-        'triposg',
-        'craftsman3d',
-        'lgm',
-        'wonder3d',
-      ]),
+      expect.arrayContaining(['triposr', 'instantmesh', 'triposg', 'craftsman3d', 'lgm']),
     )
   })
 

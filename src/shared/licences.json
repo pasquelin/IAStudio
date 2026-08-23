@@ -290,7 +290,7 @@
   {
     "name": "InstantMesh",
     "spdx": "Apache-2.0",
-    "text": "Image to mesh in about 10 s, regular faces. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Tencent ARC Lab.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "text": "Image to mesh in about 10 s, regular faces. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Tencent ARC Lab and the InstantMesh authors.\n\nTHE DOWNLOAD CARRIES MORE THAN ONE ORIGIN, read on 2026-08-23. Apache-2.0 covers the two\nTencentARC files — the reconstruction checkpoint and the white-background unet. The other\nseventeen are sudo-ai/zero123plus-v1.2, whose repository card states no licence of its own.\n\nThe unet lands under `unet/`, where the six-view pipeline reads it: the studio fetches the\nbase unet of zero123plus not at all, rather than 3.4 GB it would overwrite on load.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/TencentARC/InstantMesh"
   },
   {
@@ -315,7 +315,7 @@
   {
     "name": "LGM",
     "spdx": "MIT",
-    "text": "Four views, then a 3D Gaussian cloud. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the LGM authors, 3D Topia.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
+    "text": "Four views, then a 3D Gaussian cloud. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the LGM authors, and Ashawkey for the published weights.\n\nTHE DOWNLOAD CARRIES MORE THAN ONE ORIGIN, read on 2026-08-23. MIT covers the splatter\ncheckpoint alone; the four-view stage is ashawkey/imagedream-ipmv-diffusers, published under\nOpenRAIL, and it is fourteen of the fifteen files above.\n\nWhat LGM writes is a 3D Gaussian cloud, not a mesh: the step that turns one into the other\nis a rasterizer whose licence forbids commercial use, and it is not fetched or shipped.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/ashawkey/LGM"
   },
   {
@@ -772,12 +772,6 @@
     "sources": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5"
   },
   {
-    "name": "Unique3D",
-    "spdx": "MIT",
-    "text": "High-fidelity textured mesh from one image, ~30 s. NVIDIA CUDA.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\nCopyright AiuniAI.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
-    "sources": "https://github.com/AiuniAI/Unique3D"
-  },
-  {
     "name": "urllib3",
     "version": "2.7.0",
     "spdx": "MIT",
@@ -813,12 +807,6 @@
     "version": "7.12.11",
     "spdx": "BSD-3-Clause",
     "text": "BSD 3-Clause License\n\nCopyright (c) 2012-2023, katspaugh and contributors\nAll rights reserved.\n\nRedistribution and use in source and binary forms, with or without\nmodification, are permitted provided that the following conditions are met:\n\n* Redistributions of source code must retain the above copyright notice, this\n  list of conditions and the following disclaimer.\n\n* Redistributions in binary form must reproduce the above copyright notice,\n  this list of conditions and the following disclaimer in the documentation\n  and/or other materials provided with the distribution.\n\n* Neither the name of the copyright holder nor the names of its\n  contributors may be used to endorse or promote products derived from\n  this software without specific prior written permission.\n\nTHIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"\nAND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE\nIMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE\nDISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE\nFOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL\nDAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR\nSERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER\nCAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\nOR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\nOF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
-  },
-  {
-    "name": "Wonder3D",
-    "spdx": "MIT",
-    "text": "Multi-view normals then mesh, 2-3 min. NVIDIA CUDA. Older pipeline.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\nCopyright the Wonder3D authors.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
-    "sources": "https://huggingface.co/flamehaze1115/wonder3d-v1.0"
   },
   {
     "name": "zipp",

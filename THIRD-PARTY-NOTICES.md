@@ -127,14 +127,12 @@ The terms below govern these components. They are not affected by the licence of
 | typer | 0.27.1 | MIT |
 | typing-extensions | 4.16.0 | PSF-2.0 |
 | UniPano | shipped with the application | other |
-| Unique3D | shipped with the application | MIT |
 | urllib3 | 2.7.0 | MIT |
 | utif | 3.1.0 | MIT |
 | Wan 2.1 I2V 14B | shipped with the application | Apache-2.0 |
 | Wan 2.1 T2V 1.3B | shipped with the application | Apache-2.0 |
 | Wan 2.2 TI2V 5B | shipped with the application | Apache-2.0 |
 | wavesurfer.js | 7.12.11 | BSD-3-Clause |
-| Wonder3D | shipped with the application | MIT |
 | zipp | 4.1.0 | MIT |
 | zod | 4.4.3 | MIT |
 | zustand | 5.0.15 | MIT |
@@ -1293,7 +1291,14 @@ Image to mesh in about 10 s, regular faces. NVIDIA CUDA, one of the models the s
 It is NOT shipped with the application: it is fetched on request into the user data folder,
 against a published digest, and removed from the model manager.
 
-Copyright Tencent ARC Lab.
+Copyright Tencent ARC Lab and the InstantMesh authors.
+
+THE DOWNLOAD CARRIES MORE THAN ONE ORIGIN, read on 2026-08-23. Apache-2.0 covers the two
+TencentARC files — the reconstruction checkpoint and the white-background unet. The other
+seventeen are sudo-ai/zero123plus-v1.2, whose repository card states no licence of its own.
+
+The unet lands under `unet/`, where the six-view pipeline reads it: the studio fetches the
+base unet of zero123plus not at all, rather than 3.4 GB it would overwrite on load.
 
 Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
 ```
@@ -1460,7 +1465,14 @@ Four views, then a 3D Gaussian cloud. NVIDIA CUDA, one of the models the studio 
 It is NOT shipped with the application: it is fetched on request into the user data folder,
 against a published digest, and removed from the model manager.
 
-Copyright the LGM authors, 3D Topia.
+Copyright the LGM authors, and Ashawkey for the published weights.
+
+THE DOWNLOAD CARRIES MORE THAN ONE ORIGIN, read on 2026-08-23. MIT covers the splatter
+checkpoint alone; the four-view stage is ashawkey/imagedream-ipmv-diffusers, published under
+OpenRAIL, and it is fourteen of the fifteen files above.
+
+What LGM writes is a 3D Gaussian cloud, not a mesh: the step that turns one into the other
+is a rasterizer whose licence forbids commercial use, and it is not fetched or shipped.
 
 Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
@@ -3300,26 +3312,6 @@ weights. Generation uses MultiDiffusion circular padding.
 
 Licensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license
 ```
-## Unique3D
-
-Version: shipped with the application  
-Licence: MIT
-
-Corresponding sources:
-
-```
-https://github.com/AiuniAI/Unique3D
-```
-
-```
-High-fidelity textured mesh from one image, ~30 s. NVIDIA CUDA.
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible. Nothing is fetched until a runtime can actually run them.
-
-Copyright AiuniAI.
-
-Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
-```
 ## urllib3
 
 Version: 2.7.0  
@@ -3463,26 +3455,6 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-```
-## Wonder3D
-
-Version: shipped with the application  
-Licence: MIT
-
-Corresponding sources:
-
-```
-https://huggingface.co/flamehaze1115/wonder3d-v1.0
-```
-
-```
-Multi-view normals then mesh, 2-3 min. NVIDIA CUDA. Older pipeline.
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible. Nothing is fetched until a runtime can actually run them.
-
-Copyright the Wonder3D authors.
-
-Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## zipp
 

@@ -3673,28 +3673,6 @@
       "distribution": "direct-download"
     },
     {
-      "id": "wonder3d",
-      "name": "Wonder3D",
-      "summary": "Multi-view normals then mesh, 2-3 min. NVIDIA CUDA. Older pipeline",
-      "releasedAt": "2023-10-23",
-      "format": "safetensors",
-      "loader": "plugin",
-      "modality": "mesh",
-      "rank": 1,
-      "licence": "MIT",
-      "licenceUrl": "https://opensource.org/licenses/MIT",
-      "source": "https://huggingface.co/flamehaze1115/wonder3d-v1.0",
-      "files": [],
-      "diskBytes": 4000000000,
-      "reservationBytes": 10000000000,
-      "family": "3d",
-      "capabilities": [
-        "img23d"
-      ],
-      "runtimeStatus": "unsupported",
-      "needsCuda": true
-    },
-    {
       "id": "lgm",
       "name": "LGM",
       "summary": "Four views, then a 3D Gaussian cloud. NVIDIA CUDA",
@@ -3837,28 +3815,6 @@
       ],
       "needsCuda": true,
       "distribution": "direct-download"
-    },
-    {
-      "id": "unique3d",
-      "name": "Unique3D",
-      "summary": "High-fidelity textured mesh from one image, ~30 s. NVIDIA CUDA",
-      "releasedAt": "2024-05-30",
-      "format": "safetensors",
-      "loader": "plugin",
-      "modality": "mesh",
-      "rank": 1,
-      "licence": "MIT",
-      "licenceUrl": "https://opensource.org/licenses/MIT",
-      "source": "https://github.com/AiuniAI/Unique3D",
-      "files": [],
-      "diskBytes": 5500000000,
-      "reservationBytes": 12000000000,
-      "family": "3d",
-      "capabilities": [
-        "img23d"
-      ],
-      "runtimeStatus": "unsupported",
-      "needsCuda": true
     },
     {
       "id": "triposg",
