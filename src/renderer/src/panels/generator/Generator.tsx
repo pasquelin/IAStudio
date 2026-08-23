@@ -1,8 +1,8 @@
 import { mdiCreationOutline } from '@mdi/js'
-import { Suspense, useCallback, useEffect, useRef } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { partsOfRole } from '@shared/domain/aiRole'
-import type { Job } from '@shared/domain/job'
+import { isFinished, type Job } from '@shared/domain/job'
 import { useDescriptor } from '@/hooks/useDescriptor'
 import { useGenerationContext } from '@/hooks/useGenerationContext'
 import { useModelForCapability } from '@/hooks/useModelForCapability'
@@ -29,6 +29,7 @@ import { NoProject } from '@/panels/shared/NoProject'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
 import { GeneratorModel } from './Generator/GeneratorModel'
 import { GeneratorOperation } from './Generator/GeneratorOperation'
+import { GeneratorRun } from './Generator/GeneratorRun'
 import { GeneratorSources } from './Generator/GeneratorSources'
 
 /**
@@ -81,6 +82,15 @@ export function Generator() {
   const body = useRef<FormValues>({})
 
   /**
+   * The generation this panel launched, followed until it stops — § 30.
+   *
+   * Held by id rather than by the job itself: the main process pushes progress every couple of
+   * seconds, and a copy kept here would be the stale half of two answers.
+   */
+  const [runningId, setRunningId] = useState<string | null>(null)
+  const running = useJobs(state => state.jobs.find(job => job.id === runningId) ?? null)
+
+  /**
    * Runs the generation and answers the job, which the button's own handler discards.
    *
    * The claim is part of it, not around it: which workspace has somewhere to put the result is
@@ -92,6 +102,7 @@ export function Generator() {
       const claim = claimOnSubmit()
       return submit({ id: modelId }, values).then(job => {
         claim(job)
+        setRunningId(job?.id ?? null)
         return job
       })
     },
@@ -185,6 +196,7 @@ export function Generator() {
         name={descriptor.data?.name}
       />
       <GeneratorSources inputs={inputs} />
+      <GeneratorRun job={running} />
 
       {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}
       {refusal && <p className="text-muted px-2 text-xs">{refusal}</p>}
@@ -206,8 +218,10 @@ export function Generator() {
               submitHint={t('actions.generateHint')}
               submitNote={cost.note}
               onValuesChange={onValuesChange}
+              // 🛑 The double-submission guard as well as the refusal: `submit` is a round trip,
+              // and a second press before it answers pays for two generations.
               // `project` is not in this: the panel returns before the form when there is none.
-              busy={refusal !== undefined}
+              busy={refusal !== undefined || (running !== null && !isFinished(running.status))}
               preset={preset}
               // Dictation alone now. Rewriting a prompt, translating it and reading the style of
               // the references left this panel for the assistant: they are things one ASKS for,

@@ -1,11 +1,12 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { LOCAL_RUNTIME } from '@shared/domain/model'
 import { aiRoleId } from '@shared/domain/aiRole'
 import { localModel } from '@shared/domain/localModel-fixtures'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import { useAiModels } from '@/stores/aiModels'
-import { beforeEach, describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FieldDescriptor, ModelDescriptor } from '@shared/domain/model'
 import type { StudioBridge } from '@shared/ipc'
 import { withQueries } from '@/app/query-fixtures'
@@ -14,6 +15,8 @@ import { installCanvas } from '@/stores/canvas-fixtures'
 import { useLayouts } from '@/stores/layouts'
 import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
+import { job } from '@/stores/job-fixtures'
+import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { connectPreparation } from '@/stores/preparation'
 import { useSettings } from '@/stores/settings'
@@ -391,5 +394,77 @@ describe('the generator on this machine', () => {
 
     expect(await screen.findByText('SSD-1B')).toBeInTheDocument()
     expect(screen.queryByText(/identifiants/i)).toBeNull()
+  })
+})
+
+describe('a generation in flight', () => {
+  beforeEach(() => {
+    installCanvas(DOCUMENT)
+    useSettings.setState({ auth: { authenticated: true } })
+    useAiModels.setState({ overview: null })
+    useProject.setState({ project: PROJECT, known: true })
+    useLayouts.setState({ activeWorkspace: 'image' })
+    useGeneration.setState({ forcedCapability: aiRoleId('image', 'txt2img') })
+    chooseModels({ [aiRoleId('image', 'txt2img')]: 'model_flux' })
+    useJobs.setState({ jobs: [], bodies: {} })
+
+    installFakeBridge({
+      provider: {
+        describeModel: (modelId: string) =>
+          DESCRIPTORS[modelId]
+            ? Promise.resolve(DESCRIPTORS[modelId])
+            : Promise.reject(new Error('no model')),
+        generate: () => Promise.resolve(job({ id: 'job_1', status: 'running', progress: 0.4 })),
+      },
+    })
+  })
+
+  /** The one required field of these descriptors, filled so the form will submit at all. */
+  const generate = async (): Promise<void> => {
+    await userEvent.type(await screen.findByLabelText(/Image/), 'asset-source')
+    await userEvent.click(screen.getByRole('button', { name: /Générer/ }))
+  }
+
+  /**
+   * § 30: someone who pressed Generate watches the panel they pressed it in. A run whose only
+   * trace is a bar at the foot of the window reads as a click that did nothing.
+   */
+  it('shows how far it has got, in the panel it was launched from', async () => {
+    renderPanel()
+    await generate()
+
+    expect(await screen.findByText('En cours')).toBeVisible()
+  })
+
+  // 🛑 `submit` is a round trip, and a second press before it answers pays for two generations.
+  it('disarms the button while one is running', async () => {
+    renderPanel()
+    await generate()
+
+    expect(await screen.findByRole('button', { name: /Générer/ })).toBeDisabled()
+  })
+
+  it('offers to stop it, and asks the main process to', async () => {
+    const cancel = vi.fn(() => Promise.resolve())
+    useJobs.setState({ cancel })
+
+    renderPanel()
+    await generate()
+    await userEvent.click(await screen.findByRole('button', { name: 'Annuler la tâche' }))
+
+    expect(cancel).toHaveBeenCalledWith('job_1')
+  })
+
+  // A finished job has nothing to stop, and a button that cancels one answers nothing.
+  it('takes the way to stop it away once it has finished', async () => {
+    renderPanel()
+    await generate()
+    await screen.findByText('En cours')
+
+    act(() => {
+      useJobs.setState({ jobs: [job({ id: 'job_1', status: 'succeeded', progress: 1 })] })
+    })
+
+    expect(screen.queryByRole('button', { name: 'Annuler la tâche' })).toBeNull()
   })
 })
