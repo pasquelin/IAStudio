@@ -1,6 +1,11 @@
 import { create } from 'zustand'
-import type { AccountFailure, AccountsResult, AccountSummary } from '@shared/domain/account'
-import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import {
+  providerOf,
+  scenarioAccount,
+  type AccountFailure,
+  type AccountsResult,
+  type AccountSummary,
+} from '@shared/domain/account'
 import type { StudioBridge } from '@shared/ipc'
 import { connectThroughBridge, getBridge } from '@/services/bridge'
 import { useSettings } from './settings'
@@ -25,15 +30,6 @@ type AccountsState = {
   activate: (id: string) => Promise<AccountSaveFailure | null>
 }
 
-export function providerOf(account: AccountSummary): string {
-  return account.providerId ?? SCENARIO_CLOUD
-}
-
-/** The Scenario key in force — the one the catalogue and the green dot answer for. */
-export function scenarioAccount(accounts: readonly AccountSummary[]): AccountSummary | null {
-  return accounts.find(account => account.active && providerOf(account) === SCENARIO_CLOUD) ?? null
-}
-
 export function activeAccount(accounts: readonly AccountSummary[]): AccountSummary | null {
   return scenarioAccount(accounts) ?? accounts.find(account => account.active) ?? null
 }
@@ -47,7 +43,7 @@ export function accountsByProvider(
 ): readonly { providerId: string; accounts: readonly AccountSummary[] }[] {
   const groups = new Map<string, AccountSummary[]>()
   for (const account of accounts) {
-    const provider = account.providerId ?? SCENARIO_CLOUD
+    const provider = providerOf(account)
     const held = groups.get(provider)
     if (held) held.push(account)
     else groups.set(provider, [account])

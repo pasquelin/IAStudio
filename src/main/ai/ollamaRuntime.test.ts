@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { localModel } from '@shared/domain/localModel-fixtures'
 import type { ChatRequest } from './localRuntimes'
-import { ollamaLocalRuntime, type OllamaPort } from './ollamaRuntime'
+import { ollamaHttpPort, ollamaLocalRuntime, type OllamaPort } from './ollamaRuntime'
 
 const QWEN = localModel({
   id: 'qwen3:8b',
@@ -165,5 +165,48 @@ describe('ollamaLocalRuntime', () => {
     expect(written?.path).toBe('/tmp/cat.png')
     expect(writeFile).toHaveBeenCalledWith('/tmp/cat.png', Buffer.from('hello'))
     expect(remove).not.toHaveBeenCalled()
+  })
+})
+
+describe('ollamaHttpPort', () => {
+  /** The service answers one JSON object per line, and a chunk boundary falls wherever it falls. */
+  const streaming = (chunks: readonly string[]): typeof fetch =>
+    vi.fn(() =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              for (const chunk of chunks) controller.enqueue(new TextEncoder().encode(chunk))
+              controller.close()
+            },
+          }),
+        ),
+      ),
+    ) as unknown as typeof fetch
+
+  it('reports a pull whose frames are cut across chunks', async () => {
+    const seen: { received: number; total: number }[] = []
+    await ollamaHttpPort(
+      'http://x',
+      streaming(['{"completed":1,"tot', 'al":4}\n{"completed":4,"total":4}\n']),
+    ).pull('qwen3:8b', progress => seen.push(progress), new AbortController().signal)
+
+    expect(seen).toEqual([
+      { received: 1, total: 4 },
+      { received: 4, total: 4 },
+    ])
+  })
+
+  it('keeps the image of a last frame that carries no newline', async () => {
+    const images = await ollamaHttpPort(
+      'http://x',
+      streaming(['{"completed":1,"total":2}\n', '{"images":["aGVsbG8="]}']),
+    ).generateImage({
+      model: 'z-image-turbo',
+      prompt: 'a cat',
+      onProgress: () => {},
+    })
+
+    expect(images).toEqual(['aGVsbG8='])
   })
 })

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { scenarioAccount, useAccounts } from '@/stores/accounts'
+import { scenarioAccount } from '@shared/domain/account'
+import { useAccounts } from '@/stores/accounts'
 import { useLatest } from './useLatest'
 
 /**

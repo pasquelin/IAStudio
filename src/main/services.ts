@@ -6,7 +6,7 @@ import { chmod, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { availableParallelism, totalmem } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
-import type { AccountSummary } from '@shared/domain/account'
+import { scenarioAccount, type AccountSummary } from '@shared/domain/account'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import { outputExtensionOf } from '@shared/domain/localFields'
 import type { LocalModel } from '@shared/domain/localModel'
@@ -65,7 +65,7 @@ import { createHttpChatBrain } from './assistant/brainHttp'
 import { createRoutedBrain } from './assistant/brainRouted'
 import { createSession, type DictationSession } from './dictation/session'
 import { STT_MODEL } from '@shared/domain/dictation'
-import { CLOUD_PROVIDERS, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import { CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import { createAiManager, type AiManager } from './ai/manager'
 import { catalogueWith, modelWith } from './ai/catalogue'
@@ -612,12 +612,7 @@ export function createServices(settings: SettingsStore): Services {
   const linkOpenProject = (): Relink => {
     const current = project.current()
     const accounts = settings.accounts()
-    const active =
-      accounts.find(
-        account =>
-          account.active &&
-          (account.providerId === undefined || account.providerId === SCENARIO_CLOUD),
-      ) ?? null
+    const active = scenarioAccount(accounts)
     if (!current || !active) return { kind: 'unchanged', active }
 
     const links = settings.read().storage.projectAccounts
@@ -654,7 +649,7 @@ export function createServices(settings: SettingsStore): Services {
    */
   const applyProjectAccount = (
     plan: ProjectAccountPlan,
-    active: AccountSummary | undefined,
+    active: AccountSummary | null,
     projectPath: string,
   ): void => {
     if (plan.kind === 'restore') {
@@ -714,11 +709,7 @@ export function createServices(settings: SettingsStore): Services {
   const settleOpenedProject = (current: Project): void => {
     const stored = settings.read()
     const accounts = settings.accounts()
-    const active = accounts.find(
-      account =>
-        account.active &&
-        (account.providerId === undefined || account.providerId === SCENARIO_CLOUD),
-    )
+    const active = scenarioAccount(accounts)
     const links = stored.storage.projectAccounts
     const plan = planProjectAccount(links[current.path], accounts)
 
