@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { partsOfRole, primaryRoleOf, type AiRoleId } from '@shared/domain/aiRole'
 import { MODEL_FAMILIES, type ModelFamily } from '@shared/domain/model'
 import type { FormValues } from '@/helpers/dynamicForm'
 import {
@@ -8,6 +9,12 @@ import {
   withoutSearch,
   type CollectionState,
 } from '@/helpers/collectionState'
+
+/**
+ * Bumped past `COLLECTION_PERSIST_VERSION` because `selected` changed KEY, not shape: entries
+ * filed per family have to be re-filed per employment or every space opens on no model at all.
+ */
+const MODELS_PERSIST_VERSION = COLLECTION_PERSIST_VERSION + 1
 
 type Collections = Partial<Record<ModelFamily, CollectionState>>
 
@@ -26,12 +33,35 @@ function searchless(collections: Collections): Collections {
   return stored
 }
 
+/**
+ * What a family's choice becomes once choices are filed per employment: the choice of its FIRST
+ * one, which is exactly what read it before — `resolveModelForFamily` only ever looked at
+ * `primaryRoleOf(family)`.
+ */
+function withRoleKeys(persisted: unknown): unknown {
+  if (typeof persisted !== 'object' || persisted === null) return persisted
+  const held = persisted as { selected?: Record<string, string> }
+  if (!held.selected) return persisted
+
+  const selected: Partial<Record<AiRoleId, string>> = {}
+  for (const family of MODEL_FAMILIES) {
+    const modelId = held.selected[family]
+    const role = primaryRoleOf(family)
+    if (modelId && role) selected[role] = modelId
+  }
+
+  return { ...held, selected }
+}
+
 type ModelsState = {
   /**
-   * One choice per family: the panel follows the active workspace, and switching from Image
-   * to Video and back must not lose what was picked on either side.
+   * One choice per EMPLOYMENT, not per family — ADR-23 § C.
+   *
+   * Filed per family, choosing a model to retouch with replaced the one text-to-image was on:
+   * the two are different pickings, and the same weights serve both. Keyed by `AiRoleId` so that
+   * the cloud model a panel picked is remembered against the operation it was picked for.
    */
-  selected: Partial<Record<ModelFamily, string>>
+  selected: Partial<Record<AiRoleId, string>>
   /**
    * The browser's search, sort, thumbnail size and facets — one set per family, for the same
    * reason as the choice above and a sharper one.
@@ -61,14 +91,13 @@ type ModelsState = {
   prepared: ModelFamily | null
 
   /**
-   * Files the choice under the model's own family, which makes a choice GLOBAL to that family:
-   * picking an image model anywhere replaces the one the Image space was on. Assumed rather than
-   * worked around: the alternative is a second table filed per surface, persisted and migrated,
-   * to record a distinction — "chosen here" against "chosen there" — that nothing asks about.
+   * Files the choice under the EMPLOYMENT it was made for. Global to that employment: picking a
+   * model to retouch with in one document is picking it for every retouch, which is what a
+   * preference means. What it no longer touches is the other operations of the same family.
    */
-  select: (family: ModelFamily, modelId: string) => void
+  select: (role: AiRoleId, modelId: string) => void
   /** Picks the model AND the values to open its form on, in one write. */
-  prepare: (family: ModelFamily, modelId: string, params: FormValues) => void
+  prepare: (role: AiRoleId, modelId: string, params: FormValues) => void
   setCollection: (family: ModelFamily, collection: CollectionState) => void
   dropPreparation: () => void
 }
@@ -85,18 +114,25 @@ export const useModels = create<ModelsState>()(
       preset: {},
       prepared: null,
 
-      select: (family, modelId) =>
+      select: (role, modelId) =>
         set(state => ({
-          selected: { ...state.selected, [family]: modelId },
+          selected: { ...state.selected, [role]: modelId },
           prepared: null,
         })),
 
-      prepare: (family, modelId, params) =>
-        set(state => ({
-          selected: { ...state.selected, [family]: modelId },
-          preset: { ...state.preset, [family]: params },
-          prepared: family,
-        })),
+      prepare: (role, modelId, params) =>
+        set(state => {
+          // The form opens on the FAMILY, which is what a descriptor belongs to; the choice is
+          // filed on the employment. Both, or an edit arms a model whose parameters never arrive.
+          const parts = partsOfRole(role)
+          if (parts === null) return state
+
+          return {
+            selected: { ...state.selected, [role]: modelId },
+            preset: { ...state.preset, [parts.family]: params },
+            prepared: parts.family,
+          }
+        }),
 
       setCollection: (family, collection) =>
         set(state => ({ collections: { ...state.collections, [family]: collection } })),
@@ -112,7 +148,9 @@ export const useModels = create<ModelsState>()(
       // renamed, so a state written before it restores `selected` and leaves `collections`
       // empty — every space opens unfiltered once, which is exactly what has to happen to the
       // shared filter this replaces. The orphan entry is gone at the first write.
-      version: COLLECTION_PERSIST_VERSION,
+      version: MODELS_PERSIST_VERSION,
+      migrate: (persisted, version) =>
+        version >= MODELS_PERSIST_VERSION ? persisted : withRoleKeys(persisted),
       // The search text is deliberately dropped: restoring it would open the studio on a
       // narrowed catalogue nobody typed, which reads as a catalogue gone missing.
       partialize: state => ({

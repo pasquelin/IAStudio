@@ -1,4 +1,4 @@
-import { CAPABILITIES_BY_FAMILY, LOCAL_RUNTIME, type ModelFamily } from './model'
+import { CAPABILITIES_BY_FAMILY, type ModelFamily } from './model'
 
 /**
  * What an AI is FOR — see `docs/ci/adr/ADR-21-le-fournisseur-se-choisit-par-emploi.md`.
@@ -70,30 +70,6 @@ export function isGenerationRole(role: AiRoleId): boolean {
 export function primaryRoleOf(family: ModelFamily): AiRoleId | null {
   const [capability] = CAPABILITIES_BY_FAMILY[family]
   return capability === undefined ? null : aiRoleId(family, capability)
-}
-
-/** Primary employment plus every capability this model actually serves. Unknown caps are skipped. */
-export function familyChoiceWrites(model: {
-  readonly id: string
-  readonly family: ModelFamily
-  readonly capabilities: readonly string[]
-  readonly runsOn: string
-}): readonly { role: AiRoleId; provider: RoleProvider }[] {
-  const provider: RoleProvider =
-    model.runsOn === LOCAL_RUNTIME
-      ? { kind: 'local', modelId: model.id }
-      : { kind: 'cloud', providerId: model.runsOn }
-
-  const roles = new Set<AiRoleId>()
-  const primary = primaryRoleOf(model.family)
-  if (primary) roles.add(primary)
-
-  const known = CAPABILITIES_BY_FAMILY[model.family]
-  for (const capability of model.capabilities) {
-    if (known.includes(capability)) roles.add(aiRoleId(model.family, capability))
-  }
-
-  return [...roles].map(role => ({ role, provider }))
 }
 
 /** What the role is made of, for a caller that needs to label it. `null` for a standalone one. */

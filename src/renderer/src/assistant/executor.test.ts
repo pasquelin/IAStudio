@@ -1,3 +1,4 @@
+import { aiRoleId } from '@shared/domain/aiRole'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import type { Job } from '@shared/domain/job'
@@ -215,7 +216,7 @@ describe('choosing and preparing a model', () => {
       ok: true,
     })
 
-    expect(useModels.getState().selected.image).toBe('model_x')
+    expect(useModels.getState().selected[aiRoleId('image', 'txt2img')]).toBe('model_x')
   })
 
   it('fills the generator without sending anything', async () => {
@@ -226,7 +227,7 @@ describe('choosing and preparing a model', () => {
     })
 
     expect(useModels.getState().preset['3d']).toEqual({ prompt: 'a knight helmet' })
-    expect(useModels.getState().selected['3d']).toBe('model_y')
+    expect(useModels.getState().selected[aiRoleId('3d', 'txt23d')]).toBe('model_y')
   })
 
   it('refuses parameters that are not a set of values', async () => {

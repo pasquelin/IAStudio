@@ -11,7 +11,6 @@ import { AiSettings } from './AiSettings/AiSettings'
 import { DictationSettings } from './DictationSettings'
 import { MediaSettings } from './MediaSettings'
 import { ShortcutsSettings } from './ShortcutsSettings/ShortcutsSettings'
-import { ModelFamilySettings } from './ModelFamilySettings'
 
 export type SettingsSection = SettingSectionEntry & {
   /** What no descriptor can express: credentials, a catalogue picker, a resolved status. */
@@ -33,14 +32,6 @@ const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   shortcuts: ShortcutsSettings,
   media: MediaSettings,
   dictation: DictationSettings,
-  'generation.image': () => <ModelFamilySettings family="image" />,
-  'generation.video': () => <ModelFamilySettings family="video" />,
-  'generation.3d': () => <ModelFamilySettings family="3d" />,
-  'generation.audio': () => <ModelFamilySettings family="audio" />,
-  'generation.skybox': () => <ModelFamilySettings family="skybox" />,
-  'generation.upscale': () => <ModelFamilySettings family="upscale" />,
-  'generation.background-removal': () => <ModelFamilySettings family="background-removal" />,
-  'generation.vectorization': () => <ModelFamilySettings family="vectorization" />,
   'ai.image': () => <AiSettings family="image" />,
   'ai.video': () => <AiSettings family="video" />,
   'ai.3d': () => <AiSettings family="3d" />,

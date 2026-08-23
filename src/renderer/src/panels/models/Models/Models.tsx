@@ -1,8 +1,8 @@
 import { mdiCubeScan } from '@mdi/js'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { familyChoiceWrites } from '@shared/domain/aiRole'
-import type { ModelSummary } from '@shared/domain/model'
+import { primaryRoleOf } from '@shared/domain/aiRole'
+import { LOCAL_RUNTIME, type ModelSummary } from '@shared/domain/model'
 import { CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import { failureKeyOf } from '@/services/failureMessage'
 import { Collection } from '@/design/Collection/Collection'
@@ -61,7 +61,7 @@ export function Models() {
   // left this panel saying "no model chosen" about the very model the generator was running.
   const selectedId = useModelForFamily(family)
   const select = useModels(state => state.select)
-  const chooseAiProviders = useAiModels(state => state.chooseAiProviders)
+  const chooseAiProvider = useAiModels(state => state.chooseAiProvider)
   const projectPath = useProject(state => state.project?.path ?? null)
   const authenticated = useSettings(state => state.auth.authenticated)
   const plan = usePlanAccess()
@@ -173,11 +173,20 @@ export function Models() {
               setOffered(model)
               return
             }
-            select(model.family, model.id)
-            const writes = familyChoiceWrites(model)
-            if (writes.length > 0) {
-              void chooseAiProviders(writes, projectPath === null ? 'app' : 'project')
-            }
+            // ADR-23 § C: the employment the pick was made FOR, and no other. This panel knows
+            // a family, so it arms that family's first one — where `familyChoiceWrites` armed
+            // every employment the model could serve, silently taking over five more.
+            const role = primaryRoleOf(model.family)
+            if (!role) return
+
+            select(role, model.id)
+            void chooseAiProvider(
+              role,
+              model.runsOn === LOCAL_RUNTIME
+                ? { kind: 'local', modelId: model.id }
+                : { kind: 'cloud', providerId: model.runsOn },
+              projectPath === null ? 'app' : 'project',
+            )
           }}
           onReachEnd={catalogue.more}
           onVisible={onVisible}

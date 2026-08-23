@@ -1,3 +1,4 @@
+import { aiRoleId } from '@shared/domain/aiRole'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useLayouts } from './layouts'
 import { useModels } from './models'
@@ -15,7 +16,9 @@ describe('a preparation', () => {
    */
   it('closes when the user leaves the space that made it', () => {
     const stop = connectPreparation()
-    useModels.getState().prepare('upscale', 'model_big', { image: 'asset-flat' })
+    useModels
+      .getState()
+      .prepare(aiRoleId('upscale', 'upscale'), 'model_big', { image: 'asset-flat' })
 
     useLayouts.setState({ activeWorkspace: 'video' })
 
@@ -26,18 +29,20 @@ describe('a preparation', () => {
   // The model and the values it was prepared with stay: only the detour ends.
   it('leaves the model it chose behind it', () => {
     const stop = connectPreparation()
-    useModels.getState().prepare('upscale', 'model_big', { image: 'asset-flat' })
+    useModels
+      .getState()
+      .prepare(aiRoleId('upscale', 'upscale'), 'model_big', { image: 'asset-flat' })
 
     useLayouts.setState({ activeWorkspace: 'video' })
 
-    expect(useModels.getState().selected.upscale).toBe('model_big')
+    expect(useModels.getState().selected[aiRoleId('upscale', 'upscale')]).toBe('model_big')
     expect(useModels.getState().preset.upscale).toEqual({ image: 'asset-flat' })
     stop()
   })
 
   it('survives a change that leaves the workspace alone', () => {
     const stop = connectPreparation()
-    useModels.getState().prepare('upscale', 'model_big', {})
+    useModels.getState().prepare(aiRoleId('upscale', 'upscale'), 'model_big', {})
 
     useLayouts.setState({ layout: null })
 

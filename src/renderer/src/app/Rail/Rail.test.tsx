@@ -1,3 +1,4 @@
+import { aiRoleId } from '@shared/domain/aiRole'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -169,7 +170,7 @@ describe('Rail', () => {
   })
 
   it('offers it as soon as one is', () => {
-    useModels.setState({ selected: { '3d': 'tripo-v3' } })
+    useModels.setState({ selected: { [aiRoleId('3d', 'txt23d')]: 'tripo-v3' } })
     render(<Rail side="left" />)
     expect(screen.getByRole('button', { name: 'Génération' })).toBeInTheDocument()
   })
@@ -189,7 +190,7 @@ describe('Rail', () => {
   // The shelf comes LAST of the three above the cut, and that is what keeps the Models in front
   // when a space is entered: a half with nothing chosen opens on the first tool it declares.
   it('puts the Scenario panels on the left rail, under the new-document button', () => {
-    useModels.setState({ selected: { '3d': 'tripo-v3' } })
+    useModels.setState({ selected: { [aiRoleId('3d', 'txt23d')]: 'tripo-v3' } })
     const { container } = render(<Rail side="left" />)
 
     expect(marksOf(container)).toEqual([
@@ -227,7 +228,7 @@ describe('Rail', () => {
   // the section declares — the Models in the upper left, never the generator taking its turn.
   it('marks the section-first panel as up on the default layout', () => {
     useLayouts.setState({ activeWorkspace: 'image' })
-    useModels.setState({ selected: { image: 'flux-dev' } })
+    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'flux-dev' } })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     render(<Rail side="left" />)
 

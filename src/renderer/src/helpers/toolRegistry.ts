@@ -27,7 +27,7 @@ import { gitHoldsFolder } from '@shared/domain/git'
 import { NODE_KINDS } from '@/engines/scene/nodeKinds'
 import { useGit } from '@/stores/git'
 import { useProject } from '@/stores/project'
-import { modelForFamily } from './modelForFamily'
+import { modelForFamily } from './modelForCapability'
 import { familyOfSurface } from './workspaces'
 
 export type Tool = {

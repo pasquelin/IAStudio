@@ -68,16 +68,17 @@ describe('staging a change', () => {
     expect(isSettingsDraftDirty(draft())).toBe(true)
   })
 
-  it('stages what no path can express, such as a family default model', async () => {
+  it('stages what no path can express, such as the order of the spaces', async () => {
     const write = vi.fn(() => Promise.resolve())
     useSettings.setState({ write })
 
-    draft().stageBranch({ generation: { defaultModels: { image: 'model_1' } } })
+    draft().stageBranch({ workspaces: { order: ['video', 'image'] } })
     draft().stage('generation.maxRetries', 2)
     await draft().apply()
 
     expect(write).toHaveBeenCalledWith({
-      generation: { defaultModels: { image: 'model_1' }, maxRetries: 2 },
+      workspaces: { order: ['video', 'image'] },
+      generation: { maxRetries: 2 },
     })
   })
 })
@@ -109,9 +110,9 @@ describe('what a control shows', () => {
 
 describe('whether anything is waiting', () => {
   it('counts a branch staged by a bespoke screen, not only touched leaves', () => {
-    draft().stageBranch({ generation: { defaultModels: { image: 'model_1' } } })
+    draft().stageBranch({ workspaces: { order: ['video', 'image'] } })
 
-    // Without this the default-model screen stages a change and no Apply button appears.
+    // Without this a screen that drags its rows stages a change and no Apply button appears.
     expect(isSettingsDraftDirty(draft())).toBe(true)
   })
 

@@ -34,7 +34,7 @@ describe('offering a model of one family', () => {
   it('opens the settings for a family that space cannot list', () => {
     offerModelsOfFamily('upscale')
 
-    expect(opened).toEqual(['generation.upscale'])
+    expect(opened).toEqual(['ai.upscale'])
     expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBeUndefined()
   })
 
@@ -44,6 +44,6 @@ describe('offering a model of one family', () => {
 
     offerModelsOfFamily('image')
 
-    expect(opened).toEqual(['generation.image'])
+    expect(opened).toEqual(['ai.image'])
   })
 })

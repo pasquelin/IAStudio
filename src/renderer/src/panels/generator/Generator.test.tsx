@@ -16,7 +16,7 @@ import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { connectPreparation } from '@/stores/preparation'
 import { useSettings } from '@/stores/settings'
-import { preferModels } from '@/stores/settings-fixtures'
+import { chooseModels, chooseModelsByFamily } from '@/stores/models-fixtures'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { useTools } from '@/stores/tools'
 import { prepareEdit } from '@/spaces/image/aiActions'
@@ -79,7 +79,7 @@ describe('Generator', () => {
     useModels.setState({ selected: {}, preset: {}, prepared: null })
     useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
     useLayouts.setState({ activeWorkspace: 'image' })
-    preferModels({ image: 'model_flux', upscale: 'model_big' })
+    chooseModelsByFamily({ image: 'model_flux', upscale: 'model_big' })
 
     bridge = installFakeBridge({
       provider: {
@@ -120,7 +120,7 @@ describe('Generator', () => {
     await prepareEdit(DOCUMENT, 'enlarge', host, bridge.provider)
 
     useLayouts.setState({ activeWorkspace: 'video' })
-    preferModels({ video: 'model_flux' })
+    chooseModelsByFamily({ video: 'model_flux' })
     renderPanel()
 
     expect(await screen.findByText('Flux')).toBeInTheDocument()
@@ -131,7 +131,7 @@ describe('Generator', () => {
   it('drops the preparation once a model is picked in the panel', async () => {
     await prepareEdit(DOCUMENT, 'enlarge', host, bridge.provider)
 
-    useModels.getState().select('image', 'model_flux')
+    useModels.getState().select(aiRoleId('image', 'txt2img'), 'model_flux')
     renderPanel()
 
     expect(await screen.findByText('Flux')).toBeInTheDocument()
@@ -240,7 +240,7 @@ describe('the generator without a project', () => {
     useSettings.setState({ auth: { authenticated: true } })
     useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
     useLayouts.setState({ activeWorkspace: 'image' })
-    preferModels({ image: 'model_flux', upscale: 'model_big' })
+    chooseModelsByFamily({ image: 'model_flux', upscale: 'model_big' })
     installFakeBridge({})
   })
 
@@ -288,10 +288,14 @@ describe('the generator on this machine', () => {
     installCanvas(DOCUMENT)
     useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
     useProject.setState({ project: PROJECT, known: true })
-    useModels.setState({ selected: { image: 'ssd-1b' }, preset: {}, prepared: null })
+    useModels.setState({
+      selected: { [aiRoleId('image', 'txt2img')]: 'ssd-1b' },
+      preset: {},
+      prepared: null,
+    })
     useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
     useLayouts.setState({ activeWorkspace: 'image' })
-    preferModels()
+    chooseModels()
     const overview: AiOverview = {
       roles: [
         {

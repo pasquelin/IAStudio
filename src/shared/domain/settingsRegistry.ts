@@ -48,9 +48,9 @@ export type SettingSectionEntry = {
   /** Set on a sub-section. The navigation builds its tree from this, and nothing else. */
   parent?: SettingsSectionId
   /**
-   * The model family this screen sets a default for. Declared rather than read back out of the
-   * id: an action that cannot find a model of a family has to open the screen that sets one,
-   * and slicing `'background-removal'` off the id would hand it a string nothing checks.
+   * The model family this screen chooses providers for. Declared rather than read back out of
+   * the id: an action that cannot find a model of a family has to open the screen that gives it
+   * one, and slicing `'background-removal'` off the id would hand it a string nothing checks.
    */
   family?: ModelFamily
 }
@@ -61,61 +61,32 @@ export function sectionOfFamily(family: ModelFamily): SettingsSectionId | undefi
 }
 
 /**
- * One screen per model family, each holding the default model of that family. Their labels are
- * the workspaces' own: a family and the space that works with it are the same idea to the user.
+ * One screen per family, holding every employment that family has and what serves each.
  *
- * The last three have no workspace of their own — they are the families the canvas edits reach
- * for — so they are named after the family. Without these screens, Cutout and Vectorize have
- * nowhere at all to be given a model, and both stop on "no model set".
+ * They carry `family:` since ADR-23 removed the per-family default picker: an action that cannot
+ * find a model has one place to send the person, and this is it. The last three have no
+ * workspace of their own — they are the families the canvas edits reach for.
  */
-const MODEL_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
-  { id: 'generation.image', labelKey: 'workspaces.image', parent: 'generation', family: 'image' },
-  { id: 'generation.video', labelKey: 'workspaces.video', parent: 'generation', family: 'video' },
-  { id: 'generation.3d', labelKey: 'workspaces.3d', parent: 'generation', family: '3d' },
-  { id: 'generation.audio', labelKey: 'workspaces.audio', parent: 'generation', family: 'audio' },
+const AI_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
+  { id: 'ai.image', labelKey: 'workspaces.image', parent: 'ai', family: 'image' },
+  { id: 'ai.video', labelKey: 'workspaces.video', parent: 'ai', family: 'video' },
+  { id: 'ai.3d', labelKey: 'workspaces.3d', parent: 'ai', family: '3d' },
+  { id: 'ai.audio', labelKey: 'workspaces.audio', parent: 'ai', family: 'audio' },
+  { id: 'ai.texture', labelKey: 'families.texture', parent: 'ai', family: 'texture' },
+  { id: 'ai.skybox', labelKey: 'workspaces.skyboxes', parent: 'ai', family: 'skybox' },
+  { id: 'ai.upscale', labelKey: 'families.upscale', parent: 'ai', family: 'upscale' },
   {
-    id: 'generation.skybox',
-    labelKey: 'workspaces.skyboxes',
-    parent: 'generation',
-    family: 'skybox',
-  },
-  {
-    id: 'generation.upscale',
-    labelKey: 'families.upscale',
-    parent: 'generation',
-    family: 'upscale',
-  },
-  {
-    id: 'generation.background-removal',
+    id: 'ai.background-removal',
     labelKey: 'families.background-removal',
-    parent: 'generation',
+    parent: 'ai',
     family: 'background-removal',
   },
   {
-    id: 'generation.vectorization',
+    id: 'ai.vectorization',
     labelKey: 'families.vectorization',
-    parent: 'generation',
+    parent: 'ai',
     family: 'vectorization',
   },
-]
-
-/**
- * Employment screens. No `family:` — that field is the generation default picker.
- *
- * The last three have no workspace of their own: they are the families the canvas edits reach
- * for, and each has exactly one employment since 2026-08-23. Without a screen apiece, upscaling,
- * cutout and vectorisation could be given no model at all.
- */
-const AI_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
-  { id: 'ai.image', labelKey: 'workspaces.image', parent: 'ai' },
-  { id: 'ai.video', labelKey: 'workspaces.video', parent: 'ai' },
-  { id: 'ai.3d', labelKey: 'workspaces.3d', parent: 'ai' },
-  { id: 'ai.audio', labelKey: 'workspaces.audio', parent: 'ai' },
-  { id: 'ai.texture', labelKey: 'families.texture', parent: 'ai' },
-  { id: 'ai.skybox', labelKey: 'workspaces.skyboxes', parent: 'ai' },
-  { id: 'ai.upscale', labelKey: 'families.upscale', parent: 'ai' },
-  { id: 'ai.background-removal', labelKey: 'families.background-removal', parent: 'ai' },
-  { id: 'ai.vectorization', labelKey: 'families.vectorization', parent: 'ai' },
 ]
 
 export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
@@ -140,7 +111,6 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     labelKey: 'settings.generation',
     descriptionKey: 'settings.generationDescription',
   },
-  ...MODEL_FAMILY_SECTIONS,
   {
     id: 'ai',
     labelKey: 'settings.ai',

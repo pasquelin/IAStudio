@@ -1,3 +1,4 @@
+import { aiRoleId } from '@shared/domain/aiRole'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
@@ -5,7 +6,7 @@ import { HOME_SURFACE, TOOL_PLACEMENTS, type ToolId, type ToolZone } from '@shar
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
-import { preferModels } from '@/stores/settings-fixtures'
+import { chooseModelsByFamily } from '@/stores/models-fixtures'
 import { useGit } from '@/stores/git'
 import { trackByGit } from '@/stores/git-fixtures'
 import { useProject } from '@/stores/project'
@@ -48,7 +49,7 @@ beforeEach(() => {
 
 describe('the generator', () => {
   it('is offered where a model was chosen', () => {
-    useModels.setState({ selected: { image: 'flux-dev' } })
+    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'flux-dev' } })
     expect(idsOf('left', 'image')).toContain('generator')
   })
 
@@ -57,32 +58,32 @@ describe('the generator', () => {
   })
 
   it('counts the preferred model, which is what that preference is for', () => {
-    preferModels({ image: 'flux-dev' })
+    chooseModelsByFamily({ image: 'flux-dev' })
     expect(hasModelIn('image')).toBe(true)
   })
 
   it('reads the section, not a shared family: textures no longer follows image', () => {
-    useModels.setState({ selected: { image: 'flux-dev' } })
+    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'flux-dev' } })
     expect(hasModelIn('image')).toBe(true)
     expect(hasModelIn('textures')).toBe(false)
   })
 
   it('is the only panel its absence removes', () => {
     expect(idsOf('left', 'image')).toEqual(['models', 'assets', 'explorer'])
-    useModels.setState({ selected: { image: 'flux-dev' } })
+    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'flux-dev' } })
     expect(idsOf('left', 'image')).toEqual(['models', 'generator', 'assets', 'explorer'])
   })
 
   /** The home is the one surface with nothing to generate at all, and it stays that way. */
   it('is never offered on the home, whatever has been chosen elsewhere', () => {
-    useModels.setState({ selected: { image: 'flux-dev' } })
+    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'flux-dev' } })
 
     expect(hasModelIn(HOME_SURFACE)).toBe(false)
   })
 
   /** A choice made in one space is not a choice made in another: the scopes are separate keys. */
   it('keeps a space’s choice out of the spaces that have another family', () => {
-    useModels.setState({ selected: { texture: 'flux-dev' } })
+    useModels.setState({ selected: { [aiRoleId('texture', 'txt2img_texture')]: 'flux-dev' } })
 
     expect(hasModelIn('image')).toBe(false)
   })

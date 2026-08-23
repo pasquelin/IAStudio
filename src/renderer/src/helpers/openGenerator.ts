@@ -1,3 +1,4 @@
+import { primaryRoleOf } from '@shared/domain/aiRole'
 import type { ModelFamily } from '@shared/domain/model'
 import { revealTool } from '@/helpers/revealPanel'
 import { useModels } from '@/stores/models'
@@ -21,7 +22,10 @@ export function openGeneratorOn(
   modelId: string,
   params: Record<string, unknown>,
 ): void {
-  useModels.getState().prepare(family, modelId, params)
+  const role = primaryRoleOf(family)
+  if (!role) return
+
+  useModels.getState().prepare(role, modelId, params)
   // The generator may well be closed — it is a tool window like any other.
   revealTool('generator')
 }

@@ -10,7 +10,6 @@ import type { LocalModel } from './localModel'
 import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
 import type { RecentProject } from './project'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
-import type { ModelFamily } from './model'
 import type { DisplayUnit, HelperVisibility, ShadowQuality, ViewportQuality } from './scene'
 
 /**
@@ -96,8 +95,6 @@ export type Settings = {
   generation: {
     concurrentJobs: number
     maxRetries: number
-    /** Model preselected by the generator, per family. Absent means "ask every time". */
-    defaultModels: Partial<Record<ModelFamily, string>>
     /**
      * Whether an asset arriving without a useful name gets described on its own.
      *
@@ -318,7 +315,7 @@ export const DEFAULT_SETTINGS: Settings = {
   home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] },
   workspaces: { order: [...WORKSPACE_IDS] },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
-  generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {}, captionArrivals: true },
+  generation: { concurrentJobs: 3, maxRetries: 4, captionArrivals: true },
   // Empty on a fresh install, and that is the point: no choice made means the local side is
   // taken wherever it can serve, so the studio works before anyone has an account.
   ai: { roles: {}, projectRoles: {}, ownModels: [] },
@@ -425,14 +422,6 @@ export type SettingsSectionId =
   | 'account'
   | 'appearance'
   | 'generation'
-  | 'generation.image'
-  | 'generation.video'
-  | 'generation.3d'
-  | 'generation.audio'
-  | 'generation.skybox'
-  | 'generation.upscale'
-  | 'generation.background-removal'
-  | 'generation.vectorization'
   | 'ai'
   | 'ai.image'
   | 'ai.video'
@@ -457,14 +446,6 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'account',
   'appearance',
   'generation',
-  'generation.image',
-  'generation.video',
-  'generation.3d',
-  'generation.audio',
-  'generation.skybox',
-  'generation.upscale',
-  'generation.background-removal',
-  'generation.vectorization',
   'ai',
   'ai.image',
   'ai.video',

@@ -1,3 +1,4 @@
+import { aiRoleId } from '@shared/domain/aiRole'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -134,7 +135,7 @@ describe('Inspector, on what a panel selected', () => {
     await userEvent.click(screen.getByRole('button', { name: /Régénérer/ }))
 
     const models = useModels.getState()
-    expect(models.selected.image).toBe('eleven-music-v2')
+    expect(models.selected[aiRoleId('image', 'txt2img')]).toBe('eleven-music-v2')
     expect(models.preset.image).toEqual({ prompt: 'x', guidance: 7 })
     expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('generator')
   })

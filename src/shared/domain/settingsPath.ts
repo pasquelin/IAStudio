@@ -12,12 +12,11 @@ export type SettingValue = string | number | boolean
  * file, and the recent projects — like the account each of them works under — are written by
  * opening one and by the switch in the title bar. None of which is a list anyone can write down.
  *
- * Named by full path, not by key: excluding `'defaultModels'` wherever it appears would also
- * swallow a future `appearance.defaultModels`, and a leaf missing from `SettingPath` is a leaf
- * the coverage check can no longer notice.
+ * Named by full path, not by key: excluding `'overrides'` wherever it appears would also swallow
+ * a future `appearance.overrides`, and a leaf missing from `SettingPath` is a leaf the coverage
+ * check can no longer notice.
  */
 type DedicatedPath =
-  | 'generation.defaultModels'
   | 'shortcuts.overrides'
   | 'home.sections'
   | 'storage.recentProjects'

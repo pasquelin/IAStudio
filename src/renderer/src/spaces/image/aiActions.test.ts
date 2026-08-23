@@ -1,3 +1,4 @@
+import { aiRoleId } from '@shared/domain/aiRole'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { setLayerMask } from '@/engines/canvas/commands'
@@ -6,10 +7,12 @@ import { installCanvas } from '@/stores/canvas-fixtures'
 import { useCanvases } from '@/stores/canvases'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
-import { preferModels } from '@/stores/settings-fixtures'
+import { chooseModels } from '@/stores/models-fixtures'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { arrangementOf, useTools } from '@/stores/tools'
 import { prepareEdit } from './aiActions'
+
+const INPAINT = aiRoleId('image', 'inpaint')
 
 const DOCUMENT = 'doc-1'
 
@@ -36,27 +39,32 @@ const bridge = {
 beforeEach(() => {
   uploaded = []
   installCanvas(DOCUMENT)
-  useModels.setState({ selected: {}, preset: {} })
   useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
   useLayouts.setState({ activeWorkspace: 'image', home: false })
-  preferModels({ image: 'model_flux' })
+  // The employment a retouch reaches for since ADR-23, not the family's first one: the same
+  // weights serve both, and a person may well have picked differently for each.
+  chooseModels({ [INPAINT]: 'model_flux' })
 })
 
 describe('preparing an edit', () => {
-  it('opens the family model on the flattened document', async () => {
+  it("opens the retouch's own model on the flattened document", async () => {
     await expect(prepareEdit(DOCUMENT, 'regenerate', host, bridge)).resolves.toBe(true)
 
-    expect(useModels.getState().selected.image).toBe('model_flux')
+    expect(useModels.getState().selected[INPAINT]).toBe('model_flux')
+    // The form still opens on the FAMILY, which is what a descriptor belongs to.
     expect(useModels.getState().preset.image).toMatchObject({ image: 'asset-flat' })
   })
 
-  // The session choice wins over the preference, the order the generator itself follows.
-  it('uses the model chosen in the panel over the one set in the settings', async () => {
-    useModels.getState().select('image', 'model_chosen')
+  /**
+   * 🛑 ADR-23 § C. Naming the family reached for what text-to-image was on, so someone who had
+   * chosen SSD-1B to retouch with had their retouch run by whatever drew from words.
+   */
+  it('leaves the model of another employment of the same family alone', async () => {
+    chooseModels({ [aiRoleId('image', 'txt2img')]: 'model_words' })
 
-    await prepareEdit(DOCUMENT, 'regenerate', host, bridge)
+    await expect(prepareEdit(DOCUMENT, 'regenerate', host, bridge)).resolves.toBe(false)
 
-    expect(useModels.getState().selected.image).toBe('model_chosen')
+    expect(uploaded).toEqual([])
   })
 
   /**
@@ -117,12 +125,12 @@ describe('preparing an edit', () => {
   })
 
   // Cutting out, enlarging and vectorizing take the picture whole: a mask would mean nothing.
-  it('asks each edit of the family it belongs to', async () => {
-    preferModels({ upscale: 'model_big' })
+  it('asks each edit of the employment it belongs to', async () => {
+    chooseModels({ [aiRoleId('upscale', 'upscale')]: 'model_big' })
 
     await prepareEdit(DOCUMENT, 'enlarge', host, bridge)
 
-    expect(useModels.getState().selected.upscale).toBe('model_big')
+    expect(useModels.getState().selected[aiRoleId('upscale', 'upscale')]).toBe('model_big')
     expect(uploaded).toEqual(['FLAT'])
   })
 
@@ -131,8 +139,7 @@ describe('preparing an edit', () => {
    * the one place where choosing one belongs.
    */
   it('opens the models panel rather than picking one when none is set', async () => {
-    useModels.setState({ selected: {} })
-    preferModels()
+    chooseModels()
 
     await expect(prepareEdit(DOCUMENT, 'regenerate', host, bridge)).resolves.toBe(false)
 
@@ -155,11 +162,11 @@ describe('preparing an edit', () => {
         },
       },
     })
-    preferModels()
+    chooseModels()
 
     await expect(prepareEdit(DOCUMENT, 'vectorize', host, bridge)).resolves.toBe(false)
 
-    expect(opened).toEqual(['generation.vectorization'])
+    expect(opened).toEqual(['ai.vectorization'])
     expect(uploaded).toEqual([])
   })
 

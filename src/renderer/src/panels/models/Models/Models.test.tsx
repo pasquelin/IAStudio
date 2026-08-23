@@ -1,3 +1,4 @@
+import { aiRoleId } from '@shared/domain/aiRole'
 import { render, screen, waitFor } from '@testing-library/react'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import userEvent from '@testing-library/user-event'
@@ -13,7 +14,7 @@ import { installFakeBridge } from '@/services/fakeBridge'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
-import { preferModels } from '@/stores/settings-fixtures'
+import { chooseModels, chooseModelsByFamily } from '@/stores/models-fixtures'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collectionState'
 import { Models } from './Models'
 
@@ -41,7 +42,7 @@ describe('Models panel', () => {
     useSettings.setState({ auth: { authenticated: true } })
     // The panel reads the preference too, so a model preferred by one test would be shown as
     // chosen in the next.
-    preferModels()
+    chooseModels()
     useModels.setState({ selected: {}, collections: {} })
     useLayouts.setState({ activeWorkspace: 'image' })
   })
@@ -243,7 +244,7 @@ describe('Models panel', () => {
     expect(modelPreviews).toHaveBeenCalledWith(['asset_bare'])
   })
 
-  it('remembers the chosen model per family', async () => {
+  it('remembers the chosen model per employment', async () => {
     installFakeBridge({
       provider: { searchModels: () => Promise.resolve({ items: [model('flux')], cursor: null }) },
     })
@@ -251,7 +252,7 @@ describe('Models panel', () => {
     renderPanel()
     await userEvent.click(await screen.findByText('Model flux'))
 
-    expect(useModels.getState().selected.image).toBe('flux')
+    expect(useModels.getState().selected[aiRoleId('image', 'txt2img')]).toBe('flux')
   })
 
   /**
@@ -259,7 +260,7 @@ describe('Models panel', () => {
    * panel said "no model chosen" about the very model the one beside it was running.
    */
   it('shows the preferred model as chosen where nothing was picked by hand', async () => {
-    preferModels({ image: 'flux' })
+    chooseModelsByFamily({ image: 'flux' })
     installFakeBridge({
       provider: { searchModels: () => Promise.resolve({ items: [model('flux')], cursor: null }) },
     })
@@ -385,7 +386,9 @@ describe('Models panel', () => {
 
       await userEvent.click(await screen.findByText('Model mine'))
 
-      expect(useModels.getState().selected).toMatchObject({ image: 'mine' })
+      expect(useModels.getState().selected).toMatchObject({
+        [aiRoleId('image', 'txt2img')]: 'mine',
+      })
     })
 
     /**

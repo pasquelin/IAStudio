@@ -1,7 +1,8 @@
 import i18next from 'i18next'
-import type { FieldDescriptor, ModelFamily } from '@shared/domain/model'
+import { aiRoleId, partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
+import type { FieldDescriptor } from '@shared/domain/model'
 import { layerById } from '@/engines/canvas/canvasState'
-import { modelForFamily } from '@/helpers/modelForFamily'
+import { modelForCapability } from '@/helpers/modelForCapability'
 import { reportNotice } from '@/services/diagnostics'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useModels } from '@/stores/models'
@@ -22,17 +23,21 @@ export type EditBridge = {
 }
 
 /**
- * The five edits the canvas offers, and the family of models each one asks for. Declared rather
- * than branched: a sixth is one entry, and none of them names a model.
+ * The five edits the canvas offers, and the EMPLOYMENT each one asks for. Declared rather than
+ * branched: a sixth is one entry, and none of them names a model.
+ *
+ * The employment and not the family since ADR-23: a retouch reaches for the model chosen to
+ * retouch with, where naming the family reached for the one text-to-image was on — the same
+ * weights serve both, and the person may well have picked differently for each.
  */
 export type AiEdit = 'regenerate' | 'cutout' | 'enlarge' | 'vectorize' | 'extend'
 
-export const AI_EDITS: Readonly<Record<AiEdit, { family: ModelFamily; masked: boolean }>> = {
-  regenerate: { family: 'image', masked: true },
-  cutout: { family: 'background-removal', masked: false },
-  enlarge: { family: 'upscale', masked: false },
-  vectorize: { family: 'vectorization', masked: false },
-  extend: { family: 'image', masked: true },
+export const AI_EDITS: Readonly<Record<AiEdit, { role: AiRoleId; masked: boolean }>> = {
+  regenerate: { role: aiRoleId('image', 'inpaint'), masked: true },
+  cutout: { role: aiRoleId('background-removal', 'cutout'), masked: false },
+  enlarge: { role: aiRoleId('upscale', 'upscale'), masked: false },
+  vectorize: { role: aiRoleId('vectorization', 'vectorize'), masked: false },
+  extend: { role: aiRoleId('image', 'outpaint'), masked: true },
 }
 
 /**
@@ -50,10 +55,13 @@ export async function prepareEdit(
   host: EditHost,
   bridge: EditBridge,
 ): Promise<boolean> {
-  const { family, masked } = AI_EDITS[edit]
-  const modelId = modelForFamily(family)
+  const { role, masked } = AI_EDITS[edit]
+  const modelId = modelForCapability(role)
   if (!modelId) {
-    offerModelsOfFamily(family)
+    // The family, because that is what a picker browses: an employment has no catalogue of its
+    // own, and `partsOfRole` never answers nothing for a role composed from constants.
+    const parts = partsOfRole(role)
+    if (parts) offerModelsOfFamily(parts.family)
     return false
   }
 
@@ -97,7 +105,7 @@ export async function prepareEdit(
     ...(maskId ? { mask: maskId } : {}),
   })
 
-  useModels.getState().prepare(family, modelId, values)
+  useModels.getState().prepare(role, modelId, values)
   revealTool('generator')
   return true
 }

@@ -1,3 +1,4 @@
+import { aiRoleId } from '@shared/domain/aiRole'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MenuAbility, MenuCheck } from '@shared/domain/command'
@@ -280,7 +281,7 @@ describe('what the native menu is told', () => {
   // nothing else would tell it.
   it('announces the generator as soon as a model is chosen', () => {
     renderHook(() => useNativeMenu())
-    useModels.getState().select('image', 'flux-dev')
+    useModels.getState().select(aiRoleId('image', 'txt2img'), 'flux-dev')
     expect(lastPublished().tools).toContain('generator')
   })
 

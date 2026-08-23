@@ -4,7 +4,6 @@ import {
   allRoles,
   ASSISTANT_ROLE,
   DICTATION_ROLE,
-  familyChoiceWrites,
   partsOfRole,
   primaryRoleOf,
   providerFor,
@@ -13,7 +12,6 @@ import {
   type RoleOffer,
   type RoleProvider,
 } from './aiRole'
-import { LOCAL_RUNTIME } from './model'
 
 /** Installed defaults to what is usable: the two only part where a machine says no. */
 const offer = (over: Partial<RoleOffer> = {}): RoleOffer => ({
@@ -81,35 +79,6 @@ describe('primaryRoleOf', () => {
   // `motion`, and text-to-3D is still what the space generates when nothing else is asked.
   it('is unmoved by a capability appended to a family', () => {
     expect(primaryRoleOf('3d')).toBe(aiRoleId('3d', 'txt23d'))
-  })
-})
-
-describe('familyChoiceWrites', () => {
-  it('writes the primary employment and every capability the model actually has', () => {
-    expect(
-      familyChoiceWrites({
-        id: 'ssd-1b',
-        family: 'image',
-        capabilities: ['txt2img', 'inpaint'],
-        runsOn: LOCAL_RUNTIME,
-      }),
-    ).toEqual([
-      { role: aiRoleId('image', 'txt2img'), provider: { kind: 'local', modelId: 'ssd-1b' } },
-      { role: aiRoleId('image', 'inpaint'), provider: { kind: 'local', modelId: 'ssd-1b' } },
-    ])
-  })
-
-  it('writes a cloud id for a remote model, and skips capabilities the family does not have', () => {
-    expect(
-      familyChoiceWrites({
-        id: 'model_flux',
-        family: 'image',
-        capabilities: ['txt2img', 'txt2video'],
-        runsOn: 'scenario',
-      }),
-    ).toEqual([
-      { role: aiRoleId('image', 'txt2img'), provider: { kind: 'cloud', providerId: 'scenario' } },
-    ])
   })
 })
 
