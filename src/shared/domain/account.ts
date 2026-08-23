@@ -1,3 +1,5 @@
+import { SCENARIO_CLOUD } from './aiCloud'
+
 /**
  * A stored Scenario account, as the renderer may know it. The key and secret never appear
  * here — they stay in the main process, encrypted (see spec § 4, invariant 1).
@@ -12,6 +14,22 @@ export type AccountSummary = {
   providerId?: string
   /** Active FOR ITS CLOUD. Two providers each have one, and they are not exclusive. */
   active: boolean
+}
+
+/** Which cloud a key opens. Absent means Scenario — every key written before clouds became a list. */
+export function providerOf(account: AccountSummary): string {
+  return account.providerId ?? SCENARIO_CLOUD
+}
+
+/**
+ * The Scenario key in force — the one the catalogue, the green dot and a project link answer for.
+ *
+ * Here rather than in a store: the main process asks it too, on every project it settles, and the
+ * two sides reading the word "active" differently is how a project ends up linked to a key that
+ * serves another cloud.
+ */
+export function scenarioAccount(accounts: readonly AccountSummary[]): AccountSummary | null {
+  return accounts.find(account => account.active && providerOf(account) === SCENARIO_CLOUD) ?? null
 }
 
 export const ACCOUNT_NAME_MAX_LENGTH = 60

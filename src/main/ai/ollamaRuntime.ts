@@ -1,4 +1,5 @@
 import { writeFile } from 'node:fs/promises'
+import { chunksOf } from '@main/netStream'
 import type { DownloadProgress } from '@shared/domain/localModel'
 import { ollamaModel, type OllamaTag } from '@shared/domain/ollamaModel'
 import { isRecord } from '@shared/guards'
@@ -32,6 +33,32 @@ const TAGS_MS = 2_000
 const DOWN_MS = 10_000
 const FRESH_MS = 3_000
 
+/** Ollama answers a stream as one JSON object per line. A truncated last frame is ordinary. */
+async function* eventsOf(body: ReadableStream<Uint8Array> | null): AsyncIterable<unknown> {
+  const decoder = new TextDecoder()
+  let rest = ''
+
+  function* framesIn(text: string, last: boolean): Iterable<unknown> {
+    const lines = (rest + text).split('\n')
+    // 🛑 The tail is only held back while more is coming: a stream whose last frame carries no
+    // newline is what generate ends with, and holding it there would drop the image.
+    rest = last ? '' : (lines.pop() ?? '')
+    for (const line of lines) {
+      if (line.trim() === '') continue
+      try {
+        yield JSON.parse(line)
+      } catch {
+        // A truncated frame is ordinary on a cancelled pull.
+      }
+    }
+  }
+
+  for await (const chunk of chunksOf(body)) {
+    yield* framesIn(decoder.decode(chunk, { stream: true }), false)
+  }
+  yield* framesIn(decoder.decode(), true)
+}
+
 export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): OllamaPort {
   const url = (path: string) => `${origin}${path}`
 
@@ -64,30 +91,13 @@ export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): Oll
         signal,
       })
       if (!response.ok) throw new Error(`ollama /api/pull ${response.status}`)
-      if (!response.body) return
 
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let rest = ''
-      for (;;) {
-        const { done, value } = await reader.read()
-        rest += decoder.decode(value ?? new Uint8Array(), { stream: !done })
-        const lines = rest.split('\n')
-        rest = done ? '' : (lines.pop() ?? '')
-        for (const line of lines) {
-          if (line.trim() === '') continue
-          try {
-            const event: unknown = JSON.parse(line)
-            if (!isRecord(event) || typeof event.total !== 'number') continue
-            onProgress({
-              received: typeof event.completed === 'number' ? event.completed : 0,
-              total: event.total,
-            })
-          } catch {
-            // A truncated frame is ordinary on a cancelled pull.
-          }
-        }
-        if (done) break
+      for await (const event of eventsOf(response.body)) {
+        if (!isRecord(event) || typeof event.total !== 'number') continue
+        onProgress({
+          received: typeof event.completed === 'number' ? event.completed : 0,
+          total: event.total,
+        })
       }
     },
 
@@ -137,33 +147,16 @@ export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): Oll
         signal: request.signal,
       })
       if (!response.ok) throw new Error(`ollama /api/generate ${response.status}`)
-      if (!response.body) return []
 
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let rest = ''
       let images: string[] = []
-      for (;;) {
-        const { done, value } = await reader.read()
-        rest += decoder.decode(value ?? new Uint8Array(), { stream: !done })
-        const lines = rest.split('\n')
-        rest = done ? '' : (lines.pop() ?? '')
-        for (const line of lines) {
-          if (line.trim() === '') continue
-          try {
-            const event: unknown = JSON.parse(line)
-            if (!isRecord(event)) continue
-            const total = typeof event.total === 'number' ? event.total : null
-            const completed = typeof event.completed === 'number' ? event.completed : 0
-            if (total !== null && total > 0) request.onProgress(completed / total)
-            if (Array.isArray(event.images)) {
-              images = event.images.filter((one): one is string => typeof one === 'string')
-            }
-          } catch {
-            // A truncated frame is ordinary on a cancelled generate.
-          }
+      for await (const event of eventsOf(response.body)) {
+        if (!isRecord(event)) continue
+        const total = typeof event.total === 'number' ? event.total : null
+        const completed = typeof event.completed === 'number' ? event.completed : 0
+        if (total !== null && total > 0) request.onProgress(completed / total)
+        if (Array.isArray(event.images)) {
+          images = event.images.filter((one): one is string => typeof one === 'string')
         }
-        if (done) break
       }
       return images
     },

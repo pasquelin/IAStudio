@@ -4,17 +4,15 @@ import type { ModelSummary } from '@shared/domain/model'
 import type { PlanAccess } from '@shared/domain/plan'
 import { usePlanRefusal } from './usePlanRefusal'
 
+/** The word a tile shows for a refusal, and the sentence its tooltip explains it with. */
+export type ModelRefusalWord = { word: string; hint: string }
+
 /**
  * Why a model cannot be picked right now, or `undefined` when it can.
  *
  * Two reasons, and they are not the same gesture: a plan that does not reach it is a purchase,
- * where weights that are not on the disk are a download the studio can start itself. The
- * download is the ONE case that answers a second thing — `fetchable` — so a click can offer it
- * rather than leaving a dimmed tile the person can only wonder about.
+ * where weights that are not on the disk are a download the studio can start itself.
  */
-/** The word a tile shows for a refusal, and the sentence its tooltip explains it with. */
-export type ModelRefusalWord = { word: string; hint: string }
-
 export type ModelReach = {
   /**
    * The two words the tile shows, and the sentence its tooltip explains them with.

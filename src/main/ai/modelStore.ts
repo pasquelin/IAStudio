@@ -94,14 +94,7 @@ export function createDownloadHost(): DownloadHost {
 
     rename,
 
-    exists: async path => {
-      try {
-        await stat(path)
-        return true
-      } catch {
-        return false
-      }
-    },
+    exists,
 
     join,
     ensureFolder,
