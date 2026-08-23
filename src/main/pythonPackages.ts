@@ -77,13 +77,13 @@ export const UNREAD_ON_THIS_PLATFORM: readonly string[] = [
 /**
  * 🛑 **Locked, distributed everywhere, and their licences have NOT been read yet.**
  *
- * Different from `UNREAD_ON_THIS_PLATFORM`, and the difference decides what closes the hole:
- * those never materialise here at all, these simply have not been collected since they were
- * added — `collect-python-licences.mjs` reads a package's own `METADATA`, which asks for the
- * 682 Mo environment to exist on disk. One run of the collector empties this list.
+ * Different from `UNREAD_ON_THIS_PLATFORM`: those never materialise here at all, these have not
+ * been collected since they were added — `collect-python-licences.mjs` reads a package's own
+ * `METADATA`, which asks for the environment to exist on disk.
  *
- * Written rather than filtered away in silence: what a release ships under them is stated by
- * nobody until that run happens.
+ * 🛑 **A run of the collector would NOT empty this list**, measured 2026-08-23: `materialise()`
+ * installs `--extra diffusion` and nothing else, so everything the `plugin` extra brings — the
+ * whole 3d half — is unreachable to it. Closing the hole means installing every extra there.
  */
 export const UNREAD_PENDING_COLLECTION: readonly string[] = [
   'imageio',

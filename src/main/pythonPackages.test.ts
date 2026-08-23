@@ -47,6 +47,14 @@ describe('what the Python side distributes', () => {
     expect(lockedPackages().filter(name => !known.has(name))).toEqual([])
   })
 
+  /**
+   * The list only shrinks when the collector is taught to install every extra; until then a
+   * growing one is a growing hole, and a silent one is worse.
+   */
+  it('does not let the uncollected half grow unnoticed', () => {
+    expect(UNREAD_PENDING_COLLECTION).toHaveLength(47)
+  })
+
   it('states a licence for each package whose metadata was read', () => {
     const unread = Object.entries(pythonLicences())
       .filter(([, entry]) => !entry.spdx)

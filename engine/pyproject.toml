@@ -50,6 +50,12 @@ plugin = [
   "timm>=1.0",
   "jaxtyping>=0.2",
   "typeguard>=4.0",
+  # `_require(…, "plugin")` names this extra in its refusal, so what the adapters import right
+  # after the probe has to be in it — otherwise the next line raises a bare ImportError.
+  "diffusers>=0.40",
+  "transformers>=5.0",
+  "accelerate>=1.0",
+  "numpy>=1.26",
 ]
 
 [dependency-groups]

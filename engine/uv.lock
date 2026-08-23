@@ -661,11 +661,14 @@ diffusion = [
     { name = "transformers" },
 ]
 plugin = [
+    { name = "accelerate" },
+    { name = "diffusers" },
     { name = "einops" },
     { name = "huggingface-hub" },
     { name = "imageio" },
     { name = "jaxtyping" },
     { name = "kiui" },
+    { name = "numpy" },
     { name = "omegaconf" },
     { name = "pillow" },
     { name = "plyfile" },
@@ -679,6 +682,7 @@ plugin = [
     { name = "torch" },
     { name = "torchaudio" },
     { name = "torchvision" },
+    { name = "transformers" },
     { name = "trimesh" },
     { name = "typeguard" },
 ]
@@ -692,7 +696,9 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "accelerate", marker = "extra == 'diffusion'", specifier = ">=1.0" },
+    { name = "accelerate", marker = "extra == 'plugin'", specifier = ">=1.0" },
     { name = "diffusers", marker = "extra == 'diffusion'", specifier = ">=0.40" },
+    { name = "diffusers", marker = "extra == 'plugin'", specifier = ">=0.40" },
     { name = "einops", marker = "extra == 'plugin'", specifier = ">=0.7" },
     { name = "huggingface-hub", marker = "extra == 'plugin'", specifier = ">=0.24" },
     { name = "imageio", marker = "extra == 'diffusion'", specifier = ">=2.34" },
@@ -700,6 +706,7 @@ requires-dist = [
     { name = "imageio-ffmpeg", marker = "extra == 'diffusion'", specifier = ">=0.5" },
     { name = "jaxtyping", marker = "extra == 'plugin'", specifier = ">=0.2" },
     { name = "kiui", marker = "extra == 'plugin'", specifier = ">=0.2.3" },
+    { name = "numpy", marker = "extra == 'plugin'", specifier = ">=1.26" },
     { name = "omegaconf", marker = "extra == 'plugin'", specifier = ">=2.3" },
     { name = "pillow", marker = "extra == 'plugin'", specifier = ">=10.0" },
     { name = "plyfile", marker = "extra == 'plugin'", specifier = ">=1.0" },
@@ -716,6 +723,7 @@ requires-dist = [
     { name = "torchaudio", marker = "extra == 'plugin'", specifier = ">=2.6" },
     { name = "torchvision", marker = "extra == 'plugin'", specifier = ">=0.21" },
     { name = "transformers", marker = "extra == 'diffusion'", specifier = ">=5.0" },
+    { name = "transformers", marker = "extra == 'plugin'", specifier = ">=5.0" },
     { name = "trimesh", marker = "extra == 'plugin'", specifier = ">=4.0" },
     { name = "typeguard", marker = "extra == 'plugin'", specifier = ">=4.0" },
 ]

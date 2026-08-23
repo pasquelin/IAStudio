@@ -194,6 +194,7 @@ describe('the shipped catalogue', () => {
     const model = shippedModel('lgm')
 
     expect(model?.loader).toBe('plugin')
+    expect(model?.needsCuda).toBe(true)
     expect(model?.runtimeStatus).toBeUndefined()
     expect(model?.files.map(file => file.name)).toContain('lgm/model_fp16_fixrot.safetensors')
   })
@@ -202,6 +203,7 @@ describe('the shipped catalogue', () => {
     const closed = shippedModels()
       .filter(model => model.family === '3d')
       .filter(model => model.runtimeStatus === 'unsupported')
+      .map(model => model.id)
 
     expect(closed).toEqual([])
   })
@@ -210,6 +212,7 @@ describe('the shipped catalogue', () => {
     const model = shippedModel('craftsman3d')
 
     expect(model?.licence).toBe('CreativeML Open RAIL-M')
+    expect(model?.needsCuda).toBe(true)
     expect(model?.licenceStatus).toBe('restricted')
     expect(model?.files.map(file => file.name)).toContain('model.ckpt')
   })

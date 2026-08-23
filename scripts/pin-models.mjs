@@ -31,10 +31,25 @@ function partsOf(url) {
   return { repo: match[1], revision: match[2], path: match[3] }
 }
 
-async function json(url) {
+async function fetched(url) {
   const response = await fetch(url, { redirect: 'follow' })
   if (!response.ok) throw new Error(`${url} answered ${response.status}`)
-  return await response.json()
+  return response
+}
+
+/**
+ * Answers are memoised because a manifest names one repository many times: pinning the whole
+ * catalogue asked 546 commits and 546 trees for 39 repositories and 177 folders.
+ */
+const answered = new Map()
+
+async function json(url) {
+  if (!answered.has(url))
+    answered.set(
+      url,
+      fetched(url).then(response => response.json()),
+    )
+  return await answered.get(url)
 }
 
 /** The commit a branch points at, so a recorded digest stays true when the branch moves on. */
@@ -46,11 +61,11 @@ async function commitOf(repo, revision) {
 const SMALL_ENOUGH = 8 * 1024 * 1024
 
 async function digestOf(repo, revision, path) {
-  const url = `https://huggingface.co/${repo}/resolve/${revision}/${path}`
-  const response = await fetch(url, { redirect: 'follow' })
-  if (!response.ok) throw new Error(`${url} answered ${response.status}`)
+  const response = await fetched(`https://huggingface.co/${repo}/resolve/${revision}/${path}`)
+  const digest = createHash('sha256')
+  for await (const chunk of response.body) digest.update(chunk)
 
-  return createHash('sha256').update(new Uint8Array(await response.arrayBuffer())).digest('hex')
+  return digest.digest('hex')
 }
 
 async function entryOf(repo, revision, path) {
@@ -61,12 +76,10 @@ async function entryOf(repo, revision, path) {
 
   // A plain file has no `lfs`, and its `oid` is a GIT blob hash — not a SHA-256 of the contents.
   // Those are configs and vocabularies, so the digest is read off the bytes themselves.
-  if (!found.lfs) {
-    if (found.size > SMALL_ENOUGH) throw new Error(`${path} is ${found.size} bytes and not LFS`)
-    return { bytes: found.size, sha256: await digestOf(repo, revision, path) }
-  }
+  if (found.lfs) return { bytes: found.size, sha256: found.lfs.oid }
+  if (found.size > SMALL_ENOUGH) throw new Error(`${path} is ${found.size} bytes and not LFS`)
 
-  return { bytes: found.size, sha256: found.lfs.oid }
+  return { bytes: found.size, sha256: await digestOf(repo, revision, path) }
 }
 
 export async function pinModels({ all = false, id = null } = {}) {

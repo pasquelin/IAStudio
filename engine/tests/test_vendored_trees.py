@@ -1,8 +1,8 @@
 """What an over-trimmed vendor tree costs: an ImportError nothing here would otherwise reach.
 
-The plugin extra is never installed by the gate, so no test imports these packages. Reading the
-import statements is what remains — and it is what catches a module left behind when a training
-half is dropped.
+The plugin extra is never installed by the gate, so no test imports these packages — reading their
+import statements is what remains. Relative imports are the ones that matter: three of the five
+trees write nothing else, so skipping them left this guard green over an empty set.
 """
 
 import ast
@@ -25,38 +25,50 @@ LICENCE_OF = {
 VENDORED = sorted(LICENCE_OF)
 
 
-def _internal_imports(package: str) -> list[tuple[Path, str]]:
-    found: list[tuple[Path, str]] = []
+def _targets(file: Path, package: str, node: ast.AST) -> list[Path]:
+    if isinstance(node, ast.Import):
+        return [
+            VENDOR.joinpath(*alias.name.split("."))
+            for alias in node.names
+            if alias.name.split(".")[0] == package
+        ]
+    if not isinstance(node, ast.ImportFrom):
+        return []
+    if node.level == 0:
+        if not node.module or node.module.split(".")[0] != package:
+            return []
+        return [VENDOR.joinpath(*node.module.split("."))]
+
+    home = file.parents[node.level - 1]
+    if node.module:
+        return [home.joinpath(*node.module.split("."))]
+    # `from . import a, b` names its modules on the right rather than in `module`.
+    return [home / alias.name for alias in node.names]
+
+
+def _imports(package: str) -> list[tuple[Path, Path]]:
+    found: list[tuple[Path, Path]] = []
     for file in sorted((VENDOR / package).rglob("*.py")):
-        for node in ast.walk(ast.parse(file.read_text(errors="ignore"))):
-            if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-                if node.module.split(".")[0] == package:
-                    found.append((file, node.module))
-            elif isinstance(node, ast.Import):
-                found += [
-                    (file, alias.name)
-                    for alias in node.names
-                    if alias.name.split(".")[0] == package
-                ]
+        tree = ast.parse(file.read_text(errors="ignore"), filename=str(file))
+        for node in ast.walk(tree):
+            found += [(file, target) for target in _targets(file, package, node)]
     return found
 
 
 @pytest.mark.parametrize("package", VENDORED)
 def test_every_internal_import_resolves(package: str) -> None:
     missing = [
-        f"{file.relative_to(VENDOR)} -> {module}"
-        for file, module in _internal_imports(package)
-        if not VENDOR.joinpath(*module.split(".")).with_suffix(".py").exists()
-        and not (VENDOR.joinpath(*module.split(".")) / "__init__.py").exists()
+        f"{file.relative_to(VENDOR)} -> {target.relative_to(VENDOR)}"
+        for file, target in _imports(package)
+        if not target.with_suffix(".py").exists() and not (target / "__init__.py").exists()
     ]
 
     assert missing == []
 
 
 @pytest.mark.parametrize("package", VENDORED)
-def test_every_vendored_file_parses(package: str) -> None:
-    for file in (VENDOR / package).rglob("*.py"):
-        ast.parse(file.read_text(errors="ignore"), filename=str(file))
+def test_a_tree_states_imports_this_guard_can_read(package: str) -> None:
+    assert _imports(package) != []
 
 
 def test_the_licence_of_each_vendored_tree_travels_with_it() -> None:
