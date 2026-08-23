@@ -320,17 +320,16 @@ export type StudioCapability = {
 }
 
 export const STUDIO_CAPABILITIES: readonly StudioCapability[] = [
+  // The panoramas answer image capabilities and are found by tag — the family is what
+  // `SKYBOX_TAG` already filed them under, and `answers` is what tells the two apart.
+  { capability: 'txt2skybox', family: 'skybox', answers: 'txt2img' },
+  { capability: 'img2skybox', family: 'skybox', answers: 'img2img' },
   { capability: 'rig', family: '3d', answers: '3d23d', tags: ['rigging'] },
   { capability: 'motion', family: '3d', tags: ['motion', 'animation'], excludes: ['rigging'] },
   { capability: 'upscale', family: 'upscale' },
   { capability: 'cutout', family: 'background-removal' },
   { capability: 'vectorize', family: 'vectorization' },
 ]
-
-/** Whether the API's enum holds this capability, which is what decides if a filter may carry it. */
-export function isStudioCapability(capability: string): boolean {
-  return STUDIO_CAPABILITIES.some(entry => entry.capability === capability)
-}
 
 /** The rule that finds a studio capability's models, or nothing when it names none. */
 export function studioCapability(capability: string): StudioCapability | undefined {

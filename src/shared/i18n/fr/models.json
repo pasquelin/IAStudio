@@ -23,7 +23,8 @@
     "modelScope_local": "Local",
     "modelScope_cloud": "Cloud",
     "modelScope_installed": "Installé",
-    "modelInstalled": "Installé"
+    "modelInstalled": "Installé",
+    "modelScopeHint": "Restreint la liste à cette provenance"
   },
   "models": {
     "none": "Aucun modèle dans cet espace.",

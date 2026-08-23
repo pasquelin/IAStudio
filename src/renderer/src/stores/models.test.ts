@@ -6,7 +6,7 @@ import { ORIGIN_FACET } from '@/panels/models/modelFilters'
 import { useModels } from './models'
 
 beforeEach(() => {
-  useModels.setState({ selected: {}, collections: {}, preset: {}, prepared: null })
+  useModels.setState({ selected: {}, collections: {}, preset: {} })
 })
 
 describe('choosing a model', () => {
@@ -68,14 +68,5 @@ describe('choosing a model', () => {
 
       expect(stored('skybox').selections).toBeUndefined()
     })
-  })
-
-  /** A choice made by hand closes the parenthesis an action opened — see `prepared`. */
-  it('drops a preparation the user has just overruled', () => {
-    useModels.setState({ prepared: 'upscale' })
-
-    useModels.getState().select(aiRoleId('video', 'txt2video'), 'model_kling')
-
-    expect(useModels.getState().prepared).toBeNull()
   })
 })

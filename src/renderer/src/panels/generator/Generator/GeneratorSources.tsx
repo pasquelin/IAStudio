@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { assetUrl } from '@shared/domain/asset'
+import { Row } from '@/design/Row'
 import { PANEL_GROUP_LABEL } from '@/design/styles'
 import { Thumbnail } from '@/design/Thumbnail'
 import type { GenerationInput } from '@/generation/generationInputs'
@@ -9,11 +10,9 @@ export type GeneratorSourcesProps = {
 }
 
 /**
- * What the workspace is about to hand the model, drawn — the § 10 of the brief.
- *
- * 🛑 Never a silent generation: the panel takes the selection and the open document on its own,
- * so what it took has to be readable before the button is pressed. A source nobody can see is a
- * resource spent without being asked for.
+ * 🛑 What the workspace is about to hand the model, drawn. The panel takes the selection and the
+ * open document on its own, so what it took has to be readable before the button is pressed — a
+ * source nobody can see is a resource spent without being asked for.
  */
 export function GeneratorSources({ inputs }: GeneratorSourcesProps) {
   const { t } = useTranslation()
@@ -25,24 +24,20 @@ export function GeneratorSources({ inputs }: GeneratorSourcesProps) {
 
       <ul className="flex flex-col gap-1.5">
         {inputs.map((input, at) => (
-          <li
-            // The list is rebuilt from the workspace on every change and holds no state of its
-            // own, so the position is the only stable name a live document's input ever has.
-            key={`${input.role}:${input.assetId ?? input.label}:${at}`}
-            className="bg-surface flex min-w-0 items-center gap-2 rounded-(--radius-sc-sm) p-1"
-          >
-            {input.assetId ? (
-              <Thumbnail url={assetUrl(input.assetId)} className="size-8 shrink-0" />
-            ) : (
-              <span className="bg-elevated size-8 shrink-0 rounded-(--radius-sc-sm)" />
-            )}
-
-            <span className="flex min-w-0 flex-col">
-              <span className="text-text truncate text-xs">{input.label}</span>
-              <span className="text-muted text-tiny">
-                {t(`generation.sourceFrom_${input.origin}`)}
-              </span>
-            </span>
+          // Rebuilt from the workspace on every change and holding no state, so the position is
+          // the only stable name a live document's input ever has.
+          <li key={`${input.role}:${input.assetId ?? input.label}:${at}`}>
+            <Row
+              media={
+                input.assetId ? (
+                  <Thumbnail url={assetUrl(input.assetId)} className="size-(--sc-control)" />
+                ) : (
+                  <span className="bg-elevated size-(--sc-control) rounded-(--radius-sc-sm)" />
+                )
+              }
+              title={input.label}
+              subtitle={t(`generation.sourceFrom_${input.origin}`)}
+            />
           </li>
         ))}
       </ul>

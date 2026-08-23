@@ -29,16 +29,12 @@ export const PERIOD_FACET = 'period'
 /**
  * What the panel may narrow by, which is not every employment a family has.
  *
- * Skybox names are the studio's own and nothing finds them apart: Scenario panoramas answer
- * `txt2img` like any image model, so offering the two would empty the cloud list.
- *
- * A studio capability that narrows NOTHING goes too — `upscale`, `cutout` and `vectorize` are
+ * A studio capability that narrows NOTHING is left out — `upscale`, `cutout` and `vectorize` are
  * the whole membership of their family, so the option would be ticked over a list it cannot
- * shorten. `rig` and `motion` stay: they cut nineteen models down to five and six.
+ * shorten. `rig` and `motion` stay: they cut nineteen models down to five and six, and so do the
+ * two panorama employments, which `answers` tells apart.
  */
 function filterCapabilitiesOf(family: ModelFamily): readonly string[] {
-  if (family === 'skybox') return []
-
   return CAPABILITIES_BY_FAMILY[family].filter(capability => {
     const studio = studioCapability(capability)
     return studio === undefined || studio.answers !== undefined || studio.tags !== undefined

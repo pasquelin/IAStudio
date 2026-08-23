@@ -66,10 +66,13 @@ describe('model filters', () => {
     ])
   })
 
-  // Local employments (`txt2skybox`) are not what Scenario panoramas answer. The facet would
-  // empty the cloud list the moment it was ticked.
-  it('does not offer skybox employments as a catalogue filter', () => {
-    expect(facetsFor('skybox', identity, CLOUDS).map(facet => facet.key)).not.toContain(
+  /**
+   * `txt2skybox` is the studio's own word — Scenario panoramas answer `txt2img` like any image
+   * model — so the facet emptied the cloud list the moment it was ticked. It narrows properly
+   * since `STUDIO_CAPABILITIES` says what each of the two answers underneath.
+   */
+  it('offers the skybox employments, which the studio knows how to find', () => {
+    expect(facetsFor('skybox', identity, CLOUDS).map(facet => facet.key)).toContain(
       CAPABILITY_FACET,
     )
     expect(
@@ -79,7 +82,17 @@ describe('model filters', () => {
         '',
         CLOUDS,
       ),
-    ).not.toHaveProperty('capabilities')
+    ).toMatchObject({ capabilities: ['txt2skybox'] })
+  })
+
+  /**
+   * `upscale`, `cutout` and `vectorize` ARE the whole membership of their family, so the option
+   * would be ticked over a list it cannot shorten — as vain as one whose only answer is none.
+   */
+  it('drops an employment that could narrow nothing', () => {
+    expect(facetsFor('upscale', identity, CLOUDS).map(facet => facet.key)).not.toContain(
+      CAPABILITY_FACET,
+    )
   })
 
   /**

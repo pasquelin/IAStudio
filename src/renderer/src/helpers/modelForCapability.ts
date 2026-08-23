@@ -1,17 +1,12 @@
 import type { AiOverview } from '@shared/domain/aiOverview'
-import { primaryRoleOf, type AiRoleId } from '@shared/domain/aiRole'
-import type { ModelFamily } from '@shared/domain/model'
+import type { AiRoleId } from '@shared/domain/aiRole'
 import { useAiModels } from '@/stores/aiModels'
 import { useModels } from '@/stores/models'
 
 /**
- * The model an EMPLOYMENT generates with — see
- * `docs/ci/adr/ADR-23-la-generation-se-pilote-par-capability.md`.
- *
- * The employment settles WHO serves it, and `providerFor` has already answered that in the main
- * process: `RoleRow.provider` is what a person chose, honoured while it can be. A local choice
- * names its model outright. A cloud names no model at all — it says which account pays — so the
- * model itself is the one picked in the panel.
+ * The model an employment generates with — ADR-23. `RoleRow.provider` has already settled WHO
+ * serves it: a local choice names its model, a cloud names only the account that pays, so the
+ * model itself is then the one picked in the panel.
  */
 export function resolveModelForCapability(
   role: AiRoleId,
@@ -49,16 +44,4 @@ export function modelForCapability(role: AiRoleId): string | undefined {
     useModels.getState().selected[role],
     useAiModels.getState().overview,
   )
-}
-
-/**
- * What a family generates with when nothing narrower was asked for — its first employment.
- *
- * Kept for the surfaces that still name a family rather than an operation: the rail deciding
- * whether to draw the generator, and the canvas edits. `null` for `other`, which generates
- * nothing.
- */
-export function modelForFamily(family: ModelFamily): string | undefined {
-  const role = primaryRoleOf(family)
-  return role === null ? undefined : modelForCapability(role)
 }

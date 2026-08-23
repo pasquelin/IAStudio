@@ -15,7 +15,7 @@ import { installFakeBridge } from '@/services/fakeBridge'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
-import { chooseModels, chooseModelsByFamily } from '@/stores/models-fixtures'
+import { chooseModels } from '@/stores/models-fixtures'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collectionState'
 import { Models } from './Models'
 
@@ -260,7 +260,7 @@ describe('Models panel', () => {
    * panel said "no model chosen" about the very model the one beside it was running.
    */
   it('shows the preferred model as chosen where nothing was picked by hand', async () => {
-    chooseModelsByFamily({ image: 'flux' })
+    chooseModels({ [aiRoleId('image', 'txt2img')]: 'flux' })
     installFakeBridge({
       provider: { searchModels: () => Promise.resolve({ items: [model('flux')], cursor: null }) },
     })

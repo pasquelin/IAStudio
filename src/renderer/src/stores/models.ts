@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { partsOfRole, primaryRoleOf, type AiRoleId } from '@shared/domain/aiRole'
+import { primaryRoleOf, type AiRoleId } from '@shared/domain/aiRole'
 import { MODEL_FAMILIES, type ModelFamily } from '@shared/domain/model'
 import type { FormValues } from '@/helpers/dynamicForm'
 import {
@@ -74,21 +74,12 @@ type ModelsState = {
    */
   collections: Collections
   /**
-   * Parameters the generator should open on, per family. Set by "regenerate with these" in the
-   * inspector; kept out of the persisted state, since it belongs to one gesture and not to a
-   * preference.
-   */
-  preset: Partial<Record<ModelFamily, FormValues>>
-  /**
-   * The family an action asked the generator to open on, when it is not the workspace's own —
-   * Enlarge reaches for an upscaler. Without it the panel went on showing the image model it
-   * already held: the picture the edit had just uploaded never appeared, and Generate would
-   * have run the wrong model on it.
+   * Parameters the generator should open on, per EMPLOYMENT — the values an edit prepared for a
+   * retouch have no business reaching text-to-image, which the same weights also serve.
    *
-   * A parenthesis, not a preference: it lasts until a model is picked by hand or the user
-   * leaves the space — see `connectPreparation`.
+   * Kept out of the persisted state: it belongs to one gesture and not to a preference.
    */
-  prepared: ModelFamily | null
+  preset: Partial<Record<AiRoleId, FormValues>>
 
   /**
    * Files the choice under the EMPLOYMENT it was made for. Global to that employment: picking a
@@ -99,7 +90,6 @@ type ModelsState = {
   /** Picks the model AND the values to open its form on, in one write. */
   prepare: (role: AiRoleId, modelId: string, params: FormValues) => void
   setCollection: (family: ModelFamily, collection: CollectionState) => void
-  dropPreparation: () => void
 }
 
 /**
@@ -112,32 +102,18 @@ export const useModels = create<ModelsState>()(
       selected: {},
       collections: {},
       preset: {},
-      prepared: null,
 
       select: (role, modelId) =>
-        set(state => ({
-          selected: { ...state.selected, [role]: modelId },
-          prepared: null,
-        })),
+        set(state => ({ selected: { ...state.selected, [role]: modelId } })),
 
       prepare: (role, modelId, params) =>
-        set(state => {
-          // The form opens on the FAMILY, which is what a descriptor belongs to; the choice is
-          // filed on the employment. Both, or an edit arms a model whose parameters never arrive.
-          const parts = partsOfRole(role)
-          if (parts === null) return state
-
-          return {
-            selected: { ...state.selected, [role]: modelId },
-            preset: { ...state.preset, [parts.family]: params },
-            prepared: parts.family,
-          }
-        }),
+        set(state => ({
+          selected: { ...state.selected, [role]: modelId },
+          preset: { ...state.preset, [role]: params },
+        })),
 
       setCollection: (family, collection) =>
         set(state => ({ collections: { ...state.collections, [family]: collection } })),
-
-      dropPreparation: () => set(state => (state.prepared ? { prepared: null } : state)),
     }),
     {
       name: 'ia-studio:models',

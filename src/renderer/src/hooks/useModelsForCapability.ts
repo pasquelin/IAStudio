@@ -12,12 +12,9 @@ const PICKER_LIMIT = 100
 const NONE: readonly ModelSummary[] = []
 
 /**
- * Every model that serves this employment, on this machine and in the clouds an account is held
- * for — the § 6 of the brief: an Image → Image picker shows only what can do it.
- *
- * One request, because the registry already merges the two sides: `localSummaries` files a
- * manifest under the same `ModelSummary` a catalogue row comes back as, and `matches` narrows
- * both by the capability — the studio's own included, which no model publishes.
+ * Every model that serves this employment, local and cloud. One request: the registry already
+ * files a manifest under the same `ModelSummary` a catalogue row is, and narrows both by the
+ * capability — the studio's own included, which no model publishes.
  */
 export function useModelsForCapability(role: AiRoleId | null): readonly ModelSummary[] {
   const parts = role === null ? null : partsOfRole(role)
@@ -25,10 +22,10 @@ export function useModelsForCapability(role: AiRoleId | null): readonly ModelSum
   const { data } = useQuery<readonly ModelSummary[]>({
     queryKey: ['models', 'capability', role],
     queryFn: async () => {
-      if (!parts) return NONE
+      // `enabled` below is what makes this non-null; the key already carries the role.
       const page = await getBridge()?.provider.searchModels({
-        family: parts.family,
-        capabilities: [parts.capability],
+        family: parts?.family,
+        capabilities: parts ? [parts.capability] : undefined,
         limit: PICKER_LIMIT,
       })
 

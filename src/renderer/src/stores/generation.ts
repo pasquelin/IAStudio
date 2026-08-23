@@ -2,18 +2,15 @@ import { create } from 'zustand'
 import type { AiRoleId } from '@shared/domain/aiRole'
 
 /**
- * What the person asked of the generation panel, as opposed to what the workspace suggests.
+ * What the person asked of the generation panel, against what the workspace suggests.
  *
- * Session state, deliberately unpersisted: an operation forced yesterday, against a selection
- * that is long gone, is not a preference — it is a gesture that has ended. What IS a preference
- * lives in `RoleChoices`, and `useModels.selected` holds the model each employment is on.
+ * Session state, deliberately unpersisted: an operation forced against a selection that is long
+ * gone is a gesture that has ended, not a preference. Preferences live in `RoleChoices`.
  */
 type GenerationState = {
   /**
-   * The employment the person picked by hand, or `null` to follow the context.
-   *
-   * § 21: it wins while the context can still reach it, and gives way rather than leaving the
-   * panel offering a Generate that would die.
+   * The employment picked by hand, or `null` to follow the context. It wins while the context can
+   * still reach it, and gives way rather than leaving a Generate that would die.
    */
   forcedCapability: AiRoleId | null
   forceCapability: (role: AiRoleId | null) => void

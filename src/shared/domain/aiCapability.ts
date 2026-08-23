@@ -234,20 +234,23 @@ function requiredInputsOf(contract: CapabilityContract): readonly CapabilityInpu
 export type AvailableInput = { role: 'source' | 'mask'; kind: AssetType }
 
 /**
- * Whether this employment can work from what is at hand, ignoring what is only optional.
+ * Whether what is at hand answers this one input.
  *
  * The words are never counted: a prompt is typed, not selected, so an employment that asks for
  * one is reachable from an empty workspace — which is where every session starts.
  */
+export function fills(input: CapabilityInput, available: readonly AvailableInput[]): boolean {
+  if (input.kind === 'text') return true
+  if (input.role === 'mask') return available.some(one => one.role === 'mask')
+
+  const kind = input.kind
+  return available.some(one => one.role === 'source' && one.kind === kind)
+}
+
+/** Whether this employment can work from what is at hand, ignoring what is only optional. */
 export function reachableFrom(
   contract: CapabilityContract,
   available: readonly AvailableInput[],
 ): boolean {
-  return requiredInputsOf(contract).every(input => {
-    if (input.kind === 'text') return true
-    if (input.role === 'mask') return available.some(one => one.role === 'mask')
-
-    const kind = input.kind
-    return available.some(one => one.role === 'source' && one.kind === kind)
-  })
+  return requiredInputsOf(contract).every(input => fills(input, available))
 }

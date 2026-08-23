@@ -597,7 +597,7 @@ describe('what a line names', () => {
 
   // Named rather than counted: a count stays green when one site drops the constant and another
   // picks it up. **Blind**: raw text, so a comment naming the constant would count as wearing it.
-  it('is worn by the four it was extracted from', () => {
+  it('is worn by the three it was extracted from', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && /\bROW_SUBJECT\b/.test(source),
     ).map(([path]) => path)
@@ -606,7 +606,6 @@ describe('what a line names', () => {
       '../panels/history/DiffPane.tsx',
       '../panels/history/HistoryRow.tsx',
       '../panels/inspector/StylesSection/StylesSectionRow.tsx',
-      './ModelPicker/ModelPickerRow.tsx',
     ])
   })
 })
@@ -631,7 +630,7 @@ describe('the box a panel puts above what it acts on', () => {
   })
 
   // Named rather than counted. **Blind**: raw text, as above.
-  it('is worn by the four it was extracted from', () => {
+  it('is worn by the three it was extracted from', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && /\bPANEL_HEAD\b/.test(source),
     ).map(([path]) => path)
@@ -710,7 +709,7 @@ describe('the slider of the studio', () => {
   })
 
   /** Named rather than counted. **Blind**: raw text, so a mention in a comment reads as a wearer. */
-  it('is worn by the four it was extracted from', () => {
+  it('is worn by the three it was extracted from', () => {
     const wearing = WRITTEN_SOURCES.filter(([, source]) => /\bSliderHandle\b/.test(source))
       .map(([path]) => path)
       .filter(path => !SLIDER_OWNERS.includes(path))

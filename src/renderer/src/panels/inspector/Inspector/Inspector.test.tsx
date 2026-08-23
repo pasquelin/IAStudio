@@ -136,7 +136,7 @@ describe('Inspector, on what a panel selected', () => {
 
     const models = useModels.getState()
     expect(models.selected[aiRoleId('image', 'txt2img')]).toBe('eleven-music-v2')
-    expect(models.preset.image).toEqual({ prompt: 'x', guidance: 7 })
+    expect(models.preset[aiRoleId('image', 'txt2img')]).toEqual({ prompt: 'x', guidance: 7 })
     expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('generator')
   })
 

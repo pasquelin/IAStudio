@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { ADVANCED_GROUP } from '@shared/domain/localFields'
@@ -82,16 +82,15 @@ export function DynamicForm({
   const formId = useId()
   const schema = useMemo(() => buildSchema(fields), [fields])
   const initial = useMemo(() => defaultValues(fields, preset), [fields, preset])
-  /**
-   * Whether the advanced group opens folded — § 14. Held here rather than derived, so unfolding
-   * it survives the model switch that follows: someone who opened the knobs meant to see them.
-   */
-  const [advancedOpen, setAdvancedOpen] = useState(false)
-  const groups = useMemo(() => groupFields(fields), [fields])
   // Split rather than reordered: the advanced knobs are drawn UNDER the button, and a fieldset
   // hidden in place would leave the disclosure describing something above it.
-  const plain = groups.filter(([group]) => group !== ADVANCED_GROUP)
-  const advanced = groups.filter(([group]) => group === ADVANCED_GROUP)
+  const [plain, advanced] = useMemo(() => {
+    const groups = groupFields(fields)
+    return [
+      groups.filter(([group]) => group !== ADVANCED_GROUP),
+      groups.filter(([group]) => group === ADVANCED_GROUP),
+    ]
+  }, [fields])
   const dependencies = useMemo(() => dependencyKeys(fields), [fields])
 
   const { register, handleSubmit, watch, setValue, getValues, reset, formState } =
@@ -108,8 +107,8 @@ export function DynamicForm({
    */
   useEffect(() => {
     reset(defaultValues(fields, preset, getValues()))
-    // `initial` rather than `fields`: it is what changes when either half of it does, and
-    // depending on `getValues` would rerun this on nothing.
+    // `initial` and not `fields`/`preset`: it is the memo of exactly those two, so listing them
+    // beside it would say the same thing twice.
   }, [initial, fields, preset, getValues, reset])
 
   // Subscribed, not rendered: `watch(callback)` reports every edit without making this component
@@ -134,7 +133,7 @@ export function DynamicForm({
     return <p className="text-muted p-2 text-xs">{t('generation.noParameter')}</p>
   }
 
-  const fieldsetOf = ([group, groupedFields]: (typeof groups)[number]) => (
+  const fieldsetOf = ([group, groupedFields]: (typeof plain)[number]) => (
     <fieldset key={group} className="m-0 flex flex-col gap-2 border-0 p-0">
       {group && group !== ADVANCED_GROUP && (
         <legend className={cn(PANEL_GROUP_LABEL, 'p-0')}>{say(group)}</legend>
@@ -196,11 +195,7 @@ export function DynamicForm({
       {/* Under the button, folded — § 14: seed, steps, guidance and strength are not what most
           generations are about, and a panel that shows everything shows nothing. */}
       {advanced.length > 0 && (
-        <details
-          open={advancedOpen}
-          onToggle={event => setAdvancedOpen(event.currentTarget.open)}
-          data-sc={sectionHandle('generation.advanced')}
-        >
+        <details data-sc={sectionHandle('generation.advanced')}>
           <summary className={cn(PANEL_GROUP_LABEL, 'cursor-pointer p-0')}>
             {say(ADVANCED_GROUP)}
           </summary>

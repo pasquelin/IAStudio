@@ -1,11 +1,8 @@
 import { useMemo } from 'react'
 import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
 import { layerById } from '@/engines/canvas/canvasState'
-import {
-  availableInputsOf,
-  type GenerationInput,
-  type WorkspaceContent,
-} from '@/generation/generationInputs'
+import type { AssetType } from '@shared/domain/asset'
+import { availableInputsOf, type GenerationInput } from '@/generation/generationInputs'
 import { resolveCapability, type CapabilityChoice } from '@/generation/capabilityResolver'
 import { workspaceById } from '@/helpers/workspaces'
 import { useAssets, assetsById } from '@/stores/assets'
@@ -42,51 +39,82 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
   const pickedIds = useSelection(selectedAssetIds)
   const rows = useAssets(assetsById)
 
+  /**
+   * 🛑 The narrow answers, never the document states: every scene command and every canvas edit
+   * replaces those objects, and a subscription to one turned a gizmo drag into a re-render of the
+   * whole panel — form, picker and sources.
+   */
   const sceneId = useDocuments(activeSceneId)
-  const scene = useScenes(state => (sceneId ? sceneOf(state, sceneId) : null))
+  const meshes = useScenes(state => (sceneId ? selectedMeshesOf(sceneOf(state, sceneId)) : NONE))
 
   // § 24: what the last generation produced, so a chain starts from it without a round trip
   // through the shelf. Ids rather than rows, so a catalogue refresh does not re-render this.
   const producedIds = useJobs(latestGenerationIds)
 
   const imageId = useDocuments(activeImageId)
-  const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
-  const document = useDocuments(state => (imageId ? state.documents[imageId] : undefined))
+  const maskedLayer = useCanvases(state => (imageId ? maskedLayerNameOf(state, imageId) : null))
+  const picture = useDocuments(state =>
+    imageId ? (state.documents[imageId]?.title ?? null) : null,
+  )
 
-  const content = useMemo((): WorkspaceContent => {
-    const selectedAssets = pickedIds.flatMap(id => {
-      const asset = rows.get(id)
-      return asset ? [{ id: asset.id, name: asset.name, type: asset.type }] : []
-    })
-
-    // A node is not an asset: what a scene selects is a placement, and the mesh it stands for is
-    // the row its `model` names. Anything else selected there has no file to send.
-    const selectedMeshes = (scene?.nodes ?? []).flatMap(node =>
-      node.type === 'model' && scene?.selectedIds.includes(node.id)
-        ? [{ id: node.model.assetId, name: node.name }]
-        : [],
-    )
-
-    const layer = canvas ? layerById(canvas, canvas.activeLayerId) : null
-
-    return {
-      selectedAssets,
-      selectedMeshes,
-      activePicture: document ? { name: document.title } : null,
-      // `enabled`, not merely present: the canvas does not honour a mask whose box is unticked,
-      // and offering it would ask the model to repaint a region nothing on screen shows.
-      activeMask: layer?.mask?.enabled === true ? { name: layer.name } : null,
-      results: producedIds.flatMap(id => {
+  const inputs = useMemo(() => {
+    const named = (ids: readonly string[]): { id: string; name: string; type: AssetType }[] =>
+      ids.flatMap(id => {
         const asset = rows.get(id)
         return asset ? [{ id: asset.id, name: asset.name, type: asset.type }] : []
-      }),
-    }
-  }, [pickedIds, rows, scene, canvas, document, producedIds])
+      })
 
-  const inputs = useMemo(() => availableInputsOf(content), [content])
+    return availableInputsOf({
+      selectedAssets: named(pickedIds),
+      selectedMeshes: meshes,
+      activePicture: picture === null ? null : { name: picture },
+      activeMask: maskedLayer === null ? null : { name: maskedLayer },
+      results: named(producedIds),
+    })
+  }, [pickedIds, rows, meshes, picture, maskedLayer, producedIds])
 
-  return {
-    inputs,
-    capability: resolveCapability(family, inputs, forced),
-  }
+  // Memoised with the inputs it reads: the resolution allocates a contract per required input,
+  // and the panel re-renders on every keystroke of the form below it.
+  const capability = useMemo(
+    () => resolveCapability(family, inputs, forced),
+    [family, inputs, forced],
+  )
+
+  return useMemo(() => ({ inputs, capability }), [inputs, capability])
+}
+
+/** Stable, so a workspace with no scene open does not hand React a new array per render. */
+const NONE: readonly { id: string; name: string }[] = []
+
+/**
+ * The meshes a scene has selected, by the catalogue row each placement references.
+ *
+ * A node is not an asset: what a scene selects is a placement, and anything but a model has no
+ * file to send.
+ */
+function selectedMeshesOf(
+  scene: ReturnType<typeof sceneOf>,
+): readonly { id: string; name: string }[] {
+  const picked = scene.nodes.flatMap(node =>
+    node.type === 'model' && scene.selectedIds.includes(node.id)
+      ? [{ id: node.model.assetId, name: node.name }]
+      : [],
+  )
+
+  return picked.length === 0 ? NONE : picked
+}
+
+/**
+ * The armed layer's name when its mask is ticked, and nothing otherwise. `enabled`, not merely
+ * present: the canvas does not honour a mask whose box is unticked, and offering it would ask
+ * the model to repaint a region nothing on screen shows.
+ */
+function maskedLayerNameOf(
+  state: Parameters<typeof canvasOf>[0],
+  documentId: string,
+): string | null {
+  const canvas = canvasOf(state, documentId)
+  const layer = layerById(canvas, canvas.activeLayerId)
+
+  return layer?.mask?.enabled === true ? layer.name : null
 }

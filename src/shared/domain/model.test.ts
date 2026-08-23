@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   CAPABILITIES_BY_FAMILY,
   FAMILY_TAGS,
-  isStudioCapability,
   MODEL_FAMILIES,
   servesStudioCapability,
   STUDIO_CAPABILITIES,
@@ -99,8 +98,7 @@ describe('the capabilities the studio names itself', () => {
   })
 
   it('answers the rule that finds a studio capability, and nothing for an API one', () => {
-    expect(isStudioCapability('rig')).toBe(true)
-    expect(isStudioCapability('img23d')).toBe(false)
+    expect(studioCapability('rig')).toBeDefined()
     expect(studioCapability('img23d')).toBeUndefined()
   })
 

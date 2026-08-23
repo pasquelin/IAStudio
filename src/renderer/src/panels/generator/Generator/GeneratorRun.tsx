@@ -10,10 +10,8 @@ export type GeneratorRunProps = {
 }
 
 /**
- * How far the generation this panel launched has got, and the way to stop it — § 30.
- *
- * In the panel and not only in the jobs bar: someone who pressed Generate watches the panel they
- * pressed it in, and a run whose only trace is a bar at the foot of the window reads as a click
+ * How far the generation this panel launched has got, and the way to stop it. In the panel and
+ * not only in the jobs bar: a run whose only trace is at the foot of the window reads as a click
  * that did nothing.
  */
 export function GeneratorRun({ job }: GeneratorRunProps) {

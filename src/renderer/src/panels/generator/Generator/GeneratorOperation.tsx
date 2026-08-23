@@ -11,11 +11,8 @@ export type GeneratorOperationProps = {
 }
 
 /**
- * What the generation is about to do — detected from the workspace, changed by hand when several
- * operations are possible. The § 7 of the brief: nobody has to know what `img2img` means.
- *
- * Not drawn where there is nothing to choose: one reachable operation is a row that only repeats
- * what the panel already says.
+ * What the generation is about to do, detected from the workspace and changed by hand. Not drawn
+ * where there is nothing to choose: one operation is a row repeating what the panel already says.
  */
 export function GeneratorOperation({ capability, onForce }: GeneratorOperationProps) {
   const { t } = useTranslation()

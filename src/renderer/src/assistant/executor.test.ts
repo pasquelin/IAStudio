@@ -226,7 +226,9 @@ describe('choosing and preparing a model', () => {
       parameters: { prompt: 'a knight helmet' },
     })
 
-    expect(useModels.getState().preset['3d']).toEqual({ prompt: 'a knight helmet' })
+    expect(useModels.getState().preset[aiRoleId('3d', 'txt23d')]).toEqual({
+      prompt: 'a knight helmet',
+    })
     expect(useModels.getState().selected[aiRoleId('3d', 'txt23d')]).toBe('model_y')
   })
 

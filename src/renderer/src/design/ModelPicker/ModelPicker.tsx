@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_RUNTIME, type ModelSummary } from '@shared/domain/model'
+import type { ModelRefusalWord } from '@/hooks/useModelReach'
 import { cn } from '@/helpers/cn'
 import { fieldHandle } from '../scHandle'
+import { Chip } from '../Chip'
 import { Flyout } from '../Flyout'
 import { CONTROL, MENU_SURFACE } from '../styles'
 import { ModelPickerRow } from './ModelPickerRow'
@@ -18,9 +20,14 @@ export type ModelPickerProps = {
   value: string | null
   onChange: (modelId: string) => void
   /** Why a model cannot be picked, per model, in the host's words. */
-  refusalOf?: (model: ModelSummary) => string | undefined
+  refusalOf?: (model: ModelSummary) => ModelRefusalWord | undefined
   /** What the closed control says under the name — where it runs, whether it is installed. */
   caption?: string
+  /**
+   * What the model in use is called when it is not in the page the picker holds. A control whose
+   * value matches no row draws blank, which reads as a panel that lost its model.
+   */
+  valueLabel?: string
   /** Shown in place of a name when nothing serves the employment yet. */
   emptyLabel: string
 }
@@ -34,11 +41,8 @@ function within(model: ModelSummary, scope: Scope): boolean {
 }
 
 /**
- * The model in use, and a way to change it without leaving the panel — the § 15 of the brief.
- *
- * It opens a flyout rather than replacing what is around it: choosing a model is a step of a
- * generation, not a destination. Managing them — installing, removing, reading what they weigh —
- * is the settings' business, and a different question.
+ * The model in use, changed without leaving the panel. A flyout rather than a surface of its own:
+ * choosing a model is a step of a generation, not a destination — managing them is the settings'.
  */
 export function ModelPicker({
   models,
@@ -46,6 +50,7 @@ export function ModelPicker({
   onChange,
   refusalOf,
   caption,
+  valueLabel,
   emptyLabel,
 }: ModelPickerProps) {
   const { t } = useTranslation()
@@ -74,7 +79,9 @@ export function ModelPicker({
         className={cn(CONTROL, 'flex w-full flex-col items-start justify-center px-2 py-1')}
         onClick={() => setOpen(held => !held)}
       >
-        <span className="text-text truncate text-xs">{chosen?.name ?? emptyLabel}</span>
+        <span className="text-text truncate text-xs">
+          {chosen?.name ?? valueLabel ?? emptyLabel}
+        </span>
         {caption && <span className="text-muted text-tiny">{caption}</span>}
       </button>
 
@@ -99,19 +106,14 @@ export function ModelPicker({
 
             <div className="flex gap-2" role="group" aria-label={t('generation.modelScope')}>
               {SCOPES.map(one => (
-                <button
+                <Chip
                   key={one}
-                  type="button"
+                  label={t(`generation.modelScope_${one}`)}
+                  hint={t('generation.modelScopeHint')}
+                  selected={scope === one}
                   data-sc={fieldHandle(`generation.modelScope.${one}`)}
-                  aria-pressed={scope === one}
-                  className={cn(
-                    'text-tiny rounded-(--radius-sc-sm) px-2 py-0.5',
-                    scope === one ? 'bg-accent text-accent-ink' : 'bg-surface text-muted',
-                  )}
                   onClick={() => setScope(one)}
-                >
-                  {t(`generation.modelScope_${one}`)}
-                </button>
+                />
               ))}
             </div>
 

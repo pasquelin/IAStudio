@@ -133,7 +133,12 @@ describe('narrowing the list', () => {
 // § 20 again, one row at a time: a download and a subscription are not the same gesture, and the
 // difference has to be readable before the click rather than after it.
 it('says on the row what stands between a model and a generation', async () => {
-  open({ refusalOf: candidate => (candidate.installed === false ? 'Non installé' : undefined) })
+  open({
+    refusalOf: candidate =>
+      candidate.installed === false
+        ? { word: 'Non installé', hint: 'Le studio peut récupérer ses poids' }
+        : undefined,
+  })
 
   await userEvent.click(screen.getByRole('button', { name: /SSD-1B/ }))
 

@@ -1,7 +1,6 @@
 import { mdiCreationOutline } from '@mdi/js'
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { partsOfRole } from '@shared/domain/aiRole'
 import { isFinished, type Job } from '@shared/domain/job'
 import { useDescriptor } from '@/hooks/useDescriptor'
 import { useGenerationContext } from '@/hooks/useGenerationContext'
@@ -46,23 +45,25 @@ export function Generator() {
   const forceCapability = useGeneration(state => state.forceCapability)
   const { inputs, capability } = useGenerationContext(forced)
 
-  // The family the FORM belongs to: a descriptor is a model's, and a model is filed under one
-  // family whatever employment it is being used for.
-  const family = capability.chosen ? partsOfRole(capability.chosen)?.family : undefined
-
   // Set by the inspector's "regenerate with these parameters"; ordinary generation leaves it
   // undefined and every field opens on its own default.
   //
   // It is deliberately not cleared once used: `DynamicForm` rebuilds its defaults whenever the
   // preset changes, so dropping it would blank the form under the hand that is filling it. It
   // stays until the next "regenerate" replaces it, which reads as the last settings used.
-  const preset = useModels(state => (family ? state.preset[family] : undefined))
+  const preset = useModels(state =>
+    capability.chosen ? state.preset[capability.chosen] : undefined,
+  )
   const modelId = useModelForCapability(capability.chosen)
 
   const authenticated = useSettings(state => state.auth.authenticated)
-  const overview = useAiModels(state => state.overview)
   const project = useProject(state => state.project)
-  const onThisMachine = modelId !== null && modelIsOnThisMachine(modelId, overview)
+  // 🛑 The ANSWER, never `state.overview`: the manager republishes the whole overview per percent
+  // of a load, and a subscription to the object re-rendered this panel with it.
+  const onThisMachine = useAiModels(
+    state => modelId !== null && modelIsOnThisMachine(modelId, state.overview),
+  )
+  const catalogueRead = useAiModels(state => state.overview !== null)
   const submit = useJobs(state => state.submit)
 
   const descriptor = useDescriptor(modelId)
@@ -141,7 +142,7 @@ export function Generator() {
   // A model of this machine needs no account. Asking for a key first hid the local catalogue
   // behind a Scenario form, and sent people out of the studio to fetch one.
   if (!authenticated && !onThisMachine) {
-    if (overview === null) {
+    if (!catalogueRead) {
       return <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
     }
 
@@ -159,30 +160,6 @@ export function Generator() {
     return <EmptyState icon={mdiCreationOutline} message={t('generation.noOperation')} />
   }
 
-  // 🛑 § 20: the panel says which of the five refusals it is, rather than letting a click end in
-  // a failure nobody can read. The operation stays on screen, so another can be picked.
-  if (!modelId) {
-    return (
-      <div className={PANEL_SCROLL}>
-        <GeneratorOperation capability={capability} onForce={forceCapability} />
-        {/* The picker stays: § 20 asks the panel to explain, and the way out of "nothing serves
-            this" is to pick something that does — without leaving. */}
-        <GeneratorModel capability={capability.chosen} modelId={null} />
-        <EmptyState icon={mdiCreationOutline} message={t('generation.noModelForOperation')} />
-      </div>
-    )
-  }
-
-  if (descriptor.isPending) {
-    return <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
-  }
-
-  // A model can be withdrawn from the catalogue while it is still the chosen one. Without
-  // this the panel renders an empty shell: no form, no reason, nothing to act on.
-  if (descriptor.isError) {
-    return <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(descriptor.error))} />
-  }
-
   // Claimed at the click and settled when the job id arrives: which workspace has somewhere to
   // put a result is not this panel's business — it serves every one of them.
   const generate = (values: FormValues): void => void runGeneration(values)
@@ -194,7 +171,22 @@ export function Generator() {
         capability={capability.chosen}
         modelId={modelId}
         name={descriptor.data?.name}
+        plan={plan}
       />
+
+      {/* 🛑 Said rather than hidden: the panel used to return null, and the rail dropped its icon
+          with it — at the one moment the picker above is what a person needs. A model withdrawn
+          from the catalogue while it was the chosen one lands on the same line. */}
+      {modelId === null && (
+        <EmptyState icon={mdiCreationOutline} message={t('generation.noModelForOperation')} />
+      )}
+      {descriptor.isPending && (
+        <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
+      )}
+      {descriptor.isError && (
+        <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(descriptor.error))} />
+      )}
+
       <GeneratorSources inputs={inputs} />
       <GeneratorRun job={running} />
 

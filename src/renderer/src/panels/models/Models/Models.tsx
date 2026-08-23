@@ -1,8 +1,8 @@
 import { mdiCubeScan } from '@mdi/js'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { primaryRoleOf } from '@shared/domain/aiRole'
-import { LOCAL_RUNTIME, type ModelFamily, type ModelSummary } from '@shared/domain/model'
+import { primaryRoleOf, providerOfModel } from '@shared/domain/aiRole'
+import type { ModelFamily, ModelSummary } from '@shared/domain/model'
 import { CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import { failureKeyOf } from '@/services/failureMessage'
 import { Collection } from '@/design/Collection/Collection'
@@ -188,9 +188,7 @@ export function Models({ family }: ModelsProps) {
             select(role, model.id)
             void chooseAiProvider(
               role,
-              model.runsOn === LOCAL_RUNTIME
-                ? { kind: 'local', modelId: model.id }
-                : { kind: 'cloud', providerId: model.runsOn },
+              providerOfModel(model),
               projectPath === null ? 'app' : 'project',
             )
           }}

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { availableInputsOf, NO_CONTENT, type WorkspaceContent } from './generationInputs'
+import { availableInputsOf, type WorkspaceContent } from './generationInputs'
+
+const NO_CONTENT: WorkspaceContent = {
+  selectedAssets: [],
+  selectedMeshes: [],
+  activePicture: null,
+  activeMask: null,
+  results: [],
+}
 
 const content = (over: Partial<WorkspaceContent> = {}): WorkspaceContent => ({
   ...NO_CONTENT,

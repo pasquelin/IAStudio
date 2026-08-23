@@ -187,7 +187,7 @@ export function useNativeMenu(): void {
     // Search keystrokes used to rebuild the native menu: only the chosen model moves a row.
     stopPublishing.push(
       useModels.subscribe((state, previous) => {
-        if (state.selected === previous.selected && state.prepared === previous.prepared) return
+        if (state.selected === previous.selected) return
         publishMenuContext()
       }),
     )

@@ -52,7 +52,7 @@ describe('preparing an edit', () => {
 
     expect(useModels.getState().selected[INPAINT]).toBe('model_flux')
     // The form still opens on the FAMILY, which is what a descriptor belongs to.
-    expect(useModels.getState().preset.image).toMatchObject({ image: 'asset-flat' })
+    expect(useModels.getState().preset[INPAINT]).toMatchObject({ image: 'asset-flat' })
   })
 
   /**
@@ -115,7 +115,7 @@ describe('preparing an edit', () => {
     await prepareEdit(DOCUMENT, 'regenerate', host, bridge)
 
     expect(uploaded).toEqual(['FLAT', 'MASK'])
-    expect(useModels.getState().preset.image).toMatchObject({ mask: 'asset-mask' })
+    expect(useModels.getState().preset[INPAINT]).toMatchObject({ mask: 'asset-mask' })
   })
 
   it('sends only the picture when there is no mask to send', async () => {

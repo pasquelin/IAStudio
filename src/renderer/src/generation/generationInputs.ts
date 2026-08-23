@@ -2,11 +2,8 @@ import type { AssetType } from '@shared/domain/asset'
 import type { AvailableInput } from '@shared/domain/aiCapability'
 
 /**
- * What the workspace offers a generation, and where it came from — see
- * `docs/ci/adr/ADR-23-la-generation-se-pilote-par-capability.md`.
- *
- * Pure: it is handed the state rather than reading a store, so the resolution can be tested
- * without React and without a browser, and so `import-cycles.test.ts` stays at zero.
+ * What the workspace offers a generation — ADR-23. Handed the state rather than reading a store,
+ * so it tests without React and `import-cycles.test.ts` stays at zero.
  */
 
 /** Where an input came from, which is what the panel says under the thumbnail. */
@@ -37,20 +34,9 @@ export type WorkspaceContent = {
   results: readonly { id: string; name: string; type: AssetType }[]
 }
 
-export const NO_CONTENT: WorkspaceContent = {
-  selectedAssets: [],
-  selectedMeshes: [],
-  activePicture: null,
-  activeMask: null,
-  results: [],
-}
-
 /**
- * Everything the workspace can hand a model, most explicit first.
- *
- * The ORDER is the priority: what the person selected outranks what merely happens to be open,
- * and a result they just made outranks neither — it is offered, never taken. `resolveCapability`
- * reads the list, and the panel fills each contract slot from the first input that fits.
+ * Everything the workspace can hand a model, most explicit first. The ORDER is the priority: the
+ * panel fills each slot of the contract from the first input that fits it.
  */
 export function availableInputsOf(content: WorkspaceContent): readonly GenerationInput[] {
   const inputs: GenerationInput[] = []

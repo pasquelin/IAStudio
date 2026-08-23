@@ -335,7 +335,6 @@ describe('the generator on this machine', () => {
     useModels.setState({
       selected: { [aiRoleId('image', 'txt2img')]: 'ssd-1b' },
       preset: {},
-      prepared: null,
     })
     useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
     useLayouts.setState({ activeWorkspace: 'image' })

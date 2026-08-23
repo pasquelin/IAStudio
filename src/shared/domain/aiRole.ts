@@ -1,4 +1,4 @@
-import { CAPABILITIES_BY_FAMILY, type ModelFamily } from './model'
+import { CAPABILITIES_BY_FAMILY, LOCAL_RUNTIME, type ModelFamily } from './model'
 
 /**
  * What an AI is FOR — see `docs/ci/adr/ADR-21-le-fournisseur-se-choisit-par-emploi.md`.
@@ -70,6 +70,18 @@ export function isGenerationRole(role: AiRoleId): boolean {
 export function primaryRoleOf(family: ModelFamily): AiRoleId | null {
   const [capability] = CAPABILITIES_BY_FAMILY[family]
   return capability === undefined ? null : aiRoleId(family, capability)
+}
+
+/**
+ * Who serves an employment, given the model picked for it — the one reading of `runsOn`.
+ *
+ * It is what `familyChoiceWrites` held before ADR-23 § C narrowed a pick to one employment: the
+ * local/cloud rule is domain, and leaving it to each panel produced two copies of it at once.
+ */
+export function providerOfModel(model: { id: string; runsOn: string }): RoleProvider {
+  return model.runsOn === LOCAL_RUNTIME
+    ? { kind: 'local', modelId: model.id }
+    : { kind: 'cloud', providerId: model.runsOn }
 }
 
 /** What the role is made of, for a caller that needs to label it. `null` for a standalone one. */

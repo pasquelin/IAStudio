@@ -340,10 +340,17 @@ function showable(asset: RemoteAsset): string | null {
  * under, so a filter on one answers the same models the employment offers.
  */
 function serves(summary: ModelSummary, capability: string): boolean {
-  const studio = studioCapability(capability)
-  if (!studio) return summary.capabilities.includes(capability)
+  // What the model PUBLISHES first, whatever else is known about the capability: a local
+  // manifest names its employments outright — the four panorama models declare `txt2skybox` —
+  // where the cloud catalogue answers the enum value underneath it.
+  if (summary.capabilities.includes(capability)) return true
 
-  return summary.family === studio.family && servesStudioCapability(studio, summary)
+  const studio = studioCapability(capability)
+  return (
+    studio !== undefined &&
+    summary.family === studio.family &&
+    servesStudioCapability(studio, summary)
+  )
 }
 
 /**
