@@ -28,6 +28,7 @@ The terms below govern these components. They are not affected by the licence of
 | CogVideoX 2B | shipped with the application | Apache-2.0 |
 | ControlNet Canny SDXL | shipped with the application | Apache-2.0 |
 | CPython | 3.12.14 | PSF-2.0 |
+| CraftsMan3D | shipped with the application | MIT |
 | daisyui | 5.7.16 | MIT |
 | diffusers | 0.40.0 | Apache 2.0 License |
 | Diffusion360 | shipped with the application | other |
@@ -51,9 +52,11 @@ The terms below govern these components. They are not affected by the licence of
 | idna | 3.19 | BSD-3-Clause |
 | immer | 11.1.16 | MIT |
 | importlib-metadata | 9.0.0 | Apache-2.0 |
+| InstantMesh | shipped with the application | Apache-2.0 |
 | IP-Adapter SDXL | shipped with the application | Apache-2.0 |
 | jinja2 | 3.1.6 | BSD License |
 | Lato | shipped with the application | OFL-1.1 |
+| LGM | shipped with the application | MIT |
 | markdown-it-py | 4.2.0 | MIT License |
 | markupsafe | 3.0.3 | BSD-3-Clause |
 | mdurl | 0.1.2 | MIT License |
@@ -119,16 +122,19 @@ The terms below govern these components. They are not affected by the licence of
 | TRELLIS Image | shipped with the application | MIT |
 | TRELLIS Text | shipped with the application | MIT |
 | TRELLIS.2 4B | shipped with the application | MIT |
+| TripoSG | shipped with the application | MIT |
 | TripoSR | shipped with the application | MIT |
 | typer | 0.27.1 | MIT |
 | typing-extensions | 4.16.0 | PSF-2.0 |
 | UniPano | shipped with the application | other |
+| Unique3D | shipped with the application | MIT |
 | urllib3 | 2.7.0 | MIT |
 | utif | 3.1.0 | MIT |
 | Wan 2.1 I2V 14B | shipped with the application | Apache-2.0 |
 | Wan 2.1 T2V 1.3B | shipped with the application | Apache-2.0 |
 | Wan 2.2 TI2V 5B | shipped with the application | Apache-2.0 |
 | wavesurfer.js | 7.12.11 | BSD-3-Clause |
+| Wonder3D | shipped with the application | MIT |
 | zipp | 4.1.0 | MIT |
 | zod | 4.4.3 | MIT |
 | zustand | 5.0.15 | MIT |
@@ -599,6 +605,26 @@ The interpreter the local AI engine runs on. It IS in the installer, beside ffmp
 
 Copyright the Python Software Foundation. Licensed under PSF-2.0.
 Source: https://github.com/astral-sh/python-build-standalone
+```
+## CraftsMan3D
+
+Version: shipped with the application  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://huggingface.co/craftsman3d/craftsman
+```
+
+```
+Native 3D diffusion, text or image to a smooth mesh. NVIDIA CUDA.
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible. Nothing is fetched until a runtime can actually run them.
+
+Copyright the CraftsMan3D authors.
+
+Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## daisyui
 
@@ -1248,6 +1274,26 @@ application: it is fetched on first use, and removed with the engine.
 Licensed under Apache-2.0.
 Source: https://github.com/python/importlib_metadata
 ```
+## InstantMesh
+
+Version: shipped with the application  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/TencentARC/InstantMesh
+```
+
+```
+Image to mesh in about 10 s, regular faces. NVIDIA CUDA.
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible. Nothing is fetched until a runtime can actually run them.
+
+Copyright Tencent ARC Lab.
+
+Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
+```
 ## IP-Adapter SDXL
 
 Version: shipped with the application  
@@ -1394,6 +1440,26 @@ INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
+```
+## LGM
+
+Version: shipped with the application  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://huggingface.co/ashawkey/LGM
+```
+
+```
+Multi-view Gaussians, then a mesh. Text or image. NVIDIA CUDA.
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible. Nothing is fetched until a runtime can actually run them.
+
+Copyright the LGM authors, 3D Topia.
+
+Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## markdown-it-py
 
@@ -2762,7 +2828,7 @@ https://huggingface.co/openai/shap-e
 ```
 
 ```
-Shap-E, texte vers maillage, one of the models the studio generates with on this machine.
+Text to a coarse blob mesh. Prefer English CLIP prompts. Dated quality, one of the models the studio generates with on this machine.
 It is NOT shipped with the application: it is fetched on request into the user data folder,
 against a published digest, and removed from the model manager.
 
@@ -2787,7 +2853,7 @@ https://huggingface.co/openai/shap-e-img2img
 ```
 
 ```
-Shap-E, image vers maillage, one of the models the studio generates with on this machine.
+Image to a coarse blob mesh. Same dated quality as text Shap-E, one of the models the studio generates with on this machine.
 It is NOT shipped with the application: it is fetched on request into the user data folder,
 against a published digest, and removed from the model manager.
 
@@ -3084,7 +3150,7 @@ https://huggingface.co/microsoft/TRELLIS-image-large
 ```
 
 ```
-TRELLIS image vers 3D, large, one of the models the studio generates with on this machine.
+High-quality image to textured mesh. NVIDIA CUDA, one of the models the studio generates with on this machine.
 It is NOT shipped with the application: it is fetched on request into the user data folder,
 against a published digest, and removed from the model manager.
 
@@ -3103,7 +3169,7 @@ https://huggingface.co/microsoft/TRELLIS-text-large
 ```
 
 ```
-TRELLIS texte vers 3D, large, one of the models the studio generates with on this machine.
+High-quality text to textured mesh. NVIDIA CUDA, one of the models the studio generates with on this machine.
 It is NOT shipped with the application: it is fetched on request into the user data folder,
 against a published digest, and removed from the model manager.
 
@@ -3122,11 +3188,31 @@ https://huggingface.co/microsoft/TRELLIS.2-4B
 ```
 
 ```
-TRELLIS.2, 4B, image vers 3D, one of the models the studio generates with on this machine.
+Best open PBR mesh (colour, metal, roughness). NVIDIA CUDA, 24 GB, one of the models the studio generates with on this machine.
 It is NOT shipped with the application: it is fetched on request into the user data folder,
 against a published digest, and removed from the model manager.
 
 Copyright Microsoft.
+
+Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
+```
+## TripoSG
+
+Version: shipped with the application  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://huggingface.co/VAST-AI/TripoSG
+```
+
+```
+High-fidelity geometry from one image, 8 GB VRAM. NVIDIA CUDA.
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible. Nothing is fetched until a runtime can actually run them.
+
+Copyright VAST AI Research and Tripo.
 
 Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
@@ -3142,7 +3228,7 @@ https://huggingface.co/stabilityai/TripoSR
 ```
 
 ```
-TripoSR, image vers 3D, leger, one of the models the studio generates with on this machine.
+Fastest open image-to-mesh. Vertex colours, ~6 GB. Best local pick on Apple Silicon, one of the models the studio generates with on this machine.
 It is NOT shipped with the application: it is fetched on request into the user data folder,
 against a published digest, and removed from the model manager.
 
@@ -3204,6 +3290,26 @@ is visible. Nothing is fetched until a runtime can actually run them.
 
 
 Licensed under other. Full terms: https://github.com/jinhong-ni/UniPano
+```
+## Unique3D
+
+Version: shipped with the application  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/AiuniAI/Unique3D
+```
+
+```
+High-fidelity textured mesh from one image, ~30 s. NVIDIA CUDA.
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible. Nothing is fetched until a runtime can actually run them.
+
+Copyright AiuniAI.
+
+Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## urllib3
 
@@ -3348,6 +3454,26 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+## Wonder3D
+
+Version: shipped with the application  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://huggingface.co/flamehaze1115/wonder3d-v1.0
+```
+
+```
+Multi-view normals then mesh, 2-3 min. NVIDIA CUDA. Older pipeline.
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible. Nothing is fetched until a runtime can actually run them.
+
+Copyright the Wonder3D authors.
+
+Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## zipp
 

@@ -70,6 +70,28 @@ describe('AiSettings', () => {
     useAiModels.setState({ overview: null })
   })
 
+  it('puts the catalogue line under a candidate, not only its size', () => {
+    show(
+      overview({
+        roles: [
+          row({
+            candidates: [
+              {
+                ...PARAKEET,
+                model: localModel({
+                  summary: 'Fastest open image-to-mesh',
+                  releasedAt: '2024-03-04',
+                }),
+              },
+            ],
+          }),
+        ],
+      }),
+    )
+
+    expect(screen.getByText(/2024 · Fastest open image-to-mesh/)).toBeInTheDocument()
+  })
+
   it('says nothing about the machine before the main process has answered', () => {
     render(<AiSettings />)
 

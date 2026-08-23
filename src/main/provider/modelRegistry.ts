@@ -15,7 +15,12 @@ import {
 } from '@shared/domain/model'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { localFieldsOf } from '@shared/domain/localFields'
-import { capabilitiesIn, modelThumbnailUrl, type LocalModel } from '@shared/domain/localModel'
+import {
+  catalogueLineOf,
+  capabilitiesIn,
+  modelThumbnailUrl,
+  type LocalModel,
+} from '@shared/domain/localModel'
 import type { WatchCredentials } from './credentialsWatch'
 import { familyOf, translateSchema, type ProviderInput } from './schema'
 
@@ -231,6 +236,7 @@ function localSummaryOf(
   const capabilities = capabilitiesIn(model, family)
   if (capabilities === null) return null
 
+  const line = catalogueLineOf(model)
   return {
     id: model.id,
     name: model.name,
@@ -243,13 +249,14 @@ function localSummaryOf(
     installed,
     ...(model.files.length === 0 ? { downloadable: false } : {}),
     diskBytes: model.diskBytes,
-    featured: false,
+    featured: model.featured ?? false,
     capabilities,
     tags: [],
     // Always one: the manifest names its own, and a modality's generic picture stands in for a
     // model the person supplied. A card with nothing to draw is what this exists to prevent.
     thumbnail: modelThumbnailUrl(model),
-    ...(model.summary === undefined ? {} : { description: model.summary }),
+    ...(line === undefined ? {} : { description: line }),
+    ...(model.releasedAt === undefined ? {} : { createdAt: model.releasedAt }),
   }
 }
 

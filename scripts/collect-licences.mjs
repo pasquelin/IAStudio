@@ -232,6 +232,12 @@ const MODEL_NOTES = {
   'shap-e-img2img': [
     'Copyright OpenAI. Same renderer, and the same `.bin` reservation as Shap-E above.',
   ],
+  craftsman3d: ['Copyright the CraftsMan3D authors.'],
+  instantmesh: ['Copyright Tencent ARC Lab.'],
+  wonder3d: ['Copyright the Wonder3D authors.'],
+  lgm: ['Copyright the LGM authors, 3D Topia.'],
+  unique3d: ['Copyright AiuniAI.'],
+  triposg: ['Copyright VAST AI Research and Tripo.'],
 }
 
 /**

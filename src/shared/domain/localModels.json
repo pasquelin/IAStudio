@@ -291,16 +291,8 @@
       "reservationBytes": 4496703488,
       "thumbnail": "ssd-1b.png",
       "family": "image",
-      "capabilities": [
-        "txt2img",
-        "img2img",
-        "inpaint",
-        "outpaint"
-      ],
-      "serves": [
-        "texture/txt2img_texture",
-        "texture/img2img_texture"
-      ]
+      "capabilities": ["txt2img", "img2img", "inpaint", "outpaint"],
+      "serves": ["texture/txt2img_texture", "texture/img2img_texture"]
     },
     {
       "id": "sana-600m-1024",
@@ -431,12 +423,8 @@
       "reservationBytes": 7766163456,
       "thumbnail": "sana-600m-1024.png",
       "family": "image",
-      "capabilities": [
-        "txt2img"
-      ],
-      "serves": [
-        "texture/txt2img_texture"
-      ]
+      "capabilities": ["txt2img"],
+      "serves": ["texture/txt2img_texture"]
     },
     {
       "id": "sana-1600m-1024",
@@ -583,12 +571,8 @@
       "reservationBytes": 4862736884,
       "thumbnail": "sana-1600m-1024.png",
       "family": "image",
-      "capabilities": [
-        "txt2img"
-      ],
-      "serves": [
-        "texture/txt2img_texture"
-      ]
+      "capabilities": ["txt2img"],
+      "serves": ["texture/txt2img_texture"]
     },
     {
       "id": "sana15-1-6b",
@@ -719,12 +703,8 @@
       "reservationBytes": 4862888829,
       "thumbnail": "sana15-1-6b.png",
       "family": "image",
-      "capabilities": [
-        "txt2img"
-      ],
-      "serves": [
-        "texture/txt2img_texture"
-      ]
+      "capabilities": ["txt2img"],
+      "serves": ["texture/txt2img_texture"]
     },
     {
       "id": "qwen-image",
@@ -967,12 +947,8 @@
       "reservationBytes": 28852287506,
       "thumbnail": "qwen-image.png",
       "family": "image",
-      "capabilities": [
-        "txt2img"
-      ],
-      "serves": [
-        "texture/txt2img_texture"
-      ]
+      "capabilities": ["txt2img"],
+      "serves": ["texture/txt2img_texture"]
     }
   ],
   "video/txt2video": [
@@ -1105,10 +1081,7 @@
       "reservationBytes": 6887763909,
       "thumbnail": "cogvideox-2b.png",
       "family": "video",
-      "capabilities": [
-        "txt2video",
-        "video2video"
-      ]
+      "capabilities": ["txt2video", "video2video"]
     },
     {
       "id": "wan21-t2v-1-3b",
@@ -1279,10 +1252,7 @@
       "reservationBytes": 14464443929,
       "thumbnail": "wan21-t2v-1-3b.png",
       "family": "video",
-      "capabilities": [
-        "txt2video",
-        "video2video"
-      ]
+      "capabilities": ["txt2video", "video2video"]
     },
     {
       "id": "wan22-ti2v-5b",
@@ -1461,11 +1431,7 @@
       "reservationBytes": 17100709200,
       "thumbnail": "wan22-ti2v-5b.png",
       "family": "video",
-      "capabilities": [
-        "img2video",
-        "txt2video",
-        "video2video"
-      ]
+      "capabilities": ["img2video", "txt2video", "video2video"]
     },
     {
       "id": "mochi-1-preview",
@@ -1740,9 +1706,7 @@
       "reservationBytes": 66754740322,
       "thumbnail": "mochi-1-preview.png",
       "family": "video",
-      "capabilities": [
-        "txt2video"
-      ]
+      "capabilities": ["txt2video"]
     }
   ],
   "image/img2img": [
@@ -2059,9 +2023,7 @@
       "reservationBytes": 28860227143,
       "thumbnail": "qwen-image-edit.png",
       "family": "image",
-      "capabilities": [
-        "img2img"
-      ]
+      "capabilities": ["img2img"]
     }
   ],
   "video/img2video": [
@@ -2354,9 +2316,7 @@
       "reservationBytes": 45048778190,
       "thumbnail": "wan21-i2v-14b-480p.png",
       "family": "video",
-      "capabilities": [
-        "img2video"
-      ]
+      "capabilities": ["img2video"]
     }
   ],
   "audio/txt2audio": [
@@ -2529,10 +2489,7 @@
       "reservationBytes": 5550750945,
       "thumbnail": "acestep-v15-xl-turbo.png",
       "family": "audio",
-      "capabilities": [
-        "txt2audio",
-        "audio2audio"
-      ]
+      "capabilities": ["txt2audio", "audio2audio"]
     },
     {
       "id": "acestep-v15-xl-base",
@@ -2735,10 +2692,7 @@
       "reservationBytes": 5760798878,
       "thumbnail": "acestep-v15-xl-base.png",
       "family": "audio",
-      "capabilities": [
-        "txt2audio",
-        "audio2audio"
-      ]
+      "capabilities": ["txt2audio", "audio2audio"]
     },
     {
       "id": "acestep-v15-xl-sft",
@@ -2941,17 +2895,15 @@
       "reservationBytes": 5760798878,
       "thumbnail": "acestep-v15-xl-sft.png",
       "family": "audio",
-      "capabilities": [
-        "txt2audio",
-        "audio2audio"
-      ]
+      "capabilities": ["txt2audio", "audio2audio"]
     }
   ],
   "3d/txt23d": [
     {
       "id": "shap-e",
       "name": "Shap-E",
-      "summary": "Shap-E, texte vers maillage",
+      "summary": "Text to a coarse blob mesh. Prefer English CLIP prompts. Dated quality",
+      "releasedAt": "2023-05-03",
       "format": "safetensors",
       "loader": "diffusers",
       "modality": "mesh",
@@ -3101,9 +3053,7 @@
       "reservationBytes": 2450491475,
       "thumbnail": "shap-e.png",
       "family": "3d",
-      "capabilities": [
-        "txt23d"
-      ],
+      "capabilities": ["txt23d"],
       "readsTorchWeights": true
     }
   ],
@@ -3111,7 +3061,9 @@
     {
       "id": "triposr",
       "name": "TripoSR",
-      "summary": "TripoSR, image vers 3D, leger",
+      "summary": "Fastest open image-to-mesh. Vertex colours, ~6 GB. Best local pick on Apple Silicon",
+      "releasedAt": "2024-03-04",
+      "featured": true,
       "format": "pickle",
       "loader": "plugin",
       "modality": "mesh",
@@ -3141,16 +3093,15 @@
       "reservationBytes": 838623864,
       "thumbnail": "triposr.png",
       "family": "3d",
-      "capabilities": [
-        "img23d"
-      ],
+      "capabilities": ["img23d"],
       "distribution": "direct-download",
       "licenceStatus": "commercial"
     },
     {
       "id": "shap-e-img2img",
       "name": "Shap-E Image",
-      "summary": "Shap-E, image vers maillage",
+      "summary": "Image to a coarse blob mesh. Same dated quality as text Shap-E",
+      "releasedAt": "2023-05-03",
       "format": "safetensors",
       "loader": "diffusers",
       "modality": "mesh",
@@ -3276,15 +3227,15 @@
       "reservationBytes": 2989127072,
       "thumbnail": "shap-e-img2img.png",
       "family": "3d",
-      "capabilities": [
-        "img23d"
-      ],
+      "capabilities": ["img23d"],
       "readsTorchWeights": true
     },
     {
       "id": "trellis2-4b",
       "name": "TRELLIS.2 4B",
-      "summary": "TRELLIS.2, 4B, image vers 3D",
+      "summary": "Best open PBR mesh (colour, metal, roughness). NVIDIA CUDA, 24 GB",
+      "releasedAt": "2025-12-16",
+      "featured": true,
       "format": "safetensors",
       "loader": "plugin",
       "modality": "mesh",
@@ -3458,11 +3409,131 @@
       "reservationBytes": 8118738554,
       "thumbnail": "trellis2-4b.png",
       "family": "3d",
-      "capabilities": [
-        "img23d"
-      ],
+      "capabilities": ["img23d"],
       "distribution": "direct-download",
       "licenceStatus": "commercial",
+      "needsCuda": true
+    },
+    {
+      "id": "craftsman3d",
+      "name": "CraftsMan3D",
+      "summary": "Native 3D diffusion, text or image to a smooth mesh. NVIDIA CUDA",
+      "releasedAt": "2024-05-23",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "mesh",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/craftsman3d/craftsman",
+      "files": [],
+      "diskBytes": 2500000000,
+      "reservationBytes": 8000000000,
+      "family": "3d",
+      "capabilities": ["img23d"],
+      "serves": ["3d/txt23d"],
+      "runtimeStatus": "unsupported",
+      "needsCuda": true
+    },
+    {
+      "id": "instantmesh",
+      "name": "InstantMesh",
+      "summary": "Image to mesh in about 10 s, regular faces. NVIDIA CUDA",
+      "releasedAt": "2024-04-10",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "mesh",
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/TencentARC/InstantMesh",
+      "files": [],
+      "diskBytes": 3500000000,
+      "reservationBytes": 10000000000,
+      "family": "3d",
+      "capabilities": ["img23d"],
+      "runtimeStatus": "unsupported",
+      "needsCuda": true
+    },
+    {
+      "id": "wonder3d",
+      "name": "Wonder3D",
+      "summary": "Multi-view normals then mesh, 2-3 min. NVIDIA CUDA. Older pipeline",
+      "releasedAt": "2023-10-23",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "mesh",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/flamehaze1115/wonder3d-v1.0",
+      "files": [],
+      "diskBytes": 4000000000,
+      "reservationBytes": 10000000000,
+      "family": "3d",
+      "capabilities": ["img23d"],
+      "runtimeStatus": "unsupported",
+      "needsCuda": true
+    },
+    {
+      "id": "lgm",
+      "name": "LGM",
+      "summary": "Multi-view Gaussians, then a mesh. Text or image. NVIDIA CUDA",
+      "releasedAt": "2024-02-07",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "mesh",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/ashawkey/LGM",
+      "files": [],
+      "diskBytes": 5000000000,
+      "reservationBytes": 12000000000,
+      "family": "3d",
+      "capabilities": ["img23d"],
+      "serves": ["3d/txt23d"],
+      "runtimeStatus": "unsupported",
+      "needsCuda": true
+    },
+    {
+      "id": "unique3d",
+      "name": "Unique3D",
+      "summary": "High-fidelity textured mesh from one image, ~30 s. NVIDIA CUDA",
+      "releasedAt": "2024-05-30",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "mesh",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://github.com/AiuniAI/Unique3D",
+      "files": [],
+      "diskBytes": 5500000000,
+      "reservationBytes": 12000000000,
+      "family": "3d",
+      "capabilities": ["img23d"],
+      "runtimeStatus": "unsupported",
+      "needsCuda": true
+    },
+    {
+      "id": "triposg",
+      "name": "TripoSG",
+      "summary": "High-fidelity geometry from one image, 8 GB VRAM. NVIDIA CUDA",
+      "releasedAt": "2025-02-10",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "mesh",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://huggingface.co/VAST-AI/TripoSG",
+      "files": [],
+      "diskBytes": 6000000000,
+      "reservationBytes": 10000000000,
+      "family": "3d",
+      "capabilities": ["img23d"],
+      "runtimeStatus": "unsupported",
       "needsCuda": true
     }
   ],
@@ -3604,16 +3675,12 @@
       "reservationBytes": 2507643548,
       "thumbnail": "controlnet-canny-sdxl.png",
       "family": "image",
-      "capabilities": [
-        "controlnet"
-      ],
+      "capabilities": ["controlnet"],
       "attaches": {
         "model": "ssd-1b",
         "as": "controlnet"
       },
-      "serves": [
-        "texture/controlnet_texture"
-      ]
+      "serves": ["texture/controlnet_texture"]
     }
   ],
   "image/reference": [
@@ -3658,18 +3725,14 @@
       "reservationBytes": 2196250026,
       "thumbnail": "ip-adapter-sdxl.png",
       "family": "image",
-      "capabilities": [
-        "reference"
-      ],
+      "capabilities": ["reference"],
       "attaches": {
         "model": "ssd-1b",
         "as": "ip-adapter",
         "subfolder": "sdxl_models",
         "weightName": "ip-adapter_sdxl.safetensors"
       },
-      "serves": [
-        "texture/reference_texture"
-      ]
+      "serves": ["texture/reference_texture"]
     }
   ],
   "audio/video2audio": [
@@ -3722,9 +3785,7 @@
       "reservationBytes": 1625582553,
       "thumbnail": "mmaudio-small-44k.png",
       "family": "audio",
-      "capabilities": [
-        "video2audio"
-      ],
+      "capabilities": ["video2audio"],
       "distribution": "direct-download",
       "licenceStatus": "non-commercial"
     },
@@ -3777,9 +3838,7 @@
       "reservationBytes": 2554376795,
       "thumbnail": "mmaudio-medium-44k.png",
       "family": "audio",
-      "capabilities": [
-        "video2audio"
-      ],
+      "capabilities": ["video2audio"],
       "distribution": "direct-download",
       "licenceStatus": "non-commercial"
     },
@@ -3832,9 +3891,7 @@
       "reservationBytes": 3370803661,
       "thumbnail": "mmaudio-large-44k.png",
       "family": "audio",
-      "capabilities": [
-        "video2audio"
-      ],
+      "capabilities": ["video2audio"],
       "distribution": "direct-download",
       "licenceStatus": "non-commercial"
     }
@@ -3843,7 +3900,8 @@
     {
       "id": "trellis-text-large",
       "name": "TRELLIS Text",
-      "summary": "TRELLIS texte vers 3D, large",
+      "summary": "High-quality text to textured mesh. NVIDIA CUDA",
+      "releasedAt": "2024-12-05",
       "format": "safetensors",
       "loader": "plugin",
       "modality": "mesh",
@@ -3897,20 +3955,17 @@
       "reservationBytes": 1142098602,
       "thumbnail": "trellis-text-large.png",
       "family": "3d",
-      "capabilities": [
-        "3d23d"
-      ],
+      "capabilities": ["3d23d"],
       "distribution": "direct-download",
       "licenceStatus": "commercial",
-      "serves": [
-        "3d/txt23d"
-      ],
+      "serves": ["3d/txt23d"],
       "needsCuda": true
     },
     {
       "id": "trellis-image-large",
       "name": "TRELLIS Image",
-      "summary": "TRELLIS image vers 3D, large",
+      "summary": "High-quality image to textured mesh. NVIDIA CUDA",
+      "releasedAt": "2024-12-05",
       "format": "safetensors",
       "loader": "plugin",
       "modality": "mesh",
@@ -4060,14 +4115,10 @@
       "reservationBytes": 1649619433,
       "thumbnail": "trellis-image-large.png",
       "family": "3d",
-      "capabilities": [
-        "3d23d"
-      ],
+      "capabilities": ["3d23d"],
       "distribution": "direct-download",
       "licenceStatus": "commercial",
-      "serves": [
-        "3d/img23d"
-      ],
+      "serves": ["3d/img23d"],
       "needsCuda": true
     }
   ],
@@ -4087,9 +4138,7 @@
       "diskBytes": 0,
       "reservationBytes": 4000000000,
       "family": "skybox",
-      "capabilities": [
-        "txt2skybox"
-      ],
+      "capabilities": ["txt2skybox"],
       "runtimeStatus": "unsupported",
       "fieldOverrides": {
         "width": {
@@ -4115,10 +4164,7 @@
       "diskBytes": 0,
       "reservationBytes": 4000000000,
       "family": "skybox",
-      "capabilities": [
-        "txt2skybox",
-        "img2skybox"
-      ],
+      "capabilities": ["txt2skybox", "img2skybox"],
       "runtimeStatus": "unsupported",
       "fieldOverrides": {
         "width": {
@@ -4144,10 +4190,7 @@
       "diskBytes": 0,
       "reservationBytes": 2000000000,
       "family": "skybox",
-      "capabilities": [
-        "txt2skybox",
-        "img2skybox"
-      ],
+      "capabilities": ["txt2skybox", "img2skybox"],
       "licenceStatus": "restricted",
       "runtimeStatus": "unsupported",
       "fieldOverrides": {
@@ -4174,9 +4217,7 @@
       "diskBytes": 0,
       "reservationBytes": 2000000000,
       "family": "skybox",
-      "capabilities": [
-        "txt2skybox"
-      ],
+      "capabilities": ["txt2skybox"],
       "licenceStatus": "restricted",
       "runtimeStatus": "unsupported",
       "fieldOverrides": {
@@ -4205,9 +4246,7 @@
       "diskBytes": 0,
       "reservationBytes": 12000000000,
       "family": "skybox",
-      "capabilities": [
-        "img2skybox"
-      ],
+      "capabilities": ["img2skybox"],
       "runtimeStatus": "unsupported",
       "fieldOverrides": {
         "width": {

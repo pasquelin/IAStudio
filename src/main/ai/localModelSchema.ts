@@ -69,5 +69,7 @@ export const localModelSchema: z.ZodType<LocalModel> = z.object({
     .optional(),
   summary: z.string().optional(),
   thumbnail: z.string().optional(),
+  releasedAt: z.iso.date().optional(),
+  featured: z.boolean().optional(),
   weightsPath: z.string().min(1).optional(),
 })
