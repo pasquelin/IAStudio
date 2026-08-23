@@ -172,6 +172,24 @@ describe('the shipped catalogue', () => {
     expect(excluded).toEqual([])
   })
 
+  it('opens TripoSG as a CUDA plugin with pinned files', () => {
+    const model = shippedModel('triposg')
+
+    expect(model?.loader).toBe('plugin')
+    expect(model?.needsCuda).toBe(true)
+    expect(model?.files.length).toBeGreaterThan(0)
+    expect(model?.runtimeStatus).not.toBe('unsupported')
+  })
+
+  it('leaves the five 3d stacks whose python is not vendored without files', () => {
+    const closed = shippedModels()
+      .filter(model => model.family === '3d')
+      .filter(model => model.runtimeStatus === 'unsupported')
+      .map(model => model.id)
+
+    expect(closed.sort()).toEqual(['craftsman3d', 'instantmesh', 'lgm', 'unique3d', 'wonder3d'])
+  })
+
   it('lists commercially licensed 3d engines beside the ones already wired', () => {
     expect(shippedModelsFor(aiRoleId('3d', 'img23d')).map(model => model.id)).toEqual(
       expect.arrayContaining([

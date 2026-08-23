@@ -1,5 +1,5 @@
 """
-Adapters for families diffusers does not open: TripoSR, TRELLIS, TRELLIS.2, MMAudio.
+Adapters for families diffusers does not open: TripoSR, TRELLIS, TRELLIS.2, TripoSG, MMAudio.
 
 The Python is ours (vendored or an extra). Weights stay in the digested folder, with no `.py`.
 `torch.load(..., weights_only=True)` is the pickle path — PyTorch 2.6 refuses reducers.
@@ -104,6 +104,9 @@ class PluginAdapter:
         elif model_id == "trellis2-4b":
             self._handle = _load_trellis2(folder)
             self._kind = "trellis2"
+        elif model_id == "triposg":
+            self._handle = _load_triposg(folder)
+            self._kind = "triposg"
         elif model_id in MMAUDIO_WEIGHTS:
             self._handle = _load_mmaudio(model_id, folder, device)
             self._kind = "mmaudio"
@@ -148,6 +151,8 @@ class PluginAdapter:
             _run_trellis(self._handle, params, destination, text=False)
         elif self._kind == "trellis2":
             _run_trellis2(self._handle, params, destination)
+        elif self._kind == "triposg":
+            _run_triposg(self._handle, params, destination, held.device)
         else:
             _run_mmaudio(self._handle, params, destination)
 
@@ -262,6 +267,42 @@ def _run_trellis2(pipeline: Any, params: dict[str, Any], destination: str) -> No
         mesh.save_ply(destination)
         return
     raise LoadRefusedError("TRELLIS.2 returned no mesh")
+
+
+def _load_triposg(folder: str) -> Any:
+    import torch
+
+    if not torch.cuda.is_available():
+        raise LoadRefusedError("TripoSG needs CUDA")
+    _require("triposg.pipelines.pipeline_triposg", "plugin")
+    from triposg.pipelines.pipeline_triposg import TripoSGPipeline
+
+    pipeline = TripoSGPipeline.from_pretrained(folder, local_files_only=True)
+    pipeline.to("cuda")
+    return pipeline
+
+
+def _run_triposg(pipeline: Any, params: dict[str, Any], destination: str, device: str) -> None:
+    image = params.get("image")
+    if not image:
+        raise LoadRefusedError("a generation needs a picture")
+    import torch
+    from PIL import Image
+
+    rembg = _require("rembg", "plugin")
+    picture = rembg.remove(Image.open(str(image)).convert("RGB")).convert("RGB")
+    seed = int(params["seed"]) if params.get("seed") not in (None, "") else 1
+    steps = int(params["steps"]) if params.get("steps") not in (None, "") else 50
+    cfg = float(params["cfgScale"]) if params.get("cfgScale") not in (None, "") else 7.0
+    outputs = pipeline(
+        image=picture,
+        generator=torch.Generator(device=device).manual_seed(seed),
+        num_inference_steps=steps,
+        guidance_scale=cfg,
+    ).samples[0]
+    trimesh = _require("trimesh", "plugin")
+    mesh = trimesh.Trimesh(outputs[0].astype("float32"), outputs[1])
+    mesh.export(destination)
 
 
 def _load_mmaudio(model_id: str, folder: str, device: str) -> Any:

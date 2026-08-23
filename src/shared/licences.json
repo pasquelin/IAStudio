@@ -742,7 +742,7 @@
   {
     "name": "TripoSG",
     "spdx": "MIT",
-    "text": "High-fidelity geometry from one image, 8 GB VRAM. NVIDIA CUDA.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\nCopyright VAST AI Research and Tripo.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
+    "text": "High-fidelity geometry from one image, 8 GB VRAM. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright VAST AI Research and Tripo.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/VAST-AI/TripoSG"
   },
   {

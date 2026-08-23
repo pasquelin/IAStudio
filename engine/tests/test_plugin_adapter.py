@@ -12,12 +12,13 @@ from ia_studio_engine.adapters.plugin_ids import CUDA_ONLY, PLUGIN_IDS, is_plugi
 from ia_studio_engine.adapters.routing_adapter import RoutingAdapter
 
 
-def test_the_seven_plugin_ids_are_named() -> None:
+def test_the_eight_plugin_ids_are_named() -> None:
     assert {
         "triposr",
         "trellis-text-large",
         "trellis-image-large",
         "trellis2-4b",
+        "triposg",
         "mmaudio-small-44k",
         "mmaudio-medium-44k",
         "mmaudio-large-44k",
@@ -52,6 +53,7 @@ def test_unsupported_plugins_have_no_adapter() -> None:
 
 def test_trellis_is_cuda_only() -> None:
     assert "trellis-image-large" in CUDA_ONLY
+    assert "triposg" in CUDA_ONLY
     assert "triposr" not in CUDA_ONLY
     assert "mmaudio-small-44k" not in CUDA_ONLY
 

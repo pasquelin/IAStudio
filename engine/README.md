@@ -30,9 +30,10 @@ Ce qui diffère entre deux portes est une modalité et un nom : la boucle est é
 | `engine/3d` | maillage | idem | idem |
 | `engine/skybox` | panorama 360 | idem | idem |
 
-Les familles hors diffusers (TripoSR, TRELLIS, TRELLIS.2, MMAudio) passent par `plugin_adapter.py`.
-TripoSR est vendu sous `vendor/tsr` (MIT, `weights_only=True`). TRELLIS / TRELLIS.2 demandent
-CUDA — sur Metal la carte le dit. MMAudio tourne sur MPS. Extra `plugin`, pas dans `engine:check`.
+Les familles hors diffusers (TripoSR, TRELLIS, TRELLIS.2, TripoSG, MMAudio) passent par
+`plugin_adapter.py`. TripoSR est vendu sous `vendor/tsr` (MIT, `weights_only=True`), TripoSG sous
+`vendor/triposg`. TRELLIS / TRELLIS.2 / TripoSG demandent CUDA — sur Metal la carte le dit.
+MMAudio tourne sur MPS. Extra `plugin`, pas dans `engine:check`.
 
 **Une op routée répond IMMÉDIATEMENT avec le job qu'elle a ouvert**, jamais avec son résultat :
 un chargement lit des gigaoctets et une génération dure des secondes. Le résultat arrive en

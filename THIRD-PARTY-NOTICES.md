@@ -3215,9 +3215,9 @@ https://huggingface.co/VAST-AI/TripoSG
 ```
 
 ```
-High-fidelity geometry from one image, 8 GB VRAM. NVIDIA CUDA.
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible. Nothing is fetched until a runtime can actually run them.
+High-fidelity geometry from one image, 8 GB VRAM. NVIDIA CUDA, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
 
 Copyright VAST AI Research and Tripo.
 
