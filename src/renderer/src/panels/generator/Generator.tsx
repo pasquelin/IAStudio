@@ -1,19 +1,20 @@
 import { mdiCreationOutline } from '@mdi/js'
 import { Suspense, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { partsOfRole } from '@shared/domain/aiRole'
 import type { Job } from '@shared/domain/job'
 import { useDescriptor } from '@/hooks/useDescriptor'
-import { useModelForFamily } from '@/hooks/useModelForFamily'
+import { useGenerationContext } from '@/hooks/useGenerationContext'
+import { useModelForCapability } from '@/hooks/useModelForCapability'
 import { usePlanAccess } from '@/hooks/usePlanAccess'
 import { usePlanRefusal } from '@/hooks/usePlanRefusal'
 import { modelIsOnThisMachine } from '@/helpers/modelForCapability'
-import { workspaceById } from '@/helpers/workspaces'
 import { referencePictures, type FormValues } from '@/helpers/dynamicForm'
 import { registerGenerator } from '@/assistant/generatorBridge'
 import { dictationAccessory } from '@/dictation/DictationField'
 import { failureKeyOf } from '@/services/failureMessage'
 import { useJobs } from '@/stores/jobs'
-import { useLayouts } from '@/stores/layouts'
+import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { claimOnSubmit } from '@/stores/generationClaims'
@@ -27,21 +28,26 @@ import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { NoProject } from '@/panels/shared/NoProject'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
+import { GeneratorOperation } from './Generator/GeneratorOperation'
+import { GeneratorSources } from './Generator/GeneratorSources'
 
 /**
- * The form the chosen model's schema describes, and nothing else: the prompt, the parameters,
- * the button. Which model runs is the Models panel's business — see spec § 6, and no field
- * here is written for any particular model.
+ * The one panel a generation is run from — ADR-23. The operation the workspace points at, the
+ * model that serves it, what is about to be sent, and the form the model's own schema describes.
+ *
+ * No field here is written for any particular model (invariant 5), and nothing about any
+ * particular operation either: both come from the contract and the descriptor.
  */
 export function Generator() {
   const { t } = useTranslation()
 
-  const workspace = useLayouts(state => state.activeWorkspace)
+  const forced = useGeneration(state => state.forcedCapability)
+  const forceCapability = useGeneration(state => state.forceCapability)
+  const { inputs, capability } = useGenerationContext(forced)
 
-  // What an edit asked this generator to open on — an upscaler for Enlarge — or the workspace's
-  // own family. See `prepared`: it is a parenthesis, and it closes on its own.
-  const prepared = useModels(state => state.prepared)
-  const family = prepared ?? workspaceById(workspace).family
+  // The family the FORM belongs to: a descriptor is a model's, and a model is filed under one
+  // family whatever employment it is being used for.
+  const family = capability.chosen ? partsOfRole(capability.chosen)?.family : undefined
 
   // Set by the inspector's "regenerate with these parameters"; ordinary generation leaves it
   // undefined and every field opens on its own default.
@@ -49,8 +55,8 @@ export function Generator() {
   // It is deliberately not cleared once used: `DynamicForm` rebuilds its defaults whenever the
   // preset changes, so dropping it would blank the form under the hand that is filling it. It
   // stays until the next "regenerate" replaces it, which reads as the last settings used.
-  const preset = useModels(state => state.preset[family])
-  const modelId = useModelForFamily(family)
+  const preset = useModels(state => (family ? state.preset[family] : undefined))
+  const modelId = useModelForCapability(capability.chosen)
 
   const authenticated = useSettings(state => state.auth.authenticated)
   const overview = useAiModels(state => state.overview)
@@ -136,9 +142,22 @@ export function Generator() {
   // button is dead — which is what it did, with one muted line to say why.
   if (!project) return <NoProject icon={mdiCreationOutline} message={t('generation.noProject')} />
 
-  // Unreachable: a section without a model offers no generator at all — the rail drops its icon
-  // and `shownTool` puts Models in this half. The guard is what makes `modelId` a string below.
-  if (!modelId) return null
+  // Said rather than hidden — § 26: what the workspace holds reaches no operation of this
+  // family, and inventing a conversion to reach one is what ADR-23 forbids.
+  if (!capability.chosen) {
+    return <EmptyState icon={mdiCreationOutline} message={t('generation.noOperation')} />
+  }
+
+  // 🛑 § 20: the panel says which of the five refusals it is, rather than letting a click end in
+  // a failure nobody can read. The operation stays on screen, so another can be picked.
+  if (!modelId) {
+    return (
+      <div className={PANEL_SCROLL}>
+        <GeneratorOperation capability={capability} onForce={forceCapability} />
+        <EmptyState icon={mdiCreationOutline} message={t('generation.noModelForOperation')} />
+      </div>
+    )
+  }
 
   if (descriptor.isPending) {
     return <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
@@ -157,6 +176,9 @@ export function Generator() {
   return (
     <div className={PANEL_SCROLL}>
       <FormHeader title={descriptor.data?.name ?? t('collection.loading')} />
+
+      <GeneratorOperation capability={capability} onForce={forceCapability} />
+      <GeneratorSources inputs={inputs} />
 
       {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}
       {refusal && <p className="text-muted px-2 text-xs">{refusal}</p>}

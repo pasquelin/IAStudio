@@ -6,7 +6,16 @@
     "noCredentials": "Renseignez vos identifiants API pour voir vos modèles.",
     "dropPicture": "Déposez une image, ou collez son identifiant",
     "dropModel": "Déposez un modèle 3D, ou collez son identifiant",
-    "estimatedCost": "~{{units}} UC"
+    "estimatedCost": "~{{units}} UC",
+    "operation": "Opération",
+    "operationHint": "Ce que la génération va faire du contenu de l’espace de travail",
+    "noOperation": "Aucune opération n’est possible avec ce qui est sélectionné.",
+    "noModelForOperation": "Aucun modèle disponible pour cette opération.",
+    "sources": "Sources",
+    "sourceFrom_selection": "Sélection",
+    "sourceFrom_document": "Document ouvert",
+    "sourceFrom_result": "Résultat précédent",
+    "dropSource": "Retirer cette source"
   },
   "models": {
     "none": "Aucun modèle dans cet espace.",

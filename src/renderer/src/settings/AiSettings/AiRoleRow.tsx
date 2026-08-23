@@ -10,7 +10,7 @@ import { useAiModels } from '@/stores/aiModels'
 import { useModels } from '@/stores/models'
 import { AiCandidateRow } from './AiCandidateRow'
 import { AiChoiceRow } from './AiChoiceRow'
-import { roleLabel } from './roleLabel'
+import { roleLabel } from '@/helpers/roleLabel'
 
 const SOURCE_COPY: Record<ModelSource, { title: string; help?: string }> = {
   studio: { title: 'aiModels.sourceStudio', help: 'aiModels.sourceStudioHelp' },

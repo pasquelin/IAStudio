@@ -5,6 +5,7 @@ import { layerById } from '@/engines/canvas/canvasState'
 import { modelForCapability } from '@/helpers/modelForCapability'
 import { reportNotice } from '@/services/diagnostics'
 import { canvasOf, useCanvases } from '@/stores/canvases'
+import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
 import { fillEditFields } from './aiFields'
 import { offerModelsOfFamily } from '@/helpers/offerModel'
@@ -106,6 +107,7 @@ export async function prepareEdit(
   })
 
   useModels.getState().prepare(role, modelId, values)
+  useGeneration.getState().forceCapability(role)
   revealTool('generator')
   return true
 }
