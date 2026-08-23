@@ -656,7 +656,7 @@ laisserait croire que `⌘D` ou `⌘Z` y font ce qu’ils font dans l’espace d
 | `E` |  |  |  |  | Outil Gomme |  |  |  |
 | `⇧Q` |  |  | Quatre vues |  |  |  |  |  |
 | `⇧W` |  |  | Arêtes en quads |  |  |  |  |  |
-| `⇧R` |  |  |  |  | Forme Ligne |  |  |  |
+| `⇧R` |  |  |  |  | Forme Trait |  |  |  |
 | `⇧P` |  |  |  |  | Outil Crayon |  |  |  |
 | `[` / `]` |  |  |  |  | Réduire / Agrandir le pinceau |  |  |  |
 | `Suppr` |  |  | Supprimer l’objet | Supprimer le clip |  |  |  |  |

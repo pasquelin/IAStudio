@@ -390,8 +390,8 @@
       "help": "Arme le tracé d’un rectangle sur le calque actif ; MAJ en fait un carré."
     },
     "canvasToolShapeLine": {
-      "title": "Forme Ligne",
-      "help": "Arme le tracé d’une ligne. Dans le même groupe que le rectangle, d’où sa touche augmentée de MAJ."
+      "title": "Forme Trait",
+      "help": "Arme le tracé d’un trait. Dans le même groupe que le rectangle, d’où sa touche augmentée de MAJ."
     },
     "canvasToolShapeArrow": {
       "title": "Forme Flèche",
