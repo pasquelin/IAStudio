@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { AiOverview, RoleRow } from '@shared/domain/aiOverview'
 import { aiRoleId } from '@shared/domain/aiRole'
@@ -107,4 +107,28 @@ it('answers nothing for no family at all', () => {
   preferModels({ image: 'sdxl' })
 
   expect(renderHook(() => useModelForFamily(null)).result.current).toBeNull()
+})
+
+/**
+ * `[M]` The manager republishes the whole overview per percent of a load and per tick of an
+ * install — around a hundred times per download — and the generator and every rail read this.
+ * Subscribing to the object itself re-rendered them all for an answer that had not moved.
+ */
+it('does not re-render when a republished overview leaves the answer alone', () => {
+  useModels.setState({ selected: { image: 'flux' } })
+  useAiModels.setState({ overview: overviewOf(imageRow()) })
+
+  let renders = 0
+  const { result } = renderHook(() => {
+    renders += 1
+    return useModelForFamily('image')
+  })
+  const before = renders
+
+  act(() => {
+    useAiModels.setState({ overview: overviewOf(imageRow()) })
+  })
+
+  expect(result.current).toBe('flux')
+  expect(renders).toBe(before)
 })

@@ -16,7 +16,11 @@ export function useModelForFamily(family: ModelFamily | null): string | null {
   const preferred = useSettings(state =>
     family ? state.settings.generation.defaultModels[family] : undefined,
   )
-  const overview = useAiModels(state => state.overview)
-  if (!family) return null
-  return resolveModelForFamily(family, chosen, preferred, overview) ?? null
+  // 🛑 The ANSWER, never `state.overview` itself: the manager republishes the whole overview per
+  // percent of a load and per tick of an install, and a subscription to the object re-rendered the
+  // generator and every rail with it. A string compares by value, so an identical republish stops
+  // here.
+  return useAiModels(state =>
+    family ? (resolveModelForFamily(family, chosen, preferred, state.overview) ?? null) : null,
+  )
 }

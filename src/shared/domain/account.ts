@@ -32,6 +32,16 @@ export function scenarioAccount(accounts: readonly AccountSummary[]): AccountSum
   return accounts.find(account => account.active && providerOf(account) === SCENARIO_CLOUD) ?? null
 }
 
+/**
+ * The clouds a key is active for, read off ONE listing.
+ *
+ * Asking each cloud on its own is what this replaces: every ask decrypted the keychain and
+ * re-parsed the book, so eight registered clouds cost eight synchronous decryptions per compose.
+ */
+export function activeProvidersOf(accounts: readonly AccountSummary[]): ReadonlySet<string> {
+  return new Set(accounts.filter(account => account.active).map(providerOf))
+}
+
 export const ACCOUNT_NAME_MAX_LENGTH = 60
 
 /**
