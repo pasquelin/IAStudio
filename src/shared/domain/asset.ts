@@ -376,9 +376,8 @@ export function assetBadgeOf(asset: Asset, activeOwnerId: string | null): AssetB
     case 'error':
       return 'error'
     default:
-      // A twin with nothing said about it is one the catalogue recorded before it tracked
-      // sync — an asset collected from a generation. Both sides hold it, and neither has moved.
-      return 'synced'
+      // Provenance, not a twin: a generation lands a file so a resume does not download twice.
+      return 'local-only'
   }
 }
 

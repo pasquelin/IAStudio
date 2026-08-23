@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { Asset } from '@shared/domain/asset'
+import type { Asset, AssetType } from '@shared/domain/asset'
 import type { Job } from '@shared/domain/job'
+import type { WorkspaceId } from '@shared/domain/workspace'
 import type { LocalBackend, WriteRequest } from './localBackend'
 import {
   createLocalCollector,
@@ -33,7 +34,15 @@ function harness(over: Partial<LocalCollectorDeps> = {}) {
     replaceBytes: () => Promise.reject(new Error('not used by the collector')),
     importFromBytes: request => {
       written.push(request)
-      return Promise.resolve({ id: request.id, type: request.type } as Asset)
+      const asset: Asset = {
+        id: request.id,
+        name: request.name,
+        type: request.type,
+        location: 'local',
+        tags: [],
+        createdAt: JOB.createdAt,
+      }
+      return Promise.resolve(asset)
     },
   }
 
@@ -61,7 +70,6 @@ describe('filing a generation made on this machine', () => {
     expect(held.written[0]).toMatchObject({ id: 'asset_1', type: 'image', jobId: 'job_1' })
   })
 
-  /** A shelf named after models is a shelf where everything of one model reads the same. */
   it('names the asset after what was asked, not after the model that answered', async () => {
     const held = harness()
     await held.collect(JOB, [])
@@ -76,7 +84,6 @@ describe('filing a generation made on this machine', () => {
     expect(held.written[0]?.extension).toBe('webp')
   })
 
-  /** Losing the hand-off after the import costs nothing; losing it before loses the generation. */
   it('drops the hand-off only once the bytes are in the project', async () => {
     const held = harness()
     await held.collect(JOB, [])
@@ -90,7 +97,39 @@ describe('filing a generation made on this machine', () => {
     expect(await held.collect(JOB, [])).toEqual({ ids: ['asset_1'], workspaces: ['image'] })
   })
 
-  /** A conversation produced a sentence: the job succeeded, it simply has nothing to file. */
+  it("asks for the file under the runner's job id, not the studio's", async () => {
+    const asked: string[] = []
+    const held = harness({
+      producedBy: id => {
+        asked.push(id)
+        return id === 'local_abc' ? PRODUCED : null
+      },
+    })
+
+    expect(await held.collect({ ...JOB, remoteId: 'local_abc' }, [])).toEqual({
+      ids: ['asset_1'],
+      workspaces: ['image'],
+    })
+    expect(asked).toEqual(['local_abc'])
+  })
+
+  const shelves: readonly { type: AssetType; workspace: WorkspaceId }[] = [
+    { type: 'video', workspace: 'video' },
+    { type: 'audio', workspace: 'audio' },
+    { type: 'mesh', workspace: '3d' },
+    { type: 'texture', workspace: 'textures' },
+    { type: 'skybox', workspace: 'skyboxes' },
+  ]
+
+  it.each(shelves)('files a $type generation on its own shelf', async ({ type, workspace }) => {
+    const held = harness({
+      producedBy: () => ({ ...PRODUCED, type, path: `/tmp/out.${type}` }),
+    })
+
+    expect(await held.collect(JOB, [])).toEqual({ ids: ['asset_1'], workspaces: [workspace] })
+    expect(held.written[0]?.type).toBe(type)
+  })
+
   it('files nothing for a job that produced no file', async () => {
     const held = harness({ producedBy: () => null })
 
@@ -98,7 +137,6 @@ describe('filing a generation made on this machine', () => {
     expect(held.written).toEqual([])
   })
 
-  /** A generation that cannot be read is a collection that failed, not a job that succeeded. */
   it('fails rather than reporting a job with nothing behind it', async () => {
     const held = harness({ readFile: () => Promise.reject(new Error('gone')) })
 

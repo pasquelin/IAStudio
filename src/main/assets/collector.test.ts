@@ -96,6 +96,19 @@ describe('asset collector', () => {
     expect(imported[0]).toMatchObject({ remoteAssetId: 'remote_1', type: 'mesh' })
   })
 
+  it('files a cloud generation without counting it as synced', async () => {
+    const { backend, imported } = backendSpy()
+    const collect = createAssetCollector({
+      retrieve: () => Promise.resolve(remote('image')),
+      backend,
+      newId: () => 'asset_1',
+      heldFor: async () => null,
+    })
+
+    await collect(JOB, ['remote_1'])
+    expect(imported[0]?.sync).toBe(false)
+  })
+
   /**
    * A mesh generated here is a tile in the browser a second later, and its `.glb` is not a
    * picture. The API renders a still for exactly that, and dropping it leaves the shelf showing

@@ -13,8 +13,9 @@ const JOB: Job = {
   assetIds: [],
 }
 
-const answering = (id: string): AssetCollector =>
-  vi.fn(() => Promise.resolve({ ids: [id], workspaces: [] }))
+function answering(id: string): AssetCollector {
+  return vi.fn(() => Promise.resolve({ ids: [id], workspaces: [] }))
+}
 
 describe('routing a collection to whoever owns the job', () => {
   it('files what this machine produced', async () => {
@@ -23,6 +24,19 @@ describe('routing a collection to whoever owns the job', () => {
     const collect = createRoutedCollector({ local, cloud: () => cloud, owns: () => true })
 
     expect(await collect(JOB, [])).toEqual({ ids: ['local'], workspaces: [] })
+    expect(cloud).not.toHaveBeenCalled()
+  })
+
+  it("asks ownership of the runner's job id, not the studio's", async () => {
+    const owns = vi.fn((id: string) => id === 'local_abc')
+    const local = answering('local')
+    const cloud = answering('cloud')
+    const collect = createRoutedCollector({ local, cloud: () => cloud, owns })
+
+    await collect({ ...JOB, remoteId: 'local_abc' }, [])
+
+    expect(owns).toHaveBeenCalledWith('local_abc')
+    expect(local).toHaveBeenCalled()
     expect(cloud).not.toHaveBeenCalled()
   })
 
@@ -39,7 +53,6 @@ describe('routing a collection to whoever owns the job', () => {
     expect(cloud).toHaveBeenCalledWith(JOB, ['remote_1'])
   })
 
-  /** A generation made here needs no account, and refusing it for want of one would be absurd. */
   it('collects a local generation with no account held', async () => {
     const collect = createRoutedCollector({
       local: answering('local'),
@@ -50,10 +63,6 @@ describe('routing a collection to whoever owns the job', () => {
     expect(await collect(JOB, [])).toEqual({ ids: ['local'], workspaces: [] })
   })
 
-  /**
-   * The account went away between the run and the collection: the outputs exist, nothing here can
-   * fetch them, and that is a storage failure rather than a job quietly reported as succeeded.
-   */
   it('fails rather than reporting a cloud job with nothing behind it', async () => {
     const collect = createRoutedCollector({
       local: answering('local'),

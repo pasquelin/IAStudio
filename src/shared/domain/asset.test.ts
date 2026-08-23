@@ -213,10 +213,8 @@ describe('the badge an asset wears', () => {
     expect(assetBadgeOf(asset({ ...twin, syncStatus: 'error' }), OWNER)).toBe('error')
   })
 
-  it('reads a twin the catalogue said nothing about as settled', () => {
-    // Rows written before the catalogue tracked sync — assets collected from a generation,
-    // which were downloaded from the very twin they point at.
-    expect(assetBadgeOf(asset({ remoteAssetId: 'asset_x' }), OWNER)).toBe('synced')
+  it('reads a remote id without a sync status as local-only', () => {
+    expect(assetBadgeOf(asset({ remoteAssetId: 'asset_x' }), OWNER)).toBe('local-only')
   })
 
   it('says so when the twin belongs to another project', () => {

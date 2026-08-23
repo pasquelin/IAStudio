@@ -130,6 +130,8 @@ export function createAssetCollector({
         type,
         jobId: job.id,
         remoteAssetId,
+        // Provenance, not a twin: pushing is a later, explicit gesture.
+        sync: false,
         // One job, one group. The API has no notion of a set, but the seven channels of a PBR
         // pack are exactly the outputs of one conversion — and a lone output is not a group.
         ...(remoteAssetIds.length > 1 ? { groupId: job.id, outputIndex: index } : {}),
