@@ -203,12 +203,13 @@ justement pour que `⌘Z` reste instantané sur des documents lourds.
 
 **Ce qu’il faut faire :** `⇧⌘E` avant un recadrage large, si vous pensez revenir en arrière.
 
-### Remplir n’est pas un pot de peinture
+### Le pot de peinture ne s’arrête pas aux contours
 
-**Remplir le calque** (`G`) remplit le calque **entier**, d’un bord à l’autre. Ce n’est pas le
-remplissage par zone que vous connaissez peut-être ailleurs — celui qui s’arrête aux contours.
+**Pot de peinture** (`G`) remplit le calque **entier**, d’un bord à l’autre — ou toute la **zone
+sélectionnée**, s’il y en a une. Ce n’est pas le remplissage par zone que vous connaissez peut-être
+ailleurs — celui qui s’arrête aux contours du dessin.
 
-Ce n’est pas un défaut : c’est un outil différent, qui porte bien son nom.
+Ce n’est pas un défaut : c’est un outil différent, et une sélection est le seul moyen de le borner.
 
 ### L’historique s’arrête à 100
 
