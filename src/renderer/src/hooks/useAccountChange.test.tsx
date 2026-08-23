@@ -44,13 +44,18 @@ describe('useAccountChange', () => {
     expect(purge).not.toHaveBeenCalled()
   })
 
-  it('has nothing to drop when the first account arrives', () => {
+  /**
+   * 🛑 Measured on screen: a key added mid-session showed no cloud model until the app was
+   * restarted. The registry answers the local catalogue with no account, so the window HAD
+   * cached a listing — one holding what this machine runs and nothing else.
+   */
+  it('drops what was cached under no account when the first one arrives', () => {
     const purge = vi.fn()
     renderHook(() => useAccountChange(purge))
 
     activate('a')
 
-    expect(purge).not.toHaveBeenCalled()
+    expect(purge).toHaveBeenCalledTimes(1)
   })
 
   it('stops watching once the window is gone', () => {

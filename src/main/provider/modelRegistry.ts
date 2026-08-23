@@ -636,7 +636,19 @@ export function createModelRegistry({
       let walked = 0
 
       while (cursor && items.length < limit && walked < MAX_PAGES_PER_REQUEST) {
-        const page: CatalogPage = await fetchPage(cursor, query)
+        /**
+         * 🛑 A remote refusal must not take the local catalogue with it. Without an account the
+         * very first page throws, and the manifests collected just above — which need no account,
+         * no network and no subscription — were thrown away with it: every picker came back empty
+         * on a machine holding models it could run.
+         *
+         * Rethrown when nothing local answered, so a panel that has only the cloud to show still
+         * says why it is showing nothing.
+         */
+        const page: CatalogPage = await fetchPage(cursor, query).catch((failure: unknown) => {
+          if (items.length === 0) throw failure
+          return { models: [], token: null }
+        })
         walked += 1
 
         if (cursor.mode === 'list' && cursor.privacy === 'private' && !cursor.token) {

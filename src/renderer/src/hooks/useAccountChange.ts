@@ -26,10 +26,14 @@ export function useAccountChange(purge: () => void): void {
       const next = scenarioAccount(state.accounts)?.id ?? null
       if (next === active) return
 
-      // Nothing was fetched under "no account", so arriving at one has nothing to drop.
-      const switched = active !== null
+      /*
+       * 🛑 ARRIVING at one counts, and it did not until the registry began answering the local
+       * catalogue with no account: the window then holds a listing of what this machine runs and
+       * nothing else, cached under keys a new key does not change. Measured on screen — a key
+       * added mid-session showed no cloud model until the app was restarted.
+       */
       active = next
-      if (switched) latest.current()
+      latest.current()
     })
   }, [latest])
 }

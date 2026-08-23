@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { useAccountChange } from '@/hooks/useAccountChange'
 import { DEFAULT_SETTINGS_SECTION, sectionFromRoute } from '@shared/domain/settings'
 import { descriptorsIn } from '@shared/domain/settingsRegistry'
 import { matchSettings } from '@shared/domain/settingsSearch'
@@ -84,6 +85,10 @@ export function SettingsWindow() {
   useEffect(() => {
     void getBridge()?.settings.setPending(pending)
   }, [pending])
+
+  // Its own client, so its own purge: what was fetched under one account — or under none — must
+  // not survive into the next. `Application` does the same for the main window.
+  useAccountChange(() => client.clear())
 
   // Searched over the translated title and description, so `t` has to be a dependency: the
   // same query finds different settings once the language changes.

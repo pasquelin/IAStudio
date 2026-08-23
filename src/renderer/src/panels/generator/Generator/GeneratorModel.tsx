@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { providerOfModel, type AiRoleId } from '@shared/domain/aiRole'
 import type { ModelSummary } from '@shared/domain/model'
@@ -6,6 +6,7 @@ import type { PlanAccess } from '@shared/domain/plan'
 import { ModelPicker } from '@/design/ModelPicker/ModelPicker'
 import { ModelDownloadDialog } from '@/panels/models/Models/ModelDownloadDialog'
 import { runtimeLabel } from '@/helpers/runtimeLabel'
+import { useLazyPreviews } from '@/hooks/useLazyPreviews'
 import { useModelsForCapability } from '@/hooks/useModelsForCapability'
 import { useModelReach, type ModelRefusalWord } from '@/hooks/useModelReach'
 import { useModels } from '@/stores/models'
@@ -50,7 +51,26 @@ export function GeneratorModel({ capability, modelId, name, plan }: GeneratorMod
   const reachOf = useModelReach(plan)
 
   const refusalOf = (model: ModelSummary): ModelRefusalWord | undefined => reachOf(model).refusal
+
+  const { urls, resolve } = useLazyPreviews()
+  const pictureOf = (model: ModelSummary): string | undefined =>
+    model.thumbnail ?? (model.previewAssetId ? urls[model.previewAssetId] : undefined)
+  const onShown = useCallback(
+    (shown: readonly ModelSummary[]) => {
+      resolve(
+        shown.flatMap(one => (!one.thumbnail && one.previewAssetId ? [one.previewAssetId] : [])),
+      )
+    },
+    [resolve],
+  )
   const chosen = models.find(one => one.id === modelId)
+
+  // The model in USE, whether or not the list was ever opened: its plate is drawn on the closed
+  // control, and `onShown` only ever covers what the flyout drew.
+  useEffect(() => {
+    if (chosen && !chosen.thumbnail && chosen.previewAssetId) resolve([chosen.previewAssetId])
+  }, [chosen, resolve])
+
   const [offered, setOffered] = useState<ModelSummary | null>(null)
 
   return (
@@ -80,6 +100,8 @@ export function GeneratorModel({ capability, modelId, name, plan }: GeneratorMod
           )
         }}
         refusalOf={refusalOf}
+        pictureOf={pictureOf}
+        onShown={onShown}
         caption={chosen ? captionOf(chosen, refusalOf(chosen), t) : undefined}
         valueLabel={name}
         emptyLabel={t('generation.chooseModel')}

@@ -925,3 +925,36 @@ describe('model registry', () => {
     })
   })
 })
+
+const refusing = () => ({
+  list: () => Promise.reject(new Error('not-authenticated')),
+  search: () => Promise.reject(new Error('not-authenticated')),
+  retrieve: () => Promise.reject(new Error('not-authenticated')),
+  assetUrls: () => Promise.resolve([]),
+})
+
+describe('a catalogue that refuses', () => {
+  /**
+   * 🛑 Measured on screen, with no account: the first remote page throws, and the manifests
+   * collected before it went with it — every picker came back empty on a machine holding models
+   * it can run. A local model needs no account, no network and no subscription.
+   */
+  it('still answers what this machine holds', async () => {
+    const registry = registryOf({
+      catalog: refusing,
+      localModels: () => [localModel({ id: 'ssd-1b', family: 'image', capabilities: ['txt2img'] })],
+    })
+
+    const page = await registry.search({ family: 'image' })
+
+    expect(page.items.map(one => one.id)).toEqual(['ssd-1b'])
+  })
+
+  // With nothing local to show, the refusal still reaches the panel: a shelf that shows nothing
+  // and says nothing is worse than one that says why.
+  it('passes the refusal on when it has nothing else to offer', async () => {
+    const registry = registryOf({ catalog: refusing })
+
+    await expect(registry.search({ family: 'image' })).rejects.toThrow('not-authenticated')
+  })
+})

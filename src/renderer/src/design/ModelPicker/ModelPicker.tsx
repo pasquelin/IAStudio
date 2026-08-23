@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_RUNTIME, type ModelSummary } from '@shared/domain/model'
 import type { ModelRefusalWord } from '@/hooks/useModelReach'
@@ -6,7 +6,8 @@ import { cn } from '@/helpers/cn'
 import { fieldHandle } from '../scHandle'
 import { Chip } from '../Chip'
 import { Flyout } from '../Flyout'
-import { CONTROL, MENU_SURFACE } from '../styles'
+import { Thumbnail } from '../Thumbnail'
+import { CONTROL } from '../styles'
 import { ModelPickerRow } from './ModelPickerRow'
 
 /** What the list may be narrowed to. `all` is the state it opens in. */
@@ -21,6 +22,10 @@ export type ModelPickerProps = {
   onChange: (modelId: string) => void
   /** Why a model cannot be picked, per model, in the host's words. */
   refusalOf?: (model: ModelSummary) => ModelRefusalWord | undefined
+  /** Its picture, resolved by the host: most cloud models carry a signed example, not a thumbnail. */
+  pictureOf?: (model: ModelSummary) => string | undefined
+  /** Told which models reached the screen, so the host can resolve their pictures. */
+  onShown?: (models: readonly ModelSummary[]) => void
   /** What the closed control says under the name — where it runs, whether it is installed. */
   caption?: string
   /**
@@ -49,6 +54,8 @@ export function ModelPicker({
   value,
   onChange,
   refusalOf,
+  pictureOf,
+  onShown,
   caption,
   valueLabel,
   emptyLabel,
@@ -68,6 +75,12 @@ export function ModelPicker({
 
   const chosen = models.find(model => model.id === value)
 
+  // Asked for once the list is drawn, and only for what it holds: a signed URL is short-lived,
+  // so it is fetched when a model is actually seen.
+  useEffect(() => {
+    if (open) onShown?.(shown)
+  }, [open, shown, onShown])
+
   return (
     <>
       <button
@@ -76,13 +89,24 @@ export function ModelPicker({
         data-sc={fieldHandle('generation.model')}
         aria-haspopup="menu"
         aria-expanded={open}
-        className={cn(CONTROL, 'flex w-full flex-col items-start justify-center px-2 py-1')}
+        // `CONTROL` without its height: this one holds a name over a caption, and one control's
+        // worth of height clipped the name away entirely.
+        className={cn(
+          'bg-surface text-text text-tiny rounded-(--radius-sc-md)',
+          'flex min-h-(--sc-control) w-full items-center gap-2 px-2 py-1 text-left',
+        )}
         onClick={() => setOpen(held => !held)}
       >
-        <span className="text-text truncate text-xs">
-          {chosen?.name ?? valueLabel ?? emptyLabel}
+        {/* The same plate its own row wears open: the model in use has to be recognisable at a
+            glance, which is what a picture is for and a name is not. */}
+        <Thumbnail url={chosen ? pictureOf?.(chosen) : undefined} className="size-8 shrink-0" />
+
+        <span className="flex min-w-0 flex-col">
+          <span className="text-text truncate text-xs">
+            {chosen?.name ?? valueLabel ?? emptyLabel}
+          </span>
+          {caption && <span className="text-muted text-tiny truncate">{caption}</span>}
         </span>
-        {caption && <span className="text-muted text-tiny">{caption}</span>}
       </button>
 
       {open && (
@@ -93,7 +117,7 @@ export function ModelPicker({
           onDismiss={() => setOpen(false)}
           onKeyClose={() => setOpen(false)}
         >
-          <div className={cn(MENU_SURFACE, 'flex max-h-80 w-full flex-col gap-2 p-2')}>
+          <div className="flex min-w-0 flex-col gap-2 p-1">
             <input
               type="search"
               className={cn(CONTROL, 'px-2')}
@@ -117,12 +141,13 @@ export function ModelPicker({
               ))}
             </div>
 
-            <ul className="flex min-h-0 flex-col gap-0.5 overflow-y-auto">
+            <ul className="flex flex-col gap-0.5">
               {shown.map(model => (
                 <li key={model.id}>
                   <ModelPickerRow
                     model={model}
                     selected={model.id === value}
+                    picture={pictureOf?.(model)}
                     refusal={refusalOf?.(model)}
                     onPick={() => {
                       onChange(model.id)
