@@ -74,6 +74,12 @@ const MODEL_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
   { id: 'generation.3d', labelKey: 'workspaces.3d', parent: 'generation', family: '3d' },
   { id: 'generation.audio', labelKey: 'workspaces.audio', parent: 'generation', family: 'audio' },
   {
+    id: 'generation.skybox',
+    labelKey: 'workspaces.skyboxes',
+    parent: 'generation',
+    family: 'skybox',
+  },
+  {
     id: 'generation.upscale',
     labelKey: 'families.upscale',
     parent: 'generation',
@@ -100,6 +106,7 @@ const AI_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
   { id: 'ai.3d', labelKey: 'workspaces.3d', parent: 'ai' },
   { id: 'ai.audio', labelKey: 'workspaces.audio', parent: 'ai' },
   { id: 'ai.texture', labelKey: 'families.texture', parent: 'ai' },
+  { id: 'ai.skybox', labelKey: 'workspaces.skyboxes', parent: 'ai' },
 ]
 
 export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [

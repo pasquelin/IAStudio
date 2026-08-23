@@ -37,6 +37,13 @@ describe('why a model is out of reach', () => {
     expect(reachOf(null, model({ runsOn: 'scenario' })).fetchable).toBe(false)
   })
 
+  it('offers no download for a card listed before any engine can open it', () => {
+    const reach = reachOf(null, model({ installed: false, downloadable: false }))
+
+    expect(reach.fetchable).toBe(false)
+    expect(reach.refusal?.word).toBe('Pas de moteur')
+  })
+
   it('says nothing about a model that is here and within reach', () => {
     expect(reachOf(null, model({ installed: true })).refusal).toBeUndefined()
   })

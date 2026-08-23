@@ -234,6 +234,7 @@ function localSummaryOf(model: LocalModel, installed: boolean): ModelSummary | n
     // the studio was built on — which is what `official` means here.
     origin: 'community',
     installed,
+    ...(model.files.length === 0 ? { downloadable: false } : {}),
     diskBytes: model.diskBytes,
     featured: false,
     capabilities: model.capabilities ?? [],

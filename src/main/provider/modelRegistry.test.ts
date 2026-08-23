@@ -790,6 +790,25 @@ describe('model registry', () => {
       expect((await registry.search({})).items).toEqual([])
     })
 
+    it('marks a listed card with nothing to fetch as not downloadable', async () => {
+      const listed = localModel({
+        id: 'panfusion',
+        family: 'skybox',
+        capabilities: ['txt2skybox'],
+        files: [],
+      })
+      const registry = registryOf({
+        catalog: publicCatalog([]),
+        localModels: () => [listed],
+        isInstalled: () => false,
+      })
+
+      const [item] = (await registry.search({ family: 'skybox' })).items
+
+      expect(item?.installed).toBe(false)
+      expect(item?.downloadable).toBe(false)
+    })
+
     it('narrows a local model by family and by capability like any other', async () => {
       const registry = registryOf({ catalog: publicCatalog([]), localModels: () => [LOCAL] })
 

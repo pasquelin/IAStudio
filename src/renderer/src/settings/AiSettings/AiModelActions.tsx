@@ -60,6 +60,9 @@ export const AiModelActions = memo(function AiModelActions({
   }
 
   if (!candidate.installed) {
+    // Nothing to fetch — a listed card, not a download.
+    if (candidate.model.files.length === 0) return null
+
     return (
       // Offered whatever the machine thinks of it: hiding the button decided for the person, and
       // a download that will not fit says so when it fails rather than never being offered.

@@ -217,6 +217,7 @@ describe('settings registry', () => {
     ).toEqual(['generation.image'])
     expect(sectionEntry('ai.image')?.family).toBeUndefined()
     expect(sectionOfFamily('image')).toBe('generation.image')
+    expect(sectionOfFamily('skybox')).toBe('generation.skybox')
     expect(sectionOfFamily('texture')).toBeUndefined()
   })
 

@@ -25,6 +25,8 @@
     "runtime": "Runs",
     "runsLocally": "On this machine",
     "notInstalled": "Not downloaded yet",
+    "engineMissing": "No engine yet",
+    "engineMissingHint": "No engine in this studio can open this model yet.",
     "downloadThis": "Download this model?",
     "downloadThisHint": "{{name}} — {{size}} fetched from its publisher. The studio redistributes nothing.",
     "download": "Download",
@@ -90,7 +92,9 @@
     "txt2img_texture": "Text to texture",
     "img2img_texture": "Image to texture",
     "controlnet_texture": "Texture guidance",
-    "reference_texture": "Texture reference"
+    "reference_texture": "Texture reference",
+    "txt2skybox": "Text to panorama",
+    "img2skybox": "Image to panorama"
   },
   "auth": {
     "key": "API key",

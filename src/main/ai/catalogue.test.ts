@@ -129,6 +129,29 @@ describe('the shipped catalogue', () => {
     expect(closed).toEqual([])
   })
 
+  it('lists the five panorama models under the skybox employments', () => {
+    expect(shippedModelsFor(aiRoleId('skybox', 'txt2skybox')).map(model => model.id)).toEqual([
+      'panfusion',
+      'mvdiffusion',
+      'diffusion360',
+      'unipano',
+    ])
+    expect(shippedModelsFor(aiRoleId('skybox', 'img2skybox')).map(model => model.id)).toEqual([
+      'mvdiffusion',
+      'diffusion360',
+      'genex-world-initializer',
+    ])
+  })
+
+  // A digest nobody can fetch is worse than no download: the engine is a later lot.
+  it('ships no files for a generating model no engine can open', () => {
+    const offered = shippedModels()
+      .filter(model => model.runtimeStatus === 'unsupported' && model.files.length > 0)
+      .map(model => model.id)
+
+    expect(offered).toEqual([])
+  })
+
   it('gives every generating model a family and a capability', () => {
     const bare = shippedModels()
       .filter(model => model.modality && model.modality !== 'text')

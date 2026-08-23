@@ -36,12 +36,17 @@ export function useModelReach(plan: PlanAccess | null): (model: ModelSummary) =>
 
   return useMemo(() => {
     const absent = { word: t('models.notInstalled'), hint: t('models.notInstalledHint') }
+    const unwired = { word: t('models.engineMissing'), hint: t('models.engineMissingHint') }
 
     return model => {
       // 🛑 Before the plan, and never after: a model of THIS machine answers to no subscription,
       // and asking first said "beyond your plan" about weights that were only missing.
       // `installed` is absent for a cloud model, where there is nothing to fetch.
-      if (model.installed === false) return { refusal: absent, fetchable: true }
+      if (model.installed === false) {
+        return model.downloadable === false
+          ? { refusal: unwired, fetchable: false }
+          : { refusal: absent, fetchable: true }
+      }
 
       const beyond = refusalFor(model.requiredPlanLevel)
       return beyond === undefined

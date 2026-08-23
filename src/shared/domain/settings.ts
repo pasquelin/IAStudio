@@ -429,6 +429,7 @@ export type SettingsSectionId =
   | 'generation.video'
   | 'generation.3d'
   | 'generation.audio'
+  | 'generation.skybox'
   | 'generation.upscale'
   | 'generation.background-removal'
   | 'generation.vectorization'
@@ -438,6 +439,7 @@ export type SettingsSectionId =
   | 'ai.3d'
   | 'ai.audio'
   | 'ai.texture'
+  | 'ai.skybox'
   | 'spaces'
   | 'spaces.three'
   | 'shortcuts'
@@ -456,6 +458,7 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'generation.video',
   'generation.3d',
   'generation.audio',
+  'generation.skybox',
   'generation.upscale',
   'generation.background-removal',
   'generation.vectorization',
@@ -465,6 +468,7 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'ai.3d',
   'ai.audio',
   'ai.texture',
+  'ai.skybox',
   'spaces',
   'spaces.three',
   'shortcuts',

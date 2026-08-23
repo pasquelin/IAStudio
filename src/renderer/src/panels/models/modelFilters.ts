@@ -25,6 +25,14 @@ export const TAG_FACET = 'tag'
 export const PUBLISHER_FACET = 'publisher'
 export const PERIOD_FACET = 'period'
 
+/**
+ * What the panel may narrow by. Skybox employments are local names; Scenario panoramas answer
+ * `txt2img` and are found by tag — offering the invented names would empty the cloud list.
+ */
+function filterCapabilitiesOf(family: ModelFamily): readonly string[] {
+  return family === 'skybox' ? [] : CAPABILITIES_BY_FAMILY[family]
+}
+
 /** Translates a key into user text. Taking it as an argument keeps this module renderless. */
 type Translate = (key: string) => string
 
@@ -63,7 +71,7 @@ export function facetsFor(
     ],
   })
 
-  const capabilities = CAPABILITIES_BY_FAMILY[family]
+  const capabilities = filterCapabilitiesOf(family)
   if (capabilities.length) {
     facets.push({
       key: CAPABILITY_FACET,
@@ -145,7 +153,7 @@ export function queryFrom(
   clouds: readonly string[],
 ): ModelQuery {
   const runsOn = chosen(state, RUNTIME_FACET, [LOCAL_RUNTIME, ...clouds]) ?? LOCAL_RUNTIME
-  const capabilities = offered(state, CAPABILITY_FACET, CAPABILITIES_BY_FAMILY[family])
+  const capabilities = offered(state, CAPABILITY_FACET, filterCapabilitiesOf(family))
   // One parameter for both: the API matches a publisher exactly as it matches any other tag.
   const tags = [
     ...offered(state, TAG_FACET, TAGS_BY_FAMILY[family]),

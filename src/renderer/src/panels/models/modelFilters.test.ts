@@ -66,6 +66,22 @@ describe('model filters', () => {
     ])
   })
 
+  // Local employments (`txt2skybox`) are not what Scenario panoramas answer. The facet would
+  // empty the cloud list the moment it was ticked.
+  it('does not offer skybox employments as a catalogue filter', () => {
+    expect(facetsFor('skybox', identity, CLOUDS).map(facet => facet.key)).not.toContain(
+      CAPABILITY_FACET,
+    )
+    expect(
+      queryFrom(
+        stateWith({ selections: { [CAPABILITY_FACET]: ['txt2skybox'] } }),
+        'skybox',
+        '',
+        CLOUDS,
+      ),
+    ).not.toHaveProperty('capabilities')
+  })
+
   /**
    * Kling and Vidu publish video, Tripo publishes 3D. A flat list would offer, in the Image
    * workspace, a publisher whose only possible answer is "no result".

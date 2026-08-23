@@ -165,6 +165,12 @@ const FETCHED_ON_REQUEST = [
   'against a published digest, and removed from the model manager.',
 ].join('\n')
 
+/** A card listed before any engine can open it: the catalogue names a publisher, nothing is pulled. */
+const LISTED_NOT_FETCHED = [
+  'No engine in this studio opens these weights yet: they are listed so the choice',
+  'is visible. Nothing is fetched until a runtime can actually run them.',
+].join('\n')
+
 /**
  * What is true of ONE model and of no other: who holds the copyright, and what its own components
  * were read to be. Keyed by manifest id, so a model with nothing particular to say needs no line.
@@ -244,20 +250,16 @@ function catalogueLicences() {
       name: model.name,
       spdx: model.licence,
       text: [
-        `${model.summary}, one of the models the studio generates with on this machine.`,
-        FETCHED_ON_REQUEST,
+        model.files.length === 0
+          ? `${model.summary}.`
+          : `${model.summary}, one of the models the studio generates with on this machine.`,
+        model.files.length === 0 ? LISTED_NOT_FETCHED : FETCHED_ON_REQUEST,
         '',
         ...(MODEL_NOTES[model.id] ?? []),
         '',
         `Licensed under ${model.licence}. Full terms: ${model.licenceUrl}`,
         ...(model.licenceStatus === 'non-commercial'
           ? ['', 'NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.']
-          : []),
-        ...(model.runtimeStatus === 'plugin-required'
-          ? ['', 'No engine in this studio opens these weights yet: they are listed so the choice']
-          : []),
-        ...(model.runtimeStatus === 'plugin-required'
-          ? ['is visible, and fetched from the publisher rather than from us.']
           : []),
       ].join('\n'),
       sources: model.source,

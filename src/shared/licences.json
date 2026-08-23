@@ -146,6 +146,12 @@
     "sources": "https://github.com/huggingface/diffusers"
   },
   {
+    "name": "Diffusion360",
+    "spdx": "other",
+    "text": "Text or image to 360 panorama, lightweight.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\n\nLicensed under other. Full terms: https://github.com/ArcherFMY/SD-T2I-360PanoImage",
+    "sources": "https://github.com/ArcherFMY/SD-T2I-360PanoImage"
+  },
+  {
     "name": "dockview-react",
     "version": "8.1.0",
     "spdx": "MIT",
@@ -195,6 +201,12 @@
     "spdx": "BSD-3-Clause",
     "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/fsspec/filesystem_spec",
     "sources": "https://github.com/fsspec/filesystem_spec"
+  },
+  {
+    "name": "GenEx World Initializer",
+    "spdx": "CC-BY-4.0",
+    "text": "Image and prompt to 360 panorama.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\n\nLicensed under CC-BY-4.0. Full terms: https://creativecommons.org/licenses/by/4.0/",
+    "sources": "https://huggingface.co/genex-world/World-Initializer-image-to-panorama"
   },
   {
     "name": "h11",
@@ -320,19 +332,19 @@
   {
     "name": "MMAudio Large",
     "spdx": "CC-BY-NC-4.0",
-    "text": "MMAudio large, 44 kHz, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the MMAudio authors.\n\nLicensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/\n\nNON-COMMERCIAL ONLY. These weights may not be used in a commercial project.\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "text": "MMAudio large, 44 kHz, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the MMAudio authors.\n\nLicensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/\n\nNON-COMMERCIAL ONLY. These weights may not be used in a commercial project.",
     "sources": "https://huggingface.co/hkchengrex/MMAudio"
   },
   {
     "name": "MMAudio Medium",
     "spdx": "CC-BY-NC-4.0",
-    "text": "MMAudio medium, 44 kHz, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the MMAudio authors.\n\nLicensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/\n\nNON-COMMERCIAL ONLY. These weights may not be used in a commercial project.\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "text": "MMAudio medium, 44 kHz, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the MMAudio authors.\n\nLicensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/\n\nNON-COMMERCIAL ONLY. These weights may not be used in a commercial project.",
     "sources": "https://huggingface.co/hkchengrex/MMAudio"
   },
   {
     "name": "MMAudio Small",
     "spdx": "CC-BY-NC-4.0",
-    "text": "MMAudio small, 44 kHz, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the MMAudio authors.\n\nLicensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/\n\nNON-COMMERCIAL ONLY. These weights may not be used in a commercial project.\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "text": "MMAudio small, 44 kHz, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the MMAudio authors.\n\nLicensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/\n\nNON-COMMERCIAL ONLY. These weights may not be used in a commercial project.",
     "sources": "https://huggingface.co/hkchengrex/MMAudio"
   },
   {
@@ -347,6 +359,12 @@
     "spdx": "BSD",
     "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD.\nSource: https://github.com/fredrik-johansson/mpmath",
     "sources": "https://github.com/fredrik-johansson/mpmath"
+  },
+  {
+    "name": "MVDiffusion",
+    "spdx": "MIT",
+    "text": "Text or image to 360 panorama.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
+    "sources": "https://github.com/Tangshitao/MVDiffusion"
   },
   {
     "name": "networkx",
@@ -387,6 +405,12 @@
     "spdx": "Apache-2.0 OR BSD-2-Clause",
     "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0 OR BSD-2-Clause.\nSource: https://github.com/pypa/packaging",
     "sources": "https://github.com/pypa/packaging"
+  },
+  {
+    "name": "PanFusion",
+    "spdx": "MIT",
+    "text": "Text to 360 panorama, dual-branch Stable Diffusion.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
+    "sources": "https://github.com/chengzhag/PanFusion"
   },
   {
     "name": "Parakeet TDT 0.6b v3",
@@ -682,25 +706,25 @@
   {
     "name": "TRELLIS Image",
     "spdx": "MIT",
-    "text": "TRELLIS image vers 3D, large, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "text": "TRELLIS image vers 3D, large, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/microsoft/TRELLIS-image-large"
   },
   {
     "name": "TRELLIS Text",
     "spdx": "MIT",
-    "text": "TRELLIS texte vers 3D, large, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "text": "TRELLIS texte vers 3D, large, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/microsoft/TRELLIS-text-large"
   },
   {
     "name": "TRELLIS.2 4B",
     "spdx": "MIT",
-    "text": "TRELLIS.2, 4B, image vers 3D, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Microsoft.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "text": "TRELLIS.2, 4B, image vers 3D, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Microsoft.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/microsoft/TRELLIS.2-4B"
   },
   {
     "name": "TripoSR",
     "spdx": "MIT",
-    "text": "TripoSR, image vers 3D, leger, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Stability AI and Tripo AI.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT\n\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible, and fetched from the publisher rather than from us.",
+    "text": "TripoSR, image vers 3D, leger, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Stability AI and Tripo AI.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/stabilityai/TripoSR"
   },
   {
@@ -716,6 +740,12 @@
     "spdx": "PSF-2.0",
     "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under PSF-2.0.\nSource: https://github.com/python/typing_extensions",
     "sources": "https://github.com/python/typing_extensions"
+  },
+  {
+    "name": "UniPano",
+    "spdx": "other",
+    "text": "Text to 360 panorama, single-branch, lighter than PanFusion.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\n\nLicensed under other. Full terms: https://github.com/jinhong-ni/UniPano",
+    "sources": "https://github.com/jinhong-ni/UniPano"
   },
   {
     "name": "urllib3",

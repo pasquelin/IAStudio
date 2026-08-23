@@ -30,6 +30,7 @@ The terms below govern these components. They are not affected by the licence of
 | CPython | 3.12.14 | PSF-2.0 |
 | daisyui | 5.7.16 | MIT |
 | diffusers | 0.40.0 | Apache 2.0 License |
+| Diffusion360 | shipped with the application | other |
 | dockview-react | 8.1.0 | MIT |
 | electron | 43.4.0 | MIT |
 | electron-store | 11.0.2 | MIT |
@@ -38,6 +39,7 @@ The terms below govern these components. They are not affected by the licence of
 | FFmpeg | 7.1.1 / 7.1.5 | GPL-3.0-or-later / LGPL-2.1-or-later |
 | filelock | 3.32.3 | MIT |
 | fsspec | 2026.7.0 | BSD-3-Clause |
+| GenEx World Initializer | shipped with the application | CC-BY-4.0 |
 | h11 | 0.16.0 | MIT |
 | hf-xet | 1.6.0 | Apache-2.0 |
 | httpcore | 1.0.9 | BSD-3-Clause |
@@ -61,12 +63,14 @@ The terms below govern these components. They are not affected by the licence of
 | MMAudio Small | shipped with the application | CC-BY-NC-4.0 |
 | Mochi 1 | shipped with the application | Apache-2.0 |
 | mpmath | 1.3.0 | BSD |
+| MVDiffusion | shipped with the application | MIT |
 | networkx | 3.6.1 | BSD-3-Clause |
 | node-llama-cpp | 3.20.0 | MIT |
 | numpy | 2.5.2 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 |
 | ONNX Runtime | 1.27.0 | MIT |
 | opentype.js | 2.0.0 | MIT |
 | packaging | 26.3 | Apache-2.0 OR BSD-2-Clause |
+| PanFusion | shipped with the application | MIT |
 | Parakeet TDT 0.6b v3 | int8 | CC-BY-4.0 |
 | pillow | 12.3.0 | MIT-CMU |
 | pixi.js | 8.19.0 | MIT |
@@ -118,6 +122,7 @@ The terms below govern these components. They are not affected by the licence of
 | TripoSR | shipped with the application | MIT |
 | typer | 0.27.1 | MIT |
 | typing-extensions | 4.16.0 | PSF-2.0 |
+| UniPano | shipped with the application | other |
 | urllib3 | 2.7.0 | MIT |
 | utif | 3.1.0 | MIT |
 | Wan 2.1 I2V 14B | shipped with the application | Apache-2.0 |
@@ -641,6 +646,25 @@ application: it is fetched on first use, and removed with the engine.
 Licensed under Apache 2.0 License.
 Source: https://github.com/huggingface/diffusers
 ```
+## Diffusion360
+
+Version: shipped with the application  
+Licence: other
+
+Corresponding sources:
+
+```
+https://github.com/ArcherFMY/SD-T2I-360PanoImage
+```
+
+```
+Text or image to 360 panorama, lightweight.
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible. Nothing is fetched until a runtime can actually run them.
+
+
+Licensed under other. Full terms: https://github.com/ArcherFMY/SD-T2I-360PanoImage
+```
 ## dockview-react
 
 Version: 8.1.0  
@@ -810,6 +834,25 @@ application: it is fetched on first use, and removed with the engine.
 
 Licensed under BSD-3-Clause.
 Source: https://github.com/fsspec/filesystem_spec
+```
+## GenEx World Initializer
+
+Version: shipped with the application  
+Licence: CC-BY-4.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/genex-world/World-Initializer-image-to-panorama
+```
+
+```
+Image and prompt to 360 panorama.
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible. Nothing is fetched until a runtime can actually run them.
+
+
+Licensed under CC-BY-4.0. Full terms: https://creativecommons.org/licenses/by/4.0/
 ```
 ## h11
 
@@ -1813,9 +1856,6 @@ Copyright the MMAudio authors.
 Licensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/
 
 NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.
-
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible, and fetched from the publisher rather than from us.
 ```
 ## MMAudio Medium
 
@@ -1838,9 +1878,6 @@ Copyright the MMAudio authors.
 Licensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/
 
 NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.
-
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible, and fetched from the publisher rather than from us.
 ```
 ## MMAudio Small
 
@@ -1863,9 +1900,6 @@ Copyright the MMAudio authors.
 Licensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/
 
 NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.
-
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible, and fetched from the publisher rather than from us.
 ```
 ## Mochi 1
 
@@ -1904,6 +1938,25 @@ application: it is fetched on first use, and removed with the engine.
 
 Licensed under BSD.
 Source: https://github.com/fredrik-johansson/mpmath
+```
+## MVDiffusion
+
+Version: shipped with the application  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/Tangshitao/MVDiffusion
+```
+
+```
+Text or image to 360 panorama.
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible. Nothing is fetched until a runtime can actually run them.
+
+
+Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## networkx
 
@@ -2031,6 +2084,25 @@ application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache-2.0 OR BSD-2-Clause.
 Source: https://github.com/pypa/packaging
+```
+## PanFusion
+
+Version: shipped with the application  
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/chengzhag/PanFusion
+```
+
+```
+Text to 360 panorama, dual-branch Stable Diffusion.
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible. Nothing is fetched until a runtime can actually run them.
+
+
+Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## Parakeet TDT 0.6b v3
 
@@ -3018,9 +3090,6 @@ against a published digest, and removed from the model manager.
 
 
 Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
-
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible, and fetched from the publisher rather than from us.
 ```
 ## TRELLIS Text
 
@@ -3040,9 +3109,6 @@ against a published digest, and removed from the model manager.
 
 
 Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
-
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible, and fetched from the publisher rather than from us.
 ```
 ## TRELLIS.2 4B
 
@@ -3063,9 +3129,6 @@ against a published digest, and removed from the model manager.
 Copyright Microsoft.
 
 Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
-
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible, and fetched from the publisher rather than from us.
 ```
 ## TripoSR
 
@@ -3086,9 +3149,6 @@ against a published digest, and removed from the model manager.
 Copyright Stability AI and Tripo AI.
 
 Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
-
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible, and fetched from the publisher rather than from us.
 ```
 ## typer
 
@@ -3125,6 +3185,25 @@ application: it is fetched on first use, and removed with the engine.
 
 Licensed under PSF-2.0.
 Source: https://github.com/python/typing_extensions
+```
+## UniPano
+
+Version: shipped with the application  
+Licence: other
+
+Corresponding sources:
+
+```
+https://github.com/jinhong-ni/UniPano
+```
+
+```
+Text to 360 panorama, single-branch, lighter than PanFusion.
+No engine in this studio opens these weights yet: they are listed so the choice
+is visible. Nothing is fetched until a runtime can actually run them.
+
+
+Licensed under other. Full terms: https://github.com/jinhong-ni/UniPano
 ```
 ## urllib3
 

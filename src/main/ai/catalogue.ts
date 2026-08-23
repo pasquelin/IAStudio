@@ -57,9 +57,8 @@ function rolesOf(model: LocalModel, key: AiRoleId): readonly AiRoleId[] {
  * digests are written by `pin-models.mjs` rather than by hand. The recognition model joins from
  * `dictation.ts`, which owns it: its files are what the engine there loads by name.
  *
- * 🛑 A model enters this list only once its runtime is wired. A catalogue that offers a download
- * for an engine the studio does not carry costs someone gigabytes for nothing — which is worse
- * than not offering it, and is not the same thing as deciding for them what their machine can hold.
+ * 🛑 A download is offered only once the runtime is wired. An unwired engine may still be
+ * listed (`unsupported`, no files): the choice is visible, nothing is fetched.
  */
 const SHIPPED: readonly { readonly role: AiRoleId; readonly model: LocalModel }[] = [
   { role: DICTATION_ROLE, model: STT_MODEL },

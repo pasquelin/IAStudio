@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { STT_MODEL, STT_MODEL_BYTES, STT_MODEL_FILES } from '@shared/domain/dictation'
-import type { ModelFile } from '@shared/domain/localModel'
+import type { LocalModel, ModelFile } from '@shared/domain/localModel'
 import {
   ChecksumMismatch,
   DownloadCancelled,
@@ -361,6 +361,20 @@ describe('modelIsComplete', () => {
 
     disk.set('/elsewhere/mine.gguf', 'weights')
     expect(await modelIsComplete(host, supplied, '/models')).toBe(true)
+  })
+
+  it('does not call a catalogue entry with nothing to fetch installed', async () => {
+    const { host } = harness()
+    const listed: LocalModel = { ...STT_MODEL, files: [], loader: 'plugin' }
+
+    expect(await modelIsComplete(host, listed, '/models')).toBe(false)
+  })
+
+  it('treats an Ollama model with nothing to fetch as already here', async () => {
+    const { host } = harness()
+    const listed: LocalModel = { ...STT_MODEL, files: [], loader: 'ollama' }
+
+    expect(await modelIsComplete(host, listed, '/models')).toBe(true)
   })
 })
 

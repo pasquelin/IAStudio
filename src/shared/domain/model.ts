@@ -220,6 +220,11 @@ export type ModelSummary = {
    * offers the download, rather than letting a click end in a failure the person cannot read.
    */
   installed?: boolean
+  /**
+   * Whether a click can fetch the weights. Absent means yes when `installed` is false.
+   * False for a card listed before any engine can open it: nothing to pull, so no dialog.
+   */
+  downloadable?: boolean
   /** What the download weighs. Absent for a cloud model, which downloads nothing. */
   diskBytes?: number
   featured: boolean
@@ -259,9 +264,9 @@ export type ModelSort = 'relevance' | 'recent' | 'oldest'
 export const MODEL_SORTS: readonly ModelSort[] = ['relevance', 'recent', 'oldest']
 
 /**
- * Capabilities worth offering as a filter, per family — taken from the API's own enum. Only a
- * head of it: `controlnet_inpaint_ip_adapter` and its kin are combinations a user filters by
- * their parts, not by name.
+ * Capabilities worth offering as a filter, per family. Taken from the API's own enum, except
+ * skybox: Scenario panoramas answer image capabilities and are found by tag. Combinations
+ * like `controlnet_inpaint_ip_adapter` are filtered by their parts, not by name.
  */
 export const CAPABILITIES_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   image: ['txt2img', 'img2img', 'inpaint', 'outpaint', 'controlnet', 'reference'],
@@ -269,9 +274,7 @@ export const CAPABILITIES_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   '3d': ['txt23d', 'img23d', '3d23d'],
   audio: ['txt2audio', 'audio2audio', 'video2audio'],
   texture: ['txt2img_texture', 'img2img_texture', 'controlnet_texture', 'reference_texture'],
-  // Empty like its tags and its publishers below, and for the same reason: the family is four
-  // models wide, and a two-option menu narrowing four rows only ever answers "fewer".
-  skybox: [],
+  skybox: ['txt2skybox', 'img2skybox'],
   upscale: [],
   'background-removal': [],
   vectorization: [],
@@ -311,8 +314,7 @@ export const TAGS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   // Empty until the same count is run over the family: it was split out of `image` on its
   // capabilities, and borrowing that list would offer tags no texture model may carry.
   texture: [],
-  // Empty for the reason `CAPABILITIES_BY_FAMILY` gives above: four rows leave a facet nothing
-  // to narrow.
+  // Empty like its publishers: Scenario's four panoramas leave a facet nothing to narrow.
   skybox: [],
   upscale: [],
   'background-removal': [],

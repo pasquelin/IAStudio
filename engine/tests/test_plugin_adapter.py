@@ -25,7 +25,7 @@ def test_the_seven_plugin_ids_are_named() -> None:
     assert not is_plugin_model("sana-600m-1024")
 
 
-def test_plugin_ids_match_the_catalogue() -> None:
+def test_plugin_ids_match_the_wired_catalogue() -> None:
     root = Path(__file__).resolve().parents[2]
     catalogue = json.loads((root / "src/shared/domain/localModels.json").read_text())
     listed = {
@@ -33,8 +33,21 @@ def test_plugin_ids_match_the_catalogue() -> None:
         for models in catalogue.values()
         for model in models
         if model.get("loader") == "plugin"
+        and model.get("runtimeStatus", "supported") == "supported"
     }
     assert listed == set(PLUGIN_IDS)
+
+
+def test_unsupported_plugins_have_no_adapter() -> None:
+    root = Path(__file__).resolve().parents[2]
+    catalogue = json.loads((root / "src/shared/domain/localModels.json").read_text())
+    unwired = {
+        model["id"]
+        for models in catalogue.values()
+        for model in models
+        if model.get("loader") == "plugin" and model.get("runtimeStatus") == "unsupported"
+    }
+    assert unwired.isdisjoint(PLUGIN_IDS)
 
 
 def test_trellis_is_cuda_only() -> None:

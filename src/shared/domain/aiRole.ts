@@ -65,7 +65,7 @@ export function isGenerationRole(role: AiRoleId): boolean {
 /**
  * The employment a workspace generates with when it only names a family.
  *
- * `null` when the family has no employment (skybox, upscale, cutout, vectorize).
+ * `null` when the family has no employment (upscale, cutout, vectorize).
  */
 export function primaryRoleOf(family: ModelFamily): AiRoleId | null {
   const [capability] = CAPABILITIES_BY_FAMILY[family]

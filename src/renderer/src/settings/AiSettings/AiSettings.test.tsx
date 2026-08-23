@@ -242,6 +242,29 @@ describe('AiSettings', () => {
     expect(install).toHaveBeenCalledWith('parakeet')
   })
 
+  it('does not offer Install on a catalogue entry with nothing to fetch', () => {
+    show(
+      overview({
+        roles: [
+          row({
+            candidates: [
+              {
+                ...PARAKEET,
+                installed: false,
+                obstacle: 'plugin',
+                fit: 'incompatible',
+                model: localModel({ id: 'panfusion', name: 'PanFusion', files: [] }),
+              },
+            ],
+          }),
+        ],
+      }),
+    )
+
+    expect(screen.getByText('PanFusion')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Installer' })).not.toBeInTheDocument()
+  })
+
   // The empty choice has to be reachable again: without it, a choice made once could never
   // be given back, and a billed provider would stay selected.
   it('offers a way back to no provider', () => {

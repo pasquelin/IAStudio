@@ -4070,5 +4070,153 @@
       ],
       "needsCuda": true
     }
+  ],
+  "skybox/txt2skybox": [
+    {
+      "id": "panfusion",
+      "name": "PanFusion",
+      "summary": "Text to 360 panorama, dual-branch Stable Diffusion",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "image",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://github.com/chengzhag/PanFusion",
+      "files": [],
+      "diskBytes": 0,
+      "reservationBytes": 4000000000,
+      "family": "skybox",
+      "capabilities": [
+        "txt2skybox"
+      ],
+      "runtimeStatus": "unsupported",
+      "fieldOverrides": {
+        "width": {
+          "default": 2048
+        },
+        "height": {
+          "default": 1024
+        }
+      }
+    },
+    {
+      "id": "mvdiffusion",
+      "name": "MVDiffusion",
+      "summary": "Text or image to 360 panorama",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "image",
+      "rank": 1,
+      "licence": "MIT",
+      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "source": "https://github.com/Tangshitao/MVDiffusion",
+      "files": [],
+      "diskBytes": 0,
+      "reservationBytes": 4000000000,
+      "family": "skybox",
+      "capabilities": [
+        "txt2skybox",
+        "img2skybox"
+      ],
+      "runtimeStatus": "unsupported",
+      "fieldOverrides": {
+        "width": {
+          "default": 2048
+        },
+        "height": {
+          "default": 1024
+        }
+      }
+    },
+    {
+      "id": "diffusion360",
+      "name": "Diffusion360",
+      "summary": "Text or image to 360 panorama, lightweight",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "image",
+      "rank": 1,
+      "licence": "other",
+      "licenceUrl": "https://github.com/ArcherFMY/SD-T2I-360PanoImage",
+      "source": "https://github.com/ArcherFMY/SD-T2I-360PanoImage",
+      "files": [],
+      "diskBytes": 0,
+      "reservationBytes": 2000000000,
+      "family": "skybox",
+      "capabilities": [
+        "txt2skybox",
+        "img2skybox"
+      ],
+      "licenceStatus": "restricted",
+      "runtimeStatus": "unsupported",
+      "fieldOverrides": {
+        "width": {
+          "default": 2048
+        },
+        "height": {
+          "default": 1024
+        }
+      }
+    },
+    {
+      "id": "unipano",
+      "name": "UniPano",
+      "summary": "Text to 360 panorama, single-branch, lighter than PanFusion",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "image",
+      "rank": 1,
+      "licence": "other",
+      "licenceUrl": "https://github.com/jinhong-ni/UniPano",
+      "source": "https://github.com/jinhong-ni/UniPano",
+      "files": [],
+      "diskBytes": 0,
+      "reservationBytes": 2000000000,
+      "family": "skybox",
+      "capabilities": [
+        "txt2skybox"
+      ],
+      "licenceStatus": "restricted",
+      "runtimeStatus": "unsupported",
+      "fieldOverrides": {
+        "width": {
+          "default": 2048
+        },
+        "height": {
+          "default": 1024
+        }
+      }
+    }
+  ],
+  "skybox/img2skybox": [
+    {
+      "id": "genex-world-initializer",
+      "name": "GenEx World Initializer",
+      "summary": "Image and prompt to 360 panorama",
+      "format": "safetensors",
+      "loader": "plugin",
+      "modality": "image",
+      "rank": 1,
+      "licence": "CC-BY-4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "source": "https://huggingface.co/genex-world/World-Initializer-image-to-panorama",
+      "files": [],
+      "diskBytes": 0,
+      "reservationBytes": 12000000000,
+      "family": "skybox",
+      "capabilities": [
+        "img2skybox"
+      ],
+      "runtimeStatus": "unsupported",
+      "fieldOverrides": {
+        "width": {
+          "default": 2048
+        },
+        "height": {
+          "default": 1024
+        }
+      }
+    }
   ]
 }

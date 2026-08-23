@@ -37,6 +37,7 @@ const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   'generation.video': () => <ModelFamilySettings family="video" />,
   'generation.3d': () => <ModelFamilySettings family="3d" />,
   'generation.audio': () => <ModelFamilySettings family="audio" />,
+  'generation.skybox': () => <ModelFamilySettings family="skybox" />,
   'generation.upscale': () => <ModelFamilySettings family="upscale" />,
   'generation.background-removal': () => <ModelFamilySettings family="background-removal" />,
   'generation.vectorization': () => <ModelFamilySettings family="vectorization" />,
@@ -45,6 +46,7 @@ const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   'ai.3d': () => <AiSettings family="3d" />,
   'ai.audio': () => <AiSettings family="audio" />,
   'ai.texture': () => <AiSettings family="texture" />,
+  'ai.skybox': () => <AiSettings family="skybox" />,
 }
 
 function withContent(entry: SettingSectionEntry): SettingsSection {

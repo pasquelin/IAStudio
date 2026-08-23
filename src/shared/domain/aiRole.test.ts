@@ -51,6 +51,8 @@ describe('allRoles', () => {
     expect(roles).toContain(DICTATION_ROLE)
     expect(roles).toContain(aiRoleId('image', 'txt2img'))
     expect(roles).toContain(aiRoleId('audio', 'video2audio'))
+    expect(roles).toContain(aiRoleId('skybox', 'txt2skybox'))
+    expect(roles).toContain(aiRoleId('skybox', 'img2skybox'))
     expect(new Set(roles).size).toBe(roles.length)
   })
 })
@@ -59,11 +61,11 @@ describe('primaryRoleOf', () => {
   it('names the first capability of a generating family', () => {
     expect(primaryRoleOf('image')).toBe(aiRoleId('image', 'txt2img'))
     expect(primaryRoleOf('3d')).toBe(aiRoleId('3d', 'txt23d'))
+    expect(primaryRoleOf('skybox')).toBe(aiRoleId('skybox', 'txt2skybox'))
   })
 
   it('answers nothing for a family that has no employment', () => {
     expect(primaryRoleOf('upscale')).toBeNull()
-    expect(primaryRoleOf('skybox')).toBeNull()
   })
 })
 

@@ -25,6 +25,8 @@
     "runtime": "Tourne",
     "runsLocally": "Sur cette machine",
     "notInstalled": "Pas encore téléchargé",
+    "engineMissing": "Pas de moteur",
+    "engineMissingHint": "Aucun moteur de ce studio ne sait encore ouvrir ce modèle.",
     "downloadThis": "Télécharger ce modèle ?",
     "downloadThisHint": "{{name}} — {{size}} à récupérer chez son éditeur. Le studio ne redistribue rien.",
     "download": "Télécharger",
@@ -90,7 +92,9 @@
     "txt2img_texture": "Texte vers texture",
     "img2img_texture": "Image vers texture",
     "controlnet_texture": "Guidage de texture",
-    "reference_texture": "Texture de référence"
+    "reference_texture": "Texture de référence",
+    "txt2skybox": "Texte vers panorama",
+    "img2skybox": "Image vers panorama"
   },
   "auth": {
     "key": "Clé API",
