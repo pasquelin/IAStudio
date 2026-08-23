@@ -33,7 +33,7 @@ export function RailGroup({ zone }: { zone: ToolZone }) {
   const focusedZone = useTools(state => state.focusedZone)
   const surface = useToolSurface()
   const open = useTools(state => arrangementOf(state, surface).open)
-  const state = useToolState(surface)
+  const state = useToolState()
   const tools = useAvailableTools(zone, surface)
   // Actions are stable for the store's lifetime: subscribing to them would only add selectors
   // re-run on every write.

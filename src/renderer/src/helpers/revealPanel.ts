@@ -44,7 +44,7 @@ export function toolIsShown(tool: ToolId, surface: ToolSurface): boolean {
 
   const { zone, slot } = placement
   const { open } = arrangementOf(useTools.getState(), surface)
-  return shownTool(open[zone]?.[slot], zone, slot, surface, toolStateOf(surface)) === tool
+  return shownTool(open[zone]?.[slot], zone, slot, surface, toolStateOf()) === tool
 }
 
 /**

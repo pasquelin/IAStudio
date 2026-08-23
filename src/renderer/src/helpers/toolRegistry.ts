@@ -2,7 +2,6 @@ import {
   mdiCloudOutline,
   mdiRunFast,
   mdiCreationOutline,
-  mdiCubeScan,
   mdiFileTreeOutline,
   mdiFolderMultipleOutline,
   mdiFolderOutline,
@@ -27,8 +26,6 @@ import { gitHoldsFolder } from '@shared/domain/git'
 import { NODE_KINDS } from '@/engines/scene/nodeKinds'
 import { useGit } from '@/stores/git'
 import { useProject } from '@/stores/project'
-import { modelForFamily } from './modelForCapability'
-import { familyOfSurface } from './workspaces'
 
 export type Tool = {
   id: ToolId
@@ -51,7 +48,6 @@ const ICONS: Record<ToolId, string> = {
   // neither the fork above it nor the film reel the montage wears.
   history: mdiHistory,
   scene: mdiFileTreeOutline,
-  models: mdiCubeScan,
   generator: mdiCreationOutline,
   inspector: mdiTuneVariant,
   assets: mdiImageMultipleOutline,
@@ -109,10 +105,8 @@ export function toolIcon(id: ToolId): string {
 }
 
 /** The answers the shared registry cannot give: they depend on state, which `shared/` cannot read. */
-export function toolStateOf(surface: ToolSurface): ToolState {
-  const family = familyOfSurface(surface)
+export function toolStateOf(): ToolState {
   return {
-    hasModel: Boolean(family && modelForFamily(family)),
     hasProject: useProject.getState().project !== null,
     hasGit: gitHoldsFolder(useGit.getState().repository),
   }
@@ -120,8 +114,6 @@ export function toolStateOf(surface: ToolSurface): ToolState {
 
 /** What a surface can offer beyond what the registry declares, each rule answered from a store. */
 export type ToolState = {
-  /** A model to generate with: one chosen in the Models panel, or one preferred in the settings. */
-  hasModel: boolean
   /** A project folder open, which is what the Explorer reads. */
   hasProject: boolean
   /** Git holding the project folder, so there are versions to read. Kept honest by the shell. */
@@ -138,7 +130,6 @@ export type ToolState = {
 function canOffer(id: ToolId, surface: ToolSurface, state: ToolState): boolean {
   const requires = placementIn(id, surface)?.requires
 
-  if (requires === 'model') return state.hasModel
   if (requires === 'project') return state.hasProject
   // `git` implies `project`, and the conjunction is not redundant: the repository is corrected
   // asynchronously, so a project just closed still reads `ready` until the next status lands.
@@ -192,7 +183,7 @@ function firstToolIn(
  * since it lives in the main process and cannot ask a store.
  */
 export function availableToolIds(surface: ToolSurface): ToolId[] {
-  const state = toolStateOf(surface)
+  const state = toolStateOf()
   return TOOLS.filter(tool => serves(tool, surface) && canOffer(tool.id, surface, state)).map(
     tool => tool.id,
   )

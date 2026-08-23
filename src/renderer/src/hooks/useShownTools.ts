@@ -16,7 +16,7 @@ export type ShownTools = { primary: ToolId | null; secondary: ToolId | null }
 export function useShownTools(zone: ToolZone): ShownTools {
   const surface = useToolSurface()
   const slots = useTools(state => arrangementOf(state, surface).open[zone])
-  const state = useToolState(surface)
+  const state = useToolState()
 
   return {
     primary: shownTool(slots?.primary, zone, 'primary', surface, state),

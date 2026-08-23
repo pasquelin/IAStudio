@@ -15,7 +15,15 @@
     "sourceFrom_selection": "Selection",
     "sourceFrom_document": "Open document",
     "sourceFrom_result": "Previous result",
-    "dropSource": "Remove this source"
+    "dropSource": "Remove this source",
+    "chooseModel": "Pick a model",
+    "searchModel": "Search for a model",
+    "modelScope": "Catalogue scope",
+    "modelScope_all": "All",
+    "modelScope_local": "Local",
+    "modelScope_cloud": "Cloud",
+    "modelScope_installed": "Installed",
+    "modelInstalled": "Installed"
   },
   "models": {
     "none": "No model in this workspace.",

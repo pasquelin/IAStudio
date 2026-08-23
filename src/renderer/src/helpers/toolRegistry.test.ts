@@ -6,24 +6,19 @@ import { HOME_SURFACE, TOOL_PLACEMENTS, type ToolId, type ToolZone } from '@shar
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
-import { chooseModelsByFamily } from '@/stores/models-fixtures'
+import { chooseModels } from '@/stores/models-fixtures'
 import { useGit } from '@/stores/git'
 import { trackByGit } from '@/stores/git-fixtures'
 import { useProject } from '@/stores/project'
 import { useAvailableTools } from '@/hooks/useAvailableTools'
-import { shownTool, toolIcon, toolStateOf, TOOLS, type ToolState } from './toolRegistry'
+import { shownTool, toolIcon, TOOLS, type ToolState } from './toolRegistry'
 
 /** What a workspace answers to: a project is always open in one, by definition. */
-const WITH_MODEL: ToolState = { hasModel: true, hasProject: true, hasGit: true }
-const NO_MODEL: ToolState = { hasModel: false, hasProject: true, hasGit: true }
+const IN_WORKSPACE: ToolState = { hasProject: true, hasGit: true }
 /** The home before anything has been opened, which is where a launch starts. */
-const NO_PROJECT: ToolState = { hasModel: false, hasProject: false, hasGit: false }
+const NO_PROJECT: ToolState = { hasProject: false, hasGit: false }
 /** A project open in a folder git is not tracking, which is every folder until `git init`. */
-const NO_GIT: ToolState = { hasModel: true, hasProject: true, hasGit: false }
-
-/** The half of `toolStateOf` these cases are about, read where they used to read it alone. */
-const hasModelIn = (surface: Parameters<typeof toolStateOf>[0]): boolean =>
-  toolStateOf(surface).hasModel
+const NO_GIT: ToolState = { hasProject: true, hasGit: false }
 
 /** A project open, which is what the home's Explorer answers to. */
 const openProject = (): void => {
@@ -48,44 +43,20 @@ beforeEach(() => {
 })
 
 describe('the generator', () => {
-  it('is offered where a model was chosen', () => {
-    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'flux-dev' } })
+  /**
+   * 🛑 It used to be DROPPED from the rail whenever nothing served the space's family — the one
+   * moment a person needs the panel most, and the panel is what would have offered them a model.
+   * ADR-23 § D: the picker lives inside it, so the way out is where the problem is said.
+   */
+  it('is offered whether or not a model was ever chosen', () => {
+    expect(idsOf('left', 'image')).toContain('generator')
+
+    chooseModels({ [aiRoleId('image', 'txt2img')]: 'flux-dev' })
     expect(idsOf('left', 'image')).toContain('generator')
   })
 
-  it('is absent where none was — generating is impossible without one', () => {
-    expect(idsOf('left', 'image')).not.toContain('generator')
-  })
-
-  it('counts the preferred model, which is what that preference is for', () => {
-    chooseModelsByFamily({ image: 'flux-dev' })
-    expect(hasModelIn('image')).toBe(true)
-  })
-
-  it('reads the section, not a shared family: textures no longer follows image', () => {
-    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'flux-dev' } })
-    expect(hasModelIn('image')).toBe(true)
-    expect(hasModelIn('textures')).toBe(false)
-  })
-
-  it('is the only panel its absence removes', () => {
-    expect(idsOf('left', 'image')).toEqual(['models', 'assets', 'explorer'])
-    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'flux-dev' } })
-    expect(idsOf('left', 'image')).toEqual(['models', 'generator', 'assets', 'explorer'])
-  })
-
-  /** The home is the one surface with nothing to generate at all, and it stays that way. */
-  it('is never offered on the home, whatever has been chosen elsewhere', () => {
-    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'flux-dev' } })
-
-    expect(hasModelIn(HOME_SURFACE)).toBe(false)
-  })
-
-  /** A choice made in one space is not a choice made in another: the scopes are separate keys. */
-  it('keeps a space’s choice out of the spaces that have another family', () => {
-    useModels.setState({ selected: { [aiRoleId('texture', 'txt2img_texture')]: 'flux-dev' } })
-
-    expect(hasModelIn('image')).toBe(false)
+  it('opens the half it shares with the shelf, whatever has been chosen', () => {
+    expect(idsOf('left', 'image')).toEqual(['generator', 'assets', 'explorer'])
   })
 
   // Named for what it checks: a section with no model still shows every panel of its right
@@ -120,7 +91,7 @@ describe('the explorer on the home', () => {
   // to fall back ON, which is what the workspaces' own fallback would have handed it.
   it('leaves its half empty rather than standing something else in it', () => {
     expect(shownTool('explorer', 'left', 'secondary', HOME_SURFACE, NO_PROJECT)).toBeNull()
-    expect(shownTool('explorer', 'left', 'secondary', HOME_SURFACE, WITH_MODEL)).toBe('explorer')
+    expect(shownTool('explorer', 'left', 'secondary', HOME_SURFACE, IN_WORKSPACE)).toBe('explorer')
   })
 })
 
@@ -176,50 +147,50 @@ describe('the history over a folder git is not tracking', () => {
 // open is stored once for all six, while the panel that comes first differs in each.
 describe('a half open on no panel in particular', () => {
   it('shows the one this section declares first', () => {
-    expect(shownTool(null, 'right', 'primary', 'image', WITH_MODEL)).toBe('layers')
-    expect(shownTool(null, 'right', 'primary', '3d', WITH_MODEL)).toBe('scene')
+    expect(shownTool(null, 'right', 'primary', 'image', IN_WORKSPACE)).toBe('layers')
+    expect(shownTool(null, 'right', 'primary', '3d', IN_WORKSPACE)).toBe('scene')
     // Neither Skyboxes nor Textures declares anything in that half any more: what a sky is, and
     // what a material is made of, are sections of the inspector.
-    expect(shownTool(null, 'right', 'primary', 'skyboxes', WITH_MODEL)).toBeNull()
-    expect(shownTool(null, 'right', 'primary', 'textures', WITH_MODEL)).toBeNull()
+    expect(shownTool(null, 'right', 'primary', 'skyboxes', IN_WORKSPACE)).toBeNull()
+    expect(shownTool(null, 'right', 'primary', 'textures', IN_WORKSPACE)).toBeNull()
   })
 
   // Video and Audio declare NOTHING in that half since the shelf went left, so the half opens
   // on no panel at all — the same answer as a section that fills no such half.
   it('shows nothing in the upper right of Video and Audio', () => {
-    expect(shownTool(null, 'right', 'primary', 'video', WITH_MODEL)).toBeNull()
-    expect(shownTool(null, 'right', 'primary', 'audio', WITH_MODEL)).toBeNull()
+    expect(shownTool(null, 'right', 'primary', 'video', IN_WORKSPACE)).toBeNull()
+    expect(shownTool(null, 'right', 'primary', 'audio', IN_WORKSPACE)).toBeNull()
   })
 
   it('reads the band as the history or the montage, per section', () => {
-    expect(shownTool(null, 'bottomRight', 'primary', 'image', WITH_MODEL)).toBe('history')
-    expect(shownTool(null, 'bottomRight', 'primary', 'audio', WITH_MODEL)).toBe('timeline')
+    expect(shownTool(null, 'bottomRight', 'primary', 'image', IN_WORKSPACE)).toBe('history')
+    expect(shownTool(null, 'bottomRight', 'primary', 'audio', IN_WORKSPACE)).toBe('timeline')
   })
 
-  it('never opens on a generator the section cannot offer', () => {
-    expect(shownTool(null, 'left', 'primary', 'image', NO_MODEL)).toBe('models')
-    expect(shownTool(null, 'left', 'primary', 'image', WITH_MODEL)).toBe('models')
+  it('opens on the generator, which the half declares first', () => {
+    expect(shownTool(null, 'left', 'primary', 'image', IN_WORKSPACE)).toBe('generator')
+    expect(shownTool(null, 'left', 'primary', 'image', IN_WORKSPACE)).toBe('generator')
   })
 
   // The distinction the store draws: an absent key is a closed half, `null` an open one. Reading
   // both as "nothing" would close every half nobody has clicked.
   it('is not a closed half, which shows nothing at all', () => {
-    expect(shownTool(undefined, 'right', 'primary', 'image', WITH_MODEL)).toBeNull()
+    expect(shownTool(undefined, 'right', 'primary', 'image', IN_WORKSPACE)).toBeNull()
   })
 
   it('shows nothing where the section fills no such half', () => {
-    expect(shownTool(null, 'bottomRight', 'secondary', 'image', WITH_MODEL)).toBeNull()
+    expect(shownTool(null, 'bottomRight', 'secondary', 'image', IN_WORKSPACE)).toBeNull()
   })
 
   // The lower half of the left column, which the Explorer took over.
   it('opens the lower left on the first panel that half declares', () => {
-    expect(shownTool(null, 'left', 'secondary', 'image', WITH_MODEL)).toBe('explorer')
+    expect(shownTool(null, 'left', 'secondary', 'image', IN_WORKSPACE)).toBe('explorer')
   })
 })
 
 describe('what a half of a zone shows', () => {
   it('shows the tool it holds', () => {
-    expect(shownTool('inspector', 'right', 'secondary', 'image', NO_MODEL)).toBe('inspector')
+    expect(shownTool('inspector', 'right', 'secondary', 'image', IN_WORKSPACE)).toBe('inspector')
   })
 
   /**
@@ -231,44 +202,44 @@ describe('what a half of a zone shows', () => {
    * standing empty, which is what keeps such a layout readable without a migration.
    */
   it('shows what this section puts there when the tool it holds sits elsewhere', () => {
-    expect(shownTool('assets', 'bottomRight', 'primary', 'video', WITH_MODEL)).toBe('timeline')
-    expect(shownTool('assets', 'bottomRight', 'primary', 'image', WITH_MODEL)).toBe('history')
+    expect(shownTool('assets', 'bottomRight', 'primary', 'video', IN_WORKSPACE)).toBe('timeline')
+    expect(shownTool('assets', 'bottomRight', 'primary', 'image', IN_WORKSPACE)).toBe('history')
   })
 
   it('leaves a tool alone in the zone this section gives it', () => {
-    expect(shownTool('timeline', 'bottomRight', 'primary', 'video', WITH_MODEL)).toBe('timeline')
-    expect(shownTool('assets', 'left', 'primary', 'image', WITH_MODEL)).toBe('assets')
+    expect(shownTool('timeline', 'bottomRight', 'primary', 'video', IN_WORKSPACE)).toBe('timeline')
+    expect(shownTool('assets', 'left', 'primary', 'image', IN_WORKSPACE)).toBe('assets')
   })
 
   it('substitutes within the half, never across the separator', () => {
-    expect(shownTool('inspector', 'right', 'primary', 'image', WITH_MODEL)).toBe('layers')
-    expect(shownTool('layers', 'right', 'secondary', 'image', WITH_MODEL)).toBe('inspector')
+    expect(shownTool('inspector', 'right', 'primary', 'image', IN_WORKSPACE)).toBe('layers')
+    expect(shownTool('layers', 'right', 'secondary', 'image', IN_WORKSPACE)).toBe('inspector')
   })
 
   it('answers null for a half this section does not fill', () => {
     // A band is read across its width, so it has no second half for anything to substitute into.
-    expect(shownTool('assets', 'bottomRight', 'secondary', 'image', WITH_MODEL)).toBeNull()
+    expect(shownTool('assets', 'bottomRight', 'secondary', 'image', IN_WORKSPACE)).toBeNull()
   })
 
-  it('never substitutes a generator a section cannot offer', () => {
-    expect(shownTool('inspector', 'left', 'primary', 'image', NO_MODEL)).toBe('models')
+  it('opens on the generator, whatever the half was last showing', () => {
+    expect(shownTool('inspector', 'left', 'primary', 'image', IN_WORKSPACE)).toBe('generator')
   })
 
   // Where several tools share a half, the substitute is the first the registry declares. The
   // order of `TOOL_PLACEMENTS` is the choice, so it is spelled out here rather than left to
   // whoever reorders that table next.
   it('substitutes the first tool the half declares when several share it', () => {
-    expect(shownTool('layers', 'right', 'primary', '3d', WITH_MODEL)).toBe('scene')
+    expect(shownTool('layers', 'right', 'primary', '3d', IN_WORKSPACE)).toBe('scene')
     // The other half several tools share, so the rule does not hang on the 3D column alone.
-    expect(shownTool('layers', 'left', 'primary', 'image', WITH_MODEL)).toBe('models')
+    expect(shownTool('layers', 'left', 'primary', 'image', IN_WORKSPACE)).toBe('generator')
   })
 
   it('falls back to the models panel where the generator has no model', () => {
-    expect(shownTool('generator', 'left', 'primary', 'image', NO_MODEL)).toBe('models')
+    expect(shownTool('generator', 'left', 'primary', 'image', IN_WORKSPACE)).toBe('generator')
   })
 
   it('shows the generator again as soon as one is there', () => {
-    expect(shownTool('generator', 'left', 'primary', 'image', WITH_MODEL)).toBe('generator')
+    expect(shownTool('generator', 'left', 'primary', 'image', IN_WORKSPACE)).toBe('generator')
   })
 })
 

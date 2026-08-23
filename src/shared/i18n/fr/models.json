@@ -15,7 +15,15 @@
     "sourceFrom_selection": "Sélection",
     "sourceFrom_document": "Document ouvert",
     "sourceFrom_result": "Résultat précédent",
-    "dropSource": "Retirer cette source"
+    "dropSource": "Retirer cette source",
+    "chooseModel": "Choisir un modèle",
+    "searchModel": "Chercher un modèle",
+    "modelScope": "Portée du catalogue",
+    "modelScope_all": "Tout",
+    "modelScope_local": "Local",
+    "modelScope_cloud": "Cloud",
+    "modelScope_installed": "Installé",
+    "modelInstalled": "Installé"
   },
   "models": {
     "none": "Aucun modèle dans cet espace.",

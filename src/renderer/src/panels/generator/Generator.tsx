@@ -21,13 +21,13 @@ import { claimOnSubmit } from '@/stores/generationClaims'
 import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
 import { DynamicForm } from '@/design/dynamicFormLazy'
-import { FormHeader } from '@/design/FormHeader'
 import { PANEL_SCROLL } from '@/design/styles'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { NoProject } from '@/panels/shared/NoProject'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
+import { GeneratorModel } from './Generator/GeneratorModel'
 import { GeneratorOperation } from './Generator/GeneratorOperation'
 import { GeneratorSources } from './Generator/GeneratorSources'
 
@@ -154,6 +154,9 @@ export function Generator() {
     return (
       <div className={PANEL_SCROLL}>
         <GeneratorOperation capability={capability} onForce={forceCapability} />
+        {/* The picker stays: § 20 asks the panel to explain, and the way out of "nothing serves
+            this" is to pick something that does — without leaving. */}
+        <GeneratorModel capability={capability.chosen} modelId={null} />
         <EmptyState icon={mdiCreationOutline} message={t('generation.noModelForOperation')} />
       </div>
     )
@@ -175,9 +178,12 @@ export function Generator() {
 
   return (
     <div className={PANEL_SCROLL}>
-      <FormHeader title={descriptor.data?.name ?? t('collection.loading')} />
-
       <GeneratorOperation capability={capability} onForce={forceCapability} />
+      <GeneratorModel
+        capability={capability.chosen}
+        modelId={modelId}
+        name={descriptor.data?.name}
+      />
       <GeneratorSources inputs={inputs} />
 
       {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}

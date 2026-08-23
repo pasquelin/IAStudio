@@ -135,16 +135,16 @@ describe('preparing an edit', () => {
   })
 
   /**
-   * Never a model chosen on the user's behalf. The panel opens on the family instead, which is
-   * the one place where choosing one belongs.
+   * Never a model chosen on the user's behalf. The generation panel comes up instead: its picker
+   * lists exactly what this operation can be served by, which is where choosing one belongs.
    */
-  it('opens the models panel rather than picking one when none is set', async () => {
+  it('opens the generation panel rather than picking one when none is set', async () => {
     chooseModels()
 
     await expect(prepareEdit(DOCUMENT, 'regenerate', host, bridge)).resolves.toBe(false)
 
     expect(uploaded).toEqual([])
-    expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('models')
+    expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('generator')
   })
 
   /**
