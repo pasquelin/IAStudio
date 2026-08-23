@@ -6,13 +6,16 @@ PLUGIN_IDS: frozenset[str] = frozenset(
         "trellis-text-large",
         "trellis-image-large",
         "trellis2-4b",
+        "triposg",
         "mmaudio-small-44k",
         "mmaudio-medium-44k",
         "mmaudio-large-44k",
     }
 )
 
-CUDA_ONLY: frozenset[str] = frozenset({"trellis-text-large", "trellis-image-large", "trellis2-4b"})
+CUDA_ONLY: frozenset[str] = frozenset(
+    {"trellis-text-large", "trellis-image-large", "trellis2-4b", "triposg"}
+)
 
 MMAUDIO_WEIGHTS = {
     "mmaudio-small-44k": "weights/mmaudio_small_44k.pth",

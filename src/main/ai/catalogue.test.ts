@@ -133,23 +133,21 @@ describe('the shipped catalogue', () => {
     expect(shippedModelsFor(aiRoleId('skybox', 'txt2skybox')).map(model => model.id)).toEqual([
       'panfusion',
       'mvdiffusion',
-      'diffusion360',
       'unipano',
+      'diffusion360',
     ])
     expect(shippedModelsFor(aiRoleId('skybox', 'img2skybox')).map(model => model.id)).toEqual([
-      'mvdiffusion',
-      'diffusion360',
       'genex-world-initializer',
     ])
   })
 
-  it('opens GenEx, so a skybox employment has an engine that can run', () => {
-    const genex = shippedModels().find(model => model.id === 'genex-world-initializer')
+  it('opens every skybox model, so both employments have an engine that can run', () => {
+    const closed = shippedModels()
+      .filter(model => model.family === 'skybox')
+      .filter(model => model.runtimeStatus === 'unsupported' || model.files.length === 0)
+      .map(model => model.id)
 
-    expect(genex?.runtimeStatus).not.toBe('unsupported')
-    expect(genex?.loader).toBe('diffusers')
-    expect(genex?.modality).toBe('skybox')
-    expect(genex?.files.length).toBeGreaterThan(0)
+    expect(closed).toEqual([])
   })
 
   // A digest nobody can fetch is worse than no download: the engine is a later lot.
@@ -172,6 +170,24 @@ describe('the shipped catalogue', () => {
       .map(model => model.id)
 
     expect(excluded).toEqual([])
+  })
+
+  it('opens TripoSG as a CUDA plugin with pinned files', () => {
+    const model = shippedModel('triposg')
+
+    expect(model?.loader).toBe('plugin')
+    expect(model?.needsCuda).toBe(true)
+    expect(model?.files.length).toBeGreaterThan(0)
+    expect(model?.runtimeStatus).not.toBe('unsupported')
+  })
+
+  it('leaves the five 3d stacks whose python is not vendored without files', () => {
+    const closed = shippedModels()
+      .filter(model => model.family === '3d')
+      .filter(model => model.runtimeStatus === 'unsupported')
+      .map(model => model.id)
+
+    expect(closed.sort()).toEqual(['craftsman3d', 'instantmesh', 'lgm', 'unique3d', 'wonder3d'])
   })
 
   it('lists commercially licensed 3d engines beside the ones already wired', () => {
