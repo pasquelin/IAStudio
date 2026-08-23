@@ -143,6 +143,10 @@ export type LocalModel = {
   readonly thumbnail?: string
   /** One line under the name, in the publisher's words. Data, not a word of the interface. */
   readonly summary?: string
+  /** ISO date these weights were published. `catalogueLineOf` is what shows the year. */
+  readonly releasedAt?: string
+  /** Studio highlight of a strong pick. The machine's verdict still greys it if it cannot run. */
+  readonly featured?: boolean
   /** Where the weights come from. `direct-download` where a manifest says nothing. */
   readonly distribution?: ModelDistribution
   /** What the licence permits, as the catalogue presents it. `commercial` by default. */
@@ -189,6 +193,15 @@ export function modelThumbnailUrl(model: LocalModel): string {
   // The generic picture of its modality where a manifest names none — which is every model the
   // person supplied, since nothing can know what their file looks like.
   return hostedUrl(MODEL_HOST, model.thumbnail ?? `${model.modality ?? 'text'}.png`)
+}
+
+/** Year plus the publisher line — one caption for pickers and rows. */
+export function catalogueLineOf(
+  model: Pick<LocalModel, 'summary' | 'releasedAt'>,
+): string | undefined {
+  if (model.summary === undefined) return undefined
+  const year = model.releasedAt?.slice(0, 4)
+  return year ? `${year} · ${model.summary}` : model.summary
 }
 
 /**

@@ -790,6 +790,28 @@ describe('model registry', () => {
       expect((await registry.search({})).items).toEqual([])
     })
 
+    it('carries the year and the highlight the manifest declared', async () => {
+      const local = localModel({
+        id: 'triposr',
+        name: 'TripoSR',
+        family: '3d',
+        capabilities: ['img23d'],
+        summary: 'Fastest open image-to-mesh',
+        releasedAt: '2024-03-04',
+        featured: true,
+      })
+      const registry = registryOf({
+        catalog: publicCatalog([]),
+        localModels: () => [local],
+      })
+
+      const [item] = (await registry.search({ family: '3d' })).items
+
+      expect(item?.description).toBe('2024 · Fastest open image-to-mesh')
+      expect(item?.createdAt).toBe('2024-03-04')
+      expect(item?.featured).toBe(true)
+    })
+
     it('marks a listed card with nothing to fetch as not downloadable', async () => {
       const listed = localModel({
         id: 'panfusion',

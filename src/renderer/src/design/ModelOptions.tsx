@@ -4,7 +4,7 @@ import type { PlanAccess } from '@shared/domain/plan'
 import { isBeyondPlan } from '@shared/domain/plan'
 
 /** All a picker row reads off a model; the rest of a summary never reaches the label. */
-export type PickableModel = Pick<ModelSummary, 'id' | 'name' | 'requiredPlanLevel'>
+export type PickableModel = Pick<ModelSummary, 'id' | 'name' | 'requiredPlanLevel' | 'description'>
 
 export type ModelOptionsProps = {
   models: readonly PickableModel[]
@@ -26,9 +26,12 @@ export function ModelOptions({ models, plan }: ModelOptionsProps) {
     <>
       {models.map(model => {
         const refused = isBeyondPlan(model.requiredPlanLevel, plan)
+        const label = [model.name, model.description, refused ? locked : undefined]
+          .filter(part => part)
+          .join(' — ')
         return (
           <option key={model.id} value={model.id} disabled={refused}>
-            {refused ? `${model.name} — ${locked}` : model.name}
+            {label}
           </option>
         )
       })}

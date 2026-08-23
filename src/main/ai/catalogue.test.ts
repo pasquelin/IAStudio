@@ -152,6 +152,47 @@ describe('the shipped catalogue', () => {
     expect(offered).toEqual([])
   })
 
+  /**
+   * Hunyuan3D's community licence excludes the EU, the UK and South Korea. Listing it here would
+   * present a download the studio itself has no permission to offer from this territory.
+   */
+  it('does not list a 3d model whose licence excludes this territory', () => {
+    const excluded = shippedModels()
+      .filter(model => model.family === '3d')
+      .filter(model => model.licenceStatus === 'unsupported-region' || /hunyuan/i.test(model.id))
+      .map(model => model.id)
+
+    expect(excluded).toEqual([])
+  })
+
+  it('lists commercially licensed 3d engines beside the ones already wired', () => {
+    expect(shippedModelsFor(aiRoleId('3d', 'img23d')).map(model => model.id)).toEqual(
+      expect.arrayContaining([
+        'triposr',
+        'instantmesh',
+        'unique3d',
+        'triposg',
+        'craftsman3d',
+        'lgm',
+        'wonder3d',
+      ]),
+    )
+  })
+
+  it('gives every 3d model a year and a line that says more than its name', () => {
+    const models = shippedModels().filter(model => model.family === '3d')
+    const thin = models
+      .filter(model => !model.releasedAt || !model.summary || model.summary === model.name)
+      .map(model => model.id)
+    // The year lives in `releasedAt`; restating it in the line would show twice on screen.
+    const restated = models
+      .filter(model => /^\d{4} · /.test(model.summary ?? ''))
+      .map(model => model.id)
+
+    expect(thin).toEqual([])
+    expect(restated).toEqual([])
+  })
+
   it('gives every generating model a family and a capability', () => {
     const bare = shippedModels()
       .filter(model => model.modality && model.modality !== 'text')

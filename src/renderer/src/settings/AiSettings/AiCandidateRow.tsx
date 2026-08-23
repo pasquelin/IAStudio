@@ -2,7 +2,11 @@ import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelCandidate } from '@shared/domain/aiOverview'
 import type { AiRoleId } from '@shared/domain/aiRole'
-import { modelThumbnailUrl, type DownloadProgress } from '@shared/domain/localModel'
+import {
+  catalogueLineOf,
+  modelThumbnailUrl,
+  type DownloadProgress,
+} from '@shared/domain/localModel'
 import { Thumbnail } from '@/design/Thumbnail'
 import { useBytes } from '@/hooks/useBytes'
 import type { ModelFitSentence } from '@/hooks/useModelFit'
@@ -51,10 +55,13 @@ export const AiCandidateRow = memo(function AiCandidateRow({
       // on every row would be noise, where "serves six employments" beside 4.47 GB is the whole
       // difference between this catalogue's lightest entry and its heaviest.
       caption={[
-        bytes(candidate.model.diskBytes),
-        ...(candidate.serves > 1 ? [t('aiModels.servesRoles', { count: candidate.serves })] : []),
+        candidate.model.diskBytes > 0 ? bytes(candidate.model.diskBytes) : undefined,
+        catalogueLineOf(candidate.model),
+        candidate.serves > 1 ? t('aiModels.servesRoles', { count: candidate.serves }) : undefined,
         fit.verdict,
-      ].join(' · ')}
+      ]
+        .filter(part => part)
+        .join(' · ')}
       // The provenance comes FIRST when there is one to say: it qualifies everything after it.
       hint={
         candidate.unverified

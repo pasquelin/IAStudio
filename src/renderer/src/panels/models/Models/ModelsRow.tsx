@@ -7,22 +7,24 @@ import { Thumbnail } from '@/design/Thumbnail'
 import { Row } from '@/design/Row'
 
 /**
- * What the API actually says about a model, in one line: who published it and what it does.
- * Rating, generation time and category come back empty on all 642 public models — measured.
- *
- * "Featured" outranks the origin: a third-party model Scenario highlights reads as vetted,
- * whereas calling GPT Image 2 "community" says the opposite of what the tag means.
+ * Standing plus a line. Rating, generation time and category come back empty on all 642 public
+ * models — measured. A catalogue description replaces origin; "featured" still prefixes it.
  */
 function subtitleOf(model: ModelSummary, t: TFunction): string {
-  const standing = model.featured
-    ? t('models.featured')
-    : t(model.origin === 'official' ? 'models.official' : 'models.community')
-  const [capability] = model.capabilities
+  if (model.description) {
+    if (!model.featured) return model.description
+    return `${t('models.featured')} · ${model.description}`
+  }
 
+  let standing: string
+  if (model.featured) standing = t('models.featured')
+  else if (model.origin === 'official') standing = t('models.official')
+  else standing = t('models.community')
+
+  const [capability] = model.capabilities
   // An unknown capability shows its API name rather than its missing translation key.
-  return capability
-    ? `${standing} · ${t(`capabilities.${capability}`, { defaultValue: capability })}`
-    : standing
+  if (!capability) return standing
+  return `${standing} · ${t(`capabilities.${capability}`, { defaultValue: capability })}`
 }
 
 /** Memoized like the card: a scroll re-renders every mounted row on each frame. */

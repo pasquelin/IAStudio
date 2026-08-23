@@ -36,4 +36,13 @@ describe('ModelOptions', () => {
   it('refuses nothing while the plan is unknown', () => {
     for (const option of pick(MODELS, null)) expect(option).toBeEnabled()
   })
+
+  it('puts the year and the quality line on the option, not only the name', () => {
+    const [option] = pick(
+      [{ id: 'triposr', name: 'TripoSR', description: '2024 · Fastest open image-to-mesh' }],
+      null,
+    )
+
+    expect(option?.textContent).toBe('TripoSR — 2024 · Fastest open image-to-mesh')
+  })
 })
