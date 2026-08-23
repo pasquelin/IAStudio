@@ -3697,7 +3697,7 @@
     {
       "id": "lgm",
       "name": "LGM",
-      "summary": "Multi-view Gaussians, then a mesh. Text or image. NVIDIA CUDA",
+      "summary": "Four views, then a 3D Gaussian cloud. NVIDIA CUDA",
       "releasedAt": "2024-02-07",
       "format": "safetensors",
       "loader": "plugin",
@@ -3706,18 +3706,137 @@
       "licence": "MIT",
       "licenceUrl": "https://opensource.org/licenses/MIT",
       "source": "https://huggingface.co/ashawkey/LGM",
-      "files": [],
-      "diskBytes": 5000000000,
+      "files": [
+        {
+          "role": "processor",
+          "name": "feature_extractor/preprocessor_config.json",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/feature_extractor/preprocessor_config.json",
+          "bytes": 546,
+          "sha256": "2a39223c20db51c4b8eaea6f43e6369303477f4eede0393ff9c321504d2fb645",
+          "upstream": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "image-encoder",
+          "name": "image_encoder/config.json",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/image_encoder/config.json",
+          "bytes": 563,
+          "sha256": "9359014d5c66ccb0dcd9b7e7ed0d650490153567bc7102b2a6c6b95c3a89176b",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "image-encoder",
+          "name": "image_encoder/model.safetensors",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/image_encoder/model.safetensors",
+          "bytes": 1261595704,
+          "sha256": "2a56cfd4ffcf40be097c430324ec184cc37187f6dafef128ef9225438a3c03c4",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/scheduler/scheduler_config.json",
+          "bytes": 502,
+          "sha256": "2434ad87a9a249cfcf24487a4cee7b4686871dcd4252b87d146439a5052b21af",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/text_encoder/config.json",
+          "bytes": 610,
+          "sha256": "408398445f04b68e55f08e7cde61ffa00d32b6fd12c3b9a7a33af41c1cfadb5d",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.safetensors",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/text_encoder/model.safetensors",
+          "bytes": 680820392,
+          "sha256": "bc1827c465450322616f06dea41596eac7d493f4e95904dcb51f0fc745c4e13f",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/tokenizer/merges.txt",
+          "bytes": 524619,
+          "sha256": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/tokenizer/special_tokens_map.json",
+          "bytes": 460,
+          "sha256": "f118ab3a983206e4f32583448de6bd6aae4ee21869135cef1f5848a753cdaab6",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/tokenizer/tokenizer_config.json",
+          "bytes": 855,
+          "sha256": "516314ccab66918d7cb647480ac27abd3520d14e1e5825aac99f50c851c16071",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/tokenizer/vocab.json",
+          "bytes": 1059962,
+          "sha256": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "unet",
+          "name": "unet/config.json",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/unet/config.json",
+          "bytes": 403,
+          "sha256": "d12d77420446caddc3271e336435bedf160a083443fa5ba3f529ac60016e7b49",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "unet",
+          "name": "unet/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/unet/diffusion_pytorch_model.safetensors",
+          "bytes": 1883435904,
+          "sha256": "28d8b241a54125fa0a041c1818a5dcdb717e6f5270eea1268172acd3ab0238e0",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/vae/config.json",
+          "bytes": 601,
+          "sha256": "5145d839688ba88a8b80a1fbb29f1bd1acd0201850386fc1b5a5d84ff810648d",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.safetensors",
+          "url": "https://huggingface.co/ashawkey/imagedream-ipmv-diffusers/resolve/73a034178e748421506492e91790cc62d6aefef5/vae/diffusion_pytorch_model.safetensors",
+          "bytes": 167335342,
+          "sha256": "3e4c08995484ee61270175e9e7a072b66a6e4eeb5f0c266667fe1f45b90daf9a",
+          "revision": "73a034178e748421506492e91790cc62d6aefef5"
+        },
+        {
+          "role": "weights",
+          "name": "lgm/model_fp16_fixrot.safetensors",
+          "url": "https://huggingface.co/ashawkey/LGM/resolve/bc0097d24ffc5efc2e6a216edd579128f85f53ab/model_fp16_fixrot.safetensors",
+          "bytes": 830126160,
+          "sha256": "744d6324656342c64f871308e73db97f0eb51858d94329b30090e986a6d050ab",
+          "revision": "bc0097d24ffc5efc2e6a216edd579128f85f53ab"
+        }
+      ],
+      "diskBytes": 4824902623,
       "reservationBytes": 12000000000,
       "family": "3d",
       "capabilities": [
         "img23d"
       ],
-      "serves": [
-        "3d/txt23d"
-      ],
-      "runtimeStatus": "unsupported",
-      "needsCuda": true
+      "needsCuda": true,
+      "distribution": "direct-download"
     },
     {
       "id": "unique3d",

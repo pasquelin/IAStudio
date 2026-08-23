@@ -190,13 +190,21 @@ describe('the shipped catalogue', () => {
     expect(model?.files.map(file => file.name)).toContain('unet/diffusion_pytorch_model.bin')
   })
 
-  it('leaves the four 3d stacks whose python is not vendored without files', () => {
+  it('opens LGM as a CUDA plugin that writes a Gaussian cloud', () => {
+    const model = shippedModel('lgm')
+
+    expect(model?.loader).toBe('plugin')
+    expect(model?.runtimeStatus).toBeUndefined()
+    expect(model?.files.map(file => file.name)).toContain('lgm/model_fp16_fixrot.safetensors')
+  })
+
+  it('leaves the three 3d stacks whose python is not vendored without files', () => {
     const closed = shippedModels()
       .filter(model => model.family === '3d')
       .filter(model => model.runtimeStatus === 'unsupported')
       .map(model => model.id)
 
-    expect(closed.sort()).toEqual(['craftsman3d', 'lgm', 'unique3d', 'wonder3d'])
+    expect(closed.sort()).toEqual(['craftsman3d', 'unique3d', 'wonder3d'])
   })
 
   it('lists commercially licensed 3d engines beside the ones already wired', () => {

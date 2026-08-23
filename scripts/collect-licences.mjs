@@ -225,6 +225,16 @@ const MODEL_NOTES = {
     'The unet lands under `unet/`, where the six-view pipeline reads it: the studio fetches the',
     'base unet of zero123plus not at all, rather than 3.4 GB it would overwrite on load.',
   ],
+  lgm: [
+    'Copyright the LGM authors, and Ashawkey for the published weights.',
+    '',
+    'THE DOWNLOAD CARRIES MORE THAN ONE ORIGIN, read on 2026-08-23. MIT covers the splatter',
+    'checkpoint alone; the four-view stage is ashawkey/imagedream-ipmv-diffusers, published under',
+    'OpenRAIL, and it is fourteen of the fifteen files above.',
+    '',
+    'What LGM writes is a 3D Gaussian cloud, not a mesh: the step that turns one into the other',
+    'is a rasterizer whose licence forbids commercial use, and it is not fetched or shipped.',
+  ],
   panfusion: [
     'The files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). PanFusion publishes a',
     'Lightning checkpoint this studio cannot open. Generation uses MultiDiffusion circular padding.',

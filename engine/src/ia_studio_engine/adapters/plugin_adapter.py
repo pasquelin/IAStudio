@@ -1,6 +1,6 @@
 """
 Adapters for families diffusers does not open: TripoSR, TRELLIS, TRELLIS.2, TripoSG,
-InstantMesh, MMAudio.
+InstantMesh, LGM, MMAudio.
 
 The Python is ours (vendored or an extra). Weights stay in the digested folder, with no `.py`.
 `torch.load(..., weights_only=True)` is the pickle path — PyTorch 2.6 refuses reducers.
@@ -111,6 +111,9 @@ class PluginAdapter:
         elif model_id == "instantmesh":
             self._handle = _load_instantmesh(folder)
             self._kind = "instantmesh"
+        elif model_id == "lgm":
+            self._handle = _load_lgm(folder)
+            self._kind = "lgm"
         elif model_id in MMAUDIO_WEIGHTS:
             self._handle = _load_mmaudio(model_id, folder, device)
             self._kind = "mmaudio"
@@ -159,6 +162,8 @@ class PluginAdapter:
             _run_triposg(self._handle, params, destination, held.device)
         elif self._kind == "instantmesh":
             _run_instantmesh(self._handle, params, destination, held.device)
+        elif self._kind == "lgm":
+            _run_lgm(self._handle, params, destination, held.device)
         else:
             _run_mmaudio(self._handle, params, destination)
 
@@ -311,6 +316,10 @@ def _run_triposg(pipeline: Any, params: dict[str, Any], destination: str, device
     mesh.export(destination)
 
 
+# What LGM's own inference normalises its four views by, before the splatter reads them.
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_DEVIATION = (0.229, 0.224, 0.225)
+
 # `configs/instant-nerf-large.yaml` of the InstantMesh repository. The checkpoint is loaded with
 # strict=True, so a figure that drifts refuses the load rather than opening a wrong model.
 INSTANT_NERF_LARGE = {
@@ -396,6 +405,88 @@ def _run_instantmesh(
     # The repository's own glTF convention, which is the one this studio's viewer reads.
     turned = vertices @ np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]])
     trimesh.Trimesh(turned, faces, vertex_colors=colours).export(destination)
+
+
+def _load_lgm(folder: str) -> Any:
+    import torch
+
+    if not torch.cuda.is_available():
+        raise LoadRefusedError("LGM needs CUDA")
+    _require("lgm.models", "plugin")
+    from diffusers import AutoencoderKL, DDIMScheduler
+    from lgm.models import LGM
+    from lgm.mvdream.mv_unet import MultiViewUNetModel
+    from lgm.mvdream.pipeline_mvdream import MVDreamPipeline
+    from lgm.options import config_defaults
+    from safetensors.torch import load_file
+    from transformers import (
+        CLIPImageProcessor,
+        CLIPTextModel,
+        CLIPTokenizer,
+        CLIPVisionModel,
+    )
+
+    root = Path(folder)
+    # Component by component rather than through `from_pretrained`: the published pipeline names
+    # its unet class in a `.py` beside the weights, which this studio never downloads.
+    unet = MultiViewUNetModel.from_config(MultiViewUNetModel.load_config(str(root / "unet")))
+    unet.load_state_dict(load_file(str(root / "unet/diffusion_pytorch_model.safetensors")))
+    views = MVDreamPipeline(
+        vae=AutoencoderKL.from_pretrained(str(root / "vae"), local_files_only=True),
+        unet=unet,
+        tokenizer=CLIPTokenizer.from_pretrained(str(root / "tokenizer"), local_files_only=True),
+        text_encoder=CLIPTextModel.from_pretrained(
+            str(root / "text_encoder"), local_files_only=True
+        ),
+        scheduler=DDIMScheduler.from_pretrained(str(root / "scheduler"), local_files_only=True),
+        feature_extractor=CLIPImageProcessor.from_pretrained(
+            str(root / "feature_extractor"), local_files_only=True
+        ),
+        image_encoder=CLIPVisionModel.from_pretrained(
+            str(root / "image_encoder"), local_files_only=True
+        ),
+    )
+    views.to("cuda", dtype=torch.float16)
+
+    options = config_defaults["big"]
+    splatter = LGM(options)
+    splatter.load_state_dict(
+        load_file(str(root / "lgm/model_fp16_fixrot.safetensors")), strict=False
+    )
+    splatter = splatter.half().to("cuda").eval()
+    return {"views": views, "splatter": splatter, "rays": splatter.prepare_default_rays("cuda")}
+
+
+def _run_lgm(handle: dict[str, Any], params: dict[str, Any], destination: str, device: str) -> None:
+    image = params.get("image")
+    if not image:
+        raise LoadRefusedError(generation_refusal(params) or "a generation needs a picture")
+    import numpy as np
+    import torch
+    import torch.nn.functional as functional
+    import torchvision.transforms.functional as pictures
+    from PIL import Image
+
+    rembg = _require("rembg", "plugin")
+    carved = np.asarray(rembg.remove(Image.open(str(image)).convert("RGBA")), dtype=np.float32)
+    carved /= 255.0
+    flat = carved[..., :3] * carved[..., 3:4] + (1 - carved[..., 3:4])
+
+    cfg = float(params["cfgScale"]) if params.get("cfgScale") not in (None, "") else 5.0
+    steps = int(params["steps"]) if params.get("steps") not in (None, "") else 30
+    quartet = handle["views"]("", flat, guidance_scale=cfg, num_inference_steps=steps, elevation=0)
+    # The pipeline answers front, right, back, left; the splatter reads them in view order.
+    ordered = np.stack([quartet[1], quartet[2], quartet[3], quartet[0]], axis=0)
+
+    seen = torch.from_numpy(ordered).permute(0, 3, 1, 2).float().to(device)
+    seen = functional.interpolate(seen, size=(256, 256), mode="bilinear", align_corners=False)
+    seen = pictures.normalize(seen, IMAGENET_MEAN, IMAGENET_DEVIATION)
+    seen = torch.cat([seen, handle["rays"]], dim=1).unsqueeze(0)
+
+    with torch.no_grad(), torch.autocast(device_type="cuda", dtype=torch.float16):
+        gaussians = handle["splatter"].forward_gaussians(seen)
+    # Gaussians, not triangles: turning them into a mesh is what the rasterizer above is for.
+    handle["splatter"].gs.save_ply(gaussians, destination)
 
 
 def _load_mmaudio(model_id: str, folder: str, device: str) -> Any:

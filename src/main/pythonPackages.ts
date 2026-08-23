@@ -108,6 +108,17 @@ export const UNREAD_PENDING_COLLECTION: readonly string[] = [
   'scipy',
   'tifffile',
   'torchaudio',
+  'torchvision',
+  'pymcubes',
+  'kiui',
+  'roma',
+  'plyfile',
+  'executing',
+  'objprint',
+  'prompt-toolkit',
+  'questionary',
+  'varname',
+  'wcwidth',
 ]
 
 /** The engine's own package. It is the studio's code, under the studio's licence. */

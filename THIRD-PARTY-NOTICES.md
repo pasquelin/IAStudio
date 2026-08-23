@@ -1456,9 +1456,9 @@ https://huggingface.co/ashawkey/LGM
 ```
 
 ```
-Multi-view Gaussians, then a mesh. Text or image. NVIDIA CUDA.
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible. Nothing is fetched until a runtime can actually run them.
+Four views, then a 3D Gaussian cloud. NVIDIA CUDA, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
 
 Copyright the LGM authors, 3D Topia.
 
