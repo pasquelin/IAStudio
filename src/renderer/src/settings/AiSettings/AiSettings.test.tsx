@@ -120,7 +120,8 @@ describe('AiSettings', () => {
 
     expect(screen.getAllByText('Ollama')).toHaveLength(1)
     expect(screen.queryByText(/alpha:1/)).not.toBeInTheDocument()
-    expect(screen.getByText(/Ollama · 2/)).toBeInTheDocument()
+    expect(screen.getByText(/2 modèles prêts/)).toBeInTheDocument()
+    expect(screen.getByText(/souvent Assistant/)).toBeInTheDocument()
   })
 
   it('offers to install Ollama when it is not on this computer', () => {
@@ -171,7 +172,9 @@ describe('AiSettings', () => {
     expect(screen.getByText('Sur cet ordinateur')).toBeInTheDocument()
     expect(screen.getByText(/Le studio fait tourner le modèle ici/)).toBeInTheDocument()
     expect(screen.getAllByText('Ollama').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText(/Un autre programme, sur cet ordinateur/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Ollama est un logiciel sur cette machine/).length).toBeGreaterThan(
+      0,
+    )
     expect(screen.getByText('En ligne')).toBeInTheDocument()
     expect(screen.getByText(/Les serveurs Scenario/)).toBeInTheDocument()
     expect(screen.getByText('qwen3:8b')).toBeInTheDocument()
@@ -243,29 +246,11 @@ describe('AiSettings', () => {
     expect(choose).toHaveBeenCalledWith(DICTATION_ROLE, null, 'app')
   })
 
-  /**
-   * "Activate" means RESIDENT, never hidden — ADR-21 § D. The two gestures are about MEMORY, and
-   * they sit beside the pair that is about the disk: a model can be installed and idle.
-   */
-  it('offers to hold an installed model in memory', () => {
-    const load = vi.fn(() => Promise.resolve(overview()))
-    installFakeBridge({ ai: { load } })
-    show()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Charger' }))
-
-    expect(load).toHaveBeenCalledWith('parakeet')
-  })
-
-  // The same button, the other way round: what is resident is what can be given back.
-  it('offers to give the memory back once a model is resident', () => {
-    const unload = vi.fn(() => Promise.resolve(overview()))
-    installFakeBridge({ ai: { unload } })
+  it('does not offer to load or unload by hand', () => {
     show(overview({ roles: [row({ candidates: [{ ...PARAKEET, loaded: true }] })] }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Décharger' }))
-
-    expect(unload).toHaveBeenCalledWith('parakeet')
+    expect(screen.queryByRole('button', { name: 'Charger' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Décharger' })).not.toBeInTheDocument()
   })
 
   /**

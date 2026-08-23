@@ -6,6 +6,7 @@ import { partsOfRole } from '@shared/domain/aiRole'
 import { MODEL_SOURCES, sourceOf, type ModelSource } from '@shared/domain/localModel'
 import { UiIcon } from '@/design/UiIcon'
 import { WINDOW_CAPTION, WINDOW_GROUP_LABEL } from '@/design/windowStyles'
+import { cn } from '@/helpers/cn'
 import type { ModelFitSentence } from '@/hooks/useModelFit'
 import { useAiModels } from '@/stores/aiModels'
 import { useModels } from '@/stores/models'
@@ -75,7 +76,7 @@ export const AiRoleRow = memo(function AiRoleRow({
         </span>
       </summary>
 
-      <fieldset className="pb-3">
+      <fieldset className="pt-3 pb-4">
         <legend className="sr-only">{t('aiModels.candidates', { role: label })}</legend>
         <ul>
           <AiChoiceRow
@@ -118,7 +119,7 @@ export const AiRoleRow = memo(function AiRoleRow({
 
             return (
               <li key={source}>
-                <h4 className={WINDOW_GROUP_LABEL}>{t(SOURCE_KEY[source])}</h4>
+                <h4 className={cn(WINDOW_GROUP_LABEL, 'mt-4')}>{t(SOURCE_KEY[source])}</h4>
                 {source === 'studio' && (
                   <p className={WINDOW_CAPTION}>{t('aiModels.sourceStudioHelp')}</p>
                 )}
@@ -156,7 +157,7 @@ export const AiRoleRow = memo(function AiRoleRow({
 
           {row.clouds.length > 0 && (
             <li>
-              <h4 className={WINDOW_GROUP_LABEL}>{t('aiModels.sourceCloud')}</h4>
+              <h4 className={cn(WINDOW_GROUP_LABEL, 'mt-4')}>{t('aiModels.sourceCloud')}</h4>
               <p className={WINDOW_CAPTION}>{t('aiModels.sourceCloudHelp')}</p>
               <ul>
                 {row.clouds.map(providerId => (

@@ -19,11 +19,8 @@ export type AiModelActionsProps = {
 }
 
 /**
- * What can be DONE to one model: fetch it, drop it, hold it in memory, let it go.
- *
- * Two pairs and not one: installing is about the disk, loading is about the memory, and "activate"
- * has always meant the second — ADR-21 § D. A model can be installed and idle, which is the state
- * a machine spends most of its time in.
+ * What can be DONE to one model from this screen: fetch it or drop it. Holding it in memory is
+ * the studio's, at generation time — offering it here drowned the choice in a second gesture.
  */
 export const AiModelActions = memo(function AiModelActions({
   candidate,
@@ -36,9 +33,7 @@ export const AiModelActions = memo(function AiModelActions({
   const installAiModel = useAiModels(state => state.installAiModel)
   const cancelAiInstall = useAiModels(state => state.cancelAiInstall)
   const removeAiModel = useAiModels(state => state.removeAiModel)
-  const loadAiModel = useAiModels(state => state.loadAiModel)
   const cancelAiLoad = useAiModels(state => state.cancelAiLoad)
-  const unloadAiModel = useAiModels(state => state.unloadAiModel)
 
   if (progress) {
     return (
@@ -82,23 +77,6 @@ export const AiModelActions = memo(function AiModelActions({
 
   return (
     <span className="flex items-center gap-2">
-      {/* Offered only where the runtime can actually hold weights: a runtime that opens its own
-          per call answered a memory sentence about a gesture that does not exist. */}
-      {candidate.holdable && (
-        <button
-          type="button"
-          {...HINT_LEFT(candidate.loaded ? t('aiModels.unloadHint') : t('aiModels.loadHint'))}
-          className="btn btn-sm"
-          onClick={() =>
-            void (candidate.loaded
-              ? unloadAiModel(candidate.model.id)
-              : loadAiModel(candidate.model.id))
-          }
-        >
-          {candidate.loaded ? t('aiModels.unload') : t('aiModels.load')}
-        </button>
-      )}
-
       <button
         type="button"
         // The WORD follows the EFFECT, both off `supplied`: their file stays where they put it,

@@ -111,8 +111,8 @@ export function AiSettings() {
           the manager owns the write because it re-judges the candidates — see `SettingsWindow`. */}
       <p className={cn(WINDOW_HELP, 'mb-4')}>{t('aiModels.appliesNow')}</p>
 
-      <section className="mb-4">
-        <h3 className={WINDOW_GROUP_LABEL}>{t('aiModels.sourceOllama')}</h3>
+      <section className="mb-6">
+        <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-2')}>{t('aiModels.sourceOllama')}</h3>
         <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
         <AiOllamaOffer offer={overview.ollama} busy={busy} />
       </section>
@@ -152,8 +152,8 @@ export function AiSettings() {
       {groups.map(
         group =>
           group.rows.length > 0 && (
-            <section key={group.heading} className="mb-4">
-              <h3 className={WINDOW_GROUP_LABEL}>{group.heading}</h3>
+            <section key={group.heading} className="mb-6">
+              <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-3')}>{group.heading}</h3>
               {group.rows.map(row => (
                 <AiRoleRow
                   key={row.role}
