@@ -25,15 +25,19 @@ const PRODUCED: CollectableProduction = {
   prompt: 'a red cube on a white table',
 }
 
-function harness(over: Partial<LocalCollectorDeps> = {}) {
+function harness(over: Partial<LocalCollectorDeps> = {}, importing?: () => Promise<never>) {
   const written: WriteRequest[] = []
+  const sources: string[] = []
   const discarded: string[] = []
 
   const backend: LocalBackend = {
     importFromUrl: () => Promise.reject(new Error('a local generation is never downloaded')),
     replaceBytes: () => Promise.reject(new Error('not used by the collector')),
-    importFromBytes: request => {
+    importFromBytes: () => Promise.reject(new Error('a generation is filed by path, not by bytes')),
+    importFromFile: (request, sourcePath) => {
+      if (importing) return importing()
       written.push(request)
+      sources.push(sourcePath)
       const asset: Asset = {
         id: request.id,
         name: request.name,
@@ -48,7 +52,6 @@ function harness(over: Partial<LocalCollectorDeps> = {}) {
 
   const collect = createLocalCollector({
     producedBy: () => PRODUCED,
-    readFile: () => Promise.resolve(new Uint8Array([137, 80, 78, 71])),
     discard: path => {
       discarded.push(path)
       return Promise.resolve()
@@ -59,15 +62,20 @@ function harness(over: Partial<LocalCollectorDeps> = {}) {
     ...over,
   })
 
-  return { collect, written, discarded }
+  return { collect, written, sources, discarded }
 }
 
 describe('filing a generation made on this machine', () => {
-  it('writes the bytes the engine produced into the project', async () => {
+  /**
+   * Handed over BY PATH: the engine writes video, audio, meshes and panoramas, and reading one to
+   * write it back put the whole file through the main process's heap for nothing.
+   */
+  it('hands the file the engine wrote to the project, by path', async () => {
     const held = harness()
 
     expect(await held.collect(JOB, [])).toEqual({ ids: ['asset_1'], workspaces: ['image'] })
     expect(held.written[0]).toMatchObject({ id: 'asset_1', type: 'image', jobId: 'job_1' })
+    expect(held.sources).toEqual([PRODUCED.path])
   })
 
   it('names the asset after what was asked, not after the model that answered', async () => {
@@ -84,7 +92,7 @@ describe('filing a generation made on this machine', () => {
     expect(held.written[0]?.extension).toBe('webp')
   })
 
-  it('drops the hand-off only once the bytes are in the project', async () => {
+  it('drops the hand-off only once the file is in the project', async () => {
     const held = harness()
     await held.collect(JOB, [])
 
@@ -138,7 +146,7 @@ describe('filing a generation made on this machine', () => {
   })
 
   it('fails rather than reporting a job with nothing behind it', async () => {
-    const held = harness({ readFile: () => Promise.reject(new Error('gone')) })
+    const held = harness({}, () => Promise.reject(new Error('gone')))
 
     await expect(held.collect(JOB, [])).rejects.toThrow('gone')
   })

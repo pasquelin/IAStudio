@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
+WIDTH, HEIGHT = 2048, 1024
+#: The panorama is painted at twice the canvas and reduced, which is what softens the face seams.
+SCALE = 2
+
 
 def view_to_panorama(image: Any) -> tuple[Any, Any]:
     from PIL import Image
@@ -14,40 +18,22 @@ def view_to_panorama(image: Any) -> tuple[Any, Any]:
     front = image.crop((left, top, left + side, top + side)).resize((512, 512))
     white = Image.new("RGB", (512, 512), (255, 255, 255))
     black = Image.new("RGB", (512, 512), (0, 0, 0))
-    panorama = _cubemap_to_equirect(
-        {
-            "front": front,
-            "back": white,
-            "left": white,
-            "right": white,
-            "top": white,
-            "bottom": white,
-        },
-        2048,
-        1024,
-        2,
-    )
-    mask = _cubemap_to_equirect(
-        {
-            "front": black,
-            "back": white,
-            "left": white,
-            "right": white,
-            "top": white,
-            "bottom": white,
-        },
-        2048,
-        1024,
-        1,
-    ).convert("L")
-    return panorama, mask
+    around = {"back": white, "left": white, "right": white, "top": white, "bottom": white}
+
+    rays = _rays(WIDTH * SCALE, HEIGHT * SCALE)
+    panorama = _paint({"front": front, **around}, rays).resize((WIDTH, HEIGHT), Image.LANCZOS)
+    # 🛑 Every OTHER ray of the same grid IS the grid of the smaller one — `theta` depends on
+    # `x / out_w` alone, so the coarse angles are a subset of the fine ones. The mask is what
+    # FluxFill must read exactly, so it is painted at its own size rather than resized into
+    # a soft edge; what this saves is the trigonometry, not the painting.
+    mask = _paint({"front": black, **around}, tuple(ray[::SCALE, ::SCALE] for ray in rays))
+    return panorama, mask.convert("L")
 
 
-def _cubemap_to_equirect(faces: dict[str, Any], width: int, height: int, scale: int) -> Any:
+def _rays(out_w: int, out_h: int) -> tuple[Any, Any, Any]:
+    """Where each pixel of an equirectangular canvas looks — the only trigonometry here."""
     import numpy
-    from PIL import Image
 
-    out_w, out_h = width * scale, height * scale
     rx, ry, rz = numpy.deg2rad([90, -90, 180])
     rotation = (
         numpy.array(
@@ -70,10 +56,17 @@ def _cubemap_to_equirect(faces: dict[str, Any], width: int, height: int, scale: 
     ys = numpy.cos(phi) * numpy.sin(theta)
     zs = numpy.sin(phi)
     stacked = rotation @ numpy.stack([xs.ravel(), ys.ravel(), zs.ravel()])
-    xs, ys, zs = (stacked[i].reshape(out_h, out_w) for i in range(3))
+    return tuple(stacked[i].reshape(out_h, out_w) for i in range(3))
+
+
+def _paint(faces: dict[str, Any], rays: tuple[Any, Any, Any]) -> Any:
+    import numpy
+    from PIL import Image
+
+    xs, ys, zs = rays
     abs_x, abs_y, abs_z = numpy.abs(xs), numpy.abs(ys), numpy.abs(zs)
     face_index = numpy.argmax(numpy.stack([abs_x, abs_y, abs_z], axis=-1), axis=-1)
-    pixels = numpy.zeros((out_h, out_w, 3), dtype=numpy.uint8)
+    pixels = numpy.zeros((*xs.shape, 3), dtype=numpy.uint8)
     samples = {
         "right": ((face_index == 0) & (xs > 0), -zs, abs_x, ys, abs_x),
         "left": ((face_index == 0) & (xs < 0), zs, abs_x, ys, abs_x),
@@ -82,14 +75,23 @@ def _cubemap_to_equirect(faces: dict[str, Any], width: int, height: int, scale: 
         "front": ((face_index == 2) & (zs > 0), xs, abs_z, ys, abs_z),
         "back": ((face_index == 2) & (zs < 0), -xs, abs_z, ys, abs_z),
     }
-    for name, (mask, u_num, u_den, v_num, v_den) in samples.items():
+    for name, (covered, u_num, u_den, v_num, v_den) in samples.items():
         face = numpy.array(faces[name])
-        u = (u_num[mask] / u_den[mask] + 1) / 2
-        v = (v_num[mask] / v_den[mask] + 1) / 2
+        flat = face.reshape(-1, face.shape[-1])
+        # 🛑 `[M]` Five of the six faces are one colour — a panorama grown from a single view is
+        # white all around, its mask black in front and white everywhere else. Sampling a texture
+        # to read the same pixel back cost two divides and two clips over millions of rays.
+        if bool(numpy.all(flat == flat[0])):
+            pixels[covered] = flat[0]
+            continue
+
+        u = (u_num[covered] / u_den[covered] + 1) / 2
+        v = (v_num[covered] / v_den[covered] + 1) / 2
         fh, fw = face.shape[:2]
-        pixels[yv[mask].astype(int), xv[mask].astype(int)] = face[
+        # Boolean indexing on both sides: the destinations are the covered pixels themselves, in
+        # the same order, which is what a grid of coordinates was being carried to spell out.
+        pixels[covered] = face[
             numpy.clip((v * fh).astype(int), 0, fh - 1),
             numpy.clip((u * fw).astype(int), 0, fw - 1),
         ]
-    image = Image.fromarray(pixels)
-    return image.resize((width, height), Image.LANCZOS) if scale > 1 else image
+    return Image.fromarray(pixels)

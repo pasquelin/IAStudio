@@ -43,6 +43,7 @@ function harness(overrides: Partial<CloudBackendDeps> = {}): Harness {
   const smalls: { name: string; base64: string }[] = []
 
   const local: LocalBackend = {
+    importFromFile: () => Promise.reject(new Error('a twin is downloaded, never moved')),
     importFromUrl: async request => {
       imported.push(request)
       const asset: Asset = {

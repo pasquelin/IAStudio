@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_ACCOUNT_NAME } from '@shared/domain/account'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import { memoryAdapter, type MemoryAdapter } from './memoryAdapter'
@@ -30,6 +30,23 @@ describe('settings store', () => {
   it('falls back to the defaults when the stored settings are unusable', () => {
     adapter.raw.set('settings', { appearance: { theme: 'purple' } })
     expect(createSettingsStore(adapter).read()).toEqual(DEFAULT_SETTINGS)
+  })
+
+  /**
+   * A read cost a zod pass over the whole file and a rebuild of fifteen sections, and the main
+   * process asks from many hot paths — `services.ts` alone eighteen times.
+   */
+  it('reads the stored settings once, and again after a write', () => {
+    const store = createSettingsStore(adapter)
+    const reads = vi.spyOn(adapter, 'read')
+
+    store.read()
+    store.read()
+    expect(reads.mock.calls.filter(([key]) => key === 'settings')).toHaveLength(1)
+
+    store.write({ appearance: { density: 'compact' } })
+    expect(store.read().appearance.density).toBe('compact')
+    expect(reads.mock.calls.filter(([key]) => key === 'settings').length).toBeGreaterThan(1)
   })
 
   it('merges a partial write section by section', () => {

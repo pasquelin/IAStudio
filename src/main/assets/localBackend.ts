@@ -1,4 +1,4 @@
-import { rm, writeFile } from 'node:fs/promises'
+import { copyFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import {
   DEFAULT_ASSET_FOLDERS,
@@ -102,6 +102,13 @@ export type WriteRequest = Omit<ImportRequest, 'url'> & {
 export type LocalBackend = {
   importFromUrl: (request: ImportRequest) => Promise<Asset>
   importFromBytes: (request: WriteRequest, bytes: Uint8Array) => Promise<Asset>
+  /**
+   * The same import, for bytes that are ALREADY a file on this machine — what a local generation
+   * leaves behind. Moved rather than read and written back: a video or a panorama would otherwise
+   * cross the main process's heap whole, twice. The source is gone on success; a move across
+   * volumes falls back to a copy, and then it is the caller's to discard.
+   */
+  importFromFile: (request: WriteRequest, sourcePath: string) => Promise<Asset>
   /**
    * Overwrites an asset's file, keeping its id, its name and its place in the catalogue. What
    * "apply" means in the audio editor: the same asset, edited. The extension follows the bytes,
@@ -224,7 +231,26 @@ export function createLocalBackend({
     }
   }
 
-  const write = async (request: WriteRequest, bytes: Uint8Array): Promise<Asset> => {
+  /** Bytes in hand, or a file already on this machine. */
+  type WriteSource = { bytes: Uint8Array } | { from: string }
+
+  /** `rename` first: a copy of a panorama is megabytes of I/O the same volume never needs. */
+  const place = async (source: WriteSource, absolute: string): Promise<void> => {
+    if ('bytes' in source) return await writeFile(absolute, source.bytes)
+
+    try {
+      await rename(source.from, absolute)
+    } catch {
+      // Across volumes `rename` refuses (EXDEV), and the studio's temporary folder and the
+      // project can sit on different ones. The source is left for its owner to discard.
+      await copyFile(source.from, absolute)
+    }
+  }
+
+  const lengthOf = async (source: WriteSource, absolute: string): Promise<number> =>
+    'bytes' in source ? source.bytes.byteLength : (await stat(absolute)).size
+
+  const write = async (request: WriteRequest, source: WriteSource): Promise<Asset> => {
     // Read BEFORE the write, where it used to run beside it: the file is named after the row
     // now, so where the bytes go depends on what this id already has. Pulling a twin a second
     // time must land on the file it landed on the first — not beside it, under a suffixed name.
@@ -254,12 +280,13 @@ export function createLocalBackend({
 
     // The probe spawns ffprobe, so it runs beside the still rather than after it.
     const absolute = join(projectPath(), relativePath)
-    const written = writeFile(absolute, bytes)
-    const [posterPath, probe, fingerprint] = await Promise.all([
+    const written = place(source, absolute)
+    const [posterPath, probe, fingerprint, byteLength] = await Promise.all([
       poster,
-      // After the write, and only after it: these two read the file that was just laid down.
+      // After the write, and only after it: these three read the file that was just laid down.
       written.then(() => probeWritten(request, relativePath)),
       written.then(() => hash(absolute)),
+      written.then(() => lengthOf(source, absolute)),
     ])
 
     const at = now()
@@ -278,7 +305,7 @@ export function createLocalBackend({
       type: request.type,
       location: 'local',
       path: relativePath,
-      bytes: bytes.byteLength,
+      bytes: byteLength,
       tags: existing?.tags ?? [],
       createdAt: existing?.createdAt ?? at,
       localChangedAt: at,
@@ -327,10 +354,14 @@ export function createLocalBackend({
     importFromUrl: async request =>
       write(
         { ...request, extension: extensionFromUrl(request.url, request.type) },
-        await download(request.url),
+        {
+          bytes: await download(request.url),
+        },
       ),
 
-    importFromBytes: (request, bytes) => write(request, bytes),
+    importFromBytes: (request, bytes) => write(request, { bytes }),
+
+    importFromFile: (request, sourcePath) => write(request, { from: sourcePath }),
 
     replaceBytes: async (assetId, bytes, extension, probe) => {
       const existing = await catalog().find(assetId)
