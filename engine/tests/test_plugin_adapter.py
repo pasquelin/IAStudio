@@ -12,13 +12,16 @@ from ia_studio_engine.adapters.plugin_ids import CUDA_ONLY, PLUGIN_IDS, is_plugi
 from ia_studio_engine.adapters.routing_adapter import RoutingAdapter
 
 
-def test_the_eight_plugin_ids_are_named() -> None:
+def test_every_plugin_id_is_named() -> None:
     assert {
         "triposr",
         "trellis-text-large",
         "trellis-image-large",
         "trellis2-4b",
         "triposg",
+        "instantmesh",
+        "lgm",
+        "craftsman3d",
         "mmaudio-small-44k",
         "mmaudio-medium-44k",
         "mmaudio-large-44k",
@@ -51,19 +54,28 @@ def test_unsupported_plugins_have_no_adapter() -> None:
     assert unwired.isdisjoint(PLUGIN_IDS)
 
 
-def test_trellis_is_cuda_only() -> None:
-    assert "trellis-image-large" in CUDA_ONLY
-    assert "triposg" in CUDA_ONLY
-    assert "triposr" not in CUDA_ONLY
-    assert "mmaudio-small-44k" not in CUDA_ONLY
+def test_cuda_only_says_what_the_catalogue_says() -> None:
+    root = Path(__file__).resolve().parents[2]
+    catalogue = json.loads((root / "src/shared/domain/localModels.json").read_text())
+    demanded = {
+        model["id"]
+        for models in catalogue.values()
+        for model in models
+        if model.get("loader") == "plugin" and model.get("needsCuda")
+    }
+
+    assert demanded == CUDA_ONLY
 
 
-def test_trellis_refuses_to_load_on_mps(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+@pytest.mark.parametrize("model_id", sorted(CUDA_ONLY))
+def test_a_cuda_family_refuses_to_load_on_mps(
+    model_id: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     import ia_studio_engine.adapters.plugin_adapter as plugin_adapter
 
     monkeypatch.setattr(plugin_adapter, "_device", lambda: "mps")
     with pytest.raises(LoadRefusedError, match="CUDA"):
-        PluginAdapter().load("trellis-image-large", str(tmp_path))
+        PluginAdapter().load(model_id, str(tmp_path))
 
 
 def test_an_unknown_id_is_not_a_plugin_adapter(
@@ -114,3 +126,8 @@ def test_a_second_plugin_load_unloads_the_first(
 
     assert calls == ["unload"]
     assert adapter._handle == "handle"
+
+
+def test_a_generation_needs_a_loaded_model() -> None:
+    with pytest.raises(LoadRefusedError, match="no model is loaded"):
+        PluginAdapter().generate({}, "/tmp/out.ply", "engine/3d")

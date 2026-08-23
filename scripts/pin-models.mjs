@@ -15,6 +15,7 @@
  * it arrives and refuses a file that does not match, so a wrong figure here costs a refused
  * install — never a bad file at the path a runtime loads from.
  */
+import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -30,15 +31,41 @@ function partsOf(url) {
   return { repo: match[1], revision: match[2], path: match[3] }
 }
 
-async function json(url) {
+async function fetched(url) {
   const response = await fetch(url, { redirect: 'follow' })
   if (!response.ok) throw new Error(`${url} answered ${response.status}`)
-  return await response.json()
+  return response
+}
+
+/**
+ * Answers are memoised because a manifest names one repository many times: pinning the whole
+ * catalogue asked 546 commits and 546 trees for 39 repositories and 177 folders.
+ */
+const answered = new Map()
+
+async function json(url) {
+  if (!answered.has(url))
+    answered.set(
+      url,
+      fetched(url).then(response => response.json()),
+    )
+  return await answered.get(url)
 }
 
 /** The commit a branch points at, so a recorded digest stays true when the branch moves on. */
 async function commitOf(repo, revision) {
   return (await json(`https://huggingface.co/api/models/${repo}/revision/${revision}`)).sha
+}
+
+/** Above this, a file without an `lfs` entry is a mistake to report rather than bytes to pull. */
+const SMALL_ENOUGH = 8 * 1024 * 1024
+
+async function digestOf(repo, revision, path) {
+  const response = await fetched(`https://huggingface.co/${repo}/resolve/${revision}/${path}`)
+  const digest = createHash('sha256')
+  for await (const chunk of response.body) digest.update(chunk)
+
+  return digest.digest('hex')
 }
 
 async function entryOf(repo, revision, path) {
@@ -48,10 +75,11 @@ async function entryOf(repo, revision, path) {
   if (!found) throw new Error(`${path} is not in ${repo}@${revision}`)
 
   // A plain file has no `lfs`, and its `oid` is a GIT blob hash — not a SHA-256 of the contents.
-  // Saying so beats writing forty hex characters that would fail every download.
-  if (!found.lfs) throw new Error(`${path} is not an LFS file: no published SHA-256`)
+  // Those are configs and vocabularies, so the digest is read off the bytes themselves.
+  if (found.lfs) return { bytes: found.size, sha256: found.lfs.oid }
+  if (found.size > SMALL_ENOUGH) throw new Error(`${path} is ${found.size} bytes and not LFS`)
 
-  return { bytes: found.size, sha256: found.lfs.oid }
+  return { bytes: found.size, sha256: await digestOf(repo, revision, path) }
 }
 
 export async function pinModels({ all = false, id = null } = {}) {
