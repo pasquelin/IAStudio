@@ -4,6 +4,7 @@ import { failureKeyOf, failureMessageKey } from './failureMessage'
 describe('failure message', () => {
   it('maps a code to its key', () => {
     expect(failureMessageKey('rate-limited')).toBe('errors.rateLimited')
+    expect(failureMessageKey('incomplete-model')).toBe('errors.incompleteModel')
   })
 
   /**

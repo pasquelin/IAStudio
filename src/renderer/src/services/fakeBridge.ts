@@ -16,6 +16,7 @@ const EMPTY_AI_OVERVIEW: AiOverview = {
   installing: null,
   loading: null,
   loadFailure: null,
+  installFailure: null,
   ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
 }
 

@@ -29,6 +29,8 @@ export type RemoteJob = {
   assetIds: readonly string[]
   /** On a submission, and on a poll too — which is where a resumed job finds its own. */
   cost?: number
+  /** A local runner names why it failed. Absent on the cloud, which has no code of its own. */
+  error?: JobFailure
 }
 
 export type JobRunner = {
@@ -519,7 +521,7 @@ export function createJobManager({
     if (status !== 'succeeded') {
       // The API has spoken, and nothing is owed: this one may be forgotten.
       entry.done = true
-      settle(entry, status, status === 'failed' ? 'rejected' : undefined)
+      settle(entry, status, status === 'failed' ? (remote.error ?? 'rejected') : undefined)
       return
     }
 

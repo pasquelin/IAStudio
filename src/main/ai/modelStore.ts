@@ -51,12 +51,13 @@ export async function migrateSttFolder(folder: string): Promise<void> {
  */
 export function createDownloadHost(): DownloadHost {
   return {
-    fetch: async (url, range): Promise<DownloadResponse> => {
+    fetch: async (url, range, signal): Promise<DownloadResponse> => {
       // A signed release URL expires, so the canonical address is resolved again on every
       // resume rather than kept from the run that stopped.
       const response = await net.fetch(url, {
         redirect: 'follow',
         headers: range > 0 ? { Range: `bytes=${range}-` } : {},
+        signal,
       })
 
       return {

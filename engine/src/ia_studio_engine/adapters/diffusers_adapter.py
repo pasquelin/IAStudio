@@ -198,6 +198,18 @@ def memory_frame(device: str, backend: str, door: str) -> dict[str, Any]:
     }
 
 
+def pretrained_file_kwargs(torch_weights: bool) -> dict[str, bool | str]:
+    """Which weight FILES to open. Shap-E's `.bin` renderer has no `fp16` sibling."""
+    files: dict[str, bool | str] = {
+        "use_safetensors": not torch_weights,
+        "trust_remote_code": False,
+        "local_files_only": True,
+    }
+    if not torch_weights:
+        files["variant"] = "fp16"
+    return files
+
+
 class DiffusersAdapter:
     """Holds at most one pipeline. What it holds and what it costs are ANSWERED, never guessed."""
 
@@ -264,13 +276,7 @@ class DiffusersAdapter:
         # parameters at two bytes rather than four.
         pipeline = DiffusionPipeline.from_pretrained(
             folder,
-            # Refuses rather than falling back to a pickle — measured, not assumed. `False` only
-            # where the MANIFEST said so: torch 2.6 still refuses to unpickle, and every file it
-            # names is pinned to a digest. See `readsTorchWeights` in `localModel.ts`.
-            use_safetensors=not torch_weights,
-            trust_remote_code=False,
-            local_files_only=True,
-            variant="fp16",
+            **pretrained_file_kwargs(torch_weights),
             dtype=torch.float16,
         ).to(device)
 

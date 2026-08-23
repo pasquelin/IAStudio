@@ -54,6 +54,7 @@ const overview = (over: Partial<AiOverview> = {}): AiOverview => ({
   installing: null,
   loading: null,
   loadFailure: null,
+  installFailure: null,
   ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
   ...over,
 })
@@ -305,6 +306,18 @@ describe('AiSettings', () => {
     )
 
     expect(screen.getByRole('status')).toHaveTextContent(/8,0 Gio.*3,0 Gio/)
+  })
+
+  it('says to reinstall when the files on disk cannot be opened', () => {
+    show(overview({ loadFailure: { reason: 'incomplete', modelId: 'parakeet' } }))
+
+    expect(screen.getByRole('status')).toHaveTextContent(/Réinstallez/)
+  })
+
+  it('says a dropped download can be resumed', () => {
+    show(overview({ installFailure: { reason: 'network', modelId: 'parakeet' } }))
+
+    expect(screen.getByRole('status')).toHaveTextContent(/interrompu/)
   })
 
   // Their file, their disk: the word differs from "Supprimer" because the gesture does.

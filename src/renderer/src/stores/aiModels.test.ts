@@ -10,6 +10,7 @@ const overview = (over: Partial<AiOverview> = {}): AiOverview => ({
   installing: null,
   loading: null,
   loadFailure: null,
+  installFailure: null,
   ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
   ...over,
 })

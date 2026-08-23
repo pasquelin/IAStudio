@@ -7,6 +7,7 @@
  *
  *     node scripts/fetch-engine.mjs                          # this machine
  *     node scripts/fetch-engine.mjs --platform win32 --arch x64
+ *     node scripts/fetch-engine.mjs --sources-only           # recopy engine/src, skip the interpreter
  *     node scripts/fetch-engine.mjs --digests                # after rotating a build
  *
  * 🛑 **The interpreter alone, and no tensor library.** Measured 2026-08-22: the core answers in
@@ -20,9 +21,17 @@
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -63,6 +72,20 @@ const urlOf = triple =>
   `https://github.com/astral-sh/python-build-standalone/releases/download/${RELEASE}/` +
   `cpython-${PYTHON}+${RELEASE}-${triple}-install_only.tar.gz`
 
+/**
+ * Puts the committed engine next to the interpreter. Called on every fetch AND every start:
+ * skipping it when the interpreter stamp matched is how a copy went days behind the tree.
+ */
+export function syncEngineSources() {
+  mkdirSync(DESTINATION, { recursive: true })
+  const dest = join(DESTINATION, 'src')
+  if (existsSync(dest)) rmSync(dest, { recursive: true, force: true })
+  cpSync(join(ROOT, 'engine', 'src'), dest, {
+    recursive: true,
+    filter: src => basename(src) !== '__pycache__' && !src.endsWith('.pyc'),
+  })
+}
+
 function tripleFor(platform, arch) {
   const triple = TARGETS[`${platform}-${arch}`]
   if (!triple) throw new Error(`no interpreter build for ${platform}-${arch}`)
@@ -90,7 +113,10 @@ export async function fetchEngine(platform = process.platform, arch = process.ar
   const stamp = join(DESTINATION, '.fetched')
   const wanted = `${triple}@${RELEASE}`
 
-  if (existsSync(stamp) && readFileSync(stamp, 'utf8').trim() === wanted) return
+  if (existsSync(stamp) && readFileSync(stamp, 'utf8').trim() === wanted) {
+    syncEngineSources()
+    return
+  }
 
   const expected = DIGESTS[triple]
   if (!expected) {
@@ -115,11 +141,7 @@ export async function fetchEngine(platform = process.platform, arch = process.ar
     // does not.
     execFileSync('tar', ['xzf', archive, '-C', DESTINATION], { stdio: 'inherit' })
 
-    // The engine's own sources beside it, so the bundle carries what it runs rather than
-    // resolving a package: `engine/src` is committed and needs no build step.
-    execFileSync('cp', ['-R', join(ROOT, 'engine', 'src'), join(DESTINATION, 'src')], {
-      stdio: 'inherit',
-    })
+    syncEngineSources()
 
     writeFileSync(stamp, `${wanted}\n`)
   } finally {
@@ -146,5 +168,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
 
   if (process.argv.includes('--digests')) await printDigests()
+  else if (process.argv.includes('--sources-only')) syncEngineSources()
   else await fetchEngine(argument('platform') ?? process.platform, argument('arch') ?? process.arch)
 }

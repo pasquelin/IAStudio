@@ -132,7 +132,7 @@ describe('AccountSettings', () => {
     ['forbidden', 'Cette clé API n’a pas les droits requis.'],
     ['rate-limited', 'Trop de requêtes. Nouvelle tentative en cours…'],
     ['server', 'Le service de génération est momentanément indisponible.'],
-    ['network', 'Impossible de joindre le service de génération. Vérifiez votre connexion.'],
+    ['network', 'La connexion a été interrompue. Vérifiez le réseau et réessayez.'],
     ['unexpected', 'Une erreur inattendue est survenue.'],
   ])('translates the %s failure into its own message', async (reason, message) => {
     installFakeBridge({

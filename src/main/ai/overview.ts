@@ -1,4 +1,10 @@
-import type { AiOverview, LoadRefusal, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
+import type {
+  AiOverview,
+  InstallRefusal,
+  LoadRefusal,
+  ModelCandidate,
+  RoleRow,
+} from '@shared/domain/aiOverview'
 import {
   allRoles,
   providerFor,
@@ -45,6 +51,7 @@ export type OverviewInput = {
   readonly installing: { readonly modelId: string; readonly progress: DownloadProgress } | null
   readonly loading: { readonly modelId: string; readonly ratio: number } | null
   readonly loadFailure: LoadRefusal | null
+  readonly installFailure: InstallRefusal | null
   readonly ollamaReady: boolean
   readonly ollamaInstalled: boolean
   readonly ollamaNames: readonly string[]
@@ -152,6 +159,7 @@ export function aiOverviewOf(input: OverviewInput): AiOverview {
     installing: input.installing,
     loading: input.loading,
     loadFailure: input.loadFailure,
+    installFailure: input.installFailure,
     ollama: {
       ready: input.ollamaReady,
       installed: input.ollamaInstalled,

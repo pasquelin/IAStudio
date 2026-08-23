@@ -22,4 +22,4 @@ export type ApiFailure =
   | 'unexpected'
 
 /** What a generation can fail on, beyond the API itself. */
-export type JobFailure = ApiFailure | 'rejected' | 'storage'
+export type JobFailure = ApiFailure | 'rejected' | 'storage' | 'incomplete-model'

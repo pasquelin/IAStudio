@@ -12,6 +12,7 @@ from ia_studio_engine.adapters.diffusers_adapter import (
     LoadedModel,
     accepted_kwargs,
     generation_refusal,
+    pretrained_file_kwargs,
     tune_pipeline,
 )
 from ia_studio_engine.adapters.modalities import MODALITIES
@@ -28,6 +29,20 @@ def held(*, model_id: str = "sana") -> LoadedModel:
         takes_step_callback=False,
         default_steps=1,
     )
+
+
+def test_a_torch_weight_model_does_not_ask_for_an_fp16_sibling() -> None:
+    files = pretrained_file_kwargs(True)
+
+    assert files["use_safetensors"] is False
+    assert "variant" not in files
+
+
+def test_safetensors_models_still_take_the_fp16_files() -> None:
+    files = pretrained_file_kwargs(False)
+
+    assert files["use_safetensors"] is True
+    assert files["variant"] == "fp16"
 
 
 def test_refuses_a_folder_that_is_not_one(tmp_path: Path) -> None:

@@ -349,6 +349,16 @@ describe('the AI manager', () => {
     expect(log).toHaveBeenCalledWith('warn', expect.stringContaining(STT_MODEL.id))
   })
 
+  it('leaves a readable reason on the overview when a download drops', async () => {
+    const after = await manager({
+      runtimes: {
+        'sherpa-onnx': idleRuntime(() => Promise.reject(new Error('net::ERR_NETWORK_CHANGED'))),
+      },
+    }).install(STT_MODEL.id)
+
+    expect(after.installFailure).toEqual({ reason: 'network', modelId: STT_MODEL.id })
+  })
+
   /**
    * Removing is a NETWORK call for a runtime that pulls its own weights, where deleting files
    * barely ever failed. Raised, it reached a `void removeAiModel(…)` in the window and became an
@@ -627,6 +637,16 @@ describe('holding a model in memory', () => {
 
     expect((await ai.overview()).loading).toBeNull()
     expect((await ai.overview()).loadFailure?.reason).toBe('failed')
+  })
+
+  it('refuses to load a model whose files are not on disk, rather than asking the engine', async () => {
+    const load = vi.fn(() => Promise.resolve(0))
+    const after = await manager({
+      runtimes: { 'sherpa-onnx': { ...idleRuntime(), load } },
+    }).load(STT_MODEL.id)
+
+    expect(after.loadFailure).toEqual({ reason: 'incomplete', modelId: STT_MODEL.id })
+    expect(load).not.toHaveBeenCalled()
   })
 })
 
