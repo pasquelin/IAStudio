@@ -131,6 +131,20 @@ describe('createAssetInputResolver', () => {
     expect(push).toHaveBeenCalledWith('asset_local')
   })
 
+  it("reuses a generation's remote id rather than pushing a duplicate", async () => {
+    const at = '2026-08-09T11:00:00.000Z'
+    const { resolve, push } = resolverOver([
+      asset('asset_local', {
+        remoteAssetId: 'asset_remote',
+        localChangedAt: at,
+        remoteSyncedAt: at,
+      }),
+    ])
+
+    expect(await resolve.resolveBody({ image: 'asset_local' })).toEqual({ image: 'asset_remote' })
+    expect(push).not.toHaveBeenCalled()
+  })
+
   it('keeps the twin of an asset untouched since it went up', async () => {
     const { resolve, push } = resolverOver([
       asset('asset_local', {

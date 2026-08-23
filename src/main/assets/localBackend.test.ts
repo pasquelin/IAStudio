@@ -309,6 +309,23 @@ describe('local backend', () => {
     })
   })
 
+  it("records a generation's remote id without counting it as synced", async () => {
+    const asset = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/render.png',
+      name: 'Boulder',
+      type: 'image',
+      remoteAssetId: 'asset_remote',
+      sync: false,
+    })
+
+    expect(asset.remoteAssetId).toBe('asset_remote')
+    expect(asset.syncStatus).toBeUndefined()
+    // Same clock as `localChangedAt`, so the library page does not read as a conflict and a
+    // follow-up generation reuses the id rather than pushing a duplicate.
+    expect(asset.remoteSyncedAt).toBe('2026-08-06T10:00:00.000Z')
+  })
+
   // Downloaded from the very twin it points at: the two cannot differ yet.
   it('counts an imported asset as settled with its twin', async () => {
     const asset = await backend.importFromUrl({

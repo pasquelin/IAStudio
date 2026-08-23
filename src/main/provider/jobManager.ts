@@ -501,6 +501,10 @@ export function createJobManager({
     // otherwise it keeps burning credits with nobody watching.
     if (entry.cancelled) return await abandon(entry, bound, remoteId)
 
+    // On the job the collector sees, not only on the entry: a local runner indexes the file
+    // under this id, and collecting by ours files nothing while the job still succeeds.
+    entry.job.remoteId = remoteId
+
     let remote = submitted ?? (await withRetry(() => bound.runner.poll(remoteId)))
     let status = advance(entry, remote)
 

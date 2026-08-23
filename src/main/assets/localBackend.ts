@@ -72,6 +72,11 @@ export type ImportRequest = {
   /** The project the twin belongs to — an API key opens onto one, and keys can be swapped. */
   remoteOwnerId?: string
   remoteUpdatedAt?: string
+  /**
+   * False for a generation: the remote id is provenance so a resume does not download twice.
+   * A pull from the library leaves this unset, which is a twin and counts as synced.
+   */
+  sync?: false
   derivedFrom?: string
   /** What ties the outputs of one generation together — the seven channels of a PBR pack. */
   groupId?: string
@@ -146,25 +151,19 @@ export function extensionFromUrl(url: string, type: AssetType): string {
   }
 }
 
-/**
- * What an asset that came down from the library records about its twin.
- *
- * It is `synced` the moment it lands, and that is not an assumption: the bytes on disk were
- * just downloaded from the very asset being pointed at, so the two sides cannot differ yet.
- * `remoteSyncedAt` is the baseline both later stamps are measured against.
- */
+/** A library pull is a twin (`synced`). A generation (`sync: false`) keeps the remote id and stamp. */
 export function twinOf(
-  request: Pick<ImportRequest, 'remoteAssetId' | 'remoteOwnerId' | 'remoteUpdatedAt'>,
+  request: Pick<ImportRequest, 'remoteAssetId' | 'remoteOwnerId' | 'remoteUpdatedAt' | 'sync'>,
   at: string,
 ): Partial<Asset> {
   if (!request.remoteAssetId) return {}
 
   return {
     remoteAssetId: request.remoteAssetId,
-    syncStatus: 'synced',
     remoteSyncedAt: at,
     ...(request.remoteOwnerId ? { remoteOwnerId: request.remoteOwnerId } : {}),
     ...(request.remoteUpdatedAt ? { remoteUpdatedAt: request.remoteUpdatedAt } : {}),
+    ...(request.sync === false ? {} : { syncStatus: 'synced' }),
   }
 }
 

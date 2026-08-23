@@ -590,6 +590,26 @@ describe('job manager', () => {
     expect(progress).toEqual([])
   })
 
+  it("hands the collector the runner's job id", async () => {
+    const seen: Array<string | undefined> = []
+    const { manager } = harness({
+      runner: {
+        submit: () => Promise.resolve(remote('success', { jobId: 'local_abc' })),
+        poll: () => Promise.resolve(remote('success', { jobId: 'local_abc' })),
+        cancel: () => Promise.resolve(),
+      },
+      collect: job => {
+        seen.push(job.remoteId)
+        return landing(['asset_local'])
+      },
+    })
+
+    manager.submit({ id: 'sana-600m-1024' }, 'Sana', {})
+    await settled()
+
+    expect(seen).toEqual(['local_abc'])
+  })
+
   /** Each outcome, beside the spelling the API answers it with. */
   const SETTLED: readonly [JobStatus, string][] = [
     ['succeeded', 'success'],

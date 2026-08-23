@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { FINISHED_STATUSES, isFinished, JOB_STATUSES, type JobStatus, settlementOf } from './job'
+import {
+  FINISHED_STATUSES,
+  isFinished,
+  JOB_STATUSES,
+  runnerIdOf,
+  type Job,
+  type JobStatus,
+  settlementOf,
+} from './job'
 
 const AT = '2026-08-12T10:00:00.000Z'
 
@@ -56,5 +64,25 @@ describe('what reaching a status writes on a job', () => {
     for (const status of JOB_STATUSES.filter(other => !isFinished(other))) {
       expect(settlementOf(status, AT)).toEqual({})
     }
+  })
+})
+
+const JOB: Job = {
+  id: 'job_1',
+  targetId: 'sana-600m-1024',
+  label: 'Sana',
+  status: 'running',
+  progress: 1,
+  createdAt: AT,
+  assetIds: [],
+}
+
+describe('the id the runner knows a job by', () => {
+  it("is the runner's own once submit has answered", () => {
+    expect(runnerIdOf({ ...JOB, remoteId: 'local_abc' })).toBe('local_abc')
+  })
+
+  it('falls back to ours before submit has answered', () => {
+    expect(runnerIdOf(JOB)).toBe('job_1')
   })
 })

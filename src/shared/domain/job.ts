@@ -30,6 +30,16 @@ export type Job = {
    * itself — which is where a job resumed from a previous session can still find it.
    */
   cost?: number
+  /**
+   * The id the runner issued. Ours (`id`) is minted before submit; a local runner files what it
+   * produced under this one (`local_…`). Absent until submit has answered.
+   */
+  remoteId?: string
+}
+
+/** The runner's own id (`local_…`). Collecting under ours files nothing and still succeeds. */
+export function runnerIdOf(job: Job): string {
+  return job.remoteId ?? job.id
 }
 
 /**

@@ -2,25 +2,15 @@ import type { AssetType } from '@shared/domain/asset'
 import { workspaceOfType } from '@shared/domain/assetKind'
 import { generatedAssetName } from '@shared/domain/assetName'
 import { extensionOf, pathBaseNameOf } from '@shared/domain/fileName'
+import { runnerIdOf } from '@shared/domain/job'
 import type { AssetCollector, CollectedOutputs } from '@main/provider/jobManager'
 import type { LocalBackend } from './localBackend'
 
 /**
- * Brings a generation made on THIS machine into the project.
- *
- * Nothing is downloaded and nothing is retrieved: the engine wrote a file the main process owns,
- * and what is left is to read it, file it, and delete what was only ever a hand-off. The cloud
- * collector cannot serve here — every branch of it turns on a remote asset id there is none of.
- */
-
-/**
- * What a finished local job left behind, as the collector needs to see it.
- *
- * Three fields and not the runner's whole answer: the device and the backend say what RAN it,
- * which belongs to the log and to the screen, and nothing here files them.
+ * What a finished local job left behind. Three fields, not the runner's whole answer: device
+ * and backend say what ran it, and nothing here files them.
  */
 export type CollectableProduction = {
-  /** The file the engine wrote. It is the studio's to file, and to delete. */
   readonly path: string
   readonly type: AssetType
   /** What the person typed, which is what names the asset — never the model that answered. */
@@ -41,20 +31,22 @@ export type LocalCollectorDeps = {
 const NOTHING: CollectedOutputs = { ids: [], workspaces: [] }
 
 /**
- * The extension the engine chose to write, WITHOUT its dot — which is what `WriteRequest` takes.
- *
- * `extensionOf` of `@shared/domain/fileName` keeps the dot, so the two cannot be one function;
- * this leans on it rather than respelling a second `lastIndexOf` dance.
+ * The extension the engine wrote, without its dot — what `WriteRequest` takes. `extensionOf`
+ * keeps the dot, so this leans on it rather than respelling the last-dot dance.
  */
 function bareExtensionOf(path: string): string {
   return extensionOf(pathBaseNameOf(path)).slice(1) || 'png'
 }
 
+/**
+ * Brings a generation made on this machine into the project: read the file the engine wrote,
+ * file it, drop the hand-off. The cloud collector cannot serve — every branch turns on a remote
+ * id there is none of.
+ */
 export function createLocalCollector(deps: LocalCollectorDeps): AssetCollector {
   return async job => {
-    const produced = deps.producedBy(job.id)
-    // A conversation produced no file, and answering nothing is the honest outcome rather than a
-    // failure: the job succeeded, it simply has nothing to file.
+    const produced = deps.producedBy(runnerIdOf(job))
+    // A conversation produced no file: the job succeeded, it simply has nothing to file.
     if (!produced) return NOTHING
 
     const bytes = await deps.readFile(produced.path)
