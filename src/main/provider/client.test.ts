@@ -1,12 +1,16 @@
 import { APIConnectionError, APIError } from '@scenario-labs/sdk'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Credentials } from '@main/settings/accounts'
+import { log } from '@main/log'
 import {
   clientFor,
   createClientProvider,
   describeFailure,
   failureOf,
   NotAuthenticatedError,
+  quietlyReducedBy,
+  recordFailuresTo,
+  reducedBy,
   testAuthentication,
   type AuthProbe,
   type ClientProviderDeps,
@@ -117,6 +121,39 @@ describe('authentication probe', () => {
       authenticated: false,
       reason: 'invalid-credentials',
     })
+  })
+})
+
+describe('reducing a missing key', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    recordFailuresTo(null)
+  })
+
+  it('still reduces to missing, without writing it as a failure', async () => {
+    vi.spyOn(log, 'error').mockImplementation(() => {})
+    const noted: string[] = []
+    recordFailuresTo((_scope, detail) => noted.push(detail))
+
+    await expect(
+      reducedBy('assets')(() => Promise.reject(new NotAuthenticatedError())),
+    ).rejects.toThrow('missing')
+    await expect(
+      quietlyReducedBy('assets')(() => Promise.reject(new NotAuthenticatedError())),
+    ).rejects.toThrow('missing')
+
+    expect(log.error).not.toHaveBeenCalled()
+    expect(noted).toEqual([])
+  })
+
+  it('still logs a refused call', async () => {
+    vi.spyOn(log, 'error').mockImplementation(() => {})
+
+    await expect(
+      quietlyReducedBy('assets')(() => Promise.reject(new Error('429'))),
+    ).rejects.toThrow('unexpected')
+
+    expect(log.error).toHaveBeenCalledOnce()
   })
 })
 

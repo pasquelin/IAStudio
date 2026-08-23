@@ -9,6 +9,7 @@ import { log } from '@main/log'
 import {
   describeFailure,
   failureOf,
+  NotAuthenticatedError,
   persistableFailure,
   quietlyReducedBy,
   reducedBy,
@@ -73,6 +74,16 @@ const reduced = reducedBy('assets')
  * is made again here.
  */
 const quietly = quietlyReducedBy('assets')
+
+const EMPTY_PAGE: CloudPage = { assets: [], cursor: null }
+
+/** A missing key is the ordinary first-run — Electron logs every rejected handler. */
+function emptyIfUnauthenticated<T>(empty: T) {
+  return (error: unknown): T => {
+    if (error instanceof Error && error.cause instanceof NotAuthenticatedError) return empty
+    throw error
+  }
+}
 
 /**
  * Whether this query has to go through the search index rather than the plain listing.
@@ -385,17 +396,17 @@ export function registerAssetHandlers({
   // a bug on the other side of the boundary, and reducing it to `unexpected` would hide it.
   handle(CHANNELS.cloudSimilar, (_event, assetId) => {
     const reference = parseAssetId(assetId)
-    return quietly(() => similar(remote(), reference))
+    return quietly(() => similar(remote(), reference)).catch(emptyIfUnauthenticated([]))
   })
 
   handle(CHANNELS.cloudExplore, (_event, query) => {
     const parsed = parseExploreQuery(query)
-    return quietly(() => explore(remote(), parsed))
+    return quietly(() => explore(remote(), parsed)).catch(emptyIfUnauthenticated(EMPTY_PAGE))
   })
 
   handle(CHANNELS.cloudBrowse, (_event, query) => {
     const parsed = parseCloudQuery(query)
-    return quietly(() => browse(remote(), parsed))
+    return quietly(() => browse(remote(), parsed)).catch(emptyIfUnauthenticated(EMPTY_PAGE))
   })
 
   handle(CHANNELS.cloudPull, async (_event, remoteAssetIds) => {

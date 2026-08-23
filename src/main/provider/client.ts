@@ -140,7 +140,8 @@ function reducing(note: (error: unknown) => void) {
     try {
       return await action()
     } catch (error) {
-      note(error)
+      // No credentials is a state, not a refused call: there was never a request to describe.
+      if (!(error instanceof NotAuthenticatedError)) note(error)
       throw new Error(failureOf(error), { cause: error })
     }
   }
