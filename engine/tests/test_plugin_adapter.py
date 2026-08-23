@@ -12,7 +12,7 @@ from ia_studio_engine.adapters.plugin_ids import CUDA_ONLY, PLUGIN_IDS, is_plugi
 from ia_studio_engine.adapters.routing_adapter import RoutingAdapter
 
 
-def test_the_ten_plugin_ids_are_named() -> None:
+def test_the_eleven_plugin_ids_are_named() -> None:
     assert {
         "triposr",
         "trellis-text-large",
@@ -21,6 +21,7 @@ def test_the_ten_plugin_ids_are_named() -> None:
         "triposg",
         "instantmesh",
         "lgm",
+        "craftsman3d",
         "mmaudio-small-44k",
         "mmaudio-medium-44k",
         "mmaudio-large-44k",
@@ -58,6 +59,7 @@ def test_trellis_is_cuda_only() -> None:
     assert "triposg" in CUDA_ONLY
     assert "instantmesh" in CUDA_ONLY
     assert "lgm" in CUDA_ONLY
+    assert "craftsman3d" in CUDA_ONLY
     assert "triposr" not in CUDA_ONLY
     assert "mmaudio-small-44k" not in CUDA_ONLY
 

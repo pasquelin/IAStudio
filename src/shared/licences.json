@@ -134,8 +134,8 @@
   },
   {
     "name": "CraftsMan3D",
-    "spdx": "MIT",
-    "text": "Native 3D diffusion, text or image to a smooth mesh. NVIDIA CUDA.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\nCopyright the CraftsMan3D authors.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
+    "spdx": "CreativeML Open RAIL-M",
+    "text": "Native 3D diffusion, one image to a smooth mesh. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the CraftsMan3D authors.\n\nTHE TERMS ARE THOSE OF THE BRANCH THE WEIGHTS BELONG TO, read on 2026-08-23. `main` says MIT\nand does not open these weights at all — it registers neither `pixart-diffusion-system` nor\n`cond-embedder`, the two names their config.yaml asks for. The branch that does, CraftsMan-v1.5,\nstates the Stable Diffusion 1.5 terms: CreativeML Open RAIL-M. Neither branch carries a\nLICENSE file; both state their terms in the README alone.\n\nWhat the studio ships is the inference code, which that licence calls Complementary Material\nand grants outright — its use-based restrictions bind the weights, which the person fetches\nfrom the publisher under the licence they accept there.\n\nTwo configs travel with it: openai/clip-vit-large-patch14, whose card states no licence, and\nfacebook/dinov2-base (Apache-2.0). Their tensors are never fetched — the checkpoint holds them.\n\nLicensed under CreativeML Open RAIL-M. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license",
     "sources": "https://huggingface.co/craftsman3d/craftsman"
   },
   {

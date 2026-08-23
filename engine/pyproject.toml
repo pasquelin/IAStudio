@@ -24,7 +24,7 @@ diffusion = [
   "imageio>=2.34",
   "imageio-ffmpeg>=0.5",
 ]
-# TripoSR / TRELLIS / TripoSG / InstantMesh / LGM / MMAudio. NEVER installed by
+# TripoSR / TRELLIS / TripoSG / InstantMesh / LGM / CraftsMan3D / MMAudio. NEVER installed by
 # `pnpm engine:check`.
 plugin = [
   "torch>=2.6",
@@ -44,6 +44,12 @@ plugin = [
   "roma>=1.5",
   "plyfile>=1.0",
   "safetensors>=0.4",
+  # CraftsMan3D builds its system on Lightning, and its iso-surface on scikit-image.
+  "pytorch-lightning>=2.1",
+  "scikit-image>=0.22",
+  "timm>=1.0",
+  "jaxtyping>=0.2",
+  "typeguard>=4.0",
 ]
 
 [dependency-groups]

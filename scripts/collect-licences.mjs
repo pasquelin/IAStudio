@@ -269,7 +269,22 @@ const MODEL_NOTES = {
   'shap-e-img2img': [
     'Copyright OpenAI. Same renderer, and the same `.bin` reservation as Shap-E above.',
   ],
-  craftsman3d: ['Copyright the CraftsMan3D authors.'],
+  craftsman3d: [
+    'Copyright the CraftsMan3D authors.',
+    '',
+    'THE TERMS ARE THOSE OF THE BRANCH THE WEIGHTS BELONG TO, read on 2026-08-23. `main` says MIT',
+    'and does not open these weights at all — it registers neither `pixart-diffusion-system` nor',
+    '`cond-embedder`, the two names their config.yaml asks for. The branch that does, CraftsMan-v1.5,',
+    'states the Stable Diffusion 1.5 terms: CreativeML Open RAIL-M. Neither branch carries a',
+    'LICENSE file; both state their terms in the README alone.',
+    '',
+    'What the studio ships is the inference code, which that licence calls Complementary Material',
+    'and grants outright — its use-based restrictions bind the weights, which the person fetches',
+    'from the publisher under the licence they accept there.',
+    '',
+    'Two configs travel with it: openai/clip-vit-large-patch14, whose card states no licence, and',
+    'facebook/dinov2-base (Apache-2.0). Their tensors are never fetched — the checkpoint holds them.',
+  ],
   triposg: ['Copyright VAST AI Research and Tripo.'],
 }
 

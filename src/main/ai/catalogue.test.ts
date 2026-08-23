@@ -198,13 +198,20 @@ describe('the shipped catalogue', () => {
     expect(model?.files.map(file => file.name)).toContain('lgm/model_fp16_fixrot.safetensors')
   })
 
-  it('leaves CraftsMan3D alone, the one 3d stack whose python is not vendored', () => {
+  it('leaves no 3d card the engine cannot open', () => {
     const closed = shippedModels()
       .filter(model => model.family === '3d')
       .filter(model => model.runtimeStatus === 'unsupported')
-      .map(model => model.id)
 
-    expect(closed.sort()).toEqual(['craftsman3d'])
+    expect(closed).toEqual([])
+  })
+
+  it('states the OpenRAIL terms CraftsMan3D actually ships under', () => {
+    const model = shippedModel('craftsman3d')
+
+    expect(model?.licence).toBe('CreativeML Open RAIL-M')
+    expect(model?.licenceStatus).toBe('restricted')
+    expect(model?.files.map(file => file.name)).toContain('model.ckpt')
   })
 
   it('lists commercially licensed 3d engines beside the ones already wired', () => {

@@ -28,7 +28,7 @@ The terms below govern these components. They are not affected by the licence of
 | CogVideoX 2B | shipped with the application | Apache-2.0 |
 | ControlNet Canny SDXL | shipped with the application | Apache-2.0 |
 | CPython | 3.12.14 | PSF-2.0 |
-| CraftsMan3D | shipped with the application | MIT |
+| CraftsMan3D | shipped with the application | CreativeML Open RAIL-M |
 | daisyui | 5.7.16 | MIT |
 | diffusers | 0.40.0 | Apache 2.0 License |
 | Diffusion360 | shipped with the application | Apache-2.0 |
@@ -607,7 +607,7 @@ Source: https://github.com/astral-sh/python-build-standalone
 ## CraftsMan3D
 
 Version: shipped with the application  
-Licence: MIT
+Licence: CreativeML Open RAIL-M
 
 Corresponding sources:
 
@@ -616,13 +616,26 @@ https://huggingface.co/craftsman3d/craftsman
 ```
 
 ```
-Native 3D diffusion, text or image to a smooth mesh. NVIDIA CUDA.
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible. Nothing is fetched until a runtime can actually run them.
+Native 3D diffusion, one image to a smooth mesh. NVIDIA CUDA, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
 
 Copyright the CraftsMan3D authors.
 
-Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
+THE TERMS ARE THOSE OF THE BRANCH THE WEIGHTS BELONG TO, read on 2026-08-23. `main` says MIT
+and does not open these weights at all — it registers neither `pixart-diffusion-system` nor
+`cond-embedder`, the two names their config.yaml asks for. The branch that does, CraftsMan-v1.5,
+states the Stable Diffusion 1.5 terms: CreativeML Open RAIL-M. Neither branch carries a
+LICENSE file; both state their terms in the README alone.
+
+What the studio ships is the inference code, which that licence calls Complementary Material
+and grants outright — its use-based restrictions bind the weights, which the person fetches
+from the publisher under the licence they accept there.
+
+Two configs travel with it: openai/clip-vit-large-patch14, whose card states no licence, and
+facebook/dinov2-base (Apache-2.0). Their tensors are never fetched — the checkpoint holds them.
+
+Licensed under CreativeML Open RAIL-M. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license
 ```
 ## daisyui
 

@@ -1,6 +1,6 @@
 """
 Adapters for families diffusers does not open: TripoSR, TRELLIS, TRELLIS.2, TripoSG,
-InstantMesh, LGM, MMAudio.
+InstantMesh, LGM, CraftsMan3D, MMAudio.
 
 The Python is ours (vendored or an extra). Weights stay in the digested folder, with no `.py`.
 `torch.load(..., weights_only=True)` is the pickle path — PyTorch 2.6 refuses reducers.
@@ -114,6 +114,9 @@ class PluginAdapter:
         elif model_id == "lgm":
             self._handle = _load_lgm(folder)
             self._kind = "lgm"
+        elif model_id == "craftsman3d":
+            self._handle = _load_craftsman(folder)
+            self._kind = "craftsman3d"
         elif model_id in MMAUDIO_WEIGHTS:
             self._handle = _load_mmaudio(model_id, folder, device)
             self._kind = "mmaudio"
@@ -164,6 +167,8 @@ class PluginAdapter:
             _run_instantmesh(self._handle, params, destination, held.device)
         elif self._kind == "lgm":
             _run_lgm(self._handle, params, destination, held.device)
+        elif self._kind == "craftsman3d":
+            _run_craftsman(self._handle, params, destination)
         else:
             _run_mmaudio(self._handle, params, destination)
 
@@ -487,6 +492,38 @@ def _run_lgm(handle: dict[str, Any], params: dict[str, Any], destination: str, d
         gaussians = handle["splatter"].forward_gaussians(seen)
     # Gaussians, not triangles: turning them into a mesh is what the rasterizer above is for.
     handle["splatter"].gs.save_ply(gaussians, destination)
+
+
+def _load_craftsman(folder: str) -> Any:
+    import torch
+
+    if not torch.cuda.is_available():
+        raise LoadRefusedError("CraftsMan3D needs CUDA")
+    _require("craftsman", "plugin")
+    from craftsman.models.conditional_encoders import cond_encoder
+    from craftsman.pipeline import CraftsManPipeline
+
+    root = Path(folder)
+    # The encoder names two repositories to read a config shape from; the manifest fetched both,
+    # and the checkpoint carries every tensor they would otherwise have pulled.
+    cond_encoder.LOCAL_CONFIGS = {
+        "openai/clip-vit-large-patch14": str(root / "clip"),
+        "facebook/dinov2-base": str(root / "dinov2"),
+    }
+    return CraftsManPipeline.from_pretrained(folder, device="cuda", torch_dtype=torch.float32)
+
+
+def _run_craftsman(pipeline: Any, params: dict[str, Any], destination: str) -> None:
+    image = params.get("image")
+    if not image:
+        raise LoadRefusedError(generation_refusal(params) or "a generation needs a picture")
+    steps = int(params["steps"]) if params.get("steps") not in (None, "") else 50
+    cfg = float(params["cfgScale"]) if params.get("cfgScale") not in (None, "") else 7.5
+    seed = int(params["seed"]) if params.get("seed") not in (None, "") else None
+    meshes = pipeline(str(image), num_inference_steps=steps, guidance_scale=cfg, seed=seed).meshes
+    if not meshes:
+        raise LoadRefusedError("CraftsMan3D returned no mesh")
+    meshes[0].export(destination)
 
 
 def _load_mmaudio(model_id: str, folder: str, device: str) -> Any:

@@ -3474,27 +3474,66 @@
     {
       "id": "craftsman3d",
       "name": "CraftsMan3D",
-      "summary": "Native 3D diffusion, text or image to a smooth mesh. NVIDIA CUDA",
+      "summary": "Native 3D diffusion, one image to a smooth mesh. NVIDIA CUDA",
       "releasedAt": "2024-05-23",
-      "format": "safetensors",
+      "format": "pickle",
       "loader": "plugin",
       "modality": "mesh",
       "rank": 1,
-      "licence": "MIT",
-      "licenceUrl": "https://opensource.org/licenses/MIT",
+      "licence": "CreativeML Open RAIL-M",
+      "licenceUrl": "https://huggingface.co/spaces/CompVis/stable-diffusion-license",
       "source": "https://huggingface.co/craftsman3d/craftsman",
-      "files": [],
-      "diskBytes": 2500000000,
+      "files": [
+        {
+          "role": "index",
+          "name": "config.yaml",
+          "url": "https://huggingface.co/craftsman3d/craftsman/resolve/df4ddf7544cc2e75c5d24cb8605d8e91f0fa4abc/config.yaml",
+          "bytes": 2344,
+          "sha256": "12be573f7a6afd44b8c20687722e94559ddcf8790d3985616720598567ebebf5",
+          "revision": "df4ddf7544cc2e75c5d24cb8605d8e91f0fa4abc"
+        },
+        {
+          "role": "weights",
+          "name": "model.ckpt",
+          "url": "https://huggingface.co/craftsman3d/craftsman/resolve/df4ddf7544cc2e75c5d24cb8605d8e91f0fa4abc/model.ckpt",
+          "bytes": 4987508283,
+          "sha256": "e157fd5f106c308b6de4e62d474be4e7315e0d01b7fec7d6d731b17f5227a729",
+          "revision": "df4ddf7544cc2e75c5d24cb8605d8e91f0fa4abc"
+        },
+        {
+          "role": "condition-encoder",
+          "name": "clip/config.json",
+          "url": "https://huggingface.co/openai/clip-vit-large-patch14/resolve/32bd64288804d66eefd0ccbe215aa642df71cc41/config.json",
+          "bytes": 4519,
+          "sha256": "8a09b467700c58138c29d53c605b34ebc69beaadd13274a8a2af8ad2c2f4032a",
+          "revision": "32bd64288804d66eefd0ccbe215aa642df71cc41"
+        },
+        {
+          "role": "condition-encoder",
+          "name": "dinov2/config.json",
+          "url": "https://huggingface.co/facebook/dinov2-base/resolve/f9e44c814b77203eaa57a6bdbbd535f21ede1415/config.json",
+          "bytes": 548,
+          "sha256": "f7ff4cfa73d2f70647dbf6950541ad25d73082d54c2e7e9bded160c7656b2a70",
+          "revision": "f9e44c814b77203eaa57a6bdbbd535f21ede1415"
+        },
+        {
+          "role": "image-processor",
+          "name": "dinov2/preprocessor_config.json",
+          "url": "https://huggingface.co/facebook/dinov2-base/resolve/f9e44c814b77203eaa57a6bdbbd535f21ede1415/preprocessor_config.json",
+          "bytes": 436,
+          "sha256": "14e780d86fa1861f8751f868d7f45425b5feb55c38ca26f152ca5097ab30f828",
+          "revision": "f9e44c814b77203eaa57a6bdbbd535f21ede1415"
+        }
+      ],
+      "diskBytes": 4987516130,
       "reservationBytes": 8000000000,
       "family": "3d",
       "capabilities": [
         "img23d"
       ],
-      "serves": [
-        "3d/txt23d"
-      ],
-      "runtimeStatus": "unsupported",
-      "needsCuda": true
+      "needsCuda": true,
+      "distribution": "direct-download",
+      "licenceStatus": "restricted"
     },
     {
       "id": "instantmesh",

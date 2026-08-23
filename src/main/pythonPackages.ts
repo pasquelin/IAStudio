@@ -119,6 +119,20 @@ export const UNREAD_PENDING_COLLECTION: readonly string[] = [
   'questionary',
   'varname',
   'wcwidth',
+  'pytorch-lightning',
+  'lightning-utilities',
+  'torchmetrics',
+  'timm',
+  'jaxtyping',
+  'typeguard',
+  'wadler-lindig',
+  'aiohappyeyeballs',
+  'aiohttp',
+  'aiosignal',
+  'frozenlist',
+  'multidict',
+  'propcache',
+  'yarl',
 ]
 
 /** The engine's own package. It is the studio's code, under the studio's licence. */
