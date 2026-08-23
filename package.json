@@ -10,8 +10,8 @@
   "main": "./out/main/index.js",
   "packageManager": "pnpm@11.21.0",
   "scripts": {
-    "start": "node scripts/dev-app-identity.mjs && electron-vite dev --watch",
-    "start:debug": "node scripts/dev-app-identity.mjs && electron-vite dev --watch --remoteDebuggingPort 9222",
+    "start": "node scripts/fetch-engine.mjs --sources-only && node scripts/dev-app-identity.mjs && electron-vite dev --watch",
+    "start:debug": "node scripts/fetch-engine.mjs --sources-only && node scripts/dev-app-identity.mjs && electron-vite dev --watch --remoteDebuggingPort 9222",
     "build": "pnpm typecheck && electron-vite build && node scripts/check-artefact.mjs",
     "dist": "pnpm build && bash scripts/dist.sh",
     "preview": "electron-vite preview",

@@ -96,6 +96,14 @@ export type LoadRefusal =
       readonly neededBytes: number
       readonly availableBytes: number
     }
+  | { readonly reason: 'incomplete'; readonly modelId: string }
+  | { readonly reason: 'network'; readonly modelId: string }
+  | { readonly reason: 'failed'; readonly modelId: string }
+
+/** Why an install did not land, kept until the next try so the screen can say it. */
+export type InstallRefusal =
+  | { readonly reason: 'network'; readonly modelId: string }
+  | { readonly reason: 'checksum'; readonly modelId: string }
   | { readonly reason: 'failed'; readonly modelId: string }
 
 export type AiOverview = {
@@ -109,6 +117,8 @@ export type AiOverview = {
   readonly loading: { readonly modelId: string; readonly ratio: number } | null
   /** What the last load refused, or nothing. Cleared by the next load, never by a compose. */
   readonly loadFailure: LoadRefusal | null
+  /** What the last install refused, or nothing. Cleared by the next install, never by a compose. */
+  readonly installFailure: InstallRefusal | null
   /**
    * Whether Ollama is on this computer, whether it is answering, and the models it listed.
    * The settings screen always names the three sources so a person can pick among them.

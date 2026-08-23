@@ -150,7 +150,19 @@ describe('a model that produces something other than a sentence', () => {
     await settled()
 
     expect((await runner.poll(jobId)).status).toBe('failure')
+    expect((await runner.poll(jobId)).error).toBe('rejected')
     expect(runner.producedBy(jobId)).toBeNull()
+  })
+
+  it('names an incomplete model so the jobs row can say to reinstall', async () => {
+    const runner = imageRunner({
+      generate: () => Promise.reject(new Error('incomplete-model')),
+    })
+
+    const { jobId } = await runner.submit({ id: IMAGE_MODEL.id }, { prompt: 'x' })
+    await settled()
+
+    expect((await runner.poll(jobId)).error).toBe('incomplete-model')
   })
 
   it('leaves a conversation producing nothing to file', async () => {

@@ -53,6 +53,7 @@ const input = (over: Partial<OverviewInput> = {}): OverviewInput => ({
   installing: null,
   loading: null,
   loadFailure: null,
+  installFailure: null,
   ollamaReady: false,
   ollamaInstalled: false,
   ollamaNames: [],

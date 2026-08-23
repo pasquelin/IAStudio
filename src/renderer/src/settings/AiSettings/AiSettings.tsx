@@ -4,6 +4,8 @@ import {
   CHOICE_SCOPES,
   type AiOverview,
   type ChoiceScope,
+  type InstallRefusal,
+  type LoadRefusal,
   type RoleRow,
 } from '@shared/domain/aiOverview'
 import { isGenerationRole, partsOfRole } from '@shared/domain/aiRole'
@@ -24,6 +26,30 @@ const SCOPE_FIELD = 'setting-ai-scope'
 /** What is in flight, when it belongs to THIS row — the others then hold their render. */
 function heldBy<T extends { modelId: string }>(row: RoleRow, flight: T | null): T | null {
   return flight && row.candidates.some(one => one.model.id === flight.modelId) ? flight : null
+}
+
+function loadFailureKey(reason: LoadRefusal['reason']): string {
+  switch (reason) {
+    case 'beyond-machine':
+      return 'aiModels.loadBeyondMachine'
+    case 'incomplete':
+      return 'aiModels.loadIncomplete'
+    case 'network':
+      return 'aiModels.loadNetwork'
+    case 'failed':
+      return 'aiModels.loadFailed'
+  }
+}
+
+function installFailureKey(reason: InstallRefusal['reason']): string {
+  switch (reason) {
+    case 'network':
+      return 'aiModels.installFailedNetwork'
+    case 'checksum':
+      return 'aiModels.installFailedChecksum'
+    case 'failed':
+      return 'aiModels.installFailed'
+  }
 }
 
 /** Where the choices that apply were written, so reopening the screen lands on that side. */
@@ -138,6 +164,12 @@ export function AiSettings({ family }: AiSettingsProps) {
 
       {rows.length === 0 && <p className={WINDOW_HELP}>{t('aiModels.empty')}</p>}
 
+      {overview.installFailure !== null && (
+        <p className={cn(WINDOW_HELP, 'mb-2')} role="status">
+          {t(installFailureKey(overview.installFailure.reason))}
+        </p>
+      )}
+
       {/* One sentence per branch: only the admission weighed bytes, so only it may name them. */}
       {overview.loadFailure !== null && (
         <p className={cn(WINDOW_HELP, 'mb-2')} role="status">
@@ -146,7 +178,7 @@ export function AiSettings({ family }: AiSettingsProps) {
                 needed: bytes(overview.loadFailure.neededBytes),
                 available: bytes(overview.loadFailure.availableBytes),
               })
-            : t('aiModels.loadFailed')}
+            : t(loadFailureKey(overview.loadFailure.reason))}
         </p>
       )}
 

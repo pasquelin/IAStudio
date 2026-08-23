@@ -5,8 +5,10 @@ import type { LocalModel, ModelFile } from '@shared/domain/localModel'
 import {
   ChecksumMismatch,
   DownloadCancelled,
+  NetworkInterrupted,
   fetchModel,
   fetchModelFile,
+  isNetworkError,
   modelIsComplete,
   type DownloadHost,
 } from './modelInstall'
@@ -33,6 +35,8 @@ const fileOf = (content: string, name = 'encoder.int8.onnx'): ModelFile => ({
  */
 function harness(served: Record<string, string[]> = {}) {
   const disk = new Map<string, string>()
+  /** Length `sizeOf` should report, when the test put a short stand-in for a large file. */
+  const sizes = new Map<string, number>()
   /** The folders the install asked for, so a nested file name can be shown to create its own. */
   const made: string[] = []
   const requests: { url: string; range: number }[] = []
@@ -65,7 +69,10 @@ function harness(served: Record<string, string[]> = {}) {
         body: stream(body),
       })
     },
-    sizeOf: path => Promise.resolve(disk.get(path)?.length ?? 0),
+    sizeOf: path => {
+      if (!disk.has(path)) return Promise.resolve(0)
+      return Promise.resolve(sizes.get(path) ?? disk.get(path)?.length ?? 0)
+    },
     open: (path, resume) => {
       opened.push({ path, resume })
       if (!resume) disk.set(path, '')
@@ -86,6 +93,7 @@ function harness(served: Record<string, string[]> = {}) {
     },
     remove: path => {
       disk.delete(path)
+      sizes.delete(path)
       return Promise.resolve()
     },
     rename: (from, to) => {
@@ -105,6 +113,7 @@ function harness(served: Record<string, string[]> = {}) {
   return {
     host,
     disk,
+    sizes,
     made,
     requests,
     opened,
@@ -292,6 +301,22 @@ describe('fetchModelFile', () => {
     await expect(fetchModelFile(host, FILE, options())).rejects.toThrow('404')
     expect(disk.size).toBe(0)
   })
+
+  it('names the file when the connection drops, so the journal is not a bare net:: code', async () => {
+    const { host } = harness({ [FILE.url]: [content] })
+    host.fetch = () => Promise.reject(new Error('net::ERR_NETWORK_CHANGED'))
+
+    await expect(fetchModelFile(host, FILE, options())).rejects.toBeInstanceOf(NetworkInterrupted)
+    await expect(fetchModelFile(host, FILE, options())).rejects.toThrow(FILE.name)
+  })
+})
+
+describe('a dropped connection', () => {
+  it('is recognised from Electron and from the OS', () => {
+    expect(isNetworkError(new Error('net::ERR_NETWORK_CHANGED'))).toBe(true)
+    expect(isNetworkError(new Error('read ECONNRESET'))).toBe(true)
+    expect(isNetworkError(new Error('digest mismatch'))).toBe(false)
+  })
 })
 
 describe('fetchModel', () => {
@@ -302,8 +327,11 @@ describe('fetchModel', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('skips a file that is already there and still counts it as done', async () => {
-    const { host, disk, requests } = harness()
-    for (const file of STT_MODEL_FILES) disk.set(`/models/${file.name}`, 'here')
+    const { host, disk, sizes, requests } = harness()
+    for (const file of STT_MODEL_FILES) {
+      disk.set(`/models/${file.name}`, 'here')
+      sizes.set(`/models/${file.name}`, file.bytes)
+    }
     const onProgress = vi.fn()
 
     await fetchModel(host, STT_MODEL, { folder: '/models', onProgress })
@@ -313,6 +341,23 @@ describe('fetchModel', () => {
       received: STT_MODEL_BYTES,
       total: STT_MODEL_BYTES,
     })
+  })
+
+  it('throws away a final file of the wrong size and fetches it again', async () => {
+    const { host, disk, requests } = harness({ [FILE!.url]: ['one'] })
+    vi.spyOn(FILE!, 'sha256', 'get').mockReturnValue(digestOf('one'))
+    disk.set(`/models/${FILE!.name}`, 'cut')
+
+    await expect(
+      fetchModel(
+        host,
+        { ...STT_MODEL, files: [FILE!] },
+        { folder: '/models', onProgress: vi.fn() },
+      ),
+    ).resolves.toBeUndefined()
+
+    expect(requests).toEqual([{ url: FILE!.url, range: 0 }])
+    expect(disk.get(`/models/${FILE!.name}`)).toBe('one')
   })
 
   it('fetches the files in order, and stops at the first that fails', async () => {
@@ -338,13 +383,28 @@ describe('modelIsComplete', () => {
   const missing = STT_MODEL_FILES[1]!
 
   it('is true only when every file is present', async () => {
-    const { host, disk } = harness()
+    const { host, disk, sizes } = harness()
     expect(await modelIsComplete(host, STT_MODEL, '/models')).toBe(false)
 
-    for (const file of STT_MODEL_FILES) disk.set(`/models/${file.name}`, 'here')
+    for (const file of STT_MODEL_FILES) {
+      disk.set(`/models/${file.name}`, 'here')
+      sizes.set(`/models/${file.name}`, file.bytes)
+    }
     expect(await modelIsComplete(host, STT_MODEL, '/models')).toBe(true)
 
     disk.delete(`/models/${missing.name}`)
+    expect(await modelIsComplete(host, STT_MODEL, '/models')).toBe(false)
+  })
+
+  it('is false when a file is there but shorter than the manifest said', async () => {
+    const { host, disk, sizes } = harness()
+    for (const file of STT_MODEL_FILES) {
+      disk.set(`/models/${file.name}`, 'here')
+      sizes.set(`/models/${file.name}`, file.bytes)
+    }
+    disk.set(`/models/${missing.name}`, 'cut')
+    sizes.set(`/models/${missing.name}`, 3)
+
     expect(await modelIsComplete(host, STT_MODEL, '/models')).toBe(false)
   })
 

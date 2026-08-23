@@ -21,7 +21,7 @@ import { pathParentOf } from '@shared/domain/fileName'
  */
 export type DownloadHost = {
   /** Answers the status, the headers that matter, and the body as a stream of chunks. */
-  fetch: (url: string, range: number) => Promise<DownloadResponse>
+  fetch: (url: string, range: number, signal?: AbortSignal) => Promise<DownloadResponse>
   /** How much of a partial file is already on disk. `0` when there is none. */
   sizeOf: (path: string) => Promise<number>
   /**
@@ -74,6 +74,34 @@ export class ChecksumMismatch extends Error {}
 
 export class DownloadCancelled extends Error {}
 
+/** The connection dropped mid-file. The `.part` stays, so the next try resumes. */
+export class NetworkInterrupted extends Error {}
+
+const NETWORK_MARKS = [
+  'net::ERR_',
+  'ENOTFOUND',
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'EAI_AGAIN',
+  'ECONNREFUSED',
+  'socket hang up',
+]
+
+export function isNetworkError(error: unknown): boolean {
+  const text = error instanceof Error ? `${error.name} ${error.message}` : String(error)
+  return NETWORK_MARKS.some(mark => text.includes(mark))
+}
+
+function rethrowNetwork(error: unknown, file: string): never {
+  if (error instanceof DownloadCancelled || error instanceof ChecksumMismatch) throw error
+  if (isNetworkError(error)) {
+    throw new NetworkInterrupted(
+      `${file}: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+  throw error
+}
+
 const partOf = (path: string): string => `${path}${PART_SUFFIX}`
 
 function abortIfCancelled(signal: AbortSignal | undefined): void {
@@ -106,7 +134,13 @@ export async function fetchModelFile(
   // a model that loads and recognises nothing.
   const asked = onDisk > 0 && onDisk < file.bytes ? onDisk : 0
 
-  const response = await host.fetch(file.url, asked)
+  let response: DownloadResponse
+  try {
+    response = await host.fetch(file.url, asked, options.signal)
+  } catch (error) {
+    abortIfCancelled(options.signal)
+    rethrowNetwork(error, file.name)
+  }
   if (!response.ok) throw new Error(`${file.name} answered ${response.status}`)
 
   // Resumed only if the server actually honoured the range. Asked to resume and served the
@@ -139,6 +173,9 @@ export async function fetchModelFile(
         options.onProgress({ received: options.alreadyDone + received, total: options.total })
       }
     }
+  } catch (error) {
+    abortIfCancelled(options.signal)
+    rethrowNetwork(error, file.name)
   } finally {
     // Closed on the way out whatever happened: a cancelled download leaves a `.part` the next
     // attempt resumes from, and an open handle would keep it locked on Windows.
@@ -177,11 +214,18 @@ export async function fetchModel(
   let done = 0
 
   for (const file of model.files) {
-    if (await host.exists(host.join(options.folder, file.name))) {
+    const target = host.join(options.folder, file.name)
+    const held = await host.sizeOf(target)
+    if (held === file.bytes) {
       done += file.bytes
       options.onProgress({ received: done, total })
       continue
     }
+
+    // A name at the final path with the wrong size is not a resume point: only `.part` is.
+    // Leaving it would skip the fetch forever (`exists` used to, and a cut download then
+    // loaded as if the model were whole).
+    if (held > 0) await host.remove(target)
 
     await fetchModelFile(host, file, { ...options, alreadyDone: done, total })
     done += file.bytes
@@ -189,9 +233,11 @@ export async function fetchModel(
 }
 
 /**
- * Whether every file of a model is present. Their digests are not re-checked here: they were
- * verified before the rename, and re-reading hundreds of megabytes on every start would cost
- * seconds of disk for files nothing else writes.
+ * Whether every file of a model is present AND the size the manifest named.
+ *
+ * Digests are not re-checked here: they were verified before the rename, and re-reading hundreds
+ * of megabytes on every start would cost seconds of disk for files nothing else writes. Size is
+ * the cheap check that still catches a cut download sitting at the final path.
  */
 export async function modelIsComplete(
   host: DownloadHost,
@@ -209,9 +255,12 @@ export async function modelIsComplete(
   // At once, and the lost short-circuit costs nothing: a `stat` that fails is as cheap as one that
   // succeeds, and this sits on every compose — so on every assistant turn, four latencies deep on
   // a model folder the setting lets someone point at an external disk.
-  const present = await Promise.all(
-    model.files.map(file => host.exists(host.join(folder, file.name))),
+  const sizes = await Promise.all(
+    model.files.map(async file => ({
+      expected: file.bytes,
+      actual: await host.sizeOf(host.join(folder, file.name)),
+    })),
   )
 
-  return present.every(Boolean)
+  return sizes.every(one => one.actual === one.expected)
 }

@@ -65,10 +65,11 @@
     "notFound": "Resource not found.",
     "rateLimited": "Too many requests. Retrying…",
     "server": "The generation service is temporarily unavailable.",
-    "network": "Cannot reach the generation service. Check your connection.",
+    "network": "The connection was interrupted. Check the network and try again.",
     "unexpected": "An unexpected error occurred.",
     "invalidValue": "Invalid value.",
     "rejected": "The generation failed.",
+    "incompleteModel": "The model files are incomplete. Reinstall the model, then run it again.",
     "storage": "Could not save the result to disk.",
     "panelCrashed": "This panel ran into an error.",
     "windowCrashed": "The application ran into an error."

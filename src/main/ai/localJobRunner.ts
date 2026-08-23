@@ -1,3 +1,4 @@
+import type { JobFailure } from '@shared/domain/failure'
 import type { AssetType } from '@shared/domain/asset'
 import {
   assetTypeOfModality,
@@ -8,6 +9,7 @@ import {
 import type { LocalModel } from '@shared/domain/localModel'
 import type { JobRunner, RemoteJob } from '@main/provider/jobManager'
 import type { ChatRequest, GenerateResult } from './localRuntimes'
+import { NetworkInterrupted, isNetworkError } from './modelInstall'
 
 /**
  * Generations run on THIS machine, behind the shape the job manager already speaks.
@@ -23,6 +25,8 @@ type LocalJob = {
   abort: AbortController
   /** What the model answered, once it has. Read through `outputOf`. */
   answer: string
+  /** A code, never a message — the renderer translates it. */
+  error: JobFailure | null
   /** Where a generation landed, for whoever files it. Empty for a job that produced a sentence. */
   produced: LocalProduction | null
 }
@@ -82,6 +86,15 @@ export type LocalJobRunner = JobRunner & {
 function promptOf(body: Record<string, unknown>): string {
   const prompt = body[PROMPT_FIELD_KEY]
   return typeof prompt === 'string' ? prompt : ''
+}
+
+function jobFailureOf(error: unknown): JobFailure {
+  if (error instanceof NetworkInterrupted || isNetworkError(error)) return 'network'
+  const text = error instanceof Error ? error.message : String(error)
+  if (text === 'incomplete-model' || text.endsWith(': incomplete-model')) return 'incomplete-model'
+  if (text === 'network' || text.endsWith(': network')) return 'network'
+  if (text.includes('no file named')) return 'incomplete-model'
+  return 'rejected'
 }
 
 export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
@@ -154,6 +167,7 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
       job.progress = 1
     } catch (error) {
       job.status = 'failure'
+      job.error = jobFailureOf(error)
       deps.log('warn', `a local job of ${model.id} failed: ${String(error)}`)
     }
   }
@@ -163,6 +177,7 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
     status: job.status,
     progress: job.progress,
     assetIds: [],
+    error: job.error ?? undefined,
     // Nothing was billed, and saying zero is what keeps a local run out of the usage report as a
     // figure rather than as a hole.
     cost: 0,
@@ -183,6 +198,7 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
         abort: new AbortController(),
         answer: '',
         produced: null,
+        error: null,
       }
 
       jobs.set(jobId, job)

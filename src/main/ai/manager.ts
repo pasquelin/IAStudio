@@ -1,4 +1,9 @@
-import type { AiOverview, ChoiceScope, LoadRefusal } from '@shared/domain/aiOverview'
+import type {
+  AiOverview,
+  ChoiceScope,
+  InstallRefusal,
+  LoadRefusal,
+} from '@shared/domain/aiOverview'
 import type { AiRoleId, RoleChoices, RoleProvider } from '@shared/domain/aiRole'
 import type { MemorySnapshot, RuntimeOccupancy } from '@shared/domain/aiMemory'
 import type { RuntimeEndpointId } from '@shared/domain/aiRuntime'
@@ -10,7 +15,12 @@ import {
   type ModelLoader,
 } from '@shared/domain/localModel'
 import type { PartialSettings, Settings } from '@shared/domain/settings'
-import { DownloadCancelled } from './modelInstall'
+import {
+  ChecksumMismatch,
+  DownloadCancelled,
+  NetworkInterrupted,
+  isNetworkError,
+} from './modelInstall'
 import { admissionFor } from './admission'
 import { catalogueWith, modelsForWith, modelWith, rolesServedBy } from './catalogue'
 import { asRuntimeSnapshot, type HardwareFacts } from './hardwareProbe'
@@ -181,6 +191,36 @@ const loaderOf = (endpoint: RuntimeEndpointId): ModelLoader => {
   return loader
 }
 
+function installRefusalOf(error: unknown, modelId: string): InstallRefusal {
+  if (error instanceof ChecksumMismatch) return { reason: 'checksum', modelId }
+  if (error instanceof NetworkInterrupted || isNetworkError(error)) {
+    return { reason: 'network', modelId }
+  }
+  return { reason: 'failed', modelId }
+}
+
+function loadRefusalOf(error: unknown, modelId: string): LoadRefusal {
+  if (error instanceof NetworkInterrupted || isNetworkError(error)) {
+    return { reason: 'network', modelId }
+  }
+  const text = String(error)
+  if (text.includes('no file named') || text.includes('incomplete-model')) {
+    return { reason: 'incomplete', modelId }
+  }
+  return { reason: 'failed', modelId }
+}
+
+function loadThrowOf(failure: LoadRefusal): Error {
+  if (failure.reason === 'beyond-machine') {
+    return new Error(
+      `${failure.modelId} needs ${failure.neededBytes} bytes, ${failure.availableBytes} free`,
+    )
+  }
+  if (failure.reason === 'incomplete') return new Error('incomplete-model')
+  if (failure.reason === 'network') return new Error('network')
+  return new Error(`loading ${failure.modelId} failed`)
+}
+
 export function createAiManager(deps: ManagerDeps): AiManager {
   // At most one install runs: a second would compete for the same disk and the same bar.
   let running: RunningInstall | null = null
@@ -190,6 +230,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
   let ollamaDone: Promise<AiOverview> | null = null
   let loading: { modelId: string; ratio: number; abort: AbortController } | null = null
   let loadFailure: LoadRefusal | null = null
+  let installFailure: InstallRefusal | null = null
 
   /**
    * What each door holds, and when it last served — the two halves `admissionFor` reads. Counting
@@ -318,6 +359,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
         running === null ? null : { modelId: running.modelId, progress: running.progress },
       loading: loading === null ? null : { modelId: loading.modelId, ratio: loading.ratio },
       loadFailure,
+      installFailure,
       ollamaReady: readings.get('ollama')?.ready === true,
       ollamaInstalled: deps.ollamaInstalled(),
       ollamaNames: [],
@@ -412,6 +454,12 @@ export function createAiManager(deps: ManagerDeps): AiManager {
         },
         abort.signal,
       )
+      installFailure = null
+    } catch (error) {
+      if (!(error instanceof DownloadCancelled)) {
+        installFailure = installRefusalOf(error, model.id)
+      }
+      throw error
     } finally {
       running = null
       // Caught, or it would REPLACE the download's own error: the dictation session tells a
@@ -423,6 +471,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
   }
 
   function start(model: LocalModel): RunningInstall {
+    installFailure = null
     const abort = new AbortController()
     // Started a tick later, so the lock below is in place before `fetchFiles` can clear it: a
     // host that threw synchronously would otherwise leave `running` set to a download nobody runs.
@@ -594,6 +643,16 @@ export function createAiManager(deps: ManagerDeps): AiManager {
         if (loadFailure !== null) return
         if (!load) throw new Error(`nothing here holds ${model.id} in memory`)
 
+        const onDiskNow = await readingsOf([model])
+        if (onDiskNow.get(model.loader)?.installed.has(model.id) !== true) {
+          loadFailure = { reason: 'incomplete', modelId: model.id }
+          deps.log(
+            'warn',
+            `refusing to load ${model.id}: files missing or the wrong size — reinstall`,
+          )
+          return
+        }
+
         const bytes = await load(model, {
           onProgress: ratio => {
             // Gated: a runtime reports per block of tensors — hundreds of ticks a second — and each
@@ -612,7 +671,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       } catch (error) {
         // No figures: only the admission weighed bytes, and a runtime that refused for its own
         // reasons — a cancellation among them — would be borrowing them from an unrelated reading.
-        loadFailure = { reason: 'failed', modelId: model.id }
+        loadFailure = loadRefusalOf(error, model.id)
         deps.log('warn', `loading ${model.id} failed: ${String(error)}`)
       } finally {
         loading = null
@@ -781,12 +840,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       await runLoad(model)
       await announce()
       if (loadFailure === null) return
-      if (loadFailure.reason === 'beyond-machine') {
-        throw new Error(
-          `${loadFailure.modelId} needs ${loadFailure.neededBytes} bytes, ${loadFailure.availableBytes} free`,
-        )
-      }
-      throw new Error(`loading ${loadFailure.modelId} failed`)
+      throw loadThrowOf(loadFailure)
     },
 
     cancelLoad: async () => {

@@ -92,6 +92,8 @@ export function bundledEngine(
       platform === 'win32'
         ? join(home, 'python', 'python.exe')
         : join(home, 'python', 'bin', 'python3'),
+    // Same layout the pack ships: interpreter and sources as siblings. `engine:fetch` (and
+    // every `pnpm start`) recopies `engine/src` here, so this folder cannot lag the tree.
     sources: join(home, 'src'),
   }
 }
