@@ -12,6 +12,7 @@ never sufficient — what protects is the manifest listing every file that reach
 
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -101,14 +102,22 @@ def _default_steps(pipeline: Any) -> int:
     return asked.default if asked is not None and isinstance(asked.default, int) else 20
 
 
+def _call_parameters(pipeline: Any) -> Any:
+    """What `__call__` declared. Empty when there is no signature to read."""
+    import inspect
+
+    try:
+        return inspect.signature(pipeline.__call__).parameters
+    except (TypeError, ValueError, AttributeError):
+        return {}
+
+
 def _takes_step_callback(pipeline: Any) -> bool:
     """
     🛑 A cancel lands on `callback_on_step_end` and nowhere else. Read, since `ShapEPipeline`
     does not take one and passing it raises `TypeError`.
     """
-    import inspect
-
-    return "callback_on_step_end" in inspect.signature(pipeline.__call__).parameters
+    return "callback_on_step_end" in _call_parameters(pipeline)
 
 
 #: Which pipeline reworks a sequence, by the one that was loaded — a table because diffusers
@@ -214,6 +223,24 @@ def pretrained_file_kwargs(torch_weights: bool, folder: str | None = None) -> di
     return files
 
 
+def pretrained_optional_overrides(folder: str) -> dict[str, None]:
+    """Skip a safety checker the index names when the folder did not fetch it."""
+    root = Path(folder)
+    index_path = root / "model_index.json"
+    if not index_path.is_file():
+        return {}
+    try:
+        index = json.loads(index_path.read_text())
+    except json.JSONDecodeError:
+        return {}
+    checker = index.get("safety_checker")
+    if not isinstance(checker, list) or not checker or checker[0] is None:
+        return {}
+    if (root / "safety_checker").is_dir():
+        return {}
+    return {"safety_checker": None}
+
+
 class DiffusersAdapter:
     """Holds at most one pipeline. What it holds and what it costs are ANSWERED, never guessed."""
 
@@ -281,6 +308,7 @@ class DiffusersAdapter:
         pipeline = DiffusionPipeline.from_pretrained(
             folder,
             **pretrained_file_kwargs(torch_weights, folder),
+            **pretrained_optional_overrides(folder),
             dtype=torch.float16,
         ).to(device)
 
@@ -348,7 +376,16 @@ class DiffusersAdapter:
 
         # Image employments only. A mesh picture is Shap-E; a video picture is I2V — neither
         # is `AutoPipelineForImage2Image`. Import stays below: the gate has no diffusers.
-        if "image" not in kwargs or self.modality is not MODALITIES["image"]:
+        if "image" not in kwargs:
+            return None
+        if self.modality is MODALITIES["skybox"]:
+            if "mask_image" not in kwargs:
+                return None
+            held = self.loaded
+            if held is not None and "mask_image" in _call_parameters(held.pipeline):
+                return None
+            raise LoadRefusedError("this panorama model does not take a source image")
+        if self.modality is not MODALITIES["image"]:
             return None
 
         import diffusers

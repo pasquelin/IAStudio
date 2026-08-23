@@ -7,22 +7,26 @@ download 682 MB to be green. What loading a real pipeline does is proven by the 
 
 from pathlib import Path
 
+import pytest
+
 from ia_studio_engine.adapters.diffusers_adapter import (
     DiffusersAdapter,
     LoadedModel,
+    LoadRefusedError,
     accepted_kwargs,
     generation_refusal,
     pretrained_file_kwargs,
+    pretrained_optional_overrides,
     tune_pipeline,
 )
 from ia_studio_engine.adapters.modalities import MODALITIES
 
 
-def held(*, model_id: str = "sana") -> LoadedModel:
+def held(*, model_id: str = "sana", pipeline: object | None = None) -> LoadedModel:
     return LoadedModel(
         model_id=model_id,
         device="cpu",
-        pipeline=object(),
+        pipeline=object() if pipeline is None else pipeline,
         bytes_resident=1,
         tensor_bytes=1,
         load_ms=1,
@@ -148,6 +152,55 @@ def test_a_video_still_does_not_switch_to_an_image_pipeline() -> None:
     adapter.loaded = held(model_id="wan21-i2v-14b-480p")
 
     assert adapter._wanted_class({"image": "opened:/a.png", "prompt": "walk"}) is None
+
+
+def test_a_skybox_that_cannot_inpaint_refuses_a_source_image() -> None:
+    adapter = DiffusersAdapter(MODALITIES["skybox"])
+    adapter.loaded = held(model_id="diffusion360")
+
+    with pytest.raises(LoadRefusedError, match="does not take a source image"):
+        adapter._wanted_class({"image": "opened:/a.png", "mask_image": "opened:/m.png"})
+
+
+def test_a_skybox_from_words_does_not_switch_pipeline() -> None:
+    adapter = DiffusersAdapter(MODALITIES["skybox"])
+    adapter.loaded = held(model_id="panfusion")
+
+    assert adapter._wanted_class({"prompt": "a hall", "circular_padding": True}) is None
+
+
+def test_a_skybox_that_already_inpaints_keeps_its_pipeline() -> None:
+    class Fill:
+        def __call__(self, prompt: str, image: object, mask_image: object) -> None:
+            del prompt, image, mask_image
+
+    adapter = DiffusersAdapter(MODALITIES["skybox"])
+    adapter.loaded = held(model_id="genex-world-initializer", pipeline=Fill())
+
+    assert adapter._wanted_class({"image": "opened:/a.png", "mask_image": "opened:/m.png"}) is None
+
+
+def test_skips_a_safety_checker_the_folder_did_not_fetch(tmp_path: Path) -> None:
+    (tmp_path / "model_index.json").write_text(
+        '{"safety_checker": ["stable_diffusion", "StableDiffusionSafetyChecker"]}'
+    )
+
+    assert pretrained_optional_overrides(str(tmp_path)) == {"safety_checker": None}
+
+
+def test_keeps_a_safety_checker_that_was_fetched(tmp_path: Path) -> None:
+    (tmp_path / "model_index.json").write_text(
+        '{"safety_checker": ["stable_diffusion", "StableDiffusionSafetyChecker"]}'
+    )
+    (tmp_path / "safety_checker").mkdir()
+
+    assert pretrained_optional_overrides(str(tmp_path)) == {}
+
+
+def test_a_null_safety_checker_in_the_index_needs_no_override(tmp_path: Path) -> None:
+    (tmp_path / "model_index.json").write_text('{"safety_checker": [null, null]}')
+
+    assert pretrained_optional_overrides(str(tmp_path)) == {}
 
 
 def test_drops_a_still_the_pipeline_does_not_take() -> None:

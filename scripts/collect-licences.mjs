@@ -215,6 +215,23 @@ const MODEL_NOTES = {
     'its renderer in that form alone. What still guards it: torch has refused to unpickle by',
     'default since 2.6, and every file above is pinned to a digest.',
   ],
+  panfusion: [
+    'The files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). PanFusion publishes a',
+    'Lightning checkpoint this studio cannot open. Generation uses MultiDiffusion circular padding.',
+  ],
+  mvdiffusion: [
+    'The files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). MVDiffusion publishes a',
+    'Dropbox Lightning checkpoint this studio cannot open. Generation uses MultiDiffusion.',
+  ],
+  diffusion360: [
+    'Copyright the Diffusion360 authors. The files fetched are the published sd-base pipeline',
+    '(Apache-2.0). They include `.bin` tensors, the same reservation as Shap-E: torch has refused',
+    'to unpickle by default since 2.6, and every file above is pinned to a digest.',
+  ],
+  unipano: [
+    'The files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). UniPano publishes no',
+    'weights. Generation uses MultiDiffusion circular padding.',
+  ],
   'controlnet-canny-sdxl': [
     'Copyright the xinsir authors. A control network run BESIDE a base model, never alone.',
   ],

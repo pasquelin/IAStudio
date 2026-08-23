@@ -153,9 +153,9 @@
   },
   {
     "name": "Diffusion360",
-    "spdx": "other",
-    "text": "Text or image to 360 panorama, lightweight.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\n\nLicensed under other. Full terms: https://github.com/ArcherFMY/SD-T2I-360PanoImage",
-    "sources": "https://github.com/ArcherFMY/SD-T2I-360PanoImage"
+    "spdx": "Apache-2.0",
+    "text": "Text to 360 panorama, 360-finetuned Stable Diffusion 1.5, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the Diffusion360 authors. The files fetched are the published sd-base pipeline\n(Apache-2.0). They include `.bin` tensors, the same reservation as Shap-E: torch has refused\nto unpickle by default since 2.6, and every file above is pinned to a digest.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "sources": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage"
   },
   {
     "name": "dockview-react",
@@ -380,9 +380,9 @@
   },
   {
     "name": "MVDiffusion",
-    "spdx": "MIT",
-    "text": "Text or image to 360 panorama.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
-    "sources": "https://github.com/Tangshitao/MVDiffusion"
+    "spdx": "other",
+    "text": "Text to 360 panorama via MultiDiffusion, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nThe files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). MVDiffusion publishes a\nDropbox Lightning checkpoint this studio cannot open. Generation uses MultiDiffusion.\n\nLicensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license",
+    "sources": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5"
   },
   {
     "name": "networkx",
@@ -426,9 +426,9 @@
   },
   {
     "name": "PanFusion",
-    "spdx": "MIT",
-    "text": "Text to 360 panorama, dual-branch Stable Diffusion.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
-    "sources": "https://github.com/chengzhag/PanFusion"
+    "spdx": "other",
+    "text": "Text to 360 panorama via MultiDiffusion, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nThe files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). PanFusion publishes a\nLightning checkpoint this studio cannot open. Generation uses MultiDiffusion circular padding.\n\nLicensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license",
+    "sources": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5"
   },
   {
     "name": "Parakeet TDT 0.6b v3",
@@ -768,8 +768,8 @@
   {
     "name": "UniPano",
     "spdx": "other",
-    "text": "Text to 360 panorama, single-branch, lighter than PanFusion.\nNo engine in this studio opens these weights yet: they are listed so the choice\nis visible. Nothing is fetched until a runtime can actually run them.\n\n\nLicensed under other. Full terms: https://github.com/jinhong-ni/UniPano",
-    "sources": "https://github.com/jinhong-ni/UniPano"
+    "text": "Text to 360 panorama via MultiDiffusion, single-branch, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nThe files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). UniPano publishes no\nweights. Generation uses MultiDiffusion circular padding.\n\nLicensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license",
+    "sources": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5"
   },
   {
     "name": "Unique3D",

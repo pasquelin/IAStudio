@@ -31,7 +31,7 @@ The terms below govern these components. They are not affected by the licence of
 | CraftsMan3D | shipped with the application | MIT |
 | daisyui | 5.7.16 | MIT |
 | diffusers | 0.40.0 | Apache 2.0 License |
-| Diffusion360 | shipped with the application | other |
+| Diffusion360 | shipped with the application | Apache-2.0 |
 | dockview-react | 8.1.0 | MIT |
 | electron | 43.4.0 | MIT |
 | electron-store | 11.0.2 | MIT |
@@ -66,14 +66,14 @@ The terms below govern these components. They are not affected by the licence of
 | MMAudio Small | shipped with the application | CC-BY-NC-4.0 |
 | Mochi 1 | shipped with the application | Apache-2.0 |
 | mpmath | 1.3.0 | BSD |
-| MVDiffusion | shipped with the application | MIT |
+| MVDiffusion | shipped with the application | other |
 | networkx | 3.6.1 | BSD-3-Clause |
 | node-llama-cpp | 3.20.0 | MIT |
 | numpy | 2.5.2 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 |
 | ONNX Runtime | 1.27.0 | MIT |
 | opentype.js | 2.0.0 | MIT |
 | packaging | 26.3 | Apache-2.0 OR BSD-2-Clause |
-| PanFusion | shipped with the application | MIT |
+| PanFusion | shipped with the application | other |
 | Parakeet TDT 0.6b v3 | int8 | CC-BY-4.0 |
 | pillow | 12.3.0 | MIT-CMU |
 | pixi.js | 8.19.0 | MIT |
@@ -675,21 +675,24 @@ Source: https://github.com/huggingface/diffusers
 ## Diffusion360
 
 Version: shipped with the application  
-Licence: other
+Licence: Apache-2.0
 
 Corresponding sources:
 
 ```
-https://github.com/ArcherFMY/SD-T2I-360PanoImage
+https://huggingface.co/archerfmy0831/sd-t2i-360panoimage
 ```
 
 ```
-Text or image to 360 panorama, lightweight.
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible. Nothing is fetched until a runtime can actually run them.
+Text to 360 panorama, 360-finetuned Stable Diffusion 1.5, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
 
+Copyright the Diffusion360 authors. The files fetched are the published sd-base pipeline
+(Apache-2.0). They include `.bin` tensors, the same reservation as Shap-E: torch has refused
+to unpickle by default since 2.6, and every file above is pinned to a digest.
 
-Licensed under other. Full terms: https://github.com/ArcherFMY/SD-T2I-360PanoImage
+Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
 ```
 ## dockview-react
 
@@ -2008,21 +2011,23 @@ Source: https://github.com/fredrik-johansson/mpmath
 ## MVDiffusion
 
 Version: shipped with the application  
-Licence: MIT
+Licence: other
 
 Corresponding sources:
 
 ```
-https://github.com/Tangshitao/MVDiffusion
+https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 
 ```
-Text or image to 360 panorama.
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible. Nothing is fetched until a runtime can actually run them.
+Text to 360 panorama via MultiDiffusion, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
 
+The files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). MVDiffusion publishes a
+Dropbox Lightning checkpoint this studio cannot open. Generation uses MultiDiffusion.
 
-Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
+Licensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license
 ```
 ## networkx
 
@@ -2154,21 +2159,23 @@ Source: https://github.com/pypa/packaging
 ## PanFusion
 
 Version: shipped with the application  
-Licence: MIT
+Licence: other
 
 Corresponding sources:
 
 ```
-https://github.com/chengzhag/PanFusion
+https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 
 ```
-Text to 360 panorama, dual-branch Stable Diffusion.
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible. Nothing is fetched until a runtime can actually run them.
+Text to 360 panorama via MultiDiffusion, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
 
+The files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). PanFusion publishes a
+Lightning checkpoint this studio cannot open. Generation uses MultiDiffusion circular padding.
 
-Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
+Licensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license
 ```
 ## Parakeet TDT 0.6b v3
 
@@ -3280,16 +3287,18 @@ Licence: other
 Corresponding sources:
 
 ```
-https://github.com/jinhong-ni/UniPano
+https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 
 ```
-Text to 360 panorama, single-branch, lighter than PanFusion.
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible. Nothing is fetched until a runtime can actually run them.
+Text to 360 panorama via MultiDiffusion, single-branch, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
 
+The files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). UniPano publishes no
+weights. Generation uses MultiDiffusion circular padding.
 
-Licensed under other. Full terms: https://github.com/jinhong-ni/UniPano
+Licensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license
 ```
 ## Unique3D
 

@@ -4126,20 +4126,125 @@
     {
       "id": "panfusion",
       "name": "PanFusion",
-      "summary": "Text to 360 panorama, dual-branch Stable Diffusion",
+      "summary": "Text to 360 panorama via MultiDiffusion",
+      "releasedAt": "2024-04-11",
       "format": "safetensors",
-      "loader": "plugin",
+      "loader": "diffusers",
       "modality": "skybox",
       "rank": 1,
-      "licence": "MIT",
-      "licenceUrl": "https://opensource.org/licenses/MIT",
-      "source": "https://github.com/chengzhag/PanFusion",
-      "files": [],
-      "diskBytes": 0,
-      "reservationBytes": 4000000000,
+      "licence": "other",
+      "licenceUrl": "https://huggingface.co/spaces/CompVis/stable-diffusion-license",
+      "source": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5",
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/model_index.json",
+          "bytes": 541,
+          "sha256": "e2f6f22e274374010aec30c79eb2d6e53fff4a36ac0225523a92cb2d41a83347",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "index",
+          "name": "feature_extractor/preprocessor_config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/feature_extractor/preprocessor_config.json",
+          "bytes": 342,
+          "sha256": "2a1da83b5e1032aaeef397552ddb408dca0d8cd1dc58f61bf6abf38d6f33a0a2",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/scheduler/scheduler_config.json",
+          "bytes": 308,
+          "sha256": "699cce92eb7c122e2eb7dfdea78e6187fda76a5ed4a8e42319b85610e620e091",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/text_encoder/config.json",
+          "bytes": 617,
+          "sha256": "845df614cb9327ae7bbea027316246fae917827407da6df13572e41b5f93b4cc",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.fp16.safetensors",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/text_encoder/model.fp16.safetensors",
+          "bytes": 246144864,
+          "sha256": "77795e2023adcf39bc29a884661950380bd093cf0750a966d473d1718dc9ef4e",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/tokenizer/merges.txt",
+          "bytes": 524619,
+          "sha256": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/tokenizer/special_tokens_map.json",
+          "bytes": 472,
+          "sha256": "c4864a9376a8401918425bed71fc14fc0e81f9b59ec45c1cf96cccb2df508eac",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/tokenizer/tokenizer_config.json",
+          "bytes": 806,
+          "sha256": "00439066fcba73de57644cf41e4e3b9f2dbb09d7f3fc2005898ba52399045882",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/tokenizer/vocab.json",
+          "bytes": 1059962,
+          "sha256": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "unet",
+          "name": "unet/config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/unet/config.json",
+          "bytes": 743,
+          "sha256": "78f474de6bab3d893868f37be97b636ae65c0df3073ed3256ca458ff599b5f96",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "unet",
+          "name": "unet/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/unet/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 1719125304,
+          "sha256": "c83908253f9a64d08c25fc90874c9c8aef9a329ce1ca5fb909d73b0c83d1ea21",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/vae/config.json",
+          "bytes": 547,
+          "sha256": "786a7d21647ddea6a04b9675c03d3cb45e90a2f3c6da5fbda2c54ade040036de",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/vae/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 167335342,
+          "sha256": "4fbcf0ebe55a0984f5a5e00d8c4521d52359af7229bb4d81890039d2aa16dd7c",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        }
+      ],
+      "diskBytes": 2134194467,
+      "reservationBytes": 1067097233,
       "family": "skybox",
-      "capabilities": ["txt2skybox"],
-      "runtimeStatus": "unsupported",
+      "licenceStatus": "restricted",
       "fieldOverrides": {
         "width": {
           "default": 2048
@@ -4147,25 +4252,133 @@
         "height": {
           "default": 1024
         }
-      }
+      },
+      "capabilities": [
+        "txt2skybox"
+      ]
     },
     {
       "id": "mvdiffusion",
       "name": "MVDiffusion",
-      "summary": "Text or image to 360 panorama",
+      "summary": "Text to 360 panorama via MultiDiffusion",
+      "releasedAt": "2023-07-03",
       "format": "safetensors",
-      "loader": "plugin",
+      "loader": "diffusers",
       "modality": "skybox",
       "rank": 1,
-      "licence": "MIT",
-      "licenceUrl": "https://opensource.org/licenses/MIT",
-      "source": "https://github.com/Tangshitao/MVDiffusion",
-      "files": [],
-      "diskBytes": 0,
-      "reservationBytes": 4000000000,
+      "licence": "other",
+      "licenceUrl": "https://huggingface.co/spaces/CompVis/stable-diffusion-license",
+      "source": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5",
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/model_index.json",
+          "bytes": 541,
+          "sha256": "e2f6f22e274374010aec30c79eb2d6e53fff4a36ac0225523a92cb2d41a83347",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "index",
+          "name": "feature_extractor/preprocessor_config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/feature_extractor/preprocessor_config.json",
+          "bytes": 342,
+          "sha256": "2a1da83b5e1032aaeef397552ddb408dca0d8cd1dc58f61bf6abf38d6f33a0a2",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/scheduler/scheduler_config.json",
+          "bytes": 308,
+          "sha256": "699cce92eb7c122e2eb7dfdea78e6187fda76a5ed4a8e42319b85610e620e091",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/text_encoder/config.json",
+          "bytes": 617,
+          "sha256": "845df614cb9327ae7bbea027316246fae917827407da6df13572e41b5f93b4cc",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.fp16.safetensors",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/text_encoder/model.fp16.safetensors",
+          "bytes": 246144864,
+          "sha256": "77795e2023adcf39bc29a884661950380bd093cf0750a966d473d1718dc9ef4e",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/tokenizer/merges.txt",
+          "bytes": 524619,
+          "sha256": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/tokenizer/special_tokens_map.json",
+          "bytes": 472,
+          "sha256": "c4864a9376a8401918425bed71fc14fc0e81f9b59ec45c1cf96cccb2df508eac",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/tokenizer/tokenizer_config.json",
+          "bytes": 806,
+          "sha256": "00439066fcba73de57644cf41e4e3b9f2dbb09d7f3fc2005898ba52399045882",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/tokenizer/vocab.json",
+          "bytes": 1059962,
+          "sha256": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "unet",
+          "name": "unet/config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/unet/config.json",
+          "bytes": 743,
+          "sha256": "78f474de6bab3d893868f37be97b636ae65c0df3073ed3256ca458ff599b5f96",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "unet",
+          "name": "unet/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/unet/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 1719125304,
+          "sha256": "c83908253f9a64d08c25fc90874c9c8aef9a329ce1ca5fb909d73b0c83d1ea21",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/vae/config.json",
+          "bytes": 547,
+          "sha256": "786a7d21647ddea6a04b9675c03d3cb45e90a2f3c6da5fbda2c54ade040036de",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/vae/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 167335342,
+          "sha256": "4fbcf0ebe55a0984f5a5e00d8c4521d52359af7229bb4d81890039d2aa16dd7c",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        }
+      ],
+      "diskBytes": 2134194467,
+      "reservationBytes": 1067097233,
       "family": "skybox",
-      "capabilities": ["txt2skybox", "img2skybox"],
-      "runtimeStatus": "unsupported",
+      "licenceStatus": "restricted",
       "fieldOverrides": {
         "width": {
           "default": 2048
@@ -4173,26 +4386,135 @@
         "height": {
           "default": 1024
         }
-      }
+      },
+      "capabilities": [
+        "txt2skybox"
+      ]
     },
     {
       "id": "diffusion360",
       "name": "Diffusion360",
-      "summary": "Text or image to 360 panorama, lightweight",
+      "summary": "Text to 360 panorama, 360-finetuned Stable Diffusion 1.5",
+      "releasedAt": "2023-11-22",
       "format": "safetensors",
-      "loader": "plugin",
+      "loader": "diffusers",
       "modality": "skybox",
       "rank": 1,
-      "licence": "other",
-      "licenceUrl": "https://github.com/ArcherFMY/SD-T2I-360PanoImage",
-      "source": "https://github.com/ArcherFMY/SD-T2I-360PanoImage",
-      "files": [],
-      "diskBytes": 0,
-      "reservationBytes": 2000000000,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage",
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/model_index.json",
+          "bytes": 545,
+          "sha256": "f6ae5e063992beb4fe8f48532277bcc669078ce3d4ac0a9214649e0068845dbe",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        },
+        {
+          "role": "index",
+          "name": "feature_extractor/preprocessor_config.json",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/feature_extractor/preprocessor_config.json",
+          "bytes": 342,
+          "sha256": "2a1da83b5e1032aaeef397552ddb408dca0d8cd1dc58f61bf6abf38d6f33a0a2",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/scheduler/scheduler_config.json",
+          "bytes": 346,
+          "sha256": "11ac5627d7df0fa344b875c4b5722b1767a8a2aa1684c2cf8b4d614300127234",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/text_encoder/config.json",
+          "bytes": 613,
+          "sha256": "7e33bfc475f6cf76e69b28b101993ca834d1f22ff4d35caefde32d63d4f42fba",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/pytorch_model.bin",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/text_encoder/pytorch_model.bin",
+          "bytes": 1361671895,
+          "sha256": "c3e254d7b61353497ea0be2c4013df4ea8f739ee88cffa0ba58cd085459ed565",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/tokenizer/merges.txt",
+          "bytes": 524619,
+          "sha256": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/tokenizer/special_tokens_map.json",
+          "bytes": 460,
+          "sha256": "f118ab3a983206e4f32583448de6bd6aae4ee21869135cef1f5848a753cdaab6",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/tokenizer/tokenizer_config.json",
+          "bytes": 807,
+          "sha256": "d562b18a0c6d32a168fce3d7a342fce64579ebacffb98fb71b0affc494fc32d8",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/tokenizer/vocab.json",
+          "bytes": 1059962,
+          "sha256": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        },
+        {
+          "role": "unet",
+          "name": "unet/config.json",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/unet/config.json",
+          "bytes": 1675,
+          "sha256": "d5d7a04f7ae390e4902372f2388551c4c8e112af9fa7d261ad30d848bc2ef29d",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        },
+        {
+          "role": "unet",
+          "name": "unet/diffusion_pytorch_model.bin",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/unet/diffusion_pytorch_model.bin",
+          "bytes": 3463934693,
+          "sha256": "795c1363925c16a8bddbc5dc1ed97d153a55655986405d5dccfb2d83ce3ab75f",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/vae/config.json",
+          "bytes": 553,
+          "sha256": "424117cb534ce03497c41305ed868980123917b2b6abba4bbaa615e968772903",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.bin",
+          "url": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage/resolve/d20770f5ec0000a2aaa579a1209d11dc92ddb08a/sd-base/vae/diffusion_pytorch_model.bin",
+          "bytes": 334707217,
+          "sha256": "1b4889b6b1d4ce7ae320a02dedaeff1780ad77d415ea0d744b476155c6377ddc",
+          "revision": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a"
+        }
+      ],
+      "diskBytes": 5161903727,
+      "reservationBytes": 2580951863,
       "family": "skybox",
-      "capabilities": ["txt2skybox", "img2skybox"],
-      "licenceStatus": "restricted",
-      "runtimeStatus": "unsupported",
+      "capabilities": [
+        "txt2skybox"
+      ],
       "fieldOverrides": {
         "width": {
           "default": 2048
@@ -4200,26 +4522,131 @@
         "height": {
           "default": 1024
         }
-      }
+      },
+      "readsTorchWeights": true
     },
     {
       "id": "unipano",
       "name": "UniPano",
-      "summary": "Text to 360 panorama, single-branch, lighter than PanFusion",
+      "summary": "Text to 360 panorama via MultiDiffusion, single-branch",
+      "releasedAt": "2025-05-28",
       "format": "safetensors",
-      "loader": "plugin",
+      "loader": "diffusers",
       "modality": "skybox",
       "rank": 1,
       "licence": "other",
-      "licenceUrl": "https://github.com/jinhong-ni/UniPano",
-      "source": "https://github.com/jinhong-ni/UniPano",
-      "files": [],
-      "diskBytes": 0,
-      "reservationBytes": 2000000000,
+      "licenceUrl": "https://huggingface.co/spaces/CompVis/stable-diffusion-license",
+      "source": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5",
+      "files": [
+        {
+          "role": "index",
+          "name": "model_index.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/model_index.json",
+          "bytes": 541,
+          "sha256": "e2f6f22e274374010aec30c79eb2d6e53fff4a36ac0225523a92cb2d41a83347",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "index",
+          "name": "feature_extractor/preprocessor_config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/feature_extractor/preprocessor_config.json",
+          "bytes": 342,
+          "sha256": "2a1da83b5e1032aaeef397552ddb408dca0d8cd1dc58f61bf6abf38d6f33a0a2",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "scheduler",
+          "name": "scheduler/scheduler_config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/scheduler/scheduler_config.json",
+          "bytes": 308,
+          "sha256": "699cce92eb7c122e2eb7dfdea78e6187fda76a5ed4a8e42319b85610e620e091",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/text_encoder/config.json",
+          "bytes": 617,
+          "sha256": "845df614cb9327ae7bbea027316246fae917827407da6df13572e41b5f93b4cc",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "text-encoder",
+          "name": "text_encoder/model.fp16.safetensors",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/text_encoder/model.fp16.safetensors",
+          "bytes": 246144864,
+          "sha256": "77795e2023adcf39bc29a884661950380bd093cf0750a966d473d1718dc9ef4e",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/merges.txt",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/tokenizer/merges.txt",
+          "bytes": 524619,
+          "sha256": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/special_tokens_map.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/tokenizer/special_tokens_map.json",
+          "bytes": 472,
+          "sha256": "c4864a9376a8401918425bed71fc14fc0e81f9b59ec45c1cf96cccb2df508eac",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/tokenizer_config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/tokenizer/tokenizer_config.json",
+          "bytes": 806,
+          "sha256": "00439066fcba73de57644cf41e4e3b9f2dbb09d7f3fc2005898ba52399045882",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "tokenizer",
+          "name": "tokenizer/vocab.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/tokenizer/vocab.json",
+          "bytes": 1059962,
+          "sha256": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "unet",
+          "name": "unet/config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/unet/config.json",
+          "bytes": 743,
+          "sha256": "78f474de6bab3d893868f37be97b636ae65c0df3073ed3256ca458ff599b5f96",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "unet",
+          "name": "unet/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/unet/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 1719125304,
+          "sha256": "c83908253f9a64d08c25fc90874c9c8aef9a329ce1ca5fb909d73b0c83d1ea21",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "vae",
+          "name": "vae/config.json",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/vae/config.json",
+          "bytes": 547,
+          "sha256": "786a7d21647ddea6a04b9675c03d3cb45e90a2f3c6da5fbda2c54ade040036de",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        },
+        {
+          "role": "vae",
+          "name": "vae/diffusion_pytorch_model.fp16.safetensors",
+          "url": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/vae/diffusion_pytorch_model.fp16.safetensors",
+          "bytes": 167335342,
+          "sha256": "4fbcf0ebe55a0984f5a5e00d8c4521d52359af7229bb4d81890039d2aa16dd7c",
+          "revision": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
+        }
+      ],
+      "diskBytes": 2134194467,
+      "reservationBytes": 1067097233,
       "family": "skybox",
-      "capabilities": ["txt2skybox"],
       "licenceStatus": "restricted",
-      "runtimeStatus": "unsupported",
       "fieldOverrides": {
         "width": {
           "default": 2048
@@ -4227,7 +4654,10 @@
         "height": {
           "default": 1024
         }
-      }
+      },
+      "capabilities": [
+        "txt2skybox"
+      ]
     }
   ],
   "skybox/img2skybox": [

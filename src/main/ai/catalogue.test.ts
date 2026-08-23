@@ -133,23 +133,21 @@ describe('the shipped catalogue', () => {
     expect(shippedModelsFor(aiRoleId('skybox', 'txt2skybox')).map(model => model.id)).toEqual([
       'panfusion',
       'mvdiffusion',
-      'diffusion360',
       'unipano',
+      'diffusion360',
     ])
     expect(shippedModelsFor(aiRoleId('skybox', 'img2skybox')).map(model => model.id)).toEqual([
-      'mvdiffusion',
-      'diffusion360',
       'genex-world-initializer',
     ])
   })
 
-  it('opens GenEx, so a skybox employment has an engine that can run', () => {
-    const genex = shippedModels().find(model => model.id === 'genex-world-initializer')
+  it('opens every skybox model, so both employments have an engine that can run', () => {
+    const closed = shippedModels()
+      .filter(model => model.family === 'skybox')
+      .filter(model => model.runtimeStatus === 'unsupported' || model.files.length === 0)
+      .map(model => model.id)
 
-    expect(genex?.runtimeStatus).not.toBe('unsupported')
-    expect(genex?.loader).toBe('diffusers')
-    expect(genex?.modality).toBe('skybox')
-    expect(genex?.files.length).toBeGreaterThan(0)
+    expect(closed).toEqual([])
   })
 
   // A digest nobody can fetch is worse than no download: the engine is a later lot.
