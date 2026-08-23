@@ -49,6 +49,18 @@ describe('settings store', () => {
     expect(reads.mock.calls.filter(([key]) => key === 'settings').length).toBeGreaterThan(1)
   })
 
+  /**
+   * Held between reads means SHARED between callers: one of them writing into a section would
+   * change what every other reads, while the file behind it still said the old thing.
+   */
+  it('hands back settings nobody can write into', () => {
+    const settings = createSettingsStore(adapter).read()
+
+    expect(() => {
+      settings.appearance.density = 'compact'
+    }).toThrow()
+  })
+
   it('merges a partial write section by section', () => {
     const store = createSettingsStore(adapter)
     store.write({ appearance: { density: 'compact' } })

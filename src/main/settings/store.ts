@@ -170,8 +170,18 @@ export function createSettingsStore(
    */
   let cached: Settings | null = null
 
+  /**
+   * Frozen because it is now SHARED: every caller between two writes holds the same object, so
+   * one of them writing into a section would change what the others read — and the file behind
+   * it would still say the old thing. A write goes through `write`, which rebuilds it.
+   */
+  const frozen = (settings: Settings): Settings => {
+    for (const section of Object.values(settings)) Object.freeze(section)
+    return Object.freeze(settings)
+  }
+
   const read = (): Settings => {
-    cached ??= merge(DEFAULT_SETTINGS, salvagePartialSettings(adapter.read(SETTINGS_KEY)))
+    cached ??= frozen(merge(DEFAULT_SETTINGS, salvagePartialSettings(adapter.read(SETTINGS_KEY))))
     return cached
   }
 
