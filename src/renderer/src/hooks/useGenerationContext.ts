@@ -13,6 +13,7 @@ import { canvasOf, useCanvases } from '@/stores/canvases'
 import { activeImageId, activeSceneId, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { sceneOf, useScenes } from '@/stores/scenes'
+import { latestGenerationIds, useJobs } from '@/stores/jobs'
 import { selectedAssetIds, useSelection } from '@/stores/selection'
 
 /**
@@ -44,6 +45,10 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
   const sceneId = useDocuments(activeSceneId)
   const scene = useScenes(state => (sceneId ? sceneOf(state, sceneId) : null))
 
+  // § 24: what the last generation produced, so a chain starts from it without a round trip
+  // through the shelf. Ids rather than rows, so a catalogue refresh does not re-render this.
+  const producedIds = useJobs(latestGenerationIds)
+
   const imageId = useDocuments(activeImageId)
   const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
   const document = useDocuments(state => (imageId ? state.documents[imageId] : undefined))
@@ -71,9 +76,12 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
       // `enabled`, not merely present: the canvas does not honour a mask whose box is unticked,
       // and offering it would ask the model to repaint a region nothing on screen shows.
       activeMask: layer?.mask?.enabled === true ? { name: layer.name } : null,
-      results: [],
+      results: producedIds.flatMap(id => {
+        const asset = rows.get(id)
+        return asset ? [{ id: asset.id, name: asset.name, type: asset.type }] : []
+      }),
     }
-  }, [pickedIds, rows, scene, canvas, document])
+  }, [pickedIds, rows, scene, canvas, document, producedIds])
 
   const inputs = useMemo(() => availableInputsOf(content), [content])
 

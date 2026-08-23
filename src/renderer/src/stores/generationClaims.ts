@@ -1,7 +1,11 @@
+import type { DocumentKind } from '@shared/domain/document'
 import type { Job } from '@shared/domain/job'
+import { claimAudioOnSubmit } from './audioGeneration'
 import { claimImageOnSubmit } from './imageGeneration'
 import { claimModelOnSubmit } from './modelGeneration'
+import { claimSequenceOnSubmit } from './sequenceGeneration'
 import { claimSkyboxOnSubmit } from './skyboxGeneration'
+import { claimTextureOnSubmit } from './textureGeneration'
 
 /**
  * Every workspace that has somewhere to put a result, claimed in one call.
@@ -13,8 +17,28 @@ import { claimSkyboxOnSubmit } from './skyboxGeneration'
  * hold and everything to forget: a workspace added without a line here is a generation that
  * lands nowhere.
  */
+/**
+ * The kinds a claim exists for, so a guard can hold the list against `DOCUMENT_KINDS` rather
+ * than against a copy: a workspace added without a line above lands its generations nowhere.
+ */
+export const CLAIMED_KINDS: readonly DocumentKind[] = [
+  'skybox',
+  'image',
+  'scene',
+  'sequence',
+  'audio',
+  'texture',
+]
+
 export function claimOnSubmit(): (job: Job | null) => void {
-  const claims = [claimSkyboxOnSubmit(), claimImageOnSubmit(), claimModelOnSubmit()]
+  const claims = [
+    claimSkyboxOnSubmit(),
+    claimImageOnSubmit(),
+    claimModelOnSubmit(),
+    claimSequenceOnSubmit(),
+    claimAudioOnSubmit(),
+    claimTextureOnSubmit(),
+  ]
 
   return job => {
     for (const claim of claims) claim(job)

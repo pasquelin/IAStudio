@@ -20,6 +20,22 @@ type JobsState = {
   apply: (progress: JobProgress) => void
 }
 
+/** Stable, so a surface reading the selector does not re-render on every unrelated job tick. */
+const NO_IDS: readonly string[] = []
+
+/**
+ * What the most recent finished generation produced — § 24: a result becomes a source without a
+ * round trip through the shelf.
+ *
+ * The LAST one alone, and the list is in submission order: offering everything a session ever
+ * made would be a second shelf, and the shelf is one panel away. `assetIds` is what the job
+ * carries; the rows themselves are read where they are drawn.
+ */
+export function latestGenerationIds(state: Pick<JobsState, 'jobs'>): readonly string[] {
+  const finished = state.jobs.find(job => job.status === 'succeeded' && job.assetIds?.length)
+  return finished?.assetIds ?? NO_IDS
+}
+
 /**
  * Jobs are owned by the main process; this replica exists so the jobs bar can render without
  * asking, and it is refreshed by progress events rather than by polling a second time.
