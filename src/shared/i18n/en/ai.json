@@ -137,6 +137,8 @@
     "servesRoles_many": "{{count, number}} employments",
     "servesRoles_other": "{{count, number}} employments",
     "publisherCard": "Publisher card",
-    "publisherCardHint": "Opens this model’s Hugging Face page in the browser"
+    "publisherCardHint": "Opens this model’s Hugging Face page in the browser",
+    "catalogue": "Catalogue",
+    "catalogueHelp": "The models of this family, on this machine and in the cloud. Which one serves each employment is picked in the generation panel."
   }
 }

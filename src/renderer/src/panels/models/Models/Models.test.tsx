@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   LOCAL_RUNTIME,
+  type ModelFamily,
   type ModelPage,
   type ModelQuery,
   type ModelSummary,
@@ -33,8 +34,8 @@ function model(id: string, overrides: Partial<ModelSummary> = {}): ModelSummary 
   }
 }
 
-function renderPanel() {
-  return render(withQueries(<Models />))
+function renderPanel(family: ModelFamily = 'image') {
+  return render(withQueries(<Models family={family} />))
 }
 
 describe('Models panel', () => {
@@ -87,14 +88,13 @@ describe('Models panel', () => {
     expect(open).toHaveBeenCalledWith('account')
   })
 
-  it('asks only for the models of the active workspace', async () => {
+  it('asks only for the models of the family it browses', async () => {
     const searchModels = vi.fn((_query?: ModelQuery): Promise<ModelPage> =>
       Promise.resolve({ items: [], cursor: null }),
     )
     installFakeBridge({ provider: { searchModels } })
-    useLayouts.setState({ activeWorkspace: '3d' })
 
-    renderPanel()
+    renderPanel('3d')
 
     await waitFor(() => expect(searchModels).toHaveBeenCalled())
     expect(searchModels.mock.calls[0]?.[0]).toMatchObject({
@@ -284,7 +284,7 @@ describe('Models panel', () => {
     useModels.setState({
       collections: { image: { ...DEFAULT_COLLECTION_STATE, search: 'nothing' } },
     })
-    rerender(withQueries(<Models />))
+    rerender(withQueries(<Models family="image" />))
 
     expect(await screen.findByText(/Aucun résultat pour ce filtre/)).toBeInTheDocument()
   })
@@ -295,16 +295,15 @@ describe('Models panel', () => {
    * space as well — and there it matched nothing at all, none of its models carrying the tag
    * "Official" was read from. Without the split this panel answers "no result" instead.
    */
-  it('reads the filters of the space it shows, not those of the space next door', async () => {
+  it('reads the filters of the family it shows, not those of the family next door', async () => {
     installFakeBridge({
       provider: { searchModels: () => Promise.resolve({ items: [], cursor: null }) },
     })
     useModels.setState({
       collections: { image: { ...DEFAULT_COLLECTION_STATE, search: 'nothing' } },
     })
-    useLayouts.setState({ activeWorkspace: 'skyboxes' })
 
-    renderPanel()
+    renderPanel('skybox')
 
     expect(await screen.findByText(/Aucun modèle dans cet espace/)).toBeInTheDocument()
   })
@@ -315,7 +314,7 @@ describe('Models panel', () => {
    * The word left behind would ask the search endpoint for it under the new family, then blame
    * the empty answer on a filter that space never had.
    */
-  it('does not carry the word typed in one space into the next', async () => {
+  it('does not carry the word typed under one family into the next', async () => {
     const searchModels = vi.fn((_query?: ModelQuery): Promise<ModelPage> =>
       Promise.resolve({ items: [], cursor: null }),
     )
@@ -327,8 +326,7 @@ describe('Models panel', () => {
     const { rerender } = renderPanel()
     await waitFor(() => expect(searchModels).toHaveBeenCalled())
 
-    useLayouts.setState({ activeWorkspace: 'skyboxes' })
-    rerender(withQueries(<Models />))
+    rerender(withQueries(<Models family="skybox" />))
 
     await waitFor(() =>
       expect(searchModels.mock.calls.at(-1)?.[0]).toMatchObject({ family: 'skybox' }),

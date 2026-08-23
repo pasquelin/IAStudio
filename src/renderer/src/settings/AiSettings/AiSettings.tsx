@@ -17,6 +17,7 @@ import { useModelFit } from '@/hooks/useModelFit'
 import { useAiModels } from '@/stores/aiModels'
 import { SettingLine } from '../SettingLine'
 import { SETTING_COLUMN, SETTING_SELECT } from '../settingStyles'
+import { Models } from '@/panels/models/Models/Models'
 import { AiOllamaOffer } from './AiOllamaOffer'
 import { AiRoleRow } from './AiRoleRow'
 import { gpuName } from './gpuName'
@@ -180,6 +181,14 @@ export function AiSettings({ family }: AiSettingsProps) {
               })
             : t(loadFailureKey(overview.loadFailure.reason))}
         </p>
+      )}
+
+      {family !== undefined && (
+        <section className="mt-6 flex h-96 flex-col">
+          <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-2')}>{t('aiModels.catalogue')}</h3>
+          <p className={WINDOW_CAPTION}>{t('aiModels.catalogueHelp')}</p>
+          <Models family={family} />
+        </section>
       )}
 
       {rows.map(row => (

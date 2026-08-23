@@ -2,7 +2,7 @@ import { mdiCubeScan } from '@mdi/js'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { primaryRoleOf } from '@shared/domain/aiRole'
-import { LOCAL_RUNTIME, type ModelSummary } from '@shared/domain/model'
+import { LOCAL_RUNTIME, type ModelFamily, type ModelSummary } from '@shared/domain/model'
 import { CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import { failureKeyOf } from '@/services/failureMessage'
 import { Collection } from '@/design/Collection/Collection'
@@ -17,12 +17,10 @@ import { usePlanAccess } from '@/hooks/usePlanAccess'
 import { useModelReach } from '@/hooks/useModelReach'
 import { ModelDownloadDialog } from './ModelDownloadDialog'
 import { getBridge } from '@/services/bridge'
-import { useLayouts } from '@/stores/layouts'
 import { modelCollectionOf, useModels } from '@/stores/models'
 import { useAiModels } from '@/stores/aiModels'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
-import { workspaceById } from '@/helpers/workspaces'
 import { EmptyState } from '@/design/EmptyState'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { facetsFor, queryFrom, sortOptions } from '../modelFilters'
@@ -44,14 +42,22 @@ const AUTOMATIC_PULLS = 6
 /** Never rebuilt: a fresh empty array per render would invalidate the memo that reads it. */
 const NO_CLOUDS: readonly string[] = []
 
+export type ModelsProps = {
+  /** The family whose catalogue is browsed. The settings screen it sits under names it. */
+  family: ModelFamily
+}
+
 /**
- * The model browser. It follows the active workspace — Image shows image models, 3D shows 3D
- * models — because the title bar already says which one is active; type tabs would repeat it.
+ * The model browser — what the catalogue holds for one family, on this machine and in the cloud.
+ *
+ * It sat in a dock until ADR-23, sharing a half with the generation panel: picking a model and
+ * using it took turns, so generating meant opening it, choosing, coming back, and starting again
+ * for every attempt. It is now the MANAGER — discovering, installing, reading what a model
+ * weighs — and it lives beside the employments it serves, in the settings. What a generation
+ * picks is the panel's own picker.
  */
-export function Models() {
+export function Models({ family }: ModelsProps) {
   const { t } = useTranslation()
-  const workspace = useLayouts(state => state.activeWorkspace)
-  const { family } = workspaceById(workspace)
 
   // Per family: the bar follows the workspace like the rest of this panel, and a filter set
   // under Image narrowing the Skyboxes space is a filter nobody can find to relax.
