@@ -873,9 +873,9 @@ https://huggingface.co/genex-world/World-Initializer-image-to-panorama
 ```
 
 ```
-Image and prompt to 360 panorama.
-No engine in this studio opens these weights yet: they are listed so the choice
-is visible. Nothing is fetched until a runtime can actually run them.
+Image and prompt to 360 panorama, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
 
 
 Licensed under CC-BY-4.0. Full terms: https://creativecommons.org/licenses/by/4.0/

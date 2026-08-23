@@ -154,6 +154,7 @@ describe('every door a loader answers on', () => {
       runtimeEndpointId('diffusers', '3d'),
       runtimeEndpointId('diffusers', 'audio'),
       runtimeEndpointId('diffusers', 'diffusion'),
+      runtimeEndpointId('diffusers', 'skybox'),
       runtimeEndpointId('diffusers', 'video'),
     ])
   })
@@ -174,6 +175,11 @@ describe('engineDoorOf', () => {
   // freeing one would take the other down with it.
   it('gives a video a process of its own rather than the image one', () => {
     expect(engineDoorOf('video')).not.toBe(engineDoorOf('image'))
+  })
+
+  it('gives a skybox a process of its own rather than the image one', () => {
+    expect(engineDoorOf('skybox')).toBe('engine/skybox')
+    expect(engineDoorOf('skybox')).not.toBe(engineDoorOf('image'))
   })
 
   // `endpointOfDoor` reads the same format the other way, and a key not minted here fails to

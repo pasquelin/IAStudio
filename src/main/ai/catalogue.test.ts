@@ -143,6 +143,15 @@ describe('the shipped catalogue', () => {
     ])
   })
 
+  it('opens GenEx, so a skybox employment has an engine that can run', () => {
+    const genex = shippedModels().find(model => model.id === 'genex-world-initializer')
+
+    expect(genex?.runtimeStatus).not.toBe('unsupported')
+    expect(genex?.loader).toBe('diffusers')
+    expect(genex?.modality).toBe('skybox')
+    expect(genex?.files.length).toBeGreaterThan(0)
+  })
+
   // A digest nobody can fetch is worse than no download: the engine is a later lot.
   it('ships no files for a generating model no engine can open', () => {
     const offered = shippedModels()

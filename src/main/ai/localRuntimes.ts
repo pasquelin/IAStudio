@@ -27,6 +27,7 @@ const DIFFUSERS_DOORS: Readonly<Record<ProducingModality, string>> = {
   video: 'video',
   audio: 'audio',
   mesh: '3d',
+  skybox: 'skybox',
 }
 
 const DOORS_BY_LOADER: Readonly<Partial<Record<ModelLoader, Readonly<Record<string, string>>>>> = {

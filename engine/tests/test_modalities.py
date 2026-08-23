@@ -79,6 +79,18 @@ def test_a_sound_carries_how_long_it_runs() -> None:
     assert kwargs_of("audio", seconds=12)["audio_duration"] == 12.0
 
 
+def test_a_skybox_from_words_asks_for_a_seamless_wrap() -> None:
+    asked = kwargs_of("skybox", width=2048, height=1024)
+
+    assert asked["circular_padding"] is True
+    assert asked["width"] == 2048
+    assert asked["height"] == 1024
+
+
+def test_a_skybox_is_a_listed_modality() -> None:
+    assert "skybox" in MODALITIES
+
+
 def test_lyrics_reach_the_pipeline() -> None:
     assert kwargs_of("audio", lyrics="[verse]\nhello")["lyrics"] == "[verse]\nhello"
 

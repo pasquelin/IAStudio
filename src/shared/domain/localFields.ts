@@ -13,7 +13,7 @@ import type { AssetType } from './asset'
  */
 
 /** What a runtime takes, as far as a form is concerned. Never a model id, never a runtime name. */
-export type LocalModality = 'text' | 'image' | 'video' | 'audio' | 'mesh'
+export type LocalModality = 'text' | 'image' | 'video' | 'audio' | 'mesh' | 'skybox'
 
 /** A modality that writes a FILE. Everything but `text`, which answers a sentence and files none. */
 export type ProducingModality = Exclude<LocalModality, 'text'>
@@ -41,6 +41,8 @@ const EXTENSIONS: Record<ProducingModality, string> = {
   video: 'mp4',
   audio: 'wav',
   mesh: 'ply',
+  // Same raster as an image: the collector files by modality, not by suffix.
+  skybox: 'png',
 }
 
 /**
@@ -316,6 +318,16 @@ const TEMPLATES: Record<LocalModality, readonly LocalFieldTemplate[]> = {
     SOURCE_IMAGE,
     steps({ default: 25, max: 100 }),
     cfgScale({ default: 15, max: 30 }),
+    SEED,
+  ],
+  skybox: [
+    PROMPT,
+    NEGATIVE_PROMPT,
+    SOURCE_IMAGE,
+    side('width', { default: 2048, max: 4096, step: 64 }),
+    side('height', { default: 1024, max: 2048, step: 64 }),
+    steps({ default: 20, max: 150 }),
+    cfgScale({ default: 7, max: 30 }),
     SEED,
   ],
 }

@@ -25,6 +25,7 @@ DOOR_MODULES: dict[str, str] = {
     "engine/video": "ia_studio_engine.workers.video",
     "engine/audio": "ia_studio_engine.workers.audio",
     "engine/3d": "ia_studio_engine.workers.mesh",
+    "engine/skybox": "ia_studio_engine.workers.skybox",
 }
 
 Send = Callable[[str], None]

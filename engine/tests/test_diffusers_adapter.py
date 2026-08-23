@@ -45,6 +45,22 @@ def test_safetensors_models_still_take_the_fp16_files() -> None:
     assert files["variant"] == "fp16"
 
 
+def test_a_folder_without_fp16_siblings_does_not_ask_for_them(tmp_path: Path) -> None:
+    (tmp_path / "model.safetensors").write_bytes(b"")
+
+    files = pretrained_file_kwargs(False, str(tmp_path))
+
+    assert "variant" not in files
+
+
+def test_a_folder_that_ships_fp16_files_still_asks_for_them(tmp_path: Path) -> None:
+    (tmp_path / "model.fp16.safetensors").write_bytes(b"")
+
+    files = pretrained_file_kwargs(False, str(tmp_path))
+
+    assert files["variant"] == "fp16"
+
+
 def test_refuses_a_folder_that_is_not_one(tmp_path: Path) -> None:
     assert "not a folder" in (DiffusersAdapter.refuse_reason(str(tmp_path / "nowhere")) or "")
 

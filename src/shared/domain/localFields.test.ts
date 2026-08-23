@@ -108,12 +108,23 @@ describe('the modalities that write a file', () => {
     for (const modality of producing) expect(assetTypeOfModality(modality)).toBe(modality)
   })
 
-  // The collector reads the extension back off the path: a video written as `.png` lands as a
-  // picture nothing can play.
-  it('writes each of them under an extension of its own', () => {
-    const written = producing.map(outputExtensionOf)
+  // The collector files by modality. A skybox is a panorama PNG — the same suffix as an image,
+  // a different shelf. A video written as `.png` is the case this still refuses.
+  it('writes a clip, a take and a mesh under a suffix nothing else uses', () => {
+    expect(outputExtensionOf('image')).toBe('png')
+    expect(outputExtensionOf('skybox')).toBe('png')
+    expect(outputExtensionOf('video')).toBe('mp4')
+    expect(outputExtensionOf('audio')).toBe('wav')
+    expect(outputExtensionOf('mesh')).toBe('ply')
+  })
 
-    expect(new Set(written).size).toBe(producing.length)
+  it('opens a skybox on a 2:1 frame, which a still does not', () => {
+    const fields = localFieldsOf('skybox', {}, shout)
+    expect(fields.find(field => field.key === 'width')?.default).toBe(2048)
+    expect(fields.find(field => field.key === 'height')?.default).toBe(1024)
+    expect(localFieldsOf('image', {}, shout).find(field => field.key === 'width')?.default).toBe(
+      1024,
+    )
   })
 
   it('leaves a conversation writing no file at all', () => {

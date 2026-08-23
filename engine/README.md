@@ -5,7 +5,7 @@ d'Electron, qui **mesure et exécute** — jamais un second ordonnanceur.
 
 ## Ce qu'il est aujourd'hui
 
-Le socle, le tuyau, et **quatre portes**, une par modalité. Le noyau se connecte, se présente,
+Le socle, le tuyau, et **cinq portes**, une par modalité. Le noyau se connecte, se présente,
 répond `hardware.info`, et route vers un worker ce qu'il ne peut pas répondre lui-même —
 `models.load`, `models.unload`, `generate`, `worker.status`. **C'est le principal qui nomme la
 porte** sur chaque requête : lui seul sait quel modèle a été choisi pour quel emploi.
@@ -20,7 +20,7 @@ démarre à la première demande — une porte que personne n'a demandée est un
 jamais tourné — et lui parle par un `socketpair` hérité, dans le même NDJSON.
 
 Ce qui diffère entre deux portes est une modalité et un nom : la boucle est écrite une fois
-(`workers/door.py`), et les quatre modules qui la nomment font quatre lignes chacun.
+(`workers/door.py`), et les cinq modules qui la nomment font quatre lignes chacun.
 
 | Porte | Modalité | Adapter | Backend |
 |---|---|---|---|
@@ -28,6 +28,7 @@ Ce qui diffère entre deux portes est une modalité et un nom : la boucle est é
 | `engine/video` | vidéo | idem | idem |
 | `engine/audio` | son | idem | idem |
 | `engine/3d` | maillage | idem | idem |
+| `engine/skybox` | panorama 360 | idem | idem |
 
 Les familles hors diffusers (TripoSR, TRELLIS, TRELLIS.2, MMAudio) passent par `plugin_adapter.py`.
 TripoSR est vendu sous `vendor/tsr` (MIT, `weights_only=True`). TRELLIS / TRELLIS.2 demandent
