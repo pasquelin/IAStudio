@@ -42,8 +42,6 @@
   "aiModels": {
     "reading": "Lecture de la machine…",
     "empty": "Aucun emploi n’a de fournisseur à proposer sur cette machine.",
-    "generationGroup": "Génération",
-    "standaloneGroup": "Assistant et voix",
     "machineMemory": "{{available}} libres sur {{total}}",
     "machineDisk": "{{free}} sur le disque",
     "appliesNow": "Un choix fait ici s’applique tout de suite — Annuler ne le reprend pas.",

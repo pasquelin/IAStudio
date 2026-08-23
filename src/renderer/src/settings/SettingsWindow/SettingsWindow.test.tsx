@@ -17,6 +17,14 @@ function navigation(): HTMLElement {
   return screen.getByRole('navigation', { name: 'Sections de réglages' })
 }
 
+/** A nested entry, named like another under a different parent. */
+function childEntry(parent: string, child: string): HTMLElement {
+  const button = within(navigation()).getByRole('button', { name: parent })
+  const item = button.parentElement
+  if (item === null) throw new Error(`no item for ${parent}`)
+  return within(item).getByRole('button', { name: child })
+}
+
 describe('SettingsWindow', () => {
   beforeEach(() => {
     useSettingsDraft.setState({ pending: {}, touched: new Set() })
@@ -118,6 +126,11 @@ describe('SettingsWindow', () => {
       'Détourage',
       'Vectorisation',
       'Modèles d’IA',
+      'Image',
+      'Vidéo',
+      'Modélisation',
+      'Audio',
+      'Texture',
       'Espaces de travail',
       'Modélisation',
       'Raccourcis',
@@ -127,6 +140,19 @@ describe('SettingsWindow', () => {
       'Stockage',
       'Avancé',
     ])
+  })
+
+  it('opens a family of AI employments from the models section, not the default picker', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+
+    await userEvent.click(childEntry('Modèles d’IA', 'Image'))
+
+    expect(screen.getByRole('heading', { name: 'Image' })).toBeInTheDocument()
+    expect(screen.getByText(/s’applique tout de suite/)).toBeInTheDocument()
+    expect(screen.queryByText('Ollama')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Ajouter un fichier…' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Modèle par défaut/)).not.toBeInTheDocument()
   })
 
   // Written in `rem` until the 11th of August, this column answered the root element that the
@@ -354,7 +380,7 @@ describe('SettingsWindow', () => {
     })
 
     render(<SettingsWindow />)
-    await userEvent.click(within(navigation()).getByRole('button', { name: 'Image' }))
+    await userEvent.click(childEntry('Génération', 'Image'))
 
     const picker = await screen.findByLabelText(/Modèle par défaut/)
     await userEvent.selectOptions(picker, 'model_flux')
@@ -403,7 +429,7 @@ describe('SettingsWindow', () => {
     })
 
     render(<SettingsWindow />)
-    await userEvent.click(within(navigation()).getByRole('button', { name: 'Image' }))
+    await userEvent.click(childEntry('Génération', 'Image'))
 
     const picker = await screen.findByLabelText(/Modèle par défaut/)
     // The line itself, not the window: every other row carries a dot of its own.
@@ -455,7 +481,7 @@ describe('SettingsWindow', () => {
     })
 
     render(<SettingsWindow />)
-    await userEvent.click(within(navigation()).getByRole('button', { name: 'Image' }))
+    await userEvent.click(childEntry('Génération', 'Image'))
 
     const option = await screen.findByRole('option', { name: /Seedance 2\.0/ })
     expect(option).toBeDisabled()
@@ -502,7 +528,7 @@ describe('SettingsWindow', () => {
     })
 
     render(<SettingsWindow />)
-    await userEvent.click(within(navigation()).getByRole('button', { name: 'Image' }))
+    await userEvent.click(childEntry('Génération', 'Image'))
 
     expect(await screen.findByText(/cu-basic/)).toBeInTheDocument()
   })

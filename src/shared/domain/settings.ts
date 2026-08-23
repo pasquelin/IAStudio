@@ -433,6 +433,11 @@ export type SettingsSectionId =
   | 'generation.background-removal'
   | 'generation.vectorization'
   | 'ai'
+  | 'ai.image'
+  | 'ai.video'
+  | 'ai.3d'
+  | 'ai.audio'
+  | 'ai.texture'
   | 'spaces'
   | 'spaces.three'
   | 'shortcuts'
@@ -455,6 +460,11 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'generation.background-removal',
   'generation.vectorization',
   'ai',
+  'ai.image',
+  'ai.video',
+  'ai.3d',
+  'ai.audio',
+  'ai.texture',
   'spaces',
   'spaces.three',
   'shortcuts',

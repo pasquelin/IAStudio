@@ -93,6 +93,15 @@ const MODEL_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
   },
 ]
 
+/** Employment screens. No `family:` — that field is the generation default picker. */
+const AI_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
+  { id: 'ai.image', labelKey: 'workspaces.image', parent: 'ai' },
+  { id: 'ai.video', labelKey: 'workspaces.video', parent: 'ai' },
+  { id: 'ai.3d', labelKey: 'workspaces.3d', parent: 'ai' },
+  { id: 'ai.audio', labelKey: 'workspaces.audio', parent: 'ai' },
+  { id: 'ai.texture', labelKey: 'families.texture', parent: 'ai' },
+]
+
 export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
   {
     id: 'general',
@@ -120,6 +129,7 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     labelKey: 'settings.ai',
     descriptionKey: 'settings.aiDescription',
   },
+  ...AI_FAMILY_SECTIONS,
   {
     id: 'spaces',
     labelKey: 'settings.spaces',

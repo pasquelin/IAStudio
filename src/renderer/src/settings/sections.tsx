@@ -24,7 +24,7 @@ export type SettingsSection = SettingSectionEntry & {
  * nesting — comes from the shared registry.
  *
  * The family screens are spelled out rather than derived from the id: reading `'image'` back
- * out of `'generation.image'` would hand `ModelFamilySettings` a string the type cannot check,
+ * out of `'generation.image'` or `'ai.image'` would hand a string the type cannot check,
  * and a section renamed would fail here instead of failing silently.
  */
 const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
@@ -40,6 +40,11 @@ const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   'generation.upscale': () => <ModelFamilySettings family="upscale" />,
   'generation.background-removal': () => <ModelFamilySettings family="background-removal" />,
   'generation.vectorization': () => <ModelFamilySettings family="vectorization" />,
+  'ai.image': () => <AiSettings family="image" />,
+  'ai.video': () => <AiSettings family="video" />,
+  'ai.3d': () => <AiSettings family="3d" />,
+  'ai.audio': () => <AiSettings family="audio" />,
+  'ai.texture': () => <AiSettings family="texture" />,
 }
 
 function withContent(entry: SettingSectionEntry): SettingsSection {

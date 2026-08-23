@@ -6,7 +6,8 @@ import {
   type ChoiceScope,
   type RoleRow,
 } from '@shared/domain/aiOverview'
-import { isGenerationRole } from '@shared/domain/aiRole'
+import { isGenerationRole, partsOfRole } from '@shared/domain/aiRole'
+import type { ModelFamily } from '@shared/domain/model'
 import { WINDOW_CAPTION, WINDOW_GROUP_LABEL, WINDOW_HELP } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
 import { useBytes } from '@/hooks/useBytes'
@@ -32,11 +33,21 @@ function scopeOf(overview: AiOverview): ChoiceScope {
   return overview.roles.some(row => row.chosen.project !== null) ? 'project' : 'app'
 }
 
+function rowsOf(roles: readonly RoleRow[], family: ModelFamily | undefined): readonly RoleRow[] {
+  if (family === undefined) return roles.filter(row => !isGenerationRole(row.role))
+  return roles.filter(row => partsOfRole(row.role)?.family === family)
+}
+
+export type AiSettingsProps = {
+  /** Absent on the overview: Ollama, the machine, and the two roles no space holds. */
+  family?: ModelFamily
+}
+
 /**
  * The manager: which AI serves which EMPLOYMENT, and what this machine says of each candidate.
  * Three rules from ADR-21 — a default that works, nothing hidden, and the machine decides.
  */
-export function AiSettings() {
+export function AiSettings({ family }: AiSettingsProps) {
   const { t } = useTranslation()
   const bytes = useBytes()
   const overview = useAiModels(state => state.overview)
@@ -48,20 +59,8 @@ export function AiSettings() {
   const [scope, setScope] = useState<ChoiceScope | null>(null)
 
   const fitOf = useModelFit(overview?.machine ?? null)
-
-  const groups: readonly { heading: string; rows: readonly RoleRow[] }[] = useMemo(() => {
-    const roles = overview?.roles ?? []
-    return [
-      {
-        heading: t('aiModels.generationGroup'),
-        rows: roles.filter(row => isGenerationRole(row.role)),
-      },
-      {
-        heading: t('aiModels.standaloneGroup'),
-        rows: roles.filter(row => !isGenerationRole(row.role)),
-      },
-    ]
-  }, [overview?.roles, t])
+  const rows = rowsOf(overview?.roles ?? [], family)
+  const overviewPane = family === undefined
 
   // On the machine alone, never on the whole overview: a download re-publishes every four
   // mebibytes and `announceProgress` deliberately keeps this member's reference, which depending
@@ -106,16 +105,18 @@ export function AiSettings() {
 
   return (
     <div className={SETTING_COLUMN}>
-      <p className={WINDOW_CAPTION}>{machine}</p>
+      {overviewPane && <p className={WINDOW_CAPTION}>{machine}</p>}
       {/* The one screen of this window that does not wait for Apply, said rather than discovered:
           the manager owns the write because it re-judges the candidates — see `SettingsWindow`. */}
       <p className={cn(WINDOW_HELP, 'mb-4')}>{t('aiModels.appliesNow')}</p>
 
-      <section className="mb-6">
-        <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-2')}>{t('aiModels.sourceOllama')}</h3>
-        <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
-        <AiOllamaOffer offer={overview.ollama} busy={busy} />
-      </section>
+      {overviewPane && (
+        <section className="mb-6">
+          <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-2')}>{t('aiModels.sourceOllama')}</h3>
+          <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
+          <AiOllamaOffer offer={overview.ollama} busy={busy} />
+        </section>
+      )}
 
       {overview.projectPath !== null && (
         <SettingLine title={t('aiModels.scope')} labelFor={SCOPE_FIELD}>
@@ -135,7 +136,7 @@ export function AiSettings() {
         </SettingLine>
       )}
 
-      {overview.roles.length === 0 && <p className={WINDOW_HELP}>{t('aiModels.empty')}</p>}
+      {rows.length === 0 && <p className={WINDOW_HELP}>{t('aiModels.empty')}</p>}
 
       {/* One sentence per branch: only the admission weighed bytes, so only it may name them. */}
       {overview.loadFailure !== null && (
@@ -149,42 +150,37 @@ export function AiSettings() {
         </p>
       )}
 
-      {groups.map(
-        group =>
-          group.rows.length > 0 && (
-            <section key={group.heading} className="mb-6">
-              <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-3')}>{group.heading}</h3>
-              {group.rows.map(row => (
-                <AiRoleRow
-                  key={row.role}
-                  row={row}
-                  // Only the row that owns it: the others then hold their render while a bar moves.
-                  loading={heldBy(row, overview.loading)}
-                  installing={heldBy(row, overview.installing)}
-                  busy={busy}
-                  scope={writesTo}
-                  fitOf={fitOf}
-                />
-              ))}
-            </section>
-          ),
-      )}
+      {rows.map(row => (
+        <AiRoleRow
+          key={row.role}
+          row={row}
+          // Only the row that owns it: the others then hold their render while a bar moves.
+          loading={heldBy(row, overview.loading)}
+          installing={heldBy(row, overview.installing)}
+          busy={busy}
+          scope={writesTo}
+          fitOf={fitOf}
+        />
+      ))}
 
-      <SettingLine title={t('aiModels.ownModel')} help={t('aiModels.ownModelHelp')}>
-        <button
-          type="button"
-          data-sc="field:ai.ownModel"
-          className="btn btn-sm"
-          onClick={() => void addOwnAiModel()}
-        >
-          {t('aiModels.addOwnModel')}
-        </button>
-      </SettingLine>
-
-      {ownModelFailure !== null && (
-        <p className={WINDOW_HELP} role="status">
-          {t('aiModels.ownModelUnreadable')}
-        </p>
+      {overviewPane && (
+        <>
+          <SettingLine title={t('aiModels.ownModel')} help={t('aiModels.ownModelHelp')}>
+            <button
+              type="button"
+              data-sc="field:ai.ownModel"
+              className="btn btn-sm"
+              onClick={() => void addOwnAiModel()}
+            >
+              {t('aiModels.addOwnModel')}
+            </button>
+          </SettingLine>
+          {ownModelFailure !== null && (
+            <p className={WINDOW_HELP} role="status">
+              {t('aiModels.ownModelUnreadable')}
+            </p>
+          )}
+        </>
       )}
     </div>
   )

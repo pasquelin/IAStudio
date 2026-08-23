@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AiOverview, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
 import { aiRoleId, DICTATION_ROLE } from '@shared/domain/aiRole'
 import { GIBI, localModel } from '@shared/domain/localModel-fixtures'
+import type { ModelFamily } from '@shared/domain/model'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAiModels } from '@/stores/aiModels'
 import { AiSettings } from './AiSettings'
@@ -57,9 +58,9 @@ const overview = (over: Partial<AiOverview> = {}): AiOverview => ({
   ...over,
 })
 
-const show = (one: AiOverview = overview()) => {
+const show = (one: AiOverview = overview(), family?: ModelFamily) => {
   useAiModels.setState({ overview: one })
-  render(<AiSettings />)
+  render(<AiSettings family={family} />)
 }
 
 describe('AiSettings', () => {
@@ -84,12 +85,25 @@ describe('AiSettings', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows one line per employment, with what serves it', () => {
+  it('keeps generation employments off the overview', () => {
     show(overview({ roles: [row(), row({ role: aiRoleId('image', 'inpaint'), candidates: [] })] }))
 
     expect(screen.getByText('Dictée')).toBeInTheDocument()
-    expect(screen.getByText('Image · Retouche interne')).toBeInTheDocument()
     expect(screen.getAllByText(/Parakeet/).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Image · Retouche interne')).not.toBeInTheDocument()
+  })
+
+  it('shows one family of employments, and none of the others', () => {
+    show(
+      overview({ roles: [row(), row({ role: aiRoleId('image', 'inpaint'), candidates: [] })] }),
+      'image',
+    )
+
+    expect(screen.getByText('Image · Retouche interne')).toBeInTheDocument()
+    expect(screen.queryByText('Dictée')).not.toBeInTheDocument()
+    expect(screen.queryByText('Ollama')).not.toBeInTheDocument()
+    expect(screen.queryByText(/libres sur/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Ajouter un fichier…' })).not.toBeInTheDocument()
   })
 
   /**

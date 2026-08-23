@@ -13,6 +13,7 @@ import {
   PATH_KINDS,
   rootSections,
   sectionEntry,
+  sectionOfFamily,
   SETTING_REGISTRY,
   SETTING_SECTIONS,
   UNLISTED_PATHS,
@@ -208,6 +209,15 @@ describe('settings registry', () => {
 
     expect(new Set(ids).size).toBe(ids.length)
     expect(sectionEntry('media')?.labelKey).toBe('settings.media')
+  })
+
+  it('finds the generation screen of a family, not the AI employment screen', () => {
+    expect(
+      SETTING_SECTIONS.filter(section => section.family === 'image').map(one => one.id),
+    ).toEqual(['generation.image'])
+    expect(sectionEntry('ai.image')?.family).toBeUndefined()
+    expect(sectionOfFamily('image')).toBe('generation.image')
+    expect(sectionOfFamily('texture')).toBeUndefined()
   })
 
   it('finds a descriptor by path, and nothing for one it does not describe', () => {

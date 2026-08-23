@@ -42,8 +42,6 @@
   "aiModels": {
     "reading": "Reading the machine…",
     "empty": "No employment has a provider to offer on this machine.",
-    "generationGroup": "Generation",
-    "standaloneGroup": "Assistant and voice",
     "machineMemory": "{{available}} free of {{total}}",
     "machineDisk": "{{free}} on disk",
     "appliesNow": "A choice made here applies at once — Cancel does not take it back.",
