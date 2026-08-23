@@ -2,7 +2,7 @@ import { mdiMicrophone, mdiMicrophoneOff } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import type { TooltipFactory } from '@/helpers/tooltip'
-import { useDictation } from '@/hooks/useDictation'
+import { useDictationView } from '@/hooks/useDictationView'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useBinding } from '@/stores/bindings'
 import { LevelMeter } from './LevelMeter'
@@ -29,7 +29,7 @@ export function DictationButton({ variant = 'bar', tooltip }: DictationButtonPro
   const { t } = useTranslation()
   const label = useShortcutLabel()
   const shortcut = label(useBinding('app.dictate'))
-  const dictation = useDictation()
+  const dictation = useDictationView()
 
   // Hidden rather than disabled: a control that is off in the settings has nothing to say, and
   // a greyed microphone beside every prompt would be a permanent question.

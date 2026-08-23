@@ -12,7 +12,7 @@ import { useAiModels } from '@/stores/aiModels'
 import { useAssets } from '@/stores/assets'
 import { useTasks } from '@/stores/tasks'
 import { useJobs } from '@/stores/jobs'
-import { useDictation as useDictationStore } from '@/stores/dictation'
+import { useDictation } from '@/stores/dictation'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
@@ -36,7 +36,7 @@ export function Application() {
   const connectProject = useProject(state => state.connect)
   const connectJobs = useJobs(state => state.connect)
   const connectMedia = useMedia(state => state.connect)
-  const connectDictation = useDictationStore(state => state.connect)
+  const connectDictation = useDictation(state => state.connect)
   const connectUpdates = useUpdates(state => state.connect)
   const connectActivity = useActivity(state => state.connect)
   const connectAssets = useAssets(state => state.connect)
