@@ -238,7 +238,7 @@ The eraser erases **to transparency**; it does not paint white.
 | Tool | Shortcut | What it does |
 |---|---|---|
 | **Comment** | — | *not available yet* |
-| **Fill layer** | `G` | fills the active layer — or the **selected area**, if there is one |
+| **Paint bucket** | `G` | fills the active layer — or the **selected area**, if there is one |
 | **Eyedropper** | `I` | picks up the colour under the pointer |
 | **Colour** | — | the colour of the brush, the pencil, the shapes and the fill |
 | **Brush settings** | `[` and `]` | the size, the hardness and the opacity |
@@ -250,10 +250,10 @@ The eraser erases **to transparency**; it does not paint white.
 > **not greyed, it is gone**: the rule the inspector already applies to a sprite, which gets no
 > shadow section rather than a dead one.
 
-> **Fill is not a paint bucket.** It does not hunt for the patch of colour under the pointer: it
-> fills **the whole layer**, edge to edge — or, **if an area is selected, that area alone**. That
-> is what gives a plain background in one gesture, and a region its flat colour; it is not the
-> colour-proximity fill you may know from elsewhere.
+> **This bucket does not stop at outlines.** It does not hunt for the patch of colour under the
+> pointer: it fills **the whole layer**, edge to edge — or, **if an area is selected, that area
+> alone**. That is what gives a plain background in one gesture, and a region its flat colour; it
+> is not the colour-proximity fill you may know from elsewhere.
 
 ### The brush settings
 

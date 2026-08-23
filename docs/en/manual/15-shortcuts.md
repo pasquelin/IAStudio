@@ -350,7 +350,7 @@ Every tool in the bar is a command: its key arms it, and remaps like the rest.
 | `M` | Rectangular selection | | `P` | Brush |
 | `L` | Lasso | | `⇧P` | Pencil |
 | `T` | Text | | `E` | Eraser |
-| `G` | Fill the layer | | `I` | Eyedropper |
+| `G` | Paint bucket | | `I` | Eyedropper |
 
 **Four tools have no default key** — elliptical selection, polygon, star, selection eraser — and you can
 give them one in the settings.

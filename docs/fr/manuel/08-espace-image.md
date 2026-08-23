@@ -246,7 +246,7 @@ La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Commentaire** | — | *pas encore disponible* |
-| **Remplir le calque** | `G` | remplit le calque actif — ou la **zone sélectionnée**, s’il y en a une |
+| **Pot de peinture** | `G` | remplit le calque actif — ou la **zone sélectionnée**, s’il y en a une |
 | **Pipette** | `I` | prélève la couleur sous le pointeur |
 | **Couleur** | — | la couleur du pinceau, du crayon, des formes et du remplissage |
 | **Réglages du pinceau** | `[` et `]` | la taille, la dureté et l’opacité |
@@ -259,7 +259,7 @@ La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 > l’inspecteur applique déjà à un sprite, qui n’a aucune section d’ombre plutôt qu’une section
 > morte.
 
-> **Remplir n’est pas un pot de peinture.** Il ne cherche pas la plage de couleur sous le
+> **Ce pot ne s’arrête pas aux contours.** Il ne cherche pas la plage de couleur sous le
 > pointeur : il remplit **tout le calque**, d’un bord à l’autre — ou, **si une zone est
 > sélectionnée, cette zone seulement**. C’est ce qui donne un fond uni en un geste, et une zone sa
 > couleur plate ; ce n’est pas le remplissage par proximité de couleur que vous connaissez

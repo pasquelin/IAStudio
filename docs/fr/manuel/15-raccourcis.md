@@ -359,7 +359,7 @@ Chaque outil de la barre est une commande : sa touche l’arme, et se remappe co
 | `M` | Sélection rectangulaire | | `P` | Pinceau |
 | `L` | Lasso | | `⇧P` | Crayon |
 | `T` | Texte | | `E` | Gomme |
-| `G` | Remplir le calque | | `I` | Pipette |
+| `G` | Pot de peinture | | `I` | Pipette |
 
 **Quatre outils n’ont pas de touche par défaut** — sélection elliptique, polygone, étoile, gomme
 sélective — et vous pouvez leur en donner une dans les réglages.

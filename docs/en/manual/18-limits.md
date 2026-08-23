@@ -194,12 +194,13 @@ studio rules out precisely so `⌘Z` stays instant on heavy documents.
 
 **What to do:** press `⇧⌘E` before a wide crop, if you may want to come back.
 
-### Fill is not a paint bucket
+### The paint bucket does not stop at outlines
 
-**Fill layer** (`G`) fills the **entire** layer, edge to edge. It is not the region fill you may know
-from elsewhere — the one that stops at outlines.
+**Paint bucket** (`G`) fills the **entire** layer, edge to edge — or the whole **selected area**, if
+there is one. It is not the region fill you may know from elsewhere — the one that stops at the
+outlines of the drawing.
 
-That is not a defect: it is a different tool, and its name says so.
+That is not a defect: it is a different tool, and a selection is the only way to bound it.
 
 ### History stops at 100
 
