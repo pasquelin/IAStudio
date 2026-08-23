@@ -121,7 +121,7 @@ describe('AiSettings', () => {
     expect(screen.getAllByText('Ollama')).toHaveLength(1)
     expect(screen.queryByText(/alpha:1/)).not.toBeInTheDocument()
     expect(screen.getByText(/2 modèles prêts/)).toBeInTheDocument()
-    expect(screen.getByText(/souvent Assistant/)).toBeInTheDocument()
+    expect(screen.getByText(/ouvrez Assistant plus bas/)).toBeInTheDocument()
   })
 
   it('offers to install Ollama when it is not on this computer', () => {
@@ -172,9 +172,7 @@ describe('AiSettings', () => {
     expect(screen.getByText('Sur cet ordinateur')).toBeInTheDocument()
     expect(screen.getByText(/Le studio fait tourner le modèle ici/)).toBeInTheDocument()
     expect(screen.getAllByText('Ollama').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText(/Ollama est un logiciel sur cette machine/).length).toBeGreaterThan(
-      0,
-    )
+    expect(screen.getAllByText(/Ollama est un logiciel sur cet ordinateur/)).not.toHaveLength(0)
     expect(screen.getByText('En ligne')).toBeInTheDocument()
     expect(screen.getByText(/Les serveurs Scenario/)).toBeInTheDocument()
     expect(screen.getByText('qwen3:8b')).toBeInTheDocument()

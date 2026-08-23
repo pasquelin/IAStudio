@@ -6,7 +6,6 @@ import { partsOfRole } from '@shared/domain/aiRole'
 import { MODEL_SOURCES, sourceOf, type ModelSource } from '@shared/domain/localModel'
 import { UiIcon } from '@/design/UiIcon'
 import { WINDOW_CAPTION, WINDOW_GROUP_LABEL } from '@/design/windowStyles'
-import { cn } from '@/helpers/cn'
 import type { ModelFitSentence } from '@/hooks/useModelFit'
 import { useAiModels } from '@/stores/aiModels'
 import { useModels } from '@/stores/models'
@@ -14,10 +13,10 @@ import { AiCandidateRow } from './AiCandidateRow'
 import { AiChoiceRow } from './AiChoiceRow'
 import { roleLabel } from './roleLabel'
 
-const SOURCE_KEY: Record<ModelSource, string> = {
-  studio: 'aiModels.sourceStudio',
-  ollama: 'aiModels.sourceOllama',
-  custom: 'aiModels.sourceCustom',
+const SOURCE_COPY: Record<ModelSource, { title: string; help?: string }> = {
+  studio: { title: 'aiModels.sourceStudio', help: 'aiModels.sourceStudioHelp' },
+  ollama: { title: 'aiModels.sourceOllama', help: 'aiModels.sourceOllamaHelp' },
+  custom: { title: 'aiModels.sourceCustom' },
 }
 
 export type AiRoleRowProps = {
@@ -88,14 +87,8 @@ export const AiRoleRow = memo(function AiRoleRow({
             onChoose={() => void chooseAiProvider(row.role, null, scope)}
           />
 
-          {/* 🛑 Said rather than left blank: an employment with no local candidate is a list with
-              nothing but the clouds in it, and silence there reads as something broken. What is
-              missing is an ENGINE, not a manifest — the studio carries llama.cpp and sherpa-onnx,
-              and nothing that draws.
-
-              No `role="alert"`, which DaisyUI's own examples carry: that is a live region, and
-              this is a standing state rather than something that just happened — announced on
-              every render, it would interrupt for news that is not new. */}
+          {/* 🛑 Silence here reads as a broken list: what is missing is an engine, not a manifest.
+              No role="alert" — a live region would announce a standing state on every render. */}
           {provider === null && (
             <li className="py-2">
               <span className="alert alert-warning alert-soft">
@@ -116,16 +109,12 @@ export const AiRoleRow = memo(function AiRoleRow({
           {MODEL_SOURCES.map(source => {
             const candidates = row.candidates.filter(one => sourceOf(one.model) === source)
             if (candidates.length === 0) return null
+            const copy = SOURCE_COPY[source]
 
             return (
-              <li key={source}>
-                <h4 className={cn(WINDOW_GROUP_LABEL, 'mt-4')}>{t(SOURCE_KEY[source])}</h4>
-                {source === 'studio' && (
-                  <p className={WINDOW_CAPTION}>{t('aiModels.sourceStudioHelp')}</p>
-                )}
-                {source === 'ollama' && (
-                  <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
-                )}
+              <li key={source} className="pt-6">
+                <h4 className={WINDOW_GROUP_LABEL}>{t(copy.title)}</h4>
+                {copy.help !== undefined && <p className={WINDOW_CAPTION}>{t(copy.help)}</p>}
                 <ul>
                   {candidates.map(candidate => (
                     <AiCandidateRow
@@ -156,8 +145,8 @@ export const AiRoleRow = memo(function AiRoleRow({
           })}
 
           {row.clouds.length > 0 && (
-            <li>
-              <h4 className={cn(WINDOW_GROUP_LABEL, 'mt-4')}>{t('aiModels.sourceCloud')}</h4>
+            <li className="pt-6">
+              <h4 className={WINDOW_GROUP_LABEL}>{t('aiModels.sourceCloud')}</h4>
               <p className={WINDOW_CAPTION}>{t('aiModels.sourceCloudHelp')}</p>
               <ul>
                 {row.clouds.map(providerId => (
