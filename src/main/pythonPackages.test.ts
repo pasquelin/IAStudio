@@ -52,6 +52,9 @@ describe('what the Python side distributes', () => {
    * growing one is a growing hole, and a silent one is worse.
    */
   it('does not let the uncollected half grow unnoticed', () => {
+    const locked = new Set(lockedPackages())
+
+    expect(UNREAD_PENDING_COLLECTION.filter(name => !locked.has(name))).toEqual([])
     expect(UNREAD_PENDING_COLLECTION).toHaveLength(47)
   })
 

@@ -283,17 +283,19 @@ def _load_triposg(folder: str) -> Any:
 
     pipeline = TripoSGPipeline.from_pretrained(folder, local_files_only=True)
     pipeline.to("cuda")
-    return pipeline
+    return {"pipeline": pipeline, "rembg": _require("rembg", "plugin").new_session()}
 
 
-def _run_triposg(pipeline: Any, params: dict[str, Any], destination: str, device: str) -> None:
+def _run_triposg(
+    handle: dict[str, Any], params: dict[str, Any], destination: str, device: str
+) -> None:
     import torch
 
-    picture = _carve(None, _picture(params), "RGB").convert("RGB")
+    picture = _carve(handle, _picture(params), "RGB").convert("RGB")
     seed = _knob(params, "seed", int, 1)
     steps = _knob(params, "steps", int, 50)
     cfg = _knob(params, "cfgScale", float, 7.0)
-    outputs = pipeline(
+    outputs = handle["pipeline"](
         image=picture,
         generator=torch.Generator(device=device).manual_seed(seed),
         num_inference_steps=steps,
@@ -360,9 +362,10 @@ def _run_instantmesh(
     import numpy as np
     import torch
     from einops import rearrange
+    from instantmesh.framing import resize_foreground
     from torchvision.transforms import v2
 
-    picture = _carve(handle, _picture(params), "RGB")
+    picture = resize_foreground(_carve(handle, _picture(params), "RGBA"), 0.85)
     seed = _knob(params, "seed", int, 1)
     steps = _knob(params, "steps", int, 75)
     cfg = _knob(params, "cfgScale", float, 4.0)
@@ -451,9 +454,10 @@ def _run_lgm(handle: dict[str, Any], params: dict[str, Any], destination: str, d
     import torch
     import torch.nn.functional as functional
     import torchvision.transforms.functional as pictures
+    from kiui.op import recenter
 
-    carved = np.asarray(_carve(handle, _picture(params), "RGBA"), dtype=np.float32)
-    carved /= 255.0
+    carved = np.asarray(_carve(handle, _picture(params), "RGBA"))
+    carved = recenter(carved, carved[..., -1] > 0, border_ratio=0.2).astype(np.float32) / 255.0
     flat = carved[..., :3] * carved[..., 3:4] + (1 - carved[..., 3:4])
 
     cfg = _knob(params, "cfgScale", float, 5.0)

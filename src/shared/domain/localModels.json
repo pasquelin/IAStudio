@@ -3709,7 +3709,8 @@
         "img23d"
       ],
       "needsCuda": true,
-      "distribution": "direct-download"
+      "distribution": "direct-download",
+      "licenceStatus": "restricted"
     },
     {
       "id": "lgm",
@@ -3853,7 +3854,8 @@
         "img23d"
       ],
       "needsCuda": true,
-      "distribution": "direct-download"
+      "distribution": "direct-download",
+      "licenceStatus": "restricted"
     },
     {
       "id": "triposg",

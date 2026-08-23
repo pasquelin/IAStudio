@@ -30,11 +30,11 @@ Ce qui diffère entre deux portes est une modalité et un nom : la boucle est é
 | `engine/3d` | maillage | idem | idem |
 | `engine/skybox` | panorama 360 | idem | idem |
 
-Les familles hors diffusers (TripoSR, TRELLIS, TRELLIS.2, TripoSG, InstantMesh, LGM, MMAudio)
-passent par `plugin_adapter.py`. TripoSR est vendu sous `vendor/tsr` (MIT, `weights_only=True`),
-TripoSG sous `vendor/triposg`, InstantMesh sous `vendor/instantmesh` (Apache-2.0) et LGM sous
-`vendor/lgm` (MIT). Tous sauf TripoSR et MMAudio demandent CUDA — sur Metal la carte le dit.
-MMAudio tourne sur MPS. Extra `plugin`, pas dans `engine:check`.
+Les familles hors diffusers passent par `plugin_adapter.py` ; `plugin_ids.py` les nomme, et
+`vendor/` porte leur Python — un arbre par famille, chacun avec son fichier de licence, ce dont
+`test_vendored_trees.py` fait foi plutôt que cette phrase. Tous sauf TripoSR et MMAudio demandent
+CUDA, et sur Metal la carte le dit. MMAudio tourne sur MPS. Extra `plugin`, pas dans
+`engine:check`.
 
 **Deux extensions CUDA sont volontairement absentes, et ce n'est pas un oubli** : `nvdiffrast`
 (licence NVIDIA non commerciale) et `diff_gaussian_rasterization` (Inria, non commerciale). Le
