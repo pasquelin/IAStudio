@@ -5,7 +5,21 @@
   },
   "aiClouds": {
     "scenario": "Scenario",
-    "scenarioHint": "Génère sur les serveurs Scenario. Rien à installer."
+    "scenarioHint": "Génère sur les serveurs Scenario. Rien à installer.",
+    "openai": "OpenAI",
+    "openaiHint": "Les modèles GPT. Une clé API. Sert l’Assistant.",
+    "anthropic": "Claude",
+    "anthropicHint": "Anthropic Claude. Une clé API. Sert l’Assistant.",
+    "google": "Gemini",
+    "googleHint": "Google Gemini. Une clé API. Sert l’Assistant.",
+    "deepseek": "DeepSeek",
+    "deepseekHint": "DeepSeek. Une clé API. Sert l’Assistant.",
+    "xai": "Grok",
+    "xaiHint": "xAI Grok. Une clé API. Sert l’Assistant.",
+    "mistral": "Mistral",
+    "mistralHint": "Mistral. Une clé API. Sert l’Assistant.",
+    "openrouter": "OpenRouter",
+    "openrouterHint": "Une clé, beaucoup de modèles. Sert l’Assistant."
   },
   "localFields": {
     "prompt": "Description",

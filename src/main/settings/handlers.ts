@@ -1,4 +1,5 @@
 import type { AccountsResult, AccountSummary } from '@shared/domain/account'
+import { cloudAuth } from '@shared/domain/aiCloud'
 import type { AuthState, SettingsSectionId } from '@shared/domain/settings'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
@@ -8,6 +9,7 @@ import type { SettingActionId } from '@shared/domain/settingsRegistry'
 import {
   parseAccountId,
   parseAccountName,
+  parseCloudProviderId,
   parseCredentials,
   parsePartialSettings,
   parseSettingAction,
@@ -70,9 +72,10 @@ export function registerSettingsHandlers({
 
   handle(CHANNELS.accountsList, () => settings.accounts())
 
-  handle(CHANNELS.accountsAdd, (_event, name, key, secret) => {
-    const credentials = parseCredentials(key, secret)
-    return mutate(() => settings.addAccount(parseAccountName(name), credentials))
+  handle(CHANNELS.accountsAdd, (_event, name, key, secret, providerId) => {
+    const provider = parseCloudProviderId(providerId)
+    const credentials = parseCredentials(key, secret, cloudAuth(provider))
+    return mutate(() => settings.addAccount(parseAccountName(name), credentials, provider))
   })
 
   handle(CHANNELS.accountsRename, (_event, id, name) =>

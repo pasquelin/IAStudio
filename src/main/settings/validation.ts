@@ -1,5 +1,10 @@
 import { z } from 'zod'
-import { isCloudProviderId, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import {
+  isCloudProviderId,
+  SCENARIO_CLOUD,
+  type CloudAuth,
+  type CloudProviderId,
+} from '@shared/domain/aiCloud'
 import type { RoleProvider } from '@shared/domain/aiRole'
 import { ASSISTANT_MODELS } from '@shared/domain/assistant'
 import { LANGUAGE_PREFERENCES } from '@shared/i18n/languages'
@@ -327,11 +332,24 @@ export function parseSettingAction(value: unknown): SettingActionId {
 // and the API answers 401 to a credential that only differs by whitespace.
 const credential = z.string().trim().min(1)
 
-export function parseCredentials(key: unknown, secret: unknown): Credentials {
+export function parseCredentials(
+  key: unknown,
+  secret: unknown,
+  auth: CloudAuth = 'key-secret',
+): Credentials {
+  if (auth === 'key') return { key: credential.parse(key), secret: '' }
+
   return { key: credential.parse(key), secret: credential.parse(secret) }
 }
 
-const storedCredentials = z.object({ key: credential, secret: credential })
+/** Absent or Scenario: every caller written before clouds were a list. */
+export function parseCloudProviderId(value: unknown): CloudProviderId {
+  if (value === undefined || value === null || value === '') return SCENARIO_CLOUD
+  if (!isCloudProviderId(value)) throw new Error(`unknown cloud: ${String(value)}`)
+  return value
+}
+
+const storedCredentials = z.object({ key: credential, secret: z.string().trim() })
 
 /**
  * Reads back what this process wrote, on the same `credential` schema as the input path. A

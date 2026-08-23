@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { activeAccount, useAccounts } from '@/stores/accounts'
+import { scenarioAccount, useAccounts } from '@/stores/accounts'
 import { useLatest } from './useLatest'
 
 /**
@@ -19,10 +19,10 @@ export function useAccountChange(purge: () => void): void {
      * never through `onChange`. A watcher on the event alone would therefore still hold `null`
      * once the window is up, and would sit out the switch it exists to catch.
      */
-    let active = activeAccount(useAccounts.getState().accounts)?.id ?? null
+    let active = scenarioAccount(useAccounts.getState().accounts)?.id ?? null
 
     return useAccounts.subscribe(state => {
-      const next = activeAccount(state.accounts)?.id ?? null
+      const next = scenarioAccount(state.accounts)?.id ?? null
       if (next === active) return
 
       // Nothing was fetched under "no account", so arriving at one has nothing to drop.

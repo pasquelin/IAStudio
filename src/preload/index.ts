@@ -52,7 +52,8 @@ const bridge: StudioBridge = {
   },
   accounts: {
     list: () => ipcRenderer.invoke(CHANNELS.accountsList),
-    add: (name, key, secret) => ipcRenderer.invoke(CHANNELS.accountsAdd, name, key, secret),
+    add: (name, key, secret, providerId) =>
+      ipcRenderer.invoke(CHANNELS.accountsAdd, name, key, secret, providerId),
     rename: (id, name) => ipcRenderer.invoke(CHANNELS.accountsRename, id, name),
     remove: id => ipcRenderer.invoke(CHANNELS.accountsRemove, id),
     activate: id => ipcRenderer.invoke(CHANNELS.accountsActivate, id),

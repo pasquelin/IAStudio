@@ -110,7 +110,9 @@
     "remove": "Remove",
     "active": "In use",
     "use": "Use this account",
-    "none": "No account yet. Add an API key to reach the remote library.",
+    "none": "No account yet. Add an API key — Scenario to generate, another service for Assistant.",
+    "provider": "Service",
+    "providerHint": "Which AI this key opens",
     "switch": "Account: {{name}}",
     "switchHint": "Pick the API key to generate on, or add one",
     "connectedClouds": "{{count, number}} services connected",
@@ -119,7 +121,7 @@
     "manage": "Manage accounts…",
     "notConnected": "Not connected",
     "fromEnvFile": "secrets/.env",
-    "explanation": "Each API key carries its own remote project. Switching accounts changes the library you browse — never the files in your local project.",
+    "explanation": "Scenario opens the remote library. The other keys serve Assistant. Switching the Scenario account changes the library — never your local files.",
     "errors": {
       "empty": "A name is required.",
       "too-long": "This name is too long.",
@@ -130,6 +132,7 @@
       "unexpected": "The account could not be saved."
     },
     "useHint": "Every generation will run on this key from now on",
+    "useHintChat": "This key will be the one this service uses",
     "renameHint": "Changes only the name shown here — the key itself stays the same",
     "removeHint": "Forgets the key on this machine; the remote account is untouched",
     "saveHint": "Keeps the new name, provided no other account already has it",

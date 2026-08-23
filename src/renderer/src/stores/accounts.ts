@@ -14,14 +14,28 @@ type AccountsState = {
   /** Loads the accounts and follows the switches other windows make. Returns the unsubscribe. */
   connect: () => Promise<() => void>
   /** Every mutation answers `null` on success, or why it was refused. */
-  add: (name: string, key: string, secret: string) => Promise<AccountSaveFailure | null>
+  add: (
+    name: string,
+    key: string,
+    secret: string,
+    providerId?: string,
+  ) => Promise<AccountSaveFailure | null>
   rename: (id: string, name: string) => Promise<AccountSaveFailure | null>
   remove: (id: string) => Promise<AccountSaveFailure | null>
   activate: (id: string) => Promise<AccountSaveFailure | null>
 }
 
+export function providerOf(account: AccountSummary): string {
+  return account.providerId ?? SCENARIO_CLOUD
+}
+
+/** The Scenario key in force — the one the catalogue and the green dot answer for. */
+export function scenarioAccount(accounts: readonly AccountSummary[]): AccountSummary | null {
+  return accounts.find(account => account.active && providerOf(account) === SCENARIO_CLOUD) ?? null
+}
+
 export function activeAccount(accounts: readonly AccountSummary[]): AccountSummary | null {
-  return accounts.find(account => account.active) ?? null
+  return scenarioAccount(accounts) ?? accounts.find(account => account.active) ?? null
 }
 
 /**
@@ -60,7 +74,7 @@ export const useAccounts = create<AccountsState>()((set, get) => {
     // Answering null would read as "saved", and the form would clear the key just typed.
     if (!bridge) return 'unexpected'
 
-    const before = activeAccount(get().accounts)?.id ?? null
+    const before = scenarioAccount(get().accounts)?.id ?? null
 
     let result: AccountsResult
     try {
@@ -74,7 +88,7 @@ export const useAccounts = create<AccountsState>()((set, get) => {
     set({ accounts: result.accounts })
     if (result.failure) return result.failure
 
-    if ((activeAccount(result.accounts)?.id ?? null) !== before) {
+    if ((scenarioAccount(result.accounts)?.id ?? null) !== before) {
       await useSettings.getState().refreshAuth()
     }
 
@@ -103,14 +117,15 @@ export const useAccounts = create<AccountsState>()((set, get) => {
       return stop
     }),
 
-    add: (name, key, secret) => mutate(accounts => accounts.add(name, key, secret)),
+    add: (name, key, secret, providerId) =>
+      mutate(accounts => accounts.add(name, key, secret, providerId)),
 
     rename: (id, name) => mutate(accounts => accounts.rename(id, name)),
 
     remove: id => mutate(accounts => accounts.remove(id)),
 
     activate: async id => {
-      if (activeAccount(get().accounts)?.id === id) return null
+      if (get().accounts.find(account => account.id === id)?.active) return null
       return await mutate(accounts => accounts.activate(id))
     },
   }

@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { familyChoiceWrites } from '@shared/domain/aiRole'
 import type { ModelSummary } from '@shared/domain/model'
-import { CLOUD_IDS } from '@shared/domain/aiCloud'
+import { CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import { failureKeyOf } from '@/services/failureMessage'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
@@ -80,7 +80,9 @@ export function Models() {
   // costs nothing, and `queryFrom` translates nothing.
   // A cloud is offered only where a key is held. The listing itself stays on this machine
   // until the person ticks Scenario — an account is not a reason to show billed models.
-  const clouds = authenticated ? CLOUD_IDS : NO_CLOUDS
+  const clouds = authenticated
+    ? CLOUD_PROVIDERS.filter(one => one.families.includes(family)).map(one => one.id)
+    : NO_CLOUDS
   const query = queryFrom(collection, family, search, clouds)
 
   // Memoised, unlike the query above: building the facets translates up to twenty-five labels

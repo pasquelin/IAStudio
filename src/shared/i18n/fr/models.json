@@ -110,7 +110,9 @@
     "remove": "Supprimer",
     "active": "Utilisé",
     "use": "Utiliser ce compte",
-    "none": "Aucun compte pour l’instant. Ajoutez une clé API pour accéder à la bibliothèque distante.",
+    "none": "Aucun compte pour l’instant. Ajoutez une clé API — Scenario pour générer, un autre service pour l’Assistant.",
+    "provider": "Service",
+    "providerHint": "Quelle IA cette clé ouvre",
     "switch": "Compte : {{name}}",
     "switchHint": "Choisir la clé API sur laquelle générer, ou en ajouter une",
     "connectedClouds": "{{count, number}} services connectés",
@@ -119,7 +121,7 @@
     "manage": "Gérer les comptes…",
     "notConnected": "Non connecté",
     "fromEnvFile": "secrets/.env",
-    "explanation": "Chaque clé API porte son propre projet distant. Changer de compte change la bibliothèque que vous parcourez — jamais les fichiers de votre projet local.",
+    "explanation": "Scenario ouvre la bibliothèque distante. Les autres clés servent l’Assistant. Changer de compte Scenario change la bibliothèque — jamais vos fichiers locaux.",
     "errors": {
       "empty": "Un nom est obligatoire.",
       "too-long": "Ce nom est trop long.",
@@ -130,6 +132,7 @@
       "unexpected": "Le compte n’a pas pu être enregistré."
     },
     "useHint": "Toutes les générations partiront désormais de cette clé",
+    "useHintChat": "Cette clé sera celle de ce service",
     "renameHint": "Ne change que le nom affiché ici — la clé reste la même",
     "removeHint": "Oublie la clé sur cette machine ; le compte distant n’est pas touché",
     "saveHint": "Garde le nouveau nom, si aucun autre compte ne le porte déjà",

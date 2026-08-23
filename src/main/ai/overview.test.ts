@@ -122,7 +122,7 @@ describe('aiOverviewOf', () => {
     const overview = aiOverviewOf(input({ readyClouds: CLOUD_IDS }))
 
     expect(rowOf(overview, ASSISTANT_ROLE)?.candidates).toEqual([])
-    expect(rowOf(overview, aiRoleId('image', 'inpaint'))?.clouds).toEqual(CLOUD_IDS)
+    expect(rowOf(overview, aiRoleId('image', 'inpaint'))?.clouds).toEqual(['scenario'])
   })
 
   /**

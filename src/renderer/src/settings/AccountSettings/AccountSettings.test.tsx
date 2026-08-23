@@ -67,12 +67,30 @@ describe('AccountSettings', () => {
     render(<AccountSettings />)
     await fillAndAdd()
 
-    expect(add).toHaveBeenCalledWith('Studio', KEY, SECRET)
+    expect(add).toHaveBeenCalledWith('Studio', KEY, SECRET, 'scenario')
     await screen.findByText('Studio')
 
     // Nothing typed may survive in the rendered tree, input values included.
     expect(document.body.innerHTML).not.toContain(SECRET)
     expect(document.body.innerHTML).not.toContain(KEY)
+  })
+
+  it('stores a chat key without a secret', async () => {
+    const add = vi.fn((): Promise<AccountsResult> =>
+      Promise.resolve({
+        accounts: [{ id: 'o', name: 'Work', providerId: 'openai', active: true }],
+      }),
+    )
+    installFakeBridge({ accounts: { add } })
+
+    render(<AccountSettings />)
+    await userEvent.selectOptions(screen.getByLabelText(/Service/), 'OpenAI')
+    expect(screen.queryByLabelText(/Secret API/)).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText(/Nom/), 'Work')
+    await userEvent.type(screen.getByLabelText(/Clé API/), KEY)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter un compte' }))
+
+    expect(add).toHaveBeenCalledWith('Work', KEY, '', 'openai')
   })
 
   it('keeps what was typed when the name is refused', async () => {
@@ -156,8 +174,10 @@ describe('AccountSettings', () => {
 
     render(<AccountSettings />)
     await userEvent.click(screen.getByRole('button', { name: 'Renommer' }))
-    // Scoped to the row: the add form carries a name field of its own.
-    const field = within(screen.getByRole('listitem')).getByLabelText('Nom')
+    // The add form carries a name field of its own; this one sits next to Enregistrer.
+    const field = within(
+      screen.getByRole('button', { name: 'Enregistrer' }).closest('form')!,
+    ).getByLabelText('Nom')
     await userEvent.clear(field)
     await userEvent.type(field, 'Client X')
     await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }))

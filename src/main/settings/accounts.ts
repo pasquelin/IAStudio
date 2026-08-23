@@ -77,7 +77,7 @@ export function summariesOf(book: AccountBook): AccountSummary[] {
 }
 
 /** The key in force for one cloud. `null` when none of its accounts is active, or it holds none. */
-function credentialsFor(book: AccountBook, provider: CloudProviderId): Credentials | null {
+export function credentialsFor(book: AccountBook, provider: CloudProviderId): Credentials | null {
   const id = book.activeByProvider[provider]
   return book.accounts.find(account => account.id === id)?.credentials ?? null
 }

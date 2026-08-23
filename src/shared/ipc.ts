@@ -978,7 +978,7 @@ export type StudioBridge = {
   accounts: {
     list: () => Promise<AccountSummary[]>
     /** Stores a key under a name. The name is required and must not already be taken. */
-    add: (name: string, key: string, secret: string) => Promise<AccountsResult>
+    add: (name: string, key: string, secret: string, providerId?: string) => Promise<AccountsResult>
     rename: (id: string, name: string) => Promise<AccountsResult>
     remove: (id: string) => Promise<AccountsResult>
     activate: (id: string) => Promise<AccountsResult>

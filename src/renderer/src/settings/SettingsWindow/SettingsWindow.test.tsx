@@ -115,7 +115,6 @@ describe('SettingsWindow', () => {
     const entries = within(navigation()).getAllByRole('button')
     expect(entries.map(entry => entry.textContent)).toEqual([
       'Général',
-      'Compte',
       'Apparence',
       'Génération',
       'Image',
@@ -126,6 +125,7 @@ describe('SettingsWindow', () => {
       'Détourage',
       'Vectorisation',
       'Modèles d’IA',
+      'Clés API',
       'Image',
       'Vidéo',
       'Modélisation',
@@ -343,7 +343,7 @@ describe('SettingsWindow', () => {
     render(<SettingsWindow />)
 
     await userEvent.type(screen.getByLabelText('Rechercher un réglage'), 'thème')
-    await userEvent.click(within(navigation()).getByRole('button', { name: 'Compte' }))
+    await userEvent.click(childEntry('Modèles d’IA', 'Clés API'))
 
     expect(screen.getByLabelText(/Clé API/)).toBeInTheDocument()
     expect(screen.getByLabelText('Rechercher un réglage')).toHaveValue('')

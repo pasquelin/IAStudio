@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { AccountSummary } from '@shared/domain/account'
+import { SCENARIO_CLOUD, type CloudProviderId } from '@shared/domain/aiCloud'
 import { DEFAULT_SETTINGS, type PartialSettings, type Settings } from '@shared/domain/settings'
 import {
   AccountError,
@@ -7,6 +8,7 @@ import {
   activeCredentials,
   addAccount,
   credentialsByFingerprint,
+  credentialsFor,
   bookFromCredentials,
   EMPTY_BOOK,
   removeAccount,
@@ -69,7 +71,11 @@ export type SettingsStore = {
    */
   keyedAccounts: () => KeyedAccount[]
   /** All four throw an `AccountError`: a refused name, an unknown id, or a locked keychain. */
-  addAccount: (name: string, credentials: Credentials) => AccountChange
+  addAccount: (
+    name: string,
+    credentials: Credentials,
+    providerId?: CloudProviderId,
+  ) => AccountChange
   renameAccount: (id: string, name: string) => AccountChange
   removeAccount: (id: string) => AccountChange
   activateAccount: (id: string) => AccountChange
@@ -81,6 +87,8 @@ export type SettingsStore = {
   settleAccounts: () => void
   /** Main process only. Never expose over IPC — see spec § 4, invariant 1. */
   readCredentials: () => Credentials | null
+  /** Main process only. The active key of one cloud, or none. */
+  readCredentialsFor: (provider: CloudProviderId) => Credentials | null
   /**
    * The credentials behind an `accountFingerprint`, or `null` if that key is no longer held.
    * Main process only. What lets a job outliving a session be polled on the account that paid
@@ -310,8 +318,15 @@ export function createSettingsStore(
         credentials: account.credentials,
       })),
 
-    addAccount: (name, credentials) =>
-      apply(book => addAccount(book, { id: newAccountId(), name, credentials })),
+    addAccount: (name, credentials, providerId) =>
+      apply(book =>
+        addAccount(book, {
+          id: newAccountId(),
+          name,
+          credentials,
+          ...(providerId && providerId !== SCENARIO_CLOUD ? { providerId } : {}),
+        }),
+      ),
 
     renameAccount: (id, name) => apply(book => renameAccount(book, id, name)),
 
@@ -353,6 +368,8 @@ export function createSettingsStore(
     },
 
     readCredentials: () => activeCredentials(readBook()),
+
+    readCredentialsFor: provider => credentialsFor(readBook(), provider),
 
     credentialsOf: fingerprint => credentialsByFingerprint(readBook(), fingerprint),
 

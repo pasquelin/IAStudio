@@ -61,9 +61,11 @@ import { createMcpControl, type McpControl } from './mcp/control'
 import type { AssistantBrain } from './assistant/brainPort'
 import { createProviderBrain } from './assistant/brainProvider'
 import { createLocalBrain } from './assistant/brainLocal'
+import { createHttpChatBrain } from './assistant/brainHttp'
 import { createRoutedBrain } from './assistant/brainRouted'
 import { createSession, type DictationSession } from './dictation/session'
 import { STT_MODEL } from '@shared/domain/dictation'
+import { CLOUD_PROVIDERS, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import { createAiManager, type AiManager } from './ai/manager'
 import { catalogueWith, modelWith } from './ai/catalogue'
@@ -616,7 +618,12 @@ export function createServices(settings: SettingsStore): Services {
   const linkOpenProject = (): Relink => {
     const current = project.current()
     const accounts = settings.accounts()
-    const active = accounts.find(account => account.active) ?? null
+    const active =
+      accounts.find(
+        account =>
+          account.active &&
+          (account.providerId === undefined || account.providerId === SCENARIO_CLOUD),
+      ) ?? null
     if (!current || !active) return { kind: 'unchanged', active }
 
     const links = settings.read().storage.projectAccounts
@@ -713,7 +720,11 @@ export function createServices(settings: SettingsStore): Services {
   const settleOpenedProject = (current: Project): void => {
     const stored = settings.read()
     const accounts = settings.accounts()
-    const active = accounts.find(account => account.active)
+    const active = accounts.find(
+      account =>
+        account.active &&
+        (account.providerId === undefined || account.providerId === SCENARIO_CLOUD),
+    )
     const links = stored.storage.projectAccounts
     const plan = planProjectAccount(links[current.path], accounts)
 
@@ -1155,37 +1166,21 @@ export function createServices(settings: SettingsStore): Services {
   const downloads = createDownloadHost()
 
   /**
-   * Whether a Scenario key is held — a BOOLEAN, cached, because reading it opens the OS keychain
-   * and `safeStorage.decryptString` is synchronous on the main thread. It sat on every compose,
-   * so on every assistant turn.
-   *
-   * Invalidated by the credential watch, which is the channel that fires exactly when the ACTIVE
-   * key moves. **Blind spot, in clear**: `secrets/.env` stands in for an account in development
-   * and is reread on each `readBook()`, so editing it mid-session leaves this answer stale until
-   * an account changes or the studio restarts.
+   * ADR-21 § C: what proves an account is held, and what thinks for it, keyed by the registry.
+   * Scenario's brain is a getter because it is built further down.
    */
-  let scenarioKeyHeld: boolean | null = null
-  const heldScenarioKey = (): boolean => {
-    scenarioKeyHeld ??= settings.readCredentials() !== null
-    return scenarioKeyHeld
-  }
-  credentials.watch(() => {
-    scenarioKeyHeld = null
-  })
-
-  /**
-   * 🛑 The ONE place the wiring names a cloud — ADR-21 § C as amended: what proves an account is
-   * held, and what thinks for it. A second cloud adds a line here and touches nothing else.
-   *
-   * `held` asks whether a key is HELD, not whether it works: probing costs a round trip, and a
-   * revoked key is refused where it is used rather than hidden from the manager. `brain` is a
-   * getter because it is built further down, once the job manager exists.
-   */
-  const clouds: Record<string, { held: () => boolean; brain: () => AssistantBrain }> = {
-    scenario: {
-      held: heldScenarioKey,
-      brain: () => providerBrain,
-    },
+  const clouds: Record<string, { held: () => boolean; brain: () => AssistantBrain }> = {}
+  for (const cloud of CLOUD_PROVIDERS) {
+    const held = (): boolean => settings.readCredentialsFor(cloud.id) !== null
+    if (cloud.chat.kind === 'scenario') {
+      clouds[cloud.id] = { held, brain: () => providerBrain }
+    } else {
+      const http = createHttpChatBrain({
+        chat: cloud.chat,
+        credentials: () => settings.readCredentialsFor(cloud.id),
+      })
+      clouds[cloud.id] = { held, brain: () => http }
+    }
   }
 
   /**

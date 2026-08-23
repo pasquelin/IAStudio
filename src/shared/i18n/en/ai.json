@@ -5,7 +5,21 @@
   },
   "aiClouds": {
     "scenario": "Scenario",
-    "scenarioHint": "Generates on Scenario’s servers. Nothing to install."
+    "scenarioHint": "Generates on Scenario’s servers. Nothing to install.",
+    "openai": "OpenAI",
+    "openaiHint": "GPT models. One API key. Serves Assistant.",
+    "anthropic": "Claude",
+    "anthropicHint": "Anthropic Claude. One API key. Serves Assistant.",
+    "google": "Gemini",
+    "googleHint": "Google Gemini. One API key. Serves Assistant.",
+    "deepseek": "DeepSeek",
+    "deepseekHint": "DeepSeek. One API key. Serves Assistant.",
+    "xai": "Grok",
+    "xaiHint": "xAI Grok. One API key. Serves Assistant.",
+    "mistral": "Mistral",
+    "mistralHint": "Mistral. One API key. Serves Assistant.",
+    "openrouter": "OpenRouter",
+    "openrouterHint": "One key, many models. Serves Assistant."
   },
   "localFields": {
     "prompt": "Description",

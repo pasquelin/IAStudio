@@ -197,4 +197,10 @@ describe('activeAccount', () => {
   it('answers null when none is', () => {
     expect(activeAccount([{ ...studio, active: false }])).toBeNull()
   })
+
+  it('prefers the Scenario key when another cloud is also in use', () => {
+    expect(
+      activeAccount([{ id: 'o', name: 'GPT', providerId: 'openai', active: true }, studio]),
+    ).toEqual(studio)
+  })
 })

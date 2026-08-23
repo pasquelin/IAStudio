@@ -112,6 +112,7 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     id: 'account',
     labelKey: 'settings.account',
     descriptionKey: 'settings.accountDescription',
+    parent: 'ai',
   },
   {
     id: 'appearance',

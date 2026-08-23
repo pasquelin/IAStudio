@@ -1,6 +1,7 @@
 import { useState, type SubmitEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { checkAccountName, type AccountSummary } from '@shared/domain/account'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { cn } from '@/helpers/cn'
 import { HINT_LEFT, HINT_TOP } from '@/helpers/tooltip'
 import { useAccounts, type AccountSaveFailure } from '@/stores/accounts'
@@ -22,6 +23,8 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
   // One state, not two: a draft that exists IS the editing mode, so the two cannot disagree.
   const [draft, setDraft] = useState<string | null>(null)
   const [failure, setFailure] = useState<AccountSaveFailure | null>(null)
+
+  const keyWorks = (account.providerId ?? SCENARIO_CLOUD) !== SCENARIO_CLOUD || authenticated
 
   const stopEditing = (): void => {
     setDraft(null)
@@ -80,8 +83,8 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
       <span className="flex flex-1 items-center gap-2 truncate text-sm">
         {account.name}
         {account.active && (
-          <span className={cn('badge badge-sm', authenticated ? 'badge-success' : 'badge-error')}>
-            {authenticated ? t('accounts.active') : t('accounts.notConnected')}
+          <span className={cn('badge badge-sm', keyWorks ? 'badge-success' : 'badge-error')}>
+            {keyWorks ? t('accounts.active') : t('accounts.notConnected')}
           </span>
         )}
         {account.readOnly && <span className="badge badge-sm">{t('accounts.fromEnvFile')}</span>}

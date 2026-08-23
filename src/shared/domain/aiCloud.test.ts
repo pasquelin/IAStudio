@@ -10,13 +10,14 @@ describe('the cloud registry', () => {
    */
   it('offers a cloud only where one declares serving the role', () => {
     expect(cloudsServing(aiRoleId('image', 'inpaint'))).toEqual(['scenario'])
-    expect(cloudsServing(ASSISTANT_ROLE)).toEqual(['scenario'])
+    expect(cloudsServing(ASSISTANT_ROLE)).toEqual(CLOUD_IDS)
     expect(cloudsServing(DICTATION_ROLE)).toEqual([])
   })
 
   // The registry decides, never a string that arrived from a stored file or an IPC payload.
   it('answers for the ids it holds, and for no other', () => {
     expect(isCloudProviderId('scenario')).toBe(true)
+    expect(isCloudProviderId('openai')).toBe(true)
     expect(isCloudProviderId('nowhere')).toBe(false)
     expect(isCloudProviderId(null)).toBe(false)
   })
