@@ -285,13 +285,14 @@ paient, une fois, et qui restent en vie — un worker est un processus, et c’e
 qu’un plan de libération mémoire peut tuer pour rendre des octets.
 
 **Une porte par modalité, et une porte est un processus.** `engine/diffusion` sert l'image,
-`engine/video` la vidéo, `engine/audio` le son, `engine/3d` le maillage. C'est le principal qui
+`engine/video` la vidéo, `engine/audio` le son, `engine/3d` le maillage, `engine/skybox` le
+panorama. C'est le principal qui
 nomme la porte sur chaque requête, parce qu'il est le seul à savoir quel modèle a été choisi pour
 quel emploi ; le moteur n'en choisit jamais une. Elles sont distinctes pour une raison de mémoire
 et non de rangement : un modèle vidéo pèse des dizaines de gigaoctets, et libérer une porte veut
 dire **tuer son processus** — colocalisées, on ne pourrait pas libérer l'une sans emporter l'autre.
 Ce qui diffère entre deux portes est une modalité et un nom : la boucle est écrite une fois
-(`workers/door.py`), et les quatre modules qui la nomment font quatre lignes chacun.
+(`workers/door.py`), et les cinq modules qui la nomment font quatre lignes chacun.
 
 Le dialogue passe par un socket unix — un named pipe sous Windows — en cadres NDJSON, un objet
 JSON par ligne. Pas par l’entrée standard, et la raison n’est pas la vitesse : **`stdout` est un

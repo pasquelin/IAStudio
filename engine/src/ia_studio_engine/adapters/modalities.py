@@ -223,6 +223,25 @@ def _write_mesh(result: Any, destination: str, _params: dict[str, Any]) -> None:
     export_to_ply(result.images[0], destination)
 
 
+def _skybox_kwargs(params: dict[str, Any]) -> dict[str, Any]:
+    """A prompt is MultiDiffusion; a picture is FluxFill on a 2048x1024 canvas."""
+    source = _number(params, "image")
+    if source is None:
+        return {**_sized_kwargs(params), "circular_padding": True}
+
+    from ia_studio_engine.adapters.skybox_fill import view_to_panorama
+
+    kwargs = _shared_kwargs(params)
+    wrapped, mask = view_to_panorama(_open_image(source))
+    if not kwargs.get("prompt"):
+        kwargs["prompt"] = "360 panorama"
+    kwargs["image"] = wrapped
+    kwargs["mask_image"] = mask
+    kwargs["width"] = 2048
+    kwargs["height"] = 1024
+    return kwargs
+
+
 @dataclass(frozen=True)
 class Modality:
     """One modality, as a door practises it: what it asks for, and what it writes."""
@@ -236,4 +255,5 @@ MODALITIES: dict[str, Modality] = {
     "video": Modality(_video_kwargs, _write_video),
     "audio": Modality(_audio_kwargs, _write_audio),
     "mesh": Modality(_mesh_kwargs, _write_mesh),
+    "skybox": Modality(_skybox_kwargs, _write_image),
 }

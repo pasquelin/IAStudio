@@ -198,14 +198,18 @@ def memory_frame(device: str, backend: str, door: str) -> dict[str, Any]:
     }
 
 
-def pretrained_file_kwargs(torch_weights: bool) -> dict[str, bool | str]:
+def pretrained_file_kwargs(torch_weights: bool, folder: str | None = None) -> dict[str, bool | str]:
     """Which weight FILES to open. Shap-E's `.bin` renderer has no `fp16` sibling."""
     files: dict[str, bool | str] = {
         "use_safetensors": not torch_weights,
         "trust_remote_code": False,
         "local_files_only": True,
     }
-    if not torch_weights:
+    if torch_weights:
+        return files
+    # FluxFill ships `model.safetensors` with no `.fp16` twin. Asking for the variant then
+    # refuses a complete folder.
+    if folder is None or any(Path(folder).rglob("*.fp16.safetensors")):
         files["variant"] = "fp16"
     return files
 
@@ -276,9 +280,17 @@ class DiffusersAdapter:
         # parameters at two bytes rather than four.
         pipeline = DiffusionPipeline.from_pretrained(
             folder,
-            **pretrained_file_kwargs(torch_weights),
+            **pretrained_file_kwargs(torch_weights, folder),
             dtype=torch.float16,
         ).to(device)
+
+        if (
+            self.modality is MODALITIES["skybox"]
+            and type(pipeline).__name__ == "StableDiffusionPipeline"
+        ):
+            from diffusers import StableDiffusionPanoramaPipeline
+
+            pipeline = StableDiffusionPanoramaPipeline.from_pipe(pipeline)
 
         if attachment is not None:
             pipeline = _attached(pipeline, attachment, device)

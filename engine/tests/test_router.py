@@ -339,6 +339,14 @@ def test_two_modalities_are_two_processes() -> None:
     assert [worker.door for worker in workers] == [DIFFUSION_DOOR, "engine/video"]
 
 
+def test_a_skybox_is_a_door_of_its_own() -> None:
+    router, _written, workers = harness()
+
+    router.submit("generate", {"door": "engine/skybox"}, job="local_sky")
+
+    assert [worker.door for worker in workers] == ["engine/skybox"]
+
+
 def test_two_doors_numbering_from_one_settle_their_own_job() -> None:
     """Both number their runs from 1: the run alone names two jobs and settles the wrong one."""
     router, written, workers = harness()
@@ -363,7 +371,7 @@ def test_a_door_that_dies_leaves_the_jobs_of_another_alone() -> None:
 def test_closing_the_router_closes_every_door_it_started() -> None:
     router, _written, workers = harness()
     router.submit("generate", {}, job="local_a1")
-    router.submit("generate", {"door": "engine/3d"}, job="local_a2")
+    router.submit("generate", {"door": "engine/skybox"}, job="local_a2")
 
     router.close()
 
