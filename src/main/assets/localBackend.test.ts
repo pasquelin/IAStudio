@@ -216,6 +216,26 @@ describe('local backend', () => {
     expect(rewritten.path).toBe('Audio/Prise.wav')
   })
 
+  /**
+   * A generation made on this machine is already a file: reading it to write it back put video,
+   * audio, meshes and panoramas through the main process's heap whole, twice.
+   */
+  it('moves a file already on this machine instead of copying its bytes through', async () => {
+    const source = join(root, 'handover.png')
+    await writeFile(source, BYTES)
+
+    const asset = await backend.importFromFile(
+      { id: 'asset_1', name: 'Cube', type: 'image', extension: '.png' },
+      source,
+    )
+
+    expect(asset.path).toBe('Images/Cube.png')
+    expect(await readFile(join(root, asset.path ?? ''))).toEqual(Buffer.from(BYTES))
+    // The length comes off the file that landed, there being no buffer to measure.
+    expect(asset.bytes).toBe(BYTES.byteLength)
+    await expect(readFile(source)).rejects.toThrow()
+  })
+
   // One folder per kind, and the catalogue reads a texture's channel off the folder it sits in.
   it('files each kind under its own folder', async () => {
     const landed = async (type: AssetType): Promise<string | undefined> => {

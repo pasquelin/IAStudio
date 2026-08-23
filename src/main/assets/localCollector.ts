@@ -20,8 +20,7 @@ export type CollectableProduction = {
 export type LocalCollectorDeps = {
   /** What this job produced, or `null` for one that produced a sentence rather than a file. */
   producedBy: (jobId: string) => CollectableProduction | null
-  readFile: (path: string) => Promise<Uint8Array>
-  /** Removes the hand-off. A failure here costs a temporary file, never the asset. */
+  /** Removes the hand-off, when there is still one: an import that MOVED the file leaves none. */
   discard: (path: string) => Promise<void>
   backend: LocalBackend
   newId: () => string
@@ -39,9 +38,9 @@ function bareExtensionOf(path: string): string {
 }
 
 /**
- * Brings a generation made on this machine into the project: read the file the engine wrote,
- * file it, drop the hand-off. The cloud collector cannot serve — every branch turns on a remote
- * id there is none of.
+ * Brings a generation made on this machine into the project: hand the file the engine wrote to
+ * the backend, drop what is left of the hand-off. The cloud collector cannot serve — every branch
+ * turns on a remote asset id there is none of.
  */
 export function createLocalCollector(deps: LocalCollectorDeps): AssetCollector {
   return async job => {
@@ -49,8 +48,9 @@ export function createLocalCollector(deps: LocalCollectorDeps): AssetCollector {
     // A conversation produced no file: the job succeeded, it simply has nothing to file.
     if (!produced) return NOTHING
 
-    const bytes = await deps.readFile(produced.path)
-    const asset = await deps.backend.importFromBytes(
+    // By PATH, never by bytes: the engine writes video, audio, meshes and panoramas, and reading
+    // one to write it back put the whole file through this process's heap for nothing.
+    const asset = await deps.backend.importFromFile(
       {
         id: deps.newId(),
         name: generatedAssetName({ prompt: produced.prompt, label: job.label, index: 0, total: 1 }),
@@ -58,11 +58,12 @@ export function createLocalCollector(deps: LocalCollectorDeps): AssetCollector {
         jobId: job.id,
         extension: bareExtensionOf(produced.path),
       },
-      bytes,
+      produced.path,
     )
 
-    // After the import, never before: the bytes are in the project, so losing the hand-off costs
-    // nothing — where deleting first would lose the generation if the import then failed.
+    // After the import, never before: the file is in the project, so losing the hand-off costs
+    // nothing — where deleting first would lose the generation if the import then failed. A move
+    // already took it, and `force` makes that absence a no-op.
     await deps.discard(produced.path).catch(error => {
       deps.log('warn', `could not remove ${produced.path}: ${String(error)}`)
     })

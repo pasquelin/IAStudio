@@ -849,6 +849,7 @@ describe('project handlers', () => {
     const backend = () => ({
       importFromUrl: vi.fn(),
       importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'texture' })),
+      importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'texture' })),
       replaceBytes: vi.fn(),
     })
 
@@ -1041,6 +1042,7 @@ describe('project handlers', () => {
     const backend = () => ({
       importFromUrl: vi.fn(),
       importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'texture' })),
+      importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'texture' })),
       replaceBytes: vi.fn(),
     })
 
@@ -1203,6 +1205,7 @@ describe('project handlers', () => {
     const backend = () => ({
       importFromUrl: vi.fn(),
       importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
+      importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
       replaceBytes: vi.fn(async () => asset({ id: 'asset-1', type: 'image' })),
     })
 
@@ -1433,6 +1436,7 @@ describe('project handlers', () => {
     const backend = () => ({
       importFromUrl: vi.fn(),
       importFromBytes: vi.fn(async () => asset({ id: 'asset-2', type: 'image' })),
+      importFromFile: vi.fn(async () => asset({ id: 'asset-2', type: 'image' })),
       replaceBytes: vi.fn(async () => asset({ id: 'asset-1', type: 'image' })),
     })
 

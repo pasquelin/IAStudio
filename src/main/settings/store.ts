@@ -162,8 +162,23 @@ export function createSettingsStore(
   adapter: PersistenceAdapter,
   { onChange, newAccountId = () => `account_${randomUUID()}` }: SettingsStoreOptions = {},
 ): SettingsStore {
-  const read = (): Settings =>
-    merge(DEFAULT_SETTINGS, salvagePartialSettings(adapter.read(SETTINGS_KEY)))
+  /**
+   * 🛑 Held between writes, and the config file is no longer re-read for each ask: one edited by
+   * hand while the studio runs is seen at the next write, not at the next read. The price of a
+   * read was a zod pass over the whole file plus a rebuild of all fifteen sections, on a call the
+   * main process makes from many hot paths — `services.ts` alone asks eighteen times.
+   */
+  let cached: Settings | null = null
+
+  const read = (): Settings => {
+    cached ??= merge(DEFAULT_SETTINGS, salvagePartialSettings(adapter.read(SETTINGS_KEY)))
+    return cached
+  }
+
+  /** What was just written is re-read rather than assumed: the schema may narrow what it stores. */
+  const forgetSettings = (): void => {
+    cached = null
+  }
 
   const readRaw = (key: string): string | null => adapter.read<string>(key) ?? null
 
@@ -274,12 +289,14 @@ export function createSettingsStore(
     write: partial => {
       const merged = merge(read(), partial)
       adapter.write(SETTINGS_KEY, merged)
+      forgetSettings()
       announce(merged)
       return merged
     },
 
     reset: () => {
       adapter.write(SETTINGS_KEY, DEFAULT_SETTINGS)
+      forgetSettings()
       announce(DEFAULT_SETTINGS)
       return DEFAULT_SETTINGS
     },

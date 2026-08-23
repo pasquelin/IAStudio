@@ -1620,7 +1620,6 @@ export function createServices(settings: SettingsStore): Services {
    */
   const collectLocal = createLocalCollector({
     producedBy: jobId => localJobs.producedBy(jobId),
-    readFile: path => readFile(path),
     discard: path => rm(path, { force: true }),
     backend: assets,
     newId: newAssetId,
