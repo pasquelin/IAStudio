@@ -5,7 +5,7 @@ import { ProgressBar } from '@/design/ProgressBar'
 import { STATUS_BUTTON } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { useBytes } from '@/hooks/useBytes'
-import { useDictation } from '@/hooks/useDictation'
+import { useDictationView } from '@/hooks/useDictationView'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { DictationStatusListening } from './DictationStatusListening'
 
@@ -22,7 +22,7 @@ import { DictationStatusListening } from './DictationStatusListening'
  */
 export function DictationStatus() {
   const { t } = useTranslation()
-  const dictation = useDictation()
+  const dictation = useDictationView()
   const bytes = useBytes()
 
   if (!dictation.enabled) return null

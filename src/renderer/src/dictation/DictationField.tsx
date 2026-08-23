@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { useDictation } from '@/hooks/useDictation'
+import { useDictationView } from '@/hooks/useDictationView'
 import { DictationButton } from './DictationButton'
 import { Heard } from './Heard'
 
@@ -18,7 +18,7 @@ import { Heard } from './Heard'
  * and for ⌥D, which is what a form with three text boxes needs.
  */
 export function DictationField() {
-  const { isListening, enabled } = useDictation()
+  const { isListening, enabled } = useDictationView()
 
   if (!enabled) return null
 

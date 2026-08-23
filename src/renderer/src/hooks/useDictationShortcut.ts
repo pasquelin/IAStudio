@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useDictation as useDictationStore } from '@/stores/dictation'
+import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { useHeldCommand } from './useHeldCommand'
 
@@ -12,7 +12,7 @@ import { useHeldCommand } from './useHeldCommand'
  */
 export function useDictationShortcut(): void {
   const enabled = useSettings(state => state.settings.dictation.enabled)
-  const setHeld = useDictationStore(state => state.setHeld)
+  const setHeld = useDictation(state => state.setHeld)
 
   useHeldCommand(
     'app.dictate',
