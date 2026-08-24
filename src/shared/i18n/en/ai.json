@@ -56,8 +56,8 @@
   "aiModels": {
     "reading": "Reading the machine…",
     "empty": "No employment has a provider to offer on this machine.",
-    "machineMemory": "{{available}} free of {{total}}",
-    "machineDisk": "{{free}} on disk",
+    "machineMemory": "Memory: {{available}} free of {{total}}",
+    "machineDisk": "Disk: {{free}} free",
     "appliesNow": "A choice made here applies at once — Cancel does not take it back.",
     "scope": "These choices apply to",
     "scope_app": "the application",
@@ -93,7 +93,7 @@
       "plugin": "no engine in this studio can open this model yet",
       "cuda": "this model needs an NVIDIA GPU (CUDA)"
     },
-    "machineVram": "{{free}} free of {{total}} video memory",
+    "machineVram": "Video memory: {{free}} free of {{total}}",
     "load": "Load",
     "loadHint": "Holds the weights in memory so answers come back at once",
     "loading": "Loading the model",
@@ -139,6 +139,7 @@
     "publisherCard": "Publisher card",
     "publisherCardHint": "Opens this model’s Hugging Face page in the browser",
     "catalogue": "Catalogue",
-    "catalogueHelp": "The models of this family, on this machine and in the cloud. Which one serves each employment is picked in the generation panel."
+    "catalogueHelp": "The models of this family, on this machine and in the cloud. Which one serves each employment is picked in the generation panel.",
+    "machineGpu": "Chip: {{name}}"
   }
 }

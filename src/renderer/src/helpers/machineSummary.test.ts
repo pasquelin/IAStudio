@@ -35,9 +35,10 @@ describe('gpuName', () => {
 })
 
 describe('the machine sentence', () => {
-  it('says memory, chip and disk, in that order', () => {
+  /** Every figure names its subject: read as bare numbers, nothing said which memory was which. */
+  it('says memory, chip and disk, in that order, each one named', () => {
     expect(machineSummary(machine(), say, bytes)).toBe(
-      'aiModels.machineMemory(total=96G,available=34G) · Apple M2 Max · aiModels.machineDisk(free=500G)',
+      'aiModels.machineMemory(total=96G,available=34G) · aiModels.machineGpu(name=Apple M2 Max) · aiModels.machineDisk(free=500G)',
     )
   })
 

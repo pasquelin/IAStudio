@@ -6,7 +6,14 @@ import {
   type NewsTopic,
 } from '@shared/domain/news'
 import { log } from '@main/log'
-import { ARTICLES_URL, articlesFrom, mergedModels, modelsFrom, modelsUrl } from './newsFeed'
+import {
+  ARTICLES_URL,
+  articlesFrom,
+  mergedModels,
+  modelsFrom,
+  modelsUrl,
+  recentOf,
+} from './newsFeed'
 
 /** What a body comes back through. Injected so no test of this file reaches the network. */
 type NewsReader = (url: string, signal: AbortSignal) => Promise<string>
@@ -31,9 +38,13 @@ export type NewsService = {
   page: (topic: NewsTopic) => Promise<NewsPage>
 }
 
-async function itemsFor(topic: NewsTopic, read: NewsReader): Promise<NewsItem[]> {
+async function itemsFor(topic: NewsTopic, read: NewsReader, now: number): Promise<NewsItem[]> {
   const signal = AbortSignal.timeout(REQUEST_MS)
-  if (topic === ARTICLES_TOPIC) return articlesFrom(await read(ARTICLES_URL, signal))
+  // The feed carries five hundred items, and the models walk is capped by the request itself:
+  // this is the ONE side that had nothing bounding it, which put forty-four rows on the home.
+  if (topic === ARTICLES_TOPIC) {
+    return recentOf(articlesFrom(await read(ARTICLES_URL, signal)), now)
+  }
 
   const tags = NEWS_TAGS_BY_FAMILY[topic] ?? []
   const pages = await Promise.all(tags.map(tag => read(modelsUrl(tag), signal).then(modelsFrom)))
@@ -55,7 +66,7 @@ export function createNewsService({ read, now }: NewsDependencies): NewsService 
     try {
       const page: NewsPage = {
         topic,
-        items: await itemsFor(topic, read),
+        items: await itemsFor(topic, read, now()),
         readAt: new Date(now()).toISOString(),
       }
       held.set(topic, { at: now(), page })

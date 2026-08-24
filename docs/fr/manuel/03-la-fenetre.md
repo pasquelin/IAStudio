@@ -101,6 +101,10 @@ seule catégorie s’affiche à la fois, et c’est une seule requête.
 catégorie à part — le studio les sert avec des modèles d’image — donc une puce pour l’une d’elles
 répéterait la liste Image sous un autre nom.
 
+**Huit lignes, et rien de plus vieux qu’un mois.** Le flux d’articles en porte cinq cents ; une
+bande d’accueil n’est pas un lecteur de flux. Au-delà d’un mois ce n’est plus une actualité, c’est
+de l’histoire.
+
 **Un clic ouvre la page dans votre navigateur.** Rien n’est téléchargé, rien n’est installé : ce
 sont les modèles et les articles de quelqu’un d’autre.
 

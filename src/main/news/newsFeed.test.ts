@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { articlesFrom, mergedModels, modelsFrom, modelsUrl } from './newsFeed'
+import { NEWS_PAGE_SIZE } from '@shared/domain/news'
+import {
+  articlesFrom,
+  mergedModels,
+  modelsFrom,
+  modelsUrl,
+  NEWS_WINDOW_MS,
+  recentOf,
+} from './newsFeed'
 
 describe('the hub request', () => {
   it('asks for one pipeline, trending first', () => {
@@ -129,5 +137,47 @@ describe('the blog feed', () => {
 
   it('answers nothing on a body that is not a feed', () => {
     expect(articlesFrom('<html><body>404</body></html>')).toEqual([])
+  })
+})
+
+describe('what a band is allowed to show', () => {
+  const NOW = Date.parse('2026-08-24T00:00:00.000Z')
+
+  const aged = (days: number) => ({
+    id: `d${days}`,
+    title: `d${days}`,
+    url: `https://huggingface.co/blog/d${days}`,
+    publishedAt: new Date(NOW - days * 24 * 60 * 60 * 1000).toISOString(),
+    kind: null,
+    downloads: null,
+    likes: null,
+  })
+
+  /**
+   * The defect this closes: the blog feed carries five hundred items, and nothing capped the
+   * articles side — forty-four rows landed on the home, a page of their own.
+   */
+  it('shows no more rows than one band holds', () => {
+    expect(
+      recentOf(
+        Array.from({ length: 40 }, (_unused, rank) => aged(rank)),
+        NOW,
+      ),
+    ).toHaveLength(NEWS_PAGE_SIZE)
+  })
+
+  it('drops what is older than a month: past that it is history, not news', () => {
+    const kept = recentOf([aged(2), aged(40)], NOW)
+
+    expect(kept.map(item => item.id)).toEqual(['d2'])
+  })
+
+  it('keeps the edge of the window rather than cutting it', () => {
+    expect(recentOf([aged(NEWS_WINDOW_MS / (24 * 60 * 60 * 1000) - 1)], NOW)).toHaveLength(1)
+  })
+
+  /** Nothing here can judge an item that stated no date, and inventing one to compare is worse. */
+  it('keeps an item that stated no date at all', () => {
+    expect(recentOf([{ ...aged(0), publishedAt: null }], NOW)).toHaveLength(1)
   })
 })

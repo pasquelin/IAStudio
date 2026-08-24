@@ -1,8 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ARTICLES_TOPIC } from '@shared/domain/news'
+import { ARTICLES_TOPIC, NEWS_PAGE_SIZE } from '@shared/domain/news'
+import { NEWS_WINDOW_MS } from './newsFeed'
 import { createNewsService, NEWS_TTL_MS } from './newsStore'
 
 const ONE_MODEL = JSON.stringify([{ id: 'a/b', downloads: 1, likes: 2 }])
+
+/** Fifty items every other day — sixteen of them inside the window, which is what caps. */
+const LONG_FEED = `<rss><channel>${Array.from({ length: 50 }, (_unused, rank) => {
+  const at = new Date(Date.UTC(2026, 7, 24) - rank * 2 * 24 * 60 * 60 * 1000).toUTCString()
+  return `<item><title>a${rank}</title><link>https://huggingface.co/blog/a${rank}</link><pubDate>${at}</pubDate></item>`
+}).join('')}</channel></rss>`
 
 function service(read = vi.fn(() => Promise.resolve(ONE_MODEL))) {
   let clock = 0
@@ -55,6 +62,22 @@ describe('the news service', () => {
     await Promise.all([news.page('image'), news.page('image')])
 
     expect(read).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * The articles side had nothing bounding it — the models walk is capped by the request itself —
+   * so forty-four rows of a five-hundred-item feed landed on the home.
+   */
+  it('bounds the articles to a month and to what one band holds', async () => {
+    const clock = Date.UTC(2026, 7, 24)
+    const news = createNewsService({ read: () => Promise.resolve(LONG_FEED), now: () => clock })
+
+    const page = await news.page(ARTICLES_TOPIC)
+
+    expect(page.items).toHaveLength(NEWS_PAGE_SIZE)
+    for (const item of page.items) {
+      expect(Date.parse(item.publishedAt ?? '')).toBeGreaterThanOrEqual(clock - NEWS_WINDOW_MS)
+    }
   })
 
   it('lets a refusal through, so the band can tell silence from an empty list', async () => {

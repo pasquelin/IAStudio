@@ -5,6 +5,7 @@ import { QuietNote } from '@/design/QuietNote'
 import { useNews } from '@/hooks/useNews'
 import { useSettings } from '@/stores/settings'
 import { NewsRow } from './NewsRow'
+import { NewsSkeleton } from './NewsSkeleton'
 
 /**
  * The five states of one topic: switched off, reading, refused, empty, and the rows.
@@ -26,7 +27,7 @@ export function NewsBody({ topic, reading }: { topic: NewsTopic; reading: boolea
     )
   }
 
-  if (news.isPending) return <QuietNote>{t('home.news.reading')}</QuietNote>
+  if (news.isPending) return <NewsSkeleton />
 
   if (news.isError) {
     return (
