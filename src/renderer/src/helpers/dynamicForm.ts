@@ -38,6 +38,21 @@ export function visibleFields(
 }
 
 /**
+ * 🛑 Whether the NEW descriptor can hold a value the old one wrote. Two models sharing a key
+ * share nothing else: a scheduler the next one does not list renders a `<select>` on no option
+ * at all, and a knob past its bounds fails validation on a field nobody ever touched.
+ */
+function fits(field: FieldDescriptor, value: unknown): boolean {
+  if (field.options?.length) return field.options.some(one => one.value === value)
+
+  if (typeof value === 'number') {
+    if (field.min !== undefined && value < field.min) return false
+    if (field.max !== undefined && value > field.max) return false
+  }
+  return true
+}
+
+/**
  * What a form opens on, in the order that decides it: a preset first, then what the person had
  * already typed, then the descriptor's own default.
  *
@@ -59,7 +74,7 @@ export function defaultValues(
     if (preset && field.key in preset) values[field.key] = preset[field.key]
     // Blank is not a value: a field the previous model left empty must take the new one's
     // default rather than emptying a knob the person never touched.
-    else if (held !== undefined) values[field.key] = held
+    else if (held !== undefined && fits(field, held)) values[field.key] = held
     else if (field.default !== undefined) values[field.key] = field.default
     else if (field.kind === 'boolean') values[field.key] = false
     else values[field.key] = ''

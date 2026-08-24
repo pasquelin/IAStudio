@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_RUNTIME, type ModelSummary } from '@shared/domain/model'
 import type { ModelRefusalWord } from '@/hooks/useModelReach'
+import { useDismiss } from '@/hooks/useDismiss'
+import { useMenuKeys } from '@/hooks/useMenuKeys'
 import { cn } from '@/helpers/cn'
 import { fieldHandle } from '../scHandle'
 import { Chip } from '../Chip'
-import { Flyout } from '../Flyout'
 import { Thumbnail } from '../Thumbnail'
-import { CONTROL } from '../styles'
+import { CONTROL, MENU_SURFACE } from '../styles'
 import { ModelPickerRow } from './ModelPickerRow'
 
 /** What the list may be narrowed to. `all` is the state it opens in. */
@@ -16,6 +17,8 @@ type Scope = 'all' | 'local' | 'cloud' | 'installed'
 const SCOPES: readonly Scope[] = ['all', 'local', 'cloud', 'installed']
 
 export type ModelPickerProps = {
+  /** Names the control, so a `<label>` above it may bind: a `<button>` is labelable. */
+  id?: string
   models: readonly ModelSummary[]
   /** The model in use, or `null` when the employment is served by nothing yet. */
   value: string | null
@@ -24,8 +27,11 @@ export type ModelPickerProps = {
   refusalOf?: (model: ModelSummary) => ModelRefusalWord | undefined
   /** Its picture, resolved by the host: most cloud models carry a signed example, not a thumbnail. */
   pictureOf?: (model: ModelSummary) => string | undefined
-  /** Told which models reached the screen, so the host can resolve their pictures. */
-  onShown?: (models: readonly ModelSummary[]) => void
+  /**
+   * Told what the picker will DRAW — its whole list, at mount, closed or not. Wider than
+   * `Collection`'s prop of the same name, which reports only the virtualised window.
+   */
+  onVisible?: (models: readonly ModelSummary[]) => void
   /** What the closed control says under the name — where it runs, whether it is installed. */
   caption?: string
   /**
@@ -50,18 +56,20 @@ function within(model: ModelSummary, scope: Scope): boolean {
  * choosing a model is a step of a generation, not a destination — managing them is the settings'.
  */
 export function ModelPicker({
+  id,
   models,
   value,
   onChange,
   refusalOf,
   pictureOf,
-  onShown,
+  onVisible,
   caption,
   valueLabel,
   emptyLabel,
 }: ModelPickerProps) {
   const { t } = useTranslation()
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  const panel = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [scope, setScope] = useState<Scope>('all')
@@ -75,31 +83,34 @@ export function ModelPicker({
 
   const chosen = models.find(model => model.id === value)
 
-  // Asked for once the list is drawn, and only for what it holds: a signed URL is short-lived,
-  // so it is fetched when a model is actually seen.
+  // 🛑 Asked for BEFORE the flyout opens, never when. Measured on screen: the round trip is
+  // ~830ms, over which the list drew 54 empty plates out of 61 — the whole of what a person
+  // sees of it. `chosen` is one of these, so the closed plate is covered by the same breath.
   useEffect(() => {
-    if (open) onShown?.(shown)
-  }, [open, shown, onShown])
+    onVisible?.(models)
+  }, [models, onVisible])
+
+  const close = open ? () => setOpen(false) : undefined
+  useDismiss(close, panel, anchor)
+  useMenuKeys(panel, close)
 
   return (
     <>
       <button
         type="button"
+        id={id}
         ref={setAnchor}
         data-sc={fieldHandle('generation.model')}
         aria-haspopup="menu"
         aria-expanded={open}
-        // `CONTROL` without its height: this one holds a name over a caption, and one control's
-        // worth of height clipped the name away entirely.
+        // A name over a caption: one control's worth of height clipped the name away.
         className={cn(
-          'bg-surface text-text text-tiny rounded-(--radius-sc-md)',
-          'flex min-h-(--sc-control) w-full items-center gap-2 px-2 py-1 text-left',
+          CONTROL,
+          'flex h-auto min-h-(--sc-control) w-full items-center gap-2 px-2 py-1 text-left',
         )}
         onClick={() => setOpen(held => !held)}
       >
-        {/* The same plate its own row wears open: the model in use has to be recognisable at a
-            glance, which is what a picture is for and a name is not. */}
-        <Thumbnail url={chosen ? pictureOf?.(chosen) : undefined} className="size-8 shrink-0" />
+        <Thumbnail url={chosen ? pictureOf?.(chosen) : undefined} className="size-8" />
 
         <span className="flex min-w-0 flex-col">
           <span className="text-text truncate text-xs">
@@ -110,14 +121,10 @@ export function ModelPicker({
       </button>
 
       {open && (
-        <Flyout
-          anchor={anchor}
-          placement="under"
-          role="menu"
-          onDismiss={() => setOpen(false)}
-          onKeyClose={() => setOpen(false)}
-        >
-          <div className="flex min-w-0 flex-col gap-2 p-1">
+        /* 🛑 IN FLOW, under the control, never floating: a `fixed` panel does not follow the
+           form it belongs to, and scrolling left the list hanging over the wrong field. */
+        <div ref={panel} role="menu" className={cn(MENU_SURFACE, 'mt-1 max-h-80 w-full')}>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
             <input
               type="search"
               className={cn(CONTROL, 'px-2')}
@@ -141,7 +148,7 @@ export function ModelPicker({
               ))}
             </div>
 
-            <ul className="flex flex-col gap-0.5">
+            <ul className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
               {shown.map(model => (
                 <li key={model.id}>
                   <ModelPickerRow
@@ -162,7 +169,7 @@ export function ModelPicker({
               <p className="text-muted text-tiny px-2 py-1">{t('collection.noMatch')}</p>
             )}
           </div>
-        </Flyout>
+        </div>
       )}
     </>
   )

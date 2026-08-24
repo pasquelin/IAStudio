@@ -44,12 +44,14 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
    * whole panel — form, picker and sources.
    */
   const sceneId = useDocuments(activeSceneId)
-  // 🛑 `useShallow`, and it is not a nicety: the selector builds an array, zustand compares
-  // snapshots with `Object.is`, and a fresh one per render is an endless re-render the moment a
-  // scene holds one selected model.
-  const meshes = useScenes(
-    useShallow(state => (sceneId ? selectedMeshesOf(sceneOf(state, sceneId)) : NONE)),
+  // 🛑 STRINGS across the subscription, never objects: `useShallow` compares the entries with
+  // `Object.is`, so an array of fresh `{ id, name }` is a new snapshot every read — an endless
+  // re-render the moment a scene holds one selected model. Paired back into rows below.
+  const meshKeys = useScenes(
+    useShallow(state => (sceneId ? selectedMeshKeysOf(sceneOf(state, sceneId)) : NO_KEYS)),
   )
+
+  const meshes = useMemo(() => meshKeys.map(meshOfKey), [meshKeys])
 
   // § 24: what the last generation produced, so a chain starts from it without a round trip
   // through the shelf. Ids rather than rows, so a catalogue refresh does not re-render this.
@@ -80,7 +82,10 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
 }
 
 /** Stable, so a workspace with no scene open does not hand React a new array per render. */
-const NONE: readonly { id: string; name: string }[] = []
+const NO_KEYS: readonly string[] = []
+
+/** A separator no node name can hold, so an id and a name travel as one comparable string. */
+const KEY_PART = '\u0000'
 
 /**
  * The meshes a scene has selected, by the catalogue row each placement references.
@@ -88,14 +93,17 @@ const NONE: readonly { id: string; name: string }[] = []
  * A node is not an asset: what a scene selects is a placement, and anything but a model has no
  * file to send.
  */
-function selectedMeshesOf(
-  scene: ReturnType<typeof sceneOf>,
-): readonly { id: string; name: string }[] {
+function selectedMeshKeysOf(scene: ReturnType<typeof sceneOf>): readonly string[] {
   const picked = scene.nodes.flatMap(node =>
     node.type === 'model' && scene.selectedIds.includes(node.id)
-      ? [{ id: node.model.assetId, name: node.name }]
+      ? [`${node.model.assetId}${KEY_PART}${node.name}`]
       : [],
   )
 
-  return picked.length === 0 ? NONE : picked
+  return picked.length === 0 ? NO_KEYS : picked
+}
+
+function meshOfKey(key: string): { id: string; name: string } {
+  const at = key.indexOf(KEY_PART)
+  return { id: key.slice(0, at), name: key.slice(at + KEY_PART.length) }
 }

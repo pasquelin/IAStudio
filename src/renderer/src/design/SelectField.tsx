@@ -2,6 +2,7 @@ import { mdiChevronDown } from '@mdi/js'
 import { useId, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { FieldActions } from './FieldActions'
+import { FormField } from './FormField'
 import { PropertyLabel } from './PropertyLabel'
 import { fieldHandle } from './scHandle'
 import { CONTROL, FIELD_ROW, NATIVE_SELECT } from './styles'
@@ -26,11 +27,11 @@ export type SelectFieldProps<V extends string> = {
    */
   unnamedLabel?: string
   /**
-   * `row` is the property line. `inline` drops the label column, for a bar. `bar` drops it too
-   * and draws its own chevron — the browser pins the native one to the edge of the control, where
-   * no padding reaches it, and a filter bar is read as a row of words rather than of fields.
+   * `row` is the property line, `stacked` the form field with its name above. `inline` drops the
+   * label column; `bar` drops it too and draws its own chevron, the native one being pinned to
+   * the control's edge where no padding reaches it.
    */
-  layout?: 'row' | 'inline' | 'bar'
+  layout?: 'row' | 'stacked' | 'inline' | 'bar'
   /**
    * Tooltip attributes from the host's own factory, already resolved. `TIP_*` sets a name and is
    * for a select drawing no visible label; `HINT_*` adds to one and is for `row` (WCAG 2.5.3).
@@ -83,51 +84,71 @@ export function SelectField<V extends string>({
   const unnamed =
     unnamedLabel !== undefined && (value === null || !options.some(one => one.value === value))
 
+  // A real `<label>` either way, since a select is what a label may safely bind: pressing the
+  // word opens the list, which is the gesture anyone expects of it.
+  const named = layout === 'row' || layout === 'stacked'
+
+  const control = (
+    <select
+      id={id}
+      // Only where no visible name is drawn, for the reason above.
+      aria-label={named ? undefined : label}
+      data-sc={scId && fieldHandle(scId)}
+      value={unnamed ? UNNAMED : (value ?? UNNAMED)}
+      onChange={event => {
+        const picked = options.find(option => option.value === event.target.value)
+        if (picked) onChange(picked.value)
+      }}
+      {...hint}
+      className={cn(
+        layout === 'bar'
+          ? cn(CONTROL, 'w-full cursor-pointer appearance-none border-none pr-6 pl-2')
+          : NATIVE_SELECT,
+        'min-w-0 flex-1',
+        // The unset entry reads quieter than a value, which is how a filter bar shows at a
+        // glance which of its facets are actually filtering.
+        layout === 'bar' && !value && 'text-muted',
+      )}
+    >
+      {/* Only while nothing names the value: an entry no one may pick would otherwise sit in
+            every list, and `disabled` is what keeps it out of the answers while it shows. */}
+      {unnamed && (
+        <option value={UNNAMED} disabled>
+          {unnamedLabel}
+        </option>
+      )}
+
+      {options.map(option => (
+        <option key={option.value} value={option.value} disabled={option.disabled}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  )
+
+  // The form field, its name above it and nothing in a column beside it. What flanks the control
+  // still flanks it: a stacked field browses and clears like any other.
+  if (layout === 'stacked') {
+    return (
+      <FormField label={label} htmlFor={id} className={className}>
+        <div className="flex min-w-0 items-center gap-2">
+          {leading}
+          {control}
+          <FieldActions>{actions}</FieldActions>
+        </div>
+      </FormField>
+    )
+  }
+
   return (
     <div
       className={cn(layout === 'bar' ? 'relative flex min-w-0 items-center' : FIELD_ROW, className)}
     >
-      {/* A real `<label>`, since a select is what a label may safely bind: pressing the word opens
-          the list, which is the gesture anyone expects of it. */}
       {layout === 'row' && <PropertyLabel as="label" htmlFor={id} label={label} />}
 
       {leading}
 
-      <select
-        id={id}
-        // Only where no visible name is drawn, for the reason above.
-        aria-label={layout === 'row' ? undefined : label}
-        data-sc={scId && fieldHandle(scId)}
-        value={unnamed ? UNNAMED : (value ?? UNNAMED)}
-        onChange={event => {
-          const picked = options.find(option => option.value === event.target.value)
-          if (picked) onChange(picked.value)
-        }}
-        {...hint}
-        className={cn(
-          layout === 'bar'
-            ? cn(CONTROL, 'w-full cursor-pointer appearance-none border-none pr-6 pl-2')
-            : NATIVE_SELECT,
-          'min-w-0 flex-1',
-          // The unset entry reads quieter than a value, which is how a filter bar shows at a
-          // glance which of its facets are actually filtering.
-          layout === 'bar' && !value && 'text-muted',
-        )}
-      >
-        {/* Only while nothing names the value: an entry no one may pick would otherwise sit in
-            every list, and `disabled` is what keeps it out of the answers while it shows. */}
-        {unnamed && (
-          <option value={UNNAMED} disabled>
-            {unnamedLabel}
-          </option>
-        )}
-
-        {options.map(option => (
-          <option key={option.value} value={option.value} disabled={option.disabled}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      {control}
 
       {/* Only the closed control is restyled; the open list stays the platform's, which is the
           whole reason a `<select>` is used inside a panel too narrow for a menu of its own. */}

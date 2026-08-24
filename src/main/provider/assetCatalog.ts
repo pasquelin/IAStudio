@@ -3,7 +3,8 @@ import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { log } from '@main/log'
 import { cloudAssetOfHit, cloudAssetOfListing } from './assetNormalizer'
 import { offsetAfter, tokenAfter } from './cursor'
-import { chunk, DELETE_MAX, GET_BULK_MAX, PAGE_SIZE_MAX } from './limits'
+import { chunk } from '@shared/collections'
+import { DELETE_MAX, GET_BULK_MAX, PAGE_SIZE_MAX } from './limits'
 
 /**
  * The API's own closed unions, taken from the SDK rather than restated.

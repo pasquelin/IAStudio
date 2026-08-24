@@ -35,6 +35,7 @@ export function GeneratorOperation({ capability, onForce }: GeneratorOperationPr
   return (
     <SelectField
       label={t('generation.operation')}
+      layout="stacked"
       scId="generation.operation"
       value={capability.chosen === null ? FOLLOW : String(capability.chosen)}
       options={[

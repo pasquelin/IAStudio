@@ -27,7 +27,7 @@ export type ToastProps = {
  */
 export function Toast({ icon, tone, children, dismissLabel, dismissHint, onDismiss }: ToastProps) {
   return (
-    <div className={cn(MENU_SURFACE, 'pointer-events-auto static flex-row items-start gap-2 p-2')}>
+    <div className={cn(MENU_SURFACE, 'pointer-events-auto flex-row items-start gap-2 p-2')}>
       <UiIcon path={icon} size={14} className={cn('mt-px shrink-0', TONE_TEXT[tone])} />
 
       {children}

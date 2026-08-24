@@ -551,7 +551,9 @@ export const useTools = create<ToolsState>()(
       // 17 drops `channels` and `styles`, which became sections of the inspector: the upper right
       // of Textures declares nothing now, and a stored arrangement still naming one of them would
       // keep it written for ever — `openEverywhereItSits` only reads what a bump makes it read.
-      version: 17,
+      // 18 is `models` leaving the docks for the settings, and it is the SAME rule: without the
+      // bump `migrate` never runs, and every installed arrangement keeps naming a dead panel.
+      version: 18,
       migrate: migrateTools,
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.

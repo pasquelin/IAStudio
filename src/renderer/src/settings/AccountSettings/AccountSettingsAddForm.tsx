@@ -1,5 +1,6 @@
-import { useState, type SubmitEvent } from 'react'
+import { useId, useState, type SubmitEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { FormField } from '@/design/FormField'
 import { checkAccountName } from '@shared/domain/account'
 import { CLOUD_IDS, cloudAuth, isCloudProviderId, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { HINT_TOP } from '@/helpers/tooltip'
@@ -7,6 +8,7 @@ import { useAccounts, type AccountSaveFailure } from '@/stores/accounts'
 import { FAILURE_KEYS } from './failureKeys'
 
 export function AccountSettingsAddForm() {
+  const form = useId()
   const { t } = useTranslation()
   const accounts = useAccounts(state => state.accounts)
   const add = useAccounts(state => state.add)
@@ -42,9 +44,9 @@ export function AccountSettingsAddForm() {
 
   return (
     <form className="flex flex-col gap-3 border-t border-current/10 pt-4" onSubmit={submit}>
-      <label className="flex flex-col gap-2 text-xs">
-        {t('accounts.provider')}
+      <FormField label={t('accounts.provider')} htmlFor={`${form}provider`}>
         <select
+          id={`${form}provider`}
           data-sc="field:newAccount.provider"
           className="select select-sm w-full"
           value={providerId}
@@ -59,11 +61,11 @@ export function AccountSettingsAddForm() {
             </option>
           ))}
         </select>
-      </label>
+      </FormField>
 
-      <label className="flex flex-col gap-2 text-xs">
-        {t('accounts.name')}
+      <FormField label={t('accounts.name')} htmlFor={`${form}name`}>
         <input
+          id={`${form}name`}
           data-sc="field:newAccount.name"
           className="input input-sm w-full"
           type="text"
@@ -73,11 +75,11 @@ export function AccountSettingsAddForm() {
           value={name}
           onChange={event => setName(event.target.value)}
         />
-      </label>
+      </FormField>
 
-      <label className="flex flex-col gap-2 text-xs">
-        {t('auth.key')}
+      <FormField label={t('auth.key')} htmlFor={`${form}key`}>
         <input
+          id={`${form}key`}
           data-sc="field:newAccount.key"
           className="input input-sm w-full"
           type="text"
@@ -86,12 +88,12 @@ export function AccountSettingsAddForm() {
           value={key}
           onChange={event => setKey(event.target.value)}
         />
-      </label>
+      </FormField>
 
       {wantsSecret && (
-        <label className="flex flex-col gap-2 text-xs">
-          {t('auth.secret')}
+        <FormField label={t('auth.secret')} htmlFor={`${form}secret`}>
           <input
+            id={`${form}secret`}
             data-sc="field:newAccount.secret"
             className="input input-sm w-full"
             type="password"
@@ -99,7 +101,7 @@ export function AccountSettingsAddForm() {
             value={secret}
             onChange={event => setSecret(event.target.value)}
           />
-        </label>
+        </FormField>
       )}
 
       {failure && (

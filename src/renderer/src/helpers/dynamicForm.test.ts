@@ -10,6 +10,39 @@ import {
 import { field } from './dynamic-form-fixtures'
 
 describe('default values', () => {
+  /**
+   * 🛑 Two models sharing a key share nothing else: a scheduler the next one does not list would
+   * render a `<select>` on no option at all, and a required field then reads empty in silence.
+   */
+  it('leaves behind a carried value the new model cannot hold', () => {
+    const field: FieldDescriptor = {
+      key: 'scheduler',
+      kind: 'choice',
+      label: 'Scheduler',
+      required: true,
+      default: 'Euler',
+      options: [{ value: 'Euler', label: 'Euler' }],
+    }
+
+    expect(defaultValues([field], undefined, { scheduler: 'DPM++ 2M' })).toEqual({
+      scheduler: 'Euler',
+    })
+  })
+
+  // A knob carried past the new model's bounds fails validation on a field nobody ever touched.
+  it('leaves behind a number the new model puts out of range', () => {
+    const field: FieldDescriptor = {
+      key: 'steps',
+      kind: 'integer',
+      label: 'Steps',
+      required: false,
+      default: 25,
+      min: 1,
+      max: 30,
+    }
+
+    expect(defaultValues([field], undefined, { steps: 80 })).toEqual({ steps: 25 })
+  })
   it('uses what the model published, and a blank otherwise', () => {
     expect(
       defaultValues([

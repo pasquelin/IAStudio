@@ -52,6 +52,39 @@ describe('the model in use', () => {
   })
 })
 
+// A `<button>` is labelable: the word above it has to open the list, or the name is decoration.
+it('lets a label above it bind to the control', () => {
+  render(
+    <>
+      <label htmlFor="picker">Modèle</label>
+      <ModelPicker
+        id="picker"
+        models={MODELS}
+        value="ssd-1b"
+        onChange={vi.fn()}
+        emptyLabel="Choisir un modèle"
+      />
+    </>,
+  )
+
+  expect(screen.getByLabelText('Modèle')).toBe(screen.getByRole('button', { name: /Modèle/ }))
+})
+
+describe('the pictures it will need', () => {
+  // 🛑 Measured on screen: the round trip is ~830ms, and asking on OPEN drew 54 empty plates of
+  // 61 for the whole of it. Asked for while the flyout is still closed, or a person never sees one.
+  it('are asked for before the flyout is ever opened', () => {
+    const onVisible = vi.fn()
+    open({ onVisible })
+
+    expect(onVisible.mock.calls.at(-1)?.[0].map((one: ModelSummary) => one.id)).toEqual([
+      'ssd-1b',
+      'sana',
+      'flux',
+    ])
+  })
+})
+
 describe('choosing another one', () => {
   /**
    * § 15: it opens a flyout rather than replacing what is around it. Choosing a model is a step

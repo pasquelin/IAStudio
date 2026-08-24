@@ -4,7 +4,7 @@ import { clampAtLeast } from '@shared/numeric'
 import { cn } from '@/helpers/cn'
 import { useDismiss } from '@/hooks/useDismiss'
 import { useMenuKeys } from '@/hooks/useMenuKeys'
-import { MENU_SURFACE } from './styles'
+import { MENU_FLOATING } from './styles'
 
 /**
  * Which side of its anchor the menu hangs on.
@@ -136,7 +136,7 @@ export function Flyout({
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       className={cn(
-        MENU_SURFACE,
+        MENU_FLOATING,
         'min-w-40',
         // The scene's Add menu is 22 rows: unbounded it runs off the bottom of the window,
         // and the rows past the edge are unreachable.

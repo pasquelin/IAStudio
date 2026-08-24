@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { providerOfModel, type AiRoleId } from '@shared/domain/aiRole'
 import type { ModelSummary } from '@shared/domain/model'
@@ -6,6 +6,7 @@ import type { PlanAccess } from '@shared/domain/plan'
 import { ModelPicker } from '@/design/ModelPicker/ModelPicker'
 import { ModelDownloadDialog } from '@/panels/models/Models/ModelDownloadDialog'
 import { runtimeLabel } from '@/helpers/runtimeLabel'
+import { FormField } from '@/design/FormField'
 import { useLazyPreviews } from '@/hooks/useLazyPreviews'
 import { useModelsForCapability } from '@/hooks/useModelsForCapability'
 import { useModelReach, type ModelRefusalWord } from '@/hooks/useModelReach'
@@ -43,6 +44,7 @@ function captionOf(
  * employment and no other (ADR-23 § C): the same weights serve several.
  */
 export function GeneratorModel({ capability, modelId, name, plan }: GeneratorModelProps) {
+  const field = useId()
   const { t } = useTranslation()
   const models = useModelsForCapability(capability)
   const select = useModels(state => state.select)
@@ -52,60 +54,46 @@ export function GeneratorModel({ capability, modelId, name, plan }: GeneratorMod
 
   const refusalOf = (model: ModelSummary): ModelRefusalWord | undefined => reachOf(model).refusal
 
-  const { urls, resolve } = useLazyPreviews()
-  const pictureOf = (model: ModelSummary): string | undefined =>
-    model.thumbnail ?? (model.previewAssetId ? urls[model.previewAssetId] : undefined)
-  const onShown = useCallback(
-    (shown: readonly ModelSummary[]) => {
-      resolve(
-        shown.flatMap(one => (!one.thumbnail && one.previewAssetId ? [one.previewAssetId] : [])),
-      )
-    },
-    [resolve],
-  )
+  const { pictureOf, resolveFor } = useLazyPreviews()
   const chosen = models.find(one => one.id === modelId)
-
-  // The model in USE, whether or not the list was ever opened: its plate is drawn on the closed
-  // control, and `onShown` only ever covers what the flyout drew.
-  useEffect(() => {
-    if (chosen && !chosen.thumbnail && chosen.previewAssetId) resolve([chosen.previewAssetId])
-  }, [chosen, resolve])
-
   const [offered, setOffered] = useState<ModelSummary | null>(null)
 
   return (
-    <div className="px-2 pt-2">
+    <div>
       {offered && <ModelDownloadDialog model={offered} onClose={() => setOffered(null)} />}
 
-      <ModelPicker
-        models={models}
-        value={modelId}
-        onChange={id => {
-          const model = models.find(one => one.id === id)
-          if (!model) return
+      <FormField label={t('generation.model')} htmlFor={field}>
+        <ModelPicker
+          id={field}
+          models={models}
+          value={modelId}
+          onChange={id => {
+            const model = models.find(one => one.id === id)
+            if (!model) return
 
-          // 🛑 The one refusal the studio can lift itself: arming weights that are not on the
-          // disk builds a generation that cannot run, where the offer to fetch them is right
-          // here. ADR-23 § D — the panel downloads or sends to configure, without leaving.
-          if (reachOf(model).fetchable) {
-            setOffered(model)
-            return
-          }
+            // 🛑 The one refusal the studio can lift itself: arming weights that are not on the
+            // disk builds a generation that cannot run, where the offer to fetch them is right
+            // here. ADR-23 § D — the panel downloads or sends to configure, without leaving.
+            if (reachOf(model).fetchable) {
+              setOffered(model)
+              return
+            }
 
-          select(capability, id)
-          void chooseAiProvider(
-            capability,
-            providerOfModel(model),
-            projectPath === null ? 'app' : 'project',
-          )
-        }}
-        refusalOf={refusalOf}
-        pictureOf={pictureOf}
-        onShown={onShown}
-        caption={chosen ? captionOf(chosen, refusalOf(chosen), t) : undefined}
-        valueLabel={name}
-        emptyLabel={t('generation.chooseModel')}
-      />
+            select(capability, id)
+            void chooseAiProvider(
+              capability,
+              providerOfModel(model),
+              projectPath === null ? 'app' : 'project',
+            )
+          }}
+          refusalOf={refusalOf}
+          pictureOf={pictureOf}
+          onVisible={resolveFor}
+          caption={chosen ? captionOf(chosen, refusalOf(chosen), t) : undefined}
+          valueLabel={name}
+          emptyLabel={t('generation.chooseModel')}
+        />
+      </FormField>
     </div>
   )
 }

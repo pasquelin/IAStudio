@@ -22,7 +22,7 @@ export function GeneratorRun({ job }: GeneratorRunProps) {
   const failure = job.error === undefined ? undefined : t(failureKeyOf(job.error))
 
   return (
-    <ul className="px-2 pt-2" data-sc="section:generation.run">
+    <ul data-sc="section:generation.run">
       <ProgressRow
         label={job.label}
         // A queued job has nothing measured yet, and an empty bar reads as a run stuck at zero.

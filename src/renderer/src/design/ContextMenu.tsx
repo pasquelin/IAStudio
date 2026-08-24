@@ -4,7 +4,7 @@ import { cn } from '@/helpers/cn'
 import type { ContextMenuAt } from '@/hooks/useContextMenu'
 import { useDismiss } from '@/hooks/useDismiss'
 import { useMenuKeys } from '@/hooks/useMenuKeys'
-import { MENU_SURFACE } from './styles'
+import { MENU_FLOATING } from './styles'
 
 export type ContextMenuProps = {
   /** Where the pointer was — `useContextMenu` is what produces it. */
@@ -62,7 +62,7 @@ export function ContextMenu({ at, onClose, children }: ContextMenuProps) {
     <div
       ref={place}
       role="menu"
-      className={cn(MENU_SURFACE, 'min-w-44')}
+      className={cn(MENU_FLOATING, 'min-w-44')}
       onPointerDown={event => event.stopPropagation()}
       onClick={event => event.stopPropagation()}
       onContextMenu={event => {

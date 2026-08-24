@@ -19,6 +19,7 @@ import { cn } from '@/helpers/cn'
 import { PANEL_GROUP_LABEL } from '../styles'
 import { useModelText } from '@/hooks/useModelText'
 import { Button } from '../Button'
+import { FormField } from '../FormField'
 import { DynamicFormControl } from './DynamicFormControl'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { sectionHandle } from '../scHandle'
@@ -142,12 +143,12 @@ export function DynamicForm({
       {visibleFields(groupedFields, values).map(field => (
         // Named THROUGH the label rather than by nesting the control in it: an accessory holds
         // buttons, and everything a label wraps is read out as the control's own name.
-        <div key={field.key} className="flex flex-col gap-2 text-xs">
-          <label htmlFor={`${formId}${field.key}`} className="text-muted">
-            {say(field.label)}
-            {field.required && <span aria-hidden> *</span>}
-          </label>
-
+        <FormField
+          key={field.key}
+          label={say(field.label)}
+          htmlFor={`${formId}${field.key}`}
+          required={field.required}
+        >
           <DynamicFormControl
             id={`${formId}${field.key}`}
             field={field}
@@ -163,14 +164,16 @@ export function DynamicForm({
               {t('errors.invalidValue')}
             </span>
           )}
-        </div>
+        </FormField>
       ))}
     </fieldset>
   )
 
   return (
     <form
-      className="flex flex-col gap-3 p-2"
+      // No gutter of its own: its one host pads the whole column, and a form padding itself
+      // there would sit a step in from the fields above it.
+      className="flex flex-col gap-3"
       onSubmit={event =>
         void handleSubmit(submitted => onSubmit?.(buildBody(fields, submitted)))(event)
       }

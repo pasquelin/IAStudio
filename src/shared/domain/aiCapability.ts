@@ -227,9 +227,12 @@ function requiredInputsOf(contract: CapabilityContract): readonly CapabilityInpu
  * picture it masks are both `image`, so a bare list of kinds made a retouch look reachable from
  * one selected picture — and running it would have repainted the whole canvas.
  *
- * A workspace emits `mask` only for something that IS one — a masked canvas layer — and `source`
- * for everything else. A `source` also answers a `reference`: they differ in what the model does
- * with the picture, never in where it came from.
+ * A `source` also answers a `reference`: they differ in what the model does with the picture,
+ * never in where it came from.
+ *
+ * 🛑 NOTHING emits `mask` today — `availableInputsOf` tags every input `source`, so `inpaint` and
+ * `outpaint` are never DETECTED and are reached only by forcing the operation. The panel names a
+ * catalogue row, and a canvas has no asset until it is flattened, which is not this panel's.
  */
 export type AvailableInput = { role: 'source' | 'mask'; kind: AssetType }
 

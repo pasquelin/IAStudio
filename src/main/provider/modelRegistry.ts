@@ -24,6 +24,7 @@ import {
   type LocalModel,
 } from '@shared/domain/localModel'
 import type { WatchCredentials } from './credentialsWatch'
+import { chunk } from '@shared/collections'
 import { familyOf, translateSchema, type ProviderInput } from './schema'
 
 /**
@@ -634,21 +635,26 @@ export function createModelRegistry({
       let cursor: Cursor | null =
         query.runsOn === LOCAL_RUNTIME ? null : (deserialize(query.cursor) ?? startOf(query))
       let walked = 0
+      let refused = false
 
       while (cursor && items.length < limit && walked < MAX_PAGES_PER_REQUEST) {
-        /**
-         * 🛑 A remote refusal must not take the local catalogue with it. Without an account the
-         * very first page throws, and the manifests collected just above — which need no account,
-         * no network and no subscription — were thrown away with it: every picker came back empty
-         * on a machine holding models it could run.
-         *
-         * Rethrown when nothing local answered, so a panel that has only the cloud to show still
-         * says why it is showing nothing.
-         */
-        const page: CatalogPage = await fetchPage(cursor, query).catch((failure: unknown) => {
-          if (items.length === 0) throw failure
-          return { models: [], token: null }
-        })
+        // 🛑 A remote refusal must not take the local catalogue with it: the manifests gathered
+        // above need no account. Rethrown when nothing local answered, so a cloud-only panel
+        // still says why it is empty.
+        const page: CatalogPage | null = await fetchPage(cursor, query).catch(
+          (failure: unknown) => {
+            if (items.length === 0) throw failure
+            return null
+          },
+        )
+        // 🛑 Out, and the cursor CLOSED with it. Leaving it armed made the window ask for the
+        // next page, which carries a cursor — so the local manifests were skipped, nothing
+        // answered, and the refusal came back to wipe the very models this exists to keep.
+        if (page === null) {
+          refused = true
+          cursor = null
+          break
+        }
         walked += 1
 
         if (cursor.mode === 'list' && cursor.privacy === 'private' && !cursor.token) {
@@ -683,7 +689,9 @@ export function createModelRegistry({
       }
 
       const value: ModelPage = { items, cursor: cursor ? serialize(cursor) : null }
-      remember(pages, key, value)
+      // A refused walk is a PARTIAL answer, and caching a partial is what makes it stick: the
+      // panel would hold the local-only list for the whole TTL after the network came back.
+      if (!refused) remember(pages, key, value)
       return value
     },
 
@@ -691,28 +699,33 @@ export function createModelRegistry({
 
     previews: async assetIds => {
       const wanted = [...new Set(assetIds)]
-      const missing = wanted.filter(id => fresh(previews.get(id)) === null && !held(id))
-      const batches: string[][] = []
+      const resolved: Record<string, string> = {}
 
-      for (let start = 0; start < missing.length; start += PREVIEW_BATCH) {
-        batches.push(missing.slice(start, start + PREVIEW_BATCH))
+      // 🛑 Collected as it arrives, NEVER read back out of the cache: `prune` evicts past
+      // `MAX_CACHED` on every write, so a picker asking for its hundred drew exactly 64 — the
+      // rest fetched, cached, evicted by their own siblings, and dropped on the way out.
+      const take = (id: string, url: string | null): void => {
+        remember(previews, id, url)
+        if (url) resolved[id] = url
       }
 
-      // The batches know nothing of each other; running them in turn only adds up their latency.
-      await Promise.all(
-        batches.map(async batch => {
-          const assets = await catalog().assetUrls(batch)
-          const found = new Map(assets.map(asset => [asset.id, showable(asset)]))
-
-          for (const id of batch) remember(previews, id, found.get(id) ?? null)
-        }),
-      )
-
-      const resolved: Record<string, string> = {}
       for (const id of wanted) {
         const url = fresh(previews.get(id))
         if (url) resolved[id] = url
       }
+
+      const missing = wanted.filter(id => fresh(previews.get(id)) === null && !held(id))
+
+      // The batches know nothing of each other; running them in turn only adds up their latency.
+      await Promise.all(
+        chunk(missing, PREVIEW_BATCH).map(async batch => {
+          const assets = await catalog().assetUrls(batch)
+          const found = new Map(assets.map(asset => [asset.id, showable(asset)]))
+
+          for (const id of batch) take(id, found.get(id) ?? null)
+        }),
+      )
+
       return resolved
     },
   }

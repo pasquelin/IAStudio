@@ -1,5 +1,5 @@
 import { mdiCubeScan } from '@mdi/js'
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { primaryRoleOf, providerOfModel } from '@shared/domain/aiRole'
 import type { ModelFamily, ModelSummary } from '@shared/domain/model'
@@ -120,24 +120,7 @@ export function Models({ family }: ModelsProps) {
   )
   const items = catalogue.items
 
-  const { urls, resolve } = useLazyPreviews()
-
-  const onVisible = useCallback(
-    (shown: readonly ModelSummary[]) => {
-      const wanted = shown
-        .filter(model => !model.thumbnail && model.previewAssetId)
-        .map(model => model.previewAssetId ?? '')
-      resolve(wanted)
-    },
-    [resolve],
-  )
-
-  /** A model's picture: its own thumbnail when it has one, its example asset otherwise. */
-  const pictureOf = useCallback(
-    (model: ModelSummary) =>
-      model.thumbnail ?? (model.previewAssetId ? urls[model.previewAssetId] : undefined),
-    [urls],
-  )
+  const { pictureOf, resolveFor } = useLazyPreviews()
 
   const selected = selectedId ? (catalogue.byId.get(selectedId) ?? null) : null
 
@@ -194,7 +177,7 @@ export function Models({ family }: ModelsProps) {
             )
           }}
           onReachEnd={catalogue.more}
-          onVisible={onVisible}
+          onVisible={resolveFor}
           // The same answer greys the cell and explains it, so a row cannot end up dimmed with
           // nothing to say why.
           // Greyed, but still reachable when the studio can fetch it — see `onSelect`.

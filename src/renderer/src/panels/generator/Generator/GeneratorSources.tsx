@@ -19,7 +19,7 @@ export function GeneratorSources({ inputs }: GeneratorSourcesProps) {
   if (inputs.length === 0) return null
 
   return (
-    <section className="flex flex-col gap-1.5 px-2 pt-2" data-sc="section:generation.sources">
+    <section className="flex flex-col gap-1.5" data-sc="section:generation.sources">
       <h3 className={PANEL_GROUP_LABEL}>{t('generation.sources')}</h3>
 
       <ul className="flex flex-col gap-1.5">

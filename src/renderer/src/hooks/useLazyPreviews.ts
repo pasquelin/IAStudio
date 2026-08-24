@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { MODEL_IDS_BATCH_LIMIT } from '@shared/domain/model'
+import { chunk } from '@shared/collections'
+import { MODEL_IDS_BATCH_LIMIT, type ModelSummary } from '@shared/domain/model'
 import { getBridge } from '@/services/bridge'
 
 /** Long enough to gather a flick of the scrollbar, short enough to feel immediate. */
@@ -39,20 +40,39 @@ export function useLazyPreviews() {
 
     timer.current = setTimeout(() => {
       timer.current = null
-      // Capped to what the channel accepts; the rest stays pending for the next window.
-      const batch = [...pending.current].slice(0, MODEL_IDS_BATCH_LIMIT)
-      for (const id of batch) pending.current.delete(id)
+      // 🛑 Cut into what the channel accepts, and ALL of it sent. Keeping the remainder back for
+      // "the next window" armed no such window: past the cap those ids stayed asked-for and
+      // unasked, and their cards kept an empty plate for the life of the panel.
+      const wanted = [...pending.current]
+      pending.current.clear()
 
-      void getBridge()
-        ?.provider.modelPreviews(batch)
-        .then(found => setUrls(current => ({ ...current, ...found })))
-        .catch(() => {
-          // Forgotten, not remembered as done: a batch lost to a dropped connection would
-          // otherwise leave those cards on their placeholder until the panel is closed.
-          for (const id of batch) asked.current.delete(id)
-        })
+      for (const batch of chunk(wanted, MODEL_IDS_BATCH_LIMIT)) {
+        void getBridge()
+          ?.provider.modelPreviews(batch)
+          .then(found => setUrls(current => ({ ...current, ...found })))
+          .catch(() => {
+            // Forgotten, not remembered as done: a batch lost to a dropped connection would
+            // otherwise leave those cards on their placeholder until the panel is closed.
+            for (const id of batch) asked.current.delete(id)
+          })
+      }
     }, THUMBNAIL_GATHER_MS)
   }, [])
 
-  return { urls, resolve }
+  // What a model's picture IS, written once: two panels drew it and had already drifted apart.
+  const pictureOf = useCallback(
+    (model: ModelSummary): string | undefined =>
+      model.thumbnail ?? (model.previewAssetId ? urls[model.previewAssetId] : undefined),
+    [urls],
+  )
+
+  const resolveFor = useCallback(
+    (models: readonly ModelSummary[]) =>
+      resolve(
+        models.flatMap(one => (!one.thumbnail && one.previewAssetId ? [one.previewAssetId] : [])),
+      ),
+    [resolve],
+  )
+
+  return { pictureOf, resolveFor }
 }

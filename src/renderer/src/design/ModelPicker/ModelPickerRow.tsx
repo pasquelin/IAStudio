@@ -27,8 +27,7 @@ export function ModelPickerRow({ model, selected, picture, refusal, onPick }: Mo
       type="button"
       role="menuitem"
       data-selected={selected || undefined}
-      // `text-left`: a button centres its text, and `Row` inherits it — the whole list read
-      // as a stack of titles down the middle.
+      // `text-left`: a button centres its text, and `Row` inherits it.
       className={cn(rowSkin(selected), 'w-full text-left')}
       onClick={onPick}
     >

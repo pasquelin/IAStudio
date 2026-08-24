@@ -20,18 +20,26 @@ export function useAccountChange(purge: () => void): void {
      * never through `onChange`. A watcher on the event alone would therefore still hold `null`
      * once the window is up, and would sit out the switch it exists to catch.
      */
-    let active = scenarioAccount(useAccounts.getState().accounts)?.id ?? null
+    let known = useAccounts.getState().accountsLoaded
+    let active = known ? (scenarioAccount(useAccounts.getState().accounts)?.id ?? null) : null
 
     return useAccounts.subscribe(state => {
       const next = scenarioAccount(state.accounts)?.id ?? null
+
+      // 🛑 The FIRST list is the baseline, not a switch. It lands a moment after the window is
+      // up, so treating it as one threw the whole cache away at every launch — every mounted
+      // query refetching, and a full catalogue walk paid for nothing.
+      if (!known && state.accountsLoaded) {
+        known = true
+        active = next
+        return
+      }
+
       if (next === active) return
 
-      /*
-       * 🛑 ARRIVING at one counts, and it did not until the registry began answering the local
-       * catalogue with no account: the window then holds a listing of what this machine runs and
-       * nothing else, cached under keys a new key does not change. Measured on screen — a key
-       * added mid-session showed no cloud model until the app was restarted.
-       */
+      // ARRIVING at an account counts once the baseline is known: with none, the window caches
+      // the local-only listing under keys a new key does not change. Measured on screen — a key
+      // added mid-session showed no cloud model until restart.
       active = next
       latest.current()
     })

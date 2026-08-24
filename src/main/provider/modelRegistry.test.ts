@@ -926,19 +926,14 @@ describe('model registry', () => {
   })
 })
 
-const refusing = () => ({
-  list: () => Promise.reject(new Error('not-authenticated')),
-  search: () => Promise.reject(new Error('not-authenticated')),
-  retrieve: () => Promise.reject(new Error('not-authenticated')),
-  assetUrls: () => Promise.resolve([]),
-})
+const refusing = () => {
+  const no = () => Promise.reject(new Error('not-authenticated'))
+  return { list: no, search: no, retrieve: no, assetUrls: () => Promise.resolve([]) }
+}
 
 describe('a catalogue that refuses', () => {
-  /**
-   * 🛑 Measured on screen, with no account: the first remote page throws, and the manifests
-   * collected before it went with it — every picker came back empty on a machine holding models
-   * it can run. A local model needs no account, no network and no subscription.
-   */
+  // 🛑 Measured on screen, with no account: the first remote page threw and took the local
+  // manifests with it — every picker came back empty on a machine holding models it can run.
   it('still answers what this machine holds', async () => {
     const registry = registryOf({
       catalog: refusing,
@@ -950,11 +945,98 @@ describe('a catalogue that refuses', () => {
     expect(page.items.map(one => one.id)).toEqual(['ssd-1b'])
   })
 
+  /**
+   * 🛑 An armed cursor is an invitation, and the window takes it: the follow-up carries a cursor,
+   * so the local manifests are skipped, nothing answers, and the refusal comes back — wiping the
+   * models that had just appeared. The walk has to report itself finished.
+   */
+  it('closes the walk rather than inviting a page that cannot come', async () => {
+    const registry = registryOf({
+      catalog: refusing,
+      localModels: () => [localModel({ id: 'ssd-1b', family: 'image', capabilities: ['txt2img'] })],
+    })
+
+    expect((await registry.search({ family: 'image' })).cursor).toBeNull()
+  })
+
+  // A partial answer that is cached is a partial answer that sticks: the panel would hold the
+  // local-only list for the whole TTL after the network came back.
+  it('does not remember a walk the cloud cut short', async () => {
+    let refusals = 0
+    const flaky = () => ({
+      list: () => {
+        refusals += 1
+        return Promise.reject(new Error('not-authenticated'))
+      },
+      search: () => Promise.reject(new Error('not-authenticated')),
+      retrieve: () => Promise.reject(new Error('not-authenticated')),
+      assetUrls: () => Promise.resolve([]),
+    })
+    const registry = registryOf({
+      catalog: flaky,
+      localModels: () => [localModel({ id: 'ssd-1b', family: 'image', capabilities: ['txt2img'] })],
+    })
+
+    await registry.search({ family: 'image' })
+    const before = refusals
+    await registry.search({ family: 'image' })
+
+    expect(refusals).toBeGreaterThan(before)
+  })
+
   // With nothing local to show, the refusal still reaches the panel: a shelf that shows nothing
   // and says nothing is worse than one that says why.
   it('passes the refusal on when it has nothing else to offer', async () => {
     const registry = registryOf({ catalog: refusing })
 
     await expect(registry.search({ family: 'image' })).rejects.toThrow('not-authenticated')
+  })
+})
+
+describe('the pictures a screenful needs', () => {
+  const picturing = () => {
+    const calls: string[][] = []
+    const catalog = () => ({
+      list: () => Promise.resolve({ models: [], token: null }),
+      search: () => Promise.resolve({ models: [], token: null }),
+      retrieve: () => Promise.reject(new Error('unknown model')),
+      assetUrls: (assetIds: readonly string[]) => {
+        calls.push([...assetIds])
+        return Promise.resolve(
+          assetIds.map(id => ({ id, url: `https://cdn/${id}`, mimeType: 'image/png' })),
+        )
+      },
+    })
+    return { calls, catalog }
+  }
+
+  // 🛑 `prune` evicts past `MAX_CACHED` on every write, so a screenful asking for more drew
+  // exactly `MAX_CACHED`, the rest evicted by their own siblings. Measured: 77 asked, 64 drawn.
+  it('answers every id it fetched, however many its own cache keeps', async () => {
+    const many = Array.from({ length: 120 }, (_, at) => `asset_${at}`)
+    const { catalog } = picturing()
+
+    const found = await registryOf({ catalog }).previews(many)
+
+    expect(Object.keys(found)).toHaveLength(many.length)
+  })
+
+  // An asset the endpoint answers nothing showable for is asked once and not again: the negative
+  // is what keeps a picker from spending a round trip per reopen on a model that has no picture.
+  it('asks once for one with nothing to show, and not again', async () => {
+    const { calls, catalog } = picturing()
+    const bare = () => ({
+      ...catalog(),
+      assetUrls: (ids: readonly string[]) => {
+        calls.push([...ids])
+        return Promise.resolve(ids.map(id => ({ id })))
+      },
+    })
+    const registry = registryOf({ catalog: bare })
+
+    await registry.previews(['asset_bare'])
+    await registry.previews(['asset_bare'])
+
+    expect(calls).toEqual([['asset_bare']])
   })
 })

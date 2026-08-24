@@ -9,6 +9,7 @@
     "estimatedCost": "~{{units}} UC",
     "operation": "Opération",
     "operationHint": "Ce que la génération va faire du contenu de l’espace de travail",
+    "model": "Modèle",
     "noOperation": "Aucune opération n’est possible avec ce qui est sélectionné.",
     "noModelForOperation": "Aucun modèle disponible pour cette opération.",
     "sources": "Sources",

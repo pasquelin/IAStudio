@@ -21,6 +21,7 @@ import { claimOnSubmit } from '@/stores/generationClaims'
 import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
 import { DynamicForm } from '@/design/dynamicFormLazy'
+import { cn } from '@/helpers/cn'
 import { PANEL_SCROLL } from '@/design/styles'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
@@ -188,7 +189,9 @@ export function Generator() {
   const generate = (values: FormValues): void => void runGeneration(values)
 
   return (
-    <div className={PANEL_SCROLL}>
+    // The gutter and the rhythm live HERE, once: every child wore its own `px-2 pt-2` and the one
+    // that forgot read as a second panel. `PANEL_SCROLL` already keeps the right edge off the bar.
+    <div className={cn(PANEL_SCROLL, 'gap-2 pt-2 pl-2')}>
       <GeneratorOperation capability={capability} onForce={forceCapability} />
       <GeneratorModel
         capability={capability.chosen}
@@ -216,7 +219,7 @@ export function Generator() {
       <GeneratorRun job={running} />
 
       {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}
-      {refusal && <p className="text-muted px-2 text-xs">{refusal}</p>}
+      {refusal && <p className="text-muted text-xs">{refusal}</p>}
 
       {/* Gated on the descriptor, which is what makes the deferred form free to the eye: it only
           renders once that round trip has come back, so the wait its chunk adds sits inside one
