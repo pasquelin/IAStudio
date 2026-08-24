@@ -183,6 +183,8 @@ export function AssetBrowser() {
    */
   const [absent, setAbsent] = useState<ReadonlySet<string>>(EMPTY_IDS)
   const [renaming, setRenaming] = useState<string | null>(null)
+  /** Which row is open. One at a time: two of these is a shelf one scrolls twice. */
+  const [expanded, setExpanded] = useState<string | null>(null)
   // Resolved once here rather than per tile, for the reason `badgeLabels` and `hints` are: a
   // `useTranslation` inside a cell subscribes every one of two hundred of them.
   const renameLabel = t('assets.renameLabel')
@@ -510,6 +512,14 @@ export function AssetBrowser() {
             {...(renameOf(row) ?? {})}
           />
         )}
+        // Held here rather than in the selection: opening a row is reading, not picking, and a
+        // shelf that opened whatever it selected would open a row on every arrow press.
+        expandedId={expanded}
+        // A library line has no file on this side and a running job has no asset yet: neither
+        // has anything to open onto.
+        canOpen={row => row.from === 'local'}
+        onToggleRow={row => setExpanded(current => (current === row.id ? null : row.id))}
+        renderRowDetail={row => <AssetDetails row={row} />}
         renderRow={row => (
           <AssetRow
             row={row}
@@ -541,10 +551,6 @@ export function AssetBrowser() {
           />
         }
       />
-
-      {/* What the shelf has picked, read out under the shelf: the inspector describes the
-          document in front and never a row of a side panel. */}
-      <AssetDetails />
     </div>
   )
 }

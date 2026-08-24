@@ -8,6 +8,7 @@ import { PropertyRow } from '@/design/PropertyRow'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { formatBytes, formatMoment } from '@/helpers/format'
 import { itemOfPath } from '@/helpers/projectItem'
+import { RoleField } from '@/panels/shared/RoleField'
 import type { FileInfoSectionId } from '../sections'
 
 export type FileInfoWindowBodyProps = {
@@ -22,8 +23,9 @@ export type FileInfoWindowBodyProps = {
 /**
  * One run of a file's information, in the inspector's own two columns.
  *
- * READ ONLY, deliberately: `RoleField` writes the catalogue, and the same right-click opens this
- * on files no catalogue holds — a correction with nowhere to be written cannot win.
+ * The role is the one line that WRITES, and only where the catalogue holds a row to write it in:
+ * `RoleField` reads out a domain it cannot correct otherwise, which is the case of every file
+ * this window is opened on from outside the project.
  */
 export function FileInfoWindowBody({ id, path, facts, asset, status }: FileInfoWindowBodyProps) {
   const { t, i18n } = useTranslation()
@@ -94,11 +96,11 @@ export function FileInfoWindowBody({ id, path, facts, asset, status }: FileInfoW
       {/* The inspector's own word for this question, not a second one: « Nature » already names
           what a thing IS there, and two labels for one idea is how a vocabulary drifts. */}
       <PropertyRow label={t('inspector.kind')}>{t(`fileInfo.kind.${facts.kind}`)}</PropertyRow>
-      {/* A folder is not a domain — see `ProjectItem`, which stands for a file and says so. */}
+      {/* A folder is not a domain — see `ProjectItem`, which stands for a file and says so. An
+          extension cannot always tell a normal map from an albedo, so the guess is offered
+          rather than imposed wherever there is a row to remember the answer in. */}
       {facts.kind === 'file' && (
-        <PropertyRow label={t('fileInfo.type')}>
-          {t(`assetTypes.${itemOfPath(path, { asset }).domain}`)}
-        </PropertyRow>
+        <RoleField assetId={asset?.id ?? null} domain={itemOfPath(path, { asset }).domain} />
       )}
       <PropertyRow label={t('inspector.path')} shape="path">
         {path}

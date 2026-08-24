@@ -1,42 +1,26 @@
 import { useTranslation } from 'react-i18next'
 import { SectionFoldScope } from '@/design/SectionFoldScope'
-import { PANEL_DETAIL } from '@/design/styles'
-import { assetsById, useAssets } from '@/stores/assets'
-import { selectedAssetIds, useSelection } from '@/stores/selection'
-import { SelectionSummary } from '@/panels/shared/SelectionSummary'
+import { ROW_DETAIL } from '@/design/styles'
 import { AssetInspector } from './AssetInspector/AssetInspector'
+import type { AssetRowModel } from './rows'
 
 /**
- * What the shelf has picked, read out under the shelf itself — the inspector describes the
- * document in front and only that. Several at once are summarised rather than detailed: showing
- * the first one's prompt for a selection of twelve is how someone regenerates the wrong thing.
+ * What one row of the shelf opens onto — the inspector describes the document in front and only
+ * that, so an asset reads out where it was picked.
+ *
+ * Only a row the catalogue holds has any of this to say: a library line has no file here and a
+ * running job has no asset yet, and both are told by the chevron being drawn on nothing.
  */
-export function AssetDetails() {
+export function AssetDetails({ row }: { row: AssetRowModel }) {
   const { t } = useTranslation()
-  const ids = useSelection(selectedAssetIds)
-  const byId = useAssets(assetsById)
-
-  // Keyed rather than filtered: a selection of a handful against a catalogue of thousands was
-  // scanning the whole of it, per render.
-  const assets = ids.flatMap(id => byId.get(id) ?? [])
-
-  // Nothing rather than an empty state: a placeholder here takes height from the list above it.
-  if (assets.length === 0) return null
-
-  const [only] = assets
-
-  const total = assets.reduce((bytes, asset) => bytes + (asset.bytes ?? 0), 0)
+  if (row.from !== 'local') return null
 
   return (
     // Outside the inspector's fold order: these sections must not answer for the button its
     // title row carries — see `SectionFoldScope`.
     <SectionFoldScope value={false}>
-      <section className={PANEL_DETAIL} aria-label={t('assets.details')}>
-        {assets.length === 1 && only ? (
-          <AssetInspector asset={only} />
-        ) : (
-          <SelectionSummary count={assets.length} bytes={total} />
-        )}
+      <section className={ROW_DETAIL} aria-label={t('assets.details')}>
+        <AssetInspector asset={row.asset} />
       </section>
     </SectionFoldScope>
   )

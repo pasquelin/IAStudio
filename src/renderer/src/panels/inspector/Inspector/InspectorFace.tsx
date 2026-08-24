@@ -21,8 +21,8 @@ import { InspectorEmpty } from './InspectorEmpty'
 
 /**
  * 🛑 The DOCUMENT in front decides. The selection only says WHICH thing inside it — a clip, a
- * track — never whether the document gets to speak; an asset and a file answer under the list
- * they were picked in, `AssetDetails` and `FileDetails`.
+ * track — never whether the document gets to speak; an asset opens under its own row of the shelf
+ * (`AssetDetails`), and a file is read in the information window.
  *
  * The order below is a reading order and not a priority: `activeIdOfKind` answers off one
  * `activeId`, so at most one of these ids is ever set.

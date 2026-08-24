@@ -43,7 +43,6 @@ import { openEntryMenu, openRootMenu } from './entryMenu'
 import { DomainRow } from './DomainRow'
 import { EntryCard, type EntryKind } from './EntryCard'
 import { EntryRow } from './EntryRow'
-import { FileDetails } from './FileDetails'
 import { FolderCrumbs } from '@/design/FolderCrumbs'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { FolderNav } from './FolderNav'
@@ -772,10 +771,6 @@ export function Explorer() {
           />
         )}
       </div>
-
-      {/* Under the rows, above the trail: what a picked file IS, read out where it was picked.
-          The inspector describes the document in front and never a row of a side panel. */}
-      <FileDetails />
 
       {/* Under the rows rather than over them: the trail says where the listing came FROM, and a
           reader looks at it after the listing, not before. Only where there is somewhere to go —

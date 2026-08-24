@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
-import type { Asset } from '@shared/domain/asset'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Asset, AssetChanges } from '@shared/domain/asset'
 import { fileInfoRoute, type FileFacts } from '@shared/domain/fileInfo'
 import type { GitRepository } from '@shared/domain/git'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -37,13 +38,19 @@ function open(
   facts: FileFacts | null,
   asset: Asset | null = null,
   repository: GitRepository = { kind: 'uninitialised' },
-): void {
+) {
+  const update = vi.fn((_assetId: string, changes: AssetChanges) =>
+    Promise.resolve({ ...PICTURE, ...changes, tags: [...(changes.tags ?? PICTURE.tags)] }),
+  )
   window.location.hash = fileInfoRoute(path)
   installFakeBridge({
     project: { fileFacts: () => Promise.resolve(facts) },
-    assets: { search: () => Promise.resolve(asset ? [asset] : []) },
+    // `update` is what `RoleField` calls when a role is corrected — see the case below.
+    assets: { search: () => Promise.resolve(asset ? [asset] : []), update },
     git: { read: () => Promise.resolve(repository) },
   })
+
+  return { update }
 }
 
 describe('FileInfoWindow', () => {
@@ -137,14 +144,26 @@ describe('FileInfoWindow', () => {
   })
 
   /**
-   * Read only, which is what tells this window from the inspector's own face: `RoleField` writes
-   * the catalogue, and the same right-click opens this on files no catalogue holds.
+   * An extension cannot always tell — a normal map and an albedo are both PNGs — so the guess is
+   * offered rather than imposed, wherever the studio has a row to remember the answer in.
    */
-  it('offers no control that would write anything', async () => {
-    open('Images/facade.jpg', FACTS, PICTURE)
+  it('offers to correct the role of a file the catalogue holds', async () => {
+    const { update } = open('Images/facade.jpg', FACTS, PICTURE)
     render(<FileInfoWindow />)
 
-    expect(await screen.findByText('Images/facade.jpg')).toBeInTheDocument()
+    const role = await screen.findByRole('combobox', { name: 'Rôle' })
+    await userEvent.selectOptions(role, 'texture')
+
+    await waitFor(() => expect(update).toHaveBeenCalledWith('asset_facade', { type: 'texture' }))
+  })
+
+  /** Read out, never offered: there is nowhere to write a correction down. */
+  it('reads the role out for a file no catalogue holds, and offers nothing else either', async () => {
+    open('Notes/brief.txt', { ...FACTS, bytes: 4096 })
+    render(<FileInfoWindow />)
+
+    expect(await screen.findByText('Notes/brief.txt')).toBeInTheDocument()
+    expect(screen.getByText('Autre')).toBeInTheDocument()
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   })

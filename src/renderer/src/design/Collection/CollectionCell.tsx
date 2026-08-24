@@ -18,6 +18,8 @@ export type CollectionCellProps = {
   tabbable: boolean
   /** What this cell is in its container's terms — `rolesFor` decides the pair. */
   role?: 'option' | 'listitem'
+  /** Whether this row is open, for a collection whose rows do. `undefined` where none can. */
+  expanded?: boolean
   /** Where it sits in the whole collection, which the mounted window cannot say. */
   position: number
   total: number
@@ -39,6 +41,7 @@ export function CollectionCell({
   disabled,
   tabbable,
   role,
+  expanded,
   position,
   total,
   onSelect,
@@ -87,6 +90,7 @@ export function CollectionCell({
   return (
     <div
       role={role}
+      aria-expanded={expanded}
       aria-posinset={position}
       aria-setsize={total}
       aria-disabled={disabled || undefined}
