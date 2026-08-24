@@ -1,3 +1,4 @@
+import type { WorkspaceId } from '@shared/domain/workspace'
 import type { AssistantAnswer, AssistantThought } from '@shared/domain/assistant'
 
 /**
@@ -22,3 +23,10 @@ export type AssistantBrain = {
    */
   think: (request: AssistantThought, signal?: AbortSignal) => Promise<AssistantAnswer>
 }
+
+/**
+ * The spaces nothing can generate in, so the model says so before promising a picture. Resolved
+ * once per turn, outside any retry: a complaint quotes an answer, and a second reading could ship
+ * a different briefing than the one complained about.
+ */
+export type NotReady = () => Promise<readonly WorkspaceId[]>

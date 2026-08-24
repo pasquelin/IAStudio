@@ -7,7 +7,7 @@
       },
       "workspaceOpen": {
         "title": "Ouvrir un espace",
-        "description": "Bascule vers un espace de travail, et y crée un document si on le demande. Sans titre, la création pose un champ de nom à l’écran et l’appel l’attend. C’est ce qui répond à « ouvre un nouveau fichier 3D »."
+        "description": "Bascule vers un espace de travail, et y crée un document si on le demande. Donnez toujours un nom : sans lui, une fenêtre de nommage s’ouvre et l’appel attend une personne."
       },
       "modelsSearch": {
         "title": "Chercher un modèle",
@@ -39,7 +39,7 @@
       },
       "chatClose": {
         "title": "Refermer la conversation",
-        "description": "Efface la conversation de l’écran pour laisser voir ce qui vient d’être fait. À appeler en dernier, quand le résultat est à l’écran — un espace ouvert, un formulaire rempli. À ne pas appeler quand la réponse est le texte lui-même, ni quand une autorisation est demandée."
+        "description": "Retire la conversation de l’écran pour laisser voir le résultat. À appeler en dernier, et seulement une fois le résultat visible — jamais quand la réponse est les mots eux-mêmes, ni pendant qu’une permission est demandée."
       },
       "promptDescribeStyle": {
         "title": "Décrire le style des références",

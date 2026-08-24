@@ -48,7 +48,7 @@ describe('what the model is told', () => {
    * answered and leave the catalogue whole.
    */
   it('cuts an over-long sentence rather than the instructions', () => {
-    const instruction = instructionFor('x'.repeat(INSTRUCTION_MAX * 2))
+    const instruction = instructionFor('x'.repeat(INSTRUCTION_MAX * 2), [])
 
     expect(instruction.length).toBe(INSTRUCTION_MAX)
     expect(instruction).toContain('Catalogue:')
@@ -68,7 +68,7 @@ describe('what the model is told', () => {
    * florid description quietly eating the rest.
    */
   it('leaves the person’s own sentence room to be long', () => {
-    expect(INSTRUCTION_MAX - preambleLength()).toBeGreaterThan(4_000)
+    expect(INSTRUCTION_MAX - preambleLength([])).toBeGreaterThan(4_000)
   })
 
   it('keeps the last turns, not the first', () => {

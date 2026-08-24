@@ -1,8 +1,9 @@
 import type { AssistantModel } from '@shared/domain/assistant'
 import type { Job } from '@shared/domain/job'
+import type { WorkspaceId } from '@shared/domain/workspace'
 import { log } from '@main/log'
 import type { AssistantThought } from '@shared/domain/assistant'
-import type { AssistantBrain } from './brainPort'
+import type { AssistantBrain, NotReady } from './brainPort'
 import { retriedAnswer, turnsWith, type BrainAttempt } from './brainRetry'
 import { instructionFor } from './instruction'
 
@@ -31,11 +32,13 @@ export type BrainDeps = {
   readText: (assetId: string) => Promise<string>
   /** Which language model answers. Read on each turn: it is a setting, and settings change. */
   model: () => AssistantModel
+  notReady?: NotReady
 }
 
 function bodyFor(
   request: AssistantThought,
   model: AssistantModel,
+  notReady: readonly WorkspaceId[] | undefined,
   complaint?: string,
 ): {
   instruction: string
@@ -48,7 +51,7 @@ function bodyFor(
   const inputs = turnsWith(request.history, complaint)
 
   return {
-    instruction: instructionFor(request.utterance),
+    instruction: instructionFor(request.utterance, notReady ?? []),
     model,
     numOutputs: 1,
     ...(inputs.length > 0 ? { textInputs: inputs } : {}),
@@ -63,14 +66,15 @@ async function answerFrom(
   return assetId === undefined ? '' : await readText(assetId)
 }
 
-export function createProviderBrain({ run, readText, model }: BrainDeps): AssistantBrain {
+export function createProviderBrain({ run, readText, model, notReady }: BrainDeps): AssistantBrain {
   /** One round trip: run the model, read the asset it wrote, hand back text and what it cost. */
   const ask = async (
     request: AssistantThought,
     chosen: AssistantModel,
+    notReady: readonly WorkspaceId[] | undefined,
     complaint?: string,
   ): Promise<BrainAttempt> => {
-    const job = await run(bodyFor(request, chosen, complaint))
+    const job = await run(bodyFor(request, chosen, notReady, complaint))
     const cost = job.cost ?? 0
 
     if (job.status !== 'succeeded') {
@@ -82,11 +86,13 @@ export function createProviderBrain({ run, readText, model }: BrainDeps): Assist
   }
 
   return {
-    think: request => {
+    think: async request => {
       // Read once, outside the retry: a setting changed between two attempts would have the model
-      // complained to be a different one from the model that answered.
+      // complained to be a different one from the model that answered. The state reads the same
+      // way, and for the same reason.
       const chosen = model()
-      return retriedAnswer(complaint => ask(request, chosen, complaint))
+      const idle = await notReady?.()
+      return await retriedAnswer(complaint => ask(request, chosen, idle, complaint))
     },
   }
 }

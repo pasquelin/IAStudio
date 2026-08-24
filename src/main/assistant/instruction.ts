@@ -63,8 +63,8 @@ const FORMAT = [
   '  "say": a short sentence for the person, in their language. May be empty.',
   '  "calls": a list of actions to run, in order. May be empty.',
   'Each call is {"action": "<name from the catalogue>", "input": {<the fields above>}}.',
-  'Example: {"say":"Opening a 3D file.","calls":[{"action":"workspace.open",',
-  '"input":{"workspace":"3d","createDocument":true}}]}',
+  'Example: {"say":"Making an image.","calls":[{"action":"workspace.open",',
+  '"input":{"workspace":"image","createDocument":true,"title":"Boat"}}]}',
 ].join('\n')
 
 const ROLE = [
@@ -73,7 +73,8 @@ const ROLE = [
   '',
   'Rules:',
   '  - Only use actions from the catalogue below. Never invent one.',
-  '  - Prefer doing over asking. Ask only when the request could mean two different things.',
+  '  - One request often needs several calls, in order. Carry it to its end.',
+  '  - Ask rather than act halfway: no calls, and the question in "say".',
   '  - generator.prepare fills the form and stops. generator.submit sends it and spends credits.',
   '  - If nothing in the catalogue fits, return no calls and say so in "say".',
 ].join('\n')
@@ -95,15 +96,15 @@ export function recentHistory(history: readonly string[], limit = HISTORY_MAX): 
  * trimming the end would take off the very sentence the person typed and leave the catalogue
  * intact, which is exactly backwards. A long paste is cut; the instructions always arrive whole.
  *
- * The preamble is fixed and short — under two thousand characters — so the budget left for a
- * sentence is most of the ten thousand. `preambleLength` is exported so a test can say that out
- * loud rather than trusting it: an action added with a florid description is the one thing that
+ * The preamble leaves most of the ten thousand to the sentence. `preambleLength` is exported so
+ * a test can say that out loud rather than trusting it: an action added with a florid
+ * description is the one thing that
  * could quietly eat it.
  */
-export function instructionFor(utterance: string): string {
+export function instructionFor(utterance: string, notReady: readonly string[]): string {
   // Composed once and its length handed on: `utteranceWithin` used to build the whole catalogue a
   // second time just to measure it, on every turn.
-  const preamble = preambleFor()
+  const preamble = preambleFor(notReady)
   return preamble + utteranceWithin(utterance, preamble.length)
 }
 
@@ -111,11 +112,15 @@ export function instructionFor(utterance: string): string {
  * Everything but the person's sentence — for a door that speaks in TURNS rather than taking one
  * instruction. There the sentence must be the LAST turn, or the model answers the one before it.
  */
-export function studioBriefing(): string {
-  return [ROLE, '', 'Catalogue:', actionCatalogue(), '', FORMAT].join('\n')
+export function studioBriefing(notReady: readonly string[] = []): string {
+  // Silent when everything is served: a line saying nothing is worth no characters.
+  const state = notReady.length === 0 ? [] : [`No model ready for: ${notReady.join(', ')}.`, '']
+
+  return [ROLE, '', ...state, 'Catalogue:', actionCatalogue(), '', FORMAT].join('\n')
 }
 
-const preambleFor = (): string => `${studioBriefing()}\n\nThe person says:\n\n`
+const preambleFor = (notReady: readonly string[] = []): string =>
+  `${studioBriefing(notReady)}\n\nThe person says:\n\n`
 
 /**
  * The sentence, cut to what the preamble leaves of the budget. A long paste is cut; it is not.
@@ -126,6 +131,6 @@ export function utteranceWithin(utterance: string, spent = preambleFor().length)
 }
 
 /** What the fixed part of an instruction costs, leaving the rest of the budget to the sentence. */
-export function preambleLength(): number {
-  return instructionFor('').length
+export function preambleLength(notReady: readonly string[]): number {
+  return instructionFor('', notReady).length
 }

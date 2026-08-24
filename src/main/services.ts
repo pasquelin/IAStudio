@@ -68,6 +68,8 @@ import { createSession, type DictationSession } from './dictation/session'
 import { STT_MODEL } from '@shared/domain/dictation'
 import { chatModelOf, CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
+import type { WorkspaceId } from '@shared/domain/workspace'
+import { spacesWithNoModel, SPACE_ROLES } from './ai/spacesWithNoModel'
 import { createAiManager, type AiManager } from './ai/manager'
 import { catalogueWith, modelWith } from './ai/catalogue'
 import { electronHardwarePort } from './ai/electronHardwarePort'
@@ -1174,6 +1176,7 @@ export function createServices(settings: SettingsStore): Services {
         chat,
         credentials: () => settings.readCredentialsFor(cloud.id),
         model: () => chatModelOf(settings.read().assistant.cloudModels[cloud.id], chat.model),
+        notReady,
       })
       clouds[cloud.id] = { brain: () => http }
     }
@@ -1405,6 +1408,12 @@ export function createServices(settings: SettingsStore): Services {
       installedOllama = null
     },
   })
+  // A declaration, not a const: the cloud brains are wired above `ai`, and hoisting is what lets
+  // them reach this. 🛑 `unservedRoles`, never `overview()` — see its note on the manager.
+  async function notReady(): Promise<readonly WorkspaceId[]> {
+    return spacesWithNoModel(await ai.unservedRoles(SPACE_ROLES))
+  }
+
   hold = ai.hold
   lookup = modelId => ai.lookup(modelId)
   forgetDiscovered = () => ai.forgetDiscovered()
@@ -1753,6 +1762,7 @@ export function createServices(settings: SettingsStore): Services {
       download: async url => await (await fetch(url)).text(),
     }),
     model: () => settings.read().assistant.model,
+    notReady,
   })
 
   /**
@@ -1769,7 +1779,12 @@ export function createServices(settings: SettingsStore): Services {
       const chat = runtimes[model.loader]?.chat
       if (!chat || model.contextTokens === undefined) return null
 
-      return createLocalBrain({ chat, modelId: model.id, contextTokens: model.contextTokens })
+      return createLocalBrain({
+        chat,
+        modelId: model.id,
+        contextTokens: model.contextTokens,
+        notReady,
+      })
     },
     cloudBrain: id => clouds[id]?.brain() ?? null,
   })

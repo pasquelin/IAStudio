@@ -1,9 +1,10 @@
+import type { ModelFamily } from './model'
 import { reconcileOrder } from './order'
 
 /**
  * Workspace registry, shared by both processes. It sits here for the same reason as
  * `domain/tool.ts`: the document domain needs `WorkspaceId`, and `shared/` cannot import from
- * the renderer. The renderer enriches these ids with icons and model families.
+ * the renderer. The renderer enriches these ids with icons.
  */
 export type WorkspaceId = 'image' | 'video' | '3d' | 'audio' | 'textures' | 'skyboxes'
 
@@ -18,6 +19,20 @@ export const WORKSPACE_IDS: readonly WorkspaceId[] = [
 ]
 
 export const DEFAULT_WORKSPACE: WorkspaceId = 'image'
+
+/**
+ * What a space generates with. Shared rather than kept beside the icons: the window draws a model
+ * browser per space and the assistant names the spaces nothing can generate in — two tables would
+ * drift the day one moves.
+ */
+export const FAMILY_BY_WORKSPACE: Record<WorkspaceId, ModelFamily> = {
+  image: 'image',
+  video: 'video',
+  '3d': '3d',
+  audio: 'audio',
+  textures: 'texture',
+  skyboxes: 'skybox',
+}
 
 /**
  * Exported because the id often arrives from outside the type system — a stored order, an IPC

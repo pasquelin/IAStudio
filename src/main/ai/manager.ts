@@ -92,6 +92,12 @@ export type AiManager = {
    * outside the studio would leave a turn reaching nothing.
    */
   providerOf: (role: AiRoleId) => Promise<RoleProvider | null>
+  /**
+   * 🛑 The same narrowing as `providerOf`, for SEVERAL roles at once. `overview()` composes
+   * twenty-one rows with their candidates and verdicts — `[M]` in `overview.ts` names that as the
+   * cost the assistant's turn was freed of, and asking it here would pay it back.
+   */
+  unservedRoles: (roles: readonly AiRoleId[]) => Promise<readonly AiRoleId[]>
   choose: (role: AiRoleId, provider: RoleProvider | null, scope: ChoiceScope) => Promise<AiOverview>
   /** One settings write for every employment a pick serves. Sequential `choose` dropped all but the last. */
   chooseMany: (
@@ -789,6 +795,23 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       const input = inputFrom(machine, readings, stored, () => models)
 
       return rowFor(role, input, effectiveChoices(input)).provider
+    },
+
+    unservedRoles: async roles => {
+      const stored = deps.settings()
+      // The catalogue walk and the hardware reading are shared across the roles; only what each
+      // one could take is weighed per role, exactly as `providerOf` weighs it for one.
+      const [discovered, machine] = await Promise.all([discover(), facts()])
+      const answered = await Promise.all(
+        roles.map(async role => {
+          const models = modelsForWith(role, stored.ai.ownModels, discovered)
+          const input = inputFrom(machine, await readingsOf(models), stored, () => models)
+
+          return rowFor(role, input, effectiveChoices(input)).provider === null ? role : null
+        }),
+      )
+
+      return answered.filter(role => role !== null)
     },
 
     choose: (role, provider, scope) => chooseMany([{ role, provider }], scope),
