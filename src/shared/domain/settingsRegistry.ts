@@ -349,6 +349,18 @@ export const SETTING_REGISTRY = [
     max: 10,
   }),
   setting({
+    path: 'generation.landing',
+    kind: 'choice',
+    section: 'generation',
+    titleKey: 'settings.landing.title',
+    helpKey: 'settings.landing.help',
+    options: [
+      { value: 'ask', labelKey: 'settings.landing.ask' },
+      { value: 'document', labelKey: 'settings.landing.document' },
+      { value: 'newTab', labelKey: 'settings.landing.newTab' },
+    ],
+  }),
+  setting({
     path: 'generation.captionArrivals',
     kind: 'boolean',
     section: 'generation',

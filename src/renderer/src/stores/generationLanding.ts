@@ -37,16 +37,22 @@ export type GenerationLanding = {
   land: (documentId: string, asset: Asset) => void
 }
 
+/** Where one generation was asked to go. `newTab` is also what an empty workspace answers. */
+export type LandingTarget = 'document' | 'newTab'
+
 export type LandingChannel = {
   /**
-   * Takes note of the document a generation is being launched from, and hands back what claims
-   * the job once its id is known.
+   * Takes note of where a generation is being launched to, and hands back what claims the job
+   * once its id is known.
    *
    * In two halves because the two moments are: the target has to be read at the click, while a
    * job id only exists after `POST /generate` has answered — and a user who switches tabs during
    * that round trip would otherwise have the result land wherever they went.
+   *
+   * `into` overrides what the click would have read — what the question answers when it is
+   * asked. Absent, the open document takes it, and a tab of its own when there is none.
    */
-  claimOnSubmit: () => (job: Job | null) => void
+  claimOnSubmit: (into?: LandingTarget) => (job: Job | null) => void
   /** Follows the job list and lands what this workspace asked for. Returns the unsubscribe. */
   connect: () => () => void
 }
@@ -76,7 +82,7 @@ export function createGenerationLanding({
    * submitted it nor the tab it was meant for, and a claim restored tomorrow would drop a result
    * into a document whose author has long moved on.
    */
-  const claims = new Map<string, string>()
+  const claims = new Map<string, string | null>()
 
   /**
    * The catalogue is read rather than waited on: `useAssets` coalesces its refresh over a couple
@@ -86,7 +92,7 @@ export function createGenerationLanding({
    * The job hands back Scenario's own asset ids; what a document stores is the id of the row the
    * collector wrote, so the two are joined on `jobId` — the only identifier both sides share.
    */
-  const settleInto = async (settled: ReadonlyMap<string, string>): Promise<void> => {
+  const settleInto = async (settled: ReadonlyMap<string, string | null>): Promise<void> => {
     const bridge = getBridge()
     if (!bridge) return
 
@@ -112,15 +118,21 @@ export function createGenerationLanding({
 
     for (const [jobId, documentId] of settled) {
       // The tab may have been closed while the job ran: writing into it would resurrect a
-      // document nothing shows, with a history nobody can reach.
-      if (!documents[documentId]) continue
+      // document nothing shows, with a history nobody can reach — so it opens instead.
+      const into = documentId !== null && documents[documentId] ? documentId : null
 
       // In catalogue order, which is the order they were rendered. Stopped at the first match
       // when that is all this workspace takes.
       for (const asset of rows) {
         if (asset.jobId !== jobId || !accepts(asset)) continue
 
-        land(documentId, asset)
+        // 🛑 Imported HERE, not at the top: `openAsset` reaches the editors, and naming it at
+        // module scope pulled four of them into the opening chunk — `eager-graph.test.ts` holds
+        // that boundary. The studio's one rule for this: a tab of its own, in the space that
+        // edits the kind, so no workspace says what opening its own output means.
+        if (into === null)
+          void import('@/helpers/openAsset').then(module => module.openAsset(asset))
+        else land(into, asset)
         if (takes === 'first') break
       }
     }
@@ -129,10 +141,10 @@ export function createGenerationLanding({
   const settle = (jobs: readonly Job[]): void => {
     if (claims.size === 0) return
 
-    const succeeded = new Map<string, string>()
+    const succeeded = new Map<string, string | null>()
     for (const job of jobs) {
-      const documentId = claims.get(job.id)
-      if (documentId === undefined || !isFinished(job.status)) continue
+      if (!claims.has(job.id) || !isFinished(job.status)) continue
+      const documentId = claims.get(job.id) ?? null
 
       // Dropped whatever the outcome: a failed or cancelled job has nothing to land, and a claim
       // kept for it would outlive the window.
@@ -144,11 +156,14 @@ export function createGenerationLanding({
   }
 
   return {
-    claimOnSubmit: () => {
-      const documentId = activeIdOfKind(useDocuments.getState(), kind)
+    claimOnSubmit: into => {
+      const open = activeIdOfKind(useDocuments.getState(), kind)
+      // `null` is a claim too, and that is the change: a workspace with nothing open used to
+      // claim NOTHING, so the result was paid for, collected, and left on the shelf unseen.
+      const target = open && into !== 'newTab' ? open : null
 
       return job => {
-        if (job && documentId) claims.set(job.id, documentId)
+        if (job) claims.set(job.id, target)
       }
     },
 

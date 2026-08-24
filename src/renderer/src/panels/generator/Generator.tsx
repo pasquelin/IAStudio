@@ -17,7 +17,9 @@ import { useJobs } from '@/stores/jobs'
 import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
-import { claimOnSubmit } from '@/stores/generationClaims'
+import { claimOnSubmit, documentAwaits } from '@/stores/generationClaims'
+import type { LandingTarget } from '@/stores/generationLanding'
+import { GeneratorLandingDialog } from './Generator/GeneratorLandingDialog'
 import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
 import { DynamicForm } from '@/design/dynamicFormLazy'
@@ -59,6 +61,8 @@ export function Generator() {
   const modelId = useModelForCapability(capability.chosen)
 
   const authenticated = useSettings(state => state.auth.authenticated)
+  const landing = useSettings(state => state.settings.generation.landing)
+  const setValue = useSettings(state => state.setValue)
   const project = useProject(state => state.project)
   // 🛑 The ANSWER, never `state.overview`: the manager republishes the whole overview per percent
   // of a load, and a subscription to the object re-rendered this panel with it.
@@ -110,6 +114,8 @@ export function Generator() {
    * window — the job has no id yet.
    */
   const [submitting, setSubmitting] = useState(false)
+  /** The values held back while the question is on screen — the run has not started. */
+  const [asking, setAsking] = useState<FormValues | null>(null)
 
   /**
    * Runs the generation and answers the job, which the button's own handler discards.
@@ -118,9 +124,9 @@ export function Generator() {
    * settled at the click, and a second path that skipped it would land generations nowhere.
    */
   const runGeneration = useCallback(
-    (values: FormValues): Promise<Job | null> => {
+    (values: FormValues, into?: LandingTarget): Promise<Job | null> => {
       if (!modelId) return Promise.resolve(null)
-      const claim = claimOnSubmit()
+      const claim = claimOnSubmit(into)
       setSubmitting(true)
 
       return submit({ id: modelId }, values)
@@ -186,75 +192,95 @@ export function Generator() {
 
   // Claimed at the click and settled when the job id arrives: which workspace has somewhere to
   // put a result is not this panel's business — it serves every one of them.
-  const generate = (values: FormValues): void => void runGeneration(values)
+  /**
+   * 🛑 Asked BEFORE the run, never after: the answer decides where minutes of compute land, and
+   * a question raised when the picture arrives is one nobody is still watching for.
+   */
+  const generate = (values: FormValues): void => {
+    if (landing === 'ask' && documentAwaits()) return setAsking(values)
+    void runGeneration(values, landing === 'newTab' ? 'newTab' : undefined)
+  }
 
   return (
-    // The gutter and the rhythm live HERE, once: every child wore its own `px-2 pt-2` and the one
-    // that forgot read as a second panel. `PANEL_SCROLL` already keeps the right edge off the bar.
-    <div className={cn(PANEL_SCROLL, 'gap-2 pt-2 pl-2')}>
-      <GeneratorOperation capability={capability} onForce={forceCapability} />
-      <GeneratorModel
-        capability={capability.chosen}
-        modelId={modelId}
-        name={descriptor.data?.name}
-        plan={plan}
-      />
+    <>
+      {asking && (
+        <GeneratorLandingDialog
+          onCancel={() => setAsking(null)}
+          onAnswer={(target, remember) => {
+            const values = asking
+            setAsking(null)
+            if (remember) void setValue('generation.landing', target)
+            void runGeneration(values, target)
+          }}
+        />
+      )}
+      {/* The gutter and the rhythm live HERE, once: every child wore its own `px-2 pt-2` and the
+          one that forgot read as a second panel. `PANEL_SCROLL` keeps the right edge off the bar. */}
+      <div className={cn(PANEL_SCROLL, 'gap-2 pt-2 pl-2')}>
+        <GeneratorOperation capability={capability} onForce={forceCapability} />
+        <GeneratorModel
+          capability={capability.chosen}
+          modelId={modelId}
+          name={descriptor.data?.name}
+          plan={plan}
+        />
 
-      {/* 🛑 Said rather than hidden: the panel used to return null, and the rail dropped its icon
+        {/* 🛑 Said rather than hidden: the panel used to return null, and the rail dropped its icon
           with it — at the one moment the picker above is what a person needs. A model withdrawn
           from the catalogue while it was the chosen one lands on the same line. */}
-      {modelId === null && (
-        <EmptyState icon={mdiCreationOutline} message={t('generation.noModelForOperation')} />
-      )}
-      {/* Both gated on a model: `useDescriptor(null)` is disabled, and a disabled query reads as
+        {modelId === null && (
+          <EmptyState icon={mdiCreationOutline} message={t('generation.noModelForOperation')} />
+        )}
+        {/* Both gated on a model: `useDescriptor(null)` is disabled, and a disabled query reads as
           pending — so the two sentences were painted one under the other. */}
-      {modelId !== null && descriptor.isPending && (
-        <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
-      )}
-      {modelId !== null && descriptor.isError && (
-        <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(descriptor.error))} />
-      )}
+        {modelId !== null && descriptor.isPending && (
+          <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
+        )}
+        {modelId !== null && descriptor.isError && (
+          <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(descriptor.error))} />
+        )}
 
-      <GeneratorSources inputs={inputs} />
-      <GeneratorRun job={running} />
+        <GeneratorSources inputs={inputs} />
+        <GeneratorRun job={running} />
 
-      {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}
-      {refusal && <p className="text-muted text-xs">{refusal}</p>}
+        {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}
+        {refusal && <p className="text-muted text-xs">{refusal}</p>}
 
-      {/* Gated on the descriptor, which is what makes the deferred form free to the eye: it only
+        {/* Gated on the descriptor, which is what makes the deferred form free to the eye: it only
           renders once that round trip has come back, so the wait its chunk adds sits inside one
           the panel already had. */}
-      {descriptor.data && (
-        // Above the `Suspense`: a rejected `lazy()` import is an error, not a fallback. Without
-        // it the throw leaves the panel, leaves the dock, and takes the whole window down.
-        <ErrorBoundary>
-          <Suspense
-            fallback={<EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />}
-          >
-            <DynamicForm
-              fields={descriptor.data.fields}
-              onSubmit={generate}
-              submitLabel={t('actions.generate')}
-              submitHint={t('actions.generateHint')}
-              submitNote={cost.note}
-              onValuesChange={onValuesChange}
-              // 🛑 The double-submission guard as well as the refusal: `submit` is a round trip,
-              // and a second press before it answers pays for two generations.
-              // `project` is not in this: the panel returns before the form when there is none.
-              busy={
-                refusal !== undefined ||
-                submitting ||
-                (running !== null && !isFinished(running.status))
-              }
-              preset={preset}
-              // Dictation alone now. Rewriting a prompt, translating it and reading the style of
-              // the references left this panel for the assistant: they are things one ASKS for,
-              // and three buttons under a field could only ever offer three of them.
-              accessory={dictationAccessory}
-            />
-          </Suspense>
-        </ErrorBoundary>
-      )}
-    </div>
+        {descriptor.data && (
+          // Above the `Suspense`: a rejected `lazy()` import is an error, not a fallback. Without
+          // it the throw leaves the panel, leaves the dock, and takes the whole window down.
+          <ErrorBoundary>
+            <Suspense
+              fallback={<EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />}
+            >
+              <DynamicForm
+                fields={descriptor.data.fields}
+                onSubmit={generate}
+                submitLabel={t('actions.generate')}
+                submitHint={t('actions.generateHint')}
+                submitNote={cost.note}
+                onValuesChange={onValuesChange}
+                // 🛑 The double-submission guard as well as the refusal: `submit` is a round trip,
+                // and a second press before it answers pays for two generations.
+                // `project` is not in this: the panel returns before the form when there is none.
+                busy={
+                  refusal !== undefined ||
+                  submitting ||
+                  (running !== null && !isFinished(running.status))
+                }
+                preset={preset}
+                // Dictation alone now. Rewriting a prompt, translating it and reading the style of
+                // the references left this panel for the assistant: they are things one ASKS for,
+                // and three buttons under a field could only ever offer three of them.
+                accessory={dictationAccessory}
+              />
+            </Suspense>
+          </ErrorBoundary>
+        )}
+      </div>
+    </>
   )
 }

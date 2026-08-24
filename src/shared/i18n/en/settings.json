@@ -305,6 +305,13 @@
     "sectionHint": "Shows the settings of this section",
     "sectionStagedHint": "This section has changes that were not applied",
     "searchSectionHint": "Opens the whole section, rather than the one result",
-    "searchResultHint": "Goes to the setting, in the section it belongs to"
+    "searchResultHint": "Goes to the setting, in the section it belongs to",
+    "landing": {
+      "title": "Where a generation lands",
+      "help": "When a document of the same kind is already open. With nothing open, the result opens.",
+      "ask": "Ask every time",
+      "document": "Into the open document",
+      "newTab": "In a tab of its own"
+    }
   }
 }

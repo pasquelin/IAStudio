@@ -13,6 +13,7 @@ import type { StudioBridge } from '@shared/ipc'
 import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installCanvas } from '@/stores/canvas-fixtures'
+import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
@@ -23,6 +24,7 @@ import { useAssets } from '@/stores/assets'
 import { useProject } from '@/stores/project'
 import { useSelection } from '@/stores/selection'
 import { connectPreparation } from '@/stores/preparation'
+import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { useSettings } from '@/stores/settings'
 import { chooseModels } from '@/stores/models-fixtures'
 import { arrangedFor } from '@/stores/tool-fixtures'
@@ -94,7 +96,15 @@ describe('Generator', () => {
 
   beforeEach(() => {
     installCanvas(DOCUMENT)
-    useSettings.setState({ auth: { authenticated: true } })
+    useSettings.setState({
+      auth: { authenticated: true },
+      // A canvas is open in every case below, so the question would stand in front of the form.
+      // The one case that is ABOUT the question sets `ask` itself.
+      settings: {
+        ...DEFAULT_SETTINGS,
+        generation: { ...DEFAULT_SETTINGS.generation, landing: 'document' },
+      },
+    })
     useAiModels.setState({ overview: null })
     // A job collects into its own project and nowhere else, so the panel asks for one before it
     // draws a form. Every case below is about the form, and each of them needs one.
@@ -434,7 +444,15 @@ describe('the generator on this machine', () => {
 describe('a generation in flight', () => {
   beforeEach(() => {
     installCanvas(DOCUMENT)
-    useSettings.setState({ auth: { authenticated: true } })
+    useSettings.setState({
+      auth: { authenticated: true },
+      // A canvas is open here, so the question would stand in front of every case below. The two
+      // that are ABOUT the question set `ask` themselves.
+      settings: {
+        ...DEFAULT_SETTINGS,
+        generation: { ...DEFAULT_SETTINGS.generation, landing: 'document' },
+      },
+    })
     useAiModels.setState({ overview: null })
     useProject.setState({ project: PROJECT, known: true })
     useLayouts.setState({ activeWorkspace: 'image' })
@@ -458,6 +476,42 @@ describe('a generation in flight', () => {
     await userEvent.type(await screen.findByLabelText(/Image/), 'asset-source')
     await userEvent.click(screen.getByRole('button', { name: /Générer/ }))
   }
+
+  /**
+   * 🛑 Asked BEFORE the run, never after: the answer decides where minutes of compute land, and
+   * a question raised when the picture arrives is one nobody is still watching for.
+   */
+  it('asks where the result goes before spending anything on it', async () => {
+    useSettings.setState({
+      settings: {
+        ...DEFAULT_SETTINGS,
+        generation: { ...DEFAULT_SETTINGS.generation, landing: 'ask' },
+      },
+    })
+    renderPanel()
+
+    await generate()
+
+    expect(await screen.findByRole('dialog')).toBeVisible()
+    expect(screen.queryByText('En cours')).toBeNull()
+  })
+
+  // With nothing open there is nothing to choose between, so nothing is asked.
+  it('asks nothing when no document is waiting for the result', async () => {
+    useDocuments.setState({ documents: {}, activeId: null })
+    useSettings.setState({
+      settings: {
+        ...DEFAULT_SETTINGS,
+        generation: { ...DEFAULT_SETTINGS.generation, landing: 'ask' },
+      },
+    })
+    renderPanel()
+
+    await generate()
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(await screen.findByText('En cours')).toBeVisible()
+  })
 
   /**
    * § 30: someone who pressed Generate watches the panel they pressed it in. A run whose only

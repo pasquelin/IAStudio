@@ -305,6 +305,13 @@
     "sectionHint": "Affiche les réglages de cette section",
     "sectionStagedHint": "Cette section a des changements non appliqués",
     "searchSectionHint": "Ouvre la section entière, au lieu du seul résultat",
-    "searchResultHint": "Va au réglage, dans la section à laquelle il appartient"
+    "searchResultHint": "Va au réglage, dans la section à laquelle il appartient",
+    "landing": {
+      "title": "Où atterrit une génération",
+      "help": "Quand un document du même genre est déjà ouvert. Sans rien d’ouvert, le résultat s’ouvre.",
+      "ask": "Demander à chaque fois",
+      "document": "Dans le document ouvert",
+      "newTab": "Dans un nouvel onglet"
+    }
   }
 }

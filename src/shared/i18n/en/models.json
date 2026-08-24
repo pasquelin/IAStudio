@@ -26,7 +26,10 @@
     "modelScope_installed": "Installed",
     "modelInstalled": "Installed",
     "modelScopeHint": "Narrows the list to that source",
-    "followSelection": "Follow the selection"
+    "followSelection": "Follow the selection",
+    "landingTitle": "Where should this generation go?",
+    "landingHint": "A document is open. The result can join it, or open in a tab of its own.",
+    "landingRemember": "Remember this choice"
   },
   "models": {
     "none": "No model in this workspace.",
