@@ -36,6 +36,7 @@ import { textAt, TRANSLATIONS, type Language } from '@shared/i18n'
 import { effectiveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
+import { createNewsService, type NewsService } from '@main/news/newsStore'
 import { createUpdates, type Updates } from '@main/updater'
 import { createAssetCollector } from './assets/collector'
 import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/autoCaption'
@@ -308,6 +309,7 @@ export type Services = {
   authState: () => Promise<AuthState>
   broadcastAccounts: (accounts: AccountSummary[]) => void
   updates: Updates
+  news: NewsService
 }
 
 /** Two cores left to the interface and to whatever else the machine is doing — CLAUDE.md § 6. */
@@ -1941,6 +1943,17 @@ export function createServices(settings: SettingsStore): Services {
       broadcast(EVENTS.accountsChanged, accounts)
       republishAi('an account change')
     },
+    // The one outward read this studio makes for something other than a model or a job. Bound
+    // to `net.fetch` so it follows the session's proxy, as every other outward call does.
+    news: createNewsService({
+      read: async (url, signal) => {
+        const response = await net.fetch(url, { signal })
+        if (!response.ok) throw new Error(`${url} answered ${response.status}`)
+
+        return response.text()
+      },
+      now: () => Date.now(),
+    }),
     updates: createUpdates({
       // Through `default`: `autoUpdater` is a defineProperty getter, which the ESM loader cannot
       // see as a named export. Measured under Electron 43 — the named read answers `undefined`.

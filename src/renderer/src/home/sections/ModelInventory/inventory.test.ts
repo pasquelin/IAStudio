@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { AiOverview, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
 import { aiRoleId, ASSISTANT_ROLE, DICTATION_ROLE } from '@shared/domain/aiRole'
 import { GIBI, localModel } from '@shared/domain/localModel-fixtures'
-import { cloudIdsOf, employmentGroupsOf, localStandingOf } from './inventory'
+import { adviceOf, cloudIdsOf, coverageOf, employmentGroupsOf, localStandingOf } from './inventory'
 
 const candidate = (over: Partial<ModelCandidate> = {}): ModelCandidate => ({
   model: localModel(),
@@ -151,5 +151,94 @@ describe('the employments', () => {
    */
   it('names no family the overview said nothing about', () => {
     expect(employmentGroupsOf(overview([]))).toEqual([])
+  })
+})
+
+describe('what one download covers', () => {
+  const wide = candidate({
+    model: localModel({ id: 'ssd-1b', name: 'SSD-1B', diskBytes: 4 * GIBI }),
+    installed: false,
+    serves: 6,
+  })
+  const narrow = candidate({
+    model: localModel({ id: 'mochi', name: 'Mochi', diskBytes: 133 * GIBI }),
+    installed: false,
+    serves: 1,
+  })
+
+  const spread = (): AiOverview =>
+    overview([
+      row({ role: aiRoleId('image', 'txt2img'), candidates: [wide, narrow] }),
+      row({ role: aiRoleId('texture', 'txt2img_texture'), candidates: [wide] }),
+    ])
+
+  it('ranks by employments answered, not by what a model weighs', () => {
+    expect(coverageOf(spread(), 2).map(one => one.id)).toEqual(['ssd-1b', 'mochi'])
+  })
+
+  /**
+   * The whole point of the block: a model filed under Image that also serves Texture is what
+   * makes one download worth two, and its own `family` field names only where its card is filed.
+   */
+  it('names the families a model spans, read off the rows it is a candidate of', () => {
+    expect(coverageOf(spread(), 1)[0]?.families).toEqual(['image', 'texture'])
+  })
+
+  it('gives a tie to the lighter one', () => {
+    const heavy = candidate({
+      model: localModel({ id: 'heavy', diskBytes: 40 * GIBI }),
+      serves: 2,
+    })
+    const light = candidate({ model: localModel({ id: 'light', diskBytes: GIBI }), serves: 2 })
+
+    expect(
+      coverageOf(overview([row({ candidates: [heavy, light] })]), 2).map(one => one.id),
+    ).toEqual(['light', 'heavy'])
+  })
+
+  it('keeps what this machine cannot hold, marked rather than dropped', () => {
+    const beyond = candidate({ installed: false, fit: 'insufficient-memory' })
+
+    expect(coverageOf(overview([row({ candidates: [beyond] })]), 3)[0]?.usable).toBe(false)
+  })
+})
+
+describe('the advice', () => {
+  it('names choosing before installing: what is on the disk costs nothing', () => {
+    const installed = candidate({ installed: true, serves: 1 })
+    const offered = candidate({
+      model: localModel({ id: 'wide', name: 'Wide' }),
+      installed: false,
+      serves: 6,
+    })
+
+    const said = adviceOf(
+      overview([
+        row({ role: aiRoleId('image', 'txt2img'), provider: null, candidates: [installed] }),
+        row({ role: aiRoleId('video', 'txt2video'), candidates: [offered] }),
+      ]),
+      ['scenario'],
+    )
+
+    expect(said.map(one => one.kind)).toEqual(['choose', 'install'])
+  })
+
+  it('offers a key only where no account is held at all', () => {
+    expect(adviceOf(overview([]), []).map(one => one.kind)).toEqual(['key'])
+    expect(adviceOf(overview([]), ['scenario'])).toEqual([])
+  })
+
+  /** A model this machine cannot run is not advice, it is a disappointment. */
+  it('never advises installing what the machine could not hold', () => {
+    const beyond = candidate({ installed: false, fit: 'incompatible', serves: 9 })
+
+    expect(adviceOf(overview([row({ candidates: [beyond] })]), ['scenario'])).toEqual([])
+  })
+
+  it('says at most two things, so the line stays a line', () => {
+    const idle = candidate({ installed: true })
+    const offered = candidate({ model: localModel({ id: 'wide' }), installed: false, serves: 4 })
+
+    expect(adviceOf(overview([row({ candidates: [idle, offered] })]), []).length).toBe(2)
   })
 })

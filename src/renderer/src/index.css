@@ -505,6 +505,11 @@
      drawn behind as a div, so a single pair of values answers every slider of the studio. */
   --sc-slider-rail: 4px;
   --sc-slider-thumb: 14px;
+  /* How wide the home's column is allowed to grow. Not a density gauge — it does not change with
+     one — but a gauge all the same, so no component writes the number. On a 2 000px display an
+     unbounded column put a row's label at one edge and its value at the other; the rails narrow
+     the centre for a workspace, and the home has none of them open on most of its width. */
+  --sc-home-width: 1100px;
   /* The glyph a `ToolButton` draws on a header. RECOPIED from `HOSTS.header.glyph`, which takes a
      number and not a gauge — `design/styles.test.ts` holds the two together, since moving one
      alone would shift the lean below by half its change and nothing would say so. */

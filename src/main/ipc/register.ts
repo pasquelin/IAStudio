@@ -34,6 +34,7 @@ import { registerMontageHandlers } from '@main/export/montage'
 import { createRunningTasks, registerTaskCancelHandler } from '@main/task/runningTasks'
 import { registerMontageImportHandlers } from '@main/import/montageImport'
 import { registerRenderHandlers } from '@main/render/handlers'
+import { registerNewsHandlers } from '@main/news/handlers'
 import { registerUpdateHandlers } from '@main/update/handlers'
 import { registerFileInfoWindow } from '@main/window/fileInfo'
 import { registerHelpWindows } from '@main/window/help'
@@ -150,6 +151,7 @@ export function registerIpc(services: Services): void {
     newId: () => `render_${randomUUID()}`,
     encode: services.encodeVideo,
   })
+  registerNewsHandlers(services.news)
   registerUpdateHandlers(services)
   // Built here rather than held by `Services`: the index reads nothing until a picker asks, so
   // it costs a closure at startup and a folder walk the first time someone opens the list.

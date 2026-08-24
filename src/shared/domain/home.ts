@@ -18,7 +18,7 @@ import { reconcileOrder } from './order'
  * nobody scans. The three left are the three that earn the width — what the studio puts forward,
  * what it can start, and what it can run with.
  */
-export type HomeSectionId = 'spotlight' | 'tools' | 'models'
+export type HomeSectionId = 'spotlight' | 'tools' | 'models' | 'news'
 
 export type HomeSectionEntry = {
   id: HomeSectionId
@@ -42,6 +42,9 @@ export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   // published on Scenario, which required a key to draw a single tile and answered a question
   // nobody opens the studio with — see `home/sections/ModelInventory`.
   { id: 'models' },
+  // What is moving outside it. Last because it is about somebody else's work: the bands above
+  // are about this machine, and a reader scrolls past them to reach it deliberately.
+  { id: 'news' },
 ]
 
 export const HOME_SECTION_IDS: readonly HomeSectionId[] = HOME_SECTIONS.map(entry => entry.id)

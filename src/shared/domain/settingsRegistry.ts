@@ -286,6 +286,13 @@ export const SETTING_REGISTRY = [
     helpKey: 'settings.home.help',
   }),
   setting({
+    path: 'home.news',
+    kind: 'boolean',
+    section: 'general',
+    titleKey: 'settings.homeNews.title',
+    helpKey: 'settings.homeNews.help',
+  }),
+  setting({
     path: 'appearance.theme',
     kind: 'choice',
     section: 'appearance',

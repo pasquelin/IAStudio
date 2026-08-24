@@ -117,6 +117,18 @@ espace de travail, il faut décocher celui-ci.
 Ce qui se règle **sur l’accueil lui-même**, et pas ici : quelles bandes sont affichées — voir
 [La fenêtre](03-la-fenetre.md#laccueil-avant-tout-le-reste).
 
+### Actualités des modèles
+
+**Interrupteur. Départ : activé.**
+
+La bande **Ce qui bouge**, en bas de l’accueil, lit les modèles qui montent et les articles parus
+sur Hugging Face. **C’est le seul appel sortant du studio pour autre chose qu’un modèle ou une
+génération**, et il va sur l’hôte d’où viennent déjà tous les poids du catalogue : personne
+n’apprend rien de neuf. Décoché, le studio ne contacte personne pour cette bande, qui reste et
+dit qu’elle est coupée.
+
+Une réponse est gardée six heures : ce sont des tendances, pas un fil d’actualité.
+
 ---
 
 ## Compte
@@ -759,6 +771,7 @@ Ce que vous avez sur une installation neuve, d’un coup d’œil.
 | Général | Langue | Système | Système, Français, English |
 | Général | À l’ouverture | Rouvrir le dernier projet | — |
 | Général | Afficher l’accueil | activé | — |
+| Général | Actualités des modèles | activé | — |
 | Apparence | Thème | Sombre | Sombre, Clair, Système |
 | Apparence | Densité | Confort | Confort, Compact |
 | Apparence | Couleur d’accent | celle du thème | — |

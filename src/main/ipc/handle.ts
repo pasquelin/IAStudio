@@ -203,6 +203,8 @@ type ChannelMethod = {
 
   [CHANNELS.menuPopup]: StudioBridge['menu']['popup']
 
+  [CHANNELS.newsRead]: StudioBridge['news']['read']
+
   [CHANNELS.updateState]: StudioBridge['updates']['state']
   [CHANNELS.updateInstall]: StudioBridge['updates']['install']
 }

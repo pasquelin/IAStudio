@@ -29,6 +29,7 @@ const SECTION_TITLES: Record<HomeSectionId, string> = {
   spotlight: 'Où vous en étiez',
   tools: 'Outils',
   models: 'Vos modèles',
+  news: 'Ce qui bouge',
 }
 
 const PROJECT = {
@@ -50,7 +51,7 @@ function setSettings(home = DEFAULT_HOME_SECTIONS, authenticated = false): void 
     loaded: true,
     settings: {
       ...state.settings,
-      home: { enabled: true, sections: [...home] },
+      home: { enabled: true, news: true, sections: [...home] },
       storage: { ...state.settings.storage, recentProjects: [] },
     },
   }))
@@ -195,7 +196,11 @@ describe('customising the home', () => {
     // Read off what is actually drawn, not off the registry: a section whose shelf is empty takes
     // itself off the page, and it must take its heading and its button with it.
     const headings = [...container.querySelectorAll('h2')]
-    expect(headings.map(node => node.textContent)).toEqual(['Outils', 'Vos modèles'])
+    expect(headings.map(node => node.textContent)).toEqual([
+      'Outils',
+      'Vos modèles',
+      'Ce qui bouge',
+    ])
 
     for (const heading of headings) {
       const id = HOME_SECTION_IDS.find(

@@ -1,10 +1,10 @@
-import type { AiOverview, RoleRow } from '@shared/domain/aiOverview'
+import type { AiOverview, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
 import { CLOUD_IDS, type CloudProviderId } from '@shared/domain/aiCloud'
 import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
 import { fitAllowsUse } from '@shared/domain/modelFit'
 import { MODEL_FAMILIES, type ModelFamily } from '@shared/domain/model'
 
-/** What the band's two halves both need, and neither owns. */
+/** What the band's blocks all need, and none owns. */
 export type Translate = (key: string, values?: Record<string, string | number>) => string
 
 export type LocalStanding = {
@@ -144,4 +144,90 @@ export function employmentGroupsOf(overview: AiOverview): readonly EmploymentGro
       sole: row,
     })),
   ]
+}
+
+/** One model of the catalogue, weighed by what a single download would answer for. */
+export type Coverage = {
+  readonly id: string
+  readonly name: string
+  readonly diskBytes: number
+  /** How many employments this ONE download serves, as the main process counted them. */
+  readonly employments: number
+  /** The families those employments span — what makes a model transverse rather than deep. */
+  readonly families: readonly ModelFamily[]
+  readonly installed: boolean
+  /** Whether this machine could run it. Shown greyed rather than dropped. */
+  readonly usable: boolean
+}
+
+/**
+ * The catalogue ranked by what ONE download buys, most first.
+ *
+ * The question the manager cannot answer at a glance: twenty-five models for nineteen
+ * employments, and the difference between them is not the quality — SSD-1B serves six for
+ * 4.47 GB where Mochi serves one for 133. Ties go to the lighter one.
+ *
+ * The families come from the ROWS a model is a candidate of, not from its own `family`: a model
+ * filed under Image that also serves Texture is exactly what this is looking for, and its own
+ * field names only where its card is filed.
+ */
+export function coverageOf(overview: AiOverview, top: number): readonly Coverage[] {
+  const held = new Map<string, { candidate: ModelCandidate; families: Set<ModelFamily> }>()
+
+  for (const row of overview.roles) {
+    const family = partsOfRole(row.role)?.family
+    for (const candidate of row.candidates) {
+      const entry = held.get(candidate.model.id) ?? { candidate, families: new Set<ModelFamily>() }
+      if (family !== undefined) entry.families.add(family)
+      held.set(candidate.model.id, entry)
+    }
+  }
+
+  return [...held.values()]
+    .map(({ candidate, families }) => ({
+      id: candidate.model.id,
+      name: candidate.model.name,
+      diskBytes: candidate.model.diskBytes,
+      employments: candidate.serves,
+      families: MODEL_FAMILIES.filter(one => families.has(one)),
+      installed: candidate.installed,
+      usable: fitAllowsUse(candidate.fit),
+    }))
+    .sort((one, other) => other.employments - one.employments || one.diskBytes - other.diskBytes)
+    .slice(0, top)
+}
+
+/**
+ * What would change the most, said as a sentence the reader can act on.
+ *
+ * Ordered by what it COSTS, not by what it unlocks: choosing among models already on the disk
+ * costs nothing, installing costs gigabytes, and a key costs money — so a studio is never told
+ * to spend before it has been told it already holds the answer.
+ */
+export type Advice =
+  | { readonly kind: 'choose'; readonly employments: number }
+  | { readonly kind: 'install'; readonly coverage: Coverage }
+  | { readonly kind: 'key' }
+
+/** Employments with something installed that could serve them, and nothing chosen. */
+function unchosen(overview: AiOverview): number {
+  return overview.roles.filter(
+    row => row.provider === null && row.candidates.some(one => one.installed),
+  ).length
+}
+
+export function adviceOf(overview: AiOverview, clouds: readonly string[]): readonly Advice[] {
+  const idle = unchosen(overview)
+  const worth = coverageOf(overview, 8).find(one => !one.installed && one.usable)
+
+  const choose: Advice = { kind: 'choose', employments: idle }
+  const key: Advice = { kind: 'key' }
+
+  return [
+    ...(idle > 0 ? [choose] : []),
+    ...(worth ? [{ kind: 'install', coverage: worth } satisfies Advice] : []),
+    // Said only once nothing at all is connected: a studio with one key does not need telling
+    // that keys exist.
+    ...(clouds.length === 0 ? [key] : []),
+  ].slice(0, 2)
 }

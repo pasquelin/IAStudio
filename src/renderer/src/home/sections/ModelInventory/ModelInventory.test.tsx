@@ -1,10 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AiOverview, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
 import { aiRoleId, ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import { GIBI, localModel } from '@shared/domain/localModel-fixtures'
-import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAiModels } from '@/stores/aiModels'
 import { settleHome } from '../../home-fixtures'
@@ -59,6 +58,9 @@ function show(one: AiOverview = overview()) {
   return { open }
 }
 
+/** The line of the means block whose label is `name`, so a value is read where it belongs. */
+const meansLine = (name: string): HTMLElement => screen.getByText(name).parentElement as HTMLElement
+
 beforeEach(() => {
   settleHome()
   useAiModels.setState({ overview: null })
@@ -75,14 +77,15 @@ describe('the models band', () => {
   it('states what the machine offers, chip included', () => {
     show()
 
-    // The unit binds to its number with a no-break space, and the chip is the one taken out of
-    // what Chromium answers rather than the driver build that came with it.
-    expect(screen.getByText(/Apple M2 Max/).textContent).toBe(
-      `34${NO_BREAK_SPACE}Gio libres sur 96${NO_BREAK_SPACE}Gio · Apple M2 Max · 500${NO_BREAK_SPACE}Gio sur le disque`,
+    // Plain spaces, where the value carries the binding one: `toHaveTextContent` normalises
+    // what it READ and not what it was given. The chip is the one taken out of what Chromium
+    // answers, rather than the driver build that came with it.
+    expect(meansLine('Machine')).toHaveTextContent(
+      '34 Gio libres sur 96 Gio · Apple M2 Max · 500 Gio sur le disque',
     )
   })
 
-  it('counts what is installed and what it weighs', () => {
+  it('counts what is installed, what it weighs and what is held in memory', () => {
     show(
       overview({
         roles: [
@@ -96,16 +99,9 @@ describe('the models band', () => {
       }),
     )
 
-    // Read off the card rather than off the page: the machine line above it ends in the same
-    // three words, and a query over the whole band would answer with either.
-    const card = screen.getByRole('button', { name: /Sur cet ordinateur/ })
-
-    expect(card).toHaveTextContent('1 modèle installé')
-    // A normal space, not the binding one the value actually carries: `toHaveTextContent`
-    // normalises what it READ and not what it was given.
-    expect(card).toHaveTextContent('2,0 Gio sur le disque')
-    expect(card).toHaveTextContent('1 chargé en mémoire')
-    expect(card).toHaveTextContent('1 au catalogue, à installer')
+    expect(meansLine('Sur cet ordinateur')).toHaveTextContent(
+      '1 modèle installé · 2,0 Gio · 1 chargé en mémoire',
+    )
   })
 
   /**
@@ -115,16 +111,34 @@ describe('the models band', () => {
   it('says a bare machine is bare, rather than drawing nothing', () => {
     show()
 
-    expect(screen.getByText('Aucun modèle installé')).toBeInTheDocument()
-    expect(screen.getByText('Aucune clé API')).toBeInTheDocument()
-    expect(screen.getByText('Pas sur cet ordinateur')).toBeInTheDocument()
+    expect(meansLine('Sur cet ordinateur')).toHaveTextContent('Aucun modèle installé')
+    expect(meansLine('Ollama')).toHaveTextContent('Pas sur cet ordinateur')
+    expect(meansLine('En ligne')).toHaveTextContent('Aucune clé API')
   })
 
   it('names the clouds an account was entered for', () => {
     show(overview({ roles: [row({ clouds: ['scenario', 'anthropic'] })] }))
 
-    expect(screen.getByText('2 comptes connectés')).toBeInTheDocument()
-    expect(screen.getByText('Scenario · Claude')).toBeInTheDocument()
+    expect(meansLine('En ligne')).toHaveTextContent('Scenario · Claude')
+  })
+
+  /**
+   * The complaint this layout answers: three cards that were each one big button, two of them
+   * opening the same screen, with nothing on any of them saying what a click would do.
+   */
+  it('gives every line a button that says what it does, and where it leads', async () => {
+    const { open } = show()
+
+    await userEvent.click(
+      within(meansLine('En ligne')).getByRole('button', { name: 'Ajouter une clé' }),
+    )
+
+    expect(open).toHaveBeenCalledWith('account')
+  })
+
+  it('offers to install Ollama when it is absent, and to choose once it is there', () => {
+    show()
+    expect(within(meansLine('Ollama')).getByRole('button')).toHaveTextContent('Installer')
   })
 
   it('names what serves an employment no family shares', () => {
@@ -136,8 +150,7 @@ describe('the models band', () => {
       }),
     )
 
-    expect(screen.getByRole('button', { name: /Assistant/ })).toBeInTheDocument()
-    expect(screen.getByText('Claude')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Assistant/ })).toHaveTextContent('Claude')
   })
 
   it('tallies a family rather than naming one of its employments', () => {
@@ -153,7 +166,7 @@ describe('the models band', () => {
       }),
     )
 
-    expect(screen.getByText('1 emploi servi sur 2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Image/ })).toHaveTextContent('1 sur 2')
   })
 
   it('opens the settings on the screen that chooses for the family clicked', async () => {
@@ -166,22 +179,75 @@ describe('the models band', () => {
     await waitFor(() => expect(open).toHaveBeenCalledWith('ai.video'))
   })
 
-  it('sends the cloud card to the account screen, where the keys are', async () => {
-    const { open } = show()
+  /**
+   * The reading the manager cannot give at a glance, and the one this band was asked for: one
+   * download that answers six employments across two families beats one that answers a single.
+   */
+  it('ranks the catalogue by what one download covers, families named', () => {
+    show(
+      overview({
+        roles: [
+          row({
+            role: aiRoleId('image', 'txt2img'),
+            candidates: [
+              candidate({
+                model: localModel({ id: 'ssd', name: 'SSD-1B', diskBytes: 4 * GIBI }),
+                installed: false,
+                serves: 6,
+              }),
+            ],
+          }),
+          row({
+            role: aiRoleId('texture', 'txt2img_texture'),
+            candidates: [
+              candidate({
+                model: localModel({ id: 'ssd', name: 'SSD-1B', diskBytes: 4 * GIBI }),
+                installed: false,
+                serves: 6,
+              }),
+            ],
+          }),
+        ],
+      }),
+    )
 
-    await userEvent.click(screen.getByRole('button', { name: /En ligne/ }))
+    const line = screen.getByText('SSD-1B').parentElement as HTMLElement
+    expect(line).toHaveTextContent('Image · Texture')
+    expect(line).toHaveTextContent('6 emplois')
+  })
 
-    expect(open).toHaveBeenCalledWith('account')
+  it('advises choosing before installing, since what is on the disk costs nothing', () => {
+    show(
+      overview({
+        roles: [
+          row({ candidates: [candidate({ installed: true })], clouds: ['scenario'] }),
+          row({
+            role: aiRoleId('video', 'txt2video'),
+            candidates: [
+              candidate({
+                model: localModel({ id: 'wide', name: 'Wide' }),
+                installed: false,
+                serves: 4,
+              }),
+            ],
+          }),
+        ],
+      }),
+    )
+
+    expect(
+      screen.getByText('1 emploi a un modèle installé mais personne de choisi.'),
+    ).toBeInTheDocument()
   })
 
   /**
    * 🛑 The band informs and leads; it never installs. A second place a download can start from is
    * a second progress bar with nothing saying which of the two is running — ADR-23.
    */
-  it('offers no gesture that would install, remove or load anything', () => {
+  it('offers no gesture that would remove or load anything', () => {
     show(overview({ roles: [row({ candidates: [candidate({ installed: false })] })] }))
 
-    for (const word of [/Installer/, /Supprimer/, /Charger/]) {
+    for (const word of [/Supprimer/, /Charger/, /Décharger/]) {
       expect(screen.queryByRole('button', { name: word })).not.toBeInTheDocument()
     }
   })

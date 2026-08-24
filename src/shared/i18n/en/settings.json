@@ -312,6 +312,10 @@
       "ask": "Ask every time",
       "document": "Into the open document",
       "newTab": "In a tab of its own"
+    },
+    "homeNews": {
+      "title": "Model news",
+      "help": "Reads the trending models and the articles published on Hugging Face, the host every weight of the catalogue already comes from. Unticked, the studio contacts nobody for this band."
     }
   }
 }

@@ -126,6 +126,7 @@ const homeSection = z.object({
 const home = z
   .object({
     enabled: z.boolean().optional(),
+    news: z.boolean().optional(),
     sections: z
       .array(homeSection.nullable().catch(null))
       .transform(entries => entries.filter(entry => entry !== null))

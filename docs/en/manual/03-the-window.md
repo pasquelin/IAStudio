@@ -30,17 +30,18 @@ It shows one thing at a time:
 While the studio reads your projects, it stays silent rather than announcing "Ready when you are"
 and then correcting itself.
 
-### The three bands
+### The four bands
 
-The centre stacks three bands, in this order:
+The centre stacks four bands, in this order:
 
 | Band | What it shows | It needs |
 |---|---|---|
 | **Where you left off** | the banner: resume, connect, or create | nothing |
 | **Tools** | what the studio knows how to start, and the way to create or open a project | nothing |
 | **Your models** | what this studio can run, and with what | nothing |
+| **What is moving** | the models trending outside, and the articles beside them | the setting, ticked by default |
 
-**None of the three needs anything any more.** The rule has not changed — a band that lacks what
+**None of the four needs an API key any more.** The rule has not changed — a band that lacks what
 it needs is not greyed out, it is not there — but it has no case left: the feed of what everyone
 was publishing held the third place until now, and an API key was needed to draw a single tile.
 
@@ -52,27 +53,60 @@ Everything else on the home is a panel, held in its two columns.
 
 ### Your models, what the studio can run
 
-The band answers the question everybody has on the second launch: **what is installed, what is
-running, and what is missing.** It opens on what the machine offers — free memory, chip, video
-memory, room on disk — then lays out three cards:
+Two columns, then two blocks. It answers the question everybody has on the second launch: **what
+is installed, what is running, and what is missing.** It opens on what the machine offers — free
+memory, chip, video memory, room on disk.
 
-| Card | What it says |
-|---|---|
-| **On this computer** | how many models are installed, what they weigh, how many are held in memory, how many are left to install, and how many are beyond this machine |
-| **Ollama** | whether it is on this computer, whether it answers, and the models it listed |
-| **Online** | the accounts a key has been entered for, by name |
+**On the left, what you have to work with** — one line per source, and each line carries the
+gesture that changes it, with a verb on it:
 
-Under the cards, **what serves your employments**: one line per family — Image, Video, Modelling,
-Audio, Textures, Skyboxes and the three the canvas reaches for — plus the Assistant and Dictation.
-A family says how many of its employments are served; a lone employment names what serves it.
+| Line | What it says | The button |
+|---|---|---|
+| **Machine** | free memory, chip, video memory, disk | none: it reports, it is not acted on |
+| **On this computer** | how many models are installed, what they weigh, how many are held in memory | **Manage** |
+| **Ollama** | whether it is there, whether it answers, and the models it listed | **Install** or **Choose** |
+| **Online** | the accounts a key has been entered for, one by one | **Add a key** or **Manage keys** |
 
-**Nothing is installed from this band**: every card and every line opens the settings section
-where the gesture lives — see [Models](05-models.md).
+**On the right, your workspaces** — one line per family, with a gauge in dots: how many of its
+employments are served out of how many. A workspace with a single employment names what serves it
+outright. The Assistant and Dictation close the list: they belong to no workspace.
+
+**Under them, what one download covers.** This is the reading the manager cannot give at a glance:
+the catalogue holds twenty-five models for nineteen employments, and what separates them is not
+the quality. An image model that also does textures answers six employments for four gigabytes
+where another answers one for a hundred and thirty-three. The families it spans are named, not
+counted. What the machine cannot hold stays on screen, marked **beyond this machine** — hiding it
+would make the catalogue look smaller than it is.
+
+**Finally one or two lines of advice**, ranked by what they COST rather than by what they unlock:
+choosing among what is already on the disk costs nothing, installing costs gigabytes, a key costs
+money. So you are never offered a way to spend before being told you already hold the answer.
+
+**Nothing is installed from this band**: every button opens the settings section where the gesture
+lives — see [Models](05-models.md).
 
 **It speaks on a bare machine**, which is half its point: with no key and no model, it says so,
 with the way to fix it.
 
-It is the only band that can be hidden.
+### What is moving, outside the studio
+
+What other people publish — **the models trending** on Hugging Face, and **the articles** posted
+there. The chips above the band filter: Image, Video, 3D, Audio, or Articles. One category shows
+at a time, and that is one request.
+
+**No Texture or Sky chip**, and that is not an oversight: nothing publishes either as a category
+of its own — the studio serves both with image models — so a chip for one would repeat the Image
+list under another name.
+
+**A click opens the page in your browser.** Nothing is downloaded, nothing is installed: these are
+somebody else's models and somebody else's articles.
+
+> **This is the studio's only outward call for something other than a model or a generation.** It
+> goes to `huggingface.co`, the host every weight of the catalogue already comes from, so nobody
+> learns anything new. **Settings ▸ General ▸ Model news** switches it off; the band then stays,
+> and says it is off.
+
+**The last two bands can be hidden**; the first two are pinned.
 
 ### Clicking a tile opens it
 
@@ -92,8 +126,8 @@ right-click over a library tile — see [Assets](07-assets.md).
 **Hide this section**, when a band's heading is hovered. Hidden sections are counted at the foot
 of the page — "1 section hidden" — with a **Show them again** button.
 
-Only **Your models** carries that button: **Where you left off** and **Tools** are pinned, and
-that is what keeps this screen from ever being empty.
+**Your models** and **What is moving** carry that button; **Where you left off** and **Tools** are
+pinned, and that is what keeps this screen from ever being empty.
 
 ### The left column
 

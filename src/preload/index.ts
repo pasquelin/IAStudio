@@ -306,6 +306,9 @@ const bridge: StudioBridge = {
     report: entry => ipcRenderer.invoke(CHANNELS.diagnosticsReport, entry),
     trace: entry => ipcRenderer.invoke(CHANNELS.diagnosticsTrace, entry),
   },
+  news: {
+    read: topic => ipcRenderer.invoke(CHANNELS.newsRead, topic),
+  },
   updates: {
     state: () => ipcRenderer.invoke(CHANNELS.updateState),
     install: () => ipcRenderer.invoke(CHANNELS.updateInstall),
