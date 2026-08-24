@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { assetUrl } from '@shared/domain/asset'
 import { Row } from '@/design/Row'
-import { PANEL_GROUP_LABEL } from '@/design/styles'
+import { FIELD_THUMBNAIL, PANEL_GROUP_LABEL } from '@/design/styles'
 import { Thumbnail } from '@/design/Thumbnail'
 import type { GenerationInput } from '@/generation/generationInputs'
 
@@ -30,7 +30,7 @@ export function GeneratorSources({ inputs }: GeneratorSourcesProps) {
             <Row
               media={
                 input.assetId ? (
-                  <Thumbnail url={assetUrl(input.assetId)} className="size-(--sc-control)" />
+                  <Thumbnail url={assetUrl(input.assetId)} className={FIELD_THUMBNAIL} />
                 ) : (
                   <span className="bg-elevated size-(--sc-control) rounded-(--radius-sc-sm)" />
                 )

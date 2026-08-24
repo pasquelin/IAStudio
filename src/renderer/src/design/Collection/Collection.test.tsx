@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -32,6 +33,89 @@ function renderCollection(
 }
 
 describe('Collection', () => {
+  describe('a row that opens', () => {
+    /** What the shelf does with a picked asset: it opens under its own line, inside the list. */
+    it('draws its detail under the row the chevron was pressed on', async () => {
+      function Opening() {
+        const [open, setOpen] = useState<string | null>(null)
+        return (
+          <Collection
+            label="Rows"
+            items={rows(3)}
+            state={{ ...DEFAULT_COLLECTION_STATE, view: 'list' }}
+            renderRow={item => <span>{item.name}</span>}
+            onSelect={() => {}}
+            expandedId={open}
+            onToggleRow={item => setOpen(current => (current === item.id ? null : item.id))}
+            renderRowDetail={item => <p>about {item.name}</p>}
+          />
+        )
+      }
+
+      render(<Opening />)
+      expect(screen.queryByText('about Row 1')).not.toBeInTheDocument()
+
+      const cell = screen.getByText('Row 1').closest('[data-cell]')
+      const chevron = cell?.querySelector('[data-chevron]')
+      expect(chevron).not.toBeNull()
+      fireEvent.pointerDown(chevron as Element)
+
+      expect(await screen.findByText('about Row 1')).toBeInTheDocument()
+      // One at a time, and the others say nothing.
+      expect(screen.queryByText('about Row 0')).not.toBeInTheDocument()
+    })
+
+    /**
+     * 🛑 The three gestures a chevron must swallow, and they belong to two different hosts: this
+     * list selects on CLICK and opens the row on DOUBLE-CLICK, where `Tree` selects on pointer
+     * down. Reading a row must not collapse a selection of five onto it.
+     */
+    it('picks nothing and opens nothing when the twist itself is pressed', async () => {
+      const onSelect = vi.fn()
+      const onActivate = vi.fn()
+      renderCollection(
+        rows(3),
+        { view: 'list' },
+        {
+          onSelect,
+          onActivate,
+          renderRowDetail: item => <p>about {item.name}</p>,
+          expandedId: null,
+        },
+      )
+
+      const chevron = screen
+        .getByText('Row 1')
+        .closest('[data-cell]')
+        ?.querySelector('[data-chevron]')
+      await userEvent.dblClick(chevron as Element)
+
+      expect(onSelect).not.toHaveBeenCalled()
+      expect(onActivate).not.toHaveBeenCalled()
+    })
+
+    /** A chevron on a line that opens onto nothing is a promise the list cannot keep. */
+    it('draws no twist on a row that answers no to `canOpen`', () => {
+      renderCollection(
+        rows(3),
+        { view: 'list' },
+        {
+          onSelect: () => {},
+          renderRowDetail: item => <p>about {item.name}</p>,
+          canOpen: item => item.id !== 'row_1',
+        },
+      )
+
+      const twisted = screen.getAllByText(/^Row \d+$/).map(name => {
+        const cell = name.closest('[data-cell]')
+        expect(cell).not.toBeNull()
+        return cell?.querySelector('[data-chevron] svg') !== null
+      })
+
+      expect(twisted).toEqual([true, false, true])
+    })
+  })
+
   it('renders a window over the items rather than all of them', () => {
     renderCollection(rows(2000))
 

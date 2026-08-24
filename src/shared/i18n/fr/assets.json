@@ -1,6 +1,6 @@
 {
   "assets": {
-    "details": "Détail de la sélection",
+    "details": "Détail de la ligne",
     "none": "Aucun asset. Générez quelque chose pour commencer.",
     "noneOfKind": "Aucun asset de ce type. Changez le filtre Type pour voir le reste du projet.",
     "search": "Rechercher…",

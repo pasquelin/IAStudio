@@ -5,7 +5,7 @@ import { FieldActions } from './FieldActions'
 import { FormField } from './FormField'
 import { PropertyLabel } from './PropertyLabel'
 import { fieldHandle } from './scHandle'
-import { CONTROL, FIELD_ROW, NATIVE_SELECT } from './styles'
+import { CONTROL, FIELD, FIELD_ROW, NATIVE_SELECT } from './styles'
 import { UiIcon } from './UiIcon'
 
 export type SelectOption<V extends string> = {
@@ -103,7 +103,13 @@ export function SelectField<V extends string>({
       className={cn(
         layout === 'bar'
           ? cn(CONTROL, 'w-full cursor-pointer appearance-none border-none pr-6 pl-2')
-          : NATIVE_SELECT,
+          : // `stacked` is a FORM field — its name above it, the control at full width — so it
+            // wears what the fields around it wear. `NATIVE_SELECT` is the BAR language: no
+            // border, wider corner, and it read as the one control of the generation panel that
+            // had strayed in from a toolbar.
+            layout === 'stacked'
+            ? FIELD
+            : NATIVE_SELECT,
         'min-w-0 flex-1',
         // The unset entry reads quieter than a value, which is how a filter bar shows at a
         // glance which of its facets are actually filtering.

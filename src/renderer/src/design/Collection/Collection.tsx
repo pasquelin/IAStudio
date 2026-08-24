@@ -1,5 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import type { DragLike } from '@/helpers/drag'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
@@ -8,6 +8,7 @@ import { useGrid } from '@/hooks/useGrid'
 import { useReachEnd } from '@/hooks/useReachEnd'
 import { useRemeasure } from '@/hooks/useRemeasure'
 import { useRowHeight, type RowHeight } from '@/hooks/useRowHeight'
+import { RowChevron } from '../RowChevron'
 import { rowDrag } from '../rowDrag'
 import { CollectionCell } from './CollectionCell'
 import { focusVirtualCell, GAP, PREFETCH_ROWS } from '../virtual'
@@ -23,7 +24,11 @@ const ROW_GAP = 4
  * the virtualizer sizes to its content — and each of them is a place a user right-clicks.
  */
 function onBlank(event: { target: EventTarget | null }): boolean {
-  return event.target instanceof Element && event.target.closest('[data-cell]') === null
+  if (!(event.target instanceof Element)) return false
+  // The detail of an open row is drawn BESIDE its cell, so `[data-cell]` alone read a press
+  // inside it as a press on the empty area — and the callers that clear the selection there,
+  // raise the root menu or take a foreign drop would all have answered it.
+  return event.target.closest('[data-cell],[data-row-detail]') === null
 }
 
 export type CollectionProps<T extends { id: string }> = {
@@ -93,6 +98,23 @@ export type CollectionProps<T extends { id: string }> = {
    * tooltip is the only thing on screen that says WHY the row is refused.
    */
   isDisabled?: (item: T) => boolean
+  /**
+   * What a row opens onto, drawn UNDER it and inside the list — the shelf reads the asset it has
+   * picked out this way. Passing it puts a chevron in front of every row and makes the list
+   * MEASURE its rows instead of holding them all to one gauge.
+   *
+   * List view only: a grid has no room under a card, and cards are square by construction.
+   */
+  renderRowDetail?: (item: T) => ReactNode
+  /** Which row is open, or `null`. One at a time — two open rows is a panel one scrolls twice. */
+  expandedId?: string | null
+  /**
+   * Which rows have anything to open. A row that answers `false` keeps the column and draws no
+   * twist in it: a chevron on a line that opens onto nothing is a promise the list cannot keep.
+   */
+  canOpen?: (item: T) => boolean
+  /** The chevron was pressed. The caller holds `expandedId`, as it holds `selectedIds`. */
+  onToggleRow?: (item: T) => void
   /** Shown in place of the items — the caller decides whether it means empty or unmatched. */
   empty?: ReactNode
   footer?: ReactNode
@@ -158,6 +180,10 @@ export function Collection<T extends { id: string }>({
   onReachEnd,
   onVisible,
   isDisabled,
+  renderRowDetail,
+  expandedId,
+  canOpen,
+  onToggleRow,
   empty,
   footer,
   rowHeight = 'control',
@@ -189,9 +215,14 @@ export function Collection<T extends { id: string }>({
    */
   const size = grid ? fitting.columnWidth + GAP : rowPixels + ROW_GAP
 
+  // A grid has no room under a card, so the two never combine.
+  const openable = renderRowDetail !== undefined && !grid
+
   const virtualizer = useVirtualizer({
     count: rows,
     getScrollElement: () => scroller.current,
+    // The height of a CLOSED row: the answer where every row is one gauge tall, an estimate
+    // where a row can open and the element is measured instead.
     estimateSize: () => size,
     overscan: grid ? 2 : 8,
   })
@@ -312,24 +343,37 @@ export function Collection<T extends { id: string }>({
                 key={row.key}
                 // The virtualizer's row is geometry, not structure: a generic element between a
                 // `listbox` and its `option`s breaks the ownership ARIA requires.
+                //
+                // 🛑 Where a row opens, its detail is drawn HERE — beside the cell rather than
+                // inside it, an `option` being no place for a control. The listbox then owns one
+                // child that is not an option. Written down rather than hidden, and not measured
+                // against a screen reader.
                 role="presentation"
+                data-index={row.index}
+                // Measured only where a row can open: elsewhere the gauge is the answer, and a
+                // measurer would read the DOM back on every frame for nothing.
+                ref={openable ? virtualizer.measureElement : undefined}
                 style={{
                   transform: `translateY(${row.start}px)`,
-                  height: row.size,
+                  // Left to the content where a row can open — a stated height is exactly what
+                  // the measurer would read back, and every row would stay one gauge tall.
+                  ...(openable ? {} : { height: row.size }),
                   ...(grid
                     ? { gap: GAP, gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
                     : { paddingBottom: ROW_GAP }),
                 }}
                 className={cn(
                   'absolute inset-x-0 top-0 box-border',
-                  grid ? 'grid items-start' : 'flex',
+                  grid ? 'grid items-start' : openable ? 'flex flex-col' : 'flex',
                 )}
               >
                 {slice.map((item, column) => {
                   const index = row.index * columns + column
-                  return (
+                  const open = openable && item.id === expandedId && (canOpen?.(item) ?? true)
+                  const cell = (
                     <CollectionCell
                       key={item.id}
+                      expanded={openable && (canOpen?.(item) ?? true) ? open : undefined}
                       index={index}
                       selected={selected.has(item.id)}
                       disabled={isDisabled?.(item) === true}
@@ -360,8 +404,27 @@ export function Collection<T extends { id: string }>({
                       onContextMenu={onContextMenu ? () => onContextMenu(item) : undefined}
                       onArrow={event => onCellKeyDown(index, event)}
                     >
+                      {openable && (
+                        <RowChevron
+                          expandable={canOpen?.(item) ?? true}
+                          expanded={open}
+                          onToggle={() => onToggleRow?.(item)}
+                        />
+                      )}
                       {card ? card(item) : renderRow?.(item)}
                     </CollectionCell>
+                  )
+
+                  if (!openable) return cell
+
+                  return (
+                    <Fragment key={item.id}>
+                      {/* The row keeps the gauge; only what opens under it is free to be tall. */}
+                      <div style={{ height: rowPixels }} className="flex shrink-0">
+                        {cell}
+                      </div>
+                      {open && <div data-row-detail>{renderRowDetail?.(item)}</div>}
+                    </Fragment>
                   )
                 })}
               </div>

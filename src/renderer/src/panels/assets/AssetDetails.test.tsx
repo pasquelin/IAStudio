@@ -13,6 +13,7 @@ import { useLayouts } from '@/stores/layouts'
 import { useSelection } from '@/stores/selection'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { arrangementOf, useTools } from '@/stores/tools'
+import type { AssetRowModel } from './rows'
 import { AssetDetails } from './AssetDetails'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
@@ -33,7 +34,9 @@ const job: Job = jobOf({
   assetIds: ['asset-1'],
 })
 
-describe('what the shelf has picked, read out under the shelf', () => {
+const localRow = (one: Asset): AssetRowModel => ({ id: one.id, from: 'local', asset: one })
+
+describe('what a row of the shelf opens onto', () => {
   beforeEach(() => {
     useLayouts.setState({ activeWorkspace: 'image', home: false })
     useSelection.setState({ selection: { kind: 'none' } })
@@ -43,55 +46,41 @@ describe('what the shelf has picked, read out under the shelf', () => {
   })
 
   /**
-   * Nothing rather than an empty state, and it is the whole reason this lives under the list
-   * instead of in the inspector: a placeholder here would take height from the shelf on every
-   * project where nothing is picked.
+   * A library line has no file on this side and a running job has no asset yet: neither has any
+   * of this to say, and the shelf draws the chevron on nothing rather than opening onto a blank.
    */
-  it('draws nothing at all while nothing is picked', () => {
-    const { container } = render(<AssetDetails />)
+  it('draws nothing at all for a row the catalogue does not hold', () => {
+    const { container } = render(
+      <AssetDetails row={{ id: 'remote-1', from: 'remote', asset: { id: 'remote-1' } as never }} />,
+    )
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('reads out the asset that was selected', () => {
-    useSelection.getState().selectAssets(['asset-1'])
-    render(<AssetDetails />)
+  it('reads the asset out', () => {
+    render(<AssetDetails row={localRow(asset())} />)
 
     expect(screen.getByText('pad.wav')).toBeInTheDocument()
     expect(screen.getByText('Audio')).toBeInTheDocument()
   })
 
-  it('summarises a multiple selection rather than detailing the first of it', () => {
-    useAssets.setState({ items: [asset(), asset({ id: 'asset-2', name: 'pad.wav' })] })
-    useSelection.getState().selectAssets(['asset-1', 'asset-2'])
-    render(<AssetDetails />)
-
-    expect(screen.getByText('2')).toBeInTheDocument()
-    expect(screen.queryByText('pad.wav')).not.toBeInTheDocument()
-  })
-
   it('shows the prompt behind a generated asset, whole', () => {
-    useAssets.setState({ items: [asset({ jobId: 'job-1' })] })
     useJobs.setState({ jobs: [job], bodies: { 'job-1': { prompt: 'a very soft pad' } } })
-    useSelection.getState().selectAssets(['asset-1'])
-    render(<AssetDetails />)
+    render(<AssetDetails row={localRow(asset({ jobId: 'job-1' }))} />)
 
     expect(screen.getByText('a very soft pad')).toBeInTheDocument()
     expect(screen.getByText('ElevenLabs Music v2')).toBeInTheDocument()
   })
 
   it('shows no generation block for an imported file', () => {
-    useSelection.getState().selectAssets(['asset-1'])
-    render(<AssetDetails />)
+    render(<AssetDetails row={localRow(asset())} />)
 
     expect(screen.queryByText('Génération')).not.toBeInTheDocument()
   })
 
   it('arms the generator with the parameters behind the asset, and brings it up', async () => {
-    useAssets.setState({ items: [asset({ jobId: 'job-1' })] })
     useJobs.setState({ jobs: [job], bodies: { 'job-1': { prompt: 'x', guidance: 7 } } })
-    useSelection.getState().selectAssets(['asset-1'])
     useTools.setState({ arrangements: arrangedFor('image', { open: {} }) })
-    render(<AssetDetails />)
+    render(<AssetDetails row={localRow(asset({ jobId: 'job-1' }))} />)
 
     await userEvent.click(screen.getByRole('button', { name: /Régénérer/ }))
 

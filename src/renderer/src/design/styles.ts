@@ -304,16 +304,11 @@ export const FILLED_ROW_HEIGHT = 44
 export const PANEL_SCROLL = 'flex min-h-0 flex-1 flex-col overflow-y-auto pr-2'
 
 /**
- * What a panel says about the row it has picked, drawn UNDER the list it was picked in. Half the
- * panel at most and scrolling on its own: a detail is several folded sections tall, and left
- * unbounded it pushed the list that raised it off the bottom of the dock.
+ * What a row of a list opens onto, drawn UNDER it and inside the list. Indented past the column
+ * the chevron stands in, so what a row says lines up with its own name rather than with the edge
+ * of the panel — the reading a tree gives its children.
  */
-export const PANEL_DETAIL = cn(
-  // 🛑 NOT `PANEL_SCROLL`, which carries `flex-1`: growing, this splits the panel evenly with the
-  // list above it and the cap below never binds. `flex-none` is what sizes it to its content.
-  'flex flex-none flex-col overflow-y-auto',
-  'border-border max-h-1/2 border-t py-1 pr-2 pl-1',
-)
+export const ROW_DETAIL = 'flex flex-col pb-1 pl-4'
 
 /**
  * The stacked box a panel puts ABOVE what it acts on — a bar of filters, a message being written.
@@ -344,6 +339,14 @@ export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
  * two of them with the same sentence explaining why.
  */
 export const FIELD_THUMBNAIL = 'size-(--sc-control)'
+
+/**
+ * The picture of a row that carries a NAME AND A LINE UNDER IT — a model, a chosen model, a
+ * candidate in the settings. Taller than `FIELD_THUMBNAIL` because the row itself is, and a
+ * gauge rather than the `size-8` and `size-10` five sites had reached for: a pixel is right at
+ * one density and wrong at the other.
+ */
+export const ROW_THUMBNAIL = 'size-(--sc-row-stacked)'
 
 /**
  * One property row of an inspector: a label of fixed width, then the control it names.

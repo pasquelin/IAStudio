@@ -1,4 +1,3 @@
-import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
@@ -8,8 +7,8 @@ import { isTyping } from '@/helpers/typing'
 import { useRemeasure } from '@/hooks/useRemeasure'
 import { useRowHeight } from '@/hooks/useRowHeight'
 import { rowDrag } from './rowDrag'
+import { RowChevron } from './RowChevron'
 import { ROW_LINE, rowSkin } from './styles'
-import { UiIcon } from './UiIcon'
 import { focusVirtualCell } from './virtual'
 
 export type TreeNode = { id: string; parentId: string | null }
@@ -550,22 +549,11 @@ export function Tree<T extends TreeNode>({
             Not a control: the row carries `aria-expanded` and the arrows already toggle it. Named
             because it has no other handle, being `aria-hidden` — three suites used to reach it as
             the row's `firstChild`, a claim about the markup around it rather than about it. */}
-        <span
-          aria-hidden="true"
-          data-chevron
-          className="flex w-3 shrink-0 justify-center"
-          onPointerDown={event => {
-            if (ghost || !row.hasChildren) return
-            // The row selects on pointer down, which fires before click: stopping the click
-            // alone would still have let the chevron steal the selection.
-            event.stopPropagation()
-            onToggle(row.node.id)
-          }}
-        >
-          {!ghost && row.hasChildren && (
-            <UiIcon path={row.expanded ? mdiChevronDown : mdiChevronRight} size={12} />
-          )}
-        </span>
+        <RowChevron
+          expandable={!ghost && row.hasChildren}
+          expanded={row.expanded}
+          onToggle={() => onToggle(row.node.id)}
+        />
         {renderRow(row)}
       </div>
       {renderTrailing && (

@@ -227,9 +227,8 @@ beforeEach(() => {
 /**
  * The listing itself — the tree, or the grid when the panel is showing one.
  *
- * Scoped rather than read off `screen`: the panel reads the file it has picked out UNDER the
- * listing (`FileDetails`), so the name of a picked row is on screen twice and a plain
- * `getByText` on it finds both.
+ * Scoped rather than read off `screen`: a name a row shows can appear elsewhere in the panel,
+ * and a plain `getByText` on it then finds both.
  */
 async function listing(): Promise<HTMLElement> {
   return waitFor(() => {
