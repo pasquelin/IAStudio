@@ -9,9 +9,11 @@ import {
 import { invoke, resetHandlers } from '@main/ipc/testHarness'
 import { registerProviderHandlers, type ProviderHandlerDeps } from './handlers'
 import type { AssetUploader } from './uploader'
+import type { Job } from '@shared/domain/job'
 import type { JobManager } from './jobManager'
 import type { ModelRegistry } from './modelRegistry'
 import type { PromptAssist } from './promptAssist'
+import type { PromptContext } from './promptContext'
 import type { CostEstimator } from './cost'
 import type { UsageReader } from './usage'
 
@@ -66,6 +68,9 @@ const usage = reader()
 
 const estimateCost: CostEstimator = () => Promise.resolve(null)
 
+/** Adds nothing unless a case says otherwise: most generations carry no project context. */
+const promptContext: PromptContext = body => Promise.resolve({ body, authored: null })
+
 /** Every dependency stubbed, so a case names only the one it is about. */
 function register(overrides: Partial<ProviderHandlerDeps> = {}): void {
   registerProviderHandlers({
@@ -76,6 +81,7 @@ function register(overrides: Partial<ProviderHandlerDeps> = {}): void {
     usage,
     plan: { access: () => Promise.resolve(null) },
     estimateCost,
+    promptContext,
     ...overrides,
   })
 }
@@ -323,6 +329,45 @@ describe('scenario handlers', () => {
         invoke(CHANNELS.providerEstimateCost, target, { prompt: 'a rock' }),
       ).resolves.toEqual({ creativeUnits: 12 })
       expect(estimate).toHaveBeenCalledWith(target, { prompt: 'a rock' })
+    })
+
+    /**
+     * A dry run VALIDATES the body it is handed, so a figure quoted on a shorter prompt than the
+     * one that will be sent is a figure for a call nobody is going to make. Both channels go
+     * through the same `promptContext`, which is the whole reason it sits in this file.
+     */
+    it('prices the body the generation would send, context included', async () => {
+      const estimate = vi.fn(() => Promise.resolve({ creativeUnits: 12 }))
+      const lengthened: PromptContext = body =>
+        Promise.resolve({
+          body: { ...body, prompt: `${String(body.prompt)}\n\nWorld: A forest` },
+          authored: {
+            written: String(body.prompt),
+            sent: `${String(body.prompt)}\n\nWorld: A forest`,
+          },
+        })
+      const submit = vi.fn((): Job => ({
+        id: 'job_1',
+        targetId: 'model_flux',
+        label: 'Flux',
+        status: 'queued',
+        progress: 0,
+        createdAt: '2026-08-24T10:00:00.000Z',
+        assetIds: [],
+      }))
+      register({ estimateCost: estimate, promptContext: lengthened, jobs: { ...jobs, submit } })
+
+      const target = { id: 'model_flux' }
+      await invoke(CHANNELS.providerEstimateCost, target, { prompt: 'a rock' })
+      await invoke(CHANNELS.providerGenerate, 'model_flux', { prompt: 'a rock' })
+
+      expect(estimate).toHaveBeenCalledWith(target, { prompt: 'a rock\n\nWorld: A forest' })
+      expect(submit).toHaveBeenCalledWith(
+        target,
+        expect.any(String),
+        { prompt: 'a rock\n\nWorld: A forest' },
+        { written: 'a rock', sent: 'a rock\n\nWorld: A forest' },
+      )
     })
 
     it('refuses a malformed request before it reaches the API', async () => {

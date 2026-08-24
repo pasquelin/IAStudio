@@ -2,6 +2,7 @@ import { mdiCreationOutline } from '@mdi/js'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
+import type { ContextUse } from '@shared/domain/projectContext'
 import { useDescriptor } from '@/hooks/useDescriptor'
 import { useGenerationContext } from '@/hooks/useGenerationContext'
 import { useModelForCapability } from '@/hooks/useModelForCapability'
@@ -30,6 +31,7 @@ import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { NoProject } from '@/panels/shared/NoProject'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
+import { GeneratorContext } from './Generator/GeneratorContext'
 import { GeneratorModel } from './Generator/GeneratorModel'
 import { GeneratorOperation } from './Generator/GeneratorOperation'
 import { GeneratorRun } from './Generator/GeneratorRun'
@@ -85,8 +87,17 @@ export function Generator() {
     () => ({ ...fillSourceFields(descriptor.data?.fields ?? [], inputs), ...prepared }),
     [descriptor.data, inputs, prepared],
   )
+  /**
+   * Whether this shot carries the project's context. Held here and not in `values`: it must never
+   * reach `buildBody`, which is what is sent to the API.
+   *
+   * Not reset after a run — « leave the context out of this shot » means without setting a card
+   * aside, not once.
+   */
+  const [contextUse, setContextUse] = useState<ContextUse>('apply')
+
   // Before the guards below return early: a hook cannot be called conditionally.
-  const cost = useCostEstimate(modelId, descriptor.data?.fields)
+  const cost = useCostEstimate(modelId, descriptor.data?.fields, contextUse)
   const plan = usePlanAccess()
   const refusalFor = usePlanRefusal(plan)
 
@@ -129,7 +140,7 @@ export function Generator() {
       const claim = claimOnSubmit(into)
       setSubmitting(true)
 
-      return submit({ id: modelId }, values)
+      return submit({ id: modelId }, values, contextUse)
         .then(job => {
           claim(job)
           setRunningId(job?.id ?? null)
@@ -137,7 +148,7 @@ export function Generator() {
         })
         .finally(() => setSubmitting(false))
     },
-    [modelId, submit],
+    [modelId, submit, contextUse],
   )
 
   useEffect(
@@ -241,6 +252,17 @@ export function Generator() {
         )}
 
         <GeneratorSources inputs={inputs} />
+        {/* Gated on the model as well as the descriptor: `prepare` ARMS what it is handed, and an
+            empty id would arm nothing under the name of nothing. */}
+        {descriptor.data && modelId !== null && (
+          <GeneratorContext
+            fields={descriptor.data.fields}
+            modelId={modelId}
+            role={capability.chosen}
+            use={contextUse}
+            onUse={setContextUse}
+          />
+        )}
         <GeneratorRun job={running} />
 
         {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}

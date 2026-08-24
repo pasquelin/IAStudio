@@ -72,6 +72,9 @@ My project/
 │
 ├── .project.json         the identity card — HIDDEN
 │
+├── .project-context.json  WHAT THE PROJECT IS ABOUT — HIDDEN
+│                        the world, the look, the forbidden — see below
+│
 ├── .ia-studio/            A BACKUP OF THE CATALOGUE — HIDDEN
 │   └── items.json          what a file cannot say about itself
 │
@@ -179,6 +182,110 @@ point it at and looks for this file inside.
 > writes the new shape beside them. **The old file is left where it is**: the folder is yours, you
 > may be syncing it, and an earlier version of the studio can still read it. Renaming the folder to
 > drop its extension is yours to do if you care to; the studio does not touch it.
+
+---
+
+## The project's context
+
+You are working on a medieval film. You ask for « a house » and you get a suburban bungalow. You
+rewrite « a medieval half-timbered cottage, in a misty forest, oil painting » — and you rewrite it
+on every generation, all day long.
+
+**The project's context is where that is written once.** It lives in the **Context** panel, in the
+lower half of the left column beside the Explorer and Git: all three speak about the open project —
+its tree, its history, and what it is about.
+
+The project menu in the title bar leads there too: **The project's context**, between the list of
+projects and the two ways to open another. It is the only one of its rows that acts on the open
+project rather than leaving it.
+
+### Cards, and nothing imposed
+
+A context is a list of **cards**. Each carries a title you choose, a text you write, and a switch.
+
+```
+PROJECT CONTEXT                       [+]
+──────────────────────────────────────────
+☑ World
+  Middle Ages, 13th century. Deep forest,
+  a kingdom in decline.
+
+☑ Art direction
+  Oil paint, chiaroscuro, ochres and muted
+  greens.
+
+☐ Character: Aldric
+  A scarred knight, tarnished armour.
+
+☑ Forbidden
+  Concrete, neon, modern clothing.
+──────────────────────────────────────────
+                412 / 600 characters sent
+```
+
+**No rubric is imposed**, and deliberately so: a novelist, an architect and a game studio describe a
+world in entirely different words. The `+` button offers three ways to begin — World, Art direction,
+Forbidden — but they are starting points only: rename them, rewrite them, delete them.
+
+**A card that is off keeps its text and adds nothing.** That is how a character is set aside for a
+series of images without being lost.
+
+### What is sent, and the counter
+
+The text of the cards that are on is added **under** your prompt, never in front of it:
+
+```
+a ruined house
+
+Project context —
+World: Middle Ages, 13th century. Deep forest, a kingdom in decline.
+Art direction: Oil paint, chiaroscuro, ochres and muted greens.
+Forbidden: Concrete, neon, modern clothing.
+```
+
+The counter at the foot of the panel says what is actually sent. **The bound is six hundred
+characters, and it comes from the models rather than from the studio**: many text encoders read only
+seventy-seven tokens — some three hundred characters — and drop the rest without a word. Past the
+bound, **the last cards are not sent**; they are dropped whole, never cut mid-sentence.
+
+### Reference images
+
+A card can carry up to **four images**: drop them onto it from the library.
+
+They do not travel on their own. The generation panel shows them with a **Use these references**
+button, and nothing moves without that click — a reference image changes which operation the model
+runs and what it costs, which is not something that should happen by surprise. The button does not
+appear for a model that takes no image.
+
+### The file, and what happens if it breaks
+
+The context is written to `.project-context.json`, **at the root of your project folder**. So it
+follows the project: copied to a disk, sent to someone, versioned in Git — it is there. It is
+readable JSON and you may edit it by hand.
+
+If the studio cannot read it, **it leaves it untouched** and the panel says which of the two things
+happened:
+
+| What the panel says | What to do |
+|---|---|
+| The file cannot be read | Repair it, or delete it to start over. Nothing was overwritten |
+| Written by a newer build | Update the studio |
+
+A project with no file has no context, and that is the ordinary case: nothing is created until you
+write a first card.
+
+### What the context touches, and what it does not
+
+**It applies to every generation** — images, video, 3D models, audio, textures, skies — as soon as
+the model has a description field. An upscale, a conversion, a mesh made from a picture have none:
+the context then does nothing, silently.
+
+**The assistant receives it too.** It knows which project it is working in without being told.
+
+**Your file names do not change.** A generated asset is named after the start of its prompt; it is
+**what you wrote** that names it, never the version the context lengthened. Likewise « Regenerate »
+reopens the form on your own prompt rather than on the lengthened one — otherwise the context would
+add to itself at every replay.
 
 ---
 

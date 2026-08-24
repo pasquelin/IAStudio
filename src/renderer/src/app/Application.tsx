@@ -15,6 +15,7 @@ import { useJobs } from '@/stores/jobs'
 import { useDictation } from '@/stores/dictation'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
+import { useProjectContext } from '@/stores/projectContext'
 import { useSettings } from '@/stores/settings'
 import { useActivity } from '@/stores/activity'
 import { useUpdates } from '@/stores/updates'
@@ -43,6 +44,7 @@ export function Application() {
   const connectUpdates = useUpdates(state => state.connect)
   const connectActivity = useActivity(state => state.connect)
   const connectAssets = useAssets(state => state.connect)
+  const connectProjectContext = useProjectContext(state => state.connect)
   const connectTasks = useTasks(state => state.connect)
 
   useEffect(() => {
@@ -57,6 +59,7 @@ export function Application() {
       connectUpdates(),
       connectActivity(),
       connectAssets(),
+      connectProjectContext(),
     ]
     return () => {
       for (const subscription of subscriptions) void subscription.then(stop => stop())
@@ -72,6 +75,7 @@ export function Application() {
     connectUpdates,
     connectActivity,
     connectAssets,
+    connectProjectContext,
   ])
 
   // Apart from the batch above, which awaits a promise each: this one hands back its unsubscribe

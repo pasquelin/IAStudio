@@ -6,6 +6,7 @@ import { definition as explorer } from '@/panels/explorer'
 import { definition as git } from '@/panels/git'
 import { definition as history } from '@/panels/history'
 import { definition as animations } from '@/panels/animations'
+import { definition as context } from '@/panels/context'
 import { definition as generator } from '@/panels/generator'
 import { definition as inspector } from '@/panels/inspector'
 import { definition as layers } from '@/panels/layers'
@@ -40,6 +41,7 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   projects,
   animations,
   text,
+  context,
 }
 
 const IDS = Object.keys(PANELS).filter(isKnownTool)

@@ -197,7 +197,7 @@ n’est parti.
 
 ## Le catalogue
 
-**Quatorze familles.** Le tableau ci-dessous dit ce que chacune couvre et ce qu’elle **engage** —
+**Quinze familles.** Le tableau ci-dessous dit ce que chacune couvre et ce qu’elle **engage** —
 c’est cette dernière colonne qui décide si le studio vous demandera quelque chose. Ni le nombre
 d’actions ni la liste exacte ne sont recopiés ici : ils bougent, et **c’est votre client qui les
 lit à la source** quand vous lui demandez ses outils, avec le détail de chaque paramètre.
@@ -215,6 +215,7 @@ lit à la source** quand vous lui demandez ses outils, avec le détail de chaque
 | **Le ciel et la matière** | régler l’image d’un ciel, y placer le soleil, choisir sous quelle projection le regarder, remplir les canaux d’une matière, la remapper, choisir la forme sur laquelle la juger et la rendre | rien |
 | **La 3D** | la scène : poser un objet, l’orienter, le tailler, l’éclairer, le peindre, l’habiller de cartes, écrire un texte, tracer un chemin, le rattacher, et la regarder — depuis une face, dans l’une des façons de dessiner, et en prendre une image. Le décor aussi : ce qui éclaire la scène, ce qui est derrière elle, sa brume, son sol, son rendu, et les décors tout prêts | rien |
 | **Les personnages** | rendre un modèle animable, ajouter ou retirer un os, lui donner une articulation du standard, poser une poignée qu’il atteint, lister ce qu’il peut jouer, poser un bloc d’animation et le régler, poser et retirer des clés, tenir les canaux, régler durée et cadence | rien |
+| **Le contexte du projet** | lire les fiches qui disent ce que le projet raconte, en ajouter une, en réécrire une, l’allumer ou l’éteindre, la supprimer | **des fichiers** pour réécrire le texte d’une fiche et pour en supprimer une — ajouter et éteindre ne détruisent rien |
 | **Le versionnage** | lire le dépôt et l’historique, indexer, enregistrer, brancher, remiser, trancher un conflit, rapatrier, publier | **des fichiers** pour ce qui réécrit la copie de travail, **un serveur** pour publier |
 | **Les réglages** | lire et changer les réglages, actionner les boutons de la fenêtre, lister les comptes, en activer un, en renommer un | **des fichiers** pour les deux boutons que rien ne reprend |
 | **Autour des documents** | la fenêtre, le compte, les mises à jour, les polices, les recettes épinglées, les styles de matière, les panneaux du studio, la dictée, et les trois fenêtres du menu Aide | **des fichiers** pour supprimer un style et pour installer une mise à jour |

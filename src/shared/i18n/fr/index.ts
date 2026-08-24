@@ -4,6 +4,7 @@ import assets from './assets.json'
 import assistant from './assistant.json'
 import commands from './commands.json'
 import common from './common.json'
+import context from './context.json'
 import environment from './environment.json'
 import fileInfo from './fileInfo.json'
 import git from './git.json'
@@ -32,6 +33,7 @@ export const fr = {
   ...assistant,
   ...commands,
   ...common,
+  ...context,
   ...environment,
   ...fileInfo,
   ...git,

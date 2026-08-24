@@ -888,6 +888,18 @@
       "settingsAction": {
         "title": "Press a settings button",
         "description": "Fires one of the buttons of the settings window — show a file, open the developer tools, copy the connection command, install the bridge, reset everything. The last two leave something behind and are asked about on screen."
+      },
+      "contextRead": {
+        "title": "Read the project’s context",
+        "description": "Answers the open project’s context cards, with their title, their text and whether they apply."
+      },
+      "contextWrite": {
+        "title": "Write a context card",
+        "description": "Adds a card to the project’s context, or replaces the title, the text or the state of the one an id names."
+      },
+      "contextRemove": {
+        "title": "Delete a context card",
+        "description": "Takes the card an id names out of the project’s context. Its text is lost."
       }
     },
     "refusals": {
@@ -1157,7 +1169,11 @@
       "metalnessMin": "Floor of the metalness the map is remapped into",
       "metalnessMax": "Ceiling of the metalness the map is remapped into",
       "previewShape": "Which shape to judge the material on",
-      "tilingPreview": "Repeat multiplier of the preview, 1, 2 or 4"
+      "tilingPreview": "Repeat multiplier of the preview, 1, 2 or 4",
+      "cardId": "Card id",
+      "cardTitle": "Card title",
+      "cardBody": "Card text",
+      "cardActive": "The card applies"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

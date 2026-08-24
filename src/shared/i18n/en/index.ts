@@ -5,6 +5,7 @@ import type * as frAssets from '../fr/assets.json'
 import type * as frAssistant from '../fr/assistant.json'
 import type * as frCommands from '../fr/commands.json'
 import type * as frCommon from '../fr/common.json'
+import type * as frContext from '../fr/context.json'
 import type * as frEnvironment from '../fr/environment.json'
 import type * as frFileInfo from '../fr/fileInfo.json'
 import type * as frGit from '../fr/git.json'
@@ -22,6 +23,7 @@ import assets from './assets.json'
 import assistant from './assistant.json'
 import commands from './commands.json'
 import common from './common.json'
+import context from './context.json'
 import environment from './environment.json'
 import fileInfo from './fileInfo.json'
 import git from './git.json'
@@ -54,6 +56,7 @@ export const en = {
   ...(assistant satisfies Section<keyof typeof frAssistant>),
   ...(commands satisfies Section<keyof typeof frCommands>),
   ...(common satisfies Section<keyof typeof frCommon>),
+  ...(context satisfies Section<keyof typeof frContext>),
   ...(environment satisfies Section<keyof typeof frEnvironment>),
   ...(fileInfo satisfies Section<keyof typeof frFileInfo>),
   ...(git satisfies Section<keyof typeof frGit>),

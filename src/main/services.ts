@@ -151,6 +151,9 @@ import {
   type FolderReader,
   type FolderWatch,
 } from './project/folder'
+import { composedContext } from '@shared/domain/projectContext'
+import { createProjectContext, type ProjectContextStore } from '@main/project/context'
+import { createPromptContext, type PromptContext } from '@main/provider/promptContext'
 import { createProjectStore, openFailureKey, orWhenGone, type ProjectStore } from './project/store'
 import { createReconciler, type Reconciler } from './project/reconcile'
 import { createActivityLog, type ActivityLog } from './project/activityLog'
@@ -207,6 +210,8 @@ export type Services = {
   plan: PlanReader
   /** What a run would cost, asked before it is run. See `cost.ts`. */
   estimateCost: CostEstimator
+  /** The open project's context, joined to what a generation sends. See `promptContext.ts`. */
+  promptContext: PromptContext
   /**
    * Runs the resolved ffmpeg with those arguments. Exposed because a render encodes too, and a
    * second resolver is how two flows start disagreeing about which binary this machine has.
@@ -296,6 +301,8 @@ export type Services = {
   folder: FolderReader
   /** The pass that puts the catalogue and the project folder back in agreement. */
   reconciler: Reconciler
+  /** The project's own context, read off the disk on every ask. */
+  context: ProjectContextStore
   /**
    * Everything that WRITES to the project folder, and the stack that takes a batch back.
    *
@@ -780,6 +787,9 @@ export function createServices(settings: SettingsStore): Services {
       await Promise.all([opened?.flush(), jobStore.flush()])
     },
   })
+
+  /** Nothing is cached: a few hundred bytes against a generation of several seconds. */
+  const context = createProjectContext({ rootOf: () => project.current()?.path ?? null })
 
   /**
    * Declared after the store because it reads it, and named before it because the store's own
@@ -1517,6 +1527,12 @@ export function createServices(settings: SettingsStore): Services {
     isLocalTarget,
   )
 
+  const promptContext = createPromptContext({
+    cards: async () => (await context.read()).cards,
+    fieldsOf: async targetId => (await models.describe(targetId)).fields,
+    log: message => log.warn('provider', message),
+  })
+
   const ownerScope = createOwnerScope(credentials.watch)
 
   /**
@@ -1787,6 +1803,9 @@ export function createServices(settings: SettingsStore): Services {
       })
     },
     cloudBrain: id => clouds[id]?.brain() ?? null,
+    // Read here rather than taken from the window: this is the one point every brain goes
+    // through, and a context a renderer could name is one it could forge.
+    contextOf: async () => composedContext((await context.read()).cards),
   })
 
   // To the studio window alone, and it says when there is none — which is the difference between
@@ -1961,6 +1980,8 @@ export function createServices(settings: SettingsStore): Services {
     folder,
     files,
     reconciler,
+    context,
+    promptContext,
     openInSystem: file => shell.openPath(file),
     askUser,
     pickMedia: () => pickMedia(language()),

@@ -1,9 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ACTION_REGISTRY, INSTRUCTION_MAX } from '@shared/domain/assistant'
+import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import type { Job } from '@shared/domain/job'
 import { createAssetText } from './assetText'
 import { createProviderBrain } from './brainProvider'
-import { actionCatalogue, instructionFor, preambleLength, recentHistory } from './instruction'
+import {
+  actionCatalogue,
+  instructionFor,
+  preambleLength,
+  recentHistory,
+  studioBriefing,
+} from './instruction'
 import { jsonIn, parseReply } from './reply'
 
 const succeeded = (assetIds: string[] = ['asset_reply'], cost = 0.75): Job => ({
@@ -57,18 +64,35 @@ describe('what the model is told', () => {
 
   /**
    * Stated as what is LEFT rather than as what the preamble costs, because that is the property
-   * that matters and the other one moved: the preamble was about a fifth of the budget with
-   * seven actions and passed a "under half" bound comfortably. It is 5 110 characters today —
-   * measured on 2026-08-15, three actions later — and most of that is `command.run` enumerating
-   * a hundred command ids, which is what makes it usable at all.
+   * that matters and the other one moved: 5 110 characters on 2026-08-15, **5 915 on 2026-08-25**,
+   * most of it `command.run` enumerating a hundred command ids — which is what makes it usable.
    *
-   * Four thousand characters is some seven hundred words, far past anything anyone says to an
-   * assistant, so the guarantee holds: a long paste is cut, the instructions always arrive
-   * whole. What this still catches is the thing it was written for — an action added with a
-   * florid description quietly eating the rest.
+   * The floor was four thousand and is two. At 5 915 the old one left EIGHTY-FIVE characters free,
+   * and a full project context costs 619 — so the context could not have been added at all, and
+   * the case below would have failed at 3 466. Two thousand is some three hundred words, still far
+   * past anything anyone says to an assistant, and the guarantee is unchanged: a long paste is
+   * cut, the instructions always arrive whole.
    */
   it('leaves the person’s own sentence room to be long', () => {
-    expect(INSTRUCTION_MAX - preambleLength([])).toBeGreaterThan(4_000)
+    expect(INSTRUCTION_MAX - preambleLength([])).toBeGreaterThan(2_000)
+  })
+
+  /** What the model is told about the project it is working in. */
+  it('tells the model what the project is about', () => {
+    expect(studioBriefing([], 'World: A medieval forest')).toContain('World: A medieval forest')
+  })
+
+  /**
+   * 🛑 The one that will rougir the day a verbose action joins the catalogue. The context is
+   * bounded before it gets here — `composedContext` caps it — so the sentence never pays for it.
+   *
+   * Measured on the context ALONE: `notReady` lengthens the briefing too, and nothing here bounds
+   * how many employments a machine can be short of at once.
+   */
+  it('leaves that room even under a project context of the full size', () => {
+    const full = 'x'.repeat(CONTEXT_COMPOSED_MAX)
+
+    expect(INSTRUCTION_MAX - preambleLength([], full)).toBeGreaterThan(2_000)
   })
 
   it('keeps the last turns, not the first', () => {

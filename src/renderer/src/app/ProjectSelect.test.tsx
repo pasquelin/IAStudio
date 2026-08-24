@@ -6,7 +6,10 @@ import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
+import { revealTool } from '@/helpers/revealPanel'
 import { ProjectSelect } from './ProjectSelect'
+
+vi.mock('@/helpers/revealPanel', () => ({ revealTool: vi.fn(() => true) }))
 
 const summer: Project = {
   path: '/projects/summer',
@@ -115,6 +118,27 @@ describe('ProjectSelect', () => {
     expect(screen.queryAllByRole('menuitemradio')).toEqual([])
     expect(screen.getByRole('menuitem', { name: 'Créer un projet' })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Ouvrir un projet' })).toBeInTheDocument()
+  })
+
+  /**
+   * The one row that acts on the project rather than switching away from it — and the only way in
+   * from the title bar, where the panel it opens is two clicks down a rail.
+   */
+  it('opens the context panel of the project in front', async () => {
+    given(summer)
+    render(<ProjectSelect />)
+    await openMenu('Summer')
+
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Contexte du projet' }))
+
+    expect(revealTool).toHaveBeenCalledWith('context')
+  })
+
+  it('offers no context to edit while no project is open', async () => {
+    render(<ProjectSelect />)
+    await openMenu('Aucun projet ouvert')
+
+    expect(screen.queryByRole('menuitem', { name: 'Contexte du projet' })).toBeNull()
   })
 
   it('makes a project in the folder the dialog picked', async () => {

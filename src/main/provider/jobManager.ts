@@ -13,6 +13,7 @@ import {
 } from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activityLog'
 import { apiFailureOf } from './client'
+import type { AuthoredPrompt } from '@shared/domain/projectContext'
 import type { PersistedJob } from './persistedJob'
 import { ORDINARY_REQUESTS_PER_WINDOW } from './rateLimiter'
 import { createRetry, DEFAULT_BACKOFF_BASE_MS } from './retry'
@@ -60,6 +61,11 @@ export type CollectedOutputs = {
 export type AssetCollector = (
   job: Job,
   remoteAssetIds: readonly string[],
+  /**
+   * What the person actually typed, when the project's context lengthened it. The API echoes back
+   * what it was SENT, and naming a file after that gives every asset of a project the same name.
+   */
+  authored: AuthoredPrompt | null,
 ) => Promise<CollectedOutputs>
 
 /**
@@ -129,7 +135,12 @@ export type JobManagerDeps = {
 }
 
 export type JobManager = {
-  submit: (target: JobTarget, label: string, body: Record<string, unknown>) => Job
+  submit: (
+    target: JobTarget,
+    label: string,
+    body: Record<string, unknown>,
+    authored?: AuthoredPrompt | null,
+  ) => Job
   /**
    * Runs a model the user did not ask to watch, and answers what became of it.
    *
@@ -270,6 +281,8 @@ type Entry = {
   /** Likewise: where the outputs go, decided when the job was asked for, not when it lands. */
   projectPath: string | null
   body: Record<string, unknown>
+  /** Kept past `body`, which is dropped on submit: the collector needs it when the outputs land. */
+  authored: AuthoredPrompt | null
   remoteId: string | null
   cancelled: boolean
   /**
@@ -372,6 +385,7 @@ export function createJobManager({
         accountId,
         projectPath,
         createdAt: entry.job.createdAt,
+        ...(entry.authored ? { authored: entry.authored } : {}),
       })
     }
 
@@ -555,7 +569,7 @@ export function createJobManager({
     // finished job with nothing behind it in the asset browser.
     let landed: CollectedOutputs
     try {
-      landed = await bound.collect(entry.job, remote.assetIds)
+      landed = await bound.collect(entry.job, remote.assetIds, entry.authored)
       entry.job.assetIds = landed.ids
     } catch {
       // Writing or indexing failed — a local problem, distinct from anything the API said, and
@@ -675,6 +689,7 @@ export function createJobManager({
     body: Record<string, unknown>,
     discreet: boolean,
     settledCallback: ((job: Job) => void) | null,
+    authored: AuthoredPrompt | null,
   ): Job => {
     const job: Job = {
       id: newId(),
@@ -696,6 +711,7 @@ export function createJobManager({
       accountId: active?.id ?? null,
       projectPath: projectPath(),
       body,
+      authored,
       remoteId: null,
       cancelled: false,
       done: false,
@@ -713,10 +729,11 @@ export function createJobManager({
   }
 
   return {
-    submit: (target, label, body) => enqueue(target, label, body, false, null),
+    submit: (target, label, body, authored) =>
+      enqueue(target, label, body, false, null, authored ?? null),
 
     run: (target, label, body) =>
-      new Promise<Job>(resolve => void enqueue(target, label, body, true, resolve)),
+      new Promise<Job>(resolve => void enqueue(target, label, body, true, resolve, null)),
 
     resume: stored => {
       let added = false
@@ -739,6 +756,7 @@ export function createJobManager({
           job,
           // Nothing discreet is ever written down, so nothing resumed can be one.
           discreet: false,
+          authored: remembered.authored ?? null,
           resumes: 0,
           settled: null,
           account: accounts.of(remembered.accountId),

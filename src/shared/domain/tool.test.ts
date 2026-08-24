@@ -120,9 +120,10 @@ describe('the home', () => {
     expect(served.map(placement => [placement.id, placement.zone, placement.slot])).toEqual([
       ['projects', 'left', 'primary'],
       ['explorer', 'left', 'secondary'],
-      // Declared LAST on purpose, and the order is what says so: the folder is what an unchosen
-      // half opens on, and the versions of that folder are what one goes to look at next.
+      // Declared after it on purpose, and the order is what says so: the folder is what an
+      // unchosen half opens on, and the versions of that folder are what one goes to look at next.
       ['git', 'left', 'secondary'],
+      ['context', 'left', 'secondary'],
       ['history', 'bottomRight', 'primary'],
     ])
   })
@@ -147,8 +148,9 @@ describe('the home', () => {
         .map(placement => placement.id)
 
     expect(inHalf('left', 'primary')).toEqual(['projects'])
-    // A rota of two: the open project read as a folder, and the same folder read as a history.
-    expect(inHalf('left', 'secondary')).toEqual(['explorer', 'git'])
+    // A rota of three, all about the open project: its folder, that folder's history, and the
+    // world what is made in it is set in.
+    expect(inHalf('left', 'secondary')).toEqual(['explorer', 'git', 'context'])
     expect(inHalf('right', 'primary')).toEqual([])
     expect(inHalf('right', 'secondary')).toEqual([])
     expect(inHalf('bottomRight', 'primary')).toEqual(['history'])
@@ -232,10 +234,11 @@ describe('the left column', () => {
         WORKSPACE_IDS.some(workspace => serves(placement, workspace)),
     )
 
-    // Two, and both read the PROJECT FOLDER — as a tree, and as a history of the same files.
-    // That is what keeps them one rota rather than a pile: whichever is in front, the half is
-    // still "the folder I am working in". A third reading of something else would not belong.
-    expect(lower.map(placement => placement.id)).toEqual(['explorer', 'git'])
+    // Three, and all three read the PROJECT — as a tree, as a history of the same files, and as
+    // the world they are made in. That is what keeps them one rota rather than a pile: whichever
+    // is in front, the half is still "the project I am working in". A reading of something else
+    // — a document, the account, the studio — would not belong.
+    expect(lower.map(placement => placement.id)).toEqual(['explorer', 'git', 'context'])
   })
 })
 

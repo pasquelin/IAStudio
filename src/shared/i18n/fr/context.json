@@ -1,0 +1,32 @@
+{
+  "context": {
+    "empty": "Ce projet n’a pas encore de contexte.",
+    "emptyHint": "Décrivez une fois l’univers, le style ou les contraintes du projet : chaque génération les portera sans que vous les réécriviez.",
+    "add": "Nouvelle fiche",
+    "addHint": "Ajouter une fiche au contexte du projet",
+    "remove": "Supprimer",
+    "removeHint": "Retirer cette fiche du contexte du projet",
+    "titlePlaceholder": "Sans titre",
+    "bodyPlaceholder": "Ce que cette fiche doit dire à chaque génération",
+    "activeHint": "Appliquer cette fiche aux générations",
+    "inactiveHint": "Mettre cette fiche de côté sans la supprimer",
+    "pinPictures": "Références",
+    "pinPicturesHint": "Déposer des images que cette fiche porte comme références",
+    "unpin": "Retirer cette référence",
+    "used": "{{used}} / {{max}} caractères envoyés",
+    "over": "Au-delà de la limite, les dernières fiches ne partent pas.",
+    "full": "Vingt-quatre fiches au maximum.",
+    "unreadable": "Le fichier de contexte de ce projet est illisible. Il n’a pas été touché : réparez-le, ou supprimez-le pour repartir de zéro.",
+    "tooNew": "Ce contexte a été écrit par une version plus récente du studio. Il n’a pas été touché : mettez le studio à jour pour l’ouvrir.",
+    "templates": "Partir d’un modèle",
+    "templateWorld": "Univers",
+    "templateWorldBody": "Où et quand cela se passe, et ce qu’il faut savoir du lieu.",
+    "templateLook": "Direction artistique",
+    "templateLookBody": "Le rendu, les matières, la lumière, la palette.",
+    "templateAvoid": "Interdits",
+    "templateAvoidBody": "Ce qui ne doit jamais apparaître.",
+    "templateBlank": "Fiche vierge",
+    "noProject": "Ouvrez un projet pour lui donner un contexte.",
+    "templateBlankHint": "Une fiche sans titre ni texte, à écrire de zéro"
+  }
+}

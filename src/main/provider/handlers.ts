@@ -6,11 +6,13 @@ import type { ModelRegistry } from './modelRegistry'
 import type { PlanReader } from './plan'
 import type { PromptAssist } from './promptAssist'
 import type { AssetUploader } from './uploader'
+import type { PromptContext } from './promptContext'
 import type { CostEstimator } from './cost'
 import type { UsageReader } from './usage'
 import {
   parseAssetName,
   parseBase64,
+  parseContextUse,
   parseGenerationBody,
   parseJobId,
   parseModelId,
@@ -34,6 +36,14 @@ export type ProviderHandlerDeps = {
   plan: PlanReader
   /** What a run would cost, asked before it is run. */
   estimateCost: CostEstimator
+  /**
+   * The open project's context, joined to what is about to be sent.
+   *
+   * Here rather than in the `JobManager`, and the queue is why: a job waits minutes before it
+   * runs, and a context edited in between would be added to a body somebody already read. It is
+   * also the one place the estimate and the generation share, so what is priced is what is sent.
+   */
+  promptContext: PromptContext
 }
 
 const reduced = reducedBy('provider')
@@ -46,6 +56,7 @@ export function registerProviderHandlers({
   usage,
   plan,
   estimateCost,
+  promptContext,
 }: ProviderHandlerDeps): void {
   handle(CHANNELS.providerUsageReport, (_event, period) =>
     reduced(() => usage.report(parseUsagePeriod(period))),
@@ -91,7 +102,7 @@ export function registerProviderHandlers({
   // Reduced like its neighbours: a throw from `parseGenerationBody` crossed the IPC raw, missing
   // the journal `recordFailuresTo` keeps — and the Generate button, which has no catch of its
   // own, then did nothing and said nothing.
-  handle(CHANNELS.providerGenerate, (_event, modelId, body) =>
+  handle(CHANNELS.providerGenerate, (_event, modelId, body, use) =>
     reduced(async () => {
       const id = parseModelId(modelId)
       const label = await models
@@ -99,14 +110,23 @@ export function registerProviderHandlers({
         .then(descriptor => descriptor.name)
         .catch(() => id)
 
-      return jobs.submit({ id }, label, parseGenerationBody(body))
+      const sent = await promptContext(parseGenerationBody(body), { id }, parseContextUse(use))
+
+      return jobs.submit({ id }, label, sent.body, sent.authored)
     }),
   )
 
   // What is priced is a target, exactly as what is submitted is. Where the figure sits in the
   // answer is `cost.ts`'s business, not this one's.
-  handle(CHANNELS.providerEstimateCost, (_event, target, body) =>
-    reduced(() => estimateCost(parseJobTarget(target), parseGenerationBody(body))),
+  // The SAME body the generation would send, context included: a dry run validates what it is
+  // given, so a price quoted on a shorter prompt is a price for a call nobody is going to make.
+  handle(CHANNELS.providerEstimateCost, (_event, target, body, use) =>
+    reduced(async () => {
+      const asked = parseJobTarget(target)
+      const sent = await promptContext(parseGenerationBody(body), asked, parseContextUse(use))
+
+      return estimateCost(asked, sent.body)
+    }),
   )
 
   handle(CHANNELS.providerUploadAsset, (_event, name, image) =>

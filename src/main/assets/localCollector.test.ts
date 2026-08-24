@@ -73,28 +73,28 @@ describe('filing a generation made on this machine', () => {
   it('hands the file the engine wrote to the project, by path', async () => {
     const held = harness()
 
-    expect(await held.collect(JOB, [])).toEqual({ ids: ['asset_1'], workspaces: ['image'] })
+    expect(await held.collect(JOB, [], null)).toEqual({ ids: ['asset_1'], workspaces: ['image'] })
     expect(held.written[0]).toMatchObject({ id: 'asset_1', type: 'image', jobId: 'job_1' })
     expect(held.sources).toEqual([PRODUCED.path])
   })
 
   it('names the asset after what was asked, not after the model that answered', async () => {
     const held = harness()
-    await held.collect(JOB, [])
+    await held.collect(JOB, [], null)
 
     expect(held.written[0]?.name).toContain('red cube')
   })
 
   it('keeps the extension the engine chose to write', async () => {
     const held = harness({ producedBy: () => ({ ...PRODUCED, path: '/tmp/out.webp' }) })
-    await held.collect(JOB, [])
+    await held.collect(JOB, [], null)
 
     expect(held.written[0]?.extension).toBe('webp')
   })
 
   it('drops the hand-off only once the file is in the project', async () => {
     const held = harness()
-    await held.collect(JOB, [])
+    await held.collect(JOB, [], null)
 
     expect(held.discarded).toEqual([PRODUCED.path])
   })
@@ -102,7 +102,7 @@ describe('filing a generation made on this machine', () => {
   it('keeps the asset when the hand-off could not be removed', async () => {
     const held = harness({ discard: () => Promise.reject(new Error('busy')) })
 
-    expect(await held.collect(JOB, [])).toEqual({ ids: ['asset_1'], workspaces: ['image'] })
+    expect(await held.collect(JOB, [], null)).toEqual({ ids: ['asset_1'], workspaces: ['image'] })
   })
 
   it("asks for the file under the runner's job id, not the studio's", async () => {
@@ -114,7 +114,7 @@ describe('filing a generation made on this machine', () => {
       },
     })
 
-    expect(await held.collect({ ...JOB, remoteId: 'local_abc' }, [])).toEqual({
+    expect(await held.collect({ ...JOB, remoteId: 'local_abc' }, [], null)).toEqual({
       ids: ['asset_1'],
       workspaces: ['image'],
     })
@@ -134,20 +134,20 @@ describe('filing a generation made on this machine', () => {
       producedBy: () => ({ ...PRODUCED, type, path: `/tmp/out.${type}` }),
     })
 
-    expect(await held.collect(JOB, [])).toEqual({ ids: ['asset_1'], workspaces: [workspace] })
+    expect(await held.collect(JOB, [], null)).toEqual({ ids: ['asset_1'], workspaces: [workspace] })
     expect(held.written[0]?.type).toBe(type)
   })
 
   it('files nothing for a job that produced no file', async () => {
     const held = harness({ producedBy: () => null })
 
-    expect(await held.collect(JOB, [])).toEqual({ ids: [], workspaces: [] })
+    expect(await held.collect(JOB, [], null)).toEqual({ ids: [], workspaces: [] })
     expect(held.written).toEqual([])
   })
 
   it('fails rather than reporting a job with nothing behind it', async () => {
     const held = harness({}, () => Promise.reject(new Error('gone')))
 
-    await expect(held.collect(JOB, [])).rejects.toThrow('gone')
+    await expect(held.collect(JOB, [], null)).rejects.toThrow('gone')
   })
 })

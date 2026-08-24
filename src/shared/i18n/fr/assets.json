@@ -235,7 +235,9 @@
     "switchHint": "Ouvrir un autre projet de cette machine, ou en créer un",
     "useHint": "Ferme le projet ouvert et ouvre celui-ci à sa place",
     "currentHint": "Ce projet est déjà ouvert",
-    "createHint": "Choisir un dossier sur le disque : tout ce que le studio produit y sera écrit"
+    "createHint": "Choisir un dossier sur le disque : tout ce que le studio produit y sera écrit",
+    "context": "Contexte du projet",
+    "contextHint": "Ouvrir le panneau où s’écrit ce que ce projet raconte"
   },
   "dictation": {
     "start": "Dicter",

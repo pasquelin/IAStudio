@@ -1,3 +1,5 @@
+import type { AuthoredPrompt } from '@shared/domain/projectContext'
+
 /**
  * What is kept of a job so that closing the studio does not lose it. The status and the progress
  * are deliberately absent — they are whatever the API says on the next poll, and a stale copy of
@@ -19,4 +21,10 @@ export type PersistedJob = {
   /** Where its outputs go. The collector writes into whichever project is open, not this one. */
   projectPath: string
   createdAt: string
+  /**
+   * What the person typed, when the project's context lengthened it. Written down although the
+   * body is not: without it a job resumed after a restart names its output after the SENT prompt,
+   * and every asset of a project comes back called the same thing.
+   */
+  authored?: AuthoredPrompt
 }

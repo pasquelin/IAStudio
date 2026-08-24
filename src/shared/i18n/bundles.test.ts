@@ -14,6 +14,7 @@ import {
   VIEWPORT_QUALITIES,
 } from '../domain/scene'
 import { CAPTURE_QUALITIES } from '../domain/sceneCapture'
+import { CONTEXT_TEMPLATES } from '../domain/projectContext'
 import { TOOL_PLACEMENTS } from '../domain/tool'
 import { ASSET_BADGES } from '../domain/asset'
 import { FILE_DOMAINS } from '../domain/fileRole'
@@ -1167,6 +1168,9 @@ const DYNAMIC_KEYS: readonly string[] = [
   ...TRACK_PROPERTIES.map(property => `animation.${property}`),
   ...HOME_SECTION_IDS.map(id => `home.sections.${id}`),
   ...[...new Set(TOOL_PLACEMENTS.map(placement => placement.id))].map(id => `panels.${id}`),
+  // The ways into a first context card, read off the list rather than off a literal: a model
+  // added without its two lines would offer the reader its own key as a menu row.
+  ...CONTEXT_TEMPLATES.flatMap(template => [template.titleKey, template.bodyKey]),
   // The six sides and the seven ways of drawing them. Composed on BOTH sides now — the 3D bar
   // offers them as modes, and the native View menu offers a row each — which is exactly why the
   // lists moved here: a menu is built in the main process, out of reach of the renderer's guard.

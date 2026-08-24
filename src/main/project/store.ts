@@ -1,7 +1,5 @@
-import { execFile as execFileCallback } from 'node:child_process'
 import type { Dir } from 'node:fs'
 import { mkdir, opendir, readFile } from 'node:fs/promises'
-import { promisify } from 'node:util'
 import { dirname, join } from 'node:path'
 import {
   CATALOG_FILE,
@@ -20,6 +18,7 @@ import { log } from '@main/log'
 import { exists, isMissing, writeAtomic, writeQueue } from '@main/persistence'
 import { CATALOGUE_CLOSED, type AsyncCatalog } from './catalogClient'
 import { applyJournal } from './fileJournal'
+import { hideFromExplorer } from './hideFromExplorer'
 import { parseManifest } from './validation'
 
 /** Thrown when a channel needing a project is reached before one is open. */
@@ -155,8 +154,6 @@ export type ProjectStore = {
   close: () => void
 }
 
-const execFile = promisify(execFileCallback)
-
 /**
  * Indented, because a project folder is meant to be opened by hand — and atomic, because this
  * is now written on every document saved rather than once at creation: a process that dies
@@ -251,24 +248,6 @@ async function surveyFolder(folder: string): Promise<FolderSurvey> {
   }
 
   return survey
-}
-
-/**
- * A leading dot hides on macOS and Linux and means nothing on Windows, which reads the
- * FILE_ATTRIBUTE_HIDDEN bit that Node does not expose. `attrib` is the only way to set it
- * without a native module, and it costs one short process per project rather than per file.
- *
- * Failures are swallowed on purpose: a manifest the Explorer happens to show is a cosmetic
- * problem, and refusing to open the project over it would be a real one.
- */
-async function hideFromExplorer(path: string): Promise<void> {
-  if (process.platform !== 'win32') return
-
-  try {
-    await execFile('attrib', ['+h', path])
-  } catch {
-    return
-  }
 }
 
 /** A manifest body, and whether it came from the name projects carried before the rename. */

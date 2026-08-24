@@ -44,6 +44,7 @@ import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { PlanAccess } from './domain/plan'
 import type { Project, RescanState } from './domain/project'
+import type { ContextCard, ContextState, ContextUse } from './domain/projectContext'
 import type {
   PromptStyle,
   PromptSuggestion,
@@ -130,6 +131,8 @@ export type Channels = {
   projectStopRescan: 'project:stop-rescan'
   projectRescanState: 'project:rescan-state'
   projectFileFacts: 'project:file-facts'
+  projectReadContext: 'project:read-context'
+  projectWriteContext: 'project:write-context'
 
   /**
    * Opens one file's information window, or reveals the one that path already has.
@@ -347,6 +350,8 @@ export const CHANNELS: Channels = {
   projectStopRescan: 'project:stop-rescan',
   projectRescanState: 'project:rescan-state',
   projectFileFacts: 'project:file-facts',
+  projectReadContext: 'project:read-context',
+  projectWriteContext: 'project:write-context',
 
   fileInfoOpen: 'window:file-info',
 
@@ -877,6 +882,7 @@ export const EVENTS = {
   projectFolderChanged: 'evt:project-folder-changed',
   filesChanged: 'evt:files-changed',
   projectRescan: 'evt:project-rescan',
+  projectContext: 'evt:project-context',
   assetsChanged: 'evt:assets-changed',
   settingsChanged: 'evt:settings-changed',
   accountsChanged: 'evt:accounts-changed',
@@ -1019,13 +1025,22 @@ export type StudioBridge = {
     translatePrompt: (draft: string) => Promise<PromptTranslation>
     /** Reads the style of the reference pictures, so a prompt can be written from it. */
     describeStyle: (images: readonly string[]) => Promise<PromptStyle>
-    generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
+    /**
+     * Queues a generation. `use` says whether the open project's context joins this one shot;
+     * ABSENT MEANS APPLY — the context is what the project already says, and a caller that lost
+     * the field must not silently drop it.
+     */
+    generate: (modelId: string, body: Record<string, unknown>, use?: ContextUse) => Promise<Job>
     /**
      * What running that exact form would cost, without running it. `null` when the API declines
      * to price it; a rejection when the call itself failed, which a caller may treat as no
      * figure.
      */
-    estimateCost: (target: JobTarget, body: Record<string, unknown>) => Promise<CostEstimate>
+    estimateCost: (
+      target: JobTarget,
+      body: Record<string, unknown>,
+      use?: ContextUse,
+    ) => Promise<CostEstimate>
     /** A picture, base64, up to 6 MB. Returns the id of the asset the API kept. */
     uploadAsset: (name: string, image: string) => Promise<string>
     cancelJob: (jobId: string) => Promise<void>
@@ -1126,6 +1141,20 @@ export type StudioBridge = {
      * open while the file it names was moved in the Finder.
      */
     fileFacts: (relative: string) => Promise<FileFacts | null>
+    /**
+     * The project's own context — the world every generation made in it is set in.
+     *
+     * Empty for a project that carries none, which is most of them. `trouble` says the file is
+     * there and this build will not touch it: repair it, or update the studio.
+     */
+    readContext: () => Promise<ContextState>
+    /**
+     * The whole list at once — one write, one truth back. Rejected while `trouble` is set, so a
+     * file nobody could read is never overwritten by a window that showed none of it.
+     */
+    writeContext: (cards: readonly ContextCard[]) => Promise<ContextState>
+    /** Fires for every window when any of them writes: two replicas of one file is one too many. */
+    onContextChanged: (callback: (state: ContextState) => void) => Unsubscribe
     /**
      * Writes an export INSIDE the open project, in a folder of its own named by the caller.
      *

@@ -24,6 +24,7 @@ import { MATERIAL_HANDLERS } from './materialHandlers'
 import { RIG_HANDLERS } from './rigHandlers'
 import { SCENE_HANDLERS } from './sceneHandlers'
 import { SEQUENCE_HANDLERS } from './sequenceHandlers'
+import { CONTEXT_HANDLERS } from './contextHandlers'
 import { SETTINGS_HANDLERS } from './settingsHandlers'
 import { SHELL_HANDLERS } from './shellHandlers'
 import { STATE_HANDLERS } from './stateHandlers'
@@ -49,6 +50,7 @@ const HANDLERS: ActionHandlers = {
   ...SCENE_HANDLERS,
   ...RIG_HANDLERS,
   ...GIT_HANDLERS,
+  ...CONTEXT_HANDLERS,
   ...SETTINGS_HANDLERS,
   ...SHELL_HANDLERS,
 }

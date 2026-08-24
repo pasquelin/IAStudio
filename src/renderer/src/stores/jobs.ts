@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Job, JobProgress, JobTarget } from '@shared/domain/job'
+import type { ContextUse } from '@shared/domain/projectContext'
 import { connectThroughBridge, getBridge } from '@/services/bridge'
 import { useAssets } from './assets'
 
@@ -14,8 +15,15 @@ type JobsState = {
 
   /** Loads the current jobs and follows their progress. Returns the unsubscribe function. */
   connect: () => Promise<() => void>
-  /** Runs what the target names, exactly as the main process does. */
-  submit: (target: JobTarget, body: Record<string, unknown>) => Promise<Job | null>
+  /**
+   * Runs what the target names, exactly as the main process does. `use` says whether the
+   * project's context joins this shot; absent applies it.
+   */
+  submit: (
+    target: JobTarget,
+    body: Record<string, unknown>,
+    use?: ContextUse,
+  ) => Promise<Job | null>
   cancel: (jobId: string) => Promise<void>
   apply: (progress: JobProgress) => void
 }
@@ -96,11 +104,11 @@ export const useJobs = create<JobsState>()((set, get) => ({
     }))
   },
 
-  submit: async (target, body) => {
+  submit: async (target, body, use) => {
     const bridge = getBridge()
     if (!bridge) return null
 
-    const job = await bridge.provider.generate(target.id, body)
+    const job = await bridge.provider.generate(target.id, body, use)
 
     set(state => ({ jobs: [job, ...state.jobs], bodies: { ...state.bodies, [job.id]: body } }))
     return job

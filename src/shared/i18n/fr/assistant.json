@@ -888,6 +888,18 @@
       "settingsAction": {
         "title": "Actionner un bouton des réglages",
         "description": "Déclenche l’un des boutons de la fenêtre des réglages — révéler un fichier, ouvrir les outils de développement, copier la commande de connexion, installer la passerelle, tout remettre à zéro. Les deux derniers laissent quelque chose derrière eux et sont demandés à l’écran."
+      },
+      "contextRead": {
+        "title": "Lire le contexte du projet",
+        "description": "Rend les fiches de contexte du projet ouvert, avec leur titre, leur texte et si elles s’appliquent."
+      },
+      "contextWrite": {
+        "title": "Écrire une fiche de contexte",
+        "description": "Ajoute une fiche au contexte du projet, ou remplace le titre, le texte ou l’état de celle qu’un identifiant nomme."
+      },
+      "contextRemove": {
+        "title": "Supprimer une fiche de contexte",
+        "description": "Retire du contexte du projet la fiche qu’un identifiant nomme. Son texte est perdu."
       }
     },
     "refusals": {
@@ -1157,7 +1169,11 @@
       "metalnessMin": "Plancher de l’aspect métallique que la carte remappe",
       "metalnessMax": "Plafond de l’aspect métallique que la carte remappe",
       "previewShape": "Forme sur laquelle juger la matière",
-      "tilingPreview": "Multiplicateur de répétition de l’aperçu, 1, 2 ou 4"
+      "tilingPreview": "Multiplicateur de répétition de l’aperçu, 1, 2 ou 4",
+      "cardId": "Identifiant de la fiche",
+      "cardTitle": "Titre de la fiche",
+      "cardBody": "Texte de la fiche",
+      "cardActive": "La fiche s’applique"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

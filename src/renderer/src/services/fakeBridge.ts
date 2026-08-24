@@ -3,6 +3,7 @@ import type { CloseChoice, DocumentWrite } from '@shared/domain/document'
 import { emptyAssetCounts } from '@shared/domain/asset'
 import type { FileOutcome } from '@shared/domain/fileOp'
 import { IDLE_RESCAN } from '@shared/domain/project'
+import { noContext } from '@shared/domain/projectContext'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { DEFAULT_LANGUAGE } from '@shared/i18n/languages'
 import type { AiOverview } from '@shared/domain/aiOverview'
@@ -93,6 +94,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       // Nothing on disk unless a suite says otherwise, which is what the window under test then
       // reads as « this entry is no longer there » rather than as a blank pane.
       fileFacts: () => Promise.resolve(null),
+      // No cards unless a suite says otherwise: a project with no context is the ordinary one.
+      readContext: () => Promise.resolve(noContext()),
+      writeContext: () => Promise.resolve(noContext()),
+      onContextChanged: noSubscription,
       exportInto: () => Promise.resolve<string | null>(null),
       revealFile: () => Promise.resolve(),
       revealFolder: () => Promise.resolve(true),

@@ -236,6 +236,32 @@ Ni l’un ni l’autre n’est une panne, et rien n’est dépensé.
 
 ---
 
+## Le contexte du projet, dans le formulaire
+
+Si le projet ouvert porte un contexte, le panneau le montre au-dessus du formulaire, tel qu'il
+partira, avec une case cochée :
+
+```
+☑ Appliquer le contexte du projet
+┌────────────────────────────────────────┐
+│ Project context —                      │
+│ Univers: Moyen Âge, XIIIᵉ siècle…      │
+│ Direction artistique: peinture à…      │
+└────────────────────────────────────────┘
+```
+
+**Décocher la case laisse le contexte de côté pour ce tir-là**, sans aller éteindre une fiche dans
+le panneau Contexte. La case reste comme vous l'avez laissée tant que le panneau est ouvert.
+
+Le prix affiché sous le bouton **Générer** tient compte du contexte : ce qui est chiffré est ce qui
+sera envoyé.
+
+Le bloc n'apparaît pas quand il n'y aurait rien à dire — aucune fiche allumée, ou un modèle sans
+champ de description. Ce que le contexte contient, comment il s'écrit et où il est rangé sont au
+chapitre [Projets](04-projets.md#le-contexte-du-projet).
+
+---
+
 ## Les réglages qu’on retrouve souvent
 
 Ils ne sont pas les mêmes partout, mais ces noms reviennent :

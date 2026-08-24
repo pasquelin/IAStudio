@@ -31,7 +31,10 @@
     "landingHint": "Un document est ouvert. Le résultat peut s’y ajouter, ou s’ouvrir dans un onglet à lui.",
     "landingRemember": "Retenir ce choix",
     "advancedHint": "Montrer les réglages qu’une génération ne demande pas",
-    "advancedFewerHint": "Replier ces réglages"
+    "advancedFewerHint": "Replier ces réglages",
+    "contextApplies": "Appliquer le contexte du projet",
+    "contextReferences": "Utiliser ces références",
+    "contextReferencesHint": "Place les images du contexte dans les champs image de ce modèle"
   },
   "models": {
     "none": "Aucun modèle dans cet espace.",

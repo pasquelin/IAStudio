@@ -28,9 +28,11 @@ import {
 } from './documentDialogs'
 import type { DocumentFiles } from './documents'
 import { askTrashFiles, askUseOccupiedFolder } from './projectDialogs'
+import type { ProjectContextStore } from './context'
 import { openFailureKey, type ProjectStore } from './store'
 import {
   parseAssetQuery,
+  parseContextCards,
   parseDocumentDraft,
   parseDocumentId,
   parseDocumentKind,
@@ -86,6 +88,8 @@ export type ProjectHandlerDeps = {
   files: FileOps
   /** The pass that puts the catalogue and the folder back in agreement — watched, never asked for. */
   reconciler: Reconciler
+  /** The project's own context. Read straight off the disk, so no window holds a stale copy. */
+  context: ProjectContextStore
   /**
    * `shell.openPath`, which answers an empty string on success and a sentence on failure — and
    * this is the only place the studio launches a third-party application, so it is injected
@@ -108,6 +112,7 @@ export function registerProjectHandlers({
   folder,
   files,
   reconciler,
+  context,
   openInSystem,
   askUser,
 }: ProjectHandlerDeps): void {
@@ -170,6 +175,16 @@ export function registerProjectHandlers({
   handle(CHANNELS.projectFileFacts, async (_event, relative) =>
     fileFactsOf(join(project.path(), parseFolderPath(relative))),
   )
+
+  handle(CHANNELS.projectReadContext, async () => context.read())
+
+  // Broadcast rather than returned alone: every window replicates the file, and one that kept
+  // showing the cards of before would preview a generation nobody is going to get.
+  handle(CHANNELS.projectWriteContext, async (_event, cards) => {
+    const state = await context.write(parseContextCards(cards))
+    broadcast(EVENTS.projectContext, state)
+    return state
+  })
 
   // An absolute path, unlike the one above: the home's shelf points at projects that are NOT
   // open, so there is no root to resolve against. `parseProjectPath` is the same refusal

@@ -18,6 +18,11 @@ export type RoutedBrainDeps = {
   localBrain: (model: LocalModel) => AssistantBrain | null
   /** The brain of a cloud, BY ID. A cloud that cannot think answers nothing, never a branch. */
   cloudBrain: (providerId: string) => AssistantBrain | null
+  /**
+   * What the open project is about. Read HERE and not passed in by the window: this is the one
+   * point every brain goes through, and a context a renderer names is one it could forge.
+   */
+  contextOf: () => Promise<string>
 }
 
 /** The brain and, when there is none, the reason — which is the only thing left to say. */
@@ -46,7 +51,7 @@ export function createRoutedBrain(deps: RoutedBrainDeps): AssistantBrain {
       const [brain, why] = brainFor(deps, await deps.providerOf())
       if (brain === null) throw new Error(`nothing serves the assistant: ${why}`)
 
-      return await brain.think(request, signal)
+      return await brain.think({ ...request, context: await deps.contextOf() }, signal)
     },
   }
 }

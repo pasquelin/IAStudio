@@ -75,6 +75,9 @@ Mon projet/
 │
 ├── .project.json         la carte d'identité — CACHÉ
 │
+├── .project-context.json  CE QUE LE PROJET RACONTE — CACHÉ
+│                        l'univers, le style, les interdits — voir plus bas
+│
 ├── .ia-studio/            UNE SAUVEGARDE DU CATALOGUE — CACHÉ
 │   └── items.json          ce qu'un fichier ne peut pas dire de lui-même
 │
@@ -185,6 +188,113 @@ que vous désignez et cherche ce fichier dedans.
 > dossier vous appartient, vous le synchronisez peut-être, et une version antérieure du studio sait
 > encore le lire. Renommer le dossier pour lui retirer son extension est à vous de le faire, si
 > vous y tenez ; le studio n’y touche pas.
+
+---
+
+## Le contexte du projet
+
+Vous travaillez sur un film médiéval. Vous demandez « une maison » et vous obtenez un pavillon de
+banlieue. Vous récrivez « une chaumière médiévale à colombages, dans une forêt brumeuse, peinture à
+l'huile » — et vous le récrivez à chaque génération, toute la journée.
+
+**Le contexte du projet est l'endroit où l'on écrit cela une fois.** Il vit dans le panneau
+**Contexte**, moitié basse de la colonne de gauche, à côté de l'Explorateur et de Git : les trois
+parlent du projet ouvert — son arbre, son histoire, et ce qu'il raconte.
+
+Le menu du projet, dans la barre de titre, y mène aussi : **Contexte du projet**, entre la liste
+des projets et les deux façons d'en ouvrir un autre. C'est la seule de ses lignes qui agit sur le
+projet ouvert au lieu d'en changer.
+
+### Des fiches, et rien d'imposé
+
+Un contexte est une liste de **fiches**. Chacune porte un titre que vous choisissez, un texte que
+vous écrivez, et un interrupteur.
+
+```
+CONTEXTE DU PROJET                    [+]
+──────────────────────────────────────────
+☑ Univers
+  Moyen Âge, XIIIᵉ siècle. Forêt profonde,
+  royaume en déclin.
+
+☑ Direction artistique
+  Peinture à l'huile, clair-obscur, ocres
+  et verts sourds.
+
+☐ Personnage : Aldric
+  Chevalier balafré, armure ternie.
+
+☑ Interdits
+  Béton, néon, vêtement moderne.
+──────────────────────────────────────────
+             412 / 600 caractères envoyés
+```
+
+**Aucune rubrique n'est imposée**, et c'est délibéré : un romancier, un architecte et un studio de
+jeu décrivent un monde avec des mots entièrement différents. Le bouton `+` propose trois façons de
+commencer — Univers, Direction artistique, Interdits — mais ce ne sont que des points de départ :
+renommez, réécrivez, supprimez.
+
+**Une fiche éteinte garde son texte et n'ajoute rien.** C'est ainsi qu'on met un personnage de côté
+le temps d'une série d'images sans le perdre.
+
+### Ce qui part, et le compteur
+
+Le texte des fiches allumées est ajouté **sous** votre prompt, jamais devant :
+
+```
+une maison en ruine
+
+Project context —
+Univers: Moyen Âge, XIIIᵉ siècle. Forêt profonde, royaume en déclin.
+Direction artistique: Peinture à l'huile, clair-obscur, ocres et verts sourds.
+Interdits: Béton, néon, vêtement moderne.
+```
+
+Le compteur en bas du panneau dit ce qui est réellement envoyé. **La limite est de six cents
+caractères, et elle vient des modèles, pas du studio** : beaucoup d'encodeurs de texte ne lisent que
+soixante-dix-sept jetons — environ trois cents caractères — et laissent tomber le reste sans un mot.
+Au-delà de la limite, **les dernières fiches ne partent pas** ; elles sont écartées entières, jamais
+coupées au milieu d'une phrase.
+
+### Des images de référence
+
+Une fiche peut porter jusqu'à **quatre images** : déposez-les dessus depuis la bibliothèque.
+
+Elles ne partent pas toutes seules. Le panneau de génération les montre avec un bouton **Utiliser
+ces références**, et rien ne bouge sans ce clic — une image de référence change l'opération que le
+modèle exécute et ce qu'elle coûte, ce n'est pas quelque chose qui doit arriver par surprise. Le
+bouton n'apparaît pas pour un modèle qui ne prend aucune image.
+
+### Le fichier, et ce qui se passe s'il casse
+
+Le contexte est écrit dans `.project-context.json`, **à la racine de votre dossier de projet**. Il
+suit donc le projet : copié sur un disque, envoyé à quelqu'un, versionné dans Git — il est là.
+C'est du JSON lisible et vous pouvez l'éditer à la main.
+
+Si le studio ne parvient pas à le lire, **il n'y touche pas** et le panneau dit laquelle des deux
+choses est arrivée :
+
+| Ce que dit le panneau | Ce qu'il faut faire |
+|---|---|
+| Le fichier est illisible | Le réparer, ou le supprimer pour repartir de zéro. Rien n'a été écrasé |
+| Écrit par une version plus récente | Mettre le studio à jour |
+
+Un projet qui n'a pas de fichier n'a pas de contexte, et c'est le cas ordinaire : rien n'est créé
+tant que vous n'avez pas écrit une première fiche.
+
+### Ce que le contexte touche, et ce qu'il ne touche pas
+
+**Il s'applique à toutes les générations** — images, vidéos, modèles 3D, sons, textures, ciels — dès
+que le modèle a un champ de description. Un agrandissement, une conversion, un maillage fait à
+partir d'une image n'en ont pas : le contexte ne fait alors rien, silencieusement.
+
+**L'assistant le reçoit aussi.** Il sait dans quel projet il travaille sans que vous le lui disiez.
+
+**Le nom de vos fichiers ne change pas.** Un asset généré est nommé d'après le début de son prompt ;
+c'est **ce que vous avez écrit** qui le nomme, jamais la version allongée par le contexte. De même,
+« Régénérer » rouvre le formulaire sur votre prompt, pas sur le prompt allongé — sans quoi le
+contexte s'ajouterait à lui-même à chaque reprise.
 
 ---
 

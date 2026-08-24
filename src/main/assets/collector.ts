@@ -1,5 +1,6 @@
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import { assetTypeOfRemote, workspaceOfType } from '@shared/domain/assetKind'
+import { withAuthoredPrompt } from '@shared/domain/projectContext'
 import { generatedAssetName } from '@shared/domain/assetName'
 import { channelFromProviderType } from '@shared/domain/texture'
 import type { WorkspaceId } from '@shared/domain/workspace'
@@ -63,7 +64,7 @@ export function createAssetCollector({
     return await retrieve(remoteAssetId).catch(() => null)
   }
 
-  return async (job, remoteAssetIds) => {
+  return async (job, remoteAssetIds, authored) => {
     const collected: string[] = []
     // A set, and read back as one: the seven channels of a PBR pack are one shelf, not seven.
     const shelves = new Set<WorkspaceId>()
@@ -110,6 +111,10 @@ export function createAssetCollector({
       // became of its file.
       const parent = remote.parentId ? await heldFor(remote.parentId) : null
 
+      // What the PERSON wrote, and only then what the API echoed: the echo carries whatever the
+      // project's context added, and every row of a shelf would read the same.
+      const written = authored?.written ?? remote.generation?.prompt
+
       const asset = await backend.importFromUrl({
         // The row this job already made for this output, when there is one: `write` finds it,
         // rewrites it in place and — `INSERT OR REPLACE` naming no `missing_at` — undates it. A
@@ -122,7 +127,7 @@ export function createAssetCollector({
         // where everything of one model reads the same. The label is the fallback, and an
         // honest one — an upscale takes a picture and no words.
         name: generatedAssetName({
-          ...(remote.generation?.prompt ? { prompt: remote.generation.prompt } : {}),
+          ...(written ? { prompt: written } : {}),
           label: job.label,
           index,
           total: remoteAssetIds.length,
@@ -140,7 +145,15 @@ export function createAssetCollector({
         ...(remote.thumbnailUrl ? { thumbnailUrl: remote.thumbnailUrl } : {}),
         ...(remote.ownerId ? { remoteOwnerId: remote.ownerId } : {}),
         ...(remote.updatedAt ? { remoteUpdatedAt: remote.updatedAt } : {}),
-        ...(remote.generation ? { generation: remote.generation } : {}),
+        // The WRITTEN prompt, never the one the context lengthened: it names the file, it is
+        // what full-text search matches, and it is what a « regenerate » must reopen on.
+        ...(remote.generation
+          ? {
+              generation: authored
+                ? withAuthoredPrompt(remote.generation, authored)
+                : remote.generation,
+            }
+          : {}),
         ...(parent ? { derivedFrom: parent.id } : {}),
         // Absent rather than false: an ordinary map is not "a map that is not inverted".
         ...(source ? { map: source.channel } : {}),

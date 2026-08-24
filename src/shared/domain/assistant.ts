@@ -15,6 +15,7 @@ import { MATERIAL_ACTIONS } from './materialActions'
 import { RIG_ACTIONS } from './rigActions'
 import { SCENE_ACTIONS } from './sceneActions'
 import { SEQUENCE_ACTIONS } from './sequenceActions'
+import { CONTEXT_ACTIONS } from './contextActions'
 import { SETTINGS_ACTIONS } from './settingsActions'
 import { SHELL_ACTIONS } from './shellActions'
 import { STATE_ACTIONS } from './stateActions'
@@ -53,6 +54,7 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = [
   ...SCENE_ACTIONS,
   ...RIG_ACTIONS,
   ...GIT_ACTIONS,
+  ...CONTEXT_ACTIONS,
   ...SETTINGS_ACTIONS,
   ...SHELL_ACTIONS,
 ]
@@ -85,6 +87,14 @@ export type AssistantThought = {
    * ships can only carry ten blocks of text.
    */
   history: readonly string[]
+  /**
+   * What the open project is about, already composed — see `composedContext`.
+   *
+   * 🛑 Filled in the MAIN process, never by a window: `parseThought` does not declare it, so zod
+   * strips one that arrived over the boundary. A context a renderer could name is a context a
+   * renderer could forge.
+   */
+  context?: string
 }
 
 export type AssistantAnswer = {

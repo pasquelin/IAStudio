@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CONTEXT_COMPOSED_MAX, CONTEXT_USES, type ContextUse } from '@shared/domain/projectContext'
 import { ASSET_NAME_MAX_LENGTH } from '@shared/domain/asset'
 import type { JobTarget } from '@shared/domain/job'
 import type { PersistedJob } from './persistedJob'
@@ -148,6 +149,9 @@ export function parseReferenceImages(value: unknown): string[] {
   return referenceImages.parse(value)
 }
 
+/** The blank line `bodyWithContext` puts between a written prompt and the context under it. */
+const SEPARATOR_LENGTH = 2
+
 /**
  * Jobs read back from disk. Non-empty strings throughout: a hand-rolled guard once let a blank
  * pair through in the settings, and a blank `remoteId` here would poll a job id that is not one.
@@ -166,6 +170,21 @@ const storedJob = z
     accountId: z.string().trim().min(1),
     projectPath: z.string().trim().min(1),
     createdAt: z.string().trim().min(1),
+    /**
+     * 🛑 `.catch(undefined)` and not a bare shape: a note whose two halves do not parse must cost
+     * the halves, never the JOB. Dropped by the entry's own `.catch(null)` below, a generation
+     * already running and already paid for would be abandoned at the next launch — which is the
+     * one thing the comment under this object says it exists to prevent.
+     *
+     * `sent` carries a written prompt AND a context, so it is bounded by the sum of the two.
+     */
+    authored: z
+      .object({
+        written: z.string().max(PROMPT_INPUT_MAX),
+        sent: z.string().max(PROMPT_INPUT_MAX + CONTEXT_COMPOSED_MAX + SEPARATOR_LENGTH),
+      })
+      .optional()
+      .catch(undefined),
   })
   // A note written by an earlier version spells its target differently, and may carry fields this
   // build no longer knows — zod strips those. Dropping the whole entry rather than reading what
@@ -180,4 +199,15 @@ const storedJobs = z.array(storedJob.nullable().catch(null))
 export function parseStoredJobs(content: string): PersistedJob[] {
   const parsed: unknown = JSON.parse(content)
   return storedJobs.parse(parsed).filter(job => job !== null)
+}
+
+const contextUse = z.enum(CONTEXT_USES).optional()
+
+/**
+ * 🛑 Absent reads as APPLY — the opposite of `parseForceWrite`, and deliberately so: the context
+ * is what the project already says, and a payload that lost this field must not silently drop it.
+ * Which is also why the flag is a union and not a boolean nobody would read the right way round.
+ */
+export function parseContextUse(value: unknown): ContextUse {
+  return contextUse.parse(value) ?? 'apply'
 }

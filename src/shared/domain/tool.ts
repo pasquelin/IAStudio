@@ -56,6 +56,7 @@ export type ToolId =
   | 'projects'
   | 'animations'
   | 'text'
+  | 'context'
 
 /**
  * The panels the upper half of a WORKSPACE's left column is reserved for: what the Scenario API
@@ -212,6 +213,23 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // space that is always true; on the home it is the whole point.
   {
     id: 'git',
+    zone: 'left',
+    slot: 'secondary',
+    surfaces: [...WORKSPACE_IDS, HOME_SURFACE],
+    requires: 'project',
+  },
+
+  // What the project is ABOUT, in the half that already holds what the project IS — its folder,
+  // and what has changed in it. The three answer one question between them: the folder I am
+  // working in, its history, and the world everything in it is set in.
+  //
+  // Declared last, so an untouched half still opens on the Explorer: this one is written now and
+  // then and read while generating, where the folder is what one reaches for by default.
+  //
+  // Offered only while a project IS open, like the two beside it: the context is a file of the
+  // project folder, and there is nothing to write into one that is not open.
+  {
+    id: 'context',
     zone: 'left',
     slot: 'secondary',
     surfaces: [...WORKSPACE_IDS, HOME_SURFACE],
