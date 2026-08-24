@@ -346,6 +346,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onSkyboxExport: noSubscription,
       ...overrides.menu,
     },
+    news: {
+      read: topic => Promise.resolve({ topic, items: [], readAt: '2026-08-24T00:00:00.000Z' }),
+      ...overrides.news,
+    },
     updates: {
       state: () => Promise.resolve({ phase: 'idle' }),
       install: () => Promise.resolve(),

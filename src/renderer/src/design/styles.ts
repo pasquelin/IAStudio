@@ -487,6 +487,17 @@ export const MEDIA_SHAPE = 'overflow-hidden rounded-(--radius-sc-sm)'
 export const MEDIA_FRAME = `border-border bg-surface border ${MEDIA_SHAPE}`
 
 /**
+ * The plate a block of the HOME stands on, and the heading it wears.
+ *
+ * The home is a page of blocks rather than a dock, so its surface is its own — and it is a
+ * surface the two bands had each written out by hand, down to the padding. A third block is what
+ * made that a copy.
+ */
+export const HOME_BLOCK = 'bg-surface flex flex-col gap-2 rounded-(--radius-sc-lg) p-3'
+
+export const HOME_BLOCK_HEADING = 'text-muted text-mini m-0 font-semibold tracking-wider uppercase'
+
+/**
  * The plate a mark sits on in the corner of a tile — never WHICH corner, which is each mark's
  * own business.
  *

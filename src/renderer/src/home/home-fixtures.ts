@@ -26,7 +26,10 @@ export function settleHome(project: Project | null = HOME_PROJECT): void {
   useSettings.setState(state => ({
     authKnown: true,
     loaded: true,
-    settings: { ...state.settings, home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] } },
+    settings: {
+      ...state.settings,
+      home: { enabled: true, news: true, sections: [...DEFAULT_HOME_SECTIONS] },
+    },
   }))
   useProject.setState({ project, known: true })
 }

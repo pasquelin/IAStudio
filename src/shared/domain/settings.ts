@@ -78,6 +78,11 @@ export type Settings = {
    */
   home: {
     enabled: boolean
+    /**
+     * Whether the news band reads the hub. The one outward call the studio makes for something
+     * other than a model or a job, so it is a setting rather than a fact.
+     */
+    news: boolean
     sections: HomeSectionSetting[]
   }
   /**
@@ -323,7 +328,7 @@ export type Settings = {
  */
 export const DEFAULT_SETTINGS: Settings = {
   general: { language: 'system', startup: 'lastProject', autosave: true },
-  home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] },
+  home: { enabled: true, news: true, sections: [...DEFAULT_HOME_SECTIONS] },
   workspaces: { order: [...WORKSPACE_IDS] },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
   generation: { concurrentJobs: 3, maxRetries: 4, captionArrivals: true, landing: 'ask' },

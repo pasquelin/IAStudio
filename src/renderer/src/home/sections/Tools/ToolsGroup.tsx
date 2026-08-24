@@ -1,5 +1,5 @@
 import { UiIcon } from '@/design/UiIcon'
-import { rowSkin, TILE_QUIET } from '@/design/styles'
+import { HOME_BLOCK, HOME_BLOCK_HEADING, rowSkin, TILE_QUIET } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 
 export type Entry = {
@@ -12,8 +12,8 @@ export type Entry = {
 
 export function ToolsGroup({ title, entries }: { title: string; entries: readonly Entry[] }) {
   return (
-    <div className="bg-surface flex flex-col gap-2 rounded-(--radius-sc-lg) p-3">
-      <h3 className="text-muted text-mini m-0 font-semibold tracking-wider uppercase">{title}</h3>
+    <div className={HOME_BLOCK}>
+      <h3 className={HOME_BLOCK_HEADING}>{title}</h3>
 
       {/* Tracks the CENTRE rather than the window: Tailwind's breakpoints answer to the viewport,
           and the panel columns beside this band take a third of it without moving one.

@@ -111,6 +111,18 @@ home still appears, offering to create one. To land directly in a workspace, unt
 What is set **on the home itself**, and not here: which bands are shown — see
 [The window](03-the-window.md#the-home-screen-before-anything-else).
 
+### Model news
+
+**Switch. Default: on.**
+
+The **What is moving** band, at the foot of the home, reads the models trending and the articles
+posted on Hugging Face. **This is the studio's only outward call for something other than a model
+or a generation**, and it goes to the host every weight of the catalogue already comes from:
+nobody learns anything new. Unticked, the studio contacts nobody for that band, which stays and
+says it is off.
+
+An answer is kept for six hours: these are trends, not a ticker.
+
 ---
 
 ## Account
@@ -736,6 +748,7 @@ What you have on a fresh install, at a glance.
 | General | Language | System | System, Français, English |
 | General | On opening | Reopen the last project | — |
 | General | Show the home screen | on | — |
+| General | Model news | on | — |
 | Appearance | Theme | Dark | Dark, Light, System |
 | Appearance | Density | Comfortable | Comfortable, Compact |
 | Appearance | Accent colour | the theme's own | — |

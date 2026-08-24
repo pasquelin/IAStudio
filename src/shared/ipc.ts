@@ -8,6 +8,7 @@ import type { FavoriteRecipe } from './domain/favorite'
 import type { FileFacts } from './domain/fileInfo'
 import type { FileHistory, FileOutcome } from './domain/fileOp'
 import type { NamedDocumentPlace, NewDocumentAsk } from './domain/newDocument'
+import type { NewsPage, NewsTopic } from './domain/news'
 import type { FolderEntry } from './domain/folder'
 import type { OraDocument } from './domain/openRaster'
 import type { MaterialStyle } from './domain/style'
@@ -282,6 +283,8 @@ export type Channels = {
 
   menuPopup: 'menu:popup'
 
+  newsRead: 'news:read'
+
   updateState: 'update:state'
   updateInstall: 'update:install'
 }
@@ -483,6 +486,8 @@ export const CHANNELS: Channels = {
   helpOpen: 'help:open',
 
   menuPopup: 'menu:popup',
+
+  newsRead: 'news:read',
 
   updateState: 'update:state',
   updateInstall: 'update:install',
@@ -1848,6 +1853,15 @@ export type StudioBridge = {
      * and how many times a thing happened is half of what it says.
      */
     trace: (entry: TraceEntry) => Promise<void>
+  }
+  news: {
+    /**
+     * One topic's rows — the models trending under a family, or the blog's articles.
+     *
+     * REJECTS rather than answering an empty page when the source refused: the band has to tell
+     * "nothing published" from "nobody answered", and an empty list says the first.
+     */
+    read: (topic: NewsTopic) => Promise<NewsPage>
   }
   updates: {
     /**

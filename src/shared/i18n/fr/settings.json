@@ -312,6 +312,10 @@
       "ask": "Demander à chaque fois",
       "document": "Dans le document ouvert",
       "newTab": "Dans un nouvel onglet"
+    },
+    "homeNews": {
+      "title": "Actualités des modèles",
+      "help": "Lit les modèles qui montent et les articles publiés sur Hugging Face, l’hôte d’où viennent déjà tous les poids du catalogue. Décoché, le studio ne contacte personne pour cette bande."
     }
   }
 }

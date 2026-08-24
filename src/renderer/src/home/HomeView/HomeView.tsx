@@ -33,7 +33,9 @@ export function HomeView() {
     // sticky headings measure themselves from its top, and neither could say so.
     <ScrollHostProvider host={scroller}>
       <div ref={setScroller} className="h-full overflow-x-hidden overflow-y-auto">
-        <div className="flex flex-col gap-8 px-6 py-6">
+        {/* Bounded by a gauge, and it is the whole page's readability: unbounded, a row's label
+            sat at one edge of a wide display and its value at the other. */}
+        <div className="mx-auto flex w-full max-w-(--sc-home-width) flex-col gap-8 px-6 py-6">
           {sections.map(id => {
             const Section = HOME_COMPONENTS[id]
             return (

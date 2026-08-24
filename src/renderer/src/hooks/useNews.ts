@@ -1,0 +1,24 @@
+import { useQuery } from '@tanstack/react-query'
+import type { NewsPage, NewsTopic } from '@shared/domain/news'
+import { getBridge } from '@/services/bridge'
+
+/**
+ * One topic of the news band. The main process caches per topic for six hours and folds two
+ * windows asking at once into one request, so this holds nothing of its own.
+ *
+ * `retry: false`: the source is somebody else's server and the band is decoration — three
+ * silent attempts before a person is told nothing answered is three attempts too many.
+ */
+export function useNews(topic: NewsTopic, enabled: boolean) {
+  return useQuery<NewsPage>({
+    queryKey: ['news', topic],
+    queryFn: () => {
+      const bridge = getBridge()
+      if (!bridge) throw new Error('no bridge')
+
+      return bridge.news.read(topic)
+    },
+    enabled,
+    retry: false,
+  })
+}

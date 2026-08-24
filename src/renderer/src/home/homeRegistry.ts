@@ -1,6 +1,7 @@
 import type { FC } from 'react'
 import type { HomeSectionId } from '@shared/domain/home'
 import { ModelInventory } from './sections/ModelInventory/ModelInventory'
+import { News } from './sections/News/News'
 import { Spotlight } from './sections/Spotlight/Spotlight'
 import { Tools } from './sections/Tools/Tools'
 
@@ -12,4 +13,5 @@ export const HOME_COMPONENTS: Record<HomeSectionId, FC> = {
   spotlight: Spotlight,
   tools: Tools,
   models: ModelInventory,
+  news: News,
 }

@@ -175,16 +175,13 @@ describe('the row skin and the state it publishes', () => {
    * control, so the fill is the whole of what says it can be pressed.
    *
    * There were two until 2026-08-19, when the texture channels stopped being tiles and became
-   * link rows of the inspector — where the rule below is that nothing fills at all. Three since
-   * the home's models band, whose source cards are tiles in exactly that sense.
+   * link rows of the inspector — where the rule below is that nothing fills at all.
    *
    * The inspector is deliberately absent, and that is a decision of 2026-08-14: no line of it
    * answers the pointer. The cost was stated when it was taken — nothing distinguishes a line one
    * can open from a line one only reads, and what says a row opens is its tooltip.
    */
   const MAY_FILL_UNDER_THE_POINTER = [
-    // A count, a title and two quiet lines: nothing on it looks like a control until it fills.
-    '../home/sections/ModelInventory/ModelInventoryCard.tsx',
     '../home/sections/Tools/ToolsGroup.tsx',
     // Back to two on 2026-08-20: the tiles a new scene picks its template from. A tile in the
     // same strict sense — a still and a name, and nothing else on it that looks like a control.
@@ -199,7 +196,7 @@ describe('the row skin and the state it publishes', () => {
    * `rowSkin`. The studio's fill is guarded here because the studio's fill has one door; a panel
    * painting its own is caught by nothing.
    */
-  it('fills under the pointer for three surfaces only, and none is a line of the inspector', () => {
+  it('fills under the pointer for two surfaces only, and neither is a line of the inspector', () => {
     const asking = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && source.includes("surface: 'tile'"),
     ).map(([path]) => path)

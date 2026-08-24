@@ -14,7 +14,7 @@ beforeEach(() => {
     auth: { authenticated: true },
     settings: {
       ...state.settings,
-      home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] },
+      home: { enabled: true, news: true, sections: [...DEFAULT_HOME_SECTIONS] },
     },
   }))
 })

@@ -5,6 +5,7 @@ import { QuietNote } from '@/design/QuietNote'
 import { aiSectionOf } from '@/helpers/aiSectionLazy'
 import { roleLabel } from '@/helpers/roleLabel'
 import { ModelInventoryRow } from './ModelInventoryRow'
+import { HOME_BLOCK, HOME_BLOCK_HEADING } from '@/design/styles'
 import { employmentGroupsOf, type EmploymentGroup, type Translate } from './inventory'
 
 /**
@@ -24,29 +25,31 @@ export function ModelInventoryEmployments({
   const { t } = useTranslation()
   const groups = employmentGroupsOf(overview)
 
-  if (groups.length === 0) return <QuietNote>{t('home.models.nothing')}</QuietNote>
-
   return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-muted text-mini m-0 font-semibold tracking-wider uppercase">
-        {t('home.models.employments')}
-      </h3>
+    <div className={HOME_BLOCK}>
+      <h3 className={HOME_BLOCK_HEADING}>{t('home.models.employments')}</h3>
 
-      {groups.map(group => {
-        const label = labelOf(group, t)
+      {groups.length === 0 ? (
+        <QuietNote>{t('home.models.nothing')}</QuietNote>
+      ) : (
+        groups.map(group => {
+          const label = labelOf(group, t)
 
-        return (
-          <ModelInventoryRow
-            key={group.key}
-            label={label}
-            standing={standingOf(group, t)}
-            hint={t('home.models.employmentHint', { name: label })}
-            // The screen is asked for on the click rather than composed with the group: the
-            // registry that answers rides in the settings window's own chunk.
-            onClick={() => void aiSectionOf(group.family).then(onOpen)}
-          />
-        )
-      })}
+          return (
+            <ModelInventoryRow
+              key={group.key}
+              label={label}
+              served={group.served}
+              total={group.total}
+              standing={standingOf(group, t)}
+              hint={t('home.models.employmentHint', { name: label })}
+              // The screen is asked for on the click rather than composed with the group: the
+              // registry that answers rides in the settings window's own chunk.
+              onClick={() => void aiSectionOf(group.family).then(onOpen)}
+            />
+          )
+        })
+      )}
     </div>
   )
 }

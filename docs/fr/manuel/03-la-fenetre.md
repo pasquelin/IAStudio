@@ -31,17 +31,18 @@ Elle n’affiche qu’une chose à la fois :
 Tant que le studio lit vos projets, elle reste muette plutôt que d’annoncer « Tout est prêt »
 puis de se corriger.
 
-### Les trois bandes
+### Les quatre bandes
 
-Le centre empile trois bandes, dans cet ordre :
+Le centre empile quatre bandes, dans cet ordre :
 
 | Bande | Ce qu’elle montre | Il faut |
 |---|---|---|
 | **Où vous en étiez** | la bannière : reprendre, connecter, ou créer | rien |
 | **Outils** | ce que le studio sait commencer, et de quoi créer ou ouvrir un projet | rien |
 | **Vos modèles** | ce que ce studio sait faire tourner, et avec quoi | rien |
+| **Ce qui bouge** | les modèles qui montent et les articles publiés au dehors | le réglage, coché par défaut |
 
-**Aucune des trois ne demande plus rien.** La règle n’a pas changé — une bande à qui il manque
+**Aucune des quatre n’exige plus de clé API.** La règle n’a pas changé — une bande à qui il manque
 quelque chose n’est pas grisée, elle n’est pas là — mais elle n’a plus de cas : le fil de ce que
 tout le monde publiait tenait la troisième place jusqu’ici, et il fallait une clé API pour en voir
 une seule vignette.
@@ -54,27 +55,61 @@ Tout le reste de l’accueil est un panneau, logé dans les deux colonnes.
 
 ### Vos modèles, ce que le studio sait faire tourner
 
-La bande répond à la question qu’on se pose au deuxième lancement : **qu’est-ce qui est installé,
+Deux colonnes, puis deux blocs. Elle répond à la question qu’on se pose au deuxième lancement : **qu’est-ce qui est installé,
 qu’est-ce qui tourne, et qu’est-ce qui manque.** Elle s’ouvre sur ce que la machine offre —
-mémoire libre, puce, mémoire vidéo, place sur le disque — puis pose trois cartes :
+mémoire libre, puce, mémoire vidéo, place sur le disque.
 
-| Carte | Ce qu’elle dit |
-|---|---|
-| **Sur cet ordinateur** | combien de modèles sont installés, ce qu’ils pèsent, combien sont chargés en mémoire, combien restent à installer, et combien sont hors de portée de cette machine |
-| **Ollama** | s’il est sur cet ordinateur, s’il répond, et les modèles qu’il a listés |
-| **En ligne** | les comptes dont une clé est renseignée, nommés |
+**À gauche, ce dont vous disposez** — une ligne par source, et chaque ligne porte le geste qui la
+change, avec un verbe dessus :
 
-Sous les cartes, **ce qui sert vos emplois** : une ligne par famille — Image, Vidéo, Modélisation,
-Audio, Textures, Skyboxes et les trois que le canevas emploie — plus l’Assistant et la Dictée. Une
-famille dit combien de ses emplois sont servis ; un emploi seul dit ce qui le sert, par son nom.
+| Ligne | Ce qu’elle dit | Le bouton |
+|---|---|---|
+| **Machine** | mémoire libre, puce, mémoire vidéo, disque | aucun : elle rapporte, elle ne s’actionne pas |
+| **Sur cet ordinateur** | combien de modèles sont installés, ce qu’ils pèsent, combien sont chargés en mémoire | **Gérer** |
+| **Ollama** | s’il est là, s’il répond, et les modèles qu’il a listés | **Installer** ou **Choisir** |
+| **En ligne** | les comptes dont une clé est renseignée, nommés un par un | **Ajouter une clé** ou **Gérer les clés** |
 
-**Rien ne s’installe depuis cette bande** : chaque carte et chaque ligne ouvre la section des
-réglages où le geste se fait — voir [Les modèles](05-modeles.md).
+**À droite, vos espaces** — une ligne par famille, avec une jauge en points : combien de ses
+emplois sont servis sur combien. Un espace qui n’a qu’un emploi nomme directement ce qui le sert.
+L’Assistant et la Dictée ferment la liste : ils n’appartiennent à aucun espace.
+
+**Dessous, ce qu’un seul téléchargement couvre.** C’est la lecture que le gestionnaire ne donne
+pas d’un coup d’œil : le catalogue tient vingt-cinq modèles pour dix-neuf emplois, et ce qui les
+sépare n’est pas la qualité. Un modèle d’image qui sait aussi les textures répond à six emplois
+pour quatre gigaoctets là où un autre en sert un pour cent trente-trois. Les familles qu’il
+traverse sont nommées, pas comptées. Ce que la machine ne peut pas tenir reste affiché, marqué
+**hors de portée** — le cacher ferait paraître le catalogue plus petit qu’il n’est.
+
+**Enfin une ou deux lignes de conseil**, classées par ce qu’elles COÛTENT et non par ce qu’elles
+rapportent : choisir parmi ce qui est déjà sur le disque ne coûte rien, installer coûte des
+gigaoctets, une clé coûte de l’argent. On ne vous propose donc jamais de dépenser avant de vous
+avoir dit que vous aviez déjà la réponse.
+
+**Rien ne s’installe depuis cette bande** : chaque bouton ouvre la section des réglages où le
+geste se fait — voir [Les modèles](05-modeles.md).
 
 **Elle parle sur une machine vide**, et c’est la moitié de son intérêt : sans clé et sans modèle,
 elle le dit, avec le chemin pour y remédier.
 
-C’est la seule bande qui puisse être masquée.
+### Ce qui bouge, hors du studio
+
+Ce que les autres publient — **les modèles qui montent** sur Hugging Face, et **les articles**
+parus là-bas. Les puces au-dessus de la bande filtrent : Image, Vidéo, 3D, Audio, ou Articles. Une
+seule catégorie s’affiche à la fois, et c’est une seule requête.
+
+**Pas de puce Texture ni Ciel**, et ce n’est pas un oubli : rien ne publie ces deux-là comme une
+catégorie à part — le studio les sert avec des modèles d’image — donc une puce pour l’une d’elles
+répéterait la liste Image sous un autre nom.
+
+**Un clic ouvre la page dans votre navigateur.** Rien n’est téléchargé, rien n’est installé : ce
+sont les modèles et les articles de quelqu’un d’autre.
+
+> **C’est le seul appel sortant du studio pour autre chose qu’un modèle ou une génération.** Il va
+> sur `huggingface.co`, l’hôte d’où viennent déjà tous les poids du catalogue, donc personne
+> n’apprend rien de neuf. **Réglages ▸ Général ▸ Actualités des modèles** le coupe ; la bande
+> reste alors, et dit qu’elle est coupée.
+
+**Les deux dernières bandes peuvent être masquées** ; les deux premières sont épinglées.
 
 ### Cliquer une vignette l’ouvre
 
@@ -94,8 +129,8 @@ droit sur une vignette de la bibliothèque — voir [Les assets](07-assets.md).
 **Masquer cette section**, au survol d’un titre de bande. Les sections masquées sont comptées en
 bas de page — « 1 section masquée » — avec un bouton **Les réafficher**.
 
-Seul **Vos modèles** porte ce bouton : **Où vous en étiez** et **Outils** sont épinglées, et c’est
-ce qui garantit que cet écran n’est jamais vide.
+**Vos modèles** et **Ce qui bouge** portent ce bouton ; **Où vous en étiez** et **Outils** sont
+épinglées, et c’est ce qui garantit que cet écran n’est jamais vide.
 
 ### La colonne de gauche
 
