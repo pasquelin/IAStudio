@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { MachineSummary } from '@shared/domain/aiOverview'
 import { GIBI } from '@shared/domain/localModel-fixtures'
-import { gpuName, machineSummary } from './machineSummary'
+import { gpuName, machineReadings, machineSummary } from './machineSummary'
 
 const machine = (over: Partial<MachineSummary> = {}): MachineSummary => ({
   physicalBytes: 96 * GIBI,
@@ -67,5 +67,15 @@ describe('the machine sentence', () => {
     delete older.vram
 
     expect(() => machineSummary(older as unknown as MachineSummary, say, bytes)).not.toThrow()
+  })
+})
+
+describe('the machine readings', () => {
+  /** Four short lines where a surface has the room, one joined line where it has not. */
+  it('are the same parts the sentence joins', () => {
+    const readings = machineReadings(machine(), say, bytes)
+
+    expect(readings).toHaveLength(3)
+    expect(readings.join(' · ')).toBe(machineSummary(machine(), say, bytes))
   })
 })

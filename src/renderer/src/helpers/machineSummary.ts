@@ -22,11 +22,11 @@ export function gpuName(renderer: string): string {
  * summary written before the field existed has no key at all — measured, it took the manager
  * down with `Cannot read properties of undefined (reading 'totalBytes')`.
  */
-export function machineSummary(
+export function machineReadings(
   summary: MachineSummary,
   translate: (key: string, values: Record<string, string>) => string,
   bytes: (value: number) => string,
-): string {
+): string[] {
   return [
     translate('aiModels.machineMemory', {
       total: bytes(summary.physicalBytes),
@@ -44,7 +44,14 @@ export function machineSummary(
     summary.diskFreeBytes === null
       ? null
       : translate('aiModels.machineDisk', { free: bytes(summary.diskFreeBytes) }),
-  ]
-    .filter(part => part !== null)
-    .join(' · ')
+  ].filter(part => part !== null)
+}
+
+/** The same readings on one line, for a surface with room for one and not for four. */
+export function machineSummary(
+  summary: MachineSummary,
+  translate: (key: string, values: Record<string, string>) => string,
+  bytes: (value: number) => string,
+): string {
+  return machineReadings(summary, translate, bytes).join(' · ')
 }

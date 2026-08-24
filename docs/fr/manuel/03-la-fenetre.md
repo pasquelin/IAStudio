@@ -58,7 +58,7 @@ Tout le reste de l’accueil est un panneau, logé dans les deux colonnes.
 Elle répond à la question qu’on se pose au deuxième lancement : **qu’est-ce qui est installé,
 qu’est-ce qui tourne, et qu’est-ce qui manque.** Elle se lit de haut en bas, du verdict au détail.
 
-**En tête, où vous en êtes** : « 5 emplois servis sur 26 », une barre, puis une ou deux lignes de
+**En tête, où vous en êtes** : « 5 opérations sur 23 ont un modèle », une barre, puis une ou deux lignes de
 conseil. Les conseils sont classés par ce qu’ils COÛTENT et non par ce qu’ils rapportent — choisir
 parmi ce qui est déjà sur le disque ne coûte rien, installer coûte des gigaoctets, une clé coûte de
 l’argent. On ne vous propose donc jamais de dépenser avant de vous avoir dit que vous aviez déjà la
@@ -79,13 +79,20 @@ l’autre bout de l’écran.
 | **En ligne** | les comptes dont une clé est renseignée, nommés un par un | **Ajouter une clé** ou **Gérer les clés** |
 | **Machine** | mémoire vive, puce, mémoire vidéo, disque — chaque chiffre nomme son sujet | aucun : elle rapporte, et rien ici n’agit dessus |
 
+**Les deux colonnes s’arrêtent où leur contenu s’arrête**, sans être étirées l’une sur l’autre :
+une carte tirée à la hauteur de sa voisine se lit comme une carte à qui il manque quelque chose.
+
 **À droite, vos espaces** — une ligne par famille, une jauge en points, et la fraction servie. Un
-espace qui n’a qu’un emploi nomme directement ce qui le sert. Un filet ferme la liste avant
+espace qui n’a qu’une opération nomme directement ce qui la sert. Un filet ferme la liste avant
 l’Assistant et la Dictée : ils n’appartiennent à aucun espace.
 
+**« Opération » est le mot de la génération**, pas un mot de plus : c’est ce que le panneau de
+génération appelle déjà « Opération » — Texte vers image, Retouche interne, Squelettage. Une
+famille en tient plusieurs, et un modèle peut en servir plusieurs à la fois.
+
 **Dessous, ce qu’un seul téléchargement couvre.** C’est la lecture que le gestionnaire ne donne
-pas d’un coup d’œil : le catalogue tient vingt-cinq modèles pour dix-neuf emplois, et ce qui les
-sépare n’est pas la qualité. Un modèle d’image qui sait aussi les textures répond à six emplois
+pas d’un coup d’œil : le catalogue tient vingt-cinq modèles pour dix-neuf opérations, et ce qui les
+sépare n’est pas la qualité. Un modèle d’image qui sait aussi les textures répond à six opérations
 pour quatre gigaoctets là où un autre en sert un pour cent trente-trois. Les familles qu’il
 traverse sont nommées, pas comptées. Ce que la machine ne peut pas tenir reste affiché, marqué
 **hors de portée** — le cacher ferait paraître le catalogue plus petit qu’il n’est.

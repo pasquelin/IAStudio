@@ -205,26 +205,31 @@ export function coverageOf(overview: AiOverview, top: number): readonly Coverage
  * to spend before it has been told it already holds the answer.
  */
 export type Advice =
-  | { readonly kind: 'choose'; readonly employments: number }
+  | { readonly kind: 'choose'; readonly roles: readonly AiRoleId[] }
   | { readonly kind: 'install'; readonly coverage: Coverage }
   | { readonly kind: 'key' }
 
-/** Employments with something installed that could serve them, and nothing chosen. */
-function unchosen(overview: AiOverview): number {
-  return overview.roles.filter(
-    row => row.provider === null && row.candidates.some(one => one.installed),
-  ).length
+/**
+ * Operations with a model already on the disk and nothing chosen to run it.
+ *
+ * The ROLES rather than their count: « 2 operations » says nothing about which two, and a reader
+ * cannot act on a number. The sentence names them.
+ */
+function unchosen(overview: AiOverview): readonly AiRoleId[] {
+  return overview.roles
+    .filter(row => row.provider === null && row.candidates.some(one => one.installed))
+    .map(row => row.role)
 }
 
 export function adviceOf(overview: AiOverview, clouds: readonly string[]): readonly Advice[] {
   const idle = unchosen(overview)
   const worth = coverageOf(overview, 8).find(one => !one.installed && one.usable)
 
-  const choose: Advice = { kind: 'choose', employments: idle }
+  const choose: Advice = { kind: 'choose', roles: idle }
   const key: Advice = { kind: 'key' }
 
   return [
-    ...(idle > 0 ? [choose] : []),
+    ...(idle.length > 0 ? [choose] : []),
     ...(worth ? [{ kind: 'install', coverage: worth } satisfies Advice] : []),
     // Said only once nothing at all is connected: a studio with one key does not need telling
     // that keys exist.

@@ -20,7 +20,7 @@
     "gitDescription": "Version tracking of the project folder, by git. Your files only.",
     "mediaDescription": "Preparation of imported files: proxies and waveforms.",
     "dictationDescription": "Speaking a text instead of typing it. Everything happens on this computer: nothing you say is sent anywhere.",
-    "aiDescription": "Which AI serves each employment. The studio here, Ollama here, or an online service you have a key for.",
+    "aiDescription": "Which AI serves each operation. The studio here, Ollama here, or an online service you have a key for.",
     "theme": {
       "title": "Theme",
       "help": "Picks the colours of the whole application. The dark theme rests the eyes over a long session in a dimly lit room; the light one reads better in broad daylight. “System” follows your computer’s own setting and switches on its own, for instance when evening comes.",
