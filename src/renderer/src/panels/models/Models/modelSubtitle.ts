@@ -5,8 +5,8 @@ import type { ModelSummary } from '@shared/domain/model'
  * Standing plus a line. Rating, generation time and category come back empty on all 642 public
  * models — measured. A catalogue description replaces origin; "featured" still prefixes it.
  *
- * Outside the row so the panel can resolve it: translating inside a virtualized row runs
- * i18next per row and per frame of a scroll, which is the rule `AssetRow` already carries.
+ * Its own module so the composition is testable without a render — the row that calls it is
+ * memoised, so this runs only when a row's props actually move.
  */
 export function modelSubtitle(model: ModelSummary, t: TFunction): string {
   if (model.description) {

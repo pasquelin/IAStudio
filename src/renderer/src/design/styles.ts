@@ -308,7 +308,12 @@ export const PANEL_SCROLL = 'flex min-h-0 flex-1 flex-col overflow-y-auto pr-2'
  * panel at most and scrolling on its own: a detail is several folded sections tall, and left
  * unbounded it pushed the list that raised it off the bottom of the dock.
  */
-export const PANEL_DETAIL = cn(PANEL_SCROLL, 'border-border max-h-1/2 shrink-0 border-t py-1 pl-1')
+export const PANEL_DETAIL = cn(
+  // 🛑 NOT `PANEL_SCROLL`, which carries `flex-1`: growing, this splits the panel evenly with the
+  // list above it and the cap below never binds. `flex-none` is what sizes it to its content.
+  'flex flex-none flex-col overflow-y-auto',
+  'border-border max-h-1/2 border-t py-1 pr-2 pl-1',
+)
 
 /**
  * The stacked box a panel puts ABOVE what it acts on — a bar of filters, a message being written.

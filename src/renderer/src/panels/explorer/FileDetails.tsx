@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { SectionFoldScope } from '@/design/SectionFoldScope'
 import { PANEL_DETAIL } from '@/design/styles'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { FileInspector } from './FileInspector'
@@ -15,8 +16,11 @@ export function FileDetails() {
   if (paths.length === 0) return null
 
   return (
-    <section className={PANEL_DETAIL} aria-label={t('explorer.details')}>
-      <FileInspector paths={paths} />
-    </section>
+    // Outside the inspector's fold order — see `AssetDetails`.
+    <SectionFoldScope value={false}>
+      <section className={PANEL_DETAIL} aria-label={t('explorer.details')}>
+        <FileInspector paths={paths} />
+      </section>
+    </SectionFoldScope>
   )
 }

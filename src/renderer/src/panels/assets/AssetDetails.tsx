@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { SectionFoldScope } from '@/design/SectionFoldScope'
 import { PANEL_DETAIL } from '@/design/styles'
 import { assetsById, useAssets } from '@/stores/assets'
 import { selectedAssetIds, useSelection } from '@/stores/selection'
@@ -27,12 +28,16 @@ export function AssetDetails() {
   const total = assets.reduce((bytes, asset) => bytes + (asset.bytes ?? 0), 0)
 
   return (
-    <section className={PANEL_DETAIL} aria-label={t('assets.details')}>
-      {assets.length === 1 && only ? (
-        <AssetInspector asset={only} />
-      ) : (
-        <SelectionSummary count={assets.length} bytes={total} />
-      )}
-    </section>
+    // Outside the inspector's fold order: these sections must not answer for the button its
+    // title row carries — see `SectionFoldScope`.
+    <SectionFoldScope value={false}>
+      <section className={PANEL_DETAIL} aria-label={t('assets.details')}>
+        {assets.length === 1 && only ? (
+          <AssetInspector asset={only} />
+        ) : (
+          <SelectionSummary count={assets.length} bytes={total} />
+        )}
+      </section>
+    </SectionFoldScope>
   )
 }

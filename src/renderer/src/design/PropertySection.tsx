@@ -1,7 +1,8 @@
 import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
-import { useEffect, useId, useState, type ReactNode } from 'react'
+import { useContext, useEffect, useId, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { useSectionFolds } from '@/stores/sectionFolds'
+import { SectionFoldScope } from './SectionFoldScope'
 import { PROPERTY_BODY } from './styles'
 import { UiIcon } from './UiIcon'
 import { HINT_LEFT } from '@/helpers/tooltip'
@@ -26,18 +27,23 @@ export function PropertySection({
 }: PropertySectionProps) {
   const { t } = useTranslation()
   const id = useId()
+  // Whether the panel-wide order reaches this section at all — see `SectionFoldScope`.
+  const ordered = useContext(SectionFoldScope)
   const stamp = useSectionFolds(state => state.stamp)
   const wanted = useSectionFolds(state => state.wanted)
   const [held, setHeld] = useState({ stamp, open: defaultOpen })
 
   // Adjusted during the render rather than in an effect, the way `useCatalogueAssets` takes a new
   // question: an effect would fold the section one frame after the press, visibly.
-  if (held.stamp !== stamp) setHeld({ stamp, open: wanted })
+  if (ordered && held.stamp !== stamp) setHeld({ stamp, open: wanted })
 
   const open = held.open
   // What the title button reads to know whether it has anything left to fold. The subscription is
   // dropped when the face changes, so sections that went away stop answering for it.
-  useEffect(() => useSectionFolds.getState().noteSection(id, open), [id, open])
+  useEffect(
+    () => (ordered ? useSectionFolds.getState().noteSection(id, open) : undefined),
+    [ordered, id, open],
+  )
 
   return (
     <section className="border-border border-b last:border-b-0">

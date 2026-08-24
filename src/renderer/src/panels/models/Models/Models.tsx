@@ -25,7 +25,6 @@ import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { facetsFor, queryFrom, sortOptions } from '../modelFilters'
 import { ModelsCard } from './ModelsCard'
 import { ModelsRow } from './ModelsRow'
-import { modelSubtitle } from './modelSubtitle'
 import { ModelsSelected } from './ModelsSelected'
 
 const PAGE_LIMIT = 24
@@ -188,20 +187,10 @@ export function Models({ family }: ModelsProps) {
           }}
           rowHeight={ROW_HEIGHT}
           renderCard={model => (
-            <ModelsCard
-              model={model}
-              picture={pictureOf(model)}
-              featured={t('models.featured')}
-              refusal={reachOf(model).refusal}
-            />
+            <ModelsCard model={model} picture={pictureOf(model)} refusal={reachOf(model).refusal} />
           )}
           renderRow={model => (
-            <ModelsRow
-              model={model}
-              picture={pictureOf(model)}
-              subtitle={modelSubtitle(model, t)}
-              refusal={reachOf(model).refusal}
-            />
+            <ModelsRow model={model} picture={pictureOf(model)} refusal={reachOf(model).refusal} />
           )}
           empty={
             <EmptyState
