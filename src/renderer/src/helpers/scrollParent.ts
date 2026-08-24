@@ -19,14 +19,3 @@ export function scrollParentOf(element: Element | null): HTMLElement | null {
 
   return null
 }
-
-/**
- * How far an element sits below the top of what scrolls it — the `scrollMargin` a virtualizer
- * needs when its items are not the first thing in the container.
- *
- * Measured through the viewport rather than by adding up `offsetTop`, which answers relative to
- * the nearest positioned ancestor and would be wrong the moment anything in between is relative.
- */
-export function scrollOffsetWithin(element: Element, scroller: HTMLElement): number {
-  return element.getBoundingClientRect().top - scroller.getBoundingClientRect().top
-}

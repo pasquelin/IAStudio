@@ -55,3 +55,27 @@ export const PROJECT_TREES: readonly string[] = [
   MAIN,
   ...['renderer', 'shared', 'preload'].map(tree => join(SOURCE_ROOT, tree)),
 ]
+
+/**
+ * Every name a module DECLARES and exports, mapped to whether it survives compilation.
+ *
+ * A VALUE is code that ships; a TYPE is gone by then, and one of them — `UnaccountedPath` — is
+ * read by nobody ON PURPOSE, its export being what keeps a compile-time check alive. Guards that
+ * weigh the two differently need the distinction, so it is drawn once, here.
+ *
+ * What it does not see, and why each would need a parser rather than a line: `export { x }` and
+ * `export * from`, which re-publish a name declared elsewhere; `export default`, which carries no
+ * name; and a declaration whose `export` keyword sits on its own line.
+ */
+export function exportedNames(code: string): Map<string, 'value' | 'type'> {
+  return new Map(
+    // `?? ''`: both groups are filled whenever the pattern matched, which the type cannot know.
+    [...code.matchAll(DECLARES)].map(match => [
+      match[2] ?? '',
+      /^(?:type|interface)$/.test(match[1] ?? '') ? 'type' : 'value',
+    ]),
+  )
+}
+
+const DECLARES =
+  /(?:^|\n)export (?:async |declare |abstract )*(function\*?|const|let|var|class|type|interface|enum) (\w+)/g

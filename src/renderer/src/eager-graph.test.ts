@@ -238,20 +238,20 @@ describe('the opening chunk', () => {
    * own included. Stated over the whole folder, so a panel added tomorrow cannot land eager with
    * the guard still green.
    *
-   * The four left are reached for something other than a zone. `panels/jobs/Jobs.tsx` and its row
+   * The three left are reached for something other than a zone: `panels/jobs/Jobs.tsx` and its row
    * ARE a panel of the table since 11 August — but they are also what the status bar's flyout
    * opens (`app/JobsStatus.tsx:10`), which is the first screen, so the chunk holds them either
    * way. That is why `Jobs.tsx` may not read `helpers/toolRegistry`: it would drag the scene's
-   * node kinds in behind it. The facet key is read by `helpers/revealPanel.ts`, which narrows a
-   * browser before bringing it up; `panels/assets/facets.ts` holds nothing but constants for that
-   * reason — the hooks that read them moved to `hooks/` on 17 August, and with them the
-   * `react-i18next` import this chunk used to pull in behind a single string.
+   * node kinds in behind it.
+   *
+   * `panels/assets/facets.ts` was the fourth until 24 August, pulled in by `revealAssetsOfKind`
+   * — a function nothing called, deleted with the six other unread values. The budget shrank on
+   * its own, which is what a budget that may only shrink is for.
    */
   it('reaches no panel of the tool table, except the list the status bar itself opens', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.startsWith('./panels/')).sort()).toEqual([
-      './panels/assets/facets.ts',
       './panels/jobs/JobRow/JobRow.tsx',
       './panels/jobs/JobRow/JobRowDetail.tsx',
       './panels/jobs/Jobs.tsx',
