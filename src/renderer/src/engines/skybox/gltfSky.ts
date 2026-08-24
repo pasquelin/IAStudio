@@ -17,6 +17,7 @@ import {
   KHR_LIGHTS_PUNCTUAL,
   type GltfDocument,
   type GltfNode,
+  type GltfPunctualLight,
 } from '@shared/domain/gltf'
 import { STUDIO_METADATA_KEY } from '@shared/domain/document'
 import { isRecord, readNumber, readString } from '@shared/guards'
@@ -75,31 +76,31 @@ export function gltfSkyOf(
     },
   ]
 
+  // Typed rather than left to the literal: `extensions` is an open record, so nothing else here
+  // would refuse a light of a kind `KHR_lights_punctual` does not define.
+  const lights: readonly GltfPunctualLight[] = [
+    {
+      type: 'directional',
+      name: SUN_NODE,
+      color: linearRgbOf(content.sun.color),
+      /**
+       * The studio's own dial, and NOT the lux the extension asks a directional light for.
+       * Measured on three.js 0.185, which is the only glTF reader on this machine and the
+       * renderer this studio is built on: its exporter writes `light.intensity` unchanged and its
+       * loader reads it back unchanged. Converting would mean inventing a reference illuminance
+       * nothing here measures. A consumer that honours the unit reads a dim sun.
+       */
+      intensity: content.sun.intensity,
+    },
+  ]
+
   return {
     asset: { version: GLTF_VERSION, generator: GLTF_GENERATOR },
     scene: 0,
     scenes: [{ name, nodes: [0, 1] }],
     nodes,
     extensionsUsed: [KHR_LIGHTS_PUNCTUAL],
-    extensions: {
-      [KHR_LIGHTS_PUNCTUAL]: {
-        lights: [
-          {
-            type: 'directional',
-            name: SUN_NODE,
-            color: linearRgbOf(content.sun.color),
-            /**
-             * The studio's own dial, and NOT the lux the extension asks a directional light for.
-             * Measured on three.js 0.185, which is the only glTF reader on this machine and the
-             * renderer this studio is built on: its exporter writes `light.intensity` unchanged
-             * and its loader reads it back unchanged. Converting would mean inventing a reference
-             * illuminance nothing here measures. A consumer that honours the unit reads a dim sun.
-             */
-            intensity: content.sun.intensity,
-          },
-        ],
-      },
-    },
+    extensions: { [KHR_LIGHTS_PUNCTUAL]: { lights } },
     extras: { [STUDIO_METADATA_KEY]: content },
   }
 }

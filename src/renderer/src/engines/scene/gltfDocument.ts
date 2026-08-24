@@ -26,6 +26,7 @@ import {
   gltfStudioMetadata,
   isGltfDocument,
   KHR_LIGHTS_PUNCTUAL,
+  type GltfPunctualLight,
 } from '@shared/domain/gltf'
 import { isRecord } from '@shared/guards'
 import type { LightDescriptor, Transform } from '@shared/domain/scene'
@@ -50,9 +51,11 @@ type GltfCamera = {
   perspective: { yfov: number; znear: number; zfar: number }
 }
 
-/** An absent `range` means a light that reaches everywhere, on both sides. */
-type GltfLight = {
-  type: 'directional' | 'point' | 'spot'
+/**
+ * A light as this studio WRITES one: the domain's shape, with everything it leaves optional filled
+ * in. An absent `range` means a light that reaches everywhere, on both sides.
+ */
+type GltfLight = GltfPunctualLight & {
   name: string
   color: readonly [number, number, number]
   intensity: number
