@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from ia_studio_engine import PROTOCOL_VERSION
 from ia_studio_engine.core.workers import WorkerProcess
 
 GREETS_THEN_ECHOES = """
@@ -61,7 +62,7 @@ def test_a_request_is_answered_under_the_run_it_was_sent_with(door_module) -> No
     worker.start()
     try:
         run = worker.next_run()
-        worker.send({"v": 1, "id": run, "op": "worker.status", "params": {}})
+        worker.send({"v": PROTOCOL_VERSION, "id": run, "op": "worker.status", "params": {}})
 
         assert answered.wait(10)
         assert frames[0]["id"] == run
@@ -141,7 +142,9 @@ def test_what_it_sends_is_one_json_object_per_line(door_module) -> None:
     worker.start()
     try:
         senders = [
-            threading.Thread(target=worker.send, args=({"v": 1, "id": number, "op": "x"},))
+            threading.Thread(
+                target=worker.send, args=({"v": PROTOCOL_VERSION, "id": number, "op": "x"},)
+            )
             for number in range(1, 4)
         ]
         for sender in senders:

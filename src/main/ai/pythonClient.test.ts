@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { log } from '@main/log'
 import {
   createPythonClient,
   HELLO_TIMEOUT_MS,
@@ -55,7 +56,10 @@ const machine = {
 }
 
 beforeEach(() => vi.useFakeTimers())
-afterEach(() => vi.useRealTimers())
+afterEach(() => {
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
 
 describe('the handshake', () => {
   it('is answered by the greeting the engine sends unasked', async () => {
@@ -320,49 +324,18 @@ describe('watching a job that runs for seconds', () => {
   })
 })
 
-describe('the doors that announced themselves', () => {
-  const workerHello: EngineWorkerHello = {
-    v: PROTOCOL_VERSION,
-    evt: 'worker.hello',
-    door: 'engine/diffusion',
-    engine: '0.1.0',
-    protocol: PROTOCOL_VERSION,
-    backend: 'pytorch',
-    device: 'mps',
-    occupancy: { process: 'exclusive-process', device: 'exclusive', maxConcurrent: 1 },
-  }
+describe('a door announcing itself', () => {
+  const workerHello: EngineWorkerHello = { v: PROTOCOL_VERSION, evt: 'worker.hello' }
 
-  it('holds none before one has started', async () => {
-    const held = harness()
-    held.say(greeting())
-    await held.client.ready
-
-    expect(held.client.doors()).toEqual([])
-  })
-
-  /**
-   * A worker may start long after the engine did, so occupancy is DATA the door republishes and
-   * never a fact of the engine's own handshake.
-   */
-  it('holds what a door announced when it started', async () => {
+  /** Named rather than left to the fall-through, which would log its absent `runtime.error`. */
+  it('is dropped without a word in the log', async () => {
+    const warn = vi.spyOn(log, 'warn').mockImplementation(() => {})
     const held = harness()
     held.say(greeting())
     await held.client.ready
 
     held.say(workerHello)
 
-    expect(held.client.doors()).toEqual([workerHello])
-  })
-
-  it('reads a door that restarted once rather than twice', async () => {
-    const held = harness()
-    held.say(greeting())
-    await held.client.ready
-
-    held.say(workerHello)
-    held.say({ ...workerHello, occupancy: { ...workerHello.occupancy, maxConcurrent: 2 } })
-
-    expect(held.client.doors()).toHaveLength(1)
-    expect(held.client.doors()[0]?.occupancy.maxConcurrent).toBe(2)
+    expect(warn).not.toHaveBeenCalled()
   })
 })

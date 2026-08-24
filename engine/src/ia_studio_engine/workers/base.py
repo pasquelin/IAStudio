@@ -31,7 +31,7 @@ from ia_studio_engine.protocol.envelope import (
 Handler = Callable[[dict[str, Any]], Any]
 
 
-def worker_hello(door: str, backend: str, device: str, occupancy: dict[str, Any]) -> str:
+def worker_hello(door: str, backend: str, occupancy: dict[str, Any]) -> str:
     """
     A worker names its DOOR, not its runtime: that is what keys `MemorySnapshot.runtimeBytes`.
 
@@ -44,7 +44,6 @@ def worker_hello(door: str, backend: str, device: str, occupancy: dict[str, Any]
         engine=__version__,
         protocol=PROTOCOL_VERSION,
         backend=backend,
-        device=device,
         occupancy=occupancy,
     )
 
