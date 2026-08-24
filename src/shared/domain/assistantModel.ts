@@ -42,6 +42,4 @@ export const ASSISTANT_MODELS: readonly AssistantModel[] = [
 
 export const DEFAULT_ASSISTANT_MODEL: AssistantModel = 'claude-haiku-4-5'
 
-/** What the API refuses beyond, measured from the model's own schema. */
-export const INSTRUCTION_MAX = 10_000
 export const HISTORY_MAX = 10

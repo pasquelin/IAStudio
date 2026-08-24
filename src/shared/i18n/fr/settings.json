@@ -316,6 +316,29 @@
     "homeNews": {
       "title": "Actualités des modèles",
       "help": "Lit les modèles qui montent et les articles publiés sur Hugging Face, l’hôte d’où viennent déjà tous les poids du catalogue. Décoché, le studio ne contacte personne pour cette bande."
+    },
+    "mcp": "Point d’entrée (MCP)",
+    "mcpDescription": "La seconde porte du studio : un autre logiciel de cette machine — Claude Code, Cursor, tout client parlant le protocole MCP — lance les mêmes actions que l’assistant, depuis son propre projet. Fermée au départ.",
+    "mcpListening": "Ouvert : le studio écoute sur 127.0.0.1:{{port}}, sur cette machine seule.",
+    "mcpClosed": "Fermé : rien n’écoute. Cochez le réglage ci-dessus pour ouvrir la porte.",
+    "mcpHowTo": "Brancher un client",
+    "mcpStepOpen": "Cochez « Piloter le studio depuis l’extérieur ». Le point d’entrée démarre aussitôt.",
+    "mcpStepCopy": "Copiez la commande de connexion, pour un client piloté depuis un terminal — ou le bloc de configuration, pour un client qui lit un fichier.",
+    "mcpStepPaste": "Collez-la dans un terminal ouvert sur votre projet, ou le bloc dans le fichier de configuration de votre client.",
+    "mcpEachLaunch": "Le port et le jeton sont neufs à chaque démarrage du studio : le geste est à refaire après chaque lancement. Un client déjà enregistré sous le même nom se remplace, il n’y a rien à supprimer avant.",
+    "mcpExamples": "Ce qu’un client peut faire",
+    "mcpExampleGenerate": "« Cherche un modèle de skybox nocturne, prépare la génération, mais ne l’envoie pas. »",
+    "mcpExampleTidy": "« Range les rushes de la semaine dans un dossier par jour. »",
+    "mcpExampleScene": "« Pose une sphère à deux mètres à droite du cube et éclaire-la en chaud. »",
+    "mcpGuards": "Ce qui garde la porte",
+    "mcpGuardLocal": "Le point d’entrée n’écoute que sur cette machine : rien du réseau ne l’atteint.",
+    "mcpGuardToken": "Un jeton neuf à chaque démarrage ; une demande sans lui est refusée.",
+    "mcpGuardOrigin": "Une demande venue d’une page web ouverte dans votre navigateur est refusée sur ce seul motif.",
+    "mcpGuardConsent": "Tout ce qui dépense ou téléverse s’affiche et attend votre accord — sauf ce que vous avez délégué ci-dessus.",
+    "copyMcpConfig": {
+      "title": "Bloc de configuration",
+      "help": "Copie le même branchement au format JSON, pour un client qui se configure par un fichier plutôt que par une commande. À recopier après chaque lancement, comme la commande.",
+      "button": "Copier le JSON"
     }
   }
 }

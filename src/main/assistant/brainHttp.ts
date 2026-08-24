@@ -5,10 +5,26 @@ import type { ChatTurn } from '@main/ai/localRuntimes'
 import { log } from '@main/log'
 import type { Credentials } from '@main/settings/accounts'
 import type { AssistantBrain, NotReady } from './brainPort'
-import { retriedAnswer, turnsWith } from './brainRetry'
-import { studioBriefing, utteranceWithin } from './instruction'
+import { answeredTurn, OversizedRequest, turnsWith } from './brainTurn'
+import { briefingFor, type Briefing } from './instruction'
+import { roomFor } from './promptWindow'
 
 const ASK_TOKENS = 4096
+
+/**
+ * The window a chat cloud is taken to hold — an ASSUMPTION, said as one: the model is typed by
+ * hand here and none of these clouds publishes its window over the API, so there is nothing to
+ * measure. 32 000 tokens is the smallest the eight defaults are believed to have.
+ */
+const CLOUD_CONTEXT_TOKENS = 32_000
+
+/**
+ * And what one that REFUSED that is taken to hold — the narrowest window the studio ships for,
+ * which is what an Ollama model declares. Through `roomFor` like the other two doors: the reply
+ * and the sentence get their room from the same arithmetic, rather than from a number written
+ * here that reserved neither.
+ */
+const CLOUD_FALLBACK_TOKENS = 4_096
 
 export type HttpBrainDeps = {
   chat: HttpChat
@@ -67,6 +83,14 @@ function geminiText(body: unknown): string | null {
   return textOf(first['content']['parts'][0], ['text'])
 }
 
+/**
+ * The statuses that mean "this request was not acceptable as sent" — which, for a briefing of
+ * seventy thousand characters against a model typed by hand, is what a window too small looks
+ * like. A 401, a 429 or a 500 are NOT among them: they say nothing about the size, and asking
+ * again with a shorter one would double a rate limit and hide the real cause.
+ */
+const TOO_MUCH: readonly number[] = [400, 413, 422]
+
 async function readBody(
   response: Response,
   pick: (body: unknown) => string | null,
@@ -75,7 +99,8 @@ async function readBody(
   const body: unknown = await response.json().catch(() => null)
   if (!response.ok) {
     const detail = textOf(body, ['error', 'message']) ?? `${response.status}`
-    throw new Error(`${label} refused: ${detail}`)
+    const refusal = `${label} refused: ${detail}`
+    throw TOO_MUCH.includes(response.status) ? new OversizedRequest(refusal) : new Error(refusal)
   }
   const text = pick(body)
   if (text === null) throw new Error(`${label} answered nothing`)
@@ -211,27 +236,37 @@ export function createHttpChatBrain({
   notReady,
 }: HttpBrainDeps): AssistantBrain {
   const send = post ?? fetch
+  /**
+   * Whether this door has already refused the whole catalogue AND answered the short one. Both
+   * halves matter: a 400 for a model name nobody knows refuses either briefing, and would
+   * otherwise narrow this door for the life of the process on a fault that is not about size.
+   */
+  let narrowed = false
 
   const round = async (
     request: AssistantThought,
-    briefing: string,
+    briefing: Briefing,
     signal?: AbortSignal,
     complaint?: string,
   ) => {
     const held = credentials()
     if (held === null) throw new Error(`${chat.kind} has no key`)
 
+    // The sentence arrives whole: the channel already bounds it, and what used to cut it here was
+    // Scenario's ten thousand characters — a ceiling none of these clouds has.
     const messages = messagesFor(
-      briefing,
+      briefing.text,
       turnsWith(request.history, complaint),
-      utteranceWithin(request.utterance, briefing.length),
+      request.utterance,
     )
 
     try {
       // The model is settled HERE and nowhere deeper: what a cloud is talked to with is a
       // setting, and the three request shapes below only ever read the one they were handed.
       const asked = { ...chat, model: model() }
-      return { answer: await ask(asked, held.key, messages, send, signal), cost: 0 }
+      const answer = await ask(asked, held.key, messages, send, signal)
+      if (briefing.narrow === null) narrowed = true
+      return { answer, cost: 0 }
     } catch (error) {
       log.warn('assistant', `${chat.kind} thinking failed: ${String(error)}`)
       throw error
@@ -240,10 +275,18 @@ export function createHttpChatBrain({
 
   return {
     think: async (request, signal) => {
-      // Read once, outside the retry: a complaint quotes an answer, and a second reading would
-      // ship a briefing the complaint was not about.
-      const briefing = studioBriefing(await notReady?.(), request.context, request.targets)
-      return await retriedAnswer(complaint => round(request, briefing, signal, complaint))
+      // Once this door has refused the whole catalogue and answered the short one, it is asked
+      // narrow from the start: the wide briefing is 70 000 characters it would refuse again.
+      const briefing = await briefingFor(
+        request,
+        narrowed ? roomFor(CLOUD_FALLBACK_TOKENS) : roomFor(CLOUD_CONTEXT_TOKENS),
+        notReady,
+        roomFor(CLOUD_FALLBACK_TOKENS),
+      )
+
+      return await answeredTurn(briefing, (shown, complaint) =>
+        round(request, shown, signal, complaint),
+      )
     },
   }
 }

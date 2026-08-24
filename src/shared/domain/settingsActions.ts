@@ -32,7 +32,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     name: 'settings.write',
     titleKey: 'assistant.actions.settingsWrite.title',
     descriptionKey: 'assistant.actions.settingsWrite.description',
-    commitment: 'none',
+    commitment: 'studio',
     reach: 'mcp',
     fields: [
       {
@@ -56,7 +56,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     name: 'accounts.activate',
     titleKey: 'assistant.actions.accountsActivate.title',
     descriptionKey: 'assistant.actions.accountsActivate.description',
-    commitment: 'none',
+    commitment: 'studio',
     reach: 'mcp',
     fields: [
       { key: 'accountId', kind: 'text', labelKey: 'assistant.fields.accountId', required: true },
@@ -68,7 +68,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     name: 'accounts.rename',
     titleKey: 'assistant.actions.accountsRename.title',
     descriptionKey: 'assistant.actions.accountsRename.description',
-    commitment: 'none',
+    commitment: 'studio',
     reach: 'mcp',
     fields: [
       { key: 'accountId', kind: 'text', labelKey: 'assistant.fields.accountId', required: true },

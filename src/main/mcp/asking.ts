@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto'
-import type { ActionOutcome, AssistantCall } from '@shared/domain/assistant'
+import {
+  commitmentOfCall,
+  needsConfirmation,
+  type ActionOutcome,
+  type AssistantCall,
+} from '@shared/domain/assistant'
 import type { AssistantActionRequest, AssistantActionResult } from '@shared/ipc'
 
 /**
@@ -19,6 +24,16 @@ import type { AssistantActionRequest, AssistantActionResult } from '@shared/ipc'
  * something is still happening long after the user walked away.
  */
 const ANSWER_TIMEOUT_MS = 120_000
+
+/**
+ * And how long one that asks NOBODY waits.
+ *
+ * Derived rather than passed in: whether a call raises a question is already a fact of what it
+ * engages. `studio.state` sits in front of every sentence typed at the assistant, and inherited
+ * the two minutes a person is given to read — but so did every `documents.list` an MCP client
+ * makes against a window that happens to be reloading.
+ */
+const READ_TIMEOUT_MS = 2_000
 
 export type RemoteActionDeps = {
   /** Sends to the window in front, answering `false` when there is none — see `sendToFront`. */
@@ -53,12 +68,18 @@ export function createRemoteActions({
           return
         }
 
-        const timer = setTimeout(() => {
-          // Dropped from the map first, so an answer that arrives late finds nothing to resolve
-          // rather than resolving a promise its caller already gave up on.
-          waiting.delete(callId)
-          resolve({ ok: false, refusal: 'timedOut' })
-        }, timeoutMs)
+        const timer = setTimeout(
+          () => {
+            // Dropped from the map first, so an answer that arrives late finds nothing to resolve
+            // rather than resolving a promise its caller already gave up on.
+            waiting.delete(callId)
+            resolve({ ok: false, refusal: 'timedOut' })
+            // Capped rather than replaced, so a decor that shortens the wait shortens both.
+          },
+          needsConfirmation(commitmentOfCall(call.action, call.input))
+            ? timeoutMs
+            : Math.min(timeoutMs, READ_TIMEOUT_MS),
+        )
 
         // The wait must not be a reason the application stays alive at quit.
         timer.unref()

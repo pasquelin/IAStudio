@@ -1,4 +1,9 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
+import type {
+  SnapshotDocument,
+  SnapshotSelection,
+  StudioSnapshot,
+} from '@shared/domain/studioSnapshot'
 import { scopeOfWorkspace } from '@shared/domain/command'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { EXPORT_FORMATS } from '@shared/domain/scene'
@@ -6,12 +11,23 @@ import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/textureExport'
 import type { FolderExportRequest } from '@shared/ipc'
 import { closeDocument, documentIsDirty, dropDocument, saveDocument } from '@/app/documentIo'
 import { openDocument } from '@/app/dockviewApi'
-import { getBridge } from '@/services/bridge'
+import { layerById } from '@/engines/canvas/canvasState'
+import { selectedNodes } from '@/engines/scene/sceneState'
 import { reportFailure } from '@/services/diagnostics'
-import { useDocuments } from '@/stores/documents'
+import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
+import {
+  activeImageId,
+  activeMontageId,
+  activeSceneId,
+  useDocuments,
+  type DocumentsSlice,
+} from '@/stores/documents'
 import { toolSurface, useLayouts } from '@/stores/layouts'
+import { useSettings } from '@/stores/settings'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
+import { sceneOf, sceneStore, useScenes } from '@/stores/scenes'
+import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { withBridge, type ActionHandlers } from './actionHandler'
 import { numberOf, oneOf, textOf } from './actionInputs'
 
@@ -26,7 +42,7 @@ const SCENE_SCOPES: readonly ('scene' | 'selection')[] = ['scene', 'selection']
  * bullet uses: a client and the person at the machine must see one studio, not two.
  */
 
-const summaryOf = (document: DocumentDescriptor, activeId: string | null) => ({
+const summaryOf = (document: DocumentDescriptor, activeId: string | null): SnapshotDocument => ({
   id: document.id,
   title: document.title,
   kind: document.kind,
@@ -36,30 +52,88 @@ const summaryOf = (document: DocumentDescriptor, activeId: string | null) => ({
   modified: documentIsDirty(document.id),
 })
 
-async function studioState(): Promise<ActionOutcome> {
-  const bridge = getBridge()
-  if (!bridge) return refused('noBridge')
+function selectionNow(documents: DocumentsSlice): SnapshotSelection | null {
+  const imageId = activeImageId(documents)
+  if (imageId !== null) {
+    /**
+     * 🛑 Only once the store HOLDS this canvas. `canvasOf` answers `DEFAULT_CANVAS` for a
+     * document it has not loaded, and its active layer is the base one — so a freshly opened
+     * image reported "Background" as designated, and "delete it" aimed at a layer nobody chose.
+     */
+    const canvases = useCanvases.getState()
+    if (!canvasStore.hasState(canvases, imageId)) return null
 
+    const canvas = canvasOf(canvases, imageId)
+    const layer = layerById(canvas, canvas.activeLayerId)
+    return layer ? { kind: 'layer', items: [{ id: layer.id, name: layer.name }] } : null
+  }
+
+  const sceneId = activeSceneId(documents)
+  if (sceneId !== null) {
+    const scenes = useScenes.getState()
+    if (!sceneStore.hasState(scenes, sceneId)) return null
+
+    const scene = sceneOf(scenes, sceneId)
+    // The scene's own reader, which keeps the ORDER OF SELECTION — its last node is the anchor
+    // the inspector reads. Filtering the tree instead returned them in tree order, so the anchor
+    // could fall outside the four this briefing names.
+    const chosen = selectedNodes(scene.nodes, scene.selectedIds)
+    return chosen.length === 0
+      ? null
+      : { kind: 'node', items: chosen.map(node => ({ id: node.id, name: node.name })) }
+  }
+
+  const montageId = activeMontageId(documents)
+  if (montageId === null) return null
+
+  const sequences = useSequences.getState()
+  if (!sequenceStore.hasState(sequences, montageId)) return null
+
+  const selectedId = sequenceOf(sequences, montageId).selectedId
+  return selectedId === null
+    ? null
+    : { kind: 'clip', items: [{ id: selectedId, name: selectedId }] }
+}
+
+/**
+ * 🛑 Typed as `StudioSnapshot` rather than composed loose: this leaves the window as `unknown`
+ * and is read key by key in the main process. Untyped, a field renamed here left `describeStudio`
+ * composing an empty sentence, and the model acting on a studio that is not there.
+ */
+function studioState(): ActionOutcome {
   const documents = useDocuments.getState()
   const surface = toolSurface()
+  const project = useProject.getState()
+  /**
+   * 🛑 The window's own mirror, NOT `settings.authState()`. That one probes the API — one
+   * `models.list` over the wire — and this answer now sits in front of every sentence typed at
+   * the assistant, where it used to run only when an MCP client asked.
+   */
+  const auth = useSettings.getState()
 
-  return {
-    ok: true,
-    data: {
-      project: useProject.getState().project,
-      workspace: useLayouts.getState().activeWorkspace,
-      /**
-       * The surface, and the scope it puts a command in — the two facts `command.run` refuses on.
-       * A client that reads `wrongSurface` needs the SCOPE to know what to activate, and deriving
-       * it here rather than leaving it to be looked up is what makes the refusal actionable.
-       */
-      surface,
-      commandScope: scopeOfWorkspace(surface),
-      documents: Object.values(documents.documents).map(one => summaryOf(one, documents.activeId)),
-      armedModels: useModels.getState().selected,
-      authenticated: (await bridge.settings.authState()).authenticated,
-    },
+  const snapshot: StudioSnapshot = {
+    project: project.project,
+    // 🛑 Beside the project itself: its initial `null` means "not asked yet", and a reader that
+    // took it for an answer would tell a model there is no project over an open one.
+    projectKnown: project.known,
+    workspace: useLayouts.getState().activeWorkspace,
+    /**
+     * The surface, and the scope it puts a command in — the two facts `command.run` refuses on.
+     * A client that reads `wrongSurface` needs the SCOPE to know what to activate, and deriving
+     * it here rather than leaving it to be looked up is what makes the refusal actionable.
+     */
+    surface,
+    commandScope: scopeOfWorkspace(surface),
+    documents: Object.values(documents.documents).map(one => summaryOf(one, documents.activeId)),
+    // What the person has designated, which is what a spoken request most often means by "it".
+    selection: selectionNow(documents),
+    armedModels: useModels.getState().selected,
+    authenticated: auth.auth.authenticated,
+    // Same reason as `projectKnown`, and the store keeps the flag for it.
+    authKnown: auth.authKnown,
   }
+
+  return { ok: true, data: snapshot }
 }
 
 function listDocuments(): ActionOutcome {

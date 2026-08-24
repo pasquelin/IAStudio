@@ -232,6 +232,18 @@ describe('choosing and preparing a model', () => {
     expect(useModels.getState().selected[aiRoleId('3d', 'txt23d')]).toBe('model_y')
   })
 
+  /**
+   * What a model shown only the short list asks with, and what it gets back: the action, what it
+   * is for, and the fields it takes — enough to call it on the next turn without seeing the rest.
+   */
+  it('finds actions the short catalogue never named', async () => {
+    const outcome = await runAction('actions.find', { query: 'git branch' })
+    const found = outcome.ok ? (outcome.data as { name: string; fields: unknown[] }[]) : []
+
+    expect(found.some(one => one.name === 'git.checkout')).toBe(true)
+    expect(found.find(one => one.name === 'git.checkout')?.fields.length).toBeGreaterThan(0)
+  })
+
   it('refuses parameters that are not a set of values', async () => {
     const outcome = await runAction('generator.prepare', {
       family: '3d',

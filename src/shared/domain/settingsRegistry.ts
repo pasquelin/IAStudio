@@ -148,6 +148,11 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     descriptionKey: 'settings.gitDescription',
   },
   {
+    id: 'mcp',
+    labelKey: 'settings.mcp',
+    descriptionKey: 'settings.mcpDescription',
+  },
+  {
     id: 'storage',
     labelKey: 'settings.storage',
     descriptionKey: 'settings.storageDescription',
@@ -597,7 +602,7 @@ export const SETTING_REGISTRY = [
   setting({
     path: 'mcp.enabled',
     kind: 'boolean',
-    section: 'advanced',
+    section: 'mcp',
     titleKey: 'settings.mcpEnabled.title',
     helpKey: 'settings.mcpEnabled.help',
   }),
@@ -609,7 +614,7 @@ export const SETTING_REGISTRY = [
   setting({
     path: 'mcp.delegateFiles',
     kind: 'boolean',
-    section: 'advanced',
+    section: 'mcp',
     titleKey: 'settings.mcpDelegateFiles.title',
     helpKey: 'settings.mcpDelegateFiles.help',
     dependsOn: { path: 'mcp.enabled', equals: true },
@@ -617,7 +622,7 @@ export const SETTING_REGISTRY = [
   setting({
     path: 'mcp.delegateAsset',
     kind: 'boolean',
-    section: 'advanced',
+    section: 'mcp',
     titleKey: 'settings.mcpDelegateAsset.title',
     helpKey: 'settings.mcpDelegateAsset.help',
     dependsOn: { path: 'mcp.enabled', equals: true },
@@ -625,7 +630,7 @@ export const SETTING_REGISTRY = [
   setting({
     path: 'mcp.delegateRemote',
     kind: 'boolean',
-    section: 'advanced',
+    section: 'mcp',
     titleKey: 'settings.mcpDelegateRemote.title',
     helpKey: 'settings.mcpDelegateRemote.help',
     dependsOn: { path: 'mcp.enabled', equals: true },
@@ -636,7 +641,7 @@ export const SETTING_REGISTRY = [
     min: 0,
     max: 10_000,
     step: 1,
-    section: 'advanced',
+    section: 'mcp',
     titleKey: 'settings.mcpDelegateBudget.title',
     helpKey: 'settings.mcpDelegateBudget.help',
     dependsOn: { path: 'mcp.enabled', equals: true },
@@ -722,11 +727,20 @@ export const ACTION_REGISTRY: readonly SettingAction[] = [
   {
     // The port and the token are minted per launch, so there is nothing to write down and
     // nothing to show on this screen — only a line to paste, which is what this hands over.
-    id: 'advanced.copyMcpCommand',
-    section: 'advanced',
+    id: 'mcp.copyCommand',
+    section: 'mcp',
     titleKey: 'settings.copyMcpCommand.title',
     helpKey: 'settings.copyMcpCommand.help',
     buttonKey: 'settings.copyMcpCommand.button',
+  },
+  {
+    // The same two facts in the shape a client that reads a FILE takes them: one command line
+    // covers Claude Code, and nothing covered the others.
+    id: 'mcp.copyConfig',
+    section: 'mcp',
+    titleKey: 'settings.copyMcpConfig.title',
+    helpKey: 'settings.copyMcpConfig.help',
+    buttonKey: 'settings.copyMcpConfig.button',
   },
   {
     // Asked before acting, and it is the only action here that writes OUTSIDE the studio's own

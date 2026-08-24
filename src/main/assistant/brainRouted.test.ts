@@ -19,6 +19,7 @@ const routed = (over: Partial<RoutedBrainDeps> = {}) =>
     localBrain: () => answering('from this machine'),
     cloudBrain: id => (id === 'a-cloud' ? answering('from the cloud') : null),
     contextOf: () => Promise.resolve(''),
+    stateOf: () => Promise.resolve(''),
     ...over,
   })
 
@@ -56,6 +57,30 @@ describe('the routed brain', () => {
     })
 
     await expect(brain.think(thought)).rejects.toThrow(/not in the catalogue/)
+  })
+
+  /**
+   * Both readings reach the brain, and this is the ONE point they are made: a window that named
+   * its own state or its own project could name a document it is not showing.
+   */
+  it('hands the brain what the project is about and what the studio is', async () => {
+    const think = vi.fn(() => Promise.resolve<AssistantAnswer>({ say: '', calls: [], cost: 0 }))
+    const brain = routed({
+      providerOf: () => Promise.resolve({ kind: 'local', modelId: llama.id }),
+      localBrain: () => ({ think }),
+      contextOf: () => Promise.resolve('World: a forest'),
+      stateOf: () => Promise.resolve('Studio now:\n  Space: image.'),
+    })
+
+    await brain.think({ utterance: 'hello', history: [], context: 'forged', state: 'forged' })
+
+    expect(think).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: 'World: a forest',
+        state: 'Studio now:\n  Space: image.',
+      }),
+      undefined,
+    )
   })
 
   // A model uninstalled, a key removed, a project opened: all of them move the answer, and a turn

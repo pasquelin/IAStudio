@@ -46,6 +46,24 @@ describe('asking the window in front to act', () => {
     await expect(actions.run(call)).resolves.toEqual({ ok: false, refusal: 'timedOut' })
   })
 
+  /**
+   * 🛑 Derived from what the call ENGAGES, not from who is calling. The assistant's state read
+   * sits in front of every sentence typed, and a `documents.list` from an MCP client hits a
+   * window that may be reloading — neither raises a question, so neither waits two minutes for
+   * a person to read one.
+   */
+  it('waits far less for a call that asks nobody', async () => {
+    const actions = createRemoteActions({ send: () => true })
+    const started = Date.now()
+
+    // `documents.list` commits nothing, so the cap is the read one and not the two minutes.
+    await expect(actions.run({ action: 'documents.list', input: {} })).resolves.toEqual({
+      ok: false,
+      refusal: 'timedOut',
+    })
+    expect(Date.now() - started).toBeLessThan(10_000)
+  }, 15_000)
+
   // An answer that arrives after the wait ended, or a window answering twice.
   it('drops an answer nobody is waiting on', () => {
     const { actions } = windowThatAnswers()

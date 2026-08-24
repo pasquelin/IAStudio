@@ -59,11 +59,13 @@ import { bundledAnimationFile } from './animations'
 import { createAssetText } from './assistant/assetText'
 import { createRemoteActions, type RemoteActions } from './mcp/asking'
 import { createMcpControl, type McpControl } from './mcp/control'
+import { mcpStateOf } from './mcp/endpoint'
 import type { AssistantBrain } from './assistant/brainPort'
 import { createProviderBrain } from './assistant/brainProvider'
 import { createLocalBrain } from './assistant/brainLocal'
 import { createHttpChatBrain } from './assistant/brainHttp'
 import { createRoutedBrain } from './assistant/brainRouted'
+import { describeStudio } from './assistant/studioState'
 import { createSession, type DictationSession } from './dictation/session'
 import { STT_MODEL } from '@shared/domain/dictation'
 import { chatModelOf, CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
@@ -1781,6 +1783,12 @@ export function createServices(settings: SettingsStore): Services {
     notReady,
   })
 
+  // To the studio window alone, and it says when there is none — which is the difference between
+  // an MCP client hearing "no window was there" and waiting out two minutes for nothing.
+  const remoteActions = createRemoteActions({
+    send: request => sendTo(studioWindow(), EVENTS.assistantAction, request),
+  })
+
   /**
    * WHICH brain answers is the manager's decision, asked on every turn — ADR-21 § A: the assistant
    * is an employment like any other, served by a model on this machine or by a registered cloud,
@@ -1806,12 +1814,12 @@ export function createServices(settings: SettingsStore): Services {
     // Read here rather than taken from the window: this is the one point every brain goes
     // through, and a context a renderer could name is one it could forge.
     contextOf: async () => composedContext((await context.read()).cards),
-  })
-
-  // To the studio window alone, and it says when there is none — which is the difference between
-  // an MCP client hearing "no window was there" and waiting out two minutes for nothing.
-  const remoteActions = createRemoteActions({
-    send: request => sendTo(studioWindow(), EVENTS.assistantAction, request),
+    // Asked of the window by the door an MCP client reads `studio.state` by: one reading of what
+    // the studio is, or the assistant and a client on the wire would see two different studios.
+    stateOf: async () => {
+      const outcome = await remoteActions.run({ action: 'studio.state', input: {} })
+      return outcome.ok ? describeStudio(outcome.data) : ''
+    },
   })
 
   /**
@@ -1825,6 +1833,7 @@ export function createServices(settings: SettingsStore): Services {
     run: remoteActions.run,
     version: app.getVersion(),
     configPath: join(app.getPath('userData'), 'mcp.json'),
+    onSettled: endpoint => broadcast(EVENTS.mcpState, mcpStateOf(endpoint)),
   })
 
   const captioner = createCaptioner({

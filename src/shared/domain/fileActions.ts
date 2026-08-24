@@ -37,7 +37,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     name: 'project.open',
     titleKey: 'assistant.actions.projectOpen.title',
     descriptionKey: 'assistant.actions.projectOpen.description',
-    commitment: 'none',
+    commitment: 'studio',
     reach: 'mcp',
     fields: [
       { key: 'path', kind: 'text', labelKey: 'assistant.fields.folderPath', required: true },
@@ -47,7 +47,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     name: 'project.create',
     titleKey: 'assistant.actions.projectCreate.title',
     descriptionKey: 'assistant.actions.projectCreate.description',
-    commitment: 'none',
+    commitment: 'studio',
     reach: 'mcp',
     fields: [
       { key: 'path', kind: 'text', labelKey: 'assistant.fields.folderPath', required: true },

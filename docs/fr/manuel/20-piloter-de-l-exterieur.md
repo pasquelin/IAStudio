@@ -17,13 +17,16 @@ Elle a deux portes, et **elles donnent sur la même pièce** :
 Les deux lisent **le même catalogue**, et **rien qui engage quelque chose ne part sans que vous
 l’ayez vu à l’écran** — d’où que vienne la demande.
 
-Elles n’en voient pas la même part, et c’est délibéré. **L’assistant en connaît onze**, celles
-d’une phrase parlée : ouvrir un espace, chercher un modèle, préparer une génération. **Le point
-d’entrée les offre toutes**, tout ce qu’un programme conduit délibérément — l’arbre des fichiers,
-la pile de calques, le montage, le ciel, la matière, la scène 3D, le squelette d’un personnage, le
-dépôt git, la bibliothèque distante, les panneaux du studio. La raison est prosaïque : le modèle
-qui lit vos phrases reçoit le catalogue entier avant chacune d’elles, et le catalogue entier n’y
-laisserait plus de place pour la phrase.
+**Le point d’entrée les offre toutes** — tout ce qu’un programme conduit délibérément : l’arbre
+des fichiers, la pile de calques, le montage, le ciel, la matière, la scène 3D, le squelette d’un
+personnage, le dépôt git, la bibliothèque distante, les panneaux du studio.
+
+**L’assistant, lui, en reçoit autant que le modèle qui vous répond peut en tenir.** Le catalogue
+entier là où il y a la place — un nuage de discussion, un modèle local à grande fenêtre — et
+seulement les actions d’une phrase parlée là où il n’y en a pas : ouvrir un espace, chercher un
+modèle, préparer une génération. Dans ce dernier cas il lui reste de quoi **demander le reste** en
+cours de route, ce qui lui coûte un aller-retour. Vous n’avez rien à régler : cela suit le modèle
+choisi dans la fenêtre de l’assistant.
 
 ---
 
@@ -43,10 +46,16 @@ Chaque étape s’affiche dans le fil, avec ce qu’elle a donné.
 
 ### Ce que l’assistant peut lire
 
-**Rien de ce que vous n’avez pas écrit.** Il reçoit votre phrase et **les dix derniers échanges**
-de la conversation en cours, rendus en texte. Il ne voit ni vos images, ni vos projets, ni le
-contenu de vos documents — il connaît le *catalogue* des actions et leurs paramètres, pas ce sur
-quoi elles vont s’appliquer.
+**Votre phrase, les dix derniers échanges, et l’état du studio.** Il sait quel espace est ouvert,
+quel document est devant et s’il porte des modifications non enregistrées, quel modèle est armé
+pour cet espace, ce qui y est sélectionné, et ce que la fiche du projet raconte
+([chapitre 4](04-projets.md#le-contexte-du-projet)). C’est ce qui lui permet de comprendre
+« fais-moi un vélo » comme une génération dans l’espace où vous êtes, plutôt que comme un document
+à créer.
+
+**Il ne voit pas vos documents pour autant** : ni vos images, ni leur contenu — il connaît le
+*catalogue* des actions et leurs paramètres, et l’état de la fenêtre, pas ce que vos fichiers
+contiennent.
 
 Une exception, et elle est explicite : **Décrire le style des références** lit les images de
 référence déjà posées sur le formulaire du Générateur. C’est le seul endroit où l’assistant
@@ -129,7 +138,7 @@ Quatre choses, et il faut les quatre pour qu’une demande passe :
 
 ### L’ouvrir
 
-**Réglages ▸ Avancé ▸ Piloter le studio depuis l’extérieur.** Cochez la case ; le point d’entrée
+**Réglages ▸ Point d’entrée (MCP) ▸ Piloter le studio depuis l’extérieur.** Cochez la case ; le point d’entrée
 démarre aussitôt. Décochez-la, il s’arrête et **plus rien n’écoute**.
 
 ---
@@ -140,7 +149,8 @@ C’est le cas le plus courant, et il tient en trois gestes.
 
 ### 1. Ouvrir la porte
 
-**Réglages ▸ Avancé**, cochez **Piloter le studio depuis l’extérieur**.
+**Réglages ▸ Point d’entrée (MCP)**, cochez **Piloter le studio depuis l’extérieur**. La rubrique
+dit alors sur quel port le studio écoute, ce qu’un client peut faire, et ce qui garde la porte.
 
 ### 2. Copier la ligne de connexion
 
@@ -160,6 +170,27 @@ Ouvrez un terminal **dans le dossier du projet où vous travaillez avec Claude C
 ligne. C’est tout : Claude Code connaît désormais le studio, et voit ses outils.
 
 Pour vérifier, demandez-lui la liste de ses serveurs MCP — le studio doit y figurer, connecté.
+
+### Un client qui se configure par un fichier
+
+Tous ne se pilotent pas depuis un terminal. Pour ceux-là, **Bloc de configuration ▸ Copier le
+JSON** met dans le presse-papiers le même branchement, dans la forme qu’un fichier de
+configuration attend :
+
+```json
+{
+  "mcpServers": {
+    "ia studio": {
+      "type": "http",
+      "url": "http://127.0.0.1:54321/mcp",
+      "headers": { "Authorization": "Bearer …" }
+    }
+  }
+}
+```
+
+Collez-le dans le fichier de configuration MCP de votre client. Le port et le jeton y sont les
+vôtres, et changent au même rythme.
 
 ### Ce qu’il faut refaire à chaque lancement
 

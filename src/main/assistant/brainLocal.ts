@@ -2,9 +2,9 @@ import type { AssistantThought } from '@shared/domain/assistant'
 import { log } from '@main/log'
 import type { ChatRequest, ChatTurn } from '@main/ai/localRuntimes'
 import type { AssistantBrain, NotReady } from './brainPort'
-import { retriedAnswer, turnsWith } from './brainRetry'
-import { studioBriefing, utteranceWithin } from './instruction'
-import { promptWindow } from './promptWindow'
+import { answeredTurn, turnsWith } from './brainTurn'
+import { briefingFor, type Briefing } from './instruction'
+import { promptWindow, roomFor, sentenceWithin } from './promptWindow'
 
 /**
  * The assistant's thinking, run on a model on this machine. Same catalogue and same parsing as the
@@ -47,16 +47,17 @@ export function createLocalBrain({
 }: LocalBrainDeps): AssistantBrain {
   const ask = async (
     request: AssistantThought,
-    briefing: string,
+    briefing: Briefing,
     signal?: AbortSignal,
     complaint?: string,
   ) => {
-    const said = utteranceWithin(request.utterance, briefing.length)
+    // Cut to THIS window and no longer to Scenario's — `sentenceWithin` holds the arithmetic.
+    const said = sentenceWithin(request.utterance, briefing.text.length, contextTokens)
     // Raising the window here would quietly ask for memory nothing budgeted: the reservation was
     // measured against the one the manifest declares. The briefing and the sentence are what must
     // survive, so the history is what gives ground — the runtime would cut the briefing first.
     const window = promptWindow(
-      briefing + said,
+      briefing.text + said,
       turnsWith(request.history, complaint),
       contextTokens,
     )
@@ -67,7 +68,7 @@ export function createLocalBrain({
     return {
       answer: await chat({
         model: modelId,
-        messages: messagesFor(briefing, window.history, said),
+        messages: messagesFor(briefing.text, window.history, said),
         contextTokens,
         json: true,
         ...(signal ? { signal } : {}),
@@ -78,10 +79,11 @@ export function createLocalBrain({
 
   return {
     think: async (request, signal) => {
-      // Read once, outside the retry, as `model()` is next door: a complaint quotes an answer, and
-      // a second reading would ship a briefing the complaint was not about.
-      const briefing = studioBriefing(await notReady?.(), request.context, request.targets)
-      return await retriedAnswer(complaint => ask(request, briefing, signal, complaint))
+      const briefing = await briefingFor(request, roomFor(contextTokens), notReady)
+
+      return await answeredTurn(briefing, (shown, complaint) =>
+        ask(request, shown, signal, complaint),
+      )
     },
   }
 }

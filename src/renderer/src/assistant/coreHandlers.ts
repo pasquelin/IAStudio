@@ -1,9 +1,10 @@
-import { refused, type ActionOutcome } from '@shared/domain/assistant'
+import { findActions, refused, type ActionOutcome } from '@shared/domain/assistant'
 import { commandDescriptor } from '@shared/domain/command'
 import { primaryRoleOf } from '@shared/domain/aiRole'
 import { MODEL_FAMILIES } from '@shared/domain/model'
 import { SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
+import { englishText } from '@shared/i18n'
 import { showWorkspace } from '@/app/dockviewApi'
 import { createDocumentIn } from '@/app/newDocument'
 import { openGeneratorOn } from '@/helpers/openGenerator'
@@ -132,8 +133,32 @@ function describeStyle(): Promise<ActionOutcome> {
   return withBridge(bridge => bridge.provider.describeStyle(references))
 }
 
+/**
+ * The catalogue, searched — how a model shown the short list learns what else there is.
+ *
+ * English, like the catalogue a model is shown and the tools an MCP client reads: the answer is
+ * read by a program, not by the person at the machine.
+ */
+function findInCatalogue(input: Record<string, unknown>): ActionOutcome {
+  const query = textOf(input, 'query')
+  if (query === null) return refused('badInput')
+
+  return {
+    ok: true,
+    // The field DESCRIPTORS as they stand, plus their English label: listing the three properties
+    // that seemed useful dropped `repeated`, `min` and `max`, so a client discovering an action
+    // here got a weaker contract than the same tool in `tools/list`.
+    data: findActions(query).map(found => ({
+      name: found.name,
+      description: englishText(found.descriptionKey),
+      fields: found.fields.map(field => ({ ...field, label: englishText(field.labelKey) })),
+    })),
+  }
+}
+
 export const CORE_HANDLERS: ActionHandlers = {
   'command.run': runCommand,
+  'actions.find': findInCatalogue,
   'workspace.open': openWorkspace,
   'generator.prepare': prepareGenerator,
   'generator.submit': submitPrepared,

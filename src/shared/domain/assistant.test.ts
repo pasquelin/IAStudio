@@ -6,10 +6,12 @@ import {
   ACTION_REGISTRY,
   assistantAction,
   commitmentOfCommand,
+  findActions,
   needsConfirmation,
   refusalKey,
 } from './assistant'
 import { COMMAND_REGISTRY, type CommandId } from './command'
+import { delegated } from './delegation'
 
 function resolve(bundle: unknown, key: string): unknown {
   return key
@@ -104,6 +106,52 @@ describe('what an action engages', () => {
       const text = resolve(TRANSLATIONS[code], refusalKey(refusal))
       expect(typeof text === 'string' && text.trim() !== '', refusal).toBe(true)
     }
+  })
+
+  /**
+   * The half of two-step discovery that lives in the registry: what a query finds is what the
+   * model is shown next, so an answer ranked by chance is a briefing about the wrong family.
+   */
+  it('finds an action by its name or its description, the closest first', () => {
+    const found = findActions('checkout branch')
+
+    expect(found[0]?.name).toBe('git.checkout')
+    expect(found.some(one => one.name === 'actions.find')).toBe(false)
+  })
+
+  it('finds nothing on an empty query rather than everything', () => {
+    expect(findActions('   ')).toEqual([])
+  })
+
+  /**
+   * 🛑 The five the widening put within a spoken sentence's reach, and the reason `studio`
+   * exists: the assistant's model is now shown the whole registry, where before it was shown
+   * eleven names. Which account answers decides whose library and whose invoice the next
+   * generation lands on, and no ⌘Z reaches any of it.
+   */
+  it.each([
+    'settings.write',
+    'accounts.activate',
+    'accounts.rename',
+    'project.open',
+    'project.create',
+  ])('asks before %s changes what the studio is', name => {
+    expect(assistantAction(name)?.commitment).toBe('studio')
+    expect(needsConfirmation('studio')).toBe(true)
+  })
+
+  /** And no switch waves it through, which is what tells it apart from the other four. */
+  it('never delegates what changes the studio itself', () => {
+    const armed = {
+      enabled: true,
+      delegateFiles: true,
+      delegateAsset: true,
+      delegateRemote: true,
+      delegateBudget: 1_000,
+    }
+
+    expect(delegated(armed, 'studio', 0, 0)).toBe(false)
+    expect(delegated(armed, 'files', 0, 0)).toBe(true)
   })
 
   it('never spends credits through a command', () => {

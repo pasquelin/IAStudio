@@ -1,10 +1,12 @@
+import { englishText } from '../i18n'
+import type { Target } from './target'
+import { foldForSearch } from '../text'
 import {
   type ActionCommitment,
   type ActionName,
   type AssistantAction,
   type ActionReach,
 } from './assistantAction'
-import type { Target } from './target'
 import { ASSET_ACTIONS } from './assetActions'
 import { CANVAS_ACTIONS } from './canvasActions'
 import { CLOUD_ACTIONS } from './cloudActions'
@@ -27,9 +29,9 @@ import { STATE_ACTIONS } from './stateActions'
  * the model that chooses it — see spec § 9.
  *
  * One table, read by two surfaces that must never disagree: the assistant inside the window,
- * which lists it to the model as the vocabulary it may use, and the MCP server, which publishes
- * it as tools to whatever client connects. What each door sees is decided by `reach`, and by
- * nothing else — see `assistantAction.ts`.
+ * which lists the model as much of it as its brain has room for, and the MCP server, which
+ * publishes all of it as tools. What the assistant is SHOWN is decided by that room —
+ * `studioBriefing` — and `reach` only names the short share it falls back to.
  */
 
 export * from './assistantAction'
@@ -78,6 +80,59 @@ export function actionsReaching(reach: ActionReach): readonly AssistantAction[] 
   }
 }
 
+/**
+ * The words of a name or a sentence — through `foldForSearch`, the fold every other search of
+ * the studio uses. Without it « génération » shattered into `g`, `n`, `ration`, and a one-letter
+ * token scored against dozens of actions: an accented query put the wrong family at the top of
+ * the list the briefing copies.
+ */
+const wordsOf = (text: string): readonly string[] => foldForSearch(text).match(/[a-z0-9]+/g) ?? []
+
+/**
+ * Every action's own words, folded once for the process: 225 bundle walks and as many regexes,
+ * none of which depends on the query — and `actions.find` runs this on the UI thread.
+ */
+type Searchable = { readonly action: AssistantAction; readonly words: readonly string[] }
+
+let searchableHeld: readonly Searchable[] | null = null
+
+const searchable = (): readonly Searchable[] =>
+  (searchableHeld ??= ACTION_REGISTRY.filter(entry => entry.name !== DISCOVERY_ACTION).map(
+    action => ({ action, words: wordsOf(`${action.name} ${englishText(action.descriptionKey)}`) }),
+  ))
+
+/**
+ * The actions a word or two points at, best first — how a model shown the short list asks for
+ * the rest of the registry.
+ *
+ * Matched on the name and on the ENGLISH description, which is what a model is shown of an
+ * action it can already see: one text for both, or a search would find what the catalogue does
+ * not describe. Prefix matching rather than equality, so "layer" finds "layers".
+ */
+export function findActions(query: string): readonly AssistantAction[] {
+  const wanted = wordsOf(query)
+  if (wanted.length === 0) return []
+
+  return (
+    searchable()
+      .map(one => ({ action: one.action, score: scoreOf(wanted, one.words) }))
+      .filter(hit => hit.score > 0)
+      // Stable, so equal scores stay in registry order — the order the families were written in.
+      .sort((first, second) => second.score - first.score)
+      .map(hit => hit.action)
+  )
+}
+
+const scoreOf = (wanted: readonly string[], found: readonly string[]): number =>
+  wanted.filter(word => found.some(one => one.startsWith(word))).length
+
+/**
+ * The action a brain answers ITSELF, to hand a model the share of the catalogue it was not shown
+ * — see `answeredTurn`. Named here because two modules must leave it out of what they list and
+ * of what they search, and a name spelled twice is a name that drifts.
+ */
+export const DISCOVERY_ACTION: ActionName = 'actions.find'
+
 /** One thing the assistant decided to do. Checked against the registry before it is run. */
 export type AssistantCall = { action: ActionName; input: Record<string, unknown> }
 
@@ -99,10 +154,19 @@ export type AssistantThought = {
    */
   context?: string
   /**
+   * What the studio is right now — the space, the document in front, the model armed, what is
+   * selected — already in sentences. See `describeStudio`.
+   *
+   * 🛑 Filled in the MAIN process, by the same route and for the same reason as `context`: it is
+   * ASKED of the window in front, through the door an MCP client reads `studio.state` by, rather
+   * than taken from whatever a renderer chose to send.
+   */
+  state?: string
+  /**
    * What the open document can be aimed at, narrowed by the window — see `target.ts`.
    *
-   * Unlike `context` this one IS the renderer's to name: it describes its own window, and every
-   * id is checked against the live document by the handler before anything moves.
+   * Unlike `context` and `state` this one IS the renderer's to name: it describes its own window,
+   * and every id is checked against the live document by the handler before anything moves.
    */
   targets?: readonly Target[]
 }

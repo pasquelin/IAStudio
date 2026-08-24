@@ -331,18 +331,30 @@ load.
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) declares what the studio can be asked to do —
 one family per `*Actions.ts` module, their fields, **what each one commits** (`none`, `files`,
-`asset`, `remote`, `credits`) and **which door offers it** (`reach`). **The count is not written
+`asset`, `remote`, `studio`, `credits`) and **which door offers it** (`reach`). **The count is not written
 here**: it rises with every batch, and `exhaustive.test.ts` holds it to the `ActionName` union. It
 has two readers, and **neither of them decides**:
 
-- **the assistant**, inside the window, which lists the `both` share to its model — eleven actions;
+- **the assistant**, inside the window, which lists its model **as much as its brain has room
+  for**;
 - **`main/mcp/tools.ts`**, which republishes **all** of it as MCP tools for a client outside.
 
-**The asymmetry is forced, not tasteful.** The assistant's catalogue goes out in a prompt capped by
-`INSTRUCTION_MAX` at ten thousand characters, of which four thousand are left for the person's own
-sentence — `brain.test.ts` holds that floor. Publishing the families a program drives (files, layers,
-scene, git) there would eat that margin, and the sentence is what the truncation would take off.
-`tools/list` has no cap.
+**The asymmetry is not a written rule: it is arithmetic, door by door.** Each brain declares the
+room it holds — Scenario ten thousand characters, the `instruction` field of its generation
+endpoint (`brainProvider.ts`) · a chat cloud its own (`brainHttp.ts`) · a local model whatever its
+window leaves (`roomFor`, `promptWindow.ts`). `studioBriefing` puts the whole registry there when
+it fits, and otherwise the `both` share **plus the way to ask for the rest**: `actions.find`, which
+the brain runs itself before asking once more with what the search found (`answeredTurn`,
+`brainTurn.ts`).
+
+**`studio` was born of that widening**: the assistant's model is now shown actions that change the
+settings, the account that answers, or the project that is open — none of them undoable by ⌘Z, and
+the account decides whose library and whose invoice the next generation lands on. It is the only
+level with no delegation switch, and that is the point.
+
+**What a model may name follows what it was SHOWN**, no longer `reach`: the briefing carries the
+allowed set and `parseReply` holds to it. A shared ceiling did the opposite — `INSTRUCTION_MAX`
+lived in `shared/` and applied to the seven HTTP clouds, which accept dozens of times more.
 
 **`validatesInput` (`assistantAction.ts`) is the whole of the input validation**, derived from the
 fields and sitting on `runConfirmedAction`. Nothing upstream does it: the IPC boundary checks the

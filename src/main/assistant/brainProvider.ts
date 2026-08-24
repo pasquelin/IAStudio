@@ -1,11 +1,10 @@
 import type { AssistantModel } from '@shared/domain/assistant'
 import type { Job } from '@shared/domain/job'
-import type { WorkspaceId } from '@shared/domain/workspace'
 import { log } from '@main/log'
 import type { AssistantThought } from '@shared/domain/assistant'
 import type { AssistantBrain, NotReady } from './brainPort'
-import { retriedAnswer, turnsWith, type BrainAttempt } from './brainRetry'
-import { instructionFor } from './instruction'
+import { answeredTurn, turnsWith, type BrainAttempt } from './brainTurn'
+import { briefingFor, instructionFor, type Briefing } from './instruction'
 
 /**
  * The assistant's thinking, run on Scenario's own catalogue model.
@@ -20,6 +19,23 @@ import { instructionFor } from './instruction'
  * conversation, so history goes in `textInputs`, ten blocks at most; and no streaming, so the
  * answer arrives whole, after a job.
  */
+
+/**
+ * What THIS door refuses beyond, measured from the model's own schema: `instruction` is a field
+ * of the generation endpoint, and the assistant reaches a language model through it.
+ *
+ * 🛑 It belongs to this file and to no other. Shared, it was applied to seven chat clouds that
+ * take dozens of times more — an image generator's form deciding how much a conversation may say.
+ */
+export const INSTRUCTION_MAX = 10_000
+
+/**
+ * What the sentence is guaranteed, whatever the catalogue grows to. The briefing gets the rest,
+ * and at eight thousand characters the whole registry does not fit — so this door is shown the
+ * short list and asks for the rest when it needs it.
+ */
+const UTTERANCE_ROOM = 2_000
+const BRIEFING_ROOM = INSTRUCTION_MAX - UTTERANCE_ROOM
 
 export type BrainDeps = {
   /**
@@ -38,7 +54,7 @@ export type BrainDeps = {
 function bodyFor(
   request: AssistantThought,
   model: AssistantModel,
-  idle: readonly WorkspaceId[] | undefined,
+  briefing: string,
   complaint?: string,
 ): {
   instruction: string
@@ -51,7 +67,7 @@ function bodyFor(
   const inputs = turnsWith(request.history, complaint)
 
   return {
-    instruction: instructionFor(request.utterance, idle ?? [], request.context, request.targets),
+    instruction: instructionFor(briefing, request.utterance, INSTRUCTION_MAX),
     model,
     numOutputs: 1,
     ...(inputs.length > 0 ? { textInputs: inputs } : {}),
@@ -71,10 +87,10 @@ export function createProviderBrain({ run, readText, model, notReady }: BrainDep
   const ask = async (
     request: AssistantThought,
     chosen: AssistantModel,
-    idle: readonly WorkspaceId[] | undefined,
+    briefing: Briefing,
     complaint?: string,
   ): Promise<BrainAttempt> => {
-    const job = await run(bodyFor(request, chosen, idle, complaint))
+    const job = await run(bodyFor(request, chosen, briefing.text, complaint))
     const cost = job.cost ?? 0
 
     if (job.status !== 'succeeded') {
@@ -88,11 +104,13 @@ export function createProviderBrain({ run, readText, model, notReady }: BrainDep
   return {
     think: async request => {
       // Read once, outside the retry: a setting changed between two attempts would have the model
-      // complained to be a different one from the model that answered. The state reads the same
-      // way, and for the same reason.
+      // complained to be a different one from the model that answered.
       const chosen = model()
-      const idle = await notReady?.()
-      return await retriedAnswer(complaint => ask(request, chosen, idle, complaint))
+      const briefing = await briefingFor(request, BRIEFING_ROOM, notReady)
+
+      return await answeredTurn(briefing, (shown, complaint) =>
+        ask(request, chosen, shown, complaint),
+      )
     },
   }
 }
