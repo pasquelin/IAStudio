@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import { assetTypeOfRemote, workspaceOfType } from '@shared/domain/assetKind'
 import { withAuthoredPrompt } from '@shared/domain/projectContext'
@@ -61,7 +62,7 @@ export function createAssetCollector({
     mine: HeldAsset | null,
   ): Promise<RemoteAsset | null> => {
     if (!mine) return await retrieve(remoteAssetId)
-    return await retrieve(remoteAssetId).catch(() => null)
+    return await orElse(retrieve(remoteAssetId), null)
   }
 
   return async (job, remoteAssetIds, authored) => {

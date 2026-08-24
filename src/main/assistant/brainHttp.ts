@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import type { HttpChat } from '@shared/domain/aiCloud'
 import type { AssistantThought } from '@shared/domain/assistant'
 import { isRecord } from '@shared/guards'
@@ -96,7 +97,7 @@ async function readBody(
   pick: (body: unknown) => string | null,
   label: string,
 ): Promise<string> {
-  const body: unknown = await response.json().catch(() => null)
+  const body: unknown = await orElse(response.json(), null)
   if (!response.ok) {
     const detail = textOf(body, ['error', 'message']) ?? `${response.status}`
     const refusal = `${label} refused: ${detail}`

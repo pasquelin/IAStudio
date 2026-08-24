@@ -8,6 +8,7 @@
  * A document naming a system face is only faithful on a machine that has it. That hole is not
  * papered over: a family nothing answers to comes back as nothing, and the renderer says so.
  */
+import { orElse } from '@shared/promises'
 import {
   assembleFont,
   collectionOffsets,
@@ -157,7 +158,7 @@ async function buildIndex(
   const found = new Map<string, SystemFace>()
 
   for (const folder of folders) {
-    const paths = await disk.list(folder).catch(() => [])
+    const paths = await orElse(disk.list(folder), [])
 
     for (const path of paths) {
       if (!isFontFile(path)) continue
@@ -176,7 +177,7 @@ async function buildIndex(
 
 /** Every face a file offers under the one subfamily the studio lists, named. */
 async function facesOf(disk: FontDisk, path: string): Promise<SystemFace[]> {
-  const file = await disk.open(path).catch(() => null)
+  const file = await orElse(disk.open(path), null)
   if (!file) return []
 
   try {

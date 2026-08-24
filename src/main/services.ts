@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { app, BrowserWindow, dialog, net, shell, systemPreferences } from 'electron'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
@@ -1863,7 +1864,7 @@ export function createServices(settings: SettingsStore): Services {
         [],
       )
       const poster = asset ? posterFileOf(current.path, asset) : null
-      return poster ? await readFile(poster).catch(() => null) : null
+      return poster ? await orElse(readFile(poster), null) : null
     },
     // The same bound the ingest pool takes: previewing is the system's work, but a folder
     // scrolled fast asks for hundreds at once and each one leaves this process.

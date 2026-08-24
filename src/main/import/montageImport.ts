@@ -40,12 +40,14 @@ async function madeFolder(root: string, wanted: string): Promise<string | null> 
     const absolute = await folderInsideProject(root, name)
     if (!absolute) return null
 
-    const failure = await mkdir(absolute).then(
-      () => null,
-      (error: NodeJS.ErrnoException) => error,
-    )
-    if (!failure) return name
-    if (failure.code !== 'EEXIST') throw failure
+    try {
+      await mkdir(absolute)
+      return name
+    } catch (error) {
+      // Taken already is the ordinary case here — the loop tries the next name. Anything else
+      // belongs to the caller.
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+    }
   }
   return null
 }

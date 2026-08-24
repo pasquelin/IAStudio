@@ -104,12 +104,13 @@ export function createGenerationLanding({
     // The claim is already spent by `settle`, so a read that throws loses a generation that was
     // PAID for — and, unhandled, takes an unhandled rejection with it. The `refresh` this
     // replaced could not reject; this one reaches the catalogue over IPC.
-    const rows = await bridge.assets
-      .search({ types: [...types], limit: SETTLE_LIMIT })
-      .catch(error => {
-        reportFailure(scope, kind, error)
-        return null
-      })
+    let rows
+    try {
+      rows = await bridge.assets.search({ types: [...types], limit: SETTLE_LIMIT })
+    } catch (error) {
+      reportFailure(scope, kind, error)
+      return
+    }
 
     if (!rows) return
     const { documents } = useDocuments.getState()

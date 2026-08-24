@@ -377,10 +377,16 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     const refused = checkDocumentName(title, document.kind, taken, id)
     if (refused) return refused
 
-    const renamed = await getBridge()
-      ?.documents.rename(id, document.kind, title)
-      .catch(error => asNameFailure(error))
-    if (renamed === undefined) return 'invalid'
+    const bridge = getBridge()
+    if (!bridge) return 'invalid'
+
+    let renamed
+    try {
+      renamed = await bridge.documents.rename(id, document.kind, title)
+    } catch (error) {
+      return asNameFailure(error)
+    }
+
     if (typeof renamed === 'string') return renamed
 
     // Both halves, and that is the point of doing it here: `documents` is what the tab reads and

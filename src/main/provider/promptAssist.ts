@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { clamp } from '@shared/numeric'
 import {
@@ -119,7 +120,7 @@ export function createPromptAssist({
 
       // The descriptors are fetched once for the whole answer rather than per variant: every
       // call targets the same model, and `describe` is a round trip when the cache is cold.
-      const descriptors = await fields(modelId).catch(() => [])
+      const descriptors = await orElse(fields(modelId), [])
 
       return answer.prompts.map((text, index) =>
         suggestionOf(text, answer.calls?.[index], modelId, descriptors),

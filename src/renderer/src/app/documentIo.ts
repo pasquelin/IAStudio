@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import type { Asset } from '@shared/domain/asset'
 import {
   DOCUMENT_KIND_KEY,
@@ -480,7 +481,7 @@ const IMAGE_IO: DocumentIo = {
       for (const pixels of canvasFromOraContent(content, parts).pixels) {
         // Nothing is rethrown into a mount effect that has nowhere to show it — see
         // `restoreDocument`.
-        await host.restoreSnapshot(pixels).catch(() => undefined)
+        await orElse(host.restoreSnapshot(pixels), undefined)
       }
     })()
   },
@@ -496,7 +497,7 @@ const IMAGE_IO: DocumentIo = {
 
     // Sequenced for the reason `rehydrate` above is.
     for (const pixels of canvasFromOra(layered).pixels) {
-      await host.restoreSnapshot(pixels).catch(() => undefined)
+      await orElse(host.restoreSnapshot(pixels), undefined)
     }
   },
   writeAsset: async (documentId, target, captured) => {

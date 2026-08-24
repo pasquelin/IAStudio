@@ -92,7 +92,12 @@ async function extract(deps: TextureExtractionDeps, source: Asset): Promise<Asse
 
   // `Buffer` IS a `Uint8Array`, and the reader takes it as one: wrapping it would copy the
   // whole model — several hundred megabytes for a scan, on the process every window waits on.
-  const found = await readFile(file).then(embeddedTextures, (error: unknown) => {
+  // 🛑 The `try` holds the READ alone: the original handler was `readFile`'s second argument, so
+  // a reader that throws on a corrupt model is not this journal line, and never was.
+  let bytes
+  try {
+    bytes = await readFile(file)
+  } catch (error) {
     // Recorded and rethrown: the window says it too, but a project reopened tomorrow keeps
     // the line — and a file the disk refuses is exactly what one goes back to the journal for.
     deps.record({
@@ -102,7 +107,9 @@ async function extract(deps: TextureExtractionDeps, source: Asset): Promise<Asse
       params: { name: source.name },
     })
     throw error
-  })
+  }
+
+  const found = embeddedTextures(bytes)
 
   const created: Asset[] = []
   for (const texture of found) {

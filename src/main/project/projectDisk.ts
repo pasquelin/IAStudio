@@ -32,11 +32,15 @@ export function openProjectDisk(root: string): RescanDisk {
     // The disk itself, not the walk — see `RescanDisk.exists`. A path that cannot be reached at
     // all answers "there", which is the safe way round: the pass then dates nothing, where the
     // other way it would date everything on a volume that blinked.
-    exists: async path =>
-      await stat(join(root, path)).then(
-        () => true,
-        error => !isMissing(error),
-      ),
+    exists: async path => {
+      try {
+        await stat(join(root, path))
+        return true
+      } catch (error) {
+        // Only a MISSING file answers false: a volume that blinked must not read as absence.
+        return !isMissing(error)
+      }
+    },
 
     // `null` rather than a throw: a file that will not read — permissions, a volume that went
     // away mid-pass — must cost the row it might have matched, never the whole pass.

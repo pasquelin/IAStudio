@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { net } from 'electron'
 import { createReadStream } from 'node:fs'
 import { mkdir, open as openFile, readdir, rename, rm, rmdir, stat } from 'node:fs/promises'
@@ -27,7 +28,7 @@ export function defaultModelFolder(userData: string): string {
 export async function migrateSttFolder(folder: string): Promise<void> {
   const previous = join(folder, 'stt')
 
-  const found = await readdir(previous).catch(() => null)
+  const found = await orElse(readdir(previous), null)
   if (found === null) return
 
   for (const name of found) {

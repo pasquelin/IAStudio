@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { isLocalPicture, type Asset } from '@shared/domain/asset'
 import { contactSheetPdf, type SheetPicture } from '@shared/domain/contactSheet'
 import { bytesToBase64 } from '@/helpers/base64'
@@ -79,7 +80,7 @@ export async function exportContactSheet(
     // its own cell and nothing else.
     const pictures: SheetPicture[] = []
     for (const asset of chosen) {
-      const picture = await reduced(asset).catch(() => null)
+      const picture = await orElse(reduced(asset), null)
       if (picture) pictures.push(picture)
     }
 

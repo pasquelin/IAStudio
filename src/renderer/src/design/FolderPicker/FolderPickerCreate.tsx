@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { mdiFolderPlusOutline } from '@mdi/js'
 import { useState, type KeyboardEvent } from 'react'
 import { isComposing } from '@/helpers/composition'
@@ -61,9 +62,7 @@ export function FolderPickerCreate({
     const name = draft.trim()
     if (!name) return
 
-    const outcome = await getBridge()
-      ?.project.newFolder(folder, name)
-      .catch(() => null)
+    const outcome = await orElse(getBridge()?.project.newFolder(folder, name), null)
 
     // What the disk says it made, not what was asked for: the name travels through a parser and
     // a filesystem that both normalise. `from` is empty for something that CAME — `PathChange`.

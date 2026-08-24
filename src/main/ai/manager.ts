@@ -521,9 +521,12 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       running = null
       // Caught, or it would REPLACE the download's own error: the dictation session tells a
       // broken digest from a network that gave up on the class of what is thrown.
-      await announce().catch(error =>
-        deps.log('warn', `manager state unpublished: ${String(error)}`),
-      )
+      try {
+        await announce()
+      } catch (error) {
+        // Caught, per the note above, or it would REPLACE the download's own error.
+        deps.log('warn', `manager state unpublished: ${String(error)}`)
+      }
     }
   }
 

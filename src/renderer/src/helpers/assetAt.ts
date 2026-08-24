@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { chunk } from '@shared/collections'
 import { ASSET_PATHS_MAX, type Asset } from '@shared/domain/asset'
 import { getBridge } from '@/services/bridge'
@@ -15,11 +16,9 @@ import { getBridge } from '@/services/bridge'
  * What to do with `null` is the caller's own — open the file in the system, or say so.
  */
 export async function assetAt(path: string): Promise<Asset | null> {
-  const found = await getBridge()
-    ?.assets.search({ path, limit: 1 })
-    .catch(() => [])
+  const found = await orElse(getBridge()?.assets.search({ path, limit: 1 }), [])
 
-  return found?.[0] ?? null
+  return found[0] ?? null
 }
 
 /**
@@ -43,9 +42,7 @@ export async function assetsAt(paths: readonly string[]): Promise<Map<string, As
   const answers = await Promise.all(
     chunk(paths, ASSET_PATHS_MAX).map(
       async batch =>
-        (await getBridge()
-          ?.assets.search({ paths: batch, limit: batch.length })
-          .catch(() => [])) ?? [],
+        await orElse(getBridge()?.assets.search({ paths: batch, limit: batch.length }), []),
     ),
   )
 

@@ -355,22 +355,20 @@ export const useAssets = create<AssetsState>()(
           const refused = checkAssetName(name)
           if (refused) return refused
 
-          let refusal: AssetNameFailure | null = null
-          const written = await getBridge()
-            ?.assets.update(assetId, { name: name.trim() })
-            .catch((error: unknown) => {
-              // Read off the message, as a document's refusal is: the name reached the file, so
-              // the folder can now refuse what no field could see — a name it already holds.
-              // Answering `too-long` for all of them, which is what this did while length was
-              // the only thing that could be wrong, would tell the user to shorten a name whose
-              // only fault is that it is taken.
-              //
-              // Journalled by the CALLER, on the code this hands back (`helpers/rename.ts`), and
-              // no longer here as well: the sole caller wrote a second line for the same failure.
-              refusal = nameFailureOf(error, ASSET_NAME_FAILURES, 'invalid')
-              return null
-            })
-          if (!written) return refusal ?? 'invalid'
+          const bridge = getBridge()
+          if (!bridge) return 'invalid'
+
+          let written
+          try {
+            written = await bridge.assets.update(assetId, { name: name.trim() })
+          } catch (error) {
+            // Read off the message, as a document's refusal is: the name reached the file, so
+            // the folder can now refuse what no field could see — a name it already holds.
+            // Journalled by the CALLER, on the code this hands back (`helpers/rename.ts`).
+            return nameFailureOf(error, ASSET_NAME_FAILURES, 'invalid')
+          }
+
+          if (!written) return 'invalid'
 
           // Written into the shelf rather than waited for: `assets:update` broadcasts nothing —
           // it is answered where it was ordered, which is the doctrine every other write follows.
@@ -383,12 +381,17 @@ export const useAssets = create<AssetsState>()(
         },
 
         retype: async (assetId, type) => {
-          const written = await getBridge()
-            ?.assets.update(assetId, { type })
-            .catch((error: unknown) => {
-              reportFailure('assets.retype', assetId, error)
-              return null
-            })
+          const bridge = getBridge()
+          if (!bridge) return
+
+          let written
+          try {
+            written = await bridge.assets.update(assetId, { type })
+          } catch (error) {
+            reportFailure('assets.retype', assetId, error)
+            return
+          }
+
           if (!written) return
 
           // Into the shelf on the spot, as a rename is — `assets:update` broadcasts nothing, so

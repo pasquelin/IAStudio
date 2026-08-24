@@ -641,12 +641,15 @@ export function createModelRegistry({
         // 🛑 A remote refusal must not take the local catalogue with it: the manifests gathered
         // above need no account. Rethrown when nothing local answered, so a cloud-only panel
         // still says why it is empty.
-        const page: CatalogPage | null = await fetchPage(cursor, query).catch(
-          (failure: unknown) => {
-            if (items.length === 0) throw failure
-            return null
-          },
-        )
+        let page: CatalogPage | null
+        try {
+          page = await fetchPage(cursor, query)
+        } catch (failure) {
+          // Rethrown when nothing local answered, per the note above, so a cloud-only panel
+          // still says why it is empty.
+          if (items.length === 0) throw failure
+          page = null
+        }
         // 🛑 Out, and the cursor CLOSED with it. Leaving it armed made the window ask for the
         // next page, which carries a cursor — so the local manifests were skipped, nothing
         // answered, and the refusal came back to wipe the very models this exists to keep.

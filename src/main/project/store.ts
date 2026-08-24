@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import type { Dir } from 'node:fs'
 import { mkdir, opendir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -244,7 +245,7 @@ async function surveyFolder(folder: string): Promise<FolderSurvey> {
   } finally {
     // Closed by the iterator when it runs out, and NOT when it is left early: a throw partway
     // would leak the handle, which on Windows also keeps the folder locked.
-    await dir.close().catch(() => undefined)
+    await orElse(dir.close(), undefined)
   }
 
   return survey
@@ -281,7 +282,7 @@ async function readManifest(path: string): Promise<ManifestSource> {
  * not ours to tidy, and an older build of the studio still reads it.
  */
 async function promoteManifest(path: string, body: string): Promise<void> {
-  await writeAtomic(join(path, MANIFEST_FILE), body).catch(() => undefined)
+  await orElse(writeAtomic(join(path, MANIFEST_FILE), body), undefined)
   await hideFromExplorer(join(path, MANIFEST_FILE))
 }
 

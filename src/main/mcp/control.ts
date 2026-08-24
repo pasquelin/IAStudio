@@ -76,10 +76,13 @@ export function createMcpControl({ configPath, onSettled, ...deps }: McpControlD
           const started = await startMcp(deps)
           // Published before it is held: a server whose endpoint could not be written is one no
           // client can reach, so it is stopped rather than left listening unannounced.
-          await publish(started).catch(async (error: unknown) => {
+          try {
+            await publish(started)
+          } catch (error) {
+            // Stopped rather than left listening unannounced, per the note above.
             await started.close()
             throw error
-          })
+          }
           running = started
           return
         }

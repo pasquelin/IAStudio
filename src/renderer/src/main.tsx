@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { isFileInfoRoute } from '@shared/domain/fileInfo'
@@ -27,10 +28,8 @@ if (!root) throw new Error('Root element not found in index.html')
 // than letting it throw: this runs during module evaluation, which the boundary below cannot
 // catch, and a rejected read would leave a permanently empty window. The fallback is the one
 // for a machine whose language we do not know, which is exactly what an unanswered read leaves.
-const language = await getBridge()
-  ?.window.language()
-  .catch(() => UNKNOWN_SYSTEM_LANGUAGE)
-await initI18n(language ?? UNKNOWN_SYSTEM_LANGUAGE)
+const language = await orElse(getBridge()?.window.language(), UNKNOWN_SYSTEM_LANGUAGE)
+await initI18n(language)
 
 /** Same reason as the licences below, for another window's folder: registry, sections, draft. */
 const SettingsWindow = lazy(async () => ({

@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 /**
  * Reading a `fetch` body by hand. `Response.body` is a web stream, async-iterable in Node but not
  * in the DOM types Electron's renderer half pulls in — so the reader is driven manually, once.
@@ -22,7 +23,7 @@ export async function* chunksOf(
     // Abandoned mid-stream — a `break`, or a throw downstream: releasing the lock alone leaves the
     // HTTP body open until the collector runs. Cancelling is what closes it, and it is refused on
     // a stream that already failed, which is the one case there is nothing left to close.
-    if (!drained) await reader.cancel().catch(() => undefined)
+    if (!drained) await orElse(reader.cancel(), undefined)
     reader.releaseLock()
   }
 }

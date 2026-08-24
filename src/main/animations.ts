@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { readdir, stat } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import {
@@ -19,13 +20,13 @@ import { bundledAnimations, resourcesRoot } from '@main/resources'
  * installs them, and that is a state to show, never an error to report.
  */
 export async function bundledAnimationList(root: string): Promise<BundledAnimation[]> {
-  const folders = await readdir(root, { withFileTypes: true }).catch(() => [])
+  const folders = await orElse(readdir(root, { withFileTypes: true }), [])
   const found: BundledAnimation[] = []
 
   for (const folder of folders) {
     if (!folder.isDirectory()) continue
 
-    const inside: string[] = await readdir(join(root, folder.name)).catch(() => [])
+    const inside: string[] = await orElse(readdir(join(root, folder.name)), [])
     if (!clipFileOf(inside)) continue
 
     found.push({ name: folder.name, thumbnail: inside.includes(ANIMATION_THUMBNAIL) })
@@ -45,11 +46,11 @@ export async function bundledAnimationFile(root: string, id: string): Promise<st
   const inside = assetFilePath(root, id)
   if (!inside) return null
 
-  const found = await stat(inside).catch(() => null)
+  const found = await orElse(stat(inside), null)
   if (!found) return null
   if (found.isFile()) return inside
 
-  const clip = clipFileOf(await readdir(inside).catch(() => []))
+  const clip = clipFileOf(await orElse(readdir(inside), []))
   return clip ? join(inside, clip) : null
 }
 

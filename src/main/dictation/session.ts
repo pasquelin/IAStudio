@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import type {
   DownloadProgress,
   SttErrorCode,
@@ -112,7 +113,7 @@ export function createSession(host: SessionHost): DictationSession {
   const probeModel = async (): Promise<void> => {
     if (state !== 'idle' && state !== 'modelMissing') return
 
-    const ready = await host.modelIsReady().catch(() => null)
+    const ready = await orElse(host.modelIsReady(), null)
     // 🛑 Only ever between its OWN two verdicts. Read as "publish what the disk says", it landed
     // late on a refused microphone and answered `idle` over `permissionRequired`.
     if (ready === false && state === 'idle') publish('modelMissing')

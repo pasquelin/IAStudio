@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { stat } from 'node:fs/promises'
 import { assetFilePath } from '@main/assets/protocol'
 
@@ -13,6 +14,6 @@ export async function bundledFile(root: string, file: string): Promise<string | 
   const inside = assetFilePath(root, file)
   if (!inside) return null
 
-  const found = await stat(inside).catch(() => null)
+  const found = await orElse(stat(inside), null)
   return found?.isFile() ? inside : null
 }

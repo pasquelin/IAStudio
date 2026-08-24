@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { realpath } from 'node:fs/promises'
 import { isAbsolute, join, relative, sep } from 'node:path'
 
@@ -28,7 +29,7 @@ export async function folderInsideProject(root: string, folder: string): Promise
 
     // Only when it is already there. A destination that does not exist cannot be resolved, and
     // its parent — the project root — has just been.
-    const resolved = await realpath(target).catch(() => target)
+    const resolved = await orElse(realpath(target), target)
     const within = relative(base, resolved)
 
     if (within === '' || within.startsWith('..') || isAbsolute(within)) return null

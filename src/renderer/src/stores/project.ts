@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { create } from 'zustand'
 import {
   projectPickerFolder,
@@ -173,7 +174,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
     // A refusal is an answer too. Left to throw, `connect` never hands back the unsubscribe —
     // stranding the listener — and never says which project is open, which the home reads as
     // "still asking" and holds a blank page on.
-    const current = await bridge.project.current().catch(() => null)
+    const current = await orElse(bridge.project.current(), null)
     if (announced) return stop
 
     set({ project: current, known: true })

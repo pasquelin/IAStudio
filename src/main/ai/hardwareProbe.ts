@@ -7,6 +7,7 @@ import type {
 } from '@shared/domain/aiMemory'
 import type { RuntimeEndpointId } from '@shared/domain/aiRuntime'
 import { isRecord } from '@shared/guards'
+import { orElse } from '@shared/promises'
 
 /** What a probe can say about the GPU. Nothing about its memory — see `gpuIdentityOf`. */
 export type GpuIdentity = {
@@ -119,10 +120,10 @@ const usable = (reading: VramReading | null): VramReading | null =>
 /** The probe holds the "absence rather than a guess" policy for every reading that may fail. */
 export async function hardwareProbe(port: HardwarePort): Promise<HardwareFacts> {
   const [availableBytes, diskFreeBytes, info, vram] = await Promise.all([
-    port.availableBytes().catch(() => null),
-    port.diskFreeBytes().catch(() => null),
-    port.gpuInfo().catch(() => null),
-    port.vram().catch(() => null),
+    orElse(port.availableBytes(), null),
+    orElse(port.diskFreeBytes(), null),
+    orElse(port.gpuInfo(), null),
+    orElse(port.vram(), null),
   ])
 
   return {

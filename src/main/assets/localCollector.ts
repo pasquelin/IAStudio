@@ -71,9 +71,11 @@ export function createLocalCollector(deps: LocalCollectorDeps): AssetCollector {
     // After the import, never before: the file is in the project, so losing the hand-off costs
     // nothing — where deleting first would lose the generation if the import then failed. A move
     // already took it, and `force` makes that absence a no-op.
-    await deps.discard(produced.path).catch(error => {
+    try {
+      await deps.discard(produced.path)
+    } catch (error) {
       deps.log('warn', `could not remove ${produced.path}: ${String(error)}`)
-    })
+    }
 
     return { ids: [asset.id], workspaces: [workspaceOfType(produced.type)] }
   }

@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
@@ -74,7 +75,7 @@ export function registerBundledTextureHandlers({
     // path the row carries and makes no folder, so a `Textures/` sent to the trash whole would
     // fail on the first of the four and cost the project all of them.
     if (held) {
-      const rewritten = await assets.replaceBytes(held.id, bytes, '.png').catch(() => null)
+      const rewritten = await orElse(assets.replaceBytes(held.id, bytes, '.png'), null)
       if (rewritten) return withoutSourcePath(rewritten)
     }
 

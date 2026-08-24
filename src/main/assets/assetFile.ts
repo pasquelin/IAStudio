@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Asset } from '@shared/domain/asset'
@@ -51,7 +52,7 @@ async function freeAssetName(
   // Folded, because `exists` above answered for a case-insensitive volume: APFS and NTFS hold
   // one file for `Ruelle.png` and `ruelle.png`, and a raw Set would call the second one free.
   const taken = new Set(
-    (await readdir(join(root, folder)).catch(() => [])).map(entry => foldForFileName(entry)),
+    (await orElse(readdir(join(root, folder)), [])).map(entry => foldForFileName(entry)),
   )
   const free = (candidate: string): boolean =>
     !taken.has(foldForFileName(assetFileName(candidate, extension)))

@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import {
   AlphaFilter,
   type Application,
@@ -1766,7 +1767,7 @@ export class CanvasEngine {
       // Given back here already, so `dispose` has nothing left to give back for this one. A blob
       // URL is this engine's alone, so no other holder can be waiting on it.
       if (this.loaded.delete(url)) released(url)
-      await Assets.unload(url).catch(() => undefined)
+      await orElse(Assets.unload(url), undefined)
       URL.revokeObjectURL(url)
     }
   }

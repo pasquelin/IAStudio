@@ -158,29 +158,32 @@ async function browse(remote: RemoteAssetCatalog, query: CloudQuery): Promise<Cl
   const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, PAGE_SIZE_MAX)
   const byRank = ranked(query)
 
-  const page = needsSearch(query)
-    ? await remote
-        .search({
-          ...(query.text ? { query: query.text } : {}),
-          ...defined({ filter: filterExpression(query) }),
-          ...(byRank ? {} : { sortBy: NEWEST_FIRST }),
-          limit: pageSize,
-          offset: offsetFrom(query.cursor),
-        })
-        .then(found => ({
-          ...found,
-          cursor: marked(byRank ? RANKED_CURSOR : OFFSET_CURSOR, found.token),
-        }))
-    : await remote
-        .list({
-          pageSize,
-          ...defined({
-            token: tokenFrom(query.cursor),
-            types: remoteTypesFor(query.types),
-            collectionId: query.collectionId,
-          }),
-        })
-        .then(found => ({ ...found, cursor: marked(TOKEN_CURSOR, found.token) }))
+  const page = await pageOf()
+
+  async function pageOf() {
+    if (needsSearch(query)) {
+      const found = await remote.search({
+        ...(query.text ? { query: query.text } : {}),
+        ...defined({ filter: filterExpression(query) }),
+        ...(byRank ? {} : { sortBy: NEWEST_FIRST }),
+        limit: pageSize,
+        offset: offsetFrom(query.cursor),
+      })
+
+      return { ...found, cursor: marked(byRank ? RANKED_CURSOR : OFFSET_CURSOR, found.token) }
+    }
+
+    const found = await remote.list({
+      pageSize,
+      ...defined({
+        token: tokenFrom(query.cursor),
+        types: remoteTypesFor(query.types),
+        collectionId: query.collectionId,
+      }),
+    })
+
+    return { ...found, cursor: marked(TOKEN_CURSOR, found.token) }
+  }
 
   // Applied to both branches, and after them. Neither endpoint narrows the way the studio does:
   // the listing sends no `types` at all for pictures, and the index only knows the API's eight

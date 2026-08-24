@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { create } from 'zustand'
 import type { DownloadProgress, InputDevice, SttFailure, SttState } from '@shared/domain/dictation'
 import { connectThroughBridge, getBridge } from '@/services/bridge'
@@ -161,7 +162,7 @@ export const useDictation = create<DictationState>()((set, get) => ({
      * status line said "the assistant is listening" over a microphone that was never on. macOS
      * showed no recording indicator, which is how it was caught.
      */
-    const live = await bridge.dictation.state().catch(() => null)
+    const live = await orElse(bridge.dictation.state(), null)
     if (mine !== session || live?.state !== 'listening') return
 
     const chosen = useSettings.getState().settings.dictation.inputDeviceId

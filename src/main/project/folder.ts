@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { watch, type FSWatcher } from 'node:fs'
 import { cp, mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -110,7 +111,7 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
     const found: FolderEntry[] = []
 
     const walk = async (relative: string, depth: number): Promise<void> => {
-      const entries = await level(relative, hidden, sorted).catch((): FolderEntry[] => [])
+      const entries = await orElse(level(relative, hidden, sorted), [])
       const deeper: Promise<void>[] = []
 
       for (const entry of entries) {
@@ -157,7 +158,7 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
       // This is the walk that crosses a hundred thousand files on every save.
       await walkAll(hidden, entry => entry.kind === 'file', false),
 
-    names: async relative => await readdir(join(rootOf(), relative)).catch(() => null),
+    names: async relative => await orElse(readdir(join(rootOf(), relative)), null),
   }
 }
 

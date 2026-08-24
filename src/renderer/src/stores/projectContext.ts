@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { create } from 'zustand'
 import {
   composedContext,
@@ -45,7 +46,7 @@ export const useProjectContext = create<ProjectContextState>()((set, get) => ({
 
     // Refused rather than thrown on: the one refusal that reaches here is a file this build will
     // not overwrite, so what it holds — not what this window hoped — is what stays on screen.
-    const written = await bridge.project.writeContext(cards).catch(() => null)
+    const written = await orElse(bridge.project.writeContext(cards), null)
     set({ context: written ?? before })
 
     return written !== null

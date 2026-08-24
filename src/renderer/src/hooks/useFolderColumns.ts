@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { folderTrail, type FolderEntry } from '@shared/domain/folder'
 import { getBridge } from '@/services/bridge'
@@ -30,13 +31,11 @@ export function useFolderColumns(chosen: string): FolderColumns {
     void (async () => {
       // A folder taken away under an open picker answers nothing, and its column shows empty
       // rather than throwing: what is drawn is what was read.
-      const entries = await getBridge()
-        ?.project.listFolder(folder, false)
-        .catch(() => [])
+      const entries = await orElse(getBridge()?.project.listFolder(folder, false), [])
 
       setHeld(before => ({
         ...before,
-        [folder]: (entries ?? []).filter(entry => entry.kind === 'folder'),
+        [folder]: entries.filter(entry => entry.kind === 'folder'),
       }))
     })()
   }, [])

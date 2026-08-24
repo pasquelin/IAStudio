@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { createReadStream, createWriteStream } from 'node:fs'
 import { rm, stat } from 'node:fs/promises'
 import { finished, pipeline } from 'node:stream/promises'
@@ -96,7 +97,7 @@ export async function writeOtiozFile(
   // rather than a count of files — one rush of thirty gigabytes among six small ones.
   let total = encodedContent.length
   for (const medium of media) {
-    const found = await stat(medium.path).catch(() => null)
+    const found = await orElse(stat(medium.path), null)
     if (!found?.isFile()) throw new MissingMediumError(medium.entry)
     // READ rather than listened for, and the only stop this walk has: the listener that carries
     // every other one is attached below, and one added to an already-raised signal never fires.

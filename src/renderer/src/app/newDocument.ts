@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import {
   kindForWorkspace,
   DOCUMENTS_FOLDER,
@@ -26,9 +27,7 @@ async function startingFolder(): Promise<string> {
   const picked = selectedFilePaths(useSelection.getState()).at(-1)
   if (picked === undefined) return DOCUMENTS_FOLDER
 
-  const facts = await getBridge()
-    ?.project.fileFacts(picked)
-    .catch(() => null)
+  const facts = await orElse(getBridge()?.project.fileFacts(picked), null)
   if (!facts) return DOCUMENTS_FOLDER
 
   return facts.kind === 'folder' ? picked : (parentOf(picked) ?? DOCUMENTS_FOLDER)

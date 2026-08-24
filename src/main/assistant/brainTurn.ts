@@ -61,10 +61,13 @@ async function readOnce(briefing: Briefing, round: BrainRound, budget: Budget): 
 
   log.warn('assistant', 'unreadable answer, asking once more')
   budget.left -= 1
-  const second = await round(briefing, complaintAbout(first.answer)).catch((error: unknown) => {
+  let second
+  try {
+    second = await round(briefing, complaintAbout(first.answer))
+  } catch (error) {
     log.warn('assistant', `the second attempt failed: ${String(error)}`)
-    return { answer: '', cost: 0 }
-  })
+    second = { answer: '', cost: 0 }
+  }
 
   return { reply: parseReply(second.answer, briefing.allowed), cost: first.cost + second.cost }
 }

@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { create } from 'zustand'
 import { HISTORY_MAX, type AssistantModel } from '@shared/domain/assistant'
 import { narrowTargets, type Target } from '@shared/domain/target'
@@ -197,13 +198,14 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
 
     // A turn without its targets is a turn that still answers: a chunk that fails to load must
     // not leave `busy` true for the session, which is what an unhandled rejection here would do.
-    const targets = await targetsFor(said).catch(() => [])
+    const targets = await orElse(targetsFor(said), [])
 
     // No model in the request: the main process reads the setting on each turn, so the one this
     // window would send could only be a copy going stale between two windows.
-    const answer = await bridge?.assistant
-      .think({ utterance: said, history, targets })
-      .catch(() => null)
+    const answer = await orElse(
+      bridge?.assistant.think({ utterance: said, history, targets }),
+      null,
+    )
 
     if (!answer) {
       patch(set, id, { lost: true })
