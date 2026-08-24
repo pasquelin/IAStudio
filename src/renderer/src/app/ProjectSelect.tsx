@@ -4,6 +4,8 @@ import { MenuRow } from '@/design/MenuRow'
 import { Separator } from '@/design/Separator'
 import { TitleBarSelect } from '@/design/TitleBarSelect'
 import { UiIcon } from '@/design/UiIcon'
+import { revealTool } from '@/helpers/revealPanel'
+import { toolIcon } from '@/helpers/toolRegistry'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { projectsByCreation } from '@shared/domain/project'
 import { useProject } from '@/stores/project'
@@ -49,9 +51,10 @@ export function ProjectSelect() {
       // a name of "Project" alone would answer to a word nowhere on the button.
       name={t('project.switch', { name })}
       hint={t('project.switchHint')}
-      // The folders, plus the two ways to a project that is not among them. Never fewer than two,
-      // so this button always has a menu — which is why it hands `TitleBarSelect` no `onAct`.
-      rowCount={recent.length + 2}
+      // The folders, plus the two ways to a project that is not among them, plus the one row that
+      // acts on the OPEN one. Never fewer than two, so this button always has a menu — which is
+      // why it hands `TitleBarSelect` no `onAct`.
+      rowCount={recent.length + (project ? 3 : 2)}
       width="max-w-52"
       rows={close => (
         <>
@@ -79,6 +82,23 @@ export function ProjectSelect() {
           })}
 
           {recent.length > 0 && <Separator orientation="horizontal" className="self-center" />}
+
+          {/* Between the two groups because it belongs to neither: every row above SWITCHES the
+              open project and every row below leaves it, where this one acts on it. */}
+          {project !== null && (
+            <>
+              <MenuRow
+                label={t('project.context')}
+                icon={toolIcon('context')}
+                tip={HINT_RIGHT(t('project.contextHint'))}
+                onSelect={() => {
+                  close()
+                  revealTool('context')
+                }}
+              />
+              <Separator orientation="horizontal" className="self-center" />
+            </>
+          )}
 
           <MenuRow
             label={t('project.create')}

@@ -195,6 +195,10 @@ on every generation, all day long.
 lower half of the left column beside the Explorer and Git: all three speak about the open project —
 its tree, its history, and what it is about.
 
+The project menu in the title bar leads there too: **The project's context**, between the list of
+projects and the two ways to open another. It is the only one of its rows that acts on the open
+project rather than leaving it.
+
 ### Cards, and nothing imposed
 
 A context is a list of **cards**. Each carries a title you choose, a text you write, and a switch.

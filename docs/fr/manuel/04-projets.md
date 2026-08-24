@@ -201,6 +201,10 @@ l'huile » — et vous le récrivez à chaque génération, toute la journée.
 **Contexte**, moitié basse de la colonne de gauche, à côté de l'Explorateur et de Git : les trois
 parlent du projet ouvert — son arbre, son histoire, et ce qu'il raconte.
 
+Le menu du projet, dans la barre de titre, y mène aussi : **Contexte du projet**, entre la liste
+des projets et les deux façons d'en ouvrir un autre. C'est la seule de ses lignes qui agit sur le
+projet ouvert au lieu d'en changer.
+
 ### Des fiches, et rien d'imposé
 
 Un contexte est une liste de **fiches**. Chacune porte un titre que vous choisissez, un texte que
