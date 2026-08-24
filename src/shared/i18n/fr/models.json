@@ -29,7 +29,9 @@
     "followSelection": "Suivre la sélection",
     "landingTitle": "Où mettre ce que la génération va rendre ?",
     "landingHint": "Un document est ouvert. Le résultat peut s’y ajouter, ou s’ouvrir dans un onglet à lui.",
-    "landingRemember": "Retenir ce choix"
+    "landingRemember": "Retenir ce choix",
+    "advancedHint": "Montrer les réglages qu’une génération ne demande pas",
+    "advancedFewerHint": "Replier ces réglages"
   },
   "models": {
     "none": "Aucun modèle dans cet espace.",

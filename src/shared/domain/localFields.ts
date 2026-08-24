@@ -90,6 +90,7 @@ const SEED: LocalFieldTemplate = {
   labelKey: 'localFields.seed',
   helpKey: 'localFields.seedHelp',
   required: false,
+  group: ADVANCED_GROUP,
 }
 
 /**
@@ -179,6 +180,7 @@ function steps(base: { default: number; max: number }): LocalFieldTemplate {
     helpKey: 'localFields.stepsHelp',
     required: false,
     min: 1,
+    group: ADVANCED_GROUP,
     ...base,
   }
 }
@@ -213,6 +215,7 @@ function side(
     labelKey: `localFields.${key}`,
     required: false,
     min: 256,
+    group: ADVANCED_GROUP,
     ...base,
   }
 }
