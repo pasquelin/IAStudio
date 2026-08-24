@@ -5,6 +5,7 @@ import {
   HISTORY_MAX,
   INSTRUCTION_MAX,
 } from '@shared/domain/assistant'
+import type { Target } from '@shared/domain/target'
 import { englishText } from '@shared/i18n'
 
 /**
@@ -20,6 +21,15 @@ import { englishText } from '@shared/i18n'
  * English throughout either way — see `englishText`, which the window uses for the other half of
  * the same conversation.
  */
+
+/**
+ * One target, as a line the model can read. The id first because it is what `target.select` takes
+ * back — a model that read the name first tends to answer with the name.
+ */
+function targetLine(target: Target): string {
+  const selected = target.selected ? ' (selected)' : ''
+  return `  ${target.id} — ${target.kind} "${target.name}"${selected}`
+}
 
 /** One field, as a line the model can read: name, type, whether it must be there, what it takes. */
 function fieldLine(field: ActionField): string {
@@ -104,10 +114,11 @@ export function instructionFor(
   utterance: string,
   notReady: readonly string[],
   context = '',
+  targets: readonly Target[] = [],
 ): string {
   // Composed once and its length handed on: `utteranceWithin` used to build the whole catalogue a
   // second time just to measure it, on every turn.
-  const preamble = preambleFor(notReady, context)
+  const preamble = preambleFor(notReady, context, targets)
   return preamble + utteranceWithin(utterance, preamble.length)
 }
 
@@ -115,18 +126,34 @@ export function instructionFor(
  * Everything but the person's sentence — for a door that speaks in TURNS rather than taking one
  * instruction. There the sentence must be the LAST turn, or the model answers the one before it.
  */
-export function studioBriefing(notReady: readonly string[] = [], context = ''): string {
+export function studioBriefing(
+  notReady: readonly string[] = [],
+  context = '',
+  targets: readonly Target[] = [],
+): string {
   // Silent when everything is served: a line saying nothing is worth no characters.
   const state = notReady.length === 0 ? [] : [`No model ready for: ${notReady.join(', ')}.`, '']
   // Before the catalogue rather than after it: what the project IS frames every action the model
   // might pick, where a note under the list reads as a footnote to the last one.
   const about = context.length > 0 ? ['Project context:', context, ''] : []
 
-  return [ROLE, '', ...about, ...state, 'Catalogue:', actionCatalogue(), '', FORMAT].join('\n')
+  // After the catalogue rather than before it: `target.select` is what these ids are for, and a
+  // list read before the action that consumes them reads as facts about nothing.
+  const aim =
+    targets.length === 0
+      ? []
+      : ['Targets in the open document:', targets.map(targetLine).join('\n'), '']
+
+  return [ROLE, '', ...about, ...state, 'Catalogue:', actionCatalogue(), '', ...aim, FORMAT].join(
+    '\n',
+  )
 }
 
-const preambleFor = (notReady: readonly string[] = [], context = ''): string =>
-  `${studioBriefing(notReady, context)}\n\nThe person says:\n\n`
+const preambleFor = (
+  notReady: readonly string[] = [],
+  context = '',
+  targets: readonly Target[] = [],
+): string => `${studioBriefing(notReady, context, targets)}\n\nThe person says:\n\n`
 
 /**
  * The sentence, cut to what the preamble leaves of the budget. A long paste is cut; it is not.
@@ -137,6 +164,10 @@ export function utteranceWithin(utterance: string, spent = preambleFor().length)
 }
 
 /** What the fixed part of an instruction costs, leaving the rest of the budget to the sentence. */
-export function preambleLength(notReady: readonly string[], context = ''): number {
-  return instructionFor('', notReady, context).length
+export function preambleLength(
+  notReady: readonly string[],
+  context = '',
+  targets: readonly Target[] = [],
+): number {
+  return instructionFor('', notReady, context, targets).length
 }

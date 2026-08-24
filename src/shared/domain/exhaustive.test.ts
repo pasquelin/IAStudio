@@ -33,6 +33,7 @@ import {
 import { FONT_SOURCES, type FontSource } from './font'
 import { TEXTURE_SLOTS, type TextureSlot } from './scene'
 import { SETTING_ACTION_IDS, type SettingActionId } from './settingAction'
+import { TARGET_KINDS, type TargetKind } from './target'
 import { NAMED_KEYS, type NamedKey } from './shortcut'
 
 /**
@@ -263,6 +264,17 @@ describe('the lists that stand for a union', () => {
     expect(sorted(SETTING_ACTION_IDS)).toEqual(sorted(Object.keys(all)))
   })
 
+  /**
+   * `z.enum(TARGET_KINDS)` decides whether a whole thought parses, so a kind added to the union
+   * and forgotten here does not fail on that one target: `parseThought` throws, the window's
+   * `.catch` marks the turn lost, and every sentence of the session dies with nothing in the log.
+   */
+  it('names every kind a sentence can aim at', () => {
+    const all: Record<TargetKind, true> = { layer: true, node: true, clip: true, track: true }
+
+    expect(sorted(TARGET_KINDS)).toEqual(sorted(Object.keys(all)))
+  })
+
   // Read by `layer.text`, which offers the two as a choice: a third source no list named would be
   // a face a client could not ask for.
   it('names every place a typeface comes from', () => {
@@ -373,6 +385,7 @@ describe('the lists that stand for a union', () => {
       'prompt.translate': true,
       'prompt.describeStyle': true,
       'chat.close': true,
+      'target.select': true,
       'studio.state': true,
       'documents.list': true,
       'document.open': true,

@@ -1,4 +1,5 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
+import type { Target } from '@shared/domain/target'
 import { packedColour } from '@shared/domain/color'
 import { toRadians } from '@shared/domain/angles'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
@@ -433,7 +434,26 @@ function group(input: Record<string, unknown>): ActionOutcome {
   return outcome.ok ? { ok: true, data: { layerId: groupId } } : outcome
 }
 
-function select(input: Record<string, unknown>): ActionOutcome {
+/**
+ * The layers of the image in front, as things a sentence may aim at — topmost first, which is the
+ * order the stack panel shows. Flattened as `canvas.state` flattens: a name is what a person says,
+ * and where the group tree puts it is not something they can be asked to spell.
+ */
+export function layerTargets(): readonly Target[] {
+  const open = mounted()
+  if (!open) return []
+
+  return allLayers(open.state.layers)
+    .map((layer): Target => ({
+      id: layer.id,
+      kind: 'layer',
+      name: layer.name,
+      selected: layer.id === open.state.activeLayerId,
+    }))
+    .reverse()
+}
+
+export function selectLayer(input: Record<string, unknown>): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface')
 
@@ -528,7 +548,7 @@ export const CANVAS_HANDLERS: ActionHandlers = {
   },
   'layer.add': newLayer,
   'layer.remove': input => editLayer(input, layer => [removeLayer(layer.id)]),
-  'layer.select': select,
+  'layer.select': selectLayer,
   'layer.rename': input => {
     const name = textOf(input, 'name')
     return name === null

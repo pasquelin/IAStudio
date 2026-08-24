@@ -51,7 +51,7 @@ function bodyFor(
   const inputs = turnsWith(request.history, complaint)
 
   return {
-    instruction: instructionFor(request.utterance, idle ?? [], request.context),
+    instruction: instructionFor(request.utterance, idle ?? [], request.context, request.targets),
     model,
     numOutputs: 1,
     ...(inputs.length > 0 ? { textInputs: inputs } : {}),

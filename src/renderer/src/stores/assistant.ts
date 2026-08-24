@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { HISTORY_MAX, type AssistantModel } from '@shared/domain/assistant'
+import { narrowTargets, type Target } from '@shared/domain/target'
 import type { ConfirmRequest } from '@/assistant/confirm'
 import { assistantHistory, type AssistantStep, type AssistantTurn } from '@/assistant/conversation'
 import { getBridge } from '@/services/bridge'
@@ -66,6 +67,16 @@ type AssistantState = {
  * that is an index is the one that goes wrong the day it stops.
  */
 let lastTurnId = 0
+
+/**
+ * Loaded on the turn, as the handler table is: it reaches the space modules, which
+ * `eager-graph.test.ts` holds out of what a launch pays for. Narrowed against the sentence — a
+ * stack of two hundred layers would spend the room the sentence itself needs.
+ */
+async function targetsFor(said: string): Promise<readonly Target[]> {
+  const { frontTargets } = await import('@/assistant/documentTargets')
+  return narrowTargets(frontTargets()?.targets() ?? [], said)
+}
 
 /**
  * The assistant as this window holds it: what was said, what it cost, and the one question that
@@ -170,9 +181,15 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
     const turn: AssistantTurn = { id, said, answered: '', steps: [], lost: false }
     set(state => ({ turns: [...state.turns, turn], busy: true }))
 
+    // A turn without its targets is a turn that still answers: a chunk that fails to load must
+    // not leave `busy` true for the session, which is what an unhandled rejection here would do.
+    const targets = await targetsFor(said).catch(() => [])
+
     // No model in the request: the main process reads the setting on each turn, so the one this
     // window would send could only be a copy going stale between two windows.
-    const answer = await bridge?.assistant.think({ utterance: said, history }).catch(() => null)
+    const answer = await bridge?.assistant
+      .think({ utterance: said, history, targets })
+      .catch(() => null)
 
     if (!answer) {
       patch(set, id, { lost: true })

@@ -8,6 +8,9 @@ import type {
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssistant } from './assistant'
 
+/** The identity of "the brain has not been called yet", so the wait has something to compare. */
+const NOT_ASKED_YET = (): void => {}
+
 /**
  * The executor stands in: what each action does to the studio is its own suite's business, and
  * this one is about the order they run in and what the modal is told afterwards.
@@ -130,7 +133,7 @@ describe('saying something to the assistant', () => {
 
   // Two plans over one generator form, and a question on screen belonging to neither.
   it('ignores a second sentence while the first is still running', async () => {
-    let release = (): void => {}
+    let release = NOT_ASKED_YET
     installFakeBridge({
       assistant: {
         think: () =>
@@ -144,6 +147,9 @@ describe('saying something to the assistant', () => {
     await useAssistant.getState().say('deux')
     expect(useAssistant.getState().turns).toHaveLength(1)
 
+    // Awaited rather than called straight away: the turn reaches `think` a few microtasks in —
+    // it loads the target table first — and releasing before that leaves the promise hanging.
+    await vi.waitFor(() => expect(release).not.toBe(NOT_ASKED_YET))
     release()
     await first
   })

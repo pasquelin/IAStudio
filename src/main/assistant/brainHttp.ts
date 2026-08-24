@@ -242,7 +242,7 @@ export function createHttpChatBrain({
     think: async (request, signal) => {
       // Read once, outside the retry: a complaint quotes an answer, and a second reading would
       // ship a briefing the complaint was not about.
-      const briefing = studioBriefing(await notReady?.(), request.context)
+      const briefing = studioBriefing(await notReady?.(), request.context, request.targets)
       return await retriedAnswer(complaint => round(request, briefing, signal, complaint))
     },
   }

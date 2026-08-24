@@ -28,6 +28,7 @@ import { CONTEXT_HANDLERS } from './contextHandlers'
 import { SETTINGS_HANDLERS } from './settingsHandlers'
 import { SHELL_HANDLERS } from './shellHandlers'
 import { STATE_HANDLERS } from './stateHandlers'
+import { TARGET_HANDLERS } from './targetHandlers'
 
 /**
  * One action in, one outcome out — for both doors.
@@ -39,6 +40,7 @@ import { STATE_HANDLERS } from './stateHandlers'
  */
 const HANDLERS: ActionHandlers = {
   ...CORE_HANDLERS,
+  ...TARGET_HANDLERS,
   ...STATE_HANDLERS,
   ...FILE_HANDLERS,
   ...JOB_HANDLERS,
