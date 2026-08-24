@@ -1,4 +1,5 @@
 import type { AccountSummary, AccountsResult } from './domain/account'
+import type { CreditBalances } from './domain/credits'
 import type { AiOverview, ChoiceScope } from './domain/aiOverview'
 import type { AiRoleId, RoleProvider } from './domain/aiRole'
 import type { BundledAnimation } from './domain/animationLibrary'
@@ -94,6 +95,7 @@ export type Channels = {
   accountsRename: 'accounts:rename'
   accountsRemove: 'accounts:remove'
   accountsActivate: 'accounts:activate'
+  accountsCredits: 'accounts:credits'
 
   providerSearchModels: 'provider:search-models'
   providerModelPreviews: 'provider:model-previews'
@@ -314,6 +316,7 @@ export const CHANNELS: Channels = {
   accountsRename: 'accounts:rename',
   accountsRemove: 'accounts:remove',
   accountsActivate: 'accounts:activate',
+  accountsCredits: 'accounts:credits',
 
   providerSearchModels: 'provider:search-models',
   providerModelPreviews: 'provider:model-previews',
@@ -1031,6 +1034,8 @@ export type StudioBridge = {
     activate: (id: string) => Promise<AccountsResult>
     /** Every window follows the switch: the account is owned by the main process. */
     onChange: (callback: (accounts: AccountSummary[]) => void) => Unsubscribe
+    /** What each key has LEFT to spend. A key whose cloud publishes none is ABSENT, never zero. */
+    credits: () => Promise<CreditBalances>
   }
   provider: {
     searchModels: (query?: ModelQuery) => Promise<ModelPage>

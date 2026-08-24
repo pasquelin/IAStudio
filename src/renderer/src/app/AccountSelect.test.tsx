@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AccountsResult, AccountSummary } from '@shared/domain/account'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
+import type { CreditBalances } from '@shared/domain/credits'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAccounts } from '@/stores/accounts'
+import { useCredits } from '@/stores/credits'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { AccountSelect } from './AccountSelect'
@@ -38,6 +40,7 @@ const openMenu = async (name: string): Promise<void> => {
 describe('AccountSelect', () => {
   beforeEach(() => {
     given([])
+    useCredits.setState({ balances: null })
     installFakeBridge()
   })
 
@@ -75,7 +78,10 @@ describe('AccountSelect', () => {
     await openMenu('Studio')
 
     const account = screen.getByRole('menuitemradio', { name: 'Studio' })
-    expect(account).toHaveAttribute('data-tooltip-content', 'Cette clé sera celle de ce service')
+    expect(account).toHaveAttribute(
+      'data-tooltip-content',
+      expect.stringContaining('Cette clé sera celle de ce service'),
+    )
     // A visible label answers for itself: an `aria-label` here would replace it (WCAG 2.5.3).
     expect(account).not.toHaveAttribute('aria-label')
     expect(screen.getByRole('menuitem', { name: 'Gérer les comptes…' })).toHaveAttribute(
@@ -174,6 +180,40 @@ describe('AccountSelect', () => {
     expect(
       screen.getByText('Aucun projet ouvert — ce choix vaut pour le studio'),
     ).toBeInTheDocument()
+  })
+
+  // The figure where a cloud publishes one, and — on hover — the reason where it does not.
+  it('reads what each key has left when the menu opens, and says where nothing can be read', async () => {
+    const deep: AccountSummary = { id: 'b', name: 'DeepSeek', active: true, providerId: 'deepseek' }
+    const held: CreditBalances = {
+      b: { state: 'known', left: [{ amount: 12.5, currency: 'USD' }] },
+    }
+    const credits = vi.fn(() => Promise.resolve(held))
+    installFakeBridge({ accounts: { credits } })
+    given([studio, deep])
+    render(<AccountSelect />)
+    await openMenu('2 services connectés')
+
+    await waitFor(() => expect(credits).toHaveBeenCalled())
+    expect(screen.getByRole('menuitemradio', { name: /DeepSeek/ })).toHaveTextContent(/12,50/)
+    // Nothing on the row for a cloud that publishes none — the reason is in the row's own hint,
+    // and in full on the settings screen.
+    expect(screen.getByRole('menuitemradio', { name: 'Studio' })).toHaveAttribute(
+      'data-tooltip-content',
+      expect.stringContaining('Ce service ne publie pas le crédit restant.'),
+    )
+  })
+
+  // `null` balances is "never read", not "this cloud publishes none": asserting the second on
+  // the first opening puts a false sentence on every row, DeepSeek's included.
+  it('says nothing about a credit it has not read yet', () => {
+    given([studio])
+    render(<AccountSelect />)
+
+    expect(buttonFor('Studio')).toHaveAttribute(
+      'data-tooltip-content',
+      expect.not.stringContaining('crédit'),
+    )
   })
 
   it('lights up in the half-opaque shade this bar answers with', () => {

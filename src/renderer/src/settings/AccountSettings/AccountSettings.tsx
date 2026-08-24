@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { failureMessageKey } from '@/services/failureMessage'
 import { providerOf } from '@shared/domain/account'
 import { accountsByProvider, useAccounts } from '@/stores/accounts'
+import { useCredits } from '@/stores/credits'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { useSettings } from '@/stores/settings'
 import { WINDOW_CAPTION, WINDOW_GROUP_LABEL } from '@/design/windowStyles'
@@ -22,11 +23,18 @@ export function AccountSettings() {
   const auth = useSettings(state => state.auth)
   const refreshAuth = useSettings(state => state.refreshAuth)
   const accounts = useAccounts(state => state.accounts)
+  const refreshCredits = useCredits(state => state.refresh)
   const groups = accountsByProvider(accounts)
 
   useEffect(() => {
     void refreshAuth()
   }, [refreshAuth])
+
+  // On the accounts too: the add form lives on this screen, and a key saved here would otherwise
+  // read as "this service publishes no balance" until the window was closed and reopened.
+  useEffect(() => {
+    void refreshCredits()
+  }, [accounts, refreshCredits])
 
   return (
     <div className="flex max-w-lg flex-col gap-4">

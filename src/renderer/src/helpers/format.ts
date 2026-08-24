@@ -117,6 +117,17 @@ export function formatMoment(time: string, language: string, zone: Zone): string
   ).format(parsed)
 }
 
+const MONEY = new Map<string, Intl.NumberFormat>()
+
+/** An amount in the currency its source quoted. Never converted: the studio holds no rate. */
+export function formatMoney(amount: number, currency: string, locale: string): string {
+  return kept(
+    MONEY,
+    `money:${currency}:${locale}`,
+    () => new Intl.NumberFormat(locale, { style: 'currency', currency }),
+  ).format(amount)
+}
+
 const DECIMALS = new Map<string, Intl.NumberFormat>()
 
 /**

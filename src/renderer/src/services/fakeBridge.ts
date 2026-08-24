@@ -59,6 +59,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       rename: () => Promise.resolve({ accounts: [] }),
       remove: () => Promise.resolve({ accounts: [] }),
       activate: () => Promise.resolve({ accounts: [] }),
+      // Nothing known by default, which is the case every cloud but two is really in.
+      credits: () => Promise.resolve({}),
       onChange: noSubscription,
       ...overrides.accounts,
     },

@@ -8,16 +8,7 @@
 import { clamp } from '@shared/numeric'
 import { kept } from '@/helpers/format'
 
-const NUMBERS = new Map<string, Intl.NumberFormat>()
 const DATES = new Map<string, Intl.DateTimeFormat>()
-
-export function formatMoney(amount: number, currency: string, locale: string): string {
-  return kept(
-    NUMBERS,
-    `money:${currency}:${locale}`,
-    () => new Intl.NumberFormat(locale, { style: 'currency', currency }),
-  ).format(amount)
-}
 
 /** Short enough that a hundred and twenty of them can share one axis. */
 export function formatDay(date: string, locale: string): string {

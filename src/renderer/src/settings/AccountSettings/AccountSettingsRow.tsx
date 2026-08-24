@@ -5,6 +5,9 @@ import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { cn } from '@/helpers/cn'
 import { HINT_LEFT, HINT_TOP } from '@/helpers/tooltip'
 import { useAccounts, type AccountSaveFailure } from '@/stores/accounts'
+import { useCredits } from '@/stores/credits'
+import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { describeCredit } from '@/helpers/describeCredit'
 import { FAILURE_KEYS } from './failureKeys'
 
 type AccountSettingsRowProps = {
@@ -14,17 +17,19 @@ type AccountSettingsRowProps = {
 }
 
 export function AccountSettingsRow({ account, authenticated }: AccountSettingsRowProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const accounts = useAccounts(state => state.accounts)
   const rename = useAccounts(state => state.rename)
   const remove = useAccounts(state => state.remove)
   const activate = useAccounts(state => state.activate)
+  const balances = useCredits(state => state.balances)
 
   // One state, not two: a draft that exists IS the editing mode, so the two cannot disagree.
   const [draft, setDraft] = useState<string | null>(null)
   const [failure, setFailure] = useState<AccountSaveFailure | null>(null)
 
   const keyWorks = (account.providerId ?? SCENARIO_CLOUD) !== SCENARIO_CLOUD || authenticated
+  const credit = describeCredit(balances?.[account.id], i18n.language)
 
   const stopEditing = (): void => {
     setDraft(null)
@@ -79,43 +84,50 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
   }
 
   return (
-    <li className="flex items-center gap-2">
-      <span className="flex flex-1 items-center gap-2 truncate text-sm">
-        {account.name}
-        {account.active && (
-          <span className={cn('badge badge-sm', keyWorks ? 'badge-success' : 'badge-error')}>
-            {keyWorks ? t('accounts.active') : t('accounts.notConnected')}
-          </span>
-        )}
-      </span>
+    <li className="flex flex-col gap-0.5">
+      <div className="flex items-center gap-2">
+        <span className="flex flex-1 items-center gap-2 truncate text-sm">
+          {account.name}
+          {account.active && (
+            <span className={cn('badge badge-sm', keyWorks ? 'badge-success' : 'badge-error')}>
+              {keyWorks ? t('accounts.active') : t('accounts.notConnected')}
+            </span>
+          )}
+        </span>
 
-      {!account.active && (
+        {!account.active && (
+          <button
+            type="button"
+            className="btn btn-sm"
+            {...HINT_LEFT(t('accounts.useHint'))}
+            onClick={() => void activate(account.id)}
+          >
+            {t('accounts.use')}
+          </button>
+        )}
+
         <button
           type="button"
-          className="btn btn-sm"
-          {...HINT_LEFT(t('accounts.useHint'))}
-          onClick={() => void activate(account.id)}
+          className="btn btn-sm btn-ghost"
+          {...HINT_LEFT(t('accounts.renameHint'))}
+          onClick={() => setDraft(account.name)}
         >
-          {t('accounts.use')}
+          {t('accounts.rename')}
         </button>
-      )}
+        <button
+          type="button"
+          className="btn btn-sm btn-ghost text-error"
+          {...HINT_LEFT(t('accounts.removeHint'))}
+          onClick={() => void remove(account.id)}
+        >
+          {t('accounts.remove')}
+        </button>
+      </div>
 
-      <button
-        type="button"
-        className="btn btn-sm btn-ghost"
-        {...HINT_LEFT(t('accounts.renameHint'))}
-        onClick={() => setDraft(account.name)}
-      >
-        {t('accounts.rename')}
-      </button>
-      <button
-        type="button"
-        className="btn btn-sm btn-ghost text-error"
-        {...HINT_LEFT(t('accounts.removeHint'))}
-        onClick={() => void remove(account.id)}
-      >
-        {t('accounts.remove')}
-      </button>
+      {/* Said in full here: the menu has a column for a figure, not for why there is none. */}
+      {balances && (
+        <p className={WINDOW_CAPTION}>{t(credit.sentenceKey, { amount: credit.figure })}</p>
+      )}
     </li>
   )
 }

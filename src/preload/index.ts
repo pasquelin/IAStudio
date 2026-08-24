@@ -63,6 +63,7 @@ const bridge: StudioBridge = {
     rename: (id, name) => ipcRenderer.invoke(CHANNELS.accountsRename, id, name),
     remove: id => ipcRenderer.invoke(CHANNELS.accountsRemove, id),
     activate: id => ipcRenderer.invoke(CHANNELS.accountsActivate, id),
+    credits: () => ipcRenderer.invoke(CHANNELS.accountsCredits),
     onChange: callback => subscribe<AccountSummary[]>(EVENTS.accountsChanged, callback),
   },
   provider: {

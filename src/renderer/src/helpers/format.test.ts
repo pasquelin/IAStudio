@@ -6,6 +6,7 @@ import {
   formatBytes,
   formatDecimal,
   formatMoment,
+  formatMoney,
   formatPercent,
   formatUnits,
   kept,
@@ -14,6 +15,12 @@ import {
 } from './format'
 
 const name = (unit: ByteUnit): string => unit
+
+describe('formatMoney', () => {
+  it('follows the locale, not the currency', () => {
+    expect(formatMoney(12.4, 'EUR', 'en-US')).toBe('€12.40')
+  })
+})
 
 describe('reading a percentage', () => {
   // The defect this closed: the French spacing was written into three components, so an English

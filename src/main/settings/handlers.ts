@@ -3,6 +3,7 @@ import { cloudAuth } from '@shared/domain/aiCloud'
 import type { AuthState, SettingsSectionId } from '@shared/domain/settings'
 import { CHANNELS, type McpState } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
+import type { CreditsReader } from '@main/provider/credits'
 import { AccountError } from './accounts'
 import type { AccountChange, SettingsStore } from './store'
 import type { SettingActionId } from '@shared/domain/settingsRegistry'
@@ -31,6 +32,8 @@ export type SettingsHandlerDeps = {
   runAction: (id: SettingActionId) => void
   /** Told the window is holding changes nobody applied, so closing it can ask first. */
   setPending: (pending: boolean) => void
+  /** What every stored key has left to spend, for the clouds that publish such a thing. */
+  credits: CreditsReader
 }
 
 export function registerSettingsHandlers({
@@ -42,6 +45,7 @@ export function registerSettingsHandlers({
   openSettings,
   runAction,
   setPending,
+  credits,
 }: SettingsHandlerDeps): void {
   handle(CHANNELS.settingsRead, () => settings.read())
 
@@ -71,6 +75,9 @@ export function registerSettingsHandlers({
     }
 
     if (result.credentialsChanged) onCredentialsChanged()
+    // Every mutation, not just one that moved the active key: a balance belongs to a key, and
+    // `credentialsChanged` only ever speaks for the Scenario one.
+    credits.forget()
     broadcastAccounts(result.accounts)
     return { accounts: result.accounts }
   }
@@ -94,6 +101,8 @@ export function registerSettingsHandlers({
   handle(CHANNELS.accountsActivate, (_event, id) =>
     mutate(() => settings.activateAccount(parseAccountId(id))),
   )
+
+  handle(CHANNELS.accountsCredits, () => credits.balances())
 
   // A block, not an expression: `openSettingsWindow` answers with the `BrowserWindow` it
   // opened, and returning that from a handler hands an unclonable object to the IPC

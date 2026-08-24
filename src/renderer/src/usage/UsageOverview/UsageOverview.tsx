@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import type { UsageReport } from '@shared/domain/usage'
-import { formatUnits } from '@/helpers/format'
-import { formatDay, formatMoney } from '../format'
+import { formatMoney, formatUnits } from '@/helpers/format'
+import { formatDay } from '../format'
 import { UsageOverviewFigure } from './UsageOverviewFigure'
 import { WINDOW_CAPTION } from '@/design/windowStyles'
 
