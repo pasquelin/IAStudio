@@ -24,10 +24,9 @@ familles de modèles (`model.ts:73`) et des capacités par famille (`model.ts:24
 l'assistant et la dictée.
 
 `[M]` **Le studio sait déjà tenir plusieurs clés, mais globalement.** `AccountBook`
-(`main/settings/accounts.ts:39`) porte une liste de comptes et **un** `activeId` ; un compte
-`origin: 'environment'` vient de `secrets/.env` en lecture seule. Un switch de compte vit dans la
-barre de titre. **Mais le projet ne sait rien** : `.project.json` ne porte que `version`, `name`,
-`createdAt`, `updatedAt`.
+(`main/settings/accounts.ts:39`) porte une liste de comptes et **un** `activeId`. Un switch de
+compte vit dans la barre de titre. **Mais le projet ne sait rien** : `.project.json` ne porte que
+`version`, `name`, `createdAt`, `updatedAt`.
 
 `[M]` **Et sans clé, l'application ne fait rien.** Elle affiche « Non connecté » et s'arrête, alors
 que la dictée — le seul modèle local du dépôt — fonctionne sans aucun compte.
