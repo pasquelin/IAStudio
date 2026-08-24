@@ -1186,6 +1186,7 @@
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",
+    "stagedHint": "L’assistant est déjà au centre de la fenêtre",
     "listening": "L’assistant vous écoute",
     "done": "L’assistant a répondu",
     "reviewHint": "Ouvre l’assistant sur ce qu’il a compris et sur ce qu’il a fait",
