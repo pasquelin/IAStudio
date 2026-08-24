@@ -4,6 +4,7 @@ import type { AiOverview, ModelCandidate, RoleRow } from '@shared/domain/aiOverv
 import { aiRoleId, DICTATION_ROLE } from '@shared/domain/aiRole'
 import { GIBI, localModel } from '@shared/domain/localModel-fixtures'
 import type { ModelFamily } from '@shared/domain/model'
+import { FIELD_THUMBNAIL } from '@/design/styles'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAiModels } from '@/stores/aiModels'
 import { withQueries } from '@/app/query-fixtures'
@@ -92,6 +93,17 @@ describe('AiSettings', () => {
     )
 
     expect(screen.getByText(/2024 · Fastest open image-to-mesh/)).toBeInTheDocument()
+  })
+
+  /**
+   * `Thumbnail` fills the box a `Row` hands it, and these windows have no `Row` at all: left to
+   * that default the picture claimed the whole width of its line and refused to shrink, drawing
+   * a 256px portrait over the name beside it. Twice in two days, hence a case rather than a rule.
+   */
+  it('names the size of a candidate picture rather than letting it fill the line', () => {
+    show()
+
+    expect(document.querySelector('img')?.className).toContain(FIELD_THUMBNAIL)
   })
 
   it('says nothing about the machine before the main process has answered', () => {
