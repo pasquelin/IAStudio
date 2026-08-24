@@ -27,6 +27,7 @@ import type {
   SavePictureRequest,
   SaveTextureRequest,
 } from '@shared/ipc'
+import { assetId } from '@main/assets/validation'
 import { isPngBytes } from '@main/media/png'
 import { pathSegment, withinCodePoints } from '@main/validation'
 import { base64Payload } from '@main/provider/validation'
@@ -134,12 +135,11 @@ const assetQuery = z.object({
   paths: z.array(folderPath).max(ASSET_PATHS_MAX).optional(),
   // Absent here, `z.object` STRIPS it and the query reaching SQL is unfiltered: reading back a
   // generation's output answered with the first rows of the whole catalogue.
-  ids: z.array(z.string().trim().min(1)).max(ASSET_PATHS_MAX).optional(),
+  ids: z.array(assetId).max(ASSET_PATHS_MAX).optional(),
   location: z.enum(['local', 'cloud']).optional(),
   syncStatus: z.custom<SyncStatus>(isSyncStatus).optional(),
   groupId: z.string().trim().min(1).optional(),
-  // Spelled out rather than reusing the `assetId` schema, which is declared further down.
-  derivedFrom: z.string().trim().min(1).optional(),
+  derivedFrom: assetId.optional(),
   generated: z.literal(true).optional(),
   // Bounded here rather than in SQL: the renderer chooses the page size, and an unbounded
   // one would pull an entire well-stocked project across the IPC boundary in one message.
@@ -149,12 +149,6 @@ const assetQuery = z.object({
 
 export function parseAssetQuery(value: unknown): AssetQuery {
   return assetQuery.parse(value)
-}
-
-const assetId = z.string().trim().min(1)
-
-export function parseAssetId(value: unknown): string {
-  return assetId.parse(value)
 }
 
 // An edited take crosses the boundary as bytes. Bounded rather than trusted: the renderer is
@@ -399,7 +393,8 @@ const documentEnvelope = z.object({
   title,
   updatedAt: z.string().min(1),
   // Absent on every document written before assets could be opened, and on every document that
-  // edits none — so an absent field means "not linked" rather than a file to migrate.
+  // edits none — so an absent field means "not linked" rather than a file to migrate. Unbounded
+  // where the draft above bounds it: this reads a file that EXISTS, and a bound would refuse it.
   sourceAssetId: z.string().min(1).optional(),
   // Absent before version 3, where the file name was the id. Declared here or zod STRIPS it and
   // the field is written by the main process and never seen again — the very defect the comment

@@ -5,7 +5,7 @@ import { PICTURES, withoutSourcePath, type Asset, type MediaProbe } from '@share
 import type { FileOutcome } from '@shared/domain/fileOp'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
 import type { TextureExtraction } from '@main/assets/textureExtraction'
-import { parseAssetIds } from '@main/assets/validation'
+import { parseAssetId, parseAssetIds } from '@main/assets/validation'
 import { broadcast } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
@@ -30,7 +30,6 @@ import type { DocumentFiles } from './documents'
 import { askTrashFiles, askUseOccupiedFolder } from './projectDialogs'
 import { openFailureKey, type ProjectStore } from './store'
 import {
-  parseAssetId,
   parseAssetQuery,
   parseDocumentDraft,
   parseDocumentId,
