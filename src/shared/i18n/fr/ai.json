@@ -56,8 +56,8 @@
   "aiModels": {
     "reading": "Lecture de la machine…",
     "empty": "Aucun emploi n’a de fournisseur à proposer sur cette machine.",
-    "machineMemory": "{{available}} libres sur {{total}}",
-    "machineDisk": "{{free}} sur le disque",
+    "machineMemory": "Mémoire vive : {{available}} libres sur {{total}}",
+    "machineDisk": "Disque : {{free}} libres",
     "appliesNow": "Un choix fait ici s’applique tout de suite — Annuler ne le reprend pas.",
     "scope": "Ces choix valent pour",
     "scope_app": "l’application",
@@ -93,7 +93,7 @@
       "plugin": "aucun moteur de ce studio ne sait encore ouvrir ce modèle",
       "cuda": "ce modèle demande un GPU NVIDIA (CUDA)"
     },
-    "machineVram": "{{free}} libres sur {{total}} de mémoire vidéo",
+    "machineVram": "Mémoire vidéo : {{free}} libres sur {{total}}",
     "load": "Charger",
     "loadHint": "Met les poids en mémoire pour que les réponses soient immédiates",
     "loading": "Chargement du modèle",
@@ -139,6 +139,7 @@
     "publisherCard": "Fiche éditeur",
     "publisherCardHint": "Ouvre la page Hugging Face de ce modèle dans le navigateur",
     "catalogue": "Catalogue",
-    "catalogueHelp": "Les modèles de cette famille, sur cette machine et dans le cloud. Le panneau de génération choisit lequel sert chaque emploi."
+    "catalogueHelp": "Les modèles de cette famille, sur cette machine et dans le cloud. Le panneau de génération choisit lequel sert chaque emploi.",
+    "machineGpu": "Puce : {{name}}"
   }
 }

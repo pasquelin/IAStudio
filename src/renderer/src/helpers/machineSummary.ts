@@ -15,6 +15,9 @@ export function gpuName(renderer: string): string {
  * What the machine offers, in one line — memory, chip, video memory, disk. A part the machine
  * did not answer is dropped rather than filled in.
  *
+ * Every figure NAMES its subject. Read as bare numbers it was « 75 Gio libres sur 96 · Apple M2
+ * Max · 78 Gio libres sur 78 · 272 Gio », where nothing said which memory was which.
+ *
  * 🛑 `!summary.vram` and not `=== null`: the type says `| null`, but this crosses IPC and a
  * summary written before the field existed has no key at all — measured, it took the manager
  * down with `Cannot read properties of undefined (reading 'totalBytes')`.
@@ -29,7 +32,7 @@ export function machineSummary(
       total: bytes(summary.physicalBytes),
       available: bytes(summary.availableBytes),
     }),
-    summary.gpu === null ? null : gpuName(summary.gpu),
+    summary.gpu === null ? null : translate('aiModels.machineGpu', { name: gpuName(summary.gpu) }),
     // The video memory when a runtime answered for it, and nothing at all otherwise: a machine
     // with a dedicated card is judged on THIS figure, so leaving it unsaid would hide the reason.
     !summary.vram

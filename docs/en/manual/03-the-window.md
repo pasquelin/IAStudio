@@ -98,6 +98,9 @@ at a time, and that is one request.
 of its own — the studio serves both with image models — so a chip for one would repeat the Image
 list under another name.
 
+**Eight rows, and nothing older than a month.** The article feed carries five hundred; a home
+band is not a feed reader. Past a month it is not news, it is history.
+
 **A click opens the page in your browser.** Nothing is downloaded, nothing is installed: these are
 somebody else's models and somebody else's articles.
 

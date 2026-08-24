@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import type { NewsItem } from '@shared/domain/news'
-import { rowSkin, ROW_INK, ROW_QUIET } from '@/design/styles'
+import { ROW_INK, ROW_QUIET } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
 import { timeAgo } from '@/helpers/relativeTime'
 import { HINT_TOP } from '@/helpers/tooltip'
+import { NEWS_ROW } from './newsStyles'
 
 /**
  * One row of the news band, and it is a LINK rather than a button: these pages belong to
@@ -30,14 +31,9 @@ export function NewsRow({ item }: { item: NewsItem }) {
       target="_blank"
       rel="noreferrer"
       {...HINT_TOP(t('home.news.openHint'))}
-      className={cn(
-        rowSkin(false),
-        'flex items-center gap-3 px-2 py-1.5 no-underline',
-        // The row is the whole target, and a link that only takes its own text width leaves a
-        // strip of the row inert — which reads as a list that answers in some places and not
-        // others.
-        'w-full',
-      )}
+      // `w-full`: the row is the whole target, and a link taking only its own text width
+      // leaves a strip of it inert — a list that answers in some places and not others.
+      className={cn(NEWS_ROW, 'w-full no-underline')}
     >
       <span className={cn(ROW_INK, 'min-w-0 flex-1 truncate text-xs')}>{item.title}</span>
       {said.length > 0 && (

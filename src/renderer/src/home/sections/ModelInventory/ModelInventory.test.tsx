@@ -81,7 +81,7 @@ describe('the models band', () => {
     // what it READ and not what it was given. The chip is the one taken out of what Chromium
     // answers, rather than the driver build that came with it.
     expect(meansLine('Machine')).toHaveTextContent(
-      '34 Gio libres sur 96 Gio · Apple M2 Max · 500 Gio sur le disque',
+      'Mémoire vive : 34 Gio libres sur 96 Gio · Puce : Apple M2 Max · Disque : 500 Gio libres',
     )
   })
 

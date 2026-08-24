@@ -98,6 +98,29 @@ function dateOf(value: string | null): string | null {
 }
 
 /**
+ * How far back a row is worth showing. Past a month it is not news, it is history — and the
+ * blog feed carries five hundred items, which is a page of its own on the home.
+ */
+export const NEWS_WINDOW_MS = 31 * 24 * 60 * 60 * 1000
+
+/**
+ * The newest of a feed, and no more: within the window, capped at what one band shows.
+ *
+ * An item that stated no date is KEPT — nothing here can judge it, and dropping it would be
+ * inventing a date to compare against. The feed is newest-first, so the cap takes the newest.
+ */
+export function recentOf(items: readonly NewsItem[], now: number): NewsItem[] {
+  return items
+    .filter(item => {
+      if (item.publishedAt === null) return true
+      const stamp = Date.parse(item.publishedAt)
+
+      return Number.isNaN(stamp) || stamp >= now - NEWS_WINDOW_MS
+    })
+    .slice(0, NEWS_PAGE_SIZE)
+}
+
+/**
  * The blog feed, as rows. HTTPS only, and that is not decoration: the renderer opens these
  * through `setWindowOpenHandler`, which drops anything else without a word — so a row that
  * could never open is dropped here instead, where it can be counted.

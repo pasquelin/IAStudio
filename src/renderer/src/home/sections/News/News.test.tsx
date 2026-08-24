@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { NewsItem, NewsPage } from '@shared/domain/news'
+import { NEWS_PAGE_SIZE, type NewsItem, type NewsPage } from '@shared/domain/news'
 import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
@@ -76,6 +76,29 @@ describe('the news band', () => {
     show()
 
     expect(await screen.findByText(/téléchargements/)).toBeInTheDocument()
+  })
+
+  /**
+   * The page jumped: a one-line note under a band that then grew to eight rows moved everything
+   * below it. The waiting state reserves the room the rows will take.
+   */
+  it('reserves the height of a full band while it waits', () => {
+    // A read that never answers: the band stays on its waiting state for the whole case.
+    installFakeBridge({ news: { read: () => new Promise(() => {}) } })
+    render(withQueries(<News />))
+
+    expect(screen.getByRole('heading', { name: 'Ce qui bouge' })).toBeInTheDocument()
+    expect(document.querySelectorAll('[aria-hidden="true"] > span')).toHaveLength(NEWS_PAGE_SIZE)
+  })
+
+  /** Emptied first, the band collapses and the whole page jumps up, then back down. */
+  it('keeps the rows of the topic just left while the next one is read', async () => {
+    show()
+    await screen.findByText('black-forest-labs/FLUX.1-dev')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Articles' }))
+
+    expect(screen.getByText('black-forest-labs/FLUX.1-dev')).toBeInTheDocument()
   })
 
   it('says the source refused rather than showing an empty category', async () => {

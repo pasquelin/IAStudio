@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import type { NewsPage, NewsTopic } from '@shared/domain/news'
 import { getBridge } from '@/services/bridge'
 
@@ -20,5 +20,8 @@ export function useNews(topic: NewsTopic, enabled: boolean) {
     },
     enabled,
     retry: false,
+    // The rows of the topic just left stay while the next one is read: emptied first, the band
+    // collapses to nothing and the whole page jumps up, then back down a moment later.
+    placeholderData: keepPreviousData,
   })
 }
