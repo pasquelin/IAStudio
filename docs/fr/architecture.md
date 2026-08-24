@@ -776,7 +776,7 @@ ce qu’elle a reçu, et `generatedAssetName` taille le nom d’un asset dans le
 caractères de son prompt — un projet à contexte aurait nommé tous ses assets pareil. `AssetGeneration`
 ne gagne aucun champ : `withAuthoredPrompt` remet l’écrit dans `params`, ce qui fait qu’un
 « regenerate » rouvre sur ce qui a été tapé plutôt que d’empiler le contexte à chaque reprise.
-[ADR-24](ci/adr/ADR-24-ce-qui-voyage-avec-le-projet.md).
+[ADR-24](../ci/adr/ADR-24-ce-qui-voyage-avec-le-projet.md).
 
 **L’étape 8 ralentit quand la charge monte, et c’est ce qui la rend sûre.** L’intervalle est
 `max(plancher, ceil(jobs_en_cours × 60 000 ÷ POLL_REQUESTS_PER_MINUTE))` : deux secondes est ce
@@ -826,7 +826,7 @@ la structure que le studio crée à l’ouverture — l’arborescence est dans 
 **`.project-context.json` est le second fichier du projet à porter de l’écriture humaine** : les
 fiches qui disent ce que le projet raconte, ajoutées à toute génération et au briefing de
 l’assistant. Il vit dans le DOSSIER et non dans les réglages, contrairement à
-`settings.ai.projectRoles` — le critère est dans l’[ADR-24](ci/adr/ADR-24-ce-qui-voyage-avec-le-projet.md).
+`settings.ai.projectRoles` — le critère est dans l’[ADR-24](../ci/adr/ADR-24-ce-qui-voyage-avec-le-projet.md).
 Il refuse d’être écrasé quand il est illisible ou d’une version plus récente, l’inverse de
 `jobStore.ts` : ce qu’il porte est le texte de quelqu’un.
 
