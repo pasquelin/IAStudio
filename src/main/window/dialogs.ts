@@ -1,7 +1,8 @@
 import type { PathKind } from '@shared/domain/settingsRegistry'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
-import { parseBase64Payload, parseFileName, parsePathKind, parseStartIn } from './validation'
+import { parseBase64 } from '@main/provider/validation'
+import { parseFileName, parsePathKind, parseStartIn } from './validation'
 
 export type DialogHandlerDeps = {
   /** Injected rather than imported: `dialog` needs a live app, which no test has. */
@@ -23,6 +24,6 @@ export function registerDialogHandlers({ pickPath, savePicture }: DialogHandlerD
   // Decoded here rather than in the renderer: a `Buffer` does not cross the bridge, and the
   // base64 is what the extraction already produced.
   handle(CHANNELS.dialogExportPicture, (_event, name, image) =>
-    savePicture(parseFileName(name), Buffer.from(parseBase64Payload(image), 'base64')),
+    savePicture(parseFileName(name), Buffer.from(parseBase64(image), 'base64')),
   )
 }
