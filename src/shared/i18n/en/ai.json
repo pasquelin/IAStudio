@@ -141,6 +141,8 @@
     "sourceCloud": "Online",
     "sourceCloudHelp": "Scenario’s servers. The description goes to them.",
     "sourceCustom": "Your files",
+    "sourceEngine": "Local engine",
+    "sourceEngineHelp": "The studio generates on this computer itself. Nothing leaves it.",
     "sourceOllama": "Ollama",
     "sourceOllamaHelp": "Ollama is software on this computer. Your images and your text stay here.",
     "sourceStudio": "On this computer",

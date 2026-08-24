@@ -120,6 +120,13 @@ export function AiSettings({ family }: AiSettingsProps) {
           <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-2')}>{t('aiModels.sourceOllama')}</h3>
           <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
           <AiOllamaOffer offer={overview.ollama} busy={busy} />
+        </section>
+      )}
+
+      {overviewPane && (
+        <section className="mb-6">
+          <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-2')}>{t('aiModels.sourceEngine')}</h3>
+          <p className={WINDOW_CAPTION}>{t('aiModels.sourceEngineHelp')}</p>
           <AiEngineOffer offer={overview.engine} busy={busy} />
         </section>
       )}
