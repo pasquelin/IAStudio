@@ -668,7 +668,7 @@ Settings → **Advanced** → **Reset everything**. Puts every setting back to a
 
 | Symptom | First thing to try |
 |---|---|
-| The model catalogue is empty | **Settings ▸ Account**, then sign in |
+| The model catalogue is empty | **Settings ▸ AI models ▸ API keys**, then sign in |
 | "Invalid API key or secret." | look for a stray space in what was pasted |
 | "Too many requests" repeatedly | lower **Concurrent generations** to 2 |
 | "Generation “…” failed" | restore the model's parameters to default, relaunch |

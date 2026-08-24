@@ -308,7 +308,7 @@ account again.
 
 Each API key carries **its own** remote project: its models, its assets, its credit.
 
-1. **Settings ▸ Account**: add a second one, with a name of its own;
+1. **Settings ▸ AI models ▸ API keys**: add a second one, with a name of its own;
 2. **Use this account** switches;
 3. quicker day to day: the account name, top right of the window, opens the list in one click.
 

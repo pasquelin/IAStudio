@@ -228,7 +228,7 @@
       "running_other": "{{count, number}} generations running",
       "runningBody": "They carry on while you work, and land in the document that asked for them.",
       "connect": "Connect an API key",
-      "connectBody": "Models, generation and the shared library need an API key and secret. Paste them into Settings ▸ Account — they are encrypted by the system keychain and never leave this machine. Everything on your disk works without one.",
+      "connectBody": "Models, generation and the shared library need an API key and secret. Paste them into Settings ▸ AI models ▸ API keys — they are encrypted by the system keychain and never leave this machine. Everything on your disk works without one.",
       "connectAction": "Enter the API key",
       "ready": "Ready when you are",
       "readyBody": "{{project}} is open and holds nothing yet. Pick a workspace and make the first thing in it.",

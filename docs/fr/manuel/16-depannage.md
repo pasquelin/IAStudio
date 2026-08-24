@@ -696,7 +696,7 @@ installation neuve.
 
 | Symptôme | Première chose à essayer |
 |---|---|
-| Le catalogue de modèles est vide | **Réglages ▸ Compte**, puis se connecter |
+| Le catalogue de modèles est vide | **Réglages ▸ Modèles d’IA ▸ Clés API**, puis se connecter |
 | « Clé ou secret API invalide. » | chercher un espace en trop dans ce qui a été collé |
 | « Trop de requêtes » à répétition | baisser **Générations simultanées** à 2 |
 | « La génération « … » a échoué » | remettre les paramètres du modèle par défaut, relancer |

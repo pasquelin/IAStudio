@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { LANGUAGES, type Language } from './i18n/languages'
 import { deadManualLinks, type ManualChapter } from './domain/manual'
 import { americanVerbs, americanWords, frenchWords, proseOf } from './i18n/spelling-fixtures'
-import { asRead, menuPathsOf, screenLabels } from './i18n/menuPath-fixtures'
+import { asRead, menuPathsOf, screenLabels, settingsTree } from './i18n/menuPath-fixtures'
 import { TRANSLATIONS } from './i18n'
 import manual from './manual.json'
 
@@ -187,16 +187,31 @@ describe('the manual the application carries', () => {
    */
   it.each(languages)('quotes no menu path the screen does not carry, in %s', language => {
     const labels = screenLabels(TRANSLATIONS[language])
+    // The segment after « Réglages » names one of its SECTIONS, not any label on screen:
+    // « Réglages ▸ Compte » stayed green in six chapters because `usage.account` carries the word.
+    // What follows a section is a SETTING, read against the whole bundle as before.
+    const root = asRead(TRANSLATIONS[language].settings.title)
+    const tree = settingsTree(TRANSLATIONS[language])
     const invented = chaptersOf(language).flatMap(chapter =>
-      menuPathsOf(chapter.markdown).flatMap(path =>
-        path
-          .split(/[▸›]/)
-          .map(asRead)
+      menuPathsOf(chapter.markdown).flatMap(path => {
+        const segments = path.split(/[▸›]/).map(asRead)
+        const held = tree.get(segments[1] ?? '')
+        const carried = (segment: string, index: number): boolean => {
+          if (segments[0] !== root) return labels.has(segment)
+          if (index === 1) return tree.has(segment)
+
+          return index === 2 && held !== undefined && held.size > 0
+            ? held.has(segment)
+            : labels.has(segment)
+        }
+
+        return segments
           .filter(
-            segment => segment && !labels.has(segment) && !NOT_A_MENU_ENTRY[language].has(segment),
+            (segment, index) =>
+              segment && !carried(segment, index) && !NOT_A_MENU_ENTRY[language].has(segment),
           )
-          .map(segment => `${chapter.slug} — "${segment}" in ${path.trim()}`),
-      ),
+          .map(segment => `${chapter.slug} — "${segment}" in ${path.trim()}`)
+      }),
     )
 
     expect(invented).toEqual([])
