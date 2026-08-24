@@ -16,13 +16,13 @@ import { useAssistant } from '@/stores/assistant'
  */
 export function AssistantStatus() {
   const { t } = useTranslation()
-  const open = useAssistant(state => state.open)
+  const staged = useAssistant(state => state.staged > 0)
   const busy = useAssistant(state => state.busy)
   const said = useAssistant(state => state.turns.at(-1)?.said ?? '')
 
-  // Nothing while the window is up: the thread itself is on screen saying all of this at length,
-  // and the scrim would have this at 40% underneath it anyway.
-  if (open || !busy || said === '') return null
+  // Nothing while a surface has the thread up — modal or empty centre: it says all of this at
+  // length already, with its own spinner.
+  if (staged || !busy || said === '') return null
 
   return (
     <span className="flex items-center gap-1.5">

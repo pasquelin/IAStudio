@@ -1,8 +1,8 @@
 import type { IDockviewPanelProps } from 'dockview-react'
+import type { DocumentKind } from '@shared/domain/document'
 import { lazy, type FC } from 'react'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { DocumentsGuard } from './DocumentsGuard'
-import { DocumentsHome } from './DocumentsHome'
 
 export type DocumentPanelParams = { documentId: string }
 
@@ -45,12 +45,11 @@ function panelFor(Space: FC<{ documentId: string }>): FC<IDockviewPanelProps<Doc
   )
 }
 
-/**
- * Document components handed to Dockview, keyed by `DocumentKind`. `home` is what an empty
- * center shows.
- */
-export const DOCUMENT_COMPONENTS: Record<string, FC<IDockviewPanelProps<DocumentPanelParams>>> = {
-  home: () => <DocumentsHome />,
+/** Document components handed to Dockview, keyed by `DocumentKind`. */
+export const DOCUMENT_COMPONENTS: Record<
+  DocumentKind,
+  FC<IDockviewPanelProps<DocumentPanelParams>>
+> = {
   image: panelFor(ImageDocument),
   scene: panelFor(SceneDocument),
   sequence: panelFor(SequenceDocument),

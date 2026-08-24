@@ -1,4 +1,9 @@
-import type { AiOverview, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
+import {
+  servedBy,
+  type AiOverview,
+  type ModelCandidate,
+  type RoleRow,
+} from '@shared/domain/aiOverview'
 import { CLOUD_IDS, type CloudProviderId } from '@shared/domain/aiCloud'
 import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
 import { fitAllowsUse } from '@shared/domain/modelFit'
@@ -88,11 +93,6 @@ export type EmploymentGroup = {
    */
   sole: RoleRow | null
 } & ({ family: ModelFamily; role: null } | { family: null; role: AiRoleId })
-
-/** Whether an employment has something answering for it today — a choice, never a fill-in. */
-function servedBy(row: RoleRow): boolean {
-  return row.provider !== null
-}
 
 /**
  * The list, families first in the registry's order and the standalone roles after them.

@@ -44,7 +44,14 @@ function brain(...replies: AssistantAnswer[]): { asked: AssistantThought[] } {
 beforeEach(() => {
   runConfirmedAction.mockReset()
   runConfirmedAction.mockResolvedValue({ ok: true })
-  useAssistant.setState({ open: false, turns: [], busy: false, asked: null, spent: 0 })
+  useAssistant.setState({
+    open: false,
+    turns: [],
+    busy: false,
+    asked: null,
+    spent: 0,
+    draft: '',
+  })
 })
 
 describe('saying something to the assistant', () => {
@@ -56,6 +63,20 @@ describe('saying something to the assistant', () => {
     expect(turn?.said).toBe('ouvre un fichier 3D')
     expect(turn?.answered).toBe('J’ouvre un fichier 3D.')
     expect(useAssistant.getState().busy).toBe(false)
+  })
+
+  /**
+   * The field empties here rather than in the surface that submitted it, because two surfaces
+   * write into it and dictation sends without either: a sentence spoken over something half-typed
+   * used to leave that half behind, under the answer it had nothing to do with.
+   */
+  it('empties the field it just sent', async () => {
+    brain()
+    useAssistant.setState({ draft: 'ouvre un fichier 3D' })
+
+    await useAssistant.getState().say('ouvre un fichier 3D')
+
+    expect(useAssistant.getState().draft).toBe('')
   })
 
   it('carries the turns before it, and never the one being said', async () => {

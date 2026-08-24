@@ -12,7 +12,7 @@ const turn = {
 }
 
 beforeEach(() => {
-  useAssistant.setState({ open: false, busy: false, seen: 0, turns: [turn] })
+  useAssistant.setState({ open: false, busy: false, seen: 0, staged: 0, turns: [turn] })
 })
 
 describe('that the assistant is working on what was just said', () => {
@@ -34,10 +34,10 @@ describe('that the assistant is working on what was just said', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  // The thread itself is on screen saying all of this at length, and the scrim would have this
-  // at 40% underneath it anyway.
-  it('stays out of the way while the window is up', () => {
-    useAssistant.setState({ busy: true, open: true })
+  // Whichever surface has it up — the modal or the empty centre, both of which carry their own
+  // spinner. `open` means the modal ALONE, so the centre used to get two.
+  it('stays out of the way while a surface has the thread on screen', () => {
+    useAssistant.setState({ busy: true, staged: 1 })
     const { container } = render(<AssistantStatus />)
 
     expect(container).toBeEmptyDOMElement()

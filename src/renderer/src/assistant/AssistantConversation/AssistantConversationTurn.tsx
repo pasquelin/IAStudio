@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import type { AssistantTurn } from '../conversation'
-import { AssistantOverlayStep } from './AssistantOverlayStep'
+import { AssistantConversationStep } from './AssistantConversationStep'
 
 /** One exchange: what was asked, what came back, and what each action actually did. */
-export function AssistantOverlayTurn({ turn }: { turn: AssistantTurn }) {
+export function AssistantConversationTurn({ turn }: { turn: AssistantTurn }) {
   const { t } = useTranslation()
 
   return (
@@ -25,7 +25,7 @@ export function AssistantOverlayTurn({ turn }: { turn: AssistantTurn }) {
       {turn.steps.map((step, index) => (
         // Keyed by position: the same action can legitimately run twice in one plan, and the
         // list only ever grows to the end.
-        <AssistantOverlayStep key={index} step={step} />
+        <AssistantConversationStep key={index} step={step} />
       ))}
 
       {turn.lost && <p className="text-warning text-mini m-0">{t('assistant.lost')}</p>}

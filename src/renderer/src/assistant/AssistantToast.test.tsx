@@ -15,7 +15,7 @@ const turn = (id: number, lost = false) => ({
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
-  useAssistant.setState({ open: false, busy: false, seen: 0, turns: [turn(1)] })
+  useAssistant.setState({ open: false, busy: false, seen: 0, staged: 0, turns: [turn(1)] })
 })
 
 afterEach(() => {
@@ -63,9 +63,10 @@ describe('what became of the sentence, once', () => {
     expect(screen.queryByText('L’assistant a répondu')).not.toBeInTheDocument()
   })
 
-  // Nothing to report while the thread itself is on screen saying all of this at length.
-  it('stays out of the way while the window is up', () => {
-    useAssistant.setState({ open: true })
+  // Whichever surface has it up — the modal or the empty centre. `open` means the modal ALONE,
+  // and reading it here announced an answer over the page of words the person was reading.
+  it('stays out of the way while a surface has the thread on screen', () => {
+    useAssistant.setState({ staged: 1 })
     const { container } = render(<AssistantToast />)
 
     expect(container).toBeEmptyDOMElement()

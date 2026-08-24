@@ -32,6 +32,7 @@ import { FILE_KINDS } from '@shared/domain/folder'
 import { FILE_INFO_SECTIONS } from '@/fileInfo/sections'
 import { CHOICE_SCOPES } from '@shared/domain/aiOverview'
 import { FIT_DETAIL_KEYS } from '@/hooks/useModelFit'
+import { ASSISTANT_STARTERS, starterKey } from '@/assistant/starters'
 
 function resolve(code: Language, key: string): unknown {
   // Widened, not cast: the bundle's inferred type has no index signature, and every key here is
@@ -56,6 +57,9 @@ function explained(prefix: string, values: readonly string[]): string[] {
  * `inspector.layerKind_text` where a word belongs.
  */
 const COMPOSED_KEYS: readonly string[] = [
+  // The three sentences an empty centre offers, per space. They are the button AND the draft it
+  // writes, so one gone missing puts a raw key on the largest surface of the window.
+  ...Object.values(ASSISTANT_STARTERS).flat().map(starterKey),
   // One button per kind in the timeline's bar, and the label composed from the kind. The union
   // lives in the renderer, so its check does too — beside the list it derives from.
   ...TRACK_KINDS.map(kind => `timeline.addTrack.${kind}`),
