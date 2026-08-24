@@ -8,8 +8,10 @@ import { WINDOW_GROUP_LABEL } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { accountsByProvider, activeAccount, useAccounts } from '@/stores/accounts'
+import { useCredits } from '@/stores/credits'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
+import { describeCredit } from '@/helpers/describeCredit'
 
 /**
  * Switches which stored API key the studio calls with.
@@ -24,13 +26,15 @@ import { useSettings } from '@/stores/settings'
  * button that does that has to state it rather than leave it to be discovered on the next opening.
  */
 export function AccountSelect() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   const accounts = useAccounts(state => state.accounts)
   const activate = useAccounts(state => state.activate)
   const authenticated = useSettings(state => state.auth.authenticated)
   const openSection = useSettings(state => state.openSection)
   const project = useProject(state => state.project)
+  const balances = useCredits(state => state.balances)
+  const refreshCredits = useCredits(state => state.refresh)
 
   const manage = (): void => openSection('account')
 
@@ -70,6 +74,9 @@ export function AccountSelect() {
       rowCount={accounts.length + 1}
       width="max-w-44"
       onAct={manage}
+      // Read when the menu appears rather than on mount: a balance nobody is looking at is a
+      // round trip per window per launch. The main process caches, so hovering twice costs one.
+      onOpen={refreshCredits}
       rows={close => (
         <>
           <p role="presentation" className="text-muted text-mini px-2 py-1">
@@ -86,20 +93,33 @@ export function AccountSelect() {
                 </p>
               )}
 
-              {group.accounts.map(account => (
-                <MenuRow
-                  key={account.id}
-                  label={account.name}
-                  icon={mdiCloudOutline}
-                  checked={account.active}
-                  tick="one-of"
-                  tip={HINT_RIGHT(t('accounts.useHint'))}
-                  onSelect={() => {
-                    close()
-                    void activate(account.id)
-                  }}
-                />
-              ))}
+              {group.accounts.map(account => {
+                // `null` is "never read", which is not "this cloud publishes none" — asserting
+                // the second before the first answer lands is a lie on every row.
+                const credit = balances && describeCredit(balances[account.id], i18n.language)
+
+                return (
+                  <MenuRow
+                    key={account.id}
+                    label={account.name}
+                    icon={mdiCloudOutline}
+                    checked={account.active}
+                    tick="one-of"
+                    // The figure alone: "this cloud publishes none" is a standing property of
+                    // the service, said in full on the settings screen and on hover here.
+                    note={credit?.figure ?? undefined}
+                    tip={HINT_RIGHT(
+                      credit
+                        ? `${t('accounts.useHint')} · ${t(credit.sentenceKey, { amount: credit.figure })}`
+                        : t('accounts.useHint'),
+                    )}
+                    onSelect={() => {
+                      close()
+                      void activate(account.id)
+                    }}
+                  />
+                )
+              })}
             </Fragment>
           ))}
 

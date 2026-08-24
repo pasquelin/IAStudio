@@ -172,7 +172,12 @@
     "saveHint": "Garde le nouveau nom, si aucun autre compte ne le porte déjà",
     "cancelHint": "Laisse le nom tel qu’il était",
     "addHint": "Enregistre la clé, chiffrée par le trousseau du système",
-    "manageHint": "Ouvre les réglages pour ajouter, renommer ou retirer un compte"
+    "manageHint": "Ouvre les réglages pour ajouter, renommer ou retirer un compte",
+    "credits": {
+      "left": "Crédit restant : {{amount}}",
+      "unreadable": "Crédit restant illisible pour l’instant.",
+      "unpublished": "Ce service ne publie pas le crédit restant."
+    }
   },
   "intents": {
     "skyboxSource": "Utiliser comme ciel",

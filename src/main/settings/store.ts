@@ -49,6 +49,8 @@ export type KeyedAccount = {
   id: string
   name: string
   credentials: Credentials
+  /** Which cloud the key opens. Absent means Scenario, exactly as the stored account leaves it. */
+  providerId?: CloudProviderId
 }
 
 export type SettingsStore = {
@@ -323,6 +325,7 @@ export function createSettingsStore(
         id: account.id,
         name: account.name,
         credentials: account.credentials,
+        ...(account.providerId ? { providerId: account.providerId } : {}),
       })),
 
     addAccount: (name, credentials, providerId) =>

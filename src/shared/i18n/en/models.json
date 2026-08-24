@@ -172,7 +172,12 @@
     "saveHint": "Keeps the new name, provided no other account already has it",
     "cancelHint": "Leaves the name as it was",
     "addHint": "Stores the key, encrypted by the system keychain",
-    "manageHint": "Opens the settings to add, rename or remove an account"
+    "manageHint": "Opens the settings to add, rename or remove an account",
+    "credits": {
+      "left": "Credit left: {{amount}}",
+      "unreadable": "Credit left cannot be read right now.",
+      "unpublished": "This service publishes no remaining credit."
+    }
   },
   "intents": {
     "skyboxSource": "Use as sky",

@@ -96,6 +96,14 @@ describe('one row of a menu', () => {
     expect(container.querySelectorAll('svg')).toHaveLength(1)
   })
 
+  // The chord and the figure share one column, so a row that reports something read over the
+  // network draws it where a shortcut would sit rather than growing a second slot.
+  it('draws a note where a shortcut would go', () => {
+    render(<MenuRow {...props} note="12,50 $US" />)
+
+    expect(screen.getByRole('menuitem', { name: /Copy/ })).toHaveTextContent('12,50 $US')
+  })
+
   /**
    * The height and `shrink-0` are one statement, and jsdom lays nothing out so only the pair is
    * visible here: a row is a flex item of a column that stops at `max-h-[min(60vh,32rem)]`

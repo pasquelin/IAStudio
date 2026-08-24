@@ -84,6 +84,32 @@ describe('TitleBarSelect', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
+  /**
+   * Once per opening, whatever the caller passed: read as a dependency, an inline arrow whose own
+   * answer re-renders the host would ask again on every paint — a loop, not a wasted call.
+   */
+  it('asks its caller once when the menu appears, however unstable the callback', async () => {
+    const onOpen = vi.fn()
+    const { rerender } = mount({ onOpen: () => onOpen() })
+
+    await userEvent.click(button())
+    rerender(
+      <TitleBarSelect
+        leading={<span data-testid="mark" />}
+        label="Été"
+        name="Projet : Été"
+        hint="Choisir autre chose"
+        rowCount={2}
+        width="max-w-52"
+        rows={rows}
+        onOpen={() => onOpen()}
+      />,
+    )
+
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+    expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
   // A caller whose row count can never fall to one hands over no `onAct`, and the click must
   // still be harmless rather than throwing on an undefined handler.
   it('does nothing on a lone row when its caller offered no action', async () => {

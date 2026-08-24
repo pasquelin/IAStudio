@@ -21,6 +21,7 @@ type ChannelMethod = {
   [CHANNELS.accountsRename]: StudioBridge['accounts']['rename']
   [CHANNELS.accountsRemove]: StudioBridge['accounts']['remove']
   [CHANNELS.accountsActivate]: StudioBridge['accounts']['activate']
+  [CHANNELS.accountsCredits]: StudioBridge['accounts']['credits']
 
   [CHANNELS.providerSearchModels]: StudioBridge['provider']['searchModels']
   [CHANNELS.providerModelPreviews]: StudioBridge['provider']['modelPreviews']

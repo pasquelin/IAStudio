@@ -184,6 +184,7 @@ import { createRateLimiters, limitedTransport } from './provider/rateLimiter'
 import { createCredentialsWatch } from './provider/credentialsWatch'
 import { createModelRegistry, type ModelRegistry } from './provider/modelRegistry'
 import { createPlanReader, teamsOf, type PlanReader } from './provider/plan'
+import { createCreditsReader, type CreditsReader } from './provider/credits'
 import { createAssistQueue } from './provider/assistQueue'
 import { createPromptAssist, type PromptAssist } from './provider/promptAssist'
 import { promptAssistApiOf } from './provider/promptAssistApi'
@@ -211,6 +212,8 @@ export type Services = {
   usage: UsageReader
   /** Which models the account's plan may run, so the picker refuses one before the API does. */
   plan: PlanReader
+  /** What each stored key has LEFT. See `credits.ts`. */
+  credits: CreditsReader
   /** What a run would cost, asked before it is run. See `cost.ts`. */
   estimateCost: CostEstimator
   /** The open project's context, joined to what a generation sends. See `promptContext.ts`. */
@@ -583,6 +586,9 @@ export function createServices(settings: SettingsStore): Services {
     catalog: () => teamsOf(client.require()),
     watch: credentials.watch,
   })
+
+  // Every stored key, not the active one: both screens list them all.
+  const credits = createCreditsReader({ accounts: () => settings.keyedAccounts() })
 
   // Bounded and separate from the `JobManager`: none of this produces an asset or has a status
   // to poll, and a library fetch of three hundred must not become three hundred calls.
@@ -1917,6 +1923,7 @@ export function createServices(settings: SettingsStore): Services {
     prompts,
     usage,
     plan,
+    credits,
     estimateCost,
     captionArrivals: captioner.onArrival,
     describeAssets: captioner.describe,

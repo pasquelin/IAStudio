@@ -4,8 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type AccountsResult, type AccountSummary } from '@shared/domain/account'
 import type { ApiFailure } from '@shared/domain/failure'
 import type { AuthState } from '@shared/domain/settings'
+import type { CreditBalances } from '@shared/domain/credits'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAccounts } from '@/stores/accounts'
+import { useCredits } from '@/stores/credits'
 import { useSettings } from '@/stores/settings'
 import { AccountSettings } from './AccountSettings'
 
@@ -25,6 +27,7 @@ describe('AccountSettings', () => {
   beforeEach(() => {
     useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
     useAccounts.setState({ accounts: [] })
+    useCredits.setState({ balances: null })
   })
 
   afterEach(() => {
@@ -193,6 +196,22 @@ describe('AccountSettings', () => {
       'data-tooltip-content',
       'Oublie la clé sur cette machine ; le compte distant n’est pas touché',
     )
+  })
+
+  // The sentence lives here: the menu has a column for a figure, not for why there is none.
+  it('says in full what each key has left, or why the studio cannot know', async () => {
+    const deep: AccountSummary = { id: 'b', name: 'DeepSeek', active: true, providerId: 'deepseek' }
+    const held: CreditBalances = {
+      b: { state: 'known', left: [{ amount: 12.5, currency: 'USD' }] },
+    }
+    const credits = vi.fn(() => Promise.resolve(held))
+    installFakeBridge({ accounts: { credits } })
+    useAccounts.setState({ accounts: [studio, deep] })
+
+    render(<AccountSettings />)
+    await waitFor(() => expect(credits).toHaveBeenCalled())
+    expect(screen.getByText(/Crédit restant.*12,50/)).toBeInTheDocument()
+    expect(screen.getByText('Ce service ne publie pas le crédit restant.')).toBeInTheDocument()
   })
 
   it('removes an account on demand', async () => {

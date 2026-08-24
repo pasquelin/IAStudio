@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { dayOf } from '@shared/domain/usage'
 import { formatMoment } from '@/helpers/format'
-import { formatDay, formatMoney, shareOf } from './format'
-
-describe('formatMoney', () => {
-  it('follows the locale, not the currency', () => {
-    expect(formatMoney(12.4, 'EUR', 'en-US')).toBe('€12.40')
-  })
-})
+import { formatDay, shareOf } from './format'
 
 describe('formatDay', () => {
   // Read as UTC: the API dates its points there, and a local reading shifts a day at each end.

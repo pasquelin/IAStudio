@@ -26,7 +26,10 @@ type MenuRowBase = {
    * out did precisely that.
    */
   icon?: string
+  /** The chord that runs the row, drawn at its right end. */
   shortcut?: string
+  /** A figure the row reports there instead — an account's remaining credit. */
+  note?: string
   disabled?: boolean
   /**
    * Tooltip attributes from the host's factory, already resolved. Required, like `ToolButton`'s
@@ -64,6 +67,7 @@ export function MenuRow({
   label,
   icon,
   shortcut,
+  note,
   disabled,
   checked,
   tick,
@@ -106,14 +110,14 @@ export function MenuRow({
       {/* `group-focus-within` beside the hover: the keyboard walks these rows without a pointer
           anywhere near them, and the shortcut was the one thing left at `muted` on the accent —
           1.33:1 there, 2.03 on a picked yellow. The row's own fill already follows both. */}
-      {shortcut && (
+      {(shortcut ?? note) && (
         <span
           className={cn(
             'text-muted text-mini shrink-0 pl-3',
             'group-hover:text-accent-content group-focus-within:text-accent-content',
           )}
         >
-          {shortcut}
+          {shortcut ?? note}
         </span>
       )}
     </button>

@@ -1,8 +1,9 @@
 import { mdiChevronDown } from '@mdi/js'
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
+import { useLatest } from '@/hooks/useLatest'
 import { Flyout } from './Flyout'
 import { TITLE_BAR_TRIGGER } from './styles'
 import { UiIcon } from './UiIcon'
@@ -26,6 +27,8 @@ export type TitleBarSelectProps = {
    * and a handler nothing can call is a line no test can cover.
    */
   onAct?: () => void
+  /** Run when the menu appears, for a caller whose rows report something read over the network. */
+  onOpen?: () => void
   /** The label's ceiling. It is per caller: a project name is longer than an account's. */
   width: string
 }
@@ -47,9 +50,17 @@ export function TitleBarSelect({
   rowCount,
   rows,
   onAct,
+  onOpen,
   width,
 }: TitleBarSelectProps) {
   const flyout = useHoverFlyout(rowCount)
+  // Through a ref: read as a dependency, a caller's inline arrow would re-ask on every paint the
+  // menu survives — and on every paint its own answer causes.
+  const latestOpen = useLatest(onOpen)
+
+  useEffect(() => {
+    if (flyout.showing) latestOpen.current?.()
+  }, [flyout.showing, latestOpen])
 
   return (
     <div {...flyout.wrapProps} className="contents">
