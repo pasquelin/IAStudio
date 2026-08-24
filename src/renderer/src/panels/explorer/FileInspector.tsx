@@ -8,8 +8,8 @@ import { assetsAt } from '@/helpers/assetAt'
 import { formatBytes } from '@/helpers/format'
 import { itemOfPath, type ProjectItem } from '@/helpers/projectItem'
 import { useDocuments } from '@/stores/documents'
-import { RoleField } from './RoleField'
-import { SelectionSummary } from './SelectionSummary'
+import { RoleField } from '@/panels/shared/RoleField'
+import { SelectionSummary } from '@/panels/shared/SelectionSummary'
 
 /**
  * A file picked in the explorer, read out.

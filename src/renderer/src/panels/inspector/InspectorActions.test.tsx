@@ -95,11 +95,24 @@ describe('what the inspector title row carries', () => {
   })
 
   /**
-   * The one the faces make easy to get wrong: the title row is shared, so a button posted for one
-   * of them would offer to save a material while a clip filled the panel below it.
+   * The one the faces make easy to get wrong: the title row is shared, so a button posted for
+   * one of them would offer to save a material while a montage filled the panel below it. What
+   * answers is the document in FRONT — the same one `InspectorFace` reads — and a clip picked in
+   * another tab has no say here.
    */
-  it('offers no style to save while a clip is selected, even with a texture open behind', () => {
-    openTexture()
+  it('offers no style to save while the document in front is not a texture', () => {
+    useDocuments.setState({
+      activeId: 'seq-1',
+      documents: {
+        'seq-1': {
+          id: 'seq-1',
+          kind: 'sequence',
+          title: 'Montage',
+          workspace: 'video',
+          path: 'documents/Montage.otio',
+        },
+      },
+    })
     useSelection.getState().selectClip('seq-1', 'clip-1')
     render(<InspectorActions />)
 

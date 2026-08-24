@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
@@ -345,13 +345,13 @@ describe('the shelf hands its rows to the collection', () => {
     useAssets.setState({ items: [asset('one'), asset('two')] })
     render(shelf())
 
-    await userEvent.click(screen.getByText('Asset two'))
+    // Scoped to the shelf: what it has picked is read out UNDER it (`AssetDetails`), so the name
+    // of a picked row is on screen twice.
+    const shown = (): HTMLElement => within(screen.getByRole('listbox')).getByText('Asset two')
+    await userEvent.click(shown())
 
     expect(useSelection.getState().selection).toMatchObject({ kind: 'asset', ids: ['two'] })
-    expect(screen.getByText('Asset two').closest('[role="option"]')).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
+    expect(shown().closest('[role="option"]')).toHaveAttribute('aria-selected', 'true')
   })
 
   // The shelf is the one panel whose actions are plural — sending and describing both take a

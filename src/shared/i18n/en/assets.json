@@ -1,5 +1,6 @@
 {
   "assets": {
+    "details": "Selection detail",
     "none": "No asset yet. Generate something to get started.",
     "noneOfKind": "No asset of this kind. Change the Type filter to see the rest of the project.",
     "search": "Search…",

@@ -2,12 +2,10 @@ import { mdiPaletteSwatchOutline, mdiUnfoldLessHorizontal, mdiUnfoldMoreHorizont
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
-import { activeSceneId, activeTextureId, useDocuments } from '@/stores/documents'
+import { activeTextureId, useDocuments } from '@/stores/documents'
 import { anySectionOpen, useSectionFolds } from '@/stores/sectionFolds'
-import { useSelection } from '@/stores/selection'
 import { useStyles } from '@/stores/styles'
 import { textureOf, useTextures } from '@/stores/textures'
-import { inspectedTextureId } from './inspected'
 
 /**
  * What the inspector's title row carries.
@@ -15,15 +13,12 @@ import { inspectedTextureId } from './inspected'
  * The fold is posted whatever the face — every one of them is made of sections, and a panel this
  * tall is read by folding what is not in hand. Saving a material is posted only on the material
  * face: the inspector is one panel with several, so an unconditional button would offer to save a
- * material while a video clip filled the panel below it. `inspectedTextureId` answers which one
- * is drawn, as `InspectorFace` does.
+ * material while a video clip filled the panel below it. The texture in front answers which face
+ * is drawn, and `InspectorFace` reads the same one.
  */
 export function InspectorActions() {
   const { t } = useTranslation()
-  const selection = useSelection(state => state.selection)
-  const sceneId = useDocuments(activeSceneId)
-  const textureId = useDocuments(activeTextureId)
-  const documentId = inspectedTextureId(selection, sceneId, textureId)
+  const documentId = useDocuments(activeTextureId)
   // What the sections ANSWER, never a flag that flips: the face is swapped on every selection and
   // its sections come back on their own defaults, so a flag would offer to unfold what is open.
   const foldable = useSectionFolds(anySectionOpen)
