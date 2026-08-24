@@ -20,9 +20,9 @@ import { PANEL_GROUP_LABEL } from '../styles'
 import { useModelText } from '@/hooks/useModelText'
 import { Button } from '../Button'
 import { FormField } from '../FormField'
+import { PropertySection } from '../PropertySection'
 import { DynamicFormControl } from './DynamicFormControl'
 import { HINT_TOP } from '@/helpers/tooltip'
-import { sectionHandle } from '../scHandle'
 
 export type DynamicFormProps = {
   fields: readonly FieldDescriptor[]
@@ -180,31 +180,34 @@ export function DynamicForm({
     >
       {plain.map(fieldsetOf)}
 
-      {submitLabel !== undefined && (
-        <Button
-          type="submit"
-          variant="primary"
-          {...(submitHint ? HINT_TOP(submitHint) : {})}
-          disabled={busy}
-        >
-          {submitLabel}
-          {/* Spaced here rather than by a gap on the button: every tool button in the studio is
-              built on the same base, and most of them are an icon beside a word. Set apart by its
-              SIZE alone — an `opacity-70` read 3.03:1 on the accent, and this is a price. */}
-          {submitNote && <span className="text-tiny ml-1.5">{submitNote}</span>}
-        </Button>
+      {/* Folded — § 14: seed, steps, guidance and strength are not what most generations are
+          about, and a panel that shows everything shows nothing. `PropertySection` rather than a
+          fold of its own: it is the one this studio folds, and it answers "fold all". */}
+      {advanced.length > 0 && (
+        <PropertySection title={say(ADVANCED_GROUP)} defaultOpen={false} scId="generation.advanced">
+          <div className="flex flex-col gap-2">{advanced.map(fieldsetOf)}</div>
+        </PropertySection>
       )}
 
-      {/* Under the button, folded — § 14: seed, steps, guidance and strength are not what most
-          generations are about, and a panel that shows everything shows nothing. */}
-      {advanced.length > 0 && (
-        <details data-sc={sectionHandle('generation.advanced')}>
-          <summary className={cn(PANEL_GROUP_LABEL, 'cursor-pointer p-0')}>
-            {say(ADVANCED_GROUP)}
-          </summary>
-
-          <div className="flex flex-col gap-2 pt-2">{advanced.map(fieldsetOf)}</div>
-        </details>
+      {/* 🛑 STUCK to the foot of the scroller, never carried down the page by the fields above:
+          a model declaring a dozen of them pushed the one button this form has out of sight, and
+          a generation nobody can start is a panel that does nothing. */}
+      {submitLabel !== undefined && (
+        <div className="bg-panel sticky bottom-0 z-10 -mx-2 mt-auto px-2 pt-2 pb-2">
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full"
+            {...(submitHint ? HINT_TOP(submitHint) : {})}
+            disabled={busy}
+          >
+            {submitLabel}
+            {/* Spaced here rather than by a gap on the button: every tool button in the studio is
+                built on the same base, and most of them are an icon beside a word. Set apart by
+                its SIZE alone — an `opacity-70` read 3.03:1 on the accent, and this is a price. */}
+            {submitNote && <span className="text-tiny ml-1.5">{submitNote}</span>}
+          </Button>
+        </div>
       )}
     </form>
   )

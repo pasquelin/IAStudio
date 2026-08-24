@@ -1,3 +1,4 @@
+import { ADVANCED_GROUP } from '@shared/domain/localFields'
 import { FAMILY_TAGS, SKYBOX_TAG } from '@shared/domain/model'
 import type { FieldDescriptor, FieldKind, ModelFamily } from '@shared/domain/model'
 
@@ -134,8 +135,38 @@ export function translateSchema(inputs: readonly ProviderInput[] | undefined): F
     const options = optionsOf(input)
     if (options) descriptor.options = options
 
+    // Last, because two of the three signals it reads are set above.
+    if (descriptor.group === undefined && foldsByDefault(descriptor)) {
+      descriptor.group = ADVANCED_GROUP
+    }
+
     return descriptor
   })
+}
+
+/** Compared without its separators: the same knob is `cfg_scale` on one model and `cfgScale` on the next. */
+const bare = (key: string): string => key.toLowerCase().replace(/[-_\s]/g, '')
+
+/**
+ * The knobs a first generation never touches, spelled as the catalogue spells them.
+ *
+ * 🛑 The blind spot, written rather than hidden: only `seed` and the mask are told by CONTRACT —
+ * a kind of ours and the field that names what it masks. The rest is a LIST OF NAMES, so a model
+ * spelling its guidance otherwise shows it unfolded, and nothing reddens.
+ */
+const FOLDED = new Set([
+  'negativeprompt',
+  'guidancescale',
+  'guidance',
+  'cfgscale',
+  'strength',
+  'numinferencesteps',
+  'inferencesteps',
+  'steps',
+])
+
+function foldsByDefault(field: FieldDescriptor): boolean {
+  return field.kind === 'seed' || field.maskFrom !== undefined || FOLDED.has(bare(field.key))
 }
 
 const FAMILY_BY_CAPABILITY: readonly { pattern: RegExp; family: ModelFamily }[] = [

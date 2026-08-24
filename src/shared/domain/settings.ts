@@ -51,6 +51,11 @@ export const THEME_ATTRIBUTE: Record<ResolvedTheme, string> = {
   light: 'iastudio-light',
 }
 
+/** What a finished generation does with a document that is already open. */
+export type LandingChoice = 'ask' | 'document' | 'newTab'
+
+export const LANDING_CHOICES: readonly LandingChoice[] = ['ask', 'document', 'newTab']
+
 /**
  * Settings the renderer may read. API credentials NEVER appear here: the renderer asks
  * whether it is authenticated, not what the key is — see spec § 9.
@@ -95,6 +100,12 @@ export type Settings = {
   generation: {
     concurrentJobs: number
     maxRetries: number
+    /**
+     * Where a finished generation goes when a document of its kind is already open: into that
+     * document, into a tab of its own, or the question. With nothing open there is nothing to
+     * ask — it opens.
+     */
+    landing: LandingChoice
     /**
      * Whether an asset arriving without a useful name gets described on its own.
      *
@@ -315,7 +326,7 @@ export const DEFAULT_SETTINGS: Settings = {
   home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] },
   workspaces: { order: [...WORKSPACE_IDS] },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
-  generation: { concurrentJobs: 3, maxRetries: 4, captionArrivals: true },
+  generation: { concurrentJobs: 3, maxRetries: 4, captionArrivals: true, landing: 'ask' },
   // Empty on a fresh install, and that is the point: no choice made means the local side is
   // taken wherever it can serve, so the studio works before anyone has an account.
   ai: { roles: {}, projectRoles: {}, ownModels: [] },

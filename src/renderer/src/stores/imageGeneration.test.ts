@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Job, JobStatus } from '@shared/domain/job'
 import { useAssets } from './assets'
@@ -9,6 +9,14 @@ import { useDocuments } from './documents'
 import { job as jobOf } from './job-fixtures'
 import { claimImageOnSubmit, connectImageGeneration } from './imageGeneration'
 import { useJobs } from './jobs'
+
+const opened: Asset[] = []
+vi.mock('@/helpers/openAsset', () => ({
+  openAsset: (asset: Asset) => {
+    opened.push(asset)
+    return Promise.resolve()
+  },
+}))
 
 const picture = (id: string, overrides: Partial<Asset> = {}): Asset => ({
   id,
@@ -43,12 +51,45 @@ beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
   useJobs.setState({ jobs: [] })
   useAssets.setState({ items: [] })
+  opened.length = 0
   installDocument('doc-1', 'image')
   stop = connectImageGeneration()
 })
 
 afterEach(() => {
   stop()
+})
+
+describe('landing a generation when no canvas is waiting for it', () => {
+  beforeEach(() => {
+    useDocuments.setState({ documents: {}, activeId: null })
+  })
+
+  /**
+   * 🛑 A workspace with nothing open used to claim NOTHING, so the picture was paid for,
+   * collected, and left on the shelf where only a browse would find it. `openAsset` is the
+   * studio's one rule for this — a tab of its own, in the space that edits the kind.
+   */
+  it('opens what it produced rather than leaving it on the shelf', async () => {
+    catalogueHolds([picture('asset-1')])
+    submitFrom('job-1')
+
+    await finish('succeeded')
+
+    expect(opened).toEqual([expect.objectContaining({ id: 'asset-1' })])
+  })
+
+  // Asked for a tab of its own with a canvas open: the answer is obeyed, the canvas untouched.
+  it('obeys a tab of its own even with a canvas in front', async () => {
+    installDocument('doc-1', 'image')
+    catalogueHolds([picture('asset-1')])
+    claimImageOnSubmit('newTab')(job({ id: 'job-1' }))
+
+    await finish('succeeded')
+
+    expect(opened).toEqual([expect.objectContaining({ id: 'asset-1' })])
+    expect(stack('doc-1').layers.map(layer => layer.name)).toEqual(['Background'])
+  })
 })
 
 describe('landing a generation in the canvas that asked for it', () => {

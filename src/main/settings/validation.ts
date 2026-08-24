@@ -1,3 +1,4 @@
+import { LANDING_CHOICES } from '@shared/domain/settings'
 import { z } from 'zod'
 import {
   isCloudProviderId,
@@ -69,6 +70,7 @@ const generation = z.object({
   // strings: the API added models on its own schedule and an unknown one must not fail a read.
   defaultModels: z.record(z.string().min(1), z.string().min(1)).optional(),
   captionArrivals: z.boolean().optional(),
+  landing: z.enum(LANDING_CHOICES).optional(),
 })
 
 const recentProject = z.object({

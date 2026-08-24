@@ -408,32 +408,31 @@ describe('the advanced knobs', () => {
    * generations are about, so they wait one click away rather than filling the column.
    */
   it('are folded away until they are asked for', () => {
-    const { container } = render(
-      <DynamicForm fields={FIELDS} onSubmit={vi.fn()} submitLabel="Générer" />,
-    )
-
-    expect(container.querySelector('details')?.open).toBe(false)
-    expect(screen.getByText('Avancé')).toBeInTheDocument()
-  })
-
-  it('open on the summary', async () => {
     render(<DynamicForm fields={FIELDS} onSubmit={vi.fn()} submitLabel="Générer" />)
 
-    await userEvent.click(screen.getByText('Avancé'))
+    expect(screen.getByRole('button', { name: /Avancé/ })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByLabelText(/Knob gamma/)).not.toBeInTheDocument()
+  })
+
+  it('open on the heading that folds them', async () => {
+    render(<DynamicForm fields={FIELDS} onSubmit={vi.fn()} submitLabel="Générer" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Avancé/ }))
 
     expect(screen.getByLabelText(/Knob gamma/)).toBeVisible()
   })
 
-  // Under the button, not above it: the § 31 priority puts Generate ahead of what most people
-  // never touch.
-  it('sit below the button that runs the generation', () => {
-    const { container } = render(
-      <DynamicForm fields={FIELDS} onSubmit={vi.fn()} submitLabel="Générer" />,
-    )
+  /**
+   * 🛑 § 31 puts Generate ahead of what most people never touch, and ORDER stopped being enough:
+   * a model declaring a dozen plain fields pushed the one button this form has out of sight.
+   * Stuck to the foot of the scroller instead — jsdom has no layout, so the class is the witness.
+   */
+  it('keeps the button that runs the generation stuck to the foot', () => {
+    render(<DynamicForm fields={FIELDS} onSubmit={vi.fn()} submitLabel="Générer" />)
 
-    const button = screen.getByRole('button', { name: 'Générer' })
-    const details = container.querySelector('details')
+    const foot = screen.getByRole('button', { name: 'Générer' }).parentElement
 
-    expect(button.compareDocumentPosition(details!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(foot?.className).toContain('sticky')
+    expect(foot?.className).toContain('bottom-0')
   })
 })

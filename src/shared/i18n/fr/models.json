@@ -26,7 +26,10 @@
     "modelScope_installed": "Installé",
     "modelInstalled": "Installé",
     "modelScopeHint": "Restreint la liste à cette provenance",
-    "followSelection": "Suivre la sélection"
+    "followSelection": "Suivre la sélection",
+    "landingTitle": "Où mettre ce que la génération va rendre ?",
+    "landingHint": "Un document est ouvert. Le résultat peut s’y ajouter, ou s’ouvrir dans un onglet à lui.",
+    "landingRemember": "Retenir ce choix"
   },
   "models": {
     "none": "Aucun modèle dans cet espace.",
