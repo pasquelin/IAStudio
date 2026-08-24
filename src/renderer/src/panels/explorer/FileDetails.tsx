@@ -5,8 +5,7 @@ import { FileInspector } from './FileInspector'
 
 /**
  * What the explorer has picked, read out under the tree itself — the file counterpart of
- * `AssetDetails`, and here for the same reason: the inspector describes the document in front,
- * and a file clicked in a side panel is not one.
+ * `AssetDetails`, and here for the same reason.
  */
 export function FileDetails() {
   const { t } = useTranslation()

@@ -20,17 +20,12 @@ import { TrackInspector } from '../TrackInspector'
 import { InspectorEmpty } from './InspectorEmpty'
 
 /**
- * 🛑 The DOCUMENT in front decides, and nothing else may take the panel from it.
+ * 🛑 The DOCUMENT in front decides. The selection only says WHICH thing inside it — a clip, a
+ * track — never whether the document gets to speak; an asset and a file answer under the list
+ * they were picked in, `AssetDetails` and `FileDetails`.
  *
  * The order below is a reading order and not a priority: `activeIdOfKind` answers off one
- * `activeId`, so at most one of these ids is ever set. What the selection is still asked is
- * WHICH thing inside that document — a clip, a track — never whether the document gets to speak.
- *
- * An asset picked in the shelf and a file picked in the explorer used to answer here, first and
- * unguarded, where every other face is scoped to its owner. Clicking a thumbnail then took the
- * panel away from the image being edited, and nothing on screen said why the layers had stopped
- * being described. Both now read out under the list they were picked in — `AssetDetails` and
- * `FileDetails` — which is also where the gestures over them already live.
+ * `activeId`, so at most one of these ids is ever set.
  */
 export function InspectorFace() {
   const selection = useSelection(state => state.selection)
@@ -44,9 +39,7 @@ export function InspectorFace() {
   const imageId = useDocuments(activeImageId)
   const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
 
-  // An image is the one document whose inspected thing is read from the document itself:
-  // `activeLayerId` is the answer the stack highlights, and the one a layer born on the canvas
-  // sets without ever posting a selection.
+  // `activeLayerId` and not the selection: a layer born on the canvas arms it without posting one.
   if (imageId) {
     const layer = canvas ? layerById(canvas, canvas.activeLayerId) : null
     return layer ? <LayerInspector documentId={imageId} layer={layer} /> : <InspectorEmpty />
@@ -71,12 +64,10 @@ export function InspectorFace() {
     return <InspectorEmpty />
   }
 
-  // A scene says which of its nodes from its OWN state, which `SceneInspector` reads there — so
-  // nothing is asked of the selection here either.
+  // Which node is the scene's own state, read by `SceneInspector` there.
   if (sceneId) return <SceneInspector documentId={sceneId} />
 
-  // A sky has no node to pick: everything on it belongs to the document. It had a panel of its
-  // own until 2026-08-19, stacked above an inspector that read "select something".
+  // A sky has no node to pick: everything on it belongs to the document.
   if (skyboxId) return <SkyboxInspector documentId={skyboxId} />
 
   return textureId ? <TextureInspector documentId={textureId} /> : <InspectorEmpty />

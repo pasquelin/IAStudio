@@ -6,14 +6,9 @@ import { SelectionSummary } from '@/panels/shared/SelectionSummary'
 import { AssetInspector } from './AssetInspector/AssetInspector'
 
 /**
- * What the shelf has picked, read out under the shelf itself.
- *
- * It lives HERE and no longer in the inspector, which describes the document in front and only
- * that: an asset clicked in a side panel used to take the panel away from the image being
- * edited, and nothing on screen said why the layers had stopped being described.
- *
- * Several at once are summarised rather than detailed: showing the first one's prompt for a
- * selection of twelve is how someone regenerates the wrong thing.
+ * What the shelf has picked, read out under the shelf itself — the inspector describes the
+ * document in front and only that. Several at once are summarised rather than detailed: showing
+ * the first one's prompt for a selection of twelve is how someone regenerates the wrong thing.
  */
 export function AssetDetails() {
   const { t } = useTranslation()
@@ -24,10 +19,10 @@ export function AssetDetails() {
   // scanning the whole of it, per render.
   const assets = ids.flatMap(id => byId.get(id) ?? [])
 
-  // Nothing at all rather than an empty state: this sits UNDER a list that fills the panel, and
-  // a placeholder there would take height from the list on every project with nothing picked.
-  const [only] = assets
+  // Nothing rather than an empty state: a placeholder here takes height from the list above it.
   if (assets.length === 0) return null
+
+  const [only] = assets
 
   const total = assets.reduce((bytes, asset) => bytes + (asset.bytes ?? 0), 0)
 
