@@ -28,8 +28,6 @@ import { ModelsRow } from './ModelsRow'
 import { ModelsSelected } from './ModelsSelected'
 
 const PAGE_LIMIT = 24
-/** A thumbnail, a name and what the model does: two lines beside a 32 px picture. */
-const ROW_HEIGHT = 40
 
 /**
  * How many pages the panel pulls on its own before it waits for the user. Not just the empty
@@ -185,7 +183,7 @@ export function Models({ family }: ModelsProps) {
             const reach = reachOf(model)
             return reach.refusal !== undefined && !reach.fetchable
           }}
-          rowHeight={ROW_HEIGHT}
+          rowHeight="stacked"
           renderCard={model => (
             <ModelsCard model={model} picture={pictureOf(model)} refusal={reachOf(model).refusal} />
           )}

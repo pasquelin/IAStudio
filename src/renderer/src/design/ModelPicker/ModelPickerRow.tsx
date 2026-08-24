@@ -4,7 +4,7 @@ import type { ModelRefusalWord } from '@/hooks/useModelReach'
 import { cn } from '@/helpers/cn'
 import { Row } from '../Row'
 import { Thumbnail } from '../Thumbnail'
-import { FIELD_THUMBNAIL, rowSkin } from '../styles'
+import { rowSkin } from '../styles'
 
 export type ModelPickerRowProps = {
   model: ModelSummary
@@ -38,7 +38,7 @@ export const ModelPickerRow = memo(function ModelPickerRow({
       onClick={() => onPick(model.id)}
     >
       <Row
-        media={<Thumbnail url={picture} className={FIELD_THUMBNAIL} />}
+        media={<Thumbnail url={picture} />}
         title={model.name}
         subtitle={refusal ? `${where} · ${refusal.word}` : where}
         hint={refusal?.hint}

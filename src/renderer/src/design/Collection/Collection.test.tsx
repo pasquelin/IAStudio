@@ -689,13 +689,6 @@ describe('Collection, the height it estimates', () => {
     expect(screen.getByRole('listbox')).toHaveStyle({ height: '144px' })
   })
 
-  /** A number still passes through, for the picture rows no gauge describes. */
-  it('takes a number for what no shape names', () => {
-    listOf(3, { rowHeight: 40 })
-
-    expect(screen.getByRole('listbox')).toHaveStyle({ height: '132px' })
-  })
-
   /**
    * Switching density under a mounted list. The virtualizer memoizes on `count`, never on the
    * estimator, so without a re-measure the rows keep the height the density just left.

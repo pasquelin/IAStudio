@@ -4,7 +4,7 @@ import { cloudPreviewUrl } from '@shared/domain/cloudAsset'
 import { AssetBadge } from '@/design/AssetBadge'
 import { InlineRename } from '@/design/InlineRename'
 import { Row } from '@/design/Row'
-import { ROW_QUIET, ROW_THUMBNAIL } from '@/design/styles'
+import { ROW_QUIET } from '@/design/styles'
 import { Thumbnail } from '@/design/Thumbnail'
 import { cn } from '@/helpers/cn'
 import { DraggableAsset } from './DraggableAsset'
@@ -40,9 +40,7 @@ export const AssetRow = memo(function AssetRow({
         ? cloudPreviewUrl(row.asset, 40)
         : undefined
 
-  const thumbnail: ReactNode = thumbnailUrl ? (
-    <Thumbnail url={thumbnailUrl} className={ROW_THUMBNAIL} />
-  ) : null
+  const thumbnail: ReactNode = thumbnailUrl ? <Thumbnail url={thumbnailUrl} /> : null
 
   // The row becomes the field, as the explorer's and the document list's do.
   const line = rename?.open ? (

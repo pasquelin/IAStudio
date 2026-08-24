@@ -1,11 +1,24 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { ROW_INK, ROW_LINE, ROW_QUIET, ROW_SUFFIX } from './styles'
+import {
+  ROW_FLAT,
+  ROW_INK,
+  ROW_LINE,
+  ROW_MEDIA_FLAT,
+  ROW_MEDIA_STACKED,
+  ROW_QUIET,
+  ROW_STACKED,
+  ROW_SUFFIX,
+} from './styles'
 import { TIP_RIGHT, type TooltipFactory } from '@/helpers/tooltip'
 import { UiIcon } from './UiIcon'
 
 export type RowProps = {
-  /** A thumbnail, when the row has a picture. Wins over `icon` when both are given. */
+  /**
+   * A thumbnail, when the row has a picture. Wins over `icon` when both are given.
+   *
+   * Never sized by the caller: the row insets it by `--sc-row-pad` and hands it the rest.
+   */
   media?: ReactNode
   /** `@mdi/js` path, for rows whose kind is what identifies them. */
   icon?: string
@@ -73,6 +86,10 @@ export function Row({
   hint,
   tip = TIP_RIGHT,
 }: RowProps) {
+  // The one rule: a line that stacks a caption is the tall shape, everything else is the flat
+  // one. Both keep the same `--sc-row-pad` around their picture, so no host writes a height.
+  const stacked = subtitle !== undefined
+
   return (
     // One step; the host that PAINTS the fill adds the second — `Collection`'s cell and `Tree`'s
     // row both do. Raising it to two here instead stacked on the tree's own step and pushed every
@@ -94,9 +111,13 @@ export function Row({
     //
     // `LayerRow` and `SceneNodeRow` had reached for the same pair in a wrapper of their own, which
     // is why only the explorer showed it: `EntryRow` renders this directly.
-    <div className={cn(ROW_LINE, 'min-w-0 flex-1 gap-2')}>
+    <div className={cn(ROW_LINE, 'min-w-0 flex-1 gap-2', stacked ? ROW_STACKED : ROW_FLAT)}>
       {leading}
-      {media ?? (icon && <UiIcon path={icon} size={14} className="shrink-0" />)}
+      {media ? (
+        <div className={stacked ? ROW_MEDIA_STACKED : ROW_MEDIA_FLAT}>{media}</div>
+      ) : (
+        icon && <UiIcon path={icon} size={14} className="shrink-0" />
+      )}
       <div className="min-w-0 flex-1 leading-tight">
         {/* The studio tooltip and not `title`, which comes with the OS delay and none of the
             theme — and only where `hint` gives it something to say. */}

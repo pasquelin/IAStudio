@@ -6,11 +6,11 @@ import { UiIcon } from './UiIcon'
 
 export type ThumbnailProps = {
   url?: string
-  /** Its size, which the caller owns: a row and a header ask for different ones. */
+  /** Its size. A row hands it a box and it fills it; a property field names a gauge. */
   className?: string
 }
 
-export function Thumbnail({ url, className }: ThumbnailProps) {
+export function Thumbnail({ url, className = 'size-full' }: ThumbnailProps) {
   const frame = cn(MEDIA_FRAME, 'shrink-0', className)
 
   return (

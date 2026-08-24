@@ -333,20 +333,21 @@ export const PANEL_BAR = 'border-border flex items-center gap-2 border-b'
 export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
 
 /**
- * A picture standing in a property line — the texture a slot holds, the map a model carries —
- * and in a row that stacks a NAME OVER A LINE, which `--sc-row-stacked` makes 8px taller.
- *
- * One gauge, because a slot is exactly one row tall and three files were each writing it down:
- * two of them with the same sentence explaining why.
+ * A picture standing in a property FIELD — the texture a slot holds, the map a model carries.
+ * A picture standing in a ROW is not this: `Row` sizes its own, see `ROW_MEDIA_FLAT`.
  */
 export const FIELD_THUMBNAIL = 'size-(--sc-control)'
 
 /**
- * The picture of a row carrying ONE line, which is exactly one control tall — so it takes the
- * inline step, as every control standing inside a row does. A picture as tall as its own row is
- * a picture pressed against the fill `rowSkin` paints edge to edge, with no room above or below.
+ * The box a row keeps for its picture, and the height the line itself measures — paired, because
+ * one is the other less `--sc-row-pad`. `Row` picks the pair from what it carries; no caller
+ * sizes a row's picture, which is how four sizes and four paddings became one of each.
  */
-export const ROW_THUMBNAIL = 'size-(--sc-control-inline)'
+const ROW_MEDIA_BOX = 'flex shrink-0 items-center justify-center'
+export const ROW_FLAT = 'min-h-(--sc-control)'
+export const ROW_STACKED = 'min-h-(--sc-row-stacked)'
+export const ROW_MEDIA_FLAT = `${ROW_MEDIA_BOX} size-(--sc-media-flat)`
+export const ROW_MEDIA_STACKED = `${ROW_MEDIA_BOX} size-(--sc-media-stacked)`
 
 /**
  * One property row of an inspector: a label of fixed width, then the control it names.

@@ -4,7 +4,7 @@ import { activation } from '@/helpers/activation'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { Row } from '@/design/Row'
-import { FIELD_THUMBNAIL, OVERLAY_BUTTON, rowSkin } from '@/design/styles'
+import { OVERLAY_BUTTON, rowSkin } from '@/design/styles'
 import { Thumbnail } from '@/design/Thumbnail'
 
 /**
@@ -37,7 +37,7 @@ export function ModelTexturesSectionRow({
   onOpen: () => void
 }) {
   return (
-    <div className={cn('relative h-(--sc-row-stacked)', rowSkin(false))}>
+    <div className={cn('relative', rowSkin(false))}>
       <Row media={media} title={title} subtitle={subtitle} />
       <button
         type="button"
@@ -55,5 +55,5 @@ export function ModelTexturesSectionRow({
  * space.
  */
 export const pictureOf = (asset: Asset): ReactNode => (
-  <Thumbnail url={posterUrl(asset) ?? assetUrl(asset.id)} className={FIELD_THUMBNAIL} />
+  <Thumbnail url={posterUrl(asset) ?? assetUrl(asset.id)} />
 )

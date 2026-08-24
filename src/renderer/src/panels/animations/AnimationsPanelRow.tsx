@@ -2,7 +2,6 @@ import { mdiPause, mdiPlay, mdiRunFast } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { bundledThumbnailUrl } from '@shared/domain/animationLibrary'
 import { Row } from '@/design/Row'
-import { FIELD_THUMBNAIL } from '@/design/styles'
 import { Thumbnail } from '@/design/Thumbnail'
 import { ToolButton } from '@/design/ToolButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
@@ -44,11 +43,7 @@ export function AnimationsPanelRow({
       <Row
         title={name}
         // No thumbnail is the ordinary state, not a failure: a generic mark until someone draws one.
-        media={
-          thumbnail ? (
-            <Thumbnail url={bundledThumbnailUrl(name)} className={FIELD_THUMBNAIL} />
-          ) : null
-        }
+        media={thumbnail ? <Thumbnail url={bundledThumbnailUrl(name)} /> : null}
         icon={thumbnail ? undefined : mdiRunFast}
         subtitle={t('animations.dragHint')}
         actions={

@@ -93,7 +93,7 @@ export function EntryRow({
         <LoadableImage
           url={preview}
           draggable={false}
-          className="size-3.5 shrink-0 rounded-(--radius-sc-sm) object-cover"
+          className="size-full rounded-(--radius-sc-sm) object-cover"
           fallback={
             <UiIcon path={icon} size={14} className={cn('shrink-0', open && 'text-accent-ink')} />
           }

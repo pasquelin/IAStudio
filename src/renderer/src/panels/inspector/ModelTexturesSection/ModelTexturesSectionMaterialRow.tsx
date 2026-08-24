@@ -1,6 +1,5 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FIELD_THUMBNAIL } from '@/design/styles'
 import { Thumbnail } from '@/design/Thumbnail'
 import { openModelMaterial, type ChannelTexture } from '@/spaces/textures/openModelMaterial'
 import { ModelTexturesSectionRow, pictureOf } from './ModelTexturesSectionRow'
@@ -30,7 +29,7 @@ export const ModelTexturesSectionMaterialRow = memo(function ModelTexturesSectio
 
   return (
     <ModelTexturesSectionRow
-      media={cover ? pictureOf(cover) : <Thumbnail className={FIELD_THUMBNAIL} />}
+      media={cover ? pictureOf(cover) : <Thumbnail />}
       title={t('inspector.modelMaterial')}
       // What KIND of thing this is, which is what the second line of a row says everywhere else —
       // and for a material the kind IS the set of channels it holds.

@@ -8,7 +8,6 @@ import {
   type DownloadProgress,
 } from '@shared/domain/localModel'
 import { Thumbnail } from '@/design/Thumbnail'
-import { FIELD_THUMBNAIL } from '@/design/styles'
 import { useBytes } from '@/hooks/useBytes'
 import type { ModelFitSentence } from '@/hooks/useModelFit'
 import { AiChoiceRow } from './AiChoiceRow'
@@ -72,7 +71,7 @@ export const AiCandidateRow = memo(function AiCandidateRow({
       checked={chosen}
       disabled={!fit.usable}
       onChoose={onChoose}
-      picture={<Thumbnail url={modelThumbnailUrl(candidate.model)} className={FIELD_THUMBNAIL} />}
+      picture={<Thumbnail url={modelThumbnailUrl(candidate.model)} />}
     >
       {chosen && <AiPublisherLink url={candidate.model.source} />}
       <AiModelActions candidate={candidate} progress={progress} loading={loading} busy={busy} />

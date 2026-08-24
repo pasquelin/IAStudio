@@ -49,13 +49,6 @@ describe('how tall a list row is', () => {
     expect(height('filled')).toBe(38)
   })
 
-  // A shape a gauge cannot describe is the only reason to pass a number at all.
-  it('takes a number as it is', () => {
-    declare('--sc-control', '24px')
-
-    expect(height(48)).toBe(48)
-  })
-
   // The shipped numbers stand in when the stylesheet is not there to be read — as under a suite.
   it('falls back to the shipped heights when no gauge is declared', () => {
     expect(height('control')).toBe(LIST_ROW_HEIGHT)

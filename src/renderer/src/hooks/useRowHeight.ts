@@ -2,13 +2,14 @@ import { FILLED_ROW_HEIGHT, LIST_ROW_HEIGHT, STACKED_ROW_HEIGHT } from '@/design
 import { useGauge } from './useGauge'
 
 /**
- * How tall a list row is — a SHAPE by preference, a number only for what no gauge describes.
+ * How tall a list row is — a SHAPE, never a number: the `number` arm let `Models` write 40px,
+ * right at one density and wrong at the other, and no guard saw it. `Row` wears the matching
+ * `min-h` for the same shape, so a list and the rows in it cannot disagree.
  *
  * `stacked` and `filled` hold the same two steps of text and part on what is BEHIND them: a row
- * painted edge to edge loses to its own fill the room a bare row keeps. Naming one `stacked` and
- * raising it for the other's sake is what loosened the explorer and the documents panel.
+ * painted edge to edge loses to its own fill the room a bare row keeps.
  */
-export type RowHeight = 'control' | 'stacked' | 'filled' | number
+export type RowHeight = 'control' | 'stacked' | 'filled'
 
 /**
  * The pixels a row shape measures, read back from the gauge that sizes it.
@@ -29,5 +30,5 @@ export function useRowHeight(shape: RowHeight): number {
     filled: useGauge('--sc-row-filled', FILLED_ROW_HEIGHT),
   }
 
-  return typeof shape === 'number' ? shape : heights[shape]
+  return heights[shape]
 }
