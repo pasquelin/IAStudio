@@ -900,6 +900,10 @@
       "contextRemove": {
         "title": "Delete a context card",
         "description": "Takes the card an id names out of the project’s context. Its text is lost."
+      },
+      "targetSelect": {
+        "title": "Aim at a target",
+        "description": "Points at what the next step will act on in the open document — a layer, a scene object, a clip. Take the identifier from the target list in this briefing; without that list there is nothing to aim at."
       }
     },
     "refusals": {
@@ -1173,7 +1177,8 @@
       "cardId": "Card id",
       "cardTitle": "Card title",
       "cardBody": "Card text",
-      "cardActive": "The card applies"
+      "cardActive": "The card applies",
+      "aimId": "Target identifier"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

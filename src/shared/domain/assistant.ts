@@ -4,6 +4,7 @@ import {
   type AssistantAction,
   type ActionReach,
 } from './assistantAction'
+import type { Target } from './target'
 import { ASSET_ACTIONS } from './assetActions'
 import { CANVAS_ACTIONS } from './canvasActions'
 import { CLOUD_ACTIONS } from './cloudActions'
@@ -18,6 +19,7 @@ import { SEQUENCE_ACTIONS } from './sequenceActions'
 import { CONTEXT_ACTIONS } from './contextActions'
 import { SETTINGS_ACTIONS } from './settingsActions'
 import { SHELL_ACTIONS } from './shellActions'
+import { TARGET_ACTIONS } from './targetActions'
 import { STATE_ACTIONS } from './stateActions'
 
 /**
@@ -43,6 +45,7 @@ export { commitmentOfCommand } from './coreActions'
  */
 export const ACTION_REGISTRY: readonly AssistantAction[] = [
   ...CORE_ACTIONS,
+  ...TARGET_ACTIONS,
   ...STATE_ACTIONS,
   ...FILE_ACTIONS,
   ...JOB_ACTIONS,
@@ -95,6 +98,13 @@ export type AssistantThought = {
    * renderer could forge.
    */
   context?: string
+  /**
+   * What the open document can be aimed at, narrowed by the window — see `target.ts`.
+   *
+   * Unlike `context` this one IS the renderer's to name: it describes its own window, and every
+   * id is checked against the live document by the handler before anything moves.
+   */
+  targets?: readonly Target[]
 }
 
 export type AssistantAnswer = {

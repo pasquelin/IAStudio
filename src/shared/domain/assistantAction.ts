@@ -29,6 +29,7 @@ export type ActionName =
   | 'prompt.translate'
   | 'prompt.describeStyle'
   | 'chat.close'
+  | 'target.select'
   | 'studio.state'
   | 'documents.list'
   | 'document.open'
