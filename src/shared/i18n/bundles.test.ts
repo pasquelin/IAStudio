@@ -1594,6 +1594,21 @@ describe('a menu path a sentence quotes', () => {
   })
 
   /**
+   * Three sources feed one root, and a path may name any of them. Missing the actions read
+   * `Réglages ▸ Avancé ▸ Outils de développement` as invented — a true path, called false.
+   */
+  it('carries the screens, the settings AND the actions of a root section', () => {
+    const held = settingsTree(TRANSLATIONS.fr).get(asRead(TRANSLATIONS.fr.settings.ai))
+
+    expect(held?.has(asRead(TRANSLATIONS.fr.settings.account))).toBe(true)
+    expect(
+      settingsTree(TRANSLATIONS.fr)
+        .get(asRead(TRANSLATIONS.fr.settings.advanced))
+        ?.has(asRead(TRANSLATIONS.fr.settings.openDevtools.title)),
+    ).toBe(true)
+  })
+
+  /**
    * The reading above is the whole screen; this one is the window the path opens on. Both cases
    * are green without `rooted`, which is what let `Réglages ▸ Compte` ship.
    */

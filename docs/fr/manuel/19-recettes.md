@@ -90,7 +90,7 @@ dessus en calque (voir [Espace Image](08-espace-image.md)).
 Le menu **Image ▸ Agrandir** aplatit le document, l’envoie, et ouvre le formulaire de
 l’agrandisseur avec votre image déjà dedans. C’est vous qui appuyez sur **Générer**.
 
-Une fois, avant la première : **Réglages ▸ Génération ▸ Agrandissement**, choisissez un modèle.
+Une fois, avant la première : **Réglages ▸ Modèles d’IA ▸ Agrandissement**, choisissez un modèle.
 Sans lui, la commande n’envoie rien et ouvre cet écran — le panneau **Modèles** ne peut pas servir
 ici, il ne montre que la famille de l’espace ouvert.
 
@@ -349,7 +349,7 @@ encore, et rien à l’écran ne le dit sur le moment.
 |---|---|---|
 | **retrouver l’historique** d’un document rouvert | la pile d’annulation est vide | seul l’état est enregistré, pas les gestes qui y ont mené |
 | **importer un `.hdr`**, un `.obj` ou un `.fbx` | il est refusé | seul le `.glb` entre, côté 3D |
-| **détourer ou vectoriser** une image | les **Réglages ▸ Génération** s’ouvrent sur la section voulue | le modèle se choisit là, une fois pour toutes |
+| **détourer ou vectoriser** une image | les **Réglages ▸ Modèles d’IA** s’ouvrent sur la section voulue | le modèle se choisit là, une fois pour toutes |
 | **exporter une vidéo** | aucun bouton | l’export vidéo n’est pas écrit — l’image, elle, sort par `⇧⌘E` |
 | **annuler un recadrage** | la taille revient, les pixels rognés non | l’historique ne garde pas l’image d’avant en entier |
 

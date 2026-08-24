@@ -441,7 +441,7 @@ avoir vu ce qui part et avec quels réglages.
 
 **Elles vivent dans le menu Image**, et nulle part ailleurs : sans raccourci par défaut, c’est la
 seule porte. Détourer, Agrandir et Vectoriser demandent chacune un modèle d’une famille qui n’a pas
-d’espace à elle ; il se règle dans **Réglages ▸ Génération**. Tant qu’aucun n’est réglé, l’édition
+d’espace à elle ; il se règle dans **Réglages ▸ Modèles d’IA**. Tant qu’aucun n’est réglé, l’édition
 ne part pas et ouvre l’écran où en choisir un.
 
 ### Exporter

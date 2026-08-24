@@ -472,7 +472,7 @@ connection troubles.
 **The commonest cause: the line is from an earlier launch.** The port and the token change every
 time the studio starts. Yesterday's points at a port where nothing is listening any more.
 
-**What to do.** **Settings ▸ Advanced ▸ Connection command ▸ Copy**, and paste the line into your
+**What to do.** **Settings ▸ Way in (MCP) ▸ Connection command ▸ Copy**, and paste the line into your
 terminal again. A client already registered under the same name is replaced, so there is nothing to
 remove first.
 
