@@ -7,6 +7,7 @@ import {
   modelThumbnailUrl,
   type DownloadProgress,
 } from '@shared/domain/localModel'
+import { FIELD_THUMBNAIL } from '@/design/styles'
 import { Thumbnail } from '@/design/Thumbnail'
 import { useBytes } from '@/hooks/useBytes'
 import type { ModelFitSentence } from '@/hooks/useModelFit'
@@ -71,7 +72,10 @@ export const AiCandidateRow = memo(function AiCandidateRow({
       checked={chosen}
       disabled={!fit.usable}
       onChoose={onChoose}
-      picture={<Thumbnail url={modelThumbnailUrl(candidate.model)} />}
+      // The gauge is NAMED, and it has to be: `Thumbnail` fills the box a `Row` gives it, and
+      // these windows have no `Row` at all — left to the default it asks for the whole width of
+      // the line and refuses to shrink, which drew a 256px picture over the name beside it.
+      picture={<Thumbnail url={modelThumbnailUrl(candidate.model)} className={FIELD_THUMBNAIL} />}
     >
       {chosen && <AiPublisherLink url={candidate.model.source} />}
       <AiModelActions candidate={candidate} progress={progress} loading={loading} busy={busy} />

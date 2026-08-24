@@ -6,7 +6,10 @@ import { UiIcon } from './UiIcon'
 
 export type ThumbnailProps = {
   url?: string
-  /** Its size. A row hands it a box and it fills it; a property field names a gauge. */
+  /**
+   * Its size. A row hands it a box and it fills it; everywhere else NAMES a gauge — the default
+   * only holds inside a box, and outside one it claims the whole width and will not shrink.
+   */
   className?: string
 }
 
