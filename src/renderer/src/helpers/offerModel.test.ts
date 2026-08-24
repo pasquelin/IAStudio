@@ -21,10 +21,10 @@ beforeEach(() => {
  * to where one IS chosen. A failure message would say what went wrong and not what to do.
  */
 describe('offering a model of one family', () => {
-  it('opens the browser for the family that space already lists', () => {
+  it('opens the generation panel, whose picker lists exactly that family', () => {
     offerModelsOfFamily('image')
 
-    expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('models')
+    expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('generator')
   })
 
   /**
@@ -34,7 +34,7 @@ describe('offering a model of one family', () => {
   it('opens the settings for a family that space cannot list', () => {
     offerModelsOfFamily('upscale')
 
-    expect(opened).toEqual(['generation.upscale'])
+    expect(opened).toEqual(['ai.upscale'])
     expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBeUndefined()
   })
 
@@ -44,6 +44,6 @@ describe('offering a model of one family', () => {
 
     offerModelsOfFamily('image')
 
-    expect(opened).toEqual(['generation.image'])
+    expect(opened).toEqual(['ai.image'])
   })
 })

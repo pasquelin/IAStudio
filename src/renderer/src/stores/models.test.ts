@@ -1,3 +1,4 @@
+import { aiRoleId } from '@shared/domain/aiRole'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { ModelFamily } from '@shared/domain/model'
 import { DEFAULT_COLLECTION_STATE, setFacetValue } from '@/helpers/collectionState'
@@ -5,22 +6,22 @@ import { ORIGIN_FACET } from '@/panels/models/modelFilters'
 import { useModels } from './models'
 
 beforeEach(() => {
-  useModels.setState({ selected: {}, collections: {}, preset: {}, prepared: null })
+  useModels.setState({ selected: {}, collections: {}, preset: {} })
 })
 
 describe('choosing a model', () => {
   it('files it under the family it belongs to', () => {
-    useModels.getState().select('image', 'model_flux')
+    useModels.getState().select(aiRoleId('image', 'txt2img'), 'model_flux')
 
-    expect(useModels.getState().selected.image).toBe('model_flux')
+    expect(useModels.getState().selected[aiRoleId('image', 'txt2img')]).toBe('model_flux')
   })
 
   it('leaves the other families alone', () => {
-    useModels.setState({ selected: { image: 'model_flux' } })
+    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'model_flux' } })
 
-    useModels.getState().select('video', 'model_kling')
+    useModels.getState().select(aiRoleId('video', 'txt2video'), 'model_kling')
 
-    expect(useModels.getState().selected.image).toBe('model_flux')
+    expect(useModels.getState().selected[aiRoleId('image', 'txt2img')]).toBe('model_flux')
   })
 
   /**
@@ -28,11 +29,11 @@ describe('choosing a model', () => {
    * Image was on. See `select` for why the distinction is not recorded.
    */
   it('replaces the choice already filed under that family', () => {
-    useModels.setState({ selected: { image: 'model_flux' } })
+    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'model_flux' } })
 
-    useModels.getState().select('image', 'model_sdxl')
+    useModels.getState().select(aiRoleId('image', 'txt2img'), 'model_sdxl')
 
-    expect(useModels.getState().selected.image).toBe('model_sdxl')
+    expect(useModels.getState().selected[aiRoleId('image', 'txt2img')]).toBe('model_sdxl')
   })
 
   /**
@@ -67,14 +68,5 @@ describe('choosing a model', () => {
 
       expect(stored('skybox').selections).toBeUndefined()
     })
-  })
-
-  /** A choice made by hand closes the parenthesis an action opened — see `prepared`. */
-  it('drops a preparation the user has just overruled', () => {
-    useModels.setState({ prepared: 'upscale' })
-
-    useModels.getState().select('video', 'model_kling')
-
-    expect(useModels.getState().prepared).toBeNull()
   })
 })

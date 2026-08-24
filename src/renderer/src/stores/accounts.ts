@@ -15,6 +15,11 @@ export type AccountSaveFailure = AccountFailure | 'unexpected'
 
 type AccountsState = {
   accounts: AccountSummary[]
+  /**
+   * Whether the list has been read once: `accounts: []` says "not read yet" and "no key at all"
+   * alike, and a watcher cannot tell a first arrival from a switch without this.
+   */
+  accountsLoaded: boolean
 
   /** Loads the accounts and follows the switches other windows make. Returns the unsubscribe. */
   connect: () => Promise<() => void>
@@ -93,21 +98,28 @@ export const useAccounts = create<AccountsState>()((set, get) => {
 
   return {
     accounts: [],
+    accountsLoaded: false,
 
     connect: connectThroughBridge(async bridge => {
       let pushed = false
       const stop = bridge.accounts.onChange(accounts => {
         pushed = true
-        set({ accounts })
+        set({ accounts, accountsLoaded: true })
       })
 
       try {
         const accounts = await bridge.accounts.list()
         // A switch landing while the read was in flight is newer than what the read answered.
-        if (!pushed) set({ accounts })
+        // 🛑 The flag travels WITH the list, never a beat later: a watcher woken by the accounts
+        // alone reads a baseline that is not yet marked known, and calls the first list a switch.
+        if (!pushed) set({ accounts, accountsLoaded: true })
       } catch {
         // The subscription still stands: throwing here would strand the listener with nobody
         // holding the way to remove it.
+      } finally {
+        // Settled either way: a read that failed still answers "this is all there is", and a
+        // watcher left waiting for a baseline would sit out every switch that follows.
+        set({ accountsLoaded: true })
       }
 
       return stop

@@ -104,7 +104,7 @@ describe('tools store', () => {
   /** The home keeps a right column of its own, and one width serves both: it counts here. */
   it('re-clamps every zone when the window shrinks', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { left: { primary: 'models' } } }),
+      arrangements: arrangedFor('image', { open: { left: { primary: 'assets' } } }),
       lengths: { sizes: { left: 600 }, splits: {} },
     })
     useTools.getState().fit(800, 600)
@@ -119,7 +119,7 @@ describe('tools store', () => {
   it('clamps a width against a column the other family keeps open', () => {
     useTools.setState({
       arrangements: {
-        workspaces: { open: { left: { primary: 'models' } } },
+        workspaces: { open: { left: { primary: 'assets' } } },
         home: { open: { right: { primary: 'library' } } },
       },
       lengths: { sizes: { left: 400 }, splits: {} },
@@ -148,9 +148,9 @@ describe('tools store', () => {
   it('swaps within a half rather than stacking, when two tools share it', () => {
     const { show } = useTools.getState()
     show('image', 'left', 'generator')
-    show('image', 'left', 'models')
+    show('image', 'left', 'assets')
 
-    expect(arrangementOf(useTools.getState(), 'image').open.left).toEqual({ primary: 'models' })
+    expect(arrangementOf(useTools.getState(), 'image').open.left).toEqual({ primary: 'assets' })
   })
 
   it('empties the half it is asked to close', () => {
@@ -469,7 +469,7 @@ describe('openFrom', () => {
   it('rebuilds a whole version 6 layout, losing no panel', () => {
     const open = openFrom({
       left: { primary: 'assets', secondary: 'explorer' },
-      right: { primary: 'models', secondary: 'inspector' },
+      right: { primary: 'assets', secondary: 'inspector' },
       bottom: { primary: 'assets' },
     })
 
@@ -503,11 +503,11 @@ describe('openFrom', () => {
    */
   it('drops a panel no version knows any more, and keeps the rest', () => {
     const open = openFrom({
-      left: { primary: 'models' },
+      left: { primary: 'assets' },
       right: { primary: 'documents', secondary: 'inspector' },
     })
 
-    expect(open.left).toEqual({ primary: 'models' })
+    expect(open.left).toEqual({ primary: 'assets' })
     // The half is emptied rather than dropped: it keeps its size and its handle.
     expect(open.right).toEqual({ secondary: 'inspector' })
   })

@@ -1,5 +1,7 @@
+import { primaryRoleOf } from '@shared/domain/aiRole'
 import type { ModelFamily } from '@shared/domain/model'
 import { revealTool } from '@/helpers/revealPanel'
+import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
 
 /**
@@ -21,7 +23,14 @@ export function openGeneratorOn(
   modelId: string,
   params: Record<string, unknown>,
 ): void {
-  useModels.getState().prepare(family, modelId, params)
+  const role = primaryRoleOf(family)
+  if (!role) return
+
+  useModels.getState().prepare(role, modelId, params)
+  // 🛑 Both halves, as `prepareEdit` does: the panel reads the model and the values of the
+  // operation it settled on, so arming one without forcing the other hands them to whichever
+  // operation the current selection happens to point at — silently, with default values.
+  useGeneration.getState().forceCapability(role)
   // The generator may well be closed — it is a tool window like any other.
   revealTool('generator')
 }

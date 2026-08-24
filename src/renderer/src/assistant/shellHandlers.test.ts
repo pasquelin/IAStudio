@@ -171,23 +171,23 @@ describe('the panels of the surface in front', () => {
   })
 
   /**
-   * Three panels share the left half of every space, and `close` empties a half whatever stands
-   * in it: asked to close the shelf while the half showed the models, it closed the models.
+   * Two panels share the left half of every space, and `close` empties a half whatever stands in
+   * it: asked to close the shelf while the half showed the generator, it closed the generator.
    */
   it('closes the panel named, or nothing at all', async () => {
-    await runAction('panel.open', { panel: 'models' })
+    await runAction('panel.open', { panel: 'generator' })
 
     expect(await runAction('panel.close', { panel: 'assets' })).toEqual({
       ok: false,
       refusal: 'wrongSurface',
     })
-    expect(toolIsShown('models', 'image')).toBe(true)
+    expect(toolIsShown('generator', 'image')).toBe(true)
   })
 
-  // A placement `requires` a model or a project, and opening one without it put a DIFFERENT panel
-  // on screen while answering yes — `panels.list` filtered on the very same question.
+  // A placement `requires` a project or a repository, and opening one without it put a DIFFERENT
+  // panel on screen while answering yes — `panels.list` filtered on the very same question.
   it('refuses a panel this surface cannot offer yet', async () => {
-    expect(await runAction('panel.open', { panel: 'generator' })).toEqual({
+    expect(await runAction('panel.open', { panel: 'history' })).toEqual({
       ok: false,
       refusal: 'wrongSurface',
     })

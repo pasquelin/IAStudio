@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
-import { fillEditFields } from './aiFields'
+import { fillEditFields, fillSourceFields } from './aiFields'
 
 const field = (overrides: Partial<FieldDescriptor>): FieldDescriptor => ({
   key: 'field',
@@ -47,5 +47,61 @@ describe('filling a model form from an edit', () => {
   // A model that wants something else opens on its own defaults, not on a form half-blanked.
   it('writes nothing into a model that takes no picture at all', () => {
     expect(fillEditFields([PROMPT], { image: 'asset-1' })).toEqual({})
+  })
+})
+
+describe('filling a form from what the workspace holds', () => {
+  const FIELDS: FieldDescriptor[] = [
+    { key: 'prompt', kind: 'longText', label: 'Prompt', required: true },
+    { key: 'image', kind: 'image', label: 'Image', required: false },
+    { key: 'mask', kind: 'image', label: 'Mask', required: false, maskFrom: 'image' },
+    { key: 'mesh', kind: 'mesh', label: 'Mesh', required: false },
+  ]
+
+  it('puts a picture in the picture field, by kind and never by name', () => {
+    expect(
+      fillSourceFields(FIELDS, [{ role: 'source', kind: 'image', assetId: 'asset-1' }]),
+    ).toEqual({ image: 'asset-1' })
+  })
+
+  it('puts a mesh in the field a model takes one under', () => {
+    expect(
+      fillSourceFields(FIELDS, [{ role: 'source', kind: 'mesh', assetId: 'asset-2' }]),
+    ).toEqual({ mesh: 'asset-2' })
+  })
+
+  // The mask is what the model PAIRS with the picture, through `maskFrom` — never a second image.
+  it('keeps a source out of the field reserved for a mask', () => {
+    expect(
+      fillSourceFields(FIELDS, [
+        { role: 'source', kind: 'image', assetId: 'asset-1' },
+        { role: 'mask', kind: 'image', assetId: 'asset-mask' },
+      ]),
+    ).toEqual({ image: 'asset-1', mask: 'asset-mask' })
+  })
+
+  // Two references go into two fields, never both into the first one.
+  it('never fills one field twice', () => {
+    const references: FieldDescriptor[] = [
+      { key: 'first', kind: 'image', label: 'First', required: false },
+      { key: 'second', kind: 'image', label: 'Second', required: false },
+    ]
+
+    expect(
+      fillSourceFields(references, [
+        { role: 'source', kind: 'image', assetId: 'asset-1' },
+        { role: 'source', kind: 'image', assetId: 'asset-2' },
+      ]),
+    ).toEqual({ first: 'asset-1', second: 'asset-2' })
+  })
+
+  /**
+   * 🛑 A model that takes nothing of this kind opens on its own defaults rather than on a form
+   * half-blanked — and the panel keeps drawing the source, so nothing is spent in silence.
+   */
+  it('leaves alone what it cannot place', () => {
+    expect(
+      fillSourceFields(FIELDS, [{ role: 'source', kind: 'audio', assetId: 'asset-3' }]),
+    ).toEqual({})
   })
 })

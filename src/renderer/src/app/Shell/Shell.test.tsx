@@ -69,7 +69,7 @@ describe('a horizontal band', () => {
 
     const band = screen.getByLabelText('Timeline')
     // Video reads its models on the left, and the inspector is what its right column holds.
-    const left = screen.getByLabelText('Modèles')
+    const left = screen.getByLabelText('Génération')
     const right = screen.getByLabelText('Inspecteur')
 
     // The right column shares the box the band hangs under; the left one is outside it.
@@ -121,7 +121,7 @@ describe('a horizontal band', () => {
 // What a fresh install shows, and what "Reset layout" restores. The stored layout is the same in
 // all six sections; each reads its own first panel into every half.
 describe('the default layout', () => {
-  it('opens Image on the layers, the inspector, the models and the Explorer', () => {
+  it('opens Image on the layers, the inspector, the generator and the Explorer', () => {
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
@@ -129,7 +129,7 @@ describe('the default layout', () => {
     expect(screen.getByLabelText('Inspecteur')).toBeInTheDocument()
     // The upper left, on the first panel it declares. The shelf shares that half and is NOT what
     // a default layout opens on: one asks for it, and choosing a model comes first.
-    expect(screen.getByLabelText('Modèles')).toBeInTheDocument()
+    expect(screen.getByLabelText('Génération')).toBeInTheDocument()
     expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
     // The lower half of the left column, open like every other half a surface has: two halves
     // exist so the shelf stays visible WHILE the Explorer is read.
@@ -142,7 +142,7 @@ describe('the default layout', () => {
     renderShell()
 
     expect(screen.getByLabelText('Timeline')).toBeInTheDocument()
-    expect(screen.getByLabelText('Modèles')).toBeInTheDocument()
+    expect(screen.getByLabelText('Génération')).toBeInTheDocument()
   })
 
   // What a sky IS and how it is LOOKED at both went back to the inspector on 2026-08-19, one
@@ -228,11 +228,11 @@ describe('a side column', () => {
   // A lone half fills its zone: the divider belongs to the cut, and there is none to make here.
   it('draws no divider where only one half of a column is open', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { left: { primary: 'models' } } }),
+      arrangements: arrangedFor('image', { open: { left: { primary: 'assets' } } }),
     })
     renderShell()
 
-    expect(screen.getByLabelText('Modèles')).toBeInTheDocument()
+    expect(screen.getByLabelText('Assets')).toBeInTheDocument()
     expect(handles()).toHaveLength(1)
   })
 
@@ -288,7 +288,7 @@ describe('the home', () => {
     expect(screen.queryByLabelText('Ce que vous avez produit')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Activité récente')).not.toBeInTheDocument()
     // The spaces' own two, which no placement gives this surface.
-    expect(screen.queryByLabelText('Modèles')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Génération')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Explorateur')).not.toBeInTheDocument()
   })
 

@@ -9,9 +9,9 @@ import { useSettings } from '@/stores/settings'
  * Takes the user where a model of this family is chosen — never choosing one for them. The one
  * answer to that question, so two callers cannot send the user to two different screens.
  *
- * A space browses its own family and no other, so a cutout model would never appear in its
- * browser however long one looked: those are set in the preferences, and nowhere else. The home
- * browses nothing at all, which lands in the same place.
+ * The generation panel when the space generates that family: its picker lists exactly what the
+ * operation can be served by, and a model is picked there without leaving. Anything else is the
+ * settings — a cutout model belongs to no space, and the home generates nothing at all.
  *
  * Its own file rather than beside `revealTool`, and the opening chunk is why: reaching the
  * preferences means reaching `settingsRegistry`, which a guard keeps out of what the splash
@@ -19,7 +19,7 @@ import { useSettings } from '@/stores/settings'
  */
 export function offerModelsOfFamily(family: ModelFamily): void {
   if (familyOfSurface(toolSurface()) === family) {
-    revealTool('models')
+    revealTool('generator')
     return
   }
 

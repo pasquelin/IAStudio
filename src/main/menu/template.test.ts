@@ -36,7 +36,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
 const options = (given: Partial<MenuOptions> = {}): MenuOptions => ({
   language: 'fr',
   workspace: '3d',
-  tools: ['meshes', 'lights', 'explorer', 'models', 'generator', 'inspector', 'assets'],
+  tools: ['meshes', 'lights', 'explorer', 'generator', 'inspector', 'assets'],
   checked: [],
   abilities: [],
   isMac: true,

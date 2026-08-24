@@ -4,10 +4,9 @@ import type { AiOverview, RoleRow } from '@shared/domain/aiOverview'
 import { aiRoleId } from '@shared/domain/aiRole'
 import { localModel } from '@shared/domain/localModel-fixtures'
 import { useAiModels } from '@/stores/aiModels'
-import { useModels } from '@/stores/models'
-import { preferModels } from '@/stores/settings-fixtures'
-import { useModelForFamily } from '@/hooks/useModelForFamily'
-import { modelForFamily, modelIsOnThisMachine } from './modelForFamily'
+import { chooseModels } from '@/stores/models-fixtures'
+import { useModelForCapability } from '@/hooks/useModelForCapability'
+import { modelForCapability, modelIsOnThisMachine } from './modelForCapability'
 
 const imageRow = (over: Partial<RoleRow> = {}): RoleRow => ({
   role: aiRoleId('image', 'txt2img'),
@@ -41,9 +40,10 @@ const overviewOf = (row: RoleRow): AiOverview => ({
   ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
 })
 
+const TXT2IMG = aiRoleId('image', 'txt2img')
+
 beforeEach(() => {
-  preferModels()
-  useModels.setState({ selected: {} })
+  chooseModels()
   useAiModels.setState({ overview: null })
 })
 
@@ -52,28 +52,24 @@ beforeEach(() => {
  * disagree is the day a panel says a model is there and the one beside it says it is not.
  */
 describe.each([
-  ['read once', () => modelForFamily('image') ?? null],
-  ['subscribed', () => renderHook(() => useModelForFamily('image')).result.current],
-])('the model a family generates with, %s', (_form, read) => {
-  it('takes the one chosen in the panel', () => {
-    useModels.setState({ selected: { image: 'flux' } })
+  ['read once', () => modelForCapability(TXT2IMG) ?? null],
+  ['subscribed', () => renderHook(() => useModelForCapability(TXT2IMG)).result.current],
+])('the model an employment generates with, %s', (_form, read) => {
+  it('takes the one chosen for it', () => {
+    chooseModels({ [TXT2IMG]: 'flux' })
 
     expect(read()).toBe('flux')
   })
 
-  it('falls back to the one the settings name', () => {
-    preferModels({ image: 'sdxl' })
+  /**
+   * 🛑 ADR-23 § C. The same weights serve `txt2img` and `inpaint`, and a person may well have
+   * picked differently for each: filed per family, choosing a model to retouch with replaced the
+   * one text-to-image was on, silently.
+   */
+  it('leaves the choice made for another employment of the same family alone', () => {
+    chooseModels({ [aiRoleId('image', 'inpaint')]: 'ssd-1b' })
 
-    expect(read()).toBe('sdxl')
-  })
-
-  /** A preference is where to start from, never what was decided — reversing it is the one
-   * mistake a helper written to reconcile three callers can make silently. */
-  it('lets the choice win over the preference', () => {
-    preferModels({ image: 'sdxl' })
-    useModels.setState({ selected: { image: 'flux' } })
-
-    expect(read()).toBe('flux')
+    expect(read()).toBeNull()
   })
 })
 
@@ -83,30 +79,34 @@ it('recognises a model of this machine from the overview', () => {
   expect(modelIsOnThisMachine('flux', overviewOf(imageRow()))).toBe(false)
 })
 
+/** What the person chose in the settings wins: a panel leftover is not a decision. */
 it('honours a local employment over the panel leftover', () => {
-  useModels.setState({ selected: { image: 'flux' } })
+  chooseModels({ [TXT2IMG]: 'flux' })
   useAiModels.setState({
     overview: overviewOf(imageRow({ provider: { kind: 'local', modelId: 'ssd-1b' } })),
   })
 
-  expect(modelForFamily('image')).toBe('ssd-1b')
+  expect(modelForCapability(TXT2IMG)).toBe('ssd-1b')
 })
 
+/**
+ * 🛑 A model of THIS machine is never sent to a cloud: the employment is served by an account,
+ * and a leftover local id would be asked of a catalogue that has never heard of it.
+ */
 it('does not send a local leftover when the employment is a cloud', () => {
-  useModels.setState({ selected: { image: 'ssd-1b' } })
-  preferModels({ image: 'flux' })
+  chooseModels({ [TXT2IMG]: 'ssd-1b' })
   useAiModels.setState({
     overview: overviewOf(imageRow({ provider: { kind: 'cloud', providerId: 'scenario' } })),
   })
 
-  expect(modelForFamily('image')).toBe('flux')
+  expect(modelForCapability(TXT2IMG)).toBeUndefined()
 })
 
 /** Only the subscribed form takes one: the rail asks about the home, which generates nothing. */
-it('answers nothing for no family at all', () => {
-  preferModels({ image: 'sdxl' })
+it('answers nothing for no employment at all', () => {
+  chooseModels({ [TXT2IMG]: 'flux' })
 
-  expect(renderHook(() => useModelForFamily(null)).result.current).toBeNull()
+  expect(renderHook(() => useModelForCapability(null)).result.current).toBeNull()
 })
 
 /**
@@ -115,13 +115,13 @@ it('answers nothing for no family at all', () => {
  * Subscribing to the object itself re-rendered them all for an answer that had not moved.
  */
 it('does not re-render when a republished overview leaves the answer alone', () => {
-  useModels.setState({ selected: { image: 'flux' } })
+  chooseModels({ [TXT2IMG]: 'flux' })
   useAiModels.setState({ overview: overviewOf(imageRow()) })
 
   let renders = 0
   const { result } = renderHook(() => {
     renders += 1
-    return useModelForFamily('image')
+    return useModelForCapability(TXT2IMG)
   })
   const before = renders
 

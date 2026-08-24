@@ -1,5 +1,6 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { commandDescriptor } from '@shared/domain/command'
+import { primaryRoleOf } from '@shared/domain/aiRole'
 import { MODEL_FAMILIES } from '@shared/domain/model'
 import { SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
@@ -154,7 +155,13 @@ export const CORE_HANDLERS: ActionHandlers = {
     const family = oneOf(input, 'family', MODEL_FAMILIES)
     if (!family) return refused('badInput')
 
-    useModels.getState().select(family, textOf(input, 'modelId') ?? '')
+    // The door names a family, which is what an MCP client can be expected to know. The pick
+    // arms its FIRST employment — the one that family generates with when nothing narrower is
+    // asked for, and the one this call armed before choices were filed per employment.
+    const role = primaryRoleOf(family)
+    if (!role) return refused('badInput')
+
+    useModels.getState().select(role, textOf(input, 'modelId') ?? '')
     return { ok: true }
   },
 

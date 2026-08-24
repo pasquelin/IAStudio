@@ -50,7 +50,6 @@ export type ToolId =
   | 'git'
   | 'history'
   | 'scene'
-  | 'models'
   | 'generator'
   | 'inspector'
   | 'assets'
@@ -61,18 +60,18 @@ export type ToolId =
 
 /**
  * The panels the upper half of a WORKSPACE's left column is reserved for: what the Scenario API
- * offers. A model to pick, its form to fill, and the assets the account holds. Nothing else may
- * sit in that half of a workspace, and none of the three sits anywhere else — `tool.test.ts`
- * enforces both directions, and both are scoped to `WORKSPACE_IDS`. The home is outside the rule
- * and always was: it calls no model, and its upper left holds the projects.
+ * offers. A generation to run, and the assets the account holds. Nothing else may sit in that
+ * half of a workspace, and neither sits anywhere else — `tool.test.ts` enforces both directions,
+ * and both are scoped to `WORKSPACE_IDS`. The home is outside the rule and always was: it calls
+ * no model, and its upper left holds the projects.
  *
- * The half used to be generation ALONE, and the shelf lay in the bottom band or the right column
- * depending on the space. What that arrangement said was "the shelf belongs to the document in
- * front of you", and it is the opposite of what the shelf is: nothing in it is in the project
- * until it is pulled down. Read together, the three answer one question — what can I get from
- * Scenario — and the half under them answers the other: what is already mine, on my disk.
+ * 🛑 THREE until ADR-23, and the third was the rupture: picking a model and using it took turns
+ * in one half, so generating meant opening Models, choosing, coming back, and starting again for
+ * every attempt. The picker now lives INSIDE the generation panel, where a model is changed
+ * without leaving what is being written. Managing them — installing, removing, reading what they
+ * weigh — is a different question, and it moved to the settings.
  */
-export const SCENARIO_TOOLS: readonly ToolId[] = ['models', 'generator', 'assets']
+export const SCENARIO_TOOLS: readonly ToolId[] = ['generator', 'assets']
 
 /**
  * A zone is cut in two, and each half shows one tool at a time. The rail draws the same cut as
@@ -110,7 +109,7 @@ export type ToolPlacement = {
    * The state itself is not answered here — `shared/` holds no runtime dependency — but which
    * question to ask is a property of the panel, and it belongs beside the panel.
    */
-  requires?: 'project' | 'model' | 'git'
+  requires?: 'project' | 'git'
 }
 
 export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
@@ -121,13 +120,15 @@ export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
  * across the whole width, and cutting it leaves two panels too narrow to be either.
  */
 export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
-  // The upper half of the left column is the Scenario side, in every space: the same three
-  // panels in the same place, right under the button that makes a document.
-  { id: 'models', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
-  // Generating without a model is impossible, so it is absent rather than disabled.
-  { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS, requires: 'model' },
-  // Last of the three, so entering a space still lands on the models: a half with nothing chosen
-  // opens on the first tool it declares, and choosing a model is where every space starts.
+  // The upper half of the left column is the Scenario side, in every space: the same two panels
+  // in the same place, right under the button that makes a document.
+  //
+  // 🛑 No `requires: 'model'` since ADR-23. It made the rail DROP the generator's icon whenever
+  // nothing served the space's family — the one moment a person needs the panel most, and the
+  // panel is what would have offered them a model. It now says which of the five refusals it is.
+  { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
+  // Second, so entering a space lands on the generator: a half with nothing chosen opens on the
+  // first tool it declares, and generating is where every space starts.
   { id: 'assets', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
 
   // The lower half: the documents to produce into. Its own half rather than a third turn in the

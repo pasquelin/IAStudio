@@ -560,12 +560,13 @@ describe('the word that names a group in a panel', () => {
 
   // Named rather than counted, and `DiffImages` wears it twice — the two sides of a comparison.
   // **Blind**: raw text, so a file naming the constant in a comment alone would still count.
-  it('is worn by the four files it was extracted from', () => {
+  it('is worn by the five files it was extracted from', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && /\bPANEL_GROUP_LABEL(?:_WIDE)?\b/.test(source),
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
+      '../panels/generator/Generator/GeneratorSources.tsx',
       '../panels/git/GitFileGroup.tsx',
       '../panels/history/CommitFiles.tsx',
       '../panels/history/DiffImages.tsx',
@@ -596,7 +597,7 @@ describe('what a line names', () => {
 
   // Named rather than counted: a count stays green when one site drops the constant and another
   // picks it up. **Blind**: raw text, so a comment naming the constant would count as wearing it.
-  it('is worn by the two it was extracted from', () => {
+  it('is worn by the three it was extracted from', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && /\bROW_SUBJECT\b/.test(source),
     ).map(([path]) => path)
@@ -629,7 +630,7 @@ describe('the box a panel puts above what it acts on', () => {
   })
 
   // Named rather than counted. **Blind**: raw text, as above.
-  it('is worn by the two it was extracted from', () => {
+  it('is worn by the three it was extracted from', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && /\bPANEL_HEAD\b/.test(source),
     ).map(([path]) => path)
@@ -708,7 +709,7 @@ describe('the slider of the studio', () => {
   })
 
   /** Named rather than counted. **Blind**: raw text, so a mention in a comment reads as a wearer. */
-  it('is worn by the two it was extracted from', () => {
+  it('is worn by the three it was extracted from', () => {
     const wearing = WRITTEN_SOURCES.filter(([, source]) => /\bSliderHandle\b/.test(source))
       .map(([path]) => path)
       .filter(path => !SLIDER_OWNERS.includes(path))

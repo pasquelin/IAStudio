@@ -3,6 +3,8 @@ import {
   LOCAL_RUNTIME,
   PERIOD_DAYS,
   PROVIDER_MAINTAINER,
+  servesStudioCapability,
+  studioCapability,
   SYSTEM_TAG_PREFIX,
   tagOfFamily,
   type ModelDescriptor,
@@ -22,6 +24,7 @@ import {
   type LocalModel,
 } from '@shared/domain/localModel'
 import type { WatchCredentials } from './credentialsWatch'
+import { chunk } from '@shared/collections'
 import { familyOf, translateSchema, type ProviderInput } from './schema'
 
 /**
@@ -331,6 +334,27 @@ function showable(asset: RemoteAsset): string | null {
 }
 
 /**
+ * Whether the model serves this capability — the API's own enum, or one the studio names.
+ *
+ * A studio capability is never in `summary.capabilities`: no model publishes `rig`. It is
+ * decided by the rule `STUDIO_CAPABILITIES` carries, against the family the summary was filed
+ * under, so a filter on one answers the same models the employment offers.
+ */
+function serves(summary: ModelSummary, capability: string): boolean {
+  // What the model PUBLISHES first, whatever else is known about the capability: a local
+  // manifest names its employments outright — the four panorama models declare `txt2skybox` —
+  // where the cloud catalogue answers the enum value underneath it.
+  if (summary.capabilities.includes(capability)) return true
+
+  const studio = studioCapability(capability)
+  return (
+    studio !== undefined &&
+    summary.family === studio.family &&
+    servesStudioCapability(studio, summary)
+  )
+}
+
+/**
  * The whole narrowing, applied to every model whichever pass it came from.
  *
  * Nothing here is redundant with the request: the private listing accepts no `tags`, no sort
@@ -343,9 +367,8 @@ function matches(summary: ModelSummary, query: ModelQuery, since: string | null)
   if (query.runsOn && summary.runsOn !== query.runsOn) return false
   if (query.origin && summary.origin !== query.origin) return false
 
-  if (query.capabilities?.length) {
-    const held = new Set(summary.capabilities)
-    if (!query.capabilities.some(capability => held.has(capability))) return false
+  if (query.capabilities?.length && !query.capabilities.some(one => serves(summary, one))) {
+    return false
   }
 
   // Every chosen tag, unlike the API's union: a publisher AND a subject means both.
@@ -612,9 +635,26 @@ export function createModelRegistry({
       let cursor: Cursor | null =
         query.runsOn === LOCAL_RUNTIME ? null : (deserialize(query.cursor) ?? startOf(query))
       let walked = 0
+      let refused = false
 
       while (cursor && items.length < limit && walked < MAX_PAGES_PER_REQUEST) {
-        const page: CatalogPage = await fetchPage(cursor, query)
+        // 🛑 A remote refusal must not take the local catalogue with it: the manifests gathered
+        // above need no account. Rethrown when nothing local answered, so a cloud-only panel
+        // still says why it is empty.
+        const page: CatalogPage | null = await fetchPage(cursor, query).catch(
+          (failure: unknown) => {
+            if (items.length === 0) throw failure
+            return null
+          },
+        )
+        // 🛑 Out, and the cursor CLOSED with it. Leaving it armed made the window ask for the
+        // next page, which carries a cursor — so the local manifests were skipped, nothing
+        // answered, and the refusal came back to wipe the very models this exists to keep.
+        if (page === null) {
+          refused = true
+          cursor = null
+          break
+        }
         walked += 1
 
         if (cursor.mode === 'list' && cursor.privacy === 'private' && !cursor.token) {
@@ -649,7 +689,9 @@ export function createModelRegistry({
       }
 
       const value: ModelPage = { items, cursor: cursor ? serialize(cursor) : null }
-      remember(pages, key, value)
+      // A refused walk is a PARTIAL answer, and caching a partial is what makes it stick: the
+      // panel would hold the local-only list for the whole TTL after the network came back.
+      if (!refused) remember(pages, key, value)
       return value
     },
 
@@ -657,28 +699,33 @@ export function createModelRegistry({
 
     previews: async assetIds => {
       const wanted = [...new Set(assetIds)]
-      const missing = wanted.filter(id => fresh(previews.get(id)) === null && !held(id))
-      const batches: string[][] = []
+      const resolved: Record<string, string> = {}
 
-      for (let start = 0; start < missing.length; start += PREVIEW_BATCH) {
-        batches.push(missing.slice(start, start + PREVIEW_BATCH))
+      // 🛑 Collected as it arrives, NEVER read back out of the cache: `prune` evicts past
+      // `MAX_CACHED` on every write, so a picker asking for its hundred drew exactly 64 — the
+      // rest fetched, cached, evicted by their own siblings, and dropped on the way out.
+      const take = (id: string, url: string | null): void => {
+        remember(previews, id, url)
+        if (url) resolved[id] = url
       }
 
-      // The batches know nothing of each other; running them in turn only adds up their latency.
-      await Promise.all(
-        batches.map(async batch => {
-          const assets = await catalog().assetUrls(batch)
-          const found = new Map(assets.map(asset => [asset.id, showable(asset)]))
-
-          for (const id of batch) remember(previews, id, found.get(id) ?? null)
-        }),
-      )
-
-      const resolved: Record<string, string> = {}
       for (const id of wanted) {
         const url = fresh(previews.get(id))
         if (url) resolved[id] = url
       }
+
+      const missing = wanted.filter(id => fresh(previews.get(id)) === null && !held(id))
+
+      // The batches know nothing of each other; running them in turn only adds up their latency.
+      await Promise.all(
+        chunk(missing, PREVIEW_BATCH).map(async batch => {
+          const assets = await catalog().assetUrls(batch)
+          const found = new Map(assets.map(asset => [asset.id, showable(asset)]))
+
+          for (const id of batch) take(id, found.get(id) ?? null)
+        }),
+      )
+
       return resolved
     },
   }

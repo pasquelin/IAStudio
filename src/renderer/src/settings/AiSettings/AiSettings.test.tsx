@@ -6,6 +6,7 @@ import { GIBI, localModel } from '@shared/domain/localModel-fixtures'
 import type { ModelFamily } from '@shared/domain/model'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAiModels } from '@/stores/aiModels'
+import { withQueries } from '@/app/query-fixtures'
 import { AiSettings } from './AiSettings'
 
 const PARAKEET: ModelCandidate = {
@@ -61,7 +62,7 @@ const overview = (over: Partial<AiOverview> = {}): AiOverview => ({
 
 const show = (one: AiOverview = overview(), family?: ModelFamily) => {
   useAiModels.setState({ overview: one })
-  render(<AiSettings family={family} />)
+  render(withQueries(<AiSettings family={family} />))
 }
 
 describe('AiSettings', () => {
@@ -93,7 +94,7 @@ describe('AiSettings', () => {
   })
 
   it('says nothing about the machine before the main process has answered', () => {
-    render(<AiSettings />)
+    render(withQueries(<AiSettings />))
 
     expect(screen.getByText(/Lecture de la machine/)).toBeInTheDocument()
   })

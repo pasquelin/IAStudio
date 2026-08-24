@@ -34,6 +34,7 @@ import {
 } from '@shared/domain/scene'
 import { HEX_COLOR } from '@shared/domain/color'
 import { localModelSchema } from '@main/ai/localModelSchema'
+import { migratedRoleChoices } from './migratedRoleChoices'
 import type { AccountBook, Credentials } from './accounts'
 
 // Built from the shared unions, never retyped — the same reason `provider/validation.ts` gives:
@@ -63,8 +64,9 @@ const retries = boundsOf('generation.maxRetries')
 const generation = z.object({
   concurrentJobs: z.number().int().min(jobs.min).max(jobs.max).optional(),
   maxRetries: z.number().int().min(retries.min).max(retries.max).optional(),
-  // Keys are model families and values model ids, both free strings here: the API adds
-  // families and models on its own schedule, and an unknown one must not fail the write.
+  // What the same branch held before employments carried the preference. Read only to be
+  // MIGRATED below — never written again. Keys are families and values model ids, both free
+  // strings: the API added models on its own schedule and an unknown one must not fail a read.
   defaultModels: z.record(z.string().min(1), z.string().min(1)).optional(),
   captionArrivals: z.boolean().optional(),
 })
@@ -281,7 +283,7 @@ const ai = z.object({
   ownModels: z.array(localModelSchema).catch([]).optional(),
 })
 
-const partialSettings = z.object({
+const partialSettingsShape = z.object({
   ai: ai.optional(),
   general: general.optional(),
   home: home.optional(),
@@ -297,6 +299,24 @@ const partialSettings = z.object({
   assistant: assistant.optional(),
   mcp: mcp.optional(),
   dictation: dictation.optional(),
+})
+
+/**
+ * The one place `generation.defaultModels` is still read, and it leaves as `ai.roles` — ADR-23.
+ *
+ * On the whole object rather than on either branch: the migration needs both at once, and a
+ * transform on `generation` alone could not reach the choices already made on the employment
+ * side, which have to win.
+ */
+const partialSettings = partialSettingsShape.transform(parsed => {
+  const { defaultModels, ...generation } = parsed.generation ?? {}
+  if (defaultModels === undefined) return parsed
+
+  return {
+    ...parsed,
+    generation,
+    ai: { ...parsed.ai, roles: migratedRoleChoices(defaultModels, parsed.ai?.roles ?? {}) },
+  }
 })
 
 /** Validates what the renderer sends. Throws: an out-of-bounds write must not be persisted. */

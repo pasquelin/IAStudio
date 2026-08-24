@@ -1,3 +1,4 @@
+import { chunk } from '@shared/collections'
 import { ASSET_PATHS_MAX, type Asset } from '@shared/domain/asset'
 import { getBridge } from '@/services/bridge'
 
@@ -39,13 +40,8 @@ export async function assetAt(path: string): Promise<Asset | null> {
 export async function assetsAt(paths: readonly string[]): Promise<Map<string, Asset>> {
   if (paths.length === 0) return new Map()
 
-  const batches: string[][] = []
-  for (let start = 0; start < paths.length; start += ASSET_PATHS_MAX) {
-    batches.push(paths.slice(start, start + ASSET_PATHS_MAX))
-  }
-
   const answers = await Promise.all(
-    batches.map(
+    chunk(paths, ASSET_PATHS_MAX).map(
       async batch =>
         (await getBridge()
           ?.assets.search({ paths: batch, limit: batch.length })

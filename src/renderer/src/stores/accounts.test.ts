@@ -53,6 +53,24 @@ describe('useAccounts', () => {
       expect(useAccounts.getState().accounts).toEqual([studio])
     })
 
+    /**
+     * 🛑 The flag has to travel WITH the list, never a beat later. A watcher woken by the accounts
+     * alone reads a baseline that is not yet marked known, calls the first list a switch, and
+     * throws the whole query cache away at every launch.
+     */
+    it('marks the list read in the same breath as it publishes it', async () => {
+      installFakeBridge({ accounts: { list: () => Promise.resolve([studio]) } })
+      const seen: boolean[] = []
+      const stop = useAccounts.subscribe(state => {
+        if (state.accounts.length > 0) seen.push(state.accountsLoaded)
+      })
+
+      await useAccounts.getState().connect()
+      stop()
+
+      expect(seen).not.toContain(false)
+    })
+
     // A switch landing while the read is in flight is newer than what the read answers.
     it('keeps a switch that landed while the read was in flight', async () => {
       let push: ((accounts: AccountSummary[]) => void) | null = null

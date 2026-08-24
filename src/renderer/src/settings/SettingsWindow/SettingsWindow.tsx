@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { useAccountChange } from '@/hooks/useAccountChange'
 import { DEFAULT_SETTINGS_SECTION, sectionFromRoute } from '@shared/domain/settings'
 import { descriptorsIn } from '@shared/domain/settingsRegistry'
 import { matchSettings } from '@shared/domain/settingsSearch'
@@ -43,6 +45,12 @@ export function SettingsWindow() {
     () => sectionFromRoute(window.location.hash) ?? DEFAULT_SETTINGS_SECTION,
   )
   const [query, setQuery] = useState('')
+  const [client] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
+      }),
+  )
 
   const connect = useSettings(state => state.connect)
   const connectAccounts = useAccounts(state => state.connect)
@@ -78,6 +86,10 @@ export function SettingsWindow() {
     void getBridge()?.settings.setPending(pending)
   }, [pending])
 
+  // Its own client, so its own purge: what was fetched under one account — or under none — must
+  // not survive into the next. `Application` does the same for the main window.
+  useAccountChange(() => client.clear())
+
   // Searched over the translated title and description, so `t` has to be a dependency: the
   // same query finds different settings once the language changes.
   const found = useMemo(() => matchSettings(query, t), [query, t])
@@ -86,56 +98,61 @@ export function SettingsWindow() {
   const searching = query.trim() !== ''
 
   return (
-    <WindowShell
-      title={t('settings.title')}
-      navLabel={t('settings.sections')}
-      footer={<SettingsWindowDraftBar />}
-      nav={
-        <>
-          {/* Outside the scrolling part, deliberately — the component says why. */}
-          <WindowSearch label={t('settings.search')} value={query} onChange={setQuery} />
-
-          <WindowNav>
-            {SETTINGS_SECTIONS.map(entry => (
-              <SettingsWindowNavigationEntry
-                key={entry.id}
-                section={entry}
-                depth={0}
-                selected={searching ? '' : selected}
-                onSelect={id => {
-                  setQuery('')
-                  setSelected(id)
-                }}
-              />
-            ))}
-          </WindowNav>
-        </>
-      }
-    >
-      {searching ? (
-        <>
-          <h2 className="mb-4 text-base font-semibold">{t('settings.results')}</h2>
-          <SettingsWindowSearchResults
-            found={found}
-            onGo={id => {
-              setQuery('')
-              setSelected(id)
-            }}
-          />
-        </>
-      ) : (
-        section && (
+    // The catalogue this window now holds is paginated through react-query, which the main
+    // window mounts for itself. Its own client rather than a shared one: the two windows are
+    // separate documents, and nothing crosses between them.
+    <QueryClientProvider client={client}>
+      <WindowShell
+        title={t('settings.title')}
+        navLabel={t('settings.sections')}
+        footer={<SettingsWindowDraftBar />}
+        nav={
           <>
-            <h2 className="mb-1 text-base font-semibold">{t(section.labelKey)}</h2>
-            {section.descriptionKey && (
-              <p className={cn(WINDOW_CAPTION, 'mb-4')}>{t(section.descriptionKey)}</p>
-            )}
-            <SettingList descriptors={descriptorsIn(section.id)} />
-            <SettingActions section={section.id} />
-            {section.Content && <section.Content />}
+            {/* Outside the scrolling part, deliberately — the component says why. */}
+            <WindowSearch label={t('settings.search')} value={query} onChange={setQuery} />
+
+            <WindowNav>
+              {SETTINGS_SECTIONS.map(entry => (
+                <SettingsWindowNavigationEntry
+                  key={entry.id}
+                  section={entry}
+                  depth={0}
+                  selected={searching ? '' : selected}
+                  onSelect={id => {
+                    setQuery('')
+                    setSelected(id)
+                  }}
+                />
+              ))}
+            </WindowNav>
           </>
-        )
-      )}
-    </WindowShell>
+        }
+      >
+        {searching ? (
+          <>
+            <h2 className="mb-4 text-base font-semibold">{t('settings.results')}</h2>
+            <SettingsWindowSearchResults
+              found={found}
+              onGo={id => {
+                setQuery('')
+                setSelected(id)
+              }}
+            />
+          </>
+        ) : (
+          section && (
+            <>
+              <h2 className="mb-1 text-base font-semibold">{t(section.labelKey)}</h2>
+              {section.descriptionKey && (
+                <p className={cn(WINDOW_CAPTION, 'mb-4')}>{t(section.descriptionKey)}</p>
+              )}
+              <SettingList descriptors={descriptorsIn(section.id)} />
+              <SettingActions section={section.id} />
+              {section.Content && <section.Content />}
+            </>
+          )
+        )}
+      </WindowShell>
+    </QueryClientProvider>
   )
 }

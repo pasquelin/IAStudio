@@ -12,7 +12,6 @@ import { definition as inspector } from '@/panels/inspector'
 import { definition as layers } from '@/panels/layers'
 import { definition as lights } from '@/panels/lights'
 import { definition as meshes } from '@/panels/meshes'
-import { definition as models } from '@/panels/models'
 import { definition as projects } from '@/panels/projects'
 import { definition as scene } from '@/panels/scene'
 import { definition as text } from '@/panels/text'
@@ -36,7 +35,6 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   git,
   history,
   scene,
-  models,
   generator,
   inspector,
   assets,

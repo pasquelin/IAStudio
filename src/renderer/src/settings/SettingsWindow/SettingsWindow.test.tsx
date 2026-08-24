@@ -1,13 +1,7 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
-import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  DEFAULT_SETTINGS,
-  type PartialSettings,
-  type Settings,
-  type SettingsSectionId,
-} from '@shared/domain/settings'
+import { DEFAULT_SETTINGS, type Settings, type SettingsSectionId } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settingsDraft'
@@ -108,7 +102,7 @@ describe('SettingsWindow', () => {
     await waitFor(() => expect(screen.getByLabelText(/Thème/)).toBeInTheDocument())
   })
 
-  it('lists the families a generation can be configured for', () => {
+  it('lists the families an employment can be configured for', () => {
     installFakeBridge()
     render(<SettingsWindow />)
 
@@ -117,14 +111,6 @@ describe('SettingsWindow', () => {
       'Général',
       'Apparence',
       'Génération',
-      'Image',
-      'Vidéo',
-      'Modélisation',
-      'Audio',
-      'Skyboxes',
-      'Agrandissement',
-      'Détourage',
-      'Vectorisation',
       'Modèles d’IA',
       'Clés API',
       'Image',
@@ -133,6 +119,9 @@ describe('SettingsWindow', () => {
       'Audio',
       'Texture',
       'Skyboxes',
+      'Agrandissement',
+      'Détourage',
+      'Vectorisation',
       'Espaces de travail',
       'Modélisation',
       'Raccourcis',
@@ -349,218 +338,5 @@ describe('SettingsWindow', () => {
 
     expect(screen.getByLabelText(/Clé API/)).toBeInTheDocument()
     expect(screen.getByLabelText('Rechercher un réglage')).toHaveValue('')
-  })
-
-  it('records a default model per family, and forgets it when asked every time', async () => {
-    const written: PartialSettings[] = []
-    installFakeBridge({
-      settings: {
-        write: partial => {
-          written.push(partial)
-          return Promise.resolve(DEFAULT_SETTINGS)
-        },
-      },
-      provider: {
-        searchModels: () =>
-          Promise.resolve({
-            items: [
-              {
-                id: 'model_flux',
-                name: 'Flux',
-                family: 'image',
-                runsOn: SCENARIO_CLOUD,
-                source: 'scenario',
-                origin: 'official',
-                featured: false,
-                capabilities: ['txt2img'],
-                tags: [],
-              },
-            ],
-            cursor: null,
-          }),
-      },
-    })
-
-    render(<SettingsWindow />)
-    await userEvent.click(childEntry('Génération', 'Image'))
-
-    const picker = await screen.findByLabelText(/Modèle par défaut/)
-    await userEvent.selectOptions(picker, 'model_flux')
-
-    // Staged like every other setting rather than written on the spot: this screen goes
-    // through the buffer too, so it cannot slip past Apply on its own.
-    expect(written).toEqual([])
-    expect(useSettingsDraft.getState().pending).toEqual({
-      generation: { defaultModels: { image: 'model_flux' } },
-    })
-
-    await userEvent.selectOptions(picker, '')
-    // Absence of a key, not an empty model id — which the main process would reject.
-    expect(useSettingsDraft.getState().pending).toEqual({ generation: { defaultModels: {} } })
-
-    await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }))
-    expect(written.at(-1)).toEqual({ generation: { defaultModels: {} } })
-  })
-
-  /**
-   * The family picker was written by hand outside `SettingLine`, so it offered neither of the
-   * two things every neighbouring setting does: nothing said the choice was waiting for Apply,
-   * and there was no way back to what the application ships with — "ask every time".
-   */
-  it('offers the way back to asking every time, and marks the choice until it is applied', async () => {
-    installFakeBridge({
-      provider: {
-        searchModels: () =>
-          Promise.resolve({
-            items: [
-              {
-                id: 'model_flux',
-                name: 'Flux',
-                family: 'image',
-                runsOn: SCENARIO_CLOUD,
-                source: 'scenario',
-                origin: 'official',
-                featured: false,
-                capabilities: ['txt2img'],
-                tags: [],
-              },
-            ],
-            cursor: null,
-          }),
-      },
-    })
-
-    render(<SettingsWindow />)
-    await userEvent.click(childEntry('Génération', 'Image'))
-
-    const picker = await screen.findByLabelText(/Modèle par défaut/)
-    // The line itself, not the window: every other row carries a dot of its own.
-    const row = picker.closest('div')?.parentElement
-    const restore = within(row!).getByRole('button', { name: /Restaurer/ })
-    expect(restore).toBeDisabled()
-    expect(row?.querySelector('.bg-primary.invisible')).not.toBeNull()
-
-    await userEvent.selectOptions(picker, 'model_flux')
-    expect(restore).toBeEnabled()
-    expect(row?.querySelector('.bg-primary.invisible')).toBeNull()
-
-    await userEvent.click(restore)
-    expect(useSettingsDraft.getState().pending).toEqual({ generation: { defaultModels: {} } })
-    expect(picker).toHaveValue('')
-  })
-
-  /**
-   * A default the plan cannot run is a generation that fails every time the generator opens,
-   * with nothing on this screen having said so. A native `<option>` carries no tooltip, so the
-   * reason is suffixed onto the label — greying a name out silently is the failure to avoid.
-   */
-  it('refuses a default model the plan does not cover, and says so in its label', async () => {
-    installFakeBridge({
-      // Without a key there is no plan to read, and nothing is greyed out — which is the whole
-      // point of the fallback, and would make this case pass on the wrong reason.
-      settings: { authState: () => Promise.resolve({ authenticated: true }) },
-      provider: {
-        searchModels: () =>
-          Promise.resolve({
-            items: [
-              {
-                id: 'model_seedance',
-                name: 'Seedance 2.0',
-                family: 'image',
-                runsOn: SCENARIO_CLOUD,
-                source: 'scenario',
-                origin: 'official',
-                featured: false,
-                capabilities: ['txt2img'],
-                tags: [],
-                requiredPlanLevel: 50,
-              },
-            ],
-            cursor: null,
-          }),
-        plan: () => Promise.resolve({ name: 'cu-basic', level: 25 }),
-      },
-    })
-
-    render(<SettingsWindow />)
-    await userEvent.click(childEntry('Génération', 'Image'))
-
-    const option = await screen.findByRole('option', { name: /Seedance 2\.0/ })
-    expect(option).toBeDisabled()
-    expect(option).toHaveTextContent('Hors abonnement')
-  })
-
-  /**
-   * The default ALREADY stored, which nobody is choosing right now — a downgrade or an account
-   * switch puts it out of plan on its own. A browser still shows a disabled `<option>` as the
-   * selected one, and the suffix lives only in the option labels, so without this the screen
-   * says nothing and the generator opens armed on a model that fails on every submission.
-   */
-  it('warns when the default already stored has fallen out of the plan', async () => {
-    installFakeBridge({
-      settings: {
-        read: () =>
-          Promise.resolve({
-            ...DEFAULT_SETTINGS,
-            generation: { ...DEFAULT_SETTINGS.generation, defaultModels: { image: 'model_pro' } },
-          }),
-        authState: () => Promise.resolve({ authenticated: true }),
-      },
-      provider: {
-        searchModels: () =>
-          Promise.resolve({
-            items: [
-              {
-                id: 'model_pro',
-                name: 'Seedance 2.0',
-                family: 'image',
-                runsOn: SCENARIO_CLOUD,
-                source: 'scenario',
-                origin: 'official',
-                featured: false,
-                capabilities: ['txt2img'],
-                tags: [],
-                requiredPlanLevel: 50,
-              },
-            ],
-            cursor: null,
-          }),
-        plan: () => Promise.resolve({ name: 'cu-basic', level: 25 }),
-      },
-    })
-
-    render(<SettingsWindow />)
-    await userEvent.click(childEntry('Génération', 'Image'))
-
-    expect(await screen.findByText(/cu-basic/)).toBeInTheDocument()
-  })
-
-  /**
-   * The search field sat inside the column that scrolls, at `w-full`. Two things followed from
-   * that: the scrollbar took its width out of the field, so it narrowed and widened as the list
-   * grew past the window; and it scrolled away with the sections it filters.
-   *
-   * jsdom lays nothing out, so what is checked is the structure that decides it: the field is
-   * outside whatever scrolls, and the list is inside it.
-   */
-  describe('the search field', () => {
-    const field = (): HTMLElement => screen.getByLabelText('Rechercher un réglage')
-
-    it('sits outside the part that scrolls, so a scrollbar never resizes it', () => {
-      installFakeBridge()
-      render(<SettingsWindow />)
-
-      const scrollers = field().closest('[class*="overflow-auto"]')
-      expect(scrollers).toBeNull()
-    })
-
-    it('leaves the sections themselves free to scroll under it', () => {
-      installFakeBridge()
-      render(<SettingsWindow />)
-
-      // The outermost one: the nested sections carry lists of their own.
-      const [list] = within(screen.getByRole('navigation')).getAllByRole('list')
-      expect(list?.closest('[class*="overflow-auto"]')).not.toBeNull()
-    })
   })
 })

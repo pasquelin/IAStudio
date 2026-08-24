@@ -1,47 +1,51 @@
 import { mdiCreationOutline } from '@mdi/js'
-import { Suspense, useCallback, useEffect, useRef } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Job } from '@shared/domain/job'
+import { isFinished, type Job } from '@shared/domain/job'
 import { useDescriptor } from '@/hooks/useDescriptor'
-import { useModelForFamily } from '@/hooks/useModelForFamily'
+import { useGenerationContext } from '@/hooks/useGenerationContext'
+import { useModelForCapability } from '@/hooks/useModelForCapability'
 import { usePlanAccess } from '@/hooks/usePlanAccess'
 import { usePlanRefusal } from '@/hooks/usePlanRefusal'
-import { modelIsOnThisMachine } from '@/helpers/modelForFamily'
-import { workspaceById } from '@/helpers/workspaces'
+import { modelIsOnThisMachine } from '@/helpers/modelForCapability'
 import { referencePictures, type FormValues } from '@/helpers/dynamicForm'
+import { fillSourceFields } from '@/spaces/image/aiFields'
 import { registerGenerator } from '@/assistant/generatorBridge'
 import { dictationAccessory } from '@/dictation/DictationField'
 import { failureKeyOf } from '@/services/failureMessage'
 import { useJobs } from '@/stores/jobs'
-import { useLayouts } from '@/stores/layouts'
+import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { claimOnSubmit } from '@/stores/generationClaims'
 import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
 import { DynamicForm } from '@/design/dynamicFormLazy'
-import { FormHeader } from '@/design/FormHeader'
+import { cn } from '@/helpers/cn'
 import { PANEL_SCROLL } from '@/design/styles'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { NoProject } from '@/panels/shared/NoProject'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
+import { GeneratorModel } from './Generator/GeneratorModel'
+import { GeneratorOperation } from './Generator/GeneratorOperation'
+import { GeneratorRun } from './Generator/GeneratorRun'
+import { GeneratorSources } from './Generator/GeneratorSources'
 
 /**
- * The form the chosen model's schema describes, and nothing else: the prompt, the parameters,
- * the button. Which model runs is the Models panel's business — see spec § 6, and no field
- * here is written for any particular model.
+ * The one panel a generation is run from — ADR-23. The operation the workspace points at, the
+ * model that serves it, what is about to be sent, and the form the model's own schema describes.
+ *
+ * No field here is written for any particular model (invariant 5), and nothing about any
+ * particular operation either: both come from the contract and the descriptor.
  */
 export function Generator() {
   const { t } = useTranslation()
 
-  const workspace = useLayouts(state => state.activeWorkspace)
-
-  // What an edit asked this generator to open on — an upscaler for Enlarge — or the workspace's
-  // own family. See `prepared`: it is a parenthesis, and it closes on its own.
-  const prepared = useModels(state => state.prepared)
-  const family = prepared ?? workspaceById(workspace).family
+  const forced = useGeneration(state => state.forcedCapability)
+  const forceCapability = useGeneration(state => state.forceCapability)
+  const { inputs, capability } = useGenerationContext(forced)
 
   // Set by the inspector's "regenerate with these parameters"; ordinary generation leaves it
   // undefined and every field opens on its own default.
@@ -49,16 +53,34 @@ export function Generator() {
   // It is deliberately not cleared once used: `DynamicForm` rebuilds its defaults whenever the
   // preset changes, so dropping it would blank the form under the hand that is filling it. It
   // stays until the next "regenerate" replaces it, which reads as the last settings used.
-  const preset = useModels(state => state.preset[family])
-  const modelId = useModelForFamily(family)
+  const prepared = useModels(state =>
+    capability.chosen ? state.preset[capability.chosen] : undefined,
+  )
+  const modelId = useModelForCapability(capability.chosen)
 
   const authenticated = useSettings(state => state.auth.authenticated)
-  const overview = useAiModels(state => state.overview)
   const project = useProject(state => state.project)
-  const onThisMachine = modelId !== null && modelIsOnThisMachine(modelId, overview)
+  // 🛑 The ANSWER, never `state.overview`: the manager republishes the whole overview per percent
+  // of a load, and a subscription to the object re-rendered this panel with it.
+  const onThisMachine = useAiModels(
+    state => modelId !== null && modelIsOnThisMachine(modelId, state.overview),
+  )
+  const catalogueRead = useAiModels(state => state.overview !== null)
   const submit = useJobs(state => state.submit)
 
   const descriptor = useDescriptor(modelId)
+
+  /**
+   * 🛑 What the form opens on: the values an edit prepared, over the sources the workspace holds.
+   *
+   * Without this the panel DREW the sources and sent none of them — while those same sources
+   * decided which operation ran. Selecting a picture switched the generator to image-to-image and
+   * left the picture behind.
+   */
+  const preset = useMemo(
+    () => ({ ...fillSourceFields(descriptor.data?.fields ?? [], inputs), ...prepared }),
+    [descriptor.data, inputs, prepared],
+  )
   // Before the guards below return early: a hook cannot be called conditionally.
   const cost = useCostEstimate(modelId, descriptor.data?.fields)
   const plan = usePlanAccess()
@@ -75,6 +97,21 @@ export function Generator() {
   const body = useRef<FormValues>({})
 
   /**
+   * The generation this panel launched, followed until it stops — § 30.
+   *
+   * Held by id rather than by the job itself: the main process pushes progress every couple of
+   * seconds, and a copy kept here would be the stale half of two answers.
+   */
+  const [runningId, setRunningId] = useState<string | null>(null)
+  const running = useJobs(state => state.jobs.find(job => job.id === runningId) ?? null)
+  /**
+   * 🛑 Closed BEFORE the round trip and not after it: `submit` reaches the main process, and a
+   * second press while it is in flight pays for two generations. `running` cannot answer for that
+   * window — the job has no id yet.
+   */
+  const [submitting, setSubmitting] = useState(false)
+
+  /**
    * Runs the generation and answers the job, which the button's own handler discards.
    *
    * The claim is part of it, not around it: which workspace has somewhere to put the result is
@@ -84,10 +121,15 @@ export function Generator() {
     (values: FormValues): Promise<Job | null> => {
       if (!modelId) return Promise.resolve(null)
       const claim = claimOnSubmit()
-      return submit({ id: modelId }, values).then(job => {
-        claim(job)
-        return job
-      })
+      setSubmitting(true)
+
+      return submit({ id: modelId }, values)
+        .then(job => {
+          claim(job)
+          setRunningId(job?.id ?? null)
+          return job
+        })
+        .finally(() => setSubmitting(false))
     },
     [modelId, submit],
   )
@@ -124,7 +166,7 @@ export function Generator() {
   // A model of this machine needs no account. Asking for a key first hid the local catalogue
   // behind a Scenario form, and sent people out of the studio to fetch one.
   if (!authenticated && !onThisMachine) {
-    if (overview === null) {
+    if (!catalogueRead) {
       return <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
     }
 
@@ -136,18 +178,10 @@ export function Generator() {
   // button is dead — which is what it did, with one muted line to say why.
   if (!project) return <NoProject icon={mdiCreationOutline} message={t('generation.noProject')} />
 
-  // Unreachable: a section without a model offers no generator at all — the rail drops its icon
-  // and `shownTool` puts Models in this half. The guard is what makes `modelId` a string below.
-  if (!modelId) return null
-
-  if (descriptor.isPending) {
-    return <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
-  }
-
-  // A model can be withdrawn from the catalogue while it is still the chosen one. Without
-  // this the panel renders an empty shell: no form, no reason, nothing to act on.
-  if (descriptor.isError) {
-    return <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(descriptor.error))} />
+  // Said rather than hidden — § 26: what the workspace holds reaches no operation of this
+  // family, and inventing a conversion to reach one is what ADR-23 forbids.
+  if (!capability.chosen) {
+    return <EmptyState icon={mdiCreationOutline} message={t('generation.noOperation')} />
   }
 
   // Claimed at the click and settled when the job id arrives: which workspace has somewhere to
@@ -155,11 +189,37 @@ export function Generator() {
   const generate = (values: FormValues): void => void runGeneration(values)
 
   return (
-    <div className={PANEL_SCROLL}>
-      <FormHeader title={descriptor.data?.name ?? t('collection.loading')} />
+    // The gutter and the rhythm live HERE, once: every child wore its own `px-2 pt-2` and the one
+    // that forgot read as a second panel. `PANEL_SCROLL` already keeps the right edge off the bar.
+    <div className={cn(PANEL_SCROLL, 'gap-2 pt-2 pl-2')}>
+      <GeneratorOperation capability={capability} onForce={forceCapability} />
+      <GeneratorModel
+        capability={capability.chosen}
+        modelId={modelId}
+        name={descriptor.data?.name}
+        plan={plan}
+      />
+
+      {/* 🛑 Said rather than hidden: the panel used to return null, and the rail dropped its icon
+          with it — at the one moment the picker above is what a person needs. A model withdrawn
+          from the catalogue while it was the chosen one lands on the same line. */}
+      {modelId === null && (
+        <EmptyState icon={mdiCreationOutline} message={t('generation.noModelForOperation')} />
+      )}
+      {/* Both gated on a model: `useDescriptor(null)` is disabled, and a disabled query reads as
+          pending — so the two sentences were painted one under the other. */}
+      {modelId !== null && descriptor.isPending && (
+        <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
+      )}
+      {modelId !== null && descriptor.isError && (
+        <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(descriptor.error))} />
+      )}
+
+      <GeneratorSources inputs={inputs} />
+      <GeneratorRun job={running} />
 
       {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}
-      {refusal && <p className="text-muted px-2 text-xs">{refusal}</p>}
+      {refusal && <p className="text-muted text-xs">{refusal}</p>}
 
       {/* Gated on the descriptor, which is what makes the deferred form free to the eye: it only
           renders once that round trip has come back, so the wait its chunk adds sits inside one
@@ -178,8 +238,14 @@ export function Generator() {
               submitHint={t('actions.generateHint')}
               submitNote={cost.note}
               onValuesChange={onValuesChange}
+              // 🛑 The double-submission guard as well as the refusal: `submit` is a round trip,
+              // and a second press before it answers pays for two generations.
               // `project` is not in this: the panel returns before the form when there is none.
-              busy={refusal !== undefined}
+              busy={
+                refusal !== undefined ||
+                submitting ||
+                (running !== null && !isFinished(running.status))
+              }
               preset={preset}
               // Dictation alone now. Rewriting a prompt, translating it and reading the style of
               // the references left this panel for the assistant: they are things one ASKS for,

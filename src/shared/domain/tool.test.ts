@@ -72,7 +72,6 @@ describe('every workspace', () => {
   it('has somewhere to generate from', () => {
     for (const workspace of WORKSPACE_IDS) {
       expect(placementIn('generator', workspace)).not.toBeNull()
-      expect(placementIn('models', workspace)).not.toBeNull()
     }
   })
 

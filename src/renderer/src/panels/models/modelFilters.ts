@@ -5,6 +5,7 @@ import {
   MODEL_PERIODS,
   MODEL_SORTS,
   PUBLISHERS_BY_FAMILY,
+  studioCapability,
   tagLabel,
   TAGS_BY_FAMILY,
   type ModelFamily,
@@ -26,11 +27,18 @@ export const PUBLISHER_FACET = 'publisher'
 export const PERIOD_FACET = 'period'
 
 /**
- * What the panel may narrow by. Skybox employments are local names; Scenario panoramas answer
- * `txt2img` and are found by tag — offering the invented names would empty the cloud list.
+ * What the panel may narrow by, which is not every employment a family has.
+ *
+ * A studio capability that narrows NOTHING is left out — `upscale`, `cutout` and `vectorize` are
+ * the whole membership of their family, so the option would be ticked over a list it cannot
+ * shorten. `rig` and `motion` stay: they cut nineteen models down to five and six, and so do the
+ * two panorama employments, which `answers` tells apart.
  */
 function filterCapabilitiesOf(family: ModelFamily): readonly string[] {
-  return family === 'skybox' ? [] : CAPABILITIES_BY_FAMILY[family]
+  return CAPABILITIES_BY_FAMILY[family].filter(capability => {
+    const studio = studioCapability(capability)
+    return studio === undefined || studio.answers !== undefined || studio.tags !== undefined
+  })
 }
 
 /** Translates a key into user text. Taking it as an argument keeps this module renderless. */

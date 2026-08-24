@@ -360,3 +360,80 @@ describe('what the model itself wrote', () => {
     expect(screen.getByRole('option', { name: 'Carré' })).toBeDefined()
   })
 })
+
+describe('what survives a change of model', () => {
+  // Labels a dictionary would translate are avoided on purpose: what is under test is the
+  // carrying, and `Guidance` reads as « Guidage » in French.
+  const SHARED: FieldDescriptor[] = [
+    field({ key: 'prompt', label: 'Description', kind: 'longText' }),
+    field({ key: 'alpha', label: 'Knob alpha', kind: 'integer', default: 20 }),
+  ]
+  const OTHER: FieldDescriptor[] = [
+    field({ key: 'prompt', label: 'Description', kind: 'longText' }),
+    field({ key: 'beta', label: 'Knob beta', kind: 'integer', default: 7 }),
+  ]
+
+  /**
+   * § 22: a prompt written over several minutes went with the model it was typed under. What the
+   * two models share is carried; what only the old one declared is dropped.
+   */
+  it('keeps what the new model also declares', async () => {
+    const { rerender } = render(<DynamicForm fields={SHARED} onSubmit={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText(/Description/), 'a stylised robot')
+
+    rerender(<DynamicForm fields={OTHER} onSubmit={vi.fn()} />)
+
+    expect(screen.getByLabelText(/Description/)).toHaveValue('a stylised robot')
+    expect(screen.queryByLabelText(/Knob alpha/)).toBeNull()
+  })
+
+  // A field the previous model left empty must take the new one's default rather than emptying
+  // a knob nobody touched.
+  it('lets the new model default a field the old one never had', async () => {
+    const { rerender } = render(<DynamicForm fields={OTHER} onSubmit={vi.fn()} />)
+    rerender(<DynamicForm fields={SHARED} onSubmit={vi.fn()} />)
+
+    expect(screen.getByLabelText(/Knob alpha/)).toHaveValue(20)
+  })
+})
+
+describe('the advanced knobs', () => {
+  const FIELDS: FieldDescriptor[] = [
+    field({ key: 'prompt', label: 'Description', kind: 'longText' }),
+    field({ key: 'seed', label: 'Knob gamma', kind: 'seed', group: 'advanced' }),
+  ]
+
+  /**
+   * § 14: a panel that shows everything shows nothing. Seed, steps and guidance are not what most
+   * generations are about, so they wait one click away rather than filling the column.
+   */
+  it('are folded away until they are asked for', () => {
+    const { container } = render(
+      <DynamicForm fields={FIELDS} onSubmit={vi.fn()} submitLabel="Générer" />,
+    )
+
+    expect(container.querySelector('details')?.open).toBe(false)
+    expect(screen.getByText('Avancé')).toBeInTheDocument()
+  })
+
+  it('open on the summary', async () => {
+    render(<DynamicForm fields={FIELDS} onSubmit={vi.fn()} submitLabel="Générer" />)
+
+    await userEvent.click(screen.getByText('Avancé'))
+
+    expect(screen.getByLabelText(/Knob gamma/)).toBeVisible()
+  })
+
+  // Under the button, not above it: the § 31 priority puts Generate ahead of what most people
+  // never touch.
+  it('sit below the button that runs the generation', () => {
+    const { container } = render(
+      <DynamicForm fields={FIELDS} onSubmit={vi.fn()} submitLabel="Générer" />,
+    )
+
+    const button = screen.getByRole('button', { name: 'Générer' })
+    const details = container.querySelector('details')
+
+    expect(button.compareDocumentPosition(details!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+})

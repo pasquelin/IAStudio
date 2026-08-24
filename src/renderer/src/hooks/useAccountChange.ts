@@ -20,16 +20,28 @@ export function useAccountChange(purge: () => void): void {
      * never through `onChange`. A watcher on the event alone would therefore still hold `null`
      * once the window is up, and would sit out the switch it exists to catch.
      */
-    let active = scenarioAccount(useAccounts.getState().accounts)?.id ?? null
+    let known = useAccounts.getState().accountsLoaded
+    let active = known ? (scenarioAccount(useAccounts.getState().accounts)?.id ?? null) : null
 
     return useAccounts.subscribe(state => {
       const next = scenarioAccount(state.accounts)?.id ?? null
+
+      // 🛑 The FIRST list is the baseline, not a switch. It lands a moment after the window is
+      // up, so treating it as one threw the whole cache away at every launch — every mounted
+      // query refetching, and a full catalogue walk paid for nothing.
+      if (!known && state.accountsLoaded) {
+        known = true
+        active = next
+        return
+      }
+
       if (next === active) return
 
-      // Nothing was fetched under "no account", so arriving at one has nothing to drop.
-      const switched = active !== null
+      // ARRIVING at an account counts once the baseline is known: with none, the window caches
+      // the local-only listing under keys a new key does not change. Measured on screen — a key
+      // added mid-session showed no cloud model until restart.
       active = next
-      if (switched) latest.current()
+      latest.current()
     })
   }, [latest])
 }

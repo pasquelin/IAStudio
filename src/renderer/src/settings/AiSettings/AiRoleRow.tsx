@@ -2,7 +2,6 @@ import { mdiInformationOutline } from '@mdi/js'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AiOverview, ChoiceScope, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
-import { partsOfRole } from '@shared/domain/aiRole'
 import { MODEL_SOURCES, sourceOf, type ModelSource } from '@shared/domain/localModel'
 import { UiIcon } from '@/design/UiIcon'
 import { WINDOW_CAPTION, WINDOW_GROUP_LABEL } from '@/design/windowStyles'
@@ -11,7 +10,7 @@ import { useAiModels } from '@/stores/aiModels'
 import { useModels } from '@/stores/models'
 import { AiCandidateRow } from './AiCandidateRow'
 import { AiChoiceRow } from './AiChoiceRow'
-import { roleLabel } from './roleLabel'
+import { roleLabel } from '@/helpers/roleLabel'
 
 const SOURCE_COPY: Record<ModelSource, { title: string; help?: string }> = {
   studio: { title: 'aiModels.sourceStudio', help: 'aiModels.sourceStudioHelp' },
@@ -46,7 +45,7 @@ export const AiRoleRow = memo(function AiRoleRow({
 }: AiRoleRowProps) {
   const { t } = useTranslation()
   const chooseAiProvider = useAiModels(state => state.chooseAiProvider)
-  const selectFamilyModel = useModels(state => state.select)
+  const selectRoleModel = useModels(state => state.select)
 
   const label = roleLabel(row.role, t)
   // Captured so the narrowing survives into the callback below, which a property access does not.
@@ -134,8 +133,7 @@ export const AiRoleRow = memo(function AiRoleRow({
                           { kind: 'local', modelId: candidate.model.id },
                           scope,
                         )
-                        const parts = partsOfRole(row.role)
-                        if (parts) selectFamilyModel(parts.family, candidate.model.id)
+                        selectRoleModel(row.role, candidate.model.id)
                       }}
                     />
                   ))}

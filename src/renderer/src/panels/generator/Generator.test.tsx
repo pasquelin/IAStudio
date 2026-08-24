@@ -1,22 +1,30 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { LOCAL_RUNTIME } from '@shared/domain/model'
 import { aiRoleId } from '@shared/domain/aiRole'
 import { localModel } from '@shared/domain/localModel-fixtures'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import { useAiModels } from '@/stores/aiModels'
-import { beforeEach, describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FieldDescriptor, ModelDescriptor } from '@shared/domain/model'
+import type { Job } from '@shared/domain/job'
 import type { StudioBridge } from '@shared/ipc'
 import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { useLayouts } from '@/stores/layouts'
+import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
+import { job } from '@/stores/job-fixtures'
+import { useJobs } from '@/stores/jobs'
+import type { Asset } from '@shared/domain/asset'
+import { useAssets } from '@/stores/assets'
 import { useProject } from '@/stores/project'
+import { useSelection } from '@/stores/selection'
 import { connectPreparation } from '@/stores/preparation'
 import { useSettings } from '@/stores/settings'
-import { preferModels } from '@/stores/settings-fixtures'
+import { chooseModels } from '@/stores/models-fixtures'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { useTools } from '@/stores/tools'
 import { prepareEdit } from '@/spaces/image/aiActions'
@@ -61,6 +69,21 @@ function renderPanel() {
   return render(withQueries(<Generator />))
 }
 
+/** A picture on the shelf, picked — the one source this panel can attach on its own. */
+function selectPicture(): void {
+  const picked: Asset = {
+    id: 'asset-picked',
+    name: 'concept.png',
+    type: 'image',
+    location: 'local',
+    createdAt: '2026-08-23T00:00:00.000Z',
+    tags: [],
+  }
+
+  useAssets.setState({ items: [picked] })
+  useSelection.getState().selectAssets([picked.id])
+}
+
 const PROJECT = {
   path: '/projects/demo',
   manifest: { version: 1, name: 'demo', createdAt: '', updatedAt: '' },
@@ -76,10 +99,20 @@ describe('Generator', () => {
     // A job collects into its own project and nowhere else, so the panel asks for one before it
     // draws a form. Every case below is about the form, and each of them needs one.
     useProject.setState({ project: PROJECT, known: true })
-    useModels.setState({ selected: {}, preset: {}, prepared: null })
     useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
     useLayouts.setState({ activeWorkspace: 'image' })
-    preferModels({ image: 'model_flux', upscale: 'model_big' })
+    useGeneration.setState({ forcedCapability: null })
+    useAssets.setState({ items: [] })
+    useSelection.getState().clear()
+    // Both image employments, because a canvas is open above: the panel reads that as working
+    // FROM the picture, and only the employment it settles on decides which model runs.
+    chooseModels({
+      [aiRoleId('image', 'txt2img')]: 'model_flux',
+      [aiRoleId('image', 'img2img')]: 'model_flux',
+      [aiRoleId('video', 'txt2video')]: 'model_flux',
+      [aiRoleId('video', 'img2video')]: 'model_flux',
+      [aiRoleId('upscale', 'upscale')]: 'model_big',
+    })
 
     bridge = installFakeBridge({
       provider: {
@@ -93,10 +126,48 @@ describe('Generator', () => {
     })
   })
 
-  it('opens on the workspace model when nothing was prepared', async () => {
+  it('opens on the model the detected operation is served by', async () => {
     renderPanel()
 
     expect(await screen.findByText('Flux')).toBeInTheDocument()
+  })
+
+  /**
+   * The operation follows what is at hand, and nobody has to know the word for it is `img2img`.
+   * The picture is SELECTED: what the panel can send is what the catalogue holds a row for.
+   */
+  it('reads a selected picture as the operation to run, and says which', async () => {
+    selectPicture()
+    renderPanel()
+
+    await screen.findByText('Flux')
+    expect(screen.getByLabelText('Opération')).toHaveValue('image/img2img')
+  })
+
+  /**
+   * 🛑 The sources are drawn AND sent: they decide which operation runs, so drawing one the
+   * request never carries would switch the model under the person and leave the picture behind.
+   */
+  it('opens the form on the picture it says it is working from', async () => {
+    selectPicture()
+    chooseModels({ [aiRoleId('image', 'img2img')]: 'model_flux' })
+    renderPanel()
+
+    expect(await screen.findByLabelText(/Image/)).toHaveValue('asset-picked')
+  })
+
+  /**
+   * § 20: a model that serves no employment used to draw nothing at all — the rail dropped the
+   * generator's icon and the panel returned null. The operation stays on screen, so another can
+   * be picked without leaving.
+   */
+  it('says an operation has no model rather than drawing an empty panel', async () => {
+    selectPicture()
+    chooseModels({ [aiRoleId('image', 'txt2img')]: 'model_flux' })
+    renderPanel()
+
+    expect(await screen.findByText('Aucun modèle disponible pour cette opération.')).toBeVisible()
+    expect(screen.getByLabelText('Opération')).toBeInTheDocument()
   })
 
   /**
@@ -120,18 +191,20 @@ describe('Generator', () => {
     await prepareEdit(DOCUMENT, 'enlarge', host, bridge.provider)
 
     useLayouts.setState({ activeWorkspace: 'video' })
-    preferModels({ video: 'model_flux' })
     renderPanel()
 
     expect(await screen.findByText('Flux')).toBeInTheDocument()
     stop()
   })
 
-  // Choosing a model by hand is taking the generator back from whatever prepared it.
-  it('drops the preparation once a model is picked in the panel', async () => {
+  /**
+   * Picking the operation by hand is taking the generator back from whatever prepared it — the
+   * gesture the Models panel used to carry, now one control away from the form it changes.
+   */
+  it('drops the preparation once another operation is picked', async () => {
     await prepareEdit(DOCUMENT, 'enlarge', host, bridge.provider)
 
-    useModels.getState().select('image', 'model_flux')
+    useGeneration.getState().forceCapability(aiRoleId('image', 'txt2img'))
     renderPanel()
 
     expect(await screen.findByText('Flux')).toBeInTheDocument()
@@ -240,7 +313,13 @@ describe('the generator without a project', () => {
     useSettings.setState({ auth: { authenticated: true } })
     useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
     useLayouts.setState({ activeWorkspace: 'image' })
-    preferModels({ image: 'model_flux', upscale: 'model_big' })
+    chooseModels({
+      [aiRoleId('image', 'txt2img')]: 'model_flux',
+      [aiRoleId('image', 'img2img')]: 'model_flux',
+      [aiRoleId('video', 'txt2video')]: 'model_flux',
+      [aiRoleId('video', 'img2video')]: 'model_flux',
+      [aiRoleId('upscale', 'upscale')]: 'model_big',
+    })
     installFakeBridge({})
   })
 
@@ -288,10 +367,15 @@ describe('the generator on this machine', () => {
     installCanvas(DOCUMENT)
     useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
     useProject.setState({ project: PROJECT, known: true })
-    useModels.setState({ selected: { image: 'ssd-1b' }, preset: {}, prepared: null })
+    useModels.setState({
+      selected: { [aiRoleId('image', 'txt2img')]: 'ssd-1b' },
+      preset: {},
+    })
     useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
     useLayouts.setState({ activeWorkspace: 'image' })
-    preferModels()
+    // Forced, because a canvas is open above and the panel would otherwise read that as working
+    // FROM its picture. What this case is about is an account, not the detection.
+    useGeneration.setState({ forcedCapability: aiRoleId('image', 'txt2img') })
     const overview: AiOverview = {
       roles: [
         {
@@ -344,5 +428,101 @@ describe('the generator on this machine', () => {
 
     expect(await screen.findByText('SSD-1B')).toBeInTheDocument()
     expect(screen.queryByText(/identifiants/i)).toBeNull()
+  })
+})
+
+describe('a generation in flight', () => {
+  beforeEach(() => {
+    installCanvas(DOCUMENT)
+    useSettings.setState({ auth: { authenticated: true } })
+    useAiModels.setState({ overview: null })
+    useProject.setState({ project: PROJECT, known: true })
+    useLayouts.setState({ activeWorkspace: 'image' })
+    useGeneration.setState({ forcedCapability: aiRoleId('image', 'txt2img') })
+    chooseModels({ [aiRoleId('image', 'txt2img')]: 'model_flux' })
+    useJobs.setState({ jobs: [], bodies: {} })
+
+    installFakeBridge({
+      provider: {
+        describeModel: (modelId: string) =>
+          DESCRIPTORS[modelId]
+            ? Promise.resolve(DESCRIPTORS[modelId])
+            : Promise.reject(new Error('no model')),
+        generate: () => Promise.resolve(job({ id: 'job_1', status: 'running', progress: 0.4 })),
+      },
+    })
+  })
+
+  /** The one required field of these descriptors, filled so the form will submit at all. */
+  const generate = async (): Promise<void> => {
+    await userEvent.type(await screen.findByLabelText(/Image/), 'asset-source')
+    await userEvent.click(screen.getByRole('button', { name: /Générer/ }))
+  }
+
+  /**
+   * § 30: someone who pressed Generate watches the panel they pressed it in. A run whose only
+   * trace is a bar at the foot of the window reads as a click that did nothing.
+   */
+  it('shows how far it has got, in the panel it was launched from', async () => {
+    renderPanel()
+    await generate()
+
+    expect(await screen.findByText('En cours')).toBeVisible()
+  })
+
+  // 🛑 `submit` is a round trip, and a second press before it answers pays for two generations.
+  it('disarms the button while one is running', async () => {
+    renderPanel()
+    await generate()
+
+    expect(await screen.findByRole('button', { name: /Générer/ })).toBeDisabled()
+  })
+
+  /**
+   * 🛑 The window the guard is FOR: while `submit` is in flight the job has no id yet, so
+   * following the job list cannot answer for it. Reading `running` alone left the button live
+   * for the whole round trip.
+   */
+  it('disarms it during the round trip, before any job id exists', async () => {
+    let answer: (settled: Job) => void = () => {}
+    installFakeBridge({
+      provider: {
+        describeModel: (modelId: string) =>
+          DESCRIPTORS[modelId]
+            ? Promise.resolve(DESCRIPTORS[modelId])
+            : Promise.reject(new Error('no model')),
+        generate: () => new Promise<Job>(resolve => (answer = resolve)),
+      },
+    })
+
+    renderPanel()
+    await generate()
+
+    expect(screen.getByRole('button', { name: /Générer/ })).toBeDisabled()
+    await act(async () => answer(job({ id: 'job_1', status: 'running' })))
+  })
+
+  it('offers to stop it, and asks the main process to', async () => {
+    const cancel = vi.fn(() => Promise.resolve())
+    useJobs.setState({ cancel })
+
+    renderPanel()
+    await generate()
+    await userEvent.click(await screen.findByRole('button', { name: 'Annuler la tâche' }))
+
+    expect(cancel).toHaveBeenCalledWith('job_1')
+  })
+
+  // A finished job has nothing to stop, and a button that cancels one answers nothing.
+  it('takes the way to stop it away once it has finished', async () => {
+    renderPanel()
+    await generate()
+    await screen.findByText('En cours')
+
+    act(() => {
+      useJobs.setState({ jobs: [job({ id: 'job_1', status: 'succeeded', progress: 1 })] })
+    })
+
+    expect(screen.queryByRole('button', { name: 'Annuler la tâche' })).toBeNull()
   })
 })
