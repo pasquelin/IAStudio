@@ -645,8 +645,6 @@ export function createModelRegistry({
         try {
           page = await fetchPage(cursor, query)
         } catch (failure) {
-          // Rethrown when nothing local answered, per the note above, so a cloud-only panel
-          // still says why it is empty.
           if (items.length === 0) throw failure
           page = null
         }
