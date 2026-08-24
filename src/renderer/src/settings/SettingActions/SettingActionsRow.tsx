@@ -35,7 +35,9 @@ export function SettingActionsRow({ action }: { action: SettingAction }) {
         // narrow window pushes it out of sight before the button goes with it.
         {...HINT_LEFT(t(action.helpKey))}
         onClick={run}
-        className={action.confirmKey ? 'btn btn-sm btn-error btn-outline' : 'btn btn-sm'}
+        className={
+          action.confirmKey ? 'btn btn-sm btn-error btn-outline' : 'btn btn-sm btn-primary'
+        }
       >
         {t(action.buttonKey)}
       </button>

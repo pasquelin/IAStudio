@@ -55,7 +55,7 @@ export function AiEngineOffer({ offer, busy }: AiEngineOfferProps) {
       </span>
       <button
         type="button"
-        className="btn btn-sm"
+        className="btn btn-sm btn-primary"
         disabled={busy}
         {...HINT_LEFT(t('aiModels.installEngineHint'))}
         onClick={() => void installEngine()}

@@ -56,7 +56,7 @@ export function AiOllamaOffer({ offer, busy }: AiOllamaOfferProps) {
         </span>
         <button
           type="button"
-          className="btn btn-sm"
+          className="btn btn-sm btn-primary"
           disabled={busy}
           {...HINT_LEFT(t('aiModels.installOllamaHint'))}
           onClick={() => void installOllama()}

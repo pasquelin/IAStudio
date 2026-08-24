@@ -98,7 +98,7 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
         {!account.active && (
           <button
             type="button"
-            className="btn btn-sm"
+            className="btn btn-sm btn-primary"
             {...HINT_LEFT(t('accounts.useHint'))}
             onClick={() => void activate(account.id)}
           >

@@ -188,7 +188,7 @@ export function AiSettings({ family }: AiSettingsProps) {
             <button
               type="button"
               data-sc="field:ai.ownModel"
-              className="btn btn-sm"
+              className="btn btn-sm btn-primary"
               onClick={() => void addOwnAiModel()}
             >
               {t('aiModels.addOwnModel')}
