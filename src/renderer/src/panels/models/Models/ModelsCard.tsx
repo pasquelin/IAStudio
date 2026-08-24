@@ -1,6 +1,4 @@
-import type { TFunction } from 'i18next'
 import { memo, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
 import type { ModelSummary } from '@shared/domain/model'
 import type { ModelRefusalWord } from '@/hooks/useModelReach'
 import { HINT_LEFT } from '@/helpers/tooltip'
@@ -26,7 +24,7 @@ const BADGE = cn(
 function badgeFor(
   model: ModelSummary,
   refusal: ModelRefusalWord | undefined,
-  t: TFunction,
+  featured: string,
 ): ReactNode {
   // Left, not right: the badge already sits against the tile's right edge, and this panel is
   // docked to a side — a tooltip opening outward would leave the window. HINT and not TIP:
@@ -42,8 +40,8 @@ function badgeFor(
   if (!model.featured) return null
 
   return (
-    <span title={t('models.featured')} className={BADGE}>
-      {t('models.featured')}
+    <span title={featured} className={BADGE}>
+      {featured}
     </span>
   )
 }
@@ -51,13 +49,14 @@ function badgeFor(
 export const ModelsCard = memo(function ModelsCard({
   model,
   picture,
+  featured,
   refusal,
 }: {
   model: ModelSummary
   picture?: string
+  /** The word "featured", resolved by the panel — see `modelSubtitle`. */
+  featured: string
   refusal?: ModelRefusalWord
 }) {
-  const { t } = useTranslation()
-
-  return <MediaTile url={picture} caption={model.name} badge={badgeFor(model, refusal, t)} />
+  return <MediaTile url={picture} caption={model.name} badge={badgeFor(model, refusal, featured)} />
 })

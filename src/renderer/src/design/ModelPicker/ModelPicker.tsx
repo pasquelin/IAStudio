@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_RUNTIME, type ModelSummary } from '@shared/domain/model'
+import { runtimeLabel } from '@/helpers/runtimeLabel'
 import type { ModelRefusalWord } from '@/hooks/useModelReach'
 import { useDismiss } from '@/hooks/useDismiss'
 import { useMenuKeys } from '@/hooks/useMenuKeys'
@@ -81,6 +82,28 @@ export function ModelPicker({
     )
   }, [models, scope, search])
 
+  /**
+   * Where each runtime is called, resolved once for the whole list: a row that translated its
+   * own ran i18next per row and per render — a hundred of them, on every keystroke of the
+   * search below. Keyed by runtime rather than by model, there being a handful of the first.
+   */
+  const runtimeLabels = useMemo(() => {
+    const labels = new Map<string, string>()
+    for (const model of models) {
+      if (!labels.has(model.runsOn)) labels.set(model.runsOn, runtimeLabel(model.runsOn, t))
+    }
+    return labels
+  }, [models, t])
+
+  // Stable, so a memoised row is not handed a new callback on every render of this panel.
+  const pick = useCallback(
+    (modelId: string) => {
+      onChange(modelId)
+      setOpen(false)
+    },
+    [onChange],
+  )
+
   const chosen = models.find(model => model.id === value)
 
   // 🛑 Asked for BEFORE the flyout opens, never when. Measured on screen: the round trip is
@@ -154,12 +177,10 @@ export function ModelPicker({
                   <ModelPickerRow
                     model={model}
                     selected={model.id === value}
+                    where={runtimeLabels.get(model.runsOn) ?? model.runsOn}
                     picture={pictureOf?.(model)}
                     refusal={refusalOf?.(model)}
-                    onPick={() => {
-                      onChange(model.id)
-                      setOpen(false)
-                    }}
+                    onPick={pick}
                   />
                 </li>
               ))}
