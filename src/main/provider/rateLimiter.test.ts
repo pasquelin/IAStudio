@@ -8,7 +8,7 @@ import {
   RATE_MARGIN,
   RATE_WINDOW_MS,
   REQUESTS_PER_WINDOW,
-  type Admission,
+  type RateAdmission,
   type RateLimiter,
   type RateLimiterOptions,
 } from './rateLimiter'
@@ -394,7 +394,7 @@ describe('the transport a client is built on', () => {
   // Nothing that could end up in a dump has to hold the key to say which account it belongs to.
   it('names the window without putting the key in it', () => {
     const named: string[] = []
-    const admit = (): Promise<Admission> => Promise.resolve({ admitted: true })
+    const admit = (): Promise<RateAdmission> => Promise.resolve({ admitted: true })
     const limiters = {
       of: (account: string) => {
         named.push(account)

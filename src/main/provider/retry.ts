@@ -1,8 +1,8 @@
-import { failureOf } from './client'
+import { apiFailureOf } from './client'
 
 /** Only what a retry can fix. A 401 or a malformed body will fail identically forever. */
 export function isRetryable(error: unknown): boolean {
-  const failure = failureOf(error)
+  const failure = apiFailureOf(error)
   return failure === 'rate-limited' || failure === 'server' || failure === 'network'
 }
 

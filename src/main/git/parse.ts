@@ -192,7 +192,7 @@ export function parseNameStatus(output: string): GitCommitFile[] {
  * Anything unrecognised is `unknown` rather than a guess. The panel shows git's own line for that
  * case, which is more use than a sentence we made up about a failure we did not identify.
  */
-export function failureOf(error: unknown): GitFailure {
+export function gitFailureOf(error: unknown): GitFailure {
   const message = messageOf(error)
 
   if (/not a git repository|does not appear to be a git repository/i.test(message)) {

@@ -8,7 +8,7 @@ import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
 import {
   describeFailure,
-  failureOf,
+  apiFailureOf,
   NotAuthenticatedError,
   persistableFailure,
   quietlyReducedBy,
@@ -434,7 +434,7 @@ export function registerAssetHandlers({
           // produced it, so it carries the API key, and a journal is a file one may well send on.
           detail: persistableFailure(error),
         })
-        outcomes.push({ assetId: cloudAsset.id, ok: false, error: failureOf(error) })
+        outcomes.push({ assetId: cloudAsset.id, ok: false, error: apiFailureOf(error) })
       }
     }
 
@@ -468,7 +468,7 @@ export function registerAssetHandlers({
         outcomes.push({ assetId, ok: true })
       } catch (error) {
         log.error('assets', describeFailure(error))
-        const failure = failureOf(error)
+        const failure = apiFailureOf(error)
         outcomes.push({ assetId, ok: false, error: failure })
 
         const asset = await catalog().find(assetId)
