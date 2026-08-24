@@ -820,4 +820,34 @@ describe('what a compose costs', () => {
 
     expect(asked).toEqual([[STT_MODEL.id]])
   })
+
+  /**
+   * 🛑 ONE reading for the whole question, never one per role. `reconcile` walks every door of a
+   * loader it sees, so a video-only reading reported `diffusers` with nothing loaded and dropped
+   * the occupancy of an image model held on another of its five doors — on every assistant turn.
+   * The six sweeps also raced on `onDisk`, which `installedIds` publishes to the model browser.
+   */
+  it('reads the runtimes once for the whole question, not once per role', async () => {
+    let sweeps = 0
+    const counting = (): LocalRuntime => ({
+      ...idleRuntime(),
+      read: () => {
+        sweeps += 1
+        return Promise.resolve({ ready: true, installed: new Set<string>(), loaded: new Set() })
+      },
+    })
+
+    const ai = manager({ runtimes: { diffusers: counting(), llamacpp: counting() } })
+    await ai.unservedRoles([aiRoleId('3d', 'txt23d'), aiRoleId('image', 'txt2img')])
+
+    expect(sweeps).toBe(1)
+  })
+
+  // A choice, never a fill-in: nothing ticked means nothing serves it, whatever is on the disk.
+  it('names every role nothing was chosen for', async () => {
+    const ai = manager()
+    const roles = [aiRoleId('image', 'txt2img'), aiRoleId('video', 'txt2video')]
+
+    expect(await ai.unservedRoles(roles)).toEqual(roles)
+  })
 })

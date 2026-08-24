@@ -38,7 +38,7 @@ export type BrainDeps = {
 function bodyFor(
   request: AssistantThought,
   model: AssistantModel,
-  notReady: readonly WorkspaceId[] | undefined,
+  idle: readonly WorkspaceId[] | undefined,
   complaint?: string,
 ): {
   instruction: string
@@ -51,7 +51,7 @@ function bodyFor(
   const inputs = turnsWith(request.history, complaint)
 
   return {
-    instruction: instructionFor(request.utterance, notReady ?? []),
+    instruction: instructionFor(request.utterance, idle ?? []),
     model,
     numOutputs: 1,
     ...(inputs.length > 0 ? { textInputs: inputs } : {}),
@@ -71,10 +71,10 @@ export function createProviderBrain({ run, readText, model, notReady }: BrainDep
   const ask = async (
     request: AssistantThought,
     chosen: AssistantModel,
-    notReady: readonly WorkspaceId[] | undefined,
+    idle: readonly WorkspaceId[] | undefined,
     complaint?: string,
   ): Promise<BrainAttempt> => {
-    const job = await run(bodyFor(request, chosen, notReady, complaint))
+    const job = await run(bodyFor(request, chosen, idle, complaint))
     const cost = job.cost ?? 0
 
     if (job.status !== 'succeeded') {

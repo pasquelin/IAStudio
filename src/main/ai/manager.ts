@@ -799,19 +799,22 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
     unservedRoles: async roles => {
       const stored = deps.settings()
-      // The catalogue walk and the hardware reading are shared across the roles; only what each
-      // one could take is weighed per role, exactly as `providerOf` weighs it for one.
+      const own = stored.ai.ownModels
       const [discovered, machine] = await Promise.all([discover(), facts()])
-      const answered = await Promise.all(
-        roles.map(async role => {
-          const models = modelsForWith(role, stored.ai.ownModels, discovered)
-          const input = inputFrom(machine, await readingsOf(models), stored, () => models)
+      const forRole = (role: AiRoleId): readonly LocalModel[] =>
+        modelsForWith(role, own, discovered)
 
-          return rowFor(role, input, effectiveChoices(input)).provider === null ? role : null
-        }),
-      )
+      /**
+       * 🛑 ONE reading, over the UNION of what the roles could take — never one per role.
+       * `reconcile` walks every door of a loader it sees, so weighing video on its own reported
+       * `diffusers` with nothing loaded and dropped the occupancy of an image model resident on
+       * another of its five doors. Six concurrent sweeps also raced on `onDisk`.
+       */
+      const union = new Map(roles.flatMap(forRole).map(model => [model.id, model]))
+      const input = inputFrom(machine, await readingsOf([...union.values()]), stored, forRole)
+      const choices = effectiveChoices(input)
 
-      return answered.filter(role => role !== null)
+      return roles.filter(role => rowFor(role, input, choices).provider === null)
     },
 
     choose: (role, provider, scope) => chooseMany([{ role, provider }], scope),
