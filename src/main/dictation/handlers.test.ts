@@ -16,6 +16,7 @@ function register(overrides: Partial<DictationSession> = {}) {
     downloadModel: vi.fn(() => Promise.resolve()),
     cancelDownload: vi.fn(),
     dispose: vi.fn(),
+    probeModel: vi.fn(() => Promise.resolve()),
     ...overrides,
   }
   const openPrivacySettings = vi.fn()

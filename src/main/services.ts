@@ -1338,6 +1338,10 @@ export function createServices(settings: SettingsStore): Services {
     }),
   }
 
+  // Declared before the manager because its `emit` reaches back into it, and `?.` would not save
+  // a `const` from its temporal dead zone — an overview emitted during construction would throw.
+  let dictation: DictationSession | null = null
+
   const ai = createAiManager({
     facts: () => hardwareProbe(electronHardwarePort(modelFolder, llama.vram)),
     snapshotOf: (facts, runtimeBytes) =>
@@ -1347,7 +1351,13 @@ export function createServices(settings: SettingsStore): Services {
     currentProjectPath: () => project.current()?.path ?? null,
     readyClouds: () => readyCloudsOf(activeProvidersOf(settings.accounts())),
     runtimes,
-    emit: overview => broadcast(EVENTS.ai, overview),
+    emit: overview => {
+      broadcast(EVENTS.ai, overview)
+      // 🛑 The speech model is in this catalogue, so it is installed and deleted from a screen
+      // the session never hears about — without this, a model fetched there left the microphone
+      // hidden and the status line offering to download files already on the disk.
+      void dictation?.probeModel()
+    },
     log: (level, message) => log[level]('ai', message),
     now: Date.now,
     ollamaInstalled: ollamaIsInstalled,
@@ -1417,7 +1427,7 @@ export function createServices(settings: SettingsStore): Services {
     )
   }
 
-  const dictation = createSession({
+  dictation = createSession({
     modelFolder,
     vadPath: () => bundledVad(resourcesRoot()),
     settings: () => settings.read().dictation,

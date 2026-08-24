@@ -51,6 +51,12 @@ function harness(overrides: Partial<SessionHost> = {}) {
     opened,
     timers,
     states: () => events.filter(event => event.type === 'state').map(event => event.state),
+    /** Lets the startup probe finish: it crosses `modelIsReady` and a `catch` before it publishes. */
+    settled: async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    },
     crash: (error: Error) => captured?.onFailure(error),
     speak: (text: string) => captured?.onFinal(text, 300),
     failLoad: (reason: string) => {
@@ -101,8 +107,53 @@ describe('starting a session', () => {
     })
   })
 
+  // Before any press: a window cannot tell a missing model from a microphone that answers
+  // nothing, so the button it would draw does nothing when pressed.
+  it('says the model is missing without waiting to be started', async () => {
+    const { states, settled } = harness({ modelIsReady: () => Promise.resolve(false) })
+
+    await settled()
+
+    expect(states()).toEqual(['modelMissing'])
+  })
+
+  /**
+   * 🛑 The catalogue screen writes the very files this session needs and never tells it. Without
+   * a way back, a model fetched there left the microphone hidden and the status line offering to
+   * download 640 MB already on the disk — until the studio was restarted.
+   */
+  it('takes back the missing model once something else has installed it', async () => {
+    let onDisk = false
+    const { session, states, settled } = harness({ modelIsReady: () => Promise.resolve(onDisk) })
+    await settled()
+
+    onDisk = true
+    await session.probeModel()
+
+    expect(states()).toEqual(['modelMissing', 'idle'])
+  })
+
+  it('leaves a live session alone when the manager stirs', async () => {
+    const { session, states } = harness()
+    await session.start()
+
+    await session.probeModel()
+
+    expect(states()).toEqual(['loadingEngine', 'listening'])
+  })
+
+  /**
+   * 🛑 The model goes missing AFTER the startup probe answered, or this proves nothing: the probe
+   * would have published `modelMissing` already and `publish` deduplicates, so the case would go
+   * green on the state it was handed rather than on the one the press produced.
+   */
   it('asks for the model rather than failing when it is not there', async () => {
-    const { session, states, opened } = harness({ modelIsReady: () => Promise.resolve(false) })
+    let onDisk = true
+    const { session, states, opened, settled } = harness({
+      modelIsReady: () => Promise.resolve(onDisk),
+    })
+    await settled()
+    onDisk = false
 
     await session.start()
 
@@ -413,18 +464,22 @@ describe('fetching the model', () => {
    * may have come from the manager screen rather than from this session's own signal.
    */
   it('goes back to asking when the download is cancelled', async () => {
-    const { session, states } = harness({
+    const { session, states, settled } = harness({
+      modelIsReady: () => Promise.resolve(false),
       download: (_report, signal) =>
         new Promise((_resolve, reject) => {
           signal.addEventListener('abort', () => reject(new DownloadCancelled('cancelled')))
         }),
     })
+    // The startup probe first, and a disk that agrees with the case: a session downloading a
+    // model the harness calls present is a decor that contradicts itself.
+    await settled()
 
     const running = session.downloadModel()
     session.cancelDownload()
     await running
 
-    expect(states()).toEqual(['downloadingModel', 'modelMissing'])
+    expect(states()).toEqual(['modelMissing', 'downloadingModel', 'modelMissing'])
   })
 
   // Told apart because they lead somewhere different: a network that failed is worth retrying,

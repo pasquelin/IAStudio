@@ -64,6 +64,11 @@ export type DictationSession = {
   cancelDownload: () => void
   /** Drops the engine and everything it holds. Called when the application is going away. */
   dispose: () => void
+  /**
+   * Reads the disk again. Called when the model manager has installed or deleted something: it
+   * writes the very files this session needs and knows nothing about it.
+   */
+  probeModel: () => Promise<void>
 }
 
 /**
@@ -98,6 +103,25 @@ export function createSession(host: SessionHost): DictationSession {
     state = next
     host.emit({ type: 'state', state })
   }
+
+  /**
+   * Whether the weights are on disk, told without a press — from a window a missing model and a
+   * microphone that answers nothing look alike. Reversible in BOTH directions: the manager screen
+   * installs and deletes the same files and never touches this session.
+   */
+  const probeModel = async (): Promise<void> => {
+    if (state !== 'idle' && state !== 'modelMissing') return
+
+    const ready = await host.modelIsReady().catch(() => null)
+    // 🛑 Only ever between its OWN two verdicts. Read as "publish what the disk says", it landed
+    // late on a refused microphone and answered `idle` over `permissionRequired`.
+    if (ready === false && state === 'idle') publish('modelMissing')
+    else if (ready === true && state === 'modelMissing') publish('idle')
+  }
+
+  // Swallowed: an unreadable folder is what a press will report, and a rejection in a factory
+  // reaches no caller.
+  void probeModel().catch(() => {})
 
   const refuse = (code: SttErrorCode, error: unknown): void => {
     failure = failureOf(code, error)
@@ -285,6 +309,8 @@ export function createSession(host: SessionHost): DictationSession {
     },
 
     cancelDownload: () => downloading?.abort(),
+
+    probeModel,
 
     dispose: () => {
       cancelIdle?.()
