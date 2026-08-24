@@ -228,6 +228,8 @@ describe('the advice', () => {
     )
 
     expect(said.map(one => one.kind)).toEqual(['choose', 'install'])
+    // The roles themselves, not their count: a reader cannot act on « 2 operations ».
+    expect(said[0]).toMatchObject({ roles: [aiRoleId('image', 'txt2img')] })
   })
 
   it('offers a key only where no account is held at all', () => {

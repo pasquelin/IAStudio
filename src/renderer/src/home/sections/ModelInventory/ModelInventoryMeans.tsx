@@ -5,7 +5,7 @@ import { Button } from '@/design/Button'
 import { HOME_BLOCK, HOME_BLOCK_HEADING, ROW_SUBJECT } from '@/design/styles'
 import { AI_SECTION } from '@/helpers/aiSectionLazy'
 import { cn } from '@/helpers/cn'
-import { machineSummary } from '@/helpers/machineSummary'
+import { machineReadings } from '@/helpers/machineSummary'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useBytes } from '@/hooks/useBytes'
 import { cloudIdsOf, localStandingOf, type Translate } from './inventory'
@@ -14,7 +14,8 @@ import { cloudIdsOf, localStandingOf, type Translate } from './inventory'
 type Means = {
   key: string
   label: string
-  value: string
+  /** One line each. The machine states four; a source states one. */
+  readings: readonly string[]
   /** Absent on the machine, which reports and is acted on from nowhere. */
   action: { label: string; hint: string; section: SettingsSectionId } | null
 }
@@ -45,7 +46,7 @@ export function ModelInventoryMeans({
     {
       key: 'local',
       label: t('aiModels.sourceStudio'),
-      value: localValue(standing, t, bytes),
+      readings: [localValue(standing, t, bytes)],
       action: {
         label: t('home.models.manage'),
         hint: t('home.models.localHint'),
@@ -55,7 +56,7 @@ export function ModelInventoryMeans({
     {
       key: 'ollama',
       label: t('aiModels.sourceOllama'),
-      value: ollamaValue(ollama, t),
+      readings: [ollamaValue(ollama, t)],
       action: {
         label: ollama.installed ? t('home.models.choose') : t('home.models.installOllama'),
         hint: t('home.models.ollamaHint'),
@@ -65,10 +66,11 @@ export function ModelInventoryMeans({
     {
       key: 'clouds',
       label: t('aiModels.sourceCloud'),
-      value:
+      readings: [
         clouds.length === 0
           ? t('home.models.cloudNone')
           : clouds.map(id => t(`aiClouds.${id}`)).join(' · '),
+      ],
       action: {
         label: clouds.length === 0 ? t('home.models.addKey') : t('home.models.manageKeys'),
         hint: t('home.models.cloudHint'),
@@ -79,7 +81,9 @@ export function ModelInventoryMeans({
     {
       key: 'machine',
       label: t('home.models.machine'),
-      value: machineSummary(overview.machine, t, bytes),
+      // Four short lines rather than one long one: run together they wrapped, and a wrapped
+      // sentence of four figures is where a reader stops looking for the one they came for.
+      readings: machineReadings(overview.machine, t, bytes),
       action: null,
     },
   ]
@@ -89,7 +93,7 @@ export function ModelInventoryMeans({
       <h3 className={HOME_BLOCK_HEADING}>{t('home.models.means')}</h3>
 
       <dl className="m-0 flex flex-col gap-3">
-        {sources.map(({ key, label, value, action }) => (
+        {sources.map(({ key, label, readings, action }) => (
           <div key={key} className="flex flex-col gap-0.5">
             <div className="flex items-center gap-3">
               <dt className={cn(ROW_SUBJECT, 'font-medium')}>{label}</dt>
@@ -99,7 +103,11 @@ export function ModelInventoryMeans({
                 </Button>
               )}
             </div>
-            <dd className="text-muted text-tiny m-0 leading-snug">{value}</dd>
+            {readings.map(reading => (
+              <dd key={reading} className="text-muted text-tiny m-0 leading-snug">
+                {reading}
+              </dd>
+            ))}
           </div>
         ))}
       </dl>

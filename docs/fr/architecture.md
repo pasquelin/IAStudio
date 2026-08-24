@@ -288,7 +288,7 @@ qu’un plan de libération mémoire peut tuer pour rendre des octets.
 `engine/video` la vidéo, `engine/audio` le son, `engine/3d` le maillage, `engine/skybox` le
 panorama. C'est le principal qui
 nomme la porte sur chaque requête, parce qu'il est le seul à savoir quel modèle a été choisi pour
-quel emploi ; le moteur n'en choisit jamais une. Elles sont distinctes pour une raison de mémoire
+quelle opération ; le moteur n'en choisit jamais une. Elles sont distinctes pour une raison de mémoire
 et non de rangement : un modèle vidéo pèse des dizaines de gigaoctets, et libérer une porte veut
 dire **tuer son processus** — colocalisées, on ne pourrait pas libérer l'une sans emporter l'autre.
 Ce qui diffère entre deux portes est une modalité et un nom : la boucle est écrite une fois

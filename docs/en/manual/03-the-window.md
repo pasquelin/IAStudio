@@ -56,7 +56,7 @@ Everything else on the home is a panel, held in its two columns.
 It answers the question everybody has on the second launch: **what is installed, what is running,
 and what is missing.** It reads top down, from the verdict to the detail.
 
-**At the head, where you stand**: "5 employments served of 26", a bar, then one or two lines of
+**At the head, where you stand**: "5 operations of 23 have a model", a bar, then one or two lines of
 advice. The advice is ranked by what it COSTS rather than by what it unlocks — choosing among what
 is already on the disk costs nothing, installing costs gigabytes, a key costs money. So you are
 never offered a way to spend before being told you already hold the answer.
@@ -74,15 +74,22 @@ end of the screen.
 | **On this computer** | how many models are installed, what they weigh, how many are held in memory | **Manage** |
 | **Ollama** | whether it is there, whether it answers, and the models it listed | **Install** or **Choose** |
 | **Online** | the accounts a key has been entered for, one by one | **Add a key** or **Manage keys** |
-| **Machine** | memory, chip, video memory, disk — every figure names its subject | none: it reports, and nothing here acts on it |
+| **Machine** | memory, chip, video memory, disk — one short line per figure, each naming its subject | none: it reports, and nothing here acts on it |
+
+**Neither column is stretched to the other**: a card pulled to its neighbour's height reads as a
+card with something missing.
 
 **On the right, your workspaces** — one line per family, a gauge in dots, and the served fraction.
-A workspace with a single employment names what serves it outright. A rule closes the list before
+A workspace with a single operation names what serves it outright. A rule closes the list before
 the Assistant and Dictation: they belong to no workspace.
 
+**"Operation" is the generation panel's own word**, not one more: it is what that panel already
+calls an Operation — Text to image, Inpaint, Rigging. A family holds several, and one model can
+serve several at once.
+
 **Under them, what one download covers.** This is the reading the manager cannot give at a glance:
-the catalogue holds twenty-five models for nineteen employments, and what separates them is not
-the quality. An image model that also does textures answers six employments for four gigabytes
+the catalogue holds twenty-five models for nineteen operations, and what separates them is not
+the quality. An image model that also does textures answers six operations for four gigabytes
 where another answers one for a hundred and thirty-three. The families it spans are named, not
 counted. What the machine cannot hold stays on screen, marked **beyond this machine** — hiding it
 would make the catalogue look smaller than it is.

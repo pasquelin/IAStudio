@@ -78,15 +78,21 @@ describe('the models band', () => {
     expect(screen.getByText('Lecture de la machine…')).toBeInTheDocument()
   })
 
-  it('states what the machine offers, chip included', () => {
+  /**
+   * One line per figure, and each names its subject. Run together they wrapped, and a wrapped
+   * sentence of four figures is where a reader stops looking for the one they came for.
+   */
+  it('states what the machine offers, one short reading at a time', () => {
     show()
+
+    const machine = meansLine('Machine')
 
     // Plain spaces, where the value carries the binding one: `toHaveTextContent` normalises
     // what it READ and not what it was given. The chip is the one taken out of what Chromium
     // answers, rather than the driver build that came with it.
-    expect(meansLine('Machine')).toHaveTextContent(
-      'Mémoire vive : 34 Gio libres sur 96 Gio · Puce : Apple M2 Max · Disque : 500 Gio libres',
-    )
+    expect(machine).toHaveTextContent('Mémoire vive : 34 Gio libres sur 96 Gio')
+    expect(machine).toHaveTextContent('Puce : Apple M2 Max')
+    expect(machine).toHaveTextContent('Disque : 500 Gio libres')
   })
 
   it('counts what is installed, what it weighs and what is held in memory', () => {
@@ -217,7 +223,7 @@ describe('the models band', () => {
 
     const line = screen.getByText('SSD-1B').parentElement as HTMLElement
     expect(line).toHaveTextContent('Image · Texture')
-    expect(line).toHaveTextContent('6 emplois')
+    expect(line).toHaveTextContent('6 opérations')
   })
 
   it('advises choosing before installing, since what is on the disk costs nothing', () => {
@@ -239,9 +245,9 @@ describe('the models band', () => {
       }),
     )
 
-    expect(
-      screen.getByText('1 emploi a un modèle installé mais personne de choisi.'),
-    ).toBeInTheDocument()
+    // Named rather than counted, and no « personne » in it: a reader cannot act on a number,
+    // and the sentence has to say which operation it is talking about.
+    expect(screen.getByText(/Image · Texte vers image a son modèle installé/)).toBeInTheDocument()
   })
 
   /**
@@ -261,7 +267,7 @@ describe('the models band', () => {
       }),
     )
 
-    const verdict = screen.getByText('1 emploi servi sur 2')
+    const verdict = screen.getByText('1 opération sur 2 a un modèle')
     const means = screen.getByText('Ce dont vous disposez')
 
     expect(verdict.compareDocumentPosition(means)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
