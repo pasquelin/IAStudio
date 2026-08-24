@@ -54,6 +54,7 @@ beforeEach(() => {
     asked: null,
     spent: 0,
     draft: '',
+    staged: 0,
   })
 })
 
@@ -192,6 +193,34 @@ describe('the question asked before anything is engaged', () => {
   // A question nobody can see is not a question — and one may arrive from outside this window.
   it('brings the modal up on its own', async () => {
     const asked = useAssistant.getState().ask({ action: 'generator.submit', commitment: 'credits' })
+
+    expect(useAssistant.getState().open).toBe(true)
+    useAssistant.getState().answer(false)
+    await expect(asked).resolves.toBe(false)
+  })
+
+  /**
+   * The other half of the same rule: the idle centre stages the very same thread, so throwing the
+   * modal over it moved the reader out of the page they were reading to answer a line already on
+   * their screen.
+   */
+  it('leaves the thread where it is when a surface already shows it', async () => {
+    const unstage = useAssistant.getState().stage()
+    const asked = useAssistant.getState().ask({ action: 'generator.submit', commitment: 'credits' })
+
+    expect(useAssistant.getState().open).toBe(false)
+    expect(useAssistant.getState().asked?.request.action).toBe('generator.submit')
+
+    useAssistant.getState().answer(true)
+    await expect(asked).resolves.toBe(true)
+    unstage()
+  })
+
+  /** Opening a document, going Home or losing the model list all take that surface down. */
+  it('brings the modal up when the surface showing the question goes away', async () => {
+    const unstage = useAssistant.getState().stage()
+    const asked = useAssistant.getState().ask({ action: 'generator.submit', commitment: 'credits' })
+    unstage()
 
     expect(useAssistant.getState().open).toBe(true)
     useAssistant.getState().answer(false)

@@ -102,7 +102,15 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
 
   stage: () => {
     set(state => ({ staged: state.staged + 1 }))
-    return () => set(state => ({ staged: state.staged - 1 }))
+
+    // The last surface going down with a question still waiting brings the modal up: `ask` decides
+    // once, and the idle centre is taken down by opening a document, going Home, or losing the
+    // model list. Left as it was, nothing could answer, and `busy` held for the session.
+    return () =>
+      set(state => ({
+        staged: state.staged - 1,
+        open: state.open || (state.staged === 1 && state.asked !== null),
+      }))
   },
 
   /**
@@ -142,15 +150,21 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
        * the first. Approving "this uploads an image, it is free" would have started a forty-unit
        * generation.
        *
-       * Refusing the newcomer is the safe end of that: nothing is spent, and the caller hears
-       * why. Opened, not queued, for the first one — a question nobody can see is not a question.
+       * Refusing the newcomer is the safe end of that: nothing is spent, and the caller hears why.
        */
       if (get().asked) {
         resolve(false)
         return
       }
 
-      set(state => ({ open: true, seen: lastSeen(state), asked: { request, answer: resolve } }))
+      // The modal opens only where the thread is on screen NOWHERE. Unconditional, a question
+      // raised from the idle centre threw the window over the very exchange one was reading, to
+      // answer a line that was already there.
+      set(state => ({
+        open: state.staged > 0 ? state.open : true,
+        seen: lastSeen(state),
+        asked: { request, answer: resolve },
+      }))
     }),
 
   answer: granted => {
