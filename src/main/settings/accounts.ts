@@ -112,9 +112,8 @@ function requireHeld(book: AccountBook, id: string): StoredAccount {
 export function addAccount(book: AccountBook, account: StoredAccount): AccountBook {
   const accounts = [...book.accounts, { ...account, name: requireName(account.name, book) }]
   const provider = providerOf(account)
-  // Active only where its cloud had none: a second key must not redirect every call the moment it
-  // is saved — the user was configuring, not switching. The FIRST key of a cloud is different:
-  // without it that cloud has nothing at all.
+  // Active only where its cloud had none: the FIRST key of a cloud is different from the second,
+  // since without it that cloud has nothing at all.
   const activeByProvider = book.activeByProvider[provider]
     ? book.activeByProvider
     : { ...book.activeByProvider, [provider]: account.id }

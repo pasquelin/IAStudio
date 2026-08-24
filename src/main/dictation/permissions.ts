@@ -43,13 +43,7 @@ export async function requestMicrophone(host: MicrophoneHost): Promise<Microphon
 const MACOS_MICROPHONE_SETTINGS =
   'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone'
 
-/**
- * Opens the screen where microphone access is granted back after a refusal.
- *
- * The address never leaves this module, and no caller names it: a renderer that could say what
- * gets opened would be a renderer that can open anything — which is what `openExternally`
- * guards against for every other URL.
- */
+/** Opens the screen where microphone access is granted back after a refusal. */
 export function openMicrophoneSettings(open: (url: string) => void): void {
   open(MACOS_MICROPHONE_SETTINGS)
 }

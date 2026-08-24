@@ -57,11 +57,9 @@ export function parseAssetName(value: unknown): string {
 export const base64Payload = z
   .string()
   .min(1)
-  // Only the head: the payload is megabytes long, and a data URL prefix — the one mistake this
-  // catches — is at the front. The size is checked before it, in the uploader.
   // The head alone: the payload is megabytes long, and the one mistake worth catching — a
   // `data:image/png;base64,` prefix — is at the front. An unanchored class would match `data`
-  // and let the rest through.
+  // and let the rest through. The size is checked before this, in the uploader.
   .refine(value => /^[A-Za-z0-9+/=]+$/.test(value.slice(0, 64)), 'expected raw base64')
 
 export function parseBase64(value: unknown): string {

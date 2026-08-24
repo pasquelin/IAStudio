@@ -313,8 +313,7 @@ export function createLocalBackend({
       // the fingerprint an earlier write recorded, which still describes the same bytes.
       ...(fingerprint ? { hash: fingerprint } : {}),
       ...(probe ? { probe } : {}),
-      // Absent rather than cleared: a still that failed to come down this time leaves the one
-      // an earlier pull already put on disk, which is still a true picture of the same asset.
+      // Absent rather than cleared, for the reason the fingerprint above carries.
       ...(posterPath ? { posterPath } : {}),
       ...(request.jobId ? { jobId: request.jobId } : {}),
       ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
