@@ -1,81 +1,37 @@
-"""Plugin family routing, without torch."""
+"""
+Plugin family routing, without torch.
 
-import json
+🛑 Nothing here reads the repository: `engine/` imports none of it at runtime, which is what makes
+its extraction a `git filter-repo` away. Whether `PLUGINS` matches the studio's catalogue is held
+from the studio side, in `localRuntimes.test.ts`.
+"""
+
 from pathlib import Path
 
 import pytest
 
-from ia_studio_engine.adapters.diffusers_adapter import LoadRefusedError
+from ia_studio_engine.adapters.loading import LoadRefusedError
 from ia_studio_engine.adapters.modalities import MODALITIES
-from ia_studio_engine.adapters.plugin_adapter import PluginAdapter
-from ia_studio_engine.adapters.plugin_ids import CUDA_ONLY, PLUGIN_IDS, is_plugin_model
+from ia_studio_engine.adapters.plugin_adapter import PLUGINS, Plugin, PluginAdapter, is_plugin_model
 from ia_studio_engine.adapters.routing_adapter import RoutingAdapter
 
-
-def test_every_plugin_id_is_named() -> None:
-    assert {
-        "triposr",
-        "trellis-text-large",
-        "trellis-image-large",
-        "trellis2-4b",
-        "triposg",
-        "instantmesh",
-        "lgm",
-        "craftsman3d",
-        "mmaudio-small-44k",
-        "mmaudio-medium-44k",
-        "mmaudio-large-44k",
-    } == PLUGIN_IDS
-    assert not is_plugin_model("sana-600m-1024")
+CUDA_ONLY = sorted(name for name, plugin in PLUGINS.items() if plugin.needs_cuda)
 
 
-def test_plugin_ids_match_the_wired_catalogue() -> None:
-    root = Path(__file__).resolve().parents[2]
-    catalogue = json.loads((root / "src/shared/domain/localModels.json").read_text())
-    listed = {
-        model["id"]
-        for models in catalogue.values()
-        for model in models
-        if model.get("loader") == "plugin"
-        and model.get("runtimeStatus", "supported") == "supported"
-    }
-    assert listed == set(PLUGIN_IDS)
-
-
-def test_unsupported_plugins_have_no_adapter() -> None:
-    root = Path(__file__).resolve().parents[2]
-    catalogue = json.loads((root / "src/shared/domain/localModels.json").read_text())
-    unwired = {
-        model["id"]
-        for models in catalogue.values()
-        for model in models
-        if model.get("loader") == "plugin" and model.get("runtimeStatus") == "unsupported"
-    }
-    assert unwired.isdisjoint(PLUGIN_IDS)
-
-
-def test_cuda_only_says_what_the_catalogue_says() -> None:
-    root = Path(__file__).resolve().parents[2]
-    catalogue = json.loads((root / "src/shared/domain/localModels.json").read_text())
-    demanded = {
-        model["id"]
-        for models in catalogue.values()
-        for model in models
-        if model.get("loader") == "plugin" and model.get("needsCuda")
-    }
-
-    assert demanded == CUDA_ONLY
-
-
-@pytest.mark.parametrize("model_id", sorted(CUDA_ONLY))
 def test_a_cuda_family_refuses_to_load_on_mps(
-    model_id: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """`needs_cuda` is read off the same table `load` dispatches by, so one family carries it."""
     import ia_studio_engine.adapters.plugin_adapter as plugin_adapter
 
-    monkeypatch.setattr(plugin_adapter, "_device", lambda: "mps")
+    monkeypatch.setattr(plugin_adapter, "device", lambda: "mps")
     with pytest.raises(LoadRefusedError, match="CUDA"):
-        PluginAdapter().load(model_id, str(tmp_path))
+        PluginAdapter().load(CUDA_ONLY[0], str(tmp_path))
+
+
+def test_a_family_that_runs_anywhere_is_not_refused_for_the_device() -> None:
+    assert "triposr" not in CUDA_ONLY
+    assert not is_plugin_model("sana-600m-1024")
 
 
 def test_an_unknown_id_is_not_a_plugin_adapter(
@@ -83,9 +39,20 @@ def test_an_unknown_id_is_not_a_plugin_adapter(
 ) -> None:
     import ia_studio_engine.adapters.plugin_adapter as plugin_adapter
 
-    monkeypatch.setattr(plugin_adapter, "_device", lambda: "cpu")
+    monkeypatch.setattr(plugin_adapter, "device", lambda: "cpu")
     with pytest.raises(LoadRefusedError, match="no plugin adapter"):
         PluginAdapter().load("ssd-1b", str(tmp_path))
+
+
+def test_attached_weights_are_refused_rather_than_dropped(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A ControlNet asked of a plugin used to load as if nothing had been requested."""
+    import ia_studio_engine.adapters.plugin_adapter as plugin_adapter
+
+    monkeypatch.setattr(plugin_adapter, "device", lambda: "cpu")
+    with pytest.raises(LoadRefusedError, match="no attached weights"):
+        PluginAdapter().load("triposr", str(tmp_path), attachment={"folder": "/w", "as": "lora"})
 
 
 def test_the_door_starts_on_diffusers() -> None:
@@ -107,12 +74,10 @@ def test_a_second_plugin_load_unloads_the_first(
 ) -> None:
     import ia_studio_engine.adapters.plugin_adapter as plugin_adapter
 
-    monkeypatch.setattr(plugin_adapter, "_device", lambda: "cpu")
-    monkeypatch.setattr(plugin_adapter, "_held_bytes", lambda _device: 0)
-    monkeypatch.setattr(plugin_adapter, "_tensor_bytes", lambda _device: 0)
-    monkeypatch.setattr(plugin_adapter, "_load_triposr", lambda _folder, _device: "handle")
-    (tmp_path / "config.yaml").write_text("{}")
-
+    monkeypatch.setattr(plugin_adapter, "device", lambda: "cpu")
+    monkeypatch.setattr(plugin_adapter, "held_bytes", lambda _device: 0)
+    monkeypatch.setattr(plugin_adapter, "tensor_bytes", lambda _device: 0)
+    monkeypatch.setitem(PLUGINS, "triposr", Plugin(lambda *_args: "handle", PLUGINS["triposr"].run))
     adapter = PluginAdapter()
     calls: list[str] = []
     original = adapter.unload
@@ -125,7 +90,16 @@ def test_a_second_plugin_load_unloads_the_first(
     adapter.load("triposr", str(tmp_path))
 
     assert calls == ["unload"]
-    assert adapter._handle == "handle"
+    assert adapter.loaded is not None
+    assert adapter.loaded.pipeline == "handle"
+
+
+def test_a_family_that_reads_a_picture_says_so_rather_than_asking_for_a_prompt() -> None:
+    """TripoSR takes no prompt, and the diffusers refusal named one — in the studio's journal."""
+    import ia_studio_engine.adapters.plugin_adapter as plugin_adapter
+
+    with pytest.raises(LoadRefusedError, match="needs a picture"):
+        plugin_adapter._picture({"prompt": "a red cube"})
 
 
 def test_a_generation_needs_a_loaded_model() -> None:

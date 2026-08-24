@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from ia_studio_engine.adapters.diffusers_adapter import DiffusersAdapter
+from ia_studio_engine.adapters.loading import LoadedModel
 from ia_studio_engine.adapters.modalities import Modality
-from ia_studio_engine.adapters.plugin_adapter import PluginAdapter
-from ia_studio_engine.adapters.plugin_ids import is_plugin_model
+from ia_studio_engine.adapters.model_adapter import ModelAdapter
+from ia_studio_engine.adapters.plugin_adapter import PluginAdapter, is_plugin_model
 
 
 class RoutingAdapter:
@@ -15,10 +17,10 @@ class RoutingAdapter:
 
     def __init__(self, modality: Modality) -> None:
         self.modality = modality
-        self._inner: DiffusersAdapter | PluginAdapter = DiffusersAdapter(modality)
+        self._inner: ModelAdapter = DiffusersAdapter(modality)
 
     @property
-    def loaded(self) -> Any:
+    def loaded(self) -> LoadedModel | None:
         return self._inner.loaded
 
     def backend(self) -> str:
@@ -27,19 +29,15 @@ class RoutingAdapter:
     def device(self) -> str:
         return self._inner.device()
 
-    def held_bytes(self) -> int | None:
-        return self._inner.held_bytes()
-
     def load(
         self,
         model_id: str,
         folder: str,
         torch_weights: bool = False,
         attachment: dict[str, Any] | None = None,
-    ) -> Any:
+    ) -> LoadedModel:
         plugin = is_plugin_model(model_id)
-        inner_is_plugin = isinstance(self._inner, PluginAdapter)
-        if plugin != inner_is_plugin:
+        if plugin != isinstance(self._inner, PluginAdapter):
             self._inner.unload()
             self._inner = PluginAdapter() if plugin else DiffusersAdapter(self.modality)
         return self._inner.load(
@@ -54,7 +52,7 @@ class RoutingAdapter:
         params: dict[str, Any],
         destination: str,
         door: str,
-        on_step: Any = None,
-        stopping: Any = None,
+        on_step: Callable[[int, int], None] | None = None,
+        stopping: Callable[[], bool] | None = None,
     ) -> dict[str, Any]:
         return self._inner.generate(params, destination, door, on_step, stopping)

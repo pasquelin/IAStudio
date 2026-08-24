@@ -1,11 +1,17 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { runtimeEndpointId } from '@shared/domain/aiRuntime'
 import { MODEL_LOADERS } from '@shared/domain/localModel'
+import { LOCAL_MODALITIES, producesFile } from '@shared/domain/localFields'
+import catalogue from '@shared/domain/localModels.json'
 import { endpointOf, endpointsOf, engineDoorOf } from './localRuntimes'
 import { endpointOfDoor } from './engineMemory'
 import type { LocalModel } from '@shared/domain/localModel'
 import { localModel } from '@shared/domain/localModel-fixtures'
 import { fileRuntime, runtimeReadingsOf, type LocalRuntime } from './localRuntimes'
+
+const ROOT = join(import.meta.dirname, '..', '..', '..')
 
 const parakeet = localModel({ id: 'parakeet', loader: 'sherpa-onnx' })
 const llama = localModel({ id: 'llama3.2:3b', loader: 'ollama', files: [] })
@@ -186,5 +192,88 @@ describe('engineDoorOf', () => {
   // index the record it addresses.
   it('mints what the memory ledger reads back', () => {
     expect(endpointOfDoor(engineDoorOf('mesh'))).toBe(engineDoorOf('mesh'))
+  })
+})
+
+describe('the doors the engine opens', () => {
+  /**
+   * 🛑 Two tables, one on each side of the frontier: this file pairs a MODALITY with a door, and
+   * `engine/src/ia_studio_engine/protocol/doors.py` pairs a DOOR with the modality it serves. A
+   * name that drifts on one side is refused at generation time, hours after the edit, as
+   * `no such door` — nothing else here would see it.
+   */
+  it('names the same door as the engine, for every modality that writes a file', () => {
+    const doorsPy = readFileSync(
+      join(ROOT, 'engine/src/ia_studio_engine/protocol/doors.py'),
+      'utf8',
+    )
+    const declared = Object.fromEntries(
+      [...doorsPy.matchAll(/^ {4}"(engine\/[a-z0-9]+)": "([a-z]+)",$/gm)].map(
+        ([, door, modality]) => [modality, door],
+      ),
+    )
+    const ours = Object.fromEntries(
+      LOCAL_MODALITIES.filter(producesFile).map(modality => [modality, engineDoorOf(modality)]),
+    )
+
+    expect(ours).toEqual(declared)
+  })
+})
+
+describe('the families the engine opens itself', () => {
+  /**
+   * 🛑 The catalogue and `PLUGINS` are the two halves of one decision, and they sit on opposite
+   * sides of the frontier. Read from HERE rather than from `engine/tests/`: the engine imports
+   * nothing of this repository, and a guard that reached back into `src/` would be deleted the
+   * day the engine is extracted — taking with it what says a CUDA family must not load on Metal.
+   */
+  const table = readFileSync(
+    join(ROOT, 'engine/src/ia_studio_engine/adapters/plugin_adapter.py'),
+    'utf8',
+  )
+  const body = table.split('PLUGINS: dict[str, Plugin] = {')[1]?.split('\n}')[0] ?? ''
+  const declared = body.split(/\n(?= {4}")/).flatMap(entry => {
+    const id = /^ {4}"([a-z0-9-]+)":/.exec(entry)?.[1]
+    return id ? [{ id, needsCuda: entry.includes('needs_cuda=True') }] : []
+  })
+
+  const wired = (status: string): LocalModel[] =>
+    Object.values(catalogue as Record<string, LocalModel[]>)
+      .flat()
+      .filter(model => model.loader === 'plugin' && (model.runtimeStatus ?? 'supported') === status)
+
+  it('opens every plugin the catalogue wires, and nothing it does not', () => {
+    expect(declared.map(one => one.id).sort()).toEqual(
+      wired('supported')
+        .map(one => one.id)
+        .sort(),
+    )
+  })
+
+  it('wires no plugin to weights the engine refuses to attach', () => {
+    // `PluginAdapter.load` raises on `attachment`, and only the catalogue can say a plugin has
+    // one — the refusal would otherwise surface at `models.load`, not here.
+    const grafted = wired('supported').filter(model => model.attaches !== undefined)
+
+    expect(grafted.map(model => model.id)).toEqual([])
+  })
+
+  it('leaves a plugin marked unsupported without an adapter', () => {
+    const unwired = new Set(wired('unsupported').map(one => one.id))
+
+    expect(declared.filter(one => unwired.has(one.id))).toEqual([])
+  })
+
+  it('demands CUDA for exactly the families the catalogue says need it', () => {
+    const demanded = wired('supported')
+      .filter(model => model.needsCuda)
+      .map(model => model.id)
+
+    expect(
+      declared
+        .filter(one => one.needsCuda)
+        .map(one => one.id)
+        .sort(),
+    ).toEqual(demanded.sort())
   })
 })

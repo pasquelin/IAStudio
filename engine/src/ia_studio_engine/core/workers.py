@@ -25,11 +25,13 @@ Listener = Callable[[dict[str, Any]], None]
 class WorkerProcess:
     """One worker, from its spawn to its death. Not a pool: a door holds one process."""
 
-    def __init__(self, module: str, on_frame: Listener, on_gone: Callable[[], None]) -> None:
+    def __init__(
+        self, module: str, door: str, on_frame: Listener, on_gone: Callable[[], None]
+    ) -> None:
         ours, theirs = socket.socketpair()
         # The child needs the fd across `exec`, which `pass_fds` is what clears CLOEXEC for.
         self._process = subprocess.Popen(
-            [sys.executable, "-m", module, str(theirs.fileno())],
+            [sys.executable, "-m", module, door, str(theirs.fileno())],
             pass_fds=(theirs.fileno(),),
         )
         theirs.close()

@@ -19,8 +19,11 @@ Une porte est un **processus**, et c'est ce qu'un plan de libération peut tuer.
 démarre à la première demande — une porte que personne n'a demandée est un processus qui n'a
 jamais tourné — et lui parle par un `socketpair` hérité, dans le même NDJSON.
 
-Ce qui diffère entre deux portes est une modalité et un nom : la boucle est écrite une fois
-(`workers/door.py`), et les cinq modules qui la nomment font quatre lignes chacun.
+Ce qui diffère entre deux portes est une modalité et un nom, et **c'est une ligne de table** :
+`protocol/doors.py` apparie porte et modalité, `workers/door.py` est la boucle, et le noyau lance
+`python -m ia_studio_engine.workers.door <porte> <fd>`. Cinq modules répétaient ces quatre
+lignes ; la table est lue par le noyau **et** par le studio, que `localRuntimes.test.ts` tient en
+phase.
 
 | Porte | Modalité | Adapter | Backend |
 |---|---|---|---|
@@ -30,8 +33,9 @@ Ce qui diffère entre deux portes est une modalité et un nom : la boucle est é
 | `engine/3d` | maillage | idem | idem |
 | `engine/skybox` | panorama 360 | idem | idem |
 
-Les familles hors diffusers passent par `plugin_adapter.py` ; `plugin_ids.py` les nomme, et
-`vendor/` porte leur Python — un arbre par famille, chacun avec son fichier de licence, ce dont
+Les familles hors diffusers passent par `plugin_adapter.py`, dont la table `PLUGINS` porte les
+trois faits d'une famille — ce qui l'ouvre, ce qui l'exécute, si elle exige CUDA — et `vendor/`
+porte leur Python — un arbre par famille, chacun avec son fichier de licence, ce dont
 `test_vendored_trees.py` fait foi plutôt que cette phrase. Tous sauf TripoSR et MMAudio demandent
 CUDA, et sur Metal la carte le dit. MMAudio tourne sur MPS. Extra `plugin`, pas dans
 `engine:check`.
@@ -104,6 +108,8 @@ uv run --project engine pytest engine/tests
 ```
 
 `uv` matérialise l'environnement seul ; aucun `pip install` n'est à lancer. Python 3.12 minimum.
+Le groupe `dev` porte **numpy et Pillow** en plus de pytest et ruff — 37 Mo installés, ce qu'il faut pour que
+`skybox_fill` soit gardé sans que la porte paie les 682 Mo de `diffusion`.
 
 **La porte n'installe JAMAIS le groupe `diffusion`** — elle téléchargerait 682 Mo pour être verte.
 Les tests d'`engine/tests` sont écrits pour n'en avoir aucun besoin : ce qu'un vrai backend fait

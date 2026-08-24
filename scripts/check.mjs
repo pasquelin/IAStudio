@@ -138,15 +138,22 @@ async function main(since) {
   // through `related`.
   const sources = touched.filter(path => /^src\/.*\.(ts|tsx|css|json|html)$/.test(path))
   const wholeSuite = touched.some(path => RERUN_EVERYTHING.includes(path))
+  // A wide guard may READ outside `src/`: `localRuntimes.test.ts` holds the door table of
+  // `engine/**/doors.py` in step with the studio's. Detection lives under `src/`, so a lot that
+  // touches the engine alone selected nothing and exited green on the very drift it guards.
+  const guarded = touched.some(path => /^engine\/.*\.py$/.test(path))
 
-  if (sources.length === 0 && !wholeSuite) {
+  if (sources.length === 0 && !wholeSuite && !guarded) {
     process.stdout.write(
-      `\nNothing under src/ has changed against ${since}. There is nothing to check.\n\n`,
+      `\nNothing under src/ or engine/ has changed against ${since}. There is nothing to check.\n\n`,
     )
     return 0
   }
 
-  process.stdout.write(`\nAgainst ${since}: ${sources.length} file(s) touched under src/.\n`)
+  process.stdout.write(
+    `\nAgainst ${since}: ${sources.length} file(s) touched under src/` +
+      `${guarded ? ', and the engine moved — its own gate is `pnpm engine:check`' : ''}.\n`,
+  )
   if (wholeSuite) {
     process.stdout.write('A config file moved, so the whole suite runs rather than a selection.\n')
   }
@@ -156,7 +163,9 @@ async function main(since) {
   const suites = wholeSuite
     ? [run('tests (whole suite)', 'npx', ['vitest', 'run'])]
     : [
-        run('tests (related)', 'npx', ['vitest', 'related', '--run', ...sources]),
+        ...(sources.length > 0
+          ? [run('tests (related)', 'npx', ['vitest', 'related', '--run', ...sources])]
+          : []),
         run('tests (wide guards)', 'npx', ['vitest', 'run', ...wideGuards()]),
       ]
 

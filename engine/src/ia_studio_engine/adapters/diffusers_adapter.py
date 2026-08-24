@@ -15,80 +15,39 @@ from __future__ import annotations
 import json
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ia_studio_engine.adapters.device import (
+    device,
+    held_bytes,
+    release_cache,
+    result_frame,
+    tensor_bytes,
+)
+from ia_studio_engine.adapters.loading import (
+    LoadedModel,
+    LoadRefusedError,
+    generation_refusal,
+    refuse_reason,
+)
 from ia_studio_engine.adapters.modalities import MODALITIES, Modality
 from ia_studio_engine.core.jobqueue import CancelledError
 
 
-class LoadRefusedError(Exception):
-    """The request is malformed, or names weights this adapter cannot open. Not a policy."""
-
-
-def _device() -> str:
-    """The device REALLY used: a silent CPU fallback is indistinguishable from a slow machine."""
-    import torch
-
-    if torch.backends.mps.is_available():
-        return "mps"
-    return "cuda" if torch.cuda.is_available() else "cpu"
-
-
-def _tensor_bytes(device: str) -> int | None:
-    """What the ALLOCATOR counts: live tensors. `None` where the backend does not answer."""
-    import torch
-
-    if device == "mps":
-        return int(torch.mps.current_allocated_memory())
-    if device == "cuda":
-        return int(torch.cuda.memory_allocated())
-    return None
-
-
-def _held_bytes(device: str) -> int | None:
+def call_parameters(pipeline: Any) -> Any:
     """
-    What was taken FROM THE POT, cache included — the number admission needs.
+    What `__call__` declared, and `None` when there is no signature to read.
 
-    Measured 2026-08-22: a generation moved the driver by 5.67 GB while the allocator did not move
-    at all, so counting tensors alone under-reports a door mid-generation by two thirds.
+    The two are different answers: unreadable means every argument goes through, empty means none
+    does. One falsy value for both let a filter pass what a pipeline never declared.
     """
-    import torch
+    import inspect
 
-    if device == "mps":
-        return int(torch.mps.driver_allocated_memory())
-    if device == "cuda":
-        # `(free, total)`, in that order — the reverse reads negative, which no admission survives.
-        free, total = torch.cuda.mem_get_info()
-        return int(total - free)
-    return None
-
-
-def machine_memory(device: str) -> dict[str, int | None]:
-    """
-    The pot itself. `freeBytes` is `None` on `mps`, and that is the measurement rather than a gap.
-
-    Measured 2026-08-22 with the studio running and a viewport open: `recommended_max_memory()`
-    answered 83.49 GB unchanged while `vm_stat` showed **319 MB actually free** at the peak.
-    Metal's ceiling is what THIS PROCESS may take, never what the machine has left — deriving
-    `total - held` from it would have told admission 68 GB were free while the machine was at its
-    knees. On `unified` the viewport draws from the same pot and no backend counter sees it, which
-    is exactly what `MemorySnapshot.rendererReservedBytes` exists for.
-
-    `unifiedBytes` MEASURES the domain: greater than zero on a SoC, zero on a dedicated card.
-    """
-    import torch
-
-    if device == "mps":
-        ceiling = int(torch.mps.recommended_max_memory())
-        return {"totalBytes": ceiling, "freeBytes": None, "unifiedBytes": ceiling}
-    if device == "cuda":
-        # A dedicated card has its own pot, and `mem_get_info` answers for the DEVICE rather than
-        # for this process — `[?]` never run here, no such machine.
-        free, total = torch.cuda.mem_get_info()
-        return {"totalBytes": int(total), "freeBytes": int(free), "unifiedBytes": 0}
-    return {"totalBytes": None, "freeBytes": None, "unifiedBytes": None}
+    try:
+        return inspect.signature(pipeline.__call__).parameters
+    except (TypeError, ValueError, AttributeError):
+        return None
 
 
 def _default_steps(pipeline: Any) -> int:
@@ -96,20 +55,8 @@ def _default_steps(pipeline: Any) -> int:
     What the pipeline runs when the form left the field empty — StableAudio runs 100 where a
     literal 20 was assumed, and the reported ratio then climbs to five.
     """
-    import inspect
-
-    asked = inspect.signature(pipeline.__call__).parameters.get("num_inference_steps")
+    asked = (call_parameters(pipeline) or {}).get("num_inference_steps")
     return asked.default if asked is not None and isinstance(asked.default, int) else 20
-
-
-def _call_parameters(pipeline: Any) -> Any:
-    """What `__call__` declared. Empty when there is no signature to read."""
-    import inspect
-
-    try:
-        return inspect.signature(pipeline.__call__).parameters
-    except (TypeError, ValueError, AttributeError):
-        return {}
 
 
 def _takes_step_callback(pipeline: Any) -> bool:
@@ -117,7 +64,7 @@ def _takes_step_callback(pipeline: Any) -> bool:
     🛑 A cancel lands on `callback_on_step_end` and nowhere else. Read, since `ShapEPipeline`
     does not take one and passing it raises `TypeError`.
     """
-    return "callback_on_step_end" in _call_parameters(pipeline)
+    return "callback_on_step_end" in (call_parameters(pipeline) or {})
 
 
 #: Which pipeline reworks a sequence, by the one that was loaded — a table because diffusers
@@ -135,20 +82,12 @@ def accepted_kwargs(pipeline: Any, kwargs: dict[str, Any]) -> dict[str, Any]:
     """Drop arguments the resident class did not declare — a T2V still must not become TypeError."""
     import inspect
 
-    try:
-        parameters = inspect.signature(pipeline.__call__).parameters
-    except (TypeError, ValueError):
+    parameters = call_parameters(pipeline)
+    if parameters is None:
         return kwargs
     if any(item.kind is inspect.Parameter.VAR_KEYWORD for item in parameters.values()):
         return kwargs
     return {key: value for key, value in kwargs.items() if key in parameters}
-
-
-def generation_refusal(kwargs: dict[str, Any]) -> str | None:
-    """A prompt, or a source the modality already turned into a pipeline argument."""
-    if kwargs.get("prompt") or any(key in kwargs for key in ("image", "video", "src_audio")):
-        return None
-    return "a generation needs a prompt"
 
 
 def tune_pipeline(pipeline: Any) -> None:
@@ -159,7 +98,7 @@ def tune_pipeline(pipeline: Any) -> None:
             enable()
 
 
-def _attached(pipeline: Any, attachment: dict[str, Any], device: str) -> Any:
+def _attached(pipeline: Any, attachment: dict[str, Any], on: str) -> Any:
     """
     Weights grafted onto the pipeline that is already resident, never a second pipeline.
 
@@ -179,32 +118,8 @@ def _attached(pipeline: Any, attachment: dict[str, Any], device: str) -> Any:
 
     control = ControlNetModel.from_pretrained(
         attachment["folder"], use_safetensors=True, local_files_only=True, dtype=torch.float16
-    ).to(device)
+    ).to(on)
     return AutoPipelineForText2Image.from_pipe(pipeline, controlnet=control)
-
-
-@dataclass
-class LoadedModel:
-    model_id: str
-    device: str
-    pipeline: Any
-    bytes_resident: int | None
-    tensor_bytes: int | None
-    load_ms: float
-    takes_step_callback: bool
-    default_steps: int
-
-
-def memory_frame(device: str, backend: str, door: str) -> dict[str, Any]:
-    """What a door answers for `memory.info`. Every number is READ, none is derived."""
-    return {
-        "door": door,
-        "tensorBytes": _tensor_bytes(device),
-        "heldBytes": _held_bytes(device),
-        "device": device,
-        "backend": backend,
-        "machine": machine_memory(device),
-    }
 
 
 def pretrained_file_kwargs(torch_weights: bool, folder: str | None = None) -> dict[str, bool | str]:
@@ -256,26 +171,8 @@ class DiffusersAdapter:
     def backend(self) -> str:
         return "pytorch"
 
-    def held_bytes(self) -> int | None:
-        """What the door holds RIGHT NOW — read after an unload, never derived from one."""
-        return _held_bytes(_device())
-
     def device(self) -> str:
-        return _device()
-
-    @staticmethod
-    def refuse_reason(folder: str) -> str | None:
-        """
-        Read BEFORE any import: a refusal must not cost the 8.7 s `import torch` costs cold.
-        A `.py` beside local weights runs without asking — spec § I.2,
-        `trust_remote_code=False` does not stop it.
-        """
-        path = Path(folder)
-        if not path.is_dir():
-            return f"not a folder: {folder}"
-
-        stray = sorted(entry.name for entry in path.rglob("*.py"))
-        return f"the weights carry python: {', '.join(stray[:3])}" if stray else None
+        return device()
 
     def load(
         self,
@@ -284,14 +181,14 @@ class DiffusersAdapter:
         torch_weights: bool = False,
         attachment: dict[str, Any] | None = None,
     ) -> LoadedModel:
-        refusal = self.refuse_reason(folder)
+        refusal = refuse_reason(folder)
         if refusal is not None:
             raise LoadRefusedError(refusal)
 
         from diffusers import DiffusionPipeline
 
         self.unload()
-        device = _device()
+        on = device()
         started = time.perf_counter_ns()
         import torch
         from diffusers.utils import logging as diffusers_logging
@@ -310,7 +207,7 @@ class DiffusersAdapter:
             **pretrained_file_kwargs(torch_weights, folder),
             **pretrained_optional_overrides(folder),
             dtype=torch.float16,
-        ).to(device)
+        ).to(on)
 
         if (
             self.modality is MODALITIES["skybox"]
@@ -321,17 +218,17 @@ class DiffusersAdapter:
             pipeline = StableDiffusionPanoramaPipeline.from_pipe(pipeline)
 
         if attachment is not None:
-            pipeline = _attached(pipeline, attachment, device)
+            pipeline = _attached(pipeline, attachment, on)
 
         tune_pipeline(pipeline)
         load_ms = (time.perf_counter_ns() - started) / 1e6
 
         self.loaded = LoadedModel(
             model_id=model_id,
-            device=device,
+            device=on,
             pipeline=pipeline,
-            bytes_resident=_held_bytes(device),
-            tensor_bytes=_tensor_bytes(device),
+            bytes_resident=held_bytes(on),
+            tensor_bytes=tensor_bytes(on),
             load_ms=load_ms,
             takes_step_callback=_takes_step_callback(pipeline),
             default_steps=_default_steps(pipeline),
@@ -346,22 +243,10 @@ class DiffusersAdapter:
         if held is None:
             return
 
-        pipeline = held.pipeline
-        del held
-        del pipeline
-        import gc
+        held.pipeline = None
+        release_cache()
 
-        gc.collect()
-        try:
-            import torch
-        except ImportError:
-            return
-        if torch.backends.mps.is_available():
-            torch.mps.empty_cache()
-        elif torch.cuda.is_available():
-            torch.cuda.empty_cache()
-
-    def _wanted_class(self, kwargs: dict[str, Any]) -> Any:
+    def _wanted_class(self, held: LoadedModel, kwargs: dict[str, Any]) -> Any:
         """
         Which pipeline the ARGUMENTS call for. Video goes through a TABLE: diffusers
         publishes no `AutoPipelineForVideoToVideo`, read on 2026-08-22.
@@ -369,8 +254,6 @@ class DiffusersAdapter:
         if "video" in kwargs:
             import diffusers
 
-            held = self.loaded
-            assert held is not None
             wanted = VIDEO_TO_VIDEO.get(type(held.pipeline).__name__)
             return getattr(diffusers, wanted, None) if wanted else None
 
@@ -381,8 +264,7 @@ class DiffusersAdapter:
         if self.modality is MODALITIES["skybox"]:
             if "mask_image" not in kwargs:
                 return None
-            held = self.loaded
-            if held is not None and "mask_image" in _call_parameters(held.pipeline):
+            if "mask_image" in (call_parameters(held.pipeline) or {}):
                 return None
             raise LoadRefusedError("this panorama model does not take a source image")
         if self.modality is not MODALITIES["image"]:
@@ -396,17 +278,14 @@ class DiffusersAdapter:
             else diffusers.AutoPipelineForImage2Image
         )
 
-    def _for(self, kwargs: dict[str, Any]) -> Any:
+    def _for(self, held: LoadedModel, kwargs: dict[str, Any]) -> Any:
         """
         The pipeline the arguments call for, DERIVED from the one that is loaded.
 
         `from_pipe` reuses the components already resident rather than reading the weights again:
         one download, one residency, several employments.
         """
-        held = self.loaded
-        assert held is not None
-
-        wanted = self._wanted_class(kwargs)
+        wanted = self._wanted_class(held, kwargs)
         if wanted is None:
             return held.pipeline
 
@@ -444,7 +323,7 @@ class DiffusersAdapter:
                 on_step(step + 1, steps)
             return state
 
-        pipeline = self._for(kwargs)
+        pipeline = self._for(held, kwargs)
         if held.takes_step_callback:
             kwargs["callback_on_step_end"] = between_steps
         kwargs = accepted_kwargs(pipeline, kwargs)
@@ -458,14 +337,4 @@ class DiffusersAdapter:
         if sample_rate is not None:
             write_params["samplingRate"] = int(sample_rate)
         self.modality.write(result, destination, write_params)
-        return {
-            "path": destination,
-            "door": door,
-            "device": held.device,
-            "backend": self.backend(),
-            "generateMs": round(generate_ms, 1),
-            # `heldBytes` and `tensorBytes` are the names the ledger reads. A third spelling is
-            # dropped in silence by a zod object that does not name it — measured, this one was.
-            "heldBytes": _held_bytes(held.device),
-            "tensorBytes": _tensor_bytes(held.device),
-        }
+        return result_frame(door, held.device, self.backend(), destination, generate_ms)
