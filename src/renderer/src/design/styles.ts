@@ -426,24 +426,26 @@ export const FIELD =
 export const FIELD_FILL = cn(FIELD, 'min-w-0 flex-1')
 
 /**
- * The surface a menu wears, whether it hangs from a control, opens at the pointer, or sits in
- * the flow under the field it belongs to. Its width is left to the caller: a flyout is as wide
- * as its anchor suggests, a context menu wider.
+ * The surface a menu wears. The SKIN only — never where it sits, and never whether it is raised:
+ * a menu that sits IN a form is one of its fields, and a shadow there says it left the page.
  *
- * The SKIN only — never where it sits. Two callers already had to undo a `fixed` they never
- * asked for, and `PANE_TOOLBAR` below carries the same separation the other way round.
+ * Its width is left to the caller: a flyout is as wide as its anchor suggests, a menu in a form
+ * as wide as the form.
  */
 export const MENU_SURFACE = cn(
   'border-border bg-surface flex flex-col gap-0.5',
-  'rounded-(--radius-sc-lg) border p-1 shadow-(--sc-shadow-floating)',
+  'rounded-(--radius-sc-lg) border p-1',
 )
 
+/** The same, off the page — for a surface its host places but that reads as floating. */
+export const MENU_RAISED = cn(MENU_SURFACE, 'shadow-(--sc-shadow-floating)')
+
 /**
- * The same, lifted off the page for a menu that hangs rather than sits. Above the MODALS
- * (`z-60`), not merely above the panels: measured on the new-document dialog, whose tree came
- * out cut in half behind its own scrim.
+ * The same again, placed by itself, for a menu that HANGS. Above the MODALS (`z-60`), not merely
+ * above the panels: measured on the new-document dialog, whose tree came out cut in half behind
+ * its own scrim.
  */
-export const MENU_FLOATING = cn(MENU_SURFACE, 'fixed z-70')
+export const MENU_FLOATING = cn(MENU_RAISED, 'fixed z-70')
 
 /**
  * Where a workspace's own bar floats over its pane. The image and the 3D space put it in the
