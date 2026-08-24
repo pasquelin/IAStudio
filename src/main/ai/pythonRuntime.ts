@@ -80,7 +80,7 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
           if (door.heldBytes === 0) held.delete(door.door)
         }
       } catch (error) {
-        deps.log('info', `the engine answered nothing for its memory: ${String(error)}`)
+        deps.log('warn', `the engine answered nothing for its memory: ${String(error)}`)
       }
 
       return {

@@ -84,9 +84,7 @@ describe('reading what the engine holds', () => {
   })
 
   it('names what it loaded once a door holds bytes for it', async () => {
-    const doors = [
-      { door: 'engine/diffusion', tensorBytes: 1, heldBytes: 2, device: 'mps', backend: 'pytorch' },
-    ]
+    const doors = [{ door: 'engine/diffusion', heldBytes: 2, device: 'mps', backend: 'pytorch' }]
     const held = harness({ memory: () => Promise.resolve(doors) })
 
     await held.runtime.load?.(MODEL, { onProgress: () => {} })
@@ -103,13 +101,7 @@ describe('reading what the engine holds', () => {
     const zeroed = harness({
       memory: () =>
         Promise.resolve([
-          {
-            door: 'engine/diffusion',
-            heldBytes: 0,
-            tensorBytes: 0,
-            device: 'cpu',
-            backend: 'pytorch',
-          },
+          { door: 'engine/diffusion', heldBytes: 0, device: 'cpu', backend: 'pytorch' },
         ]),
     })
     await zeroed.runtime.load?.(MODEL, { onProgress: () => {} })
@@ -306,9 +298,7 @@ describe('unloading', () => {
   })
 
   it('keeps what it held when the door refuses the unload', async () => {
-    const doors = [
-      { door: 'engine/diffusion', tensorBytes: 1, heldBytes: 2, device: 'mps', backend: 'pytorch' },
-    ]
+    const doors = [{ door: 'engine/diffusion', heldBytes: 2, device: 'mps', backend: 'pytorch' }]
     const held = harness({
       memory: () => Promise.resolve(doors),
       job: op =>

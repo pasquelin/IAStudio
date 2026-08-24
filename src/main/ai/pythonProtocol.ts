@@ -78,7 +78,8 @@ const jobProgress = z.object({
  * a door produced belongs to the JOB — the shape `JobRunner` already speaks.
  *
  * 🛑 **A zod object DROPS what it does not name.** The engine answered `bytesResident` while this
- * named `bytes`, and the reading vanished in silence — every field a door sends belongs here.
+ * named `bytes`, and the reading vanished in silence — every field a door sends belongs here. The
+ * reverse costs too: a name no door sends is read as a contract by whoever writes the next fixture.
  */
 const settledJob = z.object({
   v: z.number(),
@@ -89,7 +90,6 @@ const settledJob = z.object({
   path: z.string().optional(),
   device: z.string().optional(),
   backend: z.string().optional(),
-  bytes: z.number().nullable().optional(),
   loadMs: z.number().optional(),
   generateMs: z.number().optional(),
   door: z.string().optional(),
@@ -97,7 +97,6 @@ const settledJob = z.object({
   tensorBytes: z.number().nullable().optional(),
   heldBytes: z.number().nullable().optional(),
   machine: z.unknown().optional(),
-  cancelled: z.boolean().optional(),
 })
 
 /** What the engine says about a frame it could not read: there is no run id to answer under. */
@@ -163,8 +162,9 @@ const hardware = z.object({
   platform: z.string(),
   machine: z.string(),
   pythonVersion: z.string(),
-  cpuCount: z.number(),
-  /** `null` where the system declines to answer: an unread context is never given a default. */
+  /** Both `null` where the system declines: `os.cpu_count()` and `_total_bytes()` may, and an
+   * unread reading is never given a default — a required field would lose the WHOLE machine. */
+  cpuCount: z.number().nullable(),
   totalBytes: z.number().nullable(),
 })
 
@@ -176,16 +176,11 @@ export function readHardware(value: unknown): EngineHardware {
 }
 
 /**
- * What one door holds, as its own backend counts it.
- *
- * Two numbers and not one, measured 2026-08-22: loading Sana 600M moved the allocator by 8.84 GB
- * and the driver by 8.89, then a generation moved the driver by 5.67 more while the allocator did
- * not move at all. **Admission reads `heldBytes`** — tensors alone under-report a door
- * mid-generation by two thirds.
+ * What one door holds: the DRIVER's number, never the allocator's — `DoorMemory` in `memory.py`
+ * carries the measurement that settled it, and composes these four fields and no other.
  */
-const doorMemory = z.object({
+export const doorMemory = z.object({
   door: z.string(),
-  tensorBytes: z.number(),
   heldBytes: z.number(),
   device: z.string(),
   backend: z.string(),

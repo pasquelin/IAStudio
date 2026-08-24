@@ -5,7 +5,6 @@ import type { EngineDoorMemory } from './pythonProtocol'
 
 const diffusion: EngineDoorMemory = {
   door: 'engine/diffusion',
-  tensorBytes: 8_844_678_144,
   heldBytes: 8_890_220_544,
   device: 'mps',
   backend: 'pytorch',

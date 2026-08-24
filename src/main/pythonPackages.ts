@@ -84,6 +84,8 @@ export const UNREAD_ON_THIS_PLATFORM: readonly string[] = [
  * 🛑 **A run of the collector would NOT empty this list**, measured 2026-08-23: `materialise()`
  * installs `--extra diffusion` and nothing else, so everything the `plugin` extra brings — the
  * whole 3d half — is unreachable to it. Closing the hole means installing every extra there.
+ * `torchvision` is the exception since it joined `diffusion`: the next run WILL read it, and this
+ * list and its count come down by one.
  */
 export const UNREAD_PENDING_COLLECTION: readonly string[] = [
   'imageio',

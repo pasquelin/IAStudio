@@ -27,6 +27,7 @@ from ia_studio_engine.adapters.loading import (
     NEEDS_PROMPT,
     LoadedModel,
     LoadRefusedError,
+    quietened,
     refuse_reason,
 )
 from ia_studio_engine.adapters.params import filled, knob, text
@@ -135,7 +136,7 @@ class PluginAdapter:
 
         self.unload()
         started = time.perf_counter_ns()
-        handle = plugin.load(folder, on)
+        handle = quietened(plugin.load(folder, on))
 
         load_ms = (time.perf_counter_ns() - started) / 1e6
         self.loaded = LoadedModel(

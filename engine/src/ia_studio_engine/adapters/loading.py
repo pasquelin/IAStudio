@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -45,3 +46,28 @@ def generation_refusal(kwargs: dict[str, Any]) -> str | None:
     if kwargs.get("prompt") or any(key in kwargs for key in ("image", "video", "src_audio")):
         return None
     return NEEDS_PROMPT
+
+
+def quietened(held: Any) -> Any:
+    """
+    tqdm writes to stderr, which the studio journals as an ERROR line: a twenty-step denoise files
+    twenty for a job that went perfectly, and progress already travels as `job.progress`.
+
+    `DiffusionPipeline.progress_bar` reads `_progress_bar_config` ALONE, so diffusers' logging
+    switch never reached it, and every `from_pipe` builds a fresh object inheriting none of it —
+    this is asked of the FINAL object a door keeps. A plugin hands back a dict of pipelines as
+    often as a pipeline, hence the walk. **Blind spot**: `CraftsManPipeline` draws its own tqdm
+    with `disable_prog=False` written into vendored code, and no keyword here reaches it.
+    """
+    if isinstance(held, dict):
+        for inner in held.values():
+            quietened(inner)
+        return held
+
+    configure = getattr(held, "set_progress_bar_config", None)
+    if callable(configure):
+        # Duck-typed across families this repo does not vendor: a different signature is a refusal
+        # to be quiet, never a reason to fail a load that otherwise worked.
+        with contextlib.suppress(TypeError):
+            configure(disable=True)
+    return held

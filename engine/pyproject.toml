@@ -18,6 +18,10 @@ diffusion = [
   "diffusers>=0.40",
   "transformers>=5.0",
   "accelerate>=1.0",
+  # Not optional in practice: without it `transformers>=5` falls back to the PIL image processors
+  # and says so on every load. 1,9 Mo on macOS arm64, 7,7 on Linux, 3,5 on Windows — measured on
+  # the 0.28.0 wheels, against the 682 Mo this extra already costs.
+  "torchvision>=0.21",
   # What `export_to_video` writes through — declared the day a video model entered the catalogue.
   # Without them a generation denoises to its last step and then dies at the write.
   "imageio>=2.34",

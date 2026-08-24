@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { PROTOCOL_VERSION, readFrame, readHardware } from './pythonProtocol'
+import {
+  doorMemory,
+  PROTOCOL_VERSION,
+  readFrame,
+  readHardware,
+  readMemoryLedger,
+} from './pythonProtocol'
 
 const ROOT = join(import.meta.dirname, '..', '..', '..')
 
@@ -72,5 +78,31 @@ describe('the machine the engine measured', () => {
 
   it('refuses a shape only a mismatched engine could send', () => {
     expect(() => readHardware({ ...reading, cpuCount: 'twelve' })).toThrow()
+  })
+})
+
+/**
+ * Nothing compiles the two halves of this frame together — the hole `PROTOCOL_VERSION` has above.
+ * The schema asked for a `tensorBytes` no door composed, so `memory.ledger` threw on every call.
+ * Blind spot, in clear: NAMES only — `held_bytes` turning float, or `int | None`, leaves it green.
+ */
+describe('what a door reports about its memory', () => {
+  const sample = {
+    door: 'engine/diffusion',
+    heldBytes: 8_887_119_872,
+    device: 'mps',
+    backend: 'pytorch',
+  }
+
+  /** `MemoryLedger` has an `as_frame` of its own, and it composes `doors` rather than a door. */
+  const source = readFileSync(join(ROOT, 'engine/src/ia_studio_engine/core/memory.py'), 'utf8')
+  const own = source.slice(source.indexOf('class DoorMemory'), source.indexOf('class MemoryLedger'))
+  const emitted = [...own.matchAll(/^\s+"(\w+)":/gm)].map(found => found[1] ?? '')
+
+  it('is read as the engine composes it, field for field', () => {
+    // Against the SCHEMA and not against `sample`: a phantom field that is merely optional is
+    // absent from the round trip below, and the schema is the only place it shows.
+    expect(Object.keys(doorMemory.shape).sort()).toEqual([...emitted].sort())
+    expect(readMemoryLedger({ doors: [sample] })).toEqual([sample])
   })
 })

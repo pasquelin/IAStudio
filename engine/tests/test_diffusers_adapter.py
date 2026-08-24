@@ -20,6 +20,7 @@ from ia_studio_engine.adapters.loading import (
     LoadedModel,
     LoadRefusedError,
     generation_refusal,
+    quietened,
     refuse_reason,
 )
 from ia_studio_engine.adapters.modalities import MODALITIES
@@ -141,6 +142,58 @@ def test_tune_enables_slicing_and_tiling_when_the_pipeline_has_them() -> None:
 
 def test_tune_skips_knobs_a_pipeline_does_not_have() -> None:
     tune_pipeline(object())
+
+
+def test_a_pipeline_a_door_holds_is_asked_to_draw_no_progress_bar() -> None:
+    """One stderr line per denoise step, journalled as an ERROR, for a job that went perfectly."""
+
+    class Probe:
+        def __init__(self) -> None:
+            self.disabled: bool | None = None
+
+        def set_progress_bar_config(self, disable: bool) -> None:
+            self.disabled = disable
+
+    probe = Probe()
+
+    assert quietened(probe) is probe
+    assert probe.disabled is True
+
+
+def test_a_pipeline_without_that_knob_is_handed_back_untouched() -> None:
+    """A plugin family holds whatever its own code builds, and most are not diffusers pipelines."""
+    handle = object()
+
+    assert quietened(handle) is handle
+
+
+def test_a_plugin_handing_back_a_dict_has_the_pipelines_inside_it_quietened() -> None:
+    """Five of the eleven families answer `{"pipeline": …}` or `{"views": …}`, never the object."""
+
+    class Probe:
+        def __init__(self) -> None:
+            self.disabled: bool | None = None
+
+        def set_progress_bar_config(self, disable: bool) -> None:
+            self.disabled = disable
+
+    inner = Probe()
+    handle = {"views": inner, "unet": object()}
+
+    assert quietened(handle) is handle
+    assert inner.disabled is True
+
+
+def test_a_knob_of_another_signature_refuses_to_be_quiet_rather_than_failing_the_load() -> None:
+    """Families this repo does not vendor are duck-typed, and a load that worked must not crash."""
+
+    class Stubborn:
+        def set_progress_bar_config(self, verbosity: int) -> None:
+            raise AssertionError("never reached with this keyword")
+
+    handle = Stubborn()
+
+    assert quietened(handle) is handle
 
 
 def test_a_mesh_picture_does_not_switch_to_an_image_pipeline() -> None:
