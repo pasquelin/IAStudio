@@ -67,12 +67,15 @@ async function listing(folders: readonly string[], hidden: boolean): Promise<Lis
   if (!bridge) return []
 
   return await Promise.all(
-    folders.map(folder =>
-      bridge.project
-        .listFolder(folder, hidden)
-        .then(entries => ({ folder, entries }))
-        .catch(() => ({ folder, entries: [] })),
-    ),
+    folders.map(async folder => {
+      try {
+        return { folder, entries: await bridge.project.listFolder(folder, hidden) }
+      } catch {
+        // An empty listing rather than a hole: the note above says why a folder that went
+        // missing mid-read is the ordinary case here, not a failure to report.
+        return { folder, entries: [] }
+      }
+    }),
   )
 }
 

@@ -195,9 +195,12 @@ export const useProject = create<ProjectState>()((set, get) => ({
       // list that only forgets when the home asked it keeps offering a folder nothing can open.
       // Swallowed on the way: this is already the failing path, and `open` answers `false`
       // whether or not the shelf could be written.
-      await get()
-        .forget(path)
-        .catch(() => {})
+      try {
+        await get().forget(path)
+      } catch {
+        // Already the failing path: `open` answers `false` either way, as the note above says.
+      }
+
       return false
     }
   },

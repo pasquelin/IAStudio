@@ -34,12 +34,21 @@ export async function migrateSttFolder(folder: string): Promise<void> {
     // 🛑 Never over a name already taken above: `rename` overwrites, and the file up here is the
     // one a later version wrote. Left behind, it costs a re-download; overwritten, it is lost.
     const target = join(folder, name)
-    if (!(await exists(target))) await rename(join(previous, name), target).catch(() => {})
+    if (!(await exists(target)))
+      try {
+        await rename(join(previous, name), target)
+      } catch {
+        // Left where it is: a file that would not move costs a re-download, never the one above.
+      }
   }
 
   // `rmdir` and not a recursive `rm`: a folder still holding something is one this could not
   // empty, and removing it anyway would delete exactly what was just protected.
-  await rmdir(previous).catch(() => {})
+  try {
+    await rmdir(previous)
+  } catch {
+    // Still holding something, per the note above — which is the case this must not force.
+  }
 }
 
 /**

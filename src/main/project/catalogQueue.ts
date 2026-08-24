@@ -126,10 +126,14 @@ export function serveCatalog(
      */
     const saveBackup = async (report: RescanReport): Promise<RescanReport> => {
       if (worthBackingUp(report)) {
-        await writeItemsBackup(
-          message.root,
-          itemsBackupOf(catalog.backup(), new Date().toISOString()),
-        ).catch(() => {})
+        try {
+          await writeItemsBackup(
+            message.root,
+            itemsBackupOf(catalog.backup(), new Date().toISOString()),
+          )
+        } catch {
+          // Not the pass's failure, as the note above says: a project with no backup.
+        }
       }
       return report
     }

@@ -347,7 +347,11 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         if (stage === 'duplicate' || stage === 'unreadable') {
           // Swallowed: this runs in a `finally`, and the project may have been closed while the
           // file was being read — a throw here would escape the ingest nobody is awaiting.
-          await deps.discard(assetId).catch(() => {})
+          try {
+            await deps.discard(assetId)
+          } catch {
+            // Runs in a `finally` on a project that may be closed, as the note above says.
+          }
         } else if (stage !== 'queued') {
           // Saved whatever else happened: a proxy that failed after the probe and the hash
           // succeeded must not throw them away — there is no retry, and re-picking makes a

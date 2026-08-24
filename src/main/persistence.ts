@@ -41,7 +41,12 @@ export async function writeAtomic(
   } catch (error) {
     // The tidy-up must not become the failure: what the caller has to hear is why the content
     // could not be written, not why the staging copy would not go away.
-    await rm(staging, { force: true }).catch(() => {})
+    try {
+      await rm(staging, { force: true })
+    } catch {
+      // The tidy-up must not become the failure: the caller hears the write, not this.
+    }
+
     throw error
   }
 }

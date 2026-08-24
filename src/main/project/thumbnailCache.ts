@@ -72,7 +72,11 @@ export function createThumbnailCache(deps: ThumbnailCacheDeps): ThumbnailCache {
   const touch = async (file: string): Promise<void> => {
     // Read ONCE: the two stamps are the same instant, and an eviction reads one of them.
     const at = now()
-    await utimes(file, at, at).catch(() => {})
+    try {
+      await utimes(file, at, at)
+    } catch {
+      // Best effort, as the note above says: a read-only volume costs a place in the queue.
+    }
   }
   /** Written since the folder was last measured — measuring it is a `stat` per entry. */
   let sinceSweep = 0
@@ -138,7 +142,13 @@ export function createThumbnailCache(deps: ThumbnailCacheDeps): ThumbnailCache {
         return null
       }
 
-      await evict(folder, rendered.byteLength).catch(() => {})
+      try {
+        await evict(folder, rendered.byteLength)
+      } catch {
+        // A sweep that could not run leaves the folder bigger than its budget, never without
+        // the thumbnail that was just written.
+      }
+
       return cached
     },
   }

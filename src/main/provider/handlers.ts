@@ -105,10 +105,14 @@ export function registerProviderHandlers({
   handle(CHANNELS.providerGenerate, (_event, modelId, body, use) =>
     reduced(async () => {
       const id = parseModelId(modelId)
-      const label = await models
-        .describe(id)
-        .then(descriptor => descriptor.name)
-        .catch(() => id)
+      // The id stands in for a name the catalogue could not give: a job listed under its id
+      // reads worse than one listed under a name, and neither is a reason to refuse to generate.
+      let label = id
+      try {
+        label = (await models.describe(id)).name
+      } catch {
+        // Nothing to record: `describe` has already said what it could not read.
+      }
 
       const sent = await promptContext(parseGenerationBody(body), { id }, parseContextUse(use))
 

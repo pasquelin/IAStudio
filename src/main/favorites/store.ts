@@ -127,7 +127,12 @@ export function createFavorites(folder: string): FavoritesStore {
         } catch (error) {
           // The index is what `unpin` reads to know which stills to remove, so a picture whose
           // line never landed is one nothing can ever collect.
-          await rm(fileOf(draft.id), { force: true }).catch(() => {})
+          try {
+            await rm(fileOf(draft.id), { force: true })
+          } catch {
+            // The write that failed is what the caller has to hear about, not this tidy-up.
+          }
+
           throw error
         }
       }),
@@ -141,7 +146,12 @@ export function createFavorites(folder: string): FavoritesStore {
         // pointing at a file that is gone is a broken tile for good — the shelf reads
         // `hasThumbnail` and never checks again.
         const written = await write(kept)
-        await rm(fileOf(id), { force: true }).catch(() => {})
+        try {
+          await rm(fileOf(id), { force: true })
+        } catch {
+          // An orphaned picture is invisible, per the note above; the line is already gone.
+        }
+
         return written
       }),
 

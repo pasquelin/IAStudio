@@ -472,10 +472,14 @@ export function createJobManager({
    * still being paid for, so it has to outlive the session that gave up on it.
    */
   const abandon = async (entry: Entry, bound: JobAccount, remoteId: string): Promise<void> => {
-    await bound.runner
-      .cancel(remoteId)
-      .then(() => void (entry.done = true))
-      .catch(() => {})
+    try {
+      await bound.runner.cancel(remoteId)
+      entry.done = true
+    } catch {
+      // Nothing to add: a refused cancellation is the case the note above describes, and the
+      // entry stays undone so the account keeps answering for a job that is still running.
+    }
+
     settle(entry, 'cancelled')
   }
 
@@ -813,14 +817,19 @@ export function createJobManager({
       // On the account that submitted it, whichever one is active now. The note goes with the
       // API taking it, and not before: refused, the job is still running and still being paid
       // for, so it has to outlive the session that gave up on it.
-      if (entry.remoteId) {
-        await entry.account?.runner
-          .cancel(entry.remoteId)
-          .then(() => {
-            entry.done = true
-            remember()
-          })
-          .catch(() => {})
+      // 🛑 Read out FIRST because `?.` short-circuited the WHOLE chain: an entry with no account
+      // never reached the two lines below, and a `try` around `runner?.cancel(…)` would run them.
+      // No real entry seems to get here — a `remoteId` implies an account — but this keeps the
+      // rewrite from betting on it, and the suite is green either way.
+      const runner = entry.account?.runner
+      if (entry.remoteId && runner) {
+        try {
+          await runner.cancel(entry.remoteId)
+          entry.done = true
+          remember()
+        } catch {
+          // Same as `abandon`: refused, the job outlives the session that gave up on it.
+        }
       }
     },
 

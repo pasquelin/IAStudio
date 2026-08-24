@@ -403,21 +403,24 @@ export function Explorer() {
     // The catalogue still answers first for what it holds; what changed is the FALLBACK. A file
     // it has never heard of used to go to the system — a picture copied in by hand, the one thing
     // this panel must not do — and is now judged on its extension, and adopted where it can be.
-    // Wrapped so a REJECTION is told from an answer of `null`: the two used to be one, and a
-    // busy catalogue sent a `.glb` to macOS Preview seconds after a download, silently.
-    const answered = await getBridge()
-      ?.media.adopt(node.path)
-      .then(asset => ({ asset }))
-      .catch(error => {
-        reportFailure('explorer.open', nameOf(node.path), error)
-        return null
-      })
+    const bridge = getBridge()
+    if (!bridge) return
 
-    if (!answered) return
+    // A REJECTION is not an answer of `null`, and telling them apart is the whole point: the two
+    // used to be one, and a busy catalogue sent a `.glb` to macOS Preview seconds after a
+    // download, silently. The import below stays OUT of the `try`, so a failing editor is not
+    // reported as a catalogue that refused.
+    let adopted: Asset | null
+    try {
+      adopted = await bridge.media.adopt(node.path)
+    } catch (error) {
+      reportFailure('explorer.open', nameOf(node.path), error)
+      return
+    }
 
-    if (answered.asset) {
+    if (adopted) {
       const { openAsset } = await import('@/helpers/openAsset')
-      return openAsset(answered.asset)
+      return openAsset(adopted)
     }
 
     // Handed to the system, and the journal is what says so when it refuses: a `.txt` and a `.pdf`
