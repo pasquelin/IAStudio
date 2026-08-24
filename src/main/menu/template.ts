@@ -19,6 +19,7 @@ import {
 import { placementIn, type ToolId, type ToolPlacement, type ToolSurface } from '@shared/domain/tool'
 import {
   bindingOf,
+  commandDescriptor,
   commandIn,
   scopeOfWorkspace,
   type BindingOverrides,
@@ -168,7 +169,9 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     registerAccelerator = true,
   ): Pick<MenuItemConstructorOptions, 'accelerator' | 'registerAccelerator'> => {
     const binding = bindingOf(command, overrides)
-    const typed = typesText(binding)
+    // `commandFor` excludes `global`, so the menu is that scope's only door: its key stays declared
+    // even where a remap has made it one a field would write.
+    const typed = typesText(binding) && commandDescriptor(command)?.scope !== 'global'
     return {
       accelerator: typed && isMac ? undefined : acceleratorOf(binding),
       registerAccelerator: registerAccelerator && !typed,

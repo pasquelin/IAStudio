@@ -932,8 +932,8 @@ describe('the home', () => {
  * macOS a declared accelerator is reserved with the system whatever `registerAccelerator` says,
  * and typing a layer name armed a tool, letter by letter.
  *
- * Blind spot: a `global` command remapped onto such a key would lose its only door, `commandFor`
- * excluding that scope and no window listening for it. None carries one today.
+ * A `global` command is the exception, and the case below says why: no window listens for that
+ * scope, so the menu is its only door and its key stays declared.
  */
 describe('the keys the menu leaves to a field', () => {
   const rowsOf = (items: MenuItemConstructorOptions[]): MenuItemConstructorOptions[] =>
@@ -964,17 +964,24 @@ describe('the keys the menu leaves to a field', () => {
     expect(shown.filter(row => row.registerAccelerator !== false)).toEqual([])
   })
 
-  /**
-   * A remap is what the registry never saw coming — and Alt writes a character on a Mac. Both
-   * kinds of row at once: `scene.duplicate` is built by `commandItem`, the save row by hand.
-   */
+  /** A remap is what the registry never saw coming — and Alt writes a character on a Mac. */
   it('answers to the binding in force, not to the default', () => {
-    const overrides = { 'scene.duplicate': 'Alt+KeyK', 'document.save': 'KeyS' }
-    // Off macOS the rows still SHOW the remapped key, which is what proves it reached them.
+    const overrides = { 'scene.duplicate': 'Alt+KeyK' }
+    // Off macOS the row still SHOWS the remapped key, which is what proves it reached it.
     const shown = typedRows(everyRow({ overrides, isMac: false })).map(row => row.accelerator)
 
-    expect(shown).toEqual(expect.arrayContaining(['Alt+K', 'S']))
+    expect(shown).toContain('Alt+K')
     expect(typedRows(everyRow({ overrides }))).toEqual([])
+  })
+
+  /**
+   * The one scope no window hears — `commandFor` excludes it. Dropping the key would leave the
+   * row as the only way in and no key at all, where the studio would rather keep both.
+   */
+  it('leaves a global command its key, the menu being its only door', () => {
+    const remapped = everyRow({ overrides: { 'document.save': 'KeyS' } })
+
+    expect(typedRows(remapped).map(row => row.accelerator)).toContain('S')
   })
 
   it('keeps the chords a field would never write', () => {
