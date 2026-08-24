@@ -19,6 +19,7 @@ import {
 import { placementIn, type ToolId, type ToolPlacement, type ToolSurface } from '@shared/domain/tool'
 import {
   bindingOf,
+  commandDescriptor,
   commandIn,
   scopeOfWorkspace,
   type BindingOverrides,
@@ -26,7 +27,7 @@ import {
   type MenuAbility,
   type MenuCheck,
 } from '@shared/domain/command'
-import { acceleratorOf } from '@shared/domain/shortcut'
+import { acceleratorOf, typesText } from '@shared/domain/shortcut'
 import { fillHoles, TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
 import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/textureExport'
 import { FACE_SIZES, SKY_PANORAMAS } from '@shared/domain/skybox'
@@ -159,12 +160,24 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   } = options
 
   /**
-   * The accelerator of a command, read off the registry. Written by hand until now, which is
-   * how the menu kept advertising a key a remapped command no longer answered to — and how a
-   * command could be fired by a shortcut the menu never mentioned.
+   * How a native row may carry a command's key, read off the registry so the menu never advertises
+   * one a remap has moved. `registerAccelerator` is Windows and Linux ONLY: on macOS a row that
+   * carries one has it RESERVED, which is how twenty-three rows swallowed `V`, `E` and `[` as typed.
    */
-  const shortcut = (command: CommandId): string | undefined =>
-    acceleratorOf(bindingOf(command, overrides))
+  const keyOf = (
+    command: CommandId,
+    registerAccelerator = true,
+  ): Pick<MenuItemConstructorOptions, 'accelerator' | 'registerAccelerator'> => {
+    const binding = bindingOf(command, overrides)
+    // `commandFor` excludes `global`, so the menu is that scope's only door: its key stays declared
+    // even where a remap has made it one a field would write.
+    const typed = typesText(binding) && commandDescriptor(command)?.scope !== 'global'
+    return {
+      accelerator: typed && isMac ? undefined : acceleratorOf(binding),
+      registerAccelerator: registerAccelerator && !typed,
+    }
+  }
+
   const t = TRANSLATIONS[language]
 
   // Interpolated rather than spelled out in both bundles: `constants.test.ts` pins the product
@@ -183,7 +196,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   // now, and which window is focused has nothing to do with it.
   const settingsItem: MenuItemConstructorOptions = {
     label: t.menu.settings,
-    accelerator: shortcut('app.settings'),
+    ...keyOf('app.settings'),
     click: () => actions.openSettings(),
   }
 
@@ -386,8 +399,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     // row worded for its place — « La vidéo… » under Export — read as a command reachable nowhere.
     id: command,
     label,
-    accelerator: shortcut(command),
-    registerAccelerator,
+    ...keyOf(command, registerAccelerator),
     click: () => actions.runCommand(command),
   })
 
@@ -664,23 +676,23 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       submenu: [
         {
           label: t.menu.newProject,
-          accelerator: shortcut('project.new'),
+          ...keyOf('project.new'),
           click: () => actions.runCommand('project.new'),
         },
         {
           label: t.menu.openProject,
-          accelerator: shortcut('project.open'),
+          ...keyOf('project.open'),
           click: () => actions.runCommand('project.open'),
         },
         { type: 'separator' },
         {
           label: t.menu.saveDocument,
-          accelerator: shortcut('document.save'),
+          ...keyOf('document.save'),
           click: () => actions.runCommand('document.save'),
         },
         {
           label: t.menu.saveDocumentAs,
-          accelerator: shortcut('document.saveAs'),
+          ...keyOf('document.saveAs'),
           click: () => actions.runCommand('document.saveAs'),
         },
         { type: 'separator' },
@@ -725,7 +737,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         { type: 'separator' },
         {
           label: t.menu.fullScreen,
-          accelerator: shortcut('window.fullScreen'),
+          ...keyOf('window.fullScreen'),
           click: () => actions.toggleFullScreen(),
         },
         ...developerItems(isDevelopment, roleItem),

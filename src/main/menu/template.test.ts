@@ -926,3 +926,65 @@ describe('the home', () => {
     expect(labels(panels)).toEqual(['Vos projets'])
   })
 })
+
+/**
+ * The keys a caret has a use for — bare letters, `[`, `Delete`, anything Shift or Alt reaches. On
+ * macOS a declared accelerator is reserved with the system whatever `registerAccelerator` says,
+ * and typing a layer name armed a tool, letter by letter.
+ *
+ * A `global` command is the exception, and the case below says why: no window listens for that
+ * scope, so the menu is its only door and its key stays declared.
+ */
+describe('the keys the menu leaves to a field', () => {
+  const rowsOf = (items: MenuItemConstructorOptions[]): MenuItemConstructorOptions[] =>
+    items.flatMap(item => [item, ...(Array.isArray(item.submenu) ? rowsOf(item.submenu) : [])])
+
+  const everyRow = (given: Partial<MenuOptions> = {}): MenuItemConstructorOptions[] =>
+    [...WORKSPACE_IDS, null].flatMap(workspace =>
+      rowsOf(menuTemplate(options({ ...given, workspace }))),
+    )
+
+  const typedRows = (rows: MenuItemConstructorOptions[]): MenuItemConstructorOptions[] =>
+    rows.filter(row => row.accelerator !== undefined && !/Cmd|Ctrl/.test(String(row.accelerator)))
+
+  const macRows = everyRow()
+
+  it('declares none of them on macOS, where the system would take the key', () => {
+    const declared = typedRows(macRows).map(
+      row => `${String(row.label)} — ${String(row.accelerator)}`,
+    )
+
+    expect(declared).toEqual([])
+  })
+
+  it('shows them elsewhere without reserving them', () => {
+    const shown = typedRows(everyRow({ isMac: false }))
+
+    expect(shown.length).toBeGreaterThan(0)
+    expect(shown.filter(row => row.registerAccelerator !== false)).toEqual([])
+  })
+
+  /** A remap is what the registry never saw coming — and Alt writes a character on a Mac. */
+  it('answers to the binding in force, not to the default', () => {
+    const overrides = { 'scene.duplicate': 'Alt+KeyK' }
+    // Off macOS the row still SHOWS the remapped key, which is what proves it reached it.
+    const shown = typedRows(everyRow({ overrides, isMac: false })).map(row => row.accelerator)
+
+    expect(shown).toContain('Alt+K')
+    expect(typedRows(everyRow({ overrides }))).toEqual([])
+  })
+
+  /**
+   * The one scope no window hears — `commandFor` excludes it. Dropping the key would leave the
+   * row as the only way in and no key at all, where the studio would rather keep both.
+   */
+  it('leaves a global command its key, the menu being its only door', () => {
+    const remapped = everyRow({ overrides: { 'document.save': 'KeyS' } })
+
+    expect(typedRows(remapped).map(row => row.accelerator)).toContain('S')
+  })
+
+  it('keeps the chords a field would never write', () => {
+    expect(macRows.find(row => row.id === 'scene.group')?.accelerator).toBe('CmdOrCtrl+G')
+  })
+})

@@ -117,6 +117,24 @@ export function copiesText(signature: Signature): boolean {
   return TEXT_CHORDS.has(signature)
 }
 
+/**
+ * Whether the caret would have a use for the key: writing it, erasing with it, or moving through
+ * the words. That is anything a bare key carries, and anything Shift or Alt do — both produce a
+ * character on a Mac.
+ *
+ * Blind spot: `Ctrl` reads as safe, and on macOS it is not — `⌃A`, `⌃E`, `⌃K` and `⌃D` are the
+ * caret set every AppKit field implements. No binding carries a bare `Ctrl` today, and answering
+ * differently per platform would take a signature the platform is passed to.
+ *
+ * Asked by the native menu, which must not reserve such a key with the system: see `keyOf` in
+ * `main/menu/template.ts`.
+ */
+export function typesText(signature: Signature | null): boolean {
+  if (!signature) return false
+  const modifiers = signature.split('+').slice(0, -1)
+  return !modifiers.includes('Ctrl') && !modifiers.includes('Meta')
+}
+
 const MODIFIER_GLYPHS: Record<string, string> = {
   Ctrl: '⌃',
   Alt: '⌥',
