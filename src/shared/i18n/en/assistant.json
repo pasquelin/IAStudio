@@ -1186,6 +1186,7 @@
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",
+    "stagedHint": "The assistant is already in the middle of the window",
     "listening": "The assistant is listening",
     "done": "The assistant has answered",
     "reviewHint": "Opens the assistant to show what it understood and what it did",

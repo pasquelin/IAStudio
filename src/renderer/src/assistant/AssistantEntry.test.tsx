@@ -5,7 +5,7 @@ import { useAssistant } from '@/stores/assistant'
 import { AssistantEntry } from './AssistantEntry'
 
 beforeEach(() => {
-  useAssistant.setState({ open: false })
+  useAssistant.setState({ open: false, staged: 0 })
 })
 
 describe('the way to the assistant with a pointer', () => {
@@ -36,5 +36,17 @@ describe('the way to the assistant with a pointer', () => {
 
     expect(button).toHaveAttribute('aria-keyshortcuts')
     expect(button).toHaveTextContent(/^Assistant$/)
+  })
+
+  // Quiet rather than gone: a destination that vanishes is one nobody looks for again once a
+  // document has taken the centre back.
+  it('goes quiet while another surface holds the thread', async () => {
+    useAssistant.setState({ staged: 1 })
+    render(<AssistantEntry />)
+
+    await userEvent.click(screen.getByRole('button'))
+
+    expect(screen.getByRole('button')).toHaveAttribute('aria-disabled', 'true')
+    expect(useAssistant.getState().open).toBe(false)
   })
 })
