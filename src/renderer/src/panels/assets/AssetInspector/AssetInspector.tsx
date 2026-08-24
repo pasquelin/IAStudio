@@ -12,7 +12,7 @@ import { generationOf } from '@/helpers/generation'
 import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { renameAsset } from '@/helpers/rename'
-import { RoleField } from '../RoleField'
+import { RoleField } from '@/panels/shared/RoleField'
 import { useJobs } from '@/stores/jobs'
 import { AssetInspectorGeneration } from './AssetInspectorGeneration'
 

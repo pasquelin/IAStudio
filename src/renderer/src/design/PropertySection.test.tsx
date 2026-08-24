@@ -1,7 +1,8 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useSectionFolds } from '@/stores/sectionFolds'
+import { anySectionOpen, useSectionFolds } from '@/stores/sectionFolds'
+import { SectionFoldScope } from './SectionFoldScope'
 import { PropertySection } from './PropertySection'
 
 describe('PropertySection', () => {
@@ -92,6 +93,25 @@ describe('PropertySection', () => {
       )
 
       expect(screen.getByText('fields')).toBeInTheDocument()
+    })
+
+    /**
+     * A section drawn outside the panel that carries the button — the shelf reads its picked
+     * asset out in sections of its own — is neither counted by the offer nor moved by the order.
+     */
+    it('passes a section by when its scope says the order is not its panel’s', () => {
+      render(
+        <SectionFoldScope value={false}>
+          <PropertySection title="Identity">
+            <p>elsewhere</p>
+          </PropertySection>
+        </SectionFoldScope>,
+      )
+
+      expect(anySectionOpen(useSectionFolds.getState())).toBe(false)
+
+      act(() => useSectionFolds.getState().askAllSections())
+      expect(screen.getByText('elsewhere')).toBeInTheDocument()
     })
   })
 

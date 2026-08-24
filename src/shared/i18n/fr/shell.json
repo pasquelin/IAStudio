@@ -97,6 +97,7 @@
     "rescanStopHint": "Interrompt la recherche. Ce qui a déjà été retrouvé reste retrouvé",
     "emptyFolder": "Ce dossier ne contient rien.",
     "crumbs": "Dossier affiché",
+    "details": "Détail de la sélection",
     "projectFolder": "Projet",
     "crumbHint": "Remonte à ce dossier",
     "back": "Précédent",

@@ -1,10 +1,7 @@
-import { aiRoleId } from '@shared/domain/aiRole'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import type { Job } from '@shared/domain/job'
-import { job as jobOf } from '@/stores/job-fixtures'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
 import { layerFixture } from '@/engines/canvas/canvas-fixtures'
 import { installCanvas } from '@/stores/canvas-fixtures'
@@ -14,13 +11,10 @@ import { useAssets } from '@/stores/assets'
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useJobs } from '@/stores/jobs'
-import { useModels } from '@/stores/models'
 import { installSequence } from '@/stores/sequence-fixtures'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useLayouts } from '@/stores/layouts'
 import { useSelection } from '@/stores/selection'
-import { arrangedFor } from '@/stores/tool-fixtures'
-import { arrangementOf, useTools } from '@/stores/tools'
 import { Inspector } from './Inspector'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
@@ -33,19 +27,11 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
   ...overrides,
 })
 
-const job: Job = jobOf({
-  id: 'job-1',
-  targetId: 'eleven-music-v2',
-  label: 'ElevenLabs Music v2',
-  status: 'succeeded',
-  assetIds: ['asset-1'],
-})
-
 function openSequence(): void {
   installSequence('doc-1', sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')]))
 }
 
-describe('Inspector, on what a panel selected', () => {
+describe('Inspector, on the document in front', () => {
   beforeEach(() => {
     useLayouts.setState({ activeWorkspace: 'image', home: false })
     useSelection.setState({ selection: { kind: 'none' } })
@@ -91,53 +77,34 @@ describe('Inspector, on what a panel selected', () => {
     expect(screen.queryByText(/Sélectionnez un élément/)).not.toBeInTheDocument()
   })
 
-  it('reads out the asset that was selected', () => {
+  /**
+   * 🛑 The document in front keeps the panel, whatever a side panel has picked. An asset used to
+   * answer here FIRST and unguarded, so clicking a thumbnail took the inspector away from the
+   * image being edited — with nothing on screen saying why the layers had stopped being
+   * described. What an asset is now reads out under the shelf itself, in `AssetDetails`.
+   */
+  it('leaves the image in front described when an asset is picked in the shelf', () => {
+    installCanvas('image-1', {
+      ...DEFAULT_CANVAS,
+      layers: [layerFixture({ name: 'Paint' })],
+      activeLayerId: 'layer-2',
+    })
     useSelection.getState().selectAssets(['asset-1'])
+
     render(<Inspector />)
 
-    expect(screen.getByText('pad.wav')).toBeInTheDocument()
-    expect(screen.getByText('Audio')).toBeInTheDocument()
-  })
-
-  it('summarises a multiple selection rather than detailing the first of it', () => {
-    useAssets.setState({ items: [asset(), asset({ id: 'asset-2', name: 'pad.wav' })] })
-    useSelection.getState().selectAssets(['asset-1', 'asset-2'])
-    render(<Inspector />)
-
-    expect(screen.getByText('2')).toBeInTheDocument()
+    expect(screen.getByText('Paint')).toBeInTheDocument()
     expect(screen.queryByText('pad.wav')).not.toBeInTheDocument()
   })
 
-  it('shows the prompt behind a generated asset, whole', () => {
-    useAssets.setState({ items: [asset({ jobId: 'job-1' })] })
-    useJobs.setState({ jobs: [job], bodies: { 'job-1': { prompt: 'a very soft pad' } } })
-    useSelection.getState().selectAssets(['asset-1'])
+  /** The same rule for a file of the project folder — the explorer's own selection. */
+  it('leaves the sky in front graded when a file is picked in the explorer', () => {
+    installDocument('sky-1', 'skyboxes')
+    useSelection.getState().selectFiles(['Repérages/ruelle.png'])
+
     render(<Inspector />)
 
-    expect(screen.getByText('a very soft pad')).toBeInTheDocument()
-    expect(screen.getByText('ElevenLabs Music v2')).toBeInTheDocument()
-  })
-
-  it('shows no generation block for an imported file', () => {
-    useSelection.getState().selectAssets(['asset-1'])
-    render(<Inspector />)
-
-    expect(screen.queryByText('Génération')).not.toBeInTheDocument()
-  })
-
-  it('arms the generator with the parameters behind the asset, and brings it up', async () => {
-    useAssets.setState({ items: [asset({ jobId: 'job-1' })] })
-    useJobs.setState({ jobs: [job], bodies: { 'job-1': { prompt: 'x', guidance: 7 } } })
-    useSelection.getState().selectAssets(['asset-1'])
-    useTools.setState({ arrangements: arrangedFor('image', { open: {} }) })
-    render(<Inspector />)
-
-    await userEvent.click(screen.getByRole('button', { name: /Régénérer/ }))
-
-    const models = useModels.getState()
-    expect(models.selected[aiRoleId('image', 'txt2img')]).toBe('eleven-music-v2')
-    expect(models.preset[aiRoleId('image', 'txt2img')]).toEqual({ prompt: 'x', guidance: 7 })
-    expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('generator')
+    expect(screen.getByLabelText('Élévation')).toBeInTheDocument()
   })
 
   it('reads out the clip the montage has selected', () => {

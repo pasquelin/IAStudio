@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useCallback, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { providerOfModel, type AiRoleId } from '@shared/domain/aiRole'
 import type { ModelSummary } from '@shared/domain/model'
@@ -52,7 +52,12 @@ export function GeneratorModel({ capability, modelId, name, plan }: GeneratorMod
   const projectPath = useAiModels(state => state.overview?.projectPath ?? null)
   const reachOf = useModelReach(plan)
 
-  const refusalOf = (model: ModelSummary): ModelRefusalWord | undefined => reachOf(model).refusal
+  // Memoised on the answer it narrows, which `useModelReach` already keeps stable: an inline
+  // arrow here handed the picker a new function per render, and every row with it.
+  const refusalOf = useCallback(
+    (model: ModelSummary): ModelRefusalWord | undefined => reachOf(model).refusal,
+    [reachOf],
+  )
 
   const { pictureOf, resolveFor } = useLazyPreviews()
   const chosen = models.find(one => one.id === modelId)

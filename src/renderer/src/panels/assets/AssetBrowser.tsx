@@ -28,6 +28,7 @@ import { useProject } from '@/stores/project'
 import { selectedAssetIds, useSelection } from '@/stores/selection'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 import { AssetCard } from './AssetCard'
+import { AssetDetails } from './AssetDetails'
 import { AssetRow } from './AssetRow'
 import { ImportProgress } from './ImportProgress'
 import { LOCATION_FACET, PUBLISHED_BADGE, TYPE_FACET } from './facets'
@@ -540,6 +541,10 @@ export function AssetBrowser() {
           />
         }
       />
+
+      {/* What the shelf has picked, read out under the shelf: the inspector describes the
+          document in front and never a row of a side panel. */}
+      <AssetDetails />
     </div>
   )
 }

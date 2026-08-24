@@ -97,6 +97,7 @@
     "rescanStopHint": "Calls off the search. Whatever was found already stays found",
     "emptyFolder": "This folder holds nothing.",
     "crumbs": "Folder shown",
+    "details": "Selection detail",
     "projectFolder": "Project",
     "crumbHint": "Goes back up to this folder",
     "back": "Back",

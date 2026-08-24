@@ -12,16 +12,21 @@ import {
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useSelection } from '@/stores/selection'
 import { ClipInspector } from '../ClipInspector'
-import { FileInspector } from '../FileInspector'
 import { LayerInspector } from '../LayerInspector/LayerInspector'
 import { SceneInspector } from '../SceneInspector'
 import { SkyboxInspector } from '../SkyboxInspector/SkyboxInspector'
 import { TextureInspector } from '../TextureInspector/TextureInspector'
 import { TrackInspector } from '../TrackInspector'
-import { inspectedTextureId } from '../inspected'
-import { InspectorAssetSelection } from './InspectorAssetSelection'
 import { InspectorEmpty } from './InspectorEmpty'
 
+/**
+ * 🛑 The DOCUMENT in front decides. The selection only says WHICH thing inside it — a clip, a
+ * track — never whether the document gets to speak; an asset and a file answer under the list
+ * they were picked in, `AssetDetails` and `FileDetails`.
+ *
+ * The order below is a reading order and not a priority: `activeIdOfKind` answers off one
+ * `activeId`, so at most one of these ids is ever set.
+ */
 export function InspectorFace() {
   const selection = useSelection(state => state.selection)
   const sceneId = useDocuments(activeSceneId)
@@ -34,70 +39,36 @@ export function InspectorFace() {
   const imageId = useDocuments(activeImageId)
   const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
 
-  switch (selection.kind) {
-    // The catalogue is read by the face that needs it, not here: subscribing to it from this one
-    // re-rendered the clip and track inspectors on every catalogue refresh too.
-    case 'asset':
-      return <InspectorAssetSelection ids={selection.ids} />
-
-    // Paths, not ids: what the explorer picks is a file of the project folder, and most of them
-    // have no row anywhere — which is the whole difference between this face and the one above.
-    case 'file':
-      return <FileInspector paths={selection.ids} />
-
-    // Both guarded on the owner: the sequence in front is not necessarily the one this was
-    // selected in, and every sequence has a track called `V1`.
-    case 'clip': {
-      // Which clip comes from the sequence rather than from the descriptor: `selectedId` is
-      // what the canvas highlights, and commands move it — dropping an asset selects the clip
-      // it creates. Reading the id here instead would leave the two showing different clips.
-      const chosen = sequence && selection.ownerId === sequenceId ? sequence.selectedId : null
-      const clip = sequence && chosen ? clipById(sequence, chosen) : null
-      return sequenceId && sequence && clip ? (
-        <ClipInspector documentId={sequenceId} sequence={sequence} clip={clip} />
-      ) : (
-        <InspectorEmpty />
-      )
-    }
-
-    // Not a case of its own, unlike the clip and track faces: which layer is read below, from
-    // `activeLayerId` — the answer the stack highlights, and the one a layer born on the canvas
-    // sets without ever posting a selection.
-    case 'layer':
-      break
-
-    case 'track': {
-      const track =
-        sequence && selection.ownerId === sequenceId
-          ? trackById(sequence, selection.ids[0] ?? '')
-          : null
-      return sequenceId && track ? (
-        <TrackInspector documentId={sequenceId} track={track} />
-      ) : (
-        <InspectorEmpty />
-      )
-    }
+  // `activeLayerId` and not the selection: a layer born on the canvas arms it without posting one.
+  if (imageId) {
+    const layer = canvas ? layerById(canvas, canvas.activeLayerId) : null
+    return layer ? <LayerInspector documentId={imageId} layer={layer} /> : <InspectorEmpty />
   }
 
-  // Before the three below, which answer for a document of another kind: an image in front is
-  // the one document whose inspected thing is a layer.
-  const layer = canvas ? layerById(canvas, canvas.activeLayerId) : null
-  if (imageId && layer) return <LayerInspector documentId={imageId} layer={layer} />
+  // Both guarded on the owner: every sequence names its first tracks `V1` and `A1`, so a track
+  // picked in one tab matches by id in the next and would be described in its place.
+  if (sequenceId && sequence) {
+    // Which clip comes from the sequence rather than from the descriptor: `selectedId` is what
+    // the canvas highlights, and commands move it — dropping an asset selects the clip it
+    // creates. Reading the id off the selection would leave the two showing different clips.
+    if (selection.kind === 'clip' && selection.ownerId === sequenceId) {
+      const clip = sequence.selectedId ? clipById(sequence, sequence.selectedId) : null
+      if (clip) return <ClipInspector documentId={sequenceId} sequence={sequence} clip={clip} />
+    }
 
-  // `none` and `node` both land here, and deliberately: neither names a thing the document in
-  // front might not hold. Nothing was clicked at all, or a scene node was — and a scene says
-  // which of its nodes from its OWN state, which `SceneInspector` reads there. That is why this
-  // one is not guarded on its owner as the three faces above are: guarding it emptied the panel
-  // on every switch between two scenes, and kept it empty over a texture afterwards. At most one
-  // id is set below, so the order is reading order.
+    if (selection.kind === 'track' && selection.ownerId === sequenceId) {
+      const track = trackById(sequence, selection.ids[0] ?? '')
+      if (track) return <TrackInspector documentId={sequenceId} track={track} />
+    }
+
+    return <InspectorEmpty />
+  }
+
+  // Which node is the scene's own state, read by `SceneInspector` there.
   if (sceneId) return <SceneInspector documentId={sceneId} />
 
-  // A sky has no node to pick either — everything on it belongs to the document. It had a panel
-  // of its own until 2026-08-19, stacked above an inspector that read "select something".
+  // A sky has no node to pick: everything on it belongs to the document.
   if (skyboxId) return <SkyboxInspector documentId={skyboxId} />
 
-  // Through the same answer the title row reads, so the button it carries and the face below it
-  // can never describe two different things.
-  const material = inspectedTextureId(selection, sceneId, textureId)
-  return material ? <TextureInspector documentId={material} /> : <InspectorEmpty />
+  return textureId ? <TextureInspector documentId={textureId} /> : <InspectorEmpty />
 }

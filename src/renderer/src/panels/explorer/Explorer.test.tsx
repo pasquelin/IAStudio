@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
@@ -224,6 +224,21 @@ beforeEach(() => {
   installFakeBridge({})
 })
 
+/**
+ * The listing itself — the tree, or the grid when the panel is showing one.
+ *
+ * Scoped rather than read off `screen`: the panel reads the file it has picked out UNDER the
+ * listing (`FileDetails`), so the name of a picked row is on screen twice and a plain
+ * `getByText` on it finds both.
+ */
+async function listing(): Promise<HTMLElement> {
+  return waitFor(() => {
+    const shown = screen.queryByRole('tree') ?? screen.queryByRole('listbox')
+    if (!shown) throw new Error('the panel is drawing neither a tree nor a grid')
+    return shown
+  })
+}
+
 describe('the project explorer', () => {
   it('says so when no project is open, rather than listing nothing', () => {
     render(<Explorer />)
@@ -301,7 +316,7 @@ describe('the project explorer', () => {
 
       render(<Explorer />)
 
-      expect(await screen.findByText('assets')).toBeInTheDocument()
+      expect(await within(await listing()).findByText('assets')).toBeInTheDocument()
       expect(screen.getByText('documents')).toBeInTheDocument()
       expect(screen.getByText('notes.txt')).toBeInTheDocument()
     })
@@ -316,7 +331,7 @@ describe('the project explorer', () => {
       })
 
       render(<Explorer />)
-      await screen.findByText('assets')
+      await within(await listing()).findByText('assets')
 
       expect(listFolder).toHaveBeenCalledTimes(1)
       expect(listFolder).toHaveBeenCalledWith('', false)
@@ -327,7 +342,7 @@ describe('the project explorer', () => {
       install({ '': [folder('assets')], assets: [file('boulder.png', 'assets')] })
 
       render(<Explorer />)
-      await userEvent.click(await screen.findByText('assets'))
+      await userEvent.click(await within(await listing()).findByText('assets'))
       await userEvent.keyboard('{ArrowRight}')
 
       expect(await screen.findByText('boulder.png')).toBeInTheDocument()
@@ -342,7 +357,7 @@ describe('the project explorer', () => {
       install({ '': [folder('assets')] })
 
       render(<Explorer />)
-      await screen.findByText('assets')
+      await within(await listing()).findByText('assets')
 
       expect(screen.getByRole('treeitem')).toHaveAttribute('aria-expanded', 'false')
     })
@@ -374,11 +389,13 @@ describe('the project explorer', () => {
       install({ '': [folder('assets')], assets: [file('one.png', 'assets')] })
 
       render(<Explorer />)
-      await userEvent.dblClick(await screen.findByText('assets'))
-      await screen.findByText('one.png')
-      await userEvent.dblClick(screen.getByText('assets'))
+      await userEvent.dblClick(await within(await listing()).findByText('assets'))
+      await within(await listing()).findByText('one.png')
+      await userEvent.dblClick(within(await listing()).getByText('assets'))
 
-      await waitFor(() => expect(screen.queryByText('one.png')).not.toBeInTheDocument())
+      await waitFor(async () =>
+        expect(within(await listing()).queryByText('one.png')).not.toBeInTheDocument(),
+      )
     })
 
     // Every path in the tree named the folder just left: kept a frame longer, its rows are
@@ -426,7 +443,7 @@ describe('the project explorer', () => {
       })
 
       render(<Explorer />)
-      await userEvent.dblClick(await screen.findByText('assets'))
+      await userEvent.dblClick(await within(await listing()).findByText('assets'))
 
       expect(screen.getByText('notes.txt')).toBeInTheDocument()
     })
@@ -521,7 +538,7 @@ describe('the project explorer', () => {
       const { openFile } = install({ '': [file('brief.pdf')] })
 
       render(<Explorer />)
-      await userEvent.dblClick(await screen.findByText('brief.pdf'))
+      await userEvent.dblClick(await within(await listing()).findByText('brief.pdf'))
 
       expect(openFile).toHaveBeenCalledWith('brief.pdf')
       expect(openDocument).not.toHaveBeenCalled()
@@ -551,7 +568,7 @@ describe('the project explorer', () => {
       )
 
       render(<Explorer />)
-      await userEvent.dblClick(await screen.findByText('assets'))
+      await userEvent.dblClick(await within(await listing()).findByText('assets'))
       await userEvent.dblClick(await screen.findByText('boulder.png'))
 
       await waitFor(() => expect(openAsset).toHaveBeenCalledTimes(1))
@@ -572,8 +589,8 @@ describe('the project explorer', () => {
       })
 
       render(<Explorer />)
-      await userEvent.dblClick(await screen.findByText('Images'))
-      await userEvent.dblClick(await screen.findByText('facade.jpg'))
+      await userEvent.dblClick(await within(await listing()).findByText('Images'))
+      await userEvent.dblClick(await within(await listing()).findByText('facade.jpg'))
 
       await waitFor(() => expect(openAsset).toHaveBeenCalledTimes(1))
       expect(adopt).toHaveBeenCalledWith('Images/facade.jpg')
@@ -591,7 +608,7 @@ describe('the project explorer', () => {
 
       render(<Explorer />)
       const rowFor = async (name: string): Promise<HTMLElement> => {
-        const row = (await screen.findByText(name)).closest('[role="treeitem"]')
+        const row = (await within(await listing()).findByText(name)).closest('[role="treeitem"]')
         if (!(row instanceof HTMLElement)) throw new Error(`no row for ${name}`)
         return row
       }
@@ -668,10 +685,12 @@ describe('the project explorer', () => {
       install({ '': [file('brief.pdf')] })
 
       render(<Explorer />)
-      await screen.findByText('brief.pdf')
+      await within(await listing()).findByText('brief.pdf')
       vi.unstubAllGlobals()
 
-      await expect(userEvent.dblClick(screen.getByText('brief.pdf'))).resolves.toBeUndefined()
+      await expect(
+        userEvent.dblClick(within(await listing()).getByText('brief.pdf')),
+      ).resolves.toBeUndefined()
     })
 
     it('opens a folder rather than handing it to the system', async () => {
@@ -679,9 +698,9 @@ describe('the project explorer', () => {
       const { openFile } = install({ '': [folder('assets')], assets: [file('one.png', 'assets')] })
 
       render(<Explorer />)
-      await userEvent.dblClick(await screen.findByText('assets'))
+      await userEvent.dblClick(await within(await listing()).findByText('assets'))
 
-      expect(await screen.findByText('one.png')).toBeInTheDocument()
+      expect(await within(await listing()).findByText('one.png')).toBeInTheDocument()
       expect(openFile).not.toHaveBeenCalled()
     })
 
@@ -809,7 +828,7 @@ describe('the project explorer', () => {
  */
 describe('dragging a row of the explorer', () => {
   const rowFor = async (name: string): Promise<HTMLElement> => {
-    const label = await screen.findByText(name)
+    const label = await within(await listing()).findByText(name)
     const row = label.closest('[role="treeitem"]')
     if (!(row instanceof HTMLElement)) throw new Error(`no row for ${name}`)
     return row
@@ -839,7 +858,7 @@ describe('dragging a row of the explorer', () => {
     })
 
     render(<Explorer />)
-    await userEvent.click(await screen.findByText('notes'))
+    await userEvent.click(await within(await listing()).findByText('notes'))
     await userEvent.keyboard('{ArrowRight}')
     await drag('brief.pdf', 'refs')
 
@@ -889,7 +908,7 @@ describe('dragging a row of the explorer', () => {
     })
 
     render(<Explorer />)
-    await userEvent.click(await screen.findByText('notes'))
+    await userEvent.click(await within(await listing()).findByText('notes'))
     await userEvent.keyboard('{ArrowRight}')
     await drag('notes', 'drafts')
 
@@ -906,7 +925,7 @@ describe('dragging a row of the explorer', () => {
  */
 describe('picking several rows of the explorer', () => {
   const rowFor = async (name: string): Promise<HTMLElement> => {
-    const label = await screen.findByText(name)
+    const label = await within(await listing()).findByText(name)
     const row = label.closest('[role="treeitem"]')
     if (!(row instanceof HTMLElement)) throw new Error(`no row for ${name}`)
     return row
@@ -997,7 +1016,7 @@ describe('picking several rows of the explorer', () => {
     })
 
     render(<Explorer />)
-    await userEvent.click(await screen.findByText('notes'))
+    await userEvent.click(await within(await listing()).findByText('notes'))
     await userEvent.keyboard('{ArrowRight}')
 
     const data = dragTransfer()
@@ -1026,7 +1045,7 @@ describe('the explorer commands', () => {
     // Nothing has moved yet, and nothing will until the paste says where.
     expect(moveFiles).not.toHaveBeenCalled()
 
-    await userEvent.click(await screen.findByText('notes'))
+    await userEvent.click(await within(await listing()).findByText('notes'))
     await userEvent.keyboard('{Meta>}v{/Meta}')
 
     expect(pasteFiles).toHaveBeenCalledWith(['a.png'], 'notes', true)
@@ -1041,7 +1060,7 @@ describe('the explorer commands', () => {
     render(<Explorer />)
     await userEvent.click(await screen.findByText('a.png'))
     await userEvent.keyboard('{Meta>}c{/Meta}')
-    await userEvent.click(await screen.findByText('notes'))
+    await userEvent.click(await within(await listing()).findByText('notes'))
     await userEvent.keyboard('{Meta>}v{/Meta}')
     await userEvent.click(await screen.findByText('refs'))
     await userEvent.keyboard('{Meta>}v{/Meta}')
@@ -1075,7 +1094,7 @@ describe('the explorer commands', () => {
     const { newFolder } = install({ '': [folder('notes')] })
 
     render(<Explorer />)
-    await screen.findByText('notes')
+    await within(await listing()).findByText('notes')
     // Focused without being clicked, which is the state the first case is about: the panel arms
     // its scope on the focus, and nothing is picked yet. Inside `act`, or the effect that
     // subscribes to the keyboard has not run by the time the key below is pressed.
@@ -1084,7 +1103,7 @@ describe('the explorer commands', () => {
 
     await waitFor(() => expect(newFolder).toHaveBeenCalledWith('', 'dossier'))
 
-    await userEvent.click(await screen.findByText('notes'))
+    await userEvent.click(await within(await listing()).findByText('notes'))
     fireEvent.keyDown(window, { key: 'N', code: 'KeyN', metaKey: true, shiftKey: true })
 
     await waitFor(() => expect(newFolder).toHaveBeenCalledWith('notes', 'dossier'))
@@ -1101,7 +1120,7 @@ describe('the explorer commands', () => {
     const { newFolder } = install({ '': [folder('notes')] })
 
     render(<Explorer />)
-    await userEvent.click(await screen.findByText('notes'))
+    await userEvent.click(await within(await listing()).findByText('notes'))
 
     fireEvent.contextMenu(screen.getByRole('tree').parentElement!)
     fireEvent.keyDown(window, { key: 'N', code: 'KeyN', metaKey: true, shiftKey: true })
@@ -1129,7 +1148,10 @@ describe('the explorer commands', () => {
  */
 describe('the explorer menu', () => {
   const open = async (name: string): Promise<void> => {
-    await userEvent.pointer({ keys: '[MouseRight]', target: await screen.findByText(name) })
+    await userEvent.pointer({
+      keys: '[MouseRight]',
+      target: await within(await listing()).findByText(name),
+    })
   }
 
   it('shows a file in the system file manager', async () => {
@@ -1285,7 +1307,7 @@ describe('the explorer menu', () => {
     menu.picks('Renommer')
 
     render(<Explorer />)
-    await userEvent.dblClick(await screen.findByText('assets'))
+    await userEvent.dblClick(await within(await listing()).findByText('assets'))
     await open('Boulder.png')
     const field = await screen.findByRole('textbox', { name: 'Nom du document' })
     await userEvent.clear(field)
@@ -1317,7 +1339,7 @@ describe('the explorer menu', () => {
     )
 
     render(<Explorer />)
-    await userEvent.dblClick(await screen.findByText('assets'))
+    await userEvent.dblClick(await within(await listing()).findByText('assets'))
     await open('Boulder.png')
 
     await waitFor(() => expect(menu.offers('Renommer')).toBe(true))
@@ -1334,7 +1356,7 @@ describe('the explorer menu', () => {
     install({ '': [folder('assets')], assets: [file('dropped.png', 'assets')] })
 
     render(<Explorer />)
-    await userEvent.dblClick(await screen.findByText('assets'))
+    await userEvent.dblClick(await within(await listing()).findByText('assets'))
     await open('dropped.png')
 
     await waitFor(() => expect(menu.offers('Renommer')).toBe(true))
@@ -1555,7 +1577,7 @@ describe('the explorer read by domain', () => {
     // The document by its title, the source by its file name.
     expect(await screen.findByText('Niveau')).toBeInTheDocument()
     expect(screen.getByText('chaise.glb')).toBeInTheDocument()
-    expect(screen.queryByText('a3f1.gltf')).not.toBeInTheDocument()
+    expect(within(await listing()).queryByText('a3f1.gltf')).not.toBeInTheDocument()
   })
 
   /** A source needs none: its own name IS the directory entry, extension and all. */
@@ -1630,7 +1652,7 @@ describe('the project explorer, as a grid', () => {
 
   /** The tile, which is what carries the drag: the cell around it belongs to `Collection`. */
   const tileFor = async (name: string): Promise<HTMLElement> => {
-    const caption = await screen.findByText(name)
+    const caption = await within(await listing()).findByText(name)
     const tile = caption.closest('[draggable]')
     if (!(tile instanceof HTMLElement)) throw new Error(`no tile for ${name}`)
     return tile
@@ -1654,8 +1676,8 @@ describe('the project explorer, as a grid', () => {
 
     render(<Explorer />)
 
-    expect(await screen.findByText('Images')).toBeInTheDocument()
-    expect(screen.getByText('brief.pdf')).toBeInTheDocument()
+    expect(await within(await listing()).findByText('Images')).toBeInTheDocument()
+    expect(within(await listing()).getByText('brief.pdf')).toBeInTheDocument()
     // The tree would draw it under its folder; a grid has no nesting to draw it in.
     expect(screen.queryByText('a.png')).toBeNull()
   })
@@ -1669,7 +1691,7 @@ describe('the project explorer, as a grid', () => {
     await enter('Images')
 
     expect(await screen.findByText('a.png')).toBeInTheDocument()
-    expect(screen.queryByText('brief.pdf')).toBeNull()
+    expect(within(await listing()).queryByText('brief.pdf')).toBeNull()
   })
 
   /** A door that shut behind you would make the grid a worse tree, not a second reading of one. */
@@ -1684,7 +1706,7 @@ describe('the project explorer, as a grid', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Projet' }))
 
-    expect(await screen.findByText('brief.pdf')).toBeInTheDocument()
+    expect(await within(await listing()).findByText('brief.pdf')).toBeInTheDocument()
   })
 
   /**
@@ -1701,7 +1723,7 @@ describe('the project explorer, as a grid', () => {
     await screen.findByText('a.png')
 
     await userEvent.click(screen.getByRole('button', { name: 'Précédent' }))
-    expect(await screen.findByText('brief.pdf')).toBeInTheDocument()
+    expect(await within(await listing()).findByText('brief.pdf')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Suivant' }))
     expect(await screen.findByText('a.png')).toBeInTheDocument()
@@ -1718,7 +1740,7 @@ describe('the project explorer, as a grid', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Dossier parent' }))
 
-    expect(await screen.findByText('brief.pdf')).toBeInTheDocument()
+    expect(await within(await listing()).findByText('brief.pdf')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Dossier parent' })).toBeDisabled()
   })
 
@@ -1864,7 +1886,7 @@ describe('the project explorer, as a grid', () => {
     })
 
     render(<Explorer />)
-    await userEvent.click(await screen.findByText('brief.pdf'))
+    await userEvent.click(await within(await listing()).findByText('brief.pdf'))
     await enter('Images')
     await screen.findByText('a.png')
 
@@ -1935,11 +1957,11 @@ describe('the project explorer, as a grid', () => {
     await screen.findByText('a.png')
 
     act(() => useExplorerView.setState({ collection: { ...LIST_ONLY, view: 'list' } }))
-    await userEvent.click(await screen.findByText('Images'))
+    await userEvent.click(await within(await listing()).findByText('Images'))
     await userEvent.keyboard('{ArrowLeft}')
     act(() => useExplorerView.setState({ collection: { ...LIST_ONLY, view: 'grid' } }))
 
-    expect(await screen.findByText('brief.pdf')).toBeInTheDocument()
+    expect(await within(await listing()).findByText('brief.pdf')).toBeInTheDocument()
   })
 
   /**
@@ -1955,7 +1977,7 @@ describe('the project explorer, as a grid', () => {
     })
 
     render(<Explorer />)
-    await userEvent.click(await screen.findByText('brief.pdf'))
+    await userEvent.click(await within(await listing()).findByText('brief.pdf'))
     fireEvent.keyDown(window, { key: 'c', code: 'KeyC', metaKey: true })
     await enter('Images')
     await screen.findByText('a.png')
@@ -2121,7 +2143,7 @@ describe('the project explorer, as a grid', () => {
     }
 
     const rowFor = async (name: string): Promise<HTMLElement> => {
-      const row = (await screen.findByText(name)).closest('[role="treeitem"]')
+      const row = (await within(await listing()).findByText(name)).closest('[role="treeitem"]')
       if (!(row instanceof HTMLElement)) throw new Error(`no row for ${name}`)
       return row
     }
