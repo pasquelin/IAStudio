@@ -10,11 +10,13 @@ import {
   isWorkerHello,
   PROTOCOL_VERSION,
   readHardware,
+  readRequirements,
   readMemoryLedger,
   readOpenedJob,
   type EngineDoorMemory,
   type EngineFrame,
   type EngineHardware,
+  type EngineRequirements,
   type EngineHello,
   type EngineJobOp,
   type EngineRequest,
@@ -59,6 +61,11 @@ export type PythonClient = {
    * what a release was expected to return. Answered by the core, so it wakes no door.
    */
   memory: () => Promise<readonly EngineDoorMemory[]>
+  /**
+   * What the door's environment is missing, if anything. Answered by the core, so it wakes no
+   * door and imports no tensor library — a door started to be told it holds nothing is 682 MB.
+   */
+  requirements: () => Promise<EngineRequirements>
   /**
    * Opens a JOB on a door and waits for the event that settles it — reading gigabytes and running
    * an inference are the two things `REQUEST_TIMEOUT_MS` must never bound.
@@ -211,6 +218,17 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
         'hardware.info',
       )
       return readHardware(answer)
+    },
+
+    requirements: async () => {
+      if (closed) throw new Error(GONE)
+
+      return readRequirements(
+        await beforeDeadline(
+          client.send(id => engineRequest(id, 'engine.requirements')),
+          'engine.requirements',
+        ),
+      )
     },
 
     memory: async () => {

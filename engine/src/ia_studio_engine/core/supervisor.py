@@ -17,6 +17,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
 
 from ia_studio_engine import PROTOCOL_VERSION, __version__
+from ia_studio_engine.core.requirements import survey
 from ia_studio_engine.core.router import DoorRouter, spawn_door
 from ia_studio_engine.hardware.probe import hardware_info
 from ia_studio_engine.protocol.envelope import (
@@ -32,7 +33,11 @@ from ia_studio_engine.protocol.envelope import (
 
 Handler = Callable[[dict[str, Any]], Any]
 
-HANDLERS: Mapping[str, Handler] = {"hardware.info": lambda _params: hardware_info()}
+HANDLERS: Mapping[str, Handler] = {
+    "hardware.info": lambda _params: hardware_info(),
+    # Read off `.dist-info` folders, so the core stays free of every library it reports on.
+    "engine.requirements": lambda _params: survey(),
+}
 
 #: What the core hands to a door rather than answering itself. Each reads gigabytes or runs for
 #: seconds, so each answers with the job it opened and pushes its result as an event.

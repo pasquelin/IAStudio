@@ -1,6 +1,7 @@
 import type { DownloadProgress, LocalModel } from '@shared/domain/localModel'
 import type { RuntimeEndpointId } from '@shared/domain/aiRuntime'
 import type { PythonClient } from './pythonClient'
+import type { EngineRequirements } from './pythonProtocol'
 import type {
   FileRuntimeDeps,
   GenerateRequest,
@@ -45,6 +46,16 @@ function attachmentOf(model: LocalModel, base: LocalModel | null): Record<string
     attachSubfolder: model.attaches.subfolder,
     attachWeightName: model.attaches.weightName,
   }
+}
+
+/**
+ * What is missing, named. A person can only act on names: "the door died" sends them to a log,
+ * `torch, torchvision` sends them to the button that installs exactly those.
+ */
+function whatIsMissing(needs: EngineRequirements): string {
+  const absent = needs.absent.map(one => one.name)
+  const stale = needs.stale.map(one => `${one.name} ${one.installed} (needs ${one.wanted})`)
+  return [...absent, ...stale].join(', ')
 }
 
 export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
@@ -99,6 +110,14 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
     load: async (model: LocalModel, options: LoadOptions): Promise<number> => {
       const engine = await deps.engine()
       if (!engine) throw new Error('the local AI engine is not answering')
+
+      // Asked BEFORE the door is woken: a library that is absent fails as an `ImportError` three
+      // frames inside a worker, which reaches the person as a door that died. The core answers
+      // this off `.dist-info` folders, so it imports nothing and starts no process.
+      const needs = await engine.requirements()
+      if (!needs.complete) {
+        throw new Error(`the local AI engine is missing: ${whatIsMissing(needs)}`)
+      }
 
       const done = deps.onUsed?.(model.id)
       try {

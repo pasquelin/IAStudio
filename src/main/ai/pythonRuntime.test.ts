@@ -25,8 +25,19 @@ function harness(over: Partial<PythonClient> = {}, deps: Partial<PythonRuntimeDe
   // spy records, or the assertion reads a call nobody made.
   const job = vi.fn(over.job ?? (() => Promise.resolve(settled())))
   const memory = vi.fn(over.memory ?? (() => Promise.resolve([])))
+  const requirements = vi.fn(
+    over.requirements ??
+      (() =>
+        Promise.resolve({
+          extra: 'diffusion',
+          declaration: [],
+          absent: [],
+          stale: [],
+          complete: true,
+        })),
+  )
 
-  const client = { ...over, job, memory } as unknown as PythonClient
+  const client = { ...over, job, memory, requirements } as unknown as PythonClient
 
   const runtime = pythonRuntime({
     folderFor: model => `/models/${model.id}`,
@@ -40,7 +51,7 @@ function harness(over: Partial<PythonClient> = {}, deps: Partial<PythonRuntimeDe
     ...deps,
   })
 
-  return { runtime, job, memory }
+  return { runtime, job, memory, requirements }
 }
 
 describe('reading what the engine holds', () => {
@@ -371,5 +382,29 @@ describe('weights that complete another model', () => {
       expect.objectContaining({ attachFolder: undefined }),
       expect.anything(),
     )
+  })
+})
+
+describe('a door whose environment is incomplete', () => {
+  /**
+   * Asked before the door is woken: an absent library fails as an `ImportError` three frames inside
+   * a worker, and reaches the person as a door that died with no name to act on.
+   */
+  it('refuses the load naming what has to be installed', async () => {
+    const held = harness({
+      requirements: () =>
+        Promise.resolve({
+          extra: 'diffusion',
+          declaration: ['torch>=2.6', 'torchvision>=0.21'],
+          absent: [{ name: 'torchvision', wanted: '>=0.21' }],
+          stale: [{ name: 'torch', wanted: '>=2.6', installed: '2.1.0' }],
+          complete: false,
+        }),
+    })
+
+    await expect(held.runtime.load?.(MODEL, { onProgress: () => {} })).rejects.toThrow(
+      'torchvision, torch 2.1.0 (needs >=2.6)',
+    )
+    expect(held.job).not.toHaveBeenCalled()
   })
 })
