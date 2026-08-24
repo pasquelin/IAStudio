@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FOLDER_ROOT, isUnder, parentOf, type FolderEntry } from '@shared/domain/folder'
+import { byCodeUnit } from '@shared/text'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
 
@@ -38,6 +39,20 @@ const nodeOf = (entry: FolderEntry): FolderNode => ({
   id: entry.path,
   parentId: parentOf(entry.path),
 })
+
+/**
+ * The same rows in the same order — `id` and `parentId` both derive from the path, so what the
+ * disk answers with is the whole comparison. `sameRows` in `useCatalogueAssets` is this shape
+ * over the fields a catalogue row is judged by.
+ */
+const sameNodes = (held: readonly FolderNode[], found: readonly FolderNode[]): boolean =>
+  held.length === found.length &&
+  held.every(
+    (node, index) =>
+      node.path === found[index]?.path &&
+      node.name === found[index]?.name &&
+      node.kind === found[index]?.kind,
+  )
 
 /**
  * Reads folders. Answers what they hold and touches no state — which is what lets the effects
@@ -87,7 +102,12 @@ export function useFolderTree(hidden: boolean): UnfoldableFolderTree {
       // the tree with it. Strictly under: a folder's own row belongs to its parent's listing,
       // and counting it as its own child emptied the tree the moment one was opened.
       const kept = current.filter(node => !answers.some(({ folder }) => isUnder(node.id, folder)))
-      return [...kept, ...answers.flatMap(({ entries }) => entries.map(nodeOf))]
+      const next = [...kept, ...answers.flatMap(({ entries }) => entries.map(nodeOf))]
+
+      // Handed back UNCHANGED when the disk said the same thing, so React bails out rather than
+      // re-rendering the panel: every focus on the window is a reading, `FOLDER_ROOT` makes each
+      // one replace the whole tree, and the answer is the same one nearly every time.
+      return sameNodes(current, next) ? current : next
     })
   }, [])
 
@@ -102,10 +122,11 @@ export function useFolderTree(hidden: boolean): UnfoldableFolderTree {
   }
 
   // Every open folder rather than the root alone once `hidden` moves: what a dot hides sits at
-  // every level, and re-reading the root would reveal `.project.json` while leaving `.index/`
-  // out of a folder already unfolded.
+  // every level. Sorted, so the order says WHICH are open rather than when — `absorb` compares
+  // position by position, and a fold then an unfold would miss the bail-out on an unchanged tree.
   const reload = useCallback(() => {
-    if (projectPath) void listing([FOLDER_ROOT, ...open.current], hidden).then(absorb)
+    if (!projectPath) return
+    void listing([FOLDER_ROOT, ...Array.from(open.current).sort(byCodeUnit)], hidden).then(absorb)
   }, [projectPath, hidden, absorb])
 
   // The read at mount IS a reload, as `useCatalogueAssets` already spells it: the two had the
@@ -152,5 +173,10 @@ export function useFolderTree(hidden: boolean): UnfoldableFolderTree {
     [opening],
   )
 
-  return { nodes, expandedIds, toggle, unfold, reload }
+  // One identity for as long as nothing moves: the explorer swaps its three sources through a
+  // `useMemo` that reads this object, and a fresh one every render re-sorts the whole tree.
+  return useMemo(
+    () => ({ nodes, expandedIds, toggle, unfold, reload }),
+    [nodes, expandedIds, toggle, unfold, reload],
+  )
 }

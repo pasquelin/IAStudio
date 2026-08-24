@@ -106,5 +106,9 @@ export function useFolderSearch(term: string, hidden: boolean): FolderSearch {
     return open
   }, [found.nodes, folded.ids])
 
-  return { ...found, expandedIds, toggle: folded.toggle, reload }
+  // One identity for as long as nothing moves — see `useFolderTree`.
+  return useMemo(
+    () => ({ ...found, expandedIds, toggle: folded.toggle, reload }),
+    [found, expandedIds, folded.toggle, reload],
+  )
 }

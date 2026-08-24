@@ -41,5 +41,9 @@ export function useDomainTree(
     return open
   }, [built.expandedIds, folded.ids])
 
-  return { nodes, expandedIds, toggle: folded.toggle, reload, loaded }
+  // One identity for as long as nothing moves — see `useFolderTree`.
+  return useMemo(
+    () => ({ nodes, expandedIds, toggle: folded.toggle, reload, loaded }),
+    [nodes, expandedIds, folded.toggle, reload, loaded],
+  )
 }
