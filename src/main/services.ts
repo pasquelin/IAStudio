@@ -66,7 +66,7 @@ import { createHttpChatBrain } from './assistant/brainHttp'
 import { createRoutedBrain } from './assistant/brainRouted'
 import { createSession, type DictationSession } from './dictation/session'
 import { STT_MODEL } from '@shared/domain/dictation'
-import { CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
+import { chatModelOf, CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import { createAiManager, type AiManager } from './ai/manager'
 import { catalogueWith, modelWith } from './ai/catalogue'
@@ -1165,12 +1165,15 @@ export function createServices(settings: SettingsStore): Services {
    */
   const clouds: Record<string, { brain: () => AssistantBrain }> = {}
   for (const cloud of CLOUD_PROVIDERS) {
-    if (cloud.chat.kind === 'scenario') {
+    // Captured so the narrowing survives into the closures below, which a property access does not.
+    const chat = cloud.chat
+    if (chat.kind === 'scenario') {
       clouds[cloud.id] = { brain: () => providerBrain }
     } else {
       const http = createHttpChatBrain({
-        chat: cloud.chat,
+        chat,
         credentials: () => settings.readCredentialsFor(cloud.id),
+        model: () => chatModelOf(settings.read().assistant.cloudModels[cloud.id], chat.model),
       })
       clouds[cloud.id] = { brain: () => http }
     }

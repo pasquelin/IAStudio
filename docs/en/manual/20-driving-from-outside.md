@@ -52,12 +52,21 @@ One exception, and it is explicit: **Describe the style of the references** read
 images already sitting on the Generator's form. It is the only place the assistant looks at an
 image, and you have to have asked for it.
 
-### Choosing the model that reads you
+### Choosing who answers you
 
 The picker is **in the assistant's own window**, not in the settings — the moment one wants a
-steadier model is the middle of a sentence that was not understood.
+steadier model is the middle of a sentence that was not understood. It lists everything that can
+answer, grouped by where it runs:
 
-| Model | What it is worth |
+- **On this machine** — the models installed here, Ollama included. Nothing leaves the computer.
+- **Your keys** — the services you hold a key for in *Settings ▸ API keys*. The exact model name is
+  set beside the service, in *Settings ▸ AI models*.
+- **The studio** — the remote catalogue, on one of the four models below.
+
+It is the same choice as *Settings ▸ AI models ▸ Assistant*: changing it here changes it there, and
+it applies to the open project once that project is what settled it.
+
+| Studio model | What it is worth |
 |---|---|
 | **Haiku 4.5** *(start)* | the fastest and the cheapest |
 | **Sonnet 4.6** | the balance |
@@ -67,9 +76,10 @@ steadier model is the middle of a sentence that was not understood.
 The cheapest is enough to open a workspace or search for a model. The others hold up better on a
 request that chains three or four actions.
 
-> **There is no second account and no second key to enter.** The assistant thinks on a model of
-> the remote catalogue, over the connection you already have. That is also why **thinking is
-> paid for** — see just below.
+> **Under *The studio*, there is no second account and no second key to enter.** The assistant
+> thinks on a model of the remote catalogue, over the connection you already have. That is also
+> why **thinking is paid for** — see just below. A service of your own, or a model on this
+> machine, spends no creative units at all.
 
 ### What it costs
 

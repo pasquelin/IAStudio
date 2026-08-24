@@ -1,9 +1,10 @@
-import type {
-  AiOverview,
-  InstallRefusal,
-  LoadRefusal,
-  ModelCandidate,
-  RoleRow,
+import {
+  canServe,
+  type AiOverview,
+  type InstallRefusal,
+  type LoadRefusal,
+  type ModelCandidate,
+  type RoleRow,
 } from '@shared/domain/aiOverview'
 import {
   allRoles,
@@ -20,7 +21,7 @@ import {
   type DownloadProgress,
   type LocalModel,
 } from '@shared/domain/localModel'
-import { fitAllowsUse, fitReadingOf } from '@shared/domain/modelFit'
+import { fitReadingOf } from '@shared/domain/modelFit'
 import type { HardwareFacts } from './hardwareProbe'
 
 /**
@@ -70,7 +71,7 @@ export type OverviewInput = {
  * have it answer nothing until someone noticed.
  */
 function localOptionsFor(candidates: readonly ModelCandidate[]): readonly string[] {
-  return candidates.filter(one => one.installed && fitAllowsUse(one.fit)).map(one => one.model.id)
+  return candidates.filter(canServe).map(one => one.model.id)
 }
 
 /**

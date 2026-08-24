@@ -15,6 +15,7 @@ describe('createHttpChatBrain', () => {
   it('refuses to think when no key is held', async () => {
     const brain = createHttpChatBrain({
       chat: { kind: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+      model: () => 'gpt-4o-mini',
       credentials: () => null,
       fetch: vi.fn(),
     })
@@ -30,6 +31,7 @@ describe('createHttpChatBrain', () => {
     )
     const brain = createHttpChatBrain({
       chat: { kind: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+      model: () => 'gpt-4o-mini',
       credentials: () => ({ key: 'sk-test', secret: '' }),
       fetch: post,
     })
@@ -56,6 +58,7 @@ describe('createHttpChatBrain', () => {
     })
     const brain = createHttpChatBrain({
       chat: { kind: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+      model: () => 'gpt-4o-mini',
       credentials: () => ({ key: 'sk-test', secret: '' }),
       fetch: post,
     })
@@ -73,6 +76,7 @@ describe('createHttpChatBrain', () => {
     )
     const brain = createHttpChatBrain({
       chat: { kind: 'anthropic', model: 'claude-sonnet-4-5' },
+      model: () => 'claude-sonnet-4-5',
       credentials: () => ({ key: 'ant-key', secret: '' }),
       fetch: post,
     })
@@ -94,6 +98,7 @@ describe('createHttpChatBrain', () => {
     )
     const brain = createHttpChatBrain({
       chat: { kind: 'gemini', model: 'gemini-2.0-flash' },
+      model: () => 'gemini-2.0-flash',
       credentials: () => ({ key: 'gem-key', secret: '' }),
       fetch: post,
     })
@@ -101,6 +106,47 @@ describe('createHttpChatBrain', () => {
     expect((await brain.think(thought)).say).toBe('yo')
     expect(post).toHaveBeenCalledWith(
       expect.stringContaining('gemini-2.0-flash'),
+      expect.anything(),
+    )
+    expect(post).toHaveBeenCalledWith(expect.stringContaining('key=gem-key'), expect.anything())
+  })
+  it('asks the model the settings name, read again on each turn', async () => {
+    const sent: string[] = []
+    const post = vi.fn(async (_url: string, init?: RequestInit) => {
+      sent.push(String(init?.body))
+      return jsonResponse({ choices: [{ message: { content: '{"say":"ok","calls":[]}' } }] })
+    })
+    let chosen = 'deepseek-chat'
+    const brain = createHttpChatBrain({
+      chat: { kind: 'openai', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
+      model: () => chosen,
+      credentials: () => ({ key: 'ds-key', secret: '' }),
+      fetch: post,
+    })
+
+    await brain.think(thought)
+    chosen = 'deepseek-reasoner'
+    await brain.think(thought)
+
+    expect(sent[0]).toContain('"model":"deepseek-chat"')
+    expect(sent[1]).toContain('"model":"deepseek-reasoner"')
+  })
+  /** The model is typed by hand now: a `#` in it truncated the URL and took `?key=` with it. */
+  it('encodes the model name it puts in the Gemini path', async () => {
+    const post = vi.fn(async () =>
+      jsonResponse({ candidates: [{ content: { parts: [{ text: '{"say":"ok","calls":[]}' }] } }] }),
+    )
+    const brain = createHttpChatBrain({
+      chat: { kind: 'gemini', model: 'gemini-2.0-flash' },
+      model: () => 'models/one#two',
+      credentials: () => ({ key: 'gem-key', secret: '' }),
+      fetch: post,
+    })
+
+    await brain.think(thought)
+
+    expect(post).toHaveBeenCalledWith(
+      expect.stringContaining('models%2Fone%23two:generateContent'),
       expect.anything(),
     )
     expect(post).toHaveBeenCalledWith(expect.stringContaining('key=gem-key'), expect.anything())

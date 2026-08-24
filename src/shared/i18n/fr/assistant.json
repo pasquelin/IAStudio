@@ -1171,8 +1171,6 @@
     "sendHint": "Envoie la phrase à l’assistant, qui choisit les actions et les exécute",
     "close": "Fermer",
     "closeHint": "Referme la fenêtre sans rien annuler de ce qui tourne déjà",
-    "model": "Modèle de l’assistant",
-    "modelHint": "Choisit le modèle qui lit vos phrases. Le moins cher suffit pour ouvrir un espace, les autres tiennent mieux les demandes en plusieurs étapes.",
     "thinking": "L’assistant réfléchit…",
     "lost": "L’assistant n’a pas su répondre à cette demande.",
     "refused": "{{action}} — {{reason}}",
@@ -1209,6 +1207,13 @@
     },
     "starterHint": "Écrit la phrase dans le champ. Rien n’est envoyé tant que vous n’avez pas validé.",
     "unserved": "Aucun modèle ne répond pour l’assistant. Choisissez-en un et il pourra travailler ici.",
-    "chooseModelHint": "Ouvre le gestionnaire d’IA, où le modèle de l’assistant se choisit."
+    "chooseModelHint": "Ouvre le gestionnaire d’IA, où le modèle de l’assistant se choisit.",
+    "brain": "Qui répond",
+    "brainHint": "Choisit ce qui lit vos phrases : un modèle sur cette machine, un service dont vous avez la clé, ou le studio. Le même choix que dans les réglages Modèles d’IA.",
+    "brainNone": "rien de choisi",
+    "cloudBrain": "{{cloud}} — {{model}}",
+    "groupMachine": "Sur cette machine",
+    "groupClouds": "Vos clés",
+    "groupStudio": "Le studio"
   }
 }

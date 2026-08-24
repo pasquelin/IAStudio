@@ -1,12 +1,10 @@
 import { mdiChatOutline } from '@mdi/js'
 import { useEffect, useRef, type Ref } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ASSISTANT_MODELS } from '@shared/domain/assistant'
 import { Button } from '@/design/Button'
 import { EmptyState } from '@/design/EmptyState'
 import { QuietNote } from '@/design/QuietNote'
 import { fieldHandle } from '@/design/scHandle'
-import { SelectField } from '@/design/SelectField'
 import { Spinner } from '@/design/Spinner'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
@@ -20,6 +18,7 @@ import { useSettings } from '@/stores/settings'
 import { DictationButton } from '@/dictation/DictationButton'
 import { Heard } from '@/dictation/Heard'
 import { ASSISTANT_STARTERS, starterKey } from '../starters'
+import { AssistantConversationPicker } from './AssistantConversationPicker'
 import { AssistantConversationQuestion } from './AssistantConversationQuestion'
 import { AssistantConversationTurn } from './AssistantConversationTurn'
 import { CONVERSATION_CARD } from './conversationStyles'
@@ -47,7 +46,6 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
   const busy = useAssistant(state => state.busy)
   const asked = useAssistant(state => state.asked)
   const micOpen = useDictation(store => store.state === 'listening')
-  const model = useSettings(state => state.settings.assistant.model)
   const draft = useAssistant(state => state.draft)
   const setDraft = useAssistant(state => state.setDraft)
   const workspace = useLayouts(state => state.activeWorkspace)
@@ -201,22 +199,8 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
 
             <div className="flex items-center gap-2">
               {/* Down here from the header, beside the sentence it will read: the moment one wants
-                a better model is the middle of writing, not a trip to a title bar. */}
-              <SelectField
-                layout="inline"
-                label={t('assistant.model')}
-                scId="assistant.model"
-                hint={TIP_TOP(t('assistant.model'), false, t('assistant.modelHint'))}
-                value={model}
-                // Named from the bundle, never from the union: a raw `gemini-3.5-flash` in an
-                // otherwise French list is the defect this repository pays for most.
-                options={ASSISTANT_MODELS.map(name => ({
-                  value: name,
-                  label: t(`assistant.models.${name}`),
-                }))}
-                onChange={name => useAssistant.getState().setModel(name)}
-                className="max-w-44"
-              />
+                another brain is the middle of writing, not a trip to a preferences window. */}
+              <AssistantConversationPicker />
 
               {/* Beside the button it shares a job with: this pair is "how the sentence gets in". */}
               <span className="ml-auto flex items-center gap-2">

@@ -119,18 +119,6 @@ describe('the assistant conversation', () => {
     expect(screen.getByText(/n’a pas pu en estimer le montant/)).toBeInTheDocument()
   })
 
-  // The setting lives beside the sentence rather than in the preferences: one wants a better
-  // model mid-sentence, not after a trip to a title bar.
-  it('writes the model straight to the settings', async () => {
-    const write = vi.fn(() => Promise.resolve())
-    useSettings.setState({ write })
-    render(<AssistantConversation />)
-
-    await userEvent.selectOptions(screen.getByRole('combobox'), 'claude-opus-4-8')
-
-    expect(write).toHaveBeenCalledWith({ assistant: { model: 'claude-opus-4-8' } })
-  })
-
   /**
    * 🛑 It WRITES the sentence. An action of this studio can spend, and a suggestion that sent on
    * its own would start the spending on the person's behalf.

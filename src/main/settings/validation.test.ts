@@ -343,3 +343,32 @@ describe('the account each project works under', () => {
     ).toThrow()
   })
 })
+
+/**
+ * The model each cloud answers with — typed by hand, so the file is where a stale one arrives:
+ * a cloud dropped from the registry between two releases, or a downgrade after one was added.
+ */
+describe('the model a cloud is talked to with', () => {
+  it('keeps a name typed for a cloud the registry holds', () => {
+    const parsed = parsePartialSettings({
+      assistant: { cloudModels: { deepseek: 'deepseek-reasoner' } },
+    })
+
+    expect(parsed.assistant?.cloudModels).toEqual({ deepseek: 'deepseek-reasoner' })
+  })
+
+  /** The whole file goes through ONE parse: refusing this key reset the theme along with it. */
+  it('drops a cloud this build no longer knows, keeping the rest of the file', () => {
+    const salvaged = salvagePartialSettings({
+      appearance: { theme: 'light' },
+      assistant: {
+        model: 'claude-opus-4-8',
+        cloudModels: { gone: 'x', deepseek: 'deepseek-chat' },
+      },
+    })
+
+    expect(salvaged.assistant?.cloudModels).toEqual({ deepseek: 'deepseek-chat' })
+    expect(salvaged.assistant?.model).toBe('claude-opus-4-8')
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+})

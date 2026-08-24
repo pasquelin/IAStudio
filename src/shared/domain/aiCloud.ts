@@ -92,6 +92,20 @@ export function isCloudProviderId(value: unknown): value is CloudProviderId {
   return CLOUD_IDS.some(id => id === value)
 }
 
+/**
+ * The model a cloud declares, and the reading of "is this cloud talked to over HTTP at all":
+ * `null` for one whose thinking goes through the catalogue instead.
+ */
+export function defaultChatModel(id: CloudProviderId): string | null {
+  const chat = CLOUD_PROVIDERS.find(one => one.id === id)?.chat
+  return chat === undefined || chat.kind === 'scenario' ? null : chat.model
+}
+
+/** Which model a cloud answers with. A name typed and then emptied is an absent one. */
+export function chatModelOf(chosen: string | undefined, declared: string): string {
+  return chosen?.trim() || declared
+}
+
 /** How the key is typed. An unknown id is treated as Scenario — the stored default. */
 export function cloudAuth(id: CloudProviderId): CloudAuth {
   return CLOUD_PROVIDERS.find(one => one.id === id)?.auth ?? 'key-secret'

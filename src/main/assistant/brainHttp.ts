@@ -13,6 +13,8 @@ const ASK_TOKENS = 4096
 export type HttpBrainDeps = {
   chat: HttpChat
   credentials: () => Credentials | null
+  /** Which model of that cloud answers. Read on each turn: it is a setting, and settings change. */
+  model: () => string
   fetch?: (input: string, init?: RequestInit) => Promise<Response>
 }
 
@@ -160,7 +162,10 @@ async function askGemini(
 ): Promise<string> {
   const system = systemOf(messages)
   const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${chat.model}:generateContent` +
+    // Encoded like the key beside it: the model is typed by hand now, and a `#` in it truncated
+    // the URL — dropping `?key=` and answering 401 with nothing to read.
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(chat.model)}` +
+    `:generateContent` +
     `?key=${encodeURIComponent(key)}`
   const response = await postJson(
     post,
@@ -200,6 +205,7 @@ async function ask(
 export function createHttpChatBrain({
   chat,
   credentials,
+  model,
   fetch: post,
 }: HttpBrainDeps): AssistantBrain {
   const send = post ?? fetch
@@ -215,7 +221,10 @@ export function createHttpChatBrain({
     )
 
     try {
-      return { answer: await ask(chat, held.key, messages, send, signal), cost: 0 }
+      // The model is settled HERE and nowhere deeper: what a cloud is talked to with is a
+      // setting, and the three request shapes below only ever read the one they were handed.
+      const asked = { ...chat, model: model() }
+      return { answer: await ask(asked, held.key, messages, send, signal), cost: 0 }
     } catch (error) {
       log.warn('assistant', `${chat.kind} thinking failed: ${String(error)}`)
       throw error
