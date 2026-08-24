@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import type { ModelSummary } from '@shared/domain/model'
 import { Thumbnail } from '@/design/Thumbnail'
 import { Row } from '@/design/Row'
-import { ROW_THUMBNAIL } from '@/design/styles'
+import { FIELD_THUMBNAIL } from '@/design/styles'
 
 /** The chosen model, kept in view: it is what the generator below will run. */
 export function ModelsSelected({
@@ -19,7 +19,7 @@ export function ModelsSelected({
   return (
     <div className="border-border border-b px-1 py-1.5">
       <Row
-        media={<Thumbnail url={picture} className={ROW_THUMBNAIL} />}
+        media={<Thumbnail url={picture} className={FIELD_THUMBNAIL} />}
         title={model?.name ?? t('models.noSelection')}
         subtitle={model ? t(`families.${model.family}`) : t('models.pickOne')}
       />

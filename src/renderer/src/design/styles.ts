@@ -333,7 +333,8 @@ export const PANEL_BAR = 'border-border flex items-center gap-2 border-b'
 export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
 
 /**
- * A picture standing in a property line — the texture a slot holds, the map a model carries.
+ * A picture standing in a property line — the texture a slot holds, the map a model carries —
+ * and in a row that stacks a NAME OVER A LINE, which `--sc-row-stacked` makes 8px taller.
  *
  * One gauge, because a slot is exactly one row tall and three files were each writing it down:
  * two of them with the same sentence explaining why.
@@ -341,12 +342,11 @@ export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
 export const FIELD_THUMBNAIL = 'size-(--sc-control)'
 
 /**
- * The picture of a row that carries a NAME AND A LINE UNDER IT — a model, a chosen model, a
- * candidate in the settings. Taller than `FIELD_THUMBNAIL` because the row itself is, and a
- * gauge rather than the `size-8` and `size-10` five sites had reached for: a pixel is right at
- * one density and wrong at the other.
+ * The picture of a row carrying ONE line, which is exactly one control tall — so it takes the
+ * inline step, as every control standing inside a row does. A picture as tall as its own row is
+ * a picture pressed against the fill `rowSkin` paints edge to edge, with no room above or below.
  */
-export const ROW_THUMBNAIL = 'size-(--sc-row-stacked)'
+export const ROW_THUMBNAIL = 'size-(--sc-control-inline)'
 
 /**
  * One property row of an inspector: a label of fixed width, then the control it names.
