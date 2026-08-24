@@ -122,14 +122,14 @@ describe('Rail', () => {
     })
 
     /**
-     * The right rail is the legend of the right column and of the band's right half: one way
-     * into something above, the history of the open project at the foot, and no separator —
-     * the two blocks are pushed apart by the rail's own layout.
+     * The right rail is the legend of the band's right half alone, since the home's right COLUMN
+     * went with the account's library: the history of the open project, and no separator — this
+     * screen acts on no document, so it has nothing to open into.
      */
-    it('draws the right rail as one half, with the band under it', () => {
+    it('draws the right rail as the band alone', () => {
       const { container } = render(<Rail side="right" />)
 
-      expect(marksOf(container)).toEqual(['Votre bibliothèque', 'Historique'])
+      expect(marksOf(container)).toEqual(['Historique'])
     })
 
     // No half names a panel on the default layout, so what reads as up is the first one the

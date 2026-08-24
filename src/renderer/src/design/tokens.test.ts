@@ -299,21 +299,19 @@ function dimmingPercent(fraction = '', unit = '', step = ''): number {
 }
 
 /**
- * The two sites that dim without a `disabled` beside them, each with the reason it may.
+ * The sites that dim without a `disabled` beside them, each with the reason it may.
  *
- * Kept as paths rather than folded into the rule because neither is derivable from the text: one
- * dims a picture, the other is a disabled control whose `disabled` prop sits twelve lines above
+ * Kept as paths rather than folded into the rule because none is derivable from the text: one
+ * dims a picture, another is a disabled control whose `disabled` prop sits twelve lines above
  * the class. A rule that guessed either would guess wrong on the next site.
  *
- * `ShelfTile` first carried "no word of the tile is inside it", **which was false** — its button
- * wraps a `MediaTile`, whose `figcaption` is a visible word. The reason it may is that the word
- * is white on a near-black gradient and reads about 17:1; a tenth off the whole subtree leaves it
- * nowhere near the bar. The reasons here are prose, and prose is what a reviewer has to check —
- * `staleExemptions` below asks whether an entry is still NEEDED, never whether it is true.
+ * The reasons here are prose, and prose is what a reviewer has to check — `staleExemptions`
+ * below asks whether an entry is still NEEDED, never whether it is true. `ShelfTile` held the
+ * first one and left with the home's library band; its entry went the same day, which is the
+ * whole point of that rule.
  */
 const DIMMING_ALLOWED: Record<string, string> = {
-  '/ShelfTile.tsx': 'a caption at ~17:1 on its own gradient, a tenth off it changes nothing',
-  // MEASURED on 2026-08-17, and it is NOT the ShelfTile case it used to claim: a folder tile is
+  // MEASURED on 2026-08-17: a folder tile is
   // `bare`, so its caption is `text-text` on the panel rather than white on a gradient — 13.3:1
   // dark and 16.1:1 light at full ink, but 4.28 and 3.20 once cut. A file tile keeps the gradient
   // and its ~17:1. The bar is missed in the light theme for a folder on its way out, and the
@@ -350,7 +348,7 @@ const DIMMING_ALLOWED: Record<string, string> = {
  * **What it does NOT hold**, so nobody reads it as more than it is: `style={{ opacity: 0.7 }}`
  * writes no class and is invisible to it; `disabled` is looked for on the LINE, so an unrelated
  * `disabled &&` on a long `cn()` call excuses a dimming beside it; and an exemption is by FILE,
- * so a second dimming added to `ShelfTile.tsx` inherits the first one's reason. None of the three
+ * so a second dimming added to `Tree.tsx` inherits the first one's reason. None of the three
  * has a live case today — the renderer's sixteen `opacity-N` sites were read one by one.
  */
 function dimmedWithoutReason(sources: readonly (readonly [string, string])[]): string[] {

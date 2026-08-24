@@ -8,7 +8,6 @@ import { useSettings } from '@/stores/settings'
  */
 export function useHomeSections(): readonly HomeSectionId[] {
   const stored = useSettings(state => state.settings.home.sections)
-  const authenticated = useSettings(state => state.auth.authenticated)
 
-  return useMemo(() => visibleHomeSections(stored, { authenticated }), [stored, authenticated])
+  return useMemo(() => visibleHomeSections(stored), [stored])
 }

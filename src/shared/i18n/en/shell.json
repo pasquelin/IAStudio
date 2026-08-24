@@ -30,7 +30,6 @@
     "assets": "Assets",
     "scene": "Scene",
     "projects": "Your projects",
-    "library": "Your library",
     "animations": "Animations",
     "text": "Text"
   },
@@ -186,7 +185,7 @@
     "sections": {
       "spotlight": "Where you left off",
       "tools": "Tools",
-      "explore": "Explore"
+      "models": "Your models"
     },
     "title": "Home",
     "tools": {
@@ -218,10 +217,6 @@
       "rename": "Rename",
       "renameHint": "Change the project name, leaving its folder on disk where it is"
     },
-    "library": {
-      "fetch": "Fetch “{{name}}” into the project",
-      "none": "Your account library is empty, or no API key has been entered yet."
-    },
     "spotlight": {
       "resume": "Pick up where you left off",
       "resumeBody": "{{name}}, in {{project}}.",
@@ -250,16 +245,48 @@
     "retry": "Try again",
     "refused": "This panel did not get an answer.",
     "open": "Open “{{name}}”",
-    "explore": {
-      "loading": "Loading the feed…",
-      "none": "Nothing published in this category yet."
-    },
     "restoreHint": "Puts every hidden section back on the home, at once",
-    "exploreTabHint": "Shows only this category in the shelf",
     "closingActionHint": "Opens the creation space, the one where generating happens",
     "spotlightResumeHint": "Reopens the document as it was when it was closed",
     "spotlightConnectHint": "Opens the settings, at the account section",
     "spotlightReadyHint": "Opens the creation space, the one where generating happens",
-    "hideHint": "Takes the section off the home; a line at the foot of the page brings it back"
+    "hideHint": "Takes the section off the home; a line at the foot of the page brings it back",
+    "models": {
+      "localNone": "No model installed",
+      "localCount_one": "{{count, number}} model installed",
+      "localCount_many": "{{count, number}} models installed",
+      "localCount_other": "{{count, number}} models installed",
+      "localDisk": "{{size}} on disk",
+      "localLoaded_one": "{{count, number}} held in memory",
+      "localLoaded_many": "{{count, number}} held in memory",
+      "localLoaded_other": "{{count, number}} held in memory",
+      "localOffered_one": "{{count, number}} in the catalogue, to install",
+      "localOffered_many": "{{count, number}} in the catalogue, to install",
+      "localOffered_other": "{{count, number}} in the catalogue, to install",
+      "localOutOfReach_one": "{{count, number}} beyond this machine",
+      "localOutOfReach_many": "{{count, number}} beyond this machine",
+      "localOutOfReach_other": "{{count, number}} beyond this machine",
+      "localHint": "Opens the settings, where a model is installed, loaded and removed",
+      "ollamaMissing": "Not on this computer",
+      "ollamaIdle": "Installed, but closed",
+      "ollamaEmpty": "No model yet",
+      "ollamaCount_one": "{{count, number}} model ready",
+      "ollamaCount_many": "{{count, number}} models ready",
+      "ollamaCount_other": "{{count, number}} models ready",
+      "ollamaHint": "Opens the settings, at the AI section, where Ollama is installed and picked",
+      "cloudNone": "No API key",
+      "cloudNoneHelp": "Everything on your disk works without one.",
+      "cloudCount_one": "{{count, number}} account connected",
+      "cloudCount_many": "{{count, number}} accounts connected",
+      "cloudCount_other": "{{count, number}} accounts connected",
+      "cloudHint": "Opens the settings, at the account section, where keys are entered",
+      "employments": "What serves your employments",
+      "employmentHint": "Opens the settings, where what serves {{name}} is chosen",
+      "served_one": "{{count, number}} employment served of {{total, number}}",
+      "served_many": "{{count, number}} employments served of {{total, number}}",
+      "served_other": "{{count, number}} employments served of {{total, number}}",
+      "servedNone": "None served",
+      "nothing": "No model on this machine and no API key: nothing can be generated yet."
+    }
   }
 }

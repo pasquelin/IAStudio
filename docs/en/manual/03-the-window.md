@@ -38,10 +38,11 @@ The centre stacks three bands, in this order:
 |---|---|---|
 | **Where you left off** | the banner: resume, connect, or create | nothing |
 | **Tools** | what the studio knows how to start, and the way to create or open a project | nothing |
-| **Explore** | what everyone has published, by kind | an API key |
+| **Your models** | what this studio can run, and with what | nothing |
 
-**A band that lacks what it needs is not greyed out: it is not there.** With no API key,
-**Explore** does not exist on this screen.
+**None of the three needs anything any more.** The rule has not changed — a band that lacks what
+it needs is not greyed out, it is not there — but it has no case left: the feed of what everyone
+was publishing held the third place until now, and an API key was needed to draw a single tile.
 
 **Tools** lists the workspaces in the same order as the workspace bar, with **New project**,
 **Open project** and **Settings** beside them. It is the band that still says something on a
@@ -49,15 +50,27 @@ machine with no key, no project and no history.
 
 Everything else on the home is a panel, held in its two columns.
 
-### Explore, the endless feed
+### Your models, what the studio can run
 
-The feed of what **everyone** has published, one category at a time — the six kinds the remote
-library can serve, as tabs. There is no "all" tab, and **no Animation tab**: the studio knows a
-seventh kind the feed cannot serve.
+The band answers the question everybody has on the second launch: **what is installed, what is
+running, and what is missing.** It opens on what the machine offers — free memory, chip, video
+memory, room on disk — then lays out three cards:
 
-- **it loads as you go down**: the feed pages while you scroll;
-- **it stays at the foot of the page**, and does not move;
-- **the tiles do nothing.** They belong to someone else.
+| Card | What it says |
+|---|---|
+| **On this computer** | how many models are installed, what they weigh, how many are held in memory, how many are left to install, and how many are beyond this machine |
+| **Ollama** | whether it is on this computer, whether it answers, and the models it listed |
+| **Online** | the accounts a key has been entered for, by name |
+
+Under the cards, **what serves your employments**: one line per family — Image, Video, Modelling,
+Audio, Textures, Skyboxes and the three the canvas reaches for — plus the Assistant and Dictation.
+A family says how many of its employments are served; a lone employment names what serves it.
+
+**Nothing is installed from this band**: every card and every line opens the settings section
+where the gesture lives — see [Models](05-models.md).
+
+**It speaks on a bare machine**, which is half its point: with no key and no model, it says so,
+with the way to fix it.
 
 It is the only band that can be hidden.
 
@@ -70,19 +83,17 @@ that is not "open" is a secondary action, revealed on hover in the corner of the
 creation, reopens the form already filled in — model, prompt and settings are kept beside the
 asset.
 
-**One exception: a library asset you have not fetched yet.** The click **fetches** it, and the
-button says so; once it is down, it opens like the others. Nothing is downloaded without your
-asking. With no project open, or while a transfer is running, the tile does not respond.
-
-That is where you fetch, and nowhere else; the shelf can send — see [Assets](07-assets.md).
+**Fetching a remote asset no longer happens on this screen**: the panel that listed what your
+account holds online has left the home. The gesture lives in the **Assets** panel, on a
+right-click over a library tile — see [Assets](07-assets.md).
 
 ### Tidying the page
 
 **Hide this section**, when a band's heading is hovered. Hidden sections are counted at the foot
 of the page — "1 section hidden" — with a **Show them again** button.
 
-Only **Explore** carries that button: **Where you left off** and **Tools** are pinned, and that is
-what keeps this screen from ever being empty.
+Only **Your models** carries that button: **Where you left off** and **Tools** are pinned, and
+that is what keeps this screen from ever being empty.
 
 ### The left column
 
@@ -111,18 +122,14 @@ their icons sit side by side in the rail. How to use it is in
 
 ### The right column
 
-| Panel | Half | What it shows | It needs |
-|---|---|---|---|
-| **Your library** | 1st | what your account holds online | an API key |
+**The home has none.** That is not an oversight: in every workspace the right column is where what
+acts on the document in front of you lives, and the home opens no document. The one panel that had
+stood there listed what your account holds online; it has left the screen, and what it said about
+your means is said by the **Your models** band, across the full width.
 
-**"It needs" does not mean here what it means for the bands.** A band missing what it needs
-disappears; **a panel stays and says what it lacks**. With no key, *Your library* says it is empty
-**or** that no key has been entered, without settling which — and if the server refuses, it offers
-to **try again**.
-
-**Nothing there is kept.** The library is read afresh on every visit, and the tiles are signed
-addresses that expire; holding on to them would make a panel of broken pictures a fortnight later,
-with nothing to explain it. Changing key reads it again too: another key is another library.
+**"It needs" does not mean the same for a panel as for a band.** A band missing what it needs
+disappears; **a panel stays and says what it lacks** — which is what the Explorer and Git do in
+the left column.
 
 > **The home can be skipped.** **Settings ▸ General ▸ Show the home screen**: unticked, the studio
 > goes straight to the workspace you left. What you hide is set on the home itself.
@@ -247,7 +254,7 @@ In **Video**, **Audio**, **Textures** and **Skyboxes** the upper half of that co
 none of those four declares anything there, and the rail then carries the Inspector alone — what a
 sky or a material IS is described by the inspector itself.
 
-On the home it carries one: **Your library**, and nothing below the separator.
+On the home it carries none: this screen has no right column.
 
 ### The rail only shows what the workspace can do
 

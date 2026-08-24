@@ -54,7 +54,6 @@ export type ToolId =
   | 'inspector'
   | 'assets'
   | 'projects'
-  | 'library'
   | 'animations'
   | 'text'
 
@@ -163,15 +162,17 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The home's own, and they serve it ALONE — a column beside an editor is for what acts on what
   // is in front of you, and each of these reads the studio rather than a document.
   //
-  // THREE, where there were eleven until 13 August. The eight that went were readings of the
+  // TWO, where there were eleven until 13 August. The eight that went then were readings of the
   // studio nobody came to this screen for: what an account had spent, how many assets it held by
   // kind, the newest ones it made, favourites, ideas, look-alikes, and two journals the status bar
   // already carries. The home is an entry point — where one comes to open something — and every
   // panel that answered a question instead of offering a way in was a panel between the reader
-  // and the projects.
+  // and the projects. The ninth was the account's own library, and it was the same defect one
+  // rung up: a column of somebody's remote assets, beside the folder they would land in.
   //
-  // The halves are the same ones every space uses: the left is what one opens FROM, the right is
-  // what one opens.
+  // Both are in the LEFT column, and the home's right one is empty as a result. That is the shape
+  // the rule produces rather than an oversight: the left is what one opens FROM, and nothing this
+  // screen does acts on a document in front of you.
   //
   // The upper left, which the home alone leaves for something other than generation: it makes no
   // document, so the half goes to what one produces IN — the projects, the first thing anyone
@@ -197,10 +198,6 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
     surfaces: [HOME_SURFACE],
     requires: 'project',
   },
-
-  // The right column: what the account holds outside this project — a way into something, which
-  // is what this screen is for.
-  { id: 'library', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
 
   // The project's own history, in the half the project's own FOLDER occupies — it answers about
   // the same files, and the two are read one after the other rather than side by side. Declared

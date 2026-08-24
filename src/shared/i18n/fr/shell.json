@@ -30,7 +30,6 @@
     "assets": "Assets",
     "scene": "Scène",
     "projects": "Vos projets",
-    "library": "Votre bibliothèque",
     "animations": "Animations",
     "text": "Texte"
   },
@@ -186,7 +185,7 @@
     "sections": {
       "spotlight": "Où vous en étiez",
       "tools": "Outils",
-      "explore": "Explorer"
+      "models": "Vos modèles"
     },
     "title": "Accueil",
     "tools": {
@@ -218,10 +217,6 @@
       "rename": "Renommer",
       "renameHint": "Changer le nom du projet, sans toucher à son dossier sur le disque"
     },
-    "library": {
-      "fetch": "Récupérer « {{name}} » dans le projet",
-      "none": "La bibliothèque de votre compte est vide, ou aucune clé API n’est renseignée."
-    },
     "spotlight": {
       "resume": "Reprendre où vous en étiez",
       "resumeBody": "{{name}}, dans {{project}}.",
@@ -250,16 +245,48 @@
     "retry": "Réessayer",
     "refused": "Ce panneau n’a pas obtenu de réponse.",
     "open": "Ouvrir « {{name}} »",
-    "explore": {
-      "loading": "Chargement du fil…",
-      "none": "Rien de publié dans cette catégorie pour le moment."
-    },
     "restoreHint": "Remet toutes les sections cachées sur l’accueil, d’un coup",
-    "exploreTabHint": "Ne montre que cette catégorie dans la bande",
     "closingActionHint": "Ouvre l’espace de création, celui où l’on génère",
     "spotlightResumeHint": "Rouvre le document tel qu’il était à la fermeture",
     "spotlightConnectHint": "Ouvre les réglages, à la section du compte",
     "spotlightReadyHint": "Ouvre l’espace de création, celui où l’on génère",
-    "hideHint": "Retire la section de l’accueil ; une ligne en bas de la page la rétablit"
+    "hideHint": "Retire la section de l’accueil ; une ligne en bas de la page la rétablit",
+    "models": {
+      "localNone": "Aucun modèle installé",
+      "localCount_one": "{{count, number}} modèle installé",
+      "localCount_many": "{{count, number}} modèles installés",
+      "localCount_other": "{{count, number}} modèles installés",
+      "localDisk": "{{size}} sur le disque",
+      "localLoaded_one": "{{count, number}} chargé en mémoire",
+      "localLoaded_many": "{{count, number}} chargés en mémoire",
+      "localLoaded_other": "{{count, number}} chargés en mémoire",
+      "localOffered_one": "{{count, number}} au catalogue, à installer",
+      "localOffered_many": "{{count, number}} au catalogue, à installer",
+      "localOffered_other": "{{count, number}} au catalogue, à installer",
+      "localOutOfReach_one": "{{count, number}} hors de portée de cette machine",
+      "localOutOfReach_many": "{{count, number}} hors de portée de cette machine",
+      "localOutOfReach_other": "{{count, number}} hors de portée de cette machine",
+      "localHint": "Ouvre les réglages, là où l’on installe, charge et retire un modèle",
+      "ollamaMissing": "Pas sur cet ordinateur",
+      "ollamaIdle": "Installé, mais fermé",
+      "ollamaEmpty": "Aucun modèle",
+      "ollamaCount_one": "{{count, number}} modèle prêt",
+      "ollamaCount_many": "{{count, number}} modèles prêts",
+      "ollamaCount_other": "{{count, number}} modèles prêts",
+      "ollamaHint": "Ouvre les réglages, à la section IA, où Ollama s’installe et se choisit",
+      "cloudNone": "Aucune clé API",
+      "cloudNoneHelp": "Tout ce qui est sur votre disque fonctionne sans.",
+      "cloudCount_one": "{{count, number}} compte connecté",
+      "cloudCount_many": "{{count, number}} comptes connectés",
+      "cloudCount_other": "{{count, number}} comptes connectés",
+      "cloudHint": "Ouvre les réglages, à la section du compte, où se saisissent les clés",
+      "employments": "Ce qui sert vos emplois",
+      "employmentHint": "Ouvre les réglages, là où se choisit ce qui sert {{name}}",
+      "served_one": "{{count, number}} emploi servi sur {{total, number}}",
+      "served_many": "{{count, number}} emplois servis sur {{total, number}}",
+      "served_other": "{{count, number}} emplois servis sur {{total, number}}",
+      "servedNone": "Aucun emploi servi",
+      "nothing": "Aucun modèle sur cette machine et aucune clé API : rien ne peut encore être généré."
+    }
   }
 }

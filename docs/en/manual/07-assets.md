@@ -350,14 +350,15 @@ Three things describe it better than an introduction would:
 
 An unselected asset, or a closed project, leaves the button greyed out.
 
-> **The shelf has no Fetch button; the home screen does.** Its **Your library** band lists what
-> your account holds, and clicking a thumbnail brings it down into the open project. So the
-> transfer runs both ways — but each way has its own door, and they are not the same one:
-> sending starts from the shelf, fetching from the home screen.
+> **Fetching is not a button on the bar: it is the right-click on a library tile.** The **Fetch
+> into the project** entry brings the asset down into the open project. So the transfer runs both
+> ways from this shelf — sending by the button, fetching by the menu.
 >
-> **The click only fetches once.** If the asset is already on your disk, that same thumbnail
-> **opens** it instead of downloading it again. And with no project open, or while a transfer is
-> running, it does not react at all.
+> **The entry is greyed out, never hidden**, with no project open or while a transfer is running:
+> an entry that comes and goes depending on what is open is one nobody can learn.
+>
+> Until this batch it was the home screen that fetched, through a panel listing what the account
+> holds online. That panel has left the home.
 
 ### Naming from what the API sees
 

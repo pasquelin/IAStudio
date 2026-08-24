@@ -4,28 +4,16 @@ import {
   HOME_SECTIONS,
   homeSections,
   hiddenHomeSections,
-  homeSectionOf,
   shownHomeSection,
   visibleHomeSections,
-  type HomeContext,
   type HomeSectionSetting,
 } from './home'
 import { TOOL_PLACEMENTS } from './tool'
-
-const CONTEXTS: HomeContext[] = [{ authenticated: true }, { authenticated: false }]
 
 const ALL_HIDDEN: HomeSectionSetting[] = HOME_SECTIONS.map(entry => ({
   id: entry.id,
   visible: false,
 }))
-
-describe('the pinned sections', () => {
-  it('need no key, which is what makes an empty home impossible', () => {
-    for (const entry of HOME_SECTIONS.filter(candidate => candidate.pinned === true)) {
-      expect(entry.requiresApi).toBeUndefined()
-    }
-  })
-})
 
 /**
  * The two registries answer different questions — what the centre stacks, and what the rails
@@ -45,32 +33,29 @@ describe('the sections and the panels', () => {
 })
 
 describe('the sections a home draws', () => {
-  it('is never empty, whatever is missing and whatever the user hid', () => {
-    for (const context of CONTEXTS) {
-      for (const stored of [DEFAULT_HOME_SECTIONS, ALL_HIDDEN, []]) {
-        expect(visibleHomeSections(stored, context).length).toBeGreaterThan(0)
-      }
+  it('is never empty, whatever the user hid', () => {
+    for (const stored of [DEFAULT_HOME_SECTIONS, ALL_HIDDEN, []]) {
+      expect(visibleHomeSections(stored).length).toBeGreaterThan(0)
     }
   })
 
-  it('drops what needs a key when there is none, rather than drawing it empty', () => {
-    const sections = visibleHomeSections(DEFAULT_HOME_SECTIONS, { authenticated: false })
-
-    expect(sections).not.toContain('explore')
-    expect(sections).toContain('spotlight')
-  })
-
   it('shows every band on a fresh install: what one hides, one hid', () => {
-    const sections = visibleHomeSections(DEFAULT_HOME_SECTIONS, { authenticated: true })
-
-    expect(sections).toEqual(HOME_SECTIONS.map(entry => entry.id))
+    expect(visibleHomeSections(DEFAULT_HOME_SECTIONS)).toEqual(HOME_SECTIONS.map(entry => entry.id))
   })
 
   it('hides a section the user hid, and keeps the pinned one they tried to', () => {
-    const sections = visibleHomeSections(ALL_HIDDEN, { authenticated: true })
+    const sections = visibleHomeSections(ALL_HIDDEN)
 
     expect(sections).toContain('spotlight')
-    expect(sections).not.toContain('explore')
+    expect(sections).not.toContain('models')
+  })
+
+  /**
+   * The band that replaced the explore feed is the one the studio has most to say about when no
+   * key has ever been entered — an empty machine is a reading, not an absence.
+   */
+  it('draws the models band with nothing configured at all', () => {
+    expect(visibleHomeSections([])).toContain('models')
   })
 })
 
@@ -82,7 +67,7 @@ describe('reading back a stored order', () => {
     ]
 
     // `as` because that id no longer exists in the union — which is the case the guard is for.
-    const sections = visibleHomeSections(fromDisk as HomeSectionSetting[], { authenticated: true })
+    const sections = visibleHomeSections(fromDisk as HomeSectionSetting[])
 
     expect(sections).toContain('spotlight')
     expect(sections).not.toContain('gone')
@@ -90,17 +75,17 @@ describe('reading back a stored order', () => {
 
   /**
    * The settings of anyone who ran the studio before 11 August name twelve bands that are panels
-   * now. Nothing migrates them: they are dropped on the way in, which is what keeps a panel from
-   * being listed as a band nobody can draw.
+   * now, and anyone who ran it before this lot names `explore`. Nothing migrates either: they are
+   * dropped on the way in, which is what keeps an id nobody can draw from being listed as a band.
    *
    * Eleven of the twelve, since 12 August: `tools` came back to the centre, so a stored line
    * naming it is a band again — which is the other half of the same rule, and the reason this
    * reads the registry rather than a list written here.
    */
-  it('drops the ids that became panels, without touching the rest', () => {
+  it('drops the ids that became panels or went away, without touching the rest', () => {
     const fromDisk: { id: string; visible: boolean }[] = [
       { id: 'projects', visible: true },
-      { id: 'byMode', visible: true },
+      { id: 'explore', visible: true },
       { id: 'tools', visible: true },
       { id: 'usage', visible: true },
       { id: 'spotlight', visible: true },
@@ -109,7 +94,7 @@ describe('reading back a stored order', () => {
     const kept = homeSections(fromDisk as HomeSectionSetting[]).map(setting => setting.id)
 
     expect(kept).not.toContain('projects')
-    expect(kept).not.toContain('byMode')
+    expect(kept).not.toContain('explore')
     expect(kept).not.toContain('usage')
     expect(kept).toContain('tools')
     expect(kept).toContain('spotlight')
@@ -118,43 +103,25 @@ describe('reading back a stored order', () => {
   })
 
   it('adds a section this version gained, at the place it was designed for', () => {
-    const withoutExplore: HomeSectionSetting[] = DEFAULT_HOME_SECTIONS.filter(
-      setting => setting.id !== 'explore',
+    const withoutModels: HomeSectionSetting[] = DEFAULT_HOME_SECTIONS.filter(
+      setting => setting.id !== 'models',
     )
 
-    const sections = visibleHomeSections(withoutExplore, { authenticated: true })
-
-    expect(sections).toEqual(HOME_SECTIONS.map(entry => entry.id))
+    expect(visibleHomeSections(withoutModels)).toEqual(HOME_SECTIONS.map(entry => entry.id))
   })
 })
 
 describe('hiding a band', () => {
   it('hides and shows a section, and offers the hidden ones back', () => {
-    const hidden = shownHomeSection(DEFAULT_HOME_SECTIONS, 'explore', false)
+    const hidden = shownHomeSection(DEFAULT_HOME_SECTIONS, 'models', false)
 
-    expect(hiddenHomeSections(hidden)).toEqual(['explore'])
-    expect(hiddenHomeSections(shownHomeSection(hidden, 'explore', true))).toEqual([])
+    expect(hiddenHomeSections(hidden)).toEqual(['models'])
+    expect(hiddenHomeSections(shownHomeSection(hidden, 'models', true))).toEqual([])
   })
 
   it('never offers a pinned section back, since it was never taken away', () => {
     const hidden = shownHomeSection(DEFAULT_HOME_SECTIONS, 'spotlight', false)
 
     expect(hiddenHomeSections(hidden)).toEqual([])
-  })
-})
-
-describe('a band that never ends', () => {
-  it('is held at the foot of the page whatever the stored order says', () => {
-    // Settings written by an earlier version, or by hand, must not land it mid-page.
-    const scrambled: HomeSectionSetting[] = [
-      { id: 'explore', visible: true },
-      { id: 'spotlight', visible: true },
-    ]
-
-    expect(homeSections(scrambled).at(-1)?.id).toBe('explore')
-  })
-
-  it('is anchored in the registry, which is what that rule reads', () => {
-    expect(homeSectionOf('explore')?.anchored).toBe(true)
   })
 })

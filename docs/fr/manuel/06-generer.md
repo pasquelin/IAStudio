@@ -49,7 +49,8 @@ publié demain aura, lui aussi, le sien — sans mise à jour du studio.
 > **Une image posée sur un formulaire part chez le fournisseur au moment de générer.** Le modèle
 > tourne sur les serveurs du fournisseur : il ne peut lire que ce que la bibliothèque du compte
 > contient. Le studio envoie donc l’asset du projet, garde le lien entre les deux, et n’envoie
-> rien la fois suivante. Vous la retrouvez dans **Votre bibliothèque**, sur l’accueil.
+> rien la fois suivante. Vous la retrouvez dans le panneau **Assets**, parmi ce que la
+> bibliothèque du compte détient.
 >
 > Une image modifiée depuis son envoi repart : sans quoi la génération tournerait sur une
 > version que vous ne voyez plus.

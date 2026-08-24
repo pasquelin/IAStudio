@@ -255,20 +255,20 @@ describe('a side column', () => {
 
 describe('the home', () => {
   /**
-   * Two columns and no band: the montage and the asset strip act on an open document, and the
+   * One column and no band: the montage and the asset strip act on an open document, and the
    * home has none. Those zones are not drawn, so neither are their rails.
    */
-  it('draws its two columns and neither band', () => {
+  it('draws its one column and neither band', () => {
     useLayouts.setState({ home: true })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
     expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
-    // TWO dividers, one per column — where a workspace has four. A column split needs both halves
-    // populated, and since 13 August the home has no `secondary` anywhere: a handle drawn there
-    // would drag a cut with nothing on the far side of it.
-    expect(handles()).toHaveLength(2)
+    // ONE divider — where a workspace has four. The right column went with the account's library,
+    // and a column split needs both halves populated: with no project open the left one holds
+    // the projects alone, so a handle drawn there would drag a cut with nothing on its far side.
+    expect(handles()).toHaveLength(1)
   })
 
   /**
@@ -276,14 +276,16 @@ describe('the home', () => {
    * reopens like the others. What an unchosen half draws is the first panel the registry puts
    * there, which is why no arrangement here names one.
    */
-  it('opens on the projects and on the library', () => {
+  it('opens on the projects', () => {
     useLayouts.setState({ home: true })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
     // The upper left, which the home alone gives to something other than generation.
     expect(screen.getByLabelText('Vos projets')).toBeInTheDocument()
-    expect(screen.getByLabelText('Votre bibliothèque')).toBeInTheDocument()
+    // The account's remote library stood in the right column until this lot, and it was the last
+    // panel there: what it said now lives in the models band of the page itself.
+    expect(screen.queryByLabelText('Votre bibliothèque')).not.toBeInTheDocument()
     // Gone with the eight readings of the studio that came down on 13 August.
     expect(screen.queryByLabelText('Ce que vous avez produit')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Activité récente')).not.toBeInTheDocument()
@@ -293,9 +295,9 @@ describe('the home', () => {
   })
 
   /**
-   * The documents take their turn with the library in the one half the right column has: a half
-   * shows ONE panel at a time. The rail is how one swaps them, and it has its own suite — this
-   * file mocks it away so that a title queried here can only be a panel.
+   * A half shows ONE panel at a time, whatever else the registry declares beside it. The rail is
+   * how one swaps them, and it has its own suite — this file mocks it away so that a title
+   * queried here can only be a panel.
    */
   it('shows one panel per half, never the whole right column at once', () => {
     useLayouts.setState({ home: true })
@@ -329,7 +331,8 @@ describe('the home', () => {
 
     const { sizes, splits } = useTools.getState().lengths
     expect(sizes.left).toBeDefined()
-    expect(sizes.right).toBeDefined()
+    // Nothing writes a right-hand width any more: this surface has one column.
+    expect(sizes.right).toBeUndefined()
     // No split to drag any more, and that is the assertion rather than an omission: the home has
     // one half per column since 13 August, so nothing here writes `splits`.
     expect(splits).toEqual({})

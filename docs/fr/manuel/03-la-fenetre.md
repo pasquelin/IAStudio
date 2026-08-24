@@ -39,10 +39,12 @@ Le centre empile trois bandes, dans cet ordre :
 |---|---|---|
 | **Où vous en étiez** | la bannière : reprendre, connecter, ou créer | rien |
 | **Outils** | ce que le studio sait commencer, et de quoi créer ou ouvrir un projet | rien |
-| **Explorer** | ce que tout le monde a publié, par type | une clé API |
+| **Vos modèles** | ce que ce studio sait faire tourner, et avec quoi | rien |
 
-**Une bande qui n’a pas ce qu’il lui faut n’est pas grisée : elle n’est pas là.** Sans clé API,
-**Explorer** n’existe pas sur cet écran.
+**Aucune des trois ne demande plus rien.** La règle n’a pas changé — une bande à qui il manque
+quelque chose n’est pas grisée, elle n’est pas là — mais elle n’a plus de cas : le fil de ce que
+tout le monde publiait tenait la troisième place jusqu’ici, et il fallait une clé API pour en voir
+une seule vignette.
 
 **Outils** liste les espaces dans le même ordre que la barre des espaces, avec **Nouveau projet**,
 **Ouvrir un projet** et **Réglages** à côté. C’est la bande qui parle encore sur une machine sans
@@ -50,15 +52,27 @@ clé, sans projet et sans historique.
 
 Tout le reste de l’accueil est un panneau, logé dans les deux colonnes.
 
-### Explorer, le fil sans fin
+### Vos modèles, ce que le studio sait faire tourner
 
-Le fil de ce que **tout le monde** a publié, une catégorie à la fois — les six types que la
-bibliothèque distante sait rendre, en onglets. Pas d’onglet « tout », et **pas d’onglet
-Animation** : le studio en connaît un septième type, que le fil ne sait pas servir.
+La bande répond à la question qu’on se pose au deuxième lancement : **qu’est-ce qui est installé,
+qu’est-ce qui tourne, et qu’est-ce qui manque.** Elle s’ouvre sur ce que la machine offre —
+mémoire libre, puce, mémoire vidéo, place sur le disque — puis pose trois cartes :
 
-- **il se charge en descendant** : le fil pagine tant que vous scrollez ;
-- **il reste en bas de page**, et ne se déplace pas ;
-- **les tuiles ne font rien.** Elles appartiennent à quelqu’un d’autre.
+| Carte | Ce qu’elle dit |
+|---|---|
+| **Sur cet ordinateur** | combien de modèles sont installés, ce qu’ils pèsent, combien sont chargés en mémoire, combien restent à installer, et combien sont hors de portée de cette machine |
+| **Ollama** | s’il est sur cet ordinateur, s’il répond, et les modèles qu’il a listés |
+| **En ligne** | les comptes dont une clé est renseignée, nommés |
+
+Sous les cartes, **ce qui sert vos emplois** : une ligne par famille — Image, Vidéo, Modélisation,
+Audio, Textures, Skyboxes et les trois que le canevas emploie — plus l’Assistant et la Dictée. Une
+famille dit combien de ses emplois sont servis ; un emploi seul dit ce qui le sert, par son nom.
+
+**Rien ne s’installe depuis cette bande** : chaque carte et chaque ligne ouvre la section des
+réglages où le geste se fait — voir [Les modèles](05-modeles.md).
+
+**Elle parle sur une machine vide**, et c’est la moitié de son intérêt : sans clé et sans modèle,
+elle le dit, avec le chemin pour y remédier.
 
 C’est la seule bande qui puisse être masquée.
 
@@ -71,21 +85,17 @@ pas « ouvrir » est une action secondaire, révélée au survol dans le coin de
 chaque création, rouvre le formulaire déjà rempli — modèle, prompt et réglages sont gardés à côté
 de l’asset.
 
-**Une exception : un asset de la bibliothèque que vous n’avez pas encore rapatrié.** Le clic le
-**récupère**, et le bouton le dit ; une fois descendu, il s’ouvre comme les autres. Rien n’est
-téléchargé sans que vous l’ayez demandé. Sans projet ouvert, ou pendant un transfert, la vignette
-ne répond pas.
-
-C’est là, et nulle part ailleurs, qu’on rapatrie ; l’étagère, elle, sait envoyer — voir
-[Les assets](07-assets.md).
+**Rapatrier un asset distant ne se fait plus depuis cet écran** : le panneau qui listait ce que
+votre compte détient en ligne a quitté l’accueil. Le geste vit dans le panneau **Assets**, au clic
+droit sur une vignette de la bibliothèque — voir [Les assets](07-assets.md).
 
 ### Ranger la page
 
 **Masquer cette section**, au survol d’un titre de bande. Les sections masquées sont comptées en
 bas de page — « 1 section masquée » — avec un bouton **Les réafficher**.
 
-Seul **Explorer** porte ce bouton : **Où vous en étiez** et **Outils** sont épinglées, et c’est ce
-qui garantit que cet écran n’est jamais vide.
+Seul **Vos modèles** porte ce bouton : **Où vous en étiez** et **Outils** sont épinglées, et c’est
+ce qui garantit que cet écran n’est jamais vide.
 
 ### La colonne de gauche
 
@@ -115,19 +125,14 @@ d’emploi est au chapitre
 
 ### La colonne de droite
 
-| Panneau | Moitié | Ce qu’il montre | Il faut |
-|---|---|---|---|
-| **Votre bibliothèque** | 1re | ce que votre compte détient en ligne | une clé API |
+**L’accueil n’en a pas.** Ce n’est pas un oubli : la colonne de droite est, dans chaque espace,
+celle de ce qui agit sur le document qu’on a devant soi, et l’accueil n’en ouvre aucun. Le seul
+panneau qui y avait tenu listait ce que votre compte détient en ligne ; il a quitté l’écran, et ce
+qu’il disait de vos moyens est dit par la bande **Vos modèles**, en pleine largeur.
 
-**« Il faut » ne veut pas dire la même chose que pour les bandes.** Une bande à qui il manque
-quelque chose disparaît ; **un panneau reste et dit ce qui lui manque**. Sans clé, *Votre
-bibliothèque* dit qu’elle est vide **ou** qu’aucune clé n’est renseignée, sans trancher — et si
-le serveur refuse, elle offre de **réessayer**.
-
-**Rien n’y est gardé.** La bibliothèque est relue à chaque visite, et les vignettes sont des
-adresses signées qui expirent ; les retenir ferait un panneau d’images cassées quinze jours plus
-tard, sans rien pour l’expliquer. Changer de clé la relit aussi : une autre clé est une autre
-bibliothèque.
+**« Il faut » ne veut pas dire la même chose pour un panneau que pour une bande.** Une bande à qui
+il manque quelque chose disparaît ; **un panneau reste et dit ce qui lui manque** — c’est ce que
+font l’Explorateur et Git dans la colonne de gauche.
 
 > **L’accueil peut être coupé.** **Réglages ▸ Général ▸ Afficher l’accueil** : décoché, le
 > studio va droit à l’espace que vous aviez quitté. Ce que vous masquez se règle sur l’accueil
@@ -254,7 +259,7 @@ En **Vidéo**, en **Audio**, en **Textures** et en **Skyboxes**, la moitié haut
 est vide : ces quatre espaces n’y déclarent rien, et le rail ne porte alors que l’Inspecteur — ce
 qu’un ciel ou une matière EST y est décrit par l’inspecteur lui-même.
 
-À l’accueil, il n’en porte qu’une : **Votre bibliothèque**, et rien sous le trait.
+À l’accueil, il n’en porte aucune : cet écran n’a pas de colonne de droite.
 
 ### Le rail ne montre que ce que l’espace sait faire
 

@@ -28,18 +28,18 @@ describe('HideSection', () => {
   it('takes the band off the page', async () => {
     const write = vi.fn((_partial: PartialSettings) => Promise.resolve(DEFAULT_SETTINGS))
     installFakeBridge({ settings: { write } })
-    render(<HideSection id="explore" />)
+    render(<HideSection id="models" />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Masquer cette section' }))
 
     await waitFor(() => expect(write).toHaveBeenCalled())
     const sent = write.mock.calls[0]?.[0]?.home?.sections
-    expect(sent?.find(section => section.id === 'explore')?.visible).toBe(false)
+    expect(sent?.find(section => section.id === 'models')?.visible).toBe(false)
   })
 
   // The name says what, the tooltip says what it does — and where what it hid can be found again.
   it('explains what it does instead of reading its label back', () => {
-    render(<HideSection id="explore" />)
+    render(<HideSection id="models" />)
 
     expect(screen.getByRole('button', { name: 'Masquer cette section' })).toHaveAttribute(
       'data-tooltip-content',
