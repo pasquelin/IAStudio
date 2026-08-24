@@ -8,7 +8,7 @@ import type {
 import type { Credentials } from '@main/settings/accounts'
 import type { KeyedAccount } from '@main/settings/store'
 import type { AssistQueue } from './assistQueue'
-import { failureOf } from './client'
+import { apiFailureOf } from './client'
 import {
   aggregate,
   eventsOf,
@@ -97,7 +97,7 @@ export function createUsageReader({
             accountId: account.id,
             name: account.name,
             data: null,
-            failure: failureOf(error),
+            failure: apiFailureOf(error),
           })),
       ),
     )

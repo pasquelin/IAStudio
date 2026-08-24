@@ -2,7 +2,7 @@ import type { AiOverview } from '@shared/domain/aiOverview'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import type { AiManager } from './manager'
-import { parseChoice, parseChoices, parseModelId } from './validation'
+import { parseChoice, parseChoices, parseAiModelId } from './validation'
 
 export type AiHandlerDeps = {
   manager: AiManager
@@ -28,14 +28,14 @@ export function registerAiHandlers({ manager, addOwnModel }: AiHandlerDeps): voi
     return manager.chooseMany(parsed.writes, parsed.scope)
   })
 
-  handle(CHANNELS.aiInstall, (_event, modelId) => manager.install(parseModelId(modelId)))
+  handle(CHANNELS.aiInstall, (_event, modelId) => manager.install(parseAiModelId(modelId)))
   handle(CHANNELS.aiCancelInstall, () => manager.cancelInstall())
   handle(CHANNELS.aiInstallOllama, () => manager.installOllama())
   handle(CHANNELS.aiCancelInstallOllama, () => manager.cancelInstallOllama())
-  handle(CHANNELS.aiRemove, (_event, modelId) => manager.remove(parseModelId(modelId)))
-  handle(CHANNELS.aiLoad, (_event, modelId) => manager.load(parseModelId(modelId)))
+  handle(CHANNELS.aiRemove, (_event, modelId) => manager.remove(parseAiModelId(modelId)))
+  handle(CHANNELS.aiLoad, (_event, modelId) => manager.load(parseAiModelId(modelId)))
   handle(CHANNELS.aiCancelLoad, () => manager.cancelLoad())
-  handle(CHANNELS.aiUnload, (_event, modelId) => manager.unload(parseModelId(modelId)))
+  handle(CHANNELS.aiUnload, (_event, modelId) => manager.unload(parseAiModelId(modelId)))
 
   handle(CHANNELS.aiAddOwnModel, () => addOwnModel())
 }

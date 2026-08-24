@@ -9,7 +9,7 @@ import { remoteHost, type GitRemote, type GitStashEntry } from '@shared/domain/g
 import type { GitDiff } from '@shared/domain/gitDiff'
 import { detectGit, type VersionProbe } from './binary'
 import type { CredentialVault } from './credentials'
-import { failureOf, safeMessage } from './parse'
+import { gitFailureOf, safeMessage } from './parse'
 import type { Repository, RepositoryDeps } from './repository'
 
 export type GitServiceDeps = {
@@ -144,7 +144,7 @@ export function createGitService({
       if (!(await found.repository.isRepository())) return { kind: 'uninitialised' }
       return { kind: 'ready', status: await found.repository.status() }
     } catch (error) {
-      return { kind: 'failed', reason: failureOf(error), detail: safeMessage(error) }
+      return { kind: 'failed', reason: gitFailureOf(error), detail: safeMessage(error) }
     }
   }
 
@@ -158,7 +158,7 @@ export function createGitService({
     try {
       await run(found.repository)
     } catch (error) {
-      return { kind: 'failed', reason: failureOf(error), detail: safeMessage(error) }
+      return { kind: 'failed', reason: gitFailureOf(error), detail: safeMessage(error) }
     }
 
     return await read()

@@ -12,7 +12,7 @@ import {
   settlementOf,
 } from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activityLog'
-import { failureOf } from './client'
+import { apiFailureOf } from './client'
 import type { PersistedJob } from './persistedJob'
 import { ORDINARY_REQUESTS_PER_WINDOW } from './rateLimiter'
 import { createRetry, DEFAULT_BACKOFF_BASE_MS } from './retry'
@@ -609,7 +609,7 @@ export function createJobManager({
         return
       }
 
-      const failure = failureOf(error)
+      const failure = apiFailureOf(error)
 
       // A job that already has a remote id is RUNNING on the server, and paid for. Losing the
       // network while following it says nothing about the job — reported as failed, the bar read

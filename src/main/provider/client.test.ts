@@ -6,7 +6,7 @@ import {
   clientFor,
   createClientProvider,
   describeFailure,
-  failureOf,
+  apiFailureOf,
   NotAuthenticatedError,
   quietlyReducedBy,
   recordFailuresTo,
@@ -29,11 +29,11 @@ function probe(answer: () => Promise<unknown>): AuthProbe {
 
 describe('failure mapping', () => {
   it('maps each status the API can answer to a code the renderer can translate', () => {
-    expect(failureOf(apiError(401))).toBe('invalid-credentials')
-    expect(failureOf(apiError(403))).toBe('forbidden')
-    expect(failureOf(apiError(429))).toBe('rate-limited')
-    expect(failureOf(apiError(500))).toBe('server')
-    expect(failureOf(apiError(503))).toBe('server')
+    expect(apiFailureOf(apiError(401))).toBe('invalid-credentials')
+    expect(apiFailureOf(apiError(403))).toBe('forbidden')
+    expect(apiFailureOf(apiError(429))).toBe('rate-limited')
+    expect(apiFailureOf(apiError(500))).toBe('server')
+    expect(apiFailureOf(apiError(503))).toBe('server')
   })
 
   /**
@@ -53,23 +53,23 @@ describe('failure mapping', () => {
       new Headers(),
     )
 
-    expect(failureOf(restricted)).toBe('plan-restricted')
-    expect(failureOf(apiError(403))).toBe('forbidden')
+    expect(apiFailureOf(restricted)).toBe('plan-restricted')
+    expect(apiFailureOf(apiError(403))).toBe('forbidden')
   })
 
   it('maps an unreachable API to a network failure', () => {
-    expect(failureOf(new APIConnectionError({}))).toBe('network')
+    expect(apiFailureOf(new APIConnectionError({}))).toBe('network')
   })
 
   it('falls back to unexpected on anything it does not recognise', () => {
-    expect(failureOf(apiError(418))).toBe('unexpected')
-    expect(failureOf(new Error('boom'))).toBe('unexpected')
-    expect(failureOf('boom')).toBe('unexpected')
+    expect(apiFailureOf(apiError(418))).toBe('unexpected')
+    expect(apiFailureOf(new Error('boom'))).toBe('unexpected')
+    expect(apiFailureOf('boom')).toBe('unexpected')
   })
 
   it('never carries the SDK message across the boundary', () => {
     const leaky = apiError(401, 'Authorization: Basic YXBpX2tleTpzM2NyM3Q=')
-    expect(JSON.stringify(failureOf(leaky))).not.toContain('YXBpX2tleQ')
+    expect(JSON.stringify(apiFailureOf(leaky))).not.toContain('YXBpX2tleQ')
   })
 })
 

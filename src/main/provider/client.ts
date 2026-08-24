@@ -34,7 +34,7 @@ function restrictedByPlan(body: unknown): boolean {
  * The reduction is the point, not a simplification: an `APIError` message embeds the request
  * that produced it, so returning it would walk the API key across the IPC boundary.
  */
-export function failureOf(error: unknown): ApiFailure {
+export function apiFailureOf(error: unknown): ApiFailure {
   if (error instanceof NotAuthenticatedError) return 'missing'
   if (error instanceof APIConnectionError) return 'network'
 
@@ -107,7 +107,7 @@ export async function testAuthentication(client: AuthProbe): Promise<AuthState> 
     await client.models.list({ pageSize: 1 })
     return { authenticated: true }
   } catch (error) {
-    return { authenticated: false, reason: failureOf(error) }
+    return { authenticated: false, reason: apiFailureOf(error) }
   }
 }
 
@@ -142,7 +142,7 @@ function reducing(note: (error: unknown) => void) {
     } catch (error) {
       // No credentials is a state, not a refused call: there was never a request to describe.
       if (!(error instanceof NotAuthenticatedError)) note(error)
-      throw new Error(failureOf(error), { cause: error })
+      throw new Error(apiFailureOf(error), { cause: error })
     }
   }
 }

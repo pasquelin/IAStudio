@@ -73,14 +73,14 @@ export type RateLimiterOptions = {
 }
 
 /** Admitted, or held with the wait that would have been needed. */
-export type Admission = { admitted: true } | { admitted: false; retryAfterMs: number }
+export type RateAdmission = { admitted: true } | { admitted: false; retryAfterMs: number }
 
 export type RateLimiter = {
   /** Resolves once a request may go out, or says how long it would have taken. */
-  acquire: (signal?: AbortSignal, priority?: Priority) => Promise<Admission>
+  acquire: (signal?: AbortSignal, priority?: Priority) => Promise<RateAdmission>
 }
 
-const ADMITTED: Admission = { admitted: true }
+const ADMITTED: RateAdmission = { admitted: true }
 
 /**
  * A sliding window over the instants requests were admitted at.
@@ -113,7 +113,7 @@ export function createRateLimiter({
     deadline: number,
     priority: Priority,
     signal?: AbortSignal,
-  ): Promise<Admission> => {
+  ): Promise<RateAdmission> => {
     const ceiling = priority === 'urgent' ? limit : ordinaryCeiling
 
     for (;;) {
@@ -199,7 +199,7 @@ export function createRateLimiter({
  * call behind it never settles. Invariant 6 asks a long task to be cancellable, not eventually
  * cancellable.
  */
-function abortable(served: Promise<Admission>, signal?: AbortSignal): Promise<Admission> {
+function abortable(served: Promise<RateAdmission>, signal?: AbortSignal): Promise<RateAdmission> {
   if (!signal) return served
 
   return new Promise((resolve, reject) => {
@@ -262,7 +262,7 @@ export async function asUrgent<T>(action: () => Promise<T>): Promise<T> {
  * rewraps it as `APIConnectionError` — so a rate limit would reach the user as a network failure
  * on a healthy connection. A 429 is retried too, but knowingly: `retry-after-ms` is honoured to
  * the millisecond, so the wait happens outside the request's own timeout, and what surfaces if
- * it persists is an `APIError` that `failureOf` reads as `rate-limited`.
+ * it persists is an `APIError` that `apiFailureOf` reads as `rate-limited`.
  */
 function heldResponse(retryAfterMs: number): Response {
   return new Response(JSON.stringify({ message: "held by the studio's own rate limit" }), {

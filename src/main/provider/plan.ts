@@ -21,10 +21,10 @@ export type TeamsCatalog = { teams: () => Promise<RemoteTeams> }
  * The one method of the SDK client this needs. Narrower than `Scenario['get']`, whose
  * `APIPromise` carries extras nothing here reads — and which no test can construct.
  */
-export type Transport = { get: (path: string) => Promise<RemoteTeams> }
+export type TeamsTransport = { get: (path: string) => Promise<RemoteTeams> }
 
 /** Binds the port to the real SDK, as `catalogOf` does for the model catalogue. */
-export function teamsOf(client: Transport): TeamsCatalog {
+export function teamsOf(client: TeamsTransport): TeamsCatalog {
   return {
     teams: () => client.get('/teams'),
   }
