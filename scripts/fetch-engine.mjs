@@ -84,6 +84,9 @@ export function syncEngineSources() {
     recursive: true,
     filter: src => basename(src) !== '__pycache__' && !src.endsWith('.pyc'),
   })
+  // `core/requirements.py` reads it at `parents[3]` to say what the door's environment is missing.
+  // A list copied into Python would drift from the one `uv` resolves; this keeps ONE declaration.
+  cpSync(join(ROOT, 'engine', 'pyproject.toml'), join(DESTINATION, 'pyproject.toml'))
 }
 
 function tripleFor(platform, arch) {

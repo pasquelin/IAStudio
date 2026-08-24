@@ -15,7 +15,7 @@ import { z } from 'zod'
 export const PROTOCOL_VERSION = 2
 
 /** What the core answers itself, in the same turn — neither wakes a door. */
-export type EngineOp = 'hardware.info' | 'memory.ledger'
+export type EngineOp = 'hardware.info' | 'memory.ledger' | 'engine.requirements'
 
 /**
  * What the core hands to a DOOR instead of answering. Each reads gigabytes or runs for seconds, so
@@ -145,6 +145,25 @@ export function isJobProgress(value: EngineFrame): value is EngineJobProgress {
 
 export function isWorkerHello(value: EngineFrame): value is EngineWorkerHello {
   return 'evt' in value && value.evt === 'worker.hello'
+}
+
+/**
+ * What the door's environment holds against what it was declared to need. Answered by the CORE,
+ * which imports none of it: a `.dist-info` read is what tells absent from stale without paying the
+ * 682 MB an import would. `declaration` travels because repairing means installing that same list.
+ */
+const requirements = z.object({
+  extra: z.string(),
+  declaration: z.array(z.string()),
+  absent: z.array(z.object({ name: z.string(), wanted: z.string() })),
+  stale: z.array(z.object({ name: z.string(), wanted: z.string(), installed: z.string() })),
+  complete: z.boolean(),
+})
+
+export type EngineRequirements = z.infer<typeof requirements>
+
+export function readRequirements(value: unknown): EngineRequirements {
+  return requirements.parse(value)
 }
 
 /** What a routed op answers in the same turn: the job it opened, never its result. */
