@@ -672,6 +672,7 @@ a logo laid over it.
 4. ModelRegistry translates      JSON schema → FieldDescriptor[]
 5. DynamicForm renders it        react-hook-form + a zod schema built from the descriptors
 5b. the price shows up           provider:estimate-cost → POST ?dryRun=true → 200 (402 as fallback)
+5c. the project's context joins  promptContext — on THOSE TWO channels, nowhere else
 6. user submits                  provider:generate
 7. JobManager queues it          bounded concurrency
 8. it polls                      jobs.retrieve — 2 s is the FLOOR, not the rate
@@ -685,6 +686,20 @@ hand is right for exactly one model on exactly one day.
 
 An unknown field kind renders as raw input rather than failing the descriptor — a generation
 form that silently loses a field is worse than an ugly one.
+
+**Step 5c sits in the handler and not in the `JobManager`, and the queue is why**: a job waits
+minutes before it runs, and a context edited in between would be added to a body somebody has
+already read on screen. It is also the one point the estimate and the generation share: what is
+priced is what is sent. The prompt field is found through `promptSpark` and never by name — a
+context landing in a negative prompt would ask for the opposite of itself. A model that declares
+none is left alone, silently.
+
+**The WRITTEN prompt travels beside it** (`AuthoredPrompt`), from the handler to the collector: the
+API echoes back what it was sent, and `generatedAssetName` cuts an asset's name from the first sixty
+characters of its prompt — a project with a context would have named all of its assets the same.
+`AssetGeneration` gains no field: `withAuthoredPrompt` puts the written one back into `params`, so a
+« regenerate » reopens on what was typed rather than stacking the context at every replay.
+[ADR-24](ci/adr/ADR-24-ce-qui-voyage-avec-le-projet.md).
 
 **Step 8 slows down as the load rises, and that is what makes it safe.** The interval is
 `max(floor, ceil(running × 60,000 ÷ POLL_REQUESTS_PER_MINUTE))`: two seconds is what one or two
@@ -728,6 +743,12 @@ It is one case of the [first screen](#the-first-screen) rule.
 
 A project is a folder. `project.json` is its manifest (version, name, timestamps); the rest is
 structure the studio creates on open — see the [manual](manual/04-projects.md) for the tree.
+
+**`.project-context.json` is the project's second file to carry human writing**: the cards saying
+what the project is about, added to every generation and to the assistant's briefing. It lives in
+the FOLDER rather than in the settings, unlike `settings.ai.projectRoles` — the criterion is in
+[ADR-24](ci/adr/ADR-24-ce-qui-voyage-avec-le-projet.md). It refuses to be overwritten when it is
+unreadable or from a newer build, the opposite of `jobStore.ts`: what it holds is somebody's text.
 
 The **catalogue** is `.index/catalog.db`, a SQLite index of every asset: id, name, type,
 location, tags, timestamps, and the path when the asset is local. It exists so the asset shelf

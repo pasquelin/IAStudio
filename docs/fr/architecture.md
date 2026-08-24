@@ -735,6 +735,7 @@ Confondre les deux faisait évincer un rush pour un logo posé au-dessus.
 4. le ModelRegistry traduit          schéma JSON → FieldDescriptor[]
 5. DynamicForm le rend               react-hook-form + un schéma zod bâti sur les descripteurs
 5b. le prix s'affiche                provider:estimate-cost → POST ?dryRun=true → 200 (402 en repli)
+5c. le contexte du projet rejoint     promptContext — sur CES DEUX canaux, jamais ailleurs
 6. soumission                        provider:generate
 7. le JobManager met en file         concurrence bornée
 8. il poll                           jobs.retrieve — 2 s est le PLANCHER, pas la cadence
@@ -749,6 +750,20 @@ jour.
 
 Un `kind` de champ inconnu se rend en saisie brute plutôt que de faire échouer le descripteur —
 un formulaire de génération qui perd un champ en silence est pire qu’un formulaire laid.
+
+**L’étape 5c est dans le handler et non dans le `JobManager`, et la file d’attente est pourquoi** :
+un job attend des minutes avant de partir, et un contexte modifié entre-temps serait ajouté à un
+corps que quelqu’un a déjà lu à l’écran. C’est aussi le seul point que le devis et la génération
+partagent : ce qui est chiffré est ce qui est envoyé. La clé du champ de prompt se trouve par
+`promptSpark`, jamais par son nom — un contexte tombé dans un *negative prompt* demanderait
+l’inverse de lui-même. Un modèle qui n’en déclare aucun n’est pas touché, en silence.
+
+**Le prompt ÉCRIT voyage à côté** (`AuthoredPrompt`), du handler jusqu’au collecteur : l’API renvoie
+ce qu’elle a reçu, et `generatedAssetName` taille le nom d’un asset dans les soixante premiers
+caractères de son prompt — un projet à contexte aurait nommé tous ses assets pareil. `AssetGeneration`
+ne gagne aucun champ : `withAuthoredPrompt` remet l’écrit dans `params`, ce qui fait qu’un
+« regenerate » rouvre sur ce qui a été tapé plutôt que d’empiler le contexte à chaque reprise.
+[ADR-24](ci/adr/ADR-24-ce-qui-voyage-avec-le-projet.md).
 
 **L’étape 8 ralentit quand la charge monte, et c’est ce qui la rend sûre.** L’intervalle est
 `max(plancher, ceil(jobs_en_cours × 60 000 ÷ POLL_REQUESTS_PER_MINUTE))` : deux secondes est ce
@@ -794,6 +809,13 @@ lisent la source. C’est un cas particulier de la règle du [premier écran](#l
 Un projet est un dossier. `project.json` en est le manifeste (version, nom, dates) ; le reste est
 la structure que le studio crée à l’ouverture — l’arborescence est dans le
 [manuel](manuel/04-projets.md).
+
+**`.project-context.json` est le second fichier du projet à porter de l’écriture humaine** : les
+fiches qui disent ce que le projet raconte, ajoutées à toute génération et au briefing de
+l’assistant. Il vit dans le DOSSIER et non dans les réglages, contrairement à
+`settings.ai.projectRoles` — le critère est dans l’[ADR-24](ci/adr/ADR-24-ce-qui-voyage-avec-le-projet.md).
+Il refuse d’être écrasé quand il est illisible ou d’une version plus récente, l’inverse de
+`jobStore.ts` : ce qu’il porte est le texte de quelqu’un.
 
 Le **catalogue** est `.index/catalog.db`, un index SQLite de chaque asset : identifiant, nom,
 type, emplacement, étiquettes, dates, et le chemin quand l’asset est local. Il existe pour que

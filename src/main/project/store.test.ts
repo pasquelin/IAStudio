@@ -23,7 +23,7 @@ import { memoryCatalog } from './catalog-fixtures'
 
 type ExecDone = (error: Error | null, stdout: string, stderr: string) => void
 
-/** Hoisted: `store.ts` promisifies `execFile` as it loads, before any `beforeEach` could run. */
+/** Hoisted: `hideFromExplorer.ts` promisifies `execFile` as it loads, before a `beforeEach` runs. */
 const execFileMock = vi.hoisted(() =>
   vi.fn((_command: string, _args: string[], done: ExecDone) => {
     done(null, '', '')

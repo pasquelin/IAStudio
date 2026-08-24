@@ -110,8 +110,10 @@ describe('Rail', () => {
         'separator',
         'Explorateur',
         // Same half as the folder, and after it: the folder is what the half opens on, the
-        // versions of that folder are what one switches to. Both need a project open.
+        // versions of that folder and what it is about are what one switches to. All three
+        // need a project open.
         'Git',
+        'Contexte',
       ])
 
       // `marksOf` reads buttons and separators, so it cannot see the hole an empty zone leaves:
@@ -200,6 +202,7 @@ describe('Rail', () => {
       'separator',
       'Explorateur',
       'Git',
+      'Contexte',
       // Nothing at the foot: the band's left half is where a panel is dragged, and no placement
       // declares one there — its tools all hang on the right, and so do their icons.
     ])

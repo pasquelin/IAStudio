@@ -31,7 +31,8 @@
     "scene": "Scène",
     "projects": "Vos projets",
     "animations": "Animations",
-    "text": "Texte"
+    "text": "Texte",
+    "context": "Contexte"
   },
   "view": {
     "projection": "Projection",

@@ -23,7 +23,7 @@ describe('routing a collection to whoever owns the job', () => {
     const cloud = answering('cloud')
     const collect = createRoutedCollector({ local, cloud: () => cloud, owns: () => true })
 
-    expect(await collect(JOB, [])).toEqual({ ids: ['local'], workspaces: [] })
+    expect(await collect(JOB, [], null)).toEqual({ ids: ['local'], workspaces: [] })
     expect(cloud).not.toHaveBeenCalled()
   })
 
@@ -33,7 +33,7 @@ describe('routing a collection to whoever owns the job', () => {
     const cloud = answering('cloud')
     const collect = createRoutedCollector({ local, cloud: () => cloud, owns })
 
-    await collect({ ...JOB, remoteId: 'local_abc' }, [])
+    await collect({ ...JOB, remoteId: 'local_abc' }, [], null)
 
     expect(owns).toHaveBeenCalledWith('local_abc')
     expect(local).toHaveBeenCalled()
@@ -48,9 +48,9 @@ describe('routing a collection to whoever owns the job', () => {
       owns: () => false,
     })
 
-    await collect(JOB, ['remote_1'])
+    await collect(JOB, ['remote_1'], null)
 
-    expect(cloud).toHaveBeenCalledWith(JOB, ['remote_1'])
+    expect(cloud).toHaveBeenCalledWith(JOB, ['remote_1'], null)
   })
 
   it('collects a local generation with no account held', async () => {
@@ -60,7 +60,7 @@ describe('routing a collection to whoever owns the job', () => {
       owns: () => true,
     })
 
-    expect(await collect(JOB, [])).toEqual({ ids: ['local'], workspaces: [] })
+    expect(await collect(JOB, [], null)).toEqual({ ids: ['local'], workspaces: [] })
   })
 
   it('fails rather than reporting a cloud job with nothing behind it', async () => {
@@ -70,6 +70,6 @@ describe('routing a collection to whoever owns the job', () => {
       owns: () => false,
     })
 
-    await expect(collect(JOB, ['remote_1'])).rejects.toThrow(/no account/)
+    await expect(collect(JOB, ['remote_1'], null)).rejects.toThrow(/no account/)
   })
 })

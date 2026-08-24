@@ -20,6 +20,15 @@ import {
 import { isPrivatePath } from '@shared/domain/folder'
 import { isOraSurfacePath, type OraStack } from '@shared/domain/openRaster'
 import { MANIFEST_VERSION, type Manifest } from '@shared/domain/project'
+import {
+  CONTEXT_BODY_MAX,
+  CONTEXT_CARDS_MAX,
+  CONTEXT_PICTURES_MAX,
+  CONTEXT_TITLE_MAX,
+  CONTEXT_VERSION,
+  type ContextCard,
+  type ProjectContext,
+} from '@shared/domain/projectContext'
 import { isPbrChannel, type PbrChannel } from '@shared/domain/texture'
 import type {
   SaveAudioRequest,
@@ -44,6 +53,32 @@ const manifest = z.object({
 /** A project folder is user territory: its manifest can be edited, truncated or replaced. */
 export function parseManifest(value: unknown): Manifest {
   return manifest.parse(value)
+}
+
+// Bounds in CODE POINTS, never in UTF-16 units: a card written in emoji or in Japanese is as long
+// as it looks, which is the lesson `checkAssetName` already carries.
+const contextCard = z.object({
+  id: z.string().trim().min(1).refine(withinCodePoints(80)),
+  // May be empty: a card with no title travels as its body alone.
+  title: z.string().trim().refine(withinCodePoints(CONTEXT_TITLE_MAX)),
+  body: z.string().refine(withinCodePoints(CONTEXT_BODY_MAX)),
+  active: z.boolean(),
+  pictures: z.array(assetId).max(CONTEXT_PICTURES_MAX),
+})
+
+const projectContext = z.object({
+  version: z.number().int().min(1).max(CONTEXT_VERSION),
+  cards: z.array(contextCard).max(CONTEXT_CARDS_MAX),
+})
+
+/** The file, which like the manifest is user territory — hand-edited, truncated, or older. */
+export function parseProjectContext(value: unknown): ProjectContext {
+  return projectContext.parse(value)
+}
+
+/** What a window, or a program driving the studio, asks to store. */
+export function parseContextCards(value: unknown): ContextCard[] {
+  return z.array(contextCard).max(CONTEXT_CARDS_MAX).parse(value)
 }
 
 // Absolute paths only, and enforced rather than merely intended: a relative one would resolve

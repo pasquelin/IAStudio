@@ -227,6 +227,32 @@ Neither is a failure, and nothing is spent.
 
 ---
 
+## The project's context, in the form
+
+If the open project carries a context, the panel shows it above the form, as it will be sent, with
+a ticked box:
+
+```
+☑ Apply the project's context
+┌────────────────────────────────────────┐
+│ Project context —                      │
+│ World: Middle Ages, 13th century…      │
+│ Art direction: oil paint, chiaro…      │
+└────────────────────────────────────────┘
+```
+
+**Unticking the box leaves the context out of that one shot**, without going to turn a card off in
+the Context panel. The box stays as you left it for as long as the panel is open.
+
+The price under the **Generate** button accounts for the context: what is quoted is what will be
+sent.
+
+The block is not drawn when there would be nothing to say — no card on, or a model with no
+description field. What a context holds, how it is written and where it is kept are in the
+[Projects](04-projects.md#the-projects-context) chapter.
+
+---
+
 ## The settings you meet most often
 
 They are not the same everywhere, but these names recur:

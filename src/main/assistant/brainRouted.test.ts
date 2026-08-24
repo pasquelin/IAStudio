@@ -18,6 +18,7 @@ const routed = (over: Partial<RoutedBrainDeps> = {}) =>
     modelOf: id => (id === llama.id ? llama : null),
     localBrain: () => answering('from this machine'),
     cloudBrain: id => (id === 'a-cloud' ? answering('from the cloud') : null),
+    contextOf: () => Promise.resolve(''),
     ...over,
   })
 

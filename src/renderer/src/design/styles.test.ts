@@ -633,12 +633,16 @@ describe('the box a panel puts above what it acts on', () => {
   })
 
   // Named rather than counted. **Blind**: raw text, as above.
-  it('is worn by the three it was extracted from', () => {
+  it('is worn by the two it was extracted from, and by the context card', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && /\bPANEL_HEAD\b/.test(source),
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
+      // Not a panel HEAD, and it wears this anyway: a context card is a block ruled off by the
+      // same trait, with the same room, and a fourth spelling of those five words is what the
+      // rule above exists to prevent.
+      '../panels/context/ContextCardRow.tsx',
       '../panels/git/CommitBox.tsx',
       './CollectionBar/CollectionBar.tsx',
     ])

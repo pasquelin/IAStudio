@@ -12,6 +12,7 @@ import { getBridge } from '@/services/bridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { useSettings } from './settings'
 import { useActivity } from './activity'
+import { useProjectContext } from './projectContext'
 import { forgetRememberedAssets, useAssets } from './assets'
 import { useLayouts } from './layouts'
 import { useSceneClipboard } from './sceneClipboard'
@@ -86,6 +87,9 @@ async function followProject(project: Project | null): Promise<void> {
     useAssets.getState().refresh(),
     refreshDocuments(),
     useActivity.getState().reload(),
+    // The context belongs to the folder: one left behind would be previewed under the next
+    // project, and added to everything generated in it.
+    useProjectContext.getState().reload(),
   ])
 
   // AFTER the catalogue has been read, never before it: the by-id index remembers every asset it

@@ -63,6 +63,7 @@ describe('the registry, published as tools', () => {
     expect(marked.map(action => action.name).sort()).toEqual([
       'assets.remove',
       'command.run',
+      'context.write',
       'git.commit',
       'settings.action',
     ])

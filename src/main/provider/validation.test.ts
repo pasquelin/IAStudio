@@ -72,6 +72,25 @@ describe('jobs read back from disk', () => {
     })
   })
 
+  /**
+   * 🛑 The written prompt is a courtesy — it names the file well. Losing it must never cost the
+   * NOTE: a prompt long enough to overflow the bound dropped the whole entry, and a generation
+   * running and already paid for was abandoned at the next launch.
+   */
+  it('keeps a note whose written prompt it cannot read', () => {
+    const stored = [{ ...NOTE, targetId: 'model_flux', authored: { written: 'a house', sent: 42 } }]
+
+    expect(parseStoredJobs(JSON.stringify(stored))[0]).toMatchObject({ id: NOTE.id })
+  })
+
+  it('reads the written prompt back, so a resumed job still names its output by it', () => {
+    const authored = { written: 'a house', sent: 'a house\n\nWorld: A forest' }
+
+    const stored = [{ ...NOTE, targetId: 'model_flux', authored }]
+
+    expect(parseStoredJobs(JSON.stringify(stored))[0]).toMatchObject({ authored })
+  })
+
   // A blank remote id would have the manager poll a job id that is not one.
   it('drops an entry it cannot make sense of, and keeps the rest', () => {
     const stored = [

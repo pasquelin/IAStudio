@@ -194,7 +194,7 @@ the prepared generation** has had your yes on screen, nothing has gone out.
 
 ## The catalogue
 
-**Fourteen families.** The table below says what each family covers and what it **commits** — that
+**Fifteen families.** The table below says what each family covers and what it **commits** — that
 last column is what decides whether the studio will ask you anything. Neither the count nor the
 exact list is copied out here: they move, and **your client reads them at the source** when you ask
 it for its tools, with every parameter of every action.
@@ -212,6 +212,7 @@ it for its tools, with every parameter of every action.
 | **Sky and material** | adjust a sky's image, place its sun, choose the projection to look at it under, fill a material's channels, remap them, choose the shape to judge it on, and render it | nothing |
 | **3D** | the scene: place an object, turn it, cut it to size, light it, paint it, dress it in maps, set a text, draw a rail, reparent it, and look at it — from one side, in one of the ways of drawing, and take a still of it. The setting too: what lights the scene, what hangs behind it, its haze, its ground, its rendering, and the ready-made worlds | nothing |
 | **Characters** | make a model animatable, add or remove a bone, tie it to a joint of the standard, put a handle on it, list what it can play, lay an animation block and set it, lay and take back keys, keep the channels, set length and rate | nothing |
+| **The project's context** | read the cards that say what the project is about, add one, rewrite one, turn it on or off, delete it | **files**, for rewriting a card's text and for deleting one — adding and turning off destroy nothing |
 | **Versions** | read the repository and its history, stage, record, branch, shelve, settle a conflict, fetch, publish | **files**, for whatever rewrites the working tree; **a server**, for publishing |
 | **Settings** | read and change the settings, press the buttons of the window, list the accounts, switch to one, rename one | **files**, for the two buttons nothing takes back |
 | **Around the documents** | the window, the account, updates, fonts, pinned recipes, material styles, the studio's panels, dictation, and the three windows of the Help menu | **files**, for deleting a style and for installing an update |

@@ -31,7 +31,10 @@
     "landingHint": "A document is open. The result can join it, or open in a tab of its own.",
     "landingRemember": "Remember this choice",
     "advancedHint": "Show the knobs a generation does not ask for",
-    "advancedFewerHint": "Fold these knobs away"
+    "advancedFewerHint": "Fold these knobs away",
+    "contextApplies": "Apply the project’s context",
+    "contextReferences": "Use these references",
+    "contextReferencesHint": "Puts the context’s images into this model’s image fields"
   },
   "models": {
     "none": "No model in this workspace.",

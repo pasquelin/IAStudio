@@ -60,7 +60,8 @@ describe('what the form in front of the user would cost', () => {
     })
 
     expect(estimateCost).toHaveBeenCalledOnce()
-    expect(estimateCost).toHaveBeenCalledWith({ id: 'model_flux' }, { prompt: 'a rock' })
+    // The third argument says whether the project's context joins the shot; absent is 'apply'.
+    expect(estimateCost).toHaveBeenCalledWith({ id: 'model_flux' }, { prompt: 'a rock' }, 'apply')
     expect(result.current.note).toContain('12')
   })
 

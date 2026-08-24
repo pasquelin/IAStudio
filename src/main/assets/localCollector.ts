@@ -43,7 +43,7 @@ function bareExtensionOf(path: string): string {
  * turns on a remote asset id there is none of.
  */
 export function createLocalCollector(deps: LocalCollectorDeps): AssetCollector {
-  return async job => {
+  return async (job, _remoteAssetIds, authored) => {
     const produced = deps.producedBy(runnerIdOf(job))
     // A conversation produced no file: the job succeeded, it simply has nothing to file.
     if (!produced) return NOTHING
@@ -53,7 +53,14 @@ export function createLocalCollector(deps: LocalCollectorDeps): AssetCollector {
     const asset = await deps.backend.importFromFile(
       {
         id: deps.newId(),
-        name: generatedAssetName({ prompt: produced.prompt, label: job.label, index: 0, total: 1 }),
+        // The written prompt over the body's: what the engine was HANDED carries the project's
+        // context, and the file would be named after the world rather than after its subject.
+        name: generatedAssetName({
+          prompt: authored?.written ?? produced.prompt,
+          label: job.label,
+          index: 0,
+          total: 1,
+        }),
         type: produced.type,
         jobId: job.id,
         extension: bareExtensionOf(produced.path),

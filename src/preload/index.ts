@@ -7,6 +7,7 @@ import type { TaskProgress } from '@shared/domain/taskProgress'
 import type { SttEvent } from '@shared/domain/dictation'
 import type { FileOutcome } from '@shared/domain/fileOp'
 import type { Project, RescanState } from '@shared/domain/project'
+import type { ContextState } from '@shared/domain/projectContext'
 import type { Job, JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
 import type { Settings } from '@shared/domain/settings'
@@ -67,8 +68,10 @@ const bridge: StudioBridge = {
     suggestPrompts: request => ipcRenderer.invoke(CHANNELS.providerSuggestPrompts, request),
     translatePrompt: draft => ipcRenderer.invoke(CHANNELS.providerTranslatePrompt, draft),
     describeStyle: images => ipcRenderer.invoke(CHANNELS.providerDescribeStyle, images),
-    generate: (modelId, body) => ipcRenderer.invoke(CHANNELS.providerGenerate, modelId, body),
-    estimateCost: (target, body) => ipcRenderer.invoke(CHANNELS.providerEstimateCost, target, body),
+    generate: (modelId, body, use) =>
+      ipcRenderer.invoke(CHANNELS.providerGenerate, modelId, body, use),
+    estimateCost: (target, body, use) =>
+      ipcRenderer.invoke(CHANNELS.providerEstimateCost, target, body, use),
     uploadAsset: (name, image) => ipcRenderer.invoke(CHANNELS.providerUploadAsset, name, image),
     cancelJob: jobId => ipcRenderer.invoke(CHANNELS.providerCancelJob, jobId),
     listJobs: () => ipcRenderer.invoke(CHANNELS.providerListJobs),
@@ -93,6 +96,9 @@ const bridge: StudioBridge = {
     rescanState: () => ipcRenderer.invoke(CHANNELS.projectRescanState),
     stopRescan: () => ipcRenderer.invoke(CHANNELS.projectStopRescan),
     fileFacts: relative => ipcRenderer.invoke(CHANNELS.projectFileFacts, relative),
+    readContext: () => ipcRenderer.invoke(CHANNELS.projectReadContext),
+    writeContext: cards => ipcRenderer.invoke(CHANNELS.projectWriteContext, cards),
+    onContextChanged: callback => subscribe<ContextState>(EVENTS.projectContext, callback),
     exportInto: request => ipcRenderer.invoke(CHANNELS.projectExport, request),
     revealFile: relative => ipcRenderer.invoke(CHANNELS.projectRevealFile, relative),
     revealFolder: path => ipcRenderer.invoke(CHANNELS.projectRevealFolder, path),
