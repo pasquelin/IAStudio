@@ -432,7 +432,7 @@ what is going and with which settings.
 
 **They live in the Image menu**, and nowhere else: with no default shortcut, that is the only
 door. Cut out, Upscale and Vectorise each ask for a model of a family that has no workspace of its
-own; it is set in **Settings ▸ Generation**. Until one is set, the edit request does not leave and
+own; it is set in **Settings ▸ AI models**. Until one is set, the edit request does not leave and
 opens the screen where you choose it.
 
 ### Exporting

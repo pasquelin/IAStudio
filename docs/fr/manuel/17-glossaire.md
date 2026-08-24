@@ -182,7 +182,7 @@ Le calcul se relance depuis le menu de sa vignette, autant de fois qu’on veut.
 **Détourage** *(background removal)*
 Retirer le fond d’une image pour ne garder que le sujet, sur du transparent. La commande
 **Détourer** est dans le menu Image ; son modèle se règle dans
-**Réglages ▸ Génération ▸ Détourage**.
+**Réglages ▸ Modèles d’IA ▸ Détourage**.
 
 **Dictée**
 Écrire un texte en le disant plutôt qu'en le tapant. La reconnaissance tourne **sur cet
@@ -700,7 +700,7 @@ dépense rien et ne génère rien.
 **Vectorisation**
 Convertir une image en tracés — des lignes et des courbes, qui s’agrandissent sans jamais devenir
 floues. La commande **Vectoriser** est dans le menu Image ; son modèle se règle dans
-**Réglages ▸ Génération ▸ Vectorisation**.
+**Réglages ▸ Modèles d’IA ▸ Vectorisation**.
 
 **Vignette** *(thumbnail)*
 La petite image qui représente un *asset* dans l’étagère ou un *modèle* dans le catalogue.

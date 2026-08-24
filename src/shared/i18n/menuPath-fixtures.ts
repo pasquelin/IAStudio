@@ -4,7 +4,7 @@
  * out twice, the two readings would drift, and the manual's has already been widened three times.
  */
 import { isRecord } from '../guards'
-import { childSections, rootSections } from '../domain/settingsRegistry'
+import { actionsIn, childSections, descriptorsIn, rootSections } from '../domain/settingsRegistry'
 
 /**
  * Both separators the chapters write, and they are not interchangeable to a regexp: `▸` carries
@@ -63,9 +63,17 @@ const valueAt = (bundle: unknown, path: string): string => {
 }
 
 /**
- * The settings window as a TREE — each root screen against the screens it holds — read from the
- * registry that already declares the nesting. A flat set of every section says `Réglages ▸ Clés
- * API` resolves, when the screen sits under « Modèles d'IA » and the path is missing a segment.
+ * The settings window as a TREE — each root screen against what may legitimately follow it —
+ * read from the registry that already declares the nesting. A flat set of every section says
+ * `Réglages ▸ Clés API` resolves, when the screen sits under « Modèles d'IA ».
+ *
+ * What follows a root is a screen it HOLDS, a setting it CARRIES or an action it OFFERS, all
+ * three declared: `Réglages ▸ Génération ▸ Image` stayed green on the whole screen alone, the
+ * families living under « Modèles d'IA » and no setting of that section being named so.
+ *
+ * Two things it does NOT catch. A path of TWO segments only asks that the root exists, so
+ * `Réglages ▸ Génération` reads green while meaning a screen it does not hold. And a root the
+ * registry leaves empty — `shortcuts` — carries no index at all, so anything follows it.
  */
 export const settingsTree = (bundle: unknown): Map<string, ReadonlySet<string>> =>
   new Map(
@@ -75,9 +83,11 @@ export const settingsTree = (bundle: unknown): Map<string, ReadonlySet<string>> 
           [
             asRead(valueAt(bundle, root.labelKey)),
             new Set(
-              childSections(root.id)
-                .map(child => asRead(valueAt(bundle, child.labelKey)))
-                .filter(Boolean),
+              [
+                ...childSections(root.id).map(child => asRead(valueAt(bundle, child.labelKey))),
+                ...descriptorsIn(root.id).map(held => asRead(valueAt(bundle, held.titleKey))),
+                ...actionsIn(root.id).map(offered => asRead(valueAt(bundle, offered.titleKey))),
+              ].filter(Boolean),
             ),
           ] as [string, ReadonlySet<string>],
       )
