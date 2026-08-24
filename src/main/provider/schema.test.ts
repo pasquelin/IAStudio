@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ADVANCED_GROUP } from '@shared/domain/localFields'
 import { SKYBOX_TAG } from '@shared/domain/model'
 import { familyOf, translateSchema, type ProviderInput } from './schema'
 
@@ -255,5 +256,50 @@ describe('familyOf', () => {
     ]
 
     expect(translateSchema(inputs).map(field => field.maskFrom)).toEqual([undefined, 'image'])
+  })
+})
+
+describe('what a first generation never touches', () => {
+  const inputOf = (over: Partial<ProviderInput> & { name: string }): ProviderInput => ({
+    type: 'string',
+    ...over,
+  })
+
+  // Told by a KIND of ours and by the field that names what it masks — the two contractual signals.
+  it('folds the seed and the mask, whatever the model calls them', () => {
+    const fields = translateSchema([
+      inputOf({ name: 'seed', type: 'integer' }),
+      inputOf({ name: 'whatever', type: 'image', maskFrom: 'image' }),
+    ])
+
+    expect(fields.map(one => one.group)).toEqual([ADVANCED_GROUP, ADVANCED_GROUP])
+  })
+
+  // Spelled either way: the same knob is `cfg_scale` on one model and `cfgScale` on the next.
+  it('folds the knobs whichever way the catalogue spells them', () => {
+    const fields = translateSchema([
+      inputOf({ name: 'negative_prompt' }),
+      inputOf({ name: 'cfgScale', type: 'float' }),
+      inputOf({ name: 'num_inference_steps', type: 'integer' }),
+    ])
+
+    expect(fields.every(one => one.group === ADVANCED_GROUP)).toBe(true)
+  })
+
+  // What the generation is ABOUT, and what it consumes, stay in plain sight.
+  it('leaves the prompt and the picture it works from unfolded', () => {
+    const fields = translateSchema([
+      inputOf({ name: 'prompt' }),
+      inputOf({ name: 'image', type: 'image' }),
+    ])
+
+    expect(fields.map(one => one.group)).toEqual([undefined, undefined])
+  })
+
+  // A model that groups its own inputs is obeyed: the default only fills a silence.
+  it('never overrides a group the model declared itself', () => {
+    const [field] = translateSchema([inputOf({ name: 'seed', type: 'integer', group: 'Sampling' })])
+
+    expect(field?.group).toBe('Sampling')
   })
 })

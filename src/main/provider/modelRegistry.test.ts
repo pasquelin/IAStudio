@@ -6,6 +6,7 @@ import {
   SKYBOX_TAG,
   SYSTEM_TAG_PREFIX,
 } from '@shared/domain/model'
+import { ADVANCED_GROUP } from '@shared/domain/localFields'
 import { localModel } from '@shared/domain/localModel-fixtures'
 import { createCredentialsWatch } from './credentialsWatch'
 import {
@@ -695,6 +696,9 @@ describe('model registry', () => {
           default: 28,
           min: 1,
           max: 50,
+          // Folded by default: the API groups nothing, and a step count is not what a first
+          // generation is about. `schema.test.ts` holds the rule that decides it.
+          group: ADVANCED_GROUP,
         },
       ])
     })

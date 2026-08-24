@@ -167,6 +167,7 @@ const NEGATIVE_PROMPT: LocalFieldTemplate = {
   kind: 'longText',
   labelKey: 'localFields.negativePrompt',
   required: false,
+  group: ADVANCED_GROUP,
 }
 
 /** Written once and shared: three modalities count denoise steps, with bounds of their own. */
