@@ -56,15 +56,6 @@ export const DEFAULT_COLLECTION_STATE: CollectionState = {
 export const LIST_ONLY: CollectionState = { ...DEFAULT_COLLECTION_STATE, view: 'list' }
 
 /**
- * Its twin the other way round: pictures in a narrow column, with neither search nor facets.
- *
- * A module constant rather than an object built in the panel, for the reason every fixed state
- * here is one — nothing may hand out a shared mutable, and a preset belongs beside the defaults
- * it is a variation of.
- */
-export const TILES_ONLY: CollectionState = { ...DEFAULT_COLLECTION_STATE, thumbnailSize: 96 }
-
-/**
  * The state as it goes to storage. `search` is the one field no store persists: reopening the
  * studio on a catalogue narrowed by a word nobody typed reads as a catalogue gone missing.
  *

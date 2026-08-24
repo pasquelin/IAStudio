@@ -209,8 +209,3 @@ function foreignMaterial(payload: MtlxDocument, channels: ChannelSet): TextureSt
     },
   }
 }
-
-/** Every file the material points at, which is what a save has to keep across. */
-export function mtlxFiles(payload: MtlxDocument): string[] {
-  return payload.images.map(image => image.file)
-}

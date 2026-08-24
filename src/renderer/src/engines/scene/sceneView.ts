@@ -13,7 +13,6 @@ import { toRadians } from '@shared/domain/angles'
 import {
   DISPLAY_MODES,
   VIEW_DIRECTIONS,
-  isViewDirection,
   type DisplayMode,
   type Transform,
   type Vector3 as PlainVector3,
@@ -35,11 +34,6 @@ export type PaneView = 'free' | ViewDirection | CameraView
 
 /** The views that need nothing of the scene. A camera view names a node, so it is not one. */
 export const PANE_VIEWS: readonly ('free' | ViewDirection)[] = ['free', ...VIEW_DIRECTIONS]
-
-export function isPaneView(value: unknown): value is PaneView {
-  if (isCameraView(value)) return true
-  return typeof value === 'string' && (value === 'free' || isViewDirection(value))
-}
 
 export function isCameraView(view: unknown): view is CameraView {
   if (typeof view !== 'object' || view === null) return false

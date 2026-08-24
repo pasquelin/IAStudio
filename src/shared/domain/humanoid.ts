@@ -151,10 +151,6 @@ export const WHOLE_BODY: BodyPart = 'all'
 
 export const BODY_PARTS: readonly BodyPart[] = [WHOLE_BODY, 'upper', 'lower']
 
-export function isBodyPart(value: unknown): value is BodyPart {
-  return BODY_PARTS.some(part => part === value)
-}
-
 const UPPER_ROLES: ReadonlySet<string> = new Set<HumanoidRole>([
   'Spine',
   'Chest',

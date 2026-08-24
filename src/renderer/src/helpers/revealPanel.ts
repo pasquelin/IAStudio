@@ -1,11 +1,5 @@
-import type { AssetType } from '@shared/domain/asset'
 import { placementIn, type ToolId, type ToolSurface } from '@shared/domain/tool'
-import { showWorkspace } from '@/app/dockviewApi'
-import { setFacetValue } from '@/helpers/collectionState'
 import { shownTool, toolStateOf } from '@/helpers/toolRegistry'
-import { workspaceOfType } from '@/helpers/workspaces'
-import { TYPE_FACET } from '@/panels/assets/facets'
-import { useAssets } from '@/stores/assets'
 import { toolSurface } from '@/stores/layouts'
 import { arrangementOf, useTools } from '@/stores/tools'
 
@@ -68,24 +62,4 @@ export function closeTool(tool: ToolId): boolean {
  */
 export function revealAssets(): void {
   revealTool('assets')
-}
-
-/**
- * Brings the shelf up narrowed to one kind, in the workspace that makes it.
- *
- * Beside `revealAssets` rather than in the home that asks for it: naming a facet and writing it
- * into the browser's state is the panel's own language, and the home has no business speaking
- * it. The kind IS the scope the shelf asks the catalogue and the library for, so a click on
- * "Skyboxes" shows every sky rather than the four kinds that space happens to accept.
- */
-export function revealAssetsOfKind(type: AssetType): void {
-  // `showWorkspace` rather than the store's setter, so the tab strip and the rail agree: the
-  // centre holds every section at once, and a section chosen by hand brings its own tab forward.
-  showWorkspace(workspaceOfType(type))
-
-  const { collection, setCollection } = useAssets.getState()
-  setCollection(setFacetValue(collection, TYPE_FACET, type))
-
-  // After the workspace: the shelf lands wherever THAT space puts it.
-  revealAssets()
 }

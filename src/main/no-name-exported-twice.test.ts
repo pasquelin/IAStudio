@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { PROJECT_TREES, SOURCE_ROOT, WHOLE_PROJECT, sourceFiles } from './sourceFiles'
+import {
+  PROJECT_TREES,
+  SOURCE_ROOT,
+  WHOLE_PROJECT,
+  exportedNames,
+  sourceFiles,
+} from './sourceFiles'
 
 /**
  * One name, one module — within `src/main`.
@@ -19,18 +25,9 @@ import { PROJECT_TREES, SOURCE_ROOT, WHOLE_PROJECT, sourceFiles } from './source
  * **What it does not see, in clear.** The first draft read `function|const|class` only, and an
  * adversarial review found two type collisions living behind that gap — `Admission` between
  * `ai/` and `provider/`, the very pair this guard was written for. Declarative forms are read
- * now; these are NOT, and each would need a parser rather than a line: `export { x }` and
- * `export * from`, which re-publish a name declared elsewhere; `export default`, which carries
- * no name here; and a declaration whose `export` keyword sits on its own line.
+ * now, by `exportedNames`, whose own JSDoc holds what stays out of reach of a line.
  */
 const [MAIN] = PROJECT_TREES
-
-const DECLARES =
-  /(?:^|\n)export (?:async |declare |abstract )*(?:function\*?|const|let|var|class|type|interface|enum) (\w+)/g
-
-const exportsIn = (code: string): Set<string> =>
-  // `?? ''`: the group is filled whenever the pattern matched, which the type cannot know.
-  new Set([...code.matchAll(DECLARES)].map(match => match[1] ?? ''))
 
 describe('one name, one module', () => {
   it(
@@ -38,7 +35,7 @@ describe('one name, one module', () => {
     () => {
       const byName = new Map<string, string[]>()
       for (const path of sourceFiles(MAIN ?? ''))
-        for (const name of exportsIn(readFileSync(path, 'utf8')))
+        for (const name of exportedNames(readFileSync(path, 'utf8')).keys())
           byName.set(name, [...(byName.get(name) ?? []), relative(SOURCE_ROOT, path)])
 
       const shared = [...byName]
