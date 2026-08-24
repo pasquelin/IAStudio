@@ -18,22 +18,29 @@ diffusion = [
   "diffusers>=0.40",
   "transformers>=5.0",
   "accelerate>=1.0",
-  "safetensors>=0.4",
   # What `export_to_video` writes through — declared the day a video model entered the catalogue.
   # Without them a generation denoises to its last step and then dies at the write.
   "imageio>=2.34",
   "imageio-ffmpeg>=0.5",
+  # Both arrive through diffusers anyway; declared because this door IMPORTS them directly —
+  # `modalities` reads and writes a WAV through numpy, and `skybox_fill` paints through Pillow.
+  # An undeclared import is one a dependency is free to drop from under us.
+  "numpy>=1.26",
+  "pillow>=10.0",
 ]
 # TripoSR / TRELLIS / TripoSG / InstantMesh / LGM / CraftsMan3D / MMAudio. NEVER installed by
 # `pnpm engine:check`.
 plugin = [
-  "torch>=2.6",
+  # Everything the diffusers door needs, at the SAME bounds — and what `_require(…, "plugin")`
+  # promises: the adapters import diffusers, transformers and numpy right after the probe.
+  "ia-studio-engine[diffusion]",
   "einops>=0.7",
+  # `_load_lgm` reads its unet and its splatter through `safetensors.torch.load_file`; the
+  # diffusers door only ever asks diffusers for `use_safetensors`.
+  "safetensors>=0.4",
   "omegaconf>=2.3",
   "trimesh>=4.0",
-  "pillow>=10.0",
   "huggingface-hub>=0.24",
-  "imageio>=2.34",
   "rembg>=2.0",
   "torchaudio>=2.6",
   "torchvision>=0.21",
@@ -43,23 +50,19 @@ plugin = [
   "kiui>=0.2.3",
   "roma>=1.5",
   "plyfile>=1.0",
-  "safetensors>=0.4",
   # CraftsMan3D builds its system on Lightning, and its iso-surface on scikit-image.
   "pytorch-lightning>=2.1",
   "scikit-image>=0.22",
   "timm>=1.0",
   "jaxtyping>=0.2",
   "typeguard>=4.0",
-  # `_require(…, "plugin")` names this extra in its refusal, so what the adapters import right
-  # after the probe has to be in it — otherwise the next line raises a bare ImportError.
-  "diffusers>=0.40",
-  "transformers>=5.0",
-  "accelerate>=1.0",
-  "numpy>=1.26",
 ]
 
 [dependency-groups]
-dev = ["pytest>=8.4", "ruff>=0.14"]
+# numpy and Pillow, and nothing heavier: `skybox_fill` is pure array work, and leaving it
+# untested was the one algorithmic file of this engine with no guard. Together they are ~37 MB installed —
+# the 682 MB of `diffusion` is what the gate still refuses to pay.
+dev = ["pytest>=8.4", "ruff>=0.14", "numpy>=1.26", "pillow>=10.0"]
 
 [build-system]
 requires = ["hatchling"]

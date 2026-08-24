@@ -20,6 +20,7 @@ from ia_studio_engine import PROTOCOL_VERSION, __version__
 from ia_studio_engine.core.router import DoorRouter, spawn_door
 from ia_studio_engine.hardware.probe import hardware_info
 from ia_studio_engine.protocol.envelope import (
+    CANCEL_OP,
     EnvelopeError,
     Request,
     decode_request,
@@ -30,8 +31,6 @@ from ia_studio_engine.protocol.envelope import (
 )
 
 Handler = Callable[[dict[str, Any]], Any]
-
-CANCEL_OP = "engine.cancel"
 
 HANDLERS: Mapping[str, Handler] = {"hardware.info": lambda _params: hardware_info()}
 

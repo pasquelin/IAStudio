@@ -19,6 +19,7 @@ from typing import Any
 from ia_studio_engine import PROTOCOL_VERSION, __version__
 from ia_studio_engine.core.jobqueue import Job, JobQueue
 from ia_studio_engine.protocol.envelope import (
+    CANCEL_OP,
     EnvelopeError,
     decode_request,
     encode_error,
@@ -28,8 +29,6 @@ from ia_studio_engine.protocol.envelope import (
 )
 
 Handler = Callable[[dict[str, Any]], Any]
-
-CANCEL_OP = "engine.cancel"
 
 
 def worker_hello(door: str, backend: str, device: str, occupancy: dict[str, Any]) -> str:

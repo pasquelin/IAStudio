@@ -11,13 +11,16 @@ import pytest
 
 from ia_studio_engine.adapters.diffusers_adapter import (
     DiffusersAdapter,
-    LoadedModel,
-    LoadRefusedError,
     accepted_kwargs,
-    generation_refusal,
     pretrained_file_kwargs,
     pretrained_optional_overrides,
     tune_pipeline,
+)
+from ia_studio_engine.adapters.loading import (
+    LoadedModel,
+    LoadRefusedError,
+    generation_refusal,
+    refuse_reason,
 )
 from ia_studio_engine.adapters.modalities import MODALITIES
 
@@ -66,28 +69,28 @@ def test_a_folder_that_ships_fp16_files_still_asks_for_them(tmp_path: Path) -> N
 
 
 def test_refuses_a_folder_that_is_not_one(tmp_path: Path) -> None:
-    assert "not a folder" in (DiffusersAdapter.refuse_reason(str(tmp_path / "nowhere")) or "")
+    assert "not a folder" in (refuse_reason(str(tmp_path / "nowhere")) or "")
 
 
 def test_admits_a_folder_of_weights(tmp_path: Path) -> None:
     (tmp_path / "model_index.json").write_text("{}")
     (tmp_path / "model.safetensors").write_bytes(b"")
 
-    assert DiffusersAdapter.refuse_reason(str(tmp_path)) is None
+    assert refuse_reason(str(tmp_path)) is None
 
 
 def test_refuses_weights_that_carry_python(tmp_path: Path) -> None:
     (tmp_path / "model_index.json").write_text("{}")
     (tmp_path / "custom_model.py").write_text("import os")
 
-    assert "custom_model.py" in (DiffusersAdapter.refuse_reason(str(tmp_path)) or "")
+    assert "custom_model.py" in (refuse_reason(str(tmp_path)) or "")
 
 
 def test_sees_python_hidden_a_folder_down(tmp_path: Path) -> None:
     (tmp_path / "transformer").mkdir()
     (tmp_path / "transformer" / "modeling.py").write_text("import os")
 
-    assert "modeling.py" in (DiffusersAdapter.refuse_reason(str(tmp_path)) or "")
+    assert "modeling.py" in (refuse_reason(str(tmp_path)) or "")
 
 
 def test_unload_drops_the_pipeline_it_held() -> None:
@@ -144,14 +147,19 @@ def test_a_mesh_picture_does_not_switch_to_an_image_pipeline() -> None:
     adapter = DiffusersAdapter(MODALITIES["mesh"])
     adapter.loaded = held(model_id="shap-e-img2img")
 
-    assert adapter._wanted_class({"image": "opened:/a.png", "output_type": "mesh"}) is None
+    assert (
+        adapter._wanted_class(adapter.loaded, {"image": "opened:/a.png", "output_type": "mesh"})
+        is None
+    )
 
 
 def test_a_video_still_does_not_switch_to_an_image_pipeline() -> None:
     adapter = DiffusersAdapter(MODALITIES["video"])
     adapter.loaded = held(model_id="wan21-i2v-14b-480p")
 
-    assert adapter._wanted_class({"image": "opened:/a.png", "prompt": "walk"}) is None
+    assert (
+        adapter._wanted_class(adapter.loaded, {"image": "opened:/a.png", "prompt": "walk"}) is None
+    )
 
 
 def test_a_skybox_that_cannot_inpaint_refuses_a_source_image() -> None:
@@ -159,14 +167,19 @@ def test_a_skybox_that_cannot_inpaint_refuses_a_source_image() -> None:
     adapter.loaded = held(model_id="diffusion360")
 
     with pytest.raises(LoadRefusedError, match="does not take a source image"):
-        adapter._wanted_class({"image": "opened:/a.png", "mask_image": "opened:/m.png"})
+        adapter._wanted_class(
+            adapter.loaded, {"image": "opened:/a.png", "mask_image": "opened:/m.png"}
+        )
 
 
 def test_a_skybox_from_words_does_not_switch_pipeline() -> None:
     adapter = DiffusersAdapter(MODALITIES["skybox"])
     adapter.loaded = held(model_id="panfusion")
 
-    assert adapter._wanted_class({"prompt": "a hall", "circular_padding": True}) is None
+    assert (
+        adapter._wanted_class(adapter.loaded, {"prompt": "a hall", "circular_padding": True})
+        is None
+    )
 
 
 def test_a_skybox_that_already_inpaints_keeps_its_pipeline() -> None:
@@ -177,7 +190,12 @@ def test_a_skybox_that_already_inpaints_keeps_its_pipeline() -> None:
     adapter = DiffusersAdapter(MODALITIES["skybox"])
     adapter.loaded = held(model_id="genex-world-initializer", pipeline=Fill())
 
-    assert adapter._wanted_class({"image": "opened:/a.png", "mask_image": "opened:/m.png"}) is None
+    assert (
+        adapter._wanted_class(
+            adapter.loaded, {"image": "opened:/a.png", "mask_image": "opened:/m.png"}
+        )
+        is None
+    )
 
 
 def test_skips_a_safety_checker_the_folder_did_not_fetch(tmp_path: Path) -> None:

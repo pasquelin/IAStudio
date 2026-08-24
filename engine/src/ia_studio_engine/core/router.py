@@ -13,20 +13,12 @@ from typing import Any
 from ia_studio_engine import PROTOCOL_VERSION
 from ia_studio_engine.core.memory import DoorMemory, MemoryLedger
 from ia_studio_engine.core.workers import WorkerProcess
-from ia_studio_engine.protocol.envelope import encode_event
+from ia_studio_engine.protocol.doors import DOORS
+from ia_studio_engine.protocol.envelope import CANCEL_OP, encode_event
 
-DIFFUSION_DOOR = "engine/diffusion"
-
-#: Every door there is, and the module that IS one. A door is a PROCESS: an 80 GB video model
-#: has no business in the process holding an image. Pairing with a modality lives in
-#: `localRuntimes.ts` — one table, on the side that decides.
-DOOR_MODULES: dict[str, str] = {
-    DIFFUSION_DOOR: "ia_studio_engine.workers.diffusion",
-    "engine/video": "ia_studio_engine.workers.video",
-    "engine/audio": "ia_studio_engine.workers.audio",
-    "engine/3d": "ia_studio_engine.workers.mesh",
-    "engine/skybox": "ia_studio_engine.workers.skybox",
-}
+#: The single module every door runs; which door it is travels as its first argument. Named here
+#: because the core is the only side that builds an argv.
+DOOR_MODULE = "ia_studio_engine.workers.door"
 
 Send = Callable[[str], None]
 Spawn = Callable[[str, Callable[[dict], None], Callable[[], None]], WorkerProcess]
@@ -85,21 +77,16 @@ class DoorRouter:
         if not isinstance(held, int):
             return
 
-        door = str(answer.get("door", DIFFUSION_DOOR))
+        # The door is the one this frame CAME FROM, never the one it names: `_worker_said` is
+        # closed over it. Reading the payload filed a video door's gigabytes under an image door,
+        # and the main reads this ledger to decide what to release.
         if held == 0:
             self.ledger.forget(door)
             return
         if not isinstance(device, str) or not isinstance(backend, str):
             return
 
-        self.ledger.record(
-            DoorMemory(
-                door=door,
-                held_bytes=held,
-                device=device,
-                backend=backend,
-            )
-        )
+        self.ledger.record(DoorMemory(door=door, held_bytes=held, device=device, backend=backend))
 
     def _worker_left(self, door: str) -> None:
         """
@@ -143,12 +130,12 @@ class DoorRouter:
         Answers IMMEDIATELY with the job it opened. Waiting for a load or a generation would hold
         the core's loop, and the studio would have no way to cancel what it started.
         """
-        door = str(params.get("door", DIFFUSION_DOOR))
-        # Refused rather than started: spawning `-m` on a module that does not exist forks a
-        # process that dies at import, and the job would fail as `door-gone` — which sends whoever
-        # reads the journal looking for a crash instead of a misspelt door.
-        if door not in DOOR_MODULES:
-            raise ValueError(f"no such door: {door}")
+        # Refused rather than started, and no door is privileged: falling back to the image door
+        # routed a malformed request somewhere plausible, and spawning a door that does not exist
+        # forks a process that dies at once — read from the journal as a crash, not a misspelling.
+        door = params.get("door")
+        if not isinstance(door, str) or door not in DOORS:
+            raise ValueError(f"no such door: {door!r}")
 
         worker = self._live(door)
         run = worker.next_run()
@@ -176,7 +163,7 @@ class DoorRouter:
             {
                 "v": PROTOCOL_VERSION,
                 "id": worker.next_run(),
-                "op": "engine.cancel",
+                "op": CANCEL_OP,
                 "params": {"run": key[1]},
             }
         )
@@ -201,4 +188,4 @@ class DoorRouter:
 def spawn_door(
     door: str, on_frame: Callable[[dict], None], on_gone: Callable[[], None]
 ) -> WorkerProcess:
-    return WorkerProcess(DOOR_MODULES[door], on_frame, on_gone)
+    return WorkerProcess(DOOR_MODULE, door, on_frame, on_gone)

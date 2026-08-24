@@ -656,7 +656,8 @@ diffusion = [
     { name = "diffusers" },
     { name = "imageio" },
     { name = "imageio-ffmpeg" },
-    { name = "safetensors" },
+    { name = "numpy" },
+    { name = "pillow" },
     { name = "torch" },
     { name = "transformers" },
 ]
@@ -666,6 +667,7 @@ plugin = [
     { name = "einops" },
     { name = "huggingface-hub" },
     { name = "imageio" },
+    { name = "imageio-ffmpeg" },
     { name = "jaxtyping" },
     { name = "kiui" },
     { name = "numpy" },
@@ -689,6 +691,8 @@ plugin = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "numpy" },
+    { name = "pillow" },
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -704,17 +708,19 @@ requires-dist = [
     { name = "imageio", marker = "extra == 'diffusion'", specifier = ">=2.34" },
     { name = "imageio", marker = "extra == 'plugin'", specifier = ">=2.34" },
     { name = "imageio-ffmpeg", marker = "extra == 'diffusion'", specifier = ">=0.5" },
+    { name = "imageio-ffmpeg", marker = "extra == 'plugin'", specifier = ">=0.5" },
     { name = "jaxtyping", marker = "extra == 'plugin'", specifier = ">=0.2" },
     { name = "kiui", marker = "extra == 'plugin'", specifier = ">=0.2.3" },
+    { name = "numpy", marker = "extra == 'diffusion'", specifier = ">=1.26" },
     { name = "numpy", marker = "extra == 'plugin'", specifier = ">=1.26" },
     { name = "omegaconf", marker = "extra == 'plugin'", specifier = ">=2.3" },
+    { name = "pillow", marker = "extra == 'diffusion'", specifier = ">=10.0" },
     { name = "pillow", marker = "extra == 'plugin'", specifier = ">=10.0" },
     { name = "plyfile", marker = "extra == 'plugin'", specifier = ">=1.0" },
     { name = "pymcubes", marker = "extra == 'plugin'", specifier = ">=0.1" },
     { name = "pytorch-lightning", marker = "extra == 'plugin'", specifier = ">=2.1" },
     { name = "rembg", marker = "extra == 'plugin'", specifier = ">=2.0" },
     { name = "roma", marker = "extra == 'plugin'", specifier = ">=1.5" },
-    { name = "safetensors", marker = "extra == 'diffusion'", specifier = ">=0.4" },
     { name = "safetensors", marker = "extra == 'plugin'", specifier = ">=0.4" },
     { name = "scikit-image", marker = "extra == 'plugin'", specifier = ">=0.22" },
     { name = "timm", marker = "extra == 'plugin'", specifier = ">=1.0" },
@@ -731,6 +737,8 @@ provides-extras = ["core", "diffusion", "plugin"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "pillow", specifier = ">=10.0" },
     { name = "pytest", specifier = ">=8.4" },
     { name = "ruff", specifier = ">=0.14" },
 ]

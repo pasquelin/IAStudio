@@ -11,7 +11,11 @@ from typing import Any
 
 import pytest
 
-from ia_studio_engine.core.router import DIFFUSION_DOOR, DoorRouter
+from ia_studio_engine.core.router import DoorRouter
+
+IMAGE_DOOR = "engine/diffusion"
+#: Every request names its door — the studio does, and `submit` refuses one that does not.
+DOOR = {"door": IMAGE_DOOR}
 
 
 class StandInWorker:
@@ -52,16 +56,17 @@ def harness() -> tuple[DoorRouter, list[dict], list[StandInWorker]]:
         return worker
 
     router = DoorRouter(lambda line: written.append(json.loads(line)), spawn)
-    # The diffusion door by default, so a test that opens one says nothing about which.
-    router.said = lambda frame, door=DIFFUSION_DOOR: answered[door](frame)  # type: ignore[attr-defined]
-    router.door_died = lambda door=DIFFUSION_DOOR: left[door]()  # type: ignore[attr-defined]
+    # The image door unless a case says otherwise — a convenience of this harness, not a default
+    # the router has: `submit` refuses a request that names no door.
+    router.said = lambda frame, door=IMAGE_DOOR: answered[door](frame)  # type: ignore[attr-defined]
+    router.door_died = lambda door=IMAGE_DOOR: left[door]()  # type: ignore[attr-defined]
     return router, written, workers
 
 
 def test_answers_with_the_job_it_opened_rather_than_waiting_for_the_result() -> None:
     router, written, workers = harness()
 
-    answer = router.submit("models.load", {"folder": "/weights"}, job="local_a1")
+    answer = router.submit("models.load", {**DOOR, "folder": "/weights"}, job="local_a1")
 
     assert answer == {"jobId": "local_a1"}
     assert written == []
@@ -71,15 +76,15 @@ def test_answers_with_the_job_it_opened_rather_than_waiting_for_the_result() -> 
 def test_the_door_is_started_once_however_many_jobs_arrive() -> None:
     router, _written, workers = harness()
 
-    router.submit("models.load", {}, job="local_a1")
-    router.submit("generate", {}, job="local_a2")
+    router.submit("models.load", DOOR, job="local_a1")
+    router.submit("generate", DOOR, job="local_a2")
 
     assert len(workers) == 1
 
 
 def test_what_the_worker_settles_reaches_the_studio_as_its_job() -> None:
     router, written, workers = harness()
-    router.submit("generate", {}, job="local_a1")
+    router.submit("generate", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
 
     router.said({"v": 1, "id": run, "ok": {"path": "/tmp/out.png", "device": "mps"}})
@@ -91,7 +96,7 @@ def test_what_the_worker_settles_reaches_the_studio_as_its_job() -> None:
 
 def test_a_refusal_reaches_the_studio_with_its_reason() -> None:
     router, written, workers = harness()
-    router.submit("models.load", {}, job="local_a1")
+    router.submit("models.load", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
 
     router.said({"v": 1, "id": run, "err": {"code": "memory", "message": "no room"}})
@@ -102,7 +107,7 @@ def test_a_refusal_reaches_the_studio_with_its_reason() -> None:
 
 def test_a_second_answer_for_one_run_is_dropped_rather_than_pushed_twice() -> None:
     router, written, workers = harness()
-    router.submit("generate", {}, job="local_a1")
+    router.submit("generate", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
 
     router.said({"v": 1, "id": run, "ok": {}})
@@ -113,7 +118,7 @@ def test_a_second_answer_for_one_run_is_dropped_rather_than_pushed_twice() -> No
 
 def test_closing_the_router_closes_the_door_it_started() -> None:
     router, _written, workers = harness()
-    router.submit("generate", {}, job="local_a1")
+    router.submit("generate", DOOR, job="local_a1")
 
     router.close()
 
@@ -142,8 +147,8 @@ def test_a_routed_op_without_its_job_is_refused(job: object) -> None:
 def test_a_door_that_dies_fails_every_job_it_was_holding() -> None:
     """Otherwise the studio waits for ever on a process that is not there — § A.5, exception 2."""
     router, written, _workers = harness()
-    router.submit("generate", {}, job="local_a1")
-    router.submit("generate", {}, job="local_a2")
+    router.submit("generate", DOOR, job="local_a1")
+    router.submit("generate", DOOR, job="local_a2")
 
     router.door_died()
 
@@ -153,17 +158,17 @@ def test_a_door_that_dies_fails_every_job_it_was_holding() -> None:
 
 def test_a_door_that_left_is_started_again_by_the_next_job() -> None:
     router, _written, workers = harness()
-    router.submit("generate", {}, job="local_a1")
+    router.submit("generate", DOOR, job="local_a1")
     router.door_died()
 
-    router.submit("generate", {}, job="local_a2")
+    router.submit("generate", DOOR, job="local_a2")
 
     assert len(workers) == 2
 
 
 def test_records_what_a_door_answered_about_its_memory() -> None:
     router, _written, workers = harness()
-    router.submit("models.load", {}, job="local_a1")
+    router.submit("models.load", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
 
     router.said(
@@ -184,10 +189,32 @@ def test_records_what_a_door_answered_about_its_memory() -> None:
     assert door["heldBytes"] == 8_890_220_544
 
 
+def test_a_door_that_did_not_name_itself_is_filed_under_the_one_that_answered() -> None:
+    """
+    The default used to be the diffusion door whatever the frame came from, so a video door's
+    gigabytes landed on an image door — and the main reads this ledger to pick what to release.
+    """
+    router, _written, workers = harness()
+    router.submit("models.load", {"door": "engine/video"}, job="local_v1")
+    run = workers[0].sent[0]["id"]
+
+    router.said(
+        {
+            "v": 1,
+            "id": run,
+            "ok": {"heldBytes": 4_000_000_000, "device": "cuda", "backend": "pytorch"},
+        },
+        door="engine/video",
+    )
+
+    [entry] = router.ledger.as_frame()["doors"]
+    assert entry["door"] == "engine/video"
+
+
 def test_leaves_a_backend_that_answered_no_number_absent() -> None:
     """A zero would be trusted by admission; absent is what makes it read `unknown`."""
     router, _written, workers = harness()
-    router.submit("models.load", {}, job="local_a1")
+    router.submit("models.load", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
 
     router.said({"v": 1, "id": run, "ok": {"door": "engine/diffusion", "heldBytes": None}})
@@ -198,7 +225,7 @@ def test_leaves_a_backend_that_answered_no_number_absent() -> None:
 def test_an_unload_that_holds_nothing_leaves_the_door_absent() -> None:
     """An unload that omitted device used to no-op, so the load's gigabytes stayed in the ledger."""
     router, _written, workers = harness()
-    router.submit("models.load", {}, job="local_a1")
+    router.submit("models.load", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
     router.said(
         {
@@ -213,7 +240,7 @@ def test_an_unload_that_holds_nothing_leaves_the_door_absent() -> None:
         }
     )
 
-    router.submit("models.unload", {}, job="local_a2")
+    router.submit("models.unload", DOOR, job="local_a2")
     unload = workers[0].sent[1]["id"]
     router.said(
         {
@@ -233,7 +260,7 @@ def test_an_unload_that_holds_nothing_leaves_the_door_absent() -> None:
 
 def test_an_unload_that_still_holds_bytes_replaces_the_record() -> None:
     router, _written, workers = harness()
-    router.submit("models.load", {}, job="local_a1")
+    router.submit("models.load", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
     router.said(
         {
@@ -248,7 +275,7 @@ def test_an_unload_that_still_holds_bytes_replaces_the_record() -> None:
         }
     )
 
-    router.submit("models.unload", {}, job="local_a2")
+    router.submit("models.unload", DOOR, job="local_a2")
     unload = workers[0].sent[1]["id"]
     router.said(
         {
@@ -269,7 +296,7 @@ def test_an_unload_that_still_holds_bytes_replaces_the_record() -> None:
 
 def test_a_door_that_died_holds_nothing_in_the_ledger() -> None:
     router, _written, workers = harness()
-    router.submit("models.load", {}, job="local_a1")
+    router.submit("models.load", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
     router.said(
         {"v": 1, "id": run, "ok": {"door": "engine/diffusion", "heldBytes": 1, "tensorBytes": 1}}
@@ -283,7 +310,7 @@ def test_a_door_that_died_holds_nothing_in_the_ledger() -> None:
 def test_passes_an_event_from_a_door_straight_through() -> None:
     """`job.progress` is the only thing a job says while it runs, and it belongs to no run."""
     router, written, _workers = harness()
-    router.submit("generate", {}, job="local_a1")
+    router.submit("generate", DOOR, job="local_a1")
 
     router.said({"v": 1, "evt": "job.progress", "job": "local_a1", "ratio": 0.5})
 
@@ -292,7 +319,7 @@ def test_passes_an_event_from_a_door_straight_through() -> None:
 
 def test_asks_the_door_to_drop_a_job_by_its_own_numbering() -> None:
     router, _written, workers = harness()
-    router.submit("generate", {}, job="local_a1")
+    router.submit("generate", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
 
     assert router.cancel("local_a1") == {"cancelled": True}
@@ -303,7 +330,7 @@ def test_asks_the_door_to_drop_a_job_by_its_own_numbering() -> None:
 def test_a_cancel_never_borrows_the_run_of_the_job_it_stops() -> None:
     """Reusing it makes the door answer under the job's id, settling it as a success — measured."""
     router, _written, workers = harness()
-    router.submit("generate", {}, job="local_a1")
+    router.submit("generate", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
 
     router.cancel("local_a1")
@@ -329,14 +356,24 @@ def test_a_door_nobody_named_is_refused_rather_than_started() -> None:
     assert workers == []
 
 
+def test_a_request_that_names_no_door_is_refused_rather_than_sent_to_the_image_one() -> None:
+    """The image door used to be the default, so a malformed request routed somewhere plausible."""
+    router, _written, workers = harness()
+
+    with pytest.raises(ValueError):
+        router.submit("generate", {}, job="local_a1")
+
+    assert workers == []
+
+
 def test_two_modalities_are_two_processes() -> None:
     """A door is what a release plan kills, and an 80 GB video has no place in an image's."""
     router, _written, workers = harness()
 
-    router.submit("generate", {}, job="local_a1")
+    router.submit("generate", DOOR, job="local_a1")
     router.submit("generate", {"door": "engine/video"}, job="local_a2")
 
-    assert [worker.door for worker in workers] == [DIFFUSION_DOOR, "engine/video"]
+    assert [worker.door for worker in workers] == [IMAGE_DOOR, "engine/video"]
 
 
 def test_a_skybox_is_a_door_of_its_own() -> None:
@@ -350,7 +387,7 @@ def test_a_skybox_is_a_door_of_its_own() -> None:
 def test_two_doors_numbering_from_one_settle_their_own_job() -> None:
     """Both number their runs from 1: the run alone names two jobs and settles the wrong one."""
     router, written, workers = harness()
-    router.submit("generate", {}, job="local_image")
+    router.submit("generate", DOOR, job="local_image")
     router.submit("generate", {"door": "engine/audio"}, job="local_sound")
 
     router.said({"v": 1, "id": workers[1].sent[0]["id"], "ok": {}}, "engine/audio")
@@ -360,7 +397,7 @@ def test_two_doors_numbering_from_one_settle_their_own_job() -> None:
 
 def test_a_door_that_dies_leaves_the_jobs_of_another_alone() -> None:
     router, written, _workers = harness()
-    router.submit("generate", {}, job="local_image")
+    router.submit("generate", DOOR, job="local_image")
     router.submit("generate", {"door": "engine/audio"}, job="local_sound")
 
     router.door_died("engine/audio")
@@ -370,7 +407,7 @@ def test_a_door_that_dies_leaves_the_jobs_of_another_alone() -> None:
 
 def test_closing_the_router_closes_every_door_it_started() -> None:
     router, _written, workers = harness()
-    router.submit("generate", {}, job="local_a1")
+    router.submit("generate", DOOR, job="local_a1")
     router.submit("generate", {"door": "engine/skybox"}, job="local_a2")
 
     router.close()
@@ -383,6 +420,6 @@ def test_a_door_answers_only_once_the_router_knows_about_it() -> None:
     dead a moment later: alive to everyone, answering nobody, never restarted."""
     router, _written, workers = harness()
 
-    router.submit("generate", {}, job="local_a1")
+    router.submit("generate", DOOR, job="local_a1")
 
     assert workers[0].started is True

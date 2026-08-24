@@ -1,6 +1,8 @@
 """
 One process, one adapter, one modality, one model. It never replans — it does not free another
 door, does not substitute a model. A refusal travels back, and the main process makes the plan.
+
+Started by the core as `python -m ia_studio_engine.workers.door <door> <fd>`, never on its own.
 """
 
 from __future__ import annotations
@@ -9,9 +11,11 @@ import socket
 import sys
 from typing import Any
 
-from ia_studio_engine.adapters.diffusers_adapter import DiffusersAdapter, memory_frame
-from ia_studio_engine.adapters.modalities import Modality
+from ia_studio_engine.adapters.device import memory_frame
+from ia_studio_engine.adapters.modalities import MODALITIES
+from ia_studio_engine.adapters.params import filled
 from ia_studio_engine.adapters.routing_adapter import RoutingAdapter
+from ia_studio_engine.protocol.doors import DOORS
 from ia_studio_engine.protocol.envelope import encode_event
 from ia_studio_engine.workers.base import WorkerLoop, worker_hello
 
@@ -19,8 +23,11 @@ from ia_studio_engine.workers.base import WorkerLoop, worker_hello
 OCCUPANCY = {"process": "exclusive-process", "device": "exclusive", "maxConcurrent": 1}
 
 
-def inline_handlers(door: str, adapter: DiffusersAdapter | RoutingAdapter) -> dict[str, Any]:
-    """Answered in the reading turn: no device call, so a running job never delays one."""
+def inline_handlers(door: str, adapter: RoutingAdapter) -> dict[str, Any]:
+    """
+    Answered in the reading turn, whatever the job thread is doing. `memory.info` DOES read the
+    driver, which is the point: admission needs the number now, not after the denoise.
+    """
 
     def status(_params: dict[str, Any]) -> dict[str, Any]:
         held = adapter.loaded
@@ -33,14 +40,14 @@ def inline_handlers(door: str, adapter: DiffusersAdapter | RoutingAdapter) -> di
 
     return {
         "worker.status": status,
-        "memory.info": lambda _params: memory_frame(adapter.device(), adapter.backend(), door),
+        "memory.info": lambda _params: memory_frame(door, adapter.device(), adapter.backend()),
     }
 
 
 def _attachment_of(params: dict[str, Any]) -> dict[str, Any] | None:
     """Weights grafted onto the pipeline rather than being one — `attaches`, in `localModel.ts`."""
-    folder = params.get("attachFolder")
-    if not folder:
+    folder = filled(params, "attachFolder")
+    if folder is None:
         return None
 
     return {
@@ -51,9 +58,7 @@ def _attachment_of(params: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def queued_handlers(
-    door: str, adapter: DiffusersAdapter | RoutingAdapter, loop: WorkerLoop
-) -> dict[str, Any]:
+def queued_handlers(door: str, adapter: RoutingAdapter, loop: WorkerLoop) -> dict[str, Any]:
     """Everything that touches the device, serialised by the queue — § A.5, exception 1."""
 
     def load(params: dict[str, Any]) -> dict[str, Any]:
@@ -63,6 +68,8 @@ def queued_handlers(
             torch_weights=bool(params.get("torchWeights", False)),
             attachment=_attachment_of(params),
         )
+        # The reading taken AT the load, never re-probed after it: `costs` would read the driver
+        # again, and what a pipeline took is what admission has to see.
         return {
             "door": door,
             "heldBytes": held.bytes_resident,
@@ -74,11 +81,12 @@ def queued_handlers(
 
     def unload(_params: dict[str, Any]) -> dict[str, Any]:
         adapter.unload()
-        frame = memory_frame(adapter.device(), adapter.backend(), door)
-        held = adapter.held_bytes()
+        frame = memory_frame(door, adapter.device(), adapter.backend())
+        # `None` is what a backend without a counter answers, and admission reads a zero as a
+        # measurement. Taken off the frame rather than probed again — that was two device reads.
         return {
             **frame,
-            "heldBytes": 0 if held is None else held,
+            "heldBytes": frame["heldBytes"] or 0,
             "tensorBytes": frame["tensorBytes"] or 0,
         }
 
@@ -99,14 +107,9 @@ def queued_handlers(
     return {"models.load": load, "models.unload": unload, "generate": generate}
 
 
-def serve(door: str, modality: Modality, argv: list[str] | None = None) -> int:
-    """Started by the core with an inherited socket, never on its own."""
-    arguments = list(sys.argv[1:] if argv is None else argv)
-    if len(arguments) != 1:
-        raise SystemExit(f"{door} is started with one inherited fd, got {arguments}")
-
-    adapter = RoutingAdapter(modality)
-    connection = socket.socket(fileno=int(arguments[0]))
+def serve(door: str, fd: int) -> int:
+    adapter = RoutingAdapter(MODALITIES[DOORS[door]])
+    connection = socket.socket(fileno=fd)
     WorkerLoop(
         connection,
         worker_hello(door, adapter.backend(), adapter.device(), OCCUPANCY),
@@ -114,3 +117,14 @@ def serve(door: str, modality: Modality, argv: list[str] | None = None) -> int:
         lambda loop: queued_handlers(door, adapter, loop),
     ).run()
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if len(arguments) != 2 or arguments[0] not in DOORS:
+        raise SystemExit(f"a door is started as `<door> <inherited fd>`, got {arguments}")
+    return serve(arguments[0], int(arguments[1]))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

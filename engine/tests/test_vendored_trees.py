@@ -6,6 +6,7 @@ trees write nothing else, so skipping them left this guard green over an empty s
 """
 
 import ast
+from functools import cache
 from pathlib import Path
 
 import pytest
@@ -46,13 +47,19 @@ def _targets(file: Path, package: str, node: ast.AST) -> list[Path]:
     return [home / alias.name for alias in node.names]
 
 
-def _imports(package: str) -> list[tuple[Path, Path]]:
+@cache
+def _tree(file: Path) -> ast.Module:
+    """Parsed once: 93 files of vendored Python, read by two guards and by the reachability walk."""
+    return ast.parse(file.read_text(errors="ignore"), filename=str(file))
+
+
+@cache
+def _imports(package: str) -> tuple[tuple[Path, Path], ...]:
     found: list[tuple[Path, Path]] = []
     for file in sorted((VENDOR / package).rglob("*.py")):
-        tree = ast.parse(file.read_text(errors="ignore"), filename=str(file))
-        for node in ast.walk(tree):
+        for node in ast.walk(_tree(file)):
             found += [(file, target) for target in _targets(file, package, node)]
-    return found
+    return tuple(found)
 
 
 @pytest.mark.parametrize("package", VENDORED)
@@ -68,7 +75,7 @@ def test_every_internal_import_resolves(package: str) -> None:
 
 @pytest.mark.parametrize("package", VENDORED)
 def test_a_tree_states_imports_this_guard_can_read(package: str) -> None:
-    assert _imports(package) != []
+    assert _imports(package) != ()
 
 
 def test_the_licence_of_each_vendored_tree_travels_with_it() -> None:
@@ -79,3 +86,98 @@ def test_no_vendored_tree_is_left_without_a_licence() -> None:
     trees = {path.name for path in VENDOR.iterdir() if path.is_dir() and path.name != "__pycache__"}
 
     assert trees == set(LICENCE_OF)
+
+
+ADAPTER = Path(__file__).resolve().parents[1] / "src/ia_studio_engine/adapters/plugin_adapter.py"
+
+#: Reached by a NAME read from a checkpoint's config rather than by an import — `tsr/system.py`
+#: builds every part through `find_class`, and CraftsMan through `craftsman.find`. No static
+#: reader will ever see these, and there is nothing to decide about them.
+REACHED_BY_NAME = {
+    "tsr/models/nerf_renderer.py",
+    "tsr/models/network_utils.py",
+    "tsr/models/tokenizers/__init__.py",
+    "tsr/models/tokenizers/image.py",
+    "tsr/models/tokenizers/triplane.py",
+    "tsr/models/transformer/__init__.py",
+    "tsr/models/transformer/attention.py",
+    "tsr/models/transformer/basic_transformer_block.py",
+    "tsr/models/transformer/transformer_1d.py",
+    "craftsman/models/geometry/__init__.py",
+    "craftsman/models/geometry/base.py",
+    "craftsman/models/geometry/utils.py",
+}
+
+#: `[?]` OPEN QUESTION, not an exemption: 332 lines nothing reaches, and the pipeline reads its
+#: scheduler out of diffusers. Only a `model_index.json` naming `triposg.schedulers` would still
+#: reach them, and no weights are installed on this machine to say. Delete or keep — undecided.
+UNDECIDED = {
+    "triposg/schedulers/__init__.py",
+    "triposg/schedulers/scheduling_rectified_flow.py",
+}
+
+
+def _module_of(path: Path) -> Path | None:
+    if (path / "__init__.py").exists():
+        return path / "__init__.py"
+    return path.with_suffix(".py") if path.with_suffix(".py").exists() else None
+
+
+def _entry_points() -> set[str]:
+    """What `plugin_adapter.py` opens: its own imports, plus the modules `_require` names."""
+    tree = ast.parse(ADAPTER.read_text())
+    named: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            named |= {alias.name for alias in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            named.add(node.module)
+        elif (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "_require"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+        ):
+            named.add(str(node.args[0].value))
+    return {name for name in named if name.split(".")[0] in LICENCE_OF}
+
+
+def _reached() -> set[Path]:
+    """Every module importing an entry point runs, each package's `__init__.py` included."""
+    seen: set[str] = set()
+    found: set[Path] = set()
+    queue = list(_entry_points())
+    while queue:
+        module = queue.pop()
+        if module in seen:
+            continue
+        parts = module.split(".")
+        file = _module_of(VENDOR.joinpath(*parts))
+        if file is None:
+            continue
+
+        seen.add(module)
+        found.add(file)
+        # Importing `a.b.c` runs `a/__init__.py` and `a/b/__init__.py` on the way in.
+        queue += [".".join(parts[:depth]) for depth in range(1, len(parts))]
+        for node in ast.walk(_tree(file)):
+            queue += [
+                ".".join(target.relative_to(VENDOR).parts)
+                for target in _targets(file, parts[0], node)
+            ]
+
+    return found
+
+
+def test_no_vendored_module_is_unreachable_without_saying_why() -> None:
+    """An over-trimmed tree is one failure; a tree carrying lines nothing opens is the other."""
+    present = {
+        path.relative_to(VENDOR).as_posix()
+        for package in VENDORED
+        for path in (VENDOR / package).rglob("*.py")
+        if "__pycache__" not in path.parts
+    }
+    reached = {path.relative_to(VENDOR).as_posix() for path in _reached()}
+
+    assert sorted(present - reached) == sorted(REACHED_BY_NAME | UNDECIDED)
