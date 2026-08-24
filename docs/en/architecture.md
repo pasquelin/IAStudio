@@ -128,7 +128,7 @@ mesh in a burst, and bounding that burst to a single thread keeps the rest of th
 responsive. All three are wiring only: the catalogue, the dispatch, the audio arithmetic and the
 BVH build are tested on their own, without a worker in sight.
 
-**What waits for an answer is a module, not a private map.** `bvh-inflight.ts` holds the requests
+**What waits for an answer is a module, not a private map.** `bvhInflight.ts` holds the requests
 sent to the worker and the promises waiting on them, and it reports how many are out. The reason
 is not elegance: while that map lived inside the builder's closure, the line sweeping it after a
 refused send was an assurance no test could reach — emptied, the gate stayed green. **A register
@@ -591,15 +591,15 @@ or a disposal.
 the shared history, `viewport/` the base of the three 3D views, and `gpu/` the shader passes and
 the frame counter.
 
-The audio one is a pair of modules rather than a class — `audio-data.ts` does the sample work,
+The audio one is a pair of modules rather than a class — `audioData.ts` does the sample work,
 `edits.ts` holds an `AudioEditState` replayable from the source file. Same invariant as the other
 three: the edit is the state, never the buffer currently in memory.
 
-**That is sound EDITING. PLAYBACK is a second pair, elsewhere** — `sound-schedule.ts` and
-`sound-port.ts`, under `engines/timeline/`, because it reads a sequence of clips rather than one
+**That is sound EDITING. PLAYBACK is a second pair, elsewhere** — `soundSchedule.ts` and
+`soundPort.ts`, under `engines/timeline/`, because it reads a sequence of clips rather than one
 file. The split is the same: the arithmetic on one side, what only a browser can do on the other.
 
-Each pairs with a plain state module (`canvas-state.ts`, `scene-state.ts`, `timeline-state.ts`)
+Each pairs with a plain state module (`canvasState.ts`, `sceneState.ts`, `timelineState.ts`)
 and a command module. Commands are the only way state changes, which is what makes undo a
 generic mechanism in `engines/core/history.ts` rather than three bespoke ones.
 
@@ -613,14 +613,14 @@ moves the race window instead of closing it — a field opens its gesture **on f
 command at all. One caller is concerned today, `setSkyboxSource`, which serves all three ways a
 picture enters a sky.
 
-`node-factory.ts`, `mesh-primitives.ts`, `light-types.ts` and `three-factory.ts` keep the
+`nodeFactory.ts`, `meshPrimitives.ts`, `lightTypes.ts` and `threeFactory.ts` keep the
 *description* of a node separate from its three.js instantiation — so a scene serialises without
 dragging the renderer along, and rebuilds from that serialisation alone.
 
 And once the three object exists, **it is mutated, never replaced**: `.set` rather than a `new`.
 Those writes arrive on every frame of an inspector drag, and the cost is not theoretical —
 replacing a material risks recompiling its shader program, replacing a colour throws away the
-instance three is holding. Ten colour writes follow the rule, and `three-sync.ts`,
+instance three is holding. Ten colour writes follow the rule, and `threeSync.ts`,
 `TextureRenderer.ts` and `SkyboxRenderer.ts` each carry it as a comment, next to what it guards.
 
 **One exception, and it is deliberate**: `ViewportEngine` does replace the scene background object,
@@ -634,11 +634,11 @@ scrubbing starts stuttering for no visible reason. The timeline and the Audio wo
 both take it from the same place.
 
 **What a monitor makes you HEAR goes through a second port, and its arithmetic is pure.**
-`engines/timeline/sound-schedule.ts` knows nothing but numbers: where a slice lands on the output
+`engines/timeline/soundSchedule.ts` knows nothing but numbers: where a slice lands on the output
 clock, what a load that arrived late must skip rather than play late, how much source a sped-up
 clip spends, and **where the fade envelope goes** — the `ClipFade` an `AudioChunk` carries gives
 the CLIP's edges as instants rather than lengths, because a slice may begin INSIDE a fade, and
-`cueFor` turns them into the corners of `SoundCue.ramps`. `sound-port.ts` holds what only a browser
+`cueFor` turns them into the corners of `SoundCue.ramps`. `soundPort.ts` holds what only a browser
 can do — one `AudioContext` per window, opened on the first sound and never closed, the browser's
 own decoder, one `AudioBufferSourceNode` per clip, and the envelope laid on its `GainNode`:
 `setValueAtTime` at the cue instant **before** any ramp, without which a ramp would start from the
@@ -646,7 +646,7 @@ instant the graph was built.
 
 A clip is planned **whole** as it enters the one-second horizon, never window by window: a source
 restarted at every joint is heard as a click. The samples themselves are shared per asset and
-reference counted (`engines/core/ref-cache.ts`) — `decodeAudioData` decodes the **file**, not the
+reference counted (`engines/core/refCache.ts`) — `decodeAudioData` decodes the **file**, not the
 share of it one clip takes.
 
 **The output clock is the master whenever it runs.** `TimelineEngine.play` wakes the sound
@@ -656,7 +656,7 @@ the sound in under a minute. The port answers `null` while the output is not run
 output freezes its time, and hanging onto it would stop the sequence rather than play it.
 
 **What a monitor shows comes from a sink, and the engine picks which one.**
-`engines/timeline/sink-port.ts` opens a mediabunny `VideoSampleSink` where the asset carries a
+`engines/timeline/sinkPort.ts` opens a mediabunny `VideoSampleSink` where the asset carries a
 video track, and a still-picture sink everywhere else — that one answers the same frame at every
 position, a picture having no time of its own. `TimelineEngine.seek` never sees the difference: it
 asks for a frame and gets one.
@@ -1320,7 +1320,7 @@ and the panels through Testing Library.
 | A tool panel | an entry in `TOOL_PLACEMENTS`, then `panels/<name>/` with an `index.ts` exporting `definition: { Content, Actions }` |
 | A workspace | `WORKSPACE_IDS`, then its icon and family in `helpers/workspaces.ts` — the compiler asks for both |
 | An IPC channel | `shared/ipc.ts` first, then the handler; the signature is derived, so start from the contract |
-| A mesh or light kind | `mesh-primitives.ts` / `light-types.ts` — the toolbar, the panels and the native menu all read those tables |
+| A mesh or light kind | `meshPrimitives.ts` / `lightTypes.ts` — the toolbar, the panels and the native menu all read those tables |
 | An image tool | `spaces/image/imageTools.ts`, in the right group |
 | A shared visual shape | `design/`, one component per file, plus its test |
 

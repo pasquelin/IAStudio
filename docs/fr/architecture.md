@@ -130,7 +130,7 @@ une rafale bornée à un fil garde le reste de la fenêtre réactif. Les trois n
 tuyauterie : le catalogue, le dispatch, l’arithmétique audio et la construction du BVH se testent
 seuls, sans worker.
 
-**Ce qui attend une réponse est un module, pas une carte privée.** `bvh-inflight.ts` tient les
+**Ce qui attend une réponse est un module, pas une carte privée.** `bvhInflight.ts` tient les
 requêtes parties vers le worker et les promesses qui les attendent, et il expose son décompte.
 La raison n’est pas l’élégance : tant que cette carte vivait dans le constructeur du builder,
 la ligne qui la nettoyait après un envoi refusé était une assurance qu’aucun test ne pouvait
@@ -651,17 +651,17 @@ trois chances de ne pas être d’accord sur un redimensionnement ou une libéra
 `core/` porte l’historique partagé, `viewport/` le socle des trois vues 3D, et `gpu/` les passes
 de shader et le compteur de frame.
 
-Celui du son est une paire de modules plutôt qu’une classe — `audio-data.ts` fait le travail sur
+Celui du son est une paire de modules plutôt qu’une classe — `audioData.ts` fait le travail sur
 les échantillons, `edits.ts` tient un `AudioEditState` rejouable depuis le fichier source. Même
 invariant que les trois autres : l’édition est l’état, jamais le buffer en mémoire.
 
-**C’est l’ÉDITION sonore. La LECTURE est une seconde paire, ailleurs** — `sound-schedule.ts` et
-`sound-port.ts`, dans `engines/timeline/`, parce qu’elle lit une séquence de clips et non un
+**C’est l’ÉDITION sonore. La LECTURE est une seconde paire, ailleurs** — `soundSchedule.ts` et
+`soundPort.ts`, dans `engines/timeline/`, parce qu’elle lit une séquence de clips et non un
 fichier. Le partage y est le même : l’arithmétique d’un côté, ce que seul un navigateur sait faire
 de l’autre.
 
-Chacun va de pair avec un module d’état pur (`canvas-state.ts`, `scene-state.ts`,
-`timeline-state.ts`) et un module de commandes. Les commandes sont la seule voie par laquelle
+Chacun va de pair avec un module d’état pur (`canvasState.ts`, `sceneState.ts`,
+`timelineState.ts`) et un module de commandes. Les commandes sont la seule voie par laquelle
 l’état change, ce qui fait de l’undo un mécanisme générique dans `engines/core/history.ts` plutôt
 que trois mécaniques sur mesure.
 
@@ -676,7 +676,7 @@ déplace la fenêtre de course au lieu de la fermer — un champ ouvre son geste
 aucune commande. Un seul appelant est concerné aujourd’hui, `setSkyboxSource`, qui sert les trois
 chemins d’entrée d’une image dans un ciel.
 
-`node-factory.ts`, `mesh-primitives.ts`, `light-types.ts` et `three-factory.ts` gardent la
+`nodeFactory.ts`, `meshPrimitives.ts`, `lightTypes.ts` et `threeFactory.ts` gardent la
 *description* d’un nœud séparée de son instanciation three.js — une scène se sérialise donc sans
 traîner le moteur de rendu avec elle, et se reconstruit depuis cette seule sérialisation.
 
@@ -684,7 +684,7 @@ Et une fois l’objet three instancié, **on le mute, on ne le remplace pas** : 
 `new`. Ces écritures arrivent à chaque image d’un glissement d’inspecteur, et le coût n’est pas
 théorique — remplacer un matériau expose à une recompilation de son programme de shader, remplacer
 une couleur jette l’instance que three détient. Dix écritures de couleur suivent la règle, et
-`three-sync.ts`, `TextureRenderer.ts` et `SkyboxRenderer.ts` la portent chacun en commentaire, au
+`threeSync.ts`, `TextureRenderer.ts` et `SkyboxRenderer.ts` la portent chacun en commentaire, au
 plus près de ce qu’elle garde.
 
 **Une exception, et elle est délibérée** : `ViewportEngine` remplace bien l’objet du fond de scène,
@@ -698,19 +698,19 @@ scrubbing se met à saccader sans raison visible. La timeline et la forme d'onde
 le prennent tous les deux au même endroit.
 
 **Ce qu'un moniteur fait ENTENDRE passe par un second port, et son arithmétique est pure.**
-`engines/timeline/sound-schedule.ts` ne connaît que des nombres : quand un extrait tombe sur
+`engines/timeline/soundSchedule.ts` ne connaît que des nombres : quand un extrait tombe sur
 l'horloge de sortie, ce qu'un chargement arrivé en retard doit sauter plutôt que jouer tard,
 combien de source dépense un clip accéléré, et **où passe l'enveloppe de fondu** — le `ClipFade`
 que porte un `AudioChunk` donne les bords du CLIP en instants, pas en longueurs, parce qu'une
 tranche peut commencer AU MILIEU d'un fondu, et `cueFor` en tire les coins de `SoundCue.ramps`.
-`sound-port.ts` tient ce que seul un navigateur sait faire — une `AudioContext` unique par fenêtre,
+`soundPort.ts` tient ce que seul un navigateur sait faire — une `AudioContext` unique par fenêtre,
 ouverte au premier son et jamais fermée, le décodeur du navigateur, un `AudioBufferSourceNode` par
 clip, et l'enveloppe posée sur son `GainNode` : `setValueAtTime` à l'instant du cue **avant** toute
 rampe, faute de quoi la rampe partirait de l'instant où le graphe a été monté.
 
 Un clip est planifié **entier** quand il entre dans l'horizon d'une seconde, jamais fenêtre par
 fenêtre : une source relancée à chaque jointure s'entend comme un clic. Les échantillons, eux, sont
-partagés par asset et comptés par référence (`engines/core/ref-cache.ts`) — `decodeAudioData`
+partagés par asset et comptés par référence (`engines/core/refCache.ts`) — `decodeAudioData`
 décode le **fichier**, pas la part qu'un clip en prend.
 
 **L'horloge de sortie est maître dès qu'elle tourne.** `TimelineEngine.play` réveille le son
@@ -720,7 +720,7 @@ dériverait du son en moins d'une minute. Le port répond `null` tant que la sor
 une sortie suspendue fige son temps, et s'y accrocher arrêterait la séquence au lieu de la jouer.
 
 **Ce qu'un moniteur affiche vient d'un sink, et le sink est choisi par le moteur.**
-`engines/timeline/sink-port.ts` ouvre un `VideoSampleSink` mediabunny là où l'asset porte une piste
+`engines/timeline/sinkPort.ts` ouvre un `VideoSampleSink` mediabunny là où l'asset porte une piste
 vidéo, et un sink d'image fixe partout ailleurs — celui-ci rend la même frame à toute position, une
 image n'ayant pas de temps à elle. `TimelineEngine.seek` ignore la différence : il demande une
 frame et en reçoit une.
@@ -1423,7 +1423,7 @@ IPC, et les panneaux via Testing Library.
 | Un panneau | une entrée dans `TOOL_PLACEMENTS`, puis `panels/<nom>/` avec un `index.ts` exportant `definition: { Content, Actions }` |
 | Un espace de travail | `WORKSPACE_IDS`, puis son icône et sa famille dans `helpers/workspaces.ts` — le compilateur réclame les deux |
 | Un canal IPC | `shared/ipc.ts` d’abord, le handler ensuite ; la signature en est dérivée, donc partez du contrat |
-| Un type de maillage ou de lumière | `mesh-primitives.ts` / `light-types.ts` — la barre d’outils, les panneaux et le menu natif lisent ces tables |
+| Un type de maillage ou de lumière | `meshPrimitives.ts` / `lightTypes.ts` — la barre d’outils, les panneaux et le menu natif lisent ces tables |
 | Un outil image | `spaces/image/imageTools.ts`, dans le bon groupe |
 | Une forme visuelle partagée | `design/`, un composant par fichier, avec son test |
 
