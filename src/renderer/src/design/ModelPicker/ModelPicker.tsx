@@ -9,7 +9,7 @@ import { cn } from '@/helpers/cn'
 import { fieldHandle } from '../scHandle'
 import { Chip } from '../Chip'
 import { Thumbnail } from '../Thumbnail'
-import { CONTROL, MENU_SURFACE, ROW_THUMBNAIL } from '../styles'
+import { CONTROL, MENU_SURFACE, FIELD_THUMBNAIL } from '../styles'
 import { ModelPickerRow } from './ModelPickerRow'
 
 /** What the list may be narrowed to. `all` is the state it opens in. */
@@ -133,7 +133,7 @@ export function ModelPicker({
         )}
         onClick={() => setOpen(held => !held)}
       >
-        <Thumbnail url={chosen ? pictureOf?.(chosen) : undefined} className={ROW_THUMBNAIL} />
+        <Thumbnail url={chosen ? pictureOf?.(chosen) : undefined} className={FIELD_THUMBNAIL} />
 
         <span className="flex min-w-0 flex-col">
           <span className="text-text truncate text-xs">

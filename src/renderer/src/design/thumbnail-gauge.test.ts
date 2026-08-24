@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { FIELD_THUMBNAIL, ROW_THUMBNAIL } from './styles'
 import { WRITTEN_SOURCES } from './testHarness'
 
 /**
@@ -6,8 +7,8 @@ import { WRITTEN_SOURCES } from './testHarness'
  *
  * Those are PIXELS: `size-8` is 32px at both densities, so it is right at one and wrong at the
  * other, and five sites had reached for one of them independently. The studio has two gauges for
- * a row's picture and no third — `FIELD_THUMBNAIL` for a line carrying one word, `ROW_THUMBNAIL`
- * for a line carrying a name and a line under it.
+ * a row's picture and no third — `ROW_THUMBNAIL` for a line one control tall, `FIELD_THUMBNAIL`
+ * for a property line and for a row that stacks a name over a caption.
  *
  * Only the numeric scale is refused: `size-(--sc-…)` and `size-full` are gauges.
  */
@@ -30,5 +31,21 @@ describe('the picture of a row', () => {
     ).map(([path]) => path)
 
     expect(offenders).toEqual([])
+  })
+
+  /**
+   * A picture sized by the gauge that measures its own ROW is flush with the fill `rowSkin`
+   * paints edge to edge — no room above it, none below. `ROW_THUMBNAIL` was `--sc-row-stacked`,
+   * the very height of the row holding it, on the model browser and the settings alike.
+   */
+  it('is sized by a control gauge, never by the height of the row holding it', () => {
+    const rowHeights = ['--sc-row-stacked', '--sc-row-filled']
+
+    expect(
+      [FIELD_THUMBNAIL, ROW_THUMBNAIL].filter(gauge => rowHeights.some(row => gauge.includes(row))),
+    ).toEqual([])
+
+    // And the two stay apart: one gauge for both would put the flat row back where it started.
+    expect(ROW_THUMBNAIL).not.toBe(FIELD_THUMBNAIL)
   })
 })
