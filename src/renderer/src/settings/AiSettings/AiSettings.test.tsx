@@ -407,3 +407,25 @@ describe('a summary written before a field existed', () => {
     expect(screen.getByText(/libres sur/)).toBeInTheDocument()
   })
 })
+
+describe('the catalogue inside the manager', () => {
+  /**
+   * 🛑 Measured on screen: the tiles painted OVER the employment rows below them. `Models` sizes
+   * itself with `h-full`, so it took the whole of a section that also holds a heading and a
+   * paragraph — and the section clipped nothing.
+   *
+   * A class rather than a rendered box, and knowingly: jsdom lays nothing out, so the only thing
+   * a test here can hold is that the catalogue is still given a parent that bounds it.
+   */
+  it('bounds the catalogue rather than letting it paint over the rows below', () => {
+    show(overview(), 'video')
+
+    const section = screen.getByRole('heading', { name: 'Catalogue' }).closest('section')
+
+    expect(section?.className).toContain('overflow-hidden')
+    // The last child is what holds the browser, and it is the half that makes the height mean
+    // something: without `min-h-0` a flex child refuses to shrink under its own content.
+    expect(section?.lastElementChild?.className).toContain('min-h-0')
+    expect(section?.lastElementChild?.className).toContain('flex-1')
+  })
+})
