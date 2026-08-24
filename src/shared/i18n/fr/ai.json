@@ -62,8 +62,6 @@
     "cancelLoad": "Annuler",
     "cancelLoadHint": "Arrête le chargement et rend la mémoire déjà prise",
     "candidates": "Modèles pour {{role}}",
-    "catalogue": "Catalogue",
-    "catalogueHelp": "Les modèles de cette famille, sur cette machine et dans le cloud. Le panneau de génération choisit lequel sert chaque opération.",
     "chooseProvider": "Aucun modèle n’est choisi pour cette opération. Rien n’est facturé tant que vous n’en avez pas validé un.",
     "chosenAtProject": "propre au projet",
     "detail": {
