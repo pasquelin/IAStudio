@@ -39,7 +39,7 @@
       },
       "actionsFind": {
         "title": "Find actions",
-        "description": "Searches every action the studio publishes by keywords and hands back the ones that match, with their fields. Changes nothing on screen."
+        "description": "Searches by keywords across every action the studio publishes and hands back the ones that match, with their fields. Changes nothing on screen."
       },
       "chatClose": {
         "title": "Close the conversation",
@@ -235,7 +235,7 @@
       },
       "guideAdd": {
         "title": "Lay a guide",
-        "description": "Lays a vertical or a horizontal guide at the place given, in document coordinates, and answers the id it was just born with. The two actions beside it move it and take it away by that id."
+        "description": "Lays a vertical or a horizontal guide at the place given, in document coordinates, and answers the id it has just been given. The two actions beside it move it and take it away by that id."
       },
       "guideMove": {
         "title": "Move a guide",

@@ -68,7 +68,7 @@
     "hardness": "Hardness",
     "opacity": "Opacity",
     "textName": "Text",
-    "textEditing": "Typing the text"
+    "textEditing": "Text entry"
   },
   "imageView": {
     "zoom": "{{value}} — actual size",
