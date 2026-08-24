@@ -90,9 +90,14 @@ def test_no_vendored_tree_is_left_without_a_licence() -> None:
 
 ADAPTER = Path(__file__).resolve().parents[1] / "src/ia_studio_engine/adapters/plugin_adapter.py"
 
-#: Reached by a NAME read from a checkpoint's config rather than by an import — `tsr/system.py`
-#: builds every part through `find_class`, and CraftsMan through `craftsman.find`. No static
-#: reader will ever see these, and there is nothing to decide about them.
+#: Reached by a NAME read from a checkpoint's config rather than by an import, so no static reader
+#: will ever see these. `tsr/system.py` builds every part through `find_class`; TripoSG's scheduler
+#: is named by `model_index.json`, which `from_pretrained` imports — the
+#: `FlowMatchEulerDiscreteScheduler` annotation in `pipelines/pipeline_triposg.py` has no runtime
+#: effect, and reading it as the truth is what makes a static pass call these 332 lines dead.
+#: huggingface.co/VAST-AI/TripoSG @ 2c1c516d22d58db486a058d98d31bb6177344e06 /model_index.json,
+#: sha256 750af638d10fc67a5f43d19ef0a0d1d3d446174e24b73bddd0a49226016c80c2 — the digest
+#: `src/shared/domain/localModels.json` already pins for that file.
 REACHED_BY_NAME = {
     "tsr/models/nerf_renderer.py",
     "tsr/models/network_utils.py",
@@ -103,15 +108,6 @@ REACHED_BY_NAME = {
     "tsr/models/transformer/attention.py",
     "tsr/models/transformer/basic_transformer_block.py",
     "tsr/models/transformer/transformer_1d.py",
-    "craftsman/models/geometry/__init__.py",
-    "craftsman/models/geometry/base.py",
-    "craftsman/models/geometry/utils.py",
-}
-
-#: `[?]` OPEN QUESTION, not an exemption: 332 lines nothing reaches, and the pipeline reads its
-#: scheduler out of diffusers. Only a `model_index.json` naming `triposg.schedulers` would still
-#: reach them, and no weights are installed on this machine to say. Delete or keep — undecided.
-UNDECIDED = {
     "triposg/schedulers/__init__.py",
     "triposg/schedulers/scheduling_rectified_flow.py",
 }
@@ -180,4 +176,4 @@ def test_no_vendored_module_is_unreachable_without_saying_why() -> None:
     }
     reached = {path.relative_to(VENDOR).as_posix() for path in _reached()}
 
-    assert sorted(present - reached) == sorted(REACHED_BY_NAME | UNDECIDED)
+    assert sorted(present - reached) == sorted(REACHED_BY_NAME)
