@@ -82,6 +82,16 @@ describe('the favourites channels', () => {
     expect(recipe?.type).toBe('image')
   })
 
+  /**
+   * The bound the asset channels carry, applied here too: the id reaches a filter expression and
+   * the request line the SDK logs, and `favorites` read it from a schema that had none.
+   */
+  it('refuses an asset id past the bound the asset channels carry', async () => {
+    await register()
+
+    await expect(invoke(CHANNELS.favoritesPin, 'a'.repeat(201))).rejects.toThrow()
+  })
+
   it('copies a still of the asset beside the recipe', async () => {
     await catalog.add(asset())
     const { readThumbnail } = await register()

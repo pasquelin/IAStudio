@@ -4,7 +4,7 @@ import { handle } from '@main/ipc/handle'
 import { servedFileOf } from '@main/assets/protocol'
 import type { ProjectStore } from '@main/project/store'
 import type { FavoritesStore } from './store'
-import { parseAssetId } from '@main/project/validation'
+import { parseAssetId } from '@main/assets/validation'
 import { parseFavoriteId } from './validation'
 
 /** Reads a still down to what a tile draws. Injected: it needs a live app to reach `nativeImage`. */
