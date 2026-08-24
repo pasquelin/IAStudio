@@ -29,6 +29,7 @@ from ia_studio_engine.adapters.loading import (
     LoadedModel,
     LoadRefusedError,
     generation_refusal,
+    quietened,
     refuse_reason,
 )
 from ia_studio_engine.adapters.modalities import MODALITIES, Modality
@@ -193,9 +194,9 @@ class DiffusersAdapter:
         import torch
         from diffusers.utils import logging as diffusers_logging
 
-        # tqdm writes to stderr, and the studio journals a worker's stderr as an ERROR line. Left
-        # on, a twenty-step denoise files twenty error lines for a job that went perfectly.
-        # Progress belongs to `job.progress`, which the callback below pushes.
+        # Diffusers' OWN logging tqdm — the loading bars. It does NOT reach a denoise: the pipeline
+        # draws that one through `pipeline_utils.progress_bar`, which reads `_progress_bar_config`
+        # and nothing else. `quietened` is what covers it, on every pipeline a door holds.
         diffusers_logging.disable_progress_bar()
 
         # `variant` picks which FILES are read; it does NOT set the compute dtype. Measured
@@ -220,7 +221,7 @@ class DiffusersAdapter:
         if attachment is not None:
             pipeline = _attached(pipeline, attachment, on)
 
-        tune_pipeline(pipeline)
+        tune_pipeline(quietened(pipeline))
         load_ms = (time.perf_counter_ns() - started) / 1e6
 
         self.loaded = LoadedModel(
@@ -291,7 +292,7 @@ class DiffusersAdapter:
 
         derived = self._derived.get(wanted.__name__)
         if derived is None:
-            derived = wanted.from_pipe(held.pipeline)
+            derived = quietened(wanted.from_pipe(held.pipeline))
             self._derived[wanted.__name__] = derived
         return derived
 

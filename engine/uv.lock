@@ -659,6 +659,7 @@ diffusion = [
     { name = "numpy" },
     { name = "pillow" },
     { name = "torch" },
+    { name = "torchvision" },
     { name = "transformers" },
 ]
 plugin = [
@@ -727,6 +728,7 @@ requires-dist = [
     { name = "torch", marker = "extra == 'diffusion'", specifier = ">=2.6" },
     { name = "torch", marker = "extra == 'plugin'", specifier = ">=2.6" },
     { name = "torchaudio", marker = "extra == 'plugin'", specifier = ">=2.6" },
+    { name = "torchvision", marker = "extra == 'diffusion'", specifier = ">=0.21" },
     { name = "torchvision", marker = "extra == 'plugin'", specifier = ">=0.21" },
     { name = "transformers", marker = "extra == 'diffusion'", specifier = ">=5.0" },
     { name = "transformers", marker = "extra == 'plugin'", specifier = ">=5.0" },
