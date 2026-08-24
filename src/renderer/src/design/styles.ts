@@ -334,7 +334,7 @@ export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
 
 /**
  * A picture standing in a property FIELD — the texture a slot holds, the map a model carries.
- * A picture standing in a ROW is not this: `Row` sizes its own, see `ROW_MEDIA_FLAT`.
+ * A picture standing in a ROW is not this: `Row` sizes its own, see `ROW_MEDIA_CONTROL`.
  */
 export const FIELD_THUMBNAIL = 'size-(--sc-control)'
 
@@ -344,9 +344,9 @@ export const FIELD_THUMBNAIL = 'size-(--sc-control)'
  * sizes a row's picture, which is how four sizes and four paddings became one of each.
  */
 const ROW_MEDIA_BOX = 'flex shrink-0 items-center justify-center'
-export const ROW_FLAT = 'min-h-(--sc-control)'
+export const ROW_CONTROL = 'min-h-(--sc-control)'
 export const ROW_STACKED = 'min-h-(--sc-row-stacked)'
-export const ROW_MEDIA_FLAT = `${ROW_MEDIA_BOX} size-(--sc-media-flat)`
+export const ROW_MEDIA_CONTROL = `${ROW_MEDIA_BOX} size-(--sc-media-control)`
 export const ROW_MEDIA_STACKED = `${ROW_MEDIA_BOX} size-(--sc-media-stacked)`
 
 /**

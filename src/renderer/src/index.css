@@ -555,7 +555,7 @@
      and from the line they stand in; neither is chosen. Same at both densities: the padding is
      what stays constant, the picture is what shrinks. */
   --sc-row-pad: 4px;
-  --sc-media-flat: calc(var(--sc-control) - 2 * var(--sc-row-pad));
+  --sc-media-control: calc(var(--sc-control) - 2 * var(--sc-row-pad));
   --sc-media-stacked: calc(var(--sc-row-stacked) - 2 * var(--sc-row-pad));
   /* Rail width: the button (36) plus the margin keeping it off the window edge. */
   --sc-rail: 48px;

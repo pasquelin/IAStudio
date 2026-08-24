@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import {
-  ROW_FLAT,
+  ROW_CONTROL,
   ROW_INK,
   ROW_LINE,
-  ROW_MEDIA_FLAT,
+  ROW_MEDIA_CONTROL,
   ROW_MEDIA_STACKED,
   ROW_QUIET,
   ROW_STACKED,
@@ -86,8 +86,8 @@ export function Row({
   hint,
   tip = TIP_RIGHT,
 }: RowProps) {
-  // The one rule: a line that stacks a caption is the tall shape, everything else is the flat
-  // one. Both keep the same `--sc-row-pad` around their picture, so no host writes a height.
+  // The one rule: a line that stacks a caption is the tall shape, everything else is the control
+  // shape. Both keep the same `--sc-row-pad` around their picture, so no host writes a height.
   const stacked = subtitle !== undefined
 
   return (
@@ -111,10 +111,10 @@ export function Row({
     //
     // `LayerRow` and `SceneNodeRow` had reached for the same pair in a wrapper of their own, which
     // is why only the explorer showed it: `EntryRow` renders this directly.
-    <div className={cn(ROW_LINE, 'min-w-0 flex-1 gap-2', stacked ? ROW_STACKED : ROW_FLAT)}>
+    <div className={cn(ROW_LINE, 'min-w-0 flex-1 gap-2', stacked ? ROW_STACKED : ROW_CONTROL)}>
       {leading}
       {media ? (
-        <div className={stacked ? ROW_MEDIA_STACKED : ROW_MEDIA_FLAT}>{media}</div>
+        <div className={stacked ? ROW_MEDIA_STACKED : ROW_MEDIA_CONTROL}>{media}</div>
       ) : (
         icon && <UiIcon path={icon} size={14} className="shrink-0" />
       )}
