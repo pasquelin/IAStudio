@@ -57,7 +57,7 @@
     "addOwnModel": "Add a file…",
     "appliesNow": "A choice made here applies at once — Cancel does not take it back.",
     "cancelInstall": "Cancel",
-    "cancelInstallEngineHint": "Stops the install. What has already arrived is kept for the resume",
+    "cancelInstallEngineHint": "Stops the install. What already arrived is kept, to resume from",
     "cancelInstallHint": "Stops the download. What already arrived is kept, to resume from",
     "cancelLoad": "Cancel",
     "cancelLoadHint": "Stops the load and gives back the memory already taken",
@@ -67,7 +67,7 @@
     "detail": {
       "memory": "{{needed}} asked for, {{available}} of memory free",
       "disk": "{{needed}} to download, {{free}} free on disk",
-      "refused": "the format or the provenance of this model is not admitted",
+      "refused": "the format or the provenance of this model is not accepted",
       "runtime": "this model is not available on this machine right now",
       "plugin": "no engine in this studio can open this model yet",
       "cuda": "this model needs an NVIDIA GPU (CUDA)"
