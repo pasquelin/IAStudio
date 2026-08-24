@@ -280,10 +280,6 @@
       "cloudHint": "Opens the settings, at the account section, where keys are entered",
       "employments": "Your workspaces",
       "employmentHint": "Opens the settings, where what serves {{name}} is chosen",
-      "served_one": "{{count, number}} of {{total, number}}",
-      "served_many": "{{count, number}} of {{total, number}}",
-      "served_other": "{{count, number}} of {{total, number}}",
-      "servedNone": "None served",
       "nothing": "No model on this machine and no API key: nothing can be generated yet.",
       "coverage": "What one download covers",
       "held": "Installed",
@@ -298,7 +294,12 @@
       "advice_install_action": "Install",
       "advice_key": "No API key: the models online ask for no download at all.",
       "advice_key_action": "Add a key",
-      "adviceHint": "Opens the settings, where this advice is acted on"
+      "adviceHint": "Opens the settings, where this advice is acted on",
+      "served": "{{count, number}} / {{total, number}}",
+      "verdict_one": "{{count, number}} employment served of {{total, number}}",
+      "verdict_many": "{{count, number}} employments served of {{total, number}}",
+      "verdict_other": "{{count, number}} employments served of {{total, number}}",
+      "verdictBar": "How many of your employments are served"
     },
     "news": {
       "articles": "Articles",

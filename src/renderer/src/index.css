@@ -510,6 +510,9 @@
      unbounded column put a row's label at one edge and its value at the other; the rails narrow
      the centre for a workspace, and the home has none of them open on most of its width. */
   --sc-home-width: 1100px;
+  /* The coverage bar of the home's models band. Bounded, and short on purpose: a bar running the
+     width of the page reads as a download in progress rather than as a proportion. */
+  --sc-verdict-bar: 320px;
   /* The glyph a `ToolButton` draws on a header. RECOPIED from `HOSTS.header.glyph`, which takes a
      number and not a gauge — `design/styles.test.ts` holds the two together, since moving one
      alone would shift the lean below by half its change and nothing would say so. */

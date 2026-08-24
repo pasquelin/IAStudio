@@ -231,3 +231,17 @@ export function adviceOf(overview: AiOverview, clouds: readonly string[]): reado
     ...(clouds.length === 0 ? [key] : []),
   ].slice(0, 2)
 }
+
+/**
+ * Every employment, and how many of them are served — the one figure that says where a studio
+ * stands before any of the detail under it.
+ *
+ * Summed over the GROUPS rather than over the roles, so it agrees line for line with the list
+ * beside it: two readings of one number that disagree is worse than one reading.
+ */
+export function servedTotalsOf(overview: AiOverview): { served: number; total: number } {
+  return employmentGroupsOf(overview).reduce(
+    (sum, group) => ({ served: sum.served + group.served, total: sum.total + group.total }),
+    { served: 0, total: 0 },
+  )
+}

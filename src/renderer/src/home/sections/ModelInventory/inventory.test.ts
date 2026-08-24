@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest'
 import type { AiOverview, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
 import { aiRoleId, ASSISTANT_ROLE, DICTATION_ROLE } from '@shared/domain/aiRole'
 import { GIBI, localModel } from '@shared/domain/localModel-fixtures'
-import { adviceOf, cloudIdsOf, coverageOf, employmentGroupsOf, localStandingOf } from './inventory'
+import {
+  adviceOf,
+  cloudIdsOf,
+  coverageOf,
+  employmentGroupsOf,
+  localStandingOf,
+  servedTotalsOf,
+} from './inventory'
 
 const candidate = (over: Partial<ModelCandidate> = {}): ModelCandidate => ({
   model: localModel(),
@@ -240,5 +247,27 @@ describe('the advice', () => {
     const offered = candidate({ model: localModel({ id: 'wide' }), installed: false, serves: 4 })
 
     expect(adviceOf(overview([row({ candidates: [idle, offered] })]), []).length).toBe(2)
+  })
+})
+
+describe('where the studio stands', () => {
+  it('adds up every employment and the ones that are served', () => {
+    const totals = servedTotalsOf(
+      overview([
+        row({
+          role: aiRoleId('image', 'txt2img'),
+          provider: { kind: 'cloud', providerId: 'scenario' },
+        }),
+        row({ role: aiRoleId('image', 'inpaint') }),
+        row({ role: ASSISTANT_ROLE, provider: { kind: 'local', modelId: 'a' } }),
+      ]),
+    )
+
+    expect(totals).toEqual({ served: 2, total: 3 })
+  })
+
+  /** Nothing to be a fraction of: the band must not divide by it. */
+  it('answers zero over zero on an overview that offers nothing', () => {
+    expect(servedTotalsOf(overview([]))).toEqual({ served: 0, total: 0 })
   })
 })

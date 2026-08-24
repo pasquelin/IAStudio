@@ -3,13 +3,14 @@ import { QuietNote } from '@/design/QuietNote'
 import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
 import { Section } from '../../Section'
-import { ModelInventoryAdvice } from './ModelInventoryAdvice'
 import { ModelInventoryCoverage } from './ModelInventoryCoverage'
 import { ModelInventoryEmployments } from './ModelInventoryEmployments'
 import { ModelInventoryMeans } from './ModelInventoryMeans'
+import { ModelInventoryVerdict } from './ModelInventoryVerdict'
 
 /**
- * What this studio can run, and with what.
+ * What this studio can run, and with what — read top down: where it stands, what it has, and
+ * what one download would add.
  *
  * 🛑 It INFORMS and leads; it does not manage. Installing, removing and loading live in the
  * settings since ADR-23, and a second set of those gestures here would be a second place a
@@ -25,17 +26,19 @@ export function ModelInventory() {
       {overview === null ? (
         <QuietNote standalone>{t('aiModels.reading')}</QuietNote>
       ) : (
-        <div className="flex flex-col gap-3">
-          {/* Two columns where the centre has the width for them, one where it does not — a
-              container query rather than a breakpoint, the panel columns beside this band
-              narrowing it without the viewport moving. */}
+        <div className="@container flex flex-col gap-4">
+          <ModelInventoryVerdict overview={overview} onOpen={openSection} />
+
+          {/* A CONTAINER query, not a breakpoint: breakpoints answer to the viewport, and the
+              panel columns beside this band narrow it without moving one. The first draft asked
+              for `auto-fit`, which Tailwind never emitted — the two blocks stacked on every
+              window, and nothing said so. */}
           <div className="grid grid-cols-1 gap-3 @3xl:grid-cols-2">
             <ModelInventoryMeans overview={overview} onOpen={openSection} />
             <ModelInventoryEmployments overview={overview} onOpen={openSection} />
           </div>
 
           <ModelInventoryCoverage overview={overview} onOpen={openSection} />
-          <ModelInventoryAdvice overview={overview} onOpen={openSection} />
         </div>
       )}
     </Section>
