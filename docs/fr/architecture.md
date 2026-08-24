@@ -380,18 +380,31 @@ de se charger.
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) déclare ce que le studio sait faire sur demande —
 une famille par module `*Actions.ts`, leurs champs, **ce que chacune engage** (`none`, `files`,
-`asset`, `remote`, `credits`) et **quelle porte l’offre** (`reach`). **Le nombre n’est pas écrit
+`asset`, `remote`, `studio`, `credits`) et **quelle porte l’offre** (`reach`). **Le nombre n’est pas écrit
 ici** : il monte à chaque lot, et `exhaustive.test.ts` le tient contre l’union `ActionName`. Il a
 deux lecteurs, et **aucun des deux ne décide** :
 
-- **l’assistant**, dans la fenêtre, qui liste à son modèle la part `both` — onze actions ;
+- **l’assistant**, dans la fenêtre, qui liste à son modèle **ce que la place de son cerveau
+  permet** ;
 - **`main/mcp/tools.ts`**, qui republie **tout** en outils MCP pour un client extérieur.
 
-**L’asymétrie est forcée, pas esthétique.** Le catalogue de l’assistant part dans un prompt plafonné
-par `INSTRUCTION_MAX` à dix mille caractères, dont il reste quatre mille pour la phrase de la
-personne — `brain.test.ts` tient ce plancher. Publier là les familles qu’un programme conduit
-(fichiers, calques, scène, git) mangerait cette marge, et c’est la phrase que la troncature
-emporterait. `tools/list` n’a pas de plafond.
+**L’asymétrie n’est pas une règle écrite : elle est arithmétique, porte par porte.** Chaque cerveau
+déclare la place qu’il tient — Scenario dix mille caractères, le champ `instruction` de son endpoint
+de génération (`brainProvider.ts`) · un nuage de discussion la sienne (`brainHttp.ts`) · un modèle
+local ce que sa fenêtre laisse (`roomFor`, `promptWindow.ts`). `studioBriefing` y met le registre
+entier quand il tient, et sinon la part `both` **plus la façon de demander le reste** :
+`actions.find`, que le cerveau exécute lui-même avant de redemander une fois, avec ce que la
+recherche a trouvé (`answeredTurn`, `brainTurn.ts`).
+
+**`studio` est né de cet élargissement** : le modèle de l’assistant voit désormais des actions qui
+changent les réglages, le compte qui répond ou le projet ouvert — aucune n’est annulable par ⌘Z, et
+le compte décide de quelle bibliothèque et de quelle facture relève la génération suivante. C’est
+le seul niveau sans interrupteur de délégation, et c’est le propos.
+
+**Ce qu’un modèle a le droit de nommer suit ce qu’il a été MONTRÉ**, et non plus `reach` : le
+briefing porte l’ensemble autorisé, `parseReply` s’y tient. Un plafond partagé faisait l’inverse —
+`INSTRUCTION_MAX` vivait dans `shared/` et s’appliquait aux sept nuages HTTP, qui acceptent des
+dizaines de fois plus.
 
 **`validatesInput` (`assistantAction.ts`) est la seule validation d’entrée du dispositif**, dérivée
 des champs et posée sur `runConfirmedAction`. Rien en amont ne la fait : l’IPC vérifie l’enveloppe,

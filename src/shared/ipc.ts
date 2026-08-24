@@ -85,6 +85,7 @@ export type Channels = {
   settingsWrite: 'settings:write'
   settingsAuthState: 'settings:auth-state'
   settingsOpen: 'settings:open'
+  mcpState: 'mcp:state'
   settingsRunAction: 'settings:run-action'
   settingsPending: 'settings:pending'
 
@@ -304,6 +305,7 @@ export const CHANNELS: Channels = {
   settingsWrite: 'settings:write',
   settingsAuthState: 'settings:auth-state',
   settingsOpen: 'settings:open',
+  mcpState: 'mcp:state',
   settingsRunAction: 'settings:run-action',
   settingsPending: 'settings:pending',
 
@@ -885,6 +887,7 @@ export const EVENTS = {
   projectContext: 'evt:project-context',
   assetsChanged: 'evt:assets-changed',
   settingsChanged: 'evt:settings-changed',
+  mcpState: 'evt:mcp-state',
   accountsChanged: 'evt:accounts-changed',
   openTool: 'evt:open-tool',
   menuCommand: 'evt:menu-command',
@@ -958,6 +961,14 @@ export type SkyboxExportCommand =
   | { kind: 'panorama'; target: Extract<ExportTargetId, 'sky.hdr' | 'sky.exr'> }
 
 /**
+ * Where the MCP server is listening, as a window may know it: the port, never the token.
+ *
+ * No `listening` beside it — it was `port !== null` in both producers, and a second field that
+ * can only ever agree is a second field that can one day disagree.
+ */
+export type McpState = { port: number | null }
+
+/**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in
  * `CHANNELS`; every `on…` subscribes to exactly one entry of `EVENTS`.
  */
@@ -966,6 +977,7 @@ export type StudioBridge = {
     read: () => Promise<Settings>
     write: (partial: PartialSettings) => Promise<Settings>
     authState: () => Promise<AuthState>
+
     /** Opens the settings window on a section, or focuses it there if it is already up. */
     open: (section: SettingsSectionId) => Promise<void>
     /**
@@ -986,6 +998,24 @@ export type StudioBridge = {
     onChange: (callback: (settings: Settings) => void) => Unsubscribe
     /** Section the settings window is asked to show while it is already open. */
     onSection: (callback: (section: SettingsSectionId) => void) => Unsubscribe
+  }
+  /**
+   * The door onto this machine — its own pair, like `window` and `updates`, because the SETTING
+   * is precisely not the answer: a server that failed to bind is stopped and `mcp.enabled` still
+   * reads true.
+   *
+   * 🛑 The port and never the token. The token is the whole of what stands between a local
+   * process and `tools/call`; it goes to the clipboard from the main process, and no window
+   * holds it.
+   */
+  mcp: {
+    state: () => Promise<McpState>
+    /**
+     * The door settling, open or shut. Pushed rather than polled: the port is bound after the
+     * setting that asked for it has already been broadcast, so a window reading on that change
+     * reads the instant BEFORE it started listening.
+     */
+    onState: (callback: (state: McpState) => void) => Unsubscribe
   }
   /**
    * The stored API keys. An API key carries its own project and team — the API lists neither —

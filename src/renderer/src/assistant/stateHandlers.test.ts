@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { DocumentNameFailure } from '@shared/domain/documentName'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { holdCanvas } from '@/spaces/image/canvasHosts'
 import { installDocuments, retitleDocument } from '@/stores/document-fixtures'
+import { installScene } from '@/stores/scene-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
@@ -80,6 +82,24 @@ describe('reading what the studio is', () => {
       : null
     expect(state?.documents.find(one => one.id === 'doc-b')?.active).toBe(true)
     expect(state?.documents.find(one => one.id === 'doc-a')?.active).toBe(false)
+  })
+
+  /**
+   * What a spoken request most often means by "it". Answered here rather than left to a second
+   * call: the assistant's briefing reads this as a sentence, and a client that had to ask twice
+   * would act between the two answers.
+   */
+  it('says what is designated on the surface in front', async () => {
+    const base = createDefaultScene()
+    const node = base.nodes[0]
+    installScene('doc-scene', { ...base, selectedIds: node ? [node.id] : [] })
+
+    const outcome = await runAction('studio.state', {})
+
+    expect(outcome).toMatchObject({
+      ok: true,
+      data: { selection: { kind: 'node', items: [{ id: node?.id, name: node?.name }] } },
+    })
   })
 
   it('says a document holds unsaved work, from the same predicate the tab bullet reads', async () => {

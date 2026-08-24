@@ -36,6 +36,7 @@ describe('settings handlers', () => {
       openSettings,
       runAction,
       setPending,
+      mcpState: () => ({ listening: false, port: null }),
     })
   })
 
@@ -82,6 +83,7 @@ describe('settings handlers', () => {
       openSettings,
       runAction,
       setPending,
+      mcpState: () => ({ listening: false, port: null }),
     })
 
     expect(invoke(CHANNELS.settingsOpen, 'account')).toBeUndefined()

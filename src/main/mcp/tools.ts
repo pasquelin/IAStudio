@@ -111,6 +111,9 @@ const COMMITMENT_NOTE: Record<ActionCommitment, string> = {
   asset: 'Asks the person on screen first: it uploads an image that stays in their library.',
   remote:
     'Asks the person on screen first: it publishes to a server, and nothing here undoes that.',
+  studio:
+    'Asks the person on screen first, and cannot be delegated: it changes the settings, the ' +
+    'account that answers, or the project that is open.',
   credits: 'Asks the person on screen first, with an estimate: it spends creative units.',
 }
 

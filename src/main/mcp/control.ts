@@ -23,14 +23,24 @@ export type McpControl = {
 export type McpControlDeps = McpDeps & {
   /** Where the port and the token are written, so a client can be pointed here. */
   configPath: string
+  /**
+   * Said once the server has settled, open or shut — the port alone, never the token.
+   *
+   * A window cannot work this out for itself: the setting that asks for the door is broadcast
+   * before the port is bound, so anything reading on that change reads the instant before.
+   */
+  onSettled?: (endpoint: McpEndpoint | null) => void
 }
 
-export function createMcpControl({ configPath, ...deps }: McpControlDeps): McpControl {
+export function createMcpControl({ configPath, onSettled, ...deps }: McpControlDeps): McpControl {
   let running: RunningMcp | null = null
   let wanted = false
   // The toggle is a checkbox, and two clicks in quick succession would otherwise start a second
   // server before the first had a port. The same queue the studio's other small files use.
   const queue = writeQueue()
+
+  const endpointNow = (): McpEndpoint | null =>
+    running ? { port: running.port, token: running.token } : null
 
   const publish = async ({ port, token }: McpEndpoint): Promise<void> => {
     /**
@@ -93,6 +103,9 @@ export function createMcpControl({ configPath, ...deps }: McpControlDeps): McpCo
         wanted = false
         log.warn('mcp', `could not settle the server: ${String(error)}`)
       })
+      // After both branches and after the repair: what is announced is what IS listening, which
+      // a failed start makes different from what was asked for.
+      .finally(() => onSettled?.(endpointNow()))
 
   // A file left by a crash, a kill, or a quit that raced its own cleanup names a port nothing is
   // listening on — and the next process to take that port inherits a client pointed at it. There
@@ -106,7 +119,7 @@ export function createMcpControl({ configPath, ...deps }: McpControlDeps): McpCo
       void settle()
     },
 
-    endpoint: () => (running ? { port: running.port, token: running.token } : null),
+    endpoint: endpointNow,
 
     stop: async () => {
       wanted = false

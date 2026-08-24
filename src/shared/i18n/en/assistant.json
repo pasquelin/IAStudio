@@ -37,6 +37,10 @@
         "title": "Translate a prompt into English",
         "description": "Carries a text into the language the models are trained on, and says which language it recognised. Spends nothing and changes nothing on screen."
       },
+      "actionsFind": {
+        "title": "Find actions",
+        "description": "Searches every action the studio publishes by keywords and hands back the ones that match, with their fields. Changes nothing on screen."
+      },
       "chatClose": {
         "title": "Close the conversation",
         "description": "Clears the conversation off the screen so the result can be seen. Call it last, and only once the result is there — never when the answer is the words themselves, nor while permission is being asked."
@@ -1201,6 +1205,7 @@
       "files": "This action will change what your project holds — files, or the assets in its library. It costs no creative units.",
       "asset": "This action will upload an image, which then stays in your library. It costs no creative units.",
       "remote": "This action will publish to a server, off this machine. It costs no creative units, and nothing here takes it back.",
+      "studio": "This action changes what the studio is: its settings, the account that answers, or the project that is open. No ⌘Z takes it back, and it costs no creative units.",
       "yes": "Allow",
       "yesHint": "Runs the action above, and commits what it commits",
       "no": "Don’t allow",

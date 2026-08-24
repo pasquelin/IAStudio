@@ -128,6 +128,7 @@ describe('SettingsWindow', () => {
       'Dictée',
       'Médias',
       'Versions',
+      'Point d’entrée (MCP)',
       'Stockage',
       'Avancé',
     ])

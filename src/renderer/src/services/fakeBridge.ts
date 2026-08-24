@@ -48,6 +48,11 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onSection: noSubscription,
       ...overrides.settings,
     },
+    mcp: {
+      state: () => Promise.resolve({ port: null }),
+      onState: noSubscription,
+      ...overrides.mcp,
+    },
     accounts: {
       list: () => Promise.resolve([]),
       add: () => Promise.resolve({ accounts: [] }),

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { mcpStateOf } from '@main/mcp/endpoint'
 import { join } from 'node:path'
 import { app } from 'electron'
 import { registerAssetHandlers } from '@main/assets/handlers'
@@ -59,6 +60,9 @@ export function registerIpc(services: Services): void {
     ...services,
     openSettings: openSettingsWindow,
     setPending: markSettingsPending,
+    // The setting says what was WANTED; this says what is listening. Both sides of the answer
+    // come from `mcpStateOf`, so the pull and the push cannot disagree.
+    mcpState: () => mcpStateOf(services.mcp.endpoint()),
     runAction: runSettingAction({
       settings: services.settings,
       settingsPath: services.settings.path,

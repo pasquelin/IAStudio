@@ -208,4 +208,19 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     reach: 'both',
     fields: [],
   }),
+  /**
+   * How a model too small to be shown the whole registry asks for the rest of it.
+   *
+   * The brain answers this one itself and asks again — see `answeredTurn`. It is in the registry
+   * all the same, because the two doors read one table: a client that reached `tools/list` has
+   * no use for it, but a handler is what keeps the registry and the table exhaustive of each other.
+   */
+  action({
+    name: 'actions.find',
+    titleKey: 'assistant.actions.actionsFind.title',
+    descriptionKey: 'assistant.actions.actionsFind.description',
+    commitment: 'none',
+    reach: 'both',
+    fields: [{ key: 'query', kind: 'text', labelKey: 'assistant.fields.query', required: true }],
+  }),
 ]

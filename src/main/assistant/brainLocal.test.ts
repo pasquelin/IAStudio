@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { ChatRequest } from '@main/ai/localRuntimes'
 import { createLocalBrain } from './brainLocal'
 
-const brainAnswering = (answers: readonly string[]) => {
+const brainAnswering = (answers: readonly string[], contextTokens = 8192) => {
   const asked: ChatRequest[] = []
   let turn = 0
 
@@ -12,10 +12,13 @@ const brainAnswering = (answers: readonly string[]) => {
   }
 
   return {
-    brain: createLocalBrain({ chat, modelId: 'llama3.2:3b', contextTokens: 8192 }),
+    brain: createLocalBrain({ chat, modelId: 'llama3.2:3b', contextTokens }),
     asked,
   }
 }
+
+const briefingOf = (asked: readonly ChatRequest[]): string =>
+  String(asked[0]?.messages.find(turn => turn.role === 'system')?.content)
 
 const REPLY = '{"say":"Opening it.","calls":[]}'
 
@@ -28,6 +31,44 @@ describe('the local brain', () => {
       calls: [],
       cost: 0,
     })
+  })
+
+  /**
+   * What a local model is shown follows from ITS window and from nothing else — the same
+   * arithmetic that decides how much history fits. A three-billion model on eight thousand
+   * tokens gets the short list; one with a hundred and thirty thousand gets the registry.
+   */
+  it('is shown the whole registry when its window holds it', async () => {
+    const { brain, asked } = brainAnswering([REPLY], 131_072)
+
+    await brain.think({ utterance: 'hello', history: [] })
+
+    expect(briefingOf(asked)).toContain('  git.checkout —')
+  })
+
+  it('is shown the short list, and the way to ask for the rest, in a small window', async () => {
+    const { brain, asked } = brainAnswering([REPLY])
+
+    await brain.think({ utterance: 'hello', history: [] })
+
+    expect(briefingOf(asked)).not.toContain('  git.checkout —')
+    expect(briefingOf(asked)).toContain('"actions.find"')
+  })
+
+  /**
+   * 🛑 The channel takes ten thousand characters and this window holds a third of that. An uncut
+   * paste does not overflow itself: the runtime cuts from the HEAD, where the briefing sits, so
+   * the loss lands on the instructions rather than on the paste — ADR-18.
+   */
+  it('cuts a long paste to its own window, leaving the briefing whole', async () => {
+    // 4 096, which is what every Ollama model of the catalogue declares.
+    const { brain, asked } = brainAnswering([REPLY], 4_096)
+
+    await brain.think({ utterance: 'x'.repeat(10_000), history: [] })
+
+    const said = String(asked[0]?.messages.at(-1)?.content)
+    expect(said.length).toBeLessThan(10_000)
+    expect(briefingOf(asked)).toContain('Catalogue:')
   })
 
   it('asks the model for one JSON object, in the window its manifest declares', async () => {

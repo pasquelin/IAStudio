@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import { createMcpControl, type McpControl } from './control'
+import type { McpEndpoint } from './endpoint'
 
 /**
  * The file that carries the token, and the switch that writes it.
@@ -34,11 +35,12 @@ afterEach(async () => {
   vi.restoreAllMocks()
 })
 
-function running(): McpControl {
+function running(onSettled?: (endpoint: McpEndpoint | null) => void): McpControl {
   control = createMcpControl({
     run: () => Promise.resolve({ ok: true }),
     version: '1.2.3',
     configPath: configPath(),
+    ...(onSettled ? { onSettled } : {}),
   })
   return control
 }
@@ -81,6 +83,19 @@ describe('the file a client is pointed at', () => {
 
     // The low nine bits: the rest is the file type, which is not what this is about.
     expect((await stat(configPath())).mode & 0o777).toBe(0o600)
+  })
+
+  /**
+   * A window cannot work this out for itself: the setting that asks for the door is broadcast
+   * before the port is bound, so anything reading on that change reads the instant before.
+   */
+  it('says when it has settled, and on which port', async () => {
+    const settled = vi.fn()
+    const mcp = running(settled)
+    mcp.apply(settings(true))
+    await waitForConfig(true)
+
+    await vi.waitFor(() => expect(settled).toHaveBeenCalledWith(mcp.endpoint()), WAIT)
   })
 
   it('takes it away again when the switch goes off', async () => {

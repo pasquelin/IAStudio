@@ -20,6 +20,7 @@ import {
   EVENTS,
   type AssistantActionRequest,
   type LogEntry,
+  type McpState,
   type SceneAddRequest,
   type SceneDisplayRequest,
   type SceneViewRequest,
@@ -50,6 +51,10 @@ const bridge: StudioBridge = {
     setPending: pending => ipcRenderer.invoke(CHANNELS.settingsPending, pending),
     onChange: callback => subscribe<Settings>(EVENTS.settingsChanged, callback),
     onSection: callback => subscribe<SettingsSectionId>(EVENTS.settingsSection, callback),
+  },
+  mcp: {
+    state: () => ipcRenderer.invoke(CHANNELS.mcpState),
+    onState: callback => subscribe<McpState>(EVENTS.mcpState, callback),
   },
   accounts: {
     list: () => ipcRenderer.invoke(CHANNELS.accountsList),

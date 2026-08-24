@@ -316,6 +316,29 @@
     "homeNews": {
       "title": "Model news",
       "help": "Reads the trending models and the articles published on Hugging Face, the host every weight of the catalogue already comes from. Unticked, the studio contacts nobody for this band."
+    },
+    "mcp": "Way in (MCP)",
+    "mcpDescription": "The studio’s second door: another program on this machine — Claude Code, Cursor, any client speaking the MCP protocol — runs the same actions the assistant runs, from its own project. Shut to start with.",
+    "mcpListening": "Open: the studio is listening on 127.0.0.1:{{port}}, on this machine alone.",
+    "mcpClosed": "Shut: nothing is listening. Tick the setting above to open the door.",
+    "mcpHowTo": "Connecting a client",
+    "mcpStepOpen": "Tick “Drive the studio from outside”. The way in starts at once.",
+    "mcpStepCopy": "Copy the connection command, for a client driven from a terminal — or the configuration block, for a client that reads a file.",
+    "mcpStepPaste": "Paste it into a terminal opened on your project, or the block into your client’s configuration file.",
+    "mcpEachLaunch": "The port and the token are new every time the studio starts, so the gesture has to be repeated after each launch. A client already registered under the same name is replaced; there is nothing to remove first.",
+    "mcpExamples": "What a client can do",
+    "mcpExampleGenerate": "“Find a night skybox model, prepare the generation, but do not send it.”",
+    "mcpExampleTidy": "“Sort this week’s rushes into one folder per day.”",
+    "mcpExampleScene": "“Put a sphere two metres to the right of the cube and light it warm.”",
+    "mcpGuards": "What guards the door",
+    "mcpGuardLocal": "The way in listens on this machine only: nothing from the network reaches it.",
+    "mcpGuardToken": "A new token every launch; a request without it is refused.",
+    "mcpGuardOrigin": "A request from a web page open in your browser is refused on that ground alone.",
+    "mcpGuardConsent": "Anything that spends or uploads shows on screen and waits for your yes — except what you delegated above.",
+    "copyMcpConfig": {
+      "title": "Configuration block",
+      "help": "Copies the same connection as JSON, for a client configured by a file rather than by a command. To be copied again after each launch, like the command.",
+      "button": "Copy the JSON"
     }
   }
 }

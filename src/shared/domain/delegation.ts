@@ -35,6 +35,10 @@ export function delegated(
       return mcp.delegateAsset
     case 'remote':
       return mcp.delegateRemote
+    // No switch arms this one, deliberately: what it changes is which account answers and which
+    // project is open, and a checkbox that waves those through is a checkbox nobody should have.
+    case 'studio':
+      return false
     case 'credits':
       return estimate !== null && spent + estimate <= mcp.delegateBudget
   }

@@ -17,13 +17,15 @@ It has two doors, and **they open onto the same room**:
 Both read **the same catalogue**, and **nothing that commits anything goes out without your seeing
 it on screen** — wherever the request came from.
 
-They do not see the same share of it, and that is deliberate. **The assistant knows eleven**, the
-ones a spoken sentence needs: open a workspace, find a model, prepare a generation. **The way in
-offers them all**, everything a program drives deliberately — the file tree, the layer stack, the
-edit, the sky, the material, the 3D scene, a character's skeleton, the git repository, the remote
-library, the studio's panels. The reason is a plain one: the model that reads your sentences is
-given the whole catalogue before each of them, and the whole catalogue would leave no room left
-for the sentence.
+**The way in offers them all** — everything a program drives deliberately: the file tree, the
+layer stack, the edit, the sky, the material, the 3D scene, a character's skeleton, the git
+repository, the remote library, the studio's panels.
+
+**The assistant gets as many of them as the model answering you can hold.** The whole catalogue
+where there is room — a chat cloud, a local model with a wide window — and only the actions a
+spoken sentence needs where there is not: open a workspace, find a model, prepare a generation. In
+that case it is left with a way to **ask for the rest** mid-course, which costs it one round trip.
+There is nothing for you to set: it follows the model picked in the assistant's window.
 
 ---
 
@@ -43,10 +45,15 @@ Each step shows in the thread, with what it returned.
 
 ### What the assistant can read
 
-**Nothing you have not written.** It receives your sentence and **the last ten exchanges** of the
-conversation under way, rendered as text. It sees neither your images, nor your projects, nor the
-contents of your documents — it knows the *catalogue* of actions and their parameters, not what
-they are about to apply to.
+**Your sentence, the last ten exchanges, and the state of the studio.** It knows which workspace
+is open, which document is in front and whether it holds unsaved changes, which model is armed for
+that workspace, what is selected in it, and what the project's own notes say
+([chapter 4](04-projects.md#the-projects-context)). That is what lets it read "make me a bicycle"
+as a generation in the workspace you are in, rather than as a document to create.
+
+**It still does not see your documents**: neither your images nor their contents — it knows the
+*catalogue* of actions and their parameters, and the state of the window, not what your files
+hold.
 
 One exception, and it is explicit: **Describe the style of the references** reads the reference
 images already sitting on the Generator's form. It is the only place the assistant looks at an
@@ -128,7 +135,8 @@ Four things, and a request needs all four to get through:
 
 ### Opening it
 
-**Settings ▸ Advanced ▸ Drive the studio from outside.** Tick the box; the way in starts at once.
+**Settings ▸ Way in (MCP) ▸ Drive the studio from outside.** Tick the box; the way in starts at
+once.
 Untick it, it stops and **nothing is listening any more**.
 
 ---
@@ -139,7 +147,8 @@ This is the common case, and it takes three gestures.
 
 ### 1. Open the door
 
-**Settings ▸ Advanced**, tick **Drive the studio from outside**.
+**Settings ▸ Way in (MCP)**, tick **Drive the studio from outside**. The section then says which
+port the studio is listening on, what a client can do, and what guards the door.
 
 ### 2. Copy the connection line
 
@@ -158,6 +167,26 @@ Open a terminal **in the project folder where you work with Claude Code**, and p
 That is all: Claude Code now knows the studio, and sees its tools.
 
 To check, ask it for its MCP servers — the studio should be there, connected.
+
+### A client configured by a file
+
+Not all of them are driven from a terminal. For those, **Configuration block ▸ Copy the JSON**
+puts the same connection on the clipboard, in the shape a configuration file expects:
+
+```json
+{
+  "mcpServers": {
+    "ia studio": {
+      "type": "http",
+      "url": "http://127.0.0.1:54321/mcp",
+      "headers": { "Authorization": "Bearer …" }
+    }
+  }
+}
+```
+
+Paste it into your client's MCP configuration file. The port and the token there are yours, and
+change at the same rhythm.
 
 ### What to redo at every launch
 

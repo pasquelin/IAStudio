@@ -29,6 +29,7 @@ export type ActionName =
   | 'prompt.translate'
   | 'prompt.describeStyle'
   | 'chat.close'
+  | 'actions.find'
   | 'target.select'
   | 'studio.state'
   | 'documents.list'
@@ -256,6 +257,10 @@ export type ActionName =
  * - `remote` — publishes to a server outside this machine. Costs nothing and destroys nothing
  *   locally, and that is exactly why the other levels do not describe it: what leaves cannot be
  *   called back, and no undo on this machine reaches it.
+ * - `studio` — changes what the studio IS beyond the open document: which preferences hold,
+ *   which account answers, which project is open. No ⌘Z reaches any of it, and the account is
+ *   the one that decides whose library and whose invoice the next generation lands on. It is the
+ *   only level with no delegation switch, and that is the point.
  * - `credits` — spends real money. Confirmed, and the estimate is stated first.
  *
  * The distinction matters at the moment of asking: only `credits` has a figure to quote, and
@@ -265,26 +270,25 @@ export type ActionName =
  * writes". A new folder and a duplicate add something nobody loses, and a studio that asked
  * about those would teach its user to click Allow without reading.
  */
-export type ActionCommitment = 'none' | 'files' | 'asset' | 'remote' | 'credits'
+export type ActionCommitment = 'none' | 'files' | 'asset' | 'remote' | 'studio' | 'credits'
 
 export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
   'none',
   'files',
   'asset',
   'remote',
+  'studio',
   'credits',
 ]
 
 /**
- * Which of the two doors offers this action.
+ * 🛑 Which share this action belongs to when a door is too NARROW for the whole registry — no
+ * longer "which door offers it", and the difference matters to whoever adds an action.
  *
- * `both` is the assistant inside the window AND an outside client; `mcp` is the client alone.
- * The asymmetry is forced and measured: the assistant's model is told the whole catalogue in a
- * prompt capped at `INSTRUCTION_MAX`, so a registry of eighty actions would leave no room for
- * the sentence the person typed. An outside client reads `tools/list`, which has no such cap.
- *
- * `both` is therefore the vocabulary of a spoken request, and `mcp` everything a program drives
- * deliberately — file trees, layer stacks, git. `instruction.ts` filters; `tools.ts` does not.
+ * `both` is the vocabulary of a spoken request, `mcp` everything a program drives deliberately.
+ * A brain with room is shown ALL of it and may name any of it: what a model may call follows
+ * what `studioBriefing` showed it, which `parseReply` is held to — not this. An action marked
+ * `mcp` is out of a small model's first sight, never out of its reach.
  */
 export type ActionReach = 'both' | 'mcp'
 

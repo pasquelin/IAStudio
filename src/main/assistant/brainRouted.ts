@@ -23,6 +23,14 @@ export type RoutedBrainDeps = {
    * point every brain goes through, and a context a renderer names is one it could forge.
    */
   contextOf: () => Promise<string>
+  /**
+   * What the studio IS — the space, the document in front, the model armed. Asked of the window
+   * on every turn, by the same route and for the same reason as the context above.
+   *
+   * Empty when no window answered. A turn still happens: the model is then as blind as it was
+   * before any of this, which is worse than knowing and better than waiting.
+   */
+  stateOf: () => Promise<string>
 }
 
 /** The brain and, when there is none, the reason — which is the only thing left to say. */
@@ -48,10 +56,18 @@ function brainFor(
 export function createRoutedBrain(deps: RoutedBrainDeps): AssistantBrain {
   return {
     think: async (request, signal) => {
-      const [brain, why] = brainFor(deps, await deps.providerOf())
+      // The three together: WHICH brain answers probes the runtimes, and neither the project nor
+      // the studio's state depends on the answer. Serially, the person waited for their sum.
+      const [provider, context, state] = await Promise.all([
+        deps.providerOf(),
+        deps.contextOf(),
+        deps.stateOf(),
+      ])
+
+      const [brain, why] = brainFor(deps, provider)
       if (brain === null) throw new Error(`nothing serves the assistant: ${why}`)
 
-      return await brain.think({ ...request, context: await deps.contextOf() }, signal)
+      return await brain.think({ ...request, context, state }, signal)
     },
   }
 }

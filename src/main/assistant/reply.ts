@@ -14,7 +14,7 @@ import {
 import { isRecord } from '@shared/guards'
 
 /** What `parseReply` answers: the reply without the cost, which only the caller knows. */
-type Reply = Omit<AssistantAnswer, 'cost'>
+export type Reply = Omit<AssistantAnswer, 'cost'>
 
 /**
  * Pulls the object out of whatever the model wrapped it in.
@@ -43,17 +43,17 @@ export function jsonIn(text: string): unknown {
   }
 }
 
-function callIn(value: unknown): AssistantCall | null {
+function callIn(value: unknown, shown: ReadonlySet<ActionName>): AssistantCall | null {
   if (!isRecord(value)) return null
 
   /**
-   * Held to the share the model was SHOWN, not to the registry — `instruction.ts` lists it the
-   * `both` actions and nothing else, so an action it names from the other seventy-six is an
-   * action it invented. Checking against the whole registry let a hallucinated `git.checkout`
-   * through on the strength of the name alone.
+   * Held to the share the model was SHOWN, which is now a decision of the briefing rather than a
+   * fact of the registry: a brain with room is shown everything, and a brain without is shown the
+   * eleven. Read off `reach` instead, a model with the whole catalogue had every call refused —
+   * and before that, a hallucinated `git.checkout` went through on the strength of its name.
    */
   const action = assistantAction(typeof value.action === 'string' ? value.action : '')
-  if (!action || action.reach !== 'both') return null
+  if (!action || !shown.has(action.name)) return null
 
   // An action with no fields may legitimately arrive without an input at all.
   const input = value.input
@@ -72,7 +72,7 @@ function callIn(value: unknown): AssistantCall | null {
  * down to the ones it does. Dropping the unknown call silently would run the remainder of a plan
  * whose author meant it to run entire — the studio would do half of something nobody asked for.
  */
-export function parseReply(text: string): Reply | null {
+export function parseReply(text: string, shown: ReadonlySet<ActionName>): Reply | null {
   const parsed = jsonIn(text)
   if (!isRecord(parsed)) return null
 
@@ -84,7 +84,7 @@ export function parseReply(text: string): Reply | null {
 
   const calls: AssistantCall[] = []
   for (const raw of Array.isArray(rawCalls) ? rawCalls : []) {
-    const call = callIn(raw)
+    const call = callIn(raw, shown)
     if (!call) return null
     calls.push(call)
   }

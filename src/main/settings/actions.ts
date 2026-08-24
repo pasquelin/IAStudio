@@ -4,7 +4,7 @@ import { APP_NAME } from '@shared/constants'
 import type { SettingActionId } from '@shared/domain/settingsRegistry'
 import { installResolveScript } from '@main/bridge/resolveBridge'
 import { log } from '@main/log'
-import { mcpAddCommand, type McpEndpoint } from '@main/mcp/endpoint'
+import { clientName, mcpAddCommand, mcpConfigJson, type McpEndpoint } from '@main/mcp/endpoint'
 import type { SettingsStore } from './store'
 
 export type ActionDeps = {
@@ -20,6 +20,13 @@ export type ActionDeps = {
    * log line: nothing else answers this button, so a silent failure is one nobody finds out about.
    */
   onResolveMissing: () => void
+}
+
+const copyEndpoint = (
+  endpoint: McpEndpoint | null,
+  spell: (endpoint: McpEndpoint, name: string) => string,
+): void => {
+  if (endpoint) clipboard.writeText(spell(endpoint, clientName(APP_NAME)))
 }
 
 /**
@@ -51,13 +58,15 @@ export function runSettingAction({
         BrowserWindow.getFocusedWindow()?.webContents.openDevTools({ mode: 'detach' })
         return
 
-      case 'advanced.copyMcpCommand': {
-        // Nothing to copy while the server is off, and nothing to say about it either: the
-        // button sits under the switch that turns it on, which is the answer.
-        const endpoint = mcpEndpoint()
-        if (endpoint) clipboard.writeText(mcpAddCommand(endpoint, APP_NAME.toLowerCase()))
+      // Nothing to copy while the server is off, and nothing to say about it either: both
+      // buttons sit under the switch that turns it on, which is the answer.
+      case 'mcp.copyCommand':
+        copyEndpoint(mcpEndpoint(), mcpAddCommand)
         return
-      }
+
+      case 'mcp.copyConfig':
+        copyEndpoint(mcpEndpoint(), mcpConfigJson)
+        return
 
       case 'advanced.installResolveBridge':
         // Revealed once written, which is the whole of the feedback: a file dropped in another

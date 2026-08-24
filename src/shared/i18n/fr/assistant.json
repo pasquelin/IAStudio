@@ -37,6 +37,10 @@
         "title": "Traduire un prompt en anglais",
         "description": "Porte un texte dans la langue sur laquelle les modèles sont entraînés, et dit quelle langue il a reconnue. Ne consomme rien et ne change rien à l’écran."
       },
+      "actionsFind": {
+        "title": "Chercher des actions",
+        "description": "Cherche par mots-clés dans toutes les actions que le studio publie et rend celles qui correspondent, avec leurs champs. Ne change rien à l’écran."
+      },
       "chatClose": {
         "title": "Refermer la conversation",
         "description": "Retire la conversation de l’écran pour laisser voir le résultat. À appeler en dernier, et seulement une fois le résultat visible — jamais quand la réponse est les mots eux-mêmes, ni pendant qu’une permission est demandée."
@@ -1201,6 +1205,7 @@
       "files": "Cette action va modifier ce que porte votre projet — des fichiers, ou les assets de sa bibliothèque. Elle ne coûte aucune unité créative.",
       "asset": "Cette action va téléverser une image, qui restera dans votre bibliothèque. Elle ne coûte aucune unité créative.",
       "remote": "Cette action va publier vers un serveur, hors de cette machine. Elle ne coûte aucune unité créative, et rien ici ne la rattrape.",
+      "studio": "Cette action change ce qu’est le studio : ses réglages, le compte qui répond ou le projet ouvert. Aucun ⌘Z ne revient dessus, et elle ne coûte aucune unité créative.",
       "yes": "Autoriser",
       "yesHint": "Lance l’action décrite au-dessus, et engage ce qu’elle engage",
       "no": "Refuser",

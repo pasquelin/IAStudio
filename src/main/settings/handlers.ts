@@ -1,7 +1,7 @@
 import type { AccountsResult, AccountSummary } from '@shared/domain/account'
 import { cloudAuth } from '@shared/domain/aiCloud'
 import type { AuthState, SettingsSectionId } from '@shared/domain/settings'
-import { CHANNELS } from '@shared/ipc'
+import { CHANNELS, type McpState } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { AccountError } from './accounts'
 import type { AccountChange, SettingsStore } from './store'
@@ -21,6 +21,8 @@ export type SettingsHandlerDeps = {
   /** Called whenever the active credentials change, so a cached API client can be dropped. */
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
+  /** Where the MCP server is listening, or `null` while it is off — the port alone. */
+  mcpState: () => McpState
   /** Pushes the account list to every window: the active account is owned by this process. */
   broadcastAccounts: (accounts: AccountSummary[]) => void
   /** Opens the settings window on a section — a panel saying the key is missing leads here. */
@@ -35,6 +37,7 @@ export function registerSettingsHandlers({
   settings,
   onCredentialsChanged,
   authState,
+  mcpState,
   broadcastAccounts,
   openSettings,
   runAction,
@@ -47,6 +50,8 @@ export function registerSettingsHandlers({
   handle(CHANNELS.settingsWrite, (_event, partial) => settings.write(parsePartialSettings(partial)))
 
   handle(CHANNELS.settingsAuthState, () => authState())
+
+  handle(CHANNELS.mcpState, () => mcpState())
 
   /**
    * Runs one change to the account list. A refusal comes back as a code rather than a rejected

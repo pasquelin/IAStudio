@@ -33,8 +33,8 @@ import {
 import { FONT_SOURCES, type FontSource } from './font'
 import { TEXTURE_SLOTS, type TextureSlot } from './scene'
 import { SETTING_ACTION_IDS, type SettingActionId } from './settingAction'
-import { TARGET_KINDS, type TargetKind } from './target'
 import { NAMED_KEYS, type NamedKey } from './shortcut'
+import { TARGET_KINDS, type TargetKind } from './target'
 
 /**
  * Each of these lists is walked to check something else — the i18n bundles above all, which are
@@ -51,6 +51,17 @@ import { NAMED_KEYS, type NamedKey } from './shortcut'
 const sorted = (values: readonly string[]): readonly string[] => [...values].sort()
 
 describe('the lists that stand for a union', () => {
+  /**
+   * `z.enum(TARGET_KINDS)` decides whether a whole thought parses, so a kind added to the union
+   * and forgotten here does not fail on that one target: `parseThought` throws, the window's
+   * `.catch` marks the turn lost, and every sentence of the session dies with nothing in the log.
+   */
+  it('names every kind a sentence can aim at', () => {
+    const all: Record<TargetKind, true> = { layer: true, node: true, clip: true, track: true }
+
+    expect(sorted(TARGET_KINDS)).toEqual(sorted(Object.keys(all)))
+  })
+
   it('names every asset type', () => {
     const all: Record<AssetType, true> = {
       image: true,
@@ -256,23 +267,13 @@ describe('the lists that stand for a union', () => {
       'advanced.openSettingsFile': true,
       'advanced.openLogFolder': true,
       'advanced.openDevtools': true,
-      'advanced.copyMcpCommand': true,
+      'mcp.copyCommand': true,
+      'mcp.copyConfig': true,
       'advanced.installResolveBridge': true,
       'advanced.reset': true,
     }
 
     expect(sorted(SETTING_ACTION_IDS)).toEqual(sorted(Object.keys(all)))
-  })
-
-  /**
-   * `z.enum(TARGET_KINDS)` decides whether a whole thought parses, so a kind added to the union
-   * and forgotten here does not fail on that one target: `parseThought` throws, the window's
-   * `.catch` marks the turn lost, and every sentence of the session dies with nothing in the log.
-   */
-  it('names every kind a sentence can aim at', () => {
-    const all: Record<TargetKind, true> = { layer: true, node: true, clip: true, track: true }
-
-    expect(sorted(TARGET_KINDS)).toEqual(sorted(Object.keys(all)))
   })
 
   // Read by `layer.text`, which offers the two as a choice: a third source no list named would be
@@ -340,6 +341,7 @@ describe('the lists that stand for a union', () => {
   it('names every level of commitment an action can carry', () => {
     const all: Record<ActionCommitment, true> = {
       none: true,
+      studio: true,
       files: true,
       asset: true,
       remote: true,
@@ -385,6 +387,7 @@ describe('the lists that stand for a union', () => {
       'prompt.translate': true,
       'prompt.describeStyle': true,
       'chat.close': true,
+      'actions.find': true,
       'target.select': true,
       'studio.state': true,
       'documents.list': true,
