@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useId, useMemo, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { ADVANCED_GROUP } from '@shared/domain/localFields'
@@ -20,7 +20,7 @@ import { PANEL_GROUP_LABEL } from '../styles'
 import { useModelText } from '@/hooks/useModelText'
 import { Button } from '../Button'
 import { FormField } from '../FormField'
-import { PropertySection } from '../PropertySection'
+import { FoldRule } from '../FoldRule'
 import { DynamicFormControl } from './DynamicFormControl'
 import { HINT_TOP } from '@/helpers/tooltip'
 
@@ -77,6 +77,7 @@ export function DynamicForm({
   accessory,
 }: DynamicFormProps) {
   const { t } = useTranslation()
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const say = useModelText()
   // Two generators can be open at once — the panel and a detached window — and an id repeated
   // across them would point every label at the first form's field.
@@ -180,13 +181,23 @@ export function DynamicForm({
     >
       {plain.map(fieldsetOf)}
 
-      {/* Folded — § 14: seed, steps, guidance and strength are not what most generations are
-          about, and a panel that shows everything shows nothing. `PropertySection` rather than a
-          fold of its own: it is the one this studio folds, and it answers "fold all". */}
+      {/* Folded — § 14: seed, steps, sides and guidance are not what most generations are about,
+          and a panel that shows everything shows nothing. The rule the collection bar folds its
+          filters by, which is the same problem and now the same component. */}
       {advanced.length > 0 && (
-        <PropertySection title={say(ADVANCED_GROUP)} defaultOpen={false} scId="generation.advanced">
-          <div className="flex flex-col gap-2">{advanced.map(fieldsetOf)}</div>
-        </PropertySection>
+        <>
+          <FoldRule
+            open={showAdvanced}
+            onToggle={() => setShowAdvanced(current => !current)}
+            moreLabel={t('collection.more')}
+            fewerLabel={t('collection.fewer')}
+            moreHint={t('generation.advancedHint')}
+            fewerHint={t('generation.advancedFewerHint')}
+            scId="generation.advanced"
+          />
+
+          {showAdvanced && <div className="flex flex-col gap-2">{advanced.map(fieldsetOf)}</div>}
+        </>
       )}
 
       {/* 🛑 STUCK to the foot of the scroller, never carried down the page by the fields above:

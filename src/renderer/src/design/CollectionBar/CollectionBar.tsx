@@ -11,7 +11,8 @@ import {
   type FacetDescriptor,
   type FacetOption,
 } from '@/helpers/collectionState'
-import { HINT_TOP, TIP_BOTTOM } from '@/helpers/tooltip'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { FoldRule } from '../FoldRule'
 import { fieldHandle } from '../scHandle'
 import { CONTROL, PANEL_BAR, PANEL_HEAD } from '../styles'
 import { ToolButton } from '../ToolButton'
@@ -226,19 +227,15 @@ export function CollectionBar({
       {/* Six menus stacked leave a panel with more filter than collection. The rule doubles as
           the control: it separates the filters from the display options, and opens them. */}
       {folded && (
-        <button
-          type="button"
-          aria-expanded={expanded}
-          {...HINT_TOP(t(expanded ? 'collection.fewerHint' : 'collection.moreHint'))}
-          onClick={() => setExpanded(current => !current)}
-          className="group flex cursor-pointer items-center gap-2 py-0.5"
-        >
-          <span className="border-border flex-1 border-t" />
-          <span className="text-muted group-hover:text-text text-mini transition-colors">
-            {expanded ? t('collection.fewer') : t('collection.more')}
-          </span>
-          <span className="border-border flex-1 border-t" />
-        </button>
+        <FoldRule
+          open={expanded}
+          onToggle={() => setExpanded(current => !current)}
+          moreLabel={t('collection.more')}
+          fewerLabel={t('collection.fewer')}
+          moreHint={t('collection.moreHint')}
+          fewerHint={t('collection.fewerHint')}
+          scId="collection.facets"
+        />
       )}
 
       <div className="flex items-center justify-between">

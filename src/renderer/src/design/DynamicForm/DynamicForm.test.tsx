@@ -410,14 +410,14 @@ describe('the advanced knobs', () => {
   it('are folded away until they are asked for', () => {
     render(<DynamicForm fields={FIELDS} onSubmit={vi.fn()} submitLabel="Générer" />)
 
-    expect(screen.getByRole('button', { name: /Avancé/ })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('button', { name: /Plus/ })).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByLabelText(/Knob gamma/)).not.toBeInTheDocument()
   })
 
   it('open on the heading that folds them', async () => {
     render(<DynamicForm fields={FIELDS} onSubmit={vi.fn()} submitLabel="Générer" />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Avancé/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Plus/ }))
 
     expect(screen.getByLabelText(/Knob gamma/)).toBeVisible()
   })
