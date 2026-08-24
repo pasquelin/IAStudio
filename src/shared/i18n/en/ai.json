@@ -62,8 +62,6 @@
     "cancelLoad": "Cancel",
     "cancelLoadHint": "Stops the load and gives back the memory already taken",
     "candidates": "Models for {{role}}",
-    "catalogue": "Catalogue",
-    "catalogueHelp": "The models of this family, on this machine and in the cloud. Which one serves each operation is picked in the generation panel.",
     "chooseProvider": "No model is chosen for this operation. Nothing is billed until you pick one.",
     "chosenAtProject": "set for this project",
     "detail": {

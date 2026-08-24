@@ -18,7 +18,6 @@ import { machineSummary } from '@/helpers/machineSummary'
 import { useAiModels } from '@/stores/aiModels'
 import { SettingLine } from '../SettingLine'
 import { SETTING_COLUMN, SETTING_SELECT } from '../settingStyles'
-import { Models } from '@/panels/models/Models/Models'
 import { AiEngineOffer } from './AiEngineOffer'
 import { AiOllamaOffer } from './AiOllamaOffer'
 import { AiRoleRow } from './AiRoleRow'
@@ -167,21 +166,6 @@ export function AiSettings({ family }: AiSettingsProps) {
               })
             : t(loadFailureKey(overview.loadFailure.reason))}
         </p>
-      )}
-
-      {family !== undefined && (
-        <section className="mt-6 flex h-120 flex-col overflow-hidden">
-          <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-2')}>{t('aiModels.catalogue')}</h3>
-          <p className={WINDOW_CAPTION}>{t('aiModels.catalogueHelp')}</p>
-          {/* `Models` asks for a parent that SIZES it — its own root is `h-full`. Given none, it
-              took the section's whole height beside a heading and a paragraph, so its grid
-              overflowed and painted over the rows below. `min-h-0` is the other half: a flex
-              child refuses to shrink under its content without it, and the grid would push the
-              section open again. */}
-          <div className="min-h-0 flex-1">
-            <Models family={family} />
-          </div>
-        </section>
       )}
 
       {rows.map(row => (
