@@ -2,7 +2,7 @@ import { mdiClose } from '@mdi/js'
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { MENU_SURFACE, TONE_TEXT, type StatusTone } from '../styles'
+import { MENU_RAISED, TONE_TEXT, type StatusTone } from '../styles'
 import { ToolButton } from '../ToolButton'
 import { UiIcon } from '../UiIcon'
 
@@ -27,7 +27,7 @@ export type ToastProps = {
  */
 export function Toast({ icon, tone, children, dismissLabel, dismissHint, onDismiss }: ToastProps) {
   return (
-    <div className={cn(MENU_SURFACE, 'pointer-events-auto flex-row items-start gap-2 p-2')}>
+    <div className={cn(MENU_RAISED, 'pointer-events-auto flex-row items-start gap-2 p-2')}>
       <UiIcon path={icon} size={14} className={cn('mt-px shrink-0', TONE_TEXT[tone])} />
 
       {children}
