@@ -235,7 +235,7 @@
       },
       "guideAdd": {
         "title": "Lay a guide",
-        "description": "Lays an upright or a flat guide at the place given, in document coordinates, and answers the id it was just born with. The two actions beside it move it and take it away by that id."
+        "description": "Lays a vertical or a horizontal guide at the place given, in document coordinates, and answers the id it was just born with. The two actions beside it move it and take it away by that id."
       },
       "guideMove": {
         "title": "Move a guide",
@@ -751,7 +751,7 @@
       },
       "keyMove": {
         "title": "Move a key",
-        "description": "Slides a key along its channel, keeping its value. A key landing on an instant another already holds replaces it, two keys on one frame being a state no evaluation can read twice."
+        "description": "Slides a key along its channel, keeping its value. A key landing on an instant another already holds replaces it, two keys on one frame being a state no playback could read back."
       },
       "channelRemove": {
         "title": "Remove an animation channel",
@@ -1164,7 +1164,7 @@
       "maskLinked": "The mask travels with the layer when it moves",
       "maskRemove": "Take the mask off the layer",
       "guideId": "Id of the guide",
-      "guideAxis": "Which way the guide runs, upright on x or flat on y",
+      "guideAxis": "Which way the guide runs, vertical on x or horizontal on y",
       "guidePosition": "Where the guide sits, in document coordinates",
       "helpPage": "Which help window to open",
       "captureQuality": "How big the still comes out, or the view’s own pixels when absent",
@@ -1226,7 +1226,7 @@
       "audioTrim": "Trim an audio clip",
       "textureMake": "Generate a material",
       "textureFromImage": "Make a material from an image",
-      "textureTile": "Make a material tile",
+      "textureTile": "Make a material seamless",
       "skyboxMake": "Generate a sky",
       "skyboxRelight": "Change the light of a sky",
       "skyboxExport": "Export a sky"

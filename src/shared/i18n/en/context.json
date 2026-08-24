@@ -18,7 +18,7 @@
     "full": "Twenty-four cards at most.",
     "unreadable": "This project’s context file cannot be read. It has been left untouched: repair it, or delete it to start over.",
     "tooNew": "This context was written by a newer build of the studio. It has been left untouched: update the studio to open it.",
-    "templates": "Start from a model",
+    "templates": "Start from a template",
     "templateWorld": "World",
     "templateWorldBody": "Where and when this takes place, and what to know about it.",
     "templateLook": "Art direction",
