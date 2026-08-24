@@ -4,7 +4,7 @@ import { isRecord } from '@shared/guards'
 import type { ChatTurn } from '@main/ai/localRuntimes'
 import { log } from '@main/log'
 import type { Credentials } from '@main/settings/accounts'
-import type { AssistantBrain } from './brainPort'
+import type { AssistantBrain, NotReady } from './brainPort'
 import { retriedAnswer, turnsWith } from './brainRetry'
 import { studioBriefing, utteranceWithin } from './instruction'
 
@@ -16,6 +16,7 @@ export type HttpBrainDeps = {
   /** Which model of that cloud answers. Read on each turn: it is a setting, and settings change. */
   model: () => string
   fetch?: (input: string, init?: RequestInit) => Promise<Response>
+  notReady?: NotReady
 }
 
 type Poster = NonNullable<HttpBrainDeps['fetch']>
@@ -207,17 +208,23 @@ export function createHttpChatBrain({
   credentials,
   model,
   fetch: post,
+  notReady,
 }: HttpBrainDeps): AssistantBrain {
   const send = post ?? fetch
 
-  const round = async (request: AssistantThought, signal?: AbortSignal, complaint?: string) => {
+  const round = async (
+    request: AssistantThought,
+    briefing: string,
+    signal?: AbortSignal,
+    complaint?: string,
+  ) => {
     const held = credentials()
     if (held === null) throw new Error(`${chat.kind} has no key`)
 
     const messages = messagesFor(
-      studioBriefing(),
+      briefing,
       turnsWith(request.history, complaint),
-      utteranceWithin(request.utterance),
+      utteranceWithin(request.utterance, briefing.length),
     )
 
     try {
@@ -232,6 +239,11 @@ export function createHttpChatBrain({
   }
 
   return {
-    think: (request, signal) => retriedAnswer(complaint => round(request, signal, complaint)),
+    think: async (request, signal) => {
+      // Read once, outside the retry: a complaint quotes an answer, and a second reading would
+      // ship a briefing the complaint was not about.
+      const briefing = studioBriefing(await notReady?.())
+      return await retriedAnswer(complaint => round(request, briefing, signal, complaint))
+    },
   }
 }

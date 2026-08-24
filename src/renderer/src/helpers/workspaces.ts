@@ -11,7 +11,12 @@ import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
 import { workspaceOfType } from '@shared/domain/assetKind'
 import { type ModelFamily } from '@shared/domain/model'
 import { HOME_SURFACE, type ToolSurface } from '@shared/domain/tool'
-import { WORKSPACE_IDS, workspaceOrder, type WorkspaceId } from '@shared/domain/workspace'
+import {
+  FAMILY_BY_WORKSPACE,
+  WORKSPACE_IDS,
+  workspaceOrder,
+  type WorkspaceId,
+} from '@shared/domain/workspace'
 
 export type Workspace = {
   id: WorkspaceId
@@ -85,15 +90,6 @@ export function assetTypesOf(workspace: WorkspaceId): readonly AssetType[] {
   return USED_BY_WORKSPACE[workspace]
 }
 
-const FAMILIES: Record<WorkspaceId, ModelFamily> = {
-  image: 'image',
-  video: 'video',
-  '3d': '3d',
-  audio: 'audio',
-  textures: 'texture',
-  skyboxes: 'skybox',
-}
-
 /**
  * Derived from the shared registry rather than relisted, the way `toolRegistry.ts` derives
  * from `TOOL_PLACEMENTS`: a new workspace is then declared once, and the compiler demands its
@@ -103,7 +99,7 @@ const FAMILIES: Record<WorkspaceId, ModelFamily> = {
 export const WORKSPACES: readonly Workspace[] = WORKSPACE_IDS.map(id => ({
   id,
   icon: ICONS[id],
-  family: FAMILIES[id],
+  family: FAMILY_BY_WORKSPACE[id],
 }))
 
 /**

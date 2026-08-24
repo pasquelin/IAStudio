@@ -92,6 +92,12 @@ export type AiManager = {
    * outside the studio would leave a turn reaching nothing.
    */
   providerOf: (role: AiRoleId) => Promise<RoleProvider | null>
+  /**
+   * 🛑 The same narrowing as `providerOf`, for SEVERAL roles at once. `overview()` composes
+   * twenty-one rows with their candidates and verdicts — `[M]` in `overview.ts` names that as the
+   * cost the assistant's turn was freed of, and asking it here would pay it back.
+   */
+  unservedRoles: (roles: readonly AiRoleId[]) => Promise<readonly AiRoleId[]>
   choose: (role: AiRoleId, provider: RoleProvider | null, scope: ChoiceScope) => Promise<AiOverview>
   /** One settings write for every employment a pick serves. Sequential `choose` dropped all but the last. */
   chooseMany: (
@@ -789,6 +795,26 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       const input = inputFrom(machine, readings, stored, () => models)
 
       return rowFor(role, input, effectiveChoices(input)).provider
+    },
+
+    unservedRoles: async roles => {
+      const stored = deps.settings()
+      const own = stored.ai.ownModels
+      const [discovered, machine] = await Promise.all([discover(), facts()])
+      const forRole = (role: AiRoleId): readonly LocalModel[] =>
+        modelsForWith(role, own, discovered)
+
+      /**
+       * 🛑 ONE reading, over the UNION of what the roles could take — never one per role.
+       * `reconcile` walks every door of a loader it sees, so weighing video on its own reported
+       * `diffusers` with nothing loaded and dropped the occupancy of an image model resident on
+       * another of its five doors. Six concurrent sweeps also raced on `onDisk`.
+       */
+      const union = new Map(roles.flatMap(forRole).map(model => [model.id, model]))
+      const input = inputFrom(machine, await readingsOf([...union.values()]), stored, forRole)
+      const choices = effectiveChoices(input)
+
+      return roles.filter(role => rowFor(role, input, choices).provider === null)
     },
 
     choose: (role, provider, scope) => chooseMany([{ role, provider }], scope),

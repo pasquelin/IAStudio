@@ -7,7 +7,7 @@
       },
       "workspaceOpen": {
         "title": "Open a workspace",
-        "description": "Switches to a workspace, and creates a document there when asked to. Given no title, the creation puts a name field on screen and the call waits for it. This is what answers “open a new 3D file”."
+        "description": "Switches to a workspace, and creates a document there when asked to. Always give a title: without one a name window opens and the call waits for a person."
       },
       "modelsSearch": {
         "title": "Search for a model",
@@ -39,7 +39,7 @@
       },
       "chatClose": {
         "title": "Close the conversation",
-        "description": "Clears the conversation off the screen so that what was just done can be seen. Call it last, when the result is on screen — a space opened, a form filled. Do not call it when the answer is the words themselves, nor when permission is being asked for."
+        "description": "Clears the conversation off the screen so the result can be seen. Call it last, and only once the result is there — never when the answer is the words themselves, nor while permission is being asked."
       },
       "promptDescribeStyle": {
         "title": "Describe the style of the references",
