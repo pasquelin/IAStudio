@@ -130,7 +130,7 @@ export function AssistantOverlay() {
           />
         </header>
 
-        <AssistantConversation ref={surface} autoFocus />
+        <AssistantConversation ref={surface} autoFocus voice />
       </div>
     </div>
   )

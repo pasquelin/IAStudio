@@ -66,17 +66,17 @@ describe('saying something to the assistant', () => {
   })
 
   /**
-   * The field empties here rather than in the surface that submitted it, because two surfaces
-   * write into it and dictation sends without either: a sentence spoken over something half-typed
-   * used to leave that half behind, under the answer it had nothing to do with.
+   * 🛑 Dictation sends the SPOKEN words, not the field. Emptying it here destroyed whatever was
+   * half-typed beside them — the composer clears its own, which is the only path that knows the
+   * two are the same text.
    */
-  it('empties the field it just sent', async () => {
+  it('leaves the field alone, so a spoken sentence does not eat a typed one', async () => {
     brain()
-    useAssistant.setState({ draft: 'ouvre un fichier 3D' })
+    useAssistant.setState({ draft: 'génère une image de ' })
 
-    await useAssistant.getState().say('ouvre un fichier 3D')
+    await useAssistant.getState().say('un casque')
 
-    expect(useAssistant.getState().draft).toBe('')
+    expect(useAssistant.getState().draft).toBe('génère une image de ')
   })
 
   it('carries the turns before it, and never the one being said', async () => {

@@ -168,7 +168,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
      */
     const history = assistantHistory(get().turns.slice(-HISTORY_MAX))
     const turn: AssistantTurn = { id, said, answered: '', steps: [], lost: false }
-    set(state => ({ turns: [...state.turns, turn], busy: true, draft: '' }))
+    set(state => ({ turns: [...state.turns, turn], busy: true }))
 
     // No model in the request: the main process reads the setting on each turn, so the one this
     // window would send could only be a copy going stale between two windows.

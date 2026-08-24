@@ -14,6 +14,12 @@ import { AssistantConversation } from './AssistantConversation'
 
 const say = vi.hoisted(() => vi.fn<(utterance: string) => Promise<void>>())
 
+/** Nothing chosen for the assistant role, which is what a fresh studio looks like. */
+const unserved = () =>
+  useAiModels.setState({
+    overview: aiOverview({ roles: [roleRow({ role: ASSISTANT_ROLE, provider: null })] }),
+  })
+
 beforeEach(() => {
   say.mockReset()
   say.mockResolvedValue(undefined)
@@ -32,13 +38,14 @@ beforeEach(() => {
 })
 
 describe('the assistant conversation', () => {
-  it('sends what was typed', async () => {
+  it('sends what was typed, and clears the field', async () => {
     render(<AssistantConversation />)
 
     await userEvent.type(screen.getByRole('textbox'), 'ouvre un fichier 3D')
     await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }))
 
     expect(say).toHaveBeenCalledWith('ouvre un fichier 3D')
+    expect(screen.getByRole('textbox')).toHaveValue('')
   })
 
   /**
@@ -78,7 +85,7 @@ describe('the assistant conversation', () => {
   // two sessions is a leftover, not a sentence anybody is speaking.
   it('shows the sentence still being spoken', () => {
     useDictation.setState({ partial: 'ouvre un fichier', state: 'listening' })
-    render(<AssistantConversation />)
+    render(<AssistantConversation voice />)
 
     expect(screen.getByText('ouvre un fichier')).toBeInTheDocument()
   })
@@ -154,9 +161,7 @@ describe('the assistant conversation', () => {
    */
   it('asks for a model instead of a field when nothing answers', async () => {
     const openSection = vi.fn()
-    useAiModels.setState({
-      overview: aiOverview({ roles: [roleRow({ role: ASSISTANT_ROLE, provider: null })] }),
-    })
+    unserved()
     useSettings.setState({ openSection })
     render(<AssistantConversation />)
 
@@ -164,6 +169,39 @@ describe('the assistant conversation', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Choisir un modèle' }))
 
     expect(openSection).toHaveBeenCalledWith('ai')
+  })
+
+  /**
+   * 🛑 The composer alone. `registerConfirmer` answers for MCP actions too, which need no
+   * assistant model: swallowing the whole conversation left a question on screen that could not
+   * be read, granted, or priced — the only way out being the close button, which declines.
+   */
+  it('still shows a question, and the thread, when nothing answers', () => {
+    unserved()
+    useAssistant.setState({
+      turns: [{ id: 1, said: 'génère un casque', answered: '', steps: [], lost: false }],
+      asked: {
+        request: { action: 'generator.submit', commitment: 'credits', estimate: 12 },
+        answer: vi.fn(),
+      },
+    })
+    render(<AssistantConversation />)
+
+    expect(screen.getByText('génère un casque')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Autoriser' })).toBeInTheDocument()
+  })
+
+  /**
+   * The microphone goes where the claim is — only the overlay registers a dictation target.
+   * Offered without one, a settled sentence falls to the caret, which the button itself just
+   * took, and the words are dropped with nothing on screen.
+   */
+  it('offers the microphone only to a host that claimed the spoken word', () => {
+    const { rerender } = render(<AssistantConversation />)
+    expect(screen.queryByRole('button', { name: /Dicter/ })).not.toBeInTheDocument()
+
+    rerender(<AssistantConversation voice />)
+    expect(screen.getByRole('button', { name: /Dicter/ })).toBeInTheDocument()
   })
 
   // Beside an exchange they are an interruption: the blank page is the only thing they answer.
