@@ -38,6 +38,7 @@ const overviewOf = (row: RoleRow): AiOverview => ({
   loadFailure: null,
   installFailure: null,
   ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
+  engine: { known: false, missing: [], progress: null, failed: false },
 })
 
 const TXT2IMG = aiRoleId('image', 'txt2img')

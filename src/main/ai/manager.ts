@@ -69,6 +69,15 @@ export type ManagerDeps = {
   ollamaInstalled: () => boolean
   /** Fetches the official archive into the studio folder when none is on this computer. */
   installOllama: (onProgress: (ratio: number) => void, signal: AbortSignal) => Promise<void>
+  /**
+   * What the door's environment lacks, by name, and `null` while nothing has answered.
+   *
+   * Asked of the ENGINE and never computed here: the declaration lives in `pyproject.toml`, and a
+   * second reading of it in TypeScript would drift from the one `uv` resolves.
+   */
+  engineMissing: () => Promise<readonly string[] | null>
+  /** Installs exactly what the engine named, with the interpreter the app ships. */
+  installEngine: (onProgress: (ratio: number) => void, signal: AbortSignal) => Promise<void>
 }
 
 export type AiManager = {
@@ -102,6 +111,11 @@ export type AiManager = {
   /** Puts Ollama on this computer when it is missing. One at a time, like a model install. */
   installOllama: () => Promise<AiOverview>
   cancelInstallOllama: () => Promise<AiOverview>
+  /** Asks the engine what its environment lacks. Answered by the core, so it wakes no door. */
+  readEngine: () => Promise<AiOverview>
+  /** Installs what it named. Long: 682 MB on macOS, 4.7 GB on Linux, and cancellable. */
+  installEngine: () => Promise<AiOverview>
+  cancelInstallEngine: () => Promise<AiOverview>
   remove: (modelId: string) => Promise<AiOverview>
   /**
    * Holds the weights in memory, or says why it could not — never a freeze. Cancellable, and it
@@ -227,6 +241,11 @@ export function createAiManager(deps: ManagerDeps): AiManager {
   let ollamaAbort: AbortController | null = null
   let ollamaProgress: number | null = null
   let ollamaFailed = false
+  let engineMissing: readonly string[] | null = null
+  let engineProgress: number | null = null
+  let engineFailed = false
+  let engineDone: Promise<AiOverview> | null = null
+  let engineAbort: AbortController | null = null
   let ollamaDone: Promise<AiOverview> | null = null
   let loading: { modelId: string; ratio: number; abort: AbortController } | null = null
   let loadFailure: LoadRefusal | null = null
@@ -365,6 +384,10 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       ollamaNames: [],
       ollamaProgress,
       ollamaFailed,
+      engineKnown: engineMissing !== null,
+      engineMissing: engineMissing ?? [],
+      engineProgress,
+      engineFailed,
     }
   }
 
@@ -414,6 +437,34 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       return
     }
     republish({ ollama: { ...published.ollama, progress: ratio } })
+  }
+
+  function reportEngineProgress(ratio: number): void {
+    engineProgress = ratio
+    if (published === null) {
+      void announce()
+      return
+    }
+    republish({ engine: { ...published.engine, progress: ratio } })
+  }
+
+  async function runEngineInstall(): Promise<AiOverview> {
+    engineAbort = new AbortController()
+    engineProgress = 0
+    engineFailed = false
+    void announce()
+    try {
+      await deps.installEngine(reportEngineProgress, engineAbort.signal)
+      // Read afresh rather than emptied: pip resolves, and what it left is what the engine sees.
+      engineMissing = await deps.engineMissing()
+    } catch (error) {
+      engineFailed = true
+      deps.log('warn', `the engine repair stopped: ${String(error)}`)
+    } finally {
+      engineAbort = null
+      engineProgress = null
+    }
+    return announce()
   }
 
   async function runOllamaInstall(): Promise<AiOverview> {
@@ -760,6 +811,25 @@ export function createAiManager(deps: ManagerDeps): AiManager {
 
     cancelInstallOllama: async () => {
       ollamaAbort?.abort()
+      return published ?? compose()
+    },
+
+    readEngine: async () => {
+      engineMissing = await deps.engineMissing()
+      return compose()
+    },
+
+    installEngine: () => {
+      if (engineDone) return engineDone
+
+      engineDone = runEngineInstall().finally(() => {
+        engineDone = null
+      })
+      return engineDone
+    },
+
+    cancelInstallEngine: async () => {
+      engineAbort?.abort()
       return published ?? compose()
     },
 

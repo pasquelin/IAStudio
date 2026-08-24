@@ -74,6 +74,8 @@ import { electronHardwarePort } from './ai/electronHardwarePort'
 import { electronLlamaPort } from './ai/electronLlamaPort'
 import { llamaLocalRuntime } from './ai/llamaRuntime'
 import { ensureOllama, ollamaInstalled } from './ai/ensureOllama'
+import { installEngineLibraries } from './ai/installEngineLibraries'
+import { spawnLines } from './ai/spawnLines'
 import {
   extractOllamaArchive,
   fetchOllamaArchive,
@@ -1346,6 +1348,28 @@ export function createServices(settings: SettingsStore): Services {
     log: (level, message) => log[level]('ai', message),
     now: Date.now,
     ollamaInstalled: ollamaIsInstalled,
+    engineMissing: async () => {
+      // Started on this ask: the core imports no tensor library, so this is the 33 ms hello and
+      // never a door. Answered `null` when it will not start — unknown, which is not "ready".
+      const client = await engine.engine()
+      if (!client) return null
+
+      const needs = await client.requirements()
+      return [...needs.absent.map(one => one.name), ...needs.stale.map(one => one.name)]
+    },
+    installEngine: async (onProgress, signal) => {
+      const client = await engine.engine()
+      if (!client) throw new Error('the local AI engine is not answering')
+
+      await installEngineLibraries({
+        python: bundledEngine(resourcesRoot(), process.platform).python,
+        // The engine's own declaration, never a list written here.
+        declaration: (await client.requirements()).declaration,
+        spawn: spawnLines,
+        onProgress,
+        signal,
+      })
+    },
     installOllama: async (onProgress, signal) => {
       // The studio just put one there: the remembered answer would keep saying otherwise.
       installedOllama = null

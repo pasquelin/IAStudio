@@ -57,6 +57,7 @@ const overview = (over: Partial<AiOverview> = {}): AiOverview => ({
   loadFailure: null,
   installFailure: null,
   ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
+  engine: { known: false, missing: [], progress: null, failed: false },
   ...over,
 })
 
@@ -168,6 +169,7 @@ describe('AiSettings', () => {
     show(
       overview({
         ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
+        engine: { known: false, missing: [], progress: null, failed: false },
         roles: [row({ role: aiRoleId('image', 'txt2img'), candidates: [PARAKEET] })],
       }),
     )
@@ -182,6 +184,7 @@ describe('AiSettings', () => {
     show(
       overview({
         ollama: { ready: false, installed: false, names: [], progress: null, failed: true },
+        engine: { known: false, missing: [], progress: null, failed: false },
         roles: [row({ role: aiRoleId('image', 'txt2img'), candidates: [PARAKEET] })],
       }),
     )

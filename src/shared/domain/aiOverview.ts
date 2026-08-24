@@ -124,6 +124,24 @@ export type AiOverview = {
    * The settings screen always names the three sources so a person can pick among them.
    */
   readonly ollama: OllamaOffer
+  /** What the local engine's environment is missing, and whether a repair is running. */
+  readonly engine: EngineOffer
+}
+
+/**
+ * The tensor libraries the door needs, as the engine itself reads them off its own `.dist-info`.
+ *
+ * `missing` empty AND `known` true is the only reading that means ready: an engine that has not
+ * answered yet knows nothing, and a nothing must never be shown as a clean bill of health.
+ */
+export type EngineOffer = {
+  readonly known: boolean
+  /** Absent or older than declared, by name. What the button installs, and what it says. */
+  readonly missing: readonly string[]
+  /** 0 to 1 while pip runs. `null` when nothing is in flight. */
+  readonly progress: number | null
+  /** The last repair did not land. Cleared by the next try. */
+  readonly failed: boolean
 }
 
 export type OllamaOffer = {

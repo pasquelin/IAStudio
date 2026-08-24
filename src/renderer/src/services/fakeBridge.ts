@@ -18,6 +18,7 @@ const EMPTY_AI_OVERVIEW: AiOverview = {
   loadFailure: null,
   installFailure: null,
   ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
+  engine: { known: false, missing: [], progress: null, failed: false },
 }
 
 const noSubscription = (): (() => void) => () => {}
@@ -276,6 +277,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       install: () => Promise.resolve(EMPTY_AI_OVERVIEW),
       cancelInstall: () => Promise.resolve(EMPTY_AI_OVERVIEW),
       installOllama: () => Promise.resolve(EMPTY_AI_OVERVIEW),
+      readEngine: () => Promise.resolve(EMPTY_AI_OVERVIEW),
+      installEngine: () => Promise.resolve(EMPTY_AI_OVERVIEW),
+      cancelInstallEngine: () => Promise.resolve(EMPTY_AI_OVERVIEW),
       cancelInstallOllama: () => Promise.resolve(EMPTY_AI_OVERVIEW),
       remove: () => Promise.resolve(EMPTY_AI_OVERVIEW),
       load: () => Promise.resolve(EMPTY_AI_OVERVIEW),

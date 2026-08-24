@@ -101,6 +101,8 @@ const manager = (over: Partial<ManagerDeps> = {}) =>
     idleUnloadMinutes: () => 0,
     ollamaInstalled: () => false,
     installOllama: () => Promise.resolve(),
+    engineMissing: () => Promise.resolve(null),
+    installEngine: () => Promise.resolve(),
     ...over,
   })
 
