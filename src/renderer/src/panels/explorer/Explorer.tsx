@@ -180,6 +180,18 @@ export function Explorer() {
   const waiting = useMemo(() => new Set(cut), [cut])
 
   /**
+   * What can be unfolded: a heading, or a folder that is no document — and under a search, only
+   * one with a match beneath it. Held rather than written inline, which is what makes the stable
+   * `nodes` worth having: `Tree` memoises its flattening on this very predicate.
+   */
+  const expandable = useCallback(
+    (node: ExplorerNode): boolean =>
+      isDomainHeading(node) ||
+      (node.kind === 'folder' && !documentOf(node) && (!searching || withChildren.has(node.id))),
+    [documentOf, searching, withChildren],
+  )
+
+  /**
    * Where a new folder or a paste lands: the picked row when it is a folder, its own folder when
    * it is a file, and the project folder itself when nothing is picked.
    *
@@ -579,8 +591,8 @@ export function Explorer() {
         }
       />
 
-      {/* Nothing at all unless a pass is running, which on a project where nothing moved is
-          every time: the row appears when the studio is reading files and can be told to stop. */}
+      {/* Nothing at all unless a pass LASTS, which on a project where nothing moved it never
+          does: inserted here, a row that came and went would push the tree down and back. */}
       <RescanBar />
 
       <div className="min-h-0 flex-1">
@@ -677,17 +689,7 @@ export function Explorer() {
             // A heading names files rather than holding them: it is not a thing to pick, and a
             // selection that gathered one would hand the disk a domain where it expects a path.
             selectable={node => !isDomainHeading(node)}
-            // A folder is expandable before anything under it has been read: what the tree can see is
-            // only what is loaded, and a folder nobody has opened has nothing loaded by definition.
-            // Except a document that happens to be one — it opens, and what it holds is the studio's
-            // own business rather than something to browse. A heading always holds something: an
-            // empty domain is left out rather than drawn.
-            expandable={node =>
-              isDomainHeading(node) ||
-              (node.kind === 'folder' &&
-                !documentOf(node) &&
-                (!searching || withChildren.has(node.id)))
-            }
+            expandable={expandable}
             // Read from `shared/` so the main process refuses the same things — and read on BOTH
             // sides of the gesture, what moves and what receives. A domain view offers no drag at
             // all: there is no folder on screen to carry a file INTO, and a heading is not a place.
