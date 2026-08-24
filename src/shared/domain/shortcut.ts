@@ -117,6 +117,20 @@ export function copiesText(signature: Signature): boolean {
   return TEXT_CHORDS.has(signature)
 }
 
+/**
+ * Whether the caret would have a use for the key: writing it, erasing with it, or moving through
+ * the words. That is anything a bare key carries, and anything Shift or Alt do — both produce a
+ * character on a Mac. Only Ctrl and Meta lift a chord out of the field it is pressed in.
+ *
+ * Asked by the native menu, which must not reserve such a key with the system: see `keyOf` in
+ * `main/menu/template.ts`.
+ */
+export function typesText(signature: Signature | null): boolean {
+  if (!signature) return false
+  const modifiers = signature.split('+').slice(0, -1)
+  return !modifiers.includes('Ctrl') && !modifiers.includes('Meta')
+}
+
 const MODIFIER_GLYPHS: Record<string, string> = {
   Ctrl: '⌃',
   Alt: '⌥',

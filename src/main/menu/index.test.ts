@@ -377,7 +377,9 @@ describe('what a rebuild must not drop', () => {
     const window = openWindow()
     focusWindow(window)
     announce(window, 'image', ['assets'])
-    buildMenu({ 'canvas.undo': 'Shift+KeyZ' })
+    // A chord that carries ⌘: a remap onto a bare key is deliberately not drawn on macOS, where
+    // the row would reserve it with the system — `template.test.ts` holds that half.
+    buildMenu({ 'canvas.undo': 'Shift+Meta+KeyZ' })
     const remapped = undoItem()?.accelerator
 
     // A rebuild driven by the focus, which passes neither the language nor the overrides —
