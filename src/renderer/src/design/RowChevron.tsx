@@ -1,5 +1,4 @@
 import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
-import { cn } from '@/helpers/cn'
 import { UiIcon } from './UiIcon'
 
 export type RowChevronProps = {
@@ -7,7 +6,6 @@ export type RowChevronProps = {
   expandable: boolean
   expanded: boolean
   onToggle: () => void
-  className?: string
 }
 
 /**
@@ -17,17 +15,23 @@ export type RowChevronProps = {
  * Not a control: the row carries `aria-expanded` and the arrows already toggle it. It is named
  * by `data-chevron` because it has no other handle, being `aria-hidden`.
  */
-export function RowChevron({ expandable, expanded, onToggle, className }: RowChevronProps) {
+export function RowChevron({ expandable, expanded, onToggle }: RowChevronProps) {
+  // 🛑 All three, and each is a different host: `Tree` selects on POINTER DOWN, `Collection`
+  // selects on CLICK and opens the row on DOUBLE-CLICK. Stopping the first alone let a press on
+  // the chevron collapse a shelf's whole selection onto that row, and a quick double-tap open
+  // the asset as a document.
+  const swallow = (event: { stopPropagation: () => void }): void => event.stopPropagation()
+
   return (
     <span
       aria-hidden="true"
       data-chevron
-      className={cn('flex w-3 shrink-0 justify-center', className)}
+      className="flex w-3 shrink-0 justify-center"
+      onClick={expandable ? swallow : undefined}
+      onDoubleClick={expandable ? swallow : undefined}
       onPointerDown={event => {
         if (!expandable) return
-        // The row selects on pointer down, which fires before click: stopping the click alone
-        // would still have let the chevron steal the selection.
-        event.stopPropagation()
+        swallow(event)
         onToggle()
       }}
     >

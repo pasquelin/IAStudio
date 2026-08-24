@@ -24,7 +24,11 @@ const ROW_GAP = 4
  * the virtualizer sizes to its content — and each of them is a place a user right-clicks.
  */
 function onBlank(event: { target: EventTarget | null }): boolean {
-  return event.target instanceof Element && event.target.closest('[data-cell]') === null
+  if (!(event.target instanceof Element)) return false
+  // The detail of an open row is drawn BESIDE its cell, so `[data-cell]` alone read a press
+  // inside it as a press on the empty area — and the callers that clear the selection there,
+  // raise the root menu or take a foreign drop would all have answered it.
+  return event.target.closest('[data-cell],[data-row-detail]') === null
 }
 
 export type CollectionProps<T extends { id: string }> = {
@@ -369,7 +373,7 @@ export function Collection<T extends { id: string }>({
                   const cell = (
                     <CollectionCell
                       key={item.id}
-                      expanded={openable ? open : undefined}
+                      expanded={openable && (canOpen?.(item) ?? true) ? open : undefined}
                       index={index}
                       selected={selected.has(item.id)}
                       disabled={isDisabled?.(item) === true}
@@ -419,7 +423,7 @@ export function Collection<T extends { id: string }>({
                       <div style={{ height: rowPixels }} className="flex shrink-0">
                         {cell}
                       </div>
-                      {open && renderRowDetail?.(item)}
+                      {open && <div data-row-detail>{renderRowDetail?.(item)}</div>}
                     </Fragment>
                   )
                 })}

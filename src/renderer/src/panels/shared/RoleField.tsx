@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FILE_DOMAINS, type FileDomain } from '@shared/domain/fileRole'
 import { PropertyRow } from '@/design/PropertyRow'
@@ -19,6 +20,12 @@ import { useAssets } from '@/stores/assets'
 export function RoleField({ assetId, domain }: { assetId: string | null; domain: FileDomain }) {
   const { t } = useTranslation()
   const retype = useAssets(state => state.retype)
+  /**
+   * What was picked here, until the host reads it back. Not every host does: the information
+   * window holds its asset in a `useState` that only a folder change refreshes, and retyping
+   * moves nothing on disk — so the control showed the OLD role the moment it was corrected.
+   */
+  const [written, setWritten] = useState<FileDomain | null>(null)
 
   if (!assetId) {
     return (
@@ -33,7 +40,7 @@ export function RoleField({ assetId, domain }: { assetId: string | null; domain:
   return (
     <SelectField
       label={t('inspector.role')}
-      value={domain}
+      value={written ?? domain}
       options={FILE_DOMAINS.map(type => ({
         value: type,
         label: t(`assetTypes.${type}`),
@@ -43,7 +50,11 @@ export function RoleField({ assetId, domain }: { assetId: string | null; domain:
         disabled: type === 'other',
       }))}
       onChange={picked => {
-        if (picked !== 'other') void retype(assetId, picked)
+        if (picked === 'other') return
+        setWritten(picked)
+        // Given back on a refusal: the catalogue is what decides, and a control left showing a
+        // correction nobody recorded is the same lie the other way round.
+        void retype(assetId, picked).catch(() => setWritten(null))
       }}
       scId="file.role"
     />

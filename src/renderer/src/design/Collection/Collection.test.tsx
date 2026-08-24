@@ -65,6 +65,35 @@ describe('Collection', () => {
       expect(screen.queryByText('about Row 0')).not.toBeInTheDocument()
     })
 
+    /**
+     * 🛑 The three gestures a chevron must swallow, and they belong to two different hosts: this
+     * list selects on CLICK and opens the row on DOUBLE-CLICK, where `Tree` selects on pointer
+     * down. Reading a row must not collapse a selection of five onto it.
+     */
+    it('picks nothing and opens nothing when the twist itself is pressed', async () => {
+      const onSelect = vi.fn()
+      const onActivate = vi.fn()
+      renderCollection(
+        rows(3),
+        { view: 'list' },
+        {
+          onSelect,
+          onActivate,
+          renderRowDetail: item => <p>about {item.name}</p>,
+          expandedId: null,
+        },
+      )
+
+      const chevron = screen
+        .getByText('Row 1')
+        .closest('[data-cell]')
+        ?.querySelector('[data-chevron]')
+      await userEvent.dblClick(chevron as Element)
+
+      expect(onSelect).not.toHaveBeenCalled()
+      expect(onActivate).not.toHaveBeenCalled()
+    })
+
     /** A chevron on a line that opens onto nothing is a promise the list cannot keep. */
     it('draws no twist on a row that answers no to `canOpen`', () => {
       renderCollection(
