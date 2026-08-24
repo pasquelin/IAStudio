@@ -9,8 +9,10 @@ import { z } from 'zod'
 /**
  * The vocabulary both sides agree on, carried by every frame. `__init__.py` holds the same number
  * and `pythonProtocol.test.ts` reads it: no compiler sits between the two languages.
+ *
+ * 2: `worker.hello` no longer carries `device`.
  */
-export const PROTOCOL_VERSION = 1
+export const PROTOCOL_VERSION = 2
 
 /** What the core answers itself, in the same turn — neither wakes a door. */
 export type EngineOp = 'hardware.info' | 'memory.ledger'
@@ -54,24 +56,11 @@ const hello = z.object({
 })
 
 /**
- * A door announcing itself. It arrives whenever a worker starts, which is why occupancy is DATA
- * here rather than a constant: it depends on the backend, the adapter, the model and the machine,
- * and the TypeScript knows none of the four.
+ * A door announcing itself. Nothing reads it, so only what IDENTIFIES the frame is described:
+ * spelling out fields no caller wants couples this file to `door.py` for nothing, and a value
+ * drifting out of a literal union would drop the frame into `readFrame`'s null, which logs.
  */
-const workerHello = z.object({
-  v: z.number(),
-  evt: z.literal('worker.hello'),
-  door: z.string(),
-  engine: z.string(),
-  protocol: z.number(),
-  backend: z.string(),
-  device: z.string(),
-  occupancy: z.object({
-    process: z.union([z.literal('multi-job'), z.literal('exclusive-process')]),
-    device: z.union([z.literal('shared'), z.literal('exclusive')]),
-    maxConcurrent: z.number().nullable(),
-  }),
-})
+const workerHello = z.object({ v: z.number(), evt: z.literal('worker.hello') })
 
 /**
  * A job reporting how far it is. Pushed between two denoise steps — the only place a long job can

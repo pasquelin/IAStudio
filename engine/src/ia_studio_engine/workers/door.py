@@ -112,7 +112,7 @@ def serve(door: str, fd: int) -> int:
     connection = socket.socket(fileno=fd)
     WorkerLoop(
         connection,
-        worker_hello(door, adapter.backend(), adapter.device(), OCCUPANCY),
+        worker_hello(door, adapter.backend(), OCCUPANCY),
         inline_handlers(door, adapter),
         lambda loop: queued_handlers(door, adapter, loop),
     ).run()

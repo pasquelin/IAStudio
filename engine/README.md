@@ -10,8 +10,11 @@ répond `hardware.info`, et route vers un worker ce qu'il ne peut pas répondre 
 `models.load`, `models.unload`, `generate`, `worker.status`. **C'est le principal qui nomme la
 porte** sur chaque requête : lui seul sait quel modèle a été choisi pour quel emploi.
 
-**Le noyau n'importe jamais torch.** Mesuré le 22/08 sur la chaîne complète : le noyau salue à
-**33 ms**, le worker paie l'import une fois, et le modèle reste chaud entre deux générations.
+**Ni le noyau ni le salut d'une porte n'importent torch.** Mesuré le 22/08 sur la chaîne
+complète : le noyau salue à **33 ms**, le worker paie l'import une fois, et le modèle reste chaud
+entre deux générations. Une porte tenait le sien à **573 ms** — elle nommait son device, et le lire
+importe torch ; sans ce champ elle salue à **34 ms** (médianes de 7, à chaud, extra `diffusion`
+installé). Le device employé pour un calcul voyage sur le cadre de résultat de ce calcul.
 
 ## Les portes
 
@@ -76,11 +79,14 @@ Le moteur parle en premier : `engine.hello` porte la version du protocole, et un
 processus plutôt que de le dégrader.
 
 ```jsonc
-{"v": 1, "id": 42, "op": "hardware.info", "params": {}}   // requête
-{"v": 1, "id": 42, "ok": {…}}                             // réponse
-{"v": 1, "id": 42, "err": {"code": "…", "message": "…"}}  // refus
-{"v": 1, "evt": "engine.hello", …}                        // événement
+{"v": 2, "id": 42, "op": "hardware.info", "params": {}}   // requête
+{"v": 2, "id": 42, "ok": {…}}                             // réponse
+{"v": 2, "id": 42, "err": {"code": "…", "message": "…"}}  // refus
+{"v": 2, "evt": "engine.hello", …}                        // événement
 ```
+
+La version vit à deux endroits, `__init__.py` et `pythonProtocol.ts`, et rien ne les compile
+ensemble — `main/ai/pythonProtocol.test.ts` lit le fichier Python pour tenir les deux en phase.
 
 **Des chemins, jamais des octets.** Une génération écrit son résultat dans un fichier que le
 principal contrôle, et le cadre porte le chemin.

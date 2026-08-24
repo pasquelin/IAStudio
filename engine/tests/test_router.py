@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 
+from ia_studio_engine import PROTOCOL_VERSION
 from ia_studio_engine.core.router import DoorRouter
 
 IMAGE_DOOR = "engine/diffusion"
@@ -87,10 +88,16 @@ def test_what_the_worker_settles_reaches_the_studio_as_its_job() -> None:
     router.submit("generate", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
 
-    router.said({"v": 1, "id": run, "ok": {"path": "/tmp/out.png", "device": "mps"}})
+    router.said({"v": PROTOCOL_VERSION, "id": run, "ok": {"path": "/tmp/out.png", "device": "mps"}})
 
     assert written == [
-        {"v": 1, "evt": "job.completed", "job": "local_a1", "path": "/tmp/out.png", "device": "mps"}
+        {
+            "v": PROTOCOL_VERSION,
+            "evt": "job.completed",
+            "job": "local_a1",
+            "path": "/tmp/out.png",
+            "device": "mps",
+        }
     ]
 
 
@@ -99,7 +106,7 @@ def test_a_refusal_reaches_the_studio_with_its_reason() -> None:
     router.submit("models.load", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
 
-    router.said({"v": 1, "id": run, "err": {"code": "memory", "message": "no room"}})
+    router.said({"v": PROTOCOL_VERSION, "id": run, "err": {"code": "memory", "message": "no room"}})
 
     assert written[0]["evt"] == "job.failed"
     assert (written[0]["code"], written[0]["message"]) == ("memory", "no room")
@@ -110,8 +117,8 @@ def test_a_second_answer_for_one_run_is_dropped_rather_than_pushed_twice() -> No
     router.submit("generate", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
 
-    router.said({"v": 1, "id": run, "ok": {}})
-    router.said({"v": 1, "id": run, "ok": {}})
+    router.said({"v": PROTOCOL_VERSION, "id": run, "ok": {}})
+    router.said({"v": PROTOCOL_VERSION, "id": run, "ok": {}})
 
     assert len(written) == 1
 
@@ -173,7 +180,7 @@ def test_records_what_a_door_answered_about_its_memory() -> None:
 
     router.said(
         {
-            "v": 1,
+            "v": PROTOCOL_VERSION,
             "id": run,
             "ok": {
                 "door": "engine/diffusion",
@@ -200,7 +207,7 @@ def test_a_door_that_did_not_name_itself_is_filed_under_the_one_that_answered() 
 
     router.said(
         {
-            "v": 1,
+            "v": PROTOCOL_VERSION,
             "id": run,
             "ok": {"heldBytes": 4_000_000_000, "device": "cuda", "backend": "pytorch"},
         },
@@ -217,7 +224,9 @@ def test_leaves_a_backend_that_answered_no_number_absent() -> None:
     router.submit("models.load", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
 
-    router.said({"v": 1, "id": run, "ok": {"door": "engine/diffusion", "heldBytes": None}})
+    router.said(
+        {"v": PROTOCOL_VERSION, "id": run, "ok": {"door": "engine/diffusion", "heldBytes": None}}
+    )
 
     assert router.ledger.as_frame() == {"doors": []}
 
@@ -229,7 +238,7 @@ def test_an_unload_that_holds_nothing_leaves_the_door_absent() -> None:
     run = workers[0].sent[0]["id"]
     router.said(
         {
-            "v": 1,
+            "v": PROTOCOL_VERSION,
             "id": run,
             "ok": {
                 "door": "engine/diffusion",
@@ -244,7 +253,7 @@ def test_an_unload_that_holds_nothing_leaves_the_door_absent() -> None:
     unload = workers[0].sent[1]["id"]
     router.said(
         {
-            "v": 1,
+            "v": PROTOCOL_VERSION,
             "id": unload,
             "ok": {
                 "door": "engine/diffusion",
@@ -264,7 +273,7 @@ def test_an_unload_that_still_holds_bytes_replaces_the_record() -> None:
     run = workers[0].sent[0]["id"]
     router.said(
         {
-            "v": 1,
+            "v": PROTOCOL_VERSION,
             "id": run,
             "ok": {
                 "door": "engine/diffusion",
@@ -279,7 +288,7 @@ def test_an_unload_that_still_holds_bytes_replaces_the_record() -> None:
     unload = workers[0].sent[1]["id"]
     router.said(
         {
-            "v": 1,
+            "v": PROTOCOL_VERSION,
             "id": unload,
             "ok": {
                 "door": "engine/diffusion",
@@ -299,7 +308,11 @@ def test_a_door_that_died_holds_nothing_in_the_ledger() -> None:
     router.submit("models.load", DOOR, job="local_a1")
     run = workers[0].sent[0]["id"]
     router.said(
-        {"v": 1, "id": run, "ok": {"door": "engine/diffusion", "heldBytes": 1, "tensorBytes": 1}}
+        {
+            "v": PROTOCOL_VERSION,
+            "id": run,
+            "ok": {"door": "engine/diffusion", "heldBytes": 1, "tensorBytes": 1},
+        }
     )
 
     router.door_died()
@@ -312,9 +325,14 @@ def test_passes_an_event_from_a_door_straight_through() -> None:
     router, written, _workers = harness()
     router.submit("generate", DOOR, job="local_a1")
 
-    router.said({"v": 1, "evt": "job.progress", "job": "local_a1", "ratio": 0.5})
+    router.said({"v": PROTOCOL_VERSION, "evt": "job.progress", "job": "local_a1", "ratio": 0.5})
 
-    assert written[-1] == {"v": 1, "evt": "job.progress", "job": "local_a1", "ratio": 0.5}
+    assert written[-1] == {
+        "v": PROTOCOL_VERSION,
+        "evt": "job.progress",
+        "job": "local_a1",
+        "ratio": 0.5,
+    }
 
 
 def test_asks_the_door_to_drop_a_job_by_its_own_numbering() -> None:
@@ -390,7 +408,7 @@ def test_two_doors_numbering_from_one_settle_their_own_job() -> None:
     router.submit("generate", DOOR, job="local_image")
     router.submit("generate", {"door": "engine/audio"}, job="local_sound")
 
-    router.said({"v": 1, "id": workers[1].sent[0]["id"], "ok": {}}, "engine/audio")
+    router.said({"v": PROTOCOL_VERSION, "id": workers[1].sent[0]["id"], "ok": {}}, "engine/audio")
 
     assert [frame["job"] for frame in written] == ["local_sound"]
 
