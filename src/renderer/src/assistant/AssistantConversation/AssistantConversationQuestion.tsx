@@ -5,7 +5,7 @@ import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant } from '@/stores/assistant'
 import { formatUnits } from '@/helpers/format'
 import type { ConfirmRequest } from '../confirm'
-import { OVERLAY_CARD } from './overlayStyles'
+import { CONVERSATION_CARD } from './conversationStyles'
 
 /**
  * The yes-or-no, with what it engages stated first.
@@ -13,7 +13,7 @@ import { OVERLAY_CARD } from './overlayStyles'
  * A figure is quoted only when there is one: an upload has no price, and `null` means the API
  * declined to give one — said as such rather than filled in with a guess.
  */
-export function AssistantOverlayQuestion({ request }: { request: ConfirmRequest }) {
+export function AssistantConversationQuestion({ request }: { request: ConfirmRequest }) {
   const { t, i18n } = useTranslation()
   const action = assistantAction(request.action)
   const answer = useAssistant(state => state.answer)
@@ -34,7 +34,7 @@ export function AssistantOverlayQuestion({ request }: { request: ConfirmRequest 
   }
 
   return (
-    <div className={OVERLAY_CARD}>
+    <div className={CONVERSATION_CARD}>
       <p className="text-text m-0 text-xs font-medium">
         {action ? t(action.titleKey) : request.action}
       </p>

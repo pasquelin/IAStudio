@@ -44,7 +44,14 @@ function brain(...replies: AssistantAnswer[]): { asked: AssistantThought[] } {
 beforeEach(() => {
   runConfirmedAction.mockReset()
   runConfirmedAction.mockResolvedValue({ ok: true })
-  useAssistant.setState({ open: false, turns: [], busy: false, asked: null, spent: 0 })
+  useAssistant.setState({
+    open: false,
+    turns: [],
+    busy: false,
+    asked: null,
+    spent: 0,
+    draft: '',
+  })
 })
 
 describe('saying something to the assistant', () => {
@@ -56,6 +63,20 @@ describe('saying something to the assistant', () => {
     expect(turn?.said).toBe('ouvre un fichier 3D')
     expect(turn?.answered).toBe('J’ouvre un fichier 3D.')
     expect(useAssistant.getState().busy).toBe(false)
+  })
+
+  /**
+   * 🛑 Dictation sends the SPOKEN words, not the field. Emptying it here destroyed whatever was
+   * half-typed beside them — the composer clears its own, which is the only path that knows the
+   * two are the same text.
+   */
+  it('leaves the field alone, so a spoken sentence does not eat a typed one', async () => {
+    brain()
+    useAssistant.setState({ draft: 'génère une image de ' })
+
+    await useAssistant.getState().say('un casque')
+
+    expect(useAssistant.getState().draft).toBe('génère une image de ')
   })
 
   it('carries the turns before it, and never the one being said', async () => {

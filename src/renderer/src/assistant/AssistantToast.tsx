@@ -34,7 +34,7 @@ const LINGER_MS = 6000
  */
 export function AssistantToast() {
   const { t } = useTranslation()
-  const open = useAssistant(state => state.open)
+  const staged = useAssistant(state => state.staged > 0)
   const busy = useAssistant(state => state.busy)
   const seen = useAssistant(state => state.seen)
   // Three primitives rather than the turn itself: `patch` rebuilds that object by spread on every
@@ -45,7 +45,7 @@ export function AssistantToast() {
   const said = useAssistant(state => state.turns.at(-1)?.said ?? '')
   const lost = useAssistant(state => state.turns.at(-1)?.lost ?? false)
 
-  const showing = !open && !busy && id > seen
+  const showing = !staged && !busy && id > seen
 
   useEffect(() => {
     if (!showing) return

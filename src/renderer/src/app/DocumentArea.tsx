@@ -7,6 +7,7 @@ import { useDocuments } from '@/stores/documents'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { DocumentTab } from './DocumentTab'
 import { DOCUMENT_COMPONENTS } from './documents/documents'
+import { DocumentsIdle } from './documents/DocumentsIdle/DocumentsIdle'
 import { setDockviewApi } from './dockviewApi'
 
 /**
@@ -121,6 +122,10 @@ export function DocumentArea() {
         // Every tab, not a per-panel choice: closing a document has to ask about unsaved work
         // whichever space opened it.
         defaultTabComponent={DocumentTab}
+        // What Dockview shows while no group is visible, and takes down on the first one. The
+        // middle of the window was a bare `dv-watermark` div until this — the largest surface of
+        // the studio, saying nothing.
+        watermarkComponent={DocumentsIdle}
         onReady={onReady}
       />
     </AssetDropTarget>

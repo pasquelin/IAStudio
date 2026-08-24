@@ -23,6 +23,22 @@ type AssistantState = {
    * invoice.
    */
   spent: number
+  /** Held here, not by the surface: two surfaces write it, and dictation sends without either. */
+  draft: string
+  setDraft: (draft: string) => void
+  /**
+   * How many surfaces have the thread on screen — the modal, the empty centre, or neither.
+   *
+   * 🛑 Not `open`, which means the MODAL alone. Everything that speaks only when nobody is
+   * reading — the toast, the status line, marking a turn seen — asks this: with the centre
+   * staging the same thread, `open` says "nobody is reading" over a full page of words.
+   *
+   * A count rather than a flag: the two hosts hand over in one commit, and a cleanup landing
+   * after the newcomer's mount would leave it at zero with the thread on screen.
+   */
+  staged: number
+  /** Declares the thread on screen. Returns the way to take it back down. */
+  stage: () => () => void
 
   show: () => void
   hide: () => void
@@ -68,6 +84,15 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   asked: null,
   spent: 0,
   seen: 0,
+  draft: '',
+  staged: 0,
+
+  setDraft: draft => set({ draft }),
+
+  stage: () => {
+    set(state => ({ staged: state.staged + 1 }))
+    return () => set(state => ({ staged: state.staged - 1 }))
+  },
 
   /**
    * Showing IS reading — but only of what there is to read.
@@ -206,9 +231,8 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
       set({ open: false })
     }
 
-    // Read, if the window was there to be read: this is the other half of the `busy` guard in
-    // `show`. A turn answered under an open window needs no toast afterwards.
-    if (get().open) set({ seen: id })
+    // Read, if a surface was there to read it: the other half of the `busy` guard in `show`.
+    if (get().staged > 0) set({ seen: id })
   },
 
   setModel: model => {

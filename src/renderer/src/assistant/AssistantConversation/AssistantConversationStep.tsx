@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { assistantAction, refusalKey } from '@shared/domain/assistant'
 import type { AssistantStep } from '../conversation'
 
-export function AssistantOverlayStep({ step }: { step: AssistantStep }) {
+export function AssistantConversationStep({ step }: { step: AssistantStep }) {
   const { t } = useTranslation()
   const action = assistantAction(step.action)
   // An action the registry no longer declares cannot reach here — the executor checks first —

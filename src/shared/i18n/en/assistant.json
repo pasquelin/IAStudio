@@ -1186,6 +1186,29 @@
       "yesHint": "Runs the action above, and commits what it commits",
       "no": "Don’t allow",
       "noHint": "Runs nothing, and the assistant takes it into account for what follows"
-    }
+    },
+    "starters": {
+      "imageMake": "Generate an image",
+      "imageRework": "Rework an image of the project",
+      "imageUpscale": "Enlarge an image",
+      "videoMake": "Generate a video",
+      "videoFromImage": "Animate an image",
+      "videoCut": "Cut a sequence",
+      "meshMake": "Generate a 3D model",
+      "meshFromImage": "Make a 3D model from an image",
+      "meshRig": "Prepare a skeleton",
+      "audioMake": "Generate a sound",
+      "audioFromVideo": "Take the sound off a video",
+      "audioTrim": "Trim an audio clip",
+      "textureMake": "Generate a material",
+      "textureFromImage": "Make a material from an image",
+      "textureTile": "Make a material tile",
+      "skyboxMake": "Generate a sky",
+      "skyboxRelight": "Change the light of a sky",
+      "skyboxExport": "Export a sky"
+    },
+    "starterHint": "Writes the sentence into the field. Nothing is sent until you send it.",
+    "unserved": "Nothing answers for the assistant. Pick a model and it can work here.",
+    "chooseModelHint": "Opens the AI manager, where the assistant’s model is picked."
   }
 }

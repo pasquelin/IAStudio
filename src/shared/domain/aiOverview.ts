@@ -65,6 +65,16 @@ export type RoleRow = {
   readonly clouds: readonly string[]
 }
 
+/**
+ * Whether an employment has something answering for it today — a choice, never a fill-in.
+ *
+ * Beside the type rather than in either reader: the home counts it and the empty centre asks it,
+ * and the day `provider` gains a third reading one of them would ship the old answer.
+ */
+export function servedBy(row: RoleRow): boolean {
+  return row.provider !== null
+}
+
 /** What the machine offers, as the screen states it above the rows. */
 export type MachineSummary = {
   readonly physicalBytes: number
