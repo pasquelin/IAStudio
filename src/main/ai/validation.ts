@@ -17,15 +17,12 @@ const choice = z.object({
 })
 
 /**
- * The id of a model a window names. `String(value)` was coercing rather than refusing — it makes
- * `"[object Object]"` out of anything and sends it down to the catalogue.
- *
- * Qualified where `provider/validation.ts` keeps `parseModelId` bare: the studio is built on the
- * Scenario catalogue, so an unqualified model id is one of ITS. The local engine is the other
- * domain, and the two schemas do not even agree — this one does not trim.
+ * The id of a model a window names — its own schema, the local engine being a domain apart from
+ * the Scenario catalogue, under the rule every other id of this boundary follows. `String(value)`
+ * was coercing rather than refusing: it makes `"[object Object]"` out of anything.
  */
 export function parseAiModelId(value: unknown): string {
-  return z.string().min(1).parse(value)
+  return z.string().trim().min(1).parse(value)
 }
 
 export function parseChoice(
