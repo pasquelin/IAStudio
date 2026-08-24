@@ -9,10 +9,13 @@ import { FIELD_ROW } from './styles'
  *
  * `inline` truncates, which is right for a number or a name. `stacked` drops the value onto its
  * own line under the label — a prompt, a paragraph. `wrap` keeps the two columns and lets the
- * value run onto a second line: a path and a hash are ONE value, and stacking them in a box
- * whose every other row is a pair reads as a label whose value went missing.
+ * value run onto a second line, for a value with no head and no tail: a hash.
+ *
+ * `path` is the same column, clipped at its HEAD — `Images/Croquis/etude.jpg` broken mid-word
+ * costs a line and shows nothing the far end did not already say, the file's own name being
+ * what a reader looks for. The same reading `Row` gives a path with `clip="start"`.
  */
-export type PropertyShape = 'inline' | 'stacked' | 'wrap'
+export type PropertyShape = 'inline' | 'stacked' | 'wrap' | 'path'
 
 export type PropertyRowProps = {
   label: string
@@ -64,6 +67,7 @@ export function PropertyRow({ label, children, shape = 'inline', actions }: Prop
           // « Rôle » used to begin where « Taille » ended.
           shape !== 'stacked' && 'flex-1',
           shape === 'inline' && 'truncate',
+          shape === 'path' && 'truncate-start',
           // `break-all`: a path and a hash hold no space to break at, so a wrap with nothing to
           // wrap ON runs off the edge instead.
           shape === 'wrap' && 'break-all',

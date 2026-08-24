@@ -100,7 +100,7 @@ export function FileInfoWindowBody({ id, path, facts, asset, status }: FileInfoW
           {t(`assetTypes.${itemOfPath(path, { asset }).domain}`)}
         </PropertyRow>
       )}
-      <PropertyRow label={t('inspector.path')} shape="wrap">
+      <PropertyRow label={t('inspector.path')} shape="path">
         {path}
       </PropertyRow>
       {/* The folder's own entry weighs ninety-six bytes and says nothing about what it holds;

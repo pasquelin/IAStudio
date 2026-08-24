@@ -100,11 +100,11 @@ export function AssetInspector({ asset }: { asset: Asset }) {
       {asset.location === 'local' && (
         <PropertySection title={t('inspector.file')} scId="asset.file">
           {/* The PATH, which this row used to leave out: a label, a wide empty column and a
-              button at the far end said where nothing. `wrap` because a path is one value that
-              takes two lines rather than a name that truncates. */}
+              button at the far end said where nothing. Clipped at its HEAD — see `PropertyShape`
+              — where it used to break mid-word and take a second line to say nothing more. */}
           <PropertyRow
             label={t('inspector.onDisk')}
-            shape="wrap"
+            shape="path"
             actions={
               missing ? undefined : (
                 <ToolButton

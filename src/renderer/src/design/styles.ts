@@ -346,6 +346,14 @@ export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
 export const FIELD_THUMBNAIL = 'size-(--sc-control)'
 
 /**
+ * The picture of a row that carries a NAME AND A LINE UNDER IT — a model, a chosen model, a
+ * candidate in the settings. Taller than `FIELD_THUMBNAIL` because the row itself is, and a
+ * gauge rather than the `size-8` and `size-10` five sites had reached for: a pixel is right at
+ * one density and wrong at the other.
+ */
+export const ROW_THUMBNAIL = 'size-(--sc-row-stacked)'
+
+/**
  * One property row of an inspector: a label of fixed width, then the control it names.
  *
  * The gap is two, never one: at one the label, the track and the number read as a single
