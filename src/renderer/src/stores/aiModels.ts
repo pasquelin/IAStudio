@@ -31,6 +31,9 @@ type AiModelsState = {
   cancelAiInstall: () => Promise<void>
   installOllama: () => Promise<void>
   cancelInstallOllama: () => Promise<void>
+  readEngine: () => Promise<void>
+  installEngine: () => Promise<void>
+  cancelInstallEngine: () => Promise<void>
   removeAiModel: (modelId: string) => Promise<void>
   /** Holds the weights in memory, or leaves `overview.loadFailure` saying why it could not. */
   loadAiModel: (modelId: string) => Promise<void>
@@ -85,6 +88,9 @@ export const useAiModels = create<AiModelsState>()(set => {
       command(bridge => bridge.ai.choose(role, provider, scope)),
     installAiModel: modelId => command(bridge => bridge.ai.install(modelId)),
     cancelAiInstall: () => command(bridge => bridge.ai.cancelInstall()),
+    readEngine: () => command(bridge => bridge.ai.readEngine()),
+    installEngine: () => command(bridge => bridge.ai.installEngine()),
+    cancelInstallEngine: () => command(bridge => bridge.ai.cancelInstallEngine()),
     installOllama: () => command(bridge => bridge.ai.installOllama()),
     cancelInstallOllama: () => command(bridge => bridge.ai.cancelInstallOllama()),
     removeAiModel: modelId => command(bridge => bridge.ai.remove(modelId)),

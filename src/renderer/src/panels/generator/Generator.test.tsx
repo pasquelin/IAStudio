@@ -421,6 +421,7 @@ describe('the generator on this machine', () => {
       loadFailure: null,
       installFailure: null,
       ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
+      engine: { known: false, missing: [], progress: null, failed: false },
     }
     useAiModels.setState({ overview })
     installFakeBridge({

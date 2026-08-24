@@ -48,6 +48,7 @@ const overview = (roles: readonly RoleRow[]): AiOverview => ({
   loadFailure: null,
   installFailure: null,
   ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
+  engine: { known: false, missing: [], progress: null, failed: false },
 })
 
 describe('what the machine holds', () => {

@@ -19,6 +19,7 @@ import { useAiModels } from '@/stores/aiModels'
 import { SettingLine } from '../SettingLine'
 import { SETTING_COLUMN, SETTING_SELECT } from '../settingStyles'
 import { Models } from '@/panels/models/Models/Models'
+import { AiEngineOffer } from './AiEngineOffer'
 import { AiOllamaOffer } from './AiOllamaOffer'
 import { AiRoleRow } from './AiRoleRow'
 
@@ -119,6 +120,7 @@ export function AiSettings({ family }: AiSettingsProps) {
           <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-2')}>{t('aiModels.sourceOllama')}</h3>
           <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
           <AiOllamaOffer offer={overview.ollama} busy={busy} />
+          <AiEngineOffer offer={overview.engine} busy={busy} />
         </section>
       )}
 

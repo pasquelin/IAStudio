@@ -59,6 +59,10 @@ const input = (over: Partial<OverviewInput> = {}): OverviewInput => ({
   ollamaNames: [],
   ollamaProgress: null,
   ollamaFailed: false,
+  engineKnown: false,
+  engineMissing: [],
+  engineProgress: null,
+  engineFailed: false,
   ...over,
 })
 

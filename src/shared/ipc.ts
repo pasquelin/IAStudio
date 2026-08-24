@@ -243,6 +243,9 @@ export type Channels = {
   aiCancelInstall: 'ai:cancel-install'
   aiInstallOllama: 'ai:install-ollama'
   aiCancelInstallOllama: 'ai:cancel-install-ollama'
+  aiReadEngine: 'ai:read-engine'
+  aiInstallEngine: 'ai:install-engine'
+  aiCancelInstallEngine: 'ai:cancel-install-engine'
   aiRemove: 'ai:remove'
   aiLoad: 'ai:load'
   aiCancelLoad: 'ai:cancel-load'
@@ -450,6 +453,9 @@ export const CHANNELS: Channels = {
   aiCancelInstall: 'ai:cancel-install',
   aiInstallOllama: 'ai:install-ollama',
   aiCancelInstallOllama: 'ai:cancel-install-ollama',
+  aiReadEngine: 'ai:read-engine',
+  aiInstallEngine: 'ai:install-engine',
+  aiCancelInstallEngine: 'ai:cancel-install-engine',
   aiRemove: 'ai:remove',
   aiLoad: 'ai:load',
   aiCancelLoad: 'ai:cancel-load',
@@ -1690,6 +1696,11 @@ export type StudioBridge = {
     /** Puts Ollama on this computer when it is missing. Same disk lock as a model install. */
     installOllama: () => Promise<AiOverview>
     cancelInstallOllama: () => Promise<AiOverview>
+    /** Asks the local engine what its tensor libraries are missing. Wakes no door. */
+    readEngine: () => Promise<AiOverview>
+    /** Installs exactly what it named, with the interpreter the app ships. Cancellable. */
+    installEngine: () => Promise<AiOverview>
+    cancelInstallEngine: () => Promise<AiOverview>
     /**
      * Deletes the files. The choices that named it are left alone — they fall back on their own.
      *

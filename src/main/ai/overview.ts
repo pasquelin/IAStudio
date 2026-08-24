@@ -57,6 +57,10 @@ export type OverviewInput = {
   readonly ollamaNames: readonly string[]
   readonly ollamaProgress: number | null
   readonly ollamaFailed: boolean
+  readonly engineKnown: boolean
+  readonly engineMissing: readonly string[]
+  readonly engineProgress: number | null
+  readonly engineFailed: boolean
 }
 
 /**
@@ -166,6 +170,12 @@ export function aiOverviewOf(input: OverviewInput): AiOverview {
       names: input.ollamaNames,
       progress: input.ollamaProgress,
       failed: input.ollamaFailed,
+    },
+    engine: {
+      known: input.engineKnown,
+      missing: input.engineMissing,
+      progress: input.engineProgress,
+      failed: input.engineFailed,
     },
   }
 }
