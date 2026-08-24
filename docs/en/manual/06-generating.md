@@ -47,7 +47,7 @@ too — with no update to the studio.
 > **A picture placed on a form goes up to the provider when you generate.** The model runs on
 > the provider's servers: it can only read what the account's library holds. So the studio sends the
 > project asset up, remembers the link between the two, and sends nothing the next time. You will
-> find it under **Your library**, on the home screen.
+> find it in the **Assets** panel, among what the account's library holds.
 >
 > A picture edited since it went up is sent again: otherwise the generation would run on a version
 > you no longer see.

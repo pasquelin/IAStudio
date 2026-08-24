@@ -237,7 +237,9 @@ describe('salvaging the home section order', () => {
       // so its entry is salvaged where `projects` — still a panel — would be dropped.
       { id: 'tools', visible: true },
       { id: 'projects', visible: true },
-      { id: 'explore', visible: false },
+      // The feed of everything published on Scenario, dropped with the band itself.
+      { id: 'explore', visible: true },
+      { id: 'models', visible: false },
     ]
 
     const salvaged = salvagePartialSettings(withTheme({ sections }))
@@ -245,7 +247,7 @@ describe('salvaging the home section order', () => {
     expect(salvaged.home?.sections).toEqual([
       { id: 'spotlight', visible: true },
       { id: 'tools', visible: true },
-      { id: 'explore', visible: false },
+      { id: 'models', visible: false },
     ])
   })
 

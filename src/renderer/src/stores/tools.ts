@@ -141,9 +141,9 @@ export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
   },
   home: {
     // Both halves of the left column, as every space has: the projects above, and under them
-    // the one that is open, read as a folder. The right column keeps one.
+    // the one that is open, read as a folder. There is no right column: the account's library
+    // was the only panel that ever stood there, and this screen acts on no document.
     left: { primary: null, secondary: null },
-    right: { primary: null },
     // The band, since 17 August, and it holds one thing: the history of the project that is
     // open. `null` means "the half is there and nothing was chosen", which is what leaves it to
     // the first tool the registry serves — and with no project open, that is no tool at all.
@@ -553,7 +553,11 @@ export const useTools = create<ToolsState>()(
       // keep it written for ever — `openEverywhereItSits` only reads what a bump makes it read.
       // 18 is `models` leaving the docks for the settings, and it is the SAME rule: without the
       // bump `migrate` never runs, and every installed arrangement keeps naming a dead panel.
-      version: 18,
+      // 19 is `library` leaving the home, and it costs one thing more than 17 and 18 did: it was
+      // the only panel of the home's RIGHT column, so an unmigrated arrangement keeps that zone
+      // OPEN — `openEverywhereItSits` keeps a zone that was open even once emptied — and the
+      // whole installed base would carry a 260 px column drawing nothing, with a handle to drag.
+      version: 19,
       migrate: migrateTools,
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.

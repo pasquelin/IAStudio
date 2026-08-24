@@ -38,7 +38,6 @@ export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
   inspector: { load: () => import('@/panels/inspector'), role: 'actions' },
   assets: { load: () => import('@/panels/assets'), role: 'actions' },
   projects: { load: () => import('@/panels/projects'), role: null },
-  library: { load: () => import('@/panels/library'), role: null },
   animations: { load: () => import('@/panels/animations'), role: null },
   text: { load: () => import('@/panels/text'), role: null },
 }

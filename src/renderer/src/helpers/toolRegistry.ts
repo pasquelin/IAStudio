@@ -1,5 +1,4 @@
 import {
-  mdiCloudOutline,
   mdiRunFast,
   mdiCreationOutline,
   mdiFileTreeOutline,
@@ -54,7 +53,6 @@ const ICONS: Record<ToolId, string> = {
   // The home's own. `mdiFolderOutline` is the Explorer's and `mdiCreationOutline` the
   // generator's: a rail where two glyphs mean two things is a rail one reads twice.
   projects: mdiFolderMultipleOutline,
-  library: mdiCloudOutline,
   animations: mdiRunFast,
   text: mdiFormatText,
 }

@@ -100,11 +100,12 @@ describe('every workspace', () => {
 
 describe('the home', () => {
   /**
-   * FIVE placements, where there were eleven until 13 August. The eight that went answered a
-   * question about the studio — what it spent, how many assets it holds by kind, the newest ones,
-   * favourites, ideas, look-alikes, and two journals the status bar already carries — and this
-   * screen is where one comes to OPEN something. The list is spelled out rather than counted: an
-   * id creeping back in is the exact regression this holds against.
+   * FOUR placements, where there were eleven until 13 August. The eight that went then answered
+   * a question about the studio — what it spent, how many assets it holds by kind, the newest
+   * ones, favourites, ideas, look-alikes, and two journals the status bar already carries — and
+   * this screen is where one comes to OPEN something. The ninth was the account's remote library,
+   * and it went for the same reason. The list is spelled out rather than counted: an id creeping
+   * back in is the exact regression this holds against.
    *
    * The two that came back are the two about the project that is OPEN, and both are withheld
    * while none is: what has changed in its folder, and what came before. That is a different
@@ -119,7 +120,6 @@ describe('the home', () => {
     expect(served.map(placement => [placement.id, placement.zone, placement.slot])).toEqual([
       ['projects', 'left', 'primary'],
       ['explorer', 'left', 'secondary'],
-      ['library', 'right', 'primary'],
       // Declared LAST on purpose, and the order is what says so: the folder is what an unchosen
       // half opens on, and the versions of that folder are what one goes to look at next.
       ['git', 'left', 'secondary'],
@@ -130,9 +130,9 @@ describe('the home', () => {
   /**
    * The rule every space follows: the left is what one opens FROM, the right is what one opens.
    *
-   * The left column now holds both halves, as every space does — the projects above, and under
-   * them the one that is open, read as a folder. The right keeps one: a rota there is where the
-   * projects stopped being the thing this screen opens on.
+   * The left column holds both halves, as every space does — the projects above, and under them
+   * the one that is open, read as a folder. The right holds NOTHING, and that is the rule's own
+   * result rather than a gap: this screen acts on no document, so it has nothing to open INTO.
    *
    * The BAND is new on 17 August, and it is the one zone this screen had never had. What it
    * holds is read across — a history is one commit per line, and a branch graph in a 280 px
@@ -149,7 +149,7 @@ describe('the home', () => {
     expect(inHalf('left', 'primary')).toEqual(['projects'])
     // A rota of two: the open project read as a folder, and the same folder read as a history.
     expect(inHalf('left', 'secondary')).toEqual(['explorer', 'git'])
-    expect(inHalf('right', 'primary')).toEqual(['library'])
+    expect(inHalf('right', 'primary')).toEqual([])
     expect(inHalf('right', 'secondary')).toEqual([])
     expect(inHalf('bottomRight', 'primary')).toEqual(['history'])
     // The band's left half is where a panel is DRAGGED, never where one is declared.
@@ -161,10 +161,8 @@ describe('the home', () => {
    * for: a panel of recent projects beside an editor is a panel about somewhere else.
    */
   it('keeps its panels to itself, and takes none of the workspaces', () => {
-    for (const id of ['projects', 'library']) {
-      expect(placementsOf(id)).toHaveLength(1)
-      for (const workspace of WORKSPACE_IDS) expect(placementIn(id, workspace)).toBeNull()
-    }
+    expect(placementsOf('projects')).toHaveLength(1)
+    for (const workspace of WORKSPACE_IDS) expect(placementIn('projects', workspace)).toBeNull()
   })
 
   /**

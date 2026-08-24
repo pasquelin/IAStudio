@@ -14,13 +14,13 @@ import { WINDOW_CAPTION, WINDOW_GROUP_LABEL, WINDOW_HELP } from '@/design/window
 import { cn } from '@/helpers/cn'
 import { useBytes } from '@/hooks/useBytes'
 import { useModelFit } from '@/hooks/useModelFit'
+import { machineSummary } from '@/helpers/machineSummary'
 import { useAiModels } from '@/stores/aiModels'
 import { SettingLine } from '../SettingLine'
 import { SETTING_COLUMN, SETTING_SELECT } from '../settingStyles'
 import { Models } from '@/panels/models/Models/Models'
 import { AiOllamaOffer } from './AiOllamaOffer'
 import { AiRoleRow } from './AiRoleRow'
-import { gpuName } from './gpuName'
 
 const SCOPE_FIELD = 'setting-ai-scope'
 
@@ -93,33 +93,10 @@ export function AiSettings({ family }: AiSettingsProps) {
   // mebibytes and `announceProgress` deliberately keeps this member's reference, which depending
   // on the overview would have thrown away.
   const summary = overview?.machine ?? null
-  const machine = useMemo(() => {
-    if (summary === null) return ''
-
-    return [
-      t('aiModels.machineMemory', {
-        total: bytes(summary.physicalBytes),
-        available: bytes(summary.availableBytes),
-      }),
-      summary.gpu === null ? null : gpuName(summary.gpu),
-      // The video memory when a runtime answered for it, and nothing at all otherwise: a machine
-      // with a dedicated card is judged on THIS figure, so leaving it unsaid would hide the reason.
-      // Falsy and not `=== null`: the type says `| null`, but this crosses IPC, and a summary
-      // written before the field existed simply has no key — measured, it took the panel down
-      // with `Cannot read properties of undefined (reading 'totalBytes')`.
-      !summary.vram
-        ? null
-        : t('aiModels.machineVram', {
-            total: bytes(summary.vram.totalBytes),
-            free: bytes(summary.vram.freeBytes),
-          }),
-      summary.diskFreeBytes === null
-        ? null
-        : t('aiModels.machineDisk', { free: bytes(summary.diskFreeBytes) }),
-    ]
-      .filter(part => part !== null)
-      .join(' · ')
-  }, [summary, t, bytes])
+  const machine = useMemo(
+    () => (summary === null ? '' : machineSummary(summary, t, bytes)),
+    [summary, t, bytes],
+  )
 
   if (overview === null) return <p className={WINDOW_HELP}>{t('aiModels.reading')}</p>
 

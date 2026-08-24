@@ -28,7 +28,7 @@ const POSTER_DOCUMENT: DocumentDescriptor = {
 const SECTION_TITLES: Record<HomeSectionId, string> = {
   spotlight: 'Où vous en étiez',
   tools: 'Outils',
-  explore: 'Explorer',
+  models: 'Vos modèles',
 }
 
 const PROJECT = {
@@ -79,10 +79,15 @@ describe('the home', () => {
     expect(screen.getByText('Connecter une clé API')).toBeInTheDocument()
   })
 
-  it('drops what needs a key rather than drawing it empty', () => {
+  /**
+   * What the feed this band replaced could not do. It needed a key to draw a single tile, so the
+   * home of a machine with none was two bands; the models band is at its most useful there,
+   * since saying that nothing is set up yet is half of what it is for.
+   */
+  it('draws the models band on a studio with no key at all', () => {
     render(<HomeView />, { wrapper: queryHost() })
 
-    expect(screen.queryByText('Explorer')).not.toBeInTheDocument()
+    expect(screen.getByText('Vos modèles')).toBeInTheDocument()
   })
 
   it('points back at what was open, which is the one thing it still lists itself', () => {
@@ -190,7 +195,7 @@ describe('customising the home', () => {
     // Read off what is actually drawn, not off the registry: a section whose shelf is empty takes
     // itself off the page, and it must take its heading and its button with it.
     const headings = [...container.querySelectorAll('h2')]
-    expect(headings.map(node => node.textContent)).toEqual(['Outils', 'Explorer'])
+    expect(headings.map(node => node.textContent)).toEqual(['Outils', 'Vos modèles'])
 
     for (const heading of headings) {
       const id = HOME_SECTION_IDS.find(
@@ -204,19 +209,19 @@ describe('customising the home', () => {
 
   it('says how many sections are hidden, and takes them back', async () => {
     setSettings(
-      DEFAULT_HOME_SECTIONS.map(section => ({ ...section, visible: section.id !== 'explore' })),
+      DEFAULT_HOME_SECTIONS.map(section => ({ ...section, visible: section.id !== 'models' })),
       true,
     )
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
     render(<HomeView />, { wrapper: queryHost() })
 
-    expect(screen.queryByText('Explorer')).not.toBeInTheDocument()
+    expect(screen.queryByText('Vos modèles')).not.toBeInTheDocument()
     expect(screen.getByText('1 section masquée')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Les réafficher' }))
 
     const written = useSettings.getState().settings.home.sections
-    expect(written.find(section => section.id === 'explore')?.visible).toBe(true)
+    expect(written.find(section => section.id === 'models')?.visible).toBe(true)
   })
 })

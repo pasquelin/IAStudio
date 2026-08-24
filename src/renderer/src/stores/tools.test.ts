@@ -101,10 +101,12 @@ describe('tools store', () => {
     expect((sizes.left ?? 0) + (sizes.right ?? 0)).toBeLessThanOrEqual(1000 - MIN_CENTER)
   })
 
-  /** The home keeps a right column of its own, and one width serves both: it counts here. */
+  /** A zone open anywhere takes its width off the others, whichever family holds it open. */
   it('re-clamps every zone when the window shrinks', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { left: { primary: 'assets' } } }),
+      arrangements: arrangedFor('image', {
+        open: { left: { primary: 'assets' }, right: { primary: 'inspector' } },
+      }),
       lengths: { sizes: { left: 600 }, splits: {} },
     })
     useTools.getState().fit(800, 600)
@@ -113,20 +115,20 @@ describe('tools store', () => {
 
   /**
    * A length is clamped against the TIGHTEST of the two families now that one serves both: a
-   * width the home could afford — its right column being the only one open there — would
-   * overflow a space that keeps the opposite column open.
+   * width the home could afford — its left column being the only one it opens — would overflow
+   * a space that keeps the opposite column open.
    */
   it('clamps a width against a column the other family keeps open', () => {
     useTools.setState({
       arrangements: {
-        workspaces: { open: { left: { primary: 'assets' } } },
-        home: { open: { right: { primary: 'library' } } },
+        workspaces: { open: { right: { primary: 'inspector' } } },
+        home: { open: { left: { primary: 'projects' } } },
       },
-      lengths: { sizes: { left: 400 }, splits: {} },
+      lengths: { sizes: { right: 400 }, splits: {} },
     })
-    useTools.getState().resize('right', 900, 1000)
+    useTools.getState().resize('left', 900, 1000)
 
-    expect(useTools.getState().lengths.sizes.right).toBe(1000 - 400 - MIN_CENTER)
+    expect(useTools.getState().lengths.sizes.left).toBe(1000 - 400 - MIN_CENTER)
   })
 
   it('opens a tool in the half its placement declares', () => {

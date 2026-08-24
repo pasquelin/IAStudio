@@ -360,15 +360,16 @@ Trois choses le décrivent mieux qu’une phrase de présentation :
 
 Un asset non sélectionné, ou un projet fermé, laisse le bouton grisé.
 
-> **L’étagère n’a pas de bouton pour rapatrier ; l’accueil en a un.** La bande **Votre
-> bibliothèque**, sur la page d’accueil, liste ce que votre compte détient, et cliquer une
-> vignette la fait descendre dans le projet ouvert. Le transfert va donc dans les deux sens —
-> mais chaque sens a sa porte, et ce n’est pas la même : l’envoi part de l’étagère, le
-> rapatriement de l’accueil.
+> **Rapatrier n’est pas un bouton de la barre : c’est le clic droit sur une vignette de la
+> bibliothèque.** L’entrée **Récupérer dans le projet** descend l’asset dans le projet ouvert. Le
+> transfert va donc dans les deux sens depuis cette étagère — l’envoi par le bouton, le
+> rapatriement par le menu.
 >
-> **Le clic ne rapatrie qu’une fois.** Si l’asset est déjà sur votre disque, la même vignette
-> l’**ouvre** au lieu de le retélécharger. Et sans projet ouvert, ou pendant un transfert en
-> cours, elle ne réagit pas du tout.
+> **L’entrée est grisée, jamais cachée**, sans projet ouvert ou pendant un transfert en cours :
+> une entrée qui va et vient au gré de ce qui est ouvert est une entrée que personne n’apprend.
+>
+> Jusqu’à ce lot, c’était la page d’accueil qui rapatriait, par un panneau listant ce que le
+> compte détient en ligne. Ce panneau a quitté l’accueil.
 
 ### Nommer par ce que l’API voit
 
