@@ -469,7 +469,7 @@ the fastest way to explore a direction.
 
 | Message | Cause | What to do |
 |---|---|---|
-| **No credentials saved.** | no API key | **Settings ▸ Account** |
+| **No credentials saved.** | no API key | **Settings ▸ AI models ▸ API keys** |
 | **Invalid API key or secret.** | one of the two strings is wrong | check it, often a stray space |
 | **This API key lacks the required permissions.** | the key exists but cannot do this | check your plan with your provider |
 | **Too many requests. Retrying…** | you exceeded the allowed rate | nothing, the studio retries on its own |

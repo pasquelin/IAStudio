@@ -315,7 +315,7 @@ rebrancher le compte.
 
 Chaque clé API porte **son propre** projet distant : ses modèles, ses assets, son crédit.
 
-1. **Réglages ▸ Compte** : ajoutez-en un second, avec son nom à lui ;
+1. **Réglages ▸ Modèles d’IA ▸ Clés API** : ajoutez-en un second, avec son nom à lui ;
 2. **Utiliser ce compte** bascule ;
 3. plus rapide au quotidien : le nom du compte, en haut à droite de la fenêtre, ouvre la liste
    d’un clic.

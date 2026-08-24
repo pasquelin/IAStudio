@@ -45,7 +45,7 @@ import { WORKSPACE_IDS } from '../domain/workspace'
 import { USAGE_ACTIONS, USAGE_ASSET_KINDS, USAGE_EVENT_ACTIONS } from '../domain/usage'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 import { americanVerbs, americanWords, frenchWords } from './spelling-fixtures'
-import { screenLabels, unquotedMenuSegments } from './menuPath-fixtures'
+import { asRead, screenLabels, settingsTree, unquotedMenuSegments } from './menuPath-fixtures'
 import modelTextFr from './model-text.fr.json'
 
 /** Every key, nested ones included, in the order the file writes them. */
@@ -1570,8 +1570,12 @@ describe('a menu path a sentence quotes', () => {
    */
   it.each(CODES)('quotes no menu path the screen does not carry, in %s', code => {
     const labels = screenLabels(TRANSLATIONS[code])
+    const rooted = {
+      root: asRead(TRANSLATIONS[code].settings.title),
+      tree: settingsTree(TRANSLATIONS[code]),
+    }
     const invented = [...BUNDLES[code]].flatMap(([key, value]) =>
-      unquotedMenuSegments(value, labels).map(found => `${key} — ${found}`),
+      unquotedMenuSegments(value, labels, rooted).map(found => `${key} — ${found}`),
     )
 
     expect(invented).toEqual([])
@@ -1587,6 +1591,28 @@ describe('a menu path a sentence quotes', () => {
     expect(unquotedMenuSegments('Collez-les dans Réglages ▸ Trousseau.', labels)).toEqual([
       '"Trousseau" in Collez-les dans Réglages ▸ Trousseau',
     ])
+  })
+
+  /**
+   * The reading above is the whole screen; this one is the window the path opens on. Both cases
+   * are green without `rooted`, which is what let `Réglages ▸ Compte` ship.
+   */
+  it('reads a settings path against the SECTIONS, not against every label on screen', () => {
+    const labels = new Set(['réglages', 'compte', 'clés api', 'modèles d’ia'])
+    const rooted = {
+      root: 'réglages',
+      tree: new Map([['modèles d’ia', new Set(['clés api'])]]),
+    }
+
+    expect(
+      unquotedMenuSegments('Collez-les dans Réglages ▸ Modèles d’IA ▸ Compte.', labels, rooted),
+    ).toEqual(['"Compte" in Collez-les dans Réglages ▸ Modèles d’IA ▸ Compte'])
+    expect(unquotedMenuSegments('Collez-les dans Réglages ▸ Clés API.', labels, rooted)).toEqual([
+      '"Clés API" in Collez-les dans Réglages ▸ Clés API',
+    ])
+    expect(
+      unquotedMenuSegments('Collez-les dans Réglages ▸ Modèles d’IA ▸ Clés API.', labels, rooted),
+    ).toEqual([])
   })
 })
 

@@ -78,7 +78,7 @@ gesture would move both the object and the point of view.
 > **The keys are read at their physical position.** WASD on a QWERTY keyboard and ZQSD on an AZERTY
 > one are **the same four keys**. There is nothing to reconfigure.
 
-Three settings govern flying: **Settings ▸ Workspaces ▸ 3D**
+Three settings govern flying: **Settings ▸ Workspaces ▸ Modelling**
 
 | Setting | What it does | Default |
 |---|---|---|
@@ -114,7 +114,7 @@ the native menu:
 
 **Snapping is for lining things up.** Without it an object lands 1.0374 m from the previous one;
 with it, at a round 1 m. How fine the steps are — one for moving, one for rotating, one for
-scaling — is set in **Settings ▸ Workspaces ▸ 3D**.
+scaling — is set in **Settings ▸ Workspaces ▸ Modelling**.
 
 **The local frame shows on a turned object.** With world handles, the red arrow always points
 east. With local handles it points to the **object's** right: which is what you want to drive a
@@ -598,7 +598,7 @@ without anyone noticing.
 > shows nothing.
 
 What a shadow looks like — crisp or softened edge, how fine the computation — is set once for the
-whole scene in **Settings ▸ Workspaces ▸ 3D**.
+whole scene in **Settings ▸ Workspaces ▸ Modelling**.
 
 ### Environment — the sky that lights
 
@@ -627,7 +627,7 @@ not there: it would be chosen, and nothing would show.
 The chequering is **not** an object in the scene: it is a reference, to know where things are and
 at what height. It appears in no render.
 
-**Settings ▸ Workspaces ▸ 3D**:
+**Settings ▸ Workspaces ▸ Modelling**:
 
 | Setting | What it does | Default |
 |---|---|---|

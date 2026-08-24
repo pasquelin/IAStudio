@@ -80,7 +80,7 @@ déplacent pas la caméra — sans quoi le même geste bougerait l’objet et le
 > **Les touches sont lues à leur position physique.** WASD sur un clavier QWERTY et ZQSD sur un
 > clavier AZERTY sont **les mêmes quatre touches**. Il n’y a rien à reconfigurer.
 
-Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ 3D**
+Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ Modélisation**
 
 | Réglage | Ce qu’il fait | Défaut |
 |---|---|---|
@@ -115,7 +115,7 @@ La barre ne porte que ce qui se réclame **sans lâcher la souris**. Le reste es
 
 **Le magnétisme sert à aligner.** Sans lui, un objet se pose à 1,0374 m du précédent ; avec lui,
 à 1 m tout rond. La finesse des crans — un pour le déplacement, un pour la rotation, un pour
-l’échelle — se règle dans **Réglages ▸ Espaces de travail ▸ 3D**.
+l’échelle — se règle dans **Réglages ▸ Espaces de travail ▸ Modélisation**.
 
 **Le repère local se voit sur un objet tourné.** Poignées en repère monde, la flèche rouge pointe
 toujours vers l’est. En repère local, elle pointe vers la droite **de l’objet** : c’est ce qu’on
@@ -620,7 +620,7 @@ faire ni l’un ni l’autre sans que cela se voie.
 > sans effet, le studio n’affiche rien.
 
 À quoi ressemble une ombre — bord net ou adouci, finesse du calcul — se règle une fois pour toute
-la scène dans **Réglages ▸ Espaces de travail ▸ 3D**.
+la scène dans **Réglages ▸ Espaces de travail ▸ Modélisation**.
 
 ### Environnement — le ciel qui éclaire
 
@@ -650,7 +650,7 @@ dans le nuage n’y figure pas : il serait choisi, et rien ne s’afficherait.
 Le quadrillage n’est **pas** un objet de la scène : c’est un repère, pour savoir où sont les
 choses et à quelle hauteur. Il n’apparaît dans aucun rendu.
 
-**Réglages ▸ Espaces de travail ▸ 3D** :
+**Réglages ▸ Espaces de travail ▸ Modélisation** :
 
 | Réglage | Ce qu’il fait | Défaut |
 |---|---|---|
