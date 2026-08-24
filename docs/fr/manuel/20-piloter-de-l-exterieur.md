@@ -52,12 +52,21 @@ Une exception, et elle est explicite : **Décrire le style des références** li
 référence déjà posées sur le formulaire du Générateur. C’est le seul endroit où l’assistant
 regarde une image, et il faut l’avoir demandé.
 
-### Choisir le modèle qui vous lit
+### Choisir qui vous répond
 
 Le sélecteur est **dans la fenêtre de l’assistant**, pas dans les réglages — le moment où l’on veut
-un modèle plus solide, c’est au milieu d’une phrase qui n’a pas été comprise.
+un modèle plus solide, c’est au milieu d’une phrase qui n’a pas été comprise. Il liste tout ce qui
+peut répondre, groupé par l’endroit où cela tourne :
 
-| Modèle | Ce qu’il vaut |
+- **Sur cette machine** — les modèles installés, Ollama compris. Rien ne sort de l’ordinateur.
+- **Vos clés** — les services pour lesquels une clé est enregistrée dans *Réglages ▸ Clés API*. Le
+  nom exact du modèle se règle à côté du service, dans *Réglages ▸ Modèles d’IA*.
+- **Le studio** — le catalogue distant, sur l’un des quatre modèles ci-dessous.
+
+C’est le même choix que *Réglages ▸ Modèles d’IA ▸ Assistant* : le changer ici le change là-bas, et
+il vaut pour le projet ouvert dès lors que c’est le projet qui l’avait fixé.
+
+| Modèle du studio | Ce qu’il vaut |
 |---|---|
 | **Haiku 4.5** *(départ)* | le plus rapide et le moins cher |
 | **Sonnet 4.6** | l’équilibre |
@@ -67,9 +76,10 @@ un modèle plus solide, c’est au milieu d’une phrase qui n’a pas été com
 Le moins cher suffit pour ouvrir un espace ou chercher un modèle. Les autres tiennent mieux une
 demande qui enchaîne trois ou quatre actions.
 
-> **Il n’y a ni second compte, ni seconde clé à saisir.** L’assistant réfléchit sur un modèle du
-> catalogue distant, avec la connexion que vous avez déjà. C’est aussi pour cette raison que
-> **réfléchir se paie** — voir juste en dessous.
+> **Sous *Le studio*, il n’y a ni second compte, ni seconde clé à saisir.** L’assistant réfléchit
+> sur un modèle du catalogue distant, avec la connexion que vous avez déjà. C’est aussi pour cette
+> raison que **réfléchir se paie** — voir juste en dessous. Un service à vous ou un modèle de cette
+> machine ne consomme, lui, aucune unité créative.
 
 ### Ce que ça coûte
 

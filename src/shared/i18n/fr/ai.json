@@ -148,6 +148,9 @@
     "unload": "Décharger",
     "unloadHint": "Rend la mémoire. Le modèle reste installé sur le disque",
     "unverifiedProvenance": "provenance non vérifiée",
-    "verdict": "{{word}} — {{detail}}"
+    "verdict": "{{word}} — {{detail}}",
+    "cloudModel": "Modèle",
+    "cloudModelHelp": "Le nom exact du modèle chez ce service. Laissé vide, le studio prend celui qu’il propose.",
+    "studioModelHelp": "Le même choix que dans la fenêtre de l’assistant. Les quatre diffèrent par le prix."
   }
 }

@@ -1,6 +1,8 @@
 import { mdiInformationOutline } from '@mdi/js'
-import { memo } from 'react'
+import { Fragment, memo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { defaultChatModel } from '@shared/domain/aiCloud'
+import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import type { AiOverview, ChoiceScope, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
 import { MODEL_SOURCES, sourceOf, type ModelSource } from '@shared/domain/localModel'
 import { UiIcon } from '@/design/UiIcon'
@@ -9,6 +11,8 @@ import type { ModelFitSentence } from '@/hooks/useModelFit'
 import { useAiModels } from '@/stores/aiModels'
 import { useModels } from '@/stores/models'
 import { AiCandidateRow } from './AiCandidateRow'
+import { AiCloudModel } from './AiCloudModel'
+import { AiStudioModel } from './AiStudioModel'
 import { AiChoiceRow } from './AiChoiceRow'
 import { roleLabel } from '@/helpers/roleLabel'
 
@@ -148,17 +152,27 @@ export const AiRoleRow = memo(function AiRoleRow({
               <p className={WINDOW_CAPTION}>{t('aiModels.sourceCloudHelp')}</p>
               <ul>
                 {row.clouds.map(providerId => (
-                  <AiChoiceRow
-                    key={providerId}
-                    role={row.role}
-                    choice={providerId}
-                    label={t(`aiClouds.${providerId}`)}
-                    hint={t(`aiClouds.${providerId}Hint`)}
-                    checked={editing?.kind === 'cloud' && editing.providerId === providerId}
-                    onChoose={() =>
-                      void chooseAiProvider(row.role, { kind: 'cloud', providerId }, scope)
-                    }
-                  />
+                  <Fragment key={providerId}>
+                    <AiChoiceRow
+                      role={row.role}
+                      choice={providerId}
+                      label={t(`aiClouds.${providerId}`)}
+                      hint={t(`aiClouds.${providerId}Hint`)}
+                      checked={editing?.kind === 'cloud' && editing.providerId === providerId}
+                      onChoose={() =>
+                        void chooseAiProvider(row.role, { kind: 'cloud', providerId }, scope)
+                      }
+                    />
+                    {/* Under every cloud rather than under the chosen one alone: the model is not
+                        scoped, and a field appearing with the radio would hide it. Which control
+                        it takes is read off the registry — a declared model, or a priced four. */}
+                    {row.role === ASSISTANT_ROLE &&
+                      (defaultChatModel(providerId) === null ? (
+                        <AiStudioModel />
+                      ) : (
+                        <AiCloudModel providerId={providerId} />
+                      ))}
+                  </Fragment>
                 ))}
               </ul>
             </li>

@@ -1171,8 +1171,6 @@
     "sendHint": "Sends the sentence to the assistant, which picks the actions and runs them",
     "close": "Close",
     "closeHint": "Closes the window without cancelling anything already under way",
-    "model": "Assistant model",
-    "modelHint": "Picks the model that reads your sentences. The cheapest is enough to open a workspace, the others hold up better on requests that take several steps.",
     "thinking": "The assistant is thinking…",
     "lost": "The assistant could not answer that one.",
     "refused": "{{action}} — {{reason}}",
@@ -1209,6 +1207,13 @@
     },
     "starterHint": "Writes the sentence into the field. Nothing is sent until you send it.",
     "unserved": "Nothing answers for the assistant. Pick a model and it can work here.",
-    "chooseModelHint": "Opens the AI manager, where the assistant’s model is picked."
+    "chooseModelHint": "Opens the AI manager, where the assistant’s model is picked.",
+    "brain": "Who answers",
+    "brainHint": "Picks what reads your sentences: a model on this machine, a service you hold a key for, or the studio. The same choice the AI models settings write.",
+    "brainNone": "none chosen",
+    "cloudBrain": "{{cloud}} — {{model}}",
+    "groupMachine": "On this machine",
+    "groupClouds": "Your keys",
+    "groupStudio": "The studio"
   }
 }

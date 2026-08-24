@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { CLOUD_IDS, CLOUD_PROVIDERS, cloudsServing, isCloudProviderId } from './aiCloud'
+import {
+  chatModelOf,
+  CLOUD_IDS,
+  CLOUD_PROVIDERS,
+  cloudsServing,
+  defaultChatModel,
+  isCloudProviderId,
+} from './aiCloud'
 import { aiRoleId, ASSISTANT_ROLE, DICTATION_ROLE } from './aiRole'
 
 describe('the cloud registry', () => {
@@ -29,5 +36,21 @@ describe('the cloud registry', () => {
   it('would serve a role from an entry nobody had to teach the code about', () => {
     expect(CLOUD_IDS).toEqual(CLOUD_PROVIDERS.map(one => one.id))
     expect(CLOUD_PROVIDERS.every(one => one.id.length > 0)).toBe(true)
+  })
+
+  /**
+   * Scenario answers `null`, which is the reading « this one is not talked to over HTTP »: its
+   * thinking goes through the catalogue, on one of a fixed four that are priced and enumerated.
+   */
+  it('declares the model each cloud is talked to with', () => {
+    expect(defaultChatModel('deepseek')).toBe('deepseek-chat')
+    expect(defaultChatModel('scenario')).toBeNull()
+    expect(defaultChatModel('nowhere')).toBeNull()
+  })
+
+  it('takes a name typed for a cloud, and reads one emptied as none', () => {
+    expect(chatModelOf('deepseek-reasoner', 'deepseek-chat')).toBe('deepseek-reasoner')
+    expect(chatModelOf(undefined, 'deepseek-chat')).toBe('deepseek-chat')
+    expect(chatModelOf('  ', 'deepseek-chat')).toBe('deepseek-chat')
   })
 })

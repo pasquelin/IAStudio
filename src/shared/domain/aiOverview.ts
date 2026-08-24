@@ -1,7 +1,7 @@
 import type { AiRoleId, RoleProvider } from './aiRole'
 import type { Compatibility } from './aiMemory'
 import type { DownloadProgress, LocalModel } from './localModel'
-import type { FitObstacle } from './modelFit'
+import { fitAllowsUse, type FitObstacle } from './modelFit'
 
 /**
  * What the manager screen reads — one row per ROLE, never one per model.
@@ -73,6 +73,25 @@ export type RoleRow = {
  */
 export function servedBy(row: RoleRow): boolean {
   return row.provider !== null
+}
+
+/**
+ * Where a choice has to be written to take effect: the project's, once that project overrides the
+ * role. Writing the application's there would agree with itself and change nothing on screen.
+ */
+export function writeScopeFor(
+  row: Pick<RoleRow, 'chosen'>,
+  projectPath: string | null,
+): ChoiceScope {
+  return projectPath !== null && row.chosen.project !== null ? 'project' : 'app'
+}
+
+/**
+ * Whether a candidate may be OFFERED for its role: on the disk, and not refused by the machine.
+ * Installed first rather than best-fitting — a model nobody downloaded answers nothing.
+ */
+export function canServe(candidate: ModelCandidate): boolean {
+  return candidate.installed && fitAllowsUse(candidate.fit)
 }
 
 /** What the machine offers, as the screen states it above the rows. */

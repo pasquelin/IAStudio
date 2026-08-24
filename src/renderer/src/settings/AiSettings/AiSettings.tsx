@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   CHOICE_SCOPES,
+  writeScopeFor,
   type AiOverview,
   type ChoiceScope,
   type InstallRefusal,
@@ -55,9 +56,9 @@ function installFailureKey(reason: InstallRefusal['reason']): string {
 
 /** Where the choices that apply were written, so reopening the screen lands on that side. */
 function scopeOf(overview: AiOverview): ChoiceScope {
-  if (overview.projectPath === null) return 'app'
-
-  return overview.roles.some(row => row.chosen.project !== null) ? 'project' : 'app'
+  return overview.roles.some(row => writeScopeFor(row, overview.projectPath) === 'project')
+    ? 'project'
+    : 'app'
 }
 
 function rowsOf(roles: readonly RoleRow[], family: ModelFamily | undefined): readonly RoleRow[] {

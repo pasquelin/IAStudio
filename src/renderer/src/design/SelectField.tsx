@@ -12,6 +12,8 @@ export type SelectOption<V extends string> = {
   value: V
   label: string
   disabled?: boolean
+  /** The heading this option stands under. Options sharing one are drawn together, in order. */
+  group?: string
 }
 
 export type SelectFieldProps<V extends string> = {
@@ -49,6 +51,23 @@ export type SelectFieldProps<V extends string> = {
 
 /** The row a `null` stands on: a `<select>` always shows one of its own entries. */
 const UNNAMED = ''
+
+type OptionRun<V extends string> = { group?: string; run: SelectOption<V>[] }
+
+/** Runs of options by heading, in the order the caller listed them — never sorted or merged. */
+function runsOf<V extends string>(options: readonly SelectOption<V>[]): OptionRun<V>[] {
+  // The twenty callers that group nothing walk out with the array they came in with.
+  if (options.every(one => one.group === undefined)) return [{ run: [...options] }]
+
+  const runs: OptionRun<V>[] = []
+  for (const option of options) {
+    const last = runs[runs.length - 1]
+    if (last && last.group === option.group) last.run.push(option)
+    else runs.push({ group: option.group, run: [option] })
+  }
+
+  return runs
+}
 
 /**
  * One of a fixed set of values. Written once because a `<select>` hands back a STRING: every one
@@ -124,11 +143,23 @@ export function SelectField<V extends string>({
         </option>
       )}
 
-      {options.map(option => (
-        <option key={option.value} value={option.value} disabled={option.disabled}>
-          {option.label}
-        </option>
-      ))}
+      {runsOf(options).map(({ group, run }, index) => {
+        const entries = run.map(option => (
+          <option key={option.value} value={option.value} disabled={option.disabled}>
+            {option.label}
+          </option>
+        ))
+
+        return group === undefined ? (
+          entries
+        ) : (
+          // Keyed by POSITION: two runs are free to share a heading, and two same-keyed
+          // optgroups reconcile as undefined behaviour.
+          <optgroup key={`${index}:${group}`} label={group}>
+            {entries}
+          </optgroup>
+        )
+      })}
     </select>
   )
 

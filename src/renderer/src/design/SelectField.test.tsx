@@ -158,4 +158,29 @@ describe('SelectField', () => {
     // And the binding still holds, which is what makes the visible word the accessible name.
     expect(screen.getByLabelText('Blend mode')).toBe(screen.getByRole('combobox'))
   })
+  /**
+   * Runs in the caller's order, never a merge by name: a list whose headings are read off the
+   * data can hand the same word twice, and sorting them would reorder what it offers.
+   */
+  it('draws a heading over each run of options that shares one', () => {
+    renderField({
+      options: [
+        { value: 'normal', label: 'Normal', group: 'Here' },
+        { value: 'multiply', label: 'Multiply', group: 'There' },
+        { value: 'screen', label: 'Screen', group: 'Here' },
+      ],
+    })
+
+    expect(screen.getAllByRole('group').map(one => one.getAttribute('label'))).toEqual([
+      'Here',
+      'There',
+      'Here',
+    ])
+  })
+
+  it('draws no heading at all for a list that names none', () => {
+    renderField()
+
+    expect(screen.queryAllByRole('group')).toEqual([])
+  })
 })

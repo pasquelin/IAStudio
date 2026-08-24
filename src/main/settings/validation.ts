@@ -213,7 +213,22 @@ const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })
 // Enumerated rather than left a string: a model the API does not serve is answered with a 400,
 // and the panel that writes this offers a fixed list — so anything else came from a hand-edited
 // file, and the defaults are a better answer than a failing assistant.
-const assistant = z.object({ model: z.enum(ASSISTANT_MODELS).optional() })
+const assistant = z.object({
+  model: z.enum(ASSISTANT_MODELS).optional(),
+  /**
+   * Free text where the model above is enumerated: each cloud names its own, and the field that
+   * writes this offers no list. Unknown ids are DROPPED rather than refused — a cloud that left
+   * the registry costs its line, where a `refine` on the key would reset the whole file.
+   */
+  cloudModels: z
+    .record(z.string().min(1), z.string().max(200).catch(''))
+    .transform(entries =>
+      Object.fromEntries(
+        Object.entries(entries).filter(([id, name]) => isCloudProviderId(id) && name.trim() !== ''),
+      ),
+    )
+    .optional(),
+})
 
 const mcp = z.object({
   enabled: z.boolean().optional(),

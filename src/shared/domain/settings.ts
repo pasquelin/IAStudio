@@ -256,6 +256,11 @@ export type Settings = {
      * and opening the preferences to get there loses the sentence.
      */
     model: AssistantModel
+    /**
+     * The model each cloud is talked to with, by cloud id. Free text: every cloud names its own,
+     * and a list written here would be stale the week after. Absent means what the cloud declares.
+     */
+    cloudModels: Record<string, string>
   }
   /**
    * The same actions the assistant runs, offered to a client outside the application — see
@@ -365,7 +370,7 @@ export const DEFAULT_SETTINGS: Settings = {
   advanced: { logLevel: 'info' },
   media: {},
   git: {},
-  assistant: { model: DEFAULT_ASSISTANT_MODEL },
+  assistant: { model: DEFAULT_ASSISTANT_MODEL, cloudModels: {} },
   mcp: {
     enabled: false,
     delegateFiles: false,
