@@ -69,7 +69,7 @@ export const AiModelActions = memo(function AiModelActions({
       <button
         type="button"
         {...HINT_LEFT(t('aiModels.installHint', { size: bytes(candidate.model.diskBytes) }))}
-        className="btn btn-sm"
+        className="btn btn-sm btn-primary"
         disabled={busy}
         onClick={() => void installAiModel(candidate.model.id)}
       >
@@ -85,7 +85,7 @@ export const AiModelActions = memo(function AiModelActions({
         // The WORD follows the EFFECT, both off `supplied`: their file stays where they put it,
         // and the studio only ever drops the entry that pointed at it.
         {...HINT_LEFT(candidate.supplied ? t('aiModels.forgetHint') : t('aiModels.removeHint'))}
-        className="btn btn-sm"
+        className="btn btn-sm btn-primary"
         onClick={() => void removeAiModel(candidate.model.id)}
       >
         {candidate.supplied ? t('aiModels.forget') : t('aiModels.remove')}

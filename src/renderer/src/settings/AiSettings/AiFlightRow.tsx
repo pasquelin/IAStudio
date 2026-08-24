@@ -20,7 +20,12 @@ export function AiFlightRow({ ratio, label, stop, stopHint, onStop }: AiFlightRo
   return (
     <span className="flex items-center gap-2">
       <ProgressBar ratio={ratio} label={label} className="w-24" />
-      <button type="button" {...HINT_LEFT(stopHint)} className="btn btn-sm" onClick={onStop}>
+      <button
+        type="button"
+        {...HINT_LEFT(stopHint)}
+        className="btn btn-sm btn-primary"
+        onClick={onStop}
+      >
         {stop}
       </button>
     </span>

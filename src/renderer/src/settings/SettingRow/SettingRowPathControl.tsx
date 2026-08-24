@@ -36,7 +36,7 @@ export function SettingRowPathControl({
       />
       <button
         type="button"
-        className="btn btn-sm shrink-0"
+        className="btn btn-sm btn-primary shrink-0"
         {...HINT_LEFT(t('settings.browseHint'))}
         onClick={() => void browse()}
       >

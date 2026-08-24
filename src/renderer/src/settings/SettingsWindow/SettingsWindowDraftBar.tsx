@@ -30,7 +30,7 @@ export function SettingsWindowDraftBar() {
       </button>
       <button
         type="button"
-        className="btn btn-sm"
+        className="btn btn-sm btn-primary"
         {...HINT_TOP(t('settings.applyHint'))}
         onClick={() => void apply()}
       >
