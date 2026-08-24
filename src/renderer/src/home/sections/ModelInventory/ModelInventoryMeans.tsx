@@ -2,28 +2,30 @@ import { useTranslation } from 'react-i18next'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import type { SettingsSectionId } from '@shared/domain/settings'
 import { Button } from '@/design/Button'
+import { HOME_BLOCK, HOME_BLOCK_HEADING, ROW_SUBJECT } from '@/design/styles'
 import { AI_SECTION } from '@/helpers/aiSectionLazy'
+import { cn } from '@/helpers/cn'
 import { machineSummary } from '@/helpers/machineSummary'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useBytes } from '@/hooks/useBytes'
-import { HOME_BLOCK, HOME_BLOCK_HEADING } from '@/design/styles'
 import { cloudIdsOf, localStandingOf, type Translate } from './inventory'
 
-/** One line: what it is, where it stands, and the one gesture that changes it. */
+/** One source: what it is, where it stands, and the one gesture that changes it. */
 type Means = {
   key: string
   label: string
   value: string
-  /** Absent on the machine, which reports and cannot be acted on from here. */
+  /** Absent on the machine, which reports and is acted on from nowhere. */
   action: { label: string; hint: string; section: SettingsSectionId } | null
 }
 
 /**
- * What the studio has to work with — the machine, the disk, Ollama, the accounts.
+ * What the studio has to work with — the disk, Ollama, the accounts, and the machine under them.
  *
- * Every line carries its own action with a VERB on it. Three cards that were each one big button
- * stood here until now, and two of them opened the same screen: a surface that acts has to say
- * what the click does, and « Ollama » is not a thing one does.
+ * The name and its button share a LINE, with the reading under both. Laid out as a three-column
+ * row they sat a column apart — on a wide window the button for a source was a thousand pixels
+ * from the source it acted on, which is the whole reason the first draft of this band was
+ * unreadable.
  */
 export function ModelInventoryMeans({
   overview,
@@ -39,13 +41,7 @@ export function ModelInventoryMeans({
   const clouds = cloudIdsOf(overview)
   const { ollama } = overview
 
-  const lines: Means[] = [
-    {
-      key: 'machine',
-      label: t('home.models.machine'),
-      value: machineSummary(overview.machine, t, bytes),
-      action: null,
-    },
+  const sources: Means[] = [
     {
       key: 'local',
       label: t('aiModels.sourceStudio'),
@@ -79,26 +75,31 @@ export function ModelInventoryMeans({
         section: 'account',
       },
     },
+    // Last, and with no button: it reports, and nothing here acts on it.
+    {
+      key: 'machine',
+      label: t('home.models.machine'),
+      value: machineSummary(overview.machine, t, bytes),
+      action: null,
+    },
   ]
 
   return (
     <div className={HOME_BLOCK}>
       <h3 className={HOME_BLOCK_HEADING}>{t('home.models.means')}</h3>
 
-      <dl className="m-0 flex flex-col gap-1.5">
-        {lines.map(({ key, label, value, action }) => (
-          <div key={key} className="flex items-center gap-3">
-            <dt className="text-muted w-32 shrink-0 text-xs">{label}</dt>
-            <dd className="text-text m-0 min-w-0 flex-1 text-xs">{value}</dd>
-            {action && (
-              <Button
-                {...HINT_LEFT(action.hint)}
-                className="shrink-0"
-                onClick={() => onOpen(action.section)}
-              >
-                {action.label}
-              </Button>
-            )}
+      <dl className="m-0 flex flex-col gap-3">
+        {sources.map(({ key, label, value, action }) => (
+          <div key={key} className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-3">
+              <dt className={cn(ROW_SUBJECT, 'font-medium')}>{label}</dt>
+              {action && (
+                <Button {...HINT_LEFT(action.hint)} onClick={() => onOpen(action.section)}>
+                  {action.label}
+                </Button>
+              )}
+            </div>
+            <dd className="text-muted text-tiny m-0 leading-snug">{value}</dd>
           </div>
         ))}
       </dl>

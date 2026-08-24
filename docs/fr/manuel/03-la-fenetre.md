@@ -55,23 +55,33 @@ Tout le reste de l’accueil est un panneau, logé dans les deux colonnes.
 
 ### Vos modèles, ce que le studio sait faire tourner
 
-Deux colonnes, puis deux blocs. Elle répond à la question qu’on se pose au deuxième lancement : **qu’est-ce qui est installé,
-qu’est-ce qui tourne, et qu’est-ce qui manque.** Elle s’ouvre sur ce que la machine offre —
-mémoire libre, puce, mémoire vidéo, place sur le disque.
+Elle répond à la question qu’on se pose au deuxième lancement : **qu’est-ce qui est installé,
+qu’est-ce qui tourne, et qu’est-ce qui manque.** Elle se lit de haut en bas, du verdict au détail.
 
-**À gauche, ce dont vous disposez** — une ligne par source, et chaque ligne porte le geste qui la
-change, avec un verbe dessus :
+**En tête, où vous en êtes** : « 5 emplois servis sur 26 », une barre, puis une ou deux lignes de
+conseil. Les conseils sont classés par ce qu’ils COÛTENT et non par ce qu’ils rapportent — choisir
+parmi ce qui est déjà sur le disque ne coûte rien, installer coûte des gigaoctets, une clé coûte de
+l’argent. On ne vous propose donc jamais de dépenser avant de vous avoir dit que vous aviez déjà la
+réponse.
+
+**Puis deux colonnes**, côte à côte quand le centre est assez large et l’une sous l’autre sinon.
+C’est la largeur du CENTRE qui décide, pas celle de la fenêtre : ouvrir un panneau à gauche
+resserre la bande, et elle repasse sur une colonne.
+
+**À gauche, ce dont vous disposez** — une source par ligne. Le nom et son bouton partagent la
+première ligne, la lecture est sous les deux : ce qui agit sur une source est à côté d’elle, pas à
+l’autre bout de l’écran.
 
 | Ligne | Ce qu’elle dit | Le bouton |
 |---|---|---|
-| **Machine** | mémoire libre, puce, mémoire vidéo, disque | aucun : elle rapporte, elle ne s’actionne pas |
 | **Sur cet ordinateur** | combien de modèles sont installés, ce qu’ils pèsent, combien sont chargés en mémoire | **Gérer** |
 | **Ollama** | s’il est là, s’il répond, et les modèles qu’il a listés | **Installer** ou **Choisir** |
 | **En ligne** | les comptes dont une clé est renseignée, nommés un par un | **Ajouter une clé** ou **Gérer les clés** |
+| **Machine** | mémoire vive, puce, mémoire vidéo, disque — chaque chiffre nomme son sujet | aucun : elle rapporte, et rien ici n’agit dessus |
 
-**À droite, vos espaces** — une ligne par famille, avec une jauge en points : combien de ses
-emplois sont servis sur combien. Un espace qui n’a qu’un emploi nomme directement ce qui le sert.
-L’Assistant et la Dictée ferment la liste : ils n’appartiennent à aucun espace.
+**À droite, vos espaces** — une ligne par famille, une jauge en points, et la fraction servie. Un
+espace qui n’a qu’un emploi nomme directement ce qui le sert. Un filet ferme la liste avant
+l’Assistant et la Dictée : ils n’appartiennent à aucun espace.
 
 **Dessous, ce qu’un seul téléchargement couvre.** C’est la lecture que le gestionnaire ne donne
 pas d’un coup d’œil : le catalogue tient vingt-cinq modèles pour dix-neuf emplois, et ce qui les
@@ -79,11 +89,6 @@ sépare n’est pas la qualité. Un modèle d’image qui sait aussi les texture
 pour quatre gigaoctets là où un autre en sert un pour cent trente-trois. Les familles qu’il
 traverse sont nommées, pas comptées. Ce que la machine ne peut pas tenir reste affiché, marqué
 **hors de portée** — le cacher ferait paraître le catalogue plus petit qu’il n’est.
-
-**Enfin une ou deux lignes de conseil**, classées par ce qu’elles COÛTENT et non par ce qu’elles
-rapportent : choisir parmi ce qui est déjà sur le disque ne coûte rien, installer coûte des
-gigaoctets, une clé coûte de l’argent. On ne vous propose donc jamais de dépenser avant de vous
-avoir dit que vous aviez déjà la réponse.
 
 **Rien ne s’installe depuis cette bande** : chaque bouton ouvre la section des réglages où le
 geste se fait — voir [Les modèles](05-modeles.md).

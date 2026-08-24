@@ -8,16 +8,13 @@ export type ModelInventoryRowProps = {
   label: string
   served: number
   total: number
-  /** What answers for it — a model, a cloud, or a tally of how many of the family are served. */
+  /** What answers for it — a model, a cloud, or how many of the family are served. */
   standing: string
   hint: string
   onClick: () => void
 }
 
-/**
- * One employment line, and the way into the screen that chooses what serves it.
- *
- */
+/** One employment line, and the way into the screen that chooses what serves it. */
 export function ModelInventoryRow({
   label,
   served,
@@ -36,11 +33,11 @@ export function ModelInventoryRow({
         'flex w-full cursor-pointer items-center gap-3 border-none bg-transparent px-2 py-1 text-left',
       )}
     >
-      <span className={cn(ROW_INK, 'w-24 shrink-0 truncate text-xs')}>{label}</span>
-
+      <span className={cn(ROW_INK, 'w-20 shrink-0 truncate text-xs')}>{label}</span>
       <ModelInventoryGauge served={served} total={total} />
-
-      <span className={cn(ROW_QUIET, 'text-tiny ml-auto shrink-0 truncate')}>{standing}</span>
+      {/* `truncate` and not `shrink-0`: a model's name is the one value here that can be long,
+          and a column that grows for it pushes the gauge off its own alignment. */}
+      <span className={cn(ROW_QUIET, 'text-tiny ml-auto min-w-0 truncate')}>{standing}</span>
     </button>
   )
 }

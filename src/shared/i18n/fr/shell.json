@@ -280,10 +280,6 @@
       "cloudHint": "Ouvre les réglages, à la section du compte, où se saisissent les clés",
       "employments": "Vos espaces",
       "employmentHint": "Ouvre les réglages, là où se choisit ce qui sert {{name}}",
-      "served_one": "{{count, number}} sur {{total, number}}",
-      "served_many": "{{count, number}} sur {{total, number}}",
-      "served_other": "{{count, number}} sur {{total, number}}",
-      "servedNone": "Aucun servi",
       "nothing": "Aucun modèle sur cette machine et aucune clé API : rien ne peut encore être généré.",
       "coverage": "Ce qu’un seul téléchargement couvre",
       "held": "Installé",
@@ -298,7 +294,12 @@
       "advice_install_action": "Installer",
       "advice_key": "Aucune clé API : les modèles en ligne ne demandent aucun téléchargement.",
       "advice_key_action": "Ajouter une clé",
-      "adviceHint": "Ouvre les réglages, là où ce conseil se met en œuvre"
+      "adviceHint": "Ouvre les réglages, là où ce conseil se met en œuvre",
+      "served": "{{count, number}} / {{total, number}}",
+      "verdict_one": "{{count, number}} emploi servi sur {{total, number}}",
+      "verdict_many": "{{count, number}} emplois servis sur {{total, number}}",
+      "verdict_other": "{{count, number}} emplois servis sur {{total, number}}",
+      "verdictBar": "Part de vos emplois qui sont servis"
     },
     "news": {
       "articles": "Articles",

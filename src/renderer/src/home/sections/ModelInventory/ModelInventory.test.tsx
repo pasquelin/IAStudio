@@ -58,8 +58,12 @@ function show(one: AiOverview = overview()) {
   return { open }
 }
 
-/** The line of the means block whose label is `name`, so a value is read where it belongs. */
-const meansLine = (name: string): HTMLElement => screen.getByText(name).parentElement as HTMLElement
+/**
+ * The block of the means list whose name is `name` — its label, its reading and its button, which
+ * now share one group rather than sitting a column apart.
+ */
+const meansLine = (name: string): HTMLElement =>
+  screen.getByText(name).parentElement?.parentElement as HTMLElement
 
 beforeEach(() => {
   settleHome()
@@ -166,7 +170,7 @@ describe('the models band', () => {
       }),
     )
 
-    expect(screen.getByRole('button', { name: /Image/ })).toHaveTextContent('1 sur 2')
+    expect(screen.getByRole('button', { name: /Image/ })).toHaveTextContent('1 / 2')
   })
 
   it('opens the settings on the screen that chooses for the family clicked', async () => {
@@ -238,6 +242,41 @@ describe('the models band', () => {
     expect(
       screen.getByText('1 emploi a un modèle installé mais personne de choisi.'),
     ).toBeInTheDocument()
+  })
+
+  /**
+   * The figure a reader needs before any of the detail under it — and it opens the band, where
+   * the advice used to close it under three blocks nobody reached.
+   */
+  it('opens on where the studio stands, before what it holds', () => {
+    show(
+      overview({
+        roles: [
+          row({
+            role: aiRoleId('image', 'txt2img'),
+            provider: { kind: 'cloud', providerId: 'scenario' },
+          }),
+          row({ role: aiRoleId('image', 'inpaint') }),
+        ],
+      }),
+    )
+
+    const verdict = screen.getByText('1 emploi servi sur 2')
+    const means = screen.getByText('Ce dont vous disposez')
+
+    expect(verdict.compareDocumentPosition(means)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+
+  /** Read straight on, « Assistant » looked like a seventh workspace. */
+  it('rules off the two roles no workspace holds', () => {
+    const { open } = show(
+      overview({
+        roles: [row({ role: aiRoleId('image', 'txt2img') }), row({ role: ASSISTANT_ROLE })],
+      }),
+    )
+
+    expect(document.querySelectorAll('[aria-hidden="true"].bg-border')).toHaveLength(1)
+    expect(open).not.toHaveBeenCalled()
   })
 
   /**

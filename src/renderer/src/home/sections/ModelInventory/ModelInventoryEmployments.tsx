@@ -1,7 +1,9 @@
+import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AiOverview, RoleRow } from '@shared/domain/aiOverview'
 import type { SettingsSectionId } from '@shared/domain/settings'
 import { QuietNote } from '@/design/QuietNote'
+import { Separator } from '@/design/Separator'
 import { aiSectionOf } from '@/helpers/aiSectionLazy'
 import { roleLabel } from '@/helpers/roleLabel'
 import { ModelInventoryRow } from './ModelInventoryRow'
@@ -32,21 +34,27 @@ export function ModelInventoryEmployments({
       {groups.length === 0 ? (
         <QuietNote>{t('home.models.nothing')}</QuietNote>
       ) : (
-        groups.map(group => {
+        groups.map((group, rank) => {
           const label = labelOf(group, t)
 
           return (
-            <ModelInventoryRow
-              key={group.key}
-              label={label}
-              served={group.served}
-              total={group.total}
-              standing={standingOf(group, t)}
-              hint={t('home.models.employmentHint', { name: label })}
-              // The screen is asked for on the click rather than composed with the group: the
-              // registry that answers rides in the settings window's own chunk.
-              onClick={() => void aiSectionOf(group.family).then(onOpen)}
-            />
+            // The two roles no family holds close the list, and a rule says so: read straight on,
+            // « Assistant » looked like a seventh workspace.
+            <Fragment key={group.key}>
+              {group.family === null && groups[rank - 1]?.family !== null && (
+                <Separator orientation="horizontal" className="my-1 w-full" />
+              )}
+              <ModelInventoryRow
+                label={label}
+                served={group.served}
+                total={group.total}
+                standing={standingOf(group, t)}
+                hint={t('home.models.employmentHint', { name: label })}
+                // The screen is asked for on the click rather than composed with the group: the
+                // registry that answers rides in the settings window's own chunk.
+                onClick={() => void aiSectionOf(group.family).then(onOpen)}
+              />
+            </Fragment>
           )
         })
       )}
@@ -59,13 +67,12 @@ function labelOf(group: EmploymentGroup, t: Translate): string {
 }
 
 /**
- * What answers for the group: the provider by name where ONE employment is at stake, a tally
+ * What answers for the group: the provider by name where ONE employment is at stake, a fraction
  * otherwise. A family of six that named only its first employment's model would read as an
- * answer about all six.
+ * answer about all six — and « aucun emploi servi » written out six times was six identical rows.
  */
 function standingOf(group: EmploymentGroup, t: Translate): string {
   if (group.sole !== null) return servedBy(group.sole, t)
-  if (group.served === 0) return t('home.models.servedNone')
 
   return t('home.models.served', { count: group.served, total: group.total })
 }

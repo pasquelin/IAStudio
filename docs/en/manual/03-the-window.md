@@ -53,23 +53,32 @@ Everything else on the home is a panel, held in its two columns.
 
 ### Your models, what the studio can run
 
-Two columns, then two blocks. It answers the question everybody has on the second launch: **what
-is installed, what is running, and what is missing.** It opens on what the machine offers — free
-memory, chip, video memory, room on disk.
+It answers the question everybody has on the second launch: **what is installed, what is running,
+and what is missing.** It reads top down, from the verdict to the detail.
 
-**On the left, what you have to work with** — one line per source, and each line carries the
-gesture that changes it, with a verb on it:
+**At the head, where you stand**: "5 employments served of 26", a bar, then one or two lines of
+advice. The advice is ranked by what it COSTS rather than by what it unlocks — choosing among what
+is already on the disk costs nothing, installing costs gigabytes, a key costs money. So you are
+never offered a way to spend before being told you already hold the answer.
+
+**Then two columns**, side by side when the centre is wide enough and stacked when it is not. The
+CENTRE decides, not the window: opening a panel on the left narrows the band, and it falls back to
+one column.
+
+**On the left, what you have to work with** — one source per line. The name and its button share
+the first line, the reading sits under both: what acts on a source is beside it, not at the other
+end of the screen.
 
 | Line | What it says | The button |
 |---|---|---|
-| **Machine** | free memory, chip, video memory, disk | none: it reports, it is not acted on |
 | **On this computer** | how many models are installed, what they weigh, how many are held in memory | **Manage** |
 | **Ollama** | whether it is there, whether it answers, and the models it listed | **Install** or **Choose** |
 | **Online** | the accounts a key has been entered for, one by one | **Add a key** or **Manage keys** |
+| **Machine** | memory, chip, video memory, disk — every figure names its subject | none: it reports, and nothing here acts on it |
 
-**On the right, your workspaces** — one line per family, with a gauge in dots: how many of its
-employments are served out of how many. A workspace with a single employment names what serves it
-outright. The Assistant and Dictation close the list: they belong to no workspace.
+**On the right, your workspaces** — one line per family, a gauge in dots, and the served fraction.
+A workspace with a single employment names what serves it outright. A rule closes the list before
+the Assistant and Dictation: they belong to no workspace.
 
 **Under them, what one download covers.** This is the reading the manager cannot give at a glance:
 the catalogue holds twenty-five models for nineteen employments, and what separates them is not
@@ -77,10 +86,6 @@ the quality. An image model that also does textures answers six employments for 
 where another answers one for a hundred and thirty-three. The families it spans are named, not
 counted. What the machine cannot hold stays on screen, marked **beyond this machine** — hiding it
 would make the catalogue look smaller than it is.
-
-**Finally one or two lines of advice**, ranked by what they COST rather than by what they unlock:
-choosing among what is already on the disk costs nothing, installing costs gigabytes, a key costs
-money. So you are never offered a way to spend before being told you already hold the answer.
 
 **Nothing is installed from this band**: every button opens the settings section where the gesture
 lives — see [Models](05-models.md).

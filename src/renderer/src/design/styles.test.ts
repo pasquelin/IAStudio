@@ -597,12 +597,15 @@ describe('what a line names', () => {
 
   // Named rather than counted: a count stays green when one site drops the constant and another
   // picks it up. **Blind**: raw text, so a comment naming the constant would count as wearing it.
-  it('is worn by the three it was extracted from', () => {
+  it('is worn by the four that name a line', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && /\bROW_SUBJECT\b/.test(source),
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
+      // A fourth on 2026-08-24: the home's models band names its sources the same way, and had
+      // spelled the five words out before this rule said so.
+      '../home/sections/ModelInventory/ModelInventoryMeans.tsx',
       '../panels/history/DiffPane.tsx',
       '../panels/history/HistoryRow.tsx',
       '../panels/inspector/StylesSection/StylesSectionRow.tsx',
