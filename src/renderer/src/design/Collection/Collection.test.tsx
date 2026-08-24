@@ -94,6 +94,23 @@ describe('Collection', () => {
       expect(onActivate).not.toHaveBeenCalled()
     })
 
+    /**
+     * 🛑 The twist stands BESIDE the name, never above it. jsdom lays nothing out, so what is
+     * read here is the class that decides it: without `flex`, the chevron and the row stacked
+     * and every line of the shelf drew its glyph over its own name, at twice the height.
+     */
+    it('lays the twist beside the row rather than above it', () => {
+      renderCollection(
+        rows(2),
+        { view: 'list' },
+        { onSelect: () => {}, renderRowDetail: item => <p>about {item.name}</p> },
+      )
+
+      const cell = screen.getByText('Row 0').closest('[data-cell]')
+      expect(cell?.className).toContain('flex')
+      expect(cell?.querySelector('[data-chevron]')).not.toBeNull()
+    })
+
     /** A chevron on a line that opens onto nothing is a promise the list cannot keep. */
     it('draws no twist on a row that answers no to `canOpen`', () => {
       renderCollection(

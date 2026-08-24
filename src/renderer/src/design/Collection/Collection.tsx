@@ -387,7 +387,15 @@ export function Collection<T extends { id: string }>({
                       // painted under it, so nothing moves on being picked; a ROW's is the
                       // distance this cell owes its content from the fill it draws, which is
                       // why it lives here rather than in `Row` — as the tree's row already does.
-                      className={grid ? 'p-1' : 'h-full w-full px-1'}
+                      className={
+                        grid
+                          ? 'p-1'
+                          : // 🛑 `flex items-center` where the cell holds a chevron: without it
+                            // the twist and the row stack, and every line of the shelf drew its
+                            // glyph ABOVE its own name, at twice the height. The tree gets the
+                            // same from the line shape its own row wears.
+                            cn('h-full w-full px-1', openable && 'flex items-center')
+                      }
                       role={roles.cell}
                       // The virtualizer mounts a window, so the cells cannot be counted from the
                       // tree: without these a reader announces "1 of 35" over a list of 2000.
