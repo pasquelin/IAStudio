@@ -11,11 +11,58 @@ import { SCENARIOS } from './scenarios'
  * silence — a request added to the markdown is measured by nothing, and a scenario written for
  * no request is counted as coverage of a list it is not on.
  */
-const REQUESTS = [...readFileSync('scripts/evals/BATTERIE.md', 'utf8').matchAll(/^- \[[ x]\] «/gm)]
+const LIST = readFileSync('scripts/evals/BATTERIE.md', 'utf8').split('\n')
+
+const REQUESTS = LIST.filter(one => /^- \[[ x]\] «/.test(one))
+
+/** A sentence as either side spells it — the quotes and the wrapping are not the point. */
+const plainly = (said: string): string =>
+  said.replace(/[’']/g, "'").replace(/\s+/g, ' ').trim().toLowerCase()
+
+/**
+ * What each request ASKS, in order.
+ *
+ * Two things a one-line regex gets wrong, and both were live: Prettier wraps a long request over
+ * several lines, and section 30 writes a note AFTER the closing quote. So: join until the first
+ * `»`, then read between the quotes.
+ */
+const asked = (): readonly string[] => {
+  const found: string[] = []
+  for (let at = 0; at < LIST.length; at += 1) {
+    if (!/^- \[[ x]\] «/.test(LIST[at] ?? '')) continue
+
+    let whole = LIST[at] ?? ''
+    while (!whole.includes('»') && at + 1 < LIST.length) {
+      at += 1
+      whole = `${whole} ${LIST[at]}`
+    }
+    found.push(plainly(whole.slice(whole.indexOf('«') + 1, whole.indexOf('»'))))
+  }
+
+  return found
+}
 
 describe('the batterie and the bench', () => {
   it('carries one scenario per request of the list', () => {
     expect(SCENARIOS).toHaveLength(REQUESTS.length)
+  })
+
+  /**
+   * 🛑 The list and the bench have to say the SAME sentence, or `BATTERIE.md` describes a bench
+   * nobody runs. Seven had drifted — one of them asking for « l'os que je viens d'ajouter » on a
+   * decor that never added one — and nothing was red: the count matched, the order matched, and
+   * only the words differed.
+   *
+   * The LAST sentence, because a scenario whose chain is the subject carries its earlier steps
+   * as setup — the list only ever names the request being scored.
+   */
+  it('says of each request the sentence the list carries', () => {
+    const list = asked()
+    const drifted = SCENARIOS.map((one, at) =>
+      plainly(one.said.at(-1) ?? '') === list[at] ? null : one.name,
+    ).filter(one => one !== null)
+
+    expect(drifted).toEqual([])
   })
 
   it('names every scenario after the section and the rank it answers', () => {

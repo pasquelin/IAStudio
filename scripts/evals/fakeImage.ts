@@ -247,6 +247,7 @@ export function imageAction(bench: Bench, action: string, input: Input): ActionO
 
       image.width = width
       image.height = height
+      image.cropped = true
       image.modified = true
       return done
     }
@@ -256,6 +257,7 @@ export function imageAction(bench: Bench, action: string, input: Input): ActionO
       if (turn === '') return refused('badInput')
 
       if (turn.startsWith('rotate')) [image.width, image.height] = [image.height, image.width]
+      image.turned += 1
       image.modified = true
       return done
     }

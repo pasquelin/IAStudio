@@ -91,9 +91,15 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
   },
   {
     name: '50.7 removes the bone just added',
-    said: ["Supprime l'os Bras Droit."],
-    setup: rigged,
-    passed: run => rigOf(run)?.bones.some(one => one.name === 'Bras Droit') === false,
+    said: ["Supprime l'os que je viens d'ajouter."],
+    // The added bone has to EXIST before the sentence, or « celui que je viens d'ajouter » points
+    // at nothing and any removal would pass.
+    setup: studio => {
+      rigged(studio)
+      studio.run('bone.add', { nodeId: studio.front()?.nodes[0]?.id ?? '', parent: 'Bras Droit' })
+    },
+    // Back to the three the fit laid: the one added by the decor is the one to go.
+    passed: run => rigOf(run)?.bones.length === 3,
   },
   {
     name: '50.8 adds an IK constraint on the left leg',
@@ -160,13 +166,13 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     name: '51.7 crops the picture to a centred square',
     said: ["Recadre l'image sur un carré centré."],
     setup: boatImage,
-    passed: run => imageOf(run)?.width === imageOf(run)?.height,
+    passed: run => imageOf(run)?.cropped === true && imageOf(run)?.width === imageOf(run)?.height,
   },
   {
     name: '51.8 turns the document 90 degrees clockwise',
     said: ['Fais pivoter le document de 90 degrés vers la droite.'],
     setup: boatImage,
-    passed: run => imageOf(run)?.width === 1080 && imageOf(run)?.height === 1920,
+    passed: run => imageOf(run)?.turned === 1 && imageOf(run)?.width === 1080,
   },
   {
     name: '51.9 lays a vertical guide down the middle',

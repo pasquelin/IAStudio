@@ -11,12 +11,6 @@ import { cubeScene, cameraScene, madeCar, nodeAt, scene, testFolders } from './s
 
 const idle = (run: Run): boolean => read.spoke(run) && read.lookedOnly(run)
 
-/** A scene with a sprite in it — `node.sprite` refuses anything that is not one. */
-const spriteScene = (studio: FakeStudio): void => {
-  cubeScene(studio)
-  studio.run('node.add', { kind: 'sprite', name: 'Panneau' })
-}
-
 /** A camera with a shot already cut, which is what a rail is hung on. */
 const shotScene = (studio: FakeStudio): void => {
   cameraScene(studio)
@@ -134,7 +128,7 @@ export const REST_SCENARIOS: readonly Scenario[] = [
   {
     name: '42.6 opens the information card of the boat picture',
     said: ["Ouvre la fiche d'informations de l'image du bateau."],
-    passed: run => run.studio.bench().shell.revealed.some(one => one.includes('bateau')),
+    passed: run => run.studio.bench().shell.described.some(one => one.includes('bateau')),
   },
 
   {
@@ -274,10 +268,13 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     passed: run => read.answeredWith(run, 'node.geometry'),
   },
   {
-    name: '46.2 puts the boat picture on the billboard',
-    said: ['Fais porter au panneau plat mon image du bateau.'],
-    setup: spriteScene,
-    passed: run => (read.nodeNamed(run, 'Panneau')?.sprite ?? null) !== null,
+    name: '46.2 adds a billboard carrying the boat picture',
+    said: [
+      'Ajoute un panneau plat qui porte l’image du bateau et qui fait toujours face à la caméra.',
+    ],
+    setup: cubeScene,
+    // Two calls, and the second is the point: adding the sprite, then giving it its picture.
+    passed: run => read.nodesOfKind(run, 'sprite').some(one => one.sprite !== null),
   },
   {
     name: '46.3 adds a 3D text reading Studio above the cube',
@@ -289,7 +286,9 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     name: '46.4 traces a closed path from the cube to the right',
     said: ['Trace un chemin fermé qui part du cube et va vers la droite.'],
     setup: cubeScene,
-    passed: run => read.nodesOfKind(run, 'path').length === 1,
+    // Closed, and not merely there: adding the node is `node.add`'s doing, and the request says
+    // « fermé », which is the only part `node.path` answers.
+    passed: run => read.nodesOfKind(run, 'path').some(one => one.closed),
   },
   {
     name: '46.5 adds a point two metres further along that path',
@@ -380,7 +379,7 @@ export const REST_SCENARIOS: readonly Scenario[] = [
   },
   {
     name: '48.2 adds a light fog',
-    said: ['Ajoute un brouillard léger à la scène.'],
+    said: ['Ajoute un brouillard léger.'],
     setup: cubeScene,
     passed: run => read.inSpace(run, '3d')[0]?.world.fog === true,
   },
@@ -392,7 +391,7 @@ export const REST_SCENARIOS: readonly Scenario[] = [
   },
   {
     name: '48.4 puts the render at its highest quality',
-    said: ['Passe le rendu de la scène en qualité maximale.'],
+    said: ['Passe le rendu en qualité maximale.'],
     setup: cubeScene,
     passed: run => read.answeredWith(run, 'world.render'),
   },

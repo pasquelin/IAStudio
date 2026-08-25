@@ -127,6 +127,8 @@ function blankDocument(bench: Bench, title: string, at: WorkspaceId): StudioDocu
     guides: [],
     autoKey: false,
     captures: 0,
+    cropped: false,
+    turned: 0,
     skybox: { source: null, sunIntensity: 1, environmentIntensity: 1, adjusted: false },
     channels: {},
     material: null,

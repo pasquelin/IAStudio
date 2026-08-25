@@ -47,12 +47,21 @@ export function shellAction(bench: Bench, action: string, input: Input): ActionO
       return done
     }
 
-    case 'file.reveal':
-    case 'fileInfo.open': {
+    // Two gestures, two lists: showing a file in the Finder is not opening its card, and a
+    // bench folding them together scored either request on the other.
+    case 'file.reveal': {
       const path = text(input, 'path')
       if (!held(bench, path)) return refused('notFound')
 
       shell.revealed.push(path)
+      return done
+    }
+
+    case 'fileInfo.open': {
+      const path = text(input, 'path')
+      if (!held(bench, path)) return refused('notFound')
+
+      shell.described.push(path)
       return done
     }
 

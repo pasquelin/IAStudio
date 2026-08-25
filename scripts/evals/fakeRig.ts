@@ -34,6 +34,7 @@ export function rigAction(bench: Bench, action: string, input: Input): ActionOut
       const node = aimed()
       if (node?.kind !== 'path') return refused('badInput')
 
+      node.closed = flag(input, 'closed')
       scene.modified = true
       return done
     }
@@ -175,10 +176,13 @@ export function rigAction(bench: Bench, action: string, input: Input): ActionOut
       scene.modified = true
       return done
 
+    // 🛑 `parent` and not `bone`: the registry names the bone the new one hangs FROM, and the
+    // new one is named by the studio. A bench reading `bone` refused every well-formed call.
     case 'bone.add': {
-      if (!rig.fitted) return refused('badInput')
+      const parent = text(input, 'parent')
+      if (!rig.fitted || parent === '') return refused('badInput')
 
-      rig.bones.push({ name: text(input, 'bone') || `Os ${rig.bones.length + 1}`, role: null })
+      rig.bones.push({ name: `Os ${rig.bones.length + 1}`, role: null })
       scene.modified = true
       return done
     }
@@ -213,9 +217,10 @@ export function rigAction(bench: Bench, action: string, input: Input): ActionOut
     }
 
     case 'ik.add': {
-      if (!rig.fitted) return refused('badInput')
+      const bone = text(input, 'bone')
+      if (!rig.fitted || bone === '') return refused('badInput')
 
-      rig.iks.push(text(input, 'bone') || `chain-${rig.iks.length + 1}`)
+      rig.iks.push(bone)
       scene.modified = true
       return done
     }

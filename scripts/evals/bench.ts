@@ -38,6 +38,8 @@ export type SceneNode = {
   castShadow: boolean
   /** The points of a path node, in order — empty for everything else. */
   points: Vector[]
+  /** Whether a path node joins its last point back to its first. */
+  closed: boolean
   /** What a 3D text node reads. */
   text: string | null
 }
@@ -140,6 +142,12 @@ export type StudioDocument = {
   /** Whether a move lays its own key, which is what `animation.autoKey` switches. */
   autoKey: boolean
   captures: number
+  /**
+   * 🛑 Cropping, resizing and turning all land on `width`/`height`, so an oracle reading those
+   * alone scored any of the three on the other two. These say WHICH gesture ran.
+   */
+  cropped: boolean
+  turned: number
   skybox: Skybox
   /** Which picture each PBR channel of a material document holds, by channel name. */
   channels: Record<string, string>
@@ -202,6 +210,8 @@ export type ShellState = {
   mirrored: boolean
   helpAt: string | null
   revealed: string[]
+  /** Paths whose information card was opened — not the same gesture as showing the file. */
+  described: string[]
   styles: { id: string; name: string }[]
   context: Record<string, string>
   accounts: { id: string; name: string; active: boolean }[]
@@ -238,6 +248,7 @@ export const blankShell = (): ShellState => ({
   mirrored: false,
   helpAt: null,
   revealed: [],
+  described: [],
   styles: [],
   context: {},
   accounts: [

@@ -188,7 +188,7 @@ export const GIT_SCENARIOS: readonly Scenario[] = [
   },
   {
     name: '58.22 fetches what changed on the remote',
-    said: ['Récupère ce qui a changé sur le dépôt distant, sans y toucher.'],
+    said: ['Récupère ce qui a changé sur le dépôt distant.'],
     setup: committed,
     passed: run => gitOf(run).fetched && !gitOf(run).pulled,
   },

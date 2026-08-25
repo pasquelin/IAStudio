@@ -523,7 +523,7 @@ Sur un montage vidéo portant deux plans et un fond sonore :
 - [ ] « Supprime de ma bibliothèque l'image que tu viens de générer. »
 - [ ] « Y a-t-il des assets de ma bibliothèque dont le fichier a disparu ? »
 - [ ] « Décris-moi ce que représente l'image du bateau et range-la avec des mots-clés. »
-- [ ] « Montre-moi le fichier de cet asset sur mon disque. »
+- [ ] « Montre-moi le fichier de l'image du bateau sur mon disque. »
 - [ ] « Suis-je connecté à mon compte Scenario ? »
 - [ ] « Combien de crédits me reste-t-il ce mois-ci ? »
 - [ ] « Quels comptes ai-je enregistrés ? »
@@ -703,7 +703,7 @@ Sur un projet suivi par git :
 - [ ] « J'ai un conflit sur l'image du bateau : garde ma version. »
 - [ ] « Abandonne la fusion en cours. »
 - [ ] « Quels dépôts distants sont configurés ? »
-- [ ] « Ajoute mon dépôt distant origin. »
+- [ ] « Ajoute mon dépôt distant origin, sur https://example.com/demo.git. »
 - [ ] « Récupère ce qui a changé sur le dépôt distant. »
 - [ ] « Récupère et applique les changements du dépôt distant. »
 - [ ] « Envoie mes versions sur le dépôt distant. »

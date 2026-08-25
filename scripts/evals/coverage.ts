@@ -12,6 +12,12 @@ import type { ActionName } from '@shared/domain/assistant'
  * An intention, not a prescription: the model picks its own calls and the oracles read the
  * studio, never the calls. A rank listed against an action says « this request is why that tool
  * is considered measured ».
+ *
+ * 🛑 The blind spot, measured and left open: a decor may run the very action a rank is cited for.
+ * Usually that is fine — the decor lays a cube down and the request adds a second one, which the
+ * oracle counts. It is a DEFECT only when the oracle measures nothing the decor did not already
+ * do, and no test tells the two apart: 42 entries hit the first case, 12 the second. Those twelve
+ * are fixed; the rule for the next one is to read the oracle, not the decor.
  */
 export const COVERAGE: Record<ActionName, readonly string[]> = {
   'command.run': ['45.1'],
@@ -88,14 +94,14 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'layer.text': ['39.6'],
   'layer.move': ['19.4'],
   'layer.duplicate': ['39.4'],
-  'layer.group': ['51.1', '51.2'],
+  'layer.group': ['51.1'],
   'layer.ungroup': ['51.2'],
   'layer.mergeDown': ['51.3'],
   'layer.lock': ['39.5'],
   'layer.shape': ['51.4'],
   'layer.adjustment': ['51.5'],
   'layer.mask': ['51.6'],
-  'guide.add': ['51.9', '51.10', '51.11'],
+  'guide.add': ['51.9'],
   'guide.move': ['51.10'],
   'guide.remove': ['51.11'],
 
@@ -119,7 +125,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
 
   'skybox.state': ['37.1'],
   'skybox.view': ['37.7'],
-  'skybox.adjust': ['37.5', '37.6'],
+  'skybox.adjust': ['37.5'],
   'skybox.resetAdjustments': ['37.6'],
   'skybox.sun': ['37.3'],
   'skybox.environment': ['37.4'],
@@ -130,7 +136,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'texture.channel': ['38.3', '38.4'],
 
   'styles.list': ['53.1'],
-  'style.save': ['53.2', '53.3', '53.4'],
+  'style.save': ['53.2'],
   'style.rename': ['53.3'],
   'style.remove': ['53.4'],
 
@@ -148,16 +154,16 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'updates.state': ['56.1'],
   'updates.install': ['56.2'],
   'dictation.state': ['56.3'],
-  'dictation.start': ['56.4', '56.5'],
+  'dictation.start': ['56.4'],
   'dictation.stop': ['56.5'],
   'panels.list': ['55.4'],
-  'panel.open': ['55.5', '55.6'],
+  'panel.open': ['55.5'],
   'panel.close': ['55.6'],
   'media.capabilities': ['56.6'],
   'media.adopt': ['56.7'],
   'fonts.list': ['56.8'],
   'favorites.list': ['55.9'],
-  'favorite.pin': ['55.10', '55.11'],
+  'favorite.pin': ['55.10'],
   'favorite.unpin': ['55.11'],
   'fileInfo.open': ['42.6'],
   'mirror.open': ['55.7'],
@@ -201,7 +207,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'node.sprite': ['46.2'],
   'node.text': ['46.3'],
   'node.path': ['46.4'],
-  'path.addPoint': ['46.5', '46.6', '46.7'],
+  'path.addPoint': ['46.5'],
   'path.movePoint': ['46.6'],
   'path.removePoint': ['46.7'],
   'node.light': ['8.3', '8.5', '24.4', '26.4', '26.5'],
@@ -225,14 +231,14 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'world.render': ['48.4'],
 
   'rig.state': ['50.1'],
-  'rig.fit': ['50.2', '50.3'],
+  'rig.fit': ['50.2'],
   'rig.clear': ['50.10'],
   'rig.hands': ['50.3'],
   'bone.add': ['50.4'],
   'bone.remove': ['50.7'],
   'bone.rename': ['50.5'],
   'bone.role': ['50.6'],
-  'ik.add': ['50.8', '50.9'],
+  'ik.add': ['50.8'],
   'ik.remove': ['50.9'],
 
   'animations.list': ['49.1'],
@@ -255,7 +261,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'git.branches': ['58.5'],
   'git.stashes': ['58.6'],
   'git.init': ['58.7'],
-  'git.stage': ['58.8', '58.11'],
+  'git.stage': ['58.8'],
   'git.unstage': ['58.9'],
   'git.restore': ['58.10'],
   'git.commit': ['58.11'],
@@ -274,7 +280,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'git.push': ['58.24'],
 
   'context.read': ['57.3'],
-  'context.write': ['57.4', '57.3', '57.5'],
+  'context.write': ['57.4'],
   'context.remove': ['57.5'],
   'settings.read': ['57.1'],
   'settings.write': ['10.1', '10.4', '10.5'],

@@ -26,14 +26,17 @@ export const CANVAS_SCENARIOS: readonly Scenario[] = [
     setup: boatImage,
     passed: run => {
       const image = read.inSpace(run, 'image')[0]
-      return image?.width === 1080 && image.height === 1080
+      // Not cropped: « passe en 1080 sur 1080 » resizes the document, it does not cut it.
+      return image?.width === 1080 && image.height === 1080 && !image.cropped
     },
   },
   {
     name: '39.3 selects the Bateau layer',
     said: ['Sélectionne le calque Bateau.'],
     setup: overlay,
-    passed: run => run.studio.bench().selection.ids.length > 0,
+    // The KIND too: `target.select` also fills the list, and « sélectionne le calque » is not
+    // « pointe quelque chose ».
+    passed: run => run.studio.bench().selection.kind === 'layer',
   },
   {
     name: '39.4 duplicates the Bateau layer',
@@ -76,7 +79,7 @@ export const CANVAS_SCENARIOS: readonly Scenario[] = [
     name: '40.4 selects the first shot',
     said: ['Sélectionne le premier plan.'],
     setup: cutMontage,
-    passed: run => run.studio.bench().selection.ids.length > 0,
+    passed: run => run.studio.bench().selection.kind === 'clip',
   },
   {
     name: '40.5 renames the sound row Ambiance',

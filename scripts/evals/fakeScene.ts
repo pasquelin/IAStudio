@@ -44,6 +44,7 @@ function add(bench: Bench, scene: StudioDocument, kind: string, input: Input): A
     targetId: null,
     castShadow: false,
     points: [],
+    closed: false,
     text: null,
   }
   scene.nodes.push(node)
