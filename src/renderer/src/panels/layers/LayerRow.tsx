@@ -10,6 +10,7 @@ import { removeLayer, renameLayer, setLayerLocks } from '@/engines/canvas/comman
 import type { Command } from '@/engines/core/history'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { InlineRename } from '@/design/InlineRename'
+import { ROW_WRAPPER } from '@/design/styles'
 import { LAYER_LOCKS } from './layerLocks'
 import { useCanvases } from '@/stores/canvases'
 
@@ -67,7 +68,7 @@ export const LayerRow = memo(function LayerRow({
     // On the name and its buttons, never on the chevron or the eye — both of those sit outside
     // this element, and a double click meant for either is not a rename. One div, as
     // `SceneNodeRow` has: the wrapper around it lost its second child when the eye left the line.
-    <div className="h-full min-w-0 flex-1" onDoubleClick={onRename}>
+    <div className={ROW_WRAPPER} onDoubleClick={onRename}>
       {renaming ? (
         <InlineRename
           value={layer.name}

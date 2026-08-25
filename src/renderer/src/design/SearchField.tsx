@@ -12,17 +12,17 @@ export type SearchFieldProps = {
   /** The name a script drives the field by. Required: an unnamed one is invisible to every pilot. */
   scId: string
   /** Extra width rules from the host — a header gives ground, a panel takes the whole line. */
+  /** What the host sizes the field with. Replaces the default width, it does not add to it. */
   className?: string
-  /** Attributes of the studio tooltip, when the host has something to explain. */
-  tip?: Record<string, string>
+  /** Attributes of the studio tooltip, when the host has something to explain — as every field. */
+  hint?: Record<string, string>
 }
 
 /**
- * The one search box of a dock. The glyph is what says "search" once the placeholder is typed
- * over, and the padding that keeps the text off it belongs here rather than at each host — the
- * model picker had neither, so its field carried no width of its own and read as a stray label.
+ * The one search box of a dock. The glyph is what says « search » once the placeholder is typed
+ * over, and the padding keeping the text off it belongs here rather than at each host.
  */
-export function SearchField({ label, value, onChange, scId, className, tip }: SearchFieldProps) {
+export function SearchField({ label, value, onChange, scId, className, hint }: SearchFieldProps) {
   return (
     <label className={cn('relative flex items-center', className ?? 'w-full')}>
       <UiIcon
@@ -38,7 +38,7 @@ export function SearchField({ label, value, onChange, scId, className, tip }: Se
         onChange={event => onChange(event.target.value)}
         className={cn(CONTROL, 'w-full py-0 pr-2 pl-7')}
         data-sc={fieldHandle(scId)}
-        {...tip}
+        {...hint}
       />
     </label>
   )

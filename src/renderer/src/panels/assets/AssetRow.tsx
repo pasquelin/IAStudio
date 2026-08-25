@@ -3,7 +3,7 @@ import type { AssetBadge as BadgeName } from '@shared/domain/asset'
 import { cloudPreviewUrl } from '@shared/domain/cloudAsset'
 import { AssetBadge } from '@/design/AssetBadge'
 import { Row } from '@/design/Row'
-import { ROW_QUIET } from '@/design/styles'
+import { ROW_QUIET, ROW_WRAPPER } from '@/design/styles'
 import { Thumbnail } from '@/design/Thumbnail'
 import { cn } from '@/helpers/cn'
 import { LibraryAsset } from './LibraryAsset'
@@ -18,16 +18,8 @@ export type AssetRowProps = {
   hints: RowHints
 }
 
-/**
- * Every wrapper between the panel's cell and `Row`, and `min-w-0 flex-1` is the point: a flex item
- * defaults to `min-width: auto`, so a wrapper carrying only `h-full` is as wide as the longest
- * name in the list and `Row`'s `truncate` never fires — the panel scrolled sideways and the badge
- * went off its edge instead.
- */
-const ROW_WRAPPER = 'h-full min-w-0 flex-1'
-
-// The type ends the line rather than sitting under the name: a subtitle would stack two lines
-// into the 28 px this panel gives a row, and `Row` is never told to size itself down.
+// The type ends the line rather than sitting under the name: a second level would make the row a
+// `picture` one, and what this panel needs read at a glance is the thumbnail, not two words.
 export const AssetRow = memo(function AssetRow({
   row,
   typeLabel,
