@@ -1,22 +1,34 @@
 import { describe, expect, it } from 'vitest'
 import { Box3, OrthographicCamera, PerspectiveCamera, Vector3 } from 'three'
-import { gizmoSizeFor, heldRadius, screenFactor } from './gizmoSize'
-
-/** What `TransformControls` scales its rings by, and so what their radius on stage comes to. */
-const radiusOnStage = (size: number, factor: number) => (factor * size) / 4
+import { gizmoReachOf, gizmoSizeFor, heldRadius, screenFactor, type GizmoMode } from './gizmoSize'
 
 describe('gizmoSizeFor', () => {
-  // The whole point: a small object is no longer wrapped in handles several times its width.
-  it('never lets the handles grow wider than what they hold', () => {
+  /**
+   * The whole point, and what the first attempt got wrong: it took the outermost handle for a
+   * radius of one. Nothing in `TransformControls` stands at one — the rotation ring is at 0.75 —
+   * so the handles landed a quarter short of the object they were meant to wrap.
+   */
+  const MODES: readonly GizmoMode[] = ['translate', 'rotate', 'scale']
+
+  it.each(MODES)('lands the outermost handle of %s ON the radius it holds', mode => {
     const factor = screenFactor(new PerspectiveCamera(60), new Vector3(0, 0, 10), new Vector3())
 
-    expect(radiusOnStage(gizmoSizeFor(0.5, 0.2, factor), factor)).toBeCloseTo(0.2)
+    expect(gizmoReachOf(gizmoSizeFor(0.5, 0.2, factor, mode), factor, mode)).toBeCloseTo(0.2)
+  })
+
+  // A ring reaches further than an arrow, so the same object asks the two modes for two sizes.
+  it('asks a rotation for a smaller size than an arrow, for one radius', () => {
+    const factor = screenFactor(new PerspectiveCamera(60), new Vector3(0, 0, 10), new Vector3())
+
+    expect(gizmoSizeFor(9, 0.2, factor, 'rotate')).toBeLessThan(
+      gizmoSizeFor(9, 0.2, factor, 'translate'),
+    )
   })
 
   it('keeps the preferred size while the object is the bigger of the two', () => {
     const factor = screenFactor(new PerspectiveCamera(60), new Vector3(0, 0, 2), new Vector3())
 
-    expect(gizmoSizeFor(0.5, 50, factor)).toBe(0.5)
+    expect(gizmoSizeFor(0.5, 50, factor, 'rotate')).toBe(0.5)
   })
 
   /**
@@ -24,7 +36,7 @@ describe('gizmoSizeFor', () => {
    * handles would collapse to a point and there would be no way to move either.
    */
   it('leaves a node with nothing to measure at the preferred size', () => {
-    expect(gizmoSizeFor(0.5, 0, 12)).toBe(0.5)
+    expect(gizmoSizeFor(0.5, 0, 12, 'rotate')).toBe(0.5)
   })
 
   // Pulling back raises the factor, which is what used to hold the screen size constant — and is
@@ -33,7 +45,9 @@ describe('gizmoSizeFor', () => {
     const near = screenFactor(new PerspectiveCamera(60), new Vector3(0, 0, 5), new Vector3())
     const far = screenFactor(new PerspectiveCamera(60), new Vector3(0, 0, 50), new Vector3())
 
-    expect(gizmoSizeFor(0.5, 0.2, far)).toBeLessThan(gizmoSizeFor(0.5, 0.2, near))
+    expect(gizmoSizeFor(0.5, 0.2, far, 'rotate')).toBeLessThan(
+      gizmoSizeFor(0.5, 0.2, near, 'rotate'),
+    )
   })
 })
 

@@ -2409,6 +2409,9 @@ export class SceneRenderer {
 
     held.updateMatrixWorld(true)
     this.gizmoBox.setFromObject(held)
+    // The MODE decides how far the outermost handle stands: a rotation ring reaches further than
+    // an arrow, so the same size wraps two different radii.
+    if (this.mode === 'select') return
     this.gizmo.size = gizmoSizeFor(
       this.view.gizmoSize,
       heldRadius(this.gizmoBox, this.gizmoSpan),
@@ -2417,6 +2420,7 @@ export class SceneRenderer {
         this.viewport.camera.getWorldPosition(this.gizmoEye),
         held.getWorldPosition(this.gizmoSpot),
       ),
+      this.mode,
     )
   }
 
