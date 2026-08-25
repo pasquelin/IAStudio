@@ -1211,7 +1211,7 @@
     "close": "Close",
     "closeHint": "Closes the window without cancelling anything already under way",
     "thinking": "The assistant is thinking…",
-    "workingRound": "The assistant is working — round {{round}}",
+    "workingRound": "The assistant is working — step {{round}}",
     "stopping": "Stopping — the studio is finishing what is running…",
     "stop": "Stop",
     "stopHint": "Stops the assistant after the action now running; nothing already done is undone",
@@ -1219,7 +1219,7 @@
     "stepAnswered_many": "{{count, number}} results",
     "stepAnswered_other": "{{count, number}} results",
     "ending": {
-      "halted": "The assistant stopped there: too many rounds for one request. Ask it to carry on, or raise the limit in the settings.",
+      "halted": "The assistant stopped there: too many steps for one request. Ask it to carry on, or raise the limit in the settings.",
       "stopped": "You stopped the assistant here."
     },
     "lost": "The assistant could not answer that one.",
