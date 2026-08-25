@@ -21,10 +21,12 @@ export async function runAssetAction(
   // The same filter the menu counted on, so a greyed row and a gesture that does nothing cannot
   // disagree: what the studio keeps for itself has no catalogue row behind it.
   const held = await assetsAt(paths.filter(path => !isPrivatePath(path)))
-  const ids = [...held.values()].map(asset => asset.id)
-  if (ids.length === 0) return
+  const chosen = [...held.values()]
+  if (chosen.length === 0) return
 
-  if (action === 'contactSheet') return void (await exportContactSheet(ids, contactSheetName))
+  if (action === 'contactSheet') return void (await exportContactSheet(chosen, contactSheetName))
+
+  const ids = chosen.map(asset => asset.id)
   if (action === 'push') return await useCloud.getState().push(ids)
 
   await getBridge()?.assets.describe(ids)

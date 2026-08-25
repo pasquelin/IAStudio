@@ -13,7 +13,7 @@ This is the heart of the studio: you describe, it makes.
 **2. The request leaves.** It does not come straight back. It becomes a **job**, visible in the
 panel of the same name, with a progress bar.
 
-**3. The result arrives** in the Assets panel and on your disk.
+**3. The result arrives** in your account's **Library**, then on your disk.
 
 In between, you can keep working, switch workspace, open another document. Nothing blocks.
 
@@ -47,7 +47,7 @@ too — with no update to the studio.
 > **A picture placed on a form goes up to the provider when you generate.** The model runs on
 > the provider's servers: it can only read what the account's library holds. So the studio sends the
 > project asset up, remembers the link between the two, and sends nothing the next time. You will
-> find it in the **Assets** panel, among what the account's library holds.
+> find it in the **Library** panel, among what the account's library holds.
 >
 > A picture edited since it went up is sent again: otherwise the generation would run on a version
 > you no longer see.
@@ -422,7 +422,7 @@ first one carries on quietly.
 
 The line turns to **Done**, and the asset appears:
 
-- in the **Assets** panel — the project's shelf;
+- in your account's **Library**, from which you can download it;
 - on your disk, in `Images/`, `Video/`, `Audio/`… depending on its type, until you file it
   elsewhere.
 
@@ -453,7 +453,7 @@ drop. See [Assets](07-assets.md).
 
 ## Regenerating with the same settings
 
-Select an asset in the shelf and look at the **Inspector**, on the right. If it knows the
+Select an asset in the Explorer and look at the **Inspector**, on the right. If it knows the
 generation that produced it, it shows the model, the prompt and the seed — and offers
 **Regenerate**.
 

@@ -196,8 +196,8 @@ Bottom right, the **status line** shows "1 generation" and a progress bar. Depen
 allow ten seconds to two minutes. You do not have to sit and watch: the bar advances on its own, and
 you can do something else meanwhile.
 
-When the line reads **Done**, your image has arrived. It is filed in the **Assets** panel —
-the project's shelf — and on your disk, in `Images/`.
+When the line reads **Done**, your image has arrived. It is filed in the **Explorer** — the
+project's folder — and on your disk, in `Images/`.
 
 **Click the thumbnail**: the **Inspector**, on the right, shows everything known about it — its
 size, its weight, the model that made it, the prompt you wrote, and the *seed* that will let you

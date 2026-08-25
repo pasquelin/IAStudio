@@ -21,16 +21,16 @@ part où écrire le document.
 ### Faire entrer une image existante
 
 **Un document image n’est pas condamné à partir du blanc.** Trois gestes y posent une image de
-votre étagère, et les trois font la même chose : un **calque de plus**, au-dessus de la pile,
+vos assets, et les trois font la même chose : un **calque de plus**, au-dessus de la pile,
 nommé d’après l’asset et **déjà actif** : c’est lui que le prochain trait recevra.
 
 | Geste | Ce qu’il faut |
 |---|---|
 | **Glisser-déposer** l’image sur la toile | l’onglet image ouvert devant vous |
 | **Clic droit ▸ Placer comme calque** | un onglet image ouvert, en avant ou non |
-| L’outil **Image…**, groupe Formes | rien : il ouvre l’étagère, vous y choisissez |
+| L’outil **Image…**, groupe Formes | rien : il ouvre l’Explorateur, vous y choisissez |
 
-> Seules les **images du projet** entrent — celles que vous voyez dans l’étagère, générées ou
+> Seules les **images du projet** entrent — celles que vous voyez dans l’Explorateur, générées ou
 > importées. Une image qui n’a pas encore été téléchargée dans le projet n’est pas déposable.
 
 **Le double-clic ne figure pas dans ce tableau, et c’est la nuance du chapitre** : il n’entre dans
@@ -38,7 +38,7 @@ aucun document ouvert. Il ouvre l’image dans un onglet **à elle** : elle n’
 plus, le document EST l’image — et rouvrir la même image revient à cet onglet-là plutôt que d’en
 ouvrir un second. C’est la règle de tout le studio, décrite dans [Les assets](07-assets.md).
 
-Il n’y a **pas de menu « Ouvrir »** : on ouvre par un double-clic, sur l’image dans l’étagère ou
+Il n’y a **pas de menu « Ouvrir »** : on ouvre par un double-clic, sur l’image dans l’Explorateur ou
 sur le document dans l’Explorateur. Le `+` du rail gauche, lui, part du blanc — et ce
 document-là ne porte aucun asset derrière lui. La nuance compte au moment de fermer l’onglet, voir
 la fin de ce chapitre.
@@ -360,7 +360,7 @@ composités à l’export ; les règles, les repères et les pointillés de sél
 > l’enregistrement garde la pile intacte pour continuer à travailler.
 >
 > **Et si ce document a été ouvert depuis un asset, `⌘S` réécrit AUSSI cet asset** — la vignette
-> de l’étagère suit donc ce que vous éditez, au lieu de montrer la génération d’origine. Les deux
+> de l’Explorateur suit donc ce que vous éditez, au lieu de montrer la génération d’origine. Les deux
 > écritures sont dans cet ordre, et il compte : le document porte les calques et l’historique,
 > l’asset une image plate. Si la seconde échoue, votre travail est déjà sur le disque et c’est la
 > vignette qui est en retard — jamais l’inverse.
@@ -372,7 +372,7 @@ composités à l’export ; les règles, les repères et les pointillés de sél
 > n’est jamais touché** : l’édition entre dans le projet, votre fichier reste où il est.
 >
 > **Le studio le dit quand il constate que le document ne mesure plus son asset**, à deux moments
-> qui ne se valent pas. En rouvrant l’asset depuis l’étagère alors que son onglet est déjà là,
+> qui ne se valent pas. En rouvrant l’asset depuis l’Explorateur alors que son onglet est déjà là,
 > c’est un avertissement : rien n’est encore écrit, vous pouvez choisir. À l’enregistrement, c’est
 > un constat — **rien n’est refusé et l’écriture a lieu**. Et il se tait quand il ne peut pas
 > mesurer : un asset illisible, ou un onglet qui n’a pas fini de s’ouvrir. Pour garder l’original

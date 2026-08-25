@@ -29,7 +29,7 @@ button says what it keeps. The detail is in [chapter 3](03-the-window.md#the-jou
 The panel closes three ways: a click beside it, `Escape`, or switching to another application.
 Clicking the icon again works too. The same holds for the generations bar to its left.
 
-> **A successful generation says which shelf it landed in** — useful as soon as a model produces
+> **A successful generation says which folder it landed in** — useful as soon as a model produces
 > something other than what the workspace you are in shows.
 
 **A failure also raises a toast** in the corner, which does not fade on its own. If you missed
@@ -46,10 +46,10 @@ telling you what they are missing in order to fill up.
 |---|---|
 | "No project open" | you need to create or open a project (`⌘N` / `⌘O`) |
 | "No document open. Generate or open an asset to get started." | the centre of the window is waiting for a first tab |
-| "No asset yet. Generate something to get started." | the project's shelf is still empty |
+| "No asset yet. Generate something to get started." | the project's folder is still empty |
 | "No generation running." | nothing is generating right now — the generations list is empty |
 | "Open a project to generate." | the form is waiting for a project to drop the result into |
-| "Open a project to see its assets." | the same, for the shelf |
+| "Open a project to see its assets." | the same, for the Explorer |
 | "Open a scene to see its contents." | the **Scene** panel is waiting for an open scene |
 | "Open a scene to see its meshes." / "Open a scene to see its lights." | the same, for the two neighbouring panels |
 | "No model chosen" / "Nothing is billed until you pick a model." | no model has been confirmed — Scenario is unused until you pick one |
@@ -304,7 +304,7 @@ the line away once it is finished.
 
 ### "Video preparation unavailable: no lighter copy, no waveform."
 
-**Where it shows.** On an amber warning triangle, on the asset shelf's title bar: hover it, or
+**Where it shows.** On an amber warning triangle, on the Explorer's title bar: hover it, or
 reach it with the keyboard. The same state is written out in full, and permanently, in
 **Settings ▸ Media**.
 
@@ -359,7 +359,7 @@ brew reinstall ffmpeg
 **What it means.** This file has the same fingerprint as an asset already present. The studio
 refuses to keep two copies.
 
-**This is not an error.** Look for it in the **Assets** panel: it is already there.
+**This is not an error.** Look for it in the **Explorer**: it is already there.
 
 ### "Unreadable file"
 

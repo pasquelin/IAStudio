@@ -156,7 +156,7 @@ Quatre canaux se calculent depuis un autre, sur votre carte graphique — sans a
 Le calcul est ce que le **clic droit sur la ligne** offre. Si le canal source est vide, l’entrée le
 dit et ne se clique pas : c’est celui-là qu’il faut remplir d’abord.
 
-Le résultat est une **image du projet** comme une autre — elle apparaît dans l’étagère, se regarde à
+Le résultat est une **image du projet** comme une autre — elle apparaît dans l’Explorateur, se regarde à
 plat, part avec le projet — et le canal la porte avec le badge « dérivé ». Chaque calcul en crée une
 nouvelle : relancer trois fois laisse trois images, dont une seule est en place.
 

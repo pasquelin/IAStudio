@@ -1,8 +1,16 @@
-import { mdiEyeOffOutline, mdiEyeOutline, mdiFileTreeOutline, mdiShapeOutline } from '@mdi/js'
+import {
+  mdiAlertOutline,
+  mdiEyeOffOutline,
+  mdiEyeOutline,
+  mdiFileTreeOutline,
+  mdiShapeOutline,
+} from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
+import { UiIcon } from '@/design/UiIcon'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useExplorerView } from '@/stores/explorerView'
+import { useMedia } from '@/stores/media'
 
 /**
  * The Explorer's own title row: how the folder is READ, and how much of it is shown.
@@ -15,6 +23,7 @@ import { useExplorerView } from '@/stores/explorerView'
  */
 export function ExplorerActions() {
   const { t } = useTranslation()
+  const ffmpeg = useMedia(state => state.capabilities.ffmpeg)
   const hidden = useExplorerView(state => state.hidden)
   const toggleHidden = useExplorerView(state => state.toggleExplorerHidden)
   const mode = useExplorerView(state => state.mode)
@@ -22,6 +31,20 @@ export function ExplorerActions() {
 
   return (
     <>
+      {/* An icon rather than the sentence, which is 65 characters and would chase the three
+          readings out of the row; not a button, since nothing here can install ffmpeg. Focusable
+          all the same: the tooltip is the only thing that shows the sentence. It followed the
+          import here, the shelf's title row having lost it. */}
+      {!ffmpeg && (
+        <span
+          role="img"
+          tabIndex={0}
+          className="text-warning inline-flex shrink-0 items-center rounded-(--radius-sc-sm)"
+          {...TIP_BOTTOM(t('ingest.noFfmpeg'))}
+        >
+          <UiIcon path={mdiAlertOutline} size={14} />
+        </span>
+      )}
       {/* Two readings of one folder, and the pair is drawn as a pair: which one is on is what
           says the other exists at all. */}
       <ToolButton

@@ -607,7 +607,7 @@ ouvrir, et le dupliquer dégraderait `ToolId` en `string`.
 Un outil peut déclarer **plusieurs placements**, pour des ensembles d’espaces disjoints —
 l’Explorateur occupe la même moitié dans tous les espaces et à l’accueil, mais seul celui de
 l’accueil exige un projet ouvert. **Aucun outil ne déclare deux moitiés d’espace de travail
-depuis le 17/08**, l’étagère ayant abandonné la sienne en montant dans la colonne de gauche.
+depuis le 17/08**, l’Explorateur ayant abandonné la sienne en montant dans la colonne de gauche.
 `tool.test.ts` verrouille les deux invariants qui rendent cela lisible :
 les espaces de deux placements ne se recouvrent jamais, et les placements d’un même outil partagent
 leur moitié — un outil qui changerait de moitié en même temps que de zone atterrirait dans une
@@ -754,7 +754,7 @@ Confondre les deux faisait évincer un rush pour un logo posé au-dessus.
 8. il poll                           jobs.retrieve — 2 s est le PLANCHER, pas la cadence
 9. la progression remonte            evt:job-progress → ligne d'état
 10. succès                           metadata.assetIds → téléchargés dans le projet
-11. le catalogue l'enregistre        SQLite → l'asset paraît dans l'étagère
+11. le catalogue l'enregistre        SQLite → l'asset paraît dans l'Explorateur
 ```
 
 Les étapes 3 et 4 sont la raison d’être de l’invariant 5. Les entrées d’un modèle lui
@@ -832,7 +832,7 @@ Il refuse d’être écrasé quand il est illisible ou d’une version plus réc
 
 Le **catalogue** est `.index/catalog.db`, un index SQLite de chaque asset : identifiant, nom,
 type, emplacement, étiquettes, dates, et le chemin quand l’asset est local. Il existe pour que
-l’étagère puisse chercher parmi des milliers d’éléments sans toucher au système de fichiers, et
+l’Explorateur puisse chercher parmi des milliers d’éléments sans toucher au système de fichiers, et
 pour qu’un projet reste transportable.
 
 **Il ne se reconstruit pas.** Rien ne redevine ce qu’un fichier EST : le catalogue se remplit au
@@ -1023,7 +1023,7 @@ Trois conséquences pour l’appelant, et aucune n’est facultative :
   `aria-setsize` sont posés depuis l’index réel : sans eux, un catalogue de 2000 modèles se dit
   « 1 sur 35 », et le nombre change au défilement.
 - **`aria-multiselectable` est déclaré, jamais déduit.** `pickFrom` offre shift et ⌘ à tous les
-  appelants, mais la plupart n’en gardent qu’un — deux seulement passent `multiple`, l’étagère
+  appelants, mais la plupart n’en gardent qu’un — deux seulement passent `multiple`, l’Explorateur
   d’assets et la liste de nœuds. Le déduire promettrait une plage que les autres ne construisent
   pas.
 

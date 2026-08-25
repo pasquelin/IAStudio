@@ -9,9 +9,9 @@ L’espace où l’on assemble des plans les uns après les autres pour en faire
 ## Comment l’espace est disposé
 
 Comme l’espace Audio, c’est un espace où la **bande basse appartient au montage**. Une séquence se
-lit sur toute la largeur de l’écran : la **Timeline** y prend donc toute la place. L’étagère à
-assets reste où elle est partout ailleurs — moitié haute de la **colonne de gauche** — et tient
-donc l’écran en même temps que le montage, ce qui est ce qu’il faut pour glisser une prise sur une
+lit sur toute la largeur de l’écran : la **Timeline** y prend donc toute la place. L’**Explorateur**
+reste où il est partout ailleurs — moitié basse de la **colonne de gauche** — et tient donc
+l’écran en même temps que le montage, ce qui est ce qu’il faut pour glisser une prise sur une
 piste.
 
 La moitié haute de la colonne de droite est **vide** dans cet espace : la Vidéo n’y déclare aucun
@@ -51,7 +51,7 @@ Quatre gestes, et **ils ne posent pas le clip au même endroit** :
 
 | Geste | Sur quelle piste | À quel instant |
 |---|---|---|
-| **Glisser-déposer** depuis l’étagère | celle que vous survolez, **si elle peut le prendre** | là où vous lâchez |
+| **Glisser-déposer** depuis l’Explorateur | celle que vous survolez, **si elle peut le prendre** | là où vous lâchez |
 | **Glisser-déposer** dans le vide, sous la dernière piste | une **nouvelle** piste, ouverte pour lui — sauf pour une scène 3D | là où vous lâchez |
 | **Glisser-déposer** une ligne de scène 3D depuis l’**Explorateur** | une piste image, jamais une piste son | là où vous lâchez |
 | **Clic droit ▸ Ajouter au montage** | le studio choisit | à la **tête de lecture** |

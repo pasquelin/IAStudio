@@ -53,7 +53,8 @@ The second half of your API credentials, the equivalent of a password. It always
 A raw-material file in your *project*: an image, a video, a sound, a 3D object, a *texture*, a sky.
 Keep this in mind: **an asset is a finished, reusable file**.
 
-Assets live in the **Assets** panel, familiarly called *the shelf*.
+Assets live in the **Explorer** once they are on your disk, and in the **Library** while they are
+only online.
 
 **Assistant**
 The window where you say what you want to do, in an ordinary sentence, rather than clicking it.
@@ -565,8 +566,8 @@ Two separate settings, on every object of a 3D scene. **Casts a shadow**: the ob
 distant piece of set can do neither without anyone noticing.
 
 **Shelf**
-The nickname of the **Assets** panel. You file what you have made and imported there; you pick from
-it to work.
+The former nickname of the **Assets** panel, which listed both the project and the account. It no
+longer exists: the project is read in the **Explorer**, the account in the **Library**.
 
 **Skybox**
 What you see all around you in a 3D scene when you turn your head: the sky, the horizon, the distant

@@ -65,7 +65,7 @@ A raw-material file in your project: an image, a video, a sound, a 3D object, a 
 
 Keep this in mind: **an asset is a finished file you can reuse**.
 
-Assets live in the **Assets** panel, familiarly called "the shelf".
+Assets live in the **Assets** panel, familiarly called "the Explorer".
 
 ### 3. A **document**
 

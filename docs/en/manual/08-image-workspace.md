@@ -20,16 +20,16 @@ would be nowhere to write the document.
 ### Bringing an existing picture in
 
 **An image document is not condemned to start from white.** Three gestures lay a picture from
-your shelf onto it, and all three do the same thing: **one more layer**, on top of the stack,
+your assets onto it, and all three do the same thing: **one more layer**, on top of the stack,
 named after the asset and **already active**: it is the one the next stroke will land on.
 
 | Gesture | What it needs |
 |---|---|
 | **Drag and drop** the picture onto the canvas | the image tab open in front of you |
 | **Right-click ▸ Place as a layer** | an image tab open, in front or not |
-| The **Image…** tool, Shapes group | nothing: it opens the shelf, you pick there |
+| The **Image…** tool, Shapes group | nothing: it opens the Explorer, you pick there |
 
-> Only **pictures of the project** come in — the ones showing in the shelf, generated or
+> Only **pictures of the project** come in — the ones showing in the Explorer, generated or
 > imported. A picture not yet downloaded into the project cannot be dropped.
 
 **Double-click is not in that table, and that is the chapter's distinction**: it goes into no open
@@ -37,7 +37,7 @@ document. It opens the picture in a tab **of its own**: it is not one more layer
 document IS the picture — and reopening the same picture comes back to that tab rather than opening
 a second. It is the studio-wide rule, described in [Assets](07-assets.md).
 
-There is **no "Open" menu**: you open with a double-click, on the picture in the shelf or on the
+There is **no "Open" menu**: you open with a double-click, on the picture in the Explorer or on the
 document in the Explorer. The `+` on the left rail starts from white instead — and that document
 has no asset behind it. The distinction matters when you close the tab — see the end of this
 chapter.
@@ -200,7 +200,7 @@ The frame never leaves the picture — a crop trims, it does not grow.
 | **Ellipse** | `O` | Shift for a circle |
 | **Polygon** | — | drawn from its centre |
 | **Star** | — | drawn from its centre |
-| **Image…** | — | opens the shelf, to lay a picture down as a layer |
+| **Image…** | — | opens the Explorer, to lay a picture down as a layer |
 
 ### Drawing group
 
@@ -348,7 +348,7 @@ on the way out; rulers, guides and marching ants are not in it.
 > same. That is not what `⇧⌘E` does: the export flattens and leaves the studio, while saving keeps
 > the stack intact so you can carry on.
 >
-> **And if that document was opened from an asset, `⌘S` rewrites that asset TOO** — so the shelf's
+> **And if that document was opened from an asset, `⌘S` rewrites that asset TOO** — so the Explorer's
 > thumbnail follows what you are editing, instead of showing the original generation. The two
 > writes happen in that order, and the order matters: the document carries the layers and the
 > history, the asset a flat picture. If the second one fails, your work is already on disk and it
@@ -361,7 +361,7 @@ on the way out; rulers, guides and marching ants are not in it.
 > the edit enters the project, and your file stays where it is.
 >
 > **The studio says so when it finds the document no longer measures its asset**, at two moments
-> that are not equal. Reopening the asset from the shelf while its tab is already there is a
+> that are not equal. Reopening the asset from the Explorer while its tab is already there is a
 > warning: nothing has been written yet, and you can still choose. On save it is a statement —
 > **nothing is refused and the write happens**. And it stays quiet when it cannot measure: an
 > asset that will not decode, or a tab that has not finished opening. To keep the original intact,

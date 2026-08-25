@@ -133,7 +133,7 @@ One gap remains: **switching projects** closes the open documents without asking
 
 ### There is no "Open" menu, and none is needed
 
-A picture from the shelf comes **in** to an open document — dragged onto the canvas, sent by
+A picture from the Explorer comes **in** to an open document — dragged onto the canvas, sent by
 right-click, or chosen with the **Image…** tool: it becomes a layer. And **double-clicked, it opens
 a document of its own**. See [Image workspace](08-image-workspace.md).
 
@@ -468,7 +468,7 @@ project lives. **The second is not implemented**, and the choice is therefore of
 the interface. Offering a button that leads nowhere would be a promise the software cannot keep.
 
 > **Not to be confused with your account's library**, which does exist: you can **send** assets to
-> it from the shelf. These are two different things — one is where the project itself is kept, the
+> it from the Explorer. These are two different things — one is where the project itself is kept, the
 > other is a stock of assets online, beside the project. See [Assets](07-assets.md).
 
 ### Fetching has no button

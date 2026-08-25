@@ -40,7 +40,7 @@ part.
 | 4 | [Les projets](manuel/04-projets.md) | Ce qu’est un projet, ce qu’il y a dedans, comment le sauvegarder et le déplacer |
 | 5 | [Trouver un modèle](manuel/05-modeles.md) | Le catalogue, la recherche, les filtres, et comment choisir |
 | 6 | [Générer](manuel/06-generer.md) | Le formulaire, le prompt, la file de tâches, les erreurs et les reprises |
-| 7 | [Les assets](manuel/07-assets.md) | L’étagère du projet, la recherche, l’import de vos propres fichiers |
+| 7 | [Les assets et la Bibliothèque](manuel/07-assets.md) | La bibliothèque distante, télécharger, l’import de vos propres fichiers |
 
 ### Les espaces de travail
 
@@ -102,7 +102,8 @@ barre qui avance. Un clic dessus ouvre le détail.
 Vous pouvez continuer à travailler pendant ce temps.
 
 **7. Récupérez le résultat.**
-Quand la tâche passe à « Terminée », l’image arrive dans le panneau **Assets** — l’étagère du
+Quand la tâche passe à « Terminée », l’image arrive dans la **Bibliothèque** de votre compte — et
+dans le dossier du
 projet — et sur votre disque, dans le dossier `Images/`. Cliquez dessus : l’**Inspecteur**,
 à droite, montre son modèle, son prompt et sa graine, et sait ouvrir le dossier qui la contient.
 

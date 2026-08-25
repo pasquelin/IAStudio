@@ -58,7 +58,7 @@ Remember those two lines and nothing will block you.
 3. click the **Generate** icon in the left rail — choosing a model does not open the panel for
    you — then write your sentence in the **prompt**;
 4. **Generate**. The status line, bottom right, follows the progress;
-5. the result arrives in the **Assets** panel, and in `Images/` on your disk.
+5. the result arrives in the **Library**, and in `Images/` on your disk.
 
 **The catch.** With no project open there is **neither form nor button**: the panel shows "Open a
 project to generate." instead. It is not a greyed-out button, it is the whole panel waiting for a
@@ -162,9 +162,9 @@ deliberate. To aim at normals or roughness, drop onto **their row** in the Chann
 2. **Models** panel → **Capability** filter, visible without unfolding anything → **Image to video**;
 3. pick a model, give it your picture, describe the motion you want;
 4. **Generate** — allow longer than for a picture: a few minutes is normal;
-5. the clip arrives in **Assets**.
+5. the clip arrives in the **Library**.
 
-**To see it large**: **double-click** the clip in the shelf. An edit opens for it, with the clip
+**To see it large**: **double-click** the clip in the Explorer. An edit opens for it, with the clip
 already laid down — the `+` on the left rail is not a prerequisite.
 
 ---
@@ -174,9 +174,9 @@ already laid down — the `+` on the left rail is not a prerequisite.
 1. **Audio** workspace;
 2. **Models** panel: the publishers on offer are ElevenLabs, Google, Bytedance;
 3. describe the sound you want, **Generate**;
-4. the sound arrives in **Assets**.
+4. the sound arrives in the **Library**.
 
-**To hear it and shape it:** **double-click** your sound in the shelf. A tab opens for it and the
+**To hear it and shape it:** **double-click** your sound in the Explorer. A tab opens for it and the
 waveform appears — the `+` on the left rail is not a prerequisite.
 
 ---
@@ -204,7 +204,7 @@ four **arrows**, which do the same. `E` goes up, `Q` goes down, left `⇧` speed
 
 1. **Video** workspace;
 2. the **+** button on the left rail: a fresh sequence;
-3. **drag** your first clip from the shelf — in Video it sits in the **right column**, the bottom
+3. **drag** your first clip from the Explorer — in Video it sits in the **right column**, the bottom
    strip being taken by the timeline — onto a picture track;
 4. drag the second **right after it**: it lands on the nearest frame, but **it does not stick to
    the first one's edge**. Release too early and it covers its neighbour; edge snapping only comes
@@ -223,7 +223,7 @@ come back is the undo history.
 
 ## Trim a sound and fade it in
 
-1. **double-click** your sound in the shelf — the Audio workspace opens with it;
+1. **double-click** your sound in the Explorer — the Audio workspace opens with it;
 2. drag the region's edges to **trim**;
 3. set a **fade in** and a **fade out**;
 4. the **A/B** tool compares against the original, before your edits — it is a tool of its own,
@@ -258,7 +258,7 @@ base colour**.
 
 ## Bring in my own files
 
-1. **Assets** panel → the **Import media** button, on its title row;
+1. in the **Explorer**, right-click the blank, then **Import media**;
 2. choose your files. Accepted formats: video (`mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v`),
    audio (`wav` `mp3` `aac` `flac` `m4a` `ogg`), image (`png` `jpg` `jpeg` `webp` `tif` `tiff`
    `exr`), 3D (`glb`);
@@ -275,7 +275,7 @@ files and its textures along beside it — as well as `.obj`, `.fbx` and HDRIs (
 
 ## Remake a picture that came out well
 
-1. click the picture in the **Assets** panel;
+1. click the picture in the **Explorer**;
 2. look at the **Inspector**, on the right: if it knows the generation, it shows the **model**,
    the **prompt** and the **seed**;
 3. the **Regenerate** button: the model and its parameters come back into the Generation panel,

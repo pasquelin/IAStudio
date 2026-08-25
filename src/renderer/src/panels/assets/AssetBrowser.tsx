@@ -304,9 +304,9 @@ export function AssetBrowser() {
       ? setFacetValue(collection, TYPE_FACET, null)
       : collection,
   )
-  // Read off `sources` rather than asked again: a source that has not answered is not in the
-  // record, and two spellings of that question would drift apart.
-  const reading = !('library' in sources) && !('published' in sources)
+  // EITHER source still on its way, not both: a listing nobody asked for is not pending, so
+  // reading the record alone said « no match » over a feed whose first page was in flight.
+  const reading = (wantsOwn && library.pending) || (publishedType !== null && feed.pending)
   const refused = library.refusal !== null || feed.refusal !== null
 
   if (authKnown && !authenticated) return <MissingCredentials icon={mdiImageMultipleOutline} />

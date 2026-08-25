@@ -138,7 +138,7 @@ Un point qui reste : **changer de projet** ferme les documents ouverts sans pose
 
 ### Il n’y a pas de menu « Ouvrir », et il n’en faut pas
 
-Une image de l’étagère **entre** dans un document ouvert — glissée sur la toile, envoyée par le
+Une image de l’Explorateur **entre** dans un document ouvert — glissée sur la toile, envoyée par le
 clic droit, ou choisie par l’outil **Image…** : elle y devient un calque. Et **double-cliquée,
 elle ouvre un document à elle**. Voir [Espace Image](08-espace-image.md).
 
@@ -483,7 +483,7 @@ nulle part dans l’interface. Offrir un bouton qui ne mène nulle part serait u
 logiciel ne peut pas tenir.
 
 > **À ne pas confondre avec la bibliothèque de votre compte**, qui, elle, existe : vous pouvez
-> **envoyer** des assets vers elle depuis l’étagère. Ce sont deux choses différentes — l’une est
+> **envoyer** des assets vers elle depuis l’Explorateur. Ce sont deux choses différentes — l’une est
 > l’endroit où le projet lui-même est rangé, l’autre est un stock d’assets en ligne à côté du
 > projet. Voir [Les assets](07-assets.md).
 

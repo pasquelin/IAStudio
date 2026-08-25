@@ -121,10 +121,14 @@ describe('a library line the catalogue does not hold', () => {
   })
 
   /**
-   * One transfer at a time is `useCloud`'s own rule, so a shelf of twelve picked lines has to
-   * come down in ONE gesture — twelve clicks would be eleven refusals.
+   * One transfer at a time is `useCloud`'s own rule, so twelve picked lines have to come down in
+   * ONE gesture — twelve clicks would be eleven refusals.
+   *
+   * 🛑 Seeded with what the panel actually writes — the ROW ids `Collection` hands it, prefixed —
+   * and asserted on the LIBRARY ids a transfer takes. Seeded with bare ids, this case never met
+   * the real value, and the range silently fell back to the one line clicked.
    */
-  it('brings down the whole picked range in one transfer', async () => {
+  it('brings down the whole picked range in one transfer, by the library’s own ids', async () => {
     let pulled: readonly string[] = []
     installFakeBridge({
       menu: menu.bridge,
@@ -137,7 +141,7 @@ describe('a library line the catalogue does not hold', () => {
     })
     menu.picks('Télécharger 3 assets')
 
-    open(['asset_remote', 'asset_b', 'asset_c'])
+    open(['remote:asset_remote', 'remote:asset_b', 'remote:asset_c'])
 
     await vi.waitFor(() => expect(pulled).toEqual(['asset_remote', 'asset_b', 'asset_c']))
   })

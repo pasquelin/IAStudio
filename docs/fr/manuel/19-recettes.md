@@ -57,7 +57,7 @@ Retenez ces deux lignes et vous ne serez bloqué nulle part.
 3. cliquez l’icône **Génération** du rail gauche — choisir un modèle n’ouvre pas le panneau à
    votre place — puis écrivez votre phrase dans le **prompt** ;
 4. **Générer**. La ligne d’état, en bas à droite, suit l’avancement ;
-5. le résultat arrive dans le panneau **Assets**, et dans `Images/` sur votre disque.
+5. le résultat arrive dans la **Bibliothèque**, et dans `Images/` sur votre disque.
 
 **Le piège.** Sans projet ouvert, il n’y a **ni formulaire ni bouton** : le panneau affiche à la
 place « Ouvrez un projet pour générer. » Ce n’est pas un bouton grisé, c’est le panneau entier qui
@@ -165,7 +165,7 @@ voulu. Pour viser les normales ou la rugosité, déposez sur **leur ligne** dans
 4. **Générer** — comptez plus longtemps que pour une image : quelques minutes est normal ;
 5. le clip arrive dans les **Assets**.
 
-**Pour le voir en grand** : **double-cliquez** le clip dans l’étagère. Un montage s’ouvre pour lui,
+**Pour le voir en grand** : **double-cliquez** le clip dans l’Explorateur. Un montage s’ouvre pour lui,
 avec le clip déjà posé — le `+` du rail gauche n’est pas un préalable.
 
 ---
@@ -177,7 +177,7 @@ avec le clip déjà posé — le `+` du rail gauche n’est pas un préalable.
 3. décrivez le son voulu, **Générer** ;
 4. le son arrive dans les **Assets**.
 
-**Pour l’écouter et le retoucher :** **double-cliquez** votre son dans l’étagère. Un onglet
+**Pour l’écouter et le retoucher :** **double-cliquez** votre son dans l’Explorateur. Un onglet
 s’ouvre pour lui, et la forme d’onde apparaît — le `+` du rail gauche n’est pas un préalable.
 
 ---
@@ -207,7 +207,7 @@ accélère.
 
 1. espace **Vidéo** ;
 2. bouton **+** du rail gauche : une séquence neuve ;
-3. **glissez** votre premier clip depuis l’étagère — en Vidéo elle est dans la **colonne de
+3. **glissez** votre premier clip depuis l’Explorateur — en Vidéo elle est dans la **colonne de
    droite**, la bande basse étant prise par la timeline — sur une piste image ;
 4. glissez le second **juste après** : il se cale sur l’image la plus proche, mais **il ne colle
    pas au bord du premier**. Lâchez-le trop tôt et il recouvre son voisin ; l’aimantation aux bords
@@ -228,7 +228,7 @@ final.
 
 ## Rogner un son et le faire monter en douceur
 
-1. **double-cliquez** votre son dans l’étagère — l’espace Audio s’ouvre avec lui ;
+1. **double-cliquez** votre son dans l’Explorateur — l’espace Audio s’ouvre avec lui ;
 2. tirez les bords de la région pour **rogner** ;
 3. posez un **fondu d’entrée** et un **fondu de sortie** ;
 4. l’outil **A/B** compare avec l’original, avant vos retouches — c’est un outil à lui seul, pas
@@ -263,7 +263,7 @@ glisser-déposer ou le clic droit ▸ **Utiliser comme couleur de base**.
 
 ## Faire entrer mes propres fichiers
 
-1. panneau **Assets** → bouton **Importer un média**, sur sa ligne de titre ;
+1. dans l’**Explorateur**, clic droit sur le vide, puis **Importer un média** ;
 2. choisissez vos fichiers. Formats acceptés : vidéo (`mp4` `mov` `mkv` `webm` `avi` `mxf`
    `m4v`), audio (`wav` `mp3` `aac` `flac` `m4a` `ogg`), image (`png` `jpg` `jpeg` `webp` `tif`
    `tiff` `exr`), 3D (`glb`) ;
@@ -281,7 +281,7 @@ ses textures à côté — ainsi que `.obj`, `.fbx` et les HDRI (`.hdr`) sont re
 
 ## Refaire une image que j’avais réussie
 
-1. cliquez l’image dans le panneau **Assets** ;
+1. cliquez l’image dans l’**Explorateur** ;
 2. regardez l’**Inspecteur**, à droite : s’il connaît la génération, il affiche le **modèle**, le
    **prompt** et la **graine** ;
 3. bouton **Régénérer** : le modèle et ses paramètres reviennent dans le panneau Génération, prêts

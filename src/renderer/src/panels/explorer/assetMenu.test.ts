@@ -72,11 +72,22 @@ describe('what the explorer offers to do with an asset', () => {
   })
 
   // Greyed on a selection holding no file the catalogue could answer for.
-  it('greys them out when nothing in the selection has a row', () => {
+  it('greys the catalogue gestures out when nothing in the selection has a row', () => {
     raise(null, 0)
 
     expect(offered(/Nommer/)).toBe(false)
-    expect(offered(/^Envoyer vers$/)).toBe(false)
+  })
+
+  /**
+   * 🛑 Left OUT and not greyed, which is the whole difference: the main process refuses a submenu
+   * with no row, and it refuses the WHOLE menu with it — a right-click on any folder lost its
+   * twelve other gestures, silently, since `fakeMenu` never validates what it is sent.
+   */
+  it('drops the destinations group rather than opening it onto nothing', () => {
+    raise(null, 0)
+
+    expect(row(/^Envoyer vers$/)).toBeUndefined()
+    expect(row(/^Asset$/)).toBeDefined()
   })
 
   it('lists every destination that takes this kind', () => {

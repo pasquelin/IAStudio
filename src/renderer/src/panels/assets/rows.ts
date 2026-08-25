@@ -32,6 +32,11 @@ export type RowHints = { fetch: Record<string, string>; generating: Record<strin
 const REMOTE_PREFIX = 'remote:'
 const JOB_PREFIX = 'job:'
 
+/** The row a library asset draws, and the library id behind one — the two halves of one rule. */
+export const remoteRowId = (cloudId: string): string => `${REMOTE_PREFIX}${cloudId}`
+
+export const cloudIdOf = (rowId: string): string => rowId.slice(REMOTE_PREFIX.length)
+
 /**
  * The asset's own name, derived from the PROMPT rather than from the model that made it — it says
  * the thing rather than the machine. A job answers with the label it was submitted under.
@@ -105,7 +110,7 @@ export function mergeRows({ remote, published, scope }: MergeInput): AssetRowMod
 
   const mine: AssetRowModel[] = remote
     .filter(asset => wanted(asset.type))
-    .map(asset => ({ id: `${REMOTE_PREFIX}${asset.id}`, from: 'remote', asset }))
+    .map(asset => ({ id: remoteRowId(asset.id), from: 'remote', asset }))
 
   // Deduped against the account's own page, so an asset it happens to own AND to have published
   // is one line — its own, which is the truer of the two. Built only when there IS a feed.
@@ -114,7 +119,7 @@ export function mergeRows({ remote, published, scope }: MergeInput): AssetRowMod
     const held = new Set(remote.map(asset => asset.id))
     for (const asset of published) {
       if (held.has(asset.id) || !wanted(asset.type)) continue
-      publics.push({ id: `${REMOTE_PREFIX}${asset.id}`, from: 'remote', asset, published: true })
+      publics.push({ id: remoteRowId(asset.id), from: 'remote', asset, published: true })
     }
   }
 

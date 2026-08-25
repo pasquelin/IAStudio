@@ -39,11 +39,29 @@ export type AssetMenuProps = {
  * ten more into it made a list nobody could read. Destinations come from `ASSET_INTENTS`.
  */
 export function assetMenuGroups({ asset, count, t, onAsset }: AssetMenuProps): ContextMenuRow[] {
-  return [{ separator: true }, sendGroup(asset, t), catalogueGroup(asset, count, t, onAsset)]
+  const destinations = sendRows(asset, t)
+
+  return [
+    { separator: true },
+    // 🛑 Left OUT when it opens onto nothing, rather than greyed: the main process refuses a
+    // submenu with no row (`parseContextMenuItems`), and it refuses the WHOLE menu with it — a
+    // right-click on any folder lost its twelve other gestures, silently.
+    ...(destinations.length === 0
+      ? []
+      : [
+          {
+            label: t('assets.sendTo'),
+            icon: mdiSendOutline,
+            tooltip: t('assets.sendToHint'),
+            rows: destinations,
+          },
+        ]),
+    catalogueGroup(asset, count, t, onAsset),
+  ]
 }
 
 /** Sending it into a document already open — a gesture of its own, not a fallback of opening. */
-function sendGroup(asset: Asset | null, t: TFunction): ContextMenuRow {
+function sendRows(asset: Asset | null, t: TFunction): ContextMenuAction[] {
   const pixels = asset && pixelEditorIntent(asset)
 
   const rows: ContextMenuAction[] = asset
@@ -68,15 +86,7 @@ function sendGroup(asset: Asset | null, t: TFunction): ContextMenuRow {
     })
   }
 
-  return {
-    label: t('assets.sendTo'),
-    icon: mdiSendOutline,
-    tooltip: t('assets.sendToHint'),
-    // A row the catalogue holds nothing for has nowhere to send anything, and an empty submenu
-    // is a promise that opens onto nothing.
-    disabled: rows.length === 0,
-    rows,
-  }
+  return rows
 }
 
 /** What is done to the catalogue rows themselves, over the whole selection where it applies. */

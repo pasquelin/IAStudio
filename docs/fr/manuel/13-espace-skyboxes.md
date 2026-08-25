@@ -35,8 +35,8 @@ le fond : il pose une lumière orange rasante sur tout ce qui est devant.
 
 | Chemin | Comment | Où ça atterrit |
 |---|---|---|
-| **Double-clic** | sur un **panorama** de l’étagère | dans un onglet ciel **à lui**, ouvert pour l’occasion |
-| **Glisser-déposer** | depuis l’étagère vers l’aperçu, n’importe où dessus | dans l’onglet **devant vous** |
+| **Double-clic** | sur un **panorama** de l’Explorateur | dans un onglet ciel **à lui**, ouvert pour l’occasion |
+| **Glisser-déposer** | depuis l’Explorateur vers l’aperçu, n’importe où dessus | dans l’onglet **devant vous** |
 | **Générer** | choisissez un modèle de ciel et lancez une génération | dans le document d’où elle est partie, **toute seule** |
 
 **Le double-clic est le seul des trois qui ouvre un onglet** ; les deux autres remplissent celui

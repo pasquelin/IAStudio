@@ -133,7 +133,7 @@ creation, reopens the form already filled in — model, prompt and settings are 
 asset.
 
 **Fetching a remote asset no longer happens on this screen**: the panel that listed what your
-account holds online has left the home. The gesture lives in the **Assets** panel, on a
+account holds online has left the home. The gesture lives in the **Library** panel, on a
 right-click over a library tile — see [Assets](07-assets.md).
 
 ### Tidying the page
@@ -359,7 +359,7 @@ close button never goes**, and the panel's name keeps its size.
 |---|---|---|---|---|
 | **Models** | left | 1st | everywhere | the remote catalogue, filtered on the active workspace |
 | **Generate** | left | 1st | everywhere *(if a model is chosen)* | the chosen model's form |
-| **Assets** | left | 1st | everywhere | the shelf: what the project holds, what your key owns, what is being made |
+| **Library** | left | 1st | everywhere | what your key owns online, what the community published, what is being made — **absent without an API key** |
 | **Layers** | right | 1st | Image | the layer stack of the open image |
 | **Scene** | right | 1st | 3D | the tree of the open scene |
 | **Lights** | right | 1st | 3D | the scene's light sources |
@@ -378,11 +378,11 @@ close button never goes**, and the panel's name keeps its size.
 > no project, the home is the screen it has always been — two columns and nothing below.
 
 **The left column reads in two parts: what the provider offers, then what is already yours.** Above,
-**Models**, **Generate** and **Assets**, which take turns — a model to choose, its form, and the
-shelf of what it makes. Below, the **Explorer** and **Git**, which take turns as well: your
+**Models**, **Generate** and the **Library**, which take turns — a model to choose, its form, and
+what the account hosts. Below, the **Explorer** and **Git**, which take turns as well: your
 project folder, and what has changed in it.
 
-The cut between the two halves is what makes the gesture possible: the shelf and the Explorer
+The cut between the two halves is what makes the gesture possible: the Explorer and the Explorer
 hold the screen **together**, and nothing enters the project without passing from one to the other.
 
 **The right column belongs to the open document**: what it holds, what lights it, what is
@@ -405,7 +405,7 @@ Until you have clicked an icon of a half, it shows the first panel the workspace
 That is what you see on first opening, and what **View ▸ Reset layout** restores.
 
 The upper left half opens on **Models** in every workspace — choosing a model is where everything
-starts, and the shelf is asked for. The lower half opens on the **Explorer**, everywhere too.
+starts, and the Explorer is asked for. The lower half opens on the **Explorer**, everywhere too.
 
 | Workspace | The upper right half opens on | The bottom strip on |
 |---|---|---|

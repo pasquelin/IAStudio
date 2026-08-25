@@ -15,25 +15,27 @@ const NONE: ReadonlyMap<string, Asset> = new Map()
  */
 export function useRemoteTwins(remoteIds: readonly string[]): ReadonlyMap<string, Asset> {
   const [held, setHeld] = useState<ReadonlyMap<string, Asset>>(NONE)
-  // Joined rather than the array: it is a fresh list on every render of the panel, and an effect
-  // keyed on it would ask again on every frame of a scroll.
-  const asking = remoteIds.join(' ')
-  const wanted = useLatest(asking)
+  // The list itself, which the caller memoises: joining it would have to pick a separator no id
+  // can hold, and an id carrying one refuses the whole batch — every badge silently reverting to
+  // « not on this disk ».
+  const wanted = useLatest(remoteIds)
 
   const read = useCallback((): void => {
-    if (asking === '') return
+    if (remoteIds.length === 0) return
 
-    void assetsByRemoteId(asking.split(' ')).then(twins => {
+    void assetsByRemoteId(remoteIds).then(twins => {
       // A page landing while a read is in flight leaves two out at once, and the older would
       // take the newer one's place — what is kept is the answer to the question still being asked.
-      if (wanted.current === asking) setHeld(twins)
+      if (wanted.current === remoteIds) setHeld(twins)
     })
-  }, [asking, wanted])
+  }, [remoteIds, wanted])
 
   useEffect(read, [read])
   // The shelf is what says the catalogue moved — its `refresh` writes on every read, whatever
   // scope it holds, so this fires for an asset pulled while the panel is narrowed to meshes.
   useShelfRefresh(read)
 
-  return held
+  // Derived rather than written back: a panel drawing nothing has nothing to look up, and a
+  // `setState` from inside the effect would cascade a render for an answer nobody reads.
+  return remoteIds.length === 0 ? NONE : held
 }

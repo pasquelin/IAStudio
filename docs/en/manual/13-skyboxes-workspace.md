@@ -35,8 +35,8 @@ raking orange light over everything in front of it.
 
 | Path | How | Where it lands |
 |---|---|---|
-| **Double-click** | on a **panorama** in the shelf | in a sky tab **of its own**, opened for it |
-| **Drag and drop** | from the shelf onto the preview, anywhere on it | in the tab **in front of you** |
+| **Double-click** | on a **panorama** in the Explorer | in a sky tab **of its own**, opened for it |
+| **Drag and drop** | from the Explorer onto the preview, anywhere on it | in the tab **in front of you** |
 | **Generate** | pick a sky model and launch a generation | in the document it started from, **by itself** |
 
 **Double-click is the only one of the three that opens a tab**; the other two fill the one you
