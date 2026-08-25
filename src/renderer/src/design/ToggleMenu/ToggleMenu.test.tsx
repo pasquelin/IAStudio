@@ -28,7 +28,6 @@ const setUp = (props: Partial<Parameters<typeof ToggleMenu>[0]> = {}) => {
             { value: 1, label: '1' },
           ]}
           chosen={0.5}
-          columns={2}
           label="Grid step"
           onChoose={value => {
             onSelect(String(value))

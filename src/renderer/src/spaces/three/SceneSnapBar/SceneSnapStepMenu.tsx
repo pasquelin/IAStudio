@@ -30,7 +30,6 @@ export function SceneSnapStepMenu({ control, unit, value, onChoose }: SceneSnapS
       <ValueGrid
         options={optionsOf(control.steps)}
         chosen={value}
-        columns={control.columns}
         label={t(control.stepsKey)}
         scId={`snapBar.${control.kind}.step`}
         onChoose={onChoose}
@@ -42,7 +41,6 @@ export function SceneSnapStepMenu({ control, unit, value, onChoose }: SceneSnapS
           <ValueGrid
             options={optionsOf(control.divisions)}
             chosen={value}
-            columns={control.columns}
             label={t('snapBar.rotateDivisions')}
             scId="snapBar.rotate.division"
             onChoose={onChoose}
