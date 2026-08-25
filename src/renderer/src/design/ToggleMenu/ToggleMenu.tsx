@@ -24,6 +24,12 @@ export type ToggleMenuProps = {
   onToggle?: () => void
   /** Already translated. What the menu half reads while it is closed. */
   value: string
+  /**
+   * The longest reading this control will ever show, already translated. Its place is held open
+   * whatever is on: without it a value changing width — « 4 m/s » to « 10 m/s » — resizes the
+   * button, and the whole bar shuffles under a dragged slider.
+   */
+  widest?: string
   /** Already translated. Names the menu half, which its bare figure cannot do. */
   valueLabel: string
   /** How many rows the menu holds. One or none leaves the value half inert. */
@@ -56,6 +62,7 @@ export function ToggleMenu({
   pressed,
   onToggle,
   value,
+  widest,
   valueLabel,
   rowCount,
   rows,
@@ -101,14 +108,21 @@ export function ToggleMenu({
         className={cn('text-muted w-auto gap-0.5 px-1 tabular-nums', flyout.showing && 'text-text')}
         onClick={() => (flyout.showing ? flyout.close() : flyout.open())}
       >
-        <span className="text-tiny">{value}</span>
+        {/* The widest reading, laid under the current one in the same grid cell: it reserves
+            exactly the room the text needs, at any font scale, without a pixel written here. */}
+        <span className="text-tiny grid">
+          <span aria-hidden className="invisible col-start-1 row-start-1">
+            {widest ?? value}
+          </span>
+          <span className="col-start-1 row-start-1">{value}</span>
+        </span>
         <UiIcon path={mdiChevronDown} size={12} />
       </ToolButton>
 
       {/* No `role="menu"` on the flyout: what it holds is a `radiogroup`, a form or a slider, and
           promising rows a reader could step through sends it looking for what is not there. */}
       {flyout.showing && (
-        <Flyout anchor={flyout.anchor} placement="below" {...flyout.flyoutProps}>
+        <Flyout anchor={flyout.anchor} placement="below-left" {...flyout.flyoutProps}>
           {rows(flyout.close)}
         </Flyout>
       )}

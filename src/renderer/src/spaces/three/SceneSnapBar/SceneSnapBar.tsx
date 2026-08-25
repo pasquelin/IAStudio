@@ -3,6 +3,7 @@ import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PANE_TOOLBAR_ASIDE } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
+import { FLY_SPEEDS } from '@shared/domain/snap'
 import { formatDecimal } from '@/helpers/format'
 import { tipFor } from '@/helpers/tooltip'
 import { Separator } from '@/design/Separator'
@@ -38,11 +39,18 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
   // The figure OPENS the accessible name, because it is what is on screen: a name that dropped it
   // would leave a speech-input user saying what they read and reaching nothing (WCAG 2.5.3).
   const named = (value: string, name: string) => t('snapBar.namedValue', { value, name })
-  const reading = (control: (typeof SNAP_STEP_CONTROLS)[number]) =>
+  const readingOf = (control: (typeof SNAP_STEP_CONTROLS)[number], step: number) =>
     t(SNAP_READING_KEYS[control.reads], {
-      value: snapFigure(view[control.path], control.reads, view.units, i18n.language),
+      value: snapFigure(step, control.reads, view.units, i18n.language),
       unit: t(SNAP_UNIT_KEYS[view.units]),
     })
+  const speedReading = (value: number) =>
+    t('snapBar.speedValue', { value: formatDecimal(value, i18n.language, { digits: 1 }) })
+  // The longest reading a control can show, so its box stops resizing under a dragged slider.
+  // By characters, which is exact here: every figure is drawn `tabular-nums`.
+  const widestOf = (labels: readonly string[]) =>
+    labels.reduce((longest, label) => (label.length > longest.length ? label : longest), '')
+
   const toggle = (kind: keyof typeof snapping) =>
     useSceneViews.getState().setSceneSnap(documentId, kind, !snapping[kind])
 
@@ -63,15 +71,9 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
             label={t('snapBar.speed')}
             description={t('snapBar.speedHint')}
             tooltip={tipFor('horizontal')}
-            value={t('snapBar.speedValue', {
-              value: formatDecimal(flying, i18n.language, { digits: 1 }),
-            })}
-            valueLabel={named(
-              t('snapBar.speedValue', {
-                value: formatDecimal(flying, i18n.language, { digits: 1 }),
-              }),
-              t('snapBar.speed'),
-            )}
+            value={speedReading(flying)}
+            widest={widestOf(FLY_SPEEDS.map(speedReading))}
+            valueLabel={named(speedReading(flying), t('snapBar.speed'))}
             rowCount={2}
             rows={close => <SceneSpeedMenu speed={flying} onChoose={onSpeed} onClose={close} />}
           />
@@ -87,6 +89,7 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
             pressed={snapping.surface}
             onToggle={() => toggle('surface')}
             value={t(view.snapSurfaceAlign ? 'snapBar.surfaceAligned' : 'snapBar.surfaceFlat')}
+            widest={widestOf([t('snapBar.surfaceAligned'), t('snapBar.surfaceFlat')])}
             valueLabel={named(
               t(view.snapSurfaceAlign ? 'snapBar.surfaceAligned' : 'snapBar.surfaceFlat'),
               t('snapBar.surfaceSettings'),
@@ -106,8 +109,13 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
                 tooltip={tipFor('horizontal')}
                 pressed={snapping[control.kind]}
                 onToggle={() => toggle(control.kind)}
-                value={reading(control)}
-                valueLabel={named(reading(control), t(control.stepsKey))}
+                value={readingOf(control, view[control.path])}
+                widest={widestOf(
+                  [...control.steps, ...(control.divisions ?? [])].map(step =>
+                    readingOf(control, step),
+                  ),
+                )}
+                valueLabel={named(readingOf(control, view[control.path]), t(control.stepsKey))}
                 rowCount={control.steps.length}
                 rows={close => (
                   <SceneSnapStepMenu
