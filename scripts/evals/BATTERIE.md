@@ -4,6 +4,16 @@ La liste que l'assistant doit finir par passer, décidée par Alban le 2026-08-2
 plutôt que dans `docs/` parce qu'elle est la **feuille de route du banc** (`pnpm evals`) : chaque
 case cochée doit devenir un scénario mesurable, pas une impression.
 
+## Lancer le banc
+
+```bash
+pnpm evals                 # trois passes par scénario
+EVAL_RUNS=1 pnpm evals     # une seule, pour un aller-retour rapide
+```
+
+La clé se met **une fois** dans `secret/.env` — `EVAL_KEY=sk-…`. Le dossier entier est ignoré par
+git et doit le rester : une clé commitée survit dans l'historique au commit qui la retire.
+
 ## Où en est le banc
 
 Le banc joue aujourd'hui **5 scénarios** sur les ~250 ci-dessous, chacun trois fois, contre le

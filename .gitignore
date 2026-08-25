@@ -39,3 +39,8 @@ src/renderer/public/decoders/
 *.cer
 *.provisionprofile
 *.mobileprovision
+
+# 🛑 Les secrets de la machine — la clé du banc d'essai vit dans `secret/.env`. Le DOSSIER entier
+# est ignoré, pas seulement le fichier : ce qui y tombe demain l'est aussi. Une clé commitée reste
+# dans l'historique après le commit qui la retire, et le dépôt part chez qui le clone.
+secret/
