@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { isRecord } from '../guards'
-import { isSignature } from './shortcut'
+import { isSignature, reservedByPlatform } from './shortcut'
 import { LANGUAGES, TRANSLATIONS } from '../i18n'
 import {
   bindingOf,
@@ -11,6 +11,7 @@ import {
   commandIn,
   commandsIn,
   conflicts,
+  platformDefaults,
   scopeOfWorkspace,
 } from './command'
 import { WORKSPACE_IDS } from './workspace'
@@ -190,5 +191,45 @@ describe('the keys the registry binds', () => {
   it('would refuse a letter written in place of a code', () => {
     expect(isSignature('KeyP')).toBe(true)
     expect(isSignature('P')).toBe(false)
+  })
+
+  /**
+   * ⌘Q, ⌘W, ⌘M: the desktop answers these before any window does, on all three systems. A
+   * command holding one is unreachable AND takes a gesture nothing else can make — which is
+   * exactly what ⌘Q did on a French keyboard, where the window read it as the canvas's ⌘A.
+   */
+  it('leaves the chords the desktop answers to the desktop', () => {
+    for (const isMac of [true, false]) {
+      const taken = COMMAND_REGISTRY.filter(descriptor =>
+        reservedByPlatform(bindingOf(descriptor.id, platformDefaults(isMac))),
+      )
+
+      expect(taken.map(descriptor => descriptor.id)).toEqual([])
+    }
+  })
+})
+
+describe('what a system other than macOS ships', () => {
+  it('gives full screen the key its desktops actually use', () => {
+    expect(bindingOf('window.fullScreen', platformDefaults(false))).toBe('F11')
+    expect(bindingOf('window.fullScreen', platformDefaults(true))).toBe('Ctrl+Meta+KeyF')
+  })
+
+  it('lets a remap win over what the system ships', () => {
+    const remapped = { ...platformDefaults(false), 'window.fullScreen': 'Meta+KeyJ' }
+
+    expect(bindingOf('window.fullScreen', remapped)).toBe('Meta+KeyJ')
+  })
+
+  it('spells every one of them as a signature the studio can produce', () => {
+    const written = Object.values(platformDefaults(false))
+
+    expect(written.filter(signature => !isSignature(signature))).toEqual([])
+    expect(written.length).toBeGreaterThan(0)
+  })
+
+  /** Two commands of one scope sharing a key is a clash wherever it happens. */
+  it('clashes with nothing it ships alongside', () => {
+    expect(conflicts(platformDefaults(false))).toEqual([])
   })
 })

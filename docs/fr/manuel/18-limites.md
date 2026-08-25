@@ -186,7 +186,7 @@ passe pas est une intention affichée.
 ### Le recadrage ne rend pas ses pixels à l’annulation
 
 **Les cinq sont offerts** — Fusionner, Aplatir, le miroir, le quart de tour, et depuis peu le
-**recadrage** (`F`). Ce qui les bloquait était qu’une surface de calque ne suivait pas son
+**recadrage** (`C`). Ce qui les bloquait était qu’une surface de calque ne suivait pas son
 document ; elle le suit maintenant.
 
 Le recadrage a en revanche une limite qu’il faut connaître avant de s’en servir : **rétrécir le
@@ -498,17 +498,14 @@ Conséquence directe, et ce n’est pas une panne : sur les sept badges qu’un 
 à un autre projet ». Tant que rien ne bouge sans que vous le demandiez, l’autre côté ne peut pas
 prendre de l’avance sur le vôtre.
 
-### Sur Windows et Linux, `⌘` est pris au pied de la lettre
+### Sur Windows et Linux, `⌘` s’affiche là où `Ctrl` se presse
 
-Deux défauts distincts, l’un d’affichage, l’autre de fonctionnement.
+Les raccourcis **fonctionnent** : `⌘` se lit `Ctrl` partout, y compris ceux qu’une surface écoute
+elle-même. Ce qui reste est l’affichage — les infobulles et l’écran des raccourcis dessinent le
+symbole `⌘` du Mac au lieu d’écrire `Ctrl`.
 
-**L’affichage** : les infobulles et l’écran des raccourcis dessinent le symbole `⌘` du Mac au lieu
-de `Ctrl`, partout.
-
-**Le fonctionnement** : les raccourcis portés par le menu du système — `⌘Z`, `⌘S`, `⌘N` — répondent
-bien à `Ctrl`, c’est le menu qui les déclenche. Mais ceux qu’une surface écoute elle-même, comme
-`⌘D` dans la vue 3D, attendent la touche **Windows** et non `Ctrl` : ils sont pour l’instant hors
-d’atteinte ailleurs que sur un Mac.
+**La touche Windows, elle, ne déclenche rien** : elle appartient au bureau, et le studio ne lui
+donne aucune commande.
 
 ---
 

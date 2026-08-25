@@ -116,7 +116,7 @@ In other words: an armed tool never needs the menu to be taken up again.
 
 > **This is the group armed on opening.** A document opens on **Move**, never on the brush: the
 > first click on a picture you have just opened must not be able to leave a mark on it. The
-> brush is one key away — `P`.
+> brush is one key away — `B`.
 
 ### The **Image** menu
 
@@ -149,7 +149,7 @@ it, as long as the document has not changed size in between.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Crop** | `F` | drag a frame over the picture, adjust it, then `⏎` to trim |
+| **Crop** | `C` | drag a frame over the picture, adjust it, then `⏎` to trim |
 | **Slice** | — | *not available yet* |
 | **Cut** | — | *not available yet* |
 
@@ -194,8 +194,8 @@ The frame never leaves the picture — a crop trims, it does not grow.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Rectangle** | `R` | Shift for a square |
-| **Line** | `⇧R` | Shift constrains it to 45° |
+| **Rectangle** | `U` | Shift for a square |
+| **Line** | `⇧U` | Shift constrains it to 45° |
 | **Arrow** | `A` | Shift constrains it to 45° |
 | **Ellipse** | `O` | Shift for a circle |
 | **Polygon** | — | drawn from its centre |
@@ -206,8 +206,8 @@ The frame never leaves the picture — a crop trims, it does not grow.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Brush** | `P` | paints, soft edge |
-| **Pencil** | `⇧P` | paints, hard edge |
+| **Brush** | `B` | paints, soft edge |
+| **Pencil** | `⇧B` | paints, hard edge |
 | **Pen** | — | *not available yet* |
 
 ### Text group

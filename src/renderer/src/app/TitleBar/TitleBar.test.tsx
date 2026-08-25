@@ -134,7 +134,12 @@ describe('TitleBar', () => {
     useSettings.setState({ write })
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
-    fireEvent.keyDown(pill('Image'), { key: 'ArrowRight', code: 'ArrowRight', altKey: true })
+    fireEvent.keyDown(pill('Image'), {
+      key: 'ArrowRight',
+      code: 'ArrowRight',
+      altKey: true,
+      metaKey: true,
+    })
 
     expect(write).toHaveBeenCalledWith({
       workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes'] },
@@ -185,7 +190,12 @@ describe('TitleBar', () => {
     })
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
-    fireEvent.keyDown(pill('Image'), { key: 'ArrowRight', code: 'ArrowRight', altKey: true })
+    fireEvent.keyDown(pill('Image'), {
+      key: 'ArrowRight',
+      code: 'ArrowRight',
+      altKey: true,
+      metaKey: true,
+    })
 
     expect(write).not.toHaveBeenCalled()
   })
@@ -200,7 +210,7 @@ describe('TitleBar', () => {
     })
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
-    expect(pill('Image')).toHaveAttribute('aria-keyshortcuts', 'Alt+ArrowLeft Alt+KeyL')
+    expect(pill('Image')).toHaveAttribute('aria-keyshortcuts', 'Alt+Meta+ArrowLeft Alt+KeyL')
   })
 
   it('writes nothing at the ends of the bar', () => {
@@ -208,7 +218,12 @@ describe('TitleBar', () => {
     useSettings.setState({ write })
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
-    fireEvent.keyDown(pill('Image'), { key: 'ArrowLeft', code: 'ArrowLeft', altKey: true })
+    fireEvent.keyDown(pill('Image'), {
+      key: 'ArrowLeft',
+      code: 'ArrowLeft',
+      altKey: true,
+      metaKey: true,
+    })
 
     expect(write).not.toHaveBeenCalled()
   })
@@ -241,7 +256,12 @@ describe('TitleBar', () => {
   it('says where the space landed', () => {
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
-    fireEvent.keyDown(pill('Image'), { key: 'ArrowRight', code: 'ArrowRight', altKey: true })
+    fireEvent.keyDown(pill('Image'), {
+      key: 'ArrowRight',
+      code: 'ArrowRight',
+      altKey: true,
+      metaKey: true,
+    })
 
     expect(screen.getByRole('status')).toHaveTextContent('Image en position 2 sur 6')
   })
@@ -255,7 +275,12 @@ describe('TitleBar', () => {
   it('says it without an agreement French would have to make', () => {
     render(<TitleBar activeWorkspace="video" onWorkspace={vi.fn()} />)
 
-    fireEvent.keyDown(pill('Vidéo'), { key: 'ArrowRight', code: 'ArrowRight', altKey: true })
+    fireEvent.keyDown(pill('Vidéo'), {
+      key: 'ArrowRight',
+      code: 'ArrowRight',
+      altKey: true,
+      metaKey: true,
+    })
 
     expect(screen.getByRole('status')).toHaveTextContent('Vidéo en position 3 sur 6')
   })

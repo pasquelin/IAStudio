@@ -180,7 +180,7 @@ stated intention.
 ### Cropping does not give its pixels back on undo
 
 **All five are offered** — Merge down, Flatten, mirroring, the quarter turn, and now the **crop**
-(`F`). What blocked them was a layer's surface not following its document; it follows it now.
+(`C`). What blocked them was a layer's surface not following its document; it follows it now.
 
 The crop does come with a limit worth knowing before you use it: **shrinking the document throws
 away for good whatever falls outside the frame**. `⌘Z` restores the original size, but the removed
@@ -481,17 +481,13 @@ A direct consequence, and not a failure: of the seven badges an asset can wear, 
 appear** — "to fetch", "changed on both sides" and "belongs to another project". As long as
 nothing moves without you asking, the other side cannot get ahead of yours.
 
-### On Windows and Linux, `⌘` is taken literally
+### On Windows and Linux, `⌘` is displayed where `Ctrl` is pressed
 
-Two separate defects, one of display, one of function.
+The shortcuts **work**: `⌘` reads as `Ctrl` everywhere, including the ones a surface listens for
+itself. What is left is the display — the tooltips and the shortcuts screen draw the Mac `⌘`
+symbol instead of writing `Ctrl`.
 
-**Display**: the tooltips and the shortcuts screen draw the Mac `⌘` symbol instead of `Ctrl`,
-everywhere.
-
-**Function**: the shortcuts the system menu carries — `⌘Z`, `⌘S`, `⌘N` — do answer to `Ctrl`, since
-it is the menu that fires them. But the ones a surface listens for itself, such as `⌘D` in the 3D
-view, expect the **Windows** key rather than `Ctrl`: for now they are out of reach anywhere but on
-a Mac.
+**The Windows key fires nothing**: it belongs to the desktop, and the studio gives it no command.
 
 ---
 

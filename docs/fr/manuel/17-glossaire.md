@@ -542,7 +542,7 @@ Une des deux bandes d’icônes collées aux bords gauche et droit de la fenêtr
 icône ouvre ou ferme le *panneau* correspondant.
 
 **Recadrage** *(crop)*
-Poser un cadre sur une image et ne garder que ce qui tombe dedans. L’outil `F` de l’espace Image :
+Poser un cadre sur une image et ne garder que ce qui tombe dedans. L’outil `C` de l’espace Image :
 on glisse le cadre, on l’ajuste, `⏎` l’applique. **Un recadrage rogne, il n’agrandit jamais** — le
 cadre ne sort pas de l’image.
 

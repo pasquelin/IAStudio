@@ -2,6 +2,16 @@ import { beforeEach } from 'vitest'
 import { resetDocumentStoresForTests } from '@/stores/documentStore'
 
 /**
+ * The desktop every renderer case is written for. Pinned rather than inherited: jsdom builds its
+ * user agent from the machine, so `IS_MAC` — and with it the modifier every ⌘ chord is signed
+ * with — answered `true` here and `false` on the Linux runner. What a keyboard does off macOS is
+ * covered where it belongs, on the pure functions of `shared/domain/shortcut.ts`.
+ */
+const MAC_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+
+Object.defineProperty(globalThis.navigator, 'userAgent', { value: MAC_USER_AGENT })
+
+/**
  * A case must not inherit a document a previous one closed. Each document store keeps the ids it
  * was told to forget outside its zustand state, where a suite's own `setState` merges past them —
  * so a case that closed a document silenced the commands of every case after it, as a write that

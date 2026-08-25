@@ -243,7 +243,7 @@ Sur macOS, les trois pastilles restent à leur place habituelle, à gauche.
 | Geste | Comment |
 |---|---|
 | **Glisser** | attrapez un espace et lâchez-le sur un autre |
-| **Clavier** | `⌥←` / `⌥→` sur l’espace focalisé — les flèches nues parcourent la barre |
+| **Clavier** | `⌥⌘←` / `⌥⌘→` (`Ctrl+Page↑` / `Ctrl+Page↓`) sur l’espace focalisé — les flèches nues parcourent la barre |
 | **Clic droit** | **Déplacer à gauche** / **Déplacer à droite** |
 
 Les deux touches se remappent sous le contexte *Dans la barre des espaces* de

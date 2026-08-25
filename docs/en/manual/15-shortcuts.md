@@ -20,10 +20,35 @@ Keys are written with symbols, the same ones throughout the studio.
 So `⌘Z` reads "Command + Z" on a Mac, and "Ctrl + Z" elsewhere. The symbols are written together:
 `⇧⌘Z` means all three keys at once.
 
-> **On Windows and Linux, `⌘` is taken literally.** The tooltip and the shortcuts screen draw the
-> Mac symbol everywhere; and while the shortcuts the system menu carries do answer to `Ctrl`, the
-> ones a surface listens for itself expect the Windows key. Both defects are listed in
+> **On Windows and Linux, `⌘` reads as `Ctrl` everywhere**, including the shortcuts a surface
+> listens for itself. What is left to fix is the display: the tooltip and the shortcuts screen
+> draw the Mac symbol instead of writing `Ctrl` — see
 > [What does not exist yet](18-limits.md).
+>
+> **Three shortcuts differ, because the desktop itself decides otherwise**:
+
+| Action | macOS | Windows and Linux |
+|---|---|---|
+| **Full screen** | `⌃⌘F` | `F11` |
+| **Move workspace left** | `⌥⌘←` | `Ctrl+PageUp` |
+| **Move workspace right** | `⌥⌘→` | `Ctrl+PageDown` |
+
+---
+
+## One idea to grasp: the printed letter
+
+**A shortcut is named by the character written on the key, never by where it sits.** `⌘Z` is the
+key marked `Z`, wherever that is on your keyboard: middle-left on AZERTY, bottom-left on QWERTY.
+You press what you read.
+
+That is the rule every other application follows, and it holds for what the system keeps to
+itself too: `⌘Q` quits the studio, `⌘W` closes the window, `⌘M` minimises it. No command here can
+take those keys.
+
+> **A key printing nothing the studio can read keeps its position.** That is the case for the
+> brackets `[` and `]`, which a French keyboard only reaches through `⌥`: you then press in the
+> same place as an American keyboard, whatever symbol is engraved. Flying in the scene follows
+> the same logic, for a different reason — see below.
 
 ---
 
@@ -81,7 +106,7 @@ is also what lets it write into a text field, see below.
 | **Settings** | `⌘,` | opens the settings window |
 | **Assistant** | `⌘K` | opens the window where you say what you want to do, by voice or by keyboard |
 | **Dictate** | `⌥D` | listens to the microphone and writes what you say at the caret |
-| **Full screen** | `⌃⌘F` | makes the window take the whole screen |
+| **Full screen** | `⌃⌘F` (`F11` off macOS) | makes the window take the whole screen |
 | **Reset layout** | *none* | puts the panels back where they started |
 
 **Reset layout** deliberately has **no** default key: it is an action you reach for once every six
@@ -156,11 +181,12 @@ second as checkboxes.
 
 | Key | Effect |
 |---|---|
-| `⌥←` | moves the focused workspace one place left |
-| `⌥→` | moves the focused workspace one place right |
+| `⌥⌘←` / `Ctrl+PageUp` | moves the focused workspace one place left |
+| `⌥⌘→` / `Ctrl+PageDown` | moves the focused workspace one place right |
 
-**`⌥` and not the bare arrows**: those belong to whoever walks the bar, and taking them would
-trade one gesture for another. Dragging and right-clicking do the same thing — see
+**Not the bare arrows**: those belong to whoever walks the bar, and taking them would
+trade one gesture for another. These are the keys Safari, Chrome and VSCode give the same gesture,
+each on its own system. Dragging and right-clicking do the same thing — see
 [The title bar](03-the-window.md#arranging-the-workspaces-in-the-order-that-suits-you).
 
 Both keys can be changed like any other, under the **In the bar of spaces** context of the
@@ -314,9 +340,8 @@ Speed and boost are set in [settings](14-settings.md#workspaces).
 | **Return window** | `F` | opens the edit in a window of its own, to put on a second screen |
 | **Delete clip** | `Delete` | removes the clip from the edit. The original file stays in the assets |
 
-**`F` serves three times, and clashes with nothing.** It **frames the selection** in the 3D view and
-arms **Crop** in the image. All three belong to different contexts, which are never listening at the
-same time.
+**`F` serves twice, and clashes with nothing.** It **frames the selection** in the 3D view. Both
+belong to different contexts, which are never listening at the same time.
 
 ### Zoom
 
@@ -343,20 +368,21 @@ Every tool in the bar is a command: its key arms it, and remaps like the rest.
 
 | Key | Tool | | Key | Tool |
 |---|---|---|---|---|
-| `V` | Move | | `R` | Rectangle |
-| `H` | Hand | | `⇧R` | Line |
+| `V` | Move | | `U` | Rectangle |
+| `H` | Hand | | `⇧U` | Line |
 | `K` | Scale | | `A` | Arrow |
-| `F` | Crop | | `O` | Ellipse |
-| `M` | Rectangular selection | | `P` | Brush |
-| `L` | Lasso | | `⇧P` | Pencil |
+| `C` | Crop | | `O` | Ellipse |
+| `M` | Rectangular selection | | `B` | Brush |
+| `L` | Lasso | | `⇧B` | Pencil |
 | `T` | Text | | `E` | Eraser |
 | `G` | Paint bucket | | `I` | Eyedropper |
 
 **Four tools have no default key** — elliptical selection, polygon, star, selection eraser — and you can
 give them one in the settings.
 
-> **Line changed key.** It answered to `L`, which the Lasso already used in the same context; it
-> moved to `⇧R`, next to Rectangle, and the Arrow to `A`.
+> **Five tools carry the key they carry elsewhere.** Brush is on `B` and Pencil on `⇧B` as in
+> every image editor, Crop on `C`, the shapes on `U` and `⇧U`. `R`, `F` and `P` are free in the
+> image, and keep their meaning in the other workspaces.
 
 ### The size of the stroke
 
@@ -616,7 +642,7 @@ that is not a workspace — it is open in all of them at once — and one more c
 | `⌘,` | Settings |  |  |  |  |  |  |  |
 | `⌘K` | Assistant |  |  |  |  |  |  |  |
 | `⌥D` | Dictate |  |  |  |  |  |  |  |
-| `⌃⌘F` | Full screen |  |  |  |  |  |  |  |
+| `⌃⌘F` / `F11` | Full screen |  |  |  |  |  |  |  |
 | `⌘Z` |  |  | Undo | Undo | Undo | Undo | Undo | Undo |
 | `⇧⌘Z` |  |  | Redo | Redo | Redo | Redo | Redo | Redo |
 | `⌘G` |  |  | Group |  |  |  |  |  |
@@ -624,16 +650,18 @@ that is not a workspace — it is open in all of them at once — and one more c
 | `⌘C` / `⌘X` / `⌘V` |  |  | Copy / Cut / Paste |  |  |  |  |  |
 | `O` |  |  | Projection |  | Ellipse shape |  |  |  |
 | `Z` |  |  | Display mode |  |  |  |  |  |
-| `B` |  |  | Show skeletons |  |  |  |  |  |
+| `B` |  |  | Show skeletons |  | Brush tool |  |  |  |
 | `V` |  |  | Select |  | Move tool | Change the view |  |  |
-| `P` |  |  | Pose mode |  | Brush tool | Light probes |  |  |
+| `P` |  |  | Pose mode |  |  | Light probes |  |  |
 | `G` |  |  | Move |  | Paint bucket tool |  |  |  |
-| `R` |  |  | Rotate |  | Rectangle shape |  |  |  |
+| `R` |  |  | Rotate |  |  |  |  |  |
 | `S` |  |  | Scale *(and back up)* | Split clip |  |  |  |  |
 | `M` |  |  | Snap |  | Rectangular selection |  |  |  |
 | `L` |  |  | Local frame |  | Lasso |  |  |  |
-| `F` |  |  | Frame selection | Return window | Crop |  |  |  |
+| `F` |  |  | Frame selection | Return window |  |  |  |  |
 | `H` |  |  |  |  | Hand tool |  |  |  |
+| `C` |  |  |  |  | Crop tool |  |  |  |
+| `U` |  |  |  |  | Rectangle shape |  |  |  |
 | `K` |  |  |  |  | Scale tool |  |  |  |
 | `A` |  |  |  |  | Arrow shape |  |  |  |
 | `T` |  |  |  |  | Text tool |  |  |  |
@@ -641,8 +669,8 @@ that is not a workspace — it is open in all of them at once — and one more c
 | `E` |  |  |  |  | Eraser tool |  |  |  |
 | `⇧Q` |  |  | Four views |  |  |  |  |  |
 | `⇧W` |  |  | Quad edges |  |  |  |  |  |
-| `⇧R` |  |  |  |  | Line shape |  |  |  |
-| `⇧P` |  |  |  |  | Pencil tool |  |  |  |
+| `⇧U` |  |  |  |  | Line shape |  |  |  |
+| `⇧B` |  |  |  |  | Pencil tool |  |  |  |
 | `[` / `]` |  |  |  |  | Smaller / Larger brush |  |  |  |
 | `Delete` |  |  | Delete object | Delete clip |  |  |  |  |
 | `W A S D` |  |  | Fly |  |  |  |  |  |
@@ -663,8 +691,8 @@ that is not a workspace — it is open in all of them at once — and one more c
 | `⇧⌘E` |  |  |  |  | Export the image |  |  |  |
 | `Enter` |  |  |  |  | Apply the crop |  |  |  |
 | `Esc` |  |  |  |  | Abandon the crop |  |  |  |
-| `⌥←` |  | Move left |  |  |  |  |  |  |
-| `⌥→` |  | Move right |  |  |  |  |  |  |
+| `⌥⌘←` |  | Move left |  |  |  |  |  |  |
+| `⌥⌘→` |  | Move right |  |  |  |  |  |  |
 
 **In the explorer** — while the focus is in the panel, and only then:
 

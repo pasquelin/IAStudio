@@ -28,6 +28,38 @@ describe('useShortcuts', () => {
     expect(onCommand).toHaveBeenCalledWith('scene.translate')
   })
 
+  /**
+   * The chord that started all this. On a French keyboard the key marked Q sits where a US
+   * keyboard puts A, so reading the position fired the canvas's Select All AND swallowed the
+   * keypress — the application could not be quit from the image space at all.
+   */
+  it('leaves ⌘ and the key marked Q to the platform, wherever that key sits', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+
+    const quit = new KeyboardEvent('keydown', {
+      code: 'KeyA',
+      key: 'q',
+      metaKey: true,
+      cancelable: true,
+      bubbles: true,
+    })
+    window.dispatchEvent(quit)
+
+    expect(onCommand).not.toHaveBeenCalled()
+    expect(quit.defaultPrevented).toBe(false)
+  })
+
+  it('fires a command from the key that PRINTS its letter, not the one at that position', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+
+    // AZERTY: `g` is one position to the left of where a US keyboard has it.
+    fireEvent.keyDown(window, { code: 'KeyH', key: 'g' })
+
+    expect(onCommand).toHaveBeenCalledWith('scene.translate')
+  })
+
   it('fires once for a key held down, not once per auto-repeat', () => {
     const onCommand = vi.fn()
     mount(onCommand)

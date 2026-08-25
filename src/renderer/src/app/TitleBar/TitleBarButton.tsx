@@ -1,5 +1,6 @@
 import type { DragEvent } from 'react'
 import { cn } from '@/helpers/cn'
+import { IS_MAC } from '@/helpers/platform'
 import { TITLE_BAR_GHOST } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { bindingOf, commandFor } from '@shared/domain/command'
@@ -76,7 +77,7 @@ export function TitleBarButton({ icon, label, current, onClick, reorder }: Title
       onKeyDown={event => {
         if (!reorder) return
         const overrides = currentOverrides()
-        const command = commandFor(signatureOf(event.nativeEvent), 'spaces', overrides)
+        const command = commandFor(signatureOf(event.nativeEvent, IS_MAC), 'spaces', overrides)
         if (command !== 'spaces.moveLeft' && command !== 'spaces.moveRight') return
         event.preventDefault()
         reorder.onStep(command === 'spaces.moveLeft' ? 'left' : 'right')

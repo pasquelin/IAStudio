@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { signatureOf, type Signature } from '@shared/domain/shortcut'
+import { isSignature, signatureOf, type Signature } from '@shared/domain/shortcut'
+import { IS_MAC } from '@/helpers/platform'
 
 /** Modifiers on their own are not a shortcut; they are what is held while one is pressed. */
 const MODIFIER_CODES = new Set([
@@ -32,7 +33,10 @@ export function useChordCapture(onCaptured: (signature: Signature) => void, acti
       // Escape leaves without binding: a capture with no way out is a trap.
       if (event.code === 'Escape') return onCaptured('')
 
-      onCaptured(signatureOf(event))
+      // Away from macOS the Windows key signs a chord nothing can hold: capturing it would write
+      // a binding the settings file refuses on the way back in, and the row would go back by itself.
+      const signature = signatureOf(event, IS_MAC)
+      if (isSignature(signature)) onCaptured(signature)
     }
 
     window.addEventListener('keydown', onKeyDown, { capture: true })
