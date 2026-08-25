@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import type { CommandId } from '@shared/domain/command'
 import { heldCommandFor } from '@shared/domain/command'
 import { signatureOf } from '@shared/domain/shortcut'
+import { IS_MAC } from '@/helpers/platform'
 import { currentOverrides } from '@/stores/bindings'
 import { useLatest } from './useLatest'
 
@@ -38,7 +39,7 @@ export function useHeldCommand(
     }
 
     const matches = (event: KeyboardEvent) =>
-      heldCommandFor(signatureOf(event), currentOverrides()) === command
+      heldCommandFor(signatureOf(event, IS_MAC), currentOverrides()) === command
 
     // No typing guard, on either edge: a held command carries a modifier and exists to be used
     // from inside a field — and a key pressed outside one and released inside it still has to

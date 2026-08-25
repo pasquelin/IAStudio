@@ -6,6 +6,7 @@ import {
   type CommandScope,
 } from '@shared/domain/command'
 import { copiesText, type MotionId, signatureOf } from '@shared/domain/shortcut'
+import { IS_MAC } from '@/helpers/platform'
 import { isTyping } from '@/helpers/typing'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { currentOverrides, motionFor } from '@/stores/bindings'
@@ -128,14 +129,12 @@ export function useShortcuts({
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
-      const typing = isTyping(event.target)
-      const signature = signatureOf(event)
-
       // A field keeps every command, and the lookup is skipped rather than thrown away: ⌘E would
       // flatten a layer while its name is being typed, and the ⌘Z reflex would undo the typing
       // rather than the merge. `commandFor` walks the whole registry, on every keystroke typed.
-      if (typing) return
+      if (isTyping(event.target)) return
 
+      const signature = signatureOf(event, IS_MAC)
       const command = commandFor(signature, scope, currentOverrides())
       if (!command) return
       if (copiesText(signature) && holdsText()) return

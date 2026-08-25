@@ -164,7 +164,7 @@ describe('ImageDocument', () => {
   it('arms the brush when its key is pressed', () => {
     armed()
 
-    press('KeyP')
+    press('KeyB')
 
     expect(setTool).toHaveBeenLastCalledWith('brush')
   })
@@ -186,7 +186,7 @@ describe('ImageDocument', () => {
   it('moves the armed button with the key, not just the engine', () => {
     armed()
 
-    press('KeyP')
+    press('KeyB')
 
     expect(screen.getByRole('button', { name: /^Pinceau/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: /^Déplacement/ })).toHaveAttribute(
@@ -198,15 +198,15 @@ describe('ImageDocument', () => {
   /**
    * `L` was claimed by the lasso and by the line at once, which a registry makes impossible.
    * The lasso keeps it, as it does in every editor that has one; the line takes Shift and the
-   * rectangle's key, since that is the group it belongs to.
+   * shape key `U`, since that is the group it belongs to.
    */
-  it('gives L to the lasso and Shift+R to the line', () => {
+  it('gives L to the lasso and Shift+U to the line', () => {
     armed()
 
     press('KeyL')
     expect(setTool).toHaveBeenLastCalledWith('select')
 
-    press('KeyR', true)
+    press('KeyU', true)
     expect(setTool).toHaveBeenLastCalledWith('shape')
     expect(setShape).toHaveBeenLastCalledWith('line')
   })
@@ -215,12 +215,12 @@ describe('ImageDocument', () => {
   it('wears the key the registry gives it', () => {
     render(<ImageDocument documentId="doc-1" />)
 
-    expect(screen.getByRole('button', { name: 'Pinceau (P)' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pinceau (B)' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Pipette (I)' })).toBeInTheDocument()
   })
 
   it('offers a colour input', () => {
-    armedWith('KeyP')
+    armedWith('KeyB')
     expect(screen.getByLabelText('Couleur')).toBeInTheDocument()
   })
 
@@ -274,7 +274,7 @@ describe('ImageDocument', () => {
    */
   describe('the brush settings', () => {
     const openSettings = async (): Promise<void> => {
-      armedWith('KeyP')
+      armedWith('KeyB')
       await userEvent.click(screen.getByRole('button', { name: 'Réglages du pinceau' }))
     }
 
@@ -321,11 +321,11 @@ describe('ImageDocument', () => {
     }
 
     it('offers hardness under the brush, the only tool that feathers', async () => {
-      expect(await settingsUnder('KeyP')).toEqual(['Taille', 'Dureté', 'Opacité'])
+      expect(await settingsUnder('KeyB')).toEqual(['Taille', 'Dureté', 'Opacité'])
     })
 
     it('takes hardness away under the pencil, which is hard by definition', async () => {
-      expect(await settingsUnder('KeyP', true)).toEqual(['Taille', 'Opacité'])
+      expect(await settingsUnder('KeyB', true)).toEqual(['Taille', 'Opacité'])
     })
 
     it('takes hardness away under the eraser as well', async () => {
@@ -333,7 +333,7 @@ describe('ImageDocument', () => {
     })
 
     it('takes hardness away under the shapes, whose size is a stroke width', async () => {
-      expect(await settingsUnder('KeyR')).toEqual(['Taille', 'Opacité'])
+      expect(await settingsUnder('KeyU')).toEqual(['Taille', 'Opacité'])
     })
 
     /**
@@ -363,7 +363,7 @@ describe('ImageDocument', () => {
     it.each([
       ['the eyedropper', 'KeyI'],
       ['the pointer', 'KeyV'],
-      ['the crop frame', 'KeyF'],
+      ['the crop frame', 'KeyC'],
       ['the caption tool', 'KeyT'],
     ])('offers no setting at all under %s, which paints no pixel', (_name, key) => {
       armedWith(key)
@@ -374,7 +374,7 @@ describe('ImageDocument', () => {
 
   describe('the bracket keys', () => {
     it('steps the size up and down through the registry, not by a listener of its own', () => {
-      armedWith('KeyP')
+      armedWith('KeyB')
 
       press('BracketRight')
       expect(setBrush).toHaveBeenLastCalledWith(expect.objectContaining({ size: 34 }))

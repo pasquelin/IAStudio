@@ -237,7 +237,7 @@ On macOS, the three traffic lights stay where they always are, on the left.
 | Gesture | How |
 |---|---|
 | **Drag** | pick up a workspace and drop it onto another |
-| **Keyboard** | `⌥←` / `⌥→` on the focused workspace — the bare arrows walk the bar |
+| **Keyboard** | `⌥⌘←` / `⌥⌘→` (`Ctrl+PageUp` / `Ctrl+PageDown`) on the focused workspace — the bare arrows walk the bar |
 | **Right-click** | **Move left** / **Move right** |
 
 Both keys can be remapped under the *In the workspace bar* context of the

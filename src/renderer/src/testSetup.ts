@@ -17,6 +17,16 @@ import { forgetRememberedAssets, useAssets } from '@/stores/assets'
 import './testSetupStores'
 
 /**
+ * The desktop every renderer case is written for. Pinned rather than inherited: jsdom builds its
+ * user agent from the machine, so `IS_MAC` — and with it the modifier every ⌘ chord is signed
+ * with — answered `true` here and `false` on the Linux runner. What a keyboard does off macOS is
+ * covered where it belongs, on the pure functions of `shared/domain/shortcut.ts`.
+ */
+const MAC_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+
+Object.defineProperty(globalThis.navigator, 'userAgent', { value: MAC_USER_AGENT })
+
+/**
  * jsdom renders `<dialog>` but implements none of its modal API. Chromium does, and it is
  * what gives the account dialog its focus trap and its Escape handling — so the gap is
  * filled here rather than avoided in the component.

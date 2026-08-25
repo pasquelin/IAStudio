@@ -1,5 +1,5 @@
 import type { DisplayMode } from './scene'
-import type { Signature } from './shortcut'
+import { reservedByPlatform, type Signature } from './shortcut'
 import { HOME_SURFACE, type ToolSurface } from './tool'
 import type { WorkspaceId } from './workspace'
 
@@ -309,14 +309,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'spaces',
     titleKey: 'commands.spacesMoveLeft.title',
     helpKey: 'commands.spacesMoveLeft.help',
-    defaultBinding: 'Alt+ArrowLeft',
+    defaultBinding: 'Alt+Meta+ArrowLeft',
   }),
   command({
     id: 'spaces.moveRight',
     scope: 'spaces',
     titleKey: 'commands.spacesMoveRight.title',
     helpKey: 'commands.spacesMoveRight.help',
-    defaultBinding: 'Alt+ArrowRight',
+    defaultBinding: 'Alt+Meta+ArrowRight',
   }),
 
   /**
@@ -977,7 +977,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'canvas',
     titleKey: 'commands.canvasToolCrop.title',
     helpKey: 'commands.canvasToolCrop.help',
-    defaultBinding: 'KeyF',
+    defaultBinding: 'KeyC',
   }),
   command({
     id: 'canvas.toolSelectRectangle',
@@ -1005,14 +1005,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'canvas',
     titleKey: 'commands.canvasToolShapeRectangle.title',
     helpKey: 'commands.canvasToolShapeRectangle.help',
-    defaultBinding: 'KeyR',
+    defaultBinding: 'KeyU',
   }),
   command({
     id: 'canvas.toolShapeLine',
     scope: 'canvas',
     titleKey: 'commands.canvasToolShapeLine.title',
     helpKey: 'commands.canvasToolShapeLine.help',
-    defaultBinding: 'Shift+KeyR',
+    defaultBinding: 'Shift+KeyU',
   }),
   command({
     id: 'canvas.toolShapeArrow',
@@ -1047,14 +1047,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'canvas',
     titleKey: 'commands.canvasToolBrush.title',
     helpKey: 'commands.canvasToolBrush.help',
-    defaultBinding: 'KeyP',
+    defaultBinding: 'KeyB',
   }),
   command({
     id: 'canvas.toolPencil',
     scope: 'canvas',
     titleKey: 'commands.canvasToolPencil.title',
     helpKey: 'commands.canvasToolPencil.help',
-    defaultBinding: 'Shift+KeyP',
+    defaultBinding: 'Shift+KeyB',
   }),
   command({
     id: 'canvas.toolText',
@@ -1249,6 +1249,28 @@ export function commandsIn(scope: CommandScope): readonly CommandDescriptor[] {
 export type BindingOverrides = Partial<Record<CommandId, Signature>>
 
 /**
+ * What ships away from macOS, where the desktop's own convention differs. Read UNDER the user's
+ * remaps, so remapping one still wins and resetting it lands back on the platform's key.
+ *
+ * Merged at the two places bindings are read — `stores/bindings.ts` and `buildMenu` — rather
+ * than passed to `bindingOf`, which a dozen callers ask without knowing which system they are on.
+ */
+const AWAY_FROM_MAC: BindingOverrides = {
+  // F11 on Windows and on every Linux desktop; ⌃⌘F belongs to macOS alone.
+  'window.fullScreen': 'F11',
+  // Ctrl+PageUp/PageDown steps between tabs on Windows and Linux, where macOS uses ⌘⌥←/→.
+  'spaces.moveLeft': 'Meta+PageUp',
+  'spaces.moveRight': 'Meta+PageDown',
+}
+
+const ON_MAC: BindingOverrides = {}
+
+/** The bindings this system ships, before anything the user remapped. Never a fresh object. */
+export function platformDefaults(isMac: boolean): BindingOverrides {
+  return isMac ? ON_MAC : AWAY_FROM_MAC
+}
+
+/**
  * The key a command answers to. Resolved on demand rather than kept as a full table: a command
  * added by a new version arrives with its own default and needs no migration, and a remap of a
  * command since removed is ignored instead of lingering.
@@ -1328,7 +1350,11 @@ export function conflicts(overrides: BindingOverrides): readonly CommandId[] {
     bySignature.set(signature, [...(bySignature.get(signature) ?? []), descriptor])
   }
 
-  const clashing: CommandId[] = []
+  // Reported alongside the clashes between two commands: bound to one of these, a command is
+  // just as unreachable, and the screen has one place to say so.
+  const clashing: CommandId[] = COMMAND_REGISTRY.filter(descriptor =>
+    reservedByPlatform(bindingOf(descriptor.id, overrides)),
+  ).map(descriptor => descriptor.id)
 
   for (const sharing of bySignature.values()) {
     if (sharing.length < 2) continue

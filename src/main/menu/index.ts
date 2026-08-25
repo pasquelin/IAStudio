@@ -1,7 +1,12 @@
 import { app, BrowserWindow, Menu } from 'electron'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { HOME_SURFACE, placementOf, type ToolId, type ToolSurface } from '@shared/domain/tool'
-import type { BindingOverrides, MenuAbility, MenuCheck } from '@shared/domain/command'
+import {
+  platformDefaults,
+  type BindingOverrides,
+  type MenuAbility,
+  type MenuCheck,
+} from '@shared/domain/command'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { frontWindow, sendToFront } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
@@ -58,15 +63,18 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
   overrides = remapped
   shown = focusedMenu()
 
+  const isMac = process.platform === 'darwin'
   const template = menuTemplate({
     language: windowLanguage(),
     workspace: shown?.surface ?? null,
     tools: shown?.tools ?? [],
     checked: shown?.checked ?? [],
     abilities: shown?.abilities ?? [],
-    isMac: process.platform === 'darwin',
+    isMac,
     isDevelopment,
-    overrides,
+    // What this system ships under what the user remapped, exactly as the window reads them:
+    // the menu would otherwise advertise ⌃⌘F on a machine whose full-screen key is F11.
+    overrides: { ...platformDefaults(isMac), ...overrides },
     actions: {
       openSettings: () => void openSettingsWindow(),
       openLicences: () => void openLicencesWindow(),

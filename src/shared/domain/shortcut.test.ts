@@ -5,6 +5,7 @@ import {
   DEFAULT_MOTION,
   isSignature,
   MOTION_IDS,
+  reservedByPlatform,
   shortcutLabel,
   signatureOf,
   type KeyChord,
@@ -13,8 +14,13 @@ import {
 /** No overrides: what the application ships with. */
 const shipped = (id: Parameters<typeof bindingOf>[0]): string => bindingOf(id, {}) ?? ''
 
+/**
+ * A keypress on a US keyboard, where the character printed on a key and the position it sits at
+ * agree. The layouts where they do NOT are the point of this file, and each spells its own `key`.
+ */
 const event = (code: string, modifiers: Partial<KeyChord> = {}): KeyChord => ({
   code,
+  key: '',
   ctrlKey: false,
   altKey: false,
   shiftKey: false,
@@ -22,21 +28,43 @@ const event = (code: string, modifiers: Partial<KeyChord> = {}): KeyChord => ({
   ...modifiers,
 })
 
+/** macOS, where ⌘ is the command key. The other side is covered by `away from macOS` below. */
+const MAC = true
+
+const sign = (chord: KeyChord): string => signatureOf(chord, MAC)
+
 describe('signatureOf', () => {
-  it('uses the physical key position, not the printed letter', () => {
-    // The same physical key reads "W" on QWERTY and "Z" on AZERTY; only `code` is stable.
-    expect(signatureOf(event('KeyW'))).toBe('KeyW')
+  /**
+   * The bug this whole file turns on. On AZERTY the key marked Q sits where a US keyboard puts
+   * A, so reading the position signed ⌘Q as `Meta+KeyA` — the canvas's Select All — and the
+   * `preventDefault` that followed meant the application could not be quit at all.
+   */
+  it('names a chord by the character printed on the key, not by its position', () => {
+    expect(sign(event('KeyA', { key: 'q', metaKey: true }))).toBe('Meta+KeyQ')
+    expect(sign(event('KeyQ', { key: 'a', metaKey: true }))).toBe('Meta+KeyA')
+  })
+
+  it('falls back to the position for a key that prints no character it knows', () => {
+    expect(sign(event('KeyW'))).toBe('KeyW')
+    expect(sign(event('F11'))).toBe('F11')
+  })
+
+  /** ⇧ is what a French or German keyboard needs to type a digit at all, so ⌘⇧1 IS the user's ⌘1. */
+  it('drops the Shift that merely types a digit, and keeps the one that makes a chord', () => {
+    expect(sign(event('Digit1', { key: '1', shiftKey: true, metaKey: true }))).toBe('Meta+Digit1')
+    expect(sign(event('KeyA', { key: 'A', shiftKey: true }))).toBe('Shift+KeyA')
+    expect(sign(event('Digit1', { key: '!', shiftKey: true }))).toBe('Shift+Digit1')
   })
 
   it('orders modifiers so the same combination always signs the same', () => {
-    expect(signatureOf(event('KeyZ', { metaKey: true, shiftKey: true }))).toBe(
-      signatureOf(event('KeyZ', { shiftKey: true, metaKey: true })),
+    expect(sign(event('KeyZ', { metaKey: true, shiftKey: true }))).toBe(
+      sign(event('KeyZ', { shiftKey: true, metaKey: true })),
     )
   })
 
   it('separates a shifted binding from its bare one', () => {
-    expect(signatureOf(event('KeyZ', { metaKey: true }))).not.toBe(
-      signatureOf(event('KeyZ', { metaKey: true, shiftKey: true })),
+    expect(sign(event('KeyZ', { metaKey: true }))).not.toBe(
+      sign(event('KeyZ', { metaKey: true, shiftKey: true })),
     )
   })
 
@@ -46,27 +74,88 @@ describe('signatureOf', () => {
    * either one moves both.
    */
   it('reads the keypad Enter as the Enter it shares its meaning with', () => {
-    expect(signatureOf(event('NumpadEnter'))).toBe('Enter')
-    expect(signatureOf(event('NumpadEnter', { metaKey: true }))).toBe('Meta+Enter')
+    expect(sign(event('NumpadEnter'))).toBe('Enter')
+    expect(sign(event('NumpadEnter', { metaKey: true }))).toBe('Meta+Enter')
   })
 
   it('fires the commands bound to Enter from the keypad', () => {
-    expect(commandFor(signatureOf(event('NumpadEnter')), 'canvas', {})).toBe('canvas.cropApply')
+    expect(commandFor(sign(event('NumpadEnter')), 'canvas', {})).toBe('canvas.cropApply')
   })
 
   it('follows a remap onto Enter, having no second spelling of its own', () => {
     // A scope with nothing on Enter, so the remap is what puts a command there.
     const moved = { 'scene.translate': 'Enter' }
-    expect(commandFor(signatureOf(event('NumpadEnter')), 'scene', moved)).toBe('scene.translate')
-    expect(commandFor(signatureOf(event('NumpadEnter')), 'scene', {})).toBeNull()
+    expect(commandFor(sign(event('NumpadEnter')), 'scene', moved)).toBe('scene.translate')
+    expect(commandFor(sign(event('NumpadEnter')), 'scene', {})).toBeNull()
+  })
+
+  /** With the lock off this key is `End`: a command on `Digit1` would fire on a move. */
+  it('leaves a keypad digit alone while Num Lock makes it a movement', () => {
+    expect(sign(event('Numpad1', { key: 'End' }))).toBe('Numpad1')
+  })
+
+  it('reads a keypad digit as the digit it prints once the lock is on', () => {
+    expect(sign(event('Numpad1', { key: '1', metaKey: true }))).toBe('Meta+Digit1')
+  })
+})
+
+/** A French keyboard, where the character printed on a key and its position part company. */
+describe('a layout that is not US', () => {
+  /**
+   * `^` is a dead key and `!` prints a character no US keyboard has bare: neither can be named
+   * by what it types, so both stay on their position — which is where the bindings already sit.
+   */
+  it('names by position the keys whose character it cannot place', () => {
+    expect(sign(event('BracketLeft', { key: 'Dead' }))).toBe('BracketLeft')
+    expect(commandFor(sign(event('Slash', { key: '!' })), 'scene', {})).toBe('scene.isolate')
+  })
+
+  it('reaches the guides through the key marked with a semicolon, wherever it sits', () => {
+    const pressed = event('Comma', { key: ';', metaKey: true })
+
+    expect(commandFor(sign(pressed), 'canvas', {})).toBe('canvas.guides')
+  })
+
+  /** ⌘ and the key marked Q reaches Quit, and nothing of this studio. */
+  it('leaves the platform its own chord', () => {
+    expect(commandFor(sign(event('KeyA', { key: 'q', metaKey: true })), 'canvas', {})).toBeNull()
+  })
+})
+
+describe('away from macOS', () => {
+  it('lets Ctrl play the part ⌘ plays, as `CmdOrCtrl` already tells the menu', () => {
+    expect(signatureOf(event('KeyZ', { key: 'z', ctrlKey: true }), false)).toBe('Meta+KeyZ')
+    expect(commandFor('Meta+KeyZ', 'canvas', {})).toBe('canvas.undo')
+  })
+
+  /** Held on macOS, it is a chord of its own; elsewhere Ctrl is the command key. */
+  it('keeps ⌘ and Ctrl apart on macOS', () => {
+    expect(signatureOf(event('KeyZ', { key: 'z', ctrlKey: true }), MAC)).toBe('Ctrl+KeyZ')
   })
 
   /**
-   * With Num Lock off this key is `End`, so a command on `Digit1` would fire on a keypress
-   * meant to move. Only keys whose meaning survives the lock are folded.
+   * The Windows key names no chord here, and `isSignature` refuses this one spelling on purpose:
+   * unspellable, it matches nothing — dropped, Win+Z would have read as the plain `Z`.
    */
-  it('leaves the keypad digits on their own positions', () => {
-    expect(signatureOf(event('Numpad1'))).toBe('Numpad1')
+  it('leaves the Windows key unable to name a chord', () => {
+    const signature = signatureOf(event('KeyZ', { key: 'z', metaKey: true }), false)
+
+    expect(isSignature(signature)).toBe(false)
+    expect(commandFor(signature, 'canvas', {})).toBeNull()
+  })
+})
+
+describe('reservedByPlatform', () => {
+  it('names the chords the desktop answers before any window does', () => {
+    expect(reservedByPlatform('Meta+KeyQ')).toBe(true)
+    expect(reservedByPlatform('Meta+KeyW')).toBe(true)
+  })
+
+  /** The platform reserves ⌘, FOR the settings, which is the very thing it opens here. */
+  it('leaves ⌘, alone, and says nothing about a chord nobody claims', () => {
+    expect(reservedByPlatform('Meta+Comma')).toBe(false)
+    expect(reservedByPlatform(shipped('canvas.undo'))).toBe(false)
+    expect(reservedByPlatform(null)).toBe(false)
   })
 })
 
@@ -120,22 +209,22 @@ const named = (code: string): string => `<${code}>`
 
 describe('shortcutLabel', () => {
   it('shows the printed letter of a physical key', () => {
-    expect(shortcutLabel('KeyG', named)).toBe('G')
+    expect(shortcutLabel('KeyG', named, MAC)).toBe('G')
   })
 
   it('keeps the modifiers in front', () => {
-    expect(shortcutLabel('Shift+KeyG', named)).toBe('⇧G')
+    expect(shortcutLabel('Shift+KeyG', named, MAC)).toBe('⇧G')
   })
 
   // The bug this replaced: `Delete` and `Space` are words, and read as English ones in French.
   it('has the caller name the keys that are words', () => {
-    expect(shortcutLabel('Delete', named)).toBe('<Delete>')
-    expect(shortcutLabel('Meta+Space', named)).toBe('⌘<Space>')
+    expect(shortcutLabel('Delete', named, MAC)).toBe('<Delete>')
+    expect(shortcutLabel('Meta+Space', named, MAC)).toBe('⌘<Space>')
   })
 
   it('renders every default binding without leaking a raw code', () => {
-    expect(shortcutLabel(shipped('scene.undo'), named)).toBe('⌘Z')
-    expect(shortcutLabel(shipped('scene.redo'), named)).toBe('⇧⌘Z')
+    expect(shortcutLabel(shipped('scene.undo'), named, MAC)).toBe('⌘Z')
+    expect(shortcutLabel(shipped('scene.redo'), named, MAC)).toBe('⇧⌘Z')
   })
 })
 
@@ -164,18 +253,24 @@ describe('acceleratorOf', () => {
 
 describe('shortcutLabel, on the keys that are neither letters nor named', () => {
   it('prints what the key cap prints', () => {
-    expect(shortcutLabel('Meta+Equal', named)).toBe('⌘=')
-    expect(shortcutLabel('Meta+Minus', named)).toBe('⌘−')
-    expect(shortcutLabel('Shift+Meta+Semicolon', named)).toBe('⇧⌘;')
-    expect(shortcutLabel('Meta+Comma', named)).toBe('⌘,')
+    expect(shortcutLabel('Meta+Equal', named, MAC)).toBe('⌘=')
+    expect(shortcutLabel('Meta+Minus', named, MAC)).toBe('⌘−')
+    expect(shortcutLabel('Shift+Meta+Semicolon', named, MAC)).toBe('⇧⌘;')
+    expect(shortcutLabel('Meta+Comma', named, MAC)).toBe('⌘,')
   })
 
   it('draws an arrow rather than spelling one', () => {
-    expect(shortcutLabel('ArrowUp', named)).toBe('↑')
+    expect(shortcutLabel('ArrowUp', named, MAC)).toBe('↑')
   })
 
   it('drops the `Digit` prefix a number key carries', () => {
-    expect(shortcutLabel('Meta+Digit0', named)).toBe('⌘0')
+    expect(shortcutLabel('Meta+Digit0', named, MAC)).toBe('⌘0')
+  })
+
+  /** Windows and Linux have no ⌘ key to draw, so the chord is written the way they write it. */
+  it('spells the chord in words away from macOS', () => {
+    expect(shortcutLabel('Shift+Meta+KeyZ', named, false)).toBe('Ctrl+Shift+Z')
+    expect(shortcutLabel('Alt+KeyD', named, false)).toBe('Alt+D')
   })
 
   /**
@@ -187,7 +282,7 @@ describe('shortcutLabel, on the keys that are neither letters nor named', () => 
       if (!descriptor.defaultBinding) continue
 
       // What is left once the caller's names are removed: a glyph or a single printed letter.
-      const raw = shortcutLabel(descriptor.defaultBinding, named).replace(/<[^>]+>/g, '')
+      const raw = shortcutLabel(descriptor.defaultBinding, named, MAC).replace(/<[^>]+>/g, '')
       expect(raw, descriptor.id).not.toMatch(/[A-Za-z]{2}/)
     }
   })
@@ -288,14 +383,14 @@ describe('whether a string is a signature the studio could produce', () => {
   /** Whatever `signatureOf` builds must pass: the two describe the same grammar. */
   it('accepts every signature the studio itself builds', () => {
     const chords = [
-      { code: 'KeyS', ctrlKey: false, altKey: false, shiftKey: false, metaKey: true },
-      { code: 'Escape', ctrlKey: true, altKey: true, shiftKey: true, metaKey: true },
-      { code: 'ArrowLeft', ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
-      { code: 'Slash', ctrlKey: false, altKey: false, shiftKey: true, metaKey: false },
-      { code: 'IntlBackslash', ctrlKey: false, altKey: false, shiftKey: false, metaKey: true },
+      event('KeyS', { metaKey: true }),
+      event('Escape', { ctrlKey: true, altKey: true, shiftKey: true, metaKey: true }),
+      event('ArrowLeft', { altKey: true }),
+      event('Slash', { shiftKey: true }),
+      event('IntlBackslash', { metaKey: true }),
     ]
 
-    for (const chord of chords) expect(isSignature(signatureOf(chord))).toBe(true)
+    for (const chord of chords) expect(isSignature(sign(chord))).toBe(true)
   })
 
   /**

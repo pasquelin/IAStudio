@@ -122,7 +122,7 @@ Autrement dit : un outil armé n’a jamais besoin du menu pour être repris.
 
 > **C’est le groupe armé à l’ouverture.** Un document s’ouvre sur **Déplacement**, jamais sur le
 > pinceau : le premier clic sur une image que vous venez d’ouvrir ne doit pas pouvoir y laisser
-> une trace. Le pinceau est à une touche — `P`.
+> une trace. Le pinceau est à une touche — `B`.
 
 ### Le menu **Image**
 
@@ -156,7 +156,7 @@ le document n’a pas changé de taille entre-temps.
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
-| **Recadrage** | `F` | glissez un cadre sur l’image, ajustez-le, puis `⏎` pour rogner |
+| **Recadrage** | `C` | glissez un cadre sur l’image, ajustez-le, puis `⏎` pour rogner |
 | **Section** | — | *pas encore disponible* |
 | **Découpe** | — | *pas encore disponible* |
 
@@ -202,8 +202,8 @@ suivant. Le **Lasso** l’ignore : une zone tracée point par point n’a pas de
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
-| **Rectangle** | `R` | Maj pour un carré |
-| **Trait** | `⇧R` | Maj pour le contraindre à 45° |
+| **Rectangle** | `U` | Maj pour un carré |
+| **Trait** | `⇧U` | Maj pour le contraindre à 45° |
 | **Flèche** | `A` | Maj pour la contraindre à 45° |
 | **Ellipse** | `O` | Maj pour un cercle |
 | **Polygone** | — | tracé depuis son centre |
@@ -214,8 +214,8 @@ suivant. Le **Lasso** l’ignore : une zone tracée point par point n’a pas de
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
-| **Pinceau** | `P` | peint, bord adouci |
-| **Crayon** | `⇧P` | peint, bord net |
+| **Pinceau** | `B` | peint, bord adouci |
+| **Crayon** | `⇧B` | peint, bord net |
 | **Plume** | — | *pas encore disponible* |
 
 ### Groupe Texte

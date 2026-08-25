@@ -20,10 +20,35 @@ Les touches sont écrites avec des symboles, les mêmes partout dans le studio.
 `⌘Z` se lit donc « Commande + Z » sur un Mac, et « Ctrl + Z » ailleurs. Les symboles s’écrivent
 collés : `⇧⌘Z` veut dire les trois touches ensemble.
 
-> **Sur Windows et Linux, `⌘` est pris au pied de la lettre.** L’infobulle et l’écran des
-> raccourcis dessinent le symbole du Mac partout ; et si les raccourcis du menu du système
-> répondent bien à `Ctrl`, ceux qu’une surface écoute elle-même attendent la touche Windows. Les
-> deux défauts sont listés dans [Ce qui n’existe pas encore](18-limites.md).
+> **Sur Windows et Linux, `⌘` se lit `Ctrl` partout**, y compris pour les raccourcis qu’une
+> surface écoute elle-même. Ce qu’il reste à corriger est l’affichage : l’infobulle et l’écran des
+> raccourcis dessinent le symbole du Mac au lieu d’écrire `Ctrl` — voir
+> [Ce qui n’existe pas encore](18-limites.md).
+>
+> **Trois raccourcis diffèrent, parce que le bureau lui-même en décide autrement** :
+
+| Action | macOS | Windows et Linux |
+|---|---|---|
+| **Plein écran** | `⌃⌘F` | `F11` |
+| **Déplacer l’espace à gauche** | `⌥⌘←` | `Ctrl+Page↑` |
+| **Déplacer l’espace à droite** | `⌥⌘→` | `Ctrl+Page↓` |
+
+---
+
+## Une notion à comprendre : la lettre gravée
+
+**Un raccourci se nomme par le caractère écrit sur la touche, jamais par sa place.** `⌘Z` est la
+touche marquée `Z`, où qu’elle soit sur votre clavier : au milieu à gauche sur un AZERTY, en bas à
+gauche sur un QWERTY. Vous appuyez sur ce que vous lisez.
+
+C’est la règle de toutes les autres applications, et elle vaut aussi pour ce que le système
+garde pour lui : `⌘Q` quitte le studio, `⌘W` ferme la fenêtre, `⌘M` la réduit. Aucune commande
+d’ici ne peut prendre ces touches-là.
+
+> **Une touche qui n’écrit rien que le studio sache lire garde sa place.** C’est le cas des
+> crochets `[` et `]`, qu’un clavier français n’atteint qu’avec `⌥` : on appuie alors au même
+> endroit qu’un clavier américain, quel que soit le symbole gravé. Le vol dans la scène suit la
+> même logique, et pour une autre raison — voir plus bas.
 
 ---
 
@@ -83,7 +108,7 @@ voir plus bas.
 | **Réglages** | `⌘,` | ouvre la fenêtre des réglages |
 | **Assistant** | `⌘K` | ouvre la fenêtre où l’on dit ce que l’on veut faire, à la voix ou au clavier |
 | **Dicter** | `⌥D` | écoute le micro et écrit ce que vous dites au curseur |
-| **Plein écran** | `⌃⌘F` | fait occuper tout l’écran à la fenêtre |
+| **Plein écran** | `⌃⌘F` (`F11` hors macOS) | fait occuper tout l’écran à la fenêtre |
 | **Réinitialiser la disposition** | *aucune* | remet les panneaux là où ils étaient au départ |
 
 **Réinitialiser la disposition** n’a volontairement **pas** de touche par défaut : c’est une action
@@ -161,11 +186,12 @@ d’écran annonce les premières comme des boutons radio et les secondes comme 
 
 | Touche | Effet |
 |---|---|
-| `⌥←` | déplace l’espace focalisé d’un cran vers la gauche |
-| `⌥→` | déplace l’espace focalisé d’un cran vers la droite |
+| `⌥⌘←` / `Ctrl+Page↑` | déplace l’espace focalisé d’un cran vers la gauche |
+| `⌥⌘→` / `Ctrl+Page↓` | déplace l’espace focalisé d’un cran vers la droite |
 
-**`⌥` et non les flèches nues** : celles-ci appartiennent à qui parcourt la barre, et les prendre
-échangerait un geste contre un autre. Le glisser et le clic droit font la même chose — voir
+**Pas les flèches nues** : celles-ci appartiennent à qui parcourt la barre, et les prendre
+échangerait un geste contre un autre. Ce sont les touches que Safari, Chrome et VSCode donnent au
+même geste, chacun sur son système. Le glisser et le clic droit font la même chose — voir
 [La barre de titre](03-la-fenetre.md#ranger-les-espaces-dans-lordre-qui-vous-arrange).
 
 Ces deux touches se changent comme les autres, sous le contexte **Dans la barre des espaces** de
@@ -323,9 +349,8 @@ La vitesse et l’accélération se règlent dans les [réglages](14-reglages.md
 | **Fenêtre de retour** | `F` | ouvre le montage dans une fenêtre à part, à poser sur un second écran |
 | **Supprimer le clip** | `Suppr` | retire le clip du montage. Le fichier d’origine reste dans les assets |
 
-**`F` sert trois fois, et ne se dispute avec rien.** Elle **cadre la sélection** dans la vue 3D et
-arme le **Recadrage** dans l’image. Les trois appartiennent à des contextes différents, qui ne sont
-jamais à l’écoute en même temps.
+**`F` sert deux fois, et ne se dispute avec rien.** Elle **cadre la sélection** dans la vue 3D.
+Les deux appartiennent à des contextes différents, qui ne sont jamais à l’écoute en même temps.
 
 ### Zoom
 
@@ -352,20 +377,21 @@ Chaque outil de la barre est une commande : sa touche l’arme, et se remappe co
 
 | Touche | Outil | | Touche | Outil |
 |---|---|---|---|---|
-| `V` | Déplacement | | `R` | Rectangle |
-| `H` | Main | | `⇧R` | Trait |
+| `V` | Déplacement | | `U` | Rectangle |
+| `H` | Main | | `⇧U` | Trait |
 | `K` | Échelle | | `A` | Flèche |
-| `F` | Recadrage | | `O` | Ellipse |
-| `M` | Sélection rectangulaire | | `P` | Pinceau |
-| `L` | Lasso | | `⇧P` | Crayon |
+| `C` | Recadrage | | `O` | Ellipse |
+| `M` | Sélection rectangulaire | | `B` | Pinceau |
+| `L` | Lasso | | `⇧B` | Crayon |
 | `T` | Texte | | `E` | Gomme |
 | `G` | Pot de peinture | | `I` | Pipette |
 
 **Quatre outils n’ont pas de touche par défaut** — sélection elliptique, polygone, étoile, gomme
 sélective — et vous pouvez leur en donner une dans les réglages.
 
-> **Le Trait a changé de touche.** Il répondait à `L`, qui servait déjà au Lasso dans le même
-> contexte ; il est passé à `⇧R`, près du Rectangle, et la Flèche à `A`.
+> **Cinq outils portent la touche qu’ils portent ailleurs.** Le Pinceau est sur `B` et le Crayon
+> sur `⇧B` comme dans tous les éditeurs d’images, le Recadrage sur `C`, les formes sur `U` et
+> `⇧U`. `R`, `F` et `P` sont libres dans l’image, et gardent leur sens dans les autres espaces.
 
 ### La taille du trait
 
@@ -377,9 +403,10 @@ sélective — et vous pouvez leur en donner une dans les réglages.
 Un seul diamètre pour trois outils : le pinceau, la gomme et le trait des formes. Le cran est un
 rapport, environ ×1,4, jamais un nombre fixe de pixels.
 
-> **Ces deux touches sont repérées par leur position, pas par leur symbole.** Sur un clavier
-> français, les deux mêmes emplacements portent `)` et `^` — vous appuyez au même endroit qu’un
-> clavier américain, quelle que soit la lettre gravée dessus.
+> **Ces deux touches sont repérées par leur position, pas par leur symbole** — le seul cas de
+> l’image, et pas un oubli : un clavier français n’atteint `[` et `]` qu’avec `⌥`, donc il n’y a
+> pas de lettre gravée à écouter. Vous appuyez au même endroit qu’un clavier américain, sur les
+> touches qui portent `^` et `$`.
 
 ### Recadrage
 
@@ -631,7 +658,7 @@ laisserait croire que `⌘D` ou `⌘Z` y font ce qu’ils font dans l’espace d
 | `⌘,` | Réglages |  |  |  |  |  |  |  |
 | `⌘K` | Assistant |  |  |  |  |  |  |  |
 | `⌥D` | Dicter |  |  |  |  |  |  |  |
-| `⌃⌘F` | Plein écran |  |  |  |  |  |  |  |
+| `⌃⌘F` / `F11` | Plein écran |  |  |  |  |  |  |  |
 | `⌘Z` |  |  | Annuler | Annuler | Annuler | Annuler | Annuler | Annuler |
 | `⇧⌘Z` |  |  | Rétablir | Rétablir | Rétablir | Rétablir | Rétablir | Rétablir |
 | `⌘G` |  |  | Grouper |  |  |  |  |  |
@@ -639,16 +666,18 @@ laisserait croire que `⌘D` ou `⌘Z` y font ce qu’ils font dans l’espace d
 | `⌘C` / `⌘X` / `⌘V` |  |  | Copier / Couper / Coller |  |  |  |  |  |
 | `O` |  |  | Projection |  | Forme Ellipse |  |  |  |
 | `Z` |  |  | Mode de rendu |  |  |  |  |  |
-| `B` |  |  | Afficher les squelettes |  |  |  |  |  |
+| `B` |  |  | Afficher les squelettes |  | Outil Pinceau |  |  |  |
 | `V` |  |  | Sélectionner |  | Outil Déplacement | Changer de vue |  |  |
-| `P` |  |  | Mode pose |  | Outil Pinceau | Sondes de lumière |  |  |
+| `P` |  |  | Mode pose |  |  | Sondes de lumière |  |  |
 | `G` |  |  | Déplacer |  | Outil Pot de peinture |  |  |  |
-| `R` |  |  | Pivoter |  | Forme Rectangle |  |  |  |
+| `R` |  |  | Pivoter |  |  |  |  |  |
 | `S` |  |  | Redimensionner *(et reculer)* | Couper le clip |  |  |  |  |
 | `M` |  |  | Magnétisme |  | Sélection rectangulaire |  |  |  |
 | `L` |  |  | Repère local |  | Lasso |  |  |  |
-| `F` |  |  | Cadrer la sélection | Fenêtre de retour | Recadrage |  |  |  |
+| `F` |  |  | Cadrer la sélection | Fenêtre de retour |  |  |  |  |
 | `H` |  |  |  |  | Outil Main |  |  |  |
+| `C` |  |  |  |  | Outil Recadrage |  |  |  |
+| `U` |  |  |  |  | Forme Rectangle |  |  |  |
 | `K` |  |  |  |  | Outil Échelle |  |  |  |
 | `A` |  |  |  |  | Forme Flèche |  |  |  |
 | `T` |  |  |  |  | Outil Texte |  |  |  |
@@ -656,8 +685,8 @@ laisserait croire que `⌘D` ou `⌘Z` y font ce qu’ils font dans l’espace d
 | `E` |  |  |  |  | Outil Gomme |  |  |  |
 | `⇧Q` |  |  | Quatre vues |  |  |  |  |  |
 | `⇧W` |  |  | Arêtes en quads |  |  |  |  |  |
-| `⇧R` |  |  |  |  | Forme Trait |  |  |  |
-| `⇧P` |  |  |  |  | Outil Crayon |  |  |  |
+| `⇧U` |  |  |  |  | Forme Trait |  |  |  |
+| `⇧B` |  |  |  |  | Outil Crayon |  |  |  |
 | `[` / `]` |  |  |  |  | Réduire / Agrandir le pinceau |  |  |  |
 | `Suppr` |  |  | Supprimer l’objet | Supprimer le clip |  |  |  |  |
 | `W A S D` |  |  | Voler |  |  |  |  |  |
@@ -678,8 +707,8 @@ laisserait croire que `⌘D` ou `⌘Z` y font ce qu’ils font dans l’espace d
 | `⇧⌘E` |  |  |  |  | Exporter l’image |  |  |  |
 | `Entrée` |  |  |  |  | Appliquer le recadrage |  |  |  |
 | `Échap` |  |  |  |  | Abandonner le recadrage |  |  |  |
-| `⌥←` |  | Déplacer à gauche |  |  |  |  |  |  |
-| `⌥→` |  | Déplacer à droite |  |  |  |  |  |  |
+| `⌥⌘←` |  | Déplacer à gauche |  |  |  |  |  |  |
+| `⌥⌘→` |  | Déplacer à droite |  |  |  |  |  |  |
 
 **Dans l’explorateur** — quand le focus est dans le panneau, et là seulement :
 
