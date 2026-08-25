@@ -45,23 +45,6 @@ const FIELD_KIND: Record<AssetType, FieldKind> = {
   audio: 'raw',
 }
 
-/**
- * 🛑 Every placeable field, blanked. Spread UNDER `fillSourceFields`, and that is what makes a
- * source WITHDRAWN actually leave the form: a preset that merely omits the key lets
- * `defaultValues` carry the old id over as the person's own typing, so the request went out with
- * the very input the panel had stopped drawing.
- */
-export function blankSourceFields(fields: readonly FieldDescriptor[]): FormValues {
-  const placeable = new Set<FieldKind>(Object.values(FIELD_KIND))
-  const values: FormValues = {}
-
-  for (const field of fields) {
-    if (placeable.has(field.kind)) values[field.key] = ''
-  }
-
-  return values
-}
-
 /** One thing the workspace offers, reduced to what placing it needs. */
 export type PlaceableInput = { role: 'source' | 'mask'; kind: AssetType; assetId: string }
 

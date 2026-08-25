@@ -59,22 +59,28 @@ function fits(field: FieldDescriptor, value: unknown): boolean {
  * `carried` is the § 22 of the brief. Switching model used to reset the form, so a prompt written
  * over several minutes went with it — and the source, and the mask. Only the fields the NEW model
  * declares are filled, so nothing reaches a form that never had it.
+ *
+ * 🛑 `applied` is what tells the person's typing from the STUDIO's own filling — the preset of the
+ * last reset. Without it, a value the panel had put there came back as if it had been typed: a
+ * source withdrawn from the panel above was carried straight into the request it had just left.
  */
 export function defaultValues(
   fields: readonly FieldDescriptor[],
   preset?: FormValues,
   carried?: FormValues,
+  applied?: FormValues,
 ): FormValues {
   const values: FormValues = {}
   for (const field of fields) {
     // Through `blankToUndefined`, and NaN is why: a numeric control the new descriptor has just
     // registered reads back as one before the reset lands, which is not a value to carry.
     const held = blankToUndefined(carried?.[field.key])
+    const put = blankToUndefined(applied?.[field.key])
 
     if (preset && field.key in preset) values[field.key] = preset[field.key]
     // Blank is not a value: a field the previous model left empty must take the new one's
     // default rather than emptying a knob the person never touched.
-    else if (held !== undefined && fits(field, held)) values[field.key] = held
+    else if (held !== undefined && held !== put && fits(field, held)) values[field.key] = held
     else if (field.default !== undefined) values[field.key] = field.default
     else if (field.kind === 'boolean') values[field.key] = false
     else values[field.key] = ''

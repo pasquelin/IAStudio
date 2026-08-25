@@ -8,7 +8,7 @@ import { workspaceById } from '@/helpers/workspaces'
 import { useAssets, assetsById } from '@/stores/assets'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
-import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
+import { sceneOf, useScenes } from '@/stores/scenes'
 import { latestGenerationIds, useJobs } from '@/stores/jobs'
 import { selectedAssetIds, useSelection } from '@/stores/selection'
 
@@ -23,8 +23,8 @@ export type GenerationContext = {
   capability: CapabilityChoice
   /**
    * Takes one input back off, by undoing the gesture that offered it — the shelf's pick, the
-   * scene's. A `result` has no gesture behind it, so it is not withdrawn but replaced by the
-   * next generation; the panel draws no way off for one.
+   * the shelf's pick. What has no gesture behind it is drawn without a way off rather than with
+   * a broken one — see the note on the implementation for the scene, and for a result.
    */
   withdraw: (input: GenerationInput) => void
 }
@@ -81,23 +81,17 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
    * 🛑 Undone where it was DONE, never filtered here. A panel-side list of dismissed ids would
    * leave the shelf showing a row as picked while the generation no longer took it, and the two
    * answers to "what is selected" would drift apart with nothing to reconcile them.
+   *
+   * 🛑 THE SHELF ONLY. `selectIn` ends on `pointAtNodes`, which rewrites the WHOLE selection
+   * descriptor, so withdrawing one mesh would take every asset source down with it. Deselecting
+   * a node without moving what the inspector looks at is a change to that pair, not to this hook.
    */
-  const withdraw = useCallback(
-    (input: GenerationInput) => {
-      if (input.origin === 'assets') {
-        // Read at CALL time and FILTERED, never toggled against the render that drew the row: a
-        // click landing after the selection moved would otherwise put the asset back.
-        const picked = selectedAssetIds(useSelection.getState())
-        useSelection.getState().selectAssets(picked.filter(id => id !== input.assetId))
-        return
-      }
-
-      if (input.origin === 'scene' && input.nodeId !== undefined && sceneId !== null) {
-        selectIn(sceneId, [input.nodeId], 'toggle')
-      }
-    },
-    [sceneId],
-  )
+  const withdraw = useCallback((input: GenerationInput) => {
+    // Read at CALL time and FILTERED, never toggled against the render that drew the row: a
+    // click landing after the selection moved would otherwise put the asset back.
+    const picked = selectedAssetIds(useSelection.getState())
+    useSelection.getState().selectAssets(picked.filter(id => id !== input.assetId))
+  }, [])
 
   // Memoised with the inputs it reads: the resolution allocates a contract per required input,
   // and the panel re-renders on every keystroke of the form below it.
@@ -112,7 +106,7 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
 /** Stable, so a workspace with no scene open does not hand React a new array per render. */
 const NO_KEYS: readonly string[] = []
 
-/** A separator no node name can hold, so the three parts travel as one comparable string. */
+/** A separator no node name can hold, so an id and a name travel as one comparable string. */
 const KEY_PART = '\u0000'
 
 /**
@@ -124,14 +118,14 @@ const KEY_PART = '\u0000'
 function selectedMeshKeysOf(scene: ReturnType<typeof sceneOf>): readonly string[] {
   const picked = scene.nodes.flatMap(node =>
     node.type === 'model' && scene.selectedIds.includes(node.id)
-      ? [`${node.id}${KEY_PART}${node.model.assetId}${KEY_PART}${node.name}`]
+      ? [`${node.model.assetId}${KEY_PART}${node.name}`]
       : [],
   )
 
   return picked.length === 0 ? NO_KEYS : picked
 }
 
-function meshOfKey(key: string): { id: string; name: string; nodeId: string } {
-  const [nodeId = '', id = '', name = ''] = key.split(KEY_PART)
-  return { id, name, nodeId }
+function meshOfKey(key: string): { id: string; name: string } {
+  const at = key.indexOf(KEY_PART)
+  return { id: key.slice(0, at), name: key.slice(at + KEY_PART.length) }
 }

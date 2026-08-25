@@ -31,11 +31,6 @@ export type GenerationInput = AvailableInput & {
   /** What the panel draws beside the thumbnail. Document data, never a word of the interface. */
   label: string
   origin: InputOrigin
-  /**
-   * The placement it was picked as, for the one origin whose asset id is not what selected it: a
-   * scene selects NODES, and two of them can reference the same model.
-   */
-  nodeId?: string
 }
 
 /** What the panel is handed to work out its inputs, gathered by `useGenerationContext`. */
@@ -43,7 +38,7 @@ export type WorkspaceContent = {
   /** Rows the shelf has selected, whatever their kind. */
   selectedAssets: readonly { id: string; name: string; type: AssetType }[]
   /** The models a scene has selected, by the catalogue row each one references. */
-  selectedMeshes: readonly { id: string; name: string; nodeId: string }[]
+  selectedMeshes: readonly { id: string; name: string }[]
   /** What the last generation produced, kept so a chain can start from it. */
   results: readonly { id: string; name: string; type: AssetType }[]
 }
@@ -72,7 +67,6 @@ export function availableInputsOf(content: WorkspaceContent): readonly Generatio
       assetId: mesh.id,
       label: mesh.name,
       origin: 'scene',
-      nodeId: mesh.nodeId,
     })
   }
 

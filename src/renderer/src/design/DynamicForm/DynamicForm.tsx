@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { ADVANCED_GROUP } from '@shared/domain/localFields'
@@ -84,6 +84,10 @@ export function DynamicForm({
   const formId = useId()
   const schema = useMemo(() => buildSchema(fields), [fields])
   const initial = useMemo(() => defaultValues(fields, preset), [fields, preset])
+  // The preset of the PREVIOUS reset, so the next one can tell what the person typed from what the
+  // panel filled. Not `useLatest`, which answers with the current render: this is read before it
+  // is written, in the same effect, and answering with `preset` itself would compare it to itself.
+  const applied = useRef<FormValues | undefined>(undefined)
   // Split rather than reordered: the advanced knobs are drawn UNDER the button, and a fieldset
   // hidden in place would leave the disclosure describing something above it.
   const [plain, advanced] = useMemo(() => {
@@ -108,7 +112,8 @@ export function DynamicForm({
    * fields.
    */
   useEffect(() => {
-    reset(defaultValues(fields, preset, getValues()))
+    reset(defaultValues(fields, preset, getValues(), applied.current))
+    applied.current = preset
     // `initial` and not `fields`/`preset`: it is the memo of exactly those two, so listing them
     // beside it would say the same thing twice.
   }, [initial, fields, preset, getValues, reset])

@@ -10,7 +10,7 @@ import { usePlanAccess } from '@/hooks/usePlanAccess'
 import { usePlanRefusal } from '@/hooks/usePlanRefusal'
 import { modelIsOnThisMachine } from '@/helpers/modelForCapability'
 import { referencePictures, type FormValues } from '@/helpers/dynamicForm'
-import { blankSourceFields, fillSourceFields } from '@/spaces/image/aiFields'
+import { fillSourceFields } from '@/spaces/image/aiFields'
 import { registerGenerator } from '@/assistant/generatorBridge'
 import { dictationAccessory } from '@/dictation/DictationField'
 import { failureKeyOf } from '@/services/failureMessage'
@@ -83,10 +83,10 @@ export function Generator() {
    * decided which operation ran. Selecting a picture switched the generator to image-to-image and
    * left the picture behind.
    */
-  const preset = useMemo(() => {
-    const fields = descriptor.data?.fields ?? []
-    return { ...blankSourceFields(fields), ...fillSourceFields(fields, inputs), ...prepared }
-  }, [descriptor.data, inputs, prepared])
+  const preset = useMemo(
+    () => ({ ...fillSourceFields(descriptor.data?.fields ?? [], inputs), ...prepared }),
+    [descriptor.data, inputs, prepared],
+  )
   /**
    * Whether this shot carries the project's context. Held here and not in `values`: it must never
    * reach `buildBody`, which is what is sent to the API.

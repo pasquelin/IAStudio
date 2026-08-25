@@ -46,10 +46,12 @@ export function GeneratorSources({ inputs, onWithdraw }: GeneratorSourcesProps) 
               }
               title={input.label}
               subtitle={t(`generation.sourceFrom_${input.origin}`)}
-              // A result is not withdrawn but replaced by the next generation: there is no gesture
-              // behind it to undo, and a cross that only hid a line would lie about what is sent.
+              // Only where there is a gesture to undo. A result is replaced by the next
+              // generation rather than withdrawn, and a scene's pick cannot be undone without
+              // moving what the inspector looks at — see `GenerationContext.withdraw`. A cross
+              // that only hid a line would lie about what is sent.
               actions={
-                input.origin === 'result' ? undefined : (
+                input.origin !== 'assets' ? undefined : (
                   <ToolButton
                     icon={mdiClose}
                     variant="row"

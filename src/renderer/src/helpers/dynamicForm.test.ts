@@ -43,6 +43,30 @@ describe('default values', () => {
 
     expect(defaultValues([field], undefined, { steps: 80 })).toEqual({ steps: 25 })
   })
+  /**
+   * 🛑 What the panel FILLED is not what the person typed. Carried alike, a source withdrawn from
+   * the panel above came straight back into the request it had just left — the list said one
+   * thing about what would be sent, the form below it said another.
+   */
+  it('drops a carried value the last preset had put there, and keeps a typed one', () => {
+    const image = field({ key: 'image' })
+
+    expect(defaultValues([image], undefined, { image: 'asset-1' }, { image: 'asset-1' })).toEqual({
+      image: '',
+    })
+    expect(defaultValues([image], undefined, { image: 'typed' }, { image: 'asset-1' })).toEqual({
+      image: 'typed',
+    })
+  })
+
+  // A mask is dropped by hand and no source ever fills one, so nothing in the preset ever names
+  // it: carrying it is the whole reason § 22 exists, and telling the two apart must not cost it.
+  it('keeps what no preset ever put there', () => {
+    expect(defaultValues([field({ key: 'mask' })], undefined, { mask: 'drawn' }, {})).toEqual({
+      mask: 'drawn',
+    })
+  })
+
   it('uses what the model published, and a blank otherwise', () => {
     expect(
       defaultValues([
