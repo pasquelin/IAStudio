@@ -28,6 +28,8 @@ export type SnapStepControl = {
   /** Which preference the menu writes. The switch beside it is per document, and is not here. */
   path: 'snapTranslate' | 'snapRotate' | 'snapScale'
   steps: readonly number[]
+  /** How wide its menu spreads. A list of figures grows sideways, never downwards. */
+  columns: 2 | 3
   /** A second column of 360 divided by a power of two — the one menu that has one. */
   divisions?: readonly number[]
   reads: SnapReading
@@ -46,6 +48,7 @@ export const SNAP_STEP_CONTROLS: readonly SnapStepControl[] = [
     stepsKey: 'snapBar.translateSteps',
     path: 'snapTranslate',
     steps: SNAP_TRANSLATE_STEPS,
+    columns: 3,
     reads: 'length',
   },
   {
@@ -56,6 +59,7 @@ export const SNAP_STEP_CONTROLS: readonly SnapStepControl[] = [
     stepsKey: 'snapBar.rotateSteps',
     path: 'snapRotate',
     steps: SNAP_ROTATE_STEPS,
+    columns: 3,
     divisions: SNAP_ROTATE_DIVISIONS,
     reads: 'angle',
   },
@@ -67,6 +71,7 @@ export const SNAP_STEP_CONTROLS: readonly SnapStepControl[] = [
     stepsKey: 'snapBar.scaleSteps',
     path: 'snapScale',
     steps: SNAP_SCALE_RATIOS,
+    columns: 2,
     reads: 'ratio',
   },
 ]

@@ -369,8 +369,9 @@ describe('snapping and the coordinate frame', () => {
   it('arms a snap by choosing its step, without a second click', async () => {
     render(<SceneDocument documentId="doc-1" />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Pas de la grille/ }))
-    await userEvent.click(screen.getByRole('menuitemradio', { name: '1 m' }))
+    // Hovered, not clicked: the menu opens on the way in, and a click there would put it away.
+    await userEvent.hover(screen.getByRole('button', { name: /Pas de la grille/ }))
+    await userEvent.click(screen.getByRole('radio', { name: '1 m' }))
 
     expect(setSnapping).toHaveBeenLastCalledWith({ ...NOTHING_SNAPPED, translate: true })
   })

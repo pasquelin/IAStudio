@@ -1,6 +1,7 @@
 import { mdiChevronDown } from '@mdi/js'
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import { fieldHandle } from '../scHandle'
 import type { TooltipFactory } from '@/helpers/tooltip'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
 import { Flyout } from '../Flyout'
@@ -29,10 +30,10 @@ export type ToggleMenuProps = {
   rowCount: number
   rows: (close: () => void) => ReactNode
   /**
-   * Whether the rows really are menu items. False for a menu holding a slider or a form:
-   * `role="menu"` over anything else sends a screen reader looking for rows to step through.
+   * The handle a script drives this control by. Two are derived from it — `.toggle` and `.menu`
+   * — because the two zones do different things and a script has to say which one it means.
    */
-  menu?: boolean
+  scId?: string
 }
 
 /**
@@ -43,9 +44,9 @@ export type ToggleMenuProps = {
  * No border of its own: the bar it sits on already draws one, and a control that framed itself
  * inside it gave the studio two rules of bordering where it has one.
  *
- * It opens on CLICK and never on hover, which is where it parts from `MenuButton`: this menu sets
- * a value rather than offering to switch a mode, and one crossed by the pointer on the way to the
- * viewport would open over the very scene it is about to change.
+ * It opens the way every other menu of the studio opens — on hover, and on `Alt+ArrowDown` — and
+ * its click BASCULES rather than only opening: a menu asked for by hand is one a second click
+ * must be able to put away.
  */
 export function ToggleMenu({
   icon,
@@ -58,15 +59,15 @@ export function ToggleMenu({
   valueLabel,
   rowCount,
   rows,
-  menu = true,
+  scId,
 }: ToggleMenuProps) {
-  // `wrapProps` deliberately left off: they are what opens a flyout on hover. Everything this
-  // does open with goes through `open`, which marks the menu as asked for — so the pointer
-  // leaving cannot close it either.
   const flyout = useHoverFlyout(rowCount)
 
   return (
-    <div className="flex items-center">
+    // `wrapProps`, exactly as `MenuButton` spreads them: the tool column opens its own menus on
+    // hover, and a second bar over the same viewport opening only on click was two manners for
+    // one gesture. The click stays, as a TOGGLE — a menu one opened by hand closes the same way.
+    <div {...flyout.wrapProps} className="flex items-center gap-0.5">
       {onToggle && (
         <ToolButton
           icon={icon}
@@ -75,6 +76,7 @@ export function ToggleMenu({
           tooltip={tooltip}
           variant="bar"
           active={pressed}
+          data-sc={scId && fieldHandle(`${scId}.toggle`)}
           // An armed snap is something one ACTIONS, which `CLAUDE.md` gives the full accent —
           // and `active` alone paints it `elevated`, the colour the hover already uses. The bar
           // then said the same thing about the control under the pointer and the one armed.
@@ -94,21 +96,19 @@ export function ToggleMenu({
         // The rows cover the button and its own tip with them, which then reads as a sentence
         // cut in half. The accessible name stays — it is not the tooltip's to lose.
         tipHidden={flyout.showing}
+        data-sc={scId && fieldHandle(`${scId}.menu`)}
         disabled={!flyout.hasFlyout}
         className={cn('text-muted w-auto gap-0.5 px-1 tabular-nums', flyout.showing && 'text-text')}
-        onClick={flyout.open}
+        onClick={() => (flyout.showing ? flyout.close() : flyout.open())}
       >
         <span className="text-tiny">{value}</span>
         <UiIcon path={mdiChevronDown} size={12} />
       </ToolButton>
 
+      {/* No `role="menu"` on the flyout: what it holds is a `radiogroup`, a form or a slider, and
+          promising rows a reader could step through sends it looking for what is not there. */}
       {flyout.showing && (
-        <Flyout
-          anchor={flyout.anchor}
-          placement="below"
-          role={menu ? 'menu' : undefined}
-          {...flyout.flyoutProps}
-        >
+        <Flyout anchor={flyout.anchor} placement="below" {...flyout.flyoutProps}>
           {rows(flyout.close)}
         </Flyout>
       )}
