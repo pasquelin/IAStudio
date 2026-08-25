@@ -177,9 +177,24 @@ async function openByPath(input: Record<string, unknown>): Promise<ActionOutcome
   return { ok: true, data: { documentId: document.id } }
 }
 
-/** The open document a call names, or nothing — every action of this family takes one by id. */
+/**
+ * The open document a call names — by id, by path, or by a title only one of them wears.
+ *
+ * 🛑 By TITLE as well, because the id is the one thing a caller may never have seen: the briefing
+ * names open documents in quotes and nothing else, so a model told to bring one back to the front
+ * had only its title to answer with, and was refused for it.
+ *
+ * A title two documents share resolves to neither: guessing between them would activate the wrong
+ * one silently, where `notFound` sends the caller to `documents.list` for the id.
+ */
 function namedDocument(input: Record<string, unknown>): DocumentDescriptor | null {
-  return useDocuments.getState().documents[textOf(input, 'documentId') ?? ''] ?? null
+  const named = textOf(input, 'documentId') ?? ''
+  const open = Object.values(useDocuments.getState().documents)
+  const byId = useDocuments.getState().documents[named]
+  if (byId || named === '') return byId ?? null
+
+  const titled = open.filter(one => one.title === named || one.path === named)
+  return titled.length === 1 ? (titled[0] ?? null) : null
 }
 
 function named(input: Record<string, unknown>): string | null {

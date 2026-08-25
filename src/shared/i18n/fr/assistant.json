@@ -63,7 +63,7 @@
       },
       "documentActivate": {
         "title": "Mettre un document devant",
-        "description": "Fait d’un document déjà ouvert l’onglet actif, pour que les commandes de sa surface l’atteignent. C’est la réponse à une commande refusée parce qu’elle s’adressait à une autre surface."
+        "description": "Fait d’un document déjà ouvert l’onglet actif, pour que les commandes de sa surface l’atteignent. C’est la réponse à une commande refusée parce qu’elle s’adressait à une autre surface. Nommez-le par son identifiant, par son chemin, ou par le titre que le studio affiche entre guillemets — un titre que deux documents partagent n’en nomme aucun."
       },
       "documentClose": {
         "title": "Fermer un document",

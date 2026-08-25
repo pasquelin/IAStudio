@@ -145,6 +145,14 @@ const WIDE_RULES = [
   '    answer. Never ask to be allowed: a name follows the prompt that made it, not what is spoken.',
   '  - Several files match? Choose none: name them in "say" and ask which.',
   '  - The remote library is not this project. Look there only when asked to.',
+  // A plan that reads well and cannot run: opening the picture is what put the Image space in
+  // front, and every scene call after it was refused.
+  '  - Scene, image and montage actions work on the document IN FRONT, and opening a file changes',
+  '    which one that is. Open what you will act on LAST, or bring it back with document.activate,',
+  '    which takes its id, its path, or the title the studio shows in quotes.',
+  // Narrowed to the repair alone: rule 3 above is what makes a model ask, and it must keep doing
+  // so for what the person alone knows.
+  '  - Never ask to be allowed to repair your OWN order: do it, and say what you did.',
 ]
 
 /** What the short list cannot say, and how the model asks for the rest — see `answeredTurn`. */
@@ -161,7 +169,7 @@ const FIND_RULE =
  */
 const CONTINUING = [
   'You are still working on the same request. What you have already done is in the history',
-  'above, with what each action answered — build on it, and never run the same action twice.',
+  'above, with what each action answered — build on it, and never redo a call that has answered.',
   'Answer with NO calls when the request is done, or when you need something only the person',
   'can tell you: your "say" is then what they read.',
 ].join('\n')

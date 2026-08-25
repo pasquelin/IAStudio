@@ -98,6 +98,8 @@ describe('how much of the catalogue the model is shown', () => {
     expect(wide.text).toContain('  - A file the person names is in the project')
     expect(wide.text).toContain('List the folders YOURSELF')
     expect(wide.text).toContain('The remote library is not this project')
+    expect(wide.text).toContain('work on the document IN FRONT')
+    expect(wide.text).toContain('repair your OWN order')
   })
 
   it('stays inside the room it was given', () => {
