@@ -305,6 +305,7 @@
     "rotate": "Angle snap",
     "rotateSteps": "Angle step",
     "rotateHint": "Turns in even steps. The submenu picks the angle, as an increment or as a division of a full turn.",
+    "rotateDivisions": "Divisions of a full turn",
     "scale": "Scale snap",
     "scaleSteps": "Scale step",
     "scaleHint": "Changes the scale in even steps. The submenu picks the ratio.",

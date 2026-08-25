@@ -59,6 +59,7 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
         <>
           <ToggleMenu
             icon={mdiRun}
+            scId="snapBar.speed"
             label={t('snapBar.speed')}
             description={t('snapBar.speedHint')}
             tooltip={tipFor('horizontal')}
@@ -72,7 +73,6 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
               t('snapBar.speed'),
             )}
             rowCount={2}
-            menu={false}
             rows={close => <SceneSpeedMenu speed={flying} onChoose={onSpeed} onClose={close} />}
           />
 
@@ -80,6 +80,7 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
 
           <ToggleMenu
             icon={mdiFormatVerticalAlignBottom}
+            scId="snapBar.surface"
             label={t('snapBar.surface')}
             description={t('snapBar.surfaceHint')}
             tooltip={tipFor('horizontal')}
@@ -91,7 +92,6 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
               t('snapBar.surfaceSettings'),
             )}
             rowCount={2}
-            menu={false}
             rows={() => <SceneSnapSurfaceMenu view={view} onViewport={set} />}
           />
 
@@ -100,6 +100,7 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
               <Separator />
               <ToggleMenu
                 icon={control.icon}
+                scId={`snapBar.${control.kind}`}
                 label={t(control.labelKey)}
                 description={t(control.descriptionKey)}
                 tooltip={tipFor('horizontal')}

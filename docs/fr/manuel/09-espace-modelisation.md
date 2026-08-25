@@ -143,9 +143,14 @@ Une seconde barre flotte **en haut du viewport**, horizontale. Elle ne porte pas
 des **comportements** : ce qu’on change *pendant* qu’on manipule, sans lâcher la souris.
 
 Chaque entrée est un groupe de **deux zones**. L’icône, à gauche, **allume ou éteint** ce
-magnétisme-là et rien d’autre. La valeur, à droite, **ouvre un menu** — et choisir un cran
-**allume ce magnétisme au passage** : aller chercher un pas, c’est demander ce magnétisme, et le
-laisser éteint coûtait un second clic à chaque première utilisation.
+magnétisme-là et rien d’autre. La valeur, à droite, **ouvre un menu** au survol, comme les menus
+de la barre d’outils — un clic dessus le referme. Choisir un cran **allume ce magnétisme au
+passage** : aller chercher un pas, c’est demander ce magnétisme, et le laisser éteint coûtait un
+second clic à chaque première utilisation.
+
+Les crans s’affichent **en colonnes**, pas en liste : une valeur se cherche du regard, et une
+colonne de neuf pas recouvrait la scène qu’on s’apprête à changer. Le cran actif est **peint**,
+là où il est — pas signalé par une coche à l’autre bout de la liste.
 
 | Entrée | Ce que l’icône bascule | Ce que le menu règle |
 |---|---|---|

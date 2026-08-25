@@ -142,9 +142,13 @@ A second bar floats **at the top of the viewport**, horizontal. It carries no to
 **behaviours**: what you change *while* manipulating, without letting go of the mouse.
 
 Each entry is a group of **two zones**. The icon, on the left, **turns that one snap** on or off
-and nothing else. The value, on the right, **opens a menu** — and choosing a step **arms that snap
-along with it**: reaching for a step is asking for the snap, and leaving it off cost a second
-click on every first use.
+and nothing else. The value, on the right, **opens a menu** on hover, as the tool bar's own menus
+do — a click on it puts the menu away. Choosing a step **arms that snap along with it**: reaching
+for a step is asking for the snap, and leaving it off cost a second click on every first use.
+
+The steps are laid out **in columns**, not as a list: a value is found by eye, and a column of
+nine steps covered the very scene it was about to change. The step in force is **painted where it
+stands** — not marked by a tick at the other end of a list.
 
 | Entry | What the icon toggles | What the menu sets |
 |---|---|---|

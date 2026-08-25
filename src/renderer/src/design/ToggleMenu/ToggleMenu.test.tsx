@@ -3,7 +3,7 @@ import { mdiMagnet } from '@mdi/js'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
-import { MenuRow } from '../MenuRow'
+import { ValueGrid } from '../ValueGrid/ValueGrid'
 import { ToggleMenu } from './ToggleMenu'
 
 const setUp = (props: Partial<Parameters<typeof ToggleMenu>[0]> = {}) => {
@@ -22,28 +22,19 @@ const setUp = (props: Partial<Parameters<typeof ToggleMenu>[0]> = {}) => {
       valueLabel="Grid step"
       rowCount={2}
       rows={close => (
-        <>
-          <MenuRow
-            label="0.5"
-            checked
-            tick="one-of"
-            tip={{}}
-            onSelect={() => {
-              onSelect('0.5')
-              close()
-            }}
-          />
-          <MenuRow
-            label="1"
-            checked={false}
-            tick="one-of"
-            tip={{}}
-            onSelect={() => {
-              onSelect('1')
-              close()
-            }}
-          />
-        </>
+        <ValueGrid
+          options={[
+            { value: 0.5, label: '0.5' },
+            { value: 1, label: '1' },
+          ]}
+          chosen={0.5}
+          columns={2}
+          label="Grid step"
+          onChoose={value => {
+            onSelect(String(value))
+            close()
+          }}
+        />
       )}
       {...props}
     />,
@@ -59,7 +50,7 @@ describe('ToggleMenu', () => {
     await user.click(screen.getByRole('button', { name: /Grid snap/ }))
 
     expect(onToggle).toHaveBeenCalledOnce()
-    expect(screen.queryByRole('menu')).toBeNull()
+    expect(screen.queryByRole('radiogroup')).toBeNull()
   })
 
   // The two halves stay separate HERE: what a choice does beyond being reported is the caller's,
@@ -67,21 +58,34 @@ describe('ToggleMenu', () => {
   it('reports a choice without toggling on its own', async () => {
     const { onToggle, onSelect, user } = setUp()
 
-    await user.click(screen.getByRole('button', { name: /Grid step/ }))
-    await user.click(screen.getByRole('menuitemradio', { name: '1' }))
+    await user.hover(screen.getByRole('button', { name: /Grid step/ }))
+    await user.click(screen.getByRole('radio', { name: '1' }))
 
     expect(onSelect).toHaveBeenCalledWith('1')
     expect(onToggle).not.toHaveBeenCalled()
   })
 
-  // Hovering opens `MenuButton`, and it must not open this one: the bar sits over the viewport,
-  // and a menu the pointer merely crossed would cover the very scene it is about to change.
-  it('stays shut under the pointer', async () => {
+  // The tool column opens its own menus on hover; a second bar over the same viewport opening
+  // only on click was two manners for one gesture.
+  it('opens under the pointer, as every other menu of the studio does', async () => {
     const { user } = setUp()
 
     await user.hover(screen.getByRole('button', { name: /Grid step/ }))
 
-    expect(screen.queryByRole('menu')).toBeNull()
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument()
+  })
+
+  // The pointer opens it on the way in, so the click that follows is the one that PUTS IT AWAY —
+  // which is what a toggle means here. Without it the menu could only be dismissed by leaving.
+  it('closes on a click of the half the pointer opened', async () => {
+    const { user } = setUp()
+    const value = screen.getByRole('button', { name: /Grid step/ })
+
+    await user.hover(value)
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument()
+
+    await user.click(value)
+    expect(screen.queryByRole('radiogroup')).toBeNull()
   })
 
   /**

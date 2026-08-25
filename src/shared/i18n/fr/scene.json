@@ -305,6 +305,7 @@
     "rotate": "Magnétisme d’angle",
     "rotateSteps": "Crans d’angle",
     "rotateHint": "Faire tourner par crans réguliers. Le sous-menu choisit l’angle, en incréments ou en divisions du tour.",
+    "rotateDivisions": "Divisions du tour",
     "scale": "Magnétisme d’échelle",
     "scaleSteps": "Pas d’échelle",
     "scaleHint": "Faire varier l’échelle par crans réguliers. Le sous-menu choisit le ratio.",
