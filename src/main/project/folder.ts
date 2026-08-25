@@ -6,7 +6,7 @@ import { exists } from '@main/persistence'
 import { isStagingName } from '@shared/domain/document'
 import { entriesByName, isHiddenEntry, pathIn, type FolderEntry } from '@shared/domain/folder'
 import { isUnwatchedByGit } from '@shared/domain/git'
-import { foldForSearch } from '@shared/text'
+import { matchesWords, searchWords } from '@shared/text'
 
 /**
  * How far a search walks. A project is someone's own folder and can hold a checkout of anything;
@@ -31,7 +31,8 @@ export type FolderReader = {
    * at a time, so it cannot filter what it has never read — a word matching a file nobody has
    * unfolded would answer nothing. The tree rebuilds the ancestors of what comes back.
    *
-   * Folded on both sides (`foldForSearch`), so `foret` finds `Forêt`.
+   * Matched by WORDS in any order and folded on both sides (`matchesWords`), so `foret` finds
+   * `Forêt` and `green sailboat` finds a file whose name puts the two three commas apart.
    */
   search: (term: string, hidden?: boolean) => Promise<FolderEntry[]>
   /**
@@ -140,12 +141,13 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
     list: async (relative, hidden) => await level(relative, hidden),
 
     search: async (term, hidden = false) => {
-      // Trimmed here as well as in the panel: a term of spaces alone would otherwise match every
-      // name holding one, which is most of them.
-      const wanted = foldForSearch(term.trim())
-      if (wanted === '') return []
+      // By WORDS, not by substring: a file named after the prompt that made it holds the words a
+      // person searches by, three commas apart — see `matchesWords`. Folded once, here, rather
+      // than once per entry of a walk that crosses the whole project.
+      const words = searchWords(term)
+      if (words.length === 0) return []
 
-      return await walkAll(hidden, entry => foldForSearch(entry.name).includes(wanted))
+      return await walkAll(hidden, entry => matchesWords(entry.name, words))
     },
 
     walk: async (hidden = false) =>

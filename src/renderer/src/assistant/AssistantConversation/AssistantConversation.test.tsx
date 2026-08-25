@@ -221,16 +221,29 @@ describe('the assistant conversation', () => {
  * sits in front of, wondering whether to type the sentence again.
  */
 describe('while the assistant is working', () => {
-  it('says which round it is on, so a long chain does not read as a freeze', () => {
-    useAssistant.setState({ busy: true, round: 3 })
+  /** What `say` posts before it thinks: the turn exists from the moment the sentence leaves. */
+  const working = (round: number, stopping = false): void =>
+    useAssistant.setState({
+      busy: true,
+      round,
+      stopping,
+      turns: [{ id: 1, said: 'ouvre le voilier vert', answered: '', steps: [], lost: false }],
+    })
+
+  // In the thread and last of it, where the answer itself will appear: what one watches while
+  // waiting is the place the words are going to land, never a line down by the field.
+  it('says which round it is on, at the end of the thread', () => {
+    working(3)
     render(<AssistantConversation />)
 
-    expect(screen.getByText(/3/)).toBeInTheDocument()
+    const waiting = screen.getByText(/3/)
+    expect(waiting).toBeInTheDocument()
+    expect(screen.getByRole('list')).toContainElement(waiting)
   })
 
   // Where Send was, and never beside it: a chain one cannot call off is one nobody dares start.
   it('offers to stop instead of to send, and cannot send meanwhile', async () => {
-    useAssistant.setState({ busy: true, round: 1 })
+    working(1)
     render(<AssistantConversation />)
 
     await userEvent.click(screen.getByRole('button', { name: /arrêter/i }))
@@ -242,7 +255,7 @@ describe('while the assistant is working', () => {
 
   // Pressed twice, the second press asks nothing more: what is running is what it waits for.
   it('says it is stopping, and takes no second press', () => {
-    useAssistant.setState({ busy: true, round: 2, stopping: true })
+    working(2, true)
     render(<AssistantConversation />)
 
     expect(screen.getByRole('button', { name: /arrêter/i })).toBeDisabled()

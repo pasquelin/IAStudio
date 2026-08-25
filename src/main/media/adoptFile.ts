@@ -1,3 +1,4 @@
+import type { Stats } from 'node:fs'
 import { open, stat } from 'node:fs/promises'
 import { basename } from 'node:path'
 import type { Asset, MediaProbe } from '@shared/domain/asset'
@@ -74,6 +75,21 @@ export async function adoptFile(relative: string, deps: AdoptFileDeps): Promise<
   return adopting
 }
 
+/** The two codes that mean "nothing sits there"; every other failure is one worth hearing. */
+const ABSENT = new Set(['ENOENT', 'ENOTDIR'])
+
+async function statOrAbsent(absolute: string): Promise<Stats | null> {
+  try {
+    return await stat(absolute)
+  } catch (error) {
+    if (error instanceof Error && ABSENT.has(String((error as NodeJS.ErrnoException).code))) {
+      return null
+    }
+
+    throw error
+  }
+}
+
 async function adopt(relative: string, deps: AdoptFileDeps): Promise<Asset | null> {
   // What the studio keeps for itself is shown, never taken: `.index/` holds the previews and the
   // proxies it rewrites at will, and a row pointing into it would die at the next eviction.
@@ -86,8 +102,12 @@ async function adopt(relative: string, deps: AdoptFileDeps): Promise<Asset | nul
   const absolute = assetFilePath(deps.projectPath(), relative)
   if (!absolute) return null
 
-  const stats = await stat(absolute)
-  if (!stats.isFile()) return null
+  // 🛑 ABSENT answers `null`; anything else still throws. A name a person spoke reaches here —
+  // the assistant calls with `voilier vert` — and an ENOENT counted as a studio failure on the
+  // status line. A volume that refuses the read is the other case, and swallowing it too would
+  // report a catalogue that broke as a file that is not there.
+  const stats = await statOrAbsent(absolute)
+  if (!stats?.isFile()) return null
 
   const name = basename(relative)
   const type = await domainOf(name, absolute)

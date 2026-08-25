@@ -183,7 +183,7 @@
       },
       "assetsSearch": {
         "title": "Search the project’s catalogue",
-        "description": "Searches THIS project’s own catalogue, on this machine, by text, kind and tags, and can narrow to what was generated. The account’s remote library is elsewhere."
+        "description": "Searches THIS project’s own catalogue, on this machine, by text, kind and tags, and can narrow to what was generated. The catalogue holds assets, not the project’s files: a file the person names is found by searching the project’s files. The account’s remote library is elsewhere again."
       },
       "assetsCounts": {
         "title": "Count the project’s catalogue",

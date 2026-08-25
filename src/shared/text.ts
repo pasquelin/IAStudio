@@ -19,6 +19,33 @@ export function foldForSearch(text: string): string {
 }
 
 /**
+ * The words a search is made of — folded, then matched against every name by `matchesWords`.
+ *
+ * Punctuation is not part of a word: a dictated `le voilier.` ends in a full stop, and a search
+ * that kept it attached answered nothing for a file plainly there. Letters and NUMBERS by their
+ * Unicode class, never `[a-z0-9]`: « génération » shattered into `g`, `n` and `ration`, and the
+ * one-letter tokens scored against dozens of actions in `findActions`.
+ */
+export function searchWords(term: string): readonly string[] {
+  return foldForSearch(term).match(/[\p{Letter}\p{Number}]+/gu) ?? []
+}
+
+/**
+ * Whether a name answers those words: EVERY one of them is in it, in any order.
+ *
+ * A substring was what this used to be, and it failed the search a person actually types —
+ * `green sailboat` finds nothing in `a beautiful sailing ship, sailboat, on the open sea, green`.
+ * The words are PREPARED by the caller: a walk crosses a hundred thousand entries, and folding
+ * one term per entry is that work done a hundred thousand times.
+ */
+export function matchesWords(name: string, words: readonly string[]): boolean {
+  if (words.length === 0) return false
+
+  const folded = foldForSearch(name)
+  return words.every(word => folded.includes(word))
+}
+
+/**
  * The order of two strings nothing DISPLAYS in that order — an ISO stamp, a schema key, an id.
  *
  * `localeCompare` is the wrong tool twice over here. It answers in the locale the OS happens to

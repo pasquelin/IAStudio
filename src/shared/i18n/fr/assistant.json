@@ -183,7 +183,7 @@
       },
       "assetsSearch": {
         "title": "Chercher dans le catalogue du projet",
-        "description": "Cherche par texte, par nature et par tags dans le catalogue de CE projet, sur cette machine, et peut se restreindre à ce qui a été généré. La bibliothèque distante du compte est ailleurs."
+        "description": "Cherche par texte, par nature et par tags dans le catalogue de CE projet, sur cette machine, et peut se restreindre à ce qui a été généré. Le catalogue porte des assets, pas les fichiers du projet : un fichier que la personne nomme se trouve en cherchant dans les fichiers du projet. La bibliothèque distante du compte est encore ailleurs."
       },
       "assetsCounts": {
         "title": "Compter le catalogue du projet",

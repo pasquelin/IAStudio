@@ -3,7 +3,7 @@
  * the components so the panels that own this state — and drive a server query from it — can
  * be tested without rendering a virtualized grid.
  */
-import { foldForSearch } from '@shared/text'
+import { matchesWords, searchWords } from '@shared/text'
 import { clamp } from '@shared/numeric'
 import { THUMBNAIL_SIZE } from '@shared/domain/project'
 
@@ -127,7 +127,9 @@ export function filterLocally<T>(
   state: CollectionState,
   filter: LocalFilter<T>,
 ): T[] {
-  const needle = foldForSearch(state.search.trim())
+  // The same words the project search matches by, and for the same reason: a picture is named
+  // after the prompt that made it, so `green sailboat` sits three commas apart in its name.
+  const words = searchWords(state.search)
 
   // Resolved once for the list rather than per item: the shelf that calls this holds a thousand
   // rows now that it pages, and re-entering the facets per row allocated two objects each.
@@ -137,8 +139,8 @@ export function filterLocally<T>(
   })
 
   return items.filter(item => {
-    const against = needle ? filter.text(item) : null
-    if (against !== null && !foldForSearch(against).includes(needle)) return false
+    const against = words.length > 0 ? filter.text(item) : null
+    if (against !== null && !matchesWords(against, words)) return false
 
     for (const { read, wanted } of narrowing) {
       const held = read(item)
