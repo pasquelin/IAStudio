@@ -9,18 +9,19 @@ import { boundsOf } from '@shared/domain/settingsRegistry'
  * available here.
  */
 describe('SceneRenderer and the size of its handles', () => {
-  it('gives the gizmo the size the settings hold, never a constant', () => {
-    expect(source).toContain('this.gizmo.size = this.view.gizmoSize')
+  it('gives the gizmo a size CAPPED to what it holds, never the setting raw', () => {
+    expect(source).toContain('this.gizmo.size = gizmoSizeFor(')
+    expect(source).not.toContain('this.gizmo.size = this.view.gizmoSize')
   })
 
   /**
-   * On BUILD and on every `configure`. Applied only where the gizmo is built, a size changed in
-   * the preferences would wait for the next selection to be seen — and applied only on
-   * `configure`, a gizmo rebuilt after a detach would come back at the library's own default.
+   * Three CALLS — the fourth occurrence is the declaration. On build, so a gizmo rebuilt after a
+   * detach does not come back at the library's default; on `configure`, so a preference is seen
+   * without waiting for the next selection; and on every FRAME, because the cap reads the
+   * distance and the distance moves on every notch of the wheel.
    */
-  it('applies it in both places, or the setting is half-heard', () => {
-    // Two CALLS — the third occurrence is the declaration, which is why this reads `this.`.
-    expect(source.match(/this\.applyGizmoSize\(\)/g)).toHaveLength(2)
+  it('applies it on build, on configure AND on every frame', () => {
+    expect(source.match(/this\.applyGizmoSize\(\)/g)).toHaveLength(3)
   })
 })
 

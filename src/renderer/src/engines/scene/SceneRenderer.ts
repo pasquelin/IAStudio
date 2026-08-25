@@ -187,6 +187,7 @@ import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
 import { NOTHING_SNAPPED, type Snapping } from '@shared/domain/snap'
+import { gizmoSizeFor, heldRadius, screenFactor } from './gizmoSize'
 import { heldBy, surfaceLift, surfaceRayFrom, surfaceTurn } from './surfaceSnap'
 import { snapSteps } from './snapSteps'
 import {
@@ -541,6 +542,11 @@ export class SceneRenderer {
   private readonly surfaceFrom = new Vector3()
   /** What the pivot wore when the drag began. A turn composed onto its own result drifts. */
   private readonly surfaceHeld = new Quaternion()
+  /** Scratch for capping the handles to what they hold, so a frame allocates nothing. */
+  private readonly gizmoBox = new Box3()
+  private readonly gizmoSpan = new Vector3()
+  private readonly gizmoEye = new Vector3()
+  private readonly gizmoSpot = new Vector3()
   private readonly pointer = new Vector2()
   private readonly objects = new Map<string, Object3D>()
   /** A shadow walk stops here: what hangs under a node carries that node's flags, not its parent's. */
@@ -2398,9 +2404,20 @@ export class SceneRenderer {
    * the default of 1 covered half the view.
    */
   private applyGizmoSize(): void {
-    if (!this.gizmo) return
-    this.gizmo.size = this.view.gizmoSize
-    this.redraw()
+    const held = this.gizmo?.object
+    if (!this.gizmo || !held) return
+
+    held.updateMatrixWorld(true)
+    this.gizmoBox.setFromObject(held)
+    this.gizmo.size = gizmoSizeFor(
+      this.view.gizmoSize,
+      heldRadius(this.gizmoBox, this.gizmoSpan),
+      screenFactor(
+        this.viewport.camera,
+        this.viewport.camera.getWorldPosition(this.gizmoEye),
+        held.getWorldPosition(this.gizmoSpot),
+      ),
+    )
   }
 
   private applySnap(): void {
@@ -3878,6 +3895,10 @@ export class SceneRenderer {
     for (const joints of this.joints.values()) {
       if (joints.points.visible) joints.refresh()
     }
+
+    // Before the panes are drawn: the cap reads the distance, and the distance moves on every
+    // notch of the wheel. Read on `configure` alone it was right once, then stayed put.
+    this.applyGizmoSize()
 
     const moving = this.flying && this.held.size > 0
     if (moving) {

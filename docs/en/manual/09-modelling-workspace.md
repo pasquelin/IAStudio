@@ -175,9 +175,13 @@ document in hand. The same steps are in **Settings ▸ Workspaces ▸ Modelling*
 are dragging and lays it on whatever it meets. It only acts during a **move** — not during a
 rotation or a resize.
 
-**The handles keep the same size on screen**, whatever the distance. That is not a defect: every
-3D application does it, or they would be impossible to grab as soon as you pull back. What SHARE
-of the view they take is set in **Settings ▸ Workspaces ▸ Modelling ▸ Handle size**.
+**The handles never grow past the object they hold.** On a small part they follow its size and
+shrink with it as you pull back; beyond that they keep one size on screen rather than growing
+without end — or they would be impossible to grab from afar. The ceiling is set in
+**Settings ▸ Workspaces ▸ Modelling ▸ Handle size**.
+
+A light and a camera have no volume to measure: their handles keep the size of the setting, or
+there would be nothing left to grab.
 
 **The local frame shows on a turned object.** With world handles, the red arrow always points
 east. With local handles it points to the **object's** right: which is what you want to drive a
