@@ -1,7 +1,15 @@
-import { commitmentOfCall } from '@shared/domain/assistant'
 import type { Run, Scenario } from './run'
 import * as read from './oracle'
-import { cubeScene, cutMontage, montage, namedCopy, scene, testFolders } from './setups'
+import {
+  cameraScene,
+  cubeScene,
+  cutMontage,
+  montage,
+  namedCopy,
+  nodeAt,
+  scene,
+  testFolders,
+} from './setups'
 
 /**
  * Sections 1 to 5 of the batterie: reading the project, moving about it, searching it, tidying
@@ -11,10 +19,7 @@ import { cubeScene, cutMontage, montage, namedCopy, scene, testFolders } from '.
  * a model that answers « voici tes documents » after opening three of them has failed.
  */
 
-const idle = (run: Run): boolean =>
-  read.spoke(run) &&
-  run.called.every(one => commitmentOfCall(one.action, one.input) === 'none') &&
-  read.changedNothing(run)
+const idle = (run: Run): boolean => read.spoke(run) && read.lookedOnly(run)
 
 const asking = (name: string, said: string, passed: (run: Run) => boolean): Scenario => ({
   name,
@@ -59,8 +64,7 @@ export const PROJECT_SCENARIOS: readonly Scenario[] = [
     name: '1.6 names the cameras and the lights of the scene',
     said: ['Quelles caméras et quelles lumières sont présentes dans ma scène ?'],
     setup: studio => {
-      cubeScene(studio)
-      studio.run('node.add', { kind: 'camera', name: 'Camera Test' })
+      cameraScene(studio)
       studio.run('node.add', { kind: 'directional', name: 'Soleil Test' })
     },
     passed: run => idle(run) && read.answeredWith(run, 'scene.state'),
@@ -68,10 +72,7 @@ export const PROJECT_SCENARIOS: readonly Scenario[] = [
   {
     name: "1.7 gives the scene camera's properties",
     said: ['Donne-moi les propriétés de la caméra de la scène.'],
-    setup: studio => {
-      cubeScene(studio)
-      studio.run('node.add', { kind: 'camera', name: 'Camera Test' })
-    },
+    setup: cameraScene,
     passed: run => idle(run) && read.answeredWith(run, 'scene.state'),
   },
   {
@@ -85,7 +86,7 @@ export const PROJECT_SCENARIOS: readonly Scenario[] = [
     said: ['Quels éléments sont actuellement sélectionnés ?'],
     setup: studio => {
       cubeScene(studio)
-      studio.run('node.select', { nodeIds: [studio.front()?.nodes[0]?.id ?? ''] })
+      studio.run('node.select', { nodeIds: [nodeAt(studio, 0)] })
     },
     passed: idle,
   },

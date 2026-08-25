@@ -132,6 +132,8 @@ export function createFakeStudio(files: readonly StudioFile[]): FakeStudio {
     assets: files
       .filter(one => one.kind === 'file')
       .map((one, at) => ({
+        // Off the same run of ids as everything else: minted apart, a generated asset landed on
+        // the id of a project picture and `referenced` passed on the wrong one.
         id: `asset-${at + 1}`,
         name: pathBaseNameOf(one.path),
         // The one table that says what a file IS, rather than a copy of the suffix list.
@@ -145,13 +147,17 @@ export function createFakeStudio(files: readonly StudioFile[]): FakeStudio {
     space: null,
     frontId: null,
     selection: { kind: 'node', ids: [] },
-    armed: { image: 'flux.1-dev', model: 'mesh-gen-1', video: 'video-gen-1' },
+    // Keyed by the families the REGISTRY declares — `3d`, never `model`, which `studio.state`
+    // would otherwise advertise to the model as a family that does not exist.
+    armed: { image: 'flux.1-dev', '3d': 'mesh-gen-1', video: 'video-gen-1' },
     prepared: null,
     past: [],
     future: [],
     projectName: 'Démo',
     unmodelled: [],
-    counter: 0,
+    // Past the catalogue, so a generated asset can never mint the id of a project picture — it
+    // did, and `referenced` then passed on a file nobody had pointed at.
+    counter: files.length,
   }
 
   const open = (title: string, at: WorkspaceId, path: string | null): ActionOutcome => {

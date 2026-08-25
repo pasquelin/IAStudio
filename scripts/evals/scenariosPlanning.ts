@@ -1,6 +1,6 @@
 import type { Run, Scenario } from './run'
 import * as read from './oracle'
-import { cutMontage, modelScene, scene } from './setups'
+import { cubeScene, cutMontage, framedModel, modelScene } from './setups'
 
 /**
  * Sections 31 to 36: a whole scene, a whole montage, from ONE sentence.
@@ -47,7 +47,7 @@ export const PLANNING_SCENARIOS: readonly Scenario[] = [
       const sound = made.tracks.find(one => one.kind === 'audio')?.id
       const sounds = made.clips.filter(one => one.trackId === sound)
       const pictures = made.clips.filter(one => one.trackId !== sound)
-      const end = pictures.reduce((last, one) => Math.max(last, one.start + one.duration), 0)
+      const end = read.endOf(pictures)
       return (
         pictures.length >= 2 &&
         pictures.some(one => read.lasts(one.duration, 5)) &&
@@ -118,28 +118,19 @@ export const PLANNING_SCENARIOS: readonly Scenario[] = [
     said: [
       'Vérifie que toutes les actions que je t’ai demandé d’effectuer sur Test MCP ont réellement été appliquées.',
     ],
-    setup: studio => {
-      scene()(studio)
-      studio.run('node.add', { kind: 'box', name: 'Cube Test' })
-    },
+    setup: cubeScene,
     passed: run => read.spoke(run) && read.answeredWith(run, 'scene.state'),
   },
   {
     name: '35.2 compares the scene with what was asked',
     said: ['Compare l’état actuel de la scène avec ce que je t’ai demandé.'],
-    setup: studio => {
-      scene()(studio)
-      studio.run('node.add', { kind: 'box', name: 'Cube Test' })
-    },
+    setup: cubeScene,
     passed: run => read.spoke(run) && read.changedNothing(run),
   },
   {
     name: '35.3 lists only what did not produce the expected result',
     said: ['Liste uniquement les actions qui n’ont pas produit le résultat attendu.'],
-    setup: studio => {
-      scene()(studio)
-      studio.run('node.add', { kind: 'box', name: 'Cube Test' })
-    },
+    setup: cubeScene,
     passed: run => read.spoke(run) && read.changedNothing(run),
   },
 
@@ -169,16 +160,13 @@ export const PLANNING_SCENARIOS: readonly Scenario[] = [
     said: [
       'Transforme maintenant cette scène en un montage vidéo de 10 secondes, ajoute une musique de mon projet adaptée et prépare le montage pour l’export.',
     ],
-    setup: studio => {
-      modelScene(studio)
-      studio.run('node.add', { kind: 'camera', name: 'Camera' })
-    },
+    setup: framedModel,
     passed: run => {
       const made = read.documents(run).find(one => one.space === 'video')
       if (!made) return false
 
       const sound = made.tracks.find(one => one.kind === 'audio')?.id
-      return read.near(made.duration, 10, 0.01) && made.clips.some(one => one.trackId === sound)
+      return read.lasts(made.duration, 10) && made.clips.some(one => one.trackId === sound)
     },
   },
   {

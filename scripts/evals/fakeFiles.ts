@@ -2,7 +2,7 @@ import type { ActionOutcome } from '@shared/domain/assistant'
 import { pathBaseNameOf } from '@shared/domain/fileName'
 import { matchesWords, searchWords } from '@shared/text'
 import { answered, done, front, refused, type Bench, type StudioFile } from './bench'
-import { text, texts, type Input } from './inputs'
+import { paths, text, type Input } from './inputs'
 
 /** The project folder and the documents open over it — sections 1 to 5, and the undo of 29. */
 
@@ -17,21 +17,23 @@ const holds = (bench: Bench, path: string): StudioFile | undefined =>
 const beneath = (bench: Bench, path: string): StudioFile[] =>
   bench.files.filter(one => one.path === path || one.path.startsWith(`${path}/`))
 
+const joined = (folder: string, name: string): string =>
+  folder === '' ? name : `${folder}/${name}`
+
+/** A path and everything beneath it, moved in one go. */
+function renamed(bench: Bench, from: string, to: string): void {
+  for (const one of beneath(bench, from)) {
+    one.path = one.path === from ? to : one.path.replace(`${from}/`, `${to}/`)
+  }
+}
+
+/**
+ * 🛑 The FILES alone, never the open documents: `files.undo` reaches `project.undoFile()` and
+ * reverses file operations. A bench rolling documents back too made a `folder.new` followed by
+ * an undo wipe every edit of the session, which reads as a model failure.
+ */
 export function remember(bench: Bench): void {
-  bench.past.push({
-    files: bench.files.map(one => ({ ...one })),
-    documents: bench.documents.map(one => ({
-      ...one,
-      nodes: one.nodes.map(node => ({ ...node })),
-      layers: one.layers.map(layer => ({ ...layer })),
-      clips: one.clips.map(clip => ({ ...clip })),
-      tracks: one.tracks.map(track => ({ ...track })),
-      animations: one.animations.map(anim => ({ ...anim, keys: [...anim.keys] })),
-      world: { ...one.world },
-      skybox: { ...one.skybox },
-      channels: { ...one.channels },
-    })),
-  })
+  bench.past.push({ files: bench.files.map(one => ({ ...one })) })
   bench.future = []
 }
 
@@ -39,10 +41,8 @@ function step(bench: Bench, from: 'past' | 'future'): ActionOutcome {
   const taken = bench[from].pop()
   if (!taken) return refused('badInput')
 
-  const other = from === 'past' ? 'future' : 'past'
-  bench[other].push({ files: bench.files, documents: bench.documents })
+  bench[from === 'past' ? 'future' : 'past'].push({ files: bench.files })
   bench.files = taken.files
-  bench.documents = taken.documents
   return done
 }
 
@@ -68,7 +68,7 @@ export function fileAction(bench: Bench, action: string, input: Input): ActionOu
       const name = text(input, 'name')
       if (name === '') return refused('badInput')
 
-      const path = parent === '' ? name : `${parent}/${name}`
+      const path = joined(parent, name)
       if (holds(bench, path)) return refused('badInput')
 
       remember(bench)
@@ -82,7 +82,7 @@ export function fileAction(bench: Bench, action: string, input: Input): ActionOu
      * second call and scored a file the studio would have left where it was.
      */
     case 'files.duplicate': {
-      const wanted = texts(input, 'paths')
+      const wanted = paths(input)
       if (wanted.length === 0) return refused('badInput')
 
       remember(bench)
@@ -91,7 +91,7 @@ export function fileAction(bench: Bench, action: string, input: Input): ActionOu
         const found = holds(bench, from)
         if (!found || found.kind !== 'file') continue
 
-        const to = `${parentOf(from)}${parentOf(from) === '' ? '' : '/'}copie de ${pathBaseNameOf(from)}`
+        const to = joined(parentOf(from), `copie de ${pathBaseNameOf(from)}`)
         if (holds(bench, to)) continue
 
         bench.files.push({ path: to, kind: 'file' })
@@ -101,7 +101,7 @@ export function fileAction(bench: Bench, action: string, input: Input): ActionOu
     }
 
     case 'files.copy': {
-      const wanted = texts(input, 'paths')
+      const wanted = paths(input)
       const folder = text(input, 'folder')
       if (wanted.length === 0) return refused('badInput')
 
@@ -110,7 +110,7 @@ export function fileAction(bench: Bench, action: string, input: Input): ActionOu
         const found = holds(bench, from)
         if (!found) continue
 
-        const to = folder === '' ? pathBaseNameOf(from) : `${folder}/${pathBaseNameOf(from)}`
+        const to = joined(folder, pathBaseNameOf(from))
         if (!holds(bench, to)) bench.files.push({ path: to, kind: found.kind })
       }
       return done
@@ -122,19 +122,17 @@ export function fileAction(bench: Bench, action: string, input: Input): ActionOu
       const name = text(input, 'name')
       if (!found || name === '') return refused('notFound')
 
-      const to = parentOf(from) === '' ? name : `${parentOf(from)}/${name}`
+      const to = joined(parentOf(from), name)
       remember(bench)
-      for (const one of beneath(bench, from)) {
-        one.path = one.path === from ? to : one.path.replace(`${from}/`, `${to}/`)
-      }
+      renamed(bench, from, to)
       for (const one of bench.documents) if (one.path === from) one.path = to
       return answered({ path: to })
     }
 
     case 'files.move': {
-      const wanted =
-        texts(input, 'paths').length > 0 ? texts(input, 'paths') : [text(input, 'path')]
-      const folder = text(input, 'folder') || text(input, 'to')
+      const wanted = paths(input)
+      const folder = text(input, 'folder')
+      if (wanted.length === 0) return refused('badInput')
       if (folder !== '' && !holds(bench, folder)) return refused('notFound')
 
       remember(bench)
@@ -142,18 +140,18 @@ export function fileAction(bench: Bench, action: string, input: Input): ActionOu
         const found = holds(bench, from)
         if (!found) continue
 
-        const to = folder === '' ? pathBaseNameOf(from) : `${folder}/${pathBaseNameOf(from)}`
-        for (const one of beneath(bench, from)) {
-          one.path = one.path === from ? to : one.path.replace(`${from}/`, `${to}/`)
-        }
+        renamed(
+          bench,
+          from,
+          folder === '' ? pathBaseNameOf(from) : joined(folder, pathBaseNameOf(from)),
+        )
       }
       return done
     }
 
     case 'files.trash': {
-      const wanted =
-        texts(input, 'paths').length > 0 ? texts(input, 'paths') : [text(input, 'path')]
-      if (wanted.every(one => one === '')) return refused('badInput')
+      const wanted = paths(input)
+      if (wanted.length === 0) return refused('badInput')
 
       remember(bench)
       for (const path of wanted) {

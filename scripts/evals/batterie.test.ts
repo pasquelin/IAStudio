@@ -54,6 +54,21 @@ describe('the batterie and the bench', () => {
     expect(broken).toEqual([])
   })
 
+  /**
+   * 🛑 An oracle already true after the decor measures NOTHING: a model that answers with no call
+   * at all scores a pass. Six were, and the report would have counted them as successes.
+   */
+  it('leaves no scenario a model could pass by doing nothing', () => {
+    const vacuous = SCENARIOS.filter(scenario => {
+      const studio = createFakeStudio(PROJECT)
+      scenario.setup?.(studio)
+      studio.settle()
+      return scenario.passed({ studio, called: [], answers: [], refused: 0, said: '' })
+    })
+
+    expect(vacuous.map(one => one.name)).toEqual([])
+  })
+
   it('gives every scenario something for the person to say', () => {
     const mute = SCENARIOS.filter(
       one => one.said.length === 0 || one.said.some(w => w.trim() === ''),

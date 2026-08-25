@@ -1,4 +1,3 @@
-import { commitmentOfCall } from '@shared/domain/assistant'
 import type { Run, Scenario } from './run'
 import * as read from './oracle'
 import {
@@ -6,10 +5,14 @@ import {
   cameraScene,
   cubeScene,
   cutMontage,
+  framedModel,
   litScene,
   modelScene,
+  namedSun,
+  raisedCube,
   scene,
   soundBed,
+  twoBeds,
   withSphere,
 } from './setups'
 
@@ -23,10 +26,7 @@ import {
  */
 
 /** Nothing that outlives the looking, and a question put back. */
-const askedRatherThanActed = (run: Run): boolean =>
-  read.askedBack(run) &&
-  run.called.every(one => commitmentOfCall(one.action, one.input) === 'none') &&
-  read.changedNothing(run)
+const askedRatherThanActed = (run: Run): boolean => read.askedBack(run) && read.lookedOnly(run)
 
 export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
   // ——— 24. Commandes naturelles volontairement imprécises ———
@@ -58,10 +58,7 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
   {
     name: '24.5 frames the character properly',
     said: ['Cadre correctement le personnage.'],
-    setup: studio => {
-      modelScene(studio)
-      studio.run('node.add', { kind: 'camera', name: 'Camera' })
-    },
+    setup: framedModel,
     passed: run => read.framing(run, 'Camera'),
   },
   {
@@ -82,10 +79,7 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
   {
     name: '24.8 makes the camera look at the character',
     said: ['Fais regarder la caméra vers le personnage.'],
-    setup: studio => {
-      modelScene(studio)
-      studio.run('node.add', { kind: 'camera', name: 'Camera' })
-    },
+    setup: framedModel,
     passed: run => read.nodeNamed(run, 'Camera')?.targetId !== null,
   },
   {
@@ -176,19 +170,13 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
   {
     name: '26.1 gives the position of Cube Test',
     said: ['Quelle est la position de Cube Test ?'],
-    setup: studio => {
-      cubeScene(studio)
-      studio.run('node.transform', { nodeId: studio.front()?.nodes[0]?.id ?? '', positionY: 3 })
-    },
+    setup: raisedCube,
     passed: run => read.spoke(run) && read.changedNothing(run),
   },
   {
     name: '26.2 adds 2 to its Y',
     said: ['Quelle est la position de Cube Test ?', 'Ajoute 2 à sa valeur Y.'],
-    setup: studio => {
-      cubeScene(studio)
-      studio.run('node.transform', { nodeId: studio.front()?.nodes[0]?.id ?? '', positionY: 3 })
-    },
+    setup: raisedCube,
     passed: run => read.near(read.nodeNamed(run, 'Cube Test')?.position.y ?? 0, 5, 0.01),
   },
   {
@@ -198,10 +186,7 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
       'Ajoute 2 à sa valeur Y.',
       'Quelle est maintenant sa position ?',
     ],
-    setup: studio => {
-      cubeScene(studio)
-      studio.run('node.transform', { nodeId: studio.front()?.nodes[0]?.id ?? '', positionY: 3 })
-    },
+    setup: raisedCube,
     passed: run => read.near(read.nodeNamed(run, 'Cube Test')?.position.y ?? 0, 5, 0.01),
   },
   {
@@ -213,10 +198,7 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
   {
     name: '26.5 doubles it',
     said: ["Quelle est l'intensité de Soleil Test ?", 'Multiplie-la par deux.'],
-    setup: studio => {
-      litScene(studio)
-      studio.run('node.light', { nodeId: studio.front()?.nodes[1]?.id ?? '', intensity: 3 })
-    },
+    setup: namedSun,
     passed: run => read.near(read.nodeNamed(run, 'Soleil Test')?.intensity ?? 0, 6, 0.01),
   },
   {
@@ -226,10 +208,7 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
       'Multiplie-la par deux.',
       'Vérifie la nouvelle valeur.',
     ],
-    setup: studio => {
-      litScene(studio)
-      studio.run('node.light', { nodeId: studio.front()?.nodes[1]?.id ?? '', intensity: 3 })
-    },
+    setup: namedSun,
     passed: run => read.near(read.nodeNamed(run, 'Soleil Test')?.intensity ?? 0, 6, 0.01),
   },
 
@@ -240,7 +219,8 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
       'Si Test MCP contient déjà une caméra appelée Camera Test, ne la recrée pas ; sinon crée-la.',
     ],
     setup: cameraScene,
-    passed: run => read.nodesOfKind(run, 'camera').length === 1,
+    // Making none is right — but only after reading the scene, which is the whole condition.
+    passed: run => read.nodesOfKind(run, 'camera').length === 1 && read.tried(run, 'scene.state'),
   },
   {
     name: '27.2 puts the existing cube at Y = 0 rather than making one',
@@ -275,7 +255,8 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
     name: '27.4 adds a light only if none is directional',
     said: ["Ajoute une lumière seulement s'il n'y a actuellement aucune lumière directionnelle."],
     setup: litScene,
-    passed: run => read.nodesOfKind(run, 'directional').length === 1,
+    passed: run =>
+      read.nodesOfKind(run, 'directional').length === 1 && read.tried(run, 'scene.state'),
   },
 
   // ——— 28. Actions en masse ———
@@ -299,20 +280,7 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
   {
     name: '28.3 puts every audio clip of the montage at 60 percent',
     said: ['Réduis tous les fichiers audio du montage à 60 % de volume.'],
-    setup: studio => {
-      cutMontage(studio)
-      const audio = studio.front()?.tracks[1]?.id ?? ''
-      for (const [at, name] of [
-        'a calm ambient pad, loopable.wav',
-        'waves on a wooden hull.wav',
-      ].entries()) {
-        studio.run('clip.add', {
-          trackId: audio,
-          assetId: read.assetOf(studio, name),
-          start: at * 5,
-        })
-      }
-    },
+    setup: twoBeds,
     passed: run => {
       const sounds = read.clips(run).filter(one => one.trackId === read.audioTrack(run))
       return sounds.length === 2 && sounds.every(one => read.quietedTo(one.gain, 60))
@@ -349,7 +317,10 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
     name: '29.2 undoes the last change',
     said: ['Déplace Cube Test à X = 50.', 'Annule ma dernière modification.'],
     setup: cubeScene,
-    passed: run => read.near(read.nodeNamed(run, 'Cube Test')?.position.x ?? 50, 0, 0.01),
+    // Both halves, or doing nothing at all would pass: the cube has to have MOVED, and come back.
+    passed: run =>
+      read.tried(run, 'node.transform') &&
+      read.near(read.nodeNamed(run, 'Cube Test')?.position.x ?? 50, 0, 0.01),
   },
   {
     name: '29.3 checks Cube Test came back',
@@ -360,7 +331,9 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
     ],
     setup: cubeScene,
     passed: run =>
-      read.spoke(run) && read.near(read.nodeNamed(run, 'Cube Test')?.position.x ?? 50, 0, 0.01),
+      read.spoke(run) &&
+      read.tried(run, 'node.transform') &&
+      read.near(read.nodeNamed(run, 'Cube Test')?.position.x ?? 50, 0, 0.01),
   },
   {
     name: '29.4 removes Sphere Droite',
@@ -372,7 +345,8 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
     name: '29.5 undoes the removal',
     said: ['Supprime Sphere Droite.', 'Annule la suppression.'],
     setup: withSphere,
-    passed: run => read.nodeNamed(run, 'Sphere Droite') !== undefined,
+    passed: run =>
+      read.tried(run, 'node.remove') && read.nodeNamed(run, 'Sphere Droite') !== undefined,
   },
   {
     name: '29.6 checks Sphere Droite exists again',
@@ -382,7 +356,10 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
       'Vérifie que Sphere Droite existe de nouveau.',
     ],
     setup: withSphere,
-    passed: run => read.spoke(run) && read.nodeNamed(run, 'Sphere Droite') !== undefined,
+    passed: run =>
+      read.spoke(run) &&
+      read.tried(run, 'node.remove') &&
+      read.nodeNamed(run, 'Sphere Droite') !== undefined,
   },
 
   // ——— 30. Protection contre les mauvaises interprétations ———

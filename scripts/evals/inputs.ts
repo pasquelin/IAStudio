@@ -18,6 +18,19 @@ export const number = (input: Input, key: string): number | null =>
 
 export const flag = (input: Input, key: string): boolean => input[key] === true
 
+/**
+ * What a call aims at, BY ID alone — `nodeById`, `layerById` and their kin answer to nothing
+ * else, and a bench forgiving a name forgives the field the model gets wrong most often.
+ */
+export const byId = <T extends { id: string }>(
+  among: readonly T[],
+  input: Input,
+  key: string,
+): T | undefined => among.find(one => one.id === text(input, key))
+
+/** The paths a file action names — always a list, never a lone `path`. */
+export const paths = (input: Input): readonly string[] => texts(input, 'paths')
+
 /** A vector spelled as three optional numbers, over the one the thing already wears. */
 export const vector = (input: Input, of: string, current: Vector = ORIGIN): Vector => ({
   x: number(input, `${of}X`) ?? current.x,
@@ -28,6 +41,8 @@ export const vector = (input: Input, of: string, current: Vector = ORIGIN): Vect
 /** Whether a vector was named at all — a transform naming none is a call that changes nothing. */
 export const named = (input: Input, of: string): boolean =>
   ['X', 'Y', 'Z'].some(axis => number(input, `${of}${axis}`) !== null)
+
+const isSlot = (name: string): name is TextureSlot => TEXTURE_SLOTS.some(slot => slot === name)
 
 /**
  * The slots a material call names, as `texturesFrom` reads them: a record of SLOT to asset id.
@@ -42,9 +57,7 @@ export function slots(input: Input, key = 'textures'): Partial<Record<TextureSlo
   for (const [slot, value] of Object.entries(asked)) {
     if (typeof value !== 'string') return null
     // A blank id is the map taken OFF, which is not the same as leaving it alone.
-    if (value.trim() !== '' && TEXTURE_SLOTS.includes(slot as TextureSlot)) {
-      found[slot as TextureSlot] = value
-    }
+    if (value.trim() !== '' && isSlot(slot)) found[slot] = value
   }
 
   return found

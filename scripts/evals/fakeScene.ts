@@ -13,7 +13,7 @@ import {
   type SceneNode,
   type StudioDocument,
 } from './bench'
-import { flag, named, number, slots, text, texts, vector, type Input } from './inputs'
+import { byId, flag, named, number, slots, text, texts, vector, type Input } from './inputs'
 
 /** Everything a 3D document answers — the space the batterie spends nine of its sections in. */
 
@@ -24,11 +24,6 @@ const isMesh = (kind: string): boolean => MESH_ENTRIES.some(entry => entry.kind 
 /** What `node.material` reaches: a mesh or a text — and a text's outline takes no tiling. */
 const wearsMaterial = (input: Input, kind: string): boolean =>
   isMesh(kind) || (kind === 'text' && input['tilesPerMetre'] === undefined)
-
-// By ID alone, as `nodeById` does: a bench answering to a NAME forgives the field the model gets
-// wrong most often, and every such forgiveness scores a call the studio would have refused.
-const aimed = (scene: StudioDocument, input: Input): SceneNode | undefined =>
-  scene.nodes.find(one => one.id === text(input, 'nodeId'))
 
 function add(bench: Bench, scene: StudioDocument, kind: string, input: Input): ActionOutcome {
   const node: SceneNode = {
@@ -92,7 +87,7 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
       return text(input, 'assetId') === '' ? refused('badInput') : add(bench, scene, 'model', input)
 
     case 'node.remove': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       if (!node) return refused('badInput')
 
       scene.nodes = scene.nodes.filter(one => one !== node)
@@ -101,7 +96,7 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'node.rename': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       const name = text(input, 'name')
       if (!node || name === '') return refused('badInput')
 
@@ -111,7 +106,7 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'node.transform': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       if (!node) return refused('badInput')
       if (!named(input, 'position') && !named(input, 'rotation') && !named(input, 'scale')) {
         return refused('badInput')
@@ -125,7 +120,7 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'node.visible': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       if (!node) return refused('badInput')
 
       node.visible = flag(input, 'visible')
@@ -134,7 +129,7 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'node.material': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       // An imported model wears `model.textures`, never this one.
       if (!node || !wearsMaterial(input, node.kind)) return refused('badInput')
 
@@ -144,10 +139,13 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
       const colour = text(input, 'color')
       const roughness = number(input, 'roughness')
       const metalness = number(input, 'metalness')
-      const named = Object.keys(asked).length > 0 || colour !== '' || roughness !== null
-      if (!named && metalness === null && number(input, 'tilesPerMetre') === null) {
-        return refused('badInput')
-      }
+      const dialled =
+        Object.keys(asked).length > 0 ||
+        colour !== '' ||
+        roughness !== null ||
+        metalness !== null ||
+        number(input, 'tilesPerMetre') !== null
+      if (!dialled) return refused('badInput')
 
       node.textures = { ...node.textures, ...asked }
       if (colour !== '') node.color = colour
@@ -158,7 +156,7 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'model.textures': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       const asked = slots(input)
       if (!node || asked === null || Object.keys(asked).length === 0) return refused('badInput')
 
@@ -168,14 +166,14 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'node.geometry': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       // Aims at a mesh rather than making one: a bench that added a box here scored "resize the
       // cube" as a second cube.
       return node && isMesh(node.kind) ? done : refused('badInput')
     }
 
     case 'node.sprite': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       if (node?.kind !== 'sprite') return refused('badInput')
 
       const map = text(input, 'map')
@@ -184,15 +182,16 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'node.shadow': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       if (!node) return refused('badInput')
 
       node.castShadow = flag(input, 'castShadow')
+      scene.modified = true
       return done
     }
 
     case 'node.light': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       if (!node || node.intensity === null) return refused('badInput')
 
       const intensity = number(input, 'intensity')
@@ -206,14 +205,14 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'node.camera': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       return node?.kind === 'camera' ? done : refused('badInput')
     }
 
     // A shot is what a camera animation IS, and `camera.target` aims at the SHOT rather than at
     // the camera — a bench taking `nodeId` here scored a call the studio refuses.
     case 'camera.shot': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       if (node?.kind !== 'camera') return refused('badInput')
 
       const shot: Animation = { id: nextId(bench, 'shot'), name: node.id, keys: [] }
@@ -233,7 +232,7 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'camera.target': {
-      const shot = scene.animations.find(one => one.id === text(input, 'shotId'))
+      const shot = byId(scene.animations, input, 'shotId')
       const at = text(input, 'targetId')
       if (!shot) return refused('badInput')
 
@@ -253,10 +252,11 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'node.reparent': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       if (!node) return refused('badInput')
 
       node.parentId = text(input, 'parentId') || null
+      scene.modified = true
       return done
     }
 
@@ -296,11 +296,13 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
 
     case 'world.fog':
       scene.world.fog = text(input, 'kind') !== 'none'
+      scene.modified = true
       return done
 
     case 'world.ground':
       scene.world.ground = flag(input, 'visible')
       scene.world.shadows = flag(input, 'receiveShadow') || scene.world.shadows
+      scene.modified = true
       return done
 
     case 'animation.settings': {
@@ -316,7 +318,7 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
       return answered(scene.animations.map(one => ({ id: one.id, name: one.name })))
 
     case 'animation.add': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       if (!node) return refused('badInput')
 
       const clip: Animation = {
@@ -332,6 +334,7 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
     case 'animation.remove': {
       const id = text(input, 'clipId')
       scene.animations = scene.animations.filter(one => one.id !== id)
+      scene.modified = true
       return done
     }
 
@@ -341,7 +344,7 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
      * transform and score an animation of nothing.
      */
     case 'key.pose': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       if (!node) return refused('badInput')
 
       const property = text(input, 'property') || 'position'
@@ -364,13 +367,14 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'key.clear': {
-      const node = aimed(scene, input)
+      const node = byId(scene.nodes, input, 'nodeId')
       const at = number(input, 'timeSeconds')
       if (!node) return refused('badInput')
 
+      // The dot matters: `node-1` prefix-matches `node-10`, and clearing one wiped the other.
       for (const held of scene.animations) {
         held.keys = held.keys.filter(
-          one => !one.channel.startsWith(node.id) || (at !== null && one.at !== at),
+          one => !one.channel.startsWith(`${node.id}.`) || (at !== null && one.at !== at),
         )
       }
       return done
@@ -385,6 +389,7 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
       for (const held of scene.animations) {
         held.keys = held.keys.filter(one => one.channel !== wanted)
       }
+      scene.modified = true
       return done
     }
 

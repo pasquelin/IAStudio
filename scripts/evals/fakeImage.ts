@@ -1,11 +1,8 @@
 import type { ActionOutcome } from '@shared/domain/assistant'
 import { answered, done, front, nextId, refused, type Bench, type StudioDocument } from './bench'
-import { flag, number, text, type Input } from './inputs'
+import { byId, flag, number, text, type Input } from './inputs'
 
 /** Everything an image document answers — the layer stack of sections 18 and 19. */
-
-const aimed = (image: StudioDocument, input: Input) =>
-  image.layers.find(one => one.id === text(input, 'layerId'))
 
 const stateOf = (image: StudioDocument): unknown => ({
   documentId: image.id,
@@ -59,14 +56,15 @@ export function imageAction(bench: Bench, action: string, input: Input): ActionO
         assetId: text(input, 'assetId') || null,
         text: null,
       }
-      // Newest on TOP, which is what "above the boat" is read against.
-      image.layers.unshift(layer)
+      // Index 0 is the BOTTOM, as `addLayer` holds it — a bench stacking the other way round
+      // rewarded `index: 1` for « passe-le derrière », which the studio reads as `index: 0`.
+      image.layers.push(layer)
       image.modified = true
       return answered({ layerId: layer.id })
     }
 
     case 'layer.remove': {
-      const layer = aimed(image, input)
+      const layer = byId(image.layers, input, 'layerId')
       if (!layer) return refused('badInput')
 
       image.layers = image.layers.filter(one => one !== layer)
@@ -75,7 +73,7 @@ export function imageAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'layer.rename': {
-      const layer = aimed(image, input)
+      const layer = byId(image.layers, input, 'layerId')
       const name = text(input, 'name')
       if (!layer || name === '') return refused('badInput')
 
@@ -85,7 +83,7 @@ export function imageAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'layer.style': {
-      const layer = aimed(image, input)
+      const layer = byId(image.layers, input, 'layerId')
       if (!layer) return refused('badInput')
 
       const opacity = number(input, 'opacity')
@@ -98,7 +96,7 @@ export function imageAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'layer.transform': {
-      const layer = aimed(image, input)
+      const layer = byId(image.layers, input, 'layerId')
       if (!layer) return refused('badInput')
 
       const x = number(input, 'x')
@@ -120,7 +118,7 @@ export function imageAction(bench: Bench, action: string, input: Input): ActionO
     }
 
     case 'layer.move': {
-      const layer = aimed(image, input)
+      const layer = byId(image.layers, input, 'layerId')
       const to = number(input, 'index')
       if (!layer || to === null) return refused('badInput')
 
@@ -135,25 +133,26 @@ export function imageAction(bench: Bench, action: string, input: Input): ActionO
       return done
 
     case 'layer.lock': {
-      const layer = aimed(image, input)
+      const layer = byId(image.layers, input, 'layerId')
       if (!layer) return refused('badInput')
 
       layer.locked = flag(input, 'pixels') || flag(input, 'position') || flag(input, 'alpha')
+      image.modified = true
       return done
     }
 
     case 'layer.duplicate': {
-      const layer = aimed(image, input)
+      const layer = byId(image.layers, input, 'layerId')
       if (!layer) return refused('badInput')
 
       const copy = { ...layer, id: nextId(bench, 'layer'), name: `${layer.name} copy` }
-      image.layers.unshift(copy)
+      image.layers.push(copy)
       image.modified = true
       return answered({ layerId: copy.id })
     }
 
     case 'layer.text': {
-      const layer = aimed(image, input)
+      const layer = byId(image.layers, input, 'layerId')
       const value = text(input, 'text')
       if (!layer || value === '') return refused('badInput')
 

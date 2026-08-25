@@ -1,3 +1,4 @@
+import { commitmentOfCall, type ActionName } from '@shared/domain/assistant'
 import { isRecord } from '@shared/guards'
 import type { FakeStudio } from './fakeStudio'
 import type { Clip, Layer, SceneNode, StudioDocument } from './bench'
@@ -65,6 +66,14 @@ export const near = (value: number, wanted: number, slack = 0.001): boolean =>
 /** What a read-only turn is allowed to do: look, and say. Nothing that outlives the looking. */
 export const changedNothing = (run: Run): boolean =>
   documents(run).every(one => !one.modified) && run.studio.bench().past.length === 0
+
+/** Looked and said, and nothing more: no call that commits, and nothing left changed. */
+export const lookedOnly = (run: Run): boolean =>
+  run.called.every(one => commitmentOfCall(one.action, one.input) === 'none') && changedNothing(run)
+
+/** Where a montage ends: the last frame any clip reaches, which is what « exactly » reads on. */
+export const endOf = (of: readonly Clip[]): number =>
+  of.reduce((last, one) => Math.max(last, one.start + one.duration), 0)
 
 /** What the model answered a question WITH — a sentence, not an empty turn. */
 export const spoke = (run: Run): boolean => run.said.trim().length > 0
@@ -135,3 +144,7 @@ export const searched = (run: Run, word: string): boolean =>
         value => typeof value === 'string' && value.toLowerCase().includes(word),
       ),
   )
+
+/** Whether an action ran at all, refused or not — what an undo scenario has to see happen. */
+export const tried = (run: Run, name: ActionName): boolean =>
+  run.called.some(one => one.action === name)

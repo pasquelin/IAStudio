@@ -2,7 +2,7 @@ import type { ActionOutcome } from '@shared/domain/assistant'
 import { isRecord } from '@shared/guards'
 import { matchesWords, searchWords } from '@shared/text'
 import { answered, done, nextId, refused, type Bench, type CatalogueAsset } from './bench'
-import { text, texts, type Input } from './inputs'
+import { byId, text, texts, type Input } from './inputs'
 
 /**
  * The library and the generator — sections 20 to 23, and the id every material slot takes.
@@ -105,7 +105,7 @@ export function libraryAction(bench: Bench, action: string, input: Input): Actio
     }
 
     case 'asset.update': {
-      const asset = bench.assets.find(one => one.id === text(input, 'assetId'))
+      const asset = byId(bench.assets, input, 'assetId')
       if (!asset) return refused('notFound')
 
       if (text(input, 'name') !== '') asset.name = text(input, 'name')
@@ -121,7 +121,7 @@ export function libraryAction(bench: Bench, action: string, input: Input): Actio
     }
 
     case 'asset.extractTextures': {
-      const asset = bench.assets.find(one => one.id === text(input, 'assetId'))
+      const asset = byId(bench.assets, input, 'assetId')
       if (!asset) return refused('notFound')
 
       // A model carries its maps; pulling them out is how "its textures" become ids.
