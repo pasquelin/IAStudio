@@ -31,14 +31,34 @@ export function heldRadius(box: Box3, into: Vector3): number {
 }
 
 /**
- * The size to give the gizmo. `TransformControls` scales its handles by `factor * size / 4`, and
- * its rotation rings have a radius of one — so the radius on stage is exactly that product, and
- * the size that matches a radius is what this inverts.
+ * How far the OUTERMOST handle of each mode reaches, in the gizmo's own space. Read off
+ * `TransformControls`: the arrows and the scale boxes sit at 0.5, the rotation's outer ring is a
+ * `CircleGeometry( 0.75, 1 )`. Taking them for 1 — which nothing there is — left the handles a
+ * quarter short of what they were meant to wrap.
+ */
+const REACH: Record<GizmoMode, number> = { translate: 0.5, rotate: 0.75, scale: 0.5 }
+
+export type GizmoMode = 'translate' | 'rotate' | 'scale'
+
+/**
+ * The size to give the gizmo so its outermost handle lands on the radius of what it holds.
+ * `TransformControls` scales by `factor * size / 4`, so that handle stands at
+ * `factor * size / 4 * REACH` — and this inverts it.
  *
  * A radius of zero means nothing was measured: a light and a camera have no box, and their
  * handles keep the preferred size rather than collapsing to nothing.
  */
-export function gizmoSizeFor(preferred: number, radius: number, factor: number): number {
+export function gizmoSizeFor(
+  preferred: number,
+  radius: number,
+  factor: number,
+  mode: GizmoMode,
+): number {
   if (radius <= 0 || factor <= 0) return preferred
-  return Math.min(preferred, (4 * radius) / factor)
+  return Math.min(preferred, (4 * radius) / (REACH[mode] * factor))
+}
+
+/** Where the outermost handle of a mode lands, for a size and a factor. What the cap aims at. */
+export function gizmoReachOf(size: number, factor: number, mode: GizmoMode): number {
+  return ((factor * size) / 4) * REACH[mode]
 }
