@@ -21,7 +21,9 @@ export function useLocalModels(
   enabled: boolean,
 ): readonly ModelSummary[] {
   const { data } = useQuery<readonly ModelSummary[]>({
-    queryKey: [...key, LOCAL_RUNTIME],
+    // The narrowing is IN the key: a caller reusing a prefix with a narrower `query` would
+    // otherwise be handed the wider ask's cached rows and never issue its own request.
+    queryKey: [...key, query, LOCAL_RUNTIME],
     queryFn: async () =>
       (
         await getBridge()?.provider.searchModels({
