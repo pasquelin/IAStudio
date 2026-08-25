@@ -371,7 +371,7 @@ export const DEFAULT_SETTINGS: Settings = {
     snapTranslate: 0.5,
     snapRotate: 15,
     snapScale: 0.1,
-    gizmoSize: 0.5,
+    gizmoSize: 0.75,
     snapSurfaceAlign: true,
     snapSurfaceOffset: 0,
     shadows: true,

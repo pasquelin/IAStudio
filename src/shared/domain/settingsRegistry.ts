@@ -476,8 +476,10 @@ export const SETTING_REGISTRY = [
     section: 'spaces.three',
     titleKey: 'settings.gizmoSize.title',
     helpKey: 'settings.gizmoSize.help',
-    min: 0.2,
-    max: 1.5,
+    // Up to twice what the object measures: the cap is a CEILING, and somebody working on a
+    // small part wants the handles to stand clear of it rather than hug its outline.
+    min: 0.75,
+    max: 2,
     step: 0.05,
   }),
   setting({
