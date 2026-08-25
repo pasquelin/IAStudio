@@ -70,6 +70,22 @@ describe('what a step answered, as the model reads it', () => {
   })
 
   /**
+   * 🛑 Where a chain stalls: `0 results: []` reads as an answer, and the model reported it to the
+   * person and stopped — three times over, asking to be allowed to list the folder it could have
+   * listed. Named in words at the moment the model decides, not in a briefing.
+   */
+  it('says an empty answer in words rather than in brackets', () => {
+    const [block = ''] = assistantHistory([
+      turn({ steps: [{ action: 'files.search', refusal: null, data: [] }] }),
+    ])
+
+    expect(block).toContain('nothing matched')
+    // No instruction with it: `jobs.list` answers empty for a job not yet registered, and a
+    // "try another way" there would stop a model from watching its own generation.
+    expect(block).not.toContain('another way')
+  })
+
+  /**
    * 🛑 Dropped by WHOLE entries and counted: half a path is a path the model calls with, and a
    * call on half a path opens nothing. A model told nothing of what was cut plans against a
    * project half of which it cannot see.

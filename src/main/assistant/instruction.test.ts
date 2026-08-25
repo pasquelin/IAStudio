@@ -72,6 +72,34 @@ describe('how much of the catalogue the model is shown', () => {
     expect(briefing.allowed.has('git.checkout')).toBe(false)
   })
 
+  /**
+   * 🛑 A briefing may not NAME an action it did not show. `parseReply` refuses a reply WHOLE the
+   * moment one call names an unshown action, so a rule telling a narrow door to `files.list`
+   * costs it the entire answer — twice, the retry only complaining about JSON — and the turn
+   * dies as "I did not manage to answer that one" with two billed round trips spent.
+   *
+   * The whole registry's names, not a list written here: a rule added tomorrow naming a fifth
+   * action is caught by the same case.
+   */
+  it('names no action the short list does not show', () => {
+    const briefing = studioBriefing({ room: NARROW })
+    // The RULES alone: the catalogue below them lists `command.run`'s own options, and a studio
+    // command legitimately shares a name with an action — `document.save` is both.
+    const rules = briefing.text.slice(0, briefing.text.indexOf('Catalogue:'))
+    const unshown = ACTION_REGISTRY.filter(action => !briefing.allowed.has(action.name))
+
+    expect(unshown.filter(action => rules.includes(action.name)).map(one => one.name)).toEqual([])
+  })
+
+  // The other half: a rule dropped from the wide door would be as silent as one wrongly kept.
+  it('gives the door that holds them the rules that name them', () => {
+    const wide = studioBriefing({ room: WIDE })
+
+    expect(wide.text).toContain('  - A file the person names is in the project')
+    expect(wide.text).toContain('List the folders YOURSELF')
+    expect(wide.text).toContain('The remote library is not this project')
+  })
+
   it('stays inside the room it was given', () => {
     expect(studioBriefing({ room: NARROW }).text.length).toBeLessThanOrEqual(NARROW)
   })

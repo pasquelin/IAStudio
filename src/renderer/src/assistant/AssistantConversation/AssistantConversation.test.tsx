@@ -220,6 +220,37 @@ describe('the assistant conversation', () => {
  * runs for as long as it takes, and a screen saying nothing for four rounds is one the person
  * sits in front of, wondering whether to type the sentence again.
  */
+describe('what a step shows of what it did', () => {
+  const ran = (data: unknown): void =>
+    useAssistant.setState({
+      turns: [
+        {
+          id: 1,
+          said: 'ouvre l’image du bateau',
+          answered: '',
+          steps: [{ action: 'files.search', refusal: null, data }],
+          lost: false,
+        },
+      ],
+    })
+
+  it('counts what a list answered', () => {
+    ran(['Images/a.png', 'Images/b.png'])
+    render(<AssistantConversation />)
+
+    expect(screen.getByText(/2 résultats/)).toBeInTheDocument()
+  })
+
+  // « 1 résultat » under an opening says nothing about a file that just opened: what a list
+  // answers is how many there were, and what everything else answers is its own business.
+  it('counts nothing where counting means nothing', () => {
+    ran({ opened: 'asset' })
+    render(<AssistantConversation />)
+
+    expect(screen.queryByText(/résultat/)).not.toBeInTheDocument()
+  })
+})
+
 describe('while the assistant is working', () => {
   /** What `say` posts before it thinks: the turn exists from the moment the sentence leaves. */
   const working = (round: number, stopping = false): void =>
