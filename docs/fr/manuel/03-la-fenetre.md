@@ -292,7 +292,7 @@ dessous dans la seconde.
 |---|---|
 | **+** (bouton bleu) | crée un **nouveau document** dans l’espace actif — à l’accueil, un **nouveau projet** |
 | *séparateur* | |
-| Icônes de la **moitié haute** | Modèles, Génération, puis Assets — ce que le fournisseur propose ; l’accueil y met **Vos projets** |
+| Icônes de la **moitié haute** | Modèles, Génération, puis Bibliothèque — ce que le fournisseur propose ; l’accueil y met **Vos projets** |
 | *séparateur* | |
 | Icônes de la **moitié basse** | l’Explorateur puis Git, à l’accueil comme dans les espaces |
 | Tout en bas | Timeline puis Historique, selon l’espace ; à l’accueil, l’Historique seul |
@@ -389,8 +389,8 @@ garde sa taille.
 > été, deux colonnes et rien en bas.
 
 **La colonne de gauche se lit en deux temps : ce que le fournisseur propose, puis ce qui est déjà à
-vous.** En haut, **Modèles**, **Génération** et **Assets**, qui se relaient — un modèle à choisir,
-son formulaire, et la **Bibliothèque** de ce que le compte héberge. En bas, l’**Explorateur** et **Git**, qui se
+vous.** En haut, **Modèles**, **Génération** et la **Bibliothèque**, qui se relaient — un modèle à
+choisir, son formulaire, et ce que le compte héberge. En bas, l’**Explorateur** et **Git**, qui se
 relaient aussi : le dossier de votre projet, et ce qui y a changé.
 
 La coupure entre les deux moitiés est ce qui rend le geste possible : la Bibliothèque et l’Explorateur

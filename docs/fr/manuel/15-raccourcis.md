@@ -129,7 +129,7 @@ en bascule dans les [réglages](14-reglages.md#façon-de-déclencher).
 
 ### Parcourir une liste au clavier
 
-Les listes du studio se traversent toutes de la même façon : l’Explorateur, l’Explorateur, les
+Les listes du studio se traversent toutes de la même façon : l’Explorateur, la Bibliothèque, les
 calques, les modèles, l’arbre de la scène.
 
 | Touche | Effet |
@@ -249,7 +249,7 @@ parcourant une liste.
 | **Déplacer** | `G` | tirer sur les flèches de couleur pour le glisser |
 | **Pivoter** | `R` | tirer sur les cercles de couleur pour le faire tourner |
 | **Redimensionner** | `S` | tirer sur les poignées. `⇧` garde les proportions |
-| **Magnétisme** | `M` | fait avancer les poignées par pas réguliers. Les pas se règlent dans les réglages |
+| **Tous les magnétismes** | `M` | allume ou éteint d’un coup les quatre magnétismes — surface, grille, angle, échelle. La barre en haut du viewport les règle un par un |
 | **Repère local** | `L` | aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde |
 | **Projection** | `O` | bascule entre perspective et projection orthographique |
 | **Mode de rendu** | `Z` | fait défiler les neuf façons de dessiner |
@@ -672,7 +672,7 @@ laisserait croire que `⌘D` ou `⌘Z` y font ce qu’ils font dans l’espace d
 | `G` |  |  | Déplacer |  | Outil Pot de peinture |  |  |  |
 | `R` |  |  | Pivoter |  |  |  |  |  |
 | `S` |  |  | Redimensionner *(et reculer)* | Couper le clip |  |  |  |  |
-| `M` |  |  | Magnétisme |  | Sélection rectangulaire |  |  |  |
+| `M` |  |  | Tous les magnétismes |  | Sélection rectangulaire |  |  |  |
 | `L` |  |  | Repère local |  | Lasso |  |  |  |
 | `F` |  |  | Cadrer la sélection | Fenêtre de retour |  |  |  |  |
 | `H` |  |  |  |  | Outil Main |  |  |  |
