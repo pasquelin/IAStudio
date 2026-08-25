@@ -55,7 +55,7 @@
       },
       "documentsList": {
         "title": "Lister les documents du projet",
-        "description": "Rend tous les documents que porte le dossier du projet, ouverts dans un onglet ou non, avec leur chemin, leur nature et leur espace. Ne change rien à l’écran."
+        "description": "Rend les documents éditables que porte le dossier du projet — images en calques, scènes, montages, matières — ouverts dans un onglet ou non. Les autres fichiers du projet, images et modèles compris, ne sont pas là."
       },
       "documentOpen": {
         "title": "Ouvrir un document",
@@ -92,6 +92,10 @@
       "projectCreate": {
         "title": "Créer un dossier de projet",
         "description": "Crée un projet à un chemin absolu de cette machine et l’ouvre, sans lever le dialogue système qu’une personne utiliserait."
+      },
+      "fileOpen": {
+        "title": "Ouvrir un fichier du projet",
+        "description": "Ouvre n’importe quel fichier du dossier du projet — une image, un modèle 3D, une texture, un document — dans l’espace qui l’édite, comme un double-clic dans l’Explorateur. Un fichier qu’aucun éditeur d’ici ne prend est confié au programme auquel il appartient."
       },
       "filesList": {
         "title": "Lister un dossier",
@@ -178,12 +182,12 @@
         "description": "Rend ce que le compte a dépensé sur une fenêtre de sept, trente-et-un ou cent vingt jours, telle que la fenêtre de consommation l’affiche."
       },
       "assetsSearch": {
-        "title": "Chercher dans la bibliothèque",
-        "description": "Cherche les assets du projet par texte, par nature et par tags, et peut se restreindre à ce qui a été généré. Répond avec les lignes que porte le catalogue."
+        "title": "Chercher dans le catalogue du projet",
+        "description": "Cherche par texte, par nature et par tags dans le catalogue de CE projet, sur cette machine, et peut se restreindre à ce qui a été généré. La bibliothèque distante du compte est ailleurs."
       },
       "assetsCounts": {
-        "title": "Compter la bibliothèque",
-        "description": "Rend le nombre d’assets de chaque nature que porte le projet, compté dans le catalogue plutôt qu’en les listant."
+        "title": "Compter le catalogue du projet",
+        "description": "Rend le nombre d’assets de chaque nature que ce projet porte sur cette machine, compté dans le catalogue plutôt qu’en les listant."
       },
       "assetGet": {
         "title": "Lire des assets",

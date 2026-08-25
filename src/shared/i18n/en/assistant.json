@@ -55,7 +55,7 @@
       },
       "documentsList": {
         "title": "List the project’s documents",
-        "description": "Returns every document the project folder holds, open in a tab or not, with its path, kind and workspace. Changes nothing on screen."
+        "description": "Returns the editable documents the project folder holds — layered images, scenes, edits, materials — open in a tab or not. The project’s other files, images and models included, are not here."
       },
       "documentOpen": {
         "title": "Open a document",
@@ -92,6 +92,10 @@
       "projectCreate": {
         "title": "Create a project folder",
         "description": "Makes a new project at an absolute path on this machine and opens it, without raising the system dialogue a person would use."
+      },
+      "fileOpen": {
+        "title": "Open a file of the project",
+        "description": "Opens any file the project folder holds — an image, a 3D model, a texture, a document — in the space that edits it, the way a double-click in the Explorer does. A file no editor here takes is handed to the program that owns it."
       },
       "filesList": {
         "title": "List a folder",
@@ -178,12 +182,12 @@
         "description": "Returns what the account has spent over a window of seven, thirty-one or a hundred and twenty days, as the usage window shows it."
       },
       "assetsSearch": {
-        "title": "Search the library",
-        "description": "Searches the project’s assets by text, kind and tags, and can narrow to what was generated. Answers with the rows the catalogue holds."
+        "title": "Search the project’s catalogue",
+        "description": "Searches THIS project’s own catalogue, on this machine, by text, kind and tags, and can narrow to what was generated. The account’s remote library is elsewhere."
       },
       "assetsCounts": {
-        "title": "Count the library",
-        "description": "Returns how many assets of each kind the project holds, counted in the catalogue rather than by listing them."
+        "title": "Count the project’s catalogue",
+        "description": "Returns how many assets of each kind this project holds on this machine, counted in the catalogue rather than by listing them."
       },
       "assetGet": {
         "title": "Read assets",
