@@ -14,7 +14,7 @@
     "noModelForOperation": "Aucun modèle ne sert cette opération.",
     "chooseModelFirst": "Choisissez un modèle pour continuer.",
     "sources": "Sources",
-    "sourceFrom_assets": "Sélectionné dans les assets",
+    "sourceFrom_explorer": "Sélectionné dans l’explorateur",
     "sourceFrom_scene": "Sélectionné dans la scène",
     "sourceFrom_result": "Résultat précédent",
     "dropSource": "Retirer cette source",

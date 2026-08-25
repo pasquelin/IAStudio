@@ -4,8 +4,8 @@ import { cloudIdOf, remoteRowId } from '@/panels/assets/rows'
 
 type LibraryPickState = {
   /**
-   * The ROW ids picked, in the order taken — what `Collection` paints. Not in the selection store
-   * because nothing this panel lists has a catalogue row until it is downloaded.
+   * The ROW ids picked, in the order taken — what `Collection` paints. Not in the selection store,
+   * which names rows of the PROJECT folder by path: nothing listed here is in the project yet.
    */
   picked: readonly string[]
   setPicked: (picked: readonly string[]) => void

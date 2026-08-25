@@ -19,7 +19,7 @@ import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStac
 import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
 import { ENVIRONMENT_PRESETS } from '@/engines/scene/environmentPresets'
 import { SHADOW_LEVELS } from '@/engines/scene/shadowLevels'
-import { INPUT_ORIGINS } from '@/generation/generationInputs'
+import { INPUT_ORIGINS, type InputOrigin } from '@/generation/generationInputs'
 import { RIG_STATUSES, type RigStatus } from '@/engines/scene/rigState'
 import { RIG_FIT_FAULTS, type RigFitFault } from '@/engines/scene/rigFit'
 import { NAVIGATION_HINT_GROUPS } from '@/spaces/three/SceneNavigationHint'
@@ -187,6 +187,14 @@ describe('the lists behind those keys', () => {
     const all: Record<LayerOperation, true> = { group: true, ungroup: true, duplicate: true }
 
     expect([...LAYER_OPERATIONS].sort()).toEqual(Object.keys(all).sort())
+  })
+
+  // The only surface that says what the studio is about to SEND: an origin with no line here
+  // stands under the raw key.
+  it('holds every place a generation source can come from', () => {
+    const all: Record<InputOrigin, true> = { explorer: true, scene: true, result: true }
+
+    expect([...INPUT_ORIGINS].sort()).toEqual(Object.keys(all).sort())
   })
 
   it('holds every kind a track can be', () => {

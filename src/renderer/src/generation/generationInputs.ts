@@ -11,15 +11,15 @@ import type { AvailableInput } from '@shared/domain/aiCapability'
  * the input off has to undo — a source nobody can trace to a gesture is one nobody can withdraw.
  */
 export type InputOrigin =
-  /** Rows the asset shelf has picked. */
-  | 'assets'
+  /** Files the project explorer has picked. */
+  | 'explorer'
   /** Placements the scene in front has picked. */
   | 'scene'
   /** What the last generation produced, so a chain starts from it. */
   | 'result'
 
 /** Walked by `dynamic-keys.i18n.test.ts`: the sentence under each thumbnail is composed. */
-export const INPUT_ORIGINS: readonly InputOrigin[] = ['assets', 'scene', 'result']
+export const INPUT_ORIGINS: readonly InputOrigin[] = ['explorer', 'scene', 'result']
 
 export type GenerationInput = AvailableInput & {
   /**
@@ -31,31 +31,32 @@ export type GenerationInput = AvailableInput & {
   /** What the panel draws beside the thumbnail. Document data, never a word of the interface. */
   label: string
 } & (
-    | { origin: 'assets' | 'result' }
+    | { origin: 'result' }
     /**
      * 🛑 The placement it was picked as, REQUIRED by the union: a scene selects nodes, two of them
      * can reference one model, and withdrawing by asset id would take both off. Optional, the
      * panel drew a cross that silently did nothing.
      */
     | { origin: 'scene'; nodeId: string }
+    /** The PATH it was picked by, for the same reason: the explorer deselects by path. */
+    | { origin: 'explorer'; path: string }
   )
 
 /** An input a gesture put there, so taking it off has something to undo. */
-export type WithdrawableInput = Extract<GenerationInput, { origin: 'assets' | 'scene' }>
+export type WithdrawableInput = Extract<GenerationInput, { origin: 'explorer' | 'scene' }>
 
-/**
- * 🛑 An ALLOW-list, owned here with the union itself: a result is replaced by the next generation
- * rather than withdrawn, and asking « is it a result? » let a fourth origin get a cross by default
- * — one the hook would then have routed into the shelf branch and deselected by asset id.
- */
+/** 🛑 An ALLOW-list, owned with the union: a fourth origin must not get a cross by default. */
 export function isWithdrawable(input: GenerationInput): input is WithdrawableInput {
-  return input.origin === 'assets' || input.origin === 'scene'
+  return input.origin === 'explorer' || input.origin === 'scene'
 }
 
 /** What the panel is handed to work out its inputs, gathered by `useGenerationContext`. */
 export type WorkspaceContent = {
-  /** Rows the shelf has selected, whatever their kind. */
-  selectedAssets: readonly { id: string; name: string; type: AssetType }[]
+  /**
+   * Files the explorer has picked, each already resolved to the catalogue row it names. A file
+   * the catalogue does not hold has no id to send and never reaches here.
+   */
+  selectedFiles: readonly { assetId: string; name: string; path: string; type: AssetType }[]
   /** The models a scene has selected: the placement, and the catalogue row it references. */
   selectedMeshes: readonly { assetId: string; name: string; nodeId: string }[]
   /** What the last generation produced, kept so a chain can start from it. */
@@ -64,21 +65,13 @@ export type WorkspaceContent = {
 
 /**
  * Everything the workspace can hand a model, most explicit first. The ORDER is the priority: the
- * panel fills each slot of the contract from the first input that fits it.
- *
- * 🛑 The SCENE opens it, and the shelf follows. Selecting a node used to wipe the shelf's pick, so
- * the question never arose; now the two coexist, and a row picked in a catalogue an hour ago would
- * otherwise outrank the model just clicked in the viewport.
+ * panel fills each slot of the contract from the first input that fits it — 🛑 the SCENE opens the
+ * list and the explorer follows, or a file picked an hour ago outranks the model just clicked.
  */
 export function availableInputsOf(content: WorkspaceContent): readonly GenerationInput[] {
   const inputs: GenerationInput[] = []
-  /**
-   * 🛑 One GESTURE, one input — keyed by what withdrawing it undoes, never by the catalogue row.
-   * A scene selects placements, so two nodes of one model are two sources and each takes its own
-   * cross; everything else is the row itself, so a picture the last generation made and that was
-   * then clicked in the shelf arrives once. Keyed by the row throughout, that mesh pair collapsed
-   * into one line whose cross visibly did nothing.
-   */
+  // 🛑 Keyed by what withdrawing UNDOES — a node id, then a row id: two placements of one model
+  // are two sources, and keyed by the row that pair collapsed into one whose cross did nothing.
   const seen = new Set<string>()
 
   for (const mesh of content.selectedMeshes) {
@@ -94,15 +87,16 @@ export function availableInputsOf(content: WorkspaceContent): readonly Generatio
     })
   }
 
-  for (const asset of content.selectedAssets) {
-    if (seen.has(asset.id)) continue
-    seen.add(asset.id)
+  for (const file of content.selectedFiles) {
+    if (seen.has(file.assetId)) continue
+    seen.add(file.assetId)
     inputs.push({
       role: 'source',
-      kind: asset.type,
-      assetId: asset.id,
-      label: asset.name,
-      origin: 'assets',
+      kind: file.type,
+      assetId: file.assetId,
+      label: file.name,
+      origin: 'explorer',
+      path: file.path,
     })
   }
 

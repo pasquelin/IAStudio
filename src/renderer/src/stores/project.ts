@@ -88,7 +88,7 @@ async function followProject(project: Project | null): Promise<void> {
   // Assets and folder rows are named for the project that is being left: a path still picked
   // resolves inside the new one, so its own explorer highlighted a file nobody chose — and ⌘⌫
   // would have trashed it.
-  useSelection.getState().clear()
+  useSelection.getState().selectFiles([])
   const [, folderAnswered] = await Promise.all([
     useAssets.getState().refresh(),
     refreshDocuments(),

@@ -22,7 +22,7 @@ import { useJobs } from '@/stores/jobs'
 import type { Asset } from '@shared/domain/asset'
 import { useAssets } from '@/stores/assets'
 import { useProject } from '@/stores/project'
-import { selectedAssetIds, useSelection } from '@/stores/selection'
+import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { connectPreparation } from '@/stores/preparation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { useSettings } from '@/stores/settings'
@@ -71,19 +71,22 @@ function renderPanel() {
   return render(withQueries(<Generator />))
 }
 
-/** A picture on the shelf, picked — the one source this panel can attach on its own. */
-function selectPicture(): void {
-  const picked: Asset = {
-    id: 'asset-picked',
-    name: 'concept.png',
-    type: 'image',
-    location: 'local',
-    createdAt: '2026-08-23T00:00:00.000Z',
-    tags: [],
-  }
+/** A picture picked in the explorer — the one source this panel can attach on its own. */
+const PICTURE_PATH = 'Images/concept.png'
 
-  useAssets.setState({ items: [picked] })
-  useSelection.getState().selectAssets([picked.id])
+const PICKED: Asset = {
+  id: 'asset-picked',
+  name: 'concept',
+  type: 'image',
+  location: 'local',
+  path: PICTURE_PATH,
+  createdAt: '2026-08-23T00:00:00.000Z',
+  tags: [],
+}
+
+function selectPicture(): void {
+  useAssets.setState({ items: [PICKED] })
+  useSelection.getState().selectFiles([PICTURE_PATH])
 }
 
 /** A row the picker can list, for the state where the catalogue holds one and none is chosen. */
@@ -126,7 +129,7 @@ describe('Generator', () => {
     useLayouts.setState({ activeWorkspace: 'image' })
     useGeneration.setState({ forcedCapability: null })
     useAssets.setState({ items: [] })
-    useSelection.getState().clear()
+    useSelection.getState().selectFiles([])
     // Both image employments, because a canvas is open above: the panel reads that as working
     // FROM the picture, and only the employment it settles on decides which model runs.
     chooseModels({
@@ -138,6 +141,8 @@ describe('Generator', () => {
     })
 
     bridge = installFakeBridge({
+      // The panel resolves a picked PATH against the catalogue — see `useGenerationContext`.
+      assets: { search: async () => [PICKED] },
       provider: {
         describeModel: (modelId: string) =>
           DESCRIPTORS[modelId]
@@ -220,10 +225,10 @@ describe('Generator', () => {
     selectPicture()
     renderPanel()
 
-    await screen.findByText('Sélectionné dans les assets')
+    await screen.findByText('Sélectionné dans l’explorateur')
     await userEvent.click(screen.getByRole('button', { name: 'Retirer cette source' }))
 
-    expect(selectedAssetIds(useSelection.getState())).toEqual([])
+    expect(selectedFilePaths(useSelection.getState())).toEqual([])
     expect(screen.queryByText('concept.png')).not.toBeInTheDocument()
   })
 

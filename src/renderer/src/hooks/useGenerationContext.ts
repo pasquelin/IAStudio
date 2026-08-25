@@ -1,14 +1,15 @@
 import { useCallback, useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
-import type { AssetType } from '@shared/domain/asset'
 import {
   availableInputsOf,
   type GenerationInput,
   type WithdrawableInput,
 } from '@/generation/generationInputs'
 import { resolveCapability, type CapabilityChoice } from '@/generation/capabilityResolver'
+import { nameOf } from '@shared/domain/folder'
 import { selectedNodes } from '@/engines/scene/sceneState'
+import { usePickedRows } from './usePickedRows'
 import { deselect } from '@/helpers/selection'
 import { workspaceById } from '@/helpers/workspaces'
 import { useAssets, assetsById } from '@/stores/assets'
@@ -16,7 +17,7 @@ import { activeSceneId, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { latestGenerationIds, useJobs } from '@/stores/jobs'
-import { selectedAssetIds, useSelection } from '@/stores/selection'
+import { selectedFilePaths, useSelection } from '@/stores/selection'
 
 /**
  * What the AI side knows of the workspace right now — the § 9 of the brief.
@@ -27,11 +28,7 @@ import { selectedAssetIds, useSelection } from '@/stores/selection'
 export type GenerationContext = {
   inputs: readonly GenerationInput[]
   capability: CapabilityChoice
-  /**
-   * Takes one input back off, by undoing the gesture that offered it — the shelf's pick, the
-   * scene's. A result has none to undo: it is replaced by the next generation rather than
-   * withdrawn, and the panel draws no way off for one.
-   */
+  /** Takes one input off by undoing the gesture that offered it; a result has none to undo. */
   withdraw: (input: WithdrawableInput) => void
 }
 
@@ -47,7 +44,12 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
   // it was made in — Enlarge asks for an upscaler while the image workspace is in front.
   const family = (forced && partsOfRole(forced)?.family) ?? workspaceById(workspace).family
 
-  const pickedIds = useSelection(selectedAssetIds)
+  /**
+   * 🛑 Asked OF the catalogue, never off `useAssets.items`: that store pages two hundred rows at
+   * a time, so a file picked past the first page would have offered nothing at all, in silence.
+   */
+  const pickedPaths = useSelection(selectedFilePaths)
+  const pickedRows = usePickedRows(pickedPaths)
   const rows = useAssets(assetsById)
 
   /**
@@ -70,23 +72,26 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
   const producedIds = useJobs(latestGenerationIds)
 
   const inputs = useMemo(() => {
-    const named = (ids: readonly string[]): { id: string; name: string; type: AssetType }[] =>
-      ids.flatMap(id => {
+    return availableInputsOf({
+      // In the ORDER they were picked, which the catalogue's answer does not keep: the panel
+      // fills each slot of the contract from the first input that fits.
+      selectedFiles: pickedPaths.flatMap(path => {
+        const asset = pickedRows.get(path)
+        // The FILE's name, as the explorer shows it: a catalogue row is filed under its stem, and
+        // a `concept.png` clicked in the tree stood under the thumbnail as `concept`.
+        return asset ? [{ assetId: asset.id, name: nameOf(path), path, type: asset.type }] : []
+      }),
+      selectedMeshes: meshes,
+      results: producedIds.flatMap(id => {
         const asset = rows.get(id)
         return asset ? [{ id: asset.id, name: asset.name, type: asset.type }] : []
-      })
-
-    return availableInputsOf({
-      selectedAssets: named(pickedIds),
-      selectedMeshes: meshes,
-      results: named(producedIds),
+      }),
     })
-  }, [pickedIds, rows, meshes, producedIds])
+  }, [pickedPaths, pickedRows, rows, meshes, producedIds])
 
   /**
-   * 🛑 Undone where it was DONE, never filtered here. A panel-side list of dismissed ids would
-   * leave the shelf showing a row as picked while the generation no longer took it, and the two
-   * answers to "what is selected" would drift apart with nothing to reconcile them.
+   * 🛑 Undone where it was DONE, never filtered here: a panel-side list of dismissed ids would
+   * leave the explorer showing a row as picked while the generation no longer took it.
    */
   const withdraw = useCallback((input: WithdrawableInput) => {
     // Both read at CALL time, never from the render that drew the row: a click landing after
@@ -100,8 +105,8 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
       return
     }
 
-    const picked = selectedAssetIds(useSelection.getState())
-    useSelection.getState().selectAssets(deselect(picked, input.assetId))
+    const picked = selectedFilePaths(useSelection.getState())
+    useSelection.getState().selectFiles(deselect(picked, input.path))
   }, [])
 
   // Memoised with the inputs it reads: the resolution allocates a contract per required input,

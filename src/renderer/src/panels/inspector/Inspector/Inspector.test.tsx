@@ -34,7 +34,7 @@ function openSequence(): void {
 describe('Inspector, on the document in front', () => {
   beforeEach(() => {
     useLayouts.setState({ activeWorkspace: 'image', home: false })
-    useSelection.setState({ selection: { kind: 'none' } })
+    useSelection.getState().selectFiles([])
     useAssets.setState({ items: [asset()] })
     useJobs.setState({ jobs: [], bodies: {} })
     useDocuments.setState({ documents: {}, activeId: null })
@@ -83,28 +83,18 @@ describe('Inspector, on the document in front', () => {
    * image being edited — with nothing on screen saying why the layers had stopped being
    * described. What an asset is now reads out under the shelf itself, in `AssetDetails`.
    */
-  it('leaves the image in front described when an asset is picked in the shelf', () => {
+  it('leaves the image in front described while a file is picked in the explorer', () => {
     installCanvas('image-1', {
       ...DEFAULT_CANVAS,
       layers: [layerFixture({ name: 'Paint' })],
       activeLayerId: 'layer-2',
     })
-    useSelection.getState().selectAssets(['asset-1'])
+    useSelection.getState().selectFiles(['Images/etude.png'])
 
     render(<Inspector />)
 
     expect(screen.getByText('Paint')).toBeInTheDocument()
     expect(screen.queryByText('pad.wav')).not.toBeInTheDocument()
-  })
-
-  /** The same rule for a file of the project folder — the explorer's own selection. */
-  it('leaves the sky in front graded when a file is picked in the explorer', () => {
-    installDocument('sky-1', 'skyboxes')
-    useSelection.getState().selectFiles(['Repérages/ruelle.png'])
-
-    render(<Inspector />)
-
-    expect(screen.getByLabelText('Élévation')).toBeInTheDocument()
   })
 
   it('reads out the clip the montage has selected', () => {

@@ -163,8 +163,8 @@ export function AssetBrowser() {
   /** Which row is open. One at a time: two of these is a panel one scrolls twice. */
   const [expanded, setExpanded] = useState<string | null>(null)
   /**
-   * What is picked, in a store of its own rather than in the selection one: that store speaks
-   * catalogue ids, and none of these lines has one until it is downloaded — see `useLibraryPick`.
+   * What is picked, in a store of its own rather than in the selection one: that one names rows
+   * of the PROJECT folder, and none of these lines is in the project until it is downloaded.
    */
   const picked = useLibraryPick(state => state.picked)
   const setPicked = useLibraryPick(state => state.setPicked)

@@ -16,7 +16,7 @@ import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { useExplorerView } from '@/stores/explorerView'
-import { useSelection } from '@/stores/selection'
+import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { Explorer } from './Explorer'
@@ -1637,7 +1637,7 @@ describe('the explorer read by domain', () => {
     render(<Explorer />)
     await userEvent.click(await screen.findByText('Autre'))
 
-    expect(useSelection.getState().selection.kind).toBe('none')
+    expect(selectedFilePaths(useSelection.getState())).toEqual([])
     await userEvent.dblClick(screen.getByText('Autre'))
     await waitFor(() => expect(screen.queryByText('notes.pdf')).not.toBeInTheDocument())
   })

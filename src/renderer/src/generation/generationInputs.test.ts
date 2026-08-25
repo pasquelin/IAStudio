@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { availableInputsOf, type WorkspaceContent } from './generationInputs'
 
-const NO_CONTENT: WorkspaceContent = { selectedAssets: [], selectedMeshes: [], results: [] }
+const NO_CONTENT: WorkspaceContent = { selectedFiles: [], selectedMeshes: [], results: [] }
 
 const content = (over: Partial<WorkspaceContent> = {}): WorkspaceContent => ({
   ...NO_CONTENT,
@@ -13,13 +13,22 @@ describe('what the workspace offers a generation', () => {
     expect(availableInputsOf(NO_CONTENT)).toEqual([])
   })
 
-  it('offers a selected row under the kind the catalogue filed it as', () => {
+  it('offers a picked file under the kind the catalogue filed it as', () => {
     const inputs = availableInputsOf(
-      content({ selectedAssets: [{ id: 'a1', name: 'car.png', type: 'image' }] }),
+      content({
+        selectedFiles: [{ assetId: 'a1', name: 'car.png', path: 'Images/car.png', type: 'image' }],
+      }),
     )
 
     expect(inputs).toEqual([
-      { role: 'source', kind: 'image', assetId: 'a1', label: 'car.png', origin: 'assets' },
+      {
+        role: 'source',
+        kind: 'image',
+        assetId: 'a1',
+        label: 'car.png',
+        origin: 'explorer',
+        path: 'Images/car.png',
+      },
     ])
   })
 
@@ -41,50 +50,52 @@ describe('what the workspace offers a generation', () => {
     })
   })
 
-  /**
-   * 🛑 The viewport outranks the shelf, and nothing said so until the two could coexist: selecting
-   * a node used to wipe the shelf's pick. A mesh picked in a catalogue an hour ago would otherwise
-   * be handed to the contract ahead of the model just clicked in the scene.
-   */
-  it('puts what the scene holds ahead of what the shelf holds', () => {
+  // A mesh picked an hour ago would otherwise be handed to the contract ahead of the model just
+  // clicked in the scene.
+  it('puts what the scene holds ahead of what the explorer holds', () => {
     const inputs = availableInputsOf(
       content({
-        selectedAssets: [{ id: 'a1', name: 'crate.glb', type: 'mesh' }],
+        selectedFiles: [{ assetId: 'a1', name: 'crate.glb', path: '3D/crate.glb', type: 'mesh' }],
         selectedMeshes: [{ assetId: 'm1', name: 'Robot', nodeId: 'n1' }],
       }),
     )
 
-    expect(inputs.map(input => input.origin)).toEqual(['scene', 'assets'])
+    expect(inputs.map(input => input.origin)).toEqual(['scene', 'explorer'])
   })
 
   /**
    * The order IS the priority, and the panel fills each contract slot from the first input that
-   * fits: someone who picked a picture on the shelf means that one, even while a canvas is open.
+   * fits: someone who picked a picture in the explorer means that one, even while a canvas is open.
    */
-  it('puts what was selected ahead of what was merely produced', () => {
+  it('puts what was picked ahead of what was merely produced', () => {
     const inputs = availableInputsOf(
       content({
-        selectedAssets: [{ id: 'a1', name: 'concept.png', type: 'image' }],
+        selectedFiles: [
+          { assetId: 'a1', name: 'concept.png', path: 'Images/concept.png', type: 'image' },
+        ],
         results: [{ id: 'r1', name: 'robot.png', type: 'image' }],
       }),
     )
 
-    expect(inputs.map(input => input.origin)).toEqual(['assets', 'result'])
+    expect(inputs.map(input => input.origin)).toEqual(['explorer', 'result'])
   })
 
   /**
-   * A generated picture clicked in the shelf is one thing that reached the panel two ways. Listed
-   * twice, taking the shelf's pick off left the result's copy filling the very same field.
+   * A generated picture picked in the explorer is one thing that reached the panel two ways.
+   * Listed twice, taking the explorer's pick off left the result's copy filling the very same
+   * field — which is why the file is keyed by its ROW rather than by its path.
    */
   it('offers one row once, whichever way it reached the panel', () => {
     const inputs = availableInputsOf(
       content({
-        selectedAssets: [{ id: 'r1', name: 'robot.png', type: 'image' }],
+        selectedFiles: [
+          { assetId: 'r1', name: 'robot.png', path: 'Images/robot.png', type: 'image' },
+        ],
         results: [{ id: 'r1', name: 'robot.png', type: 'image' }],
       }),
     )
 
-    expect(inputs.map(input => input.origin)).toEqual(['assets'])
+    expect(inputs.map(input => input.origin)).toEqual(['explorer'])
   })
 
   // § 24: a result becomes a source without a round trip through the shelf — offered, never taken.

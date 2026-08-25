@@ -21,7 +21,7 @@ import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { installDocuments, retitleDocument } from '@/stores/document-fixtures'
 import { exportSequence } from './sequenceExport'
-import { useSelection } from '@/stores/selection'
+import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { TIMELESS_DURATION } from '@/engines/timeline/insert'
@@ -97,7 +97,7 @@ describe('TimelineCanvas', () => {
   beforeEach(() => {
     useTimelineView.setState({ viewports: {} })
     useAssets.setState({ items: [asset()] })
-    useSelection.getState().clear()
+    useSelection.getState().selectFiles([])
     menu = fakeMenu()
     installFakeBridge({ menu: menu.bridge })
   })
@@ -457,22 +457,19 @@ describe('TimelineCanvas', () => {
    */
   it('designates the clip that was pressed, and leaves what a shelf picked where it is', () => {
     useSequences.getState().runCommand('doc-1', addClip('V1', clip))
-    useSelection.getState().selectAssets(['asset-1', 'asset-2'])
+    useSelection.getState().selectFiles(['Images/one.png', 'Images/two.png'])
 
     fireEvent.pointerDown(paint(), { clientX: 10, clientY: RULER_HEIGHT + 30 })
 
     expect(sequenceOf(useSequences.getState(), 'doc-1').selectedId).toBe('clip-1')
-    expect(useSelection.getState().selection).toEqual({
-      kind: 'asset',
-      ids: ['asset-1', 'asset-2'],
-    })
+    expect(selectedFilePaths(useSelection.getState())).toEqual(['Images/one.png', 'Images/two.png'])
   })
 
   // A press in the void drops what the MONTAGE designated, and nothing else: it is not this
   // canvas's business to empty a shelf standing beside it.
   it('empties its own selection when the press lands in the void, and only its own', () => {
     useSequences.getState().runCommand('doc-1', addClip('V1', clip))
-    useSelection.getState().selectAssets(['asset-1'])
+    useSelection.getState().selectFiles(['Images/one.png'])
     const canvas = paint()
     fireEvent.pointerDown(canvas, { clientX: 10, clientY: RULER_HEIGHT + 30 })
 
@@ -482,7 +479,7 @@ describe('TimelineCanvas', () => {
     })
 
     expect(sequenceOf(useSequences.getState(), 'doc-1').selectedId).toBeNull()
-    expect(useSelection.getState().selection).toEqual({ kind: 'asset', ids: ['asset-1'] })
+    expect(selectedFilePaths(useSelection.getState())).toEqual(['Images/one.png'])
   })
 
   it('leaves the montage untouched while the hand drags across a clip', () => {
