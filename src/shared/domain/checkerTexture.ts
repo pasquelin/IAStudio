@@ -1,3 +1,5 @@
+import { hostedUrl } from './asset'
+
 /**
  * The four working textures the app ships with — a grid and a checker, each at two densities.
  *
@@ -41,6 +43,18 @@ export const CHECKER_TEXTURE_NAMES: Record<CheckerTextureId, string> = {
 
 export function checkerTextureFile(id: CheckerTextureId): string {
   return `${CHECKER_TEXTURE_NAMES[id]}.png`
+}
+
+/**
+ * The host that serves one from beside the app, no project taking part — as `template` and
+ * `model` already do. Beside `installBundledTextures`, not instead of it: a mesh wears the ASSET,
+ * so the `.gltf` it is written as points at a picture another application can open.
+ */
+export const TEXTURE_HOST = 'texture'
+
+/** Where the window reads one from. Named by its file, like every other shipped folder. */
+export function bundledTextureUrl(id: CheckerTextureId): string {
+  return hostedUrl(TEXTURE_HOST, checkerTextureFile(id))
 }
 
 /** What one of them lands in the project as: the id it was given, and the row it now has. */

@@ -206,6 +206,7 @@ describe('the lists that stand for a union', () => {
       'texture.shader': true,
       'texture.export': true,
       'skybox.source': true,
+      'skybox.probes': true,
       'skybox.export': true,
       'canvas.layer': true,
       'canvas.place': true,

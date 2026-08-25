@@ -710,6 +710,11 @@ export type LogScope =
   | 'texture.shader'
   | 'texture.export'
   | 'skybox.source'
+  /**
+   * A working texture shipped beside the app that would not load. Apart from `skybox.source`,
+   * whose sentence blames the picture the user chose: this one is a defect of our packaging.
+   */
+  | 'skybox.probes'
   | 'skybox.export'
   | 'canvas.layer'
   /**
@@ -793,6 +798,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'texture.shader',
   'texture.export',
   'skybox.source',
+  'skybox.probes',
   'skybox.export',
   'canvas.layer',
   'canvas.place',

@@ -50,6 +50,8 @@ vi.mock('../viewport/testObjects', async importOriginal => {
     ...actual,
     createTestObjects: (options: Parameters<typeof actual.createTestObjects>[0]) => {
       probes = actual.createTestObjects(options)
+      // Watched rather than doubled: what the floor DOES with a map is `testObjects.test.ts`.
+      vi.spyOn(probes, 'setGroundMap')
       return probes
     },
   }
@@ -74,6 +76,12 @@ vi.mock('../gpu/passes/adjust', async importOriginal => {
 })
 
 const host = document.createElement('div')
+
+/** Where a picture of the open project is read from — the floor's grid answers on another host. */
+const ASSET_URL = 'ia-studio://asset/'
+
+/** The floor's grid, shipped beside the app: no project takes part in answering for it. */
+const GRID_URL = 'ia-studio://texture/GridLarge.png'
 
 /** Azimuth `0` aims at `+Z`, which is where a ray through the centre of the frame goes. */
 const SUN_AHEAD = 0
@@ -181,6 +189,10 @@ describe('the renderer of a skybox', () => {
     expect(pipeline.renderTo).toHaveBeenCalledTimes(graded + 1)
   }
 
+  /** What the engine asked of the SHELF — the floor's grid, read at construction, is not that. */
+  const skyLoads = (): string[] =>
+    source.load.mock.calls.map(([url]) => url).filter(url => url.startsWith(ASSET_URL))
+
   const gradedTarget = (): WebGLRenderTarget | undefined =>
     pipeline.createTarget.mock.results[0]?.value
 
@@ -232,7 +244,7 @@ describe('the renderer of a skybox', () => {
     it('asks for the sky by asset id, not by a URL it built itself', async () => {
       await applied(mounted(), skyOf('sky-1'))
 
-      expect(source.load).toHaveBeenCalledWith('ia-studio://asset/sky-1')
+      expect(source.load).toHaveBeenCalledWith(`${ASSET_URL}sky-1`)
     })
 
     /**
@@ -251,13 +263,13 @@ describe('the renderer of a skybox', () => {
       await applied(renderer, skyOf('sky-1'))
 
       renderer.refreshSource()
-      expect(source.load).toHaveBeenCalledTimes(1)
+      expect(skyLoads()).toHaveLength(1)
 
       version = 'after'
       renderer.refreshSource()
 
       await vi.advanceTimersByTimeAsync(0)
-      expect(source.load).toHaveBeenLastCalledWith('ia-studio://asset/sky-1?v=after')
+      expect(source.load).toHaveBeenLastCalledWith(`${ASSET_URL}sky-1?v=after`)
     })
 
     it('grades the picture it was given into the background', async () => {
@@ -292,7 +304,7 @@ describe('the renderer of a skybox', () => {
 
       renderer.apply(skyOf('sky-1'))
 
-      expect(source.load).toHaveBeenCalledTimes(1)
+      expect(skyLoads()).toHaveLength(1)
     })
 
     it('frees the previous sky when another one is chosen', async () => {
@@ -301,8 +313,8 @@ describe('the renderer of a skybox', () => {
 
       await applied(renderer, skyOf('sky-2'))
 
-      expect(source.freed[0]).toHaveBeenCalled()
-      expect(source.freed[1]).not.toHaveBeenCalled()
+      expect(source.freedFor(`${ASSET_URL}sky-1`)).toHaveBeenCalled()
+      expect(source.freedFor(`${ASSET_URL}sky-2`)).not.toHaveBeenCalled()
     })
 
     it('takes the background away when the picture goes', async () => {
@@ -317,7 +329,7 @@ describe('the renderer of a skybox', () => {
     it('asks for nothing on a document that never had a picture', () => {
       mounted().apply(createSkyboxContent())
 
-      expect(source.load).not.toHaveBeenCalled()
+      expect(skyLoads()).toEqual([])
       expect(environment.setTexture).not.toHaveBeenCalled()
     })
 
@@ -349,8 +361,35 @@ describe('the renderer of a skybox', () => {
       renderer.apply(skyOf('sky-1'))
       await vi.advanceTimersByTimeAsync(0)
 
-      expect(source.load).toHaveBeenCalled()
+      expect(skyLoads()).toHaveLength(1)
       expect(pipeline.renderTo).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("the probes' floor", () => {
+    // NO PRIMITIVE IS BORN BARE — a white plane says nothing about the scale of what lights it.
+    it('dresses the floor with the shipped grid, read from beside the app', async () => {
+      mounted()
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(source.load).toHaveBeenCalledWith(GRID_URL)
+      expect(probes.setGroundMap).toHaveBeenCalledWith(expect.any(Texture))
+    })
+
+    it('frees a grid that arrives after the engine went away', async () => {
+      let arrive: (texture: Texture) => void = () => {}
+      source.load.mockImplementationOnce(() => new Promise(resolve => (arrive = resolve)))
+      const renderer = mounted()
+
+      renderer.dispose()
+      mountedRenderers.length = 0
+      const grid = new Texture()
+      const freed = vi.spyOn(grid, 'dispose')
+      arrive(grid)
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(freed).toHaveBeenCalled()
+      expect(probes.setGroundMap).not.toHaveBeenCalled()
     })
   })
 
@@ -620,16 +659,16 @@ describe('the renderer of a skybox', () => {
   })
 
   describe('going away', () => {
-    // `probes` stays out: covering it would mean a fourth double for three meshes that own
-    // nothing else. `test-objects.ts` has no test at all — that is its own lot.
-    it('frees its sky, its target, its passes and its viewport', async () => {
+    // The meshes themselves stay out — `testObjects.test.ts` covers what they wear and free.
+    it('frees its sky, its grid, its target, its passes and its viewport', async () => {
       const renderer = mounted()
       const target = vi.spyOn(gradedTarget() ?? new WebGLRenderTarget(1, 1), 'dispose')
       await applied(renderer, skyOf('sky-1'))
 
       renderer.dispose()
 
-      expect(source.freed[0]).toHaveBeenCalled()
+      expect(source.freedFor(`${ASSET_URL}sky-1`)).toHaveBeenCalled()
+      expect(source.freedFor(GRID_URL)).toHaveBeenCalled()
       expect(target).toHaveBeenCalled()
       expect(environment.dispose).toHaveBeenCalled()
       expect(pipeline.dispose).toHaveBeenCalled()
