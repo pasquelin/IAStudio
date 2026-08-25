@@ -251,16 +251,19 @@ export default defineConfig({
         test: {
           /**
            * The bench's own fixtures, which `src` globs never reach. Free and offline, unlike
-           * `pnpm evals`, so it belongs to the gate. Anchored on `scripts/evals/` and not on
-           * `scripts/`: that is what `tsconfig.evals.json` covers, and a test outside it would
+           * `pnpm banc`, so it belongs to the gate. Anchored on `scripts/banc/` and not on
+           * `scripts/`: that is what `tsconfig.banc.json` covers, and a test outside it would
            * run having never been typechecked.
            */
-          name: 'scripts',
-          environment: 'node',
+          name: 'banc',
+          // jsdom: the bench drives the REAL renderer handlers through `runAction`, and the
+          // stores they read are written for a window.
+          environment: 'jsdom',
+          setupFiles: ['src/renderer/src/testSetupStores.ts'],
           pool: TEST_POOL,
           testTimeout: TEST_TIMEOUT,
-          include: ['scripts/evals/**/*.test.ts'],
-          benchmark: { include: ['scripts/evals/**/*.bench.ts'] },
+          include: ['scripts/banc/**/*.test.ts'],
+          benchmark: { include: ['scripts/banc/**/*.bench.ts'] },
         },
       },
       {

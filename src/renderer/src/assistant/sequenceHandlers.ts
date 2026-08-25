@@ -1,4 +1,5 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
+import type { Target } from '@shared/domain/target'
 import type { Command } from '@/engines/core/history'
 import {
   addClips,
@@ -31,7 +32,13 @@ import {
   type SequenceState,
 } from '@/engines/timeline/timelineState'
 import { activeMontageId, useDocuments } from '@/stores/documents'
-import { selectClipIn, sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
+import {
+  selectClipIn,
+  selectTrackIn,
+  sequenceOf,
+  useSequences,
+  writeTrack,
+} from '@/stores/sequences'
 import { withAsset, withBridge, type ActionHandlers } from './actionHandler'
 import { boolOf, numberOf, oneOf, textOf } from './actionInputs'
 
@@ -310,4 +317,46 @@ export const SEQUENCE_HANDLERS: ActionHandlers = {
     const name = textOf(input, 'name')
     return editTrackOf(input, trackId => (name === null ? null : renameTrack(trackId, name)))
   },
+}
+
+/**
+ * What a sentence may aim at inside a montage: the rows, and the clips on them.
+ *
+ * 🛑 Rows as well as clips, and the rows are why this exists: `clip.move` REQUIRES a track id,
+ * and a briefing naming none had a model guess `track-1`, `track-2` and the empty string, eight
+ * refusals in a row on one sentence. A clip stands under its own id, as `selectionNow` says.
+ */
+export function montageTargets(): readonly Target[] {
+  const open = mounted()
+  if (!open) return []
+
+  return open.state.tracks.flatMap((track): Target[] => [
+    {
+      id: track.id,
+      kind: 'track',
+      name: track.name,
+      selected: track.id === open.state.selectedTrackId,
+    },
+    ...track.clips.map((clip): Target => ({
+      id: clip.id,
+      kind: 'clip',
+      name: clip.id,
+      selected: clip.id === open.state.selectedId,
+    })),
+  ])
+}
+
+/** Aiming at either, through the doors the strip itself presses. */
+export function selectInMontage(id: string): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
+
+  if (trackById(open.state, id)) {
+    selectTrackIn(open.documentId, id)
+    return { ok: true }
+  }
+  if (!clipById(open.state, id)) return refused('notFound')
+
+  selectClipIn(open.documentId, id)
+  return { ok: true }
 }

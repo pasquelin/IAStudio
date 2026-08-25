@@ -1,0 +1,234 @@
+import type { WorkspaceId } from '@shared/domain/workspace'
+import { canvasOf, useCanvases } from '@/stores/canvases'
+import { useModelClips } from '@/stores/modelClips'
+import { sceneOf, useScenes } from '@/stores/scenes'
+import { sequenceOf, useSequences } from '@/stores/sequences'
+import { SECOND } from './oracle'
+import type { Studio } from './studio'
+
+/**
+ * The decors a section names in prose, laid out by the BENCH and never by the model: a scenario
+ * scores ONE request, and making the model rebuild its section would score the same step forty
+ * times. `batterie.test.ts` makes a decor the studio refuses red.
+ */
+
+const frontId = (studio: Studio): string => studio.front()?.id ?? ''
+
+/** The id `assets.search` would hand back for a file, so a decor can name one. */
+export const assetOf = (studio: Studio, ending: string): string =>
+  studio.assets().find(one => (one.path ?? '').endsWith(ending))?.id ?? ''
+
+/** A document of that space, made and brought forward — what every decor starts from. */
+export const opened =
+  (workspace: WorkspaceId, title: string, more: Record<string, unknown> = {}) =>
+  async (studio: Studio): Promise<void> => {
+    await studio.run('workspace.open', { workspace, createDocument: true, title, ...more })
+  }
+
+/**
+ * 🛑 `empty`, the batterie's own word. `basic` seeds a floor, a box, two lights and a camera, so
+ * every decor that counted nodes was counting the template's.
+ */
+export const scene = (title = 'Test MCP') => opened('3d', title, { template: 'empty' })
+
+/** A scene holding the objects a section talks about, in the order it names them. */
+const sceneWith =
+  (...added: readonly { kind: string; name: string }[]) =>
+  async (studio: Studio): Promise<void> => {
+    await scene()(studio)
+    for (const one of added) await studio.run('node.add', one)
+  }
+
+const CUBE = { kind: 'box', name: 'Cube Test' }
+
+/** A scene with a plain block in it, which the six material scenarios of section 12 act on. */
+export const blockScene = sceneWith({ kind: 'box', name: 'Bloc' })
+
+/** A scene holding the cube every section from 6 onwards talks about. */
+export const cubeScene = sceneWith(CUBE)
+
+export const withSphere = sceneWith(CUBE, { kind: 'sphere', name: 'Sphere Droite' })
+
+/** A wall with a cube standing inside it — what a window is cut out of. */
+export const wallAndCube = sceneWith({ kind: 'box', name: 'Mur' }, { kind: 'box', name: 'Cube' })
+
+export const twoSpheres = sceneWith(
+  CUBE,
+  { kind: 'sphere', name: 'Sphere Droite' },
+  { kind: 'sphere', name: 'Sphere Gauche' },
+)
+
+export const litScene = sceneWith(CUBE, { kind: 'directional', name: 'Soleil Test' })
+
+export const cameraScene = sceneWith(CUBE, { kind: 'camera', name: 'Camera Test' })
+
+/** A scene with the project's knight in it — sections 11 and 12 act on an imported model. */
+export const modelScene = async (studio: Studio): Promise<void> => {
+  await scene()(studio)
+  await studio.run('node.addModel', {
+    assetId: assetOf(studio, 'knight in plate armour, character.glb'),
+    name: 'Knight',
+  })
+  measured(studio, named(studio, 'Knight'))
+}
+
+/** The bones the model in front carries, for a decor that has to name the one it just added. */
+export const bonesOf = (studio: Studio): readonly string[] => {
+  const node = sceneOf(useScenes.getState(), frontId(studio)).nodes.find(
+    one => one.type === 'model',
+  )
+  return node?.type === 'model' ? (node.model.rig?.bones.map(one => one.name) ?? []) : []
+}
+
+/**
+ * 🛑 What the ENGINE measures of a model, which a headless run has none of: without it `rig.fit`
+ * refuses `notFound` and the whole of section 50 is scored on a model nobody could have rigged.
+ */
+const measured = (studio: Studio, nodeId: string): void => {
+  useModelClips.getState().reportRig(frontId(studio), nodeId, {
+    status: 'staticMesh',
+    bones: [],
+    boneNames: [],
+    boneCount: 0,
+    // A character of about 1.8 m, standing — `rigFitFaultOf` refuses anything flat or lying.
+    bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
+  })
+}
+
+/** A video montage carries a video row and a sound row; an audio one carries sound rows alone. */
+export const montage =
+  (title = 'Test Video', workspace: 'video' | 'audio' = 'video') =>
+  async (studio: Studio): Promise<void> => {
+    await opened(workspace, title)(studio)
+    if (workspace === 'video') await studio.run('track.add', { kind: 'video' })
+    await studio.run('track.add', { kind: 'audio' })
+    if (workspace === 'audio') await studio.run('track.add', { kind: 'audio' })
+  }
+
+/** One clip of the project laid on a row — `start` in the MICROSECONDS the montage counts in. */
+export const laid = async (
+  studio: Studio,
+  track: string,
+  ending: string,
+  start: number,
+): Promise<void> => {
+  await studio.run('clip.add', { trackId: track, assetId: assetOf(studio, ending), start })
+}
+
+/**
+ * 🛑 The node a decor NAMES, never the nth: a template seeds three lights and an import three
+ * more, so indexing to « the cube » wrote on whatever the studio had put there first.
+ */
+export const named = (studio: Studio, name: string): string =>
+  sceneOf(useScenes.getState(), frontId(studio)).nodes.find(one => one.name.includes(name))?.id ??
+  ''
+
+/** The nth layer, row or clip of the document in front — what a decor names one by. */
+
+export const layerAt = (studio: Studio, at: number): string =>
+  canvasOf(useCanvases.getState(), frontId(studio)).layers[at]?.id ?? ''
+
+export const trackAt = (studio: Studio, at: number): string =>
+  sequenceOf(useSequences.getState(), frontId(studio)).tracks[at]?.id ?? ''
+
+export const clipAt = (studio: Studio, at: number): string =>
+  sequenceOf(useSequences.getState(), frontId(studio)).tracks.flatMap(one => one.clips)[at]?.id ??
+  ''
+
+/** A montage carrying the project's two videos back to back on V1 — each six seconds long. */
+export const cutMontage = async (studio: Studio): Promise<void> => {
+  await montage()(studio)
+  const track = trackAt(studio, 0)
+  await laid(studio, track, 'a drone shot over the sea.mp4', 0)
+  await laid(studio, track, 'a slow pan across the harbour.mp4', 6 * SECOND)
+}
+
+/** That montage with a sound bed under it, which five scenarios of section 16 and 24 want. */
+export const soundBed = async (studio: Studio): Promise<void> => {
+  await cutMontage(studio)
+  await laid(studio, trackAt(studio, 1), 'a calm ambient pad, loopable.wav', 0)
+}
+
+/** Two sounds on two rows of an audio montage — the decor of section 17. */
+export const twoSounds = async (studio: Studio): Promise<void> => {
+  await montage('Test Audio', 'audio')(studio)
+  await laid(studio, trackAt(studio, 0), 'a calm ambient pad, loopable.wav', 0)
+  await laid(studio, trackAt(studio, 1), 'waves on a wooden hull.wav', 0)
+}
+
+/**
+ * 🛑 RENAMED, never added to: opening a picture makes a document that IS the picture, one layer
+ * holding it, and a second one left every « combien de calques » oracle counting one too many.
+ */
+export const boatImage = async (studio: Studio): Promise<void> => {
+  await studio.run('file.open', { path: 'Images/fais moi un bateau.png' })
+  await studio.run('layer.rename', { layerId: layerAt(studio, 0), name: 'Bateau' })
+}
+
+/** That picture with a second layer over it, which five scenarios of section 19 act on. */
+export const overlay = async (studio: Studio): Promise<void> => {
+  await boatImage(studio)
+  await studio.run('layer.add', { name: 'Overlay Test', kind: 'pixel' })
+}
+
+/**
+ * What the studio names a duplicate — its own answer, never a spelling written here. `planFiles`
+ * numbers a copy the way the explorer shows it, and the bench used to invent « copie de … ».
+ */
+const COPY = 'Images/fais moi un bateau 2.png'
+
+/** The folders section 4 builds, and the copy it renames — laid out step by step. */
+export const testFolders = async (studio: Studio): Promise<void> => {
+  await studio.run('folder.new', { folder: '', name: 'Tests Assistant' })
+  await studio.run('folder.new', { folder: 'Tests Assistant', name: 'Images' })
+}
+
+/**
+ * 🛑 In `Tests Assistant`, never `Images/`: « déplace-le dans le sous-dossier Images » named a
+ * folder the file was already in, and three passes answered « il y est déjà » — which was true.
+ */
+export const namedCopy = async (studio: Studio): Promise<void> => {
+  await testFolders(studio)
+  await studio.run('files.duplicate', { paths: ['Images/fais moi un bateau.png'] })
+  await studio.run('files.move', { paths: [COPY], folder: 'Tests Assistant' })
+  await studio.run('file.rename', {
+    path: 'Tests Assistant/fais moi un bateau 2.png',
+    name: 'bateau-test.png',
+  })
+}
+
+/** A generation already run — what sections 20 to 22 build the NEXT request on. */
+export const generated =
+  (family: string, modelId: string, prompt: string) =>
+  async (studio: Studio): Promise<void> => {
+    await studio.run('generator.prepare', { family, modelId, parameters: { prompt } })
+    await studio.run('generator.submit', {})
+  }
+
+export const madeCar = generated('image', 'model-image', 'a red sports car')
+export const madeBoat = generated('image', 'model-image', 'the boat at night')
+export const madeChest = generated('3d', 'model-3d', 'a wooden chest')
+
+/** That montage carrying BOTH of the project's sounds, one after the other on the sound row. */
+export const twoBeds = async (studio: Studio): Promise<void> => {
+  await soundBed(studio)
+  await laid(studio, trackAt(studio, 1), 'waves on a wooden hull.wav', 6 * SECOND)
+}
+
+/** A model in a scene with a camera by it — what four « imprecise sentence » scenarios act on. */
+export const framedModel = async (studio: Studio): Promise<void> => {
+  await modelScene(studio)
+  await studio.run('node.add', { kind: 'camera', name: 'Camera' })
+}
+
+/** The cube standing three metres up, which the read-then-write scenarios of 26 start from. */
+export const raisedCube = async (studio: Studio): Promise<void> => {
+  await cubeScene(studio)
+  await studio.run('node.transform', { nodeId: named(studio, 'Cube Test'), positionY: 3 })
+}
+
+/** Soleil Test at an intensity worth doubling — the other half of section 26. */
+export const namedSun = async (studio: Studio): Promise<void> => {
+  await litScene(studio)
+  await studio.run('node.light', { nodeId: named(studio, 'Soleil Test'), intensity: 3 })
+}

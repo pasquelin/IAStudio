@@ -1,4 +1,5 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
+import type { Target } from '@shared/domain/target'
 import { readColor } from '@shared/domain/color'
 import { FONT_SOURCES, type FontRef } from '@shared/domain/font'
 import {
@@ -382,6 +383,31 @@ function select(input: Record<string, unknown>): ActionOutcome {
   // Selection is not a command: it stays out of the history, so `replace` writes the state.
   useScenes.getState().replace(open.documentId, setSelection(open.state, nodeIds))
   return { ok: true }
+}
+
+/**
+ * What a sentence may aim at inside a scene, as the outliner names them.
+ *
+ * 🛑 Published for the same reason the layer stack is: without it the briefing named no node at
+ * all, and a model asked to move « le cube » spelled an id it had invented — `<nodeId>`, the
+ * name in the id's place, `node-1`. The tree is FLATTENED here: `narrowTargets` ranks and cuts,
+ * and depth is not what a spoken request picks by.
+ */
+export function nodeTargets(): readonly Target[] {
+  const open = mounted()
+  if (!open) return []
+
+  return open.state.nodes.map(node => ({
+    id: node.id,
+    kind: 'node',
+    name: node.name,
+    selected: open.state.selectedIds.includes(node.id),
+  }))
+}
+
+/** Aiming at one of them, through the same door `node.select` uses — never a second path. */
+export function selectNode(id: string): ActionOutcome {
+  return select({ nodeIds: [id] })
 }
 
 function reparent(input: Record<string, unknown>): ActionOutcome {
