@@ -28,7 +28,7 @@ export type HoverFlyout = {
    * one the pointer merely crossed would pull the caret out of whatever was being typed.
    */
   asked: boolean
-  /** Goes on the button's wrapper. */
+  /** Goes on the button whose menu this IS — never on a wrapper it shares with another one. */
   wrapProps: { onPointerEnter: () => void; onPointerLeave: () => void }
   /**
    * Goes on the menu itself — without it, reaching the rows closes them. It carries the menu's
@@ -38,14 +38,17 @@ export type HoverFlyout = {
   flyoutProps: {
     onPointerEnter: () => void
     onPointerLeave: () => void
+    /** A walk of the rows takes the menu out of the pointer's hands, whatever opened it. */
+    onKeyDown: (event: KeyboardEvent<HTMLElement>) => void
     onDismiss: () => void
     onKeyClose: (() => void) | undefined
   }
   /**
-   * The opening a keyboard asks for, since hovering is not a keyboard gesture — a click on a
-   * button whose only job is its menu, or `Alt+ArrowDown` on one whose click does something else.
-   * It records the ask whether or not there are rows to show, so a caller with a row count that
-   * varies has to check `hasFlyout` first.
+   * Opening it BY HAND — a click. The rows get the keyboard, but the pointer keeps the right to
+   * close what it opened; only the chord read by `triggerProps` survives the pointer leaving.
+   *
+   * It records the opening whether or not there are rows to show, so a caller with a row count
+   * that varies has to check `hasFlyout` first.
    */
   open: () => void
   close: () => void
@@ -58,13 +61,24 @@ export type HoverFlyout = {
  */
 const GRACE = 220
 
+/**
+ * What put the menu on screen, which is the whole state — three booleans made eight combinations
+ * for four cases, and the grace period only ever cleared one of them.
+ *
+ * `pointer` was merely crossed and gets no keyboard; `hand` was clicked; `key` came through the
+ * chord and is the one opening the pointer may not close.
+ */
+type Opening = null | 'pointer' | 'hand' | 'key'
+
+/** What `useMenuKeys` walks the rows with. A row PRESSED is a choice, and closes on its own. */
+const WALKING_KEYS: ReadonlySet<string> = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End'])
+
 /** The chord exactly, no more: a fourth modifier held down means the user meant something else. */
 const opensWith = (event: KeyboardEvent<HTMLElement>): boolean =>
   event.key === 'ArrowDown' && event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
 
 export function useHoverFlyout(rowCount: number): HoverFlyout {
-  const [open, setOpen] = useState(false)
-  const [asked, setAsked] = useState(false)
+  const [openedBy, setOpenedBy] = useState<Opening>(null)
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasFlyout = rowCount > 1
@@ -74,36 +88,53 @@ export function useHoverFlyout(rowCount: number): HoverFlyout {
     timer.current = null
   }, [])
 
+  // Never overwrites: the pointer crossing a menu that was asked for must not demote it to a
+  // hovered one, which would take its keyboard away mid-walk.
   const enter = useCallback(() => {
     cancel()
-    setOpen(true)
+    setOpenedBy(opened => opened ?? 'pointer')
   }, [cancel])
 
-  // A menu that was asked for is not the pointer's to close. Walking it with the arrows and
-  // moving the mouse off the bar is one gesture, not two: closing on the grace period would end
-  // the walk 220 ms after a movement that touched nothing, and hand the focus back to the opener.
-  // It closes the way a menu closes — a choice, `Escape`, `Tab`, or a press outside.
+  // Walking the rows with the arrows while the mouse sits elsewhere is ONE gesture, so only a
+  // keyboard opening survives the pointer leaving. Everything else the pointer closes.
   const leave = useCallback(() => {
-    if (asked) return
+    if (openedBy === 'key') return
     cancel()
-    timer.current = setTimeout(() => setOpen(false), GRACE)
-  }, [asked, cancel])
+    timer.current = setTimeout(() => setOpenedBy(null), GRACE)
+  }, [cancel, openedBy])
 
-  const ask = useCallback(() => {
-    cancel()
-    setOpen(true)
-    setAsked(true)
-  }, [cancel])
+  const ask = useCallback(
+    (by: Opening) => {
+      cancel()
+      setOpenedBy(by)
+    },
+    [cancel],
+  )
 
   const close = useCallback(() => {
     cancel()
-    setOpen(false)
-    setAsked(false)
+    setOpenedBy(null)
   }, [cancel])
 
   useEffect(() => cancel, [cancel])
 
-  const askedFor = hasFlyout && open && asked
+  /**
+   * Wrapped rather than handed `ask` with a default: a caller passing it straight to `onClick`
+   * gives it the `MouseEvent`, which any defaulted parameter would read as an opening.
+   */
+  const openByHand = useCallback(() => ask('hand'), [ask])
+
+  // Walking the rows is a keyboard gesture whatever opened the menu: from the first arrow, the
+  // mouse moving off the bar must not end it.
+  const onRowsKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLElement>) => {
+      if (WALKING_KEYS.has(event.key)) ask('key')
+    },
+    [ask],
+  )
+
+  const open = openedBy !== null
+  const askedFor = hasFlyout && open && openedBy !== 'pointer'
 
   /**
    * Stopped as well as prevented: these buttons sit inside `Collection` cells, which walk the
@@ -116,7 +147,7 @@ export function useHoverFlyout(rowCount: number): HoverFlyout {
       if (!hasFlyout || !opensWith(event)) return
       event.preventDefault()
       event.stopPropagation()
-      ask()
+      ask('key')
     },
     [ask, hasFlyout],
   )
@@ -143,12 +174,13 @@ export function useHoverFlyout(rowCount: number): HoverFlyout {
       flyoutProps: {
         onPointerEnter: enter,
         onPointerLeave: leave,
+        onKeyDown: onRowsKeyDown,
         onDismiss: close,
         onKeyClose: askedFor ? close : undefined,
       },
-      open: ask,
+      open: openByHand,
       close,
     }),
-    [anchor, ask, askedFor, close, enter, hasFlyout, leave, onKeyDown, open],
+    [anchor, askedFor, close, enter, hasFlyout, leave, onKeyDown, onRowsKeyDown, open, openByHand],
   )
 }

@@ -1,4 +1,4 @@
-import { useCallback, useRef, type ReactNode } from 'react'
+import { useCallback, useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { clampAtLeast } from '@shared/numeric'
 import { cn } from '@/helpers/cn'
@@ -54,6 +54,8 @@ export type FlyoutProps = {
   onWindowLeave?: () => void
   onPointerEnter?: () => void
   onPointerLeave?: () => void
+  /** Told which key the rows were walked with. `useMenuKeys` does the walking; this only reports. */
+  onKeyDown?: (event: KeyboardEvent<HTMLElement>) => void
 }
 
 /**
@@ -84,6 +86,7 @@ export function Flyout({
   onWindowLeave,
   onPointerEnter,
   onPointerLeave,
+  onKeyDown,
 }: FlyoutProps) {
   const panel = useRef<HTMLDivElement | null>(null)
 
@@ -138,6 +141,7 @@ export function Flyout({
       role={role}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
+      onKeyDown={onKeyDown}
       className={cn(
         MENU_FLOATING,
         'min-w-40',
