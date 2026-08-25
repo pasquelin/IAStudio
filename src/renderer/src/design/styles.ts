@@ -376,6 +376,9 @@ const ROW_MEDIA_BOX = 'flex shrink-0 items-center justify-center'
  * 🛑 Written out in FULL three times rather than built by a helper: Tailwind scans the SOURCE for
  * class names, so a string assembled at runtime generates nothing and the picture blows up to its
  * natural width. The `_` around the minus is the space `calc` requires, as Tailwind spells it.
+ *
+ * The fallback is the line's own shape, for a host that publishes no `--sc-row-height`: getting
+ * THAT wrong is what left the model picker at 20px.
  */
 export const ROW_MEDIA_CONTROL = `${ROW_MEDIA_BOX} size-[calc(var(--sc-row-height,var(--sc-control))_-_2*var(--sc-row-pad))]`
 export const ROW_MEDIA_STACKED = `${ROW_MEDIA_BOX} size-[calc(var(--sc-row-height,var(--sc-row-stacked))_-_2*var(--sc-row-pad))]`

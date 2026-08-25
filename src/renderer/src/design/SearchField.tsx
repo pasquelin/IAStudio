@@ -11,7 +11,6 @@ export type SearchFieldProps = {
   onChange: (value: string) => void
   /** The name a script drives the field by. Required: an unnamed one is invisible to every pilot. */
   scId: string
-  /** Extra width rules from the host — a header gives ground, a panel takes the whole line. */
   /** What the host sizes the field with. Replaces the default width, it does not add to it. */
   className?: string
   /** Attributes of the studio tooltip, when the host has something to explain — as every field. */
