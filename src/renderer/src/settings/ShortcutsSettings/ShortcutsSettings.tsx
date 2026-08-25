@@ -10,6 +10,7 @@ import {
 } from '@shared/domain/command'
 import type { Signature } from '@shared/domain/shortcut'
 import { useOverrides } from '@/hooks/useOverrides'
+import { withPlatformDefaults } from '@/stores/bindings'
 import { WINDOW_CAPTION } from '@/design/windowStyles'
 import { ShortcutsSettingsScope } from './ShortcutsSettingsScope'
 import { ShortcutsSettingsSearchByChord } from './ShortcutsSettingsSearchByChord'
@@ -24,6 +25,9 @@ import { ShortcutsSettingsSearchByChord } from './ShortcutsSettingsSearchByChord
 export function ShortcutsSettings() {
   const { t } = useTranslation()
   const [overrides, setOverrides] = useOverrides()
+  // What the screen SHOWS is resolved against the system; what `bind` writes is not — see
+  // `withPlatformDefaults`. Read raw, this screen offered ⌃⌘F for a full screen that answers F11.
+  const resolved = withPlatformDefaults(overrides)
   /**
    * What is listening, if anything. ONE state rather than one per listener: a row and the
    * search box each holding their own meant a keypress could be recorded as a binding and used
@@ -35,7 +39,7 @@ export function ShortcutsSettings() {
   const capturing = listening === 'search' ? null : listening
 
   // Rebuilt only when a binding moves, not on every keystroke of a capture.
-  const clashing = useMemo(() => new Set(conflicts(overrides)), [overrides])
+  const clashing = useMemo(() => new Set(conflicts(resolved)), [resolved])
 
   const bind = (id: CommandId, signature: Signature | null): void => {
     setListening(null)
@@ -51,7 +55,7 @@ export function ShortcutsSettings() {
 
   // The question people actually ask is "what has ⌘K?", not "what is undo bound to".
   const matches = (descriptor: CommandDescriptor): boolean =>
-    query === null || bindingOf(descriptor.id, overrides) === query
+    query === null || bindingOf(descriptor.id, resolved) === query
 
   return (
     <div className="mt-3 flex flex-col gap-4">

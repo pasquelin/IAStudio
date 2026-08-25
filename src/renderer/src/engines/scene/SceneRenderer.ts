@@ -564,6 +564,10 @@ export class SceneRenderer {
   private readonly surfaceRay = withEveryLayer(new Raycaster())
   private readonly surfaceBox = new Box3()
   private readonly surfaceFrom = new Vector3()
+  /** The slope the ray met, in world space. Scratch: it is measured once per frame of a drag. */
+  private readonly surfaceNormal = new Vector3()
+  /** Refilled rather than rebuilt, for the same reason — see `surfaceRoots`. */
+  private readonly surfaceScope: Object3D[] = []
   /** What the pivot wore when the drag began. A turn composed onto its own result drifts. */
   private readonly surfaceHeld = new Quaternion()
   /** Scratch for capping the handles to what they hold, so a frame allocates nothing. */
@@ -2498,7 +2502,9 @@ export class SceneRenderer {
     // it by the one it had upright buries whichever corner the rotation just brought down.
     if (aligning && hit.normal) {
       surfaceTurn(
-        hit.normal.clone().applyMatrix3(SURFACE_NORMAL.getNormalMatrix(hit.object.matrixWorld)),
+        this.surfaceNormal
+          .copy(hit.normal)
+          .applyMatrix3(SURFACE_NORMAL.getNormalMatrix(hit.object.matrixWorld)),
         this.surfaceHeld,
         held.quaternion,
       )
@@ -2513,9 +2519,17 @@ export class SceneRenderer {
   /**
    * Where the ray starts looking. The ROOTS alone: `this.objects` holds parents AND descendants,
    * so handing it every one makes a node at depth *d* intersect *d+1* times.
+   *
+   * Written into a kept array rather than built: this answers once per frame of a drag, and the
+   * spread alone allocated a second list the size of the scene each time.
    */
   private surfaceRoots(): Object3D[] {
-    return [...this.objects.values()].filter(object => object.parent === this.viewport.scene)
+    this.surfaceScope.length = 0
+    for (const object of this.objects.values()) {
+      if (object.parent === this.viewport.scene) this.surfaceScope.push(object)
+    }
+
+    return this.surfaceScope
   }
 
   /**

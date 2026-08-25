@@ -14,11 +14,15 @@ const PLATFORM_DEFAULTS = platformDefaults(IS_MAC)
  * The remaps over what this system ships. Cached on the identity of the stored object: this is
  * read on every keystroke, and a fresh merge per press would be a new object every time — which
  * a zustand selector reads as a change and re-renders on.
+ *
+ * 🛑 What SHOWS a binding reads this; what WRITES one reads the stored table. Merged into the
+ * written table, the platform's own keys would be saved as though the user had remapped them —
+ * which is also why a row asks the stored table whether it is remapped.
  */
 let mergedFrom: BindingOverrides | null = null
 let merged: BindingOverrides = PLATFORM_DEFAULTS
 
-function withPlatformDefaults(overrides: BindingOverrides): BindingOverrides {
+export function withPlatformDefaults(overrides: BindingOverrides): BindingOverrides {
   if (overrides !== mergedFrom) {
     mergedFrom = overrides
     merged = { ...PLATFORM_DEFAULTS, ...overrides }

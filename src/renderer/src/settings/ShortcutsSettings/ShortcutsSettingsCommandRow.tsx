@@ -10,6 +10,7 @@ import { HINT_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from '../SettingLine'
 import { SettingRestoreButton } from '../SettingRestoreButton'
 import { WINDOW_HELP } from '@/design/windowStyles'
+import { withPlatformDefaults } from '@/stores/bindings'
 
 export function ShortcutsSettingsCommandRow({
   descriptor,
@@ -31,7 +32,7 @@ export function ShortcutsSettingsCommandRow({
 
   useChordCapture(signature => (signature === '' ? onCapture() : onBind(signature)), capturing)
 
-  const binding = bindingOf(descriptor.id, overrides)
+  const binding = bindingOf(descriptor.id, withPlatformDefaults(overrides))
   const remapped = overrides[descriptor.id] !== undefined
   const id = `command-${descriptor.id}`
   const describedBy = `${id}-help`

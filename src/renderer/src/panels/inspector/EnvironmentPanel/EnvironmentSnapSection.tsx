@@ -1,17 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import type { Settings } from '@shared/domain/settings'
-import {
-  SNAP_KINDS,
-  SNAP_ROTATE_STEPS,
-  SNAP_SCALE_RATIOS,
-  SNAP_TRANSLATE_STEPS,
-  type SnapKind,
-  type Snapping,
-} from '@shared/domain/snap'
+import { SNAP_KINDS, type SnapKind, type Snapping } from '@shared/domain/snap'
 import { PropertySection } from '@/design/PropertySection'
 import { SelectField } from '@/design/SelectField'
 import { ToggleField } from '@/design/ToggleField'
+import { useSnapReading } from '@/hooks/useSnapReading'
 import { HINT_LEFT } from '@/helpers/tooltip'
+import {
+  SNAP_STEP_CONTROLS,
+  type SnapStepControl,
+} from '@/spaces/three/SceneSnapBar/sceneSnapControls'
 
 export type EnvironmentSnapSectionProps = {
   view: Settings['three']
@@ -31,11 +29,13 @@ export function EnvironmentSnapSection({
   onSnap,
 }: EnvironmentSnapSectionProps) {
   const { t } = useTranslation()
+  // The same reader the bar uses: written by hand here, a step read `0.25` where the viewport
+  // read `0,25 m` — no unit, no symbol, and the decimal separator of no language in particular.
+  const reading = useSnapReading(view.units)
 
-  const steps = (values: readonly number[], format: (value: number) => string = String) =>
-    values.map(value => ({ value: String(value), label: format(value) }))
+  const options = (control: SnapStepControl) =>
+    control.steps.map(step => ({ value: String(step), label: reading(control.reads, step) }))
 
-  const degrees = (value: number) => t('environment.snapDegrees', { value })
   const hint = HINT_LEFT(t('environment.snapEnabledHint'))
 
   return (
@@ -52,39 +52,22 @@ export function EnvironmentSnapSection({
 
       {/* The three that HAVE steps, never the surface snap, which lands rather than advances:
           a step that changes nothing right now is a control that reads as broken. */}
-      {STEPPED_KINDS.some(kind => snapping[kind]) && (
+      {SNAP_STEP_CONTROLS.some(control => snapping[control.kind]) && (
         <>
           {/* The preferences set these three by a free SLIDER, so a stored step can fall between
               two of the ones offered here — it then reads as itself rather than as the first. */}
-          <SelectField
-            label={t('environment.snapTranslate')}
-            scId="environment.snapTranslate"
-            value={String(view.snapTranslate)}
-            options={steps(SNAP_TRANSLATE_STEPS)}
-            onChange={value => onViewport({ snapTranslate: Number(value) })}
-            unnamedLabel={String(view.snapTranslate)}
-            hint={hint}
-          />
-
-          <SelectField
-            label={t('environment.snapRotate')}
-            scId="environment.snapRotate"
-            value={String(view.snapRotate)}
-            options={steps(SNAP_ROTATE_STEPS, degrees)}
-            onChange={value => onViewport({ snapRotate: Number(value) })}
-            unnamedLabel={degrees(view.snapRotate)}
-            hint={hint}
-          />
-
-          <SelectField
-            label={t('environment.snapScale')}
-            scId="environment.snapScale"
-            value={String(view.snapScale)}
-            options={steps(SNAP_SCALE_RATIOS)}
-            onChange={value => onViewport({ snapScale: Number(value) })}
-            unnamedLabel={String(view.snapScale)}
-            hint={hint}
-          />
+          {SNAP_STEP_CONTROLS.map(control => (
+            <SelectField
+              key={control.kind}
+              label={t(FIELD_KEYS[control.path])}
+              scId={FIELD_KEYS[control.path]}
+              value={String(view[control.path])}
+              options={options(control)}
+              onChange={value => onViewport({ [control.path]: Number(value) })}
+              unnamedLabel={reading(control.reads, view[control.path])}
+              hint={hint}
+            />
+          ))}
         </>
       )}
     </PropertySection>
@@ -99,5 +82,12 @@ const SNAP_LABELS: Record<SnapKind, string> = {
   scale: 'snapBar.scale',
 }
 
-/** The three a step applies to. The surface snap lands on something; it advances by nothing. */
-const STEPPED_KINDS: readonly SnapKind[] = ['translate', 'rotate', 'scale']
+/**
+ * This panel's own words for the three, and its `scId`s. Not the bar's: under a section already
+ * called « Magnétisme », « Magnétisme de grille » says it twice.
+ */
+const FIELD_KEYS: Record<SnapStepControl['path'], string> = {
+  snapTranslate: 'environment.snapTranslate',
+  snapRotate: 'environment.snapRotate',
+  snapScale: 'environment.snapScale',
+}

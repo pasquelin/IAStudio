@@ -3,7 +3,7 @@ import { bindingOf } from '@shared/domain/command'
 import type { SearchHit } from '@shared/domain/settingsSearch'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { useSettings } from '@/stores/settings'
+import { useBindingOverrides } from '@/stores/bindings'
 import { WINDOW_HELP, WINDOW_ROW_BUTTON } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
 
@@ -11,7 +11,7 @@ import { cn } from '@/helpers/cn'
 export function SettingsWindowResultRow({ hit, onGo }: { hit: SearchHit; onGo: () => void }) {
   const { t } = useTranslation()
   const label = useShortcutLabel()
-  const overrides = useSettings(state => state.settings.shortcuts.overrides)
+  const overrides = useBindingOverrides()
 
   if (hit.kind === 'setting') return null
 
