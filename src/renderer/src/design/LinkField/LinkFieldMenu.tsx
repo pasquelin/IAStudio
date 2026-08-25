@@ -1,5 +1,4 @@
 import { mdiClose, mdiFolderSearchOutline, mdiOpenInNew } from '@mdi/js'
-import { useTranslation } from 'react-i18next'
 import type { ReactNode } from 'react'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import type { ContextMenuAt } from '@/hooks/useContextMenu'
@@ -14,8 +13,9 @@ export type LinkFieldMenuProps = {
   browse?: LinkPress
   /** What the double-click opens. The words are the caller's, and the menu reads them out loud. */
   open?: LinkPress
-  /** Emptying the slot, where that is a state it has. */
-  onClear?: () => void
+  /** Emptying the slot, where that is a state it has. The words are the caller's: what a sky
+   * empties to is not what a texture empties to. */
+  clear?: LinkPress
   /** Rows belonging to the surface rather than to the slot — a channel's flat view, its recipe. */
   extra?: ReactNode
 }
@@ -24,9 +24,7 @@ export type LinkFieldMenuProps = {
  * The third gesture of every link row, written once: everything the SLOT can do — choose, open,
  * empty — beside whatever the surface adds.
  */
-export function LinkFieldMenu({ at, onClose, browse, open, onClear, extra }: LinkFieldMenuProps) {
-  const { t } = useTranslation()
-
+export function LinkFieldMenu({ at, onClose, browse, open, clear, extra }: LinkFieldMenuProps) {
   const chosen = (run: () => void) => () => {
     run()
     onClose()
@@ -54,12 +52,12 @@ export function LinkFieldMenu({ at, onClose, browse, open, onClear, extra }: Lin
 
       {extra}
 
-      {onClear && (
+      {clear && (
         <MenuRow
-          label={t('inspector.clearTexture')}
+          label={clear.label}
           icon={mdiClose}
-          tip={HINT_RIGHT(t('inspector.clearTextureHint'))}
-          onSelect={chosen(onClear)}
+          tip={HINT_RIGHT(clear.hint)}
+          onSelect={chosen(clear.run)}
         />
       )}
     </ContextMenu>

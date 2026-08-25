@@ -12,9 +12,6 @@ const NONE: ReadonlyMap<string, Asset> = new Map()
  * a list panel wants, and what `useCatalogueAssets` does — every pick in the explorer left the
  * generator with no source for a frame: the operation fell back to text-to-image, the model
  * swapped, and the form cleared the picture it was working from.
- *
- * A path just picked is therefore missing for one turn rather than taking the others down with
- * it, and the answer to a question already replaced is dropped rather than shown late.
  */
 export function usePickedRows(paths: readonly string[]): ReadonlyMap<string, Asset> {
   const [held, setHeld] = useState(NONE)

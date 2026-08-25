@@ -1,3 +1,5 @@
+import { clamp } from '@shared/numeric'
+
 /**
  * The ceiling on a chain: how many times one sentence may send the model back to work.
  *
@@ -15,4 +17,4 @@ export const ASSISTANT_STEPS_MIN = 2
 export const ASSISTANT_STEPS_MAX = 40
 
 export const assistantStepsWithin = (steps: number): number =>
-  Math.min(ASSISTANT_STEPS_MAX, Math.max(ASSISTANT_STEPS_MIN, Math.trunc(steps)))
+  clamp(Math.trunc(steps), ASSISTANT_STEPS_MIN, ASSISTANT_STEPS_MAX)

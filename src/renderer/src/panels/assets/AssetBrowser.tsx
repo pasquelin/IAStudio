@@ -1,7 +1,13 @@
 import { mdiImageMultipleOutline } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ASSET_TYPES, isAssetType, isCloudAssetType, type AssetType } from '@shared/domain/asset'
+import {
+  ASSET_TYPES,
+  isAssetType,
+  isCloudAssetType,
+  type AssetBadge,
+  type AssetType,
+} from '@shared/domain/asset'
 import { typeOfWorkspace } from '@shared/domain/assetKind'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
@@ -203,6 +209,10 @@ export function AssetBrowser() {
     return new Map(rows.map(row => [row.id, markOf(row, { inFlight, twins })]))
   }, [rows, moving, twins])
 
+  // The fallback in ONE place: a card and a line drawing the same row must not be able to answer
+  // differently about where it stands.
+  const badgeOf = (id: string): AssetBadge => badges.get(id) ?? 'remote-only'
+
   const filtered = useMemo(
     () =>
       filterLocally(rows, collection, {
@@ -345,7 +355,7 @@ export function AssetBrowser() {
         renderCard={row => (
           <AssetCard
             row={row}
-            badge={badges.get(row.id) ?? 'remote-only'}
+            badge={badgeOf(row.id)}
             badgeLabels={badgeLabels}
             typeLabels={typeLabels}
             hints={hints}
@@ -364,7 +374,7 @@ export function AssetBrowser() {
           <AssetRow
             row={row}
             typeLabel={typeLabelOf(row, typeLabels)}
-            badge={badges.get(row.id) ?? 'remote-only'}
+            badge={badgeOf(row.id)}
             badgeLabels={badgeLabels}
             hints={hints}
           />

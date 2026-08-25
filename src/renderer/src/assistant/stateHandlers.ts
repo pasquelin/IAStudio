@@ -189,11 +189,11 @@ async function openByPath(input: Record<string, unknown>): Promise<ActionOutcome
  */
 function namedDocument(input: Record<string, unknown>): DocumentDescriptor | null {
   const named = textOf(input, 'documentId') ?? ''
-  const open = Object.values(useDocuments.getState().documents)
-  const byId = useDocuments.getState().documents[named]
+  const { documents } = useDocuments.getState()
+  const byId = documents[named]
   if (byId || named === '') return byId ?? null
 
-  const titled = open.filter(one => one.title === named || one.path === named)
+  const titled = Object.values(documents).filter(one => one.title === named || one.path === named)
   return titled.length === 1 ? (titled[0] ?? null) : null
 }
 

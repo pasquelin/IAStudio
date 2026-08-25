@@ -76,9 +76,20 @@ export function writeQueue(): WriteQueue {
   }
 }
 
+const codeOf = (error: unknown): string | null =>
+  error instanceof Error && 'code' in error ? String(error.code) : null
+
 /** Node reports a missing path this way, and it is the one failure that is not an error. */
-export const isMissing = (error: unknown): boolean =>
-  error instanceof Error && 'code' in error && error.code === 'ENOENT'
+export const isMissing = (error: unknown): boolean => codeOf(error) === 'ENOENT'
+
+/**
+ * Nothing sits there — the absence above, plus a parent that turned out not to be a directory.
+ * What walks a path it did not build reads the two the same way.
+ */
+export const isAbsent = (error: unknown): boolean => {
+  const code = codeOf(error)
+  return code === 'ENOENT' || code === 'ENOTDIR'
+}
 
 /**
  * Whether a path is there at all. Anything that is not a plain absence — a permission that

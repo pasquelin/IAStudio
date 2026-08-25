@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 export type ForgettableTimeout = {
   /** Schedules `run`, dropping whatever was already waiting. */
@@ -30,5 +30,5 @@ export function useForgettableTimeout(): ForgettableTimeout {
 
   useEffect(() => forget, [forget])
 
-  return { after, forget }
+  return useMemo(() => ({ after, forget }), [after, forget])
 }

@@ -1,6 +1,6 @@
 import { render, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { useForgettableTimeout } from './useForgettableTimeout'
+import { useForgettableTimeout, type ForgettableTimeout } from './useForgettableTimeout'
 
 function Waiting({ onReady, delayMs = 20 }: { onReady: () => void; delayMs?: number }) {
   const timeout = useForgettableTimeout()
@@ -12,7 +12,24 @@ function Waiting({ onReady, delayMs = 20 }: { onReady: () => void; delayMs?: num
   )
 }
 
+function Watching({ onRender }: { onRender: (timeout: ForgettableTimeout) => void }) {
+  onRender(useForgettableTimeout())
+
+  return null
+}
+
 describe('one waiting thing, cancellable', () => {
+  /** Callers put it in a dependency list, so a fresh object every render re-makes their handlers. */
+  it('keeps its identity across renders', () => {
+    const seen: ForgettableTimeout[] = []
+    const record = (one: ForgettableTimeout) => void seen.push(one)
+    const { rerender } = render(<Watching onRender={record} />)
+
+    rerender(<Watching onRender={record} />)
+
+    expect(seen[0]).toBe(seen[1])
+  })
+
   it('runs what was scheduled once the delay is out', async () => {
     const ready = vi.fn()
     const { getByRole } = render(<Waiting onReady={ready} />)

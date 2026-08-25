@@ -69,8 +69,14 @@ export const ChannelsSection = memo(function ChannelsSection({ documentId }: Cha
   }
 
   // Not this space: a material is assembled here and its images are painted in Images.
-  const editPixels = (channel: PbrChannel): EditPixels | null =>
-    editPixelsOf(pictures.find(candidate => candidate.id === channels[channel]?.assetId))
+  // The empty channels leave first: eight of these run per render, and a channel holding nothing
+  // would otherwise walk the whole project's pictures to answer `undefined`.
+  const editPixels = (channel: PbrChannel): EditPixels | null => {
+    const assetId = channels[channel]?.assetId
+    if (!assetId) return null
+
+    return editPixelsOf(pictures.find(candidate => candidate.id === assetId))
+  }
 
   // The list only offers what can be decoded, so the row it names is always there; the `if` is
   // what the type asks for, not a case a user reaches.
