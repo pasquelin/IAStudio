@@ -657,6 +657,37 @@ const unreadable = new Set<string>()
  */
 const assetBehind = new Set<string>()
 
+/** Documents whose flatten has been agreed to. ⌘S asks once; asking at each would be unbearable. */
+const flattenAgreed = new Set<string>()
+
+/**
+ * Whether the asset may take the flatten — asked once per document, remembered for the session.
+ *
+ * A refusal leaves the DOCUMENT written, which is why it is not a failure and arms no debt: the
+ * work is on disk either way, and only the picture the scene reads stays behind.
+ */
+async function agreedToFlatten(
+  document: DocumentDescriptor,
+  format: WritableFormat,
+  losses: readonly CapabilityTrait[],
+): Promise<boolean> {
+  if (flattenAgreed.has(document.id)) return true
+
+  const agreed = await askedToFlatten(
+    document.title,
+    format.toUpperCase(),
+    // Translated HERE: a dialogue reading « layers, liveText » to a French speaker is the rawest
+    // form of this repository's costliest defect. Only picture traits arrive — see `traitsOf`.
+    losses.map(trait => i18next.t(`traits.${trait}`)).join(', '),
+  )
+  if (agreed) flattenAgreed.add(document.id)
+  return agreed
+}
+
+/** No bridge — a test, a plain browser — answers yes: there is nobody to ask and nothing to lose. */
+const askedToFlatten = async (title: string, format: string, lost: string): Promise<boolean> =>
+  (await getBridge()?.documents.confirmFlatten(title, format, lost)) ?? true
+
 /**
  * What both saving gestures need before they can write anything, or `null` when one of them is
  * missing — which is the same refusal for both, said once.
@@ -749,10 +780,8 @@ export async function saveDocument(documentId: string, byHand = true): Promise<b
 /**
  * Which format overwriting the source means writing, and what it would destroy.
  *
- * A format the table does not write — a `.tif`, a `.gif` — reports everything the document holds
- * rather than nothing: « no answer » must never read as « nothing to lose », which is the exact
- * shape of the silent loss this path exists to stop. Its `format` is then never used, the losses
- * having already refused the write.
+ * A format the table does not write — a `.tif`, a `.gif` — is written as OpenRaster rather than
+ * flattened: « no answer » must never read as « nothing to lose ».
  */
 function writePlanFor(
   document: DocumentDescriptor,
@@ -762,11 +791,18 @@ function writePlanFor(
   // `path`, NEVER `name`: a row's name is the STEM — `adoptFile` stores `stemOf(…)` — so reading
   // the format off it answered `null` for every asset a project actually holds, and a document
   // with two layers was then refused even by the `.ora` that could hold it.
-  const format = formatOfFile(assetsById(useAssets.getState()).get(sourceAssetId)?.path ?? '')
-  if (!io.traitsOf) return { format: format ?? 'png', losses: [] }
+  // `path`, NEVER `name`: a row's name is the STEM, so no asset a project holds has an extension
+  // there — read off it, a document with two layers was refused even by the `.ora` holding it.
+  const written =
+    formatOfFile(assetsById(useAssets.getState()).get(sourceAssetId)?.path ?? '') ??
+    // Never the flat default on an unknown extension: `replaceBytes` moves the extension with the
+    // bytes, so guessing would turn a container this table failed to recognise into a PNG.
+    'ora'
+  if (!io.traitsOf) return { format: written, losses: [] }
 
-  const traits = io.traitsOf(document.id)
-  return { format: format ?? 'png', losses: format ? lossesFor(traits, format) : traits }
+  // Against what is actually WRITTEN, never against what the file was: answered otherwise, an
+  // unknown extension asked whether to flatten into an `.ora`, which loses nothing at all.
+  return { format: written, losses: lossesFor(io.traitsOf(document.id), written) }
 }
 
 /**
@@ -796,12 +832,12 @@ async function rewriteSourceAsset(
   // cannot be written back to a `.png` writes back to it whole — which is what makes an open
   // format worth reaching for rather than a second place to keep the same picture.
   const { format, losses } = writePlanFor(document, io, source)
-  if (losses.length > 0) {
-    // NOT `assetBehind`: this is a refusal, not a failure, and a retry would write the very
-    // thing that was refused the moment anything else marked the asset late.
-    reportFailure('canvas.flatten', document.title, new Error(losses.join(', ')))
-    return
-  }
+  // ASKED, then said — never refused. The document was written a few lines above, into the `.ora`
+  // that holds the whole stack, so the flat picture the asset receives costs nothing: it is the
+  // RENDER the scene and the shelf read, not the copy the work lives in. Refusing left the two
+  // out of step with no way back — a channel of a texture is always a `.png`, so any layer,
+  // opacity or blend stopped a ⌘S from ever reaching the model.
+  if (losses.length > 0 && !(await agreedToFlatten(document, format, losses))) return
 
   try {
     const written = await io.writeAsset(
@@ -1228,6 +1264,8 @@ function forgetDocument(documentId: string, kind?: DocumentKind): void {
   // Same reason: the id goes back to the folder, and a document reopened later must not inherit
   // a debt owed by the one before it.
   assetBehind.delete(documentId)
+  // And the answer given about flattening it: another document under the same id never agreed.
+  flattenAgreed.delete(documentId)
   // Session views are not the document's state, so no `DocumentIo` drops them. `useCanvasViews`
   // and `useSceneViews` still keep their entry for the session — they hold a viewport, which is
   // harmless to inherit; an inspected channel is not, it would reopen the tab on a flat map.

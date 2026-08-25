@@ -1,4 +1,11 @@
-import { Mesh, MeshStandardMaterial, Object3D, SRGBColorSpace, Texture } from 'three'
+import {
+  Mesh,
+  MeshStandardMaterial,
+  Object3D,
+  RepeatWrapping,
+  SRGBColorSpace,
+  Texture,
+} from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createModelTextures } from './modelTextures'
 import { scriptedTextureCache } from './scene-fixtures'
@@ -44,7 +51,9 @@ describe('createModelTextures', () => {
     textures.apply({ map: { assetId: 'tex-1' } })
     const loaded = await scripted.settle('tex-1')
 
-    expect(materialOf(instance).map).toBe(loaded)
+    // The SOURCE, not the instance: an override wears the sampler of the map it replaces, so
+    // what lands on the material is a clone sharing the picture — see `sampledLike`.
+    expect(materialOf(instance).map?.source).toBe(loaded?.source)
     expect(scripted.spaces.get('tex-1')).toBe(SRGBColorSpace)
     expect(onChange).toHaveBeenCalled()
   })
@@ -61,7 +70,7 @@ describe('createModelTextures', () => {
     textures.apply({ map: { assetId: 'tex-1' } })
     const loaded = await scripted.settle('tex-1')
 
-    expect(materialOf(dressed).map).toBe(loaded)
+    expect(materialOf(dressed).map?.source).toBe(loaded?.source)
     expect(materialOf(untouched).map).toBe(fileMap)
     expect(materialOf(source).map).toBe(fileMap)
   })
@@ -140,5 +149,71 @@ describe('createModelTextures', () => {
     })
 
     expect(undressable).toHaveBeenCalled()
+  })
+
+  /**
+   * glTF stores its UVs for an unflipped picture, and `GLTFLoader` configures no orientation —
+   * asked the studio's own way up, an override lands upside down over the map it replaces.
+   */
+  it('asks for its pictures the way up the model file stores them', async () => {
+    const scripted = scriptedTextureCache()
+    const { source } = loadedModel()
+    const instance = instanceOf(source)
+
+    createModelTextures(scripted.cache, instance, onChange).apply({
+      map: { assetId: 'tex-base' },
+    })
+    await scripted.settle('tex-base')
+
+    expect(scripted.orientations.get('tex-base')).toBe('from-image')
+  })
+
+  /**
+   * A `.glb` whose map tiles says so on the SAMPLER, not in the picture. Posted bare, an override
+   * reverted every model to ClampToEdge at 1×1 — a slot at a time it was rare, the button that
+   * fills five at once makes it a single click.
+   */
+  it('dresses the override with the sampler of the map it replaces', async () => {
+    const scripted = scriptedTextureCache()
+    const { source, fileMap } = loadedModel()
+    fileMap.wrapS = RepeatWrapping
+    fileMap.wrapT = RepeatWrapping
+    fileMap.repeat.set(4, 2)
+    fileMap.offset.set(0.25, 0.5)
+    fileMap.channel = 1
+    const instance = instanceOf(source)
+
+    createModelTextures(scripted.cache, instance, onChange).apply({
+      map: { assetId: 'tex-base' },
+    })
+    await scripted.settle('tex-base')
+
+    const worn = materialOf(instance).map
+    expect(worn?.repeat.toArray()).toEqual([4, 2])
+    expect(worn?.offset.toArray()).toEqual([0.25, 0.5])
+    expect(worn?.wrapS).toBe(RepeatWrapping)
+    expect(worn?.channel).toBe(1)
+  })
+
+  /**
+   * The clone carries its own wrapping, and `getTextureCacheKey` reads it — so three allocates a
+   * SECOND GPU texture for it, one the cache never hears about. Left alone, every ⌘S on the
+   * picture and every reopening of the scene grew `info.memory.textures` for the session.
+   */
+  it('frees the clone it wore when the model goes away', async () => {
+    const scripted = scriptedTextureCache()
+    const { source, fileMap } = loadedModel()
+    fileMap.repeat.set(2, 2)
+    const instance = instanceOf(source)
+    const textures = createModelTextures(scripted.cache, instance, onChange)
+
+    textures.apply({ map: { assetId: 'tex-base' } })
+    await scripted.settle('tex-base')
+    const worn = materialOf(instance).map
+    const freed = vi.spyOn(worn as Texture, 'dispose')
+
+    textures.dispose()
+
+    expect(freed).toHaveBeenCalled()
   })
 })

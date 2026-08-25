@@ -190,6 +190,7 @@ export type Channels = {
   documentConfirmClose: 'document:confirm-close'
   documentConfirmDelete: 'document:confirm-delete'
   documentConfirmOverwrite: 'document:confirm-overwrite'
+  documentConfirmFlatten: 'document:confirm-flatten'
 
   assetsSearch: 'assets:search'
   assetsCounts: 'assets:counts'
@@ -404,6 +405,7 @@ export const CHANNELS: Channels = {
   documentConfirmClose: 'document:confirm-close',
   documentConfirmDelete: 'document:confirm-delete',
   documentConfirmOverwrite: 'document:confirm-overwrite',
+  documentConfirmFlatten: 'document:confirm-flatten',
 
   assetsSearch: 'assets:search',
   assetsCounts: 'assets:counts',
@@ -731,10 +733,7 @@ export type LogScope =
   // Said under `assets.open`, it read « this asset has nowhere to go » while the asset was
   // appearing on screen.
   | 'canvas.size'
-  /** A save that refused to flatten a document over a source file whose format cannot hold it. */
-  | 'canvas.flatten'
-  // An edit sent to a model, whose picture the editor could not produce. Its own scope because
-  // `canvas.flatten` already carries a sentence about a SAVE, and nothing was being saved here.
+  // An edit sent to a model, whose picture the editor could not produce.
   | 'canvas.edit'
   | 'image.export'
   | 'document.load'
@@ -806,7 +805,6 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'canvas.layer',
   'canvas.place',
   'canvas.size',
-  'canvas.flatten',
   'canvas.edit',
   'image.export',
   'document.load',
@@ -1416,6 +1414,16 @@ export type StudioBridge = {
      * `stale`, and answering no is what a dismissed dialog gives back.
      */
     confirmOverwrite: (title: string) => Promise<boolean>
+    /**
+     * Whether to let the asset behind this document take the FLATTENED picture, its format
+     * carrying no `lost`.
+     *
+     * Asked once per document and never again: ⌘S is the most frequent gesture of the studio, and
+     * a question at each one would be unbearable on a picture that keeps its layers. Nothing is
+     * destroyed either way — the document is written first, with the whole stack — so the safe
+     * answer here is the one that writes, unlike every other confirmation of this file.
+     */
+    confirmFlatten: (title: string, format: string, lost: string) => Promise<boolean>
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>

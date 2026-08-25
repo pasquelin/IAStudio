@@ -244,7 +244,7 @@ describe('the renderer of a skybox', () => {
     it('asks for the sky by asset id, not by a URL it built itself', async () => {
       await applied(mounted(), skyOf('sky-1'))
 
-      expect(source.load).toHaveBeenCalledWith(`${ASSET_URL}sky-1`)
+      expect(source.load).toHaveBeenCalledWith(`${ASSET_URL}sky-1`, 'flipY')
     })
 
     /**
@@ -269,7 +269,7 @@ describe('the renderer of a skybox', () => {
       renderer.refreshSource()
 
       await vi.advanceTimersByTimeAsync(0)
-      expect(source.load).toHaveBeenLastCalledWith(`${ASSET_URL}sky-1?v=after`)
+      expect(source.load).toHaveBeenLastCalledWith(`${ASSET_URL}sky-1?v=after`, 'flipY')
     })
 
     it('grades the picture it was given into the background', async () => {

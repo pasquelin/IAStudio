@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   channelFromProviderType,
   seamVerdict,
+  slotForChannel,
   CHANNEL_BY_PROVIDER_TYPE,
   DEFAULT_TEXTURE_MATERIAL,
   isPbrChannel,
@@ -124,5 +125,21 @@ describe('reading a seam ratio in words', () => {
   it('calls a wrap twice the grain a visible one', () => {
     expect(seamVerdict(2)).toBe('visible')
     expect(seamVerdict(10)).toBe('visible')
+  })
+})
+
+describe('the scene slot a channel dresses', () => {
+  it('answers the five a scene carries', () => {
+    expect(slotForChannel('baseColor')).toBe('map')
+    expect(slotForChannel('normal')).toBe('normalMap')
+    expect(slotForChannel('roughness')).toBe('roughnessMap')
+    expect(slotForChannel('metalness')).toBe('metalnessMap')
+    expect(slotForChannel('ao')).toBe('aoMap')
+  })
+
+  it('answers nothing for a channel no scene slot reads', () => {
+    expect(slotForChannel('height')).toBeNull()
+    expect(slotForChannel('emissive')).toBeNull()
+    expect(slotForChannel('edge')).toBeNull()
   })
 })

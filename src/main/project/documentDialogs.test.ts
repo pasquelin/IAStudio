@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setWindowLanguage } from '@main/window/language'
-import { askCloseChoice, askDeleteDocument, type AskUser } from './documentDialogs'
+import {
+  askCloseChoice,
+  askDeleteDocument,
+  askFlattenDocument,
+  type AskUser,
+} from './documentDialogs'
 
 type Shown = Parameters<AskUser>[0]
 
@@ -81,5 +86,35 @@ describe('asking before deleting a document', () => {
     await askDeleteDocument(ask, 'Set dressing')
 
     expect(shown[0]?.message).toContain('Set dressing')
+  })
+})
+
+describe('asking before flattening into the source file', () => {
+  /**
+   * The one question of this file whose YES is the default: the document was written first and
+   * holds the whole stack, so what is at stake is a surprise rather than a loss. An inversion of
+   * the button order would make Escape mean « flatten », and no other gate would see it.
+   */
+  it('puts the flatten on both the default and the first button', async () => {
+    const { ask, shown } = asking(0)
+    await askFlattenDocument(ask, 'Robot', 'PNG', 'layers')
+
+    expect(shown[0]?.defaultId).toBe(0)
+    expect(shown[0]?.cancelId).toBe(1)
+    expect(shown[0]?.buttons[0]).toBe('Flatten and save')
+  })
+
+  it('flattens only on that button, and a dismissal declines', async () => {
+    await expect(askFlattenDocument(asking(0).ask, 'Robot', 'PNG', 'layers')).resolves.toBe(true)
+    await expect(askFlattenDocument(asking(1).ask, 'Robot', 'PNG', 'layers')).resolves.toBe(false)
+  })
+
+  it('names the document, the format and what that format cannot hold', async () => {
+    const { ask, shown } = asking(0)
+    await askFlattenDocument(ask, 'Robot', 'PNG', 'layers, live text')
+
+    expect(shown[0]?.message).toContain('Robot')
+    expect(shown[0]?.detail).toContain('PNG')
+    expect(shown[0]?.detail).toContain('layers, live text')
   })
 })

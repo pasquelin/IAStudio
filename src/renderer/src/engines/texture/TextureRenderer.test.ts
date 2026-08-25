@@ -66,7 +66,7 @@ describe('the texture preview', () => {
   it('asks for the sky by asset id, not by a URL it built itself', async () => {
     await applied(mounted(), skyOf('sky-1'))
 
-    expect(source.load).toHaveBeenCalledWith('ia-studio://asset/sky-1')
+    expect(source.load).toHaveBeenCalledWith('ia-studio://asset/sky-1', 'flipY')
   })
 
   /** Both halves: an orbit panned with the middle button aims elsewhere, and putting only the
@@ -201,7 +201,7 @@ describe('the texture preview', () => {
 
       await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(PBR_CHANNELS.length))
       for (const channel of PBR_CHANNELS) {
-        expect(source.load).toHaveBeenCalledWith(`ia-studio://asset/${channel}-1`)
+        expect(source.load).toHaveBeenCalledWith(`ia-studio://asset/${channel}-1`, 'flipY')
       }
     })
 
@@ -403,7 +403,7 @@ describe('the texture preview', () => {
       renderer.refreshMaps()
 
       await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(2))
-      expect(source.load).toHaveBeenLastCalledWith('ia-studio://asset/base-1?v=after')
+      expect(source.load).toHaveBeenLastCalledWith('ia-studio://asset/base-1?v=after', 'flipY')
     })
   })
 })

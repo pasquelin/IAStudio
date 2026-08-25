@@ -172,6 +172,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       remove: () => Promise.resolve(),
       // Cancel and refuse: a test that does not stub these cannot lose a document by omission.
       confirmClose: () => Promise.resolve<CloseChoice>('cancel'),
+      // Yes, where its neighbours answer no: this is the one dialogue whose default WRITES, and
+      // a test that does not name it wants the save to go through.
+      confirmFlatten: () => Promise.resolve(true),
       confirmDelete: () => Promise.resolve(false),
       confirmOverwrite: () => Promise.resolve(false),
       ...overrides.documents,

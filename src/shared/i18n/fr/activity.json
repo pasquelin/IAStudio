@@ -102,7 +102,6 @@
       "canvas.layer": "Un calque n’a pas pu être chargé",
       "canvas.place": "Cette image n’a pas pu être posée sur le document",
       "canvas.size": "Cette image n’a pas pu garder sa taille",
-      "canvas.flatten": "L’image d’origine n’a pas pu être mise à jour, son format ne sachant pas porter ce travail. Elle est restée intacte — utilisez Enregistrer sous.",
       "canvas.edit": "L’image n’a pas pu être envoyée au modèle",
       "image.export": "L’export de l’image a échoué",
       "document.save": "L’enregistrement du document a échoué",

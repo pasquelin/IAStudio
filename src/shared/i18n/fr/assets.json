@@ -161,6 +161,9 @@
     "overwriteTitle": "Modifications extérieures détectées sur {{title}}",
     "overwriteBody": "Une autre application a écrit dans ce fichier depuis que le studio l’a lu. Enregistrer maintenant remplace ces modifications, et elles seront perdues.",
     "overwriteConfirm": "Écraser",
+    "flattenTitle": "Aplatir l’image de « {{title}} » dans son {{format}} ?",
+    "flattenBody": "Un {{format}} ne porte pas {{lost}}. Le fichier reçoit l’image telle que vous la voyez, et prend l’extension du format écrit ; le document du studio garde vos calques intacts. Cette question ne sera plus posée pour ce document.",
+    "flattenConfirm": "Aplatir et enregistrer",
     "closeHint": "Retire l’onglet de la barre ; le document reste dans le projet",
     "closeOthersHint": "Ferme tous les autres onglets, un par un",
     "renameHint": "Change le nom du document, partout où il est écrit — son fichier compris",
@@ -270,5 +273,19 @@
     "downloadHint": "Une seule fois : le modèle reste ensuite sur cette machine",
     "cancelDownloadHint": "Arrête le téléchargement ; ce qui est déjà reçu est jeté",
     "openPrivacySettingsHint": "Ouvre les réglages du système, à la section du microphone"
+  },
+  "traits": {
+    "layers": "calques",
+    "groups": "groupes",
+    "layerMask": "masques",
+    "adjustmentLayer": "calques de réglage",
+    "liveText": "texte modifiable",
+    "vectorShape": "formes vectorielles",
+    "layerTransform": "transformations de calque",
+    "blendMode": "modes de fusion",
+    "layerOpacity": "opacité de calque",
+    "clipping": "écrêtage",
+    "layerLock": "verrous de calque",
+    "guides": "repères"
   }
 }

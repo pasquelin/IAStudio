@@ -74,3 +74,23 @@ export function useCatalogueAssets(ask: CatalogueAsk): readonly Asset[] {
 
   return held.assets
 }
+
+/**
+ * Reads in flight, per question. A mesh's material stacks five slots and the model overrides five
+ * more: without this, one selection opened eleven identical queries, and every write to the
+ * catalogue replayed all eleven — `better-sqlite3` is synchronous in the main process, so each one
+ * is a pause every window pays for (invariant 6).
+ */
+const inFlight = new Map<string, Promise<readonly Asset[]>>()
+
+export function askOnce(
+  key: string,
+  run: () => Promise<readonly Asset[]>,
+): Promise<readonly Asset[]> {
+  const already = inFlight.get(key)
+  if (already) return already
+
+  const running = run().finally(() => inFlight.delete(key))
+  inFlight.set(key, running)
+  return running
+}

@@ -17,6 +17,8 @@ type Dressed = {
   material: MeshStandardMaterial
   /** Read before anything is written over it: removing an override puts the file's map back. */
   fileMaps: Map<TextureSlot, Texture | null>
+  /** The clones this material wears — ours to free, unlike anything the cache handed out. */
+  worn: Map<TextureSlot, Texture>
 }
 
 /**
@@ -55,7 +57,7 @@ export function createModelTextures(
       const fileMaps = new Map<TextureSlot, Texture | null>(
         TEXTURE_SLOTS.map(slot => [slot, copy[slot]]),
       )
-      dressed.push({ mesh: object, material: copy, fileMaps })
+      dressed.push({ mesh: object, material: copy, fileMaps, worn: new Map() })
       return copy
     }
 
@@ -63,18 +65,28 @@ export function createModelTextures(
     object.material = Array.isArray(worn) ? worn.map(clone) : clone(worn)
   })
 
-  const slots = createSlotBindings(cache, (slot, texture) => {
+  // `from-image`, unlike every other holder of this cache: the glTF stores its UVs for an
+  // unflipped picture, so the studio's own convention lands them upside down over the maps it
+  // replaces.
+  const slots = createSlotBindings(cache, 'from-image', (slot, texture) => {
     // Nothing to dress, and the inspector still offers five slots: said out loud rather than
     // letting every one of them do nothing in silence.
     if (dressed.length === 0) return onUndressable()
 
-    for (const { mesh, material, fileMaps } of dressed) {
-      const next = texture ?? fileMaps.get(slot) ?? null
+    for (const { mesh, material, fileMaps, worn } of dressed) {
+      const file = fileMaps.get(slot) ?? null
+      const next = texture ? sampledLike(texture, file) : file
       if (material[slot] === next) continue
 
       // Same reason as a mesh's own maps: occlusion reads the second UV set, and a generated
       // model rarely carries one — left alone, an AO map would do nothing at all.
       if (next && slot === 'aoMap') giveSecondUvSet(mesh.geometry)
+
+      // The clone this slot wore, if any: three counts its GPU textures per `Texture`, and a copy
+      // carrying its own wrapping is a second allocation nothing else would ever free.
+      worn.get(slot)?.dispose()
+      if (texture && next) worn.set(slot, next)
+      else worn.delete(slot)
 
       material[slot] = next
       material.needsUpdate = true
@@ -87,7 +99,32 @@ export function createModelTextures(
     dispose: () => {
       slots.clear()
       // Cloned copies only — SceneRenderer.release never sees them; file maps stay with the cache.
-      for (const { material } of dressed) material.dispose()
+      for (const { material, worn } of dressed) {
+        for (const copy of worn.values()) copy.dispose()
+        material.dispose()
+      }
     },
   }
+}
+
+/**
+ * The override wearing the sampler of the map it replaces — repeat, offset, rotation and UV set.
+ *
+ * A CLONE, because the cache hands the same instance to every holder: written on it, one model's
+ * tiling would reach every other slot pointing at that picture. It shares the `Source`, but NOT
+ * the GPU texture — `getTextureCacheKey` reads the wrapping — so the caller frees what it wears.
+ */
+function sampledLike(texture: Texture, file: Texture | null | undefined): Texture {
+  if (!file) return texture
+
+  const worn = texture.clone()
+  worn.wrapS = file.wrapS
+  worn.wrapT = file.wrapT
+  worn.repeat.copy(file.repeat)
+  worn.offset.copy(file.offset)
+  worn.center.copy(file.center)
+  worn.rotation = file.rotation
+  // The UV set the glTF told this slot to read — a model carrying a second one dresses from it.
+  worn.channel = file.channel
+  return worn
 }

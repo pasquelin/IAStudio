@@ -166,6 +166,8 @@ const bridge: StudioBridge = {
     confirmClose: title => ipcRenderer.invoke(CHANNELS.documentConfirmClose, title),
     confirmDelete: title => ipcRenderer.invoke(CHANNELS.documentConfirmDelete, title),
     confirmOverwrite: title => ipcRenderer.invoke(CHANNELS.documentConfirmOverwrite, title),
+    confirmFlatten: (title, format, lost) =>
+      ipcRenderer.invoke(CHANNELS.documentConfirmFlatten, title, format, lost),
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),
