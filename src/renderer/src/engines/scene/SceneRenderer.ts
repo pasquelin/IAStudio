@@ -789,6 +789,7 @@ export class SceneRenderer {
     if (this.mode !== 'select') gizmo.setMode(this.mode)
     gizmo.setSpace(this.space)
     this.applySnap()
+    this.applyGizmoSize()
     this.attachGizmo()
 
     // Lit before anything is added: a scene with no light of its own still shows its materials,
@@ -2284,8 +2285,10 @@ export class SceneRenderer {
     // from this very field of view, and has to be resized with it.
     if (lensMoved) this.viewport.setFieldOfView(next.fieldOfView)
 
-    // Unconditional: a step changed while snapping is off has to be waiting when it comes on.
+    // Unconditional, both of them: a step changed while snapping is off has to be waiting when
+    // it comes on, and the handles are rebuilt from `size` on the frame after it moves.
     this.applySnap()
+    this.applyGizmoSize()
 
     const gl = this.viewport.gl
     if (gl) {
@@ -2387,6 +2390,17 @@ export class SceneRenderer {
   private landsOn(object: Object3D, held: Object3D): boolean {
     if (!(object instanceof Mesh) || heldBy(object, held)) return false
     return isScenery(object, id => this.applied.get(id)?.type === 'path')
+  }
+
+  /**
+   * How much of the SCREEN the handles take. `TransformControls` divides the distance out of
+   * their scale, so they never shrink with it — this is the share of the frame they keep, and
+   * the default of 1 covered half the view.
+   */
+  private applyGizmoSize(): void {
+    if (!this.gizmo) return
+    this.gizmo.size = this.view.gizmoSize
+    this.redraw()
   }
 
   private applySnap(): void {

@@ -187,6 +187,12 @@ export type Settings = {
     /** In degrees, like the inspector: radians are stored, never typed. */
     snapRotate: number
     snapScale: number
+    /**
+     * How big the transform handles are drawn, as a share of what `TransformControls` calls 1.
+     * Their size on SCREEN stays constant whatever the distance — that is the control's own
+     * doing, and what every 3D application does — so this is how much of the screen they take.
+     */
+    gizmoSize: number
     /** Whether a surface snap turns what it lays down to match the slope it lands on. */
     snapSurfaceAlign: boolean
     /** Metres a surface snap leaves between what it lays down and what it landed on. */
@@ -365,6 +371,7 @@ export const DEFAULT_SETTINGS: Settings = {
     snapTranslate: 0.5,
     snapRotate: 15,
     snapScale: 0.1,
+    gizmoSize: 0.5,
     snapSurfaceAlign: true,
     snapSurfaceOffset: 0,
     shadows: true,
