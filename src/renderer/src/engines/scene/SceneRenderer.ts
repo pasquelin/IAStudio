@@ -190,6 +190,7 @@ import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skelet
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { primitiveOf } from '@shared/domain/csg'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
+import { createInstancedGroups, type InstancedGroups } from './instancing'
 import { matrixOfTransform } from '../csg/csgMatrix'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
@@ -395,6 +396,12 @@ const RAIL_FACING = new Vector3()
 const DOWNWARD = new Vector3(0, -1, 0)
 const SURFACE_NORMAL = new Matrix3()
 
+/** A raycaster that sees what the camera does not — the layer `instancing.ts` hides meshes on. */
+function withEveryLayer(raycaster: Raycaster): Raycaster {
+  raycaster.layers.enableAll()
+  return raycaster
+}
+
 /**
  * A pick that may widen the ray's tolerance, with both thresholds put back whatever it does.
  *
@@ -543,12 +550,16 @@ export class SceneRenderer {
    */
   private view: ViewportOptions = { ...DEFAULT_SETTINGS.three }
 
-  private readonly raycaster = new Raycaster()
+  /**
+   * Both raycasters read EVERY layer, the camera's and the one instancing moves meshes to: a
+   * repeated shape is drawn by one instance and picked on its own mesh — see `instancing.ts`.
+   */
+  private readonly raycaster = withEveryLayer(new Raycaster())
   /**
    * The surface snap's own, never the shared one: that one's `Line` and `Points` thresholds are
    * widened by whoever picked last, and a downward ray would then meet a rail before the floor.
    */
-  private readonly surfaceRay = new Raycaster()
+  private readonly surfaceRay = withEveryLayer(new Raycaster())
   private readonly surfaceBox = new Box3()
   private readonly surfaceFrom = new Vector3()
   /** What the pivot wore when the drag began. A turn composed onto its own result drifts. */
@@ -700,6 +711,7 @@ export class SceneRenderer {
   private readonly paneMemory = createPaneMemory()
   private readonly bvh: BvhBuilder
   private readonly csg: CsgEvaluator
+  private readonly instances: InstancedGroups
   /** Nodes whose cut is out. Holds which side owes the cache its reference. */
   private readonly cutting = new Set<string>()
   private readonly skin: SkinWeights
@@ -758,6 +770,7 @@ export class SceneRenderer {
       onFailure: (url, error) => reportFailure('scene.animation', url, error),
     })
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
+    this.instances = createInstancedGroups(this.viewport.scene)
     this.csg = createCsgEvaluator({
       spawn: () => new CsgWorker(),
       // The key as subject, so two solids that both fail are two lines rather than one: the node
@@ -1336,6 +1349,9 @@ export class SceneRenderer {
       if (this.contentChanged) {
         this.modelStats = statsOf(this.objects.values())
         this.contentChanged = false
+        // On the same signal, and for the same reason it exists: the grouping walks every node,
+        // which a selection must never pay for. The world matrices are up to date by here.
+        this.instances.rebuild([...this.applied.values()], id => this.objects.get(id))
       }
       const selected = this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
       report(this.modelStats, statsOf(selected))
@@ -2236,6 +2252,7 @@ export class SceneRenderer {
     this.textureCache.dispose()
     this.modelCache.dispose()
     this.csg.dispose()
+    this.instances.dispose()
     this.gltf.dispose()
     this.wireMaterial.dispose()
     this.paneMaterials.dispose()

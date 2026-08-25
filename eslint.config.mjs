@@ -47,7 +47,16 @@ export default defineConfig([
      */
     files: ['scripts/**/*.{mjs,ts}'],
     languageOptions: {
-      globals: { console: 'readonly', fetch: 'readonly', process: 'readonly' },
+      globals: {
+        console: 'readonly',
+        fetch: 'readonly',
+        process: 'readonly',
+        // `cdp.mjs` parle au protocole DevTools : Node 22+ porte WebSocket, et les minuteurs
+        // bornent une attente de réponse.
+        WebSocket: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+      },
     },
     // Lifted for the one `.ts` among them, which the block above catches by extension: the rule
     // exists because the renderer's journal belongs to the main process, and a build script has
