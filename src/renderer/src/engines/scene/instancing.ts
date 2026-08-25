@@ -14,11 +14,15 @@ import type { SceneNode } from './sceneState'
 /**
  * The layer a mesh goes to once an `InstancedMesh` draws it in its place.
  *
+ * TWO, and never one: `EDGE_LAYER` is one, and a view that shows edges enables it on the camera.
+ * Sharing the number put every hidden mesh back on screen beside the instance drawing it —
+ * measured, a tight view of 10 000 went from 3.7 ms and 40 calls to 12.6 ms and 9 605.
+ *
  * The camera renders layer 0 alone, so nothing on this one costs a draw call — but the mesh stays
  * in the scene with its matrix up to date, which is what keeps picking, the gizmo and the
  * selection working untouched. A raycaster must enable it explicitly: see `pickableLayers`.
  */
-export const DRAWN_BY_INSTANCE = 1
+export const DRAWN_BY_INSTANCE = 2
 
 /**
  * Past this many nodes of one shape, drawing them one by one stops being free.
@@ -43,11 +47,16 @@ export type InstancedGroups = {
    * any of them was drawn by an instance.
    *
    * A gesture reports its move only when it ends, so between the two an instanced node would
-   * stand where the last rebuild left it. Ten nodes cost 1.4 µs at 10 000 and 3.5 µs at 40 000,
-   * against 3.9 and 32.7 ms to group again. Read the world matrices before calling: they are
-   * what is copied.
+   * stand where the last rebuild left it. Ten nodes cost 0.95 µs at 10 000 and 1.35 µs at
+   * 40 000, against 7.2 and 47.5 ms to group again. Read the world matrices before calling:
+   * they are what is copied.
    */
   moved: (ids: Iterable<string>, objectOf: (id: string) => Object3D | undefined) => boolean
+  /**
+   * The meshes it draws with, for the passes that dress the scene: a display mode REPLACES a
+   * mesh's material, and an instance left out of that walk keeps the one it was built with.
+   */
+  drawn: () => readonly InstancedMesh[]
   /** The engine is going away, and so are the meshes it built. */
   dispose: () => void
 }
@@ -60,20 +69,29 @@ export type InstancedGroups = {
  * frame buys nothing at any distance a level reaches.
  *
  * The meshes are NOT replaced — they are moved to a layer the camera ignores. Everything that
- * reads `objects` goes on working, and the cost of keeping them is what was measured: 1.34 ms
- * against 0.01 ms for instances alone, against 17.02 ms for meshes drawn one by one.
+ * reads `objects` goes on working, and what it buys was measured on this Mac at 1600×900, on
+ * 10 000 shadowed spheres: a tight view fell from 12.4 ms and 9 566 draw calls to 3.7 ms and 40,
+ * a wide one from 24.4 ms and 19 411 calls to 4.3 ms and 73.
  */
-export function createInstancedGroups(host: Object3D): InstancedGroups {
+export function createInstancedGroups(
+  host: Object3D,
+  /**
+   * What a mesh wears when no view has dressed it. A display mode REPLACES a material, so an
+   * instance built during one would be born wearing the stand-in — and would keep it when the
+   * view went back, since nothing remembers a material for an object that did not exist yet.
+   */
+  ownMaterialOf: (mesh: Mesh) => Material | Material[] = mesh => mesh.material,
+): InstancedGroups {
   const drawn: InstancedMesh[] = []
   /** Where a node's matrix sits, so a move can be written without walking the scene again. */
   const placed = new Map<string, { instance: InstancedMesh; slot: number }>()
   /**
    * The spelling of a node's shape and paint, held against the node itself.
    *
-   * Spelling them cost 22.7 ms of the 26.3 ms a rebuild took on 10 000 nodes, and a rebuild runs
-   * on every change of content; held, the same rebuild costs 3.9 ms, and 32.7 ms at 40 000
-   * against 108. A node is replaced when it is edited and kept when it is not — `syncNode`
-   * already leans on that — so a node still here is still spelled the same way.
+   * A rebuild runs on every change of content, and spelling them again each time cost 53.6 ms on
+   * 10 000 nodes and 209.2 ms on 40 000; held, the same rebuilds cost 7.2 ms and 47.5 ms. A node
+   * is replaced when it is edited and kept when it is not — `syncNode` already leans on that —
+   * so a node still here is still spelled the same way.
    */
   const spelled = new WeakMap<SceneNode, string>()
 
@@ -111,7 +129,10 @@ export function createInstancedGroups(host: Object3D): InstancedGroups {
         // it already carries what the viewport isolates on top of what the document hides.
         if (!(mesh instanceof Mesh) || !isDrawn(mesh, host)) continue
 
-        const key = keyOf(node)
+        // The shadow flags belong to the key: an `InstancedMesh` carries ONE of each, and the
+        // shadow camera reads only the layer the sources have left — so a group that mixed them
+        // would give its own answer to every node in it.
+        const key = `${keyOf(node)}|${mesh.castShadow ? 1 : 0}${mesh.receiveShadow ? 1 : 0}`
         const held = groups.get(key)
         if (held) {
           held.ids.push(node.id)
@@ -130,7 +151,7 @@ export function createInstancedGroups(host: Object3D): InstancedGroups {
           continue
         }
 
-        const material = materialOf(first)
+        const material = materialOf(ownMaterialOf(first))
         if (!material) continue
 
         const regions = splitOf(worn, first.geometry)
@@ -151,6 +172,11 @@ export function createInstancedGroups(host: Object3D): InstancedGroups {
           // What was really written, so a region short of a mesh draws one fewer rather than
           // leaving the constructor's identity matrix as a copy of the shape at the origin.
           instance.count = written
+          // Read off the source, which `applyShadowFlags` has already written: the sources sit
+          // on a layer the shadow camera never looks at, so without this an instanced object
+          // would neither cast a shadow nor catch one.
+          instance.castShadow = first.castShadow
+          instance.receiveShadow = first.receiveShadow
           instance.instanceMatrix.needsUpdate = true
           // Its own bounds are what the frustum tests: without this the whole region is culled by
           // the box of a single instance, and a scene disappears as soon as the camera turns.
@@ -182,6 +208,8 @@ export function createInstancedGroups(host: Object3D): InstancedGroups {
       }
       return touched
     },
+
+    drawn: () => drawn,
 
     dispose: clear,
   }
@@ -254,7 +282,11 @@ export function keepsItsGroup(previous: SceneNode, node: SceneNode): boolean {
     previous.geometry === node.geometry &&
     previous.material === node.material &&
     previous.visible === node.visible &&
-    previous.parentId === node.parentId
+    previous.parentId === node.parentId &&
+    // The shadow flags are part of the group key: an instance carries one of each, so a node
+    // that changed its mind about casting has to leave the group rather than keep its slot.
+    previous.castShadow === node.castShadow &&
+    previous.receiveShadow === node.receiveShadow
   )
 }
 
@@ -262,6 +294,6 @@ export function keepsItsGroup(previous: SceneNode, node: SceneNode): boolean {
 type Grouped = { ids: string[]; meshes: Mesh[] }
 
 /** An instance draws ONE material. A mesh wearing an array of them is left to be drawn alone. */
-function materialOf(mesh: Mesh): Material | null {
-  return Array.isArray(mesh.material) ? (mesh.material[0] ?? null) : mesh.material
+function materialOf(worn: Material | Material[]): Material | null {
+  return Array.isArray(worn) ? (worn[0] ?? null) : worn
 }

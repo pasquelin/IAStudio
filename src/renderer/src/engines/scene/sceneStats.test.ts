@@ -1,4 +1,13 @@
-import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, PlaneGeometry, Texture } from 'three'
+import {
+  BoxGeometry,
+  InstancedMesh,
+  Matrix4,
+  Mesh,
+  MeshStandardMaterial,
+  Object3D,
+  PlaneGeometry,
+  Texture,
+} from 'three'
 import { describe, expect, it } from 'vitest'
 import { MARKER_NAME } from './markerPaint'
 import { densityOf, EMPTY_STATS, statsOf, totalStats } from './sceneStats'
@@ -124,5 +133,21 @@ describe('totalStats', () => {
 
   it('adds up nothing to nothing', () => {
     expect(totalStats([])).toEqual(EMPTY_STATS)
+  })
+
+  it('counts every copy an instance draws, not the one shape it holds', () => {
+    const geometry = new BoxGeometry(1, 1, 1)
+    const lone = densityOf(new Mesh(geometry, new MeshStandardMaterial()))
+
+    const many = new InstancedMesh(geometry, new MeshStandardMaterial(), 8)
+    for (let at = 0; at < 8; at += 1) {
+      many.setMatrixAt(at, new Matrix4().makeTranslation(at * 2, 0, 0))
+    }
+    many.instanceMatrix.needsUpdate = true
+
+    // Its box spans every copy while its geometry is one: read as a lone cube, the most crowded
+    // thing on screen came out at the coolest step of the density ramp.
+    expect(densityOf(many)).toBeGreaterThan(0)
+    expect(densityOf(many)).toBeLessThan(lone)
   })
 })
