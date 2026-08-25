@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { createFakeStudio } from './fakeStudio'
+import { rankOf } from './coverage'
 import { PROJECT } from './project'
 import { SCENARIOS } from './scenarios'
 
@@ -25,7 +26,7 @@ describe('the batterie and the bench', () => {
 
   it('numbers them in the order the list reads', () => {
     const rank = (name: string): number => {
-      const [section, at] = name.split(' ')[0]?.split('.') ?? []
+      const [section, at] = rankOf(name).split('.')
       return Number(section) * 100 + Number(at)
     }
     const ranks = SCENARIOS.map(one => rank(one.name))

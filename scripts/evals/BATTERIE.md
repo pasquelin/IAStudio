@@ -21,6 +21,28 @@ ordre. `batterie.test.ts` tient les deux listes à la même longueur et dans le 
 demande ajoutée ici sans scénario fait rougir la porte, et un scénario écrit pour rien aussi.
 C'est ce qui rend « on en est où ? » répondable.
 
+## Ce que la batterie ne mesure pas encore
+
+Le registre publie **228 actions**, et **toutes** partent sur le fil MCP : `mcpTools()` liste
+`actionsReaching('mcp')`, qui est le registre entier. `coverage.ts` dit, action par action, quelle
+demande l'exerce — **61 en ont une, 167 n'en ont aucune**, et le faux studio n'en joue que 116.
+
+🛑 **Un outil qu'aucune phrase n'atteint est un outil que personne n'a vu marcher.** La table est
+un `Record<ActionName, …>` : une action ajoutée au registre **ne compile plus** tant qu'elle n'y
+répond pas, fût-ce par une liste vide. `coverage.test.ts` tient le reste — un rang cité qui ne
+nomme aucun scénario, une action déclarée couverte que le faux studio ne sait pas jouer (elle
+serait scorée à l'aveugle), et le rôle de ce qui reste sans mesure, **écrit en toutes lettres
+plutôt que compté** : un compte reste vert le jour où un trou se comble pendant qu'un autre se
+creuse.
+
+**Déclaré n'est pas mesuré**, et le rapport du banc écrit les deux : `MCP reached: N/228` compte ce
+qu'une passe a vraiment appelé, et la ligne `declared covered, never reached` nomme les actions que
+`coverage.ts` promettait et qu'aucun run n'a touchées.
+
+**Ajouter une action au registre, c'est ajouter ses scénarios dans le même mouvement** : la
+modéliser dans le faux studio, écrire la ou les demandes ici, les brancher dans `coverage.ts`.
+Une famille livrée sans cela part sur le fil MCP sans qu'aucune mesure ne la couvre.
+
 **Aucune passe complète n'a encore été lancée.** Les scénarios sont écrits, pas mesurés — et une
 case ne se coche que sur un chiffre.
 

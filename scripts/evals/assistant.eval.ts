@@ -3,11 +3,12 @@ import { assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { CLOUD_PROVIDERS, defaultChatModel } from '@shared/domain/aiCloud'
 import { orElse } from '@shared/promises'
 import { isRecord } from '@shared/guards'
-import type { ActionName, ActionOutcome } from '@shared/domain/assistant'
+import { ACTION_REGISTRY, type ActionName, type ActionOutcome } from '@shared/domain/assistant'
 import { assistantHistory, type AssistantTurn } from '@/assistant/conversation'
 import { createHttpChatBrain } from '@main/assistant/brainHttp'
 import { PROJECT } from './project'
 import { SCENARIOS } from './scenarios'
+import { coveredActions } from './coverage'
 import type { Run, Scenario } from './run'
 import { createFakeStudio } from './fakeStudio'
 
@@ -86,6 +87,9 @@ const measured: Measured[] = []
 
 /** Actions no scenario modelled — every figure below is worth less for each one of them. */
 const unmodelled: ActionName[] = []
+
+/** Every action any run actually chose — the MEASURED half of what `coverage.ts` declares. */
+const touched = new Set<ActionName>()
 
 const sumOf = (read: (one: Measured) => number): number =>
   measured.reduce((total, one) => total + read(one), 0)
@@ -230,6 +234,8 @@ describe.skipIf(KEY === '' || chat === null)(`what ${PROVIDER} does with a real 
       for (const action of played.studio.unmodelled()) {
         if (!unmodelled.includes(action)) unmodelled.push(action)
       }
+
+      for (const one of played.called) touched.add(one.action)
     }
 
     measured.push(tally)
@@ -253,6 +259,16 @@ describe.skipIf(KEY === '' || chat === null)(`what ${PROVIDER} does with a real 
     if (unmodelled.length > 0) {
       console.log(`\n  🛑 not modelled, so scored blind: ${unmodelled.join(', ')}`)
     }
+
+    // 🛑 What `coverage.ts` PROMISED against what this run actually chose. A declared action no
+    // run ever reached is a tool still unseen, and the table says otherwise until this prints.
+    const promised = coveredActions().filter(one => !touched.has(one))
+    console.log(
+      `\n  MCP reached: ${touched.size}/${ACTION_REGISTRY.length} actions` +
+        (promised.length > 0
+          ? `\n  🛑 declared covered, never reached: ${promised.join(', ')}`
+          : ''),
+    )
 
     console.log(
       `\n  passed ${Math.round(rate * 100)}% · ${sumOf(one => one.rounds)} rounds · ` +
