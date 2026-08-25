@@ -38,6 +38,13 @@ import { markOf, mergeRows, runningRows, typeOfRow, type AssetRowModel } from '.
 /** How much of a cloud listing one page asks for. The scroll asks for the next. */
 const LIBRARY_PAGE = 60
 
+/**
+ * How many lines are worth pulling for before the scroll takes over. `image` cannot be asked OF
+ * the API, so the space's kind is filtered here and a page of sixty can draw one line.
+ * 🛑 `max` bounds the spend: a library sparser than that stops short, with no scroll left to ask.
+ */
+const SURFACE_ROWS = 24
+
 /** What a line of the account's own library answers the Source facet with. */
 const SOURCES_OF_OWN: readonly string[] = [OWN_SOURCE]
 
@@ -276,6 +283,7 @@ export function AssetBrowser() {
   useAutomaticPulls({
     key: `${ownerId} ${search} ${scope.join()} ${publishedType}`,
     drawn: shown.length,
+    wanted: SURFACE_ROWS,
     fetching: library.fetching || feed.fetching,
     // A page either of them answers with nothing moves no row on screen, and the panel would
     // stop one pull in with pages still to come.

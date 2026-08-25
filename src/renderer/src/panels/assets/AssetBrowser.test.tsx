@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import type { CloudAsset } from '@shared/domain/cloudAsset'
+import type { CloudAsset, CloudPage } from '@shared/domain/cloudAsset'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collectionState'
 import { useAssets } from '@/stores/assets'
 import { useLayouts } from '@/stores/layouts'
@@ -66,6 +66,40 @@ const holding = (assets: readonly CloudAsset[] = [cloud()]) =>
   installFakeBridge({
     cloud: { browse: () => Promise.resolve({ assets: [...assets], cursor: null }) },
   })
+
+/**
+ * A full page of the library the space narrows away almost entirely: one picture, and fifty-nine
+ * meshes the API cannot be asked to leave out — `image` comes back with everything.
+ */
+const NARROWED_PAGE: CloudPage = {
+  assets: [
+    cloud({ id: 'asset_one', name: 'The only picture' }),
+    ...Array.from({ length: 59 }, (_, index) =>
+      cloud({ id: `asset_mesh_${index}`, type: 'mesh', createdAt: '2026-08-12T10:00:00.000Z' }),
+    ),
+  ],
+  cursor: 't:page-2',
+}
+
+/** A second of the same, so what follows is out of reach of a single extra pull. */
+const NARROWED_AGAIN: CloudPage = {
+  assets: Array.from({ length: 60 }, (_, index) =>
+    cloud({ id: `asset_more_mesh_${index}`, type: 'mesh', createdAt: '2026-08-12T09:30:00.000Z' }),
+  ),
+  cursor: 't:page-3',
+}
+
+/** The eleven the account also owns, which nothing on screen reaches without pulling twice. */
+const PAGE_BEHIND: CloudPage = {
+  assets: Array.from({ length: 11 }, (_, index) =>
+    cloud({
+      id: `asset_later_${index}`,
+      name: `A later picture ${index}`,
+      createdAt: '2026-08-12T09:00:00.000Z',
+    }),
+  ),
+  cursor: null,
+}
 
 beforeEach(() => {
   useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
@@ -190,6 +224,31 @@ describe('what the remote browser draws', () => {
     render(shelf())
 
     expect(await screen.findByText('A skeleton')).toBeInTheDocument()
+  })
+
+  /**
+   * 🛑 The space narrows to its own kind and the API cannot be asked for it — so a full page can
+   * leave a single line drawn. Counted as a surface already filled, the panel stopped one page in
+   * and only caught up when it was closed and reopened.
+   */
+  it('keeps pulling while a page the space narrowed leaves the surface nearly empty', async () => {
+    installFakeBridge({
+      cloud: {
+        browse: ({ cursor }) =>
+          Promise.resolve(
+            cursor === undefined
+              ? NARROWED_PAGE
+              : cursor === NARROWED_PAGE.cursor
+                ? NARROWED_AGAIN
+                : PAGE_BEHIND,
+          ),
+      },
+    })
+
+    render(shelf())
+
+    expect(await screen.findByText('A later picture 10')).toBeInTheDocument()
+    expect(useAssets.getState().shownCount).toBe(12)
   })
 })
 
