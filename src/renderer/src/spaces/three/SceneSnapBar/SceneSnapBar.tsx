@@ -3,7 +3,7 @@ import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PANE_TOOLBAR_ASIDE } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
-import { FLY_SPEEDS } from '@shared/domain/snap'
+import { boundsOf } from '@shared/domain/settingsRegistry'
 import { formatDecimal } from '@/helpers/format'
 import { tipFor } from '@/helpers/tooltip'
 import { Separator } from '@/design/Separator'
@@ -44,8 +44,14 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
       value: snapFigure(step, control.reads, view.units, i18n.language),
       unit: t(SNAP_UNIT_KEYS[view.units]),
     })
+  // ALWAYS one decimal, and the widest reading taken from the BOUND rather than from the rungs:
+  // the slider reaches 14,5 — longer than every rung, « 0,5 » included — so a box held open by
+  // the rungs alone still jumped. With a fixed decimal the length follows the whole part only,
+  // and the largest whole part the setting allows is its maximum.
   const speedReading = (value: number) =>
-    t('snapBar.speedValue', { value: formatDecimal(value, i18n.language, { digits: 1 }) })
+    t('snapBar.speedValue', {
+      value: formatDecimal(value, i18n.language, { digits: 1, least: 1 }),
+    })
   // The longest reading a control can show, so its box stops resizing under a dragged slider.
   // By characters, which is exact here: every figure is drawn `tabular-nums`.
   const widestOf = (labels: readonly string[]) =>
@@ -72,7 +78,7 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
             description={t('snapBar.speedHint')}
             tooltip={tipFor('horizontal')}
             value={speedReading(flying)}
-            widest={widestOf(FLY_SPEEDS.map(speedReading))}
+            widest={speedReading(boundsOf('three.flySpeed').max)}
             valueLabel={named(speedReading(flying), t('snapBar.speed'))}
             rowCount={2}
             rows={close => <SceneSpeedMenu speed={flying} onChoose={onSpeed} onClose={close} />}
