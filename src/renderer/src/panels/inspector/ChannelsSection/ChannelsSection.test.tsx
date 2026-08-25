@@ -264,7 +264,7 @@ describe('the channels of a material', () => {
 
       await rightClick('Couleur de base')
 
-      expect(screen.getByRole('menuitem', { name: /Choisir une image/ })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: /Parcourir les images/ })).toBeInTheDocument()
       expect(screen.queryByRole('menuitem', { name: /Calculer depuis/ })).toBeNull()
     })
 

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type MouseEvent, type ReactNode } from 'react'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import { carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
 import { cn } from '@/helpers/cn'
@@ -23,6 +23,8 @@ export type AssetDropTargetProps = {
    * the pointer's own "+" says it better.
    */
   outlined?: boolean
+  /** The surface is what a right-click lands on, where the caller holds a menu for it. */
+  onContextMenu?: (event: MouseEvent) => void
   className?: string
   children: ReactNode
 }
@@ -45,6 +47,7 @@ export function AssetDropTarget({
   onDrop,
   exclusive,
   outlined = true,
+  onContextMenu,
   className,
   children,
 }: AssetDropTargetProps) {
@@ -52,6 +55,7 @@ export function AssetDropTarget({
 
   return (
     <div
+      onContextMenu={onContextMenu}
       className={cn(
         className,
         outlined && state !== 'idle' && 'outline-2 -outline-offset-2',

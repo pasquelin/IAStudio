@@ -1,12 +1,9 @@
-import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PICTURES } from '@shared/domain/asset'
 import { mountedAssetPicker } from '@/app/assetPicker'
-import { LinkField, namedPress, type LinkFieldProps } from '@/design/LinkField/LinkField'
+import { LinkField, type LinkFieldProps } from '@/design/LinkField/LinkField'
 import { openAssetById } from '@/helpers/openAsset'
-import { useContextMenu } from '@/hooks/useContextMenu'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
-import { PictureFieldMenu } from './PictureFieldMenu'
 
 export type PictureFieldProps = {
   label: string
@@ -17,11 +14,6 @@ export type PictureFieldProps = {
    * slot with NOTHING to open — told apart from an absent prop, which takes the default below.
    */
   open?: LinkFieldProps['open'] | null
-  /**
-   * What a single click on the picture does. Absent, it opens the picker — the same window the
-   * browse button opens, put under the gesture a hand reaches for first.
-   */
-  press?: LinkFieldProps['press']
   /** A standing laid over the picture — see `LinkField`. */
   badge?: LinkFieldProps['badge']
   /** What a drop puts here, when the caller needs the asset itself — see `LinkField`. */
@@ -34,11 +26,8 @@ export type PictureFieldProps = {
   emptyLabel?: string | null
   /** The handle the MCP steers this link by. Never a translated word. */
   scId?: string
-  /**
-   * Menu rows belonging to the SURFACE rather than to the slot — see `PictureFieldMenu`. Handed
-   * the closer, since a row is what shuts the menu it was chosen in.
-   */
-  menuExtra?: (close: () => void) => ReactNode
+  /** Menu rows belonging to the SURFACE rather than to the slot — see `LinkFieldMenu`. */
+  menuExtra?: LinkFieldProps['menuExtra']
 }
 
 /**
@@ -51,7 +40,6 @@ export function PictureField({
   value,
   onChange,
   open,
-  press,
   badge,
   onDropAsset,
   emptyLabel,
@@ -60,7 +48,6 @@ export function PictureField({
 }: PictureFieldProps) {
   const { t } = useTranslation()
   const options = useProjectPictures(PICTURES)
-  const menu = useContextMenu()
   /**
    * Asked for at press time, never at render: the window is mounted by the shell, and a slot that
    * captured it while drawing would hold whatever was mounted when the panel first opened.
@@ -76,58 +63,48 @@ export function PictureField({
     })
   }
 
-  const opening =
-    open === null
-      ? undefined
-      : (open ?? {
-          label: t('inspector.openTexture'),
-          hint: t('inspector.openTextureHint'),
-          run: () => openAssetById(value),
-        })
+  /**
+   * One window, two controls — so two NAMES: the picture and the gutter button sit on the same
+   * row, and two focus stops answering to one name is what WCAG 2.4.6 refuses.
+   */
+  const picking = {
+    label: t('inspector.pickPicture'),
+    hint: t(open === null ? 'inspector.pickPictureAloneHint' : 'inspector.pickPictureHint'),
+    run: browse,
+  }
 
   return (
-    <div className="min-w-0" onContextMenu={menu.open}>
-      <LinkField
-        label={label}
-        value={value}
-        options={options}
-        onChange={onChange}
-        emptyLabel={emptyLabel === null ? undefined : (emptyLabel ?? t('inspector.noTexture'))}
-        missingLabel={t('inspector.missingTexture')}
-        clearLabel={t('inspector.clearTexture')}
-        // The three kinds that decode as an image, which is exactly what `options` was filtered to:
-        // a slot that lit up for a mesh would promise a drop it then refuses.
-        accepts={PICTURES}
-        badge={badge}
-        onDropAsset={onDropAsset}
-        press={
-          press ?? {
-            label: t('inspector.pickPicture'),
-            hint: t('inspector.pickPictureHint'),
-            run: browse,
-          }
-        }
-        open={opening}
-        browse={{
-          label: t('inspector.browseTexture'),
-          hint: t('inspector.browseTextureHint'),
-          run: browse,
-        }}
-        scId={scId}
-      />
-
-      {menu.at && (
-        <PictureFieldMenu
-          at={menu.at}
-          onClose={menu.close}
-          onBrowse={browse}
-          // Only what the slot RESOLVED to can be opened, as the press is: a document outlives the
-          // picture it points at.
-          open={value === null ? undefined : namedPress(opening)}
-          onClear={emptyLabel === null || value === null ? undefined : () => onChange(null)}
-          extra={menuExtra?.(menu.close)}
-        />
-      )}
-    </div>
+    <LinkField
+      label={label}
+      value={value}
+      options={options}
+      onChange={onChange}
+      emptyLabel={emptyLabel === null ? undefined : (emptyLabel ?? t('inspector.noTexture'))}
+      missingLabel={t('inspector.missingTexture')}
+      clearLabel={t('inspector.clearTexture')}
+      // The three kinds that decode as an image, which is exactly what `options` was filtered to:
+      // a slot that lit up for a mesh would promise a drop it then refuses.
+      accepts={PICTURES}
+      badge={badge}
+      onDropAsset={onDropAsset}
+      // The picker, under the gesture a hand reaches for first — and under the browse button too.
+      press={picking}
+      open={
+        open === null
+          ? undefined
+          : (open ?? {
+              label: t('inspector.openTexture'),
+              hint: t('inspector.openTextureHint'),
+              run: () => openAssetById(value),
+            })
+      }
+      browse={{
+        label: t('inspector.browseTexture'),
+        hint: t('inspector.browseTextureHint'),
+        run: browse,
+      }}
+      menuExtra={menuExtra}
+      scId={scId}
+    />
   )
 }

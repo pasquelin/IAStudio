@@ -1,28 +1,23 @@
-import { useEffect, useRef, type KeyboardEvent, type MouseEvent } from 'react'
+import { useEffect, useRef, type MouseEvent } from 'react'
+import { activation, type ActivationProps } from '@/helpers/activation'
 
-export type DeferredPressProps = {
-  onClick: (event: MouseEvent) => void
-  onDoubleClick: () => void
-  onKeyDown: (event: KeyboardEvent) => void
+export type DeferredPressProps = Partial<ActivationProps> & {
+  onClick?: (event: MouseEvent) => void
 }
 
 /**
- * How long a second click may still arrive. Below the platform's own double-click window, which
- * a page cannot read: what it buys is the press feeling immediate, and 250 ms is what a hand
- * doing two clicks on purpose beats.
+ * How long a second click may still arrive. 🛑 At or ABOVE the platform's own window, never under:
+ * Chromium waits ~500 ms, and a shorter wait fires the press while a `dblclick` is still coming.
  */
-const DOUBLE_CLICK_WINDOW = 250
+const DOUBLE_CLICK_WINDOW = 500
 
 /**
  * The two pointer gestures of one surface, when the SINGLE click opens something of its own.
  *
- * `selection` cannot serve that case: it fires on the first click of a pair, so a double-click
- * meant for the editor put a picker on screen first. Here the single press waits out the window
- * a second click could land in, and a double-click cancels it.
- *
- * Enter opens, Space presses — the studio's split, spelled once in `activation`.
+ * 🛑 Not `selection`: it fires on the FIRST click of a pair, so a double-click meant for the
+ * editor put a picker on screen first. Here the press waits that window out, and opening cancels it.
  */
-export function useDeferredPress(press: () => void, open?: () => void): DeferredPressProps {
+export function useDeferredPress(press?: () => void, open?: () => void): DeferredPressProps {
   const waiting = useRef<number | null>(null)
 
   const forget = (): void => {
@@ -32,23 +27,27 @@ export function useDeferredPress(press: () => void, open?: () => void): Deferred
 
   useEffect(() => forget, [])
 
-  return {
-    onClick: event => {
-      if (event.detail > 1) return
-      // Nothing to wait for where the surface does not open: the press is the only gesture it has.
-      if (!open) return press()
+  const opening = open && activation(open)
 
-      forget()
-      waiting.current = window.setTimeout(press, DOUBLE_CLICK_WINDOW)
-    },
-    onDoubleClick: () => {
-      forget()
-      open?.()
-    },
-    onKeyDown: event => {
-      if (event.key !== 'Enter' || !open) return
-      event.preventDefault()
-      open()
-    },
+  return {
+    ...(press && {
+      onClick: (event: MouseEvent) => {
+        if (event.detail > 1) return
+        // Nothing to wait for where the surface does not open: the press is its only gesture.
+        if (!open) return press()
+
+        forget()
+        waiting.current = window.setTimeout(press, DOUBLE_CLICK_WINDOW)
+      },
+    }),
+    // Composed rather than handed a closure: `activation` is called with `open` itself, and the
+    // cancellation is laid over what it returns — `react-hooks/refs` refuses the other order.
+    ...(opening && {
+      ...opening,
+      onDoubleClick: () => {
+        forget()
+        opening.onDoubleClick()
+      },
+    }),
   }
 }

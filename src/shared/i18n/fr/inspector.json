@@ -57,6 +57,7 @@
     "rotationInert": "Un sprite fait toujours face à la caméra, et le tourner ne se voit que s’il porte des enfants",
     "pickPicture": "Choisir une image",
     "pickPictureHint": "Ouvre le sélecteur d’images du projet. Double-cliquer ouvre celle-ci là où elle s’édite",
+    "pickPictureAloneHint": "Ouvre le sélecteur d’images du projet",
     "clearTextureHint": "Vide ce slot — l’image reste dans le projet",
     "browseTexture": "Parcourir les images",
     "browseTextureHint": "Choisir parmi les images du projet, en vignettes plutôt qu’en liste",

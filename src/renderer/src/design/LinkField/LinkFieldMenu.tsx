@@ -1,18 +1,19 @@
 import { mdiClose, mdiFolderSearchOutline, mdiOpenInNew } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { ReactNode } from 'react'
-import { ContextMenu } from '@/design/ContextMenu'
-import { MenuRow } from '@/design/MenuRow'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import type { ContextMenuAt } from '@/hooks/useContextMenu'
+import { ContextMenu } from '../ContextMenu'
+import { MenuRow } from '../MenuRow'
+import type { LinkPress } from './linkPress'
 
-export type PictureFieldMenuProps = {
+export type LinkFieldMenuProps = {
   at: ContextMenuAt
   onClose: () => void
   /** The picker — the same window the single click and the browse button open. */
-  onBrowse: () => void
-  /** What the double-click opens, already named by the caller. Absent where nothing opens. */
-  open?: { label: string; hint: string; run: () => void; icon?: string }
+  browse?: LinkPress
+  /** What the double-click opens. The words are the caller's, and the menu reads them out loud. */
+  open?: LinkPress
   /** Emptying the slot, where that is a state it has. */
   onClear?: () => void
   /** Rows belonging to the surface rather than to the slot — a channel's flat view, its recipe. */
@@ -20,20 +21,10 @@ export type PictureFieldMenuProps = {
 }
 
 /**
- * The third gesture of every picture slot, written once.
- *
- * A material's channels grew one first, and it held what only they can do. Everything a SLOT can
- * do belongs here instead: choosing, opening, emptying — so the four surfaces that draw a picture
- * row answer the same right-click.
+ * The third gesture of every link row, written once: everything the SLOT can do — choose, open,
+ * empty — beside whatever the surface adds.
  */
-export function PictureFieldMenu({
-  at,
-  onClose,
-  onBrowse,
-  open,
-  onClear,
-  extra,
-}: PictureFieldMenuProps) {
+export function LinkFieldMenu({ at, onClose, browse, open, onClear, extra }: LinkFieldMenuProps) {
   const { t } = useTranslation()
 
   const chosen = (run: () => void) => () => {
@@ -43,17 +34,19 @@ export function PictureFieldMenu({
 
   return (
     <ContextMenu at={at} onClose={onClose}>
-      <MenuRow
-        label={t('inspector.pickPicture')}
-        icon={mdiFolderSearchOutline}
-        tip={HINT_RIGHT(t('inspector.pickPictureHint'))}
-        onSelect={chosen(onBrowse)}
-      />
+      {browse && (
+        <MenuRow
+          label={browse.label}
+          icon={mdiFolderSearchOutline}
+          tip={HINT_RIGHT(browse.hint)}
+          onSelect={chosen(browse.run)}
+        />
+      )}
 
       {open && (
         <MenuRow
           label={open.label}
-          icon={open.icon ?? mdiOpenInNew}
+          icon={mdiOpenInNew}
           tip={HINT_RIGHT(open.hint)}
           onSelect={chosen(open.run)}
         />

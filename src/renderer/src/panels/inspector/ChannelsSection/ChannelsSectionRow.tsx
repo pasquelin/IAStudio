@@ -57,16 +57,26 @@ export function ChannelsSectionRow({
   const origin = map ? ORIGINS[map.origin] : null
 
   return (
-    <div className={cn('min-w-0', rowSkin(inspected))} data-selected={inspected || undefined}>
+    // `aria-current` rather than the tint alone: which of the eight is shown flat is a fact, and
+    // a colour is not one a screen reader — or anyone reading without it — can hear.
+    <div
+      className={cn('min-w-0', rowSkin(inspected))}
+      data-selected={inspected || undefined}
+      aria-current={inspected || undefined}
+    >
       <PictureField
         label={name}
         value={map?.assetId ?? null}
         onChange={onChange}
         onDropAsset={onDropAsset}
         scId={`texture.channel.${channel}`}
-        // The run alone: the press names the button, and its hint announces the double-click.
-        // Left off where there is nothing to paint, so Enter leads nowhere it cannot go.
-        open={pixels ? { run: pixels.run } : null}
+        // Named even though the press names the button: the MENU reads these words out loud, and
+        // painting a channel was reachable from nowhere else once its own menu went away.
+        open={
+          pixels
+            ? { label: t('assets.editPixels'), hint: t('assets.editPixelsHint'), run: pixels.run }
+            : null
+        }
         badge={origin && <TileMark icon={origin.icon} label={t(origin.key)} />}
         menuExtra={close => (
           <ChannelsSectionMenuRows
