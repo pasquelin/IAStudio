@@ -5,6 +5,7 @@ import { dragTransfer } from '@/helpers/drag-fixtures'
 import { fakeMenu } from '@/helpers/menu-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useCloud } from '@/stores/cloud'
+import { useLibraryPick } from '@/stores/libraryPick'
 import { useProject } from '@/stores/project'
 import { LibraryAsset } from './LibraryAsset'
 
@@ -21,11 +22,12 @@ const asset: CloudAsset = {
   collectionIds: [],
 }
 
-const FETCH = 'Récupérer dans le projet'
+const FETCH = 'Télécharger 1 asset'
 
 let menu = fakeMenu()
 
-function open() {
+function open(picked: readonly string[] = []) {
+  useLibraryPick.setState({ picked })
   render(
     <LibraryAsset asset={asset}>
       <span>tile</span>
@@ -116,5 +118,27 @@ describe('a library line the catalogue does not hold', () => {
     open()
 
     await vi.waitFor(() => expect(pulled).toEqual(['asset_remote']))
+  })
+
+  /**
+   * One transfer at a time is `useCloud`'s own rule, so a shelf of twelve picked lines has to
+   * come down in ONE gesture — twelve clicks would be eleven refusals.
+   */
+  it('brings down the whole picked range in one transfer', async () => {
+    let pulled: readonly string[] = []
+    installFakeBridge({
+      menu: menu.bridge,
+      cloud: {
+        pull: ids => {
+          pulled = ids
+          return Promise.resolve([])
+        },
+      },
+    })
+    menu.picks('Télécharger 3 assets')
+
+    open(['asset_remote', 'asset_b', 'asset_c'])
+
+    await vi.waitFor(() => expect(pulled).toEqual(['asset_remote', 'asset_b', 'asset_c']))
   })
 })

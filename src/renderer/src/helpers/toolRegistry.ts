@@ -23,7 +23,9 @@ import {
   type ToolZone,
 } from '@shared/domain/tool'
 import { gitHoldsFolder } from '@shared/domain/git'
+import { scenarioAccount } from '@shared/domain/account'
 import { NODE_KINDS } from '@/engines/scene/nodeKinds'
+import { useAccounts, type AccountsState } from '@/stores/accounts'
 import { useGit } from '@/stores/git'
 import { useProject } from '@/stores/project'
 
@@ -111,7 +113,22 @@ export function toolStateOf(): ToolState {
   return {
     hasProject: useProject.getState().project !== null,
     hasGit: gitHoldsFolder(useGit.getState().repository),
+    hasCloud: cloudIsHeld(useAccounts.getState()),
   }
+}
+
+/**
+ * Whether a key that opens a remote library is held.
+ *
+ * Read off the ACCOUNT LIST and never off `auth.authenticated`, which is the answer to a network
+ * round trip: an icon keyed on that one would be absent for the first second of every launch and
+ * appear under the pointer.
+ *
+ * A list not read yet counts as held, for the same reason in the other direction — the ordinary
+ * case is someone who has a key, and their rail must not lose an icon and get it back.
+ */
+function cloudIsHeld({ accounts, accountsLoaded }: AccountsState): boolean {
+  return !accountsLoaded || scenarioAccount(accounts) !== null
 }
 
 /** What a surface can offer beyond what the registry declares, each rule answered from a store. */
@@ -120,6 +137,12 @@ export type ToolState = {
   hasProject: boolean
   /** Git holding the project folder, so there are versions to read. Kept honest by the shell. */
   hasGit: boolean
+  /**
+   * A key opening onto a remote library. Scenario's, because it is the one cloud of
+   * `CLOUD_PROVIDERS` that publishes assets at all — the other seven hold a chat key and serve
+   * the assistant. A second one would widen this answer, not add a second.
+   */
+  hasCloud: boolean
 }
 
 /**
@@ -136,6 +159,7 @@ function canOffer(id: ToolId, surface: ToolSurface, state: ToolState): boolean {
   // `git` implies `project`, and the conjunction is not redundant: the repository is corrected
   // asynchronously, so a project just closed still reads `ready` until the next status lands.
   if (requires === 'git') return state.hasProject && state.hasGit
+  if (requires === 'cloud') return state.hasCloud
   return true
 }
 

@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
+import { scenarioAccount } from '@shared/domain/account'
 import { gitHoldsFolder } from '@shared/domain/git'
 import type { ToolState } from '@/helpers/toolRegistry'
+import { useAccounts } from '@/stores/accounts'
 import { useGit } from '@/stores/git'
 import { useProject } from '@/stores/project'
 
@@ -11,6 +13,11 @@ import { useProject } from '@/stores/project'
 export function useToolState(): ToolState {
   const hasProject = useProject(state => state.project !== null)
   const hasGit = useGit(state => gitHoldsFolder(state.repository))
+  // A list not read yet counts as held — see `cloudIsHeld`, which this must answer alike or the
+  // rail would disagree with the native menu about which panels exist.
+  const hasCloud = useAccounts(
+    state => !state.accountsLoaded || scenarioAccount(state.accounts) !== null,
+  )
 
-  return useMemo(() => ({ hasProject, hasGit }), [hasProject, hasGit])
+  return useMemo(() => ({ hasProject, hasGit, hasCloud }), [hasProject, hasGit, hasCloud])
 }

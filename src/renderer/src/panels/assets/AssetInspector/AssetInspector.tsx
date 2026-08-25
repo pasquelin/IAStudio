@@ -1,7 +1,8 @@
 import { mdiFolderOpenOutline } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Asset } from '@shared/domain/asset'
+import { assetBadgeOf, type Asset } from '@shared/domain/asset'
+import { AssetBadge } from '@/design/AssetBadge'
 import { InlineRename } from '@/design/InlineRename'
 import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
@@ -13,7 +14,9 @@ import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { renameAsset } from '@/helpers/rename'
 import { RoleField } from '@/panels/shared/RoleField'
+import { useBadgeLabels } from '@/hooks/useBadgeLabels'
 import { useJobs } from '@/stores/jobs'
+import { activeOwnerId, useSettings } from '@/stores/settings'
 import { AssetInspectorGeneration } from './AssetInspectorGeneration'
 
 /**
@@ -24,6 +27,8 @@ export function AssetInspector({ asset }: { asset: Asset }) {
   const { t, i18n } = useTranslation()
   const jobs = useJobs(state => state.jobs)
   const bodies = useJobs(state => state.bodies)
+  const badgeLabels = useBadgeLabels()
+  const ownerId = useSettings(activeOwnerId)
   const [missing, setMissing] = useState(false)
   const [renaming, setRenaming] = useState(false)
 
@@ -42,6 +47,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
   }
 
   const generation = generationOf(asset, jobs, bodies)
+  const badge = assetBadgeOf(asset, ownerId)
   const probe = asset.probe
 
   return (
@@ -88,6 +94,11 @@ export function AssetInspector({ asset }: { asset: Asset }) {
             {formatBytes(asset.bytes, unit => t(`units.${unit}`), i18n.language)}
           </PropertyRow>
         )}
+        {/* Where this row stands against the library — the one reading of an asset that the
+            remote browser can no longer show, having stopped drawing local lines. */}
+        <PropertyRow label={t('assets.syncState')}>
+          <AssetBadge badge={badge} label={badgeLabels.get(badge) ?? ''} showQuiet />
+        </PropertyRow>
         <PropertyRow label={t('inspector.created')}>
           {/* The studio's language, not the machine's — the two differ. */}
           {/* Local: this says when a person made the thing, not what an account was billed. */}

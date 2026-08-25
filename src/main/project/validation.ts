@@ -171,6 +171,10 @@ const assetQuery = z.object({
   // Absent here, `z.object` STRIPS it and the query reaching SQL is unfiltered: reading back a
   // generation's output answered with the first rows of the whole catalogue.
   ids: z.array(assetId).max(ASSET_PATHS_MAX).optional(),
+  // Which of a page of library assets this project already holds. Held to the same bound and
+  // stripped for the same reason as `ids` just above — the ids are the API's, not this side's,
+  // so they go through the plain string rule rather than through `assetId`.
+  remoteAssetIds: z.array(z.string().trim().min(1).max(200)).max(ASSET_PATHS_MAX).optional(),
   location: z.enum(['local', 'cloud']).optional(),
   syncStatus: z.custom<SyncStatus>(isSyncStatus).optional(),
   groupId: z.string().trim().min(1).optional(),

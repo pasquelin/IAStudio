@@ -157,7 +157,7 @@ const DOM_BOUND = [
   'src/renderer/src/helpers/menuIcon.test.ts',
   // Not for a DOM of their own: they read the labels a menu is raised with, and `i18next` is only
   // initialised by the renderer setup — `initI18n` reads `localStorage`, which node has not.
-  'src/renderer/src/panels/assets/assetMenu.test.ts',
+  'src/renderer/src/panels/explorer/assetMenu.test.ts',
   'src/renderer/src/panels/layers/layerMenu.test.ts',
   'src/renderer/src/spaces/three/sceneAddMenu.test.ts',
   'src/renderer/src/spaces/three/sceneNodeMenu.test.ts',

@@ -198,7 +198,7 @@ describe('Rail', () => {
       'Nouveau document',
       'separator',
       'Génération',
-      'Assets',
+      'Bibliothèque',
       'separator',
       'Explorateur',
       'Git',
@@ -237,7 +237,10 @@ describe('Rail', () => {
       'aria-pressed',
       'true',
     )
-    expect(screen.getByRole('button', { name: 'Assets' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Bibliothèque' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
   })
 
   // The panel a section stands in for another is the one that is up, so its icon is the one

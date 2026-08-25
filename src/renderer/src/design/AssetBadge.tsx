@@ -57,9 +57,14 @@ const MARKS: Record<Badge, { icon: string; tone: string; busy?: true }> = {
 /**
  * The corner mark that says where an asset lives.
  *
- * Not drawn at all for the two settled states in a dense grid — see `showQuiet`. A mark on every
+ * Not drawn at all for the one settled state in a dense grid — see `showQuiet`. A mark on every
  * one of two hundred tiles is noise, and the states worth a glance are the ones that need doing
  * something about. The list view, which has room, shows all of them.
+ *
+ * 🛑 `synced` used to be quiet beside `local-only`, and stopped being on 25 August: the grid it
+ * was quiet in listed the PROJECT, where nearly every row is synchronised. The one that replaced
+ * it lists a remote library, where « you already have this one » is the exception — and the one
+ * thing a reader needs before spending a download.
  */
 export type AssetBadgeProps = {
   badge: Badge
@@ -73,7 +78,7 @@ export type AssetBadgeProps = {
 }
 
 export function AssetBadge({ badge, label, showQuiet = false, overlay = false }: AssetBadgeProps) {
-  const quiet = badge === 'local-only' || badge === 'synced'
+  const quiet = badge === 'local-only'
   if (quiet && !showQuiet) return null
 
   const mark = MARKS[badge]

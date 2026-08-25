@@ -5,6 +5,7 @@ import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { startLibraryDrag } from '@/helpers/assetDrag'
 import { showContextMenu } from '@/helpers/contextMenu'
 import { useCloud } from '@/stores/cloud'
+import { pickedWith } from '@/stores/libraryPick'
 import { useProject } from '@/stores/project'
 
 export type LibraryAssetProps = {
@@ -49,16 +50,19 @@ export function LibraryAsset({ asset, className, children }: LibraryAssetProps) 
          * time is `useCloud`'s own rule.
          */
         const canFetch = useProject.getState().project !== null && !useCloud.getState().busy
+        // The whole picked range, so a shelf of twelve comes down in one transfer — which is
+        // also `useCloud`'s own rule: one at a time, and twelve clicks would be eleven refusals.
+        const ids = pickedWith(asset.id)
 
         void showContextMenu([
           {
-            label: t('assets.fetchAction'),
+            label: t('assets.fetchAction', { count: ids.length }),
             icon: mdiDownloadOutline,
             tooltip: t('assets.fetchActionHint'),
             // Greyed rather than hidden, as every other menu here: an entry that comes and goes
             // depending on what is open is one nobody can learn.
             disabled: !canFetch,
-            onSelect: () => void useCloud.getState().pull([asset.id]),
+            onSelect: () => void useCloud.getState().pull(ids),
           },
         ])
       }}

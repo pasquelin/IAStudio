@@ -13,7 +13,7 @@ import { useSettings } from './settings'
 /** Why an account could not be saved, including a refusal that never reached the main process. */
 export type AccountSaveFailure = AccountFailure | 'unexpected'
 
-type AccountsState = {
+export type AccountsState = {
   accounts: AccountSummary[]
   /**
    * Whether the list has been read once: `accounts: []` says "not read yet" and "no key at all"

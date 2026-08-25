@@ -3,6 +3,7 @@ import {
   mdiContentCut,
   mdiContentDuplicate,
   mdiContentPaste,
+  mdiFileImportOutline,
   mdiFolderOpenOutline,
   mdiFolderPlusOutline,
   mdiInformationOutline,
@@ -22,6 +23,8 @@ import { acceleratorOf } from '@shared/domain/shortcut'
 import { showContextMenu, type ContextMenuRow } from '@/helpers/contextMenu'
 import type { FolderNode } from '@/hooks/useFolderTree'
 import { getBridge } from '@/services/bridge'
+import type { AssetAction } from './assetActions'
+import { assetMenuGroups } from './assetMenu'
 
 export type EntryMenuProps = {
   node: FolderNode
@@ -48,6 +51,13 @@ export type EntryMenuProps = {
   t: TFunction
   onOpen: () => void
   onRename: () => void
+  /**
+   * The three gestures that act on the catalogue rows behind the selection, rather than on the
+   * files themselves. They live here since the shelf stopped listing what the project holds:
+   * naming pictures, laying them out on a sheet and sending them up are all about assets, and
+   * this panel is where the assets of a project are now looked at.
+   */
+  onAsset: (action: AssetAction) => void
   run: (command: CommandId) => void
 }
 
@@ -109,6 +119,12 @@ export type RootMenuProps = {
   history: FileHistory
   bindings: BindingOverrides
   t: TFunction
+  /**
+   * Brings files in from the disk. Aimed at the PROJECT rather than at a row, which is why it
+   * hangs off the blank: it moved here when the shelf stopped listing what the project holds,
+   * and the shelf's own title row was the only place offering it.
+   */
+  onImport: () => void
   /** Runs the command against the PROJECT FOLDER, whatever the selection was a moment ago. */
   run: (command: CommandId) => void
 }
@@ -126,10 +142,24 @@ export type RootMenuProps = {
  * blank, but nothing there raised a menu — so a brand new project offered no way at all to make
  * a folder in it.
  */
-export function openRootMenu({ clipboard, history, bindings, t, run }: RootMenuProps): void {
+export function openRootMenu({
+  clipboard,
+  history,
+  bindings,
+  t,
+  onImport,
+  run,
+}: RootMenuProps): void {
   const row = commandRows(bindings, run)
 
   void showContextMenu([
+    {
+      label: t('assets.import'),
+      tooltip: t('assets.importHint'),
+      icon: mdiFileImportOutline,
+      onSelect: onImport,
+    },
+    { separator: true },
     row('explorer.paste', {
       label: t('explorer.paste'),
       tooltip: t('explorer.pasteHint'),
@@ -172,6 +202,7 @@ export function openEntryMenu({
   t,
   onOpen,
   onRename,
+  onAsset,
   run,
 }: EntryMenuProps): void {
   /**
@@ -195,6 +226,10 @@ export function openEntryMenu({
    * something it cannot do.
    */
   const owned = selection.some(path => isPrivatePath(path))
+
+  // The count the three catalogue gestures name — a folder has no row behind it, and neither has
+  // anything the studio keeps for itself.
+  const files = selection.filter(path => !isPrivatePath(path)).length
 
   const row = commandRows(bindings, run)
 
@@ -274,6 +309,12 @@ export function openEntryMenu({
       // apart from `owned` above. Nothing under a dot goes either way.
       disabled: selection.some(path => isPrivatePath(path, 'shown')),
     }),
+    /*
+     * Greyed on a selection holding no file at all, and no finer than that: which of the files
+     * the catalogue actually holds is a round trip, and a menu is drawn on a click. The gesture
+     * asks once it has been chosen and drops what has no row — see `runAssetAction`.
+     */
+    ...assetMenuGroups({ asset, count: files, t, onAsset }),
     ...historyRows(row, t, history),
   ])
 }

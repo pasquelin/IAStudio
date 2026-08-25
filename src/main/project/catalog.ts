@@ -928,6 +928,10 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       // is read. Empty means nothing, as it does for `paths` just above.
       if (query.ids) narrowTo('id', query.ids)
 
+      // Which of a page of library assets this project already holds. The column is indexed —
+      // `selectByRemoteId` reads it one at a time — and this is the same question for a listing.
+      if (query.remoteAssetIds) narrowTo('remote_asset_id', query.remoteAssetIds)
+
       if (query.syncStatus) {
         conditions.push('sync_state = ?')
         params.push(query.syncStatus)

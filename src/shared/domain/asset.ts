@@ -496,6 +496,17 @@ export type AssetQuery = {
    * answers in. Empty means nothing, as it does for `paths`.
    */
   ids?: readonly string[]
+  /**
+   * Which of THESE library assets this project already holds — the question the remote browser
+   * asks of every page it draws.
+   *
+   * Asked of the catalogue rather than answered from the rows a window happens to be holding:
+   * that store pages the catalogue two hundred at a time, so a project with more than that would
+   * have offered a download of a file already on the disk. Bounded by `ASSET_PATHS_MAX` and
+   * empty means nothing, both exactly as `paths` above — one placeholder each in a statement the
+   * main process builds.
+   */
+  remoteAssetIds?: readonly string[]
   /** Narrows to one side of the library, or to what still has to move between them. */
   location?: AssetLocation
   syncStatus?: SyncStatus

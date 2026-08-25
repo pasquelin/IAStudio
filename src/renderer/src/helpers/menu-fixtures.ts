@@ -1,5 +1,10 @@
 import type { ContextMenuItem } from '@shared/domain/contextMenu'
 
+/** A menu read as one list: a group, then the rows it opens onto. One level, as the type bounds. */
+function flattened(items: readonly ContextMenuItem[]): ContextMenuItem[] {
+  return items.flatMap(item => [item, ...(item.submenu ?? [])])
+}
+
 /**
  * The system's context menu, for tests — what a window asked it to draw, and which row it says
  * was chosen.
@@ -27,10 +32,13 @@ export function fakeMenu() {
         return Promise.resolve(rows.find(row => row.label === picked)?.id ?? null)
       },
     },
-    /** The labels of the menu last raised, in the order they were sent. */
-    labels: (): string[] => (raised.at(-1) ?? []).map(item => item.label),
+    /**
+     * The labels of the menu last raised, in the order they were sent — a group's own label
+     * followed by its rows', which is the order a reader meets them in.
+     */
+    labels: (): string[] => flattened(raised.at(-1) ?? []).map(item => item.label),
     /** Whether that menu offered the row, or merely showed it — absent when it has no such row. */
     offers: (label: string): boolean | undefined =>
-      raised.at(-1)?.find(item => item.label === label)?.enabled,
+      flattened(raised.at(-1) ?? []).find(item => item.label === label)?.enabled,
   }
 }

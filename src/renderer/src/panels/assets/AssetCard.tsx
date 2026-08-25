@@ -1,19 +1,15 @@
 import { memo } from 'react'
-import { posterUrl, type AssetBadge as BadgeName, type AssetType } from '@shared/domain/asset'
+import type { AssetBadge as BadgeName, AssetType } from '@shared/domain/asset'
 import { AssetBadge } from '@/design/AssetBadge'
 import { AssetTypeMark } from '@/design/AssetTypeMark'
-import { InlineRename } from '@/design/InlineRename'
 import { MediaTile } from '@/design/MediaTile'
 import { MEDIA_FRAME } from '@/design/styles'
 import { ProgressBar } from '@/design/ProgressBar'
 import { Spinner } from '@/design/Spinner'
 import { cloudTileFace } from '@/helpers/cloudTile'
 import { cn } from '@/helpers/cn'
-import { assetIcon } from '@/helpers/workspaces'
-import { AssetWaveform } from './AssetWaveform'
-import { DraggableAsset } from './DraggableAsset'
 import { LibraryAsset } from './LibraryAsset'
-import { nameOfRow, typeOfRow, type AssetRenameHandle, type AssetRowModel } from './rows'
+import { nameOfRow, typeOfRow, type AssetRowModel } from './rows'
 
 /** The width a tile occupies. What the CDN is asked for follows, once density is applied. */
 const PREVIEW_WIDTH = 220
@@ -34,8 +30,6 @@ export type AssetCardProps = {
    * subscribes every one of two hundred cells and allocates a fresh attribute object per frame.
    */
   hints: { fetch: Record<string, string>; generating: Record<string, string> }
-  /** Renaming, when this tile is the one being renamed. */
-  rename?: AssetRenameHandle
 }
 
 export const AssetCard = memo(function AssetCard({
@@ -44,7 +38,6 @@ export const AssetCard = memo(function AssetCard({
   badgeLabels,
   typeLabels,
   hints,
-  rename,
 }: AssetCardProps) {
   const type = typeOfRow(row)
 
@@ -60,36 +53,6 @@ export const AssetCard = memo(function AssetCard({
       <AssetBadge badge={badge} label={badgeLabels.get(badge) ?? badge} overlay />
     </>
   )
-
-  // Only a local row has a file to drag: a library asset has no path, and a job has no output
-  // yet. Dragging either would drop an identifier no document can resolve.
-  if (row.from === 'local') {
-    return (
-      <DraggableAsset asset={row.asset} {...(rename ? { onRename: rename.start } : {})}>
-        <MediaTile
-          url={posterUrl(row.asset) ?? undefined}
-          caption={row.asset.name}
-          captionField={
-            rename?.open ? (
-              <InlineRename
-                value={row.asset.name}
-                label={rename.label}
-                gauge="inline"
-                onCommit={rename.commit}
-              />
-            ) : undefined
-          }
-          fallbackIcon={assetIcon(row.asset.type)}
-          // A sound is the one kind the studio deliberately writes no poster for — a still would
-          // be painted under the waveform of every clip it becomes (`POSTER_KINDS`). Its shape is
-          // drawn here instead, from the peaks the montage already reads. A library row gets
-          // none: the waveform is derived from a file, and that one has none in the project yet.
-          face={row.asset.type === 'audio' ? <AssetWaveform assetId={row.asset.id} /> : undefined}
-          badge={mark}
-        />
-      </DraggableAsset>
-    )
-  }
 
   // A hint and never an `aria-label`: the tile's name is already on screen in its caption, and
   // one set over a visible name replaces it for a screen reader (WCAG 2.5.3). What these two
