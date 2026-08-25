@@ -256,3 +256,35 @@ describe('the one texture loader', () => {
     expect(building).toEqual([])
   })
 })
+
+describe('the orientation a picture is decoded in', () => {
+  /**
+   * glTF stores its UVs for an unflipped picture and `GLTFLoader` configures no orientation, so a
+   * map of the project put over one of a model's own lands upside down under the studio's default.
+   */
+  it('loads the same asset once per orientation', async () => {
+    const load = vi.fn<TextureSource>(() => Promise.resolve(new Texture()))
+    const cache = createTextureCache(load, silent)
+
+    await cache.acquire('tex-1', NoColorSpace)
+    await cache.acquire('tex-1', NoColorSpace, undefined, 'from-image')
+
+    expect(load).toHaveBeenCalledTimes(2)
+    expect(load.mock.calls.map(([, orientation]) => orientation)).toEqual(['flipY', 'from-image'])
+  })
+
+  // Held apart, or releasing one holder would free the picture the other is still drawing with.
+  it('keeps the two apart when one of them is released', async () => {
+    const load = vi.fn<TextureSource>(() => Promise.resolve(new Texture()))
+    const cache = createTextureCache(load, silent)
+
+    await cache.acquire('tex-1', NoColorSpace)
+    await cache.acquire('tex-1', NoColorSpace, undefined, 'from-image')
+    cache.release('tex-1', NoColorSpace, undefined, 'from-image')
+
+    // The upright holder never let go, so asking again answers what it holds rather than reloading.
+    await cache.acquire('tex-1', NoColorSpace)
+
+    expect(load).toHaveBeenCalledTimes(2)
+  })
+})

@@ -1,6 +1,6 @@
 import { NoColorSpace, SRGBColorSpace, type ColorSpace, type Texture } from 'three'
 import { TEXTURE_SLOTS, type TextureRef, type TextureSlot } from '@shared/domain/scene'
-import type { TextureCache } from './textureCache'
+import type { PictureOrientation, TextureCache } from './textureCache'
 
 /**
  * Points the slot at an asset, or at none — `null` is how a slot is emptied and its reference
@@ -24,12 +24,14 @@ export function createTextureBinding(
   cache: TextureCache,
   colorSpace: ColorSpace,
   install: (texture: Texture | null) => void,
+  /** `from-image` for the maps of an imported model — see `PictureOrientation`. */
+  orientation: PictureOrientation = 'flipY',
 ): TextureBinding {
   type Wanted = { assetId: string; version: string | undefined }
   let held: Wanted | null = null
 
   const release = (given: Wanted | null): void => {
-    if (given) cache.release(given.assetId, colorSpace, given.version)
+    if (given) cache.release(given.assetId, colorSpace, given.version, orientation)
   }
 
   return assetId => {
@@ -63,7 +65,7 @@ export function createTextureBinding(
     }
     if (!wanted) return
 
-    void cache.acquire(wanted.assetId, colorSpace, wanted.version).then(texture => {
+    void cache.acquire(wanted.assetId, colorSpace, wanted.version, orientation).then(texture => {
       if (swapping) release(previous)
       // Stale: the slot has moved on, and the reference it took went back with the move.
       if (held !== wanted || !texture) return
@@ -97,10 +99,16 @@ export type SlotBindings = {
 export function createSlotBindings(
   cache: TextureCache,
   install: (slot: TextureSlot, texture: Texture | null) => void,
+  orientation: PictureOrientation = 'flipY',
 ): SlotBindings {
   const slots = TEXTURE_SLOTS.map(slot => ({
     slot,
-    bind: createTextureBinding(cache, spaceOf(slot), texture => install(slot, texture)),
+    bind: createTextureBinding(
+      cache,
+      spaceOf(slot),
+      texture => install(slot, texture),
+      orientation,
+    ),
   }))
 
   return {

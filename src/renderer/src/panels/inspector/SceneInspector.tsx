@@ -29,7 +29,7 @@ import { CameraShotSection } from './CameraShotSection/CameraShotSection'
 import { RigSection } from './RigSection'
 import { EnvironmentPanel } from './EnvironmentPanel/EnvironmentPanel'
 import { MaterialSection } from './MaterialSection'
-import { ModelOverridesSection } from './ModelOverridesSection'
+import { ModelOverridesSection } from './ModelOverridesSection/ModelOverridesSection'
 import { ModelTexturesSection } from './ModelTexturesSection/ModelTexturesSection'
 import { PathSection } from './PathSection'
 import { ShadowSection } from './ShadowSection'
@@ -206,6 +206,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
               had that slot. */}
           <ModelTexturesSection assetId={model.model.assetId} name={model.name} />
           <ModelOverridesSection
+            assetId={model.model.assetId}
             textures={model.model.textures}
             onChange={textures => edit.run(setModelTextures(model.id, textures))}
           />

@@ -1,6 +1,7 @@
 import { isRecord, readBoolean, readNumber } from '../guards'
 import { clamp } from '../numeric'
 import { readColor } from './color'
+import type { TextureSlot } from './scene'
 import { normalizeAzimuth } from './angles'
 
 /**
@@ -24,6 +25,33 @@ export const PBR_CHANNELS: readonly PbrChannel[] = [
 
 export function isPbrChannel(value: unknown): value is PbrChannel {
   return PBR_CHANNELS.some(candidate => candidate === value)
+}
+
+/**
+ * The slot of a SCENE a channel dresses — `null` for the three a `MeshStandardMaterial` reads
+ * elsewhere, or not at all.
+ *
+ * Total rather than partial, so a ninth channel does not compile until it has answered here.
+ *
+ * **Known blind spot, and it is upstream:** extraction labels four channels only
+ * (`CHANNEL_OF_SLOT`, `main/assets/glbTextures.ts`), one of which is `emissive` — so what a
+ * model's own pictures can actually fill is `map`, `normalMap` and `aoMap`. `roughness` and
+ * `metalness` stay packed in one picture that claims no channel, and answering here does not
+ * unpack it.
+ */
+export function slotForChannel(channel: PbrChannel): TextureSlot | null {
+  return SLOT_BY_CHANNEL[channel]
+}
+
+const SLOT_BY_CHANNEL: Record<PbrChannel, TextureSlot | null> = {
+  baseColor: 'map',
+  normal: 'normalMap',
+  roughness: 'roughnessMap',
+  metalness: 'metalnessMap',
+  ao: 'aoMap',
+  height: null,
+  emissive: null,
+  edge: null,
 }
 
 /**

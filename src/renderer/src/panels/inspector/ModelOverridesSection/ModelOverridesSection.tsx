@@ -2,9 +2,12 @@ import { useTranslation } from 'react-i18next'
 import type { ModelRef } from '@shared/domain/scene'
 import { PropertySection } from '@/design/PropertySection'
 
-import { TextureSlotFields } from './TextureSlotFields'
+import { TextureSlotFields } from '../TextureSlotFields'
+import { ModelOverridesSectionOwnPictures } from './ModelOverridesSectionOwnPictures'
 
 export type ModelOverridesSectionProps = {
+  /** The model's own asset — what the pictures offered at the foot were taken out of. */
+  assetId: string
   textures: ModelRef['textures']
   onChange: (textures: ModelRef['textures']) => void
 }
@@ -19,7 +22,7 @@ export type ModelOverridesSectionProps = {
  * Folded on sight, under the model's own pictures: pointing a slot somewhere else is the rarer
  * half of this panel, and the file's own maps are what one opens it to see.
  */
-export function ModelOverridesSection({ textures, onChange }: ModelOverridesSectionProps) {
+export function ModelOverridesSection({ assetId, textures, onChange }: ModelOverridesSectionProps) {
   const { t } = useTranslation()
 
   return (
@@ -32,12 +35,13 @@ export function ModelOverridesSection({ textures, onChange }: ModelOverridesSect
         slots={textures ?? {}}
         emptyLabel={t('inspector.fileTexture')}
         scId="modelOverrides"
-        onChange={(slot, assetId) => {
+        onChange={(slot, pictureId) => {
           const rest = { ...textures }
           delete rest[slot]
-          onChange(assetId === null ? rest : { ...rest, [slot]: { assetId } })
+          onChange(pictureId === null ? rest : { ...rest, [slot]: { assetId: pictureId } })
         }}
       />
+      <ModelOverridesSectionOwnPictures assetId={assetId} textures={textures} onChange={onChange} />
     </PropertySection>
   )
 }

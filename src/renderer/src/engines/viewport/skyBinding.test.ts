@@ -28,7 +28,7 @@ describe('createSkyBinding', () => {
     const environment = fakeEnvironment()
     await binding().apply(environment, SKY)
 
-    expect(source.load).toHaveBeenCalledWith('ia-studio://asset/sky-1')
+    expect(source.load).toHaveBeenCalledWith('ia-studio://asset/sky-1', 'flipY')
     expect(environment.setTexture).toHaveBeenCalled()
     expect(environment.refresh).toHaveBeenCalled()
   })
@@ -63,7 +63,7 @@ describe('createSkyBinding', () => {
     await sky.refresh()
 
     expect(source.load).toHaveBeenCalledTimes(2)
-    expect(source.load).toHaveBeenLastCalledWith('ia-studio://asset/sky-1?v=after')
+    expect(source.load).toHaveBeenLastCalledWith('ia-studio://asset/sky-1?v=after', 'flipY')
   })
 
   it('refreshes nothing before a sky has been asked for', async () => {

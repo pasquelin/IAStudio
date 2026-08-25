@@ -141,4 +141,21 @@ describe('createModelTextures', () => {
 
     expect(undressable).toHaveBeenCalled()
   })
+
+  /**
+   * glTF stores its UVs for an unflipped picture, and `GLTFLoader` configures no orientation —
+   * asked the studio's own way up, an override lands upside down over the map it replaces.
+   */
+  it('asks for its pictures the way up the model file stores them', async () => {
+    const scripted = scriptedTextureCache()
+    const { source } = loadedModel()
+    const instance = instanceOf(source)
+
+    createModelTextures(scripted.cache, instance, onChange).apply({
+      map: { assetId: 'tex-base' },
+    })
+    await scripted.settle('tex-base')
+
+    expect(scripted.orientations.get('tex-base')).toBe('from-image')
+  })
 })

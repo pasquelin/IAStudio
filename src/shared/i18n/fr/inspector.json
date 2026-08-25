@@ -62,6 +62,8 @@
     "browseTexture": "Parcourir les images",
     "browseTextureHint": "Choisir parmi les images du projet, en vignettes plutôt qu’en liste",
     "modelOverrides": "Remplacer un canal",
+    "useModelPictures": "Reprendre les images du modèle",
+    "useModelPicturesHint": "Pointe chaque canal vers les images extraites de ce modèle, pour qu’en éditer une repeigne le modèle",
     "noModelTexture": "Aucune image extraite de ce modèle.",
     "openTextureHint": "Double-cliquer pour ouvrir cette image dans l’espace qui l’édite",
     "modelMaterial": "Matière du modèle",
