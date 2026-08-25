@@ -22,6 +22,7 @@ import { SHADOW_LEVELS } from '@/engines/scene/shadowLevels'
 import { INPUT_ORIGINS } from '@/generation/generationInputs'
 import { RIG_STATUSES, type RigStatus } from '@/engines/scene/rigState'
 import { RIG_FIT_FAULTS, type RigFitFault } from '@/engines/scene/rigFit'
+import { NAVIGATION_HINT_GROUPS } from '@/spaces/three/SceneNavigationHint'
 import { CHARACTER_KINDS } from '@/panels/inspector/RigSection'
 import { ASSET_INTENTS } from '@/helpers/assetIntents'
 import { FOLDER_SORTS } from '@/helpers/folderSort'
@@ -79,6 +80,9 @@ const COMPOSED_KEYS: readonly string[] = [
   ...LAYER_LOCKS.map(padlock => `${padlock.labelKey}Hint`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}Hint`),
   ...BLEND_MODES.map(mode => `blend.${mode}`),
+  // What each group of flight keys is FOR, composed from the table the hint walks. A group with
+  // no sentence would put a raw key over the viewport at the very moment the mode opens.
+  ...NAVIGATION_HINT_GROUPS.map(group => `sceneNavigation.${group.key}`),
   ...LAYER_KINDS.map(kind => `inspector.layerKind_${kind}`),
   // Where a generation's source was taken from, written under its thumbnail. An origin with no
   // sentence would put a raw key on the one line saying what the studio is about to send.

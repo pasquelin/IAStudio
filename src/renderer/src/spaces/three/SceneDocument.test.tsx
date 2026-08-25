@@ -53,6 +53,7 @@ const built = vi.hoisted((): SceneRendererOptions[] => [])
 /** The engines themselves, for the one fact a case has to state rather than fire: the flight. */
 const engines = vi.hoisted((): { flying: boolean }[] => [])
 const viewFrom = vi.fn()
+const setNavigating = vi.fn()
 // At module scope like the others, so a test can make the encoding itself refuse: the exporters
 // throw on a texture they cannot write, and that is the half no bridge failure stands in for.
 const exportTo = vi.fn(() => Promise.resolve(new Uint8Array([103, 108, 84, 70])))
@@ -71,6 +72,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     apply = vi.fn()
     dispose = vi.fn()
     setMotion = vi.fn()
+    setNavigating = setNavigating
     /** The right button, which no case here holds down — the two that need it set it themselves. */
     flying = false
     configure = configure
@@ -277,6 +279,62 @@ describe('snapping and the coordinate frame', () => {
 
     expect(setSnapping).toHaveBeenCalledWith(false)
     expect(setSpace).toHaveBeenCalledWith('world')
+  })
+
+  it('arms navigation from the toolbar, and gives the pointer back on the next click', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    const button = screen.getByRole('button', { name: /Naviguer/ })
+
+    await userEvent.click(button)
+    expect(setNavigating).toHaveBeenLastCalledWith(true)
+
+    await userEvent.click(button)
+    expect(setNavigating).toHaveBeenLastCalledWith(false)
+  })
+
+  // Full accent says « this is what is being acted on », and only one thing ever is.
+  it('arms navigation INSTEAD of the transform tool', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    expect(screen.getByRole('button', { name: /Sélectionner/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: /Naviguer/ }))
+
+    expect(screen.getByRole('button', { name: /Naviguer/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Sélectionner/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
+  /**
+   * `useShortcuts` only swallows the MOTION keys, so `G` reaches the dispatch mid-flight. Left
+   * alone, the gizmo changed under a captured pointer while the bar went on showing Naviguer.
+   */
+  it('leaves navigation when a transform tool is armed on its key', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Naviguer/ }))
+    expect(setNavigating).toHaveBeenLastCalledWith(true)
+
+    await userEvent.keyboard('{g}')
+
+    expect(setMode).toHaveBeenLastCalledWith('translate')
+    expect(setNavigating).toHaveBeenLastCalledWith(false)
+  })
+
+  // The pointer is captured while it is armed, and a captured pointer over a tab nobody is
+  // looking at would fly a scene out of sight.
+  it('disarms navigation when another tab comes to the front', async () => {
+    const { rerender } = render(<SceneDocument documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Naviguer/ }))
+    expect(setNavigating).toHaveBeenLastCalledWith(true)
+
+    useDocuments.setState({ activeId: 'doc-2' })
+    rerender(<SceneDocument documentId="doc-1" />)
+
+    expect(setNavigating).toHaveBeenLastCalledWith(false)
   })
 
   it('toggles snapping from the toolbar and back off on the next click', async () => {

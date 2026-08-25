@@ -284,6 +284,13 @@ const KEY_GLYPHS: Record<string, string> = {
   Comma: ',',
   Period: '.',
   Slash: '/',
+  // The key under Escape. Its legend differs by layout — `²` on a French one — and the code is
+  // what the binding matches on either way.
+  Backquote: '`',
+  // Held as a bare code by `DEFAULT_MOTION`, never as the `Shift` segment of a signature, so the
+  // modifier glyphs never see it — without this the flight hint reads `ShiftLeft`.
+  ShiftLeft: '⇧',
+  ShiftRight: '⇧',
   BracketLeft: '[',
   BracketRight: ']',
   ArrowUp: '↑',

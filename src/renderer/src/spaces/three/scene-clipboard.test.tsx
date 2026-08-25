@@ -19,6 +19,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     apply = vi.fn()
     dispose = vi.fn()
     setMotion = vi.fn()
+    setNavigating = vi.fn()
     configure = vi.fn()
     setMode = vi.fn()
     setSnapping = vi.fn()

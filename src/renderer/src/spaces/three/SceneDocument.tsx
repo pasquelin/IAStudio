@@ -43,12 +43,13 @@ import { isDisplayMode } from '@shared/domain/scene'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
 import { CameraPreview } from './CameraPreview/CameraPreview'
 import { SceneCounters } from './SceneCounters'
+import { SceneNavigationHint } from './SceneNavigationHint'
 import { openSceneAddMenu } from './sceneAddMenu'
 import { openSceneNodeMenu } from './sceneNodeMenu'
 import { openPathPointMenu } from './pathPointMenu'
 import { removePickedPathPoint, runSceneCommand, toggleNodeVisible } from './sceneCommands'
 import { ScenePaneGrid } from './ScenePaneGrid/ScenePaneGrid'
-import { ADD_TOOLS, SCENE_TOOLS, addedKind } from './sceneTools'
+import { ADD_TOOLS, NAVIGATE_TOOL, SCENE_TOOLS, addedKind } from './sceneTools'
 import { sceneExportFiles } from './sceneExportFiles'
 import { hideIn, isolating, NOTHING_ISOLATED, type Isolation } from '@/engines/scene/isolation'
 import { toggledIsolation } from '@/engines/scene/sceneVisibility'
@@ -190,6 +191,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const [live, setLive] = useState<SceneRenderer | null>(null)
   const [mode, setMode] = useState<TransformMode>('select')
   const [localFrame, setLocalFrame] = useState(false)
+  /** Armed navigation. Not a `TransformMode`: that one aims the gizmo, and this aims the camera. */
+  const [navigating, setNavigating] = useState(false)
+  /** What the wheel left the flight at. Kept across armings, as the engine keeps the speed. */
+  const [flySpeed, setFlySpeed] = useState<number | null>(null)
   /** What the scene costs, as the engine counts it — see `SceneRendererOptions.onStats`. */
   const [stats, setStats] = useState<{ scene: SceneStats; selected: SceneStats }>({
     scene: EMPTY_STATS,
@@ -253,6 +258,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           onRemove: () => removePickedPathPoint(documentId),
         }),
       onStats: (scene, selected) => setStats({ scene, selected }),
+      // Escape and a lost window release the capture without passing through the button, and the
+      // armed state has to follow or the bar would stay lit over a mode that is over.
+      onNavigatingChange: setNavigating,
+      onFlySpeedChange: setFlySpeed,
       // Published so a montage can look through this very view: a scene with no camera of its
       // own has no other framing anybody chose. Once per orbit, never per frame of one.
       onView: placement => useSceneViews.getState().setCamera(documentId, placement),
@@ -383,6 +392,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
   // Single dispatch: the toolbar and the keyboard both resolve to a `CommandId` first, so a new
   // tool is declared once in `SCENE_TOOLS` and handled once here.
+  const armTool = useCallback((tool: TransformMode) => {
+    setNavigating(false)
+    setMode(tool)
+  }, [])
+
   const run = useCallback(
     (command: CommandId) => {
       // What acts on the selection is shared with the node menu, which arrives by the same ids —
@@ -392,14 +406,17 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       const store = useScenes.getState()
 
       switch (command) {
+        // Each of these LEAVES navigation. `useShortcuts` only swallows the motion keys, so `V`,
+        // `G` and `R` reach here mid-flight: left alone, the gizmo changed under a captured
+        // pointer while the bar went on showing Naviguer.
         case 'scene.select':
-          return setMode('select')
+          return armTool('select')
         case 'scene.translate':
-          return setMode('translate')
+          return armTool('translate')
         case 'scene.rotate':
-          return setMode('rotate')
+          return armTool('rotate')
         case 'scene.scale':
-          return setMode('scale')
+          return armTool('scale')
         case 'scene.snap':
           return useSceneViews.getState().setSceneSnapping(documentId, !view.snapping)
         // The rules themselves are in `sceneVisibility`, which the panel's buttons reach too:
@@ -412,6 +429,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return changeIsolation(documentId, () => NOTHING_ISOLATED)
         case 'scene.space':
           return setLocalFrame(current => !current)
+        case 'scene.navigate':
+          return setNavigating(current => !current)
         case 'scene.display':
           return cycleDisplay()
         // The keyboard and the palette take the view's own size; the menu rows carry the rest.
@@ -443,7 +462,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return store.redo(documentId)
       }
     },
-    [documentId, view, cycleDisplay],
+    [documentId, view, cycleDisplay, armTool],
   )
 
   /** Two flyouts answer here: the ways of drawing, and the three families a scene grows by. */
@@ -458,6 +477,14 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     },
     [documentId, paneInHand],
   )
+
+  // Derived rather than stored: a background tab keeps its engine, and a captured pointer there
+  // would fly a scene nobody is looking at. The engine owns the capture; this only says whether
+  // the mode is meant to be on.
+  const armed = navigating && active
+  useEffect(() => {
+    engine.current?.setNavigating(armed)
+  }, [armed, live])
 
   useShortcuts({
     scope: 'scene',
@@ -563,6 +590,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       <div ref={host} className="absolute inset-0" />
       <SceneClock documentId={documentId} duration={scene.animation.duration} renderer={live} />
       <SceneCounters scene={stats.scene} selected={stats.selected} />
+      {armed && <SceneNavigationHint speed={flySpeed} />}
       <CameraPreview documentId={documentId} />
       {view.quad && (
         <ScenePaneGrid
@@ -574,7 +602,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       <Toolbar
         className={PANE_TOOLBAR}
         tools={tools}
-        activeTool={mode}
+        activeTool={armed ? NAVIGATE_TOOL : mode}
         onTool={id => {
           const command = SCENE_TOOLS.find(candidate => candidate.id === id)?.command
           if (command) run(command)

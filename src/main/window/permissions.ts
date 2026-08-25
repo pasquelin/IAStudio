@@ -6,20 +6,16 @@ import { isDevelopment } from '@main/environment'
  */
 export type PermissionRequest = { permission: string; origin: string }
 
+/** `media` is the microphone and the camera together; `pointerLock` is the 3D navigation mode. */
+const ASKED_FOR: readonly string[] = ['media', 'pointerLock']
+
 /**
- * Whether a permission request is granted.
- *
- * Until dictation there was no handler at all, and Electron's default is to grant everything —
- * so this narrows what the application allows rather than widening it. `media` covers the
- * microphone and the camera together and is the only one the studio has any use for; anything
- * else is a page doing something this application never does.
- *
- * The origin check is the point. `lockNavigation` already keeps a window on its own document,
- * and this is the second lock on the same door: a page that somehow got loaded elsewhere does
- * not get to open the microphone with our signature on the request.
+ * Electron grants everything when no handler is installed, so this narrows rather than widens.
+ * The origin check is the second lock behind `lockNavigation`: a page loaded elsewhere does not
+ * get to open the microphone with our signature on the request.
  */
 export function grantsPermission(request: PermissionRequest, appOrigin: string): boolean {
-  if (request.permission !== 'media') return false
+  if (!ASKED_FOR.includes(request.permission)) return false
   return request.origin === appOrigin
 }
 

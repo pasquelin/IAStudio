@@ -4,9 +4,12 @@ import {
   LinearSRGBColorSpace,
   MeshBasicMaterial,
   NoToneMapping,
+  type Object3D,
   OrthographicCamera,
   PerspectiveCamera,
+  Raycaster,
   Scene,
+  Vector2,
   Vector3,
   WebGLRenderer,
   WebGLRenderTarget,
@@ -15,6 +18,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { createGpuPipeline, type GpuPipeline } from '../gpu/gpuPipeline'
 import { token } from '../core/palette'
 import { aspectLoan } from './aspectLoan'
+import { dollyTo, notchesOf, PIVOT_AHEAD } from './dolly'
 import { frameDelta } from './frameClock'
 import { emptyGpuStats, recordFrame, type GpuStats } from './gpuStats'
 import {
@@ -100,6 +104,16 @@ export type ViewportEngineOptions = {
    * the two `mount` calls came first, and nothing would guard it.
    */
   onPaneArmed?: (event: PointerEvent) => void
+  /**
+   * What the wheel's ray may land the pivot on. Without it the ray would take the grid, a light's
+   * helper or the gizmo for scenery, and none of those is a place to aim at.
+   */
+  pickTargets?: () => Object3D[]
+  /**
+   * A first refusal on the wheel, for a caller the notches mean something else to — flying, where
+   * they set the speed. `true` consumes the event and no dolly happens.
+   */
+  onWheel?: (event: WheelEvent) => boolean
   fieldOfView?: number
   near?: number
   far?: number
@@ -185,9 +199,15 @@ type ExtraPane = {
  */
 const EXTRA_PANE_HEIGHT = 6
 
-/** How far ahead of a borrowed camera its orbit turns. Reused, so lending allocates nothing. */
-const BORROWED_PIVOT = 5
+/** Reused, so lending allocates nothing. How FAR ahead is `PIVOT_AHEAD`, the one such distance. */
 const borrowedAim = new Vector3()
+
+/** Metres. What a wheel over nothing at all scales its step by — see `aimWheel`. */
+const DEFAULT_REACH = 10
+
+/** How long a wheel must be still before the framing it left is published. */
+const WHEEL_SETTLES_MS = 250
+const gaze = new Vector3()
 
 /** The camera an added view is currently drawing through — a borrowed one wins over both. */
 function cameraOf(pane: ExtraPane): ViewportCamera {
@@ -203,6 +223,17 @@ export class ViewportEngine {
   private projection: ProjectionKind = 'perspective'
 
   private renderer: WebGLRenderer | null = null
+  /** Only the wheel casts from here; picking is the caller's, which knows what a hit means. */
+  private readonly raycaster = new Raycaster()
+  /** `setFromCamera` takes a `Vector2` and nothing else. */
+  private readonly wheelNdc = new Vector2()
+  /**
+   * Where the wheel last aimed, held until the pointer moves. Re-picking per notch runs a
+   * full-scene raycast at trackpad rates — 8 to 32 ms a notch on a scene with no BVH tree.
+   */
+  private wheelAim: { readonly aim: Vector3; readonly aimed: Vector3 } | null = null
+  /** Pending « the wheel has stopped ». One gesture reports once — see `reportWheelSettled`. */
+  private wheelSettling: ReturnType<typeof setTimeout> | null = null
   private output: ViewportOutput = {}
   private controls: OrbitControls | null = null
   private observer: ResizeObserver | null = null
@@ -571,7 +602,7 @@ export class ViewportEngine {
       // merely hovers the pane, with no gesture to report it.
       if (camera) {
         camera.getWorldDirection(borrowedAim)
-        pane.controls.target.copy(camera.position).addScaledVector(borrowedAim, BORROWED_PIVOT)
+        pane.controls.target.copy(camera.position).addScaledVector(borrowedAim, PIVOT_AHEAD)
       }
       pane.controls.update()
     }
@@ -613,6 +644,9 @@ export class ViewportEngine {
    * scene editor that had to arm it would be the second place deciding which view is being used.
    */
   private readonly armPaneUnderPointer = (event: PointerEvent): void => {
+    // A pointer that moved aims somewhere else, whatever else this call decides.
+    this.wheelAim = null
+
     // Kept before the early return, never after: the move that lifts a freeze is one this
     // returns on, and `freezePanes` has nothing to re-arm from unless that move was recorded.
     this.lastPointer.clientX = event.clientX
@@ -717,6 +751,9 @@ export class ViewportEngine {
     this.host = host
     host.addEventListener('pointerdown', this.armPaneUnderPointer, true)
     host.addEventListener('pointermove', this.armPaneUnderPointer, true)
+    // Not passive: the dolly cancels the event, and a passive listener may not. On the host for
+    // the reason above — `OrbitControls` posts its own wheel listener on the canvas.
+    host.addEventListener('wheel', this.onWheelCapture, { capture: true, passive: false })
 
     // Drawn in the turn it is measured, never asked for: `setSize` blanks the drawing buffer, and
     // an observation lands after the frame callbacks of the paint that follows — see
@@ -744,7 +781,11 @@ export class ViewportEngine {
 
     this.host?.removeEventListener('pointerdown', this.armPaneUnderPointer, true)
     this.host?.removeEventListener('pointermove', this.armPaneUnderPointer, true)
+    this.host?.removeEventListener('wheel', this.onWheelCapture, true)
     this.host = null
+
+    if (this.wheelSettling !== null) clearTimeout(this.wheelSettling)
+    this.wheelSettling = null
 
     if (this.insetCatchUp !== null) clearTimeout(this.insetCatchUp)
     this.insetCatchUp = null
@@ -837,6 +878,94 @@ export class ViewportEngine {
       width: pane.width,
       height: pane.height,
     })
+  }
+
+  /** Pane 0 is the main orbit; the rest read one past their own index, as the cameras do. */
+  private orbitOfPane(index: number): OrbitControls | null {
+    return index === 0 ? this.controls : (this.extras[index - 1]?.controls ?? null)
+  }
+
+  /** The wheel, taken from `OrbitControls` for perspective panes — why, in `dolly.ts`. */
+  private readonly onWheelCapture = (event: WheelEvent): void => {
+    if (this.options.onWheel?.(event) === true) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+
+    const index = this.paneAtPointer(event)
+    if (index === null) return
+
+    const camera = this.cameraOfPane(index)
+    const orbit = this.orbitOfPane(index)
+    // An orthographic pane keeps the wheel `OrbitControls` gives it: it shows the same thing
+    // wherever it stands, so it zooms by scaling its frustum. Its `zoomToCursor` is NOT the way to
+    // anchor it — that one reads the whole canvas, so it drifts in every pane of a quad layout.
+    if (!(camera instanceof PerspectiveCamera) || !orbit?.enabled) return
+
+    const held = this.wheelAim ?? this.aimWheel(event, camera, orbit)
+    if (!held) return
+    this.wheelAim = held
+
+    const move = dollyTo({
+      position: camera.position,
+      forward: camera.getWorldDirection(gaze),
+      aim: held.aim,
+      aimed: held.aimed,
+      notches: notchesOf(event.deltaY),
+    })
+
+    camera.position.copy(move.position)
+    orbit.target.copy(move.pivot)
+    orbit.update()
+    this.requestRender()
+    this.reportWheelSettled(index)
+    // Held past a crossing, the aimed point sits BEHIND the camera and the distance to it grows
+    // again — every further notch of one flick would be larger than the last.
+    if (move.crossed) this.wheelAim = null
+
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  /**
+   * The end of a zoom, once the notches stop. `OrbitControls` dispatched `end` around every notch
+   * of the wheel it used to own; taking the wheel took that with it, and whoever listens publishes
+   * where the view now stands — a montage reads that framing back.
+   */
+  private reportWheelSettled(pane: number): void {
+    const settled = this.options.onCameraSettled
+    if (!settled) return
+
+    if (this.wheelSettling !== null) clearTimeout(this.wheelSettling)
+    this.wheelSettling = setTimeout(() => {
+      this.wheelSettling = null
+      settled(pane)
+    }, WHEEL_SETTLES_MS)
+  }
+
+  /**
+   * What the pointer names, in world space. Both halves stay true while the camera only travels:
+   * a ray through an unmoved screen point keeps its world direction, and meets the same surface.
+   */
+  private aimWheel(
+    event: WheelEvent,
+    camera: PerspectiveCamera,
+    orbit: OrbitControls,
+  ): { readonly aim: Vector3; readonly aimed: Vector3 } | null {
+    const ndc = this.pointerNdcOf(event)
+    if (!ndc) return null
+
+    this.raycaster.setFromCamera(this.wheelNdc.set(ndc.x, ndc.y), camera)
+    const hit = this.raycaster.intersectObjects(this.options.pickTargets?.() ?? [], true)[0]
+    // Nothing under the pointer still deserves a distance: without one, a wheel over empty sky
+    // would have nothing to scale its step by. The pivot's own distance is what the view implies.
+    const reach = camera.position.distanceTo(orbit.target) || DEFAULT_REACH
+
+    return {
+      aim: this.raycaster.ray.direction.clone(),
+      aimed: hit ? hit.point : this.raycaster.ray.at(reach, new Vector3()),
+    }
   }
 
   /**

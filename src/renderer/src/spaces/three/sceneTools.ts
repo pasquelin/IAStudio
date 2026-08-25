@@ -30,6 +30,7 @@ import {
   mdiSquareOpacity,
   mdiThermometer,
   mdiTrashCanOutline,
+  mdiVideo3d,
   mdiVectorSquare,
 } from '@mdi/js'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar/tools'
@@ -64,6 +65,9 @@ const DISPLAY_ICONS: Record<DisplayMode, string> = {
   ghost: mdiSquareOpacity,
   skeleton: mdiBone,
 }
+
+/** Named, because the space reads it back to draw the bar: a rename must not silently unlight it. */
+export const NAVIGATE_TOOL = 'navigate'
 
 /** Every tool of this bar carries one now: the two groups that acted through rows have left. */
 export type SceneTool = ToolbarItem & { command: CommandId }
@@ -123,6 +127,15 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     icon: mdiCursorDefaultOutline,
     // What a scene GAINS stands above, and this is the rule under it — see `ADD_TOOLS`.
     separatorBefore: true,
+  },
+  // Under `select` rather than over it: the bar opens on the tool that grabs nothing, and moving
+  // the camera is what one reaches for next — before any handle.
+  {
+    id: NAVIGATE_TOOL,
+    command: 'scene.navigate',
+    labelKey: 'sceneTools.navigate',
+    descriptionKey: 'sceneTools.navigateHint',
+    icon: mdiVideo3d,
   },
   {
     id: 'translate',

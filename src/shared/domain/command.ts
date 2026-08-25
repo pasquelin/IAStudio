@@ -49,6 +49,7 @@ export type CommandId =
   | 'explorer.trash'
   | 'explorer.undo'
   | 'explorer.redo'
+  | 'scene.navigate'
   | 'scene.select'
   | 'scene.translate'
   | 'scene.rotate'
@@ -384,6 +385,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: 'Shift+Meta+KeyZ',
   }),
 
+  // `Backquote` as in Blender's walk mode. It is the one key near the letters that no tool and
+  // no direction claims, which matters here: this mode hands the letters to the camera.
+  command({
+    id: 'scene.navigate',
+    scope: 'scene',
+    titleKey: 'commands.sceneNavigate.title',
+    helpKey: 'commands.sceneNavigate.help',
+    defaultBinding: 'Backquote',
+  }),
   // `KeyV` as in every editor that has a pointer tool. Not `KeyQ` or `KeyW`, which fly the
   // camera: `useShortcuts` reads both tables on the same keydown, so one key would do both.
   command({

@@ -448,6 +448,10 @@
     "scenePoseMode": {
       "title": "Pose mode",
       "help": "Switches between picking objects and picking the bones of a rig."
+    },
+    "sceneNavigate": {
+      "title": "Navigate",
+      "help": "Move through the scene as in a game: the mouse holds the view, W A S D travel, E and Q rise and fall. The wheel sets the speed. Escape gives the mouse back."
     }
   }
 }

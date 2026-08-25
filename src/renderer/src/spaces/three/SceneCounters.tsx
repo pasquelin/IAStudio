@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/helpers/cn'
+import { VIEWPORT_READOUT } from '@/design/styles'
 import { formatDecimal } from '@/helpers/format'
 import type { SceneStats } from '@/engines/scene/sceneStats'
 
@@ -53,11 +55,7 @@ export function SceneCounters({ scene, selected }: SceneCountersProps) {
   const showsSelection = selected.draws > 0
 
   return (
-    <div
-      // Pointer events off: it sits over the canvas, and a click meant for the model must not
-      // land on a read-out.
-      className="text-muted bg-panel/80 text-mini pointer-events-none absolute bottom-2 left-2 rounded-(--radius-sc-md) px-2 py-1 tabular-nums"
-    >
+    <div className={cn(VIEWPORT_READOUT, 'bottom-2 left-2 tabular-nums')}>
       <table>
         <caption className="sr-only">{t('sceneCounters.title')}</caption>
         <tbody>
