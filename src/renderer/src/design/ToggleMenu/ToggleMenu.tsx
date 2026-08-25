@@ -78,10 +78,7 @@ export function ToggleMenu({
   const flyout = useHoverFlyout(rowCount)
 
   return (
-    // `wrapProps`, exactly as `MenuButton` spreads them: the tool column opens its own menus on
-    // hover, and a second bar over the same viewport opening only on click was two manners for
-    // one gesture. The click stays, as a TOGGLE — a menu one opened by hand closes the same way.
-    <div {...flyout.wrapProps} className="flex items-center gap-0.5">
+    <div className="flex items-center gap-0.5">
       {onToggle && (
         <ToolButton
           icon={icon}
@@ -96,11 +93,16 @@ export function ToggleMenu({
           // then said the same thing about the control under the pointer and the one armed.
           // `ToolbarTool` reaches for the same pair, for the same reason.
           accented={pressed}
+          // No `close` here: the icon sits outside the panel AND outside the opener, so the
+          // press that reaches it is already the one `useDismiss` puts the rows away on.
           onClick={onToggle}
         />
       )}
 
+      {/* `wrapProps` on the VALUE alone, not on the pair: `MenuButton` spreads them over its one
+          button, whose menu IS its job. Over both, approaching the icon opened the value's rows. */}
       <ToolButton
+        {...flyout.wrapProps}
         {...flyout.triggerProps}
         icon={onToggle ? undefined : icon}
         label={t('a11y.namedValue', { value, name: valueName })}

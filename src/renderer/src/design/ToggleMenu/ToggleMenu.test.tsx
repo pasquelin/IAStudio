@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mdiMagnet } from '@mdi/js'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { ValueGrid } from '../ValueGrid/ValueGrid'
@@ -64,6 +64,19 @@ describe('ToggleMenu', () => {
     expect(onToggle).not.toHaveBeenCalled()
   })
 
+  /**
+   * The hover that opens belongs to the VALUE, not to the pair. `MenuButton` spreads it over its
+   * one button, whose menu IS its job; spread over both, merely approaching the icon laid the
+   * value's rows over the bar — and a click meant for the toggle went through them.
+   */
+  it('leaves the rows alone when the pointer is only on the icon half', async () => {
+    const { user } = setUp()
+
+    await user.hover(screen.getByRole('button', { name: /Grid snap/ }))
+
+    expect(screen.queryByRole('radiogroup')).toBeNull()
+  })
+
   // The tool column opens its own menus on hover; a second bar over the same viewport opening
   // only on click was two manners for one gesture.
   it('opens under the pointer, as every other menu of the studio does', async () => {
@@ -85,6 +98,26 @@ describe('ToggleMenu', () => {
 
     await user.click(value)
     expect(screen.queryByRole('radiogroup')).toBeNull()
+  })
+
+  /**
+   * The one this lot exists for: clicked open, the rows stayed on screen with nothing under the
+   * cursor — long enough to be photographed. A click is a POINTER gesture, so the pointer walking
+   * away is what puts it away; only `Alt+ArrowDown` survives that.
+   */
+  it('lets the pointer close what a click opened', async () => {
+    const { user } = setUp()
+    const value = screen.getByRole('button', { name: /Grid step/ })
+
+    // Hover then click: the pointer opens it on the way in, so this second press is the ASK.
+    await user.hover(value)
+    await user.click(value)
+    await user.click(value)
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument()
+
+    await user.unhover(value)
+
+    await waitFor(() => expect(screen.queryByRole('radiogroup')).toBeNull())
   })
 
   /**
