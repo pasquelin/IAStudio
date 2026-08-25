@@ -70,6 +70,9 @@ export function AssetBrowser() {
   const project = useProject(state => state.project)
   const workspace = useLayouts(state => state.activeWorkspace)
   const ownerId = useSettings(activeOwnerId)
+  // The key is known to WORK, not merely to be stored: `authState` resolves the credentials the
+  // channel below needs, so this is the earliest moment a listing can come back with anything.
+  const authenticated = useSettings(state => state.auth.authenticated)
   const typeLabels = useTypeLabels()
   const badgeLabels = useBadgeLabels()
   const facets = useAssetFacets(typeLabels)
@@ -129,16 +132,29 @@ export function AssetBrowser() {
    */
   const cloudScope = useMemo(() => scope.filter(isCloudAssetType), [scope])
 
-  // Keyed on the account, on what is asked for and on the word: another key is another library.
-  const library = usePages(['assets', 'library', ownerId, cloudScope, search], from =>
-    getBridge()
-      ?.cloud.browse({
-        pageSize: LIBRARY_PAGE,
-        types: cloudScope,
-        ...(search ? { text: search } : {}),
-        ...from,
-      })
-      .then(cloudPage),
+  /**
+   * Keyed on the account, on what is asked for and on the word: another key is another library.
+   *
+   * 🛑 Not read before the key is known to work, and that is a fix rather than a saving. The
+   * channel answers an EMPTY PAGE when no credentials resolve — `emptyIfUnauthenticated`, so a
+   * first run without a key does not dump a stack per poll — which react-query then holds as a
+   * successful, finished listing. Asked during the moment the keychain has not answered yet, the
+   * shelf therefore cached « this account owns nothing » and had no reason to ever ask again:
+   * measured on 25 August, four launches in a row with no `GET /assets` in the journal at all,
+   * the library only arriving once the panel was closed and reopened past the 30 s staleness.
+   */
+  const library = usePages(
+    ['assets', 'library', ownerId, cloudScope, search],
+    from =>
+      getBridge()
+        ?.cloud.browse({
+          pageSize: LIBRARY_PAGE,
+          types: cloudScope,
+          ...(search ? { text: search } : {}),
+          ...from,
+        })
+        .then(cloudPage),
+    { enabled: authenticated },
   )
   const remote = library.items
 
@@ -165,7 +181,8 @@ export function AssetBrowser() {
             })
             .then(cloudPage),
     // Never read while nobody asks for it: the feed is unbounded, and reading it costs a search.
-    { enabled: publishedType !== null },
+    // And never without a key, for the reason the library above states.
+    { enabled: publishedType !== null && authenticated },
   )
   const published = feed.items
 

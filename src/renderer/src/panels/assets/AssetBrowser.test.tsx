@@ -53,6 +53,10 @@ describe('AssetBrowser', () => {
     // Said out loud, because the shelf narrows to the space's own kind: these fixtures are
     // pictures, and a block left in whichever space ran last would filter them all away.
     useLayouts.setState({ activeWorkspace: 'image' })
+    // A working key is the ordinary state of this panel — and now a CONDITION of it: the library
+    // half is not read at all until one is established, which is what stopped the shelf from
+    // caching an empty listing obtained during the moment the keychain had not answered yet.
+    useSettings.setState({ auth: { authenticated: true, ownerId: 'proj_a' } })
     useSelection.getState().clear()
     vi.clearAllMocks()
   })
@@ -337,6 +341,10 @@ describe('the shelf hands its rows to the collection', () => {
     // Said out loud, because the shelf narrows to the space's own kind: these fixtures are
     // pictures, and a block left in whichever space ran last would filter them all away.
     useLayouts.setState({ activeWorkspace: 'image' })
+    // A working key is the ordinary state of this panel — and now a CONDITION of it: the library
+    // half is not read at all until one is established, which is what stopped the shelf from
+    // caching an empty listing obtained during the moment the keychain had not answered yet.
+    useSettings.setState({ auth: { authenticated: true, ownerId: 'proj_a' } })
     useSelection.getState().clear()
     vi.clearAllMocks()
   })
@@ -442,6 +450,31 @@ describe('the three provenances, as the panel draws them', () => {
 
     expect(await screen.findByText('A library picture')).toBeInTheDocument()
     expect(screen.getByText('Asset asset_1')).toBeInTheDocument()
+  })
+
+  /**
+   * 🛑 The shelf opened on the project alone and stayed that way until it was closed and
+   * reopened. The channel answers an EMPTY PAGE rather than refusing when no credentials
+   * resolve, so a listing asked before the key was established came back as a finished,
+   * successful « this account owns nothing » — and react-query had no reason to ask again.
+   */
+  it('does not read the library before a key is established', async () => {
+    const browse = vi.fn(() => Promise.resolve({ assets: [cloudAsset], cursor: null }))
+    installFakeBridge({ cloud: { browse } })
+    useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
+    useAssets.setState({ items: [asset('asset_1')] })
+
+    const { rerender } = render(shelf())
+
+    // The one thing that must not happen is the shelf sitting on « still loading » for ever:
+    // a listing nobody may read is finished, not pending.
+    expect(await screen.findByText('Asset asset_1')).toBeInTheDocument()
+    expect(browse).not.toHaveBeenCalled()
+
+    useSettings.setState({ auth: { authenticated: true, ownerId: 'proj_1' } })
+    rerender(shelf())
+
+    expect(await screen.findByText('A library picture')).toBeInTheDocument()
   })
 
   /**

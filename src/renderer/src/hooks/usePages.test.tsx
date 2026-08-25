@@ -147,6 +147,14 @@ describe('a listing read page by page', () => {
     expect(idsOf()).toBe('')
   })
 
+  // A surface waiting on this one waited for the whole session: react-query calls a disabled
+  // query pending, and the asset shelf read that as « the library is still answering ».
+  it('is not waiting on a page it is not allowed to ask for', () => {
+    render(withQueries(<Listing read={() => new Promise(() => {})} enabled={false} />))
+
+    expect(screen.getByTestId('state')).toHaveTextContent('exhausted')
+  })
+
   // No bridge is an answer: there is nothing to ask, and nothing more to wait for.
   it('settles when the caller has nothing to ask', async () => {
     render(withQueries(<Listing read={() => undefined} />))
