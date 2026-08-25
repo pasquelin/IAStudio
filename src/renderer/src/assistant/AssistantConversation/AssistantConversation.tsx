@@ -81,10 +81,16 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
 
   useEffect(() => useAssistant.getState().stage(), [])
 
+  /**
+   * 🛑 `round` and `asked` as well as `turns`: the working line is the LAST child of the thread
+   * now, and it appears without a turn changing — a round starting, a confirmation granted. Kept
+   * on `turns` alone it was appended below the fold, and the one thing saying "it is still
+   * working" was the one thing out of sight.
+   */
   useEffect(() => {
     const list = thread.current
     if (list && following.current) list.scrollTop = list.scrollHeight
-  }, [turns])
+  }, [turns, busy, round, asked])
 
   // 🛑 Never the whole conversation. `registerConfirmer` answers for MCP actions too, which need
   // no assistant model — swallowing the thread here left a question on screen that could not be
@@ -126,21 +132,20 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
           {turns.map(turn => (
             <AssistantConversationTurn key={turn.id} turn={turn} />
           ))}
-        </ol>
-      )}
 
-      {/* The one thing missing while it worked: that it IS working, and on which round. A chain
-          runs for as long as it takes, and a screen saying nothing for four rounds is one the
-          person sits in front of wondering whether to type again. */}
-      {busy && !asked && (
-        <p className="text-muted text-mini m-0 flex shrink-0 items-center gap-1.5 px-2">
-          <Spinner label={t('assistant.thinking')} size={14} />
-          {stopping
-            ? t('assistant.stopping')
-            : round > 1
-              ? t('assistant.workingRound', { round })
-              : t('assistant.thinking')}
-        </p>
+          {/* IN the thread, last of it — where the answer itself will appear, and never down by
+              the field: what one watches while waiting is the place the words will land. */}
+          {busy && !asked && (
+            <li className="text-muted text-mini m-0 flex items-center gap-1.5">
+              <Spinner label={t('assistant.thinking')} size={14} />
+              {stopping
+                ? t('assistant.stopping')
+                : round > 1
+                  ? t('assistant.workingRound', { round })
+                  : t('assistant.thinking')}
+            </li>
+          )}
+        </ol>
       )}
 
       {asked && <AssistantConversationQuestion request={asked.request} />}

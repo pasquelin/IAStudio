@@ -140,6 +140,23 @@ describe('searching the project folder', () => {
     (await createFolderReader(() => root, inFrench).search(term, hidden)).map(entry => entry.path)
 
   /**
+   * 🛑 The search a person actually types, and the one a substring could never answer: this
+   * studio names a picture after the prompt that made it, so the words are in the name but
+   * scattered through it. `green sailboat` found nothing in a folder holding
+   * `a beautiful sailing ship, sailboat, on the open sea, green….png`.
+   */
+  it('finds a name by its words, wherever they sit in it and in any order', async () => {
+    const root = await project()
+    const named = 'a beautiful sailing ship, sailboat, on the open sea, green.png'
+    await writeFile(join(root, named), '')
+
+    expect(await namesFound(root, 'green sailboat')).toEqual([named])
+    expect(await namesFound(root, 'sailboat green')).toEqual([named])
+    // Every word has to be there: one that is not is a different file.
+    expect(await namesFound(root, 'green submarine')).toEqual([])
+  })
+
+  /**
    * The whole reason this channel exists: the tree reads one folder at a time, so a file three
    * folds down is a file it has never seen — and a search that filtered what is loaded would
    * answer nothing for it.

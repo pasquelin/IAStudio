@@ -37,9 +37,9 @@ export async function openProjectFile(path: string): Promise<FileOpening> {
   try {
     adopted = await bridge.media.adopt(path)
   } catch (error) {
-    // 🛑 `adoptFile` stats the file itself and lets ENOENT through, so a path the project does
-    // not hold REJECTS rather than answering `null` — and only the disk tells that apart from a
-    // catalogue that broke. `explorer.open` names the gesture, not its caller.
+    // A path that is not there answers `null` below, never a throw — so what reaches here is a
+    // catalogue or a volume that failed, and the disk is asked only to tell the two apart.
+    // `explorer.open` names the gesture, not its caller.
     if ((await bridge.project.fileFacts(path)) === null) return 'missing'
 
     reportFailure('explorer.open', path, error)

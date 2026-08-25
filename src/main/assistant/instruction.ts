@@ -121,6 +121,18 @@ const RULES = [
    * saturated 8 000 — measure the worst case again before lengthening any of them.
    */
   '  - A file the person names is in the project: find it by name there, then file.open it.',
+  /**
+   * 🛑 The one that unblocks a studio spoken to in one language and filled in another: a picture
+   * is named after the PROMPT that made it, so "le voilier vert" is on disk as "a beautiful
+   * sailing ship, sailboat, on the open sea, green". No wording of a search reaches that — and
+   * the model answered "no such file" over a folder of nine, which it could simply have read.
+   *
+   * **Its blind spot, and the sibling rule's**: neither `files.list` nor `files.search` is in the
+   * short share — measured on 2026-08-25, either one there leaves the expansion no room to answer
+   * `actions.find`. A narrow door following this literally spends one round being refused before
+   * FIND_RULE puts it right. The wide door, which is every cloud, reads both in its catalogue.
+   */
+  '  - Nothing found by name? List the folder and read it: names follow the prompt, not the speaker.',
   '  - Several files match? Choose none: name them in "say" and ask which.',
   '  - The remote library is not this project. Look there only when asked to.',
 ]

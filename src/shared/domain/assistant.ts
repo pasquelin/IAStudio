@@ -1,6 +1,6 @@
 import { englishText } from '../i18n'
 import type { Target } from './target'
-import { foldForSearch } from '../text'
+import { searchWords } from '../text'
 import {
   type ActionCommitment,
   type ActionName,
@@ -81,14 +81,6 @@ export function actionsReaching(reach: ActionReach): readonly AssistantAction[] 
 }
 
 /**
- * The words of a name or a sentence — through `foldForSearch`, the fold every other search of
- * the studio uses. Without it « génération » shattered into `g`, `n`, `ration`, and a one-letter
- * token scored against dozens of actions: an accented query put the wrong family at the top of
- * the list the briefing copies.
- */
-const wordsOf = (text: string): readonly string[] => foldForSearch(text).match(/[a-z0-9]+/g) ?? []
-
-/**
  * Every action's own words, folded once for the process: 225 bundle walks and as many regexes,
  * none of which depends on the query — and `actions.find` runs this on the UI thread.
  */
@@ -98,7 +90,10 @@ let searchableHeld: readonly Searchable[] | null = null
 
 const searchable = (): readonly Searchable[] =>
   (searchableHeld ??= ACTION_REGISTRY.filter(entry => entry.name !== DISCOVERY_ACTION).map(
-    action => ({ action, words: wordsOf(`${action.name} ${englishText(action.descriptionKey)}`) }),
+    action => ({
+      action,
+      words: searchWords(`${action.name} ${englishText(action.descriptionKey)}`),
+    }),
   ))
 
 /**
@@ -110,7 +105,7 @@ const searchable = (): readonly Searchable[] =>
  * not describe. Prefix matching rather than equality, so "layer" finds "layers".
  */
 export function findActions(query: string): readonly AssistantAction[] {
-  const wanted = wordsOf(query)
+  const wanted = searchWords(query)
   if (wanted.length === 0) return []
 
   return (
