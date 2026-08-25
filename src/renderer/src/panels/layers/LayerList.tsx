@@ -4,7 +4,6 @@ import { Tree } from '@/design/Tree'
 import { allLayers, canRemoveLayer, isGroup } from '@/engines/canvas/canvasState'
 import { moveLayer, setLayerVisible } from '@/engines/canvas/commands'
 import { canvasOf, collapseLayerIn, selectLayerIn, useCanvases } from '@/stores/canvases'
-import { useSelection } from '@/stores/selection'
 import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
 import { LayerRow } from './LayerRow'
 import { openLayerMenu } from './layerMenu'
@@ -85,10 +84,9 @@ export function LayerList({ documentId }: { documentId: string }) {
       onSelect={ids => {
         const id = ids.at(-1)
         if (!id) return
+        // Arming is the whole of it: the inspector follows `activeLayerId` — see `InspectorFace`
+        // — so posting a second copy to the global selection only wiped whatever else held it.
         selectLayerIn(documentId, id)
-        // The stack arms a layer to paint on; the inspector reads what was touched last. Both,
-        // or picking a row would describe whatever was selected before it.
-        useSelection.getState().selectLayer(documentId, id)
       }}
       // Only a group holds layers. Dropping onto one puts the layer at the top of it, which is
       // the first row the list draws inside it — where the eye was aiming.

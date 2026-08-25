@@ -1,4 +1,4 @@
-import { clipById, trackById } from '@/engines/timeline/timelineState'
+import { designatedIn } from '@/engines/timeline/timelineState'
 import { layerById } from '@/engines/canvas/canvasState'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import {
@@ -10,7 +10,6 @@ import {
   useDocuments,
 } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
-import { useSelection } from '@/stores/selection'
 import { ClipInspector } from '../ClipInspector'
 import { LayerInspector } from '../LayerInspector/LayerInspector'
 import { SceneInspector } from '../SceneInspector'
@@ -20,15 +19,14 @@ import { TrackInspector } from '../TrackInspector'
 import { InspectorEmpty } from './InspectorEmpty'
 
 /**
- * 🛑 The DOCUMENT in front decides. The selection only says WHICH thing inside it — a clip, a
- * track — never whether the document gets to speak; an asset opens under its own row of the shelf
- * (`AssetDetails`), and a file is read in the information window.
+ * 🛑 The DOCUMENT in front decides, and everything it shows is read from that document — nothing
+ * here asks the studio's global descriptor anything. An asset opens under its own row of the
+ * shelf (`AssetDetails`), and a file is read in the information window.
  *
  * The order below is a reading order and not a priority: `activeIdOfKind` answers off one
  * `activeId`, so at most one of these ids is ever set.
  */
 export function InspectorFace() {
-  const selection = useSelection(state => state.selection)
   const sceneId = useDocuments(activeSceneId)
   // The MONTAGE in front, not the sequence: the Audio workspace shows one too, and reading only
   // the sequence left every clip and track picked there with an empty inspector.
@@ -39,29 +37,26 @@ export function InspectorFace() {
   const imageId = useDocuments(activeImageId)
   const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
 
-  // `activeLayerId` and not the selection: a layer born on the canvas arms it without posting one.
+  // `activeLayerId`, which is where a layer's own document holds it: one born on the canvas arms
+  // it without any pointer being involved.
   if (imageId) {
     const layer = canvas ? layerById(canvas, canvas.activeLayerId) : null
     return layer ? <LayerInspector documentId={imageId} layer={layer} /> : <InspectorEmpty />
   }
 
-  // Both guarded on the owner: every sequence names its first tracks `V1` and `A1`, so a track
-  // picked in one tab matches by id in the next and would be described in its place.
+  // Read off the montage, so no owner has to be compared: a clip designated in one tab cannot
+  // speak for another.
   if (sequenceId && sequence) {
-    // Which clip comes from the sequence rather than from the descriptor: `selectedId` is what
-    // the canvas highlights, and commands move it — dropping an asset selects the clip it
-    // creates. Reading the id off the selection would leave the two showing different clips.
-    if (selection.kind === 'clip' && selection.ownerId === sequenceId) {
-      const clip = sequence.selectedId ? clipById(sequence, sequence.selectedId) : null
-      if (clip) return <ClipInspector documentId={sequenceId} sequence={sequence} clip={clip} />
+    const designated = designatedIn(sequence)
+    if (designated?.kind === 'track') {
+      return <TrackInspector documentId={sequenceId} track={designated.track} />
     }
 
-    if (selection.kind === 'track' && selection.ownerId === sequenceId) {
-      const track = trackById(sequence, selection.ids[0] ?? '')
-      if (track) return <TrackInspector documentId={sequenceId} track={track} />
-    }
-
-    return <InspectorEmpty />
+    return designated ? (
+      <ClipInspector documentId={sequenceId} sequence={sequence} clip={designated.clip} />
+    ) : (
+      <InspectorEmpty />
+    )
   }
 
   // Which node is the scene's own state, read by `SceneInspector` there.

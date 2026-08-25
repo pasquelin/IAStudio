@@ -18,6 +18,8 @@ import {
   updateTrack,
   wholeFrames,
   type Clip,
+  selectClip,
+  selectTrack,
   type SequenceState,
   type Track,
   type Us,
@@ -33,6 +35,40 @@ export const useSequences = store.use
 export const sequenceOf = store.stateOf
 export const sequenceHistoryOf = store.historyOf
 export const isSequenceDirty = store.isDirty
+
+/**
+ * What a montage designates, wherever the gesture came from. Read at CALL time, like `selectIn`
+ * and `selectLayerIn`, and outside the history — selecting is not an edit. Answers the state
+ * either way, which is what lets a drag keep its baseline.
+ */
+export function selectClipIn(documentId: string, clipId: string | null): SequenceState {
+  return designate(documentId, sequence => selectClip(sequence, clipId))
+}
+
+/** Its twin for a row. Silent on a montage whose file is still on its way, as its neighbours are. */
+export function selectTrackIn(documentId: string, trackId: string | null): void {
+  designate(documentId, sequence => selectTrack(sequence, trackId))
+}
+
+function designate(
+  documentId: string,
+  change: (sequence: SequenceState) => SequenceState,
+): SequenceState {
+  const current = store.use.getState()
+  const sequence = store.stateOf(current, documentId)
+  if (!store.hasState(current, documentId)) return sequence
+
+  const next = change(sequence)
+  if (
+    next.selectedId === sequence.selectedId &&
+    next.selectedTrackId === sequence.selectedTrackId
+  ) {
+    return sequence
+  }
+
+  current.replace(documentId, next)
+  return next
+}
 
 /**
  * Whether any track of that montage would hold this asset — what keeps the cascade from
@@ -96,33 +132,25 @@ export function addSceneToSequence(
 }
 
 /**
- * Lays a take down and answers WHICH clip it became — the one thing its neighbour above cannot
- * say, and the Audio workspace needs it: the take under the editor and the clip on the strip are
- * two views of one thing, and only an id ties them.
+ * Lays a take down, and `addClips` designates what it laid — which is what opens it in the editor.
  *
- * Null when no track would take it, on the same reasoning: a montage whose sound tracks are all
- * locked has nowhere to put this, and refusing beats laying a clip where nothing plays it.
- *
- * Outside the HISTORY, not merely outside a gesture, and that is what its neighbour cannot do:
- * loading a take is not something ⌘Z gives back — the editor half drops its chain outright. Left
- * on the stack, one press right after a load undid the clip while the chain went on naming it,
- * and every later edit stopped reaching a strip that no longer held it.
+ * Outside the HISTORY, not merely outside a gesture: loading a take is not something ⌘Z gives
+ * back — the editor half drops its chain outright, so one press after a load undid the clip while
+ * the chain went on naming it, and every later edit stopped reaching a strip that no longer held it.
  */
-export function addTakeToSequence(documentId: string, asset: Asset): string | null {
+export function addTakeToSequence(documentId: string, asset: Asset): void {
   const current = store.use.getState()
   // Nothing rather than the wrong thing, as `SoundPanel` puts it: `stateOf` answers with the
   // SEQUENCE default — a picture track — for a document whose file is still on its way, and a
   // take dropped in that window would build the Audio workspace a row it cannot play.
-  if (!store.hasState(current, documentId)) return null
+  if (!store.hasState(current, documentId)) return
 
   const sequence = store.stateOf(current, documentId)
 
   const placements = placementsForAsset(sequence, asset, asset.id, sequence.playhead)
-  const laid = placements[0]
-  if (!laid) return null
+  if (placements.length === 0) return
 
   current.replace(documentId, addClips(placements).apply(sequence))
-  return laid.clip.id
 }
 
 /**

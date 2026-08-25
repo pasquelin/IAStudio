@@ -7,7 +7,6 @@ import {
   type Clip,
   type SequenceState,
 } from '@/engines/timeline/timelineState'
-import { useSelection } from '@/stores/selection'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { loadTake } from './loadTake'
 
@@ -32,7 +31,6 @@ const clipsOf = (): Clip[] => montageOf().tracks.flatMap(track => track.clips)
 describe('putting a take onto the montage', () => {
   beforeEach(() => {
     useSequences.getState().replace('doc-1', EMPTY_SOUND_SEQUENCE)
-    useSelection.getState().clear()
   })
 
   it('lands on the first sound track, and selects what it laid', () => {
@@ -41,14 +39,8 @@ describe('putting a take onto the montage', () => {
     const [first] = montageOf().tracks
     const laid = first?.clips[0]
     expect(first?.clips.map(clip => clip.assetId)).toEqual(['take-1'])
-    // Both selections: the montage's own is what the editor reads, this one is what the
-    // inspector reads, and a block shown in one and described by neither is half a selection.
+    // The montage's own pick, which the editor, the strip and the inspector all read.
     expect(montageOf().selectedId).toBe(laid?.id)
-    expect(useSelection.getState().selection).toEqual({
-      kind: 'clip',
-      ownerId: 'doc-1',
-      ids: [laid?.id],
-    })
   })
 
   it('takes nothing that is not sound', () => {
@@ -117,12 +109,11 @@ describe('putting a take onto the montage', () => {
     loadTake('doc-1', take())
 
     expect(useSequences.getState().states['doc-1']).toBeUndefined()
-    expect(useSelection.getState().selection).toEqual({ kind: 'none' })
   })
 
-  // A montage whose sound tracks are all locked has nowhere to put this. Refusing beats laying
-  // a block where nothing would play it, and nothing is selected on the way out.
-  it('selects nothing when every sound track refuses it', () => {
+  // A montage whose sound tracks are all locked has nowhere to put this: refusing beats laying
+  // a block where nothing would play it.
+  it('lays nothing down when every sound track refuses it', () => {
     const locked = montageOf().tracks.reduce(
       (state, track) => updateTrack(state, track.id, one => ({ ...one, locked: true })),
       montageOf(),
@@ -132,6 +123,5 @@ describe('putting a take onto the montage', () => {
     loadTake('doc-1', take())
 
     expect(clipsOf()).toEqual([])
-    expect(useSelection.getState().selection).toEqual({ kind: 'none' })
   })
 })

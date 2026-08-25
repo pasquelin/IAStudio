@@ -25,7 +25,7 @@ import { connectModelGeneration } from '@/stores/modelGeneration'
 import { connectSequenceGeneration } from '@/stores/sequenceGeneration'
 import { connectTextureGeneration } from '@/stores/textureGeneration'
 import { connectPreparation } from '@/stores/preparation'
-import { connectSceneSelection } from '@/stores/sceneSelection'
+import { connectSubSelectionRelease } from '@/stores/subSelection'
 import { connectSkyboxGeneration } from '@/stores/skyboxGeneration'
 import { Shell } from './Shell/Shell'
 
@@ -101,7 +101,7 @@ export function Application() {
 
   // Same reason again: a scene selects from four doors — the outliner, the viewport, the node
   // panels and its own COMMANDS — and only the inspector needs to hear about all four.
-  useEffect(() => connectSceneSelection(), [])
+  useEffect(() => connectSubSelectionRelease(), [])
 
   useAppliedSettings()
   useDictationShortcut()

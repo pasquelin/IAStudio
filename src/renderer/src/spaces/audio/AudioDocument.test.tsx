@@ -88,7 +88,10 @@ function montageWithTake(): void {
     makeClip({ id: CLIP, assetId: 'asset-1', start: 0, duration: 2 * SECOND }),
   ).apply(EMPTY_SOUND_SEQUENCE)
 
-  useSequences.setState({ states: { 'doc-1': { ...laid, selectedId: CLIP } }, histories: {} })
+  useSequences.setState({
+    states: { 'doc-1': { ...laid, selectedId: CLIP } },
+    histories: {},
+  })
 }
 
 // Every suite in this file, not one: a document left behind sends `useRestoredDocument`

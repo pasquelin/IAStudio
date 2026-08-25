@@ -103,7 +103,7 @@ const SNAPSHOT = z.object({
   ),
   selection: z
     .object({
-      kind: z.enum(['layer', 'node', 'clip']),
+      kind: z.enum(TARGET_KINDS),
       items: z.array(z.object({ id: z.string(), name: z.string() })),
     })
     .nullable(),

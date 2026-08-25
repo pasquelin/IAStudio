@@ -17,6 +17,7 @@ import { useProjectContext } from './projectContext'
 import { forgetRememberedAssets, useAssets } from './assets'
 import { useLayouts } from './layouts'
 import { useSceneClipboard } from './sceneClipboard'
+import { useSelection } from './selection'
 
 type ProjectState = {
   project: Project | null
@@ -84,6 +85,10 @@ async function followProject(project: Project | null): Promise<void> {
   // toasts too — they never expire, so one raised by the project being left would hang over
   // the one being opened, naming an asset that is no longer anywhere.
   useActivity.getState().dismissAll()
+  // Assets and folder rows are named for the project that is being left: a path still picked
+  // resolves inside the new one, so its own explorer highlighted a file nobody chose — and ⌘⌫
+  // would have trashed it.
+  useSelection.getState().clear()
   const [, folderAnswered] = await Promise.all([
     useAssets.getState().refresh(),
     refreshDocuments(),

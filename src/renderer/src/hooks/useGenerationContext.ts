@@ -2,13 +2,19 @@ import { useCallback, useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
 import type { AssetType } from '@shared/domain/asset'
-import { availableInputsOf, type GenerationInput } from '@/generation/generationInputs'
+import {
+  availableInputsOf,
+  type GenerationInput,
+  type WithdrawableInput,
+} from '@/generation/generationInputs'
 import { resolveCapability, type CapabilityChoice } from '@/generation/capabilityResolver'
+import { selectedNodes } from '@/engines/scene/sceneState'
+import { deselect } from '@/helpers/selection'
 import { workspaceById } from '@/helpers/workspaces'
 import { useAssets, assetsById } from '@/stores/assets'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { latestGenerationIds, useJobs } from '@/stores/jobs'
 import { selectedAssetIds, useSelection } from '@/stores/selection'
 
@@ -22,11 +28,11 @@ export type GenerationContext = {
   inputs: readonly GenerationInput[]
   capability: CapabilityChoice
   /**
-   * Takes one input back off, by undoing the gesture that offered it — the shelf's pick, and only
-   * that one. What has no gesture to undo is drawn without a way off rather than with a broken
-   * one; the implementation says why for each.
+   * Takes one input back off, by undoing the gesture that offered it — the shelf's pick, the
+   * scene's. A result has none to undo: it is replaced by the next generation rather than
+   * withdrawn, and the panel draws no way off for one.
    */
-  withdraw: (input: GenerationInput) => void
+  withdraw: (input: WithdrawableInput) => void
 }
 
 /**
@@ -81,16 +87,21 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
    * 🛑 Undone where it was DONE, never filtered here. A panel-side list of dismissed ids would
    * leave the shelf showing a row as picked while the generation no longer took it, and the two
    * answers to "what is selected" would drift apart with nothing to reconcile them.
-   *
-   * 🛑 THE SHELF ONLY. `selectIn` ends on `pointAtNodes`, which rewrites the WHOLE selection
-   * descriptor, so withdrawing one mesh would take every asset source down with it. Deselecting
-   * a node without moving what the inspector looks at is a change to that pair, not to this hook.
    */
-  const withdraw = useCallback((input: GenerationInput) => {
-    // Read at CALL time and FILTERED, never toggled against the render that drew the row: a
-    // click landing after the selection moved would otherwise put the asset back.
+  const withdraw = useCallback((input: WithdrawableInput) => {
+    // Both read at CALL time, never from the render that drew the row: a click landing after
+    // the selection moved would otherwise act on a list nobody holds any more.
+    if (input.origin === 'scene') {
+      const documentId = activeSceneId(useDocuments.getState())
+      if (documentId === null) return
+
+      const scene = sceneOf(useScenes.getState(), documentId)
+      selectIn(documentId, deselect(scene.selectedIds, input.nodeId))
+      return
+    }
+
     const picked = selectedAssetIds(useSelection.getState())
-    useSelection.getState().selectAssets(picked.filter(id => id !== input.assetId))
+    useSelection.getState().selectAssets(deselect(picked, input.assetId))
   }, [])
 
   // Memoised with the inputs it reads: the resolution allocates a contract per required input,
@@ -106,7 +117,7 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
 /** Stable, so a workspace with no scene open does not hand React a new array per render. */
 const NO_KEYS: readonly string[] = []
 
-/** A separator no node name can hold, so an id and a name travel as one comparable string. */
+/** A separator no node name can hold, so the three parts travel as one comparable string. */
 const KEY_PART = '\u0000'
 
 /**
@@ -116,16 +127,22 @@ const KEY_PART = '\u0000'
  * file to send.
  */
 function selectedMeshKeysOf(scene: ReturnType<typeof sceneOf>): readonly string[] {
-  const picked = scene.nodes.flatMap(node =>
-    node.type === 'model' && scene.selectedIds.includes(node.id)
-      ? [`${node.model.assetId}${KEY_PART}${node.name}`]
+  // Guarded on the commonest case: `selectedNodes` indexes every node of the scene, and this runs
+  // on every emission of the scene store — a pointer gesture writes at 60 Hz.
+  if (scene.selectedIds.length === 0) return NO_KEYS
+
+  // Through `selectedNodes`, which keeps the ORDER OF SELECTION — the panel fills each slot from
+  // the first input that fits, and tree order would hand it the wrong one.
+  const picked = selectedNodes(scene.nodes, scene.selectedIds).flatMap(node =>
+    node.type === 'model'
+      ? [`${node.id}${KEY_PART}${node.model.assetId}${KEY_PART}${node.name}`]
       : [],
   )
 
   return picked.length === 0 ? NO_KEYS : picked
 }
 
-function meshOfKey(key: string): { id: string; name: string } {
-  const at = key.indexOf(KEY_PART)
-  return { id: key.slice(0, at), name: key.slice(at + KEY_PART.length) }
+function meshOfKey(key: string): { assetId: string; name: string; nodeId: string } {
+  const [nodeId = '', assetId = '', name = ''] = key.split(KEY_PART)
+  return { assetId, name, nodeId }
 }

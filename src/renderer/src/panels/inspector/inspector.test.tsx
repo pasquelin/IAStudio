@@ -44,7 +44,6 @@ import { inSection } from './inspector-fixtures'
 import { useTextureViews } from '@/stores/textureViews'
 import { textureOf, useTextures } from '@/stores/textures'
 import { setChannel } from '@/engines/texture/commands'
-import { connectSceneSelection } from '@/stores/sceneSelection'
 import { addModelTo, sceneHistoryOf, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { definition } from '.'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
@@ -828,10 +827,10 @@ describe('inspector panel', () => {
     expect(entries()).toBe(1)
   })
 
-  // One panel for the whole studio: picking a layer describes it where a clip would be described.
-  it('describes the layer picked in the stack', () => {
+  // One panel for the whole studio: an image in front describes its ARMED layer where a clip
+  // would be described. What arms it is the stack, never a pointer posted elsewhere.
+  it('describes the armed layer of the image in front', () => {
     installCanvas('doc-1')
-    useSelection.getState().selectLayer('doc-1', 'layer-1')
     render(withQueries(<Content />))
 
     expect(screen.getByText('Composition')).toBeInTheDocument()
@@ -852,7 +851,6 @@ describe('inspector panel', () => {
       ],
       selectedId: 'clip-1',
     })
-    useSelection.getState().selectClip('doc-1', 'clip-1')
     render(withQueries(<Content />))
 
     // A folding heading like every other section of the studio, since the fixed one was merged
@@ -860,19 +858,6 @@ describe('inspector panel', () => {
     expect(screen.getByRole('button', { name: /Clip/ })).toBeInTheDocument()
     // The three a sound clip is shaped by, and the reason this matters: they had no other surface.
     expect(screen.getByRole('spinbutton', { name: /Gain/ })).toBeInTheDocument()
-  })
-
-  /**
-   * The armed layer of the image in FRONT, whatever a selection posted elsewhere still says. One
-   * answer rather than two: the stack highlights `activeLayerId`, and a panel reading a second
-   * source emptied itself over the very layer the stack showed picked.
-   */
-  it('describes the armed layer of the image in front, not one picked elsewhere', () => {
-    installCanvas('doc-1')
-    useSelection.getState().selectLayer('elsewhere', 'layer-1')
-    render(withQueries(<Content />))
-
-    expect(screen.getByRole('button', { name: /Composition/ })).toBeInTheDocument()
   })
 
   /**
@@ -1067,19 +1052,10 @@ describe('the inspector and what is picked in a scene', () => {
     expect(screen.getByText('Géométrie')).toBeInTheDocument()
   })
 
-  /**
-   * A COMMAND selects too — an import selects the model it just put down, a duplicate its copies,
-   * ⌘Z what a delete dropped — and none of them go through `selectIn`. Dropping an asset in the
-   * viewport therefore left the panel describing the asset that was dropped, while the outliner
-   * highlighted the node it had become: the same thing named twice, two panels disagreeing, and
-   * a second click on the row as the only way out.
-   */
-  it('describes the node an import just put down, not the asset it came from', () => {
+  // A COMMAND selects too, and none of them go through `selectIn`: an import selects the model it
+  // just put down. The scene's own face follows it, whichever door the selection came through.
+  it('describes the node an import just put down', () => {
     install(meshNode('box-1'), false)
-    // The connector the application wires up: what the panel shows after an import is only half
-    // the answer, and the other half is who told it — see `sceneSelection.test.ts`.
-    const stop = connectSceneSelection()
-    useSelection.getState().selectAssets(['asset-1'])
 
     addModelTo('doc-1', {
       id: 'asset-1',
@@ -1092,7 +1068,6 @@ describe('the inspector and what is picked in a scene', () => {
     render(withQueries(<Content />))
 
     expect(screen.getByText('Transformation')).toBeInTheDocument()
-    stop()
   })
 
   // The scene's own face is what a click in the void leaves: its environment is read there, and
@@ -1105,19 +1080,6 @@ describe('the inspector and what is picked in a scene', () => {
 
     expect(screen.getByText('Environnement')).toBeInTheDocument()
     expect(screen.queryByText('Géométrie')).not.toBeInTheDocument()
-  })
-
-  /**
-   * Deselecting in one panel says nothing about another. It used to empty the whole descriptor:
-   * five assets picked in the shelf went grey — and the two buttons that act on them with them —
-   * because a cube was clicked away in a viewport beside it.
-   */
-  it('leaves what another panel has picked where it is', () => {
-    install(meshNode('box-1'), false)
-    useSelection.getState().selectAssets(['asset-1'])
-    selectIn('doc-1', [])
-
-    expect(useSelection.getState().selection.kind).toBe('asset')
   })
 
   /**

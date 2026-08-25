@@ -86,8 +86,47 @@ export type Track = {
 export type SequenceState = {
   settings: SequenceSettings
   tracks: Track[]
+  /** The clip the montage works on: the strip's highlight, the take editor, the source monitor. */
   selectedId: string | null
+  /**
+   * The row the inspector describes. NOT exclusive with the clip — the take editor keeps its
+   * block while a header is renamed beside it — but `selectClip` clears it, so the inspector
+   * follows whichever was pressed last.
+   *
+   * 🛑 Both halves are SAVED with the montage, and this montage is the only document of the
+   * studio that does it: `sceneState.ts` writes the opposite in as many words, and an `.ora`
+   * recomputes its active layer on read. The divergence is deliberate — the pair is revalidated
+   * against the tracks by `readSelection` — but nothing reconciles the two rules.
+   */
+  selectedTrackId: string | null
   playhead: Us
+}
+
+/** Both halves of what a montage designates — see the two fields above. */
+export type SequenceSelection = Pick<SequenceState, 'selectedId' | 'selectedTrackId'>
+
+/**
+ * WHICH of the two a montage designates, resolved against what it still holds. One reader, or
+ * the inspector and the assistant answer differently for a row that is no longer there.
+ */
+export type Designated = { kind: 'track'; track: Track } | { kind: 'clip'; clip: Clip } | null
+
+export function designatedIn(state: SequenceState): Designated {
+  const track = state.selectedTrackId ? trackById(state, state.selectedTrackId) : null
+  if (track) return { kind: 'track', track }
+
+  const clip = state.selectedId ? clipById(state, state.selectedId) : null
+  return clip ? { kind: 'clip', clip } : null
+}
+
+/** Selecting a clip takes the inspector off whatever row it was describing. */
+export function selectClip(state: SequenceState, clipId: string | null): SequenceState {
+  return { ...state, selectedId: clipId, selectedTrackId: null }
+}
+
+/** Selecting a row leaves the clip alone — see `selectedTrackId`. */
+export function selectTrack(state: SequenceState, trackId: string | null): SequenceState {
+  return { ...state, selectedTrackId: trackId }
 }
 
 export const DEFAULT_SETTINGS: SequenceSettings = {
@@ -154,6 +193,7 @@ export const EMPTY_SEQUENCE: SequenceState = {
     makeTrack({ id: 'A1', kind: 'audio', index: 0 }),
   ],
   selectedId: null,
+  selectedTrackId: null,
   playhead: 0,
 }
 
@@ -177,6 +217,7 @@ export const EMPTY_SOUND_SEQUENCE: SequenceState = {
     [1, 2, 3, 4].map(number => makeTrack({ id: `A${number}`, kind: 'audio', index: 0 })),
   ),
   selectedId: null,
+  selectedTrackId: null,
   playhead: 0,
 }
 
@@ -311,7 +352,7 @@ export function sequenceDuration(state: SequenceState): Us {
   return end
 }
 
-export function trackById(state: SequenceState, id: string): Track | null {
+export function trackById(state: { tracks: readonly Track[] }, id: string): Track | null {
   return state.tracks.find(track => track.id === id) ?? null
 }
 
@@ -330,7 +371,7 @@ export function hasTrackOfKind(state: SequenceState, kind: TrackKind): boolean {
   return state.tracks.some(track => track.kind === kind)
 }
 
-export function trackOfClip(state: SequenceState, clipId: string): Track | null {
+export function trackOfClip(state: { tracks: readonly Track[] }, clipId: string): Track | null {
   return state.tracks.find(track => track.clips.some(clip => clip.id === clipId)) ?? null
 }
 
@@ -534,6 +575,23 @@ function readSettings(raw: unknown): SequenceSettings {
 }
 
 /**
+ * What a file designates, dropped when it names something the read discarded — a clip left out
+ * for being unplayable, a track that is no longer there. Nothing may designate nothing.
+ */
+export function readSelection(
+  raw: Record<string, unknown>,
+  tracks: readonly Track[],
+): SequenceSelection {
+  const clipId = readString(raw, 'selectedId', '')
+  const trackId = readString(raw, 'selectedTrackId', '')
+
+  return {
+    selectedId: trackOfClip({ tracks }, clipId) ? clipId : null,
+    selectedTrackId: trackById({ tracks }, trackId) ? trackId : null,
+  }
+}
+
+/**
  * A sequence read back from a file. Takes the parsed value rather than the text, like every
  * other document reader: text that is not JSON at all is a file that failed to read, and the
  * caller must be able to tell that from a file whose shape is merely wrong — the first refuses
@@ -549,15 +607,10 @@ export function parseSequence(content: unknown): SequenceState {
   })
   if (tracks.length === 0) return EMPTY_SEQUENCE
 
-  const selectedId = content.selectedId
   return {
     settings: readSettings(content.settings),
     tracks,
-    // Dropped when it points at a clip the read discarded: nothing may select nothing.
-    selectedId:
-      typeof selectedId === 'string' && tracks.some(t => t.clips.some(c => c.id === selectedId))
-        ? selectedId
-        : null,
+    ...readSelection(content, tracks),
     playhead: readPositive(content, 'playhead', 0),
   }
 }

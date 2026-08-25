@@ -37,6 +37,15 @@ export function applySelection(
   return same(current, next) ? current : next
 }
 
+/**
+ * One id taken OFF, and never put on: `toggle` adds what it does not find, so a click landing
+ * after the selection moved would put back what it meant to remove. Identity kept when the id was
+ * not there, so nothing re-renders for a gesture that changed nothing.
+ */
+export function deselect(ids: readonly string[], id: string): readonly string[] {
+  return applySelection(ids, ids.includes(id) ? [id] : [], 'toggle')
+}
+
 function toggled(current: readonly string[], ids: readonly string[]): readonly string[] {
   const next = [...current]
   for (const id of ids) {

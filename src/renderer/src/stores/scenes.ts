@@ -10,7 +10,6 @@ import { sceneFromTemplate } from '@/engines/scene/sceneTemplates'
 import type { SceneTemplateId } from '@shared/domain/sceneTemplate'
 import type { SelectionMode } from '@/helpers/selection'
 import { createDocumentStore } from './documentStore'
-import { useSelection } from './selection'
 
 /** One scene per document, in memory like the documents themselves. */
 const store = createDocumentStore<SceneState>(EMPTY_SCENE)
@@ -50,9 +49,7 @@ export function writeAnimationTrack(
 /**
  * What is picked in a scene, wherever the gesture came from. The scene is read at CALL time, not
  * from the render that drew the row: a copy taken before whatever command ran in between would
- * undo it. It points the studio's selection too, and must keep doing so despite
- * `connectSceneSelection` — re-clicking an already selected row changes no ids, so it wakes no
- * subscriber, and that is exactly the gesture that brings the panel back onto a node.
+ * undo it. It writes the scene and nothing else — the selection a scene holds is its own.
  */
 export function selectIn(
   documentId: string,
@@ -67,7 +64,6 @@ export function selectIn(
   // a row that is already selected — the gesture that OPENS a drag — otherwise wrote the document
   // back, and the viewport rebuilt its whole scene graph on the strength of it.
   if (next.selectedIds !== current.selectedIds) state.replace(documentId, next)
-  useSelection.getState().pointAtNodes(documentId, next.selectedIds.length > 0)
 }
 
 /**

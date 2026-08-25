@@ -1,5 +1,6 @@
 import type { DocumentKind } from './document'
 import type { Project } from './project'
+import type { TargetKind } from './target'
 import type { WorkspaceId } from './workspace'
 
 /**
@@ -32,7 +33,7 @@ export type SnapshotDocument = {
  * no name of its own, so it stands under its id.
  */
 export type SnapshotSelection = {
-  kind: 'layer' | 'node' | 'clip'
+  kind: TargetKind
   items: { id: string; name: string }[]
 }
 

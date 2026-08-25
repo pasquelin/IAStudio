@@ -156,12 +156,28 @@ const montage: SequenceState = {
     }),
   ]),
   selectedId: 'b',
+  selectedTrackId: null,
   playhead: 1_500_000,
 }
 
 describe('sequenceFromOtio', () => {
   it('reads back everything the studio put in, standard or extended', () => {
     expect(sequenceFromOtio(write(montage))).toEqual(montage)
+  })
+
+  // The other half of what a montage designates: a file written before a row could be
+  // designated carries no `selectedTrackId`, and still reads its clip back.
+  it('reads back a designated row beside the designated clip', () => {
+    const onTrack: SequenceState = { ...montage, selectedTrackId: 'A1' }
+    expect(sequenceFromOtio(write(onTrack)).selectedTrackId).toBe('A1')
+  })
+
+  // Nothing may designate nothing: a row named by a file that no longer holds it is dropped,
+  // exactly as a clip the read discarded is.
+  it('forgets a row the file names and the read does not hold', () => {
+    expect(
+      sequenceFromOtio(write({ ...montage, selectedTrackId: 'A9' })).selectedTrackId,
+    ).toBeNull()
   })
 
   it('carries a live scene clip through the round trip', () => {
@@ -239,6 +255,7 @@ describe('sequenceFromOtio', () => {
         }),
       ]),
       selectedId: 'b',
+      selectedTrackId: null,
       playhead: 1_500_000,
     }
 
@@ -293,6 +310,7 @@ describe('sequenceFromOtio', () => {
           }),
         ]),
         selectedId: null,
+        selectedTrackId: null,
         playhead: 0,
       }),
     )

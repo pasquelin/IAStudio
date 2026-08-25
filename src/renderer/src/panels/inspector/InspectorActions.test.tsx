@@ -97,8 +97,7 @@ describe('what the inspector title row carries', () => {
   /**
    * The one the faces make easy to get wrong: the title row is shared, so a button posted for
    * one of them would offer to save a material while a montage filled the panel below it. What
-   * answers is the document in FRONT — the same one `InspectorFace` reads — and a clip picked in
-   * another tab has no say here.
+   * answers is the document in FRONT — the same one `InspectorFace` reads.
    */
   it('offers no style to save while the document in front is not a texture', () => {
     useDocuments.setState({
@@ -113,7 +112,6 @@ describe('what the inspector title row carries', () => {
         },
       },
     })
-    useSelection.getState().selectClip('seq-1', 'clip-1')
     render(<InspectorActions />)
 
     expect(screen.queryByRole('button', { name: SAVE })).not.toBeInTheDocument()

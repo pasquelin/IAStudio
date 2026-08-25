@@ -13,6 +13,7 @@ import { closeDocument, documentIsDirty, dropDocument, saveDocument } from '@/ap
 import { openDocument } from '@/app/dockviewApi'
 import { layerById } from '@/engines/canvas/canvasState'
 import { selectedNodes } from '@/engines/scene/sceneState'
+import { designatedIn } from '@/engines/timeline/timelineState'
 import { reportFailure } from '@/services/diagnostics'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import {
@@ -90,10 +91,15 @@ function selectionNow(documents: DocumentsSlice): SnapshotSelection | null {
   const sequences = useSequences.getState()
   if (!sequenceStore.hasState(sequences, montageId)) return null
 
-  const selectedId = sequenceOf(sequences, montageId).selectedId
-  return selectedId === null
-    ? null
-    : { kind: 'clip', items: [{ id: selectedId, name: selectedId }] }
+  // The one answer `InspectorFace` reads. A clip has no name of its own, so it stands under its id.
+  const designated = designatedIn(sequenceOf(sequences, montageId))
+  if (designated === null) return null
+
+  const { id, name } =
+    designated.kind === 'track'
+      ? designated.track
+      : { id: designated.clip.id, name: designated.clip.id }
+  return { kind: designated.kind, items: [{ id, name }] }
 }
 
 /**

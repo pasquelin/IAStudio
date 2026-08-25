@@ -31,7 +31,7 @@ import {
 } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
 import { changedFields } from '@/helpers/objects'
-import { applySelection, type SelectionMode } from '@/helpers/selection'
+import { applySelection, deselect, type SelectionMode } from '@/helpers/selection'
 import { withField, type FieldValue } from './propertyFields'
 import { newId } from '@/helpers/ids'
 import { groupNode } from './nodeFactory'
@@ -877,9 +877,4 @@ export function setSelection(
   mode: SelectionMode = 'replace',
 ): SceneState {
   return { ...state, selectedIds: applySelection(state.selectedIds, ids, mode) }
-}
-
-/** Identity kept when nothing was selected: a delete elsewhere must not re-render every panel. */
-function deselect(ids: readonly string[], id: string): readonly string[] {
-  return applySelection(ids, ids.includes(id) ? [id] : [], 'toggle')
 }

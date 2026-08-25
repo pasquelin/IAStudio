@@ -52,9 +52,8 @@ import { documentExportName, useDocuments } from '@/stores/documents'
 import { runTask } from '@/stores/tasks'
 import { peaksOf, usePeaks } from '@/stores/peaks'
 import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
-import { useSelection } from '@/stores/selection'
 import { playbackHeadOf, usePlayback } from '@/stores/playback'
-import { addSceneToSequence, sequenceOf, useSequences } from '@/stores/sequences'
+import { addSceneToSequence, selectClipIn, sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { exportSequence } from './sequenceExport'
 import type { VideoToolId } from './videoTools'
@@ -319,8 +318,9 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
 
     const gesture = beginGesture(sequence, viewport, point, tool === 'hand')
     if (!gesture) {
-      useSequences.getState().replace(documentId, { ...sequence, selectedId: null })
-      useSelection.getState().clear()
+      // The montage's own selection only: what a shelf or an explorer has picked beside it is
+      // not this canvas's to empty, and clearing it took the generator's sources away with it.
+      selectClipIn(documentId, null)
       return
     }
 
@@ -334,10 +334,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
     }
 
     // Selecting is not an edit either, and the clip must highlight before the drag moves it.
-    const base: SequenceState = { ...sequence, selectedId: gesture.clipId }
-    dragging.current = { gesture, base }
-    useSequences.getState().replace(documentId, base)
-    useSelection.getState().selectClip(documentId, gesture.clipId)
+    dragging.current = { gesture, base: selectClipIn(documentId, gesture.clipId) }
   }
 
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>): void => {
@@ -411,7 +408,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
 
     // Selected first: the menu acts on this clip, and a menu whose rows edit something other
     // than what is highlighted is a menu nobody trusts.
-    store.replace(documentId, { ...state, selectedId: clip.id })
+    selectClipIn(documentId, clip.id)
 
     const run = (command: Command<SequenceState>) => (): void =>
       useSequences.getState().runCommand(documentId, command)

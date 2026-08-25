@@ -1,9 +1,9 @@
 /**
  * What the assistant may aim at inside the open document.
  *
- * The kinds are four of the seven `stores/selection.ts` tells apart — the ones that live INSIDE a
- * document. An asset and a file belong to the project, and neither is aimed at from a sentence
- * about the picture in front.
+ * The kinds are the things that live INSIDE a document. An asset and a file belong to the
+ * project, and neither is aimed at from a sentence about the picture in front. `SnapshotSelection`
+ * reads the same union: what the assistant may aim at is what a briefing may designate.
  */
 export type TargetKind = 'layer' | 'node' | 'clip' | 'track'
 
