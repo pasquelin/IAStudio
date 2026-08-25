@@ -46,11 +46,12 @@ export async function askCloseChoice(ask: AskUser, title: string): Promise<Close
 }
 
 /**
- * A yes-or-no the studio must not assume the answer to: Cancel is the default AND what a
- * dismissed dialog gives back, so neither Return nor Escape can reach the answer that writes.
+ * A yes-or-no. By default Cancel is BOTH the default button and what a dismissed dialog gives
+ * back, so neither Return nor Escape reaches the answer that writes; `confirmByDefault` inverts
+ * that, and belongs only to a question whose yes destroys nothing.
  *
- * Shared, because that button arrangement is the whole of the decision — the two questions asked
- * this way sit in different files and would drift apart on which id means yes.
+ * Shared, because that button arrangement is the whole of the decision — the questions asked this
+ * way sit in different files and would drift apart on which id means yes.
  */
 export async function askConfirm(
   ask: AskUser,

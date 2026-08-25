@@ -780,11 +780,8 @@ export async function saveDocument(documentId: string, byHand = true): Promise<b
 /**
  * Which format overwriting the source means writing, and what it would destroy.
  *
- * A format the table does not write — a `.tif`, a `.gif` — reports everything the document holds
- * rather than nothing: « no answer » must never read as « nothing to lose », which is the exact
- * shape of the silent loss this path exists to stop. It writes OpenRaster rather than the flat
- * default for that same reason: `replaceBytes` moves the extension with the bytes, so guessing
- * `png` on an unknown format would flatten a container this table simply failed to recognise.
+ * A format the table does not write — a `.tif`, a `.gif` — is written as OpenRaster rather than
+ * flattened: « no answer » must never read as « nothing to lose ».
  */
 function writePlanFor(
   document: DocumentDescriptor,
@@ -794,11 +791,18 @@ function writePlanFor(
   // `path`, NEVER `name`: a row's name is the STEM — `adoptFile` stores `stemOf(…)` — so reading
   // the format off it answered `null` for every asset a project actually holds, and a document
   // with two layers was then refused even by the `.ora` that could hold it.
-  const format = formatOfFile(assetsById(useAssets.getState()).get(sourceAssetId)?.path ?? '')
-  if (!io.traitsOf) return { format: format ?? 'ora', losses: [] }
+  // `path`, NEVER `name`: a row's name is the STEM, so no asset a project holds has an extension
+  // there — read off it, a document with two layers was refused even by the `.ora` holding it.
+  const written =
+    formatOfFile(assetsById(useAssets.getState()).get(sourceAssetId)?.path ?? '') ??
+    // Never the flat default on an unknown extension: `replaceBytes` moves the extension with the
+    // bytes, so guessing would turn a container this table failed to recognise into a PNG.
+    'ora'
+  if (!io.traitsOf) return { format: written, losses: [] }
 
-  const traits = io.traitsOf(document.id)
-  return { format: format ?? 'ora', losses: format ? lossesFor(traits, format) : traits }
+  // Against what is actually WRITTEN, never against what the file was: answered otherwise, an
+  // unknown extension asked whether to flatten into an `.ora`, which loses nothing at all.
+  return { format: written, losses: lossesFor(io.traitsOf(document.id), written) }
 }
 
 /**

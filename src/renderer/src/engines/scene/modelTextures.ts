@@ -17,6 +17,8 @@ type Dressed = {
   material: MeshStandardMaterial
   /** Read before anything is written over it: removing an override puts the file's map back. */
   fileMaps: Map<TextureSlot, Texture | null>
+  /** The clones this material wears — ours to free, unlike anything the cache handed out. */
+  worn: Map<TextureSlot, Texture>
 }
 
 /**
@@ -55,7 +57,7 @@ export function createModelTextures(
       const fileMaps = new Map<TextureSlot, Texture | null>(
         TEXTURE_SLOTS.map(slot => [slot, copy[slot]]),
       )
-      dressed.push({ mesh: object, material: copy, fileMaps })
+      dressed.push({ mesh: object, material: copy, fileMaps, worn: new Map() })
       return copy
     }
 
@@ -71,15 +73,22 @@ export function createModelTextures(
     // letting every one of them do nothing in silence.
     if (dressed.length === 0) return onUndressable()
 
-    for (const { mesh, material, fileMaps } of dressed) {
-      const next = texture ?? fileMaps.get(slot) ?? null
+    for (const { mesh, material, fileMaps, worn } of dressed) {
+      const file = fileMaps.get(slot) ?? null
+      const next = texture ? sampledLike(texture, file) : file
       if (material[slot] === next) continue
 
       // Same reason as a mesh's own maps: occlusion reads the second UV set, and a generated
       // model rarely carries one — left alone, an AO map would do nothing at all.
       if (next && slot === 'aoMap') giveSecondUvSet(mesh.geometry)
 
-      material[slot] = texture ? sampledLike(texture, fileMaps.get(slot)) : next
+      // The clone this slot wore, if any: three counts its GPU textures per `Texture`, and a copy
+      // carrying its own wrapping is a second allocation nothing else would ever free.
+      worn.get(slot)?.dispose()
+      if (texture && next) worn.set(slot, next)
+      else worn.delete(slot)
+
+      material[slot] = next
       material.needsUpdate = true
     }
     onChange()
@@ -90,7 +99,10 @@ export function createModelTextures(
     dispose: () => {
       slots.clear()
       // Cloned copies only — SceneRenderer.release never sees them; file maps stay with the cache.
-      for (const { material } of dressed) material.dispose()
+      for (const { material, worn } of dressed) {
+        for (const copy of worn.values()) copy.dispose()
+        material.dispose()
+      }
     },
   }
 }
@@ -99,8 +111,8 @@ export function createModelTextures(
  * The override wearing the sampler of the map it replaces — repeat, offset, rotation and UV set.
  *
  * A CLONE, because the cache hands the same instance to every holder: written on it, one model's
- * tiling would reach every other slot pointing at that picture. It shares the `Source`, so the
- * GPU still holds one texture — and it is never disposed, the cache owning what it came from.
+ * tiling would reach every other slot pointing at that picture. It shares the `Source`, but NOT
+ * the GPU texture — `getTextureCacheKey` reads the wrapping — so the caller frees what it wears.
  */
 function sampledLike(texture: Texture, file: Texture | null | undefined): Texture {
   if (!file) return texture

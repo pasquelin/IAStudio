@@ -194,4 +194,26 @@ describe('createModelTextures', () => {
     expect(worn?.wrapS).toBe(RepeatWrapping)
     expect(worn?.channel).toBe(1)
   })
+
+  /**
+   * The clone carries its own wrapping, and `getTextureCacheKey` reads it — so three allocates a
+   * SECOND GPU texture for it, one the cache never hears about. Left alone, every ⌘S on the
+   * picture and every reopening of the scene grew `info.memory.textures` for the session.
+   */
+  it('frees the clone it wore when the model goes away', async () => {
+    const scripted = scriptedTextureCache()
+    const { source, fileMap } = loadedModel()
+    fileMap.repeat.set(2, 2)
+    const instance = instanceOf(source)
+    const textures = createModelTextures(scripted.cache, instance, onChange)
+
+    textures.apply({ map: { assetId: 'tex-base' } })
+    await scripted.settle('tex-base')
+    const worn = materialOf(instance).map
+    const freed = vi.spyOn(worn as Texture, 'dispose')
+
+    textures.dispose()
+
+    expect(freed).toHaveBeenCalled()
+  })
 })
