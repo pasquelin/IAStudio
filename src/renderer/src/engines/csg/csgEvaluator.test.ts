@@ -147,4 +147,37 @@ describe('createCsgEvaluator', () => {
     evaluator.dispose()
     expect(fake.worker.terminate).toHaveBeenCalledOnce()
   })
+  /**
+   * The claim the whole cache rests on, at the scale an editor actually reaches: two hundred
+   * identical windows are one mesh and one evaluation, not two hundred of each.
+   */
+  it('cuts once for two hundred identical solids, and holds one geometry', async () => {
+    const fake = fakeWorker()
+    const evaluator = createCsgEvaluator({ spawn: () => fake.worker, onFailure: vi.fn() })
+
+    const asked = Array.from({ length: 200 }, () => evaluator.acquire(wall()))
+    fake.succeed()
+    const geometries = await Promise.all(asked)
+
+    expect(fake.sent).toHaveLength(1)
+    expect(new Set(geometries).size).toBe(1)
+  })
+
+  it('keeps the mesh while any holder is left, and frees it at the last', async () => {
+    const fake = fakeWorker()
+    const evaluator = createCsgEvaluator({ spawn: () => fake.worker, onFailure: vi.fn() })
+
+    const asked = Array.from({ length: 3 }, () => evaluator.acquire(wall()))
+    fake.succeed()
+    const geometry = (await Promise.all(asked))[0]
+    if (!geometry) throw new Error('the cut answered nothing')
+    const disposed = vi.spyOn(geometry, 'dispose')
+
+    evaluator.release(wall())
+    evaluator.release(wall())
+    expect(disposed).not.toHaveBeenCalled()
+
+    evaluator.release(wall())
+    expect(disposed).toHaveBeenCalledOnce()
+  })
 })

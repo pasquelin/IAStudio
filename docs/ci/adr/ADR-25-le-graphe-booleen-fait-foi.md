@@ -134,6 +134,22 @@ géométrie a été évincée du cache reste donc collidable sans occuper de VRA
 
 ## Angles morts, écrits plutôt que cachés
 
+`[M]` **Ce que coûte une découpe, mesuré** (`csgEvaluate.bench.ts`, ce Mac) : une fenêtre dans un
+mur, **0,82 ms** ; une sphère de 8 064 triangles percée, **16,17 ms** — une frame entière, et c'est
+ce qui justifie le Worker. Une chaîne d'unions coûte **linéairement**, environ 1,6 ms par cran.
+
+`[M]` **Les sous-recettes sont en cache, borné à 64 entrées.** Sans lui, ajouter un cran à un solide
+réévaluait tout ce qu'il y avait dessous : **16,11 ms pour une dixième union, contre 0,20 ms** une
+fois le cache posé. C'est le geste le plus fréquent d'un modeleur — une découpe de plus sur ce
+qu'il vient de faire — et c'était le plus cher.
+
+`[?]` **Les draw calls ne sont PAS réduits.** Deux cents solides identiques partagent bien une
+géométrie et une évaluation (prouvé à 200 dans `csgEvaluator.test.ts`), mais chacun reste un `Mesh`,
+donc un appel de dessin. L'instanciation les ramènerait à un seul ; elle n'est pas livrée, et ce
+n'est pas un oubli : `this.objects` tient un `Object3D` par nœud, que le picking, le gizmo et la
+sélection lisent tous. Aucun `InstancedMesh` n'existe dans ce dépôt à ce jour. **C'est le gain
+restant le plus important pour une scène de jeu**, et c'est un chantier de rendu, pas de CSG.
+
 `[?]` **Rien de ce qui précède n'est mesuré sur cette machine.** Les coûts annoncés — microsecondes
 pour le clipping, effondrement de l'évaluation en temps réel — sont des ordres de grandeur de
 conception, pas des relevés. La première mesure qui compte est le temps d'évaluation d'un booléen
