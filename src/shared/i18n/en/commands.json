@@ -452,6 +452,22 @@
     "sceneNavigate": {
       "title": "Navigate",
       "help": "Move through the scene as in a game: the mouse holds the view, W A S D travel, E and Q rise and fall. The wheel sets the speed. Escape gives the mouse back."
+    },
+    "sceneCarve": {
+      "title": "Carve",
+      "help": "Hollows the first selected shape with the ones after it: a cube set inside a wall opens a window in it. The original shapes are kept — Separate gives them back."
+    },
+    "sceneWeld": {
+      "title": "Join",
+      "help": "Merges the selected shapes into a single solid. The original shapes are kept — Separate gives them back."
+    },
+    "sceneIntersect": {
+      "title": "Keep overlap",
+      "help": "Keeps only the part where the selected shapes overlap, and throws the rest away. The original shapes are kept — Separate gives them back."
+    },
+    "sceneSeparate": {
+      "title": "Separate",
+      "help": "Undoes a solid and gives back the shapes it was made of, each where it stood."
     }
   }
 }

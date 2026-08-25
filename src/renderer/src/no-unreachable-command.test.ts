@@ -73,9 +73,11 @@ const COMBINATORS: readonly string[] = [
   'editClip',
   'railOnNewShot',
   // The single-node writer its spreading twin builds from. `setMaterialOn` is what decides
-  // whether a mesh or a text is being painted, and `movesToCommand` whether a move becomes a key
-  // — an action naming the half underneath would be a second law about what that edit means.
+  // whether a mesh, a text or a solid is being painted, and `movesToCommand` whether a move
+  // becomes a key — an action naming the half underneath would be a second law about what that
+  // edit means.
   'setMeshMaterial',
+  'setNodeMaterial',
   'setTextMaterial',
   'setSprite',
   'setText',

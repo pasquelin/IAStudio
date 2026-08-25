@@ -11,7 +11,7 @@ import { PANE_TOOLBAR } from '@/design/styles'
 import { isSnapping } from '@shared/domain/snap'
 import { SceneSnapBar } from './SceneSnapBar/SceneSnapBar'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
-import { nodeById } from '@/engines/scene/sceneState'
+import { nodeById, selectedNodes } from '@/engines/scene/sceneState'
 import { movesToCommand } from '@/engines/scene/animationCommands'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
@@ -36,6 +36,7 @@ import { useModelClips } from '@/stores/modelClips'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
+import { canCarve, canSeparate } from '@/engines/csg/carve'
 import { addModelTo, isSceneDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { displayOfPane, sceneViewChromeOf, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { skeletonProfilesOf, useSkeletonProfiles } from '@/stores/skeletonProfiles'
@@ -505,6 +506,15 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   // toggle: the document re-renders on every transform release, and this maps every item of the
   // bar, each of them looking its key up through the registry.
   const nothingSelected = scene.selectedIds.length === 0
+  // Booleans rather than the selection itself, like `isolated` below: a fresh array on every
+  // render would remap the whole bar on each frame of a drag, which is what this memo avoids.
+  // Resolved ONCE — `selectedNodes` indexes the whole scene, and this body runs on every render.
+  const foldable = useMemo(
+    () => selectedNodes(scene.nodes, scene.selectedIds),
+    [scene.nodes, scene.selectedIds],
+  )
+  const cannotCarve = !canCarve(foldable)
+  const cannotSeparate = !canSeparate(foldable)
   const nothingHeld = useSceneClipboard(state => state.nodes.length === 0)
   // The boolean rather than the object: `hideIn` mints a fresh isolation on every hidden node,
   // which would remap all the tools for a state that has not changed.
@@ -537,6 +547,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       'scene.isolate': nothingSelected && !isolated,
       'scene.hide': nothingSelected,
       'scene.showAll': !isolated,
+      // The same test `carveNodes` refuses on, so a live-looking button is never a dead click.
+      'scene.carve': cannotCarve,
+      'scene.weld': cannotCarve,
+      'scene.intersect': cannotCarve,
+      'scene.separate': cannotSeparate,
     }
 
     return [
@@ -565,6 +580,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     bindings,
     label,
     nothingSelected,
+    cannotCarve,
+    cannotSeparate,
     nothingHeld,
     view.snapping,
     localFrame,

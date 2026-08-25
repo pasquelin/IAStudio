@@ -86,6 +86,7 @@
     "scope": {
       "scene.model": "A 3D model could not be loaded",
       "scene.bvh": "A 3D model could not be prepared for picking",
+      "scene.carved": "A shape could not be cut",
       "scene.texture": "A texture could not be loaded",
       "scene.animation": "An animation could not be laid on the character",
       "scene.export": "Exporting the scene failed",

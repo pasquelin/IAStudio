@@ -184,7 +184,11 @@
     "displayHint": "Dessiner les surfaces, leurs arêtes, ou les deux",
     "spaceHint": "Aligner les poignées sur l’orientation de l’objet ; bouton relâché, elles suivent les axes du monde",
     "navigate": "Naviguer",
-    "navigateHint": "Voler dans la scène au clavier, la souris tenant le regard"
+    "navigateHint": "Voler dans la scène au clavier, la souris tenant le regard",
+    "carveHint": "Creuser la première forme sélectionnée avec les suivantes",
+    "weldHint": "Réunir les formes sélectionnées en un seul solide",
+    "intersectHint": "Ne garder que la partie commune aux formes sélectionnées",
+    "separateHint": "Rendre les formes dont un solide a été fait"
   },
   "sceneViews": {
     "free": "Perspective",

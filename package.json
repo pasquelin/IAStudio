@@ -61,6 +61,7 @@
     "sherpa-onnx-node": "1.13.5",
     "simple-git": "^3.36.0",
     "three": "0.185.1",
+    "three-bvh-csg": "^0.0.18",
     "three-mesh-bvh": "^0.9.14",
     "utif": "^3.1.0"
   },

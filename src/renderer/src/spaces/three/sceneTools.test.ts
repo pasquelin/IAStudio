@@ -74,6 +74,10 @@ describe('SCENE_TOOLS', () => {
       'duplicate',
       'group',
       'delete',
+      'carve',
+      'weld',
+      'intersect',
+      'separate',
       'display',
       'quad',
       'frame',
@@ -114,6 +118,7 @@ describe('SCENE_TOOLS', () => {
       'select',
       'snap',
       'duplicate',
+      'carve',
       'display',
       'frame',
     ])

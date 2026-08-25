@@ -19,7 +19,7 @@ describe('LicencesWindow', () => {
     render(<LicencesWindow />)
 
     expect(screen.getByRole('button', { name: /FFmpeg/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^three\b/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^three(?!-)/ })).toBeInTheDocument()
   })
 
   /**
@@ -43,7 +43,7 @@ describe('LicencesWindow', () => {
    */
   it('mounts the shared tooltip, and says which of the two gestures the row offers', async () => {
     render(<LicencesWindow />)
-    const entry = screen.getByRole('button', { name: /^three\b/ })
+    const entry = screen.getByRole('button', { name: /^three(?!-)/ })
 
     expect(entry).toHaveAttribute(
       'data-tooltip-content',
@@ -63,7 +63,7 @@ describe('LicencesWindow', () => {
   // A notice that needs a working network to be read is not a notice: the whole text is here.
   it('unfolds the full text of a licence, not a link to it', async () => {
     render(<LicencesWindow />)
-    const entry = screen.getByRole('button', { name: /^three\b/ })
+    const entry = screen.getByRole('button', { name: /^three(?!-)/ })
 
     expect(entry).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(entry)
@@ -75,10 +75,10 @@ describe('LicencesWindow', () => {
   it('shows one at a time, so the list stays readable', async () => {
     render(<LicencesWindow />)
 
-    await userEvent.click(screen.getByRole('button', { name: /^three\b/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^three(?!-)/ }))
     await userEvent.click(screen.getByRole('button', { name: /FFmpeg/ }))
 
-    expect(screen.getByRole('button', { name: /^three\b/ })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /^three(?!-)/ })).toHaveAttribute(
       'aria-expanded',
       'false',
     )

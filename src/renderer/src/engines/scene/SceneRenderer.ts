@@ -67,12 +67,14 @@ import {
 import type { PaneRect } from '../viewport/panes'
 import {
   canReceiveShadow,
+  carriesMaterial,
   type ModelNode,
   type NodeMove,
   type SceneNode,
   type SceneNodeType,
   type SceneState,
   type SpriteNode,
+  type CarvedNode,
   type TextNode,
 } from './sceneState'
 import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
@@ -84,6 +86,7 @@ import { railsInUse, shotCameras, shotOfCameraAt } from './cameraShots'
 import {
   buildPath,
   cameraBody,
+  geometryFor,
   helperFor,
   knobIndexOf,
   knobName,
@@ -172,6 +175,7 @@ import {
 } from './sceneView'
 import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 import BvhWorker from './bvh.worker?worker'
+import CsgWorker from '../csg/csg.worker?worker'
 import SkinWorker from './skinWeights.worker?worker'
 import RetargetWorker from './retarget.worker?worker'
 import { createRetarget, retargetFitOf, type Retarget, type RetargetFit } from './retarget'
@@ -184,6 +188,8 @@ import type { Rig } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
+import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
+import { matrixOfTransform } from '../csg/carve'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
 import { NOTHING_SNAPPED, type Snapping } from '@shared/domain/snap'
@@ -461,12 +467,16 @@ const GRID_SINKAGE = 0.02
  * placed away from what they light or watch, and a group is only ever as big as its children,
  * which are counted on their own.
  */
-const FRAMED_NODES: ReadonlySet<SceneNodeType> = new Set<SceneNodeType>([
-  'mesh',
-  'model',
-  'text',
-  'sprite',
+const UNFRAMED_NODES: ReadonlySet<SceneNodeType> = new Set<SceneNodeType>([
+  'light',
+  'camera',
+  'group',
+  'path',
 ])
+
+/** Spelled as what is LEFT OUT: a node kind added to the union is framed by default, where a
+ * whitelist would have quietly stopped framing it. */
+const isFramed = (type: SceneNodeType): boolean => !UNFRAMED_NODES.has(type)
 
 /** An empty box for an empty set, which is how a caller tells "nothing yet" from "nothing there". */
 function boundsOf(objects: Iterable<Object3D>): Box3 {
@@ -688,6 +698,9 @@ export class SceneRenderer {
   /** What each mesh wore, and which lights the material preview put out — see `pane-dress`. */
   private readonly paneMemory = createPaneMemory()
   private readonly bvh: BvhBuilder
+  private readonly csg: CsgEvaluator
+  /** Nodes whose cut is out. Holds which side owes the cache its reference. */
+  private readonly cutting = new Set<string>()
   private readonly skin: SkinWeights
   private readonly retarget: Retarget
   /**
@@ -744,6 +757,12 @@ export class SceneRenderer {
       onFailure: (url, error) => reportFailure('scene.animation', url, error),
     })
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
+    this.csg = createCsgEvaluator({
+      spawn: () => new CsgWorker(),
+      // The key as subject, so two solids that both fail are two lines rather than one: the node
+      // keeps drawing its raw brushes, and a silent second failure would look like a success.
+      onFailure: (key, error) => reportFailure('scene.carved', key, error),
+    })
     this.skin = options.skin ?? createSkinWeights(() => new SkinWorker())
     this.retarget = options.retarget ?? createRetarget(() => new RetargetWorker())
     // Before any file lands: a skeleton this project has already been taught is recognised on
@@ -1735,11 +1754,11 @@ export class SceneRenderer {
     return { position: plainVector(camera.position), target: plainVector(target) }
   }
 
-  /** What a framing and a shadow frustum are both measured against — see `FRAMED_NODES`. */
+  /** What a framing and a shadow frustum are both measured against — see `UNFRAMED_NODES`. */
   private framedObjects(): Object3D[] {
     const objects: Object3D[] = []
     for (const [id, object] of this.objects) {
-      if (FRAMED_NODES.has(this.applied.get(id)?.type ?? 'group')) objects.push(object)
+      if (isFramed(this.applied.get(id)?.type ?? 'group')) objects.push(object)
     }
     return objects
   }
@@ -2215,6 +2234,7 @@ export class SceneRenderer {
     for (const id of [...this.skeletons.keys()]) this.unbindSkeleton(id)
     this.textureCache.dispose()
     this.modelCache.dispose()
+    this.csg.dispose()
     this.gltf.dispose()
     this.wireMaterial.dispose()
     this.paneMaterials.dispose()
@@ -2245,7 +2265,9 @@ export class SceneRenderer {
   refreshTextures(): void {
     for (const [id, maps] of this.textures) {
       const node = this.applied.get(id)
-      if (node?.type === 'mesh') maps.apply(node.material)
+      // A solid wears the same descriptor and registers the same slots — `carriesMaterial` is
+      // what keeps the three in step, where a list of types drifts.
+      if (node && carriesMaterial(node)) maps.apply(node.material)
     }
     for (const [id, maps] of this.spriteMaps) {
       const node = this.applied.get(id)
@@ -2769,6 +2791,22 @@ export class SceneRenderer {
       return
     }
 
+    if (node.type === 'carved' && object instanceof Mesh) {
+      const before = previous?.type === 'carved' ? previous : null
+      // Cut again only when the RECIPE moved: a colour change must not send the worker off, which
+      // is the one edit here that costs anything.
+      if (before?.carved !== node.carved) void this.recut(node, object)
+
+      const material = standardMaterialOf(object)
+      if (material && before?.material !== node.material) {
+        applyMaterial(material, node.material, this.meshColor)
+        // The slots too, exactly as a mesh: `buildCarved` registers them, and without this a map
+        // assigned in the inspector changed the document and nothing on screen.
+        this.textures.get(node.id)?.apply(node.material)
+      }
+      return
+    }
+
     if (node.type === 'text' && object instanceof Mesh) {
       const before = previous?.type === 'text' ? previous : null
       // Cut again only when the words or their shape moved: a colour change must not re-extrude
@@ -2790,6 +2828,7 @@ export class SceneRenderer {
     if (node.type === 'text') return this.buildText(node)
     if (node.type === 'camera') return this.buildCamera(node)
     if (node.type === 'path') return buildPath(node.path, this.meshColor)
+    if (node.type === 'carved') return this.buildCarved(node)
     // A group is its transform and nothing else: an empty object others hang from.
     return new Object3D()
   }
@@ -2817,6 +2856,69 @@ export class SceneRenderer {
     this.frustums.set(node.id, helper)
     this.markers.set(node.id, body)
     return camera
+  }
+
+  /**
+   * A solid cut out of other solids. Born wearing its BASE brush — the wall before the window —
+   * because ADR-25 refuses an empty node: what the cut has not finished is shown uncut, never
+   * missing.
+   */
+  private buildCarved(node: CarvedNode): Mesh {
+    const material = new MeshStandardMaterial()
+    applyMaterial(material, node.material, this.meshColor)
+
+    // The base brush AS THE RECIPE PLACES IT: its transform carries the matter's scale, so a
+    // wall shown uncut while the worker runs is the size it will be once pierced.
+    const raw = geometryFor(node.carved.base.geometry)
+    raw.applyMatrix4(matrixOfTransform(node.carved.base.transform))
+    const mesh = new Mesh(raw, material)
+    // The very slots a mesh gets: a solid wears the same descriptor, and without this its maps
+    // are named by the document and loaded by nobody.
+    const textures = createMaterialTextures(this.textureCache, mesh, material, () => this.redraw())
+    textures.apply(node.material)
+    this.textures.set(node.id, textures)
+
+    void this.recut(node, mesh)
+
+    return mesh
+  }
+
+  /**
+   * The solid, cut again from whatever the node now says.
+   *
+   * The evaluator hands out one geometry per distinct graph, so the mesh must never dispose what
+   * it is given — `release` is what frees it, and only once the last node lets go.
+   */
+  private async recut(node: CarvedNode, into: Mesh): Promise<void> {
+    // Recorded BEFORE the await: `release` reads this to know a reference is out, so a node
+    // deleted mid-cut is given back exactly once.
+    this.cutting.add(node.id)
+    const cut = await this.csg.acquire(node.carved)
+    const held = this.cutting.delete(node.id)
+
+    // The OBJECT and the RECIPE, never the node itself: any edit — a drag, a rename, a colour —
+    // mints a fresh node while leaving `carved` the same, and comparing identity threw the cut
+    // away for a solid that still wanted it. `buildModel` compares its holder the same way.
+    const applied = this.applied.get(node.id)
+    if (!cut || this.objects.get(node.id) !== into || applied?.type !== 'carved') {
+      if (cut && held) this.csg.release(node.carved)
+      return
+    }
+    if (applied.carved !== node.carved) {
+      if (held) this.csg.release(node.carved)
+      return
+    }
+    const object = into
+
+    // The uncut brush this node was born wearing. Its own buffers, so nothing else frees it —
+    // and the cache's geometries are never disposed here, which `owns` is what tells apart.
+    if (!this.csg.owns(object.geometry)) object.geometry.dispose()
+    object.geometry = cut
+    void this.bvh.accelerate(object)
+    // Same reason as a model landing into a wireframe scene: the edges outline the shape that
+    // was there before the cut arrived — the uncut brush — until they are built again.
+    if (this.needsEdges()) this.applyDisplay(object)
+    this.redraw()
   }
 
   /**
@@ -3225,6 +3327,11 @@ export class SceneRenderer {
     // pointed at, and nothing else remembers it.
     const applied = this.applied.get(id)
     if (applied?.type === 'model') this.modelCache.release(applied.model.assetId)
+    // Given back once: `recut` may still be in flight, and `cutting` is what says which of the
+    // two owes the reference.
+    // `has`, never `delete`: consuming the token here left `recut` believing the reference had
+    // already been given back, and neither side ever returned it.
+    if (applied?.type === 'carved' && !this.cutting.has(id)) this.csg.release(applied.carved)
     // Before the instance goes: a mixer holding actions keeps every bone of a released model
     // alive with it.
     this.animations.remove(id)
@@ -3252,7 +3359,9 @@ export class SceneRenderer {
       // find it to remove.
       object.removeFromParent()
       if (object instanceof Mesh) {
-        object.geometry.dispose()
+        // Never a geometry the CSG cache lends: the same buffers are drawn by every node of the
+        // same graph, and freeing them here empties its neighbours' screens.
+        if (!this.csg.owns(object.geometry)) object.geometry.dispose()
         disposeMaterial(object)
       }
       // A sprite is not a mesh, so the branch above never freed its material. Its geometry is

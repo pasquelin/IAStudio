@@ -912,6 +912,14 @@
       "targetSelect": {
         "title": "Désigner une cible",
         "description": "Désigne dans le document ouvert ce que la suite visera — un calque, un objet de scène, un clip. Prenez l’identifiant dans la liste des cibles de ce briefing. Sans elle, il n’y a rien à viser."
+      },
+      "nodeCarve": {
+        "title": "Percer, fusionner ou croiser des objets",
+        "description": "Plie plusieurs objets de la scène devant en un seul solide : le premier identifiant est la matière, les suivants sont les outils. Les formes d’origine sont conservées dans le solide et « node.separate » les rend. Répond avec l’identifiant du solide."
+      },
+      "nodeSeparate": {
+        "title": "Séparer un solide",
+        "description": "Défait un solide de la scène devant et rend les formes dont il a été fait, chacune là où elle se trouvait. Répond avec les identifiants des objets rendus."
       }
     },
     "refusals": {
@@ -1186,7 +1194,8 @@
       "cardTitle": "Titre de la fiche",
       "cardBody": "Texte de la fiche",
       "cardActive": "La fiche s’applique",
-      "aimId": "Identifiant de la cible"
+      "aimId": "Identifiant de la cible",
+      "csgOperation": "Ce qu’il faut en faire"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

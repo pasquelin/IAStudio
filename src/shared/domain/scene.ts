@@ -10,39 +10,14 @@ import type { FontRef } from './font'
 import type { BodyPart } from './humanoid'
 import type { Rig } from './rig'
 import type { Us } from './time'
+import type { GeometryDescriptor } from './geometry'
 import type { Vector3 } from './transform'
 
 /** Re-exported so the fifty-odd files that read a pose from here keep reading it from here. */
 export { isTransform, isVector3, type Transform, type Vector3 } from './transform'
 
-/**
- * Each primitive carries its own parameters rather than a shared bag of optionals: a sphere has
- * no depth, and a type that lets it have one stops describing anything.
- */
-export type GeometryDescriptor =
-  | { kind: 'box'; width: number; height: number; depth: number }
-  | { kind: 'capsule'; radius: number; height: number; capSegments: number; radialSegments: number }
-  | { kind: 'circle'; radius: number; segments: number }
-  | { kind: 'cylinder'; radiusTop: number; radiusBottom: number; height: number; segments: number }
-  | { kind: 'dodecahedron'; radius: number }
-  | { kind: 'icosahedron'; radius: number }
-  | { kind: 'lathe'; segments: number }
-  | { kind: 'octahedron'; radius: number }
-  | { kind: 'plane'; width: number; height: number }
-  | { kind: 'ring'; innerRadius: number; outerRadius: number; segments: number }
-  | { kind: 'sphere'; radius: number; widthSegments: number; heightSegments: number }
-  | { kind: 'tetrahedron'; radius: number }
-  | { kind: 'torus'; radius: number; tube: number; radialSegments: number; tubularSegments: number }
-  | {
-      kind: 'torusKnot'
-      radius: number
-      tube: number
-      tubularSegments: number
-      radialSegments: number
-      p: number
-      q: number
-    }
-  | { kind: 'tube'; radius: number; tubularSegments: number; radialSegments: number }
+/** Re-exported for the same reason as the transform above: this is where a scene is read from. */
+export type { GeometryDescriptor } from './geometry'
 
 /**
  * A texture is a reference to an asset of the project, never an image and never a three.js

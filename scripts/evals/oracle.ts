@@ -34,6 +34,13 @@ export const nodeNamed = (run: Run, name: string): SceneNode | undefined =>
 export const nodesOfKind = (run: Run, ...kinds: string[]): readonly SceneNode[] =>
   nodes(run).filter(one => kinds.includes(one.kind))
 
+/** The one solid a fold produced, and BY WHICH verb — three buttons that all leave "a solid"
+ * behind are three scenarios one wrong answer passes. */
+export const carvedBy = (run: Run, operation: string): boolean => {
+  const solids = nodesOfKind(run, 'carved')
+  return solids.length === 1 && solids[0]?.operation === operation
+}
+
 export const layers = (run: Run): readonly Layer[] =>
   inSpace(run, 'image').flatMap(one => one.layers)
 

@@ -31,7 +31,11 @@ import {
   mdiThermometer,
   mdiTrashCanOutline,
   mdiVideo3d,
+  mdiVectorDifference,
+  mdiVectorDifferenceAb,
+  mdiVectorIntersection,
   mdiVectorSquare,
+  mdiVectorUnion,
 } from '@mdi/js'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar/tools'
 import { ADD_FAMILIES, labelKeyOf } from '@/engines/scene/nodeKinds'
@@ -199,6 +203,41 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     labelKey: 'commands.sceneDelete.title',
     descriptionKey: 'sceneTools.deleteHint',
     icon: mdiTrashCanOutline,
+    acts: true,
+  },
+  // What a selection becomes. Their own group, under the three verbs that act on it: these do
+  // not edit what is selected, they REPLACE it with one solid — and the fourth undoes that.
+  {
+    id: 'carve',
+    command: 'scene.carve',
+    labelKey: 'commands.sceneCarve.title',
+    descriptionKey: 'sceneTools.carveHint',
+    icon: mdiVectorDifferenceAb,
+    separatorBefore: true,
+    acts: true,
+  },
+  {
+    id: 'weld',
+    command: 'scene.weld',
+    labelKey: 'commands.sceneWeld.title',
+    descriptionKey: 'sceneTools.weldHint',
+    icon: mdiVectorUnion,
+    acts: true,
+  },
+  {
+    id: 'intersect',
+    command: 'scene.intersect',
+    labelKey: 'commands.sceneIntersect.title',
+    descriptionKey: 'sceneTools.intersectHint',
+    icon: mdiVectorIntersection,
+    acts: true,
+  },
+  {
+    id: 'separate',
+    command: 'scene.separate',
+    labelKey: 'commands.sceneSeparate.title',
+    descriptionKey: 'sceneTools.separateHint',
+    icon: mdiVectorDifference,
     acts: true,
   },
   // The one view setting worth a button: a modeller flips between shaded and wireframe several

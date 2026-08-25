@@ -7,11 +7,20 @@ import type {
   Vector3,
 } from '@shared/domain/scene'
 import { DEFAULT_CAMERA, DEFAULT_PATH } from '@shared/domain/scene'
+import type { CsgGraph } from '@shared/domain/csg'
 import { newId } from '@/helpers/ids'
 import { defaultMeshMaterial } from './checkerTextures'
 import { lightByKind } from './lightTypes'
 import { primitiveByKind } from './meshPrimitives'
-import { CAMERA_ICON, GROUP_ICON, MODEL_ICON, PATH_ICON, SPRITE_ICON, TEXT_ICON } from './nodeKinds'
+import {
+  CAMERA_ICON,
+  CARVED_ICON,
+  GROUP_ICON,
+  MODEL_ICON,
+  PATH_ICON,
+  SPRITE_ICON,
+  TEXT_ICON,
+} from './nodeKinds'
 import {
   DEFAULT_MATERIAL,
   DEFAULT_SPRITE,
@@ -182,6 +191,34 @@ export function textNode(): SceneNode {
   }
 }
 
+/** A solid, standing where the matter it was cut from stood, and wearing its material. */
+export function carvedNode(
+  carved: CsgGraph,
+  {
+    transform = IDENTITY_TRANSFORM,
+    material = DEFAULT_MATERIAL,
+    parentId = null,
+    name = 'Solid',
+  }: {
+    transform?: Transform
+    material?: MaterialDescriptor
+    parentId?: string | null
+    name?: string
+  } = {},
+): SceneNode {
+  return {
+    id: newId(),
+    parentId,
+    name,
+    visible: true,
+    transform,
+    ...shadowDefaults({ type: 'carved' }),
+    type: 'carved',
+    carved,
+    material,
+  }
+}
+
 /** An empty node others hang from. Its transform moves everything under it, and nothing else. */
 export function groupNode(transform = IDENTITY_TRANSFORM, name = 'Group'): SceneNode {
   return {
@@ -207,9 +244,14 @@ export function iconOf(node: SceneNode): string {
   if (node.type === 'text') return TEXT_ICON
   if (node.type === 'camera') return CAMERA_ICON
   if (node.type === 'path') return PATH_ICON
+  if (node.type === 'carved') return CARVED_ICON
 
-  const kind = node.type === 'light' ? node.light.kind : node.geometry.kind
-  return (primitiveByKind(kind) ?? lightByKind(kind))?.icon ?? mdiCubeOutline
+  // Named rather than assumed: the fallthrough used to read `node.geometry` on anything that was
+  // not a light, so the next member of the union would have crashed here instead of taking the
+  // default glyph.
+  if (node.type === 'light') return lightByKind(node.light.kind)?.icon ?? mdiCubeOutline
+  if (node.type !== 'mesh') return mdiCubeOutline
+  return primitiveByKind(node.geometry.kind)?.icon ?? mdiCubeOutline
 }
 
 /**

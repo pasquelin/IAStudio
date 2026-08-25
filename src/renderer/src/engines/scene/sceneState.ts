@@ -19,6 +19,7 @@ import {
   type Transform,
   type Vector3,
 } from '@shared/domain/scene'
+import type { CsgGraph } from '@shared/domain/csg'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { DEFAULT_FONT } from '@shared/domain/font'
 import { cachedOn } from '../core/cachedOn'
@@ -45,6 +46,9 @@ export type SceneNode = SceneNodeBase &
     // A solid like a mesh, and lit like one — so it wears the same material, and the inspector's
     // material section serves it without knowing it exists.
     | { type: 'text'; text: TextDescriptor; material: MaterialDescriptor }
+    // A solid cut out of other solids. It wears a material like a mesh, and its SHAPE is a
+    // recipe rather than a descriptor — ADR-25: the graph is the document, the mesh is a cache.
+    | { type: 'carved'; carved: CsgGraph; material: MaterialDescriptor }
     // Nothing of its own: a group is a transform others hang from, and a name to find it by.
     | { type: 'group' }
     // What a render looks through. Not the viewport's camera: that one is how the scene is being
@@ -265,6 +269,20 @@ export type LightNode = Extract<SceneNode, { type: 'light' }>
 export type ModelNode = Extract<SceneNode, { type: 'model' }>
 export type SpriteNode = Extract<SceneNode, { type: 'sprite' }>
 export type TextNode = Extract<SceneNode, { type: 'text' }>
+export type CarvedNode = Extract<SceneNode, { type: 'carved' }>
+
+/**
+ * What wears a `MaterialDescriptor` — a mesh, a text and a solid, lit by the same rules and
+ * served by one section of the inspector.
+ *
+ * Derived, never restated: the three sites that listed the types by hand each forgot the solid,
+ * and each forgot it silently — a wall could be pierced and then not painted.
+ */
+export type MaterialNode = Extract<SceneNode, { material: MaterialDescriptor }>
+
+export function carriesMaterial(node: SceneNode): node is MaterialNode {
+  return 'material' in node
+}
 export type GroupNode = Extract<SceneNode, { type: 'group' }>
 export type CameraNode = Extract<SceneNode, { type: 'camera' }>
 export type PathNode = Extract<SceneNode, { type: 'path' }>

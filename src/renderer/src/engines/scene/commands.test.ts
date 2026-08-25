@@ -6,6 +6,8 @@ import { emptyHistory, run, undo, type Command } from '../core/history'
 import {
   addNode,
   addNodes,
+  carveNodes,
+  separateNode,
   addIkChain,
   addRigBone,
   addRigHands,
@@ -1015,5 +1017,66 @@ describe('editing a skeleton bone by bone', () => {
 
   it('reaches for nothing from a root, which has no bone above it to turn', () => {
     expect(ikOf(addIkChain('m', 'Hips').apply(rigged()))).toBeUndefined()
+  })
+})
+
+describe('carveNodes', () => {
+  const wall = () => ({ ...mesh('wall'), name: 'Wall' })
+  const cube = (x: number) => ({
+    ...mesh('cube'),
+    transform: { ...IDENTITY_TRANSFORM, position: { x, y: 0, z: 0 } },
+  })
+
+  const carved = (picked: SceneState['nodes']) => {
+    const command = carveNodes(picked, 'subtract', picked)
+    if (!command) throw new Error('the cut was refused')
+    return command.apply({ ...EMPTY_SCENE, nodes: picked })
+  }
+
+  it('leaves one solid where the two shapes were', () => {
+    const next = carved([wall(), cube(1)])
+
+    expect(next.nodes).toHaveLength(1)
+    expect(next.nodes[0]?.type).toBe('carved')
+  })
+
+  it('keeps the matter name and placement, so a wall gains a window', () => {
+    const matter = {
+      ...wall(),
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 7, y: 0, z: 0 } },
+    }
+    const solid = carved([matter, cube(7)]).nodes[0]
+
+    expect(solid?.name).toBe('Wall')
+    expect(solid?.transform.position.x).toBe(7)
+  })
+
+  it('refuses a selection nothing can be cut out of', () => {
+    expect(carveNodes([wall()], 'subtract', [wall()])).toBeNull()
+  })
+
+  // The reason `CsgPart` carries a material at all: welding a red cube to a blue sphere and
+  // separating them must not hand both back in one colour.
+  it('gives each shape back the colour it wore before the fold', () => {
+    const red = { ...wall(), material: { ...DEFAULT_MATERIAL, color: '#ff0000' } }
+    const blue = { ...cube(1), material: { ...DEFAULT_MATERIAL, color: '#0000ff' } }
+    const solid = carved([red, blue]).nodes[0]
+    if (solid?.type !== 'carved') throw new Error('the cut produced no solid')
+
+    const back = separateNode(solid).apply({ ...EMPTY_SCENE, nodes: [solid] })
+    const colours = back.nodes.map(node => (node.type === 'mesh' ? node.material.color : null))
+
+    expect(colours).toEqual(['#ff0000', '#0000ff'])
+  })
+
+  it('gives back the very shapes it folded in, still where they stood', () => {
+    const solid = carved([wall(), cube(1)]).nodes[0]
+    if (solid?.type !== 'carved') throw new Error('the cut produced no solid')
+
+    const back = separateNode(solid).apply({ ...EMPTY_SCENE, nodes: [solid] })
+
+    expect(back.nodes).toHaveLength(2)
+    expect(back.nodes.map(node => node.type)).toEqual(['mesh', 'mesh'])
+    expect(back.nodes[1]?.transform.position.x).toBeCloseTo(1)
   })
 })

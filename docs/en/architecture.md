@@ -587,9 +587,19 @@ The three that show 3D share `engines/viewport/` — canvas, camera, orbit, resi
 loop, image-based lighting. Each writing its own was three chances to disagree about a resize
 or a disposal.
 
-**Six engines, nine folders under `engines/`: the other three are not engines.** `core/` carries
-the shared history, `viewport/` the base of the three 3D views, and `gpu/` the shader passes and
-the frame counter.
+**Six engines, ten folders under `engines/`: the other four are not engines.** `core/` carries
+the shared history, `viewport/` the base of the three 3D views, `gpu/` the shader passes and
+the frame counter, and `csg/` boolean carving.
+
+**`csg/` is a layer, not an engine, and that is deliberate**: it holds no scene, knows neither
+document nor selection, and that is what will make it reusable outside the studio — to run a game,
+where carving happens at EDIT time and never at runtime. The graph (brushes, operations,
+placements) is the document; the evaluated mesh is a reference-counted cache, freed the moment no
+node points at it, and rebuilt on demand. Nothing is evaluated during a gesture: it all goes on
+release, into a worker that receives the GRAPH and hands back transferable buffers. What the cut
+has not finished shows as raw brushes — the solid wall, without its window — never a missing
+object. [ADR-25](../ci/adr/ADR-25-le-graphe-booleen-fait-foi.md) carries the decisions, including
+the ones that prepare collisions without shipping them.
 
 The audio one is a pair of modules rather than a class — `audioData.ts` does the sample work,
 `edits.ts` holds an `AudioEditState` replayable from the source file. Same invariant as the other

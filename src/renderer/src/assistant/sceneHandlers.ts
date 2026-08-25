@@ -20,6 +20,7 @@ import {
   type TextureSlot,
   type Vector3,
 } from '@shared/domain/scene'
+import { CSG_OPERATIONS } from '@shared/domain/csg'
 import { CAPTURE_QUALITIES, DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { SECOND } from '@shared/domain/time'
 import { withinBounds } from '@shared/numeric'
@@ -27,6 +28,7 @@ import { captureSceneView } from '@/helpers/captureSceneView'
 import { ENVIRONMENT_PRESETS, presetPatch } from '@/engines/scene/environmentPresets'
 import {
   addNode,
+  carveNodes,
   multi,
   removeNode,
   renameNode,
@@ -43,7 +45,9 @@ import {
   setSpriteOn,
   setTextOn,
   setWorld,
+  separateNode,
 } from '@/engines/scene/commands'
+import { carriesMaterial } from '@/engines/scene/sceneState'
 import { backgroundOfKind, fogOfKind } from '@/engines/scene/sceneWorld'
 import { EASINGS, POINT_TARGET, type CameraShot } from '@shared/domain/animation'
 import {
@@ -274,6 +278,9 @@ function readState(): ActionOutcome {
         // The points of a rail, so binding one is not done blind — `camera.rail` takes the id
         // from here, and what the rail looks like decides which one a client wants.
         ...(node.type === 'path' ? { path: node.path } : {}),
+        // The recipe and the material: without them a solid reads as a bare `type` and a client
+        // cannot tell a pierced wall from a welded one, nor know there is anything to separate.
+        ...(node.type === 'carved' ? { carved: node.carved, material: node.material } : {}),
       })),
     },
   }
@@ -528,6 +535,46 @@ export const SCENE_HANDLERS: ActionHandlers = {
 
   'node.remove': input => editNode(input, node => removeNode(node.id)),
 
+  /**
+   * The ids in the ORDER they were given: the first is the matter, the rest are the tools. A
+   * client that names them in another order asks for another solid, which is what the toolbar
+   * does too — see `carveGraph`.
+   */
+  'node.carve': input => {
+    const open = mounted()
+    if (!open) return refused('wrongSurface')
+
+    const operation = oneOf(input, 'operation', CSG_OPERATIONS)
+    const picked = textsOf(input, 'nodeIds')
+      .map(id => nodeById(open.state, id))
+      .filter(node => node !== null)
+    const command = operation && carveNodes(picked, operation, open.state.nodes)
+    if (!command) return refused('badInput')
+
+    useScenes.getState().runCommand(open.documentId, command)
+    // The id the description promises: a client cannot address the solid otherwise, short of
+    // re-reading the whole scene. Read off the state after, since the command mints it.
+    const solid = sceneOf(useScenes.getState(), open.documentId).nodes.find(
+      node => node.type === 'carved' && !open.state.nodes.includes(node),
+    )
+    return { ok: true, data: { nodeId: solid?.id ?? '' } }
+  },
+
+  'node.separate': input => {
+    const open = mounted()
+    if (!open) return refused('wrongSurface')
+
+    const node = nodeById(open.state, textOf(input, 'nodeId') ?? '')
+    if (node?.type !== 'carved') return refused('badInput')
+
+    useScenes.getState().runCommand(open.documentId, separateNode(node))
+    // The shapes handed back, as the description promises — their ids are what a client aims at
+    // next, and nothing else names them.
+    const after = sceneOf(useScenes.getState(), open.documentId)
+    const given = after.nodes.filter(one => !open.state.nodes.includes(one)).map(one => one.id)
+    return { ok: true, data: { nodeIds: given } }
+  },
+
   'node.rename': input =>
     editNode(input, node => renameNode(node.id, textOf(input, 'name') ?? node.name)),
 
@@ -563,10 +610,11 @@ export const SCENE_HANDLERS: ActionHandlers = {
 
   'node.material': input =>
     editNode(input, node => {
-      if (node.type !== 'mesh' && node.type !== 'text') return null
-      // A text's outline is not a primitive, so its UVs never go through the tiling — the field
-      // the inspector drops for a text is refused here rather than filed and ignored.
-      if (node.type === 'text' && input.tilesPerMetre !== undefined) return null
+      if (!carriesMaterial(node)) return null
+      // Neither a text's outline nor a cut result is a primitive, so their UVs never go through
+      // the tiling — the field the inspector drops for both is refused here rather than filed
+      // and ignored.
+      if (node.type !== 'mesh' && input.tilesPerMetre !== undefined) return null
 
       const textures = texturesFrom(input)
       if (!textures) return null

@@ -26,6 +26,7 @@ import {
   type ModelRef,
   type SceneWorld,
 } from '@shared/domain/scene'
+import { CSG_OPERATIONS, type CsgPart } from '@shared/domain/csg'
 import { readWorld } from './sceneWorld'
 import { BODY_PARTS } from '@shared/domain/humanoid'
 import { isRig } from '@shared/domain/rig'
@@ -141,6 +142,25 @@ function revived(node: SceneNode): SceneNode {
   if (filled.type === 'mesh') {
     return { ...filled, material: revivedMaterial(filled.material) }
   }
+  if (filled.type === 'carved') {
+    const material = revivedMaterial(filled.material)
+    // A brush written before it kept its own material takes the solid's, so `separateNode`
+    // always hands back something painted rather than a hole in the descriptor.
+    const painted = (part: CsgPart): CsgPart => ({
+      ...part,
+      material: revivedMaterial(part.material ?? material),
+    })
+
+    return {
+      ...filled,
+      material,
+      carved: {
+        ...filled.carved,
+        base: painted(filled.carved.base),
+        steps: filled.carved.steps.map(step => ({ ...step, part: painted(step.part) })),
+      },
+    }
+  }
   if (filled.type === 'sprite') {
     return { ...filled, sprite: { ...DEFAULT_SPRITE, ...filled.sprite } }
   }
@@ -246,6 +266,10 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.type === 'text') return isText(value.text) && isMaterial(value.material)
   // A group carries nothing of its own: everything it is has already been checked above.
   if (value.type === 'group') return true
+  // The recipe, and the material it wears like a mesh. A graph that does not read is the node
+  // refused rather than a solid drawn from half a recipe — glTF being index-bound, half a graph
+  // is a broken file, not a partly right one.
+  if (value.type === 'carved') return isCsgGraph(value.carved) && isMaterial(value.material)
   // Three numbers, and a file that holds none of them keeps its node: the defaults are what a
   // camera is without them, and `revived` lays them under whatever the file did say.
   if (value.type === 'camera') return value.camera === undefined || isRecord(value.camera)
@@ -254,6 +278,28 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.type === 'path') return isPath(value.path)
 
   return value.type === 'light' && describes(value.light, LIGHT_SPECS)
+}
+
+/**
+ * A boolean recipe: one base brush, then any number of steps. The shapes go through the very
+ * table a mesh's does, so a primitive gained is accepted here the day it is offered on screen.
+ */
+function isCsgGraph(value: unknown): boolean {
+  if (!isRecord(value) || !isCsgPart(value.base)) return false
+  if (!Array.isArray(value.steps)) return false
+
+  return value.steps.every(
+    step =>
+      isRecord(step) && CSG_OPERATIONS.some(one => one === step.operation) && isCsgPart(step.part),
+  )
+}
+
+function isCsgPart(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.name !== 'string') return false
+  if (!describes(value.geometry, GEOMETRY_SPECS) || !isTransform(value.transform)) return false
+  // Absent on a document written before a brush kept its own: the solid's material is laid under
+  // it in `revived`, which is what a separate then hands back.
+  return value.material === undefined || isMaterial(value.material)
 }
 
 function isOptionalFlag(value: unknown): boolean {

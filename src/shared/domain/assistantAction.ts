@@ -159,6 +159,8 @@ export type ActionName =
   | 'scene.state'
   | 'node.add'
   | 'node.addModel'
+  | 'node.carve'
+  | 'node.separate'
   | 'node.remove'
   | 'node.rename'
   | 'node.transform'

@@ -507,6 +507,40 @@ ranger disparaîtrait de l’écran, et on le croirait perdu.
 
 ---
 
+## Percer, fusionner, croiser
+
+**Édition ▸ Percer**, ou les quatre boutons de la barre d’outils, après le groupe.
+
+Posez un cube dans un mur, sélectionnez **le mur d’abord, le cube ensuite**, puis **Percer** : le
+mur gagne une fenêtre. C’est tout le principe — la **première** forme choisie est la matière, les
+suivantes sont les outils qui la creusent.
+
+Trois façons de combiner, et une pour revenir en arrière :
+
+| Bouton | Ce qu’il fait |
+|---|---|
+| **Percer** | creuse la première forme avec les suivantes — le cube ouvre la fenêtre |
+| **Fusionner** | réunit les formes en un seul solide |
+| **Garder le commun** | ne garde que la partie où les formes se chevauchent |
+| **Séparer** | rend les formes d’origine, chacune là où elle était |
+
+**Rien n’est perdu.** Le solide garde en mémoire les formes dont il a été fait : **Séparer** vous
+les rend intactes, et `⌘Z` annule la découpe comme n’importe quelle autre action. Vous pouvez donc
+essayer sans crainte.
+
+Le solide obtenu se comporte comme un objet ordinaire : il porte un nom, se déplace, se tourne,
+s’habille d’une matière, et la fenêtre suit le mur quand vous le déplacez.
+
+> **Le calcul ne se fait pas pendant que vous bougez le cube**, mais au moment où vous cliquez sur
+> le bouton — et il se fait à côté, sans figer l’écran. Sur une forme très détaillée, le solide
+> peut donc apparaître **plein pendant un instant** avant que le trou se creuse : ce n’est pas une
+> erreur, c’est le calcul qui n’a pas encore rendu sa réponse.
+
+> **Une seule forme ne se perce pas.** Il en faut au moins deux, et les boutons ne font rien tant
+> que ce n’est pas le cas. **Séparer** ne s’applique qu’à un solide à la fois.
+
+---
+
 ## Dupliquer, copier, coller
 
 Les quatre raccourcis que vous connaissez déjà. **Dupliquer** a sa ligne dans **Édition** ; les

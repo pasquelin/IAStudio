@@ -34,11 +34,14 @@ import { changedFields } from '@/helpers/objects'
 import { applySelection, deselect, type SelectionMode } from '@/helpers/selection'
 import { withField, type FieldValue } from './propertyFields'
 import { newId } from '@/helpers/ids'
-import { groupNode } from './nodeFactory'
+import { carvedNode, groupNode, meshNode } from './nodeFactory'
+import { canCarve, carveGraph, isCarvable, placedIn } from '../csg/carve'
+import type { CsgOperation } from '@shared/domain/csg'
 import {
   canCastShadow,
   canReceiveShadow,
   canReparent,
+  carriesMaterial,
   hasChildren,
   nodeById,
   rotationShows,
@@ -46,6 +49,7 @@ import {
   withAxisLock,
   withoutLockedAxes,
   type AxisLock,
+  type CarvedNode,
   type SceneNodeBase,
   type SceneNodeType,
   type MeshNode,
@@ -217,6 +221,34 @@ export function setMeshMaterial(id: string, material: MaterialDescriptor): Comma
   return editMesh('material', id, { material })
 }
 
+/**
+ * The material of whatever wears one — a mesh, a text or a solid.
+ *
+ * Keyed on the field rather than on the type, unlike `patchPart`: three node kinds hold the same
+ * descriptor, and a command per kind is how the solid came to be paintable nowhere.
+ */
+export function setNodeMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
+  let previous: MaterialDescriptor | null = null
+
+  const write = (state: SceneState, written: MaterialDescriptor): SceneState => ({
+    ...state,
+    nodes: state.nodes.map(node =>
+      node.id === id && carriesMaterial(node) ? { ...node, material: written } : node,
+    ),
+  })
+
+  return {
+    id: `material:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (!node || !carriesMaterial(node)) return state
+      previous = node.material
+      return write(state, material)
+    },
+    revert: state => (previous ? write(state, previous) : state),
+  }
+}
+
 export function setLight(id: string, light: LightDescriptor): Command<SceneState> {
   let previous: LightDescriptor | null = null
 
@@ -361,11 +393,10 @@ export function setMaterialOn(
   changes: Partial<MaterialDescriptor>,
 ): Command<SceneState> {
   return batch('material', nodes, node => {
-    // A text is lit exactly as a mesh is, and wears the same descriptor — so one section of the
-    // inspector serves both, and neither has to know the other exists.
-    if (node.type === 'mesh') return setMeshMaterial(node.id, { ...node.material, ...changes })
-    if (node.type === 'text') return setTextMaterial(node.id, { ...node.material, ...changes })
-    return null
+    // A text and a solid are lit exactly as a mesh is, and wear the same descriptor — so one
+    // section of the inspector serves the three, and none has to know the others exist.
+    if (!carriesMaterial(node)) return null
+    return setNodeMaterial(node.id, { ...node.material, ...changes })
   })
 }
 
@@ -743,6 +774,68 @@ export function groupNodes(nodes: readonly SceneNode[]): Command<SceneState> {
   return multi(commandId('group', [group.id]), [
     addNode(group),
     ...roots.map(node => reparentNode(node.id, group.id)),
+  ])
+}
+
+/**
+ * Folds a selection into one solid, and takes the nodes it was cut from out of the scene.
+ *
+ * The first shape is the matter: the solid stands where it stood, wears its material and hangs
+ * from its parent, so the cut reads as the wall gaining a window rather than a new object
+ * appearing. `null` when fewer than two nodes carry a shape at all.
+ */
+export function carveNodes(
+  picked: readonly SceneNode[],
+  operation: CsgOperation,
+  all: readonly SceneNode[],
+): Command<SceneState> | null {
+  if (!canCarve(picked)) return null
+  const [matter, ...tools] = picked.filter(isCarvable)
+  // Unreachable through `canCarve`, which now demands every node carry a shape — kept because
+  // the destructuring cannot say so to the compiler.
+  if (!matter) return null
+
+  const solid = carvedNode(carveGraph(matter, tools, operation, all), {
+    // Without the matter's SCALE, which travelled into the base brush — see `carveGraph`, where
+    // keeping it here is what sheared a turned tool.
+    transform: { ...matter.transform, scale: { x: 1, y: 1, z: 1 } },
+    material: matter.material,
+    parentId: matter.parentId,
+    name: matter.name,
+  })
+
+  return multi(commandId('carve', [solid.id]), [
+    addNode(solid),
+    // Their subtrees with them, exactly as `removeNodes` does: a child left hanging from a node
+    // the scene no longer holds is dropped by `flattenTree` — invisible in the outliner, still
+    // written to the file.
+    ...subtreeOf(all, matter.id)
+      .concat(tools.flatMap(tool => subtreeOf(all, tool.id)))
+      .map(node => removeNode(node.id)),
+  ])
+}
+
+/**
+ * Undoes a fold: the solid goes, and the brushes it was cut from come back as meshes — each with
+ * the shape, the placement AND the material it wore before. What comes back is what the GRAPH
+ * kept, which is the whole point of ADR-25: a mesh alone could not be taken apart again.
+ */
+export function separateNode(node: CarvedNode): Command<SceneState> {
+  const parts = [node.carved.base, ...node.carved.steps.map(step => step.part)]
+
+  return multi(commandId('separate', [node.id]), [
+    ...parts.map(part =>
+      addNode({
+        ...meshNode(part.geometry, {
+          material: part.material,
+          parentId: node.parentId,
+          name: part.name,
+        }),
+        // In the solid's frame, so a brush lands back where the cut had it standing.
+        transform: placedIn(node.transform, part.transform),
+      }),
+    ),
+    removeNode(node.id),
   ])
 }
 

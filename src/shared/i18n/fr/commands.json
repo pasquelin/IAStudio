@@ -452,6 +452,22 @@
     "sceneNavigate": {
       "title": "Naviguer",
       "help": "Traverser la scène comme dans un jeu : la souris tient le regard, W A S D déplacent, E et Q montent et descendent. La molette règle la vitesse. Échap rend la souris."
+    },
+    "sceneCarve": {
+      "title": "Percer",
+      "help": "Creuse la première forme sélectionnée avec les suivantes : un cube posé dans un mur y ouvre une fenêtre. Les formes d’origine sont conservées — « Séparer » les rend."
+    },
+    "sceneWeld": {
+      "title": "Fusionner",
+      "help": "Réunit les formes sélectionnées en un seul solide. Les formes d’origine sont conservées — « Séparer » les rend."
+    },
+    "sceneIntersect": {
+      "title": "Garder le commun",
+      "help": "Ne garde que la partie où les formes sélectionnées se chevauchent, et jette le reste. Les formes d’origine sont conservées — « Séparer » les rend."
+    },
+    "sceneSeparate": {
+      "title": "Séparer",
+      "help": "Défait un solide et rend les formes dont il a été fait, chacune là où elle se trouvait."
     }
   }
 }

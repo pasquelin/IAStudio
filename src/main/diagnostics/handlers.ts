@@ -12,6 +12,7 @@ import { parseLogEntry, parseTraceEntry } from './validation'
 const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'scene.model': 'document',
   'scene.bvh': 'document',
+  'scene.carved': 'document',
   'scene.texture': 'document',
   'scene.animation': 'document',
   'scene.export': 'document',

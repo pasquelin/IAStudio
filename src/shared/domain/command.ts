@@ -61,6 +61,10 @@ export type CommandId =
   | 'scene.add'
   | 'scene.addToSheet'
   | 'scene.removeFromSheet'
+  | 'scene.carve'
+  | 'scene.weld'
+  | 'scene.intersect'
+  | 'scene.separate'
   | 'scene.group'
   | 'scene.duplicate'
   | 'scene.copy'
@@ -558,6 +562,36 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: null,
   }),
   // `⌘G` as in every editor that groups: the key is taken by nothing else in this scope.
+  // The four verbs of a solid. No default key: nothing in a 3D package claims one for these,
+  // and reserving a letter here would take it from a tool a hand reaches for far more often.
+  command({
+    id: 'scene.carve',
+    scope: 'scene',
+    titleKey: 'commands.sceneCarve.title',
+    helpKey: 'commands.sceneCarve.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.weld',
+    scope: 'scene',
+    titleKey: 'commands.sceneWeld.title',
+    helpKey: 'commands.sceneWeld.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.intersect',
+    scope: 'scene',
+    titleKey: 'commands.sceneIntersect.title',
+    helpKey: 'commands.sceneIntersect.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.separate',
+    scope: 'scene',
+    titleKey: 'commands.sceneSeparate.title',
+    helpKey: 'commands.sceneSeparate.help',
+    defaultBinding: null,
+  }),
   command({
     id: 'scene.group',
     scope: 'scene',
