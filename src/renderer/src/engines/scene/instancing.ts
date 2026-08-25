@@ -1,5 +1,6 @@
-import { InstancedMesh, Mesh, type Material, type Object3D } from 'three'
+import { InstancedMesh, Mesh, type BufferGeometry, type Material, type Object3D } from 'three'
 import { stableKey } from '@shared/hash'
+import { TRIANGLES_PER_REGION, regionsByGrid, type SpatialRegions } from './instanceRegions'
 import type { SceneNode } from './sceneState'
 
 /**
@@ -41,14 +42,14 @@ export type InstancedGroups = {
  * against 0.01 ms for instances alone, against 17.02 ms for meshes drawn one by one.
  */
 export function createInstancedGroups(host: Object3D): InstancedGroups {
-  const drawn = new Map<string, InstancedMesh>()
+  const drawn: InstancedMesh[] = []
 
   const clear = (): void => {
-    for (const instance of drawn.values()) {
+    for (const instance of drawn) {
       instance.removeFromParent()
       instance.dispose()
     }
-    drawn.clear()
+    drawn.length = 0
   }
 
   return {
@@ -57,9 +58,11 @@ export function createInstancedGroups(host: Object3D): InstancedGroups {
 
       const groups = new Map<string, Mesh[]>()
       for (const node of nodes) {
-        if (node.type !== 'mesh' || !node.visible) continue
+        if (node.type !== 'mesh') continue
         const mesh = objectOf(node.id)
-        if (!(mesh instanceof Mesh)) continue
+        // Read off the OBJECT, never the node: `visible` is the flag three.js draws through, so
+        // it already carries what the viewport isolates on top of what the document hides.
+        if (!(mesh instanceof Mesh) || !isDrawn(mesh, host)) continue
 
         // Everything a draw call would have to change: the shape, and what it is painted with.
         // Two nodes that differ by any of it cannot share one call, so they are two groups.
@@ -70,7 +73,7 @@ export function createInstancedGroups(host: Object3D): InstancedGroups {
       }
 
       let instanced = 0
-      for (const [key, meshes] of groups) {
+      for (const meshes of groups.values()) {
         const first = meshes[0]
         if (!first) continue
         // Back to the camera's layer: a group that shrank below the floor since the last pass
@@ -83,17 +86,30 @@ export function createInstancedGroups(host: Object3D): InstancedGroups {
         const material = materialOf(first)
         if (!material) continue
 
-        const instance = new InstancedMesh(first.geometry, material, meshes.length)
-        for (const [at, mesh] of meshes.entries()) {
-          instance.setMatrixAt(at, mesh.matrixWorld)
-          mesh.layers.set(DRAWN_BY_INSTANCE)
+        const regions = splitOf(meshes, first.geometry)
+        for (let region = 0; region + 1 < regions.starts.length; region += 1) {
+          const from = regions.starts[region] ?? 0
+          const to = regions.starts[region + 1] ?? 0
+          const instance = new InstancedMesh(first.geometry, material, to - from)
+          let written = 0
+          for (let slot = from; slot < to; slot += 1) {
+            const mesh = meshes[regions.order[slot] ?? -1]
+            if (!mesh) continue
+            instance.setMatrixAt(written, mesh.matrixWorld)
+            written += 1
+          }
+          // What was really written, so a region short of a mesh draws one fewer rather than
+          // leaving the constructor's identity matrix as a copy of the shape at the origin.
+          instance.count = written
+          instance.instanceMatrix.needsUpdate = true
+          // Its own bounds are what the frustum tests: without this the whole region is culled by
+          // the box of a single instance, and a scene disappears as soon as the camera turns.
+          instance.computeBoundingSphere()
+          host.add(instance)
+          drawn.push(instance)
         }
-        instance.instanceMatrix.needsUpdate = true
-        // Its own bounds are what the frustum tests: without this the whole group is culled by
-        // the box of a single instance, and a scene disappears as soon as the camera turns.
-        instance.computeBoundingSphere()
-        host.add(instance)
-        drawn.set(key, instance)
+
+        for (const mesh of meshes) mesh.layers.set(DRAWN_BY_INSTANCE)
         instanced += meshes.length
       }
       return instanced
@@ -101,6 +117,40 @@ export function createInstancedGroups(host: Object3D): InstancedGroups {
 
     dispose: clear,
   }
+}
+
+/**
+ * The regions this group is drawn in — one holding everything when all of it together draws
+ * fewer triangles than a region is worth.
+ */
+function splitOf(meshes: readonly Mesh[], geometry: BufferGeometry): SpatialRegions {
+  const cells = Math.ceil((meshes.length * trianglesOf(geometry)) / TRIANGLES_PER_REGION)
+  if (cells <= 1) {
+    return { order: Uint32Array.from(meshes.keys()), starts: Uint32Array.of(0, meshes.length) }
+  }
+
+  // The translation read straight off the world matrix, never `decompose`: a non-uniform scale
+  // inside a rotated parent shears, and a decomposed translation of a sheared matrix drifts.
+  const at = new Float64Array(meshes.length * 3)
+  for (const [slot, mesh] of meshes.entries()) {
+    const placed = mesh.matrixWorld.elements
+    at[slot * 3] = placed[12] ?? 0
+    at[slot * 3 + 1] = placed[13] ?? 0
+    at[slot * 3 + 2] = placed[14] ?? 0
+  }
+  return regionsByGrid({ at, count: meshes.length }, cells)
+}
+
+/** What three.js would draw: this object visible, and every one it hangs from up to the host. */
+function isDrawn(mesh: Object3D, host: Object3D): boolean {
+  for (let at: Object3D | null = mesh; at && at !== host; at = at.parent) {
+    if (!at.visible) return false
+  }
+  return true
+}
+
+function trianglesOf(geometry: BufferGeometry): number {
+  return (geometry.index?.count ?? geometry.getAttribute('position')?.count ?? 0) / 3
 }
 
 /** An instance draws ONE material. A mesh wearing an array of them is left to be drawn alone. */
