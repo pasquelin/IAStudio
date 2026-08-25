@@ -182,6 +182,35 @@ describe('putting a document in front', () => {
     expect(openDocument).toHaveBeenCalledWith(expect.objectContaining({ id: 'doc-b' }))
   })
 
+  /**
+   * 🛑 By TITLE, because the id is the one thing a caller may never have seen: the briefing names
+   * open documents in quotes and nothing else, so a model told to bring one back to the front had
+   * only its title to answer with — and the rule telling it to do so promised a refusal.
+   */
+  it('takes the title the studio shows, not the id alone', async () => {
+    installDocuments({ 'doc-a': '3d', 'doc-b': 'image' }, 'doc-a')
+    retitleDocument('doc-b', 'Planche du château')
+
+    expect(await runAction('document.activate', { documentId: 'Planche du château' })).toEqual({
+      ok: true,
+    })
+    expect(useDocuments.getState().activeId).toBe('doc-b')
+  })
+
+  // Guessing between two would activate the wrong one in silence, where a refusal sends the
+  // caller to `documents.list` for the id that tells them apart.
+  it('refuses a title two documents share rather than picking one', async () => {
+    installDocuments({ 'doc-a': '3d', 'doc-b': 'image' }, 'doc-a')
+    retitleDocument('doc-a', 'Château')
+    retitleDocument('doc-b', 'Château')
+
+    expect(await runAction('document.activate', { documentId: 'Château' })).toEqual({
+      ok: false,
+      refusal: 'notFound',
+    })
+    expect(useDocuments.getState().activeId).toBe('doc-a')
+  })
+
   it('refuses an id no tab holds rather than clearing the centre', async () => {
     installDocuments({ 'doc-a': '3d' }, 'doc-a')
 

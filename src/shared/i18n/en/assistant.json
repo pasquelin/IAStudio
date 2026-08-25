@@ -63,7 +63,7 @@
       },
       "documentActivate": {
         "title": "Bring a document to the front",
-        "description": "Makes an already open document the active tab, so that commands aimed at its surface reach it. This is the answer to a command refused for being on the wrong surface."
+        "description": "Makes an already open document the active tab, so that commands aimed at its surface reach it. This is the answer to a command refused for being on the wrong surface. Name it by its id, by its path, or by the title the studio shows in quotes — a title two documents share names neither."
       },
       "documentClose": {
         "title": "Close a document",
