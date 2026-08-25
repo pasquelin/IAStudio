@@ -249,6 +249,23 @@ export default defineConfig({
       {
         resolve: { alias },
         test: {
+          /**
+           * The bench's own fixtures, which `src` globs never reach. Free and offline, unlike
+           * `pnpm evals`, so it belongs to the gate. Anchored on `scripts/evals/` and not on
+           * `scripts/`: that is what `tsconfig.evals.json` covers, and a test outside it would
+           * run having never been typechecked.
+           */
+          name: 'scripts',
+          environment: 'node',
+          pool: TEST_POOL,
+          testTimeout: TEST_TIMEOUT,
+          include: ['scripts/evals/**/*.test.ts'],
+          benchmark: { include: ['scripts/evals/**/*.bench.ts'] },
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
           name: 'renderer-node',
           // The renderer tests that never touch a browser. jsdom and the renderer setup cost them
           // more than they run: on 2026-08-12, 221 cases of `helpers/` executed in 700 ms under

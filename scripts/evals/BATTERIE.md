@@ -16,12 +16,36 @@ git et doit le rester : une clé commitée survit dans l'historique au commit qu
 
 ## Où en est le banc
 
-Le banc joue aujourd'hui **5 scénarios** sur les ~250 ci-dessous, chacun trois fois, contre le
-vrai modèle. Dernière mesure — DeepSeek, 2026-08-26 : **33 % de réussite, 48 tours,
-18 691 tokens par tour dont 77 % servis par le cache du fournisseur.**
+La liste ci-dessous compte **192 demandes**. Le banc en joue **5**, chacune trois fois, contre le
+vrai modèle — et **trois seulement** figurent ici, marquées **[banc]** : les deux autres (ouvrir un
+document au nom quasi exact, poser une image sur un plan dans une scène neuve) sont nées d'une
+panne observée et n'ont pas encore de ligne. Les **189 restantes ne sont mesurées par rien.**
 
-Les cinq déjà couverts sont marqués **[banc]**. Le reste attend son tour, et l'ordre n'est pas
-l'ordre de la liste : ce qui se mesure d'abord est ce qui échoue.
+Dernière mesure — DeepSeek, 2026-08-25, trois passes par scénario : **0/3** ouvre une image nommée
+dans une autre langue · **2/3** ouvre un document au nom quasi exact · **3/3** demande lequel quand
+deux fichiers matchent · **0/3** pose une image sur un plan en 3D · **3/3** répond sans toucher au
+studio. Soit 8 tirages sur 15, 33 tours, 17 875 tokens par tour dont 94 % servis par le cache.
+
+**Ce que les chaînes montrent, et qu'aucun pourcentage ne dit** : le modèle CHERCHE puis s'arrête.
+`files.search`, `files.list → files.search`, `files.search → documents.list` — puis rien. Sur
+« ouvre la charge 2000 », une passe sur trois n'émet **aucun appel** alors que la recherche rendait
+le chemin. Ce n'est pas un problème de connaissance du projet.
+
+L'ordre n'est pas celui de la liste : ce qui se mesure d'abord est ce qui échoue.
+
+🛑 **Un pourcentage global de ce banc ne se compare à rien : quinze tirages, c'est tout.** Le même
+code a rendu 33 %, 40 % et 53 % dans la même journée — d'où les lignes par scénario ci-dessus
+plutôt qu'un chiffre de tête. Et trois passes séparent mal 1/3 de 2/3. La seule comparaison qui
+vaut est celle qu'on peut expliquer : « ce scénario ne pouvait pas passer, il passe ».
+
+🛑 **Une action que le studio simulé modélise MAL ne se voit nulle part.** La ligne `not modelled`
+du rapport nomme celles qu'il ignore, jamais celles qu'il lit de travers — et une action lue de
+travers ressemble trait pour trait à un modèle qui choisit mal. `node.material` était lu comme un
+`assetId` posé à côté du nœud, là où le registre déclare un enregistrement `textures` : le seul
+appel correct revenait `badInput`, et trois passes ont bouclé dessus. Le studio simulé passe
+désormais **toute** entrée par `validatesInput`, la porte que le vrai chemin tient
+(`renderer/src/assistant/executor.ts`), plutôt que de relire les champs à la main action par
+action ; `fakeStudio.test.ts` garde le reste, et `pnpm evals` ne peut voir ni l'un ni l'autre.
 
 🛑 **Une case cochée à la main ne vaut rien.** Toutes les erreurs de cette session étaient
 annoncées comme des succès par le modèle lui-même, et une passe unique a donné 60 % là où trois
