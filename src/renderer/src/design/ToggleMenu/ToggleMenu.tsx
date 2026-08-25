@@ -75,6 +75,11 @@ export function ToggleMenu({
           tooltip={tooltip}
           variant="header"
           active={pressed}
+          // An armed snap is something one ACTIONS, which `CLAUDE.md` gives the full accent —
+          // and `active` alone paints it `elevated`, the colour the hover already uses. The bar
+          // then said the same thing about the control under the pointer and the one armed.
+          // `ToolbarTool` reaches for the same pair, for the same reason.
+          accented={pressed}
           onClick={onToggle}
         />
       )}

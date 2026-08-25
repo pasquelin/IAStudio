@@ -524,6 +524,10 @@
   /* The room every property line keeps at its end, drawn into or not — two controls, the most any
      line asks for: padlock and reset on Scale, browse and clear on a link. */
   --sc-row-actions: calc(var(--sc-control) * 2);
+  /* Where a surface laid BESIDE the pane's tool column starts. Derived, so a density that moves
+     the control moves it too: `left-2` under the column (8px), its border and `p-1` on both
+     sides (10px), and 8px of air between the two. */
+  --sc-pane-aside: calc(var(--sc-control) + 26px);
   /* A list row that stacks a name over a subtitle. `--sc-control` cannot hold it: two steps of
      `leading-tight` text are 27.5px, which fills a 28px row edge to edge and overflows a compact
      one. Its own gauge rather than a padding on the row, because the virtualizer is given a
