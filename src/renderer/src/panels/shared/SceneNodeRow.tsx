@@ -6,6 +6,7 @@ import { iconOf } from '@/engines/scene/nodeFactory'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { useScenes } from '@/stores/scenes'
 import { InlineRename } from '@/design/InlineRename'
+import { ROW_WRAPPER } from '@/design/styles'
 import { VisibilityToggle } from './VisibilityToggle'
 
 export type SceneNodeRowProps = {
@@ -66,7 +67,7 @@ export const SceneNodeRow = memo(function SceneNodeRow({
   return (
     // On the name alone, as the layer stack does: a double click meant for the chevron or the
     // eye is not a rename.
-    <div className="h-full min-w-0 flex-1" onDoubleClick={() => onRename?.(node.id)}>
+    <div className={ROW_WRAPPER} onDoubleClick={() => onRename?.(node.id)}>
       <Row
         icon={iconOf(node)}
         title={node.name}

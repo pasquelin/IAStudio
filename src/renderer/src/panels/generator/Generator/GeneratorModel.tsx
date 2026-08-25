@@ -107,11 +107,10 @@ export function GeneratorModel({ capability, modelId, name, plan }: GeneratorMod
       {/* Under the field rather than in the middle of the panel: it is about the control right
           above it, and a picker that opens into the flow pushed a centred message off centre.
 
-          🛑 ANGLE MORT: `useModelsForCapability` answers `data ?? NONE`, so an empty list is also
-          what a catalogue being FETCHED looks like, and what a REJECTED request looks like — a
-          request that failed is stated as fact ("no model serves this"), with no retry offered.
-          Strictly better than what it replaced, which said it unconditionally; the real fix is
-          that hook publishing its pending and error states, which it does not. */}
+          🛑 ANGLE MORT: `useModelsForCapability` answers a bare list, so « being fetched » and
+          « refused » both read as « no model serves this », stated as fact and with no retry.
+          `usePages` publishes `pending` and `refusal` since 25 August — the hook swallows them,
+          and taking them through is what closes this. */}
       {modelId === null && (
         <p className="text-muted text-tiny pt-1">
           {t(

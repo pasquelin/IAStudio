@@ -84,7 +84,7 @@ export function CollectionBar({
       // what gives ground — a narrow search box still searches, a clipped one is unreachable.
       className={layout === 'header' ? 'w-56 min-w-16 shrink' : inline ? 'w-56 shrink-0' : 'w-full'}
       // The placeholder says it, but only until the field is typed in.
-      tip={TIP_BOTTOM(t('collection.search'), undefined, t('collection.searchHint'))}
+      hint={TIP_BOTTOM(t('collection.search'), undefined, t('collection.searchHint'))}
     />
   )
 
