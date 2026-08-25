@@ -88,9 +88,13 @@ elle, souder un cube rouge à une sphère bleue puis séparer rendait les deux d
 solide. Les ajouter plus tard voudrait dire migrer tous les documents déjà écrits ; aujourd'hui le
 coût est nul.
 
-`[M]` **Un solide ne se découpe pas dans un autre solide, et c'est un refus écrit.** La liste de
-pas est plate : plier un solide dedans garderait sa brosse de base et jetterait en silence toutes
-les découpes déjà faites. La barre refuse plutôt que de tronquer — il faut le séparer d'abord.
+`[M]` **Une brosse peut être une RECETTE, pas seulement une forme** — `CsgPart.geometry` est donc
+récursif. Un premier arbitrage refusait de plier un solide dans un autre, au motif que la liste de
+pas est plate et n'aurait gardé que sa brosse de base. **Mauvais arbitrage, corrigé au premier
+essai dans l'app** : cela protégeait le défaut au lieu de le lever, et enchaîner des booléens est
+le geste ordinaire d'un modeleur — Roblox comme Blender. Le worker récurse, la relecture du
+document descend avec elle, et « Séparer » rend un solide COMME un solide plutôt que d'aplatir
+ses découpes.
 
 `[M]` **Le graphe voyage en `extras` glTF, verbatim, et les meshes évalués au standard.** C'est le
 mécanisme déjà prouvé quatre fois par le § Formats de `CLAUDE.md` : la fenêtre produit la structure

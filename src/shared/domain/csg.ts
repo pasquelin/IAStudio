@@ -30,7 +30,15 @@ export type CollisionFidelity = 'box' | 'hull' | 'convexes' | 'trimesh'
 /** One brush of the graph: a shape, where it stands, and what it goes back to on separate. */
 export type CsgPart = {
   name: string
-  geometry: GeometryDescriptor
+  /**
+   * A primitive, OR a whole recipe — a solid folded into another solid.
+   *
+   * Recursive on purpose. A flat list of steps could only have kept such a brush's BASE shape and
+   * dropped every cut already made in it, so the toolbar used to refuse the gesture outright.
+   * Refusing protected the shortcoming instead of lifting it, and chaining booleans is what every
+   * modeller does — Roblox included.
+   */
+  geometry: GeometryDescriptor | CsgGraph
   /** In the solid's own frame, so moving the solid moves everything it was cut from. */
   transform: Transform
   /**
@@ -61,8 +69,24 @@ export type CsgGraph = {
 
 export function csgPartOf(
   name: string,
-  geometry: GeometryDescriptor,
+  geometry: GeometryDescriptor | CsgGraph,
   material: MaterialDescriptor,
 ): CsgPart {
   return { name, geometry, transform: IDENTITY_TRANSFORM, material }
+}
+
+/**
+ * Whether a brush carries a recipe rather than a primitive. Reads `base`, which a
+ * `GeometryDescriptor` never has — its own discriminant is `kind`.
+ */
+export function isCsgGraph(shape: GeometryDescriptor | CsgGraph): shape is CsgGraph {
+  return 'base' in shape
+}
+
+/**
+ * The first real shape a recipe rests on, however deep it is nested — what a solid wears while
+ * its cut is still out, since a graph has no geometry of its own to draw.
+ */
+export function primitiveOf(part: CsgPart): GeometryDescriptor {
+  return isCsgGraph(part.geometry) ? primitiveOf(part.geometry.base) : part.geometry
 }
