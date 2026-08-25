@@ -1,4 +1,9 @@
-import { FILLED_ROW_HEIGHT, LIST_ROW_HEIGHT, STACKED_ROW_HEIGHT } from '@/design/styles'
+import {
+  FILLED_ROW_HEIGHT,
+  LIST_ROW_HEIGHT,
+  MEDIA_ROW_HEIGHT,
+  STACKED_ROW_HEIGHT,
+} from '@/design/styles'
 import { useGauge } from './useGauge'
 
 /**
@@ -9,7 +14,7 @@ import { useGauge } from './useGauge'
  * `stacked` and `filled` hold the same two steps of text and part on what is BEHIND them: a row
  * painted edge to edge loses to its own fill the room a bare row keeps.
  */
-export type RowHeight = 'control' | 'stacked' | 'filled'
+export type RowHeight = 'control' | 'stacked' | 'filled' | 'media'
 
 /**
  * The pixels a row shape measures, read back from the gauge that sizes it.
@@ -28,6 +33,7 @@ export function useRowHeight(shape: RowHeight): number {
     control: useGauge('--sc-control', LIST_ROW_HEIGHT),
     stacked: useGauge('--sc-row-stacked', STACKED_ROW_HEIGHT),
     filled: useGauge('--sc-row-filled', FILLED_ROW_HEIGHT),
+    media: useGauge('--sc-row-media', MEDIA_ROW_HEIGHT),
   }
 
   return heights[shape]

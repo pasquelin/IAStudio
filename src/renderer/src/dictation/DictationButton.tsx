@@ -31,9 +31,10 @@ export function DictationButton({ variant = 'bar', tooltip }: DictationButtonPro
   const shortcut = label(useBinding('app.dictate'))
   const dictation = useDictationView()
 
-  // Hidden rather than disabled: a control that is off in the settings has nothing to say, and
-  // a greyed microphone beside every prompt would be a permanent question.
-  if (!dictation.enabled) return null
+  // Hidden rather than disabled: a control the settings switched off, or whose model was never
+  // fetched, could only answer nothing. The status line is where the download is offered, once
+  // for the whole application.
+  if (!dictation.enabled || dictation.state === 'modelMissing') return null
 
   return (
     <span className="flex items-center gap-2">

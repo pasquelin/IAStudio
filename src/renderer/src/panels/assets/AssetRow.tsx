@@ -23,6 +23,14 @@ export type AssetRowProps = {
   rename?: AssetRenameHandle
 }
 
+/**
+ * Every wrapper between the shelf's cell and `Row`, and `min-w-0 flex-1` is the point: a flex
+ * item defaults to `min-width: auto`, so a wrapper carrying only `h-full` is as wide as the
+ * longest name in the list and `Row`'s `truncate` never fires — the shelf scrolled sideways and
+ * the badge went off the panel edge instead.
+ */
+const ROW_WRAPPER = 'h-full min-w-0 flex-1'
+
 // The type ends the line rather than sitting under the name: a subtitle would stack two lines
 // into the 28 px this shelf gives a row, and `Row` is never told to size itself down.
 export const AssetRow = memo(function AssetRow({
@@ -63,19 +71,26 @@ export const AssetRow = memo(function AssetRow({
   // two that are not here yet say what a double-click will do, which nothing else on the line does.
   if (row.from === 'remote') {
     return (
-      <LibraryAsset asset={row.asset} className="h-full">
-        <div {...hints.fetch}>{line}</div>
+      <LibraryAsset asset={row.asset} className={ROW_WRAPPER}>
+        <div {...hints.fetch} className={ROW_WRAPPER}>
+          {line}
+        </div>
       </LibraryAsset>
     )
   }
 
-  if (row.from === 'job') return <div {...hints.generating}>{line}</div>
+  if (row.from === 'job') {
+    return (
+      <div {...hints.generating} className={ROW_WRAPPER}>
+        {line}
+      </div>
+    )
+  }
 
-  // `h-full` on the wrapper: `Row` sizes itself against its parent, which is this div.
   return (
     <DraggableAsset
       asset={row.asset}
-      className="h-full"
+      className={ROW_WRAPPER}
       {...(rename ? { onRename: rename.start } : {})}
     >
       {line}

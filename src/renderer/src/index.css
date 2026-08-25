@@ -550,6 +550,9 @@
      also loosened the documents panel, which stacks the same two steps. Flat, for the reason
      above. */
   --sc-row-filled: 44px;
+  /* A list row whose PICTURE is what one reads — the asset shelf. Two steps of text fit in 36;
+     a thumbnail one can recognise does not, and 28px of picture showed a colour, not a subject. */
+  --sc-row-media: 48px;
   /* The room a row keeps around the picture it carries — ONE number, so every thumbnail of the
      studio is inset the same however tall its line is. The two sizes below are DERIVED from it
      and from the line they stand in; neither is chosen. Same at both densities: the padding is
@@ -618,6 +621,7 @@
   --sc-slider-thumb: 12px;
   --sc-row-stacked: 32px;
   --sc-row-filled: 38px;
+  --sc-row-media: 42px;
   --sc-rail: 42px;
   --sc-rail-button: 32px;
   --sc-gutter: 4px;

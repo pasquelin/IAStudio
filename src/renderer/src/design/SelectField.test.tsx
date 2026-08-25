@@ -13,7 +13,7 @@ const BLENDS: readonly SelectOption<Blend>[] = [
 function renderField(props: Partial<Parameters<typeof SelectField<Blend>>[0]> = {}) {
   const onChange = vi.fn()
 
-  render(
+  const { container } = render(
     <SelectField
       label="Blend mode"
       value="normal"
@@ -23,7 +23,7 @@ function renderField(props: Partial<Parameters<typeof SelectField<Blend>>[0]> = 
     />,
   )
 
-  return { onChange, select: screen.getByRole('combobox') }
+  return { onChange, container, select: screen.getByRole('combobox') }
 }
 
 describe('SelectField', () => {
@@ -182,5 +182,20 @@ describe('SelectField', () => {
     renderField()
 
     expect(screen.queryAllByRole('group')).toEqual([])
+  })
+  /**
+   * The end column belongs to the property LINE. Held on a stacked field, its room came out of
+   * the select, which then stopped short of the fields standing under it.
+   */
+  it('holds no end column on a stacked field with nothing to put in it', () => {
+    const { container } = renderField({ layout: 'stacked' })
+
+    expect(container.querySelector('[aria-hidden="true"]')).toBeNull()
+  })
+
+  it('still draws what follows a stacked select', () => {
+    renderField({ layout: 'stacked', actions: <button type="button">Add a rail</button> })
+
+    expect(screen.getByRole('button', { name: 'Add a rail' })).toBeInTheDocument()
   })
 })

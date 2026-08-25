@@ -65,6 +65,13 @@ describe('the microphone button', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
+  // A press could only answer nothing, and what offers to fetch the model is the status line.
+  it('shows nothing at all while the model was never fetched', () => {
+    show('modelMissing')
+
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
   // What the model needs and what the system refused belong to the whole application, not to
   // one field: a form with two long text fields would offer the same 640 MB twice.
   it('never carries what belongs to the status line', () => {

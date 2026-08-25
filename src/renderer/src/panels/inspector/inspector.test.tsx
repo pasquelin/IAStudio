@@ -48,6 +48,7 @@ import { connectSceneSelection } from '@/stores/sceneSelection'
 import { addModelTo, sceneHistoryOf, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { definition } from '.'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
+import { withQueries } from '@/app/query-fixtures'
 
 const { Content } = definition
 
@@ -124,7 +125,7 @@ beforeEach(() => {
 describe('inspector panel', () => {
   it('asks for a selection when no document can offer one', () => {
     useDocuments.setState({ activeId: null })
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByText(/Sélectionnez un élément/)).toBeInTheDocument()
   })
@@ -133,7 +134,7 @@ describe('inspector panel', () => {
   // when nothing is selected — in place of a message saying there is nothing to show.
   it('shows what lights the scene when nothing is selected', () => {
     install(meshNode('box-1'), false)
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByRole('button', { name: /Environnement/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Transformation/ })).not.toBeInTheDocument()
@@ -142,7 +143,7 @@ describe('inspector panel', () => {
   // The slot is what a sky is DRAGGED onto, and a fresh scene opens on the studio: hiding it
   // there would leave the 3D space with no drop target for a sky at all.
   it('keeps the sky slot whatever the source, so a sky can always be dropped', () => {
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByLabelText('Ciel')).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Source' })).toHaveValue('studio')
@@ -152,7 +153,7 @@ describe('inspector panel', () => {
   // not one: the first sky of the project lands, and the slot below is what changes it.
   it('writes a sky into the document as soon as one is asked for, through the history', async () => {
     cataloguing([skyAsset('sky-1', 'Coucher')])
-    render(<Content />)
+    render(withQueries(<Content />))
 
     await userEvent.selectOptions(await skySource(), 'skybox')
 
@@ -167,7 +168,7 @@ describe('inspector panel', () => {
 
   it('offers the skies of the project in the slot, and the studio to come back to', async () => {
     cataloguing([skyAsset('sky-1', 'Coucher'), skyAsset('sky-2', 'Aube')])
-    render(<Content />)
+    render(withQueries(<Content />))
     await userEvent.selectOptions(await skySource(), 'skybox')
 
     const slot = screen.getByLabelText('Ciel')
@@ -181,7 +182,7 @@ describe('inspector panel', () => {
   })
 
   it('shows the three sections of a mesh', () => {
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByRole('button', { name: /Transformation/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Géométrie/ })).toBeInTheDocument()
@@ -198,7 +199,7 @@ describe('inspector panel', () => {
         decay: 2,
       }),
     )
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByRole('button', { name: /Lumière/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Géométrie/ })).not.toBeInTheDocument()
@@ -208,7 +209,7 @@ describe('inspector panel', () => {
 
   it('shows a camera its lens, and no material', () => {
     install(cameraNodeFixture('camera-1'))
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByRole('button', { name: /Caméra/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Matière/ })).not.toBeInTheDocument()
@@ -227,7 +228,7 @@ describe('inspector panel', () => {
       addAnimationTrack({ nodeId: 'camera-1', property: 'fov' }, 'Lens', 'lens').apply(state),
     )
     useAnimationViews.getState().setAutoKey('doc-1', true)
-    render(<Content />)
+    render(withQueries(<Content />))
 
     fireEvent.change(screen.getByLabelText('Angle de vue'), { target: { value: '80' } })
 
@@ -242,7 +243,7 @@ describe('inspector panel', () => {
 
   it('writes the lens itself for a camera nothing animates', () => {
     install(cameraNodeFixture('camera-1', { fov: 50 }))
-    render(<Content />)
+    render(withQueries(<Content />))
 
     fireEvent.change(screen.getByLabelText('Angle de vue'), { target: { value: '80' } })
 
@@ -252,7 +253,7 @@ describe('inspector panel', () => {
 
   it('shows a sprite its own section, and no material', () => {
     install(spriteNodeFixture('sprite-1'))
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByRole('button', { name: /Sprite/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Matière/ })).not.toBeInTheDocument()
@@ -262,7 +263,7 @@ describe('inspector panel', () => {
   // three.js draws meshes into a shadow map and nothing else: both switches would be inert.
   it('offers a sprite no shadow section at all', () => {
     install(spriteNodeFixture('sprite-1'))
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.queryByRole('button', { name: /Ombres/ })).not.toBeInTheDocument()
   })
@@ -277,7 +278,7 @@ describe('inspector panel', () => {
    */
   it('leaves a lone sprite its rotation row, inert, and keeps the two that act', () => {
     install(spriteNodeFixture('sprite-1'))
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByText('Rotation')).toBeInTheDocument()
     expect(screen.getAllByLabelText('X').map(field => field.hasAttribute('disabled'))).toEqual([
@@ -295,7 +296,7 @@ describe('inspector panel', () => {
    */
   it('enables the reset of the rows that have moved alone, and undoes like any edit', async () => {
     install({ ...meshNode('box-1'), transform: moved(2, 0, 0) })
-    render(<Content />)
+    render(withQueries(<Content />))
 
     const live = screen
       .getAllByRole('button', { name: /Revenir à la valeur par défaut/ })
@@ -315,7 +316,7 @@ describe('inspector panel', () => {
    */
   it('holds one axis still, and leaves that hold outside the history', async () => {
     install({ ...meshNode('box-1'), transform: moved(2, 0, 0) })
-    render(<Content />)
+    render(withQueries(<Content />))
 
     // Matched loosely: the row carries the display unit since the Environment panel landed.
     await userEvent.click(screen.getByRole('button', { name: /^Position/ }))
@@ -341,7 +342,7 @@ describe('inspector panel', () => {
       ...meshNode('box-1'),
       geometry: { kind: 'box', width: 4, height: 1, depth: 1 },
     })
-    render(<Content />)
+    render(withQueries(<Content />))
 
     const width = screen.getByLabelText('Largeur')
     expect(width).toHaveValue('4')
@@ -366,7 +367,7 @@ describe('inspector panel', () => {
   /** Inert where the value already stands there, which is what tells the moved rows apart. */
   it('leaves the reset of an untouched descriptor field disabled', () => {
     install(meshNode('box-1'))
-    render(<Content />)
+    render(withQueries(<Content />))
 
     const row = screen.getByLabelText('Largeur').parentElement
 
@@ -381,7 +382,7 @@ describe('inspector panel', () => {
       nodes: [spriteNodeFixture('sprite-1'), meshNode('box-1', 'sprite-1')],
       selectedIds: ['sprite-1'],
     })
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByText('Rotation')).toBeInTheDocument()
   })
@@ -394,14 +395,14 @@ describe('inspector panel', () => {
       nodes: [meshNode('box-1'), spriteNodeFixture('sprite-1')],
       selectedIds: ['box-1', 'sprite-1'],
     })
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByText('Rotation')).toBeInTheDocument()
   })
 
   it('fades a sprite through the history', () => {
     install(spriteNodeFixture('sprite-1'))
-    render(<Content />)
+    render(withQueries(<Content />))
 
     fireEvent.change(screen.getByLabelText('Opacité'), { target: { value: '0.4' } })
 
@@ -419,14 +420,14 @@ describe('inspector panel', () => {
       nodes: [meshNode('box-1'), lightNodeFixture('light-1')],
       selectedIds: ['light-1'],
     })
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByRole('button', { name: /Lumière/ })).toBeInTheDocument()
   })
 
   describe('editing a mesh', () => {
     it('writes a typed geometry parameter into the state', async () => {
-      render(<Content />)
+      render(withQueries(<Content />))
 
       const width = screen.getByLabelText('Largeur')
       await userEvent.clear(width)
@@ -437,7 +438,7 @@ describe('inspector panel', () => {
     })
 
     it('leaves the rest of the geometry alone', async () => {
-      render(<Content />)
+      render(withQueries(<Content />))
 
       await userEvent.clear(screen.getByLabelText('Hauteur'))
       await userEvent.type(screen.getByLabelText('Hauteur'), '3')
@@ -452,7 +453,7 @@ describe('inspector panel', () => {
     })
 
     it('writes a material colour', () => {
-      render(<Content />)
+      render(withQueries(<Content />))
 
       fireEvent.change(screen.getByLabelText('Couleur'), { target: { value: '#ff0000' } })
 
@@ -461,7 +462,7 @@ describe('inspector panel', () => {
     })
 
     it('moves the node it was handed', () => {
-      render(<Content />)
+      render(withQueries(<Content />))
       const handle = axisHandle('X')
 
       fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
@@ -472,7 +473,7 @@ describe('inspector panel', () => {
 
     // Radians are what the document stores; nobody types in them.
     it('turns the node in degrees', () => {
-      render(<Content />)
+      render(withQueries(<Content />))
       const handle = axisHandle('Y', 1)
 
       fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
@@ -499,7 +500,7 @@ describe('inspector panel', () => {
     })
 
     it('slides the intensity', () => {
-      render(<Content />)
+      render(withQueries(<Content />))
 
       fireEvent.change(screen.getByLabelText('Intensité'), { target: { value: '3.5' } })
 
@@ -508,7 +509,7 @@ describe('inspector panel', () => {
     })
 
     it('moves the target of the beam', () => {
-      render(<Content />)
+      render(withQueries(<Content />))
       const handle = axisHandle('Z', -1)
 
       fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
@@ -521,7 +522,7 @@ describe('inspector panel', () => {
 
   describe('history', () => {
     it('leaves one entry for a whole drag, and undo gives the node back', () => {
-      render(<Content />)
+      render(withQueries(<Content />))
       const handle = axisHandle('X')
 
       fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
@@ -537,7 +538,7 @@ describe('inspector panel', () => {
     })
 
     it('makes a typing session one entry', async () => {
-      render(<Content />)
+      render(withQueries(<Content />))
 
       const width = screen.getByLabelText('Largeur')
       await userEvent.click(width)
@@ -549,7 +550,7 @@ describe('inspector panel', () => {
     })
 
     it('keeps two separate drags apart', () => {
-      render(<Content />)
+      render(withQueries(<Content />))
       const handle = axisHandle('X')
 
       for (const distance of [10, 20]) {
@@ -569,7 +570,7 @@ describe('inspector panel', () => {
     if (!knot) throw new Error('no torusKnot builder')
     install(knot)
 
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByLabelText('Rayon')).toBeInTheDocument()
     expect(screen.getByLabelText('Enroulements P')).toBeInTheDocument()
@@ -597,7 +598,7 @@ describe('inspector panel', () => {
 
     // What the studio generates lands in `image` far more often than in `texture`.
     it('offers the pictures of the project, whatever folder they were filed under', async () => {
-      render(<Content />)
+      render(withQueries(<Content />))
 
       expect(await screen.findAllByRole('option', { name: /Brique/ })).not.toHaveLength(0)
       expect(screen.getAllByRole('option', { name: /Rendu/ })).not.toHaveLength(0)
@@ -610,13 +611,13 @@ describe('inspector panel', () => {
      */
     it('offers them while the shelf is narrowed to another kind entirely', async () => {
       useAssets.setState({ items: [] })
-      render(<Content />)
+      render(withQueries(<Content />))
 
       expect(await screen.findAllByRole('option', { name: /Brique/ })).not.toHaveLength(0)
     })
 
     it('leaves out what could never be loaded as a texture', async () => {
-      render(<Content />)
+      render(withQueries(<Content />))
       await screen.findAllByRole('option', { name: /Brique/ })
 
       expect(screen.queryByRole('option', { name: /Rush/ })).not.toBeInTheDocument()
@@ -625,7 +626,7 @@ describe('inspector panel', () => {
     // A texture is a reference to an asset, never an image: that is what a reopened scene can
     // resolve again.
     it('stores the asset identifier in the material', async () => {
-      render(<Content />)
+      render(withQueries(<Content />))
       await screen.findAllByRole('option', { name: /Brique/ })
 
       await userEvent.selectOptions(screen.getByLabelText('Texture'), 'tex-1')
@@ -639,7 +640,7 @@ describe('inspector panel', () => {
         ...meshNode('box-1'),
         material: { ...DEFAULT_MATERIAL, map: { assetId: 'tex-1' } },
       })
-      render(<Content />)
+      render(withQueries(<Content />))
 
       await userEvent.click(screen.getAllByRole('button', { name: /Retirer la texture/ })[0]!)
 
@@ -657,7 +658,7 @@ describe('inspector panel', () => {
      * screen. The name is now the label of the shared column, like every other property line.
      */
     it('offers a slot per map a standard material reads, each under its own name', () => {
-      render(<Content />)
+      render(withQueries(<Content />))
 
       const named = TEXTURE_SLOTS.map(slot =>
         screen.getByLabelText(fr.inspector.fields[slot], { exact: true }),
@@ -668,7 +669,7 @@ describe('inspector panel', () => {
   })
 
   it('shows the node name, and renames it', async () => {
-    render(<Content />)
+    render(withQueries(<Content />))
 
     const name = screen.getByLabelText('Nom')
     expect(name).toHaveValue('box-1')
@@ -691,7 +692,7 @@ describe('inspector panel', () => {
 
     it('reads out the anchor, which is the last node picked', () => {
       installPair()
-      render(<Content />)
+      render(withQueries(<Content />))
 
       expect(screen.getByLabelText('Nom')).toHaveValue('box-1')
     })
@@ -715,7 +716,7 @@ describe('inspector panel', () => {
         ],
         selectedIds: ['box-2', 'box-1'],
       })
-      render(<Content />)
+      render(withQueries(<Content />))
 
       // The first of the three Y fields: position, then rotation, then scale, in that order.
       const y = screen.getAllByLabelText('Y')[0]
@@ -731,7 +732,7 @@ describe('inspector panel', () => {
 
     it('writes a typed geometry parameter onto every selected mesh, as one entry', async () => {
       installPair()
-      render(<Content />)
+      render(withQueries(<Content />))
 
       const width = screen.getByLabelText('Largeur')
       await userEvent.clear(width)
@@ -759,7 +760,7 @@ describe('inspector panel', () => {
         world: DEFAULT_WORLD,
         animation: EMPTY_TIMELINE,
       })
-      render(<Content />)
+      render(withQueries(<Content />))
       const handle = axisHandle('Y')
 
       fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
@@ -773,7 +774,7 @@ describe('inspector panel', () => {
     // looked at.
     it('leaves a node of another kind alone', () => {
       installPair()
-      render(<Content />)
+      render(withQueries(<Content />))
 
       fireEvent.change(screen.getByLabelText('Couleur'), { target: { value: '#ff0000' } })
 
@@ -795,7 +796,7 @@ describe('inspector panel', () => {
         world: DEFAULT_WORLD,
         animation: EMPTY_TIMELINE,
       })
-      render(<Content />)
+      render(withQueries(<Content />))
       const handle = axisHandle('Y', 1)
 
       fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0 })
@@ -808,7 +809,7 @@ describe('inspector panel', () => {
 
     it('renames the anchor only: three nodes of one name is not a rename', async () => {
       installPair()
-      render(<Content />)
+      render(withQueries(<Content />))
 
       const name = screen.getByLabelText('Nom')
       await userEvent.clear(name)
@@ -822,7 +823,7 @@ describe('inspector panel', () => {
   it('adds nothing to the history for a node added elsewhere', () => {
     const cube = createNodeOf('box')
     if (cube) useScenes.getState().runCommand('doc-1', addNode(cube))
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(entries()).toBe(1)
   })
@@ -831,7 +832,7 @@ describe('inspector panel', () => {
   it('describes the layer picked in the stack', () => {
     installCanvas('doc-1')
     useSelection.getState().selectLayer('doc-1', 'layer-1')
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByText('Composition')).toBeInTheDocument()
   })
@@ -852,7 +853,7 @@ describe('inspector panel', () => {
       selectedId: 'clip-1',
     })
     useSelection.getState().selectClip('doc-1', 'clip-1')
-    render(<Content />)
+    render(withQueries(<Content />))
 
     // A folding heading like every other section of the studio, since the fixed one was merged
     // into it: the Audio space used to be one of the four that could not fold anything.
@@ -869,7 +870,7 @@ describe('inspector panel', () => {
   it('describes the armed layer of the image in front, not one picked elsewhere', () => {
     installCanvas('doc-1')
     useSelection.getState().selectLayer('elsewhere', 'layer-1')
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByRole('button', { name: /Composition/ })).toBeInTheDocument()
   })
@@ -887,7 +888,7 @@ describe('inspector panel', () => {
 
     it('describes the material of a texture', () => {
       installTexture('doc-1')
-      render(<Content />)
+      render(withQueries(<Content />))
 
       expect(inSection('Matière').getByLabelText('Rugosité')).toBeInTheDocument()
     })
@@ -901,7 +902,7 @@ describe('inspector panel', () => {
      */
     it('multiplies the repeat for the preview without writing it into the material', async () => {
       installTexture('doc-1')
-      render(<Content />)
+      render(withQueries(<Content />))
       await openTiling()
 
       await userEvent.selectOptions(
@@ -916,7 +917,7 @@ describe('inspector panel', () => {
 
     it('brings the seams to the middle without writing an offset into the material', async () => {
       installTexture('doc-1')
-      render(<Content />)
+      render(withQueries(<Content />))
       await openTiling()
 
       await userEvent.click(screen.getByLabelText('Amener les coutures au centre'))
@@ -929,7 +930,7 @@ describe('inspector panel', () => {
     /** A measurement asks the GPU for a context: it is offered where there is nothing to read. */
     it('refuses to measure a seam with no base colour to measure it on', async () => {
       installTexture('doc-1')
-      render(<Content />)
+      render(withQueries(<Content />))
       await openTiling()
 
       expect(screen.getByRole('button', { name: 'Mesurer' })).toBeDisabled()
@@ -943,7 +944,7 @@ describe('inspector panel', () => {
           'doc-1',
           setChannel('baseColor', { assetId: 'img-1', origin: 'imported', width: 8, height: 8 }),
         )
-      render(<Content />)
+      render(withQueries(<Content />))
       await openTiling()
 
       expect(screen.getByRole('button', { name: 'Mesurer' })).toBeEnabled()
@@ -963,7 +964,7 @@ describe('inspector panel', () => {
 
     it('reads a measurement back in words rather than as a ratio', async () => {
       measured('img-1', 3)
-      render(<Content />)
+      render(withQueries(<Content />))
       await openTiling()
 
       expect(screen.getByText('Couture visible')).toBeInTheDocument()
@@ -975,7 +976,7 @@ describe('inspector panel', () => {
      */
     it('drops the words when the base colour they described is gone', async () => {
       measured('img-2', 3)
-      render(<Content />)
+      render(withQueries(<Content />))
       await openTiling()
 
       expect(screen.queryByText('Couture visible')).not.toBeInTheDocument()
@@ -988,7 +989,7 @@ describe('inspector panel', () => {
      */
     it('shows the scene face for a 3D document, not the texture one', () => {
       install(meshNode('mesh-1'), false)
-      render(<Content />)
+      render(withQueries(<Content />))
 
       // `Rugosité` belongs to the material of a texture; a mesh material says `Rugosité` nowhere.
       expect(screen.queryByLabelText('Rugosité')).toBeNull()
@@ -998,7 +999,7 @@ describe('inspector panel', () => {
     /** An image opens with a layer armed, so there is always one to describe — see above. */
     it('describes the armed layer when the document in front is an image', () => {
       installCanvas('doc-1')
-      render(<Content />)
+      render(withQueries(<Content />))
 
       expect(screen.queryByText('Sélectionnez un élément pour voir ses propriétés.')).toBeNull()
       expect(screen.queryByLabelText('Rugosité')).toBeNull()
@@ -1015,7 +1016,7 @@ describe('the inspector on an imported model', () => {
 
   it('offers no clip picker while the file has reported none', () => {
     install(modelNodeFixture('model-1'))
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.queryByLabelText('Clip')).not.toBeInTheDocument()
   })
@@ -1026,7 +1027,7 @@ describe('the inspector on an imported model', () => {
       clips: { 'doc-1': { 'model-1': ['walk'] } },
       rigs: { 'doc-1': { 'model-1': rigStateFixture([]) } },
     })
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByLabelText('Clip')).toBeInTheDocument()
   })
@@ -1036,7 +1037,7 @@ describe('the inspector on an imported model', () => {
   // shows on sight is the model's OWN pictures.
   it('offers a slot per map, reading « the file own » until one is overridden', async () => {
     install(modelNodeFixture('model-1'))
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByText('Textures du modèle')).toBeInTheDocument()
     expect(screen.queryByText('Celle du fichier')).not.toBeInTheDocument()
@@ -1061,7 +1062,7 @@ describe('the inspector and what is picked in a scene', () => {
     install(meshNode('box-1'), false)
     useSelection.getState().selectAssets(['asset-1'])
     selectIn('doc-1', ['box-1'])
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByText('Géométrie')).toBeInTheDocument()
   })
@@ -1088,7 +1089,7 @@ describe('the inspector and what is picked in a scene', () => {
       tags: [],
       createdAt: '2026-08-14T10:00:00.000Z',
     })
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByText('Transformation')).toBeInTheDocument()
     stop()
@@ -1100,7 +1101,7 @@ describe('the inspector and what is picked in a scene', () => {
     install(meshNode('box-1'), false)
     selectIn('doc-1', ['box-1'])
     selectIn('doc-1', [])
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(screen.getByText('Environnement')).toBeInTheDocument()
     expect(screen.queryByText('Géométrie')).not.toBeInTheDocument()
@@ -1138,7 +1139,7 @@ describe('the inspector and what is picked in a scene', () => {
     selectIn('doc-1', ['box-1'])
 
     installDocuments({ 'doc-1': '3d', 'doc-2': '3d' }, 'doc-2')
-    render(<Content />)
+    render(withQueries(<Content />))
 
     // Its environment, since nothing is picked in it — and never the empty state, which is what
     // three panels contradicting each other looks like: the outliner of doc-2 highlights nothing
@@ -1150,7 +1151,7 @@ describe('the inspector and what is picked in a scene', () => {
     install(meshNode('box-1'), false)
     selectIn('doc-1', ['box-1'])
     installTexture('doc-2')
-    render(<Content />)
+    render(withQueries(<Content />))
 
     expect(inSection('Matière').getByLabelText('Rugosité')).toBeInTheDocument()
   })

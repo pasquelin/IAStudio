@@ -355,6 +355,9 @@ export function Collection<T extends { id: string }>({
                 ref={openable ? virtualizer.measureElement : undefined}
                 style={{
                   transform: `translateY(${row.start}px)`,
+                  // What `Row` sizes its picture against: the line it actually stands in, so no
+                  // row shape has to be guessed from the props a caller passed.
+                  ['--sc-row-height' as string]: `${rowPixels}px`,
                   // Left to the content where a row can open — a stated height is exactly what
                   // the measurer would read back, and every row would stay one gauge tall.
                   ...(openable ? {} : { height: row.size }),

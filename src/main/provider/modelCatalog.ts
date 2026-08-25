@@ -24,6 +24,16 @@ function sortParams(sort: ModelSort): SortParams {
   return { sortBy: 'score' }
 }
 
+/** Where the pictures are served from — the hosts the renderer's CSP has to allow, never a URL. */
+function hostsOf(assets: readonly { url?: string; thumbnail?: { url?: string } }[]): string {
+  const hosts = new Set(
+    assets.flatMap(asset =>
+      [asset.url, asset.thumbnail?.url].flatMap(url => (url ? [URL.parse(url)?.host ?? '?'] : [])),
+    ),
+  )
+  return hosts.size ? [...hosts].join(' ') : 'no url at all'
+}
+
 /**
  * Binds the registry's narrow catalogue to the real SDK. The only file where the two meet, so
  * a change in the SDK's shape lands here rather than throughout the registry.
@@ -90,6 +100,12 @@ export function catalogOf(client: Scenario): ModelCatalog {
     assetUrls: async assetIds => {
       log.info('provider', `POST /assets/get-bulk ${assetIds.length} ids`)
       const { assets } = await client.assets.getBulk({ assetIds: [...assetIds] })
+      // The one call of the catalogue that answered into silence, which is what left a missing
+      // thumbnail unreadable for three sittings.
+      log.info(
+        'provider',
+        `POST /assets/get-bulk → ${assets.length}/${assetIds.length} assets, ${hostsOf(assets)}`,
+      )
       return assets
     },
   }

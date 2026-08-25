@@ -138,10 +138,10 @@ describe('narrowing the list', () => {
   })
 
   /**
-   * A cloud model has nothing to install, so greying it under this facet would say it is
-   * missing — which is exactly what "installed" must not come to mean.
+   * `installed` is ABSENT for a cloud model, so a facet reading `!== false` let the whole
+   * catalogue through and said nothing. It answers one question: are the weights on this disk.
    */
-  it('keeps a cloud model under the installed facet, having nothing to install', async () => {
+  it('keeps only the weights this disk holds under the installed facet', async () => {
     open()
 
     await userEvent.click(screen.getByRole('button', { name: /SSD-1B/ }))
@@ -149,7 +149,6 @@ describe('narrowing the list', () => {
 
     expect(screen.getAllByRole('menuitem').map(row => row.textContent)).toEqual([
       expect.stringContaining('SSD-1B'),
-      expect.stringContaining('Flux'),
     ])
   })
 

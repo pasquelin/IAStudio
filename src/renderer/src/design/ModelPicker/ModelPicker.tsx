@@ -6,10 +6,12 @@ import type { ModelRefusalWord } from '@/hooks/useModelReach'
 import { useDismiss } from '@/hooks/useDismiss'
 import { useMenuKeys } from '@/hooks/useMenuKeys'
 import { cn } from '@/helpers/cn'
+import { HINT_BOTTOM } from '@/helpers/tooltip'
 import { fieldHandle } from '../scHandle'
 import { Chip } from '../Chip'
+import { SearchField } from '../SearchField'
 import { Thumbnail } from '../Thumbnail'
-import { CONTROL, MENU_SURFACE, FIELD_THUMBNAIL } from '../styles'
+import { FIELD, MENU_SURFACE, FIELD_THUMBNAIL } from '../styles'
 import { ModelPickerRow } from './ModelPickerRow'
 
 /** What the list may be narrowed to. `all` is the state it opens in. */
@@ -47,8 +49,9 @@ export type ModelPickerProps = {
 function within(model: ModelSummary, scope: Scope): boolean {
   if (scope === 'local') return model.runsOn === LOCAL_RUNTIME
   if (scope === 'cloud') return model.runsOn !== LOCAL_RUNTIME
-  // A cloud model has nothing to install, and greying it under this facet would say it is missing.
-  if (scope === 'installed') return model.installed !== false
+  // `installed` is ABSENT for a cloud model — nothing to install there — so `!== false` let the
+  // whole catalogue through this facet. It answers one question: are the weights on this disk.
+  if (scope === 'installed') return model.runsOn === LOCAL_RUNTIME && model.installed === true
   return true
 }
 
@@ -127,9 +130,10 @@ export function ModelPicker({
         aria-haspopup="menu"
         aria-expanded={open}
         // A name over a caption: one control's worth of height clipped the name away.
+        // `FIELD`, not `CONTROL`: this one stands in a form, beside its bordered fields, not on a bar.
         className={cn(
-          CONTROL,
-          'flex h-auto min-h-(--sc-control) w-full items-center gap-2 px-2 py-1 text-left',
+          FIELD,
+          'flex h-auto min-h-(--sc-control) w-full cursor-pointer items-center gap-2 px-2 py-1 text-left',
         )}
         onClick={() => setOpen(held => !held)}
       >
@@ -146,16 +150,18 @@ export function ModelPicker({
       {open && (
         /* 🛑 IN FLOW, under the control, never floating: a `fixed` panel does not follow the
            form it belongs to, and scrolling left the list hanging over the wrong field. */
-        <div ref={panel} role="menu" className={cn(MENU_SURFACE, 'mt-1 max-h-80 w-full')}>
+        <div
+          ref={panel}
+          role="menu"
+          // The field corner over the menu one: in flow under the control, it reads as a field.
+          className={cn(MENU_SURFACE, 'mt-1 max-h-80 w-full rounded-(--radius-sc-sm) p-2')}
+        >
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-            <input
-              type="search"
-              className={cn(CONTROL, 'px-2')}
-              data-sc={fieldHandle('generation.modelSearch')}
-              placeholder={t('generation.searchModel')}
-              aria-label={t('generation.searchModel')}
+            <SearchField
+              label={t('generation.searchModel')}
               value={search}
-              onChange={event => setSearch(event.target.value)}
+              onChange={setSearch}
+              scId="generation.modelSearch"
             />
 
             <div className="flex gap-2" role="group" aria-label={t('generation.modelScope')}>
@@ -164,6 +170,7 @@ export function ModelPicker({
                   key={one}
                   label={t(`generation.modelScope_${one}`)}
                   hint={t('generation.modelScopeHint')}
+                  tip={HINT_BOTTOM}
                   selected={scope === one}
                   data-sc={fieldHandle(`generation.modelScope.${one}`)}
                   onClick={() => setScope(one)}

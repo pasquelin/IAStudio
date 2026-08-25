@@ -483,6 +483,7 @@ export function AssetBrowser() {
         multiple
         items={shown}
         state={collection}
+        rowHeight="media"
         // The shelf owns its rows' gestures rather than each row wiring its own: that is what
         // put these cells in the tab order, and what gives them the range a click could not ask
         // for. `DraggableAsset` keeps the drag and the menu, which belong to the row itself.

@@ -183,7 +183,7 @@ export function Models({ family }: ModelsProps) {
             const reach = reachOf(model)
             return reach.refusal !== undefined && !reach.fetchable
           }}
-          rowHeight="stacked"
+          rowHeight="media"
           renderCard={model => (
             <ModelsCard model={model} picture={pictureOf(model)} refusal={reachOf(model).refusal} />
           )}

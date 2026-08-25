@@ -296,6 +296,9 @@ export const STACKED_ROW_HEIGHT = 36
  */
 export const FILLED_ROW_HEIGHT = 44
 
+/** `--sc-row-media` at its tallest, as a number. Same rule as its neighbours: a fallback only. */
+export const MEDIA_ROW_HEIGHT = 48
+
 /**
  * A panel's scrolling body. The right padding is the point: on macOS the scrollbar is drawn
  * OVER the content rather than beside it, and with no room reserved it lands on the last column
@@ -343,11 +346,27 @@ export const FIELD_THUMBNAIL = 'size-(--sc-control)'
  * one is the other less `--sc-row-pad`. `Row` picks the pair from what it carries; no caller
  * sizes a row's picture, which is how four sizes and four paddings became one of each.
  */
-const ROW_MEDIA_BOX = 'flex shrink-0 items-center justify-center'
 export const ROW_CONTROL = 'min-h-(--sc-control)'
 export const ROW_STACKED = 'min-h-(--sc-row-stacked)'
-export const ROW_MEDIA_CONTROL = `${ROW_MEDIA_BOX} size-(--sc-media-control)`
-export const ROW_MEDIA_STACKED = `${ROW_MEDIA_BOX} size-(--sc-media-stacked)`
+export const ROW_PICTURE = 'min-h-(--sc-row-media)'
+
+/**
+ * The box a row keeps for its picture: the line it stands in, less `--sc-row-pad` top and bottom.
+ *
+ * 🛑 Two things this line cannot do without, both paid on 2026-08-24. Written out in FULL, three
+ * times, never built by a helper: Tailwind scans the source for class names, so a string
+ * assembled at runtime generates nothing, the box loses its size, and the picture blows up to
+ * its natural width — the whole panel. And the `_` around the minus: CSS `calc` requires
+ * whitespace there, and `_` is how Tailwind writes a space inside an arbitrary value.
+ *
+ * `--sc-row-height` is published by whatever imposes a height (`Collection` does); the fallback
+ * is the line's own shape, and getting THAT wrong is what left the model picker at 20px.
+ */
+const ROW_MEDIA_BOX = 'flex shrink-0 items-center justify-center'
+
+export const ROW_MEDIA_CONTROL = `${ROW_MEDIA_BOX} size-[calc(var(--sc-row-height,var(--sc-control))_-_2*var(--sc-row-pad))]`
+export const ROW_MEDIA_STACKED = `${ROW_MEDIA_BOX} size-[calc(var(--sc-row-height,var(--sc-row-stacked))_-_2*var(--sc-row-pad))]`
+export const ROW_MEDIA_PICTURE = `${ROW_MEDIA_BOX} size-[calc(var(--sc-row-height,var(--sc-row-media))_-_2*var(--sc-row-pad))]`
 
 /**
  * One property row of an inspector: a label of fixed width, then the control it names.

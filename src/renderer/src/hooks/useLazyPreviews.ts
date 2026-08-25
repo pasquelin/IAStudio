@@ -24,17 +24,16 @@ export function useLazyPreviews() {
   useEffect(
     () => () => {
       if (timer.current) clearTimeout(timer.current)
+      // 🛑 Cleared, never merely stopped: a stale handle reads as "a window is already armed", so
+      // an instance that outlives its teardown — StrictMode and HMR do that — asks for nothing
+      // ever again. What is still gathered stays gathered; the next `resolve` arms a new window.
+      timer.current = null
     },
     [],
   )
 
   const resolve = useCallback((assetIds: readonly string[]) => {
-    for (const id of assetIds) {
-      if (!asked.current.has(id)) {
-        asked.current.add(id)
-        pending.current.add(id)
-      }
-    }
+    for (const id of assetIds) if (!asked.current.has(id)) pending.current.add(id)
 
     if (!pending.current.size || timer.current) return
 
@@ -45,6 +44,9 @@ export function useLazyPreviews() {
       // unasked, and their cards kept an empty plate for the life of the panel.
       const wanted = [...pending.current]
       pending.current.clear()
+      // Marked HERE, where the request actually leaves — one meaning for `asked`, so nothing has
+      // to reconcile "gathered" against "sent" on the way out.
+      for (const id of wanted) asked.current.add(id)
 
       for (const batch of chunk(wanted, MODEL_IDS_BATCH_LIMIT)) {
         void getBridge()

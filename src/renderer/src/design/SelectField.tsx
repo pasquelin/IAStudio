@@ -171,7 +171,10 @@ export function SelectField<V extends string>({
         <div className="flex min-w-0 items-center gap-2">
           {leading}
           {control}
-          <FieldActions>{actions}</FieldActions>
+          {/* Bare, as on the `bar` line below: a stacked field ends no property line, and the
+              column `FieldActions` reserves was taken out of the control — the select stopped
+              short of the fields under it. */}
+          {actions}
         </div>
       </FormField>
     )

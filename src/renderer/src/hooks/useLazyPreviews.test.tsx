@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
+import { StrictMode, useEffect } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MODEL_IDS_BATCH_LIMIT, type ModelSummary } from '@shared/domain/model'
 import { useLazyPreviews } from './useLazyPreviews'
@@ -54,6 +55,28 @@ describe('the pictures a list needs', () => {
     act(() => void vi.advanceTimersByTime(500))
 
     expect(asked).toHaveLength(many.length)
+  })
+
+  /**
+   * 🛑 An instance that outlives its teardown keeps its refs — StrictMode and HMR both do it, and
+   * that is where this was measured: the cancelled window left a handle that read as armed, so
+   * the list that came back asked for nothing and kept every plate empty.
+   */
+  it('asks again after a teardown cancelled the window it had armed', () => {
+    const many = [model('a'), model('b')]
+    // Armed from an EFFECT, so the window is already open when StrictMode tears the instance
+    // down — asked for after the mount, nothing would be in flight to cancel.
+    renderHook(
+      () => {
+        const { resolveFor } = useLazyPreviews()
+        useEffect(() => resolveFor(many), [resolveFor])
+      },
+      { wrapper: StrictMode },
+    )
+
+    act(() => void vi.advanceTimersByTime(500))
+
+    expect(asked).toEqual(['asset_a', 'asset_b'])
   })
 
   // A model carrying its own thumbnail costs no round trip: the picture is already in the listing.

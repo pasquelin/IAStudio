@@ -1,4 +1,4 @@
-import { mdiFormatListBulleted, mdiMagnify, mdiMinus, mdiPlus, mdiViewGridOutline } from '@mdi/js'
+import { mdiFormatListBulleted, mdiMinus, mdiPlus, mdiViewGridOutline } from '@mdi/js'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
@@ -13,10 +13,9 @@ import {
 } from '@/helpers/collectionState'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { FoldRule } from '../FoldRule'
-import { fieldHandle } from '../scHandle'
-import { CONTROL, PANEL_BAR, PANEL_HEAD } from '../styles'
+import { PANEL_BAR, PANEL_HEAD } from '../styles'
 import { ToolButton } from '../ToolButton'
-import { UiIcon } from '../UiIcon'
+import { SearchField } from '../SearchField'
 import { SelectField } from '../SelectField'
 
 /** Facets shown before the fold — one row of the grid. The rest hide behind the toggle. */
@@ -76,30 +75,17 @@ export function CollectionBar({
   const inline = layout !== 'stacked'
 
   const search = (
-    <label
-      className={cn(
-        'relative flex items-center',
-        // In a header the row is shared with the panel's name and its way out, so the field is
-        // what gives ground — a narrow search box still searches, a clipped one is unreachable.
-        layout === 'header' ? 'w-56 min-w-16 shrink' : inline ? 'w-56 shrink-0' : 'w-full',
-      )}
-    >
-      <UiIcon
-        path={mdiMagnify}
-        size={14}
-        className="text-muted pointer-events-none absolute left-2"
-      />
-      <input
-        type="search"
-        data-sc={fieldHandle(`${scId}.search`)}
-        value={state.search}
-        // The placeholder says it, but only until the field is typed in.
-        {...TIP_BOTTOM(t('collection.search'), undefined, t('collection.searchHint'))}
-        placeholder={t('collection.search')}
-        onChange={event => onChange({ ...state, search: event.target.value })}
-        className={cn(CONTROL, 'w-full py-0 pr-2 pl-7')}
-      />
-    </label>
+    <SearchField
+      label={t('collection.search')}
+      value={state.search}
+      onChange={value => onChange({ ...state, search: value })}
+      scId={`${scId}.search`}
+      // In a header the row is shared with the panel's name and its way out, so the field is
+      // what gives ground — a narrow search box still searches, a clipped one is unreachable.
+      className={layout === 'header' ? 'w-56 min-w-16 shrink' : inline ? 'w-56 shrink-0' : 'w-full'}
+      // The placeholder says it, but only until the field is typed in.
+      tip={TIP_BOTTOM(t('collection.search'), undefined, t('collection.searchHint'))}
+    />
   )
 
   const menusOf = (shown: readonly FacetDescriptor[]): ReactNode[] =>

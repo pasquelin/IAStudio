@@ -5,7 +5,9 @@ import {
   ROW_INK,
   ROW_LINE,
   ROW_MEDIA_CONTROL,
+  ROW_MEDIA_PICTURE,
   ROW_MEDIA_STACKED,
+  ROW_PICTURE,
   ROW_QUIET,
   ROW_STACKED,
   ROW_SUFFIX,
@@ -86,9 +88,16 @@ export function Row({
   hint,
   tip = TIP_RIGHT,
 }: RowProps) {
-  // The one rule: a line that stacks a caption is the tall shape, everything else is the control
-  // shape. Both keep the same `--sc-row-pad` around their picture, so no host writes a height.
-  const stacked = subtitle !== undefined
+  // The one rule, and the only place it is written: a picture UNDER a caption is what one reads
+  // a line by, so it gets the tall shape; a caption alone gets the middle one; a bare name the
+  // control. All three keep the same `--sc-row-pad` around the picture.
+  const shape = media && subtitle ? 'picture' : subtitle ? 'stacked' : 'control'
+  const line = { picture: ROW_PICTURE, stacked: ROW_STACKED, control: ROW_CONTROL }[shape]
+  const box = {
+    picture: ROW_MEDIA_PICTURE,
+    stacked: ROW_MEDIA_STACKED,
+    control: ROW_MEDIA_CONTROL,
+  }[shape]
 
   return (
     // One step; the host that PAINTS the fill adds the second — `Collection`'s cell and `Tree`'s
@@ -111,10 +120,10 @@ export function Row({
     //
     // `LayerRow` and `SceneNodeRow` had reached for the same pair in a wrapper of their own, which
     // is why only the explorer showed it: `EntryRow` renders this directly.
-    <div className={cn(ROW_LINE, 'min-w-0 flex-1 gap-2', stacked ? ROW_STACKED : ROW_CONTROL)}>
+    <div className={cn(ROW_LINE, 'min-w-0 flex-1 gap-2', line)}>
       {leading}
       {media ? (
-        <div className={stacked ? ROW_MEDIA_STACKED : ROW_MEDIA_CONTROL}>{media}</div>
+        <div className={box}>{media}</div>
       ) : (
         icon && <UiIcon path={icon} size={14} className="shrink-0" />
       )}

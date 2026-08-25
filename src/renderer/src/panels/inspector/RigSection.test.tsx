@@ -15,6 +15,7 @@ import { useAssets } from '@/stores/assets'
 import { useSceneViews } from '@/stores/sceneViews'
 import type { FieldKind, ModelSummary } from '@shared/domain/model'
 import type { PlanAccess } from '@shared/domain/plan'
+import { withQueries } from '@/app/query-fixtures'
 import { RigSection } from './RigSection'
 
 const DOCUMENT = 'doc-1'
@@ -43,7 +44,7 @@ function show(bounds = STANDING_BOUNDS, progress?: number): void {
     rigs: { [DOCUMENT]: { a: { ...rigStateFixture([]), bounds } } },
     rigProgress: progress === undefined ? {} : { [DOCUMENT]: { a: progress } },
   })
-  render(<Host />)
+  render(withQueries(<Host />))
 }
 
 describe('RigSection', () => {
@@ -56,7 +57,7 @@ describe('RigSection', () => {
   })
 
   it('says nothing while the file has not landed', () => {
-    render(<Host />)
+    render(withQueries(<Host />))
 
     expect(screen.queryByText('Squelette')).not.toBeInTheDocument()
   })
@@ -145,7 +146,7 @@ describe('RigSection', () => {
 
   it('takes itself off for a model that already carries a skeleton of its own', () => {
     useModelClips.setState({ rigs: { [DOCUMENT]: { a: rigStateFixture(['Hips', 'Spine']) } } })
-    render(<Host />)
+    render(withQueries(<Host />))
 
     expect(screen.queryByText('Squelette')).not.toBeInTheDocument()
   })
@@ -276,7 +277,7 @@ describe('RigSection', () => {
     })
     useModelClips.setState({ rigs: { [DOCUMENT]: { a: rigStateFixture(['Hips', 'Spine']) } } })
     if (bone) useSceneViews.getState().setPickedBone(DOCUMENT, { nodeId: 'a', bone })
-    render(<Host />)
+    render(withQueries(<Host />))
   }
 
   it('lays the thirty finger bones on a rig that has none', async () => {
@@ -374,7 +375,7 @@ describe('RigSection', () => {
       nodes: [{ ...node, model: { ...node.model, rig: rigFit(STANDING_BOUNDS) } }],
     })
     useModelClips.setState({ rigs: { [DOCUMENT]: { a: rigStateFixture(['Hips', 'Spine']) } } })
-    render(<Host />)
+    render(withQueries(<Host />))
 
     expect(screen.getByText(/a reçu un squelette/)).toBeInTheDocument()
     expect(screen.queryByText(/trop plat/)).not.toBeInTheDocument()
