@@ -158,9 +158,15 @@ describe('SceneDocument', () => {
    * Read from the design system rather than written here: the image space and the graph put their
    * bar in the same corner, and a copy of the inset is a copy that goes stale on its own.
    */
+  // Two bars live over this viewport since the snap bar arrived, and only one of them is the
+  // tool column. The snap bar names itself; the column is found by the orientation it declares.
   it('places its bar where every space places it', () => {
     render(<SceneDocument documentId="doc-1" />)
-    expect(screen.getByRole('toolbar')).toHaveClass(PANE_TOOLBAR)
+    const column = screen
+      .getAllByRole('toolbar')
+      .find(bar => bar.getAttribute('aria-orientation') === 'vertical')
+
+    expect(column).toHaveClass(PANE_TOOLBAR)
   })
 
   /**

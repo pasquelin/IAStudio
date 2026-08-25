@@ -6,10 +6,19 @@ import { ToolbarTool } from './ToolbarTool'
 import type { ToolbarItem } from './tools'
 
 export type ToolbarProps = {
-  /** Tools rendered, in order. */
-  tools: ToolbarItem[]
+  /**
+   * Tools rendered, in order. Empty for a bar whose whole content is `extras` — the snap bar,
+   * whose controls are each two zones and so cannot be a `ToolbarItem`.
+   */
+  tools?: ToolbarItem[]
   activeTool?: string
-  onTool: (id: string) => void
+  onTool?: (id: string) => void
+  /**
+   * Names the bar for a reader. Already translated. Needed the moment a view holds TWO — the 3D
+   * viewport does — since `role="toolbar"` twice with nothing to tell them apart is two bars a
+   * reader has to enter to identify.
+   */
+  label?: string
   /** Called when a row of a tool's flyout is chosen. */
   onMode?: (toolId: string, modeId: string) => void
   orientation?: 'vertical' | 'horizontal'
@@ -27,9 +36,10 @@ export type ToolbarProps = {
  * knowing its value.
  */
 export function Toolbar({
-  tools,
+  tools = [],
   activeTool,
-  onTool,
+  onTool = () => {},
+  label,
   onMode,
   orientation = 'vertical',
   extras,
@@ -45,6 +55,7 @@ export function Toolbar({
   return (
     <div
       role="toolbar"
+      aria-label={label}
       style={style}
       aria-orientation={vertical ? 'vertical' : 'horizontal'}
       className={cn(
