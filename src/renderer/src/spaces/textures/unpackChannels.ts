@@ -1,0 +1,68 @@
+import i18next from 'i18next'
+import { assetUrl, type Asset } from '@shared/domain/asset'
+import type { PbrChannel } from '@shared/domain/texture'
+import { loadTexture } from '@/engines/scene/textureCache'
+import { createUnpackPort, type UnpackPort } from '@/engines/texture/derive/unpackPort'
+import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
+import { useAssets } from '@/stores/assets'
+
+/** The GPU port, built once. It holds nothing: a context is made and released per unpacking. */
+const gpuUnpack = createUnpackPort({ loadTexture })
+
+/**
+ * What each glTF slot packs, in the studio's own channels — the reason a picture with no `map`
+ * cannot simply be offered for unpacking: a `clearcoatTexture` names something with no channel
+ * at all, and reading a roughness out of it would write a measurement of nothing.
+ */
+const PACKED_BY_SLOT: Record<string, readonly PbrChannel[]> = {
+  metallicRoughnessTexture: ['roughness', 'metalness'],
+}
+
+/** The channels this picture can be split into, or none when nothing says what it packs. */
+export function packedChannels(asset: Asset): readonly PbrChannel[] {
+  return asset.packedSlot ? (PACKED_BY_SLOT[asset.packedSlot] ?? []) : []
+}
+
+/**
+ * Splits a packed picture into one asset per channel it holds, and puts them in the project.
+ *
+ * New assets every time, never an overwrite — the same rule a derivation follows, and for the
+ * same reason: the packed file is what the model was exported with, and it is not the studio's
+ * to replace. They land `derivedFrom` the PACKED picture rather than the model, so a second
+ * unpacking of the same file is traceable to what it came out of.
+ *
+ * Answers how many landed. Failures are reported rather than thrown: the caller is a row.
+ */
+export async function unpackTextureChannels(
+  asset: Asset,
+  unpack: UnpackPort = gpuUnpack,
+): Promise<number> {
+  const wanted = packedChannels(asset)
+  const bridge = getBridge()
+  if (wanted.length === 0 || !bridge) return 0
+
+  let landed = 0
+  for (const channel of wanted) {
+    try {
+      const picture = await unpack({ channel, sourceUrl: assetUrl(asset.id) })
+      await bridge.assets.saveTexture({
+        name: i18next.t('texture.derivedName', {
+          name: asset.name,
+          channel: i18next.t(`texture.channel.${channel}`),
+        }),
+        map: channel,
+        derivedFrom: asset.id,
+        png: picture.png,
+      })
+      landed += 1
+    } catch (error) {
+      reportFailure('texture.channel', channel, error)
+    }
+  }
+
+  // Once, after the whole set: the shelf is what every slot reads to show a picture, and a
+  // refresh per channel would have it re-read the catalogue for each one.
+  if (landed > 0) await useAssets.getState().refresh()
+  return landed
+}

@@ -69,6 +69,8 @@
     "modelMaterial": "Matière du modèle",
     "openMaterial": "Ouvrir la matière du modèle",
     "openMaterialHint": "Double-cliquer pour ouvrir cette matière dans l’espace Textures",
+    "unpackChannels": "Dépaqueter les canaux",
+    "unpackChannelsHint": "Écrit la rugosité et la métallicité de cette image en deux canaux à part, que le modèle peut alors suivre",
     "unclaimedChannel": "Cette image ne tient pas dans un seul canal",
     "fields": {
       "width": "Largeur",
