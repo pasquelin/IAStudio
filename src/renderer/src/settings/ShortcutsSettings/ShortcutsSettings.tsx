@@ -10,7 +10,7 @@ import {
 } from '@shared/domain/command'
 import type { Signature } from '@shared/domain/shortcut'
 import { useOverrides } from '@/hooks/useOverrides'
-import { withPlatformDefaults } from '@/stores/bindings'
+import { resolveBindings } from '@/stores/bindings'
 import { WINDOW_CAPTION } from '@/design/windowStyles'
 import { ShortcutsSettingsScope } from './ShortcutsSettingsScope'
 import { ShortcutsSettingsSearchByChord } from './ShortcutsSettingsSearchByChord'
@@ -26,8 +26,9 @@ export function ShortcutsSettings() {
   const { t } = useTranslation()
   const [overrides, setOverrides] = useOverrides()
   // What the screen SHOWS is resolved against the system; what `bind` writes is not — see
-  // `withPlatformDefaults`. Read raw, this screen offered ⌃⌘F for a full screen that answers F11.
-  const resolved = withPlatformDefaults(overrides)
+  // `resolveBindings`. Read raw, this screen offered ⌃⌘F for a full screen that answers F11.
+  // Resolved once and handed down: a merge per row is 171 of them on every keystroke.
+  const resolved = useMemo(() => resolveBindings(overrides), [overrides])
   /**
    * What is listening, if anything. ONE state rather than one per listener: a row and the
    * search box each holding their own meant a keypress could be recorded as a binding and used
@@ -75,6 +76,7 @@ export function ShortcutsSettings() {
           scope={scope}
           descriptors={commandsIn(scope).filter(matches)}
           overrides={overrides}
+          resolved={resolved}
           clashing={clashing}
           capturing={capturing}
           onCapture={setListening}

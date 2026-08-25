@@ -2309,6 +2309,8 @@ export class SceneRenderer {
 
     this.stopPaletteWatch?.()
     this.stopPaletteWatch = null
+    // Or the last drag's roots outlive every node they name.
+    this.surfaceScope.length = 0
 
     const canvas = this.viewport.canvas
     this.setNavigating(false)

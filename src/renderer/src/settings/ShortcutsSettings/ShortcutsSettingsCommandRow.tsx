@@ -10,18 +10,21 @@ import { HINT_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from '../SettingLine'
 import { SettingRestoreButton } from '../SettingRestoreButton'
 import { WINDOW_HELP } from '@/design/windowStyles'
-import { withPlatformDefaults } from '@/stores/bindings'
 
 export function ShortcutsSettingsCommandRow({
   descriptor,
   overrides,
+  resolved,
   clashing,
   capturing,
   onCapture,
   onBind,
 }: {
   descriptor: CommandDescriptor
+  /** The stored table — what says whether this line is REMAPPED. */
   overrides: BindingOverrides
+  /** The same, merged with what this system ships — what the line SHOWS. */
+  resolved: BindingOverrides
   clashing: boolean
   capturing: boolean
   onCapture: () => void
@@ -32,7 +35,9 @@ export function ShortcutsSettingsCommandRow({
 
   useChordCapture(signature => (signature === '' ? onCapture() : onBind(signature)), capturing)
 
-  const binding = bindingOf(descriptor.id, withPlatformDefaults(overrides))
+  // Shown from the resolved table, remapped from the stored one: a key this system ships is
+  // not something the user changed.
+  const binding = bindingOf(descriptor.id, resolved)
   const remapped = overrides[descriptor.id] !== undefined
   const id = `command-${descriptor.id}`
   const describedBy = `${id}-help`

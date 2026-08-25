@@ -13,6 +13,7 @@ export function ShortcutsSettingsScope({
   scope,
   descriptors,
   overrides,
+  resolved,
   clashing,
   capturing,
   onCapture,
@@ -21,6 +22,8 @@ export function ShortcutsSettingsScope({
   scope: CommandScope
   descriptors: readonly CommandDescriptor[]
   overrides: BindingOverrides
+  /** The same table, merged with what this system ships. What a row SHOWS reads this one. */
+  resolved: BindingOverrides
   clashing: ReadonlySet<CommandId>
   capturing: CommandId | null
   onCapture: (id: CommandId | 'search' | null) => void
@@ -39,6 +42,7 @@ export function ShortcutsSettingsScope({
           key={descriptor.id}
           descriptor={descriptor}
           overrides={overrides}
+          resolved={resolved}
           clashing={clashing.has(descriptor.id)}
           capturing={capturing === descriptor.id}
           onCapture={() => onCapture(capturing === descriptor.id ? null : descriptor.id)}

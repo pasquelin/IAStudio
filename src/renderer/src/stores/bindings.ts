@@ -22,12 +22,22 @@ const PLATFORM_DEFAULTS = platformDefaults(IS_MAC)
 let mergedFrom: BindingOverrides | null = null
 let merged: BindingOverrides = PLATFORM_DEFAULTS
 
-export function withPlatformDefaults(overrides: BindingOverrides): BindingOverrides {
+function withPlatformDefaults(overrides: BindingOverrides): BindingOverrides {
   if (overrides !== mergedFrom) {
     mergedFrom = overrides
     merged = { ...PLATFORM_DEFAULTS, ...overrides }
   }
   return merged
+}
+
+/**
+ * The same merge, uncached, for a table the store does not hold — the shortcuts screen reads its
+ * own draft. 🛑 Never `withPlatformDefaults`: its memo has ONE slot, and two identities alternating
+ * through it would make `useBindingOverrides` answer a fresh object every other read, which is
+ * exactly what `useSyncExternalStore` refuses. The caller memoises.
+ */
+export function resolveBindings(overrides: BindingOverrides): BindingOverrides {
+  return { ...PLATFORM_DEFAULTS, ...overrides }
 }
 
 /**
