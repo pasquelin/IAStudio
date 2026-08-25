@@ -55,6 +55,7 @@ function renderSlot(props: Partial<LinkFieldProps> & Pick<LinkFieldProps, 'onCha
 }
 
 const OPEN = { label: 'Ouvrir', hint: 'Ouvre la texture', run: () => {} }
+const TOGGLE = { label: 'Regarder seul', hint: 'Affiche le canal à plat', run: () => {}, on: false }
 const BROWSE = { label: 'Parcourir', hint: 'Choisir dans tout le projet', run: () => {} }
 
 describe('LinkField', () => {
@@ -224,6 +225,57 @@ describe('LinkField', () => {
       await new Promise(settle => setTimeout(settle, 600))
 
       expect(screen.queryByRole('img', { name: 'Brick' })).not.toBeInTheDocument()
+    })
+
+    /**
+     * The two gestures of one picture, which is the studio's rule and was this component's one
+     * exception: a `toggled` press REPLACED the double-click, leaving a material's channels the
+     * only link line of the studio nothing could open.
+     */
+    it('looks with a single click and opens with a double one', async () => {
+      const look = vi.fn()
+      const open = vi.fn()
+      render(
+        <Slot
+          value="tex-1"
+          onChange={vi.fn()}
+          toggle={{ ...TOGGLE, run: look }}
+          open={{ ...OPEN, run: open }}
+        />,
+      )
+      const picture = screen.getByRole('button', { name: 'Regarder seul' })
+
+      await userEvent.click(picture)
+      expect(look).toHaveBeenCalledTimes(1)
+
+      await userEvent.dblClick(picture)
+      expect(open).toHaveBeenCalledTimes(1)
+      // Once more, not twice: the second click of the pair belongs to the opening, and a toggle
+      // that went there and back under it would undo the very view the gesture asked for.
+      expect(look).toHaveBeenCalledTimes(2)
+    })
+
+    // The press is named for what a single click does, since that is the gesture a hand reaches
+    // for first; the tooltip is where the other one is spelled out.
+    it('names the press after the look where a slot offers both', () => {
+      render(<Slot value="tex-1" onChange={vi.fn()} toggle={TOGGLE} open={OPEN} />)
+
+      expect(screen.getByRole('button', { name: 'Regarder seul' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      )
+    })
+
+    /**
+     * The wordless `open` is for a slot a `toggle` already names. Alone it draws nothing — an
+     * unnamed button is a Tab stop leading nowhere, and the type says so rather than the reader
+     * finding out.
+     */
+    it('draws no press for an opening nothing names', () => {
+      render(<Slot value="tex-1" onChange={vi.fn()} open={{ run: vi.fn() }} />)
+
+      expect(screen.queryByRole('button', { name: 'Brick' })).toBeNull()
+      expect(screen.getAllByRole('button')).toHaveLength(1)
     })
 
     // A slot that simply stayed empty while a library picture was being fetched read as a drop

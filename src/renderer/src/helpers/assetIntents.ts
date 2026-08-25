@@ -269,16 +269,14 @@ export function editorIntent(asset: Asset): AssetIntent | null {
 }
 
 /**
- * Where the PIXELS of a picture are edited, when that is not already where its kind is edited.
+ * Where the PIXELS of a picture are edited — Images, for every picture on this disk.
  *
- * A texture and a sky are ASSEMBLED in spaces of their own — one holds channels, the other a
- * projection — and neither writes an image back: `IO_BY_KIND` gives neither a `writeAsset`, and
- * says why at its own line. So a texture pulled out of a model could be looked at and never
- * retouched, which is the half of « extract, edit, and the model follows » that was missing.
- *
- * `null` for a picture Images already opens on a double-click, and for one that is not on disk.
+ * Whether a row here would double up with a surface's own double-click is the CALLER's question:
+ * refusing an `image` here left the assembling spaces, which have no such gesture, with none at
+ * all. `null` for a picture not on disk — `assetUrl` answers 404 for a cloud row.
  */
 export function pixelEditorIntent(asset: Asset): AssetIntent | null {
-  if (!isLocalPicture(asset) || editorIntent(asset)?.workspace === 'image') return null
-  return ASSET_INTENTS.find(intent => intent.workspace === 'image') ?? null
+  return isLocalPicture(asset) ? IMAGE_INTENT : null
 }
+
+const IMAGE_INTENT = ASSET_INTENTS.find(intent => intent.workspace === 'image') ?? null

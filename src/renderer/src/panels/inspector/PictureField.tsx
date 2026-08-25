@@ -9,8 +9,13 @@ export type PictureFieldProps = {
   label: string
   value: string | null
   onChange: (assetId: string | null) => void
-  /** What pressing the picture does, when it is not opening the asset — see `LinkField`. */
-  open?: LinkFieldProps['open']
+  /**
+   * What a double-click on the picture opens, when the asset's own space is not it. `null` for a
+   * slot with NOTHING to open — told apart from an absent prop, which takes the default below.
+   */
+  open?: LinkFieldProps['open'] | null
+  /** What a single click does to the picture — see `LinkField`. */
+  toggle?: LinkFieldProps['toggle']
   /** A standing laid over the picture — see `LinkField`. */
   badge?: LinkFieldProps['badge']
   /** What a drop puts here, when the caller needs the asset itself — see `LinkField`. */
@@ -18,9 +23,9 @@ export type PictureFieldProps = {
   /**
    * What the empty row reads. Given only where "empty" does not mean "no picture": a model's slot
    * left empty wears the map its own file carries, and reading « none » over a textured model
-   * would be a plain lie.
+   * would be a plain lie. `null` for a slot that CANNOT be empty — see `LinkField`.
    */
-  emptyLabel?: string
+  emptyLabel?: string | null
   /** The handle the MCP steers this link by. Never a translated word. */
   scId?: string
 }
@@ -35,6 +40,7 @@ export function PictureField({
   value,
   onChange,
   open,
+  toggle,
   badge,
   onDropAsset,
   emptyLabel,
@@ -63,7 +69,7 @@ export function PictureField({
       value={value}
       options={options}
       onChange={onChange}
-      emptyLabel={emptyLabel ?? t('inspector.noTexture')}
+      emptyLabel={emptyLabel === null ? undefined : (emptyLabel ?? t('inspector.noTexture'))}
       missingLabel={t('inspector.missingTexture')}
       clearLabel={t('inspector.clearTexture')}
       // The three kinds that decode as an image, which is exactly what `options` was filtered to:
@@ -71,12 +77,15 @@ export function PictureField({
       accepts={PICTURES}
       badge={badge}
       onDropAsset={onDropAsset}
+      toggle={toggle}
       open={
-        open ?? {
-          label: t('inspector.openTexture'),
-          hint: t('inspector.openTextureHint'),
-          run: () => openAssetById(value),
-        }
+        open === null
+          ? undefined
+          : (open ?? {
+              label: t('inspector.openTexture'),
+              hint: t('inspector.openTextureHint'),
+              run: () => openAssetById(value),
+            })
       }
       browse={{
         label: t('inspector.browseTexture'),

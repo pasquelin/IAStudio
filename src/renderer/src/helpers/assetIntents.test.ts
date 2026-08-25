@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
+import { ASSET_TYPES, PICTURES, type Asset } from '@shared/domain/asset'
 import { workspaceOfType } from '@shared/domain/assetKind'
 import { kindForWorkspace } from '@shared/domain/document'
 import { WORKSPACES } from './workspaces'
-import { ASSET_INTENTS, editorIntent, intentsFor } from './assetIntents'
+import { ASSET_INTENTS, editorIntent, intentsFor, pixelEditorIntent } from './assetIntents'
 
 const picture = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset_1',
@@ -112,5 +112,15 @@ describe('where an asset is edited', () => {
   // invisible node — the `SKELETON_ONLY` trap `rigState` was written for.
   it('tells a motion apart from a model, though both live in 3D', () => {
     expect(editorIntent(picture({ type: 'animation' }))?.id).toBe('3d.animation')
+  })
+
+  /** The one decision left in it: a row the cloud still holds has no pixels on this disk. */
+  it('paints every local picture, and nothing that is not on disk', () => {
+    for (const type of PICTURES) {
+      expect(pixelEditorIntent(picture({ type }))?.workspace).toBe('image')
+    }
+
+    expect(pixelEditorIntent(picture({ location: 'cloud' }))).toBeNull()
+    expect(pixelEditorIntent(picture({ type: 'mesh' }))).toBeNull()
   })
 })

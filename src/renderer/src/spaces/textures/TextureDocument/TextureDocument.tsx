@@ -5,9 +5,8 @@ import { assetUrl, PICTURES, posterUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
 import { type TextureExportTarget } from '@shared/domain/textureExport'
 import { activation } from '@/helpers/activation'
-import { pixelEditorIntent } from '@/helpers/assetIntents'
 import { cn } from '@/helpers/cn'
-import { openAsset } from '@/helpers/openAsset'
+import { editPixelsOf } from '@/helpers/openAsset'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -128,11 +127,9 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   // catalogue row are two re-renders of a viewport.
   const flatAsset = useAssets(state => (flat ? assetsById(state).get(flat.assetId) : undefined))
   const flatPoster = flat && ((flatAsset && posterUrl(flatAsset)) ?? assetUrl(flat.assetId))
-  // Where its PIXELS are edited, which is not this space: a texture is assembled here and painted
-  // in Images. Absent leaves the picture there to be looked at and nothing more — a channel whose
-  // asset the shelf is not holding, or one that is not on this disk.
-  const intent = flatAsset ? pixelEditorIntent(flatAsset) : null
-  const editPixels = flatAsset && intent ? () => void openAsset(flatAsset, intent) : undefined
+  // Not this space: a texture is assembled here and painted in Images. Absent leaves the picture
+  // there to be looked at and nothing more — an asset off the shelf, or one not on this disk.
+  const editPixels = editPixelsOf(flatAsset)?.run
 
   return (
     <AssetDropTarget

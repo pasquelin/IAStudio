@@ -32,16 +32,30 @@ const SkyboxDocument = lazy(async () => ({
 const TextureDocument = lazy(async () => ({
   default: (await import('@/spaces/textures/TextureDocument/TextureDocument')).TextureDocument,
 }))
-/** Every space is opened the same way: the tab checks its document still exists, then renders. */
+/**
+ * Every space is opened the same way: the tab checks its document still exists, then renders.
+ *
+ * The press brings the panel forward, which is what puts its section up — Dockview cannot: it
+ * activates a group off FOCUS, and a viewport is a `div` a click never focuses. In capture,
+ * because the engines below stop the propagation of their own pointer gestures.
+ */
 function panelFor(Space: FC<{ documentId: string }>): FC<IDockviewPanelProps<DocumentPanelParams>> {
   return props => (
-    // Above the `Suspense` below: a rejected `lazy()` import is an error, not a fallback. Retry
-    // cannot fix that one — React caches the rejection — but the tab stays closable.
-    <ErrorBoundary>
-      <DocumentsGuard id={props.params.documentId}>
-        {() => <Space documentId={props.params.documentId} />}
-      </DocumentsGuard>
-    </ErrorBoundary>
+    // Outside the boundary, so a space that threw is still a panel one can bring forward.
+    <div
+      className="size-full"
+      onPointerDownCapture={() => {
+        if (!props.api.isActive) props.api.setActive()
+      }}
+    >
+      {/* Above the `Suspense` below: a rejected `lazy()` import is an error, not a fallback. Retry
+          cannot fix that one — React caches the rejection — but the tab stays closable. */}
+      <ErrorBoundary>
+        <DocumentsGuard id={props.params.documentId}>
+          {() => <Space documentId={props.params.documentId} />}
+        </DocumentsGuard>
+      </ErrorBoundary>
+    </div>
   )
 }
 

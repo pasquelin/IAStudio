@@ -16,6 +16,7 @@ import { setAdjustment, setEnvironmentSetting, setSunSetting } from '@/engines/s
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { SkyboxInspectorAdjustments } from './SkyboxInspectorAdjustments'
+import { SkyboxInspectorSource } from './SkyboxInspectorSource'
 import { SkyboxInspectorView } from './SkyboxInspectorView'
 
 const TWO_PI = Math.PI * 2
@@ -62,6 +63,10 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
       {/* How it is LOOKED at, before what it is: the projection is what the rest is judged
           under, and it was a panel of its own until 2026-08-19. */}
       <SkyboxInspectorView documentId={documentId} />
+
+      {/* Before everything the sun and the grading do TO it: the picture is what they are judged
+          on, and it was the one thing this inspector never named. */}
+      <SkyboxInspectorSource documentId={documentId} />
 
       <PropertySection title={t('skybox.sun')} scId="skybox.sun">
         <SliderField

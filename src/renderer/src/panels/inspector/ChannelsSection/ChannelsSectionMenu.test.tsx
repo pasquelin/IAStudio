@@ -1,12 +1,23 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import type { EditPixels } from '@/helpers/openAsset'
 import { ChannelsSectionMenu } from './ChannelsSectionMenu'
 import type { ChannelDerivation } from './derivation'
 
 const READY: ChannelDerivation = { source: 'baseColor', state: 'ready', run: vi.fn() }
 
-const open = (derivation: ChannelDerivation = READY): void => {
-  render(<ChannelsSectionMenu derivation={derivation} at={{ x: 10, y: 10 }} onClose={vi.fn()} />)
+const open = (
+  derivation: ChannelDerivation | null = READY,
+  pixels: EditPixels | null = null,
+): void => {
+  render(
+    <ChannelsSectionMenu
+      derivation={derivation}
+      pixels={pixels}
+      at={{ x: 10, y: 10 }}
+      onClose={vi.fn()}
+    />,
+  )
 }
 
 describe('ChannelsSectionMenu', () => {
@@ -36,5 +47,18 @@ describe('ChannelsSectionMenu', () => {
     for (const row of screen.getAllByRole('menuitem')) {
       expect(row).not.toHaveAttribute('aria-label')
     }
+  })
+
+  /**
+   * Four of the eight channels compute from nothing — `baseColor` first among them — so a menu
+   * that only ever held a derivation did not open at all on the very row a model's colour lands in.
+   */
+  it('offers to paint a channel that nothing computes', () => {
+    const run = vi.fn()
+    open(null, { workspace: 'image', run })
+
+    screen.getByRole('menuitem', { name: 'Modifier l’image' }).click()
+
+    expect(run).toHaveBeenCalled()
   })
 })

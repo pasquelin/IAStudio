@@ -4,7 +4,7 @@ import { reportFailure } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
 import { documentForAsset, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
-import { editorIntent, type AssetIntent } from './assetIntents'
+import { editorIntent, pixelEditorIntent, type AssetIntent } from './assetIntents'
 
 /**
  * What opening an asset does — double-click or Enter: a tab of its own, in the space that edits
@@ -92,4 +92,18 @@ export function openAssetById(assetId: string | null): void {
 
   const asset = assetsById(useAssets.getState()).get(assetId)
   if (asset) void openAsset(asset)
+}
+
+/** Painting a picture, and the space it happens in — a menu reads its glyph off the same answer. */
+export type EditPixels = { workspace: AssetIntent['workspace']; run: () => void }
+
+/**
+ * Descending to a picture's PIXELS — what an assembling space offers, since none of them writes an
+ * image back. `null` where there is nothing to paint: no asset, or one that is not on this disk.
+ */
+export function editPixelsOf(asset: Asset | null | undefined): EditPixels | null {
+  const intent = asset ? pixelEditorIntent(asset) : null
+  if (!asset || !intent) return null
+
+  return { workspace: intent.workspace, run: () => void openAsset(asset, intent) }
 }

@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react'
+import type { KeyboardEvent, MouseEvent } from 'react'
 
 export type ActivationProps = {
   onDoubleClick: () => void
@@ -23,4 +23,12 @@ export function activation(open: () => void): ActivationProps {
       open()
     },
   }
+}
+
+/**
+ * What LOOKING answers to, on a surface that also opens: a single click, Space with it, and never
+ * the second click of a double — `detail` is what the platform gives to tell the two apart.
+ */
+export function selection(look: () => void): { onClick: (event: MouseEvent) => void } {
+  return { onClick: event => event.detail < 2 && look() }
 }

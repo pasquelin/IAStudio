@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { Asset } from '@shared/domain/asset'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { PICTURES, type Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { Project } from '@shared/domain/project'
 import { chainOf, pushEdit } from '@/engines/audio/edits'
@@ -14,7 +14,7 @@ import { sceneOf, useScenes } from '@/stores/scenes'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { lendPictureMeasure } from '@/spaces/image/pictureSize'
-import { openAsset } from './openAsset'
+import { editPixelsOf, openAsset } from './openAsset'
 
 /** Written out rather than taken from the home's fixture, which pulls in a DOM this never uses. */
 const PROJECT: Project = {
@@ -104,12 +104,28 @@ describe('opening an asset', () => {
     await openAsset(texture)
     const channel = opened().id
 
-    const { pixelEditorIntent } = await import('./assetIntents')
-    await openAsset(texture, pixelEditorIntent(texture) ?? undefined)
+    editPixelsOf(texture)?.run()
+    // The run is fire-and-forget, as a press is: the LAYER is what says the picture has landed.
+    await vi.waitFor(() =>
+      expect(canvasOf(useCanvases.getState(), opened().id).layers.at(-1)?.name).toBe('body.png'),
+    )
 
     expect(opened().id).not.toBe(channel)
-    expect(canvasOf(useCanvases.getState(), opened().id).layers.at(-1)?.name).toBe('body.png')
     expect(useLayouts.getState().activeWorkspace).toBe('image')
+  })
+
+  /**
+   * Every picture on this disk, whatever kind the catalogue filed it as: the assembling spaces
+   * take all three, and refusing an `image` left them with no way to Images at all.
+   */
+  it('offers the painting of every local picture, and of nothing else', () => {
+    for (const type of PICTURES) {
+      expect(editPixelsOf(picture({ type }))?.workspace).toBe('image')
+    }
+
+    expect(editPixelsOf(picture({ location: 'cloud' }))).toBeNull()
+    expect(editPixelsOf(asset({ type: 'mesh' }))).toBeNull()
+    expect(editPixelsOf(null)).toBeNull()
   })
 
   it('opens a mesh in a scene', async () => {
